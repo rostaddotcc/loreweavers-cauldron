@@ -23,6 +23,7 @@ from auth import create_token, load_users, verify_password, verify_token
 from dice import roll as dice_roll
 from models import DM_SYSTEM_PROMPT, get_api_key, get_model, list_models_for_frontend
 from atmosphere import build_art_prompt, detect_environments
+from locations import get_locations_with_travel
 from state_manager import CampaignStore
 
 app = FastAPI(title="Mörkrets Rike", version="1.0.0")
@@ -73,6 +74,170 @@ def _parse_roll_requests(text: str) -> tuple[str, list[dict]]:
         rolls.append({'notation': notation, 'label': label or notation})
     clean = KAST_PATTERN.sub('', text).strip()
     return clean, rolls
+
+
+# ═══════════════════════════════════════
+# Mekaniska taggar — påverka spelstate
+# ═══════════════════════════════════════
+
+# D&D 5e XP-trösklar för level-up
+XP_THRESHOLDS = [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000,
+                 85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000,
+                 305000, 355000]
+
+# Regex-mönster för mekaniska taggar
+_MECH_PATTERNS = {
+    'SKADA':           re.compile(r'\[SKADA:(\d+)\]'),
+    'HELA':            re.compile(r'\[HELA:(\d+)\]'),
+    'XP':              re.compile(r'\[XP:(\d+)\]'),
+    'GULD':            re.compile(r'\[GULD:(-?\d+)\]'),
+    'FÖREMÅL':         re.compile(r'\[FÖREMÅL:([^|\]]+)(?:\|([^|\]]+))?(?:\|([^\]]+))?\]'),
+    'QUEST':           re.compile(r'\[QUEST:([^|\]]+)(?:\|([^|\]]+))?(?:\|([^\]]+))?\]'),
+    'QUEST_SLUTFÖRD':  re.compile(r'\[QUEST_SLUTFÖRD:([^\]]+)\]'),
+    'QUEST_MISSLYCKAD': re.compile(r'\[QUEST_MISSLYCKAD:([^\]]+)\]'),
+    'KONSEKVENS':      re.compile(r'\[KONSEKVENS:([^\]]+)\]'),
+    'NPC_DÖD':         re.compile(r'\[NPC_DÖD:([^\]]+)\]'),
+    'PLATS':           re.compile(r'\[PLATS:([^\]]+)\]'),
+    'TID':             re.compile(r'\[TID:([^\]]+)\]'),
+}
+
+
+def _parse_mechanical_tags(text: str, state: dict) -> tuple[str, dict, list[dict]]:
+    """
+    Hitta och ta bort alla mekaniska taggar ur DM-svaret.
+    Uppdaterar state och returnerar (clean_text, state, effects_list).
+    """
+    effects: list[dict] = []
+
+    # SKADA — minska HP
+    for m in _MECH_PATTERNS['SKADA'].finditer(text):
+        amount = int(m.group(1))
+        char = state.setdefault('character', {})
+        hp = char.setdefault('hp', {'current': 10, 'max': 10, 'temp': 0})
+        hp['current'] = max(0, hp.get('current', 0) - amount)
+        effects.append({'type': 'skada', 'value': amount})
+
+    # HELA — öka HP
+    for m in _MECH_PATTERNS['HELA'].finditer(text):
+        amount = int(m.group(1))
+        char = state.setdefault('character', {})
+        hp = char.setdefault('hp', {'current': 10, 'max': 10, 'temp': 0})
+        hp['current'] = min(hp.get('max', 10), hp.get('current', 0) + amount)
+        effects.append({'type': 'hela', 'value': amount})
+
+    # XP — ge erfarenhet + level-up
+    for m in _MECH_PATTERNS['XP'].finditer(text):
+        amount = int(m.group(1))
+        char = state.setdefault('character', {})
+        xp = char.setdefault('xp', {'current': 0, 'next_level': 300})
+        xp['current'] = xp.get('current', 0) + amount
+        effects.append({'type': 'xp', 'value': amount})
+        # Level-up check
+        level = char.get('level', 1)
+        while level < len(XP_THRESHOLDS) and xp['current'] >= XP_THRESHOLDS[level]:
+            level += 1
+            char['level'] = level
+            if level < len(XP_THRESHOLDS):
+                xp['next_level'] = XP_THRESHOLDS[level]
+            effects.append({'type': 'level_up', 'value': level})
+
+    # GULD — lägg till/ta bort guld
+    for m in _MECH_PATTERNS['GULD'].finditer(text):
+        amount = int(m.group(1))
+        currency = state.setdefault('currency', {'pp': 0, 'gp': 0, 'ep': 0, 'sp': 0, 'cp': 0})
+        currency['gp'] = currency.get('gp', 0) + amount
+        effects.append({'type': 'guld', 'value': amount})
+
+    # FÖREMÅL — lägg till i inventariet
+    for m in _MECH_PATTERNS['FÖREMÅL'].finditer(text):
+        name = m.group(1).strip()
+        item_type = (m.group(2) or 'Annat').strip()
+        rarity = (m.group(3) or 'normal').strip()
+        inv = state.setdefault('inventory', [])
+        inv.append({
+            'id': f"tag-{len(inv)}",
+            'name': name,
+            'type': item_type,
+            'qty': 1,
+            'weight': 0,
+            'equipped': False,
+            'rarity': rarity,
+            'description': '',
+        })
+        effects.append({'type': 'föremål', 'value': name})
+
+    # QUEST — skapa nytt uppdrag
+    for m in _MECH_PATTERNS['QUEST'].finditer(text):
+        name = m.group(1).strip()
+        desc = (m.group(2) or '').strip()
+        reward = (m.group(3) or '').strip()
+        quests = state.setdefault('quests', [])
+        quests.append({
+            'name': name,
+            'description': desc,
+            'reward': reward,
+            'status': 'aktiv',
+        })
+        effects.append({'type': 'quest', 'value': name})
+
+    # QUEST_SLUTFÖRD
+    for m in _MECH_PATTERNS['QUEST_SLUTFÖRD'].finditer(text):
+        name = m.group(1).strip()
+        for q in state.get('quests', []):
+            if q.get('name', '').lower() == name.lower():
+                q['status'] = 'slutförd'
+                break
+        effects.append({'type': 'quest_slutförd', 'value': name})
+
+    # QUEST_MISSLYCKAD
+    for m in _MECH_PATTERNS['QUEST_MISSLYCKAD'].finditer(text):
+        name = m.group(1).strip()
+        for q in state.get('quests', []):
+            if q.get('name', '').lower() == name.lower():
+                q['status'] = 'misslyckad'
+                break
+        effects.append({'type': 'quest_misslyckad', 'value': name})
+
+    # KONSEKVENS — permanent världsförändring → lore
+    for m in _MECH_PATTERNS['KONSEKVENS'].finditer(text):
+        desc = m.group(1).strip()
+        state.setdefault('lore', []).append(desc)
+        effects.append({'type': 'konsekvens', 'value': desc})
+
+    # NPC_DÖD — markera NPC som död
+    for m in _MECH_PATTERNS['NPC_DÖD'].finditer(text):
+        name = m.group(1).strip()
+        for npc in state.get('npcs', []):
+            if npc.get('name', '').lower() == name.lower():
+                npc['alive'] = False
+                break
+        effects.append({'type': 'npc_död', 'value': name})
+
+    # PLATS — uppdatera nuvarande plats
+    for m in _MECH_PATTERNS['PLATS'].finditer(text):
+        name = m.group(1).strip()
+        world = state.setdefault('world', {})
+        world['current_location'] = name
+        visited = world.setdefault('visited_locations', [])
+        if name not in visited:
+            visited.append(name)
+        effects.append({'type': 'plats', 'value': name})
+
+    # TID — uppdatera tid/väder
+    for m in _MECH_PATTERNS['TID'].finditer(text):
+        desc = m.group(1).strip()
+        world = state.setdefault('world', {})
+        world['time'] = desc
+        effects.append({'type': 'tid', 'value': desc})
+
+    # Ta bort alla taggar ur texten
+    clean = text
+    for pattern in _MECH_PATTERNS.values():
+        clean = pattern.sub('', clean)
+    # Städa upp dubbla blanksteg/rader som blir kvar
+    clean = re.sub(r'\n{3,}', '\n\n', clean).strip()
+
+    return clean, state, effects
 
 app.add_middleware(
     CORSMiddleware,
@@ -391,6 +556,9 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     reply, new_npcs = _parse_npcs(reply)
     reply, roll_requests = _parse_roll_requests(reply)
 
+    # Parsa mekaniska taggar (SKADA, HELA, XP, GULD, etc.)
+    reply, state, effects = _parse_mechanical_tags(reply, state)
+
     # Atmosfär-subagent: generera ASCII-art om miljön triggar
     ascii_art = None
     environments = detect_environments(reply)
@@ -450,6 +618,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         "new_npcs": new_npcs,
         "roll_requests": roll_requests,
         "ascii_art": ascii_art,
+        "effects": effects,
     }
 
 
@@ -775,6 +944,92 @@ async def import_file(
 
 
 # ═══════════════════════════════════════
+# WORLD BUILDING
+# ═══════════════════════════════════════
+
+WORLD_BUILD_PROMPT = """Du är en världsextraktor för D&D-kampanjer. Analysera spelarens beskrivning och extrahera strukturerad världdata.
+
+Svara ENDAST med giltig JSON (ingen markdown):
+{
+  "locations": [{"name": "", "description": ""}],
+  "npcs": [{"name": "", "role": "", "relation": "neutral", "notes": "", "alive": true}],
+  "lore": ["string — viktiga världsdetaljer, historia, myter, stämning"]
+}
+
+Om en kategori saknas i beskrivningen, returnera tom array. Extrahera bara det som faktiskt finns."""
+
+
+class WorldBuildRequest(BaseModel):
+    prompt: str
+    model_id: str = "qwen3.8-max"
+
+
+@app.post("/api/world/build")
+async def world_build(req: WorldBuildRequest, morkrets_token: str | None = Cookie(None)):
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    messages = [
+        {"role": "system", "content": WORLD_BUILD_PROMPT},
+        {"role": "user", "content": f"Bygg världen utifrån denna beskrivning:\n\n{req.prompt}"},
+    ]
+
+    try:
+        raw = await _call_llm(req.model_id, messages, temperature=0.4, max_tokens=2048)
+        extracted = _extract_json(raw)
+    except ValueError as e:
+        raise HTTPException(422, f"Kunde inte tolka LLM-svar: {e}")
+    except RuntimeError as e:
+        raise HTTPException(500, str(e))
+
+    merged = {"locations": 0, "npcs": 0, "lore": 0}
+
+    # Locations
+    for loc in extracted.get("locations", []):
+        if isinstance(loc, dict) and loc.get("name"):
+            existing_locs = {l.get("name", "").lower() for l in state.get("locations", [])}
+            if loc["name"].lower() not in existing_locs:
+                state.setdefault("locations", []).append(
+                    {"name": loc["name"], "description": loc.get("description", "")}
+                )
+                merged["locations"] += 1
+
+    # NPCs
+    for npc in extracted.get("npcs", []):
+        if isinstance(npc, dict) and npc.get("name"):
+            existing_names = {n.get("name", "").lower() for n in state.get("npcs", [])}
+            if npc["name"].lower() not in existing_names:
+                state.setdefault("npcs", []).append({
+                    "name": npc["name"],
+                    "role": npc.get("role", "okänd"),
+                    "relation": npc.get("relation", "neutral"),
+                    "notes": npc.get("notes", ""),
+                    "alive": npc.get("alive", True),
+                })
+                merged["npcs"] += 1
+
+    # Lore
+    for item in extracted.get("lore", []):
+        if isinstance(item, str) and item.strip():
+            state.setdefault("lore", []).append(item.strip())
+            merged["lore"] += 1
+
+    store.save(state)
+
+    return {
+        "ok": True,
+        "merged": merged,
+        "locations": extracted.get("locations", []),
+        "npcs": extracted.get("npcs", []),
+        "lore": extracted.get("lore", []),
+    }
+
+
+# ═══════════════════════════════════════
 # HEALTH
 # ═══════════════════════════════════════
 
@@ -782,6 +1037,16 @@ async def import_file(
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "game": "Mörkrets Rike"}
+
+
+@app.get("/api/campaign/locations")
+async def campaign_locations(morkrets_token: str | None = Cookie(None)):
+    """Returnera alla kända platser med restid från nuvarande position."""
+    payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+    return get_locations_with_travel(state)
 
 
 # ═══════════════════════════════════════

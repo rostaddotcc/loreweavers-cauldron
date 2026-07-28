@@ -429,6 +429,22 @@
   }
   .toast.show { transform: translate(-50%, 0); opacity: 1; }
 
+  /* ═══════════ Laddar / tom kampanj ═══════════ */
+  .loading {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 1.1rem; padding: 5rem 1rem; text-align: center;
+  }
+  .loading .rune { font-size: 2.6rem; animation: candle 3s ease-in-out infinite; }
+  .loading p { font-style: italic; color: var(--bone-dim); letter-spacing: 0.05em; }
+  .no-campaign { text-align: center; padding: 4.5rem 1.5rem; }
+  .no-campaign .rune { font-size: 3.2rem; margin-bottom: 1rem; animation: candle 4s ease-in-out infinite; }
+  .no-campaign h2 {
+    font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.35rem;
+    color: var(--bone-bright); letter-spacing: 0.05em; margin-bottom: 0.5rem;
+  }
+  .no-campaign p { font-style: italic; color: var(--bone-dim); margin-bottom: 1.6rem; }
+  .no-campaign .rune-btn { display: inline-block; text-decoration: none; }
+
   /* ═══════════ Responsivt ═══════════ */
   @media (max-width: 720px) {
     .abilities { grid-template-columns: repeat(3, 1fr); }
@@ -454,6 +470,7 @@
   <span style="font-size:.78rem;font-style:italic;color:var(--bone-dim);border-left:1px solid var(--edge);padding-left:1rem">Karaktärsark</span>
   <span style="flex:1"></span>
   <a class="top-btn" href="chat.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">⚔ Till bordet</a>
+  <a class="top-btn" href="platser.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">🗺️ Kartan</a>
   <a class="top-btn" href="npcs.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">📖 Gestalter</a>
   <button class="top-btn danger" onclick="doLogout()" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px">🚪 Lämna</button>
 </header>
@@ -464,6 +481,11 @@
     <h1>Mörkrets Rike</h1>
     <div class="rune-divider"><span>✦</span></div>
   </header>
+
+  <div id="loading" class="loading">
+    <div class="rune">🕯️</div>
+    <p>Läser in kampanjens tillstånd…</p>
+  </div>
 
   <nav class="tabs">
     <div class="tab active" data-tab="character">⚔ Karaktär</div>
@@ -521,9 +543,9 @@
       <div class="vital wide">
         <div class="vital-head">
           <span class="label">⭐ Erfarenhet</span>
-          <span class="nums">23 400<small> / 34 000 till nivå 8</small></span>
+          <span class="nums"><span id="xp-cur">0</span><small> / <span id="xp-next">—</span></small></span>
         </div>
-        <div class="trough"><div class="fill xp" id="xp-bar" style="width:69%"></div></div>
+        <div class="trough"><div class="fill xp" id="xp-bar" style="width:0%"></div></div>
       </div>
     </div>
 
@@ -600,53 +622,109 @@ if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 </script>
 <script>
 // ═══════════════════════════════════════
-// GAME STATE — sparas som JSON per kampanj
+// GAME STATE — laddas från backend via API.getCampaign()
 // ═══════════════════════════════════════
 const state = {
-  character: {
-    name: "Thalindra Mörkeld", race: "Halvälva", class: "Eldbesvärjare", level: 7,
-    hp: { current: 38, max: 52 },
-    spellSlots: { current: 4, max: 6 },
-    xp: { current: 23400, next: 34000 },
-    abilities: {
-      STR: { score: 8,  mod: -1 }, DEX: { score: 14, mod: 2 },
-      CON: { score: 13, mod: 1 },  INT: { score: 18, mod: 4 },
-      WIS: { score: 12, mod: 1 },  CHA: { score: 15, mod: 2 },
-    },
-    traits: [
-      { name: "Mörkerseende", magic: false }, { name: "Feblod", magic: true },
-      { name: "Eldmotstånd", magic: true }, { name: "Arcane Recovery", magic: true },
-      { name: "Sculpt Spells", magic: true }, { name: "Potent Cantrip", magic: true },
-    ],
-    saves: [
-      { name: "INT +7", prof: true }, { name: "WIS +4", prof: true },
-      { name: "STR −1", prof: false }, { name: "DEX +2", prof: false },
-      { name: "CON +1", prof: false }, { name: "CHA +2", prof: false },
-    ],
-    portrait: null,
-  },
-  inventory: [
-    { name: "Eldstav +1", type: "Vapen", qty: 1, weight: 4, equipped: true, rarity: "magic" },
-    { name: "Läderkrage", type: "Rustning", qty: 1, weight: 10, equipped: true, rarity: "normal" },
-    { name: "Eldboll-scroll", type: "Magisk", qty: 2, weight: 0.1, equipped: false, rarity: "rare" },
-    { name: "Hälsodryck", type: "Dryck", qty: 3, weight: 0.5, equipped: false, rarity: "normal" },
-    { name: "Komponentväska", type: "Verktyg", qty: 1, weight: 2, equipped: true, rarity: "normal" },
-    { name: "Spellbok", type: "Verktyg", qty: 1, weight: 3, equipped: false, rarity: "normal" },
-    { name: "Fackla", type: "Annat", qty: 5, weight: 1, equipped: false, rarity: "normal" },
-    { name: "Rep (15 m)", type: "Verktyg", qty: 1, weight: 5, equipped: false, rarity: "normal" },
-    { name: "Ransoner (5 dagar)", type: "Annat", qty: 1, weight: 2, equipped: false, rarity: "normal" },
-    { name: "Amulett av skydd", type: "Magisk", qty: 1, weight: 0.2, equipped: true, rarity: "magic" },
-    { name: "Dolk", type: "Vapen", qty: 1, weight: 1, equipped: false, rarity: "normal" },
-    { name: "Trollkarlsrock", type: "Annat", qty: 1, weight: 1, equipped: true, rarity: "normal" },
-  ],
-  currency: { pp: 2, gp: 134, ep: 0, sp: 23, cp: 15 },
-  transactions: [
-    { desc: "Belöning: Drakgrottan", amount: 200, unit: "gp", date: "Session 3 · Dag 11" },
-    { desc: "Köpte hälsodrycker ×3", amount: -45, unit: "gp", date: "Session 3 · Dag 12" },
-    { desc: "Köpte Eldstav +1", amount: -120, unit: "gp", date: "Session 2 · Dag 8" },
-    { desc: "Sålde goblinbyte", amount: 35, unit: "gp", date: "Session 2 · Dag 7" },
-  ],
+  character: {},
+  inventory: [],
+  currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 },
+  transactions: [],
+  world: {},
 };
+
+// ═══════════════════════════════════════
+// INIT — hämta kampanjens tillstånd från backend
+// ═══════════════════════════════════════
+(async function init() {
+  try {
+    const { campaign } = await API.getCampaign();
+    if (!campaign) { showNoCampaign(); return; }
+    const raw = campaign._raw || {};
+    state.character    = raw.character || {};
+    state.inventory    = Array.isArray(raw.inventory) ? raw.inventory : [];
+    state.currency     = Object.assign({ pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 }, raw.currency);
+    state.transactions = Array.isArray(raw.transactions) ? raw.transactions : [];
+    state.world        = raw.world || {};
+    renderAll();
+    document.getElementById('loading').style.display = 'none';
+  } catch (e) {
+    showNoCampaign('Kampanjen kunde inte laddas — kontrollera anslutningen och försök igen.');
+  }
+})();
+
+function showNoCampaign(msg) {
+  document.getElementById('loading').style.display = 'none';
+  document.querySelector('.tabs').style.display = 'none';
+  document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
+  const box = document.createElement('section');
+  box.className = 'panel no-campaign';
+  box.style.display = 'block';
+  box.innerHTML = `
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="rune">🗺️</div>
+    <h2>Ingen aktiv kampanj — skapa ett äventyr först</h2>
+    <p>${msg || 'Karaktärsarket fylls på när spelledaren väckt världen till liv.'}</p>
+    <a class="rune-btn" href="adventure.html">✦ Skapa äventyr</a>`;
+  document.querySelector('.app').appendChild(box);
+}
+
+function renderAll() {
+  renderHeader();
+  renderHp();
+  renderSlots();
+  renderXp();
+  renderAbilities();
+  renderTraits();
+  renderSaves();
+  renderInventory();
+  renderCurrency();
+  renderTransactions();
+}
+
+// ═══════════════════════════════════════
+// KARAKTÄRSHUVUD — namn, klass, AC, INIT m.m.
+// ═══════════════════════════════════════
+function fmtMod(m) { return m >= 0 ? '+' + m : '' + m; }
+
+function renderHeader() {
+  const c = state.character;
+  const name = c.name || 'Namnlös äventyrare';
+  document.getElementById('char-name').textContent = name;
+  document.getElementById('char-class').textContent =
+    [c.race, c.class].filter(Boolean).join(' · ') + (c.level ? ' · Nivå ' + c.level : '');
+  document.title = '⚔️ Mörkrets Rike — ' + name;
+  // Återställ porträtt om det finns sparat i backend-state
+  if (c.portrait) {
+    const frame = document.getElementById('portrait');
+    document.getElementById('portrait-emoji').style.display = 'none';
+    let img = frame.querySelector('img');
+    if (!img) { img = document.createElement('img'); frame.insertBefore(img, frame.querySelector('.hint')); }
+    img.src = c.portrait;
+  }
+  const dex  = c.abilities?.DEX?.mod ?? 0;
+  const wis  = c.abilities?.WIS?.mod ?? 0;
+  const meta = [
+    ['AC',   c.ac ?? '—'],
+    ['INIT', fmtMod(c.initiative ?? dex)],
+    ['PERC', fmtMod(c.perception ?? wis)],
+    ['FART', c.speed || '30 ft'],
+    ['PROF', '+' + (c.proficiency ?? 2)],
+  ];
+  document.querySelector('.char-meta').innerHTML = meta
+    .map(([k, v]) => `<span class="stat"><i>${k}</i><b>${v}</b></span>`).join('');
+}
+
+// ═══════════════════════════════════════
+// XP
+// ═══════════════════════════════════════
+function renderXp() {
+  const xp = state.character.xp || {};
+  const cur  = xp.current ?? 0;
+  const next = xp.next_level ?? xp.next ?? 0;
+  document.getElementById('xp-cur').textContent = cur.toLocaleString('sv-SE');
+  document.getElementById('xp-next').textContent = next ? next.toLocaleString('sv-SE') + ' till nästa nivå' : '—';
+  document.getElementById('xp-bar').style.width = (next > 0 ? Math.min(100, (cur / next) * 100) : 0) + '%';
+}
 
 // ═══════════════════════════════════════
 // TABS
@@ -700,66 +778,97 @@ portraitInput.addEventListener('change', e => {
 });
 
 // ═══════════════════════════════════════
-// HP
+// HP — lokal uppdatering + sync till backend
 // ═══════════════════════════════════════
 function adjustHp(delta) {
-  const hp = state.character.hp;
-  hp.current = Math.max(0, Math.min(hp.max, hp.current + delta));
+  const hp = state.character.hp || { current: 0, max: 0 };
+  state.character.hp = hp;
+  hp.current = Math.max(0, Math.min(hp.max || 0, hp.current + delta));
   renderHp();
-  if (hp.current === 0) { SFX.fail(); toast('💀 Thalindra är medvetslös!'); }
+  if (hp.current === 0) { SFX.fail(); toast('💀 ' + (state.character.name || 'Hjälten') + ' är medvetslös!'); }
   else if (delta < 0) { SFX.damage(); toast('🩸 −' + (-delta) + ' skada'); }
   else { SFX.heal(); toast('✨ +' + delta + ' helad'); }
+  // Sync till backend — uppdateras lokalt direkt, servern får värdet via PATCH
+  API.updateCharacter({ hp: { current: hp.current, max: hp.max } })
+    .then(() => toast('HP uppdaterat (syncas vid nästa chat)'))
+    .catch(() => {}); // req() visar redan ett fel — tyst här
 }
 function renderHp() {
-  const hp = state.character.hp;
-  const pct = (hp.current / hp.max) * 100;
-  document.getElementById('hp-cur').textContent = hp.current;
-  document.getElementById('hp-max').textContent = hp.max;
+  const hp = state.character.hp || { current: 0, max: 0 };
+  const pct = hp.max > 0 ? (hp.current / hp.max) * 100 : 0;
+  document.getElementById('hp-cur').textContent = hp.current ?? 0;
+  document.getElementById('hp-max').textContent = hp.max ?? 0;
   document.getElementById('hp-bar').style.width = pct + '%';
-  document.getElementById('hp-trough').classList.toggle('low', pct < 25);
+  document.getElementById('hp-trough').classList.toggle('low', hp.max > 0 && pct < 25);
 }
-renderHp();
 
 // ═══════════════════════════════════════
 // SPELL SLOTS — klickbara runor
 // ═══════════════════════════════════════
 function renderSlots() {
-  const ss = state.character.spellSlots;
+  const ss = state.character.spell_slots || state.character.spellSlots || { current: 0, max: 0 };
   const wrap = document.getElementById('slots');
   wrap.innerHTML = '';
+  if (!ss.max) {
+    wrap.innerHTML = '<span class="slots-hint">Inga besvärjelseplatser — karaktären kastar inte besvärjelser</span>';
+  }
   for (let i = 0; i < ss.max; i++) {
     const s = document.createElement('div');
     s.className = 'slot' + (i < ss.current ? ' lit' : '');
     s.textContent = '✦';
     s.title = 'Plats ' + (i + 1);
     s.addEventListener('click', () => {
-      ss.current = (i < ss.current) ? i : i + 1;
+      const wasLit = i < ss.current;
+      ss.current = wasLit ? i : i + 1;
       renderSlots();
-      toast(i < ss.current + 0 ? '🔮 Besvärjelse kastad' : '✨ Plats återställd');
+      toast(wasLit ? '🔮 Besvärjelse kastad' : '✨ Plats återställd');
     });
     wrap.appendChild(s);
   }
   document.getElementById('slot-cur').textContent = ss.current;
   document.getElementById('slot-max').textContent = ss.max;
 }
-renderSlots();
 
 // ═══════════════════════════════════════
 // ABILITIES / TRAITS / SAVES
 // ═══════════════════════════════════════
 const abilityNames = { STR: 'STY', DEX: 'SMI', CON: 'TÅL', INT: 'INT', WIS: 'VIS', CHA: 'KAR' };
-const abEl = document.getElementById('abilities');
-for (const [key, v] of Object.entries(state.character.abilities)) {
-  abEl.innerHTML += `<div class="ability" title="${key}">
-    <div class="abbr">${abilityNames[key]}</div>
-    <div class="score">${v.score}</div>
-    <div class="mod">${v.mod >= 0 ? '+' + v.mod : v.mod}</div>
-  </div>`;
+const abilityOrder = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
+
+function renderAbilities() {
+  const abilities = state.character.abilities || {};
+  document.getElementById('abilities').innerHTML = abilityOrder.map(key => {
+    const v = abilities[key] || {};
+    const score = v.score ?? 10;
+    const mod = v.mod ?? Math.floor((score - 10) / 2);
+    return `<div class="ability" title="${key}">
+      <div class="abbr">${abilityNames[key]}</div>
+      <div class="score">${score}</div>
+      <div class="mod">${mod >= 0 ? '+' + mod : mod}</div>
+    </div>`;
+  }).join('');
 }
-document.getElementById('traits').innerHTML =
-  state.character.traits.map(t => `<span class="trait ${t.magic ? 'magic' : ''}">${t.magic ? '✦ ' : ''}${t.name}</span>`).join('');
-document.getElementById('saves').innerHTML =
-  state.character.saves.map(s => `<span class="trait ${s.prof ? 'prof' : ''}">${s.prof ? '●' : '○'} ${s.name}</span>`).join('');
+
+function renderTraits() {
+  const traits = state.character.traits || [];
+  document.getElementById('traits').innerHTML = traits.length
+    ? traits.map(t => {
+        // Backend kan skicka antingen strängar eller {name, magic}-objekt
+        if (typeof t === 'string') return `<span class="trait">${t}</span>`;
+        return `<span class="trait ${t.magic ? 'magic' : ''}">${t.magic ? '✦ ' : ''}${t.name}</span>`;
+      }).join('')
+    : '<span class="slots-hint">Inga egenskaper noterade ännu…</span>';
+}
+
+function renderSaves() {
+  const saves = state.character.saves || [];
+  document.getElementById('saves').innerHTML = saves.length
+    ? saves.map(s => {
+        if (typeof s === 'string') return `<span class="trait">${s}</span>`;
+        return `<span class="trait ${s.prof ? 'prof' : ''}">${s.prof ? '●' : '○'} ${s.name}</span>`;
+      }).join('')
+    : '<span class="slots-hint">Inga sparade sparningskast ännu…</span>';
+}
 
 // ═══════════════════════════════════════
 // INVENTORY
@@ -767,6 +876,9 @@ document.getElementById('saves').innerHTML =
 function renderInventory() {
   const body = document.getElementById('inv-body');
   body.innerHTML = '';
+  if (!state.inventory.length) {
+    body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--bone-dim);font-style:italic;padding:1.6rem 0">Väskan är tom… än så länge.</td></tr>';
+  }
   let totalWeight = 0;
   state.inventory.forEach((item, i) => {
     const w = item.weight * item.qty;
@@ -813,7 +925,6 @@ function addItem(e) {
   renderInventory();
   toast('✦ ' + name + ' tillagd i packningen');
 }
-renderInventory();
 
 // ═══════════════════════════════════════
 // CURRENCY
@@ -866,16 +977,20 @@ function updateHoard() {
   const gp = Math.floor(total), sp = Math.round((total - gp) * 10);
   document.getElementById('total-sub').textContent = `= ${gp} guldmynt & ${sp} silvermynt`;
 }
-renderCurrency();
 
 // ═══════════════════════════════════════
-// TRANSACTIONS
+// TRANSACTIONS — kontobok från backend
 // ═══════════════════════════════════════
-document.getElementById('tx-log').innerHTML = state.transactions.map(tx => `
-  <div class="tx">
-    <div><div class="tx-desc">${tx.desc}</div><div class="tx-date">${tx.date}</div></div>
-    <div class="tx-amount ${tx.amount >= 0 ? 'pos' : 'neg'}">${tx.amount >= 0 ? '+' : ''}${tx.amount} ${tx.unit}</div>
-  </div>`).join('');
+function renderTransactions() {
+  const txs = state.transactions || [];
+  document.getElementById('tx-log').innerHTML = txs.length
+    ? txs.map(tx => `
+      <div class="tx">
+        <div><div class="tx-desc">${tx.desc || tx.description || '—'}</div><div class="tx-date">${tx.date || ''}</div></div>
+        <div class="tx-amount ${tx.amount >= 0 ? 'pos' : 'neg'}">${tx.amount >= 0 ? '+' : ''}${tx.amount} ${tx.unit || 'gp'}</div>
+      </div>`).join('')
+    : '<div style="text-align:center;color:var(--bone-dim);font-style:italic;padding:1.4rem 0;font-size:.85rem">Inga transaktioner ännu — horden växer med äventyret.</div>';
+}
 
 // ═══════════════════════════════════════
 // GLÖD — ember-partiklar

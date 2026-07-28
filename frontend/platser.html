@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚔️ Mörkrets Rike — Kartan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="snes.css">
+<style>
+  :root{--ink:#0b0812;--stone:#161020;--stone-2:#1d1529;--stone-3:#241a33;--edge:#3d2f52;--bone:#d9c9a6;--bone-bright:#efe2c0;--bone-dim:#8a7a5e;--gold:#c9a227;--gold-bright:#e8c65a;--blood:#a32433;--blood-bright:#d43a4d;--ember:#d4691e;--arcane:#8b5fd4;--poison:#7aa35e;--teal:#5e9aa3}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{font-family:'Spectral',Georgia,serif;color:var(--bone);background:radial-gradient(1000px 500px at 50% 115%,rgba(212,105,30,.1),transparent 60%),radial-gradient(700px 400px at 10% -5%,rgba(139,95,212,.08),transparent 55%),var(--ink);display:flex;flex-direction:column;overflow:hidden}
+  .grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.045;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
+  #embers{position:fixed;inset:0;z-index:0;pointer-events:none}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 190px 70px rgba(4,2,8,.88)}
+
+  .topbar{position:relative;z-index:5;display:flex;align-items:center;gap:1rem;padding:.7rem 1.2rem;background:linear-gradient(180deg,var(--stone-2),rgba(22,16,32,.95));border-bottom:1px solid var(--edge);box-shadow:0 4px 20px rgba(0,0,0,.5)}
+  .topbar .brand{font-family:'Cinzel',serif;font-weight:900;font-size:1.05rem;color:var(--gold-bright);letter-spacing:.06em;white-space:nowrap;text-shadow:0 0 14px rgba(232,198,90,.3)}
+  .topbar .page-tag{font-size:.78rem;font-style:italic;color:var(--bone-dim);border-left:1px solid var(--edge);padding-left:1rem}
+  .topbar .spacer{flex:1}
+  .top-btn{font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;white-space:nowrap;text-decoration:none}
+  .top-btn:hover{color:var(--gold-bright);border-color:var(--gold);box-shadow:0 0 12px -3px rgba(232,198,90,.4)}
+
+  .layout{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;min-height:0;overflow-y:auto;padding:1.5rem 2rem 3rem}
+
+  .map-head{text-align:center;margin-bottom:1.8rem}
+  .map-head h1{font-family:'Cinzel',serif;font-weight:900;font-size:1.4rem;color:var(--bone-bright);text-shadow:0 2px 0 #000}
+  .map-head .sub{font-style:italic;color:var(--bone-dim);font-size:.85rem;margin-top:.3rem}
+  .current-loc{display:inline-flex;align-items:center;gap:.5rem;margin-top:.7rem;padding:.5rem 1.2rem;background:rgba(201,162,39,.08);border:2px solid rgba(201,162,39,.4);font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.1em;color:var(--gold-bright)}
+  .current-loc .pin{font-size:1.1rem}
+
+  /* ── ASCII-karta ── */
+  .ascii-map{margin:0 auto 2rem;padding:1rem 1.5rem;background:rgba(4,3,10,.95);border:2px solid var(--edge);box-shadow:inset 0 0 20px rgba(139,95,212,.05),5px 5px 0 rgba(0,0,0,.7);overflow-x:auto;text-align:center;max-width:700px}
+  .ascii-map pre{font-family:'Courier New',monospace;font-size:.68rem;line-height:1.3;color:var(--arcane);text-shadow:0 0 6px rgba(139,95,212,.3);white-space:pre;display:inline-block;text-align:left;margin:0}
+  .ascii-map .map-label{font-family:'Silkscreen',monospace;font-size:.55rem;letter-spacing:.2em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.5rem}
+
+  /* ── Platskort ── */
+  .places-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem;max-width:1000px;margin:0 auto}
+  .place-card{position:relative;background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,#120c1c);border:2px solid var(--edge);padding:1.1rem 1.2rem;box-shadow:5px 5px 0 rgba(0,0,0,.7);transition:transform .2s,border-color .2s,box-shadow .2s}
+  .place-card:hover{transform:translate(-2px,-2px);border-color:var(--gold);box-shadow:7px 7px 0 rgba(0,0,0,.8)}
+  .place-card.current{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),5px 5px 0 rgba(0,0,0,.7)}
+  .place-card.visited{opacity:1}
+  .place-card.unvisited{opacity:.55}
+  .place-card.unvisited:hover{opacity:.8}
+
+  .pc-top{display:flex;align-items:center;gap:.7rem;margin-bottom:.5rem}
+  .pc-icon{width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;border:2px solid var(--edge);background:var(--stone-3);flex-shrink:0}
+  .pc-name{font-family:'Cinzel',serif;font-weight:700;font-size:.9rem;color:var(--bone-bright)}
+  .pc-terrain{font-size:.68rem;color:var(--bone-dim);font-style:italic}
+  .pc-desc{font-size:.82rem;color:var(--bone);line-height:1.5;margin-bottom:.7rem;font-style:italic}
+  .pc-footer{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap}
+  .pc-travel{font-family:'Silkscreen',monospace;font-size:.62rem;letter-spacing:.08em;padding:.3rem .7rem;border:1px solid var(--edge);color:var(--bone-dim)}
+  .pc-travel.here{color:var(--gold-bright);border-color:rgba(201,162,39,.5);background:rgba(201,162,39,.08)}
+  .pc-travel.near{color:var(--poison);border-color:rgba(122,163,94,.4)}
+  .pc-travel.far{color:var(--ember);border-color:rgba(212,105,30,.4)}
+  .pc-travel.very-far{color:var(--blood-bright);border-color:rgba(212,58,77,.4)}
+  .pc-status{font-family:'Silkscreen',monospace;font-size:.55rem;letter-spacing:.1em;text-transform:uppercase}
+  .pc-status.visited{color:var(--poison)}
+  .pc-status.current{color:var(--gold-bright)}
+  .pc-status.unknown{color:var(--bone-dim)}
+
+  .pc-landmarks{margin-top:.6rem;padding-top:.5rem;border-top:1px solid rgba(61,47,82,.4)}
+  .pc-landmarks .lm-label{font-family:'Silkscreen',monospace;font-size:.52rem;letter-spacing:.15em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.3rem}
+  .pc-landmarks ul{list-style:none;padding:0}
+  .pc-landmarks li{font-size:.78rem;color:var(--bone);padding:.15rem 0 .15rem 1rem;position:relative}
+  .pc-landmarks li::before{content:'◆';position:absolute;left:0;color:var(--arcane);font-size:.6rem;top:.25rem}
+
+  .empty-state{text-align:center;padding:4rem 2rem;color:var(--bone-dim)}
+  .empty-state .icon{font-size:3rem;margin-bottom:1rem;opacity:.4}
+  .empty-state p{font-style:italic;font-size:.9rem}
+
+  .toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:50;font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.12em;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);padding:.7rem 1.5rem;box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}
+  .toast.show{transform:translate(-50%,0);opacity:1}
+
+  @media(max-width:640px){.layout{padding:1rem}.places-grid{grid-template-columns:1fr}.topbar .page-tag{display:none}}
+</style>
+</head>
+<body>
+<div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
+
+<header class="topbar">
+  <span class="brand">🐉 Mörkrets Rike</span>
+  <span class="page-tag">🗺️ Kartan — Platser & Resor</span>
+  <span class="spacer"></span>
+  <a class="top-btn" href="chat.html">⚔ Till bordet</a>
+  <a class="top-btn" href="character.html">🧙 Karaktär</a>
+  <a class="top-btn" href="npcs.html">📖 Gestalter</a>
+</header>
+
+<div class="layout">
+  <div class="map-head">
+    <h1>🗺️ Kartan</h1>
+    <p class="sub">Platser du besökt och vägar du kan vandra</p>
+    <div class="current-loc" id="current-loc"><span class="pin">📍</span> <span id="current-name">Laddar…</span></div>
+  </div>
+
+  <div class="ascii-map" id="ascii-map">
+    <div class="map-label">✦ världskarta ✦</div>
+    <pre id="map-art">Laddar karta…</pre>
+  </div>
+
+  <div class="places-grid" id="places-grid"></div>
+
+  <div class="empty-state" id="empty-state" style="display:none">
+    <div class="icon">🗺️</div>
+    <p>Du har inte besökt några platser ännu.<br>Världen väntar bortom horisonten…</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="sfx.js"></script>
+<script src="api.js"></script>
+<script>
+// Auth-guard
+if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
+
+const TERRAIN_ICONS = {
+  'väg': '🛤️', 'stig': '🥾', 'skog': '🌲', 'berg': '⛰️',
+  'träsk': '🌫️', 'slätt': '🌾', 'is': '❄️', 'hav': '🌊', 'okänd': '❓'
+};
+
+function travelClass(days) {
+  if (days === 0) return 'here';
+  if (days <= 1) return 'near';
+  if (days <= 3) return 'far';
+  return 'very-far';
+}
+
+function renderMap(locations) {
+  // Enkel ASCII-karta: placera platser på ett 50x20-rutnät
+  const W = 50, H = 18;
+  const grid = Array.from({length: H}, () => Array(W).fill(' '));
+
+  // Rita terräng-bakgrund (subtil)
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const r = Math.random();
+      if (r < 0.03) grid[y][x] = '·';
+      else if (r < 0.04) grid[y][x] = ',';
+    }
+  }
+
+  // Placera platser
+  locations.forEach(loc => {
+    const px = Math.round((loc.x / 100) * (W - 4)) + 2;
+    const py = Math.round((loc.y / 100) * (H - 2)) + 1;
+    if (py >= 0 && py < H && px >= 0 && px < W) {
+      if (loc.current) {
+        grid[py][px] = '◉'; // Nuvarande plats
+        if (px+1 < W) grid[py][px+1] = ' ';
+      } else if (loc.visited) {
+        grid[py][px] = '◆'; // Besökt
+      } else {
+        grid[py][px] = '◇'; // Känd men ej besökt
+      }
+    }
+  });
+
+  // Rita ramar
+  const top = '╔' + '═'.repeat(W) + '╗';
+  const bot = '╚' + '═'.repeat(W) + '╝';
+  const rows = grid.map(r => '║' + r.join('') + '║');
+
+  document.getElementById('map-art').textContent = [top, ...rows, bot].join('\n');
+}
+
+function renderPlaces(locations) {
+  const grid = document.getElementById('places-grid');
+  const empty = document.getElementById('empty-state');
+
+  if (!locations || locations.length === 0) {
+    grid.style.display = 'none';
+    empty.style.display = 'block';
+    return;
+  }
+
+  grid.style.display = 'grid';
+  empty.style.display = 'none';
+
+  grid.innerHTML = locations.map(loc => {
+    const icon = TERRAIN_ICONS[loc.terrain] || '❓';
+    const tc = travelClass(loc.travel_days);
+    const statusClass = loc.current ? 'current' : loc.visited ? 'visited' : 'unknown';
+    const statusText = loc.current ? '📍 Du är här' : loc.visited ? '✓ Besökt' : '◇ Känd';
+    const cardClass = loc.current ? 'current' : loc.visited ? 'visited' : 'unvisited';
+
+    let landmarks = '';
+    if (loc.landmarks && loc.landmarks.length) {
+      landmarks = `
+        <div class="pc-landmarks">
+          <div class="lm-label">Sevärdheter</div>
+          <ul>${loc.landmarks.map(l => `<li>${l}</li>`).join('')}</ul>
+        </div>`;
+    }
+
+    return `
+      <div class="place-card ${cardClass}">
+        <div class="pc-top">
+          <div class="pc-icon">${icon}</div>
+          <div>
+            <div class="pc-name">${loc.name}</div>
+            <div class="pc-terrain">${loc.terrain || 'okänd terräng'}</div>
+          </div>
+        </div>
+        <div class="pc-desc">${loc.description || 'En plats i mörkret.'}</div>
+        <div class="pc-footer">
+          <span class="pc-travel ${tc}">🚶 ${loc.travel_text}</span>
+          <span class="pc-status ${statusClass}">${statusText}</span>
+        </div>
+        ${landmarks}
+      </div>`;
+  }).join('');
+}
+
+async function loadLocations() {
+  try {
+    const res = await fetch('/api/campaign/locations', { credentials: 'include' });
+    if (!res.ok) throw new Error('Ingen kampanj');
+    const locations = await res.json();
+
+    // Hitta nuvarande plats
+    const current = locations.find(l => l.current);
+    document.getElementById('current-name').textContent = current ? current.name : 'Okänd plats';
+
+    renderMap(locations);
+    renderPlaces(locations);
+  } catch (e) {
+    document.getElementById('current-name').textContent = 'Ingen aktiv kampanj';
+    document.getElementById('ascii-map').style.display = 'none';
+    document.getElementById('places-grid').style.display = 'none';
+    document.getElementById('empty-state').style.display = 'block';
+  }
+}
+
+loadLocations();
+
+// Toast
+let toastTimer;
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2400);}
+
+// Embers
+const canvas=document.getElementById('embers'),ctx=canvas.getContext('2d');
+let W,H,embers=[];
+function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight;}
+resize();addEventListener('resize',resize);
+function spawn(init){return{x:Math.random()*W,y:init?Math.random()*H:H+10,r:.7+Math.random()*1.5,vy:.2+Math.random()*.55,vx:(Math.random()-.5)*.3,life:0,max:400+Math.random()*500,hue:Math.random()<.82?22+Math.random()*18:268+Math.random()*20};}
+for(let i=0;i<30;i++)embers.push(spawn(true));
+function tick(){ctx.clearRect(0,0,W,H);for(let i=0;i<embers.length;i++){const e=embers[i];e.life++;e.y-=e.vy;e.x+=e.vx+Math.sin(e.life*.02)*.12;const fade=Math.min(1,e.life/60)*Math.max(0,1-e.life/e.max);const fl=.5+Math.sin(e.life*.15+i)*.35;ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fillStyle=`hsla(${e.hue},90%,60%,${.4*fade*fl})`;ctx.shadowColor=`hsla(${e.hue},90%,55%,${.6*fade})`;ctx.shadowBlur=6;ctx.fill();if(e.life>e.max||e.y<-12)embers[i]=spawn(false);}requestAnimationFrame(tick);}
+tick();
+</script>
+</body>
+</html>

@@ -197,6 +197,7 @@
   <span class="page-tag">Minneskodex · Kända gestalter</span>
   <span class="spacer"></span>
   <a class="top-btn" href="chat.html">⚔ Till bordet</a>
+  <a class="top-btn" href="platser.html">🗺️ Kartan</a>
   <a class="top-btn" href="character.html">🧙 Karaktär</a>
   <button class="top-btn danger" onclick="doLogout()">🚪 Lämna</button>
 </header>
@@ -230,134 +231,16 @@ if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 </script>
 <script>
 // ═══════════════════════════════════════
-// NPC-REGISTRY — i produktion: campaign state (JSON)
+// KAMPANJDATA — laddas från backend via API.getCampaign()
 // ═══════════════════════════════════════
-let purse = 134; // gp — syncas med karaktärsstaten via backend
-
-const NPCS = [
-  {
-    id:'morvaine', name:'Morvaine', icon:'🧙', color:'#8b5fd4', glow:'rgba(139,95,212,.45)',
-    role:'Den gåtfulla trollkarlen', race:'Människa (förhäxad?)',
-    relation:'okänd', trust:35, alive:true,
-    met:{ location:'Den Övergivna Kvarnen', when:'Session 4 · Dag 13', how:'Stod bredvid den svävande kristallen när ni bröt er in. Verkade inte förvånad — snarare som om hen hade väntat på er i mycket lång tid.' },
-    merchant:{ items:[
-      { name:'Scroll: Identifiera', price:25, rarity:'rare', stock:2 },
-      { name:'Scroll: Fjärrsyn', price:60, rarity:'rare', stock:1 },
-      { name:'Komponent: svart pärla', price:12, rarity:'normal', stock:4 },
-    ]},
-    quests:[
-      { name:'Kristallens minne', status:'aktiv', desc:'Morvaine vill att Thalindra rör vid kristallen och berättar vad den viskar. Varning: den tar något i utbyte — Morvaine säger inte vad.', reward:'Ett svar + 150 gp' },
-    ],
-    notes:['Händerna darrar — är rädd för något, men inte för oss.', 'Kallar kristallen "den som minns".', 'Kände igen Thalindras namn innan hon presenterade sig.'],
-    conversations:[
-      { when:'Session 4 · Dag 13', location:'Den Övergivna Kvarnen', lines:[
-        { who:'npc', text:'Äntligen. <em>Rösten är som torra löv mot sten.</em> Jag har väntat på dig, eldbärare. Kristallen viskade att du skulle komma.' },
-        { who:'player', text:'Vem är du? Och vad är det där för något?' },
-        { who:'npc', text:'Fråga mig vad du vill — men vet att varje svar har ett pris. <em>Sträcker ut en hand mot kristallen.</em> Den minns allt som någonsin dött i denna dal.' },
-      ]},
-    ],
-  },
-  {
-    id:'kael', name:'Kael Asksvärd', icon:'⚔️', color:'#d4691e', glow:'rgba(212,105,30,.45)',
-    role:'Legosoldat', race:'Människa',
-    relation:'allierad', trust:72, alive:true,
-    met:{ location:'Värdshuset "Sista Glöden"', when:'Session 2 · Dag 7', how:'Erbjöd sig att vakta er rygg mot betalning. Höll sitt ord — även när det blev dyrare för honom än vad någon avtalat.' },
-    merchant:null,
-    quests:[
-      { name:'Råttan i källaren', status:'slutförd', desc:'Rensa källaren under Sista Glöden. Visade sig vara en odöd råttlare, inte vanliga råttor. 35 gp utbetalat.', reward:'35 gp (utbetalt)' },
-      { name:'Asksvärdets skuld', status:'aktiv', desc:'Kaels förlorade svärd ligger någonstans på gravfältet norr om dalen. Det var hans fars. Han vill ha tillbaka det — men vågar inte gå dit själv.', reward:'Kaels lojalitet för livet + svärdet' },
-    ],
-    notes:['Hatar odöda. Personligt, inte principiellt.', 'Sov med ena ögat öppet första natten.', 'Nämnde en syster som dog i Askans Dal. Byter ämne direkt.'],
-    conversations:[
-      { when:'Session 2 · Dag 7', location:'Värdshuset "Sista Glöden"', lines:[
-        { who:'npc', text:'Ni ser ut som folk som är på väg någonstans de inte borde. <em>Lyfter ölet.</em> Jag heter Kael. För rätt pris ser jag till att ni kommer fram.' },
-        { who:'player', text:'Vad tar du för att vakta oss till kvarnen?' },
-        { who:'npc', text:'Kvarnen? <em>Ställer ner ölet. Skrattar inte längre.</em> Då blir det dubbla priset. Och jag vill ha betalt i förskott.' },
-      ]},
-      { when:'Session 3 · Dag 9', location:'Lägret vid ån', lines:[
-        { who:'npc', text:'Min syster trodde också att hon kunde förhandla med det som bor i dalen. <em>Spottar i elden.</em> Lär er av hennes misstag: förhandla inte.' },
-      ]},
-    ],
-  },
-  {
-    id:'lyra', name:'Lyra Vindviska', icon:'🏹', color:'#7aa35e', glow:'rgba(122,163,94,.45)',
-    role:'Skogsalv · Jägare', race:'Skogsalv',
-    relation:'allierad', trust:64, alive:true,
-    met:{ location:'Vägen genom Askans Dal', when:'Session 1 · Dag 3', how:'Dök upp ur snåren mitt i ett bakhåll — och räddade er. Eller var det hon som låg i bakhåll och ångrade sig? Hon säger inget om den natten.' },
-    merchant:null,
-    quests:[
-      { name:'Vargens spår', status:'aktiv', desc:'Följ spåren av den vita vargen till dess lya. Levande, om möjligt — den är inte ett vanligt djur, och skogen vill att den lever.', reward:'Vargens päls + vägledning genom skogen' },
-    ],
-    notes:['Talar med träden. Bokstavligen. De svarar.', 'Undviker eld — av respekt, inte av rädsla.', 'Vet mer om dalens historia än hon säger. Väntar på rätt tillfälle.'],
-    conversations:[
-      { when:'Session 1 · Dag 3', location:'Vägen genom Askans Dal', lines:[
-        { who:'npc', text:'Tre pilar. <em>Pekar på de döda rövarna.</em> Ni hade klarat er. Kanske. Jag heter Lyra, och skogen skickade mig.' },
-        { who:'player', text:'Skickade skogen dig? Skogen kan väl inte skicka någon.' },
-        { who:'npc', text:'<em>Ler snett.</em> Då ska du lyssna bättre.' },
-      ]},
-    ],
-  },
-  {
-    id:'borg', name:'Borg Stenhand', icon:'🛡️', color:'#c9a227', glow:'rgba(201,162,39,.45)',
-    role:'Värdshusvärd', race:'Dvärg',
-    relation:'neutral', trust:55, alive:true,
-    met:{ location:'Värdshuset "Sista Glöden"', when:'Session 1 · Dag 2', how:'Serverade er utan frågor och utan brådska. Kom ihåg allt ni sa ändå — och mycket ni inte sa.' },
-    merchant:{ items:[
-      { name:'Hälsodryck', price:15, rarity:'normal', stock:6 },
-      { name:'Större hälsodryck', price:40, rarity:'rare', stock:2 },
-      { name:'Ransoner (1 dag)', price:2, rarity:'normal', stock:12 },
-      { name:'Rep (15 m)', price:1, rarity:'normal', stock:5 },
-      { name:'Dvärgöl "Stenhandens Svarta"', price:1, rarity:'normal', stock:99 },
-    ]},
-    quests:[
-      { name:'Ölets recept', status:'aktiv', desc:'Borgs jäst stals från bryggeriet i Väst för tre månader sedan. Utan den blir ölet bara… öl. Hitta jästen. Eller tjuven. Helst båda.', reward:'Livstids gratis öl på Sista Glöden' },
-    ],
-    notes:['Säljer information lika gärna som öl — dyrare än ölet.', 'Har en dörr bakom disken som aldrig öppnas. Han ler när man frågar.', 'Tar 20% extra av främlingar. 0% av vänner. Bestämmer själv vem som är vad.'],
-    conversations:[
-      { when:'Session 1 · Dag 2', location:'Värdshuset "Sista Glöden"', lines:[
-        { who:'npc', text:'Öl, soppa, rum. I den ordningen, eller den omvända. <em>Torkar ett glas som redan är torrt.</em> Fråga inte om kvarnen.' },
-        { who:'player', text:'Varför inte?' },
-        { who:'npc', text:'<em>Ställer ner glaset. För första gången ser han er i ögonen.</em> För att den som frågar om kvarnen alltid är den som ska dit. Och jag vill inte behöva städa efter er.' },
-      ]},
-    ],
-  },
-  {
-    id:'halvard', name:'Vakten Halvard', icon:'💂', color:'#a8b2c0', glow:'rgba(168,178,192,.35)',
-    role:'Stadsvakt', race:'Människa',
-    relation:'neutral', trust:40, alive:true,
-    met:{ location:'Stadsporten, Väsby', when:'Session 1 · Dag 1', how:'Visiterade er vid ankomst. Släppte igenom er mot en "liten avgift" och ett löfte om att inte ställa till problem.' },
-    merchant:null,
-    quests:[],
-    notes:['Tar mutor, men minns exakt vem som betalat — och hur mycket.', 'Varnade oss för kvarnen. På riktigt, inte som Borg.', 'Byter skift vid midnatt. Porten är obevakad i tio minuter.'],
-    conversations:[
-      { when:'Session 1 · Dag 1', location:'Stadsporten, Väsby', lines:[
-        { who:'npc', text:'Vapen? <em>Tittar knappt upp.</em> Registrerade. Välkomna till Väsby. Ställ inte till bråk, så ställer inte jag till med er.' },
-        { who:'player', text:'Vad är det för ort egentligen?' },
-        { who:'npc', text:'En ort där folk försvinner och ingen frågar varför. <em>Sänker rösten.</em> Håll er borta från kvarnen. Det är ett vänligt råd, och det är gratis.' },
-      ]},
-    ],
-  },
-  {
-    id:'damen', name:'Den Gröna Damen', icon:'👻', color:'#d43a4d', glow:'rgba(212,58,77,.45)',
-    role:'Vålnad i kvarnen', race:'Odöd (vålnad)',
-    relation:'fiende', trust:0, alive:false,
-    met:{ location:'Kvarnens källare', when:'Session 4 · Dag 13', how:'Visade sig när kristallen pulserade som starkast. Morvaine bad oss fly — första gången vi sett honom rädd på riktigt.' },
-    merchant:null,
-    quests:[
-      { name:'Den gröna kedjan', status:'aktiv', desc:'Morvaine tror att något binder henne till kvarnen — något hon bar i livet. Hitta det. Och bestäm sedan om det ska förstöras, eller om hon ska få veta var det är.', reward:'Okänt. Morvaine säger: "Ett val."' },
-    ],
-    notes:['Anfaller inte om man inte rör kristallen. Väntar, snarare.', 'Viskar namn. Mest Thalindras. Ibland namn ingen av oss känner.', 'Morvaine kallade henne "den första". Den första vad?'],
-    conversations:[
-      { when:'Session 4 · Dag 13', location:'Kvarnens källare', lines:[
-        { who:'npc', text:'<em>Rösten kommer från överallt och ingenstans, som vatten som rinner uppåt.</em> Du bär elden. Jag bar vattnet. Vi bar båda fel börda, du och jag.' },
-        { who:'player', text:'Vad vill du?' },
-        { who:'npc', text:'<em>Det gröna ljuset stannar. Helt.</em> Att du ska minnas mig. Det är allt som finns kvar av att vilja.' },
-      ]},
-    ],
-  },
-];
+let NPCS = [];      // gestalter från backend
+let QUESTS = [];    // uppdrag från backend
+let CAMPAIGN = null;
 
 const REL_LABEL = { allierad:'Allierad', neutral:'Neutral', fiende:'Fiende', 'okänd':'Okänd' };
+const REL_KEYS  = ['allierad', 'neutral', 'fiende', 'okänd'];
+
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 function trustTier(t){
   if(t<20) return {label:'Fientlig', color:'var(--blood-bright)'};
@@ -367,21 +250,100 @@ function trustTier(t){
   return {label:'Lojal', color:'var(--gold-bright)'};
 }
 
+function hexToGlow(hex){
+  const h = String(hex||'').replace('#','');
+  if (h.length !== 6) return 'rgba(201,162,39,.45)';
+  const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16);
+  return `rgba(${r},${g},${b},.45)`;
+}
+
+function hasActiveQuest(n){
+  const name = (n.name || '').toLowerCase();
+  return name && QUESTS.some(q => q.status === 'aktiv' && (q.name || '').toLowerCase().includes(name));
+}
+function relatedQuests(n){
+  const name = (n.name || '').toLowerCase();
+  if (!name) return [];
+  return QUESTS.filter(q =>
+    (q.name || '').toLowerCase().includes(name) ||
+    (q.description || '').toLowerCase().includes(name));
+}
+
+// ═══════════════════════════════════════
+// INIT — hämta kampanjens tillstånd
+// ═══════════════════════════════════════
+(async function init(){
+  try {
+    const { campaign } = await API.getCampaign();
+    if (!campaign) { showNoCampaign(); return; }
+    CAMPAIGN = campaign;
+    const raw = campaign._raw || {};
+    NPCS = (Array.isArray(raw.npcs) ? raw.npcs : []).map(n => ({
+      name: n.name || 'Namnlös',
+      role: n.role || 'Okänd roll',
+      race: n.race || '',
+      relation: REL_KEYS.includes(n.relation) ? n.relation : 'okänd',
+      trust: typeof n.trust === 'number' ? n.trust : null,
+      alive: n.alive !== false,
+      color: n.color || '#c9a227',
+      glow: n.glow || hexToGlow(n.color || '#c9a227'),
+      icon: n.icon || '🎭',
+      notes: n.notes || '',
+    }));
+    QUESTS = Array.isArray(raw.quests) ? raw.quests : [];
+    buildFilters();
+    renderList();
+    if (NPCS.length) selectNpc(0);
+    else showEmptyHall();
+  } catch (e) {
+    showNoCampaign('Minneskodexen kunde inte laddas — kontrollera anslutningen och försök igen.');
+  }
+})();
+
+function showNoCampaign(msg){
+  document.getElementById('npc-list').innerHTML = '';
+  document.getElementById('hall-count').textContent = '';
+  document.getElementById('filters').innerHTML = '';
+  document.getElementById('dossier').innerHTML = `
+    <div class="empty">
+      <div class="rune">🗺️</div>
+      <p>Ingen aktiv kampanj — skapa ett äventyr först</p>
+      <a class="talk-btn" href="adventure.html">✦ Skapa äventyr</a>
+    </div>`;
+  if (msg) toast('⚠ ' + msg);
+}
+
+function showEmptyHall(){
+  document.getElementById('npc-list').innerHTML = `
+    <div style="text-align:center;color:var(--bone-dim);font-style:italic;padding:2.5rem 1rem;font-size:.88rem;line-height:1.8">
+      🕯️<br>Du har inte mött några gestalter ännu.<br>De väntar i mörkret…
+    </div>`;
+  document.getElementById('hall-count').textContent = '0 gestalter';
+  document.getElementById('dossier').innerHTML = `
+    <div class="empty">
+      <div class="rune">🕯️</div>
+      <p>Du har inte mött några gestalter ännu. De väntar i mörkret…</p>
+      <a class="talk-btn" href="chat.html">⚔ Till bordet</a>
+    </div>`;
+}
+
 // ═══════════════════════════════════════
 // FILTER + LISTA
 // ═══════════════════════════════════════
 const FILTERS = [
   { id:'alla', label:'Alla', test:()=>true },
   { id:'allierade', label:'Allierade', test:n=>n.relation==='allierad' },
-  { id:'handlare', label:'Handlare', test:n=>!!n.merchant },
-  { id:'uppdrag', label:'Uppdrag', test:n=>n.quests.some(q=>q.status==='aktiv') },
+  { id:'uppdrag', label:'Uppdrag', test:n=>hasActiveQuest(n) },
   { id:'fiender', label:'Fiender', test:n=>n.relation==='fiende' },
+  { id:'fallna', label:'Fallna', test:n=>!n.alive },
 ];
 let activeFilter = 'alla';
 let selectedId = null;
 
-document.getElementById('filters').innerHTML = FILTERS.map(f =>
-  `<button class="fchip ${f.id==='alla'?'on':''}" data-f="${f.id}" onclick="setFilter('${f.id}')">${f.label}</button>`).join('');
+function buildFilters(){
+  document.getElementById('filters').innerHTML = FILTERS.map(f =>
+    `<button class="fchip ${f.id==='alla'?'on':''}" data-f="${f.id}" onclick="setFilter('${f.id}')">${f.label}</button>`).join('');
+}
 
 function setFilter(id){
   activeFilter = id;
@@ -390,158 +352,116 @@ function setFilter(id){
 }
 
 function renderList(){
-  const f = FILTERS.find(x=>x.id===activeFilter);
-  const list = NPCS.filter(f.test);
-  document.getElementById('npc-list').innerHTML = list.map(n => `
-    <div class="ncard ${selectedId===n.id?'sel':''}" style="--nc:${n.color};--ng:${n.glow}" onclick="selectNpc('${n.id}')">
+  const f = FILTERS.find(x=>x.id===activeFilter) || FILTERS[0];
+  document.getElementById('npc-list').innerHTML = NPCS.map((n, i) => {
+    if (!f.test(n)) return '';
+    return `
+    <div class="ncard ${selectedId===i?'sel':''}" style="--nc:${n.color};--ng:${n.glow}" onclick="selectNpc(${i})">
       <div class="sigil">${n.icon}</div>
       <div style="min-width:0">
-        <div class="nm">${n.name}</div>
-        <div class="rl">${n.role}</div>
+        <div class="nm">${esc(n.name)}</div>
+        <div class="rl">${esc(n.role)}</div>
         <div class="badges">
           <span class="badge b-rel-${n.relation}">${REL_LABEL[n.relation]}</span>
-          ${n.merchant?'<span class="badge b-shop">🪙 Handlare</span>':''}
-          ${n.quests.some(q=>q.status==='aktiv')?'<span class="badge b-quest">⚑ Uppdrag</span>':''}
-          ${!n.alive?'<span class="badge b-dead">💀 Odöd</span>':''}
+          ${hasActiveQuest(n)?'<span class="badge b-quest">⚑ Uppdrag</span>':''}
+          ${!n.alive?'<span class="badge b-dead">💀 Fallen</span>':''}
         </div>
-        <div class="seen">Senast sedd: ${n.met.location} · ${n.met.when}</div>
       </div>
-    </div>`).join('') || '<div style="text-align:center;color:var(--bone-dim);font-style:italic;padding:2rem 0;font-size:.85rem">Inga gestalter matchar…</div>';
-  document.getElementById('hall-count').textContent = `${list.length} av ${NPCS.length} gestalter`;
+    </div>`;
+  }).join('') || '<div style="text-align:center;color:var(--bone-dim);font-style:italic;padding:2rem 0;font-size:.85rem">Inga gestalter matchar…</div>';
+  document.getElementById('hall-count').textContent = `${NPCS.filter(f.test).length} av ${NPCS.length} gestalter`;
 }
 
 // ═══════════════════════════════════════
 // DOSSIER
 // ═══════════════════════════════════════
-function selectNpc(id){
-  selectedId = id;
+function selectNpc(i){
+  selectedId = i;
   renderList();
-  renderDossier(NPCS.find(n=>n.id===id));
+  renderDossier(NPCS[i]);
 }
 
 function renderDossier(n){
-  const tier = trustTier(n.trust);
   const d = document.getElementById('dossier');
-  const sec = (i, label, body) => `
-    <div class="d-sec" style="animation-delay:${.08*i}s">
+  const sec = (idx, label, body) => `
+    <div class="d-sec" style="animation-delay:${.08*idx}s">
       <div class="d-label">${label}</div>${body}
+    </div>`;
+  const box = inner => `
+    <div class="panel-box">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      ${inner}
     </div>`;
 
   let html = `
     <div class="d-head" style="--dc:${n.color};--dg:${n.glow}">
       <div class="d-portrait">${n.icon}</div>
       <div>
-        <div class="d-name">${n.name}</div>
-        <div class="d-role" style="color:${n.color}">${n.role}</div>
+        <div class="d-name">${esc(n.name)}</div>
+        <div class="d-role" style="color:${n.color}">${esc(n.role)}</div>
         <div class="d-chips">
           <span class="badge b-rel-${n.relation}">${REL_LABEL[n.relation]}</span>
-          <span class="badge b-rel-neutral">${n.race}</span>
-          ${n.alive ? '<span class="badge b-rel-allierad">Levande</span>' : '<span class="badge b-dead">Odöd</span>'}
-          ${n.merchant?'<span class="badge b-shop">🪙 Handlare</span>':''}
+          ${n.race ? `<span class="badge b-rel-neutral">${esc(n.race)}</span>` : ''}
+          ${n.alive ? '<span class="badge b-rel-allierad">Levande</span>' : '<span class="badge b-dead">💀 Fallen</span>'}
         </div>
       </div>
     </div>`;
 
-  // Mötet
-  html += sec(1, '📍 Första mötet', `
-    <div class="panel-box" style="--dc:${n.color}">
-      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
-      <div class="met-loc">${n.met.location}</div>
-      <div class="met-when">${n.met.when}</div>
-      <div class="met-how">${n.met.how}</div>
-    </div>`);
+  let s = 1;
 
-  // Förtroende
-  html += sec(2, '🤝 Förtroende', `
-    <div class="trust-row">
-      <div class="trust-bar"><div class="trust-fill" id="tf" style="background:${tier.color};color:${tier.color}"></div></div>
-      <div class="trust-label" style="color:${tier.color}">${tier.label} · ${n.trust}/100</div>
-    </div>`);
-
-  // Uppdrag
-  if(n.quests.length){
-    html += sec(3, '⚑ Uppdrag', n.quests.map(q => `
-      <div class="quest">
-        <div class="q-head">
-          <span class="q-name">${q.name}</span>
-          <span class="q-status qs-${q.status}">${q.status}</span>
-        </div>
-        <div class="q-desc">${q.desc}</div>
-        <div class="q-reward"><b>Belöning:</b> ${q.reward}</div>
-      </div>`).join(''));
-  }
-
-  // Handel
-  if(n.merchant){
-    html += sec(4, '🪙 Säljer', `
-      <div class="panel-box">
-        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
-        <table class="shop-table">
-          <thead><tr><th>Vara</th><th style="text-align:center">Lager</th><th>Pris</th><th></th></tr></thead>
-          <tbody>${n.merchant.items.map((it,i) => `
-            <tr>
-              <td class="i-name ${it.rarity}">${it.rarity==='rare'?'✦ ':''}${it.name}</td>
-              <td class="i-stock" id="stock-${n.id}-${i}">${it.stock>50?'∞':it.stock}</td>
-              <td class="i-price">${it.price} gp</td>
-              <td style="text-align:right"><button class="buy-btn" id="buy-${n.id}-${i}" onclick="buyItem('${n.id}',${i})">Köp</button></td>
-            </tr>`).join('')}
-          </tbody>
-        </table>
-        <div class="purse">Din börs: <b id="purse">${purse} gp</b></div>
+  // Förtroende (om backend har det)
+  if (typeof n.trust === 'number') {
+    const tier = trustTier(n.trust);
+    html += sec(s++, '🤝 Förtroende', `
+      <div class="trust-row">
+        <div class="trust-bar"><div class="trust-fill" id="tf" style="background:${tier.color};color:${tier.color}"></div></div>
+        <div class="trust-label" style="color:${tier.color}">${tier.label} · ${n.trust}/100</div>
       </div>`);
   }
 
-  // Anteckningar
-  html += sec(n.merchant?5:4, '🕯️ Det du vet', `
-    <ul class="notes-list" style="--dc:${n.color};--dg:${n.glow}">
-      ${n.notes.map(x=>`<li>${x}</li>`).join('')}
-    </ul>`);
+  // Det du vet — anteckningar
+  const notes = n.notes
+    ? (Array.isArray(n.notes) ? n.notes : String(n.notes).split('\n').filter(x=>x.trim()))
+    : [];
+  html += sec(s++, '🕯️ Det du vet', notes.length
+    ? `<ul class="notes-list" style="--dc:${n.color};--dg:${n.glow}">${notes.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`
+    : box(`<p style="font-style:italic;color:var(--bone-dim);font-size:.88rem">Inget nedtecknat ännu. Anteckningar sparas automatiskt från chatten.</p>`));
 
-  // Samtal
-  html += sec(n.merchant?6:5, '💬 Samtal', n.conversations.map(c => `
-    <div class="conv" style="--dc:${n.color}">
-      <div class="conv-head"><b>${c.when}</b> · ${c.location}</div>
-      ${c.lines.map((l,i) => l.who==='npc' ? `
-        <div class="line npc" style="animation-delay:${i*.12}s">
-          <div class="who" style="color:${n.color}"><span class="dot" style="color:${n.color};background:${n.color}"></span>${n.icon} ${n.name}</div>
-          <div class="text">${l.text}</div>
-        </div>` : `
-        <div class="line player" style="animation-delay:${i*.12}s">
-          <div class="who">🧙‍♀️ Thalindra</div>
-          <div class="text">${l.text}</div>
-        </div>`).join('')}
-    </div>`).join(''));
+  // Relaterade uppdrag
+  const quests = relatedQuests(n);
+  if (quests.length) {
+    html += sec(s++, '⚑ Uppdrag', quests.map(q => `
+      <div class="quest">
+        <div class="q-head">
+          <span class="q-name">${esc(q.name)}</span>
+          <span class="q-status qs-${q.status}">${esc(q.status)}</span>
+        </div>
+        <div class="q-desc">${esc(q.description)}</div>
+        ${q.reward ? `<div class="q-reward"><b>Belöning:</b> ${esc(q.reward)}</div>` : ''}
+      </div>`).join(''));
+  }
+
+  // Handel — backend stöder det inte ännu
+  html += sec(s++, '🪙 Handel',
+    box(`<p style="font-style:italic;color:var(--bone-dim);font-size:.88rem">Handel kommer i en framtida version.</p>`));
+
+  // Samtal — sparas automatiskt från chatten
+  html += sec(s++, '💬 Samtal',
+    box(`<p style="font-style:italic;color:var(--bone-dim);font-size:.88rem">Samtal sparas automatiskt från chatten.</p>`));
 
   html += `<div class="d-sec" style="animation-delay:.5s">
-    <a class="talk-btn" href="chat.html">💬 Tala med ${n.name.split(' ')[0]} vid bordet</a>
+    <a class="talk-btn" href="chat.html">💬 Tala med ${esc(n.name.split(' ')[0])} vid bordet</a>
   </div>`;
 
   d.innerHTML = html;
   d.scrollTop = 0;
   // Animera förtroendebaren
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    const tf = document.getElementById('tf');
-    if(tf) tf.style.width = n.trust + '%';
-  }));
-}
-
-// ═══════════════════════════════════════
-// HANDEL
-// ═══════════════════════════════════════
-function buyItem(npcId, idx){
-  const n = NPCS.find(x=>x.id===npcId);
-  const it = n.merchant.items[idx];
-  if(it.stock<=0){ toast('⚠ Slut i lager'); return; }
-  if(purse < it.price){ toast('⚠ Inte nog med guld i börsen'); return; }
-  purse -= it.price;
-  it.stock--;
-  SFX.coin();
-  document.getElementById('purse').textContent = purse + ' gp';
-  const stockEl = document.getElementById(`stock-${npcId}-${idx}`);
-  stockEl.textContent = it.stock>50 ? '∞' : it.stock;
-  if(it.stock<=0) document.getElementById(`buy-${npcId}-${idx}`).disabled = true;
-  toast(`🪙 Köpte ${it.name} för ${it.price} gp`);
-  // I produktion: POST /api/campaign/{id}/buy → uppdaterar state.json (currency + inventory)
+  if (typeof n.trust === 'number') {
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      const tf = document.getElementById('tf');
+      if (tf) tf.style.width = n.trust + '%';
+    }));
+  }
 }
 
 // ═══════════════════════════════════════
@@ -564,8 +484,6 @@ function spawn(init){return{x:Math.random()*W,y:init?Math.random()*H:H+10,r:.7+M
 for(let i=0;i<34;i++)embers.push(spawn(true));
 function tick(){ctx.clearRect(0,0,W,H);for(let i=0;i<embers.length;i++){const e=embers[i];e.life++;e.y-=e.vy;e.x+=e.vx+Math.sin(e.life*.02)*.12;const fade=Math.min(1,e.life/60)*Math.max(0,1-e.life/e.max);const fl=.5+Math.sin(e.life*.15+i)*.35;ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fillStyle=`hsla(${e.hue},90%,60%,${.4*fade*fl})`;ctx.shadowColor=`hsla(${e.hue},90%,55%,${.6*fade})`;ctx.shadowBlur=6;ctx.fill();if(e.life>e.max||e.y<-12)embers[i]=spawn(false);}requestAnimationFrame(tick);}
 tick();
-
-renderList();
 </script>
 </body>
 </html>

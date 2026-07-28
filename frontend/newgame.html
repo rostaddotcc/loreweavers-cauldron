@@ -473,14 +473,17 @@ function blankScroll() {
 document.getElementById('prompt').value = FREE_PROMPT;
 
 // ═══════════════════════════════════════
-// SUMMON — simulerar Qwen-generering
+// SUMMON — riktig karaktärsgenerering via backend
 // ═══════════════════════════════════════
 let summoning = false;
-function summon() {
+let lastPrompt = '';
+
+async function summon() {
   if (summoning) return;
   const prompt = document.getElementById('prompt').value.trim();
   if (!prompt) { toast('⚠ Skriv en beskrivning först'); return; }
   summoning = true;
+  lastPrompt = prompt;
   document.getElementById('summon').disabled = true;
   document.getElementById('preview').classList.remove('show');
 
@@ -488,36 +491,63 @@ function summon() {
   weaving.classList.add('show');
   weaving.scrollIntoView({ behavior:'smooth', block:'center' });
 
-  // Tärningarna "rullar"
+  // Tärningarna "rullar" medan Qwen väver
   const dice = document.querySelectorAll('.die');
   const iv = setInterval(() => {
     dice.forEach(d => d.textContent = 1 + Math.floor(Math.random()*20));
   }, 90);
 
-  // I produktion: POST /api/character/generate { prompt, model } → Qwen → JSON
-  setTimeout(() => {
+  try {
+    // Se till att kampanj finns (ett spel per användare)
+    const { campaign } = await API.getCampaign();
+    if (!campaign) {
+      await API.createCampaign(sessionStorage.getItem('dnd_adventure_mode') || 'freestyle');
+    }
+
+    // Generera karaktären via backend → Qwen
+    const res = await API.generateCharacter(prompt, 'qwen3.8-max');
+    const c = res.character || {};
+
     clearInterval(iv);
-    // Välj karaktär: arketypens förbyggda, annars slumpa en
-    const char = selectedKey ? ARCHETYPES[selectedKey].char : randomFreeChar();
+    weaving.classList.remove('show');
+
+    // Normalisera backend-data → preview-format
+    const abilities = c.abilities || {};
+    const stats = {};
+    for (const k of ['STR','DEX','CON','INT','WIS','CHA']) {
+      stats[k] = (abilities[k] && abilities[k].score) || 10;
+    }
+    const char = {
+      name: c.name || 'Namnlös',
+      cls: [c.race, c.class].filter(Boolean).join(' · ') + (c.level ? ' · Nivå ' + c.level : ''),
+      icon: '🎭',
+      stats,
+      hp: (c.hp && c.hp.max) || 10,
+      ac: c.ac || 10,
+      init: c.initiative || 0,
+      prof: c.proficiency || 2,
+      traits: Array.isArray(c.traits) ? c.traits.map(t => typeof t === 'string' ? t : t.name) : [],
+      gear: c.background || 'En ensam vandrare med okänt förflutet.',
+      story: c.background || 'Denna karaktärs historia är ännu oskriven. Mörkret väntar på att forma den.',
+    };
+
     const ac = selectedKey ? ARCHETYPES[selectedKey].color : '#8b5fd4';
     const glow = selectedKey ? ARCHETYPES[selectedKey].glow : 'rgba(139,95,212,.35)';
     renderPreview(char, ac, glow);
-    weaving.classList.remove('show');
-    document.getElementById('summon').disabled = false;
-    summoning = false;
+
     document.getElementById('preview').classList.add('show');
     document.getElementById('preview').scrollIntoView({ behavior:'smooth', block:'start' });
+    SFX.levelup();
     toast('🔮 Karaktären är vävd!');
-  }, 2400);
-}
-
-function randomFreeChar() {
-  // Fallback för fri prompt — i produktion kommer detta från Qwen
-  return { name:'Vandraren', cls:'Människa · Äventyrare · Nivå 5', icon:'🌑',
-    stats:{STR:13,DEX:14,CON:13,INT:12,WIS:13,CHA:12}, hp:38, ac:14, init:2, prof:3,
-    traits:['Mångsidig','Överlevnadsinstinkt','Skarp blick'],
-    gear:'<b>Kortsvärd</b> · Läderbrynja · 2× Hälsodryck · Rep · Ransoner · Ficklampa',
-    story:'Vissa säger att Vandraren kom från ingenstans. Andra att de kom från någonstans alltför specifikt. Själv säger de ingenting — men deras ögon har sett saker som får elden att tveka.' };
+  } catch (e) {
+    clearInterval(iv);
+    weaving.classList.remove('show');
+    SFX.error();
+    toast('⚠ Kunde inte väva karaktären: ' + (e.message || 'okänt fel'));
+  } finally {
+    document.getElementById('summon').disabled = false;
+    summoning = false;
+  }
 }
 
 function renderPreview(c, ac, glow) {
@@ -544,8 +574,8 @@ function renderPreview(c, ac, glow) {
 }
 
 function enterGame() {
-  // I produktion: spara karaktären till campaign state via backend
-  sessionStorage.setItem('dnd_character', document.getElementById('pv-name').textContent);
+  // Karaktären är redan sparad i backend via generateCharacter
+  SFX.click();
   location.href = 'chat.html';
 }
 

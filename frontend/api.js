@@ -11,9 +11,14 @@ const API = (() => {
   // ── Fetch-wrapper med felhantering ──
   async function req(path, opts = {}) {
     try {
+      // FormData (filuppladdning) sätter sin egen Content-Type med boundary
+      const isForm = typeof FormData !== 'undefined' && opts.body instanceof FormData;
+      const headers = isForm
+        ? { ...opts.headers }
+        : { 'Content-Type': 'application/json', ...opts.headers };
       const res = await fetch(BASE + path, {
         credentials: 'include',
-        headers: { 'Content-Type': 'application/json', ...opts.headers },
+        headers,
         ...opts,
       });
       if (res.status === 401) {
@@ -118,6 +123,8 @@ const API = (() => {
         day: s.world?.time || '—',
         location: s.world?.current_location || 'Okänd',
         turn_count: s.meta?.turn_count || 0,
+        opening_key: s.opening_key || s.meta?.opening_key || 'default',
+        world: s.world || {},
         _raw: s,
       };
     },
@@ -144,6 +151,67 @@ const API = (() => {
         return { ok: true };
       }
       return req('/api/campaign', { method: 'DELETE' });
+    },
+
+    // ── Karaktärsuppdatering (HP, inventory m.m.) ──
+    async updateCharacter(data) {
+      if (MOCK) {
+        const c = mock._load();
+        if (c) {
+          c.character = { ...c.character, ...data };
+          mock._save();
+        }
+        return { ok: true };
+      }
+      return req('/api/campaign/character', { method: 'PATCH', body: JSON.stringify(data) });
+    },
+
+    // ── Transkript (senaste meddelandena) ──
+    async getTranscript() {
+      if (MOCK) {
+        return { messages: [] };
+      }
+      return req('/api/campaign/transcript');
+    },
+
+    // ── Världsbygge (prompt → strukturerad världdata) ──
+    async buildWorld(prompt, modelId = 'qwen3.8-max') {
+      if (MOCK) {
+        await new Promise(r => setTimeout(r, 1800));
+        return {
+          ok: true,
+          merged: { locations: 3, npcs: 4, lore: 6 },
+          locations: [
+            { name: 'Askans Dal', description: 'En dal där askan aldrig slutar falla' },
+            { name: 'Den Övergivna Kvarnen', description: 'Ett ruttnande landmärke med grönt sken' },
+            { name: 'Värdshuset Sista Ljuset', description: 'Det enda stället med levande eld' },
+          ],
+          npcs: [
+            { name: 'Morvaine', role: 'Den gåtfulla trollkarlen' },
+            { name: 'Kael Asksvärd', role: 'Legosoldat' },
+            { name: 'Lyra Vindviska', role: 'Skogsalv, jägare' },
+            { name: 'Borg Stenhand', role: 'Värdshusvärd' },
+          ],
+          lore: ['Askfallet började för hundra år sedan', 'Något viskar namn i mörkret'],
+        };
+      }
+      return req('/api/world/build', { method: 'POST', body: JSON.stringify({ prompt, model_id: modelId }) });
+    },
+
+    // ── Filimport (multipart FormData → extraherad kampanjdata) ──
+    async importFile(file, modelId = 'qwen3.8-max') {
+      if (MOCK) {
+        await new Promise(r => setTimeout(r, 1200 + Math.random() * 800));
+        return {
+          ok: true,
+          filename: file.name,
+          merged: { characters: 1, npcs: 3, locations: 2, lore: 4, items: 2 },
+        };
+      }
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('model_id', modelId);
+      return req('/api/import', { method: 'POST', body: fd });
     },
 
     // ── Chat ──

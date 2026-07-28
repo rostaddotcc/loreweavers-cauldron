@@ -1,494 +1,511 @@
 /* ═══════════════════════════════════════════════════
-   🎮 MÖRKRETS RIKE — 16-BIT ELDEN RING THEME (v2)
-   SNES / Super Famicom · Dark Souls · "lite äldre"
+   🦇 ETT SVENSKT D&D-ÄVENTYR — TERMINAL GOTHIC v3
+   Castlevania × DOS × Linux terminal
    Länkas EFTER inline-stilar så att detta vinner.
    ═══════════════════════════════════════════════════ */
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap');
 
-/* ── 0. GLOBAL RESET: SNES är kantigt ── */
+/* ── PALETT ── */
+:root {
+  --ink: #08080d;
+  --stone: #0e0e14;
+  --stone-2: #12121a;
+  --stone-3: #181822;
+  --edge: #2a2a3a;
+  --edge-hi: #3a3a50;
+  --bone: #b8b8c8;
+  --bone-bright: #e0e0ec;
+  --bone-dim: #6a6a80;
+  --gold: #c9a227;
+  --gold-bright: #e8c65a;
+  --blood: #8b1a2a;
+  --blood-bright: #d43a4d;
+  --ember: #d4691e;
+  --arcane: #7b4fd4;
+  --poison: #5a9a4e;
+  --teal: #4e8a93;
+  --term-green: #33cc33;
+  --term-amber: #ccaa33;
+}
+
+/* ── 0. GLOBAL RESET ── */
 *, *::before, *::after {
   border-radius: 0 !important;
+  box-sizing: border-box;
 }
+canvas, img { image-rendering: pixelated; }
 
-/* Pixel-rendering överallt */
-canvas, img, .sigil, .portrait-frame, .pv-portrait, .d-portrait,
-.pc-avatar, .ncard .sigil, .coin-disc, .cp-icon, .vc-icon, .pv-icon,
-.arch .icon, .path .icon {
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
+/* ── 1. TYPOGRAFI — allt monospace/pixel ── */
+body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, label {
+  font-family: 'Silkscreen', 'Press Start 2P', 'Courier New', monospace !important;
+  letter-spacing: 0.02em !important;
 }
-
-/* ── 1. TYPOGRAFI ──
-   Press Start 2P → stora titlar (iconic 8/16-bit)
-   Silkscreen     → UI-labels, knappar, badges
-   Spectral       → brödtext (läsbar, behålls)        */
-h1, h2, h3, .gate-title, .destiny-title h1, .masthead h1,
+h1, .gate-title, .destiny-title h1, .masthead h1, .head h1,
 .forge-head .brand, .topbar .brand, .char-name, .pv-name, .d-name,
-.head h1, .cp-name, .hall-title, .panel-title, .section-label {
-  font-family: 'Press Start 2P', 'Silkscreen', monospace !important;
-  letter-spacing: 0 !important;
-  line-height: 1.5 !important;
+.cp-name, .hall-title {
+  font-family: 'Press Start 2P', monospace !important;
+  line-height: 1.6 !important;
+  text-shadow: 2px 2px 0 #000 !important;
+  animation: none !important;
+}
+/* Brödtext i chatten — Silkscreen för läsbarhet */
+.msg .text, .pv-story, .pv-gear, .oracle-msg.a {
+  font-family: 'Silkscreen', monospace !important;
+  font-style: normal !important;
+  font-size: .82rem !important;
+  line-height: 1.8 !important;
+}
+/* Input — monospace, inte kursiv */
+input, textarea, select {
+  font-style: normal !important;
+}
+input::placeholder, textarea::placeholder {
+  font-style: normal !important;
+  color: var(--bone-dim) !important;
+  opacity: .7;
 }
 
-.tab, .top-btn, .badge, .section-title, .d-label,
-.fchip, .tag, .coin-btn, .mini-btn, .rune-btn, .go-btn, .summon-btn,
-.pv-go, .pv-reroll, .buy-btn, .rr-btn, .gate-btn, .modal-btn,
-.dice-label, .die-btn .d-type, .hall-foot, .blank-btn, .danger-btn,
-.pv-stat .a, .ep-label, .cp-stat, .path .tag, .scroll-hint, .hint,
-.gate-footer, .field label, .side-label, .model-select select,
-.vc-name, .vc-sub, .vc-go, .npc-role, .pc-sub, .q-status,
-.trust-label, .ep-label, .slots-hint, .input-hint, .oracle-msg,
-.rr-label, .art-label, .notes-list, .met-when, .conv-head b,
-.char-meta .stat i, .pv-vitals, .destiny-sub, .gate-sub, .head .sub,
-.head .over, .destiny-title .over, .cp-sub, .cp-rule, .dz-text,
-.dz-formats, .fi-name, .fi-size, .path p, .arch .lore {
-  font-family: 'Silkscreen', 'Press Start 2P', monospace !important;
-  letter-spacing: 0 !important;
+/* ── 2. BAKGRUND — platt, ingen gradient-glans ── */
+body {
+  background: var(--ink) !important;
+}
+/* Ta bort alla radial-gradient bakgrunder */
+body[style], .app, .gate, .layout {
+  background-image: none !important;
 }
 
-/* Brödtext / narration — Spectral kvar för läsbarhet */
-.msg .text, .pv-story, .pv-gear, #prompt, .world-prompt,
-.input-row textarea, .oracle-msg.a {
-  font-family: 'Spectral', Georgia, serif !important;
+/* ── 3. SCANLINES + CRT ── */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: 999; pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0,0,0,.18) 0px,
+    rgba(0,0,0,.18) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+body::after {
+  content: ''; position: fixed; inset: 0; z-index: 998; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,.5) 100%);
 }
 
-/* ── 2. PIXEL-SKUGGOR (hårda, offset — ingen blur) ── */
+/* ── 4. PANELER — terminal-fönster ── */
 .panel, .panel-box, .scroll-box, .gate-frame, .hoard, .modal-box,
-.continue-panel, .path, .arch {
-  box-shadow: 6px 6px 0 rgba(0,0,0,.85) !important;
-  border: 3px solid var(--edge) !important;
+.continue-panel, .path, .arch, .oracle, .roll-request {
+  background: var(--stone) !important;
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+  position: relative;
 }
-/* Dubbelram — yttre + inre (SNES-fönster) */
+/* Dubbelram via ::before — terminal-style */
 .panel::before, .panel-box::before, .scroll-box::before,
 .gate-frame::before, .modal-box::before, .continue-panel::before {
   content: '';
   position: absolute;
-  inset: 4px;
-  border: 2px solid rgba(201,162,39,.22);
+  inset: 3px;
+  border: 1px solid var(--edge);
   pointer-events: none;
   z-index: 1;
+  opacity: .5;
 }
+/* Hörn-markörer (DOS box-drawing feel) */
+.corner { display: none !important; }
 
-.ncard, .coin, .pc-card, .ep-card, .quest, .vault-chip, .file-item {
-  box-shadow: 4px 4px 0 rgba(0,0,0,.8) !important;
-  border: 2px solid var(--edge) !important;
+/* ── 5. KNAPPAR — DOS-style, platta ── */
+button, .go-btn, .summon-btn, .pv-go, .gate-btn, .rr-btn,
+.modal-btn, .rune-btn, .send-btn, .top-btn, .back, .blank-btn,
+.pv-reroll, .danger-btn, .buy-btn, .mini-btn, .coin-btn, .fchip {
+  background: var(--stone-3) !important;
+  border: 1px solid var(--edge) !important;
+  color: var(--bone) !important;
+  box-shadow: none !important;
+  transition: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+  position: relative;
 }
-.arch:hover, .path:hover, .ncard:hover, .ncard.sel, .pc-card:hover,
-.vault-chip:hover {
-  box-shadow: 6px 6px 0 rgba(0,0,0,.9) !important;
-}
+button::after, .go-btn::after, .summon-btn::after, .pv-go::after,
+.gate-btn::after { display: none !important; }
 
-/* ── 3. KNAPPAR — SNES press-effekt ── */
-.rune-btn, .go-btn, .summon-btn, .pv-go, .gate-btn, .rr-btn,
-.modal-btn.confirm, .danger-btn, .cp-actions .go-btn {
-  box-shadow: 4px 4px 0 rgba(0,0,0,.8) !important;
-  border: 2px solid #6e5510 !important;
-  transition: none !important; /* SNES: instant, ingen easing */
-}
-.rune-btn:hover, .go-btn:hover, .summon-btn:hover, .pv-go:hover,
-.gate-btn:hover, .rr-btn:hover, .modal-btn.confirm:hover,
-.danger-btn:hover, .cp-actions .go-btn:hover {
-  transform: translate(-2px,-2px) !important;
-  box-shadow: 6px 6px 0 rgba(0,0,0,.9) !important;
+button:hover, .go-btn:hover, .summon-btn:hover, .pv-go:hover,
+.gate-btn:hover, .rr-btn:hover, .top-btn:hover, .send-btn:hover,
+.rune-btn:hover, .danger-btn:hover, .back:hover, .pv-reroll:hover {
+  background: var(--edge) !important;
+  border-color: var(--gold) !important;
+  color: var(--gold-bright) !important;
+  transform: none !important;
+  box-shadow: none !important;
   filter: none !important;
 }
-.rune-btn:active, .go-btn:active, .summon-btn:active, .pv-go:active,
-.gate-btn:active, .rr-btn:active, .modal-btn.confirm:active,
-.danger-btn:active, .cp-actions .go-btn:active {
-  transform: translate(2px,2px) !important;
-  box-shadow: 1px 1px 0 rgba(0,0,0,.8) !important;
+button:active, .go-btn:active, .gate-btn:active, .send-btn:active {
+  background: var(--gold) !important;
+  color: var(--ink) !important;
 }
-.modal-btn.cancel, .top-btn, .blank-btn, .fchip, .buy-btn, .mini-btn,
-.coin-btn, .back, .pv-reroll {
-  box-shadow: 3px 3px 0 rgba(0,0,0,.7) !important;
-  border: 2px solid var(--edge) !important;
-  transition: none !important;
+/* Primär-knappar (guld) */
+.go-btn, .summon-btn, .pv-go, .gate-btn, .send-btn {
+  background: var(--gold) !important;
+  border-color: var(--gold-bright) !important;
+  color: var(--ink) !important;
+  font-weight: 700 !important;
 }
-.top-btn:hover, .fchip:hover, .buy-btn:hover, .mini-btn:hover,
-.back:hover, .pv-reroll:hover {
-  transform: translate(-1px,-1px) !important;
-  box-shadow: 4px 4px 0 rgba(0,0,0,.8) !important;
+.go-btn:hover, .summon-btn:hover, .pv-go:hover, .gate-btn:hover, .send-btn:hover {
+  background: var(--gold-bright) !important;
+  color: var(--ink) !important;
 }
-
-/* Ta bort mjuka "glow"/sheen-animationer på knappar */
-.gate-btn::after, .go-btn::after, .summon-btn::after, .pv-go::after {
-  display: none !important;
+/* Farliga knappar */
+.danger-btn, .top-btn.danger {
+  border-color: var(--blood) !important;
+  color: var(--blood-bright) !important;
 }
-
-/* ── 4. DITHER + SCANLINES (SNES-textur över allt) ── */
-body::before {
-  content: ''; position: fixed; inset: 0; z-index: 3; pointer-events: none;
-  background: repeating-linear-gradient(
-    0deg,
-    rgba(0,0,0,.13) 0px,
-    rgba(0,0,0,.13) 1px,
-    transparent 1px,
-    transparent 3px
-  );
-  mix-blend-mode: multiply;
-}
-body::after {
-  content: ''; position: fixed; inset: 0; z-index: 3; pointer-events: none;
-  background-image:
-    repeating-linear-gradient(45deg, rgba(255,255,255,.012) 0 1px, transparent 1px 3px),
-    repeating-linear-gradient(-45deg, rgba(0,0,0,.05) 0 1px, transparent 1px 3px);
+.danger-btn:hover, .top-btn.danger:hover {
+  background: var(--blood) !important;
+  color: #fff !important;
 }
 
-/* ── 5. SNES DIALOGRUTOR (chatt-meddelanden) ── */
-.msg.dm, .msg.npc {
-  background: rgba(8,6,18,.92) !important;
-  border: 3px solid var(--edge) !important;
-  box-shadow:
-    inset 0 0 0 2px var(--ink),
-    inset 0 0 0 4px rgba(201,162,39,.35),
-    5px 5px 0 rgba(0,0,0,.7) !important;
-  padding: .9rem 1rem !important;
-  border-left-width: 3px !important;
+/* ── 6. CHATT — terminal-log ── */
+.msg { border: none !important; box-shadow: none !important; padding: .4rem 0 !important; }
+.msg.dm {
+  border-left: 2px solid var(--gold) !important;
+  padding-left: .8rem !important;
+  background: transparent !important;
 }
-.msg.dm { border-color: rgba(201,162,39,.6) !important; }
-.msg.npc { border-color: var(--edge) !important; }
+.msg.npc {
+  border-left: 2px solid var(--arcane) !important;
+  padding-left: .8rem !important;
+  background: transparent !important;
+}
+.msg.player {
+  text-align: right !important;
+}
 .msg.player .text {
-  background: rgba(20,12,38,.95) !important;
-  border: 3px solid rgba(139,95,212,.6) !important;
-  box-shadow:
-    inset 0 0 0 2px var(--ink),
-    5px 5px 0 rgba(0,0,0,.7) !important;
-  border-radius: 0 !important;
+  display: inline-block;
+  text-align: left;
+  background: var(--stone-2) !important;
+  border: 1px solid var(--edge) !important;
+  padding: .5rem .8rem !important;
+  box-shadow: none !important;
 }
 .msg.system .box {
-  background: rgba(8,6,18,.95) !important;
-  border: 2px dashed rgba(201,162,39,.5) !important;
-  box-shadow: 4px 4px 0 rgba(0,0,0,.6) !important;
+  background: transparent !important;
+  border: 1px dashed var(--edge) !important;
+  box-shadow: none !important;
+  color: var(--bone-dim) !important;
 }
-/* Dialogtext → pixel-font, upprätt (ingen kursiv serif) */
-.msg .text {
-  font-family: 'Silkscreen', 'Press Start 2P', monospace !important;
-  font-style: normal !important;
-  font-size: .92rem !important;
-  line-height: 1.75 !important;
-  letter-spacing: .01em !important;
+.msg.dm .who, .msg.player .who {
+  font-size: .6rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: .15em !important;
+  color: var(--bone-dim) !important;
 }
+.msg.dm .who { color: var(--gold) !important; }
 .msg.dm .text em, .msg.npc .text em {
   font-style: normal !important;
   color: var(--bone-dim) !important;
 }
-/* DM-who label → pixel */
-.msg.dm .who, .msg.player .who {
-  font-family: 'Silkscreen', monospace !important;
-  letter-spacing: .08em !important;
-}
 
-/* ── 6. SEGMENTERADE BARER (SNES HP/XP) ── */
-.bar, .trough, .trust-bar, .pc-hp, .ex-bar {
-  border: 2px solid var(--edge) !important;
-  background: #08050f !important;
-  box-shadow: inset 2px 2px 0 rgba(0,0,0,.8) !important;
-  border-radius: 0 !important;
-}
-.bar::after, .trough::after {
-  content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: repeating-linear-gradient(
-    90deg,
-    transparent 0,
-    transparent calc(10% - 2px),
-    rgba(0,0,0,.55) calc(10% - 2px),
-    rgba(0,0,0,.55) 10%
-  );
-}
-.bar, .trough { position: relative; }
-.fill, .bar-fill, .trust-fill, .ex-fill {
+/* ── 7. INPUTFÄLT — terminal prompt ── */
+.input-row textarea, #prompt, .world-prompt,
+.add-form input, .add-form select, .oracle-input input, .field input {
+  background: var(--ink) !important;
+  border: 1px solid var(--edge) !important;
   box-shadow: none !important;
-  border-radius: 0 !important;
-  background-image: repeating-linear-gradient(
-    0deg,
-    rgba(255,255,255,.16) 0 2px,
-    transparent 2px 4px
-  ) !important;
+  color: var(--term-green) !important;
+  caret-color: var(--term-green);
 }
-.fill.hp, .bar-hp .bar-fill, .pc-hp i { background-color: var(--blood-bright) !important; }
-.fill.xp, .bar-xp .bar-fill { background-color: var(--gold-bright) !important; }
-.bar-mana .bar-fill { background-color: var(--arcane) !important; }
+.input-row textarea:focus, #prompt:focus, .world-prompt:focus, .field input:focus {
+  border-color: var(--term-green) !important;
+  box-shadow: 0 0 0 1px rgba(51,204,51,.2) !important;
+}
+/* Prompt-prefix känsla */
+.input-row { position: relative; }
+.input-row::before {
+  content: '>';
+  position: absolute;
+  left: .6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--term-green);
+  font-size: .8rem;
+  z-index: 2;
+  pointer-events: none;
+}
+.input-row textarea { padding-left: 1.8rem !important; }
 
-/* ── 7. PIXEL-TÄRNINGAR ── */
+/* ── 8. SIDEBAR — terminal panel ── */
+.sidebar {
+  background: var(--stone) !important;
+  border-right: 1px solid var(--edge) !important;
+}
+.side-label {
+  color: var(--term-green) !important;
+  font-size: .55rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: .2em !important;
+}
+.side-label::before { content: '┌─ '; color: var(--edge); }
+.side-label::after { content: ' ─┐'; color: var(--edge); }
+.pc-card {
+  background: var(--stone-2) !important;
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+}
+.pc-card:hover { border-color: var(--gold) !important; transform: none !important; }
+.pc-name {
+  font-family: 'Press Start 2P', monospace !important;
+  font-size: .6rem !important;
+  color: var(--bone-bright) !important;
+}
+.pc-sub { font-style: normal !important; color: var(--bone-dim) !important; font-size: .6rem !important; }
+.pc-hp {
+  height: 6px !important;
+  background: var(--ink) !important;
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+}
+.pc-hp i {
+  background: var(--blood-bright) !important;
+  background-image: none !important;
+}
+/* NPC-rader */
+.npc-row { transition: none !important; }
+.npc-row:hover { background: var(--stone-2) !important; }
+.npc-row.dead { opacity: .4; text-decoration: line-through; }
+.npc-dot { border-radius: 0 !important; box-shadow: none !important; width: 6px !important; height: 6px !important; }
+.npc-name { font-size: .68rem !important; white-space: nowrap !important; }
+.npc-role { font-size: .55rem !important; font-style: normal !important; color: var(--bone-dim) !important; }
+/* Plats */
+#loc-name { font-size: .68rem !important; color: var(--term-amber) !important; }
+#loc-sub { font-size: .58rem !important; font-style: normal !important; color: var(--bone-dim) !important; }
+
+/* ── 9. TOPBAR — terminal header ── */
+.topbar {
+  background: var(--stone) !important;
+  border-bottom: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+}
+.topbar .brand {
+  font-size: .65rem !important;
+  color: var(--gold) !important;
+  text-shadow: none !important;
+}
+.topbar .campaign { color: var(--bone-dim) !important; font-style: normal !important; }
+.model-select {
+  background: var(--stone-2) !important;
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+}
+.model-select select { color: var(--bone-bright) !important; }
+
+/* ── 10. TÄRNINGAR ── */
+.dice-tray {
+  border-top: 1px solid var(--edge) !important;
+  background: var(--stone) !important;
+}
 .die-btn {
   clip-path: none !important;
-  border: 2px solid var(--edge) !important;
-  box-shadow: 4px 4px 0 rgba(0,0,0,.8) !important;
-  background: linear-gradient(160deg, var(--stone-3), var(--stone)) !important;
+  background: var(--stone-2) !important;
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
   transition: none !important;
 }
 .die-btn:hover {
-  transform: translate(-2px,-2px) !important;
-  box-shadow: 6px 6px 0 rgba(0,0,0,.9) !important;
   border-color: var(--gold) !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
-.die-btn .d-num { font-family: 'Press Start 2P', monospace !important; font-size: .62rem !important; }
-/* Vävnadstärningarna i newgame → pixel */
+.die-btn .d-num { font-family: 'Press Start 2P', monospace !important; font-size: .55rem !important; }
 .die {
   clip-path: none !important;
-  border: 2px solid var(--gold) !important;
-  box-shadow: 3px 3px 0 rgba(0,0,0,.8) !important;
+  border: 1px solid var(--gold) !important;
+  box-shadow: none !important;
   font-family: 'Press Start 2P', monospace !important;
-  font-size: .8rem !important;
+  font-size: .7rem !important;
   animation-timing-function: steps(2) !important;
 }
 
-/* ── 8. SIGILL / PORTRÄTT → PIXEL-RUTOR ── */
-.sigil, .portrait-frame, .pv-portrait, .d-portrait, .pc-avatar,
-.ncard .sigil, .cp-icon, .vc-icon, .pv-icon {
-  border-radius: 0 !important;
-  image-rendering: pixelated;
-  border-width: 3px !important;
-  box-shadow: 5px 5px 0 rgba(0,0,0,.8) !important;
+/* ── 11. BARER — segmenterade ── */
+.bar, .trough, .trust-bar, .ex-bar {
+  border: 1px solid var(--edge) !important;
+  background: var(--ink) !important;
+  box-shadow: none !important;
 }
-.sigil-ring, .sigil-ring.inner { display: none !important; } /* mjuka ringar → bort */
-.sigil { border: 3px solid var(--gold) !important; background: var(--stone-3) !important; }
-/* cp-icon breathe → stegad pixel-puls */
-.cp-icon { animation: cp-breathe-px 2s steps(2) infinite !important; }
-@keyframes cp-breathe-px {
-  0%,100% { box-shadow: 5px 5px 0 rgba(0,0,0,.8), 0 0 0 2px rgba(201,162,39,.3); }
-  50%     { box-shadow: 5px 5px 0 rgba(0,0,0,.8), 0 0 0 4px rgba(201,162,39,.55); }
+.fill, .bar-fill, .trust-fill, .ex-fill {
+  box-shadow: none !important;
+  background-image: none !important;
 }
+.fill.hp, .bar-hp .bar-fill { background-color: var(--blood-bright) !important; }
+.fill.xp, .bar-xp .bar-fill { background-color: var(--gold) !important; }
 
-/* ── 9. FÖRMÅGOR / STATS → PIXEL-RUTOR ── */
-.ability, .pv-stat {
-  clip-path: none !important;
-  border: 2px solid var(--edge) !important;
-  box-shadow: 4px 4px 0 rgba(0,0,0,.7) !important;
-}
-.ability .score, .pv-stat .s { font-family: 'Press Start 2P', monospace !important; font-size: 1.1rem !important; }
-.pv-stat .a, .ability .abbr { font-family: 'Silkscreen', monospace !important; }
-
-/* ── 10. MYNT → PIXEL-COINS ── */
-.coin-disc {
-  border-radius: 0 !important;
-  border: 2px solid rgba(0,0,0,.5) !important;
-  box-shadow: 3px 3px 0 rgba(0,0,0,.7) !important;
-  image-rendering: pixelated;
-}
-.coin-amount { font-family: 'Press Start 2P', monospace !important; font-size: 1.1rem !important; }
-
-/* ── 11. INPUTFÄLT → SNES text-box ── */
-.input-row textarea, #prompt, .world-prompt,
-.add-form input, .add-form select, .oracle-input input, .field input {
-  border: 3px solid var(--edge) !important;
-  box-shadow: inset 3px 3px 0 rgba(0,0,0,.6), 4px 4px 0 rgba(0,0,0,.6) !important;
-  background: #0a0714 !important;
-  border-radius: 0 !important;
-}
-.input-row textarea:focus, #prompt:focus, .world-prompt:focus, .field input:focus {
-  border-color: var(--gold) !important;
-  box-shadow: inset 3px 3px 0 rgba(0,0,0,.6), 4px 4px 0 rgba(0,0,0,.6), 0 0 0 2px rgba(201,162,39,.25) !important;
-}
-
-/* ── 12. FLIKAR → SNES menu-tabs med pil ── */
+/* ── 12. FLIKAR / TABS ── */
 .tab {
-  border: 2px solid var(--edge) !important;
+  border: 1px solid var(--edge) !important;
   border-bottom: none !important;
-  box-shadow: 3px -3px 0 rgba(0,0,0,.5) !important;
+  box-shadow: none !important;
   transition: none !important;
+  background: var(--stone) !important;
 }
 .tab.active {
   border-color: var(--gold) !important;
-  box-shadow: 3px -3px 0 rgba(0,0,0,.5), inset 0 3px 0 var(--gold) !important;
+  background: var(--stone-2) !important;
+  box-shadow: none !important;
 }
-.tab.active::before {
-  content: '▸ ';
-  color: var(--gold-bright);
-  animation: blink-px 1s steps(1) infinite;
-}
-@keyframes blink-px { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
+.tab.active::before { content: '> '; color: var(--gold); }
 
-/* ── 13. GULD-ORNAMENT → PIXEL-CORNERS ── */
-.corner { opacity: 1 !important; border-width: 3px !important; }
-
-/* ── 14. TOPBAR / SIDEBAR → hårdare ── */
-.topbar, .sidebar, .hall, .oracle {
-  border-color: var(--edge) !important;
-}
-.model-select { border: 2px solid var(--edge) !important; box-shadow: 3px 3px 0 rgba(0,0,0,.6) !important; }
-
-/* ── 15. SPELL SLOTS → pixel-rutor ── */
-.slot {
-  border-radius: 0 !important;
-  border: 2px solid var(--edge) !important;
-  box-shadow: 3px 3px 0 rgba(0,0,0,.6) !important;
-}
-.slot.lit {
-  box-shadow: 3px 3px 0 rgba(0,0,0,.6), 0 0 10px rgba(139,95,212,.6) !important;
-}
-
-/* ── 16. TOAST → SNES notification ── */
+/* ── 13. TOAST ── */
 .toast {
-  border: 3px solid var(--gold) !important;
-  box-shadow: 5px 5px 0 rgba(0,0,0,.8) !important;
-  font-family: 'Silkscreen', monospace !important;
-  border-radius: 0 !important;
+  background: var(--stone) !important;
+  border: 1px solid var(--gold) !important;
+  box-shadow: none !important;
+  color: var(--gold-bright) !important;
 }
 
-/* ── 17. RUBRIK-skala + pixel text-shadow ── */
-.gate-title { font-size: 1.05rem !important; text-shadow: 3px 3px 0 #000, 0 0 0 transparent !important; }
-.destiny-title h1 { font-size: 1.35rem !important; text-shadow: 3px 3px 0 #000 !important; }
-.masthead h1, .head h1 { font-size: 1.05rem !important; text-shadow: 3px 3px 0 #000 !important; }
-.topbar .brand, .forge-head .brand { font-size: .72rem !important; text-shadow: 2px 2px 0 #000 !important; }
-.char-name, .pv-name, .d-name { font-size: 1.05rem !important; text-shadow: 2px 2px 0 #000 !important; }
-.hall-title { font-size: .8rem !important; }
-.cp-name { font-size: 1.1rem !important; text-shadow: 2px 2px 0 #000 !important; }
-/* Ta bort mjuka candle/glow-animationer på titlar */
-.gate-title, .destiny-title h1, .head h1, .cp-name {
-  animation: none !important;
-}
+/* ── 14. SCROLLBARS ── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--ink); }
+::-webkit-scrollbar-thumb { background: var(--edge); border: 1px solid var(--ink); }
+::-webkit-scrollbar-thumb:hover { background: var(--edge-hi); }
+::selection { background: rgba(51,204,51,.3); color: #fff; }
 
-/* ── 18. EMBER-canvas → pixel-rendering ── */
-#embers { image-rendering: pixelated; }
-
-/* ── 19. DROPZONE → pixel-box ── */
-.dropzone {
-  border: 3px dashed var(--edge) !important;
-  box-shadow: inset 3px 3px 0 rgba(0,0,0,.4) !important;
-  border-radius: 0 !important;
-  transition: none !important;
-}
-.dropzone:hover, .dropzone.dragover {
-  border-color: var(--gold) !important;
-  box-shadow: inset 3px 3px 0 rgba(0,0,0,.4), 0 0 0 2px rgba(201,162,39,.2) !important;
-}
-
-/* ── 20. QUEST / NOTES → SNES list ── */
-.quest { border: 2px solid var(--edge) !important; box-shadow: 4px 4px 0 rgba(0,0,0,.6) !important; }
-.quest:hover { border-color: var(--ember) !important; }
-.notes-list li::before { content: '▸' !important; font-family: monospace; color: var(--gold); }
-
-/* ── 21. SCROLLBARS → pixel ── */
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: var(--ink, #0b0812); border-left: 2px solid var(--edge, #3d2f52); }
-::-webkit-scrollbar-thumb { background: var(--edge, #3d2f52); border: 2px solid var(--ink, #0b0812); }
-::-webkit-scrollbar-thumb:hover { background: var(--gold, #c9a227); }
-
-/* ── 22. SELECTION → guld ── */
-::selection { background: rgba(201,162,39,.4); color: #efe2c0; }
-
-/* ── 23. FOG / VIGNETTE → behålls men mjuka gradienter dämpas ── */
-.fog::before, .fog::after { filter: blur(60px) !important; opacity: .35 !important; }
-
-/* ── 24. VÄVNINGS-TEXT / DM-TANKAR → pixel ── */
-.w-text, #thought-text {
-  font-family: 'Silkscreen', monospace !important;
-  font-style: normal !important;
-}
-/* DM-status blinkar stegat */
-#dm-status.show .w-text, #dm-status.show #thought-text {
-  animation: blink-px 1.6s steps(1) infinite;
-}
-
-/* ── 25. ORACLE → SNES-panel ── */
-.oracle {
-  border: 3px solid var(--edge) !important;
-  box-shadow: 6px 6px 0 rgba(0,0,0,.85) !important;
-}
-.oracle-msg {
-  border-radius: 0 !important;
-}
-.oracle-msg.q {
-  border: 2px solid rgba(139,95,212,.5) !important;
-  box-shadow: 3px 3px 0 rgba(0,0,0,.6) !important;
-}
-.oracle-msg.a {
-  border: 2px solid rgba(201,162,39,.5) !important;
-  box-shadow: 3px 3px 0 rgba(0,0,0,.6) !important;
-}
-
-/* ── 26. ROLL REQUEST → SNES-knapp ── */
-.roll-request {
-  border: 2px solid var(--edge) !important;
-  box-shadow: 4px 4px 0 rgba(0,0,0,.7) !important;
-  background: rgba(8,6,18,.92) !important;
-}
-.rr-btn {
-  font-family: 'Silkscreen', monospace !important;
-}
-
-/* ── 27. ASCII-ART → pixel-ram ── */
-.ascii-art {
-  border: 2px solid rgba(201,162,39,.4) !important;
-  box-shadow: 4px 4px 0 rgba(0,0,0,.6) !important;
-  background: rgba(8,6,18,.9) !important;
-}
-.ascii-art pre {
-  font-family: 'Silkscreen', monospace !important;
-  line-height: 1.15 !important;
-}
-.art-label {
-  font-family: 'Silkscreen', monospace !important;
-}
-
-/* ── 28. NPC / SIDEBAR-rader → pixel ── */
-.npc-row { border-radius: 0 !important; transition: none !important; }
-.npc-row:hover { background: rgba(201,162,39,.08) !important; }
-.npc-row.dead { opacity: .5; }
-.npc-dot { border-radius: 0 !important; box-shadow: 2px 2px 0 rgba(0,0,0,.6) !important; }
-.npc-name { font-family: 'Silkscreen', monospace !important; font-size: .72rem !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
-.npc-role { font-family: 'Silkscreen', monospace !important; font-size: .58rem !important; font-style: normal !important; white-space: nowrap !important; }
-.pc-card { transition: none !important; }
-.pc-card:hover { transform: none !important; border-color: var(--gold) !important; }
-.pc-name { font-family: 'Press Start 2P', monospace !important; font-size: .68rem !important; line-height: 1.5 !important; }
-.pc-sub { font-style: normal !important; }
-.pc-hp { border-radius: 0 !important; height: 8px !important; border: 2px solid var(--edge) !important; background: #08050f !important; box-shadow: inset 2px 2px 0 rgba(0,0,0,.8) !important; }
-.pc-hp i { border-radius: 0 !important; background: var(--blood-bright) !important; background-image: repeating-linear-gradient(0deg, rgba(255,255,255,.16) 0 2px, transparent 2px 4px) !important; }
-/* PLATS-blocket → pixel */
-#loc-name { font-family: 'Silkscreen', monospace !important; font-size: .72rem !important; }
-#loc-sub { font-family: 'Silkscreen', monospace !important; font-size: .6rem !important; font-style: normal !important; }
-/* Input-placeholder → pixel, inte kursiv serif */
-.input-row textarea::placeholder { font-family: 'Silkscreen', monospace !important; font-style: normal !important; font-size: .78rem !important; }
-
-/* ── 29. MINDRE pixel-labels ── */
-.char-meta .stat i, .pv-vitals, .met-when, .conv-head b {
-  font-family: 'Silkscreen', monospace !important;
-}
-
-/* ── 30. LOGIN-sida specifikt ── */
-.gate-sub, .gate-footer { font-style: normal !important; }
-.gate-frame { position: relative; }
+/* ── 15. LOGIN ── */
+.gate-frame { background: var(--stone) !important; }
+.gate-title { font-size: .9rem !important; color: var(--bone-bright) !important; }
+.gate-sub, .gate-footer { font-style: normal !important; color: var(--bone-dim) !important; }
 .gate-frame.shake { animation: shake-px .3s steps(3) !important; }
 @keyframes shake-px {
   0%,100% { transform: translateX(0); }
-  33% { transform: translateX(-6px); }
-  66% { transform: translateX(6px); }
+  33% { transform: translateX(-5px); }
+  66% { transform: translateX(5px); }
 }
-.gate-frame.success { border-color: var(--gold) !important; box-shadow: 6px 6px 0 rgba(0,0,0,.85), 0 0 0 3px rgba(201,162,39,.4) !important; }
+.gate-frame.success { border-color: var(--term-green) !important; }
+.sigil { border: 1px solid var(--gold) !important; background: var(--stone-2) !important; box-shadow: none !important; }
+.sigil-ring, .sigil-ring.inner { display: none !important; }
 
-/* ── 31. VÄGSKÄLET / ARKETYPER → pixel-hover ── */
-.path, .arch { transition: none !important; }
-.path:hover, .arch:hover { transform: translate(-2px,-2px) !important; }
-.path .icon, .arch .icon { transition: none !important; filter: none !important; }
-.path:hover .icon, .arch:hover .icon { transform: none !important; }
-.path .glow, .arch .glow { display: none !important; } /* mjuka glows → bort */
-.arch.selected { box-shadow: 6px 6px 0 rgba(0,0,0,.9), 0 0 0 2px var(--ac, var(--gold)) !important; }
-
-/* ── 32. FÖRHANDSVISNING (newgame) → pixel ── */
-.pv-portrait { transform: none !important; }
-.pv-trait { border-radius: 0 !important; box-shadow: 2px 2px 0 rgba(0,0,0,.5) !important; }
-.pv-story { border-left: 3px solid var(--pv-ac, var(--gold)) !important; }
-
-/* ── 33. SEND / UTFÖR-knapp → platt pixel ── */
-.send-btn {
-  font-family: 'Silkscreen', monospace !important;
-  font-size: .72rem !important;
-  color: #1a1206 !important;
-  text-shadow: 0 1px 0 rgba(255,255,255,.3) !important;
-  border-radius: 0 !important;
-  box-shadow: 4px 4px 0 rgba(0,0,0,.8) !important;
-  border: 2px solid #6e5510 !important;
+/* ── 16. VÄGSKÄLET / ARKETYPER ── */
+.path, .arch {
+  background: var(--stone) !important;
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
   transition: none !important;
-  filter: none !important;
 }
-.send-btn:hover { transform: translate(-2px,-2px) !important; box-shadow: 6px 6px 0 rgba(0,0,0,.9) !important; }
-.send-btn:active { transform: translate(2px,2px) !important; box-shadow: 1px 1px 0 rgba(0,0,0,.8) !important; }
-.send-btn::after { display: none !important; }
+.path:hover, .arch:hover {
+  border-color: var(--gold) !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+.path .glow, .arch .glow { display: none !important; }
+.path::before, .arch::before { display: none !important; }
+.arch.selected { border-color: var(--gold) !important; background: var(--stone-2) !important; }
+.path h2, .arch h3 { color: var(--bone-bright) !important; }
+.path p, .arch .lore { font-style: normal !important; color: var(--bone-dim) !important; }
+.path .tag, .arch .tag { border-color: var(--edge) !important; color: var(--bone-dim) !important; }
 
-/* ── 34. RESPONSIVT ── */
+/* ── 17. FÖRHANDSVISNING ── */
+.pv-portrait, .pc-avatar, .cp-icon, .vc-icon {
+  border-radius: 0 !important;
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+  background: var(--stone-2) !important;
+}
+.pv-stat, .ability {
+  clip-path: none !important;
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+  background: var(--stone-2) !important;
+}
+.pv-stat .s, .ability .score { font-family: 'Press Start 2P', monospace !important; font-size: .9rem !important; }
+.pv-trait { border: 1px solid var(--edge) !important; box-shadow: none !important; background: var(--stone-2) !important; }
+.pv-story { border-left: 2px solid var(--gold) !important; font-style: normal !important; }
+
+/* ── 18. ORACLE ── */
+.oracle {
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+  background: var(--stone) !important;
+}
+.oracle-msg { border-radius: 0 !important; }
+.oracle-msg.q { border: 1px solid var(--arcane) !important; box-shadow: none !important; }
+.oracle-msg.a { border: 1px solid var(--edge) !important; box-shadow: none !important; }
+
+/* ── 19. ASCII-ART ── */
+.ascii-art {
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+  background: var(--ink) !important;
+}
+.ascii-art pre {
+  font-family: 'Courier New', monospace !important;
+  color: var(--term-green) !important;
+  line-height: 1.2 !important;
+  font-size: .7rem !important;
+}
+.art-label { color: var(--bone-dim) !important; }
+
+/* ── 20. ROLL REQUEST ── */
+.roll-request {
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+  background: var(--stone) !important;
+}
+.rr-btn { border-color: var(--gold) !important; color: var(--gold) !important; }
+
+/* ── 21. DM-TANKAR ── */
+.w-text, #thought-text {
+  font-style: normal !important;
+  color: var(--term-green) !important;
+}
+#dm-status.show .w-text, #dm-status.show #thought-text {
+  animation: blink-cursor 1.2s steps(1) infinite;
+}
+@keyframes blink-cursor { 0%,49% { opacity: 1; } 50%,100% { opacity: .3; } }
+
+/* ── 22. FOG / VIGNETTE / EMBERS ── */
+.fog { display: none !important; }
+.vignette { box-shadow: inset 0 0 120px 40px rgba(0,0,0,.7) !important; }
+#embers { opacity: .4; }
+
+/* ── 23. DROPZONE / FILER ── */
+.dropzone {
+  border: 1px dashed var(--edge) !important;
+  box-shadow: none !important;
+  transition: none !important;
+}
+.dropzone:hover, .dropzone.dragover { border-color: var(--term-green) !important; }
+.file-item { background: var(--stone-2) !important; border: 1px solid var(--edge) !important; }
+
+/* ── 24. QUEST / NOTES ── */
+.quest { border: 1px solid var(--edge) !important; box-shadow: none !important; }
+.quest:hover { border-color: var(--ember) !important; }
+.notes-list li::before { content: '> ' !important; color: var(--term-green); }
+
+/* ── 25. VALVET ── */
+.vault-chip {
+  background: var(--stone-2) !important;
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+}
+.vault-chip:hover { border-color: var(--gold) !important; transform: none !important; }
+
+/* ── 26. RUBRIK-SKALA ── */
+.gate-title { font-size: .85rem !important; }
+.destiny-title h1 { font-size: 1.1rem !important; }
+.masthead h1, .head h1 { font-size: .9rem !important; }
+.topbar .brand, .forge-head .brand { font-size: .6rem !important; }
+.char-name, .pv-name, .d-name { font-size: .9rem !important; }
+.hall-title { font-size: .7rem !important; }
+.cp-name { font-size: .9rem !important; }
+
+/* ── 27. BLINKING CURSOR (terminal feel) ── */
+.input-row textarea::after {
+  content: '█';
+  animation: blink-cursor 1s steps(1) infinite;
+  color: var(--term-green);
+}
+
+/* ── 28. RESPONSIVT ── */
 @media (max-width: 560px) {
-  .gate-title { font-size: .85rem !important; }
-  .destiny-title h1 { font-size: 1.05rem !important; }
-  .head h1 { font-size: .85rem !important; }
+  .gate-title { font-size: .7rem !important; }
+  .destiny-title h1 { font-size: .85rem !important; }
+  .head h1 { font-size: .7rem !important; }
+  .msg .text { font-size: .72rem !important; }
 }

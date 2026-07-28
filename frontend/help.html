@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚔️ Ett svenskt D&amp;D-äventyr — Hur spelar man?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:#08080d; --stone:#0e0e14; --stone-2:#12121a; --stone-3:#181822;
+    --edge:#2a2a3a; --bone:#b8b8c8; --bone-bright:#e0e0ec; --bone-dim:#6a6a80;
+    --gold:#c9a227; --gold-bright:#e8c65a; --blood-bright:#d43a4d;
+    --arcane:#7b4fd4; --term-green:#33cc33; --term-amber:#ccaa33;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;border-radius:0}
+  body{
+    font-family:'Silkscreen',monospace;color:var(--bone);min-height:100vh;
+    background:var(--ink);line-height:1.8;
+  }
+  body::before{content:'';position:fixed;inset:0;z-index:999;pointer-events:none;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0px,rgba(0,0,0,.18) 1px,transparent 1px,transparent 3px)}
+  .app{max-width:800px;margin:0 auto;padding:2rem 1.5rem 4rem}
+  h1{font-family:'Press Start 2P',monospace;font-size:1rem;color:var(--gold);margin-bottom:.5rem;text-shadow:2px 2px 0 #000}
+  h2{font-family:'Press Start 2P',monospace;font-size:.7rem;color:var(--term-green);margin:2rem 0 .8rem;text-transform:uppercase;letter-spacing:.1em}
+  h2::before{content:'> ';color:var(--edge)}
+  p,li{font-size:.78rem;color:var(--bone);margin-bottom:.6rem}
+  ul{padding-left:1.2rem;list-style:none}
+  li::before{content:'▸ ';color:var(--gold)}
+  .box{background:var(--stone);border:1px solid var(--edge);padding:1.2rem;margin:1rem 0}
+  .box::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.4}
+  .box{position:relative}
+  .cmd{color:var(--term-green);background:var(--ink);padding:.15rem .4rem;border:1px solid var(--edge);font-size:.72rem}
+  .key{color:var(--term-amber);border:1px solid var(--edge);padding:.1rem .35rem;font-size:.68rem;background:var(--stone-2)}
+  .topbar{display:flex;align-items:center;gap:1rem;padding:1rem 0;border-bottom:1px solid var(--edge);margin-bottom:2rem}
+  .topbar .brand{font-family:'Press Start 2P',monospace;font-size:.6rem;color:var(--gold)}
+  .topbar a{color:var(--bone-dim);text-decoration:none;font-size:.65rem;border:1px solid var(--edge);padding:.35rem .7rem;transition:none}
+  .topbar a:hover{border-color:var(--gold);color:var(--gold-bright)}
+  .divider{border:none;border-top:1px dashed var(--edge);margin:1.5rem 0}
+  .loop{display:grid;grid-template-columns:auto 1fr;gap:.4rem .8rem;font-size:.72rem}
+  .loop .step{color:var(--term-green);font-weight:700}
+  .loop .desc{color:var(--bone)}
+  a{color:var(--arcane)}
+</style>
+<link rel="stylesheet" href="snes.css">
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <span class="brand">🐉 Ett svenskt D&amp;D-äventyr</span>
+    <span style="flex:1"></span>
+    <a href="chat.html">⚔ Till bordet</a>
+    <a href="adventure.html">🚪 Vägskälet</a>
+  </div>
+
+  <h1>⚔ Hur spelar man?</h1>
+  <p style="color:var(--bone-dim)">En guide till äventyret — från första inloggning till sista tärningskastet.</p>
+
+  <hr class="divider">
+
+  <h2>Core Loop</h2>
+  <div class="box">
+    <div class="loop">
+      <span class="step">1.</span><span class="desc"><b>DM vaknar</b> — ställer 2-3 frågor om din karaktär och världen</span>
+      <span class="step">2.</span><span class="desc"><b>Du svarar</b> — DM väver in dina svar i öppningsscenen</span>
+      <span class="step">3.</span><span class="desc"><b>Du agerar</b> — skriv fritt: slå, smyg, tala, utforska</span>
+      <span class="step">4.</span><span class="desc"><b>DM svarar</b> — beskriver konsekvenser, NPCs, nya val</span>
+      <span class="step">5.</span><span class="desc"><b>Tärningar</b> — DM begär kast vid osäkerhet, du slår</span>
+      <span class="step">6.</span><span class="desc"><b>Upprepa</b> — storyn byggs av dina val, inget är förskrivet</span>
+    </div>
+  </div>
+
+  <h2>Kom igång</h2>
+  <ul>
+    <li>Logga in med ditt användarnamn och lösenord</li>
+    <li>Välj äventyrstyp: <b>Förbered</b> (bygg värld), <b>Importera</b> (ladda upp filer), eller <b>Nytt</b> (freestyle)</li>
+    <li>Skapa din karaktär: välj arketyp eller skriv fritt, välj modell (DeepSeek V4 Flash / Qwen 3.8 Max)</li>
+    <li>Klicka "Frammana karaktär" — AI:n genererar ett fullt karaktärsark</li>
+    <li>Klicka "Till bordet" — DM vaknar och ställer sina frågor</li>
+  </ul>
+
+  <h2>Prata med NPCs</h2>
+  <div class="box">
+    <p>Skriv <span class="cmd">@Namn</span> i chatten för att rikta dig direkt till en NPC.</p>
+    <p>Exempel: <span class="cmd">@Lyra Vane</span> <span style="color:var(--bone-dim)">"Vad gör du här?"</span></p>
+    <p>NPC:n svarar i sin egen röst. DM kan lägga sig i med narration.</p>
+    <p>Du får autocomplete när du skriver <span class="cmd">@</span> — alla kända NPCs listas.</p>
+  </div>
+
+  <h2>Tärningar</h2>
+  <ul>
+    <li>DM begär ett kast: <span class="cmd">[KAST: 1d20+4 | SMIDIGHET]</span></li>
+    <li>En knapp dyker upp i chatten — klicka för att slå</li>
+    <li>Tärningsbrickan längst ner är <b>låst</b> (🔒) tills DM begär ett kast</li>
+    <li>Du kan också skriva <span class="cmd">/rulla 1d20+4</span> direkt i chatten</li>
+    <li>Naturlig 20 = KRITISKT! Naturlig 1 = PATETISKT!</li>
+  </ul>
+
+  <h2>Mekaniska taggar (osynliga)</h2>
+  <p>DM använder taggar som systemet plockar bort och omvandlar till effekter:</p>
+  <ul>
+    <li><span class="cmd">[SKADA:12]</span> — du tar 12 skada (HP minskar)</li>
+    <li><span class="cmd">[HELA:8]</span> — du helas 8 HP</li>
+    <li><span class="cmd">[XP:250]</span> — du får erfarenhetspoäng</li>
+    <li><span class="cmd">[GULD:50]</span> — du hittar guld</li>
+    <li><span class="cmd">[FÖREMÅL:Svärd|Vapen|rare]</span> — nytt föremål i inventariet</li>
+    <li><span class="cmd">[QUEST:Rädda byn|Beskrivning|100 gp]</span> — nytt uppdrag</li>
+    <li><span class="cmd">[NPC:Namn|Roll|relation]</span> — ny NPC registreras</li>
+    <li><span class="cmd">[PLATS:Stencirkeln]</span> — platsen uppdateras</li>
+  </ul>
+
+  <h2>Modeller</h2>
+  <div class="box">
+    <p>Du kan byta AI-modell mitt i äventyret via dropdownen i topbaren.</p>
+    <ul>
+      <li><b>DeepSeek V4 Flash</b> — standard, snabb, reasoning-modell (tänker innan den svarar)</li>
+      <li><b>Qwen 3.8 Max</b> — kraftfull, bra på kreativ narration</li>
+      <li><b>Qwen 3.6 Flash</b> — snabb, används för atmosfär/ASCII-art</li>
+      <li><b>Lokala modeller</b> — via Ollama (kräver lokal server)</li>
+    </ul>
+    <p style="color:var(--bone-dim);font-size:.68rem">Valet sparas i webbläsaren och gäller tills du byter.</p>
+  </div>
+
+  <h2>Musik & Ljud</h2>
+  <ul>
+    <li><span class="key">♫</span> — musik av/på (stämningsbaserade loopar: natt, dag, strid, stad, vila, fängelsehåla)</li>
+    <li><span class="key">🔊</span> — ljudeffekter av/på (tärningar, mynt, strid, level-up)</li>
+    <li>Musiken byter stämning automatiskt baserat på DM:s text</li>
+  </ul>
+
+  <h2>Regler (D&amp;D 5e, förenklat)</h2>
+  <div class="box">
+    <ul>
+      <li><b>Kast:</b> 1d20 + modifierare vs DC (Difficulty Class)</li>
+      <li><b>DC 10</b> = lätt, <b>DC 15</b> = medel, <b>DC 20</b> = svårt</li>
+      <li><b>HP 0</b> = death saves (1d20, 3 lyckade = stabil, 3 misslyckade = död)</li>
+      <li><b>XP</b> = erfarenhetspoäng, level-up vid trösklar (300, 900, 2700...)</li>
+      <li><b>Strid:</b> initiative → turordning → attack → skada → upprepa</li>
+      <li><b>Vila:</b> kort vila (1h) = återställ HP, lång vila (8h) = full HP + spell slots</li>
+    </ul>
+    <p style="color:var(--bone-dim);font-size:.68rem">DM:n är den slutgiltiga domaren. Reglerna är ett ramverk, inte ett fängelse.</p>
+  </div>
+
+  <h2>Tips</h2>
+  <ul>
+    <li>Skriv fritt — du kan göra vad som helst (försöka, inte alltid lyckas)</li>
+    <li>Fråga Regel-oraklet (📜) om du är osäker på D&amp;D-regler</li>
+    <li>Utforska Kartan (🗺️) för att se platser och restider</li>
+    <li>Läs Loggboken (📜) för en sammanfattning av äventyret</li>
+    <li>Spara din karaktär i Valvet (🏰) för att återanvända den</li>
+    <li>Exportera (📦) för att ladda ner hela kampanjen som ZIP</li>
+  </ul>
+
+  <hr class="divider">
+  <p style="text-align:center;color:var(--bone-dim);font-size:.65rem">
+    Driven av DeepSeek & Qwen · Kampanjer sparas lokalt · <a href="login.html">Tillbaka till porten</a>
+  </p>
+</div>
+</body>
+</html>

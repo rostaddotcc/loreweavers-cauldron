@@ -433,10 +433,10 @@
     <span class="model-label">🔮</span>
     <select id="model-picker" onchange="switchModel(this.value)">
       <optgroup label="⚡ Moln-API">
-        <option value="qwen3.8-max" selected>Qwen 3.8 Max</option>
+        <option value="deepseek-v4-flash" selected>DeepSeek V4 Flash</option>
+        <option value="qwen3.8-max">Qwen 3.8 Max</option>
         <option value="qwen3.7-plus">Qwen 3.7 Plus</option>
         <option value="deepseek-v4-pro">DeepSeek V4 Pro</option>
-        <option value="deepseek-v4-flash">DeepSeek V4 Flash</option>
         <option value="qwen3.6-flash">Qwen 3.6 Flash (atmosfär)</option>
         <option value="mimo-v2">MiMo V2</option>
       </optgroup>
@@ -448,6 +448,7 @@
   </div>
 
   <button class="top-btn" onclick="toggleOracle()">📜 Regel-orakel</button>
+  <a class="top-btn" href="help.html">❓ Hur spelar man?</a>
   <a class="top-btn" href="npcs.html">📖 Gestalter</a>
   <a class="top-btn" href="platser.html">🗺️ Kartan</a>
   <a class="top-btn" href="loggbok.html">📜 Loggbok</a>
@@ -455,6 +456,7 @@
   <button class="top-btn" onclick="exportCampaign()">📦 Exportera</button>
   <button class="top-btn" onclick="location.href='character.html'">🧙 Karaktär</button>
   <button class="top-btn sfx-btn" onclick="sfxToggleBtn()" title="Ljud av/på">🔊</button>
+  <button class="top-btn music-btn" onclick="musicToggleBtn()" title="Musik av/på">♫</button>
   <button class="top-btn danger" onclick="logout()">🚪 Lämna</button>
 </header>
 
@@ -542,6 +544,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="sfx.js"></script>
+<script src="music.js"></script>
 <script src="api.js"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
@@ -883,7 +886,7 @@ function showTyping(who) {
 function hideTyping() { hideThoughts(); }
 
 // ═══════════════════════════════════════
-// PLAYER INPUT
+// PLAYER INPUT + @NPC-MENTIONS
 // ═══════════════════════════════════════
 const input = document.getElementById('player-input');
 input.addEventListener('keydown', e => {
@@ -892,7 +895,53 @@ input.addEventListener('keydown', e => {
 input.addEventListener('input', () => {
   input.style.height = 'auto';
   input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+  // @-autocomplete
+  checkAtMention();
 });
+
+// @NPC autocomplete
+let atPopup = null;
+function checkAtMention() {
+  const val = input.value;
+  const atMatch = val.match(/@(\w*)$/);
+  if (atMatch) {
+    const partial = atMatch[1].toLowerCase();
+    const matches = Object.entries(NPCS)
+      .filter(([k]) => k !== 'dm')
+      .filter(([k, n]) => n.name.toLowerCase().includes(partial))
+      .slice(0, 5);
+    if (matches.length > 0) {
+      showAtPopup(matches);
+      return;
+    }
+  }
+  hideAtPopup();
+}
+
+function showAtPopup(matches) {
+  if (!atPopup) {
+    atPopup = document.createElement('div');
+    atPopup.className = 'at-popup';
+    atPopup.style.cssText = 'position:absolute;bottom:100%;left:0;background:var(--stone);border:1px solid var(--edge);z-index:50;min-width:200px;';
+    input.parentElement.style.position = 'relative';
+    input.parentElement.appendChild(atPopup);
+  }
+  atPopup.innerHTML = matches.map(([k, n]) =>
+    `<div class="at-item" style="padding:.4rem .6rem;cursor:pointer;font-size:.7rem;color:var(--bone)" 
+      onmousedown="insertAtMention('${n.name.replace(/'/g, "\\'")}')">${n.icon} ${n.name} <span style="color:var(--bone-dim)">${n.role || ''}</span></div>`
+  ).join('');
+  atPopup.style.display = 'block';
+}
+
+function hideAtPopup() {
+  if (atPopup) atPopup.style.display = 'none';
+}
+
+function insertAtMention(name) {
+  input.value = input.value.replace(/@\w*$/, '@' + name + ' ');
+  hideAtPopup();
+  input.focus();
+}
 
 function sendPlayer() {
   const text = input.value.trim();
@@ -946,6 +995,12 @@ async function dmRespond(playerText) {
 
     // Visa svaret som DM-narration
     addMessage('dm', null, reply);
+
+    // Stämningsdetektering → byt musikloop
+    const detectedMood = MUSIC.detectMood(reply);
+    if (detectedMood && detectedMood !== MUSIC.mood) {
+      MUSIC.setMood(detectedMood);
+    }
 
     // Mekaniska effekter (skada, XP, loot, quests…)
     if (res.effects && res.effects.length) {
@@ -1098,7 +1153,7 @@ function exportCampaign() {
 // ═══════════════════════════════════════
 // MODEL PICKER — nycklar stannar på servern
 // ═══════════════════════════════════════
-let currentModel = 'qwen3.8-max';
+let currentModel = localStorage.getItem('dnd_model') || 'deepseek-v4-flash';
 const modelNames = {
   'qwen3.8-max': 'Qwen 3.8 Max',
   'qwen3.7-plus': 'Qwen 3.7 Plus',
@@ -1110,11 +1165,12 @@ const modelNames = {
 };
 function switchModel(model) {
   currentModel = model;
+  localStorage.setItem('dnd_model', model);
   const local = model.startsWith('ollama:');
   toast(`🔮 Dungeon Master byter röst: ${modelNames[model]}${local ? ' · körs lokalt' : ''}`);
-  // I produktion: POST /api/session/model { model } → backend byter provider
-  // Nycklar läses ur backend/.env — frontend ser ALDRIG API-nycklar
 }
+// Sätt dropdownen till det sparade valet
+document.getElementById('model-picker').value = currentModel;
 function logout() {
   sessionStorage.removeItem('dnd_user');
   sessionStorage.removeItem('dnd_token');

@@ -43,7 +43,7 @@ MODELS: dict[str, ModelConfig] = {
         supports_vision=True,
     ),
 
-    # ── DeepSeek ──
+    # ── DeepSeek (direkt, egen nyckel) ──
     "deepseek-v4-pro": ModelConfig(
         model_id="deepseek-v4-pro",
         display_name="DeepSeek V4 Pro",
@@ -202,6 +202,15 @@ När en quest ges → [QUEST:...]. När världen förändras → [KONSEKVENS:...
 - Ge dem personlighet, mål, hemligheter, rädslor.
 - Återanvänd NPCs från tidigare möten när det passar.
 - Exempel: [NPC:Morvaine|Gåtfull trollkarl|okänd]
+
+## @NPC-KONVERSATION (KRITISKT)
+Spelaren kan skriva @Namn för att rikta sig direkt till en NPC.
+- När du ser @Namn i spelarens meddelande: låt den NPC:n svara direkt, i sin egen röst.
+- NPC:n ska ha en distinkt personlighet och tala utifrån sin roll, relation och sina hemligheter.
+- Du som DM kan lägga dig i med narration (kort) om det passar — men NPC:n ska alltid svara först.
+- Format: NPC-dialogen ska vara tydligt separerad från DM-narration.
+- Om spelaren @-nämner en NPC som inte finns i listan: skapa den NPC:n på plats och tagga den.
+- NPCs i närheten kan också reagera på konversationen om det passar.
 
 ## Tärningskast — regler
 - Begär kast BARA vid genuin osäkerhet OCH meningsfulla konsekvenser.

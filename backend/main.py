@@ -323,9 +323,15 @@ async def _call_llm(
     temperature: float = 0.8,
     max_tokens: int = 1024,
 ) -> str:
-    """Anropa vald modell via OpenAI-kompatibelt /chat/completions."""
+    """Anropa vald modell via OpenAI-kompatibelt /chat/completions.
+    Reasoning-modeller (deepseek-v4-flash) behöver högre max_tokens
+    eftersom de tänker innan de svarar."""
     config = get_model(model_id)
     api_key = get_api_key(config)
+
+    # Reasoning-modeller behöver mer utrymme (thinking + content)
+    if config.api_model in ("deepseek-v4-flash",):
+        max_tokens = max(max_tokens, 4096)
 
     headers = {"Content-Type": "application/json"}
     if api_key:
@@ -340,14 +346,20 @@ async def _call_llm(
 
     url = f"{config.base_url.rstrip('/')}/chat/completions"
 
-    async with httpx.AsyncClient(timeout=120) as client:
+    async with httpx.AsyncClient(timeout=180) as client:
         resp = await client.post(url, headers=headers, json=body)
         if resp.status_code != 200:
             raise HTTPException(
                 502, f"LLM-fel ({resp.status_code}): {resp.text[:300]}"
             )
         data = resp.json()
-        return data["choices"][0]["message"]["content"]
+        content = data["choices"][0]["message"].get("content", "")
+        if not content:
+            # Reasoning-modell som inte hann klart — försök med mer tokens
+            raise RuntimeError(
+                "Modellen returnerade tomt svar (reasoning-modell?)"
+            )
+        return content
 
 
 def _extract_json(text: str) -> dict:

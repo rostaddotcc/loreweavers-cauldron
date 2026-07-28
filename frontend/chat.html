@@ -319,6 +319,7 @@
   <a class="top-btn" href="npcs.html">📖 Gestalter</a>
   <button class="top-btn" onclick="exportCampaign()">📦 Exportera</button>
   <button class="top-btn" onclick="location.href='character.html'">🧙 Karaktär</button>
+  <button class="top-btn sfx-btn" onclick="sfxToggleBtn()" title="Ljud av/på">🔊</button>
   <button class="top-btn danger" onclick="logout()">🚪 Lämna</button>
 </header>
 
@@ -391,6 +392,7 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="sfx.js"></script>
 <script>
 // ═══════════════════════════════════════
 // NPC REGISTRY — färg + ikon per NPC
@@ -425,6 +427,7 @@ function addMessage(type, npcKey, text) {
 
   if (type === 'dm') {
     el.innerHTML = `<div class="who">🐉 Dungeon Master</div><div class="text">${text}</div>`;
+    SFX.receive();
   } else if (type === 'npc') {
     const n = NPCS[npcKey] || NPCS.vakt;
     el.innerHTML = `
@@ -433,10 +436,18 @@ function addMessage(type, npcKey, text) {
         ${n.icon} ${n.name}
       </div>
       <div class="text">${text}</div>`;
+    SFX.receive();
   } else if (type === 'player') {
     el.innerHTML = `<div class="who">🧙‍♀️ Thalindra</div><div class="text">${text}</div>`;
+    SFX.send();
   } else if (type === 'system') {
     el.innerHTML = `<div class="box">${text}</div>`;
+    // Ljud baserat på innehåll
+    if (text.includes('KRITISKT')) SFX.crit();
+    else if (text.includes('PATETISKT')) SFX.fail();
+    else if (text.includes('🎲')) SFX.dice();
+    else if (text.includes('⚔') && text.includes('Initiative')) SFX.battle();
+    else SFX.click();
   }
 
   chat.appendChild(el);
@@ -479,6 +490,7 @@ const script = [
   { type: 'npc', npc: 'kael', text: 'Jag gillar inte det här. <em>Spottar på marken.</em> Sista gången någon gick in där kom de ut som… något annat. Vi borde bränna hela skiten.' },
   { type: 'npc', npc: 'lyra', text: 'Eller så går vi in och tar reda på vad det är som kallar på henne. <em>Nickar mot Thalindra.</em> Det där ljuset är inte naturligt. Det är <em>gammal</em> magi.' },
   { type: 'dm', text: 'Vad gör du? Kvarnens dörr står på glänt. Det gröna ljuset pulserar snabbare nu — som om det vet att du är här.' },
+  { type: 'system', text: '⚔ <b>STRID!</b> En skelettväktare reser sig ur askan! Initiative: Thalindra 18, Skelettväktare 12' },
 ];
 
 let scriptIdx = 0;

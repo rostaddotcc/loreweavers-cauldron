@@ -221,6 +221,7 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="sfx.js"></script>
 <script>
 // ═══════════════════════════════════════
 // NPC-REGISTRY — i produktion: campaign state (JSON)
@@ -528,6 +529,7 @@ function buyItem(npcId, idx){
   if(purse < it.price){ toast('⚠ Inte nog med guld i börsen'); return; }
   purse -= it.price;
   it.stock--;
+  SFX.coin();
   document.getElementById('purse').textContent = purse + ' gp';
   const stockEl = document.getElementById(`stock-${npcId}-${idx}`);
   stockEl.textContent = it.stock>50 ? '∞' : it.stock;

@@ -198,6 +198,9 @@
   </div>
 </div>
 
+<div class="toast" id="toast"></div>
+
+<script src="sfx.js"></script>
 <script>
 // ═══════════════════════════════════════
 // AUTH — enkel username/password (backend validerar)
@@ -219,14 +222,16 @@ function handleLogin(e) {
   if (USERS[user] && USERS[user] === pass) {
     err.textContent = '';
     frame.classList.add('success');
+    SFX.gate();
     // Spara session
     sessionStorage.setItem('dnd_user', user);
     sessionStorage.setItem('dnd_token', btoa(user + ':' + Date.now()));
     setTimeout(() => {
       window.location.href = 'adventure.html';
-    }, 600);
+    }, 900);
   } else {
     err.textContent = '⚠ Porten förblir stängd. Fel namn eller lösenord.';
+    SFX.error();
     frame.classList.remove('shake');
     void frame.offsetWidth;
     frame.classList.add('shake');

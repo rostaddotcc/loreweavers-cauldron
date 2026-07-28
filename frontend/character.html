@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚔️ Mörkrets Rike — Karaktärsark</title>
+<title>⚔️ Ett svenskt D&amp;D-äventyr — Karaktärsark</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
@@ -466,7 +466,7 @@
 <div class="vignette"></div>
 
 <header style="position:relative;z-index:5;display:flex;align-items:center;gap:1rem;padding:.7rem 1.2rem;background:linear-gradient(180deg,var(--stone-2),rgba(22,16,32,.95));border-bottom:1px solid var(--edge);box-shadow:0 4px 20px rgba(0,0,0,.5)">
-  <span style="font-family:Cinzel,serif;font-weight:900;font-size:1.05rem;color:var(--gold-bright);letter-spacing:.06em;text-shadow:0 0 14px rgba(232,198,90,.3)">🐉 Mörkrets Rike</span>
+  <span style="font-family:Cinzel,serif;font-weight:900;font-size:1.05rem;color:var(--gold-bright);letter-spacing:.06em;text-shadow:0 0 14px rgba(232,198,90,.3)">🐉 Ett svenskt D&amp;D-äventyr</span>
   <span style="font-size:.78rem;font-style:italic;color:var(--bone-dim);border-left:1px solid var(--edge);padding-left:1rem">Karaktärsark</span>
   <span style="flex:1"></span>
   <a class="top-btn" href="chat.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">⚔ Till bordet</a>
@@ -481,7 +481,7 @@
 
   <header class="masthead">
     <div class="over">Qwen-driven Dungeon Master</div>
-    <h1>Mörkrets Rike</h1>
+    <h1>Ett svenskt D&amp;D-äventyr</h1>
     <div class="rune-divider"><span>✦</span></div>
   </header>
 
@@ -695,7 +695,7 @@ function renderHeader() {
   document.getElementById('char-name').textContent = name;
   document.getElementById('char-class').textContent =
     [c.race, c.class].filter(Boolean).join(' · ') + (c.level ? ' · Nivå ' + c.level : '');
-  document.title = '⚔️ Mörkrets Rike — ' + name;
+  document.title = '⚔️ ' + name + ' — Ett svenskt D&D-äventyr';
   // Återställ porträtt om det finns sparat i backend-state
   if (c.portrait) {
     const frame = document.getElementById('portrait');

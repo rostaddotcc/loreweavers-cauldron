@@ -26,7 +26,7 @@ def _default_state(campaign_id: str, user: str) -> dict:
     return {
         "meta": {
             "campaign_id": campaign_id,
-            "campaign_name": "Mörkrets Rike",
+            "campaign_name": "Ett svenskt D&D-äventyr",
             "user": user,
             "created": _now(),
             "last_updated": _now(),

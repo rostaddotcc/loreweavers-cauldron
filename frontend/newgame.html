@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚔️ Mörkrets Rike — Välj ditt öde</title>
+<title>⚔️ Ett svenskt D&amp;D-äventyr — Välj ditt öde</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
@@ -201,7 +201,7 @@
 
 <div class="app">
   <header class="forge-head">
-    <span class="brand">🐉 Mörkrets Rike</span>
+    <span class="brand">🐉 Ett svenskt D&amp;D-äventyr</span>
     <a class="back" href="adventure.html">← Till vägskälet</a>
   </header>
 
@@ -547,8 +547,8 @@ async function summon() {
       init: c.initiative || 0,
       prof: c.proficiency || 2,
       traits: Array.isArray(c.traits) ? c.traits.map(t => typeof t === 'string' ? t : t.name) : [],
-      gear: c.background || 'En ensam vandrare med okänt förflutet.',
-      story: c.background || 'Denna karaktärs historia är ännu oskriven. Mörkret väntar på att forma den.',
+      gear: c.gear || 'En ensam vandrare med okänt förflutet.',
+      story: c.story || c.background || 'Denna karaktärs historia är ännu oskriven. Mörkret väntar på att forma den.',
     };
 
     const ac = selectedKey ? ARCHETYPES[selectedKey].color : '#8b5fd4';

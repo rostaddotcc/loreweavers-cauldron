@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚔️ Mörkrets Rike — Vid bordet</title>
+<title>⚔️ Ett svenskt D&amp;D-äventyr — Vid bordet</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -425,7 +425,7 @@
 
 <!-- ═══════════ TOP BAR ═══════════ -->
 <header class="topbar">
-  <span class="brand">🐉 Mörkrets Rike</span>
+  <span class="brand">🐉 Ett svenskt D&amp;D-äventyr</span>
   <span class="campaign" id="campaign-tag">Kampanj: —</span>
   <span class="spacer"></span>
 
@@ -511,7 +511,7 @@
 
     <div class="input-area">
       <div class="input-row">
-        <textarea id="player-input" rows="1" placeholder="Vad gör Thalindra? Skriv fritt — slå, smyg, tala, kasta en besvärjelse…"></textarea>
+        <textarea id="player-input" rows="1" placeholder="Vad gör du? Skriv fritt — slå, smyg, tala, kasta en besvärjelse…"></textarea>
         <button class="send-btn" onclick="sendPlayer()">⚔ Utför</button>
       </div>
       <div class="input-hint">
@@ -562,35 +562,70 @@ async function loadCampaign() {
       if (campaign.character && campaign.character.name) {
         CHAR_NAME = campaign.character.name;
       }
+      // Fyll NPC-registret från kampanjstate (inga demo-NPCs)
+      ingestNpcs(campaign._raw && campaign._raw.npcs);
+      // Uppdatera sällskapskortet i sidebaren
+      const ch = campaign.character || {};
+      if (ch.name) {
+        document.getElementById('pc-name').textContent = ch.name;
+        document.getElementById('pc-sub').textContent =
+          [ch.race, ch.class].filter(Boolean).join(' · ') + (ch.level ? ' · Nivå ' + ch.level : '');
+        const hp = ch.hp || {};
+        if (hp.max) {
+          document.getElementById('pc-hp-fill').style.width = Math.round(100 * (hp.current || 0) / hp.max) + '%';
+        }
+      }
+      // Uppdatera plats + input-placeholder
+      const world = campaign.world || {};
+      if (world.current_location) {
+        document.getElementById('loc-name').textContent = '🗺 ' + world.current_location;
+      }
+      if (world.time) {
+        document.getElementById('loc-sub').textContent = world.time;
+      }
+      document.getElementById('player-input').placeholder =
+        'Vad gör ' + CHAR_NAME + '? Skriv fritt — slå, smyg, tala, kasta en besvärjelse…';
       // Uppdatera topbar
       const tag = document.querySelector('.topbar .campaign');
       if (tag) tag.textContent = `Kampanj: ${campaign.name} · Tur ${campaign.turn_count}`;
+    } else {
+      // Ingen kampanj — tillbaka till vägskälet
+      location.href = 'adventure.html';
+      return false;
     }
-  } catch(e) { /* MOCK-läge eller ingen kampanj */ }
+  } catch(e) { /* serverfel — fortsätt ändå */ }
+  return true;
 }
-loadCampaign();
+loadCampaign().then(ok => { if (ok !== false) loadTranscript(); });
 
 // ═══════════════════════════════════════
-// NPC REGISTRY — färg + ikon per NPC
+// NPC REGISTRY — fylls på från kampanjstate (inga demo-NPCs)
 // ═══════════════════════════════════════
 const NPCS = {
-  dm:        { name: 'Dungeon Master', color: '#c9a227', icon: '🐉' },
-  morvaine:  { name: 'Morvaine',       color: '#8b5fd4', icon: '🧙',  role: 'Den gåtfulla trollkarlen' },
-  kael:      { name: 'Kael Asksvärd',  color: '#d4691e', icon: '⚔️', role: 'Legosoldat' },
-  lyra:      { name: 'Lyra Vindviska', color: '#7aa35e', icon: '🏹', role: 'Skogsalv, jägare' },
-  borg:      { name: 'Borg Stenhand',  color: '#a32433', icon: '🛡️', role: 'Värdshusvärd' },
-  vakt:      { name: 'Vakten',         color: '#a8b2c0', icon: '💂', role: 'Stadsvakt' },
+  dm: { name: 'Dungeon Master', color: '#c9a227', icon: '🐉' },
 };
 
-// Render NPC list
-document.getElementById('npc-list').innerHTML = Object.entries(NPCS)
-  .filter(([k]) => k !== 'dm')
-  .map(([k, n]) => `
-    <div class="npc-row" onclick="location.href='npcs.html'" title="Öppna dossier i Minnets hall" style="cursor:pointer">
-      <span class="npc-dot" style="color:${n.color};background:${n.color}"></span>
-      <span class="npc-name">${n.icon} ${n.name}</span>
-      <span class="npc-role">${n.role || ''}</span>
-    </div>`).join('');
+function ingestNpcs(npcList) {
+  (npcList || []).forEach(npc => {
+    if (!npc || !npc.name) return;
+    const key = npc.name.toLowerCase().replace(/\s+/g, '_');
+    if (!NPCS[key]) {
+      NPCS[key] = {
+        name: npc.name,
+        color: npc.color || '#a8b2c0',
+        icon: npc.icon || '🎭',
+        role: npc.role || '',
+        alive: npc.alive !== false,
+      };
+    } else if (npc.alive === false) {
+      NPCS[key].alive = false;
+    }
+  });
+  renderNpcSidebar();
+}
+
+// Render NPC list (tom från start — fylls på när kampanjen laddas)
+renderNpcSidebar();
 
 // ═══════════════════════════════════════
 // MESSAGE RENDERING
@@ -602,16 +637,16 @@ function addMessage(type, npcKey, text) {
   el.className = 'msg ' + type;
 
   if (type === 'dm') {
-    el.innerHTML = `<div class="who">🐉 Dungeon Master</div><div class="text">${text}</div>`;
+    el.innerHTML = `<div class="who">🐉 Dungeon Master</div><div class="text">${mdToHtml(escapeHtml(text))}</div>`;
     SFX.receive();
   } else if (type === 'npc') {
-    const n = NPCS[npcKey] || NPCS.vakt;
+    const n = NPCS[npcKey] || { name: npcKey || 'Okänd', color: '#a8b2c0', icon: '🎭', role: '' };
     el.innerHTML = `
       <div class="who" style="color:${n.color}">
         <span class="dot" style="color:${n.color};background:${n.color}"></span>
         ${n.icon} ${n.name}
       </div>
-      <div class="text">${text}</div>`;
+      <div class="text">${mdToHtml(escapeHtml(text))}</div>`;
     SFX.receive();
   } else if (type === 'player') {
     el.innerHTML = `<div class="who">🧙‍♀️ ${CHAR_NAME}</div><div class="text">${text}</div>`;
@@ -746,14 +781,19 @@ function diceMessage(roll, label) {
 }
 
 // ═══════════════════════════════════════
-// TRANSCRIPT LOADING — riktig chatt
+// TRANSCRIPT LOADING + VAKNANDET
 // ═══════════════════════════════════════
+// Första "spelarmeddelandet" är en osynlig trigger för vaknandet —
+// den sparas i transkriptet men visas aldrig i chatten.
+const AWAKENING_TRIGGER = '__VAKNA_DM__';
+
 async function loadTranscript() {
   try {
     const { messages } = await API.getTranscript();
-    if (messages && messages.length > 0) {
-      // Rendera befintliga meddelanden
-      messages.forEach(m => {
+    const visible = (messages || []).filter(m => m.content !== AWAKENING_TRIGGER);
+    if (visible.length > 0) {
+      // Rendera befintliga meddelanden (hoppa över vaknandetrigger)
+      visible.forEach(m => {
         if (m.role === 'user') {
           addMessage('player', null, escapeHtml(m.content));
         } else if (m.role === 'assistant') {
@@ -762,14 +802,12 @@ async function loadTranscript() {
       });
       return;
     }
-  } catch (e) { /* Ingen kampanj eller fel — fortsätt till öppning */ }
+  } catch (e) { /* Ingen historik eller fel — fortsätt till vaknandet */ }
 
-  // Ingen historik → be DM:n öppna äventyret
-  addMessage('system', null, '🕯️ <b>Mörkrets Rike</b> — Dungeon Master vaknar…');
-  dmRespond('Jag är redo att börja mitt äventyr. Öppna scenen, Dungeon Master. Beskriv var jag befinner mig, vad jag ser och hör, och ge mig ett val.');
+  // Tomt transkript → DM vaknar: skicka trigger, DM ställer sina frågor
+  addMessage('system', null, '🕯️ <b>Dungeon Master vaknar…</b> Mörkret rör på sig.');
+  dmRespond(AWAKENING_TRIGGER);
 }
-
-loadTranscript();
 
 // ═══════════════════════════════════════
 // DM-TANKAR — roterande statusfraser
@@ -881,6 +919,14 @@ function escapeHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+// Enkel markdown → HTML för DM/NPC-text (**fet**, *kursiv*, radbrytningar)
+function mdToHtml(s) {
+  return s
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    .replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, '<i>$1</i>')
+    .replace(/\n/g, '<br>');
+}
+
 // ═══════════════════════════════════════
 // DM RESPONSE — riktig LLM via backend
 // ═══════════════════════════════════════
@@ -893,15 +939,9 @@ async function dmRespond(playerText) {
     // Parsa svaret — DM kan inkludera NPC-dialog
     const reply = res.reply || '…';
 
-    // Lägg till nya NPCs i registret
+    // Lägg till nya NPCs i registret (från DM:s svar)
     if (res.new_npcs && res.new_npcs.length) {
-      res.new_npcs.forEach(npc => {
-        const key = npc.name.toLowerCase().replace(/\s+/g, '_');
-        if (!NPCS[key]) {
-          NPCS[key] = { name: npc.name, color: npc.color || '#a8b2c0', icon: npc.icon || '🎭', role: npc.role || '' };
-        }
-      });
-      renderNpcSidebar();
+      ingestNpcs(res.new_npcs);
     }
 
     // Visa svaret som DM-narration
@@ -929,7 +969,7 @@ async function dmRespond(playerText) {
     }
   } catch (e) {
     hideThoughts();
-    addMessage('system', null, '⚠ DM:n kunde inte svara. Försök igen.');
+    addMessage('system', null, '⚠ DM:n kunde inte svara: <b>' + escapeHtml(e.message || 'okänt fel') + '</b>. Försök igen.');
   }
 }
 
@@ -997,32 +1037,25 @@ function addAsciiArt(art) {
 function renderNpcSidebar() {
   const list = document.getElementById('npc-list');
   if (!list) return;
-  list.innerHTML = Object.entries(NPCS)
+  const rows = Object.entries(NPCS)
     .filter(([k]) => k !== 'dm')
     .map(([k, n]) => `
-      <div class="npc-row" onclick="location.href='npcs.html'" title="Öppna dossier" style="cursor:pointer">
+      <div class="npc-row${n.alive === false ? ' dead' : ''}" onclick="location.href='npcs.html'" title="Öppna dossier" style="cursor:pointer">
         <span class="npc-dot" style="color:${n.color};background:${n.color}"></span>
-        <span class="npc-name">${n.icon} ${n.name}</span>
+        <span class="npc-name">${n.alive === false ? '💀 ' : ''}${n.icon} ${n.name}</span>
         <span class="npc-role">${n.role || ''}</span>
       </div>`).join('');
+  list.innerHTML = rows || '<div class="npc-row" style="opacity:.45;cursor:default">Ingen har dykt upp ännu…</div>';
 }
 
 // ═══════════════════════════════════════
-// RULES ORACLE
+// RULES ORACLE — Qwen-driven via backend
 // ═══════════════════════════════════════
 function toggleOracle() {
   document.getElementById('oracle').classList.toggle('open');
 }
 
-const oracleAnswers = {
-  'klättra': 'Att klättra kräver vanligtvis ett Strength (Athletics)-slag. DC beror på ytan: grov vägg DC 10, hal klippa DC 15, glatt murverk DC 20. DM:n kan ge advantage om du har klätterutrustning.',
-  'smyga': 'Stealth slås med DEX-modifierare mot vaktens Passive Perception. Om du rör dig långsamt får du inte disadvantage. Att gömma sig kräver att du bryter line of sight först.',
-  'initiative': 'Initiative = d20 + DEX-mod. Alla slår i början av striden, högsta går först. Vid lika avgör DM:n (oftast högst DEX vinner).',
-  'besvärjelse': 'För att kasta en besvärjelse behöver du spell slots. Cantrips kostar inget. Som eldbesvärjare på nivå 7 har du 4 slots — de återställs efter en long rest.',
-  'default': 'Enligt D&D 5e-reglerna: slå en d20, lägg till relevant modifierare, och jämför med DC:n som DM:n sätter. Ju högre DC, desto svårare uppgift. Lätt DC 10, medel DC 15, svår DC 20.'
-};
-
-function askOracle() {
+async function askOracle() {
   const q = document.getElementById('oracle-q').value.trim();
   if (!q) return;
   document.getElementById('oracle-q').value = '';
@@ -1032,18 +1065,22 @@ function askOracle() {
   qEl.textContent = q;
   log.appendChild(qEl);
 
-  // Oraklet "tänker" medan det söker i reglerna
+  // Oraklet "tänker" medan Qwen slår upp i reglerna
   showThoughts('rules');
-
-  setTimeout(() => {
+  try {
+    const { answer } = await API.oracle(q);
     hideThoughts();
-    const key = Object.keys(oracleAnswers).find(k => q.toLowerCase().includes(k)) || 'default';
     const aEl = document.createElement('div');
     aEl.className = 'oracle-msg a';
-    aEl.textContent = oracleAnswers[key];
+    aEl.textContent = answer;
     log.appendChild(aEl);
-    log.scrollTop = log.scrollHeight;
-  }, 1400);
+  } catch (e) {
+    hideThoughts();
+    const aEl = document.createElement('div');
+    aEl.className = 'oracle-msg a';
+    aEl.textContent = '⚠ Oraklet tiger: ' + (e.message || 'okänt fel');
+    log.appendChild(aEl);
+  }
   log.scrollTop = log.scrollHeight;
 }
 
@@ -1051,7 +1088,11 @@ function askOracle() {
 // EXPORT / LOGOUT / TOAST
 // ═══════════════════════════════════════
 function exportCampaign() {
+  const url = API.exportUrl();
+  if (!url) { toast('⚠ Export ej tillgänglig i mock-läge'); return; }
   toast('📦 Bygger kampanj-export… (zip med transkript, karaktärsark, bilagor)');
+  // Öppna nedladdningen i en ny flik — cookien följer med automatiskt
+  window.open(url, '_blank');
 }
 
 // ═══════════════════════════════════════

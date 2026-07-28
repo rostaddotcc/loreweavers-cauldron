@@ -21,7 +21,15 @@ from pydantic import BaseModel
 
 from auth import create_token, load_users, verify_password, verify_token
 from dice import roll as dice_roll
-from models import DM_SYSTEM_PROMPT, get_api_key, get_model, list_models_for_frontend
+from models import (
+    AWAKENING_ASK,
+    AWAKENING_OPEN,
+    DM_SYSTEM_PROMPT,
+    ORACLE_PROMPT,
+    get_api_key,
+    get_model,
+    list_models_for_frontend,
+)
 from atmosphere import build_art_prompt, detect_environments
 from locations import get_locations_with_travel
 from logbook import build_log_prompt
@@ -429,6 +437,39 @@ async def dice(req: DiceRequest, morkrets_token: str | None = Cookie(None)):
 
 
 # ═══════════════════════════════════════
+# REGELORAKLET — Qwen-driven (ersätter hårdkodade svar)
+# ═══════════════════════════════════════
+
+
+class OracleRequest(BaseModel):
+    question: str
+    model_id: str = "qwen3.6-flash"
+
+
+@app.post("/api/oracle")
+async def oracle(req: OracleRequest, morkrets_token: str | None = Cookie(None)):
+    """Ställ en regelfråga till Regeloraklet (LLM)."""
+    _get_current_user(morkrets_token)
+    if not req.question.strip():
+        raise HTTPException(400, "Ställ en fråga först")
+    try:
+        answer = await _call_llm(
+            req.model_id,
+            [
+                {"role": "system", "content": ORACLE_PROMPT},
+                {"role": "user", "content": req.question},
+            ],
+            temperature=0.4,
+            max_tokens=300,
+        )
+    except HTTPException:
+        raise
+    except (ValueError, RuntimeError) as e:
+        raise HTTPException(502, f"Oraklet tiger: {e}")
+    return {"answer": answer.strip()}
+
+
+# ═══════════════════════════════════════
 # CAMPAIGN CRUD
 # ═══════════════════════════════════════
 
@@ -458,6 +499,7 @@ async def create_campaign(morkrets_token: str | None = Cookie(None)):
     style_key, style_desc = random.choice(OPENING_STYLES)
     state["meta"]["opening_style"] = style_desc
     state["meta"]["opening_key"] = style_key
+    state["meta"]["awakening"] = True  # DM vaknar: frågor först, sen öppnas scenen
     store.save(state)
     return {"ok": True, "campaign_id": state["meta"]["campaign_id"], "opening": style_key}
 
@@ -469,6 +511,17 @@ async def get_campaign(morkrets_token: str | None = Cookie(None)):
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
     return state
+
+
+@app.get("/api/campaign/transcript")
+async def get_transcript(morkrets_token: str | None = Cookie(None)):
+    """Returnera kampanjens transkript (senaste 100 meddelandena)."""
+    payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+    entries = store.load_transcript(state, last_n=100)
+    return {"messages": entries}
 
 
 @app.delete("/api/campaign")
@@ -485,8 +538,13 @@ async def delete_campaign(morkrets_token: str | None = Cookie(None)):
 # ═══════════════════════════════════════
 
 
-def _build_system_prompt(state: dict) -> str:
-    """Bygg systemprompt med kampanjkontext."""
+def _build_system_prompt(
+    state: dict,
+    turn_override: int | None = None,
+    awakening_trigger: bool = False,
+) -> str:
+    """Bygg systemprompt med kampanjkontext. turn_override används av /api/chat
+    för att räkna med det meddelande som ännu inte sparats i transkriptet."""
     parts = [DM_SYSTEM_PROMPT]
 
     # Karaktär
@@ -519,10 +577,19 @@ def _build_system_prompt(state: dict) -> str:
         q_str = "; ".join(q.get("name", "?") for q in active[:5])
         parts.append(f"\n## Aktiva uppdrag\n{q_str}")
 
-    # Äventyrsöppning (bara vid första draget)
-    opening = state.get("meta", {}).get("opening_style", "")
-    if opening and state.get("meta", {}).get("turn_count", 0) == 0:
-        parts.append(f"\n## Äventyrsöppning (första draget)\n{opening}")
+    # ── VAKNANDEPROTOKOLLET ──
+    # Aktiveras av awakening-flaggan (nya kampanjer) eller av triggern.
+    # turn_override = turn_count + det meddelande som ännu inte sparats.
+    # turn==1 = spelarens första meddelande → DM ställer frågor.
+    # turn==2 = spelaren har svarat på frågorna → DM öppnar scenen med svaren.
+    meta = state.get("meta", {})
+    if meta.get("awakening") or awakening_trigger:
+        turn = turn_override if turn_override is not None else meta.get("turn_count", 0)
+        opening = meta.get("opening_style", "Beskriv omgivningen atmosfäriskt och låt spelaren utforska.")
+        if awakening_trigger or turn == 1:
+            parts.append(AWAKENING_ASK)
+        elif turn == 2:
+            parts.append(AWAKENING_OPEN.format(opening_style=opening))
 
     return "\n".join(parts)
 
@@ -536,11 +603,13 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj — skapa en först")
 
-    # Lägg till spelarens meddelande
-    state = store.append_message(state, "user", req.message)
-
-    # Bygg meddelandelista
-    messages = [{"role": "system", "content": _build_system_prompt(state)}]
+    # Bygg meddelandelista — spelarens meddelande sparas först EFTER att LLM:n svarat,
+    # så ett misslyckat anrop lämnar inga spår i transkriptet.
+    effective_turn = state["meta"].get("turn_count", 0) + 1
+    is_awakening = req.message == "__VAKNA_DM__"
+    messages = [{"role": "system", "content": _build_system_prompt(
+        state, turn_override=effective_turn, awakening_trigger=is_awakening
+    )}]
 
     # Lägg till senaste sammanfattningar som kontext
     summaries = store.load_summaries(state, last_n=2)
@@ -549,34 +618,31 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
             {"role": "system", "content": f"[Sammanfattning vid tur {s['turn']}]: {s['text']}"}
         )
 
-    # Lägg till recent transcript
+    # Lägg till recent transcript + spelarens nya meddelande
+    # (vaknandetrigger filtreras bort — den är en intern signal, inte spelartext)
     transcript = store.load_transcript(state, last_n=16)
     for entry in transcript:
-        messages.append({"role": entry["role"], "content": entry["content"]})
+        if entry.get("content") == "__VAKNA_DM__":
+            continue
+        messages.append({"role": "user" if entry["role"] == "user" else "assistant", "content": entry["content"]})
+    # Vaknandet: LLM:n ser en narrativ kallelse istället för den råa triggern
+    user_content = req.message
+    if is_awakening:
+        user_content = "*Du slår upp ögonen i mörkret. Någon har kallat på dig. En ny spelare sitter vid bordet och väntar.*"
+    messages.append({"role": "user", "content": user_content})
 
-    # Anropa LLM
+    # Anropa LLM — vid fel: riktigt felmeddelande, ingen placeholder
     try:
         reply = await _call_llm(req.model_id, messages)
-    except (ValueError, RuntimeError, HTTPException):
-        # Trött DM — orkar inte just nu
-        reply = random.choice([
-            "*Dungeon Master gäspar tungt och lägger ifrån sig tärningarna.*\n\nJag är trött, vi spelar en annan dag. Mörkret vilar... men det glömmer aldrig.",
-            "*En suck ekar genom mörkret.*\n\nInte ens en Dungeon Master kan vara vaken jämt. Kom tillbaka när skuggorna är längre.",
-            "*Dungeon Master blundar och lutar sig mot bordet.*\n\nI'm tired... let's play later. Äventyret väntar.",
-        ])
-        # Spara och returnera direkt utan parsning
-        state = store.append_message(state, "assistant", reply)
-        store.save(state)
-        return {
-            "reply": reply,
-            "turn_count": state["meta"].get("turn_count", 0),
-            "summary_generated": False,
-            "npcs": [],
-            "roll_requests": [],
-            "effects": [],
-            "ascii_art": None,
-            "tired": True,
-        }
+    except HTTPException:
+        raise
+    except (ValueError, RuntimeError) as e:
+        raise HTTPException(502, f"DM:n nås inte just nu: {e}")
+    except Exception as e:
+        raise HTTPException(502, f"Oväntat LLM-fel: {e}")
+
+    # Spara spelarens meddelande + DM-svar i transkriptet
+    state = store.append_message(state, "user", req.message)
 
     # Parsa NPCs och kastbegäran ur svaret
     reply, new_npcs = _parse_npcs(reply)
@@ -652,7 +718,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
 # CHARACTER GENERATION
 # ═══════════════════════════════════════
 
-CHARACTER_PROMPT = """Du är en D&D-karaktärsgenerator. Skapa en karaktär baserad på spelarens beskrivning.
+CHARACTER_PROMPT = """Du är en D&D-karaktärsgenerator för ett mörkt fantasy-äventyr. Skapa en karaktär baserad på spelarens beskrivning.
 
 Svara ENDAST med giltig JSON (ingen markdown) med detta schema:
 {
@@ -661,7 +727,7 @@ Svara ENDAST med giltig JSON (ingen markdown) med detta schema:
   "class": "string",
   "level": 1,
   "alignment": "string",
-  "background": "string",
+  "background": "string — klass/bakgrund, kort",
   "ac": 10,
   "initiative": 0,
   "perception": 10,
@@ -678,8 +744,10 @@ Svara ENDAST med giltig JSON (ingen markdown) med detta schema:
     "WIS": {"score": 10, "mod": 0},
     "CHA": {"score": 10, "mod": 0}
   },
-  "traits": [],
-  "saves": []
+  "traits": ["string — 3-4 förmågor/egenskaper"],
+  "saves": [],
+  "gear": "string — startutrustning, 5-8 föremål separerade med ' · '",
+  "story": "string — bakgrundshistoria, max 100 ord, mörk och stämningsfull"
 }"""
 
 
@@ -700,25 +768,11 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
     try:
         raw = await _call_llm(req.model_id, messages, temperature=0.7)
         char_data = _extract_json(raw)
-    except (ValueError, RuntimeError, HTTPException):
-        # Trött DM — generera en enkel fallback-karaktär
-        char_data = {
-            "name": "Den Trötte Vandraren",
-            "race": "Människa",
-            "class": "Äventyrare",
-            "level": 1,
-            "alignment": "Neutral",
-            "background": "En trött själ som väntar på bättre tider.",
-            "hp": {"current": 10, "max": 10},
-            "ac": 10,
-            "abilities": {
-                "STR": {"score": 10, "mod": 0}, "DEX": {"score": 10, "mod": 0},
-                "CON": {"score": 10, "mod": 0}, "INT": {"score": 10, "mod": 0},
-                "WIS": {"score": 10, "mod": 0}, "CHA": {"score": 10, "mod": 0},
-            },
-            "traits": ["Uthållig"],
-            "tired": True,
-        }
+    except HTTPException:
+        raise
+    except (ValueError, RuntimeError) as e:
+        # Inga tysta fallback-karaktärer — spelaren ska se vad som gick fel
+        raise HTTPException(502, f"Karaktären kunde inte vävas: {e}")
 
     # Validera löst — se till att grundfält finns
     if not char_data.get("name"):

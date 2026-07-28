@@ -273,6 +273,15 @@ const API = (() => {
       return req('/api/vault/' + charId, { method: 'DELETE' });
     },
 
+    // ── Regeloraklet (Qwen-driven) ──
+    async oracle(question, modelId = 'qwen3.6-flash') {
+      if (MOCK) {
+        await new Promise(r => setTimeout(r, 900));
+        return { answer: 'Slå en d20 och lägg till relevant modifierare mot DM:ns DC.' };
+      }
+      return req('/api/oracle', { method: 'POST', body: JSON.stringify({ question, model_id: modelId }) });
+    },
+
     // ── Export ──
     exportUrl() {
       return MOCK ? null : BASE + '/api/campaign/export';

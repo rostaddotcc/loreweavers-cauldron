@@ -1,86 +1,127 @@
 /* ═══════════════════════════════════════════════════
-   🎮 MÖRKRETS RIKE — 16-BIT ELDEN RING THEME
-   Pixeltypsnitt · hårda kanter · dither · SNES-dialog
+   🎮 MÖRKRETS RIKE — 16-BIT ELDEN RING THEME (v2)
+   SNES / Super Famicom · Dark Souls · "lite äldre"
    Länkas EFTER inline-stilar så att detta vinner.
    ═══════════════════════════════════════════════════ */
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap');
 
-/* ── 0. GLOBAL RESET: inga rundade hörn (SNES är kantigt) ── */
-*, *::before, *::after { border-radius: 0 !important; }
+/* ── 0. GLOBAL RESET: SNES är kantigt ── */
+*, *::before, *::after {
+  border-radius: 0 !important;
+}
+
+/* Pixel-rendering överallt */
+canvas, img, .sigil, .portrait-frame, .pv-portrait, .d-portrait,
+.pc-avatar, .ncard .sigil, .coin-disc, .cp-icon, .vc-icon, .pv-icon,
+.arch .icon, .path .icon {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
 
 /* ── 1. TYPOGRAFI ──
    Press Start 2P → stora titlar (iconic 8/16-bit)
    Silkscreen     → UI-labels, knappar, badges
    Spectral       → brödtext (läsbar, behålls)        */
-h1, .gate-title, .destiny-title h1, .masthead h1,
-.forge-head .brand, .topbar .brand, .char-name, .pv-name, .d-name {
+h1, h2, h3, .gate-title, .destiny-title h1, .masthead h1,
+.forge-head .brand, .topbar .brand, .char-name, .pv-name, .d-name,
+.head h1, .cp-name, .hall-title, .panel-title, .section-label {
   font-family: 'Press Start 2P', 'Silkscreen', monospace !important;
   letter-spacing: 0 !important;
-  line-height: 1.4 !important;
+  line-height: 1.5 !important;
 }
 
-.tab, .top-btn, .badge, .section-label, .section-title, .d-label,
+.tab, .top-btn, .badge, .section-title, .d-label,
 .fchip, .tag, .coin-btn, .mini-btn, .rune-btn, .go-btn, .summon-btn,
 .pv-go, .pv-reroll, .buy-btn, .rr-btn, .gate-btn, .modal-btn,
-.dice-label, .die-btn .d-type, .hall-title, .panel-title,
-.vital-head .label, .coin-name, .ability .abbr, .pc-sub, .q-status,
-.trust-label, .ep-label, .slots-hint, .input-hint, .hall-foot {
+.dice-label, .die-btn .d-type, .hall-foot, .blank-btn, .danger-btn,
+.pv-stat .a, .ep-label, .cp-stat, .path .tag, .scroll-hint, .hint,
+.gate-footer, .field label, .side-label, .model-select select,
+.vc-name, .vc-sub, .vc-go, .npc-role, .pc-sub, .q-status,
+.trust-label, .ep-label, .slots-hint, .input-hint, .oracle-msg,
+.rr-label, .art-label, .notes-list, .met-when, .conv-head b,
+.char-meta .stat i, .pv-vitals, .destiny-sub, .gate-sub, .head .sub,
+.head .over, .destiny-title .over, .cp-sub, .cp-rule, .dz-text,
+.dz-formats, .fi-name, .fi-size, .path p, .arch .lore {
   font-family: 'Silkscreen', 'Press Start 2P', monospace !important;
   letter-spacing: 0 !important;
 }
 
-/* ── 2. PIXEL-SKUGGOR (hårda, offset — ingen blur) ── */
-.panel, .panel-box, .scroll-box, .gate-frame, .arch, .path,
-.ncard, .quest, .coin, .ability, .pv-stat, .pc-card, .ep-card,
-.hoard, .modal-box, .die-btn, .add-form input, .add-form select,
-.world-prompt, #prompt, .input-row textarea, .oracle-input input {
-  border-radius: 0 !important;
+/* Brödtext / narration — Spectral kvar för läsbarhet */
+.msg .text, .pv-story, .pv-gear, #prompt, .world-prompt,
+.input-row textarea, .oracle-msg.a {
+  font-family: 'Spectral', Georgia, serif !important;
 }
 
-.panel, .panel-box, .scroll-box, .gate-frame, .hoard, .modal-box {
-  box-shadow: 8px 8px 0 rgba(0,0,0,.85) !important;
+/* ── 2. PIXEL-SKUGGOR (hårda, offset — ingen blur) ── */
+.panel, .panel-box, .scroll-box, .gate-frame, .hoard, .modal-box,
+.continue-panel, .path, .arch {
+  box-shadow: 6px 6px 0 rgba(0,0,0,.85) !important;
   border: 3px solid var(--edge) !important;
 }
-.arch, .path, .ncard, .coin, .pc-card, .ep-card {
-  box-shadow: 5px 5px 0 rgba(0,0,0,.8) !important;
-  border: 2px solid var(--edge) !important;
-}
-.arch:hover, .path:hover, .ncard:hover, .ncard.sel, .pc-card:hover {
-  box-shadow: 7px 7px 0 rgba(0,0,0,.9) !important;
+/* Dubbelram — yttre + inre (SNES-fönster) */
+.panel::before, .panel-box::before, .scroll-box::before,
+.gate-frame::before, .modal-box::before, .continue-panel::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 2px solid rgba(201,162,39,.22);
+  pointer-events: none;
+  z-index: 1;
 }
 
-/* Ta bort mjuka "glow"-skuggor på knappar → hårda */
-.rune-btn, .go-btn, .summon-btn, .pv-go, .gate-btn, .rr-btn, .modal-btn.confirm {
+.ncard, .coin, .pc-card, .ep-card, .quest, .vault-chip, .file-item {
   box-shadow: 4px 4px 0 rgba(0,0,0,.8) !important;
-  border: 2px solid #6e5510 !important;
+  border: 2px solid var(--edge) !important;
 }
-.rune-btn:hover, .go-btn:hover, .summon-btn:hover, .pv-go:hover,
-.gate-btn:hover, .rr-btn:hover, .modal-btn.confirm:hover {
-  transform: translate(-2px,-2px) !important;
+.arch:hover, .path:hover, .ncard:hover, .ncard.sel, .pc-card:hover,
+.vault-chip:hover {
   box-shadow: 6px 6px 0 rgba(0,0,0,.9) !important;
 }
+
+/* ── 3. KNAPPAR — SNES press-effekt ── */
+.rune-btn, .go-btn, .summon-btn, .pv-go, .gate-btn, .rr-btn,
+.modal-btn.confirm, .danger-btn, .cp-actions .go-btn {
+  box-shadow: 4px 4px 0 rgba(0,0,0,.8) !important;
+  border: 2px solid #6e5510 !important;
+  transition: none !important; /* SNES: instant, ingen easing */
+}
+.rune-btn:hover, .go-btn:hover, .summon-btn:hover, .pv-go:hover,
+.gate-btn:hover, .rr-btn:hover, .modal-btn.confirm:hover,
+.danger-btn:hover, .cp-actions .go-btn:hover {
+  transform: translate(-2px,-2px) !important;
+  box-shadow: 6px 6px 0 rgba(0,0,0,.9) !important;
+  filter: none !important;
+}
 .rune-btn:active, .go-btn:active, .summon-btn:active, .pv-go:active,
-.gate-btn:active, .rr-btn:active, .modal-btn.confirm:active {
+.gate-btn:active, .rr-btn:active, .modal-btn.confirm:active,
+.danger-btn:active, .cp-actions .go-btn:active {
   transform: translate(2px,2px) !important;
   box-shadow: 1px 1px 0 rgba(0,0,0,.8) !important;
 }
-.modal-btn.cancel, .top-btn, .blank-btn, .fchip, .buy-btn, .mini-btn, .coin-btn {
+.modal-btn.cancel, .top-btn, .blank-btn, .fchip, .buy-btn, .mini-btn,
+.coin-btn, .back, .pv-reroll {
   box-shadow: 3px 3px 0 rgba(0,0,0,.7) !important;
   border: 2px solid var(--edge) !important;
+  transition: none !important;
 }
-.top-btn:hover, .fchip:hover, .buy-btn:hover, .mini-btn:hover {
+.top-btn:hover, .fchip:hover, .buy-btn:hover, .mini-btn:hover,
+.back:hover, .pv-reroll:hover {
   transform: translate(-1px,-1px) !important;
   box-shadow: 4px 4px 0 rgba(0,0,0,.8) !important;
 }
 
-/* ── 3. DITHER + SCANLINES (SNES-textur över allt) ── */
+/* Ta bort mjuka "glow"/sheen-animationer på knappar */
+.gate-btn::after, .go-btn::after, .summon-btn::after, .pv-go::after {
+  display: none !important;
+}
+
+/* ── 4. DITHER + SCANLINES (SNES-textur över allt) ── */
 body::before {
   content: ''; position: fixed; inset: 0; z-index: 3; pointer-events: none;
-  /* subtila scanlines */
   background: repeating-linear-gradient(
     0deg,
-    rgba(0,0,0,.14) 0px,
-    rgba(0,0,0,.14) 1px,
+    rgba(0,0,0,.13) 0px,
+    rgba(0,0,0,.13) 1px,
     transparent 1px,
     transparent 3px
   );
@@ -88,13 +129,12 @@ body::before {
 }
 body::after {
   content: ''; position: fixed; inset: 0; z-index: 3; pointer-events: none;
-  /* dither-korn */
   background-image:
     repeating-linear-gradient(45deg, rgba(255,255,255,.012) 0 1px, transparent 1px 3px),
     repeating-linear-gradient(-45deg, rgba(0,0,0,.05) 0 1px, transparent 1px 3px);
 }
 
-/* ── 4. SNES DIALOGRUTOR (chatt-meddelanden) ── */
+/* ── 5. SNES DIALOGRUTOR (chatt-meddelanden) ── */
 .msg.dm, .msg.npc {
   background: rgba(8,6,18,.92) !important;
   border: 3px solid var(--edge) !important;
@@ -120,14 +160,31 @@ body::after {
   border: 2px dashed rgba(201,162,39,.5) !important;
   box-shadow: 4px 4px 0 rgba(0,0,0,.6) !important;
 }
+/* Dialogtext → pixel-font, upprätt (ingen kursiv serif) */
+.msg .text {
+  font-family: 'Silkscreen', 'Press Start 2P', monospace !important;
+  font-style: normal !important;
+  font-size: .92rem !important;
+  line-height: 1.75 !important;
+  letter-spacing: .01em !important;
+}
+.msg.dm .text em, .msg.npc .text em {
+  font-style: normal !important;
+  color: var(--bone-dim) !important;
+}
+/* DM-who label → pixel */
+.msg.dm .who, .msg.player .who {
+  font-family: 'Silkscreen', monospace !important;
+  letter-spacing: .08em !important;
+}
 
-/* ── 5. SEGMENTERADE BARER (SNES HP/XP) ── */
+/* ── 6. SEGMENTERADE BARER (SNES HP/XP) ── */
 .bar, .trough, .trust-bar, .pc-hp, .ex-bar {
   border: 2px solid var(--edge) !important;
   background: #08050f !important;
   box-shadow: inset 2px 2px 0 rgba(0,0,0,.8) !important;
+  border-radius: 0 !important;
 }
-/* tick-marks som delar upp i segment */
 .bar::after, .trough::after {
   content: ''; position: absolute; inset: 0; pointer-events: none;
   background: repeating-linear-gradient(
@@ -139,25 +196,26 @@ body::after {
   );
 }
 .bar, .trough { position: relative; }
-.fill, .bar-fill, .trust-fill {
+.fill, .bar-fill, .trust-fill, .ex-fill {
   box-shadow: none !important;
-  /* pixel-stegad gradient */
+  border-radius: 0 !important;
   background-image: repeating-linear-gradient(
     0deg,
     rgba(255,255,255,.16) 0 2px,
     transparent 2px 4px
   ) !important;
 }
-.fill.hp, .bar-hp .bar-fill { background-color: var(--blood-bright) !important; }
+.fill.hp, .bar-hp .bar-fill, .pc-hp i { background-color: var(--blood-bright) !important; }
 .fill.xp, .bar-xp .bar-fill { background-color: var(--gold-bright) !important; }
 .bar-mana .bar-fill { background-color: var(--arcane) !important; }
 
-/* ── 6. PIXEL-TÄRNINGAR ── */
+/* ── 7. PIXEL-TÄRNINGAR ── */
 .die-btn {
   clip-path: none !important;
   border: 2px solid var(--edge) !important;
   box-shadow: 4px 4px 0 rgba(0,0,0,.8) !important;
   background: linear-gradient(160deg, var(--stone-3), var(--stone)) !important;
+  transition: none !important;
 }
 .die-btn:hover {
   transform: translate(-2px,-2px) !important;
@@ -165,9 +223,19 @@ body::after {
   border-color: var(--gold) !important;
 }
 .die-btn .d-num { font-family: 'Press Start 2P', monospace !important; font-size: .62rem !important; }
+/* Vävnadstärningarna i newgame → pixel */
+.die {
+  clip-path: none !important;
+  border: 2px solid var(--gold) !important;
+  box-shadow: 3px 3px 0 rgba(0,0,0,.8) !important;
+  font-family: 'Press Start 2P', monospace !important;
+  font-size: .8rem !important;
+  animation-timing-function: steps(2) !important;
+}
 
-/* ── 7. RUN-SIGILL → PIXEL-ICONS ── */
-.sigil, .portrait-frame, .pv-portrait, .d-portrait, .pc-avatar, .ncard .sigil {
+/* ── 8. SIGILL / PORTRÄTT → PIXEL-RUTOR ── */
+.sigil, .portrait-frame, .pv-portrait, .d-portrait, .pc-avatar,
+.ncard .sigil, .cp-icon, .vc-icon, .pv-icon {
   border-radius: 0 !important;
   image-rendering: pixelated;
   border-width: 3px !important;
@@ -175,16 +243,23 @@ body::after {
 }
 .sigil-ring, .sigil-ring.inner { display: none !important; } /* mjuka ringar → bort */
 .sigil { border: 3px solid var(--gold) !important; background: var(--stone-3) !important; }
+/* cp-icon breathe → stegad pixel-puls */
+.cp-icon { animation: cp-breathe-px 2s steps(2) infinite !important; }
+@keyframes cp-breathe-px {
+  0%,100% { box-shadow: 5px 5px 0 rgba(0,0,0,.8), 0 0 0 2px rgba(201,162,39,.3); }
+  50%     { box-shadow: 5px 5px 0 rgba(0,0,0,.8), 0 0 0 4px rgba(201,162,39,.55); }
+}
 
-/* ── 8. FÖRMÅGOR / STATS → PIXEL-RUTOR ── */
+/* ── 9. FÖRMÅGOR / STATS → PIXEL-RUTOR ── */
 .ability, .pv-stat {
   clip-path: none !important;
   border: 2px solid var(--edge) !important;
   box-shadow: 4px 4px 0 rgba(0,0,0,.7) !important;
 }
 .ability .score, .pv-stat .s { font-family: 'Press Start 2P', monospace !important; font-size: 1.1rem !important; }
+.pv-stat .a, .ability .abbr { font-family: 'Silkscreen', monospace !important; }
 
-/* ── 9. MYNT → PIXEL-COINS ── */
+/* ── 10. MYNT → PIXEL-COINS ── */
 .coin-disc {
   border-radius: 0 !important;
   border: 2px solid rgba(0,0,0,.5) !important;
@@ -193,39 +268,47 @@ body::after {
 }
 .coin-amount { font-family: 'Press Start 2P', monospace !important; font-size: 1.1rem !important; }
 
-/* ── 10. INPUTFÄLT → SNES text-box ── */
+/* ── 11. INPUTFÄLT → SNES text-box ── */
 .input-row textarea, #prompt, .world-prompt,
 .add-form input, .add-form select, .oracle-input input, .field input {
   border: 3px solid var(--edge) !important;
   box-shadow: inset 3px 3px 0 rgba(0,0,0,.6), 4px 4px 0 rgba(0,0,0,.6) !important;
   background: #0a0714 !important;
+  border-radius: 0 !important;
 }
 .input-row textarea:focus, #prompt:focus, .world-prompt:focus, .field input:focus {
   border-color: var(--gold) !important;
   box-shadow: inset 3px 3px 0 rgba(0,0,0,.6), 4px 4px 0 rgba(0,0,0,.6), 0 0 0 2px rgba(201,162,39,.25) !important;
 }
 
-/* ── 11. FLIKAR → SNES menu-tabs ── */
+/* ── 12. FLIKAR → SNES menu-tabs med pil ── */
 .tab {
   border: 2px solid var(--edge) !important;
   border-bottom: none !important;
   box-shadow: 3px -3px 0 rgba(0,0,0,.5) !important;
+  transition: none !important;
 }
 .tab.active {
   border-color: var(--gold) !important;
   box-shadow: 3px -3px 0 rgba(0,0,0,.5), inset 0 3px 0 var(--gold) !important;
 }
+.tab.active::before {
+  content: '▸ ';
+  color: var(--gold-bright);
+  animation: blink-px 1s steps(1) infinite;
+}
+@keyframes blink-px { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
 
-/* ── 12. GULD-ORNAMENT → PIXEL-CORNERS ── */
+/* ── 13. GULD-ORNAMENT → PIXEL-CORNERS ── */
 .corner { opacity: 1 !important; border-width: 3px !important; }
 
-/* ── 13. TOPBAR / SIDEBAR → hårdare ── */
+/* ── 14. TOPBAR / SIDEBAR → hårdare ── */
 .topbar, .sidebar, .hall, .oracle {
   border-color: var(--edge) !important;
 }
 .model-select { border: 2px solid var(--edge) !important; box-shadow: 3px 3px 0 rgba(0,0,0,.6) !important; }
 
-/* ── 14. SPELL SLOTS → pixel-rutor ── */
+/* ── 15. SPELL SLOTS → pixel-rutor ── */
 .slot {
   border-radius: 0 !important;
   border: 2px solid var(--edge) !important;
@@ -235,40 +318,177 @@ body::after {
   box-shadow: 3px 3px 0 rgba(0,0,0,.6), 0 0 10px rgba(139,95,212,.6) !important;
 }
 
-/* ── 15. TOAST → SNES notification ── */
+/* ── 16. TOAST → SNES notification ── */
 .toast {
   border: 3px solid var(--gold) !important;
   box-shadow: 5px 5px 0 rgba(0,0,0,.8) !important;
   font-family: 'Silkscreen', monospace !important;
+  border-radius: 0 !important;
 }
 
-/* ── 16. RUBRIK-skala (Press Start 2P är stor — skala ner) ── */
-.gate-title { font-size: 1.15rem !important; }
-.destiny-title h1 { font-size: 1.5rem !important; }
-.masthead h1 { font-size: 1.1rem !important; }
-.topbar .brand, .forge-head .brand { font-size: .8rem !important; }
-.char-name, .pv-name, .d-name { font-size: 1.15rem !important; }
-.hall-title { font-size: .85rem !important; }
+/* ── 17. RUBRIK-skala + pixel text-shadow ── */
+.gate-title { font-size: 1.05rem !important; text-shadow: 3px 3px 0 #000, 0 0 0 transparent !important; }
+.destiny-title h1 { font-size: 1.35rem !important; text-shadow: 3px 3px 0 #000 !important; }
+.masthead h1, .head h1 { font-size: 1.05rem !important; text-shadow: 3px 3px 0 #000 !important; }
+.topbar .brand, .forge-head .brand { font-size: .72rem !important; text-shadow: 2px 2px 0 #000 !important; }
+.char-name, .pv-name, .d-name { font-size: 1.05rem !important; text-shadow: 2px 2px 0 #000 !important; }
+.hall-title { font-size: .8rem !important; }
+.cp-name { font-size: 1.1rem !important; text-shadow: 2px 2px 0 #000 !important; }
+/* Ta bort mjuka candle/glow-animationer på titlar */
+.gate-title, .destiny-title h1, .head h1, .cp-name {
+  animation: none !important;
+}
 
-/* ── 17. EMBER-canvas → pixel-rendering ── */
+/* ── 18. EMBER-canvas → pixel-rendering ── */
 #embers { image-rendering: pixelated; }
 
-/* ── 18. DROPZONE → pixel-box ── */
+/* ── 19. DROPZONE → pixel-box ── */
 .dropzone {
   border: 3px dashed var(--edge) !important;
   box-shadow: inset 3px 3px 0 rgba(0,0,0,.4) !important;
+  border-radius: 0 !important;
+  transition: none !important;
 }
 .dropzone:hover, .dropzone.dragover {
   border-color: var(--gold) !important;
   box-shadow: inset 3px 3px 0 rgba(0,0,0,.4), 0 0 0 2px rgba(201,162,39,.2) !important;
 }
 
-/* ── 19. QUEST / NOTES → SNES list ── */
+/* ── 20. QUEST / NOTES → SNES list ── */
 .quest { border: 2px solid var(--edge) !important; box-shadow: 4px 4px 0 rgba(0,0,0,.6) !important; }
 .quest:hover { border-color: var(--ember) !important; }
-.notes-list li::before { content: '▸' !important; font-family: monospace; }
+.notes-list li::before { content: '▸' !important; font-family: monospace; color: var(--gold); }
 
-/* ── 20. MINDRE pixel-labels ── */
+/* ── 21. SCROLLBARS → pixel ── */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--ink, #0b0812); border-left: 2px solid var(--edge, #3d2f52); }
+::-webkit-scrollbar-thumb { background: var(--edge, #3d2f52); border: 2px solid var(--ink, #0b0812); }
+::-webkit-scrollbar-thumb:hover { background: var(--gold, #c9a227); }
+
+/* ── 22. SELECTION → guld ── */
+::selection { background: rgba(201,162,39,.4); color: #efe2c0; }
+
+/* ── 23. FOG / VIGNETTE → behålls men mjuka gradienter dämpas ── */
+.fog::before, .fog::after { filter: blur(60px) !important; opacity: .35 !important; }
+
+/* ── 24. VÄVNINGS-TEXT / DM-TANKAR → pixel ── */
+.w-text, #thought-text {
+  font-family: 'Silkscreen', monospace !important;
+  font-style: normal !important;
+}
+/* DM-status blinkar stegat */
+#dm-status.show .w-text, #dm-status.show #thought-text {
+  animation: blink-px 1.6s steps(1) infinite;
+}
+
+/* ── 25. ORACLE → SNES-panel ── */
+.oracle {
+  border: 3px solid var(--edge) !important;
+  box-shadow: 6px 6px 0 rgba(0,0,0,.85) !important;
+}
+.oracle-msg {
+  border-radius: 0 !important;
+}
+.oracle-msg.q {
+  border: 2px solid rgba(139,95,212,.5) !important;
+  box-shadow: 3px 3px 0 rgba(0,0,0,.6) !important;
+}
+.oracle-msg.a {
+  border: 2px solid rgba(201,162,39,.5) !important;
+  box-shadow: 3px 3px 0 rgba(0,0,0,.6) !important;
+}
+
+/* ── 26. ROLL REQUEST → SNES-knapp ── */
+.roll-request {
+  border: 2px solid var(--edge) !important;
+  box-shadow: 4px 4px 0 rgba(0,0,0,.7) !important;
+  background: rgba(8,6,18,.92) !important;
+}
+.rr-btn {
+  font-family: 'Silkscreen', monospace !important;
+}
+
+/* ── 27. ASCII-ART → pixel-ram ── */
+.ascii-art {
+  border: 2px solid rgba(201,162,39,.4) !important;
+  box-shadow: 4px 4px 0 rgba(0,0,0,.6) !important;
+  background: rgba(8,6,18,.9) !important;
+}
+.ascii-art pre {
+  font-family: 'Silkscreen', monospace !important;
+  line-height: 1.15 !important;
+}
+.art-label {
+  font-family: 'Silkscreen', monospace !important;
+}
+
+/* ── 28. NPC / SIDEBAR-rader → pixel ── */
+.npc-row { border-radius: 0 !important; transition: none !important; }
+.npc-row:hover { background: rgba(201,162,39,.08) !important; }
+.npc-row.dead { opacity: .5; }
+.npc-dot { border-radius: 0 !important; box-shadow: 2px 2px 0 rgba(0,0,0,.6) !important; }
+.npc-name { font-family: 'Silkscreen', monospace !important; font-size: .72rem !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+.npc-role { font-family: 'Silkscreen', monospace !important; font-size: .58rem !important; font-style: normal !important; white-space: nowrap !important; }
+.pc-card { transition: none !important; }
+.pc-card:hover { transform: none !important; border-color: var(--gold) !important; }
+.pc-name { font-family: 'Press Start 2P', monospace !important; font-size: .68rem !important; line-height: 1.5 !important; }
+.pc-sub { font-style: normal !important; }
+.pc-hp { border-radius: 0 !important; height: 8px !important; border: 2px solid var(--edge) !important; background: #08050f !important; box-shadow: inset 2px 2px 0 rgba(0,0,0,.8) !important; }
+.pc-hp i { border-radius: 0 !important; background: var(--blood-bright) !important; background-image: repeating-linear-gradient(0deg, rgba(255,255,255,.16) 0 2px, transparent 2px 4px) !important; }
+/* PLATS-blocket → pixel */
+#loc-name { font-family: 'Silkscreen', monospace !important; font-size: .72rem !important; }
+#loc-sub { font-family: 'Silkscreen', monospace !important; font-size: .6rem !important; font-style: normal !important; }
+/* Input-placeholder → pixel, inte kursiv serif */
+.input-row textarea::placeholder { font-family: 'Silkscreen', monospace !important; font-style: normal !important; font-size: .78rem !important; }
+
+/* ── 29. MINDRE pixel-labels ── */
 .char-meta .stat i, .pv-vitals, .met-when, .conv-head b {
   font-family: 'Silkscreen', monospace !important;
+}
+
+/* ── 30. LOGIN-sida specifikt ── */
+.gate-sub, .gate-footer { font-style: normal !important; }
+.gate-frame { position: relative; }
+.gate-frame.shake { animation: shake-px .3s steps(3) !important; }
+@keyframes shake-px {
+  0%,100% { transform: translateX(0); }
+  33% { transform: translateX(-6px); }
+  66% { transform: translateX(6px); }
+}
+.gate-frame.success { border-color: var(--gold) !important; box-shadow: 6px 6px 0 rgba(0,0,0,.85), 0 0 0 3px rgba(201,162,39,.4) !important; }
+
+/* ── 31. VÄGSKÄLET / ARKETYPER → pixel-hover ── */
+.path, .arch { transition: none !important; }
+.path:hover, .arch:hover { transform: translate(-2px,-2px) !important; }
+.path .icon, .arch .icon { transition: none !important; filter: none !important; }
+.path:hover .icon, .arch:hover .icon { transform: none !important; }
+.path .glow, .arch .glow { display: none !important; } /* mjuka glows → bort */
+.arch.selected { box-shadow: 6px 6px 0 rgba(0,0,0,.9), 0 0 0 2px var(--ac, var(--gold)) !important; }
+
+/* ── 32. FÖRHANDSVISNING (newgame) → pixel ── */
+.pv-portrait { transform: none !important; }
+.pv-trait { border-radius: 0 !important; box-shadow: 2px 2px 0 rgba(0,0,0,.5) !important; }
+.pv-story { border-left: 3px solid var(--pv-ac, var(--gold)) !important; }
+
+/* ── 33. SEND / UTFÖR-knapp → platt pixel ── */
+.send-btn {
+  font-family: 'Silkscreen', monospace !important;
+  font-size: .72rem !important;
+  color: #1a1206 !important;
+  text-shadow: 0 1px 0 rgba(255,255,255,.3) !important;
+  border-radius: 0 !important;
+  box-shadow: 4px 4px 0 rgba(0,0,0,.8) !important;
+  border: 2px solid #6e5510 !important;
+  transition: none !important;
+  filter: none !important;
+}
+.send-btn:hover { transform: translate(-2px,-2px) !important; box-shadow: 6px 6px 0 rgba(0,0,0,.9) !important; }
+.send-btn:active { transform: translate(2px,2px) !important; box-shadow: 1px 1px 0 rgba(0,0,0,.8) !important; }
+.send-btn::after { display: none !important; }
+
+/* ── 34. RESPONSIVT ── */
+@media (max-width: 560px) {
+  .gate-title { font-size: .85rem !important; }
+  .destiny-title h1 { font-size: 1.05rem !important; }
+  .head h1 { font-size: .85rem !important; }
 }

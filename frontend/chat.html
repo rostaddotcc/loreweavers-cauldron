@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚔️ Mörkrets Rike — Vid bordet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0b0812;
+    --stone: #161020;
+    --stone-2: #1d1529;
+    --stone-3: #241a33;
+    --edge: #3d2f52;
+    --bone: #d9c9a6;
+    --bone-bright: #efe2c0;
+    --bone-dim: #8a7a5e;
+    --gold: #c9a227;
+    --gold-bright: #e8c65a;
+    --blood: #a32433;
+    --blood-bright: #d43a4d;
+    --ember: #d4691e;
+    --arcane: #8b5fd4;
+    --poison: #7aa35e;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Spectral', Georgia, serif;
+    color: var(--bone);
+    background:
+      radial-gradient(1000px 500px at 50% 115%, rgba(212,105,30,0.1), transparent 60%),
+      radial-gradient(700px 400px at 10% -5%, rgba(139,95,212,0.08), transparent 55%),
+      var(--ink);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .grain { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E"); }
+  #embers { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+  /* ═══════════ Top bar ═══════════ */
+  .topbar {
+    position: relative; z-index: 5;
+    display: flex; align-items: center; gap: 1rem;
+    padding: 0.7rem 1.2rem;
+    background: linear-gradient(180deg, var(--stone-2), rgba(22,16,32,0.95));
+    border-bottom: 1px solid var(--edge);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+  .topbar .brand {
+    font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.05rem;
+    color: var(--gold-bright); letter-spacing: 0.06em; white-space: nowrap;
+    text-shadow: 0 0 14px rgba(232,198,90,0.3);
+  }
+  .topbar .campaign {
+    font-size: 0.78rem; font-style: italic; color: var(--bone-dim);
+    border-left: 1px solid var(--edge); padding-left: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .topbar .spacer { flex: 1; }
+  .top-btn {
+    font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase;
+    background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
+    padding: 0.45rem 0.85rem; cursor: pointer; transition: all 0.2s; border-radius: 2px; white-space: nowrap;
+  }
+  .top-btn:hover { color: var(--gold-bright); border-color: var(--gold); box-shadow: 0 0 12px -3px rgba(232,198,90,0.4); }
+  .top-btn.danger:hover { color: var(--blood-bright); border-color: var(--blood-bright); box-shadow: 0 0 12px -3px rgba(212,58,77,0.4); }
+
+  /* ── Model picker ── */
+  .model-select {
+    display: flex; align-items: center; gap: 0.4rem;
+    background: var(--stone-3); border: 1px solid var(--edge);
+    padding: 0.3rem 0.5rem 0.3rem 0.7rem; border-radius: 2px;
+    transition: border-color 0.2s;
+  }
+  .model-select:hover { border-color: var(--arcane); }
+  .model-label { font-size: 0.85rem; }
+  .model-select select {
+    font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.06em;
+    background: transparent; border: none; color: var(--bone-bright);
+    cursor: pointer; outline: none; appearance: none; -webkit-appearance: none;
+    padding-right: 1.1rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%238a7a5e'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 0.2rem center;
+  }
+  .model-select select option, .model-select select optgroup {
+    background: var(--stone); color: var(--bone); font-family: 'Spectral', serif; font-size: 0.82rem;
+  }
+  .model-select select:focus { color: var(--gold-bright); }
+
+  /* ═══════════ Layout ═══════════ */
+  .layout { position: relative; z-index: 2; flex: 1; display: flex; min-height: 0; }
+
+  /* ── Sidebar: party ── */
+  .sidebar {
+    width: 240px; flex-shrink: 0;
+    background: linear-gradient(180deg, var(--stone), #100b18);
+    border-right: 1px solid var(--edge);
+    padding: 1rem 0.9rem; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 0.8rem;
+  }
+  .side-label {
+    font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.26em;
+    text-transform: uppercase; color: var(--bone-dim); margin-bottom: 0.3rem;
+  }
+  .pc-card {
+    display: flex; gap: 0.6rem; align-items: center;
+    background: var(--stone-2); border: 1px solid var(--edge); padding: 0.6rem;
+    cursor: pointer; transition: all 0.2s; border-radius: 2px;
+  }
+  .pc-card:hover { border-color: var(--gold); transform: translateX(3px); }
+  .pc-card.active { border-color: var(--gold); box-shadow: 0 0 14px -4px rgba(232,198,90,0.4); }
+  .pc-avatar {
+    width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+    border: 1px solid var(--edge); background: var(--stone-3);
+  }
+  .pc-name { font-weight: 600; font-size: 0.85rem; color: var(--bone-bright); line-height: 1.2; }
+  .pc-sub { font-size: 0.68rem; color: var(--bone-dim); font-style: italic; }
+  .pc-hp { height: 4px; background: #0a0612; margin-top: 0.3rem; border-radius: 2px; overflow: hidden; }
+  .pc-hp i { display: block; height: 100%; background: linear-gradient(90deg, #5e1220, var(--blood-bright)); border-radius: 2px; }
+
+  .npc-list { display: flex; flex-direction: column; gap: 0.35rem; }
+  .npc-row {
+    display: flex; align-items: center; gap: 0.5rem; font-size: 0.78rem;
+    padding: 0.3rem 0.4rem; border-radius: 2px; transition: background 0.2s; cursor: default;
+  }
+  .npc-row:hover { background: rgba(139,95,212,0.07); }
+  .npc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 6px currentColor; }
+  .npc-name { color: var(--bone); }
+  .npc-role { color: var(--bone-dim); font-size: 0.68rem; font-style: italic; margin-left: auto; }
+
+  /* ── Main chat ── */
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .chat-scroll { flex: 1; overflow-y: auto; padding: 1.4rem 1.6rem 0.5rem; scroll-behavior: smooth; }
+  .chat-scroll::-webkit-scrollbar { width: 8px; }
+  .chat-scroll::-webkit-scrollbar-track { background: var(--ink); }
+  .chat-scroll::-webkit-scrollbar-thumb { background: var(--edge); border-radius: 4px; }
+  .chat-scroll::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+
+  .msg { margin-bottom: 1.1rem; animation: msg-in 0.4s cubic-bezier(0.22,1,0.36,1); max-width: 760px; }
+  @keyframes msg-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* DM narration */
+  .msg.dm { border-left: 2px solid rgba(201,162,39,0.4); padding-left: 1rem; }
+  .msg.dm .who {
+    font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.24em;
+    text-transform: uppercase; color: var(--gold); margin-bottom: 0.3rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .msg.dm .text { font-style: italic; color: var(--bone); line-height: 1.65; font-size: 0.95rem; }
+
+  /* NPC speech */
+  .msg.npc { padding-left: 1rem; }
+  .msg.npc .who {
+    font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.82rem;
+    margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.5rem;
+  }
+  .msg.npc .who .dot { width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
+  .msg.npc .text { color: var(--bone); line-height: 1.6; font-size: 0.93rem; }
+  .msg.npc .text em { color: var(--bone-dim); }
+
+  /* Player */
+  .msg.player { margin-left: auto; text-align: right; }
+  .msg.player .who {
+    font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.24em;
+    text-transform: uppercase; color: var(--arcane); margin-bottom: 0.3rem;
+  }
+  .msg.player .text {
+    display: inline-block; text-align: left;
+    background: linear-gradient(160deg, rgba(139,95,212,0.14), rgba(139,95,212,0.05));
+    border: 1px solid rgba(139,95,212,0.35); padding: 0.7rem 1rem;
+    border-radius: 8px 2px 8px 8px; line-height: 1.6; font-size: 0.93rem; color: var(--bone-bright);
+    box-shadow: 0 4px 16px -6px rgba(139,95,212,0.3);
+  }
+
+  /* System / dice */
+  .msg.system { text-align: center; max-width: 520px; margin-left: auto; margin-right: auto; }
+  .msg.system .box {
+    display: inline-block; font-size: 0.8rem; color: var(--bone-dim);
+    border: 1px dashed var(--edge); padding: 0.5rem 1.2rem; border-radius: 2px;
+    background: rgba(11,8,18,0.6);
+  }
+  .msg.system .box b { color: var(--gold-bright); font-family: 'Cinzel', serif; }
+  .msg.system .box .dice { font-size: 1.1rem; vertical-align: -2px; }
+  .msg.system .box .crit { color: var(--gold-bright); text-shadow: 0 0 10px rgba(232,198,90,0.7); font-weight: 700; }
+  .msg.system .box .fail { color: var(--blood-bright); text-shadow: 0 0 10px rgba(212,58,77,0.6); font-weight: 700; }
+
+  /* Typing indicator */
+  .typing { display: none; align-items: center; gap: 0.6rem; padding: 0 1.6rem 0.6rem; color: var(--bone-dim); font-size: 0.78rem; font-style: italic; }
+  .typing.show { display: flex; }
+  .typing .dots span {
+    display: inline-block; width: 5px; height: 5px; border-radius: 50%;
+    background: var(--gold); margin: 0 2px; animation: bounce 1.2s infinite;
+  }
+  .typing .dots span:nth-child(2) { animation-delay: 0.15s; }
+  .typing .dots span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes bounce { 0%,60%,100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-5px); opacity: 1; } }
+
+  /* ── Input ── */
+  .input-area {
+    padding: 0.8rem 1.6rem 1rem;
+    background: linear-gradient(180deg, rgba(22,16,32,0.6), var(--stone));
+    border-top: 1px solid var(--edge);
+  }
+  .input-row { display: flex; gap: 0.6rem; align-items: flex-end; }
+  .input-row textarea {
+    flex: 1; font-family: 'Spectral', serif; font-size: 0.95rem; color: var(--bone-bright);
+    background: #0d0817; border: 1px solid var(--edge); padding: 0.75rem 1rem;
+    outline: none; resize: none; min-height: 48px; max-height: 140px; border-radius: 2px;
+    transition: border-color 0.25s, box-shadow 0.25s; line-height: 1.5;
+  }
+  .input-row textarea::placeholder { color: rgba(138,122,94,0.5); font-style: italic; }
+  .input-row textarea:focus { border-color: var(--gold); box-shadow: 0 0 16px -4px rgba(232,198,90,0.35); }
+  .send-btn {
+    font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.72rem; letter-spacing: 0.16em;
+    text-transform: uppercase; color: #1a1206; cursor: pointer;
+    background: linear-gradient(180deg, var(--gold-bright), var(--gold) 55%, #8a6d14);
+    border: 1px solid #6e5510; padding: 0.85rem 1.4rem; border-radius: 2px;
+    box-shadow: 0 4px 14px -4px rgba(232,198,90,0.5); transition: all 0.18s; white-space: nowrap;
+  }
+  .send-btn:hover { filter: brightness(1.12); transform: translateY(-2px); }
+  .send-btn:active { transform: translateY(0); }
+  .input-hint { font-size: 0.68rem; color: var(--bone-dim); font-style: italic; margin-top: 0.4rem; }
+  .input-hint kbd {
+    font-family: 'Cinzel', serif; font-size: 0.58rem; background: var(--stone-3);
+    border: 1px solid var(--edge); padding: 0.1rem 0.4rem; border-radius: 2px; color: var(--bone);
+  }
+
+  /* ── Rules oracle panel ── */
+  .oracle {
+    width: 0; overflow: hidden; flex-shrink: 0;
+    background: linear-gradient(180deg, var(--stone), #100b18);
+    border-left: 1px solid var(--edge);
+    transition: width 0.35s cubic-bezier(0.22,1,0.36,1);
+    display: flex; flex-direction: column;
+  }
+  .oracle.open { width: 320px; }
+  .oracle-inner { width: 320px; display: flex; flex-direction: column; height: 100%; }
+  .oracle-head {
+    padding: 0.9rem 1rem; border-bottom: 1px solid var(--edge);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .oracle-head h3 {
+    font-family: 'Cinzel', serif; font-size: 0.72rem; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--arcane);
+    text-shadow: 0 0 10px rgba(139,95,212,0.4);
+  }
+  .oracle-close { background: none; border: none; color: var(--bone-dim); cursor: pointer; font-size: 1rem; transition: color 0.2s; }
+  .oracle-close:hover { color: var(--blood-bright); }
+  .oracle-log { flex: 1; overflow-y: auto; padding: 1rem; }
+  .oracle-msg { margin-bottom: 0.9rem; font-size: 0.85rem; line-height: 1.55; }
+  .oracle-msg.q { color: var(--bone-bright); }
+  .oracle-msg.q::before { content: '❓ '; }
+  .oracle-msg.a { color: var(--bone); border-left: 2px solid rgba(139,95,212,0.4); padding-left: 0.8rem; font-style: italic; }
+  .oracle-input { display: flex; gap: 0.5rem; padding: 0.8rem; border-top: 1px solid var(--edge); }
+  .oracle-input input {
+    flex: 1; font-family: 'Spectral', serif; font-size: 0.85rem; color: var(--bone-bright);
+    background: #0d0817; border: 1px solid var(--edge); padding: 0.55rem 0.8rem;
+    outline: none; border-radius: 2px;
+  }
+  .oracle-input input:focus { border-color: var(--arcane); }
+  .oracle-input button {
+    font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.12em;
+    background: var(--stone-3); border: 1px solid rgba(139,95,212,0.4); color: var(--arcane);
+    padding: 0.55rem 0.9rem; cursor: pointer; border-radius: 2px; transition: all 0.2s;
+  }
+  .oracle-input button:hover { box-shadow: 0 0 12px -3px rgba(139,95,212,0.5); }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 1.5rem; left: 50%; transform: translate(-50%, 80px);
+    z-index: 50; font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 0.12em;
+    background: linear-gradient(180deg, var(--stone-3), var(--stone));
+    border: 1px solid var(--gold); color: var(--gold-bright);
+    padding: 0.7rem 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+    opacity: 0; transition: all 0.35s cubic-bezier(0.22,1,0.36,1); pointer-events: none;
+  }
+  .toast.show { transform: translate(-50%, 0); opacity: 1; }
+
+  @media (max-width: 900px) {
+    .sidebar { display: none; }
+    .oracle.open { width: 260px; }
+    .oracle-inner { width: 260px; }
+    .topbar .campaign { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<canvas id="embers"></canvas>
+
+<!-- ═══════════ TOP BAR ═══════════ -->
+<header class="topbar">
+  <span class="brand">🐉 Mörkrets Rike</span>
+  <span class="campaign">Kampanj: Askans Dal · Session 4 · Dag 13</span>
+  <span class="spacer"></span>
+
+  <div class="model-select">
+    <span class="model-label">🔮</span>
+    <select id="model-picker" onchange="switchModel(this.value)">
+      <optgroup label="⚡ Moln-API">
+        <option value="qwen3.8-max" selected>Qwen 3.8 Max</option>
+        <option value="qwen3.7-plus">Qwen 3.7 Plus</option>
+        <option value="deepseek-v4-pro">DeepSeek V4 Pro</option>
+        <option value="deepseek-v4-flash">DeepSeek V4 Flash</option>
+        <option value="mimo-v2">MiMo V2</option>
+      </optgroup>
+      <optgroup label="🏠 Lokalt (Ollama)">
+        <option value="ollama:qwen3:8b">Qwen3 8B (lokal)</option>
+        <option value="ollama:deepseek-r1:7b">DeepSeek R1 7B (lokal)</option>
+      </optgroup>
+    </select>
+  </div>
+
+  <button class="top-btn" onclick="toggleOracle()">📜 Regel-orakel</button>
+  <a class="top-btn" href="npcs.html">📖 Gestalter</a>
+  <button class="top-btn" onclick="exportCampaign()">📦 Exportera</button>
+  <button class="top-btn" onclick="location.href='character.html'">🧙 Karaktär</button>
+  <button class="top-btn danger" onclick="logout()">🚪 Lämna</button>
+</header>
+
+<div class="layout">
+
+  <!-- ═══════════ SIDEBAR ═══════════ -->
+  <aside class="sidebar">
+    <div>
+      <div class="side-label">Sällskapet</div>
+      <div class="pc-card active">
+        <div class="pc-avatar">🧙‍♀️</div>
+        <div style="flex:1;min-width:0">
+          <div class="pc-name">Thalindra Mörkeld</div>
+          <div class="pc-sub">Halvälva · Eldbesvärjare · Nivå 7</div>
+          <div class="pc-hp"><i style="width:73%"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="side-label">Kända NPCs</div>
+      <div class="npc-list" id="npc-list"></div>
+    </div>
+
+    <div style="margin-top:auto">
+      <div class="side-label">Plats</div>
+      <div style="font-size:0.85rem;color:var(--bone-bright)">🏚 Den Övergivna Kvarnen</div>
+      <div style="font-size:0.72rem;color:var(--bone-dim);font-style:italic;margin-top:0.2rem">Askans Dal · Natt, regn</div>
+    </div>
+  </aside>
+
+  <!-- ═══════════ MAIN CHAT ═══════════ -->
+  <main class="main">
+    <div class="chat-scroll" id="chat"></div>
+
+    <div class="typing" id="typing">
+      <span id="typing-who">Dungeon Master</span> väver berättelsen
+      <span class="dots"><span></span><span></span><span></span></span>
+    </div>
+
+    <div class="input-area">
+      <div class="input-row">
+        <textarea id="player-input" rows="1" placeholder="Vad gör Thalindra? Skriv fritt — slå, smyg, tala, kasta en besvärjelse…"></textarea>
+        <button class="send-btn" onclick="sendPlayer()">⚔ Utför</button>
+      </div>
+      <div class="input-hint">
+        <kbd>Enter</kbd> skicka · <kbd>Shift+Enter</kbd> ny rad · Skriv <kbd>/rulla 1d20+4</kbd> för att slå en tärning
+      </div>
+    </div>
+  </main>
+
+  <!-- ═══════════ RULES ORACLE ═══════════ -->
+  <aside class="oracle" id="oracle">
+    <div class="oracle-inner">
+      <div class="oracle-head">
+        <h3>📜 Regel-orakel</h3>
+        <button class="oracle-close" onclick="toggleOracle()">✕</button>
+      </div>
+      <div class="oracle-log" id="oracle-log">
+        <div class="oracle-msg a">Fråga oraklet om D&D 5e-regler utan att avbryta spelet. Svaren påverkar inte berättelsen.</div>
+      </div>
+      <div class="oracle-input">
+        <input type="text" id="oracle-q" placeholder="T.ex. Vad är DC för att klättra?" onkeydown="if(event.key==='Enter')askOracle()">
+        <button onclick="askOracle()">Fråga</button>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════
+// NPC REGISTRY — färg + ikon per NPC
+// ═══════════════════════════════════════
+const NPCS = {
+  dm:        { name: 'Dungeon Master', color: '#c9a227', icon: '🐉' },
+  morvaine:  { name: 'Morvaine',       color: '#8b5fd4', icon: '🧙',  role: 'Den gåtfulla trollkarlen' },
+  kael:      { name: 'Kael Asksvärd',  color: '#d4691e', icon: '⚔️', role: 'Legosoldat' },
+  lyra:      { name: 'Lyra Vindviska', color: '#7aa35e', icon: '🏹', role: 'Skogsalv, jägare' },
+  borg:      { name: 'Borg Stenhand',  color: '#a32433', icon: '🛡️', role: 'Värdshusvärd' },
+  vakt:      { name: 'Vakten',         color: '#a8b2c0', icon: '💂', role: 'Stadsvakt' },
+};
+
+// Render NPC list
+document.getElementById('npc-list').innerHTML = Object.entries(NPCS)
+  .filter(([k]) => k !== 'dm')
+  .map(([k, n]) => `
+    <div class="npc-row" onclick="location.href='npcs.html'" title="Öppna dossier i Minnets hall" style="cursor:pointer">
+      <span class="npc-dot" style="color:${n.color};background:${n.color}"></span>
+      <span class="npc-name">${n.icon} ${n.name}</span>
+      <span class="npc-role">${n.role || ''}</span>
+    </div>`).join('');
+
+// ═══════════════════════════════════════
+// MESSAGE RENDERING
+// ═══════════════════════════════════════
+const chat = document.getElementById('chat');
+
+function addMessage(type, npcKey, text) {
+  const el = document.createElement('div');
+  el.className = 'msg ' + type;
+
+  if (type === 'dm') {
+    el.innerHTML = `<div class="who">🐉 Dungeon Master</div><div class="text">${text}</div>`;
+  } else if (type === 'npc') {
+    const n = NPCS[npcKey] || NPCS.vakt;
+    el.innerHTML = `
+      <div class="who" style="color:${n.color}">
+        <span class="dot" style="color:${n.color};background:${n.color}"></span>
+        ${n.icon} ${n.name}
+      </div>
+      <div class="text">${text}</div>`;
+  } else if (type === 'player') {
+    el.innerHTML = `<div class="who">🧙‍♀️ Thalindra</div><div class="text">${text}</div>`;
+  } else if (type === 'system') {
+    el.innerHTML = `<div class="box">${text}</div>`;
+  }
+
+  chat.appendChild(el);
+  chat.scrollTop = chat.scrollHeight;
+  return el;
+}
+
+// ═══════════════════════════════════════
+// DICE
+// ═══════════════════════════════════════
+function rollDice(notation) {
+  const m = notation.match(/(\d+)d(\d+)([+-]\d+)?/i);
+  if (!m) return null;
+  const count = parseInt(m[1]), sides = parseInt(m[2]), mod = parseInt(m[3] || 0);
+  let rolls = [], total = 0;
+  for (let i = 0; i < count; i++) {
+    const r = 1 + Math.floor(Math.random() * sides);
+    rolls.push(r); total += r;
+  }
+  total += mod;
+  return { rolls, total, count, sides, mod, notation };
+}
+
+function diceMessage(roll, label) {
+  const isCrit = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 20;
+  const isFail = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 1;
+  let cls = '';
+  if (isCrit) cls = 'crit';
+  if (isFail) cls = 'fail';
+  const modStr = roll.mod !== 0 ? (roll.mod > 0 ? '+' + roll.mod : roll.mod) : '';
+  return `<span class="dice">🎲</span> ${label || roll.notation}: [${roll.rolls.join(', ')}]${modStr} = <b class="${cls}">${roll.total}</b>${isCrit ? ' ✦ KRITISKT!' : ''}${isFail ? ' ✦ PATETISKT!' : ''}`;
+}
+
+// ═══════════════════════════════════════
+// DEMO SCRIPT — öppningsscenen
+// ═══════════════════════════════════════
+const script = [
+  { type: 'system', text: '⚔ <b>Session 4</b> börjar · Askans Dal · Natt, regnet smattrar mot taken' },
+  { type: 'dm', text: 'Regnet piskar mot den övergivna kvarnens ruttna väggar. Genom springorna i dörren ser ni ett svagt, grönt ljus pulsera från kvarnens inre — som ett sjukt hjärta som slår i mörkret. Något därinne viskar namn. Ditt namn, Thalindra.' },
+  { type: 'npc', npc: 'kael', text: 'Jag gillar inte det här. <em>Spottar på marken.</em> Sista gången någon gick in där kom de ut som… något annat. Vi borde bränna hela skiten.' },
+  { type: 'npc', npc: 'lyra', text: 'Eller så går vi in och tar reda på vad det är som kallar på henne. <em>Nickar mot Thalindra.</em> Det där ljuset är inte naturligt. Det är <em>gammal</em> magi.' },
+  { type: 'dm', text: 'Vad gör du? Kvarnens dörr står på glänt. Det gröna ljuset pulserar snabbare nu — som om det vet att du är här.' },
+];
+
+let scriptIdx = 0;
+function playScript() {
+  if (scriptIdx >= script.length) return;
+  const s = script[scriptIdx++];
+  showTyping(s.type === 'npc' ? NPCS[s.npc]?.name : 'Dungeon Master');
+  setTimeout(() => {
+    hideTyping();
+    addMessage(s.type, s.npc, s.text);
+    setTimeout(playScript, 600);
+  }, 900 + Math.random() * 800);
+}
+
+function showTyping(who) {
+  document.getElementById('typing-who').textContent = who;
+  document.getElementById('typing').classList.add('show');
+}
+function hideTyping() {
+  document.getElementById('typing').classList.remove('show');
+}
+
+setTimeout(playScript, 800);
+
+// ═══════════════════════════════════════
+// PLAYER INPUT
+// ═══════════════════════════════════════
+const input = document.getElementById('player-input');
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendPlayer(); }
+});
+input.addEventListener('input', () => {
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+});
+
+function sendPlayer() {
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  input.style.height = 'auto';
+
+  // /rulla command
+  const rollMatch = text.match(/^\/rulla\s+(.+)$/i);
+  if (rollMatch) {
+    const roll = rollDice(rollMatch[1]);
+    if (roll) {
+      addMessage('player', null, `<i>Slår ${roll.notation}</i>`);
+      addMessage('system', null, diceMessage(roll));
+      return;
+    }
+  }
+
+  addMessage('player', null, escapeHtml(text));
+  dmRespond(text);
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ═══════════════════════════════════════
+// DM RESPONSE (demo — i produktion: Qwen API)
+// ═══════════════════════════════════════
+const dmResponses = [
+  { type: 'dm', text: 'Du kliver över tröskeln. Golvet knakar under dina stövlar. Det gröna ljuset kommer från en sprucken kristall som svävar ovanför kvarnstenen — och bredvid den står en gestalt i en söndertrasad mantel.' },
+  { type: 'npc', npc: 'morvaine', text: 'Äntligen. <em>Rösten är som torra löv mot sten.</em> Jag har väntat på dig, eldbärare. Kristallen viskade att du skulle komma. Fråga mig vad du vill — men vet att varje svar har ett pris.' },
+  { type: 'system', text: '<span class="dice">🎲</span> Perception (Thalindra): [14] +2 = <b>16</b> — Du märker att gestaltens händer darrar. Den är rädd.' },
+  { type: 'dm', text: 'Morvaine sträcker ut en hand mot kristallen. Ljuset pulserar i takt med dess andning. <em>"Den minns,"</em> viskar trollkarlen. <em>"Den minns allt som någonsin dött i denna dal."</em>' },
+];
+let dmIdx = 0;
+
+function dmRespond(playerText) {
+  const resp = dmResponses[dmIdx % dmResponses.length];
+  dmIdx++;
+  const who = resp.type === 'npc' ? NPCS[resp.npc]?.name : 'Dungeon Master';
+  showTyping(who);
+  setTimeout(() => {
+    hideTyping();
+    addMessage(resp.type, resp.npc, resp.text);
+  }, 1200 + Math.random() * 1000);
+}
+
+// ═══════════════════════════════════════
+// RULES ORACLE
+// ═══════════════════════════════════════
+function toggleOracle() {
+  document.getElementById('oracle').classList.toggle('open');
+}
+
+const oracleAnswers = {
+  'klättra': 'Att klättra kräver vanligtvis ett Strength (Athletics)-slag. DC beror på ytan: grov vägg DC 10, hal klippa DC 15, glatt murverk DC 20. DM:n kan ge advantage om du har klätterutrustning.',
+  'smyga': 'Stealth slås med DEX-modifierare mot vaktens Passive Perception. Om du rör dig långsamt får du inte disadvantage. Att gömma sig kräver att du bryter line of sight först.',
+  'initiative': 'Initiative = d20 + DEX-mod. Alla slår i början av striden, högsta går först. Vid lika avgör DM:n (oftast högst DEX vinner).',
+  'besvärjelse': 'För att kasta en besvärjelse behöver du spell slots. Cantrips kostar inget. Som eldbesvärjare på nivå 7 har du 4 slots — de återställs efter en long rest.',
+  'default': 'Enligt D&D 5e-reglerna: slå en d20, lägg till relevant modifierare, och jämför med DC:n som DM:n sätter. Ju högre DC, desto svårare uppgift. Lätt DC 10, medel DC 15, svår DC 20.'
+};
+
+function askOracle() {
+  const q = document.getElementById('oracle-q').value.trim();
+  if (!q) return;
+  document.getElementById('oracle-q').value = '';
+  const log = document.getElementById('oracle-log');
+  const qEl = document.createElement('div');
+  qEl.className = 'oracle-msg q';
+  qEl.textContent = q;
+  log.appendChild(qEl);
+
+  setTimeout(() => {
+    const key = Object.keys(oracleAnswers).find(k => q.toLowerCase().includes(k)) || 'default';
+    const aEl = document.createElement('div');
+    aEl.className = 'oracle-msg a';
+    aEl.textContent = oracleAnswers[key];
+    log.appendChild(aEl);
+    log.scrollTop = log.scrollHeight;
+  }, 700);
+  log.scrollTop = log.scrollHeight;
+}
+
+// ═══════════════════════════════════════
+// EXPORT / LOGOUT / TOAST
+// ═══════════════════════════════════════
+function exportCampaign() {
+  toast('📦 Bygger kampanj-export… (zip med transkript, karaktärsark, bilagor)');
+}
+
+// ═══════════════════════════════════════
+// MODEL PICKER — nycklar stannar på servern
+// ═══════════════════════════════════════
+let currentModel = 'qwen3.8-max';
+const modelNames = {
+  'qwen3.8-max': 'Qwen 3.8 Max',
+  'qwen3.7-plus': 'Qwen 3.7 Plus',
+  'deepseek-v4-pro': 'DeepSeek V4 Pro',
+  'deepseek-v4-flash': 'DeepSeek V4 Flash',
+  'mimo-v2': 'MiMo V2',
+  'ollama:qwen3:8b': 'Qwen3 8B (lokal)',
+  'ollama:deepseek-r1:7b': 'DeepSeek R1 7B (lokal)',
+};
+function switchModel(model) {
+  currentModel = model;
+  const local = model.startsWith('ollama:');
+  toast(`🔮 Dungeon Master byter röst: ${modelNames[model]}${local ? ' · körs lokalt' : ''}`);
+  // I produktion: POST /api/session/model { model } → backend byter provider
+  // Nycklar läses ur backend/.env — frontend ser ALDRIG API-nycklar
+}
+function logout() {
+  sessionStorage.removeItem('dnd_user');
+  sessionStorage.removeItem('dnd_token');
+  location.href = 'login.html';
+}
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+// ═══════════════════════════════════════
+// EMBERS
+// ═══════════════════════════════════════
+const canvas = document.getElementById('embers');
+const ctx = canvas.getContext('2d');
+let W, H, embers = [];
+function resize() { W = canvas.width = innerWidth; H = canvas.height = innerHeight; }
+resize(); addEventListener('resize', resize);
+function spawn(init) {
+  return { x: Math.random()*W, y: init ? Math.random()*H : H+10, r: 0.7+Math.random()*1.5,
+    vy: 0.2+Math.random()*0.55, vx: (Math.random()-0.5)*0.3, life: 0,
+    max: 400+Math.random()*500, hue: Math.random()<0.82 ? 22+Math.random()*18 : 268+Math.random()*20 };
+}
+for (let i=0;i<32;i++) embers.push(spawn(true));
+function tick() {
+  ctx.clearRect(0,0,W,H);
+  for (let i=0;i<embers.length;i++) {
+    const e=embers[i]; e.life++; e.y-=e.vy; e.x+=e.vx+Math.sin(e.life*0.02)*0.12;
+    const fade=Math.min(1,e.life/60)*Math.max(0,1-e.life/e.max);
+    const fl=0.5+Math.sin(e.life*0.15+i)*0.35;
+    ctx.beginPath(); ctx.arc(e.x,e.y,e.r,0,Math.PI*2);
+    ctx.fillStyle=`hsla(${e.hue},90%,60%,${0.4*fade*fl})`;
+    ctx.shadowColor=`hsla(${e.hue},90%,55%,${0.6*fade})`; ctx.shadowBlur=6; ctx.fill();
+    if (e.life>e.max||e.y<-12) embers[i]=spawn(false);
+  }
+  requestAnimationFrame(tick);
+}
+tick();
+</script>
+</body>
+</html>

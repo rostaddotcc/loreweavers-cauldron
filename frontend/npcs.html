@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚔️ Mörkrets Rike — Gestalter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0b0812;--stone:#161020;--stone-2:#1d1529;--stone-3:#241a33;
+    --edge:#3d2f52;--edge-warm:#5a4433;
+    --bone:#d9c9a6;--bone-bright:#efe2c0;--bone-dim:#8a7a5e;
+    --gold:#c9a227;--gold-bright:#e8c65a;
+    --blood:#a32433;--blood-bright:#d43a4d;
+    --ember:#d4691e;--arcane:#8b5fd4;--poison:#7aa35e;--teal:#5e9aa3;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    font-family:'Spectral',Georgia,serif;color:var(--bone);
+    background:
+      radial-gradient(1000px 500px at 50% 115%, rgba(212,105,30,.1), transparent 60%),
+      radial-gradient(700px 400px at 10% -5%, rgba(139,95,212,.08), transparent 55%),
+      var(--ink);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.045;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
+  #embers{position:fixed;inset:0;z-index:0;pointer-events:none}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 190px 70px rgba(4,2,8,.88)}
+
+  /* ═══════════ Topbar ═══════════ */
+  .topbar{position:relative;z-index:5;display:flex;align-items:center;gap:1rem;padding:.7rem 1.2rem;
+    background:linear-gradient(180deg,var(--stone-2),rgba(22,16,32,.95));border-bottom:1px solid var(--edge);box-shadow:0 4px 20px rgba(0,0,0,.5)}
+  .topbar .brand{font-family:'Cinzel',serif;font-weight:900;font-size:1.05rem;color:var(--gold-bright);letter-spacing:.06em;white-space:nowrap;text-shadow:0 0 14px rgba(232,198,90,.3)}
+  .topbar .page-tag{font-size:.78rem;font-style:italic;color:var(--bone-dim);border-left:1px solid var(--edge);padding-left:1rem}
+  .topbar .spacer{flex:1}
+  .top-btn{font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;white-space:nowrap;text-decoration:none}
+  .top-btn:hover{color:var(--gold-bright);border-color:var(--gold);box-shadow:0 0 12px -3px rgba(232,198,90,.4)}
+  .top-btn.danger:hover{color:var(--blood-bright);border-color:var(--blood-bright);box-shadow:0 0 12px -3px rgba(212,58,77,.4)}
+
+  /* ═══════════ Layout ═══════════ */
+  .layout{position:relative;z-index:2;flex:1;display:flex;min-height:0}
+
+  /* ── Vänster: minnets hall ── */
+  .hall{width:320px;flex-shrink:0;display:flex;flex-direction:column;background:linear-gradient(180deg,var(--stone),#100b18);border-right:1px solid var(--edge)}
+  .hall-head{padding:1.1rem 1rem .8rem;border-bottom:1px solid var(--edge)}
+  .hall-title{font-family:'Cinzel',serif;font-weight:900;font-size:1.05rem;color:var(--bone-bright);letter-spacing:.05em;margin-bottom:.15rem}
+  .hall-sub{font-size:.75rem;font-style:italic;color:var(--bone-dim)}
+  .filters{display:flex;gap:.35rem;flex-wrap:wrap;padding:.8rem 1rem;border-bottom:1px solid rgba(61,47,82,.5)}
+  .fchip{font-family:'Cinzel',serif;font-size:.56rem;letter-spacing:.12em;text-transform:uppercase;background:transparent;border:1px solid var(--edge);color:var(--bone-dim);padding:.32rem .6rem;cursor:pointer;border-radius:2px;transition:all .2s}
+  .fchip:hover{color:var(--bone-bright);border-color:var(--bone-dim)}
+  .fchip.on{color:#1a1206;background:var(--gold);border-color:var(--gold);box-shadow:0 0 10px -2px rgba(232,198,90,.5)}
+  .npc-list{flex:1;overflow-y:auto;padding:.8rem}
+  .npc-list::-webkit-scrollbar{width:7px}
+  .npc-list::-webkit-scrollbar-thumb{background:var(--edge);border-radius:4px}
+
+  .ncard{position:relative;display:flex;gap:.75rem;align-items:center;padding:.75rem .7rem;margin-bottom:.55rem;cursor:pointer;
+    background:linear-gradient(160deg,var(--stone-2),var(--stone));border:1px solid var(--edge);border-radius:2px;
+    transition:transform .22s cubic-bezier(.22,1,.36,1),border-color .22s,box-shadow .22s;overflow:hidden}
+  .ncard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--nc,var(--edge));opacity:.5;transition:opacity .22s}
+  .ncard:hover{transform:translateX(5px);border-color:var(--nc,var(--gold))}
+  .ncard:hover::before{opacity:1}
+  .ncard.sel{border-color:var(--nc,var(--gold));box-shadow:0 0 18px -6px var(--ng,rgba(201,162,39,.4));transform:translateX(5px)}
+  .ncard.sel::before{opacity:1}
+  .ncard .sigil{width:42px;height:42px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.25rem;
+    border:1px solid var(--nc,var(--edge));background:var(--stone-3);box-shadow:0 0 12px -3px var(--ng,transparent),inset 0 0 8px rgba(0,0,0,.5);transition:transform .25s}
+  .ncard:hover .sigil{transform:scale(1.1) rotate(-4deg)}
+  .ncard .nm{font-weight:600;font-size:.9rem;color:var(--bone-bright);line-height:1.2}
+  .ncard .rl{font-size:.72rem;font-style:italic;color:var(--bone-dim)}
+  .ncard .badges{display:flex;gap:.3rem;margin-top:.25rem}
+  .badge{font-family:'Cinzel',serif;font-size:.5rem;letter-spacing:.1em;text-transform:uppercase;padding:.14rem .42rem;border:1px solid;border-radius:2px}
+  .b-rel-allierad{color:var(--poison);border-color:rgba(122,163,94,.55)}
+  .b-rel-neutral{color:var(--bone-dim);border-color:var(--edge)}
+  .b-rel-fiende{color:var(--blood-bright);border-color:rgba(212,58,77,.55)}
+  .b-rel-okänd{color:var(--arcane);border-color:rgba(139,95,212,.5)}
+  .b-shop{color:var(--gold-bright);border-color:rgba(201,162,39,.5)}
+  .b-quest{color:var(--ember);border-color:rgba(212,105,30,.55)}
+  .b-dead{color:var(--bone-dim);border-color:var(--edge);text-decoration:line-through}
+  .ncard .seen{font-size:.66rem;color:var(--bone-dim);margin-top:.2rem}
+  .hall-foot{padding:.7rem 1rem;border-top:1px solid var(--edge);font-size:.7rem;font-style:italic;color:var(--bone-dim);text-align:center}
+
+  /* ── Höger: dossier ── */
+  .dossier{flex:1;overflow-y:auto;padding:1.8rem 2rem 4rem;min-width:0}
+  .dossier::-webkit-scrollbar{width:8px}
+  .dossier::-webkit-scrollbar-thumb{background:var(--edge);border-radius:4px}
+
+  .empty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;color:var(--bone-dim)}
+  .empty .rune{font-size:3rem;opacity:.4;animation:candle 4s ease-in-out infinite}
+  .empty p{font-style:italic;font-size:.95rem}
+
+  .d-head{display:flex;gap:1.5rem;align-items:center;margin-bottom:1.6rem;animation:rise .5s cubic-bezier(.22,1,.36,1) both}
+  .d-portrait{width:92px;height:92px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2.4rem;
+    border:2px solid var(--dc,var(--gold));background:var(--stone-3);box-shadow:0 0 26px -4px var(--dg,rgba(201,162,39,.5)),inset 0 0 14px rgba(0,0,0,.5);
+    transform:rotate(-3deg);animation:portrait-breathe 4s ease-in-out infinite}
+  @keyframes portrait-breathe{0%,100%{box-shadow:0 0 20px -4px var(--dg,rgba(201,162,39,.4)),inset 0 0 14px rgba(0,0,0,.5)}50%{box-shadow:0 0 34px -2px var(--dg,rgba(201,162,39,.65)),inset 0 0 14px rgba(0,0,0,.5)}}
+  .d-name{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(1.4rem,3vw,1.9rem);color:var(--bone-bright);text-shadow:0 2px 0 #000;line-height:1.15}
+  .d-role{font-style:italic;color:var(--dc,var(--arcane));font-size:1rem;margin:.2rem 0 .55rem}
+  .d-chips{display:flex;gap:.4rem;flex-wrap:wrap}
+  .d-chips .badge{font-size:.56rem;padding:.22rem .55rem}
+
+  .d-sec{margin-bottom:1.7rem;animation:rise .5s cubic-bezier(.22,1,.36,1) both}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  .d-label{font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);display:flex;align-items:center;gap:.9rem;margin-bottom:.8rem}
+  .d-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(201,162,39,.5),transparent)}
+
+  .panel-box{background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,#120c1c);border:1px solid var(--edge);padding:1.1rem 1.2rem;position:relative}
+  .panel-box .corner{position:absolute;width:14px;height:14px;border-color:var(--gold);border-style:solid;opacity:.6}
+  .corner.tl{top:5px;left:5px;border-width:2px 0 0 2px}.corner.tr{top:5px;right:5px;border-width:2px 2px 0 0}
+  .corner.bl{bottom:5px;left:5px;border-width:0 0 2px 2px}.corner.br{bottom:5px;right:5px;border-width:0 2px 2px 0}
+
+  .met-loc{font-family:'Cinzel',serif;font-weight:700;font-size:1.05rem;color:var(--bone-bright)}
+  .met-when{font-size:.78rem;color:var(--gold-bright);letter-spacing:.06em;margin:.15rem 0 .5rem}
+  .met-how{font-style:italic;color:var(--bone);line-height:1.6;font-size:.9rem}
+
+  .trust-row{display:flex;align-items:center;gap:1rem}
+  .trust-bar{flex:1;height:12px;background:#0a0612;border:1px solid var(--edge);overflow:hidden;box-shadow:inset 0 3px 8px rgba(0,0,0,.8)}
+  .trust-fill{height:100%;width:0;transition:width 1s cubic-bezier(.22,1,.36,1) .2s;box-shadow:0 0 12px currentColor}
+  .trust-label{font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;min-width:90px;text-align:right}
+
+  .quest{border:1px solid var(--edge);background:var(--stone);padding:.9rem 1rem;margin-bottom:.6rem;transition:border-color .2s,transform .2s}
+  .quest:hover{border-color:var(--ember);transform:translateX(4px)}
+  .q-head{display:flex;align-items:center;gap:.6rem;margin-bottom:.35rem;flex-wrap:wrap}
+  .q-name{font-family:'Cinzel',serif;font-weight:700;font-size:.9rem;color:var(--bone-bright)}
+  .q-status{font-family:'Cinzel',serif;font-size:.52rem;letter-spacing:.12em;text-transform:uppercase;padding:.2rem .55rem;border:1px solid;border-radius:2px}
+  .qs-aktiv{color:var(--gold-bright);border-color:rgba(232,198,90,.6);animation:qpulse 2s ease-in-out infinite}
+  @keyframes qpulse{0%,100%{box-shadow:0 0 4px -1px rgba(232,198,90,.4)}50%{box-shadow:0 0 12px -1px rgba(232,198,90,.8)}}
+  .qs-slutförd{color:var(--poison);border-color:rgba(122,163,94,.55)}
+  .qs-misslyckad{color:var(--blood-bright);border-color:rgba(212,58,77,.55)}
+  .q-desc{font-size:.85rem;color:var(--bone);line-height:1.55}
+  .q-reward{font-size:.78rem;color:var(--gold-bright);margin-top:.4rem}
+  .q-reward b{font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-dim);font-weight:400}
+
+  .shop-table{width:100%;border-collapse:collapse;font-size:.85rem}
+  .shop-table th{font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--bone-dim);text-align:left;padding:.45rem .6rem;border-bottom:2px solid var(--edge-warm)}
+  .shop-table td{padding:.55rem .6rem;border-bottom:1px solid rgba(61,47,82,.5);vertical-align:middle}
+  .shop-table tr:hover td{background:rgba(201,162,39,.04)}
+  .i-name{color:var(--bone-bright);font-weight:500}
+  .i-name.rare{color:var(--gold-bright);text-shadow:0 0 10px rgba(232,198,90,.35)}
+  .i-name.magic{color:#cbb3f2;text-shadow:0 0 10px rgba(139,95,212,.45)}
+  .i-price{color:var(--gold-bright);font-family:'Cinzel',serif;font-weight:700;white-space:nowrap}
+  .i-stock{color:var(--bone-dim);font-size:.78rem;text-align:center}
+  .buy-btn{font-family:'Cinzel',serif;font-size:.56rem;letter-spacing:.12em;text-transform:uppercase;background:var(--stone-3);border:1px solid rgba(201,162,39,.45);color:var(--gold-bright);padding:.35rem .75rem;cursor:pointer;border-radius:2px;transition:all .18s}
+  .buy-btn:hover:not(:disabled){background:var(--gold);color:#1a1206;box-shadow:0 0 12px -2px rgba(232,198,90,.6)}
+  .buy-btn:disabled{opacity:.35;cursor:not-allowed}
+  .purse{font-size:.78rem;color:var(--bone-dim);margin-top:.7rem;text-align:right}
+  .purse b{color:var(--gold-bright);font-family:'Cinzel',serif}
+
+  .notes-list{list-style:none}
+  .notes-list li{padding:.45rem 0 .45rem 1.4rem;position:relative;font-size:.88rem;color:var(--bone);line-height:1.55;border-bottom:1px solid rgba(61,47,82,.35)}
+  .notes-list li::before{content:'✦';position:absolute;left:.2rem;color:var(--dc,var(--gold));text-shadow:0 0 8px var(--dg,transparent)}
+
+  .conv{margin-bottom:1.3rem}
+  .conv-head{display:flex;align-items:center;gap:.7rem;font-size:.72rem;color:var(--bone-dim);margin-bottom:.7rem}
+  .conv-head::before,.conv-head::after{content:'';flex:1;height:1px;background:rgba(61,47,82,.5)}
+  .conv-head b{color:var(--gold-bright);font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
+  .line{margin-bottom:.7rem;max-width:640px;animation:rise .4s ease both}
+  .line .who{font-family:'Cinzel',serif;font-weight:700;font-size:.78rem;margin-bottom:.2rem;display:flex;align-items:center;gap:.45rem}
+  .line .who .dot{width:8px;height:8px;border-radius:50%;box-shadow:0 0 7px currentColor}
+  .line.npc{padding-left:.9rem;border-left:2px solid var(--dc,var(--edge))}
+  .line.npc .text{font-size:.9rem;color:var(--bone);line-height:1.6}
+  .line.npc .text em{color:var(--bone-dim)}
+  .line.player{margin-left:auto;text-align:right}
+  .line.player .who{justify-content:flex-end;color:var(--arcane);font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;font-weight:400}
+  .line.player .text{display:inline-block;text-align:left;background:linear-gradient(160deg,rgba(139,95,212,.14),rgba(139,95,212,.05));border:1px solid rgba(139,95,212,.35);padding:.55rem .9rem;border-radius:8px 2px 8px 8px;font-size:.9rem;line-height:1.55;color:var(--bone-bright)}
+
+  .talk-btn{font-family:'Cinzel',serif;font-weight:700;font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;color:#1a1206;
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);border:1px solid #6e5510;padding:.8rem 1.5rem;cursor:pointer;border-radius:2px;
+    box-shadow:0 6px 18px -6px rgba(232,198,90,.5);transition:all .2s;text-decoration:none;display:inline-block}
+  .talk-btn:hover{filter:brightness(1.12);transform:translateY(-2px)}
+
+  .toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:50;font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.12em;
+    background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);padding:.7rem 1.5rem;
+    box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}
+  .toast.show{transform:translate(-50%,0);opacity:1}
+
+  @media(max-width:860px){
+    .hall{width:250px}
+    .dossier{padding:1.3rem 1.1rem 3rem}
+    .topbar .page-tag{display:none}
+  }
+  @media(max-width:640px){
+    .layout{flex-direction:column}
+    .hall{width:100%;height:42%;border-right:none;border-bottom:1px solid var(--edge)}
+    .dossier{height:58%}
+  }
+</style>
+</head>
+<body>
+<div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
+
+<header class="topbar">
+  <span class="brand">🐉 Mörkrets Rike</span>
+  <span class="page-tag">Minneskodex · Kända gestalter</span>
+  <span class="spacer"></span>
+  <a class="top-btn" href="chat.html">⚔ Till bordet</a>
+  <a class="top-btn" href="character.html">🧙 Karaktär</a>
+  <a class="top-btn danger" href="login.html">🚪 Lämna</a>
+</header>
+
+<div class="layout">
+  <aside class="hall">
+    <div class="hall-head">
+      <div class="hall-title">📖 Minnets hall</div>
+      <div class="hall-sub">Alla gestalter du mött längs vägen</div>
+    </div>
+    <div class="filters" id="filters"></div>
+    <div class="npc-list" id="npc-list"></div>
+    <div class="hall-foot" id="hall-count"></div>
+  </aside>
+
+  <main class="dossier" id="dossier">
+    <div class="empty">
+      <div class="rune">🕯️</div>
+      <p>Välj en gestalt ur minnets hall…</p>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════
+// NPC-REGISTRY — i produktion: campaign state (JSON)
+// ═══════════════════════════════════════
+let purse = 134; // gp — syncas med karaktärsstaten via backend
+
+const NPCS = [
+  {
+    id:'morvaine', name:'Morvaine', icon:'🧙', color:'#8b5fd4', glow:'rgba(139,95,212,.45)',
+    role:'Den gåtfulla trollkarlen', race:'Människa (förhäxad?)',
+    relation:'okänd', trust:35, alive:true,
+    met:{ location:'Den Övergivna Kvarnen', when:'Session 4 · Dag 13', how:'Stod bredvid den svävande kristallen när ni bröt er in. Verkade inte förvånad — snarare som om hen hade väntat på er i mycket lång tid.' },
+    merchant:{ items:[
+      { name:'Scroll: Identifiera', price:25, rarity:'rare', stock:2 },
+      { name:'Scroll: Fjärrsyn', price:60, rarity:'rare', stock:1 },
+      { name:'Komponent: svart pärla', price:12, rarity:'normal', stock:4 },
+    ]},
+    quests:[
+      { name:'Kristallens minne', status:'aktiv', desc:'Morvaine vill att Thalindra rör vid kristallen och berättar vad den viskar. Varning: den tar något i utbyte — Morvaine säger inte vad.', reward:'Ett svar + 150 gp' },
+    ],
+    notes:['Händerna darrar — är rädd för något, men inte för oss.', 'Kallar kristallen "den som minns".', 'Kände igen Thalindras namn innan hon presenterade sig.'],
+    conversations:[
+      { when:'Session 4 · Dag 13', location:'Den Övergivna Kvarnen', lines:[
+        { who:'npc', text:'Äntligen. <em>Rösten är som torra löv mot sten.</em> Jag har väntat på dig, eldbärare. Kristallen viskade att du skulle komma.' },
+        { who:'player', text:'Vem är du? Och vad är det där för något?' },
+        { who:'npc', text:'Fråga mig vad du vill — men vet att varje svar har ett pris. <em>Sträcker ut en hand mot kristallen.</em> Den minns allt som någonsin dött i denna dal.' },
+      ]},
+    ],
+  },
+  {
+    id:'kael', name:'Kael Asksvärd', icon:'⚔️', color:'#d4691e', glow:'rgba(212,105,30,.45)',
+    role:'Legosoldat', race:'Människa',
+    relation:'allierad', trust:72, alive:true,
+    met:{ location:'Värdshuset "Sista Glöden"', when:'Session 2 · Dag 7', how:'Erbjöd sig att vakta er rygg mot betalning. Höll sitt ord — även när det blev dyrare för honom än vad någon avtalat.' },
+    merchant:null,
+    quests:[
+      { name:'Råttan i källaren', status:'slutförd', desc:'Rensa källaren under Sista Glöden. Visade sig vara en odöd råttlare, inte vanliga råttor. 35 gp utbetalat.', reward:'35 gp (utbetalt)' },
+      { name:'Asksvärdets skuld', status:'aktiv', desc:'Kaels förlorade svärd ligger någonstans på gravfältet norr om dalen. Det var hans fars. Han vill ha tillbaka det — men vågar inte gå dit själv.', reward:'Kaels lojalitet för livet + svärdet' },
+    ],
+    notes:['Hatar odöda. Personligt, inte principiellt.', 'Sov med ena ögat öppet första natten.', 'Nämnde en syster som dog i Askans Dal. Byter ämne direkt.'],
+    conversations:[
+      { when:'Session 2 · Dag 7', location:'Värdshuset "Sista Glöden"', lines:[
+        { who:'npc', text:'Ni ser ut som folk som är på väg någonstans de inte borde. <em>Lyfter ölet.</em> Jag heter Kael. För rätt pris ser jag till att ni kommer fram.' },
+        { who:'player', text:'Vad tar du för att vakta oss till kvarnen?' },
+        { who:'npc', text:'Kvarnen? <em>Ställer ner ölet. Skrattar inte längre.</em> Då blir det dubbla priset. Och jag vill ha betalt i förskott.' },
+      ]},
+      { when:'Session 3 · Dag 9', location:'Lägret vid ån', lines:[
+        { who:'npc', text:'Min syster trodde också att hon kunde förhandla med det som bor i dalen. <em>Spottar i elden.</em> Lär er av hennes misstag: förhandla inte.' },
+      ]},
+    ],
+  },
+  {
+    id:'lyra', name:'Lyra Vindviska', icon:'🏹', color:'#7aa35e', glow:'rgba(122,163,94,.45)',
+    role:'Skogsalv · Jägare', race:'Skogsalv',
+    relation:'allierad', trust:64, alive:true,
+    met:{ location:'Vägen genom Askans Dal', when:'Session 1 · Dag 3', how:'Dök upp ur snåren mitt i ett bakhåll — och räddade er. Eller var det hon som låg i bakhåll och ångrade sig? Hon säger inget om den natten.' },
+    merchant:null,
+    quests:[
+      { name:'Vargens spår', status:'aktiv', desc:'Följ spåren av den vita vargen till dess lya. Levande, om möjligt — den är inte ett vanligt djur, och skogen vill att den lever.', reward:'Vargens päls + vägledning genom skogen' },
+    ],
+    notes:['Talar med träden. Bokstavligen. De svarar.', 'Undviker eld — av respekt, inte av rädsla.', 'Vet mer om dalens historia än hon säger. Väntar på rätt tillfälle.'],
+    conversations:[
+      { when:'Session 1 · Dag 3', location:'Vägen genom Askans Dal', lines:[
+        { who:'npc', text:'Tre pilar. <em>Pekar på de döda rövarna.</em> Ni hade klarat er. Kanske. Jag heter Lyra, och skogen skickade mig.' },
+        { who:'player', text:'Skickade skogen dig? Skogen kan väl inte skicka någon.' },
+        { who:'npc', text:'<em>Ler snett.</em> Då ska du lyssna bättre.' },
+      ]},
+    ],
+  },
+  {
+    id:'borg', name:'Borg Stenhand', icon:'🛡️', color:'#c9a227', glow:'rgba(201,162,39,.45)',
+    role:'Värdshusvärd', race:'Dvärg',
+    relation:'neutral', trust:55, alive:true,
+    met:{ location:'Värdshuset "Sista Glöden"', when:'Session 1 · Dag 2', how:'Serverade er utan frågor och utan brådska. Kom ihåg allt ni sa ändå — och mycket ni inte sa.' },
+    merchant:{ items:[
+      { name:'Hälsodryck', price:15, rarity:'normal', stock:6 },
+      { name:'Större hälsodryck', price:40, rarity:'rare', stock:2 },
+      { name:'Ransoner (1 dag)', price:2, rarity:'normal', stock:12 },
+      { name:'Rep (15 m)', price:1, rarity:'normal', stock:5 },
+      { name:'Dvärgöl "Stenhandens Svarta"', price:1, rarity:'normal', stock:99 },
+    ]},
+    quests:[
+      { name:'Ölets recept', status:'aktiv', desc:'Borgs jäst stals från bryggeriet i Väst för tre månader sedan. Utan den blir ölet bara… öl. Hitta jästen. Eller tjuven. Helst båda.', reward:'Livstids gratis öl på Sista Glöden' },
+    ],
+    notes:['Säljer information lika gärna som öl — dyrare än ölet.', 'Har en dörr bakom disken som aldrig öppnas. Han ler när man frågar.', 'Tar 20% extra av främlingar. 0% av vänner. Bestämmer själv vem som är vad.'],
+    conversations:[
+      { when:'Session 1 · Dag 2', location:'Värdshuset "Sista Glöden"', lines:[
+        { who:'npc', text:'Öl, soppa, rum. I den ordningen, eller den omvända. <em>Torkar ett glas som redan är torrt.</em> Fråga inte om kvarnen.' },
+        { who:'player', text:'Varför inte?' },
+        { who:'npc', text:'<em>Ställer ner glaset. För första gången ser han er i ögonen.</em> För att den som frågar om kvarnen alltid är den som ska dit. Och jag vill inte behöva städa efter er.' },
+      ]},
+    ],
+  },
+  {
+    id:'halvard', name:'Vakten Halvard', icon:'💂', color:'#a8b2c0', glow:'rgba(168,178,192,.35)',
+    role:'Stadsvakt', race:'Människa',
+    relation:'neutral', trust:40, alive:true,
+    met:{ location:'Stadsporten, Väsby', when:'Session 1 · Dag 1', how:'Visiterade er vid ankomst. Släppte igenom er mot en "liten avgift" och ett löfte om att inte ställa till problem.' },
+    merchant:null,
+    quests:[],
+    notes:['Tar mutor, men minns exakt vem som betalat — och hur mycket.', 'Varnade oss för kvarnen. På riktigt, inte som Borg.', 'Byter skift vid midnatt. Porten är obevakad i tio minuter.'],
+    conversations:[
+      { when:'Session 1 · Dag 1', location:'Stadsporten, Väsby', lines:[
+        { who:'npc', text:'Vapen? <em>Tittar knappt upp.</em> Registrerade. Välkomna till Väsby. Ställ inte till bråk, så ställer inte jag till med er.' },
+        { who:'player', text:'Vad är det för ort egentligen?' },
+        { who:'npc', text:'En ort där folk försvinner och ingen frågar varför. <em>Sänker rösten.</em> Håll er borta från kvarnen. Det är ett vänligt råd, och det är gratis.' },
+      ]},
+    ],
+  },
+  {
+    id:'damen', name:'Den Gröna Damen', icon:'👻', color:'#d43a4d', glow:'rgba(212,58,77,.45)',
+    role:'Vålnad i kvarnen', race:'Odöd (vålnad)',
+    relation:'fiende', trust:0, alive:false,
+    met:{ location:'Kvarnens källare', when:'Session 4 · Dag 13', how:'Visade sig när kristallen pulserade som starkast. Morvaine bad oss fly — första gången vi sett honom rädd på riktigt.' },
+    merchant:null,
+    quests:[
+      { name:'Den gröna kedjan', status:'aktiv', desc:'Morvaine tror att något binder henne till kvarnen — något hon bar i livet. Hitta det. Och bestäm sedan om det ska förstöras, eller om hon ska få veta var det är.', reward:'Okänt. Morvaine säger: "Ett val."' },
+    ],
+    notes:['Anfaller inte om man inte rör kristallen. Väntar, snarare.', 'Viskar namn. Mest Thalindras. Ibland namn ingen av oss känner.', 'Morvaine kallade henne "den första". Den första vad?'],
+    conversations:[
+      { when:'Session 4 · Dag 13', location:'Kvarnens källare', lines:[
+        { who:'npc', text:'<em>Rösten kommer från överallt och ingenstans, som vatten som rinner uppåt.</em> Du bär elden. Jag bar vattnet. Vi bar båda fel börda, du och jag.' },
+        { who:'player', text:'Vad vill du?' },
+        { who:'npc', text:'<em>Det gröna ljuset stannar. Helt.</em> Att du ska minnas mig. Det är allt som finns kvar av att vilja.' },
+      ]},
+    ],
+  },
+];
+
+const REL_LABEL = { allierad:'Allierad', neutral:'Neutral', fiende:'Fiende', 'okänd':'Okänd' };
+
+function trustTier(t){
+  if(t<20) return {label:'Fientlig', color:'var(--blood-bright)'};
+  if(t<40) return {label:'Vaksam', color:'var(--ember)'};
+  if(t<60) return {label:'Neutral', color:'var(--bone-dim)'};
+  if(t<80) return {label:'Vänlig', color:'var(--poison)'};
+  return {label:'Lojal', color:'var(--gold-bright)'};
+}
+
+// ═══════════════════════════════════════
+// FILTER + LISTA
+// ═══════════════════════════════════════
+const FILTERS = [
+  { id:'alla', label:'Alla', test:()=>true },
+  { id:'allierade', label:'Allierade', test:n=>n.relation==='allierad' },
+  { id:'handlare', label:'Handlare', test:n=>!!n.merchant },
+  { id:'uppdrag', label:'Uppdrag', test:n=>n.quests.some(q=>q.status==='aktiv') },
+  { id:'fiender', label:'Fiender', test:n=>n.relation==='fiende' },
+];
+let activeFilter = 'alla';
+let selectedId = null;
+
+document.getElementById('filters').innerHTML = FILTERS.map(f =>
+  `<button class="fchip ${f.id==='alla'?'on':''}" data-f="${f.id}" onclick="setFilter('${f.id}')">${f.label}</button>`).join('');
+
+function setFilter(id){
+  activeFilter = id;
+  document.querySelectorAll('.fchip').forEach(c => c.classList.toggle('on', c.dataset.f===id));
+  renderList();
+}
+
+function renderList(){
+  const f = FILTERS.find(x=>x.id===activeFilter);
+  const list = NPCS.filter(f.test);
+  document.getElementById('npc-list').innerHTML = list.map(n => `
+    <div class="ncard ${selectedId===n.id?'sel':''}" style="--nc:${n.color};--ng:${n.glow}" onclick="selectNpc('${n.id}')">
+      <div class="sigil">${n.icon}</div>
+      <div style="min-width:0">
+        <div class="nm">${n.name}</div>
+        <div class="rl">${n.role}</div>
+        <div class="badges">
+          <span class="badge b-rel-${n.relation}">${REL_LABEL[n.relation]}</span>
+          ${n.merchant?'<span class="badge b-shop">🪙 Handlare</span>':''}
+          ${n.quests.some(q=>q.status==='aktiv')?'<span class="badge b-quest">⚑ Uppdrag</span>':''}
+          ${!n.alive?'<span class="badge b-dead">💀 Odöd</span>':''}
+        </div>
+        <div class="seen">Senast sedd: ${n.met.location} · ${n.met.when}</div>
+      </div>
+    </div>`).join('') || '<div style="text-align:center;color:var(--bone-dim);font-style:italic;padding:2rem 0;font-size:.85rem">Inga gestalter matchar…</div>';
+  document.getElementById('hall-count').textContent = `${list.length} av ${NPCS.length} gestalter`;
+}
+
+// ═══════════════════════════════════════
+// DOSSIER
+// ═══════════════════════════════════════
+function selectNpc(id){
+  selectedId = id;
+  renderList();
+  renderDossier(NPCS.find(n=>n.id===id));
+}
+
+function renderDossier(n){
+  const tier = trustTier(n.trust);
+  const d = document.getElementById('dossier');
+  const sec = (i, label, body) => `
+    <div class="d-sec" style="animation-delay:${.08*i}s">
+      <div class="d-label">${label}</div>${body}
+    </div>`;
+
+  let html = `
+    <div class="d-head" style="--dc:${n.color};--dg:${n.glow}">
+      <div class="d-portrait">${n.icon}</div>
+      <div>
+        <div class="d-name">${n.name}</div>
+        <div class="d-role" style="color:${n.color}">${n.role}</div>
+        <div class="d-chips">
+          <span class="badge b-rel-${n.relation}">${REL_LABEL[n.relation]}</span>
+          <span class="badge b-rel-neutral">${n.race}</span>
+          ${n.alive ? '<span class="badge b-rel-allierad">Levande</span>' : '<span class="badge b-dead">Odöd</span>'}
+          ${n.merchant?'<span class="badge b-shop">🪙 Handlare</span>':''}
+        </div>
+      </div>
+    </div>`;
+
+  // Mötet
+  html += sec(1, '📍 Första mötet', `
+    <div class="panel-box" style="--dc:${n.color}">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div class="met-loc">${n.met.location}</div>
+      <div class="met-when">${n.met.when}</div>
+      <div class="met-how">${n.met.how}</div>
+    </div>`);
+
+  // Förtroende
+  html += sec(2, '🤝 Förtroende', `
+    <div class="trust-row">
+      <div class="trust-bar"><div class="trust-fill" id="tf" style="background:${tier.color};color:${tier.color}"></div></div>
+      <div class="trust-label" style="color:${tier.color}">${tier.label} · ${n.trust}/100</div>
+    </div>`);
+
+  // Uppdrag
+  if(n.quests.length){
+    html += sec(3, '⚑ Uppdrag', n.quests.map(q => `
+      <div class="quest">
+        <div class="q-head">
+          <span class="q-name">${q.name}</span>
+          <span class="q-status qs-${q.status}">${q.status}</span>
+        </div>
+        <div class="q-desc">${q.desc}</div>
+        <div class="q-reward"><b>Belöning:</b> ${q.reward}</div>
+      </div>`).join(''));
+  }
+
+  // Handel
+  if(n.merchant){
+    html += sec(4, '🪙 Säljer', `
+      <div class="panel-box">
+        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        <table class="shop-table">
+          <thead><tr><th>Vara</th><th style="text-align:center">Lager</th><th>Pris</th><th></th></tr></thead>
+          <tbody>${n.merchant.items.map((it,i) => `
+            <tr>
+              <td class="i-name ${it.rarity}">${it.rarity==='rare'?'✦ ':''}${it.name}</td>
+              <td class="i-stock" id="stock-${n.id}-${i}">${it.stock>50?'∞':it.stock}</td>
+              <td class="i-price">${it.price} gp</td>
+              <td style="text-align:right"><button class="buy-btn" id="buy-${n.id}-${i}" onclick="buyItem('${n.id}',${i})">Köp</button></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+        <div class="purse">Din börs: <b id="purse">${purse} gp</b></div>
+      </div>`);
+  }
+
+  // Anteckningar
+  html += sec(n.merchant?5:4, '🕯️ Det du vet', `
+    <ul class="notes-list" style="--dc:${n.color};--dg:${n.glow}">
+      ${n.notes.map(x=>`<li>${x}</li>`).join('')}
+    </ul>`);
+
+  // Samtal
+  html += sec(n.merchant?6:5, '💬 Samtal', n.conversations.map(c => `
+    <div class="conv" style="--dc:${n.color}">
+      <div class="conv-head"><b>${c.when}</b> · ${c.location}</div>
+      ${c.lines.map((l,i) => l.who==='npc' ? `
+        <div class="line npc" style="animation-delay:${i*.12}s">
+          <div class="who" style="color:${n.color}"><span class="dot" style="color:${n.color};background:${n.color}"></span>${n.icon} ${n.name}</div>
+          <div class="text">${l.text}</div>
+        </div>` : `
+        <div class="line player" style="animation-delay:${i*.12}s">
+          <div class="who">🧙‍♀️ Thalindra</div>
+          <div class="text">${l.text}</div>
+        </div>`).join('')}
+    </div>`).join(''));
+
+  html += `<div class="d-sec" style="animation-delay:.5s">
+    <a class="talk-btn" href="chat.html">💬 Tala med ${n.name.split(' ')[0]} vid bordet</a>
+  </div>`;
+
+  d.innerHTML = html;
+  d.scrollTop = 0;
+  // Animera förtroendebaren
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const tf = document.getElementById('tf');
+    if(tf) tf.style.width = n.trust + '%';
+  }));
+}
+
+// ═══════════════════════════════════════
+// HANDEL
+// ═══════════════════════════════════════
+function buyItem(npcId, idx){
+  const n = NPCS.find(x=>x.id===npcId);
+  const it = n.merchant.items[idx];
+  if(it.stock<=0){ toast('⚠ Slut i lager'); return; }
+  if(purse < it.price){ toast('⚠ Inte nog med guld i börsen'); return; }
+  purse -= it.price;
+  it.stock--;
+  document.getElementById('purse').textContent = purse + ' gp';
+  const stockEl = document.getElementById(`stock-${npcId}-${idx}`);
+  stockEl.textContent = it.stock>50 ? '∞' : it.stock;
+  if(it.stock<=0) document.getElementById(`buy-${npcId}-${idx}`).disabled = true;
+  toast(`🪙 Köpte ${it.name} för ${it.price} gp`);
+  // I produktion: POST /api/campaign/{id}/buy → uppdaterar state.json (currency + inventory)
+}
+
+// ═══════════════════════════════════════
+// TOAST + EMBERS
+// ═══════════════════════════════════════
+let toastTimer;
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2400);}
+
+const canvas=document.getElementById('embers'),ctx=canvas.getContext('2d');
+let W,H,embers=[];
+function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight;}
+resize();addEventListener('resize',resize);
+function spawn(init){return{x:Math.random()*W,y:init?Math.random()*H:H+10,r:.7+Math.random()*1.5,vy:.2+Math.random()*.55,vx:(Math.random()-.5)*.3,life:0,max:400+Math.random()*500,hue:Math.random()<.82?22+Math.random()*18:268+Math.random()*20};}
+for(let i=0;i<34;i++)embers.push(spawn(true));
+function tick(){ctx.clearRect(0,0,W,H);for(let i=0;i<embers.length;i++){const e=embers[i];e.life++;e.y-=e.vy;e.x+=e.vx+Math.sin(e.life*.02)*.12;const fade=Math.min(1,e.life/60)*Math.max(0,1-e.life/e.max);const fl=.5+Math.sin(e.life*.15+i)*.35;ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fillStyle=`hsla(${e.hue},90%,60%,${.4*fade*fl})`;ctx.shadowColor=`hsla(${e.hue},90%,55%,${.6*fade})`;ctx.shadowBlur=6;ctx.fill();if(e.life>e.max||e.y<-12)embers[i]=spawn(false);}requestAnimationFrame(tick);}
+tick();
+
+renderList();
+</script>
+</body>
+</html>

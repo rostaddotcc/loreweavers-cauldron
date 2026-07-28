@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚔️ Mörkrets Rike — Välj ditt öde</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:#0b0812; --stone:#161020; --stone-2:#1d1529; --stone-3:#241a33;
+    --edge:#3d2f52; --edge-warm:#5a4433;
+    --bone:#d9c9a6; --bone-bright:#efe2c0; --bone-dim:#8a7a5e;
+    --gold:#c9a227; --gold-bright:#e8c65a;
+    --blood:#a32433; --blood-bright:#d43a4d;
+    --ember:#d4691e; --arcane:#8b5fd4; --poison:#7aa35e; --teal:#5e9aa3;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:'Spectral',Georgia,serif;color:var(--bone);min-height:100vh;
+    background:
+      radial-gradient(1100px 520px at 50% 112%, rgba(212,105,30,.13), transparent 62%),
+      radial-gradient(820px 460px at 12% -8%, rgba(139,95,212,.10), transparent 58%),
+      radial-gradient(640px 380px at 88% -4%, rgba(163,36,51,.09), transparent 56%),
+      var(--ink);
+    background-attachment:fixed;overflow-x:hidden;
+  }
+  .grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .fog{position:fixed;inset:-20%;z-index:0;pointer-events:none}
+  .fog::before,.fog::after{content:'';position:absolute;width:70vw;height:70vw;border-radius:50%;filter:blur(90px);opacity:.5}
+  .fog::before{left:-10%;top:20%;background:radial-gradient(circle,rgba(139,95,212,.07),transparent 65%);animation:drift-a 70s ease-in-out infinite alternate}
+  .fog::after{right:-15%;bottom:5%;background:radial-gradient(circle,rgba(212,105,30,.06),transparent 65%);animation:drift-b 90s ease-in-out infinite alternate}
+  @keyframes drift-a{from{transform:translate(0,0) scale(1)}to{transform:translate(14vw,-8vh) scale(1.25)}}
+  @keyframes drift-b{from{transform:translate(0,0) scale(1.15)}to{transform:translate(-12vw,6vh) scale(.9)}}
+  #embers{position:fixed;inset:0;z-index:1;pointer-events:none}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(4,2,8,.85)}
+
+  .app{position:relative;z-index:2;max-width:1080px;margin:0 auto;padding:2rem 1.25rem 5rem}
+
+  /* ── Head ── */
+  .forge-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:2.4rem}
+  .forge-head .brand{font-family:'Cinzel',serif;font-weight:900;font-size:1.1rem;color:var(--gold-bright);letter-spacing:.06em;text-shadow:0 0 14px rgba(232,198,90,.3)}
+  .forge-head .back{font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .9rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none}
+  .forge-head .back:hover{color:var(--gold-bright);border-color:var(--gold)}
+
+  .destiny-title{text-align:center;margin-bottom:.4rem}
+  .destiny-title .over{font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.42em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.55rem}
+  .destiny-title h1{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(1.8rem,5vw,2.7rem);color:var(--bone-bright);letter-spacing:.05em;text-shadow:0 2px 0 #000,0 0 24px rgba(232,198,90,.25);animation:candle 5s ease-in-out infinite}
+  @keyframes candle{0%,100%{text-shadow:0 2px 0 #000,0 0 24px rgba(232,198,90,.25)}42%{text-shadow:0 2px 0 #000,0 0 32px rgba(232,198,90,.4)}76%{text-shadow:0 2px 0 #000,0 0 26px rgba(212,105,30,.35)}}
+  .destiny-sub{text-align:center;font-style:italic;color:var(--bone-dim);font-size:.92rem;margin-bottom:2.2rem}
+  .rune-divider{display:flex;align-items:center;gap:.9rem;margin:0 auto 2.4rem;max-width:380px}
+  .rune-divider::before,.rune-divider::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.5}
+  .rune-divider span{color:var(--gold);text-shadow:0 0 8px rgba(201,162,39,.6)}
+
+  /* ── Section labels ── */
+  .section-label{font-family:'Cinzel',serif;font-size:.74rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);display:flex;align-items:center;gap:.9rem;margin:2.6rem 0 1.2rem}
+  .section-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(201,162,39,.5),transparent)}
+  .section-label .num{color:var(--bone-dim);font-size:.62rem}
+
+  /* ═══════════ Archetype spread ═══════════ */
+  .spread{display:grid;grid-template-columns:repeat(3,1fr);gap:1.1rem}
+  .arch{
+    position:relative;cursor:pointer;text-align:center;padding:1.4rem 1rem 1.2rem;
+    background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);
+    border:1px solid var(--edge);
+    transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s,border-color .3s;
+    overflow:hidden;
+  }
+  .arch::before{content:'';position:absolute;inset:6px;border:1px solid rgba(201,162,39,.18);pointer-events:none;transition:border-color .3s}
+  .arch:nth-child(1){transform:rotate(-1.6deg)}
+  .arch:nth-child(2){transform:rotate(1.1deg)}
+  .arch:nth-child(3){transform:rotate(-.8deg)}
+  .arch:nth-child(4){transform:rotate(1.4deg)}
+  .arch:nth-child(5){transform:rotate(-1.2deg)}
+  .arch:nth-child(6){transform:rotate(.9deg)}
+  .arch:hover{transform:rotate(0) translateY(-8px);box-shadow:0 18px 34px -12px rgba(0,0,0,.85);border-color:var(--ac,var(--gold));z-index:2}
+  .arch:hover::before{border-color:var(--ac,var(--gold))}
+  .arch .glow{position:absolute;inset:0;opacity:0;transition:opacity .35s;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 0%,var(--ac-glow,rgba(201,162,39,.14)),transparent 70%)}
+  .arch:hover .glow{opacity:1}
+  .arch .icon{
+    width:56px;height:56px;margin:0 auto .8rem;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:1.6rem;
+    border:1px solid var(--ac,var(--gold));background:var(--stone-3);
+    box-shadow:0 0 16px -4px var(--ac-glow,rgba(201,162,39,.4)),inset 0 0 12px rgba(0,0,0,.5);
+    transition:transform .3s,box-shadow .3s;
+  }
+  .arch:hover .icon{transform:scale(1.12);box-shadow:0 0 24px -2px var(--ac-glow,rgba(201,162,39,.6)),inset 0 0 12px rgba(0,0,0,.5)}
+  .arch h3{font-family:'Cinzel',serif;font-weight:700;font-size:.95rem;color:var(--bone-bright);letter-spacing:.04em;margin-bottom:.45rem}
+  .arch .lore{font-style:italic;font-size:.8rem;color:var(--bone-dim);line-height:1.5;margin-bottom:.8rem;min-height:3.6em}
+  .arch .tags{display:flex;justify-content:center;gap:.35rem;flex-wrap:wrap}
+  .arch .tag{font-family:'Cinzel',serif;font-size:.52rem;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim);border:1px solid var(--edge);padding:.2rem .5rem;border-radius:2px}
+  .arch .ribbon{
+    position:absolute;top:10px;right:-30px;transform:rotate(38deg);
+    font-family:'Cinzel',serif;font-size:.52rem;letter-spacing:.18em;text-transform:uppercase;
+    background:var(--ac,var(--gold));color:#1a1206;padding:.25rem 2.2rem;
+    opacity:0;transition:opacity .3s;
+  }
+  .arch.selected{border-color:var(--ac,var(--gold));transform:rotate(0) translateY(-6px);
+    box-shadow:0 0 0 1px var(--ac,var(--gold)),0 16px 34px -12px var(--ac-glow,rgba(201,162,39,.5))}
+  .arch.selected .ribbon{opacity:1}
+  .arch.selected::before{border-color:var(--ac,var(--gold))}
+
+  /* ═══════════ Prompt scroll ═══════════ */
+  .scroll-box{position:relative;background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,#120c1c);border:1px solid var(--edge);padding:1.6rem 1.5rem;box-shadow:0 20px 50px -20px rgba(0,0,0,.9)}
+  .corner{position:absolute;width:18px;height:18px;border-color:var(--gold);border-style:solid;opacity:.7}
+  .corner.tl{top:6px;left:6px;border-width:2px 0 0 2px}.corner.tr{top:6px;right:6px;border-width:2px 2px 0 0}
+  .corner.bl{bottom:6px;left:6px;border-width:0 0 2px 2px}.corner.br{bottom:6px;right:6px;border-width:0 2px 2px 0}
+  .scroll-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.6rem}
+  .scroll-head .mode{font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--arcane)}
+  .scroll-head .mode b{color:var(--bone-bright)}
+  .blank-btn{font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;background:transparent;border:1px solid var(--edge);color:var(--bone-dim);padding:.4rem .8rem;cursor:pointer;transition:all .2s;border-radius:2px}
+  .blank-btn:hover{color:var(--bone-bright);border-color:var(--bone-dim)}
+  #prompt{
+    width:100%;min-height:230px;resize:vertical;
+    font-family:'Spectral',serif;font-size:.9rem;line-height:1.65;color:var(--bone-bright);
+    background:#0d0817;border:1px solid var(--edge);padding:1rem 1.1rem;outline:none;border-radius:2px;
+    transition:border-color .25s,box-shadow .25s;
+  }
+  #prompt:focus{border-color:var(--arcane);box-shadow:0 0 18px -5px rgba(139,95,212,.4)}
+  .scroll-actions{display:flex;align-items:center;gap:1rem;margin-top:1.2rem;flex-wrap:wrap}
+  .summon-btn{
+    font-family:'Cinzel',serif;font-weight:700;font-size:.82rem;letter-spacing:.18em;text-transform:uppercase;
+    color:#1a1206;cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);
+    border:1px solid #6e5510;padding:.9rem 1.8rem;border-radius:2px;position:relative;overflow:hidden;
+    box-shadow:0 6px 20px -6px rgba(232,198,90,.5),inset 0 1px 0 rgba(255,255,255,.35);transition:all .2s;
+  }
+  .summon-btn:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-2px)}
+  .summon-btn:disabled{opacity:.55;cursor:wait}
+  .summon-btn::after{content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.25) 50%,transparent 60%);background-size:250% 100%;animation:btn-sheen 4s ease-in-out infinite}
+  @keyframes btn-sheen{0%,100%{background-position:200% 0}50%{background-position:-80% 0}}
+  .scroll-hint{font-size:.75rem;font-style:italic;color:var(--bone-dim)}
+  .scroll-hint b{color:var(--arcane);font-style:normal}
+
+  /* ═══════════ Weaving / dice ═══════════ */
+  .weaving{display:none;text-align:center;padding:2rem 0 .5rem}
+  .weaving.show{display:block;animation:msg-in .4s ease}
+  .weaving .w-text{font-style:italic;color:var(--arcane);font-size:.92rem;margin-bottom:1.2rem;text-shadow:0 0 12px rgba(139,95,212,.4)}
+  .dice-row{display:flex;justify-content:center;gap:.7rem}
+  .die{
+    width:46px;height:46px;display:flex;align-items:center;justify-content:center;
+    font-family:'Cinzel',serif;font-weight:900;font-size:1.15rem;color:var(--gold-bright);
+    background:linear-gradient(160deg,var(--stone-3),var(--stone));border:1px solid var(--gold);
+    box-shadow:0 0 14px -3px rgba(232,198,90,.5),inset 0 0 10px rgba(0,0,0,.6);
+    clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);
+    animation:die-shake .5s ease-in-out infinite;
+  }
+  .die:nth-child(2){animation-delay:.08s}.die:nth-child(3){animation-delay:.16s}
+  .die:nth-child(4){animation-delay:.24s}.die:nth-child(5){animation-delay:.32s}.die:nth-child(6){animation-delay:.4s}
+  @keyframes die-shake{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-6px) rotate(8deg)}}
+
+  /* ═══════════ Character preview ═══════════ */
+  .preview{display:none;margin-top:2.4rem}
+  .preview.show{display:block;animation:msg-in .55s cubic-bezier(.22,1,.36,1)}
+  @keyframes msg-in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  .pv-head{display:flex;gap:1.4rem;align-items:center;margin-bottom:1.4rem;flex-wrap:wrap}
+  .pv-portrait{width:84px;height:84px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2.2rem;border:2px solid var(--pv-ac,var(--gold));background:var(--stone-3);box-shadow:0 0 22px -4px var(--pv-glow,rgba(201,162,39,.5));transform:rotate(-3deg)}
+  .pv-name{font-family:'Cinzel',serif;font-weight:900;font-size:1.5rem;color:var(--bone-bright);text-shadow:0 2px 0 #000}
+  .pv-class{font-style:italic;color:var(--pv-ac,var(--arcane));font-size:.95rem;margin-top:.15rem}
+  .pv-stats{display:grid;grid-template-columns:repeat(6,1fr);gap:.6rem;margin-bottom:1.3rem}
+  .pv-stat{text-align:center;padding:.7rem .2rem .6rem;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--edge);clip-path:polygon(50% 0,100% 12%,100% 88%,50% 100%,0 88%,0 12%)}
+  .pv-stat .a{font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.2em;color:var(--gold)}
+  .pv-stat .s{font-family:'Cinzel',serif;font-weight:900;font-size:1.3rem;color:var(--bone-bright)}
+  .pv-stat .m{font-size:.72rem;color:var(--arcane)}
+  .pv-vitals{display:flex;gap:1.4rem;flex-wrap:wrap;font-size:.85rem;color:var(--bone-dim);margin-bottom:1.3rem}
+  .pv-vitals b{color:var(--bone-bright);font-size:1rem}
+  .pv-traits{display:flex;flex-wrap:wrap;gap:.45rem;margin-bottom:1.3rem}
+  .pv-trait{font-size:.78rem;padding:.3rem .8rem;border:1px solid rgba(139,95,212,.5);color:#cbb3f2;background:rgba(139,95,212,.08);border-radius:2px}
+  .pv-gear{font-size:.85rem;color:var(--bone);line-height:1.7;margin-bottom:1.3rem}
+  .pv-gear b{color:var(--gold-bright)}
+  .pv-story{font-style:italic;color:var(--bone);line-height:1.7;border-left:2px solid var(--pv-ac,var(--gold));padding-left:1rem;margin-bottom:1.6rem;font-size:.92rem}
+  .pv-actions{display:flex;gap:.8rem;flex-wrap:wrap}
+  .pv-go{font-family:'Cinzel',serif;font-weight:700;font-size:.78rem;letter-spacing:.16em;text-transform:uppercase;color:#1a1206;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);border:1px solid #6e5510;padding:.85rem 1.6rem;cursor:pointer;border-radius:2px;transition:all .2s;box-shadow:0 6px 18px -6px rgba(232,198,90,.5)}
+  .pv-go:hover{filter:brightness(1.12);transform:translateY(-2px)}
+  .pv-reroll{font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.85rem 1.3rem;cursor:pointer;border-radius:2px;transition:all .2s}
+  .pv-reroll:hover{color:var(--bone-bright);border-color:var(--arcane)}
+
+  .toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:50;font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.12em;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);padding:.7rem 1.5rem;box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}
+  .toast.show{transform:translate(-50%,0);opacity:1}
+
+  @media(max-width:860px){.spread{grid-template-columns:repeat(2,1fr)}.pv-stats{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:560px){.spread{grid-template-columns:1fr}.arch{transform:none!important}}
+</style>
+</head>
+<body>
+<div class="grain"></div><div class="fog"></div><canvas id="embers"></canvas><div class="vignette"></div>
+
+<div class="app">
+  <header class="forge-head">
+    <span class="brand">🐉 Mörkrets Rike</span>
+    <a class="back" href="login.html">← Till porten</a>
+  </header>
+
+  <div class="destiny-title">
+    <div class="over">Steg ett av tre</div>
+    <h1>Välj ditt öde</h1>
+  </div>
+  <p class="destiny-sub">Välj en arketyp — eller skriv din egen legend. Dungeon Master väver din karaktär till liv.</p>
+  <div class="rune-divider"><span>✦</span></div>
+
+  <!-- ═══════════ 1. ARKETYPER ═══════════ -->
+  <div class="section-label"><span class="num">I.</span> Arketyper</div>
+  <div class="spread" id="spread"></div>
+
+  <!-- ═══════════ 2. PROMPT-MALL ═══════════ -->
+  <div class="section-label"><span class="num">II.</span> Ödesväven</div>
+  <div class="scroll-box">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="scroll-head">
+      <span class="mode" id="mode-label">📜 <b>Tom pergament</b> — skriv fritt</span>
+      <button class="blank-btn" onclick="blankScroll()">✦ Tom pergament</button>
+    </div>
+    <textarea id="prompt" spellcheck="false"></textarea>
+    <div class="scroll-actions">
+      <button class="summon-btn" id="summon" onclick="summon()">🔮 Frammana karaktär</button>
+      <span class="scroll-hint">Prompten skickas till <b id="model-name">Qwen 3.8 Max</b> som genererar ett fullt karaktärsark.</span>
+    </div>
+  </div>
+
+  <!-- ═══════════ VÄVNING ═══════════ -->
+  <div class="weaving" id="weaving">
+    <div class="w-text" id="w-text">Dungeon Master väver din ödesväv…</div>
+    <div class="dice-row">
+      <div class="die">?</div><div class="die">?</div><div class="die">?</div>
+      <div class="die">?</div><div class="die">?</div><div class="die">?</div>
+    </div>
+  </div>
+
+  <!-- ═══════════ 3. FÖRHANDSVISNING ═══════════ -->
+  <div class="preview" id="preview">
+    <div class="section-label"><span class="num">III.</span> Din hjälte</div>
+    <div class="scroll-box" id="pv-box">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div class="pv-head">
+        <div class="pv-portrait" id="pv-icon">⚔️</div>
+        <div>
+          <div class="pv-name" id="pv-name"></div>
+          <div class="pv-class" id="pv-class"></div>
+        </div>
+      </div>
+      <div class="pv-stats" id="pv-stats"></div>
+      <div class="pv-vitals" id="pv-vitals"></div>
+      <div class="pv-traits" id="pv-traits"></div>
+      <div class="pv-gear" id="pv-gear"></div>
+      <div class="pv-story" id="pv-story"></div>
+      <div class="pv-actions">
+        <button class="pv-go" onclick="enterGame()">⚔️ Till bordet</button>
+        <button class="pv-reroll" onclick="summon()">🔄 Slå om ödet</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════
+// ARKETYPER — klickbara mallar
+// ═══════════════════════════════════════
+const ARCHETYPES = {
+  fallen: {
+    icon:'⚔️', name:'Den Fallne Riddaren', color:'#d43a4d', glow:'rgba(212,58,77,.35)',
+    lore:'En vanärad paladin som söker upprättelse — eller hämnd — i mörkret.',
+    tags:['Människa','Paladin','Närstrid'],
+    prompt:`Skapa en D&D 5e-karaktär utifrån denna arketyp:
+
+ARKETYP: Den Fallne Riddaren
+Ras: Människa (variant)
+Klass: Paladin (edsbruten — har förlorat sin gudomliga koppling)
+Bakgrund: Vanärad adel, falskt anklagad för förräderi
+Personlighet: Stoisk, plågsamt ärlig, bär på djup skuld
+Mål: Återupprätta sitt namn — eller hämnas på förrädaren
+Hemlighet: Edsbrottet var inte ett misstag…
+
+Generera:
+1. Namn (mörk fantasy)
+2. Fullt karaktärsark: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves
+3. 3-4 förmågor/egenskaper
+4. Startutrustning (5-8 föremål)
+5. Bakgrundshistoria (max 100 ord)
+Returnera som JSON enligt state-schema.`,
+    char:{ name:'Aldric Vane', cls:'Människa · Edsbruten Paladin · Nivå 5', icon:'⚔️',
+      stats:{STR:17,DEX:10,CON:15,INT:9,WIS:12,CHA:16}, hp:44, ac:18, init:0, prof:3,
+      traits:['Gudomlig känsla','Hämndens ed','Skyddande aura','Läggande händer'],
+      gear:'<b>Långsvärd</b> · <b>Sköld</b> · Kedjeharnesk · Heligt symbol (sprucket) · 3× Hälsodryck · Rep · Ransoner',
+      story:'Aldric var rikets yngste riddare tills natten hans befäl mördades och bevisen pekade på honom. Ingen trodde på hans oskuld — inte ens hans gud. Nu vandrar han med ett sprucket sigill och en ed som inte längre svarar. Men nattetid, när han drömmer, hör han fortfarande rustningens kalla viskning: "Hitta sanningen. Eller brinn med den."' }
+  },
+  witch: {
+    icon:'🔮', name:'Askhäxan', color:'#8b5fd4', glow:'rgba(139,95,212,.35)',
+    lore:'Eldmärkt av en förhäxelse hon aldrig bad om. Lågorna lyder henne — nästan.',
+    tags:['Tiefling','Häxa','Magi'],
+    prompt:`Skapa en D&D 5e-karaktär utifrån denna arketyp:
+
+ARKETYP: Askhäxan
+Ras: Tiefling
+Klass: Warlock (Eld-pakt)
+Bakgrund: Född under en askregnande komet, märkt av en uråldrig eldande
+Personlighet: Skarptungad, nyfiken, rädd för sin egen kraft
+Mål: Förstå varför elden valde just henne
+Hemlighet: Pakten var inte hennes val — det var hennes moders
+
+Generera:
+1. Namn (mörk fantasy)
+2. Fullt karaktärsark: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves
+3. 3-4 förmågor/egenskaper
+4. Startutrustning (5-8 föremål)
+5. Bakgrundshistoria (max 100 ord)
+Returnera som JSON enligt state-schema.`,
+    char:{ name:'Sable Askfödd', cls:'Tiefling · Eldpakt-Häxa · Nivå 5', icon:'🔮',
+      stats:{STR:8,DEX:14,CON:13,INT:16,WIS:10,CHA:17}, hp:33, ac:13, init:2, prof:3,
+      traits:['Eldmotstånd','Häxeld','Asksteg','Paktens pris'],
+      gear:'<b>Askstav</b> · Komponentväska · Spellbok (bränd i kanterna) · 2× Hälsodryck · Fackla ×5 · Amulett av kol',
+      story:'Natten Sable föddes regnade aska över byn, och i hennes handflata brann ett märke som aldrig slocknat. Elden viskar till henne — ibland råd, ibland hot. Hon lärde sig tidigt att aldrig fråga varifrån rösten kommer. Men nu har märket börjat sprida sig, och viskningarna har blivit ett enda ord, om och om igen: hennes moders namn.' }
+  },
+  hunter: {
+    icon:'🏹', name:'Gravjägaren', color:'#d4691e', glow:'rgba(212,105,30,.35)',
+    lore:'Jagar det som vägrar stanna dött. Silver armborst, kallt hjärta.',
+    tags:['Halvälva','Ranger','Dödjägare'],
+    prompt:`Skapa en D&D 5e-karaktär utifrån denna arketyp:
+
+ARKETYP: Gravjägaren
+Ras: Halvälva
+Klass: Ranger (Dödjägare)
+Bakgrund: Upplärd av en tyst orden som jagar odöda
+Personlighet: Fåordig, vaksam, bär på en förlust
+Mål: Utrota den vampyr som tog hens syster
+Hemlighet: Hen har själv blivit biten — och räknar dagarna
+
+Generera:
+1. Namn (mörk fantasy)
+2. Fullt karaktärsark: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves
+3. 3-4 förmågor/egenskaper
+4. Startutrustning (5-8 föremål)
+5. Bakgrundshistoria (max 100 ord)
+Returnera som JSON enligt state-schema.`,
+    char:{ name:'Kaelen Grav', cls:'Halvälva · Dödjägare · Nivå 5', icon:'🏹',
+      stats:{STR:13,DEX:18,CON:14,INT:11,WIS:15,CHA:9}, hp:41, ac:15, init:4, prof:3,
+      traits:['Odödabane','Silverpil','Skuggsteg','Jägarens märke'],
+      gear:'<b>Armborst (silverbultar)</b> · <b>Kortsvärd</b> · Läderbrynja · Heligt vatten ×3 · Vitlökskrans · Karta över gravplatser',
+      story:'Kaelen lärde sig läsa innan hen lärde sig tala — i ordens bok stod allt om hur man dödar det som redan är dött. Systern var den enda som fick hen att le. När vampyren tog henne tog den också den sista mjuka delen av Kaelen. Nu är bettet i hens egen hals ett timglas, och varje silverbult är både ett löfte och en förberedelse.' }
+  },
+  thief: {
+    icon:'🎭', name:'Viskande Tjuven', color:'#7aa35e', glow:'rgba(122,163,94,.35)',
+    lore:'Hör de dödas hemligheter. Låser, fickor, gravar — allt öppnar sig.',
+    tags:['Halvling','Rogue','Spion'],
+    prompt:`Skapa en D&D 5e-karaktär utifrån denna arketyp:
+
+ARKETYP: Viskande Tjuven
+Ras: Halvling
+Klass: Rogue (Spion/Whisperer)
+Bakgrund: Växte upp på en kyrkogård, lärde sig "lyssna" av de döda
+Personlighet: Lättsam på ytan, alltid rädd i botten
+Mål: Stjäla tillbaka något som tillhörde hens döda mor
+Hemlighet: De döda ljuger ibland — och hen vet inte längre vem som viskar
+
+Generera:
+1. Namn (mörk fantasy)
+2. Fullt karaktärsark: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves
+3. 3-4 förmågor/egenskaper
+4. Startutrustning (5-8 föremål)
+5. Bakgrundshistoria (max 100 ord)
+Returnera som JSON enligt state-schema.`,
+    char:{ name:'Pip Viskfot', cls:'Halvling · Viskare · Nivå 5', icon:'🎭',
+      stats:{STR:8,DEX:17,CON:12,INT:14,WIS:13,CHA:15}, hp:30, ac:14, init:3, prof:3,
+      traits:['Smygattack','Dödsviskning','Ficklås','Skuggdans'],
+      gear:'<b>Kort svärd</b> · <b>Dolk ×2</b> · Läderläder · Tjuvverktyg · 3× Rökgranat · Amulett (moderns)',
+      story:'Pip lärde sig gå tystare än de döda som bodde under kyrkogårdens jord. De blev hens första vänner — och de viskade. Hemligheter om grannarna, om skatter, om mord. Moderns död var den första gången en viskning ljög. Nu jagar Pip sanningen genom fickor och gravar, med ett leende som aldrig riktigt når ögonen.' }
+  },
+  warden: {
+    icon:'🛡️', name:'Edsvurna Väktaren', color:'#c9a227', glow:'rgba(201,162,39,.35)',
+    lore:'Vaktar en glömd grav. Eden är allt som finns kvar av hens folk.',
+    tags:['Dvärg','Väktare','Försvar'],
+    prompt:`Skapa en D&D 5e-karaktär utifrån denna arketyp:
+
+ARKETYP: Edsvurna Väktaren
+Ras: Dvärg
+Klass: Fighter (Väktare/Champion)
+Bakgrund: Sista medlemmen av en orden som vaktade en glömd konungagrav
+Personlighet: Orubblig, torr humor, djupt lojal
+Mål: Fullborda eden — även om det blir det sista hen gör
+Hemlighet: Graven är redan plundrad. Hen väktar något som inte längre finns där.
+
+Generera:
+1. Namn (mörk fantasy)
+2. Fullt karaktärsark: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves
+3. 3-4 förmågor/egenskaper
+4. Startutrustning (5-8 föremål)
+5. Bakgrundshistoria (max 100 ord)
+Returnera som JSON enligt state-schema.`,
+    char:{ name:'Brunja Stenhand', cls:'Dvärg · Gravväktare · Nivå 5', icon:'🛡️',
+      stats:{STR:16,DEX:11,CON:17,INT:10,WIS:13,CHA:12}, hp:49, ac:18, init:0, prof:3,
+      traits:['Andra andningen','Stenhud','Gravens ed','Skyddande ställning'],
+      gear:'<b>Stridshammare</b> · <b>Sköld (med runor)</b> · Splintbrynja · 2× Hälsodryck · Runsten · Dvärgöl (sista flaskan)',
+      story:'Brunja svor eden som barn: ingen ska passera graven. Nu är orden död, bergen tysta, och graven bakom hen är tom — plundrad för hundra år sedan. Men en ed är en ed. Hen väktar fortfarande, och berättar för alla att det är något värt att vakta därinne. Kanske är det därför hen aldrig låter någon titta.' }
+  },
+  skald: {
+    icon:'🐍', name:'Ormtungans Skald', color:'#5e9aa3', glow:'rgba(94,154,163,.35)',
+    lore:'Sånger som böjer sinnen. Varje vers är ett gift — eller ett botemedel.',
+    tags:['Älv','Bard','Förförare'],
+    prompt:`Skapa en D&D 5e-karaktär utifrån denna arketyp:
+
+ARKETYP: Ormtungans Skald
+Ras: Älv
+Klass: Bard (Viskare/College of Whispers)
+Bakgrund: Utesluten från sin hov för "farliga sånger"
+Personlighet: Charmig, gåtfull, alltid tre steg före
+Mål: Återupprätta sin plats vid hovet — eller bränna det
+Hemlighet: En av hens sånger dödade en konung. Ingen vet. Än.
+
+Generera:
+1. Namn (mörk fantasy)
+2. Fullt karaktärsark: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves
+3. 3-4 förmågor/egenskaper
+4. Startutrustning (5-8 föremål)
+5. Bakgrundshistoria (max 100 ord)
+Returnera som JSON enligt state-schema.`,
+    char:{ name:'Lyriel Ormtunga', cls:'Älv · Viskarbard · Nivå 5', icon:'🐍',
+      stats:{STR:9,DEX:15,CON:12,INT:13,WIS:11,CHA:18}, hp:33, ac:13, init:2, prof:3,
+      traits:['Viskande vers','Giftig charm','Sång av rädsla','Mångtydig'],
+      gear:'<b>Fiol (med dold klinga)</b> · <b>Dolk</b> · Läderläder · 2× Giftflaska (sömn) · Förfalskningskit · Kärleksbrev (stulet)',
+      story:'Lyriels röst kunde få en domare att gråta och en bödel att tveka. Hovet kallade det magi; Lyriel kallade det sanning. Men en sång gick för lång — konungen sov in och vaknade aldrig. Nu vandrar Lyriel med en fiol som väger mer än den ser ut att göra, och en hemlighet som skulle kunna välta ett rike. Eller rädda ett.' }
+  },
+};
+
+const FREE_PROMPT = `Beskriv din karaktär fritt — utseende, personlighet, bakgrund, vad de fruktar, vad de begär.
+
+Dungeon Master genererar sedan:
+1. Namn, ras, klass, nivå
+2. Fullt karaktärsark (STR/DEX/CON/INT/WIS/CHA, HP, AC, saves)
+3. 3-4 förmågor & egenskaper
+4. Startutrustning (5-8 föremål)
+5. Bakgrundshistoria (max 100 ord)
+Returnera som JSON enligt state-schema.`;
+
+// ═══════════════════════════════════════
+// RENDER ARKETYPER
+// ═══════════════════════════════════════
+const spread = document.getElementById('spread');
+spread.innerHTML = Object.entries(ARCHETYPES).map(([key, a]) => `
+  <div class="arch" data-key="${key}" style="--ac:${a.color};--ac-glow:${a.glow}" onclick="selectArch('${key}')">
+    <div class="glow"></div>
+    <div class="ribbon">Vald</div>
+    <div class="icon">${a.icon}</div>
+    <h3>${a.name}</h3>
+    <p class="lore">${a.lore}</p>
+    <div class="tags">${a.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+  </div>`).join('');
+
+let selectedKey = null;
+function selectArch(key) {
+  selectedKey = key;
+  document.querySelectorAll('.arch').forEach(el => el.classList.toggle('selected', el.dataset.key === key));
+  const a = ARCHETYPES[key];
+  document.getElementById('prompt').value = a.prompt;
+  document.getElementById('mode-label').innerHTML = `📜 Arketyp: <b>${a.name}</b>`;
+  toast(`${a.icon} ${a.name} vald — prompt-mall laddad`);
+}
+function blankScroll() {
+  selectedKey = null;
+  document.querySelectorAll('.arch').forEach(el => el.classList.remove('selected'));
+  document.getElementById('prompt').value = FREE_PROMPT;
+  document.getElementById('mode-label').innerHTML = `📜 <b>Tom pergament</b> — skriv fritt`;
+  toast('✦ Tom pergament — skriv din egen legend');
+}
+document.getElementById('prompt').value = FREE_PROMPT;
+
+// ═══════════════════════════════════════
+// SUMMON — simulerar Qwen-generering
+// ═══════════════════════════════════════
+let summoning = false;
+function summon() {
+  if (summoning) return;
+  const prompt = document.getElementById('prompt').value.trim();
+  if (!prompt) { toast('⚠ Skriv en beskrivning först'); return; }
+  summoning = true;
+  document.getElementById('summon').disabled = true;
+  document.getElementById('preview').classList.remove('show');
+
+  const weaving = document.getElementById('weaving');
+  weaving.classList.add('show');
+  weaving.scrollIntoView({ behavior:'smooth', block:'center' });
+
+  // Tärningarna "rullar"
+  const dice = document.querySelectorAll('.die');
+  const iv = setInterval(() => {
+    dice.forEach(d => d.textContent = 1 + Math.floor(Math.random()*20));
+  }, 90);
+
+  // I produktion: POST /api/character/generate { prompt, model } → Qwen → JSON
+  setTimeout(() => {
+    clearInterval(iv);
+    // Välj karaktär: arketypens förbyggda, annars slumpa en
+    const char = selectedKey ? ARCHETYPES[selectedKey].char : randomFreeChar();
+    const ac = selectedKey ? ARCHETYPES[selectedKey].color : '#8b5fd4';
+    const glow = selectedKey ? ARCHETYPES[selectedKey].glow : 'rgba(139,95,212,.35)';
+    renderPreview(char, ac, glow);
+    weaving.classList.remove('show');
+    document.getElementById('summon').disabled = false;
+    summoning = false;
+    document.getElementById('preview').classList.add('show');
+    document.getElementById('preview').scrollIntoView({ behavior:'smooth', block:'start' });
+    toast('🔮 Karaktären är vävd!');
+  }, 2400);
+}
+
+function randomFreeChar() {
+  // Fallback för fri prompt — i produktion kommer detta från Qwen
+  return { name:'Vandraren', cls:'Människa · Äventyrare · Nivå 5', icon:'🌑',
+    stats:{STR:13,DEX:14,CON:13,INT:12,WIS:13,CHA:12}, hp:38, ac:14, init:2, prof:3,
+    traits:['Mångsidig','Överlevnadsinstinkt','Skarp blick'],
+    gear:'<b>Kortsvärd</b> · Läderbrynja · 2× Hälsodryck · Rep · Ransoner · Ficklampa',
+    story:'Vissa säger att Vandraren kom från ingenstans. Andra att de kom från någonstans alltför specifikt. Själv säger de ingenting — men deras ögon har sett saker som får elden att tveka.' };
+}
+
+function renderPreview(c, ac, glow) {
+  const box = document.getElementById('pv-box');
+  box.style.setProperty('--pv-ac', ac);
+  box.style.setProperty('--pv-glow', glow);
+  document.getElementById('pv-icon').textContent = c.icon;
+  document.getElementById('pv-icon').style.borderColor = ac;
+  document.getElementById('pv-name').textContent = c.name;
+  document.getElementById('pv-class').textContent = c.cls;
+  document.getElementById('pv-class').style.color = ac;
+
+  const mod = s => { const m = Math.floor((s-10)/2); return m >= 0 ? '+'+m : ''+m; };
+  document.getElementById('pv-stats').innerHTML = Object.entries(c.stats).map(([k,v]) => `
+    <div class="pv-stat"><div class="a">${k}</div><div class="s">${v}</div><div class="m">${mod(v)}</div></div>`).join('');
+
+  document.getElementById('pv-vitals').innerHTML = `
+    <span>❤️ HP <b>${c.hp}</b></span><span>🛡️ AC <b>${c.ac}</b></span>
+    <span>⚡ Init <b>${c.init>=0?'+':''}${c.init}</b></span><span>🎯 Prof <b>+${c.prof}</b></span>`;
+
+  document.getElementById('pv-traits').innerHTML = c.traits.map(t=>`<span class="pv-trait">✦ ${t}</span>`).join('');
+  document.getElementById('pv-gear').innerHTML = '🎒 ' + c.gear;
+  document.getElementById('pv-story').textContent = c.story;
+}
+
+function enterGame() {
+  // I produktion: spara karaktären till campaign state via backend
+  sessionStorage.setItem('dnd_character', document.getElementById('pv-name').textContent);
+  location.href = 'chat.html';
+}
+
+// ═══════════════════════════════════════
+// TOAST + EMBERS
+// ═══════════════════════════════════════
+let toastTimer;
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2200);}
+
+const canvas=document.getElementById('embers'),ctx=canvas.getContext('2d');
+let W,H,embers=[];
+function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight;}
+resize();addEventListener('resize',resize);
+function spawn(init){return{x:Math.random()*W,y:init?Math.random()*H:H+10,r:.7+Math.random()*1.6,vy:.2+Math.random()*0.6,vx:(Math.random()-.5)*.3,life:0,max:400+Math.random()*500,hue:Math.random()<.82?22+Math.random()*18:268+Math.random()*20};}
+for(let i=0;i<40;i++)embers.push(spawn(true));
+function tick(){ctx.clearRect(0,0,W,H);for(let i=0;i<embers.length;i++){const e=embers[i];e.life++;e.y-=e.vy;e.x+=e.vx+Math.sin(e.life*.02)*.12;const fade=Math.min(1,e.life/60)*Math.max(0,1-e.life/e.max);const fl=.5+Math.sin(e.life*.15+i)*.35;ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fillStyle=`hsla(${e.hue},90%,60%,${.45*fade*fl})`;ctx.shadowColor=`hsla(${e.hue},90%,55%,${.7*fade})`;ctx.shadowBlur=7;ctx.fill();if(e.life>e.max||e.y<-12)embers[i]=spawn(false);}requestAnimationFrame(tick);}
+tick();
+</script>
+</body>
+</html>

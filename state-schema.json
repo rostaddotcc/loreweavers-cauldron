@@ -1,0 +1,170 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DnD Campaign State",
+  "type": "object",
+  "properties": {
+    "meta": {
+      "type": "object",
+      "properties": {
+        "campaign_id": { "type": "string" },
+        "campaign_name": { "type": "string" },
+        "created": { "type": "string", "format": "date-time" },
+        "last_updated": { "type": "string", "format": "date-time" },
+        "turn_count": { "type": "integer" },
+        "session_count": { "type": "integer" }
+      }
+    },
+    "character": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "race": { "type": "string" },
+        "class": { "type": "string" },
+        "level": { "type": "integer" },
+        "alignment": { "type": "string" },
+        "background": { "type": "string" },
+        "ac": { "type": "integer" },
+        "initiative": { "type": "integer" },
+        "perception": { "type": "integer" },
+        "speed": { "type": "string" },
+        "proficiency": { "type": "integer" },
+        "hp": {
+          "type": "object",
+          "properties": {
+            "current": { "type": "integer" },
+            "max": { "type": "integer" },
+            "temp": { "type": "integer" }
+          }
+        },
+        "spell_slots": {
+          "type": "object",
+          "properties": {
+            "current": { "type": "integer" },
+            "max": { "type": "integer" }
+          }
+        },
+        "xp": {
+          "type": "object",
+          "properties": {
+            "current": { "type": "integer" },
+            "next_level": { "type": "integer" }
+          }
+        },
+        "abilities": {
+          "type": "object",
+          "properties": {
+            "STR": { "$ref": "#/definitions/ability" },
+            "DEX": { "$ref": "#/definitions/ability" },
+            "CON": { "$ref": "#/definitions/ability" },
+            "INT": { "$ref": "#/definitions/ability" },
+            "WIS": { "$ref": "#/definitions/ability" },
+            "CHA": { "$ref": "#/definitions/ability" }
+          }
+        },
+        "traits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "magic": { "type": "boolean" },
+              "description": { "type": "string" }
+            }
+          }
+        },
+        "saves": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ability": { "type": "string" },
+              "bonus": { "type": "integer" },
+              "proficient": { "type": "boolean" }
+            }
+          }
+        },
+        "portrait": { "type": ["string", "null"], "description": "Base64 or file path" }
+      }
+    },
+    "inventory": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "type": { "type": "string", "enum": ["Vapen", "Rustning", "Dryck", "Magisk", "Verktyg", "Annat"] },
+          "qty": { "type": "integer" },
+          "weight": { "type": "number" },
+          "equipped": { "type": "boolean" },
+          "rarity": { "type": "string", "enum": ["normal", "magic", "rare", "legendary"] },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "currency": {
+      "type": "object",
+      "properties": {
+        "pp": { "type": "integer" },
+        "gp": { "type": "integer" },
+        "ep": { "type": "integer" },
+        "sp": { "type": "integer" },
+        "cp": { "type": "integer" }
+      }
+    },
+    "transactions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "desc": { "type": "string" },
+          "amount": { "type": "number" },
+          "unit": { "type": "string" },
+          "date": { "type": "string" }
+        }
+      }
+    },
+    "npcs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "role": { "type": "string" },
+          "relation": { "type": "string", "enum": ["allierad", "fiende", "neutral", "okänd"] },
+          "notes": { "type": "string" },
+          "alive": { "type": "boolean" }
+        }
+      }
+    },
+    "quests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "status": { "type": "string", "enum": ["aktiv", "slutförd", "misslyckad"] },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "world": {
+      "type": "object",
+      "properties": {
+        "current_location": { "type": "string" },
+        "visited_locations": { "type": "array", "items": { "type": "string" } },
+        "time": { "type": "string", "description": "In-game date/time" },
+        "weather": { "type": "string" }
+      }
+    }
+  },
+  "definitions": {
+    "ability": {
+      "type": "object",
+      "properties": {
+        "score": { "type": "integer" },
+        "mod": { "type": "integer" }
+      }
+    }
+  }
+}

@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
-from fastapi import Cookie, FastAPI, File, HTTPException, Response, UploadFile
+from fastapi import Cookie, FastAPI, File, Form, HTTPException, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -925,6 +925,126 @@ async def delete_attachment(att_id: str, morkrets_token: str | None = Cookie(Non
     state["attachments"] = [a for a in attachments if a["id"] != att_id]
     store.save(state)
     return {"ok": True, "message": "Bilagan raderad"}
+
+
+# ═══════════════════════════════════════
+# AVATARER — spelare, DM och NPCs
+# ═══════════════════════════════════════
+
+AVATAR_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
+AVATAR_MEDIA = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+}
+
+
+def _safe_avatar_key(kind: str) -> str:
+    """Normalisera avatar-nyckel: 'player', 'dm' eller 'npc:<nyckel>'."""
+    kind = (kind or "").strip()
+    if kind in ("player", "dm"):
+        return kind
+    if kind.startswith("npc:"):
+        key = kind[4:].strip()
+        if key and re.fullmatch(r"[\w\-]+", key):
+            return "npc:" + key
+    raise HTTPException(400, f"Ogiltig avatar-typ: {kind}")
+
+
+@app.post("/api/campaign/avatar")
+async def upload_avatar(
+    kind: str = Form(...),
+    file: UploadFile = File(...),
+    morkrets_token: str | None = Cookie(None),
+):
+    """Ladda upp en avatar för spelaren, DM eller en NPC."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    avatar_key = _safe_avatar_key(kind)
+
+    fname = file.filename or "avatar.png"
+    ext = Path(fname).suffix.lower()
+    if ext not in AVATAR_EXTS:
+        raise HTTPException(400, f"Filformat ej stöd: {ext} (tillåtna: png, jpg, webp, gif)")
+
+    content = await file.read()
+    if len(content) > 3 * 1024 * 1024:
+        raise HTTPException(400, "Bilden är för stor (max 3 MB)")
+
+    cid = state["meta"]["campaign_id"]
+    av_dir = CAMPAIGNS_DIR / username / cid / "avatars"
+    av_dir.mkdir(parents=True, exist_ok=True)
+
+    disk_name = avatar_key.replace(":", "_") + ext
+    (av_dir / disk_name).write_bytes(content)
+
+    avatars = state.setdefault("avatars", {})
+    avatars[avatar_key] = {
+        "disk_name": disk_name,
+        "ext": ext,
+        "size": len(content),
+        "uploaded": datetime.now(timezone.utc).isoformat(),
+    }
+    store.save(state)
+
+    return {"ok": True, "kind": avatar_key, "url": f"/api/campaign/avatar/{avatar_key}"}
+
+
+@app.get("/api/campaign/avatar/{kind:path}")
+async def get_avatar(kind: str, morkrets_token: str | None = Cookie(None)):
+    """Hämta en avatar-bild."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    avatar_key = _safe_avatar_key(kind)
+    entry = state.get("avatars", {}).get(avatar_key)
+    if not entry:
+        raise HTTPException(404, "Avataren hittades inte")
+
+    cid = state["meta"]["campaign_id"]
+    path = CAMPAIGNS_DIR / username / cid / "avatars" / entry["disk_name"]
+    if not path.exists():
+        raise HTTPException(404, "Bild saknas på disk")
+
+    return FileResponse(
+        path,
+        media_type=AVATAR_MEDIA.get(entry["ext"], "image/png"),
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
+@app.delete("/api/campaign/avatar/{kind:path}")
+async def delete_avatar(kind: str, morkrets_token: str | None = Cookie(None)):
+    """Ta bort en avatar (återgår till standard-sprite)."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    avatar_key = _safe_avatar_key(kind)
+    avatars = state.get("avatars", {})
+    entry = avatars.get(avatar_key)
+    if not entry:
+        raise HTTPException(404, "Avataren hittades inte")
+
+    cid = state["meta"]["campaign_id"]
+    path = CAMPAIGNS_DIR / username / cid / "avatars" / entry["disk_name"]
+    if path.exists():
+        path.unlink()
+
+    del avatars[avatar_key]
+    store.save(state)
+    return {"ok": True, "message": "Avataren borttagen"}
 
 
 # ═══════════════════════════════════════

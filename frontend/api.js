@@ -183,6 +183,24 @@ const API = (() => {
       return req('/api/campaign/attachments/' + attId, { method: 'DELETE' });
     },
 
+    // ── Avatarer (spelare, DM, NPCs) ──
+    async uploadAvatar(kind, file) {
+      if (MOCK) throw new Error('Ej i mock-läge');
+      const fd = new FormData();
+      fd.append('kind', kind);
+      fd.append('file', file);
+      return req('/api/campaign/avatar', { method: 'POST', body: fd });
+    },
+
+    avatarUrl(kind) {
+      return MOCK ? null : BASE + '/api/campaign/avatar/' + encodeURIComponent(kind);
+    },
+
+    async deleteAvatar(kind) {
+      if (MOCK) throw new Error('Ej i mock-läge');
+      return req('/api/campaign/avatar/' + encodeURIComponent(kind), { method: 'DELETE' });
+    },
+
     // ── Transkript (senaste meddelandena) ──
     async getTranscript() {
       if (MOCK) {

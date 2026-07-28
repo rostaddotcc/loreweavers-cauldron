@@ -143,6 +143,18 @@
   .msg { margin-bottom: 1.1rem; animation: msg-in 0.4s cubic-bezier(0.22,1,0.36,1); max-width: 760px; }
   @keyframes msg-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
+  /* ── Avatarer i chatten (liten bild eller sprite, klickbar för uppladdning) ── */
+  .msg-avatar {
+    width: 18px; height: 18px; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; border: 1px solid transparent;
+    transition: border-color .2s, transform .2s;
+    overflow: hidden;
+  }
+  .msg-avatar:hover { border-color: var(--gold); transform: scale(1.12); }
+  .msg-avatar img { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; display: block; }
+  .msg-avatar .pxs { width: 1em; height: 1em; }
+
   /* DM narration */
   .msg.dm { border-left: 2px solid rgba(201,162,39,0.4); padding-left: 1rem; }
   .msg.dm .who {
@@ -167,6 +179,7 @@
   .msg.player .who {
     font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.24em;
     text-transform: uppercase; color: var(--arcane); margin-bottom: 0.35rem;
+    display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem;
   }
   .msg.player .text {
     display: inline-block; text-align: left;
@@ -469,7 +482,7 @@
     <div>
       <div class="side-label">Sällskapet</div>
       <div class="pc-card active" onclick="location.href='character.html'" title="Öppna karaktärsark">
-        <div class="pc-avatar" id="pc-avatar">🎭</div>
+        <div class="pc-avatar" id="pc-avatar" onclick="event.stopPropagation();pickAvatar('player')" title="Klicka för att byta bild">🎭</div>
         <div style="flex:1;min-width:0">
           <div class="pc-name" id="pc-name">—</div>
           <div class="pc-sub" id="pc-sub">—</div>
@@ -569,6 +582,9 @@ async function loadCampaign() {
       }
       // Fyll NPC-registret från kampanjstate (inga demo-NPCs)
       ingestNpcs(campaign._raw && campaign._raw.npcs);
+      // Fyll avatar-registret (spelare, DM, NPCs)
+      ingestAvatars(campaign._raw && campaign._raw.avatars);
+      refreshAvatars();
       // Uppdatera sällskapskortet i sidebaren
       const ch = campaign.character || {};
       if (ch.name) {
@@ -633,6 +649,75 @@ function ingestNpcs(npcList) {
 renderNpcSidebar();
 
 // ═══════════════════════════════════════
+// AVATARER — spelare, DM och NPCs (bild eller sprite)
+// ═══════════════════════════════════════
+// Spårar vilka avatarer som finns uppladdade: { 'player': url, 'dm': url, 'npc:xxx': url }
+const AVATARS = {};
+
+// Fyll AVATARS från kampanjstate
+function ingestAvatars(avatarMap) {
+  Object.keys(AVATARS).forEach(k => delete AVATARS[k]);
+  Object.keys(avatarMap || {}).forEach(kind => {
+    AVATARS[kind] = API.avatarUrl(kind);
+  });
+}
+
+// Returnerar HTML för en avatar: uppladdad bild, eller sprite-emoji som fallback.
+// kind: 'player' | 'dm' | 'npc:<key>' — fallbackEmoji visas om ingen bild finns.
+function avatarHtml(kind, fallbackEmoji) {
+  const url = AVATARS[kind];
+  const inner = url
+    ? `<img src="${url}" alt="" loading="lazy">`
+    : SPR.html(fallbackEmoji);
+  return `<span class="msg-avatar" onclick="pickAvatar('${kind}')" title="Klicka för att byta bild">${inner}</span>`;
+}
+
+// Öppna filväljare och ladda upp en avatar
+function pickAvatar(kind) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/png,image/jpeg,image/webp,image/gif';
+  input.onchange = async () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    try {
+      await API.uploadAvatar(kind, file);
+      AVATARS[kind] = API.avatarUrl(kind) + '?t=' + Date.now();
+      refreshAvatars();
+      toast('🖼 Bild uppdaterad');
+    } catch (e) {
+      toast('⚠ Kunde inte ladda upp: ' + (e.message || 'okänt fel'));
+    }
+  };
+  input.click();
+}
+
+// Uppdatera alla avatarer på sidan (efter uppladdning)
+function refreshAvatars() {
+  // Spelarens kort i sidebaren
+  const pcAv = document.getElementById('pc-avatar');
+  if (pcAv) {
+    pcAv.innerHTML = AVATARS['player']
+      ? `<img src="${AVATARS['player']}" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">`
+      : SPR.html('🎭');
+  }
+  // NPC-listan i sidebaren
+  renderNpcSidebar();
+  // Chattens avsändar-rader
+  document.querySelectorAll('.msg.dm .who .msg-avatar').forEach(el => {
+    el.innerHTML = AVATARS['dm'] ? `<img src="${AVATARS['dm']}" alt="">` : SPR.html('🧙‍♂️');
+  });
+  document.querySelectorAll('.msg.player .who .msg-avatar').forEach(el => {
+    el.innerHTML = AVATARS['player'] ? `<img src="${AVATARS['player']}" alt="">` : SPR.html('🧙‍♀️');
+  });
+  document.querySelectorAll('.msg.npc .who .msg-avatar').forEach(el => {
+    const key = el.dataset.npcKey;
+    const n = NPCS[key] || {};
+    el.innerHTML = AVATARS['npc:' + key] ? `<img src="${AVATARS['npc:' + key]}" alt="">` : SPR.html(n.icon || '🎭');
+  });
+}
+
+// ═══════════════════════════════════════
 // MESSAGE RENDERING
 // ═══════════════════════════════════════
 const chat = document.getElementById('chat');
@@ -642,19 +727,19 @@ function addMessage(type, npcKey, text) {
   el.className = 'msg ' + type;
 
   if (type === 'dm') {
-    el.innerHTML = `<div class="who">🧙‍♂️ Dungeon Master</div><div class="text">${mdToHtml(escapeHtml(text))}</div>`;
+    el.innerHTML = `<div class="who">${avatarHtml('dm', '🧙‍♂️')} Dungeon Master</div><div class="text">${mdToHtml(escapeHtml(text))}</div>`;
     SFX.receive();
   } else if (type === 'npc') {
     const n = NPCS[npcKey] || { name: npcKey || 'Okänd', color: '#a8b2c0', icon: '🎭', role: '' };
     el.innerHTML = `
       <div class="who" style="color:${n.color}">
-        <span class="dot" style="color:${n.color};background:${n.color}"></span>
-        ${n.icon} ${n.name}
+        <span class="msg-avatar" data-npc-key="${npcKey}" onclick="pickAvatar('npc:${npcKey}')" title="Klicka för att byta bild">${AVATARS['npc:' + npcKey] ? `<img src="${AVATARS['npc:' + npcKey]}" alt="">` : SPR.html(n.icon || '🎭')}</span>
+        ${n.name}
       </div>
       <div class="text">${mdToHtml(escapeHtml(text))}</div>`;
     SFX.receive();
   } else if (type === 'player') {
-    el.innerHTML = `<div class="who">🧙‍♀️ ${CHAR_NAME}</div><div class="text">${text}</div>`;
+    el.innerHTML = `<div class="who">${avatarHtml('player', '🧙‍♀️')} ${CHAR_NAME}</div><div class="text">${text}</div>`;
     SFX.send();
   } else if (type === 'system') {
     el.innerHTML = `<div class="box">${text}</div>`;
@@ -1096,12 +1181,18 @@ function renderNpcSidebar() {
   if (!list) return;
   const rows = Object.entries(NPCS)
     .filter(([k]) => k !== 'dm')
-    .map(([k, n]) => `
+    .map(([k, n]) => {
+      const av = AVATARS['npc:' + k];
+      const icon = av
+        ? `<img src="${av}" alt="" style="width:16px;height:16px;object-fit:cover;image-rendering:pixelated">`
+        : SPR.html(n.icon || '🎭');
+      return `
       <div class="npc-row${n.alive === false ? ' dead' : ''}" onclick="location.href='npcs.html'" title="Öppna dossier" style="cursor:pointer">
         <span class="npc-dot" style="color:${n.color};background:${n.color}"></span>
-        <span class="npc-name">${n.alive === false ? '💀 ' : ''}${n.icon} ${n.name}</span>
+        <span class="npc-name">${n.alive === false ? SPR.html('💀') : ''} ${icon} ${n.name}</span>
         <span class="npc-role">${n.role || ''}</span>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   list.innerHTML = rows || '<div class="npc-row" style="opacity:.45;cursor:default">Ingen har dykt upp ännu…</div>';
 }
 

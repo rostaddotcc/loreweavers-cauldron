@@ -746,34 +746,30 @@ function diceMessage(roll, label) {
 }
 
 // ═══════════════════════════════════════
-// DEMO SCRIPT — öppningsscenen
+// TRANSCRIPT LOADING — riktig chatt
 // ═══════════════════════════════════════
-const script = [
-  { type: 'system', text: '⚔ <b>Session 4</b> börjar · Askans Dal · Natt, regnet smattrar mot taken' },
-  { type: 'dm', text: 'Regnet piskar mot den övergivna kvarnens ruttna väggar. Genom springorna i dörren ser ni ett svagt, grönt ljus pulsera från kvarnens inre — som ett sjukt hjärta som slår i mörkret. Något därinne viskar namn. Ditt namn, Thalindra.' },
-  { type: 'npc', npc: 'kael', text: 'Jag gillar inte det här. <em>Spottar på marken.</em> Sista gången någon gick in där kom de ut som… något annat. Vi borde bränna hela skiten.' },
-  { type: 'npc', npc: 'lyra', text: 'Eller så går vi in och tar reda på vad det är som kallar på henne. <em>Nickar mot Thalindra.</em> Det där ljuset är inte naturligt. Det är <em>gammal</em> magi.' },
-  { type: 'dm', text: 'Vad gör du? Kvarnens dörr står på glänt. Det gröna ljuset pulserar snabbare nu — som om det vet att du är här.' },
-  { type: 'system', text: '⚔ <b>STRID!</b> En skelettväktare reser sig ur askan!' },
-  { type: 'roll', notation: '1d20+3', label: 'INITIATIV' },
-];
+async function loadTranscript() {
+  try {
+    const { messages } = await API.getTranscript();
+    if (messages && messages.length > 0) {
+      // Rendera befintliga meddelanden
+      messages.forEach(m => {
+        if (m.role === 'user') {
+          addMessage('player', null, escapeHtml(m.content));
+        } else if (m.role === 'assistant') {
+          addMessage('dm', null, m.content);
+        }
+      });
+      return;
+    }
+  } catch (e) { /* Ingen kampanj eller fel — fortsätt till öppning */ }
 
-let scriptIdx = 0;
-function playScript() {
-  if (scriptIdx >= script.length) return;
-  const s = script[scriptIdx++];
-  if (s.type === 'roll') {
-    addRollRequest(s.notation, s.label);
-    setTimeout(playScript, 600);
-    return;
-  }
-  showTyping(s.type === 'npc' ? NPCS[s.npc]?.name : 'Dungeon Master');
-  setTimeout(() => {
-    hideTyping();
-    addMessage(s.type, s.npc, s.text);
-    setTimeout(playScript, 600);
-  }, 900 + Math.random() * 800);
+  // Ingen historik → be DM:n öppna äventyret
+  addMessage('system', null, '🕯️ <b>Mörkrets Rike</b> — Dungeon Master vaknar…');
+  dmRespond('Jag är redo att börja mitt äventyr. Öppna scenen, Dungeon Master. Beskriv var jag befinner mig, vad jag ser och hör, och ge mig ett val.');
 }
+
+loadTranscript();
 
 // ═══════════════════════════════════════
 // DM-TANKAR — roterande statusfraser
@@ -847,8 +843,6 @@ function showTyping(who) {
   showThoughts(kind);
 }
 function hideTyping() { hideThoughts(); }
-
-setTimeout(playScript, 800);
 
 // ═══════════════════════════════════════
 // PLAYER INPUT

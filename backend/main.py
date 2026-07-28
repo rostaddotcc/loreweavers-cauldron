@@ -557,10 +557,26 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     # Anropa LLM
     try:
         reply = await _call_llm(req.model_id, messages)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    except RuntimeError as e:
-        raise HTTPException(500, str(e))
+    except (ValueError, RuntimeError, HTTPException):
+        # Trött DM — orkar inte just nu
+        reply = random.choice([
+            "*Dungeon Master gäspar tungt och lägger ifrån sig tärningarna.*\n\nJag är trött, vi spelar en annan dag. Mörkret vilar... men det glömmer aldrig.",
+            "*En suck ekar genom mörkret.*\n\nInte ens en Dungeon Master kan vara vaken jämt. Kom tillbaka när skuggorna är längre.",
+            "*Dungeon Master blundar och lutar sig mot bordet.*\n\nI'm tired... let's play later. Äventyret väntar.",
+        ])
+        # Spara och returnera direkt utan parsning
+        state = store.append_message(state, "assistant", reply)
+        store.save(state)
+        return {
+            "reply": reply,
+            "turn_count": state["meta"].get("turn_count", 0),
+            "summary_generated": False,
+            "npcs": [],
+            "roll_requests": [],
+            "effects": [],
+            "ascii_art": None,
+            "tired": True,
+        }
 
     # Parsa NPCs och kastbegäran ur svaret
     reply, new_npcs = _parse_npcs(reply)
@@ -684,10 +700,25 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
     try:
         raw = await _call_llm(req.model_id, messages, temperature=0.7)
         char_data = _extract_json(raw)
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    except RuntimeError as e:
-        raise HTTPException(500, str(e))
+    except (ValueError, RuntimeError, HTTPException):
+        # Trött DM — generera en enkel fallback-karaktär
+        char_data = {
+            "name": "Den Trötte Vandraren",
+            "race": "Människa",
+            "class": "Äventyrare",
+            "level": 1,
+            "alignment": "Neutral",
+            "background": "En trött själ som väntar på bättre tider.",
+            "hp": {"current": 10, "max": 10},
+            "ac": 10,
+            "abilities": {
+                "STR": {"score": 10, "mod": 0}, "DEX": {"score": 10, "mod": 0},
+                "CON": {"score": 10, "mod": 0}, "INT": {"score": 10, "mod": 0},
+                "WIS": {"score": 10, "mod": 0}, "CHA": {"score": 10, "mod": 0},
+            },
+            "traits": ["Uthållig"],
+            "tired": True,
+        }
 
     # Validera löst — se till att grundfält finns
     if not char_data.get("name"):

@@ -12,6 +12,7 @@ from pathlib import Path
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
 CAMPAIGNS_DIR = DATA_DIR / "campaigns"
+VAULTS_DIR = DATA_DIR / "vaults"
 
 SUMMARY_INTERVAL = 20  # Var 20:e tur → sammanfattning
 
@@ -224,3 +225,64 @@ class CampaignStore:
         user = state["meta"]["user"]
         cid = state["meta"]["campaign_id"]
         return self._summaries_dir(user, cid)
+
+
+class CharacterVault:
+    """Karaktärsvalvet — sparade hjältar som överlever kampanjslut.
+
+    Varje användare har en vault/ med en JSON-fil per sparad karaktär.
+    Karaktärer kan återanvändas i nya kampanjer.
+    """
+
+    def __init__(self):
+        VAULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+    def _vault_dir(self, user: str) -> Path:
+        d = VAULTS_DIR / user
+        d.mkdir(parents=True, exist_ok=True)
+        return d
+
+    def save(self, user: str, character: dict, campaign_name: str = "") -> dict:
+        """Spara karaktär i valvet. Returnerar vault-posten."""
+        char_id = uuid.uuid4().hex[:10]
+        entry = {
+            "id": char_id,
+            "character": character,
+            "campaign_name": campaign_name,
+            "saved_at": _now(),
+        }
+        path = self._vault_dir(user) / f"{char_id}.json"
+        with open(path, "w") as f:
+            json.dump(entry, f, ensure_ascii=False, indent=2)
+        return entry
+
+    def list(self, user: str) -> list[dict]:
+        """Lista alla sparade karaktärer (senast sparad först)."""
+        entries = []
+        for p in self._vault_dir(user).glob("*.json"):
+            try:
+                with open(p) as f:
+                    entries.append(json.load(f))
+            except (json.JSONDecodeError, OSError):
+                continue
+        entries.sort(key=lambda e: e.get("saved_at", ""), reverse=True)
+        return entries
+
+    def get(self, user: str, char_id: str) -> dict | None:
+        """Hämta en specifik karaktär ur valvet."""
+        path = self._vault_dir(user) / f"{char_id}.json"
+        if not path.exists():
+            return None
+        try:
+            with open(path) as f:
+                return json.load(f)
+        except (json.JSONDecodeError, OSError):
+            return None
+
+    def delete(self, user: str, char_id: str) -> bool:
+        """Radera en karaktär ur valvet."""
+        path = self._vault_dir(user) / f"{char_id}.json"
+        if not path.exists():
+            return False
+        path.unlink()
+        return True

@@ -181,6 +181,16 @@
   .toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:50;font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.12em;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);padding:.7rem 1.5rem;box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}
   .toast.show{transform:translate(-50%,0);opacity:1}
 
+  /* ── Valvet-raden (sparade hjältar) ── */
+  .vault-row{display:flex;gap:.9rem;flex-wrap:wrap;margin-bottom:1.8rem}
+  .vault-chip{display:flex;align-items:center;gap:.7rem;background:linear-gradient(160deg,var(--stone-2),var(--stone));border:1px solid var(--edge);padding:.65rem 1rem .65rem .65rem;border-radius:3px;cursor:pointer;transition:all .22s cubic-bezier(.22,1,.36,1);animation:card-in .5s cubic-bezier(.22,1,.36,1) backwards}
+  .vault-chip:hover{border-color:var(--gold);transform:translateY(-3px);box-shadow:0 8px 22px -6px rgba(0,0,0,.6),0 0 16px -5px rgba(232,198,90,.35)}
+  .vault-chip .vc-icon{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;border:1px solid var(--edge);background:var(--stone-3);flex-shrink:0}
+  .vault-chip .vc-name{font-family:'Cinzel',serif;font-weight:700;font-size:.85rem;color:var(--bone-bright);line-height:1.2}
+  .vault-chip .vc-sub{font-size:.7rem;font-style:italic;color:var(--bone-dim)}
+  .vault-chip .vc-go{font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-bright);border:1px solid var(--gold);background:rgba(201,162,39,.12);padding:.35rem .6rem;border-radius:2px;margin-left:.4rem;white-space:nowrap}
+  @keyframes card-in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
   @media(max-width:860px){.spread{grid-template-columns:repeat(2,1fr)}.pv-stats{grid-template-columns:repeat(3,1fr)}}
   @media(max-width:560px){.spread{grid-template-columns:1fr}.arch{transform:none!important}}
 </style>
@@ -201,6 +211,12 @@
   </div>
   <p class="destiny-sub">Välj en arketyp — eller skriv din egen legend. Dungeon Master väver din karaktär till liv.</p>
   <div class="rune-divider"><span>✦</span></div>
+
+  <!-- ═══════════ 0. VALVET (sparade hjältar) ═══════════ -->
+  <div id="vault-section" style="display:none">
+    <div class="section-label"><span class="num">⚜</span> Valvet — återkalla en sparad hjälte</div>
+    <div class="vault-row" id="vault-row"></div>
+  </div>
 
   <!-- ═══════════ 1. ARKETYPER ═══════════ -->
   <div class="section-label"><span class="num">I.</span> Arketyper</div>
@@ -250,6 +266,7 @@
       <div class="pv-actions">
         <button class="pv-go" onclick="enterGame()">⚔️ Till bordet</button>
         <button class="pv-reroll" onclick="summon()">🔄 Slå om ödet</button>
+        <button class="pv-reroll" onclick="savePreviewToVault()">🏰 Spara i valvet</button>
       </div>
     </div>
   </div>
@@ -507,6 +524,7 @@ async function summon() {
     // Generera karaktären via backend → Qwen
     const res = await API.generateCharacter(prompt, 'qwen3.8-max');
     const c = res.character || {};
+    lastGeneratedChar = c; // Spara för valvet
 
     clearInterval(iv);
     weaving.classList.remove('show');
@@ -578,6 +596,69 @@ function enterGame() {
   SFX.click();
   location.href = 'chat.html';
 }
+
+// ═══════════════════════════════════════
+// VALVET — återkalla en sparad hjälte
+// ═══════════════════════════════════════
+let lastGeneratedChar = null;
+
+async function savePreviewToVault() {
+  if (!lastGeneratedChar || !lastGeneratedChar.name) {
+    toast('⚠ Ingen karaktär att spara ännu');
+    return;
+  }
+  SFX.click();
+  try {
+    await API.vaultSave(lastGeneratedChar);
+    toast(`🏰 ${lastGeneratedChar.name} vilar nu i valvet!`);
+    loadVaultChips(); // Uppdatera raden
+  } catch (e) {
+    toast('⚠ ' + (e.message || 'Kunde inte spara till valvet'));
+  }
+}
+
+const VAULT_ICONS = { 'krigare':'⚔️','fighter':'⚔️','riddare':'⚔️','barbar':'🪓','trollkarl':'🔮','wizard':'🔮','magiker':'🔮','häxa':'🔮','präst':'✨','cleric':'✨','munk':'👊','druid':'🌿','skald':'🎭','bard':'🎭','rogue':'🗡️','tjuv':'🗡️','ranger':'🏹','jägare':'🏹','paladin':'🛡️','väktare':'🛡️' };
+function vaultIcon(char) {
+  const cls = (char.class || '').toLowerCase();
+  for (const [k, icon] of Object.entries(VAULT_ICONS)) if (cls.includes(k)) return icon;
+  return '🧙';
+}
+
+async function loadVaultChips() {
+  try {
+    const { characters } = await API.vaultList();
+    if (!characters || characters.length === 0) return;
+    const row = document.getElementById('vault-row');
+    document.getElementById('vault-section').style.display = 'block';
+    row.innerHTML = characters.map((entry, i) => {
+      const c = entry.character || {};
+      const name = c.name || 'Namnlös';
+      const sub = [c.race, c.class].filter(Boolean).join(' · ') + (c.level ? ' · Nivå ' + c.level : '');
+      return `
+        <div class="vault-chip" style="animation-delay:${i*0.07}s" onclick="recallHero('${entry.id}', '${name.replace(/'/g, "\\'")}')">
+          <div class="vc-icon">${vaultIcon(c)}</div>
+          <div>
+            <div class="vc-name">${name}</div>
+            <div class="vc-sub">${sub}</div>
+          </div>
+          <span class="vc-go">⚔️ Återkalla</span>
+        </div>`;
+    }).join('');
+  } catch (e) { /* valvet är valfritt — ignorera fel */ }
+}
+
+async function recallHero(charId, name) {
+  SFX.click();
+  try {
+    await API.vaultUse(charId);
+    toast(`⚔️ ${name} har återkallats!`);
+    setTimeout(() => location.href = 'chat.html', 800);
+  } catch (e) {
+    toast('⚠ ' + (e.message || 'Kunde inte återkalla hjälten'));
+  }
+}
+
+loadVaultChips();
 
 // ═══════════════════════════════════════
 // TOAST + EMBERS

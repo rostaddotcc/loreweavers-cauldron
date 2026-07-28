@@ -473,6 +473,8 @@
   <a class="top-btn" href="loggbok.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">📜 Loggbok</a>
   <a class="top-btn" href="platser.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">🗺️ Kartan</a>
   <a class="top-btn" href="npcs.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">📖 Gestalter</a>
+  <a class="top-btn" href="valvet.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">🏰 Valvet</a>
+  <button class="top-btn" onclick="saveToVault()" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:linear-gradient(160deg,rgba(201,162,39,.2),rgba(201,162,39,.08));border:1px solid var(--gold);color:var(--gold-bright);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px">🏰 Spara i valvet</button>
   <button class="top-btn danger" onclick="doLogout()" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px">🚪 Lämna</button>
 </header>
 <div class="app">
@@ -755,6 +757,23 @@ function toast(msg) {
   el.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ═══════════════════════════════════════
+// KARAKTÄRSVALVET
+// ═══════════════════════════════════════
+async function saveToVault() {
+  const c = state.character;
+  if (!c || !c.name) {
+    toast('⚠ Ingen karaktär att spara ännu');
+    return;
+  }
+  try {
+    await API.vaultSave(c);
+    toast(`🏰 ${c.name} vilar nu i valvet!`);
+  } catch (e) {
+    toast('⚠ ' + (e.message || 'Kunde inte spara till valvet'));
+  }
 }
 
 // ═══════════════════════════════════════

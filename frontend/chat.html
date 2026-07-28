@@ -146,41 +146,41 @@
   /* DM narration */
   .msg.dm { border-left: 2px solid rgba(201,162,39,0.4); padding-left: 1rem; }
   .msg.dm .who {
-    font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.24em;
-    text-transform: uppercase; color: var(--gold); margin-bottom: 0.3rem;
+    font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.24em;
+    text-transform: uppercase; color: var(--gold); margin-bottom: 0.35rem;
     display: flex; align-items: center; gap: 0.5rem;
   }
-  .msg.dm .text { font-style: italic; color: var(--bone); line-height: 1.65; font-size: 0.95rem; }
+  .msg.dm .text { font-style: italic; color: var(--bone); line-height: 1.7; font-size: 1.06rem; }
 
   /* NPC speech */
   .msg.npc { padding-left: 1rem; }
   .msg.npc .who {
-    font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.82rem;
-    margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.5rem;
+    font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.9rem;
+    margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.5rem;
   }
   .msg.npc .who .dot { width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
-  .msg.npc .text { color: var(--bone); line-height: 1.6; font-size: 0.93rem; }
+  .msg.npc .text { color: var(--bone); line-height: 1.65; font-size: 1.03rem; }
   .msg.npc .text em { color: var(--bone-dim); }
 
   /* Player */
   .msg.player { margin-left: auto; text-align: right; }
   .msg.player .who {
-    font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.24em;
-    text-transform: uppercase; color: var(--arcane); margin-bottom: 0.3rem;
+    font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.24em;
+    text-transform: uppercase; color: var(--arcane); margin-bottom: 0.35rem;
   }
   .msg.player .text {
     display: inline-block; text-align: left;
     background: linear-gradient(160deg, rgba(139,95,212,0.14), rgba(139,95,212,0.05));
-    border: 1px solid rgba(139,95,212,0.35); padding: 0.7rem 1rem;
-    border-radius: 8px 2px 8px 8px; line-height: 1.6; font-size: 0.93rem; color: var(--bone-bright);
+    border: 1px solid rgba(139,95,212,0.35); padding: 0.75rem 1.05rem;
+    border-radius: 8px 2px 8px 8px; line-height: 1.65; font-size: 1.03rem; color: var(--bone-bright);
     box-shadow: 0 4px 16px -6px rgba(139,95,212,0.3);
   }
 
   /* System / dice */
   .msg.system { text-align: center; max-width: 520px; margin-left: auto; margin-right: auto; }
   .msg.system .box {
-    display: inline-block; font-size: 0.8rem; color: var(--bone-dim);
-    border: 1px dashed var(--edge); padding: 0.5rem 1.2rem; border-radius: 2px;
+    display: inline-block; font-size: 0.88rem; color: var(--bone-dim);
+    border: 1px dashed var(--edge); padding: 0.55rem 1.3rem; border-radius: 2px;
     background: rgba(11,8,18,0.6);
   }
   .msg.system .box b { color: var(--gold-bright); font-family: 'Cinzel', serif; }
@@ -337,7 +337,7 @@
   }
   .input-row { display: flex; gap: 0.6rem; align-items: flex-end; }
   .input-row textarea {
-    flex: 1; font-family: 'Spectral', serif; font-size: 0.95rem; color: var(--bone-bright);
+    flex: 1; font-family: 'Spectral', serif; font-size: 1.02rem; color: var(--bone-bright);
     background: #0d0817; border: 1px solid var(--edge); padding: 0.75rem 1rem;
     outline: none; resize: none; min-height: 48px; max-height: 140px; border-radius: 2px;
     transition: border-color 0.25s, box-shadow 0.25s; line-height: 1.5;
@@ -451,6 +451,7 @@
   <a class="top-btn" href="npcs.html">📖 Gestalter</a>
   <a class="top-btn" href="platser.html">🗺️ Kartan</a>
   <a class="top-btn" href="loggbok.html">📜 Loggbok</a>
+  <a class="top-btn" href="valvet.html">🏰 Valvet</a>
   <button class="top-btn" onclick="exportCampaign()">📦 Exportera</button>
   <button class="top-btn" onclick="location.href='character.html'">🧙 Karaktär</button>
   <button class="top-btn sfx-btn" onclick="sfxToggleBtn()" title="Ljud av/på">🔊</button>

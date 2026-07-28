@@ -25,7 +25,7 @@ from models import DM_SYSTEM_PROMPT, get_api_key, get_model, list_models_for_fro
 from atmosphere import build_art_prompt, detect_environments
 from locations import get_locations_with_travel
 from logbook import build_log_prompt
-from state_manager import CampaignStore
+from state_manager import CampaignStore, CharacterVault
 
 app = FastAPI(title="Mörkrets Rike", version="1.0.0")
 
@@ -249,6 +249,7 @@ app.add_middleware(
 )
 
 store = CampaignStore()
+vault = CharacterVault()
 
 COOKIE_NAME = "morkrets_token"
 
@@ -278,6 +279,14 @@ class CharacterRequest(BaseModel):
 
 class DiceRequest(BaseModel):
     notation: str
+
+
+class VaultSaveRequest(BaseModel):
+    character: dict
+
+
+class VaultUseRequest(BaseModel):
+    char_id: str
 
 
 # ═══════════════════════════════════════
@@ -692,6 +701,66 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
     store.save(state)
 
     return {"ok": True, "character": char_data}
+
+
+# ═══════════════════════════════════════
+# KARAKTÄRSVALVET
+# ═══════════════════════════════════════
+
+
+@app.post("/api/vault/save")
+async def vault_save(req: VaultSaveRequest, morkrets_token: str | None = Cookie(None)):
+    """Spara en karaktär i valvet (överlever kampanjslut)."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+
+    char = req.character
+    if not char or not char.get("name"):
+        raise HTTPException(400, "Karaktären saknar namn")
+
+    # Hämta kampanjnamn om det finns en aktiv kampanj
+    state = store.get(username)
+    campaign_name = state["meta"].get("campaign_name", "") if state else ""
+
+    entry = vault.save(username, char, campaign_name)
+    return {"ok": True, "vault_entry": entry}
+
+
+@app.get("/api/vault")
+async def vault_list(morkrets_token: str | None = Cookie(None)):
+    """Lista alla sparade karaktärer."""
+    payload = _get_current_user(morkrets_token)
+    entries = vault.list(payload["sub"])
+    return {"characters": entries}
+
+
+@app.post("/api/vault/use")
+async def vault_use(req: VaultUseRequest, morkrets_token: str | None = Cookie(None)):
+    """Hämta en karaktär ur valvet och sätt den som aktiv i kampanjen."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    entry = vault.get(username, req.char_id)
+    if not entry:
+        raise HTTPException(404, "Karaktären hittades inte i valvet")
+
+    state["character"] = entry["character"]
+    store.save(state)
+    return {"ok": True, "character": entry["character"]}
+
+
+@app.delete("/api/vault/{char_id}")
+async def vault_delete(char_id: str, morkrets_token: str | None = Cookie(None)):
+    """Radera en karaktär ur valvet."""
+    payload = _get_current_user(morkrets_token)
+    deleted = vault.delete(payload["sub"], char_id)
+    if not deleted:
+        raise HTTPException(404, "Karaktären hittades inte")
+    return {"ok": True, "message": "Karaktären har raderats ur valvet"}
 
 
 # ═══════════════════════════════════════

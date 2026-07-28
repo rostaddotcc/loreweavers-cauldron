@@ -1210,6 +1210,21 @@ async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
 # STATIC FILES — serva frontend
 # ═══════════════════════════════════════
 # Monteras EFTER alla /api/ routes så att API:et har prioritet.
+# No-cache middleware för HTML/JS så att webbläsaren alltid hämtar senaste.
+
+from starlette.middleware.base import BaseHTTPMiddleware
+
+class NoCacheStaticMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        path = request.url.path
+        if path.endswith(('.html', '.js')) or path == '/':
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+        return response
+
+app.add_middleware(NoCacheStaticMiddleware)
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 if FRONTEND_DIR.exists():

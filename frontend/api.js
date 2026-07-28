@@ -5,7 +5,7 @@
  * I MOCK-läge fungerar alla sidor fristående med localStorage-data.
  */
 const API = (() => {
-  const MOCK = true; // ← Byt till false när backend är live
+  const MOCK = false; // Backend live på dnd.rostad.cc
   const BASE = '';   // Samma origin i Docker (backend servar frontend)
 
   // ── Fetch-wrapper med felhantering ──

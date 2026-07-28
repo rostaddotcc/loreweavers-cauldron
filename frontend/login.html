@@ -201,40 +201,37 @@
 <div class="toast" id="toast"></div>
 
 <script src="sfx.js"></script>
+<script src="api.js"></script>
 <script>
 // ═══════════════════════════════════════
-// AUTH — enkel username/password (backend validerar)
+// AUTH — backend validerar (JWT i httpOnly cookie)
 // ═══════════════════════════════════════
-// I produktion: POST /api/login → JWT/session cookie
-// För nu: demo-validering mot hårdkodade användare
-const USERS = {
-  'rostad': 'drake2026',
-  'hastis': 'enhorn2026',
-};
-
-function handleLogin(e) {
+async function handleLogin(e) {
   e.preventDefault();
   const user = document.getElementById('username').value.trim().toLowerCase();
   const pass = document.getElementById('password').value;
   const frame = document.getElementById('gate-frame');
   const err = document.getElementById('error');
+  const btn = document.querySelector('.gate-btn');
 
-  if (USERS[user] && USERS[user] === pass) {
+  btn.disabled = true;
+  btn.textContent = '⏳ Porten prövar dig…';
+
+  try {
+    const res = await API.login(user, pass);
     err.textContent = '';
     frame.classList.add('success');
     SFX.gate();
-    // Spara session
-    sessionStorage.setItem('dnd_user', user);
-    sessionStorage.setItem('dnd_token', btoa(user + ':' + Date.now()));
-    setTimeout(() => {
-      window.location.href = 'adventure.html';
-    }, 900);
-  } else {
+    sessionStorage.setItem('dnd_user', res.username);
+    setTimeout(() => { window.location.href = 'adventure.html'; }, 900);
+  } catch (e2) {
     err.textContent = '⚠ Porten förblir stängd. Fel namn eller lösenord.';
     SFX.error();
     frame.classList.remove('shake');
     void frame.offsetWidth;
     frame.classList.add('shake');
+    btn.disabled = false;
+    btn.textContent = '⚔ Stig in i mörkret';
   }
 }
 

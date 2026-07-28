@@ -197,7 +197,7 @@
   <span class="spacer"></span>
   <a class="top-btn" href="chat.html">⚔ Till bordet</a>
   <a class="top-btn" href="character.html">🧙 Karaktär</a>
-  <a class="top-btn danger" href="login.html">🚪 Lämna</a>
+  <button class="top-btn danger" onclick="doLogout()">🚪 Lämna</button>
 </header>
 
 <div class="layout">
@@ -222,6 +222,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="sfx.js"></script>
+<script src="api.js"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -545,6 +546,12 @@ function buyItem(npcId, idx){
 // ═══════════════════════════════════════
 // TOAST + EMBERS
 // ═══════════════════════════════════════
+async function doLogout() {
+  SFX.click();
+  try { await API.logout(); } catch(_) {}
+  sessionStorage.removeItem('dnd_user');
+  location.href = 'login.html';
+}
 let toastTimer;
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2400);}
 

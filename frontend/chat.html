@@ -408,11 +408,34 @@
 <div class="toast" id="toast"></div>
 
 <script src="sfx.js"></script>
+<script src="api.js"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 </script>
 <script>
+// ═══════════════════════════════════════
+// KAMPANJSTATE
+// ═══════════════════════════════════════
+let CHAR_NAME = 'Äventyraren';
+let campaignData = null;
+
+async function loadCampaign() {
+  try {
+    const { campaign } = await API.getCampaign();
+    if (campaign) {
+      campaignData = campaign;
+      if (campaign.character && campaign.character.name) {
+        CHAR_NAME = campaign.character.name;
+      }
+      // Uppdatera topbar
+      const tag = document.querySelector('.topbar .campaign');
+      if (tag) tag.textContent = `Kampanj: ${campaign.name} · Tur ${campaign.turn_count}`;
+    }
+  } catch(e) { /* MOCK-läge eller ingen kampanj */ }
+}
+loadCampaign();
+
 // ═══════════════════════════════════════
 // NPC REGISTRY — färg + ikon per NPC
 // ═══════════════════════════════════════
@@ -457,7 +480,7 @@ function addMessage(type, npcKey, text) {
       <div class="text">${text}</div>`;
     SFX.receive();
   } else if (type === 'player') {
-    el.innerHTML = `<div class="who">🧙‍♀️ Thalindra</div><div class="text">${text}</div>`;
+    el.innerHTML = `<div class="who">🧙‍♀️ ${CHAR_NAME}</div><div class="text">${text}</div>`;
     SFX.send();
   } else if (type === 'system') {
     el.innerHTML = `<div class="box">${text}</div>`;
@@ -629,7 +652,7 @@ function sendPlayer() {
   }
 
   addMessage('player', null, escapeHtml(text));
-  dmRespond(text);
+  dmRespond(text); // async — visar tankar medan LLM svarar
 }
 
 function escapeHtml(s) {
@@ -637,25 +660,53 @@ function escapeHtml(s) {
 }
 
 // ═══════════════════════════════════════
-// DM RESPONSE (demo — i produktion: Qwen API)
+// DM RESPONSE — riktig LLM via backend
 // ═══════════════════════════════════════
-const dmResponses = [
-  { type: 'dm', text: 'Du kliver över tröskeln. Golvet knakar under dina stövlar. Det gröna ljuset kommer från en sprucken kristall som svävar ovanför kvarnstenen — och bredvid den står en gestalt i en söndertrasad mantel.' },
-  { type: 'npc', npc: 'morvaine', text: 'Äntligen. <em>Rösten är som torra löv mot sten.</em> Jag har väntat på dig, eldbärare. Kristallen viskade att du skulle komma. Fråga mig vad du vill — men vet att varje svar har ett pris.' },
-  { type: 'system', text: '<span class="dice">🎲</span> Perception (Thalindra): [14] +2 = <b>16</b> — Du märker att gestaltens händer darrar. Den är rädd.' },
-  { type: 'dm', text: 'Morvaine sträcker ut en hand mot kristallen. Ljuset pulserar i takt med dess andning. <em>"Den minns,"</em> viskar trollkarlen. <em>"Den minns allt som någonsin dött i denna dal."</em>' },
-];
-let dmIdx = 0;
+async function dmRespond(playerText) {
+  showThoughts('narrate');
+  try {
+    const res = await API.chat(playerText, currentModel);
+    hideThoughts();
 
-function dmRespond(playerText) {
-  const resp = dmResponses[dmIdx % dmResponses.length];
-  dmIdx++;
-  const who = resp.type === 'npc' ? NPCS[resp.npc]?.name : 'Dungeon Master';
-  showTyping(who);
-  setTimeout(() => {
-    hideTyping();
-    addMessage(resp.type, resp.npc, resp.text);
-  }, 1200 + Math.random() * 1000);
+    // Parsa svaret — DM kan inkludera NPC-dialog
+    const reply = res.reply || '…';
+
+    // Lägg till nya NPCs i registret
+    if (res.new_npcs && res.new_npcs.length) {
+      res.new_npcs.forEach(npc => {
+        const key = npc.name.toLowerCase().replace(/\s+/g, '_');
+        if (!NPCS[key]) {
+          NPCS[key] = { name: npc.name, color: npc.color || '#a8b2c0', icon: npc.icon || '🎭', role: npc.role || '' };
+        }
+      });
+      renderNpcSidebar();
+    }
+
+    // Visa svaret som DM-narration
+    addMessage('dm', null, reply);
+
+    // Uppdatera tur-räknare
+    if (res.turn_count) {
+      const tag = document.querySelector('.topbar .campaign');
+      if (tag && campaignData) tag.textContent = `Kampanj: ${campaignData.name} · Tur ${res.turn_count}`;
+    }
+  } catch (e) {
+    hideThoughts();
+    addMessage('system', null, '⚠ DM:n kunde inte svara. Försök igen.');
+  }
+}
+
+function renderNpcSidebar() {
+  const list = document.getElementById('npc-list');
+  if (!list) return;
+  list.innerHTML = Object.entries(NPCS)
+    .filter(([k]) => k !== 'dm')
+    .map(([k, n]) => `
+      <div class="npc-row" onclick="location.href='npcs.html'" title="Öppna dossier" style="cursor:pointer">
+        <span class="npc-dot" style="color:${n.color};background:${n.color}"></span>
+        <span class="npc-name">${n.icon} ${n.name}</span>
+        <span class="npc-role">${n.role || ''}</span>
+      </div>`).join('');
 }
 
 // ═══════════════════════════════════════

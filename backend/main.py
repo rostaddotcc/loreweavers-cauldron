@@ -25,6 +25,41 @@ from state_manager import CampaignStore
 
 app = FastAPI(title="Mörkrets Rike", version="1.0.0")
 
+# ═══════════════════════════════════════
+# NPC-parsning + Äventyrsöppningar
+# ═══════════════════════════════════════
+import random
+
+NPC_PATTERN = re.compile(r'\[NPC:([^|]+)\|([^|]+)\|([^\]]+)\]')
+
+NPC_COLORS = ['#8b5fd4', '#d4691e', '#7aa35e', '#5e9aa3', '#d43a4d', '#c9a227', '#a8b2c0', '#b06fd4']
+NPC_ICONS = ['🧙', '⚔️', '🏹', '🛡️', '🎭', '👻', '🐺', '🦉', '💀', '🔮', '🗡️', '🌙']
+
+OPENING_STYLES = [
+    ('meeting', 'Äventyret börjar med att spelaren möter en intressant NPC. Ge dem ett namn, en personlighet och en anledning att vara där.'),
+    ('alone', 'Spelaren är helt ensam. Beskriv omgivningen atmosfäriskt. Låt spelaren utforska och upptäcka saker i sin egen takt.'),
+    ('in_media_res', 'Äventyret börjar mitt i en pågående händelse — en strid, en flykt, ett brinnande hus. Kasta spelaren rakt in.'),
+    ('awakening', 'Spelaren vaknar på en okänd plats. De vet inte hur de hamnade där. Beskriv vad de ser, hör och känner.'),
+    ('summoned', 'Spelaren har kallats till en plats av någon med ett uppdrag eller ett erbjudande. Vem kallade dem, och varför?'),
+]
+
+
+def _parse_npcs(text: str) -> tuple[str, list[dict]]:
+    """Extrahera [NPC:namn|roll|relation]-taggar ur DM-svar."""
+    npcs = []
+    for i, m in enumerate(NPC_PATTERN.finditer(text)):
+        name, role, relation = m.group(1).strip(), m.group(2).strip(), m.group(3).strip().lower()
+        if relation not in ('allierad', 'neutral', 'fiende', 'okänd'):
+            relation = 'okänd'
+        npcs.append({
+            'name': name, 'role': role, 'relation': relation,
+            'color': NPC_COLORS[i % len(NPC_COLORS)],
+            'icon': NPC_ICONS[i % len(NPC_ICONS)],
+            'notes': '', 'alive': True,
+        })
+    clean = NPC_PATTERN.sub('', text).strip()
+    return clean, npcs
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -227,7 +262,12 @@ async def create_campaign(morkrets_token: str | None = Cookie(None)):
         )
 
     state = store.create(username)
-    return {"ok": True, "campaign_id": state["meta"]["campaign_id"]}
+    # Slumpa en äventyrsöppning
+    style_key, style_desc = random.choice(OPENING_STYLES)
+    state["meta"]["opening_style"] = style_desc
+    state["meta"]["opening_key"] = style_key
+    store.save(state)
+    return {"ok": True, "campaign_id": state["meta"]["campaign_id"], "opening": style_key}
 
 
 @app.get("/api/campaign")
@@ -287,6 +327,11 @@ def _build_system_prompt(state: dict) -> str:
         q_str = "; ".join(q.get("name", "?") for q in active[:5])
         parts.append(f"\n## Aktiva uppdrag\n{q_str}")
 
+    # Äventyrsöppning (bara vid första draget)
+    opening = state.get("meta", {}).get("opening_style", "")
+    if opening and state.get("meta", {}).get("turn_count", 0) == 0:
+        parts.append(f"\n## Äventyrsöppning (första draget)\n{opening}")
+
     return "\n".join(parts)
 
 
@@ -325,6 +370,13 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     except RuntimeError as e:
         raise HTTPException(500, str(e))
 
+    # Parsa NPCs ur svaret
+    reply, new_npcs = _parse_npcs(reply)
+    for npc in new_npcs:
+        existing = {n.get("name", "").lower() for n in state.get("npcs", [])}
+        if npc["name"].lower() not in existing:
+            state.setdefault("npcs", []).append(npc)
+
     # Spara DM-svar
     state = store.append_message(state, "assistant", reply)
     store.save(state)
@@ -357,6 +409,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         "reply": reply,
         "turn_count": state["meta"]["turn_count"],
         "summary_generated": summary_generated,
+        "new_npcs": new_npcs,
     }
 
 

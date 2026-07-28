@@ -3,7 +3,7 @@
    Castlevania × DOS × Linux terminal
    Länkas EFTER inline-stilar så att detta vinner.
    ═══════════════════════════════════════════════════ */
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400;500;600&family=DotGothic16&display=swap');
 
 /* ── PALETT ── */
 :root {
@@ -26,6 +26,9 @@
   --teal: #4e8a93;
   --term-green: #33cc33;
   --term-amber: #ccaa33;
+  /* Typsnitt (sätts av fonts.js, dessa är fallback/default = Pixel) */
+  --font-display: 'Press Start 2P', monospace;
+  --font-body: 'Silkscreen', monospace;
 }
 
 /* ── 0. GLOBAL RESET ── */
@@ -46,30 +49,42 @@ canvas, img { image-rendering: pixelated; }
   flex-shrink: 0;
 }
 /* Lite större i rubriker/märken där spriten är huvudsymbolen */
-.brand .pxs, .gate-title .pxs, .sigil-icon .pxs,
-.path .icon .pxs, .arch .icon .pxs, .pv-portrait .pxs,
-.pc-avatar .pxs, .cp-icon .pxs, .vc-icon .pxs,
+.pv-portrait .pxs, .pc-avatar .pxs, .cp-icon .pxs, .vc-icon .pxs,
 .die .pxs, .att-icon .pxs, .rune .pxs { width: 1.2em; height: 1.2em; }
+/* Måttliga storlekar där sprites annars skulle bli för stora */
+.brand .pxs { width: 1em; height: 1em; }
+.sigil-icon .pxs { width: 44px; height: 44px; }
+.arch .icon .pxs, .path .icon .pxs { width: 32px; height: 32px; }
 
-/* ── 1. TYPOGRAFI — allt monospace/pixel ── */
+/* ── 1. TYPOGRAFI — variabel-driven (fonts.js byter tema) ── */
 body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, label {
-  font-family: 'Silkscreen', 'Press Start 2P', 'Courier New', monospace !important;
+  font-family: var(--font-body) !important;
   letter-spacing: 0.02em !important;
 }
 h1, .gate-title, .destiny-title h1, .masthead h1, .head h1,
 .forge-head .brand, .topbar .brand, .char-name, .pv-name, .d-name,
 .cp-name, .hall-title {
-  font-family: 'Press Start 2P', monospace !important;
+  font-family: var(--font-display) !important;
   line-height: 1.6 !important;
   text-shadow: 2px 2px 0 #000 !important;
   animation: none !important;
 }
-/* Brödtext i chatten — Silkscreen för läsbarhet */
+/* Brödtext i chatten — läsbar body-font */
 .msg .text, .pv-story, .pv-gear, .oracle-msg.a {
-  font-family: 'Silkscreen', monospace !important;
+  font-family: var(--font-body) !important;
   font-style: normal !important;
   font-size: .82rem !important;
   line-height: 1.8 !important;
+}
+/* Terminal/VT323 & DotGothic är små i px — skala upp brödtexten lite */
+.font-terminal .msg .text, .font-terminal .pv-story, .font-terminal .pv-gear,
+.font-dot .msg .text, .font-dot .pv-story, .font-dot .pv-gear {
+  font-size: 1rem !important;
+}
+/* Gothic: brödtext i Spectral, lite större och elegantare */
+.font-gothic .msg .text, .font-gothic .pv-story, .font-gothic .pv-gear {
+  font-size: .95rem !important;
+  line-height: 1.7 !important;
 }
 /* Input — monospace, inte kursiv */
 input, textarea, select {

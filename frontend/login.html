@@ -223,7 +223,7 @@ function handleLogin(e) {
     sessionStorage.setItem('dnd_user', user);
     sessionStorage.setItem('dnd_token', btoa(user + ':' + Date.now()));
     setTimeout(() => {
-      window.location.href = 'newgame.html';
+      window.location.href = 'adventure.html';
     }, 600);
   } else {
     err.textContent = '⚠ Porten förblir stängd. Fel namn eller lösenord.';

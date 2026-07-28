@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚔️ Mörkrets Rike — Vägskälet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0b0812;--stone:#161020;--stone-2:#1d1529;--stone-3:#241a33;
+    --edge:#3d2f52;--bone:#d9c9a6;--bone-bright:#efe2c0;--bone-dim:#8a7a5e;
+    --gold:#c9a227;--gold-bright:#e8c65a;--blood:#a32433;--blood-bright:#d43a4d;
+    --ember:#d4691e;--arcane:#8b5fd4;--poison:#7aa35e;--teal:#5e9aa3;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:'Spectral',Georgia,serif;color:var(--bone);min-height:100vh;
+    background:
+      radial-gradient(1100px 520px at 50% 112%, rgba(212,105,30,.13), transparent 62%),
+      radial-gradient(820px 460px at 12% -8%, rgba(139,95,212,.10), transparent 58%),
+      var(--ink);
+    background-attachment:fixed;overflow-x:hidden;
+  }
+  .grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
+  #embers{position:fixed;inset:0;z-index:1;pointer-events:none}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(4,2,8,.85)}
+
+  .app{position:relative;z-index:2;max-width:960px;margin:0 auto;padding:2.5rem 1.25rem 5rem}
+
+  .head{text-align:center;margin-bottom:2.8rem}
+  .head .over{font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.42em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.55rem}
+  .head h1{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(1.8rem,5vw,2.7rem);color:var(--bone-bright);letter-spacing:.05em;text-shadow:0 2px 0 #000,0 0 24px rgba(232,198,90,.25);animation:candle 5s ease-in-out infinite}
+  @keyframes candle{0%,100%{text-shadow:0 2px 0 #000,0 0 24px rgba(232,198,90,.25)}42%{text-shadow:0 2px 0 #000,0 0 32px rgba(232,198,90,.4)}76%{text-shadow:0 2px 0 #000,0 0 26px rgba(212,105,30,.35)}}
+  .head .sub{font-style:italic;color:var(--bone-dim);font-size:.92rem;margin-top:.5rem}
+  .rune-divider{display:flex;align-items:center;gap:.9rem;margin:1rem auto 0;max-width:380px}
+  .rune-divider::before,.rune-divider::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.5}
+  .rune-divider span{color:var(--gold);text-shadow:0 0 8px rgba(201,162,39,.6)}
+
+  /* ═══════════ Tre vägar ═══════════ */
+  .paths{display:grid;grid-template-columns:repeat(3,1fr);gap:1.3rem;margin-bottom:2rem}
+  .path{
+    position:relative;cursor:pointer;text-align:center;padding:2rem 1.2rem 1.6rem;
+    background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);
+    border:1px solid var(--edge);overflow:hidden;
+    transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s,border-color .3s;
+  }
+  .path::before{content:'';position:absolute;inset:6px;border:1px solid rgba(201,162,39,.15);pointer-events:none;transition:border-color .3s}
+  .path:hover{transform:translateY(-8px);box-shadow:0 18px 40px -12px rgba(0,0,0,.85);border-color:var(--pc,var(--gold));z-index:2}
+  .path:hover::before{border-color:var(--pc,var(--gold))}
+  .path .glow{position:absolute;inset:0;opacity:0;transition:opacity .35s;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 0%,var(--pg,rgba(201,162,39,.12)),transparent 70%)}
+  .path:hover .glow{opacity:1}
+  .path .icon{font-size:2.8rem;margin-bottom:1rem;display:block;filter:drop-shadow(0 4px 12px rgba(0,0,0,.6));transition:transform .3s}
+  .path:hover .icon{transform:scale(1.15) rotate(-3deg)}
+  .path h2{font-family:'Cinzel',serif;font-weight:700;font-size:1.05rem;color:var(--bone-bright);letter-spacing:.04em;margin-bottom:.6rem}
+  .path p{font-size:.82rem;font-style:italic;color:var(--bone-dim);line-height:1.55}
+  .path .tag{display:inline-block;margin-top:.9rem;font-family:'Cinzel',serif;font-size:.56rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--pc,var(--gold));border:1px solid var(--pc,var(--gold));padding:.3rem .8rem;border-radius:2px;opacity:.7;transition:opacity .3s}
+  .path:hover .tag{opacity:1}
+
+  /* ═══════════ Expandable panel ═══════════ */
+  .expand{display:none;margin-top:1.5rem;animation:rise .5s cubic-bezier(.22,1,.36,1)}
+  .expand.show{display:block}
+  @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+  .panel-box{position:relative;background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,#120c1c);border:1px solid var(--edge);padding:1.8rem 1.6rem;box-shadow:0 20px 50px -20px rgba(0,0,0,.9)}
+  .corner{position:absolute;width:18px;height:18px;border-color:var(--gold);border-style:solid;opacity:.7}
+  .corner.tl{top:6px;left:6px;border-width:2px 0 0 2px}.corner.tr{top:6px;right:6px;border-width:2px 2px 0 0}
+  .corner.bl{bottom:6px;left:6px;border-width:0 0 2px 2px}.corner.br{bottom:6px;right:6px;border-width:0 2px 2px 0}
+
+  .panel-title{font-family:'Cinzel',serif;font-weight:700;font-size:.82rem;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);margin-bottom:1.2rem;display:flex;align-items:center;gap:.8rem}
+  .panel-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(201,162,39,.5),transparent)}
+
+  /* ── Prompt textarea ── */
+  .world-prompt{
+    width:100%;min-height:180px;resize:vertical;
+    font-family:'Spectral',serif;font-size:.9rem;line-height:1.65;color:var(--bone-bright);
+    background:#0d0817;border:1px solid var(--edge);padding:1rem 1.1rem;outline:none;border-radius:2px;
+    transition:border-color .25s,box-shadow .25s;margin-bottom:1rem;
+  }
+  .world-prompt:focus{border-color:var(--arcane);box-shadow:0 0 18px -5px rgba(139,95,212,.4)}
+  .world-prompt::placeholder{color:rgba(138,122,94,.5);font-style:italic}
+
+  /* ── Dropzone ── */
+  .dropzone{
+    border:2px dashed var(--edge);padding:1.8rem;text-align:center;cursor:pointer;
+    transition:all .25s;margin-bottom:1rem;border-radius:2px;position:relative;
+  }
+  .dropzone:hover,.dropzone.dragover{border-color:var(--gold);background:rgba(201,162,39,.04);box-shadow:0 0 20px -6px rgba(232,198,90,.3)}
+  .dropzone .dz-icon{font-size:2rem;margin-bottom:.5rem;display:block}
+  .dropzone .dz-text{font-size:.85rem;color:var(--bone-dim);font-style:italic}
+  .dropzone .dz-text b{color:var(--gold-bright);font-style:normal}
+  .dropzone .dz-formats{font-size:.7rem;color:var(--bone-dim);margin-top:.4rem}
+  .dropzone input{display:none}
+
+  .file-list{margin-bottom:1rem}
+  .file-item{display:flex;align-items:center;gap:.7rem;padding:.5rem .7rem;background:var(--stone-3);border:1px solid var(--edge);margin-bottom:.4rem;border-radius:2px;font-size:.82rem}
+  .file-item .fi-icon{font-size:1.1rem}
+  .file-item .fi-name{color:var(--bone-bright);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .file-item .fi-size{color:var(--bone-dim);font-size:.72rem}
+  .file-item .fi-del{background:none;border:none;color:var(--bone-dim);cursor:pointer;font-size:.9rem;transition:color .2s}
+  .file-item .fi-del:hover{color:var(--blood-bright)}
+
+  .actions{display:flex;gap:.8rem;flex-wrap:wrap;align-items:center}
+  .go-btn{
+    font-family:'Cinzel',serif;font-weight:700;font-size:.78rem;letter-spacing:.16em;text-transform:uppercase;
+    color:#1a1206;cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);
+    border:1px solid #6e5510;padding:.85rem 1.6rem;border-radius:2px;position:relative;overflow:hidden;
+    box-shadow:0 6px 20px -6px rgba(232,198,90,.5),inset 0 1px 0 rgba(255,255,255,.35);transition:all .2s;
+  }
+  .go-btn:hover{filter:brightness(1.12);transform:translateY(-2px)}
+  .go-btn::after{content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.25) 50%,transparent 60%);background-size:250% 100%;animation:btn-sheen 4s ease-in-out infinite}
+  @keyframes btn-sheen{0%,100%{background-position:200% 0}50%{background-position:-80% 0}}
+  .hint{font-size:.75rem;font-style:italic;color:var(--bone-dim)}
+  .hint b{color:var(--arcane);font-style:normal}
+
+  /* ── Extraction progress ── */
+  .extracting{display:none;text-align:center;padding:1.5rem 0}
+  .extracting.show{display:block;animation:rise .4s ease}
+  .extracting .ex-text{font-style:italic;color:var(--arcane);font-size:.9rem;margin-bottom:1rem;text-shadow:0 0 12px rgba(139,95,212,.4)}
+  .ex-bar{width:200px;height:8px;background:#0a0612;border:1px solid var(--edge);margin:0 auto;overflow:hidden;border-radius:4px}
+  .ex-fill{height:100%;width:0;background:linear-gradient(90deg,var(--arcane),var(--gold-bright));transition:width .3s;border-radius:4px}
+
+  /* ── Preview results ── */
+  .extract-preview{display:none;margin-top:1.2rem}
+  .extract-preview.show{display:block;animation:rise .5s ease}
+  .ep-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.7rem;margin-bottom:1.2rem}
+  .ep-card{background:var(--stone-3);border:1px solid var(--edge);padding:.8rem;border-radius:2px;text-align:center}
+  .ep-card .ep-num{font-family:'Cinzel',serif;font-weight:900;font-size:1.6rem;color:var(--gold-bright)}
+  .ep-card .ep-label{font-size:.7rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;font-family:'Cinzel',serif}
+
+  .toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:50;font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.12em;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);padding:.7rem 1.5rem;box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}
+  .toast.show{transform:translate(-50%,0);opacity:1}
+
+  @media(max-width:760px){.paths{grid-template-columns:1fr}.path{transform:none!important}}
+</style>
+</head>
+<body>
+<div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
+
+<div class="app">
+  <div class="head">
+    <div class="over">Steg ett av fyra</div>
+    <h1>Vägskälet</h1>
+    <p class="sub">Varje äventyr börjar med ett val. Vilken väg tar du?</p>
+    <div class="rune-divider"><span>✦</span></div>
+  </div>
+
+  <!-- ═══════════ TRE VÄGAR ═══════════ -->
+  <div class="paths">
+    <div class="path" style="--pc:var(--ember);--pg:rgba(212,105,30,.14)" onclick="showPanel('prepare')">
+      <div class="glow"></div>
+      <span class="icon">📜</span>
+      <h2>Förbered äventyr</h2>
+      <p>Skriv worldbuilding-prompt eller ladda upp .md/.pdf/bilder. Qwen extraherar världen åt dig.</p>
+      <span class="tag">Prompt + Import</span>
+    </div>
+
+    <div class="path" style="--pc:var(--arcane);--pg:rgba(139,95,212,.14)" onclick="showPanel('import')">
+      <div class="glow"></div>
+      <span class="icon">📥</span>
+      <h2>Importera äventyr</h2>
+      <p>Har du redan en kampanj? Dra in filer — Qwen läser in karaktärer, NPCs, platser och lore.</p>
+      <span class="tag">.md · .pdf · Bilder</span>
+    </div>
+
+    <div class="path" style="--pc:var(--blood-bright);--pg:rgba(212,58,77,.12)" onclick="newAdventure()">
+      <div class="glow"></div>
+      <span class="icon">🎲</span>
+      <h2>Nytt äventyr</h2>
+      <p>Ingen prep. Dungeon Master freestylar ihop en öppningsscen och kastar dig in i mörkret.</p>
+      <span class="tag">Freestyle · Direkt</span>
+    </div>
+  </div>
+
+  <!-- ═══════════ FÖRBERED PANEL ═══════════ -->
+  <div class="expand" id="panel-prepare">
+    <div class="panel-box">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div class="panel-title">📜 Förbered din värld</div>
+
+      <textarea class="world-prompt" id="world-prompt" placeholder="Beskriv din värld…
+
+Exempel:
+- En mörk dal där askan aldrig slutar falla
+- En stad byggd på ryggen av en död gud
+- Tre fraktioner som krigar om den sista vattenkällan
+- En förbannelse som sprider sig genom drömmar
+
+Ju mer du ger, desto rikare blir världen. Men Dungeon Master fyller i luckorna — inget behöver vara komplett."></textarea>
+
+      <div class="dropzone" id="dz-prepare" onclick="document.getElementById('file-prepare').click()">
+        <span class="dz-icon">📂</span>
+        <div class="dz-text">Dra in filer eller <b>klicka för att bläddra</b></div>
+        <div class="dz-formats">.md · .pdf · .jpg · .png — Qwen extraherar worldbuilding, karaktärer, platser</div>
+        <input type="file" id="file-prepare" multiple accept=".md,.pdf,.jpg,.jpeg,.png,.webp">
+      </div>
+      <div class="file-list" id="files-prepare"></div>
+
+      <div class="extracting" id="extracting-prepare">
+        <div class="ex-text">🔮 Qwen läser in din värld…</div>
+        <div class="ex-bar"><div class="ex-fill" id="ex-fill-prepare"></div></div>
+      </div>
+
+      <div class="extract-preview" id="preview-prepare">
+        <div class="ep-grid">
+          <div class="ep-card"><div class="ep-num" id="ep-npcs">0</div><div class="ep-label">NPCs</div></div>
+          <div class="ep-card"><div class="ep-num" id="ep-places">0</div><div class="ep-label">Platser</div></div>
+          <div class="ep-card"><div class="ep-num" id="ep-quests">0</div><div class="ep-label">Uppdrag</div></div>
+          <div class="ep-card"><div class="ep-num" id="ep-lore">0</div><div class="ep-label">Lore-fragment</div></div>
+        </div>
+        <div class="actions">
+          <button class="go-btn" onclick="proceed('prepare')">⚔️ Skapa karaktär & börja</button>
+          <span class="hint">Världen sparas och <b>Qwen</b> använder den som grund för äventyret</span>
+        </div>
+      </div>
+
+      <div class="actions" id="actions-prepare">
+        <button class="go-btn" onclick="startPrepare()">🔮 Bygg världen</button>
+        <span class="hint">Prompt + filer skickas till <b>Qwen</b> som strukturerar allt</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ IMPORT PANEL ═══════════ -->
+  <div class="expand" id="panel-import">
+    <div class="panel-box">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div class="panel-title">📥 Importera befintlig kampanj</div>
+
+      <div class="dropzone" id="dz-import" onclick="document.getElementById('file-import').click()">
+        <span class="dz-icon">📂</span>
+        <div class="dz-text">Dra in dina kampanjfiler eller <b>klicka för att bläddra</b></div>
+        <div class="dz-formats">.md · .pdf · .jpg · .png — karaktärsark, session-loggar, worldbuilding-dokument, kartor</div>
+        <input type="file" id="file-import" multiple accept=".md,.pdf,.jpg,.jpeg,.png,.webp">
+      </div>
+      <div class="file-list" id="files-import"></div>
+
+      <div class="extracting" id="extracting-import">
+        <div class="ex-text">🔮 Qwen extraherar karaktärer, NPCs, platser och lore…</div>
+        <div class="ex-bar"><div class="ex-fill" id="ex-fill-import"></div></div>
+      </div>
+
+      <div class="extract-preview" id="preview-import">
+        <div class="ep-grid">
+          <div class="ep-card"><div class="ep-num" id="ep-chars">0</div><div class="ep-label">Karaktärer</div></div>
+          <div class="ep-card"><div class="ep-num" id="ep-npcs2">0</div><div class="ep-label">NPCs</div></div>
+          <div class="ep-card"><div class="ep-num" id="ep-places2">0</div><div class="ep-label">Platser</div></div>
+          <div class="ep-card"><div class="ep-num" id="ep-lore2">0</div><div class="ep-label">Lore-fragment</div></div>
+        </div>
+        <div class="actions">
+          <button class="go-btn" onclick="proceed('import')">⚔️ Fortsätt äventyret</button>
+          <span class="hint">Importerad data merge:as in i kampanjens <b>state.json</b></span>
+        </div>
+      </div>
+
+      <div class="actions" id="actions-import">
+        <button class="go-btn" onclick="startImport()">🔮 Extrahera & importera</button>
+        <span class="hint">Filer skickas till <b>Qwen</b> (text) och <b>Qwen Vision</b> (bilder)</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════
+// PANEL TOGGLE
+// ═══════════════════════════════════════
+let activePanel = null;
+function showPanel(id) {
+  const el = document.getElementById('panel-' + id);
+  if (activePanel === id) { el.classList.remove('show'); activePanel = null; return; }
+  document.querySelectorAll('.expand').forEach(e => e.classList.remove('show'));
+  el.classList.add('show');
+  activePanel = id;
+  el.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+// ═══════════════════════════════════════
+// FILE HANDLING
+// ═══════════════════════════════════════
+const files = { prepare: [], import: [] };
+
+function setupDropzone(dzId, inputId, key) {
+  const dz = document.getElementById(dzId);
+  const input = document.getElementById(inputId);
+
+  ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('dragover'); }));
+  ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('dragover'); }));
+  dz.addEventListener('drop', e => { addFiles(e.dataTransfer.files, key); });
+  input.addEventListener('change', e => { addFiles(e.target.files, key); input.value = ''; });
+}
+setupDropzone('dz-prepare', 'file-prepare', 'prepare');
+setupDropzone('dz-import', 'file-import', 'import');
+
+function addFiles(fileList, key) {
+  for (const f of fileList) {
+    if (!files[key].find(x => x.name === f.name)) files[key].push(f);
+  }
+  renderFiles(key);
+}
+function removeFile(key, idx) {
+  files[key].splice(idx, 1);
+  renderFiles(key);
+}
+function renderFiles(key) {
+  const el = document.getElementById('files-' + key);
+  const icons = { md:'📄', pdf:'📕', jpg:'🖼️', jpeg:'🖼️', png:'🖼️', webp:'🖼️' };
+  el.innerHTML = files[key].map((f, i) => {
+    const ext = f.name.split('.').pop().toLowerCase();
+    const size = f.size < 1024 ? f.size + ' B' : f.size < 1048576 ? (f.size/1024).toFixed(1) + ' KB' : (f.size/1048576).toFixed(1) + ' MB';
+    return `<div class="file-item">
+      <span class="fi-icon">${icons[ext] || '📎'}</span>
+      <span class="fi-name">${f.name}</span>
+      <span class="fi-size">${size}</span>
+      <button class="fi-del" onclick="removeFile('${key}',${i})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// PREPARE — bygg världen
+// ═══════════════════════════════════════
+function startPrepare() {
+  const prompt = document.getElementById('world-prompt').value.trim();
+  if (!prompt && files.prepare.length === 0) {
+    toast('⚠ Skriv en beskrivning eller ladda upp filer först');
+    return;
+  }
+  document.getElementById('actions-prepare').style.display = 'none';
+  document.getElementById('extracting-prepare').classList.add('show');
+
+  // Simulera Qwen-extrahering (i produktion: POST /api/world/build)
+  let pct = 0;
+  const fill = document.getElementById('ex-fill-prepare');
+  const iv = setInterval(() => {
+    pct += 3 + Math.random() * 8;
+    if (pct >= 100) { pct = 100; clearInterval(iv); finishPrepare(); }
+    fill.style.width = pct + '%';
+  }, 120);
+}
+
+function finishPrepare() {
+  document.getElementById('extracting-prepare').classList.remove('show');
+  document.getElementById('preview-prepare').classList.add('show');
+  // Simulerade resultat (i produktion: från Qwen JSON-svar)
+  document.getElementById('ep-npcs').textContent = 4 + Math.floor(Math.random()*4);
+  document.getElementById('ep-places').textContent = 3 + Math.floor(Math.random()*3);
+  document.getElementById('ep-quests').textContent = 2 + Math.floor(Math.random()*2);
+  document.getElementById('ep-lore').textContent = 5 + Math.floor(Math.random()*5);
+  toast('🔮 Världen är strukturerad!');
+}
+
+// ═══════════════════════════════════════
+// IMPORT — extrahera kampanj
+// ═══════════════════════════════════════
+function startImport() {
+  if (files.import.length === 0) {
+    toast('⚠ Ladda upp minst en fil att importera');
+    return;
+  }
+  document.getElementById('actions-import').style.display = 'none';
+  document.getElementById('extracting-import').classList.add('show');
+
+  let pct = 0;
+  const fill = document.getElementById('ex-fill-import');
+  const iv = setInterval(() => {
+    pct += 2 + Math.random() * 6;
+    if (pct >= 100) { pct = 100; clearInterval(iv); finishImport(); }
+    fill.style.width = pct + '%';
+  }, 150);
+}
+
+function finishImport() {
+  document.getElementById('extracting-import').classList.remove('show');
+  document.getElementById('preview-import').classList.add('show');
+  document.getElementById('ep-chars').textContent = 1 + Math.floor(Math.random()*3);
+  document.getElementById('ep-npcs2').textContent = 3 + Math.floor(Math.random()*5);
+  document.getElementById('ep-places2').textContent = 2 + Math.floor(Math.random()*4);
+  document.getElementById('ep-lore2').textContent = 4 + Math.floor(Math.random()*6);
+  toast('📥 Kampanj extraherad!');
+}
+
+// ═══════════════════════════════════════
+// PROCEED / NEW ADVENTURE
+// ═══════════════════════════════════════
+function proceed(mode) {
+  // I produktion: spara world/import-data till backend, sen redirect
+  sessionStorage.setItem('dnd_adventure_mode', mode);
+  location.href = 'newgame.html';
+}
+
+function newAdventure() {
+  // DM freestylar — ingen prep, direkt till karaktärsskapande
+  sessionStorage.setItem('dnd_adventure_mode', 'freestyle');
+  toast('🎲 Dungeon Master förbereder en öppningsscen…');
+  setTimeout(() => { location.href = 'newgame.html'; }, 800);
+}
+
+// ═══════════════════════════════════════
+// TOAST + EMBERS
+// ═══════════════════════════════════════
+let toastTimer;
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2400);}
+
+const canvas=document.getElementById('embers'),ctx=canvas.getContext('2d');
+let W,H,embers=[];
+function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight;}
+resize();addEventListener('resize',resize);
+function spawn(init){return{x:Math.random()*W,y:init?Math.random()*H:H+10,r:.7+Math.random()*1.6,vy:.2+Math.random()*.6,vx:(Math.random()-.5)*.3,life:0,max:400+Math.random()*500,hue:Math.random()<.82?22+Math.random()*18:268+Math.random()*20};}
+for(let i=0;i<38;i++)embers.push(spawn(true));
+function tick(){ctx.clearRect(0,0,W,H);for(let i=0;i<embers.length;i++){const e=embers[i];e.life++;e.y-=e.vy;e.x+=e.vx+Math.sin(e.life*.02)*.12;const fade=Math.min(1,e.life/60)*Math.max(0,1-e.life/e.max);const fl=.5+Math.sin(e.life*.15+i)*.35;ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fillStyle=`hsla(${e.hue},90%,60%,${.45*fade*fl})`;ctx.shadowColor=`hsla(${e.hue},90%,55%,${.7*fade})`;ctx.shadowBlur=7;ctx.fill();if(e.life>e.max||e.y<-12)embers[i]=spawn(false);}requestAnimationFrame(tick);}
+tick();
+</script>
+</body>
+</html>

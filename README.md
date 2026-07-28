@@ -32,6 +32,7 @@ spelar NPCs, slår tärningar och bygger världen tillsammans med dig.
 dnd-llm/
 ├── frontend/
 │   ├── login.html        ← Inloggning (Porten)
+│   ├── adventure.html    ← Vägskälet: Förbered / Importera / Nytt äventyr
 │   ├── newgame.html      ← Karaktärsskapande (Välj ditt öde)
 │   ├── chat.html         ← Huvudchatt (Vid bordet)
 │   ├── character.html    ← Karaktärsark + inventory + valuta

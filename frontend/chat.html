@@ -188,6 +188,70 @@
   .msg.system .box .crit { color: var(--gold-bright); text-shadow: 0 0 10px rgba(232,198,90,0.7); font-weight: 700; }
   .msg.system .box .fail { color: var(--blood-bright); text-shadow: 0 0 10px rgba(212,58,77,0.6); font-weight: 700; }
 
+  /* ═══════════ Tärningsbricka ═══════════ */
+  .dice-tray {
+    display: flex; align-items: center; gap: .5rem;
+    padding: .5rem 1.6rem; border-top: 1px solid rgba(61,47,82,.4);
+    background: linear-gradient(180deg, rgba(22,16,32,.4), transparent);
+    overflow-x: auto; flex-shrink: 0;
+  }
+  .dice-tray::-webkit-scrollbar { height: 0; }
+  .dice-label {
+    font-family: 'Cinzel', serif; font-size: .58rem; letter-spacing: .2em;
+    text-transform: uppercase; color: var(--bone-dim); margin-right: .3rem; white-space: nowrap;
+  }
+  .die-btn {
+    position: relative; width: 44px; height: 44px; flex-shrink: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: linear-gradient(160deg, var(--stone-3), var(--stone));
+    border: 1px solid var(--edge); cursor: pointer;
+    clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+    transition: transform .2s cubic-bezier(.22,1,.36,1), filter .2s;
+  }
+  .die-btn:hover { transform: translateY(-4px) scale(1.08); filter: brightness(1.3) drop-shadow(0 6px 10px rgba(0,0,0,.6)); }
+  .die-btn:active { transform: scale(.9); }
+  .die-btn .d-num { font-family: 'Cinzel', serif; font-weight: 900; font-size: .8rem; color: var(--bone-bright); line-height: 1; }
+  .die-btn .d-type { font-family: 'Cinzel', serif; font-size: .48rem; letter-spacing: .08em; color: var(--gold); }
+  .die-btn.rolling { animation: die-shake .12s linear infinite; }
+  @keyframes die-shake { 0%,100% { transform: rotate(0) scale(1); } 25% { transform: rotate(-12deg) scale(1.1); } 75% { transform: rotate(12deg) scale(1.1); } }
+  .tray-sep { width: 1px; height: 28px; background: var(--edge); flex-shrink: 0; margin: 0 .3rem; }
+  .tray-last {
+    font-size: .78rem; color: var(--bone-dim); font-style: italic;
+    white-space: nowrap; margin-left: .4rem; transition: opacity .3s;
+  }
+  .tray-last b { color: var(--gold-bright); font-style: normal; font-family: 'Cinzel', serif; }
+  .tray-last .crit { color: var(--gold-bright); text-shadow: 0 0 10px rgba(232,198,90,.7); }
+  .tray-last .fail { color: var(--blood-bright); text-shadow: 0 0 10px rgba(212,58,77,.6); }
+
+  /* Inline roll-request i chatten */
+  .roll-request {
+    display: inline-flex; align-items: center; gap: .7rem;
+    background: linear-gradient(160deg, rgba(201,162,39,.1), rgba(201,162,39,.03));
+    border: 1px solid rgba(201,162,39,.5); padding: .6rem 1rem;
+    border-radius: 2px; animation: msg-in .4s ease;
+  }
+  .roll-request .rr-label { font-size: .85rem; color: var(--bone-bright); }
+  .roll-request .rr-label b { color: var(--gold-bright); font-family: 'Cinzel', serif; }
+  .rr-btn {
+    font-family: 'Cinzel', serif; font-weight: 700; font-size: .62rem; letter-spacing: .12em;
+    text-transform: uppercase; color: #1a1206; cursor: pointer;
+    background: linear-gradient(180deg, var(--gold-bright), var(--gold) 55%, #8a6d14);
+    border: 1px solid #6e5510; padding: .5rem 1rem; border-radius: 2px;
+    box-shadow: 0 4px 12px -4px rgba(232,198,90,.5); transition: all .18s;
+    animation: rr-pulse 2s ease-in-out infinite;
+  }
+  @keyframes rr-pulse { 0%,100% { box-shadow: 0 4px 12px -4px rgba(232,198,90,.4); } 50% { box-shadow: 0 4px 20px -2px rgba(232,198,90,.8); } }
+  .rr-btn:hover { filter: brightness(1.12); transform: translateY(-2px); }
+  .rr-btn:disabled { opacity: .4; cursor: default; animation: none; }
+  .roll-result-inline {
+    display: inline-flex; align-items: center; gap: .5rem;
+    font-size: .85rem; color: var(--bone);
+  }
+  .roll-result-inline .rr-dice { font-size: 1.1rem; }
+  .roll-result-inline b { font-family: 'Cinzel', serif; color: var(--gold-bright); }
+  .roll-result-inline .crit { color: var(--gold-bright); text-shadow: 0 0 10px rgba(232,198,90,.7); }
+  .roll-result-inline .fail { color: var(--blood-bright); text-shadow: 0 0 10px rgba(212,58,77,.6); }
+
   /* ── DM-tankar (statusindikator) ── */
   .dm-status { display: none; align-items: center; gap: .8rem; padding: .3rem 1.6rem .9rem; }
   .dm-status.show { display: flex; }
@@ -375,6 +439,19 @@
       <span class="thought" id="thought-text">🐉 Väver berättelsen…</span>
     </div>
 
+    <div class="dice-tray">
+      <span class="dice-label">🎲 Slå:</span>
+      <button class="die-btn" onclick="rollFromTray(this,'1d4')"><span class="d-num">4</span><span class="d-type">d4</span></button>
+      <button class="die-btn" onclick="rollFromTray(this,'1d6')"><span class="d-num">6</span><span class="d-type">d6</span></button>
+      <button class="die-btn" onclick="rollFromTray(this,'1d8')"><span class="d-num">8</span><span class="d-type">d8</span></button>
+      <button class="die-btn" onclick="rollFromTray(this,'1d10')"><span class="d-num">10</span><span class="d-type">d10</span></button>
+      <button class="die-btn" onclick="rollFromTray(this,'1d12')"><span class="d-num">12</span><span class="d-type">d12</span></button>
+      <button class="die-btn" onclick="rollFromTray(this,'1d20')"><span class="d-num">20</span><span class="d-type">d20</span></button>
+      <button class="die-btn" onclick="rollFromTray(this,'1d100')"><span class="d-num">100</span><span class="d-type">d100</span></button>
+      <span class="tray-sep"></span>
+      <span class="tray-last" id="tray-last"></span>
+    </div>
+
     <div class="input-area">
       <div class="input-row">
         <textarea id="player-input" rows="1" placeholder="Vad gör Thalindra? Skriv fritt — slå, smyg, tala, kasta en besvärjelse…"></textarea>
@@ -513,6 +590,94 @@ function rollDice(notation) {
   return { rolls, total, count, sides, mod, notation };
 }
 
+// ── Tärningsbricka: rulla med animation ──
+function rollFromTray(btn, notation) {
+  if (btn.classList.contains('rolling')) return;
+  btn.classList.add('rolling');
+  const numEl = btn.querySelector('.d-num');
+  const sides = parseInt(notation.split('d')[1]);
+  const origNum = numEl.textContent;
+
+  // Snurra siffror under rullningen
+  const iv = setInterval(() => {
+    numEl.textContent = 1 + Math.floor(Math.random() * sides);
+  }, 70);
+
+  SFX.dice();
+
+  setTimeout(() => {
+    clearInterval(iv);
+    btn.classList.remove('rolling');
+    numEl.textContent = origNum;
+    const roll = rollDice(notation);
+    showTrayResult(roll);
+    addMessage('system', null, diceMessage(roll, notation));
+  }, 600);
+}
+
+function showTrayResult(roll) {
+  const el = document.getElementById('tray-last');
+  const isCrit = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 20;
+  const isFail = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 1;
+  let cls = '';
+  if (isCrit) cls = 'crit';
+  if (isFail) cls = 'fail';
+  el.innerHTML = `Senast: <b class="${cls}">${roll.total}</b> (${roll.notation})${isCrit ? ' ✦' : ''}${isFail ? ' ✦' : ''}`;
+  el.style.opacity = 1;
+}
+
+// ── DM begär ett kast inline i chatten ──
+function addRollRequest(notation, label) {
+  const el = document.createElement('div');
+  el.className = 'msg system';
+  const id = 'rr-' + Date.now();
+  el.innerHTML = `
+    <div class="roll-request" id="${id}">
+      <span class="rr-label">🎲 DM begär: <b>${label}</b> <span style="color:var(--bone-dim)">(${notation})</span></span>
+      <button class="rr-btn" onclick="answerRollRequest('${id}','${notation}','${label.replace(/'/g,"\\'")}')">Slå ${notation}</button>
+    </div>`;
+  chat.appendChild(el);
+  chat.scrollTop = chat.scrollHeight;
+  SFX.click();
+}
+
+async function answerRollRequest(id, notation, label) {
+  const box = document.getElementById(id);
+  if (!box) return;
+  const btn = box.querySelector('.rr-btn');
+  btn.disabled = true;
+  btn.textContent = '🎲 Rullar…';
+  SFX.dice();
+
+  // Animation
+  await new Promise(r => setTimeout(r, 500));
+
+  const roll = rollDice(notation);
+  const isCrit = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 20;
+  const isFail = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 1;
+  if (isCrit) SFX.crit();
+  else if (isFail) SFX.fail();
+
+  const modStr = roll.mod !== 0 ? (roll.mod > 0 ? '+' + roll.mod : roll.mod) : '';
+  const cls = isCrit ? 'crit' : isFail ? 'fail' : '';
+  box.innerHTML = `
+    <div class="roll-result-inline">
+      <span class="rr-dice">🎲</span>
+      <span>${label}: [${roll.rolls.join(', ')}]${modStr} = <b class="${cls}">${roll.total}</b>${isCrit ? ' ✦ KRITISKT!' : ''}${isFail ? ' ✦ PATETISKT!' : ''}</span>
+    </div>`;
+  showTrayResult(roll);
+
+  // Skicka resultatet till DM (backend)
+  try {
+    const resultMsg = `[Resultat: ${label} → ${roll.total} (${roll.rolls.join(', ')}${modStr})]`;
+    const res = await API.chat(resultMsg, currentModel);
+    if (res.reply) addMessage('dm', null, res.reply);
+    if (res.roll_requests && res.roll_requests.length) {
+      res.roll_requests.forEach(r => addRollRequest(r.notation, r.label));
+    }
+  } catch (e) { /* DM svarar inte på resultat — OK */ }
+}
+
 function diceMessage(roll, label) {
   const isCrit = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 20;
   const isFail = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 1;
@@ -532,13 +697,19 @@ const script = [
   { type: 'npc', npc: 'kael', text: 'Jag gillar inte det här. <em>Spottar på marken.</em> Sista gången någon gick in där kom de ut som… något annat. Vi borde bränna hela skiten.' },
   { type: 'npc', npc: 'lyra', text: 'Eller så går vi in och tar reda på vad det är som kallar på henne. <em>Nickar mot Thalindra.</em> Det där ljuset är inte naturligt. Det är <em>gammal</em> magi.' },
   { type: 'dm', text: 'Vad gör du? Kvarnens dörr står på glänt. Det gröna ljuset pulserar snabbare nu — som om det vet att du är här.' },
-  { type: 'system', text: '⚔ <b>STRID!</b> En skelettväktare reser sig ur askan! Initiative: Thalindra 18, Skelettväktare 12' },
+  { type: 'system', text: '⚔ <b>STRID!</b> En skelettväktare reser sig ur askan!' },
+  { type: 'roll', notation: '1d20+3', label: 'INITIATIV' },
 ];
 
 let scriptIdx = 0;
 function playScript() {
   if (scriptIdx >= script.length) return;
   const s = script[scriptIdx++];
+  if (s.type === 'roll') {
+    addRollRequest(s.notation, s.label);
+    setTimeout(playScript, 600);
+    return;
+  }
   showTyping(s.type === 'npc' ? NPCS[s.npc]?.name : 'Dungeon Master');
   setTimeout(() => {
     hideTyping();
@@ -684,6 +855,11 @@ async function dmRespond(playerText) {
 
     // Visa svaret som DM-narration
     addMessage('dm', null, reply);
+
+    // DM begär kast → visa inline-knappar
+    if (res.roll_requests && res.roll_requests.length) {
+      res.roll_requests.forEach(r => addRollRequest(r.notation, r.label));
+    }
 
     // Uppdatera tur-räknare
     if (res.turn_count) {

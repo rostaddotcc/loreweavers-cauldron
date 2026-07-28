@@ -31,6 +31,7 @@ app = FastAPI(title="Mörkrets Rike", version="1.0.0")
 import random
 
 NPC_PATTERN = re.compile(r'\[NPC:([^|]+)\|([^|]+)\|([^\]]+)\]')
+KAST_PATTERN = re.compile(r'\[KAST:\s*([^\]|]+)(?:\|([^\]]+))?\]')
 
 NPC_COLORS = ['#8b5fd4', '#d4691e', '#7aa35e', '#5e9aa3', '#d43a4d', '#c9a227', '#a8b2c0', '#b06fd4']
 NPC_ICONS = ['🧙', '⚔️', '🏹', '🛡️', '🎭', '👻', '🐺', '🦉', '💀', '🔮', '🗡️', '🌙']
@@ -59,6 +60,17 @@ def _parse_npcs(text: str) -> tuple[str, list[dict]]:
         })
     clean = NPC_PATTERN.sub('', text).strip()
     return clean, npcs
+
+
+def _parse_roll_requests(text: str) -> tuple[str, list[dict]]:
+    """Extrahera [KAST: 1d20+4 | SMIDIGHET för att smyga]-taggar ur DM-svar."""
+    rolls = []
+    for m in KAST_PATTERN.finditer(text):
+        notation = m.group(1).strip()
+        label = (m.group(2) or '').strip()
+        rolls.append({'notation': notation, 'label': label or notation})
+    clean = KAST_PATTERN.sub('', text).strip()
+    return clean, rolls
 
 app.add_middleware(
     CORSMiddleware,
@@ -370,8 +382,9 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     except RuntimeError as e:
         raise HTTPException(500, str(e))
 
-    # Parsa NPCs ur svaret
+    # Parsa NPCs och kastbegäran ur svaret
     reply, new_npcs = _parse_npcs(reply)
+    reply, roll_requests = _parse_roll_requests(reply)
     for npc in new_npcs:
         existing = {n.get("name", "").lower() for n in state.get("npcs", [])}
         if npc["name"].lower() not in existing:
@@ -410,6 +423,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         "turn_count": state["meta"]["turn_count"],
         "summary_generated": summary_generated,
         "new_npcs": new_npcs,
+        "roll_requests": roll_requests,
     }
 
 

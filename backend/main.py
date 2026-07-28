@@ -24,6 +24,7 @@ from dice import roll as dice_roll
 from models import DM_SYSTEM_PROMPT, get_api_key, get_model, list_models_for_frontend
 from atmosphere import build_art_prompt, detect_environments
 from locations import get_locations_with_travel
+from logbook import build_log_prompt
 from state_manager import CampaignStore
 
 app = FastAPI(title="Mörkrets Rike", version="1.0.0")
@@ -1047,6 +1048,62 @@ async def campaign_locations(morkrets_token: str | None = Cookie(None)):
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
     return get_locations_with_travel(state)
+
+
+@app.get("/api/campaign/logbook")
+async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
+    """Generera en äventyrsjournal (tidslinje) via LLM."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    # Samla transkript
+    transcript = store.load_transcript(state, last_n=100)
+    t_text = "\n".join(
+        f"{e['role']}: {e['content']}" for e in transcript
+    )
+
+    # Samla sammanfattningar
+    summaries = store.load_summaries(state, last_n=10)
+    s_text = "\n".join(
+        f"[Tur {s['turn']}]: {s['text']}" for s in summaries
+    )
+
+    if not t_text and not s_text:
+        return {"title": "Mörkrets Rike", "days": [], "summary": "Äventyret har inte börjat ännu."}
+
+    # Generera loggbok via LLM (snabb modell)
+    campaign_name = state.get("meta", {}).get("campaign_name", "Mörkrets Rike")
+    prompt = build_log_prompt(t_text, s_text, campaign_name)
+
+    try:
+        raw = await _call_llm(
+            ATMOSPHERE_MODEL,
+            [{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=2048,
+        )
+        log_data = _extract_json(raw)
+    except Exception:
+        # Fallback: enkel struktur från state
+        log_data = {
+            "title": campaign_name,
+            "days": [{
+                "day": 1,
+                "title": "Äventyret börjar",
+                "mood": "Förväntansfull",
+                "events": ["Kampanjen skapades"],
+                "location": state.get("world", {}).get("current_location", "Okänd"),
+                "npcs_met": [n.get("name", "?") for n in state.get("npcs", [])[:5]],
+                "quests": [q.get("name", "?") for q in state.get("quests", []) if q.get("status") == "aktiv"],
+            }],
+            "summary": "Äventyret har just börjat. Mörkret väntar.",
+        }
+
+    return log_data
 
 
 # ═══════════════════════════════════════

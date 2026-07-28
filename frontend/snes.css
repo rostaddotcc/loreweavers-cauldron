@@ -43,18 +43,62 @@ canvas, img { image-rendering: pixelated; }
   display: inline-block;
   width: 1em;
   height: 1em;
-  vertical-align: -0.14em;
+  vertical-align: middle;   /* centrera mot textens x-höjd — ingen uppåt-offset */
   image-rendering: pixelated;
   shape-rendering: crispEdges;
   flex-shrink: 0;
 }
-/* Lite större i rubriker/märken där spriten är huvudsymbolen */
-.pv-portrait .pxs, .pc-avatar .pxs, .cp-icon .pxs, .vc-icon .pxs,
-.die .pxs, .att-icon .pxs, .rune .pxs { width: 1.2em; height: 1.2em; }
-/* Måttliga storlekar där sprites annars skulle bli för stora */
+
+/* ── Flex-bärare: sprite + text centrerade med gap ──
+   (endan element som redan är inline/flex — rör inte block/tabell-layouter) */
+.top-btn, .send-btn, .rune-btn, .go-btn, .summon-btn, .gate-btn,
+.msg .who, .dice-label, .die-btn, .at-item, .att-item, .fi-name,
+.roll-request .rr-label, .oracle-head h3, .rr-btn, #loc-name,
+.model-label, .att-dropzone .att-text, .toast {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+}
+
+/* ── Sprite-storlek per kontext (konsekvent skala) ── */
+/* Knappar + labels: 0.9em */
+.top-btn .pxs, .send-btn .pxs, .rune-btn .pxs, .go-btn .pxs,
+.summon-btn .pxs, .gate-btn .pxs, .at-item .pxs, .att-item .pxs,
+.fi-name .pxs, .toast .pxs, .rr-btn .pxs, .roll-request .rr-label .pxs,
+.oracle-head h3 .pxs, .dice-label .pxs, .die-btn .pxs,
+.att-dropzone .att-text .pxs, .model-label .pxs {
+  width: 0.9em; height: 0.9em;
+}
+
+/* Chattens avsändar-rader: sprite i textstorlek */
+.msg .who .pxs { width: 1em; height: 1em; }
+
+/* NPC-listan (redan flex): sprite i textstorlek */
+.npc-row .pxs { width: 0.95em; height: 0.95em; }
+
+/* Sidebar-plats: block-flex så texten radbryts inuti och ikonen centreras mot hela blocket */
+#loc-name { display: flex; align-items: center; gap: 0.4em; }
+#loc-name .pxs { width: 0.95em; height: 0.95em; }
+
+/* Brand/loggor: 1em */
 .brand .pxs { width: 1em; height: 1em; }
+
+/* Porträtt/avatarer: större, i sin ruta */
+.pv-portrait .pxs, .pc-avatar .pxs, .cp-icon .pxs, .vc-icon .pxs,
+.rune .pxs { width: 1.2em; height: 1.2em; }
+
+/* Tärningsbrickan: lås + tärning samma storlek */
+#tray-lock { display: inline-flex; align-items: center; }
+#tray-lock .pxs { width: 1em; height: 1em; }
+.die .pxs { width: 1.1em; height: 1.1em; }
+
+/* Stora symboler: login-sigill, arketyper, vägskäl */
 .sigil-icon .pxs { width: 44px; height: 44px; }
 .arch .icon .pxs, .path .icon .pxs { width: 32px; height: 32px; }
+
+/* Rubriker: sprite i rubrikstorlek */
+.gate-title .pxs, .destiny-title h1 .pxs, .masthead h1 .pxs,
+.head h1 .pxs, .hall-title .pxs, .char-name .pxs { width: 1em; height: 1em; }
 
 /* ── 1. TYPOGRAFI — variabel-driven (fonts.js byter tema) ── */
 body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, label {

@@ -496,7 +496,7 @@
 
     <div class="dm-status" id="dm-status">
       <div class="rune-spinner"></div>
-      <span class="thought" id="thought-text">🐉 Väver berättelsen…</span>
+      <span class="thought" id="thought-text">🧙‍♂️ Väver berättelsen…</span>
     </div>
 
     <div class="dice-tray locked" id="dice-tray">
@@ -607,7 +607,7 @@ loadCampaign().then(ok => { if (ok !== false) loadTranscript(); });
 // NPC REGISTRY — fylls på från kampanjstate (inga demo-NPCs)
 // ═══════════════════════════════════════
 const NPCS = {
-  dm: { name: 'Dungeon Master', color: '#c9a227', icon: '🐉' },
+  dm: { name: 'Dungeon Master', color: '#c9a227', icon: '🧙‍♂️' },
 };
 
 function ingestNpcs(npcList) {
@@ -642,7 +642,7 @@ function addMessage(type, npcKey, text) {
   el.className = 'msg ' + type;
 
   if (type === 'dm') {
-    el.innerHTML = `<div class="who">🐉 Dungeon Master</div><div class="text">${mdToHtml(escapeHtml(text))}</div>`;
+    el.innerHTML = `<div class="who">🧙‍♂️ Dungeon Master</div><div class="text">${mdToHtml(escapeHtml(text))}</div>`;
     SFX.receive();
   } else if (type === 'npc') {
     const n = NPCS[npcKey] || { name: npcKey || 'Okänd', color: '#a8b2c0', icon: '🎭', role: '' };
@@ -821,7 +821,7 @@ async function loadTranscript() {
 // en specifik fas via { thought: '...' } i svaret.
 const THOUGHTS = {
   narrate: [
-    '🐉 Väver berättelsen…',
+    '🧙‍♂️ Väver berättelsen…',
     '🕯️ Låter skuggorna tala…',
     '🌫️ Målar dimman över dalen…',
     '📜 Bläddrar i ödets bok…',

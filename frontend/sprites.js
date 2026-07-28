@@ -43,7 +43,10 @@ const SPR = (() => {
     '🏰': ['g.gggg.g','gggggggg','.gggggg.','.gggggg.','.gg..gg.','.gggggg.','.gg..gg.','gggggggg'],
     '🕯': ['...oo...','...oo...','...ww...','...ww...','...ww...','...ww...','..gggg..','........'],
     '🐉': ['..nnnn..','.nnnnnn.','.nknnkn.','.nnnnnn.','..nnnn..','.nnnnnn.','n......n','........'],
-    '🧙': ['...pp...','...pp...','..pppp..','.pppppp.','..ffff..','..fkfk..','..ffff..','.pppppp.'],
+    '🧙': ['..pppp..','.pppppp.','.pppppp.','..ffff..','..fkfk..','.pppppp.','.pppppp.','........'],
+    // Dungeon Master — guld-trollkarl med spetsig hatt (ZWJ-sekvens 🧙‍♂️, med och utan VS16)
+    '🧙‍♂️': ['....G...','...GG...','..GGGG..','.GGGGGG.','..ffff..','..fkfk..','.GGGGGG.','.GGGGGG.'],
+    '🧙‍♂': ['....G...','...GG...','..GGGG..','.GGGGGG.','..ffff..','..fkfk..','.GGGGGG.','.GGGGGG.'],
     '🎲': ['.wwwwww.','.wkwwkw.','.wwwwww.','.wwkwww.','.wwwwww.','.wkwwkw.','.wwwwww.','........'],
     '✨': ['...G....','..GGG...','.GGGGG..','..GGG...','...G....','.G......','.G.G....','........'],
     '📖': ['.RRRRRR.','.RwwwwR.','.RwddwR.','.RwwwwR.','.RwddwR.','.RwwwwR.','.RRRRRR.','........'],
@@ -56,7 +59,7 @@ const SPR = (() => {
     '🖼': ['.gggggg.','.gwwwwg.','.gwttwg.','.gwttwg.','.gwwwwg.','.gggggg.','........','........'],
     '📦': ['.bbbbbb.','.bBbbBb.','.bbbbb..','.bbgbb..','.bbbbb..','.bBbbBb.','.bbbbbb.','........'],
     '📍': ['...rr...','..rrrr..','..rkkr..','..rrrr..','...rr...','...r....','...r....','........'],
-    '❓': ['..gggg..','.g....g.','.....g..','....g...','....g...','........','....g...','........'],
+    '❓': ['..gggg..','.gggggg.','.gg..gg.','.....gg.','....gg..','...gg...','........','...gg...'],
     '⚑': ['.s......','.srrrr..','.srrrr..','.srrrr..','.s......','.s......','.s......','........'],
     '🗡': ['......s.','.....ss.','....ss..','...ss...','..ss....','.gg.....','.g......','........'],
     '📥': ['...s....','...s....','..sss...','.sssss..','sssssss.','.bbbbb..','.bbbbbb.','........'],
@@ -68,7 +71,7 @@ const SPR = (() => {
     '📂': ['.gggg...','.gggggg.','.gwwwwg.','.gwwwwg.','.gggggg.','........','........','........'],
     '🔇': ['..ii....','.iinn..r','.iinn.r.','.iinn.r.','.iinn..r','..ii....','........','........'],
     '📕': ['.RRRRRR.','.RRRRRg.','.Rwwwwg.','.RRRRRg.','.RRRRRR.','........','........','........'],
-    '🔒': ['..gggg..','.g....g.','.g....g.','.gggggg.','.ggkgg..','.ggkgg..','.gggggg.','........'],
+    '🔒': ['..gggg..','.gg..gg.','.gg..gg.','.gggggg.','.gggggg.','.ggkggg.','.gggggg.','........'],
     '🌫': ['........','.ddddd..','........','..ddddd.','........','.ddddd..','........','........'],
     '⚡': ['...GG...','..GG....','.GGGGG..','...GG...','..GG....','.GG.....','........','........'],
     '⭐': ['...G....','...G....','..GGG...','.GGGGG..','..GGG...','..G.G...','.G...G..','........'],
@@ -177,7 +180,8 @@ const SPR = (() => {
     while ((m = EMOJI_RE.exec(val)) !== null) {
       const base = baseOf(m[0]);
       if (KEEP.has(base)) continue;
-      const el = svgEl(base);
+      // Prova hela token först (t.ex. 🧙‍♂️ → guld-trollkarl), annars bas-emoji
+      const el = svgEl(m[0]) || svgEl(base);
       if (!el) continue;
       if (m.index > last) frag.appendChild(document.createTextNode(val.slice(last, m.index)));
       frag.appendChild(el);

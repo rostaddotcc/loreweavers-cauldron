@@ -35,6 +35,22 @@
 }
 canvas, img { image-rendering: pixelated; }
 
+/* ── PIXEL SPRITES (ersätter emojis) ── */
+.pxs {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.14em;
+  image-rendering: pixelated;
+  shape-rendering: crispEdges;
+  flex-shrink: 0;
+}
+/* Lite större i rubriker/märken där spriten är huvudsymbolen */
+.brand .pxs, .gate-title .pxs, .sigil-icon .pxs,
+.path .icon .pxs, .arch .icon .pxs, .pv-portrait .pxs,
+.pc-avatar .pxs, .cp-icon .pxs, .vc-icon .pxs,
+.die .pxs, .att-icon .pxs, .rune .pxs { width: 1.2em; height: 1.2em; }
+
 /* ── 1. TYPOGRAFI — allt monospace/pixel ── */
 body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, label {
   font-family: 'Silkscreen', 'Press Start 2P', 'Courier New', monospace !important;

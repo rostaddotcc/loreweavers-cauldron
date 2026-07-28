@@ -219,7 +219,7 @@ const MUSIC = (() => {
 function musicToggleBtn() {
   const on = MUSIC.toggle();
   const btns = document.querySelectorAll('.music-btn');
-  btns.forEach(b => b.textContent = on ? '♫' : '♪̶');
+  btns.forEach(b => { b.textContent = on ? '♫' : '♪'; b.classList.toggle('off', !on); });
   if (on && !MUSIC.isPlaying) MUSIC.setMood(MUSIC.mood || 'night');
   return on;
 }

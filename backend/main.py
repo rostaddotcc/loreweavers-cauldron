@@ -8,6 +8,7 @@ import io
 import json
 import os
 import re
+import uuid
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -15,7 +16,7 @@ from pathlib import Path
 import httpx
 from fastapi import Cookie, FastAPI, File, HTTPException, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -33,7 +34,7 @@ from models import (
 from atmosphere import build_art_prompt, detect_environments
 from locations import get_locations_with_travel
 from logbook import build_log_prompt
-from state_manager import CampaignStore, CharacterVault
+from state_manager import CAMPAIGNS_DIR, CampaignStore, CharacterVault
 
 app = FastAPI(title="Mörkrets Rike", version="1.0.0")
 
@@ -732,6 +733,8 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
 
 CHARACTER_PROMPT = """Du är en D&D-karaktärsgenerator för ett mörkt fantasy-äventyr. Skapa en karaktär baserad på spelarens beskrivning.
 
+VIKTIGT: Karaktären hör hemma i en PÅHITTAD fantasy-värld. Använd ALDRIG verkliga ortsnamn (inga svenska städer, länder eller kända platser) i namn, bakgrund eller utrustning. Hitta på stämningsfulla fantasy-namn.
+
 Svara ENDAST med giltig JSON (ingen markdown) med detta schema:
 {
   "name": "string",
@@ -798,6 +801,130 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
     store.save(state)
 
     return {"ok": True, "character": char_data}
+
+
+# ═══════════════════════════════════════
+# KARAKTÄRSUPPDATERING + BILAGOR
+# ═══════════════════════════════════════
+
+ATTACHMENT_EXTS = {".pdf", ".md", ".txt"}
+ATTACHMENT_MEDIA = {
+    ".pdf": "application/pdf",
+    ".md": "text/markdown; charset=utf-8",
+    ".txt": "text/plain; charset=utf-8",
+}
+
+
+@app.patch("/api/campaign/character")
+async def update_character(req: dict, morkrets_token: str | None = Cookie(None)):
+    """Uppdatera valda fält på den aktiva karaktären (t.ex. notes)."""
+    payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    char = state.setdefault("character", {})
+    # Tillåt bara kända fält (notes + framtida textfält) — aldrig abilities/hp
+    for key in ("notes",):
+        if key in req:
+            char[key] = str(req[key])
+    store.save(state)
+    return {"ok": True, "character": char}
+
+
+@app.post("/api/campaign/attachments")
+async def upload_attachment(
+    file: UploadFile = File(...),
+    morkrets_token: str | None = Cookie(None),
+):
+    """Ladda upp en bilaga (pdf/md/txt) till kampanjen."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    fname = file.filename or "bilaga.txt"
+    ext = Path(fname).suffix.lower()
+    if ext not in ATTACHMENT_EXTS:
+        raise HTTPException(400, f"Filformat ej stöd: {ext} (tillåtna: .pdf, .md, .txt)")
+
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(400, "Filen är för stor (max 5 MB)")
+
+    cid = state["meta"]["campaign_id"]
+    att_dir = CAMPAIGNS_DIR / username / cid / "attachments"
+    att_dir.mkdir(parents=True, exist_ok=True)
+
+    att_id = uuid.uuid4().hex[:12]
+    # Spara med säkert filnamn men behåll originalnamnet i metadata
+    safe_name = re.sub(r"[^\w.\-]", "_", fname)
+    disk_name = f"{att_id}{ext}"
+    (att_dir / disk_name).write_bytes(content)
+
+    attachments = state.setdefault("attachments", [])
+    entry = {
+        "id": att_id,
+        "name": fname,
+        "disk_name": disk_name,
+        "ext": ext,
+        "size": len(content),
+        "uploaded": datetime.now(timezone.utc).isoformat(),
+    }
+    attachments.append(entry)
+    store.save(state)
+
+    return {"ok": True, "attachment": entry}
+
+
+@app.get("/api/campaign/attachments/{att_id}")
+async def download_attachment(att_id: str, morkrets_token: str | None = Cookie(None)):
+    """Ladda ner en bilaga."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    cid = state["meta"]["campaign_id"]
+    entry = next((a for a in state.get("attachments", []) if a["id"] == att_id), None)
+    if not entry:
+        raise HTTPException(404, "Bilagan hittades inte")
+
+    path = CAMPAIGNS_DIR / username / cid / "attachments" / entry["disk_name"]
+    if not path.exists():
+        raise HTTPException(404, "Fil saknas på disk")
+
+    return FileResponse(
+        path,
+        media_type=ATTACHMENT_MEDIA.get(entry["ext"], "application/octet-stream"),
+        filename=entry["name"],
+    )
+
+
+@app.delete("/api/campaign/attachments/{att_id}")
+async def delete_attachment(att_id: str, morkrets_token: str | None = Cookie(None)):
+    """Radera en bilaga."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    cid = state["meta"]["campaign_id"]
+    attachments = state.get("attachments", [])
+    entry = next((a for a in attachments if a["id"] == att_id), None)
+    if not entry:
+        raise HTTPException(404, "Bilagan hittades inte")
+
+    path = CAMPAIGNS_DIR / username / cid / "attachments" / entry["disk_name"]
+    if path.exists():
+        path.unlink()
+
+    state["attachments"] = [a for a in attachments if a["id"] != att_id]
+    store.save(state)
+    return {"ok": True, "message": "Bilagan raderad"}
 
 
 # ═══════════════════════════════════════
@@ -1115,6 +1242,8 @@ async def import_file(
 # ═══════════════════════════════════════
 
 WORLD_BUILD_PROMPT = """Du är en världsextraktor för D&D-kampanjer. Analysera spelarens beskrivning och extrahera strukturerad världdata.
+
+VIKTIGT: Världen är en PÅHITTAD fantasy-värld. Om spelaren nämner verkliga ortsnamn (svenska städer, länder, kända platser), översätt dem till stämningsfulla fantasy-namn. Använd ALDRIG verkliga ortsnamn i output.
 
 Svara ENDAST med giltig JSON (ingen markdown):
 {

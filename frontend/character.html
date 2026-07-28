@@ -351,6 +351,58 @@
   .rune-btn:hover { filter: brightness(1.12); transform: translateY(-2px); box-shadow: 0 8px 20px -4px rgba(232,198,90,0.6), inset 0 1px 0 rgba(255,255,255,0.4); }
   .rune-btn:active { transform: translateY(0); }
 
+  /* ── Anteckningar + Bilagor ── */
+  .notes-layout { display: grid; grid-template-columns: 1fr 300px; gap: 1.6rem; align-items: start; }
+  .notes-hint { font-size: 0.72rem; color: var(--bone-dim); font-style: italic; text-transform: none; letter-spacing: 0; font-weight: 400; }
+  #notes-editor {
+    width: 100%; min-height: 380px; resize: vertical;
+    font-family: 'Spectral', Georgia, serif; font-size: 0.92rem; line-height: 1.7;
+    color: var(--bone-bright); background: var(--stone-2);
+    border: 1px solid var(--edge); padding: 1rem 1.1rem; outline: none; border-radius: 2px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  #notes-editor:focus { border-color: var(--gold); box-shadow: 0 0 16px -5px rgba(232,198,90,0.35); }
+  #notes-editor::placeholder { color: rgba(138,122,94,0.45); font-style: italic; }
+  .notes-actions { display: flex; align-items: center; gap: 1rem; margin-top: 0.9rem; }
+  .notes-status { font-size: 0.75rem; font-style: italic; color: var(--poison); min-height: 1em; }
+  .notes-status.err { color: var(--blood-bright); }
+
+  .att-dropzone {
+    position: relative; border: 2px dashed var(--edge); padding: 1.4rem 1rem; text-align: center;
+    cursor: pointer; transition: all 0.2s; border-radius: 2px; margin-bottom: 1rem;
+  }
+  .att-dropzone:hover, .att-dropzone.dragover { border-color: var(--gold); background: rgba(201,162,39,0.05); }
+  .att-dropzone .att-icon { font-size: 1.6rem; display: block; margin-bottom: 0.4rem; }
+  .att-dropzone .att-text { font-size: 0.8rem; color: var(--bone-dim); display: block; }
+  .att-dropzone .att-text b { color: var(--gold-bright); }
+  .att-dropzone .att-formats { font-size: 0.68rem; color: var(--bone-dim); display: block; margin-top: 0.3rem; opacity: 0.7; }
+  .att-dropzone input { display: none; }
+
+  .att-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .att-item {
+    display: flex; align-items: center; gap: 0.6rem;
+    background: var(--stone-2); border: 1px solid var(--edge); padding: 0.55rem 0.7rem;
+    border-radius: 2px; transition: border-color 0.2s;
+  }
+  .att-item:hover { border-color: var(--gold); }
+  .att-item .att-fi { font-size: 1.1rem; flex-shrink: 0; }
+  .att-item a {
+    flex: 1; color: var(--bone-bright); text-decoration: none; font-size: 0.82rem;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .att-item a:hover { color: var(--gold-bright); text-decoration: underline; }
+  .att-item .att-size { font-size: 0.65rem; color: var(--bone-dim); flex-shrink: 0; }
+  .att-item .att-del {
+    background: none; border: none; color: var(--bone-dim); cursor: pointer;
+    font-size: 0.85rem; padding: 0 0.2rem; transition: color 0.2s; flex-shrink: 0;
+  }
+  .att-item .att-del:hover { color: var(--blood-bright); }
+  .att-empty { font-size: 0.75rem; font-style: italic; color: var(--bone-dim); text-align: center; padding: 0.5rem; }
+
+  @media (max-width: 760px) {
+    .notes-layout { grid-template-columns: 1fr; }
+  }
+
   /* ═══════════ Valuta — mynt ═══════════ */
   .currency-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.9rem; }
   .coin {
@@ -494,6 +546,7 @@
     <div class="tab active" data-tab="character">⚔ Karaktär</div>
     <div class="tab" data-tab="inventory">🎒 Utrustning</div>
     <div class="tab" data-tab="currency">🪙 Skattkammare</div>
+    <div class="tab" data-tab="notes">📜 Anteckningar</div>
   </nav>
 
   <!-- ═══════════ KARAKTÄR ═══════════ -->
@@ -613,6 +666,37 @@
     <div id="tx-log"></div>
   </section>
 
+  <!-- ═══════════ ANTECKNINGAR ═══════════ -->
+  <section class="panel" id="panel-notes">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+
+    <div class="notes-layout">
+      <div class="notes-main">
+        <div class="section-title">Fria anteckningar <span class="notes-hint">— skriv fritt om din karaktär, världen, dina mål…</span></div>
+        <textarea id="notes-editor" spellcheck="false" placeholder="# Min karaktär
+
+Skriv fritt här — bakgrundshistoria, mål, relationer, teorier om världen…
+
+Markdown stöds inte i renderingen, men strukturen är din."></textarea>
+        <div class="notes-actions">
+          <button class="rune-btn" onclick="saveNotes()">💾 Spara anteckningar</button>
+          <span class="notes-status" id="notes-status"></span>
+        </div>
+      </div>
+
+      <div class="notes-side">
+        <div class="section-title">Bilagor</div>
+        <div class="att-dropzone" id="att-dropzone">
+          <span class="att-icon">📎</span>
+          <span class="att-text">Dra hit filer eller <b>klicka</b></span>
+          <span class="att-formats">.pdf · .md · .txt</span>
+          <input type="file" id="att-input" multiple accept=".pdf,.md,.txt">
+        </div>
+        <div class="att-list" id="att-list"></div>
+      </div>
+    </div>
+  </section>
+
 </div>
 
 <div class="toast" id="toast"></div>
@@ -633,6 +717,7 @@ const state = {
   currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 },
   transactions: [],
   world: {},
+  attachments: [],
 };
 
 // ═══════════════════════════════════════
@@ -648,6 +733,7 @@ const state = {
     state.currency     = Object.assign({ pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 }, raw.currency);
     state.transactions = Array.isArray(raw.transactions) ? raw.transactions : [];
     state.world        = raw.world || {};
+    state.attachments  = Array.isArray(raw.attachments) ? raw.attachments : [];
     renderAll();
     document.getElementById('loading').style.display = 'none';
   } catch (e) {
@@ -682,6 +768,8 @@ function renderAll() {
   renderInventory();
   renderCurrency();
   renderTransactions();
+  renderNotes();
+  renderAttachments();
 }
 
 // ═══════════════════════════════════════
@@ -741,6 +829,104 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
   });
 });
+
+// ═══════════════════════════════════════
+// ANTECKNINGAR — fria noteringar om karaktären
+// ═══════════════════════════════════════
+let notesDirty = false;
+const notesEditor = document.getElementById('notes-editor');
+const notesStatus = document.getElementById('notes-status');
+
+notesEditor.addEventListener('input', () => { notesDirty = true; notesStatus.textContent = ''; });
+
+function renderNotes() {
+  notesEditor.value = state.character.notes || '';
+  notesDirty = false;
+}
+
+async function saveNotes() {
+  SFX.click();
+  try {
+    await API.updateCharacter({ notes: notesEditor.value });
+    state.character.notes = notesEditor.value;
+    notesDirty = false;
+    notesStatus.classList.remove('err');
+    notesStatus.textContent = '✓ Sparat';
+    setTimeout(() => { if (!notesDirty) notesStatus.textContent = ''; }, 2000);
+  } catch (e) {
+    notesStatus.classList.add('err');
+    notesStatus.textContent = '⚠ Kunde inte spara: ' + (e.message || 'okänt fel');
+  }
+}
+
+// ═══════════════════════════════════════
+// BILAGOR — pdf/md/txt som klickbara länkar
+// ═══════════════════════════════════════
+const ATT_ICONS = { '.pdf': '📕', '.md': '📄', '.txt': '📄' };
+
+function fmtSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function renderAttachments() {
+  const list = document.getElementById('att-list');
+  const atts = state.attachments || [];
+  if (atts.length === 0) {
+    list.innerHTML = '<div class="att-empty">Inga bilagor ännu.</div>';
+    return;
+  }
+  list.innerHTML = atts.map(a => `
+    <div class="att-item">
+      <span class="att-fi">${ATT_ICONS[a.ext] || '📄'}</span>
+      <a href="${API.attachmentUrl(a.id)}" target="_blank" rel="noopener" title="Öppna ${a.name}">${a.name}</a>
+      <span class="att-size">${fmtSize(a.size)}</span>
+      <button class="att-del" onclick="deleteAttachment('${a.id}')" title="Ta bort">✕</button>
+    </div>`).join('');
+}
+
+async function deleteAttachment(attId) {
+  SFX.click();
+  try {
+    await API.deleteAttachment(attId);
+    state.attachments = (state.attachments || []).filter(a => a.id !== attId);
+    renderAttachments();
+    toast('🗑️ Bilaga borttagen');
+  } catch (e) {
+    toast('⚠ ' + (e.message || 'Kunde inte ta bort bilagan'));
+  }
+}
+
+// Dropzone-hantering
+const attDropzone = document.getElementById('att-dropzone');
+const attInput = document.getElementById('att-input');
+
+attDropzone.addEventListener('click', () => attInput.click());
+['dragenter', 'dragover'].forEach(ev => attDropzone.addEventListener(ev, e => { e.preventDefault(); attDropzone.classList.add('dragover'); }));
+['dragleave', 'drop'].forEach(ev => attDropzone.addEventListener(ev, e => { e.preventDefault(); attDropzone.classList.remove('dragover'); }));
+attDropzone.addEventListener('drop', e => { uploadFiles(e.dataTransfer.files); });
+attInput.addEventListener('change', e => { uploadFiles(e.target.files); attInput.value = ''; });
+
+async function uploadFiles(fileList) {
+  const ALLOWED = ['.pdf', '.md', '.txt'];
+  for (const f of fileList) {
+    const ext = '.' + f.name.split('.').pop().toLowerCase();
+    if (!ALLOWED.includes(ext)) {
+      toast('⚠ ' + f.name + ' — endast .pdf, .md och .txt tillåts');
+      continue;
+    }
+    try {
+      const { attachment } = await API.uploadAttachment(f);
+      if (!state.attachments) state.attachments = [];
+      state.attachments.push(attachment);
+      renderAttachments();
+      toast('📎 ' + f.name + ' uppladdad');
+    } catch (e) {
+      toast('⚠ Kunde inte ladda upp ' + f.name + ': ' + (e.message || 'okänt fel'));
+    }
+  }
+}
 
 // ═══════════════════════════════════════
 // TOAST

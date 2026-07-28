@@ -166,6 +166,23 @@ const API = (() => {
       return req('/api/campaign/character', { method: 'PATCH', body: JSON.stringify(data) });
     },
 
+    // ── Bilagor (pdf/md/txt) ──
+    async uploadAttachment(file) {
+      if (MOCK) throw new Error('Ej i mock-läge');
+      const fd = new FormData();
+      fd.append('file', file);
+      return req('/api/campaign/attachments', { method: 'POST', body: fd });
+    },
+
+    attachmentUrl(attId) {
+      return MOCK ? null : BASE + '/api/campaign/attachments/' + attId;
+    },
+
+    async deleteAttachment(attId) {
+      if (MOCK) throw new Error('Ej i mock-läge');
+      return req('/api/campaign/attachments/' + attId, { method: 'DELETE' });
+    },
+
     // ── Transkript (senaste meddelandena) ──
     async getTranscript() {
       if (MOCK) {

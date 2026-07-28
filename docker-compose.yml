@@ -1,0 +1,27 @@
+# ═══════════════════════════════════════
+# Mörkrets Rike — Docker Compose
+# ═══════════════════════════════════════
+# Starta: docker compose up -d
+# Loggar: docker compose logs -f
+# Stoppa: docker compose down
+
+services:
+  morkrets-rike:
+    build: .
+    container_name: morkrets-rike
+    restart: unless-stopped
+    ports:
+      - "8092:8090"
+    volumes:
+      # Kampanjdata + användare persistas
+      - ./backend/data:/app/backend/data
+    env_file:
+      - ./backend/.env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8090
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8090/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

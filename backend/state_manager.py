@@ -1,0 +1,226 @@
+"""
+Mörkrets Rike — Campaign State Manager
+========================================
+JSON-filer under data/campaigns/{user}/{campaign_id}/.
+Varje kampanj: state.json + transcripts/ + summaries/.
+"""
+
+import json
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+
+DATA_DIR = Path(__file__).resolve().parent / "data"
+CAMPAIGNS_DIR = DATA_DIR / "campaigns"
+
+SUMMARY_INTERVAL = 20  # Var 20:e tur → sammanfattning
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _default_state(campaign_id: str, user: str) -> dict:
+    """Tomt kampanjtillstånd enligt state-schema.json."""
+    return {
+        "meta": {
+            "campaign_id": campaign_id,
+            "campaign_name": "Mörkrets Rike",
+            "user": user,
+            "created": _now(),
+            "last_updated": _now(),
+            "turn_count": 0,
+            "session_count": 1,
+        },
+        "character": {},
+        "inventory": [],
+        "currency": {"pp": 0, "gp": 0, "ep": 0, "sp": 0, "cp": 0},
+        "transactions": [],
+        "npcs": [],
+        "quests": [],
+        "world": {
+            "current_location": "",
+            "visited_locations": [],
+            "time": "",
+            "weather": "",
+        },
+        "lore": [],
+        "locations": [],
+        "items": [],
+        "images": [],
+    }
+
+
+class CampaignStore:
+    """Hanterar en användares kampanjer på disk."""
+
+    def __init__(self):
+        CAMPAIGNS_DIR.mkdir(parents=True, exist_ok=True)
+
+    def _user_dir(self, user: str) -> Path:
+        return CAMPAIGNS_DIR / user
+
+    def _campaign_dir(self, user: str, campaign_id: str) -> Path:
+        return self._user_dir(user) / campaign_id
+
+    def _state_path(self, user: str, campaign_id: str) -> Path:
+        return self._campaign_dir(user, campaign_id) / "state.json"
+
+    def _transcripts_dir(self, user: str, campaign_id: str) -> Path:
+        return self._campaign_dir(user, campaign_id) / "transcripts"
+
+    def _summaries_dir(self, user: str, campaign_id: str) -> Path:
+        return self._campaign_dir(user, campaign_id) / "summaries"
+
+    # ── CRUD ──
+
+    def create(self, user: str) -> dict:
+        """Skapa ny kampanj. Returnerar state."""
+        campaign_id = uuid.uuid4().hex[:12]
+        cdir = self._campaign_dir(user, campaign_id)
+        cdir.mkdir(parents=True, exist_ok=True)
+        self._transcripts_dir(user, campaign_id).mkdir(exist_ok=True)
+        self._summaries_dir(user, campaign_id).mkdir(exist_ok=True)
+
+        state = _default_state(campaign_id, user)
+        self.save(state)
+        return state
+
+    def get(self, user: str) -> dict | None:
+        """Hämta användarens aktiva kampanj (senast uppdaterad)."""
+        udir = self._user_dir(user)
+        if not udir.exists():
+            return None
+        # Hitta alla state.json, välj den med högst turn_count / senast uppdaterad
+        candidates = []
+        for cdir in udir.iterdir():
+            sp = cdir / "state.json"
+            if sp.exists():
+                try:
+                    with open(sp) as f:
+                        state = json.load(f)
+                    candidates.append(state)
+                except (json.JSONDecodeError, OSError):
+                    continue
+        if not candidates:
+            return None
+        candidates.sort(key=lambda s: s["meta"].get("last_updated", ""), reverse=True)
+        return candidates[0]
+
+    def delete(self, user: str) -> bool:
+        """Radera alla kampanjer för användaren. Returnerar True om något raderades."""
+        import shutil
+        udir = self._user_dir(user)
+        if not udir.exists():
+            return False
+        shutil.rmtree(udir)
+        return True
+
+    def save(self, state: dict) -> None:
+        """Spara state till disk."""
+        user = state["meta"]["user"]
+        cid = state["meta"]["campaign_id"]
+        state["meta"]["last_updated"] = _now()
+        sp = self._state_path(user, cid)
+        sp.parent.mkdir(parents=True, exist_ok=True)
+        with open(sp, "w") as f:
+            json.dump(state, f, ensure_ascii=False, indent=2)
+
+    # ── Transcript ──
+
+    def append_message(self, state: dict, role: str, content: str) -> dict:
+        """Lägg till meddelande i transcript. Uppdaterar turn_count vid user-msg."""
+        user = state["meta"]["user"]
+        cid = state["meta"]["campaign_id"]
+        tdir = self._transcripts_dir(user, cid)
+        tdir.mkdir(parents=True, exist_ok=True)
+
+        session = state["meta"].get("session_count", 1)
+        tfile = tdir / f"session-{session:03d}.jsonl"
+
+        entry = {"role": role, "content": content, "ts": _now()}
+        with open(tfile, "a") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+        if role == "user":
+            state["meta"]["turn_count"] = state["meta"].get("turn_count", 0) + 1
+
+        return state
+
+    def load_transcript(self, state: dict, last_n: int = 20) -> list[dict]:
+        """Läs de senaste N meddelandena från transcript."""
+        user = state["meta"]["user"]
+        cid = state["meta"]["campaign_id"]
+        tdir = self._transcripts_dir(user, cid)
+        if not tdir.exists():
+            return []
+
+        entries = []
+        for tfile in sorted(tdir.glob("session-*.jsonl")):
+            with open(tfile) as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        try:
+                            entries.append(json.loads(line))
+                        except json.JSONDecodeError:
+                            continue
+        return entries[-last_n:]
+
+    # ── Summaries ──
+
+    def maybe_summarize(self, state: dict) -> bool:
+        """Returnerar True om turn_count är en multipel av SUMMARY_INTERVAL."""
+        tc = state["meta"].get("turn_count", 0)
+        return tc > 0 and tc % SUMMARY_INTERVAL == 0
+
+    def save_summary(self, state: dict, summary_text: str) -> None:
+        """Spara sammanfattning till summaries/."""
+        user = state["meta"]["user"]
+        cid = state["meta"]["campaign_id"]
+        sdir = self._summaries_dir(user, cid)
+        sdir.mkdir(parents=True, exist_ok=True)
+
+        tc = state["meta"].get("turn_count", 0)
+        sfile = sdir / f"summary-turn-{tc:04d}.json"
+        with open(sfile, "w") as f:
+            json.dump(
+                {"turn": tc, "text": summary_text, "created": _now()},
+                f,
+                ensure_ascii=False,
+                indent=2,
+            )
+
+    def load_summaries(self, state: dict, last_n: int = 3) -> list[dict]:
+        """Läs de senaste N sammanfattningarna."""
+        user = state["meta"]["user"]
+        cid = state["meta"]["campaign_id"]
+        sdir = self._summaries_dir(user, cid)
+        if not sdir.exists():
+            return []
+        files = sorted(sdir.glob("summary-*.json"))
+        results = []
+        for sf in files[-last_n:]:
+            try:
+                with open(sf) as f:
+                    results.append(json.load(f))
+            except (json.JSONDecodeError, OSError):
+                continue
+        return results
+
+    # ── Export helpers ──
+
+    def get_campaign_dir(self, state: dict) -> Path:
+        user = state["meta"]["user"]
+        cid = state["meta"]["campaign_id"]
+        return self._campaign_dir(user, cid)
+
+    def get_transcripts_dir(self, state: dict) -> Path:
+        user = state["meta"]["user"]
+        cid = state["meta"]["campaign_id"]
+        return self._transcripts_dir(user, cid)
+
+    def get_summaries_dir(self, state: dict) -> Path:
+        user = state["meta"]["user"]
+        cid = state["meta"]["campaign_id"]
+        return self._summaries_dir(user, cid)

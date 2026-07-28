@@ -257,6 +257,10 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// Auth-guard — omdirigera till porten om ej inloggad
+if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
+</script>
+<script>
 // ═══════════════════════════════════════
 // ARKETYPER — klickbara mallar
 // ═══════════════════════════════════════

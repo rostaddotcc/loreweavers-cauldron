@@ -90,6 +90,22 @@ Ingen bildGENERERING i v1 — bara bildANALYS.
 - `/rulla 1d20+4` → inline tärningskast med resultat
 - DM:n kan begära kast → systemmeddelande med resultat
 
+### DM-tankar (statusindikator)
+
+Medan DM:n "tänker" visas en roterande runspinner + atmosfärisk fras.
+Fraserna roterar var 2.5:e sekund med mjuk fade. Kategorier:
+
+| Kategori | När | Exempel |
+|----------|-----|---------|
+| `narrate` | DM skriver narration | "🐉 Väver berättelsen…" |
+| `memory` | DM söker i tidigare konversationer/sammanfattningar | "🕰️ Tittar bakåt i tiden…" |
+| `rules` | Regel-oraklet svarar | "⚖️ Rådgör med reglerna…" |
+| `npc` | NPC talar | "🎭 Lånar en annans röst…" |
+| `world` | Världsbyggande/import | "🗺️ Ritar världen på nytt…" |
+
+Backend kan skicka en specifik kategori i svaret: `{ thought: 'memory' }`
+→ frontend visar minnes-fraserna medan context byggs innan LLM-anropet.
+
 ---
 
 ## Export (beslutat)

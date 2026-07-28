@@ -188,16 +188,31 @@
   .msg.system .box .crit { color: var(--gold-bright); text-shadow: 0 0 10px rgba(232,198,90,0.7); font-weight: 700; }
   .msg.system .box .fail { color: var(--blood-bright); text-shadow: 0 0 10px rgba(212,58,77,0.6); font-weight: 700; }
 
-  /* Typing indicator */
-  .typing { display: none; align-items: center; gap: 0.6rem; padding: 0 1.6rem 0.6rem; color: var(--bone-dim); font-size: 0.78rem; font-style: italic; }
-  .typing.show { display: flex; }
-  .typing .dots span {
-    display: inline-block; width: 5px; height: 5px; border-radius: 50%;
-    background: var(--gold); margin: 0 2px; animation: bounce 1.2s infinite;
+  /* ── DM-tankar (statusindikator) ── */
+  .dm-status { display: none; align-items: center; gap: .8rem; padding: .3rem 1.6rem .9rem; }
+  .dm-status.show { display: flex; }
+  .rune-spinner {
+    width: 24px; height: 24px; flex-shrink: 0; position: relative;
+    border: 1px dashed var(--gold); border-radius: 50%;
+    animation: rune-spin 3.2s linear infinite;
   }
-  .typing .dots span:nth-child(2) { animation-delay: 0.15s; }
-  .typing .dots span:nth-child(3) { animation-delay: 0.3s; }
-  @keyframes bounce { 0%,60%,100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-5px); opacity: 1; } }
+  .rune-spinner::before {
+    content: ''; position: absolute; inset: 4px; border-radius: 50%;
+    border: 1px solid rgba(139,95,212,.4);
+    animation: rune-spin 2.1s linear infinite reverse;
+  }
+  .rune-spinner::after {
+    content: ''; position: absolute; top: -3px; left: 50%; width: 5px; height: 5px;
+    background: var(--gold-bright); border-radius: 50%; transform: translateX(-50%);
+    box-shadow: 0 0 8px var(--gold-bright);
+  }
+  @keyframes rune-spin { to { transform: rotate(360deg); } }
+  .dm-status .thought {
+    font-style: italic; color: var(--bone-dim); font-size: .84rem;
+    transition: opacity .35s, transform .35s;
+    text-shadow: 0 0 12px rgba(139,95,212,.25);
+  }
+  .dm-status .thought.fade { opacity: 0; transform: translateY(4px); }
 
   /* ── Input ── */
   .input-area {
@@ -355,9 +370,9 @@
   <main class="main">
     <div class="chat-scroll" id="chat"></div>
 
-    <div class="typing" id="typing">
-      <span id="typing-who">Dungeon Master</span> väver berättelsen
-      <span class="dots"><span></span><span></span><span></span></span>
+    <div class="dm-status" id="dm-status">
+      <div class="rune-spinner"></div>
+      <span class="thought" id="thought-text">🐉 Väver berättelsen…</span>
     </div>
 
     <div class="input-area">
@@ -393,6 +408,10 @@
 <div class="toast" id="toast"></div>
 
 <script src="sfx.js"></script>
+<script>
+// Auth-guard — omdirigera till porten om ej inloggad
+if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
+</script>
 <script>
 // ═══════════════════════════════════════
 // NPC REGISTRY — färg + ikon per NPC
@@ -505,13 +524,78 @@ function playScript() {
   }, 900 + Math.random() * 800);
 }
 
+// ═══════════════════════════════════════
+// DM-TANKAR — roterande statusfraser
+// ═══════════════════════════════════════
+// Olika "tankar" beroende på vad DM:n gör. Backend kan skicka
+// en specifik fas via { thought: '...' } i svaret.
+const THOUGHTS = {
+  narrate: [
+    '🐉 Väver berättelsen…',
+    '🕯️ Låter skuggorna tala…',
+    '🌫️ Målar dimman över dalen…',
+    '📜 Bläddrar i ödets bok…',
+    '🎭 Visar fram nästa scen…',
+  ],
+  memory: [
+    '🕰️ Tittar bakåt i tiden…',
+    '📖 Bläddrar i minnets hallar…',
+    '🔮 Söker i gamla samtal…',
+    '🗝️ Låser upp bortglömda minnen…',
+    '🌒 Gräver i det som varit…',
+  ],
+  rules: [
+    '⚖️ Rådgör med reglerna…',
+    '📚 Slår upp i domarens bok…',
+    '🎲 Väger tärningarnas dom…',
+  ],
+  npc: [
+    '🎭 Lånar en annans röst…',
+    '🗣️ Viskar genom en främling…',
+    '👁️ Ser genom andras ögon…',
+  ],
+  world: [
+    '🗺️ Ritar världen på nytt…',
+    '🏔️ Reser berg och dalar…',
+    '🌑 Lyssnar till mörkret…',
+  ],
+};
+
+let thoughtTimer = null;
+let thoughtIdx = 0;
+let currentThoughts = THOUGHTS.narrate;
+
+function showThoughts(kind = 'narrate') {
+  currentThoughts = THOUGHTS[kind] || THOUGHTS.narrate;
+  thoughtIdx = Math.floor(Math.random() * currentThoughts.length);
+  const el = document.getElementById('thought-text');
+  el.textContent = currentThoughts[thoughtIdx];
+  el.classList.remove('fade');
+  document.getElementById('dm-status').classList.add('show');
+
+  // Rotera fras var 2.5:e sekund (mjuk fade)
+  clearInterval(thoughtTimer);
+  thoughtTimer = setInterval(() => {
+    el.classList.add('fade');
+    setTimeout(() => {
+      thoughtIdx = (thoughtIdx + 1) % currentThoughts.length;
+      el.textContent = currentThoughts[thoughtIdx];
+      el.classList.remove('fade');
+    }, 350);
+  }, 2500);
+}
+
+function hideThoughts() {
+  clearInterval(thoughtTimer);
+  document.getElementById('dm-status').classList.remove('show');
+}
+
+// Bakåtkompatibilitet med gammal demo-kod
 function showTyping(who) {
-  document.getElementById('typing-who').textContent = who;
-  document.getElementById('typing').classList.add('show');
+  const kind = who === 'Dungeon Master' ? 'narrate' : 'npc';
+  showThoughts(kind);
 }
-function hideTyping() {
-  document.getElementById('typing').classList.remove('show');
-}
+function hideTyping() { hideThoughts(); }
 
 setTimeout(playScript, 800);
 
@@ -599,14 +683,18 @@ function askOracle() {
   qEl.textContent = q;
   log.appendChild(qEl);
 
+  // Oraklet "tänker" medan det söker i reglerna
+  showThoughts('rules');
+
   setTimeout(() => {
+    hideThoughts();
     const key = Object.keys(oracleAnswers).find(k => q.toLowerCase().includes(k)) || 'default';
     const aEl = document.createElement('div');
     aEl.className = 'oracle-msg a';
     aEl.textContent = oracleAnswers[key];
     log.appendChild(aEl);
     log.scrollTop = log.scrollHeight;
-  }, 700);
+  }, 1400);
   log.scrollTop = log.scrollHeight;
 }
 

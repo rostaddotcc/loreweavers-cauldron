@@ -223,6 +223,10 @@
 
 <script src="sfx.js"></script>
 <script>
+// Auth-guard — omdirigera till porten om ej inloggad
+if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
+</script>
+<script>
 // ═══════════════════════════════════════
 // NPC-REGISTRY — i produktion: campaign state (JSON)
 // ═══════════════════════════════════════

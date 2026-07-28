@@ -48,16 +48,34 @@ dnd-llm/
 
 ## 🚀 Kom igång
 
+### Docker (rekommenderat)
+
+```bash
+# 1. Skapa .env med dina API-nycklar
+cp backend/.env.example backend/.env
+# Redigera backend/.env — fyll i DASHSCOPE_API_KEY etc.
+
+# 2. Starta
+docker compose up -d
+
+# 3. Öppna
+# → http://localhost:8092/login.html
+```
+
+**Port: 8092** (8090=beszel, 8091=upptagen, 8096=jellyfin)
+
+Admin-konto: `admin` / `rostad2026` (ändra i `backend/.env`)
+
+### Utan Docker
+
 ```bash
 # Frontend — öppna direkt i webbläsaren
 cd frontend && python3 -m http.server 8090
-# → http://localhost:8090/login.html
 
-# Backend (kommer)
-cp backend/.env.example backend/.env   # fyll i API-nycklar
+# Backend
+cd backend && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/uvicorn main:app --host 0.0.0.0 --port 8090
 ```
-
-Demo-inloggning: `rostad` / `drake2026`
 
 ## 🔐 Säkerhet
 

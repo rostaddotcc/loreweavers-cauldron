@@ -63,6 +63,16 @@ MODELS: dict[str, ModelConfig] = {
         supports_vision=False,
     ),
 
+    "qwen3.6-flash": ModelConfig(
+        model_id="qwen3.6-flash",
+        display_name="Qwen 3.6 Flash (snabb)",
+        provider="dashscope",
+        api_model="qwen3.6-flash",
+        base_url=os.getenv("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
+        api_key_env="DASHSCOPE_API_KEY",
+        supports_vision=False,
+    ),
+
     # ── MiMo (Xiaomi) ──
     "mimo-v2": ModelConfig(
         model_id="mimo-v2",

@@ -6,6 +6,7 @@ LLM-driven D&D Dungeon Master. Alla endpoints under /api/.
 
 import io
 import json
+import os
 import re
 import zipfile
 from datetime import datetime, timezone
@@ -21,6 +22,7 @@ from pydantic import BaseModel
 from auth import create_token, load_users, verify_password, verify_token
 from dice import roll as dice_roll
 from models import DM_SYSTEM_PROMPT, get_api_key, get_model, list_models_for_frontend
+from atmosphere import build_art_prompt, detect_environments
 from state_manager import CampaignStore
 
 app = FastAPI(title="Mörkrets Rike", version="1.0.0")
@@ -83,6 +85,9 @@ app.add_middleware(
 store = CampaignStore()
 
 COOKIE_NAME = "morkrets_token"
+
+# Atmosfär-subagent: snabb modell för ASCII-art
+ATMOSPHERE_MODEL = os.getenv("ATMOSPHERE_MODEL", "qwen3.6-flash")
 
 
 # ═══════════════════════════════════════
@@ -385,6 +390,26 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     # Parsa NPCs och kastbegäran ur svaret
     reply, new_npcs = _parse_npcs(reply)
     reply, roll_requests = _parse_roll_requests(reply)
+
+    # Atmosfär-subagent: generera ASCII-art om miljön triggar
+    ascii_art = None
+    environments = detect_environments(reply)
+    if environments:
+        try:
+            art_prompt = build_art_prompt(environments[0])
+            ascii_art = await _call_llm(
+                ATMOSPHERE_MODEL,
+                [{"role": "user", "content": art_prompt}],
+                temperature=0.9,
+                max_tokens=600,
+            )
+            ascii_art = ascii_art.strip()
+            if ascii_art.startswith("```"):
+                ascii_art = re.sub(r"^```[a-z]*\n?", "", ascii_art)
+                ascii_art = re.sub(r"\n?```$", "", ascii_art)
+            ascii_art = ascii_art.strip()
+        except Exception:
+            ascii_art = None
     for npc in new_npcs:
         existing = {n.get("name", "").lower() for n in state.get("npcs", [])}
         if npc["name"].lower() not in existing:
@@ -424,6 +449,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         "summary_generated": summary_generated,
         "new_npcs": new_npcs,
         "roll_requests": roll_requests,
+        "ascii_art": ascii_art,
     }
 
 

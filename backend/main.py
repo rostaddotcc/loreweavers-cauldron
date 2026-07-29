@@ -99,6 +99,15 @@ import random
 NPC_PATTERN = re.compile(r'\[NPC:([^|]+)\|([^|]+)\|([^\]]+)\]')
 KAST_PATTERN = re.compile(r'\[KAST:\s*([^\]|]+)(?:\|([^\]]+))?\]')
 
+# Säkerhetsnät: DM skrev "rulla tärningen" i PROSA men glömde [KAST:]-taggen.
+# Utan taggen spawnas ingen klickbar tärning → spelaren fastnar. Vi känner av
+# uppmaningsfraser och auto-spawnar en 1d20 så spelet aldrig stannar.
+PROSE_ROLL_PATTERN = re.compile(
+    r'(rulla (en |din )?tärning|slå (en |din )?tärning|kasta (en |din )?tärning|'
+    r'gör ett (tärnings)?slag|låt tärning\w* avgöra|tärning\w* avgör)',
+    re.IGNORECASE,
+)
+
 # Nyckelord som indikerar en riskfylld handling → DM borde begära kast
 ACTION_KEYWORDS = re.compile(
     r'\b(attackerar?|slår|hugger|skjuter|kastar|smyger|klättrar|hoppar|'
@@ -1421,6 +1430,14 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         logger.info("🎭 %d ny(a) NPC: %s", len(new_npcs), ", ".join(n["name"] for n in new_npcs))
     if roll_requests:
         logger.info("🎲 %d kast begärt: %s", len(roll_requests), ", ".join(r["notation"] for r in roll_requests))
+
+    # ── Säkerhetsnät: prosa-kast utan [KAST:]-tagg ──
+    # Om DM skrev "Rulla tärningen" i prosa men glömde taggen spawnas ingen
+    # klickbar tärning och spelaren fastnar. Auto-spawna en 1d20 så spelet
+    # aldrig stannar. (Taggade kast har redan rensats ur reply av _parse_roll_requests.)
+    if not roll_requests and PROSE_ROLL_PATTERN.search(reply):
+        roll_requests = [{"notation": "1d20", "label": "Tärningsslag"}]
+        logger.warning("🎲 Prosa-kast upptäckt (ingen [KAST:]-tagg) → auto-spawnar 1d20")
 
     # Lägg till nya NPCs FÖRE taggparsning (så NPC_DÖD hittar dem)
     for npc in new_npcs:

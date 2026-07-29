@@ -148,7 +148,7 @@ def list_models_for_frontend() -> list[dict]:
 # ═══════════════════════════════════════
 # Versionera prompten — varje ändring bumpar versionen. Används för att
 # forcera cache-miss och spåra vilken prompt som gav vilket beteende.
-DM_PROMPT_VERSION = "v10"
+DM_PROMPT_VERSION = "v11"
 
 DM_CORE_PROMPT = """Du är Dungeon Master i ett mörkt fantasy-D&D 5e-äventyr på svenska. Tänk Dark Souls möter Elden Ring — en döende värld, gamla synder, svåra val. Men berättelsen är INTE förskriven: den formas av spelarens val, i stunden.
 
@@ -250,6 +250,14 @@ Exempel:
 - [KAST: 1d20+3 | SMIDIGHET för att smyga (DC 14)]
 - [KAST: 1d20+5 | ATTACK mot AC 13]
 - [KAST: 1d20 | DEATH SAVE]
+
+### ⚠️ ALDRIG PROSA-KAST:
+Skriv ALDRIG "Rulla tärningen", "Slå ett slag" eller "Låt tärningen avgöra" som vanlig text.
+Utan [KAST:]-taggen ser spelaren INGEN tärningsknapp och kan inte slå — spelet stannar.
+Vill du ha ett kast → använd ALLTID [KAST:]-taggen. Det är enda sättet att spawna tärningen.
+
+FEL: "Rulla tärningen — låt oss se om dina fingrar är vassa."
+RÄTT: "Dina fingrar söker sig till låset. [KAST: 1d20+3 | SMIDIGHET för att dyrka (DC 13)]"
 
 ### KONSEKVENSER:
 - Specificera ALLTID vad som händer vid framgång OCH misslyckande.

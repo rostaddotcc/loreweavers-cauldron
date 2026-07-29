@@ -710,7 +710,7 @@ async def _call_llm(
     api_key = get_api_key(config)
 
     # Reasoning-modeller behöver mer utrymme (thinking + content)
-    if config.api_model in ("deepseek-v4-flash", "mimo-v2.5", "mimo-v2.5-pro"):
+    if config.api_model in ("deepseek-v4-flash", "mimo-v2.5", "mimo-v2.5-pro", "step-3.7-flash"):
         max_tokens = max(max_tokens, 2048)
 
     headers = {"Content-Type": "application/json"}
@@ -761,7 +761,7 @@ async def _call_llm_with_reasoning(
     api_key = get_api_key(config)
 
     # Reasoning-modeller behöver mer utrymme (thinking + content)
-    if config.api_model in ("deepseek-v4-flash", "mimo-v2.5", "mimo-v2.5-pro"):
+    if config.api_model in ("deepseek-v4-flash", "mimo-v2.5", "mimo-v2.5-pro", "step-3.7-flash"):
         max_tokens = max(max_tokens, 4096)
 
     headers = {"Content-Type": "application/json"}

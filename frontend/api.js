@@ -90,7 +90,8 @@ const API = (() => {
           { id: 'qwen3.7-plus', name: 'Qwen 3.7 Plus', provider: 'dashscope', vision: true, local: false },
           { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro', provider: 'deepseek', vision: false, local: false },
           { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', provider: 'deepseek', vision: false, local: false },
-          { id: 'mimo-v2', name: 'MiMo V2', provider: 'mimo', vision: true, local: false },
+          { id: 'mimo-v2.5', name: 'MiMo 2.5', provider: 'mimo', vision: true, local: false },
+          { id: 'mimo-v2.5-pro', name: 'MiMo 2.5 Pro', provider: 'mimo', vision: true, local: false },
           { id: 'ollama:qwen3:8b', name: 'Qwen3 8B (lokal)', provider: 'ollama', vision: false, local: true },
         ];
       }

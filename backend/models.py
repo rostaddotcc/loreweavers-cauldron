@@ -74,12 +74,21 @@ MODELS: dict[str, ModelConfig] = {
     ),
 
     # ── MiMo (Xiaomi) ──
-    "mimo-v2": ModelConfig(
-        model_id="mimo-v2",
-        display_name="MiMo V2",
+    "mimo-v2.5": ModelConfig(
+        model_id="mimo-v2.5",
+        display_name="MiMo 2.5",
         provider="mimo",
-        api_model="mimo-v2",
-        base_url=os.getenv("MIMO_BASE_URL", "https://api.mimo.xiaomi.com/v1"),
+        api_model="mimo-v2.5",
+        base_url=os.getenv("MIMO_BASE_URL", "https://api.xiaomimimo.com/v1"),
+        api_key_env="MIMO_API_KEY",
+        supports_vision=True,
+    ),
+    "mimo-v2.5-pro": ModelConfig(
+        model_id="mimo-v2.5-pro",
+        display_name="MiMo 2.5 Pro",
+        provider="mimo",
+        api_model="mimo-v2.5-pro",
+        base_url=os.getenv("MIMO_BASE_URL", "https://api.xiaomimimo.com/v1"),
         api_key_env="MIMO_API_KEY",
         supports_vision=True,
     ),

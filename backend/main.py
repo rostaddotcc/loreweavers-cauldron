@@ -114,23 +114,8 @@ PROSE_ROLL_PATTERN = re.compile(
 # men glömde [FÖREMÅL:]-taggen. Utan taggen hamnar föremålet aldrig i inventory.
 # VIKTIGT: Endast entydiga GÅVO-/FYND-verb. "ser", "tar", "får" är FÖR vanliga
 # i svensk prosa och fångar meningsfragment ("ser lite besviken ut" → falskt föremål).
-_PROSE_ITEM_STOPWORDS = (
-    r'(?:och|att|som|men|för|med|den|det|en|ett|till|från|av|på|i|vid|'
-    r'lite|rakt|ut|in|upp|ner|när|du|jag|han|hon|dess|sig|bara|redan|'
-    r'mycket|väldigt|fortfarande|här|där|nu|sedan|igen|mot|utan|efter|'
-    r'över|under|mellan|genom|bland|hos|bakom|framför|bredvid|samt|'
-    r'denna|detta|dessa|vilken|vilket|sådan|sånt|allt|alla|ingen|inget)'
-)
-PROSE_ITEM_PATTERN = re.compile(
-    r'(?:ger|räcker|lämnar|överlåter|lånar|skänker|förärar|bjuder|'
-    r'hittar|plockar upp|köper|stjäl|tar emot|mottar|upptäcker|grep|fattar)'
-    r'\s+(?:(?:dig|er|sig)\s+)?'
-    r'(?:en |ett |två |tre |några |ett par )?'
-    r'((?!' + _PROSE_ITEM_STOPWORDS + r'\b)[\wåäöÅÄÖ][\wåäöÅÄÖ\-]{1,19}'
-    r'(?:\s(?!' + _PROSE_ITEM_STOPWORDS + r'\b)[\wåäöÅÄÖ][\wåäöÅÄÖ\-]{1,19}){0,2})'
-    r'(?=\s*[.,;:!?\)]|\s+(?:och|att|som|men|för|med|den|det|till|från|av|på|i|vid|ur|upp|ner|ut|in|mot|utan)\b|$)',
-    re.IGNORECASE,
-)
+# PROSE_ITEM_PATTERN borttagen (v18) — LLM-extraktion i bakgrunden
+# hanterar nu föremål som DM glömde tagga. Regex gav för många falska positiva.
 
 # Nyckelord som indikerar en riskfylld handling → DM borde begära kast
 ACTION_KEYWORDS = re.compile(
@@ -338,22 +323,28 @@ def _parse_mechanical_tags(text: str, state: dict) -> tuple[str, dict, list[dict
             else:
                 effects.append({'type': 'guld_fail', 'value': amount, 'denom': denom, 'msg': msg})
 
-    # FÖREMÅL — lägg till i inventariet
+    # FÖREMÅL — lägg till i inventariet (med deduplicering)
     for m in _MECH_PATTERNS['FÖREMÅL'].finditer(text):
         name = m.group(1).strip()
         item_type = (m.group(2) or 'Annat').strip()
         rarity = (m.group(3) or 'normal').strip()
         inv = state.setdefault('inventory', [])
-        inv.append({
-            'id': f"tag-{len(inv)}",
-            'name': name,
-            'type': item_type,
-            'qty': 1,
-            'weight': 0,
-            'equipped': False,
-            'rarity': rarity,
-            'description': '',
-        })
+        # Deduplicering: samma namn (skiftlägesokänsligt) → qty++
+        existing = next((it for it in inv if it['name'].lower() == name.lower()), None)
+        if existing:
+            existing['qty'] = existing.get('qty', 1) + 1
+            logger.info("📦 Dedup: '%s' → qty=%d", name, existing['qty'])
+        else:
+            inv.append({
+                'id': f"tag-{len(inv)}",
+                'name': name,
+                'type': item_type,
+                'qty': 1,
+                'weight': 0,
+                'equipped': False,
+                'rarity': rarity,
+                'description': '',
+            })
         effects.append({'type': 'föremål', 'value': name})
 
     # QUEST — skapa nytt uppdrag
@@ -1563,15 +1554,67 @@ async def _post_turn_tasks(
     """Körs i bakgrunden EFTER att HTTP-svaret skickats till klienten.
     Faktextraktion, RAG-indexering och sammanfattning — inget av detta
     får någonsin fördröja spelarens upplevelse. Alla fel sväljs tyst."""
-    # 1. Extrahera fakta ur DM-svaret (billig modell)
+    # 1. Extrahera fakta + inventory-ändringar ur DM-svaret (billig modell)
     try:
         async def _extraction_llm(messages: list[dict]) -> str:
             return await _call_llm(EXTRACTION_MODEL, messages, temperature=0.2, max_tokens=800)
-        facts = await extract_facts(reply, player_msg, turn_count, _extraction_llm)
+
+        # Bygg inventory-lista för kontext (så LLM:n inte lägger till duplikat)
+        st = store.get(username)
+        inv_names = []
+        if st:
+            for it in st.get("inventory", []):
+                inv_names.append(f"- {it['name']} (×{it.get('qty', 1)})")
+        inv_list_str = "\n".join(inv_names) if inv_names else "(tomt)"
+
+        facts, inv_changes = await extract_facts(
+            reply, player_msg, turn_count, _extraction_llm,
+            inventory_list=inv_list_str,
+        )
         if facts:
             register = FactRegister(username, campaign_id)
             register.add_facts(facts)
             logger.info("Extraherade %d fakta (tur %d)", len(facts), turn_count)
+
+        # Applicera inventory-ändringar (LLM-baserat säkerhetsnät)
+        if inv_changes and st:
+            inv = st.setdefault("inventory", [])
+            # Namn som redan lagts till via [FÖREMÅL:]-tagg denna tur
+            tag_added = {e["value"].lower() for e in (st.get("meta", {}).get("last_effects", []))
+                         if e.get("type") == "föremål"}
+            for ch in inv_changes:
+                name_lower = ch["name"].lower()
+                if ch["action"] == "add":
+                    # Skippa om taggen redan lade till det
+                    if name_lower in tag_added:
+                        logger.debug("📦 LLM-extraktion skippade '%s' (redan taggad)", ch["name"])
+                        continue
+                    existing = next((it for it in inv if it["name"].lower() == name_lower), None)
+                    if existing:
+                        existing["qty"] = existing.get("qty", 1) + ch["qty"]
+                        logger.info("📦 LLM-dedup: '%s' → qty=%d", ch["name"], existing["qty"])
+                    else:
+                        inv.append({
+                            "id": f"llm-{len(inv)}",
+                            "name": ch["name"],
+                            "type": ch.get("type", "Annat"),
+                            "qty": ch["qty"],
+                            "weight": 0,
+                            "equipped": False,
+                            "rarity": "normal",
+                            "description": "",
+                        })
+                        logger.info("📦 LLM-extraktion lade till '%s'", ch["name"])
+                elif ch["action"] == "remove":
+                    existing = next((it for it in inv if it["name"].lower() == name_lower), None)
+                    if existing:
+                        existing["qty"] = existing.get("qty", 1) - ch["qty"]
+                        if existing["qty"] <= 0:
+                            inv.remove(existing)
+                            logger.info("📦 LLM-extraktion tog bort '%s'", ch["name"])
+                        else:
+                            logger.info("📦 LLM-extraktion minskade '%s' → qty=%d", ch["name"], existing["qty"])
+            store.save(st)
     except Exception as e:
         logger.debug("Faktextraktion hoppade över: %s", e)
 
@@ -1829,27 +1872,9 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
             effects = []
             dm_valid = False
 
-    # ── Säkerhetsnät: prosa-föremål utan [FÖREMÅL:]-tagg ──
-    # Om DM narrerar att spelaren får/hittar/köper något men glömde taggen
-    # hamnar föremålet aldrig i inventory. Auto-extrahera och lägg till.
-    has_item_effect = any(e.get("type") == "föremål" for e in effects)
-    if not has_item_effect:
-        item_match = PROSE_ITEM_PATTERN.search(reply)
-        if item_match:
-            item_name = item_match.group(1).strip()
-            inv = state.setdefault("inventory", [])
-            inv.append({
-                "id": f"prose-{len(inv)}",
-                "name": item_name,
-                "type": "Annat",
-                "qty": 1,
-                "weight": 0,
-                "equipped": False,
-                "rarity": "normal",
-                "description": "",
-            })
-            effects.append({"type": "föremål", "value": item_name})
-            logger.warning("📦 Prosa-föremål upptäckt (ingen [FÖREMÅL:]-tagg) → auto-lade till '%s'", item_name)
+    # ── Prosa-föremål: borttaget (v18) ──
+    # LLM-extraktion i _post_turn_tasks() hanterar nu föremål som DM
+    # glömde tagga — med kontextförståelse istället för regex.
 
     # Tagg-enforcement: spåra om DM använder taggar
     meta = state.setdefault("meta", {})

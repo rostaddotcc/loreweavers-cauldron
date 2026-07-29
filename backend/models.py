@@ -168,7 +168,7 @@ def list_models_for_frontend() -> list[dict]:
 # ═══════════════════════════════════════
 # Versionera prompten — varje ändring bumpar versionen. Används för att
 # forcera cache-miss och spåra vilken prompt som gav vilket beteende.
-DM_PROMPT_VERSION = "v17"
+DM_PROMPT_VERSION = "v18"
 
 DM_CORE_PROMPT = """Du är Dungeon Master i ett D&D 5e-äventyr på svenska. Du är en kreativ, fri berättare — du väljer själv tema, ton, miljö och stämning utifrån vad spelaren vill ha och vad berättelsen kräver. Det kan vara mörkt och hotfullt, ljust och äventyrligt, mystiskt, humoristiskt, episkt — du bestämmer. Berättelsen är INTE förskriven: den formas av spelarens val, i stunden.
 

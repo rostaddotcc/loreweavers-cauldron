@@ -141,13 +141,28 @@ nya, beständiga fakta som påverkar spelvärlden.
 2. Ta bara med NY information — upprepa inte saker som redan är kända.
 3. Inkludera inte mekaniska taggar ([SKADA:n], [XP:n] osv.) i texten.
 4. Sätt confidence 0.9–1.0 för explicita fakta, 0.6–0.8 för underförstådda.
-5. Returnera ENDAST en JSON-array. Ingen markdown, ingen förklaring.
+5. Returnera ENDAST ett JSON-objekt. Ingen markdown, ingen förklaring.
+
+## Inventory-ändringar
+Utöver fakta ska du identifiera om spelaren FÅR eller FÖRLORAR föremål.
+- "add": Spelaren tar emot, hittar, köper, stjäl eller får ett föremål.
+- "remove": Spelaren tappar, ger bort, säljer, förbrukar eller förlorar ett föremål.
+- Ta ENDAST med föremål som faktiskt byter ägare — inte saker som bara nämns.
+- "Du siktar mot flaskan" → NEJ. "Du tar flaskan" → JA.
+- Skippa föremål som redan finns i "Nuvarande inventory" (nedan) om de inte \
+faktiskt ges/tas igen.
+- Ange type (Vapen, Rustning, Dryck, Magisk, Verktyg, Annat) och qty (default 1).
 
 ## Format
-[
-  {"category": "npc", "text": "...", "confidence": 0.9},
-  {"category": "location", "text": "...", "confidence": 0.85}
-]
+{
+  "facts": [
+    {"category": "npc", "text": "...", "confidence": 0.9}
+  ],
+  "inventory_changes": [
+    {"action": "add", "name": "Rostigt svärd", "type": "Vapen", "qty": 1},
+    {"action": "remove", "name": "Torkat kött", "qty": 1}
+  ]
+}
 
 ## Exempel
 
@@ -156,31 +171,43 @@ fräser hon. Bakom henne skymtar du en karta över Gråvakts grottor. \
 [NPC:Borgmästare Hilda|Borgmästare|fiende] [PLATS:Gråvakts grottor]"
 Spelare: "Jag försöker övertala henne att ge oss uppdraget."
 
-→ [
-  {"category": "npc", "text": "Borgmästare Hilda är fientligt inställd till spelaren och litar inte på äventyrare", "confidence": 0.95},
-  {"category": "location", "text": "Gråvakts grottor finns på en karta i borgmästarens rum", "confidence": 0.8},
-  {"category": "relationship", "text": "Borgmästare Hilda är fiende till spelaren", "confidence": 0.95}
-]
+→ {
+  "facts": [
+    {"category": "npc", "text": "Borgmästare Hilda är fientligt inställd till spelaren och litar inte på äventyrare", "confidence": 0.95},
+    {"category": "location", "text": "Gråvakts grottor finns på en karta i borgmästarens rum", "confidence": 0.8},
+    {"category": "relationship", "text": "Borgmästare Hilda är fiende till spelaren", "confidence": 0.95}
+  ],
+  "inventory_changes": []
+}
 
 DM-svar: "Du öppnar kistan och finner ett rostigt svärd och 15 guldmyn. \
 [FÖREMÅL:Rostigt svärd|Vapen|vanlig] [GULD:15]"
 Spelare: "Jag tar svärdet och guldet."
 
-→ [
-  {"category": "item", "text": "Spelaren hittade ett rostigt svärd (vanligt vapen) i en kista", "confidence": 0.95},
-  {"category": "item", "text": "Spelaren plockade upp 15 guldmyn", "confidence": 0.9}
-]
+→ {
+  "facts": [
+    {"category": "item", "text": "Spelaren hittade ett rostigt svärd (vanligt vapen) i en kista", "confidence": 0.95},
+    {"category": "item", "text": "Spelaren plockade upp 15 guldmyn", "confidence": 0.9}
+  ],
+  "inventory_changes": [
+    {"action": "add", "name": "Rostigt svärd", "type": "Vapen", "qty": 1}
+  ]
+}
 
 DM-svar: "Vakten nickar långsamt. 'Jag ska visa dig vägen imorgon bitti, \
 men var här före gryningen.' [NPC_RELATION:Vakten|allierad]"
 Spelare: "Bra, jag vilar här inatt."
 
-→ [
-  {"category": "promise", "text": "Vakten lovade att visa spelaren vägen imorgon före gryningen", "confidence": 0.95},
-  {"category": "relationship", "text": "Vakten är nu allierad med spelaren", "confidence": 0.9}
-]
+→ {
+  "facts": [
+    {"category": "promise", "text": "Vakten lovade att visa spelaren vägen imorgon före gryningen", "confidence": 0.95},
+    {"category": "relationship", "text": "Vakten är nu allierad med spelaren", "confidence": 0.9}
+  ],
+  "inventory_changes": []
+}
 
-Om inga nya fakta finns, returnera en tom array: []
+Om inga nya fakta eller inventory-ändringar finns:
+{"facts": [], "inventory_changes": []}
 """
 
 # User-promptmall — fylls i per anrop
@@ -191,7 +218,10 @@ _EXTRACTION_USER_TEMPLATE = """\
 ## Spelarens handling
 {player_input}
 
-Extrahera fakta som JSON-array:"""
+## Nuvarande inventory
+{inventory_list}
+
+Extrahera fakta och inventory-ändringar som JSON-objekt:"""
 
 
 # ═══════════════════════════════════════
@@ -242,14 +272,53 @@ def _extract_json_array(raw: str) -> list[dict] | None:
     return None
 
 
+def _extract_json_object(raw: str) -> dict | None:
+    """
+    Försök parsa ett JSON-objekt ur LLM-svaret.
+    Hanterar markdown-inpackning, text runt JSON, och bakåtkompatibilitet
+    (ren array → {"facts": [...], "inventory_changes": []}).
+    """
+    cleaned = _strip_markdown_json(raw)
+
+    # Direkt försök
+    try:
+        data = json.loads(cleaned)
+        if isinstance(data, dict):
+            return data
+        # Bakåtkompat: ren array → wrappa
+        if isinstance(data, list):
+            return {"facts": data, "inventory_changes": []}
+    except json.JSONDecodeError:
+        pass
+
+    # Försök hitta första { ... } i texten
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        try:
+            data = json.loads(cleaned[start : end + 1])
+            if isinstance(data, dict):
+                return data
+        except json.JSONDecodeError:
+            pass
+
+    # Fallback: ren array i texten
+    arr = _extract_json_array(raw)
+    if arr is not None:
+        return {"facts": arr, "inventory_changes": []}
+
+    return None
+
+
 async def extract_facts(
     dm_reply: str,
     player_input: str,
     turn: int,
     model_call_fn: ModelCallFn,
-) -> list[Fact]:
+    inventory_list: str = "(tomt)",
+) -> tuple[list[Fact], list[dict]]:
     """
-    Extrahera strukturerade fakta ur ett DM-svar + spelarhandling.
+    Extrahera strukturerade fakta + inventory-ändringar ur ett DM-svar.
 
     Anropar model_call_fn (en async callable som tar messages-lista och
     returnerar str) med extraheringsprompten. Parsar JSON, validerar
@@ -261,12 +330,14 @@ async def extract_facts(
         turn: Aktuellt turnummer.
         model_call_fn: Async funktion (messages) -> str, tillhandahålls
                        av anroparen (t.ex. en wrapper kring httpx + billig modell).
+        inventory_list: Formaterad lista av nuvarande inventory (för dedup-kontext).
 
     Returns:
-        Lista av validerade Fact-objekt (kan vara tom).
+        Tuple: (lista av validerade Fact-objekt, lista av inventory-change dicts).
     """
     user_msg = _EXTRACTION_USER_TEMPLATE.format(
-        turn=turn, dm_reply=dm_reply, player_input=player_input
+        turn=turn, dm_reply=dm_reply, player_input=player_input,
+        inventory_list=inventory_list,
     )
     messages = [
         {"role": "system", "content": EXTRACTION_SYSTEM_PROMPT},
@@ -281,9 +352,9 @@ async def extract_facts(
             logger.exception("LLM-anrop misslyckades (försök %d)", attempt + 1)
             if attempt == 0:
                 continue
-            return []
+            return [], []
 
-        parsed = _extract_json_array(raw_response)
+        parsed = _extract_json_object(raw_response)
         if parsed is None:
             logger.warning(
                 "Kunde inte parsa JSON från extrahering (försök %d). "
@@ -299,16 +370,17 @@ async def extract_facts(
                         "role": "user",
                         "content": (
                             "Svaret var inte giltig JSON. "
-                            "Returnera ENDAST en JSON-array, inget annat."
+                            'Returnera ENDAST ett JSON-objekt med "facts" och '
+                            '"inventory_changes", inget annat.'
                         ),
                     }
                 )
                 continue
-            return []
+            return [], []
 
         # Validera varje faktum med Pydantic
         facts: list[Fact] = []
-        for item in parsed:
+        for item in parsed.get("facts", []):
             try:
                 fact = Fact(
                     category=item.get("category", "event"),
@@ -321,15 +393,27 @@ async def extract_facts(
                 logger.debug("Hoppade över ogiltigt faktum: %s", item)
                 continue
 
-        logger.info(
-            "Extraherade %d fakta från tur %d (försök %d)",
-            len(facts),
-            turn,
-            attempt + 1,
-        )
-        return facts
+        # Validera inventory-ändringar
+        inv_changes: list[dict] = []
+        for ch in parsed.get("inventory_changes", []):
+            action = ch.get("action", "").lower()
+            name = ch.get("name", "").strip()
+            if action not in ("add", "remove") or not name:
+                continue
+            inv_changes.append({
+                "action": action,
+                "name": name,
+                "type": ch.get("type", "Annat"),
+                "qty": max(1, int(ch.get("qty", 1))),
+            })
 
-    return []  # Nåbar bara om båda försöken misslyckas
+        logger.info(
+            "Extraherade %d fakta + %d inventory-ändringar från tur %d (försök %d)",
+            len(facts), len(inv_changes), turn, attempt + 1,
+        )
+        return facts, inv_changes
+
+    return [], []  # Nåbar bara om båda försöken misslyckas
 
 
 # ═══════════════════════════════════════

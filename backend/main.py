@@ -10,6 +10,7 @@ import io
 import json
 import logging
 import os
+import random
 import re
 import time
 import uuid
@@ -96,7 +97,6 @@ app = FastAPI(title="Mörkrets Rike", version="1.0.0")
 # ═══════════════════════════════════════
 # NPC-parsning + Äventyrsöppningar
 # ═══════════════════════════════════════
-import random
 
 NPC_PATTERN = re.compile(r'\[NPC:([^|]+)\|([^|]+)\|([^\]]+)\]')
 KAST_PATTERN = re.compile(r'\[KAST:\s*([^\]|]+)(?:\|([^\]]+))?\]')
@@ -107,6 +107,20 @@ KAST_PATTERN = re.compile(r'\[KAST:\s*([^\]|]+)(?:\|([^\]]+))?\]')
 PROSE_ROLL_PATTERN = re.compile(
     r'(rulla (en |din )?tärning|slå (en |din )?tärning|kasta (en |din )?tärning|'
     r'gör ett (tärnings)?slag|låt tärning\w* avgöra|tärning\w* avgör)',
+    re.IGNORECASE,
+)
+
+# Säkerhetsnät: DM narrerar att spelaren FÅR/HITTAR/KÖPER ett föremål i prosa
+# men glömde [FÖREMÅL:]-taggen. Utan taggen hamnar föremålet aldrig i inventory.
+# Vi känner av gåvo-/fyndfraser och extraherar föremålsnamnet generiskt.
+# Stoppord exkluderas så vi inte fångar bindeord ("och", "att", "som" ...).
+_PROSE_ITEM_STOPWORDS = r'(?:och|att|som|men|för|med|den|det|en|ett|till|från|av|på|i|vid)'
+PROSE_ITEM_PATTERN = re.compile(
+    r'(?:ger|räcker|lämnar|överlåter|lånar|skänker|förärar|bjuder|'
+    r'hittar|plockar upp|köper|tar|stjäl|får|tar emot|mottar|upptäcker|ser|grep|fattar)'
+    r'\s+(?:(?:dig|er|sig)\s+)?'
+    r'(?:en |ett |två |tre |några |ett par )?'
+    r'((?!' + _PROSE_ITEM_STOPWORDS + r'\b)[\wåäöÅÄÖ][\wåäöÅÄÖ\s\-]{2,29})',
     re.IGNORECASE,
 )
 
@@ -133,14 +147,17 @@ OPENING_STYLES = [
 def _parse_npcs(text: str) -> tuple[str, list[dict]]:
     """Extrahera [NPC:namn|roll|relation]-taggar ur DM-svar."""
     npcs = []
-    for i, m in enumerate(NPC_PATTERN.finditer(text)):
+    for m in NPC_PATTERN.finditer(text):
         name, role, relation = m.group(1).strip(), m.group(2).strip(), m.group(3).strip().lower()
         if relation not in ('allierad', 'neutral', 'fiende', 'okänd'):
             relation = 'okänd'
+        # Hash-baserad färg/ikon: samma NPC får alltid samma färg oavsett
+        # när den dyker upp (istället för att bero på parse-ordning).
+        h = int.from_bytes(name.encode('utf-8'), 'big')
         npcs.append({
             'name': name, 'role': role, 'relation': relation,
-            'color': NPC_COLORS[i % len(NPC_COLORS)],
-            'icon': NPC_ICONS[i % len(NPC_ICONS)],
+            'color': NPC_COLORS[h % len(NPC_COLORS)],
+            'icon': NPC_ICONS[h % len(NPC_ICONS)],
             'notes': '', 'alive': True,
         })
     clean = NPC_PATTERN.sub('', text).strip()
@@ -663,7 +680,8 @@ async def _call_llm_with_reasoning(
     config = get_model(model_id)
     api_key = get_api_key(config)
 
-    if config.api_model in ("deepseek-v4-flash",):
+    # Reasoning-modeller behöver mer utrymme (thinking + content)
+    if config.api_model in ("deepseek-v4-flash", "mimo-v2.5", "mimo-v2.5-pro"):
         max_tokens = max(max_tokens, 4096)
 
     headers = {"Content-Type": "application/json"}
@@ -1048,8 +1066,8 @@ async def add_lore(body: LoreRequest, morkrets_token: str | None = Cookie(None))
         try:
             campaign_id = state["meta"].get("campaign_id", "")
             await rag.index_lore(f"Lore #{len(lore)}", text, payload["sub"], campaign_id)
-        except Exception:
-            pass  # Lore-indexering är inte kritisk
+        except Exception as e:
+            logger.debug("Lore-indexering hoppade över: %s", e)
     store.save(state)
     return {"ok": True, "lore_count": len(lore)}
 
@@ -1428,13 +1446,59 @@ async def _post_turn_tasks(
                 "Max 200 ord.\n\n" + t_text
             )
             summary = await _call_llm(
-                model_id, [{"role": "user", "content": sum_prompt}],
+                EXTRACTION_MODEL, [{"role": "user", "content": sum_prompt}],
                 temperature=0.3, max_tokens=512,
             )
             store.save_summary(st, summary)
             logger.info("Sammanfattning sparad (tur %d)", turn_count)
     except Exception as e:
         logger.debug("Sammanfattning hoppade över: %s", e)
+
+    # 4. Kapitel-sammanfattning (var 5:e scen-sammanfattning, Nivå 2)
+    try:
+        st = store.get(username)
+        if st and store.maybe_chapter(st):
+            scenes = store.load_summaries(st, last_n=5)
+            s_text = "\n\n".join(
+                f"Scen {i + 1}: {s.get('text', '')}"
+                for i, s in enumerate(scenes)
+            )
+            ch_prompt = (
+                "Sammanfatta följande fem scener till ETT kapitel på svenska. "
+                "Fokusera på övergripande händelsebåge, viktiga beslut, NPC-utveckling "
+                "och konsekvenser. Max 300 ord.\n\n" + s_text
+            )
+            chapter_text = await _call_llm(
+                EXTRACTION_MODEL, [{"role": "user", "content": ch_prompt}],
+                temperature=0.3, max_tokens=512, timeout=30,
+            )
+            store.save_chapter_summary(st, chapter_text)
+            logger.info("Kapitel-sammanfattning sparad (tur %d)", turn_count)
+    except Exception as e:
+        logger.debug("Kapitel-sammanfattning hoppade över: %s", e)
+
+    # 5. Kampanjbåge (var 3:e kapitel, Nivå 3)
+    try:
+        st = store.get(username)
+        if st and store.maybe_arc(st):
+            chapters = store.load_chapters(st, last_n=3)
+            c_text = "\n\n".join(
+                f"Kapitel {i + 1}: {c.get('text', '')}"
+                for i, c in enumerate(chapters)
+            )
+            arc_prompt = (
+                "Sammanfatta följande tre kapitel till EN kampanjbåge på svenska. "
+                "Fokusera på den stora berättelsen, huvudkonflikter, allianser och "
+                "hur världen förändrats. Max 400 ord.\n\n" + c_text
+            )
+            arc_text = await _call_llm(
+                EXTRACTION_MODEL, [{"role": "user", "content": arc_prompt}],
+                temperature=0.3, max_tokens=640, timeout=30,
+            )
+            store.save_campaign_arc(st, arc_text)
+            logger.info("Kampanjbåge sparad (tur %d)", turn_count)
+    except Exception as e:
+        logger.debug("Kampanjbåge hoppade över: %s", e)
 
 
 @app.post("/api/chat")
@@ -1600,6 +1664,28 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
             effects = []
             dm_valid = False
 
+    # ── Säkerhetsnät: prosa-föremål utan [FÖREMÅL:]-tagg ──
+    # Om DM narrerar att spelaren får/hittar/köper något men glömde taggen
+    # hamnar föremålet aldrig i inventory. Auto-extrahera och lägg till.
+    has_item_effect = any(e.get("type") == "föremål" for e in effects)
+    if not has_item_effect:
+        item_match = PROSE_ITEM_PATTERN.search(reply)
+        if item_match:
+            item_name = item_match.group(1).strip()
+            inv = state.setdefault("inventory", [])
+            inv.append({
+                "id": f"prose-{len(inv)}",
+                "name": item_name,
+                "type": "Annat",
+                "qty": 1,
+                "weight": 0,
+                "equipped": False,
+                "rarity": "normal",
+                "description": "",
+            })
+            effects.append({"type": "föremål", "value": item_name})
+            logger.warning("📦 Prosa-föremål upptäckt (ingen [FÖREMÅL:]-tagg) → auto-lade till '%s'", item_name)
+
     # Tagg-enforcement: spåra om DM använder taggar
     meta = state.setdefault("meta", {})
     if effects:
@@ -1615,7 +1701,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
 
     # Tärnings-enforcement: begärde DM kast vid riskfylld handling?
     player_action = ACTION_KEYWORDS.search(req.message)
-    dm_requested_roll = bool(roll_requests) or bool(KAST_PATTERN.search(reply))
+    dm_requested_roll = bool(roll_requests)
     if player_action and not dm_requested_roll:
         meta["missing_roll_streak"] = meta.get("missing_roll_streak", 0) + 1
     elif dm_requested_roll:

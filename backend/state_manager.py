@@ -38,7 +38,6 @@ def _default_state(campaign_id: str, user: str) -> dict:
         "character": {},
         "inventory": [],
         "currency": {"pp": 0, "gp": 0, "ep": 0, "sp": 0, "cp": 0},
-        "transactions": [],
         "npcs": [],
         "quests": [],
         "world": {
@@ -50,9 +49,7 @@ def _default_state(campaign_id: str, user: str) -> dict:
         "lore": [],
         "pinned_facts": [],
         "locations": [],
-        "items": [],
         "images": [],
-        "pinned_facts": [],
     }
 
 

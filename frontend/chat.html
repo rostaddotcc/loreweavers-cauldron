@@ -826,7 +826,7 @@
 
   /* ═══════════ Tärningsspektakel & nivåbanner ═══════════ */
   /* Partikelburstar (kritiska träffar, misslyckanden, level-ups) */
-  .burst-particle, .levelup-particle {
+  .burst-particle, .levelup-particle, .fx-particle {
     position: fixed; width: 4px; height: 4px; z-index: 210;
     pointer-events: none; will-change: transform, opacity;
   }
@@ -1128,7 +1128,7 @@ async function loadCampaign() {
           document.getElementById('pc-hp-fill').style.width = Math.round(100 * (hp.current || 0) / hp.max) + '%';
         }
         updateXpBar(ch.xp);
-        updateGold(campaign.currency && campaign.currency.gp);
+        updateGold(campaign._raw?.currency?.gp ?? 0);
       }
       // Uppdatera plats + input-placeholder
       const world = campaign.world || {};
@@ -2096,7 +2096,13 @@ function renderEffects(effects, state) {
       default:
         html = `<span style="color:var(--bone-dim)">✦ ${fx.type}: ${fx.value}</span>`;
     }
-    addMessage('system', null, html);
+    // Bygg effekt-box med riktig CSS-klass (inte generisk system-box)
+    const el = document.createElement('div');
+    const cssType = fx.type.replace(/ö/g,'o').replace(/å/g,'a').replace(/ä/g,'a');
+    el.className = 'msg effect e-' + cssType;
+    el.innerHTML = `<div class="box">${html}</div>`;
+    document.getElementById('chat-messages').appendChild(el);
+    document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
     if (SFX[sfx]) SFX[sfx]();
     liveEffects(fx);
   });
@@ -2108,12 +2114,41 @@ function renderEffects(effects, state) {
   if (effects.some(fx => fx.type === 'guld')) {
     refreshCurrency();
   }
+  // HP/XP/plats: uppdatera sidebar-värden efter mekaniska effekter
+  if (effects.some(fx => ['skada', 'hela', 'xp', 'plats', 'level_up', 'ny_dag'].includes(fx.type))) {
+    refreshCharacter();
+  }
+}
+
+async function refreshCharacter() {
+  try {
+    const { campaign } = await API.getCampaign();
+    if (!campaign) return;
+    const ch = campaign.character || {};
+    const hp = ch.hp || {};
+    if (hp.max) {
+      const fill = document.getElementById('pc-hp-fill');
+      if (fill) fill.style.width = Math.round(100 * (hp.current || 0) / hp.max) + '%';
+      const txt = document.getElementById('pc-hp-text');
+      if (txt) txt.textContent = `${hp.current || 0}/${hp.max}`;
+    }
+    updateXpBar(ch.xp);
+    const w = campaign._raw?.world || {};
+    if (w.current_location) {
+      const loc = document.getElementById('loc-name');
+      if (loc) loc.textContent = '🗺 ' + w.current_location;
+    }
+    if (w.time) {
+      const sub = document.getElementById('loc-sub');
+      if (sub) sub.textContent = w.time;
+    }
+  } catch (e) { /* tyst */ }
 }
 
 async function refreshCurrency() {
   try {
     const { campaign } = await API.getCampaign();
-    if (campaign) updateGold(campaign.currency && campaign.currency.gp);
+    if (campaign) updateGold(campaign._raw?.currency?.gp ?? 0);
   } catch (e) { /* tyst */ }
 }
 
@@ -2142,8 +2177,9 @@ function addAsciiArt(art, cssClass, label) {
   // Typewriter-animation: visa tecken för tecken
   const pre = el.querySelector('pre');
   const container = el.querySelector('.ascii-art');
-  const escaped = art.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const chars = escaped.split('');
+  // Använd textContent (auto-escapar) istället för manuell escape + innerHTML
+  // som delade upp &amp; i enskilda tecken under animationen.
+  const chars = art.split('');
   let idx = 0;
   let done = false;
 
@@ -2151,25 +2187,17 @@ function addAsciiArt(art, cssClass, label) {
   container.addEventListener('click', () => {
     if (done) return;
     done = true;
-    pre.innerHTML = escaped;
-    const cursor = pre.querySelector('.art-cursor');
-    if (cursor) cursor.remove();
+    pre.textContent = art;
   });
 
   function tick() {
     if (done) return;
-    // Visa ~5ms per tecken, batcha för prestanda
     const batch = Math.min(3, chars.length - idx);
     idx += batch;
-    pre.innerHTML = escaped.slice(0, idx) + '<span class="art-cursor"></span>';
+    pre.textContent = art.slice(0, idx);
     chat.scrollTop = chat.scrollHeight;
     if (idx >= chars.length) {
       done = true;
-      // Ta bort cursor efter en kort paus
-      setTimeout(() => {
-        const c = pre.querySelector('.art-cursor');
-        if (c) c.remove();
-      }, 1500);
       return;
     }
     setTimeout(tick, 5 * batch);

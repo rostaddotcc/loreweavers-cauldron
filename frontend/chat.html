@@ -24,6 +24,7 @@
     --ember: #d4691e;
     --arcane: #8b5fd4;
     --poison: #7aa35e;
+    --teal: #5e9aa3;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { height: 100%; }
@@ -122,6 +123,12 @@
   .pc-sub { font-size: 0.68rem; color: var(--bone-dim); font-style: italic; }
   .pc-hp { height: 4px; background: #0a0612; margin-top: 0.3rem; border-radius: 2px; overflow: hidden; }
   .pc-hp i { display: block; height: 100%; background: linear-gradient(90deg, #5e1220, var(--blood-bright)); border-radius: 2px; }
+  .pc-xp { position: relative; height: 6px; background: #0a0612; margin-top: 0.35rem; border-radius: 2px; overflow: hidden; border: 1px solid rgba(201,162,39,0.25); }
+  .pc-xp i { display: block; height: 100%; background: linear-gradient(90deg, #b8860b, #ffd700); border-radius: 2px; transition: width 0.8s cubic-bezier(0.22,1,0.36,1); box-shadow: 0 0 8px rgba(255,215,0,0.45); }
+  .pc-xp::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(90deg, transparent 0 6px, rgba(11,8,18,0.55) 6px 8px); }
+  .pc-xp-label { font-size: 0.62rem; color: var(--bone-dim); margin-top: 0.2rem; letter-spacing: 0.05em; text-align: right; font-variant-numeric: tabular-nums; }
+  .pc-xp-label b { color: var(--gold-bright); font-style: normal; }
 
   .npc-list { display: flex; flex-direction: column; gap: 0.35rem; }
   .npc-row {
@@ -289,36 +296,102 @@
   .msg.effect .box { animation: effect-pop .45s cubic-bezier(.22,1,.36,1); }
   @keyframes effect-pop { from { opacity: 0; transform: scale(.85) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 
-  /* ═══════════ ASCII-ART (atmosfär) ═══════════ */
+  /* ═══════════ ASCII-ART (atmosfär) — DOS/CRT-stil ═══════════ */
   .ascii-art {
-    margin: .6rem 0; padding: .8rem 1rem;
-    background: rgba(4,3,10,.95);
-    border: 2px solid rgba(139,95,212,.35);
-    box-shadow: inset 0 0 20px rgba(139,95,212,.06), 4px 4px 0 rgba(0,0,0,.7);
-    overflow-x: auto; text-align: center;
-    animation: art-in .8s cubic-bezier(.22,1,.36,1);
+    position: relative;
+    margin: .6rem 0; padding: 1rem 1.2rem;
+    background: rgba(2,2,6,.97);
+    border: 1px solid rgba(80,200,120,.3);
+    box-shadow: inset 0 0 30px rgba(80,200,120,.04), 0 0 12px rgba(80,200,120,.06);
+    overflow: hidden; text-align: center;
+    animation: art-in .6s cubic-bezier(.22,1,.36,1);
+    cursor: pointer;
   }
+  /* Scanline-overlay */
+  .ascii-art::before {
+    content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 2px, rgba(0,0,0,.15) 2px, rgba(0,0,0,.15) 4px
+    );
+  }
+  /* CRT-flimmer */
+  .ascii-art::after {
+    content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+    animation: crt-flicker 4s infinite;
+    background: transparent;
+  }
+  @keyframes crt-flicker {
+    0%, 100% { opacity: 0; }
+    3% { opacity: .03; background: rgba(200,255,200,.04); }
+    6% { opacity: 0; }
+    50% { opacity: 0; }
+    52% { opacity: .02; background: rgba(200,255,200,.03); }
+    54% { opacity: 0; }
+  }
+  /* Hörndekorationer (DOS text-mode box) */
+  .ascii-art .corner { position: absolute; z-index: 4; color: rgba(80,200,120,.5); font-size: .65rem; line-height: 1; pointer-events: none; }
+  .ascii-art .corner.tl { top: 2px; left: 4px; }
+  .ascii-art .corner.tr { top: 2px; right: 4px; }
+  .ascii-art .corner.bl { bottom: 2px; left: 4px; }
+  .ascii-art .corner.br { bottom: 2px; right: 4px; }
   @keyframes art-in {
     from { opacity: 0; transform: translateY(10px); filter: blur(2px); }
     to { opacity: 1; transform: translateY(0); filter: blur(0); }
   }
   .ascii-art pre {
     font-family: 'Courier New', 'Lucida Console', monospace;
-    font-size: .72rem; line-height: 1.25; color: var(--arcane);
-    text-shadow: 0 0 8px rgba(139,95,212,.4);
+    font-size: .72rem; line-height: 1.3; color: rgba(80,220,120,.9);
+    text-shadow: 0 0 6px rgba(80,220,120,.35), 0 0 15px rgba(80,220,120,.1);
     white-space: pre; display: inline-block; text-align: left;
-    margin: 0;
+    margin: 0; position: relative; z-index: 1;
   }
+  /* Typewriter-cursor */
+  .ascii-art .art-cursor {
+    display: inline-block; width: .55em; height: 1em;
+    background: rgba(80,220,120,.8); vertical-align: text-bottom;
+    animation: cursor-blink .6s step-end infinite;
+    margin-left: 1px;
+  }
+  @keyframes cursor-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
   .ascii-art .art-label {
     font-family: 'Silkscreen', monospace; font-size: .55rem;
     letter-spacing: .2em; text-transform: uppercase;
-    color: var(--bone-dim); margin-bottom: .4rem;
+    color: rgba(80,200,120,.5); margin-bottom: .5rem;
     display: flex; align-items: center; justify-content: center; gap: .5rem;
+    position: relative; z-index: 1;
   }
   .ascii-art .art-label::before, .ascii-art .art-label::after {
     content: ''; flex: 1; max-width: 60px; height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(139,95,212,.4), transparent);
+    background: linear-gradient(90deg, transparent, rgba(80,200,120,.3), transparent);
   }
+  /* ── Event-specifika färger ── */
+  .ascii-art.art-level-up { border-color: rgba(255,215,0,.45); box-shadow: inset 0 0 30px rgba(255,215,0,.05), 0 0 16px rgba(255,215,0,.1); }
+  .ascii-art.art-level-up pre { color: rgba(255,225,80,.9); text-shadow: 0 0 6px rgba(255,215,0,.4), 0 0 15px rgba(255,215,0,.15); }
+  .ascii-art.art-level-up .corner { color: rgba(255,215,0,.5); }
+  .ascii-art.art-level-up .art-label { color: rgba(255,215,0,.5); }
+  .ascii-art.art-level-up .art-label::before, .ascii-art.art-level-up .art-label::after { background: linear-gradient(90deg, transparent, rgba(255,215,0,.3), transparent); }
+  .ascii-art.art-level-up .art-cursor { background: rgba(255,215,0,.8); }
+
+  .ascii-art.art-death { border-color: rgba(200,50,50,.45); box-shadow: inset 0 0 30px rgba(200,50,50,.05), 0 0 16px rgba(200,50,50,.1); }
+  .ascii-art.art-death pre { color: rgba(200,80,80,.85); text-shadow: 0 0 6px rgba(200,50,50,.4), 0 0 15px rgba(200,50,50,.15); }
+  .ascii-art.art-death .corner { color: rgba(200,50,50,.5); }
+  .ascii-art.art-death .art-label { color: rgba(200,50,50,.5); }
+  .ascii-art.art-death .art-label::before, .ascii-art.art-death .art-label::after { background: linear-gradient(90deg, transparent, rgba(200,50,50,.3), transparent); }
+  .ascii-art.art-death .art-cursor { background: rgba(200,50,50,.8); }
+
+  .ascii-art.art-new-day { border-color: rgba(100,160,255,.45); box-shadow: inset 0 0 30px rgba(100,160,255,.05), 0 0 16px rgba(100,160,255,.1); }
+  .ascii-art.art-new-day pre { color: rgba(130,180,255,.9); text-shadow: 0 0 6px rgba(100,160,255,.4), 0 0 15px rgba(100,160,255,.15); }
+  .ascii-art.art-new-day .corner { color: rgba(100,160,255,.5); }
+  .ascii-art.art-new-day .art-label { color: rgba(100,160,255,.5); }
+  .ascii-art.art-new-day .art-label::before, .ascii-art.art-new-day .art-label::after { background: linear-gradient(90deg, transparent, rgba(100,160,255,.3), transparent); }
+  .ascii-art.art-new-day .art-cursor { background: rgba(100,160,255,.8); }
+
+  .ascii-art.art-quest { border-color: rgba(200,160,60,.45); box-shadow: inset 0 0 30px rgba(200,160,60,.05), 0 0 16px rgba(200,160,60,.1); }
+  .ascii-art.art-quest pre { color: rgba(220,180,80,.9); text-shadow: 0 0 6px rgba(200,160,60,.4), 0 0 15px rgba(200,160,60,.15); }
+  .ascii-art.art-quest .corner { color: rgba(200,160,60,.5); }
+  .ascii-art.art-quest .art-label { color: rgba(200,160,60,.5); }
+  .ascii-art.art-quest .art-label::before, .ascii-art.art-quest .art-label::after { background: linear-gradient(90deg, transparent, rgba(200,160,60,.3), transparent); }
+  .ascii-art.art-quest .art-cursor { background: rgba(200,160,60,.8); }
 
   /* Inline roll-request i chatten */
   .roll-request {
@@ -456,6 +529,79 @@
   }
   .toast.show { transform: translate(-50%, 0); opacity: 1; }
 
+  /* ═══════════ Tärningsspektakel & nivåbanner ═══════════ */
+  /* Partikelburstar (kritiska träffar, misslyckanden, level-ups) */
+  .burst-particle, .levelup-particle {
+    position: fixed; width: 4px; height: 4px; z-index: 210;
+    pointer-events: none; will-change: transform, opacity;
+  }
+  .levelup-particle { background: #ffd700; box-shadow: 0 0 6px rgba(255,215,0,0.8); }
+
+  /* Helskärmsoverlay vid nivåökning */
+  .levelup-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.9rem;
+    background: radial-gradient(700px 420px at 50% 45%, rgba(201,162,39,0.16), transparent 70%), rgba(5,3,9,0.87);
+    cursor: pointer; animation: overlay-in 0.35s ease-out;
+    transition: opacity 0.5s ease;
+  }
+  .levelup-overlay.fade-out { opacity: 0; }
+  @keyframes overlay-in { from { opacity: 0; } to { opacity: 1; } }
+  .levelup-text {
+    font-family: 'Silkscreen', 'Press Start 2P', 'VT323', monospace;
+    font-size: clamp(2.6rem, 9vw, 5.5rem); color: #ffd700; letter-spacing: 0.06em;
+    text-shadow: 0 0 18px rgba(255,215,0,0.75), 0 0 60px rgba(255,215,0,0.35), 0 4px 0 #7a5c10, 0 6px 0 rgba(0,0,0,0.8);
+    animation: levelup-pop 0.7s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  .levelup-sub {
+    font-family: 'Cinzel', serif; font-size: 0.85rem; letter-spacing: 0.3em; text-transform: uppercase;
+    color: var(--bone); text-shadow: 0 0 12px rgba(232,198,90,0.4);
+    animation: levelup-pop 0.7s 0.15s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  @keyframes levelup-pop { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.3); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    15% { transform: translateX(-7px); } 30% { transform: translateX(6px); }
+    45% { transform: translateX(-5px); } 60% { transform: translateX(4px); }
+    75% { transform: translateX(-3px); } 90% { transform: translateX(2px); }
+  }
+  body.shake { animation: shake 0.5s linear; }
+
+  /* Kortvariga helskärmsblinkar (kritisk träff / ny dag) */
+  .screen-flash { position: fixed; inset: 0; z-index: 190; pointer-events: none; animation: flash-out 0.55s ease-out forwards; }
+  .screen-flash.white { background: #fff; }
+  .screen-flash.blue { background: #4d7fff; }
+  @keyframes flash-out { from { opacity: 0.55; } to { opacity: 0; } }
+
+  /* Pixelikon-badge för kritiska träffar och patetiska misslyckanden */
+  .roll-badge {
+    position: fixed; left: 50%; top: 42%; z-index: 205; pointer-events: none;
+    display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+    transform: translate(-50%, -50%);
+  }
+  .roll-badge svg { width: 72px; height: 72px; image-rendering: pixelated; filter: drop-shadow(0 0 14px rgba(255,255,255,0.35)); }
+  .roll-badge.pop svg { animation: badge-pop 0.6s cubic-bezier(0.22,1,0.36,1) both; }
+  .roll-badge.drop svg { animation: badge-drop 0.7s cubic-bezier(0.34,1.56,0.64,1) both; }
+  @keyframes badge-pop { 0% { transform: scale(0) rotate(-20deg); opacity: 0; } 60% { transform: scale(1.35) rotate(6deg); opacity: 1; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+  @keyframes badge-drop { 0% { transform: translateY(-70px) scale(0.8); opacity: 0; } 55% { transform: translateY(6px) scale(1.05); opacity: 1; } 75% { transform: translateY(-8px) scale(1); } 100% { transform: translateY(0) scale(1); } }
+  .roll-badge-text {
+    font-family: 'Silkscreen', 'Press Start 2P', 'VT323', monospace;
+    font-size: 1.1rem; letter-spacing: 0.12em; white-space: nowrap;
+    animation: levelup-pop 0.5s 0.1s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  .roll-badge-text.crit { color: #ffd700; text-shadow: 0 0 14px rgba(255,215,0,0.8), 0 2px 0 #7a5c10; }
+  .roll-badge-text.fail { color: var(--blood-bright); text-shadow: 0 0 14px rgba(212,58,77,0.8), 0 2px 0 #3d0a12; }
+
+  /* Blå banner för ny dag */
+  .day-banner {
+    display: block; padding: 0.5rem 0.9rem; text-align: center;
+    color: #9db8ff; background: rgba(77,127,255,0.08);
+    border: 1px solid rgba(77,127,255,0.45);
+    text-shadow: 0 0 12px rgba(77,127,255,0.5);
+    font-family: 'Cinzel', serif; letter-spacing: 0.1em;
+  }
+  .day-banner b { color: #cfe0ff; }
+
   @media (max-width: 900px) {
     .sidebar { display: none; }
     .oracle.open { width: 260px; }
@@ -526,6 +672,8 @@
           <div class="pc-hp"><i id="pc-hp-fill" style="width:100%"></i></div>
         </div>
       </div>
+      <div class="pc-xp"><i id="pc-xp-fill" style="width:0%"></i></div>
+      <div class="pc-xp-label" id="pc-xp-label">0 / 300 XP</div>
     </div>
 
     <div>
@@ -641,6 +789,7 @@ async function loadCampaign() {
         if (hp.max) {
           document.getElementById('pc-hp-fill').style.width = Math.round(100 * (hp.current || 0) / hp.max) + '%';
         }
+        updateXpBar(ch.xp);
       }
       // Uppdatera plats + input-placeholder
       const world = campaign.world || {};
@@ -862,6 +1011,13 @@ function showTrayResult(roll) {
   if (isFail) cls = 'fail';
   el.innerHTML = `Senast: <b class="${cls}">${roll.total}</b> (${roll.notation})${isCrit ? ' ✦' : ''}${isFail ? ' ✦' : ''}`;
   el.style.opacity = 1;
+  // Spektakel!
+  if (isCrit) showCritSpectacle(el);
+  else if (isFail) showFailSpectacle(el);
+  else {
+    const r = el.getBoundingClientRect();
+    spawnParticles(r.left + r.width/2, r.top, 10, ['#ffd700','#d43a4d','#8b5fd4','#3ddc84']);
+  }
 }
 
 // ── Tärningsbrickans lås: DM låser upp, spelaren kan växla manuellt ──
@@ -886,6 +1042,112 @@ document.getElementById('tray-lock').addEventListener('click', () => {
   SFX.click();
   toast(locking ? '🔒 Tärningarna låsta — DM begär kastet' : '🔓 Tärningarna upplåsta — slå fritt');
 });
+
+// ═══════════════════════════════════════
+// XP-BAR + LEVEL-UP + PARTIKLAR
+// ═══════════════════════════════════════
+function updateXpBar(xp) {
+  const fill = document.getElementById('pc-xp-fill');
+  const label = document.getElementById('pc-xp-label');
+  if (!fill || !xp) return;
+  const cur = xp.current || 0, next = xp.next_level || 300;
+  fill.style.width = Math.min(100, Math.round(100 * cur / next)) + '%';
+  label.innerHTML = `<b>${cur}</b> / ${next} XP`;
+}
+
+// Partikelsystem: pixelfyrkanter som sprutar utåt
+function spawnParticles(x, y, count, colors) {
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('div');
+    p.className = 'fx-particle';
+    p.style.left = x + 'px';
+    p.style.top = y + 'px';
+    p.style.background = colors[i % colors.length];
+    p.style.boxShadow = `0 0 6px ${colors[i % colors.length]}`;
+    document.body.appendChild(p);
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 2 + Math.random() * 5;
+    const vx = Math.cos(angle) * speed, vy = Math.sin(angle) * speed - 2;
+    let life = 1;
+    (function anim() {
+      life -= 0.025;
+      if (life <= 0) { p.remove(); return; }
+      const cx = parseFloat(p.style.left) + vx;
+      const cy = parseFloat(p.style.top) + vy + (1 - life) * 3;
+      p.style.left = cx + 'px';
+      p.style.top = cy + 'px';
+      p.style.opacity = life;
+      requestAnimationFrame(anim);
+    })();
+  }
+}
+
+// Pixel-DIAMANT (nat 20) — 8×8 SVG
+const DIAMOND_SVG = `<svg width="72" height="72" viewBox="0 0 8 8" shape-rendering="crispEdges" style="image-rendering:pixelated">
+<rect x="3" y="0" width="2" height="1" fill="#e0ffff"/><rect x="2" y="1" width="4" height="1" fill="#b0f0ff"/>
+<rect x="1" y="2" width="6" height="1" fill="#7fe8ff"/><rect x="0" y="3" width="8" height="1" fill="#4dd8f0"/>
+<rect x="1" y="4" width="6" height="1" fill="#2ec8e8"/><rect x="2" y="5" width="4" height="1" fill="#1ab0d0"/>
+<rect x="3" y="6" width="2" height="1" fill="#0e90b8"/><rect x="3" y="2" width="1" height="1" fill="#ffffff"/>
+</svg>`;
+
+// Pixel-DÖSKALLE (nat 1) — 8×8 SVG
+const SKULL_SVG = `<svg width="72" height="72" viewBox="0 0 8 8" shape-rendering="crispEdges" style="image-rendering:pixelated">
+<rect x="1" y="0" width="6" height="1" fill="#e8dcc8"/><rect x="0" y="1" width="8" height="3" fill="#e8dcc8"/>
+<rect x="1" y="2" width="2" height="2" fill="#0b0812"/><rect x="5" y="2" width="2" height="2" fill="#0b0812"/>
+<rect x="3" y="4" width="2" height="1" fill="#0b0812"/><rect x="1" y="5" width="6" height="1" fill="#e8dcc8"/>
+<rect x="1" y="6" width="1" height="1" fill="#e8dcc8"/><rect x="3" y="6" width="2" height="1" fill="#e8dcc8"/>
+<rect x="6" y="6" width="1" height="1" fill="#e8dcc8"/>
+</svg>`;
+
+function showCritSpectacle(el) {
+  const r = el.getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  spawnParticles(cx, cy, 35, ['#ffd700', '#fff8dc', '#4dd8f0', '#e0ffff']);
+  const d = document.createElement('div');
+  d.style.cssText = 'position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:300;text-align:center;pointer-events:none;animation:levelup-pop .6s cubic-bezier(.22,1,.36,1) both';
+  d.innerHTML = DIAMOND_SVG + `<div style="font-family:'Silkscreen',monospace;font-size:1.4rem;color:#ffd700;text-shadow:0 0 18px rgba(255,215,0,.8);margin-top:.4rem">KRITISK TRÄFF!</div>`;
+  document.body.appendChild(d);
+  const flash = document.createElement('div');
+  flash.style.cssText = 'position:fixed;inset:0;background:rgba(255,255,255,.25);z-index:290;pointer-events:none;transition:opacity .5s';
+  document.body.appendChild(flash);
+  requestAnimationFrame(() => flash.style.opacity = 0);
+  setTimeout(() => { d.remove(); flash.remove(); }, 1800);
+}
+
+function showFailSpectacle(el) {
+  const r = el.getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  spawnParticles(cx, cy, 20, ['#d43a4d', '#8b1a2b', '#e8dcc8']);
+  const s = document.createElement('div');
+  s.style.cssText = 'position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:300;text-align:center;pointer-events:none;animation:skull-drop .7s cubic-bezier(.34,1.56,.64,1) both';
+  s.innerHTML = SKULL_SVG + `<div style="font-family:'Silkscreen',monospace;font-size:1.4rem;color:#d43a4d;text-shadow:0 0 18px rgba(212,58,77,.8);margin-top:.4rem">PATETISKT!</div>`;
+  document.body.appendChild(s);
+  document.body.classList.add('shake');
+  setTimeout(() => document.body.classList.remove('shake'), 500);
+  setTimeout(() => s.remove(), 1800);
+}
+
+// Level-up: episk banner + guldregn
+function showLevelUp(level) {
+  const overlay = document.createElement('div');
+  overlay.className = 'levelup-overlay';
+  overlay.innerHTML = `
+    <div class="levelup-text">NIVÅ ${level}!</div>
+    <div class="levelup-sub">✦ Nya krafter väcks ✦</div>`;
+  document.body.appendChild(overlay);
+  // Guldregn: partiklar från mitten
+  const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+  spawnParticles(cx, cy, 40, ['#ffd700', '#fff8dc', '#c9a227', '#e8c65a']);
+  document.body.classList.add('shake');
+  setTimeout(() => document.body.classList.remove('shake'), 500);
+  if (SFX.victory) SFX.victory();
+  const dismiss = () => {
+    overlay.classList.add('fade-out');
+    setTimeout(() => overlay.remove(), 500);
+  };
+  overlay.addEventListener('click', dismiss);
+  setTimeout(dismiss, 2500);
+}
 
 // ── DM begär ett kast inline i chatten ──
 function addRollRequest(notation, label) {
@@ -916,8 +1178,12 @@ async function answerRollRequest(id, notation, label) {
   const roll = rollDice(notation);
   const isCrit = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 20;
   const isFail = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 1;
-  if (isCrit) SFX.crit();
-  else if (isFail) SFX.fail();
+  if (isCrit) { SFX.crit(); showCritSpectacle(box); }
+  else if (isFail) { SFX.fail(); showFailSpectacle(box); }
+  else {
+    const r = box.getBoundingClientRect();
+    spawnParticles(r.left + r.width/2, r.top + r.height/2, 12, ['#ffd700','#d43a4d','#8b5fd4','#3ddc84']);
+  }
 
   const modStr = roll.mod !== 0 ? (roll.mod > 0 ? '+' + roll.mod : roll.mod) : '';
   const cls = isCrit ? 'crit' : isFail ? 'fail' : '';
@@ -1175,7 +1441,7 @@ async function dmRespond(playerText) {
 
     // ASCII-art från atmosfär-subagenten
     if (res.ascii_art) {
-      addAsciiArt(res.ascii_art);
+      addAsciiArt(res.ascii_art, res.art_css_class, res.art_label);
     }
 
     // DM begär kast → visa inline-knappar + lås upp tärningsbrickan
@@ -1228,8 +1494,18 @@ function renderEffects(effects, state) {
         html = `<span style="color:var(--blood-bright)">❌ Uppdrag misslyckat: <b>${fx.value}</b></span>`;
         sfx = 'fail'; break;
       case 'level_up':
+        showLevelUp(fx.value);
         html = `<span style="color:var(--gold-bright)">🎉 <b>NIVÅ ${fx.value}!</b> Du känner nya krafter!</span>`;
-        sfx = 'levelup'; break;
+        sfx = null; break; // showLevelUp spelar victory själv
+      case 'föremål_bort':
+        html = `<span style="color:var(--blood-bright)">🗑️ Föremål förlorat: <b>${fx.value}</b></span>`;
+        sfx = 'damage'; break;
+      case 'npc_relation':
+        html = `<span style="color:var(--arcane)">🤝 Relation ändrad: <b>${fx.value}</b></span>`;
+        sfx = 'click'; break;
+      case 'ny_dag':
+        html = `<span style="color:#6ec6ff">🌅 <b>NY DAG</b> — ${fx.value}</span>`;
+        sfx = 'gate'; break;
       case 'plats':
         html = `<span style="color:var(--teal)">📍 Ny plats: <b>${fx.value}</b></span>`;
         sfx = 'click'; break;
@@ -1255,16 +1531,58 @@ async function refreshQuests() {
   } catch (e) { /* tyst — loggen uppdateras vid nästa sidladdning */ }
 }
 
-function addAsciiArt(art) {
+function addAsciiArt(art, cssClass, label) {
   const el = document.createElement('div');
   el.className = 'msg system';
+  const artClass = cssClass ? ` ${cssClass}` : '';
+  const artLabel = label || '✦ atmosfär ✦';
   el.innerHTML = `
-    <div class="ascii-art">
-      <div class="art-label">✦ atmosfär ✦</div>
-      <pre>${art.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
+    <div class="ascii-art${artClass}">
+      <span class="corner tl">╔</span><span class="corner tr">╗</span>
+      <span class="corner bl">╚</span><span class="corner br">╝</span>
+      <div class="art-label">${artLabel}</div>
+      <pre></pre>
     </div>`;
   chat.appendChild(el);
   chat.scrollTop = chat.scrollHeight;
+
+  // Typewriter-animation: visa tecken för tecken
+  const pre = el.querySelector('pre');
+  const container = el.querySelector('.ascii-art');
+  const escaped = art.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const chars = escaped.split('');
+  let idx = 0;
+  let done = false;
+
+  // Skippa animation vid klick
+  container.addEventListener('click', () => {
+    if (done) return;
+    done = true;
+    pre.innerHTML = escaped;
+    const cursor = pre.querySelector('.art-cursor');
+    if (cursor) cursor.remove();
+  });
+
+  function tick() {
+    if (done) return;
+    // Visa ~5ms per tecken, batcha för prestanda
+    const batch = Math.min(3, chars.length - idx);
+    idx += batch;
+    pre.innerHTML = escaped.slice(0, idx) + '<span class="art-cursor"></span>';
+    chat.scrollTop = chat.scrollHeight;
+    if (idx >= chars.length) {
+      done = true;
+      // Ta bort cursor efter en kort paus
+      setTimeout(() => {
+        const c = pre.querySelector('.art-cursor');
+        if (c) c.remove();
+      }, 1500);
+      return;
+    }
+    setTimeout(tick, 5 * batch);
+  }
+  // Starta efter en kort delay så meddelandet hinner renderas
+  setTimeout(tick, 100);
 }
 
 function renderNpcSidebar() {

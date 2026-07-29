@@ -31,7 +31,15 @@ from models import (
     get_model,
     list_models_for_frontend,
 )
-from atmosphere import build_art_prompt, detect_environments
+from atmosphere import (
+    build_art_prompt,
+    build_event_art_prompt,
+    detect_environments,
+    EVENT_CSS_CLASS,
+    EVENT_LABEL,
+    postprocess_art,
+    should_generate_art,
+)
 from locations import get_locations_with_travel
 from logbook import build_log_prompt
 from state_manager import CAMPAIGNS_DIR, CampaignStore, CharacterVault
@@ -45,6 +53,14 @@ import random
 
 NPC_PATTERN = re.compile(r'\[NPC:([^|]+)\|([^|]+)\|([^\]]+)\]')
 KAST_PATTERN = re.compile(r'\[KAST:\s*([^\]|]+)(?:\|([^\]]+))?\]')
+
+# Nyckelord som indikerar en riskfylld handling → DM borde begära kast
+ACTION_KEYWORDS = re.compile(
+    r'\b(attackerar?|slår|hugger|skjuter|kastar|smyger|klättrar|hoppar|'
+    r'springer|bryter|sparkar|slåss|fäktar|skär|sticker|hugg|skott|pil|'
+    r'smyga|klättra|hoppa|springa|bryta|sparka|attack)\b',
+    re.IGNORECASE,
+)
 
 NPC_COLORS = ['#8b5fd4', '#d4691e', '#7aa35e', '#5e9aa3', '#d43a4d', '#c9a227', '#a8b2c0', '#b06fd4']
 NPC_ICONS = ['🧙', '⚔️', '🏹', '🛡️', '🎭', '👻', '🐺', '🦉', '💀', '🔮', '🗡️', '🌙']
@@ -653,6 +669,16 @@ def _build_system_prompt(
             "när det är relevant. ALDRIG narrera skada eller loot utan tagg."
         )
 
+    # Tärnings-enforcement: påminn DM om den missar kast vid riskfyllda handlingar
+    missing_roll_streak = state.get("meta", {}).get("missing_roll_streak", 0)
+    if missing_roll_streak >= 2:
+        parts.append(
+            "\n## ⚠️ SYSTEM: TÄRNINGSKAST SAKNAS\n"
+            "Spelaren utförde en riskfylld handling men du begärde inget tärningskast. "
+            "Kom ihåg att begära [KAST:] vid osäkra handlingar. "
+            "Varje attack, smygning, klättring eller hopp KRÄVER ett kast med DC och konsekvenser."
+        )
+
     # ── VAKNANDEPROTOKOLLET ──
     # Aktiveras av awakening-flaggan (nya kampanjer) eller av triggern.
     # turn_override = turn_count + det meddelande som ännu inte sparats.
@@ -740,25 +766,63 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     else:
         meta["tag_streak"] = meta.get("tag_streak", 0) + 1
 
-    # Atmosfär-subagent: generera ASCII-art om miljön triggar
+    # Tärnings-enforcement: begärde DM kast vid riskfylld handling?
+    player_action = ACTION_KEYWORDS.search(req.message)
+    dm_requested_roll = bool(roll_requests) or bool(KAST_PATTERN.search(reply))
+    if player_action and not dm_requested_roll:
+        meta["missing_roll_streak"] = meta.get("missing_roll_streak", 0) + 1
+    elif dm_requested_roll:
+        meta["missing_roll_streak"] = 0
+
+    # Atmosfär-subagent: generera ASCII-art (event har prioritet, sedan miljö)
     ascii_art = None
-    environments = detect_environments(reply)
-    if environments:
-        try:
-            art_prompt = build_art_prompt(environments[0])
-            ascii_art = await _call_llm(
-                ATMOSPHERE_MODEL,
-                [{"role": "user", "content": art_prompt}],
-                temperature=0.9,
-                max_tokens=600,
-            )
-            ascii_art = ascii_art.strip()
-            if ascii_art.startswith("```"):
-                ascii_art = re.sub(r"^```[a-z]*\n?", "", ascii_art)
-                ascii_art = re.sub(r"\n?```$", "", ascii_art)
-            ascii_art = ascii_art.strip()
-        except Exception:
-            ascii_art = None
+    art_type = None  # 'event' eller 'ambient' — frontend väljer styling
+    event_art_type = None
+    turn_count = meta.get("turn_count", 0)
+
+    if should_generate_art(meta, turn_count):
+        # 1) Event-triggered art (level_up, npc_död, ny_dag, quest)
+        event_art_type = None
+        if effects:
+            for fx in effects:
+                if fx.get("type") in EVENT_CSS_CLASS:
+                    event_art_type = fx["type"]
+                    break
+        if event_art_type:
+            try:
+                art_prompt = build_event_art_prompt(event_art_type)
+                if art_prompt:
+                    raw_art = await _call_llm(
+                        ATMOSPHERE_MODEL,
+                        [{"role": "user", "content": art_prompt}],
+                        temperature=0.9,
+                        max_tokens=400,
+                    )
+                    ascii_art = postprocess_art(raw_art)
+                    if ascii_art:
+                        art_type = "event"
+                        meta["last_art_turn"] = turn_count
+            except Exception:
+                pass
+
+        # 2) Ambient miljö-art (om ingen event-art genererades)
+        if ascii_art is None:
+            environments = detect_environments(reply)
+            if environments:
+                try:
+                    art_prompt = build_art_prompt(environments[0])
+                    raw_art = await _call_llm(
+                        ATMOSPHERE_MODEL,
+                        [{"role": "user", "content": art_prompt}],
+                        temperature=0.9,
+                        max_tokens=600,
+                    )
+                    ascii_art = postprocess_art(raw_art)
+                    if ascii_art:
+                        art_type = "ambient"
+                        meta["last_art_turn"] = turn_count
+                except Exception:
+                    pass
 
     # Spara DM-svar
     state = store.append_message(state, "assistant", reply)
@@ -795,6 +859,10 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         "new_npcs": new_npcs,
         "roll_requests": roll_requests,
         "ascii_art": ascii_art,
+        "art_type": art_type,
+        "art_event": event_art_type if art_type == "event" else None,
+        "art_css_class": EVENT_CSS_CLASS.get(event_art_type) if art_type == "event" else None,
+        "art_label": EVENT_LABEL.get(event_art_type) if art_type == "event" else None,
         "effects": effects,
     }
 

@@ -76,14 +76,8 @@ from models import (
     list_models_for_frontend,
 )
 from atmosphere import (
-    build_art_prompt,
-    build_event_art_prompt,
     detect_environments,
-    EVENT_CSS_CLASS,
-    EVENT_LABEL,
     get_fallback_art,
-    get_fallback_event_art,
-    postprocess_art,
     should_generate_art,
 )
 from locations import get_locations_with_travel, place_location
@@ -1912,75 +1906,12 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         meta["last_roll_turn"] = current_turn
 
     # Atmosfär-subagent: generera ASCII-art (event har prioritet, sedan miljö)
+    # ── ASCII-art: Guardian genererar i post-DM (se guardian_inline nedan) ──
+    # Fallback-banken används om Guardian inte genererade art.
     ascii_art = None
-    art_type = None  # 'event' eller 'ambient' — frontend väljer styling
+    art_type = None
     event_art_type = None
     turn_count = meta.get("turn_count", 0)
-
-    if should_generate_art(meta, turn_count):
-        # 1) Event-triggered art (level_up, npc_död, ny_dag, quest)
-        event_art_type = None
-        if effects:
-            for fx in effects:
-                if fx.get("type") in EVENT_CSS_CLASS:
-                    event_art_type = fx["type"]
-                    break
-        if event_art_type:
-            try:
-                art_prompt = build_event_art_prompt(event_art_type)
-                if art_prompt:
-                    logger.info("🎨 Event-art: %s → %s", event_art_type, ATMOSPHERE_MODEL)
-                    raw_art = await _call_llm(
-                        ATMOSPHERE_MODEL,
-                        [{"role": "user", "content": art_prompt}],
-                        temperature=0.7,
-                        max_tokens=2048,
-                        timeout=45,
-                    )
-                    ascii_art = postprocess_art(raw_art)
-                    if ascii_art:
-                        art_type = "event"
-                        meta["last_art_turn"] = turn_count
-                        logger.info("🎨 Event-art klar (%s, %d rader)", event_art_type, ascii_art.count('\n') + 1)
-            except Exception as e:
-                logger.warning("🎨 Event-art LLM misslyckades: %s", e)
-            # Fallback: förgenererad event-art
-            if ascii_art is None and event_art_type:
-                ascii_art = get_fallback_event_art(event_art_type)
-                if ascii_art:
-                    art_type = "event"
-                    meta["last_art_turn"] = turn_count
-                    logger.info("🎨 Event-art fallback (%s)", event_art_type)
-
-        # 2) Ambient miljö-art (om ingen event-art genererades)
-        if ascii_art is None:
-            environments = detect_environments(reply)
-            if environments:
-                env = environments[0]
-                try:
-                    art_prompt = build_art_prompt(env)
-                    logger.info("🎨 Miljö-art: %s → %s", env, ATMOSPHERE_MODEL)
-                    raw_art = await _call_llm(
-                        ATMOSPHERE_MODEL,
-                        [{"role": "user", "content": art_prompt}],
-                        temperature=0.7,
-                        max_tokens=2048,
-                        timeout=45,
-                    )
-                    ascii_art = postprocess_art(raw_art)
-                    if ascii_art:
-                        art_type = "ambient"
-                        meta["last_art_turn"] = turn_count
-                        logger.info("🎨 Miljö-art klar (%s, %d rader)", env, ascii_art.count('\n') + 1)
-                except Exception as e:
-                    logger.warning("🎨 Miljö-art LLM misslyckades: %s", e)
-                # Fallback: förgenererad miljö-art
-                if ascii_art is None:
-                    ascii_art = get_fallback_art(env)
-                    if ascii_art:
-                        art_type = "ambient"
-                        meta["last_art_turn"] = turn_count
-                        logger.info("🎨 Miljö-art fallback (%s)", env)
 
     # Rensa intern struktur innan transkriptsparning
     # (reply är redan rensad från mekaniska taggar via _parse_mechanical_tags)
@@ -1996,15 +1927,33 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     # Spara DM-svar (ren text — inga taggar eller intern struktur)
     state = store.append_message(state, "assistant", reply)
 
-    # ── Guardian POST-DM: mekanisk extraktion (INLINE — syns i chatten) ──
+    # ── Guardian POST-DM: mekanisk extraktion + ASCII-art (INLINE) ──
     guardian_summary = ""
     try:
         _tg = time.time()
         mech = await guardian_extract_mechanics(
             reply, req.message, state, effective_turn,
-            lambda msgs: _call_llm(EXTRACTION_MODEL, msgs, temperature=0.2, max_tokens=800),
+            lambda msgs: _call_llm(EXTRACTION_MODEL, msgs, temperature=0.2, max_tokens=1200),
         )
         guardian_effects = apply_mechanics(state, mech)
+
+        # ASCII-art från Guardian (ersätter atmosfär-LLM)
+        guardian_art = mech.get("ascii_art")
+        if guardian_art and should_generate_art(meta, turn_count):
+            ascii_art = guardian_art
+            art_type = "ambient"
+            meta["last_art_turn"] = turn_count
+            logger.info("🛡️ Guardian-art (%.1fs, %d rader)", time.time() - _tg, ascii_art.count('\n') + 1)
+        elif should_generate_art(meta, turn_count):
+            # Fallback: förgenererad art-bank
+            environments = detect_environments(reply)
+            if environments:
+                ascii_art = get_fallback_art(environments[0])
+                if ascii_art:
+                    art_type = "ambient"
+                    meta["last_art_turn"] = turn_count
+                    logger.info("🎨 Fallback-art: %s", environments[0])
+
         if guardian_effects:
             # Lägg till i last_effects (för nästa turs prompt)
             meta = state.setdefault("meta", {})
@@ -2056,9 +2005,6 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         "roll_requests": roll_requests,
         "ascii_art": ascii_art,
         "art_type": art_type,
-        "art_event": event_art_type if art_type == "event" else None,
-        "art_css_class": EVENT_CSS_CLASS.get(event_art_type) if art_type == "event" else None,
-        "art_label": EVENT_LABEL.get(event_art_type) if art_type == "event" else None,
         "effects": effects,
         "guardian_summary": guardian_summary,
     }

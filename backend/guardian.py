@@ -217,6 +217,12 @@ Läs DM-svaret och spelarens handling. Extrahera ALLA mekaniska effekter.
 - logbook: En kort sammanfattning av vad som hände (max 2 meningar). \
 Skriv i dåtid, tredje person. T.ex. "Faelyndra smög förbi vakten och tog sig in i källaren."
 
+### ASCII-art (stämning)
+- ascii_art: En liten ASCII-art (max 10 rader, max 50 tecken bred) som matchar scenens miljö/stämning. \
+Använd enkla tecken: /\|_-~^*.+#@. Exempel: träd, berg, eld, vatten, skallar, svärd. \
+Sätt null om scenen är ren dialog eller inomhus utan tydlig miljö. \
+Generera art varannan tur — inte varje tur.
+
 ## Regler
 1. Ta ENDAST med effekter som faktiskt sker — inte saker som nämns eller hotas.
 2. "Du siktar mot flaskan" → INGET föremål. "Du tar flaskan" → items_add.
@@ -243,7 +249,8 @@ Skriv i dåtid, tredje person. T.ex. "Faelyndra smög förbi vakten och tog sig 
   "time_passed": null,
   "rest": null,
   "new_day": null,
-  "logbook": ""
+  "logbook": "",
+  "ascii_art": null
 }
 
 Tomma fält: tom array [] eller null. Utelämna ALDRIG ett fält.
@@ -332,7 +339,7 @@ async def guardian_extract_mechanics(
         "quests_new": [], "quests_completed": [], "quests_failed": [],
         "npcs_new": [], "npc_relations": [], "npc_notes": [],
         "locations_new": [], "time_passed": None, "rest": None,
-        "new_day": None, "logbook": "",
+        "new_day": None, "logbook": "", "ascii_art": None,
     }
 
     for attempt in range(2):
@@ -717,6 +724,16 @@ def _sanitize_mechanics(mech: dict) -> dict:
     # Loggbok ska vara str
     if not isinstance(mech.get("logbook"), str):
         mech["logbook"] = ""
+
+    # ASCII-art: ska vara str eller null
+    art = mech.get("ascii_art")
+    if art and isinstance(art, str):
+        # Grundläggande sanering: max 14 rader, max 60 tecken breda
+        lines = art.strip().split('\n')
+        cleaned = [l for l in lines if len(l) <= 60][:14]
+        mech["ascii_art"] = '\n'.join(cleaned) if len(cleaned) >= 3 else None
+    else:
+        mech["ascii_art"] = None
 
     return mech
 

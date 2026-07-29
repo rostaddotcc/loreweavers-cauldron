@@ -80,6 +80,8 @@ from atmosphere import (
     detect_environments,
     EVENT_CSS_CLASS,
     EVENT_LABEL,
+    get_fallback_art,
+    get_fallback_event_art,
     postprocess_art,
     should_generate_art,
 )
@@ -370,7 +372,7 @@ vault = CharacterVault()
 COOKIE_NAME = "morkrets_token"
 
 # Atmosfär-subagent: snabb modell för ASCII-art
-ATMOSPHERE_MODEL = os.getenv("ATMOSPHERE_MODEL", "qwen3.6-flash")
+ATMOSPHERE_MODEL = os.getenv("ATMOSPHERE_MODEL", "mimo-v2.5")
 EXTRACTION_MODEL = os.getenv("EXTRACTION_MODEL", "qwen3.6-flash")
 
 
@@ -611,8 +613,8 @@ async def _call_llm(
     api_key = get_api_key(config)
 
     # Reasoning-modeller behöver mer utrymme (thinking + content)
-    if config.api_model in ("deepseek-v4-flash",):
-        max_tokens = max(max_tokens, 4096)
+    if config.api_model in ("deepseek-v4-flash", "mimo-v2.5", "mimo-v2.5-pro"):
+        max_tokens = max(max_tokens, 2048)
 
     headers = {"Content-Type": "application/json"}
     if api_key:
@@ -636,10 +638,15 @@ async def _call_llm(
         data = resp.json()
         content = data["choices"][0]["message"].get("content", "")
         if not content:
-            # Reasoning-modell som inte hann klart — försök med mer tokens
-            raise RuntimeError(
-                "Modellen returnerade tomt svar (reasoning-modell?)"
-            )
+            # Reasoning-modell som inte hann klart — logga men kasta inte
+            # (atmosfär-anrop sväljer detta via postprocess_art)
+            reasoning = data["choices"][0]["message"].get("reasoning_content", "")
+            if reasoning:
+                logger.debug(
+                    "🧠 %s returnerade tomt content (%d reasoning-tokens)",
+                    config.api_model, len(reasoning),
+                )
+            return ""
         return content
 
 
@@ -1638,39 +1645,58 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
             try:
                 art_prompt = build_event_art_prompt(event_art_type)
                 if art_prompt:
+                    logger.info("🎨 Event-art: %s → %s", event_art_type, ATMOSPHERE_MODEL)
                     raw_art = await _call_llm(
                         ATMOSPHERE_MODEL,
                         [{"role": "user", "content": art_prompt}],
-                        temperature=0.9,
-                        max_tokens=400,
-                        timeout=30,
+                        temperature=0.7,
+                        max_tokens=2048,
+                        timeout=45,
                     )
                     ascii_art = postprocess_art(raw_art)
                     if ascii_art:
                         art_type = "event"
                         meta["last_art_turn"] = turn_count
-            except Exception:
-                pass
+                        logger.info("🎨 Event-art klar (%s, %d rader)", event_art_type, ascii_art.count('\n') + 1)
+            except Exception as e:
+                logger.warning("🎨 Event-art LLM misslyckades: %s", e)
+            # Fallback: förgenererad event-art
+            if ascii_art is None and event_art_type:
+                ascii_art = get_fallback_event_art(event_art_type)
+                if ascii_art:
+                    art_type = "event"
+                    meta["last_art_turn"] = turn_count
+                    logger.info("🎨 Event-art fallback (%s)", event_art_type)
 
         # 2) Ambient miljö-art (om ingen event-art genererades)
         if ascii_art is None:
             environments = detect_environments(reply)
             if environments:
+                env = environments[0]
                 try:
-                    art_prompt = build_art_prompt(environments[0])
+                    art_prompt = build_art_prompt(env)
+                    logger.info("🎨 Miljö-art: %s → %s", env, ATMOSPHERE_MODEL)
                     raw_art = await _call_llm(
                         ATMOSPHERE_MODEL,
                         [{"role": "user", "content": art_prompt}],
-                        temperature=0.9,
-                        max_tokens=600,
-                        timeout=30,
+                        temperature=0.7,
+                        max_tokens=2048,
+                        timeout=45,
                     )
                     ascii_art = postprocess_art(raw_art)
                     if ascii_art:
                         art_type = "ambient"
                         meta["last_art_turn"] = turn_count
-                except Exception:
-                    pass
+                        logger.info("🎨 Miljö-art klar (%s, %d rader)", env, ascii_art.count('\n') + 1)
+                except Exception as e:
+                    logger.warning("🎨 Miljö-art LLM misslyckades: %s", e)
+                # Fallback: förgenererad miljö-art
+                if ascii_art is None:
+                    ascii_art = get_fallback_art(env)
+                    if ascii_art:
+                        art_type = "ambient"
+                        meta["last_art_turn"] = turn_count
+                        logger.info("🎨 Miljö-art fallback (%s)", env)
 
     # Rensa intern struktur innan transkriptsparning
     # (reply är redan rensad från mekaniska taggar via _parse_mechanical_tags)

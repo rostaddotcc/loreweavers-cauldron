@@ -931,8 +931,8 @@
   }
 </style>
 <link rel="stylesheet" href="snes.css">
-<script src="sprites.js?v=20260729c"></script>
-<script src="fonts.js?v=20260729c"></script>
+<script src="sprites.js?v=20260729d"></script>
+<script src="fonts.js?v=20260729d"></script>
 </head>
 <body>
 <div class="grain"></div>
@@ -1115,9 +1115,9 @@
   </div>
 </div>
 
-<script src="sfx.js?v=20260729c"></script>
-<script src="music.js?v=20260729c"></script>
-<script src="api.js?v=20260729c"></script>
+<script src="sfx.js?v=20260729d"></script>
+<script src="music.js?v=20260729d"></script>
+<script src="api.js?v=20260729d"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -1169,10 +1169,12 @@ async function loadCampaign() {
         document.getElementById('loc-sub').textContent = world.time;
       }
       document.getElementById('player-input').placeholder =
-        'Vad gör ' + CHAR_NAME + '? Skriv fritt — slå, smyg, tala, kasta en besvärjelse…';
+        I18N.getLang() === 'en'
+          ? `What does ${CHAR_NAME} do? Write freely — fight, sneak, talk, cast a spell…`
+          : `Vad gör ${CHAR_NAME}? Skriv fritt — slå, smyg, tala, kasta en besvärjelse…`;
       // Uppdatera topbar
       const tag = document.querySelector('.topbar .campaign');
-      if (tag) tag.textContent = `Kampanj: ${campaign.name} · Tur ${campaign.turn_count}`;
+      if (tag) tag.textContent = `${I18N.t('Kampanj:')} ${campaign.name} · ${I18N.t('Tur')} ${campaign.turn_count}`;
     } else {
       // Ingen kampanj — tillbaka till vägskälet
       location.href = 'adventure.html';
@@ -1249,7 +1251,7 @@ function avatarHtml(kind, fallbackEmoji) {
   const inner = url
     ? `<img src="${url}" alt="" loading="lazy">`
     : SPR.html(fallbackEmoji);
-  return `<span class="msg-avatar" onclick="pickAvatar('${kind}')" title="Klicka för att byta bild">${inner}</span>`;
+  return `<span class="msg-avatar" onclick="pickAvatar('${kind}')" title="${I18N.t('Klicka för att byta bild')}">${inner}</span>`;
 }
 
 // Öppna filväljare och ladda upp en avatar
@@ -1335,13 +1337,13 @@ function buildMessage(type, npcKey, text) {
     const n = NPCS[npcKey] || { name: npcKey || 'Okänd', color: npcColorFor(npcKey || 'Okänd'), icon: '🎭', role: '' };
     el.style.setProperty('--npc-color', n.color);
     el.innerHTML = `
-      <span class="msg-avatar" data-npc-key="${npcKey}" onclick="pickAvatar('npc:${npcKey}')" title="Klicka för att byta bild">${AVATARS['npc:' + npcKey] ? `<img src="${AVATARS['npc:' + npcKey]}" alt="">` : SPR.html(n.icon || '🎭')}</span>
+      <span class="msg-avatar" data-npc-key="${npcKey}" onclick="pickAvatar('npc:${npcKey}')" title="${I18N.t('Klicka för att byta bild')}">${AVATARS['npc:' + npcKey] ? `<img src="${AVATARS['npc:' + npcKey]}" alt="">` : SPR.html(n.icon || '🎭')}</span>
       <div class="bubble">
         <div class="who"><span class="dot"></span>${n.name}</div>
         <div class="text">${mdToHtml(escapeHtml(text))}</div>
       </div>`;
   } else if (type === 'player') {
-    el.innerHTML = `<div class="bubble"><div class="who">${CHAR_NAME}</div><div class="text">${text}</div></div>${avatarHtml('player', '🧙‍♀️')}`;
+    el.innerHTML = `<div class="bubble"><div class="who">${I18N.t(CHAR_NAME)}</div><div class="text">${text}</div></div>${avatarHtml('player', '🧙‍♀️')}`;
   } else if (type === 'system') {
     el.innerHTML = `<div class="box">${text}</div>`;
   } else if (type === 'guardian') {
@@ -1684,8 +1686,8 @@ function addRollRequest(notation, label) {
   const id = 'rr-' + Date.now();
   el.innerHTML = `
     <div class="roll-request" id="${id}">
-      <span class="rr-label">🎲 DM begär: <b>${label}</b> <span style="color:var(--bone-dim)">(${notation})</span></span>
-      <button class="rr-btn" onclick="answerRollRequest('${id}','${notation}','${label.replace(/'/g,"\\'")}')">Slå ${notation}</button>
+      <span class="rr-label">🎲 ${I18N.t('DM begär:')} <b>${label}</b> <span style="color:var(--bone-dim)">(${notation})</span></span>
+      <button class="rr-btn" onclick="answerRollRequest('${id}','${notation}','${label.replace(/'/g,"\\'")}')">${I18N.t('Slå')} ${notation}</button>
     </div>`;
   chat.appendChild(el);
   chat.scrollTop = chat.scrollHeight;
@@ -2162,7 +2164,7 @@ async function dmRespond(playerText) {
     // Uppdatera tur-räknare
     if (res.turn_count) {
       const tag = document.querySelector('.topbar .campaign');
-      if (tag && campaignData) tag.textContent = `Kampanj: ${campaignData.name} · Tur ${res.turn_count}`;
+      if (tag && campaignData) tag.textContent = `${I18N.t('Kampanj:')} ${campaignData.name} · ${I18N.t('Tur')} ${res.turn_count}`;
     }
   } catch (e) {
     hideThoughts();
@@ -2361,7 +2363,7 @@ function renderNpcSidebar() {
         <span class="npc-role">${n.role || ''}</span>
       </div>`;
     }).join('');
-  list.innerHTML = rows || '<div class="npc-row" style="opacity:.45;cursor:default">Ingen har dykt upp ännu…</div>';
+  list.innerHTML = rows || `<div class="npc-row" style="opacity:.45;cursor:default">${I18N.t('Ingen har dykt upp ännu…')}</div>`;
 }
 
 // ── Uppdragslogg i sidebaren (från /api/campaign state.quests) ──
@@ -2370,7 +2372,7 @@ function renderQuests(quests) {
   if (!list) return;
   const qs = quests || [];
   if (!qs.length) {
-    list.innerHTML = '<div class="quest-empty">Inga uppdrag ännu…</div>';
+    list.innerHTML = `<div class="quest-empty">${I18N.t('Inga uppdrag ännu…')}</div>`;
     return;
   }
   // Aktiva först, därefter slutförda/misslyckade
@@ -2613,6 +2615,6 @@ function tick() {
 }
 tick();
 </script>
-<script src="i18n.js?v=20260729c"></script>
+<script src="i18n.js?v=20260729d"></script>
 </body>
 </html>

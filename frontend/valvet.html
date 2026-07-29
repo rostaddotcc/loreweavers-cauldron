@@ -221,8 +221,8 @@
   }
   #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
-  <script src="sprites.js?v=20260729c"></script>
-<script src="fonts.js?v=20260729c"></script>
+  <script src="sprites.js?v=20260729d"></script>
+<script src="fonts.js?v=20260729d"></script>
 </head>
 <body>
 
@@ -263,7 +263,7 @@
 
 <div id="toast"></div>
 
-<script src="api.js?v=20260729c"></script>
+<script src="api.js?v=20260729d"></script>
 <script>
 const CLASS_ICONS = {
   'krigare': '⚔️', 'fighter': '⚔️', 'riddare': '⚔️', 'barbar': '🪓',
@@ -305,21 +305,21 @@ async function doLogout() {
 async function useHero(charId, name) {
   try {
     await API.vaultUse(charId);
-    toast(`⚔️ ${name} är nu din aktiva karaktär!`);
+    toast(`⚔️ ${name} ${I18N.t('är nu din aktiva karaktär!')}`);
     setTimeout(() => location.href = 'chat.html', 900);
   } catch (e) {
-    toast('⚠ ' + (e.message || 'Kunde inte aktivera karaktären'));
+    toast('⚠ ' + (e.message || I18N.t('Kunde inte aktivera karaktären')));
   }
 }
 
 async function deleteHero(charId, name) {
-  if (!confirm(`Vill du verkligen radera ${name} ur valvet? Detta kan inte ångras.`)) return;
+  if (!confirm(`${I18N.t('Vill du verkligen radera')} ${name} ${I18N.t('ur valvet? Detta kan inte ångras.')}`)) return;
   try {
     await API.vaultDelete(charId);
-    toast(`🕯️ ${name} har lämnat valvet`);
+    toast(`🕯️ ${name} ${I18N.t('har lämnat valvet')}`);
     loadVault();
   } catch (e) {
-    toast('⚠ ' + (e.message || 'Kunde inte radera'));
+    toast('⚠ ' + (e.message || I18N.t('Kunde inte radera')));
   }
 }
 
@@ -329,6 +329,11 @@ async function loadVault() {
   const loading = document.getElementById('loading');
 
   try {
+    // Initialize i18n with campaign language
+    try {
+      const cr = await fetch('/api/campaign', { credentials: 'include' });
+      if (cr.ok) { const cd = await cr.json(); I18N.init(cd?.meta?.language || 'sv'); }
+    } catch(_) {}
     const { characters } = await API.vaultList();
     loading.style.display = 'none';
 
@@ -342,14 +347,14 @@ async function loadVault() {
     grid.style.display = 'grid';
     grid.innerHTML = characters.map((entry, i) => {
       const c = entry.character || {};
-      const name = c.name || 'Namnlös';
-      const race = c.race || 'Okänd ras';
-      const cls = c.class || 'Okänd klass';
+      const name = c.name || I18N.t('Namnlös');
+      const race = c.race || I18N.t('Okänd ras');
+      const cls = c.class || I18N.t('Okänd klass');
       const level = c.level || 1;
       const hp = c.hp ? `${c.hp.current ?? c.hp.max ?? '?'}/${c.hp.max ?? '?'}` : '—';
       const ac = c.ac ?? '—';
       const icon = iconFor(c);
-      const campaign = entry.campaign_name || 'Mörkrets Rike';
+      const campaign = entry.campaign_name || I18N.t('Mörkrets Rike');
       const saved = fmtDate(entry.saved_at);
       return `
         <div class="hero-card" style="animation-delay:${i * 0.08}s">
@@ -370,11 +375,12 @@ async function loadVault() {
   } catch (e) {
     loading.style.display = 'none';
     empty.style.display = 'block';
-    toast('⚠ Kunde inte öppna valvet');
+    toast(I18N.t('⚠ Kunde inte öppna valvet'));
   }
 }
 
 loadVault();
 </script>
+<script src="i18n.js?v=20260729d"></script>
 </body>
 </html>

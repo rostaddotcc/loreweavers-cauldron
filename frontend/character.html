@@ -509,8 +509,8 @@
   }
 </style>
 <link rel="stylesheet" href="snes.css">
-<script src="sprites.js?v=20260729c"></script>
-<script src="fonts.js?v=20260729c"></script>
+<script src="sprites.js?v=20260729d"></script>
+<script src="fonts.js?v=20260729d"></script>
 </head>
 <body>
 
@@ -707,8 +707,8 @@ Markdown stöds inte i renderingen, men strukturen är din."></textarea>
 
 <div class="toast" id="toast"></div>
 
-<script src="sfx.js?v=20260729c"></script>
-<script src="api.js?v=20260729c"></script>
+<script src="sfx.js?v=20260729d"></script>
+<script src="api.js?v=20260729d"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -746,7 +746,7 @@ const state = {
     renderAll();
     document.getElementById('loading').style.display = 'none';
   } catch (e) {
-    showNoCampaign('Kampanjen kunde inte laddas — kontrollera anslutningen och försök igen.');
+    showNoCampaign(I18N.t('Kampanjen kunde inte laddas — kontrollera anslutningen och försök igen.'));
   }
 })();
 
@@ -760,9 +760,9 @@ function showNoCampaign(msg) {
   box.innerHTML = `
     <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
     <div class="rune">🗺️</div>
-    <h2>Ingen aktiv kampanj — skapa ett äventyr först</h2>
-    <p>${msg || 'Karaktärsarket fylls på när spelledaren väckt världen till liv.'}</p>
-    <a class="rune-btn" href="adventure.html">✦ Skapa äventyr</a>`;
+    <h2>${I18N.t('Ingen aktiv kampanj — skapa ett äventyr först')}</h2>
+    <p>${msg || I18N.t('Karaktärsarket fylls på när spelledaren väckt världen till liv.')}</p>
+    <a class="rune-btn" href="adventure.html">${I18N.t('✦ Skapa äventyr')}</a>`;
   document.querySelector('.app').appendChild(box);
 }
 
@@ -788,11 +788,11 @@ function fmtMod(m) { return m >= 0 ? '+' + m : '' + m; }
 
 function renderHeader() {
   const c = state.character;
-  const name = c.name || 'Namnlös äventyrare';
+  const name = c.name || I18N.t('Namnlös äventyrare');
   document.getElementById('char-name').textContent = name;
   document.getElementById('char-class').textContent =
-    [c.race, c.class].filter(Boolean).join(' · ') + (c.level ? ' · Nivå ' + c.level : '');
-  document.title = '⚔️ ' + name + ' — Ett svenskt D&D-äventyr';
+    [c.race, c.class].filter(Boolean).join(' · ') + (c.level ? ' · ' + I18N.t('Nivå') + ' ' + c.level : '');
+  document.title = '⚔️ ' + name + ' — ' + I18N.t('Ett svenskt D&D-äventyr');
   // Återställ porträtt om det finns sparat i backend-state
   if (c.portrait) {
     const frame = document.getElementById('portrait');
@@ -807,7 +807,7 @@ function renderHeader() {
     ['AC',   c.ac ?? '—'],
     ['INIT', fmtMod(c.initiative ?? dex)],
     ['PERC', fmtMod(c.perception ?? wis)],
-    ['FART', c.speed || '30 ft'],
+    [I18N.getLang() === 'en' ? 'SPD' : 'FART', c.speed || '30 ft'],
     ['PROF', '+' + (c.proficiency ?? 2)],
   ];
   document.querySelector('.char-meta').innerHTML = meta
@@ -822,7 +822,7 @@ function renderXp() {
   const cur  = xp.current ?? 0;
   const next = xp.next_level ?? xp.next ?? 0;
   document.getElementById('xp-cur').textContent = cur.toLocaleString('sv-SE');
-  document.getElementById('xp-next').textContent = next ? next.toLocaleString('sv-SE') + ' till nästa nivå' : '—';
+  document.getElementById('xp-next').textContent = next ? next.toLocaleString('sv-SE') + I18N.t(' till nästa nivå') : '—';
   document.getElementById('xp-bar').style.width = (next > 0 ? Math.min(100, (cur / next) * 100) : 0) + '%';
 }
 
@@ -860,11 +860,11 @@ async function saveNotes() {
     state.character.notes = notesEditor.value;
     notesDirty = false;
     notesStatus.classList.remove('err');
-    notesStatus.textContent = '✓ Sparat';
+    notesStatus.textContent = I18N.t('✓ Sparat');
     setTimeout(() => { if (!notesDirty) notesStatus.textContent = ''; }, 2000);
   } catch (e) {
     notesStatus.classList.add('err');
-    notesStatus.textContent = '⚠ Kunde inte spara: ' + (e.message || 'okänt fel');
+    notesStatus.textContent = I18N.t('⚠ Kunde inte spara: ') + (e.message || I18N.t('okänt fel'));
   }
 }
 
@@ -883,15 +883,15 @@ function renderAttachments() {
   const list = document.getElementById('att-list');
   const atts = state.attachments || [];
   if (atts.length === 0) {
-    list.innerHTML = '<div class="att-empty">Inga bilagor ännu.</div>';
+    list.innerHTML = `<div class="att-empty">${I18N.t('Inga bilagor ännu.')}</div>`;
     return;
   }
   list.innerHTML = atts.map(a => `
     <div class="att-item">
       <span class="att-fi">${ATT_ICONS[a.ext] || '📄'}</span>
-      <a href="${API.attachmentUrl(a.id)}" target="_blank" rel="noopener" title="Öppna ${a.name}">${a.name}</a>
+      <a href="${API.attachmentUrl(a.id)}" target="_blank" rel="noopener" title="${I18N.t('Öppna')} ${a.name}">${a.name}</a>
       <span class="att-size">${fmtSize(a.size)}</span>
-      <button class="att-del" onclick="deleteAttachment('${a.id}')" title="Ta bort">✕</button>
+      <button class="att-del" onclick="deleteAttachment('${a.id}')" title="${I18N.t('Ta bort')}">✕</button>
     </div>`).join('');
 }
 
@@ -901,9 +901,9 @@ async function deleteAttachment(attId) {
     await API.deleteAttachment(attId);
     state.attachments = (state.attachments || []).filter(a => a.id !== attId);
     renderAttachments();
-    toast('🗑️ Bilaga borttagen');
+    toast(I18N.t('🗑️ Bilaga borttagen'));
   } catch (e) {
-    toast('⚠ ' + (e.message || 'Kunde inte ta bort bilagan'));
+    toast('⚠ ' + (e.message || I18N.t('Kunde inte ta bort bilagan')));
   }
 }
 
@@ -922,7 +922,7 @@ async function uploadFiles(fileList) {
   for (const f of fileList) {
     const ext = '.' + f.name.split('.').pop().toLowerCase();
     if (!ALLOWED.includes(ext)) {
-      toast('⚠ ' + f.name + ' — endast .pdf, .md och .txt tillåts');
+      toast('⚠ ' + f.name + I18N.t(' — endast .pdf, .md och .txt tillåts'));
       continue;
     }
     try {
@@ -930,9 +930,9 @@ async function uploadFiles(fileList) {
       if (!state.attachments) state.attachments = [];
       state.attachments.push(attachment);
       renderAttachments();
-      toast('📎 ' + f.name + ' uppladdad');
+      toast('📎 ' + f.name + I18N.t(' uppladdad'));
     } catch (e) {
-      toast('⚠ Kunde inte ladda upp ' + f.name + ': ' + (e.message || 'okänt fel'));
+      toast(I18N.t('⚠ Kunde inte ladda upp ') + f.name + ': ' + (e.message || I18N.t('okänt fel')));
     }
   }
 }
@@ -960,14 +960,14 @@ function toast(msg) {
 async function saveToVault() {
   const c = state.character;
   if (!c || !c.name) {
-    toast('⚠ Ingen karaktär att spara ännu');
+    toast(I18N.t('⚠ Ingen karaktär att spara ännu'));
     return;
   }
   try {
     await API.vaultSave(c);
-    toast(`🏰 ${c.name} vilar nu i valvet!`);
+    toast('🏰 ' + c.name + I18N.t(' vilar nu i valvet!'));
   } catch (e) {
-    toast('⚠ ' + (e.message || 'Kunde inte spara till valvet'));
+    toast('⚠ ' + (e.message || I18N.t('Kunde inte spara till valvet')));
   }
 }
 
@@ -987,7 +987,7 @@ portraitInput.addEventListener('change', e => {
     if (!img) { img = document.createElement('img'); portrait.insertBefore(img, portrait.querySelector('.hint')); }
     img.src = ev.target.result;
     state.character.portrait = ev.target.result;
-    toast('📷 Porträtt sparat — redo för Qwen-analys');
+    toast(I18N.t('📷 Porträtt sparat — redo för Qwen-analys'));
   };
   reader.readAsDataURL(file);
 });
@@ -1000,12 +1000,12 @@ function adjustHp(delta) {
   state.character.hp = hp;
   hp.current = Math.max(0, Math.min(hp.max || 0, hp.current + delta));
   renderHp();
-  if (hp.current === 0) { SFX.fail(); toast('💀 ' + (state.character.name || 'Hjälten') + ' är medvetslös!'); }
-  else if (delta < 0) { SFX.damage(); toast('🩸 −' + (-delta) + ' skada'); }
-  else { SFX.heal(); toast('✨ +' + delta + ' helad'); }
+  if (hp.current === 0) { SFX.fail(); toast('💀 ' + (state.character.name || I18N.t('Hjälten')) + I18N.t(' är medvetslös!')); }
+  else if (delta < 0) { SFX.damage(); toast('🩸 −' + (-delta) + I18N.t(' skada')); }
+  else { SFX.heal(); toast('✨ +' + delta + I18N.t(' helad')); }
   // Sync till backend — uppdateras lokalt direkt, servern får värdet via PATCH
   API.updateCharacter({ hp: { current: hp.current, max: hp.max } })
-    .then(() => toast('HP uppdaterat (syncas vid nästa chat)'))
+    .then(() => toast(I18N.t('HP uppdaterat (syncas vid nästa chat)')))
     .catch(() => {}); // req() visar redan ett fel — tyst här
 }
 function renderHp() {
@@ -1025,18 +1025,18 @@ function renderSlots() {
   const wrap = document.getElementById('slots');
   wrap.innerHTML = '';
   if (!ss.max) {
-    wrap.innerHTML = '<span class="slots-hint">Inga besvärjelseplatser — karaktären kastar inte besvärjelser</span>';
+    wrap.innerHTML = `<span class="slots-hint">${I18N.t('Inga besvärjelseplatser — karaktären kastar inte besvärjelser')}</span>`;
   }
   for (let i = 0; i < ss.max; i++) {
     const s = document.createElement('div');
     s.className = 'slot' + (i < ss.current ? ' lit' : '');
     s.textContent = '✦';
-    s.title = 'Plats ' + (i + 1);
+    s.title = (I18N.getLang() === 'en' ? 'Slot' : 'Plats') + ' ' + (i + 1);
     s.addEventListener('click', () => {
       const wasLit = i < ss.current;
       ss.current = wasLit ? i : i + 1;
       renderSlots();
-      toast(wasLit ? '🔮 Besvärjelse kastad' : '✨ Plats återställd');
+      toast(wasLit ? I18N.t('🔮 Besvärjelse kastad') : I18N.t('✨ Plats återställd'));
     });
     wrap.appendChild(s);
   }
@@ -1047,7 +1047,11 @@ function renderSlots() {
 // ═══════════════════════════════════════
 // ABILITIES / TRAITS / SAVES
 // ═══════════════════════════════════════
-const abilityNames = { STR: 'STY', DEX: 'SMI', CON: 'TÅL', INT: 'INT', WIS: 'VIS', CHA: 'KAR' };
+function abilityNames() {
+  return I18N.getLang() === 'en'
+    ? { STR: 'STR', DEX: 'DEX', CON: 'CON', INT: 'INT', WIS: 'WIS', CHA: 'CHA' }
+    : { STR: 'STY', DEX: 'SMI', CON: 'TÅL', INT: 'INT', WIS: 'VIS', CHA: 'KAR' };
+}
 const abilityOrder = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
 
 function renderAbilities() {
@@ -1057,7 +1061,7 @@ function renderAbilities() {
     const score = v.score ?? 10;
     const mod = v.mod ?? Math.floor((score - 10) / 2);
     return `<div class="ability" title="${key}">
-      <div class="abbr">${abilityNames[key]}</div>
+      <div class="abbr">${abilityNames()[key]}</div>
       <div class="score">${score}</div>
       <div class="mod">${mod >= 0 ? '+' + mod : mod}</div>
     </div>`;
@@ -1072,7 +1076,7 @@ function renderTraits() {
         if (typeof t === 'string') return `<span class="trait">${t}</span>`;
         return `<span class="trait ${t.magic ? 'magic' : ''}">${t.magic ? '✦ ' : ''}${t.name}</span>`;
       }).join('')
-    : '<span class="slots-hint">Inga egenskaper noterade ännu…</span>';
+    : `<span class="slots-hint">${I18N.t('Inga egenskaper noterade ännu…')}</span>`;
 }
 
 function renderSaves() {
@@ -1082,7 +1086,7 @@ function renderSaves() {
         if (typeof s === 'string') return `<span class="trait">${s}</span>`;
         return `<span class="trait ${s.prof ? 'prof' : ''}">${s.prof ? '●' : '○'} ${s.name}</span>`;
       }).join('')
-    : '<span class="slots-hint">Inga sparade sparningskast ännu…</span>';
+    : `<span class="slots-hint">${I18N.t('Inga sparade sparningskast ännu…')}</span>`;
 }
 
 // ═══════════════════════════════════════
@@ -1092,7 +1096,7 @@ function renderInventory() {
   const body = document.getElementById('inv-body');
   body.innerHTML = '';
   if (!state.inventory.length) {
-    body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--bone-dim);font-style:italic;padding:1.6rem 0">Väskan är tom… än så länge.</td></tr>';
+    body.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--bone-dim);font-style:italic;padding:1.6rem 0">${I18N.t('Väskan är tom… än så länge.')}</td></tr>`;
   }
   let totalWeight = 0;
   state.inventory.forEach((item, i) => {
@@ -1105,28 +1109,28 @@ function renderInventory() {
       <td class="item-type hide-sm">${item.type}</td>
       <td class="qty">${item.qty}</td>
       <td class="weight hide-sm">${w.toFixed(1)} lbs</td>
-      <td><button class="chip ${item.equipped ? 'on' : 'off'}" onclick="toggleEquip(${i})">${item.equipped ? '⚔ Buren' : 'I väska'}</button></td>
-      <td><button class="item-del" onclick="removeItem(${i})" title="Släng föremålet">✕</button></td>`;
+      <td><button class="chip ${item.equipped ? 'on' : 'off'}" onclick="toggleEquip(${i})">${item.equipped ? I18N.t('⚔ Buren') : I18N.t('I väska')}</button></td>
+      <td><button class="item-del" onclick="removeItem(${i})" title="${I18N.t('Släng föremålet')}">✕</button></td>`;
     body.appendChild(tr);
   });
   document.getElementById('inv-weight').textContent = totalWeight.toFixed(1);
   document.getElementById('inv-count').textContent = state.inventory.length;
   const warn = document.getElementById('inv-warn');
   const weightEl = document.getElementById('inv-weight');
-  if (totalWeight > 120) { warn.textContent = '⚠ ÖVERBELASTAD'; weightEl.classList.add('overloaded'); }
+  if (totalWeight > 120) { warn.textContent = I18N.t('⚠ ÖVERBELASTAD'); weightEl.classList.add('overloaded'); }
   else { warn.textContent = ''; weightEl.classList.remove('overloaded'); }
 }
 function toggleEquip(i) {
   state.inventory[i].equipped = !state.inventory[i].equipped;
   renderInventory();
-  toast(state.inventory[i].equipped ? '⚔ ' + state.inventory[i].name + ' utrustad' : '🎒 ' + state.inventory[i].name + ' nerpackad');
+  toast(state.inventory[i].equipped ? '⚔ ' + state.inventory[i].name + I18N.t(' utrustad') : '🎒 ' + state.inventory[i].name + I18N.t(' nerpackad'));
   syncInventory();
 }
 function removeItem(i) {
   const name = state.inventory[i].name;
   state.inventory.splice(i, 1);
   renderInventory();
-  toast('🗑 ' + name + ' slängd');
+  toast('🗑 ' + name + I18N.t(' slängd'));
   syncInventory();
 }
 function addItem(e) {
@@ -1144,7 +1148,7 @@ function addItem(e) {
   document.getElementById('add-weight').value = '1';
   document.getElementById('add-rarity').value = 'normal';
   renderInventory();
-  toast('✦ ' + name + ' tillagd i packningen');
+  toast('✦ ' + name + I18N.t(' tillagd i packningen'));
   syncInventory();
 }
 // ── Synca inventory till backend ──
@@ -1175,7 +1179,7 @@ function renderCurrency() {
     grid.innerHTML += `
       <div class="coin ${m.cls}" id="coin-${key}">
         <div class="coin-disc">${m.disc}</div>
-        <div class="coin-name">${m.name}</div>
+        <div class="coin-name">${I18N.t(m.name)}</div>
         <div class="coin-amount">${state.currency[key] || 0}</div>
         <div class="coin-controls">
           <button class="coin-btn" onclick="adjustCoin('${key}',-1)">−</button>
@@ -1211,7 +1215,7 @@ function updateHoard() {
   document.getElementById('total-gold').textContent = total.toFixed(1) + ' gp';
   const gp = Math.floor(total), sp = Math.round((total - gp) * 10);
   const weight = (totalCoins / 50).toFixed(2);
-  document.getElementById('total-sub').textContent = `= ${gp} guldmynt & ${sp} silvermynt · ${totalCoins} mynt · ${weight} lb`;
+  document.getElementById('total-sub').textContent = `= ${gp}${I18N.t(' guldmynt & ')}${sp}${I18N.t(' silvermynt · ')}${totalCoins}${I18N.t(' mynt · ')}${weight} lb`;
 }
 
 // ═══════════════════════════════════════
@@ -1225,7 +1229,7 @@ function renderTransactions() {
         <div><div class="tx-desc">${tx.desc || tx.description || '—'}</div><div class="tx-date">${tx.date || ''}</div></div>
         <div class="tx-amount ${tx.amount >= 0 ? 'pos' : 'neg'}">${tx.amount >= 0 ? '+' : ''}${tx.amount} ${tx.unit || 'gp'}</div>
       </div>`).join('')
-    : '<div style="text-align:center;color:var(--bone-dim);font-style:italic;padding:1.4rem 0;font-size:.85rem">Inga transaktioner ännu — horden växer med äventyret.</div>';
+    : `<div style="text-align:center;color:var(--bone-dim);font-style:italic;padding:1.4rem 0;font-size:.85rem">${I18N.t('Inga transaktioner ännu — horden växer med äventyret.')}</div>`;
 }
 
 // ═══════════════════════════════════════
@@ -1273,6 +1277,6 @@ tick();
 function exportState() { return JSON.stringify(state, null, 2); }
 window.getState = exportState;
 </script>
-<script src="i18n.js?v=20260729c"></script>
+<script src="i18n.js?v=20260729d"></script>
 </body>
 </html>

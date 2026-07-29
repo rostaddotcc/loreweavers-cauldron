@@ -552,6 +552,104 @@
   .roll-result-inline .crit { color: var(--gold-bright); text-shadow: 0 0 10px rgba(232,198,90,.7); }
   .roll-result-inline .fail { color: var(--blood-bright); text-shadow: 0 0 10px rgba(212,58,77,.6); }
 
+  /* ═══════════════════════════════════════
+     D20 KAST-CEREMONI — fullskärms-overlay
+     ═══════════════════════════════════════ */
+  .d20-overlay {
+    position: fixed; inset: 0; z-index: 400;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 1.4rem;
+    background: radial-gradient(ellipse at center, rgba(11,8,18,.92) 0%, rgba(5,3,10,.97) 100%);
+    opacity: 0; transition: opacity .3s;
+  }
+  .d20-overlay.show { opacity: 1; }
+  .d20-overlay.fade-out { opacity: 0; }
+
+  /* Bakgrundssken som andas under spänningen */
+  .d20-overlay::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(circle at 50% 45%, rgba(201,162,39,.10) 0%, transparent 55%);
+    animation: d20-ambient 2.2s ease-in-out infinite;
+  }
+  @keyframes d20-ambient { 0%,100% { opacity:.4; } 50% { opacity:1; } }
+
+  /* Etikettrad högst upp */
+  .d20-label {
+    font-family: 'Cinzel', serif; font-size: .68rem; letter-spacing: .3em;
+    text-transform: uppercase; color: var(--gold);
+    opacity: .85; z-index: 1;
+  }
+  .d20-label b { color: var(--gold-bright); }
+
+  /* Själva D20-kroppen */
+  .d20-wrap { position: relative; z-index: 1; width: 150px; height: 150px; }
+  .d20 {
+    width: 100%; height: 100%;
+    filter: drop-shadow(0 0 22px rgba(201,162,39,.45));
+  }
+  .d20 .face { fill: #1c1428; stroke: var(--gold); stroke-width: 2; }
+  .d20 .facet { fill: none; stroke: rgba(201,162,39,.55); stroke-width: 1.2; }
+  .d20 .num {
+    font-family: 'Cinzel', serif; font-weight: 700; font-size: 44px;
+    fill: var(--gold-bright); text-anchor: middle; dominant-baseline: central;
+  }
+
+  /* Rull-fas: tärningen skakar och vobblar (siffrorna flimrar) */
+  .d20-overlay.rolling .d20 { animation: d20-tumble 0.45s ease-in-out infinite; }
+  @keyframes d20-tumble {
+    0%   { transform: rotate(-8deg)  translate(0,0)    scale(1); }
+    20%  { transform: rotate(10deg)  translate(5px,-4px) scale(1.05); }
+    40%  { transform: rotate(-12deg) translate(-5px,3px) scale(.97); }
+    60%  { transform: rotate(9deg)   translate(4px,4px)  scale(1.04); }
+    80%  { transform: rotate(-7deg)  translate(-4px,-3px) scale(.98); }
+    100% { transform: rotate(8deg)   translate(0,0)    scale(1); }
+  }
+
+  /* Avslöjande: landar med en studs */
+  .d20-overlay.reveal .d20 { animation: d20-land .55s cubic-bezier(.34,1.56,.64,1) both; }
+  @keyframes d20-land {
+    0%   { transform: scale(1.35) rotate(-12deg); opacity:.6; }
+    60%  { transform: scale(.92) rotate(3deg); }
+    100% { transform: scale(1) rotate(0deg); opacity:1; }
+  }
+
+  /* Resultatfas — färg efter utfall */
+  .d20-overlay.reveal.crit .d20 { filter: drop-shadow(0 0 30px rgba(255,215,0,.9)); }
+  .d20-overlay.reveal.crit .d20 .face { stroke: var(--gold-bright); }
+  .d20-overlay.reveal.crit .d20 .num { fill: #fff8dc; }
+  .d20-overlay.reveal.crit::before { background: radial-gradient(circle at 50% 45%, rgba(255,215,0,.22) 0%, transparent 60%); }
+
+  .d20-overlay.reveal.fail .d20 { filter: drop-shadow(0 0 30px rgba(212,58,77,.9)); }
+  .d20-overlay.reveal.fail .d20 .face { stroke: var(--blood-bright); }
+  .d20-overlay.reveal.fail .d20 .num { fill: #ff8a95; }
+  .d20-overlay.reveal.fail::before { background: radial-gradient(circle at 50% 45%, rgba(212,58,77,.2) 0%, transparent 60%); }
+
+  /* Resultattext under tärningen */
+  .d20-result {
+    font-family: 'Silkscreen', monospace; font-size: 1.5rem;
+    color: var(--bone-bright); z-index: 1; min-height: 2rem;
+    text-shadow: 0 0 14px rgba(232,198,90,.5);
+    opacity: 0; transform: translateY(8px); transition: all .35s;
+  }
+  .d20-overlay.reveal .d20-result { opacity: 1; transform: translateY(0); }
+  .d20-overlay.reveal.crit .d20-result { color: var(--gold-bright); text-shadow: 0 0 20px rgba(255,215,0,.9); }
+  .d20-overlay.reveal.fail .d20-result { color: var(--blood-bright); text-shadow: 0 0 20px rgba(212,58,77,.8); }
+
+  /* "Spänning" — pulserande prickar medan tärningen rullar */
+  .d20-tension {
+    font-family: 'Cinzel', serif; font-size: .62rem; letter-spacing: .25em;
+    text-transform: uppercase; color: var(--bone-dim); z-index: 1;
+    animation: d20-tension-pulse 1s ease-in-out infinite;
+  }
+  @keyframes d20-tension-pulse { 0%,100% { opacity:.35; } 50% { opacity:.9; } }
+
+  /* Skärmskakning vid nat 1 */
+  .screen-shake { animation: d20-shake .5s cubic-bezier(.36,.07,.19,.97) both; }
+  @keyframes d20-shake {
+    10%,90% { transform: translate(-2px,1px); } 20%,80% { transform: translate(4px,-2px); }
+    30%,50%,70% { transform: translate(-6px,3px); } 40%,60% { transform: translate(6px,-3px); }
+  }
+
   /* ── DM-tankar (statusindikator) ── */
   .dm-status { display: none; align-items: center; gap: .8rem; padding: .3rem 1.6rem .9rem; }
   .dm-status.show { display: flex; }
@@ -1370,49 +1468,99 @@ function spawnParticles(x, y, count, colors) {
   }
 }
 
-// Pixel-DIAMANT (nat 20) — 8×8 SVG
-const DIAMOND_SVG = `<svg width="72" height="72" viewBox="0 0 8 8" shape-rendering="crispEdges" style="image-rendering:pixelated">
-<rect x="3" y="0" width="2" height="1" fill="#e0ffff"/><rect x="2" y="1" width="4" height="1" fill="#b0f0ff"/>
-<rect x="1" y="2" width="6" height="1" fill="#7fe8ff"/><rect x="0" y="3" width="8" height="1" fill="#4dd8f0"/>
-<rect x="1" y="4" width="6" height="1" fill="#2ec8e8"/><rect x="2" y="5" width="4" height="1" fill="#1ab0d0"/>
-<rect x="3" y="6" width="2" height="1" fill="#0e90b8"/><rect x="3" y="2" width="1" height="1" fill="#ffffff"/>
-</svg>`;
+// ═══════════════════════════════════════
+// D20 KAST-CEREMONI
+// ═══════════════════════════════════════
+// En fullskärmsritual: rulla (3s spänning med flimrande siffror) →
+// avslöjande (landar med studs) → glitter vid krit / skalle + skakning vid patetiskt.
 
-// Pixel-DÖSKALLE (nat 1) — 8×8 SVG
-const SKULL_SVG = `<svg width="72" height="72" viewBox="0 0 8 8" shape-rendering="crispEdges" style="image-rendering:pixelated">
-<rect x="1" y="0" width="6" height="1" fill="#e8dcc8"/><rect x="0" y="1" width="8" height="3" fill="#e8dcc8"/>
-<rect x="1" y="2" width="2" height="2" fill="#0b0812"/><rect x="5" y="2" width="2" height="2" fill="#0b0812"/>
-<rect x="3" y="4" width="2" height="1" fill="#0b0812"/><rect x="1" y="5" width="6" height="1" fill="#e8dcc8"/>
-<rect x="1" y="6" width="1" height="1" fill="#e8dcc8"/><rect x="3" y="6" width="2" height="1" fill="#e8dcc8"/>
-<rect x="6" y="6" width="1" height="1" fill="#e8dcc8"/>
-</svg>`;
-
-function showCritSpectacle(el) {
-  const r = el.getBoundingClientRect();
-  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-  spawnParticles(cx, cy, 35, ['#ffd700', '#fff8dc', '#4dd8f0', '#e0ffff']);
-  const d = document.createElement('div');
-  d.style.cssText = 'position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:300;text-align:center;pointer-events:none;animation:levelup-pop .6s cubic-bezier(.22,1,.36,1) both';
-  d.innerHTML = DIAMOND_SVG + `<div style="font-family:'Silkscreen',monospace;font-size:1.4rem;color:#ffd700;text-shadow:0 0 18px rgba(255,215,0,.8);margin-top:.4rem">KRITISK TRÄFF!</div>`;
-  document.body.appendChild(d);
-  const flash = document.createElement('div');
-  flash.style.cssText = 'position:fixed;inset:0;background:rgba(255,255,255,.25);z-index:290;pointer-events:none;transition:opacity .5s';
-  document.body.appendChild(flash);
-  requestAnimationFrame(() => flash.style.opacity = 0);
-  setTimeout(() => { d.remove(); flash.remove(); }, 1800);
+// D20 SVG — ikosaeder sedd framifrån (hexagon + inre trianglar)
+function d20Svg() {
+  return `<svg class="d20" viewBox="0 0 100 100">
+    <polygon class="face" points="50,4 93,27 93,73 50,96 7,73 7,27"/>
+    <polygon class="facet" points="50,4 93,27 50,50"/>
+    <polygon class="facet" points="93,27 93,73 50,50"/>
+    <polygon class="facet" points="93,73 50,96 50,50"/>
+    <polygon class="facet" points="50,96 7,73 50,50"/>
+    <polygon class="facet" points="7,73 7,27 50,50"/>
+    <polygon class="facet" points="7,27 50,4 50,50"/>
+    <text class="num" x="50" y="52">?</text>
+  </svg>`;
 }
 
-function showFailSpectacle(el) {
-  const r = el.getBoundingClientRect();
-  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-  spawnParticles(cx, cy, 20, ['#d43a4d', '#8b1a2b', '#e8dcc8']);
-  const s = document.createElement('div');
-  s.style.cssText = 'position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:300;text-align:center;pointer-events:none;animation:skull-drop .7s cubic-bezier(.34,1.56,.64,1) both';
-  s.innerHTML = SKULL_SVG + `<div style="font-family:'Silkscreen',monospace;font-size:1.4rem;color:#d43a4d;text-shadow:0 0 18px rgba(212,58,77,.8);margin-top:.4rem">PATETISKT!</div>`;
-  document.body.appendChild(s);
-  document.body.classList.add('shake');
-  setTimeout(() => document.body.classList.remove('shake'), 500);
-  setTimeout(() => s.remove(), 1800);
+// Fullskärms-tärningsceremoni. Returnerar Promise som löser när avslöjandet är klart.
+async function d20Ceremony(notation, label, roll) {
+  const isCrit = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 20;
+  const isFail = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 1;
+  const modStr = roll.mod !== 0 ? (roll.mod > 0 ? '+' + roll.mod : roll.mod) : '';
+
+  // Bygg overlay
+  const ov = document.createElement('div');
+  ov.className = 'd20-overlay';
+  ov.innerHTML = `
+    <div class="d20-label">🎲 <b>${escapeHtml(label)}</b> · ${escapeHtml(notation)}</div>
+    <div class="d20-wrap">${d20Svg()}</div>
+    <div class="d20-result"></div>
+    <div class="d20-tension">Tärningen rullar…</div>`;
+  document.body.appendChild(ov);
+  const num = ov.querySelector('.d20 .num');
+  const resultEl = ov.querySelector('.d20-result');
+  const tensionEl = ov.querySelector('.d20-tension');
+
+  // Fade-in + rull-fas (3 sekunder spänning, siffrorna flimrar)
+  requestAnimationFrame(() => ov.classList.add('show', 'rolling'));
+  SFX.dice();
+
+  const ROLL_MS = 3000;
+  const start = Date.now();
+  await new Promise(resolve => {
+    (function flicker() {
+      const elapsed = Date.now() - start;
+      if (elapsed >= ROLL_MS) { resolve(); return; }
+      // Slumpade siffror flimrar förbi — snabbt först, glesare mot slutet (bygger spänning)
+      num.textContent = 1 + Math.floor(Math.random() * (roll.sides || 20));
+      const progress = elapsed / ROLL_MS;
+      const delay = 50 + progress * progress * 220; // 50ms → ~270ms (saktar in)
+      setTimeout(flicker, delay);
+    })();
+  });
+
+  // Avslöjande!
+  ov.classList.remove('rolling');
+  ov.classList.add('reveal');
+  if (isCrit) ov.classList.add('crit');
+  if (isFail) ov.classList.add('fail');
+  num.textContent = roll.rolls[0];
+  tensionEl.style.display = 'none';
+
+  const verdict = isCrit ? '✦ KRITISKT!' : isFail ? '✦ PATETISKT!' : '';
+  resultEl.textContent = `${roll.rolls.join(', ')}${modStr} = ${roll.total} ${verdict}`.trim();
+
+  const wrap = ov.querySelector('.d20-wrap').getBoundingClientRect();
+  const cx = wrap.left + wrap.width / 2, cy = wrap.top + wrap.height / 2;
+
+  if (isCrit) {
+    SFX.crit();
+    spawnParticles(cx, cy, 40, ['#ffd700', '#fff8dc', '#4dd8f0', '#e0ffff']);
+    const flash = document.createElement('div');
+    flash.style.cssText = 'position:fixed;inset:0;background:rgba(255,248,220,.3);z-index:410;pointer-events:none;transition:opacity .6s';
+    document.body.appendChild(flash);
+    requestAnimationFrame(() => flash.style.opacity = 0);
+    setTimeout(() => flash.remove(), 700);
+  } else if (isFail) {
+    SFX.fail();
+    spawnParticles(cx, cy, 25, ['#d43a4d', '#8b1a2b', '#e8dcc8']);
+    document.body.classList.add('screen-shake');
+    setTimeout(() => document.body.classList.remove('screen-shake'), 550);
+  } else {
+    spawnParticles(cx, cy, 14, ['#ffd700', '#c9a227', '#8b5fd4']);
+  }
+
+  // Håll kvar resultatet en stund, tona sedan ut
+  await new Promise(r => setTimeout(r, 1400));
+  ov.classList.add('fade-out');
+  await new Promise(r => setTimeout(r, 320));
+  ov.remove();
 }
 
 // Level-up: episk banner + guldregn
@@ -1458,20 +1606,13 @@ async function answerRollRequest(id, notation, label) {
   const btn = box.querySelector('.rr-btn');
   btn.disabled = true;
   btn.textContent = '🎲 Rullar…';
-  SFX.dice();
-
-  // Animation
-  await new Promise(r => setTimeout(r, 500));
 
   const roll = rollDice(notation);
   const isCrit = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 20;
   const isFail = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 1;
-  if (isCrit) { SFX.crit(); showCritSpectacle(box); }
-  else if (isFail) { SFX.fail(); showFailSpectacle(box); }
-  else {
-    const r = box.getBoundingClientRect();
-    spawnParticles(r.left + r.width/2, r.top + r.height/2, 12, ['#ffd700','#d43a4d','#8b5fd4','#3ddc84']);
-  }
+
+  // D20-ceremonin — 3s spänning med flimrande siffror, sen avslöjande (vänta in)
+  await d20Ceremony(notation, label, roll);
 
   const modStr = roll.mod !== 0 ? (roll.mod > 0 ? '+' + roll.mod : roll.mod) : '';
   const cls = isCrit ? 'crit' : isFail ? 'fail' : '';
@@ -1481,15 +1622,20 @@ async function answerRollRequest(id, notation, label) {
       <span>${label}: [${roll.rolls.join(', ')}]${modStr} = <b class="${cls}">${roll.total}</b>${isCrit ? ' ✦ KRITISKT!' : ''}${isFail ? ' ✦ PATETISKT!' : ''}</span>
     </div>`;
 
-  // Skicka resultatet till DM (backend)
+  // Skicka resultatet till DM (backend) — DM ger utfallet direkt
+  showThoughts('narrate');
   try {
     const resultMsg = `[Resultat: ${label} → ${roll.total} (${roll.rolls.join(', ')}${modStr})]`;
     const res = await API.chat(resultMsg, currentModel);
+    hideThoughts();
     if (res.reply) addMessage('dm', null, res.reply);
     if (res.roll_requests && res.roll_requests.length) {
       res.roll_requests.forEach(r => addRollRequest(r.notation, r.label));
     }
-  } catch (e) { /* DM svarar inte på resultat — OK */ }
+  } catch (e) {
+    hideThoughts();
+    addMessage('system', null, '⚠ DM:n kunde inte ge utfallet: <b>' + escapeHtml(e.message || 'okänt fel') + '</b>');
+  }
 }
 
 function diceMessage(roll, label) {

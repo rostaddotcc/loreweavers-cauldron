@@ -1415,7 +1415,21 @@ def _build_system_prompt(
     """Bygg systemprompt med kampanjkontext. turn_override används av /api/chat
     för att räkna med det meddelande som ännu inte sparats i transkriptet."""
     # Core-prompt + version (versionen tvingar cache-miss vid ändringar)
-    parts = [f"[DM-prompt {DM_PROMPT_VERSION}]\n" + DM_CORE_PROMPT]
+    # ── LANGUAGE FIRST: must come before everything else ──
+    lang = state.get("meta", {}).get("language", "sv")
+    if lang == "en":
+        parts = [
+            "[LANGUAGE: ENGLISH] You MUST write ALL narration, dialogue, NPC speech, "
+            "descriptions, and every single word of your response in English. "
+            "This overrides any Swedish text in the instructions below — those are "
+            "internal system notes, NOT the output language.\n"
+        ]
+    else:
+        parts = [
+            "[SPRÅK: SVENSKA] Du MÅSTE skriva ALL narration, dialog, NPC-repliker, "
+            "beskrivningar och varje ord i ditt svar på svenska.\n"
+        ]
+    parts.append(f"[DM-prompt {DM_PROMPT_VERSION}]\n" + DM_CORE_PROMPT)
 
     # Combat vs Narrative — injicera bara det som behövs denna tur
     enemies = [n for n in state.get("npcs", []) if n.get("relation") == "fiende" and n.get("alive", True)]
@@ -1520,13 +1534,6 @@ def _build_system_prompt(
             f"Använd: [KAST: {guardian_roll['notation']} | {guardian_roll['label']}]\n"
             f"Bygg scenen så att kastet känns naturligt. Ge konsekvenser för både lyckat och misslyckat."
         )
-
-    # ── Språkinstruktion ──
-    lang = state.get("meta", {}).get("language", "sv")
-    if lang == "en":
-        parts.append("\n\n[IMPORTANT: Write ALL responses in English. All narration, dialogue, NPC speech, and descriptions must be in English.]")
-    else:
-        parts.append("\n\n[VIKTIGT: Skriv ALLA svar på svenska. All narration, dialog, NPC-repliker och beskrivningar ska vara på svenska.]")
 
     return "\n".join(parts)
 

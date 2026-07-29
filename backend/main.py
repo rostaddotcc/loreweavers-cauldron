@@ -739,6 +739,12 @@ async def _call_llm(
         "max_tokens": max_tokens,
     }
 
+    # StepFun 3.7 Flash: reasoning äter hela tokenbudgeten → tom content.
+    # Bakgrundsanrop (atmosfär, extraktion, sammanfattning) behöver inte
+    # djup resonemang — "low" ger snabbt, korrekt svar utan tankeblock.
+    if config.api_model == "step-3.7-flash":
+        body["reasoning_effort"] = "low"
+
     url = f"{config.base_url.rstrip('/')}/chat/completions"
 
     async with httpx.AsyncClient(timeout=timeout) as client:
@@ -1662,6 +1668,12 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     state = store.get(username)
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj — skapa en först")
+
+    # Spelaren svarade på ett tärningskast → rensa väntande kast-begäran.
+    # last_roll_requests fungerar då som "obesvarade kast": de finns kvar
+    # tills spelaren slår, så en refresh kan återställa knapparna.
+    if req.message.startswith("[Resultat:"):
+        state.setdefault("meta", {})["last_roll_requests"] = []
 
     # Bygg meddelandelista — spelarens meddelande sparas först EFTER att LLM:n svarat,
     # så ett misslyckat anrop lämnar inga spår i transkriptet.

@@ -91,6 +91,7 @@ from logbook import build_log_prompt
 from state_manager import CAMPAIGNS_DIR, CampaignStore, CharacterVault
 import rag
 from extraction import FactRegister, extract_facts, format_facts_block
+from guardian import guardian_check_roll, guardian_extract_mechanics, apply_mechanics
 
 app = FastAPI(title="Mörkrets Rike", version="1.0.0")
 
@@ -1316,6 +1317,7 @@ def _build_system_prompt(
     turn_override: int | None = None,
     awakening_trigger: bool = False,
     player_input: str = "",
+    guardian_roll: dict | None = None,
 ) -> str:
     """Bygg systemprompt med kampanjkontext. turn_override används av /api/chat
     för att räkna med det meddelande som ännu inte sparats i transkriptet."""
@@ -1457,6 +1459,17 @@ def _build_system_prompt(
     rules_text = inject_rules(player_input)
     if rules_text:
         parts.append(f"\n## RELEVANTA REGLER (denna tur)\n{rules_text}")
+
+    # ── Guardian-råd: kast-detektion ──
+    # Guardian har analyserat spelarens handling och rekommenderar ett kast.
+    # DM:n bör använda exakt denna [KAST:]-tagg (eller motivera varför inte).
+    if guardian_roll:
+        parts.append(
+            f"\n## 🛡️ GUARDIAN: KAST REKOMMENDERAS\n"
+            f"Spelarens handling kräver ett tärningskast.\n"
+            f"Använd: [KAST: {guardian_roll['notation']} | {guardian_roll['label']}]\n"
+            f"Bygg scenen så att kastet känns naturligt. Ge konsekvenser för både lyckat och misslyckat."
+        )
 
     return "\n".join(parts)
 
@@ -1618,6 +1631,31 @@ async def _post_turn_tasks(
     except Exception as e:
         logger.debug("Faktextraktion hoppade över: %s", e)
 
+    # 1b. Guardian POST-DM: mekanisk extraktion (skada, XP, quests, NPCs, tid, vila…)
+    try:
+        st = store.get(username)
+        if st:
+            mech = await guardian_extract_mechanics(
+                reply, player_msg, st, turn_count, _extraction_llm,
+            )
+            # Applicera ändringar (dedup mot taggar som redan applicerats)
+            guardian_effects = apply_mechanics(st, mech)
+            if guardian_effects:
+                # Lägg till Guardian-effekter i last_effects (för nästa turs prompt)
+                meta = st.setdefault("meta", {})
+                existing = meta.get("last_effects", [])
+                # Undvik dubletter: samma type+value
+                existing_keys = {(e.get("type"), str(e.get("value"))) for e in existing}
+                for ge in guardian_effects:
+                    key = (ge.get("type"), str(ge.get("value")))
+                    if key not in existing_keys:
+                        existing.append(ge)
+                meta["last_effects"] = existing
+                store.save(st)
+                logger.info("🛡️ Guardian post-DM: %d mekaniska effekter applicerade", len(guardian_effects))
+    except Exception as e:
+        logger.debug("Guardian post-DM hoppade över: %s", e)
+
     # 2. Indexera senaste transkriptet i Qdrant (var 5:e tur)
     if turn_count % 5 == 0 and turn_count > 0:
         try:
@@ -1728,9 +1766,31 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         effective_turn, req.model_id,
         "VAKNANDE" if is_awakening else f"«{req.message[:40]}»",
     )
+
+    # ── Guardian PRE-DM: kast-detektion ──
+    # Guardian avgör om handlingen kräver ett kast och i så fall vilket.
+    # Resultatet injiceras som råd i DM-prompten + fungerar som fallback
+    # om DM glömmer [KAST:]-taggen.
+    guardian_roll = None
+    if not is_awakening and not req.message.startswith("[Resultat:"):
+        try:
+            _tg = time.time()
+            guardian_roll = await guardian_check_roll(
+                req.message, state,
+                lambda msgs: _call_llm(EXTRACTION_MODEL, msgs, temperature=0.1, max_tokens=200),
+            )
+            if guardian_roll:
+                logger.info("🛡️ Guardian pre-DM (%.1fs): kast %s (%s)",
+                            time.time() - _tg, guardian_roll["notation"], guardian_roll["label"])
+            else:
+                logger.debug("🛡️ Guardian pre-DM (%.1fs): inget kast", time.time() - _tg)
+        except Exception as e:
+            logger.warning("🛡️ Guardian pre-DM hoppade över: %s", e)
+
     messages = [{"role": "system", "content": _build_system_prompt(
         state, turn_override=effective_turn, awakening_trigger=is_awakening,
         player_input=req.message,
+        guardian_roll=guardian_roll,
     )}]
     logger.debug("Systemprompt byggd (%d tecken)", len(messages[0]["content"]))
 
@@ -1803,6 +1863,14 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     if not roll_requests and PROSE_ROLL_PATTERN.search(reply):
         roll_requests = [{"notation": "1d20", "label": "Tärningsslag"}]
         logger.warning("🎲 Prosa-kast upptäckt (ingen [KAST:]-tagg) → auto-spawnar 1d20")
+
+    # ── Guardian-fallback: DM glömde [KAST:] men Guardian rekommenderade kast ──
+    # Guardian pre-DM avgjorde att handlingen kräver kast. Om DM inte
+    # producerade någon [KAST:]-tagg, använd Guardians rekommendation.
+    if not roll_requests and guardian_roll:
+        roll_requests = [{"notation": guardian_roll["notation"], "label": guardian_roll["label"]}]
+        logger.warning("🛡️ Guardian-fallback: DM glömde [KAST:] → auto-spawnar %s (%s)",
+                       guardian_roll["notation"], guardian_roll["label"])
 
     # Lägg till nya NPCs FÖRE taggparsning (så NPC_DÖD hittar dem)
     for npc in new_npcs:

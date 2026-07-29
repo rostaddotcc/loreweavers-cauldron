@@ -112,15 +112,23 @@ PROSE_ROLL_PATTERN = re.compile(
 
 # Säkerhetsnät: DM narrerar att spelaren FÅR/HITTAR/KÖPER ett föremål i prosa
 # men glömde [FÖREMÅL:]-taggen. Utan taggen hamnar föremålet aldrig i inventory.
-# Vi känner av gåvo-/fyndfraser och extraherar föremålsnamnet generiskt.
-# Stoppord exkluderas så vi inte fångar bindeord ("och", "att", "som" ...).
-_PROSE_ITEM_STOPWORDS = r'(?:och|att|som|men|för|med|den|det|en|ett|till|från|av|på|i|vid)'
+# VIKTIGT: Endast entydiga GÅVO-/FYND-verb. "ser", "tar", "får" är FÖR vanliga
+# i svensk prosa och fångar meningsfragment ("ser lite besviken ut" → falskt föremål).
+_PROSE_ITEM_STOPWORDS = (
+    r'(?:och|att|som|men|för|med|den|det|en|ett|till|från|av|på|i|vid|'
+    r'lite|rakt|ut|in|upp|ner|när|du|jag|han|hon|dess|sig|bara|redan|'
+    r'mycket|väldigt|fortfarande|här|där|nu|sedan|igen|mot|utan|efter|'
+    r'över|under|mellan|genom|bland|hos|bakom|framför|bredvid|samt|'
+    r'denna|detta|dessa|vilken|vilket|sådan|sånt|allt|alla|ingen|inget)'
+)
 PROSE_ITEM_PATTERN = re.compile(
     r'(?:ger|räcker|lämnar|överlåter|lånar|skänker|förärar|bjuder|'
-    r'hittar|plockar upp|köper|tar|stjäl|får|tar emot|mottar|upptäcker|ser|grep|fattar)'
+    r'hittar|plockar upp|köper|stjäl|tar emot|mottar|upptäcker|grep|fattar)'
     r'\s+(?:(?:dig|er|sig)\s+)?'
     r'(?:en |ett |två |tre |några |ett par )?'
-    r'((?!' + _PROSE_ITEM_STOPWORDS + r'\b)[\wåäöÅÄÖ][\wåäöÅÄÖ\s\-]{2,29})',
+    r'((?!' + _PROSE_ITEM_STOPWORDS + r'\b)[\wåäöÅÄÖ][\wåäöÅÄÖ\-]{1,19}'
+    r'(?:\s(?!' + _PROSE_ITEM_STOPWORDS + r'\b)[\wåäöÅÄÖ][\wåäöÅÄÖ\-]{1,19}){0,2})'
+    r'(?=\s*[.,;:!?\)]|\s+(?:och|att|som|men|för|med|den|det|till|från|av|på|i|vid|ur|upp|ner|ut|in|mot|utan)\b|$)',
     re.IGNORECASE,
 )
 

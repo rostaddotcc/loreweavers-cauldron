@@ -945,8 +945,10 @@ async def add_lore(body: LoreRequest, morkrets_token: str | None = Cookie(None))
 async def get_facts(category: str | None = None, morkrets_token: str | None = Cookie(None)):
     """Hämta faktaregistret (alla eller filtrerade per kategori)."""
     payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    campaign_id = state["meta"]["campaign_id"] if state else ""
     try:
-        register = FactRegister(payload["sub"])
+        register = FactRegister(payload["sub"], campaign_id)
         if category:
             facts = register.get_facts_by_category(category)
         else:
@@ -1190,7 +1192,7 @@ async def _retrieve_relevant_memory(
 
     # 1. Faktaregister — keyword-baserat, alltid tillgängligt (ingen Qdrant krävs)
     try:
-        register = FactRegister(username)
+        register = FactRegister(username, campaign_id)
         relevant = register.get_relevant_facts(query, limit=8)
         if relevant:
             sections.append(format_facts_block(relevant))
@@ -1436,7 +1438,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
 
         facts = await extract_facts(reply, req.message, turn_count, _extraction_llm)
         if facts:
-            register = FactRegister(username)
+            register = FactRegister(username, campaign_id)
             register.add_facts(facts)
             logger.info("Extraherade %d fakta (tur %d)", len(facts), turn_count)
     except Exception as e:

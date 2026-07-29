@@ -366,15 +366,19 @@ def _token_overlap_ratio(a: str, b: str) -> float:
 
 class FactRegister:
     """
-    Per-användare faktaregister med JSON-lagring.
+    Per-kampanj faktaregister med JSON-lagring.
 
-    Fil: backend/data/campaigns/<username>/facts.json
+    Fil: backend/data/campaigns/<username>/<campaign_id>/facts.json
     """
 
-    def __init__(self, username: str, data_dir: Path | None = None):
+    def __init__(self, username: str, campaign_id: str = "", data_dir: Path | None = None):
         self._username = username
         base = data_dir or _CAMPAIGNS_DIR
-        self._path = base / username / "facts.json"
+        if campaign_id:
+            self._path = base / username / campaign_id / "facts.json"
+        else:
+            # Fallback: per-användare (bakåtkompatibilitet)
+            self._path = base / username / "facts.json"
         self._facts: list[Fact] = []
         self._load()
 

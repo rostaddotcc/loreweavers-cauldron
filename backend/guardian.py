@@ -214,8 +214,16 @@ Läs DM-svaret och spelarens handling. Extrahera ALLA mekaniska effekter.
 - new_day: Om en ny dag börjar. Ange description.
 
 ### Loggbok
-- logbook: En kort sammanfattning av vad som hände (max 2 meningar). \
+- logbook: En kort sammanfattning av vad som hände denna tur (max 2 meningar). \
 Skriv i dåtid, tredje person. T.ex. "Faelyndra smög förbi vakten och tog sig in i källaren."
+
+### Dagsammanfattning (VID NY DAG)
+- day_summary: Fylls I ENDAST när new_day inte är null. Sammanfatta den DAG SOM JUST AVSLUTADES:
+  - 3-5 meningar om dagens viktigaste händelser
+  - Vilka quests som påbörjades, avslutades eller misslyckades
+  - Vilka NPCs som möttes och deras relation till spelaren
+  - Stämning/atmosfär (t.ex. "Blodig men hoppfull")
+  - Format: {"title": "Dagens titel", "events": "...", "quests": "...", "mood": "..."}
 
 ### ASCII-art (stämning)
 - ascii_art: En liten ASCII-art (max 10 rader, max 50 tecken bred) som matchar scenens miljö/stämning. \
@@ -249,6 +257,7 @@ Generera art varannan tur — inte varje tur.
   "time_passed": null,
   "rest": null,
   "new_day": null,
+  "day_summary": null,
   "logbook": "",
   "ascii_art": null
 }
@@ -344,7 +353,7 @@ async def guardian_extract_mechanics(
         "quests_new": [], "quests_completed": [], "quests_failed": [],
         "npcs_new": [], "npc_relations": [], "npc_notes": [],
         "locations_new": [], "time_passed": None, "rest": None,
-        "new_day": None, "logbook": "", "ascii_art": None,
+        "new_day": None, "day_summary": None, "logbook": "", "ascii_art": None,
     }
 
     for attempt in range(2):
@@ -649,9 +658,23 @@ def apply_mechanics(state: dict, mech: dict) -> list[dict]:
     nd = mech.get("new_day")
     if nd and isinstance(nd, dict):
         desc = nd.get("description", "En ny dag gryr")
-        world["day"] = world.get("day", 1) + 1
+        prev_day = world.get("day", 1)
+        world["day"] = prev_day + 1
         world["day_description"] = desc
         world.setdefault("day_log", []).append({"day": world["day"], "description": desc})
+
+        # Dagsammanfattning av den avslutade dagen
+        ds = mech.get("day_summary")
+        if ds and isinstance(ds, dict):
+            world.setdefault("day_summaries", []).append({
+                "day": prev_day,
+                "title": ds.get("title", f"Dag {prev_day}"),
+                "events": ds.get("events", ""),
+                "quests": ds.get("quests", ""),
+                "mood": ds.get("mood", ""),
+            })
+            logger.info("🛡️ Guardian dagsammanfattning Dag %d: %s", prev_day, ds.get("title", ""))
+
         effects.append({"type": "ny_dag", "value": f"Dag {world['day']}: {desc}"})
         logger.info("🛡️ Guardian: NY DAG %d — %s", world["day"], desc)
 
@@ -740,6 +763,11 @@ def _sanitize_mechanics(mech: dict) -> dict:
     else:
         mech["ascii_art"] = None
 
+    # day_summary: ska vara dict eller null
+    ds = mech.get("day_summary")
+    if ds and not isinstance(ds, dict):
+        mech["day_summary"] = None
+
     return mech
 
 
@@ -796,6 +824,18 @@ def format_guardian_summary(effects: list[dict], state: dict) -> str:
             lines.append(f"🕐 **Tid:** {v}")
         elif t == "ny_dag":
             lines.append(f"🌅 **{v}**")
+            # Visa dagsammanfattning av den avslutade dagen
+            world = state.get("world", {})
+            summaries = world.get("day_summaries", [])
+            if summaries:
+                ds = summaries[-1]
+                lines.append(f"📖 **Sammanfattning — {ds.get('title', '')}**")
+                if ds.get("events"):
+                    lines.append(f"  {ds['events']}")
+                if ds.get("quests"):
+                    lines.append(f"  📜 {ds['quests']}")
+                if ds.get("mood"):
+                    lines.append(f"  🎭 *{ds['mood']}*")
 
     if not lines:
         return ""

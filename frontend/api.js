@@ -8,8 +8,67 @@ const API = (() => {
   const MOCK = false; // Backend live på dnd.rostad.cc
   const BASE = '';   // Samma origin i Docker (backend servar frontend)
 
-  // ── Fetch-wrapper med felhantering ──
+  // ── Debug-logg (Ctrl+Shift+D) ──
+  const _debugLog = [];
+  let _debugPanel = null;
+  let _debugVisible = false;
+
+  function _dbg(type, msg, detail) {
+    const entry = { t: new Date().toLocaleTimeString('sv-SE'), type, msg, detail };
+    _debugLog.push(entry);
+    if (_debugLog.length > 200) _debugLog.shift();
+    if (_debugVisible) _renderDebug();
+    console.log(`[DEBUG ${type}]`, msg, detail || '');
+  }
+
+  function _renderDebug() {
+    if (!_debugPanel) return;
+    const body = _debugPanel.querySelector('.dbg-body');
+    if (!body) return;
+    body.innerHTML = _debugLog.slice(-80).map(e =>
+      `<div class="dbg-line dbg-${e.type}"><span class="dbg-t">${e.t}</span> ${e.msg}${e.detail ? ' <span class="dbg-d">' + String(e.detail).slice(0, 120) + '</span>' : ''}</div>`
+    ).join('');
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function _toggleDebug() {
+    _debugVisible = !_debugVisible;
+    if (_debugVisible && !_debugPanel) {
+      _debugPanel = document.createElement('div');
+      _debugPanel.id = 'debug-panel';
+      _debugPanel.innerHTML = `
+        <div class="dbg-header">🐛 Debug <button class="dbg-clear">Rensa</button><button class="dbg-close">✕</button></div>
+        <div class="dbg-body"></div>`;
+      _debugPanel.querySelector('.dbg-close').onclick = _toggleDebug;
+      _debugPanel.querySelector('.dbg-clear').onclick = () => { _debugLog.length = 0; _renderDebug(); };
+      document.body.appendChild(_debugPanel);
+      const style = document.createElement('style');
+      style.textContent = `
+        #debug-panel{position:fixed;bottom:0;right:0;width:420px;max-height:45vh;z-index:99999;
+          background:#0a0a12;border:1px solid #333;border-radius:8px 0 0 0;font-family:'IBM Plex Mono',monospace;
+          font-size:11px;display:flex;flex-direction:column;box-shadow:0 -4px 20px rgba(0,0,0,.6)}
+        .dbg-header{padding:6px 10px;background:#111;color:#8f8;display:flex;gap:8px;align-items:center;font-size:12px}
+        .dbg-header button{background:#222;border:1px solid #444;color:#aaa;padding:2px 8px;border-radius:3px;cursor:pointer;font-size:10px}
+        .dbg-header button:hover{background:#333;color:#fff}
+        .dbg-body{overflow-y:auto;padding:6px 10px;flex:1;max-height:38vh}
+        .dbg-line{padding:2px 0;border-bottom:1px solid #1a1a2a;line-height:1.4}
+        .dbg-t{color:#555;margin-right:6px}
+        .dbg-d{color:#666;font-style:italic}
+        .dbg-ok{color:#6d6}.dbg-err{color:#f66}.dbg-warn{color:#fa0}.dbg-info{color:#8af}.dbg-api{color:#a8f}`;
+      document.head.appendChild(style);
+    }
+    if (_debugPanel) _debugPanel.style.display = _debugVisible ? 'flex' : 'none';
+    if (_debugVisible) _renderDebug();
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); _toggleDebug(); }
+  });
+
+  // ── Fetch-wrapper med felhantering + debug ──
   async function req(path, opts = {}) {
+    const t0 = performance.now();
+    _dbg('api', `${opts.method || 'GET'} ${path}`);
     try {
       // FormData (filuppladdning) sätter sin egen Content-Type med boundary
       const isForm = typeof FormData !== 'undefined' && opts.body instanceof FormData;
@@ -21,19 +80,25 @@ const API = (() => {
         headers,
         ...opts,
       });
+      const ms = Math.round(performance.now() - t0);
       if (res.status === 401) {
-        // Session utgången → tillbaka till porten
+        _dbg('err', `${path} → 401 (${ms}ms)`);
         if (!location.pathname.includes('login')) location.href = 'login.html';
         throw new Error('Session utgången');
       }
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: res.statusText }));
-        throw new Error(typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail));
+        const msg = typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail);
+        _dbg('err', `${path} → ${res.status} (${ms}ms)`, msg);
+        throw new Error(msg);
       }
-      return await res.json();
+      const data = await res.json();
+      _dbg('ok', `${path} → 200 (${ms}ms)`);
+      return data;
     } catch (e) {
-      if (e.message !== 'Session utgången' && typeof toast === 'function') {
-        toast('⚠ ' + e.message);
+      if (e.message !== 'Session utgången') {
+        _dbg('err', `${path} FÅNGAD`, e.message);
+        if (typeof toast === 'function') toast('⚠ ' + e.message);
       }
       throw e;
     }

@@ -702,6 +702,7 @@ async def _call_llm(
     temperature: float = 0.8,
     max_tokens: int = 1024,
     timeout: float = 180,
+    reasoning_effort: str | None = None,
 ) -> str:
     """Anropa vald modell via OpenAI-kompatibelt /chat/completions.
     Reasoning-modeller (deepseek-v4-flash) behöver högre max_tokens
@@ -725,11 +726,9 @@ async def _call_llm(
         "max_tokens": max_tokens,
     }
 
-    # StepFun 3.7 Flash: reasoning äter hela tokenbudgeten → tom content.
-    # Bakgrundsanrop (atmosfär, extraktion, sammanfattning) behöver inte
-    # djup resonemang — "low" ger snabbt, korrekt svar utan tankeblock.
+    # StepFun 3.7 Flash: debiterar per prompt, inte per token → high överallt.
     if config.api_model == "step-3.7-flash":
-        body["reasoning_effort"] = "low"
+        body["reasoning_effort"] = reasoning_effort or "high"
 
     url = f"{config.base_url.rstrip('/')}/chat/completions"
 
@@ -2078,7 +2077,7 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
     ]
 
     try:
-        raw = await _call_llm(req.model_id, messages, temperature=0.7, max_tokens=3000)
+        raw = await _call_llm(req.model_id, messages, temperature=0.7, max_tokens=3000, reasoning_effort="high")
         char_data = _extract_json(raw)
     except HTTPException:
         raise

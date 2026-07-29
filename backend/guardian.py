@@ -16,7 +16,7 @@ Avlastar DM från all mekanisk bokhållning. Två lägen:
 Designprinciper:
   - DM skriver INGA mekaniska taggar — Guardian äger mekaniken.
   - Guardian är den enda auktoriteten för state-ändringar.
-  - Pre-DM måste vara snabb (<2s) — StepFun + reasoning_effort=low.
+  - Pre-DM måste vara snabb (<2s) — StepFun + reasoning_effort=high (debiterar per prompt).
   - Post-DM kör i bakgrunden — latens spelar ingen roll.
 """
 

@@ -251,57 +251,84 @@
   .msg { margin-bottom: 1.1rem; animation: msg-in 0.4s cubic-bezier(0.22,1,0.36,1); max-width: 760px; }
   @keyframes msg-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
-  /* ── Avatarer i chatten (liten bild eller sprite, klickbar för uppladdning) ── */
+  /* ── Avatarer i chatten (inramade, rollfärgade, klickbara för uppladdning) ── */
   .msg-avatar {
-    width: 18px; height: 18px; flex-shrink: 0;
+    width: 44px; height: 44px; flex-shrink: 0;
     display: inline-flex; align-items: center; justify-content: center;
-    cursor: pointer; border: 1px solid transparent;
-    transition: border-color .2s, transform .2s;
-    overflow: hidden;
+    cursor: pointer; overflow: hidden; position: relative;
+    background: var(--stone-2);
+    border: 2px solid var(--edge); border-radius: 3px;
+    transition: border-color .2s, transform .2s, box-shadow .2s;
   }
-  .msg-avatar:hover { border-color: var(--gold); transform: scale(1.12); }
+  .msg-avatar:hover { transform: scale(1.12); }
   .msg-avatar img { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; display: block; }
-  .msg-avatar .pxs { width: 1em; height: 1em; }
+  .msg-avatar .pxs { width: 68%; height: 68%; }
+  /* Ram + glöd per roll */
+  .msg.dm .msg-avatar { border-color: rgba(201,162,39,0.65); box-shadow: 0 0 10px -2px rgba(232,198,90,0.4); }
+  .msg.dm .msg-avatar:hover { border-color: var(--gold-bright); box-shadow: 0 0 16px -2px rgba(232,198,90,0.7); }
+  .msg.npc .msg-avatar { border-color: color-mix(in srgb, var(--npc-color, #a8b2c0) 65%, transparent); box-shadow: 0 0 10px -2px color-mix(in srgb, var(--npc-color, #a8b2c0) 45%, transparent); }
+  .msg.npc .msg-avatar:hover { border-color: var(--npc-color, #a8b2c0); box-shadow: 0 0 16px -2px color-mix(in srgb, var(--npc-color, #a8b2c0) 70%, transparent); }
+  .msg.player .msg-avatar { border-color: rgba(139,95,212,0.65); box-shadow: 0 0 10px -2px rgba(139,95,212,0.4); }
+  .msg.player .msg-avatar:hover { border-color: var(--arcane); box-shadow: 0 0 16px -2px rgba(139,95,212,0.7); }
 
-  /* DM narration */
-  .msg.dm { border-left: 2px solid rgba(201,162,39,0.4); padding-left: 1rem; }
-  .msg.dm .who {
-    font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.24em;
-    text-transform: uppercase; color: var(--gold); margin-bottom: 0.35rem;
-    display: flex; align-items: center; gap: 0.5rem;
+  /* ── Chattbubblor: avatar + bubbla med gotiska hörnbeslag ── */
+  .msg.dm, .msg.npc { display: flex; gap: 0.8rem; align-items: flex-start; }
+  .msg.player { display: flex; gap: 0.8rem; align-items: flex-start; justify-content: flex-end; margin-left: auto; }
+  .bubble {
+    position: relative; min-width: 0; max-width: 640px;
+    padding: 0.7rem 1.05rem 0.85rem;
+    border: 1px solid var(--edge); border-radius: 3px;
+    transition: transform .2s, box-shadow .2s, border-color .2s;
   }
-  .msg.dm .text { font-style: italic; color: var(--bone); line-height: 1.7; font-size: 1.06rem; }
+  .bubble:hover { transform: translateY(-2px); box-shadow: 0 8px 24px -10px rgba(0,0,0,0.7); }
+  /* Hörnbeslag (terminal-gotik) — accentfärg per roll */
+  .bubble::before, .bubble::after { content: ''; position: absolute; width: 11px; height: 11px; pointer-events: none; opacity: 0.9; }
+  .bubble::before { top: -1px; left: -1px; border-top: 2px solid var(--accent, var(--gold)); border-left: 2px solid var(--accent, var(--gold)); }
+  .bubble::after { bottom: -1px; right: -1px; border-bottom: 2px solid var(--accent, var(--gold)); border-right: 2px solid var(--accent, var(--gold)); }
 
-  /* NPC speech */
-  .msg.npc {
-    padding-left: 1rem;
-    border-left: 2px solid var(--npc-color, #a8b2c0);
-    transition: border-color 0.3s;
+  /* DM — guld, kursiv berättarröst */
+  .msg.dm .bubble {
+    --accent: var(--gold);
+    background: linear-gradient(160deg, rgba(201,162,39,0.13), rgba(201,162,39,0.04));
+    border-color: rgba(201,162,39,0.38);
   }
-  .msg.npc .who {
-    font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.9rem;
-    margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.5rem;
-    color: var(--npc-color, #a8b2c0);
+  .msg.dm .bubble:hover { border-color: rgba(232,198,90,0.6); }
+  .msg.dm .bubble .who { color: var(--gold); }
+  .msg.dm .bubble .text { font-style: italic; color: var(--bone); line-height: 1.7; font-size: 1.05rem; }
+
+  /* NPC — egen färg per gestalt */
+  .msg.npc .bubble {
+    --accent: var(--npc-color, #a8b2c0);
+    background: color-mix(in srgb, var(--npc-color, #a8b2c0) 8%, rgba(11,8,18,0.75));
+    border-color: color-mix(in srgb, var(--npc-color, #a8b2c0) 38%, transparent);
+  }
+  .msg.npc .bubble:hover { border-color: color-mix(in srgb, var(--npc-color, #a8b2c0) 60%, transparent); }
+  .msg.npc .bubble .who {
+    color: var(--npc-color, #a8b2c0); font-weight: 700; font-size: 0.82rem; letter-spacing: 0.1em;
     text-shadow: 0 0 12px color-mix(in srgb, var(--npc-color, #a8b2c0) 35%, transparent);
   }
-  .msg.npc .who .dot { width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
-  .msg.npc .text { color: var(--bone); line-height: 1.65; font-size: 1.03rem; }
-  .msg.npc .text em { color: var(--bone-dim); }
+  .msg.npc .bubble .who .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
+  .msg.npc .bubble .text { color: var(--bone); line-height: 1.65; font-size: 1.03rem; }
+  .msg.npc .bubble .text em { color: var(--bone-dim); }
 
-  /* Player */
-  .msg.player { margin-left: auto; text-align: right; }
-  .msg.player .who {
-    font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.24em;
-    text-transform: uppercase; color: var(--arcane); margin-bottom: 0.35rem;
-    display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem;
+  /* Spelare — lila, högerställd */
+  .msg.player .bubble {
+    --accent: var(--arcane);
+    background: linear-gradient(160deg, rgba(139,95,212,0.16), rgba(139,95,212,0.05));
+    border-color: rgba(139,95,212,0.4);
   }
-  .msg.player .text {
-    display: inline-block; text-align: left;
-    background: linear-gradient(160deg, rgba(139,95,212,0.14), rgba(139,95,212,0.05));
-    border: 1px solid rgba(139,95,212,0.35); padding: 0.75rem 1.05rem;
-    border-radius: 8px 2px 8px 8px; line-height: 1.65; font-size: 1.03rem; color: var(--bone-bright);
-    box-shadow: 0 4px 16px -6px rgba(139,95,212,0.3);
+  .msg.player .bubble:hover { border-color: rgba(139,95,212,0.65); }
+  .msg.player .bubble .who { color: var(--arcane); justify-content: flex-end; }
+  .msg.player .bubble .text { color: var(--bone-bright); line-height: 1.65; font-size: 1.03rem; }
+
+  /* Namnskylt + text i bubblan */
+  .bubble .who {
+    font-family: 'Cinzel', serif; font-size: 0.64rem; letter-spacing: 0.22em;
+    text-transform: uppercase; margin-bottom: 0.45rem;
+    display: flex; align-items: center; gap: 0.5rem;
   }
+  .bubble .text p { margin: 0 0 0.5rem; }
+  .bubble .text p:last-child { margin-bottom: 0; }
 
   /* System / dice */
   .msg.system { text-align: center; max-width: 520px; margin-left: auto; margin-right: auto; }
@@ -1103,20 +1130,20 @@ function addMessage(type, npcKey, text) {
   el.className = 'msg ' + type;
 
   if (type === 'dm') {
-    el.innerHTML = `<div class="who">${avatarHtml('dm', '🧙‍♂️')} Dungeon Master</div><div class="text">${mdToHtml(escapeHtml(text))}</div>`;
+    el.innerHTML = `${avatarHtml('dm', '🧙‍♂️')}<div class="bubble"><div class="who">Dungeon Master</div><div class="text">${mdToHtml(escapeHtml(text))}</div></div>`;
     SFX.receive();
   } else if (type === 'npc') {
     const n = NPCS[npcKey] || { name: npcKey || 'Okänd', color: npcColorFor(npcKey || 'Okänd'), icon: '🎭', role: '' };
     el.style.setProperty('--npc-color', n.color);
     el.innerHTML = `
-      <div class="who">
-        <span class="msg-avatar" data-npc-key="${npcKey}" onclick="pickAvatar('npc:${npcKey}')" title="Klicka för att byta bild">${AVATARS['npc:' + npcKey] ? `<img src="${AVATARS['npc:' + npcKey]}" alt="">` : SPR.html(n.icon || '🎭')}</span>
-        ${n.name}
-      </div>
-      <div class="text">${mdToHtml(escapeHtml(text))}</div>`;
+      <span class="msg-avatar" data-npc-key="${npcKey}" onclick="pickAvatar('npc:${npcKey}')" title="Klicka för att byta bild">${AVATARS['npc:' + npcKey] ? `<img src="${AVATARS['npc:' + npcKey]}" alt="">` : SPR.html(n.icon || '🎭')}</span>
+      <div class="bubble">
+        <div class="who"><span class="dot"></span>${n.name}</div>
+        <div class="text">${mdToHtml(escapeHtml(text))}</div>
+      </div>`;
     SFX.receive();
   } else if (type === 'player') {
-    el.innerHTML = `<div class="who">${avatarHtml('player', '🧙‍♀️')} ${CHAR_NAME}</div><div class="text">${text}</div>`;
+    el.innerHTML = `<div class="bubble"><div class="who">${CHAR_NAME}</div><div class="text">${text}</div></div>${avatarHtml('player', '🧙‍♀️')}`;
     SFX.send();
   } else if (type === 'system') {
     el.innerHTML = `<div class="box">${text}</div>`;

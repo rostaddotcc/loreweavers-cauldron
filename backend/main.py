@@ -4,6 +4,7 @@ Mörkrets Rike — FastAPI Backend
 LLM-driven D&D Dungeon Master. Alla endpoints under /api/.
 """
 
+import copy
 import io
 import json
 import logging
@@ -1167,15 +1168,12 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     effective_turn = state["meta"].get("turn_count", 0) + 1
     is_awakening = req.message == "__VAKNA_DM__"
     messages = [{"role": "system", "content": _build_system_prompt(
-        state, turn_override=effective_turn, awakening_trigger=is_awakening
+        state, turn_override=effective_turn, awakening_trigger=is_awakening,
+        player_input=req.message,
     )}]
 
-    # Lägg till senaste sammanfattningar som kontext
-    summaries = store.load_summaries(state, last_n=2)
-    for s in summaries:
-        messages.append(
-            {"role": "system", "content": f"[Sammanfattning vid tur {s['turn']}]: {s['text']}"}
-        )
+    # Sammanfattningar injiceras numera i _build_system_prompt (hierarkiskt:
+    # 2 scen + 2 kapitel + 1 kampanjbåge) — ingen separat loop behövs här.
 
     # Lägg till recent transcript + spelarens nya meddelande
     # (vaknandetrigger filtreras bort — den är en intern signal, inte spelartext)
@@ -1213,8 +1211,67 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         if npc["name"].lower() not in existing:
             state.setdefault("npcs", []).append(npc)
 
-    # Parsa mekaniska taggar (SKADA, HELA, XP, GULD, etc.)
-    reply, state, effects = _parse_mechanical_tags(reply, state)
+    # ── Pydantic-validering + retry av mekaniska taggar ──
+    # Parsa mekaniska taggar och validera mot kampanjtillståndet. Vid fel:
+    # repair-prompt + nytt LLM-anrop (upp till 2 försök totalt). Efter 2
+    # misslyckade försök behålls narrationen men trasig mekanik förkastas.
+    effects: list = []
+    dm_valid = True
+    base_state = copy.deepcopy(state)  # utgångsläge innan mekanisk parsning
+    current_reply = reply
+    last_errors: list[str] = []
+
+    for attempt in range(2):
+        work_state = copy.deepcopy(base_state)
+        parsed_reply, work_state, parsed_effects = _parse_mechanical_tags(
+            current_reply, work_state
+        )
+        dm_resp, errors = validate_dm_response(
+            parsed_reply, parsed_effects, roll_requests, work_state
+        )
+        if dm_resp.valid:
+            # Giltigt — acceptera parsningen
+            state = work_state
+            reply = parsed_reply
+            effects = parsed_effects
+            dm_valid = True
+            last_errors = []
+            break
+
+        last_errors = errors
+        if attempt < 1:
+            # Ogiltigt — be LLM:n reparera de mekaniska taggarna
+            repair_prompt = (
+                "Ditt förra svar hade dessa fel: "
+                + "; ".join(errors)
+                + ". Behåll narrationen men fixa de mekaniska taggarna. "
+                "Svara med samma format."
+            )
+            try:
+                repaired = await _call_llm(
+                    req.model_id,
+                    messages
+                    + [
+                        {"role": "assistant", "content": current_reply},
+                        {"role": "user", "content": repair_prompt},
+                    ],
+                )
+                # Rensa NPC-/kast-taggar ur det reparerade svaret (texten bara)
+                repaired, _ = _parse_npcs(repaired)
+                repaired, _ = _parse_roll_requests(repaired)
+                current_reply = repaired
+            except Exception as e:
+                logger.warning("Repair-anrop misslyckades: %s", e)
+                break
+        else:
+            # Försöken slut — behåll narrationen, förkasta trasig mekanik
+            logger.warning(
+                "DM-svar ogiltigt efter 2 försök, förkastar mekanik. Fel: %s",
+                "; ".join(errors),
+            )
+            reply = _strip_mechanical_tags(current_reply)
+            effects = []
+            dm_valid = False
 
     # Tagg-enforcement: spåra om DM använder taggar
     meta = state.setdefault("meta", {})

@@ -4,6 +4,7 @@ Mörkrets Rike — FastAPI Backend
 LLM-driven D&D Dungeon Master. Alla endpoints under /api/.
 """
 
+import asyncio
 import copy
 import io
 import json
@@ -27,6 +28,10 @@ logger = logging.getLogger("morkrets")
 # den vanliga stdout-loggen — bara en extra kopia i minnet.
 DEBUG_LOGS: deque = deque(maxlen=600)
 _LOG_ORDER = {"DEBUG": 10, "INFO": 20, "WARNING": 30, "ERROR": 40, "CRITICAL": 50}
+
+# Håller referenser till bakgrundsuppgifter så de inte garbage-collectas
+# (asyncio.create_task returnerar en svag referens annars).
+_BACKGROUND_TASKS: set = set()
 
 
 class _RingBufferHandler(logging.Handler):
@@ -587,10 +592,12 @@ async def _call_llm(
     messages: list[dict],
     temperature: float = 0.8,
     max_tokens: int = 1024,
+    timeout: float = 180,
 ) -> str:
     """Anropa vald modell via OpenAI-kompatibelt /chat/completions.
     Reasoning-modeller (deepseek-v4-flash) behöver högre max_tokens
-    eftersom de tänker innan de svarar."""
+    eftersom de tänker innan de svarar. `timeout` sänks för icke-kritiska
+    anrop (t.ex. ASCII-art) så de aldrig blockerar spelupplevelsen."""
     config = get_model(model_id)
     api_key = get_api_key(config)
 
@@ -611,7 +618,7 @@ async def _call_llm(
 
     url = f"{config.base_url.rstrip('/')}/chat/completions"
 
-    async with httpx.AsyncClient(timeout=180) as client:
+    async with httpx.AsyncClient(timeout=timeout) as client:
         resp = await client.post(url, headers=headers, json=body)
         if resp.status_code != 200:
             raise HTTPException(
@@ -1272,6 +1279,65 @@ async def _retrieve_relevant_memory(
     return "\n\n".join(sections)
 
 
+# ── Bakgrundsuppgifter efter ett DM-svar (icke-kritiska, blockerar ALDRIG svaret) ──
+async def _post_turn_tasks(
+    username: str, campaign_id: str, reply: str, player_msg: str,
+    turn_count: int, model_id: str,
+) -> None:
+    """Körs i bakgrunden EFTER att HTTP-svaret skickats till klienten.
+    Faktextraktion, RAG-indexering och sammanfattning — inget av detta
+    får någonsin fördröja spelarens upplevelse. Alla fel sväljs tyst."""
+    # 1. Extrahera fakta ur DM-svaret (billig modell)
+    try:
+        async def _extraction_llm(messages: list[dict]) -> str:
+            return await _call_llm(EXTRACTION_MODEL, messages, temperature=0.2, max_tokens=800)
+        facts = await extract_facts(reply, player_msg, turn_count, _extraction_llm)
+        if facts:
+            register = FactRegister(username, campaign_id)
+            register.add_facts(facts)
+            logger.info("Extraherade %d fakta (tur %d)", len(facts), turn_count)
+    except Exception as e:
+        logger.debug("Faktextraktion hoppade över: %s", e)
+
+    # 2. Indexera senaste transkriptet i Qdrant (var 5:e tur)
+    if turn_count % 5 == 0 and turn_count > 0:
+        try:
+            if await rag.qdrant_healthy():
+                st = store.get(username)
+                if st:
+                    recent = store.load_transcript(st, last_n=10)
+                    msgs_for_rag = [
+                        {"role": e["role"], "content": e["content"], "turn": turn_count}
+                        for e in recent
+                        if e.get("content") != "__VAKNA_DM__"
+                    ]
+                    if msgs_for_rag:
+                        await rag.index_transcript(msgs_for_rag, username, campaign_id)
+                        logger.info("RAG-indexerade %d meddelanden (tur %d)", len(msgs_for_rag), turn_count)
+        except Exception as e:
+            logger.debug("RAG-indexering hoppade över: %s", e)
+
+    # 3. Sammanfattning (om det är dags)
+    try:
+        st = store.get(username)
+        if st and store.maybe_summarize(st):
+            full_transcript = store.load_transcript(st, last_n=60)
+            t_text = "\n".join(f"{e['role']}: {e['content']}" for e in full_transcript)
+            sum_prompt = (
+                "Sammanfatta följande D&D-session på svenska. "
+                "Fokusera på viktiga händelser, beslut, NPC-möten och konsekvenser. "
+                "Max 200 ord.\n\n" + t_text
+            )
+            summary = await _call_llm(
+                model_id, [{"role": "user", "content": sum_prompt}],
+                temperature=0.3, max_tokens=512,
+            )
+            store.save_summary(st, summary)
+            logger.info("Sammanfattning sparad (tur %d)", turn_count)
+    except Exception as e:
+        logger.debug("Sammanfattning hoppade över: %s", e)
+
+
 @app.post("/api/chat")
 async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     payload = _get_current_user(morkrets_token)
@@ -1468,6 +1534,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
                         [{"role": "user", "content": art_prompt}],
                         temperature=0.9,
                         max_tokens=400,
+                        timeout=30,
                     )
                     ascii_art = postprocess_art(raw_art)
                     if ascii_art:
@@ -1487,6 +1554,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
                         [{"role": "user", "content": art_prompt}],
                         temperature=0.9,
                         max_tokens=600,
+                        timeout=30,
                     )
                     ascii_art = postprocess_art(raw_art)
                     if ascii_art:
@@ -1503,69 +1571,23 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     state = store.append_message(state, "assistant", reply)
     store.save(state)
 
-    # ── Fas 3: Faktextraktion + RAG-indexering (icke-kritiskt, körs alltid) ──
+    # ── Fas 3: Faktextraktion + RAG + sammanfattning → BAKGRUND ──
+    # Dessa är icke-kritiska och får ALDRIG fördröja HTTP-svaret till klienten.
+    # (Tidigare blockerade de svaret i upp till 180s vardera → "fastnar i laddning".)
     campaign_id = state["meta"].get("campaign_id", "")
     turn_count = state["meta"].get("turn_count", 0)
-
-    # 1. Extrahera fakta ur DM-svaret (billig modell, asynkront)
-    try:
-        async def _extraction_llm(messages: list[dict]) -> str:
-            return await _call_llm(EXTRACTION_MODEL, messages, temperature=0.2, max_tokens=800)
-
-        facts = await extract_facts(reply, req.message, turn_count, _extraction_llm)
-        if facts:
-            register = FactRegister(username, campaign_id)
-            register.add_facts(facts)
-            logger.info("Extraherade %d fakta (tur %d)", len(facts), turn_count)
-    except Exception as e:
-        logger.debug("Faktextraktion hoppade över: %s", e)
-
-    # 2. Indexera senaste transkriptet i Qdrant (var 5:e tur för att spara resurser)
-    if turn_count % 5 == 0 and turn_count > 0:
-        try:
-            if await rag.qdrant_healthy():
-                recent = store.load_transcript(state, last_n=10)
-                msgs_for_rag = [
-                    {"role": e["role"], "content": e["content"], "turn": turn_count}
-                    for e in recent
-                    if e.get("content") != "__VAKNA_DM__"
-                ]
-                if msgs_for_rag:
-                    await rag.index_transcript(msgs_for_rag, username, campaign_id)
-                    logger.info("RAG-indexerade %d meddelanden (tur %d)", len(msgs_for_rag), turn_count)
-        except Exception as e:
-            logger.debug("RAG-indexering hoppade över: %s", e)
-
-    # Kolla om sammanfattning behövs
-    summary_generated = False
-    if store.maybe_summarize(state):
-        try:
-            full_transcript = store.load_transcript(state, last_n=60)
-            t_text = "\n".join(
-                f"{e['role']}: {e['content']}" for e in full_transcript
-            )
-            sum_prompt = (
-                "Sammanfatta följande D&D-session på svenska. "
-                "Fokusera på viktiga händelser, beslut, NPC-möten och konsekvenser. "
-                "Max 200 ord.\n\n" + t_text
-            )
-            summary = await _call_llm(
-                req.model_id,
-                [{"role": "user", "content": sum_prompt}],
-                temperature=0.3,
-                max_tokens=512,
-            )
-            store.save_summary(state, summary)
-            summary_generated = True
-        except Exception:
-            pass  # Sammanfattning är inte kritisk
+    task = asyncio.create_task(_post_turn_tasks(
+        username, campaign_id, reply, req.message, turn_count, req.model_id,
+    ))
+    _BACKGROUND_TASKS.add(task)
+    task.add_done_callback(_BACKGROUND_TASKS.discard)
 
     logger.info("◀ TUR %d klar · totalt %.1fs", state["meta"]["turn_count"], time.time() - _t0)
 
     return {
         "reply": reply,
         "turn_count": state["meta"]["turn_count"],
-        "summary_generated": summary_generated,
+        "summary_generated": False,  # körs nu i bakgrunden
         "new_npcs": new_npcs,
         "roll_requests": roll_requests,
         "ascii_art": ascii_art,

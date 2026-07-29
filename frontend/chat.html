@@ -296,6 +296,47 @@
   .msg.dm .bubble .who { color: var(--gold); }
   .msg.dm .bubble .text { font-style: italic; color: var(--bone); line-height: 1.7; font-size: 1.05rem; }
 
+  /* ── DM:ns inre monolog (reasoning) — eterisk, hopfällbar tankebubbla ── */
+  .reasoning {
+    max-width: 600px; margin-left: 60px;  /* indragen — viskar under DM:s röst */
+    border: 1px solid rgba(139,95,212,0.28);
+    border-left: 2px solid rgba(139,95,212,0.65);
+    background: linear-gradient(160deg, rgba(139,95,212,0.09), rgba(90,120,220,0.03));
+    border-radius: 3px;
+    overflow: hidden;
+    transition: border-color .25s, box-shadow .25s;
+  }
+  .reasoning:hover { border-color: rgba(139,95,212,0.5); box-shadow: 0 0 18px -6px rgba(139,95,212,0.35); }
+  .reasoning-head {
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.5rem 0.9rem;
+    cursor: pointer; user-select: none;
+    font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--arcane);
+    transition: background .2s;
+  }
+  .reasoning-head:hover { background: rgba(139,95,212,0.08); }
+  .reasoning-head .orb {
+    width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    background: var(--arcane); box-shadow: 0 0 9px var(--arcane);
+    animation: orb-pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes orb-pulse { 0%,100%{opacity:.45; transform:scale(.8);} 50%{opacity:1; transform:scale(1.2);} }
+  .reasoning-head .rwords { color: var(--bone-dim); letter-spacing: 0.12em; }
+  .reasoning-head .caret { margin-left: auto; opacity:.65; transition: transform .25s; }
+  .reasoning.open .reasoning-head .caret { transform: rotate(90deg); }
+  .reasoning-body { max-height: 0; overflow: hidden; transition: max-height .4s ease; }
+  .reasoning.open .reasoning-body { max-height: 520px; overflow-y: auto; }
+  .reasoning-body .inner {
+    margin: 0 0.95rem 0.85rem; padding-top: 0.6rem;
+    border-top: 1px dashed rgba(139,95,212,0.28);
+    font-family: 'Spectral', serif; font-style: italic;
+    font-size: 0.9rem; line-height: 1.65;
+    color: var(--bone-dim);
+  }
+  .reasoning-body .inner p { margin: 0 0 0.45rem; }
+  .reasoning-body .inner p:last-child { margin-bottom: 0; }
+
   /* NPC — egen färg per gestalt */
   .msg.npc .bubble {
     --accent: var(--npc-color, #a8b2c0);
@@ -1160,6 +1201,27 @@ function addMessage(type, npcKey, text) {
   return el;
 }
 
+// ── DM:ns inre monolog (reasoning) — hopfällbar tankebubbla ──
+function addReasoning(text) {
+  if (!text || !text.trim()) return null;
+  const el = document.createElement('div');
+  el.className = 'reasoning';
+  const words = text.trim().split(/\s+/).length;
+  el.innerHTML = `
+    <div class="reasoning-head" onclick="this.parentElement.classList.toggle('open')">
+      <span class="orb"></span>
+      <span>DM:ns inre monolog</span>
+      <span class="rwords">· ${words} ord</span>
+      <span class="caret">▸</span>
+    </div>
+    <div class="reasoning-body">
+      <div class="inner">${mdToHtml(escapeHtml(text))}</div>
+    </div>`;
+  chat.appendChild(el);
+  chat.scrollTop = chat.scrollHeight;
+  return el;
+}
+
 // ═══════════════════════════════════════
 // DICE
 // ═══════════════════════════════════════
@@ -1751,6 +1813,11 @@ async function dmRespond(playerText) {
 
     // Parsa svaret — DM kan inkludera NPC-dialog
     const reply = res.reply || '…';
+
+    // DM:ns inre monolog (reasoning) — visas före svaret, hopfällbar
+    if (res.reasoning) {
+      addReasoning(res.reasoning);
+    }
 
     // Lägg till nya NPCs i registret (från DM:s svar)
     if (res.new_npcs && res.new_npcs.length) {

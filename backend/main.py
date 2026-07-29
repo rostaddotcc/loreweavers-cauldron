@@ -643,6 +643,52 @@ async def _call_llm(
         return content
 
 
+async def _call_llm_with_reasoning(
+    model_id: str,
+    messages: list[dict],
+    temperature: float = 0.8,
+    max_tokens: int = 1024,
+    timeout: float = 180,
+) -> tuple[str, str]:
+    """Som _call_llm men fångar även reasoning-modellens inre monolog
+    (reasoning_content). Returnerar (content, reasoning). Används för
+    huvud-DM-anropet så spelaren kan se hur DM:n resonerar."""
+    config = get_model(model_id)
+    api_key = get_api_key(config)
+
+    if config.api_model in ("deepseek-v4-flash",):
+        max_tokens = max(max_tokens, 4096)
+
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    body = {
+        "model": config.api_model,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+
+    url = f"{config.base_url.rstrip('/')}/chat/completions"
+
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        resp = await client.post(url, headers=headers, json=body)
+        if resp.status_code != 200:
+            raise HTTPException(
+                502, f"LLM-fel ({resp.status_code}): {resp.text[:300]}"
+            )
+        data = resp.json()
+        message = data["choices"][0]["message"]
+        content = message.get("content", "")
+        reasoning = (message.get("reasoning_content") or "").strip()
+        if not content:
+            raise RuntimeError(
+                "Modellen returnerade tomt svar (reasoning-modell?)"
+            )
+        return content, reasoning
+
+
 def _extract_json(text: str) -> dict:
     """Extrahera JSON från LLM-svar (kan vara inbäddat i markdown eller reasoning-taggar)."""
     if not text or not text.strip():
@@ -1407,9 +1453,12 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
 
     # Anropa LLM — vid fel: riktigt felmeddelande, ingen placeholder
     _tllm = time.time()
+    reasoning = ""
     try:
-        reply = await _call_llm(req.model_id, messages)
+        reply, reasoning = await _call_llm_with_reasoning(req.model_id, messages)
         logger.info("🤖 DM svarade (%d tkn, %.1fs)", len(reply), time.time() - _tllm)
+        if reasoning:
+            logger.debug("💭 DM resonerade (%d tkn)", len(reasoning))
     except HTTPException:
         logger.error("❌ DM-anrop misslyckades (HTTP-fel)")
         raise
@@ -1603,6 +1652,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
 
     return {
         "reply": reply,
+        "reasoning": reasoning[:3000] if reasoning else "",
         "turn_count": state["meta"]["turn_count"],
         "summary_generated": False,  # körs nu i bakgrunden
         "new_npcs": new_npcs,

@@ -213,8 +213,8 @@
   @media(max-width:560px){.spread{grid-template-columns:1fr}.arch{transform:none!important}}
 </style>
 <link rel="stylesheet" href="snes.css">
-<script src="sprites.js"></script>
-<script src="fonts.js"></script>
+<script src="sprites.js?v=20260729c"></script>
+<script src="fonts.js?v=20260729c"></script>
 </head>
 <body>
 <div class="grain"></div><div class="fog"></div><canvas id="embers"></canvas><div class="vignette"></div>
@@ -310,8 +310,8 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="sfx.js"></script>
-<script src="api.js"></script>
+<script src="sfx.js?v=20260729c"></script>
+<script src="api.js?v=20260729c"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -346,7 +346,24 @@ Returnera som JSON enligt state-schema.`,
       stats:{STR:17,DEX:10,CON:15,INT:9,WIS:12,CHA:16}, hp:44, ac:18, init:0, prof:3,
       traits:['Gudomlig känsla','Hämndens ed','Skyddande aura','Läggande händer'],
       gear:'<b>Långsvärd</b> · <b>Sköld</b> · Kedjeharnesk · Heligt symbol (sprucket) · 3× Hälsodryck · Rep · Ransoner',
-      story:'Aldric var rikets yngste riddare tills natten hans befäl mördades och bevisen pekade på honom. Ingen trodde på hans oskuld — inte ens hans gud. Nu vandrar han med ett sprucket sigill och en ed som inte längre svarar. Men nattetid, när han drömmer, hör han fortfarande rustningens kalla viskning: "Hitta sanningen. Eller brinn med den."' }
+      story:'Aldric var rikets yngste riddare tills natten hans befäl mördades och bevisen pekade på honom. Ingen trodde på hans oskuld — inte ens hans gud. Nu vandrar han med ett sprucket sigill och en ed som inte längre svarar. Men nattetid, när han drömmer, hör han fortfarande rustningens kalla viskning: "Hitta sanningen. Eller brinn med den."' },
+    en:{ name:'The Fallen Knight', lore:'A disgraced paladin seeking redemption — or revenge — in the darkness.', tags:['Human','Paladin','Melee'], cls:'Human · Oathbroken Paladin · Level 5', traits:['Divine Sense','Oath of Vengeance','Protective Aura','Laying on Hands'], gear:'<b>Longsword</b> · <b>Shield</b> · Chain mail · Holy symbol (cracked) · 3× Healing potion · Rope · Rations', story:'Aldric was the realm\'s youngest knight until the night his commander was murdered and the evidence pointed at him. No one believed in his innocence — not even his god. Now he wanders with a broken seal and an oath that no longer answers. But at night, when he dreams, he still hears the cold whisper of his armor: "Find the truth. Or burn with it."', prompt:`Create a D&D 5e character based on this archetype:
+
+ARCHETYPE: The Fallen Knight
+Race: Human (variant)
+Class: Paladin (oathbroken — has lost their divine connection)
+Background: Disgraced nobility, falsely accused of treason
+Personality: Stoic, painfully honest, carries deep guilt
+Goal: Restore their name — or avenge themselves on the traitor
+Secret: The broken oath was no accident…
+
+Generate:
+1. Name (dark fantasy)
+2. Full character sheet: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves
+3. 3-4 abilities/traits
+4. Starting equipment (5-8 items)
+5. Backstory (max 100 words)
+Return as JSON according to the state schema.` }
   },
   witch: {
     icon:'🔮', name:'Askhäxan', color:'#8b5fd4', glow:'rgba(139,95,212,.35)',
@@ -373,7 +390,24 @@ Returnera som JSON enligt state-schema.`,
       stats:{STR:8,DEX:14,CON:13,INT:16,WIS:10,CHA:17}, hp:33, ac:13, init:2, prof:3,
       traits:['Eldmotstånd','Häxeld','Asksteg','Paktens pris'],
       gear:'<b>Askstav</b> · Komponentväska · Spellbok (bränd i kanterna) · 2× Hälsodryck · Fackla ×5 · Amulett av kol',
-      story:'Natten Sable föddes regnade aska över byn, och i hennes handflata brann ett märke som aldrig slocknat. Elden viskar till henne — ibland råd, ibland hot. Hon lärde sig tidigt att aldrig fråga varifrån rösten kommer. Men nu har märket börjat sprida sig, och viskningarna har blivit ett enda ord, om och om igen: hennes moders namn.' }
+      story:'Natten Sable föddes regnade aska över byn, och i hennes handflata brann ett märke som aldrig slocknat. Elden viskar till henne — ibland råd, ibland hot. Hon lärde sig tidigt att aldrig fråga varifrån rösten kommer. Men nu har märket börjat sprida sig, och viskningarna har blivit ett enda ord, om och om igen: hennes moders namn.' },
+    en:{ name:'The Ash Witch', lore:'Branded by a curse she never asked for. The flames obey her — almost.', tags:['Tiefling','Warlock','Fire'], cls:'Tiefling · Fire-Pact Warlock · Level 5', traits:['Fire Resistance','Witchfire','Ash Step','Price of the Pact'], gear:'<b>Ash staff</b> · Component pouch · Spellbook (edges burned) · 2× Healing potion · 5× Torch · Coal amulet', story:'The night Sable was born, ash rained over the village, and in her palm burned a mark that never went out. The fire whispers to her — sometimes counsel, sometimes threats. She learned early never to ask where the voice comes from. But now the mark has begun to spread, and the whispers have become a single word, over and over: her mother\'s name.', prompt:`Create a D&D 5e character based on this archetype:
+
+ARCHETYPE: The Ash Witch
+Race: Tiefling
+Class: Warlock (fire pact)
+Background: Born beneath an ash-raining comet, marked by an ancient fire spirit
+Personality: Sharp-tongued, curious, afraid of her own power
+Goal: Understand why the fire chose her
+Secret: The pact was not her choice — it was her mother's
+
+Generate:
+1. Name (dark fantasy)
+2. Full character sheet: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves
+3. 3-4 abilities/traits
+4. Starting equipment (5-8 items)
+5. Backstory (max 100 words)
+Return as JSON according to the state schema.` }
   },
   hunter: {
     icon:'🏹', name:'Gravjägaren', color:'#d4691e', glow:'rgba(212,105,30,.35)',
@@ -400,7 +434,24 @@ Returnera som JSON enligt state-schema.`,
       stats:{STR:13,DEX:18,CON:14,INT:11,WIS:15,CHA:9}, hp:41, ac:15, init:4, prof:3,
       traits:['Odödabane','Silverpil','Skuggsteg','Jägarens märke'],
       gear:'<b>Armborst (silverbultar)</b> · <b>Kortsvärd</b> · Läderbrynja · Heligt vatten ×3 · Vitlökskrans · Karta över gravplatser',
-      story:'Kaelen lärde sig läsa innan hen lärde sig tala — i ordens bok stod allt om hur man dödar det som redan är dött. Systern var den enda som fick hen att le. När vampyren tog henne tog den också den sista mjuka delen av Kaelen. Nu är bettet i hens egen hals ett timglas, och varje silverbult är både ett löfte och en förberedelse.' }
+      story:'Kaelen lärde sig läsa innan hen lärde sig tala — i ordens bok stod allt om hur man dödar det som redan är dött. Systern var den enda som fick hen att le. När vampyren tog henne tog den också den sista mjuka delen av Kaelen. Nu är bettet i hens egen hals ett timglas, och varje silverbult är både ett löfte och en förberedelse.' },
+    en:{ name:'The Grave Hunter', lore:'Hunts what refuses to stay dead. Silver crossbow, cold heart.', tags:['Half-Elf','Ranger','Undead Slayer'], cls:'Half-Elf · Undead Slayer · Level 5', traits:['Undead Bane','Silver Bolt','Shadow Step','Hunter\'s Mark'], gear:'<b>Crossbow (silver bolts)</b> · <b>Shortsword</b> · Leather armor · 3× Holy water · Garlic wreath · Map of graveyards', story:'Kaelen learned to read before they learned to speak — the order\'s book held everything about how to kill what is already dead. Their sister was the only one who could make them smile. When the vampire took her, it took the last soft part of Kaelen too. Now the bite on their own neck is an hourglass, and every silver bolt is both a promise and a preparation.', prompt:`Create a D&D 5e character based on this archetype:
+
+ARCHETYPE: The Grave Hunter
+Race: Half-Elf
+Class: Ranger (undead slayer)
+Background: Raised by a silent order that hunts the undead
+Personality: Few words, ever watchful, carries a loss
+Goal: Destroy the vampire that took their sister
+Secret: They have been bitten themselves — and are counting the days
+
+Generate:
+1. Name (dark fantasy)
+2. Full character sheet: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves
+3. 3-4 abilities/traits
+4. Starting equipment (5-8 items)
+5. Backstory (max 100 words)
+Return as JSON according to the state schema.` }
   },
   thief: {
     icon:'🎭', name:'Viskande Tjuven', color:'#7aa35e', glow:'rgba(122,163,94,.35)',
@@ -427,7 +478,24 @@ Returnera som JSON enligt state-schema.`,
       stats:{STR:8,DEX:17,CON:12,INT:14,WIS:13,CHA:15}, hp:30, ac:14, init:3, prof:3,
       traits:['Smygattack','Dödsviskning','Ficklås','Skuggdans'],
       gear:'<b>Kort svärd</b> · <b>Dolk ×2</b> · Läderläder · Tjuvverktyg · 3× Rökgranat · Amulett (moderns)',
-      story:'Pip lärde sig gå tystare än de döda som bodde under kyrkogårdens jord. De blev hens första vänner — och de viskade. Hemligheter om grannarna, om skatter, om mord. Moderns död var den första gången en viskning ljög. Nu jagar Pip sanningen genom fickor och gravar, med ett leende som aldrig riktigt når ögonen.' }
+      story:'Pip lärde sig gå tystare än de döda som bodde under kyrkogårdens jord. De blev hens första vänner — och de viskade. Hemligheter om grannarna, om skatter, om mord. Moderns död var den första gången en viskning ljög. Nu jagar Pip sanningen genom fickor och gravar, med ett leende som aldrig riktigt når ögonen.' },
+    en:{ name:'The Whispering Thief', lore:'Hears the secrets of the dead. Locks, pockets, graves — everything opens.', tags:['Halfling','Rogue','Spy'], cls:'Halfling · Whisperer · Level 5', traits:['Sneak Attack','Death Whispers','Lockpicking','Shadow Dance'], gear:'<b>Shortsword</b> · <b>2× Dagger</b> · Leather armor · Thieves\' tools · 3× Smoke bomb · Amulet (mother\'s)', story:'Pip learned to walk more quietly than the dead who lived beneath the churchyard soil. They became Pip\'s first friends — and they whispered. Secrets about the neighbors, about treasure, about murder. Their mother\'s death was the first time a whisper lied. Now Pip hunts the truth through pockets and graves, with a smile that never quite reaches their eyes.', prompt:`Create a D&D 5e character based on this archetype:
+
+ARCHETYPE: The Whispering Thief
+Race: Halfling
+Class: Rogue (spy/whisperer)
+Background: Grew up in a graveyard, learned to "listen" from the dead
+Personality: Light-hearted on the surface, always afraid underneath
+Goal: Steal back something that belonged to their dead mother
+Secret: The dead sometimes lie — and Pip no longer knows who is whispering
+
+Generate:
+1. Name (dark fantasy)
+2. Full character sheet: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves
+3. 3-4 abilities/traits
+4. Starting equipment (5-8 items)
+5. Backstory (max 100 words)
+Return as JSON according to the state schema.` }
   },
   warden: {
     icon:'🛡️', name:'Edsvurna Väktaren', color:'#c9a227', glow:'rgba(201,162,39,.35)',
@@ -454,7 +522,24 @@ Returnera som JSON enligt state-schema.`,
       stats:{STR:16,DEX:11,CON:17,INT:10,WIS:13,CHA:12}, hp:49, ac:18, init:0, prof:3,
       traits:['Andra andningen','Stenhud','Gravens ed','Skyddande ställning'],
       gear:'<b>Stridshammare</b> · <b>Sköld (med runor)</b> · Splintbrynja · 2× Hälsodryck · Runsten · Dvärgöl (sista flaskan)',
-      story:'Brunja svor eden som barn: ingen ska passera graven. Nu är orden död, bergen tysta, och graven bakom hen är tom — plundrad för hundra år sedan. Men en ed är en ed. Hen väktar fortfarande, och berättar för alla att det är något värt att vakta därinne. Kanske är det därför hen aldrig låter någon titta.' }
+      story:'Brunja svor eden som barn: ingen ska passera graven. Nu är orden död, bergen tysta, och graven bakom hen är tom — plundrad för hundra år sedan. Men en ed är en ed. Hen väktar fortfarande, och berättar för alla att det är något värt att vakta därinne. Kanske är det därför hen aldrig låter någon titta.' },
+    en:{ name:'The Oathsworn Warden', lore:'Guards a forgotten tomb. The oath is all that remains of their people.', tags:['Dwarf','Fighter','Defense'], cls:'Dwarf · Grave Warden · Level 5', traits:['Second Wind','Stone Skin','Oath of the Grave','Protective Stance'], gear:'<b>Warhammer</b> · <b>Shield (runed)</b> · Splint armor · 2× Healing potion · Runestone · Dwarven ale (last bottle)', story:'Brunja swore the oath as a child: none shall pass the tomb. Now the order is dead, the mountains silent, and the tomb behind them is empty — plundered a hundred years ago. But an oath is an oath. They still keep watch, telling everyone there is something worth guarding in there. Perhaps that is why they never let anyone look.', prompt:`Create a D&D 5e character based on this archetype:
+
+ARCHETYPE: The Oathsworn Warden
+Race: Dwarf
+Class: Fighter (warden/champion)
+Background: Last member of an order that guarded a forgotten king's tomb
+Personality: Unshakeable, dry humor, deeply loyal
+Goal: Fulfill the oath — even if it is the last thing they do
+Secret: The tomb has already been emptied. They guard something that is no longer there.
+
+Generate:
+1. Name (dark fantasy)
+2. Full character sheet: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves
+3. 3-4 abilities/traits
+4. Starting equipment (5-8 items)
+5. Backstory (max 100 words)
+Return as JSON according to the state schema.` }
   },
   skald: {
     icon:'🐍', name:'Ormtungans Skald', color:'#5e9aa3', glow:'rgba(94,154,163,.35)',
@@ -481,7 +566,24 @@ Returnera som JSON enligt state-schema.`,
       stats:{STR:9,DEX:15,CON:12,INT:13,WIS:11,CHA:18}, hp:33, ac:13, init:2, prof:3,
       traits:['Viskande vers','Giftig charm','Sång av rädsla','Mångtydig'],
       gear:'<b>Fiol (med dold klinga)</b> · <b>Dolk</b> · Läderläder · 2× Giftflaska (sömn) · Förfalskningskit · Kärleksbrev (stulet)',
-      story:'Lyriels röst kunde få en domare att gråta och en bödel att tveka. Hovet kallade det magi; Lyriel kallade det sanning. Men en sång gick för lång — konungen sov in och vaknade aldrig. Nu vandrar Lyriel med en fiol som väger mer än den ser ut att göra, och en hemlighet som skulle kunna välta ett rike. Eller rädda ett.' }
+      story:'Lyriels röst kunde få en domare att gråta och en bödel att tveka. Hovet kallade det magi; Lyriel kallade det sanning. Men en sång gick för lång — konungen sov in och vaknade aldrig. Nu vandrar Lyriel med en fiol som väger mer än den ser ut att göra, och en hemlighet som skulle kunna välta ett rike. Eller rädda ett.' },
+    en:{ name:'The Serpent-Tongue Skald', lore:'Songs that bend minds. Every verse is a poison — or a cure.', tags:['Elf','Bard','Beguiler'], cls:'Elf · Whisper Bard · Level 5', traits:['Whispering Verse','Venomous Charm','Song of Fear','Ambiguous'], gear:'<b>Violin (hidden blade)</b> · <b>Dagger</b> · Leather armor · 2× Poison vial (sleep) · Forgery kit · Love letter (stolen)', story:'Lyriel\'s voice could make a judge weep and an executioner hesitate. The court called it magic; Lyriel called it truth. But one song went too far — the king fell asleep and never woke. Now Lyriel wanders with a violin that weighs more than it looks, and a secret that could topple a kingdom. Or save one.', prompt:`Create a D&D 5e character based on this archetype:
+
+ARCHETYPE: The Serpent-Tongue Skald
+Race: Elf
+Class: Bard (whisperer/College of Whispers)
+Background: Exiled from their court for "dangerous songs"
+Personality: Charming, enigmatic, always three steps ahead
+Goal: Reclaim their place at court — or burn it down
+Secret: One of their songs killed a king. No one knows. Yet.
+
+Generate:
+1. Name (dark fantasy)
+2. Full character sheet: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves
+3. 3-4 abilities/traits
+4. Starting equipment (5-8 items)
+5. Backstory (max 100 words)
+Return as JSON according to the state schema.` }
   },
 };
 
@@ -495,46 +597,90 @@ Dungeon Master genererar sedan:
 5. Bakgrundshistoria (max 100 ord)
 Returnera som JSON enligt state-schema.`;
 
+const FREE_PROMPT_EN = `Describe your character freely — appearance, personality, background, what they fear, what they desire.
+
+The Dungeon Master will then generate:
+1. Name, race, class, level
+2. Full character sheet (STR/DEX/CON/INT/WIS/CHA, HP, AC, saves)
+3. 3-4 abilities & traits
+4. Starting equipment (5-8 items)
+5. Backstory (max 100 words)
+Return as JSON according to the state schema.`;
+
 // ═══════════════════════════════════════
-// RENDER ARKETYPER
+// RENDER ARKETYPER (language-aware)
 // ═══════════════════════════════════════
 const spread = document.getElementById('spread');
-spread.innerHTML = Object.entries(ARCHETYPES).map(([key, a]) => `
+
+function isEn() { return typeof I18N !== 'undefined' && I18N.getLang() === 'en'; }
+
+function archField(a, field) {
+  return (isEn() && a.en && a.en[field]) ? a.en[field] : a[field];
+}
+
+function renderArchetypes() {
+  spread.innerHTML = Object.entries(ARCHETYPES).map(([key, a]) => `
   <div class="arch" data-key="${key}" style="--ac:${a.color};--ac-glow:${a.glow}" onclick="selectArch('${key}')">
     <div class="glow"></div>
-    <div class="ribbon">Vald</div>
+    <div class="ribbon">${isEn() ? 'Chosen' : 'Vald'}</div>
     <div class="icon">${a.icon}</div>
-    <h3>${a.name}</h3>
-    <p class="lore">${a.lore}</p>
-    <div class="tags">${a.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+    <h3>${archField(a, 'name')}</h3>
+    <p class="lore">${archField(a, 'lore')}</p>
+    <div class="tags">${archField(a, 'tags').map(t=>`<span class="tag">${t}</span>`).join('')}</div>
   </div>`).join('');
+  // Re-apply selected state after re-render
+  if (selectedKey) {
+    document.querySelectorAll('.arch').forEach(el => el.classList.toggle('selected', el.dataset.key === selectedKey));
+  }
+}
 
 let selectedKey = null;
+renderArchetypes();
 
-// ── Campaign language selector ──
+// ── Campaign language selector (live preview) ──
 function onLangChange(lang) {
   const hint = document.getElementById('lang-hint');
   if (hint) hint.textContent = lang === 'en'
     ? 'The adventure, DM and all responses in English.'
     : 'Äventyret, DM och alla svar på svenska.';
+  // Live preview: translate the whole page + re-render templates
+  if (typeof I18N !== 'undefined') {
+    I18N.init(lang);
+    renderArchetypes();
+    // Refresh the prompt textarea with the right language variant
+    if (selectedKey && ARCHETYPES[selectedKey]) {
+      document.getElementById('prompt').value = archField(ARCHETYPES[selectedKey], 'prompt');
+      document.getElementById('mode-label').innerHTML = isEn()
+        ? `📜 Archetype: <b>${archField(ARCHETYPES[selectedKey], 'name')}</b>`
+        : `📜 Arketyp: <b>${archField(ARCHETYPES[selectedKey], 'name')}</b>`;
+    } else {
+      document.getElementById('prompt').value = isEn() ? FREE_PROMPT_EN : FREE_PROMPT;
+    }
+  }
 }
 
 function selectArch(key) {
   selectedKey = key;
   document.querySelectorAll('.arch').forEach(el => el.classList.toggle('selected', el.dataset.key === key));
   const a = ARCHETYPES[key];
-  document.getElementById('prompt').value = a.prompt;
-  document.getElementById('mode-label').innerHTML = `📜 Arketyp: <b>${a.name}</b>`;
-  toast(`${a.icon} ${a.name} vald — prompt-mall laddad`);
+  document.getElementById('prompt').value = archField(a, 'prompt');
+  document.getElementById('mode-label').innerHTML = isEn()
+    ? `📜 Archetype: <b>${archField(a, 'name')}</b>`
+    : `📜 Arketyp: <b>${archField(a, 'name')}</b>`;
+  toast(isEn()
+    ? `${a.icon} ${archField(a, 'name')} chosen — prompt template loaded`
+    : `${a.icon} ${archField(a, 'name')} vald — prompt-mall laddad`);
 }
 function blankScroll() {
   selectedKey = null;
   document.querySelectorAll('.arch').forEach(el => el.classList.remove('selected'));
-  document.getElementById('prompt').value = FREE_PROMPT;
-  document.getElementById('mode-label').innerHTML = `📜 <b>Tom pergament</b> — skriv fritt`;
-  toast('✦ Tom pergament — skriv din egen legend');
+  document.getElementById('prompt').value = isEn() ? FREE_PROMPT_EN : FREE_PROMPT;
+  document.getElementById('mode-label').innerHTML = isEn()
+    ? `📜 <b>Blank scroll</b> — write freely`
+    : `📜 <b>Tom pergament</b> — skriv fritt`;
+  toast(isEn() ? '✦ Blank scroll — write your own legend' : '✦ Tom pergament — skriv din egen legend');
 }
-document.getElementById('prompt').value = FREE_PROMPT;
+document.getElementById('prompt').value = isEn() ? FREE_PROMPT_EN : FREE_PROMPT;
 
 // ═══════════════════════════════════════
 // SUMMON — riktig karaktärsgenerering via backend
@@ -737,6 +883,6 @@ for(let i=0;i<40;i++)embers.push(spawn(true));
 function tick(){ctx.clearRect(0,0,W,H);for(let i=0;i<embers.length;i++){const e=embers[i];e.life++;e.y-=e.vy;e.x+=e.vx+Math.sin(e.life*.02)*.12;const fade=Math.min(1,e.life/60)*Math.max(0,1-e.life/e.max);const fl=.5+Math.sin(e.life*.15+i)*.35;ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fillStyle=`hsla(${e.hue},90%,60%,${.45*fade*fl})`;ctx.shadowColor=`hsla(${e.hue},90%,55%,${.7*fade})`;ctx.shadowBlur=7;ctx.fill();if(e.life>e.max||e.y<-12)embers[i]=spawn(false);}requestAnimationFrame(tick);}
 tick();
 </script>
-<script src="i18n.js"></script>
+<script src="i18n.js?v=20260729c"></script>
 </body>
 </html>

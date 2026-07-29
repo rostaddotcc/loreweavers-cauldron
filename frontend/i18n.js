@@ -21,6 +21,11 @@ const I18N = (() => {
   let _lang = 'sv';
   let _initialized = false;
 
+  // Originals saved before translation, so switching back to 'sv' restores them.
+  const _origText = new WeakMap();   // text node -> original Swedish text
+  const _origAttr = new WeakMap();   // element -> { attr: originalValue }
+  let _origTitle = null;
+
   // ═══════════════════════════════════════
   // TRANSLATION DICTIONARY: Swedish → English
   // Keys are the exact Swedish strings as they appear in the HTML/JS.
@@ -661,13 +666,40 @@ const I18N = (() => {
     _lang = (lang === 'en') ? 'en' : 'sv';
     _initialized = true;
     document.documentElement.lang = _lang;
-    applyAll();
+    if (_lang === 'en') {
+      applyAll();
+    } else {
+      restoreAll();
+    }
   }
 
   /** Translate a single Swedish string. Returns the input unchanged for 'sv'. */
   function t(svString) {
     if (_lang !== 'en' || typeof svString !== 'string') return svString;
     return T[svString] !== undefined ? T[svString] : svString;
+  }
+
+  /**
+   * Restore all previously translated text nodes, attributes and the title
+   * back to their original Swedish. Safe to call when nothing was translated.
+   */
+  function restoreAll() {
+    // Text nodes
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const n = walker.currentNode;
+      if (_origText.has(n)) n.textContent = _origText.get(n);
+    }
+    // Attributes
+    const ATTRS = ['placeholder', 'title', 'alt', 'aria-label', 'label'];
+    for (const attr of ATTRS) {
+      for (const el of document.querySelectorAll('[' + attr + ']')) {
+        const orig = _origAttr.get(el);
+        if (orig && orig[attr] !== undefined) el.setAttribute(attr, orig[attr]);
+      }
+    }
+    // Title
+    if (_origTitle !== null) { document.title = _origTitle; _origTitle = null; }
   }
 
   /**
@@ -700,11 +732,17 @@ const I18N = (() => {
     for (const attr of ATTRS) {
       for (const el of document.querySelectorAll('[' + attr + ']')) {
         const val = el.getAttribute(attr);
-        if (val && T[val]) el.setAttribute(attr, T[val]);
+        if (val && T[val]) {
+          if (!_origAttr.has(el)) _origAttr.set(el, {});
+          const orig = _origAttr.get(el);
+          if (orig[attr] === undefined) orig[attr] = val;
+          el.setAttribute(attr, T[val]);
+        }
       }
     }
 
     // 3) document.title (including "— suffix" titles)
+    if (_origTitle === null) _origTitle = document.title;
     if (T[document.title]) {
       document.title = T[document.title];
     } else {
@@ -722,6 +760,7 @@ const I18N = (() => {
     const raw = node.textContent;
     const key = raw.trim();
     if (T[key]) {
+      if (!_origText.has(node)) _origText.set(node, raw);
       node.textContent = raw.replace(key, T[key]);
       return;
     }
@@ -732,7 +771,10 @@ const I18N = (() => {
         out = out.split(sv).join(en);
       }
     }
-    if (out !== raw) node.textContent = out;
+    if (out !== raw) {
+      if (!_origText.has(node)) _origText.set(node, raw);
+      node.textContent = out;
+    }
   }
 
   // ═══════════════════════════════════════
@@ -771,5 +813,5 @@ const I18N = (() => {
     init('sv');
   }
 
-  return { T, init, t, applyAll, getLang, speak, stopSpeaking };
+  return { T, init, t, applyAll, restoreAll, getLang, speak, stopSpeaking };
 })();

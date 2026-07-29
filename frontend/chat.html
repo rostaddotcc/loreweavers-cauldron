@@ -1054,6 +1054,13 @@ async function loadCampaign() {
 }
 loadCampaign().then(ok => { if (ok !== false) loadTranscript(); });
 
+// ── bfcache-skydd ──
+// När man navigerar tillbaka till chatten kan browsern återställa sidan
+// från bfcache med GAMMAL DOM (gamla meddelanden). Tvinga full reload.
+window.addEventListener('pageshow', (e) => {
+  if (e.persisted) location.reload();
+});
+
 // ═══════════════════════════════════════
 // NPC REGISTRY — fylls på från kampanjstate (inga demo-NPCs)
 // ═══════════════════════════════════════
@@ -1167,28 +1174,13 @@ function refreshAvatars() {
 const chat = document.getElementById('chat');
 
 function addMessage(type, npcKey, text) {
-  const el = document.createElement('div');
-  el.className = 'msg ' + type;
+  const el = buildMessage(type, npcKey, text);
+  if (!el) return null;
 
-  if (type === 'dm') {
-    el.innerHTML = `${avatarHtml('dm', '🧙‍♂️')}<div class="bubble"><div class="who">Dungeon Master</div><div class="text">${mdToHtml(escapeHtml(text))}</div></div>`;
-    SFX.receive();
-  } else if (type === 'npc') {
-    const n = NPCS[npcKey] || { name: npcKey || 'Okänd', color: npcColorFor(npcKey || 'Okänd'), icon: '🎭', role: '' };
-    el.style.setProperty('--npc-color', n.color);
-    el.innerHTML = `
-      <span class="msg-avatar" data-npc-key="${npcKey}" onclick="pickAvatar('npc:${npcKey}')" title="Klicka för att byta bild">${AVATARS['npc:' + npcKey] ? `<img src="${AVATARS['npc:' + npcKey]}" alt="">` : SPR.html(n.icon || '🎭')}</span>
-      <div class="bubble">
-        <div class="who"><span class="dot"></span>${n.name}</div>
-        <div class="text">${mdToHtml(escapeHtml(text))}</div>
-      </div>`;
-    SFX.receive();
-  } else if (type === 'player') {
-    el.innerHTML = `<div class="bubble"><div class="who">${CHAR_NAME}</div><div class="text">${text}</div></div>${avatarHtml('player', '🧙‍♀️')}`;
-    SFX.send();
-  } else if (type === 'system') {
-    el.innerHTML = `<div class="box">${text}</div>`;
-    // Ljud baserat på innehåll
+  // Ljud (spelas ej vid batch-rendering via buildMessage)
+  if (type === 'dm' || type === 'npc') SFX.receive();
+  else if (type === 'player') SFX.send();
+  else if (type === 'system') {
     if (text.includes('KRITISKT')) SFX.crit();
     else if (text.includes('PATETISKT')) SFX.fail();
     else if (text.includes('🎲')) SFX.dice();
@@ -1198,6 +1190,31 @@ function addMessage(type, npcKey, text) {
 
   chat.appendChild(el);
   chat.scrollTop = chat.scrollHeight;
+  return el;
+}
+
+// Bygg ett meddelandeelement UTAN att appenda eller spela ljud.
+// Används för batch-rendering (loadTranscript) → en enda reflow, inget ljudspam.
+function buildMessage(type, npcKey, text) {
+  const el = document.createElement('div');
+  el.className = 'msg ' + type;
+
+  if (type === 'dm') {
+    el.innerHTML = `${avatarHtml('dm', '🧙‍♂️')}<div class="bubble"><div class="who">Dungeon Master</div><div class="text">${mdToHtml(escapeHtml(text))}</div></div>`;
+  } else if (type === 'npc') {
+    const n = NPCS[npcKey] || { name: npcKey || 'Okänd', color: npcColorFor(npcKey || 'Okänd'), icon: '🎭', role: '' };
+    el.style.setProperty('--npc-color', n.color);
+    el.innerHTML = `
+      <span class="msg-avatar" data-npc-key="${npcKey}" onclick="pickAvatar('npc:${npcKey}')" title="Klicka för att byta bild">${AVATARS['npc:' + npcKey] ? `<img src="${AVATARS['npc:' + npcKey]}" alt="">` : SPR.html(n.icon || '🎭')}</span>
+      <div class="bubble">
+        <div class="who"><span class="dot"></span>${n.name}</div>
+        <div class="text">${mdToHtml(escapeHtml(text))}</div>
+      </div>`;
+  } else if (type === 'player') {
+    el.innerHTML = `<div class="bubble"><div class="who">${CHAR_NAME}</div><div class="text">${text}</div></div>${avatarHtml('player', '🧙‍♀️')}`;
+  } else if (type === 'system') {
+    el.innerHTML = `<div class="box">${text}</div>`;
+  }
   return el;
 }
 
@@ -1492,18 +1509,24 @@ function diceMessage(roll, label) {
 const AWAKENING_TRIGGER = '__VAKNA_DM__';
 
 async function loadTranscript() {
+  // Rensa chatten INNAN rendering — förhindrar stale DOM från bfcache,
+  // kampanjbyte eller tidigare session. Utan detta läcker gamla meddelanden in.
+  chat.innerHTML = '';
+
   try {
     const { messages } = await API.getTranscript();
     const visible = (messages || []).filter(m => m.content !== AWAKENING_TRIGGER);
     if (visible.length > 0) {
-      // Rendera befintliga meddelanden (hoppa över vaknandetrigger)
+      // Rendera i en fragment-batch → en enda DOM-reflow oavsett antal meddelanden
+      const frag = document.createDocumentFragment();
       visible.forEach(m => {
-        if (m.role === 'user') {
-          addMessage('player', null, escapeHtml(m.content));
-        } else if (m.role === 'assistant') {
-          addMessage('dm', null, m.content);
-        }
+        const el = (m.role === 'user')
+          ? buildMessage('player', null, escapeHtml(m.content))
+          : buildMessage('dm', null, m.content);
+        if (el) frag.appendChild(el);
       });
+      chat.appendChild(frag);
+      chat.scrollTop = chat.scrollHeight;
       return;
     }
   } catch (e) { /* Ingen historik eller fel — fortsätt till vaknandet */ }

@@ -1297,6 +1297,21 @@ def _build_system_prompt(
             "Kom ihåg: [KAST:]-taggen är enda sättet att spawna tärningen — aldrig prosa-kast."
         )
 
+    # Resultat-enforcement: spelaren har skickat ett tärningsresultat.
+    # DM:n MÅSTE ge utfallet direkt — injicera en otvetydig påminnelse.
+    if player_input.strip().startswith("[Resultat:"):
+        parts.append(
+            "\n## 🎲⚠️ SYSTEM: TÄRNINGSRESULTAT MOTTAGET — GE UTFALLET NU\n"
+            "Spelaren har just slagit en tärning och skickat resultatet. "
+            "Du MÅSTE i detta svar:\n"
+            "1. Jämföra resultatet mot DC/AC och avgöra: LYCKADES eller MISSLYCKADES.\n"
+            "2. Berätta utfallet NARRATIVT — vad händer konkret i världen?\n"
+            "3. Använda mekaniska taggar ([SKADA:], [XP:], [GULD:], [FÖREMÅL:]) för konsekvenser.\n"
+            "4. ALDRIG fråga 'vad gör du?' utan att FÖRST ge utfallet.\n"
+            "5. ALDRIG begära ett nytt kast för samma handling.\n"
+            "Detta är inte en vanlig handling — det är ett tärningsresultat. Ge utfallet. NU."
+        )
+
     # ── VAKNANDEPROTOKOLLET ──
     # Aktiveras av awakening-flaggan (nya kampanjer) eller av triggern.
     # turn_override = turn_count + det meddelande som ännu inte sparats.

@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📜 Mörkrets Rike — Kodex</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#08080d; --stone:#0e0e14; --stone-2:#12121a; --stone-3:#181822;
+    --edge:#2a2a3a; --edge-hi:#3a3a50;
+    --bone:#b8b8c8; --bone-bright:#e0e0ec; --bone-dim:#6a6a80;
+    --gold:#c9a227; --gold-bright:#e8c65a;
+    --blood:#8b1a2a; --blood-bright:#d43a4d;
+    --ember:#d4691e; --arcane:#7b4fd4; --poison:#5a9a4e; --teal:#4e8a93;
+    --term-green:#33cc33; --term-amber:#ccaa33;
+    --fd:'Press Start 2P',monospace;
+    --ft:'VT323',monospace;
+    --fh:'Cinzel',serif;
+    --fb:'Spectral',Georgia,serif;
+    --fm:'IBM Plex Mono',monospace;
+  }
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;border-radius:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--fb);color:var(--bone);background:var(--ink);
+    line-height:1.7;overflow-x:hidden;
+  }
+  ::selection{background:var(--gold);color:var(--ink)}
+
+  /* ── Lager: grain + scanlines + embers + vignette ── */
+  .grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .scanlines{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:.06;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.8) 3px)}
+  #embers{position:fixed;inset:0;z-index:0;pointer-events:none}
+  .vignette{position:fixed;inset:0;z-index:2;pointer-events:none;box-shadow:inset 0 0 200px 80px rgba(3,2,6,.9)}
+
+  /* ═══════════ BOOT-SKÄRM ═══════════ */
+  #boot{position:fixed;inset:0;z-index:100;background:#050508;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;transition:opacity .7s ease,visibility .7s}
+  #boot.done{opacity:0;visibility:hidden}
+  #boot pre{font-family:var(--ft);font-size:clamp(.95rem,2.2vw,1.35rem);color:var(--term-green);
+    line-height:1.5;text-shadow:0 0 8px rgba(51,204,51,.5);max-width:760px;width:90%;white-space:pre-wrap}
+  #boot .skip{position:absolute;bottom:2rem;left:50%;transform:translateX(-50%);
+    font-family:var(--fd);font-size:.55rem;color:var(--bone-dim);letter-spacing:.15em;animation:blink 1.2s step-end infinite}
+  @keyframes blink{50%{opacity:0}}
+
+  /* ═══════════ LAYOUT ═══════════ */
+  .wrap{position:relative;z-index:3;display:flex;max-width:1240px;margin:0 auto}
+
+  /* ── Vänster: kodex-index ── */
+  .index{position:sticky;top:0;align-self:flex-start;width:230px;height:100vh;flex-shrink:0;
+    padding:2.2rem 1.2rem;border-right:1px solid var(--edge);
+    background:linear-gradient(180deg,var(--stone),#0a0a10);overflow-y:auto}
+  .index .sigil{font-size:1.6rem;margin-bottom:.6rem;filter:drop-shadow(0 0 10px rgba(232,198,90,.5))}
+  .index h6{font-family:var(--fd);font-size:.5rem;letter-spacing:.2em;color:var(--gold);margin-bottom:1.4rem}
+  .index a{display:block;font-family:var(--fm);font-size:.72rem;color:var(--bone-dim);text-decoration:none;
+    padding:.42rem .6rem;border-left:2px solid transparent;transition:all .2s;margin-bottom:.15rem}
+  .index a:hover{color:var(--bone-bright);border-left-color:var(--bone-dim);transform:translateX(3px)}
+  .index a.on{color:var(--gold-bright);border-left-color:var(--gold);background:rgba(201,162,39,.06)}
+  .index .ver{margin-top:2rem;font-family:var(--ft);font-size:.85rem;color:var(--bone-dim)}
+
+  /* ── Höger: innehållet ── */
+  main{flex:1;min-width:0;padding:0 3rem 6rem;max-width:980px}
+
+  /* ── Titelskärm ── */
+  .title-screen{min-height:88vh;display:flex;flex-direction:column;justify-content:center;padding:4rem 0 3rem;position:relative}
+  .ts-frame{border:1px solid var(--edge);padding:3rem 2.5rem;position:relative;
+    background:radial-gradient(700px 300px at 50% 0%,rgba(201,162,39,.05),transparent 70%)}
+  .ts-frame::before,.ts-frame::after{content:'✦';position:absolute;color:var(--gold);font-size:.9rem;opacity:.7}
+  .ts-frame::before{top:-.55rem;left:50%;transform:translateX(-50%);background:var(--ink);padding:0 .8rem}
+  .ts-frame::after{bottom:-.55rem;left:50%;transform:translateX(-50%);background:var(--ink);padding:0 .8rem}
+  .corner{position:absolute;width:14px;height:14px;border:1px solid var(--gold)}
+  .corner.tl{top:-1px;left:-1px;border-right:0;border-bottom:0}
+  .corner.tr{top:-1px;right:-1px;border-left:0;border-bottom:0}
+  .corner.bl{bottom:-1px;left:-1px;border-right:0;border-top:0}
+  .corner.br{bottom:-1px;right:-1px;border-left:0;border-top:0}
+  .ts-kicker{font-family:var(--ft);font-size:1.05rem;color:var(--term-green);letter-spacing:.1em;margin-bottom:1.6rem;text-shadow:0 0 8px rgba(51,204,51,.4)}
+  .ts-kicker .cursor{display:inline-block;width:.55em;background:var(--term-green);animation:blink 1s step-end infinite}
+  h1.game{font-family:var(--fd);font-size:clamp(1.5rem,4.6vw,3rem);color:var(--gold-bright);line-height:1.45;
+    text-shadow:0 0 24px rgba(232,198,90,.45),3px 3px 0 var(--blood);letter-spacing:.02em;margin-bottom:1.2rem}
+  .ts-sub{font-family:var(--fh);font-size:1.05rem;font-weight:700;letter-spacing:.28em;text-transform:uppercase;color:var(--bone);margin-bottom:2rem}
+  .ts-desc{max-width:620px;font-size:1.06rem;color:var(--bone);font-weight:300}
+  .ts-desc b{color:var(--gold-bright);font-weight:600}
+  .ts-meta{display:flex;gap:2rem;flex-wrap:wrap;margin-top:2.4rem;font-family:var(--fm);font-size:.72rem;color:var(--bone-dim)}
+  .ts-meta span b{color:var(--term-amber);font-weight:500}
+  .scroll-hint{position:absolute;bottom:1.5rem;left:50%;transform:translateX(-50%);font-family:var(--fd);font-size:.5rem;
+    color:var(--bone-dim);letter-spacing:.2em;animation:floaty 2.4s ease-in-out infinite}
+  @keyframes floaty{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,7px)}}
+
+  /* ── Sektioner ── */
+  section{padding:4.2rem 0 1rem;scroll-margin-top:2rem}
+  .sec-head{display:flex;align-items:baseline;gap:1rem;margin-bottom:.4rem}
+  .sec-num{font-family:var(--fd);font-size:.65rem;color:var(--sc,var(--gold));letter-spacing:.1em}
+  h2{font-family:var(--fh);font-weight:900;font-size:clamp(1.5rem,3vw,2.1rem);color:var(--bone-bright);letter-spacing:.03em}
+  .sec-rule{height:1px;background:linear-gradient(90deg,var(--sc,var(--gold)),transparent);margin:.9rem 0 2rem;position:relative}
+  .sec-rule::before{content:'◆';position:absolute;left:0;top:-.62rem;color:var(--sc,var(--gold));font-size:.7rem}
+  .lead{font-size:1.08rem;font-weight:300;color:var(--bone);max-width:720px;margin-bottom:2rem}
+  .lead b{color:var(--gold-bright);font-weight:600}
+  p{margin-bottom:1.1rem;max-width:760px}
+  p b{color:var(--bone-bright)}
+
+  /* ── Reveal-animation ── */
+  .rv{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s cubic-bezier(.22,1,.36,1)}
+  .rv.in{opacity:1;transform:translateY(0)}
+
+  /* ── Kort ── */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1rem;margin:1.6rem 0}
+  .card{border:1px solid var(--edge);background:linear-gradient(160deg,var(--stone-2),var(--stone));
+    padding:1.3rem 1.2rem;position:relative;overflow:hidden;transition:transform .25s cubic-bezier(.22,1,.36,1),border-color .25s,box-shadow .25s}
+  .card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--cc,var(--gold));opacity:.5;transition:opacity .25s}
+  .card:hover{transform:translateY(-5px);border-color:var(--cc,var(--gold));box-shadow:0 12px 30px -12px var(--cg,rgba(201,162,39,.3))}
+  .card:hover::before{opacity:1}
+  .card .ic{font-size:1.5rem;margin-bottom:.7rem;display:inline-block;transition:transform .3s}
+  .card:hover .ic{transform:scale(1.15) rotate(-5deg)}
+  .card h4{font-family:var(--fh);font-weight:700;font-size:.95rem;color:var(--bone-bright);letter-spacing:.04em;margin-bottom:.5rem}
+  .card p{font-size:.88rem;color:var(--bone-dim);margin:0;line-height:1.6}
+  .card p b{color:var(--bone)}
+
+  /* ── Terminal-fönster ── */
+  .term{border:1px solid var(--edge-hi);background:#0a0a10;margin:1.8rem 0;box-shadow:0 14px 40px -14px rgba(0,0,0,.8)}
+  .term-bar{display:flex;align-items:center;gap:.5rem;padding:.55rem .9rem;border-bottom:1px solid var(--edge);background:var(--stone-2)}
+  .term-bar .dot{width:9px;height:9px;border-radius:50%}
+  .term-bar .t{margin-left:auto;font-family:var(--fm);font-size:.68rem;color:var(--bone-dim)}
+  .term-body{padding:1.2rem 1.3rem;font-family:var(--ft);font-size:1.12rem;line-height:1.55;overflow-x:auto}
+  .term-body .g{color:var(--term-green)}
+  .term-body .a{color:var(--term-amber)}
+  .term-body .d{color:var(--bone-dim)}
+  .term-body .r{color:var(--blood-bright)}
+  .term-body .p{color:var(--arcane)}
+  .term-body .gd{color:var(--gold-bright)}
+
+  /* ── Tabeller ── */
+  .tbl-wrap{overflow-x:auto;margin:1.6rem 0;border:1px solid var(--edge)}
+  table{width:100%;border-collapse:collapse;font-size:.9rem;min-width:560px}
+  th{font-family:var(--fh);font-weight:700;font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);
+    text-align:left;padding:.8rem 1rem;border-bottom:2px solid var(--edge-hi);background:var(--stone-2)}
+  td{padding:.7rem 1rem;border-bottom:1px solid var(--edge);vertical-align:top;color:var(--bone)}
+  tr:last-child td{border-bottom:0}
+  tr:hover td{background:rgba(201,162,39,.04)}
+  td code, .inline-code{font-family:var(--fm);font-size:.78rem;color:var(--term-amber);background:var(--stone-3);
+    border:1px solid var(--edge);padding:.12rem .45rem;white-space:nowrap}
+  td .tag{color:var(--term-green)}
+  td .desc{color:var(--bone-dim);font-size:.85rem}
+
+  /* ── Arkitektur: flöde ── */
+  .flow{display:flex;flex-direction:column;gap:0;margin:2rem 0}
+  .flow-row{display:flex;align-items:stretch;gap:0;flex-wrap:wrap}
+  .node{flex:1;min-width:150px;border:1px solid var(--edge-hi);background:linear-gradient(160deg,var(--stone-2),var(--stone));
+    padding:1rem .9rem;text-align:center;position:relative;transition:all .25s}
+  .node:hover{border-color:var(--nc,var(--gold));box-shadow:0 0 20px -6px var(--ng,rgba(201,162,39,.4));transform:translateY(-3px)}
+  .node .n-ic{font-size:1.4rem;display:block;margin-bottom:.5rem}
+  .node .n-t{font-family:var(--fh);font-weight:700;font-size:.82rem;color:var(--bone-bright);letter-spacing:.04em}
+  .node .n-s{font-family:var(--fm);font-size:.66rem;color:var(--bone-dim);margin-top:.35rem}
+  .arrow{display:flex;align-items:center;justify-content:center;width:44px;flex-shrink:0;color:var(--gold);font-size:1.1rem;position:relative}
+  .arrow::before{content:'';position:absolute;left:6px;right:14px;top:50%;height:1px;
+    background:repeating-linear-gradient(90deg,var(--gold) 0 5px,transparent 5px 10px);animation:march 1s linear infinite}
+  .arrow span{position:relative;z-index:1;background:var(--ink);padding:0 2px}
+  @keyframes march{to{background-position:10px 0}}
+  .flow-down{display:flex;justify-content:center;color:var(--gold);font-size:1.1rem;padding:.3rem 0;position:relative}
+  .flow-down::before{content:'';position:absolute;top:2px;bottom:12px;left:50%;width:1px;
+    background:repeating-linear-gradient(180deg,var(--gold) 0 5px,transparent 5px 10px);animation:marchv 1s linear infinite}
+  @keyframes marchv{to{background-position:0 10px}}
+  .services{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.8rem;margin-top:1.4rem}
+  .svc{border:1px dashed var(--edge-hi);padding:.9rem .8rem;text-align:center;transition:all .25s;background:rgba(18,18,26,.5)}
+  .svc:hover{border-color:var(--teal);border-style:solid;box-shadow:0 0 18px -6px rgba(78,138,147,.4)}
+  .svc .n-ic{font-size:1.2rem;display:block;margin-bottom:.4rem}
+  .svc .n-t{font-family:var(--fh);font-weight:700;font-size:.78rem;color:var(--bone-bright)}
+  .svc .n-s{font-family:var(--fm);font-size:.64rem;color:var(--bone-dim);margin-top:.3rem}
+
+  /* ── Minneslager: staplad mätare ── */
+  .membar{display:flex;height:44px;border:1px solid var(--edge-hi);margin:1.8rem 0 .8rem;overflow:hidden}
+  .membar .seg{display:flex;align-items:center;justify-content:center;font-family:var(--fm);font-size:.62rem;color:var(--ink);
+    font-weight:600;white-space:nowrap;overflow:hidden;transition:flex-grow .4s;cursor:default;position:relative}
+  .membar .seg:hover{filter:brightness(1.25)}
+  .memlegend{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:.5rem 1.4rem;margin-bottom:2rem}
+  .memlegend .li{display:flex;align-items:center;gap:.6rem;font-size:.82rem;color:var(--bone-dim)}
+  .memlegend .sw{width:12px;height:12px;flex-shrink:0;border:1px solid rgba(255,255,255,.2)}
+  .memlegend .li b{color:var(--bone);font-weight:500}
+
+  /* ── Filträd ── */
+  .tree{font-family:var(--fm);font-size:.8rem;line-height:1.85;color:var(--bone-dim);border:1px solid var(--edge);
+    background:#0a0a10;padding:1.4rem 1.6rem;overflow-x:auto;margin:1.6rem 0}
+  .tree .dir{color:var(--gold-bright)}
+  .tree .file{color:var(--bone)}
+  .tree .cmt{color:var(--bone-dim);font-style:italic}
+  .tree .hot{color:var(--term-green)}
+
+  /* ── Callout ── */
+  .callout{border:1px solid var(--edge-hi);border-left:3px solid var(--sc,var(--gold));background:linear-gradient(160deg,var(--stone-2),var(--stone));
+    padding:1.2rem 1.4rem;margin:1.8rem 0;max-width:760px}
+  .callout .ct{font-family:var(--fh);font-weight:700;font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:var(--sc,var(--gold));margin-bottom:.5rem}
+  .callout p{margin:0;font-size:.92rem;color:var(--bone)}
+
+  /* ── Fot ── */
+  footer{margin-top:5rem;border-top:1px solid var(--edge);padding:3rem 0 2rem;text-align:center;position:relative;z-index:3}
+  footer .f-sigil{font-size:2rem;display:block;margin-bottom:1rem;filter:drop-shadow(0 0 12px rgba(232,198,90,.5))}
+  footer .f-t{font-family:var(--fd);font-size:.6rem;color:var(--gold);letter-spacing:.15em;margin-bottom:.8rem}
+  footer .f-s{font-family:var(--ft);font-size:1rem;color:var(--bone-dim)}
+
+  /* ── Responsivt ── */
+  @media(max-width:900px){
+    .index{display:none}
+    main{padding:0 1.4rem 5rem}
+    .arrow{width:32px}
+  }
+</style>
+<noscript><style>.rv{opacity:1;transform:none}#boot{display:none}</style></noscript>
+</head>
+<body>
+<div class="grain"></div>
+<div class="scanlines"></div>
+<canvas id="embers"></canvas>
+<div class="vignette"></div>
+
+<!-- ═══════════ BOOT ═══════════ -->
+<div id="boot" onclick="skipBoot()">
+  <pre id="boot-text"></pre>
+  <span class="skip">[ KLICKA FÖR ATT HOPPA ÖVER ]</span>
+</div>
+
+<div class="wrap">
+
+  <!-- ═══════════ INDEX ═══════════ -->
+  <nav class="index">
+    <div class="sigil">🐉</div>
+    <h6>KODEX · INNEHÅLL</h6>
+    <a href="#top" class="on">⌂ Titelskärm</a>
+    <a href="#spelet">§1 · Spelet</a>
+    <a href="#spela">§2 · Så spelar du</a>
+    <a href="#arkitektur">§3 · Arkitekturen</a>
+    <a href="#harness">§4 · DM Harness</a>
+    <a href="#minne">§5 · Minnet</a>
+    <a href="#taggar">§6 · Taggprotokollet</a>
+    <a href="#data">§7 · Data &amp; filer</a>
+    <a href="#stack">§8 · Tech-stack</a>
+    <div class="ver">v1.0 · 2026-07-29<br>dnd.rostad.cc</div>
+  </nav>
+
+  <!-- ═══════════ MAIN ═══════════ -->
+  <main>
+
+    <!-- ── TITELSKÄRM ── -->
+    <div class="title-screen" id="top">
+      <div class="ts-frame">
+        <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+        <div class="ts-kicker">&gt; MORKRETS.RIKE --kodex --version<span class="cursor">&nbsp;</span></div>
+        <h1 class="game">MÖRKRETS<br>RIKE</h1>
+        <div class="ts-sub">Ett svenskt D&amp;D-äventyr</div>
+        <p class="ts-desc">
+          Ett <b>LLM-drivet Dungeons &amp; Dragons 5e</b>-spel där en artificiell Dungeon Master
+          väver berättelsen i realtid. Ingen förskriven handling — världen växer fram ur varje
+          beslut, varje tärningsslag, varje samtal. Denna kodex dokumenterar spelet,
+          arkitekturen och det <b>DM Harness</b> som håller minnet, reglerna och mekaniken samman.
+        </p>
+        <div class="ts-meta">
+          <span>BYGGD PÅ <b>FastAPI + Vanilla JS</b></span>
+          <span>DM <b>DeepSeek V4 Flash</b></span>
+          <span>MINNE <b>Qdrant + RAG</b></span>
+          <span>PLATTS <b>~4 500 rader</b></span>
+        </div>
+      </div>
+      <div class="scroll-hint">▼ RULLA NED FÖR ATT LÄSA ▼</div>
+    </div>
+
+    <!-- ── §1 SPELET ── -->
+    <section id="spelet" style="--sc:var(--gold)">
+      <div class="sec-head rv"><span class="sec-num">§1</span><h2>Spelet</h2></div>
+      <div class="sec-rule"></div>
+      <p class="lead rv">Mörkrets Rike är ett <b>en-spelare, en-DM</b> rollspel. Du skapar en karaktär,
+      kliver in i en mörk fantasyvärld och skriver fritt vad du gör. DM:n — en språkmodell —
+      svarar, begär tärningsslag, delar ut skada och XP, och introducerar gestalter och platser.</p>
+
+      <div class="cards">
+        <div class="card rv" style="--cc:var(--arcane);--cg:rgba(123,79,212,.35)"><span class="ic">🧙</span>
+          <h4>Fri karaktärsskapelse</h4>
+          <p>Beskriv din hjälte med egna ord — <b>Qwen 3.8 Max</b> genererar ett fullt 5e-ark: attribut, HP, utrustning och bakgrund. Eller välj en av sex arketyper.</p></div>
+        <div class="card rv" style="--cc:var(--ember);--cg:rgba(212,105,30,.35)"><span class="ic">🎲</span>
+          <h4>Riktiga tärningar</h4>
+          <p>DM:n begär kast med <b>DC och konsekvenser</b>. Slå via gyllene knappar i chatten — resultatet matas automatiskt tillbaka till DM:n. Nat 20 och nat 1 firas.</p></div>
+        <div class="card rv" style="--cc:var(--poison);--cg:rgba(90,154,78,.35)"><span class="ic">📖</span>
+          <h4>Levande värld</h4>
+          <p>NPC:er, platser, uppdrag och föremål sparas i kampanjens tillstånd. <b>Minneskodexen</b> och <b>Minnesarkivet</b> visar allt du upptäckt.</p></div>
+        <div class="card rv" style="--cc:var(--teal);--cg:rgba(78,138,147,.35)"><span class="ic">🖼️</span>
+          <h4>Terminal Gothic</h4>
+          <p>Castlevania × DOS × terminal. Pixel-sprites, ASCII-konst, scanlines, glödande embers och 16-bitars ljudeffekter. Inget template-skrammel.</p></div>
+      </div>
+
+      <div class="callout rv">
+        <div class="ct">Designprincip</div>
+        <p>Inget hårdkodat innehåll. Inga fördefinierade platser eller NPC:er — allt upptäcks
+        dynamiskt genom rollspel. Världen ska växa fram ur spelet, inte serveras färdig.</p>
+      </div>
+    </section>
+
+    <!-- ── §2 SÅ SPELAR DU ── -->
+    <section id="spela" style="--sc:var(--term-green)">
+      <div class="sec-head rv"><span class="sec-num">§2</span><h2>Så spelar du</h2></div>
+      <div class="sec-rule"></div>
+      <p class="lead rv">Logga in, skapa ett äventyr, skriv fritt. DM:n ställer först ett par frågor
+      om din karaktär och värld — sedan öppnas scenen.</p>
+
+      <div class="term rv">
+        <div class="term-bar"><span class="dot" style="background:var(--blood-bright)"></span><span class="dot" style="background:var(--term-amber)"></span><span class="dot" style="background:var(--poison)"></span><span class="t">chat.html — en typisk tur</span></div>
+        <div class="term-body">
+<span class="d">┌─ DM ─────────────────────────────────┐</span>
+<span class="a">  Dörren till värdshuset glider upp. En</span>
+<span class="a">  kvinna i grå kappa möter din blick.</span>
+<span class="gd">  [KAST:1d20+3|Upptäckt]</span>
+<span class="d">└──────────────────────────────────────┘</span>
+<span class="g">  🎲 DM begär: Upptäckt (1d20+3)</span>  <span class="d">[ Slå 1d20+3 ]</span>
+<span class="p">  &gt; Jag smyger fram till disken…</span>
+<span class="g">  🎲 Upptäckt: [17]+3 = 20</span>
+<span class="d">┌─ DM ─────────────────────────────────┐</span>
+<span class="a">  Hon ser rakt igenom dig. "Vi stänger</span>
+<span class="a">  snart", viskar hon. "Men du söker</span>
+<span class="a">  något annat, eller hur?"</span>
+<span class="r">  [NPC:Greta|Värdinna|neutral]</span>
+<span class="d">└──────────────────────────────────────┘</span>
+        </div>
+      </div>
+
+      <div class="tbl-wrap rv">
+        <table>
+          <tr><th>Kommando</th><th>Effekt</th></tr>
+          <tr><td><code>/rulla 1d20+4</code></td><td><span class="desc">Slå en tärning manuellt</span></td></tr>
+          <tr><td><code>/save [namn]</code></td><td><span class="desc">Spara en checkpoint</span></td></tr>
+          <tr><td><code>/pin [fakt]</code> · <code>/unpin</code></td><td><span class="desc">Fäst / ta bort en permanent sanning</span></td></tr>
+          <tr><td><code>/lore [text]</code></td><td><span class="desc">Lägg till världskunskap (indexeras i RAG)</span></td></tr>
+          <tr><td><code>/chapter [titel]</code></td><td><span class="desc">Avsluta ett kapitel manuellt</span></td></tr>
+          <tr><td><code>/facts</code></td><td><span class="desc">Lista fästa sanningar</span></td></tr>
+          <tr><td><code>/help</code></td><td><span class="desc">DOS-stilad hjälpskärm</span></td></tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── §3 ARKITEKTUR ── -->
+    <section id="arkitektur" style="--sc:var(--teal)">
+      <div class="sec-head rv"><span class="sec-num">§3</span><h2>Arkitekturen</h2></div>
+      <div class="sec-rule"></div>
+      <p class="lead rv">En <b>FastAPI-backend</b> i Docker orchestrerar allt: den bygger systemprompten,
+      anropar DM-modellen, parser de mekaniska taggarna, uppdaterar tillståndet och strömmar
+      tillbaka till en <b>vanilla JS-frontend</b>. Runt omkring: en vektordatabas för långtidsminne
+      och en lokal embedding-modell.</p>
+
+      <div class="flow rv">
+        <div class="flow-row">
+          <div class="node" style="--nc:var(--arcane);--ng:rgba(123,79,212,.4)"><span class="n-ic">🕹️</span><div class="n-t">Spelare</div><div class="n-s">browser · vanilla JS</div></div>
+          <div class="arrow"><span>→</span></div>
+          <div class="node" style="--nc:var(--teal);--ng:rgba(78,138,147,.4)"><span class="n-ic">⚙️</span><div class="n-t">FastAPI</div><div class="n-s">/api/chat · Docker :8092</div></div>
+          <div class="arrow"><span>→</span></div>
+          <div class="node" style="--nc:var(--gold);--ng:rgba(201,162,39,.4)"><span class="n-ic">🧠</span><div class="n-t">DM (LLM)</div><div class="n-s">DeepSeek V4 Flash</div></div>
+        </div>
+        <div class="flow-down"><span style="position:relative;z-index:1;background:var(--ink)">↓</span></div>
+        <div class="flow-row">
+          <div class="node" style="--nc:var(--term-green);--ng:rgba(51,204,51,.35)"><span class="n-ic">🏷️</span><div class="n-t">Taggparser</div><div class="n-s">regex + Pydantic + retry</div></div>
+          <div class="arrow"><span>→</span></div>
+          <div class="node" style="--nc:var(--ember);--ng:rgba(212,105,30,.35)"><span class="n-ic">🗃️</span><div class="n-t">State</div><div class="n-s">state.json · transcripts</div></div>
+          <div class="arrow"><span>→</span></div>
+          <div class="node" style="--nc:var(--poison);--ng:rgba(90,154,78,.35)"><span class="n-ic">📤</span><div class="n-t">Svar + effekter</div><div class="n-s">reply · roll_requests · fx</div></div>
+        </div>
+      </div>
+
+      <div class="services rv">
+        <div class="svc"><span class="n-ic">🔮</span><div class="n-t">Qdrant</div><div class="n-s">vektor-DB · 768-dim Cosine<br>samling: morkrets_rike</div></div>
+        <div class="svc"><span class="n-ic">🏠</span><div class="n-t">Ollama</div><div class="n-s">nomic-embed-text<br>lokala embeddings</div></div>
+        <div class="svc"><span class="n-ic">⚡</span><div class="n-t">Extraktionsmodell</div><div class="n-s">Qwen 3.6 Flash<br>fakta ur varje svar</div></div>
+        <div class="svc"><span class="n-ic">🎨</span><div class="n-t">Atmosfärmodell</div><div class="n-s">Qwen 3.6 Flash<br>ASCII-konst per tur</div></div>
+      </div>
+
+      <div class="callout rv" style="--sc:var(--teal)">
+        <div class="ct">Varför en DM Harness?</div>
+        <p>En naken språkmodell glömmer inventory, skippar tärningar och hittar på regler.
+        Harnessen är lagret däremellan: den <b>tvingar</b> mekanik genom taggar och validering,
+        <b>minns</b> genom hierarkiska sammanfattningar och RAG, och <b>håller ordning</b> genom
+        ett auktoritärt tillstånd som aldrig motsägs.</p>
+      </div>
+    </section>
+
+    <!-- ── §4 DM HARNESS ── -->
+    <section id="harness" style="--sc:var(--arcane)">
+      <div class="sec-head rv"><span class="sec-num">§4</span><h2>DM Harness — tre faser</h2></div>
+      <div class="sec-rule"></div>
+      <p class="lead rv">Kärnan i projektet. Byggd i tre faser, varje fas löser ett eget problem:
+      <b>kontext</b>, <b>robusthet</b> och <b>långtidsminne</b>.</p>
+
+      <div class="cards">
+        <div class="card rv" style="--cc:var(--teal);--cg:rgba(78,138,147,.35)"><span class="ic">①</span>
+          <h4>Fas 1 · Kontext</h4>
+          <p><b>compact_state()</b> + <b>truth_block()</b> — auktoritär "SANNING"-sektion istället för rå JSON. Token-baserad sliding window (6000 tokens, min 8 meddelanden). Förra turens mekaniska händelser injiceras. <b>/pin</b> fäster permanenta sanningar.</p></div>
+        <div class="card rv" style="--cc:var(--arcane);--cg:rgba(123,79,212,.35)"><span class="ic">②</span>
+          <h4>Fas 2 · Robusthet</h4>
+          <p><b>Pydantic-validering</b> + retry-loop (max 2 försök med repair-prompt). <b>Hierarkisk summering</b>: scen → kapitel → kampanjbåge. <b>Per-turn regelinjicering</b>: 15 D&amp;D 5e-regler, topp-3 matchas per tur.</p></div>
+        <div class="card rv" style="--cc:var(--gold);--cg:rgba(201,162,39,.35)"><span class="ic">③</span>
+          <h4>Fas 3 · Långtidsminne</h4>
+          <p><b>RAG</b>: transkript chunkas och embeddas i Qdrant, topp-4 relevanta hämtas per tur. <b>Faktaregister</b>: en billig modell extraherar NPC/plats/löfte-fakta efter varje svar. Allt <b>per kampanj</b>, rensas vid radering.</p></div>
+      </div>
+
+      <div class="callout rv" style="--sc:var(--blood-bright)">
+        <div class="ct">Enforcement — när DM:n slarvar</div>
+        <p>TVÅ räknare håller DM:n ärlig. <b>tag_streak</b>: använder DM:n inga mekaniska taggar på
+        3+ turer injiceras en påminnelse. <b>missing_roll_streak</b>: om spelaren utför en riskfylld
+        handling (nyckelordsdetektion) utan att DM:n begär kast, påminns DM:n nästa tur.
+        Systemprompten visar dessutom explicita <b>FEL/RÄTT-exempel</b>: "ALDRIG narrera skada utan tärning."</p>
+      </div>
+    </section>
+
+    <!-- ── §5 MINNET ── -->
+    <section id="minne" style="--sc:var(--gold)">
+      <div class="sec-head rv"><span class="sec-num">§5</span><h2>Minnet — lager på lager</h2></div>
+      <div class="sec-rule"></div>
+      <p class="lead rv">Varje tur monteras en systemprompt av <b>åtta lager</b>, i strikt prioriteringsordning.
+      Det alltid-närvarande tillståndet kommer först; det dynamiska minnet sist. Så här fylls
+      kontextfönstret:</p>
+
+      <div class="membar rv">
+        <div class="seg" style="flex-grow:10;background:var(--gold)" title="Systemprompt + taggprotokoll">PROMPT</div>
+        <div class="seg" style="flex-grow:12;background:var(--term-amber)" title="compact_state — auktoritativt tillstånd">SANNING</div>
+        <div class="seg" style="flex-grow:9;background:var(--ember)" title="2 scen + 2 kapitel + 1 kampanjbåge">SUM</div>
+        <div class="seg" style="flex-grow:8;background:var(--arcane)" title="Faktaregister — topp 8 keyword-relevanta">FAKTA</div>
+        <div class="seg" style="flex-grow:8;background:var(--teal)" title="RAG — topp 4 semantiska chunks">RAG</div>
+        <div class="seg" style="flex-grow:7;background:var(--poison)" title="Topp-3 av 15 D&D-regler">REGLER</div>
+        <div class="seg" style="flex-grow:20;background:var(--bone-dim)" title="Sliding window — 6000 tokens">FÖNSTER</div>
+        <div class="seg" style="flex-grow:8;background:var(--blood-bright)" title="Spelarens meddelande">MEDD</div>
+      </div>
+      <div class="memlegend rv">
+        <div class="li"><span class="sw" style="background:var(--gold)"></span><span><b>Systemprompt</b> — persona + taggprotokoll</span></div>
+        <div class="li"><span class="sw" style="background:var(--term-amber)"></span><span><b>SANNING</b> — HP, inventory, NPCs, quests</span></div>
+        <div class="li"><span class="sw" style="background:var(--ember)"></span><span><b>Sammanfattningar</b> — hierarkiska, var 20:e tur</span></div>
+        <div class="li"><span class="sw" style="background:var(--arcane)"></span><span><b>Faktaregister</b> — extraherade fakta</span></div>
+        <div class="li"><span class="sw" style="background:var(--teal)"></span><span><b>RAG</b> — semantiskt minne (Qdrant)</span></div>
+        <div class="li"><span class="sw" style="background:var(--poison)"></span><span><b>Regler</b> — relevanta 5e-regler</span></div>
+        <div class="li"><span class="sw" style="background:var(--bone-dim)"></span><span><b>Sliding window</b> — senaste meddelanden</span></div>
+        <div class="li"><span class="sw" style="background:var(--blood-bright)"></span><span><b>Spelarens meddelande</b></span></div>
+      </div>
+
+      <p class="rv">Sammanfattningarna byggs <b>hierarkiskt</b>: var 20:e tur skrivs en scen-sammanfattning,
+      var 5:e scen blir ett kapitel, var 3:e kapitel en kampanjbåge. Gamla detaljer komprimeras
+      stegvis — precis som ett riktigt minne.</p>
+    </section>
+
+    <!-- ── §6 TAGGAR ── -->
+    <section id="taggar" style="--sc:var(--term-green)">
+      <div class="sec-head rv"><span class="sec-num">§6</span><h2>Taggprotokollet</h2></div>
+      <div class="sec-rule"></div>
+      <p class="lead rv">DM:n narrerar fritt men bäddar in <b>mekaniska taggar</b> i svaret. Backend
+      parser dem med regex, validerar mot Pydantic-schemas och uppdaterar tillståndet — spelaren
+      ser bara den rena prosan.</p>
+
+      <div class="tbl-wrap rv">
+        <table>
+          <tr><th>Tagg</th><th>Exempel</th><th>Effekt</th></tr>
+          <tr><td><code class="tag">[SKADA:n]</code></td><td><code>[SKADA:12]</code></td><td><span class="desc">Dra av HP</span></td></tr>
+          <tr><td><code class="tag">[HELA:n]</code></td><td><code>[HELA:8]</code></td><td><span class="desc">Återställ HP</span></td></tr>
+          <tr><td><code class="tag">[XP:n]</code> · <code class="tag">[GULD:n]</code></td><td><code>[XP:250]</code></td><td><span class="desc">Erfarenhet / valuta</span></td></tr>
+          <tr><td><code class="tag">[FÖREMÅL:n|t|r]</code></td><td><code>[FÖREMÅL:Rostigt svärd|vapen|vanlig]</code></td><td><span class="desc">Lägg till i inventory</span></td></tr>
+          <tr><td><code class="tag">[FÖREMÅL_BORT:n]</code></td><td><code>[FÖREMÅL_BORT:Fackla]</code></td><td><span class="desc">Ta bort ur inventory</span></td></tr>
+          <tr><td><code class="tag">[QUEST:n|b|b]</code></td><td><code>[QUEST:Råttorna|Källaren|50 gp]</code></td><td><span class="desc">Nytt uppdrag</span></td></tr>
+          <tr><td><code class="tag">[QUEST_SLUTFÖRD:n]</code></td><td><code>[QUEST_SLUTFÖRD:Råttorna]</code></td><td><span class="desc">Markera klart</span></td></tr>
+          <tr><td><code class="tag">[NPC:n|roll|rel]</code></td><td><code>[NPC:Greta|Värdinna|neutral]</code></td><td><span class="desc">Ny gestalt + färg</span></td></tr>
+          <tr><td><code class="tag">[NPC_DÖD:n]</code></td><td><code>[NPC_DÖD:Greta]</code></td><td><span class="desc">Markera fallen</span></td></tr>
+          <tr><td><code class="tag">[NPC_RELATION:n|r]</code></td><td><code>[NPC_RELATION:Greta|allierad]</code></td><td><span class="desc">Uppdatera relation</span></td></tr>
+          <tr><td><code class="tag">[PLATS:n]</code></td><td><code>[PLATS:Gråvakt]</code></td><td><span class="desc">Ny plats på kartan</span></td></tr>
+          <tr><td><code class="tag">[KAST:1d20+M|E]</code></td><td><code>[KAST:1d20+3|Smyg]</code></td><td><span class="desc">Begär tärningsslag</span></td></tr>
+          <tr><td><code class="tag">[NY_DAG:beskr]</code></td><td><code>[NY_DAG:Regnet har upphört]</code></td><td><span class="desc">Ny dag i loggboken</span></td></tr>
+          <tr><td><code class="tag">[KONSEKVENS:beskr]</code></td><td><code>[KONSEKVENS:Vakten larmar]</code></td><td><span class="desc">Världsförändring</span></td></tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── §7 DATA ── -->
+    <section id="data" style="--sc:var(--ember)">
+      <div class="sec-head rv"><span class="sec-num">§7</span><h2>Data &amp; filer</h2></div>
+      <div class="sec-rule"></div>
+      <p class="lead rv">Allt är <b>per användare och per kampanj</b> på disk. Avslutar du ett äventyr
+      raderas katalogen <b>och</b> Qdrant-vektorerna — inget läcker mellan kampanjer.</p>
+
+      <div class="tree rv"><span class="dir">backend/</span>
+├── <span class="file hot">main.py</span>          <span class="cmt"># ~2 400 rader — endpoints, chat, taggparser</span>
+├── <span class="file">models.py</span>        <span class="cmt"># DM_SYSTEM_PROMPT, regler, modellkonfig</span>
+├── <span class="file">state_manager.py</span> <span class="cmt"># CampaignStore — state, transkript, saves</span>
+├── <span class="file hot">rag.py</span>           <span class="cmt"># embed → Qdrant, retrieve, purge_user</span>
+├── <span class="file hot">extraction.py</span>    <span class="cmt"># Fact + FactRegister + extract_facts</span>
+├── <span class="file">atmosphere.py</span>    <span class="cmt"># ASCII-konst per tur</span>
+├── <span class="file">dice.py</span> · <span class="file">auth.py</span> · <span class="file">locations.py</span> · <span class="file">logbook.py</span>
+└── <span class="dir">data/campaigns/&lt;user&gt;/&lt;campaign_id&gt;/</span>
+    ├── <span class="file">state.json</span>     <span class="cmt"># HP, inventory, NPCs, quests, world</span>
+    ├── <span class="file">facts.json</span>     <span class="cmt"># faktaregistret (Fas 3)</span>
+    ├── <span class="dir">transcripts/</span>   <span class="cmt"># råa meddelanden</span>
+    ├── <span class="dir">summaries/</span>     <span class="cmt"># scen / kapitel / kampanjbåge</span>
+    └── <span class="dir">saves/</span>         <span class="cmt"># checkpoints (/save)</span>
+
+<span class="dir">frontend/</span>
+├── <span class="file">login</span> · <span class="file">adventure</span> · <span class="file">newgame</span> · <span class="file hot">chat</span> · <span class="file">character</span>
+├── <span class="file">npcs</span> <span class="cmt">(Minnets hall)</span> · <span class="file">facts</span> <span class="cmt">(Minnesarkivet)</span>
+├── <span class="file">platser</span> <span class="cmt">(Kartan)</span> · <span class="file">loggbok</span> · <span class="file">valvet</span> · <span class="file">help</span>
+└── <span class="file">snes.css</span> · <span class="file">sprites.js</span> · <span class="file">sfx.js</span> · <span class="file">api.js</span></div>
+    </section>
+
+    <!-- ── §8 STACK ── -->
+    <section id="stack" style="--sc:var(--blood-bright)">
+      <div class="sec-head rv"><span class="sec-num">§8</span><h2>Tech-stack</h2></div>
+      <div class="sec-rule"></div>
+      <div class="tbl-wrap rv">
+        <table>
+          <tr><th>Lager</th><th>Teknik</th><th>Roll</th></tr>
+          <tr><td><b>Frontend</b></td><td><code>Vanilla JS + HTML + CSS</code></td><td><span class="desc">Terminal Gothic, pixel-sprites, 16-bit SFX</span></td></tr>
+          <tr><td><b>Backend</b></td><td><code>FastAPI · Python 3.11</code></td><td><span class="desc">Orkestrering, taggparser, validering</span></td></tr>
+          <tr><td><b>DM</b></td><td><code>DeepSeek V4 Flash</code></td><td><span class="desc">Huvud-Dungeon Master (reasoning)</span></td></tr>
+          <tr><td><b>Karaktär</b></td><td><code>Qwen 3.8 Max</code></td><td><span class="desc">Karaktärsgenerering, regel-orakel</span></td></tr>
+          <tr><td><b>Atmosfär / Extraktion</b></td><td><code>Qwen 3.6 Flash</code></td><td><span class="desc">ASCII-konst + faktextraktion (billig)</span></td></tr>
+          <tr><td><b>Embeddings</b></td><td><code>Ollama · nomic-embed-text</code></td><td><span class="desc">768-dim vektorer, lokalt</span></td></tr>
+          <tr><td><b>Vektor-DB</b></td><td><code>Qdrant</code></td><td><span class="desc">Semantiskt minne (RAG)</span></td></tr>
+          <tr><td><b>Drift</b></td><td><code>Docker Compose</code></td><td><span class="desc">dnd.rostad.cc · port 8092</span></td></tr>
+        </table>
+      </div>
+    </section>
+
+    <footer>
+      <span class="f-sigil">🐉</span>
+      <div class="f-t">MÖRKRETS RIKE · KODEX</div>
+      <div class="f-s">Ett svenskt D&amp;D-äventyr · drivet av språkmodeller, tärningar och stjärnstoft<br>
+      dnd.rostad.cc · byggd med ❤ av rostad &amp; Hästis 🦄</div>
+    </footer>
+
+  </main>
+</div>
+
+<script>
+// ── Embers (glödande partiklar) ──
+(() => {
+  const cv = document.getElementById('embers'), cx = cv.getContext('2d');
+  let W, H, P = [];
+  const rs = () => { W = cv.width = innerWidth; H = cv.height = innerHeight; };
+  rs(); addEventListener('resize', rs);
+  const COLS = ['232,198,90','212,105,30','212,58,77','123,79,212'];
+  for (let i = 0; i < 42; i++) P.push({
+    x: Math.random()*innerWidth, y: Math.random()*innerHeight,
+    s: 1+Math.random()*2.2, v: .2+Math.random()*.5,
+    a: Math.random()*Math.PI*2, o: .15+Math.random()*.4,
+    c: COLS[Math.random()*COLS.length|0]
+  });
+  (function tick(){
+    cx.clearRect(0,0,W,H);
+    for (const p of P) {
+      p.y -= p.v; p.a += .02; p.x += Math.sin(p.a)*.35;
+      if (p.y < -8) { p.y = H+8; p.x = Math.random()*W; }
+      const fl = p.o * (0.6 + 0.4*Math.sin(p.a*2));
+      cx.fillStyle = `rgba(${p.c},${fl})`;
+      cx.fillRect(p.x, p.y, p.s, p.s);
+    }
+    requestAnimationFrame(tick);
+  })();
+})();
+
+// ── Boot-sekvens ──
+const BOOT_LINES = [
+  'MÖRKRETS RIKE BIOS v3.0 — Dungeon Master Harness',
+  'Copyright (c) 2026 Rostad Interactive',
+  '',
+  '64K base memory ............ OK',
+  '384K extended memory ....... OK',
+  'LLM Dungeon Master ......... DeepSeek V4 Flash  [ONLINE]',
+  'Semantic memory (Qdrant) ... 768-dim Cosine     [ONLINE]',
+  'Embedding model (Ollama) ... nomic-embed-text   [ONLINE]',
+  'Fact register .............. per-kampanj        [TOM]',
+  '',
+  'Loading MORKRETS.RIKE — KODEX ...',
+];
+let bootDone = false;
+function skipBoot(){ if (bootDone) return; bootDone = true; document.getElementById('boot').classList.add('done'); }
+(() => {
+  const el = document.getElementById('boot-text');
+  let li = 0;
+  const iv = setInterval(() => {
+    if (bootDone) { clearInterval(iv); return; }
+    if (li >= BOOT_LINES.length) { clearInterval(iv); setTimeout(skipBoot, 500); return; }
+    el.textContent += BOOT_LINES[li] + '\n';
+    li++;
+  }, 170);
+})();
+
+// ── Scroll-reveal ──
+const io = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+}), { threshold: .12 });
+document.querySelectorAll('.rv').forEach(el => io.observe(el));
+
+// ── Scroll-spy för index ──
+const links = [...document.querySelectorAll('.index a')];
+const secs = links.map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+addEventListener('scroll', () => {
+  let cur = 0;
+  secs.forEach((s, i) => { if (s.getBoundingClientRect().top < innerHeight*.35) cur = i; });
+  links.forEach((a, i) => a.classList.toggle('on', i === cur));
+}, { passive: true });
+</script>
+</body>
+</html>

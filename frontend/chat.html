@@ -67,6 +67,7 @@
   }
   .top-btn:hover { color: var(--gold-bright); border-color: var(--gold); box-shadow: 0 0 12px -3px rgba(232,198,90,0.4); }
   .top-btn.danger:hover { color: var(--blood-bright); border-color: var(--blood-bright); box-shadow: 0 0 12px -3px rgba(212,58,77,0.4); }
+  .top-divider { width: 1px; height: 20px; background: var(--edge); flex-shrink: 0; }
 
   /* ── Model picker ── */
   .model-select {
@@ -132,6 +133,31 @@
   .npc-name { color: var(--bone); }
   .npc-role { color: var(--bone-dim); font-size: 0.68rem; font-style: italic; margin-left: auto; }
 
+  /* ── Uppdragslogg (sidebar) ── */
+  .quest-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .quest-item {
+    padding: 0.45rem 0.55rem 0.45rem 0.65rem;
+    background: rgba(201,162,39,0.04);
+    border-left: 2px solid rgba(201,162,39,0.45);
+    transition: background 0.2s, transform 0.2s;
+  }
+  .quest-item:hover { background: rgba(201,162,39,0.09); transform: translateX(2px); }
+  .quest-name {
+    font-family: 'Cinzel', serif; font-size: 0.72rem; font-weight: 700;
+    letter-spacing: 0.04em; color: var(--gold-bright); line-height: 1.3;
+  }
+  .quest-desc { font-size: 0.72rem; color: var(--bone-dim); font-style: italic; line-height: 1.4; margin-top: 0.15rem; }
+  .quest-reward {
+    font-size: 0.66rem; color: var(--poison); margin-top: 0.2rem;
+    text-shadow: 0 0 8px rgba(122,163,94,0.25);
+  }
+  .quest-item.done { border-left-color: rgba(122,163,94,0.5); background: rgba(122,163,94,0.05); }
+  .quest-item.done .quest-name { text-decoration: line-through; color: var(--bone-dim); }
+  .quest-item.done .quest-reward { color: var(--poison); opacity: 0.75; }
+  .quest-item.failed { border-left-color: rgba(163,36,51,0.5); background: rgba(163,36,51,0.06); }
+  .quest-item.failed .quest-name { text-decoration: line-through; color: rgba(212,58,77,0.6); }
+  .quest-empty { font-size: 0.72rem; color: var(--bone-dim); font-style: italic; opacity: 0.55; padding: 0.2rem 0.4rem; }
+
   /* ── Main chat ── */
   .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
   .chat-scroll { flex: 1; overflow-y: auto; padding: 1.4rem 1.6rem 0.5rem; scroll-behavior: smooth; }
@@ -165,10 +191,16 @@
   .msg.dm .text { font-style: italic; color: var(--bone); line-height: 1.7; font-size: 1.06rem; }
 
   /* NPC speech */
-  .msg.npc { padding-left: 1rem; }
+  .msg.npc {
+    padding-left: 1rem;
+    border-left: 2px solid var(--npc-color, #a8b2c0);
+    transition: border-color 0.3s;
+  }
   .msg.npc .who {
     font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.9rem;
     margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.5rem;
+    color: var(--npc-color, #a8b2c0);
+    text-shadow: 0 0 12px color-mix(in srgb, var(--npc-color, #a8b2c0) 35%, transparent);
   }
   .msg.npc .who .dot { width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
   .msg.npc .text { color: var(--bone); line-height: 1.65; font-size: 1.03rem; }
@@ -237,7 +269,8 @@
   .tray-last .fail { color: var(--blood-bright); text-shadow: 0 0 10px rgba(212,58,77,.6); }
 
   /* ── Låst tärningsbricka: DM:n måste begära kastet ── */
-  #tray-lock { font-size: .85rem; margin-right: .15rem; transition: filter .3s, transform .3s; }
+  #tray-lock { font-size: .85rem; margin-right: .15rem; cursor: pointer; user-select: none; transition: filter .3s, transform .3s; }
+  #tray-lock:hover { transform: scale(1.2); }
   .dice-tray.locked #tray-lock { filter: grayscale(1) brightness(.7); }
   .dice-tray:not(.locked) #tray-lock { animation: lock-glow 1.6s ease-in-out infinite; }
   @keyframes lock-glow { 0%,100% { transform: scale(1); } 50% { transform: scale(1.18); filter: drop-shadow(0 0 6px rgba(232,198,90,.8)); } }
@@ -462,16 +495,20 @@
     </select>
   </div>
 
-  <button class="top-btn" onclick="toggleOracle()">📜 Regel-orakel</button>
-  <a class="top-btn" href="help.html">❓ Hur spelar man?</a>
-  <a class="top-btn" href="npcs.html">📖 Gestalter</a>
+  <button class="top-btn" onclick="location.href='character.html'">🧙 Karaktär</button>
+  <span class="top-divider"></span>
   <a class="top-btn" href="platser.html">🗺️ Kartan</a>
   <a class="top-btn" href="loggbok.html">📜 Loggbok</a>
+  <a class="top-btn" href="npcs.html">📖 Gestalter</a>
   <a class="top-btn" href="valvet.html">🏰 Valvet</a>
+  <span class="top-divider"></span>
+  <button class="top-btn" onclick="toggleOracle()">📜 Regel-orakel</button>
+  <a class="top-btn" href="help.html">❓ Hur spelar man?</a>
+  <span class="top-divider"></span>
   <button class="top-btn" onclick="exportCampaign()">📦 Exportera</button>
-  <button class="top-btn" onclick="location.href='character.html'">🧙 Karaktär</button>
   <button class="top-btn sfx-btn" onclick="sfxToggleBtn()" title="Ljud av/på">🔊</button>
   <button class="top-btn music-btn" onclick="musicToggleBtn()" title="Musik av/på">♫</button>
+  <span class="top-divider"></span>
   <button class="top-btn danger" onclick="logout()">🚪 Lämna</button>
 </header>
 
@@ -488,6 +525,13 @@
           <div class="pc-sub" id="pc-sub">—</div>
           <div class="pc-hp"><i id="pc-hp-fill" style="width:100%"></i></div>
         </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="side-label">⚑ Uppdrag</div>
+      <div class="quest-list" id="quest-list">
+        <div class="quest-empty">Inga uppdrag ännu…</div>
       </div>
     </div>
 
@@ -582,6 +626,8 @@ async function loadCampaign() {
       }
       // Fyll NPC-registret från kampanjstate (inga demo-NPCs)
       ingestNpcs(campaign._raw && campaign._raw.npcs);
+      // Fyll uppdragsloggen i sidebaren
+      renderQuests(campaign._raw && campaign._raw.quests);
       // Fyll avatar-registret (spelare, DM, NPCs)
       ingestAvatars(campaign._raw && campaign._raw.avatars);
       refreshAvatars();
@@ -626,6 +672,15 @@ const NPCS = {
   dm: { name: 'Dungeon Master', color: '#c9a227', icon: '🧙‍♂️' },
 };
 
+// ── NPC-färger: deterministisk palettfärg per namn (hash) ──
+const NPC_PALETTE = ['#8b5fd4', '#d4691e', '#7aa35e', '#5e9aa3', '#d43a4d', '#e8c65a', '#b06fd4', '#6fc3b0', '#c06f8f', '#9ab05e', '#d4a373', '#a8b2c0'];
+function npcColorFor(name) {
+  const s = (name || '').toLowerCase();
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return NPC_PALETTE[h % NPC_PALETTE.length];
+}
+
 function ingestNpcs(npcList) {
   (npcList || []).forEach(npc => {
     if (!npc || !npc.name) return;
@@ -633,7 +688,7 @@ function ingestNpcs(npcList) {
     if (!NPCS[key]) {
       NPCS[key] = {
         name: npc.name,
-        color: npc.color || '#a8b2c0',
+        color: npcColorFor(npc.name),
         icon: npc.icon || '🎭',
         role: npc.role || '',
         alive: npc.alive !== false,
@@ -730,9 +785,10 @@ function addMessage(type, npcKey, text) {
     el.innerHTML = `<div class="who">${avatarHtml('dm', '🧙‍♂️')} Dungeon Master</div><div class="text">${mdToHtml(escapeHtml(text))}</div>`;
     SFX.receive();
   } else if (type === 'npc') {
-    const n = NPCS[npcKey] || { name: npcKey || 'Okänd', color: '#a8b2c0', icon: '🎭', role: '' };
+    const n = NPCS[npcKey] || { name: npcKey || 'Okänd', color: npcColorFor(npcKey || 'Okänd'), icon: '🎭', role: '' };
+    el.style.setProperty('--npc-color', n.color);
     el.innerHTML = `
-      <div class="who" style="color:${n.color}">
+      <div class="who">
         <span class="msg-avatar" data-npc-key="${npcKey}" onclick="pickAvatar('npc:${npcKey}')" title="Klicka för att byta bild">${AVATARS['npc:' + npcKey] ? `<img src="${AVATARS['npc:' + npcKey]}" alt="">` : SPR.html(n.icon || '🎭')}</span>
         ${n.name}
       </div>
@@ -807,6 +863,29 @@ function showTrayResult(roll) {
   el.innerHTML = `Senast: <b class="${cls}">${roll.total}</b> (${roll.notation})${isCrit ? ' ✦' : ''}${isFail ? ' ✦' : ''}`;
   el.style.opacity = 1;
 }
+
+// ── Tärningsbrickans lås: DM låser upp, spelaren kan växla manuellt ──
+function setTrayLock(locked) {
+  const tray = document.getElementById('dice-tray');
+  const lock = document.getElementById('tray-lock');
+  tray.classList.toggle('locked', locked);
+  lock.textContent = locked ? '🔒' : '🔓';
+  lock.title = locked ? 'Låst — DM:n måste begära kastet (klicka för att låsa upp)' : 'Upplåst — slå fritt (klicka för att låsa)';
+}
+function unlockDiceTray() {
+  const tray = document.getElementById('dice-tray');
+  if (tray.classList.contains('locked')) {
+    setTrayLock(false);
+    SFX.click();
+  }
+}
+document.getElementById('tray-lock').addEventListener('click', () => {
+  const tray = document.getElementById('dice-tray');
+  const locking = !tray.classList.contains('locked');
+  setTrayLock(locking);
+  SFX.click();
+  toast(locking ? '🔒 Tärningarna låsta — DM begär kastet' : '🔓 Tärningarna upplåsta — slå fritt');
+});
 
 // ── DM begär ett kast inline i chatten ──
 function addRollRequest(notation, label) {
@@ -1099,9 +1178,10 @@ async function dmRespond(playerText) {
       addAsciiArt(res.ascii_art);
     }
 
-    // DM begär kast → visa inline-knappar
+    // DM begär kast → visa inline-knappar + lås upp tärningsbrickan
     if (res.roll_requests && res.roll_requests.length) {
       res.roll_requests.forEach(r => addRollRequest(r.notation, r.label));
+      unlockDiceTray();
     }
 
     // Uppdatera tur-räknare
@@ -1162,6 +1242,17 @@ function renderEffects(effects, state) {
     addMessage('system', null, html);
     if (SFX[sfx]) SFX[sfx]();
   });
+  // Uppdragsloggen i sidebaren ska spegla nya/avslutade uppdrag direkt
+  if (effects.some(fx => ['quest', 'quest_slutförd', 'quest_misslyckad'].includes(fx.type))) {
+    refreshQuests();
+  }
+}
+
+async function refreshQuests() {
+  try {
+    const { campaign } = await API.getCampaign();
+    if (campaign) renderQuests(campaign._raw && campaign._raw.quests);
+  } catch (e) { /* tyst — loggen uppdateras vid nästa sidladdning */ }
 }
 
 function addAsciiArt(art) {
@@ -1194,6 +1285,35 @@ function renderNpcSidebar() {
       </div>`;
     }).join('');
   list.innerHTML = rows || '<div class="npc-row" style="opacity:.45;cursor:default">Ingen har dykt upp ännu…</div>';
+}
+
+// ── Uppdragslogg i sidebaren (från /api/campaign state.quests) ──
+function renderQuests(quests) {
+  const list = document.getElementById('quest-list');
+  if (!list) return;
+  const qs = quests || [];
+  if (!qs.length) {
+    list.innerHTML = '<div class="quest-empty">Inga uppdrag ännu…</div>';
+    return;
+  }
+  // Aktiva först, därefter slutförda/misslyckade
+  const sorted = [...qs].sort((a, b) => {
+    const aDone = a.status !== 'aktiv' ? 1 : 0;
+    const bDone = b.status !== 'aktiv' ? 1 : 0;
+    return aDone - bDone;
+  });
+  list.innerHTML = sorted.map(q => {
+    const done = q.status === 'slutförd';
+    const failed = q.status === 'misslyckad';
+    const cls = done ? ' done' : failed ? ' failed' : '';
+    const mark = done ? ' ✅' : failed ? ' 💀' : '';
+    return `
+    <div class="quest-item${cls}" title="${done ? 'Slutfört' : failed ? 'Misslyckat' : 'Aktivt'} uppdrag">
+      <div class="quest-name">⚑ ${escapeHtml(q.name || 'Namnlöst uppdrag')}${mark}</div>
+      ${q.description ? `<div class="quest-desc">${escapeHtml(q.description)}</div>` : ''}
+      ${q.reward ? `<div class="quest-reward">🪙 ${escapeHtml(q.reward)}</div>` : ''}
+    </div>`;
+  }).join('');
 }
 
 // ═══════════════════════════════════════

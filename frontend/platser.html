@@ -78,6 +78,31 @@
   .toast.show{transform:translate(-50%,0);opacity:1}
 
   @media(max-width:640px){.layout{padding:1rem}.places-grid{grid-template-columns:1fr}.topbar .page-tag{display:none}}
+
+  /* ── ASCII-karta: individuella celler ── */
+  .ascii-map pre .mc{transition:color .2s,text-shadow .2s}
+  .ascii-map pre .mc.bg{color:rgba(139,95,212,.18);text-shadow:none}
+  .ascii-map pre .mc.visited{color:var(--teal);text-shadow:0 0 4px rgba(94,154,163,.4)}
+  .ascii-map pre .mc.unvisited{color:rgba(138,122,94,.3);text-shadow:none}
+  .ascii-map pre .mc.current{color:var(--gold-bright);text-shadow:0 0 8px rgba(232,198,90,.8),0 0 20px rgba(232,198,90,.4);animation:map-glow 2s ease-in-out infinite}
+  .ascii-map pre .mc.quest{color:var(--ember)}
+  .ascii-map pre .mc.quest.current{color:var(--gold-bright)}
+  .ascii-map pre .mc[data-loc]{cursor:pointer}
+  .ascii-map pre .mc[data-loc]:hover{filter:brightness(1.6)}
+  @keyframes map-glow{0%,100%{text-shadow:0 0 8px rgba(232,198,90,.8),0 0 20px rgba(232,198,90,.4)}50%{text-shadow:0 0 14px rgba(232,198,90,1),0 0 30px rgba(232,198,90,.6)}}
+
+  /* ── Karta-tooltip ── */
+  .map-tooltip{position:fixed;z-index:60;max-width:280px;padding:.8rem 1rem;background:linear-gradient(165deg,var(--stone-2),var(--stone));border:1px solid var(--gold);box-shadow:0 8px 30px rgba(0,0,0,.8);font-size:.8rem;line-height:1.5;color:var(--bone);pointer-events:none;opacity:0;transition:opacity .2s}
+  .map-tooltip.show{opacity:1}
+  .map-tooltip .tt-name{font-family:'Cinzel',serif;font-weight:700;color:var(--gold-bright);margin-bottom:.3rem}
+  .map-tooltip .tt-terrain{font-size:.7rem;font-style:italic;color:var(--bone-dim)}
+  .map-tooltip .tt-quest{font-size:.72rem;color:var(--ember);margin-top:.3rem}
+
+  /* ── Quest-panel ── */
+  .quest-panel{max-width:700px;margin:0 auto 1.5rem;padding:.8rem 1.2rem;background:rgba(212,105,30,.06);border:1px solid rgba(212,105,30,.3)}
+  .quest-panel .qp-label{font-family:'Silkscreen',monospace;font-size:.55rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ember);margin-bottom:.4rem}
+  .quest-panel .qp-item{font-size:.82rem;color:var(--bone);padding:.2rem 0 .2rem 1rem;position:relative}
+  .quest-panel .qp-item::before{content:'⚑';position:absolute;left:0;color:var(--ember)}
 </style>
 </head>
 <body>
@@ -106,6 +131,11 @@
     <pre id="map-art">Laddar karta…</pre>
   </div>
 
+  <div class="quest-panel" id="quest-panel" style="display:none">
+    <div class="qp-label">⚑ Aktiva uppdrag</div>
+    <div id="quest-list"></div>
+  </div>
+
   <div class="places-grid" id="places-grid"></div>
 
   <div class="empty-state" id="empty-state" style="display:none">
@@ -114,6 +144,7 @@
   </div>
 </div>
 
+<div class="map-tooltip" id="map-tooltip"></div>
 <div class="toast" id="toast"></div>
 
 <script src="sfx.js"></script>
@@ -127,6 +158,26 @@ const TERRAIN_ICONS = {
   'träsk': '🌫️', 'slätt': '🌾', 'is': '❄️', 'hav': '🌊', 'okänd': '❓'
 };
 
+// ── Seeded PRNG (mulberry32) — deterministisk karta per kampanj ──
+function mulberry32(seed) {
+  return function() {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) { h = Math.imul(31, h) + s.charCodeAt(i) | 0; }
+  return h;
+}
+
+// Global state
+let allLocations = [];
+let questLocations = new Set(); // platsnamn med aktiva uppdrag
+let campaignSeed = 0;
+
 function travelClass(days) {
   if (days === 0) return 'here';
   if (days <= 1) return 'near';
@@ -135,41 +186,99 @@ function travelClass(days) {
 }
 
 function renderMap(locations) {
-  // Enkel ASCII-karta: placera platser på ett 50x20-rutnät
   const W = 50, H = 18;
-  const grid = Array.from({length: H}, () => Array(W).fill(' '));
+  const rng = mulberry32(campaignSeed);
 
-  // Rita terräng-bakgrund (subtil)
+  // Bygg grid med seeded terräng-bakgrund
+  const grid = Array.from({length: H}, () => Array.from({length: W}, () => ({ch: ' ', cls: 'bg'})));
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
-      const r = Math.random();
-      if (r < 0.03) grid[y][x] = '·';
-      else if (r < 0.04) grid[y][x] = ',';
+      const r = rng();
+      if (r < 0.03) grid[y][x] = {ch: '·', cls: 'bg'};
+      else if (r < 0.04) grid[y][x] = {ch: ',', cls: 'bg'};
     }
   }
 
-  // Placera platser
+  // Placera platser med fog of war + quest-markörer + glöd
+  const locMap = {}; // "x,y" → loc för klick
   locations.forEach(loc => {
     const px = Math.round((loc.x / 100) * (W - 4)) + 2;
     const py = Math.round((loc.y / 100) * (H - 2)) + 1;
-    if (py >= 0 && py < H && px >= 0 && px < W) {
-      if (loc.current) {
-        grid[py][px] = '◉'; // Nuvarande plats
-        if (px+1 < W) grid[py][px+1] = ' ';
-      } else if (loc.visited) {
-        grid[py][px] = '◆'; // Besökt
-      } else {
-        grid[py][px] = '◇'; // Känd men ej besökt
-      }
+    if (py < 0 || py >= H || px < 0 || px >= W) return;
+
+    let ch, cls;
+    if (loc.current) {
+      ch = '◉'; cls = 'current';
+    } else if (loc.visited) {
+      ch = '◆'; cls = 'visited';
+    } else {
+      ch = '◇'; cls = 'unvisited'; // Fog of war: dimmad
     }
+    // Quest-markör: ⚑ om platsen har ett aktivt uppdrag
+    if (questLocations.has(loc.name)) {
+      ch = loc.current ? '◉' : '⚑';
+      cls += ' quest';
+    }
+    grid[py][px] = {ch, cls, loc: loc.name};
+    locMap[loc.name] = loc;
   });
 
-  // Rita ramar
+  // Rendera som HTML med spans för styling/klick
   const top = '╔' + '═'.repeat(W) + '╗';
   const bot = '╚' + '═'.repeat(W) + '╝';
-  const rows = grid.map(r => '║' + r.join('') + '║');
+  const rows = grid.map(row => {
+    const cells = row.map(c => {
+      if (c.loc) {
+        return `<span class="mc ${c.cls}" data-loc="${c.loc}">${c.ch}</span>`;
+      }
+      return `<span class="mc ${c.cls}">${c.ch}</span>`;
+    }).join('');
+    return '║' + cells + '║';
+  });
 
-  document.getElementById('map-art').textContent = [top, ...rows, bot].join('\n');
+  document.getElementById('map-art').innerHTML = [top, ...rows, bot].join('\n');
+
+  // Klick-hantering för platsceller
+  document.getElementById('map-art').addEventListener('click', function(e) {
+    const span = e.target.closest('[data-loc]');
+    if (!span) { hideTooltip(); return; }
+    const loc = locMap[span.dataset.loc];
+    if (!loc) return;
+    showTooltip(loc, e.clientX, e.clientY);
+  });
+}
+
+// ── Tooltip: visa platsbeskrivning vid klick ──
+const tooltip = document.getElementById('map-tooltip');
+function showTooltip(loc, x, y) {
+  const icon = TERRAIN_ICONS[loc.terrain] || '❓';
+  const questTag = questLocations.has(loc.name) ? '<div class="tt-quest">⚑ Aktivt uppdrag här</div>' : '';
+  tooltip.innerHTML = `
+    <div class="tt-name">${icon} ${loc.name}</div>
+    <div class="tt-terrain">${loc.terrain || 'okänd terräng'} · ${loc.travel_text}</div>
+    <div>${loc.description || 'En plats i mörkret.'}</div>
+    ${questTag}`;
+  // Positionera nära klicket, håll inom viewport
+  const tw = 280, th = 120;
+  const left = Math.min(x + 12, innerWidth - tw - 10);
+  const topPos = Math.min(y + 12, innerHeight - th - 10);
+  tooltip.style.left = left + 'px';
+  tooltip.style.top = topPos + 'px';
+  tooltip.classList.add('show');
+  SFX.click();
+}
+function hideTooltip() { tooltip.classList.remove('show'); }
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('[data-loc]') && !e.target.closest('.map-tooltip')) hideTooltip();
+});
+
+function renderQuestPanel(quests) {
+  const panel = document.getElementById('quest-panel');
+  const list = document.getElementById('quest-list');
+  const active = (quests || []).filter(q => q.status === 'aktiv');
+  if (!active.length) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  list.innerHTML = active.map(q => `<div class="qp-item">${q.name}${q.description ? ' — ' + q.description : ''}</div>`).join('');
 }
 
 function renderPlaces(locations) {
@@ -191,6 +300,7 @@ function renderPlaces(locations) {
     const statusClass = loc.current ? 'current' : loc.visited ? 'visited' : 'unknown';
     const statusText = loc.current ? '📍 Du är här' : loc.visited ? '✓ Besökt' : '◇ Känd';
     const cardClass = loc.current ? 'current' : loc.visited ? 'visited' : 'unvisited';
+    const questBadge = questLocations.has(loc.name) ? '<span style="color:var(--ember);font-size:.7rem;margin-left:.4rem">⚑</span>' : '';
 
     let landmarks = '';
     if (loc.landmarks && loc.landmarks.length) {
@@ -206,7 +316,7 @@ function renderPlaces(locations) {
         <div class="pc-top">
           <div class="pc-icon">${icon}</div>
           <div>
-            <div class="pc-name">${loc.name}</div>
+            <div class="pc-name">${loc.name}${questBadge}</div>
             <div class="pc-terrain">${loc.terrain || 'okänd terräng'}</div>
           </div>
         </div>
@@ -222,15 +332,43 @@ function renderPlaces(locations) {
 
 async function loadLocations() {
   try {
-    const res = await fetch('/api/campaign/locations', { credentials: 'include' });
-    if (!res.ok) throw new Error('Ingen kampanj');
-    const locations = await res.json();
+    const [locRes, campRes] = await Promise.all([
+      fetch('/api/campaign/locations', { credentials: 'include' }),
+      fetch('/api/campaign', { credentials: 'include' }),
+    ]);
+    if (!locRes.ok) throw new Error('Ingen kampanj');
+    const locations = await locRes.json();
+    allLocations = locations;
+
+    // Hämta campaign_id för seeded PRNG + quests
+    let quests = [];
+    if (campRes.ok) {
+      const camp = await campRes.json();
+      campaignSeed = hashStr(camp.meta?.campaign_id || 'morkrets-rike');
+      quests = camp.quests || [];
+    } else {
+      campaignSeed = hashStr('morkrets-rike');
+    }
+
+    // Bygg questLocations: platser nämnda i aktiva uppdrag
+    questLocations = new Set();
+    const activeQuests = quests.filter(q => q.status === 'aktiv');
+    activeQuests.forEach(q => {
+      // Matcha quest-namn/description mot platsnamn
+      locations.forEach(loc => {
+        const text = ((q.name || '') + ' ' + (q.description || '')).toLowerCase();
+        if (text.includes(loc.name.toLowerCase())) questLocations.add(loc.name);
+      });
+      // Om quest har en location-field
+      if (q.location) questLocations.add(q.location);
+    });
 
     // Hitta nuvarande plats
     const current = locations.find(l => l.current);
     document.getElementById('current-name').textContent = current ? current.name : 'Okänd plats';
 
     renderMap(locations);
+    renderQuestPanel(activeQuests);
     renderPlaces(locations);
   } catch (e) {
     document.getElementById('current-name').textContent = 'Ingen aktiv kampanj';

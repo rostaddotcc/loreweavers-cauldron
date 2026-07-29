@@ -22,7 +22,7 @@ TERRAIN = {
 # Standardplatser med koordinater (enkel 2D-karta, 0-100 skala)
 # DM:n kan lägga till nya via [PLATS:...] — koordinater sätts automatiskt
 DEFAULT_LOCATIONS = {
-    'Väsby': {'x': 50, 'y': 50, 'terrain': 'väg', 'description': 'En liten handelsstad vid korsningen av två vägar.'},
+    'Gråvakt': {'x': 50, 'y': 50, 'terrain': 'väg', 'description': 'En liten handelsstad vid korsningen av två vägar.'},
     'Askans Dal': {'x': 35, 'y': 40, 'terrain': 'skog', 'description': 'En dimmig dal där askan aldrig slutar falla.'},
     'Den Övergivna Kvarnen': {'x': 30, 'y': 35, 'terrain': 'skog', 'description': 'En ruttnande kvarn med ett grönt ljus i källaren.'},
     'Sista Glöden': {'x': 52, 'y': 48, 'terrain': 'väg', 'description': 'Värdshuset där alla historier börjar och slutar.'},

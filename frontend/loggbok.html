@@ -193,11 +193,33 @@ function renderLogbook(data) {
 }
 
 async function loadLogbook() {
+  // Visa cachad loggbok direkt (localStorage) — uppdatera sedan från servern
+  const cached = localStorage.getItem('dnd_logbook_cache');
+  if (cached) {
+    try {
+      const data = JSON.parse(cached);
+      if (data && data.days && data.days.length) {
+        renderLogbook(data);
+        // Hämta fräsch data i bakgrunden (backend har egen turn_count-cache)
+        fetch('/api/campaign/logbook', { credentials: 'include' })
+          .then(r => r.ok ? r.json() : null)
+          .then(fresh => {
+            if (fresh && JSON.stringify(fresh) !== cached) {
+              localStorage.setItem('dnd_logbook_cache', JSON.stringify(fresh));
+              renderLogbook(fresh);
+            }
+          }).catch(() => {});
+        return;
+      }
+    } catch (_) { /* korrupt cache — hämta från servern */ }
+  }
+
   document.getElementById('writing').classList.add('show');
   try {
     const res = await fetch('/api/campaign/logbook', { credentials: 'include' });
     if (!res.ok) throw new Error('Ingen kampanj');
     const data = await res.json();
+    localStorage.setItem('dnd_logbook_cache', JSON.stringify(data));
     renderLogbook(data);
   } catch (e) {
     document.getElementById('writing').classList.remove('show');

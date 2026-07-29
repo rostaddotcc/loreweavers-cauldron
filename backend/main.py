@@ -109,6 +109,9 @@ _MECH_PATTERNS = {
     'NPC_DÖD':         re.compile(r'\[NPC_DÖD:([^\]]+)\]'),
     'PLATS':           re.compile(r'\[PLATS:([^\]]+)\]'),
     'TID':             re.compile(r'\[TID:([^\]]+)\]'),
+    'FÖREMÅL_BORT':    re.compile(r'\[FÖREMÅL_BORT:([^\]]+)\]'),
+    'NPC_RELATION':    re.compile(r'\[NPC_RELATION:([^|\]]+)\|([^\]]+)\]'),
+    'NY_DAG':          re.compile(r'\[NY_DAG:([^\]]+)\]'),
 }
 
 
@@ -223,7 +226,7 @@ def _parse_mechanical_tags(text: str, state: dict) -> tuple[str, dict, list[dict
                 break
         effects.append({'type': 'npc_död', 'value': name})
 
-    # PLATS — uppdatera nuvarande plats
+    # PLATS — uppdatera nuvarande plats + lägg till i locations[]
     for m in _MECH_PATTERNS['PLATS'].finditer(text):
         name = m.group(1).strip()
         world = state.setdefault('world', {})
@@ -231,6 +234,10 @@ def _parse_mechanical_tags(text: str, state: dict) -> tuple[str, dict, list[dict
         visited = world.setdefault('visited_locations', [])
         if name not in visited:
             visited.append(name)
+        # Lägg till i locations-arrayen (så kartan kan visa den)
+        locs = state.setdefault('locations', [])
+        if not any(l.get('name', '').lower() == name.lower() for l in locs):
+            locs.append({'name': name, 'description': '', 'terrain': 'okänd', 'x': 50, 'y': 50})
         effects.append({'type': 'plats', 'value': name})
 
     # TID — uppdatera tid/väder
@@ -239,6 +246,32 @@ def _parse_mechanical_tags(text: str, state: dict) -> tuple[str, dict, list[dict
         world = state.setdefault('world', {})
         world['time'] = desc
         effects.append({'type': 'tid', 'value': desc})
+
+    # FÖREMÅL_BORT — ta bort föremål ur inventariet
+    for m in _MECH_PATTERNS['FÖREMÅL_BORT'].finditer(text):
+        name = m.group(1).strip().lower()
+        inv = state.get('inventory', [])
+        state['inventory'] = [it for it in inv if it.get('name', '').lower() != name]
+        effects.append({'type': 'föremål_bort', 'value': m.group(1).strip()})
+
+    # NPC_RELATION — uppdatera en NPCs relation
+    for m in _MECH_PATTERNS['NPC_RELATION'].finditer(text):
+        npc_name = m.group(1).strip().lower()
+        new_rel = m.group(2).strip()
+        for npc in state.get('npcs', []):
+            if npc.get('name', '').lower() == npc_name:
+                npc['relation'] = new_rel
+                break
+        effects.append({'type': 'npc_relation', 'value': f"{m.group(1).strip()} → {new_rel}"})
+
+    # NY_DAG — ny dag i äventyret
+    for m in _MECH_PATTERNS['NY_DAG'].finditer(text):
+        desc = m.group(1).strip()
+        world = state.setdefault('world', {})
+        world['day'] = world.get('day', 1) + 1
+        world['day_description'] = desc
+        world.setdefault('day_log', []).append({'day': world['day'], 'description': desc})
+        effects.append({'type': 'ny_dag', 'value': f"Dag {world['day']}: {desc}"})
 
     # Ta bort alla taggar ur texten
     clean = text
@@ -364,7 +397,14 @@ async def _call_llm(
 
 
 def _extract_json(text: str) -> dict:
-    """Extrahera JSON från LLM-svar (kan vara inbäddat i markdown)."""
+    """Extrahera JSON från LLM-svar (kan vara inbäddat i markdown eller reasoning-taggar)."""
+    if not text or not text.strip():
+        raise ValueError("Tomt svar från modellen")
+
+    # Ta bort reasoning-taggar (deepseek-v4-flash: <think>, Qwen3: )
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL | re.IGNORECASE).strip()
+    text = re.sub(r"", "", text, flags=re.DOTALL | re.IGNORECASE).strip()
+
     # Prova direkt
     try:
         return json.loads(text)
@@ -377,8 +417,21 @@ def _extract_json(text: str) -> dict:
             return json.loads(m.group(1))
         except json.JSONDecodeError:
             pass
-    # Hitta första { ... }
+    # Hitta första { ... } (balanserat)
     start = text.find("{")
+    if start != -1:
+        depth = 0
+        for i in range(start, len(text)):
+            if text[i] == "{":
+                depth += 1
+            elif text[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    try:
+                        return json.loads(text[start : i + 1])
+                    except json.JSONDecodeError:
+                        break
+    # Fallback: första { till sista }
     end = text.rfind("}")
     if start != -1 and end != -1 and end > start:
         try:
@@ -590,6 +643,16 @@ def _build_system_prompt(
         q_str = "; ".join(q.get("name", "?") for q in active[:5])
         parts.append(f"\n## Aktiva uppdrag\n{q_str}")
 
+    # Tagg-enforcement: påminn DM om den slarvar med taggar
+    tag_streak = state.get("meta", {}).get("tag_streak", 0)
+    if tag_streak >= 3:
+        parts.append(
+            "\n## ⚠️ PÅMINNELSE\n"
+            "Du har inte använt mekaniska taggar på flera turer. "
+            "Kom ihåg att använda [SKADA:], [XP:], [PLATS:], [NPC:], [QUEST:] "
+            "när det är relevant. ALDRIG narrera skada eller loot utan tagg."
+        )
+
     # ── VAKNANDEPROTOKOLLET ──
     # Aktiveras av awakening-flaggan (nya kampanjer) eller av triggern.
     # turn_override = turn_count + det meddelande som ännu inte sparats.
@@ -661,8 +724,21 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     reply, new_npcs = _parse_npcs(reply)
     reply, roll_requests = _parse_roll_requests(reply)
 
+    # Lägg till nya NPCs FÖRE taggparsning (så NPC_DÖD hittar dem)
+    for npc in new_npcs:
+        existing = {n.get("name", "").lower() for n in state.get("npcs", [])}
+        if npc["name"].lower() not in existing:
+            state.setdefault("npcs", []).append(npc)
+
     # Parsa mekaniska taggar (SKADA, HELA, XP, GULD, etc.)
     reply, state, effects = _parse_mechanical_tags(reply, state)
+
+    # Tagg-enforcement: spåra om DM använder taggar
+    meta = state.setdefault("meta", {})
+    if effects:
+        meta["tag_streak"] = 0
+    else:
+        meta["tag_streak"] = meta.get("tag_streak", 0) + 1
 
     # Atmosfär-subagent: generera ASCII-art om miljön triggar
     ascii_art = None
@@ -683,10 +759,6 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
             ascii_art = ascii_art.strip()
         except Exception:
             ascii_art = None
-    for npc in new_npcs:
-        existing = {n.get("name", "").lower() for n in state.get("npcs", [])}
-        if npc["name"].lower() not in existing:
-            state.setdefault("npcs", []).append(npc)
 
     # Spara DM-svar
     state = store.append_message(state, "assistant", reply)
@@ -762,8 +834,22 @@ Svara ENDAST med giltig JSON (ingen markdown) med detta schema:
   "traits": ["string — 3-4 förmågor/egenskaper"],
   "saves": [],
   "gear": "string — startutrustning, 5-8 föremål separerade med ' · '",
-  "story": "string — bakgrundshistoria, max 100 ord, mörk och stämningsfull"
-}"""
+  "story": "string — bakgrundshistoria, max 100 ord, mörk och stämningsfull",
+  "inventory": [
+    {"name": "string", "type": "Vapen|Rustning|Dryck|Magisk|Verktyg|Annat", "qty": 1, "weight": 1.0, "equipped": false, "rarity": "normal|magic|rare"}
+  ]
+}
+
+## STARTUTRUSTNING (inventory) — KRITISKT
+Fyll ALLTID inventory-arrayen med 5-8 föremål som passar karaktärens klass och bakgrund:
+- **Ett basvapen** som passar klassen (svärd för krigare, stav för magiker, dolk för rogue, etc.) — sätt equipped:true
+- **Mat/proviant** (t.ex. "Torkat kött", "Hårt bröd", "Fältportioner") — qty 2-5
+- **En potion** (t.ex. "Läkedryck", "Elixir av mod", "Giftflaska") — qty 1-2
+- **Ett klass-unikt föremål** som speglar klassens identitet (t.ex. "Runristad spellbok" för magiker, "Tjuvverktyg" för rogue, "Heligt symbol" för cleric, "Jaktbåge + 20 pilar" för ranger)
+- **2-3 ytterligare äventyrsföremål** (rep, facklor, tändstål, karta, sovsäck, etc.)
+- Sätt realistic weight (lbs) på varje föremål. Vapen 2-6 lbs, potion 0.5 lbs, mat 0.5-1 lbs per styck.
+- Basvapnet ska ha equipped:true, allt annat equipped:false.
+- rarity: de flesta "normal", potion kan vara "magic", det klass-unika föremålet kan vara "rare"."""
 
 
 @app.post("/api/character/generate")
@@ -781,7 +867,7 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
     ]
 
     try:
-        raw = await _call_llm(req.model_id, messages, temperature=0.7)
+        raw = await _call_llm(req.model_id, messages, temperature=0.7, max_tokens=3000)
         char_data = _extract_json(raw)
     except HTTPException:
         raise
@@ -797,10 +883,28 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
     char_data.setdefault("level", 1)
     char_data.setdefault("abilities", {})
 
+    # Flytta startutrustning till state["inventory"] (där frontend läser den)
+    inventory = char_data.pop("inventory", None)
+    if isinstance(inventory, list) and inventory:
+        # Normalisera varje föremål till frontend-formatet
+        clean = []
+        for it in inventory:
+            if not isinstance(it, dict) or not it.get("name"):
+                continue
+            clean.append({
+                "name": str(it["name"]),
+                "type": str(it.get("type", "Annat")),
+                "qty": int(it.get("qty", 1) or 1),
+                "weight": float(it.get("weight", 1) or 1),
+                "equipped": bool(it.get("equipped", False)),
+                "rarity": str(it.get("rarity", "normal")),
+            })
+        state["inventory"] = clean
+
     state["character"] = char_data
     store.save(state)
 
-    return {"ok": True, "character": char_data}
+    return {"ok": True, "character": char_data, "inventory": state.get("inventory", [])}
 
 
 # ═══════════════════════════════════════
@@ -830,6 +934,37 @@ async def update_character(req: dict, morkrets_token: str | None = Cookie(None))
             char[key] = str(req[key])
     store.save(state)
     return {"ok": True, "character": char}
+
+
+@app.patch("/api/campaign/inventory")
+async def update_inventory(req: dict, morkrets_token: str | None = Cookie(None)):
+    """Uppdatera hela inventory-listan (frontend skickar full array)."""
+    payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    items = req.get("inventory")
+    if not isinstance(items, list):
+        raise HTTPException(400, "inventory måste vara en lista")
+
+    # Normalisera varje föremål
+    clean = []
+    for it in items:
+        if not isinstance(it, dict) or not it.get("name"):
+            continue
+        clean.append({
+            "id": str(it.get("id", f"item-{len(clean)}")),
+            "name": str(it["name"]),
+            "type": str(it.get("type", "Annat")),
+            "qty": max(1, int(it.get("qty", 1))),
+            "weight": max(0, float(it.get("weight", 1))),
+            "equipped": bool(it.get("equipped", False)),
+            "rarity": str(it.get("rarity", "normal")),
+        })
+    state["inventory"] = clean
+    store.save(state)
+    return {"ok": True, "inventory": clean}
 
 
 @app.post("/api/campaign/attachments")
@@ -1062,11 +1197,16 @@ async def vault_save(req: VaultSaveRequest, morkrets_token: str | None = Cookie(
     if not char or not char.get("name"):
         raise HTTPException(400, "Karaktären saknar namn")
 
-    # Hämta kampanjnamn om det finns en aktiv kampanj
+    # Hämta kampanjnamn och inventarium om det finns en aktiv kampanj
     state = store.get(username)
     campaign_name = state["meta"].get("campaign_name", "") if state else ""
+    inventory = state.get("inventory", []) if state else []
 
     entry = vault.save(username, char, campaign_name)
+    # Spara inventariet i vault-posten
+    if inventory:
+        entry["inventory"] = inventory
+        vault._save_entry(username, entry)
     return {"ok": True, "vault_entry": entry}
 
 
@@ -1475,6 +1615,13 @@ async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
 
+    # ── Cache: returnera direkt om turn_count inte ändrats ──
+    turn_count = state.get("meta", {}).get("turn_count", 0)
+    world = state.setdefault("world", {})
+    cache = world.get("logbook_cache")
+    if cache and cache.get("turn_count") == turn_count:
+        return cache["data"]
+
     # Samla transkript
     transcript = store.load_transcript(state, last_n=100)
     t_text = "\n".join(
@@ -1517,6 +1664,10 @@ async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
             }],
             "summary": "Äventyret har just börjat. Mörkret väntar.",
         }
+
+    # Spara i cache — nästa anrop med samma turn_count hoppar över LLM
+    world["logbook_cache"] = {"turn_count": turn_count, "data": log_data}
+    store.save(state)
 
     return log_data
 

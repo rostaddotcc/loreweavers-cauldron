@@ -646,7 +646,11 @@
         <option>Vapen</option><option>Rustning</option><option>Dryck</option>
         <option>Magisk</option><option>Verktyg</option><option>Annat</option>
       </select>
-      <input type="number" id="add-qty" value="1" min="1" style="width:64px">
+      <input type="number" id="add-qty" value="1" min="1" style="width:64px" title="Antal">
+      <input type="number" id="add-weight" value="1" min="0" step="0.1" style="width:80px" title="Vikt (lbs)">
+      <select id="add-rarity" title="Sällsynthet">
+        <option value="normal">Normal</option><option value="magic">✦ Magisk</option><option value="rare">Sällsynt</option>
+      </select>
       <button type="submit" class="rune-btn">✦ Lägg till</button>
     </form>
   </section>
@@ -1113,12 +1117,14 @@ function toggleEquip(i) {
   state.inventory[i].equipped = !state.inventory[i].equipped;
   renderInventory();
   toast(state.inventory[i].equipped ? '⚔ ' + state.inventory[i].name + ' utrustad' : '🎒 ' + state.inventory[i].name + ' nerpackad');
+  syncInventory();
 }
 function removeItem(i) {
   const name = state.inventory[i].name;
   state.inventory.splice(i, 1);
   renderInventory();
   toast('🗑 ' + name + ' slängd');
+  syncInventory();
 }
 function addItem(e) {
   e.preventDefault();
@@ -1127,11 +1133,27 @@ function addItem(e) {
   state.inventory.push({
     name, type: document.getElementById('add-type').value,
     qty: parseInt(document.getElementById('add-qty').value) || 1,
-    weight: 1, equipped: false, rarity: 'normal'
+    weight: parseFloat(document.getElementById('add-weight').value) || 1,
+    equipped: false,
+    rarity: document.getElementById('add-rarity').value || 'normal'
   });
   document.getElementById('add-name').value = '';
+  document.getElementById('add-weight').value = '1';
+  document.getElementById('add-rarity').value = 'normal';
   renderInventory();
   toast('✦ ' + name + ' tillagd i packningen');
+  syncInventory();
+}
+// ── Synca inventory till backend ──
+async function syncInventory() {
+  try {
+    await fetch('/api/campaign/inventory', {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inventory: state.inventory }),
+    });
+  } catch (_) { /* tyst — lokal state gäller */ }
 }
 
 // ═══════════════════════════════════════

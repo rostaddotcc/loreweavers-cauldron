@@ -1985,6 +1985,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     # glömde tagga — med kontextförståelse istället för regex.
 
     # Spara effekter för nästa turs systemprompt
+    meta = state.setdefault("meta", {})
     meta["last_effects"] = effects if effects else []
     # Spara kast-begäran så transkript-fallbacken kan återställa dem
     meta["last_roll_requests"] = roll_requests if roll_requests else []

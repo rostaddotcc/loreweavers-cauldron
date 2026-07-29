@@ -14,7 +14,9 @@ DATA_DIR = Path(__file__).resolve().parent / "data"
 CAMPAIGNS_DIR = DATA_DIR / "campaigns"
 VAULTS_DIR = DATA_DIR / "vaults"
 
-SUMMARY_INTERVAL = 20  # Var 20:e tur → sammanfattning
+SUMMARY_INTERVAL = 20  # Var 20:e tur → sammanfattning (Nivå 1: scen)
+CHAPTER_EVERY = 5      # Var 5:e scen-sammanfattning → kapitel (Nivå 2)
+ARC_EVERY = 3          # Var 3:e kapitel → kampanjbåge (Nivå 3)
 
 
 def _now() -> str:
@@ -46,9 +48,11 @@ def _default_state(campaign_id: str, user: str) -> dict:
             "weather": "",
         },
         "lore": [],
+        "pinned_facts": [],
         "locations": [],
         "items": [],
         "images": [],
+        "pinned_facts": [],
     }
 
 
@@ -72,6 +76,9 @@ class CampaignStore:
 
     def _summaries_dir(self, user: str, campaign_id: str) -> Path:
         return self._campaign_dir(user, campaign_id) / "summaries"
+
+    def _saves_dir(self, user: str, campaign_id: str) -> Path:
+        return self._campaign_dir(user, campaign_id) / "saves"
 
     # ── CRUD ──
 
@@ -168,6 +175,48 @@ class CampaignStore:
                             continue
         return entries[-last_n:]
 
+    def load_transcript_by_tokens(
+        self, state: dict, budget_tokens: int = 6000, min_messages: int = 8
+    ) -> list[dict]:
+        """Token-baserat glidande fönster — fyll bakifrån tills budgeten är slut.
+
+        Tokenuppskattning: len(content) // 3 (fungerar bra för svensk text).
+        Behåller alltid minst min_messages meddelanden oavsett budget.
+        """
+        user = state["meta"]["user"]
+        cid = state["meta"]["campaign_id"]
+        tdir = self._transcripts_dir(user, cid)
+        if not tdir.exists():
+            return []
+
+        entries = []
+        for tfile in sorted(tdir.glob("session-*.jsonl")):
+            with open(tfile) as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        try:
+                            entries.append(json.loads(line))
+                        except json.JSONDecodeError:
+                            continue
+
+        if not entries:
+            return []
+
+        # Fyll bakifrån tills tokenbudgeten tar slut
+        selected: list[dict] = []
+        tokens_used = 0
+        for entry in reversed(entries):
+            content = entry.get("content", "")
+            est_tokens = max(1, len(content) // 3)
+            if tokens_used + est_tokens > budget_tokens and len(selected) >= min_messages:
+                break
+            selected.append(entry)
+            tokens_used += est_tokens
+
+        selected.reverse()
+        return selected
+
     # ── Summaries ──
 
     def maybe_summarize(self, state: dict) -> bool:
@@ -193,7 +242,7 @@ class CampaignStore:
             )
 
     def load_summaries(self, state: dict, last_n: int = 3) -> list[dict]:
-        """Läs de senaste N sammanfattningarna."""
+        """Läs de senaste N sammanfattningarna (Nivå 1: scen)."""
         user = state["meta"]["user"]
         cid = state["meta"]["campaign_id"]
         sdir = self._summaries_dir(user, cid)
@@ -204,6 +253,88 @@ class CampaignStore:
         for sf in files[-last_n:]:
             try:
                 with open(sf) as f:
+                    results.append(json.load(f))
+            except (json.JSONDecodeError, OSError):
+                continue
+        return results
+
+    # ── Hierarkiska sammanfattningar (Nivå 2 & 3) ──
+
+    def count_scene_summaries(self, state: dict) -> int:
+        """Räkna antal scen-sammanfattningar (Nivå 1)."""
+        sdir = self._summaries_dir(state["meta"]["user"], state["meta"]["campaign_id"])
+        if not sdir.exists():
+            return 0
+        return len(list(sdir.glob("summary-*.json")))
+
+    def maybe_chapter(self, state: dict) -> bool:
+        """True om antalet scen-sammanfattningar är en multipel av CHAPTER_EVERY."""
+        n = self.count_scene_summaries(state)
+        return n > 0 and n % CHAPTER_EVERY == 0
+
+    def save_chapter_summary(self, state: dict, chapter_text: str) -> None:
+        """Spara kapitel-sammanfattning (Nivå 2) som chapter-NNN.json."""
+        sdir = self._summaries_dir(state["meta"]["user"], state["meta"]["campaign_id"])
+        sdir.mkdir(parents=True, exist_ok=True)
+        existing = sorted(sdir.glob("chapter-*.json"))
+        num = len(existing) + 1
+        cfile = sdir / f"chapter-{num:03d}.json"
+        with open(cfile, "w") as f:
+            json.dump(
+                {"chapter": num, "text": chapter_text, "created": _now()},
+                f, ensure_ascii=False, indent=2,
+            )
+
+    def count_chapter_summaries(self, state: dict) -> int:
+        """Räkna antal kapitel-sammanfattningar (Nivå 2)."""
+        sdir = self._summaries_dir(state["meta"]["user"], state["meta"]["campaign_id"])
+        if not sdir.exists():
+            return 0
+        return len(list(sdir.glob("chapter-*.json")))
+
+    def maybe_arc(self, state: dict) -> bool:
+        """True om antalet kapitel är en multipel av ARC_EVERY."""
+        n = self.count_chapter_summaries(state)
+        return n > 0 and n % ARC_EVERY == 0
+
+    def save_campaign_arc(self, state: dict, arc_text: str) -> None:
+        """Spara kampanjbåge (Nivå 3) som campaign-arc-NNN.json."""
+        sdir = self._summaries_dir(state["meta"]["user"], state["meta"]["campaign_id"])
+        sdir.mkdir(parents=True, exist_ok=True)
+        existing = sorted(sdir.glob("campaign-arc-*.json"))
+        num = len(existing) + 1
+        afile = sdir / f"campaign-arc-{num:03d}.json"
+        with open(afile, "w") as f:
+            json.dump(
+                {"arc": num, "text": arc_text, "created": _now()},
+                f, ensure_ascii=False, indent=2,
+            )
+
+    def load_chapters(self, state: dict, last_n: int = 2) -> list[dict]:
+        """Läs de senaste N kapitel-sammanfattningarna (Nivå 2)."""
+        sdir = self._summaries_dir(state["meta"]["user"], state["meta"]["campaign_id"])
+        if not sdir.exists():
+            return []
+        files = sorted(sdir.glob("chapter-*.json"))
+        results = []
+        for cf in files[-last_n:]:
+            try:
+                with open(cf) as f:
+                    results.append(json.load(f))
+            except (json.JSONDecodeError, OSError):
+                continue
+        return results
+
+    def load_campaign_arcs(self, state: dict, last_n: int = 1) -> list[dict]:
+        """Läs de senaste N kampanjbågarna (Nivå 3)."""
+        sdir = self._summaries_dir(state["meta"]["user"], state["meta"]["campaign_id"])
+        if not sdir.exists():
+            return []
+        files = sorted(sdir.glob("campaign-arc-*.json"))
+        results = []
+        for af in files[-last_n:]:
+            try:
+                with open(af) as f:
                     results.append(json.load(f))
             except (json.JSONDecodeError, OSError):
                 continue

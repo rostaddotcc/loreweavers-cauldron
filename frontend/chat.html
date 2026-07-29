@@ -236,6 +236,35 @@
     background: rgba(11,8,18,0.6);
   }
   .msg.system .box b { color: var(--gold-bright); font-family: 'Cinzel', serif; }
+
+  /* Slash-kommandon (dim, kursiv) */
+  .msg.cmd { text-align: center; max-width: 520px; margin-left: auto; margin-right: auto; }
+  .msg.cmd .box {
+    display: inline-block; font-size: 0.82rem; color: #7a8a6a;
+    font-style: italic; border: 1px solid rgba(122,138,106,0.25); padding: 0.4rem 1.1rem;
+    border-radius: 2px; background: rgba(11,8,18,0.5);
+  }
+
+  /* DOS-help-overlay */
+  .help-overlay {
+    display: none; position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.85); align-items: center; justify-content: center;
+  }
+  .help-overlay.show { display: flex; }
+  .help-screen {
+    font-family: 'Courier New', monospace; color: #33ff33; background: #0a0a0a;
+    border: 2px solid #33ff33; padding: 1.5rem 2rem; max-width: 560px; width: 90%;
+    font-size: 0.85rem; line-height: 1.7; box-shadow: 0 0 30px rgba(51,255,51,0.15);
+    position: relative;
+  }
+  .help-screen .help-title { text-align: center; color: #66ff66; font-weight: bold; margin-bottom: 0.8rem; font-size: 1rem; }
+  .help-screen .help-cmd { color: #ffcc00; }
+  .help-screen .help-desc { color: #33cc33; }
+  .help-screen .help-close {
+    position: absolute; top: 0.5rem; right: 0.8rem; color: #ff4444; cursor: pointer;
+    font-size: 1.1rem; background: none; border: none; font-family: inherit;
+  }
+  .help-screen .help-close:hover { color: #ff8888; }
   .msg.system .box .dice { font-size: 1.1rem; vertical-align: -2px; }
   .msg.system .box .crit { color: var(--gold-bright); text-shadow: 0 0 10px rgba(232,198,90,0.7); font-weight: 700; }
   .msg.system .box .fail { color: var(--blood-bright); text-shadow: 0 0 10px rgba(212,58,77,0.6); font-weight: 700; }
@@ -749,6 +778,25 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- DOS-help-overlay för /help -->
+<div class="help-overlay" id="help-overlay" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="help-screen">
+    <button class="help-close" onclick="document.getElementById('help-overlay').classList.remove('show')">✕</button>
+    <div class="help-title">╔══════════════════════════════════╗<br>║ &nbsp;MÖRKRETS RIKE — KOMMANDON &nbsp;║<br>╚══════════════════════════════════╝</div>
+    <span class="help-cmd">/rulla 1d20+4</span> <span class="help-desc">— Slå en tärning</span><br>
+    <span class="help-cmd">/save [text]</span> &nbsp;&nbsp;<span class="help-desc">— Spara kampanjen (checkpoint)</span><br>
+    <span class="help-cmd">/pin [fakt]</span> &nbsp;&nbsp;&nbsp;<span class="help-desc">— Fäst en permanent sanning</span><br>
+    <span class="help-cmd">/unpin [fakt]</span> &nbsp;<span class="help-desc">— Ta bort en fäst sanning</span><br>
+    <span class="help-cmd">/lore [text]</span> &nbsp;&nbsp;<span class="help-desc">— Lägg till en lore-post</span><br>
+    <span class="help-cmd">/chapter [titel]</span> <span class="help-desc">— Avsluta kapitel (sammanfattning)</span><br>
+    <span class="help-cmd">/facts</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="help-desc">— Visa alla fästa sanningar</span><br>
+    <span class="help-cmd">/help</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="help-desc">— Visa denna hjälp</span><br>
+    <br>
+    <span style="color:#888">──────────────────────────────────</span><br>
+    <span style="color:#888">Alla kommandon körs direkt utan DM.</span>
+  </div>
+</div>
 
 <script src="sfx.js"></script>
 <script src="music.js"></script>
@@ -1392,8 +1440,133 @@ function sendPlayer() {
     }
   }
 
+  // ── Slash-kommandon (körs direkt, utan DM) ──
+  if (text.startsWith('/')) {
+    handleSlashCommand(text);
+    return;
+  }
+
   addMessage('player', null, escapeHtml(text));
   dmRespond(text); // async — visar tankar medan LLM svarar
+}
+
+// ═══════════════════════════════════════
+// SLASH-KOMMANDON
+// ═══════════════════════════════════════
+function addCmdMessage(text) {
+  const el = document.createElement('div');
+  el.className = 'msg cmd';
+  el.innerHTML = `<div class="box">${text}</div>`;
+  chat.appendChild(el);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+async function handleSlashCommand(text) {
+  const lower = text.toLowerCase();
+
+  // /help — visa overlay
+  if (lower === '/help') {
+    addCmdMessage('⌨ <i>Visar kommandohjälp…</i>');
+    document.getElementById('help-overlay').classList.add('show');
+    return;
+  }
+
+  // /facts — visa fästa sanningar
+  if (lower === '/facts') {
+    addCmdMessage('📌 <i>Hämtar fästa sanningar…</i>');
+    try {
+      const { campaign } = await API.getCampaign();
+      const facts = campaign?._raw?.pinned_facts || [];
+      if (facts.length === 0) {
+        addMessage('system', null, '📌 Inga fästa sanningar ännu. Använd <b>/pin [fakt]</b> för att fästa en.');
+      } else {
+        const list = facts.map((f, i) => `${i + 1}. ${escapeHtml(f)}`).join('<br>');
+        addMessage('system', null, `📌 <b>Fästa sanningar:</b><br>${list}`);
+      }
+    } catch (e) {
+      addMessage('system', null, '⚠ Kunde inte hämta sanningar: ' + escapeHtml(e.message));
+    }
+    return;
+  }
+
+  // /save [beskrivning]
+  const saveMatch = text.match(/^\/save\s*(.*)$/i);
+  if (saveMatch) {
+    const desc = saveMatch[1].trim();
+    addCmdMessage(`💾 <i>Sparar kampanj${desc ? ': ' + escapeHtml(desc) : ''}…</i>`);
+    try {
+      const res = await API.saveCheckpoint(desc);
+      toast(`💾 Kapitel sparat: ${desc || res.description}`);
+      addMessage('system', null, `💾 <b>Kampanj sparat!</b> Checkpoint: ${escapeHtml(res.save_id)} (tur ${res.turn_count})`);
+    } catch (e) {
+      addMessage('system', null, '⚠ Kunde inte spara: ' + escapeHtml(e.message));
+    }
+    return;
+  }
+
+  // /pin [fakt]
+  const pinMatch = text.match(/^\/pin\s+(.+)$/i);
+  if (pinMatch) {
+    const fact = pinMatch[1].trim();
+    addCmdMessage(`📌 <i>Fäster sanning: ${escapeHtml(fact)}…</i>`);
+    try {
+      await API.pinFact(fact);
+      toast(`📌 Fakta fäst: ${fact}`);
+      addMessage('system', null, `📌 <b>Sanning fäst:</b> ${escapeHtml(fact)}`);
+    } catch (e) {
+      addMessage('system', null, '⚠ Kunde inte fästa: ' + escapeHtml(e.message));
+    }
+    return;
+  }
+
+  // /unpin [fakt]
+  const unpinMatch = text.match(/^\/unpin\s+(.+)$/i);
+  if (unpinMatch) {
+    const fact = unpinMatch[1].trim();
+    addCmdMessage(`📌 <i>Tar bort sanning: ${escapeHtml(fact)}…</i>`);
+    try {
+      await API.unpinFact(fact);
+      toast(`📌 Fakta borttagen: ${fact}`);
+      addMessage('system', null, `📌 <b>Sanning borttagen:</b> ${escapeHtml(fact)}`);
+    } catch (e) {
+      addMessage('system', null, '⚠ Kunde inte ta bort: ' + escapeHtml(e.message));
+    }
+    return;
+  }
+
+  // /lore [text]
+  const loreMatch = text.match(/^\/lore\s+(.+)$/i);
+  if (loreMatch) {
+    const loreText = loreMatch[1].trim();
+    addCmdMessage(`📜 <i>Lägger till lore…</i>`);
+    try {
+      await API.addLore(loreText);
+      toast('📜 Lore tillagd');
+      addMessage('system', null, `📜 <b>Lore tillagd:</b> ${escapeHtml(loreText)}`);
+    } catch (e) {
+      addMessage('system', null, '⚠ Kunde inte lägga till lore: ' + escapeHtml(e.message));
+    }
+    return;
+  }
+
+  // /chapter [titel]
+  const chapterMatch = text.match(/^\/chapter\s+(.+)$/i);
+  if (chapterMatch) {
+    const title = chapterMatch[1].trim();
+    addCmdMessage(`📖 <i>Avslutar kapitel: ${escapeHtml(title)}…</i>`);
+    try {
+      const res = await API.triggerChapter(title);
+      toast(`📖 Kapitel avslutat: ${title}`);
+      addMessage('system', null, `📖 <b>Kapitel ${res.chapter_count}: ${escapeHtml(title)}</b><br><br>${mdToHtml(escapeHtml(res.summary))}`);
+    } catch (e) {
+      addMessage('system', null, '⚠ Kunde inte avsluta kapitel: ' + escapeHtml(e.message));
+    }
+    return;
+  }
+
+  // Okänt kommando
+  addCmdMessage(`⚠ <i>Okänt kommando: ${escapeHtml(text)}</i>`);
+  addMessage('system', null, '⚠ Okänt kommando. Skriv <b>/help</b> för att se alla kommandon.');
 }
 
 function escapeHtml(s) {

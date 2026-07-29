@@ -322,6 +322,42 @@ const API = (() => {
       return MOCK ? null : BASE + '/api/campaign/export';
     },
 
+    // ── Save / Load / Pin / Lore / Chapter ──
+    async saveCheckpoint(description = '') {
+      if (MOCK) return { ok: true, save_id: 'mock-save', description };
+      return req('/api/campaign/save', { method: 'POST', body: JSON.stringify({ description }) });
+    },
+
+    async listSaves() {
+      if (MOCK) return { saves: [] };
+      return req('/api/campaign/saves');
+    },
+
+    async loadSave(saveId) {
+      if (MOCK) throw new Error('Ej i mock-läge');
+      return req('/api/campaign/load', { method: 'POST', body: JSON.stringify({ save_id: saveId }) });
+    },
+
+    async pinFact(fact) {
+      if (MOCK) return { ok: true, pinned_facts: [fact] };
+      return req('/api/campaign/pin', { method: 'POST', body: JSON.stringify({ fact }) });
+    },
+
+    async unpinFact(fact) {
+      if (MOCK) return { ok: true, pinned_facts: [] };
+      return req('/api/campaign/pin', { method: 'DELETE', body: JSON.stringify({ fact }) });
+    },
+
+    async addLore(text) {
+      if (MOCK) return { ok: true, lore_count: 1 };
+      return req('/api/campaign/lore', { method: 'POST', body: JSON.stringify({ text }) });
+    },
+
+    async triggerChapter(title) {
+      if (MOCK) return { ok: true, title, summary: 'Kapitlet avslutades.', chapter_count: 1 };
+      return req('/api/campaign/chapter', { method: 'POST', body: JSON.stringify({ title }) });
+    },
+
     // ── Auth-guard för sidor ──
     guard() {
       if (!sessionStorage.getItem('dnd_user')) {

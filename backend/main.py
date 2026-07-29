@@ -6,12 +6,15 @@ LLM-driven D&D Dungeon Master. Alla endpoints under /api/.
 
 import io
 import json
+import logging
 import os
 import re
 import uuid
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
+
+logger = logging.getLogger("morkrets")
 
 import httpx
 from fastapi import Cookie, FastAPI, File, Form, HTTPException, Response, UploadFile
@@ -347,6 +350,176 @@ class VaultUseRequest(BaseModel):
     char_id: str
 
 
+class SaveRequest(BaseModel):
+    description: str = ""
+
+
+class PinRequest(BaseModel):
+    fact: str
+
+
+class LoreRequest(BaseModel):
+    text: str
+
+
+class ChapterRequest(BaseModel):
+    title: str
+
+
+class LoadRequest(BaseModel):
+    save_id: str
+
+
+# ═══════════════════════════════════════
+# DM-svarsvalidering (Pydantic) + regelinjicering
+# ═══════════════════════════════════════
+
+
+class DMResponse(BaseModel):
+    """Validerad struktur för ett DM-svar efter taggparsning."""
+    narration: str
+    effects: list = []
+    roll_requests: list = []
+    valid: bool = True
+
+
+def validate_dm_response(
+    narration: str, effects: list, roll_requests: list, state: dict
+) -> tuple[DMResponse, list[str]]:
+    """
+    Validera mekaniken i ett DM-svar mot kampanjtillståndet.
+    Returnerar (DMResponse, lista_med_fel). Tom fellista = giltigt.
+
+    Kontroller:
+      - HP-förändringar (skada/hela) får inte överskrida max-HP
+      - XP måste vara positivt
+      - Föremålsnamn får inte vara tomma
+      - Questnamn får inte vara tomma
+    """
+    errors: list[str] = []
+    char = state.get("character", {})
+    hp = char.get("hp", {})
+    hp_max = hp.get("max", 10)
+    hp_current = hp.get("current", hp_max)
+
+    for fx in effects:
+        ftype = fx.get("type", "")
+        value = fx.get("value")
+        if ftype == "skada":
+            try:
+                amt = int(value)
+            except (TypeError, ValueError):
+                errors.append(f"Ogiltig skada: {value!r}")
+                continue
+            if amt > hp_max:
+                errors.append(f"Skada {amt} överstiger max-HP {hp_max}")
+        elif ftype == "hela":
+            try:
+                amt = int(value)
+            except (TypeError, ValueError):
+                errors.append(f"Ogiltig helande: {value!r}")
+                continue
+            if hp_current + amt > hp_max and amt > hp_max:
+                errors.append(f"Helande {amt} överstiger max-HP {hp_max}")
+        elif ftype == "xp":
+            try:
+                amt = int(value)
+            except (TypeError, ValueError):
+                errors.append(f"Ogiltig XP: {value!r}")
+                continue
+            if amt <= 0:
+                errors.append(f"XP måste vara positivt, fick {amt}")
+        elif ftype == "föremål":
+            if not value or not str(value).strip():
+                errors.append("Föremålsnamn får inte vara tomt")
+        elif ftype == "quest":
+            if not value or not str(value).strip():
+                errors.append("Questnamn får inte vara tomt")
+
+    dm_resp = DMResponse(
+        narration=narration,
+        effects=effects,
+        roll_requests=roll_requests,
+        valid=len(errors) == 0,
+    )
+    return dm_resp, errors
+
+
+def _strip_mechanical_tags(text: str) -> str:
+    """Ta bort alla mekaniska taggar ur text (används vid förkastande av trasig mekanik)."""
+    clean = text
+    for pattern in _MECH_PATTERNS.values():
+        clean = pattern.sub("", clean)
+    return re.sub(r"\n{3,}", "\n\n", clean).strip()
+
+
+# ── Per-turs regelinjicering (D&D 5e) ──
+
+RULES_DB: dict[str, str] = {
+    "attack": "ATTACK: Slå 1d20 + attackmodifierare (STY/SMI) mot målets AC. Träff → skada. Naturlig 20 = kritisk träff (dubbla skadetärningar), naturlig 1 = automatisk miss.",
+    "sneak": "SMYGNING: Slå 1d20 + Smidighet (Smygning) mot fiendernas passiva Perception (10 + Perception-mod). Lyckas = du är osedd och kan få överraskning/fördel.",
+    "climb": "KLÄTTRING: Slå 1d20 + Styrka (Atletik) mot en DC satt av DM (typiskt DC 10–15 för klättring). Misslyckande = fall eller ingen framgång.",
+    "jump": "HOPP: Styrka (Atletik)-slag för långt/högt hopp utöver normal räckvidd. Långt hopp = 3 + STY-mod i fot, högt = 3 + STY-mod halverat i fot.",
+    "persuade": "ÖVERTALNING: Slå 1d20 + Karisma (Övertalning) mot målets Insight eller en DC. Lyckas = NPC:n går med på rimlig begäran.",
+    "deceive": "VILSELEDANDE: Slå 1d20 + Karisma (Vilseledande) mot målets Insight. Lyckas = målet tror på lögnen.",
+    "search": "SÖKANDE/UNDERSÖKA: Slå 1d20 + Intelligens (Undersökning) mot en DC. Hittar dolda detaljer, ledtrådar och mekanismer.",
+    "trap": "FÄLLA: Oftast ett Smidighets-räddningsslag (1d20 + SMI-mod) mot fällans DC. Lyckas = halv eller ingen skada.",
+    "poison": "GIFT: Vanligtvis ett Kondition-räddningsslag (1d20 + KON-mod) mot giftets DC. Misslyckande = skada eller tillstånd (förgiftad).",
+    "spell": "BESVÄRJELSE: Magiska attacker slår 1d20 + besvärjelsemodifierare mot AC, ELLER så gör målet ett räddningsslag mot din Spell Save DC (8 + prof + besvärjelse-mod).",
+    "rest": "VILA: Kort vila (1h) → återfå HP via Hit Dice. Lång vila (8h) → full HP + återfå Hit Dice (upp till halva totalen).",
+    "death_save": "DÖDSRÄDDNING: Vid 0 HP, slå 1d20 varje tur. 10+ = framgång, <10 = misslyckande. 3 framgångar = stabil, 3 misslyckanden = död. Naturlig 1 = 2 misslyckanden, naturlig 20 = vakna med 1 HP.",
+    "surprise": "ÖVERRASKNING: Om en sida inte märker den andra får de en överraskningsrunda — de överraskade kan inte röra sig eller agera första rundan.",
+    "cover": "SKYDD: Halvt skydd = +2 AC & SMI-räddningar. Tre fjärdedels skydd = +5. Fullt skydd = kan inte träffas direkt.",
+    "condition": "TILLSTÅND: Vanliga: Liggande (prone) — nackdel på attacker, attacker inom 5 fot har fördel. Bedövad (stunned) — kan inte agera, attacker har fördel mot dig. Förgiftad — nackdel på attacker & förmågeslag.",
+}
+
+
+def inject_rules(player_input: str) -> str:
+    """
+    Extrahera nyckelord ur spelarens meddelande, matcha mot RULES_DB
+    och returnera de 3 mest relevanta reglerna som formaterad sträng.
+    """
+    if not player_input:
+        return ""
+
+    text = player_input.lower()
+
+    # Nyckelordsgrupper — svenska/engelska termer som mappar till RULES_DB-nycklar
+    keyword_map = {
+        "attack": ["attack", "attackerar", "slår", "hugger", "skjuter", "strid", "svärd", "vapen", "pil", "skott"],
+        "sneak": ["smyg", "smyger", "smyga", "ljudlös", "gömma", "gömmer", "osynlig", "lönn"],
+        "climb": ["klättr", "klättrar", "klättra", "vägg", "berg", "upp för"],
+        "jump": ["hopp", "hoppar", "hoppa", "hoppa över", "klyfta", "avgrund"],
+        "persuade": ["övertal", "övertyga", "förhandla", "charma", "charm", "diplomati"],
+        "deceive": ["lura", "ljug", "lögn", "bedra", "vilseled", "fejka", "bluff"],
+        "search": ["sök", "söker", "undersök", "leta", "letar", "granska", "genomsök", "rotar"],
+        "trap": ["fälla", "fällor", "snara", "mekanism", "utlösare"],
+        "poison": ["gift", "giftig", "förgift", "motgift", "dryck"],
+        "spell": ["besvärjelse", "magi", "troll", "trollformel", "kasta en besvärjelse", "eldklot", "mana"],
+        "rest": ["vila", "vilar", "sova", "sömn", "läger", "rast"],
+        "death_save": ["döende", "dör", "medvetslös", "blöder ut", "0 hp", "nära döden"],
+        "surprise": ["överrask", "överfall", "bakhåll", "smygattack", "överrumpla"],
+        "cover": ["skydd", "täckning", "gömmer sig bakom", "mur", "sköld", "barrikad"],
+        "condition": ["knuffa", "vält", "bedöva", "förlama", "skräck", "förblinda", "liggande"],
+    }
+
+    scores: dict[str, int] = {}
+    for rule_key, words in keyword_map.items():
+        for w in words:
+            if w in text:
+                scores[rule_key] = scores.get(rule_key, 0) + 1
+
+    if not scores:
+        return ""
+
+    # Sortera efter poäng (fallande), ta topp 3
+    top = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)[:3]
+    lines = [f"- {RULES_DB[key]}" for key, _ in top if key in RULES_DB]
+    if not lines:
+        return ""
+    return "\n".join(lines)
+
+
 # ═══════════════════════════════════════
 # Auth-hjälp
 # ═══════════════════════════════════════
@@ -616,23 +789,302 @@ async def delete_campaign(morkrets_token: str | None = Cookie(None)):
 
 
 # ═══════════════════════════════════════
+# SAVE / LOAD / PIN / LORE / CHAPTER
+# ═══════════════════════════════════════
+
+
+@app.post("/api/campaign/save")
+async def save_checkpoint(body: SaveRequest, morkrets_token: str | None = Cookie(None)):
+    """Spara en snapshot av nuvarande kampanjtillstånd."""
+    payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    user = state["meta"]["user"]
+    cid = state["meta"]["campaign_id"]
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    save_id = f"save-{ts}"
+
+    saves_dir = store._saves_dir(user, cid)
+    saves_dir.mkdir(parents=True, exist_ok=True)
+
+    snapshot = {
+        "save_id": save_id,
+        "description": body.description or f"Sparat vid tur {state['meta'].get('turn_count', 0)}",
+        "created": datetime.now(timezone.utc).isoformat(),
+        "turn_count": state["meta"].get("turn_count", 0),
+        "character": state.get("character", {}),
+        "inventory": state.get("inventory", []),
+        "currency": state.get("currency", {}),
+        "npcs": state.get("npcs", []),
+        "quests": state.get("quests", []),
+        "world": state.get("world", {}),
+        "lore": state.get("lore", []),
+        "pinned_facts": state.get("pinned_facts", []),
+    }
+    save_path = saves_dir / f"{save_id}.json"
+    with open(save_path, "w") as f:
+        json.dump(snapshot, f, ensure_ascii=False, indent=2)
+
+    return {"ok": True, "save_id": save_id, "description": snapshot["description"], "turn_count": snapshot["turn_count"]}
+
+
+@app.get("/api/campaign/saves")
+async def list_saves(morkrets_token: str | None = Cookie(None)):
+    """Lista alla sparade checkpoints för kampanjen."""
+    payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    saves_dir = store._saves_dir(state["meta"]["user"], state["meta"]["campaign_id"])
+    saves = []
+    if saves_dir.exists():
+        for sf in sorted(saves_dir.glob("save-*.json"), reverse=True):
+            try:
+                with open(sf) as f:
+                    data = json.load(f)
+                saves.append({
+                    "save_id": data.get("save_id", sf.stem),
+                    "description": data.get("description", ""),
+                    "created": data.get("created", ""),
+                    "turn_count": data.get("turn_count", 0),
+                })
+            except (json.JSONDecodeError, OSError):
+                continue
+    return {"saves": saves}
+
+
+@app.post("/api/campaign/load")
+async def load_save(body: LoadRequest, morkrets_token: str | None = Cookie(None)):
+    """Återställ kampanjtillstånd från en sparad checkpoint."""
+    payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    saves_dir = store._saves_dir(state["meta"]["user"], state["meta"]["campaign_id"])
+    save_path = saves_dir / f"{body.save_id}.json"
+    if not save_path.exists():
+        raise HTTPException(404, f"Sparfil '{body.save_id}' hittades inte")
+
+    with open(save_path) as f:
+        snapshot = json.load(f)
+
+    # Återställ fält från snapshot
+    for key in ("character", "inventory", "currency", "npcs", "quests", "world", "lore", "pinned_facts"):
+        if key in snapshot:
+            state[key] = snapshot[key]
+    if "turn_count" in snapshot:
+        state["meta"]["turn_count"] = snapshot["turn_count"]
+
+    store.save(state)
+    return {"ok": True, "restored_from": body.save_id, "state": state}
+
+
+@app.post("/api/campaign/pin")
+async def pin_fact(body: PinRequest, morkrets_token: str | None = Cookie(None)):
+    """Fäst en fakta som permanent sanning."""
+    payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    facts = state.setdefault("pinned_facts", [])
+    fact = body.fact.strip()
+    if fact and fact not in facts:
+        facts.append(fact)
+    store.save(state)
+    return {"ok": True, "pinned_facts": facts}
+
+
+@app.delete("/api/campaign/pin")
+async def unpin_fact(body: PinRequest, morkrets_token: str | None = Cookie(None)):
+    """Ta bort en fäst fakta."""
+    payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    facts = state.setdefault("pinned_facts", [])
+    fact = body.fact.strip()
+    if fact in facts:
+        facts.remove(fact)
+    store.save(state)
+    return {"ok": True, "pinned_facts": facts}
+
+
+@app.post("/api/campaign/lore")
+async def add_lore(body: LoreRequest, morkrets_token: str | None = Cookie(None)):
+    """Lägg till en lore-post till kampanjen."""
+    payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    lore = state.setdefault("lore", [])
+    text = body.text.strip()
+    if text:
+        lore.append(text)
+    store.save(state)
+    return {"ok": True, "lore_count": len(lore)}
+
+
+@app.post("/api/campaign/chapter")
+async def trigger_chapter(body: ChapterRequest, morkrets_token: str | None = Cookie(None)):
+    """Manuellt utlös en kapitalsammanfattning via LLM."""
+    payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    # Bygg kontext från transkript + state
+    transcript = store.load_transcript(state, last_n=30)
+    t_text = "\n".join(f"{e['role']}: {e['content']}" for e in transcript[-20:])
+    char_name = state.get("character", {}).get("name", "Äventyraren")
+    location = state.get("world", {}).get("current_location", "Okänd plats")
+    npcs = ", ".join(n.get("name", "?") for n in state.get("npcs", [])[:8])
+    quests = ", ".join(q.get("name", "?") for q in state.get("quests", []) if q.get("status") == "aktiv")
+
+    prompt = (
+        f"Du är en krönikör som sammanfattar ett kapitel i ett D&D-äventyr.\n"
+        f"Kapitelrubrik: {body.title}\n"
+        f"Karaktär: {char_name}, Plats: {location}\n"
+        f"NPCs: {npcs}\nAktiva uppdrag: {quests}\n\n"
+        f"Senaste händelser:\n{t_text}\n\n"
+        f"Skriv en stämningsfull kapitalsammanfattning (3-5 meningar) på svenska. "
+        f"Använd rubriken '{body.title}'. Beskriv vad som hände och vad som väntar."
+    )
+
+    try:
+        summary = await _call_llm(
+            ATMOSPHERE_MODEL,
+            [{"role": "user", "content": prompt}],
+            temperature=0.5,
+            max_tokens=512,
+        )
+    except Exception:
+        summary = f"Kapitel {body.title}: Äventyret fortsätter i {location}. Mörkret väntar."
+
+    # Spara sammanfattning och öka kapitelräknaren
+    store.save_summary(state, summary)
+    state["meta"]["chapter_count"] = state["meta"].get("chapter_count", 0) + 1
+    store.save(state)
+
+    return {"ok": True, "title": body.title, "summary": summary, "chapter_count": state["meta"]["chapter_count"]}
+
+
+# ═══════════════════════════════════════
 # CHAT
 # ═══════════════════════════════════════
+
+
+def compact_state(state: dict) -> str:
+    """Kompakt naturligt-språk-sammanfattning av kampanjtillståndet.
+
+    Ersätter json.dumps i DM-prompten — ger LLM:n samma information
+    till en bråkdel av tokenkostnaden.
+    """
+    char = state.get("character", {})
+    name = char.get("name", "Okänd")
+    klass = char.get("class", "Äventyrare")
+    level = char.get("level", 1)
+    hp = char.get("hp", {})
+    hp_cur = hp.get("current", 0)
+    hp_max = hp.get("max", 0)
+    ac = char.get("ac", 10)
+    gold = state.get("currency", {}).get("gp", 0)
+
+    lines = [f"{name}, {klass} niv {level}. HP {hp_cur}/{hp_max}. AC {ac}. Guld: {gold}."]
+
+    # Utrustade föremål
+    equipped = [it.get("name", "?") for it in state.get("inventory", []) if it.get("equipped")]
+    if equipped:
+        lines.append(f"Bär: {', '.join(equipped)}")
+
+    # Plats, tid, dag
+    world = state.get("world", {})
+    loc = world.get("current_location", "Okänd")
+    tid = world.get("time", "okänd")
+    dag = world.get("day", 1)
+    lines.append(f"Plats: {loc}. Tid: {tid}. Dag: {dag}.")
+
+    # Fiender
+    enemies = [n for n in state.get("npcs", []) if n.get("relation") == "fiende" and n.get("alive", True)]
+    if enemies:
+        e_str = ", ".join(f"{n.get('name', '?')} ({n.get('hp', '?')})" for n in enemies)
+        lines.append(f"Fiender: {e_str}")
+    else:
+        lines.append("Fiender: inga")
+
+    # Aktiva uppdrag
+    active_quests = [q.get("name", "?") for q in state.get("quests", []) if q.get("status") == "aktiv"]
+    if active_quests:
+        lines.append(f"Aktiva uppdrag: {', '.join(active_quests)}")
+
+    # Kända NPCs (max 10)
+    npcs = state.get("npcs", [])
+    if npcs:
+        npc_strs = [
+            f"{n.get('name', '?')} ({n.get('role', '?')}, {n.get('relation', '?')})"
+            for n in npcs[:10]
+        ]
+        lines.append(f"Kända NPCs: {', '.join(npc_strs)}")
+
+    return "\n".join(lines)
+
+
+def truth_block(state: dict) -> str:
+    """Auktoritär sanning — LLM:n får ALDRIG motsäga detta."""
+    parts = ["## SANNING (auktoritär — motsäg ALDRIG detta)\n", compact_state(state)]
+
+    pinned = state.get("pinned_facts", [])
+    if pinned:
+        parts.append("\nPinmade fakta:")
+        for fact in pinned:
+            parts.append(f"- {fact}")
+
+    return "\n".join(parts)
 
 
 def _build_system_prompt(
     state: dict,
     turn_override: int | None = None,
     awakening_trigger: bool = False,
+    player_input: str = "",
 ) -> str:
     """Bygg systemprompt med kampanjkontext. turn_override används av /api/chat
     för att räkna med det meddelande som ännu inte sparats i transkriptet."""
     parts = [DM_SYSTEM_PROMPT]
 
-    # Karaktär
-    char = state.get("character")
-    if char and char.get("name"):
-        parts.append(f"\n## Spelarens karaktär\n{json.dumps(char, ensure_ascii=False, indent=1)}")
+    # Sanning — kompakt tillstånd istället för rå JSON
+    parts.append("\n" + truth_block(state))
+
+    # Hierarkiska sammanfattningar: 2 scen + 2 kapitel + 1 kampanjbåge
+    scene_summaries = store.load_summaries(state, last_n=2)
+    for s in scene_summaries:
+        parts.append(f"\n[Scen-sammanfattning vid tur {s.get('turn', '?')}]: {s.get('text', '')}")
+    chapter_summaries = store.load_chapters(state, last_n=2)
+    for c in chapter_summaries:
+        parts.append(f"\n[Kapitel {c.get('chapter', '?')}]: {c.get('text', '')}")
+    campaign_arcs = store.load_campaign_arcs(state, last_n=1)
+    for a in campaign_arcs:
+        parts.append(f"\n[Kampanjbåge {a.get('arc', '?')}]: {a.get('text', '')}")
+
+    # Förra turens mekaniska händelser
+    last_effects = state.get("meta", {}).get("last_effects")
+    if last_effects:
+        fx_labels = {
+            "skada": "Skada", "hela": "Hela", "xp": "XP", "guld": "Guld",
+            "föremål": "Nytt föremål", "föremål_bort": "Föremål bort",
+            "quest": "Nytt uppdrag", "quest_slutförd": "Uppdrag slutfört",
+            "quest_misslyckad": "Uppdrag misslyckat", "konsekvens": "Konsekvens",
+            "npc_död": "NPC död", "plats": "Ny plats", "tid": "Tid",
+            "npc_relation": "NPC-relation", "ny_dag": "Ny dag", "level_up": "Nivå upp",
+        }
+        fx_strs = [f"{fx_labels.get(e.get('type', ''), e.get('type', '?'))}: {e.get('value', '?')}" for e in last_effects]
+        parts.append("\n## Förra turens händelser\n" + ", ".join(fx_strs))
 
     # Värld
     world = state.get("world", {})
@@ -693,6 +1145,11 @@ def _build_system_prompt(
         elif turn == 2:
             parts.append(AWAKENING_OPEN.format(opening_style=opening))
 
+    # Per-turs regelinjicering — relevanta D&D 5e-regler för denna tur
+    rules_text = inject_rules(player_input)
+    if rules_text:
+        parts.append(f"\n## RELEVANTA REGLER (denna tur)\n{rules_text}")
+
     return "\n".join(parts)
 
 
@@ -722,7 +1179,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
 
     # Lägg till recent transcript + spelarens nya meddelande
     # (vaknandetrigger filtreras bort — den är en intern signal, inte spelartext)
-    transcript = store.load_transcript(state, last_n=16)
+    transcript = store.load_transcript_by_tokens(state)
     for entry in transcript:
         if entry.get("content") == "__VAKNA_DM__":
             continue
@@ -765,6 +1222,9 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         meta["tag_streak"] = 0
     else:
         meta["tag_streak"] = meta.get("tag_streak", 0) + 1
+
+    # Spara effekter för nästa turs systemprompt
+    meta["last_effects"] = effects if effects else []
 
     # Tärnings-enforcement: begärde DM kast vid riskfylld handling?
     player_action = ACTION_KEYWORDS.search(req.message)
@@ -824,7 +1284,11 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
                 except Exception:
                     pass
 
-    # Spara DM-svar
+    # Rensa intern struktur innan transkriptsparning
+    # (reply är redan rensad från mekaniska taggar via _parse_mechanical_tags)
+    reply = re.sub(r'<STATE_UPDATE>.*?</STATE_UPDATE>', '', reply, flags=re.DOTALL).strip()
+
+    # Spara DM-svar (ren text — inga taggar eller intern struktur)
     state = store.append_message(state, "assistant", reply)
     store.save(state)
 

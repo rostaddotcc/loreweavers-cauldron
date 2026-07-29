@@ -60,7 +60,10 @@ from dice import roll as dice_roll
 from models import (
     AWAKENING_ASK,
     AWAKENING_OPEN,
-    DM_SYSTEM_PROMPT,
+    DM_COMBAT_PROMPT,
+    DM_CORE_PROMPT,
+    DM_NARRATIVE_PROMPT,
+    DM_PROMPT_VERSION,
     ORACLE_PROMPT,
     get_api_key,
     get_model,
@@ -1127,7 +1130,15 @@ def _build_system_prompt(
 ) -> str:
     """Bygg systemprompt med kampanjkontext. turn_override används av /api/chat
     för att räkna med det meddelande som ännu inte sparats i transkriptet."""
-    parts = [DM_SYSTEM_PROMPT]
+    # Core-prompt + version (versionen tvingar cache-miss vid ändringar)
+    parts = [f"[DM-prompt {DM_PROMPT_VERSION}]\n" + DM_CORE_PROMPT]
+
+    # Combat vs Narrative — injicera bara det som behövs denna tur
+    enemies = [n for n in state.get("npcs", []) if n.get("relation") == "fiende" and n.get("alive", True)]
+    if enemies:
+        parts.append(DM_COMBAT_PROMPT)
+    else:
+        parts.append(DM_NARRATIVE_PROMPT)
 
     # Sanning — kompakt tillstånd istället för rå JSON
     parts.append("\n" + truth_block(state))

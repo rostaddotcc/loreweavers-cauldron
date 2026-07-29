@@ -34,6 +34,10 @@
   .log-head h1{font-family:'Cinzel',serif;font-weight:900;font-size:1.5rem;color:var(--bone-bright);text-shadow:0 2px 0 #000}
   .log-head .sub{font-style:italic;color:var(--bone-dim);font-size:.85rem;margin-top:.3rem}
   .log-title{font-family:'Cinzel',serif;font-size:.9rem;color:var(--gold-bright);margin-top:.6rem;letter-spacing:.08em}
+  .refresh-btn{font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.12em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--gold);color:var(--gold-bright);padding:.32rem .7rem;cursor:pointer;transition:all .2s;border-radius:2px;white-space:nowrap;margin-top:.9rem}
+  .refresh-btn:hover{box-shadow:0 0 14px -3px rgba(232,198,90,.55);text-shadow:0 0 8px rgba(232,198,90,.6)}
+  .refresh-btn:active{transform:translateY(1px)}
+  .refresh-btn:disabled{opacity:.5;cursor:wait}
 
   /* ── Laddning: krönikören skriver ── */
   .writing{display:none;text-align:center;padding:4rem 2rem}
@@ -50,6 +54,8 @@
   .log-summary{max-width:700px;margin:0 auto 2.5rem;padding:1.2rem 1.5rem;background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,#120c1c);border:2px solid rgba(201,162,39,.4);box-shadow:inset 0 0 0 2px var(--ink),5px 5px 0 rgba(0,0,0,.7);text-align:center}
   .log-summary .label{font-family:'Silkscreen',monospace;font-size:.55rem;letter-spacing:.25em;text-transform:uppercase;color:var(--gold);margin-bottom:.5rem}
   .log-summary p{font-style:italic;color:var(--bone);line-height:1.7;font-size:.92rem}
+  .updated-stamp{font-family:'Silkscreen',monospace;font-size:.52rem;letter-spacing:.12em;color:var(--bone-dim);margin-top:.7rem}
+  .updated-stamp b{color:var(--gold);font-weight:400}
 
   /* ── Tidslinje ── */
   .timeline{position:relative;max-width:700px;margin:0 auto;padding-left:3rem}
@@ -69,6 +75,8 @@
 
   .day-loc{font-size:.78rem;color:var(--teal);margin-bottom:.7rem}
   .day-loc::before{content:'📍 '}
+  .day-loc a{color:inherit;text-decoration:none;border-bottom:1px dotted rgba(94,154,163,.6);transition:all .2s}
+  .day-loc a:hover{color:var(--gold-bright);border-bottom-color:var(--gold);text-shadow:0 0 8px rgba(232,198,90,.4)}
 
   .day-events{list-style:none;margin-bottom:.7rem}
   .day-events li{position:relative;padding:.3rem 0 .3rem 1.3rem;font-size:.88rem;color:var(--bone);line-height:1.5;border-bottom:1px solid rgba(61,47,82,.3)}
@@ -111,6 +119,7 @@
     <h1>📜 Loggbok</h1>
     <p class="sub">Krönikören sammanfattar ditt äventyr, dag för dag</p>
     <div class="log-title" id="log-title"></div>
+    <button class="refresh-btn" onclick="refreshToday()">✦ Uppdatera krönikan</button>
   </div>
 
   <div class="writing" id="writing">
@@ -123,6 +132,7 @@
     <div class="log-summary" id="log-summary" style="display:none">
       <div class="label">✦ Äventyret hittills ✦</div>
       <p id="summary-text"></p>
+      <div class="updated-stamp" id="updated-stamp" style="display:none"></div>
     </div>
     <div class="timeline" id="timeline"></div>
   </div>
@@ -169,6 +179,18 @@ function renderLogbook(data) {
     document.getElementById('summary-text').textContent = data.summary;
   }
 
+  // Uppdaterad-stämpel
+  const stamp = document.getElementById('updated-stamp');
+  if (data.generated_at) {
+    let ts;
+    try { ts = new Date(data.generated_at).toLocaleString('sv-SE', { dateStyle: 'medium', timeStyle: 'short' }); }
+    catch (_) { ts = data.generated_at; }
+    stamp.innerHTML = '✦ Uppdaterad: <b>' + esc(ts) + '</b>';
+    stamp.style.display = 'block';
+  } else {
+    stamp.style.display = 'none';
+  }
+
   // Tidslinje
   const tl = document.getElementById('timeline');
   tl.innerHTML = data.days.map((d, i) => {
@@ -183,7 +205,7 @@ function renderLogbook(data) {
           <span class="day-title">${esc(d.title || '')}</span>
           ${d.mood ? `<span class="day-mood">"${esc(d.mood)}"</span>` : ''}
         </div>
-        ${d.location ? `<div class="day-loc">${esc(d.location)}</div>` : ''}
+        ${d.location ? `<div class="day-loc"><a href="platser.html" title="Öppna kartan">${esc(d.location)}</a></div>` : ''}
         <ul class="day-events">${events}</ul>
         <div class="day-tags">${npcs}${quests}</div>
       </div>`;
@@ -228,6 +250,34 @@ async function loadLogbook() {
 }
 
 loadLogbook();
+
+// ── Uppdatera krönikan: be servern skriva om dagens logg ──
+async function refreshToday() {
+  const btn = document.querySelector('.refresh-btn');
+  btn.disabled = true;
+  const oldLabel = btn.textContent;
+  btn.textContent = '🪶 Skriver…';
+  try {
+    const res = await fetch('/api/campaign/logbook/refresh-today', { method: 'POST', credentials: 'include' });
+    if (!res.ok) throw new Error('refresh failed');
+    let data = null;
+    try { data = await res.json(); } catch (_) { /* tom body — hämta nedan */ }
+    if (!data || !data.days) {
+      const r2 = await fetch('/api/campaign/logbook', { credentials: 'include' });
+      if (r2.ok) data = await r2.json();
+    }
+    if (data) {
+      localStorage.setItem('dnd_logbook_cache', JSON.stringify(data));
+      renderLogbook(data);
+    }
+    toast('✦ Krönikan uppdaterad');
+  } catch (e) {
+    toast('⚠ Kunde inte uppdatera krönikan');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = oldLabel;
+  }
+}
 
 // Toast
 let toastTimer;

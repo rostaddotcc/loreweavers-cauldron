@@ -399,7 +399,12 @@ def _parse_mechanical_tags(text: str, state: dict) -> tuple[str, dict, list[dict
     for m in _MECH_PATTERNS['PLATS'].finditer(text):
         name = m.group(1).strip()
         world = state.setdefault('world', {})
+        old_loc = world.get('current_location', '')
         world['current_location'] = name
+        # Ruttspårning: logga förflyttningar
+        if old_loc and old_loc != name:
+            travel_log = world.setdefault('travel_log', [])
+            travel_log.append({'from': old_loc, 'to': name, 'day': world.get('day', 1)})
         visited = world.setdefault('visited_locations', [])
         if name not in visited:
             visited.append(name)
@@ -444,6 +449,8 @@ def _parse_mechanical_tags(text: str, state: dict) -> tuple[str, dict, list[dict
         world['day'] = world.get('day', 1) + 1
         world['day_description'] = desc
         world.setdefault('day_log', []).append({'day': world['day'], 'description': desc})
+        # Markera att en dag-entry ska genereras i bakgrunden
+        world['_pending_day_entry'] = True
         effects.append({'type': 'ny_dag', 'value': f"Dag {world['day']}: {desc}"})
 
     # Ta bort alla taggar ur texten
@@ -1478,6 +1485,54 @@ async def _retrieve_relevant_memory(
     return "\n\n".join(sections)
 
 
+# ── Bakgrund: generera dag-entry för loggboken ──
+async def _generate_day_entry(username: str, campaign_id: str, prev_day: int) -> None:
+    """Generera en dag-entry för föregående dag via snabb LLM.
+    Körs i bakgrunden efter NY_DAG — blockerar aldrig HTTP-svaret."""
+    try:
+        st = store.get(username)
+        if not st:
+            return
+        world = st.setdefault('world', {})
+        transcript = store.load_transcript(st, last_n=200)
+        start_idx = world.get('last_day_turn', 0)
+        recent = transcript[start_idx:]
+        if not recent:
+            world['last_day_turn'] = len(transcript)
+            world.pop('_pending_day_entry', None)
+            store.save(st)
+            return
+        t_text = "\n".join(f"{e['role']}: {e['content']}" for e in recent)
+        prompt = (
+            "Här är transkriptet sedan förra dagsskiftet. "
+            "Skriv en kort dag-entry (JSON): "
+            '{"day": N, "title": "...", "mood": "...", '
+            '"events": ["...", "..."], "location": "...", '
+            '"npcs_met": [...], "quests": [...]}. '
+            f"Dagnumret är {prev_day}. "
+            "Max 3 events, max 2 NPCs. Svara ENDAST med JSON.\n\n"
+            + t_text
+        )
+        raw = await _call_llm(
+            EXTRACTION_MODEL,
+            [{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=300,
+            timeout=30,
+        )
+        entry = _extract_json(raw)
+        entry['day'] = prev_day  # säkerställ korrekt dagnummer
+        logbook = world.setdefault('logbook', {})
+        days = logbook.setdefault('days', [])
+        days.append(entry)
+        world['last_day_turn'] = len(transcript)
+        world.pop('_pending_day_entry', None)
+        store.save(st)
+        logger.info("📖 Dag-entry genererad för dag %d", prev_day)
+    except Exception as e:
+        logger.warning("📖 Dag-entry misslyckades: %s", e)
+
+
 # ── Bakgrundsuppgifter efter ett DM-svar (icke-kritiska, blockerar ALDRIG svaret) ──
 async def _post_turn_tasks(
     username: str, campaign_id: str, reply: str, player_msg: str,
@@ -1891,6 +1946,13 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     ))
     _BACKGROUND_TASKS.add(task)
     task.add_done_callback(_BACKGROUND_TASKS.discard)
+
+    # Dag-entry: om NY_DAG trigga, generera loggbok-entry i bakgrunden
+    if state.get('world', {}).pop('_pending_day_entry', False):
+        prev_day = state['world']['day'] - 1
+        day_task = asyncio.create_task(_generate_day_entry(username, campaign_id, prev_day))
+        _BACKGROUND_TASKS.add(day_task)
+        day_task.add_done_callback(_BACKGROUND_TASKS.discard)
 
     logger.info("◀ TUR %d klar · totalt %.1fs", state["meta"]["turn_count"], time.time() - _t0)
 
@@ -2736,12 +2798,14 @@ async def campaign_locations(morkrets_token: str | None = Cookie(None)):
     state = store.get(payload["sub"])
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
-    return get_locations_with_travel(state)
+    locations = get_locations_with_travel(state)
+    travel_log = state.get('world', {}).get('travel_log', [])
+    return {"locations": locations, "travel_log": travel_log}
 
 
 @app.get("/api/campaign/logbook")
 async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
-    """Generera en äventyrsjournal (tidslinje) via LLM."""
+    """Äventyrsjournal — cache-först, LLM bara vid första besöket."""
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
 
@@ -2749,20 +2813,25 @@ async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
 
-    # ── Cache: returnera direkt om turn_count inte ändrats ──
-    turn_count = state.get("meta", {}).get("turn_count", 0)
     world = state.setdefault("world", {})
-    cache = world.get("logbook_cache")
-    if cache and cache.get("turn_count") == turn_count:
-        return cache["data"]
 
-    # Samla transkript
+    # ── Cache-först: returnera direkt om dag-entries finns ──
+    logbook = world.get("logbook", {})
+    cached_days = logbook.get("days", [])
+    if cached_days:
+        campaign_name = state.get("meta", {}).get("campaign_name", "Mörkrets Rike")
+        return {
+            "title": logbook.get("title", campaign_name),
+            "days": cached_days,
+            "summary": logbook.get("summary", ""),
+        }
+
+    # ── Första besöket: generera via LLM och cacha ──
     transcript = store.load_transcript(state, last_n=100)
     t_text = "\n".join(
         f"{e['role']}: {e['content']}" for e in transcript
     )
 
-    # Samla sammanfattningar
     summaries = store.load_summaries(state, last_n=10)
     s_text = "\n".join(
         f"[Tur {s['turn']}]: {s['text']}" for s in summaries
@@ -2771,7 +2840,6 @@ async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
     if not t_text and not s_text:
         return {"title": "Mörkrets Rike", "days": [], "summary": "Äventyret har inte börjat ännu."}
 
-    # Generera loggbok via LLM (snabb modell)
     campaign_name = state.get("meta", {}).get("campaign_name", "Mörkrets Rike")
     prompt = build_log_prompt(t_text, s_text, campaign_name)
 
@@ -2784,7 +2852,6 @@ async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
         )
         log_data = _extract_json(raw)
     except Exception:
-        # Fallback: enkel struktur från state
         log_data = {
             "title": campaign_name,
             "days": [{
@@ -2792,18 +2859,81 @@ async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
                 "title": "Äventyret börjar",
                 "mood": "Förväntansfull",
                 "events": ["Kampanjen skapades"],
-                "location": state.get("world", {}).get("current_location", "Okänd"),
+                "location": world.get("current_location", "Okänd"),
                 "npcs_met": [n.get("name", "?") for n in state.get("npcs", [])[:5]],
                 "quests": [q.get("name", "?") for q in state.get("quests", []) if q.get("status") == "aktiv"],
             }],
             "summary": "Äventyret har just börjat. Mörkret väntar.",
         }
 
-    # Spara i cache — nästa anrop med samma turn_count hoppar över LLM
-    world["logbook_cache"] = {"turn_count": turn_count, "data": log_data}
+    # Cacha i world['logbook'] — nästa anrop returnerar direkt
+    world["logbook"] = {
+        "title": log_data.get("title", campaign_name),
+        "days": log_data.get("days", []),
+        "summary": log_data.get("summary", ""),
+    }
     store.save(state)
 
     return log_data
+
+
+@app.post("/api/campaign/logbook/refresh-today")
+async def campaign_logbook_refresh_today(morkrets_token: str | None = Cookie(None)):
+    """Regenerera ENBART den senaste dag-entryn i loggboken."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    world = state.setdefault("world", {})
+    logbook = world.setdefault("logbook", {})
+    days = logbook.get("days", [])
+    if not days:
+        raise HTTPException(400, "Inga dag-entries att uppdatera")
+
+    current_day = world.get("day", 1)
+    last_entry = days[-1]
+    target_day = last_entry.get("day", current_day)
+
+    # Samla transkript sedan förra dagsskiftet
+    transcript = store.load_transcript(state, last_n=200)
+    start_idx = world.get("last_day_turn", 0)
+    recent = transcript[start_idx:]
+    t_text = "\n".join(f"{e['role']}: {e['content']}" for e in recent) if recent else ""
+
+    if not t_text:
+        return {"ok": False, "error": "Inget transkript tillgängligt"}
+
+    prompt = (
+        "Här är transkriptet sedan förra dagsskiftet. "
+        "Skriv en kort dag-entry (JSON): "
+        '{"day": N, "title": "...", "mood": "...", '
+        '"events": ["...", "..."], "location": "...", '
+        '"npcs_met": [...], "quests": [...]}. '
+        f"Dagnumret är {target_day}. "
+        "Max 3 events, max 2 NPCs. Svara ENDAST med JSON.\n\n"
+        + t_text
+    )
+
+    try:
+        raw = await _call_llm(
+            EXTRACTION_MODEL,
+            [{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=300,
+            timeout=30,
+        )
+        new_entry = _extract_json(raw)
+        new_entry["day"] = target_day
+        days[-1] = new_entry
+        logbook["days"] = days
+        store.save(state)
+        return {"ok": True, "entry": new_entry}
+    except Exception as e:
+        logger.warning("📖 Uppdatering av dag-entry misslyckades: %s", e)
+        raise HTTPException(502, f"Kunde inte generera dag-entry: {e}")
 
 
 # ═══════════════════════════════════════

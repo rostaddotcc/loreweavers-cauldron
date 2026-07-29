@@ -47,6 +47,8 @@
   .place-card.visited{opacity:1}
   .place-card.unvisited{opacity:.55}
   .place-card.unvisited:hover{opacity:.8}
+  .place-card.flash{animation:card-flash 1.4s ease-out}
+  @keyframes card-flash{0%{border-color:var(--gold-bright);box-shadow:0 0 0 2px var(--gold-bright),0 0 26px rgba(232,198,90,.55),5px 5px 0 rgba(0,0,0,.7)}100%{}}
 
   .pc-top{display:flex;align-items:center;gap:.7rem;margin-bottom:.5rem}
   .pc-icon{width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;border:2px solid var(--edge);background:var(--stone-3);flex-shrink:0}
@@ -90,6 +92,20 @@
   .ascii-map pre .mc[data-loc]{cursor:pointer}
   .ascii-map pre .mc[data-loc]:hover{filter:brightness(1.6)}
   @keyframes map-glow{0%,100%{text-shadow:0 0 8px rgba(232,198,90,.8),0 0 20px rgba(232,198,90,.4)}50%{text-shadow:0 0 14px rgba(232,198,90,1),0 0 30px rgba(232,198,90,.6)}}
+  .ascii-map pre .mc.route{color:var(--teal);opacity:.5;text-shadow:none}
+
+  /* ── Resejournal ── */
+  .travel-journal{max-width:700px;margin:0 auto 1.5rem;padding:.65rem 1rem;background:rgba(94,154,163,.05);border:1px solid rgba(94,154,163,.28);box-shadow:inset 0 0 14px rgba(94,154,163,.06);overflow-x:auto;white-space:nowrap;scrollbar-width:thin}
+  .travel-journal::-webkit-scrollbar{height:5px}
+  .travel-journal::-webkit-scrollbar-thumb{background:var(--edge);border-radius:3px}
+  .travel-journal .tj-label{font-family:'Silkscreen',monospace;font-size:.52rem;letter-spacing:.22em;text-transform:uppercase;color:var(--teal);margin-right:.9rem}
+  .travel-journal .tj-entry{display:inline-block;font-family:'Silkscreen',monospace;font-size:.55rem;letter-spacing:.05em;color:var(--bone);cursor:pointer;padding:.15rem .3rem;transition:color .2s,text-shadow .2s,transform .2s}
+  .travel-journal .tj-entry:hover{color:var(--gold-bright);text-shadow:0 0 8px rgba(232,198,90,.55);transform:translateY(-1px)}
+  .travel-journal .tj-day{color:var(--bone-dim)}
+  .travel-journal .tj-entry:hover .tj-day{color:var(--gold)}
+  .travel-journal .tj-dot{color:var(--gold);margin:0 .3rem}
+  .travel-journal .tj-sep{color:var(--gold);opacity:.55;margin:0 .45rem;font-size:.6rem}
+  .travel-journal .tj-flag{color:var(--ember);margin-right:.25rem}
 
   /* ── Karta-tooltip ── */
   .map-tooltip{position:fixed;z-index:60;max-width:280px;padding:.8rem 1rem;background:linear-gradient(165deg,var(--stone-2),var(--stone));border:1px solid var(--gold);box-shadow:0 8px 30px rgba(0,0,0,.8);font-size:.8rem;line-height:1.5;color:var(--bone);pointer-events:none;opacity:0;transition:opacity .2s}
@@ -130,6 +146,8 @@
     <div class="map-label">✦ världskarta ✦</div>
     <pre id="map-art">Laddar karta…</pre>
   </div>
+
+  <div class="travel-journal" id="travel-journal" style="display:none"></div>
 
   <div class="quest-panel" id="quest-panel" style="display:none">
     <div class="qp-label">⚑ Aktiva uppdrag</div>
@@ -185,7 +203,7 @@ function travelClass(days) {
   return 'very-far';
 }
 
-function renderMap(locations) {
+function renderMap(locations, travelLog) {
   const W = 50, H = 18;
   const rng = mulberry32(campaignSeed);
 
@@ -201,6 +219,7 @@ function renderMap(locations) {
 
   // Placera platser med fog of war + quest-markörer + glöd
   const locMap = {}; // "x,y" → loc för klick
+  const coords = {}; // platsnamn → {x, y} för ruttlinjer
   locations.forEach(loc => {
     const px = Math.round((loc.x / 100) * (W - 4)) + 2;
     const py = Math.round((loc.y / 100) * (H - 2)) + 1;
@@ -221,6 +240,28 @@ function renderMap(locations) {
     }
     grid[py][px] = {ch, cls, loc: loc.name};
     locMap[loc.name] = loc;
+    coords[loc.name] = {x: px, y: py};
+  });
+
+  // Ruttlinjer: Bresenham mellan resejournalens etapper (prickad stig)
+  (travelLog || []).forEach(step => {
+    const a = coords[step.from], b = coords[step.to];
+    if (!a || !b) return;
+    let x0 = a.x, y0 = a.y;
+    const x1 = b.x, y1 = b.y;
+    const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+    let err = dx + dy;
+    for (;;) {
+      if (!(x0 === a.x && y0 === a.y) && !(x0 === x1 && y0 === y1)) {
+        const cell = grid[y0][x0];
+        if (cell && !cell.loc && cell.cls !== 'route') grid[y0][x0] = {ch: '·', cls: 'route'};
+      }
+      if (x0 === x1 && y0 === y1) break;
+      const e2 = 2 * err;
+      if (e2 >= dy) { err += dy; x0 += sx; }
+      if (e2 <= dx) { err += dx; y0 += sy; }
+    }
   });
 
   // Rendera som HTML med spans för styling/klick
@@ -281,6 +322,36 @@ function renderQuestPanel(quests) {
   list.innerHTML = active.map(q => `<div class="qp-item">${q.name}${q.description ? ' — ' + q.description : ''}</div>`).join('');
 }
 
+// ── Resejournal: horisontell rem med klickbara etapper ──
+function placeId(name) {
+  return 'place-' + String(name).toLowerCase().replace(/[^a-zåäö0-9]+/gi, '-').replace(/^-+|-+$/g, '');
+}
+function scrollToPlace(name) {
+  const card = document.getElementById(placeId(name));
+  if (!card) { toast('🗺️ Platsen finns inte på kartan ännu'); return; }
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  card.classList.remove('flash');
+  void card.offsetWidth; // starta om animationen
+  card.classList.add('flash');
+  if (typeof SFX !== 'undefined') SFX.click();
+}
+function renderTravelJournal(travelLog) {
+  const strip = document.getElementById('travel-journal');
+  if (!travelLog || !travelLog.length) { strip.style.display = 'none'; return; }
+  strip.style.display = 'block';
+  const entries = travelLog.map((step, i) => {
+    const sep = i > 0 ? '<span class="tj-sep">→</span>' : '';
+    const isCurrent = allLocations.some(l => l.current && l.name === step.to);
+    const flag = isCurrent ? '<span class="tj-flag">⚑</span>' : '';
+    return `${sep}<span class="tj-entry" data-place="${step.to}" title="Hoppa till ${step.to}"><span class="tj-day">Dag ${step.day}</span><span class="tj-dot">·</span>${flag}${step.to}</span>`;
+  }).join('');
+  strip.innerHTML = `<span class="tj-label">🧭 Resejournal</span>${entries}`;
+}
+document.getElementById('travel-journal').addEventListener('click', function(e) {
+  const entry = e.target.closest('.tj-entry');
+  if (entry) scrollToPlace(entry.dataset.place);
+});
+
 function renderPlaces(locations) {
   const grid = document.getElementById('places-grid');
   const empty = document.getElementById('empty-state');
@@ -312,7 +383,7 @@ function renderPlaces(locations) {
     }
 
     return `
-      <div class="place-card ${cardClass}">
+      <div class="place-card ${cardClass}" id="${placeId(loc.name)}">
         <div class="pc-top">
           <div class="pc-icon">${icon}</div>
           <div>
@@ -337,7 +408,10 @@ async function loadLocations() {
       fetch('/api/campaign', { credentials: 'include' }),
     ]);
     if (!locRes.ok) throw new Error('Ingen kampanj');
-    const locations = await locRes.json();
+    const payload = await locRes.json();
+    // API:et kan returnera {locations, travel_log} eller en ren array
+    const locations = Array.isArray(payload) ? payload : (payload.locations || []);
+    const travelLog = Array.isArray(payload) ? [] : (payload.travel_log || []);
     allLocations = locations;
 
     // Hämta campaign_id för seeded PRNG + quests
@@ -367,9 +441,10 @@ async function loadLocations() {
     const current = locations.find(l => l.current);
     document.getElementById('current-name').textContent = current ? current.name : 'Okänd plats';
 
-    renderMap(locations);
+    renderMap(locations, travelLog);
     renderQuestPanel(activeQuests);
     renderPlaces(locations);
+    renderTravelJournal(travelLog);
   } catch (e) {
     document.getElementById('current-name').textContent = 'Ingen aktiv kampanj';
     document.getElementById('ascii-map').style.display = 'none';

@@ -2056,8 +2056,15 @@ async function dmRespond(playerText) {
       const { messages } = await API.getTranscript();
       const lastAssistant = [...(messages || [])].reverse().find(m => m.role === 'assistant');
       if (lastAssistant) {
-        addMessage('dm', null, lastAssistant.content);
-        addMessage('system', null, '⚡ Anslutningen avbröts — svaret hämtades från transkriptet.');
+        // Kontrollera att meddelandet inte redan visas (förhindrar dubletter)
+        const existingDm = [...chat.querySelectorAll('.msg.dm')].pop();
+        const alreadyShown = existingDm && existingDm.querySelector('.bubble')?.textContent.trim() === lastAssistant.content.trim();
+        if (!alreadyShown) {
+          addMessage('dm', null, lastAssistant.content);
+          // Transient systemmeddelande — försvinner efter 6 sekunder
+          const sysEl = addMessage('system', null, '⚡ Anslutningen avbröts — svaret hämtades från transkriptet.');
+          if (sysEl) setTimeout(() => sysEl.remove(), 6000);
+        }
         return;
       }
     } catch (e2) { /* transkript också otillgängligt */ }

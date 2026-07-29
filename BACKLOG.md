@@ -13,6 +13,19 @@ DM-prompten skiljer inte på magiklasser. Lägg till caster-specifika regler:
 - **Spellbook casters** (Wizard): kan byta ur spellbook, men bara förberedda
 - **Warlock-varning:** slots laddas på SHORT rest, inte long rest (vanligaste AI-felet)
 
+### 🔴 Prio 1 — Riktigt valutasystem (inventory-baserat)
+Pengarna ska vara en del av inventory, inte en separat placeholder. D&D 5e-valutor:
+- **Konvertering:** 10 cp = 1 sp · 10 sp = 1 ep · 10 ep = 1 gp · 10 gp = 1 pp
+  (eller förenklat: 100 cp = 10 sp = 1 gp · 10 gp = 1 pp)
+- **Backend:** `[GULD:n]` → lägg till i rätt valör, auto-konvertera överflöde
+  (t.ex. +250 cp → +2 sp +5 cp). `[GULD:-n]` → dra av, vägra om saldo < belopp.
+- **Frontend:** Valvet/character.html visar alla valörer (pp/gp/ep/sp/cp)
+  med ikoner. Guld-räknaren i chatten visar gp men hover visar alla.
+- **Köp-mekanik:** NPC-handlare med prislista. Köp → dra av guld, lägg till föremål.
+- **Vikt:** Mynt väger (50 mynt = 1 lb). Påverkar carry capacity.
+- Just nu: `currency: {pp:0, gp:0, ep:0, sp:0, cp:0}` i state men ingen konvertering,
+  ingen vikt, ingen köp-logik. Bara placeholder.
+
 ### 🔴 Prio 1 — Rikare strids-state
 `truth_block()` har HP/inventory men saknar stridsfält. Lägg till:
 - Initiative-ordning + vars tur det är

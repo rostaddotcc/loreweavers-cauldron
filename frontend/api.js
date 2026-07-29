@@ -216,6 +216,14 @@ const API = (() => {
       return req('/api/facts' + q);
     },
 
+    // ── Maskinrummet (live debug-loggar) ──
+    async getDebugLogs(since = 0, level = null) {
+      if (MOCK) return { logs: [], now: Date.now() / 1000, buffered: 0 };
+      let q = '?since=' + since;
+      if (level) q += '&level=' + encodeURIComponent(level);
+      return req('/api/debug/logs' + q);
+    },
+
     // ── Världsbygge (prompt → strukturerad världdata) ──
     async buildWorld(prompt, modelId = 'qwen3.8-max') {
       if (MOCK) {

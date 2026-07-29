@@ -10,12 +10,43 @@ import json
 import logging
 import os
 import re
+import time
 import uuid
 import zipfile
+from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
 
 logger = logging.getLogger("morkrets")
+
+# ═══════════════════════════════════════
+# 🛠️ MASKINRUMMET — ringbuffer för live-debugloggar
+# ═══════════════════════════════════════
+# Fångar alla loggar från morkrets.* (main, rag, extraction, …) i en
+# ringbuffer som frontend kan polla via /api/debug/logs. Påverkar inte
+# den vanliga stdout-loggen — bara en extra kopia i minnet.
+DEBUG_LOGS: deque = deque(maxlen=600)
+_LOG_ORDER = {"DEBUG": 10, "INFO": 20, "WARNING": 30, "ERROR": 40, "CRITICAL": 50}
+
+
+class _RingBufferHandler(logging.Handler):
+    """Kopierar varje loggpost till ringbuffern (för live-konsolen)."""
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            DEBUG_LOGS.append({
+                "ts": record.created,
+                "time": datetime.fromtimestamp(record.created).strftime("%H:%M:%S"),
+                "level": record.levelname,
+                "name": record.name.replace("morkrets", "mr").lstrip("."),
+                "msg": record.getMessage(),
+            })
+        except Exception:
+            pass  # Loggfångst får aldrig krascha spelet
+
+
+_ring = _RingBufferHandler(level=logging.DEBUG)
+logger.addHandler(_ring)
+logger.setLevel(logging.DEBUG)
 
 import httpx
 from fastapi import Cookie, FastAPI, File, Form, HTTPException, Response, UploadFile
@@ -44,7 +75,7 @@ from atmosphere import (
     postprocess_art,
     should_generate_art,
 )
-from locations import get_locations_with_travel
+from locations import get_locations_with_travel, place_location
 from logbook import build_log_prompt
 from state_manager import CAMPAIGNS_DIR, CampaignStore, CharacterVault
 import rag
@@ -259,7 +290,11 @@ def _parse_mechanical_tags(text: str, state: dict) -> tuple[str, dict, list[dict
         # Lägg till i locations-arrayen (så kartan kan visa den)
         locs = state.setdefault('locations', [])
         if not any(l.get('name', '').lower() == name.lower() for l in locs):
-            locs.append({'name': name, 'description': '', 'terrain': 'okänd', 'x': 50, 'y': 50})
+            placed = place_location(name, state.get('meta', {}).get('campaign_id', ''))
+            locs.append({
+                'name': name, 'description': '', 'terrain': placed['terrain'],
+                'x': placed['x'], 'y': placed['y'],
+            })
         effects.append({'type': 'plats', 'value': name})
 
     # TID — uppdatera tid/väder
@@ -1239,22 +1274,33 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     # så ett misslyckat anrop lämnar inga spår i transkriptet.
     effective_turn = state["meta"].get("turn_count", 0) + 1
     is_awakening = req.message == "__VAKNA_DM__"
+    _t0 = time.time()
+    logger.info(
+        "▶ TUR %d · modell=%s · %s",
+        effective_turn, req.model_id,
+        "VAKNANDE" if is_awakening else f"«{req.message[:40]}»",
+    )
     messages = [{"role": "system", "content": _build_system_prompt(
         state, turn_override=effective_turn, awakening_trigger=is_awakening,
         player_input=req.message,
     )}]
+    logger.debug("Systemprompt byggd (%d tecken)", len(messages[0]["content"]))
 
     # RAG + faktaregister: injicera relevant långtidsminne i systemprompten
     if not is_awakening:
         campaign_id = state["meta"].get("campaign_id", "")
         try:
+            _tm = time.time()
             memory_block = await _retrieve_relevant_memory(
                 username, campaign_id, req.message, state
             )
             if memory_block:
                 messages[0]["content"] += "\n\n" + memory_block
+                logger.info("🧠 Minne injicerat (+%d tkn, %.1fs)", len(memory_block), time.time() - _tm)
+            else:
+                logger.debug("🧠 Inget relevant minne hittades (%.1fs)", time.time() - _tm)
         except Exception as e:
-            logger.debug("RAG/fakta-injektion hoppade över: %s", e)
+            logger.warning("RAG/fakta-injektion hoppade över: %s", e)
 
     # Sammanfattningar injiceras numera i _build_system_prompt (hierarkiskt:
     # 2 scen + 2 kapitel + 1 kampanjbåge) — ingen separat loop behövs här.
@@ -1271,15 +1317,21 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     if is_awakening:
         user_content = "*Du slår upp ögonen i mörkret. Någon har kallat på dig. En ny spelare sitter vid bordet och väntar.*"
     messages.append({"role": "user", "content": user_content})
+    logger.debug("Kontext: %d meddelanden → DM", len(messages))
 
     # Anropa LLM — vid fel: riktigt felmeddelande, ingen placeholder
+    _tllm = time.time()
     try:
         reply = await _call_llm(req.model_id, messages)
+        logger.info("🤖 DM svarade (%d tkn, %.1fs)", len(reply), time.time() - _tllm)
     except HTTPException:
+        logger.error("❌ DM-anrop misslyckades (HTTP-fel)")
         raise
     except (ValueError, RuntimeError) as e:
+        logger.error("❌ DM-anrop misslyckades: %s", e)
         raise HTTPException(502, f"DM:n nås inte just nu: {e}")
     except Exception as e:
+        logger.error("❌ Oväntat LLM-fel: %s", e)
         raise HTTPException(502, f"Oväntat LLM-fel: {e}")
 
     # Spara spelarens meddelande + DM-svar i transkriptet
@@ -1288,6 +1340,10 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     # Parsa NPCs och kastbegäran ur svaret
     reply, new_npcs = _parse_npcs(reply)
     reply, roll_requests = _parse_roll_requests(reply)
+    if new_npcs:
+        logger.info("🎭 %d ny(a) NPC: %s", len(new_npcs), ", ".join(n["name"] for n in new_npcs))
+    if roll_requests:
+        logger.info("🎲 %d kast begärt: %s", len(roll_requests), ", ".join(r["notation"] for r in roll_requests))
 
     # Lägg till nya NPCs FÖRE taggparsning (så NPC_DÖD hittar dem)
     for npc in new_npcs:
@@ -1361,8 +1417,11 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     meta = state.setdefault("meta", {})
     if effects:
         meta["tag_streak"] = 0
+        logger.info("🏷️ %d effekt(er): %s", len(effects), ", ".join(e.get("type", "?") for e in effects))
     else:
         meta["tag_streak"] = meta.get("tag_streak", 0) + 1
+        if meta["tag_streak"] >= 2:
+            logger.warning("⚠️ DM har inte använt taggar på %d turer", meta["tag_streak"])
 
     # Spara effekter för nästa turs systemprompt
     meta["last_effects"] = effects if effects else []
@@ -1489,6 +1548,8 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
             summary_generated = True
         except Exception:
             pass  # Sammanfattning är inte kritisk
+
+    logger.info("◀ TUR %d klar · totalt %.1fs", state["meta"]["turn_count"], time.time() - _t0)
 
     return {
         "reply": reply,
@@ -2299,6 +2360,29 @@ async def world_build(req: WorldBuildRequest, morkrets_token: str | None = Cooki
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "game": "Mörkrets Rike"}
+
+
+@app.get("/api/debug/logs")
+async def debug_logs(
+    since: float = 0.0,
+    level: str | None = None,
+    morkrets_token: str | None = Cookie(None),
+):
+    """🛠️ Maskinrummet — live-loggar för debug-konsolen.
+
+    Query-parametrar:
+      since  – bara loggar nyare än denna timestamp (polling)
+      level  – filtrera: DEBUG | INFO | WARNING | ERROR (inkl. högre)
+    Returnerar {logs: [...], now: <timestamp>} där 'now' skickas tillbaka
+    som 'since' vid nästa poll. Kräver inloggning (ingen admin-gate —
+    loggarna innehåller inga hemligheter, bara spelmekanik)."""
+    _get_current_user(morkrets_token)
+    min_level = _LOG_ORDER.get((level or "DEBUG").upper(), 10)
+    out = [
+        e for e in DEBUG_LOGS
+        if e["ts"] > since and _LOG_ORDER.get(e["level"], 20) >= min_level
+    ]
+    return {"logs": out, "now": time.time(), "buffered": len(DEBUG_LOGS)}
 
 
 @app.get("/api/campaign/locations")

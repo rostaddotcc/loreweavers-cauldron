@@ -2,8 +2,12 @@
 Mörkrets Rike — Platser & Resor
 ================================
 Hanterar besökta platser, sevärdheter, och restider.
+Kartan är helt dynamisk — inga hårdkodade platser. Nya platser placeras
+deterministiskt (seedat från kampanj-ID + platsnamn) så att samma plats
+alltid hamnar på samma koordinat inom en kampanj.
 """
 
+import hashlib
 import math
 
 # Terräng-modifierare (dagar per "enhet" avstånd)
@@ -19,16 +23,24 @@ TERRAIN = {
     'okänd': 1.0,     # Default
 }
 
-# Standardplatser med koordinater (enkel 2D-karta, 0-100 skala)
-# DM:n kan lägga till nya via [PLATS:...] — koordinater sätts automatiskt
-DEFAULT_LOCATIONS = {
-    'Gråvakt': {'x': 50, 'y': 50, 'terrain': 'väg', 'description': 'En liten handelsstad vid korsningen av två vägar.'},
-    'Askans Dal': {'x': 35, 'y': 40, 'terrain': 'skog', 'description': 'En dimmig dal där askan aldrig slutar falla.'},
-    'Den Övergivna Kvarnen': {'x': 30, 'y': 35, 'terrain': 'skog', 'description': 'En ruttnande kvarn med ett grönt ljus i källaren.'},
-    'Sista Glöden': {'x': 52, 'y': 48, 'terrain': 'väg', 'description': 'Värdshuset där alla historier börjar och slutar.'},
-    'Gravfältet': {'x': 25, 'y': 30, 'terrain': 'berg', 'description': 'Ett vidsträckt gravfält norr om dalen.'},
-    'Väst': {'x': 15, 'y': 55, 'terrain': 'slätt', 'description': 'Byn i väster, känd för sitt bryggeri.'},
-}
+# Terräng-typer som kan tilldelas nya platser (viktad lista)
+TERRAIN_POOL = ['skog', 'skog', 'skog', 'slätt', 'slätt', 'väg', 'stig',
+                'berg', 'träsk', 'is', 'hav']
+
+
+def place_location(name: str, campaign_id: str = "") -> dict:
+    """Deterministisk placering av en ny plats.
+
+    Hashar (kampanj-ID + platsnamn) → x,y i [8,92] + terräng.
+    Samma namn i samma kampanj ger ALLTID samma koordinat, oavsett
+    i vilken ordning platser upptäcks. Inga hårdkodade platser.
+    """
+    seed = hashlib.md5(f"{campaign_id}:{name.lower().strip()}".encode()).hexdigest()
+    # Två oberoende koordinater + terräng ur hashen
+    x = 8 + (int(seed[0:8], 16) % 85)
+    y = 8 + (int(seed[8:16], 16) % 85)
+    terrain = TERRAIN_POOL[int(seed[16:24], 16) % len(TERRAIN_POOL)]
+    return {'x': x, 'y': y, 'terrain': terrain}
 
 
 def calculate_travel_days(from_loc: dict, to_loc: dict) -> float:
@@ -64,48 +76,36 @@ def get_locations_with_travel(state: dict) -> list[dict]:
     """
     Returnera alla kända platser med restid från nuvarande plats.
     Används av /api/campaign/locations endpointen.
+    Helt dynamisk — bara platser som kampanjen själv upptäckt.
     """
     world = state.get('world', {})
     current_name = world.get('current_location', '')
     visited = world.get('visited_locations', [])
+    campaign_id = state.get('meta', {}).get('campaign_id', '')
 
-    # Samla alla platser: defaults + kampanjens egna
     all_locations = {}
 
-    # Lägg till defaults som är besökta eller relevanta
-    for name, data in DEFAULT_LOCATIONS.items():
-        all_locations[name] = {
-            'name': name,
-            'description': data.get('description', ''),
-            'terrain': data.get('terrain', 'okänd'),
-            'x': data.get('x', 50),
-            'y': data.get('y', 50),
-            'visited': name in visited or name == current_name,
-            'current': name == current_name,
-            'landmarks': [],
-        }
-
-    # Lägg till kampanjens egna platser
+    # Bara kampanjens egna platser (inga defaults)
     for loc in state.get('locations', []):
         name = loc.get('name', '')
         if not name:
             continue
-        if name not in all_locations:
-            all_locations[name] = {
-                'name': name,
-                'description': loc.get('description', ''),
-                'terrain': loc.get('terrain', 'okänd'),
-                'x': loc.get('x', 50),
-                'y': loc.get('y', 50),
-                'visited': name in visited or name == current_name,
-                'current': name == current_name,
-                'landmarks': loc.get('landmarks', []),
-            }
-        else:
-            # Uppdatera befintlig med kampanjdata
-            all_locations[name]['description'] = loc.get('description', all_locations[name]['description'])
-            all_locations[name]['visited'] = name in visited or name == current_name
-            all_locations[name]['current'] = name == current_name
+        # Platser utan koordinater (t.ex. från world-build) placeras nu
+        if 'x' not in loc or 'y' not in loc:
+            placed = place_location(name, campaign_id)
+            loc['x'], loc['y'] = placed['x'], placed['y']
+            if loc.get('terrain', 'okänd') == 'okänd':
+                loc['terrain'] = placed['terrain']
+        all_locations[name] = {
+            'name': name,
+            'description': loc.get('description', ''),
+            'terrain': loc.get('terrain', 'okänd'),
+            'x': loc.get('x', 50),
+            'y': loc.get('y', 50),
+            'visited': name in visited or name == current_name,
+            'current': name == current_name,
+            'landmarks': loc.get('landmarks', []),
+        }
 
     # Beräkna restider från nuvarande plats
     current_loc = all_locations.get(current_name, {'x': 50, 'y': 50})

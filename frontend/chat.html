@@ -505,6 +505,73 @@
   }
   .oracle-input button:hover { box-shadow: 0 0 12px -3px rgba(139,95,212,0.5); }
 
+  /* ═══════════ 🛠️ MASKINRUMMET — live debug-konsol ═══════════ */
+  .console {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    height: 0; overflow: hidden;
+    background: linear-gradient(180deg, #0a0713, #06040c);
+    border-top: 1px solid rgba(51,204,51,0.35);
+    box-shadow: 0 -8px 30px rgba(0,0,0,0.7);
+    transition: height 0.35s cubic-bezier(.22,1,.36,1);
+    display: flex; flex-direction: column;
+  }
+  .console.open { height: 300px; }
+  .console::after { /* scanlines */
+    content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .05;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(51,204,51,.5) 3px);
+  }
+  .console-head {
+    display: flex; align-items: center; gap: 0.7rem; padding: 0.5rem 1rem;
+    border-bottom: 1px solid rgba(61,47,82,0.5); flex-shrink: 0;
+    background: rgba(22,16,32,0.6);
+  }
+  .console-title {
+    font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.68rem;
+    letter-spacing: 0.18em; text-transform: uppercase; color: var(--term-green);
+    text-shadow: 0 0 10px rgba(51,204,51,0.5); display: flex; align-items: center; gap: 0.5rem;
+  }
+  .console-title .pulse {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--term-green);
+    box-shadow: 0 0 8px var(--term-green); animation: cpulse 1.6s ease-in-out infinite;
+  }
+  @keyframes cpulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .console-filters { display: flex; gap: 0.3rem; margin-left: 0.5rem; }
+  .cchip {
+    font-family: 'Cinzel', serif; font-size: 0.52rem; letter-spacing: 0.1em; text-transform: uppercase;
+    background: transparent; border: 1px solid var(--edge); color: var(--bone-dim);
+    padding: 0.25rem 0.55rem; cursor: pointer; border-radius: 2px; transition: all 0.2s;
+  }
+  .cchip:hover { color: var(--bone-bright); border-color: var(--bone-dim); }
+  .cchip.on { color: #0a0713; background: var(--term-green); border-color: var(--term-green); box-shadow: 0 0 10px -2px rgba(51,204,51,0.6); }
+  .console-count {
+    margin-left: auto; font-family: 'VT323', monospace; font-size: 0.85rem; color: var(--bone-dim);
+  }
+  .console-btn {
+    font-family: 'Cinzel', serif; font-size: 0.55rem; letter-spacing: 0.1em; text-transform: uppercase;
+    background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
+    padding: 0.3rem 0.7rem; cursor: pointer; border-radius: 2px; transition: all 0.2s;
+  }
+  .console-btn:hover { color: var(--gold-bright); border-color: var(--gold); }
+  .console-btn.danger:hover { color: var(--blood-bright); border-color: var(--blood-bright); }
+  .console-log {
+    flex: 1; overflow-y: auto; padding: 0.6rem 1rem; font-family: 'VT323', monospace;
+    font-size: 1.02rem; line-height: 1.45;
+  }
+  .console-log::-webkit-scrollbar { width: 8px; }
+  .console-log::-webkit-scrollbar-thumb { background: var(--edge); border-radius: 4px; }
+  .clog { display: flex; gap: 0.8rem; padding: 0.1rem 0; animation: clog-in 0.25s ease; }
+  @keyframes clog-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  .clog .ct { color: var(--bone-dim); flex-shrink: 0; opacity: 0.7; }
+  .clog .cl { flex-shrink: 0; width: 52px; font-weight: 700; }
+  .clog .cn { color: var(--teal); flex-shrink: 0; opacity: 0.8; }
+  .clog .cm { flex: 1; word-break: break-word; }
+  .clog.DEBUG .cl { color: var(--bone-dim); } .clog.DEBUG .cm { color: var(--bone-dim); }
+  .clog.INFO .cl { color: var(--term-green); } .clog.INFO .cm { color: var(--bone); }
+  .clog.WARNING .cl { color: var(--term-amber); } .clog.WARNING .cm { color: var(--term-amber); }
+  .clog.ERROR .cl { color: var(--blood-bright); } .clog.ERROR .cm { color: var(--blood-bright); }
+  .clog.CRITICAL .cl { color: #ff5566; text-shadow: 0 0 8px rgba(255,85,102,0.6); } .clog.CRITICAL .cm { color: #ff5566; }
+  .console-empty { color: var(--bone-dim); font-style: italic; padding: 1rem 0; text-align: center; }
+
   /* ── Toast ── */
   .toast {
     position: fixed; bottom: 1.5rem; left: 50%; transform: translate(-50%, 80px);
@@ -637,6 +704,7 @@
   <a class="top-btn" href="valvet.html">🏰 Valvet</a>
   <span class="top-divider"></span>
   <button class="top-btn" onclick="toggleOracle()">📜 Regel-orakel</button>
+  <button class="top-btn" onclick="toggleConsole()" title="Maskinrummet — live debug-loggar">🛠️ Maskinrum</button>
   <a class="top-btn" href="help.html">❓ Hur spelar man?</a>
   <span class="top-divider"></span>
   <button class="top-btn" onclick="exportCampaign()">📦 Exportera</button>
@@ -723,6 +791,26 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- 🛠️ MASKINRUMMET — live debug-konsol -->
+<div class="console" id="console">
+  <div class="console-head">
+    <span class="console-title"><span class="pulse"></span>🛠️ Maskinrummet</span>
+    <div class="console-filters" id="console-filters">
+      <button class="cchip on" data-lv="" onclick="setConsoleLevel(this,'')">Alla</button>
+      <button class="cchip" data-lv="DEBUG" onclick="setConsoleLevel(this,'DEBUG')">Debug</button>
+      <button class="cchip" data-lv="INFO" onclick="setConsoleLevel(this,'INFO')">Info</button>
+      <button class="cchip" data-lv="WARNING" onclick="setConsoleLevel(this,'WARNING')">Warn+</button>
+    </div>
+    <span class="console-count" id="console-count">0 rader</span>
+    <button class="console-btn" id="console-autoscroll" onclick="toggleAutoScroll()">⬇ Auto</button>
+    <button class="console-btn danger" onclick="clearConsole()">Rensa</button>
+    <button class="console-btn" onclick="toggleConsole()">✕ Stäng</button>
+  </div>
+  <div class="console-log" id="console-log">
+    <div class="console-empty">Öppnar maskinrummet… loggar strömmar in live.</div>
+  </div>
+</div>
 
 <!-- DOS-help-overlay för /help -->
 <div class="help-overlay" id="help-overlay" onclick="if(event.target===this)this.classList.remove('show')">
@@ -1720,6 +1808,95 @@ async function askOracle() {
     log.appendChild(aEl);
   }
   log.scrollTop = log.scrollHeight;
+}
+
+// ═══════════════════════════════════════
+// 🛠️ MASKINRUMMET — live debug-konsol
+// ═══════════════════════════════════════
+let consoleOpen = false;
+let consoleSince = 0;          // polla bara nyare än denna timestamp
+let consoleLevel = '';         // '' = alla, annars DEBUG/INFO/WARNING
+let consoleAutoScroll = true;
+let consoleTimer = null;
+let consoleLines = 0;
+const CONSOLE_MAX = 400;       // max rader i DOM (prestanda)
+
+function toggleConsole() {
+  consoleOpen = !consoleOpen;
+  document.getElementById('console').classList.toggle('open', consoleOpen);
+  if (consoleOpen) startConsolePolling();
+  else stopConsolePolling();
+}
+
+function setConsoleLevel(btn, lv) {
+  consoleLevel = lv;
+  document.querySelectorAll('#console-filters .cchip').forEach(c => c.classList.toggle('on', c === btn));
+  // Nivåbyte → hämta hela buffern på nytt för korrekt filtrering
+  consoleSince = 0;
+  document.getElementById('console-log').innerHTML =
+    '<div class="console-empty">Hämtar loggar…</div>';
+  consoleLines = 0;
+  pollConsole();
+}
+
+function toggleAutoScroll() {
+  consoleAutoScroll = !consoleAutoScroll;
+  document.getElementById('console-autoscroll').classList.toggle('on', consoleAutoScroll);
+  document.getElementById('console-autoscroll').textContent = consoleAutoScroll ? '⬇ Auto' : '⏸ Manuell';
+}
+
+function clearConsole() {
+  document.getElementById('console-log').innerHTML =
+    '<div class="console-empty">Konsolen rensad.</div>';
+  consoleLines = 0;
+  updateConsoleCount();
+}
+
+function updateConsoleCount() {
+  document.getElementById('console-count').textContent = consoleLines + ' rader';
+}
+
+function appendConsoleLogs(logs) {
+  const box = document.getElementById('console-log');
+  const empty = box.querySelector('.console-empty');
+  if (empty) empty.remove();
+
+  const frag = document.createDocumentFragment();
+  for (const e of logs) {
+    const row = document.createElement('div');
+    row.className = 'clog ' + e.level;
+    const t = document.createElement('span'); t.className = 'ct'; t.textContent = e.time;
+    const l = document.createElement('span'); l.className = 'cl'; l.textContent = e.level.slice(0, 4);
+    const n = document.createElement('span'); n.className = 'cn'; n.textContent = '[' + e.name + ']';
+    const m = document.createElement('span'); m.className = 'cm'; m.textContent = e.msg;
+    row.append(t, l, n, m);
+    frag.appendChild(row);
+    consoleLines++;
+  }
+  box.appendChild(frag);
+
+  // Håll DOM:n liten — kapa äldsta raderna om vi överskrider taket
+  while (box.children.length > CONSOLE_MAX) box.removeChild(box.firstChild);
+
+  updateConsoleCount();
+  if (consoleAutoScroll) box.scrollTop = box.scrollHeight;
+}
+
+async function pollConsole() {
+  try {
+    const { logs, now } = await API.getDebugLogs(consoleSince, consoleLevel || null);
+    consoleSince = now;
+    if (logs && logs.length) appendConsoleLogs(logs);
+  } catch (e) { /* tyst — konsolen ska aldrig störa spelet */ }
+}
+
+function startConsolePolling() {
+  stopConsolePolling();
+  pollConsole(); // direkt första hämtning
+  consoleTimer = setInterval(pollConsole, 1500);
+}
+function stopConsolePolling() {
+  if (consoleTimer) { clearInterval(consoleTimer); consoleTimer = null; }
 }
 
 // ═══════════════════════════════════════

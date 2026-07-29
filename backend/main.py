@@ -91,7 +91,7 @@ from logbook import build_log_prompt
 from state_manager import CAMPAIGNS_DIR, CampaignStore, CharacterVault
 import rag
 from extraction import FactRegister, extract_facts, format_facts_block
-from guardian import guardian_check_roll, guardian_extract_mechanics, apply_mechanics
+from guardian import guardian_check_roll, guardian_extract_mechanics, apply_mechanics, format_guardian_summary
 
 app = FastAPI(title="Mörkrets Rike", version="1.0.0")
 
@@ -1588,30 +1588,7 @@ async def _post_turn_tasks(
     except Exception as e:
         logger.debug("Faktextraktion hoppade över: %s", e)
 
-    # 1b. Guardian POST-DM: mekanisk extraktion (skada, XP, quests, NPCs, tid, vila…)
-    try:
-        st = store.get(username)
-        if st:
-            mech = await guardian_extract_mechanics(
-                reply, player_msg, st, turn_count, _extraction_llm,
-            )
-            # Applicera ändringar (dedup mot taggar som redan applicerats)
-            guardian_effects = apply_mechanics(st, mech)
-            if guardian_effects:
-                # Lägg till Guardian-effekter i last_effects (för nästa turs prompt)
-                meta = st.setdefault("meta", {})
-                existing = meta.get("last_effects", [])
-                # Undvik dubletter: samma type+value
-                existing_keys = {(e.get("type"), str(e.get("value"))) for e in existing}
-                for ge in guardian_effects:
-                    key = (ge.get("type"), str(ge.get("value")))
-                    if key not in existing_keys:
-                        existing.append(ge)
-                meta["last_effects"] = existing
-                store.save(st)
-                logger.info("🛡️ Guardian post-DM: %d mekaniska effekter applicerade", len(guardian_effects))
-    except Exception as e:
-        logger.debug("Guardian post-DM hoppade över: %s", e)
+    # 1b. Guardian POST-DM: flyttad till /api/chat (inline) — syns nu i chatten.
 
     # 2. Indexera senaste transkriptet i Qdrant (var 5:e tur)
     if turn_count % 5 == 0 and turn_count > 0:
@@ -1776,7 +1753,11 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     for entry in transcript:
         if entry.get("content") == "__VAKNA_DM__":
             continue
-        messages.append({"role": "user" if entry["role"] == "user" else "assistant", "content": entry["content"]})
+        if entry["role"] == "guardian":
+            # Guardian-rapport → DM ser den som systemkontext (mekaniska ändringar)
+            messages.append({"role": "user", "content": f"[GUARDIAN: Mekaniska ändringar denna tur]\n{entry['content']}"})
+        else:
+            messages.append({"role": "user" if entry["role"] == "user" else "assistant", "content": entry["content"]})
     # Vaknandet: LLM:n ser en narrativ kallelse istället för den råa triggern
     user_content = req.message
     if is_awakening:
@@ -2014,6 +1995,36 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
 
     # Spara DM-svar (ren text — inga taggar eller intern struktur)
     state = store.append_message(state, "assistant", reply)
+
+    # ── Guardian POST-DM: mekanisk extraktion (INLINE — syns i chatten) ──
+    guardian_summary = ""
+    try:
+        _tg = time.time()
+        mech = await guardian_extract_mechanics(
+            reply, req.message, state, effective_turn,
+            lambda msgs: _call_llm(EXTRACTION_MODEL, msgs, temperature=0.2, max_tokens=800),
+        )
+        guardian_effects = apply_mechanics(state, mech)
+        if guardian_effects:
+            # Lägg till i last_effects (för nästa turs prompt)
+            meta = state.setdefault("meta", {})
+            existing = meta.get("last_effects", [])
+            existing_keys = {(e.get("type"), str(e.get("value"))) for e in existing}
+            for ge in guardian_effects:
+                key = (ge.get("type"), str(ge.get("value")))
+                if key not in existing_keys:
+                    existing.append(ge)
+            meta["last_effects"] = existing
+
+            # Formatera läsbar rapport
+            guardian_summary = format_guardian_summary(guardian_effects, state)
+            if guardian_summary:
+                # Spara i transkriptet (role=guardian → syns i chatten + DM-kontext)
+                state = store.append_message(state, "guardian", guardian_summary)
+                logger.info("🛡️ Guardian inline (%.1fs): %d effekter", time.time() - _tg, len(guardian_effects))
+    except Exception as e:
+        logger.warning("🛡️ Guardian post-DM hoppade över: %s", e)
+
     store.save(state)
 
     # ── Fas 3: Faktextraktion + RAG + sammanfattning → BAKGRUND ──
@@ -2049,6 +2060,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         "art_css_class": EVENT_CSS_CLASS.get(event_art_type) if art_type == "event" else None,
         "art_label": EVENT_LABEL.get(event_art_type) if art_type == "event" else None,
         "effects": effects,
+        "guardian_summary": guardian_summary,
     }
 
 

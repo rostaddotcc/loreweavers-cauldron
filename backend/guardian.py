@@ -719,3 +719,63 @@ def _sanitize_mechanics(mech: dict) -> dict:
         mech["logbook"] = ""
 
     return mech
+
+
+# ═══════════════════════════════════════
+# 4. FORMATERING — läsbar Guardian-rapport
+# ═══════════════════════════════════════
+
+def format_guardian_summary(effects: list[dict], state: dict) -> str:
+    """
+    Formatera Guardian-effekter som en läsbar rapport för chatten.
+    Returnerar tom sträng om inga effekter.
+    """
+    if not effects:
+        return ""
+
+    lines: list[str] = []
+    ch = state.get("character", {})
+    hp = ch.get("hp", {})
+
+    for e in effects:
+        t = e.get("type", "")
+        v = e.get("value", "")
+
+        if t == "skada":
+            lines.append(f"💔 **{v} skada** → HP {hp.get('current', '?')}/{hp.get('max', '?')}")
+        elif t == "hela":
+            lines.append(f"💚 **Läkning** → HP {hp.get('current', '?')}/{hp.get('max', '?')}")
+        elif t == "xp":
+            xp = ch.get("xp", {})
+            lines.append(f"⭐ **+{v} XP** ({xp.get('current', 0)}/{xp.get('next_level', '?')})")
+        elif t == "level_up":
+            lines.append(f"🎉 **NIVÅ UPP → {v}!**")
+        elif t == "föremål":
+            lines.append(f"📦 **Nytt föremål:** {v}")
+        elif t == "föremål_bort":
+            lines.append(f"🗑️ **Föremål bort:** {v}")
+        elif t == "guld":
+            denom = e.get("denom", "gp")
+            sign = "+" if int(v) >= 0 else ""
+            lines.append(f"🪙 **{sign}{v} {denom}**")
+        elif t == "quest":
+            lines.append(f"📜 **Nytt uppdrag:** {v}")
+        elif t == "quest_slutförd":
+            lines.append(f"✅ **Uppdrag slutfört:** {v}")
+        elif t == "quest_misslyckad":
+            lines.append(f"❌ **Uppdrag misslyckat:** {v}")
+        elif t == "npc_död":
+            lines.append(f"💀 **{v} har fallit.**")
+        elif t == "npc_relation":
+            lines.append(f"🤝 **{v}**")
+        elif t == "plats":
+            lines.append(f"🗺️ **Ny plats:** {v}")
+        elif t == "tid":
+            lines.append(f"🕐 **Tid:** {v}")
+        elif t == "ny_dag":
+            lines.append(f"🌅 **{v}**")
+
+    if not lines:
+        return ""
+
+    return "🛡️ **Guardian**\n" + "\n".join(lines)

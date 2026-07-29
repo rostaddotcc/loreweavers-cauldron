@@ -373,6 +373,13 @@
 
   /* System / dice */
   .msg.system { text-align: center; max-width: 520px; margin-left: auto; margin-right: auto; }
+  .msg.guardian { text-align: center; max-width: 520px; margin-left: auto; margin-right: auto; }
+  .msg.guardian .guardian-box {
+    font-size: 0.82rem; color: #a8b2c0; border: 1px solid rgba(139,95,212,.4);
+    background: rgba(139,95,212,.08); padding: 0.6rem 1rem; border-radius: 4px;
+    line-height: 1.5; text-align: left;
+  }
+  .msg.guardian .guardian-box strong { color: #c4a6f0; }
   .msg.system .box {
     display: inline-block; font-size: 0.88rem; color: var(--bone-dim);
     border: 1px dashed var(--edge); padding: 0.55rem 1.3rem; border-radius: 2px;
@@ -1281,6 +1288,7 @@ function addMessage(type, npcKey, text) {
   // Ljud (spelas ej vid batch-rendering via buildMessage)
   if (type === 'dm' || type === 'npc') SFX.receive();
   else if (type === 'player') SFX.send();
+  else if (type === 'guardian') SFX.click();
   else if (type === 'system') {
     if (text.includes('KRITISKT')) SFX.crit();
     else if (text.includes('PATETISKT')) SFX.fail();
@@ -1315,6 +1323,8 @@ function buildMessage(type, npcKey, text) {
     el.innerHTML = `<div class="bubble"><div class="who">${CHAR_NAME}</div><div class="text">${text}</div></div>${avatarHtml('player', '🧙‍♀️')}`;
   } else if (type === 'system') {
     el.innerHTML = `<div class="box">${text}</div>`;
+  } else if (type === 'guardian') {
+    el.innerHTML = `<div class="box guardian-box">${mdToHtml(escapeHtml(text))}</div>`;
   }
   return el;
 }
@@ -1652,6 +1662,7 @@ async function answerRollRequest(id, notation, label) {
     const res = await API.chat(resultMsg, currentModel);
     hideThoughts();
     if (res.reply) addMessage('dm', null, res.reply);
+    if (res.guardian_summary) addMessage('guardian', null, res.guardian_summary);
     if (res.roll_requests && res.roll_requests.length) {
       res.roll_requests.forEach(r => addRollRequest(r.notation, r.label));
     }
@@ -1693,7 +1704,9 @@ async function loadTranscript() {
       visible.forEach(m => {
         const el = (m.role === 'user')
           ? buildMessage('player', null, escapeHtml(m.content))
-          : buildMessage('dm', null, m.content);
+          : (m.role === 'guardian')
+            ? buildMessage('guardian', null, m.content)
+            : buildMessage('dm', null, m.content);
         if (el) frag.appendChild(el);
       });
       chat.appendChild(frag);
@@ -2070,6 +2083,11 @@ async function dmRespond(playerText) {
     // Mekaniska effekter (skada, XP, loot, quests…)
     if (res.effects && res.effects.length) {
       renderEffects(res.effects);
+    }
+
+    // Guardian-rapport (mekaniska ändringar synliga i chatten)
+    if (res.guardian_summary) {
+      addMessage('guardian', null, res.guardian_summary);
     }
 
     // ASCII-art från atmosfär-subagenten

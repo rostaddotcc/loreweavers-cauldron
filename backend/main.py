@@ -1275,6 +1275,28 @@ def _build_system_prompt(
             "Varje attack, smygning, klättring eller hopp KRÄVER ett kast med DC och konsekvenser."
         )
 
+    # Turns-since-last-roll: eskalerande påminnelse när det gått för länge
+    # sedan senaste tärningskastet (generell — oberoende av action-nyckelord).
+    _meta_sr = state.get("meta", {})
+    _cur_turn = turn_override if turn_override is not None else _meta_sr.get("turn_count", 0)
+    last_roll_turn = _meta_sr.get("last_roll_turn", _cur_turn)
+    turns_since_roll = max(0, _cur_turn - last_roll_turn)
+    if turns_since_roll >= 5:
+        parts.append(
+            f"\n## 🎲 SYSTEM: {turns_since_roll} TURER UTAN TÄRNINGSKAST\n"
+            "Det har gått alldeles för länge sedan senaste kastet — spelet riskerar att stanna. "
+            "Skapa NU en osäker situation som KRÄVER ett kast: ett hot som dyker upp, en riskfylld "
+            "genväg, en NPC som kräver ett svårt val, ett ljud i mörkret. "
+            "Använd ALLTID [KAST: 1d20+MOD | ETIKETT (DC X)] — ALDRIG prosa som 'rulla tärningen'."
+        )
+    elif turns_since_roll >= 3:
+        parts.append(
+            f"\n## 🎲 PÅMINNELSE: {turns_since_roll} turer sedan senaste tärningskastet\n"
+            "Om spelaren gör något med osäker utgång, begär ett kast NU. "
+            "Skapa gärna aktivt en situation som kräver ett kast. "
+            "Kom ihåg: [KAST:]-taggen är enda sättet att spawna tärningen — aldrig prosa-kast."
+        )
+
     # ── VAKNANDEPROTOKOLLET ──
     # Aktiveras av awakening-flaggan (nya kampanjer) eller av triggern.
     # turn_override = turn_count + det meddelande som ännu inte sparats.
@@ -1576,6 +1598,12 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         meta["missing_roll_streak"] = meta.get("missing_roll_streak", 0) + 1
     elif dm_requested_roll:
         meta["missing_roll_streak"] = 0
+
+    # Turns-since-last-roll: spåra när DM senast begärde ett kast så att
+    # systemprompten kan påminna DM proaktivt när det gått för länge sedan.
+    current_turn = meta.get("turn_count", 0)
+    if dm_requested_roll:
+        meta["last_roll_turn"] = current_turn
 
     # Atmosfär-subagent: generera ASCII-art (event har prioritet, sedan miljö)
     ascii_art = None

@@ -157,7 +157,7 @@ def list_models_for_frontend() -> list[dict]:
 # ═══════════════════════════════════════
 # Versionera prompten — varje ändring bumpar versionen. Används för att
 # forcera cache-miss och spåra vilken prompt som gav vilket beteende.
-DM_PROMPT_VERSION = "v16"
+DM_PROMPT_VERSION = "v17"
 
 DM_CORE_PROMPT = """Du är Dungeon Master i ett D&D 5e-äventyr på svenska. Du är en kreativ, fri berättare — du väljer själv tema, ton, miljö och stämning utifrån vad spelaren vill ha och vad berättelsen kräver. Det kan vara mörkt och hotfullt, ljust och äventyrligt, mystiskt, humoristiskt, episkt — du bestämmer. Berättelsen är INTE förskriven: den formas av spelarens val, i stunden.
 
@@ -192,7 +192,10 @@ Dessa taggar är osynliga för spelaren — systemet plockar bort dem och uppdat
 - [SKADA:antal] — spelaren tar skada (minskar HP)
 - [HELA:antal] — spelaren helas (ökar HP)
 - [XP:antal] — ge erfarenhetspoäng
-- [GULD:antal] — ge guld (positivt) eller spendera (negativt)
+- [GULD:antal] — ge/spendera guld (gp). Positivt = hitta/få, negativt = köpa/betala. Systemet konverterar automatiskt till rätt valörer.
+- [SILVER:antal] — ge/spendera silver (sp). 10 sp = 1 gp.
+- [KOPPAR:antal] — ge/spendera koppar (cp). 10 cp = 1 sp.
+- [PLATINA:antal] — ge/spendera platina (pp). 1 pp = 10 gp.
 - [FÖREMÅL:namn|typ|sällsynthet] — lägg till föremål i inventariet
 - [QUEST:namn|beskrivning|belöning] — skapa ett nytt uppdrag
 - [QUEST_SLUTFÖRD:namn] — markera uppdrag som slutfört
@@ -223,6 +226,15 @@ RÄTT: "Köpmannen ger dig utrustningen. [FÖREMÅL:Rep 15m|Verktyg|normal] [FÖ
 
 FEL: "En gammal man dyker upp och erbjuder sin hjälp."
 RÄTT: "En gammal man dyker upp. [NPC:Aldric|Vandrare|allierad] 'Jag kan visa dig vägen,' säger han."
+
+FEL: "Du köper ett rep för 1 guld."
+RÄTT: "Du köper ett rep. [GULD:-1] [FÖREMÅL:Rep 15m|Verktyg|normal]"
+
+FEL: "Köpmannen tar 5 silver för facklan."
+RÄTT: "Köpmannen nickar. [SILVER:-5] [FÖREMÅL:Fackla|Verktyg|normal]"
+
+FEL: "Du hittar en påse med 200 kopparmynt."
+RÄTT: "I påsen klirrar mynt. [KOPPAR:200]"
 
 ALDRIG narrera skada, XP, guld, föremål eller nya NPCs utan att använda motsvarande tagg.
 När en NPC GER, RÄCKER, LÅNAR eller ÖVERLÅTER något till spelaren → ALLTID [FÖREMÅL:].

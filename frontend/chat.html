@@ -419,6 +419,7 @@
   .msg.effect.e-skada .box { color: var(--blood-bright); border-color: rgba(212,58,77,.55); background: rgba(163,36,51,.1); text-shadow: 0 0 12px rgba(212,58,77,.4); }
   .msg.effect.e-hela .box { color: #8fd48a; border-color: rgba(122,163,94,.55); background: rgba(122,163,94,.08); text-shadow: 0 0 12px rgba(122,163,94,.4); }
   .msg.effect.e-xp .box, .msg.effect.e-guld .box { color: var(--gold-bright); border-color: rgba(201,162,39,.55); background: rgba(201,162,39,.08); text-shadow: 0 0 12px rgba(232,198,90,.4); }
+  .msg.effect.e-guld_fail .box { color: var(--blood-bright); border-color: rgba(212,58,77,.55); background: rgba(163,36,51,.1); text-shadow: 0 0 12px rgba(212,58,77,.4); }
   .msg.effect.e-foremal .box { color: #cbb3f2; border-color: rgba(139,95,212,.55); background: rgba(139,95,212,.08); text-shadow: 0 0 12px rgba(139,95,212,.4); }
   .msg.effect.e-quest .box { color: var(--ember); border-color: rgba(212,105,30,.55); background: rgba(212,105,30,.08); text-shadow: 0 0 12px rgba(212,105,30,.4); }
   .msg.effect.e-quest_ok .box { color: #8fd48a; border-color: rgba(122,163,94,.55); background: rgba(122,163,94,.08); text-shadow: 0 0 12px rgba(122,163,94,.4); }
@@ -986,7 +987,7 @@
       </div>
       <div class="pc-xp" id="pc-xp-bar"><i id="pc-xp-fill" style="width:0%"></i></div>
       <div class="pc-xp-label" id="pc-xp-label">0 / 300 XP</div>
-      <div class="pc-gold" id="pc-gold" title="Ditt guld">🪙 <span id="pc-gold-val">0</span></div>
+      <div class="pc-gold" id="pc-gold" title="Din plånbok">🪙 <span id="pc-gold-val">0</span> <span id="pc-gold-detail" style="font-size:0.65rem;color:var(--bone-dim);font-weight:400"></span></div>
     </div>
 
     <div>
@@ -1128,7 +1129,7 @@ async function loadCampaign() {
           document.getElementById('pc-hp-fill').style.width = Math.round(100 * (hp.current || 0) / hp.max) + '%';
         }
         updateXpBar(ch.xp);
-        updateGold(campaign._raw?.currency?.gp ?? 0);
+        updateCurrency(campaign._raw?.currency ?? {});
       }
       // Uppdatera plats + input-placeholder
       const world = campaign.world || {};
@@ -1368,13 +1369,32 @@ function updateXpBar(xp) {
   label.innerHTML = `<b>${cur}</b> / ${next} XP`;
 }
 
-// ── Guld-räknare med count-up ──
+// ── Valuta-räknare med count-up ──
 let _goldShown = 0;
-function updateGold(gp) {
+function updateCurrency(currency) {
   const el = document.getElementById('pc-gold-val');
+  const detail = document.getElementById('pc-gold-detail');
   const wrap = document.getElementById('pc-gold');
   if (!el) return;
-  const target = gp || 0;
+  const cur = currency || {};
+  const gp = cur.gp || 0;
+  // Visa gp som primär siffra
+  const target = gp;
+  // Detalj: övriga valörer
+  const parts = [];
+  if (cur.pp) parts.push(cur.pp + ' pp');
+  if (cur.sp) parts.push(cur.sp + ' sp');
+  if (cur.cp) parts.push(cur.cp + ' cp');
+  if (detail) detail.textContent = parts.length ? '(' + parts.join(', ') + ')' : '';
+  // Tooltip med allt
+  if (wrap) {
+    const all = [];
+    if (cur.pp) all.push(cur.pp + ' platina');
+    if (cur.gp) all.push(cur.gp + ' guld');
+    if (cur.sp) all.push(cur.sp + ' silver');
+    if (cur.cp) all.push(cur.cp + ' koppar');
+    wrap.title = all.length ? 'Plånbok: ' + all.join(', ') : 'Plånbok: tom';
+  }
   if (target === _goldShown) return;
   // Animera från visat värde till nytt (count-up / count-down)
   const from = _goldShown, diff = target - from;
@@ -1395,6 +1415,8 @@ function updateGold(gp) {
   }
   _goldShown = target;
 }
+// Bakåtkompatibilitet
+function updateGold(gp) { updateCurrency({ gp: gp }); }
 
 // ═══════════════════════════════════════
 // ✨ LIVE-EFFEKTER — highlighta det som händer i världen
@@ -2060,8 +2082,18 @@ function renderEffects(effects, state) {
         html = `<span style="color:var(--gold-bright)">⭐ +<b>${fx.value}</b> XP!</span>`;
         sfx = 'levelup'; break;
       case 'guld':
-        html = `<span style="color:var(--gold-bright)">🪙 +<b>${fx.value}</b> guld!</span>`;
-        sfx = 'coin'; break;
+        const denomLabel = {gp:'guld',sp:'silver',cp:'koppar',pp:'platina'}[fx.denom] || 'guld';
+        if (fx.value >= 0) {
+          html = `<span style="color:var(--gold-bright)">🪙 +<b>${fx.value}</b> ${denomLabel}!</span>`;
+          sfx = 'coin';
+        } else {
+          html = `<span style="color:var(--gold-bright)">🪙 <b>${fx.value}</b> ${denomLabel}!</span>`;
+          sfx = 'damage';
+        }
+        break;
+      case 'guld_fail':
+        html = `<span style="color:var(--blood-bright)">💸 ${fx.msg || 'Otillräckligt saldo!'}</span>`;
+        sfx = 'fail'; break;
       case 'föremål':
         html = `<span style="color:var(--arcane)">📦 Nytt föremål: <b>${fx.value}</b></span>`;
         sfx = 'click'; break;
@@ -2111,7 +2143,7 @@ function renderEffects(effects, state) {
     refreshQuests();
   }
   // Guld: hämta nytt saldo så räknaren kan animera till rätt värde
-  if (effects.some(fx => fx.type === 'guld')) {
+  if (effects.some(fx => fx.type === 'guld' || fx.type === 'guld_fail')) {
     refreshCurrency();
   }
   // HP/XP/plats: uppdatera sidebar-värden efter mekaniska effekter
@@ -2148,7 +2180,7 @@ async function refreshCharacter() {
 async function refreshCurrency() {
   try {
     const { campaign } = await API.getCampaign();
-    if (campaign) updateGold(campaign._raw?.currency?.gp ?? 0);
+    if (campaign) updateCurrency(campaign._raw?.currency ?? {});
   } catch (e) { /* tyst */ }
 }
 

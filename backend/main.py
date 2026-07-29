@@ -190,6 +190,9 @@ _MECH_PATTERNS = {
     'HELA':            re.compile(r'\[HELA:(\d+)\]'),
     'XP':              re.compile(r'\[XP:(\d+)\]'),
     'GULD':            re.compile(r'\[GULD:(-?\d+)\]'),
+    'SILVER':          re.compile(r'\[SILVER:(-?\d+)\]'),
+    'KOPPAR':          re.compile(r'\[KOPPAR:(-?\d+)\]'),
+    'PLATINA':         re.compile(r'\[PLATINA:(-?\d+)\]'),
     'FÖREMÅL':         re.compile(r'\[FÖREMÅL:([^|\]]+)(?:\|([^|\]]+))?(?:\|([^\]]+))?\]'),
     'QUEST':           re.compile(r'\[QUEST:([^|\]]+)(?:\|([^|\]]+))?(?:\|([^\]]+))?\]'),
     'QUEST_SLUTFÖRD':  re.compile(r'\[QUEST_SLUTFÖRD:([^\]]+)\]'),
@@ -202,6 +205,77 @@ _MECH_PATTERNS = {
     'NPC_RELATION':    re.compile(r'\[NPC_RELATION:([^|\]]+)\|([^\]]+)\]'),
     'NY_DAG':          re.compile(r'\[NY_DAG:([^\]]+)\]'),
 }
+
+# ── D&D 5e Valutasystem ──
+# Konvertering: 1 pp = 10 gp = 100 sp = 1000 cp (ep hoppas över för enkelhet)
+# Vikt: 50 mynt = 1 lb oavsett valör
+COIN_TO_CP = {'pp': 1000, 'gp': 100, 'sp': 10, 'cp': 1}
+COIN_NAMES = {'pp': 'platina', 'gp': 'guld', 'sp': 'silver', 'cp': 'koppar'}
+
+
+def normalize_currency(currency: dict) -> dict:
+    """Konvertera överflöde uppåt: cp → sp → gp → pp.
+    Exempel: {cp: 25, sp: 0, gp: 0, pp: 0} → {cp: 5, sp: 2, gp: 0, pp: 0}
+    """
+    total_cp = sum(currency.get(d, 0) * COIN_TO_CP[d] for d in COIN_TO_CP)
+    total_cp = max(0, total_cp)
+    result = {}
+    for denom in ('pp', 'gp', 'sp', 'cp'):
+        value = COIN_TO_CP[denom]
+        result[denom] = total_cp // value
+        total_cp %= value
+    return result
+
+
+def currency_to_cp(currency: dict) -> int:
+    """Totalt värde i kopparmynt."""
+    return sum(currency.get(d, 0) * COIN_TO_CP[d] for d in COIN_TO_CP)
+
+
+def currency_weight(currency: dict) -> float:
+    """Vikt i lb — 50 mynt = 1 lb oavsett valör."""
+    total_coins = sum(currency.get(d, 0) for d in COIN_TO_CP)
+    return round(total_coins / 50, 2)
+
+
+def currency_display(currency: dict) -> str:
+    """Mänskligt läsbar sträng: '2 pp, 15 gp, 3 sp, 7 cp' (skippar nollor)."""
+    parts = []
+    for d in ('pp', 'gp', 'sp', 'cp'):
+        v = currency.get(d, 0)
+        if v > 0:
+            parts.append(f"{v} {d}")
+    return ', '.join(parts) if parts else '0 gp'
+
+
+def apply_currency(state: dict, denom: str, amount: int) -> tuple[bool, str]:
+    """Lägg till eller dra av mynt. Normaliserar efteråt.
+    Returnerar (success, message). Vid negativt saldo: vägrar.
+    """
+    currency = state.setdefault('currency', {'pp': 0, 'gp': 0, 'sp': 0, 'cp': 0})
+    # Säkerställ att alla valörer finns
+    for d in COIN_TO_CP:
+        currency.setdefault(d, 0)
+
+    if amount >= 0:
+        currency[denom] = currency.get(denom, 0) + amount
+        state['currency'] = normalize_currency(currency)
+        return True, f"+{amount} {COIN_NAMES[denom]}"
+    else:
+        # Kontrollera att saldot räcker (i cp)
+        needed_cp = abs(amount) * COIN_TO_CP[denom]
+        available_cp = currency_to_cp(currency)
+        if needed_cp > available_cp:
+            logger.warning(
+                f"Valuta: försök spendera {abs(amount)} {COIN_NAMES[denom]} "
+                f"men saldot är bara {currency_display(currency)}"
+            )
+            return False, f"Otillräckligt saldo: behövde {abs(amount)} {COIN_NAMES[denom]}, hade {currency_display(currency)}"
+        # Dra av
+        currency[denom] = currency.get(denom, 0) + amount  # amount är negativt
+        # Om valören blev negativ, växla ner från högre valörer
+        state['currency'] = normalize_currency(currency)
+        return True, f"-{abs(amount)} {COIN_NAMES[denom]}"
 
 
 def _parse_mechanical_tags(text: str, state: dict) -> tuple[str, dict, list[dict]]:
@@ -243,12 +317,18 @@ def _parse_mechanical_tags(text: str, state: dict) -> tuple[str, dict, list[dict
                 xp['next_level'] = XP_THRESHOLDS[level]
             effects.append({'type': 'level_up', 'value': level})
 
-    # GULD — lägg till/ta bort guld
-    for m in _MECH_PATTERNS['GULD'].finditer(text):
-        amount = int(m.group(1))
-        currency = state.setdefault('currency', {'pp': 0, 'gp': 0, 'ep': 0, 'sp': 0, 'cp': 0})
-        currency['gp'] = currency.get('gp', 0) + amount
-        effects.append({'type': 'guld', 'value': amount})
+    # VALUTA — guld, silver, koppar, platina
+    _CURRENCY_TAGS = [
+        ('GULD', 'gp'), ('SILVER', 'sp'), ('KOPPAR', 'cp'), ('PLATINA', 'pp'),
+    ]
+    for tag_name, denom in _CURRENCY_TAGS:
+        for m in _MECH_PATTERNS[tag_name].finditer(text):
+            amount = int(m.group(1))
+            ok, msg = apply_currency(state, denom, amount)
+            if ok:
+                effects.append({'type': 'guld', 'value': amount, 'denom': denom, 'msg': msg})
+            else:
+                effects.append({'type': 'guld_fail', 'value': amount, 'denom': denom, 'msg': msg})
 
     # FÖREMÅL — lägg till i inventariet
     for m in _MECH_PATTERNS['FÖREMÅL'].finditer(text):
@@ -1155,9 +1235,11 @@ def compact_state(state: dict) -> str:
     hp_cur = hp.get("current", 0)
     hp_max = hp.get("max", 0)
     ac = char.get("ac", 10)
-    gold = state.get("currency", {}).get("gp", 0)
+    currency = state.get("currency", {})
+    wallet = currency_display(currency)
+    coin_wt = currency_weight(currency)
 
-    lines = [f"{name}, {klass} niv {level}. HP {hp_cur}/{hp_max}. AC {ac}. Guld: {gold}."]
+    lines = [f"{name}, {klass} niv {level}. HP {hp_cur}/{hp_max}. AC {ac}. Plånbok: {wallet}. Myntvikt: {coin_wt} lb."]
 
     # Utrustade föremål
     equipped = [it.get("name", "?") for it in state.get("inventory", []) if it.get("equipped")]

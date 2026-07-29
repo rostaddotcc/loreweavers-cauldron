@@ -404,7 +404,7 @@
   }
 
   /* ═══════════ Valuta — mynt ═══════════ */
-  .currency-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.9rem; }
+  .currency-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.9rem; }
   .coin {
     text-align: center; padding: 1.1rem 0.5rem 0.9rem; position: relative;
     background: linear-gradient(180deg, var(--stone-3), var(--stone));
@@ -1162,7 +1162,6 @@ async function syncInventory() {
 const coinMeta = {
   pp: { name: 'Platina', disc: 'PP', cls: 'c-pp', rate: 10 },
   gp: { name: 'Guld',    disc: 'GP', cls: 'c-gp', rate: 1 },
-  ep: { name: 'Electrum',disc: 'EP', cls: 'c-ep', rate: 0.5 },
   sp: { name: 'Silver',  disc: 'SP', cls: 'c-sp', rate: 0.1 },
   cp: { name: 'Koppar',  disc: 'CP', cls: 'c-cp', rate: 0.01 },
 };
@@ -1174,7 +1173,7 @@ function renderCurrency() {
       <div class="coin ${m.cls}" id="coin-${key}">
         <div class="coin-disc">${m.disc}</div>
         <div class="coin-name">${m.name}</div>
-        <div class="coin-amount">${state.currency[key]}</div>
+        <div class="coin-amount">${state.currency[key] || 0}</div>
         <div class="coin-controls">
           <button class="coin-btn" onclick="adjustCoin('${key}',-1)">−</button>
           <button class="coin-btn" onclick="adjustCoin('${key}',1)">+</button>
@@ -1201,11 +1200,15 @@ function adjustCoin(key, delta) {
   updateHoard();
 }
 function updateHoard() {
-  let total = 0;
-  for (const [key, m] of Object.entries(coinMeta)) total += state.currency[key] * m.rate;
+  let total = 0, totalCoins = 0;
+  for (const [key, m] of Object.entries(coinMeta)) {
+    total += (state.currency[key] || 0) * m.rate;
+    totalCoins += (state.currency[key] || 0);
+  }
   document.getElementById('total-gold').textContent = total.toFixed(1) + ' gp';
   const gp = Math.floor(total), sp = Math.round((total - gp) * 10);
-  document.getElementById('total-sub').textContent = `= ${gp} guldmynt & ${sp} silvermynt`;
+  const weight = (totalCoins / 50).toFixed(2);
+  document.getElementById('total-sub').textContent = `= ${gp} guldmynt & ${sp} silvermynt · ${totalCoins} mynt · ${weight} lb`;
 }
 
 // ═══════════════════════════════════════

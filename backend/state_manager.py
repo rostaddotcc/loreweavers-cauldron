@@ -37,7 +37,7 @@ def _default_state(campaign_id: str, user: str) -> dict:
         },
         "character": {},
         "inventory": [],
-        "currency": {"pp": 0, "gp": 0, "ep": 0, "sp": 0, "cp": 0},
+        "currency": {"pp": 0, "gp": 0, "sp": 0, "cp": 0},
         "npcs": [],
         "quests": [],
         "world": {

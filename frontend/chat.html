@@ -68,7 +68,38 @@
   }
   .top-btn:hover { color: var(--gold-bright); border-color: var(--gold); box-shadow: 0 0 12px -3px rgba(232,198,90,0.4); }
   .top-btn.danger:hover { color: var(--blood-bright); border-color: var(--blood-bright); box-shadow: 0 0 12px -3px rgba(212,58,77,0.4); }
+  .top-btn.icon-btn { padding: 0.55rem 0.7rem; font-size: 0.85rem; }
   .top-divider { width: 1px; height: 20px; background: var(--edge); flex-shrink: 0; }
+
+  /* ═══════════ Dropdown-meny (Världen / Verktyg) ═══════════ */
+  .dropdown { position: relative; }
+  .drop-trigger .caret { font-size: 0.6rem; margin-left: 0.25rem; display: inline-block; transition: transform 0.25s; }
+  .dropdown.open .drop-trigger { color: var(--gold-bright); border-color: var(--gold); box-shadow: 0 0 12px -3px rgba(232,198,90,0.4); }
+  .dropdown.open .drop-trigger .caret { transform: rotate(180deg); }
+  .drop-menu {
+    position: absolute; top: calc(100% + 0.5rem); left: 0; z-index: 60;
+    min-width: 230px; padding: 0.4rem;
+    background: linear-gradient(180deg, var(--stone-2), #14101f);
+    border: 1px solid var(--gold); border-radius: 3px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 20px -6px rgba(232,198,90,0.25);
+    opacity: 0; visibility: hidden; transform: translateY(-8px) scale(0.98);
+    transform-origin: top left;
+    transition: opacity 0.2s, transform 0.22s cubic-bezier(.22,1,.36,1), visibility 0.2s;
+  }
+  .dropdown.open .drop-menu { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
+  .drop-item {
+    display: flex; align-items: center; gap: 0.75rem; width: 100%;
+    padding: 0.55rem 0.7rem; border: none; border-radius: 2px;
+    background: transparent; cursor: pointer; text-align: left;
+    text-decoration: none; transition: background 0.15s, transform 0.15s;
+  }
+  .drop-item:hover { background: rgba(232,198,90,0.1); transform: translateX(3px); }
+  .di-icon { font-size: 1.05rem; flex-shrink: 0; filter: drop-shadow(0 0 4px rgba(232,198,90,0.3)); }
+  .di-body { display: flex; flex-direction: column; min-width: 0; }
+  .di-name { font-family: 'Cinzel', serif; font-size: 0.74rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-bright); }
+  .drop-item:hover .di-name { color: var(--gold-bright); }
+  .di-hint { font-size: 0.66rem; font-style: italic; color: var(--bone-dim); }
+  .drop-sep { height: 1px; background: var(--edge); margin: 0.4rem 0.3rem; }
 
   /* ── Model picker ── */
   .model-select {
@@ -129,6 +160,50 @@
     background: repeating-linear-gradient(90deg, transparent 0 6px, rgba(11,8,18,0.55) 6px 8px); }
   .pc-xp-label { font-size: 0.62rem; color: var(--bone-dim); margin-top: 0.2rem; letter-spacing: 0.05em; text-align: right; font-variant-numeric: tabular-nums; }
   .pc-xp-label b { color: var(--gold-bright); font-style: normal; }
+
+  /* ── Guld-räknare ── */
+  .pc-gold {
+    display: inline-flex; align-items: center; gap: 0.35rem; margin-top: 0.45rem;
+    font-family: 'Cinzel', serif; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.06em;
+    color: var(--gold-bright); font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 10px rgba(232,198,90,0.35); transition: transform 0.2s, text-shadow 0.2s;
+  }
+  .pc-gold.bump { animation: gold-bump 0.5s cubic-bezier(.22,1,.36,1); }
+  @keyframes gold-bump {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.35); text-shadow: 0 0 18px rgba(255,215,0,0.9); }
+    100% { transform: scale(1); }
+  }
+
+  /* ── Live-effekter: puls på HP/XP/plats + skärmvinjett ── */
+  .pc-hp.hp-flash-red { animation: hp-red 0.8s ease; }
+  @keyframes hp-red {
+    0%,100% { box-shadow: none; }
+    30% { box-shadow: 0 0 14px 3px rgba(212,58,77,0.9); }
+  }
+  .pc-hp.hp-flash-green { animation: hp-green 0.8s ease; }
+  @keyframes hp-green {
+    0%,100% { box-shadow: none; }
+    30% { box-shadow: 0 0 14px 3px rgba(122,163,94,0.9); }
+  }
+  .pc-xp.xp-flash { animation: xp-glow 0.9s ease; }
+  @keyframes xp-glow {
+    0%,100% { box-shadow: 0 0 0 rgba(232,198,90,0); }
+    30% { box-shadow: 0 0 16px 4px rgba(232,198,90,0.85); }
+  }
+  #loc-name.loc-pulse { animation: loc-pulse 1.2s ease; }
+  @keyframes loc-pulse {
+    0% { transform: scale(1); color: var(--bone-bright); }
+    25% { transform: scale(1.12); color: var(--teal); text-shadow: 0 0 14px rgba(94,154,163,0.8); }
+    100% { transform: scale(1); }
+  }
+  #screen-vignette {
+    position: fixed; inset: 0; z-index: 90; pointer-events: none; opacity: 0;
+  }
+  #screen-vignette.go { animation: vignette-fade 0.7s ease-out; }
+  @keyframes vignette-fade {
+    0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; }
+  }
 
   .npc-list { display: flex; flex-direction: column; gap: 0.35rem; }
   .npc-row {
@@ -696,20 +771,34 @@
   </div>
 
   <button class="top-btn" onclick="location.href='character.html'">🧙 Karaktär</button>
+
+  <!-- ═══ Världen — dropdown ═══ -->
+  <div class="dropdown" id="dd-world">
+    <button class="top-btn drop-trigger" onclick="toggleDropdown('dd-world')">🗺️ Världen <span class="caret">▾</span></button>
+    <div class="drop-menu">
+      <a class="drop-item" href="platser.html"><span class="di-icon">🗺️</span><span class="di-body"><span class="di-name">Kartan</span><span class="di-hint">platser & resvägar</span></span></a>
+      <a class="drop-item" href="loggbok.html"><span class="di-icon">📜</span><span class="di-body"><span class="di-name">Loggbok</span><span class="di-hint">dina anteckningar</span></span></a>
+      <a class="drop-item" href="npcs.html"><span class="di-icon">📖</span><span class="di-body"><span class="di-name">Gestalter</span><span class="di-hint">kända NPCs</span></span></a>
+      <a class="drop-item" href="facts.html"><span class="di-icon">📚</span><span class="di-body"><span class="di-name">Arkivet</span><span class="di-hint">minnen & fakta</span></span></a>
+      <a class="drop-item" href="valvet.html"><span class="di-icon">🏰</span><span class="di-body"><span class="di-name">Valvet</span><span class="di-hint">inventarium & skatter</span></span></a>
+    </div>
+  </div>
+
+  <!-- ═══ Verktyg — dropdown ═══ -->
+  <div class="dropdown" id="dd-tools">
+    <button class="top-btn drop-trigger" onclick="toggleDropdown('dd-tools')">⚙️ Verktyg <span class="caret">▾</span></button>
+    <div class="drop-menu">
+      <button class="drop-item" onclick="toggleOracle();closeDropdowns()"><span class="di-icon">📜</span><span class="di-body"><span class="di-name">Regel-orakel</span><span class="di-hint">fråga om 5e-regler</span></span></button>
+      <button class="drop-item" onclick="toggleConsole();closeDropdowns()"><span class="di-icon">🛠️</span><span class="di-body"><span class="di-name">Maskinrummet</span><span class="di-hint">live debug-loggar</span></span></button>
+      <a class="drop-item" href="help.html"><span class="di-icon">❓</span><span class="di-body"><span class="di-name">Hur spelar man?</span><span class="di-hint">kommandon & tips</span></span></a>
+      <div class="drop-sep"></div>
+      <button class="drop-item" onclick="exportCampaign();closeDropdowns()"><span class="di-icon">📦</span><span class="di-body"><span class="di-name">Exportera</span><span class="di-hint">kampanj som zip</span></span></button>
+    </div>
+  </div>
+
   <span class="top-divider"></span>
-  <a class="top-btn" href="platser.html">🗺️ Kartan</a>
-  <a class="top-btn" href="loggbok.html">📜 Loggbok</a>
-  <a class="top-btn" href="npcs.html">📖 Gestalter</a>
-  <a class="top-btn" href="facts.html">📚 Arkivet</a>
-  <a class="top-btn" href="valvet.html">🏰 Valvet</a>
-  <span class="top-divider"></span>
-  <button class="top-btn" onclick="toggleOracle()">📜 Regel-orakel</button>
-  <button class="top-btn" onclick="toggleConsole()" title="Maskinrummet — live debug-loggar">🛠️ Maskinrum</button>
-  <a class="top-btn" href="help.html">❓ Hur spelar man?</a>
-  <span class="top-divider"></span>
-  <button class="top-btn" onclick="exportCampaign()">📦 Exportera</button>
-  <button class="top-btn sfx-btn" onclick="sfxToggleBtn()" title="Ljud av/på">🔊</button>
-  <button class="top-btn music-btn" onclick="musicToggleBtn()" title="Musik av/på">♫</button>
+  <button class="top-btn icon-btn sfx-btn" onclick="sfxToggleBtn()" title="Ljud av/på">🔊</button>
+  <button class="top-btn icon-btn music-btn" onclick="musicToggleBtn()" title="Musik av/på">♫</button>
   <span class="top-divider"></span>
   <button class="top-btn danger" onclick="logout()">🚪 Lämna</button>
 </header>
@@ -725,11 +814,12 @@
         <div style="flex:1;min-width:0">
           <div class="pc-name" id="pc-name">—</div>
           <div class="pc-sub" id="pc-sub">—</div>
-          <div class="pc-hp"><i id="pc-hp-fill" style="width:100%"></i></div>
+          <div class="pc-hp" id="pc-hp-bar"><i id="pc-hp-fill" style="width:100%"></i></div>
         </div>
       </div>
-      <div class="pc-xp"><i id="pc-xp-fill" style="width:0%"></i></div>
+      <div class="pc-xp" id="pc-xp-bar"><i id="pc-xp-fill" style="width:0%"></i></div>
       <div class="pc-xp-label" id="pc-xp-label">0 / 300 XP</div>
+      <div class="pc-gold" id="pc-gold" title="Ditt guld">🪙 <span id="pc-gold-val">0</span></div>
     </div>
 
     <div>
@@ -871,6 +961,7 @@ async function loadCampaign() {
           document.getElementById('pc-hp-fill').style.width = Math.round(100 * (hp.current || 0) / hp.max) + '%';
         }
         updateXpBar(ch.xp);
+        updateGold(campaign.currency && campaign.currency.gp);
       }
       // Uppdatera plats + input-placeholder
       const world = campaign.world || {};
@@ -1070,6 +1161,79 @@ function updateXpBar(xp) {
   const cur = xp.current || 0, next = xp.next_level || 300;
   fill.style.width = Math.min(100, Math.round(100 * cur / next)) + '%';
   label.innerHTML = `<b>${cur}</b> / ${next} XP`;
+}
+
+// ── Guld-räknare med count-up ──
+let _goldShown = 0;
+function updateGold(gp) {
+  const el = document.getElementById('pc-gold-val');
+  const wrap = document.getElementById('pc-gold');
+  if (!el) return;
+  const target = gp || 0;
+  if (target === _goldShown) return;
+  // Animera från visat värde till nytt (count-up / count-down)
+  const from = _goldShown, diff = target - from;
+  const steps = 18; let i = 0;
+  const tick = () => {
+    i++;
+    const eased = 1 - Math.pow(1 - i / steps, 3); // ease-out cubic
+    el.textContent = Math.round(from + diff * eased);
+    if (i < steps) requestAnimationFrame(tick);
+    else { el.textContent = target; _goldShown = target; }
+  };
+  requestAnimationFrame(tick);
+  // Bump-animation + partiklar vid ökning
+  if (diff > 0) {
+    wrap.classList.remove('bump'); void wrap.offsetWidth; wrap.classList.add('bump');
+    const r = wrap.getBoundingClientRect();
+    if (window.spawnParticles) spawnParticles(r.left + r.width / 2, r.top, 14, ['#ffd700', '#e8c65a', '#fff3c4']);
+  }
+  _goldShown = target;
+}
+
+// ═══════════════════════════════════════
+// ✨ LIVE-EFFEKTER — highlighta det som händer i världen
+// ═══════════════════════════════════════
+// Kort puls på relevanta UI-element när en effekt landar,
+// + skärmvinjett vid skada. Gör världen levande utan att spammat.
+function flashEl(id, cls, ms = 900) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+  setTimeout(() => el.classList.remove(cls), ms);
+}
+function screenFlash(color) {
+  let v = document.getElementById('screen-vignette');
+  if (!v) {
+    v = document.createElement('div');
+    v.id = 'screen-vignette';
+    document.body.appendChild(v);
+  }
+  v.style.boxShadow = `inset 0 0 120px 40px ${color}`;
+  v.classList.remove('go'); void v.offsetWidth; v.classList.add('go');
+}
+function liveEffects(fx) {
+  switch (fx.type) {
+    case 'skada':
+      flashEl('pc-hp-bar', 'hp-flash-red');
+      screenFlash('rgba(212,58,77,0.55)');
+      break;
+    case 'hela':
+      flashEl('pc-hp-bar', 'hp-flash-green');
+      break;
+    case 'xp':
+      flashEl('pc-xp-bar', 'xp-flash');
+      break;
+    case 'guld':
+      // updateGold hanterar bump + partiklar
+      break;
+    case 'plats':
+      flashEl('loc-name', 'loc-pulse', 1200);
+      break;
+    case 'level_up':
+      screenFlash('rgba(232,198,90,0.5)');
+      break;
+  }
 }
 
 // Partikelsystem: pixelfyrkanter som sprutar utåt
@@ -1657,11 +1821,23 @@ function renderEffects(effects, state) {
     }
     addMessage('system', null, html);
     if (SFX[sfx]) SFX[sfx]();
+    liveEffects(fx);
   });
   // Uppdragsloggen i sidebaren ska spegla nya/avslutade uppdrag direkt
   if (effects.some(fx => ['quest', 'quest_slutförd', 'quest_misslyckad'].includes(fx.type))) {
     refreshQuests();
   }
+  // Guld: hämta nytt saldo så räknaren kan animera till rätt värde
+  if (effects.some(fx => fx.type === 'guld')) {
+    refreshCurrency();
+  }
+}
+
+async function refreshCurrency() {
+  try {
+    const { campaign } = await API.getCampaign();
+    if (campaign) updateGold(campaign.currency && campaign.currency.gp);
+  } catch (e) { /* tyst */ }
 }
 
 async function refreshQuests() {
@@ -1809,6 +1985,26 @@ async function askOracle() {
   }
   log.scrollTop = log.scrollHeight;
 }
+
+// ═══════════════════════════════════════
+// 🗺️ DROPDOWN-MENYER (Världen / Verktyg)
+// ═══════════════════════════════════════
+function toggleDropdown(id) {
+  const dd = document.getElementById(id);
+  const wasOpen = dd.classList.contains('open');
+  closeDropdowns();
+  if (!wasOpen) dd.classList.add('open');
+}
+function closeDropdowns() {
+  document.querySelectorAll('.dropdown.open').forEach(d => d.classList.remove('open'));
+}
+// Stäng vid klick utanför + Escape
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.dropdown')) closeDropdowns();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeDropdowns();
+});
 
 // ═══════════════════════════════════════
 // 🛠️ MASKINRUMMET — live debug-konsol

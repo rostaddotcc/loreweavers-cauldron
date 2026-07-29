@@ -20,6 +20,10 @@ services:
     environment:
       - HOST=0.0.0.0
       - PORT=8090
+      - QDRANT_URL=http://host.docker.internal:6333
+      - OLLAMA_URL=http://host.docker.internal:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8090/api/health')"]
       interval: 30s

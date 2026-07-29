@@ -47,6 +47,8 @@ from atmosphere import (
 from locations import get_locations_with_travel
 from logbook import build_log_prompt
 from state_manager import CAMPAIGNS_DIR, CampaignStore, CharacterVault
+import rag
+from extraction import FactRegister, extract_facts, format_facts_block
 
 app = FastAPI(title="Mörkrets Rike", version="1.0.0")
 
@@ -317,6 +319,7 @@ COOKIE_NAME = "morkrets_token"
 
 # Atmosfär-subagent: snabb modell för ASCII-art
 ATMOSPHERE_MODEL = os.getenv("ATMOSPHERE_MODEL", "qwen3.6-flash")
+EXTRACTION_MODEL = os.getenv("EXTRACTION_MODEL", "qwen3.6-flash")
 
 
 # ═══════════════════════════════════════
@@ -928,8 +931,32 @@ async def add_lore(body: LoreRequest, morkrets_token: str | None = Cookie(None))
     text = body.text.strip()
     if text:
         lore.append(text)
+        # Fas 3: Indexera lore i Qdrant för semantisk sökning
+        try:
+            campaign_id = state["meta"].get("campaign_id", "")
+            await rag.index_lore(f"Lore #{len(lore)}", text, payload["sub"], campaign_id)
+        except Exception:
+            pass  # Lore-indexering är inte kritisk
     store.save(state)
     return {"ok": True, "lore_count": len(lore)}
+
+
+@app.get("/api/facts")
+async def get_facts(category: str | None = None, morkrets_token: str | None = Cookie(None)):
+    """Hämta faktaregistret (alla eller filtrerade per kategori)."""
+    payload = _get_current_user(morkrets_token)
+    try:
+        register = FactRegister(payload["sub"])
+        if category:
+            facts = register.get_facts_by_category(category)
+        else:
+            facts = [f for f in register._facts if not f.superseded_by]
+        return {
+            "facts": [f.model_dump() for f in facts],
+            "stats": register.stats(),
+        }
+    except Exception:
+        return {"facts": [], "stats": {}}
 
 
 @app.post("/api/campaign/chapter")
@@ -1154,6 +1181,43 @@ def _build_system_prompt(
     return "\n".join(parts)
 
 
+async def _retrieve_relevant_memory(
+    username: str, campaign_id: str, query: str, state: dict
+) -> str:
+    """Hämta relevant långtidsminne via RAG + faktaregister.
+    Returnerar en textblock som injiceras i systemprompten."""
+    sections = []
+
+    # 1. Faktaregister — keyword-baserat, alltid tillgängligt (ingen Qdrant krävs)
+    try:
+        register = FactRegister(username)
+        relevant = register.get_relevant_facts(query, limit=8)
+        if relevant:
+            sections.append(format_facts_block(relevant))
+    except Exception as e:
+        logger.debug("Faktaregister ej tillgängligt: %s", e)
+
+    # 2. RAG — semantisk sökning i Qdrant (transkript, lore, sammanfattningar)
+    try:
+        if await rag.qdrant_healthy():
+            chunks = await rag.retrieve(query, username, top_k=4, campaign_id=campaign_id)
+            if chunks:
+                rag_lines = []
+                for c in chunks:
+                    label = {"transcript": "📜", "lore": "📖", "summary": "📋", "fact": "📌"}.get(
+                        c.get("chunk_type", ""), "•"
+                    )
+                    rag_lines.append(f"{label} (tur {c.get('turn', '?')}, relevans {c.get('score', 0):.0%}): {c['text'][:200]}")
+                sections.append(
+                    "## RELEVANT HISTORIK (semantiskt minne)\n"
+                    + "\n".join(rag_lines)
+                )
+    except Exception as e:
+        logger.debug("RAG ej tillgängligt: %s", e)
+
+    return "\n\n".join(sections)
+
+
 @app.post("/api/chat")
 async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     payload = _get_current_user(morkrets_token)
@@ -1171,6 +1235,18 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         state, turn_override=effective_turn, awakening_trigger=is_awakening,
         player_input=req.message,
     )}]
+
+    # RAG + faktaregister: injicera relevant långtidsminne i systemprompten
+    if not is_awakening:
+        campaign_id = state["meta"].get("campaign_id", "")
+        try:
+            memory_block = await _retrieve_relevant_memory(
+                username, campaign_id, req.message, state
+            )
+            if memory_block:
+                messages[0]["content"] += "\n\n" + memory_block
+        except Exception as e:
+            logger.debug("RAG/fakta-injektion hoppade över: %s", e)
 
     # Sammanfattningar injiceras numera i _build_system_prompt (hierarkiskt:
     # 2 scen + 2 kapitel + 1 kampanjbåge) — ingen separat loop behövs här.
@@ -1348,6 +1424,39 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     # Spara DM-svar (ren text — inga taggar eller intern struktur)
     state = store.append_message(state, "assistant", reply)
     store.save(state)
+
+    # ── Fas 3: Faktextraktion + RAG-indexering (icke-kritiskt, körs alltid) ──
+    campaign_id = state["meta"].get("campaign_id", "")
+    turn_count = state["meta"].get("turn_count", 0)
+
+    # 1. Extrahera fakta ur DM-svaret (billig modell, asynkront)
+    try:
+        async def _extraction_llm(messages: list[dict]) -> str:
+            return await _call_llm(EXTRACTION_MODEL, messages, temperature=0.2, max_tokens=800)
+
+        facts = await extract_facts(reply, req.message, turn_count, _extraction_llm)
+        if facts:
+            register = FactRegister(username)
+            register.add_facts(facts)
+            logger.info("Extraherade %d fakta (tur %d)", len(facts), turn_count)
+    except Exception as e:
+        logger.debug("Faktextraktion hoppade över: %s", e)
+
+    # 2. Indexera senaste transkriptet i Qdrant (var 5:e tur för att spara resurser)
+    if turn_count % 5 == 0 and turn_count > 0:
+        try:
+            if await rag.qdrant_healthy():
+                recent = store.load_transcript(state, last_n=10)
+                msgs_for_rag = [
+                    {"role": e["role"], "content": e["content"], "turn": turn_count}
+                    for e in recent
+                    if e.get("content") != "__VAKNA_DM__"
+                ]
+                if msgs_for_rag:
+                    await rag.index_transcript(msgs_for_rag, username, campaign_id)
+                    logger.info("RAG-indexerade %d meddelanden (tur %d)", len(msgs_for_rag), turn_count)
+        except Exception as e:
+            logger.debug("RAG-indexering hoppade över: %s", e)
 
     # Kolla om sammanfattning behövs
     summary_generated = False

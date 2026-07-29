@@ -209,6 +209,13 @@ const API = (() => {
       return req('/api/campaign/transcript');
     },
 
+    // ── Faktaregister (Fas 3: extraherade fakta) ──
+    async getFacts(category = null) {
+      if (MOCK) return { facts: [], stats: {} };
+      const q = category ? '?category=' + encodeURIComponent(category) : '';
+      return req('/api/facts' + q);
+    },
+
     // ── Världsbygge (prompt → strukturerad världdata) ──
     async buildWorld(prompt, modelId = 'qwen3.8-max') {
       if (MOCK) {

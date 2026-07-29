@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📚 Ett svenskt D&amp;D-äventyr — Minnesarkivet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0b0812;--stone:#161020;--stone-2:#1d1529;--stone-3:#241a33;
+    --edge:#3d2f52;--edge-warm:#5a4433;
+    --bone:#d9c9a6;--bone-bright:#efe2c0;--bone-dim:#8a7a5e;
+    --gold:#c9a227;--gold-bright:#e8c65a;
+    --blood:#a32433;--blood-bright:#d43a4d;
+    --ember:#d4691e;--arcane:#8b5fd4;--poison:#7aa35e;--teal:#5e9aa3;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    font-family:'Spectral',Georgia,serif;color:var(--bone);
+    background:
+      radial-gradient(1000px 500px at 50% 115%, rgba(139,95,212,.1), transparent 60%),
+      radial-gradient(700px 400px at 90% -5%, rgba(201,162,39,.07), transparent 55%),
+      var(--ink);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.045;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
+  #embers{position:fixed;inset:0;z-index:0;pointer-events:none}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 190px 70px rgba(4,2,8,.88)}
+
+  /* ═══════════ Topbar ═══════════ */
+  .topbar{position:relative;z-index:5;display:flex;align-items:center;gap:1rem;padding:.7rem 1.2rem;
+    background:linear-gradient(180deg,var(--stone-2),rgba(22,16,32,.95));border-bottom:1px solid var(--edge);box-shadow:0 4px 20px rgba(0,0,0,.5)}
+  .topbar .brand{font-family:'Cinzel',serif;font-weight:900;font-size:1.05rem;color:var(--gold-bright);letter-spacing:.06em;white-space:nowrap;text-shadow:0 0 14px rgba(232,198,90,.3)}
+  .topbar .page-tag{font-size:.78rem;font-style:italic;color:var(--bone-dim);border-left:1px solid var(--edge);padding-left:1rem}
+  .topbar .spacer{flex:1}
+  .top-btn{font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;white-space:nowrap;text-decoration:none}
+  .top-btn:hover{color:var(--gold-bright);border-color:var(--gold);box-shadow:0 0 12px -3px rgba(232,198,90,.4)}
+  .top-btn.danger:hover{color:var(--blood-bright);border-color:var(--blood-bright);box-shadow:0 0 12px -3px rgba(212,58,77,.4)}
+
+  /* ═══════════ Layout ═══════════ */
+  .layout{position:relative;z-index:2;flex:1;display:flex;min-height:0}
+
+  /* ── Vänster: Arkivets hyllor ── */
+  .shelves{width:300px;flex-shrink:0;display:flex;flex-direction:column;background:linear-gradient(180deg,var(--stone),#100b18);border-right:1px solid var(--edge)}
+  .shelves-head{padding:1.1rem 1rem .8rem;border-bottom:1px solid var(--edge)}
+  .shelves-title{font-family:'Cinzel',serif;font-weight:900;font-size:1.05rem;color:var(--bone-bright);letter-spacing:.05em;margin-bottom:.15rem}
+  .shelves-sub{font-size:.75rem;font-style:italic;color:var(--bone-dim)}
+  .search-wrap{padding:.8rem 1rem .5rem}
+  .search-wrap input{
+    width:100%;font-family:'Spectral',serif;font-size:.9rem;color:var(--bone-bright);
+    background:var(--stone-3);border:1px solid var(--edge);padding:.55rem .8rem;outline:none;border-radius:2px;
+    transition:border-color .2s,box-shadow .2s}
+  .search-wrap input::placeholder{color:var(--bone-dim);font-style:italic}
+  .search-wrap input:focus{border-color:var(--gold);box-shadow:0 0 14px -4px rgba(232,198,90,.35)}
+  .filters{display:flex;gap:.35rem;flex-wrap:wrap;padding:.6rem 1rem .8rem;border-bottom:1px solid rgba(61,47,82,.5)}
+  .fchip{font-family:'Cinzel',serif;font-size:.56rem;letter-spacing:.12em;text-transform:uppercase;background:transparent;border:1px solid var(--edge);color:var(--bone-dim);padding:.32rem .6rem;cursor:pointer;border-radius:2px;transition:all .2s;display:inline-flex;align-items:center;gap:.35rem}
+  .fchip:hover{color:var(--bone-bright);border-color:var(--bone-dim)}
+  .fchip.on{color:#1a1206;background:var(--gold);border-color:var(--gold);box-shadow:0 0 10px -2px rgba(232,198,90,.5)}
+  .fchip .cnt{font-size:.5rem;opacity:.75}
+
+  /* ── Statistik ── */
+  .stats{padding:.9rem 1rem;border-bottom:1px solid rgba(61,47,82,.5)}
+  .stats-title{font-family:'Cinzel',serif;font-size:.56rem;letter-spacing:.2em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.55rem}
+  .stat-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem}
+  .stat-bar-track{flex:1;height:6px;background:var(--stone-3);border:1px solid rgba(61,47,82,.5);overflow:hidden}
+  .stat-bar{height:100%;transition:width .6s cubic-bezier(.22,1,.36,1)}
+  .stat-label{font-size:.68rem;color:var(--bone-dim);width:70px;flex-shrink:0}
+  .stat-num{font-family:'Cinzel',serif;font-size:.62rem;color:var(--bone-bright);width:22px;text-align:right;flex-shrink:0}
+
+  .shelves-foot{margin-top:auto;padding:.8rem 1rem;border-top:1px solid rgba(61,47,82,.5);font-size:.72rem;font-style:italic;color:var(--bone-dim);text-align:center}
+
+  /* ── Höger: Arkivsalen ── */
+  .archive{flex:1;overflow-y:auto;padding:1.6rem 2rem 4rem}
+  .archive::-webkit-scrollbar{width:8px}
+  .archive::-webkit-scrollbar-thumb{background:var(--edge);border-radius:4px}
+  .archive-head{margin-bottom:1.4rem}
+  .archive-title{font-family:'Cinzel',serif;font-weight:900;font-size:1.5rem;color:var(--bone-bright);letter-spacing:.04em;text-shadow:0 0 18px rgba(232,198,90,.2)}
+  .archive-sub{font-size:.85rem;font-style:italic;color:var(--bone-dim);margin-top:.2rem}
+
+  .cat-section{margin-bottom:1.8rem;animation:rise .45s ease both}
+  .cat-head{display:flex;align-items:center;gap:.7rem;margin-bottom:.7rem}
+  .cat-head::before,.cat-head::after{content:'';flex:1;height:1px;background:rgba(61,47,82,.5)}
+  .cat-head b{font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:var(--cc,var(--gold-bright));display:flex;align-items:center;gap:.45rem}
+
+  .fact{position:relative;padding:.7rem .9rem .6rem 1.1rem;margin-bottom:.5rem;
+    background:linear-gradient(160deg,var(--stone-2),var(--stone));border:1px solid var(--edge);border-radius:2px;
+    transition:transform .22s cubic-bezier(.22,1,.36,1),border-color .22s,box-shadow .22s;overflow:hidden;
+    animation:rise .4s ease both}
+  .fact::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--cc,var(--edge));opacity:.55;transition:opacity .22s}
+  .fact:hover{transform:translateX(5px);border-color:var(--cc,var(--gold));box-shadow:0 0 16px -6px var(--cg,rgba(201,162,39,.35))}
+  .fact:hover::before{opacity:1}
+  .fact .ftext{font-size:.92rem;color:var(--bone);line-height:1.55}
+  .fact .fmeta{display:flex;align-items:center;gap:.8rem;margin-top:.45rem;font-size:.7rem;color:var(--bone-dim)}
+  .fact .fturn{font-family:'Cinzel',serif;font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim)}
+  .fact .fconf{display:flex;align-items:center;gap:.3rem}
+  .fact .fconf .dots{display:flex;gap:2px}
+  .fact .fconf .dot{width:5px;height:5px;background:var(--stone-3);border:1px solid var(--edge)}
+  .fact .fconf .dot.on{background:var(--cc,var(--gold));border-color:var(--cc,var(--gold));box-shadow:0 0 5px var(--cg,transparent)}
+  .fact.superseded{opacity:.4}
+  .fact.superseded .ftext{text-decoration:line-through}
+  .fact.superseded .fmeta::after{content:'✦ ersatt av nyare uppgift';color:var(--blood-bright);font-style:italic}
+
+  .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:60%;text-align:center;color:var(--bone-dim)}
+  .empty .rune{font-size:3rem;margin-bottom:1rem;filter:grayscale(.5);animation:flicker 3s ease-in-out infinite}
+  .empty p{font-size:.95rem;font-style:italic;line-height:1.8;max-width:400px}
+  .talk-btn{font-family:'Cinzel',serif;font-weight:700;font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;color:#1a1206;
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);border:1px solid #6e5510;padding:.8rem 1.5rem;cursor:pointer;border-radius:2px;
+    box-shadow:0 6px 18px -6px rgba(232,198,90,.5);transition:all .2s;text-decoration:none;display:inline-block;margin-top:1.2rem}
+  .talk-btn:hover{filter:brightness(1.12);transform:translateY(-2px)}
+
+  .toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:50;font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.12em;
+    background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);padding:.7rem 1.5rem;
+    box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}
+  .toast.show{transform:translate(-50%,0);opacity:1}
+
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes flicker{0%,100%{opacity:.6}50%{opacity:1}}
+
+  @media(max-width:860px){
+    .shelves{width:240px}
+    .archive{padding:1.2rem 1.2rem 3rem}
+    .topbar .page-tag{display:none}
+  }
+  @media(max-width:640px){
+    .layout{flex-direction:column}
+    .shelves{width:100%;height:44%;border-right:none;border-bottom:1px solid var(--edge)}
+    .archive{height:56%}
+  }
+</style>
+<link rel="stylesheet" href="snes.css">
+<script src="sprites.js"></script>
+<script src="fonts.js"></script>
+</head>
+<body>
+<div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
+
+<header class="topbar">
+  <span class="brand">🐉 Ett svenskt D&amp;D-äventyr</span>
+  <span class="page-tag">Minnesarkivet · Faktaregister</span>
+  <span class="spacer"></span>
+  <a class="top-btn" href="chat.html">⚔ Till bordet</a>
+  <a class="top-btn" href="npcs.html">📖 Gestalter</a>
+  <a class="top-btn" href="platser.html">🗺️ Kartan</a>
+  <a class="top-btn" href="loggbok.html">📜 Loggbok</a>
+  <a class="top-btn" href="valvet.html">🏰 Valvet</a>
+  <a class="top-btn" href="character.html">🧙 Karaktär</a>
+  <button class="top-btn danger" onclick="doLogout()">🚪 Lämna</button>
+</header>
+
+<div class="layout">
+  <aside class="shelves">
+    <div class="shelves-head">
+      <div class="shelves-title">📚 Arkivets hyllor</div>
+      <div class="shelves-sub">Vad världen vet om ditt äventyr</div>
+    </div>
+    <div class="search-wrap">
+      <input type="text" id="fact-search" placeholder="Sök i arkivet…" oninput="renderFacts()">
+    </div>
+    <div class="filters" id="filters"></div>
+    <div class="stats" id="stats"></div>
+    <div class="shelves-foot" id="foot-count"></div>
+  </aside>
+
+  <main class="archive" id="archive">
+    <div class="empty">
+      <div class="rune">🕯️</div>
+      <p>Arkivet laddas…</p>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="sfx.js"></script>
+<script src="api.js"></script>
+<script>
+// Auth-guard — omdirigera till porten om ej inloggad
+if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
+</script>
+<script>
+// ═══════════════════════════════════════
+// MINNESARKIVET — Faktaregister (Fas 3)
+// ═══════════════════════════════════════
+const CATS = {
+  npc:          { label:'Gestalter',    icon:'🎭', color:'#8b5fd4', glow:'rgba(139,95,212,.4)' },
+  location:     { label:'Platser',      icon:'🗺️', color:'#5e9aa3', glow:'rgba(94,154,163,.4)' },
+  item:         { label:'Föremål',      icon:'🗡️', color:'#c9a227', glow:'rgba(201,162,39,.4)' },
+  event:        { label:'Händelser',    icon:'⚡', color:'#d4691e', glow:'rgba(212,105,30,.4)' },
+  promise:      { label:'Löften',       icon:'✉️', color:'#7aa35e', glow:'rgba(122,163,94,.4)' },
+  world:        { label:'Världen',      icon:'🌙', color:'#d43a4d', glow:'rgba(212,58,77,.4)' },
+  relationship: { label:'Relationer',   icon:'💞', color:'#a88ae8', glow:'rgba(168,138,232,.4)' },
+};
+const CAT_ORDER = ['npc','location','item','event','promise','world','relationship'];
+
+let ALL_FACTS = [];
+let activeFilter = 'alla';
+
+// ── Ladda fakta från backend ──
+(async () => {
+  try {
+    const { facts, stats } = await API.getFacts();
+    ALL_FACTS = facts || [];
+    buildFilters(stats);
+    renderStats(stats);
+    renderFacts();
+    document.getElementById('foot-count').textContent =
+      ALL_FACTS.length + ' uppgifter i arkivet';
+  } catch (e) {
+    document.getElementById('archive').innerHTML = `
+      <div class="empty">
+        <div class="rune">🗺️</div>
+        <p>Ingen aktiv kampanj — skapa ett äventyr först</p>
+        <a class="talk-btn" href="adventure.html">✦ Skapa äventyr</a>
+      </div>`;
+  }
+})();
+
+function buildFilters(stats) {
+  const counts = (stats && stats.by_category_active) || {};
+  let html = `<button class="fchip on" data-f="alla" onclick="setFilter('alla')">Alla <span class="cnt">${ALL_FACTS.length}</span></button>`;
+  for (const key of CAT_ORDER) {
+    const c = CATS[key];
+    const n = counts[key] || 0;
+    if (n > 0) {
+      html += `<button class="fchip" data-f="${key}" onclick="setFilter('${key}')">${c.icon} ${c.label} <span class="cnt">${n}</span></button>`;
+    }
+  }
+  document.getElementById('filters').innerHTML = html;
+}
+
+function setFilter(id) {
+  activeFilter = id;
+  document.querySelectorAll('.fchip').forEach(c => c.classList.toggle('on', c.dataset.f === id));
+  renderFacts();
+}
+
+function renderStats(stats) {
+  if (!stats || !stats.by_category_active) return;
+  const counts = stats.by_category_active;
+  const max = Math.max(1, ...Object.values(counts));
+  let html = `<div class="stats-title">📊 Arkivets omfattning</div>`;
+  for (const key of CAT_ORDER) {
+    const n = counts[key] || 0;
+    if (n === 0) continue;
+    const c = CATS[key];
+    const pct = Math.round(100 * n / max);
+    html += `
+      <div class="stat-row">
+        <span class="stat-label">${c.icon} ${c.label}</span>
+        <div class="stat-bar-track"><div class="stat-bar" style="width:${pct}%;background:${c.color};box-shadow:0 0 8px ${c.glow}"></div></div>
+        <span class="stat-num">${n}</span>
+      </div>`;
+  }
+  if (stats.superseded > 0) {
+    html += `<div style="margin-top:.5rem;font-size:.68rem;color:var(--bone-dim);font-style:italic">✦ ${stats.superseded} ersatta uppgifter</div>`;
+  }
+  document.getElementById('stats').innerHTML = html;
+}
+
+function confDots(conf, color, glow) {
+  const n = Math.max(1, Math.min(5, Math.round(conf * 5)));
+  let d = '';
+  for (let i = 0; i < 5; i++) {
+    d += `<span class="dot ${i < n ? 'on' : ''}"></span>`;
+  }
+  return `<span class="fconf" title="Tillförlitlighet ${Math.round(conf*100)}%"><span class="dots">${d}</span></span>`;
+}
+
+function renderFacts() {
+  const q = (document.getElementById('fact-search').value || '').toLowerCase().trim();
+  let facts = ALL_FACTS;
+
+  if (activeFilter !== 'alla') {
+    facts = facts.filter(f => f.category === activeFilter);
+  }
+  if (q) {
+    facts = facts.filter(f => (f.text || '').toLowerCase().includes(q));
+  }
+
+  const archive = document.getElementById('archive');
+
+  if (ALL_FACTS.length === 0) {
+    archive.innerHTML = `
+      <div class="empty">
+        <div class="rune">🕯️</div>
+        <p>Arkivet är tomt.<br>Spela vidare så extraherar DM:n fakta ur berättelsen —<br>NPC:er, platser, löften och händelser hamnar här.</p>
+        <a class="talk-btn" href="chat.html">⚔ Till bordet</a>
+      </div>`;
+    return;
+  }
+  if (facts.length === 0) {
+    archive.innerHTML = `
+      <div class="empty">
+        <div class="rune">🔍</div>
+        <p>Inga uppgifter matchar ${q ? '«' + q + '»' : 'detta filter'}.</p>
+      </div>`;
+    return;
+  }
+
+  // Gruppera per kategori, nyaste först inom varje
+  const groups = {};
+  for (const f of facts) {
+    (groups[f.category] = groups[f.category] || []).push(f);
+  }
+
+  let html = `
+    <div class="archive-head">
+      <div class="archive-title">📚 Minnesarkivet</div>
+      <div class="archive-sub">${facts.length} uppgifter · extraherade ur berättelsen av DM:n</div>
+    </div>`;
+
+  for (const key of CAT_ORDER) {
+    const list = groups[key];
+    if (!list || !list.length) continue;
+    const c = CATS[key];
+    list.sort((a, b) => (b.source_turn || 0) - (a.source_turn || 0));
+    html += `
+      <div class="cat-section" style="--cc:${c.color};--cg:${c.glow}">
+        <div class="cat-head"><b>${c.icon} ${c.label} <span style="opacity:.6">· ${list.length}</span></b></div>
+        ${list.map((f, i) => `
+          <div class="fact ${f.superseded_by ? 'superseded' : ''}" style="--cc:${c.color};--cg:${c.glow};animation-delay:${i * 40}ms">
+            <div class="ftext">${escapeHtml(f.text)}</div>
+            <div class="fmeta">
+              <span class="fturn">Tur ${f.source_turn ?? '?'}</span>
+              ${confDots(f.confidence ?? 0.5, c.color, c.glow)}
+            </div>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  archive.innerHTML = html;
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ── Toast + logout ──
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._tid);
+  t._tid = setTimeout(() => t.classList.remove('show'), 2200);
+}
+async function doLogout() {
+  try { await API.logout(); } catch(_) {}
+  sessionStorage.removeItem('dnd_user');
+  location.href = 'login.html';
+}
+</script>
+</body>
+</html>

@@ -1869,6 +1869,13 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     # Rensa intern struktur innan transkriptsparning
     # (reply är redan rensad från mekaniska taggar via _parse_mechanical_tags)
     reply = re.sub(r'<STATE_UPDATE>.*?</STATE_UPDATE>', '', reply, flags=re.DOTALL).strip()
+    # Säkerhetsnät: reasoning-modeller kan läcka <think>-taggar i content
+    reply = re.sub(r'<think>.*?</think>', '', reply, flags=re.DOTALL | re.IGNORECASE).strip()
+    # Prosa-kast som säkerhetsnätet missade (t.ex. "Kast:" som rubrik)
+    if not roll_requests and re.search(r'^\s*-?\s*Kast\s*:', reply, re.MULTILINE | re.IGNORECASE):
+        roll_requests = [{"notation": "1d20", "label": "Tärningsslag"}]
+        reply = re.sub(r'^\s*-?\s*Kast\s*:.*$', '', reply, flags=re.MULTILINE | re.IGNORECASE).strip()
+        logger.warning("🎲 Prosa-kast 'Kast:' upptäckt → auto-spawnar 1d20")
 
     # Spara DM-svar (ren text — inga taggar eller intern struktur)
     state = store.append_message(state, "assistant", reply)

@@ -36,7 +36,7 @@ ModelCallFn = Callable[[list[dict]], Coroutine[None, None, str]]
 # ═══════════════════════════════════════
 
 GUARDIAN_PRE_SYSTEM = """\
-Du är en mekanisk väktare för ett svenskt D&D 5e-rollspel.
+Du är en mekanisk väktare för ett D&D 5e-rollspel.
 Din ENDA uppgift: avgör om spelarens handling kräver ett tärningskast.
 
 ## Regler
@@ -70,24 +70,69 @@ Spelare: "Jag försöker övertala vakten att släppa in mig"
 → {"needs_roll": true, "notation": "1d20+2", "label": "ÖVERTALNING (DC 15)", "skill": "CHA"}
 """
 
-# Färdighetsnamn → ability
+GUARDIAN_PRE_SYSTEM_EN = """\
+You are a mechanical guardian for a D&D 5e RPG.
+Your ONLY task: determine whether the player's action requires a dice roll.
+
+## Rules
+1. REQUIRE a roll for: attack, stealth, climbing, jumping, persuasion under pressure, \
+searching for hidden things, avoiding a trap, balance on uncertain surface, \
+magical action with uncertain outcome, burglary, pickpocket, escape.
+2. DO NOT require a roll for: normal walking, casual conversation, picking up items, \
+reading, opening an unlocked door, buying/selling, resting.
+3. When in doubt: REQUIRE a roll — it's more fun.
+4. ALWAYS provide correct dice notation with modifiers and DC.
+5. Use the player's actual modifiers (below).
+6. Return ONLY a JSON object.
+
+## Format — roll required
+{"needs_roll": true, "notation": "1d20+2", "label": "DEXTERITY (DC 14)", "skill": "DEX"}
+
+## Format — no roll
+{"needs_roll": false}
+
+## Examples
+Player: "I sneak past the guard"
+→ {"needs_roll": true, "notation": "1d20+2", "label": "STEALTH (DC 14)", "skill": "DEX"}
+
+Player: "I walk up to the bar and order an ale"
+→ {"needs_roll": false}
+
+Player: "I slash the orc with my sword"
+→ {"needs_roll": true, "notation": "1d20-1", "label": "ATTACK vs AC 13", "skill": "STR"}
+
+Player: "I try to persuade the guard to let me in"
+→ {"needs_roll": true, "notation": "1d20+2", "label": "PERSUASION (DC 15)", "skill": "CHA"}
+"""
+
+# Skill names → ability (SV + EN)
 _SKILL_MAP = {
     "akrobatik": "DEX", "fingerfärdighet": "DEX", "smygning": "DEX",
     "arcana": "INT", "historia": "INT", "utredning": "INT", "natur": "INT", "religion": "INT",
     "djurhantering": "WIS", "insikt": "WIS", "medicin": "WIS", "varseblivning": "WIS", "överlevnad": "WIS",
     "bedrägeri": "CHA", "intimidation": "CHA", "uppträdande": "CHA", "övertalning": "CHA",
     "athletics": "STR", "attack": "STR",
+    # English skill names
+    "acrobatics": "DEX", "sleight of hand": "DEX", "stealth": "DEX",
+    "history": "INT", "investigation": "INT", "nature": "INT",
+    "animal handling": "WIS", "insight": "WIS", "medicine": "WIS", "perception": "WIS", "survival": "WIS",
+    "deception": "CHA", "performance": "CHA", "persuasion": "CHA",
 }
 
-# Svenska ability-förkortningar
+# Ability abbreviations → localized labels (SV + EN)
 _ABIL_LABELS = {
     "STR": "STYRKA", "DEX": "SMIDIGHET", "CON": "KONSTITUTION",
     "INT": "INTELLIGENS", "WIS": "VISDOM", "CHA": "KARISMA",
 }
 
+_ABIL_LABELS_EN = {
+    "STR": "STRENGTH", "DEX": "DEXTERITY", "CON": "CONSTITUTION",
+    "INT": "INTELLIGENCE", "WIS": "WISDOM", "CHA": "CHARISMA",
+}
 
-def _format_char_context(state: dict) -> str:
-    """Bygg kompakt karaktärskontext för Guardian."""
+
+def _format_char_context(state: dict, language: str = "sv") -> str:
+    """Build compact character context for Guardian (language-aware)."""
     ch = state.get("character", {})
     abilities = ch.get("abilities", {})
     abil_str = ", ".join(
@@ -97,24 +142,35 @@ def _format_char_context(state: dict) -> str:
     prof = ch.get("proficiency", 2)
     level = ch.get("level", 1)
     hp = ch.get("hp", {})
-    cls = ch.get("class", "Okänd")
+    cls = ch.get("class", "Unknown" if language == "en" else "Okänd")
 
-    parts = [
-        f"Klass: {cls}, Nivå: {level}, Proficiency: +{prof}",
-        f"Abilities: {abil_str}",
-        f"HP: {hp.get('current', '?')}/{hp.get('max', '?')}",
-    ]
+    if language == "en":
+        parts = [
+            f"Class: {cls}, Level: {level}, Proficiency: +{prof}",
+            f"Abilities: {abil_str}",
+            f"HP: {hp.get('current', '?')}/{hp.get('max', '?')}",
+        ]
+    else:
+        parts = [
+            f"Klass: {cls}, Nivå: {level}, Proficiency: +{prof}",
+            f"Abilities: {abil_str}",
+            f"HP: {hp.get('current', '?')}/{hp.get('max', '?')}",
+        ]
 
-    # Stridskontext
+    # Combat context
     npcs = state.get("npcs", [])
-    enemies = [n["name"] for n in npcs if n.get("relation") == "fiende" and n.get("alive", True)]
+    enemies = [n["name"] for n in npcs if n.get("relation") in ("fiende", "enemy") and n.get("alive", True)]
     if enemies:
-        parts.append(f"⚔ STRID PÅGÅR — fiender: {', '.join(enemies)}")
+        if language == "en":
+            parts.append(f"⚔ COMBAT IN PROGRESS — enemies: {', '.join(enemies)}")
+        else:
+            parts.append(f"⚔ STRID PÅGÅR — fiender: {', '.join(enemies)}")
 
-    # Senaste plats
+    # Latest location
     world = state.get("world", {})
     if world.get("current_location"):
-        parts.append(f"Plats: {world['current_location']}")
+        label = "Location" if language == "en" else "Plats"
+        parts.append(f"{label}: {world['current_location']}")
 
     return "\n".join(parts)
 
@@ -123,53 +179,65 @@ async def guardian_check_roll(
     player_msg: str,
     state: dict,
     model_call_fn: ModelCallFn,
+    language: str = "sv",
 ) -> dict | None:
     """
-    Pre-DM: Kravär spelarens handling ett tärningskast?
+    Pre-DM: Does the player's action require a dice roll?
 
     Returns:
-        dict med {notation, label, skill} om kast krävs, annars None.
+        dict with {notation, label, skill} if a roll is required, else None.
     """
-    # [Resultat:] = spelaren svarar på ett kast → aldrig nytt kast
+    # [Resultat:] = player responding to a roll → never a new roll
     if player_msg.startswith("[Resultat:"):
         return None
 
-    # Vaknande → aldrig kast
+    # Awakening → never a roll
     if player_msg == "__VAKNA_DM__":
         return None
 
-    char_ctx = _format_char_context(state)
-    user_msg = (
-        f"## Karaktär\n{char_ctx}\n\n"
-        f"## Spelarens handling\n{player_msg}\n\n"
-        "Kräver detta ett tärningskast?"
-    )
+    char_ctx = _format_char_context(state, language)
+    if language == "en":
+        system_prompt = GUARDIAN_PRE_SYSTEM_EN
+        user_msg = (
+            f"## Character\n{char_ctx}\n\n"
+            f"## Player's action\n{player_msg}\n\n"
+            "Does this require a dice roll?"
+        )
+        default_label = "Dice roll"
+    else:
+        system_prompt = GUARDIAN_PRE_SYSTEM
+        user_msg = (
+            f"## Karaktär\n{char_ctx}\n\n"
+            f"## Spelarens handling\n{player_msg}\n\n"
+            "Kräver detta ett tärningskast?"
+        )
+        default_label = "Tärningsslag"
 
     messages = [
-        {"role": "system", "content": GUARDIAN_PRE_SYSTEM},
+        {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_msg},
     ]
 
     try:
         raw = await model_call_fn(messages)
     except Exception as e:
-        logger.warning("Guardian pre-DM misslyckades: %s", e)
+        logger.warning("Guardian pre-DM failed: %s", e)
         return None
 
-    # Parsa JSON
+    # Parse JSON
     result = _parse_json(raw)
     if not result or not result.get("needs_roll"):
         return None
 
     notation = result.get("notation", "1d20")
-    label = result.get("label", "Tärningsslag")
+    label = result.get("label", default_label)
     skill = result.get("skill", "")
 
-    # Validera notation (måste innehålla 1d20)
+    # Validate notation (must contain 1d20)
     if "1d20" not in notation.lower() and "d20" not in notation.lower():
         notation = "1d20"
 
-    logger.info("🛡️ Guardian pre-DM: kast krävs → %s (%s)", notation, label)
+    logger.info("🛡️ Guardian pre-DM: roll required → %s (%s)", notation, label)
     return {"notation": notation, "label": label, "skill": skill}
 
 
@@ -266,13 +334,17 @@ Tomma fält: tom array [] eller null. Utelämna ALDRIG ett fält.
 
 ## Språk / Language
 Extraheringen ska fungera oavsett om DM-svaret och spelarens handling är på svenska eller engelska. \
-Skriv logbook, npc_notes, quest-beskrivningar och ascii_art-instruktioner på samma språk som scenen. \
+Skriv logbook, npc_notes, quest-beskrivningar, day_summary och ascii_art-instruktioner på samma språk som scenen. \
 JSON-fältnamnen (damage, healing, xp, items_add osv.) är kodnivå och ändras ALDRIG — de är inte användarvända.
 """
 
+# Language instruction appended dynamically per call
+_LANG_INSTRUCTION_SV = "\n\n[VIKTIGT: Skriv alla användarvända texter (logbook, npc_notes, day_summary, quest-beskrivningar) på SVENSKA.]"
+_LANG_INSTRUCTION_EN = "\n\n[IMPORTANT: Write all user-facing text (logbook, npc_notes, day_summary, quest descriptions) in ENGLISH.]"
 
-def _format_state_for_guardian(state: dict) -> str:
-    """Bygg kompakt state-sammanfattning för Guardian post-DM."""
+
+def _format_state_for_guardian(state: dict, language: str = "sv") -> str:
+    """Build compact state summary for Guardian post-DM (language-aware)."""
     ch = state.get("character", {})
     hp = ch.get("hp", {})
     xp = ch.get("xp", {})
@@ -284,38 +356,46 @@ def _format_state_for_guardian(state: dict) -> str:
 
     parts = []
 
-    # Karaktär
+    # Character
     parts.append(f"HP: {hp.get('current', '?')}/{hp.get('max', '?')}")
-    parts.append(f"XP: {xp.get('current', 0)}/{xp.get('next_level', '?')} (nivå {ch.get('level', 1)})")
+    lvl_word = "level" if language == "en" else "nivå"
+    parts.append(f"XP: {xp.get('current', 0)}/{xp.get('next_level', '?')} ({lvl_word} {ch.get('level', 1)})")
 
     # Inventory
     if inv:
         inv_str = ", ".join(f"{it['name']}(×{it.get('qty',1)})" for it in inv[:15])
         parts.append(f"Inventory: {inv_str}")
 
-    # Valuta
+    # Currency
     if any(cur.get(d, 0) for d in ("pp", "gp", "sp", "cp")):
-        parts.append(f"Valuta: {cur.get('pp',0)}pp {cur.get('gp',0)}gp {cur.get('sp',0)}sp {cur.get('cp',0)}cp")
+        cur_label = "Currency" if language == "en" else "Valuta"
+        parts.append(f"{cur_label}: {cur.get('pp',0)}pp {cur.get('gp',0)}gp {cur.get('sp',0)}sp {cur.get('cp',0)}cp")
 
     # NPCs
     if npcs:
+        dead_word = "dead" if language == "en" else "död"
+        alive_word = "alive" if language == "en" else "levande"
         npc_str = "; ".join(
-            f"{n['name']}({n.get('relation','?')}, {'död' if not n.get('alive', True) else 'levande'})"
+            f"{n['name']}({n.get('relation','?')}, {dead_word if not n.get('alive', True) else alive_word})"
             for n in npcs[:10]
         )
         parts.append(f"NPCs: {npc_str}")
 
     # Quests
-    active = [q for q in quests if q.get("status") == "aktiv"]
+    active_statuses = ("aktiv", "active")
+    active = [q for q in quests if q.get("status") in active_statuses]
     if active:
         q_str = "; ".join(q["name"] for q in active[:5])
-        parts.append(f"Aktiva uppdrag: {q_str}")
+        q_label = "Active quests" if language == "en" else "Aktiva uppdrag"
+        parts.append(f"{q_label}: {q_str}")
 
-    # Värld
+    # World
     if world.get("current_location"):
-        parts.append(f"Plats: {world['current_location']}")
+        loc_label = "Location" if language == "en" else "Plats"
+        parts.append(f"{loc_label}: {world['current_location']}")
     if world.get("day"):
-        parts.append(f"Dag: {world['day']}")
+        day_label = "Day" if language == "en" else "Dag"
+        parts.append(f"{day_label}: {world['day']}")
 
     return "\n".join(parts)
 
@@ -326,24 +406,35 @@ async def guardian_extract_mechanics(
     state: dict,
     turn: int,
     model_call_fn: ModelCallFn,
+    language: str = "sv",
 ) -> dict:
     """
-    Post-DM: Extrahera alla mekaniska effekter ur DM-svaret.
+    Post-DM: Extract all mechanical effects from the DM reply.
 
     Returns:
-        Dict med alla fält från GUARDIAN_POST_SYSTEM-formatet.
-        Tomma fält om inget extraheras.
+        Dict with all fields from the GUARDIAN_POST_SYSTEM format.
+        Empty fields if nothing is extracted.
     """
-    state_ctx = _format_state_for_guardian(state)
-    user_msg = (
-        f"## Nuvarande tillstånd\n{state_ctx}\n\n"
-        f"## DM-svar (tur {turn})\n{dm_reply}\n\n"
-        f"## Spelarens handling\n{player_msg}\n\n"
-        "Extrahera alla mekaniska effekter:"
-    )
+    state_ctx = _format_state_for_guardian(state, language)
+    lang_instruction = _LANG_INSTRUCTION_EN if language == "en" else _LANG_INSTRUCTION_SV
+
+    if language == "en":
+        user_msg = (
+            f"## Current state\n{state_ctx}\n\n"
+            f"## DM reply (turn {turn})\n{dm_reply}\n\n"
+            f"## Player's action\n{player_msg}\n\n"
+            "Extract all mechanical effects:"
+        )
+    else:
+        user_msg = (
+            f"## Nuvarande tillstånd\n{state_ctx}\n\n"
+            f"## DM-svar (tur {turn})\n{dm_reply}\n\n"
+            f"## Spelarens handling\n{player_msg}\n\n"
+            "Extrahera alla mekaniska effekter:"
+        )
 
     messages = [
-        {"role": "system", "content": GUARDIAN_POST_SYSTEM},
+        {"role": "system", "content": GUARDIAN_POST_SYSTEM + lang_instruction},
         {"role": "user", "content": user_msg},
     ]
 
@@ -775,14 +866,15 @@ def _sanitize_mechanics(mech: dict) -> dict:
 # 4. FORMATERING — läsbar Guardian-rapport
 # ═══════════════════════════════════════
 
-def format_guardian_summary(effects: list[dict], state: dict) -> str:
+def format_guardian_summary(effects: list[dict], state: dict, language: str = "sv") -> str:
     """
-    Formatera Guardian-effekter som en läsbar rapport för chatten.
-    Returnerar tom sträng om inga effekter.
+    Format Guardian effects as a readable report for the chat.
+    Returns empty string if no effects. Language-aware (sv/en).
     """
     if not effects:
         return ""
 
+    en = language == "en"
     lines: list[str] = []
     ch = state.get("character", {})
     hp = ch.get("hp", {})
@@ -792,44 +884,62 @@ def format_guardian_summary(effects: list[dict], state: dict) -> str:
         v = e.get("value", "")
 
         if t == "skada":
-            lines.append(f"💔 **{v} skada** → HP {hp.get('current', '?')}/{hp.get('max', '?')}")
+            if en:
+                lines.append(f"💔 **{v} damage** → HP {hp.get('current', '?')}/{hp.get('max', '?')}")
+            else:
+                lines.append(f"💔 **{v} skada** → HP {hp.get('current', '?')}/{hp.get('max', '?')}")
         elif t == "hela":
-            lines.append(f"💚 **Läkning** → HP {hp.get('current', '?')}/{hp.get('max', '?')}")
+            label = "Healing" if en else "Läkning"
+            lines.append(f"💚 **{label}** → HP {hp.get('current', '?')}/{hp.get('max', '?')}")
         elif t == "xp":
             xp = ch.get("xp", {})
             lines.append(f"⭐ **+{v} XP** ({xp.get('current', 0)}/{xp.get('next_level', '?')})")
         elif t == "level_up":
-            lines.append(f"🎉 **NIVÅ UPP → {v}!**")
+            if en:
+                lines.append(f"🎉 **LEVEL UP → {v}!**")
+            else:
+                lines.append(f"🎉 **NIVÅ UPP → {v}!**")
         elif t == "föremål":
-            lines.append(f"📦 **Nytt föremål:** {v}")
+            label = "New item:" if en else "Nytt föremål:"
+            lines.append(f"📦 **{label}** {v}")
         elif t == "föremål_bort":
-            lines.append(f"🗑️ **Föremål bort:** {v}")
+            label = "Item removed:" if en else "Föremål bort:"
+            lines.append(f"🗑️ **{label}** {v}")
         elif t == "guld":
             denom = e.get("denom", "gp")
             sign = "+" if int(v) >= 0 else ""
             lines.append(f"🪙 **{sign}{v} {denom}**")
         elif t == "quest":
-            lines.append(f"📜 **Nytt uppdrag:** {v}")
+            label = "New quest:" if en else "Nytt uppdrag:"
+            lines.append(f"📜 **{label}** {v}")
         elif t == "quest_slutförd":
-            lines.append(f"✅ **Uppdrag slutfört:** {v}")
+            label = "Quest completed:" if en else "Uppdrag slutfört:"
+            lines.append(f"✅ **{label}** {v}")
         elif t == "quest_misslyckad":
-            lines.append(f"❌ **Uppdrag misslyckat:** {v}")
+            label = "Quest failed:" if en else "Uppdrag misslyckat:"
+            lines.append(f"❌ **{label}** {v}")
         elif t == "npc_död":
-            lines.append(f"💀 **{v} har fallit.**")
+            if en:
+                lines.append(f"💀 **{v} has fallen.**")
+            else:
+                lines.append(f"💀 **{v} har fallit.**")
         elif t == "npc_relation":
             lines.append(f"🤝 **{v}**")
         elif t == "plats":
-            lines.append(f"🗺️ **Ny plats:** {v}")
+            label = "New location:" if en else "Ny plats:"
+            lines.append(f"🗺️ **{label}** {v}")
         elif t == "tid":
-            lines.append(f"🕐 **Tid:** {v}")
+            label = "Time:" if en else "Tid:"
+            lines.append(f"🕐 **{label}** {v}")
         elif t == "ny_dag":
             lines.append(f"🌅 **{v}**")
-            # Visa dagsammanfattning av den avslutade dagen
+            # Show day summary of the completed day
             world = state.get("world", {})
             summaries = world.get("day_summaries", [])
             if summaries:
                 ds = summaries[-1]
-                lines.append(f"📖 **Sammanfattning — {ds.get('title', '')}**")
+                summary_label = "Summary" if en else "Sammanfattning"
+                lines.append(f"📖 **{summary_label} — {ds.get('title', '')}**")
                 if ds.get("events"):
                     lines.append(f"  {ds['events']}")
                 if ds.get("quests"):

@@ -62,7 +62,7 @@ FactCategory = Literal[
     "npc", "location", "item", "event", "promise", "world", "relationship"
 ]
 
-# Svenska etiketter för prompt-formatering
+# Category labels for prompt formatting (SV default + EN)
 CATEGORY_LABELS: dict[str, str] = {
     "npc": "NPC",
     "location": "PLATS",
@@ -71,6 +71,16 @@ CATEGORY_LABELS: dict[str, str] = {
     "promise": "LÖFTE",
     "world": "VÄRLD",
     "relationship": "RELATION",
+}
+
+CATEGORY_LABELS_EN: dict[str, str] = {
+    "npc": "NPC",
+    "location": "LOCATION",
+    "item": "ITEM",
+    "event": "EVENT",
+    "promise": "PROMISE",
+    "world": "WORLD",
+    "relationship": "RELATIONSHIP",
 }
 
 
@@ -119,11 +129,11 @@ class Fact(BaseModel):
 
 
 # ═══════════════════════════════════════
-# 2. EXTRHERINGSPROMPT (svenska)
+# 2. EXTRACTION PROMPTS (SV + EN)
 # ═══════════════════════════════════════
 
 EXTRACTION_SYSTEM_PROMPT = """\
-Du är en faktextraherare för ett svenskt D&D 5e-rollspel.
+Du är en faktextraherare för ett D&D 5e-rollspel.
 Din uppgift: läs DM-svaret och spelarens handling, och extrahera ALLA \
 nya, beständiga fakta som påverkar spelvärlden.
 
@@ -210,7 +220,83 @@ Om inga nya fakta eller inventory-ändringar finns:
 {"facts": [], "inventory_changes": []}
 """
 
-# User-promptmall — fylls i per anrop
+# English extraction prompt
+EXTRACTION_SYSTEM_PROMPT_EN = """\
+You are a fact extractor for a D&D 5e RPG.
+Your task: read the DM reply and the player's action, and extract ALL \
+new, persistent facts that affect the game world.
+
+## Categories
+- npc: New information about an NPC (name, role, personality, goals, death …)
+- location: Places mentioned, described, or made available
+- item: Items found, dropped, destroyed, or given
+- event: Significant events (battles, encounters, discoveries …)
+- promise: Promises or commitments made by NPCs or the player
+- world: World state changes (weather, time, political events …)
+- relationship: Relationship changes (NPC↔player or NPC↔NPC)
+
+## Rules
+1. Write each fact in English, short and concrete (max ~120 characters).
+2. Only include NEW information — do not repeat things already known.
+3. Do not include mechanical tags ([SKADA:n], [XP:n] etc.) in the text.
+4. Set confidence 0.9–1.0 for explicit facts, 0.6–0.8 for implied ones.
+5. Return ONLY a JSON object. No markdown, no explanation.
+
+## Inventory changes
+In addition to facts, identify if the player GAINS or LOSES items.
+- "add": Player receives, finds, buys, steals, or gains an item.
+- "remove": Player drops, gives away, sells, consumes, or loses an item.
+- ONLY include items that actually change hands — not things merely mentioned.
+- "You aim at the bottle" → NO. "You take the bottle" → YES.
+- Skip items already in "Current inventory" (below) unless given/taken again.
+- Specify type (Weapon, Armor, Potion, Magic, Tool, Other) and qty (default 1).
+
+## Format
+{
+  "facts": [
+    {"category": "npc", "text": "...", "confidence": 0.9}
+  ],
+  "inventory_changes": [
+    {"action": "add", "name": "Rusty sword", "type": "Weapon", "qty": 1},
+    {"action": "remove", "name": "Dried meat", "qty": 1}
+  ]
+}
+
+## Examples
+
+DM reply: "Mayor Hilda stares at you. 'I don't trust adventurers,' \
+she hisses. Behind her you glimpse a map of Greywatch Caverns. \
+[NPC:Mayor Hilda|Mayor|enemy] [LOCATION:Greywatch Caverns]"
+Player: "I try to persuade her to give us the quest."
+
+→ {
+  "facts": [
+    {"category": "npc", "text": "Mayor Hilda is hostile toward the player and distrusts adventurers", "confidence": 0.95},
+    {"category": "location", "text": "Greywatch Caverns appears on a map in the mayor's room", "confidence": 0.8},
+    {"category": "relationship", "text": "Mayor Hilda is an enemy of the player", "confidence": 0.95}
+  ],
+  "inventory_changes": []
+}
+
+DM reply: "You open the chest and find a rusty sword and 15 gold coins. \
+[ITEM:Rusty sword|Weapon|common] [GOLD:15]"
+Player: "I take the sword and the gold."
+
+→ {
+  "facts": [
+    {"category": "item", "text": "Player found a rusty sword (common weapon) in a chest", "confidence": 0.95},
+    {"category": "item", "text": "Player picked up 15 gold coins", "confidence": 0.9}
+  ],
+  "inventory_changes": [
+    {"action": "add", "name": "Rusty sword", "type": "Weapon", "qty": 1}
+  ]
+}
+
+If no new facts or inventory changes exist:
+{"facts": [], "inventory_changes": []}
+"""
+
+# User prompt templates — filled per call (SV + EN)
 _EXTRACTION_USER_TEMPLATE = """\
 ## DM-svar (tur {turn})
 {dm_reply}
@@ -222,6 +308,18 @@ _EXTRACTION_USER_TEMPLATE = """\
 {inventory_list}
 
 Extrahera fakta och inventory-ändringar som JSON-objekt:"""
+
+_EXTRACTION_USER_TEMPLATE_EN = """\
+## DM reply (turn {turn})
+{dm_reply}
+
+## Player's action
+{player_input}
+
+## Current inventory
+{inventory_list}
+
+Extract facts and inventory changes as a JSON object:"""
 
 
 # ═══════════════════════════════════════
@@ -316,6 +414,7 @@ async def extract_facts(
     turn: int,
     model_call_fn: ModelCallFn,
     inventory_list: str = "(tomt)",
+    language: str = "sv",
 ) -> tuple[list[Fact], list[dict]]:
     """
     Extrahera strukturerade fakta + inventory-ändringar ur ett DM-svar.
@@ -331,16 +430,25 @@ async def extract_facts(
         model_call_fn: Async funktion (messages) -> str, tillhandahålls
                        av anroparen (t.ex. en wrapper kring httpx + billig modell).
         inventory_list: Formaterad lista av nuvarande inventory (för dedup-kontext).
+        language: Campaign language ('sv' or 'en') — selects prompt language.
 
     Returns:
         Tuple: (lista av validerade Fact-objekt, lista av inventory-change dicts).
     """
-    user_msg = _EXTRACTION_USER_TEMPLATE.format(
+    # Select prompt language
+    if language == "en":
+        system_prompt = EXTRACTION_SYSTEM_PROMPT_EN
+        user_template = _EXTRACTION_USER_TEMPLATE_EN
+    else:
+        system_prompt = EXTRACTION_SYSTEM_PROMPT
+        user_template = _EXTRACTION_USER_TEMPLATE
+
+    user_msg = user_template.format(
         turn=turn, dm_reply=dm_reply, player_input=player_input,
         inventory_list=inventory_list,
     )
     messages = [
-        {"role": "system", "content": EXTRACTION_SYSTEM_PROMPT},
+        {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_msg},
     ]
 
@@ -420,7 +528,7 @@ async def extract_facts(
 # 4. FAKTAREGISTER
 # ═══════════════════════════════════════
 
-# Svenska stoppord som inte bidrar till relevans
+# Stopwords for relevance scoring (SV + EN)
 _STOPWORDS = frozenset(
     "och att den det en ett i på för med som av till är var ha de "
     "jag mig min dig din han hon vi ni oss er dem deras dess detta "
@@ -428,11 +536,21 @@ _STOPWORDS = frozenset(
     "har hade också mycket väldigt bara".split()
 )
 
+_STOPWORDS_EN = frozenset(
+    "the a an and or but in on at to for of with by from as is was "
+    "were be been being have has had do does did will would shall "
+    "should may might can could this that these those it its he she "
+    "they we you i me my his her their our your not no nor so if "
+    "then than too very just about also".split()
+)
+
+_ALL_STOPWORDS = _STOPWORDS | _STOPWORDS_EN
+
 
 def _tokenize(text: str) -> set[str]:
-    """Dela text i meningsbärande ord (gemener, utan stoppord)."""
+    """Split text into meaningful words (lowercase, without stopwords)."""
     words = re.findall(r"[a-zåäö0-9]+", text.lower())
-    return {w for w in words if w not in _STOPWORDS and len(w) > 1}
+    return {w for w in words if w not in _ALL_STOPWORDS and len(w) > 1}
 
 
 def _token_overlap_ratio(a: str, b: str) -> float:
@@ -621,11 +739,11 @@ class FactRegister:
 # ═══════════════════════════════════════
 
 
-def format_facts_block(facts: list[Fact]) -> str:
+def format_facts_block(facts: list[Fact], language: str = "sv") -> str:
     """
-    Formatera fakta som ett auktoritativt block för DM-systemprompten.
+    Format facts as an authoritative block for the DM system prompt.
 
-    Exempel:
+    Example:
         ## FAKTAREGISTER (auktoritativt — motsäg aldrig)
         - [NPC] Borgmästare Hilda är fientligt inställd till spelaren (tur 12)
         - [PLATS] Grottan vid Gråvakt har en hemlig ingång (tur 8)
@@ -633,8 +751,13 @@ def format_facts_block(facts: list[Fact]) -> str:
     if not facts:
         return ""
 
-    lines = ["## FAKTAREGISTER (auktoritativt — motsäg aldrig)"]
+    labels = CATEGORY_LABELS_EN if language == "en" else CATEGORY_LABELS
+    header = "## FACT REGISTER (authoritative — never contradict)" if language == "en" \
+        else "## FAKTAREGISTER (auktoritativt — motsäg aldrig)"
+    turn_word = "turn" if language == "en" else "tur"
+
+    lines = [header]
     for fact in facts:
-        label = CATEGORY_LABELS.get(fact.category, fact.category.upper())
-        lines.append(f"- [{label}] {fact.text} (tur {fact.source_turn})")
+        label = labels.get(fact.category, fact.category.upper())
+        lines.append(f"- [{label}] {fact.text} ({turn_word} {fact.source_turn})")
     return "\n".join(lines)

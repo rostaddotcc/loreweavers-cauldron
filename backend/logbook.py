@@ -4,7 +4,8 @@ Mörkrets Rike — Loggbok / Äventyrsjournal
 LLM extraherar en dag-för-dag tidslinje ur kampanjens transkript.
 """
 
-LOG_PROMPT = """Du är en krönikör som skriver en äventyrsjournal för ett mörkt fantasy-rollspel.
+# Swedish prompt (default)
+LOG_PROMPT_SV = """Du är en krönikör som skriver en äventyrsjournal för ett mörkt fantasy-rollspel.
 
 Analysera följande kampanjtranskript och sammanfattningar. Skapa en tidslinje organiserad per dag.
 
@@ -33,17 +34,52 @@ Svara ENDAST med giltig JSON (ingen markdown):
   "summary": "En kort sammanfattning av hela äventyret hittills (max 50 ord)"
 }"""
 
+# English prompt
+LOG_PROMPT_EN = """You are a chronicler writing an adventure journal for a dark fantasy RPG.
 
-def build_log_prompt(transcript_text: str, summaries_text: str, campaign_name: str) -> str:
-    """Bygg prompt för loggboksgenerering."""
-    parts = [LOG_PROMPT]
+Analyze the following campaign transcript and summaries. Create a timeline organized by day.
+
+Rules:
+- Group events by day (Day 1, Day 2, etc.)
+- If the day is not mentioned explicitly, estimate based on the flow of events
+- Each day: 2-4 short bullet points with the most important events
+- Include: locations visited, NPCs met, battles, important decisions, finds
+- Write in English, short and concise (max 15 words per point)
+- Add a short "mood" per day (e.g. "Foggy and uneasy" or "Bloody but hopeful")
+
+Reply ONLY with valid JSON (no markdown):
+{
+  "title": "Campaign name or theme",
+  "days": [
+    {
+      "day": 1,
+      "title": "Short title for the day",
+      "mood": "Mood in 2-3 words",
+      "events": ["Event 1", "Event 2", "Event 3"],
+      "location": "Where the day took place",
+      "npcs_met": ["NPC names"],
+      "quests": ["Quest names if relevant"]
+    }
+  ],
+  "summary": "A short summary of the entire adventure so far (max 50 words)"
+}"""
+
+
+def build_log_prompt(transcript_text: str, summaries_text: str, campaign_name: str, language: str = "sv") -> str:
+    """Build prompt for logbook generation. Supports 'sv' and 'en'."""
+    base = LOG_PROMPT_EN if language == "en" else LOG_PROMPT_SV
+    parts = [base]
     if campaign_name:
-        parts.append(f"\nKampanj: {campaign_name}")
+        label = "Campaign" if language == "en" else "Kampanj"
+        parts.append(f"\n{label}: {campaign_name}")
     if summaries_text:
-        parts.append(f"\n## Sammanfattningar\n{summaries_text}")
+        label = "Summaries" if language == "en" else "Sammanfattningar"
+        parts.append(f"\n## {label}\n{summaries_text}")
     if transcript_text:
-        # Trunkera om extremt långt
+        # Truncate if extremely long
         if len(transcript_text) > 30000:
-            transcript_text = transcript_text[:30000] + "\n[... trunkerad ...]"
-        parts.append(f"\n## Transkript\n{transcript_text}")
+            trunc_label = "[... truncated ...]" if language == "en" else "[... trunkerad ...]"
+            transcript_text = transcript_text[:30000] + f"\n{trunc_label}"
+        label = "Transcript" if language == "en" else "Transkript"
+        parts.append(f"\n## {label}\n{transcript_text}")
     return "\n".join(parts)

@@ -215,6 +215,11 @@ function renderLogbook(data) {
 }
 
 async function loadLogbook() {
+  // Initialize i18n with campaign language
+  try {
+    const r = await fetch('/api/campaign', { credentials: 'include' });
+    if (r.ok) { const d = await r.json(); I18N.init(d?.campaign?._raw?.meta?.language || 'sv'); }
+  } catch(e) {}
   // Visa cachad loggbok direkt (localStorage) — uppdatera sedan från servern
   const cached = localStorage.getItem('dnd_logbook_cache');
   if (cached) {

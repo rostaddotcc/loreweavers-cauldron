@@ -733,6 +733,9 @@ const state = {
   try {
     const { campaign } = await API.getCampaign();
     if (!campaign) { showNoCampaign(); return; }
+    // Initialize i18n with campaign language
+    const lang = (campaign._raw && campaign._raw.meta && campaign._raw.meta.language) || 'sv';
+    I18N.init(lang);
     const raw = campaign._raw || {};
     state.character    = raw.character || {};
     state.inventory    = Array.isArray(raw.inventory) ? raw.inventory : [];

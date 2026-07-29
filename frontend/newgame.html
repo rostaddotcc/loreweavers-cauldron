@@ -55,6 +55,22 @@
   .rune-divider::before,.rune-divider::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.5}
   .rune-divider span{color:var(--gold);text-shadow:0 0 8px rgba(201,162,39,.6)}
 
+  /* ── Campaign language selector ── */
+  .lang-row{display:flex;align-items:center;justify-content:center;gap:1rem;margin:-1.4rem 0 2.2rem;flex-wrap:wrap}
+  .lang-label{font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.3em;text-transform:uppercase;color:var(--bone-dim)}
+  .lang-select{
+    font-family:'Cinzel',serif;font-size:.78rem;letter-spacing:.1em;color:var(--gold-bright);
+    background:var(--stone-3);border:1px solid var(--gold);padding:.55rem 2.4rem .55rem 1rem;
+    cursor:pointer;outline:none;border-radius:2px;appearance:none;-webkit-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='6'%3E%3Cpath d='M0 0l4.5 6L9 0z' fill='%23e8c65a'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right .8rem center;
+    box-shadow:0 4px 14px -6px rgba(232,198,90,.35),inset 0 1px 0 rgba(255,255,255,.06);
+    transition:border-color .2s,box-shadow .2s,color .2s;
+  }
+  .lang-select:hover,.lang-select:focus{border-color:var(--gold-bright);box-shadow:0 0 18px -4px rgba(232,198,90,.55),inset 0 1px 0 rgba(255,255,255,.06)}
+  .lang-select option{background:var(--stone-2);color:var(--bone);font-family:'Spectral',serif;font-size:.85rem}
+  .lang-hint{font-size:.72rem;font-style:italic;color:var(--bone-dim)}
+
   /* ── Section labels ── */
   .section-label{font-family:'Cinzel',serif;font-size:.74rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);display:flex;align-items:center;gap:.9rem;margin:2.6rem 0 1.2rem}
   .section-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(201,162,39,.5),transparent)}
@@ -215,6 +231,16 @@
   </div>
   <p class="destiny-sub">Välj en arketyp — eller skriv din egen legend. Dungeon Master väver din karaktär till liv.</p>
   <div class="rune-divider"><span>✦</span></div>
+
+  <!-- ═══════════ KAMPANJSPRÅK ═══════════ -->
+  <div class="lang-row">
+    <label class="lang-label" for="campaign-lang">Kampanjspråk</label>
+    <select id="campaign-lang" class="lang-select" onchange="onLangChange(this.value)">
+      <option value="sv" selected>Svenska</option>
+      <option value="en">English</option>
+    </select>
+    <span class="lang-hint" id="lang-hint">Äventyret, DM och alla svar på svenska.</span>
+  </div>
 
   <!-- ═══════════ 0. VALVET (sparade hjältar) ═══════════ -->
   <div id="vault-section" style="display:none">
@@ -484,6 +510,15 @@ spread.innerHTML = Object.entries(ARCHETYPES).map(([key, a]) => `
   </div>`).join('');
 
 let selectedKey = null;
+
+// ── Campaign language selector ──
+function onLangChange(lang) {
+  const hint = document.getElementById('lang-hint');
+  if (hint) hint.textContent = lang === 'en'
+    ? 'The adventure, DM and all responses in English.'
+    : 'Äventyret, DM och alla svar på svenska.';
+}
+
 function selectArch(key) {
   selectedKey = key;
   document.querySelectorAll('.arch').forEach(el => el.classList.toggle('selected', el.dataset.key === key));
@@ -530,7 +565,8 @@ async function summon() {
     // Se till att kampanj finns (ett spel per användare)
     const { campaign } = await API.getCampaign();
     if (!campaign) {
-      await API.createCampaign(sessionStorage.getItem('dnd_adventure_mode') || 'freestyle');
+      const selLang = document.getElementById('campaign-lang')?.value || 'sv';
+      await API.createCampaign(sessionStorage.getItem('dnd_adventure_mode') || 'freestyle', selLang);
     }
 
     // Generera karaktären via backend → vald modell

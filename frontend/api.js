@@ -195,11 +195,11 @@ const API = (() => {
       };
     },
 
-    async createCampaign(mode = 'freestyle') {
+    async createCampaign(mode = 'freestyle', language = 'sv') {
       if (MOCK) {
         if (mock._load()) throw new Error('Du har redan ett aktivt äventyr');
         mock.campaign = {
-          meta: { campaign_id: 'mock-' + Date.now(), campaign_name: 'Mörkrets Rike', turn_count: 0, session_count: 1, created: new Date().toISOString(), last_updated: new Date().toISOString() },
+          meta: { campaign_id: 'mock-' + Date.now(), campaign_name: 'Mörkrets Rike', turn_count: 0, session_count: 1, created: new Date().toISOString(), last_updated: new Date().toISOString(), language },
           character: {}, inventory: [], currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 },
           npcs: [], quests: [], world: { current_location: '', time: '', weather: '' },
           mode,
@@ -207,7 +207,7 @@ const API = (() => {
         mock._save();
         return { ok: true, campaign_id: mock.campaign.meta.campaign_id };
       }
-      return req('/api/campaign', { method: 'POST' });
+      return req('/api/campaign', { method: 'POST', body: JSON.stringify({ language }) });
     },
 
     async endCampaign() {

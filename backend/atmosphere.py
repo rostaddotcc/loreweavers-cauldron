@@ -467,12 +467,19 @@ EVENT_CSS_CLASS = {
     'quest': 'art-quest',
 }
 
-# Event-typ → frontend-etikett
+# Event type → frontend label (SV + EN)
 EVENT_LABEL = {
     'level_up': '✦ nivå upp ✦',
     'npc_död': '✦ vila i frid ✦',
     'ny_dag': '✦ ny dag ✦',
     'quest': '✦ uppdrag ✦',
+}
+
+EVENT_LABEL_EN = {
+    'level_up': '✦ level up ✦',
+    'npc_död': '✦ rest in peace ✦',
+    'ny_dag': '✦ new day ✦',
+    'quest': '✦ quest ✦',
 }
 
 
@@ -501,8 +508,8 @@ def get_fallback_event_art(event_type: str) -> str | None:
     return EVENT_ART_BANK.get(event_type)
 
 
-def build_art_prompt(environment: str) -> str:
-    """Bygg prompt för ambient ASCII-art generering (svenska, med few-shot)."""
+def build_art_prompt(environment: str, language: str = "sv") -> str:
+    """Build prompt for ambient ASCII-art generation (language-aware, with few-shot)."""
     desc_map = {
         'skog': 'Rita en mörk, tät skog med vridna träd, dimma mellan stammarna, och ett svagt sken från något dolt.',
         'is': 'Rita ett fruset landskap med taggiga isformationer, drivande snö, och en blek kall måne lågt på himlen.',
@@ -520,42 +527,98 @@ def build_art_prompt(environment: str) -> str:
         'vila': 'Rita en lägereld på natten med gnistor som stiger mot mörkret, en tält-siluett, och stjärnor ovanför.',
         'upptäckt': 'Rita en gömd skatt: en öppen kista som lyser, utspridda mynt, och en hemlig dörr på glänt med gyllene ljus.',
     }
-    desc = desc_map.get(environment, f'Rita en stämningsfull scen av: {environment}.')
+    desc_map_en = {
+        'skog': 'Draw a dark, dense forest with twisted trees, mist between the trunks, and a faint glow from something hidden.',
+        'is': 'Draw a frozen landscape with jagged ice formations, drifting snow, and a pale cold moon low on the horizon.',
+        'lava': 'Draw a volcanic hellscape with rivers of lava, sparks, and black rocks against an orange glow.',
+        'grotta': 'Draw a deep cave with dripping stalactites, narrow passages, and something glowing faintly in the dark.',
+        'vatten': 'Draw a misty river winding through dark rocks, rain falling, and a faint reflection on the water surface.',
+        'hav': 'Draw a dark sea with waves crashing on a desolate shore, and storm clouds gathering at the horizon.',
+        'slott': 'Draw a crumbling castle with broken towers, ivy on the walls, and a single lit window high up.',
+        'grav': 'Draw a haunted graveyard with crooked gravestones, dead trees, and mist rising from the cold ground.',
+        'stad': 'Draw a medieval street at dusk with crooked houses, a hanging sign, and wet cobblestones reflecting torchlight.',
+        'berg': 'Draw a mountain peak above the clouds with a narrow cliff path, windswept and dizzying, with a hawk circling.',
+        'träsk': 'Draw a misty swamp with reeds, murky water, will-o-wisps, and gnarled dead trees reaching upward.',
+        'strid': 'Draw a chaotic battle scene with crossed swords, flying arrows, splashing blood, and a fallen shield on the ground.',
+        'död': 'Draw a death scene: a skull, scattered bones, an extinguished candle, and darkness closing in from all sides.',
+        'vila': 'Draw a campfire at night with sparks rising into the dark, a tent silhouette, and stars above.',
+        'upptäckt': 'Draw a hidden treasure: an open glowing chest, scattered coins, and a secret door ajar with golden light.',
+    }
 
-    fewshot = get_fallback_art(environment) or get_fallback_art('skog')
+    if language == "en":
+        desc = desc_map_en.get(environment, f'Draw an atmospheric scene of: {environment}.')
+        fewshot = get_fallback_art(environment) or get_fallback_art('skog')
+        return (
+            "You are an ASCII artist for a fantasy RPG. "
+            "Create an atmospheric scene using characters.\n\n"
+            f"{desc} Max 12 lines, 50 characters wide.\n\n"
+            "CRITICAL RULES:\n"
+            "- Use ONLY these characters: / \\ | - _ . : ; # @ * ^ ~ + =\n"
+            "- NO letters, NO words, NO labels\n"
+            "- NO markdown fences, NO explanations\n"
+            "- Reply ONLY with the ASCII art, nothing else\n\n"
+            f"EXAMPLE OF GOOD ASCII ART (follow this style):\n{fewshot}\n\n"
+            "Now create a similar scene."
+        )
+    else:
+        desc = desc_map.get(environment, f'Rita en stämningsfull scen av: {environment}.')
+        fewshot = get_fallback_art(environment) or get_fallback_art('skog')
+        return (
+            "Du är en ASCII-konstnär för ett fantasy-rollspel. "
+            "Skapa en stämningsfull scen med tecken.\n\n"
+            f"{desc} Max 12 rader, 50 tecken brett.\n\n"
+            "KRITISKA REGLER:\n"
+            "- Använd ENDAST dessa tecken: / \\ | - _ . : ; # @ * ^ ~ + =\n"
+            "- INGA bokstäver, INGA ord, INGA etiketter\n"
+            "- INGA markdown-stängsel, INGA förklaringar\n"
+            "- Svara ENDAST med ASCII-konsten, inget annat\n\n"
+            f"EXEMPEL PÅ BRA ASCII-ART (följ denna stil):\n{fewshot}\n\n"
+            "Skapa nu en liknande scen."
+        )
 
-    return (
-        "Du är en ASCII-konstnär för ett fantasy-rollspel. "
-        "Skapa en stämningsfull scen med tecken.\n\n"
-        f"{desc} Max 12 rader, 50 tecken brett.\n\n"
-        "KRITISKA REGLER:\n"
-        "- Använd ENDAST dessa tecken: / \\ | - _ . : ; # @ * ^ ~ + =\n"
-        "- INGA bokstäver, INGA ord, INGA etiketter\n"
-        "- INGA markdown-stängsel, INGA förklaringar\n"
-        "- Svara ENDAST med ASCII-konsten, inget annat\n\n"
-        f"EXEMPEL PÅ BRA ASCII-ART (följ denna stil):\n{fewshot}\n\n"
-        "Skapa nu en liknande scen."
-    )
 
-
-def build_event_art_prompt(event_type: str) -> str | None:
-    """Bygg prompt för event-triggered ASCII-art."""
+def build_event_art_prompt(event_type: str, language: str = "sv") -> str | None:
+    """Build prompt for event-triggered ASCII-art (language-aware)."""
     desc = EVENT_ART.get(event_type)
     if not desc:
         return None
     fewshot = get_fallback_event_art(event_type) or ""
-    return (
-        "Du är en ASCII-konstnär för ett fantasy-rollspel. "
-        "Skapa en liten, slagkraftig ASCII-art-scen.\n\n"
-        f"{desc} Max 8 rader, 40 tecken brett.\n\n"
-        "KRITISKA REGLER:\n"
-        "- Använd ENDAST dessa tecken: / \\ | - _ . : ; # @ * ^ ~ + =\n"
-        "- INGA bokstäver, INGA ord, INGA etiketter\n"
-        "- INGA markdown-stängsel, INGA förklaringar\n"
-        "- Svara ENDAST med ASCII-konsten, inget annat\n\n"
-        f"EXEMPEL:\n{fewshot}\n\n"
-        "Skapa nu en liknande scen."
-    )
+
+    # English event art descriptions
+    event_art_en = {
+        'level_up': 'Draw a triumphant pillar of light breaking through darkness, rays spreading upward, sparks and energy radiating out.',
+        'npc_död': 'Draw a lonely gravestone with a cross, dead grass around it, and a crow perched on top.',
+        'ny_dag': 'Draw a sunrise over dark hills, rays breaking the horizon, birds as silhouettes against the sky.',
+        'quest': 'Draw an unrolled parchment scroll with a wax seal, banners, and a quill pen resting beside it.',
+    }
+
+    if language == "en":
+        desc = event_art_en.get(event_type, desc)
+        return (
+            "You are an ASCII artist for a fantasy RPG. "
+            "Create a small, impactful ASCII art scene.\n\n"
+            f"{desc} Max 8 lines, 40 characters wide.\n\n"
+            "CRITICAL RULES:\n"
+            "- Use ONLY these characters: / \\ | - _ . : ; # @ * ^ ~ + =\n"
+            "- NO letters, NO words, NO labels\n"
+            "- NO markdown fences, NO explanations\n"
+            "- Reply ONLY with the ASCII art, nothing else\n\n"
+            f"EXAMPLE:\n{fewshot}\n\n"
+            "Now create a similar scene."
+        )
+    else:
+        return (
+            "Du är en ASCII-konstnär för ett fantasy-rollspel. "
+            "Skapa en liten, slagkraftig ASCII-art-scen.\n\n"
+            f"{desc} Max 8 rader, 40 tecken brett.\n\n"
+            "KRITISKA REGLER:\n"
+            "- Använd ENDAST dessa tecken: / \\ | - _ . : ; # @ * ^ ~ + =\n"
+            "- INGA bokstäver, INGA ord, INGA etiketter\n"
+            "- INGA markdown-stängsel, INGA förklaringar\n"
+            "- Svara ENDAST med ASCII-konsten, inget annat\n\n"
+            f"EXEMPEL:\n{fewshot}\n\n"
+            "Skapa nu en liknande scen."
+        )
 
 
 def should_generate_art(meta: dict, turn_count: int) -> bool:

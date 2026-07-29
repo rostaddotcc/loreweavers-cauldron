@@ -90,6 +90,19 @@ from guardian import guardian_check_roll, guardian_extract_mechanics, apply_mech
 app = FastAPI(title="Mörkrets Rike", version="1.0.0")
 
 # ═══════════════════════════════════════
+# Language helpers
+# ═══════════════════════════════════════
+
+def _get_lang(state: dict) -> str:
+    """Get campaign language from state (defaults to 'sv')."""
+    return state.get("meta", {}).get("language", "sv")
+
+
+def _err(msg_sv: str, msg_en: str, lang: str = "sv") -> str:
+    """Return an error message in the campaign's language."""
+    return msg_en if lang == "en" else msg_sv
+
+# ═══════════════════════════════════════
 # NPC-parsning + Äventyrsöppningar
 # ═══════════════════════════════════════
 
@@ -1627,6 +1640,7 @@ async def _post_turn_tasks(
         facts, inv_changes = await extract_facts(
             reply, player_msg, turn_count, _extraction_llm,
             inventory_list=inv_list_str,
+            language=_get_lang(st) if st else "sv",
         )
         if facts:
             register = FactRegister(username, campaign_id)
@@ -1799,6 +1813,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
             guardian_roll = await guardian_check_roll(
                 req.message, state,
                 lambda msgs: _call_llm(EXTRACTION_MODEL, msgs, temperature=0.1, max_tokens=200),
+                language=_get_lang(state),
             )
             if guardian_roll:
                 logger.info("🛡️ Guardian pre-DM (%.1fs): kast %s (%s)",
@@ -2002,6 +2017,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         mech = await guardian_extract_mechanics(
             reply, req.message, state, effective_turn,
             lambda msgs: _call_llm(EXTRACTION_MODEL, msgs, temperature=0.2, max_tokens=1200),
+            language=_get_lang(state),
         )
         guardian_effects = apply_mechanics(state, mech)
 
@@ -2034,7 +2050,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
             meta["last_effects"] = existing
 
             # Formatera läsbar rapport
-            guardian_summary = format_guardian_summary(guardian_effects, state)
+            guardian_summary = format_guardian_summary(guardian_effects, state, language=_get_lang(state))
             if guardian_summary:
                 # Spara i transkriptet (role=guardian → syns i chatten + DM-kontext)
                 state = store.append_message(state, "guardian", guardian_summary)

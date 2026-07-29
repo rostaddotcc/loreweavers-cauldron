@@ -202,6 +202,11 @@ let activeFilter = 'alla';
 // ── Ladda fakta från backend ──
 (async () => {
   try {
+    // Initialize i18n with campaign language
+    try {
+      const cr = await fetch('/api/campaign', { credentials: 'include' });
+      if (cr.ok) { const cd = await cr.json(); I18N.init(cd?.campaign?._raw?.meta?.language || 'sv'); }
+    } catch(_) {}
     const { facts, stats } = await API.getFacts();
     ALL_FACTS = facts || [];
     buildFilters(stats);

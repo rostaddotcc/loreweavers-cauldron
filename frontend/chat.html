@@ -1134,6 +1134,9 @@ async function loadCampaign() {
     const { campaign } = await API.getCampaign();
     if (campaign) {
       campaignData = campaign;
+      // Initialize i18n with campaign language
+      const lang = (campaign._raw && campaign._raw.meta && campaign._raw.meta.language) || 'sv';
+      I18N.init(lang);
       if (campaign.character && campaign.character.name) {
         CHAR_NAME = campaign.character.name;
       }

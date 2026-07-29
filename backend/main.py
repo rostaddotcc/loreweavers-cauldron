@@ -1384,61 +1384,18 @@ def _build_system_prompt(
         q_str = "; ".join(q.get("name", "?") for q in active[:5])
         parts.append(f"\n## Aktiva uppdrag\n{q_str}")
 
-    # Tagg-enforcement: påminn DM om den slarvar med taggar
-    tag_streak = state.get("meta", {}).get("tag_streak", 0)
-    if tag_streak >= 3:
-        parts.append(
-            "\n## ⚠️ PÅMINNELSE\n"
-            "Du har inte använt mekaniska taggar på flera turer. "
-            "Kom ihåg att använda [SKADA:], [XP:], [PLATS:], [NPC:], [QUEST:] "
-            "när det är relevant. ALDRIG narrera skada eller loot utan tagg."
-        )
+    # ── Enforcement borttaget (v19) ──
+    # tag_streak, missing_roll_streak, turns_since_roll: Guardian pre-DM
+    # detekterar kast och post-DM extraherar mekanik. DM behöver inte påminnas.
 
-    # Tärnings-enforcement: påminn DM om den missar kast vid riskfyllda handlingar
-    missing_roll_streak = state.get("meta", {}).get("missing_roll_streak", 0)
-    if missing_roll_streak >= 2:
-        parts.append(
-            "\n## ⚠️ SYSTEM: TÄRNINGSKAST SAKNAS\n"
-            "Spelaren utförde en riskfylld handling men du begärde inget tärningskast. "
-            "Kom ihåg att begära [KAST:] vid osäkra handlingar. "
-            "Varje attack, smygning, klättring eller hopp KRÄVER ett kast med DC och konsekvenser."
-        )
-
-    # Turns-since-last-roll: eskalerande påminnelse när det gått för länge
-    # sedan senaste tärningskastet (generell — oberoende av action-nyckelord).
-    _meta_sr = state.get("meta", {})
-    _cur_turn = turn_override if turn_override is not None else _meta_sr.get("turn_count", 0)
-    last_roll_turn = _meta_sr.get("last_roll_turn", _cur_turn)
-    turns_since_roll = max(0, _cur_turn - last_roll_turn)
-    if turns_since_roll >= 5:
-        parts.append(
-            f"\n## 🎲 SYSTEM: {turns_since_roll} TURER UTAN TÄRNINGSKAST\n"
-            "Det har gått alldeles för länge sedan senaste kastet — spelet riskerar att stanna. "
-            "Skapa NU en osäker situation som KRÄVER ett kast: ett hot som dyker upp, en riskfylld "
-            "genväg, en NPC som kräver ett svårt val, ett ljud i mörkret. "
-            "Använd ALLTID [KAST: 1d20+MOD | ETIKETT (DC X)] — ALDRIG prosa som 'rulla tärningen'."
-        )
-    elif turns_since_roll >= 3:
-        parts.append(
-            f"\n## 🎲 PÅMINNELSE: {turns_since_roll} turer sedan senaste tärningskastet\n"
-            "Om spelaren gör något med osäker utgång, begär ett kast NU. "
-            "Skapa gärna aktivt en situation som kräver ett kast. "
-            "Kom ihåg: [KAST:]-taggen är enda sättet att spawna tärningen — aldrig prosa-kast."
-        )
-
-    # Resultat-enforcement: spelaren har skickat ett tärningsresultat.
-    # DM:n MÅSTE ge utfallet direkt — injicera en otvetydig påminnelse.
+    # Resultat-påminnelse: spelaren har skickat ett tärningsresultat.
     if player_input.strip().startswith("[Resultat:"):
         parts.append(
-            "\n## 🎲⚠️ SYSTEM: TÄRNINGSRESULTAT MOTTAGET — GE UTFALLET NU\n"
-            "Spelaren har just slagit en tärning och skickat resultatet. "
-            "Du MÅSTE i detta svar:\n"
-            "1. Jämföra resultatet mot DC/AC och avgöra: LYCKADES eller MISSLYCKADES.\n"
-            "2. Berätta utfallet NARRATIVT — vad händer konkret i världen?\n"
-            "3. Använda mekaniska taggar ([SKADA:], [XP:], [GULD:], [FÖREMÅL:]) för konsekvenser.\n"
-            "4. ALDRIG fråga 'vad gör du?' utan att FÖRST ge utfallet.\n"
-            "5. ALDRIG begära ett nytt kast för samma handling.\n"
-            "Detta är inte en vanlig handling — det är ett tärningsresultat. Ge utfallet. NU."
+            "\n## 🎲 TÄRNINGSRESULTAT MOTTAGET\n"
+            "Spelaren har slagit en tärning. Ge utfallet direkt:\n"
+            "1. Jämför mot DC/AC → LYCKADES eller MISSLYCKADES.\n"
+            "2. Berätta utfallet narrativt.\n"
+            "3. ALDRIG fråga 'vad gör du?' utan att FÖRST ge utfallet."
         )
 
     # ── VAKNANDEPROTOKOLLET ──

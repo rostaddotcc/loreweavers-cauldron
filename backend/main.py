@@ -928,7 +928,7 @@ async def dice(req: DiceRequest, morkrets_token: str | None = Cookie(None)):
 
 class OracleRequest(BaseModel):
     question: str
-    model_id: str = "qwen3.6-flash"
+    model_id: str = "step-3.7-flash"
 
 
 @app.post("/api/oracle")

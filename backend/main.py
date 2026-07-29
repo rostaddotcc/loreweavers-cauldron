@@ -727,8 +727,10 @@ async def _call_llm(
     }
 
     # StepFun 3.7 Flash: debiterar per prompt, inte per token → high överallt.
+    # High reasoning kräver stor tokenbudget (tanke + svar).
     if config.api_model == "step-3.7-flash":
         body["reasoning_effort"] = reasoning_effort or "high"
+        body["max_tokens"] = max(body.get("max_tokens", 1024), 8000)
 
     url = f"{config.base_url.rstrip('/')}/chat/completions"
 
@@ -741,14 +743,17 @@ async def _call_llm(
         data = resp.json()
         content = data["choices"][0]["message"].get("content", "")
         if not content:
-            # Reasoning-modell som inte hann klart — logga men kasta inte
-            # (atmosfär-anrop sväljer detta via postprocess_art)
-            reasoning = data["choices"][0]["message"].get("reasoning_content", "")
+            # Reasoning-modeller (StepFun, DeepSeek) kan lägga svaret i
+            # reasoning/reasoning_content och lämna content tomt.
+            msg = data["choices"][0]["message"]
+            reasoning = msg.get("reasoning") or msg.get("reasoning_content") or ""
             if reasoning:
-                logger.debug(
-                    "🧠 %s returnerade tomt content (%d reasoning-tokens)",
+                logger.info(
+                    "🧠 %s: tomt content → använder reasoning (%d tecken)",
                     config.api_model, len(reasoning),
                 )
+                return reasoning
+            logger.warning("🧠 %s returnerade helt tomt svar", config.api_model)
             return ""
         return content
 

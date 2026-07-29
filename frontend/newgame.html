@@ -188,7 +188,9 @@
   .vault-chip .vc-icon{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;border:1px solid var(--edge);background:var(--stone-3);flex-shrink:0}
   .vault-chip .vc-name{font-family:'Cinzel',serif;font-weight:700;font-size:.85rem;color:var(--bone-bright);line-height:1.2}
   .vault-chip .vc-sub{font-size:.7rem;font-style:italic;color:var(--bone-dim)}
-  .vault-chip .vc-go{font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-bright);border:1px solid var(--gold);background:rgba(201,162,39,.12);padding:.35rem .6rem;border-radius:2px;margin-left:.4rem;white-space:nowrap}
+  .vault-chip .vc-go{font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-bright);border:1px solid var(--gold);background:rgba(201,162,39,.12);padding:.35rem .6rem;border-radius:2px;margin-left:.4rem;white-space:nowrap;cursor:pointer}
+  .vault-chip .vc-del{color:#665;font-size:.8rem;padding:.3rem .5rem;cursor:pointer;border-radius:2px;transition:all .2s;margin-left:.2rem}
+  .vault-chip .vc-del:hover{color:#f66;background:rgba(255,80,80,.12)}
   @keyframes card-in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 
   @media(max-width:860px){.spread{grid-template-columns:repeat(2,1fr)}.pv-stats{grid-template-columns:repeat(3,1fr)}}
@@ -646,13 +648,14 @@ async function loadVaultChips() {
       const name = c.name || 'Namnlös';
       const sub = [c.race, c.class].filter(Boolean).join(' · ') + (c.level ? ' · Nivå ' + c.level : '');
       return `
-        <div class="vault-chip" style="animation-delay:${i*0.07}s" onclick="recallHero('${entry.id}', '${name.replace(/'/g, "\\'")}')">
+        <div class="vault-chip" style="animation-delay:${i*0.07}s">
           <div class="vc-icon">${vaultIcon(c)}</div>
-          <div>
+          <div onclick="recallHero('${entry.id}', '${name.replace(/'/g, "\\'")}')" style="cursor:pointer;flex:1">
             <div class="vc-name">${name}</div>
             <div class="vc-sub">${sub}</div>
           </div>
-          <span class="vc-go">⚔️ Återkalla</span>
+          <span class="vc-go" onclick="recallHero('${entry.id}', '${name.replace(/'/g, "\\'")}')">⚔️ Återkalla</span>
+          <span class="vc-del" onclick="event.stopPropagation();deleteHero('${entry.id}', '${name.replace(/'/g, "\\'")}')" title="Radera">✕</span>
         </div>`;
     }).join('');
   } catch (e) { /* valvet är valfritt — ignorera fel */ }
@@ -666,6 +669,18 @@ async function recallHero(charId, name) {
     setTimeout(() => location.href = 'chat.html', 800);
   } catch (e) {
     toast('⚠ ' + (e.message || 'Kunde inte återkalla hjälten'));
+  }
+}
+
+async function deleteHero(charId, name) {
+  if (!confirm(`Vill du radera ${name} ur valvet? Detta kan inte ångras.`)) return;
+  SFX.click();
+  try {
+    await API.vaultDelete(charId);
+    toast(`🗑️ ${name} har raderats ur valvet.`);
+    loadVaultChips();
+  } catch (e) {
+    toast('⚠ ' + (e.message || 'Kunde inte radera hjälten'));
   }
 }
 

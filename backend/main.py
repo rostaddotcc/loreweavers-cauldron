@@ -986,13 +986,21 @@ async def get_campaign(morkrets_token: str | None = Cookie(None)):
 
 @app.get("/api/campaign/transcript")
 async def get_transcript(morkrets_token: str | None = Cookie(None)):
-    """Returnera kampanjens transkript (senaste 100 meddelandena)."""
+    """Returnera kampanjens transkript (senaste 100 meddelandena).
+    Inkluderar även senaste tur's effekter + kastbegäran så att
+    transkript-fallbacken kan återställa föremål/kast som tappades
+    när HTTP-anslutningen timeout:ade."""
     payload = _get_current_user(morkrets_token)
     state = store.get(payload["sub"])
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
     entries = store.load_transcript(state, last_n=100)
-    return {"messages": entries}
+    meta = state.get("meta", {})
+    return {
+        "messages": entries,
+        "last_effects": meta.get("last_effects", []),
+        "last_roll_requests": meta.get("last_roll_requests", []),
+    }
 
 
 @app.delete("/api/campaign")
@@ -1835,6 +1843,8 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
 
     # Spara effekter för nästa turs systemprompt
     meta["last_effects"] = effects if effects else []
+    # Spara kast-begäran så transkript-fallbacken kan återställa dem
+    meta["last_roll_requests"] = roll_requests if roll_requests else []
 
     # Tärnings-enforcement: begärde DM kast vid riskfylld handling?
     player_action = ACTION_KEYWORDS.search(req.message)

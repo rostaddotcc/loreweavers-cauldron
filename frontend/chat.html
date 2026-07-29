@@ -2053,14 +2053,23 @@ async function dmRespond(playerText) {
     // Om anslutningen kapsejsar (proxy-timeout, nätverk, mobil) hämtar vi
     // svaret från transkriptet istället för att visa ett felmeddelande.
     try {
-      const { messages } = await API.getTranscript();
-      const lastAssistant = [...(messages || [])].reverse().find(m => m.role === 'assistant');
+      const data = await API.getTranscript();
+      const messages = data.messages || [];
+      const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant');
       if (lastAssistant) {
         // Kontrollera att meddelandet inte redan visas (förhindrar dubletter)
         const existingDm = [...chat.querySelectorAll('.msg.dm')].pop();
         const alreadyShown = existingDm && existingDm.querySelector('.bubble')?.textContent.trim() === lastAssistant.content.trim();
         if (!alreadyShown) {
           addMessage('dm', null, lastAssistant.content);
+          // Återställ effekter (föremål, guld, XP…) som tappades vid timeout
+          if (data.last_effects && data.last_effects.length) {
+            renderEffects(data.last_effects);
+          }
+          // Återställ kast-knappar som tappades vid timeout
+          if (data.last_roll_requests && data.last_roll_requests.length) {
+            data.last_roll_requests.forEach(r => addRollRequest(r.notation, r.label));
+          }
           // Transient systemmeddelande — försvinner efter 6 sekunder
           const sysEl = addMessage('system', null, '⚡ Anslutningen avbröts — svaret hämtades från transkriptet.');
           if (sysEl) setTimeout(() => sysEl.remove(), 6000);

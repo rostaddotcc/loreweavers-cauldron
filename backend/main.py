@@ -786,9 +786,15 @@ async def get_transcript(morkrets_token: str | None = Cookie(None)):
 @app.delete("/api/campaign")
 async def delete_campaign(morkrets_token: str | None = Cookie(None)):
     payload = _get_current_user(morkrets_token)
-    deleted = store.delete(payload["sub"])
+    username = payload["sub"]
+    deleted = store.delete(username)
     if not deleted:
         raise HTTPException(404, "Ingen kampanj att radera")
+    # Fas 3: Rensa Qdrant-vektorer så inget långtidsminne läcker kvar
+    try:
+        await rag.purge_user(username)
+    except Exception as e:
+        logger.debug("Qdrant-rensning vid kampanjradering: %s", e)
     return {"ok": True, "message": "Kampanjen har avslutats och raderats"}
 
 

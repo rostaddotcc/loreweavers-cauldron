@@ -46,6 +46,7 @@ from qdrant_client.models import (
     Batch,
     FieldCondition,
     Filter,
+    FilterSelector,
     MatchValue,
     PointStruct,
 )
@@ -380,6 +381,39 @@ async def index_lore(
 
 
 # ── 6. Hälsokontroll ──────────────────────────────────────────────
+
+async def purge_user(username: str) -> int:
+    """
+    Radera alla vektorer för en användare ur Qdrant.
+    Anropas när en användares kampanjer raderas, så att inget
+    långtidsminne läcker kvar. Returnerar antalet raderade punkter.
+    """
+    try:
+        client = _qdrant_client()
+        # Räkna först (för loggning) — scrolla utan vektorer
+        points, _next = await client.scroll(
+            collection_name=COLLECTION,
+            scroll_filter=Filter(must=[
+                FieldCondition(key="username", match=MatchValue(value=username)),
+            ]),
+            limit=1,
+            with_payload=False,
+            with_vectors=False,
+        )
+        # delete() tar bort allt som matchar filtret
+        await client.delete(
+            collection_name=COLLECTION,
+            points_selector=FilterSelector(filter=Filter(must=[
+                FieldCondition(key="username", match=MatchValue(value=username)),
+            ])),
+        )
+        await client.close()
+        logger.info("Rensade Qdrant-vektorer för %s", username)
+        return len(points)
+    except Exception as exc:
+        logger.warning("Qdrant-rensning misslyckades för %s: %s", username, exc)
+        return 0
+
 
 async def qdrant_healthy() -> bool:
     """

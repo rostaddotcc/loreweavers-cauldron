@@ -213,25 +213,25 @@ let activeFilter = 'alla';
     renderStats(stats);
     renderFacts();
     document.getElementById('foot-count').textContent =
-      ALL_FACTS.length + ' uppgifter i arkivet';
+      ALL_FACTS.length + I18N.t(' uppgifter i arkivet');
   } catch (e) {
     document.getElementById('archive').innerHTML = `
       <div class="empty">
         <div class="rune">🗺️</div>
-        <p>Ingen aktiv kampanj — skapa ett äventyr först</p>
-        <a class="talk-btn" href="adventure.html">✦ Skapa äventyr</a>
+        <p>${I18N.t('Ingen aktiv kampanj — skapa ett äventyr först')}</p>
+        <a class="talk-btn" href="adventure.html">${I18N.t('✦ Skapa äventyr')}</a>
       </div>`;
   }
 })();
 
 function buildFilters(stats) {
   const counts = (stats && stats.by_category_active) || {};
-  let html = `<button class="fchip on" data-f="alla" onclick="setFilter('alla')">Alla <span class="cnt">${ALL_FACTS.length}</span></button>`;
+  let html = `<button class="fchip on" data-f="alla" onclick="setFilter('alla')">${I18N.t('Alla')} <span class="cnt">${ALL_FACTS.length}</span></button>`;
   for (const key of CAT_ORDER) {
     const c = CATS[key];
     const n = counts[key] || 0;
     if (n > 0) {
-      html += `<button class="fchip" data-f="${key}" onclick="setFilter('${key}')">${c.icon} ${c.label} <span class="cnt">${n}</span></button>`;
+      html += `<button class="fchip" data-f="${key}" onclick="setFilter('${key}')">${c.icon} ${I18N.t(c.label)} <span class="cnt">${n}</span></button>`;
     }
   }
   document.getElementById('filters').innerHTML = html;
@@ -247,7 +247,7 @@ function renderStats(stats) {
   if (!stats || !stats.by_category_active) return;
   const counts = stats.by_category_active;
   const max = Math.max(1, ...Object.values(counts));
-  let html = `<div class="stats-title">📊 Arkivets omfattning</div>`;
+  let html = `<div class="stats-title">${I18N.t('📊 Arkivets omfattning')}</div>`;
   for (const key of CAT_ORDER) {
     const n = counts[key] || 0;
     if (n === 0) continue;
@@ -255,13 +255,13 @@ function renderStats(stats) {
     const pct = Math.round(100 * n / max);
     html += `
       <div class="stat-row">
-        <span class="stat-label">${c.icon} ${c.label}</span>
+        <span class="stat-label">${c.icon} ${I18N.t(c.label)}</span>
         <div class="stat-bar-track"><div class="stat-bar" style="width:${pct}%;background:${c.color};box-shadow:0 0 8px ${c.glow}"></div></div>
         <span class="stat-num">${n}</span>
       </div>`;
   }
   if (stats.superseded > 0) {
-    html += `<div style="margin-top:.5rem;font-size:.68rem;color:var(--bone-dim);font-style:italic">✦ ${stats.superseded} ersatta uppgifter</div>`;
+    html += `<div style="margin-top:.5rem;font-size:.68rem;color:var(--bone-dim);font-style:italic">✦ ${stats.superseded}${I18N.t(' ersatta uppgifter')}</div>`;
   }
   document.getElementById('stats').innerHTML = html;
 }
@@ -292,8 +292,8 @@ function renderFacts() {
     archive.innerHTML = `
       <div class="empty">
         <div class="rune">🕯️</div>
-        <p>Arkivet är tomt.<br>Spela vidare så extraherar DM:n fakta ur berättelsen —<br>NPC:er, platser, löften och händelser hamnar här.</p>
-        <a class="talk-btn" href="chat.html">⚔ Till bordet</a>
+        <p>${I18N.t('Arkivet är tomt.')}<br>${I18N.t('Spela vidare så extraherar DM:n fakta ur berättelsen —')}<br>${I18N.t('NPC:er, platser, löften och händelser hamnar här.')}</p>
+        <a class="talk-btn" href="chat.html">${I18N.t('⚔ Till bordet')}</a>
       </div>`;
     return;
   }
@@ -301,7 +301,7 @@ function renderFacts() {
     archive.innerHTML = `
       <div class="empty">
         <div class="rune">🔍</div>
-        <p>Inga uppgifter matchar ${q ? '«' + q + '»' : 'detta filter'}.</p>
+        <p>${I18N.t('Inga uppgifter matchar ')}${q ? '«' + q + '»' : I18N.t('detta filter')}.</p>
       </div>`;
     return;
   }
@@ -314,8 +314,8 @@ function renderFacts() {
 
   let html = `
     <div class="archive-head">
-      <div class="archive-title">📚 Minnesarkivet</div>
-      <div class="archive-sub">${facts.length} uppgifter · extraherade ur berättelsen av DM:n</div>
+      <div class="archive-title">${I18N.t('📚 Minnesarkivet')}</div>
+      <div class="archive-sub">${facts.length}${I18N.t(' uppgifter · extraherade ur berättelsen av DM:n')}</div>
     </div>`;
 
   for (const key of CAT_ORDER) {
@@ -325,12 +325,12 @@ function renderFacts() {
     list.sort((a, b) => (b.source_turn || 0) - (a.source_turn || 0));
     html += `
       <div class="cat-section" style="--cc:${c.color};--cg:${c.glow}">
-        <div class="cat-head"><b>${c.icon} ${c.label} <span style="opacity:.6">· ${list.length}</span></b></div>
+        <div class="cat-head"><b>${c.icon} ${I18N.t(c.label)} <span style="opacity:.6">· ${list.length}</span></b></div>
         ${list.map((f, i) => `
           <div class="fact ${f.superseded_by ? 'superseded' : ''}" style="--cc:${c.color};--cg:${c.glow};animation-delay:${i * 40}ms">
             <div class="ftext">${escapeHtml(f.text)}</div>
             <div class="fmeta">
-              <span class="fturn">Tur ${f.source_turn ?? '?'}</span>
+              <span class="fturn">${I18N.t('Tur')} ${f.source_turn ?? '?'}</span>
               ${confDots(f.confidence ?? 0.5, c.color, c.glow)}
             </div>
           </div>`).join('')}

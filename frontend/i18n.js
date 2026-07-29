@@ -634,6 +634,7 @@ const I18N = (() => {
     // ── facts.html ──
     'Minnesarkivet · Faktaregister': 'The Memory Archive · Fact Registry',
     '📚 Arkivets hyllor': '📚 The Archive Shelves',
+    'Arkivets hyllor': 'The Archive Shelves',
     'Vad världen vet om ditt äventyr': 'What the world knows about your adventure',
     'Sök i arkivet…': 'Search the archive…',
     'Arkivet laddas…': 'The archive is loading…',

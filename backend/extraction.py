@@ -137,7 +137,7 @@ nya, beständiga fakta som påverkar spelvärlden.
 - relationship: Relationsändringar (NPC↔spelare eller NPC↔NPC)
 
 ## Regler
-1. Skriv varje faktum på SVENSKA, kort och konkret (max ~120 tecken).
+1. Skriv varje faktum på SAMMA SPRÅK som indatatexten (svenska eller engelska), kort och konkret (max ~120 tecken).
 2. Ta bara med NY information — upprepa inte saker som redan är kända.
 3. Inkludera inte mekaniska taggar ([SKADA:n], [XP:n] osv.) i texten.
 4. Sätt confidence 0.9–1.0 för explicita fakta, 0.6–0.8 för underförstådda.

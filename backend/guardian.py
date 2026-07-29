@@ -254,6 +254,11 @@ Generera art varannan tur — inte varje tur.
 }
 
 Tomma fält: tom array [] eller null. Utelämna ALDRIG ett fält.
+
+## Språk / Language
+Extraheringen ska fungera oavsett om DM-svaret och spelarens handling är på svenska eller engelska. \
+Skriv logbook, npc_notes, quest-beskrivningar och ascii_art-instruktioner på samma språk som scenen. \
+JSON-fältnamnen (damage, healing, xp, items_add osv.) är kodnivå och ändras ALDRIG — de är inte användarvända.
 """
 
 

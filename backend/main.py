@@ -506,6 +506,10 @@ class VaultUseRequest(BaseModel):
     char_id: str
 
 
+class CampaignCreateRequest(BaseModel):
+    language: str = "sv"
+
+
 class SaveRequest(BaseModel):
     description: str = ""
 
@@ -945,14 +949,91 @@ async def oracle(req: OracleRequest, morkrets_token: str | None = Cookie(None)):
 
 
 # ═══════════════════════════════════════
+# TTS — StepAudio 2.5 (text-till-ljud)
+# ═══════════════════════════════════════
+
+TTS_VOICES = [
+    {"id": "cixingnansheng", "name": "Berättaren (mörk)", "desc": "Dramatic male narrator"},
+    {"id": "cixingnvsheng", "name": "Sagorösten (ljus)", "desc": "Warm female narrator"},
+    {"id": "zhixingnansheng", "name": "Krigaren (kraftfull)", "desc": "Powerful male voice"},
+    {"id": "zhixingnvsheng", "name": "Häxan (mystisk)", "desc": "Mysterious female voice"},
+]
+
+
+class TTSRequest(BaseModel):
+    text: str
+    voice: str = "cixingnansheng"
+
+
+def _truncate_tts(text: str, limit: int = 1000) -> str:
+    """Trunkera till max `limit` tecken vid sista meningsgränsen."""
+    if len(text) <= limit:
+        return text
+    cut = text[:limit]
+    # Hitta sista meningsavslut (. ! ? …) följt av mellanslag eller slut
+    for m in reversed(list(re.finditer(r'[.!?…]\s', cut))):
+        return cut[: m.end()].strip()
+    # Ingen meningsgräns — hårklipp vid sista mellanslag
+    sp = cut.rfind(' ')
+    return cut[:sp].strip() if sp > 0 else cut.strip()
+
+
+@app.get("/api/tts/voices")
+async def tts_voices(morkrets_token: str | None = Cookie(None)):
+    """Tillgängliga TTS-röster."""
+    _get_current_user(morkrets_token)
+    return {"voices": TTS_VOICES}
+
+
+@app.post("/api/tts")
+async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
+    """Generera tal från text via StepAudio 2.5."""
+    _get_current_user(morkrets_token)
+    text = req.text.strip()
+    if not text:
+        raise HTTPException(400, "Ingen text att läsa upp")
+    text = _truncate_tts(text)
+
+    api_key = os.getenv("STEPFUN_API_KEY")
+    if not api_key:
+        raise HTTPException(500, "TTS-tjänsten är inte konfigurerad")
+
+    try:
+        async with httpx.AsyncClient(timeout=60) as client:
+            resp = await client.post(
+                "https://api.stepfun.ai/v1/audio/speech",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "stepaudio-2.5-tts",
+                    "voice": req.voice,
+                    "input": text,
+                    "instruction": "Narrate in a dramatic, immersive fantasy storytelling voice. Dark and atmospheric.",
+                },
+            )
+        if resp.status_code != 200:
+            logger.error("TTS API error %s: %s", resp.status_code, resp.text[:300])
+            raise HTTPException(502, "Kunde inte generera ljud — TTS-tjänsten svarade inte")
+        return StreamingResponse(io.BytesIO(resp.content), media_type="audio/mpeg")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("TTS error: %s", e)
+        raise HTTPException(502, "Kunde inte generera ljud — oväntat fel")
+
+
+# ═══════════════════════════════════════
 # CAMPAIGN CRUD
 # ═══════════════════════════════════════
 
 
 @app.post("/api/campaign")
-async def create_campaign(morkrets_token: str | None = Cookie(None)):
+async def create_campaign(body: CampaignCreateRequest | None = None, morkrets_token: str | None = Cookie(None)):
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
+    language = (body.language if body else "sv") or "sv"
 
     existing = store.get(username)
     if existing:
@@ -975,6 +1056,7 @@ async def create_campaign(morkrets_token: str | None = Cookie(None)):
     state["meta"]["opening_style"] = style_desc
     state["meta"]["opening_key"] = style_key
     state["meta"]["awakening"] = True  # DM vaknar: frågor först, sen öppnas scenen
+    state["meta"]["language"] = language
     store.save(state)
     return {"ok": True, "campaign_id": state["meta"]["campaign_id"], "opening": style_key}
 
@@ -1425,6 +1507,13 @@ def _build_system_prompt(
             f"Använd: [KAST: {guardian_roll['notation']} | {guardian_roll['label']}]\n"
             f"Bygg scenen så att kastet känns naturligt. Ge konsekvenser för både lyckat och misslyckat."
         )
+
+    # ── Språkinstruktion ──
+    lang = state.get("meta", {}).get("language", "sv")
+    if lang == "en":
+        parts.append("\n\n[IMPORTANT: Write ALL responses in English. All narration, dialogue, NPC speech, and descriptions must be in English.]")
+    else:
+        parts.append("\n\n[VIKTIGT: Skriv ALLA svar på svenska. All narration, dialog, NPC-repliker och beskrivningar ska vara på svenska.]")
 
     return "\n".join(parts)
 
@@ -1880,36 +1969,11 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     # LLM-extraktion i _post_turn_tasks() hanterar nu föremål som DM
     # glömde tagga — med kontextförståelse istället för regex.
 
-    # Tagg-enforcement: spåra om DM använder taggar
-    meta = state.setdefault("meta", {})
-    if effects:
-        meta["tag_streak"] = 0
-        logger.info("🏷️ %d effekt(er): %s", len(effects), ", ".join(e.get("type", "?") for e in effects))
-    else:
-        meta["tag_streak"] = meta.get("tag_streak", 0) + 1
-        if meta["tag_streak"] >= 2:
-            logger.warning("⚠️ DM har inte använt taggar på %d turer", meta["tag_streak"])
-
     # Spara effekter för nästa turs systemprompt
     meta["last_effects"] = effects if effects else []
     # Spara kast-begäran så transkript-fallbacken kan återställa dem
     meta["last_roll_requests"] = roll_requests if roll_requests else []
 
-    # Tärnings-enforcement: begärde DM kast vid riskfylld handling?
-    player_action = ACTION_KEYWORDS.search(req.message)
-    dm_requested_roll = bool(roll_requests)
-    if player_action and not dm_requested_roll:
-        meta["missing_roll_streak"] = meta.get("missing_roll_streak", 0) + 1
-    elif dm_requested_roll:
-        meta["missing_roll_streak"] = 0
-
-    # Turns-since-last-roll: spåra när DM senast begärde ett kast så att
-    # systemprompten kan påminna DM proaktivt när det gått för länge sedan.
-    current_turn = meta.get("turn_count", 0)
-    if dm_requested_roll:
-        meta["last_roll_turn"] = current_turn
-
-    # Atmosfär-subagent: generera ASCII-art (event har prioritet, sedan miljö)
     # ── ASCII-art: Guardian genererar i post-DM (se guardian_inline nedan) ──
     # Fallback-banken används om Guardian inte genererade art.
     ascii_art = None
@@ -2076,8 +2140,14 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
 
+    # Språkanpassning av karaktärsgenerering
+    lang = state.get("meta", {}).get("language", "sv")
+    char_prompt = CHARACTER_PROMPT
+    if lang == "en":
+        char_prompt += "\n\n[IMPORTANT: Write the ENTIRE character sheet in English — name, race, class, background, story, traits, gear, and all text fields. JSON field names stay the same.]"
+
     messages = [
-        {"role": "system", "content": CHARACTER_PROMPT},
+        {"role": "system", "content": char_prompt},
         {"role": "user", "content": f"Skapa en karaktär: {req.prompt}"},
     ]
 

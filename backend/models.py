@@ -73,6 +73,17 @@ MODELS: dict[str, ModelConfig] = {
         supports_vision=False,
     ),
 
+    # ── StepFun (Step Plan) ──
+    "step-3.7-flash": ModelConfig(
+        model_id="step-3.7-flash",
+        display_name="Step 3.7 Flash (snabb)",
+        provider="stepfun",
+        api_model="step-3.7-flash",
+        base_url=os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.ai/step_plan/v1"),
+        api_key_env="STEPFUN_API_KEY",
+        supports_vision=True,
+    ),
+
     # ── MiMo (Xiaomi) ──
     "mimo-v2.5": ModelConfig(
         model_id="mimo-v2.5",

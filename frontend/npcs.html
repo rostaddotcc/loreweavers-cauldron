@@ -232,10 +232,8 @@
   <span class="brand">🐉 Ett svenskt D&amp;D-äventyr</span>
   <span class="page-tag">Minneskodex · Kända gestalter</span>
   <span class="spacer"></span>
-  <a class="top-btn" href="chat.html">⚔ Till bordet</a>
   <a class="top-btn" href="platser.html">🗺️ Kartan</a>
   <a class="top-btn" href="loggbok.html">📜 Loggbok</a>
-  <a class="top-btn" href="valvet.html">🏰 Valvet</a>
   <a class="top-btn" href="character.html">🧙 Karaktär</a>
   <button class="top-btn danger" onclick="doLogout()">🚪 Lämna</button>
 </header>
@@ -364,7 +362,6 @@ function showEmptyHall(){
     <div class="empty">
       <div class="rune">🕯️</div>
       <p>${I18N.t('Du har inte mött några gestalter ännu. De väntar i mörkret…')}</p>
-      <a class="talk-btn" href="chat.html">${I18N.t('⚔ Till bordet')}</a>
     </div>`;
 }
 
@@ -482,17 +479,7 @@ function renderDossier(n){
       </div>`).join(''));
   }
 
-  // Handel — backend stöder det inte ännu
-  html += sec(s++, '🪙 Handel',
-    box(`<p style="font-style:italic;color:var(--bone-dim);font-size:.88rem">Handel kommer i en framtida version.</p>`));
-
-  // Samtal — sparas automatiskt från chatten
-  html += sec(s++, '💬 Samtal',
-    box(`<p style="font-style:italic;color:var(--bone-dim);font-size:.88rem">Samtal sparas automatiskt från chatten.</p>`));
-
-  html += `<div class="d-sec" style="animation-delay:.5s">
-    <a class="talk-btn" href="chat.html">💬 Tala med ${esc(n.name.split(' ')[0])} vid bordet</a>
-  </div>`;
+  // Samtal sker via @-taggning i chatten — ingen separat knapp behövs
 
   d.innerHTML = html;
   d.scrollTop = 0;

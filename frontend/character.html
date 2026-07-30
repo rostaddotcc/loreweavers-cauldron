@@ -588,8 +588,6 @@
   <a class="top-btn" href="loggbok.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">📜 Loggbok</a>
   <a class="top-btn" href="platser.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">🗺️ Kartan</a>
   <a class="top-btn" href="npcs.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">📖 Gestalter</a>
-  <a class="top-btn" href="valvet.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">🏰 Valvet</a>
-  <button class="top-btn" onclick="saveToVault()" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:linear-gradient(160deg,rgba(201,162,39,.2),rgba(201,162,39,.08));border:1px solid var(--gold);color:var(--gold-bright);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px">🏰 Spara i valvet</button>
   <button class="top-btn danger" onclick="doLogout()" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px">🚪 Lämna</button>
 </header>
 <div class="app">
@@ -642,12 +640,6 @@
           <span class="nums"><span id="hp-cur">38</span><small> / <span id="hp-max">52</span></small></span>
         </div>
         <div class="trough" id="hp-trough"><div class="fill hp" id="hp-bar" style="width:73%"></div></div>
-        <div class="vital-ctrl">
-          <button class="mini-btn hurt" onclick="adjustHp(-5)">−5 Skada</button>
-          <button class="mini-btn hurt" onclick="adjustHp(-1)">−1</button>
-          <button class="mini-btn" onclick="adjustHp(1)">+1</button>
-          <button class="mini-btn" onclick="adjustHp(5)">+5 Hela</button>
-        </div>
       </div>
 
       <div class="vital">
@@ -1019,23 +1011,6 @@ function toast(msg) {
 }
 
 // ═══════════════════════════════════════
-// KARAKTÄRSVALVET
-// ═══════════════════════════════════════
-async function saveToVault() {
-  const c = state.character;
-  if (!c || !c.name) {
-    toast(I18N.t('⚠ Ingen karaktär att spara ännu'));
-    return;
-  }
-  try {
-    await API.vaultSave(c);
-    toast('🏰 ' + c.name + I18N.t(' vilar nu i valvet!'));
-  } catch (e) {
-    toast('⚠ ' + (e.message || I18N.t('Kunde inte spara till valvet')));
-  }
-}
-
-// ═══════════════════════════════════════
 // PORTRAIT (Qwen Vision-redo — base64 i state)
 // ═══════════════════════════════════════
 const portrait = document.getElementById('portrait');
@@ -1057,21 +1032,8 @@ portraitInput.addEventListener('change', e => {
 });
 
 // ═══════════════════════════════════════
-// HP — lokal uppdatering + sync till backend
+// HP — visas från backend-state, ändras via DM/Guardian
 // ═══════════════════════════════════════
-function adjustHp(delta) {
-  const hp = state.character.hp || { current: 0, max: 0 };
-  state.character.hp = hp;
-  hp.current = Math.max(0, Math.min(hp.max || 0, hp.current + delta));
-  renderHp();
-  if (hp.current === 0) { SFX.fail(); toast('💀 ' + (state.character.name || I18N.t('Hjälten')) + I18N.t(' är medvetslös!')); }
-  else if (delta < 0) { SFX.damage(); toast('🩸 −' + (-delta) + I18N.t(' skada')); }
-  else { SFX.heal(); toast('✨ +' + delta + I18N.t(' helad')); }
-  // Sync till backend — uppdateras lokalt direkt, servern får värdet via PATCH
-  API.updateCharacter({ hp: { current: hp.current, max: hp.max } })
-    .then(() => toast(I18N.t('HP uppdaterat (syncas vid nästa chat)')))
-    .catch(() => {}); // req() visar redan ett fel — tyst här
-}
 function renderHp() {
   const hp = state.character.hp || { current: 0, max: 0 };
   const pct = hp.max > 0 ? (hp.current / hp.max) * 100 : 0;
@@ -1245,29 +1207,8 @@ function renderCurrency() {
         <div class="coin-disc">${m.disc}</div>
         <div class="coin-name">${I18N.t(m.name)}</div>
         <div class="coin-amount">${state.currency[key] || 0}</div>
-        <div class="coin-controls">
-          <button class="coin-btn" onclick="adjustCoin('${key}',-1)">−</button>
-          <button class="coin-btn" onclick="adjustCoin('${key}',1)">+</button>
-          <button class="coin-btn" onclick="adjustCoin('${key}',10)">+10</button>
-        </div>
       </div>`;
   }
-  updateHoard();
-}
-function adjustCoin(key, delta) {
-  const before = state.currency[key];
-  state.currency[key] = Math.max(0, before + delta);
-  const actual = state.currency[key] - before;
-  if (actual === 0) return;
-  SFX.coin();
-  const coin = document.getElementById('coin-' + key);
-  coin.querySelector('.coin-amount').textContent = state.currency[key];
-  coin.classList.remove('flipping'); void coin.offsetWidth; coin.classList.add('flipping');
-  const f = document.createElement('span');
-  f.className = 'float-num ' + (actual > 0 ? 'plus' : 'minus');
-  f.textContent = (actual > 0 ? '+' : '') + actual;
-  coin.querySelector('.coin-amount').appendChild(f);
-  setTimeout(() => f.remove(), 900);
   updateHoard();
 }
 function updateHoard() {

@@ -309,12 +309,6 @@
     <span class="lang-hint" id="lang-hint">The adventure, DM and all responses in English.</span>
   </div>
 
-  <!-- ═══════════ 0. VALVET (sparade hjältar) ═══════════ -->
-  <div id="vault-section" style="display:none">
-    <div class="section-label"><span class="num">⚜</span> Valvet — återkalla en sparad hjälte</div>
-    <div class="vault-row" id="vault-row"></div>
-  </div>
-
   <!-- ═══════════ 1. ARKETYPER ═══════════ -->
   <div class="section-label"><span class="num">I.</span> Arketyper</div>
   <div class="spread" id="spread"></div>
@@ -380,7 +374,6 @@
       <div class="pv-actions">
         <button class="pv-go" onclick="enterGame()">⚔️ Till bordet</button>
         <button class="pv-reroll" onclick="summon()">🔄 Slå om ödet</button>
-        <button class="pv-reroll" onclick="savePreviewToVault()">🏰 Spara i valvet</button>
       </div>
     </div>
   </div>
@@ -882,80 +875,6 @@ function enterGame() {
 // VALVET — återkalla en sparad hjälte
 // ═══════════════════════════════════════
 let lastGeneratedChar = null;
-
-async function savePreviewToVault() {
-  if (!lastGeneratedChar || !lastGeneratedChar.name) {
-    toast('⚠ Ingen karaktär att spara ännu');
-    return;
-  }
-  SFX.click();
-  try {
-    await API.vaultSave(lastGeneratedChar);
-    toast(`🏰 ${lastGeneratedChar.name} vilar nu i valvet!`);
-    loadVaultChips(); // Uppdatera raden
-  } catch (e) {
-    toast('⚠ ' + (e.message || 'Kunde inte spara till valvet'));
-  }
-}
-
-const VAULT_ICONS = { 'krigare':'⚔️','fighter':'⚔️','riddare':'⚔️','barbar':'🪓','trollkarl':'🔮','wizard':'🔮','magiker':'🔮','häxa':'🔮','präst':'✨','cleric':'✨','munk':'👊','druid':'🌿','skald':'🎭','bard':'🎭','rogue':'🗡️','tjuv':'🗡️','ranger':'🏹','jägare':'🏹','paladin':'🛡️','väktare':'🛡️' };
-function vaultIcon(char) {
-  const cls = (char.class || '').toLowerCase();
-  for (const [k, icon] of Object.entries(VAULT_ICONS)) if (cls.includes(k)) return icon;
-  return '🧙';
-}
-
-async function loadVaultChips() {
-  try {
-    const { characters } = await API.vaultList();
-    if (!characters || characters.length === 0) return;
-    const row = document.getElementById('vault-row');
-    document.getElementById('vault-section').style.display = 'block';
-    row.innerHTML = characters.map((entry, i) => {
-      const c = entry.character || {};
-      const name = c.name || 'Namnlös';
-      const sub = [c.race, c.class].filter(Boolean).join(' · ') + (c.level ? ' · Nivå ' + c.level : '');
-      return `
-        <div class="vault-chip" style="animation-delay:${i*0.07}s">
-          <div class="vc-icon">${vaultIcon(c)}</div>
-          <div onclick="recallHero('${entry.id}', '${name.replace(/'/g, "\\'")}')" style="cursor:pointer;flex:1">
-            <div class="vc-name">${name}</div>
-            <div class="vc-sub">${sub}</div>
-          </div>
-          <span class="vc-go" onclick="recallHero('${entry.id}', '${name.replace(/'/g, "\\'")}')">⚔️ Återkalla</span>
-          <span class="vc-del" onclick="event.stopPropagation();deleteHero('${entry.id}', '${name.replace(/'/g, "\\'")}')" title="Radera">✕</span>
-        </div>`;
-    }).join('');
-  } catch (e) { /* valvet är valfritt — ignorera fel */ }
-}
-
-async function recallHero(charId, name) {
-  SFX.click();
-  try {
-    await API.vaultUse(charId);
-    toast(`⚔️ ${name} har återkallats!`);
-    // Spara DM-modellvalet så att chat.html använder det
-    const dmModel = document.getElementById('dm-model').value;
-    localStorage.setItem('dnd_model', dmModel);
-    setTimeout(() => location.href = 'chat.html', 800);
-  } catch (e) {
-    toast('⚠ ' + (e.message || 'Kunde inte återkalla hjälten'));
-  }
-}
-
-async function deleteHero(charId, name) {
-  if (!confirm(`Vill du radera ${name} ur valvet? Detta kan inte ångras.`)) return;
-  SFX.click();
-  try {
-    await API.vaultDelete(charId);
-    toast(`🗑️ ${name} har raderats ur valvet.`);
-    loadVaultChips();
-  } catch (e) {
-    toast('⚠ ' + (e.message || 'Kunde inte radera hjälten'));
-  }
-}
-
-loadVaultChips();
 
 // ═══════════════════════════════════════
 // TOAST + EMBERS

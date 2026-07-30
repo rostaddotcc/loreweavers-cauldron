@@ -368,41 +368,6 @@ const API = (() => {
       return req('/api/character/generate', { method: 'POST', body: JSON.stringify({ prompt, model_id: modelId }) });
     },
 
-    // ── Karaktärsvalvet ──
-    async vaultList() {
-      if (MOCK) {
-        const raw = localStorage.getItem('dnd_mock_vault');
-        return { characters: raw ? JSON.parse(raw) : [] };
-      }
-      return req('/api/vault');
-    },
-
-    async vaultSave(character) {
-      if (MOCK) {
-        const raw = localStorage.getItem('dnd_mock_vault');
-        const list = raw ? JSON.parse(raw) : [];
-        list.unshift({ id: 'mock-' + Date.now(), character, campaign_name: 'Mock', saved_at: new Date().toISOString() });
-        localStorage.setItem('dnd_mock_vault', JSON.stringify(list));
-        return { ok: true };
-      }
-      return req('/api/vault/save', { method: 'POST', body: JSON.stringify({ character }) });
-    },
-
-    async vaultUse(charId) {
-      if (MOCK) throw new Error('Ej i mock-läge');
-      return req('/api/vault/use', { method: 'POST', body: JSON.stringify({ char_id: charId }) });
-    },
-
-    async vaultDelete(charId) {
-      if (MOCK) {
-        const raw = localStorage.getItem('dnd_mock_vault');
-        const list = raw ? JSON.parse(raw) : [];
-        localStorage.setItem('dnd_mock_vault', JSON.stringify(list.filter(e => e.id !== charId)));
-        return { ok: true };
-      }
-      return req('/api/vault/' + charId, { method: 'DELETE' });
-    },
-
     // ── Regeloraklet (Qwen-driven) ──
     async oracle(question, modelId = 'qwen3.6-flash') {
       if (MOCK) {

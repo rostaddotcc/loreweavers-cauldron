@@ -94,8 +94,8 @@ app = FastAPI(title="Mörkrets Rike", version="1.0.0")
 # ═══════════════════════════════════════
 
 def _get_lang(state: dict) -> str:
-    """Get campaign language from state (defaults to 'sv')."""
-    return state.get("meta", {}).get("language", "sv")
+    """Get campaign language from state (defaults to 'en')."""
+    return state.get("meta", {}).get("language", "en")
 
 
 def _err(msg_sv: str, msg_en: str, lang: str = "sv") -> str:
@@ -520,7 +520,7 @@ class VaultUseRequest(BaseModel):
 
 
 class CampaignCreateRequest(BaseModel):
-    language: str = "sv"
+    language: str = "en"
 
 
 class SaveRequest(BaseModel):
@@ -1046,7 +1046,7 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
 async def create_campaign(body: CampaignCreateRequest | None = None, morkrets_token: str | None = Cookie(None)):
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
-    language = (body.language if body else "sv") or "sv"
+    language = (body.language if body else "en") or "en"
 
     existing = store.get(username)
     if existing:
@@ -1416,7 +1416,7 @@ def _build_system_prompt(
     för att räkna med det meddelande som ännu inte sparats i transkriptet."""
     # Core-prompt + version (versionen tvingar cache-miss vid ändringar)
     # ── LANGUAGE FIRST: must come before everything else ──
-    lang = state.get("meta", {}).get("language", "sv")
+    lang = _get_lang(state)
     if lang == "en":
         parts = [
             "[LANGUAGE: ENGLISH] You MUST write ALL narration, dialogue, NPC speech, "
@@ -1647,7 +1647,7 @@ async def _post_turn_tasks(
         facts, inv_changes = await extract_facts(
             reply, player_msg, turn_count, _extraction_llm,
             inventory_list=inv_list_str,
-            language=_get_lang(st) if st else "sv",
+            language=_get_lang(st) if st else "en",
         )
         if facts:
             register = FactRegister(username, campaign_id)
@@ -2165,7 +2165,7 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
         raise HTTPException(404, "Ingen aktiv kampanj")
 
     # Språkanpassning av karaktärsgenerering
-    lang = state.get("meta", {}).get("language", "sv")
+    lang = _get_lang(state)
     char_prompt = CHARACTER_PROMPT
     if lang == "en":
         char_prompt += "\n\n[IMPORTANT: Write the ENTIRE character sheet in English — name, race, class, background, story, traits, gear, and all text fields. JSON field names stay the same.]"

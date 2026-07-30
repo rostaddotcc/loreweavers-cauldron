@@ -234,12 +234,12 @@
 
   <!-- ═══════════ KAMPANJSPRÅK ═══════════ -->
   <div class="lang-row">
-    <label class="lang-label" for="campaign-lang">Kampanjspråk</label>
+    <label class="lang-label" for="campaign-lang">Campaign language</label>
     <select id="campaign-lang" class="lang-select" onchange="onLangChange(this.value)">
-      <option value="sv" selected>Svenska</option>
-      <option value="en">English</option>
+      <option value="en" selected>English</option>
+      <option value="sv">Svenska</option>
     </select>
-    <span class="lang-hint" id="lang-hint">Äventyret, DM och alla svar på svenska.</span>
+    <span class="lang-hint" id="lang-hint">The adventure, DM and all responses in English.</span>
   </div>
 
   <!-- ═══════════ 0. VALVET (sparade hjältar) ═══════════ -->
@@ -711,7 +711,7 @@ async function summon() {
     // Se till att kampanj finns (ett spel per användare)
     const { campaign } = await API.getCampaign();
     if (!campaign) {
-      const selLang = document.getElementById('campaign-lang')?.value || 'sv';
+      const selLang = document.getElementById('campaign-lang')?.value || 'en';
       await API.createCampaign(sessionStorage.getItem('dnd_adventure_mode') || 'freestyle', selLang);
     }
 

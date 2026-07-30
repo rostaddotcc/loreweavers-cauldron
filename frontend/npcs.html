@@ -281,7 +281,7 @@ function relatedQuests(n){
     const { campaign } = await API.getCampaign();
     if (!campaign) { showNoCampaign(); return; }
     // Initialize i18n with campaign language
-    I18N.init((campaign._raw && campaign._raw.meta && campaign._raw.meta.language) || 'sv');
+    I18N.init((campaign._raw && campaign._raw.meta && campaign._raw.meta.language) || 'en');
     CAMPAIGN = campaign;
     const raw = campaign._raw || {};
     NPCS = (Array.isArray(raw.npcs) ? raw.npcs : []).map(n => ({

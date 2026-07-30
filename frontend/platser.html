@@ -419,7 +419,7 @@ async function loadLocations() {
     if (campRes.ok) {
       const camp = await campRes.json();
       // Initialize i18n with campaign language
-      I18N.init((camp.meta && camp.meta.language) || 'sv');
+      I18N.init((camp.meta && camp.meta.language) || 'en');
       campaignSeed = hashStr(camp.meta?.campaign_id || 'morkrets-rike');
       quests = camp.quests || [];
     } else {

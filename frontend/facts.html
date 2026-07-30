@@ -205,7 +205,7 @@ let activeFilter = 'alla';
     // Initialize i18n with campaign language
     try {
       const cr = await fetch('/api/campaign', { credentials: 'include' });
-      if (cr.ok) { const cd = await cr.json(); I18N.init(cd?.meta?.language || 'sv'); }
+      if (cr.ok) { const cd = await cr.json(); I18N.init(cd?.meta?.language || 'en'); }
     } catch(_) {}
     const { facts, stats } = await API.getFacts();
     ALL_FACTS = facts || [];

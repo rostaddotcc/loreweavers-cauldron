@@ -1134,12 +1134,12 @@ const I18N = (() => {
   }
 
   // ═══════════════════════════════════════
-  // AUTO-INIT — pages without an explicit I18N.init() call default to 'sv'
+  // AUTO-INIT — pages without an explicit I18N.init() call default to 'en'
   // ═══════════════════════════════════════
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => { if (!_initialized) init('sv'); });
+    document.addEventListener('DOMContentLoaded', () => { if (!_initialized) init('en'); });
   } else if (!_initialized) {
-    init('sv');
+    init('en');
   }
 
   return { T, init, t, applyAll, restoreAll, getLang, speak, stopSpeaking };

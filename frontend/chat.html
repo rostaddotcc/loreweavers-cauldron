@@ -1398,9 +1398,9 @@ function pickAvatar(kind) {
       await API.uploadAvatar(kind, file);
       AVATARS[kind] = API.avatarUrl(kind) + '?t=' + Date.now();
       refreshAvatars();
-      toast('🖼 Bild uppdaterad');
+      toast(I18N.t('🖼 Bild uppdaterad'));
     } catch (e) {
-      toast('⚠ Kunde inte ladda upp: ' + (e.message || 'okänt fel'));
+      toast('⚠ ' + I18N.t('Kunde inte ladda upp: ') + (e.message || I18N.t('okänt fel')));
     }
   };
   input.click();
@@ -1539,7 +1539,7 @@ function playTTS(btn) {
   const ok = I18N.speak(text, lang);
   if (!ok) {
     btn.textContent = '🔊'; btn.classList.remove('playing');
-    toast('⚠ Talsyntes stöds inte i denna webbläsare');
+    toast(I18N.t('⚠ Talsyntes stöds inte i denna webbläsare'));
     return;
   }
   // Lyssna på när talet är klart
@@ -2264,7 +2264,7 @@ async function handleSlashCommand(text) {
     addCmdMessage(`📜 <i>Lägger till lore…</i>`);
     try {
       await API.addLore(loreText);
-      toast('📜 Lore tillagd');
+      toast(I18N.t('📜 Lore tillagd'));
       addMessage('system', null, `📜 <b>Lore tillagd:</b> ${escapeHtml(loreText)}`);
     } catch (e) {
       addMessage('system', null, '⚠ Kunde inte lägga till lore: ' + escapeHtml(e.message));

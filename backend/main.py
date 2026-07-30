@@ -763,15 +763,14 @@ async def _call_llm(
         body["reasoning_effort"] = reasoning_effort or "high"
         body["max_tokens"] = max(body.get("max_tokens", 1024), 8000)
 
-    # Qwen3-modeller: thinking mode PÅ som standard. För strukturerade
-    # uppgifter (JSON-generering) stänger vi av det — annars äter thinking
-    # hela tokenbudgeten och content blir tomt.
+    # Qwen3-modeller: thinking mode PÅ som standard. Ge generöst med
+    # utrymme så modellen kan tänka fritt OCH leverera svaret.
     if config.provider == "dashscope" and config.api_model.startswith("qwen3"):
         if reasoning_effort == "off":
             body["enable_thinking"] = False
         else:
-            # Thinking på → ge rejält med utrymme (tanke + svar)
-            body["max_tokens"] = max(body.get("max_tokens", 1024), 8000)
+            # Thinking på → rejäl budget (tanke + svar)
+            body["max_tokens"] = max(body.get("max_tokens", 1024), 16000)
 
     url = f"{config.base_url.rstrip('/')}/chat/completions"
 
@@ -2289,7 +2288,7 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
     ]
 
     try:
-        raw = await _call_llm(req.model_id, messages, temperature=0.7, max_tokens=3000, reasoning_effort="off")
+        raw = await _call_llm(req.model_id, messages, temperature=0.7, max_tokens=4000)
         char_data = _extract_json(raw)
     except HTTPException:
         raise

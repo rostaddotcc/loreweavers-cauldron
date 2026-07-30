@@ -1049,6 +1049,8 @@ const I18N = (() => {
     // ── chat.html: model switch ──
     'Dungeon Master byter röst: ': 'The Dungeon Master changes voice: ',
     ' körs lokalt': ' · runs locally',
+    'Kunde inte radera': 'Could not delete',
+    'Kunde inte ladda upp: ': 'Could not upload: ',
 
   };
 

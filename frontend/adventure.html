@@ -560,7 +560,7 @@ async function askDeleteCampaign(campaignId, name) {
     initCampaignCheck();
   } catch (e) {
     SFX.error();
-    toast('⚠ ' + (e.message || 'Kunde inte radera'));
+    toast('⚠ ' + (e.message || I18N.t('Kunde inte radera')));
   }
 }
 

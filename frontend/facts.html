@@ -120,15 +120,44 @@
   @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
   @keyframes flicker{0%,100%{opacity:.6}50%{opacity:1}}
 
-  @media(max-width:860px){
+  @media(max-width:900px){
+    html{-webkit-tap-highlight-color:transparent}
     .shelves{width:240px}
     .archive{padding:1.2rem 1.2rem 3rem}
     .topbar .page-tag{display:none}
+    /* Topnav: radbryt + 44px träffytor (snes.css laddas sist → !important) */
+    .topbar{flex-wrap:wrap!important;gap:.4rem .5rem!important;padding:.6rem .75rem!important}
+    .topbar .top-btn{min-height:44px!important;display:inline-flex!important;align-items:center!important;padding:.4rem .65rem!important;font-size:.55rem!important}
   }
   @media(max-width:640px){
-    .layout{flex-direction:column}
-    .shelves{width:100%;height:44%;border-right:none;border-bottom:1px solid var(--edge)}
-    .archive{height:56%}
+    .layout{flex-direction:column;overflow-y:auto}
+    .shelves{width:100%;height:auto;border-right:none;border-bottom:1px solid var(--edge)}
+    .archive{height:auto;flex:1;padding:1.1rem .75rem 3rem}
+    /* Sökfält: full bredd, 48px, 16px mot iOS-zoom */
+    .search-wrap input{min-height:48px;font-size:16px;padding:.6rem .9rem}
+    /* Filterchips: horisontell rem, ingen radbrytning */
+    .filters{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:.6rem .8rem .7rem}
+    .filters::-webkit-scrollbar{display:none}
+    .fchip{flex:0 0 auto;min-height:44px;display:inline-flex;align-items:center}
+    /* Statistik: kompaktare */
+    .stats{padding:.7rem .8rem}
+    .stat-label{width:60px;font-size:.62rem}
+    /* Faktakort: en kolumn, full bredd */
+    .fact{padding:.65rem .75rem .55rem .9rem}
+    .fact:hover{transform:none}
+    .fact .ftext{font-size:.88rem}
+    .fact .fmeta{gap:.6rem}
+    .archive-title{font-size:1.25rem}
+    .talk-btn{min-height:44px;display:flex;align-items:center;justify-content:center;width:100%;text-align:center}
+    .empty{height:auto;padding:3rem 1rem}
+    .toast{left:1rem;right:1rem;transform:translateY(80px);width:auto}
+    .toast.show{transform:translateY(0)}
+  }
+  @media(max-width:400px){
+    .archive{padding:.9rem .5rem 2.5rem}
+    .shelves-head{padding:.8rem .8rem .6rem}
+    .archive-title{font-size:1.1rem}
+    .cat-head b{font-size:.56rem;letter-spacing:.12em}
   }
 </style>
 <link rel="stylesheet" href="snes.css">

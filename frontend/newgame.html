@@ -211,8 +211,84 @@
   .vault-chip .vc-del:hover{color:#f66;background:rgba(255,80,80,.12)}
   @keyframes card-in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 
-  @media(max-width:860px){.spread{grid-template-columns:repeat(2,1fr)}.pv-stats{grid-template-columns:repeat(3,1fr)}}
-  @media(max-width:560px){.spread{grid-template-columns:1fr}.arch{transform:none!important}}
+  /* ═══════════ Mobile — smedjan i fickformat ═══════════ */
+  html{-webkit-tap-highlight-color:transparent}
+  @media(max-width:900px){
+    .spread{grid-template-columns:repeat(2,1fr)}
+    .pv-stats{grid-template-columns:repeat(3,1fr)}
+    .arch:active{transform:rotate(0) translateY(2px);border-color:var(--ac,var(--gold));
+      box-shadow:0 4px 14px -8px rgba(0,0,0,.8)}
+    .arch:active .glow{opacity:1}
+    .arch:active .icon{transform:scale(1.08)}
+  }
+  @media(max-width:640px){
+    .app{padding:1.4rem .75rem 4rem}
+    .forge-head{margin-bottom:1.6rem}
+    .forge-head .brand{font-size:.9rem}
+    .forge-head .back{min-height:44px;display:inline-flex;align-items:center}
+    .destiny-sub{font-size:.85rem;margin-bottom:1.6rem}
+    .section-label{margin:2rem 0 1rem;letter-spacing:.22em}
+    /* Språkval — två stora pills i full bredd */
+    .lang-row{flex-direction:column;gap:.7rem;margin:-1rem 0 1.8rem}
+    .lang-pills{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+    .lang-pill{min-height:52px;display:flex;align-items:center;justify-content:center;font-size:.8rem;padding:.5rem .6rem}
+    .lang-pill:active{transform:translateY(2px)}
+    .lang-hint{text-align:center}
+    /* Arketyper */
+    .arch .lore{min-height:0}
+    .arch h3{font-size:.88rem}
+    /* Pergament + modeller */
+    .scroll-box{padding:1.3rem 1rem}
+    #prompt{min-height:120px;font-size:16px}
+    .blank-btn{min-height:44px;display:inline-flex;align-items:center}
+    .scroll-actions{flex-direction:column;align-items:stretch;gap:.7rem}
+    .summon-btn{width:100%;min-height:56px;font-size:.85rem}
+    .summon-btn:active:not(:disabled){transform:translateY(2px);filter:brightness(.94);
+      box-shadow:0 2px 8px -4px rgba(232,198,90,.4),inset 0 1px 0 rgba(255,255,255,.2)}
+    .scroll-actions>span{margin-top:.3rem;text-align:left;opacity:.85}
+    .scroll-actions select{width:100%;min-height:48px;font-size:16px;padding:.6rem .7rem;background:var(--stone-2)}
+    .scroll-hint{text-align:center}
+    /* Vävning */
+    .weaving .w-text{font-size:.85rem}
+    .die{width:38px;height:38px;font-size:1rem}
+    /* Valvet — horisontell scrollrad */
+    .vault-row{flex-wrap:nowrap;overflow-x:auto;padding-bottom:.5rem;margin:0 -.75rem 1.4rem;padding-left:.75rem;padding-right:.75rem;
+      scrollbar-width:thin;scrollbar-color:var(--edge) transparent}
+    .vault-chip{flex:0 0 auto}
+    .vault-chip:active{border-color:var(--gold);transform:translateY(1px)}
+    .vault-chip .vc-del{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+    /* Förhandsvisning */
+    .preview{margin-top:1.8rem}
+    .pv-head{gap:1rem}
+    .pv-portrait{width:68px;height:68px;font-size:1.8rem}
+    .pv-name{font-size:1.25rem}
+    .pv-class{font-size:.85rem}
+    .pv-stats{grid-template-columns:repeat(3,1fr)}
+    .pv-vitals{gap:.9rem;font-size:.8rem}
+    .pv-story{font-size:.88rem}
+    .pv-actions{flex-direction:column;align-items:stretch}
+    .pv-go{width:100%;min-height:56px}
+    .pv-go:active{transform:translateY(2px);filter:brightness(.94)}
+    .pv-reroll{width:100%;min-height:48px}
+    .pv-reroll:active{transform:translateY(2px);color:var(--bone-bright);border-color:var(--arcane)}
+    .toast{max-width:92%;text-align:center}
+  }
+  @media(max-width:480px){
+    .spread{grid-template-columns:1fr}
+    .arch{transform:none!important}
+    .arch.selected{transform:none!important}
+  }
+  @media(max-width:400px){
+    .app{padding:1.2rem .5rem 3.5rem}
+    .destiny-title h1{font-size:1.5rem}
+    .destiny-title .over{letter-spacing:.28em}
+    .pv-stats{grid-template-columns:repeat(2,1fr)}
+    .die{width:34px;height:34px;font-size:.9rem}
+    .dice-row{gap:.45rem}
+    .pv-portrait{width:58px;height:58px;font-size:1.5rem}
+    .pv-name{font-size:1.1rem}
+    .forge-head .brand{font-size:.78rem}
+  }
 </style>
 <link rel="stylesheet" href="snes.css">
 <script src="sprites.js?v=20260730c"></script>

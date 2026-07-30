@@ -220,6 +220,39 @@
     box-shadow: 0 8px 24px rgba(0,0,0,0.5);
   }
   #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ═══════════ Mobil — pekskärm ═══════════ */
+  @media (max-width: 900px) {
+    html { -webkit-tap-highlight-color: transparent; }
+    .topbar { flex-wrap: wrap; gap: .4rem .5rem; padding: .6rem .75rem; }
+    .topbar .top-btn {
+      min-height: 44px; display: inline-flex; align-items: center;
+      padding: .4rem .65rem; font-size: .55rem;
+    }
+    .topbar .page-label { display: none; }
+  }
+  @media (max-width: 640px) {
+    .masthead { padding: 2rem .75rem 1rem; }
+    .masthead .sub { font-size: .85rem; }
+    .vault-wrap { padding: 1.2rem .75rem 3rem; }
+    /* Valvkort: en kolumn, full bredd */
+    .vault-grid { grid-template-columns: 1fr; gap: 1rem; }
+    .hero-card { padding: 1.2rem 1rem 1rem; }
+    .hero-card:hover { transform: none; }
+    .hero-portrait { width: 56px; height: 56px; font-size: 1.6rem; }
+    .hero-actions { gap: .5rem; }
+    .btn-use { min-height: 44px; padding: .55rem .7rem; }
+    .btn-del { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+    .empty .btn-new { min-height: 44px; display: inline-flex; align-items: center; }
+    #toast { left: 1rem; right: 1rem; transform: translateY(20px); width: auto; }
+    #toast.show { transform: translateY(0); }
+  }
+  @media (max-width: 400px) {
+    .vault-wrap { padding: 1rem .5rem 2.5rem; }
+    .masthead h1 { letter-spacing: .04em; }
+    .hero-stats { gap: .4rem; }
+    .hero-stat { padding: .28rem .45rem; font-size: .54rem; }
+  }
 </style>
   <script src="sprites.js?v=20260730b"></script>
 <script src="fonts.js?v=20260730b"></script>

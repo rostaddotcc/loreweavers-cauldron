@@ -1031,12 +1031,7 @@
   }
   .day-banner b { color: #cfe0ff; }
 
-  @media (max-width: 900px) {
-    .sidebar { display: none; }
-    .oracle.open { width: 260px; }
-    .oracle-inner { width: 260px; }
-    .topbar .campaign { display: none; }
-  }
+  /* Sidebar drawer handled by snes.css section 30c — no display:none */
 </style>
 <link rel="stylesheet" href="snes.css">
 <script src="sprites.js?v=20260730e"></script>
@@ -1048,6 +1043,7 @@
 
 <!-- ═══════════ TOP BAR ═══════════ -->
 <header class="topbar">
+  <button class="mobile-menu-btn" onclick="toggleMobileSidebar()" aria-label="Öppna sällskap">☰</button>
   <span class="brand">🐉 Ett svenskt D&amp;D-äventyr</span>
   <span class="campaign" id="campaign-tag">Kampanj: —</span>
   <span class="spacer"></span>
@@ -1104,11 +1100,14 @@
   <span class="top-divider"></span>
   <button class="top-btn danger" onclick="logout()">🚪 Lämna</button>
 </header>
+<div class="mobile-hp-line" id="mobile-hp-line"><i style="width:100%"></i></div>
+<div class="drawer-backdrop" id="drawer-backdrop" onclick="toggleMobileSidebar()"></div>
 
 <div class="layout">
 
   <!-- ═══════════ SIDEBAR ═══════════ -->
   <aside class="sidebar">
+    <button class="drawer-close-btn" onclick="toggleMobileSidebar()" aria-label="Stäng">✕</button>
     <div>
       <div class="side-label">Sällskapet</div>
       <div class="pc-card active" onclick="location.href='character.html'" title="Öppna karaktärsark">
@@ -1140,6 +1139,30 @@
       <div class="side-label">Plats</div>
       <div id="loc-name" style="font-size:0.85rem;color:var(--bone-bright)">🗺 Okänd plats</div>
       <div id="loc-sub" style="font-size:0.72rem;color:var(--bone-dim);font-style:italic;margin-top:0.2rem">—</div>
+    </div>
+
+    <!-- Mobile-only drawer extras -->
+    <div class="drawer-extras">
+      <div class="model-select">
+        <span class="model-label">🔮</span>
+        <select id="model-picker-mobile" onchange="switchModel(this.value)">
+          <optgroup label="⚡ Moln-API">
+            <option value="step-3.7-flash" selected>Step 3.7 Flash (snabb)</option>
+            <option value="deepseek-v4-flash">DeepSeek V4 Flash</option>
+            <option value="qwen3.8-max">Qwen 3.8 Max</option>
+            <option value="qwen3.7-plus">Qwen 3.7 Plus</option>
+            <option value="deepseek-v4-pro">DeepSeek V4 Pro</option>
+            <option value="qwen3.6-flash">Qwen 3.6 Flash (atmosfär)</option>
+            <option value="mimo-v2.5">MiMo 2.5</option>
+            <option value="mimo-v2.5-pro">MiMo 2.5 Pro</option>
+          </optgroup>
+          <optgroup label="🏠 Lokalt (Ollama)">
+            <option value="ollama:qwen3:8b">Qwen3 8B (lokal)</option>
+            <option value="ollama:deepseek-r1:7b">DeepSeek R1 7B (lokal)</option>
+          </optgroup>
+        </select>
+      </div>
+      <button class="drawer-logout" onclick="logout()">🚪 Lämna</button>
     </div>
   </aside>
 
@@ -2829,11 +2852,18 @@ const modelNames = {
 function switchModel(model) {
   currentModel = model;
   localStorage.setItem('dnd_model', model);
+  // Sync both selects
+  const main = document.getElementById('model-picker');
+  const mobile = document.getElementById('model-picker-mobile');
+  if (main) main.value = model;
+  if (mobile) mobile.value = model;
   const local = model.startsWith('ollama:');
   toast(`🔮 Dungeon Master byter röst: ${modelNames[model]}${local ? ' · körs lokalt' : ''}`);
 }
 // Sätt dropdownen till det sparade valet
 document.getElementById('model-picker').value = currentModel;
+const mobilePickerInit = document.getElementById('model-picker-mobile');
+if (mobilePickerInit) mobilePickerInit.value = currentModel;
 function logout() {
   sessionStorage.removeItem('dnd_user');
   sessionStorage.removeItem('dnd_token');
@@ -2845,6 +2875,71 @@ function toast(msg) {
   el.textContent = msg; el.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+}
+
+// ═══════════════════════════════════════
+// MOBILE UX — drawer, sheets, HP sync
+// ═══════════════════════════════════════
+function toggleMobileSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  const backdrop = document.getElementById('drawer-backdrop');
+  if (!sidebar) return;
+  const isOpen = sidebar.classList.contains('mobile-open');
+  if (isOpen) {
+    sidebar.classList.remove('mobile-open');
+    backdrop.classList.remove('open');
+    document.body.style.overflow = '';
+  } else {
+    SFX.click();
+    sidebar.classList.add('mobile-open');
+    backdrop.classList.add('open');
+    // Sync mobile model picker
+    const mobilePicker = document.getElementById('model-picker-mobile');
+    if (mobilePicker) mobilePicker.value = currentModel;
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function openSheet(id) {
+  const sheet = document.getElementById(id);
+  const backdrop = document.getElementById(id + '-backdrop');
+  if (!sheet) return;
+  SFX.click();
+  sheet.classList.add('open');
+  if (backdrop) backdrop.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSheet(id) {
+  const sheet = document.getElementById(id);
+  const backdrop = document.getElementById(id + '-backdrop');
+  if (!sheet) return;
+  sheet.classList.remove('open');
+  if (backdrop) backdrop.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Close drawers/sheets on Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const sidebar = document.querySelector('.sidebar.mobile-open');
+    if (sidebar) { toggleMobileSidebar(); return; }
+    document.querySelectorAll('.sheet.open').forEach(s => closeSheet(s.id));
+  }
+});
+
+// Mirror HP updates to mobile-hp-line
+function mirrorMobileHp() {
+  const fill = document.getElementById('pc-hp-fill');
+  const mobileLine = document.getElementById('mobile-hp-line');
+  if (fill && mobileLine) {
+    mobileLine.querySelector('i').style.width = fill.style.width;
+  }
+}
+// Observe HP bar changes via MutationObserver
+const hpFill = document.getElementById('pc-hp-fill');
+if (hpFill) {
+  new MutationObserver(mirrorMobileHp).observe(hpFill, { attributes: true, attributeFilter: ['style'] });
 }
 
 // ═══════════════════════════════════════
@@ -2876,5 +2971,61 @@ function tick() {
 }
 tick();
 </script>
+
+<!-- ═══════════ MOBILE BOTTOM NAV ═══════════ -->
+<nav class="mobile-nav" id="mobile-nav">
+  <button class="nav-tab" onclick="openSheet('sheet-world');SFX.click()">
+    <span class="nav-icon">🗺️</span>
+    <span class="nav-label">Världen</span>
+  </button>
+  <button class="nav-tab" onclick="location.href='character.html'">
+    <span class="nav-icon">🧙</span>
+    <span class="nav-label">Karaktär</span>
+  </button>
+  <button class="nav-tab nav-center nav-active" onclick="document.getElementById('chat').scrollTop=document.getElementById('chat').scrollHeight;SFX.click()">
+    <span class="nav-icon">⚔️</span>
+    <span class="nav-label">Chat</span>
+  </button>
+  <button class="nav-tab" onclick="openSheet('sheet-tools');SFX.click()">
+    <span class="nav-icon">⚙️</span>
+    <span class="nav-label">Verktyg</span>
+  </button>
+  <button class="nav-tab" onclick="toggleMobileSidebar()">
+    <span class="nav-icon">☰</span>
+    <span class="nav-label">Sällskap</span>
+  </button>
+</nav>
+
+<!-- ═══════════ MOBILE SHEET: VÄRLDEN ═══════════ -->
+<div class="sheet-backdrop" id="sheet-world-backdrop" onclick="closeSheet('sheet-world')"></div>
+<div class="sheet" id="sheet-world">
+  <div class="sheet-head">
+    <span class="sheet-title">🗺️ Världen</span>
+    <button class="sheet-close" onclick="closeSheet('sheet-world')">✕</button>
+  </div>
+  <div class="sheet-body">
+    <a class="sheet-row" href="platser.html"><span class="sr-icon">🗺️</span><span class="sr-body"><span class="sr-name">Kartan</span><span class="sr-hint">platser &amp; resvägar</span></span></a>
+    <a class="sheet-row" href="loggbok.html"><span class="sr-icon">📜</span><span class="sr-body"><span class="sr-name">Loggbok</span><span class="sr-hint">dina anteckningar</span></span></a>
+    <a class="sheet-row" href="npcs.html"><span class="sr-icon">📖</span><span class="sr-body"><span class="sr-name">Gestalter</span><span class="sr-hint">kända NPCs</span></span></a>
+    <a class="sheet-row" href="facts.html"><span class="sr-icon">📚</span><span class="sr-body"><span class="sr-name">Arkivet</span><span class="sr-hint">minnen &amp; fakta</span></span></a>
+    <a class="sheet-row" href="valvet.html"><span class="sr-icon">🏰</span><span class="sr-body"><span class="sr-name">Valvet</span><span class="sr-hint">inventarium &amp; skatter</span></span></a>
+  </div>
+</div>
+
+<!-- ═══════════ MOBILE SHEET: VERKTYG ═══════════ -->
+<div class="sheet-backdrop" id="sheet-tools-backdrop" onclick="closeSheet('sheet-tools')"></div>
+<div class="sheet" id="sheet-tools">
+  <div class="sheet-head">
+    <span class="sheet-title">⚙️ Verktyg</span>
+    <button class="sheet-close" onclick="closeSheet('sheet-tools')">✕</button>
+  </div>
+  <div class="sheet-body">
+    <button class="sheet-row" onclick="closeSheet('sheet-tools');toggleOracle()"><span class="sr-icon">📜</span><span class="sr-body"><span class="sr-name">Regel-orakel</span><span class="sr-hint">fråga om 5e-regler</span></span></button>
+    <button class="sheet-row" onclick="closeSheet('sheet-tools');toggleConsole()"><span class="sr-icon">🛠️</span><span class="sr-body"><span class="sr-name">Maskinrummet</span><span class="sr-hint">live debug-loggar</span></span></button>
+    <a class="sheet-row" href="help.html"><span class="sr-icon">❓</span><span class="sr-body"><span class="sr-name">Hur spelar man?</span><span class="sr-hint">kommandon &amp; tips</span></span></a>
+    <button class="sheet-row" onclick="closeSheet('sheet-tools');exportCampaign()"><span class="sr-icon">📦</span><span class="sr-body"><span class="sr-name">Exportera</span><span class="sr-hint">kampanj som zip</span></span></button>
+  </div>
+</div>
+
 </body>
 </html>

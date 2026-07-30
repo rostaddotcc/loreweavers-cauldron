@@ -42,6 +42,34 @@
   .loop .step{color:var(--term-green);font-weight:700}
   .loop .desc{color:var(--bone)}
   a{color:var(--arcane)}
+
+  /* ═══════════ Mobil — pekskärm ═══════════ */
+  @media (max-width: 900px) {
+    html { -webkit-tap-highlight-color: transparent; }
+    .topbar { flex-wrap: wrap; gap: .4rem .5rem; }
+    .topbar a {
+      min-height: 44px; display: inline-flex; align-items: center;
+      padding: .4rem .7rem; font-size: .6rem;
+    }
+  }
+  @media (max-width: 640px) {
+    .app { padding: 1.25rem .75rem 3rem; }
+    h1 { font-size: .85rem; line-height: 1.6; }
+    h2 { font-size: .62rem; margin: 1.6rem 0 .7rem; }
+    p, li { font-size: .74rem; line-height: 1.9; }
+    .box { padding: .9rem .8rem; }
+    /* Långa kommandotaggar får brytas på smala skärmar */
+    .cmd { word-break: break-word; display: inline-block; max-width: 100%; }
+    .loop { gap: .5rem .6rem; }
+    .topbar .brand { font-size: .55rem; }
+  }
+  @media (max-width: 400px) {
+    .app { padding: 1rem .5rem 2.5rem; }
+    h1 { font-size: .75rem; }
+    .box { padding: .75rem .6rem; }
+    .cmd { font-size: .66rem; }
+    .key { font-size: .62rem; }
+  }
 </style>
 <link rel="stylesheet" href="snes.css">
 <script src="sprites.js?v=20260730b"></script>

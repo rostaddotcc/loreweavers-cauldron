@@ -176,15 +176,49 @@
     box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}
   .toast.show{transform:translate(-50%,0);opacity:1}
 
-  @media(max-width:860px){
+  @media(max-width:900px){
+    html{-webkit-tap-highlight-color:transparent}
     .hall{width:250px}
     .dossier{padding:1.3rem 1.1rem 3rem}
     .topbar .page-tag{display:none}
+    /* Topnav: radbryt + 44px träffytor (snes.css laddas sist → !important) */
+    .topbar{flex-wrap:wrap!important;gap:.4rem .5rem!important;padding:.6rem .75rem!important}
+    .topbar .top-btn{min-height:44px!important;display:inline-flex!important;align-items:center!important;padding:.4rem .65rem!important;font-size:.55rem!important}
   }
   @media(max-width:640px){
     .layout{flex-direction:column}
-    .hall{width:100%;height:42%;border-right:none;border-bottom:1px solid var(--edge)}
-    .dossier{height:58%}
+    .hall{width:100%;height:46%;border-right:none;border-bottom:1px solid var(--edge)}
+    .dossier{height:54%;padding:1.1rem .75rem 3rem}
+    /* Filterchips: horisontell rem, ingen radbrytning */
+    .filters{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:.7rem .8rem}
+    .filters::-webkit-scrollbar{display:none}
+    .fchip{flex:0 0 auto;min-height:44px;display:inline-flex;align-items:center}
+    /* NPC-kort: full bredd, generös träffyta */
+    .npc-list{padding:.6rem .7rem}
+    .ncard{padding:.7rem .65rem}
+    .ncard:hover{transform:none}
+    /* Dossier: porträtt + namn staplas */
+    .d-head{flex-direction:column;align-items:flex-start;gap:.9rem}
+    .d-portrait{width:76px;height:76px;font-size:2rem}
+    .trust-row{flex-wrap:wrap}
+    .trust-label{min-width:0;text-align:left;width:100%}
+    /* Butikstabell: horisontell scroll */
+    .shop-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -.4rem;padding:0 .4rem}
+    .shop-scroll::-webkit-scrollbar{height:6px}
+    .shop-scroll::-webkit-scrollbar-thumb{background:var(--edge)}
+    .shop-table{min-width:480px}
+    .buy-btn{min-height:44px;padding:.4rem .8rem}
+    .talk-btn{min-height:44px;display:flex;align-items:center;justify-content:center;width:100%;text-align:center}
+    .line{max-width:100%}
+    .panel-box{padding:.9rem .8rem}
+  }
+  @media(max-width:400px){
+    .hall-head{padding:.8rem .8rem .6rem}
+    .dossier{padding:.9rem .5rem 2.5rem}
+    .d-name{font-size:1.25rem}
+    .q-head{gap:.4rem}
+    .toast{left:1rem;right:1rem;transform:translateY(80px);width:auto}
+    .toast.show{transform:translateY(0)}
   }
 </style>
 <link rel="stylesheet" href="snes.css">

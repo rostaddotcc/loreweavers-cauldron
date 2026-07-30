@@ -252,7 +252,59 @@
   .paths-hidden .paths,.paths-hidden .expand{display:none!important}
   .paths-hidden .head .sub::after{content:' · ditt äventyr väntar ovan';color:var(--gold);font-style:italic}
 
-  @media(max-width:760px){.paths{grid-template-columns:1fr}.path{transform:none!important}.cp-grid{grid-template-columns:1fr;justify-items:center;text-align:center}.cp-stats{justify-content:center}.campaign-list{grid-template-columns:1fr}.campaign-card{padding:1rem}.campaign-card .cc-body{min-width:0}}
+  /* ═══════════ Mobile — vägskälet i fickformat ═══════════ */
+  html{-webkit-tap-highlight-color:transparent}
+  @media(max-width:900px){
+    .paths{grid-template-columns:1fr;gap:1rem}
+    .path{padding:1.4rem 1.1rem 1.2rem;transform:none!important}
+    .path:active{transform:translateY(2px)!important;border-color:var(--pc,var(--gold));
+      box-shadow:0 4px 14px -8px rgba(0,0,0,.8)}
+    .path:active .glow{opacity:1}
+    .path:active .icon{transform:scale(1.1)}
+    .path .icon{font-size:2.3rem;margin-bottom:.7rem}
+    .cp-grid{grid-template-columns:1fr;justify-items:center;text-align:center}
+    .cp-stats{justify-content:center}
+    .campaign-list{grid-template-columns:1fr}
+  }
+  @media(max-width:640px){
+    .app{padding:0 .75rem 4rem}
+    .topbar{padding:.8rem 0 0}
+    .top-btn{min-height:44px;display:inline-flex;align-items:center;padding:.4rem .9rem}
+    .head{margin:1.1rem 0 1.8rem}
+    .head .sub{font-size:.85rem}
+    .panel-box{padding:1.3rem 1rem}
+    .panel-title{font-size:.72rem;letter-spacing:.18em}
+    .world-prompt{min-height:150px;font-size:16px}
+    .name-input{min-height:48px;font-size:16px}
+    .dropzone{padding:1.4rem 1rem}
+    .dropzone .dz-text{font-size:.82rem}
+    .actions{flex-direction:column;align-items:stretch;gap:.6rem}
+    .go-btn,.danger-btn{width:100%;min-height:52px}
+    .go-btn:active,.danger-btn:active{transform:translateY(2px)!important;filter:brightness(.94)}
+    .hint{text-align:center;font-size:.72rem}
+    .continue-panel{padding:1.3rem 1rem 1.2rem}
+    .cp-name{font-size:1.15rem}
+    .cp-actions{flex-direction:column;align-items:stretch}
+    .campaign-card{padding:1rem .9rem .9rem;min-height:64px}
+    .campaign-card:hover{transform:none;box-shadow:0 12px 30px -16px rgba(0,0,0,.85);border-color:var(--edge)}
+    .campaign-card:active{transform:translateY(2px);border-color:var(--gold);
+      box-shadow:0 4px 12px -8px rgba(0,0,0,.8)}
+    .campaign-card .cc-go{flex:1;min-height:48px;display:inline-flex;align-items:center;justify-content:center}
+    .campaign-card .cc-del{min-width:48px;min-height:48px;display:inline-flex;align-items:center;justify-content:center;font-size:.7rem}
+    .campaign-card .cc-del:active{color:var(--blood-bright);border-color:var(--blood-bright)}
+    .file-item .fi-del{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+    .ep-grid{grid-template-columns:repeat(2,1fr)}
+    .toast{max-width:92%;text-align:center}
+  }
+  @media(max-width:400px){
+    .app{padding:0 .5rem 3.5rem}
+    .head h1{font-size:1.55rem}
+    .head .over{letter-spacing:.28em}
+    .path h2{font-size:.95rem}
+    .path p{font-size:.78rem}
+    .cp-icon{width:54px;height:54px;font-size:1.5rem}
+    .campaign-card .cc-sub{font-size:.68rem}
+  }
 </style>
 <link rel="stylesheet" href="snes.css">
 <script src="sprites.js?v=20260730c"></script>

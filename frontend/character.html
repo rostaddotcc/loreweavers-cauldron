@@ -507,6 +507,67 @@
     .panel { padding: 1.5rem 1rem; }
     .inv-table .hide-sm { display: none; }
   }
+
+  /* ═══════════ Mobil — pekskärm & trånga gränder ═══════════ */
+  @media (max-width: 900px) {
+    html { -webkit-tap-highlight-color: transparent; }
+    /* Topnav: radbryt + 44px träffytor (inline-stilar kräver !important) */
+    body > header { flex-wrap: wrap !important; gap: .4rem .5rem !important; padding: .6rem .75rem !important; }
+    body > header .top-btn {
+      min-height: 44px !important; display: inline-flex !important; align-items: center !important;
+      padding: .4rem .65rem !important; font-size: .55rem !important; white-space: nowrap;
+    }
+    .app { padding: 1.25rem .75rem 3rem; }
+  }
+  @media (max-width: 640px) {
+    /* Flikar: 2×2 stentavlor med full träffhöjd */
+    .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; }
+    .tab { min-height: 44px; display: flex; align-items: center; justify-content: center;
+      padding: .55rem .35rem; font-size: .64rem; border-bottom: 1px solid var(--edge); }
+    .panel { padding: 1.2rem .8rem; }
+    /* Förmågor: 2 kolumner, större siffror */
+    .abilities { grid-template-columns: repeat(2, 1fr); gap: .55rem; }
+    .ability .score { font-size: 1.35rem; }
+    /* HP/XP-mätare: högre balkar som syns */
+    .trough { height: 22px; }
+    .vital-ctrl .mini-btn { min-height: 44px; padding: .4rem .95rem; }
+    .slot { width: 40px; height: 40px; }
+    /* Utrustningstabell: horisontell scroll */
+    .inv-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .inv-scroll::-webkit-scrollbar { height: 6px; }
+    .inv-scroll::-webkit-scrollbar-thumb { background: var(--edge); }
+    .inv-table { min-width: 560px; }
+    .chip { min-height: 44px; display: inline-flex; align-items: center; }
+    .item-del { font-size: 1.05rem; padding: .55rem .5rem; opacity: .8; }
+    /* Lägg-till-formulär: staplat, 16px mot iOS-zoom */
+    .add-form input, .add-form select { font-size: 16px; min-height: 44px; }
+    .add-form input { flex: 1 1 100%; }
+    .add-form select { flex: 1 1 42%; }
+    .add-form .rune-btn { flex: 1 1 100%; min-height: 44px; }
+    /* Skattkammare */
+    .currency-grid { grid-template-columns: repeat(2, 1fr); gap: .6rem; }
+    .coin-btn { width: 44px; height: 44px; }
+    .tx { flex-wrap: wrap; gap: .3rem; }
+    /* Anteckningar */
+    .notes-layout { grid-template-columns: 1fr; }
+    #notes-editor { font-size: 16px; min-height: 280px; }
+    .rune-btn { min-height: 44px; }
+    .att-item .att-del { padding: .5rem .45rem; font-size: 1rem; }
+    .att-item a { font-size: .8rem; }
+  }
+  @media (max-width: 400px) {
+    .app { padding: 1rem .5rem 3rem; }
+    .panel { padding: 1rem .6rem; }
+    .abilities { gap: .4rem; }
+    .ability { padding: .7rem .15rem .6rem; }
+    .ability .abbr { font-size: .5rem; letter-spacing: .15em; }
+    .ability .score { font-size: 1.15rem; }
+    .coin { padding: .85rem .3rem .7rem; }
+    .coin-amount { font-size: 1.25rem; }
+    .coin-disc { width: 44px; height: 44px; }
+    .masthead h1 { letter-spacing: .02em; }
+    .char-name { font-size: 1.35rem; }
+  }
 </style>
 <link rel="stylesheet" href="snes.css">
 <script src="sprites.js?v=20260730b"></script>
@@ -622,6 +683,7 @@
     <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
 
     <div class="section-title">Packning & Vapen</div>
+    <div class="inv-scroll">
     <table class="inv-table">
       <thead>
         <tr>
@@ -635,6 +697,7 @@
       </thead>
       <tbody id="inv-body"></tbody>
     </table>
+    </div>
     <div class="inv-summary">
       <span>Total vikt: <b id="inv-weight">0</b> / 120 lbs <span id="inv-warn"></span></span>
       <span>Föremål: <b id="inv-count">0</b></span>

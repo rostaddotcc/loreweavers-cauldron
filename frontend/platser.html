@@ -81,7 +81,34 @@
   .toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:50;font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.12em;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);padding:.7rem 1.5rem;box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}
   .toast.show{transform:translate(-50%,0);opacity:1}
 
-  @media(max-width:640px){.layout{padding:1rem}.places-grid{grid-template-columns:1fr}.topbar .page-tag{display:none}}
+  @media(max-width:640px){
+    .layout{padding:1rem .75rem 2.5rem}
+    .places-grid{grid-template-columns:1fr}
+    .topbar .page-tag{display:none}
+    /* Topnav: 44px träffytor (snes.css har !important → kräver !important) */
+    .topbar{flex-wrap:wrap!important;gap:.4rem .5rem!important;padding:.6rem .75rem!important}
+    .topbar .top-btn{min-height:44px!important;display:inline-flex!important;align-items:center!important;padding:.4rem .65rem!important;font-size:.55rem!important}
+    /* Karta: full bredd, krympt typ */
+    .ascii-map{padding:.8rem .6rem;margin-left:-.25rem;margin-right:-.25rem}
+    .ascii-map pre{font-size:.42rem;line-height:1.2}
+    .map-head h1{font-size:1.2rem}
+    .current-loc{padding:.45rem .8rem;font-size:.68rem}
+    .travel-journal{padding:.55rem .7rem}
+    .travel-journal .tj-entry{padding:.35rem .3rem}
+    .quest-panel{padding:.7rem .8rem}
+    .place-card{padding:1rem .9rem}
+    .place-card:hover{transform:none}
+    .pc-footer{gap:.4rem}
+    .map-tooltip{left:.75rem!important;right:.75rem!important;max-width:none;width:auto}
+    .toast{left:1rem;right:1rem;transform:translateY(80px);width:auto}
+    .toast.show{transform:translateY(0)}
+  }
+  @media(max-width:400px){
+    .layout{padding:.8rem .5rem 2.5rem}
+    .ascii-map pre{font-size:.36rem;line-height:1.18}
+    .pc-name{font-size:.82rem}
+    .pc-desc{font-size:.78rem}
+  }
 
   /* ── ASCII-karta: individuella celler ── */
   .ascii-map pre .mc{transition:color .2s,text-shadow .2s}

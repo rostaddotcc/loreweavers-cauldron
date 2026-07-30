@@ -1032,8 +1032,8 @@
   }
 </style>
 <link rel="stylesheet" href="snes.css">
-<script src="sprites.js?v=20260730c"></script>
-<script src="fonts.js?v=20260730c"></script>
+<script src="sprites.js?v=20260730d"></script>
+<script src="fonts.js?v=20260730d"></script>
 </head>
 <body>
 <div class="grain"></div>
@@ -1216,10 +1216,10 @@
   </div>
 </div>
 
-<script src="sfx.js?v=20260730c"></script>
-<script src="music.js?v=20260730c"></script>
-<script src="api.js?v=20260730c"></script>
-<script src="i18n.js?v=20260730c"></script>
+<script src="sfx.js?v=20260730d"></script>
+<script src="music.js?v=20260730d"></script>
+<script src="api.js?v=20260730d"></script>
+<script src="i18n.js?v=20260730d"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -1789,8 +1789,8 @@ function addRollRequest(notation, label) {
   const id = 'rr-' + Date.now();
   el.innerHTML = `
     <div class="roll-request" id="${id}">
-      <span class="rr-label">🎲 ${I18N.t('DM begär:')} <b>${label}</b> <span style="color:var(--bone-dim)">(${notation})</span></span>
-      <button class="rr-btn" onclick="answerRollRequest('${id}','${notation}','${label.replace(/'/g,"\\'")}')">${I18N.t('Slå')} ${notation}</button>
+      <span class="rr-label">${diceIconForLabel(label)} ${I18N.t('DM begär:')} <b>${label}</b> <span style="color:var(--bone-dim)">(${notation})</span></span>
+      <button class="rr-btn" onclick="answerRollRequest('${id}','${notation}','${label.replace(/'/g,"\\'")}')">${diceIconForLabel(label)} ${I18N.t('Slå')} ${notation}</button>
     </div>`;
   chat.appendChild(el);
   chat.scrollTop = chat.scrollHeight;
@@ -1802,7 +1802,7 @@ async function answerRollRequest(id, notation, label) {
   if (!box) return;
   const btn = box.querySelector('.rr-btn');
   btn.disabled = true;
-  btn.textContent = '🎲 Rullar…';
+  btn.textContent = diceIconForLabel(label) + ' Rullar…';
 
   const roll = rollDice(notation);
   const isCrit = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 20;
@@ -2286,12 +2286,14 @@ const EFFECT_META = {
   guld:           { icon: '💰',  sfx: 'coin' },
   guld_fail:      { icon: '💰',  sfx: 'fail' },
   föremål:        { icon: '📦',  sfx: 'click' },
-  föremål_bort:   { icon: '📦',  sfx: 'damage' },
+  föremål_bort:   { icon: '📤',  sfx: 'damage' },
   quest:          { icon: '📜',  sfx: 'click' },
   quest_slutförd: { icon: '📜',  sfx: 'victory' },
   quest_misslyckad:{ icon: '📜',  sfx: 'fail' },
   npc_död:        { icon: '💀',  sfx: 'fail' },
   npc_relation:   { icon: '🤝',  sfx: 'click' },
+  npc_new:        { icon: '🧙',  sfx: 'click' },
+  npc_note:       { icon: '📝',  sfx: 'click' },
   plats:          { icon: '📍',  sfx: 'click' },
   tid:            { icon: '⏰',  sfx: 'click' },
   ny_dag:         { icon: '🌅',  sfx: 'gate' },
@@ -2300,22 +2302,26 @@ const EFFECT_META = {
 
 function effectText(fx) {
   const v = fx.value != null ? fx.value : '';
+  const qty = fx.qty && fx.qty > 1 ? ` ×${fx.qty}` : '';
   switch (fx.type) {
     case 'skada':        return `Du tar <b>${v}</b> skada!`;
     case 'hela':         return `Du helas <b>${v}</b> HP!`;
     case 'xp':           return `+<b>${v}</b> XP!`;
     case 'guld': {
       const d = {gp:'guld',sp:'silver',cp:'koppar',pp:'platina'}[fx.denom] || 'guld';
-      return fx.value >= 0 ? `+<b>${v}</b> ${d}!` : `<b>${v}</b> ${d}!`;
+      const sign = fx.value >= 0 ? '+' : '';
+      return `${sign}<b>${v}</b> ${d}`;
     }
     case 'guld_fail':    return fx.msg || 'Otillräckligt saldo!';
-    case 'föremål':      return `Nytt föremål: <b>${v}</b>`;
-    case 'föremål_bort': return `Föremål förlorat: <b>${v}</b>`;
+    case 'föremål':      return `Fick: <b>${v}</b>${qty}`;
+    case 'föremål_bort': return `Förlorade: <b>${v}</b>${qty}`;
     case 'quest':        return `Nytt uppdrag: <b>${v}</b>`;
     case 'quest_slutförd':return `Uppdrag slutfört: <b>${v}</b>`;
     case 'quest_misslyckad':return `Uppdrag misslyckat: <b>${v}</b>`;
     case 'level_up':     return `<b>NIVÅ ${v}!</b> Du känner nya krafter!`;
     case 'npc_relation': return `Relation ändrad: <b>${v}</b>`;
+    case 'npc_new':      return `Ny gestalt: <b>${v}</b> (${fx.role || 'okänd'}, ${fx.relation || 'okänd'})`;
+    case 'npc_note':     return `Om <b>${v}</b>: ${fx.note || ''}`;
     case 'ny_dag':       return `<b>NY DAG</b> — ${v}`;
     case 'plats':        return `Ny plats: <b>${v}</b>`;
     case 'npc_död':      return `<b>${v}</b> är död.`;
@@ -2323,6 +2329,22 @@ function effectText(fx) {
     case 'konsekvens':   return `${v}`;
     default:             return `<b>${fx.type}</b>: ${v}`;
   }
+}
+
+// ── Tärningsikoner per kategori ──
+function diceIconForLabel(label) {
+  const l = (label || '').toUpperCase();
+  if (/ATTACK|SLÅ|HUGG|SVÄRD|STRIKE|HIT/.test(l)) return '⚔️';
+  if (/SMIDIGHET|SNEAK|SMYG|STEALTH|DEX/.test(l)) return '🥷';
+  if (/SKÖLD|FÖRSVAR|SHIELD|AC|BLOCK/.test(l)) return '🛡️';
+  if (/MAGI|SPELL|ARCANE|TROLL|ELD|FIRE|CAST/.test(l)) return '🔮';
+  if (/ÖVERTALNING|PERSUASION|CHARISMA|CHA|TALK/.test(l)) return '🗣️';
+  if (/VARSEBLIVNING|PERCEPTION|SEARCH|WIS|SPOT/.test(l)) return '👁️';
+  if (/INSIKT|INSIGHT/.test(l)) return '🔮';
+  if (/KLÄTTRA|CLIMB|ATHLETICS|STYRKA|STR|JUMP/.test(l)) return '💪';
+  if (/INITIATIVE|INITIATIV/.test(l)) return '⚡';
+  if (/DEATH SAVE|DÖDSRÄDDNING/.test(l)) return '💀';
+  return '🎲';
 }
 
 function renderEffects(effects, turnCount) {

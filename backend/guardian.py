@@ -645,7 +645,7 @@ def apply_mechanics(state: dict, mech: dict) -> list[dict]:
                 "description": "",
             })
             logger.info("🛡️ Guardian: lade till '%s'", name)
-        effects.append({"type": "föremål", "value": name})
+        effects.append({"type": "föremål", "value": name, "qty": qty})
 
     for item in mech.get("items_remove", []):
         name = item.get("name", "").strip()
@@ -660,7 +660,7 @@ def apply_mechanics(state: dict, mech: dict) -> list[dict]:
                 logger.info("🛡️ Guardian: tog bort '%s'", name)
             else:
                 logger.info("🛡️ Guardian: minskade '%s' → qty=%d", name, existing["qty"])
-            effects.append({"type": "föremål_bort", "value": name})
+            effects.append({"type": "föremål_bort", "value": name, "qty": qty})
 
     # ── Valuta ──
     cur = state.setdefault("currency", {"pp": 0, "gp": 0, "sp": 0, "cp": 0})
@@ -726,6 +726,7 @@ def apply_mechanics(state: dict, mech: dict) -> list[dict]:
                 "notes": "",
                 "alive": True,
             })
+            effects.append({"type": "npc_new", "value": name, "role": npc.get("role", "Okänd"), "relation": relation})
             logger.info("🛡️ Guardian: ny NPC '%s' (%s)", name, relation)
 
     for rel in mech.get("npc_relations", []):
@@ -746,6 +747,7 @@ def apply_mechanics(state: dict, mech: dict) -> list[dict]:
         text = note.get("note", "").strip()
         if name and text:
             _add_npc_note(state, name, text)
+            effects.append({"type": "npc_note", "value": name, "note": text})
 
     # ── Platser ──
     world = state.setdefault("world", {})

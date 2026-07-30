@@ -163,7 +163,7 @@ const API = (() => {
       return req('/api/models');
     },
 
-    // ── Kampanj (ett spel per användare) ──
+    // ── Kampanj (flera per användare) ──
     async getCampaign() {
       if (MOCK) {
         const c = mock._load();
@@ -178,45 +178,59 @@ const API = (() => {
       }
     },
 
+    async listCampaigns() {
+      if (MOCK) {
+        const c = mock._load();
+        return { campaigns: c ? [this._shapeCampaign(c)] : [] };
+      }
+      return req('/api/campaigns');
+    },
+
     // Normalisera backend-state → frontend-vy
     _shapeCampaign(s) {
       if (!s) return null;
       return {
-        id: s.meta?.campaign_id,
-        name: s.meta?.campaign_name || 'Mörkrets Rike',
+        id: s.meta?.campaign_id ?? s.campaign_id,
+        name: s.meta?.campaign_name ?? s.name ?? 'Mörkrets Rike',
         character: s.character || {},
         sessions: s.meta?.session_count || 1,
         day: s.world?.time || '—',
-        location: s.world?.current_location || 'Okänd',
-        turn_count: s.meta?.turn_count || 0,
+        location: s.world?.current_location ?? s.location ?? 'Okänd',
+        turn_count: s.meta?.turn_count ?? s.turn_count ?? 0,
         opening_key: s.opening_key || s.meta?.opening_key || 'default',
         world: s.world || {},
         _raw: s,
       };
     },
 
-    async createCampaign(mode = 'freestyle', language = 'sv') {
+    async createCampaign(name = '', language = 'sv') {
+      // Default to "Ett namnlöst äventyr" if name empty
+      const campaignName = (name && name.trim()) ? name.trim() : 'Ett namnlöst äventyr';
       if (MOCK) {
-        if (mock._load()) throw new Error('Du har redan ett aktivt äventyr');
         mock.campaign = {
-          meta: { campaign_id: 'mock-' + Date.now(), campaign_name: 'Mörkrets Rike', turn_count: 0, session_count: 1, created: new Date().toISOString(), last_updated: new Date().toISOString(), language },
+          meta: { campaign_id: 'mock-' + Date.now(), campaign_name: campaignName, turn_count: 0, session_count: 1, created: new Date().toISOString(), last_updated: new Date().toISOString(), language },
           character: {}, inventory: [], currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 },
           npcs: [], quests: [], world: { current_location: '', time: '', weather: '' },
-          mode,
         };
         mock._save();
         return { ok: true, campaign_id: mock.campaign.meta.campaign_id };
       }
-      return req('/api/campaign', { method: 'POST', body: JSON.stringify({ language }) });
+      return req('/api/campaign', { method: 'POST', body: JSON.stringify({ name: campaignName, language }) });
     },
 
-    async endCampaign() {
+    async endCampaign(campaignId) {
       if (MOCK) {
         mock.campaign = null;
         localStorage.removeItem('dnd_mock_campaign');
         return { ok: true };
       }
-      return req('/api/campaign', { method: 'DELETE' });
+      if (!campaignId) throw new Error('campaign_id krävs');
+      return req('/api/campaign?campaign_id=' + encodeURIComponent(campaignId), { method: 'DELETE' });
+    },
+
+    async activateCampaign(campaignId) {
+      if (MOCK) return { ok: true };
+      return req('/api/campaign/activate', { method: 'POST', body: JSON.stringify({ campaign_id: campaignId }) });
     },
 
     // ── Karaktärsuppdatering (HP, inventory m.m.) ──

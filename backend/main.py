@@ -520,7 +520,12 @@ class VaultUseRequest(BaseModel):
 
 
 class CampaignCreateRequest(BaseModel):
+    name: str = ""
     language: str = "en"
+
+
+class CampaignActivateRequest(BaseModel):
+    campaign_id: str
 
 
 class SaveRequest(BaseModel):
@@ -1046,30 +1051,15 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
 async def create_campaign(body: CampaignCreateRequest | None = None, morkrets_token: str | None = Cookie(None)):
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
+    name = (body.name if body else "") or "Ett namnlöst äventyr"
     language = (body.language if body else "en") or "en"
 
-    existing = store.get(username)
-    if existing:
-        raise HTTPException(
-            409,
-            detail={
-                "message": "Du har redan en aktiv kampanj",
-                "campaign": {
-                    "id": existing["meta"]["campaign_id"],
-                    "name": existing["meta"]["campaign_name"],
-                    "turn_count": existing["meta"]["turn_count"],
-                    "created": existing["meta"]["created"],
-                },
-            },
-        )
-
-    state = store.create(username)
+    state = store.create(username, name=name, language=language)
     # Slumpa en äventyrsöppning
     style_key, style_desc = random.choice(OPENING_STYLES)
     state["meta"]["opening_style"] = style_desc
     state["meta"]["opening_key"] = style_key
     state["meta"]["awakening"] = True  # DM vaknar: frågor först, sen öppnas scenen
-    state["meta"]["language"] = language
     store.save(state)
     return {"ok": True, "campaign_id": state["meta"]["campaign_id"], "opening": style_key}
 
@@ -1102,11 +1092,26 @@ async def get_transcript(morkrets_token: str | None = Cookie(None)):
     }
 
 
+@app.get("/api/campaigns")
+async def list_campaigns(morkrets_token: str | None = Cookie(None)):
+    """Lista alla kampanjer för användaren."""
+    payload = _get_current_user(morkrets_token)
+    campaigns = store.list_campaigns(payload["sub"])
+    return {"campaigns": campaigns}
+
+
 @app.delete("/api/campaign")
-async def delete_campaign(morkrets_token: str | None = Cookie(None)):
+async def delete_campaign(
+    morkrets_token: str | None = Cookie(None),
+    campaign_id: str | None = None,
+):
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
-    deleted = store.delete(username)
+    # Accept campaign_id from query param or body
+    cid = campaign_id
+    if not cid:
+        raise HTTPException(400, "campaign_id krävs för att radera en specifik kampanj")
+    deleted = store.delete(username, cid)
     if not deleted:
         raise HTTPException(404, "Ingen kampanj att radera")
     # Fas 3: Rensa Qdrant-vektorer så inget långtidsminne läcker kvar
@@ -1115,6 +1120,16 @@ async def delete_campaign(morkrets_token: str | None = Cookie(None)):
     except Exception as e:
         logger.debug("Qdrant-rensning vid kampanjradering: %s", e)
     return {"ok": True, "message": "Kampanjen har avslutats och raderats"}
+
+
+@app.post("/api/campaign/activate")
+async def activate_campaign(body: CampaignActivateRequest, morkrets_token: str | None = Cookie(None)):
+    """Sätt en specifik kampanj som aktiv."""
+    payload = _get_current_user(morkrets_token)
+    state = store.set_active(payload["sub"], body.campaign_id)
+    if not state:
+        raise HTTPException(404, "Kampanjen hittades inte")
+    return {"ok": True, "campaign_id": body.campaign_id}
 
 
 # ═══════════════════════════════════════
@@ -1813,14 +1828,23 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     # Guardian avgör om handlingen kräver ett kast och i så fall vilket.
     # Resultatet injiceras som råd i DM-prompten + fungerar som fallback
     # om DM glömmer [KAST:]-taggen.
+    # Vi skickar med senaste DM-svar som kontext så Guardian förstår situationen.
     guardian_roll = None
     if not is_awakening and not req.message.startswith("[Resultat:"):
         try:
             _tg = time.time()
+            # Hämta senaste DM-svar från transkriptet för kontext
+            _recent = store.load_transcript(state, last_n=4)
+            _dm_context = ""
+            for entry in reversed(_recent):
+                if entry.get("role") == "assistant":
+                    _dm_context = entry.get("content", "")
+                    break
             guardian_roll = await guardian_check_roll(
                 req.message, state,
                 lambda msgs: _call_llm(EXTRACTION_MODEL, msgs, temperature=0.1, max_tokens=200),
                 language=_get_lang(state),
+                dm_context=_dm_context,
             )
             if guardian_roll:
                 logger.info("🛡️ Guardian pre-DM (%.1fs): kast %s (%s)",

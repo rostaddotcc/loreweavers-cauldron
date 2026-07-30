@@ -179,6 +179,61 @@
   .cp-rule{width:100%;font-size:.72rem;font-style:italic;color:var(--bone-dim);margin-top:.2rem}
   .cp-rule b{color:var(--gold);font-style:normal}
 
+  /* ── Kampanjlista (flera sparade äventyr) ── */
+  .campaign-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin-bottom:1.2rem}
+  .campaign-card{
+    position:relative;overflow:hidden;cursor:pointer;
+    background:linear-gradient(165deg,var(--stone-2),var(--stone) 60%,#120c1c);
+    border:1px solid var(--edge);padding:1.2rem 1.1rem 1rem;
+    box-shadow:0 12px 30px -16px rgba(0,0,0,.85);
+    transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s,border-color .3s;
+  }
+  .campaign-card::after{content:'';position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse at 50% -10%,rgba(232,198,90,.06),transparent 60%)}
+  .campaign-card:hover{transform:translateY(-4px);box-shadow:0 16px 40px -14px rgba(0,0,0,.9);border-color:var(--gold)}
+  .campaign-card .cc-head{display:flex;align-items:center;gap:.7rem;margin-bottom:.8rem}
+  .campaign-card .cc-icon{
+    width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;
+    border:1px solid var(--edge);background:var(--stone-3);flex-shrink:0;
+  }
+  .campaign-card .cc-name{font-family:'Cinzel',serif;font-weight:700;font-size:.92rem;color:var(--bone-bright);letter-spacing:.03em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .campaign-card .cc-char{font-size:.72rem;font-style:italic;color:var(--bone-dim)}
+  .campaign-card .cc-stats{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.7rem}
+  .campaign-card .cc-stat{
+    font-family:'Cinzel',serif;font-size:.52rem;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim);
+    border:1px solid var(--edge);background:var(--stone-3);padding:.28rem .55rem;border-radius:2px;
+  }
+  .campaign-card .cc-stat b{color:var(--gold-bright);font-weight:700;margin-right:.2rem}
+  .campaign-card .cc-actions{display:flex;gap:.5rem;align-items:center;position:relative;z-index:1}
+  .campaign-card .cc-del{
+    font-family:'Cinzel',serif;font-size:.52rem;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--bone-dim);background:none;border:1px solid var(--edge);padding:.3rem .55rem;cursor:pointer;border-radius:2px;transition:all .2s;
+  }
+  .campaign-card .cc-del:hover{color:var(--blood-bright);border-color:var(--blood-bright)}
+  .campaign-card .cc-body{flex:1;min-width:0}
+  .campaign-card .cc-sub{font-size:.72rem;color:var(--bone-dim);margin-top:.2rem}
+  .campaign-card .cc-sub b{color:var(--bone-bright)}
+  .campaign-card .cc-date{font-size:.65rem;color:var(--bone-dim);margin-top:.25rem;font-style:italic}
+  .campaign-card .cc-go{
+    font-family:'Cinzel',serif;font-weight:700;font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;
+    color:#1a1206;cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);
+    border:1px solid #6e5510;padding:.5rem 1rem;border-radius:2px;position:relative;overflow:hidden;
+    box-shadow:0 4px 14px -4px rgba(232,198,90,.4),inset 0 1px 0 rgba(255,255,255,.35);transition:all .2s;
+    white-space:nowrap;
+  }
+  .campaign-card .cc-go:hover{filter:brightness(1.12);transform:translateY(-1px)}
+
+  /* ── Namnge äventyr (inline form) ── */
+  .name-form{display:none;margin-top:1.2rem;animation:rise .4s ease}
+  .name-form.show{display:block}
+  .name-input{
+    width:100%;font-family:'Spectral',serif;font-size:.92rem;color:var(--bone-bright);
+    background:var(--stone-3);border:1px solid var(--edge);padding:.8rem 1rem;outline:none;border-radius:2px;
+    transition:border-color .25s,box-shadow .25s;margin-bottom:.8rem;
+  }
+  .name-input:focus{border-color:var(--gold);box-shadow:0 0 16px -4px rgba(232,198,90,.4)}
+  .name-input::placeholder{color:rgba(138,122,94,.5);font-style:italic}
+
   /* ── Fara-knapp (blod) ── */
   .danger-btn{
     font-family:'Cinzel',serif;font-weight:700;font-size:.78rem;letter-spacing:.16em;text-transform:uppercase;
@@ -197,7 +252,7 @@
   .paths-hidden .paths,.paths-hidden .expand{display:none!important}
   .paths-hidden .head .sub::after{content:' · ditt äventyr väntar ovan';color:var(--gold);font-style:italic}
 
-  @media(max-width:760px){.paths{grid-template-columns:1fr}.path{transform:none!important}.cp-grid{grid-template-columns:1fr;justify-items:center;text-align:center}.cp-stats{justify-content:center}}
+  @media(max-width:760px){.paths{grid-template-columns:1fr}.path{transform:none!important}.cp-grid{grid-template-columns:1fr;justify-items:center;text-align:center}.cp-stats{justify-content:center}.campaign-list{grid-template-columns:1fr}.campaign-card{padding:1rem}.campaign-card .cc-body{min-width:0}}
 </style>
 <link rel="stylesheet" href="snes.css">
 <script src="sprites.js?v=20260730b"></script>
@@ -220,23 +275,14 @@
     <div class="rune-divider"><span>✦</span></div>
   </div>
 
-  <!-- ═══════════ PÅGÅENDE ÄVENTYR ═══════════ -->
+  <!-- ═══════════ SPARADE ÄVENTYR ═══════════ -->
   <div class="continue-wrap" id="continue-wrap">
     <div class="continue-panel">
       <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
-      <div class="panel-title">⚔️ Ditt pågående äventyr</div>
-      <div class="cp-grid">
-        <div class="cp-icon" id="cp-icon">🧙‍♀️</div>
-        <div>
-          <div class="cp-name" id="cp-name">—</div>
-          <div class="cp-sub" id="cp-char">—</div>
-        </div>
-        <div class="cp-stats" id="cp-stats"></div>
-      </div>
-      <div class="cp-actions">
-        <button class="go-btn" onclick="continueAdventure()">⚔️ Fortsätt äventyret</button>
-        <button class="danger-btn" onclick="askEndAdventure()">🕯️ Avsluta äventyret</button>
-        <span class="cp-rule">Endast <b>ett</b> äventyr kan pågå åt gången — nya vägar låses tills detta är avslutat.</span>
+      <div class="panel-title">⚔️ Dina äventyr</div>
+      <div class="campaign-list" id="campaign-list"></div>
+      <div class="actions">
+        <span class="hint">Välj ett äventyr att fortsätta, eller skapa ett nytt nedan.</span>
       </div>
     </div>
   </div>
@@ -259,12 +305,28 @@
       <span class="tag">.md · .pdf · Bilder</span>
     </div>
 
-    <div class="path" style="--pc:var(--blood-bright);--pg:rgba(212,58,77,.12)" onclick="newAdventure()">
+    <div class="path" style="--pc:var(--blood-bright);--pg:rgba(212,58,77,.12)" onclick="showNewAdventureForm()">
       <div class="glow"></div>
       <span class="icon">🎲</span>
       <h2>Nytt äventyr</h2>
       <p>Ingen prep. Dungeon Master freestylar ihop en öppningsscen och kastar dig in i mörkret.</p>
       <span class="tag">Freestyle · Direkt</span>
+    </div>
+  </div>
+
+  <!-- ═══════════ NAMNGE ÄVENTYR (inline form) ═══════════ -->
+  <div class="expand" id="panel-newadventure">
+    <div class="panel-box">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div class="panel-title">🎲 Nytt äventyr</div>
+      <p style="font-size:.85rem;font-style:italic;color:var(--bone-dim);margin-bottom:1rem">
+        Ge ditt äventyr ett namn — eller låt det vara namnlöst och börja direkt.
+      </p>
+      <input type="text" class="name-input" id="adventure-name-input" placeholder="Ett namnlöst äventyr…" maxlength="60">
+      <div class="actions">
+        <button class="go-btn" onclick="startNewAdventure()">⚔️ Börja äventyret</button>
+        <span class="hint">DM freestylar en öppningsscen åt dig</span>
+      </div>
     </div>
   </div>
 
@@ -369,8 +431,8 @@ if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 <script src="i18n.js?v=20260730b"></script>
 <script>
 // ═══════════════════════════════════════
-// PÅGÅENDE ÄVENTYR — kontrolleras via API:et
-// Regel: högst ETT aktivt spel per användare
+// SPARADE ÄVENTYR — kontrolleras via API:et
+// Flera kampanjer per användare
 // ═══════════════════════════════════════
 let hasActiveCampaign = false;
 
@@ -379,35 +441,43 @@ function esc(s) {
 }
 
 async function initCampaignCheck() {
-  let campaign = null;
   try {
-    campaign = (await API.getCampaign()).campaign;
+    const { campaigns } = await API.listCampaigns();
+    if (campaigns && campaigns.length > 0) {
+      showCampaignList(campaigns);
+    } else {
+      showPaths();
+    }
   } catch (e) {
-    campaign = null; // servern nere — visa vägarna
+    showPaths();
   }
-  if (campaign) showActiveCampaign(campaign);
-  else showPaths();
 }
 
-function showActiveCampaign(c) {
+function showCampaignList(campaigns) {
   hasActiveCampaign = true;
-  const ch = c.character || {};
-  document.getElementById('cp-icon').textContent = ch.icon || '🎭';
-  document.getElementById('cp-name').textContent = c.name || 'Namnlös kampanj';
-  document.getElementById('cp-char').innerHTML =
-    '<b>' + esc(ch.name || 'Okänd hjälte') + '</b>' +
-    (ch.race || ch.class ? ' · ' + esc([ch.race, ch.class].filter(Boolean).join(' · ')) : '') +
-    (ch.level ? ' · Nivå ' + esc(ch.level) : '');
-
-  const stats = [
-    ['🕯️', 'Session', c.sessions != null ? c.sessions : 0],
-    ['📅', 'Dag', c.day != null ? c.day : '—'],
-    ['🗺️', 'Plats', c.location || 'Okänd'],
-  ];
-  document.getElementById('cp-stats').innerHTML = stats.map(([ic, l, v]) =>
-    '<span class="cp-stat"><b>' + ic + ' ' + esc(l) + '</b>' + esc(v) + '</span>'
-  ).join('');
-
+  const list = document.getElementById('campaign-list');
+  list.innerHTML = campaigns.map(c => {
+    const ch = c.character || {};
+    const icon = c.character_icon || ch.icon || '🎭';
+    const name = c.name || 'Namnlös kampanj';
+    const charName = c.character_name || ch.name || 'Ingen hjälte än';
+    const level = c.level || ch.level || 1;
+    const turns = c.turn_count || 0;
+    const loc = c.location || 'Okänd';
+    const date = c.last_updated ? new Date(c.last_updated).toLocaleDateString('sv-SE', {month:'short',day:'numeric'}) : '—';
+    return `<div class="campaign-card" data-id="${esc(c.campaign_id)}">
+      <div class="cc-icon">${icon}</div>
+      <div class="cc-body">
+        <div class="cc-name">${esc(name)}</div>
+        <div class="cc-sub"><b>${esc(charName)}</b> · Nivå ${level} · ${turns} vändor · ${esc(loc)}</div>
+        <div class="cc-date">Senast spelad: ${date}</div>
+      </div>
+      <div class="cc-actions">
+        <button class="go-btn cc-go" onclick="activateAndContinue('${esc(c.campaign_id)}')">⚔️ Fortsätt</button>
+        <button class="cc-del" onclick="askDeleteCampaign('${esc(c.campaign_id)}','${esc(name)}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
   document.getElementById('continue-wrap').classList.add('show');
   document.querySelector('.app').classList.add('paths-hidden');
 }
@@ -418,30 +488,34 @@ function showPaths() {
   document.querySelector('.app').classList.remove('paths-hidden');
 }
 
-function continueAdventure() {
+async function activateAndContinue(campaignId) {
   SFX.click();
-  location.href = 'chat.html';
+  try {
+    await API.activateCampaign(campaignId);
+    location.href = 'chat.html';
+  } catch (e) {
+    toast('⚠ Kunde inte aktivera kampanj: ' + (e.message || 'okänt fel'));
+  }
 }
 
-async function askEndAdventure() {
+async function askDeleteCampaign(campaignId, name) {
   const ok = await Modal.confirm({
-    title: 'Avsluta äventyret?',
-    body: '⚠️ Äventyret, världen och transkriptet försvinner för alltid. 💡 Tips: spara din karaktär i Valvet först (Karaktär → 🏰 Spara i valvet) så kan du återanvända den!',
-    confirmText: '🔥 Avsluta för alltid',
-    cancelText: '⚔️ Fortsätt spela',
+    title: 'Avsluta "' + name + '"?',
+    body: '⚠️ Äventyret, världen och transkriptet försvinner för alltid. 💡 Tips: spara din karaktär i Valvet först.',
+    confirmText: '🔥 Radera',
+    cancelText: 'Behåll',
     danger: true,
     icon: '🩸',
   });
   if (!ok) return;
-
   try {
-    await API.endCampaign();
+    await API.endCampaign(campaignId);
     SFX.fail();
-    showPaths();
-    toast('🕯️ Äventyret är avslutat');
+    toast('🕯️ Äventyret raderat');
+    initCampaignCheck();
   } catch (e) {
     SFX.error();
-    toast('⚠ ' + (e.message || 'Kunde inte avsluta äventyret'));
+    toast('⚠ ' + (e.message || 'Kunde inte radera'));
   }
 }
 
@@ -470,6 +544,34 @@ function showPanel(id) {
   el.classList.add('show');
   activePanel = id;
   el.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+// ═══════════════════════════════════════
+// NYTT ÄVENTYR — namnge och starta
+// ═══════════════════════════════════════
+function showNewAdventureForm() {
+  const el = document.getElementById('panel-newadventure');
+  if (activePanel === 'newadventure') { el.classList.remove('show'); activePanel = null; return; }
+  document.querySelectorAll('.expand').forEach(e => e.classList.remove('show'));
+  el.classList.add('show');
+  activePanel = 'newadventure';
+  el.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  setTimeout(() => document.getElementById('adventure-name-input').focus(), 300);
+}
+
+async function startNewAdventure() {
+  SFX.click();
+  const name = document.getElementById('adventure-name-input').value.trim();
+  const lang = 'sv'; // Default — could read from a selector if present
+  try {
+    await API.createCampaign(name, lang);
+    sessionStorage.setItem('dnd_adventure_mode', 'freestyle');
+    toast('🎲 Dungeon Master förbereder en öppningsscen…');
+    setTimeout(() => { location.href = 'newgame.html'; }, 800);
+  } catch (e) {
+    SFX.error();
+    toast('⚠ ' + (e.message || 'Kunde inte skapa kampanj'));
+  }
 }
 
 // ═══════════════════════════════════════
@@ -531,7 +633,7 @@ async function startPrepare() {
   try {
     // Se till att kampanj finns
     const { campaign } = await API.getCampaign();
-    if (!campaign) await API.createCampaign('prepare');
+    if (!campaign) await API.createCampaign('Förberett äventyr', 'sv');
     fill.style.width = '30%';
 
     // Bygg världen via backend → Qwen
@@ -576,7 +678,7 @@ async function startImport() {
   try {
     // Se till att kampanj finns
     const { campaign } = await API.getCampaign();
-    if (!campaign) await API.createCampaign('import');
+    if (!campaign) await API.createCampaign('Importerat äventyr', 'sv');
     fill.style.width = '20%';
 
     // Importera varje fil via backend

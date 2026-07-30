@@ -391,13 +391,6 @@
 
   /* System / dice */
   .msg.system { text-align: center; max-width: 520px; margin-left: auto; margin-right: auto; }
-  .msg.guardian { text-align: center; max-width: 520px; margin-left: auto; margin-right: auto; }
-  .msg.guardian .guardian-box {
-    font-size: 0.82rem; color: #a8b2c0; border: 1px solid rgba(139,95,212,.4);
-    background: rgba(139,95,212,.08); padding: 0.6rem 1rem; border-radius: 4px;
-    line-height: 1.5; text-align: left;
-  }
-  .msg.guardian .guardian-box strong { color: #c4a6f0; }
   .msg.system .box {
     display: inline-block; font-size: 0.88rem; color: var(--bone-dim);
     border: 1px dashed var(--edge); padding: 0.55rem 1.3rem; border-radius: 2px;
@@ -439,18 +432,86 @@
 
 
 
-  /* ── Mekaniska effekter (skada, xp, guld …) ── */
-  .msg.effect .box { border-style: solid; font-weight: 600; letter-spacing: .02em; }
-  .msg.effect.e-skada .box { color: var(--blood-bright); border-color: rgba(212,58,77,.55); background: rgba(163,36,51,.1); text-shadow: 0 0 12px rgba(212,58,77,.4); }
-  .msg.effect.e-hela .box { color: #8fd48a; border-color: rgba(122,163,94,.55); background: rgba(122,163,94,.08); text-shadow: 0 0 12px rgba(122,163,94,.4); }
-  .msg.effect.e-xp .box, .msg.effect.e-guld .box { color: var(--gold-bright); border-color: rgba(201,162,39,.55); background: rgba(201,162,39,.08); text-shadow: 0 0 12px rgba(232,198,90,.4); }
-  .msg.effect.e-guld_fail .box { color: var(--blood-bright); border-color: rgba(212,58,77,.55); background: rgba(163,36,51,.1); text-shadow: 0 0 12px rgba(212,58,77,.4); }
-  .msg.effect.e-foremal .box { color: #cbb3f2; border-color: rgba(139,95,212,.55); background: rgba(139,95,212,.08); text-shadow: 0 0 12px rgba(139,95,212,.4); }
-  .msg.effect.e-quest .box { color: var(--ember); border-color: rgba(212,105,30,.55); background: rgba(212,105,30,.08); text-shadow: 0 0 12px rgba(212,105,30,.4); }
-  .msg.effect.e-quest_ok .box { color: #8fd48a; border-color: rgba(122,163,94,.55); background: rgba(122,163,94,.08); text-shadow: 0 0 12px rgba(122,163,94,.4); }
-  .msg.effect.e-quest_fail .box { color: var(--blood-bright); border-color: rgba(212,58,77,.55); background: rgba(163,36,51,.1); text-shadow: 0 0 12px rgba(212,58,77,.4); }
-  .msg.effect .box { animation: effect-pop .45s cubic-bezier(.22,1,.36,1); }
-  @keyframes effect-pop { from { opacity: 0; transform: scale(.85) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+  /* ── Mekaniska effekter — Event Log Cards ── */
+  .event-batch {
+    max-width: 560px; margin: .35rem auto; padding: .3rem .5rem .45rem;
+    border: 1px solid var(--edge); border-radius: 4px;
+    background: rgba(11,8,18,.5);
+    animation: batch-in .4s cubic-bezier(.22,1,.36,1);
+    position: relative;
+  }
+  .event-batch .batch-turn {
+    position: absolute; top: -7px; right: 10px;
+    font-family: 'Cinzel', serif; font-size: .55rem; letter-spacing: .15em;
+    text-transform: uppercase; color: var(--gold-bright);
+    background: var(--stone-2); padding: 1px 7px; border: 1px solid var(--edge);
+    border-radius: 8px; pointer-events: none; z-index: 2;
+  }
+  @keyframes batch-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  .event-card {
+    display: flex; align-items: flex-start; gap: .55rem;
+    margin: .25rem 0; padding: .4rem .65rem .4rem .5rem;
+    border-left: 3px solid var(--ev-color, var(--edge));
+    background: var(--ev-bg, rgba(11,8,18,.4));
+    border-radius: 0 3px 3px 0;
+    font-size: .82rem; font-style: italic; line-height: 1.45;
+    color: var(--ev-text, var(--bone));
+    animation: effect-pop .4s cubic-bezier(.22,1,.36,1);
+    transition: background .2s;
+  }
+  .event-card:hover { background: var(--ev-bg-hover, rgba(29,21,41,.6)); }
+  .event-card .ev-icon { font-size: .95rem; font-style: normal; flex-shrink: 0; line-height: 1.45; }
+  .event-card .ev-text { flex: 1; min-width: 0; }
+  .event-card .ev-text b { font-style: normal; font-weight: 700; }
+  @keyframes effect-pop { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+
+  /* Effect type colors — border, bg tint, text */
+  .event-card.e-skada        { --ev-color: #d43a4d; --ev-bg: rgba(163,36,51,.10); --ev-bg-hover: rgba(163,36,51,.18); --ev-text: var(--blood-bright); }
+  .event-card.e-hela         { --ev-color: #7aa35e; --ev-bg: rgba(122,163,94,.08); --ev-bg-hover: rgba(122,163,94,.15); --ev-text: #8fd48a; }
+  .event-card.e-xp           { --ev-color: #c9a227; --ev-bg: rgba(201,162,39,.08); --ev-bg-hover: rgba(201,162,39,.15); --ev-text: var(--gold-bright); }
+  .event-card.e-level_up     { --ev-color: #e8c65a; --ev-bg: rgba(232,198,90,.12); --ev-bg-hover: rgba(232,198,90,.20); --ev-text: var(--gold-bright); text-shadow: 0 0 10px rgba(232,198,90,.4); }
+  .event-card.e-guld         { --ev-color: #c9a227; --ev-bg: rgba(201,162,39,.08); --ev-bg-hover: rgba(201,162,39,.15); --ev-text: var(--gold-bright); }
+  .event-card.e-guld_fail   { --ev-color: #8a1a28; --ev-bg: rgba(100,20,30,.12); --ev-bg-hover: rgba(100,20,30,.20); --ev-text: var(--blood-bright); }
+  .event-card.e-foremal      { --ev-color: #8b5fd4; --ev-bg: rgba(139,95,212,.08); --ev-bg-hover: rgba(139,95,212,.15); --ev-text: #cbb3f2; }
+  .event-card.e-foremal_bort { --ev-color: #5a4f6e; --ev-bg: rgba(90,79,110,.08); --ev-bg-hover: rgba(90,79,110,.15); --ev-text: var(--bone-dim); }
+  .event-card.e-quest        { --ev-color: #8b5fd4; --ev-bg: rgba(139,95,212,.08); --ev-bg-hover: rgba(139,95,212,.15); --ev-text: #cbb3f2; }
+  .event-card.e-quest_slutford { --ev-color: #5eba4a; --ev-bg: rgba(94,186,74,.08); --ev-bg-hover: rgba(94,186,74,.15); --ev-text: #8fd48a; }
+  .event-card.e-quest_misslyckad { --ev-color: #d43a4d; --ev-bg: rgba(163,36,51,.10); --ev-bg-hover: rgba(163,36,51,.18); --ev-text: var(--blood-bright); }
+  .event-card.e-npc_dod      { --ev-color: #4a3d5e; --ev-bg: rgba(74,61,94,.10); --ev-bg-hover: rgba(74,61,94,.18); --ev-text: var(--bone-dim); }
+  .event-card.e-npc_relation { --ev-color: #5e9aa3; --ev-bg: rgba(94,154,163,.08); --ev-bg-hover: rgba(94,154,163,.15); --ev-text: #8cc4cc; }
+  .event-card.e-plats        { --ev-color: #5e9aa3; --ev-bg: rgba(94,154,163,.08); --ev-bg-hover: rgba(94,154,163,.15); --ev-text: #8cc4cc; }
+  .event-card.e-tid          { --ev-color: #4a6a8a; --ev-bg: rgba(74,106,138,.08); --ev-bg-hover: rgba(74,106,138,.15); --ev-text: #7a9ab8; }
+  .event-card.e-ny_dag       { --ev-color: #d4a01e; --ev-bg: rgba(212,160,30,.10); --ev-bg-hover: rgba(212,160,30,.18); --ev-text: #e8c65a; }
+  .event-card.e-konsekvens   { --ev-color: #d4691e; --ev-bg: rgba(212,105,30,.08); --ev-bg-hover: rgba(212,105,30,.15); --ev-text: #e89a4a; }
+
+  /* Legacy compat — keep old .msg.effect classes for any remaining references */
+  .msg.effect .box { border-style: solid; font-weight: 600; letter-spacing: .02em; display: none; }
+
+  /* ── Guardian system log entry ── */
+  .msg.guardian {
+    max-width: 580px; margin: .4rem auto;
+    border: 1px solid rgba(201,162,39,.25);
+    border-left: 3px solid var(--gold);
+    background: rgba(8,5,14,.85);
+    border-radius: 0 4px 4px 0;
+    padding: 0; text-align: left;
+    font-family: 'Courier New', 'Lucida Console', monospace;
+    animation: batch-in .4s cubic-bezier(.22,1,.36,1);
+  }
+  .msg.guardian .guardian-title {
+    font-family: 'Cinzel', serif; font-size: .62rem; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--gold-bright);
+    padding: .4rem .8rem .25rem; border-bottom: 1px solid rgba(201,162,39,.15);
+    display: flex; align-items: center; gap: .4rem;
+  }
+  .msg.guardian .guardian-box {
+    font-size: .78rem; color: #b0a890; border: none;
+    background: transparent; padding: .45rem .8rem .55rem;
+    border-radius: 0; line-height: 1.55; text-align: left;
+    font-family: 'Courier New', 'Lucida Console', monospace;
+  }
+  .msg.guardian .guardian-box strong { color: var(--gold-bright); }
 
   /* ═══════════ ASCII-ART (atmosfär) — DOS/CRT-stil ═══════════ */
   .ascii-art {
@@ -948,8 +1009,8 @@
     <span class="model-label">🔮</span>
     <select id="model-picker" onchange="switchModel(this.value)">
       <optgroup label="⚡ Moln-API">
-        <option value="step-3.7-flash">Step 3.7 Flash (snabb)</option>
-        <option value="deepseek-v4-flash" selected>DeepSeek V4 Flash</option>
+        <option value="step-3.7-flash" selected>Step 3.7 Flash (snabb)</option>
+        <option value="deepseek-v4-flash">DeepSeek V4 Flash</option>
         <option value="qwen3.8-max">Qwen 3.8 Max</option>
         <option value="qwen3.7-plus">Qwen 3.7 Plus</option>
         <option value="deepseek-v4-pro">DeepSeek V4 Pro</option>
@@ -2555,8 +2616,9 @@ function exportCampaign() {
 // ═══════════════════════════════════════
 // MODEL PICKER — nycklar stannar på servern
 // ═══════════════════════════════════════
-let currentModel = localStorage.getItem('dnd_model') || 'deepseek-v4-flash';
+let currentModel = localStorage.getItem('dnd_model') || 'step-3.7-flash';
 const modelNames = {
+  'step-3.7-flash': 'Step 3.7 Flash',
   'qwen3.8-max': 'Qwen 3.8 Max',
   'qwen3.7-plus': 'Qwen 3.7 Plus',
   'deepseek-v4-pro': 'DeepSeek V4 Pro',

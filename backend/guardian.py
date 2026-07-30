@@ -44,11 +44,19 @@ Din ENDA uppgift: avgör om spelarens handling kräver ett tärningskast.
 sökande efter dolda ting, undvika fälla, balans på osäker yta, \
 magisk handling med osäker utgång, inbrott, pickpocket, flykt.
 2. KRÄV INTE kast vid: vanlig gång, normalt samtal, plocka upp saker, \
-läsa, öppna olåst dörr, köpa/sälja, vila.
-3. Vid tvekan: KRÄV kast — det är roligare.
+läsa, öppna olåst dörr, köpa/sälja, vila, äta, dricka, titta, lyssna, \
+gå en väg, beskriva vad man gör (utan risk), prata med NPCs (utan press).
+3. Vid tvekan: KRÄV INTE kast. Bara faktiska risker med meningsfulla konsekvenser \
+rättfärdigar ett slag. Om handlingen är rutin eller redan besluten → inget kast.
 4. Ange ALLTID korrekt tärningsnotation med modifierare och DC.
 5. Använd spelarens faktiska modifierare (nedan).
 6. Returnera ENDAST ett JSON-objekt.
+
+## Kontext — Viktigt!
+Du får se vad DM (Dungeon Master) nyss berättade. Använd detta för att förstå \
+situationen. Om DM beskriver en strid och spelaren attackerar → kast krävs. \
+Om DM beskriver en värdshusscen och spelaren beställer dryck → inget kast. \
+Om DM inte har nämnt något om risker och spelarens handling är rutin → inget kast.
 
 ## Format — kast krävs
 {"needs_roll": true, "notation": "1d20+2", "label": "SMIDIGHET (DC 14)", "skill": "DEX"}
@@ -57,14 +65,21 @@ läsa, öppna olåst dörr, köpa/sälja, vila.
 {"needs_roll": false}
 
 ## Exempel
-Spelare: "Jag smyger förbi vakten"
-→ {"needs_roll": true, "notation": "1d20+2", "label": "SMIDIGHET (DC 14)", "skill": "DEX"}
-
-Spelare: "Jag går fram till baren och beställer en öl"
+DM: "Du står i värdshuset. Borget, värdshusvärden, torkar en mugg och nickar åt dig."
+Spelare: "Jag går fram till bardisken och beställer en öl"
 → {"needs_roll": false}
 
-Spelare: "Jag hugger orken med mitt svärd"
+DM: "Tre goblins har omringat dig i skogen. De har knöliga dolkar och väser."
+Spelare: "Jag hugger närmaste goblin med mitt svärd"
 → {"needs_roll": true, "notation": "1d20-1", "label": "ATTACK mot AC 13", "skill": "STR"}
+
+DM: "En tung järnport blockerar gången. Det finns inget synligt lås."
+Spelare: "Jag letar efter en dold mekanism eller knapp"
+→ {"needs_roll": true, "notation": "1d20+2", "label": "VARSEBLIVNING (DC 15)", "skill": "WIS"}
+
+DM: "Du vandrar längs en lugn landsväg. Solen står högt."
+Spelare: "Jag går vidare längs vägen"
+→ {"needs_roll": false}
 
 Spelare: "Jag försöker övertala vakten att släppa in mig"
 → {"needs_roll": true, "notation": "1d20+2", "label": "ÖVERTALNING (DC 15)", "skill": "CHA"}
@@ -79,11 +94,19 @@ Your ONLY task: determine whether the player's action requires a dice roll.
 searching for hidden things, avoiding a trap, balance on uncertain surface, \
 magical action with uncertain outcome, burglary, pickpocket, escape.
 2. DO NOT require a roll for: normal walking, casual conversation, picking up items, \
-reading, opening an unlocked door, buying/selling, resting.
-3. When in doubt: REQUIRE a roll — it's more fun.
+reading, opening an unlocked door, buying/selling, resting, eating, drinking, \
+looking, listening, walking a path, describing actions (without risk), talking to NPCs (without pressure).
+3. When in doubt: DO NOT require a roll. Only actual risks with meaningful consequences \
+justify a roll. If the action is routine or already decided → no roll.
 4. ALWAYS provide correct dice notation with modifiers and DC.
 5. Use the player's actual modifiers (below).
 6. Return ONLY a JSON object.
+
+## Context — Important!
+You will see what the DM (Dungeon Master) just narrated. Use this to understand \
+the situation. If the DM describes combat and the player attacks → roll required. \
+If the DM describes a tavern scene and the player orders a drink → no roll. \
+If the DM hasn't mentioned any risks and the player's action is routine → no roll.
 
 ## Format — roll required
 {"needs_roll": true, "notation": "1d20+2", "label": "DEXTERITY (DC 14)", "skill": "DEX"}
@@ -92,14 +115,21 @@ reading, opening an unlocked door, buying/selling, resting.
 {"needs_roll": false}
 
 ## Examples
-Player: "I sneak past the guard"
-→ {"needs_roll": true, "notation": "1d20+2", "label": "STEALTH (DC 14)", "skill": "DEX"}
-
+DM: "You stand in the tavern. Borget, the innkeeper, wipes a mug and nods at you."
 Player: "I walk up to the bar and order an ale"
 → {"needs_roll": false}
 
-Player: "I slash the orc with my sword"
+DM: "Three goblins have surrounded you in the forest. They wield crude daggers and hiss."
+Player: "I slash the nearest goblin with my sword"
 → {"needs_roll": true, "notation": "1d20-1", "label": "ATTACK vs AC 13", "skill": "STR"}
+
+DM: "A heavy iron gate blocks the passage. There is no visible lock."
+Player: "I search for a hidden mechanism or button"
+→ {"needs_roll": true, "notation": "1d20+2", "label": "PERCEPTION (DC 15)", "skill": "WIS"}
+
+DM: "You travel along a quiet country road. The sun is high."
+Player: "I continue down the road"
+→ {"needs_roll": false}
 
 Player: "I try to persuade the guard to let me in"
 → {"needs_roll": true, "notation": "1d20+2", "label": "PERSUASION (DC 15)", "skill": "CHA"}
@@ -180,9 +210,13 @@ async def guardian_check_roll(
     state: dict,
     model_call_fn: ModelCallFn,
     language: str = "sv",
+    dm_context: str = "",
 ) -> dict | None:
     """
     Pre-DM: Does the player's action require a dice roll?
+
+    Args:
+        dm_context: Last DM reply (for situational awareness). Empty on first turn.
 
     Returns:
         dict with {notation, label, skill} if a roll is required, else None.
@@ -198,16 +232,25 @@ async def guardian_check_roll(
     char_ctx = _format_char_context(state, language)
     if language == "en":
         system_prompt = GUARDIAN_PRE_SYSTEM_EN
+        # Include DM context if available
+        context_block = ""
+        if dm_context:
+            context_block = f"## DM's last narration\n{dm_context[:500]}\n\n"
         user_msg = (
             f"## Character\n{char_ctx}\n\n"
+            f"{context_block}"
             f"## Player's action\n{player_msg}\n\n"
             "Does this require a dice roll?"
         )
         default_label = "Dice roll"
     else:
         system_prompt = GUARDIAN_PRE_SYSTEM
+        context_block = ""
+        if dm_context:
+            context_block = f"## DM:s senaste berättelse\n{dm_context[:500]}\n\n"
         user_msg = (
             f"## Karaktär\n{char_ctx}\n\n"
+            f"{context_block}"
             f"## Spelarens handling\n{player_msg}\n\n"
             "Kräver detta ett tärningskast?"
         )

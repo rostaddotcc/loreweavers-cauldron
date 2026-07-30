@@ -79,7 +79,7 @@ class CampaignStore:
 
     # ── CRUD ──
 
-    def create(self, user: str) -> dict:
+    def create(self, user: str, name: str = "", language: str = "en") -> dict:
         """Skapa ny kampanj. Returnerar state."""
         campaign_id = uuid.uuid4().hex[:12]
         cdir = self._campaign_dir(user, campaign_id)
@@ -88,15 +88,28 @@ class CampaignStore:
         self._summaries_dir(user, campaign_id).mkdir(exist_ok=True)
 
         state = _default_state(campaign_id, user)
+        if name:
+            state["meta"]["campaign_name"] = name
+        if language:
+            state["meta"]["language"] = language
         self.save(state)
         return state
 
-    def get(self, user: str) -> dict | None:
-        """Hämta användarens aktiva kampanj (senast uppdaterad)."""
+    def get(self, user: str, campaign_id: str | None = None) -> dict | None:
+        """Hämta en specifik kampanj eller den senast uppdaterade (aktiva)."""
+        if campaign_id:
+            sp = self._state_path(user, campaign_id)
+            if not sp.exists():
+                return None
+            try:
+                with open(sp) as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, OSError):
+                return None
+        # Ingen campaign_id → returnera senast uppdaterad (aktiva)
         udir = self._user_dir(user)
         if not udir.exists():
             return None
-        # Hitta alla state.json, välj den med högst turn_count / senast uppdaterad
         candidates = []
         for cdir in udir.iterdir():
             sp = cdir / "state.json"
@@ -112,14 +125,55 @@ class CampaignStore:
         candidates.sort(key=lambda s: s["meta"].get("last_updated", ""), reverse=True)
         return candidates[0]
 
-    def delete(self, user: str) -> bool:
-        """Radera alla kampanjer för användaren. Returnerar True om något raderades."""
-        import shutil
+    def list_campaigns(self, user: str) -> list[dict]:
+        """Lista alla kampanjer för en användare (senast uppdaterad först)."""
         udir = self._user_dir(user)
         if not udir.exists():
+            return []
+        results = []
+        for cdir in udir.iterdir():
+            sp = cdir / "state.json"
+            if not sp.exists():
+                continue
+            try:
+                with open(sp) as f:
+                    state = json.load(f)
+            except (json.JSONDecodeError, OSError):
+                continue
+            meta = state.get("meta", {})
+            char = state.get("character", {})
+            world = state.get("world", {})
+            results.append({
+                "campaign_id": meta.get("campaign_id", ""),
+                "name": meta.get("campaign_name", "Namnlös kampanj"),
+                "character_name": char.get("name", ""),
+                "character_icon": char.get("icon", "🎭"),
+                "level": char.get("level", 1),
+                "turn_count": meta.get("turn_count", 0),
+                "last_updated": meta.get("last_updated", ""),
+                "location": world.get("current_location", ""),
+                "language": meta.get("language", "en"),
+            })
+        results.sort(key=lambda c: c.get("last_updated", ""), reverse=True)
+        return results
+
+    def delete(self, user: str, campaign_id: str) -> bool:
+        """Radera en specifik kampanj. Returnerar True om något raderades."""
+        import shutil
+        cdir = self._campaign_dir(user, campaign_id)
+        if not cdir.exists():
             return False
-        shutil.rmtree(udir)
+        shutil.rmtree(cdir)
         return True
+
+    def set_active(self, user: str, campaign_id: str) -> dict | None:
+        """Markera en kampanj som aktiv (uppdatera last_updated)."""
+        state = self.get(user, campaign_id)
+        if not state:
+            return None
+        state["meta"]["last_updated"] = _now()
+        self.save(state)
+        return state
 
     def save(self, state: dict) -> None:
         """Spara state till disk."""

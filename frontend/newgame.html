@@ -58,17 +58,19 @@
   /* ── Campaign language selector ── */
   .lang-row{display:flex;align-items:center;justify-content:center;gap:1rem;margin:-1.4rem 0 2.2rem;flex-wrap:wrap}
   .lang-label{font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.3em;text-transform:uppercase;color:var(--bone-dim)}
-  .lang-select{
-    font-family:'Cinzel',serif;font-size:.78rem;letter-spacing:.1em;color:var(--gold-bright);
-    background:var(--stone-3);border:1px solid var(--gold);padding:.55rem 2.4rem .55rem 1rem;
-    cursor:pointer;outline:none;border-radius:2px;appearance:none;-webkit-appearance:none;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='6'%3E%3Cpath d='M0 0l4.5 6L9 0z' fill='%23e8c65a'/%3E%3C/svg%3E");
-    background-repeat:no-repeat;background-position:right .8rem center;
-    box-shadow:0 4px 14px -6px rgba(232,198,90,.35),inset 0 1px 0 rgba(255,255,255,.06);
-    transition:border-color .2s,box-shadow .2s,color .2s;
+  .lang-pills{display:flex;gap:.6rem}
+  .lang-pill{
+    font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.12em;
+    color:var(--bone-dim);background:var(--stone-3);border:1px solid var(--edge);
+    padding:.5rem 1.4rem;cursor:pointer;border-radius:2px;transition:all .25s;
+    position:relative;overflow:hidden;
   }
-  .lang-select:hover,.lang-select:focus{border-color:var(--gold-bright);box-shadow:0 0 18px -4px rgba(232,198,90,.55),inset 0 1px 0 rgba(255,255,255,.06)}
-  .lang-select option{background:var(--stone-2);color:var(--bone);font-family:'Spectral',serif;font-size:.85rem}
+  .lang-pill:hover{color:var(--bone-bright);border-color:var(--gold)}
+  .lang-pill.active{
+    color:#1a1206;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);
+    border-color:var(--gold);box-shadow:0 0 16px -4px rgba(232,198,90,.5),inset 0 1px 0 rgba(255,255,255,.3);
+  }
+  .lang-pill .flag{font-size:1rem;margin-right:.4rem;vertical-align:middle}
   .lang-hint{font-size:.72rem;font-style:italic;color:var(--bone-dim)}
 
   /* ── Section labels ── */
@@ -234,11 +236,11 @@
 
   <!-- ═══════════ KAMPANJSPRÅK ═══════════ -->
   <div class="lang-row">
-    <label class="lang-label" for="campaign-lang">Campaign language</label>
-    <select id="campaign-lang" class="lang-select" onchange="onLangChange(this.value)">
-      <option value="en" selected>English</option>
-      <option value="sv">Svenska</option>
-    </select>
+    <label class="lang-label">Campaign language</label>
+    <div class="lang-pills">
+      <button class="lang-pill active" data-lang="en" onclick="onLangChange('en')"><span class="flag">🌐</span>English</button>
+      <button class="lang-pill" data-lang="sv" onclick="onLangChange('sv')"><span class="flag">⚔️</span>Svenska</button>
+    </div>
     <span class="lang-hint" id="lang-hint">The adventure, DM and all responses in English.</span>
   </div>
 
@@ -264,11 +266,11 @@
     <div class="scroll-actions">
       <button class="summon-btn" id="summon" onclick="summon()">🔮 Frammana karaktär</button>
       <select id="char-model" style="background:var(--stone-2);border:1px solid var(--edge);color:var(--bone);padding:.4rem .6rem;font-size:.7rem;cursor:pointer">
+        <option value="step-3.7-flash" selected>Step 3.7 Flash</option>
         <option value="deepseek-v4-flash">DeepSeek V4 Flash</option>
         <option value="qwen3.8-max">Qwen 3.8 Max</option>
         <option value="mimo-v2.5">MiMo 2.5</option>
         <option value="mimo-v2.5-pro">MiMo 2.5 Pro</option>
-        <option value="step-3.7-flash">Step 3.7 Flash (snabb)</option>
       </select>
     </div>
   </div>
@@ -640,6 +642,10 @@ renderArchetypes();
 
 // ── Campaign language selector (live preview) ──
 function onLangChange(lang) {
+  // Toggle active pill
+  document.querySelectorAll('.lang-pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.lang === lang);
+  });
   const hint = document.getElementById('lang-hint');
   if (hint) hint.textContent = lang === 'en'
     ? 'The adventure, DM and all responses in English.'
@@ -712,7 +718,7 @@ async function summon() {
     // Se till att kampanj finns (ett spel per användare)
     const { campaign } = await API.getCampaign();
     if (!campaign) {
-      const selLang = document.getElementById('campaign-lang')?.value || 'en';
+      const selLang = document.querySelector('.lang-pill.active')?.dataset.lang || 'en';
       await API.createCampaign(sessionStorage.getItem('dnd_adventure_mode') || 'freestyle', selLang);
     }
 

@@ -583,9 +583,85 @@ button:active, .go-btn:active, .gate-btn:active, .send-btn:active {
 }
 
 /* ── 28. RESPONSIVT ── */
+@media (max-width: 900px) {
+  /* Chat: compact topbar */
+  .topbar {
+    flex-wrap: wrap !important;
+    gap: .3rem !important;
+    padding: .5rem .5rem 0 !important;
+  }
+  .topbar .brand { font-size: .65rem !important; }
+  .topbar .model-select select {
+    font-size: .58rem !important;
+    padding: .3rem 1.8rem .3rem .5rem !important;
+  }
+  .topbar .model-label { display: none !important; }
+  .topbar .top-btn { font-size: .5rem !important; padding: .3rem .5rem !important; }
+  .topbar .icon-btn { padding: .3rem .4rem !important; }
+  .topbar .top-divider { display: none !important; }
+  .topbar .dropdown .drop-menu {
+    position: fixed !important;
+    left: .5rem !important;
+    right: .5rem !important;
+    top: auto !important;
+    min-width: 0 !important;
+  }
+  /* Chat area: full width */
+  .chat-area { padding: .5rem !important; }
+  .msg .text { font-size: .82rem !important; line-height: 1.5 !important; }
+  .msg.dm .text { font-size: .85rem !important; }
+  /* Input area */
+  .input-area { padding: .4rem !important; }
+  .input-area textarea { font-size: .85rem !important; min-height: 44px !important; }
+  .send-btn { font-size: .65rem !important; padding: .5rem .8rem !important; }
+  /* Oracle/console panels */
+  .oracle.open, .console.open { width: 100% !important; max-width: 100% !important; }
+  .oracle-inner, .console-inner { width: 100% !important; }
+}
+
 @media (max-width: 560px) {
   .gate-title { font-size: .7rem !important; }
   .destiny-title h1 { font-size: .85rem !important; }
   .head h1 { font-size: .7rem !important; }
   .msg .text { font-size: .72rem !important; }
+  /* Even more compact topbar */
+  .topbar .brand { display: none !important; }
+  .topbar .model-select { order: -1; }
+  .topbar .model-select select { max-width: 120px !important; }
+  /* Full-width messages, smaller padding */
+  .msg { padding: .5rem .6rem !important; }
+  .msg.dm .text { font-size: .78rem !important; }
+  /* Effects: stack vertically */
+  .msg.effect { font-size: .68rem !important; }
+  /* Input: bigger touch targets */
+  .input-area { padding: .3rem !important; }
+  .input-area textarea { font-size: .9rem !important; min-height: 48px !important; }
+  .send-btn { padding: .6rem 1rem !important; }
+  /* ASCII art: smaller */
+  .ascii-art pre { font-size: .5rem !important; line-height: 1.1 !important; }
+}
+
+/* ── 29. MOBILE TOGGLES ── */
+/* On mobile, show a button to toggle the sidebar */
+.mobile-sidebar-toggle {
+  display: none;
+  position: fixed;
+  bottom: 80px;
+  right: 1rem;
+  z-index: 100;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--stone-3, #241a33);
+  border: 1px solid var(--gold, #c9a227);
+  color: var(--gold-bright, #e8c65a);
+  font-size: 1.2rem;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,.6);
+  align-items: center;
+  justify-content: center;
+}
+@media (max-width: 900px) {
+  .mobile-sidebar-toggle { display: flex; }
+  .sidebar.mobile-open { display: flex !important; position: fixed; inset: 0; z-index: 200; background: rgba(11,8,18,.95); padding: 1rem; overflow-y: auto; }
 }

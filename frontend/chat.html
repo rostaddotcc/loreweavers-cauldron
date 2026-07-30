@@ -2025,12 +2025,26 @@ async function loadTranscript() {
       // Rendera i en fragment-batch → en enda DOM-reflow oavsett antal meddelanden
       const frag = document.createDocumentFragment();
       visible.forEach(m => {
-        const el = (m.role === 'user')
-          ? buildMessage('player', null, escapeHtml(m.content))
-          : (m.role === 'guardian')
-            ? buildMessage('guardian', null, m.content)
+        if (m.role === 'guardian') {
+          // Parsa och ta bort [ROLL_GRANT:]-taggar ur guardian-meddelanden
+          let gContent = m.content;
+          const gRe = /\[ROLL_GRANT:([^|\]]+)\|([^\]]*)\]/g;
+          let gMatch;
+          const gGrants = [];
+          while ((gMatch = gRe.exec(gContent)) !== null) {
+            gGrants.push({ notation: gMatch[1], label: gMatch[2] || gMatch[1] });
+          }
+          gContent = gContent.replace(gRe, '').trim();
+          const el = buildMessage('guardian', null, gContent);
+          if (el) frag.appendChild(el);
+          // Spawna tärningsknappar efter rendering
+          gGrants.forEach(g => addRollRequest(g.notation, g.label));
+        } else {
+          const el = (m.role === 'user')
+            ? buildMessage('player', null, escapeHtml(m.content))
             : buildMessage('dm', null, m.content, m.meta);
-        if (el) frag.appendChild(el);
+          if (el) frag.appendChild(el);
+        }
       });
       chat.appendChild(frag);
       // Återställ väntande tärningskast (backend rensar dem när spelaren slår,
@@ -2463,11 +2477,23 @@ function pollForGuardian(turnCount) {
       // Hitta senaste guardian-meddelandet
       const lastGuardian = [...messages].reverse().find(m => m.role === 'guardian');
       if (lastGuardian) {
-        // Kontrollera att den inte redan visas
+        // Kontrollera att den inte redan visas (strippa taggar före jämförelse)
+        const cleanContent = lastGuardian.content.replace(/\[ROLL_GRANT:[^\]]*\]/g, '').trim();
         const existing = [...chat.querySelectorAll('.msg.guardian')].pop();
-        const alreadyShown = existing && existing.querySelector('.guardian-box')?.textContent.trim() === lastGuardian.content.trim();
+        const alreadyShown = existing && existing.querySelector('.guardian-box')?.textContent.trim() === cleanContent;
         if (!alreadyShown) {
-          addMessage('guardian', null, lastGuardian.content);
+          // Parsa och ta bort [ROLL_GRANT:notation|label]-taggar
+          let content = lastGuardian.content;
+          const grantRe = /\[ROLL_GRANT:([^|\]]+)\|([^\]]*)\]/g;
+          let gm;
+          const grants = [];
+          while ((gm = grantRe.exec(content)) !== null) {
+            grants.push({ notation: gm[1], label: gm[2] || gm[1] });
+          }
+          content = content.replace(grantRe, '').trim();
+          addMessage('guardian', null, content);
+          // Spawna tärningsknappar för varje grant
+          grants.forEach(g => addRollRequest(g.notation, g.label));
           SFX.click();
         }
         clearInterval(_guardianPollTimer);

@@ -336,6 +336,13 @@ Extrahera ALLA mekaniska effekter och uppdateringar.
 - rest: Om spelaren vilar. Ange kind ("short" eller "long").
 - new_day: Om en ny dag börjar. Ange description.
 
+### Tärningsresurser (roll_grants)
+- roll_grants: Om DM ger spelaren en mekanisk fördel som innebär ett framtida tärningskast \
+  (Bardic Inspiration, Second Wind, Bless, Guidance, Heroism, spell slot-dice, etc.). \
+  Ange notation (t.ex. "1d6", "1d8+2"), label (kort namn), och reason (varför). \
+  Exempel: DM säger "du får Bardic Inspiration" → {"notation": "1d6", "label": "Bardic Inspiration", "reason": "DM gav inspiration"}. \
+  Om DM ger en buff utan tärning (t.ex. "du känner dig starkare") → tom array.
+
 ### Loggbok
 - logbook: En kort sammanfattning av vad som hände denna tur (max 2 meningar). \
 Skriv i dåtid, tredje person. T.ex. "Faelyndra smög förbi vakten och tog sig in i källaren."
@@ -390,7 +397,8 @@ Generera art varannan tur — inte varje tur.
   "new_day": null,
   "day_summary": null,
   "logbook": "",
-  "ascii_art": null
+  "ascii_art": null,
+  "roll_grants": []
 }
 
 Tomma fält: tom array [] eller null. Utelämna ALDRIG ett fält.
@@ -919,6 +927,23 @@ def apply_mechanics(state: dict, mech: dict) -> list[dict]:
         })
         logger.info("🛡️ Guardian loggbok: %s", logbook[:80])
 
+    # ── Tärningsresurser (roll_grants) ──
+    for grant in mech.get("roll_grants", []):
+        notation = grant.get("notation", "").strip()
+        label = grant.get("label", "").strip()
+        if not notation:
+            continue
+        # Spara i state så karaktärsbladet kan visa aktiva resurser
+        resources = state.setdefault("resources", [])
+        resources.append({
+            "notation": notation,
+            "label": label or notation,
+            "reason": grant.get("reason", ""),
+            "turn": state.get("meta", {}).get("turn_count", 0),
+        })
+        effects.append({"type": "roll_grant", "value": label or notation, "notation": notation})
+        logger.info("🛡️ Guardian: roll_grant %s (%s)", notation, label)
+
     return effects
 
 
@@ -1138,6 +1163,10 @@ def format_guardian_summary(
                     lines.append(f"  📜 {ds['quests']}")
                 if ds.get("mood"):
                     lines.append(f"  🎭 *{ds['mood']}*")
+        elif t == "roll_grant":
+            notation = e.get("notation", "")
+            label = "Dice granted:" if en else "Tärning tilldelad:"
+            lines.append(f"🎲 **{label}** {v} ({notation})")
 
     # ── Icke-effekt-data från mech (loggbok, tid, vila) ──
     logbook = mech.get("logbook", "")
@@ -1162,4 +1191,14 @@ def format_guardian_summary(
 
     turn_label = f" · {('Turn' if en else 'Tur')} {turn}" if turn else ""
     header = "🛡️ **Guardian**" + turn_label
-    return header + "\n" + "\n".join(lines)
+
+    # ── Maskinläsbara taggar för frontend (parsas och tas bort ur visningen) ──
+    tags = []
+    for e in effects:
+        if e.get("type") == "roll_grant":
+            notation = e.get("notation", "")
+            label = e.get("value", "")
+            if notation:
+                tags.append(f"[ROLL_GRANT:{notation}|{label}]")
+
+    return header + "\n" + "\n".join(lines) + ("\n" + "".join(tags) if tags else "")

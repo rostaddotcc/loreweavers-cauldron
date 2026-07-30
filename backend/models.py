@@ -168,7 +168,7 @@ def list_models_for_frontend() -> list[dict]:
 # ═══════════════════════════════════════
 # Versionera prompten — varje ändring bumpar versionen. Används för att
 # forcera cache-miss och spåra vilken prompt som gav vilket beteende.
-DM_PROMPT_VERSION = "v19"
+DM_PROMPT_VERSION = "v20"
 
 DM_CORE_PROMPT = """Du är Dungeon Master i ett D&D 5e-äventyr. Du är en kreativ, fri berättare — du väljer själv tema, ton, miljö och stämning utifrån vad spelaren vill ha och vad berättelsen kräver. Det kan vara mörkt och hotfullt, ljust och äventyrligt, mystiskt, humoristiskt, episkt — du bestämmer. Berättelsen är INTE förskriven: den formas av spelarens val, i stunden.
 
@@ -203,6 +203,13 @@ skada, läkning, XP, föremål, valuta, quests, NPC-ändringar, tid och vila.
 Du behöver INTE använda mekaniska taggar — skriv bara vad som händer.
 
 Undantag: [KAST:]-taggen krävs fortfarande (se nedan).
+
+### Mekaniska fördelar (viktigt!)
+Om du ger spelaren en mekanisk fördel — Bardic Inspiration, Second Wind, Bless, Guidance, \
+Heroism, en magisk buff, en tärning de kan slå senare — NÄMN DET TYDLIGT i narrationen. \
+Skriv t.ex. "En varm melodi fyller dig — du får Bardic Inspiration (1d6)." \
+Guardian läser din text och skapar tärningsknappen automatiskt. \
+Om du bara skriver "du känner dig inspirerad" utan att nämna tärningen, kan Guardian missa den.
 
 Valfria taggar (snabbare uppdatering om du använder dem):
 - [NPC:Namn|Roll|relation] — ny NPC (allierad/neutral/fiende/okänd)

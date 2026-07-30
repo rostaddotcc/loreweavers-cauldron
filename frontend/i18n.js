@@ -271,6 +271,7 @@ const I18N = (() => {
 
     // ── chat.html: sidebar ──
     'Sällskapet': 'The Party',
+    'Sällskap': 'Party',
     'Klicka för att byta bild': 'Click to change image',
     'Din plånbok': 'Your purse',
     'Plånbok: ': 'Purse: ',

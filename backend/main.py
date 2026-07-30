@@ -485,6 +485,9 @@ COOKIE_NAME = "morkrets_token"
 # Atmosfär-subagent: snabb modell för ASCII-art
 ATMOSPHERE_MODEL = os.getenv("ATMOSPHERE_MODEL", "mimo-v2.5")
 EXTRACTION_MODEL = os.getenv("EXTRACTION_MODEL", "qwen3.6-flash")
+# Guardian: smartare modell för kontextmedveten mekanisk extraktion
+# (NPC-avslöjanden, implicita relationsändringar, karaktärsuppdateringar)
+GUARDIAN_MODEL = os.getenv("GUARDIAN_MODEL", "qwen3.8-max")
 
 
 # ═══════════════════════════════════════
@@ -1842,7 +1845,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
                     break
             guardian_roll = await guardian_check_roll(
                 req.message, state,
-                lambda msgs: _call_llm(EXTRACTION_MODEL, msgs, temperature=0.1, max_tokens=200),
+                lambda msgs: _call_llm(GUARDIAN_MODEL, msgs, temperature=0.1, max_tokens=200),
                 language=_get_lang(state),
                 dm_context=_dm_context,
             )
@@ -2050,7 +2053,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         _guardian_transcript = store.load_transcript(state, last_n=8)
         mech = await guardian_extract_mechanics(
             reply, req.message, state, effective_turn,
-            lambda msgs: _call_llm(EXTRACTION_MODEL, msgs, temperature=0.2, max_tokens=1200),
+            lambda msgs: _call_llm(GUARDIAN_MODEL, msgs, temperature=0.2, max_tokens=1500),
             language=_get_lang(state),
             conversation_history=_guardian_transcript,
         )

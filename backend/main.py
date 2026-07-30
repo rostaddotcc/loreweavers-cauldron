@@ -744,6 +744,7 @@ async def _call_llm(
     max_tokens: int = 1024,
     timeout: float = 180,
     reasoning_effort: str | None = None,
+    thinking_cap: int = 16000,
 ) -> str:
     """Anropa vald modell via OpenAI-kompatibelt /chat/completions.
     Reasoning-modeller (deepseek-v4-flash) behöver högre max_tokens
@@ -780,7 +781,7 @@ async def _call_llm(
             body["enable_thinking"] = False
         else:
             # Thinking på → rejäl budget (tanke + svar)
-            body["max_tokens"] = max(body.get("max_tokens", 1024), 16000)
+            body["max_tokens"] = max(body.get("max_tokens", 1024), thinking_cap)
 
     url = f"{config.base_url.rstrip('/')}/chat/completions"
 
@@ -2303,7 +2304,7 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
     ]
 
     try:
-        raw = await _call_llm(req.model_id, messages, temperature=0.7, max_tokens=4000)
+        raw = await _call_llm(req.model_id, messages, temperature=0.7, max_tokens=4000, thinking_cap=8000)
         char_data = _extract_json(raw)
     except HTTPException:
         raise

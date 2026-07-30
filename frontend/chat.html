@@ -67,6 +67,8 @@
     padding: 0.55rem 1.05rem; cursor: pointer; transition: all 0.2s; border-radius: 2px; white-space: nowrap;
   }
   .top-btn:hover { color: var(--gold-bright); border-color: var(--gold); box-shadow: 0 0 12px -3px rgba(232,198,90,0.4); }
+  .top-btn.admin-btn { border-color: rgba(232,198,90,0.45); color: var(--gold); }
+  .top-btn.admin-btn:hover { color: #fff8dc; border-color: var(--gold-bright); box-shadow: 0 0 16px -2px rgba(255,215,0,0.55); text-shadow: 0 0 10px rgba(255,215,0,0.7); }
   .top-btn.danger:hover { color: var(--blood-bright); border-color: var(--blood-bright); box-shadow: 0 0 12px -3px rgba(212,58,77,0.4); }
   .top-btn.icon-btn { padding: 0.55rem 0.7rem; font-size: 0.85rem; }
   .top-divider { width: 1px; height: 20px; background: var(--edge); flex-shrink: 0; }
@@ -1070,6 +1072,7 @@
   </div>
 
   <button class="top-btn" onclick="location.href='character.html'">🧙 Karaktär</button>
+  <button class="top-btn admin-btn" id="admin-btn" style="display:none" onclick="location.href='admin.html'">👑 Admin</button>
 
   <!-- ═══ Världen — dropdown ═══ -->
   <div class="dropdown" id="dd-world">
@@ -1162,6 +1165,7 @@
           </optgroup>
         </select>
       </div>
+      <button class="drawer-logout" id="admin-drawer-btn" style="display:none" onclick="location.href='admin.html'">👑 Admin</button>
       <button class="drawer-logout" onclick="logout()">🚪 Lämna</button>
     </div>
   </aside>
@@ -1316,6 +1320,16 @@ async function loadCampaign() {
   return true;
 }
 loadCampaign().then(ok => { if (ok !== false) loadTranscript(); });
+
+// ── Admin-knapp: visas bara för användaren 'admin' ──
+API.me().then(u => {
+  if (u && u.role === 'admin') {
+    for (const id of ['admin-btn', 'admin-drawer-btn']) {
+      const b = document.getElementById(id);
+      if (b) b.style.display = '';
+    }
+  }
+}).catch(() => {});
 
 // ── bfcache-skydd ──
 // När man navigerar tillbaka till chatten kan browsern återställa sidan

@@ -977,6 +977,79 @@ const I18N = (() => {
     '🚪 Lämna': '🚪 Leave',
     '🧙 Karaktär': '🧙 Character',
     '🚪 Vägskälet': '🚪 The Crossroads',
+    // ── adventure.html: campaign list (JS-generated) ──
+    'Ingen hjälte än': 'No hero yet',
+    'vändor': 'turns',
+    'Senast spelad:': 'Last played:',
+    'Fortsätt': 'Continue',
+    '⚔️ Fortsätt': '⚔️ Continue',
+    'Avsluta': 'End',
+    'Kunde inte bygga världen: ': 'Could not build the world: ',
+    'Kunde inte importera: ': 'Could not import: ',
+    'Kunde inte aktivera kampanj: ': 'Could not activate campaign: ',
+    ' Kunde inte radera': ' Could not delete',
+
+    'Äventyret, världen och transkriptet försvinner för alltid. 💡 Tips: spara din karaktär i Valvet först.': 'The adventure, world and transcript will be gone forever. 💡 Tip: save your character in the Vault first.',
+    '🔥 Radera': '🔥 Delete',
+    'Behåll': 'Keep',
+    '🕯️ Äventyret raderat': '🕯️ Adventure deleted',
+    'Kunde inte skapa kampanj': 'Could not create campaign',
+    'Dina äventyr': 'Your Adventures',
+    '⚔️ Dina äventyr': '⚔️ Your Adventures',
+    'Välj ett äventyr att fortsätta, eller skapa ett nytt nedan.': 'Choose an adventure to continue, or create a new one below.',
+    'Ge ditt äventyr ett namn — eller låt det vara namnlöst och börja direkt.': 'Give your adventure a name — or leave it unnamed and begin right away.',
+    'Ett namnlöst äventyr…': 'An unnamed adventure…',
+    'Börja äventyret': 'Begin the adventure',
+    '⚔️ Börja äventyret': '⚔️ Begin the adventure',
+    'DM freestylar en öppningsscen åt dig': 'The DM freestyles an opening scene for you',
+    'NIVÅ': 'LEVEL',
+
+    // ── chat.html: effectText fragments (JS-generated) ──
+    'Du helas ': 'You are healed ',
+    'Fick: ': 'Obtained: ',
+    'Förlorade: ': 'Lost: ',
+    'Nytt uppdrag: ': 'New quest: ',
+    'Uppdrag slutfört: ': 'Quest completed: ',
+    'Uppdrag misslyckat: ': 'Quest failed: ',
+    'Relation ändrad: ': 'Relationship changed: ',
+    'Ny gestalt: ': 'New character: ',
+    'Identitet avslöjad: ': 'Identity revealed: ',
+    'Karaktärsuppdatering': 'Character update',
+    'Ny plats: ': 'New location: ',
+    'Tid: ': 'Time: ',
+    'Fick': 'Obtained',
+    'Förlorade': 'Lost',
+
+    // ── chat.html: console & misc JS strings ──
+    'Hämtar loggar…': 'Fetching logs…',
+    'Konsolen rensad.': 'Console cleared.',
+    'Rullar…': 'Rolling…',
+    'Alla': 'All',
+    'Slutfört': 'Completed',
+    'Misslyckat': 'Failed',
+    'Aktivt': 'Active',
+    'uppdrag': 'quest',
+
+    // ── chat.html: mobile nav labels ──
+    'Sällskap': 'Party',
+    'Verktyg': 'Tools',
+
+    // ── adventure.html: naming panel ──
+    'Namnge ditt äventyr': 'Name your adventure',
+
+    // ── chat.html: oracle error ──
+    'Oraklet tiger: ': 'The oracle is silent: ',
+    'okänt fel': 'unknown error',
+
+    // ── chat.html: reason / DM monolog ──
+    'DM:ns inre monolog': "The DM's inner monologue",
+    ' ord': ' words',
+    'Tärningen rullar…': 'The die is rolling…',
+
+    // ── chat.html: model switch ──
+    'Dungeon Master byter röst: ': 'The Dungeon Master changes voice: ',
+    ' körs lokalt': ' · runs locally',
+
   };
 
   // ═══════════════════════════════════════

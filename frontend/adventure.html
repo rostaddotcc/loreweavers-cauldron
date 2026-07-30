@@ -505,7 +505,7 @@ function showCampaignList(campaigns) {
     const ch = c.character || {};
     const icon = c.character_icon || ch.icon || '🎭';
     const name = c.name || 'Namnlös kampanj';
-    const charName = c.character_name || ch.name || 'Ingen hjälte än';
+    const charName = c.character_name || ch.name || I18N.t('Ingen hjälte än');
     const level = c.level || ch.level || 1;
     const turns = c.turn_count || 0;
     const loc = c.location || 'Okänd';
@@ -514,11 +514,11 @@ function showCampaignList(campaigns) {
       <div class="cc-icon">${icon}</div>
       <div class="cc-body">
         <div class="cc-name">${esc(name)}</div>
-        <div class="cc-sub"><b>${esc(charName)}</b> · ${I18N.t('Nivå')} ${level} · ${turns} vändor · ${esc(loc)}</div>
-        <div class="cc-date">Senast spelad: ${date}</div>
+        <div class="cc-sub"><b>${esc(charName)}</b> · ${I18N.t('Nivå')} ${level} · ${turns} ${I18N.t('vändor')} · ${esc(loc)}</div>
+        <div class="cc-date">${I18N.t('Senast spelad:')} ${date}</div>
       </div>
       <div class="cc-actions">
-        <button class="go-btn cc-go" onclick="activateAndContinue('${esc(c.campaign_id)}')">⚔️ Fortsätt</button>
+        <button class="go-btn cc-go" onclick="activateAndContinue('${esc(c.campaign_id)}')">${I18N.t('⚔️ Fortsätt')}</button>
         <button class="cc-del" onclick="askDeleteCampaign('${esc(c.campaign_id)}','${esc(name)}')">✕</button>
       </div>
     </div>`;
@@ -539,16 +539,16 @@ async function activateAndContinue(campaignId) {
     await API.activateCampaign(campaignId);
     location.href = 'chat.html';
   } catch (e) {
-    toast('⚠ Kunde inte aktivera kampanj: ' + (e.message || 'okänt fel'));
+    toast('⚠ ' + I18N.t('Kunde inte aktivera kampanj: ') + (e.message || I18N.t('okänt fel')));
   }
 }
 
 async function askDeleteCampaign(campaignId, name) {
   const ok = await Modal.confirm({
-    title: 'Avsluta "' + name + '"?',
-    body: '⚠️ Äventyret, världen och transkriptet försvinner för alltid. 💡 Tips: spara din karaktär i Valvet först.',
-    confirmText: '🔥 Radera',
-    cancelText: 'Behåll',
+    title: I18N.t('Avsluta') + ' "' + name + '"?',
+    body: '⚠️ ' + I18N.t('Äventyret, världen och transkriptet försvinner för alltid. 💡 Tips: spara din karaktär i Valvet först.'),
+    confirmText: I18N.t('🔥 Radera'),
+    cancelText: I18N.t('Behåll'),
     danger: true,
     icon: '🩸',
   });
@@ -556,7 +556,7 @@ async function askDeleteCampaign(campaignId, name) {
   try {
     await API.endCampaign(campaignId);
     SFX.fail();
-    toast('🕯️ Äventyret raderat');
+    toast(I18N.t('🕯️ Äventyret raderat'));
     initCampaignCheck();
   } catch (e) {
     SFX.error();
@@ -611,11 +611,11 @@ async function startNewAdventure() {
   try {
     await API.createCampaign(name, lang);
     sessionStorage.setItem('dnd_adventure_mode', 'freestyle');
-    toast('🎲 Dungeon Master förbereder en öppningsscen…');
+    toast(I18N.t('🎲 Dungeon Master förbereder en öppningsscen…'));
     setTimeout(() => { location.href = 'newgame.html'; }, 800);
   } catch (e) {
     SFX.error();
-    toast('⚠ ' + (e.message || 'Kunde inte skapa kampanj'));
+    toast('⚠ ' + (e.message || I18N.t('Kunde inte skapa kampanj')));
   }
 }
 
@@ -667,7 +667,7 @@ function renderFiles(key) {
 async function startPrepare() {
   const prompt = document.getElementById('world-prompt').value.trim();
   if (!prompt && files.prepare.length === 0) {
-    toast('⚠ Skriv en beskrivning eller ladda upp filer först');
+    toast(I18N.t('⚠ Skriv en beskrivning eller ladda upp filer först'));
     return;
   }
   document.getElementById('actions-prepare').style.display = 'none';
@@ -697,13 +697,13 @@ async function startPrepare() {
       document.getElementById('extracting-prepare').classList.remove('show');
       document.getElementById('preview-prepare').classList.add('show');
       SFX.levelup();
-      toast('🔮 Världen är strukturerad!');
+      toast(I18N.t('🔮 Världen är strukturerad!'));
     }, 400);
   } catch (e) {
     document.getElementById('extracting-prepare').classList.remove('show');
     document.getElementById('actions-prepare').style.display = 'flex';
     SFX.error();
-    toast('⚠ Kunde inte bygga världen: ' + (e.message || 'okänt fel'));
+    toast('⚠ ' + I18N.t('Kunde inte bygga världen: ') + (e.message || I18N.t('okänt fel')));
   }
 }
 
@@ -712,7 +712,7 @@ async function startPrepare() {
 // ═══════════════════════════════════════
 async function startImport() {
   if (files.import.length === 0) {
-    toast('⚠ Ladda upp minst en fil att importera');
+    toast(I18N.t('⚠ Ladda upp minst en fil att importera'));
     return;
   }
   document.getElementById('actions-import').style.display = 'none';
@@ -746,13 +746,13 @@ async function startImport() {
       document.getElementById('extracting-import').classList.remove('show');
       document.getElementById('preview-import').classList.add('show');
       SFX.levelup();
-      toast('📥 Kampanj extraherad!');
+      toast(I18N.t('📥 Kampanj extraherad!'));
     }, 400);
   } catch (e) {
     document.getElementById('extracting-import').classList.remove('show');
     document.getElementById('actions-import').style.display = 'flex';
     SFX.error();
-    toast('⚠ Kunde inte importera: ' + (e.message || 'okänt fel'));
+    toast('⚠ ' + I18N.t('Kunde inte importera: ') + (e.message || I18N.t('okänt fel')));
   }
 }
 
@@ -768,7 +768,7 @@ function proceed(mode) {
 function newAdventure() {
   // DM freestylar — ingen prep, direkt till karaktärsskapande
   sessionStorage.setItem('dnd_adventure_mode', 'freestyle');
-  toast('🎲 Dungeon Master förbereder en öppningsscen…');
+  toast(I18N.t('🎲 Dungeon Master förbereder en öppningsscen…'));
   setTimeout(() => { location.href = 'newgame.html'; }, 800);
 }
 

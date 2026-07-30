@@ -1501,8 +1501,8 @@ function addReasoning(text) {
   el.innerHTML = `
     <div class="reasoning-head" onclick="this.parentElement.classList.toggle('open')">
       <span class="orb"></span>
-      <span>DM:ns inre monolog</span>
-      <span class="rwords">· ${words} ord</span>
+      <span>${I18N.t('DM:ns inre monolog')}</span>
+      <span class="rwords">· ${words}${I18N.t(' ord')}</span>
       <span class="caret">▸</span>
     </div>
     <div class="reasoning-body">
@@ -1735,7 +1735,7 @@ async function d20Ceremony(notation, label, roll) {
     <div class="d20-label">🎲 <b>${escapeHtml(label)}</b> · ${escapeHtml(notation)}</div>
     <div class="d20-wrap">${d20Svg()}</div>
     <div class="d20-result"></div>
-    <div class="d20-tension">Tärningen rullar…</div>`;
+    <div class="d20-tension">${I18N.t('Tärningen rullar…')}</div>`;
   document.body.appendChild(ov);
   const num = ov.querySelector('.d20 .num');
   const resultEl = ov.querySelector('.d20-result');
@@ -1767,7 +1767,7 @@ async function d20Ceremony(notation, label, roll) {
   num.textContent = roll.rolls[0];
   tensionEl.style.display = 'none';
 
-  const verdict = isCrit ? '✦ KRITISKT!' : isFail ? '✦ PATETISKT!' : '';
+  const verdict = isCrit ? I18N.t('✦ KRITISKT!') : isFail ? I18N.t('✦ PATETISKT!') : '';
   resultEl.textContent = `${roll.rolls.join(', ')}${modStr} = ${roll.total} ${verdict}`.trim();
 
   const wrap = ov.querySelector('.d20-wrap').getBoundingClientRect();
@@ -1802,8 +1802,8 @@ function showLevelUp(level) {
   const overlay = document.createElement('div');
   overlay.className = 'levelup-overlay';
   overlay.innerHTML = `
-    <div class="levelup-text">NIVÅ ${level}!</div>
-    <div class="levelup-sub">✦ Nya krafter väcks ✦</div>`;
+    <div class="levelup-text">${I18N.t('NIVÅ')} ${level}!</div>
+    <div class="levelup-sub">${I18N.t('✦ Nya krafter väcks ✦')}</div>`;
   document.body.appendChild(overlay);
   // Guldregn: partiklar från mitten
   const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
@@ -1839,7 +1839,7 @@ async function answerRollRequest(id, notation, label) {
   if (!box) return;
   const btn = box.querySelector('.rr-btn');
   btn.disabled = true;
-  btn.textContent = diceIconForLabel(label) + ' Rullar…';
+  btn.textContent = diceIconForLabel(label) + ' ' + I18N.t('Rullar…');
 
   const roll = rollDice(notation);
   const isCrit = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 20;
@@ -1853,7 +1853,7 @@ async function answerRollRequest(id, notation, label) {
   box.innerHTML = `
     <div class="roll-result-inline">
       <span class="rr-dice">🎲</span>
-      <span>${label}: [${roll.rolls.join(', ')}]${modStr} = <b class="${cls}">${roll.total}</b>${isCrit ? ' ✦ KRITISKT!' : ''}${isFail ? ' ✦ PATETISKT!' : ''}</span>
+      <span>${label}: [${roll.rolls.join(', ')}]${modStr} = <b class="${cls}">${roll.total}</b>${isCrit ? ' ' + I18N.t('✦ KRITISKT!') : ''}${isFail ? ' ' + I18N.t('✦ PATETISKT!') : ''}</span>
     </div>`;
 
   // Skicka resultatet till DM (backend) — DM ger utfallet direkt
@@ -1880,7 +1880,7 @@ function diceMessage(roll, label) {
   if (isCrit) cls = 'crit';
   if (isFail) cls = 'fail';
   const modStr = roll.mod !== 0 ? (roll.mod > 0 ? '+' + roll.mod : roll.mod) : '';
-  return `<span class="dice">🎲</span> ${label || roll.notation}: [${roll.rolls.join(', ')}]${modStr} = <b class="${cls}">${roll.total}</b>${isCrit ? ' ✦ KRITISKT!' : ''}${isFail ? ' ✦ PATETISKT!' : ''}`;
+  return `<span class="dice">🎲</span> ${label || roll.notation}: [${roll.rolls.join(', ')}]${modStr} = <b class="${cls}">${roll.total}</b>${isCrit ? ' ' + I18N.t('✦ KRITISKT!') : ''}${isFail ? ' ' + I18N.t('✦ PATETISKT!') : ''}`;
 }
 
 // ═══════════════════════════════════════
@@ -1976,7 +1976,7 @@ function beginAdventure() {
   const picker = document.getElementById('model-picker');
   if (picker) picker.value = currentModel;
   document.getElementById('model-gate').remove();
-  addMessage('system', null, '🕯️ <b>Dungeon Master vaknar…</b> Mörkret rör på sig.');
+  addMessage('system', null, '🕯️ <b>' + I18N.t('Dungeon Master vaknar…') + '</b> ' + I18N.t(' Mörkret rör på sig.'));
   dmRespond(AWAKENING_TRIGGER);
 }
 
@@ -2432,30 +2432,30 @@ function effectText(fx) {
   const v = fx.value != null ? fx.value : '';
   const qty = fx.qty && fx.qty > 1 ? ` ×${fx.qty}` : '';
   switch (fx.type) {
-    case 'skada':        return `Du tar <b>${v}</b> skada!`;
-    case 'hela':         return `Du helas <b>${v}</b> HP!`;
-    case 'xp':           return `+<b>${v}</b> XP!`;
+    case 'skada':        return `${I18N.t('Du tar ')}<b>${v}</b>${I18N.t(' skada!')}`;
+    case 'hela':         return `${I18N.t('Du helas ')}<b>${v}</b>${I18N.t(' HP!')}`;
+    case 'xp':           return `+<b>${v}</b>${I18N.t(' XP!')}`;
     case 'guld': {
-      const d = {gp:'guld',sp:'silver',cp:'koppar',pp:'platina'}[fx.denom] || 'guld';
+      const d = I18N.t({gp:'guld',sp:'silver',cp:'koppar',pp:'platina'}[fx.denom] || 'guld');
       const sign = fx.value >= 0 ? '+' : '';
       return `${sign}<b>${v}</b> ${d}`;
     }
-    case 'guld_fail':    return fx.msg || 'Otillräckligt saldo!';
-    case 'föremål':      return `Fick: <b>${v}</b>${qty}`;
-    case 'föremål_bort': return `Förlorade: <b>${v}</b>${qty}`;
-    case 'quest':        return `Nytt uppdrag: <b>${v}</b>`;
-    case 'quest_slutförd':return `Uppdrag slutfört: <b>${v}</b>`;
-    case 'quest_misslyckad':return `Uppdrag misslyckat: <b>${v}</b>`;
-    case 'level_up':     return `<b>NIVÅ ${v}!</b> Du känner nya krafter!`;
-    case 'npc_relation': return `Relation ändrad: <b>${v}</b>`;
-    case 'npc_new':      return `Ny gestalt: <b>${v}</b> (${fx.role || 'okänd'}, ${fx.relation || 'okänd'})`;
+    case 'guld_fail':    return fx.msg || I18N.t('Otillräckligt saldo!');
+    case 'föremål':      return `${I18N.t('Fick: ')}<b>${v}</b>${qty}`;
+    case 'föremål_bort': return `${I18N.t('Förlorade: ')}<b>${v}</b>${qty}`;
+    case 'quest':        return `${I18N.t('Nytt uppdrag: ')}<b>${v}</b>`;
+    case 'quest_slutförd':return `${I18N.t('Uppdrag slutfört: ')}<b>${v}</b>`;
+    case 'quest_misslyckad':return `${I18N.t('Uppdrag misslyckat: ')}<b>${v}</b>`;
+    case 'level_up':     return `<b>${I18N.t('NIVÅ')} ${v}!</b> ${I18N.t('Du känner nya krafter!')}`;
+    case 'npc_relation': return `${I18N.t('Relation ändrad: ')}<b>${v}</b>`;
+    case 'npc_new':      return `${I18N.t('Ny gestalt: ')}<b>${v}</b> (${fx.role || I18N.t('okänd')}, ${fx.relation || I18N.t('okänd')})`;
     case 'npc_note':     return `Om <b>${v}</b>: ${fx.note || ''}`;
-    case 'npc_reveal':   return `Identitet avslöjad: ${fx.old_name || 'okänd'} → <b>${v}</b>`;
-    case 'character_update': return `Karaktärsuppdatering (<b>${v}</b>): ${fx.text || ''}`;
-    case 'ny_dag':       return `<b>NY DAG</b> — ${v}`;
-    case 'plats':        return `Ny plats: <b>${v}</b>`;
-    case 'npc_död':      return `<b>${v}</b> är död.`;
-    case 'tid':          return `Tid: <b>${v}</b>`;
+    case 'npc_reveal':   return `${I18N.t('Identitet avslöjad: ')}${fx.old_name || I18N.t('okänd')} → <b>${v}</b>`;
+    case 'character_update': return `${I18N.t('Karaktärsuppdatering')} (<b>${v}</b>): ${fx.text || ''}`;
+    case 'ny_dag':       return `<b>${I18N.t('NY DAG')}</b> — ${v}`;
+    case 'plats':        return `${I18N.t('Ny plats: ')}<b>${v}</b>`;
+    case 'npc_död':      return `<b>${v}</b> ${I18N.t('är död.')}`;
+    case 'tid':          return `${I18N.t('Tid: ')}<b>${v}</b>`;
     case 'konsekvens':   return `${v}`;
     default:             return `<b>${fx.type}</b>: ${v}`;
   }
@@ -2640,7 +2640,7 @@ function renderNpcSidebar() {
         ? `<img src="${av}" alt="" style="width:16px;height:16px;object-fit:cover;image-rendering:pixelated">`
         : SPR.html(n.icon || '🎭');
       return `
-      <div class="npc-row${n.alive === false ? ' dead' : ''}" onclick="location.href='npcs.html'" title="Öppna dossier" style="cursor:pointer">
+      <div class="npc-row${n.alive === false ? ' dead' : ''}" onclick="location.href='npcs.html'" title="${I18N.t('Öppna dossier')}" style="cursor:pointer">
         <span class="npc-dot" style="color:${n.color};background:${n.color}"></span>
         <span class="npc-name">${n.alive === false ? SPR.html('💀') : ''} ${icon} ${n.name}</span>
         <span class="npc-role">${n.role || ''}</span>
@@ -2670,7 +2670,7 @@ function renderQuests(quests) {
     const cls = done ? ' done' : failed ? ' failed' : '';
     const mark = done ? ' ✅' : failed ? ' 💀' : '';
     return `
-    <div class="quest-item${cls}" title="${done ? 'Slutfört' : failed ? 'Misslyckat' : 'Aktivt'} uppdrag">
+    <div class="quest-item${cls}" title="${done ? I18N.t('Slutfört') : failed ? I18N.t('Misslyckat') : I18N.t('Aktivt')} ${I18N.t('uppdrag')}">
       <div class="quest-name">⚑ ${escapeHtml(q.name || 'Namnlöst uppdrag')}${mark}</div>
       ${q.description ? `<div class="quest-desc">${escapeHtml(q.description)}</div>` : ''}
       ${q.reward ? `<div class="quest-reward">🪙 ${escapeHtml(q.reward)}</div>` : ''}
@@ -2708,7 +2708,7 @@ async function askOracle() {
     hideThoughts();
     const aEl = document.createElement('div');
     aEl.className = 'oracle-msg a';
-    aEl.textContent = '⚠ Oraklet tiger: ' + (e.message || 'okänt fel');
+    aEl.textContent = '⚠ ' + I18N.t('Oraklet tiger: ') + (e.message || I18N.t('okänt fel'));
     log.appendChild(aEl);
   }
   log.scrollTop = log.scrollHeight;
@@ -2758,7 +2758,7 @@ function setConsoleLevel(btn, lv) {
   // Nivåbyte → hämta hela buffern på nytt för korrekt filtrering
   consoleSince = 0;
   document.getElementById('console-log').innerHTML =
-    '<div class="console-empty">Hämtar loggar…</div>';
+    '<div class="console-empty">' + I18N.t('Hämtar loggar…') + '</div>';
   consoleLines = 0;
   pollConsole();
 }
@@ -2766,18 +2766,18 @@ function setConsoleLevel(btn, lv) {
 function toggleAutoScroll() {
   consoleAutoScroll = !consoleAutoScroll;
   document.getElementById('console-autoscroll').classList.toggle('on', consoleAutoScroll);
-  document.getElementById('console-autoscroll').textContent = consoleAutoScroll ? '⬇ Auto' : '⏸ Manuell';
+  document.getElementById('console-autoscroll').textContent = consoleAutoScroll ? I18N.t('⬇ Auto') : I18N.t('⏸ Manuell');
 }
 
 function clearConsole() {
   document.getElementById('console-log').innerHTML =
-    '<div class="console-empty">Konsolen rensad.</div>';
+    '<div class="console-empty">' + I18N.t('Konsolen rensad.') + '</div>';
   consoleLines = 0;
   updateConsoleCount();
 }
 
 function updateConsoleCount() {
-  document.getElementById('console-count').textContent = consoleLines + ' rader';
+  document.getElementById('console-count').textContent = consoleLines + I18N.t(' rader');
 }
 
 function appendConsoleLogs(logs) {
@@ -2828,8 +2828,8 @@ function stopConsolePolling() {
 // ═══════════════════════════════════════
 function exportCampaign() {
   const url = API.exportUrl();
-  if (!url) { toast('⚠ Export ej tillgänglig i mock-läge'); return; }
-  toast('📦 Bygger kampanj-export… (zip med transkript, karaktärsark, bilagor)');
+  if (!url) { toast(I18N.t('⚠ Export ej tillgänglig i mock-läge')); return; }
+  toast(I18N.t('📦 Bygger kampanj-export… (zip med transkript, karaktärsark, bilagor)'));
   // Öppna nedladdningen i en ny flik — cookien följer med automatiskt
   window.open(url, '_blank');
 }
@@ -2858,7 +2858,7 @@ function switchModel(model) {
   if (main) main.value = model;
   if (mobile) mobile.value = model;
   const local = model.startsWith('ollama:');
-  toast(`🔮 Dungeon Master byter röst: ${modelNames[model]}${local ? ' · körs lokalt' : ''}`);
+  toast(`🔮 ${I18N.t('Dungeon Master byter röst: ')}${modelNames[model]}${local ? I18N.t(' körs lokalt') : ''}`);
 }
 // Sätt dropdownen till det sparade valet
 document.getElementById('model-picker').value = currentModel;

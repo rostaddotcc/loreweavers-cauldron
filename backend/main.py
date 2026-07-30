@@ -827,6 +827,10 @@ async def _call_llm_with_reasoning(
     if config.api_model in ("deepseek-v4-flash", "mimo-v2.5", "mimo-v2.5-pro", "step-3.7-flash"):
         max_tokens = max(max_tokens, 4096)
 
+    # Qwen3: thinking mode PÅ som standard — ge generös budget
+    if config.provider == "dashscope" and config.api_model.startswith("qwen3"):
+        max_tokens = max(max_tokens, 16000)
+
     headers = {"Content-Type": "application/json"}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
@@ -1998,8 +2002,27 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     # Anropa LLM — vid fel: riktigt felmeddelande, ingen placeholder
     _tllm = time.time()
     reasoning = ""
+
+    # ── Long-form detektion ──
+    # Om spelaren ber om bakgrundshistoria, bokkapitel, detaljerad beskrivning etc.
+    # höj max_tokens så DM får utrymme att skriva en längre berättelse.
+    _long_form_kw = [
+        "bakgrund", "berätta om", "historia", "kapitel", "läsa", "bok",
+        "legend", "berättelse", "dagbok", "brev", "beskriv", "vad ser jag",
+        "undersök", "inskription", "runor", "skylt", "karta", "musik",
+        "sång", "dikt", "minne", "dröm", "vision", "förflutna",
+        " backstory", "tell me about", "history", "chapter", "read", "book",
+        "legend", "tale", "diary", "letter", "describe", "what do i see",
+        "examine", "inscription", "runes", "sign", "map", "song", "poem",
+        "memory", "dream", "vision", "past",
+    ]
+    _is_long_form = any(kw in req.message.lower() for kw in _long_form_kw) and len(req.message) > 15
+    _dm_max_tokens = 4096 if _is_long_form else 1024
+    if _is_long_form:
+        logger.info("📖 Long-form request — max_tokens höjt till %d", _dm_max_tokens)
+
     try:
-        reply, reasoning, usage = await _call_llm_with_reasoning(req.model_id, messages)
+        reply, reasoning, usage = await _call_llm_with_reasoning(req.model_id, messages, max_tokens=_dm_max_tokens)
         _llm_time = round(time.time() - _tllm, 1)
         logger.info("🤖 DM svarade (%d tkn, %.1fs)", len(reply), _llm_time)
         if reasoning:

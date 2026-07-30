@@ -841,6 +841,7 @@
   }
   .send-btn:hover { filter: brightness(1.12); transform: translateY(-2px); }
   .send-btn:active { transform: translateY(0); }
+  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; filter: none; transform: none; }
   .input-hint { font-size: 0.74rem; color: var(--bone-dim); font-style: italic; margin-top: 0.4rem; }
   .input-hint kbd {
     font-family: 'Cinzel', serif; font-size: 0.58rem; background: var(--stone-3);
@@ -1879,6 +1880,8 @@ async function answerRollRequest(id, notation, label) {
     </div>`;
 
   // Skicka resultatet till DM (backend) — DM ger utfallet direkt
+  isResponding = true;
+  document.querySelector('.send-btn')?.setAttribute('disabled', '');
   showThoughts('narrate');
   try {
     const resultMsg = `[Resultat: ${label} → ${roll.total} (${roll.rolls.join(', ')}${modStr})]`;
@@ -1892,6 +1895,9 @@ async function answerRollRequest(id, notation, label) {
   } catch (e) {
     hideThoughts();
     await restoreFromTranscript('⚠ DM:n kunde inte ge utfallet: <b>' + escapeHtml(e.message || 'okänt fel') + '</b>');
+  } finally {
+    isResponding = false;
+    document.querySelector('.send-btn')?.removeAttribute('disabled');
   }
 }
 
@@ -2168,9 +2174,11 @@ function insertAtMention(name) {
   input.focus();
 }
 
+let isResponding = false;
+
 function sendPlayer() {
   const text = input.value.trim();
-  if (!text) return;
+  if (!text || isResponding) return;
   input.value = '';
   input.style.height = 'auto';
 
@@ -2365,6 +2373,8 @@ async function restoreFromTranscript(fallbackErrorMsg) {
 }
 
 async function dmRespond(playerText) {
+  isResponding = true;
+  document.querySelector('.send-btn')?.setAttribute('disabled', '');
   showThoughts('narrate');
   try {
     const res = await API.chat(playerText, currentModel);
@@ -2420,6 +2430,9 @@ async function dmRespond(playerText) {
   } catch (e) {
     hideThoughts();
     await restoreFromTranscript('⚠ DM:n kunde inte svara: <b>' + escapeHtml(e.message || 'okänt fel') + '</b>. Försök igen.');
+  } finally {
+    isResponding = false;
+    document.querySelector('.send-btn')?.removeAttribute('disabled');
   }
 }
 

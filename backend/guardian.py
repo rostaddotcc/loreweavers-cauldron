@@ -848,7 +848,10 @@ def apply_mechanics(state: dict, mech: dict) -> list[dict]:
         if not name:
             continue
         visited = world.setdefault("visited_locations", [])
-        if not any(v.get("name", "").lower() == name.lower() for v in visited):
+        if not any(
+            (v.get("name", "") if isinstance(v, dict) else str(v)).lower() == name.lower()
+            for v in visited
+        ):
             visited.append({"name": name, "turn": state.get("meta", {}).get("turn_count", 0)})
             effects.append({"type": "plats", "value": name})
             logger.info("🛡️ Guardian: ny plats '%s'", name)

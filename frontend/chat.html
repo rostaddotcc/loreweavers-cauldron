@@ -70,7 +70,11 @@
   .top-btn.admin-btn { border-color: rgba(232,198,90,0.45); color: var(--gold); }
   .top-btn.admin-btn:hover { color: #fff8dc; border-color: var(--gold-bright); box-shadow: 0 0 16px -2px rgba(255,215,0,0.55); text-shadow: 0 0 10px rgba(255,215,0,0.7); }
   .top-btn.danger:hover { color: var(--blood-bright); border-color: var(--blood-bright); box-shadow: 0 0 12px -3px rgba(212,58,77,0.4); }
-  .top-btn.icon-btn { padding: 0.55rem 0.7rem; font-size: 0.85rem; }
+  .top-btn.icon-btn {
+    width: 38px; height: 34px; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.9rem; line-height: 1;
+  }
   .top-divider { width: 1px; height: 20px; background: var(--edge); flex-shrink: 0; }
 
   /* ═══════════ Dropdown-meny (Världen / Verktyg) ═══════════ */
@@ -1101,7 +1105,7 @@
   <button class="top-btn icon-btn sfx-btn" onclick="sfxToggleBtn()" title="Ljud av/på">🔊</button>
   <button class="top-btn icon-btn music-btn" onclick="musicToggleBtn()" title="Musik av/på">♫</button>
   <span class="top-divider"></span>
-  <button class="top-btn danger" onclick="logout()">🚪 Lämna</button>
+  <button class="top-btn danger" onclick="location.href='adventure.html'">🚪 Lämna</button>
 </header>
 <div class="mobile-hp-line" id="mobile-hp-line"><i style="width:100%"></i></div>
 <div class="drawer-backdrop" id="drawer-backdrop" onclick="toggleMobileSidebar()"></div>
@@ -1166,7 +1170,7 @@
         </select>
       </div>
       <button class="drawer-logout" id="admin-drawer-btn" style="display:none" onclick="location.href='admin.html'">👑 Admin</button>
-      <button class="drawer-logout" onclick="logout()">🚪 Lämna</button>
+      <button class="drawer-logout" onclick="location.href='adventure.html'">🚪 Lämna</button>
     </div>
   </aside>
 

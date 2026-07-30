@@ -2976,15 +2976,50 @@ async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
     world = state.setdefault("world", {})
 
     # ── Cache-först: returnera direkt om dag-entries finns ──
-    logbook = world.get("logbook", {})
-    cached_days = logbook.get("days", [])
+    # Guardian sparar logbook som en array av {day, turn, text} i world["logbook"]
+    # LLM-genererad logbook sparas som ett objekt {title, days, summary} i world["logbook_llm"]
+    # Kontrollera båda formaten
+    logbook_llm = world.get("logbook_llm", {})
+    cached_days = logbook_llm.get("days", [])
     if cached_days:
         campaign_name = state.get("meta", {}).get("campaign_name", "Mörkrets Rike")
         return {
-            "title": logbook.get("title", campaign_name),
+            "title": logbook_llm.get("title", campaign_name),
             "days": cached_days,
-            "summary": logbook.get("summary", ""),
+            "summary": logbook_llm.get("summary", ""),
+            "generated_at": logbook_llm.get("generated_at", ""),
         }
+
+    # ── Guardian-logbook: konvertera enkel {day, turn, text} → {days: [...]} ──
+    guardian_log = world.get("logbook", [])
+    if guardian_log and isinstance(guardian_log, list):
+        # Gruppera per dag
+        days_map = {}
+        for entry in guardian_log:
+            day = entry.get("day", 1)
+            if day not in days_map:
+                days_map[day] = {
+                    "day": day,
+                    "title": "",
+                    "mood": "",
+                    "events": [],
+                    "location": "",
+                    "npcs_met": [],
+                    "quests": [],
+                }
+            days_map[day]["events"].append(entry.get("text", ""))
+
+        days = sorted(days_map.values(), key=lambda d: d["day"])
+        campaign_name = state.get("meta", {}).get("campaign_name", "Mörkrets Rike")
+
+        # Om vi har Guardian-entries, returnera dem direkt (snabbt, inget LLM)
+        if days and days[0]["events"]:
+            summary_text = f"Äventyret har {len(days)} dag(ar) med {len(guardian_log)} händelser."
+            return {
+                "title": campaign_name,
+                "days": days,
+                "summary": summary_text,
+            }
 
     # ── Första besöket: generera via LLM och cacha ──
     transcript = store.load_transcript(state, last_n=100)
@@ -3026,11 +3061,13 @@ async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
             "summary": "Äventyret har just börjat. Mörkret väntar.",
         }
 
-    # Cacha i world['logbook'] — nästa anrop returnerar direkt
-    world["logbook"] = {
+    # Cacha i world['logbook_llm'] — skiljt från Guardian's world['logbook']
+    from datetime import datetime, timezone
+    world["logbook_llm"] = {
         "title": log_data.get("title", campaign_name),
         "days": log_data.get("days", []),
         "summary": log_data.get("summary", ""),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
     }
     store.save(state)
 
@@ -3048,7 +3085,7 @@ async def campaign_logbook_refresh_today(morkrets_token: str | None = Cookie(Non
         raise HTTPException(404, "Ingen aktiv kampanj")
 
     world = state.setdefault("world", {})
-    logbook = world.setdefault("logbook", {})
+    logbook = world.setdefault("logbook_llm", {})
     days = logbook.get("days", [])
     if not days:
         raise HTTPException(400, "Inga dag-entries att uppdatera")

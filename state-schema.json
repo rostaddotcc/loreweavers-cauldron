@@ -98,7 +98,17 @@
           "weight": { "type": "number" },
           "equipped": { "type": "boolean" },
           "rarity": { "type": "string", "enum": ["normal", "magic", "rare", "legendary"] },
-          "description": { "type": "string" }
+          "description": { "type": "string" },
+          "damage": { "type": ["string", "null"], "description": "e.g. '1d8 slashing'" },
+          "damage_dice": { "type": ["string", "null"], "description": "e.g. '1d8', '2d6'" },
+          "damage_type": { "type": ["string", "null"], "description": "slashing, piercing, bludgeoning, fire, cold, etc." },
+          "ac_bonus": { "type": ["integer", "null"], "description": "AC for armor (14 = chain mail), +N for shields" },
+          "range": { "type": ["string", "null"], "description": "'melee', 'ranged 30/120', 'thrown 20/60'" },
+          "properties": { "type": "array", "items": { "type": "string" }, "description": "light, finesse, two-handed, reach, versatile, etc." },
+          "magic_bonus": { "type": "integer", "description": "+0/1/2/3", "default": 0 },
+          "charges": { "type": ["integer", "null"], "description": "current charges for consumables/magic items" },
+          "max_charges": { "type": ["integer", "null"], "description": "max charges" },
+          "effects": { "type": ["string", "null"], "description": "special effects description" }
         }
       }
     },

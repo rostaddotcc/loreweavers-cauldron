@@ -288,38 +288,161 @@
   .trait.magic:hover { border-color: var(--arcane); box-shadow: 0 0 16px -3px rgba(139,95,212,0.8); }
   .trait.prof { border-color: rgba(201,162,39,0.45); color: var(--gold-bright); }
 
-  /* ═══════════ Utrustning ═══════════ */
-  .inv-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
-  .inv-table th {
-    font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.22em; text-transform: uppercase;
-    color: var(--bone-dim); text-align: left; padding: 0.55rem 0.7rem;
-    border-bottom: 2px solid var(--edge-warm);
+  /* ═══════════ Utrustning — kortlayout ═══════════ */
+  .inv-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.7rem; padding: 0.2rem 0;
   }
-  .inv-table td { padding: 0.65rem 0.7rem; border-bottom: 1px solid rgba(61,47,82,0.5); vertical-align: middle; }
-  .inv-table tbody tr { transition: background 0.2s; }
-  .inv-table tbody tr:hover { background: rgba(139,95,212,0.06); }
-  .item-name { color: var(--bone-bright); font-weight: 500; }
-  .item-name.magic { color: #cbb3f2; text-shadow: 0 0 10px rgba(139,95,212,0.5); }
-  .item-name.rare { color: var(--gold-bright); text-shadow: 0 0 10px rgba(232,198,90,0.4); }
-  .item-type { color: var(--bone-dim); font-size: 0.78rem; font-style: italic; }
-  .qty { color: var(--bone-dim); text-align: center; }
-  .weight { color: var(--bone-dim); text-align: right; font-size: 0.8rem; }
+  .inv-card {
+    background: linear-gradient(180deg, var(--stone-3), var(--stone));
+    border: 1px solid var(--edge); padding: 0.9rem 1rem; cursor: pointer;
+    transition: all 0.22s; position: relative; overflow: hidden;
+  }
+  .inv-card:hover {
+    transform: translateY(-3px); border-color: var(--bone-dim);
+    box-shadow: 0 8px 20px -8px rgba(0,0,0,0.7);
+  }
+  .inv-card.equipped { border-color: rgba(122,163,94,0.5); }
+  .inv-card.equipped::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--poison), transparent);
+  }
+  /* Rarity: magic */
+  .inv-card.r-magic { border-color: rgba(139,95,212,0.45); }
+  .inv-card.r-magic:hover { box-shadow: 0 8px 24px -8px rgba(139,95,212,0.4); }
+  /* Rarity: rare */
+  .inv-card.r-rare { border-color: rgba(232,198,90,0.45); }
+  .inv-card.r-rare:hover { box-shadow: 0 8px 24px -8px rgba(232,198,90,0.4); }
+  /* Rarity: legendary */
+  .inv-card.r-legendary {
+    border-color: rgba(232,198,90,0.7);
+    background: linear-gradient(180deg, rgba(232,198,90,0.08), var(--stone-3) 40%, var(--stone));
+  }
+  .inv-card.r-legendary:hover { box-shadow: 0 8px 28px -8px rgba(232,198,90,0.6); }
+  .inv-card.r-legendary .inv-card-name { animation: candle 4s ease-in-out infinite; }
 
-  .chip {
-    font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.14em; text-transform: uppercase;
-    padding: 0.26rem 0.6rem; border: 1px solid; cursor: pointer; background: transparent;
-    transition: all 0.2s; white-space: nowrap;
+  .inv-card-row { display: flex; align-items: flex-start; gap: 0.6rem; }
+  .inv-card-icon {
+    font-size: 1.5rem; line-height: 1; flex-shrink: 0; margin-top: 0.1rem;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
   }
-  .chip.on { color: var(--poison); border-color: rgba(122,163,94,0.6); box-shadow: 0 0 8px -2px rgba(122,163,94,0.5); }
-  .chip.off { color: var(--bone-dim); border-color: var(--edge); }
-  .chip:hover { transform: translateY(-1px); filter: brightness(1.3); }
+  .inv-card-info { flex: 1; min-width: 0; }
+  .inv-card-name {
+    font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.82rem;
+    color: var(--bone-bright); line-height: 1.25;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .inv-card-name.r-magic { color: #cbb3f2; text-shadow: 0 0 8px rgba(139,95,212,0.45); }
+  .inv-card-name.r-rare { color: var(--gold-bright); text-shadow: 0 0 8px rgba(232,198,90,0.35); }
+  .inv-card-name.r-legendary { color: var(--gold-bright); text-shadow: 0 0 12px rgba(232,198,90,0.6); }
 
-  .item-del {
-    background: none; border: none; color: var(--bone-dim); cursor: pointer;
-    font-size: 0.85rem; opacity: 0.35; transition: all 0.2s; padding: 0.2rem 0.4rem;
+  .inv-card-type {
+    font-size: 0.7rem; color: var(--bone-dim); font-style: italic; margin-top: 0.15rem;
   }
-  tr:hover .item-del { opacity: 1; }
-  .item-del:hover { color: var(--blood-bright); text-shadow: 0 0 8px rgba(212,58,77,0.7); transform: scale(1.2); }
+  .inv-card-stats {
+    display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.5rem;
+  }
+  .inv-badge {
+    font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.08em;
+    padding: 0.18rem 0.5rem; border: 1px solid var(--edge); background: var(--stone);
+    color: var(--bone); white-space: nowrap; border-radius: 2px;
+  }
+  .inv-badge.dmg { border-color: rgba(163,36,51,0.5); color: var(--blood-bright); }
+  .inv-badge.ac { border-color: rgba(122,163,94,0.5); color: var(--poison); }
+  .inv-badge.charges { border-color: rgba(139,95,212,0.5); color: var(--arcane); }
+  .inv-badge.magic-bonus { border-color: rgba(232,198,90,0.5); color: var(--gold-bright); }
+  .inv-badge.range { color: var(--bone-dim); }
+  .inv-badge.qty { color: var(--bone-dim); }
+
+  .inv-card-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 0.55rem; padding-top: 0.45rem;
+    border-top: 1px solid rgba(61,47,82,0.4);
+  }
+  .inv-card-equip {
+    font-family: 'Cinzel', serif; font-size: 0.52rem; letter-spacing: 0.12em;
+    text-transform: uppercase; padding: 0.2rem 0.55rem; border: 1px solid;
+    cursor: pointer; background: transparent; transition: all 0.2s; white-space: nowrap;
+  }
+  .inv-card-equip.is-equipped {
+    color: var(--poison); border-color: rgba(122,163,94,0.6);
+    box-shadow: 0 0 6px -2px rgba(122,163,94,0.4);
+  }
+  .inv-card-equip.not-equipped { color: var(--bone-dim); border-color: var(--edge); }
+  .inv-card-equip:hover { transform: translateY(-1px); filter: brightness(1.3); }
+  .inv-card-weight { font-size: 0.68rem; color: var(--bone-dim); font-style: italic; }
+
+  /* ── Detaljmodal ── */
+  .item-modal-overlay {
+    position: fixed; inset: 0; z-index: 40;
+    background: rgba(4,2,8,0.82); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    animation: modal-fade-in 0.2s ease;
+  }
+  @keyframes modal-fade-in { from { opacity: 0; } to { opacity: 1; } }
+  .item-modal {
+    background: linear-gradient(180deg, var(--stone-3), var(--stone));
+    border: 1px solid var(--gold); padding: 2rem 2.2rem;
+    max-width: 480px; width: 92vw; max-height: 85vh; overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8), 0 0 30px -8px rgba(232,198,90,0.3);
+    animation: modal-slide-up 0.25s ease;
+  }
+  @keyframes modal-slide-up { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .item-modal-close {
+    position: absolute; top: 0.8rem; right: 1rem; background: none; border: none;
+    color: var(--bone-dim); font-size: 1.2rem; cursor: pointer; transition: color 0.2s;
+  }
+  .item-modal-close:hover { color: var(--blood-bright); }
+  .item-modal-header {
+    font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.15rem;
+    color: var(--bone-bright); margin-bottom: 0.3rem;
+    text-shadow: 0 2px 0 #000;
+  }
+  .item-modal-header.r-magic { color: #cbb3f2; text-shadow: 0 0 12px rgba(139,95,212,0.5); }
+  .item-modal-header.r-rare { color: var(--gold-bright); text-shadow: 0 0 12px rgba(232,198,90,0.4); }
+  .item-modal-header.r-legendary { color: var(--gold-bright); text-shadow: 0 0 16px rgba(232,198,90,0.7); }
+  .item-modal-sub {
+    font-size: 0.78rem; color: var(--bone-dim); font-style: italic;
+    margin-bottom: 1.1rem; padding-bottom: 0.8rem;
+    border-bottom: 1px solid rgba(61,47,82,0.5);
+  }
+  .item-modal-stat-row {
+    display: flex; justify-content: space-between; padding: 0.35rem 0;
+    border-bottom: 1px solid rgba(61,47,82,0.25); font-size: 0.85rem;
+  }
+  .item-modal-stat-label {
+    color: var(--bone-dim); font-size: 0.75rem; letter-spacing: 0.04em;
+    font-family: 'Cinzel', serif; text-transform: uppercase;
+  }
+  .item-modal-stat-val { color: var(--bone-bright); font-weight: 500; }
+  .item-modal-desc {
+    margin-top: 1rem; padding: 0.8rem; font-size: 0.85rem;
+    color: var(--bone); font-style: italic; line-height: 1.6;
+    background: rgba(13,8,23,0.4); border-left: 2px solid var(--edge);
+  }
+  .item-modal-props {
+    display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem;
+  }
+  .item-modal-prop-tag {
+    font-size: 0.68rem; padding: 0.15rem 0.5rem;
+    border: 1px solid var(--edge); color: var(--bone-dim);
+    background: var(--stone); border-radius: 2px;
+  }
+  .item-modal-actions {
+    display: flex; gap: 0.6rem; margin-top: 1.3rem;
+    padding-top: 1rem; border-top: 1px solid rgba(61,47,82,0.5);
+  }
+  .item-modal-actions .rune-btn { flex: 1; text-align: center; }
+  .item-modal-actions .del-btn {
+    flex: 0 0 auto; font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.72rem;
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--blood-bright);
+    background: transparent; border: 1px solid rgba(163,36,51,0.5); padding: 0.55rem 1.1rem;
+    cursor: pointer; transition: all 0.2s; border-radius: 2px;
+  }
+  .item-modal-actions .del-btn:hover {
+    background: rgba(163,36,51,0.15); border-color: var(--blood-bright);
+    box-shadow: 0 0 12px -3px rgba(212,58,77,0.5);
+  }
 
   .inv-summary {
     display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;
@@ -328,6 +451,10 @@
   }
   .inv-summary b { color: var(--bone-bright); }
   .overloaded { color: var(--blood-bright) !important; animation: hp-alarm 1.2s infinite; }
+  .inv-empty {
+    text-align: center; color: var(--bone-dim); font-style: italic;
+    padding: 2.5rem 1rem; font-size: 0.9rem;
+  }
 
   .add-form { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1.2rem; }
   .add-form input, .add-form select {
@@ -340,6 +467,25 @@
   }
   .add-form input::placeholder { color: var(--bone-dim); font-style: italic; }
   .add-form input { flex: 1; min-width: 150px; }
+  .add-form select { flex: 0 1 auto; min-width: 100px; }
+  .add-adv-toggle {
+    font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--bone-dim); cursor: pointer;
+    background: transparent; border: 1px dashed var(--edge); padding: 0.5rem 1rem;
+    transition: all 0.2s; width: 100%; text-align: center; margin-top: 0.2rem;
+  }
+  .add-adv-toggle:hover { border-color: var(--gold); color: var(--gold-bright); }
+  .add-adv-fields {
+    display: none; gap: 0.5rem; flex-wrap: wrap; width: 100%;
+    padding-top: 0.5rem; border-top: 1px dashed rgba(61,47,82,0.4);
+  }
+  .add-adv-fields.open { display: flex; }
+  .add-adv-fields label {
+    font-family: 'Cinzel', serif; font-size: 0.55rem; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--bone-dim); width: 100%;
+    margin-bottom: -0.3rem;
+  }
+  .add-adv-fields input { min-width: 100px; }
   .rune-btn {
     font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.72rem; letter-spacing: 0.16em;
     text-transform: uppercase; color: #1a1206; cursor: pointer;
@@ -505,7 +651,7 @@
     .char-header { flex-direction: column; text-align: center; }
     .char-meta { justify-content: center; }
     .panel { padding: 1.5rem 1rem; }
-    .inv-table .hide-sm { display: none; }
+    .inv-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
   }
 
   /* ═══════════ Mobil — pekskärm & trånga gränder ═══════════ */
@@ -533,12 +679,7 @@
     .vital-ctrl .mini-btn { min-height: 44px; padding: .4rem .95rem; }
     .slot { width: 40px; height: 40px; }
     /* Utrustningstabell: horisontell scroll */
-    .inv-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .inv-scroll::-webkit-scrollbar { height: 6px; }
-    .inv-scroll::-webkit-scrollbar-thumb { background: var(--edge); }
-    .inv-table { min-width: 560px; }
-    .chip { min-height: 44px; display: inline-flex; align-items: center; }
-    .item-del { font-size: 1.05rem; padding: .55rem .5rem; opacity: .8; }
+    .inv-grid { grid-template-columns: 1fr; gap: 0.5rem; }
     /* Lägg-till-formulär: staplat, 16px mot iOS-zoom */
     .add-form input, .add-form select { font-size: 16px; min-height: 44px; }
     .add-form input { flex: 1 1 100%; }
@@ -675,21 +816,7 @@
     <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
 
     <div class="section-title">Packning & Vapen</div>
-    <div class="inv-scroll">
-    <table class="inv-table">
-      <thead>
-        <tr>
-          <th>Föremål</th>
-          <th class="hide-sm">Typ</th>
-          <th style="text-align:center">Antal</th>
-          <th class="hide-sm" style="text-align:right">Vikt</th>
-          <th>Status</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="inv-body"></tbody>
-    </table>
-    </div>
+    <div class="inv-grid" id="inv-grid"></div>
     <div class="inv-summary">
       <span>Total vikt: <b id="inv-weight">0</b> / 120 lbs <span id="inv-warn"></span></span>
       <span>Föremål: <b id="inv-count">0</b></span>
@@ -705,9 +832,30 @@
       <input type="number" id="add-weight" value="1" min="0" step="0.1" style="width:80px" title="Vikt (lbs)">
       <select id="add-rarity" title="Sällsynthet">
         <option value="normal">Normal</option><option value="magic">✦ Magisk</option><option value="rare">Sällsynt</option>
+        <option value="legendary">⚡ Legendarisk</option>
       </select>
       <button type="submit" class="rune-btn">✦ Lägg till</button>
+      <button type="button" class="add-adv-toggle" onclick="toggleAdvFields()">▸ D&D-egenskaper (valfritt)</button>
+      <div class="add-adv-fields" id="add-adv-fields">
+        <label>Skada</label>
+        <input type="text" id="add-damage" placeholder="t.ex. 1d8 slashing" autocomplete="off">
+        <label>AC-bonus</label>
+        <input type="number" id="add-ac" placeholder="14" min="0" style="width:80px">
+        <label>Räckvidd</label>
+        <input type="text" id="add-range" placeholder="melee / ranged 30/120" autocomplete="off">
+        <label>Egenskaper (kommaseparerade)</label>
+        <input type="text" id="add-props" placeholder="light, finesse, versatile" autocomplete="off">
+        <label>Magisk bonus</label>
+        <input type="number" id="add-magic-bonus" value="0" min="0" max="5" style="width:64px">
+        <label>Laddningar</label>
+        <input type="number" id="add-charges" placeholder="3" min="0" style="width:64px">
+        <label>Max laddningar</label>
+        <input type="number" id="add-max-charges" placeholder="5" min="0" style="width:64px">
+        <label>Beskrivning</label>
+        <input type="text" id="add-description" placeholder="Beskrivning eller effekt…" autocomplete="off">
+      </div>
     </form>
+    <div id="item-modal-container"></div>
   </section>
 
   <!-- ═══════════ SKATTKAMMARE ═══════════ -->
@@ -1116,28 +1264,61 @@ function renderSaves() {
 }
 
 // ═══════════════════════════════════════
-// INVENTORY
+// INVENTORY — kortlayout + detaljmodal
 // ═══════════════════════════════════════
+
+// Typ-ikoner
+const TYPE_ICONS = { Vapen: '⚔️', Rustning: '🛡️', Dryck: '🧪', Magisk: '✦', Verktyg: '🔧', Annat: '📦' };
+
+// Hjälp: bygg badge-HTML för ett item
+function _invBadges(item) {
+  let badges = '';
+  // Skada
+  const dmg = item.damage || (item.damage_dice ? item.damage_dice + (item.damage_type ? ' ' + item.damage_type : '') : null);
+  if (dmg) badges += `<span class="inv-badge dmg">⚔ ${dmg}</span>`;
+  // AC
+  if (item.ac_bonus != null && item.ac_bonus !== undefined) badges += `<span class="inv-badge ac">🛡 ${item.ac_bonus}</span>`;
+  // Magisk bonus
+  if (item.magic_bonus > 0) badges += `<span class="inv-badge magic-bonus">+${item.magic_bonus}</span>`;
+  // Laddningar
+  if (item.charges != null || item.max_charges != null) {
+    const c = item.charges != null ? item.charges : '?';
+    const m = item.max_charges != null ? item.max_charges : '?';
+    badges += `<span class="inv-badge charges">⚡ ${c}/${m}</span>`;
+  }
+  // Räckvidd
+  if (item.range) badges += `<span class="inv-badge range">◎ ${item.range}</span>`;
+  return badges;
+}
+
 function renderInventory() {
-  const body = document.getElementById('inv-body');
-  body.innerHTML = '';
+  const grid = document.getElementById('inv-grid');
+  grid.innerHTML = '';
   if (!state.inventory.length) {
-    body.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--bone-dim);font-style:italic;padding:1.6rem 0">${I18N.t('Väskan är tom… än så länge.')}</td></tr>`;
+    grid.innerHTML = `<div class="inv-empty">${I18N.t('Väskan är tom… än så länge.')}</div>`;
   }
   let totalWeight = 0;
   state.inventory.forEach((item, i) => {
-    const w = item.weight * item.qty;
+    const w = (item.weight || 0) * (item.qty || 1);
     totalWeight += w;
-    const rc = item.rarity === 'magic' ? 'magic' : item.rarity === 'rare' ? 'rare' : '';
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="item-name ${rc}">${item.rarity === 'magic' ? '✦ ' : ''}${item.name}</td>
-      <td class="item-type hide-sm">${item.type}</td>
-      <td class="qty">${item.qty}</td>
-      <td class="weight hide-sm">${w.toFixed(1)} lbs</td>
-      <td><button class="chip ${item.equipped ? 'on' : 'off'}" onclick="toggleEquip(${i})">${item.equipped ? I18N.t('⚔ Buren') : I18N.t('I väska')}</button></td>
-      <td><button class="item-del" onclick="removeItem(${i})" title="${I18N.t('Släng föremålet')}">✕</button></td>`;
-    body.appendChild(tr);
+    const rarityCls = item.rarity ? 'r-' + item.rarity : '';
+    const icon = TYPE_ICONS[item.type] || TYPE_ICONS.Annat;
+    const card = document.createElement('div');
+    card.className = 'inv-card' + (item.equipped ? ' equipped' : '') + (rarityCls ? ' ' + rarityCls : '');
+    card.innerHTML = `
+      <div class="inv-card-row" onclick="openItemModal(${i})">
+        <span class="inv-card-icon">${icon}</span>
+        <div class="inv-card-info">
+          <div class="inv-card-name ${rarityCls}">${item.rarity === 'magic' || item.rarity === 'legendary' ? '✦ ' : ''}${item.name}</div>
+          <div class="inv-card-type">${item.type || 'Annat'}</div>
+          <div class="inv-card-stats">${_invBadges(item)}${item.qty > 1 ? `<span class="inv-badge qty">×${item.qty}</span>` : ''}</div>
+        </div>
+      </div>
+      <div class="inv-card-footer">
+        <button class="inv-card-equip ${item.equipped ? 'is-equipped' : 'not-equipped'}" onclick="event.stopPropagation();toggleEquip(${i})">${item.equipped ? I18N.t('⚔ Buren') : I18N.t('🎒 I väska')}</button>
+        <span class="inv-card-weight">${w.toFixed(1)} lbs</span>
+      </div>`;
+    grid.appendChild(card);
   });
   document.getElementById('inv-weight').textContent = totalWeight.toFixed(1);
   document.getElementById('inv-count').textContent = state.inventory.length;
@@ -1146,6 +1327,77 @@ function renderInventory() {
   if (totalWeight > 120) { warn.textContent = I18N.t('⚠ ÖVERBELASTAD'); weightEl.classList.add('overloaded'); }
   else { warn.textContent = ''; weightEl.classList.remove('overloaded'); }
 }
+
+// ── Detaljmodal ──
+function openItemModal(i) {
+  const item = state.inventory[i];
+  if (!item) return;
+  const container = document.getElementById('item-modal-container');
+  const rarityCls = item.rarity ? 'r-' + item.rarity : '';
+  const icon = TYPE_ICONS[item.type] || TYPE_ICONS.Annat;
+
+  // Bygg stat-rader
+  let statsHtml = '';
+  const dmg = item.damage || (item.damage_dice ? item.damage_dice + (item.damage_type ? ' ' + item.damage_type : '') : null);
+  if (dmg) statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">⚔ ${I18N.t('Skada')}</span><span class="item-modal-stat-val">${dmg}</span></div>`;
+  if (item.ac_bonus != null && item.ac_bonus !== undefined) statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">🛡 ${I18N.t('AC-bonus')}</span><span class="item-modal-stat-val">${item.ac_bonus}</span></div>`;
+  if (item.range) statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">◎ ${I18N.t('Räckvidd')}</span><span class="item-modal-stat-val">${item.range}</span></div>`;
+  if (item.magic_bonus > 0) statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">✦ ${I18N.t('Magisk bonus')}</span><span class="item-modal-stat-val">+${item.magic_bonus}</span></div>`;
+  if (item.charges != null || item.max_charges != null) {
+    const c = item.charges != null ? item.charges : '?';
+    const m = item.max_charges != null ? item.max_charges : '?';
+    statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">⚡ ${I18N.t('Laddningar')}</span><span class="item-modal-stat-val">${c} / ${m}</span></div>`;
+  }
+  statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">⚖ ${I18N.t('Vikt')}</span><span class="item-modal-stat-val">${(item.weight || 0).toFixed(1)} lbs × ${item.qty || 1} = ${((item.weight || 0) * (item.qty || 1)).toFixed(1)} lbs</span></div>`;
+  statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">📊 ${I18N.t('Sällsynthet')}</span><span class="item-modal-stat-val">${item.rarity === 'magic' ? '✦ ' : ''}${item.rarity || 'normal'}</span></div>`;
+  statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">📦 ${I18N.t('Status')}</span><span class="item-modal-stat-val">${item.equipped ? I18N.t('⚔ Buren') : I18N.t('🎒 I väska')}</span></div>`;
+
+  // Properties-taggar
+  let propsHtml = '';
+  const props = item.properties || [];
+  if (props.length) {
+    propsHtml = `<div class="item-modal-props">${props.map(p => `<span class="item-modal-prop-tag">${p}</span>`).join('')}</div>`;
+  }
+
+  // Beskrivning / effekter
+  let descHtml = '';
+  if (item.description) descHtml += `<div class="item-modal-desc">${item.description}</div>`;
+  if (item.effects) descHtml += `<div class="item-modal-desc" style="border-left-color:var(--arcane)">${item.effects}</div>`;
+
+  container.innerHTML = `
+    <div class="item-modal-overlay" onclick="closeItemModal(event)">
+      <div class="item-modal" onclick="event.stopPropagation()" style="position:relative">
+        <button class="item-modal-close" onclick="closeItemModal(event, true)">✕</button>
+        <div class="item-modal-header ${rarityCls}">${icon} ${item.name}</div>
+        <div class="item-modal-sub">${item.type || 'Annat'}${item.rarity && item.rarity !== 'normal' ? ' · ' + item.rarity : ''}</div>
+        ${statsHtml}
+        ${propsHtml}
+        ${descHtml}
+        <div class="item-modal-actions">
+          <button class="rune-btn" onclick="toggleEquip(${i});closeItemModal(null,true)">${item.equipped ? I18N.t('🎒 Packa ner') : I18N.t('⚔ Utrusta')}</button>
+          <button class="del-btn" onclick="removeItem(${i});closeItemModal(null,true)">${I18N.t('🗑 Släng')}</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function closeItemModal(e, force) {
+  if (force || (e && e.target && e.target.classList.contains('item-modal-overlay'))) {
+    document.getElementById('item-modal-container').innerHTML = '';
+  }
+}
+
+// Stäng modal med Escape
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeItemModal(null, true); });
+
+// ── D&D-egenskaper toggle ──
+function toggleAdvFields() {
+  const el = document.getElementById('add-adv-fields');
+  const btn = el.previousElementSibling;
+  el.classList.toggle('open');
+  btn.textContent = el.classList.contains('open') ? '▾ D&D-egenskaper (valfritt)' : '▸ D&D-egenskaper (valfritt)';
+}
+
 function toggleEquip(i) {
   state.inventory[i].equipped = !state.inventory[i].equipped;
   renderInventory();
@@ -1163,16 +1415,53 @@ function addItem(e) {
   e.preventDefault();
   const name = document.getElementById('add-name').value.trim();
   if (!name) return;
-  state.inventory.push({
-    name, type: document.getElementById('add-type').value,
+  const item = {
+    name,
+    type: document.getElementById('add-type').value,
     qty: parseInt(document.getElementById('add-qty').value) || 1,
     weight: parseFloat(document.getElementById('add-weight').value) || 1,
     equipped: false,
     rarity: document.getElementById('add-rarity').value || 'normal'
-  });
+  };
+  // D&D-egenskaper (valfritt — fylls bara i om fältet är synligt / ifyllt)
+  const dmg = document.getElementById('add-damage').value.trim();
+  if (dmg) {
+    item.damage = dmg;
+    // Försök separera dice och type: "1d8 slashing" → "1d8", "slashing"
+    const parts = dmg.split(/\s+/);
+    if (parts[0] && /\d+d\d+/.test(parts[0])) {
+      item.damage_dice = parts[0];
+      if (parts[1]) item.damage_type = parts.slice(1).join(' ');
+    }
+  }
+  const acVal = document.getElementById('add-ac').value;
+  if (acVal !== '') item.ac_bonus = parseInt(acVal) || null;
+  const rangeVal = document.getElementById('add-range').value.trim();
+  if (rangeVal) item.range = rangeVal;
+  const propsVal = document.getElementById('add-props').value.trim();
+  if (propsVal) item.properties = propsVal.split(',').map(s => s.trim()).filter(Boolean);
+  const mbVal = parseInt(document.getElementById('add-magic-bonus').value) || 0;
+  if (mbVal > 0) item.magic_bonus = mbVal;
+  const chVal = document.getElementById('add-charges').value;
+  if (chVal !== '') item.charges = parseInt(chVal) || 0;
+  const mchVal = document.getElementById('add-max-charges').value;
+  if (mchVal !== '') item.max_charges = parseInt(mchVal) || 0;
+  const descVal = document.getElementById('add-description').value.trim();
+  if (descVal) item.description = descVal;
+
+  state.inventory.push(item);
+  // Rensa fält
   document.getElementById('add-name').value = '';
   document.getElementById('add-weight').value = '1';
   document.getElementById('add-rarity').value = 'normal';
+  document.getElementById('add-damage').value = '';
+  document.getElementById('add-ac').value = '';
+  document.getElementById('add-range').value = '';
+  document.getElementById('add-props').value = '';
+  document.getElementById('add-magic-bonus').value = '0';
+  document.getElementById('add-charges').value = '';
+  document.getElementById('add-max-charges').value = '';
+  document.getElementById('add-description').value = '';
   renderInventory();
   toast('✦ ' + name + I18N.t(' tillagd i packningen'));
   syncInventory();

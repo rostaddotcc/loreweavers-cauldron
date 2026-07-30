@@ -306,6 +306,13 @@ Extrahera ALLA mekaniska effekter och uppdateringar.
 
 ### Föremål & Valuta
 - items_add: Föremål spelaren FÅR (tar, hittar, köper, stjäl). Ange name, type, qty.
+  Inkludera D&D-stats: damage (t.ex. "1d8 slashing"), damage_dice ("1d8"), damage_type ("slashing"),
+  ac_bonus (heltal, t.ex. 14 för kedjerustning), range ("melee", "ranged 30/120"),
+  properties (array: ["finesse","light"]), magic_bonus (0-3), charges, max_charges, description, effects.
+  Vapen ska ha damage/damage_dice/damage_type. Rustning ska ha ac_bonus. Magiska föremål ska ha charges/effects/magic_bonus.
+  Exempel vapen: {"name":"Långsvärd","type":"Vapen","qty":1,"damage":"1d8 slashing","damage_dice":"1d8","damage_type":"slashing","range":"melee","properties":["versatile"],"magic_bonus":0}
+  Exempel rustning: {"name":"Kedjerustning","type":"Rustning","qty":1,"ac_bonus":16,"description":"AC 16, stealth disadvantage"}
+  Exempel magiskt: {"name":"Eldtrollstav","type":"Magisk","qty":1,"damage":"2d6 fire","damage_dice":"2d6","damage_type":"fire","range":"ranged 120","magic_bonus":1,"charges":5,"max_charges":7,"effects":"Kan avfyra eldbollar"}
 - items_remove: Föremål spelaren FÖRLORAR (tappar, ger bort, säljer, förbrukar).
 - currency: Valutaändringar. Ange denom (pp/gp/sp/cp) och amount (+ för in, - för ut).
 
@@ -380,7 +387,7 @@ Generera art varannan tur — inte varje tur.
   "healing": [],
   "death": [],
   "xp": 0,
-  "items_add": [{"name": "...", "type": "Vapen", "qty": 1}],
+  "items_add": [{"name": "...", "type": "Vapen", "qty": 1, "damage": "1d8 slashing", "damage_dice": "1d8", "damage_type": "slashing", "ac_bonus": null, "range": "melee", "properties": ["versatile"], "magic_bonus": 0, "charges": null, "max_charges": null, "description": "", "effects": null}],
   "items_remove": [],
   "currency": [{"denom": "gp", "amount": 15}],
   "quests_new": [],
@@ -695,8 +702,18 @@ def apply_mechanics(state: dict, mech: dict) -> list[dict]:
                 "qty": qty,
                 "weight": 0,
                 "equipped": False,
-                "rarity": "normal",
-                "description": "",
+                "rarity": item.get("rarity", "normal"),
+                "description": item.get("description", ""),
+                "damage": item.get("damage", None),
+                "damage_dice": item.get("damage_dice", None),
+                "damage_type": item.get("damage_type", None),
+                "ac_bonus": item.get("ac_bonus", None),
+                "range": item.get("range", None),
+                "properties": item.get("properties", []),
+                "magic_bonus": int(item.get("magic_bonus", 0)),
+                "charges": item.get("charges", None),
+                "max_charges": item.get("max_charges", None),
+                "effects": item.get("effects", None),
             })
             logger.info("🛡️ Guardian: lade till '%s'", name)
         effects.append({"type": "föremål", "value": name, "qty": qty})

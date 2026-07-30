@@ -301,7 +301,10 @@ Extrahera ALLA mekaniska effekter och uppdateringar.
 - death: NPCs som dör i denna scen.
 
 ### Progression
-- xp: Erfarenhetspoäng spelaren förtjänar (strid, upptäckter, sociala segrar).
+- xp: Erfarenhetspoäng. ENDAST för: dråp/besegrade fiender, slutförda quests, \
+  stora story-milstolpar, lösande av komplexa pussel/gåtor. \
+  INTE för: vanliga NPC-samtal, titta på saker, gå från A till B, vila, köpa/sälja. \
+  Om spelaren bara pratade med en NPC eller undersökte något → 0 XP.
 - level_up: Sätt true om XP når nästa nivå.
 
 ### Föremål & Valuta
@@ -381,7 +384,10 @@ Generera art varannan tur — inte varje tur.
    "Du ser en bok" → INGET föremål. "Du läser boken" → INGET föremål (boken stannar). "Du plockar upp boken" → items_add. \
    "Du hittar en nyckel" → bara om spelaren tar den. "Du öppnar asken" → INGET föremäl om spelaren bara tittar i den.
 4. Skippa föremål som redan finns i inventory (nedan) om de inte ges/tas igen.
-5. XP ska vara rimligt: 50-100 för enkel strid, 200-500 för svår, 25-50 för upptäckt.
+5. XP: ENDAST vid: dråp (50-200 per fiende), slutfört quest (100-500), \
+   story-milstolpe (50-300), komplex pussellösning (25-100). \
+   ALDRIG XP för: NPC-samtal, undersökning, gång, vila, handel, vanliga interaktioner. \
+   Noll XP är normalt — de flesta turer ger ingen XP.
 6. Returnera ENDAST ett JSON-objekt. Inga förklaringar.
 7. NPC-UPPDATERINGAR: Var AGGRESSIV med att uppdatera NPC-kort. Om en NPC nämns \
    i konversationen och du kan härleda ny information (namn, roll, relation, \

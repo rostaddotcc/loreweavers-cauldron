@@ -1003,19 +1003,39 @@ def _sanitize_mechanics(mech: dict) -> dict:
 # 4. FORMATERING — läsbar Guardian-rapport
 # ═══════════════════════════════════════
 
-def format_guardian_summary(effects: list[dict], state: dict, language: str = "sv") -> str:
+def format_guardian_summary(
+    effects: list[dict],
+    state: dict,
+    language: str = "sv",
+    mech: dict | None = None,
+    dm_npcs: list[dict] | None = None,
+    turn: int = 0,
+) -> str:
     """
-    Format Guardian effects as a readable report for the chat.
-    Returns empty string if no effects. Language-aware (sv/en).
+    Format ALL Guardian actions as a detailed timeline for the chat.
+    Includes: effects, DM-tag NPCs, logbook, time, rest, day changes.
+    Returns empty string only if truly nothing happened.
     """
-    if not effects:
-        return ""
-
     en = language == "en"
     lines: list[str] = []
     ch = state.get("character", {})
     hp = ch.get("hp", {})
+    mech = mech or {}
 
+    # ── DM-taggar: NPCs som DM introducerade direkt ──
+    for npc in (dm_npcs or []):
+        name = npc.get("name", "?")
+        role = npc.get("role", "")
+        relation = npc.get("relation", "")
+        detail = f" ({role})" if role else ""
+        if relation:
+            detail += f" · {relation}"
+        if en:
+            lines.append(f"🧙 **New character:** {name}{detail}")
+        else:
+            lines.append(f"🧙 **Ny gestalt:** {name}{detail}")
+
+    # ── Mekaniska effekter (från apply_mechanics) ──
     for e in effects:
         t = e.get("type", "")
         v = e.get("value", "")
@@ -1037,11 +1057,15 @@ def format_guardian_summary(effects: list[dict], state: dict, language: str = "s
             else:
                 lines.append(f"🎉 **NIVÅ UPP → {v}!**")
         elif t == "föremål":
+            qty = e.get("qty", 1)
+            qty_str = f" ×{qty}" if qty > 1 else ""
             label = "New item:" if en else "Nytt föremål:"
-            lines.append(f"📦 **{label}** {v}")
+            lines.append(f"📦 **{label}** {v}{qty_str}")
         elif t == "föremål_bort":
+            qty = e.get("qty", 1)
+            qty_str = f" ×{qty}" if qty > 1 else ""
             label = "Item removed:" if en else "Föremål bort:"
-            lines.append(f"🗑️ **{label}** {v}")
+            lines.append(f"🗑️ **{label}** {v}{qty_str}")
         elif t == "guld":
             denom = e.get("denom", "gp")
             sign = "+" if int(v) >= 0 else ""
@@ -1112,7 +1136,27 @@ def format_guardian_summary(effects: list[dict], state: dict, language: str = "s
                 if ds.get("mood"):
                     lines.append(f"  🎭 *{ds['mood']}*")
 
+    # ── Icke-effekt-data från mech (loggbok, tid, vila) ──
+    logbook = mech.get("logbook", "")
+    if logbook and not any("📖" in l for l in lines):
+        lb_label = "Journal" if en else "Loggbok"
+        lines.append(f"📖 **{lb_label}:** {logbook}")
+
+    time_passed = mech.get("time_passed")
+    if time_passed and not any("🕐" in l for l in lines):
+        tp_label = "Time passes" if en else "Tid förflyter"
+        lines.append(f"🕐 **{tp_label}:** {time_passed}")
+
+    rest = mech.get("rest")
+    if rest:
+        if rest == "long":
+            lines.append("🏕️ **Lång vila** — HP återställd" if not en else "🏕️ **Long rest** — HP restored")
+        elif rest == "short":
+            lines.append("⛺ **Kort vila**" if not en else "⛺ **Short rest**")
+
     if not lines:
         return ""
 
-    return "🛡️ **Guardian**\n" + "\n".join(lines)
+    turn_label = f" · {('Turn' if en else 'Tur')} {turn}" if turn else ""
+    header = "🛡️ **Guardian**" + turn_label
+    return header + "\n" + "\n".join(lines)

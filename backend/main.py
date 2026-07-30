@@ -54,6 +54,12 @@ _ring = _RingBufferHandler(level=logging.DEBUG)
 logger.addHandler(_ring)
 logger.setLevel(logging.DEBUG)
 
+# StreamHandler → stdout (syns i docker logs)
+_stream = logging.StreamHandler()
+_stream.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%H:%M:%S"))
+_stream.setLevel(logging.INFO)
+logger.addHandler(_stream)
+
 import httpx
 from fastapi import Cookie, FastAPI, File, Form, HTTPException, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -2087,14 +2093,26 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
                     existing.append(ge)
             meta["last_effects"] = existing
 
-            # Formatera läsbar rapport
-            guardian_summary = format_guardian_summary(guardian_effects, state, language=_get_lang(state))
-            if guardian_summary:
-                # Spara i transkriptet (role=guardian → syns i chatten + DM-kontext)
-                state = store.append_message(state, "guardian", guardian_summary)
-                logger.info("🛡️ Guardian inline (%.1fs): %d effekter", time.time() - _tg, len(guardian_effects))
+        # ── Tidslinje: ALLT Guardian gör syns i chatten ──
+        # Inkluderar: mekaniska effekter, DM-introducerade NPCs,
+        # loggbok, tidsförflyttning, vila — även utan "effects".
+        guardian_summary = format_guardian_summary(
+            guardian_effects, state,
+            language=_get_lang(state),
+            mech=mech,
+            dm_npcs=new_npcs,
+            turn=effective_turn,
+        )
+        if guardian_summary:
+            # Spara i transkriptet (role=guardian → syns i chatten + DM-kontext)
+            state = store.append_message(state, "guardian", guardian_summary)
+            logger.info("🛡️ Guardian inline (%.1fs): %d effekter, %d DM-NPCs, loggbok=%s",
+                        time.time() - _tg, len(guardian_effects), len(new_npcs),
+                        "ja" if mech.get("logbook") else "nej")
+        else:
+            logger.info("🛡️ Guardian inline (%.1fs): inga ändringar att rapportera", time.time() - _tg)
     except Exception as e:
-        logger.warning("🛡️ Guardian post-DM hoppade över: %s", e)
+        logger.warning("🛡️ Guardian post-DM hoppade över: %s", e, exc_info=True)
 
     store.save(state)
 

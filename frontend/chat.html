@@ -1888,7 +1888,11 @@ async function answerRollRequest(id, notation, label) {
     const res = await API.chat(resultMsg, currentModel);
     hideThoughts();
     if (res.reply) addMessage('dm', null, res.reply);
-    if (res.guardian_summary) addMessage('guardian', null, res.guardian_summary);
+    if (res.guardian_pending) {
+      pollForGuardian(res.turn_count);
+    } else if (res.guardian_summary) {
+      addMessage('guardian', null, res.guardian_summary);
+    }
     if (res.roll_requests && res.roll_requests.length) {
       res.roll_requests.forEach(r => addRollRequest(r.notation, r.label));
     }
@@ -2407,8 +2411,11 @@ async function dmRespond(playerText) {
       renderEffects(res.effects, res.turn_count);
     }
 
-    // Guardian-rapport (mekaniska ändringar synliga i chatten)
-    if (res.guardian_summary) {
+    // Guardian-rapport: körs nu i bakgrunden → polla transkriptet
+    if (res.guardian_pending) {
+      pollForGuardian(res.turn_count);
+    } else if (res.guardian_summary) {
+      // Bakåtkompatibilitet: om backend fortfarande skickar inline
       addMessage('guardian', null, res.guardian_summary);
     }
 
@@ -2434,6 +2441,46 @@ async function dmRespond(playerText) {
     isResponding = false;
     document.querySelector('.send-btn')?.removeAttribute('disabled');
   }
+}
+
+// ═══════════════════════════════════════
+// GUARDIAN POLLING — hämtar rapporten ur transkriptet
+// ═══════════════════════════════════════
+let _guardianPollTimer = null;
+
+function pollForGuardian(turnCount) {
+  // Stoppa eventuell tidigare polling
+  if (_guardianPollTimer) { clearInterval(_guardianPollTimer); _guardianPollTimer = null; }
+
+  let attempts = 0;
+  const maxAttempts = 15; // 15 × 2s = 30s max
+
+  _guardianPollTimer = setInterval(async () => {
+    attempts++;
+    try {
+      const data = await API.getTranscript();
+      const messages = data.messages || [];
+      // Hitta senaste guardian-meddelandet
+      const lastGuardian = [...messages].reverse().find(m => m.role === 'guardian');
+      if (lastGuardian) {
+        // Kontrollera att den inte redan visas
+        const existing = [...chat.querySelectorAll('.msg.guardian')].pop();
+        const alreadyShown = existing && existing.querySelector('.guardian-box')?.textContent.trim() === lastGuardian.content.trim();
+        if (!alreadyShown) {
+          addMessage('guardian', null, lastGuardian.content);
+          SFX.click();
+        }
+        clearInterval(_guardianPollTimer);
+        _guardianPollTimer = null;
+        return;
+      }
+    } catch (e) { /* tyst */ }
+
+    if (attempts >= maxAttempts) {
+      clearInterval(_guardianPollTimer);
+      _guardianPollTimer = null;
+    }
+  }, 2000);
 }
 
 // ═══════════════════════════════════════

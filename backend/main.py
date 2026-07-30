@@ -1673,6 +1673,68 @@ async def _generate_day_entry(username: str, campaign_id: str, prev_day: int) ->
         logger.warning("📖 Dag-entry misslyckades: %s", e)
 
 
+
+# ── Guardian POST-DM: kör i bakgrunden, blockerar ALDRIG HTTP-svaret ──
+async def _guardian_post_dm(
+    username: str, reply: str, player_msg: str,
+    effective_turn: int, dm_npcs: list[dict],
+) -> None:
+    """Extraherar mekanik ur DM-svaret i bakgrunden.
+    Uppdaterar state, sparar Guardian-rapport i transkriptet.
+    Frontend pollar transkriptet för att visa rapporten."""
+    try:
+        state = store.get(username)
+        if not state:
+            return
+        meta = state.setdefault("meta", {})
+        turn_count = meta.get("turn_count", 0)
+
+        _tg = time.time()
+        _guardian_transcript = store.load_transcript(state, last_n=8)
+        mech = await guardian_extract_mechanics(
+            reply, player_msg, state, effective_turn,
+            lambda msgs: _call_llm(GUARDIAN_MODEL, msgs, temperature=0.2, max_tokens=1500),
+            language=_get_lang(state),
+            conversation_history=_guardian_transcript,
+        )
+        guardian_effects = apply_mechanics(state, mech)
+
+        # ASCII-art (avstängd tills vidare)
+        if ATMOSPHERE_ENABLED:
+            guardian_art = mech.get("ascii_art")
+            if guardian_art and should_generate_art(meta, turn_count):
+                meta["last_art_turn"] = turn_count
+                logger.info("🛡️ Guardian-art (%.1fs)", time.time() - _tg)
+
+        if guardian_effects:
+            existing = meta.get("last_effects", [])
+            existing_keys = {(e.get("type"), str(e.get("value"))) for e in existing}
+            for ge in guardian_effects:
+                key = (ge.get("type"), str(ge.get("value")))
+                if key not in existing_keys:
+                    existing.append(ge)
+            meta["last_effects"] = existing
+
+        guardian_summary = format_guardian_summary(
+            guardian_effects, state,
+            language=_get_lang(state),
+            mech=mech,
+            dm_npcs=dm_npcs,
+            turn=effective_turn,
+        )
+        if guardian_summary:
+            state = store.append_message(state, "guardian", guardian_summary)
+            logger.info("🛡️ Guardian bakgrund (%.1fs): %d effekter, %d DM-NPCs, loggbok=%s",
+                        time.time() - _tg, len(guardian_effects), len(dm_npcs),
+                        "ja" if mech.get("logbook") else "nej")
+        else:
+            logger.info("🛡️ Guardian bakgrund (%.1fs): inga ändringar", time.time() - _tg)
+
+        store.save(state)
+    except Exception as e:
+        logger.warning("🛡️ Guardian bakgrund hoppade över: %s", e, exc_info=True)
+
+
 # ── Bakgrundsuppgifter efter ett DM-svar (icke-kritiska, blockerar ALDRIG svaret) ──
 async def _post_turn_tasks(
     username: str, campaign_id: str, reply: str, player_msg: str,
@@ -2082,84 +2144,15 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         "time": _llm_time,
     })
 
-    # ── Guardian POST-DM: mekanisk extraktion + ASCII-art (INLINE) ──
-    guardian_summary = ""
-    try:
-        _tg = time.time()
-        # Hämta senaste konversationshistorik för kontextmedveten extraktion
-        _guardian_transcript = store.load_transcript(state, last_n=8)
-        mech = await guardian_extract_mechanics(
-            reply, req.message, state, effective_turn,
-            lambda msgs: _call_llm(GUARDIAN_MODEL, msgs, temperature=0.2, max_tokens=1500),
-            language=_get_lang(state),
-            conversation_history=_guardian_transcript,
-        )
-        guardian_effects = apply_mechanics(state, mech)
-
-        # ASCII-art från Guardian (ersätter atmosfär-LLM) — avstängd tills vidare
-        if ATMOSPHERE_ENABLED:
-            guardian_art = mech.get("ascii_art")
-            if guardian_art and should_generate_art(meta, turn_count):
-                ascii_art = guardian_art
-                art_type = "ambient"
-                meta["last_art_turn"] = turn_count
-                logger.info("🛡️ Guardian-art (%.1fs, %d rader)", time.time() - _tg, ascii_art.count('\n') + 1)
-            elif should_generate_art(meta, turn_count):
-                # Fallback: förgenererad art-bank
-                environments = detect_environments(reply)
-                if environments:
-                    ascii_art = get_fallback_art(environments[0])
-                    if ascii_art:
-                        art_type = "ambient"
-                        meta["last_art_turn"] = turn_count
-                        logger.info("🎨 Fallback-art: %s", environments[0])
-
-        if guardian_effects:
-            # Lägg till i last_effects (för nästa turs prompt)
-            meta = state.setdefault("meta", {})
-            existing = meta.get("last_effects", [])
-            existing_keys = {(e.get("type"), str(e.get("value"))) for e in existing}
-            for ge in guardian_effects:
-                key = (ge.get("type"), str(ge.get("value")))
-                if key not in existing_keys:
-                    existing.append(ge)
-            meta["last_effects"] = existing
-
-        # ── Tidslinje: ALLT Guardian gör syns i chatten ──
-        # Inkluderar: mekaniska effekter, DM-introducerade NPCs,
-        # loggbok, tidsförflyttning, vila — även utan "effects".
-        guardian_summary = format_guardian_summary(
-            guardian_effects, state,
-            language=_get_lang(state),
-            mech=mech,
-            dm_npcs=new_npcs,
-            turn=effective_turn,
-        )
-        if guardian_summary:
-            # Spara i transkriptet (role=guardian → syns i chatten + DM-kontext)
-            state = store.append_message(state, "guardian", guardian_summary)
-            logger.info("🛡️ Guardian inline (%.1fs): %d effekter, %d DM-NPCs, loggbok=%s",
-                        time.time() - _tg, len(guardian_effects), len(new_npcs),
-                        "ja" if mech.get("logbook") else "nej")
-        else:
-            logger.info("🛡️ Guardian inline (%.1fs): inga ändringar att rapportera", time.time() - _tg)
-
-        # Merge Guardian-extraherade NPCs → new_npcs (frontend sidebar update)
-        # Sker EFTER format_guardian_summary så de inte dupliceras i rapporten
-        # (rapporten visar dem via npc_new-effekten, sidebar via new_npcs)
-        for ge in guardian_effects:
-            if ge.get("type") == "npc_new":
-                npc_name = ge.get("value", "")
-                if npc_name and not any(n.get("name", "").lower() == npc_name.lower() for n in new_npcs):
-                    new_npcs.append({
-                        "name": npc_name,
-                        "role": ge.get("role", "Okänd"),
-                        "relation": ge.get("relation", "okänd"),
-                    })
-    except Exception as e:
-        logger.warning("🛡️ Guardian post-DM hoppade över: %s", e, exc_info=True)
-
+    # ── Spara DM-svar + effekter (Guardian kör i bakgrunden) ──
     store.save(state)
+
+    # ── Guardian POST-DM → BAKGRUND (blockerar ALDRIG HTTP-svaret) ──
+    guardian_task = asyncio.create_task(_guardian_post_dm(
+        username, reply, req.message, effective_turn, list(new_npcs),
+    ))
+    _BACKGROUND_TASKS.add(guardian_task)
+    guardian_task.add_done_callback(_BACKGROUND_TASKS.discard)
 
     # ── Fas 3: Faktextraktion + RAG + sammanfattning → BAKGRUND ──
     # Dessa är icke-kritiska och får ALDRIG fördröja HTTP-svaret till klienten.
@@ -2194,7 +2187,8 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         "ascii_art": ascii_art,
         "art_type": art_type,
         "effects": effects,
-        "guardian_summary": guardian_summary,
+        "guardian_summary": "",
+        "guardian_pending": True,
     }
 
 

@@ -500,6 +500,7 @@ COOKIE_NAME = "morkrets_token"
 
 # Atmosfär-subagent: snabb modell för ASCII-art
 ATMOSPHERE_MODEL = os.getenv("ATMOSPHERE_MODEL", "mimo-v2.5")
+ATMOSPHERE_ENABLED = os.getenv("ATMOSPHERE_ENABLED", "0") == "1"
 EXTRACTION_MODEL = os.getenv("EXTRACTION_MODEL", "qwen3.6-flash")
 # Guardian: smartare modell för kontextmedveten mekanisk extraktion
 # (NPC-avslöjanden, implicita relationsändringar, karaktärsuppdateringar)
@@ -2095,22 +2096,23 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         )
         guardian_effects = apply_mechanics(state, mech)
 
-        # ASCII-art från Guardian (ersätter atmosfär-LLM)
-        guardian_art = mech.get("ascii_art")
-        if guardian_art and should_generate_art(meta, turn_count):
-            ascii_art = guardian_art
-            art_type = "ambient"
-            meta["last_art_turn"] = turn_count
-            logger.info("🛡️ Guardian-art (%.1fs, %d rader)", time.time() - _tg, ascii_art.count('\n') + 1)
-        elif should_generate_art(meta, turn_count):
-            # Fallback: förgenererad art-bank
-            environments = detect_environments(reply)
-            if environments:
-                ascii_art = get_fallback_art(environments[0])
-                if ascii_art:
-                    art_type = "ambient"
-                    meta["last_art_turn"] = turn_count
-                    logger.info("🎨 Fallback-art: %s", environments[0])
+        # ASCII-art från Guardian (ersätter atmosfär-LLM) — avstängd tills vidare
+        if ATMOSPHERE_ENABLED:
+            guardian_art = mech.get("ascii_art")
+            if guardian_art and should_generate_art(meta, turn_count):
+                ascii_art = guardian_art
+                art_type = "ambient"
+                meta["last_art_turn"] = turn_count
+                logger.info("🛡️ Guardian-art (%.1fs, %d rader)", time.time() - _tg, ascii_art.count('\n') + 1)
+            elif should_generate_art(meta, turn_count):
+                # Fallback: förgenererad art-bank
+                environments = detect_environments(reply)
+                if environments:
+                    ascii_art = get_fallback_art(environments[0])
+                    if ascii_art:
+                        art_type = "ambient"
+                        meta["last_art_turn"] = turn_count
+                        logger.info("🎨 Fallback-art: %s", environments[0])
 
         if guardian_effects:
             # Lägg till i last_effects (för nästa turs prompt)
@@ -2141,6 +2143,19 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
                         "ja" if mech.get("logbook") else "nej")
         else:
             logger.info("🛡️ Guardian inline (%.1fs): inga ändringar att rapportera", time.time() - _tg)
+
+        # Merge Guardian-extraherade NPCs → new_npcs (frontend sidebar update)
+        # Sker EFTER format_guardian_summary så de inte dupliceras i rapporten
+        # (rapporten visar dem via npc_new-effekten, sidebar via new_npcs)
+        for ge in guardian_effects:
+            if ge.get("type") == "npc_new":
+                npc_name = ge.get("value", "")
+                if npc_name and not any(n.get("name", "").lower() == npc_name.lower() for n in new_npcs):
+                    new_npcs.append({
+                        "name": npc_name,
+                        "role": ge.get("role", "Okänd"),
+                        "relation": ge.get("relation", "okänd"),
+                    })
     except Exception as e:
         logger.warning("🛡️ Guardian post-DM hoppade över: %s", e, exc_info=True)
 

@@ -513,6 +513,13 @@
   }
   .msg.guardian .guardian-box strong { color: var(--gold-bright); }
 
+  /* ── DM footer: model · tokens · time ── */
+  .dm-footer {
+    font-size: .6rem; color: rgba(160,150,130,.45); margin-top: .3rem;
+    font-family: 'Courier New', monospace; letter-spacing: .03em;
+    text-align: right;
+  }
+
   /* ═══════════ ASCII-ART (atmosfär) — DOS/CRT-stil ═══════════ */
   .ascii-art {
     position: relative;
@@ -1032,8 +1039,8 @@
   }
 </style>
 <link rel="stylesheet" href="snes.css">
-<script src="sprites.js?v=20260730d"></script>
-<script src="fonts.js?v=20260730d"></script>
+<script src="sprites.js?v=20260730e"></script>
+<script src="fonts.js?v=20260730e"></script>
 </head>
 <body>
 <div class="grain"></div>
@@ -1216,10 +1223,10 @@
   </div>
 </div>
 
-<script src="sfx.js?v=20260730d"></script>
-<script src="music.js?v=20260730d"></script>
-<script src="api.js?v=20260730d"></script>
-<script src="i18n.js?v=20260730d"></script>
+<script src="sfx.js?v=20260730e"></script>
+<script src="music.js?v=20260730e"></script>
+<script src="api.js?v=20260730e"></script>
+<script src="i18n.js?v=20260730e"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -1406,8 +1413,8 @@ function refreshAvatars() {
 // ═══════════════════════════════════════
 const chat = document.getElementById('chat');
 
-function addMessage(type, npcKey, text) {
-  const el = buildMessage(type, npcKey, text);
+function addMessage(type, npcKey, text, meta) {
+  const el = buildMessage(type, npcKey, text, meta);
   if (!el) return null;
 
   // Ljud (spelas ej vid batch-rendering via buildMessage)
@@ -1429,12 +1436,19 @@ function addMessage(type, npcKey, text) {
 
 // Bygg ett meddelandeelement UTAN att appenda eller spela ljud.
 // Används för batch-rendering (loadTranscript) → en enda reflow, inget ljudspam.
-function buildMessage(type, npcKey, text) {
+function buildMessage(type, npcKey, text, meta) {
   const el = document.createElement('div');
   el.className = 'msg ' + type;
 
   if (type === 'dm') {
-    el.innerHTML = `${avatarHtml('dm', '🧙‍♂️')}<div class="bubble"><button class="tts-btn" title="Spela upp ljud" onclick="playTTS(this)">🔊</button><div class="who">Dungeon Master</div><div class="text">${mdToHtml(escapeHtml(text))}</div></div>`;
+    let footer = '';
+    if (meta && (meta.model || meta.tokens || meta.time)) {
+      const mn = (typeof modelNames !== 'undefined' && modelNames[meta.model]) || meta.model || '?';
+      const tok = meta.tokens ? `${meta.tokens.total_tokens || '?'} tkn` : '';
+      const spd = meta.time ? `${meta.time}s` : '';
+      footer = `<div class="dm-footer">${[mn, tok, spd].filter(Boolean).join(' · ')}</div>`;
+    }
+    el.innerHTML = `${avatarHtml('dm', '🧙‍♂️')}<div class="bubble"><button class="tts-btn" title="Spela upp ljud" onclick="playTTS(this)">🔊</button><div class="who">Dungeon Master</div><div class="text">${mdToHtml(escapeHtml(text))}</div>${footer}</div>`;
   } else if (type === 'npc') {
     const n = NPCS[npcKey] || { name: npcKey || 'Okänd', color: npcColorFor(npcKey || 'Okänd'), icon: '🎭', role: '' };
     el.style.setProperty('--npc-color', n.color);
@@ -1853,6 +1867,88 @@ function diceMessage(roll, label) {
 // den sparas i transkriptet men visas aldrig i chatten.
 const AWAKENING_TRIGGER = '__VAKNA_DM__';
 
+// ── Modellgate: välj DM innan vaknandet ──
+function showModelGate() {
+  const en = (typeof I18N !== 'undefined' && I18N.getLang() === 'en');
+  const title = en ? '⚔️ Choose your Dungeon Master' : '⚔️ Välj din spelledare';
+  const sub = en
+    ? 'This AI model will narrate your entire adventure.'
+    : 'Denna AI-modell kommer att berätta hela ditt äventyr.';
+  const btnLabel = en ? '⚔️ Begin the Adventure' : '⚔️ Påbörja äventyret';
+
+  const opts = Object.entries(modelNames).map(([id, name]) => {
+    const sel = id === currentModel ? ' selected' : '';
+    return `<option value="${id}"${sel}>${name}</option>`;
+  }).join('');
+
+  const gate = document.createElement('div');
+  gate.id = 'model-gate';
+  gate.innerHTML = `
+    <style>
+      #model-gate {
+        position: fixed; inset: 0; z-index: 9999;
+        background: rgba(5,3,10,.96);
+        display: flex; align-items: center; justify-content: center;
+        animation: fadeIn .5s ease;
+      }
+      #model-gate .gate-card {
+        background: linear-gradient(145deg, #12101a, #0d0b14);
+        border: 1px solid rgba(201,162,39,.35);
+        border-radius: 8px; padding: 2.5rem 2.2rem 2rem;
+        max-width: 420px; width: 90%; text-align: center;
+        box-shadow: 0 0 60px rgba(201,162,39,.08), inset 0 1px 0 rgba(255,255,255,.04);
+      }
+      #model-gate h2 {
+        font-family: 'Cinzel', serif; color: var(--gold-bright);
+        font-size: 1.15rem; margin: 0 0 .5rem; letter-spacing: .06em;
+      }
+      #model-gate p {
+        color: rgba(180,170,150,.6); font-size: .75rem; margin: 0 0 1.5rem;
+        line-height: 1.5;
+      }
+      #model-gate select {
+        width: 100%; padding: .6rem .8rem; font-size: .85rem;
+        background: #1a1725; color: var(--bone);
+        border: 1px solid rgba(201,162,39,.3); border-radius: 4px;
+        cursor: pointer; margin-bottom: 1.2rem;
+        font-family: 'Courier New', monospace;
+      }
+      #model-gate select:focus { outline: none; border-color: var(--gold); }
+      #model-gate button {
+        font-family: 'Cinzel', serif; font-size: .85rem;
+        padding: .65rem 2rem; cursor: pointer;
+        background: linear-gradient(135deg, #c9a227, #a07d1c);
+        color: #0d0b14; border: none; border-radius: 4px;
+        font-weight: 700; letter-spacing: .05em;
+        transition: all .2s;
+      }
+      #model-gate button:hover {
+        background: linear-gradient(135deg, #e8c84a, #c9a227);
+        box-shadow: 0 0 20px rgba(201,162,39,.3);
+        transform: translateY(-1px);
+      }
+    </style>
+    <div class="gate-card">
+      <h2>${title}</h2>
+      <p>${sub}</p>
+      <select id="gate-model">${opts}</select>
+      <br>
+      <button onclick="beginAdventure()">${btnLabel}</button>
+    </div>`;
+  document.body.appendChild(gate);
+}
+
+function beginAdventure() {
+  const sel = document.getElementById('gate-model');
+  currentModel = sel.value;
+  localStorage.setItem('dnd_model', currentModel);
+  const picker = document.getElementById('model-picker');
+  if (picker) picker.value = currentModel;
+  document.getElementById('model-gate').remove();
+  addMessage('system', null, '🕯️ <b>Dungeon Master vaknar…</b> Mörkret rör på sig.');
+  dmRespond(AWAKENING_TRIGGER);
+}
+
 async function loadTranscript() {
   // Rensa chatten INNAN rendering — förhindrar stale DOM från bfcache,
   // kampanjbyte eller tidigare session. Utan detta läcker gamla meddelanden in.
@@ -1870,7 +1966,7 @@ async function loadTranscript() {
           ? buildMessage('player', null, escapeHtml(m.content))
           : (m.role === 'guardian')
             ? buildMessage('guardian', null, m.content)
-            : buildMessage('dm', null, m.content);
+            : buildMessage('dm', null, m.content, m.meta);
         if (el) frag.appendChild(el);
       });
       chat.appendChild(frag);
@@ -1884,9 +1980,8 @@ async function loadTranscript() {
     }
   } catch (e) { /* Ingen historik eller fel — fortsätt till vaknandet */ }
 
-  // Tomt transkript → DM vaknar: skicka trigger, DM ställer sina frågor
-  addMessage('system', null, '🕯️ <b>Dungeon Master vaknar…</b> Mörkret rör på sig.');
-  dmRespond(AWAKENING_TRIGGER);
+  // Tomt transkript → visa modellgate innan DM vaknar
+  showModelGate();
 }
 
 // ═══════════════════════════════════════
@@ -2236,7 +2331,7 @@ async function dmRespond(playerText) {
     }
 
     // Visa svaret som DM-narration
-    addMessage('dm', null, reply);
+    addMessage('dm', null, reply, { model: res.model_id, tokens: res.tokens, time: res.response_time });
 
     // Stämningsdetektering → byt musikloop
     const detectedMood = MUSIC.detectMood(reply);

@@ -187,7 +187,7 @@ class CampaignStore:
 
     # ── Transcript ──
 
-    def append_message(self, state: dict, role: str, content: str) -> dict:
+    def append_message(self, state: dict, role: str, content: str, meta: dict | None = None) -> dict:
         """Lägg till meddelande i transcript. Uppdaterar turn_count vid user-msg."""
         user = state["meta"]["user"]
         cid = state["meta"]["campaign_id"]
@@ -198,6 +198,8 @@ class CampaignStore:
         tfile = tdir / f"session-{session:03d}.jsonl"
 
         entry = {"role": role, "content": content, "ts": _now()}
+        if meta:
+            entry["meta"] = meta
         with open(tfile, "a") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 

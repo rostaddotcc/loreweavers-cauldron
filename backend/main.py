@@ -795,9 +795,9 @@ async def _call_llm_with_reasoning(
     temperature: float = 0.8,
     max_tokens: int = 1024,
     timeout: float = 180,
-) -> tuple[str, str]:
+) -> tuple[str, str, dict]:
     """Som _call_llm men fångar även reasoning-modellens inre monolog
-    (reasoning_content). Returnerar (content, reasoning). Används för
+    (reasoning_content). Returnerar (content, reasoning, usage). Används för
     huvud-DM-anropet så spelaren kan se hur DM:n resonerar."""
     config = get_model(model_id)
     api_key = get_api_key(config)
@@ -833,7 +833,7 @@ async def _call_llm_with_reasoning(
             raise RuntimeError(
                 "Modellen returnerade tomt svar (reasoning-modell?)"
             )
-        return content, reasoning
+        return content, reasoning, data.get("usage", {})
 
 
 def _extract_json(text: str) -> dict:
@@ -1911,8 +1911,9 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     _tllm = time.time()
     reasoning = ""
     try:
-        reply, reasoning = await _call_llm_with_reasoning(req.model_id, messages)
-        logger.info("🤖 DM svarade (%d tkn, %.1fs)", len(reply), time.time() - _tllm)
+        reply, reasoning, usage = await _call_llm_with_reasoning(req.model_id, messages)
+        _llm_time = round(time.time() - _tllm, 1)
+        logger.info("🤖 DM svarade (%d tkn, %.1fs)", len(reply), _llm_time)
         if reasoning:
             logger.debug("💭 DM resonerade (%d tkn)", len(reasoning))
     except HTTPException:
@@ -2049,7 +2050,11 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         logger.warning("🎲 Prosa-kast 'Kast:' upptäckt → auto-spawnar 1d20")
 
     # Spara DM-svar (ren text — inga taggar eller intern struktur)
-    state = store.append_message(state, "assistant", reply)
+    state = store.append_message(state, "assistant", reply, meta={
+        "model": req.model_id,
+        "tokens": usage,
+        "time": _llm_time,
+    })
 
     # ── Guardian POST-DM: mekanisk extraktion + ASCII-art (INLINE) ──
     guardian_summary = ""
@@ -2139,6 +2144,9 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     return {
         "reply": reply,
         "reasoning": reasoning[:3000] if reasoning else "",
+        "model_id": req.model_id,
+        "tokens": usage,
+        "response_time": _llm_time,
         "turn_count": state["meta"]["turn_count"],
         "summary_generated": False,  # körs nu i bakgrunden
         "new_npcs": new_npcs,

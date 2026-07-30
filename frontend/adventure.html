@@ -10,10 +10,10 @@
 <style>
   :root{
     --ink:#08080d;--stone:#0e0e14;--stone-2:#12121a;--stone-3:#181822;
-    --edge:#2a2a3a;--edge-hi:#3a3a50;--bone:#b8b8c8;--bone-bright:#e0e0ec;--bone-dim:#6a6a80;
+    --edge:#2a2a3a;--bone:#b8b8c8;--bone-bright:#e0e0ec;--bone-dim:#6a6a80;
     --gold:#c9a227;--gold-bright:#e8c65a;--blood:#8b1a2a;--blood-bright:#d43a4d;
     --ember:#d4691e;--arcane:#7b4fd4;--poison:#5a9a4e;--teal:#4e8a93;
-    --term-green:#33cc33;--term-amber:#ccaa33;
+  }
   }
   *{margin:0;padding:0;box-sizing:border-box}
   body{
@@ -44,7 +44,6 @@
   .head{text-align:center;margin:1.4rem 0 2.8rem}
   .head .over{font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.42em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.55rem}
   .head h1{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(1.8rem,5vw,2.7rem);color:var(--bone-bright);letter-spacing:.05em;text-shadow:0 2px 0 #000,0 0 24px rgba(232,198,90,.25);animation:candle 5s ease-in-out infinite}
-  @keyframes candle{0%,100%{text-shadow:0 2px 0 #000,0 0 24px rgba(232,198,90,.25)}42%{text-shadow:0 2px 0 #000,0 0 32px rgba(232,198,90,.4)}76%{text-shadow:0 2px 0 #000,0 0 26px rgba(212,105,30,.35)}}
   .head .sub{font-style:italic;color:var(--bone-dim);font-size:.92rem;margin-top:.5rem}
   .rune-divider{display:flex;align-items:center;gap:.9rem;margin:1rem auto 0;max-width:380px}
   .rune-divider::before,.rune-divider::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.5}

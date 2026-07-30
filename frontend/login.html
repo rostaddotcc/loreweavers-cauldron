@@ -8,13 +8,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
 <style>
+  /* ══ :root aligned with snes.css Terminal Gothic v3 ══ */
   :root {
     --ink: #08080d;
     --stone: #0e0e14;
     --stone-2: #12121a;
     --stone-3: #181822;
     --edge: #2a2a3a;
-    --edge-hi: #3a3a50;
     --bone: #b8b8c8;
     --bone-bright: #e0e0ec;
     --bone-dim: #6a6a80;
@@ -35,10 +35,10 @@
     color: var(--bone);
     min-height: 100vh;
     display: flex; align-items: center; justify-content: center;
-    background: var(--ink);
     overflow: hidden;
   }
 
+  /* ── Atmosphere layers (survive snes.css) ── */
   .grain {
     position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.045;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
@@ -46,62 +46,65 @@
   #embers { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
   .vignette { position: fixed; inset: 0; z-index: 1; pointer-events: none; box-shadow: inset 0 0 200px 80px rgba(4,2,8,0.9); }
 
-  /* ── Mystical fog (unique class — NOT killed by snes.css) ── */
+  /* ── Atmospheric fog (.myst-fog — not killed by snes.css .fog rule) ── */
   .myst-fog {
-    position: fixed; inset: -20%; z-index: 0; pointer-events: none;
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
   }
   .myst-fog::before, .myst-fog::after {
-    content: ''; position: absolute; width: 70vw; height: 70vh; border-radius: 50%;
-    filter: blur(90px); opacity: 0.4;
+    content: ''; position: absolute;
+    width: 60vw; height: 60vw; border-radius: 50%;
+    filter: blur(80px); opacity: 0.4;
   }
   .myst-fog::before {
     left: -10%; top: 15%;
-    background: radial-gradient(circle, rgba(123,79,212,0.06), transparent 65%);
-    animation: fog-drift-a 80s ease-in-out infinite alternate;
+    background: radial-gradient(circle, rgba(123,79,212,0.08), transparent 60%);
+    animation: fog-drift-a 60s ease-in-out infinite alternate;
   }
   .myst-fog::after {
     right: -15%; bottom: 5%;
-    background: radial-gradient(circle, rgba(212,105,30,0.05), transparent 65%);
-    animation: fog-drift-b 100s ease-in-out infinite alternate;
+    background: radial-gradient(circle, rgba(212,105,30,0.06), transparent 60%);
+    animation: fog-drift-b 80s ease-in-out infinite alternate;
   }
-  @keyframes fog-drift-a { from { transform: translate(0,0) scale(1); } to { transform: translate(14vw,-8vh) scale(1.25); } }
-  @keyframes fog-drift-b { from { transform: translate(0,0) scale(1.15); } to { transform: translate(-12vw,6vh) scale(0.9); } }
+  @keyframes fog-drift-a { from{transform:translate(0,0) scale(1)} to{transform:translate(12vw,-6vh) scale(1.2)} }
+  @keyframes fog-drift-b { from{transform:translate(0,0) scale(1.1)} to{transform:translate(-10vw,5vh) scale(.85)} }
+
+  /* ── Rotating mystery quotes ── */
+  .myst-quotes {
+    text-align: center; margin-bottom: 1.5rem; min-height: 2em;
+    font-style: italic; font-size: 0.82rem; color: var(--bone-dim);
+    transition: opacity 1s ease; opacity: 1; padding: 0 0.5rem;
+    letter-spacing: 0.02em;
+  }
+
+  /* ── Gate entrance animation ── */
+  @keyframes gate-rise {
+    from { opacity: 0; transform: translateY(60px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 
   /* ── Gate / portal frame ── */
   .gate {
     position: relative; z-index: 2; width: 100%; max-width: 420px; padding: 1.5rem;
-    animation: gate-enter 1.2s cubic-bezier(.22,1,.36,1) both;
-  }
-  @keyframes gate-enter {
-    from { opacity: 0; transform: translateY(40px); }
-    to { opacity: 1; transform: translateY(0); }
+    animation: gate-rise 1.2s cubic-bezier(.22,1,.36,1) both;
   }
   .gate-frame {
     position: relative; padding: 2.5rem 2.2rem 2rem;
-    background: var(--stone);
     border: 1px solid var(--edge);
   }
+  /* REMOVED: .corner rules — snes.css sets .corner { display: none !important } */
+  /* REMOVED: .sigil-ring rules — snes.css kills border-radius and animation */
 
-  /* ── Sigil — SVG rune with pulse ── */
+  /* ── Sigil ── */
   .sigil {
-    width: 80px; height: 80px; margin: 0 auto 1.2rem; position: relative;
+    width: 72px; height: 72px; margin: 0 auto 1.2rem; position: relative;
     display: flex; align-items: center; justify-content: center;
   }
-  .sigil svg {
-    width: 80px; height: 80px;
-    filter: drop-shadow(0 0 8px rgba(232,198,90,0.3));
-    animation: sigil-pulse 3s ease-in-out infinite;
-  }
+  /* SVG keyframe animations (not killed by snes.css — targets HTML selectors, not SVG) */
+  @keyframes sigil-spin { to { transform: rotate(360deg); } }
   @keyframes sigil-pulse {
-    0%, 100% { filter: drop-shadow(0 0 6px rgba(232,198,90,0.25)); }
-    50% { filter: drop-shadow(0 0 16px rgba(232,198,90,0.5)); }
+    0%,100% { opacity: 0.6; }
+    50% { opacity: 1; }
   }
-  .sigil-ring-rot {
-    position: absolute; inset: 0; pointer-events: none;
-    animation: ring-spin 25s linear infinite;
-  }
-  .sigil-ring-rot svg { animation: none; filter: none; }
-  @keyframes ring-spin { to { transform: rotate(360deg); } }
 
   .gate-title {
     font-family: 'Cinzel', serif; font-weight: 900; text-align: center;
@@ -110,22 +113,10 @@
   }
   .gate-sub {
     text-align: center; font-style: italic; font-size: 0.85rem;
-    color: var(--bone-dim); margin-bottom: 0.5rem;
+    color: var(--bone-dim); margin-bottom: 1.8rem;
   }
 
-  /* ── Rotating mystic quotes ── */
-  .myst-quotes {
-    text-align: center; min-height: 2.4em; margin-bottom: 1.5rem;
-    position: relative; overflow: hidden;
-  }
-  .myst-quote {
-    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    font-style: italic; font-size: 0.78rem; color: var(--bone-dim);
-    padding: 0 0.5rem; opacity: 0; transition: opacity 1.5s ease;
-  }
-  .myst-quote.active { opacity: 1; }
-
-  /* ── Formulär ── */
+  /* ── Form ── */
   .field { margin-bottom: 1.2rem; position: relative; }
   .field label {
     display: block; font-family: 'Cinzel', serif; font-size: 0.62rem;
@@ -134,36 +125,28 @@
   }
   .field input {
     width: 100%; font-family: 'Spectral', serif; font-size: 1rem; color: var(--bone-bright);
-    background: var(--ink); border: 1px solid var(--edge); padding: 0.75rem 1rem 0.75rem 2.6rem;
-    outline: none; transition: border-color 0.25s; border-radius: 0;
+    background: #0d0817; border: 1px solid var(--edge); padding: 0.75rem 1rem 0.75rem 2.6rem;
+    outline: none; transition: border-color 0.25s;
   }
   .field input::placeholder { color: rgba(106,106,128,0.5); font-style: italic; }
   .field input:focus {
     border-color: var(--term-green);
+    box-shadow: 0 0 10px -2px rgba(51,204,51,0.3);
   }
   .field .icon {
-    position: absolute; left: 0.85rem; bottom: 0.78rem; font-size: 1rem; opacity: 0.5;
+    position: absolute; left: 0.85rem; bottom: 0.78rem;
+    font-size: 1rem; opacity: 0.4;
+    color: var(--term-green); font-family: 'VT323', monospace; font-weight: 700;
     transition: opacity 0.25s;
   }
-  .field input:focus ~ .icon { opacity: 1; color: var(--term-green); }
-  .field::before {
-    content: '>'; position: absolute; left: 0.85rem; bottom: 0.78rem;
-    color: var(--term-green); font-family: monospace; font-size: 0.9rem;
-    opacity: 0; transition: opacity 0.3s; pointer-events: none;
-  }
-  .field:focus-within::before { opacity: 0.4; }
-  .field:focus-within .icon { opacity: 0; }
+  .field input:focus ~ .icon { opacity: 1; }
 
+  /* REMOVED: .gate-btn gradient, box-shadow, ::after sheen — all killed by snes.css */
   .gate-btn {
     width: 100%; font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.85rem;
     letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer;
-    color: var(--ink); background: var(--gold);
-    border: 1px solid var(--gold-bright); padding: 0.85rem; margin-top: 0.5rem; border-radius: 0;
-    transition: background 0.2s;
+    padding: 0.85rem; margin-top: 0.5rem;
   }
-  .gate-btn:hover { background: var(--gold-bright); }
-  .gate-btn:active { background: var(--gold-bright); }
-  .gate-btn:disabled { opacity: 0.5; cursor: wait; }
 
   .gate-error {
     text-align: center; font-size: 0.8rem; color: var(--blood-bright);
@@ -172,10 +155,11 @@
 
   .gate-footer {
     text-align: center; margin-top: 1.5rem; padding-top: 1rem;
-    border-top: 1px solid var(--edge);
+    border-top: 1px solid rgba(42,42,58,0.4);
     font-size: 0.72rem; color: var(--bone-dim); font-style: italic;
   }
   .gate-footer a { color: var(--arcane); text-decoration: none; }
+  .gate-footer a:hover { text-shadow: 0 0 8px rgba(123,79,212,0.6); }
 
   /* ── Shake on error ── */
   @keyframes shake {
@@ -188,9 +172,9 @@
   .gate-frame.shake { animation: shake 0.4s ease; }
 
   /* ── Success flash ── */
-  .gate-frame.success { border-color: var(--term-green); }
+  .gate-frame.success { border-color: var(--gold); }
 
-  /* ═══════════ Mobile ═══════════ */
+  /* ═══════════ Mobile — porten i fickformat ═══════════ */
   html { -webkit-tap-highlight-color: transparent; }
   @media (max-width: 640px) {
     body { overflow-y: auto; padding: 1.25rem .75rem; }
@@ -198,11 +182,11 @@
     .gate-frame { padding: 2.1rem 1.25rem 1.6rem; }
     .gate-title { font-size: 1.28rem; letter-spacing: .05em; }
     .gate-sub { font-size: .8rem; margin-bottom: 1.4rem; }
+    .myst-quotes { font-size: .76rem; margin-bottom: 1.2rem; }
     .field input { min-height: 48px; font-size: 16px; }
     .field .icon { bottom: 50%; transform: translateY(50%); }
-    .field:focus-within .icon { opacity: 0; }
-    .field:focus-within::before { opacity: 0.4; bottom: 50%; transform: translateY(50%); }
     .gate-btn { width: 100%; min-height: 52px; }
+    .gate-btn:active { transform: translateY(2px); filter: brightness(.94); }
     .gate-footer a { display: inline-block; min-height: 44px; line-height: 44px; }
     .toast { max-width: 92%; text-align: center; }
   }
@@ -210,8 +194,7 @@
     body { padding: .75rem .5rem; }
     .gate-frame { padding: 1.7rem 1rem 1.3rem; }
     .gate-title { font-size: 1.08rem; }
-    .sigil { width: 64px; height: 64px; margin-bottom: 1rem; }
-    .sigil svg { width: 64px; height: 64px; }
+    .sigil { width: 60px; height: 60px; margin-bottom: 1rem; }
     .field input { padding-left: 2.4rem; }
     .gate-btn { font-size: .78rem; letter-spacing: .14em; }
   }
@@ -222,69 +205,78 @@
 </head>
 <body>
 <div class="grain"></div>
-<div class="myst-fog"></div>
 <canvas id="embers"></canvas>
 <div class="vignette"></div>
+<div class="myst-fog"></div>
 
 <div class="gate">
+  <div class="myst-quotes" id="myst-quotes"></div>
+
   <div class="gate-frame" id="gate-frame">
 
     <div class="sigil">
-      <div class="sigil-ring-rot">
-        <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="40" cy="40" r="38" stroke="#2a2a3a" stroke-width="1" stroke-dasharray="4 8"/>
-          <circle cx="40" cy="2" r="2" fill="#e8c65a"/>
-        </svg>
-      </div>
-      <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <radialGradient id="rune-glow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#e8c65a" stop-opacity="0.15"/>
-            <stop offset="100%" stop-color="#e8c65a" stop-opacity="0"/>
+          <radialGradient id="sglow">
+            <stop offset="0%" stop-color="#c9a227" stop-opacity="0.25"/>
+            <stop offset="100%" stop-color="#c9a227" stop-opacity="0"/>
           </radialGradient>
         </defs>
-        <circle cx="40" cy="40" r="36" fill="url(#rune-glow)"/>
-        <circle cx="40" cy="40" r="32" stroke="#c9a227" stroke-width="0.5" opacity="0.4"/>
-        <!-- Rune: dragon-eye sigil -->
-        <path d="M40 16 L52 36 L40 56 L28 36 Z" stroke="#e8c65a" stroke-width="1.5" fill="none" opacity="0.7"/>
-        <path d="M40 22 L48 36 L40 50 L32 36 Z" stroke="#7b4fd4" stroke-width="1" fill="none" opacity="0.5"/>
-        <circle cx="40" cy="36" r="3" fill="#e8c65a" opacity="0.8">
-          <animate attributeName="opacity" values="0.4;0.9;0.4" dur="2s" repeatCount="indefinite"/>
-        </circle>
-        <line x1="40" y1="8" x2="40" y2="14" stroke="#c9a227" stroke-width="1" opacity="0.6"/>
-        <line x1="40" y1="58" x2="40" y2="64" stroke="#c9a227" stroke-width="1" opacity="0.6"/>
-        <line x1="8" y1="36" x2="14" y2="36" stroke="#c9a227" stroke-width="1" opacity="0.6"/>
-        <line x1="66" y1="36" x2="72" y2="36" stroke="#c9a227" stroke-width="1" opacity="0.6"/>
+        <!-- Glow backdrop (pulses) -->
+        <circle cx="36" cy="36" r="30" fill="url(#sglow)" style="animation:sigil-pulse 3s ease-in-out infinite"/>
+        <!-- Outer ring — rotates clockwise -->
+        <g style="animation:sigil-spin 20s linear infinite;transform-origin:36px 36px">
+          <circle cx="36" cy="36" r="32" stroke="rgba(42,42,58,0.6)" stroke-width="1.5"/>
+          <circle cx="36" cy="4" r="2.5" fill="#c9a227"/>
+          <circle cx="36" cy="68" r="2.5" fill="#c9a227"/>
+          <circle cx="4" cy="36" r="2.5" fill="#7b4fd4"/>
+          <circle cx="68" cy="36" r="2.5" fill="#7b4fd4"/>
+          <!-- Rune tick marks -->
+          <line x1="36" y1="8" x2="36" y2="13" stroke="#c9a227" stroke-width="1" opacity="0.6"/>
+          <line x1="36" y1="59" x2="36" y2="64" stroke="#c9a227" stroke-width="1" opacity="0.6"/>
+          <line x1="8" y1="36" x2="13" y2="36" stroke="#7b4fd4" stroke-width="1" opacity="0.6"/>
+          <line x1="59" y1="36" x2="64" y2="36" stroke="#7b4fd4" stroke-width="1" opacity="0.6"/>
+        </g>
+        <!-- Inner ring — counter-rotates -->
+        <g style="animation:sigil-spin 14s linear infinite reverse;transform-origin:36px 36px">
+          <circle cx="36" cy="36" r="22" stroke="rgba(123,79,212,0.3)" stroke-width="1"/>
+          <circle cx="36" cy="14" r="2" fill="#7b4fd4"/>
+          <circle cx="36" cy="58" r="2" fill="#7b4fd4"/>
+          <circle cx="14" cy="36" r="2" fill="#c9a227"/>
+          <circle cx="58" cy="36" r="2" fill="#c9a227"/>
+        </g>
+        <!-- Center rune — pulses -->
+        <g style="animation:sigil-pulse 3s ease-in-out infinite">
+          <circle cx="36" cy="36" r="10" stroke="rgba(201,162,39,0.5)" stroke-width="1.5"/>
+          <line x1="36" y1="27" x2="36" y2="45" stroke="rgba(201,162,39,0.7)" stroke-width="1.2"/>
+          <line x1="27" y1="36" x2="45" y2="36" stroke="rgba(201,162,39,0.7)" stroke-width="1.2"/>
+          <line x1="30" y1="30" x2="42" y2="42" stroke="rgba(123,79,212,0.5)" stroke-width="0.8"/>
+          <line x1="42" y1="30" x2="30" y2="42" stroke="rgba(123,79,212,0.5)" stroke-width="0.8"/>
+          <circle cx="36" cy="36" r="3" fill="#c9a227"/>
+        </g>
       </svg>
     </div>
 
     <h1 class="gate-title">Ett svenskt D&amp;D-äventyr</h1>
     <p class="gate-sub">Vem vågar stiga in i mörkret?</p>
 
-    <div class="myst-quotes" id="myst-quotes">
-      <div class="myst-quote active">I mörkret väntar sagor som ännu inte berättats.</div>
-      <div class="myst-quote">Porten känner igen dig... eller gör den inte?</div>
-      <div class="myst-quote">Varje steg in i mörkret är ett steg bort från världen du kände.</div>
-      <div class="myst-quote">Drakarna minns ditt namn. Minns du deras?</div>
-    </div>
-
     <form id="login-form" onsubmit="handleLogin(event)">
       <div class="field">
         <label for="username">Äventyrare</label>
         <input type="text" id="username" placeholder="Ditt namn, modige…" autocomplete="username" required>
-        <span class="icon">⚔️</span>
+        <span class="icon">></span>
       </div>
       <div class="field">
         <label for="password">Lösenord</label>
         <input type="password" id="password" placeholder="Det hemliga ordet…" autocomplete="current-password" required>
-        <span class="icon">🔑</span>
+        <span class="icon">></span>
       </div>
       <button type="submit" class="gate-btn">⚔ Stig in i mörkret</button>
       <div class="gate-error" id="error"></div>
     </form>
 
     <div class="gate-footer">
-      Driven av Qwen · Kampanjer sparas lokalt · De gamla gudarna minns alla namn.
+      Driven av Qwen · Kampanjer sparas lokalt · <a href="#">De gamla gudarna minns alla namn.</a>
     </div>
   </div>
 </div>
@@ -334,26 +326,6 @@ if (sessionStorage.getItem('dnd_user')) {
 }
 
 // ═══════════════════════════════════════
-// ROTATING MYSTIC QUOTES
-// ═══════════════════════════════════════
-const quotes = document.querySelectorAll('.myst-quote');
-let qIdx = 0;
-setInterval(() => {
-  quotes[qIdx].classList.remove('active');
-  qIdx = (qIdx + 1) % quotes.length;
-  quotes[qIdx].classList.add('active');
-}, 5000);
-
-// ═══════════════════════════════════════
-// SFX ON INPUT FOCUS
-// ═══════════════════════════════════════
-document.querySelectorAll('.field input').forEach(inp => {
-  inp.addEventListener('focus', () => {
-    if (typeof SFX !== 'undefined' && SFX.click) SFX.click();
-  });
-});
-
-// ═══════════════════════════════════════
 // EMBERS
 // ═══════════════════════════════════════
 const canvas = document.getElementById('embers');
@@ -381,6 +353,37 @@ function tick() {
   requestAnimationFrame(tick);
 }
 tick();
+
+// ═══════════════════════════════════════
+// MYSTERY QUOTES — rotating atmospheric text
+// ═══════════════════════════════════════
+(function() {
+  const quotes = [
+    'I mörkret väntar sagor som ännu inte berättats.',
+    'Porten känner igen dig\u2026 eller gör den inte?',
+    'Varje steg in i mörkret är ett steg bort från världen du kände.',
+    'Drakarna minns ditt namn. Minns du deras?'
+  ];
+  const el = document.getElementById('myst-quotes');
+  if (!el) return;
+  let idx = 0;
+  el.textContent = quotes[0];
+  setInterval(function() {
+    el.style.opacity = '0';
+    setTimeout(function() {
+      idx = (idx + 1) % quotes.length;
+      el.textContent = quotes[idx];
+      el.style.opacity = '1';
+    }, 1000);
+  }, 5000);
+})();
+
+// ═══════════════════════════════════════
+// INPUT FOCUS SFX
+// ═══════════════════════════════════════
+document.querySelectorAll('.field input').forEach(function(inp) {
+  inp.addEventListener('focus', function() { if (typeof SFX !== 'undefined') SFX.click(); });
+});
 </script>
 </body>
 </html>

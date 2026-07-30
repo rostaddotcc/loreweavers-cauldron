@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📊 Admin — Mörkrets Rike</title>
+<title>📊 Admin · Mörkrets Rike</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
 <style>
   :root {
     --ink: #08080d;
@@ -25,503 +28,417 @@
     --teal: #4e8a93;
     --term-green: #33cc33;
     --term-amber: #ccaa33;
-    --font-display: 'Press Start 2P', monospace;
-    --font-body: 'Silkscreen', monospace;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { height: 100%; }
   body {
-    font-family: var(--font-body); color: var(--bone);
+    font-family: 'Spectral', Georgia, serif;
+    color: var(--bone);
+    min-height: 100vh;
     background: var(--ink);
     overflow-x: hidden;
-    min-height: 100vh;
   }
+
   .grain {
     position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.045;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
   }
-  #embers { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-  .vignette { position: fixed; inset: 0; z-index: 1; pointer-events: none; box-shadow: inset 0 0 190px 70px rgba(4,2,8,.88); }
+  #embers { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+  .vignette { position: fixed; inset: 0; z-index: 1; pointer-events: none; box-shadow: inset 0 0 180px 60px rgba(4,2,8,0.85); }
 
-  /* ── Container ── */
-  .admin-wrap {
-    position: relative; z-index: 2;
-    max-width: 1100px; margin: 0 auto;
-    padding: 1.5rem 1rem 3rem;
-  }
+  .app { position: relative; z-index: 2; max-width: 1100px; margin: 0 auto; padding: 1.5rem 1.25rem 5rem; }
 
   /* ── Header ── */
-  .admin-header {
-    display: flex; align-items: center; gap: 1rem;
-    padding: 1rem 0; margin-bottom: 1.5rem;
-    border-bottom: 1px solid var(--edge);
+  .masthead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; }
+  .masthead h1 {
+    font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.1rem;
+    color: var(--gold-bright); letter-spacing: 0.06em;
   }
-  .admin-header h1 {
-    font-family: var(--font-display); font-size: 0.85rem;
-    color: var(--term-green); letter-spacing: 0.08em;
-    text-shadow: 0 0 12px rgba(51,204,51,0.3);
-    flex: 1;
+  .masthead h1::before { content: '┌─ '; color: var(--edge); }
+  .masthead h1::after { content: ' ─┐'; color: var(--edge); }
+  .back-btn {
+    font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.14em;
+    text-transform: uppercase; background: var(--stone-3); border: 1px solid var(--edge);
+    color: var(--bone-dim); padding: 0.45rem 0.9rem; cursor: pointer;
+    text-decoration: none; border-radius: 0; transition: all 0.2s;
   }
-  .admin-header h1 .dim { color: var(--bone-dim); }
-  .back-btn, .refresh-btn {
-    font-family: var(--font-body); font-size: 0.75rem;
-    background: var(--stone-3); border: 1px solid var(--edge);
-    color: var(--bone-dim); padding: 0.4rem 0.8rem;
-    cursor: pointer; transition: all 0.2s;
-    text-decoration: none; display: inline-block;
-  }
-  .back-btn:hover, .refresh-btn:hover {
-    border-color: var(--edge-hi); color: var(--bone);
-  }
-  .refresh-btn { border-color: var(--term-green); color: var(--term-green); }
+  .back-btn:hover { color: var(--gold-bright); border-color: var(--gold); }
 
   /* ── Stat cards ── */
   .stats-grid {
-    display: grid; grid-template-columns: repeat(4, 1fr);
-    gap: 0.8rem; margin-bottom: 2rem;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem;
   }
   .stat-card {
-    background: var(--stone-2); border: 1px solid var(--edge);
-    padding: 1rem 0.8rem; text-align: center;
+    background: var(--stone); border: 1px solid var(--edge); padding: 1.2rem 1rem;
+    position: relative; text-align: center;
   }
-  .stat-card .stat-num {
-    font-family: var(--font-display); font-size: 1.4rem;
-    color: var(--term-green); display: block; margin-bottom: 0.4rem;
-    text-shadow: 0 0 10px rgba(51,204,51,0.25);
+  .stat-card::before {
+    content: ''; position: absolute; inset: 3px;
+    border: 1px solid var(--edge); opacity: 0.3; pointer-events: none;
   }
-  .stat-card .stat-label {
-    font-size: 0.65rem; color: var(--bone-dim);
-    letter-spacing: 0.1em; text-transform: uppercase;
+  .stat-num {
+    font-family: 'Press Start 2P', monospace; font-size: 1.4rem;
+    color: var(--term-green); text-shadow: 0 0 6px rgba(51,204,51,0.3);
+    margin-bottom: 0.4rem;
+  }
+  .stat-label {
+    font-family: 'Cinzel', serif; font-size: 0.52rem; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--bone-dim);
   }
 
-  /* ── Table ── */
+  /* ── Section title ── */
+  .section-title {
+    font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--gold); margin-bottom: 1rem;
+    display: flex; align-items: center; gap: 0.6rem;
+  }
+  .section-title::before { content: '>'; color: var(--term-green); }
+  .section-title .refresh {
+    margin-left: auto; font-size: 0.55rem; background: var(--stone-3);
+    border: 1px solid var(--edge); color: var(--bone-dim); padding: 0.3rem 0.7rem;
+    cursor: pointer; letter-spacing: 0.1em; border-radius: 0;
+  }
+  .section-title .refresh:hover { color: var(--gold-bright); border-color: var(--gold); }
+
+  /* ── Player table ── */
   .player-table { width: 100%; border-collapse: collapse; }
   .player-table th {
-    font-family: var(--font-body); font-size: 0.65rem;
-    color: var(--term-amber); letter-spacing: 0.12em;
-    text-transform: uppercase; text-align: left;
-    padding: 0.6rem 0.8rem;
-    border-bottom: 2px solid var(--edge);
-    background: var(--stone-2);
+    font-family: 'Cinzel', serif; font-size: 0.52rem; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--bone-dim); text-align: left;
+    padding: 0.6rem 0.5rem; border-bottom: 1px solid var(--edge);
   }
   .player-table td {
-    font-size: 0.8rem; padding: 0.6rem 0.8rem;
-    border-bottom: 1px solid var(--edge);
-    color: var(--bone);
+    padding: 0.7rem 0.5rem; border-bottom: 1px solid rgba(42,42,58,0.4);
+    font-size: 0.78rem; color: var(--bone-bright);
   }
   .player-row { cursor: pointer; transition: background 0.15s; }
-  .player-row:hover { background: var(--stone-3); }
+  .player-row:hover { background: var(--stone-2); }
   .player-row.expanded { background: var(--stone-2); }
-  .badge-admin {
-    font-size: 0.55rem; background: var(--blood); color: var(--bone-bright);
-    padding: 0.15rem 0.4rem; margin-left: 0.4rem;
-    letter-spacing: 0.1em; text-transform: uppercase;
-    vertical-align: middle;
+  .admin-badge {
+    display: inline-block; font-size: 0.45rem; background: var(--gold);
+    color: var(--ink); padding: 1px 5px; letter-spacing: 0.1em;
+    text-transform: uppercase; margin-left: 0.3rem; font-weight: 700;
   }
-  .token-num { font-family: var(--font-display); font-size: 0.65rem; color: var(--term-green); }
-  .turn-num { font-family: var(--font-display); font-size: 0.65rem; color: var(--term-amber); }
-  .role-tag {
-    font-size: 0.6rem; color: var(--bone-dim);
-    border: 1px solid var(--edge); padding: 0.1rem 0.4rem;
-    text-transform: uppercase; letter-spacing: 0.08em;
-  }
-  .role-tag.admin { border-color: var(--blood); color: var(--blood-bright); }
+  .token-num { color: var(--term-green); font-family: monospace; }
+  .turn-num { color: var(--term-amber); font-family: monospace; }
+  .last-active { color: var(--bone-dim); font-size: 0.68rem; }
 
-  /* ── Expanded detail ── */
-  .detail-row td {
-    padding: 0; background: var(--stone);
-    border-bottom: 2px solid var(--edge);
-  }
-  .detail-wrap {
-    padding: 1rem 1.2rem;
-    animation: slideDown 0.2s ease-out;
-  }
-  @keyframes slideDown {
-    from { opacity: 0; transform: translateY(-6px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+  /* ── Expanded campaign detail ── */
+  .campaign-detail { display: none; }
+  .campaign-detail.open { display: table-row; }
+  .campaign-detail td { padding: 0; border-bottom: 1px solid var(--edge); }
+  .campaign-inner { padding: 1rem 1.5rem !important; }
   .campaign-card {
-    background: var(--stone-2); border: 1px solid var(--edge);
-    padding: 0.8rem 1rem; margin-bottom: 0.6rem;
+    background: var(--stone-2); border: 1px solid var(--edge); padding: 1rem;
+    margin-bottom: 0.6rem;
   }
-  .campaign-card .cc-header {
-    display: flex; align-items: center; gap: 0.6rem;
-    margin-bottom: 0.5rem; flex-wrap: wrap;
-  }
-  .campaign-card .cc-name {
-    font-family: var(--font-display); font-size: 0.6rem;
-    color: var(--gold-bright);
-  }
-  .campaign-card .cc-char {
-    font-size: 0.7rem; color: var(--bone-dim);
-  }
-  .campaign-card .cc-meta {
-    display: flex; gap: 1.2rem; flex-wrap: wrap;
-    font-size: 0.7rem; color: var(--bone-dim);
-    margin-bottom: 0.5rem;
-  }
-  .campaign-card .cc-meta span { white-space: nowrap; }
+  .campaign-card .cc-head { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
+  .campaign-card .cc-name { font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.82rem; color: var(--bone-bright); }
+  .campaign-card .cc-char { font-size: 0.7rem; color: var(--bone-dim); }
+  .campaign-card .cc-meta { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.65rem; color: var(--bone-dim); }
+  .campaign-card .cc-meta span { color: var(--bone); }
 
   /* Token bar */
-  .token-bar-wrap {
-    display: flex; align-items: center; gap: 0.5rem;
-    margin: 0.4rem 0;
-  }
   .token-bar {
-    flex: 1; height: 10px; background: var(--stone-3);
-    border: 1px solid var(--edge); position: relative;
-    overflow: hidden;
+    height: 8px; background: var(--ink); border: 1px solid var(--edge);
+    display: flex; margin: 0.5rem 0; overflow: hidden;
   }
-  .token-bar .bar-prompt {
-    position: absolute; left: 0; top: 0; bottom: 0;
-    background: var(--teal);
-  }
-  .token-bar .bar-completion {
-    position: absolute; top: 0; bottom: 0;
-    background: var(--arcane);
-  }
-  .token-bar-legend {
-    display: flex; gap: 0.8rem; font-size: 0.6rem; color: var(--bone-dim);
-  }
-  .token-bar-legend .leg-item::before {
-    content: '■'; margin-right: 0.3rem;
-  }
-  .token-bar-legend .leg-prompt::before { color: var(--teal); }
-  .token-bar-legend .leg-completion::before { color: var(--arcane); }
+  .token-bar .bar-prompt { background: var(--arcane); height: 100%; }
+  .token-bar .bar-completion { background: var(--term-green); height: 100%; }
+  .token-legend { display: flex; gap: 1rem; font-size: 0.55rem; color: var(--bone-dim); }
+  .token-legend .dot { display: inline-block; width: 8px; height: 8px; margin-right: 4px; vertical-align: middle; }
+  .token-legend .dot.prompt { background: var(--arcane); }
+  .token-legend .dot.completion { background: var(--term-green); }
 
-  /* Session list */
-  .session-list {
-    margin-top: 0.5rem; font-size: 0.7rem;
+  /* Sessions */
+  .session-list { margin-top: 0.5rem; }
+  .session-item {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.6rem; color: var(--bone-dim); padding: 0.25rem 0;
+    border-bottom: 1px dashed rgba(42,42,58,0.3);
   }
-  .session-list .sess-row {
-    display: flex; gap: 1rem; padding: 0.3rem 0;
-    border-bottom: 1px solid rgba(42,42,58,0.5);
-    color: var(--bone-dim); flex-wrap: wrap;
-  }
-  .session-list .sess-row .sess-file {
-    color: var(--bone); min-width: 140px;
-  }
+  .session-item .s-tokens { color: var(--term-green); font-family: monospace; }
 
   /* ── Error state ── */
   .error-state {
-    text-align: center; padding: 3rem 1rem;
+    text-align: center; padding: 4rem 2rem; color: var(--bone-dim);
   }
-  .error-state .err-icon { font-size: 2.5rem; margin-bottom: 1rem; }
-  .error-state .err-msg {
-    font-family: var(--font-display); font-size: 0.7rem;
-    color: var(--blood-bright); margin-bottom: 1rem;
-  }
-  .error-state a {
-    color: var(--term-green); text-decoration: underline;
-  }
+  .error-state h2 { font-family: 'Cinzel', serif; font-size: 1rem; color: var(--blood-bright); margin-bottom: 1rem; }
+  .error-state a { color: var(--gold-bright); text-decoration: none; }
+  .error-state a:hover { text-shadow: 0 0 8px rgba(232,198,90,0.4); }
 
   /* ── Loading ── */
   .loading {
-    text-align: center; padding: 3rem;
-    font-family: var(--font-display); font-size: 0.7rem;
-    color: var(--term-green);
-    animation: blink 1s step-end infinite;
+    text-align: center; padding: 3rem; color: var(--bone-dim);
+    font-family: monospace; font-size: 0.8rem;
   }
-  @keyframes blink { 50% { opacity: 0.3; } }
+  .loading::after { content: ' █'; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
 
-  /* ── Mobile ── */
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 1.5rem; left: 50%; transform: translate(-50%, 80px);
+    z-index: 50; font-family: 'Cinzel', serif; font-size: 0.75rem;
+    background: var(--stone); border: 1px solid var(--gold);
+    color: var(--gold-bright); padding: 0.7rem 1.5rem; opacity: 0;
+    transition: all 0.35s cubic-bezier(0.22,1,0.36,1); pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ═══════════ Mobile ═══════════ */
   @media (max-width: 900px) {
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
-    .player-table thead { display: none; }
-    .player-table, .player-table tbody, .player-table tr, .player-table td {
-      display: block; width: 100%;
+    .player-table { display: none; }
+    .mobile-cards { display: flex; flex-direction: column; gap: 0.8rem; }
+    .m-card {
+      background: var(--stone); border: 1px solid var(--edge); padding: 0.8rem;
+      cursor: pointer;
     }
-    .player-row {
-      margin-bottom: 0.5rem; border: 1px solid var(--edge);
-      background: var(--stone-2); padding: 0.5rem;
-    }
-    .player-row td {
-      display: flex; justify-content: space-between;
-      padding: 0.25rem 0.5rem; border: none;
-      font-size: 0.75rem;
-    }
-    .player-row td::before {
-      content: attr(data-label); color: var(--bone-dim);
-      font-size: 0.6rem; text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-    .detail-row td { border: 1px solid var(--edge); border-top: none; }
+    .m-card:active { background: var(--stone-2); }
+    .m-card .mc-head { display: flex; justify-content: space-between; align-items: center; }
+    .m-card .mc-user { font-size: 0.85rem; color: var(--bone-bright); }
+    .m-card .mc-tokens { font-size: 0.7rem; color: var(--term-green); font-family: monospace; }
+    .m-card .mc-meta { display: flex; gap: 1rem; margin-top: 0.4rem; font-size: 0.6rem; color: var(--bone-dim); }
   }
-  @media (max-width: 500px) {
-    .stats-grid { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
-    .stat-card .stat-num { font-size: 1rem; }
-    .admin-header h1 { font-size: 0.65rem; }
+  @media (min-width: 901px) {
+    .mobile-cards { display: none; }
+  }
+  @media (max-width: 640px) {
+    .stats-grid { grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+    .stat-card { padding: 0.8rem 0.5rem; }
+    .stat-num { font-size: 1rem; }
+    .masthead h1 { font-size: 0.85rem; }
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=20260730c">
+<link rel="stylesheet" href="snes.css">
+<script src="sprites.js?v=20260730c"></script>
+<script src="fonts.js?v=20260730c"></script>
 </head>
 <body>
-
 <div class="grain"></div>
 <canvas id="embers"></canvas>
 <div class="vignette"></div>
 
-<div class="admin-wrap">
-
-  <div class="admin-header">
+<div class="app">
+  <header class="masthead">
+    <h1>Admin · Mörkrets Rike</h1>
     <a href="adventure.html" class="back-btn">← Tillbaka</a>
-    <h1><span class="dim">&gt;_</span> Admin · Mörkrets Rike</h1>
-    <button class="refresh-btn" id="refresh-btn">↻ Uppdatera</button>
-  </div>
+  </header>
 
-  <div id="app">
-    <div class="loading">Laddar admin-data...</div>
+  <div id="content">
+    <div class="loading">Laddar statistik</div>
   </div>
-
 </div>
 
-<script src="sprites.js?v=20260730c"></script>
-<script src="fonts.js?v=20260730c"></script>
+<div class="toast" id="toast"></div>
+
 <script src="sfx.js?v=20260730c"></script>
 <script src="api.js?v=20260730c"></script>
 <script src="i18n.js?v=20260730c"></script>
 <script>
+// Auth guard
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 
 // ═══════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════
-
 function fmtTokens(n) {
-  if (n == null || isNaN(n)) return '0';
-  if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
-  return n.toLocaleString('sv-SE');
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
+  return String(n);
 }
 
-function fmtRelative(iso) {
+function relTime(iso) {
   if (!iso) return '—';
-  const now = Date.now();
-  const then = new Date(iso).getTime();
-  if (isNaN(then)) return '—';
-  const diff = Math.max(0, now - then);
-  const sec = Math.floor(diff / 1000);
-  if (sec < 60) return 'Nyss';
-  const min = Math.floor(sec / 60);
-  if (min < 60) return min + 'm sedan';
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return hr + 'h sedan';
-  const day = Math.floor(hr / 24);
-  if (day < 7) return day + 'd sedan';
-  const wk = Math.floor(day / 7);
-  return wk + 'v sedan';
+  const d = new Date(iso);
+  if (isNaN(d)) return '—';
+  const diff = (Date.now() - d.getTime()) / 1000;
+  if (diff < 60) return 'Nyss';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm sedan';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h sedan';
+  if (diff < 604800) return Math.floor(diff / 86400) + 'd sedan';
+  return Math.floor(diff / 604800) + 'v sedan';
 }
 
-function escapeHtml(s) {
-  const d = document.createElement('div');
-  d.textContent = s || '';
-  return d.innerHTML;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
 }
 
 // ═══════════════════════════════════════
-// STATE
+// LOAD STATS
 // ═══════════════════════════════════════
-
-let adminData = null;
-let expandedUser = null;
-let userDetailCache = {};
-
-// ═══════════════════════════════════════
-// RENDER
-// ═══════════════════════════════════════
-
-function renderStats(data) {
-  return `
-    <div class="stats-grid">
-      <div class="stat-card">
-        <span class="stat-num">${data.total_users}</span>
-        <span class="stat-label">Användare</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-num">${data.total_campaigns}</span>
-        <span class="stat-label">Kampanjer</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-num">${fmtTokens(data.total_tokens)}</span>
-        <span class="stat-label">Tokens</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-num">${fmtTokens(data.total_turns)}</span>
-        <span class="stat-label">Turer</span>
-      </div>
-    </div>
-  `;
-}
-
-function renderTable(users) {
-  let rows = '';
-  for (const u of users) {
-    const isAdmin = u.role === 'admin';
-    const isExpanded = expandedUser === u.username;
-    rows += `
-      <tr class="player-row${isExpanded ? ' expanded' : ''}" data-user="${escapeHtml(u.username)}" onclick="toggleUser('${escapeHtml(u.username)}')">
-        <td data-label="Användare">
-          ${escapeHtml(u.username)}${isAdmin ? '<span class="badge-admin">ADMIN</span>' : ''}
-        </td>
-        <td data-label="Roll"><span class="role-tag${isAdmin ? ' admin' : ''}">${escapeHtml(u.role)}</span></td>
-        <td data-label="Kampanjer">${u.total_campaigns}</td>
-        <td data-label="Tokens"><span class="token-num">${fmtTokens(u.total_tokens)}</span></td>
-        <td data-label="Turer"><span class="turn-num">${fmtTokens(u.total_turns)}</span></td>
-        <td data-label="Senast aktiv">${fmtRelative(u.last_active)}</td>
-      </tr>
-    `;
-    if (isExpanded) {
-      rows += `<tr class="detail-row"><td colspan="6" id="detail-${escapeHtml(u.username)}"><div class="detail-wrap"><div class="loading">Hämtar kampanjdetaljer...</div></div></td></tr>`;
-    }
-  }
-  return `
-    <table class="player-table">
-      <thead><tr>
-        <th>Användare</th><th>Roll</th><th>Kampanjer</th><th>Tokens</th><th>Turer</th><th>Senast aktiv</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `;
-}
-
-function renderCampaignDetail(detail) {
-  if (!detail.campaigns || detail.campaigns.length === 0) {
-    return '<div style="color:var(--bone-dim);padding:0.5rem;">Inga kampanjer hittades.</div>';
-  }
-  let html = '';
-  for (const c of detail.campaigns) {
-    const total = c.total_tokens || 0;
-    const pPct = total > 0 ? (c.prompt_tokens / total * 100) : 0;
-    const cPct = total > 0 ? (c.completion_tokens / total * 100) : 0;
-
-    let sessionsHtml = '';
-    if (c.sessions && c.sessions.length > 0) {
-      sessionsHtml = '<div class="session-list">';
-      for (const s of c.sessions) {
-        sessionsHtml += `<div class="sess-row"><span class="sess-file">${escapeHtml(s.session_file)}</span><span>Prompt: ${fmtTokens(s.prompt_tokens)}</span><span>Completion: ${fmtTokens(s.completion_tokens)}</span><span>Turer: ${s.turns}</span></div>`;
-      }
-      sessionsHtml += '</div>';
-    }
-
-    html += `
-      <div class="campaign-card">
-        <div class="cc-header">
-          <span class="cc-name">${escapeHtml(c.name || 'Namnlös')}</span>
-          <span class="cc-char">${escapeHtml(c.character_icon || '')} ${escapeHtml(c.character_name || '—')} · Lvl ${c.level || 1}</span>
-        </div>
-        <div class="cc-meta">
-          <span>📍 ${escapeHtml(c.location || 'Okänd')}</span>
-          <span>🔄 ${c.turn_count || 0} turer</span>
-          <span>📊 ${fmtTokens(total)} tokens</span>
-          <span>🕐 ${fmtRelative(c.last_updated)}</span>
-        </div>
-        <div class="token-bar-wrap">
-          <div class="token-bar">
-            <div class="bar-prompt" style="width:${pPct}%"></div>
-            <div class="bar-completion" style="left:${pPct}%;width:${cPct}%"></div>
-          </div>
-        </div>
-        <div class="token-bar-legend">
-          <span class="leg-item leg-prompt">Prompt ${fmtTokens(c.prompt_tokens)} (${pPct.toFixed(0)}%)</span>
-          <span class="leg-item leg-completion">Completion ${fmtTokens(c.completion_tokens)} (${cPct.toFixed(0)}%)</span>
-        </div>
-        ${sessionsHtml}
-      </div>
-    `;
-  }
-  return html;
-}
-
-function renderAll() {
-  const app = document.getElementById('app');
-  if (!adminData) {
-    app.innerHTML = '<div class="loading">Laddar admin-data...</div>';
-    return;
-  }
-  app.innerHTML = renderStats(adminData) + renderTable(adminData.users);
-
-  // If expanded, load detail
-  if (expandedUser && userDetailCache[expandedUser]) {
-    const el = document.getElementById('detail-' + expandedUser);
-    if (el) {
-      el.querySelector('.detail-wrap').innerHTML = renderCampaignDetail(userDetailCache[expandedUser]);
-    }
-  }
-}
-
-// ═══════════════════════════════════════
-// ACTIONS
-// ═══════════════════════════════════════
-
 async function loadStats() {
+  const content = document.getElementById('content');
+  content.innerHTML = '<div class="loading">Laddar statistik</div>';
+
   try {
     const res = await fetch('/api/admin/stats', { credentials: 'include' });
+    if (res.status === 401) { location.href = 'login.html'; return; }
     if (res.status === 403) {
-      document.getElementById('app').innerHTML = `
-        <div class="error-state">
-          <div class="err-icon">🔒</div>
-          <div class="err-msg">Du har inte admin-rättigheter.</div>
-          <a href="adventure.html">← Tillbaka till äventyret</a>
-        </div>
-      `;
+      content.innerHTML = '<div class="error-state"><h2>⛔ Du har inte admin-rättigheter.</h2><p><a href="adventure.html">← Tillbaka till äventyret</a></p></div>';
       return;
     }
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    adminData = await res.json();
-    renderAll();
+    if (!res.ok) throw new Error('API fel: ' + res.status);
+    const data = await res.json();
+    renderStats(data);
   } catch (e) {
-    document.getElementById('app').innerHTML = `
-      <div class="error-state">
-        <div class="err-icon">⚠️</div>
-        <div class="err-msg">Kunde inte hämta admin-data: ${escapeHtml(e.message)}</div>
-        <a href="adventure.html">← Tillbaka till äventyret</a>
-      </div>
-    `;
+    content.innerHTML = '<div class="error-state"><h2>⚠ Kunde inte hämta statistik</h2><p>' + e.message + '</p></div>';
   }
 }
 
-async function toggleUser(username) {
-  if (expandedUser === username) {
-    expandedUser = null;
-    renderAll();
+function renderStats(data) {
+  const content = document.getElementById('content');
+  const users = data.users || [];
+
+  // Sort by total tokens desc
+  users.sort((a, b) => (b.total_tokens || 0) - (a.total_tokens || 0));
+
+  let html = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-num">${data.total_users}</div><div class="stat-label">Användare</div></div>
+      <div class="stat-card"><div class="stat-num">${data.total_campaigns}</div><div class="stat-label">Kampanjer</div></div>
+      <div class="stat-card"><div class="stat-num">${fmtTokens(data.total_tokens)}</div><div class="stat-label">Tokens</div></div>
+      <div class="stat-card"><div class="stat-num">${data.total_turns}</div><div class="stat-label">Turer</div></div>
+    </div>
+    <div class="section-title">
+      Spelarkonton
+      <button class="refresh" onclick="loadStats()">↻ Uppdatera</button>
+    </div>
+  `;
+
+  // Desktop table
+  html += '<table class="player-table"><thead><tr>';
+  html += '<th>Användare</th><th>Roll</th><th>Kampanjer</th><th>Tokens</th><th>Turer</th><th>Senast aktiv</th>';
+  html += '</tr></thead><tbody>';
+
+  users.forEach((u, i) => {
+    const badge = u.role === 'admin' ? '<span class="admin-badge">ADMIN</span>' : '';
+    html += `<tr class="player-row" id="row-${i}" onclick="toggleDetail(${i}, '${u.username}')">`;
+    html += `<td>${u.username}${badge}</td>`;
+    html += `<td>${u.role}</td>`;
+    html += `<td>${u.total_campaigns}</td>`;
+    html += `<td class="token-num">${fmtTokens(u.total_tokens)}</td>`;
+    html += `<td class="turn-num">${u.total_turns}</td>`;
+    html += `<td class="last-active">${relTime(u.last_active)}</td>`;
+    html += '</tr>';
+    html += `<tr class="campaign-detail" id="detail-${i}"><td colspan="6"><div class="campaign-inner" id="inner-${i}"></div></td></tr>`;
+  });
+  html += '</tbody></table>';
+
+  // Mobile cards
+  html += '<div class="mobile-cards">';
+  users.forEach((u, i) => {
+    const badge = u.role === 'admin' ? ' <span class="admin-badge">A</span>' : '';
+    html += `<div class="m-card" onclick="toggleDetail(${i}, '${u.username}')">`;
+    html += `<div class="mc-head"><span class="mc-user">${u.username}${badge}</span><span class="mc-tokens">${fmtTokens(u.total_tokens)} tkn</span></div>`;
+    html += `<div class="mc-meta"><span>${u.total_campaigns} kampanjer</span><span>${u.total_turns} turer</span><span>${relTime(u.last_active)}</span></div>`;
+    html += '</div>';
+  });
+  html += '</div>';
+
+  content.innerHTML = html;
+}
+
+// ═══════════════════════════════════════
+// TOGGLE CAMPAIGN DETAIL
+// ═══════════════════════════════════════
+const loadedUsers = {};
+
+async function toggleDetail(idx, username) {
+  const detail = document.getElementById('detail-' + idx);
+  const row = document.getElementById('row-' + idx);
+  const inner = document.getElementById('inner-' + idx);
+
+  if (detail.classList.contains('open')) {
+    detail.classList.remove('open');
+    row.classList.remove('expanded');
     return;
   }
-  expandedUser = username;
-  renderAll();
 
-  // Fetch detail if not cached
-  if (!userDetailCache[username]) {
-    try {
-      const res = await fetch('/api/admin/user/' + encodeURIComponent(username), { credentials: 'include' });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      userDetailCache[username] = await res.json();
-    } catch (e) {
-      userDetailCache[username] = { campaigns: [] };
-    }
-    // Re-render detail section
-    const el = document.getElementById('detail-' + username);
-    if (el) {
-      el.querySelector('.detail-wrap').innerHTML = renderCampaignDetail(userDetailCache[username]);
-    }
+  // Close all others
+  document.querySelectorAll('.campaign-detail.open').forEach(d => d.classList.remove('open'));
+  document.querySelectorAll('.player-row.expanded').forEach(r => r.classList.remove('expanded'));
+
+  detail.classList.add('open');
+  row.classList.add('expanded');
+  inner.innerHTML = '<div class="loading">Laddar kampanjer</div>';
+
+  if (loadedUsers[username]) {
+    renderDetail(inner, loadedUsers[username]);
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/admin/user/' + encodeURIComponent(username), { credentials: 'include' });
+    if (!res.ok) throw new Error('Kunde inte hämta användardata');
+    const data = await res.json();
+    loadedUsers[username] = data;
+    renderDetail(inner, data);
+  } catch (e) {
+    inner.innerHTML = '<div class="error-state"><p>' + e.message + '</p></div>';
   }
 }
 
-// ═══════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════
+function renderDetail(container, data) {
+  const campaigns = data.campaigns || [];
+  if (campaigns.length === 0) {
+    container.innerHTML = '<p style="color:var(--bone-dim);font-size:0.7rem;padding:0.5rem 0">Inga kampanjer hittades.</p>';
+    return;
+  }
 
-document.getElementById('refresh-btn').addEventListener('click', () => {
-  expandedUser = null;
-  userDetailCache = {};
-  adminData = null;
-  renderAll();
-  loadStats();
-});
+  let html = '';
+  campaigns.forEach(c => {
+    const promptT = c.prompt_tokens || 0;
+    const compT = c.completion_tokens || 0;
+    const total = c.total_tokens || 0;
+    const maxBar = Math.max(promptT, compT, 1);
+    const promptPct = (promptT / maxBar * 100).toFixed(1);
+    const compPct = (compT / maxBar * 100).toFixed(1);
 
-loadStats();
+    html += '<div class="campaign-card">';
+    html += '<div class="cc-head">';
+    html += '<span class="cc-name">' + (c.name || 'Namnlös') + '</span>';
+    html += '<span class="cc-char">' + (c.character_name || '—') + '</span>';
+    html += '</div>';
+    html += '<div class="cc-meta">';
+    html += '<span>Level: <span>' + (c.level || 1) + '</span></span>';
+    html += '<span>Plats: <span>' + (c.location || '—') + '</span></span>';
+    html += '<span>Turer: <span>' + (c.turns || 0) + '</span></span>';
+    html += '<span>Uppdaterad: <span>' + relTime(c.last_updated) + '</span></span>';
+    html += '</div>';
+
+    if (total > 0) {
+      html += '<div class="token-bar">';
+      html += '<div class="bar-prompt" style="width:' + promptPct + '%"></div>';
+      html += '<div class="bar-completion" style="width:' + compPct + '%"></div>';
+      html += '</div>';
+      html += '<div class="token-legend">';
+      html += '<span class="dot prompt"></span>Prompt: ' + fmtTokens(promptT);
+      html += '<span class="dot completion"></span>Svar: ' + fmtTokens(compT);
+      html += '<span>Total: ' + fmtTokens(total) + '</span>';
+      html += '</div>';
+    }
+
+    // Sessions
+    if (c.sessions && c.sessions.length > 0) {
+      html += '<div class="session-list">';
+      c.sessions.forEach(s => {
+        html += '<div class="session-item">';
+        html += '<span>' + s.session_file + ' · ' + s.turns + ' turer</span>';
+        html += '<span class="s-tokens">' + fmtTokens(s.total_tokens) + ' tkn</span>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  });
+  container.innerHTML = html;
+}
 
 // ═══════════════════════════════════════
-// EMBERS (from login.html pattern)
+// EMBERS (from login.html)
 // ═══════════════════════════════════════
 const canvas = document.getElementById('embers');
 const ctx = canvas.getContext('2d');
@@ -533,7 +450,7 @@ function spawn(init) {
     vy: 0.2+Math.random()*0.6, vx: (Math.random()-0.5)*0.3, life: 0,
     max: 400+Math.random()*500, hue: Math.random()<0.8 ? 22+Math.random()*18 : 268+Math.random()*20 };
 }
-for (let i=0;i<38;i++) embers.push(spawn(true));
+for (let i=0;i<30;i++) embers.push(spawn(true));
 function tick() {
   ctx.clearRect(0,0,W,H);
   for (let i=0;i<embers.length;i++) {
@@ -548,6 +465,11 @@ function tick() {
   requestAnimationFrame(tick);
 }
 tick();
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+loadStats();
 </script>
 </body>
 </html>

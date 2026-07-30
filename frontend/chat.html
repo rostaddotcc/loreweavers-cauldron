@@ -2294,6 +2294,8 @@ const EFFECT_META = {
   npc_relation:   { icon: '🤝',  sfx: 'click' },
   npc_new:        { icon: '🧙',  sfx: 'click' },
   npc_note:       { icon: '📝',  sfx: 'click' },
+  npc_reveal:     { icon: '🎭',  sfx: 'gate' },
+  character_update:{ icon: '📖',  sfx: 'click' },
   plats:          { icon: '📍',  sfx: 'click' },
   tid:            { icon: '⏰',  sfx: 'click' },
   ny_dag:         { icon: '🌅',  sfx: 'gate' },
@@ -2322,6 +2324,8 @@ function effectText(fx) {
     case 'npc_relation': return `Relation ändrad: <b>${v}</b>`;
     case 'npc_new':      return `Ny gestalt: <b>${v}</b> (${fx.role || 'okänd'}, ${fx.relation || 'okänd'})`;
     case 'npc_note':     return `Om <b>${v}</b>: ${fx.note || ''}`;
+    case 'npc_reveal':   return `Identitet avslöjad: ${fx.old_name || 'okänd'} → <b>${v}</b>`;
+    case 'character_update': return `Karaktärsuppdatering (<b>${v}</b>): ${fx.text || ''}`;
     case 'ny_dag':       return `<b>NY DAG</b> — ${v}`;
     case 'plats':        return `Ny plats: <b>${v}</b>`;
     case 'npc_död':      return `<b>${v}</b> är död.`;

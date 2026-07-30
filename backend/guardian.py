@@ -290,7 +290,8 @@ async def guardian_check_roll(
 
 GUARDIAN_POST_SYSTEM = """\
 Du är den mekaniska väktaren för ett svenskt D&D 5e-rollspel.
-Läs DM-svaret och spelarens handling. Extrahera ALLA mekaniska effekter.
+Läs DM-svaret, spelarens handling och den senaste konversationshistoriken. \
+Extrahera ALLA mekaniska effekter och uppdateringar.
 
 ## Vad du ska extrahera
 
@@ -313,10 +314,21 @@ Läs DM-svaret och spelarens handling. Extrahera ALLA mekaniska effekter.
 - quests_completed: Uppdrag som slutförs.
 - quests_failed: Uppdrag som misslyckas.
 
-### NPCs
+### NPCs (KRITISKT — uppdatera alltid vid förändringar)
 - npcs_new: Nya NPCs som introduceras. Ange name, role, relation (allierad/neutral/fiende/okänd).
-- npc_relations: Relationsändringar. Ange name och new_relation.
-- npc_notes: Nya anteckningar om NPCs (personlighet, mål, hemligheter, utseende).
+- npc_relations: Relationsändringar. Ange name och new_relation. \
+  DETEKTERA ÄVEN IMPLICITA ändringar: om en NPC hjälper spelaren → allierad. \
+  Om en NPC attackerar eller hotar → fiende. Om en NPC avslöjar en hemlighet → uppdatera notes.
+- npc_notes: Nya anteckningar om NPCs (personlighet, mål, hemligheter, utseende). \
+  DETEKTERA NAMNAVSLÖJANDEN: om en "okänd" NPC får ett namn, eller om en NPC:s \
+  identitet/roll avslöjas ("den gamle mannen visar sig vara..."), uppdatera notes.
+- npc_name_reveals: Om en NPC:s sanna namn eller identitet avslöjas. \
+  Ange old_name (eller "okänd"), new_name, och reveal_text (vad som avslöjades).
+
+### Karaktärsuppdateringar
+- character_updates: Om spelarens karaktär lär sig något nytt, upptäcker en förmåga, \
+  eller om bakgrundshistorien utvecklas. Ange field (t.ex. "trait", "backstory", "ability") \
+  och text (beskrivning av vad som ändrades).
 
 ### Värld & Tid
 - locations_new: Nya platser som nämns eller upptäcks.
@@ -348,6 +360,12 @@ Generera art varannan tur — inte varje tur.
 3. Skippa föremål som redan finns i inventory (nedan) om de inte ges/tas igen.
 4. XP ska vara rimligt: 50-100 för enkel strid, 200-500 för svår, 25-50 för upptäckt.
 5. Returnera ENDAST ett JSON-objekt. Inga förklaringar.
+6. NPC-UPPDATERINGAR: Var AGGRESSIV med att uppdatera NPC-kort. Om en NPC nämns \
+   i konversationen och du kan härleda ny information (namn, roll, relation, \
+   personlighet, mål) → lägg till i npc_notes eller npc_relations. \
+   Om en "okänd" NPC avslöjar sitt namn → npc_name_reveals.
+7. KARAKTÄRSUPPDATERINGAR: Om spelaren upptäcker en ny förmåga, lär sig en \
+   besvärjelse, eller om bakgrundshistorien utvecklas → character_updates.
 
 ## Format
 {
@@ -364,6 +382,8 @@ Generera art varannan tur — inte varje tur.
   "npcs_new": [{"name": "...", "role": "...", "relation": "neutral"}],
   "npc_relations": [],
   "npc_notes": [{"name": "...", "note": "..."}],
+  "npc_name_reveals": [{"old_name": "okänd", "new_name": "...", "reveal_text": "..."}],
+  "character_updates": [{"field": "trait", "text": "..."}],
   "locations_new": [],
   "time_passed": null,
   "rest": null,
@@ -450,9 +470,14 @@ async def guardian_extract_mechanics(
     turn: int,
     model_call_fn: ModelCallFn,
     language: str = "sv",
+    conversation_history: list[dict] | None = None,
 ) -> dict:
     """
     Post-DM: Extract all mechanical effects from the DM reply.
+
+    Args:
+        conversation_history: Recent transcript entries (role/content dicts)
+            for context-aware extraction (NPC reveals, implicit changes).
 
     Returns:
         Dict with all fields from the GUARDIAN_POST_SYSTEM format.
@@ -461,19 +486,39 @@ async def guardian_extract_mechanics(
     state_ctx = _format_state_for_guardian(state, language)
     lang_instruction = _LANG_INSTRUCTION_EN if language == "en" else _LANG_INSTRUCTION_SV
 
+    # Bygg konversationskontext (senaste 6 meddelanden)
+    history_block = ""
+    if conversation_history:
+        recent = conversation_history[-6:]
+        lines = []
+        for entry in recent:
+            role = entry.get("role", "?")
+            content = entry.get("content", "")[:300]
+            if role == "guardian":
+                continue  # Hoppa över Guardian-rapporter
+            if role == "user":
+                lines.append(f"Spelare: {content}" if language == "sv" else f"Player: {content}")
+            elif role == "assistant":
+                lines.append(f"DM: {content}" if language == "sv" else f"DM: {content}")
+        if lines:
+            history_label = "## Senaste konversation" if language == "sv" else "## Recent conversation"
+            history_block = f"{history_label}\n" + "\n".join(lines) + "\n\n"
+
     if language == "en":
         user_msg = (
             f"## Current state\n{state_ctx}\n\n"
+            f"{history_block}"
             f"## DM reply (turn {turn})\n{dm_reply}\n\n"
             f"## Player's action\n{player_msg}\n\n"
-            "Extract all mechanical effects:"
+            "Extract all mechanical effects and updates:"
         )
     else:
         user_msg = (
             f"## Nuvarande tillstånd\n{state_ctx}\n\n"
+            f"{history_block}"
             f"## DM-svar (tur {turn})\n{dm_reply}\n\n"
             f"## Spelarens handling\n{player_msg}\n\n"
-            "Extrahera alla mekaniska effekter:"
+            "Extrahera alla mekaniska effekter och uppdateringar:"
         )
 
     messages = [
@@ -486,6 +531,7 @@ async def guardian_extract_mechanics(
         "items_add": [], "items_remove": [], "currency": [],
         "quests_new": [], "quests_completed": [], "quests_failed": [],
         "npcs_new": [], "npc_relations": [], "npc_notes": [],
+        "npc_name_reveals": [], "character_updates": [],
         "locations_new": [], "time_passed": None, "rest": None,
         "new_day": None, "day_summary": None, "logbook": "", "ascii_art": None,
     }
@@ -749,6 +795,52 @@ def apply_mechanics(state: dict, mech: dict) -> list[dict]:
             _add_npc_note(state, name, text)
             effects.append({"type": "npc_note", "value": name, "note": text})
 
+    # ── NPC-namn avslöjanden ──
+    for reveal in mech.get("npc_name_reveals", []):
+        old_name = reveal.get("old_name", "").strip()
+        new_name = reveal.get("new_name", "").strip()
+        reveal_text = reveal.get("reveal_text", "").strip()
+        if not new_name:
+            continue
+        # Hitta NPC med gammalt namn (eller "okänd") och uppdatera
+        for npc in npcs:
+            if npc.get("name", "").lower() == old_name.lower() or (old_name.lower() in ("okänd", "unknown") and not npc.get("name")):
+                npc["name"] = new_name
+                if reveal_text:
+                    _add_npc_note(state, new_name, f"Identitet avslöjad: {reveal_text}")
+                effects.append({"type": "npc_reveal", "value": new_name, "old_name": old_name, "reveal_text": reveal_text})
+                logger.info("🛡️ Guardian: NPC-namn avslöjat '%s' → '%s'", old_name, new_name)
+                break
+        else:
+            # NPC hittades inte — skapa ny med avslöjat namn
+            h = int.from_bytes(new_name.encode("utf-8"), "big")
+            _colors = ['#8b5fd4', '#d4691e', '#7aa35e', '#5e9aa3', '#d43a4d', '#c9a227', '#a8b2c0', '#b06fd4']
+            _icons = ['🧙', '⚔️', '🏹', '🛡️', '🎭', '👻', '🐺', '🦉', '💀', '🔮', '🗡️', '🌙']
+            npcs.append({
+                "name": new_name,
+                "role": "Okänd",
+                "relation": "okänd",
+                "color": _colors[h % len(_colors)],
+                "icon": _icons[h % len(_icons)],
+                "notes": f"• Identitet avslöjad: {reveal_text}" if reveal_text else "",
+                "alive": True,
+            })
+            effects.append({"type": "npc_reveal", "value": new_name, "old_name": old_name, "reveal_text": reveal_text})
+            logger.info("🛡️ Guardian: ny NPC via avslöjande '%s'", new_name)
+
+    # ── Karaktärsuppdateringar ──
+    ch = state.setdefault("character", {})
+    for upd in mech.get("character_updates", []):
+        field = upd.get("field", "").strip()
+        text = upd.get("text", "").strip()
+        if not field or not text:
+            continue
+        # Spara i character.updates (append-only logg)
+        updates = ch.setdefault("updates", [])
+        updates.append({"field": field, "text": text, "turn": state.get("meta", {}).get("turn_count", 0)})
+        effects.append({"type": "character_update", "value": field, "text": text})
+        logger.info("🛡️ Guardian: karaktärsuppdatering '%s': %s", field, text[:60])
+
     # ── Platser ──
     world = state.setdefault("world", {})
     for loc in mech.get("locations_new", []):
@@ -970,6 +1062,34 @@ def format_guardian_summary(effects: list[dict], state: dict, language: str = "s
                 lines.append(f"💀 **{v} har fallit.**")
         elif t == "npc_relation":
             lines.append(f"🤝 **{v}**")
+        elif t == "npc_new":
+            role = e.get("role", "?")
+            relation = e.get("relation", "?")
+            if en:
+                lines.append(f"🧙 **New character:** {v} ({role}, {relation})")
+            else:
+                lines.append(f"🧙 **Ny gestalt:** {v} ({role}, {relation})")
+        elif t == "npc_note":
+            note = e.get("note", "")
+            if en:
+                lines.append(f"📝 **About {v}:** {note}")
+            else:
+                lines.append(f"📝 **Om {v}:** {note}")
+        elif t == "npc_reveal":
+            old = e.get("old_name", "?")
+            reveal_text = e.get("reveal_text", "")
+            if en:
+                lines.append(f"🎭 **Identity revealed:** {old} → **{v}**")
+            else:
+                lines.append(f"🎭 **Identitet avslöjad:** {old} → **{v}**")
+            if reveal_text:
+                lines.append(f"  *{reveal_text}*")
+        elif t == "character_update":
+            text = e.get("text", "")
+            if en:
+                lines.append(f"📖 **Character update ({v}):** {text}")
+            else:
+                lines.append(f"📖 **Karaktärsuppdatering ({v}):** {text}")
         elif t == "plats":
             label = "New location:" if en else "Ny plats:"
             lines.append(f"🗺️ **{label}** {v}")

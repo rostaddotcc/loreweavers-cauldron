@@ -2046,10 +2046,13 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     guardian_summary = ""
     try:
         _tg = time.time()
+        # Hämta senaste konversationshistorik för kontextmedveten extraktion
+        _guardian_transcript = store.load_transcript(state, last_n=8)
         mech = await guardian_extract_mechanics(
             reply, req.message, state, effective_turn,
             lambda msgs: _call_llm(EXTRACTION_MODEL, msgs, temperature=0.2, max_tokens=1200),
             language=_get_lang(state),
+            conversation_history=_guardian_transcript,
         )
         guardian_effects = apply_mechanics(state, mech)
 

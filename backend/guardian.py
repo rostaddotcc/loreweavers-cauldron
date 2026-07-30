@@ -368,17 +368,26 @@ Använd enkla tecken: /\|_-~^*.+#@. Exempel: träd, berg, eld, vatten, skallar, 
 Sätt null om scenen är ren dialog eller inomhus utan tydlig miljö. \
 Generera art varannan tur — inte varje tur.
 
+### Korrigeringar (KRITISKT)
+- corrections: Om DM:s narration implikerade att något hände som INTE borde ha hänt, korrigera det här. \
+  Exempel: DM skrev "du tar boken" men spelaren bara läste i den → korrigera: {"field": "items_add", "action": "retract", "reason": "Spelaren läste bara i boken, plockade inte upp den"}. \
+  Andra exempel: DM gav XP för något spelaren inte gjorde, DM lade till föremål spelaren bara tittade på. \
+  Om allt stämmer → tom array. Använd reason för att förklara för spelaren varför.
+
 ## Regler
 1. Ta ENDAST med effekter som faktiskt sker — inte saker som nämns eller hotas.
 2. "Du siktar mot flaskan" → INGET föremål. "Du tar flaskan" → items_add.
-3. Skippa föremål som redan finns i inventory (nedan) om de inte ges/tas igen.
-4. XP ska vara rimligt: 50-100 för enkel strid, 200-500 för svår, 25-50 för upptäckt.
-5. Returnera ENDAST ett JSON-objekt. Inga förklaringar.
-6. NPC-UPPDATERINGAR: Var AGGRESSIV med att uppdatera NPC-kort. Om en NPC nämns \
+3. VIKTIGT — Föremål: lägg ENDAST till i items_add om spelaren FAKTISKT tar, får, köper eller stjäl föremålet i sin ägo. \
+   "Du ser en bok" → INGET föremål. "Du läser boken" → INGET föremål (boken stannar). "Du plockar upp boken" → items_add. \
+   "Du hittar en nyckel" → bara om spelaren tar den. "Du öppnar asken" → INGET föremäl om spelaren bara tittar i den.
+4. Skippa föremål som redan finns i inventory (nedan) om de inte ges/tas igen.
+5. XP ska vara rimligt: 50-100 för enkel strid, 200-500 för svår, 25-50 för upptäckt.
+6. Returnera ENDAST ett JSON-objekt. Inga förklaringar.
+7. NPC-UPPDATERINGAR: Var AGGRESSIV med att uppdatera NPC-kort. Om en NPC nämns \
    i konversationen och du kan härleda ny information (namn, roll, relation, \
    personlighet, mål) → lägg till i npc_notes eller npc_relations. \
    Om en "okänd" NPC avslöjar sitt namn → npc_name_reveals.
-7. KARAKTÄRSUPPDATERINGAR: Om spelaren upptäcker en ny förmåga, lär sig en \
+8. KARAKTÄRSUPPDATERINGAR: Om spelaren upptäcker en ny förmåga, lär sig en \
    besvärjelse, eller om bakgrundshistorien utvecklas → character_updates.
 
 ## Format
@@ -405,7 +414,8 @@ Generera art varannan tur — inte varje tur.
   "day_summary": null,
   "logbook": "",
   "ascii_art": null,
-  "roll_grants": []
+  "roll_grants": [],
+  "corrections": []
 }
 
 Tomma fält: tom array [] eller null. Utelämna ALDRIG ett fält.
@@ -961,6 +971,22 @@ def apply_mechanics(state: dict, mech: dict) -> list[dict]:
         effects.append({"type": "roll_grant", "value": label or notation, "notation": notation})
         logger.info("🛡️ Guardian: roll_grant %s (%s)", notation, label)
 
+    # ── Korrigeringar ──
+    for corr in mech.get("corrections", []):
+        field = corr.get("field", "")
+        action = corr.get("action", "")
+        reason = corr.get("reason", "")
+        if action == "retract" and field == "items_add":
+            # Ta bort senast tillagt föremål om det var ett misstag
+            inv = state.get("inventory", [])
+            if inv:
+                removed = inv.pop()
+                effects.append({"type": "korrigering", "value": f"Föremål återkallat: {removed.get('name', '?')}", "reason": reason})
+                logger.info("🛡️ Guardian korrigering: återkallade '%s' — %s", removed.get("name", "?"), reason[:80])
+        elif reason:
+            effects.append({"type": "korrigering", "value": reason, "reason": reason})
+            logger.info("🛡️ Guardian korrigering: %s — %s", field, reason[:80])
+
     return effects
 
 
@@ -1184,6 +1210,10 @@ def format_guardian_summary(
             notation = e.get("notation", "")
             label = "Dice granted:" if en else "Tärning tilldelad:"
             lines.append(f"🎲 **{label}** {v} ({notation})")
+        elif t == "korrigering":
+            label = "Correction:" if en else "Korrigering:"
+            reason = e.get("reason", "")
+            lines.append(f"🔧 **{label}** {v}")
 
     # ── Icke-effekt-data från mech (loggbok, tid, vila) ──
     logbook = mech.get("logbook", "")

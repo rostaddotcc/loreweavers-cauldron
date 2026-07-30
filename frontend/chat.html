@@ -817,6 +817,22 @@
   }
   .dm-status .thought.fade { opacity: 0; transform: translateY(4px); }
 
+  /* ── Guardian-status (bakgrundsindikator) ── */
+  .guardian-status { display: none; align-items: center; gap: .8rem; padding: .3rem 1.6rem .9rem; }
+  .guardian-status.show { display: flex; }
+  .guardian-pulse {
+    width: 20px; height: 20px; flex-shrink: 0; position: relative;
+    border: 2px solid var(--gold); border-radius: 50%;
+    animation: guardian-ring 1.8s ease-in-out infinite;
+  }
+  .guardian-pulse::after {
+    content: ''; position: absolute; top: 3px; left: 3px; width: 10px; height: 10px;
+    background: var(--gold); border-radius: 50%; opacity: 0.6;
+    animation: guardian-dot 1.8s ease-in-out infinite;
+  }
+  @keyframes guardian-ring { 0%,100% { transform: scale(1); opacity: 0.7; } 50% { transform: scale(1.3); opacity: 0.3; } }
+  @keyframes guardian-dot { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+
   /* ── Input ── */
   .input-area {
     padding: 0.8rem 1.6rem 1rem;
@@ -1186,6 +1202,11 @@
     <div class="dm-status" id="dm-status">
       <div class="rune-spinner"></div>
       <span class="thought" id="thought-text">🧙‍♂️ Väver berättelsen…</span>
+    </div>
+
+    <div class="guardian-status" id="guardian-status">
+      <div class="guardian-pulse"></div>
+      <span class="thought">🛡️ Guardian bearbetar…</span>
     </div>
 
     <div class="input-area">
@@ -1889,6 +1910,7 @@ async function answerRollRequest(id, notation, label) {
     hideThoughts();
     if (res.reply) addMessage('dm', null, res.reply);
     if (res.guardian_pending) {
+      showGuardianStatus();
       pollForGuardian(res.turn_count);
     } else if (res.guardian_summary) {
       addMessage('guardian', null, res.guardian_summary);
@@ -1898,6 +1920,7 @@ async function answerRollRequest(id, notation, label) {
     }
   } catch (e) {
     hideThoughts();
+    hideGuardianStatus();
     await restoreFromTranscript('⚠ DM:n kunde inte ge utfallet: <b>' + escapeHtml(e.message || 'okänt fel') + '</b>');
   } finally {
     isResponding = false;
@@ -2125,6 +2148,16 @@ function showThoughts(kind = 'narrate') {
 function hideThoughts() {
   clearInterval(thoughtTimer);
   document.getElementById('dm-status').classList.remove('show');
+}
+
+// ── Guardian-status: visar att Guardian bearbetar i bakgrunden ──
+function showGuardianStatus() {
+  const el = document.getElementById('guardian-status');
+  if (el) el.classList.add('show');
+}
+function hideGuardianStatus() {
+  const el = document.getElementById('guardian-status');
+  if (el) el.classList.remove('show');
 }
 
 // Bakåtkompatibilitet med gammal demo-kod
@@ -2427,6 +2460,7 @@ async function dmRespond(playerText) {
 
     // Guardian-rapport: körs nu i bakgrunden → polla transkriptet
     if (res.guardian_pending) {
+      showGuardianStatus();
       pollForGuardian(res.turn_count);
     } else if (res.guardian_summary) {
       // Bakåtkompatibilitet: om backend fortfarande skickar inline
@@ -2450,6 +2484,7 @@ async function dmRespond(playerText) {
     }
   } catch (e) {
     hideThoughts();
+    hideGuardianStatus();
     await restoreFromTranscript('⚠ DM:n kunde inte svara: <b>' + escapeHtml(e.message || 'okänt fel') + '</b>. Försök igen.');
   } finally {
     isResponding = false;
@@ -2477,10 +2512,10 @@ function pollForGuardian(turnCount) {
       // Hitta senaste guardian-meddelandet
       const lastGuardian = [...messages].reverse().find(m => m.role === 'guardian');
       if (lastGuardian) {
-        // Kontrollera att den inte redan visas (strippa taggar före jämförelse)
+        // Kontrollera att den inte redan visas — jämför mot ALLA visade guardian-meddelanden
         const cleanContent = lastGuardian.content.replace(/\[ROLL_GRANT:[^\]]*\]/g, '').trim();
-        const existing = [...chat.querySelectorAll('.msg.guardian')].pop();
-        const alreadyShown = existing && existing.querySelector('.guardian-box')?.textContent.trim() === cleanContent;
+        const allShown = [...chat.querySelectorAll('.msg.guardian .guardian-box')].map(el => el.textContent.trim());
+        const alreadyShown = allShown.includes(cleanContent);
         if (!alreadyShown) {
           // Parsa och ta bort [ROLL_GRANT:notation|label]-taggar
           let content = lastGuardian.content;
@@ -2494,6 +2529,7 @@ function pollForGuardian(turnCount) {
           addMessage('guardian', null, content);
           // Spawna tärningsknappar för varje grant
           grants.forEach(g => addRollRequest(g.notation, g.label));
+          hideGuardianStatus();
           SFX.click();
         }
         clearInterval(_guardianPollTimer);
@@ -2505,6 +2541,7 @@ function pollForGuardian(turnCount) {
     if (attempts >= maxAttempts) {
       clearInterval(_guardianPollTimer);
       _guardianPollTimer = null;
+      hideGuardianStatus();
     }
   }, 2000);
 }

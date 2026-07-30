@@ -71,7 +71,9 @@ from auth import create_token, load_users, verify_password, verify_token
 from dice import roll as dice_roll
 from models import (
     AWAKENING_ASK,
+    AWAKENING_ASK_EN,
     AWAKENING_OPEN,
+    AWAKENING_OPEN_EN,
     DM_COMBAT_PROMPT,
     DM_CORE_PROMPT,
     DM_NARRATIVE_PROMPT,
@@ -148,6 +150,14 @@ OPENING_STYLES = [
     ('in_media_res', 'Äventyret börjar mitt i en pågående händelse — en strid, en flykt, ett brinnande hus. Kasta spelaren rakt in.'),
     ('awakening', 'Spelaren vaknar på en okänd plats. De vet inte hur de hamnade där. Beskriv vad de ser, hör och känner.'),
     ('summoned', 'Spelaren har kallats till en plats av någon med ett uppdrag eller ett erbjudande. Vem kallade dem, och varför?'),
+]
+
+OPENING_STYLES_EN = [
+    ('meeting', 'The adventure begins with the player meeting an interesting NPC. Give them a name, a personality, and a reason to be there.'),
+    ('alone', 'The player is completely alone. Describe the surroundings atmospherically. Let the player explore and discover things at their own pace.'),
+    ('in_media_res', 'The adventure begins in the middle of an ongoing event — a battle, an escape, a burning house. Throw the player straight in.'),
+    ('awakening', 'The player wakes up in an unknown place. They do not know how they got there. Describe what they see, hear, and feel.'),
+    ('summoned', 'The player has been summoned to a place by someone with a quest or an offer. Who summoned them, and why?'),
 ]
 
 
@@ -1073,8 +1083,9 @@ async def create_campaign(body: CampaignCreateRequest | None = None, morkrets_to
     language = (body.language if body else "en") or "en"
 
     state = store.create(username, name=name, language=language)
-    # Slumpa en äventyrsöppning
-    style_key, style_desc = random.choice(OPENING_STYLES)
+    # Slumpa en äventyrsöppning (språkmedveten)
+    styles = OPENING_STYLES_EN if language == "en" else OPENING_STYLES
+    style_key, style_desc = random.choice(styles)
     state["meta"]["opening_style"] = style_desc
     state["meta"]["opening_key"] = style_key
     state["meta"]["awakening"] = True  # DM vaknar: frågor först, sen öppnas scenen
@@ -1546,11 +1557,15 @@ def _build_system_prompt(
     meta = state.get("meta", {})
     if meta.get("awakening") or awakening_trigger:
         turn = turn_override if turn_override is not None else meta.get("turn_count", 0)
-        opening = meta.get("opening_style", "Beskriv omgivningen atmosfäriskt och låt spelaren utforska.")
+        default_opening = ("Describe the surroundings atmospherically and let the player explore."
+                           if lang == "en" else
+                           "Beskriv omgivningen atmosfäriskt och låt spelaren utforska.")
+        opening = meta.get("opening_style", default_opening)
         if awakening_trigger or turn == 1:
-            parts.append(AWAKENING_ASK)
+            parts.append(AWAKENING_ASK_EN if lang == "en" else AWAKENING_ASK)
         elif turn == 2:
-            parts.append(AWAKENING_OPEN.format(opening_style=opening))
+            tmpl = AWAKENING_OPEN_EN if lang == "en" else AWAKENING_OPEN
+            parts.append(tmpl.format(opening_style=opening))
 
     # Per-turs regelinjicering — relevanta D&D 5e-regler för denna tur
     rules_text = inject_rules(player_input)

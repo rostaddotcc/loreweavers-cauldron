@@ -1870,7 +1870,7 @@ const AWAKENING_TRIGGER = '__VAKNA_DM__';
 // ── Modellgate: välj DM innan vaknandet ──
 function showModelGate() {
   const en = (typeof I18N !== 'undefined' && I18N.getLang() === 'en');
-  const title = en ? '⚔️ Choose your Dungeon Master' : '⚔️ Välj din spelledare';
+  const title = en ? '⚔️ Choose your Dungeon Master' : '⚔️ Välj din Dungeon Master';
   const sub = en
     ? 'This AI model will narrate your entire adventure.'
     : 'Denna AI-modell kommer att berätta hela ditt äventyr.';
@@ -1927,6 +1927,12 @@ function showModelGate() {
         box-shadow: 0 0 20px rgba(201,162,39,.3);
         transform: translateY(-1px);
       }
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes gateCardIn {
+        from { opacity: 0; transform: translateY(14px) scale(.97); }
+        to   { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      #model-gate .gate-card { animation: gateCardIn .45s cubic-bezier(.22,1,.36,1); }
     </style>
     <div class="gate-card">
       <h2>${title}</h2>
@@ -1936,9 +1942,11 @@ function showModelGate() {
       <button onclick="beginAdventure()">${btnLabel}</button>
     </div>`;
   document.body.appendChild(gate);
+  SFX.gate();
 }
 
 function beginAdventure() {
+  SFX.click();
   const sel = document.getElementById('gate-model');
   currentModel = sel.value;
   localStorage.setItem('dnd_model', currentModel);

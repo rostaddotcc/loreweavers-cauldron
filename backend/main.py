@@ -2162,7 +2162,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
 # CHARACTER GENERATION
 # ═══════════════════════════════════════
 
-CHARACTER_PROMPT = """Du är en D&D-karaktärsgenerator för ett mörkt fantasy-äventyr. Skapa en karaktär baserad på spelarens beskrivning.
+CHARACTER_PROMPT_SV = """Du är en D&D-karaktärsgenerator för ett mörkt fantasy-äventyr. Skapa en karaktär baserad på spelarens beskrivning.
 
 VIKTIGT: Karaktären hör hemma i en PÅHITTAD fantasy-värld. Använd ALDRIG verkliga ortsnamn (inga svenska städer, länder eller kända platser) i namn, bakgrund eller utrustning. Hitta på stämningsfulla fantasy-namn.
 
@@ -2210,6 +2210,54 @@ Fyll ALLTID inventory-arrayen med 5-8 föremål som passar karaktärens klass oc
 - Basvapnet ska ha equipped:true, allt annat equipped:false.
 - rarity: de flesta "normal", potion kan vara "magic", det klass-unika föremålet kan vara "rare"."""
 
+CHARACTER_PROMPT_EN = """You are a D&D character generator for a dark fantasy adventure. Create a character based on the player's description.
+
+IMPORTANT: The character belongs in a FICTIONAL fantasy world. NEVER use real place names (no real cities, countries, or known locations) in names, backgrounds, or equipment. Invent atmospheric fantasy names.
+
+Respond ONLY with valid JSON (no markdown) using this schema:
+{
+  "name": "string",
+  "race": "string",
+  "class": "string",
+  "level": 1,
+  "alignment": "string",
+  "background": "string — class/background, brief",
+  "ac": 10,
+  "initiative": 0,
+  "perception": 10,
+  "speed": "30 ft",
+  "proficiency": 2,
+  "hp": {"current": 10, "max": 10, "temp": 0},
+  "spell_slots": {"current": 0, "max": 0},
+  "xp": {"current": 0, "next_level": 300},
+  "abilities": {
+    "STR": {"score": 10, "mod": 0},
+    "DEX": {"score": 10, "mod": 0},
+    "CON": {"score": 10, "mod": 0},
+    "INT": {"score": 10, "mod": 0},
+    "WIS": {"score": 10, "mod": 0},
+    "CHA": {"score": 10, "mod": 0}
+  },
+  "traits": ["string — 3-4 abilities/traits"],
+  "saves": [],
+  "gear": "string — starting equipment, 5-8 items separated by ' · '",
+  "story": "string — backstory, max 100 words, dark and atmospheric",
+  "inventory": [
+    {"name": "string", "type": "Weapon|Armor|Potion|Magic|Tool|Other", "qty": 1, "weight": 1.0, "equipped": false, "rarity": "normal|magic|rare"}
+  ]
+}
+
+## STARTING EQUIPMENT (inventory) — CRITICAL
+ALWAYS fill the inventory array with 5-8 items fitting the character's class and background:
+- **A base weapon** fitting the class (sword for fighter, staff for wizard, dagger for rogue, etc.) — set equipped:true
+- **Food/rations** (e.g. "Dried meat", "Hard bread", "Field rations") — qty 2-5
+- **A potion** (e.g. "Healing potion", "Elixir of courage", "Poison vial") — qty 1-2
+- **A class-unique item** reflecting class identity (e.g. "Rune-etched spellbook" for wizard, "Thieves' tools" for rogue, "Holy symbol" for cleric, "Hunting bow + 20 arrows" for ranger)
+- **2-3 additional adventure items** (rope, torches, tinderbox, map, bedroll, etc.)
+- Set realistic weight (lbs) on each item. Weapons 2-6 lbs, potions 0.5 lbs, food 0.5-1 lbs per piece.
+- The base weapon should have equipped:true, everything else equipped:false.
+- rarity: most items "normal", potions can be "magic", the class-unique item can be "rare"."""
+
 
 @app.post("/api/character/generate")
 async def generate_character(req: CharacterRequest, morkrets_token: str | None = Cookie(None)):
@@ -2222,13 +2270,12 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
 
     # Språkanpassning av karaktärsgenerering
     lang = _get_lang(state)
-    char_prompt = CHARACTER_PROMPT
-    if lang == "en":
-        char_prompt += "\n\n[IMPORTANT: Write the ENTIRE character sheet in English — name, race, class, background, story, traits, gear, and all text fields. JSON field names stay the same.]"
+    char_prompt = CHARACTER_PROMPT_EN if lang == "en" else CHARACTER_PROMPT_SV
+    user_msg = f"Create a character: {req.prompt}" if lang == "en" else f"Skapa en karaktär: {req.prompt}"
 
     messages = [
         {"role": "system", "content": char_prompt},
-        {"role": "user", "content": f"Skapa en karaktär: {req.prompt}"},
+        {"role": "user", "content": user_msg},
     ]
 
     try:
@@ -2237,14 +2284,14 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
     except HTTPException:
         raise
     except (ValueError, RuntimeError) as e:
-        # Inga tysta fallback-karaktärer — spelaren ska se vad som gick fel
-        raise HTTPException(502, f"Karaktären kunde inte vävas: {e}")
+        err = _err("Karaktären kunde inte vävas", "The character could not be woven", lang)
+        raise HTTPException(502, f"{err}: {e}")
 
     # Validera löst — se till att grundfält finns
     if not char_data.get("name"):
-        char_data["name"] = "Namnlös"
+        char_data["name"] = "Nameless" if lang == "en" else "Namnlös"
     for field in ("race", "class", "alignment", "background"):
-        char_data.setdefault(field, "Okänd")
+        char_data.setdefault(field, "Unknown" if lang == "en" else "Okänd")
     char_data.setdefault("level", 1)
     char_data.setdefault("abilities", {})
 
@@ -2258,7 +2305,7 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
                 continue
             clean.append({
                 "name": str(it["name"]),
-                "type": str(it.get("type", "Annat")),
+                "type": str(it.get("type", "Other" if lang == "en" else "Annat")),
                 "qty": int(it.get("qty", 1) or 1),
                 "weight": float(it.get("weight", 1) or 1),
                 "equipped": bool(it.get("equipped", False)),

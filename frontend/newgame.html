@@ -807,8 +807,8 @@ async function summon() {
       stats[k] = (abilities[k] && abilities[k].score) || 10;
     }
     const char = {
-      name: c.name || 'Namnlös',
-      cls: [c.race, c.class].filter(Boolean).join(' · ') + (c.level ? ' · Nivå ' + c.level : ''),
+      name: c.name || (isEn() ? 'Nameless' : 'Namnlös'),
+      cls: [c.race, c.class].filter(Boolean).join(' · ') + (c.level ? ' · ' + I18N.t('Nivå') + ' ' + c.level : ''),
       icon: '🎭',
       stats,
       hp: (c.hp && c.hp.max) || 10,

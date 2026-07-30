@@ -1283,7 +1283,7 @@ async function loadCampaign() {
       if (ch.name) {
         document.getElementById('pc-name').textContent = ch.name;
         document.getElementById('pc-sub').textContent =
-          [ch.race, ch.class].filter(Boolean).join(' · ') + (ch.level ? ' · Nivå ' + ch.level : '');
+          [ch.race, ch.class].filter(Boolean).join(' · ') + (ch.level ? ' · ' + I18N.t('Nivå') + ' ' + ch.level : '');
         const hp = ch.hp || {};
         if (hp.max) {
           document.getElementById('pc-hp-fill').style.width = Math.round(100 * (hp.current || 0) / hp.max) + '%';

@@ -9,20 +9,25 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
 <style>
   :root {
-    --ink: #0b0812;
-    --stone: #161020;
-    --stone-2: #1d1529;
-    --stone-3: #241a33;
-    --edge: #3d2f52;
-    --bone: #d9c9a6;
-    --bone-bright: #efe2c0;
-    --bone-dim: #8a7a5e;
+    --ink: #08080d;
+    --stone: #0e0e14;
+    --stone-2: #12121a;
+    --stone-3: #181822;
+    --edge: #2a2a3a;
+    --edge-hi: #3a3a50;
+    --bone: #b8b8c8;
+    --bone-bright: #e0e0ec;
+    --bone-dim: #6a6a80;
     --gold: #c9a227;
     --gold-bright: #e8c65a;
-    --blood: #a32433;
+    --blood: #8b1a2a;
     --blood-bright: #d43a4d;
     --ember: #d4691e;
-    --arcane: #8b5fd4;
+    --arcane: #7b4fd4;
+    --poison: #5a9a4e;
+    --teal: #4e8a93;
+    --term-green: #33cc33;
+    --term-amber: #ccaa33;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -30,10 +35,7 @@
     color: var(--bone);
     min-height: 100vh;
     display: flex; align-items: center; justify-content: center;
-    background:
-      radial-gradient(900px 500px at 50% 115%, rgba(212,105,30,0.12), transparent 60%),
-      radial-gradient(700px 400px at 15% -5%, rgba(139,95,212,0.09), transparent 55%),
-      var(--ink);
+    background: var(--ink);
     overflow: hidden;
   }
 
@@ -44,52 +46,84 @@
   #embers { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
   .vignette { position: fixed; inset: 0; z-index: 1; pointer-events: none; box-shadow: inset 0 0 200px 80px rgba(4,2,8,0.9); }
 
+  /* ── Mystical fog (unique class — NOT killed by snes.css) ── */
+  .myst-fog {
+    position: fixed; inset: -20%; z-index: 0; pointer-events: none;
+  }
+  .myst-fog::before, .myst-fog::after {
+    content: ''; position: absolute; width: 70vw; height: 70vh; border-radius: 50%;
+    filter: blur(90px); opacity: 0.4;
+  }
+  .myst-fog::before {
+    left: -10%; top: 15%;
+    background: radial-gradient(circle, rgba(123,79,212,0.06), transparent 65%);
+    animation: fog-drift-a 80s ease-in-out infinite alternate;
+  }
+  .myst-fog::after {
+    right: -15%; bottom: 5%;
+    background: radial-gradient(circle, rgba(212,105,30,0.05), transparent 65%);
+    animation: fog-drift-b 100s ease-in-out infinite alternate;
+  }
+  @keyframes fog-drift-a { from { transform: translate(0,0) scale(1); } to { transform: translate(14vw,-8vh) scale(1.25); } }
+  @keyframes fog-drift-b { from { transform: translate(0,0) scale(1.15); } to { transform: translate(-12vw,6vh) scale(0.9); } }
+
   /* ── Gate / portal frame ── */
   .gate {
     position: relative; z-index: 2; width: 100%; max-width: 420px; padding: 1.5rem;
+    animation: gate-enter 1.2s cubic-bezier(.22,1,.36,1) both;
+  }
+  @keyframes gate-enter {
+    from { opacity: 0; transform: translateY(40px); }
+    to { opacity: 1; transform: translateY(0); }
   }
   .gate-frame {
     position: relative; padding: 2.5rem 2.2rem 2rem;
-    background: linear-gradient(170deg, var(--stone-2), var(--stone) 60%, #0e0a16);
+    background: var(--stone);
     border: 1px solid var(--edge);
-    box-shadow: 0 30px 80px -20px rgba(0,0,0,0.9), inset 0 1px 0 rgba(239,226,192,0.04);
   }
-  .corner { position: absolute; width: 22px; height: 22px; border-color: var(--gold); border-style: solid; opacity: 0.8; }
-  .corner.tl { top: 8px; left: 8px; border-width: 2px 0 0 2px; }
-  .corner.tr { top: 8px; right: 8px; border-width: 2px 2px 0 0; }
-  .corner.bl { bottom: 8px; left: 8px; border-width: 0 0 2px 2px; }
-  .corner.br { bottom: 8px; right: 8px; border-width: 0 2px 2px 0; }
 
-  /* ── Sigill ── */
+  /* ── Sigil — SVG rune with pulse ── */
   .sigil {
-    width: 72px; height: 72px; margin: 0 auto 1.2rem; position: relative;
+    width: 80px; height: 80px; margin: 0 auto 1.2rem; position: relative;
     display: flex; align-items: center; justify-content: center;
   }
-  .sigil-ring {
-    position: absolute; inset: 0; border-radius: 50%;
-    border: 2px solid var(--edge);
-    animation: sigil-spin 20s linear infinite;
+  .sigil svg {
+    width: 80px; height: 80px;
+    filter: drop-shadow(0 0 8px rgba(232,198,90,0.3));
+    animation: sigil-pulse 3s ease-in-out infinite;
   }
-  .sigil-ring::before {
-    content: ''; position: absolute; top: -4px; left: 50%; width: 6px; height: 6px;
-    background: var(--gold-bright); border-radius: 50%; transform: translateX(-50%);
-    box-shadow: 0 0 8px var(--gold-bright);
+  @keyframes sigil-pulse {
+    0%, 100% { filter: drop-shadow(0 0 6px rgba(232,198,90,0.25)); }
+    50% { filter: drop-shadow(0 0 16px rgba(232,198,90,0.5)); }
   }
-  .sigil-ring.inner { inset: 10px; animation-direction: reverse; animation-duration: 14s; border-color: rgba(139,95,212,0.4); }
-  .sigil-ring.inner::before { background: var(--arcane); box-shadow: 0 0 8px var(--arcane); }
-  @keyframes sigil-spin { to { transform: rotate(360deg); } }
-  .sigil-icon { font-size: 1.8rem; filter: drop-shadow(0 0 12px rgba(232,198,90,0.5)); }
+  .sigil-ring-rot {
+    position: absolute; inset: 0; pointer-events: none;
+    animation: ring-spin 25s linear infinite;
+  }
+  .sigil-ring-rot svg { animation: none; filter: none; }
+  @keyframes ring-spin { to { transform: rotate(360deg); } }
 
   .gate-title {
     font-family: 'Cinzel', serif; font-weight: 900; text-align: center;
     font-size: 1.6rem; color: var(--bone-bright); letter-spacing: 0.08em;
-    text-shadow: 0 2px 0 #000, 0 0 20px rgba(232,198,90,0.2);
     margin-bottom: 0.3rem;
   }
   .gate-sub {
     text-align: center; font-style: italic; font-size: 0.85rem;
-    color: var(--bone-dim); margin-bottom: 1.8rem;
+    color: var(--bone-dim); margin-bottom: 0.5rem;
   }
+
+  /* ── Rotating mystic quotes ── */
+  .myst-quotes {
+    text-align: center; min-height: 2.4em; margin-bottom: 1.5rem;
+    position: relative; overflow: hidden;
+  }
+  .myst-quote {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-style: italic; font-size: 0.78rem; color: var(--bone-dim);
+    padding: 0 0.5rem; opacity: 0; transition: opacity 1.5s ease;
+  }
+  .myst-quote.active { opacity: 1; }
 
   /* ── Formulär ── */
   .field { margin-bottom: 1.2rem; position: relative; }
@@ -100,50 +134,48 @@
   }
   .field input {
     width: 100%; font-family: 'Spectral', serif; font-size: 1rem; color: var(--bone-bright);
-    background: #0d0817; border: 1px solid var(--edge); padding: 0.75rem 1rem 0.75rem 2.6rem;
-    outline: none; transition: border-color 0.25s, box-shadow 0.25s; border-radius: 2px;
+    background: var(--ink); border: 1px solid var(--edge); padding: 0.75rem 1rem 0.75rem 2.6rem;
+    outline: none; transition: border-color 0.25s; border-radius: 0;
   }
-  .field input::placeholder { color: rgba(138,122,94,0.5); font-style: italic; }
+  .field input::placeholder { color: rgba(106,106,128,0.5); font-style: italic; }
   .field input:focus {
-    border-color: var(--gold);
-    box-shadow: 0 0 16px -4px rgba(232,198,90,0.4), inset 0 0 20px rgba(232,198,90,0.03);
+    border-color: var(--term-green);
   }
   .field .icon {
     position: absolute; left: 0.85rem; bottom: 0.78rem; font-size: 1rem; opacity: 0.5;
     transition: opacity 0.25s;
   }
-  .field input:focus ~ .icon { opacity: 1; }
+  .field input:focus ~ .icon { opacity: 1; color: var(--term-green); }
+  .field::before {
+    content: '>'; position: absolute; left: 0.85rem; bottom: 0.78rem;
+    color: var(--term-green); font-family: monospace; font-size: 0.9rem;
+    opacity: 0; transition: opacity 0.3s; pointer-events: none;
+  }
+  .field:focus-within::before { opacity: 0.4; }
+  .field:focus-within .icon { opacity: 0; }
 
   .gate-btn {
     width: 100%; font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.85rem;
     letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer;
-    color: #1a1206; background: linear-gradient(180deg, var(--gold-bright), var(--gold) 55%, #8a6d14);
-    border: 1px solid #6e5510; padding: 0.85rem; margin-top: 0.5rem; border-radius: 2px;
-    box-shadow: 0 6px 20px -6px rgba(232,198,90,0.5), inset 0 1px 0 rgba(255,255,255,0.35);
-    transition: all 0.2s; position: relative; overflow: hidden;
+    color: var(--ink); background: var(--gold);
+    border: 1px solid var(--gold-bright); padding: 0.85rem; margin-top: 0.5rem; border-radius: 0;
+    transition: background 0.2s;
   }
-  .gate-btn:hover { filter: brightness(1.12); transform: translateY(-2px); box-shadow: 0 10px 28px -6px rgba(232,198,90,0.6); }
-  .gate-btn:active { transform: translateY(0); }
-  .gate-btn::after {
-    content: ''; position: absolute; inset: 0;
-    background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.25) 50%, transparent 60%);
-    background-size: 250% 100%; animation: btn-sheen 4s ease-in-out infinite;
-  }
-  @keyframes btn-sheen { 0%,100% { background-position: 200% 0; } 50% { background-position: -80% 0; } }
+  .gate-btn:hover { background: var(--gold-bright); }
+  .gate-btn:active { background: var(--gold-bright); }
+  .gate-btn:disabled { opacity: 0.5; cursor: wait; }
 
   .gate-error {
     text-align: center; font-size: 0.8rem; color: var(--blood-bright);
     margin-top: 0.8rem; min-height: 1.2em; font-style: italic;
-    text-shadow: 0 0 8px rgba(212,58,77,0.4);
   }
 
   .gate-footer {
     text-align: center; margin-top: 1.5rem; padding-top: 1rem;
-    border-top: 1px solid rgba(61,47,82,0.4);
+    border-top: 1px solid var(--edge);
     font-size: 0.72rem; color: var(--bone-dim); font-style: italic;
   }
   .gate-footer a { color: var(--arcane); text-decoration: none; }
-  .gate-footer a:hover { text-shadow: 0 0 8px rgba(139,95,212,0.6); }
 
   /* ── Shake on error ── */
   @keyframes shake {
@@ -156,9 +188,9 @@
   .gate-frame.shake { animation: shake 0.4s ease; }
 
   /* ── Success flash ── */
-  .gate-frame.success { border-color: var(--gold); box-shadow: 0 0 40px -8px rgba(232,198,90,0.5); }
+  .gate-frame.success { border-color: var(--term-green); }
 
-  /* ═══════════ Mobile — porten i fickformat ═══════════ */
+  /* ═══════════ Mobile ═══════════ */
   html { -webkit-tap-highlight-color: transparent; }
   @media (max-width: 640px) {
     body { overflow-y: auto; padding: 1.25rem .75rem; }
@@ -168,9 +200,9 @@
     .gate-sub { font-size: .8rem; margin-bottom: 1.4rem; }
     .field input { min-height: 48px; font-size: 16px; }
     .field .icon { bottom: 50%; transform: translateY(50%); }
+    .field:focus-within .icon { opacity: 0; }
+    .field:focus-within::before { opacity: 0.4; bottom: 50%; transform: translateY(50%); }
     .gate-btn { width: 100%; min-height: 52px; }
-    .gate-btn:active { transform: translateY(2px); filter: brightness(.94);
-      box-shadow: 0 2px 8px -4px rgba(232,198,90,.4), inset 0 1px 0 rgba(255,255,255,.2); }
     .gate-footer a { display: inline-block; min-height: 44px; line-height: 44px; }
     .toast { max-width: 92%; text-align: center; }
   }
@@ -178,33 +210,63 @@
     body { padding: .75rem .5rem; }
     .gate-frame { padding: 1.7rem 1rem 1.3rem; }
     .gate-title { font-size: 1.08rem; }
-    .sigil { width: 60px; height: 60px; margin-bottom: 1rem; }
-    .sigil-icon { font-size: 1.5rem; }
+    .sigil { width: 64px; height: 64px; margin-bottom: 1rem; }
+    .sigil svg { width: 64px; height: 64px; }
     .field input { padding-left: 2.4rem; }
     .gate-btn { font-size: .78rem; letter-spacing: .14em; }
   }
 </style>
 <link rel="stylesheet" href="snes.css">
-<script src="sprites.js?v=20260730b"></script>
-<script src="fonts.js?v=20260730b"></script>
+<script src="sprites.js?v=20260730c"></script>
+<script src="fonts.js?v=20260730c"></script>
 </head>
 <body>
 <div class="grain"></div>
+<div class="myst-fog"></div>
 <canvas id="embers"></canvas>
 <div class="vignette"></div>
 
 <div class="gate">
   <div class="gate-frame" id="gate-frame">
-    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
 
     <div class="sigil">
-      <div class="sigil-ring"></div>
-      <div class="sigil-ring inner"></div>
-      <span class="sigil-icon">🐉</span>
+      <div class="sigil-ring-rot">
+        <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="40" cy="40" r="38" stroke="#2a2a3a" stroke-width="1" stroke-dasharray="4 8"/>
+          <circle cx="40" cy="2" r="2" fill="#e8c65a"/>
+        </svg>
+      </div>
+      <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="rune-glow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#e8c65a" stop-opacity="0.15"/>
+            <stop offset="100%" stop-color="#e8c65a" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <circle cx="40" cy="40" r="36" fill="url(#rune-glow)"/>
+        <circle cx="40" cy="40" r="32" stroke="#c9a227" stroke-width="0.5" opacity="0.4"/>
+        <!-- Rune: dragon-eye sigil -->
+        <path d="M40 16 L52 36 L40 56 L28 36 Z" stroke="#e8c65a" stroke-width="1.5" fill="none" opacity="0.7"/>
+        <path d="M40 22 L48 36 L40 50 L32 36 Z" stroke="#7b4fd4" stroke-width="1" fill="none" opacity="0.5"/>
+        <circle cx="40" cy="36" r="3" fill="#e8c65a" opacity="0.8">
+          <animate attributeName="opacity" values="0.4;0.9;0.4" dur="2s" repeatCount="indefinite"/>
+        </circle>
+        <line x1="40" y1="8" x2="40" y2="14" stroke="#c9a227" stroke-width="1" opacity="0.6"/>
+        <line x1="40" y1="58" x2="40" y2="64" stroke="#c9a227" stroke-width="1" opacity="0.6"/>
+        <line x1="8" y1="36" x2="14" y2="36" stroke="#c9a227" stroke-width="1" opacity="0.6"/>
+        <line x1="66" y1="36" x2="72" y2="36" stroke="#c9a227" stroke-width="1" opacity="0.6"/>
+      </svg>
     </div>
 
     <h1 class="gate-title">Ett svenskt D&amp;D-äventyr</h1>
     <p class="gate-sub">Vem vågar stiga in i mörkret?</p>
+
+    <div class="myst-quotes" id="myst-quotes">
+      <div class="myst-quote active">I mörkret väntar sagor som ännu inte berättats.</div>
+      <div class="myst-quote">Porten känner igen dig... eller gör den inte?</div>
+      <div class="myst-quote">Varje steg in i mörkret är ett steg bort från världen du kände.</div>
+      <div class="myst-quote">Drakarna minns ditt namn. Minns du deras?</div>
+    </div>
 
     <form id="login-form" onsubmit="handleLogin(event)">
       <div class="field">
@@ -222,16 +284,16 @@
     </form>
 
     <div class="gate-footer">
-      Driven av Qwen · Kampanjer sparas lokalt · <a href="#">Glömt lösenordet?</a>
+      Driven av Qwen · Kampanjer sparas lokalt · De gamla gudarna minns alla namn.
     </div>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
-<script src="sfx.js?v=20260730b"></script>
-<script src="api.js?v=20260730b"></script>
-<script src="i18n.js?v=20260730b"></script>
+<script src="sfx.js?v=20260730c"></script>
+<script src="api.js?v=20260730c"></script>
+<script src="i18n.js?v=20260730c"></script>
 <script>
 // ═══════════════════════════════════════
 // AUTH — backend validerar (JWT i httpOnly cookie)
@@ -270,6 +332,26 @@ if (sessionStorage.getItem('dnd_user')) {
   document.querySelector('.gate-sub').textContent =
     'Välkommen tillbaka, ' + sessionStorage.getItem('dnd_user') + '!';
 }
+
+// ═══════════════════════════════════════
+// ROTATING MYSTIC QUOTES
+// ═══════════════════════════════════════
+const quotes = document.querySelectorAll('.myst-quote');
+let qIdx = 0;
+setInterval(() => {
+  quotes[qIdx].classList.remove('active');
+  qIdx = (qIdx + 1) % quotes.length;
+  quotes[qIdx].classList.add('active');
+}, 5000);
+
+// ═══════════════════════════════════════
+// SFX ON INPUT FOCUS
+// ═══════════════════════════════════════
+document.querySelectorAll('.field input').forEach(inp => {
+  inp.addEventListener('focus', () => {
+    if (typeof SFX !== 'undefined' && SFX.click) SFX.click();
+  });
+});
 
 // ═══════════════════════════════════════
 // EMBERS

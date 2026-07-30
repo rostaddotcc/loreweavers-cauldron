@@ -3166,6 +3166,180 @@ async def campaign_logbook_refresh_today(morkrets_token: str | None = Cookie(Non
 
 
 # ═══════════════════════════════════════
+# Admin Dashboard
+# ═══════════════════════════════════════
+
+
+def _require_admin(payload: dict):
+    if payload.get("role") != "admin":
+        raise HTTPException(403, "Admin-rättigheter krävs")
+
+
+def _scan_user_transcripts(user: str) -> dict:
+    """Skanna alla transkript för en användare och returnera token- och tursstatistik."""
+    prompt_tokens = 0
+    completion_tokens = 0
+    turns = 0
+    last_active = ""
+    sessions = []
+
+    user_dir = CAMPAIGNS_DIR / user
+    if not user_dir.exists():
+        return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "turns": 0, "last_active": "", "sessions": sessions}
+
+    for campaign_dir in sorted(user_dir.iterdir()):
+        if not campaign_dir.is_dir():
+            continue
+        transcript_dir = campaign_dir / "transcripts"
+        if not transcript_dir.exists():
+            continue
+        campaign_id = campaign_dir.name
+        for ts_file in sorted(transcript_dir.glob("session-*.jsonl")):
+            session_prompt = 0
+            session_completion = 0
+            session_turns = 0
+            session_last = ""
+            try:
+                with open(ts_file) as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            entry = json.loads(line)
+                        except json.JSONDecodeError:
+                            continue
+                        if entry.get("role") == "assistant":
+                            turns += 1
+                            session_turns += 1
+                        meta = entry.get("meta", {})
+                        tokens = meta.get("tokens", {})
+                        p = tokens.get("prompt_tokens", 0) or 0
+                        c = tokens.get("completion_tokens", 0) or 0
+                        prompt_tokens += p
+                        completion_tokens += c
+                        session_prompt += p
+                        session_completion += c
+                        ts = entry.get("ts", "")
+                        if ts and ts > last_active:
+                            last_active = ts
+                        if ts and ts > session_last:
+                            session_last = ts
+            except OSError:
+                continue
+            sessions.append({
+                "campaign_id": campaign_id,
+                "session_file": ts_file.name,
+                "prompt_tokens": session_prompt,
+                "completion_tokens": session_completion,
+                "total_tokens": session_prompt + session_completion,
+                "turns": session_turns,
+                "last_ts": session_last,
+            })
+
+    return {
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "total_tokens": prompt_tokens + completion_tokens,
+        "turns": turns,
+        "last_active": last_active,
+        "sessions": sessions,
+    }
+
+
+@app.get("/api/admin/stats")
+async def admin_stats(morkrets_token: str | None = Cookie(None)):
+    """Admin-only: översikt av alla användare."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+
+    users = load_users()
+    user_stats = []
+    total_campaigns = 0
+    total_tokens = 0
+    total_turns = 0
+
+    for username, udata in users.items():
+        role = udata.get("role", "player") if isinstance(udata, dict) else "player"
+        store = CampaignStore()
+        campaigns = store.list_campaigns(username)
+        scan = _scan_user_transcripts(username)
+        total_campaigns += len(campaigns)
+        total_tokens += scan["total_tokens"]
+        total_turns += scan["turns"]
+        user_stats.append({
+            "username": username,
+            "role": role,
+            "total_campaigns": len(campaigns),
+            "total_tokens": scan["total_tokens"],
+            "prompt_tokens": scan["prompt_tokens"],
+            "completion_tokens": scan["completion_tokens"],
+            "total_turns": scan["turns"],
+            "last_active": scan["last_active"],
+        })
+
+    return {
+        "total_users": len(users),
+        "total_campaigns": total_campaigns,
+        "total_tokens": total_tokens,
+        "total_turns": total_turns,
+        "users": user_stats,
+    }
+
+
+@app.get("/api/admin/user/{username}")
+async def admin_user_detail(username: str, morkrets_token: str | None = Cookie(None)):
+    """Admin-only: detaljerad info om en specifik användare."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+
+    users = load_users()
+    if username not in users:
+        raise HTTPException(404, f"Användare '{username}' finns inte")
+
+    store = CampaignStore()
+    campaigns = store.list_campaigns(username)
+    scan = _scan_user_transcripts(username)
+
+    # Bygg per-kampanj token-uppdelning
+    campaign_tokens = {}
+    for s in scan["sessions"]:
+        cid = s["campaign_id"]
+        if cid not in campaign_tokens:
+            campaign_tokens[cid] = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "turns": 0, "sessions": []}
+        campaign_tokens[cid]["prompt_tokens"] += s["prompt_tokens"]
+        campaign_tokens[cid]["completion_tokens"] += s["completion_tokens"]
+        campaign_tokens[cid]["total_tokens"] += s["total_tokens"]
+        campaign_tokens[cid]["turns"] += s["turns"]
+        campaign_tokens[cid]["sessions"].append(s)
+
+    enriched = []
+    for c in campaigns:
+        cid = c["campaign_id"]
+        ct = campaign_tokens.get(cid, {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "turns": 0, "sessions": []})
+        enriched.append({
+            **c,
+            "prompt_tokens": ct["prompt_tokens"],
+            "completion_tokens": ct["completion_tokens"],
+            "total_tokens": ct["total_tokens"],
+            "turns": ct["turns"],
+            "sessions": ct["sessions"],
+        })
+
+    return {
+        "username": username,
+        "role": users[username].get("role", "player") if isinstance(users[username], dict) else "player",
+        "total_campaigns": len(campaigns),
+        "total_tokens": scan["total_tokens"],
+        "prompt_tokens": scan["prompt_tokens"],
+        "completion_tokens": scan["completion_tokens"],
+        "total_turns": scan["turns"],
+        "last_active": scan["last_active"],
+        "campaigns": enriched,
+    }
+
+
+# ═══════════════════════════════════════
 # STATIC FILES — serva frontend
 # ═══════════════════════════════════════
 # Monteras EFTER alla /api/ routes så att API:et har prioritet.

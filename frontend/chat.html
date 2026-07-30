@@ -941,12 +941,16 @@
   }
   .console-log::-webkit-scrollbar { width: 8px; }
   .console-log::-webkit-scrollbar-thumb { background: var(--edge); border-radius: 4px; }
-  .clog { display: flex; gap: 0.8rem; padding: 0.1rem 0; animation: clog-in 0.25s ease; }
+  .clog { display: flex; gap: 0.5rem; padding: 0.1rem 0; animation: clog-in 0.25s ease; }
   @keyframes clog-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
   .clog .ct { color: var(--bone-dim); flex-shrink: 0; opacity: 0.7; }
-  .clog .cl { flex-shrink: 0; width: 52px; font-weight: 700; }
-  .clog .cn { color: var(--teal); flex-shrink: 0; opacity: 0.8; }
-  .clog .cm { flex: 1; word-break: break-word; }
+  .clog .cl { flex-shrink: 0; width: 38px; font-weight: 700; }
+  .clog .cn {
+    color: var(--teal); opacity: 0.8;
+    flex-shrink: 1; min-width: 0; max-width: 72px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .clog .cm { flex: 1; min-width: 0; word-break: break-word; }
   .clog.DEBUG .cl { color: var(--bone-dim); } .clog.DEBUG .cm { color: var(--bone-dim); }
   .clog.INFO .cl { color: var(--term-green); } .clog.INFO .cm { color: var(--bone); }
   .clog.WARNING .cl { color: var(--term-amber); } .clog.WARNING .cm { color: var(--term-amber); }
@@ -2809,7 +2813,7 @@ function appendConsoleLogs(logs) {
     row.className = 'clog ' + e.level;
     const t = document.createElement('span'); t.className = 'ct'; t.textContent = e.time;
     const l = document.createElement('span'); l.className = 'cl'; l.textContent = e.level.slice(0, 4);
-    const n = document.createElement('span'); n.className = 'cn'; n.textContent = '[' + e.name + ']';
+    const n = document.createElement('span'); n.className = 'cn'; n.textContent = '[' + e.name + ']'; n.title = e.name;
     const m = document.createElement('span'); m.className = 'cm'; m.textContent = e.msg;
     row.append(t, l, n, m);
     frag.appendChild(row);

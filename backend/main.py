@@ -1614,7 +1614,7 @@ async def trigger_chapter(body: ChapterRequest, morkrets_token: str | None = Coo
 # ═══════════════════════════════════════
 
 
-def compact_state(state: dict) -> str:
+def compact_state(state: dict, language: str = "sv") -> str:
     """Kompakt naturligt-språk-sammanfattning av kampanjtillståndet.
 
     Ersätter json.dumps i DM-prompten — ger LLM:n samma information
@@ -1638,6 +1638,19 @@ def compact_state(state: dict) -> str:
     equipped = [it.get("name", "?") for it in state.get("inventory", []) if it.get("equipped")]
     if equipped:
         lines.append(f"Bär: {', '.join(equipped)}")
+
+    # Hela inventory — kompakt lista. Fix 2026-07-31: DM:n såg tidigare BARA
+    # utrustade föremål och kunde inte veta vad spelaren bar → sa "du har
+    # ingen sköld" trots att spelaren trodde sig ha en. Nu ser DM:n allt.
+    inv = state.get("inventory", [])
+    if inv:
+        inv_str = ", ".join(
+            f"{it.get('name', '?')}{(' ×' + str(it.get('qty', 1))) if it.get('qty', 1) > 1 else ''}{' [bärs]' if it.get('equipped') else ''}"
+            for it in inv[:40]
+        )
+        lines.append(f"Inventory: {inv_str}")
+    else:
+        lines.append("Inventory: tomt" if language != "en" else "Inventory: empty")
 
     # Plats, tid, dag
     world = state.get("world", {})
@@ -1671,9 +1684,9 @@ def compact_state(state: dict) -> str:
     return "\n".join(lines)
 
 
-def truth_block(state: dict) -> str:
+def truth_block(state: dict, language: str = "sv") -> str:
     """Auktoritär sanning — LLM:n får ALDRIG motsäga detta."""
-    parts = ["## SANNING (auktoritär — motsäg ALDRIG detta)\n", compact_state(state)]
+    parts = ["## SANNING (auktoritär — motsäg ALDRIG detta)\n", compact_state(state, language)]
 
     pinned = state.get("pinned_facts", [])
     if pinned:
@@ -1718,7 +1731,7 @@ def _build_system_prompt(
         parts.append(DM_NARRATIVE_PROMPT)
 
     # Sanning — kompakt tillstånd istället för rå JSON
-    parts.append("\n" + truth_block(state))
+    parts.append("\n" + truth_block(state, language=lang))
 
     # Hierarkiska sammanfattningar: 2 scen + 2 kapitel + 1 kampanjbåge
     scene_summaries = store.load_summaries(state, last_n=2)

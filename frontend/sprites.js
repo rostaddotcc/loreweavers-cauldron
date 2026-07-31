@@ -43,6 +43,15 @@ const SPR = (() => {
     '🏰': ['g.gggg.g','gggggggg','.gggggg.','.gggggg.','.gg..gg.','.gggggg.','.gg..gg.','gggggggg'],
     '🕯': ['...oo...','...oo...','...ww...','...ww...','...ww...','...ww...','..gggg..','........'],
     '🐉': ['..nnnn..','.nnnnnn.','.nknnkn.','.nnnnnn.','..nnnn..','.nnnnnn.','n......n','........'],
+    // ── Fiender (combat tokens, hashas på namn i chat.html) ──
+    '🐗': ['..bbbb..','.bBBBBb.','bwbBBBwb','bbbbbbbb','.bbBBbb.','..bbbb..','.bb..bb.','........'],
+    '🐺': ['..ssss..','.swwwss.','swksssss','ssssssss','..ssss..','.ss..ss.','ss....ss','........'],
+    '🕷': ['...pp...','..p..p..','.p.p.p.p','..pppp..','.pprrpp.','..pppp..','.p.p.p.p','........'],
+    '🦇': ['..r..r..','.rr..rr.','RRRRRRRR','RwrrrrwR','RRRRRRRR','.RR..RR.','........','........'],
+    '👹': ['r..rr..r','RRRRRRRR','.rrrrrr.','.rRkkRr.','.rrrrrr.','.rrwwrr.','..rrrr..','........'],
+    '🧟': ['..nnnn..','.nnnnnn.','.nkknnn.','.nnnnnn.','..nNNn..','.n....n.','........','........'],
+    '🐀': ['..sss...','.sssss..','.sksss..','.sssss..','..sss...','...s....','..s.....','........'],
+    '🦂': ['r...rr..','rr.rrr..','.rrrrr..','.rrrrr..','..rrr...','...r....','...r....','........'],
     '🧙': ['..pppp..','.pppppp.','.pppppp.','..ffff..','..fkfk..','.pppppp.','.pppppp.','........'],
     // Dungeon Master — guld-trollkarl med spetsig hatt (ZWJ-sekvens 🧙‍♂️, med och utan VS16)
     '🧙‍♂️': ['....G...','...GG...','..GGGG..','.GGGGGG.','..ffff..','..fkfk..','.GGGGGG.','.GGGGGG.'],

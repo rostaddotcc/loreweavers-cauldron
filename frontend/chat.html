@@ -1272,6 +1272,17 @@
     </div>
   </aside>
 
+  <!-- ═══════════ COMBAT RAIL — Krigsrådet (dold tills strid) ═══════════ -->
+  <div id="combat-rail" class="cr-hidden">
+    <div class="cr-head">
+      <span class="cr-round">⚔ RUNDA —</span>
+      <span class="cr-hp">❤ —</span>
+    </div>
+    <div class="cr-initiative"></div>
+    <div class="cr-enemies"></div>
+    <div class="cr-status"></div>
+  </div>
+
   <!-- ═══════════ MAIN CHAT ═══════════ -->
   <main class="main">
     <div class="chat-scroll" id="chat"></div>
@@ -1405,6 +1416,9 @@ async function loadCampaign() {
         if (hp.max) {
           document.getElementById('pc-hp-fill').style.width = Math.round(100 * (hp.current || 0) / hp.max) + '%';
         }
+        // Krigsrådet behöver spelarens HP + dödsräddningar
+        _playerHp = { current: hp.current || 0, max: hp.max || 0 };
+        _playerDeathSaves = (campaign._raw && campaign._raw.character && campaign._raw.character.death_saves) || { successes: 0, failures: 0 };
         updateXpBar(ch.xp);
         updateCurrency(campaign._raw?.currency ?? {});
       }
@@ -1581,6 +1595,8 @@ function addMessage(type, npcKey, text, meta) {
   chat.appendChild(el);
   chat.scrollTop = chat.scrollHeight;
   messageParticles(el, type);
+  // [COMBAT:]-tagg → stridslogg + krigsråd + initiativceremoni (efter append, så reveal-kort hamnar efter rapporten)
+  if (type === 'guardian') applyCombatTag(el, text);
   return el;
 }
 
@@ -1613,8 +1629,10 @@ function buildMessage(type, npcKey, text, meta) {
   } else if (type === 'system') {
     el.innerHTML = `<div class="box">${text}</div>`;
   } else if (type === 'guardian') {
+    // [COMBAT:...]-taggen tas bort ur synlig text (parsas av applyCombatTag)
+    const { clean } = parseCombatTag(text);
     const gTitle = (typeof I18N !== 'undefined' && I18N.getLang() === 'en') ? '🛡️ Guardian Report' : '🛡️ Guardian-rapport';
-    el.innerHTML = `<div class="guardian-title">${gTitle}</div><div class="box guardian-box">${mdToHtml(escapeHtml(text))}</div>`;
+    el.innerHTML = `<div class="guardian-title">${gTitle}</div><div class="box guardian-box">${mdToHtml(escapeHtml(clean))}</div>`;
   }
   return el;
 }
@@ -2228,15 +2246,14 @@ function showModelGate() {
         animation: fadeIn .5s ease;
       }
       #model-gate .gate-card {
-        background: linear-gradient(145deg, #12101a, #0d0b14);
+        background: var(--stone-2);
         border: 1px solid rgba(201,162,39,.35);
-        border-radius: 8px; padding: 2.5rem 2.2rem 2rem;
+        border-radius: 0; padding: 2.5rem 2.2rem 2rem;
         max-width: 420px; width: 90%; text-align: center;
-        box-shadow: 0 0 60px rgba(201,162,39,.08), inset 0 1px 0 rgba(255,255,255,.04);
       }
       #model-gate h2 {
         font-family: 'Cinzel', serif; color: var(--gold-bright);
-        font-size: 1.15rem; margin: 0 0 .5rem; letter-spacing: .06em;
+        font-size: 1.15rem; margin: 0 0 .5rem; letter-spacing: .2em;
       }
       #model-gate p {
         color: rgba(180,170,150,.6); font-size: .75rem; margin: 0 0 1.5rem;
@@ -2244,8 +2261,8 @@ function showModelGate() {
       }
       #model-gate select {
         width: 100%; padding: .6rem .8rem; font-size: .85rem;
-        background: #1a1725; color: var(--bone);
-        border: 1px solid rgba(201,162,39,.3); border-radius: 4px;
+        background: var(--ink); color: var(--bone);
+        border: 1px solid rgba(201,162,39,.3); border-radius: 0;
         cursor: pointer; margin-bottom: 1.2rem;
         font-family: 'Courier New', monospace;
       }
@@ -2253,22 +2270,17 @@ function showModelGate() {
       #model-gate button {
         font-family: 'Cinzel', serif; font-size: .85rem;
         padding: .65rem 2rem; cursor: pointer;
-        background: linear-gradient(135deg, #c9a227, #a07d1c);
-        color: #0d0b14; border: none; border-radius: 4px;
+        background: var(--gold);
+        color: var(--ink); border: 1px solid var(--gold-bright); border-radius: 0;
         font-weight: 700; letter-spacing: .05em;
-        transition: all .2s;
+        transition: background .15s;
       }
       #model-gate button:hover {
-        background: linear-gradient(135deg, #e8c84a, #c9a227);
-        box-shadow: 0 0 20px rgba(201,162,39,.3);
-        transform: translateY(-1px);
+        background: var(--gold-bright);
+        color: var(--ink);
       }
       @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-      @keyframes gateCardIn {
-        from { opacity: 0; transform: translateY(14px) scale(.97); }
-        to   { opacity: 1; transform: translateY(0) scale(1); }
-      }
-      #model-gate .gate-card { animation: gateCardIn .45s cubic-bezier(.22,1,.36,1); }
+      #model-gate .gate-card { animation: fadeIn .45s ease; }
     </style>
     <div class="gate-card">
       <h2>${title}</h2>
@@ -2317,7 +2329,11 @@ async function loadTranscript() {
           }
           gContent = gContent.replace(gRe, '').trim();
           const el = buildMessage('guardian', null, gContent);
-          if (el) frag.appendChild(el);
+          if (el) {
+            frag.appendChild(el);
+            // F5-safe: [COMBAT:]-taggen parsas även vid transcript-laddning (reveal-kort hamnar i fragmentet, i ordning)
+            applyCombatTag(el, gContent, frag);
+          }
           // Spawna tärningsknappar efter rendering
           gGrants.forEach(g => addRollRequest(g.notation, g.label));
         } else {
@@ -2328,6 +2344,9 @@ async function loadTranscript() {
         }
       });
       chat.appendChild(frag);
+      // Resume-recap: "Senast i Mörkrets Rike…" (.resume-card) — en gång per tab-session, om det finns historik
+      const resumeCard = maybeShowResumeCard(visible);
+      if (resumeCard) chat.insertBefore(resumeCard, chat.firstChild);
       // Återställ väntande tärningskast (backend rensar dem när spelaren slår,
       // så allt som finns kvar är obesvarat) — annars försvinner knapparna vid refresh
       if (data.last_roll_requests && data.last_roll_requests.length) {
@@ -2771,7 +2790,11 @@ function pollForGuardian(turnCount) {
       const lastGuardian = [...messages].reverse().find(m => m.role === 'guardian');
       if (lastGuardian) {
         // Kontrollera att den inte redan visas — jämför mot ALLA visade guardian-meddelanden
-        const cleanContent = lastGuardian.content.replace(/\[ROLL_GRANT:[^\]]*\]/g, '').trim();
+        // (både [ROLL_GRANT:] och [COMBAT:] strippas ur jämförelsen — de syns inte i DOM:en)
+        const cleanContent = lastGuardian.content
+          .replace(/\[ROLL_GRANT:[^\]]*\]/g, '')
+          .replace(/\[COMBAT:[^\]]*\]\s*$/g, '')
+          .trim();
         const allShown = [...chat.querySelectorAll('.msg.guardian .guardian-box')].map(el => el.textContent.trim());
         const alreadyShown = allShown.includes(cleanContent);
         if (!alreadyShown) {
@@ -2802,6 +2825,279 @@ function pollForGuardian(turnCount) {
       hideGuardianStatus();
     }
   }, 2000);
+}
+
+// ═══════════════════════════════════════
+// ⚔️ COMBAT TRACKER — Krigsrådet, stridslogg, initiativceremoni (Spår C)
+// ═══════════════════════════════════════
+// Kontrakt: guardian-meddelandet avslutas med [COMBAT:<urlencoded-json>]
+// (decodeURIComponent + JSON.parse). Taggen tas bort ur synlig text.
+
+let _lastCombat = null;        // dedup-nyckel: senast renderade combat-JSON
+let _lastCombatJson = null;    // senaste combat-objektet (för end-detection)
+let _lastInitShown = null;     // initiativ-ceremoni-dedup (per session)
+let _combatEndTimer = null;
+let _playerHp = { current: 0, max: 0 };
+let _playerDeathSaves = { successes: 0, failures: 0 };
+
+// C1 — extrahera [COMBAT:<urlencoded-json>] från slutet av guardian-texten
+function parseCombatTag(text) {
+  if (!text) return { clean: text || '', combat: null };
+  const str = String(text);
+  const m = str.match(/\[COMBAT:([^\]]*)\]\s*$/);
+  if (!m) return { clean: str, combat: null };
+  let combat = null;
+  try {
+    combat = JSON.parse(decodeURIComponent(m[1]));
+  } catch (e) {
+    combat = null; // trasig tagg → behåll texten som den är
+  }
+  const clean = (m.index > 0 ? str.slice(0, m.index) : '').replace(/\s+$/, '');
+  return { clean, combat };
+}
+
+// Körs efter att guardian-msg skapats (live + loadTranscript): stridslogg + krigsråd + ceremoni
+function applyCombatTag(el, text, container) {
+  const { clean, combat } = parseCombatTag(text);
+  if (!combat) return;
+  const box = el && el.querySelector ? el.querySelector('.guardian-box') : null;
+  if (box && clean && clean.trim()) {
+    box.innerHTML = combatLogHtml(clean, combat);
+    box.classList.add('combat-log');
+  }
+  // Reason för stridsslut (ur synlig text, t.ex. "🏁 Striden är över — alla besegrade")
+  let reason = '';
+  const rm = clean.match(/(?:Striden är över|Combat over)[—\-–:]\s*(.+)/i);
+  if (rm) reason = rm[1].replace(/\*+/g, '').trim();
+  renderCombatPanel(combat, reason, container || chat);
+}
+
+// C2 — Krigsrådet (battle rail)
+function renderCombatPanel(combat, reason, container) {
+  const rail = document.getElementById('combat-rail');
+  if (!rail) return;
+  const key = JSON.stringify(combat || null);
+  if (key === _lastCombat) return; // dedup — rendera bara vid ändrad JSON
+  _lastCombat = key;
+  const prev = _lastCombatJson;
+  _lastCombatJson = combat || null;
+
+  if (!combat || combat.active === false) {
+    // Striden är över / ingen strid → fade + collapse
+    if (prev && prev.active && combat && combat.active === false) {
+      showCombatEndRow(combat, reason);
+    }
+    rail.classList.add('cr-hidden');
+    return;
+  }
+
+  rail.classList.remove('cr-hidden');
+  const en = (typeof I18N !== 'undefined' && I18N.getLang() === 'en');
+
+  // Rundmarkör (Cinzel, guld, flicker) + spelarens HP
+  const roundEl = rail.querySelector('.cr-round');
+  if (roundEl) roundEl.textContent = `⚔ ${en ? 'ROUND' : 'RUNDA'} ${combat.round || 1}`;
+  const hpEl = rail.querySelector('.cr-hp');
+  if (hpEl) hpEl.textContent = `❤ ${_playerHp.current}/${_playerHp.max || '?'}`;
+
+  // Initiativ-strip: sorterad fallande, första deltagaren aktiv
+  const ipEl = rail.querySelector('.cr-initiative');
+  if (ipEl) {
+    const entries = (combat.initiative || []).slice().sort((a, b) => (b.value || 0) - (a.value || 0));
+    ipEl.innerHTML = entries.length
+      ? entries.map((e, i) => {
+          const isPlayer = e.key === 'player';
+          const nm = isPlayer ? (en ? 'You' : 'Du') : (e.name || '?');
+          return `<span class="cr-ip${i === 0 ? ' active' : ''}${isPlayer ? ' player' : ''}">${escapeHtml(nm)}: ${e.value || 0}</span>`;
+        }).join('')
+      : `<span class="cr-none">${en ? 'No initiative yet' : 'Inget initiativ ännu'}</span>`;
+  }
+
+  // Fiende-tokens (sprite hashad på namn + HP-trough + statusrunor)
+  const enEl = rail.querySelector('.cr-enemies');
+  if (enEl) {
+    const enemies = (combat.enemies || []).filter(e => e.alive !== false);
+    enEl.innerHTML = enemies.length ? enemies.map(e => enemyTokenHtml(e)).join('') : '';
+  }
+
+  // Statusrad: dödsräddningspips när spelaren är på 0 HP
+  const stEl = rail.querySelector('.cr-status');
+  if (stEl) {
+    if (_playerHp.current <= 0) {
+      const ds = _playerDeathSaves || {};
+      let pips = '';
+      for (let i = 0; i < 3; i++) pips += i < (ds.successes || 0) ? '<span class="cr-pip ok">●</span>' : '<span class="cr-pip">○</span>';
+      for (let i = 0; i < 3; i++) pips += i < (ds.failures || 0) ? '<span class="cr-pip bad">●</span>' : '<span class="cr-pip">○</span>';
+      stEl.title = en ? 'Death saves — successes · failures' : 'Dödsräddningar — framgångar · misslyckanden';
+      stEl.innerHTML = `<span class="cr-ds">💀 ${pips}</span>`;
+    } else {
+      stEl.innerHTML = '';
+    }
+  }
+
+  maybeInitiativeReveal(combat, container);
+}
+
+// Tvinga om-render av panelen (t.ex. efter HP-ändring) utan att JSON ändrats
+function refreshCombatPanel() {
+  if (!_lastCombatJson || _lastCombatJson.active === false) return;
+  _lastCombat = null;
+  renderCombatPanel(_lastCombatJson);
+}
+
+// Fiende-token: 8×8 sprite hashad på namn (som NPCs gör) + HP-trough + statusrunor
+const ENEMY_SPRITES = ['🐗', '🐺', '🐍', '🕷', '🦇', '👹', '🧟', '🐀', '🦂', '👺'];
+function enemySpriteFor(name) {
+  const s = (name || '').toLowerCase();
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return ENEMY_SPRITES[h % ENEMY_SPRITES.length];
+}
+
+function runeFor(status) {
+  const t = String(status || '').toLowerCase();
+  if (/poison|gift/i.test(t)) return '☠';
+  if (/burn|fire|eld/i.test(t)) return '♨';
+  if (/stun|förlam|paraly/i.test(t)) return '✚';
+  if (/fright|skräck|rädd/i.test(t)) return '‼';
+  if (/bleed|blöd/i.test(t)) return '🩸';
+  if (/charm|förhäx/i.test(t)) return '◉';
+  if (/prone|ligg/i.test(t)) return '⌄';
+  return '✚';
+}
+
+function enemyTokenHtml(e) {
+  const pct = Math.max(0, Math.min(100, e.max_hp ? Math.round(100 * (e.hp || 0) / e.max_hp) : 0));
+  const low = pct < 25;
+  const st = (e.statuses || []).map(runeFor).join('');
+  return `
+  <div class="cr-enemy${e.alive === false ? ' dead' : ''}">
+    <div class="cr-token">${SPR.html(enemySpriteFor(e.name))}</div>
+    <div class="cr-enemy-name" title="${escapeHtml(e.name)}">${escapeHtml(e.name)}</div>
+    <div class="cr-hpbar${low ? ' cr-low' : ''}"><i style="width:${pct}%"></i></div>
+    <div class="cr-enemy-sub">${e.hp || 0}/${e.max_hp || 0}${e.ac ? ' · AC ' + e.ac : ''}${st ? ' · ' + st : ''}</div>
+  </div>`;
+}
+
+// Combat_end → kort segerrad i panelen i 3s, sedan dölj
+function showCombatEndRow(combat, reason) {
+  const rail = document.getElementById('combat-rail');
+  if (!rail) return;
+  const en = (typeof I18N !== 'undefined' && I18N.getLang() === 'en');
+  const row = document.createElement('div');
+  row.className = 'cr-endrow';
+  row.textContent = reason
+    ? `🏁 ${en ? 'Combat over' : 'Striden är över'} — ${reason}`
+    : `🏁 ${en ? 'Combat over' : 'Striden är över'}`;
+  rail.appendChild(row);
+  rail.classList.remove('cr-hidden');
+  rail.classList.add('cr-ended');
+  if (_combatEndTimer) clearTimeout(_combatEndTimer);
+  _combatEndTimer = setTimeout(() => {
+    row.remove();
+    rail.classList.remove('cr-ended');
+    rail.classList.add('cr-hidden');
+  }, 3000);
+}
+
+// C3 — Guardian-rapporten som DOS-stridslogg (fallback: plain guardian-box)
+function combatLineClass(line) {
+  const t = line.replace(/\*\*/g, '').trim();
+  if (/^rund[aå] ?\d+/i.test(t)) return { cls: ' cl-round', marker: '', text: t };
+  if (/^🏁/.test(t) || /striden är över|combat over|striden slutar/i.test(t)) return { cls: ' cl-end', marker: '🏁 ', text: t };
+  if (/^💀/.test(t) || /faller|är död|dör\b|dödad/i.test(t)) return { cls: ' cl-death', marker: '✕ ', text: t };
+  if (/^⚔/.test(t) || /striden börjar|combat start/i.test(t)) return { cls: ' cl-start', marker: '⚔ ', text: t };
+  if (/^💔/.test(t) || /skada|träffar|hugger|slår|kritisk/i.test(t)) return { cls: ' cl-dmg', marker: '', text: t };
+  if (/\bdu\b|din|ditt|dina/i.test(t)) return { cls: ' cl-player', marker: '', text: t };
+  return { cls: ' cl-enemy', marker: '', text: t };
+}
+
+function combatLogHtml(text, combat) {
+  const en = (typeof I18N !== 'undefined' && I18N.getLang() === 'en');
+  const round = (combat && combat.round) || null;
+  const lines = String(text || '').split('\n').map(l => l.trim()).filter(Boolean);
+  let html = '';
+  if (round != null) {
+    html += `<div class="cl-head">┌─ ${en ? 'COMBAT LOG' : 'STRIDSLOGG'} ─┐</div>`;
+    html += `<div class="cl-round">⚔ ${en ? 'ROUND' : 'RUNDA'} ${round}</div>`;
+  }
+  lines.forEach(line => {
+    const c = combatLineClass(line);
+    html += `<div class="cl-row${c.cls}">${c.marker}${mdToHtml(escapeHtml(c.text))}</div>`;
+  });
+  return html;
+}
+
+// C4 — Initiativceremoni: sorterad lista + första deltagaren agerar först (en gång per tab-session)
+const INIT_REVEAL_FLAG = 'dnd_init_revealed';
+function maybeInitiativeReveal(combat, container) {
+  const entries = (combat.initiative || []).filter(e => e && e.value != null);
+  if (entries.length < 2) return;
+  const key = JSON.stringify(entries.map(e => [e.key, e.value]));
+  if (key === _lastInitShown) return;
+  _lastInitShown = key;
+  try {
+    if (sessionStorage.getItem(INIT_REVEAL_FLAG)) return;
+    sessionStorage.setItem(INIT_REVEAL_FLAG, '1');
+  } catch (e) { /* sessionStorage otillgängligt — visa ändå */ }
+
+  const en = (typeof I18N !== 'undefined' && I18N.getLang() === 'en');
+  const sorted = entries.slice().sort((a, b) => (b.value || 0) - (a.value || 0));
+  const parts = sorted.map(e => {
+    const nm = e.key === 'player' ? (en ? 'You' : 'Du') : (e.name || '?');
+    return `<b class="${e.key === 'player' ? 'ir-player' : 'ir-enemy'}">${escapeHtml(nm)}: ${e.value}</b>`;
+  });
+  const first = sorted[0];
+  const firstName = first.key === 'player' ? (en ? 'You' : 'Du') : (first.name || '?');
+  const card = document.createElement('div');
+  card.className = 'initiative-reveal';
+  card.innerHTML = `
+    <div class="ir-title">⚡ ${en ? 'INITIATIVE' : 'INITIATIV'}</div>
+    <div class="ir-line">${parts.join(' <span class="ir-sep">·</span> ')}</div>
+    <div class="ir-first">→ ${escapeHtml(en ? firstName + ' acts first' : firstName + ' agerar först')}</div>`;
+  const target = container || chat;
+  target.appendChild(card);
+  if (target === chat) chat.scrollTop = chat.scrollHeight;
+  if (typeof SFX !== 'undefined' && SFX.battle) SFX.battle();
+}
+
+// C5 — Resume-recap: "Senast i Mörkrets Rike…" (en gång per tab-session)
+const RESUME_FLAG = 'dnd_resume_shown';
+function maybeShowResumeCard(messages) {
+  try {
+    if (sessionStorage.getItem(RESUME_FLAG)) return null;
+  } catch (e) { return null; }
+  const visible = (messages || []).filter(m => m.content !== AWAKENING_TRIGGER);
+  if (visible.length <= 2 || !campaignData) return null;
+  sessionStorage.setItem(RESUME_FLAG, '1');
+
+  const en = (typeof I18N !== 'undefined' && I18N.getLang() === 'en');
+  const world = campaignData.world || {};
+  const ch = campaignData.character || {};
+  const hp = ch.hp || {};
+  const raw = campaignData._raw || {};
+  const quests = (raw.quests || []).filter(q => q.status !== 'slutförd' && q.status !== 'misslyckad').slice(0, 3);
+  const dms = visible.filter(m => m.role === 'assistant')
+    .slice(-2)
+    .map(m => String(m.content || '').replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .map(s => s.length > 140 ? s.slice(0, 137) + '…' : s);
+
+  const card = document.createElement('div');
+  card.className = 'resume-card';
+  card.innerHTML = `
+    <div class="rc-head" onclick="this.parentElement.classList.toggle('collapsed')" role="button" tabindex="0" aria-expanded="true">
+      <span class="rc-title">🕯️ ${en ? 'Last time in the Kingdom of Darkness…' : 'Senast i Mörkrets Rike…'}</span>
+      <span class="rc-caret">▾</span>
+    </div>
+    <div class="rc-body">
+      <div class="rc-row"><span class="rc-k">📍 ${en ? 'Place' : 'Plats'}</span><span class="rc-v">${escapeHtml(world.current_location || '—')}</span></div>
+      <div class="rc-row"><span class="rc-k">🌅 ${en ? 'Day' : 'Dag'}</span><span class="rc-v">${escapeHtml(world.day || world.time || '—')}</span></div>
+      <div class="rc-row"><span class="rc-k">❤ HP</span><span class="rc-v">${hp.current || 0}/${hp.max || '?'}</span></div>
+      ${quests.length ? `<div class="rc-row rc-quests"><span class="rc-k">⚑ ${en ? 'Quests' : 'Uppdrag'}</span><span class="rc-v">${quests.map(q => escapeHtml(q.name || '?')).join(' · ')}</span></div>` : ''}
+      ${dms.length ? `<div class="rc-dms">${dms.map(d => `<div class="rc-dm">${escapeHtml(d)}</div>`).join('')}</div>` : ''}
+    </div>`;
+  return card;
 }
 
 // ═══════════════════════════════════════
@@ -2919,7 +3215,9 @@ function renderEffects(effects, turnCount) {
   if (effects.some(fx => fx.type === 'guld' || fx.type === 'guld_fail')) {
     refreshCurrency();
   }
-  if (effects.some(fx => ['skada', 'hela', 'xp', 'plats', 'level_up', 'ny_dag'].includes(fx.type))) {
+  if (effects.some(fx => ['skada', 'hela', 'xp', 'plats', 'level_up', 'ny_dag',
+                          'dödsräddning', 'combat_start', 'combat_dmg',
+                          'enemy_död', 'combat_end', 'initiativ'].includes(fx.type))) {
     refreshCharacter();
   }
 }
@@ -2936,6 +3234,10 @@ async function refreshCharacter() {
       const txt = document.getElementById('pc-hp-text');
       if (txt) txt.textContent = `${hp.current || 0}/${hp.max}`;
     }
+    // Krigsrådet: håll spelarens HP + dödsräddningar fräscha
+    _playerHp = { current: hp.current || 0, max: hp.max || 0 };
+    _playerDeathSaves = (campaign._raw && campaign._raw.character && campaign._raw.character.death_saves) || { successes: 0, failures: 0 };
+    refreshCombatPanel();
     updateXpBar(ch.xp);
     const w = campaign._raw?.world || {};
     if (w.current_location) {
@@ -2946,6 +3248,8 @@ async function refreshCharacter() {
       const sub = document.getElementById('loc-sub');
       if (sub) sub.textContent = w.time;
     }
+    // Krigsrådet: uppdatera HP/dödsräddningspips efter mekaniska effekter
+    if (typeof refreshCombatPanel === 'function') refreshCombatPanel();
   } catch (e) { /* tyst */ }
 }
 

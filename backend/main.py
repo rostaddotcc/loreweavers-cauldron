@@ -93,7 +93,14 @@ from logbook import build_log_prompt
 from state_manager import CAMPAIGNS_DIR, CampaignStore, CharacterVault
 import rag
 from extraction import FactRegister, extract_facts, format_facts_block
-from guardian import guardian_check_roll, guardian_extract_mechanics, apply_mechanics, format_guardian_summary
+from guardian import (
+    _combat_tag,
+    _XP_THRESHOLDS as XP_THRESHOLDS,  # D&D 5e XP-trösklar (definieras i guardian.py)
+    apply_mechanics,
+    format_guardian_summary,
+    guardian_check_roll,
+    guardian_extract_mechanics,
+)
 
 app = FastAPI(title="Mörkrets Rike", version="1.0.0")
 
@@ -196,11 +203,6 @@ def _parse_roll_requests(text: str) -> tuple[str, list[dict]]:
 # Mekaniska taggar — påverka spelstate
 # ═══════════════════════════════════════
 
-# D&D 5e XP-trösklar för level-up
-XP_THRESHOLDS = [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000,
-                 85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000,
-                 305000, 355000]
-
 # Regex-mönster för mekaniska taggar
 _MECH_PATTERNS = {
     'SKADA':           re.compile(r'\[SKADA:(\d+)\]'),
@@ -222,6 +224,14 @@ _MECH_PATTERNS = {
     'NPC_RELATION':    re.compile(r'\[NPC_RELATION:([^|\]]+)\|([^\]]+)\]'),
     'NY_DAG':          re.compile(r'\[NY_DAG:([^\]]+)\]'),
 }
+
+# [STRID:namn|hp|ac, namn2|hp|ac] — DM öppnar strid; Guardian sköter sedan
+# skada, rundor och turordning. Skapar world.combat (se combat-spec).
+STRID_PATTERN = re.compile(r'\[STRID:([^\]]+)\]')
+
+# [Resultat: ETIKETT → VÄRDE (rullar)] — spelarens tärningsresultat.
+# Uppdaterar initiative (combat) och dödsräddningar (character.death_saves).
+RESULT_PATTERN = re.compile(r'\[Resultat: ([^→]+) → (\d+)(?: \(([^)]*)\))?\]')
 
 # ── D&D 5e Valutasystem ──
 # Konvertering: 1 pp = 10 gp = 100 sp = 1000 cp (ep hoppas över för enkelhet)
@@ -484,6 +494,152 @@ def _parse_mechanical_tags(text: str, state: dict) -> tuple[str, dict, list[dict
     clean = re.sub(r'\n{3,}', '\n\n', clean).strip()
 
     return clean, state, effects
+
+
+def _parse_strid_tag(text: str, state: dict) -> tuple[str, list[dict]]:
+    """Extrahera [STRID:namn|hp|ac, namn2|hp|ac] → world['combat'].
+
+    DM öppnar striden med taggen; Guardian (Spår A) håller sedan reda på
+    skada, rundor och turordning. Taggen stripas ur narrationen.
+    Strukturen följer combat-specen EXAKT (frontend + Guardian läser den).
+    """
+    effects: list[dict] = []
+    m = STRID_PATTERN.search(text)
+    if not m:
+        return text, effects
+    clean = STRID_PATTERN.sub('', text)
+    # Taggen lämnar ofta dubbelblanksteg — kollapsa (rör INTE radbrytningar)
+    clean = re.sub(r'[ \t]{2,}', ' ', clean).strip()
+
+    world = state.setdefault('world', {})
+    combat = world.get('combat')
+    existing = bool(combat and combat.get('active'))
+
+    enemies: list[dict] = []
+    names: list[str] = []
+    for entry in m.group(1).split(','):
+        entry = entry.strip()
+        if not entry:
+            continue
+        parts = [p.strip() for p in entry.split('|')]
+        name = parts[0] if parts else ''
+        if not name:
+            continue
+        try:
+            hp = int(parts[1])
+        except (IndexError, ValueError):
+            hp = 1
+        try:
+            ac = int(parts[2])
+        except (IndexError, ValueError):
+            ac = 10
+        enemies.append({
+            'id': len(enemies),
+            'name': name,
+            'hp': hp,
+            'max_hp': hp,
+            'ac': ac,
+            'alive': True,
+            'statuses': [],
+        })
+        names.append(name)
+
+    if existing:
+        # Redan aktiv strid → ersätt fiendelistan men behåll runda/initiativ
+        combat['enemies'] = enemies
+    else:
+        world['combat'] = {
+            'active': True,
+            'round': 1,
+            'initiative': [],
+            'enemies': enemies,
+            'log': [],
+            'started_turn': state.setdefault('meta', {}).get('turn_count', 0),
+            'ended_turn': None,
+        }
+
+    if names:
+        effects.append({'type': 'combat_start', 'value': ', '.join(names)})
+    logger.info("⚔️ [STRID:] strid registrerad: %s", ', '.join(names) if names else '(inga fiender)')
+    return clean, effects
+
+
+def _parse_result_tag(text: str, state: dict) -> tuple[str, list[dict]]:
+    """Parsa [Resultat: ETIKETT → VÄRDE (rullar)] — initiative + dödsräddningar.
+
+    - INITIATIV/INITIATIVE (case-insensitive) + aktiv strid → spelarens
+      initiativ läggs i world.combat.initiative (ersätter player-entry).
+    - DÖDSRÄDDNING/DEATH SAVE → uppdaterar character.death_saves enligt
+      D&D 5e: nat1 = +2 misslyckanden, 20+ = vaknar med 1 HP,
+      10+ = framgång, <10 = misslyckande, 3 framgångar = stabil,
+      3 misslyckanden = död.
+    """
+    effects: list[dict] = []
+    clean = text
+    for m in RESULT_PATTERN.finditer(text):
+        label = (m.group(1) or '').strip().lower()
+        try:
+            value = int(m.group(2))
+        except (TypeError, ValueError):
+            continue
+        rolls_str = (m.group(3) or '').strip()
+        rolls = [int(r) for r in re.findall(r'\d+', rolls_str)] if rolls_str else []
+
+        # ── INITIATIV — spelarens initiativ i pågående strid ──
+        if 'initiativ' in label or 'initiative' in label:
+            combat = state.setdefault('world', {}).get('combat')
+            if combat and combat.get('active'):
+                char = state.setdefault('character', {})
+                pname = char.get('name', 'Spelaren')
+                initiative = combat.setdefault('initiative', [])
+                # Ersätt befintlig player-entry, behåll insättningsordning
+                # (frontend sorterar; vi sorterar inte här)
+                initiative[:] = [e for e in initiative if e.get('key') != 'player']
+                initiative.append({'key': 'player', 'name': pname, 'value': value})
+                effects.append({'type': 'initiativ', 'value': f"{pname}: {value}"})
+                logger.info("🎲 Initiativ registrerat: %s → %d", pname, value)
+            continue
+
+        # ── DÖDSRÄDDNING — D&D 5e-regler ──
+        if 'dödsräddning' in label or 'death save' in label:
+            char = state.setdefault('character', {})
+            hp = char.setdefault('hp', {'current': 0, 'max': 10, 'temp': 0})
+            ds = char.setdefault('death_saves', {'successes': 0, 'failures': 0})
+            nat1 = (rolls and rolls[0] == 1) or (not rolls and value == 1)
+            if nat1:
+                ds['failures'] = ds.get('failures', 0) + 2
+                effects.append({'type': 'dödsräddning', 'value': 'naturlig 1 — 2 misslyckanden'})
+                logger.info("💀 Dödsräddning: nat 1 → 2 misslyckanden")
+            elif value >= 20:
+                # Nat 20: vaknar med 1 HP, dödsräddningarna nollställs
+                if hp.get('current', 0) == 0:
+                    hp['current'] = 1
+                char['death_saves'] = {'successes': 0, 'failures': 0}
+                effects.append({'type': 'dödsräddning', 'value': 'naturlig 20 — vaknar med 1 HP'})
+                logger.info("💀 Dödsräddning: nat 20 — spelaren vaknar med 1 HP")
+            elif value >= 10:
+                ds['successes'] = ds.get('successes', 0) + 1
+                effects.append({'type': 'dödsräddning', 'value': f"framgång ({value})"})
+            else:
+                ds['failures'] = ds.get('failures', 0) + 1
+                effects.append({'type': 'dödsräddning', 'value': f"misslyckande ({value})"})
+            if ds.get('successes', 0) >= 3:
+                # Stabiliserad — nollställ (frontend visar pips från death_saves)
+                char['death_saves'] = {'successes': 0, 'failures': 0}
+                effects.append({'type': 'dödsräddning', 'value': 'stabiliserad — 3 framgångar'})
+                logger.info("💀 Spelaren stabiliserades (3 framgångar)")
+            elif ds.get('failures', 0) >= 3:
+                ds['dead'] = True
+                effects.append({'type': 'dödsräddning', 'value': 'DÖD — 3 misslyckanden'})
+                logger.info("💀 Spelaren dog (3 misslyckanden)")
+            continue
+    # Flagga att combat-state ändrats via tagg-parsning → _guardian_post_dm
+    # skickar [COMBAT:]-taggen till frontendens Krigsråd även om Guardian
+    # inte hittade egna effekter denna tur (initiativslag, dödsräddning).
+    if effects:
+        state.setdefault("meta", {})["combat_tag_dirty"] = True
+    return clean, effects
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -1590,6 +1746,51 @@ def _build_system_prompt(
         q_str = "; ".join(q.get("name", "?") for q in active[:5])
         parts.append(f"\n## Aktiva uppdrag\n{q_str}")
 
+    # ── ⚔️ PÅGÅENDE STRID — combat-tracker (v23) ──
+    # Injiceras när world.combat är aktiv: runda, fiender (HP/AC),
+    # turordning och spelarens HP/AC så DM:n kan hålla koll utan att gissa.
+    combat = world.get("combat")
+    if combat and combat.get("active"):
+        char = state.get("character", {})
+        hp = char.get("hp", {})
+        hp_cur = hp.get("current", 0)
+        hp_max = hp.get("max", 0)
+        ac = char.get("ac", 10)
+        c_lines = [
+            "\n## ⚔️ PÅGÅENDE STRID",
+            f"Runda: {combat.get('round', 1)}",
+        ]
+        enemies = [e for e in combat.get("enemies", []) if e.get("alive", True)]
+        if enemies:
+            e_str = ", ".join(
+                f"{e.get('name', '?')} ({e.get('hp', '?')}/{e.get('max_hp', '?')} HP, AC {e.get('ac', '?')})"
+                for e in enemies
+            )
+            c_lines.append(f"Fiender (HP/AC): {e_str}")
+        initiative = combat.get("initiative", [])
+        if initiative:
+            order = " → ".join(f"[{i.get('name', '?')}]" for i in initiative)
+            c_lines.append(f"Turordning: {order}")
+        else:
+            c_lines.append("Initiativ ännu ej rullat.")
+        c_lines.append(f"Ditt HP: {hp_cur}/{hp_max} · Ditt AC: {ac}")
+        parts.append("\n".join(c_lines))
+
+    # ── 💀 DÖDSRÄDDNING — spelaren är nere (v23) ──
+    # Vid 0 HP MÅSTE DM:n begära dödsräddning varje runda; Guardian/main
+    # spårar framgångar/misslyckanden i character.death_saves.
+    char = state.get("character", {})
+    hp = char.get("hp", {})
+    if hp.get("current", 0) == 0:
+        ds = char.get("death_saves", {}) or {}
+        parts.append(
+            "\n## 💀 DÖDSRÄDDNING\n"
+            "Spelaren är på 0 HP. Du MÅSTE begära [KAST: 1d20 | DÖDSRÄDDNING] varje runda "
+            "tills stabiliserad/död. "
+            f"Framgångar: {ds.get('successes', 0)}, Misslyckanden: {ds.get('failures', 0)}. "
+            "3 framgångar = stabil, 3 misslyckanden = död. Nat 20 = vaknar med 1 HP."
+        )
+
     # ── Enforcement borttaget (v19) ──
     # tag_streak, missing_roll_streak, turns_since_roll: Guardian pre-DM
     # detekterar kast och post-DM extraherar mekanik. DM behöver inte påminnas.
@@ -1731,10 +1932,16 @@ async def _generate_day_entry(username: str, campaign_id: str, prev_day: int) ->
 async def _guardian_post_dm(
     username: str, reply: str, player_msg: str,
     effective_turn: int, dm_npcs: list[dict],
+    skip_effects: list | None = None,
 ) -> None:
     """Extraherar mekanik ur DM-svaret i bakgrunden.
-    Uppdaterar state, sparar Guardian-rapport i transkriptet.
-    Frontend pollar transkriptet för att visa rapporten."""
+    Uppdaterar state, sparar Guardian-rapporten i transkriptet.
+    Frontend pollar transkriptet för att visa rapporten.
+
+    skip_effects: effekter som REDAN applicerats denna tur via DM-taggar
+    (t.ex. [SKADA:12]) — Guardian ska inte applicera dem en andra gång.
+    (P0-dedup: se combat-spec B2.)
+    """
     try:
         state = store.get(username)
         if not state:
@@ -1750,7 +1957,12 @@ async def _guardian_post_dm(
             language=_get_lang(state),
             conversation_history=_guardian_transcript,
         )
-        guardian_effects = apply_mechanics(state, mech)
+        try:
+            # Spår A lägger till skip_effects på apply_mechanics; fallback om
+            # guardian.py inte hunnit uppdateras (parallell utveckling).
+            guardian_effects = apply_mechanics(state, mech, skip_effects=skip_effects)
+        except TypeError:
+            guardian_effects = apply_mechanics(state, mech)
 
         # ASCII-art (avstängd tills vidare)
         if ATMOSPHERE_ENABLED:
@@ -1775,6 +1987,24 @@ async def _guardian_post_dm(
             dm_npcs=dm_npcs,
             turn=effective_turn,
         )
+
+        # Om striden ändrades via tagg-parsning (initiativ/dödsräddning via
+        # [Resultat:]) men Guardian inte hittade egna effekter → skicka ändå
+        # [COMBAT:]-taggen så frontendens Krigsråd uppdateras direkt.
+        combat = state.get("world", {}).get("combat")
+        if combat and meta.get("combat_tag_dirty"):
+            _tag = _combat_tag(combat)
+            if _tag and _tag not in (guardian_summary or ""):
+                guardian_summary = (guardian_summary + "\n" + _tag) if guardian_summary else _tag
+            meta.pop("combat_tag_dirty", None)
+        else:
+            meta.pop("combat_tag_dirty", None)
+
+        # Tag-only summary (inga synliga rader) → ge den en rubrik så
+        # bubblan inte ser tom ut i chatten.
+        if guardian_summary and guardian_summary.startswith("["):
+            guardian_summary = "🛡️ **Guardian**\n" + guardian_summary
+
         if guardian_summary:
             state = store.append_message(state, "guardian", guardian_summary)
             logger.info("🛡️ Guardian bakgrund (%.1fs): %d effekter, %d DM-NPCs, loggbok=%s",
@@ -1797,69 +2027,73 @@ async def _post_turn_tasks(
     Faktextraktion, RAG-indexering och sammanfattning — inget av detta
     får någonsin fördröja spelarens upplevelse. Alla fel sväljs tyst."""
     # 1. Extrahera fakta + inventory-ändringar ur DM-svaret (billig modell)
-    try:
-        async def _extraction_llm(messages: list[dict]) -> str:
-            return await _call_llm(EXTRACTION_MODEL, messages, temperature=0.2, max_tokens=800)
+    # Varannan tur (turn_count % 2 == 0): faktextraktion är ett LLM-anrop
+    # (kostnad + latens). [FÖREMÅL:]-taggar + Guardian täcker redan inventory,
+    # så att halvera extraktionsfrekvensen tappar ingen mekanik (P2, spec B5).
+    if turn_count % 2 == 0:
+        try:
+            async def _extraction_llm(messages: list[dict]) -> str:
+                return await _call_llm(EXTRACTION_MODEL, messages, temperature=0.2, max_tokens=800)
 
-        # Bygg inventory-lista för kontext (så LLM:n inte lägger till duplikat)
-        st = store.get(username)
-        inv_names = []
-        if st:
-            for it in st.get("inventory", []):
-                inv_names.append(f"- {it['name']} (×{it.get('qty', 1)})")
-        inv_list_str = "\n".join(inv_names) if inv_names else "(tomt)"
+            # Bygg inventory-lista för kontext (så LLM:n inte lägger till duplikat)
+            st = store.get(username)
+            inv_names = []
+            if st:
+                for it in st.get("inventory", []):
+                    inv_names.append(f"- {it['name']} (×{it.get('qty', 1)})")
+            inv_list_str = "\n".join(inv_names) if inv_names else "(tomt)"
 
-        facts, inv_changes = await extract_facts(
-            reply, player_msg, turn_count, _extraction_llm,
-            inventory_list=inv_list_str,
-            language=_get_lang(st) if st else "en",
-        )
-        if facts:
-            register = FactRegister(username, campaign_id)
-            register.add_facts(facts)
-            logger.info("Extraherade %d fakta (tur %d)", len(facts), turn_count)
+            facts, inv_changes = await extract_facts(
+                reply, player_msg, turn_count, _extraction_llm,
+                inventory_list=inv_list_str,
+                language=_get_lang(st) if st else "en",
+            )
+            if facts:
+                register = FactRegister(username, campaign_id)
+                register.add_facts(facts)
+                logger.info("Extraherade %d fakta (tur %d)", len(facts), turn_count)
 
-        # Applicera inventory-ändringar (LLM-baserat säkerhetsnät)
-        if inv_changes and st:
-            inv = st.setdefault("inventory", [])
-            # Namn som redan lagts till via [FÖREMÅL:]-tagg denna tur
-            tag_added = {e["value"].lower() for e in (st.get("meta", {}).get("last_effects", []))
-                         if e.get("type") == "föremål"}
-            for ch in inv_changes:
-                name_lower = ch["name"].lower()
-                if ch["action"] == "add":
-                    # Skippa om taggen redan lade till det
-                    if name_lower in tag_added:
-                        logger.debug("📦 LLM-extraktion skippade '%s' (redan taggad)", ch["name"])
-                        continue
-                    existing = next((it for it in inv if it["name"].lower() == name_lower), None)
-                    if existing:
-                        existing["qty"] = existing.get("qty", 1) + ch["qty"]
-                        logger.info("📦 LLM-dedup: '%s' → qty=%d", ch["name"], existing["qty"])
-                    else:
-                        inv.append({
-                            "id": f"llm-{len(inv)}",
-                            "name": ch["name"],
-                            "type": ch.get("type", "Annat"),
-                            "qty": ch["qty"],
-                            "weight": 0,
-                            "equipped": False,
-                            "rarity": "normal",
-                            "description": "",
-                        })
-                        logger.info("📦 LLM-extraktion lade till '%s'", ch["name"])
-                elif ch["action"] == "remove":
-                    existing = next((it for it in inv if it["name"].lower() == name_lower), None)
-                    if existing:
-                        existing["qty"] = existing.get("qty", 1) - ch["qty"]
-                        if existing["qty"] <= 0:
-                            inv.remove(existing)
-                            logger.info("📦 LLM-extraktion tog bort '%s'", ch["name"])
+            # Applicera inventory-ändringar (LLM-baserat säkerhetsnät)
+            if inv_changes and st:
+                inv = st.setdefault("inventory", [])
+                # Namn som redan lagts till via [FÖREMÅL:]-tagg denna tur
+                tag_added = {e["value"].lower() for e in (st.get("meta", {}).get("last_effects", []))
+                             if e.get("type") == "föremål"}
+                for ch in inv_changes:
+                    name_lower = ch["name"].lower()
+                    if ch["action"] == "add":
+                        # Skippa om taggen redan lade till det
+                        if name_lower in tag_added:
+                            logger.debug("📦 LLM-extraktion skippade '%s' (redan taggad)", ch["name"])
+                            continue
+                        existing = next((it for it in inv if it["name"].lower() == name_lower), None)
+                        if existing:
+                            existing["qty"] = existing.get("qty", 1) + ch["qty"]
+                            logger.info("📦 LLM-dedup: '%s' → qty=%d", ch["name"], existing["qty"])
                         else:
-                            logger.info("📦 LLM-extraktion minskade '%s' → qty=%d", ch["name"], existing["qty"])
-            store.save(st)
-    except Exception as e:
-        logger.debug("Faktextraktion hoppade över: %s", e)
+                            inv.append({
+                                "id": f"llm-{len(inv)}",
+                                "name": ch["name"],
+                                "type": ch.get("type", "Annat"),
+                                "qty": ch["qty"],
+                                "weight": 0,
+                                "equipped": False,
+                                "rarity": "normal",
+                                "description": "",
+                            })
+                            logger.info("📦 LLM-extraktion lade till '%s'", ch["name"])
+                    elif ch["action"] == "remove":
+                        existing = next((it for it in inv if it["name"].lower() == name_lower), None)
+                        if existing:
+                            existing["qty"] = existing.get("qty", 1) - ch["qty"]
+                            if existing["qty"] <= 0:
+                                inv.remove(existing)
+                                logger.info("📦 LLM-extraktion tog bort '%s'", ch["name"])
+                            else:
+                                logger.info("📦 LLM-extraktion minskade '%s' → qty=%d", ch["name"], existing["qty"])
+                store.save(st)
+        except Exception as e:
+            logger.debug("Faktextraktion hoppade över: %s", e)
 
     # 1b. Guardian POST-DM: flyttad till /api/chat (inline) — syns nu i chatten.
 
@@ -1960,8 +2194,17 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     # Spelaren svarade på ett tärningskast → rensa väntande kast-begäran.
     # last_roll_requests fungerar då som "obesvarade kast": de finns kvar
     # tills spelaren slår, så en refresh kan återställa knapparna.
+    result_effects: list = []
     if req.message.startswith("[Resultat:"):
         state.setdefault("meta", {})["last_roll_requests"] = []
+        # ── [Resultat:] — initiative + dödsräddningar (v23) ──
+        # Uppdaterar world.combat.initiative (spelarens initiativ) och
+        # character.death_saves. Muterar state FÖRE systemprompten byggs
+        # så B4-blocket visar uppdaterade värden denna tur.
+        _, result_effects = _parse_result_tag(req.message, state)
+        if result_effects:
+            logger.info("🎲 Resultat-effekter: %s",
+                        ", ".join(str(e.get("value", "?")) for e in result_effects))
 
     # Bygg meddelandelista — spelarens meddelande sparas först EFTER att LLM:n svarat,
     # så ett misslyckat anrop lämnar inga spår i transkriptet.
@@ -2181,13 +2424,21 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
             effects = []
             dm_valid = False
 
+    # ── [STRID:] — öppna/uppdatera strid (v23) ──
+    # DM öppnar striden med taggen → world.combat skapas. Körs EFTER
+    # mekanikvalideringen så taggen stripas ur den slutgiltiga reply-texten.
+    # Effekten slås ihop med tagg-effekterna → meta["last_effects"] och
+    # skickas som skip_effects till Guardian (dedup, se B2).
+    reply, strid_effects = _parse_strid_tag(reply, state)
+    effects = effects + strid_effects
+
     # ── Prosa-föremål: borttaget (v18) ──
     # LLM-extraktion i _post_turn_tasks() hanterar nu föremål som DM
     # glömde tagga — med kontextförståelse istället för regex.
 
     # Spara effekter för nästa turs systemprompt
     meta = state.setdefault("meta", {})
-    meta["last_effects"] = effects if effects else []
+    meta["last_effects"] = (result_effects or []) + (effects or [])
     # Spara kast-begäran så transkript-fallbacken kan återställa dem
     meta["last_roll_requests"] = roll_requests if roll_requests else []
 
@@ -2220,8 +2471,11 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     store.save(state)
 
     # ── Guardian POST-DM → BAKGRUND (blockerar ALDRIG HTTP-svaret) ──
+    # skip_effects = denna turs redan applicerade tagg-effekter (P0-dedup):
+    # Guardian ska inte applicera [SKADA:]-taggen en andra gång.
     guardian_task = asyncio.create_task(_guardian_post_dm(
         username, reply, req.message, effective_turn, list(new_npcs),
+        skip_effects=meta.get("last_effects") or [],
     ))
     _BACKGROUND_TASKS.add(guardian_task)
     guardian_task.add_done_callback(_BACKGROUND_TASKS.discard)
@@ -2280,9 +2534,9 @@ Svara ENDAST med giltig JSON (ingen markdown) med detta schema:
   "level": 1,
   "alignment": "string",
   "background": "string — klass/bakgrund, kort",
-  "ac": 10,
-  "initiative": 0,
-  "perception": 10,
+  "ac": 10 + DEX-mod (+ rustning om utrustad),  // BERÄKNA från abilities!
+  "initiative": DEX-mod,                        // BERÄKNA från abilities!
+  "perception": 10 + WIS-mod,                   // BERÄKNA från abilities!
   "speed": "30 ft",
   "proficiency": 2,
   "hp": {"current": 10, "max": 10, "temp": 0},
@@ -2297,13 +2551,19 @@ Svara ENDAST med giltig JSON (ingen markdown) med detta schema:
     "CHA": {"score": 10, "mod": 0}
   },
   "traits": ["string — 3-4 förmågor/egenskaper"],
-  "saves": [],
+  "saves": [{"name": "STR", "prof": true}],  // klassens save-proficiencies!
   "gear": "string — startutrustning, 5-8 föremål separerade med ' · '",
   "story": "string — bakgrundshistoria, max 100 ord, mörk och stämningsfull",
   "inventory": [
     {"name": "string", "type": "Vapen|Rustning|Dryck|Magisk|Verktyg|Annat", "qty": 1, "weight": 1.0, "equipped": false, "rarity": "normal|magic|rare|legendary", "damage": "1d8 slashing|null", "damage_dice": "1d8|null", "damage_type": "slashing|null", "ac_bonus": 14|null, "range": "melee|null", "properties": ["versatile"], "magic_bonus": 0, "charges": null, "max_charges": null, "description": "string", "effects": "string|null"}
   ]
 }
+
+## HÄRLEDDA VÄRDEN (BERÄKNA — hårdkoda INTE 10/0/10)
+- ac = 10 + DEX-mod (+ rustning om utrustad) — beräkna från abilities
+- initiative = DEX-mod
+- perception = 10 + WIS-mod
+- saves = klassens save-proficiencies: Krigare/Paladin/Barbarian = STR+CON, Wizard = INT+WIS, Rogue/Monk = DEX+INT, Cleric/Druid/Sorcerer/Bard/Warlock/Ranger = WIS+CHA
 
 ## STARTUTRUSTNING (inventory) — KRITISKT
 Fyll ALLTID inventory-arrayen med 5-8 föremål som passar karaktärens klass och bakgrund:
@@ -2329,9 +2589,9 @@ Respond ONLY with valid JSON (no markdown) using this schema:
   "level": 1,
   "alignment": "string",
   "background": "string — class/background, brief",
-  "ac": 10,
-  "initiative": 0,
-  "perception": 10,
+  "ac": 10 + DEX-mod (+ armor if equipped),  // COMPUTE from abilities!
+  "initiative": DEX-mod,                     // COMPUTE from abilities!
+  "perception": 10 + WIS-mod,                // COMPUTE from abilities!
   "speed": "30 ft",
   "proficiency": 2,
   "hp": {"current": 10, "max": 10, "temp": 0},
@@ -2346,13 +2606,19 @@ Respond ONLY with valid JSON (no markdown) using this schema:
     "CHA": {"score": 10, "mod": 0}
   },
   "traits": ["string — 3-4 abilities/traits"],
-  "saves": [],
+  "saves": [{"name": "STR", "prof": true}],  // class save proficiencies!
   "gear": "string — starting equipment, 5-8 items separated by ' · '",
   "story": "string — backstory, max 100 words, dark and atmospheric",
   "inventory": [
     {"name": "string", "type": "Weapon|Armor|Potion|Magic|Tool|Other", "qty": 1, "weight": 1.0, "equipped": false, "rarity": "normal|magic|rare|legendary", "damage": "1d8 slashing|null", "damage_dice": "1d8|null", "damage_type": "slashing|null", "ac_bonus": 14|null, "range": "melee|null", "properties": ["versatile"], "magic_bonus": 0, "charges": null, "max_charges": null, "description": "string", "effects": "string|null"}
   ]
 }
+
+## DERIVED VALUES (COMPUTE — do NOT hardcode 10/0/10)
+- ac = 10 + DEX-mod (+ armor if equipped) — compute from abilities
+- initiative = DEX-mod
+- perception = 10 + WIS-mod
+- saves = class save proficiencies: Fighter/Paladin/Barbarian = STR+CON, Wizard = INT+WIS, Rogue/Monk = DEX+INT, Cleric/Druid/Sorcerer/Bard/Warlock/Ranger = WIS+CHA
 
 ## STARTING EQUIPMENT (inventory) — CRITICAL
 ALWAYS fill the inventory array with 5-8 items fitting the character's class and background:
@@ -2405,6 +2671,44 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
         char_data.setdefault(field, "Unknown" if lang == "en" else "Okänd")
     char_data.setdefault("level", 1)
     char_data.setdefault("abilities", {})
+
+    # ── Backup-beräkning av härledda värden (P1, spec B7) ──
+    # Modellen SKA beräkna ac/initiative/perception från abilities (se
+    # prompten), men om den glömde det (default 10/0/10) räknar vi ut det
+    # här istället — så karaktärsbladet aldrig visar fel värden.
+    abilities = char_data.get("abilities") or {}
+
+    def _abil_mod(key: str) -> int:
+        entry = abilities.get(key) or {}
+        m = entry.get("mod")
+        if m is None:
+            m = (int(entry.get("score", 10) or 10) - 10) // 2
+        return int(m or 0)
+
+    dex_mod = _abil_mod("DEX")
+    wis_mod = _abil_mod("WIS")
+    if dex_mod:
+        if not char_data.get("ac") or char_data["ac"] <= 10:
+            char_data["ac"] = 10 + dex_mod
+        if not char_data.get("initiative"):
+            char_data["initiative"] = dex_mod
+    if wis_mod and (not char_data.get("perception") or char_data["perception"] <= 10):
+        char_data["perception"] = 10 + wis_mod
+
+    # Save-proficiencies: fyll från klassen om modellen lämnade dem tomma
+    if not char_data.get("saves"):
+        klass = (char_data.get("class") or "").lower()
+        save_profs = {
+            "fighter": ["STR", "CON"], "paladin": ["STR", "CON"], "barbarian": ["STR", "CON"],
+            "wizard": ["INT", "WIS"],
+            "rogue": ["DEX", "INT"], "monk": ["DEX", "INT"],
+            "cleric": ["WIS", "CHA"], "druid": ["WIS", "CHA"], "sorcerer": ["WIS", "CHA"],
+            "bard": ["WIS", "CHA"], "warlock": ["WIS", "CHA"], "ranger": ["WIS", "CHA"],
+        }
+        for cls, profs in save_profs.items():
+            if cls in klass:
+                char_data["saves"] = [{"name": p, "prof": True} for p in profs]
+                break
 
     # Flytta startutrustning till state["inventory"] (där frontend läser den)
     inventory = char_data.pop("inventory", None)

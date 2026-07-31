@@ -36,6 +36,15 @@
             "temp": { "type": "integer" }
           }
         },
+        "death_saves": {
+          "type": "object",
+          "description": "Dödsräddningar (3 framgångar = stabil, 3 misslyckanden = död)",
+          "properties": {
+            "successes": { "type": "integer", "default": 0 },
+            "failures": { "type": "integer", "default": 0 },
+            "dead": { "type": "boolean", "default": false }
+          }
+        },
         "spell_slots": {
           "type": "object",
           "properties": {
@@ -164,7 +173,55 @@
         "current_location": { "type": "string" },
         "visited_locations": { "type": "array", "items": { "type": "string" } },
         "time": { "type": "string", "description": "In-game date/time" },
-        "weather": { "type": "string" }
+        "weather": { "type": "string" },
+        "combat": {
+          "type": "object",
+          "description": "Combat-tracker (Krigsrådet): pågående strid med fiender, initiativ och logg",
+          "properties": {
+            "active": { "type": "boolean" },
+            "round": { "type": "integer" },
+            "initiative": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "key": { "type": "string", "description": "\"player\" eller \"enemy:<id>\"" },
+                  "name": { "type": "string" },
+                  "value": { "type": "integer" }
+                }
+              }
+            },
+            "enemies": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "integer" },
+                  "name": { "type": "string" },
+                  "hp": { "type": "integer" },
+                  "max_hp": { "type": "integer" },
+                  "ac": { "type": "integer" },
+                  "alive": { "type": "boolean" },
+                  "statuses": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            },
+            "log": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "round": { "type": "integer" },
+                  "actor": { "type": "string" },
+                  "name": { "type": "string" },
+                  "text": { "type": "string" }
+                }
+              }
+            },
+            "started_turn": { "type": ["integer", "null"] },
+            "ended_turn": { "type": ["integer", "null"] }
+          }
+        }
       }
     }
   },

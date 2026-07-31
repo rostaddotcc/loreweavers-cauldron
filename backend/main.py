@@ -1025,8 +1025,9 @@ TTS_VOICES = [
 ]
 
 TTS_INSTRUCTIONS = {
-    TTS_VOICE_MALE: "Narrate in a deep, dramatic, immersive fantasy storytelling voice. Dark and atmospheric, slow and deliberate.",
-    TTS_VOICE_FEMALE: "Narrate in a warm, rich, immersive fantasy storytelling voice. Like a storyteller by the fire, expressive and inviting.",
+    # OBS: instruktionen får vara MAX 128 tecken — längre ger "Instruction is invalid!"
+    TTS_VOICE_MALE: "Speak Swedish with Standard Swedish pronunciation and natural rhythm. Dramatic dark fantasy narration, slow and atmospheric.",
+    TTS_VOICE_FEMALE: "Speak Swedish with Standard Swedish pronunciation and natural rhythm. Warm rich storytelling voice, expressive and inviting.",
 }
 
 # Token Plan TTS har INGEN REST-endpoint — går bara via DashScope SDK WebSocket

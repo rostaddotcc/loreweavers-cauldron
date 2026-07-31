@@ -2012,7 +2012,10 @@ async def _guardian_post_dm(
             guardian_summary = "🛡️ **Guardian**\n" + guardian_summary
 
         if guardian_summary:
-            state = store.append_message(state, "guardian", guardian_summary)
+            state = store.append_message(
+                state, "guardian", guardian_summary,
+                meta={"turn": effective_turn},
+            )
             logger.info("🛡️ Guardian bakgrund (%.1fs): %d effekter, %d DM-NPCs, loggbok=%s",
                         time.time() - _tg, len(guardian_effects), len(dm_npcs),
                         "ja" if mech.get("logbook") else "nej")

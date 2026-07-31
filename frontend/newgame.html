@@ -130,15 +130,21 @@
     transition:border-color .25s,box-shadow .25s;
   }
   #prompt:focus{border-color:var(--arcane);box-shadow:0 0 18px -5px rgba(139,95,212,.4)}
-  /* ═══════════ Legend preview (live MD) ═══════════ */
-  .lp-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:stretch}
+  /* ═══════════ Legend editor — EN ruta: MD-preview ⇄ redigering ═══════════ */
   .sh-btns{display:flex;gap:.5rem;align-items:center}
+  .lp-single{position:relative}
+  .lp-single #prompt{display:none}
+  .lp-single.edit #prompt{display:block}
+  .lp-single.edit .legend-preview{display:none}
   .legend-preview{
     min-height:230px;max-height:480px;overflow-y:auto;
     font-family:'Spectral',serif;font-size:.9rem;line-height:1.65;color:var(--bone-bright);
     background:var(--stone);border:1px solid var(--edge);padding:1rem 1.1rem;border-radius:0;
+    cursor:text;transition:border-color .25s,box-shadow .25s;
   }
-  .legend-preview.lp-empty{color:var(--bone-dim);font-style:italic}
+  .legend-preview:hover{border-color:var(--bone-dim)}
+  .lp-toggle{opacity:.8}
+  .lp-toggle:hover{opacity:1}
   .legend-preview .lp-h{
     font-family:'Cinzel',serif;font-weight:700;font-size:.95rem;color:var(--gold-bright);
     letter-spacing:.08em;text-transform:uppercase;margin:0 0 .6rem;
@@ -248,7 +254,6 @@
     /* Pergament + modeller */
     .scroll-box{padding:1.3rem 1rem}
     #prompt{min-height:120px;font-size:16px}
-    .lp-grid{grid-template-columns:1fr}
     .legend-preview{min-height:140px;font-size:16px}
     .lp-clear{min-height:44px}
     .blank-btn{min-height:44px;display:inline-flex;align-items:center}
@@ -342,13 +347,14 @@
     <div class="scroll-head">
       <span class="mode" id="mode-label">📜 <b>Blank Parchment</b> — write freely</span>
       <div class="sh-btns">
+        <button class="blank-btn lp-toggle" id="lp-toggle" onclick="toggleLegendMode()" title="Toggle edit / preview">✏️ Edit</button>
         <button class="blank-btn lp-clear" onclick="clearPrompt()" title="Empty the textarea">🗑 Clear</button>
         <button class="blank-btn" onclick="blankScroll()">✦ Blank Parchment</button>
       </div>
     </div>
-    <div class="lp-grid">
-      <textarea id="prompt" spellcheck="false" oninput="renderLegendPreview()"></textarea>
-      <div class="legend-preview" id="legend-preview" aria-live="polite"></div>
+    <div class="lp-single" id="legend-editor">
+      <textarea id="prompt" spellcheck="false" oninput="renderLegendPreview()" onblur="onPromptBlur(event)"></textarea>
+      <div class="legend-preview" id="legend-preview" aria-live="polite" onclick="enterEditMode()"></div>
     </div>
     <div class="scroll-actions">
       <button class="summon-btn" id="summon" onclick="summon()">🔮 Summon Character</button>
@@ -924,6 +930,7 @@ function setPrompt(v) {
   el.value = v;
   lastSetValue = v;
   renderLegendPreview();
+  enterPreviewMode(); // mall laddad → visa den vackra vyn direkt
 }
 
 // 🗑 Töm textarean helt → spelaren kan skriva fritt
@@ -937,6 +944,47 @@ function clearPrompt() {
     : `📜 <b>Friskrivning</b> — din legend, dina ord`;
   renderLegendPreview();
   toast(isEn() ? '🗑 Cleared — write your own legend' : '🗑 Rensat — skriv din egen legend');
+}
+
+// ═══════════════════════════════════════
+// EN-FÖNSTER-REDIGERARE — MD-förhandsvisning ⇄ textredigering
+// En enda ruta. Preview (vacker MD) är standard; klick → redigera,
+// blur → tillbaka till preview. Toggle-pillret styr manuellt.
+// ═══════════════════════════════════════
+function enterEditMode() {
+  const box = document.getElementById('legend-editor');
+  if (!box || box.classList.contains('edit')) return;
+  box.classList.add('edit');
+  const toggle = document.getElementById('lp-toggle');
+  if (toggle) toggle.innerHTML = '👁 Preview';
+  const ta = document.getElementById('prompt');
+  if (ta) {
+    ta.focus();
+    const end = ta.value.length;
+    ta.setSelectionRange(end, end);
+  }
+}
+
+function enterPreviewMode() {
+  const box = document.getElementById('legend-editor');
+  if (!box || !box.classList.contains('edit')) return;
+  box.classList.remove('edit');
+  renderLegendPreview();
+  const toggle = document.getElementById('lp-toggle');
+  if (toggle) toggle.innerHTML = '✏️ Edit';
+}
+
+function toggleLegendMode() {
+  const box = document.getElementById('legend-editor');
+  if (box && box.classList.contains('edit')) enterPreviewMode();
+  else enterEditMode();
+}
+
+// Blur → tillbaka till vacker förhandsvisning. Men inte när man klickar
+// på själva togglen (annars tävlar blur och click om läget).
+function onPromptBlur(e) {
+  if (e && e.relatedTarget && e.relatedTarget.id === 'lp-toggle') return;
+  enterPreviewMode();
 }
 
 function escapeHtml(s) {
@@ -972,7 +1020,7 @@ function renderLegendPreview() {
   if (!el) return;
   const src = document.getElementById('prompt').value;
   if (!src.trim()) {
-    el.innerHTML = 'Your legend will appear here…';
+    el.innerHTML = '✍️ Click to write your legend…';
     el.classList.add('lp-empty');
     return;
   }

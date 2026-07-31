@@ -1975,8 +1975,8 @@ def _build_system_prompt(
         )
 
     # ── VAKNANDEPROTOKOLLET ──
-    # Aktiveras av awakening-flaggan (nya kampanjer) eller av triggern.
-    # turn_override = turn_count + det meddelande som ännu inte sparats.
+    # Aktiveras BARA för nya kampanjer (turn 1-2). awakening-flaggan
+    # rensas efter turn 2 så den aldrig triggar igen.
     # turn==1 = spelarens första meddelande → DM ställer frågor.
     # turn==2 = spelaren har svarat på frågorna → DM öppnar scenen med svaren.
     meta = state.get("meta", {})
@@ -1986,7 +1986,7 @@ def _build_system_prompt(
                            if lang == "en" else
                            "Beskriv omgivningen atmosfäriskt och låt spelaren utforska.")
         opening = meta.get("opening_style", default_opening)
-        if awakening_trigger or turn == 1:
+        if turn <= 1:
             parts.append(AWAKENING_ASK_EN if lang == "en" else AWAKENING_ASK)
         elif turn == 2:
             tmpl = AWAKENING_OPEN_EN if lang == "en" else AWAKENING_OPEN
@@ -2877,6 +2877,11 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         "tokens": usage,
         "time": _llm_time,
     })
+
+    # Rensa awakening-flaggan efter turn 2 (scenen är öppnad — aldrig igen)
+    if state["meta"].get("awakening") and effective_turn >= 2:
+        state["meta"]["awakening"] = False
+        logger.info("🌅 Awakening avslutad (tur %d)", effective_turn)
 
     # ── Spara DM-svar + effekter (Guardian kör i bakgrunden) ──
     store.save(state)

@@ -2522,7 +2522,7 @@ function startTypewriter(msgEl, type) {
   msgEl.classList.remove('tw-pending');
   const grand = segs.reduce((a, s) => a + s.total, 0);
   const chunk = Math.max(2, Math.ceil(grand / 240));      // max ~240 ticks
-  const interval = grand <= 60 ? 30 : grand <= 220 ? 24 : grand <= 700 ? 18 : 14;
+  const interval = grand <= 60 ? 40 : grand <= 220 ? 32 : grand <= 700 ? 24 : 18;
   let global = 0, tickIdx = 0, pitchDm = 0, pitchNpc = 0, done = false;
   let cursor = null, dripTimer = null;
   const startedAt = performance.now();

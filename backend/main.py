@@ -2752,9 +2752,9 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
 
     # Flytta startutrustning till state["inventory"] (där frontend läser den)
     inventory = char_data.pop("inventory", None)
-    if isinstance(inventory, list) and inventory:
+    clean = []
+    if isinstance(inventory, list):
         # Normalisera varje föremål till frontend-formatet
-        clean = []
         for it in inventory:
             if not isinstance(it, dict) or not it.get("name"):
                 continue
@@ -2766,6 +2766,34 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
                 "equipped": bool(it.get("equipped", False)),
                 "rarity": str(it.get("rarity", "normal")),
             })
+
+    # ── Säkerhetsnät (fix 2026-07-31): gear-strängen kan innehålla startitems
+    # som LLM:n glömde i inventory-arrayen (t.ex. "benplåtssköld" + "flätat
+    # likrep" hos Merrick Sotfot). Lägg till gear-items som inte redan finns
+    # (fuzzy namnmatch) så startutrustningen ALDRIG tappas.
+    gear = char_data.get("gear", "") or ""
+    if gear:
+        _existing = [c["name"].lower() for c in clean]
+        for raw in re.split(r"\s*[·|]\s*", gear):
+            raw = raw.strip()
+            if not raw:
+                continue
+            qty = 1
+            m = re.match(r"^(.*?)\s*\((\d+)\)\s*$", raw)
+            if m:
+                raw, qty = m.group(1).strip(), int(m.group(2))
+            if not raw:
+                continue
+            low = raw.lower()
+            if any(low in ex or ex in low for ex in _existing):
+                continue
+            clean.append({
+                "name": raw, "type": "Other" if lang == "en" else "Annat",
+                "qty": qty, "weight": 1.0, "equipped": False, "rarity": "normal",
+            })
+            _existing.append(low)
+
+    if clean or inventory is not None:
         state["inventory"] = clean
 
     state["character"] = char_data

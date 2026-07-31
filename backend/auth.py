@@ -6,6 +6,7 @@ JWT + bcrypt mot data/users.json.
 
 import json
 import os
+import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -18,6 +19,34 @@ JWT_EXPIRY_HOURS = int(os.getenv("JWT_EXPIRY_HOURS", "24"))
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
 USERS_FILE = DATA_DIR / "users.json"
+
+# Kontoregler (iteration 1 — SMTP/verifiering/återställning kommer senare)
+USERNAME_RE = re.compile(r"^[a-z0-9][a-z0-9_.-]{2,19}$")  # 3-20 tecken, börjar med bokstav/siffra
+PASSWORD_MIN_LEN = 6
+
+
+def normalize_username(username: str) -> str:
+    """Normalisera användarnamn: trim + lowercase. Dublettskydd bygger på detta."""
+    return (username or "").strip().lower()
+
+
+def validate_username(username: str) -> str | None:
+    """Validera användarnamn. Returnerar felmeddelande eller None om OK."""
+    uname = normalize_username(username)
+    if not uname:
+        return "Username is required."
+    if not USERNAME_RE.match(uname):
+        return "Username must be 3-20 characters (letters, numbers, _ - .) and start with a letter or number."
+    return None
+
+
+def validate_password(password: str) -> str | None:
+    """Validera lösenord. Returnerar felmeddelande eller None om OK."""
+    if not password:
+        return "Password is required."
+    if len(password) < PASSWORD_MIN_LEN:
+        return f"Password must be at least {PASSWORD_MIN_LEN} characters."
+    return None
 
 
 def load_users() -> dict:

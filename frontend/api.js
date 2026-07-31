@@ -133,6 +133,18 @@ const API = (() => {
       return req('/api/login', { method: 'POST', body: JSON.stringify({ username, password }) });
     },
 
+    async register(username, password) {
+      if (MOCK) throw new Error('Account creation is only available on the live server');
+      return req('/api/register', { method: 'POST', body: JSON.stringify({ username, password }) });
+    },
+
+    async setTurnCap(username, turnCap) {
+      if (MOCK) return { ok: true };
+      return req('/api/admin/user/' + encodeURIComponent(username) + '/turn-cap', {
+        method: 'PUT', body: JSON.stringify({ turn_cap: turnCap }),
+      });
+    },
+
     async logout() {
       sessionStorage.removeItem('dnd_user');
       sessionStorage.removeItem('dnd_token');

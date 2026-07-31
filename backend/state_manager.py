@@ -151,11 +151,19 @@ class CampaignStore:
                 "level": char.get("level", 1),
                 "turn_count": meta.get("turn_count", 0),
                 "last_updated": meta.get("last_updated", ""),
+                "created": meta.get("created", ""),
                 "location": world.get("current_location", ""),
                 "language": meta.get("language", "en"),
             })
         results.sort(key=lambda c: c.get("last_updated", ""), reverse=True)
         return results
+
+    def total_turns(self, user: str) -> int:
+        """Summan av alla kampanjers turn_count för en användare (snabb koll utan transkript)."""
+        total = 0
+        for c in self.list_campaigns(user):
+            total += int(c.get("turn_count", 0) or 0)
+        return total
 
     def delete(self, user: str, campaign_id: str) -> bool:
         """Radera en specifik kampanj. Returnerar True om något raderades."""

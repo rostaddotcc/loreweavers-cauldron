@@ -12,6 +12,7 @@ import logging
 import os
 import random
 import re
+import threading
 import time
 import uuid
 import zipfile
@@ -67,7 +68,17 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from auth import create_token, hash_password, load_users, save_users, verify_password, verify_token
+from auth import (
+    create_token,
+    hash_password,
+    load_users,
+    normalize_username,
+    save_users,
+    validate_password,
+    validate_username,
+    verify_password,
+    verify_token,
+)
 from dice import roll as dice_roll
 from models import (
     AWAKENING_ASK,
@@ -654,6 +665,41 @@ vault = CharacterVault()
 
 COOKIE_NAME = "morkrets_token"
 
+# ── Konto-säkerhet (iteration 1) ──
+# Lås för alla users.json-mutationer (login last_login, register, admin-ändringar).
+_USER_LOCK = threading.Lock()
+
+# Globalt tak för nya registreringar (skript-skydd; per-IP funkar inte bakom proxy).
+_REGISTER_LIMIT = 30          # max registreringar…
+_REGISTER_WINDOW = 3600       # …per timme
+_REGISTER_TIMES: deque = deque(maxlen=_REGISTER_LIMIT)
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _register_allowed() -> bool:
+    """Returnerar True om en ny registrering tillåts just nu."""
+    now = time.time()
+    while _REGISTER_TIMES and now - _REGISTER_TIMES[0] > _REGISTER_WINDOW:
+        _REGISTER_TIMES.popleft()
+    if len(_REGISTER_TIMES) >= _REGISTER_LIMIT:
+        return False
+    _REGISTER_TIMES.append(now)
+    return True
+
+
+def _turn_cap_for(username: str) -> int:
+    """Kontots turn-tak (0 = oändligt). Läser users.json — snabbt och litet."""
+    try:
+        udata = load_users().get(username, {})
+        if not isinstance(udata, dict):
+            return 0
+        return int(udata.get("turn_cap", 0) or 0)
+    except Exception:
+        return 0
+
 # Atmosfär-subagent: snabb modell för ASCII-art
 ATMOSPHERE_MODEL = os.getenv("ATMOSPHERE_MODEL", "mimo-v2.5")
 ATMOSPHERE_ENABLED = os.getenv("ATMOSPHERE_ENABLED", "0") == "1"
@@ -1102,14 +1148,12 @@ def _extract_json(text: str) -> dict:
 # ═══════════════════════════════════════
 
 
-@app.post("/api/login")
-async def login(req: LoginRequest, response: Response):
-    users = load_users()
-    user = users.get(req.username)
-    if not user or not verify_password(req.password, user["password_hash"]):
-        raise HTTPException(401, "Fel användarnamn eller lösenord")
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
 
-    token = create_token(req.username, user["role"])
+
+def _set_auth_cookie(response: Response, token: str) -> None:
     response.set_cookie(
         key=COOKIE_NAME,
         value=token,
@@ -1118,7 +1162,60 @@ async def login(req: LoginRequest, response: Response):
         samesite="lax",
         path="/",
     )
-    return {"ok": True, "username": req.username, "role": user["role"]}
+
+
+@app.post("/api/register")
+async def register(req: RegisterRequest, response: Response):
+    """Skapa ett spelarkonto (publik självregistrering). Iteration 1:
+    ingen SMTP/verifiering — direkt inloggning. Dublettskydd + validering."""
+    username = normalize_username(req.username)
+
+    err = validate_username(username)
+    if err:
+        raise HTTPException(400, err)
+    err = validate_password(req.password)
+    if err:
+        raise HTTPException(400, err)
+    if not _register_allowed():
+        raise HTTPException(429, "Too many new adventurers. Try again later.")
+
+    with _USER_LOCK:
+        users = load_users()
+        if username in users:
+            raise HTTPException(409, "That name is already taken. Choose another.")
+
+        users[username] = {
+            "password_hash": hash_password(req.password),
+            "role": "player",
+            "created_at": _now_iso(),
+            "last_login": _now_iso(),
+            "turn_cap": 0,
+        }
+        save_users(users)
+
+    token = create_token(username, "player")
+    _set_auth_cookie(response, token)
+    logger.info("✨ Nytt konto: %s", username)
+    return {"ok": True, "username": username, "role": "player", "created": True}
+
+
+@app.post("/api/login")
+async def login(req: LoginRequest, response: Response):
+    username = normalize_username(req.username)
+    with _USER_LOCK:
+        users = load_users()
+        user = users.get(username)
+        if not user or not isinstance(user, dict) or not verify_password(req.password, user["password_hash"]):
+            raise HTTPException(401, "Fel användarnamn eller lösenord")
+        # Om gamla konton saknar fält — backfilla utan att krascha
+        user.setdefault("created_at", _now_iso())
+        user["last_login"] = _now_iso()
+        user.setdefault("turn_cap", 0)
+        save_users(users)
+
+    token = create_token(username, user["role"])
+    _set_auth_cookie(response, token)
+    return {"ok": True, "username": username, "role": user["role"]}
 
 
 @app.post("/api/logout")
@@ -1130,7 +1227,18 @@ async def logout(response: Response):
 @app.get("/api/me")
 async def me(morkrets_token: str | None = Cookie(None)):
     payload = _get_current_user(morkrets_token)
-    return {"username": payload["sub"], "role": payload.get("role", "player")}
+    username = payload["sub"]
+    udata = load_users().get(username, {})
+    if not isinstance(udata, dict):
+        udata = {}
+    return {
+        "username": username,
+        "role": payload.get("role", "player"),
+        "created_at": udata.get("created_at"),
+        "last_login": udata.get("last_login"),
+        "turn_cap": int(udata.get("turn_cap", 0) or 0),
+        "turns_used": store.total_turns(username),
+    }
 
 
 # ═══════════════════════════════════════
@@ -2226,6 +2334,17 @@ async def _post_turn_tasks(
 async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
+
+    # ── Turn-tak (admin-styrt, 0 = oändligt) ──
+    turn_cap = _turn_cap_for(username)
+    if turn_cap > 0:
+        turns_used = store.total_turns(username)
+        if turns_used >= turn_cap:
+            logger.info("⛔ Turn-tak nått: %s (%d/%d)", username, turns_used, turn_cap)
+            raise HTTPException(
+                403,
+                "Turn limit reached. This adventure has ended — contact the administrator to raise your limit.",
+            )
 
     state = store.get(username)
     if not state:
@@ -3745,6 +3864,22 @@ def _scan_user_transcripts(user: str) -> dict:
     }
 
 
+def _account_meta(username: str, udata: dict, campaigns: list) -> dict:
+    """Konto-metadata med backfill för konton som saknar nya fält."""
+    if not isinstance(udata, dict):
+        udata = {}
+    created_at = udata.get("created_at")
+    if not created_at:
+        created_dates = [c.get("created", "") for c in campaigns if c.get("created")]
+        created_at = min(created_dates) if created_dates else None
+    return {
+        "created_at": created_at,
+        "last_login": udata.get("last_login"),
+        "turn_cap": int(udata.get("turn_cap", 0) or 0),
+        "turns_used": store.total_turns(username),
+    }
+
+
 @app.get("/api/admin/stats")
 async def admin_stats(morkrets_token: str | None = Cookie(None)):
     """Admin-only: översikt av alla användare."""
@@ -3765,6 +3900,7 @@ async def admin_stats(morkrets_token: str | None = Cookie(None)):
         total_campaigns += len(campaigns)
         total_tokens += scan["total_tokens"]
         total_turns += scan["turns"]
+        meta = _account_meta(username, udata, campaigns)
         user_stats.append({
             "username": username,
             "role": role,
@@ -3774,6 +3910,10 @@ async def admin_stats(morkrets_token: str | None = Cookie(None)):
             "completion_tokens": scan["completion_tokens"],
             "total_turns": scan["turns"],
             "last_active": scan["last_active"],
+            "created_at": meta["created_at"],
+            "last_login": meta["last_login"],
+            "turn_cap": meta["turn_cap"],
+            "turns_used": meta["turns_used"],
         })
 
     return {
@@ -3824,6 +3964,7 @@ async def admin_user_detail(username: str, morkrets_token: str | None = Cookie(N
             "sessions": ct["sessions"],
         })
 
+    meta = _account_meta(username, users[username], campaigns)
     return {
         "username": username,
         "role": users[username].get("role", "player") if isinstance(users[username], dict) else "player",
@@ -3833,6 +3974,10 @@ async def admin_user_detail(username: str, morkrets_token: str | None = Cookie(N
         "completion_tokens": scan["completion_tokens"],
         "total_turns": scan["turns"],
         "last_active": scan["last_active"],
+        "created_at": meta["created_at"],
+        "last_login": meta["last_login"],
+        "turn_cap": meta["turn_cap"],
+        "turns_used": meta["turns_used"],
         "campaigns": enriched,
     }
 
@@ -3861,22 +4006,61 @@ class AdminCreateUser(BaseModel):
     role: str = "player"
 
 
+class AdminTurnCap(BaseModel):
+    turn_cap: int
+
+
 @app.post("/api/admin/user")
 async def admin_create_user(req: AdminCreateUser, morkrets_token: str | None = Cookie(None)):
-    """Admin-only: skapa ett nytt spelarkonto. Inga restriktioner — testfas."""
+    """Admin-only: skapa ett nytt spelarkonto. Samma validering som självregistrering."""
     payload = _get_current_user(morkrets_token)
     _require_admin(payload)
 
-    users = load_users()
-    if req.username in users:
-        raise HTTPException(409, f"Användare '{req.username}' finns redan")
+    username = normalize_username(req.username)
+    err = validate_username(username)
+    if err:
+        raise HTTPException(400, err)
+    err = validate_password(req.password)
+    if err:
+        raise HTTPException(400, err)
 
-    users[req.username] = {
-        "password_hash": hash_password(req.password),
-        "role": req.role if req.role in ("player", "admin") else "player",
-    }
-    save_users(users)
-    return {"ok": True, "username": req.username, "role": users[req.username]["role"]}
+    with _USER_LOCK:
+        users = load_users()
+        if username in users:
+            raise HTTPException(409, f"Användare '{username}' finns redan")
+
+        users[username] = {
+            "password_hash": hash_password(req.password),
+            "role": req.role if req.role in ("player", "admin") else "player",
+            "created_at": _now_iso(),
+            "last_login": None,
+            "turn_cap": 0,
+        }
+        save_users(users)
+    return {"ok": True, "username": username, "role": users[username]["role"]}
+
+
+@app.put("/api/admin/user/{username}/turn-cap")
+async def admin_set_turn_cap(username: str, req: AdminTurnCap, morkrets_token: str | None = Cookie(None)):
+    """Admin-only: sätt turn-tak för ett konto (0 = oändligt)."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+
+    if not isinstance(req.turn_cap, int) or req.turn_cap < 0:
+        raise HTTPException(400, "Turn cap must be 0 (unlimited) or a positive integer")
+
+    with _USER_LOCK:
+        users = load_users()
+        if username not in users:
+            raise HTTPException(404, f"Användare '{username}' finns inte")
+        udata = users[username]
+        if not isinstance(udata, dict):
+            raise HTTPException(500, "Kontodata är korrupt")
+        udata["turn_cap"] = req.turn_cap
+        save_users(users)
+
+    logger.info("🎚️ Turn-tak satt: %s → %d", username, req.turn_cap)
+    return {"ok": True, "username": username, "turn_cap": req.turn_cap}
 
 
 @app.delete("/api/admin/user/{username}")

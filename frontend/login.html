@@ -161,6 +161,15 @@
   .gate-footer a { color: var(--arcane); text-decoration: none; }
   .gate-footer a:hover { text-shadow: 0 0 8px rgba(123,79,212,0.6); }
 
+  /* ── Login ⇄ Signup toggle ── */
+  .gate-toggle {
+    text-align: center; margin-top: 0.9rem; font-size: 0.75rem;
+    color: var(--bone-dim); font-style: italic; cursor: pointer;
+    letter-spacing: 0.02em;
+  }
+  .gate-toggle b { color: var(--arcane); font-weight: 700; font-style: normal; }
+  .gate-toggle:hover b { text-shadow: 0 0 8px rgba(123,79,212,0.6); }
+
   /* ── Shake on error ── */
   @keyframes shake {
     0%,100% { transform: translateX(0); }
@@ -188,6 +197,7 @@
     .gate-btn { width: 100%; min-height: 52px; }
     .gate-btn:active { transform: translateY(2px); filter: brightness(.94); }
     .gate-footer a { display: inline-block; min-height: 44px; line-height: 44px; }
+    .gate-toggle { display: flex; align-items: center; justify-content: center; min-height: 44px; }
     .toast { max-width: 92%; text-align: center; }
   }
   @media (max-width: 400px) {
@@ -260,23 +270,29 @@
     <h1 class="gate-title">A Swedish D&amp;D Adventure</h1>
     <p class="gate-sub">Who dares enter the darkness?</p>
 
-    <form id="login-form" onsubmit="handleLogin(event)">
+    <form id="login-form" onsubmit="handleAuth(event)">
       <div class="field">
-        <label for="username">Adventurer</label>
+        <label for="username" id="lbl-username">Adventurer</label>
         <input type="text" id="username" placeholder="Your name, brave one…" autocomplete="username" required>
         <span class="icon">></span>
       </div>
       <div class="field">
-        <label for="password">Password</label>
+        <label for="password" id="lbl-password">Password</label>
         <input type="password" id="password" placeholder="The secret word…" autocomplete="current-password" required>
         <span class="icon">></span>
       </div>
-      <button type="submit" class="gate-btn">⚔ Enter the Darkness</button>
+      <div class="field reg-only" id="confirm-field" style="display:none">
+        <label for="confirm">Confirm Password</label>
+        <input type="password" id="confirm" placeholder="Speak it once more…" autocomplete="new-password">
+        <span class="icon">></span>
+      </div>
+      <button type="submit" class="gate-btn" id="auth-btn">⚔ Enter the Darkness</button>
+      <div class="gate-toggle" id="gate-toggle" onclick="toggleAuthMode()">New here? <b>Forge your name</b></div>
       <div class="gate-error" id="error"></div>
     </form>
 
     <div class="gate-footer">
-      Powered by Qwen · Campaigns are saved locally · <a href="#">The old gods remember all names.</a>
+      Powered by Qwen · Your adventures are saved in the realm · <a href="#">The old gods remember all names.</a>
     </div>
   </div>
 </div>
@@ -284,22 +300,59 @@
 <div class="toast" id="toast"></div>
 
 <script src="sfx.js?v=20260731g"></script>
-<script src="api.js?v=20260731b"></script>
+<script src="api.js?v=20260731c"></script>
 <script src="i18n.js?v=20260730c"></script>
 <script>
 // ═══════════════════════════════════════
 // AUTH — backend validerar (JWT i httpOnly cookie)
+// Login ⇄ Signup (iteration 1: ingen email-verifiering)
 // ═══════════════════════════════════════
-async function handleLogin(e) {
+let authMode = 'login'; // 'login' | 'register'
+
+function setAuthBusy(busy) {
+  const btn = document.getElementById('auth-btn');
+  btn.disabled = busy;
+  btn.textContent = busy
+    ? (authMode === 'register' ? '⏳ Forging your name…' : '⏳ The Gate is testing you…')
+    : (authMode === 'register' ? '⚔ Forge Your Name' : '⚔ Enter the Darkness');
+}
+
+function toggleAuthMode() {
+  authMode = authMode === 'login' ? 'register' : 'login';
+  const isReg = authMode === 'register';
+  document.getElementById('confirm-field').style.display = isReg ? '' : 'none';
+  document.getElementById('confirm').required = isReg;
+  document.getElementById('lbl-username').textContent = isReg ? 'New Adventurer' : 'Adventurer';
+  document.getElementById('lbl-password').textContent = isReg ? 'Create a Password' : 'Password';
+  document.getElementById('auth-btn').textContent = isReg ? '⚔ Forge Your Name' : '⚔ Enter the Darkness';
+  document.getElementById('gate-toggle').innerHTML = isReg
+    ? 'Already sworn in? <b>Return to the gate</b>'
+    : 'New here? <b>Forge your name</b>';
+  document.getElementById('error').textContent = '';
+  if (typeof SFX !== 'undefined') SFX.click();
+}
+
+function showAuthError(msg) {
+  const frame = document.getElementById('gate-frame');
+  document.getElementById('error').textContent = '⚠ ' + msg;
+  if (typeof SFX !== 'undefined') SFX.error();
+  frame.classList.remove('shake');
+  void frame.offsetWidth;
+  frame.classList.add('shake');
+  setAuthBusy(false);
+}
+
+async function handleAuth(e) {
   e.preventDefault();
+  if (authMode === 'register') return handleRegister(e);
+
   const user = document.getElementById('username').value.trim().toLowerCase();
   const pass = document.getElementById('password').value;
   const frame = document.getElementById('gate-frame');
   const err = document.getElementById('error');
-  const btn = document.querySelector('.gate-btn');
 
-  btn.disabled = true;
-  btn.textContent = '⏳ The Gate is testing you…';
+  setAuthBusy(true);
+  err.textContent = '';
 
   try {
     const res = await API.login(user, pass);
@@ -309,13 +362,33 @@ async function handleLogin(e) {
     sessionStorage.setItem('dnd_user', res.username);
     setTimeout(() => { window.location.href = 'adventure.html'; }, 900);
   } catch (e2) {
-    err.textContent = '⚠ The Gate remains closed. Wrong name or password.';
-    SFX.error();
-    frame.classList.remove('shake');
-    void frame.offsetWidth;
-    frame.classList.add('shake');
-    btn.disabled = false;
-    btn.textContent = '⚔ Enter the Darkness';
+    showAuthError('The Gate remains closed. Wrong name or password.');
+  }
+}
+
+async function handleRegister(e) {
+  e.preventDefault();
+  const user = document.getElementById('username').value.trim().toLowerCase();
+  const pass = document.getElementById('password').value;
+  const confirm = document.getElementById('confirm').value;
+  const err = document.getElementById('error');
+
+  err.textContent = '';
+  if (pass !== confirm) {
+    showAuthError('The passwords do not match.');
+    return;
+  }
+  setAuthBusy(true);
+
+  try {
+    const res = await API.register(user, pass);
+    err.textContent = '';
+    document.getElementById('gate-frame').classList.add('success');
+    SFX.gate();
+    sessionStorage.setItem('dnd_user', res.username);
+    setTimeout(() => { window.location.href = 'adventure.html'; }, 900);
+  } catch (e2) {
+    showAuthError(e2.message || 'The Gate would not accept that name.');
   }
 }
 

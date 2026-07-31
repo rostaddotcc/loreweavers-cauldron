@@ -122,6 +122,19 @@
   .turn-num { color: var(--term-amber); font-family: monospace; }
   .last-active { color: var(--bone-dim); font-size: 0.68rem; }
 
+  /* ── Turn cap editor ── */
+  .cap-cell { white-space: nowrap; }
+  .cap-input {
+    width: 70px; background: var(--stone-2); border: 1px solid var(--edge);
+    color: var(--bone); padding: .3rem .4rem; font-size: .72rem;
+  }
+  .cap-btn {
+    background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
+    padding: .3rem .5rem; font-size: .6rem; cursor: pointer; letter-spacing: .05em;
+  }
+  .cap-btn:hover { color: var(--gold-bright); border-color: var(--gold); }
+  .cap-hint { font-size: .55rem; color: var(--bone-dim); margin-left: .3rem; }
+
   /* ── Expanded campaign detail ── */
   .campaign-detail { display: none; }
   .campaign-detail.open { display: table-row; }
@@ -233,7 +246,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="sfx.js?v=20260731g"></script>
-<script src="api.js?v=20260731b"></script>
+<script src="api.js?v=20260731c"></script>
 <script src="i18n.js?v=20260730c"></script>
 <script>
 // Auth guard
@@ -265,6 +278,30 @@ function toast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d)) return '—';
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+async function setCap(username, idx) {
+  const input = document.getElementById('cap-' + idx);
+  const val = parseInt(input.value, 10);
+  if (isNaN(val) || val < 0) { toast('Turn cap must be 0 (unlimited) or a positive number'); return; }
+  try {
+    const res = await fetch('/api/admin/user/' + encodeURIComponent(username) + '/turn-cap', {
+      method: 'PUT', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ turn_cap: val })
+    });
+    const data = await res.json();
+    if (!res.ok) { toast(data.detail || 'Could not set turn cap'); return; }
+    toast('✓ Turn cap set: ' + (val === 0 ? 'unlimited' : val) + ' for ' + username);
+    if (typeof loadedUsers !== 'undefined') loadedUsers[username] = null; // refresh cached detail
+  } catch(e) { toast('Error: ' + e.message); }
 }
 
 // ═══════════════════════════════════════
@@ -353,11 +390,12 @@ function renderStats(data) {
 
   // Desktop table
   html += '<table class="player-table"><thead><tr>';
-  html += '<th>User</th><th>Role</th><th>Campaigns</th><th>Tokens</th><th>Turns</th><th>Last Active</th><th></th>';
+  html += '<th>User</th><th>Role</th><th>Campaigns</th><th>Tokens</th><th>Turns</th><th>Last Active</th><th>Created</th><th>Last Login</th><th>Turn Cap</th><th></th>';
   html += '</tr></thead><tbody>';
 
   users.forEach((u, i) => {
     const badge = u.role === 'admin' ? '<span class="admin-badge">ADMIN</span>' : '';
+    const capVal = (u.turn_cap === undefined || u.turn_cap === null) ? 0 : u.turn_cap;
     html += `<tr class="player-row" id="row-${i}" onclick="toggleDetail(${i}, '${u.username}')">`;
     html += `<td>${u.username}${badge}</td>`;
     html += `<td>${u.role}</td>`;
@@ -365,9 +403,12 @@ function renderStats(data) {
     html += `<td class="token-num">${fmtTokens(u.total_tokens)}</td>`;
     html += `<td class="turn-num">${u.total_turns}</td>`;
     html += `<td class="last-active">${relTime(u.last_active)}</td>`;
+    html += `<td class="last-active">${relTime(u.created_at)}</td>`;
+    html += `<td class="last-active">${relTime(u.last_login)}</td>`;
+    html += `<td class="cap-cell"><input type="number" min="0" step="1" value="${capVal}" id="cap-${i}" class="cap-input"><button onclick="event.stopPropagation();setCap('${u.username}', ${i})" class="cap-btn">Set</button><span class="cap-hint">0 = ∞</span></td>`;
     html += `<td><button onclick="event.stopPropagation();deleteUser('${u.username}')" style="background:none;border:1px solid var(--blood);color:var(--blood-bright);padding:.2rem .5rem;font-size:.6rem;cursor:pointer">✕ Delete</button></td>`;
     html += '</tr>';
-    html += `<tr class="campaign-detail" id="detail-${i}"><td colspan="7"><div class="campaign-inner" id="inner-${i}"></div></td></tr>`;
+    html += `<tr class="campaign-detail" id="detail-${i}"><td colspan="10"><div class="campaign-inner" id="inner-${i}"></div></td></tr>`;
   });
   html += '</tbody></table>';
 
@@ -375,9 +416,15 @@ function renderStats(data) {
   html += '<div class="mobile-cards">';
   users.forEach((u, i) => {
     const badge = u.role === 'admin' ? ' <span class="admin-badge">A</span>' : '';
+    const capVal = (u.turn_cap === undefined || u.turn_cap === null) ? 0 : u.turn_cap;
     html += `<div class="m-card" onclick="toggleDetail(${i}, '${u.username}')">`;
     html += `<div class="mc-head"><span class="mc-user">${u.username}${badge}</span><span class="mc-tokens">${fmtTokens(u.total_tokens)} tkn</span></div>`;
     html += `<div class="mc-meta"><span>${u.total_campaigns} campaigns</span><span>${u.total_turns} turns</span><span>${relTime(u.last_active)}</span></div>`;
+    html += `<div class="mc-meta"><span>Created ${relTime(u.created_at)}</span><span>Login ${relTime(u.last_login)}</span></div>`;
+    html += `<div class="mc-cap" style="display:flex;gap:.4rem;align-items:center;margin-top:.5rem">`;
+    html += `<input type="number" min="0" step="1" value="${capVal}" id="cap-${i}" class="cap-input">`;
+    html += `<button onclick="event.stopPropagation();setCap('${u.username}', ${i})" class="cap-btn">Set cap</button>`;
+    html += `<span class="cap-hint">0 = unlimited</span></div>`;
     html += '</div>';
   });
   html += '</div>';
@@ -427,12 +474,17 @@ async function toggleDetail(idx, username) {
 
 function renderDetail(container, data) {
   const campaigns = data.campaigns || [];
+  let html = '<div class="account-meta" style="display:flex;gap:1.2rem;flex-wrap:wrap;font-size:.65rem;color:var(--bone-dim);margin-bottom:.9rem;padding-bottom:.6rem;border-bottom:1px solid rgba(42,42,58,.4)">';
+  html += '<span>Created: <b style="color:var(--bone);font-weight:400">' + fmtDate(data.created_at) + '</b></span>';
+  html += '<span>Last login: <b style="color:var(--bone);font-weight:400">' + fmtDate(data.last_login) + '</b></span>';
+  html += '<span>Turn cap: <b style="color:var(--gold-bright);font-weight:700">' + (data.turn_cap === 0 ? 'Unlimited' : data.turn_cap) + '</b></span>';
+  html += '<span>Turns used: <b style="color:var(--term-amber);font-weight:400">' + (data.turns_used || 0) + '</b></span>';
+  html += '</div>';
   if (campaigns.length === 0) {
-    container.innerHTML = '<p style="color:var(--bone-dim);font-size:0.7rem;padding:0.5rem 0">No campaigns found.</p>';
+    container.innerHTML = html + '<p style="color:var(--bone-dim);font-size:0.7rem;padding:0.5rem 0">No campaigns found.</p>';
     return;
   }
 
-  let html = '';
   campaigns.forEach(c => {
     const promptT = c.prompt_tokens || 0;
     const compT = c.completion_tokens || 0;

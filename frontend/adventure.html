@@ -242,7 +242,12 @@
   }
 
   /* ── Vägar dolda medan äventyr pågår ── */
-  .paths-hidden .paths,.paths-hidden .expand{display:none!important}
+  /* Paneler som öppnas EXPLICIT (t.ex. New Adventure-knappen i listan)
+     måste få visa sig även när paths är dolda — annars kan man inte
+     starta en andra kampanj när man redan har en. */
+  .paths-hidden .paths{display:none!important}
+  .paths-hidden .expand{display:none!important}
+  .paths-hidden .expand.show{display:block!important}
   .paths-hidden .head .sub::after{content:' · your adventure awaits above';color:var(--gold);font-style:italic}
 
   /* ═══════════ How to play — onepager ═══════════ */
@@ -378,7 +383,8 @@
       <div class="panel-title">⚔️ Your Adventures</div>
       <div class="campaign-list" id="campaign-list"></div>
       <div class="actions">
-        <span class="hint">Choose an adventure to continue, or create a new one below.</span>
+        <span class="hint">Choose an adventure to continue, or start a new one.</span>
+        <button class="go-btn" onclick="showNewAdventureForm()">🎲 New Adventure</button>
       </div>
     </div>
   </div>
@@ -522,7 +528,7 @@ The more you give, the richer the world becomes. But the Dungeon Master fills in
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 </script>
-<script src="api.js?v=20260731b"></script>
+<script src="api.js?v=20260731c"></script>
 <script src="modal.js?v=20260730c"></script>
 <script src="i18n.js?v=20260730c"></script>
 <script>

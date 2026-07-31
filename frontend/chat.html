@@ -1737,7 +1737,7 @@
 
 <script src="sfx.js?v=20260731g"></script>
 <script src="music.js?v=20260730e"></script>
-<script src="api.js?v=20260731b"></script>
+<script src="api.js?v=20260731c"></script>
 <script src="i18n.js?v=20260730e"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
@@ -3080,6 +3080,9 @@ async function loadTranscript() {
         data.last_roll_requests.forEach(r => addRollRequest(r.notation, r.label));
       }
       chat.scrollTop = chat.scrollHeight;
+      // Guardian-rapporter i transkriptet kan ha uppdaterat NPCs/platser/partystate
+      // → rita om menyn så att hård refresh inte behövs vid återkomst.
+      refreshSidebar();
       return;
     }
   } catch (e) { /* Ingen historik eller fel — fortsätt till vaknandet */ }
@@ -3624,6 +3627,8 @@ function pollForGuardian(turnCount) {
         // en sent infogad rapport ska inte slita bort scrollen.
         const nearBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 200;
         if (nearBottom) chat.scrollTop = chat.scrollHeight;
+        // Guardian kan ha uppdaterat NPCs/platser/partystate → rita om menyn
+        refreshSidebar();
       }
 
       // 2) Stoppa när DENNA turs rapport är renderad OCH inget äldre väntar.
@@ -4073,6 +4078,54 @@ async function refreshCharacter() {
       if (sub) sub.textContent = w.time;
     }
     // Krigsrådet: uppdatera HP/dödsräddningspips efter mekaniska effekter
+    if (typeof refreshCombatPanel === 'function') refreshCombatPanel();
+  } catch (e) { /* tyst */ }
+}
+
+// ═══════════════════════════════════════
+// SIDEBAR-REFRESH — Guardian post-DM uppdateringar ska synas direkt
+// ═══════════════════════════════════════
+// Buggen: Guardian (post-DM) uppdaterar NPCs/platser/partystate i kampanj-
+// staten i BAKGRUNDEN. Frontend renderade bara guardian-meddelandet i chatten
+// men ritade ALDRIG om vänstermenyn → spelaren såg nya NPCs/platser först
+// efter hård refresh. Denna funktion hämtar färsk state och ritar om hela
+// sidebaren (NPCs, uppdrag, valuta, partikort, plats). Anropas från
+// pollForGuardian + loadTranscript.
+async function refreshSidebar() {
+  try {
+    const { campaign } = await API.getCampaign();
+    if (!campaign) return;
+    campaignData = campaign;
+    const raw = campaign._raw || {};
+    // NPC-registret — Guardian kan ha lagt till nya gestalter post-DM
+    ingestNpcs(raw.npcs);
+    // Uppdragslogg + valuta
+    renderQuests(raw.quests);
+    updateCurrency(raw.currency ?? {});
+    // Partikort (namn, sub, HP, XP)
+    const ch = campaign.character || {};
+    if (ch.name) {
+      document.getElementById('pc-name').textContent = ch.name;
+      document.getElementById('pc-sub').textContent =
+        [ch.race, ch.class].filter(Boolean).join(' · ') + (ch.level ? ' · ' + I18N.t('Nivå') + ' ' + ch.level : '');
+      const hp = ch.hp || {};
+      if (hp.max) {
+        document.getElementById('pc-hp-fill').style.width = Math.round(100 * (hp.current || 0) / hp.max) + '%';
+      }
+      _playerHp = { current: hp.current || 0, max: hp.max || 0 };
+      _playerDeathSaves = (raw.character && raw.character.death_saves) || { successes: 0, failures: 0 };
+      updateXpBar(ch.xp);
+    }
+    // Plats + tid
+    const w = raw.world || {};
+    if (w.current_location) {
+      const loc = document.getElementById('loc-name');
+      if (loc) loc.textContent = '🗺 ' + w.current_location;
+    }
+    if (w.time) {
+      const sub = document.getElementById('loc-sub');
+      if (sub) sub.textContent = w.time;
+    }
     if (typeof refreshCombatPanel === 'function') refreshCombatPanel();
   } catch (e) { /* tyst */ }
 }

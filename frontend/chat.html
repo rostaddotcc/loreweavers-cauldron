@@ -741,6 +741,11 @@
   }
   .inline-dice .id-die { width: 68px; height: 68px; position: relative; }
   .inline-dice .d20 .num { font-size: 28px; }
+  /* Fördel/Nackdel: två tärningar, vald markeras guld, ratad tonas ner */
+  .inline-dice .id-dice-row { display: flex; gap: .9rem; align-items: center; }
+  .inline-dice .id-die.chosen { filter: drop-shadow(0 0 14px rgba(232,198,90,.8)); }
+  .inline-dice .id-die.dropped { opacity: .38 !important; } /* !important: d20-land animerar opacity */
+  .inline-dice.adv .id-label { color: var(--term-amber); }
 
   /* Rull-fas: tärningen tumlar */
   .inline-dice.rolling .id-die { animation: d20-tumble 0.45s ease-in-out infinite; }
@@ -2357,14 +2362,19 @@ async function inlineDiceCeremony(notation, label, roll) {
   const isFail = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 1;
   const modStr = roll.mod !== 0 ? (roll.mod > 0 ? '+' + roll.mod : roll.mod) : '';
 
+  // Fördel/Nackdel → två tärningar sida vid sida
+  const dieHtml = roll.advantage
+    ? `<div class="id-dice-row"><div class="id-die" data-i="0">${d20Svg()}</div><div class="id-die" data-i="1">${d20Svg()}</div></div>`
+    : `<div class="id-die">${d20Svg()}</div>`;
+
   // Bygg inline-meddelande i chatten
   const el = document.createElement('div');
   el.className = 'msg system';
   el.innerHTML = `
     <div class="box">
-      <div class="inline-dice rolling">
+      <div class="inline-dice rolling${roll.advantage ? ' adv' : ''}">
         <div class="id-label">🎲 ${escapeHtml(label)} · ${escapeHtml(notation)}</div>
-        <div class="id-die">${d20Svg()}</div>
+        ${dieHtml}
         <div class="id-tension">${I18N.t('Tärningen rullar…')}</div>
         <div class="id-result"></div>
       </div>
@@ -2373,7 +2383,7 @@ async function inlineDiceCeremony(notation, label, roll) {
   chat.scrollTop = chat.scrollHeight;
 
   const dice = el.querySelector('.inline-dice');
-  const num = el.querySelector('.d20 .num');
+  const nums = [...el.querySelectorAll('.d20 .num')];
   const tensionEl = el.querySelector('.id-tension');
   const resultEl = el.querySelector('.id-result');
 
@@ -2386,7 +2396,7 @@ async function inlineDiceCeremony(notation, label, roll) {
     (function flicker() {
       const elapsed = Date.now() - start;
       if (elapsed >= ROLL_MS) { resolve(); return; }
-      num.textContent = 1 + Math.floor(Math.random() * (roll.sides || 20));
+      nums.forEach(n => { n.textContent = 1 + Math.floor(Math.random() * (roll.sides || 20)); });
       const progress = elapsed / ROLL_MS;
       const delay = 50 + progress * progress * 220;
       setTimeout(flicker, delay);
@@ -2398,11 +2408,25 @@ async function inlineDiceCeremony(notation, label, roll) {
   dice.classList.add('reveal');
   if (isCrit) dice.classList.add('crit');
   if (isFail) dice.classList.add('fail');
-  num.textContent = roll.rolls[0];
+  if (roll.advantage) {
+    const dies = el.querySelectorAll('.id-die');
+    dies[0].querySelector('.num').textContent = roll.raw[0];
+    dies[1].querySelector('.num').textContent = roll.raw[1];
+    const chosenIdx = roll.chosen === roll.raw[0] ? 0 : 1;
+    dies[chosenIdx].classList.add('chosen');
+    dies[1 - chosenIdx].classList.add('dropped');
+  } else if (nums[0]) {
+    nums[0].textContent = roll.rolls[0];
+  }
   tensionEl.style.display = 'none';
 
   const verdict = isCrit ? I18N.t('✦ KRITISKT!') : isFail ? I18N.t('✦ PATETISKT!') : '';
-  resultEl.textContent = `${roll.rolls.join(', ')}${modStr} = ${roll.total} ${verdict}`.trim();
+  if (roll.advantage) {
+    const advLabel = roll.advMode === 'adv' ? 'FÖRDEL' : 'NACKDEL';
+    resultEl.textContent = `${advLabel}: ${roll.raw.join(', ')} → ${roll.chosen}${modStr} = ${roll.total} ${verdict}`.trim();
+  } else {
+    resultEl.textContent = `${roll.rolls.join(', ')}${modStr} = ${roll.total} ${verdict}`.trim();
+  }
 
   // Partiklar + effekter
   const dieRect = el.querySelector('.id-die').getBoundingClientRect();
@@ -2472,7 +2496,23 @@ async function answerRollRequest(id, notation, label) {
   btn.disabled = true;
   btn.textContent = diceIconForLabel(label) + ' ' + I18N.t('Rullar…');
 
-  const roll = rollDice(notation);
+  // Fördel/Nackdel (5e): etiketten slutar med FÖRDEL/NACKDEL → rulla 2d20, ta bästa/sämsta
+  const advMode = /(?:FÖRDEL|ADVANTAGE)/i.test(label) ? 'adv' : /(?:NACKDEL|DISADVANTAGE)/i.test(label) ? 'dis' : null;
+  let roll;
+  if (advMode && /1d20/i.test(notation)) {
+    const base = rollDice(notation) || { mod: 0 };
+    const r1 = 1 + Math.floor(Math.random() * 20);
+    const r2 = 1 + Math.floor(Math.random() * 20);
+    const chosen = advMode === 'adv' ? Math.max(r1, r2) : Math.min(r1, r2);
+    const other = chosen === r1 ? r2 : r1;
+    roll = {
+      rolls: [chosen, other], raw: [r1, r2], chosen,
+      total: chosen + (base.mod || 0), count: 1, sides: 20,
+      mod: base.mod || 0, notation, advantage: true, advMode,
+    };
+  } else {
+    roll = rollDice(notation);
+  }
   const isCrit = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 20;
   const isFail = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 1;
 
@@ -2482,10 +2522,11 @@ async function answerRollRequest(id, notation, label) {
   // Ersätt knappraden med ett kompakt resultat
   const modStr = roll.mod !== 0 ? (roll.mod > 0 ? '+' + roll.mod : roll.mod) : '';
   const cls = isCrit ? 'crit' : isFail ? 'fail' : '';
+  const shownRolls = roll.advantage ? roll.raw.join(', ') + ' → ' + roll.chosen : roll.rolls.join(', ');
   box.innerHTML = `
     <div class="roll-result-inline">
       <span class="rr-dice">🎲</span>
-      <span>${label}: [${roll.rolls.join(', ')}]${modStr} = <b class="${cls}">${roll.total}</b>${isCrit ? ' ' + I18N.t('✦ KRITISKT!') : ''}${isFail ? ' ' + I18N.t('✦ PATETISKT!') : ''}</span>
+      <span>${label}: [${shownRolls}]${modStr} = <b class="${cls}">${roll.total}</b>${isCrit ? ' ' + I18N.t('✦ KRITISKT!') : ''}${isFail ? ' ' + I18N.t('✦ PATETISKT!') : ''}</span>
     </div>`;
 
   // Skicka resultatet till DM (backend) — DM ger utfallet direkt

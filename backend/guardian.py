@@ -24,9 +24,42 @@ from __future__ import annotations
 
 import json
 import logging
+import random
 import re
 from typing import Callable, Coroutine
 from urllib.parse import quote
+
+# ── Tärningstärningar (Hit Dice, 5e) — storlek per klass ──
+_HIT_DIE_BY_CLASS = {
+    "barbarian": 12, "fighter": 10, "paladin": 10, "ranger": 10,
+    "bard": 8, "cleric": 8, "druid": 8, "monk": 8, "rogue": 8, "warlock": 8, "artificer": 8,
+    "sorcerer": 6, "wizard": 6,
+}
+
+def _hit_die_for_class(cls_name) -> str:
+    """Tärningstärningens storlek per klass (5e). Default d8."""
+    c = (cls_name or "").lower()
+    for key, sides in _HIT_DIE_BY_CLASS.items():
+        if key in c:
+            return f"1d{sides}"
+    return "1d8"
+
+def _ability_mod(ch: dict, abbr: str) -> int:
+    """Förmågemodifierare (t.ex. CON) ur character.abilities. Default 0."""
+    try:
+        mod = ch.get("abilities", {}).get(abbr, {}).get("mod", 0)
+        return int(mod or 0)
+    except (TypeError, ValueError):
+        return 0
+
+def _ensure_hit_dice(ch: dict) -> dict:
+    """Se till att character.hit_dice finns: {dice, total, remaining}."""
+    hd = ch.setdefault("hit_dice", {})
+    if not isinstance(hd, dict) or not hd.get("dice"):
+        hd["dice"] = _hit_die_for_class(ch.get("class", ""))
+    hd["total"] = max(1, int(hd.get("total") or ch.get("level") or 1))
+    hd.setdefault("remaining", hd["total"])
+    return hd
 
 logger = logging.getLogger("morkrets.guardian")
 
@@ -52,6 +85,10 @@ rättfärdigar ett slag. Om handlingen är rutin eller redan besluten → inget 
 4. Ange ALLTID korrekt tärningsnotation med modifierare och DC.
 5. Använd spelarens faktiska modifierare (nedan).
 6. Returnera ENDAST ett JSON-objekt.
+7. Sätt FÖRDEL/NACKDEL i slutet av label när situationen ger det:
+   - FÖRDEL (rulla 2d20, ta bästa): hjälp från allierad, dold/smygande, mål som är prone/blindad/fast, högre position.
+   - NACKDEL (rulla 2d20, ta sämsta): mörker/dåliga förhållanden, Dodge, mål dolt, distraktion, stress.
+   Format: label slutar med "FÖRDEL" eller "NACKDEL" (t.ex. "SMIDIGHET (DC 14) FÖRDEL").
 
 ## Kontext — Viktigt!
 Du får se vad DM (Dungeon Master) nyss berättade. Använd detta för att förstå \
@@ -102,6 +139,10 @@ justify a roll. If the action is routine or already decided → no roll.
 4. ALWAYS provide correct dice notation with modifiers and DC.
 5. Use the player's actual modifiers (below).
 6. Return ONLY a JSON object.
+7. Add ADVANTAGE/DISADVANTAGE at the end of the label when the situation calls for it:
+   - ADVANTAGE (roll 2d20, take best): help from an ally, hidden/sneaking, target is prone/blinded/restrained, higher ground.
+   - DISADVANTAGE (roll 2d20, take worst): darkness/bad conditions, Dodge, target hidden, distraction, stress.
+   Format: label ends with "ADVANTAGE" or "DISADVANTAGE" (e.g. "DEXTERITY (DC 14) ADVANTAGE").
 
 ## Context — Important!
 You will see what the DM (Dungeon Master) just narrated. Use this to understand \
@@ -1045,24 +1086,42 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             effects.append({"type": "tid", "value": desc or f"{hours}h"})
             logger.info("🛡️ Guardian: %dh förflyter — %s", hours, desc)
 
-    # ── Vila ──
+    # ── Vila (5e: Hit Dice) ──
     rest = mech.get("rest")
     if rest and isinstance(rest, dict):
         kind = rest.get("kind", "short")
         hp = ch.setdefault("hp", {"current": 1, "max": 1, "temp": 0})
+        hd = _ensure_hit_dice(ch)
         if kind == "long":
             hp["current"] = hp.get("max", 1)
             hp["temp"] = 0
-            # Spell slots
             ss = ch.setdefault("spell_slots", {"current": 0, "max": 0})
             ss["current"] = ss.get("max", 0)
-            logger.info("🛡️ Guardian: LÅNG VILA → full HP + spell slots")
+            hd["remaining"] = hd.get("total", 1)
+            effects.append({"type": "hela", "value": hp.get("current", 0)})
+            logger.info("🛡️ Guardian: LÅNG VILA → full HP + spell slots + hit dice återställda")
         else:
-            # Kort vila: ~30% HP
-            heal = max(1, hp.get("max", 1) // 3)
-            hp["current"] = min(hp.get("max", 1), hp.get("current", 0) + heal)
-            logger.info("🛡️ Guardian: KORT VILA → +%d HP", heal)
-        effects.append({"type": "hela", "value": hp.get("current", 0)})
+            # Kort vila (5e): spendera 1 Hit Die → 1dX + CON-mod
+            if hd.get("remaining", 0) > 0:
+                die = hd.get("dice", "1d8")
+                sides = int(re.sub(r"[^0-9]", "", die) or 8)
+                con_mod = _ability_mod(ch, "CON")
+                rolled = random.randint(1, sides)
+                heal = max(1, rolled + con_mod)
+                hp["current"] = min(hp.get("max", 1), hp.get("current", 0) + heal)
+                hd["remaining"] = int(hd.get("remaining", 1)) - 1
+                effects.append({
+                    "type": "vila", "value": hp.get("current", 0),
+                    "detail": f"+{heal} HP ({die}{con_mod:+d}) · {hd['remaining']}/{hd.get('total', 1)} kvar",
+                })
+                logger.info("🛡️ Guardian: KORT VILA → +%d HP (%s%+d), %d/%d tärningar kvar",
+                            heal, die, con_mod, hd["remaining"], hd.get("total", 1))
+            else:
+                effects.append({
+                    "type": "vila", "value": hp.get("current", 0),
+                    "detail": "inga tärningstärningar kvar — ingen läkning",
+                })
+                logger.info("🛡️ Guardian: KORT VILA utan hit dice → ingen läkning")
 
     # ── Ny dag ──
     nd = mech.get("new_day")
@@ -1491,10 +1550,15 @@ def format_guardian_summary(
 
     rest = mech.get("rest")
     if rest:
-        if rest == "long":
+        kind = rest.get("kind") if isinstance(rest, dict) else rest
+        if kind == "long":
             lines.append("🏕️ **Lång vila** — HP återställd" if not en else "🏕️ **Long rest** — HP restored")
-        elif rest == "short":
-            lines.append("⛺ **Kort vila**" if not en else "⛺ **Short rest**")
+        elif kind == "short":
+            vila = next((e.get("detail", "") for e in effects if e.get("type") == "vila"), "")
+            if vila:
+                lines.append(f"⛺ **Kort vila:** {vila}" if not en else f"⛺ **Short rest:** {vila}")
+            else:
+                lines.append("⛺ **Kort vila**" if not en else "⛺ **Short rest**")
 
     # ── Maskinläsbara taggar för frontend (parsas och tas bort ur visningen) ──
     tags = []

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚔️ Ett svenskt D&amp;D-äventyr — Gestalter</title>
+<title>⚔️ A Swedish D&amp;D Adventure — Personages</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
@@ -229,20 +229,20 @@
 <div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
 
 <header class="topbar">
-  <span class="brand">🐉 Ett svenskt D&amp;D-äventyr</span>
-  <span class="page-tag">Minneskodex · Kända gestalter</span>
+  <span class="brand">🐉 A Swedish D&amp;D Adventure</span>
+  <span class="page-tag">Memory Codex · Known Personages</span>
   <span class="spacer"></span>
-  <a class="top-btn" href="platser.html">🗺️ Kartan</a>
-  <a class="top-btn" href="loggbok.html">📜 Loggbok</a>
-  <a class="top-btn" href="character.html">🧙 Karaktär</a>
-  <button class="top-btn danger" onclick="doLogout()">🚪 Lämna</button>
+  <a class="top-btn" href="platser.html">🗺️ The Map</a>
+  <a class="top-btn" href="loggbok.html">📜 Logbook</a>
+  <a class="top-btn" href="character.html">🧙 Character</a>
+  <button class="top-btn danger" onclick="doLogout()">🚪 Leave</button>
 </header>
 
 <div class="layout">
   <aside class="hall">
     <div class="hall-head">
-      <div class="hall-title">📖 Minnets hall</div>
-      <div class="hall-sub">Alla gestalter du mött längs vägen</div>
+      <div class="hall-title">📖 The Hall of Memories</div>
+      <div class="hall-sub">Everyone you have met along the way</div>
     </div>
     <div class="filters" id="filters"></div>
     <div class="npc-list" id="npc-list"></div>
@@ -252,7 +252,7 @@
   <main class="dossier" id="dossier">
     <div class="empty">
       <div class="rune">🕯️</div>
-      <p>Välj en gestalt ur minnets hall…</p>
+      <p>Choose a person from the Hall of Memories…</p>
     </div>
   </main>
 </div>
@@ -274,17 +274,17 @@ let NPCS = [];      // gestalter från backend
 let QUESTS = [];    // uppdrag från backend
 let CAMPAIGN = null;
 
-const REL_LABEL = { allierad:'Allierad', neutral:'Neutral', fiende:'Fiende', 'okänd':'Okänd' };
+const REL_LABEL = { allierad:'Ally', neutral:'Neutral', fiende:'Foe', 'okänd':'Unknown' };
 const REL_KEYS  = ['allierad', 'neutral', 'fiende', 'okänd'];
 
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 function trustTier(t){
-  if(t<20) return {label:'Fientlig', color:'var(--blood-bright)'};
-  if(t<40) return {label:'Vaksam', color:'var(--ember)'};
+  if(t<20) return {label:'Hostile', color:'var(--blood-bright)'};
+  if(t<40) return {label:'Wary', color:'var(--ember)'};
   if(t<60) return {label:'Neutral', color:'var(--bone-dim)'};
-  if(t<80) return {label:'Vänlig', color:'var(--poison)'};
-  return {label:'Lojal', color:'var(--gold-bright)'};
+  if(t<80) return {label:'Friendly', color:'var(--poison)'};
+  return {label:'Loyal', color:'var(--gold-bright)'};
 }
 
 function hexToGlow(hex){
@@ -318,8 +318,8 @@ function relatedQuests(n){
     CAMPAIGN = campaign;
     const raw = campaign._raw || {};
     NPCS = (Array.isArray(raw.npcs) ? raw.npcs : []).map(n => ({
-      name: n.name || 'Namnlös',
-      role: n.role || 'Okänd roll',
+      name: n.name || 'Nameless',
+      role: n.role || 'Unknown role',
       race: n.race || '',
       relation: REL_KEYS.includes(n.relation) ? n.relation : 'okänd',
       trust: typeof n.trust === 'number' ? n.trust : null,
@@ -335,7 +335,7 @@ function relatedQuests(n){
     if (NPCS.length) selectNpc(0);
     else showEmptyHall();
   } catch (e) {
-    showNoCampaign('Minneskodexen kunde inte laddas — kontrollera anslutningen och försök igen.');
+    showNoCampaign('The Memory Codex could not be loaded — check your connection and try again.');
   }
 })();
 
@@ -346,8 +346,8 @@ function showNoCampaign(msg){
   document.getElementById('dossier').innerHTML = `
     <div class="empty">
       <div class="rune">🗺️</div>
-      <p>Ingen aktiv kampanj — skapa ett äventyr först</p>
-      <a class="talk-btn" href="adventure.html">✦ Skapa äventyr</a>
+      <p>No active campaign — create an adventure first</p>
+      <a class="talk-btn" href="adventure.html">✦ Create Adventure</a>
     </div>`;
   if (msg) toast('⚠ ' + msg);
 }
@@ -401,7 +401,7 @@ function renderList(){
         <div class="rl">${esc(n.role)}</div>
         <div class="badges">
           <span class="badge b-rel-${n.relation}">${REL_LABEL[n.relation]}</span>
-          ${hasActiveQuest(n)?'<span class="badge b-quest">⚑ Uppdrag</span>':''}
+          ${hasActiveQuest(n)?'<span class="badge b-quest">⚑ Quest</span>':''}
           ${!n.alive?'<span class="badge b-dead">💀 Fallen</span>':''}
         </div>
       </div>
@@ -440,7 +440,7 @@ function renderDossier(n){
         <div class="d-chips">
           <span class="badge b-rel-${n.relation}">${REL_LABEL[n.relation]}</span>
           ${n.race ? `<span class="badge b-rel-neutral">${esc(n.race)}</span>` : ''}
-          ${n.alive ? '<span class="badge b-rel-allierad">Levande</span>' : '<span class="badge b-dead">💀 Fallen</span>'}
+          ${n.alive ? '<span class="badge b-rel-allierad">Alive</span>' : '<span class="badge b-dead">💀 Fallen</span>'}
         </div>
       </div>
     </div>`;
@@ -450,7 +450,7 @@ function renderDossier(n){
   // Förtroende (om backend har det)
   if (typeof n.trust === 'number') {
     const tier = trustTier(n.trust);
-    html += sec(s++, '🤝 Förtroende', `
+    html += sec(s++, '🤝 Trust', `
       <div class="trust-row">
         <div class="trust-bar"><div class="trust-fill" id="tf" style="background:${tier.color};color:${tier.color}"></div></div>
         <div class="trust-label" style="color:${tier.color}">${tier.label} · ${n.trust}/100</div>
@@ -461,21 +461,21 @@ function renderDossier(n){
   const notes = n.notes
     ? (Array.isArray(n.notes) ? n.notes : String(n.notes).split('\n').filter(x=>x.trim()))
     : [];
-  html += sec(s++, '🕯️ Det du vet', notes.length
+  html += sec(s++, '🕯️ What You Know', notes.length
     ? `<ul class="notes-list" style="--dc:${n.color};--dg:${n.glow}">${notes.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`
-    : box(`<p style="font-style:italic;color:var(--bone-dim);font-size:.88rem">Inget nedtecknat ännu. Anteckningar sparas automatiskt från chatten.</p>`));
+    : box(`<p style="font-style:italic;color:var(--bone-dim);font-size:.88rem">Nothing recorded yet. Notes are saved automatically from the chat.</p>`));
 
   // Relaterade uppdrag
   const quests = relatedQuests(n);
   if (quests.length) {
-    html += sec(s++, '⚑ Uppdrag', quests.map(q => `
+    html += sec(s++, '⚑ Quests', quests.map(q => `
       <div class="quest">
         <div class="q-head">
           <span class="q-name">${esc(q.name)}</span>
           <span class="q-status qs-${q.status}">${esc(q.status)}</span>
         </div>
         <div class="q-desc">${esc(q.description)}</div>
-        ${q.reward ? `<div class="q-reward"><b>Belöning:</b> ${esc(q.reward)}</div>` : ''}
+        ${q.reward ? `<div class="q-reward"><b>Reward:</b> ${esc(q.reward)}</div>` : ''}
       </div>`).join(''));
   }
 

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚔️ Ett svenskt D&amp;D-äventyr — Karaktärsark</title>
+<title>⚔️ A Swedish D&amp;D Adventure — Character Sheet</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
@@ -722,33 +722,33 @@
 <div class="vignette"></div>
 
 <header style="position:relative;z-index:5;display:flex;align-items:center;gap:1rem;padding:.7rem 1.2rem;background:linear-gradient(180deg,var(--stone-2),rgba(22,16,32,.95));border-bottom:1px solid var(--edge);box-shadow:0 4px 20px rgba(0,0,0,.5)">
-  <span style="font-family:Cinzel,serif;font-weight:900;font-size:1.05rem;color:var(--gold-bright);letter-spacing:.06em;text-shadow:0 0 14px rgba(232,198,90,.3)">🐉 Ett svenskt D&amp;D-äventyr</span>
-  <span style="font-size:.78rem;font-style:italic;color:var(--bone-dim);border-left:1px solid var(--edge);padding-left:1rem">Karaktärsark</span>
+  <span style="font-family:Cinzel,serif;font-weight:900;font-size:1.05rem;color:var(--gold-bright);letter-spacing:.06em;text-shadow:0 0 14px rgba(232,198,90,.3)">🐉 A Swedish D&amp;D Adventure</span>
+  <span style="font-size:.78rem;font-style:italic;color:var(--bone-dim);border-left:1px solid var(--edge);padding-left:1rem">Character Sheet</span>
   <span style="flex:1"></span>
-  <a class="top-btn" href="chat.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">⚔ Till bordet</a>
-  <a class="top-btn" href="loggbok.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">📜 Loggbok</a>
-  <a class="top-btn" href="platser.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">🗺️ Kartan</a>
-  <a class="top-btn" href="npcs.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">📖 Gestalter</a>
-  <button class="top-btn danger" onclick="doLogout()" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px">🚪 Lämna</button>
+  <a class="top-btn" href="chat.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">⚔ To the Table</a>
+  <a class="top-btn" href="loggbok.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">📜 Logbook</a>
+  <a class="top-btn" href="platser.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">🗺️ The Map</a>
+  <a class="top-btn" href="npcs.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">📖 Personages</a>
+  <button class="top-btn danger" onclick="doLogout()" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px">🚪 Leave</button>
 </header>
 <div class="app">
 
   <header class="masthead">
     <div class="over">Qwen-driven Dungeon Master</div>
-    <h1>Ett svenskt D&amp;D-äventyr</h1>
+    <h1>A Swedish D&amp;D Adventure</h1>
     <div class="rune-divider"><span>✦</span></div>
   </header>
 
   <div id="loading" class="loading">
     <div class="rune">🕯️</div>
-    <p>Läser in kampanjens tillstånd…</p>
+    <p>Loading the campaign's state…</p>
   </div>
 
   <nav class="tabs">
-    <div class="tab active" data-tab="character">⚔ Karaktär</div>
-    <div class="tab" data-tab="inventory">🎒 Utrustning</div>
-    <div class="tab" data-tab="currency">🪙 Skattkammare</div>
-    <div class="tab" data-tab="notes">📜 Anteckningar</div>
+    <div class="tab active" data-tab="character">⚔ Character</div>
+    <div class="tab" data-tab="inventory">🎒 Equipment</div>
+    <div class="tab" data-tab="currency">🪙 Treasury</div>
+    <div class="tab" data-tab="notes">📜 Notes</div>
   </nav>
 
   <!-- ═══════════ KARAKTÄR ═══════════ -->
@@ -756,9 +756,9 @@
     <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
 
     <div class="char-header">
-      <div class="portrait-frame" id="portrait" title="Ladda upp porträtt — Qwen kan analysera det">
+      <div class="portrait-frame" id="portrait" title="Upload a portrait — Qwen can analyze it">
         <span class="emoji" id="portrait-emoji">🧙‍♀️</span>
-        <span class="hint">📷 För in bild</span>
+        <span class="hint">📷 Add image</span>
         <input type="file" id="portrait-input" accept="image/*">
       </div>
       <div class="char-identity">
@@ -777,7 +777,7 @@
     <div class="vitals">
       <div class="vital">
         <div class="vital-head">
-          <span class="label">❤ Hälsopoäng</span>
+          <span class="label">❤ Hit Points</span>
           <span class="nums"><span id="hp-cur">38</span><small> / <span id="hp-max">52</span></small></span>
         </div>
         <div class="trough" id="hp-trough"><div class="fill hp" id="hp-bar" style="width:73%"></div></div>
@@ -785,29 +785,29 @@
 
       <div class="vital">
         <div class="vital-head">
-          <span class="label">🔮 Besvärjelseplatser</span>
+          <span class="label">🔮 Spell Slots</span>
           <span class="nums"><span id="slot-cur">4</span><small> / <span id="slot-max">6</span></small></span>
         </div>
         <div class="slots" id="slots"></div>
-        <span class="slots-hint">Klicka en runa för att spendera / återställa</span>
+        <span class="slots-hint">Click a rune to spend / restore</span>
       </div>
 
       <div class="vital wide">
         <div class="vital-head">
-          <span class="label">⭐ Erfarenhet</span>
+          <span class="label">⭐ Experience</span>
           <span class="nums"><span id="xp-cur">0</span><small> / <span id="xp-next">—</span></small></span>
         </div>
         <div class="trough"><div class="fill xp" id="xp-bar" style="width:0%"></div></div>
       </div>
     </div>
 
-    <div class="section-title">Förmågor</div>
+    <div class="section-title">Abilities</div>
     <div class="abilities" id="abilities"></div>
 
-    <div class="section-title">Egenskaper</div>
+    <div class="section-title">Traits</div>
     <div class="traits" id="traits"></div>
 
-    <div class="section-title">Sparningskast</div>
+    <div class="section-title">Saving Throws</div>
     <div class="traits" id="saves"></div>
   </section>
 
@@ -815,44 +815,44 @@
   <section class="panel" id="panel-inventory">
     <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
 
-    <div class="section-title">Packning & Vapen</div>
+    <div class="section-title">Gear & Weapons</div>
     <div class="inv-grid" id="inv-grid"></div>
     <div class="inv-summary">
-      <span>Total vikt: <b id="inv-weight">0</b> / 120 lbs <span id="inv-warn"></span></span>
-      <span>Föremål: <b id="inv-count">0</b></span>
+      <span>Total weight: <b id="inv-weight">0</b> / 120 lbs <span id="inv-warn"></span></span>
+      <span>Items: <b id="inv-count">0</b></span>
     </div>
 
     <form class="add-form" onsubmit="addItem(event)">
-      <input type="text" id="add-name" placeholder="Nytt föremål, t.ex. Svärd av frost…" autocomplete="off">
+      <input type="text" id="add-name" placeholder="New item, e.g. Sword of Frost…" autocomplete="off">
       <select id="add-type">
-        <option>Vapen</option><option>Rustning</option><option>Dryck</option>
-        <option>Magisk</option><option>Verktyg</option><option>Annat</option>
+        <option>Weapon</option><option>Armor</option><option>Potion</option>
+        <option>Magic</option><option>Tool</option><option>Other</option>
       </select>
-      <input type="number" id="add-qty" value="1" min="1" style="width:64px" title="Antal">
-      <input type="number" id="add-weight" value="1" min="0" step="0.1" style="width:80px" title="Vikt (lbs)">
-      <select id="add-rarity" title="Sällsynthet">
-        <option value="normal">Normal</option><option value="magic">✦ Magisk</option><option value="rare">Sällsynt</option>
-        <option value="legendary">⚡ Legendarisk</option>
+      <input type="number" id="add-qty" value="1" min="1" style="width:64px" title="Qty">
+      <input type="number" id="add-weight" value="1" min="0" step="0.1" style="width:80px" title="Weight (lbs)">
+      <select id="add-rarity" title="Rarity">
+        <option value="normal">Common</option><option value="magic">✦ Magic</option><option value="rare">Rare</option>
+        <option value="legendary">⚡ Legendary</option>
       </select>
-      <button type="submit" class="rune-btn">✦ Lägg till</button>
-      <button type="button" class="add-adv-toggle" onclick="toggleAdvFields()">▸ D&D-egenskaper (valfritt)</button>
+      <button type="submit" class="rune-btn">✦ Add</button>
+      <button type="button" class="add-adv-toggle" onclick="toggleAdvFields()">▸ D&D properties (optional)</button>
       <div class="add-adv-fields" id="add-adv-fields">
-        <label>Skada</label>
-        <input type="text" id="add-damage" placeholder="t.ex. 1d8 slashing" autocomplete="off">
-        <label>AC-bonus</label>
+        <label>Damage</label>
+        <input type="text" id="add-damage" placeholder="e.g. 1d8 slashing" autocomplete="off">
+        <label>AC Bonus</label>
         <input type="number" id="add-ac" placeholder="14" min="0" style="width:80px">
-        <label>Räckvidd</label>
+        <label>Range</label>
         <input type="text" id="add-range" placeholder="melee / ranged 30/120" autocomplete="off">
-        <label>Egenskaper (kommaseparerade)</label>
+        <label>Properties (comma-separated)</label>
         <input type="text" id="add-props" placeholder="light, finesse, versatile" autocomplete="off">
-        <label>Magisk bonus</label>
+        <label>Magic Bonus</label>
         <input type="number" id="add-magic-bonus" value="0" min="0" max="5" style="width:64px">
-        <label>Laddningar</label>
+        <label>Charges</label>
         <input type="number" id="add-charges" placeholder="3" min="0" style="width:64px">
-        <label>Max laddningar</label>
+        <label>Max Charges</label>
         <input type="number" id="add-max-charges" placeholder="5" min="0" style="width:64px">
-        <label>Beskrivning</label>
-        <input type="text" id="add-description" placeholder="Beskrivning eller effekt…" autocomplete="off">
+        <label>Description</label>
+        <input type="text" id="add-description" placeholder="Description or effect…" autocomplete="off">
       </div>
     </form>
     <div id="item-modal-container"></div>
@@ -862,16 +862,16 @@
   <section class="panel" id="panel-currency">
     <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
 
-    <div class="section-title">Mynt & Ädelstenar</div>
+    <div class="section-title">Coins & Gems</div>
     <div class="currency-grid" id="currency-grid"></div>
 
     <div class="hoard">
-      <div class="label">Hordens totala värde</div>
+      <div class="label">The Hoard's Total Value</div>
       <div class="value" id="total-gold">0 gp</div>
       <div class="sub" id="total-sub"></div>
     </div>
 
-    <div class="section-title">Kontobok</div>
+    <div class="section-title">Ledger</div>
     <div id="tx-log"></div>
   </section>
 
@@ -881,23 +881,23 @@
 
     <div class="notes-layout">
       <div class="notes-main">
-        <div class="section-title">Fria anteckningar <span class="notes-hint">— skriv fritt om din karaktär, världen, dina mål…</span></div>
-        <textarea id="notes-editor" spellcheck="false" placeholder="# Min karaktär
+        <div class="section-title">Free Notes <span class="notes-hint">— write freely about your character, the world, your goals…</span></div>
+        <textarea id="notes-editor" spellcheck="false" placeholder="# My Character
 
-Skriv fritt här — bakgrundshistoria, mål, relationer, teorier om världen…
+Write freely here — backstory, goals, relationships, theories about the world…
 
-Markdown stöds inte i renderingen, men strukturen är din."></textarea>
+Markdown is not rendered, but the structure is yours."></textarea>
         <div class="notes-actions">
-          <button class="rune-btn" onclick="saveNotes()">💾 Spara anteckningar</button>
+          <button class="rune-btn" onclick="saveNotes()">💾 Save Notes</button>
           <span class="notes-status" id="notes-status"></span>
         </div>
       </div>
 
       <div class="notes-side">
-        <div class="section-title">Bilagor</div>
+        <div class="section-title">Attachments</div>
         <div class="att-dropzone" id="att-dropzone">
           <span class="att-icon">📎</span>
-          <span class="att-text">Dra hit filer eller <b>klicka</b></span>
+          <span class="att-text">Drag files here or <b>click</b></span>
           <span class="att-formats">.pdf · .md · .txt</span>
           <input type="file" id="att-input" multiple accept=".pdf,.md,.txt">
         </div>
@@ -1025,8 +1025,8 @@ function renderXp() {
   const xp = state.character.xp || {};
   const cur  = xp.current ?? 0;
   const next = xp.next_level ?? xp.next ?? 0;
-  document.getElementById('xp-cur').textContent = cur.toLocaleString('sv-SE');
-  document.getElementById('xp-next').textContent = next ? next.toLocaleString('sv-SE') + I18N.t(' till nästa nivå') : '—';
+  document.getElementById('xp-cur').textContent = cur.toLocaleString(I18N.getLang() === 'sv' ? 'sv-SE' : 'en-US');
+  document.getElementById('xp-next').textContent = next ? next.toLocaleString(I18N.getLang() === 'sv' ? 'sv-SE' : 'en-US') + I18N.t(' till nästa nivå') : '—';
   document.getElementById('xp-bar').style.width = (next > 0 ? Math.min(100, (cur / next) * 100) : 0) + '%';
 }
 
@@ -1268,7 +1268,7 @@ function renderSaves() {
 // ═══════════════════════════════════════
 
 // Typ-ikoner
-const TYPE_ICONS = { Vapen: '⚔️', Rustning: '🛡️', Dryck: '🧪', Magisk: '✦', Verktyg: '🔧', Annat: '📦' };
+const TYPE_ICONS = { Vapen: '⚔️', Rustning: '🛡️', Dryck: '🧪', Magisk: '✦', Verktyg: '🔧', Annat: '📦', Weapon: '⚔️', Armor: '🛡️', Potion: '🧪', Magic: '✦', Tool: '🔧', Other: '📦' };
 
 // Hjälp: bygg badge-HTML för ett item
 function _invBadges(item) {
@@ -1310,7 +1310,7 @@ function renderInventory() {
         <span class="inv-card-icon">${icon}</span>
         <div class="inv-card-info">
           <div class="inv-card-name ${rarityCls}">${item.rarity === 'magic' || item.rarity === 'legendary' ? '✦ ' : ''}${item.name}</div>
-          <div class="inv-card-type">${item.type || 'Annat'}</div>
+          <div class="inv-card-type">${item.type || 'Other'}</div>
           <div class="inv-card-stats">${_invBadges(item)}${item.qty > 1 ? `<span class="inv-badge qty">×${item.qty}</span>` : ''}</div>
         </div>
       </div>
@@ -1369,7 +1369,7 @@ function openItemModal(i) {
       <div class="item-modal" onclick="event.stopPropagation()" style="position:relative">
         <button class="item-modal-close" onclick="closeItemModal(event, true)">✕</button>
         <div class="item-modal-header ${rarityCls}">${icon} ${item.name}</div>
-        <div class="item-modal-sub">${item.type || 'Annat'}${item.rarity && item.rarity !== 'normal' ? ' · ' + item.rarity : ''}</div>
+        <div class="item-modal-sub">${item.type || 'Other'}${item.rarity && item.rarity !== 'normal' ? ' · ' + item.rarity : ''}</div>
         ${statsHtml}
         ${propsHtml}
         ${descHtml}
@@ -1395,7 +1395,7 @@ function toggleAdvFields() {
   const el = document.getElementById('add-adv-fields');
   const btn = el.previousElementSibling;
   el.classList.toggle('open');
-  btn.textContent = el.classList.contains('open') ? '▾ D&D-egenskaper (valfritt)' : '▸ D&D-egenskaper (valfritt)';
+  btn.textContent = el.classList.contains('open') ? '▾ D&D properties (optional)' : '▸ D&D properties (optional)';
 }
 
 function toggleEquip(i) {

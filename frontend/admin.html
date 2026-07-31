@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📊 Admin · Mörkrets Rike</title>
+<title>📊 Admin · Realm of Darkness</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -220,12 +220,12 @@
 
 <div class="app">
   <header class="masthead">
-    <h1>Admin · Mörkrets Rike</h1>
-    <a href="adventure.html" class="back-btn">← Tillbaka</a>
+    <h1>Admin · Realm of Darkness</h1>
+    <a href="adventure.html" class="back-btn">← Back</a>
   </header>
 
   <div id="content">
-    <div class="loading">Laddar statistik</div>
+    <div class="loading">Loading statistics</div>
   </div>
 </div>
 
@@ -252,11 +252,11 @@ function relTime(iso) {
   const d = new Date(iso);
   if (isNaN(d)) return '—';
   const diff = (Date.now() - d.getTime()) / 1000;
-  if (diff < 60) return 'Nyss';
-  if (diff < 3600) return Math.floor(diff / 60) + 'm sedan';
-  if (diff < 86400) return Math.floor(diff / 3600) + 'h sedan';
-  if (diff < 604800) return Math.floor(diff / 86400) + 'd sedan';
-  return Math.floor(diff / 604800) + 'v sedan';
+  if (diff < 60) return 'Just now';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+  return Math.floor(diff / 604800) + 'w ago';
 }
 
 function toast(msg) {
@@ -273,7 +273,7 @@ async function createUser() {
   const username = document.getElementById('new-user').value.trim();
   const password = document.getElementById('new-pass').value;
   const role = document.getElementById('new-role').value;
-  if (!username || !password) { toast('Fyll i användarnamn och lösenord'); return; }
+  if (!username || !password) { toast('Fill in username and password'); return; }
   try {
     const res = await fetch('/api/admin/user', {
       method: 'POST', credentials: 'include',
@@ -281,43 +281,43 @@ async function createUser() {
       body: JSON.stringify({username, password, role})
     });
     const data = await res.json();
-    if (!res.ok) { toast(data.detail || 'Kunde inte skapa konto'); return; }
-    toast(`✓ Konto skapat: ${username}`);
+    if (!res.ok) { toast(data.detail || 'Could not create account'); return; }
+    toast(`✓ Account created: ${username}`);
     document.getElementById('new-user').value = '';
     document.getElementById('new-pass').value = '';
     loadStats();
-  } catch(e) { toast('Fel: ' + e.message); }
+  } catch(e) { toast('Error: ' + e.message); }
 }
 
 async function deleteUser(username) {
-  if (!confirm(`Radera "${username}" och alla kampanjer? Detta går inte att ångra.`)) return;
+  if (!confirm(`Delete "${username}" and all their campaigns? This cannot be undone.`)) return;
   try {
     const res = await fetch('/api/admin/user/' + encodeURIComponent(username), {
       method: 'DELETE', credentials: 'include'
     });
     const data = await res.json();
-    if (!res.ok) { toast(data.detail || 'Kunde inte radera'); return; }
-    toast(`✕ Raderat: ${username}`);
+    if (!res.ok) { toast(data.detail || 'Could not delete'); return; }
+    toast(`✕ Deleted: ${username}`);
     loadStats();
-  } catch(e) { toast('Fel: ' + e.message); }
+  } catch(e) { toast('Error: ' + e.message); }
 }
 
 async function loadStats() {
   const content = document.getElementById('content');
-  content.innerHTML = '<div class="loading">Laddar statistik</div>';
+  content.innerHTML = '<div class="loading">Loading statistics</div>';
 
   try {
     const res = await fetch('/api/admin/stats', { credentials: 'include' });
     if (res.status === 401) { location.href = 'login.html'; return; }
     if (res.status === 403) {
-      content.innerHTML = '<div class="error-state"><h2>⛔ Du har inte admin-rättigheter.</h2><p><a href="adventure.html">← Tillbaka till äventyret</a></p></div>';
+      content.innerHTML = '<div class="error-state"><h2>⛔ You do not have admin privileges.</h2><p><a href="adventure.html">← Back to the Adventure</a></p></div>';
       return;
     }
-    if (!res.ok) throw new Error('API fel: ' + res.status);
+    if (!res.ok) throw new Error('API error: ' + res.status);
     const data = await res.json();
     renderStats(data);
   } catch (e) {
-    content.innerHTML = '<div class="error-state"><h2>⚠ Kunde inte hämta statistik</h2><p>' + e.message + '</p></div>';
+    content.innerHTML = '<div class="error-state"><h2>⚠ Could not fetch statistics</h2><p>' + e.message + '</p></div>';
   }
 }
 
@@ -330,29 +330,29 @@ function renderStats(data) {
 
   let html = `
     <div class="stats-grid">
-      <div class="stat-card"><div class="stat-num">${data.total_users}</div><div class="stat-label">Användare</div></div>
-      <div class="stat-card"><div class="stat-num">${data.total_campaigns}</div><div class="stat-label">Kampanjer</div></div>
+      <div class="stat-card"><div class="stat-num">${data.total_users}</div><div class="stat-label">Users</div></div>
+      <div class="stat-card"><div class="stat-num">${data.total_campaigns}</div><div class="stat-label">Campaigns</div></div>
       <div class="stat-card"><div class="stat-num">${fmtTokens(data.total_tokens)}</div><div class="stat-label">Tokens</div></div>
-      <div class="stat-card"><div class="stat-num">${data.total_turns}</div><div class="stat-label">Turer</div></div>
+      <div class="stat-card"><div class="stat-num">${data.total_turns}</div><div class="stat-label">Turns</div></div>
     </div>
     <div class="section-title">
-      Spelarkonton
-      <button class="refresh" onclick="loadStats()">↻ Uppdatera</button>
+      Player Accounts
+      <button class="refresh" onclick="loadStats()">↻ Refresh</button>
     </div>
     <div class="create-user-form" style="display:flex;gap:.5rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
-      <input id="new-user" placeholder="Användarnamn" style="background:var(--stone-2);border:1px solid var(--edge);color:var(--bone);padding:.4rem .6rem;font-size:.75rem;width:140px">
-      <input id="new-pass" placeholder="Lösenord" type="password" style="background:var(--stone-2);border:1px solid var(--edge);color:var(--bone);padding:.4rem .6rem;font-size:.75rem;width:120px">
+      <input id="new-user" placeholder="Username" style="background:var(--stone-2);border:1px solid var(--edge);color:var(--bone);padding:.4rem .6rem;font-size:.75rem;width:140px">
+      <input id="new-pass" placeholder="Password" type="password" style="background:var(--stone-2);border:1px solid var(--edge);color:var(--bone);padding:.4rem .6rem;font-size:.75rem;width:120px">
       <select id="new-role" style="background:var(--stone-2);border:1px solid var(--edge);color:var(--bone);padding:.4rem .6rem;font-size:.75rem">
-        <option value="player">Spelare</option>
+        <option value="player">Player</option>
         <option value="admin">Admin</option>
       </select>
-      <button onclick="createUser()" style="background:var(--gold);color:var(--ink);border:none;padding:.4rem .8rem;font-size:.7rem;cursor:pointer;font-weight:bold">+ Skapa</button>
+      <button onclick="createUser()" style="background:var(--gold);color:var(--ink);border:none;padding:.4rem .8rem;font-size:.7rem;cursor:pointer;font-weight:bold">+ Create</button>
     </div>
   `;
 
   // Desktop table
   html += '<table class="player-table"><thead><tr>';
-  html += '<th>Användare</th><th>Roll</th><th>Kampanjer</th><th>Tokens</th><th>Turer</th><th>Senast aktiv</th><th></th>';
+  html += '<th>User</th><th>Role</th><th>Campaigns</th><th>Tokens</th><th>Turns</th><th>Last Active</th><th></th>';
   html += '</tr></thead><tbody>';
 
   users.forEach((u, i) => {
@@ -364,7 +364,7 @@ function renderStats(data) {
     html += `<td class="token-num">${fmtTokens(u.total_tokens)}</td>`;
     html += `<td class="turn-num">${u.total_turns}</td>`;
     html += `<td class="last-active">${relTime(u.last_active)}</td>`;
-    html += `<td><button onclick="event.stopPropagation();deleteUser('${u.username}')" style="background:none;border:1px solid var(--blood);color:var(--blood-bright);padding:.2rem .5rem;font-size:.6rem;cursor:pointer">✕ Radera</button></td>`;
+    html += `<td><button onclick="event.stopPropagation();deleteUser('${u.username}')" style="background:none;border:1px solid var(--blood);color:var(--blood-bright);padding:.2rem .5rem;font-size:.6rem;cursor:pointer">✕ Delete</button></td>`;
     html += '</tr>';
     html += `<tr class="campaign-detail" id="detail-${i}"><td colspan="7"><div class="campaign-inner" id="inner-${i}"></div></td></tr>`;
   });
@@ -376,7 +376,7 @@ function renderStats(data) {
     const badge = u.role === 'admin' ? ' <span class="admin-badge">A</span>' : '';
     html += `<div class="m-card" onclick="toggleDetail(${i}, '${u.username}')">`;
     html += `<div class="mc-head"><span class="mc-user">${u.username}${badge}</span><span class="mc-tokens">${fmtTokens(u.total_tokens)} tkn</span></div>`;
-    html += `<div class="mc-meta"><span>${u.total_campaigns} kampanjer</span><span>${u.total_turns} turer</span><span>${relTime(u.last_active)}</span></div>`;
+    html += `<div class="mc-meta"><span>${u.total_campaigns} campaigns</span><span>${u.total_turns} turns</span><span>${relTime(u.last_active)}</span></div>`;
     html += '</div>';
   });
   html += '</div>';
@@ -406,7 +406,7 @@ async function toggleDetail(idx, username) {
 
   detail.classList.add('open');
   row.classList.add('expanded');
-  inner.innerHTML = '<div class="loading">Laddar kampanjer</div>';
+  inner.innerHTML = '<div class="loading">Loading campaigns</div>';
 
   if (loadedUsers[username]) {
     renderDetail(inner, loadedUsers[username]);
@@ -415,7 +415,7 @@ async function toggleDetail(idx, username) {
 
   try {
     const res = await fetch('/api/admin/user/' + encodeURIComponent(username), { credentials: 'include' });
-    if (!res.ok) throw new Error('Kunde inte hämta användardata');
+    if (!res.ok) throw new Error('Could not fetch user data');
     const data = await res.json();
     loadedUsers[username] = data;
     renderDetail(inner, data);
@@ -427,7 +427,7 @@ async function toggleDetail(idx, username) {
 function renderDetail(container, data) {
   const campaigns = data.campaigns || [];
   if (campaigns.length === 0) {
-    container.innerHTML = '<p style="color:var(--bone-dim);font-size:0.7rem;padding:0.5rem 0">Inga kampanjer hittades.</p>';
+    container.innerHTML = '<p style="color:var(--bone-dim);font-size:0.7rem;padding:0.5rem 0">No campaigns found.</p>';
     return;
   }
 
@@ -442,14 +442,14 @@ function renderDetail(container, data) {
 
     html += '<div class="campaign-card">';
     html += '<div class="cc-head">';
-    html += '<span class="cc-name">' + (c.name || 'Namnlös') + '</span>';
+    html += '<span class="cc-name">' + (c.name || 'Nameless') + '</span>';
     html += '<span class="cc-char">' + (c.character_name || '—') + '</span>';
     html += '</div>';
     html += '<div class="cc-meta">';
     html += '<span>Level: <span>' + (c.level || 1) + '</span></span>';
-    html += '<span>Plats: <span>' + (c.location || '—') + '</span></span>';
-    html += '<span>Turer: <span>' + (c.turns || 0) + '</span></span>';
-    html += '<span>Uppdaterad: <span>' + relTime(c.last_updated) + '</span></span>';
+    html += '<span>Location: <span>' + (c.location || '—') + '</span></span>';
+    html += '<span>Turns: <span>' + (c.turns || 0) + '</span></span>';
+    html += '<span>Updated: <span>' + relTime(c.last_updated) + '</span></span>';
     html += '</div>';
 
     if (total > 0) {
@@ -459,7 +459,7 @@ function renderDetail(container, data) {
       html += '</div>';
       html += '<div class="token-legend">';
       html += '<span class="dot prompt"></span>Prompt: ' + fmtTokens(promptT);
-      html += '<span class="dot completion"></span>Svar: ' + fmtTokens(compT);
+      html += '<span class="dot completion"></span>Response: ' + fmtTokens(compT);
       html += '<span>Total: ' + fmtTokens(total) + '</span>';
       html += '</div>';
     }
@@ -469,7 +469,7 @@ function renderDetail(container, data) {
       html += '<div class="session-list">';
       c.sessions.forEach(s => {
         html += '<div class="session-item">';
-        html += '<span>' + s.session_file + ' · ' + s.turns + ' turer</span>';
+        html += '<span>' + s.session_file + ' · ' + s.turns + ' turns</span>';
         html += '<span class="s-tokens">' + fmtTokens(s.total_tokens) + ' tkn</span>';
         html += '</div>';
       });

@@ -1,20 +1,20 @@
 /**
- * 🌐 api.js — Frontend ↔ Backend-brygga för Mörkrets Rike
+ * 🌐 api.js — Frontend ↔ Backend bridge for Realm of Darkness
  *
- * MOCK-läge: Sätt MOCK = false när backend körs.
- * I MOCK-läge fungerar alla sidor fristående med localStorage-data.
+ * MOCK mode: Set MOCK = false when the backend runs.
+ * In MOCK mode every page works standalone with localStorage data.
  */
 const API = (() => {
-  const MOCK = false; // Backend live på dnd.rostad.cc
-  const BASE = '';   // Samma origin i Docker (backend servar frontend)
+  const MOCK = false; // Backend live at dnd.rostad.cc
+  const BASE = '';   // Same origin in Docker (backend serves frontend)
 
-  // ── Debug-logg (Ctrl+Shift+D) ──
+  // ── Debug log (Ctrl+Shift+D) ──
   const _debugLog = [];
   let _debugPanel = null;
   let _debugVisible = false;
 
   function _dbg(type, msg, detail) {
-    const entry = { t: new Date().toLocaleTimeString('sv-SE'), type, msg, detail };
+    const entry = { t: new Date().toLocaleTimeString('en-GB'), type, msg, detail };
     _debugLog.push(entry);
     if (_debugLog.length > 200) _debugLog.shift();
     if (_debugVisible) _renderDebug();
@@ -37,7 +37,7 @@ const API = (() => {
       _debugPanel = document.createElement('div');
       _debugPanel.id = 'debug-panel';
       _debugPanel.innerHTML = `
-        <div class="dbg-header">🐛 Debug <button class="dbg-clear">Rensa</button><button class="dbg-close">✕</button></div>
+        <div class="dbg-header">🐛 Debug <button class="dbg-clear">Clear</button><button class="dbg-close">✕</button></div>
         <div class="dbg-body"></div>`;
       _debugPanel.querySelector('.dbg-close').onclick = _toggleDebug;
       _debugPanel.querySelector('.dbg-clear').onclick = () => { _debugLog.length = 0; _renderDebug(); };
@@ -65,12 +65,12 @@ const API = (() => {
     if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); _toggleDebug(); }
   });
 
-  // ── Fetch-wrapper med felhantering + debug ──
+  // ── Fetch wrapper with error handling + debug ──
   async function req(path, opts = {}) {
     const t0 = performance.now();
     _dbg('api', `${opts.method || 'GET'} ${path}`);
     try {
-      // FormData (filuppladdning) sätter sin egen Content-Type med boundary
+      // FormData (file upload) sets its own Content-Type with boundary
       const isForm = typeof FormData !== 'undefined' && opts.body instanceof FormData;
       const headers = isForm
         ? { ...opts.headers }
@@ -84,7 +84,7 @@ const API = (() => {
       if (res.status === 401) {
         _dbg('err', `${path} → 401 (${ms}ms)`);
         if (!location.pathname.includes('login')) location.href = 'login.html';
-        throw new Error('Session utgången');
+        throw new Error('Session expired');
       }
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: res.statusText }));
@@ -96,15 +96,15 @@ const API = (() => {
       _dbg('ok', `${path} → 200 (${ms}ms)`);
       return data;
     } catch (e) {
-      if (e.message !== 'Session utgången') {
-        _dbg('err', `${path} FÅNGAD`, e.message);
+      if (e.message !== 'Session expired') {
+        _dbg('err', `${path} CAUGHT`, e.message);
         if (typeof toast === 'function') toast('⚠ ' + e.message);
       }
       throw e;
     }
   }
 
-  // ── MOCK-data (localStorage) ──
+  // ── MOCK data (localStorage) ──
   const mock = {
     campaign: null,
     _load() {
@@ -128,7 +128,7 @@ const API = (() => {
           sessionStorage.setItem('dnd_user', username);
           return { ok: true, username, role: username === 'admin' ? 'admin' : 'player' };
         }
-        throw new Error('Fel användarnamn eller lösenord');
+        throw new Error('Invalid username or password');
       }
       return req('/api/login', { method: 'POST', body: JSON.stringify({ username, password }) });
     },
@@ -147,7 +147,7 @@ const API = (() => {
       return req('/api/me');
     },
 
-    // ── Modeller ──
+    // ── Models ──
     async models() {
       if (MOCK) {
         return [
@@ -157,13 +157,13 @@ const API = (() => {
           { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', provider: 'deepseek', vision: false, local: false },
           { id: 'mimo-v2.5', name: 'MiMo 2.5', provider: 'mimo', vision: true, local: false },
           { id: 'mimo-v2.5-pro', name: 'MiMo 2.5 Pro', provider: 'mimo', vision: true, local: false },
-          { id: 'ollama:qwen3:8b', name: 'Qwen3 8B (lokal)', provider: 'ollama', vision: false, local: true },
+          { id: 'ollama:qwen3:8b', name: 'Qwen3 8B (local)', provider: 'ollama', vision: false, local: true },
         ];
       }
       return req('/api/models');
     },
 
-    // ── Kampanj (flera per användare) ──
+    // ── Campaign (multiple per user) ──
     async getCampaign() {
       if (MOCK) {
         const c = mock._load();
@@ -173,7 +173,7 @@ const API = (() => {
         const state = await req('/api/campaign');
         return { campaign: this._shapeCampaign(state) };
       } catch (e) {
-        if (e.message.includes('404') || e.message.includes('Ingen')) return { campaign: null };
+        if (e.message.includes('404') || e.message.includes('Ingen') || e.message.includes('No campaign') || e.message.includes('not found')) return { campaign: null };
         throw e;
       }
     },
@@ -186,16 +186,16 @@ const API = (() => {
       return req('/api/campaigns');
     },
 
-    // Normalisera backend-state → frontend-vy
+    // Normalize backend state → frontend view
     _shapeCampaign(s) {
       if (!s) return null;
       return {
         id: s.meta?.campaign_id ?? s.campaign_id,
-        name: s.meta?.campaign_name ?? s.name ?? 'Mörkrets Rike',
+        name: s.meta?.campaign_name ?? s.name ?? 'Realm of Darkness',
         character: s.character || {},
         sessions: s.meta?.session_count || 1,
         day: s.world?.time || '—',
-        location: s.world?.current_location ?? s.location ?? 'Okänd',
+        location: s.world?.current_location ?? s.location ?? 'Unknown',
         turn_count: s.meta?.turn_count ?? s.turn_count ?? 0,
         opening_key: s.opening_key || s.meta?.opening_key || 'default',
         world: s.world || {},
@@ -204,8 +204,8 @@ const API = (() => {
     },
 
     async createCampaign(name = '', language = 'sv') {
-      // Default to "Ett namnlöst äventyr" if name empty
-      const campaignName = (name && name.trim()) ? name.trim() : 'Ett namnlöst äventyr';
+      // Default to "An Untitled Adventure" if name empty
+      const campaignName = (name && name.trim()) ? name.trim() : 'An Untitled Adventure';
       if (MOCK) {
         mock.campaign = {
           meta: { campaign_id: 'mock-' + Date.now(), campaign_name: campaignName, turn_count: 0, session_count: 1, created: new Date().toISOString(), last_updated: new Date().toISOString(), language },
@@ -224,7 +224,7 @@ const API = (() => {
         localStorage.removeItem('dnd_mock_campaign');
         return { ok: true };
       }
-      if (!campaignId) throw new Error('campaign_id krävs');
+      if (!campaignId) throw new Error('campaign_id required');
       return req('/api/campaign?campaign_id=' + encodeURIComponent(campaignId), { method: 'DELETE' });
     },
 
@@ -233,7 +233,7 @@ const API = (() => {
       return req('/api/campaign/activate', { method: 'POST', body: JSON.stringify({ campaign_id: campaignId }) });
     },
 
-    // ── Karaktärsuppdatering (HP, inventory m.m.) ──
+    // ── Character updates (HP, inventory, etc.) ──
     async updateCharacter(data) {
       if (MOCK) {
         const c = mock._load();
@@ -246,9 +246,9 @@ const API = (() => {
       return req('/api/campaign/character', { method: 'PATCH', body: JSON.stringify(data) });
     },
 
-    // ── Bilagor (pdf/md/txt) ──
+    // ── Attachments (pdf/md/txt) ──
     async uploadAttachment(file) {
-      if (MOCK) throw new Error('Ej i mock-läge');
+      if (MOCK) throw new Error('Not available in mock mode');
       const fd = new FormData();
       fd.append('file', file);
       return req('/api/campaign/attachments', { method: 'POST', body: fd });
@@ -259,13 +259,13 @@ const API = (() => {
     },
 
     async deleteAttachment(attId) {
-      if (MOCK) throw new Error('Ej i mock-läge');
+      if (MOCK) throw new Error('Not available in mock mode');
       return req('/api/campaign/attachments/' + attId, { method: 'DELETE' });
     },
 
-    // ── Avatarer (spelare, DM, NPCs) ──
+    // ── Avatars (player, DM, NPCs) ──
     async uploadAvatar(kind, file) {
-      if (MOCK) throw new Error('Ej i mock-läge');
+      if (MOCK) throw new Error('Not available in mock mode');
       const fd = new FormData();
       fd.append('kind', kind);
       fd.append('file', file);
@@ -277,11 +277,11 @@ const API = (() => {
     },
 
     async deleteAvatar(kind) {
-      if (MOCK) throw new Error('Ej i mock-läge');
+      if (MOCK) throw new Error('Not available in mock mode');
       return req('/api/campaign/avatar/' + encodeURIComponent(kind), { method: 'DELETE' });
     },
 
-    // ── Transkript (senaste meddelandena) ──
+    // ── Transcript (latest messages) ──
     async getTranscript() {
       if (MOCK) {
         return { messages: [] };
@@ -289,14 +289,14 @@ const API = (() => {
       return req('/api/campaign/transcript');
     },
 
-    // ── Faktaregister (Fas 3: extraherade fakta) ──
+    // ── Fact registry (Phase 3: extracted facts) ──
     async getFacts(category = null) {
       if (MOCK) return { facts: [], stats: {} };
       const q = category ? '?category=' + encodeURIComponent(category) : '';
       return req('/api/facts' + q);
     },
 
-    // ── Maskinrummet (live debug-loggar) ──
+    // ── Engine room (live debug logs) ──
     async getDebugLogs(since = 0, level = null) {
       if (MOCK) return { logs: [], now: Date.now() / 1000, buffered: 0 };
       let q = '?since=' + since;
@@ -304,7 +304,7 @@ const API = (() => {
       return req('/api/debug/logs' + q);
     },
 
-    // ── Världsbygge (prompt → strukturerad världdata) ──
+    // ── World building (prompt → structured world data) ──
     async buildWorld(prompt, modelId = 'qwen3.8-max') {
       if (MOCK) {
         await new Promise(r => setTimeout(r, 1800));
@@ -312,23 +312,23 @@ const API = (() => {
           ok: true,
           merged: { locations: 3, npcs: 4, lore: 6 },
           locations: [
-            { name: 'Askans Dal', description: 'En dal där askan aldrig slutar falla' },
-            { name: 'Den Övergivna Kvarnen', description: 'Ett ruttnande landmärke med grönt sken' },
-            { name: 'Värdshuset Sista Ljuset', description: 'Det enda stället med levande eld' },
+            { name: 'The Ash Vale', description: 'A valley where the ash never stops falling' },
+            { name: 'The Abandoned Mill', description: 'A rotting landmark with an eerie green glow' },
+            { name: 'The Last Light Inn', description: 'The only place with living fire' },
           ],
           npcs: [
-            { name: 'Morvaine', role: 'Den gåtfulla trollkarlen' },
-            { name: 'Kael Asksvärd', role: 'Legosoldat' },
-            { name: 'Lyra Vindviska', role: 'Skogsalv, jägare' },
-            { name: 'Borg Stenhand', role: 'Värdshusvärd' },
+            { name: 'Morvaine', role: 'The enigmatic sorcerer' },
+            { name: 'Kael Ashenblade', role: 'Mercenary' },
+            { name: 'Lyra Windwhisper', role: 'Wood elf, hunter' },
+            { name: 'Borg Stonehand', role: 'Innkeeper' },
           ],
-          lore: ['Askfallet började för hundra år sedan', 'Något viskar namn i mörkret'],
+          lore: ['The ashfall began a hundred years ago', 'Something whispers names in the dark'],
         };
       }
       return req('/api/world/build', { method: 'POST', body: JSON.stringify({ prompt, model_id: modelId }) });
     },
 
-    // ── Filimport (multipart FormData → extraherad kampanjdata) ──
+    // ── File import (multipart FormData → extracted campaign data) ──
     async importFile(file, modelId = 'qwen3.8-max') {
       if (MOCK) {
         await new Promise(r => setTimeout(r, 1200 + Math.random() * 800));
@@ -347,32 +347,32 @@ const API = (() => {
     // ── Chat ──
     async chat(message, modelId) {
       if (MOCK) {
-        // Simulerat DM-svar
+        // Simulated DM reply
         await new Promise(r => setTimeout(r, 1200 + Math.random() * 800));
         const replies = [
-          'Mörkret tätnar runt dig. Något rör sig i skuggorna — du hör ett lågt, väsande andetag.',
-          'Du kliver framåt. Golvet knakar. Framför dig glöder ett svagt, grönt ljus.',
-          'En röst viskar ditt namn. Den kommer inifrån väggarna. Eller inifrån dig.',
+          'The darkness thickens around you. Something moves in the shadows — you hear a low, hissing breath.',
+          'You step forward. The floor creaks. Ahead of you, a faint green light glows.',
+          'A voice whispers your name. It comes from inside the walls. Or from inside you.',
         ];
         return { reply: replies[Math.floor(Math.random() * replies.length)], turn_count: (mock.campaign?.meta?.turn_count || 0) + 1, summary_generated: false };
       }
       return req('/api/chat', { method: 'POST', body: JSON.stringify({ message, model_id: modelId }) });
     },
 
-    // ── Karaktärsgenerering ──
+    // ── Character generation ──
     async generateCharacter(prompt, modelId) {
       if (MOCK) {
         await new Promise(r => setTimeout(r, 2000));
-        return { ok: true, character: { name: 'Vandraren', race: 'Människa', class: 'Äventyrare', level: 5, hp: { current: 38, max: 38 }, abilities: { STR: { score: 13, mod: 1 }, DEX: { score: 14, mod: 2 }, CON: { score: 13, mod: 1 }, INT: { score: 12, mod: 1 }, WIS: { score: 13, mod: 1 }, CHA: { score: 12, mod: 1 } }, ac: 14, traits: ['Mångsidig', 'Överlevnadsinstinkt'] } };
+        return { ok: true, character: { name: 'The Wanderer', race: 'Human', class: 'Adventurer', level: 5, hp: { current: 38, max: 38 }, abilities: { STR: { score: 13, mod: 1 }, DEX: { score: 14, mod: 2 }, CON: { score: 13, mod: 1 }, INT: { score: 12, mod: 1 }, WIS: { score: 13, mod: 1 }, CHA: { score: 12, mod: 1 } }, ac: 14, traits: ['Versatile', 'Survival Instinct'] } };
       }
       return req('/api/character/generate', { method: 'POST', body: JSON.stringify({ prompt, model_id: modelId }) });
     },
 
-    // ── Regeloraklet (Qwen-driven) ──
+    // ── Rules Oracle (Qwen-driven) ──
     async oracle(question, modelId = 'qwen3.6-flash') {
       if (MOCK) {
         await new Promise(r => setTimeout(r, 900));
-        return { answer: 'Slå en d20 och lägg till relevant modifierare mot DM:ns DC.' };
+        return { answer: "Roll a d20 and add the relevant modifier against the DM's DC." };
       }
       return req('/api/oracle', { method: 'POST', body: JSON.stringify({ question, model_id: modelId }) });
     },
@@ -394,7 +394,7 @@ const API = (() => {
     },
 
     async loadSave(saveId) {
-      if (MOCK) throw new Error('Ej i mock-läge');
+      if (MOCK) throw new Error('Not available in mock mode');
       return req('/api/campaign/load', { method: 'POST', body: JSON.stringify({ save_id: saveId }) });
     },
 
@@ -414,13 +414,13 @@ const API = (() => {
     },
 
     async triggerChapter(title) {
-      if (MOCK) return { ok: true, title, summary: 'Kapitlet avslutades.', chapter_count: 1 };
+      if (MOCK) return { ok: true, title, summary: 'Chapter ended.', chapter_count: 1 };
       return req('/api/campaign/chapter', { method: 'POST', body: JSON.stringify({ title }) });
     },
 
     // ── TTS ──
     async ttsVoices() {
-      if (MOCK) return { voices: [{ id: 'male', name: 'Berättare (man)' }, { id: 'female', name: 'Berättare (kvinna)' }] };
+      if (MOCK) return { voices: [{ id: 'male', name: 'Narrator (male)' }, { id: 'female', name: 'Narrator (female)' }] };
       return req('/api/tts/voices');
     },
 
@@ -433,13 +433,13 @@ const API = (() => {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: res.statusText }));
-        const msg = typeof err.detail === 'string' ? err.detail : 'TTS-fel';
+        const msg = typeof err.detail === 'string' ? err.detail : 'TTS error';
         throw new Error(msg);
       }
       return res.blob();
     },
 
-    // ── Auth-guard för sidor ──
+    // ── Auth guard for pages ──
     guard() {
       if (!sessionStorage.getItem('dnd_user')) {
         location.href = 'login.html';

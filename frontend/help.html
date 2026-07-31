@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚔️ Ett svenskt D&amp;D-äventyr — Hur spelar man?</title>
+<title>⚔️ How to Play</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
@@ -43,7 +43,7 @@
   .loop .desc{color:var(--bone)}
   a{color:var(--arcane)}
 
-  /* ═══════════ Mobil — pekskärm ═══════════ */
+  /* ═══════════ Mobile — touchscreen ═══════════ */
   @media (max-width: 900px) {
     html { -webkit-tap-highlight-color: transparent; }
     .topbar { flex-wrap: wrap; gap: .4rem .5rem; }
@@ -58,7 +58,7 @@
     h2 { font-size: .62rem; margin: 1.6rem 0 .7rem; }
     p, li { font-size: .74rem; line-height: 1.9; }
     .box { padding: .9rem .8rem; }
-    /* Långa kommandotaggar får brytas på smala skärmar */
+    /* Long command tags may wrap on narrow screens */
     .cmd { word-break: break-word; display: inline-block; max-width: 100%; }
     .loop { gap: .5rem .6rem; }
     .topbar .brand { font-size: .55rem; }
@@ -78,113 +78,133 @@
 <body>
 <div class="app">
   <div class="topbar">
-    <span class="brand">🐉 Ett svenskt D&amp;D-äventyr</span>
+    <span class="brand">🐉 A Swedish D&amp;D Adventure</span>
     <span style="flex:1"></span>
-    <a href="chat.html">⚔ Till bordet</a>
-    <a href="adventure.html">🚪 Vägskälet</a>
+    <a href="chat.html">⚔️ To the Table</a>
+    <a href="adventure.html">🚪 The Crossroads</a>
   </div>
 
-  <h1>⚔ Hur spelar man?</h1>
-  <p style="color:var(--bone-dim)">En guide till äventyret — från första inloggning till sista tärningskastet.</p>
+  <h1>⚔ How to Play</h1>
+  <p style="color:var(--bone-dim)">A guide to the adventure — from first login to the final dice roll.</p>
 
   <hr class="divider">
 
   <h2>Core Loop</h2>
   <div class="box">
     <div class="loop">
-      <span class="step">1.</span><span class="desc"><b>DM vaknar</b> — ställer 2-3 frågor om din karaktär och världen</span>
-      <span class="step">2.</span><span class="desc"><b>Du svarar</b> — DM väver in dina svar i öppningsscenen</span>
-      <span class="step">3.</span><span class="desc"><b>Du agerar</b> — skriv fritt: slå, smyg, tala, utforska</span>
-      <span class="step">4.</span><span class="desc"><b>DM svarar</b> — beskriver konsekvenser, NPCs, nya val</span>
-      <span class="step">5.</span><span class="desc"><b>Tärningar</b> — DM begär kast vid osäkerhet, du slår</span>
-      <span class="step">6.</span><span class="desc"><b>Upprepa</b> — storyn byggs av dina val, inget är förskrivet</span>
+      <span class="step">1.</span><span class="desc"><b>The DM awakens</b> — asks 2-3 questions about your character and the world</span>
+      <span class="step">2.</span><span class="desc"><b>You answer</b> — the DM weaves your answers into the opening scene</span>
+      <span class="step">3.</span><span class="desc"><b>You act</b> — write freely: fight, sneak, speak, explore</span>
+      <span class="step">4.</span><span class="desc"><b>The DM responds</b> — describes consequences, NPCs, new choices</span>
+      <span class="step">5.</span><span class="desc"><b>Dice</b> — when the outcome is uncertain, the DM calls for a roll and you roll</span>
+      <span class="step">6.</span><span class="desc"><b>Repeat</b> — the story is built from your choices, nothing is predetermined</span>
     </div>
   </div>
 
-  <h2>Kom igång</h2>
-  <ul>
-    <li>Logga in med ditt användarnamn och lösenord</li>
-    <li>Välj äventyrstyp: <b>Förbered</b> (bygg värld), <b>Importera</b> (ladda upp filer), eller <b>Nytt</b> (freestyle)</li>
-    <li>Skapa din karaktär: välj arketyp eller skriv fritt, välj modell (DeepSeek V4 Flash / Qwen 3.8 Max)</li>
-    <li>Klicka "Frammana karaktär" — AI:n genererar ett fullt karaktärsark</li>
-    <li>Klicka "Till bordet" — DM vaknar och ställer sina frågor</li>
-  </ul>
-
-  <h2>Prata med NPCs</h2>
+  <h2>How Turns Work</h2>
   <div class="box">
-    <p>Skriv <span class="cmd">@Namn</span> i chatten för att rikta dig direkt till en NPC.</p>
-    <p>Exempel: <span class="cmd">@Lyra Vane</span> <span style="color:var(--bone-dim)">"Vad gör du här?"</span></p>
-    <p>NPC:n svarar i sin egen röst. DM kan lägga sig i med narration.</p>
-    <p>Du får autocomplete när du skriver <span class="cmd">@</span> — alla kända NPCs listas.</p>
+    <p>Every exchange at the table counts as one <b>turn</b>: your action, followed by the DM's response.</p>
+    <ul>
+      <li>The current turn is shown in the chat header: <span style="color:var(--term-green)">Campaign: … · Turn N</span></li>
+      <li>Turns are counted automatically — you never have to track them yourself</li>
+      <li>Checkpoints (<span class="cmd">/save</span>) remember which turn you saved at, so you can always see where the story stands</li>
+    </ul>
   </div>
 
-  <h2>Tärningar</h2>
+  <h2>Getting Started</h2>
   <ul>
-    <li>DM begär ett kast: <span class="cmd">[KAST: 1d20+4 | SMIDIGHET]</span></li>
-    <li>En knapp dyker upp i chatten — klicka för att slå</li>
-    <li>Tärningsbrickan längst ner är <b>låst</b> (🔒) tills DM begär ett kast</li>
-    <li>Du kan också skriva <span class="cmd">/rulla 1d20+4</span> direkt i chatten</li>
-    <li>Naturlig 20 = KRITISKT! Naturlig 1 = PATETISKT!</li>
+    <li>Log in with your username and password</li>
+    <li>Choose your adventure type: <b>Prepare</b> (build a world), <b>Import</b> (upload files), or <b>New</b> (freestyle)</li>
+    <li>Create your character: choose an archetype or write freely, pick a model (DeepSeek V4 Flash / Qwen 3.8 Max)</li>
+    <li>Click "Summon Character" — the AI generates a complete character sheet</li>
+    <li>Click "To the Table" — the DM awakens and asks its questions</li>
   </ul>
 
-  <h2>Mekaniska taggar (osynliga)</h2>
-  <p>DM använder taggar som systemet plockar bort och omvandlar till effekter:</p>
-  <ul>
-    <li><span class="cmd">[SKADA:12]</span> — du tar 12 skada (HP minskar)</li>
-    <li><span class="cmd">[HELA:8]</span> — du helas 8 HP</li>
-    <li><span class="cmd">[XP:250]</span> — du får erfarenhetspoäng</li>
-    <li><span class="cmd">[GULD:50]</span> — du hittar guld</li>
-    <li><span class="cmd">[FÖREMÅL:Svärd|Vapen|rare]</span> — nytt föremål i inventariet</li>
-    <li><span class="cmd">[QUEST:Rädda byn|Beskrivning|100 gp]</span> — nytt uppdrag</li>
-    <li><span class="cmd">[NPC:Namn|Roll|relation]</span> — ny NPC registreras</li>
-    <li><span class="cmd">[PLATS:Stencirkeln]</span> — platsen uppdateras</li>
-  </ul>
-
-  <h2>Modeller</h2>
+  <h2>Talking to NPCs</h2>
   <div class="box">
-    <p>Du kan byta AI-modell mitt i äventyret via dropdownen i topbaren.</p>
-    <ul>
-      <li><b>DeepSeek V4 Flash</b> — standard, snabb, reasoning-modell (tänker innan den svarar)</li>
-      <li><b>Qwen 3.8 Max</b> — kraftfull, bra på kreativ narration</li>
-      <li><b>Qwen 3.6 Flash</b> — snabb, används för atmosfär/ASCII-art</li>
-      <li><b>Lokala modeller</b> — via Ollama (kräver lokal server)</li>
-    </ul>
-    <p style="color:var(--bone-dim);font-size:.68rem">Valet sparas i webbläsaren och gäller tills du byter.</p>
+    <p>Type <span class="cmd">@Name</span> in the chat to address an NPC directly.</p>
+    <p>Example: <span class="cmd">@Lyra Vane</span> <span style="color:var(--bone-dim)">"What are you doing here?"</span></p>
+    <p>The NPC answers in its own voice. The DM can step in with narration at any time.</p>
+    <p>You get autocomplete when you type <span class="cmd">@</span> — every known NPC is listed.</p>
   </div>
 
-  <h2>Musik & Ljud</h2>
+  <h2>Dice</h2>
   <ul>
-    <li><span class="key">♫</span> — musik av/på (stämningsbaserade loopar: natt, dag, strid, stad, vila, fängelsehåla)</li>
-    <li><span class="key">🔊</span> — ljudeffekter av/på (tärningar, mynt, strid, level-up)</li>
-    <li>Musiken byter stämning automatiskt baserat på DM:s text</li>
+    <li>When the outcome is uncertain, the DM calls for a roll — e.g. <span class="cmd">[ROLL: 1d20+4 | DEXTERITY]</span></li>
+    <li>A roll button appears in the chat — click it to roll</li>
+    <li>The dice tray at the bottom is <b>locked</b> (🔒) until the DM calls for a roll</li>
+    <li>You can also type <span class="cmd">/roll 1d20+4</span> — the roll command (alias <span class="cmd">/rulla</span>) — directly in the chat to roll whenever you want</li>
+    <li>Natural 20 = CRITICAL! Natural 1 = PATHETIC!</li>
   </ul>
 
-  <h2>Regler (D&amp;D 5e, förenklat)</h2>
+  <h2>The Guardian</h2>
+  <div class="box">
+    <p>The <b>Guardian</b> is the keeper of mechanics. While the DM narrates, the Guardian works in the background — applying damage, healing, XP, gold, items and quests to your character.</p>
+    <ul>
+      <li>Mechanical effects appear as a <span style="color:var(--gold-bright)">🛡️ Guardian Report</span> card in the chat (e.g. the combat log)</li>
+      <li>A pulsing indicator shows the Guardian is processing — keep playing, the story never stops for bookkeeping</li>
+      <li>Your character sheet updates automatically: HP, inventory, quests, NPCs, locations</li>
+    </ul>
+  </div>
+
+  <h2>Mechanical Tags (Invisible)</h2>
+  <p>The DM uses tags that the system strips from the text and converts into effects:</p>
+  <ul>
+    <li><span class="cmd">[DAMAGE:12]</span> — you take 12 damage (HP decreases)</li>
+    <li><span class="cmd">[HEAL:8]</span> — you are healed 8 HP</li>
+    <li><span class="cmd">[XP:250]</span> — you gain experience points</li>
+    <li><span class="cmd">[GOLD:50]</span> — you find gold</li>
+    <li><span class="cmd">[ITEM:Sword|Weapon|rare]</span> — new item in your inventory</li>
+    <li><span class="cmd">[QUEST:Save the village|Description|100 gp]</span> — new quest</li>
+    <li><span class="cmd">[NPC:Name|Role|relation]</span> — a new NPC is registered</li>
+    <li><span class="cmd">[LOCATION:Stone Circle]</span> — the location updates</li>
+  </ul>
+
+  <h2>Models</h2>
+  <div class="box">
+    <p>You can switch the AI model mid-adventure via the dropdown in the top bar.</p>
+    <ul>
+      <li><b>DeepSeek V4 Flash</b> — standard, fast, reasoning model (thinks before answering)</li>
+      <li><b>Qwen 3.8 Max</b> — powerful, great at creative narration</li>
+      <li><b>Qwen 3.6 Flash</b> — fast, used for atmosphere/ASCII art</li>
+      <li><b>Local models</b> — via Ollama (requires a local server)</li>
+    </ul>
+    <p style="color:var(--bone-dim);font-size:.68rem">Your choice is saved in the browser and stays until you change it.</p>
+  </div>
+
+  <h2>Music &amp; Sound</h2>
+  <ul>
+    <li><span class="key">♫</span> — music on/off (mood-based loops: night, day, battle, town, rest, dungeon)</li>
+    <li><span class="key">🔊</span> — sound effects on/off (dice, coins, battle, level-up)</li>
+    <li>The music changes mood automatically based on the DM's text</li>
+  </ul>
+
+  <h2>Rules (D&amp;D 5e, Simplified)</h2>
   <div class="box">
     <ul>
-      <li><b>Kast:</b> 1d20 + modifierare vs DC (Difficulty Class)</li>
-      <li><b>DC 10</b> = lätt, <b>DC 15</b> = medel, <b>DC 20</b> = svårt</li>
-      <li><b>HP 0</b> = death saves (1d20, 3 lyckade = stabil, 3 misslyckade = död)</li>
-      <li><b>XP</b> = erfarenhetspoäng, level-up vid trösklar (300, 900, 2700...)</li>
-      <li><b>Strid:</b> initiative → turordning → attack → skada → upprepa</li>
-      <li><b>Vila:</b> kort vila (1h) = återställ HP, lång vila (8h) = full HP + spell slots</li>
+      <li><b>Roll:</b> 1d20 + modifier vs DC (Difficulty Class)</li>
+      <li><b>DC 10</b> = easy, <b>DC 15</b> = medium, <b>DC 20</b> = hard</li>
+      <li><b>HP 0</b> = death saves (1d20, 3 successes = stable, 3 failures = dead)</li>
+      <li><b>XP</b> = experience points, level-up at thresholds (300, 900, 2700...)</li>
+      <li><b>Combat:</b> initiative → turn order → attack → damage → repeat</li>
+      <li><b>Rest:</b> short rest (1h) = restore HP, long rest (8h) = full HP + spell slots</li>
     </ul>
-    <p style="color:var(--bone-dim);font-size:.68rem">DM:n är den slutgiltiga domaren. Reglerna är ett ramverk, inte ett fängelse.</p>
+    <p style="color:var(--bone-dim);font-size:.68rem">The DM is the final judge. The rules are a framework, not a prison.</p>
   </div>
 
   <h2>Tips</h2>
   <ul>
-    <li>Skriv fritt — du kan göra vad som helst (försöka, inte alltid lyckas)</li>
-    <li>Fråga Regel-oraklet (📜) om du är osäker på D&amp;D-regler</li>
-    <li>Utforska Kartan (🗺️) för att se platser och restider</li>
-    <li>Läs Loggboken (📜) för en sammanfattning av äventyret</li>
-    <li>Spara din karaktär i Valvet (🏰) för att återanvända den</li>
-    <li>Exportera (📦) för att ladda ner hela kampanjen som ZIP</li>
+    <li>Write freely — you can attempt anything (you may try, you may not always succeed)</li>
+    <li>Ask the Rules Oracle (📜) if you are unsure about D&amp;D rules</li>
+    <li>Explore the Map (🗺️) to see locations and travel times</li>
+    <li>Read the Logbook (📜) for a summary of the adventure</li>
+    <li>Save your character in the Vault (🏰) to reuse it</li>
+    <li>Export (📦) to download the entire campaign as a ZIP</li>
   </ul>
 
   <hr class="divider">
   <p style="text-align:center;color:var(--bone-dim);font-size:.65rem">
-    Driven av DeepSeek & Qwen · Kampanjer sparas lokalt · <a href="login.html">Tillbaka till porten</a>
+    Powered by DeepSeek &amp; Qwen · Campaigns are saved locally · <a href="login.html">Back to the Gate</a>
   </p>
 </div>
 <script src="i18n.js?v=20260730b"></script>

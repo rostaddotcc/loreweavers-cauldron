@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚔️ Ett svenskt D&amp;D-äventyr — Loggbok</title>
+<title>⚔️ A Swedish D&amp;D Adventure — Logbook</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
@@ -135,32 +135,32 @@
 <div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
 
 <header class="topbar">
-  <span class="brand">🐉 Ett svenskt D&amp;D-äventyr</span>
-  <span class="page-tag">📜 Loggbok — Äventyrsjournal</span>
+  <span class="brand">🐉 A Swedish D&amp;D Adventure</span>
+  <span class="page-tag">📜 Logbook — Adventure Journal</span>
   <span class="spacer"></span>
-  <a class="top-btn" href="chat.html">⚔ Till bordet</a>
-  <a class="top-btn" href="character.html">🧙 Karaktär</a>
-  <a class="top-btn" href="npcs.html">📖 Gestalter</a>
-  <a class="top-btn" href="platser.html">🗺️ Kartan</a>
+  <a class="top-btn" href="chat.html">⚔ To the Table</a>
+  <a class="top-btn" href="character.html">🧙 Character</a>
+  <a class="top-btn" href="npcs.html">📖 Personages</a>
+  <a class="top-btn" href="platser.html">🗺️ The Map</a>
 </header>
 
 <div class="layout">
   <div class="log-head">
-    <h1>📜 Loggbok</h1>
-    <p class="sub">Krönikören sammanfattar ditt äventyr, dag för dag</p>
+    <h1>📜 Logbook</h1>
+    <p class="sub">The chronicler summarizes your adventure, day by day</p>
     <div class="log-title" id="log-title"></div>
-    <button class="refresh-btn" onclick="refreshToday()">✦ Uppdatera krönikan</button>
+    <button class="refresh-btn" onclick="refreshToday()">✦ Update Chronicle</button>
   </div>
 
   <div class="writing" id="writing">
     <div class="quill">🪶</div>
-    <p>Krönikören bläddrar i minnets hallar…</p>
+    <p>The chronicler leafs through the halls of memory…</p>
     <div class="dots"><span></span><span></span><span></span></div>
   </div>
 
   <div id="log-content" style="display:none">
     <div class="log-summary" id="log-summary" style="display:none">
-      <div class="label">✦ Äventyret hittills ✦</div>
+      <div class="label">✦ The Adventure So Far ✦</div>
       <p id="summary-text"></p>
       <div class="updated-stamp" id="updated-stamp" style="display:none"></div>
     </div>
@@ -169,7 +169,7 @@
 
   <div class="empty-state" id="empty-state" style="display:none">
     <div class="icon">📜</div>
-    <p>Ingen loggbok ännu.<br>Äventyret väntar på att skrivas…</p>
+    <p>No logbook yet.<br>The adventure awaits being written…</p>
   </div>
 </div>
 
@@ -214,9 +214,9 @@ function renderLogbook(data) {
   const stamp = document.getElementById('updated-stamp');
   if (data.generated_at) {
     let ts;
-    try { ts = new Date(data.generated_at).toLocaleString('sv-SE', { dateStyle: 'medium', timeStyle: 'short' }); }
+    try { ts = new Date(data.generated_at).toLocaleString(I18N.getLang() === 'sv' ? 'sv-SE' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' }); }
     catch (_) { ts = data.generated_at; }
-    stamp.innerHTML = '✦ Uppdaterad: <b>' + esc(ts) + '</b>';
+    stamp.innerHTML = '✦ Updated: <b>' + esc(ts) + '</b>';
     stamp.style.display = 'block';
   } else {
     stamp.style.display = 'none';
@@ -232,11 +232,11 @@ function renderLogbook(data) {
       <div class="day-card" style="animation-delay:${i * .12}s">
         <div class="day-marker">${d.day || i + 1}</div>
         <div class="day-head">
-          <span class="day-num">Dag ${d.day || i + 1}</span>
+          <span class="day-num">Day ${d.day || i + 1}</span>
           <span class="day-title">${esc(d.title || '')}</span>
           ${d.mood ? `<span class="day-mood">"${esc(d.mood)}"</span>` : ''}
         </div>
-        ${d.location ? `<div class="day-loc"><a href="platser.html" title="Öppna kartan">${esc(d.location)}</a></div>` : ''}
+        ${d.location ? `<div class="day-loc"><a href="platser.html" title="Open the map">${esc(d.location)}</a></div>` : ''}
         <ul class="day-events">${events}</ul>
         <div class="day-tags">${npcs}${quests}</div>
       </div>`;
@@ -275,7 +275,7 @@ async function loadLogbook() {
   document.getElementById('writing').classList.add('show');
   try {
     const res = await fetch('/api/campaign/logbook', { credentials: 'include' });
-    if (!res.ok) throw new Error('Ingen kampanj');
+    if (!res.ok) throw new Error('No campaign');
     const data = await res.json();
     localStorage.setItem('dnd_logbook_cache', JSON.stringify(data));
     renderLogbook(data);
@@ -292,7 +292,7 @@ async function refreshToday() {
   const btn = document.querySelector('.refresh-btn');
   btn.disabled = true;
   const oldLabel = btn.textContent;
-  btn.textContent = '🪶 Skriver…';
+  btn.textContent = '🪶 Writing…';
   try {
     const res = await fetch('/api/campaign/logbook/refresh-today', { method: 'POST', credentials: 'include' });
     if (!res.ok) throw new Error('refresh failed');
@@ -306,9 +306,9 @@ async function refreshToday() {
       localStorage.setItem('dnd_logbook_cache', JSON.stringify(data));
       renderLogbook(data);
     }
-    toast('✦ Krönikan uppdaterad');
+    toast('✦ Chronicle updated');
   } catch (e) {
-    toast('⚠ Kunde inte uppdatera krönikan');
+    toast('⚠ Could not update the chronicle');
   } finally {
     btn.disabled = false;
     btn.textContent = oldLabel;

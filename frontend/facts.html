@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📚 Ett svenskt D&amp;D-äventyr — Minnesarkivet</title>
+<title>📚 A Swedish D&amp;D Adventure — The Memory Archive</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
@@ -102,7 +102,7 @@
   .fact .fconf .dot.on{background:var(--cc,var(--gold));border-color:var(--cc,var(--gold));box-shadow:0 0 5px var(--cg,transparent)}
   .fact.superseded{opacity:.4}
   .fact.superseded .ftext{text-decoration:line-through}
-  .fact.superseded .fmeta::after{content:'✦ ersatt av nyare uppgift';color:var(--blood-bright);font-style:italic}
+  .fact.superseded .fmeta::after{content:'✦ superseded by newer information';color:var(--blood-bright);font-style:italic}
 
   .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:60%;text-align:center;color:var(--bone-dim)}
   .empty .rune{font-size:3rem;margin-bottom:1rem;filter:grayscale(.5);animation:flicker 3s ease-in-out infinite}
@@ -168,25 +168,25 @@
 <div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
 
 <header class="topbar">
-  <span class="brand">🐉 Ett svenskt D&amp;D-äventyr</span>
-  <span class="page-tag">Minnesarkivet · Faktaregister</span>
+  <span class="brand">🐉 A Swedish D&amp;D Adventure</span>
+  <span class="page-tag">The Memory Archive · Fact Register</span>
   <span class="spacer"></span>
-  <a class="top-btn" href="chat.html">⚔ Till bordet</a>
-  <a class="top-btn" href="npcs.html">📖 Gestalter</a>
-  <a class="top-btn" href="platser.html">🗺️ Kartan</a>
-  <a class="top-btn" href="loggbok.html">📜 Loggbok</a>
-  <a class="top-btn" href="character.html">🧙 Karaktär</a>
-  <button class="top-btn danger" onclick="doLogout()">🚪 Lämna</button>
+  <a class="top-btn" href="chat.html">⚔ To the Table</a>
+  <a class="top-btn" href="npcs.html">📖 Personages</a>
+  <a class="top-btn" href="platser.html">🗺️ The Map</a>
+  <a class="top-btn" href="loggbok.html">📜 Logbook</a>
+  <a class="top-btn" href="character.html">🧙 Character</a>
+  <button class="top-btn danger" onclick="doLogout()">🚪 Leave</button>
 </header>
 
 <div class="layout">
   <aside class="shelves">
     <div class="shelves-head">
-      <div class="shelves-title">📚 Arkivets hyllor</div>
-      <div class="shelves-sub">Vad världen vet om ditt äventyr</div>
+      <div class="shelves-title">📚 The Archive's Shelves</div>
+      <div class="shelves-sub">What the world knows about your adventure</div>
     </div>
     <div class="search-wrap">
-      <input type="text" id="fact-search" placeholder="Sök i arkivet…" oninput="renderFacts()">
+      <input type="text" id="fact-search" placeholder="Search the archive…" oninput="renderFacts()">
     </div>
     <div class="filters" id="filters"></div>
     <div class="stats" id="stats"></div>
@@ -196,7 +196,7 @@
   <main class="archive" id="archive">
     <div class="empty">
       <div class="rune">🕯️</div>
-      <p>Arkivet laddas…</p>
+      <p>The archive is loading…</p>
     </div>
   </main>
 </div>

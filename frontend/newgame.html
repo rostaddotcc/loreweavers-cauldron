@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚔️ Ett svenskt D&amp;D-äventyr — Välj ditt öde</title>
+<title>⚔️ A Swedish D&amp;D Adventure — Choose Your Fate</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
@@ -288,15 +288,15 @@
 
 <div class="app">
   <header class="forge-head">
-    <span class="brand">🐉 Ett svenskt D&amp;D-äventyr</span>
-    <a class="back" href="adventure.html">← Till vägskälet</a>
+    <span class="brand">🐉 A Swedish D&amp;D Adventure</span>
+    <a class="back" href="adventure.html">← Back to the Crossroads</a>
   </header>
 
   <div class="destiny-title">
-    <div class="over">Steg ett av tre</div>
-    <h1>Välj ditt öde</h1>
+    <div class="over">Step one of three</div>
+    <h1>Choose Your Fate</h1>
   </div>
-  <p class="destiny-sub">Välj en arketyp — eller skriv din egen legend. Dungeon Master väver din karaktär till liv.</p>
+  <p class="destiny-sub">Choose an archetype — or write your own legend. The Dungeon Master weaves your character to life.</p>
   <div class="rune-divider"><span>✦</span></div>
 
   <!-- ═══════════ KAMPANJSPRÅK ═══════════ -->
@@ -310,21 +310,21 @@
   </div>
 
   <!-- ═══════════ 1. ARKETYPER ═══════════ -->
-  <div class="section-label"><span class="num">I.</span> Arketyper</div>
+  <div class="section-label"><span class="num">I.</span> Archetypes</div>
   <div class="spread" id="spread"></div>
 
   <!-- ═══════════ 2. PROMPT-MALL ═══════════ -->
-  <div class="section-label"><span class="num">II.</span> Ödesväven</div>
+  <div class="section-label"><span class="num">II.</span> The Fateweave</div>
   <div class="scroll-box">
     <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
     <div class="scroll-head">
-      <span class="mode" id="mode-label">📜 <b>Tom pergament</b> — skriv fritt</span>
-      <button class="blank-btn" onclick="blankScroll()">✦ Tom pergament</button>
+      <span class="mode" id="mode-label">📜 <b>Blank Parchment</b> — write freely</span>
+      <button class="blank-btn" onclick="blankScroll()">✦ Blank Parchment</button>
     </div>
     <textarea id="prompt" spellcheck="false"></textarea>
     <div class="scroll-actions">
-      <button class="summon-btn" id="summon" onclick="summon()">🔮 Frammana karaktär</button>
-      <span style="font-size:.6rem;color:var(--bone-dim);opacity:.7">🧙 Karaktär:</span>
+      <button class="summon-btn" id="summon" onclick="summon()">🔮 Summon Character</button>
+      <span style="font-size:.6rem;color:var(--bone-dim);opacity:.7">🧙 Character:</span>
       <select id="char-model" style="background:var(--stone-2);border:1px solid var(--edge);color:var(--bone);padding:.4rem .6rem;font-size:.7rem;cursor:pointer">
         <option value="step-3.7-flash" selected>Step 3.7 Flash</option>
         <option value="deepseek-v4-flash">DeepSeek V4 Flash</option>
@@ -337,7 +337,7 @@
 
   <!-- ═══════════ VÄVNING ═══════════ -->
   <div class="weaving" id="weaving">
-    <div class="w-text" id="w-text">Dungeon Master väver din ödesväv…</div>
+    <div class="w-text" id="w-text">The Dungeon Master weaves your fate…</div>
     <div class="dice-row">
       <div class="die">?</div><div class="die">?</div><div class="die">?</div>
       <div class="die">?</div><div class="die">?</div><div class="die">?</div>
@@ -346,7 +346,7 @@
 
   <!-- ═══════════ 3. FÖRHANDSVISNING ═══════════ -->
   <div class="preview" id="preview">
-    <div class="section-label"><span class="num">III.</span> Din hjälte</div>
+    <div class="section-label"><span class="num">III.</span> Your Hero</div>
     <div class="scroll-box" id="pv-box">
       <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
       <div class="pv-head">
@@ -362,8 +362,8 @@
       <div class="pv-gear" id="pv-gear"></div>
       <div class="pv-story" id="pv-story"></div>
       <div class="pv-actions">
-        <button class="pv-go" onclick="enterGame()">⚔️ Till bordet</button>
-        <button class="pv-reroll" onclick="summon()">🔄 Slå om ödet</button>
+        <button class="pv-go" onclick="enterGame()">⚔️ To the Table</button>
+        <button class="pv-reroll" onclick="summon()">🔄 Reroll Fate</button>
       </div>
     </div>
   </div>
@@ -889,7 +889,7 @@ let lastPrompt = '';
 async function summon() {
   if (summoning) return;
   const prompt = document.getElementById('prompt').value.trim();
-  if (!prompt) { toast('⚠ Skriv en beskrivning först'); return; }
+  if (!prompt) { toast('⚠ Write a description first'); return; }
   summoning = true;
   lastPrompt = prompt;
   document.getElementById('summon').disabled = true;
@@ -938,8 +938,8 @@ async function summon() {
       init: c.initiative || 0,
       prof: c.proficiency || 2,
       traits: Array.isArray(c.traits) ? c.traits.map(t => typeof t === 'string' ? t : t.name) : [],
-      gear: c.gear || 'En ensam vandrare med okänt förflutet.',
-      story: c.story || c.background || 'Denna karaktärs historia är ännu oskriven. Mörkret väntar på att forma den.',
+      gear: c.gear || 'A lone wanderer with an unknown past.',
+      story: c.story || c.background || 'This character\'s story is yet unwritten. The darkness awaits to shape it.',
     };
 
     const ac = selectedKey ? ARCHETYPES[selectedKey].color : '#8b5fd4';
@@ -949,12 +949,12 @@ async function summon() {
     document.getElementById('preview').classList.add('show');
     document.getElementById('preview').scrollIntoView({ behavior:'smooth', block:'start' });
     SFX.levelup();
-    toast('🔮 Karaktären är vävd!');
+    toast('🔮 The character is woven!');
   } catch (e) {
     clearInterval(iv);
     weaving.classList.remove('show');
     SFX.error();
-    toast('⚠ Kunde inte väva karaktären: ' + (e.message || 'okänt fel'));
+    toast('⚠ Could not weave the character: ' + (e.message || 'unknown error'));
   } finally {
     document.getElementById('summon').disabled = false;
     summoning = false;

@@ -1,11 +1,11 @@
 /**
- * 🔤 fonts.js — Typsnittsväxlare för hela sajten
+ * 🔤 fonts.js — Font switcher for the whole site
  * ------------------------------------------------
- * 5 typsnitt att cykla igenom, site-wide, sparas i localStorage.
- * Sätter en klass på <html> + CSS-variabler som snes.css läser.
+ * 5 fonts to cycle through, site-wide, saved in localStorage.
+ * Sets a class on <html> + CSS variables that snes.css reads.
  */
 const FONTS = (() => {
-  // Varje tema: id, visningsnamn, display-font (rubriker), body-font (brödtext)
+  // Each theme: id, display name, display font (headings), body font (body text)
   const THEMES = [
     { id: 'pixel',    name: 'Pixel',        display: "'Press Start 2P', monospace", body: "'Silkscreen', monospace" },
     { id: 'terminal', name: 'Terminal',     display: "'VT323', monospace",          body: "'VT323', monospace" },
@@ -23,7 +23,7 @@ const FONTS = (() => {
 
   function apply(theme) {
     const root = document.documentElement;
-    // Ta bort alla tema-klasser, lägg till den valda
+    // Remove all theme classes, add the selected one
     THEMES.forEach(t => root.classList.remove('font-' + t.id));
     root.classList.add('font-' + theme.id);
     root.style.setProperty('--font-display', theme.display);
@@ -45,36 +45,36 @@ const FONTS = (() => {
   return { THEMES, current, cycle, apply };
 })();
 
-// ── Global font-knapp (i topbaren, bredvid musik/mute) ──
+// ── Global font button (in the topbar, next to music/mute) ──
 function fontToggleBtn() {
   const next = FONTS.cycle();
   const btns = document.querySelectorAll('.font-btn');
-  btns.forEach(b => { b.textContent = next.name; b.title = 'Typsnitt: ' + next.name + ' (klicka för att byta)'; });
-  if (typeof toast === 'function') toast('🔤 Typsnitt: ' + next.name);
+  btns.forEach(b => { b.textContent = next.name; b.title = 'Font: ' + next.name + ' (click to switch)'; });
+  if (typeof toast === 'function') toast('🔤 Font: ' + next.name);
   if (typeof SFX !== 'undefined') SFX.click();
 }
 
-// Auto-injicera font-knappen i topbaren på alla sidor (bredvid musik/mute)
+// Auto-inject the font button into the topbar on all pages (next to music/mute)
 document.addEventListener('DOMContentLoaded', () => {
   const cur = FONTS.current();
 
-  // Uppdatera befintliga font-knappar (om någon sida har en hårdkodad)
+  // Update existing font buttons (if any page has a hardcoded one)
   document.querySelectorAll('.font-btn').forEach(b => {
     b.textContent = cur.name;
-    b.title = 'Typsnitt: ' + cur.name + ' (klicka för att byta)';
+    b.title = 'Font: ' + cur.name + ' (click to switch)';
   });
 
-  // Hitta topbaren och injicera en font-knapp om det inte redan finns en
+  // Find the topbar and inject a font button if one doesn't already exist
   const bar = document.querySelector('.topbar') || document.querySelector('.forge-head');
   if (bar && !bar.querySelector('.font-btn')) {
     const btn = document.createElement('button');
     btn.className = 'top-btn font-btn';
     btn.textContent = cur.name;
-    btn.title = 'Typsnitt: ' + cur.name + ' (klicka för att byta)';
+    btn.title = 'Font: ' + cur.name + ' (click to switch)';
     btn.onclick = fontToggleBtn;
-    // Sätt in före sista elementet (oftast Lämna/exit-knappen) om det finns, annars sist
+    // Insert before the last element (usually the Leave/exit button) if present, otherwise last
     const last = bar.lastElementChild;
-    if (last && (last.classList.contains('danger') || /lämna|exit/i.test(last.textContent))) {
+    if (last && (last.classList.contains('danger') || /lämna|leave|exit/i.test(last.textContent))) {
       bar.insertBefore(btn, last);
     } else {
       bar.appendChild(btn);

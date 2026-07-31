@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚔️ Ett svenskt D&D-äventyr — Stig in</title>
+<title>⚔️ A Swedish D&amp;D Adventure — Enter</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -257,26 +257,26 @@
       </svg>
     </div>
 
-    <h1 class="gate-title">Ett svenskt D&amp;D-äventyr</h1>
-    <p class="gate-sub">Vem vågar stiga in i mörkret?</p>
+    <h1 class="gate-title">A Swedish D&amp;D Adventure</h1>
+    <p class="gate-sub">Who dares enter the darkness?</p>
 
     <form id="login-form" onsubmit="handleLogin(event)">
       <div class="field">
-        <label for="username">Äventyrare</label>
-        <input type="text" id="username" placeholder="Ditt namn, modige…" autocomplete="username" required>
+        <label for="username">Adventurer</label>
+        <input type="text" id="username" placeholder="Your name, brave one…" autocomplete="username" required>
         <span class="icon">></span>
       </div>
       <div class="field">
-        <label for="password">Lösenord</label>
-        <input type="password" id="password" placeholder="Det hemliga ordet…" autocomplete="current-password" required>
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="The secret word…" autocomplete="current-password" required>
         <span class="icon">></span>
       </div>
-      <button type="submit" class="gate-btn">⚔ Stig in i mörkret</button>
+      <button type="submit" class="gate-btn">⚔ Enter the Darkness</button>
       <div class="gate-error" id="error"></div>
     </form>
 
     <div class="gate-footer">
-      Driven av Qwen · Kampanjer sparas lokalt · <a href="#">De gamla gudarna minns alla namn.</a>
+      Powered by Qwen · Campaigns are saved locally · <a href="#">The old gods remember all names.</a>
     </div>
   </div>
 </div>
@@ -299,7 +299,7 @@ async function handleLogin(e) {
   const btn = document.querySelector('.gate-btn');
 
   btn.disabled = true;
-  btn.textContent = '⏳ Porten prövar dig…';
+  btn.textContent = '⏳ The Gate is testing you…';
 
   try {
     const res = await API.login(user, pass);
@@ -309,20 +309,20 @@ async function handleLogin(e) {
     sessionStorage.setItem('dnd_user', res.username);
     setTimeout(() => { window.location.href = 'adventure.html'; }, 900);
   } catch (e2) {
-    err.textContent = '⚠ Porten förblir stängd. Fel namn eller lösenord.';
+    err.textContent = '⚠ The Gate remains closed. Wrong name or password.';
     SFX.error();
     frame.classList.remove('shake');
     void frame.offsetWidth;
     frame.classList.add('shake');
     btn.disabled = false;
-    btn.textContent = '⚔ Stig in i mörkret';
+    btn.textContent = '⚔ Enter the Darkness';
   }
 }
 
 // Redan inloggad?
 if (sessionStorage.getItem('dnd_user')) {
   document.querySelector('.gate-sub').textContent =
-    'Välkommen tillbaka, ' + sessionStorage.getItem('dnd_user') + '!';
+    'Welcome back, ' + sessionStorage.getItem('dnd_user') + '!';
 }
 
 // ═══════════════════════════════════════
@@ -359,10 +359,10 @@ tick();
 // ═══════════════════════════════════════
 (function() {
   const quotes = [
-    'I mörkret väntar sagor som ännu inte berättats.',
-    'Porten känner igen dig\u2026 eller gör den inte?',
-    'Varje steg in i mörkret är ett steg bort från världen du kände.',
-    'Drakarna minns ditt namn. Minns du deras?'
+    'In the darkness wait tales not yet told.',
+    'The Gate knows you\u2026 or does it?',
+    'Every step into the darkness is a step away from the world you knew.',
+    'The dragons remember your name. Do you remember theirs?'
   ];
   const el = document.getElementById('myst-quotes');
   if (!el) return;

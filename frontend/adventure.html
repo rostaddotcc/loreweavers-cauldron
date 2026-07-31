@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚔️ Ett svenskt D&amp;D-äventyr — Vägskälet</title>
+<title>⚔️ A Swedish D&amp;D Adventure — The Crossroads</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
@@ -243,7 +243,7 @@
 
   /* ── Vägar dolda medan äventyr pågår ── */
   .paths-hidden .paths,.paths-hidden .expand{display:none!important}
-  .paths-hidden .head .sub::after{content:' · ditt äventyr väntar ovan';color:var(--gold);font-style:italic}
+  .paths-hidden .head .sub::after{content:' · your adventure awaits above';color:var(--gold);font-style:italic}
 
   /* ═══════════ How to play — onepager ═══════════ */
   .htp{margin-bottom:2.4rem;animation:rise .6s cubic-bezier(.22,1,.36,1)}
@@ -336,37 +336,37 @@
 <div class="app">
   <!-- ═══════════ TOPPRAD ═══════════ -->
   <div class="topbar">
-    <button class="top-btn sfx-btn" onclick="sfxToggleBtn()" title="Ljud av/på">🔊</button>
-    <button class="top-btn danger" onclick="leaveGate()">🚪 Logga ut</button>
+    <button class="top-btn sfx-btn" onclick="sfxToggleBtn()" title="Sound on/off">🔊</button>
+    <button class="top-btn danger" onclick="leaveGate()">🚪 Log Out</button>
   </div>
 
   <div class="head">
-    <div class="over">Steg ett av fyra</div>
-    <h1>Vägskälet</h1>
-    <p class="sub">Varje äventyr börjar med ett val. Vilken väg tar du?</p>
+    <div class="over">Step one of four</div>
+    <h1>The Crossroads</h1>
+    <p class="sub">Every adventure begins with a choice. Which path will you take?</p>
     <div class="rune-divider"><span>✦</span></div>
   </div>
 
   <!-- ═══════════ SÅ SPELAR DU ═══════════ -->
   <div class="htp">
     <button class="htp-toggle" id="htp-toggle" onclick="toggleHtp()">
-      <span class="caret">▸</span> Så spelar du
+      <span class="caret">▸</span> How to Play
     </button>
     <div class="htp-body" id="htp-body">
       <div class="htp-card">
         <span class="htp-icon">🧙‍♂️</span>
         <h3>Dungeon Master</h3>
-        <p>En AI som <b>berättar världen</b> — beskriver miljöer, spelar NPCs och driver handlingen. Skriv vad du gör, så svarar DM med konsekvenser. DM hittar på världen <b>tillsammans med dig</b>, inte på förhand.</p>
+        <p>An AI that <b>tells the world</b> — describes environments, plays NPCs and drives the plot. Write what you do, and the DM answers with consequences. The DM invents the world <b>together with you</b>, not in advance.</p>
       </div>
       <div class="htp-card">
         <span class="htp-icon">🛡️</span>
         <h3>Guardian</h3>
-        <p>Ett tyst system som <b>håller koll på siffrorna</b> — HP, guld, föremål, XP. När DM berättar att du tar skada eller hittar en skatt, uppdaterar Guardian ditt karaktärsblad automatiskt. Du behöver aldrig räkna själv.</p>
+        <p>A quiet system that <b>keeps track of the numbers</b> — HP, gold, items, XP. When the DM says you take damage or find treasure, the Guardian updates your character sheet automatically. You never need to count yourself.</p>
       </div>
       <div class="htp-card">
         <span class="htp-icon">🎲</span>
-        <h3>Tärningar & mekanik</h3>
-        <p>När utfallet är osäkert begär DM ett <b>tärningskast</b>. En D20-knapp dyker upp i chatten — klicka för att slå. <b>Nat 20</b> = triumf, <b>nat 1</b> = katastrof. Skriv <b>/rulla 1d20+4</b> för att slå när du vill.</p>
+        <h3>Dice & Mechanics</h3>
+        <p>When the outcome is uncertain, the DM calls for a <b>dice roll</b>. A D20 button appears in the chat — click to roll. <b>Nat 20</b> = triumph, <b>nat 1</b> = catastrophe. Type <b>/roll 1d20+4</b> to roll whenever you want.</p>
       </div>
     </div>
   </div>
@@ -375,10 +375,10 @@
   <div class="continue-wrap" id="continue-wrap">
     <div class="continue-panel">
       <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
-      <div class="panel-title">⚔️ Dina äventyr</div>
+      <div class="panel-title">⚔️ Your Adventures</div>
       <div class="campaign-list" id="campaign-list"></div>
       <div class="actions">
-        <span class="hint">Välj ett äventyr att fortsätta, eller skapa ett nytt nedan.</span>
+        <span class="hint">Choose an adventure to continue, or create a new one below.</span>
       </div>
     </div>
   </div>
@@ -388,25 +388,25 @@
     <div class="path" style="--pc:var(--ember);--pg:rgba(212,105,30,.14)" onclick="showPanel('prepare')">
       <div class="glow"></div>
       <span class="icon">📜</span>
-      <h2>Förbered äventyr</h2>
-      <p>Skriv worldbuilding-prompt eller ladda upp .md/.pdf/bilder. Qwen extraherar världen åt dig.</p>
+      <h2>Prepare Adventure</h2>
+      <p>Write a worldbuilding prompt or upload .md/.pdf/images. Qwen extracts the world for you.</p>
       <span class="tag">Prompt + Import</span>
     </div>
 
     <div class="path" style="--pc:var(--arcane);--pg:rgba(139,95,212,.14)" onclick="showPanel('import')">
       <div class="glow"></div>
       <span class="icon">📥</span>
-      <h2>Importera äventyr</h2>
-      <p>Har du redan en kampanj? Dra in filer — Qwen läser in karaktärer, NPCs, platser och lore.</p>
-      <span class="tag">.md · .pdf · Bilder</span>
+      <h2>Import Adventure</h2>
+      <p>Already have a campaign? Drag in files — Qwen reads characters, NPCs, locations and lore.</p>
+      <span class="tag">.md · .pdf · Images</span>
     </div>
 
     <div class="path" style="--pc:var(--blood-bright);--pg:rgba(212,58,77,.12)" onclick="showNewAdventureForm()">
       <div class="glow"></div>
       <span class="icon">🎲</span>
-      <h2>Nytt äventyr</h2>
-      <p>Ingen prep. Dungeon Master freestylar ihop en öppningsscen och kastar dig in i mörkret.</p>
-      <span class="tag">Freestyle · Direkt</span>
+      <h2>New Adventure</h2>
+      <p>No prep. The Dungeon Master freestyles an opening scene and throws you into the darkness.</p>
+      <span class="tag">Freestyle · Instant</span>
     </div>
   </div>
 
@@ -414,14 +414,14 @@
   <div class="expand" id="panel-newadventure">
     <div class="panel-box">
       <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
-      <div class="panel-title">🎲 Nytt äventyr</div>
+      <div class="panel-title">🎲 New Adventure</div>
       <p style="font-size:.85rem;font-style:italic;color:var(--bone-dim);margin-bottom:1rem">
-        Ge ditt äventyr ett namn — eller låt det vara namnlöst och börja direkt.
+        Give your adventure a name — or leave it unnamed and begin right away.
       </p>
-      <input type="text" class="name-input" id="adventure-name-input" placeholder="Ett namnlöst äventyr…" maxlength="60">
+      <input type="text" class="name-input" id="adventure-name-input" placeholder="An unnamed adventure…" maxlength="60">
       <div class="actions">
-        <button class="go-btn" onclick="startNewAdventure()">⚔️ Börja äventyret</button>
-        <span class="hint">DM freestylar en öppningsscen åt dig</span>
+        <button class="go-btn" onclick="startNewAdventure()">⚔️ Begin the Adventure</button>
+        <span class="hint">The DM freestyles an opening scene for you</span>
       </div>
     </div>
   </div>
@@ -430,47 +430,47 @@
   <div class="expand" id="panel-prepare">
     <div class="panel-box">
       <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
-      <div class="panel-title">📜 Förbered din värld</div>
+      <div class="panel-title">📜 Prepare Your World</div>
 
-      <textarea class="world-prompt" id="world-prompt" placeholder="Beskriv din värld…
+      <textarea class="world-prompt" id="world-prompt" placeholder="Describe your world…
 
-Exempel:
-- En mörk dal där askan aldrig slutar falla
-- En stad byggd på ryggen av en död gud
-- Tre fraktioner som krigar om den sista vattenkällan
-- En förbannelse som sprider sig genom drömmar
+Examples:
+- A dark valley where ash never stops falling
+- A city built on the back of a dead god
+- Three factions warring over the last water source
+- A curse spreading through dreams
 
-Ju mer du ger, desto rikare blir världen. Men Dungeon Master fyller i luckorna — inget behöver vara komplett."></textarea>
+The more you give, the richer the world becomes. But the Dungeon Master fills in the gaps — nothing needs to be complete."></textarea>
 
       <div class="dropzone" id="dz-prepare" onclick="document.getElementById('file-prepare').click()">
         <span class="dz-icon">📂</span>
-        <div class="dz-text">Dra in filer eller <b>klicka för att bläddra</b></div>
-        <div class="dz-formats">.md · .pdf · .jpg · .png — Qwen extraherar worldbuilding, karaktärer, platser</div>
+        <div class="dz-text">Drag files here or <b>click to browse</b></div>
+        <div class="dz-formats">.md · .pdf · .jpg · .png — Qwen extracts worldbuilding, characters, locations</div>
         <input type="file" id="file-prepare" multiple accept=".md,.pdf,.jpg,.jpeg,.png,.webp">
       </div>
       <div class="file-list" id="files-prepare"></div>
 
       <div class="extracting" id="extracting-prepare">
-        <div class="ex-text">🔮 Qwen läser in din värld…</div>
+        <div class="ex-text">🔮 Qwen is reading your world…</div>
         <div class="ex-bar"><div class="ex-fill" id="ex-fill-prepare"></div></div>
       </div>
 
       <div class="extract-preview" id="preview-prepare">
         <div class="ep-grid">
           <div class="ep-card"><div class="ep-num" id="ep-npcs">0</div><div class="ep-label">NPCs</div></div>
-          <div class="ep-card"><div class="ep-num" id="ep-places">0</div><div class="ep-label">Platser</div></div>
-          <div class="ep-card"><div class="ep-num" id="ep-quests">0</div><div class="ep-label">Uppdrag</div></div>
-          <div class="ep-card"><div class="ep-num" id="ep-lore">0</div><div class="ep-label">Lore-fragment</div></div>
+          <div class="ep-card"><div class="ep-num" id="ep-places">0</div><div class="ep-label">Locations</div></div>
+          <div class="ep-card"><div class="ep-num" id="ep-quests">0</div><div class="ep-label">Quests</div></div>
+          <div class="ep-card"><div class="ep-num" id="ep-lore">0</div><div class="ep-label">Lore fragments</div></div>
         </div>
         <div class="actions">
-          <button class="go-btn" onclick="proceed('prepare')">⚔️ Skapa karaktär & börja</button>
-          <span class="hint">Världen sparas och <b>Qwen</b> använder den som grund för äventyret</span>
+          <button class="go-btn" onclick="proceed('prepare')">⚔️ Create Character & Begin</button>
+          <span class="hint">The world is saved and <b>Qwen</b> uses it as the foundation for the adventure</span>
         </div>
       </div>
 
       <div class="actions" id="actions-prepare">
-        <button class="go-btn" onclick="startPrepare()">🔮 Bygg världen</button>
-        <span class="hint">Prompt + filer skickas till <b>Qwen</b> som strukturerar allt</span>
+        <button class="go-btn" onclick="startPrepare()">🔮 Build the World</button>
+        <span class="hint">Prompt + files are sent to <b>Qwen</b> which structures everything</span>
       </div>
     </div>
   </div>
@@ -479,37 +479,37 @@ Ju mer du ger, desto rikare blir världen. Men Dungeon Master fyller i luckorna 
   <div class="expand" id="panel-import">
     <div class="panel-box">
       <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
-      <div class="panel-title">📥 Importera befintlig kampanj</div>
+      <div class="panel-title">📥 Import Existing Campaign</div>
 
       <div class="dropzone" id="dz-import" onclick="document.getElementById('file-import').click()">
         <span class="dz-icon">📂</span>
-        <div class="dz-text">Dra in dina kampanjfiler eller <b>klicka för att bläddra</b></div>
-        <div class="dz-formats">.md · .pdf · .jpg · .png — karaktärsark, session-loggar, worldbuilding-dokument, kartor</div>
+        <div class="dz-text">Drag in your campaign files or <b>click to browse</b></div>
+        <div class="dz-formats">.md · .pdf · .jpg · .png — character sheets, session logs, worldbuilding documents, maps</div>
         <input type="file" id="file-import" multiple accept=".md,.pdf,.jpg,.jpeg,.png,.webp">
       </div>
       <div class="file-list" id="files-import"></div>
 
       <div class="extracting" id="extracting-import">
-        <div class="ex-text">🔮 Qwen extraherar karaktärer, NPCs, platser och lore…</div>
+        <div class="ex-text">🔮 Qwen is extracting characters, NPCs, locations and lore…</div>
         <div class="ex-bar"><div class="ex-fill" id="ex-fill-import"></div></div>
       </div>
 
       <div class="extract-preview" id="preview-import">
         <div class="ep-grid">
-          <div class="ep-card"><div class="ep-num" id="ep-chars">0</div><div class="ep-label">Karaktärer</div></div>
+          <div class="ep-card"><div class="ep-num" id="ep-chars">0</div><div class="ep-label">Characters</div></div>
           <div class="ep-card"><div class="ep-num" id="ep-npcs2">0</div><div class="ep-label">NPCs</div></div>
-          <div class="ep-card"><div class="ep-num" id="ep-places2">0</div><div class="ep-label">Platser</div></div>
-          <div class="ep-card"><div class="ep-num" id="ep-lore2">0</div><div class="ep-label">Lore-fragment</div></div>
+          <div class="ep-card"><div class="ep-num" id="ep-places2">0</div><div class="ep-label">Locations</div></div>
+          <div class="ep-card"><div class="ep-num" id="ep-lore2">0</div><div class="ep-label">Lore fragments</div></div>
         </div>
         <div class="actions">
-          <button class="go-btn" onclick="proceed('import')">⚔️ Fortsätt äventyret</button>
-          <span class="hint">Importerad data merge:as in i kampanjens <b>state.json</b></span>
+          <button class="go-btn" onclick="proceed('import')">⚔️ Continue Adventure</button>
+          <span class="hint">Imported data is merged into the campaign's <b>state.json</b></span>
         </div>
       </div>
 
       <div class="actions" id="actions-import">
-        <button class="go-btn" onclick="startImport()">🔮 Extrahera & importera</button>
-        <span class="hint">Filer skickas till <b>Qwen</b> (text) och <b>Qwen Vision</b> (bilder)</span>
+        <button class="go-btn" onclick="startImport()">🔮 Extract & Import</button>
+        <span class="hint">Files are sent to <b>Qwen</b> (text) and <b>Qwen Vision</b> (images)</span>
       </div>
     </div>
   </div>
@@ -555,12 +555,12 @@ function showCampaignList(campaigns) {
   list.innerHTML = campaigns.map(c => {
     const ch = c.character || {};
     const icon = c.character_icon || ch.icon || '🎭';
-    const name = c.name || 'Namnlös kampanj';
+    const name = c.name || I18N.t('Namnlös kampanj');
     const charName = c.character_name || ch.name || I18N.t('Ingen hjälte än');
     const level = c.level || ch.level || 1;
     const turns = c.turn_count || 0;
-    const loc = c.location || 'Okänd';
-    const date = c.last_updated ? new Date(c.last_updated).toLocaleDateString('sv-SE', {month:'short',day:'numeric'}) : '—';
+    const loc = c.location || I18N.t('Okänd');
+    const date = c.last_updated ? new Date(c.last_updated).toLocaleDateString('en-US', {month:'short',day:'numeric'}) : '—';
     return `<div class="campaign-card" data-id="${esc(c.campaign_id)}">
       <div class="cc-icon">${icon}</div>
       <div class="cc-body">
@@ -668,7 +668,7 @@ function showNewAdventureForm() {
 async function startNewAdventure() {
   SFX.click();
   const name = document.getElementById('adventure-name-input').value.trim();
-  const lang = 'sv'; // Default — could read from a selector if present
+  const lang = 'en'; // English-first default; the campaign language is chosen in newgame.html
   try {
     await API.createCampaign(name, lang);
     sessionStorage.setItem('dnd_adventure_mode', 'freestyle');
@@ -739,7 +739,7 @@ async function startPrepare() {
   try {
     // Se till att kampanj finns
     const { campaign } = await API.getCampaign();
-    if (!campaign) await API.createCampaign('Förberett äventyr', 'sv');
+    if (!campaign) await API.createCampaign('Prepared Adventure', 'en');
     fill.style.width = '30%';
 
     // Bygg världen via backend → Qwen
@@ -784,7 +784,7 @@ async function startImport() {
   try {
     // Se till att kampanj finns
     const { campaign } = await API.getCampaign();
-    if (!campaign) await API.createCampaign('Importerat äventyr', 'sv');
+    if (!campaign) await API.createCampaign('Imported Adventure', 'en');
     fill.style.width = '20%';
 
     // Importera varje fil via backend

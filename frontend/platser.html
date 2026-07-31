@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚔️ Ett svenskt D&amp;D-äventyr — Kartan</title>
+<title>⚔️ A Swedish D&amp;D Adventure — The Map</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
@@ -154,32 +154,32 @@
 <div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
 
 <header class="topbar">
-  <span class="brand">🐉 Ett svenskt D&amp;D-äventyr</span>
-  <span class="page-tag">🗺️ Kartan — Platser & Resor</span>
+  <span class="brand">🐉 A Swedish D&amp;D Adventure</span>
+  <span class="page-tag">🗺️ The Map — Locations & Travel</span>
   <span class="spacer"></span>
-  <a class="top-btn" href="chat.html">⚔ Till bordet</a>
-  <a class="top-btn" href="character.html">🧙 Karaktär</a>
-  <a class="top-btn" href="npcs.html">📖 Gestalter</a>
-  <a class="top-btn" href="loggbok.html">📜 Loggbok</a>
-  <a class="top-btn" href="valvet.html">🏰 Valvet</a>
+  <a class="top-btn" href="chat.html">⚔ To the Table</a>
+  <a class="top-btn" href="character.html">🧙 Character</a>
+  <a class="top-btn" href="npcs.html">📖 Personages</a>
+  <a class="top-btn" href="loggbok.html">📜 Logbook</a>
+  <a class="top-btn" href="valvet.html">🏰 The Vault</a>
 </header>
 
 <div class="layout">
   <div class="map-head">
-    <h1>🗺️ Kartan</h1>
-    <p class="sub">Platser du besökt och vägar du kan vandra</p>
-    <div class="current-loc" id="current-loc"><span class="pin">📍</span> <span id="current-name">Laddar…</span></div>
+    <h1>🗺️ The Map</h1>
+    <p class="sub">Places you have visited and roads you can walk</p>
+    <div class="current-loc" id="current-loc"><span class="pin">📍</span> <span id="current-name">Loading…</span></div>
   </div>
 
   <div class="ascii-map" id="ascii-map">
-    <div class="map-label">✦ världskarta ✦</div>
-    <pre id="map-art">Laddar karta…</pre>
+    <div class="map-label">✦ world map ✦</div>
+    <pre id="map-art">Loading map…</pre>
   </div>
 
   <div class="travel-journal" id="travel-journal" style="display:none"></div>
 
   <div class="quest-panel" id="quest-panel" style="display:none">
-    <div class="qp-label">⚑ Aktiva uppdrag</div>
+    <div class="qp-label">⚑ Active Quests</div>
     <div id="quest-list"></div>
   </div>
 
@@ -187,7 +187,7 @@
 
   <div class="empty-state" id="empty-state" style="display:none">
     <div class="icon">🗺️</div>
-    <p>Du har inte besökt några platser ännu.<br>Världen väntar bortom horisonten…</p>
+    <p>You have not visited any places yet.<br>The world waits beyond the horizon…</p>
   </div>
 </div>
 
@@ -323,10 +323,10 @@ function renderMap(locations, travelLog) {
 const tooltip = document.getElementById('map-tooltip');
 function showTooltip(loc, x, y) {
   const icon = TERRAIN_ICONS[loc.terrain] || '❓';
-  const questTag = questLocations.has(loc.name) ? '<div class="tt-quest">⚑ Aktivt uppdrag här</div>' : '';
+  const questTag = questLocations.has(loc.name) ? '<div class="tt-quest">⚑ Active quest here</div>' : '';
   tooltip.innerHTML = `
     <div class="tt-name">${icon} ${loc.name}</div>
-    <div class="tt-terrain">${loc.terrain || 'okänd terräng'} · ${loc.travel_text}</div>
+    <div class="tt-terrain">${loc.terrain || 'unknown terrain'} · ${loc.travel_text}</div>
     <div>${loc.description || I18N.t('En plats i mörkret.')}</div>
     ${questTag}`;
   // Positionera nära klicket, håll inom viewport
@@ -373,9 +373,9 @@ function renderTravelJournal(travelLog) {
     const sep = i > 0 ? '<span class="tj-sep">→</span>' : '';
     const isCurrent = allLocations.some(l => l.current && l.name === step.to);
     const flag = isCurrent ? '<span class="tj-flag">⚑</span>' : '';
-    return `${sep}<span class="tj-entry" data-place="${step.to}" title="Hoppa till ${step.to}"><span class="tj-day">Dag ${step.day}</span><span class="tj-dot">·</span>${flag}${step.to}</span>`;
+    return `${sep}<span class="tj-entry" data-place="${step.to}" title="Jump to ${step.to}"><span class="tj-day">Day ${step.day}</span><span class="tj-dot">·</span>${flag}${step.to}</span>`;
   }).join('');
-  strip.innerHTML = `<span class="tj-label">🧭 Resejournal</span>${entries}`;
+  strip.innerHTML = `<span class="tj-label">🧭 Travel Journal</span>${entries}`;
 }
 document.getElementById('travel-journal').addEventListener('click', function(e) {
   const entry = e.target.closest('.tj-entry');
@@ -399,7 +399,7 @@ function renderPlaces(locations) {
     const icon = TERRAIN_ICONS[loc.terrain] || '❓';
     const tc = travelClass(loc.travel_days);
     const statusClass = loc.current ? 'current' : loc.visited ? 'visited' : 'unknown';
-    const statusText = loc.current ? '📍 Du är här' : loc.visited ? '✓ Besökt' : '◇ Känd';
+    const statusText = loc.current ? '📍 You are here' : loc.visited ? '✓ Visited' : '◇ Known';
     const cardClass = loc.current ? 'current' : loc.visited ? 'visited' : 'unvisited';
     const questBadge = questLocations.has(loc.name) ? '<span style="color:var(--ember);font-size:.7rem;margin-left:.4rem">⚑</span>' : '';
 
@@ -407,7 +407,7 @@ function renderPlaces(locations) {
     if (loc.landmarks && loc.landmarks.length) {
       landmarks = `
         <div class="pc-landmarks">
-          <div class="lm-label">Sevärdheter</div>
+          <div class="lm-label">Sights</div>
           <ul>${loc.landmarks.map(l => `<li>${l}</li>`).join('')}</ul>
         </div>`;
     }
@@ -418,7 +418,7 @@ function renderPlaces(locations) {
           <div class="pc-icon">${icon}</div>
           <div>
             <div class="pc-name">${loc.name}${questBadge}</div>
-            <div class="pc-terrain">${loc.terrain || 'okänd terräng'}</div>
+            <div class="pc-terrain">${loc.terrain || 'unknown terrain'}</div>
           </div>
         </div>
         <div class="pc-desc">${loc.description || I18N.t('En plats i mörkret.')}</div>
@@ -437,7 +437,7 @@ async function loadLocations() {
       fetch('/api/campaign/locations', { credentials: 'include' }),
       fetch('/api/campaign', { credentials: 'include' }),
     ]);
-    if (!locRes.ok) throw new Error('Ingen kampanj');
+    if (!locRes.ok) throw new Error('No campaign');
     const payload = await locRes.json();
     // API:et kan returnera {locations, travel_log} eller en ren array
     const locations = Array.isArray(payload) ? payload : (payload.locations || []);
@@ -478,7 +478,7 @@ async function loadLocations() {
     renderPlaces(locations);
     renderTravelJournal(travelLog);
   } catch (e) {
-    document.getElementById('current-name').textContent = 'Ingen aktiv kampanj';
+    document.getElementById('current-name').textContent = 'No active campaign';
     document.getElementById('ascii-map').style.display = 'none';
     document.getElementById('places-grid').style.display = 'none';
     document.getElementById('empty-state').style.display = 'block';

@@ -1,9 +1,9 @@
 /**
- * 🪟 modal.js — Mörk fantasy bekräftelsemodal
- * Användning: Modal.confirm({ title, body, danger, onConfirm })
+ * 🪟 modal.js — Dark fantasy confirmation modal
+ * Usage: Modal.confirm({ title, body, danger, onConfirm })
  */
 const Modal = (() => {
-  // Injecta CSS en gång
+  // Inject CSS once
   const style = document.createElement('style');
   style.textContent = `
     .modal-overlay {
@@ -79,13 +79,13 @@ const Modal = (() => {
         <div class="modal-title" id="modal-title"></div>
         <div class="modal-body" id="modal-body"></div>
         <div class="modal-actions">
-          <button class="modal-btn cancel" id="modal-cancel">Avbryt</button>
-          <button class="modal-btn confirm" id="modal-confirm">Bekräfta</button>
+          <button class="modal-btn cancel" id="modal-cancel">Cancel</button>
+          <button class="modal-btn confirm" id="modal-confirm">Confirm</button>
         </div>
       </div>`;
     document.body.appendChild(overlay);
 
-    // Stäng vid klick utanför
+    // Close on outside click
     overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
     document.getElementById('modal-cancel').addEventListener('click', close);
     return overlay;
@@ -97,18 +97,18 @@ const Modal = (() => {
 
   return {
     /**
-     * Visa bekräftelsemodal. Returnerar Promise<boolean>.
+     * Show a confirmation modal. Returns Promise<boolean>.
      * @param {Object} opts
-     * @param {string} opts.title - Rubrik
-     * @param {string} opts.body - Brödtext (HTML tillåtet)
-     * @param {string} [opts.icon] - Emoji-ikon
-     * @param {string} [opts.confirmText] - Bekräfta-knapptext
-     * @param {string} [opts.cancelText] - Avbryt-knapptext
-     * @param {boolean} [opts.danger] - Röd danger-variant
-     * @param {Function} [opts.onConfirm] - Körs vid bekräftelse (valfritt, Promise räcker)
+     * @param {string} opts.title - Heading
+     * @param {string} opts.body - Body text (HTML allowed)
+     * @param {string} [opts.icon] - Emoji icon
+     * @param {string} [opts.confirmText] - Confirm button label
+     * @param {string} [opts.cancelText] - Cancel button label
+     * @param {boolean} [opts.danger] - Red danger variant
+     * @param {Function} [opts.onConfirm] - Runs on confirmation (optional; the Promise suffices)
      * @returns {Promise<boolean>}
      */
-    confirm({ title, body, icon = '⚔️', confirmText = 'Bekräfta', cancelText = 'Avbryt', danger = false, onConfirm }) {
+    confirm({ title, body, icon = '⚔️', confirmText = 'Confirm', cancelText = 'Cancel', danger = false, onConfirm }) {
       build();
       const box = document.getElementById('modal-box');
       box.classList.toggle('danger', danger);
@@ -119,7 +119,7 @@ const Modal = (() => {
       document.getElementById('modal-cancel').textContent = cancelText;
 
       return new Promise(resolve => {
-        // Ny confirm-knapp (ta bort gammal lyssnare)
+        // Fresh confirm button (drop old listener)
         const btn = document.getElementById('modal-confirm');
         const newBtn = btn.cloneNode(true);
         btn.parentNode.replaceChild(newBtn, btn);
@@ -129,13 +129,13 @@ const Modal = (() => {
           resolve(true);
         });
 
-        // Avbryt → resolve(false)
+        // Cancel → resolve(false)
         const cancelBtn = document.getElementById('modal-cancel');
         const newCancel = cancelBtn.cloneNode(true);
         cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
         newCancel.addEventListener('click', () => { close(); resolve(false); });
 
-        // Klick utanför → resolve(false)
+        // Outside click → resolve(false)
         overlay.onclick = e => { if (e.target === overlay) { close(); resolve(false); } };
 
         overlay.classList.add('show');

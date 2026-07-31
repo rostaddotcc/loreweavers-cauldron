@@ -18,7 +18,7 @@
  *   I18N.stopSpeaking()   — cancel any ongoing speech
  */
 const I18N = (() => {
-  let _lang = 'sv';
+  let _lang = 'en'; // English-first: UI är engelska; svenska bara via DM-språk-toggle i karaktärsskapandet
   let _initialized = false;
 
   // Originals saved before translation, so switching back to 'sv' restores them.
@@ -1052,6 +1052,16 @@ const I18N = (() => {
     'Kunde inte radera': 'Could not delete',
     'Kunde inte ladda upp: ': 'Could not upload: ',
 
+    // ── character.html: item sheet rows ──
+    'AC-bonus': 'AC bonus',
+    'Laddningar': 'Charges',
+    'Magisk bonus': 'Magic bonus',
+    'Räckvidd': 'Range',
+    '⚔ Utrusta': '⚔ Equip',
+    '🎒 I väska': '🎒 In bag',
+    '🎒 Packa ner': '🎒 Pack away',
+    '🗑 Släng': '🗑 Discard',
+
   };
 
   // ═══════════════════════════════════════
@@ -1062,11 +1072,12 @@ const I18N = (() => {
 
   /**
    * Set the active language and translate the current page.
-   * Called by each page with the campaign's language ('sv' for
-   * pre-campaign pages). Re-entrant: safe to call multiple times.
+   * Called by each page with the campaign's language. Missing/undefined
+   * language → English (UI är engelska-först; svenska väljs explicit).
+   * Re-entrant: safe to call multiple times.
    */
   function init(lang) {
-    _lang = (lang === 'en') ? 'en' : 'sv';
+    _lang = (!lang || lang === 'en') ? 'en' : 'sv';
     _initialized = true;
     document.documentElement.lang = _lang;
     if (_lang === 'en') {

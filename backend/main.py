@@ -1028,8 +1028,26 @@ async def _call_llm_with_reasoning(
         content = message.get("content", "")
         reasoning = (message.get("reasoning_content") or "").strip()
         if not content:
+            # Reasoning-modellen kan ha förbrukat hela budgeten på thinking och
+            # lämnat content tomt. Försök en gång till med en tydlig uppmaning
+            # att skriva svaret som prosa — annars blir det en tyst 502.
+            retry_messages = list(messages) + [
+                {"role": "user", "content": "[System] Skriv nu ditt svar som ren prosa — minst en mening. Börja direkt med svaret."}
+            ]
+            retry_body = dict(body)
+            retry_body["messages"] = retry_messages
+            retry_body["max_tokens"] = max(max_tokens, 2048)
+            logger.warning("🧠 %s: tomt content (%d tecken reasoning) → försöker retry", config.api_model, len(reasoning))
+            async with httpx.AsyncClient(timeout=timeout) as rclient:
+                rresp = await rclient.post(url, headers=headers, json=retry_body)
+                if rresp.status_code == 200:
+                    rdata = rresp.json()
+                    rcontent = (rdata["choices"][0]["message"].get("content") or "").strip()
+                    if rcontent:
+                        logger.info("🧠 %s: retry gav svar (%d tecken)", config.api_model, len(rcontent))
+                        return rcontent, reasoning, rdata.get("usage", {})
             raise RuntimeError(
-                "Modellen returnerade tomt svar (reasoning-modell?)"
+                "Modellen returnerade tomt svar (även efter retry)"
             )
         return content, reasoning, data.get("usage", {})
 

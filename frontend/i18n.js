@@ -321,6 +321,8 @@ const I18N = (() => {
     'DM:ns inre monolog': 'The DM\'s inner monologue',
     ' ord': ' words',
     'Spela upp ljud': 'Play audio',
+    'FÖRDEL': 'ADVANTAGE',
+    'NACKDEL': 'DISADVANTAGE',
     '⚠ Talsyntes stöds inte i denna webbläsare': '⚠ Speech synthesis is not supported in this browser',
 
     // ── chat.html: dice ceremony & rolls ──
@@ -667,6 +669,8 @@ const I18N = (() => {
     'UTFÖR': 'EXECUTE',
     'Vad gör Äventyraren? Skriv fritt — slå, smyg, tala, kasta en besvärjelse…': 'What does the Adventurer do? Write freely — fight, sneak, talk, cast a spell…',
     'Spela upp ljud': 'Play audio',
+    'FÖRDEL': 'ADVANTAGE',
+    'NACKDEL': 'DISADVANTAGE',
     'Namnlös äventyrare': 'Nameless adventurer',
     'Inga besvärjelseplatser — karaktären kastar inte besvärjelser': 'No spell slots — this character does not cast spells',
     'TÅL': 'CON',

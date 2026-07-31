@@ -340,7 +340,10 @@ Extrahera ALLA mekaniska effekter och uppdateringar.
 ### Strid & Hälsa
 - damage: Skada som spelaren eller NPCs tar. Ange target ("player" eller NPC-namn), amount, type.
 - healing: Läkning. Ange target och amount.
-- death: NPCs som dör i denna scen.
+- death: NPCs som dör i denna scen. ENDAST om narrationen entydigt bekräftar döden \\
+  ("dör", "faller död", "kollapsar och rör sig inte", "andas inte längre"). \\
+  Om en NPC bara är sårad, bunden, medvetslös, flyr eller försvinner → INTE död. \\
+  (P3-fix från playthrough: "Hooded Scavenger" markerades död trots att narrationen sa "levande, bunden".)
 
 ### Progression
 - xp: Erfarenhetspoäng. ENDAST för: dråp/besegrade fiender, slutförda quests, \
@@ -1456,10 +1459,16 @@ def format_guardian_summary(
         elif t == "npc_new":
             role = e.get("role", "?")
             relation = e.get("relation", "?")
+            # P2-fix: undvik dubbel-relation ("fiende, fiende") när roll och
+            # relation är samma ord, och översätt relationen i EN-läge.
             if en:
-                lines.append(f"🧙 **New character:** {v} ({role}, {relation})")
+                _rel_en = {"allierad": "ally", "neutral": "neutral", "fiende": "enemy", "okänd": "unknown"}
+                relation = _rel_en.get(str(relation).lower(), relation)
+            meta = f"{role}, {relation}" if str(role).lower() != str(relation).lower() else role
+            if en:
+                lines.append(f"🧙 **New character:** {v} ({meta})")
             else:
-                lines.append(f"🧙 **Ny gestalt:** {v} ({role}, {relation})")
+                lines.append(f"🧙 **Ny gestalt:** {v} ({meta})")
         elif t == "npc_note":
             note = e.get("note", "")
             if en:
@@ -1546,7 +1555,20 @@ def format_guardian_summary(
     time_passed = mech.get("time_passed")
     if time_passed and not any("🕐" in l for l in lines):
         tp_label = "Time passes" if en else "Tid förflyter"
-        lines.append(f"🕐 **{tp_label}:** {time_passed}")
+        # P2-fix: time_passed är ett dict {hours, description} — formatera det
+        # istället för att dumpa rå Python-dict i chatten.
+        if isinstance(time_passed, dict):
+            hours = time_passed.get("hours") or 0
+            desc = (time_passed.get("description") or "").strip()
+            if desc and hours:
+                tp_str = f"{desc} ({hours}h)"
+            elif desc:
+                tp_str = desc
+            else:
+                tp_str = f"{hours}h"
+        else:
+            tp_str = str(time_passed)
+        lines.append(f"🕐 **{tp_label}:** {tp_str}")
 
     rest = mech.get("rest")
     if rest:

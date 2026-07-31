@@ -1594,7 +1594,7 @@
   <!-- ═══════════ COMBAT RAIL — Krigsrådet (dold tills strid) ═══════════ -->
   <div id="combat-rail" class="cr-hidden">
     <div class="cr-head">
-      <span class="cr-round">⚔ ROUND —</span>
+      <span class="cr-round"></span>
       <span class="cr-hp">❤ —</span>
     </div>
     <div class="cr-initiative"></div>
@@ -2140,7 +2140,7 @@ function buildMessage(type, npcKey, text, meta) {
         inner += `<div class="text">${mdToHtml(escapeHtml(seg.text))}</div>`;
       }
     });
-    el.innerHTML = `${avatarHtml('dm', '🧙‍♂️')}<div class="bubble"><button class="tts-btn" title="Spela upp ljud" onclick="playTTS(this)">🔊</button><div class="who">Dungeon Master</div>${inner}${footer}</div>`;
+    el.innerHTML = `${avatarHtml('dm', '🧙‍♂️')}<div class="bubble"><button class="tts-btn" title="${I18N.t('Spela upp ljud')}" onclick="playTTS(this)">🔊</button><div class="who">Dungeon Master</div>${inner}${footer}</div>`;
     // Transkript-parity-nyckel (kollapsad) — samma beräkning som msgDomKey, så
     // guardian-insättning/dedup funkar även när NPC-citat ändrat bubbel-strukturen.
     const tmp = document.createElement('div');
@@ -2520,6 +2520,10 @@ function startTypewriter(msgEl, type) {
 
   _twActive.add(msgEl);
   msgEl.classList.remove('tw-pending');
+  // Dölj modellmetadata-foten under utskrift — annars syns den direkt och
+  // svaret ser "kapadt" ut (P2-fix från playthrough). Visas i finish().
+  const footerEl = msgEl.querySelector('.dm-footer');
+  if (footerEl) footerEl.style.visibility = 'hidden';
   const grand = segs.reduce((a, s) => a + s.total, 0);
   const chunk = Math.max(2, Math.ceil(grand / 240));      // max ~240 ticks
   const interval = grand <= 60 ? 40 : grand <= 220 ? 32 : grand <= 700 ? 24 : 18;
@@ -2580,6 +2584,7 @@ function startTypewriter(msgEl, type) {
     if (done) return;
     done = true;
     _twActive.delete(msgEl);
+    if (footerEl) footerEl.style.visibility = '';
     if (cursor) cursor.remove();
     if (dripTimer) { clearInterval(dripTimer); dripTimer = null; }
     revealUpTo(grand);
@@ -2780,7 +2785,7 @@ async function inlineDiceCeremony(notation, label, roll) {
 
   const verdict = isCrit ? I18N.t('✦ KRITISKT!') : isFail ? I18N.t('✦ PATETISKT!') : '';
   if (roll.advantage) {
-    const advLabel = roll.advMode === 'adv' ? 'FÖRDEL' : 'NACKDEL';
+    const advLabel = roll.advMode === 'adv' ? I18N.t('FÖRDEL') : I18N.t('NACKDEL');
     resultEl.textContent = `${advLabel}: ${roll.raw.join(', ')} → ${roll.chosen}${modStr} = ${roll.total} ${verdict}`.trim();
   } else {
     resultEl.textContent = `${roll.rolls.join(', ')}${modStr} = ${roll.total} ${verdict}`.trim();
@@ -2834,6 +2839,14 @@ function showLevelUp(level) {
 
 // ── DM begär ett kast inline i chatten ──
 function addRollRequest(notation, label) {
+  // En begäran per tur — rensa gamla obesvarade knappar så de inte ackumuleras
+  // i chatten (P2-fix från playthrough: såg 4 st samtidigt).
+  document.querySelectorAll('.roll-request').forEach(el => {
+    if (el.querySelector('.roll-result-inline')) return;   // redan besvarad
+    const oldBtn = el.querySelector('.rr-btn');
+    if (oldBtn && oldBtn.disabled) return;                 // rullning pågår
+    el.closest('.msg.system')?.remove();
+  });
   const el = document.createElement('div');
   el.className = 'msg system';
   const id = 'rr-' + Date.now();
@@ -2854,8 +2867,11 @@ async function answerRollRequest(id, notation, label) {
   btn.disabled = true;
   btn.textContent = diceIconForLabel(label) + ' ' + I18N.t('Rullar…');
 
-  // Fördel/Nackdel (5e): etiketten slutar med FÖRDEL/NACKDEL → rulla 2d20, ta bästa/sämsta
-  const advMode = /(?:FÖRDEL|ADVANTAGE)/i.test(label) ? 'adv' : /(?:NACKDEL|DISADVANTAGE)/i.test(label) ? 'dis' : null;
+  // Fördel/Nackdel (5e): FÖRDEL/NACKDEL kan stå i etiketten ELLER i
+  // notationen (DM:n blandar fritt) → kolla båda (P2-fix från playthrough:
+  // "1d20+5 FÖRDEL" rullade bara 1d20).
+  const rollText = label + ' ' + notation;
+  const advMode = /(?:FÖRDEL|ADVANTAGE)/i.test(rollText) ? 'adv' : /(?:NACKDEL|DISADVANTAGE)/i.test(rollText) ? 'dis' : null;
   let roll;
   if (advMode && /1d20/i.test(notation)) {
     const base = rollDice(notation) || { mod: 0 };
@@ -2890,7 +2906,7 @@ async function answerRollRequest(id, notation, label) {
   // Skicka resultatet till DM (backend) — DM ger utfallet direkt
   isResponding = true;
   document.querySelector('.send-btn')?.setAttribute('disabled', '');
-  showThoughts('narrate');
+  try { showThoughts('narrate'); } catch (e) { console.warn('showThoughts:', e); }
   try {
     const resultMsg = `[Resultat: ${label} → ${roll.total} (${roll.rolls.join(', ')}${modStr})]`;
     const res = await API.chat(resultMsg, currentModel);
@@ -3415,8 +3431,13 @@ async function restoreFromTranscript(fallbackErrorMsg) {
         // Transient systemmeddelande — försvinner efter 6 sekunder
         const sysEl = addMessage('system', null, '⚡ Connection lost — the reply was recovered from the transcript.');
         if (sysEl) setTimeout(() => sysEl.remove(), 6000);
+        return true;
       }
-      return true;
+      // Senaste assistant-meddelandet är REDAN visat → inget nytt svar att
+      // återställa. Timeout/502 var äkta: visa felet istället för att
+      // tyst svälja det (fix: tyst 502 från playthrough).
+      addMessage('system', null, fallbackErrorMsg);
+      return false;
     }
   } catch (e2) { /* transkript också otillgängligt */ }
   addMessage('system', null, fallbackErrorMsg);
@@ -3426,7 +3447,9 @@ async function restoreFromTranscript(fallbackErrorMsg) {
 async function dmRespond(playerText) {
   isResponding = true;
   document.querySelector('.send-btn')?.setAttribute('disabled', '');
-  showThoughts('narrate');
+  // Om showThoughts kastar innan try-blocket fastnar isResponding=true och
+  // send-knappen förblir disabled (P3-fix från playthrough). Skydda det.
+  try { showThoughts('narrate'); } catch (e) { console.warn('showThoughts:', e); }
   try {
     const res = await API.chat(playerText, currentModel);
     hideThoughts();
@@ -3434,9 +3457,11 @@ async function dmRespond(playerText) {
     // Parsa svaret — DM kan inkludera NPC-dialog
     const reply = res.reply || '…';
 
-    // DM:ns inre monolog (reasoning) — visas före svaret, hopfällbar
+    // DM:ns inre monolog (reasoning) — medvetet INTE visad i chatten.
+    // P1-fix från playthrough: rå chain-of-thought (inkl. [KAST:]-taggar och
+    // DC-värden) läckte till spelaren. Loggas bara till konsolen för debugging.
     if (res.reasoning) {
-      addReasoning(res.reasoning);
+      console.debug('[DM reasoning]', res.reasoning);
     }
 
     // Lägg till nya NPCs i registret (från DM:s svar)

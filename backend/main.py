@@ -2053,7 +2053,7 @@ async def _generate_day_entry(username: str, campaign_id: str, prev_day: int) ->
     """Generera en dag-entry för föregående dag via snabb LLM.
     Körs i bakgrunden efter NY_DAG — blockerar aldrig HTTP-svaret."""
     try:
-        st = store.get(username)
+        st = store.get(username, campaign_id)
         if not st:
             return
         world = st.setdefault('world', {})
@@ -2294,7 +2294,7 @@ async def _guardian_manual_correction(
 
 
 async def _guardian_post_dm(
-    username: str, reply: str, player_msg: str,
+    username: str, campaign_id: str, reply: str, player_msg: str,
     effective_turn: int, dm_npcs: list[dict],
     skip_effects: list | None = None,
 ) -> None:
@@ -2302,12 +2302,15 @@ async def _guardian_post_dm(
     Uppdaterar state, sparar Guardian-rapporten i transkriptet.
     Frontend pollar transkriptet för att visa rapporten.
 
+    campaign_id: EXPLICIT kampanj-ID — bakgrundsuppgifter får ALDRIG
+    förlita sig på store.get(username) (aktiv kampanj kan ha bytts).
+
     skip_effects: effekter som REDAN applicerats denna tur via DM-taggar
     (t.ex. [SKADA:12]) — Guardian ska inte applicera dem en andra gång.
     (P0-dedup: se combat-spec B2.)
     """
     try:
-        state = store.get(username)
+        state = store.get(username, campaign_id)
         if not state:
             return
         meta = state.setdefault("meta", {})
@@ -2403,7 +2406,7 @@ async def _post_turn_tasks(
                 return await _call_llm(EXTRACTION_MODEL, messages, temperature=0.2, max_tokens=800)
 
             # Bygg inventory-lista för kontext (så LLM:n inte lägger till duplikat)
-            st = store.get(username)
+            st = store.get(username, campaign_id)
             inv_names = []
             if st:
                 for it in st.get("inventory", []):
@@ -2468,7 +2471,7 @@ async def _post_turn_tasks(
     if turn_count % 5 == 0 and turn_count > 0:
         try:
             if await rag.qdrant_healthy():
-                st = store.get(username)
+                st = store.get(username, campaign_id)
                 if st:
                     recent = store.load_transcript(st, last_n=10)
                     msgs_for_rag = [
@@ -2484,7 +2487,7 @@ async def _post_turn_tasks(
 
     # 3. Sammanfattning (om det är dags)
     try:
-        st = store.get(username)
+        st = store.get(username, campaign_id)
         if st and store.maybe_summarize(st):
             full_transcript = store.load_transcript(st, last_n=60)
             t_text = "\n".join(f"{e['role']}: {e['content']}" for e in full_transcript)
@@ -2504,7 +2507,7 @@ async def _post_turn_tasks(
 
     # 4. Kapitel-sammanfattning (var 5:e scen-sammanfattning, Nivå 2)
     try:
-        st = store.get(username)
+        st = store.get(username, campaign_id)
         if st and store.maybe_chapter(st):
             scenes = store.load_summaries(st, last_n=5)
             s_text = "\n\n".join(
@@ -2527,7 +2530,7 @@ async def _post_turn_tasks(
 
     # 5. Kampanjbåge (var 3:e kapitel, Nivå 3)
     try:
-        st = store.get(username)
+        st = store.get(username, campaign_id)
         if st and store.maybe_arc(st):
             chapters = store.load_chapters(st, last_n=3)
             c_text = "\n\n".join(
@@ -2568,6 +2571,9 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     state = store.get(username)
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj — skapa en först")
+
+    # campaign_id tidigt — bakgrundsuppgifter behöver explicit ID
+    campaign_id = state["meta"].get("campaign_id", "")
 
     # Spelaren svarade på ett tärningskast → rensa väntande kast-begäran.
     # last_roll_requests fungerar då som "obesvarade kast": de finns kvar
@@ -2879,7 +2885,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     # skip_effects = denna turs redan applicerade tagg-effekter (P0-dedup):
     # Guardian ska inte applicera [SKADA:]-taggen en andra gång.
     guardian_task = asyncio.create_task(_guardian_post_dm(
-        username, reply, req.message, effective_turn, list(new_npcs),
+        username, campaign_id, reply, req.message, effective_turn, list(new_npcs),
         skip_effects=meta.get("last_effects") or [],
     ))
     _BACKGROUND_TASKS.add(guardian_task)

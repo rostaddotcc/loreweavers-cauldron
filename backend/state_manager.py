@@ -62,6 +62,10 @@ class CampaignStore:
     def _user_dir(self, user: str) -> Path:
         return CAMPAIGNS_DIR / user
 
+    def _active_file(self, user: str) -> Path:
+        """Pekarfil: innehåller campaign_id för den aktiva kampanjen."""
+        return self._user_dir(user) / ".active_campaign"
+
     def _campaign_dir(self, user: str, campaign_id: str) -> Path:
         return self._user_dir(user) / campaign_id
 
@@ -80,7 +84,7 @@ class CampaignStore:
     # ── CRUD ──
 
     def create(self, user: str, name: str = "", language: str = "en") -> dict:
-        """Skapa ny kampanj. Returnerar state."""
+        """Skapa ny kampanj. Sätter den som aktiv. Returnerar state."""
         campaign_id = uuid.uuid4().hex[:12]
         cdir = self._campaign_dir(user, campaign_id)
         cdir.mkdir(parents=True, exist_ok=True)
@@ -93,10 +97,27 @@ class CampaignStore:
         if language:
             state["meta"]["language"] = language
         self.save(state)
+        # Sätt som aktiv kampanj
+        self._set_active_pointer(user, campaign_id)
         return state
 
+    def _set_active_pointer(self, user: str, campaign_id: str) -> None:
+        """Skriv pekarfilen för aktiv kampanj."""
+        udir = self._user_dir(user)
+        udir.mkdir(parents=True, exist_ok=True)
+        (udir / ".active_campaign").write_text(campaign_id)
+
+    def _get_active_pointer(self, user: str) -> str | None:
+        """Läs pekarfilen för aktiv kampanj."""
+        f = self._active_file(user)
+        if f.exists():
+            cid = f.read_text().strip()
+            if cid and self._state_path(user, cid).exists():
+                return cid
+        return None
+
     def get(self, user: str, campaign_id: str | None = None) -> dict | None:
-        """Hämta en specifik kampanj eller den senast uppdaterade (aktiva)."""
+        """Hämta en specifik kampanj eller den aktiva (via pekarfil)."""
         if campaign_id:
             sp = self._state_path(user, campaign_id)
             if not sp.exists():
@@ -106,7 +127,11 @@ class CampaignStore:
                     return json.load(f)
             except (json.JSONDecodeError, OSError):
                 return None
-        # Ingen campaign_id → returnera senast uppdaterad (aktiva)
+        # Ingen campaign_id → använd pekarfilen (aktiv kampanj)
+        active_id = self._get_active_pointer(user)
+        if active_id:
+            return self.get(user, active_id)
+        # Fallback: senast uppdaterad (bakåtkompatibilitet)
         udir = self._user_dir(user)
         if not udir.exists():
             return None
@@ -175,10 +200,11 @@ class CampaignStore:
         return True
 
     def set_active(self, user: str, campaign_id: str) -> dict | None:
-        """Markera en kampanj som aktiv (uppdatera last_updated)."""
+        """Markera en kampanj som aktiv (pekarfil + last_updated)."""
         state = self.get(user, campaign_id)
         if not state:
             return None
+        self._set_active_pointer(user, campaign_id)
         state["meta"]["last_updated"] = _now()
         self.save(state)
         return state

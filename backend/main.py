@@ -3069,8 +3069,14 @@ async def combat_end_turn(morkrets_token: str | None = Cookie(None)):
     # 2. Applicera fiendeaktioner mekaniskt
     enemy_effects = apply_enemy_actions(state, enemy_actions)
 
-    # 3. Gå till nästa tur (rundövergång, status-tick)
-    combat = combat_advance_turn(state)
+    # 3. Hoppa till nästa runda (alla fiender har agerat via Battle AI)
+    #    advance_turn stegar ett i taget — loopa tills det är spelarens tur igen
+    for _ in range(len(combat.get("turn_order", [])) + 1):
+        combat = combat_advance_turn(state)
+        if not combat.get("active"):
+            break
+        if is_player_turn(combat):
+            break
 
     # 4. Spara
     store.save(state)

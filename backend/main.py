@@ -615,17 +615,14 @@ def _parse_result_tag(text: str, state: dict) -> tuple[str, list[dict]]:
         rolls_str = (m.group(3) or '').strip()
         rolls = [int(r) for r in re.findall(r'\d+', rolls_str)] if rolls_str else []
 
-        # ── INITIATIV — spelarens initiativ i pågående strid ──
+        # ── INITIATIV — spelarens initiativ i pågående strid (v25) ──
         if 'initiativ' in label or 'initiative' in label:
             combat = state.setdefault('world', {}).get('combat')
             if combat and combat.get('active'):
+                # Combat-motorn rullar alla initiativ (spelare + fiender)
+                combat_roll_initiative(state, player_roll=value)
                 char = state.setdefault('character', {})
                 pname = char.get('name', 'Spelaren')
-                initiative = combat.setdefault('initiative', [])
-                # Ersätt befintlig player-entry, behåll insättningsordning
-                # (frontend sorterar; vi sorterar inte här)
-                initiative[:] = [e for e in initiative if e.get('key') != 'player']
-                initiative.append({'key': 'player', 'name': pname, 'value': value})
                 effects.append({'type': 'initiativ', 'value': f"{pname}: {value}"})
                 logger.info("🎲 Initiativ registrerat: %s → %d", pname, value)
             continue

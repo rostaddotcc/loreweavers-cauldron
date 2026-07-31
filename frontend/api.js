@@ -326,44 +326,20 @@ const API = (() => {
       return req('/api/debug/logs' + q);
     },
 
-    // ── World building (prompt → structured world data) ──
-    async buildWorld(prompt, modelId = 'qwen3.8-max') {
+    // ── World building (prompt + optional files → structured world data) ──
+    async buildWorld(prompt, fileList = [], modelId = 'qwen3.8-max') {
       if (MOCK) {
         await new Promise(r => setTimeout(r, 1800));
         return {
           ok: true,
-          merged: { locations: 3, npcs: 4, lore: 6 },
-          locations: [
-            { name: 'The Ash Vale', description: 'A valley where the ash never stops falling' },
-            { name: 'The Abandoned Mill', description: 'A rotting landmark with an eerie green glow' },
-            { name: 'The Last Light Inn', description: 'The only place with living fire' },
-          ],
-          npcs: [
-            { name: 'Morvaine', role: 'The enigmatic sorcerer' },
-            { name: 'Kael Ashenblade', role: 'Mercenary' },
-            { name: 'Lyra Windwhisper', role: 'Wood elf, hunter' },
-            { name: 'Borg Stonehand', role: 'Innkeeper' },
-          ],
-          lore: ['The ashfall began a hundred years ago', 'Something whispers names in the dark'],
-        };
-      }
-      return req('/api/world/build', { method: 'POST', body: JSON.stringify({ prompt, model_id: modelId }) });
-    },
-
-    // ── File import (multipart FormData → extracted campaign data) ──
-    async importFile(file, modelId = 'qwen3.8-max') {
-      if (MOCK) {
-        await new Promise(r => setTimeout(r, 1200 + Math.random() * 800));
-        return {
-          ok: true,
-          filename: file.name,
-          merged: { characters: 1, npcs: 3, locations: 2, lore: 4, items: 2 },
+          merged: { characters: 1, npcs: 4, locations: 3, quests: 1, lore: 6, items: 2 },
         };
       }
       const fd = new FormData();
-      fd.append('file', file);
+      fd.append('prompt', prompt || '');
       fd.append('model_id', modelId);
-      return req('/api/import', { method: 'POST', body: fd });
+      for (const f of fileList) fd.append('files', f);
+      return req('/api/world/build', { method: 'POST', body: fd });
     },
 
     // ── Chat ──
@@ -459,6 +435,34 @@ const API = (() => {
         throw new Error(msg);
       }
       return res.blob();
+    },
+
+    // ── Combat (v25 — stridsmotorn) ──
+    async combatAttack(targetId, attackRoll, damageNotation = '1d8') {
+      return req('/api/combat/attack', {
+        method: 'POST',
+        body: JSON.stringify({ target_id: targetId, attack_roll: attackRoll, damage_notation: damageNotation }),
+      });
+    },
+
+    async combatCast(opts) {
+      return req('/api/combat/cast', { method: 'POST', body: JSON.stringify(opts) });
+    },
+
+    async combatBonus(action) {
+      return req('/api/combat/bonus', { method: 'POST', body: JSON.stringify({ action }) });
+    },
+
+    async combatFlee(dexCheck) {
+      return req('/api/combat/flee', { method: 'POST', body: JSON.stringify({ dex_check: dexCheck }) });
+    },
+
+    async combatEndTurn() {
+      return req('/api/combat/end-turn', { method: 'POST' });
+    },
+
+    async combatState() {
+      return req('/api/combat/state');
     },
 
     // ── Auth guard for pages ──

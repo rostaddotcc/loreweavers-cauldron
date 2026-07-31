@@ -1591,14 +1591,33 @@
     </div>
   </aside>
 
-  <!-- ═══════════ COMBAT RAIL — Krigsrådet (dold tills strid) ═══════════ -->
+  <!-- ═══════════ COMBAT RAIL — Krigsrådet v2 (dold tills strid) ═══════════ -->
   <div id="combat-rail" class="cr-hidden">
     <div class="cr-head">
       <span class="cr-round"></span>
       <span class="cr-hp">❤ —</span>
+      <span class="cr-ac">🛡 —</span>
     </div>
+    <div class="cr-turn-indicator"></div>
     <div class="cr-initiative"></div>
     <div class="cr-enemies"></div>
+    <div class="cr-actions">
+      <div class="cr-action-pips">
+        <span class="cr-pip-label">Action</span>
+        <span class="cr-pip action" data-action="action">●</span>
+        <span class="cr-pip-label">Bonus</span>
+        <span class="cr-pip action" data-action="bonus">●</span>
+        <span class="cr-pip-label">React</span>
+        <span class="cr-pip action" data-action="reaction">●</span>
+      </div>
+      <div class="cr-spell-slots"></div>
+    </div>
+    <div class="cr-buttons">
+      <button class="cr-btn cr-btn-attack" onclick="combatUI.attack()">⚔ Attack</button>
+      <button class="cr-btn cr-btn-cast" onclick="combatUI.cast()">🔮 Cast</button>
+      <button class="cr-btn cr-btn-flee" onclick="combatUI.flee()">🏃 Flee</button>
+      <button class="cr-btn cr-btn-end" onclick="combatUI.endTurn()">⏭ End Turn</button>
+    </div>
     <div class="cr-status"></div>
   </div>
 
@@ -3701,7 +3720,7 @@ function applyCombatTag(el, text, container) {
   renderCombatPanel(combat, reason, container || chat);
 }
 
-// C2 — Krigsrådet (battle rail)
+// C2 — Krigsrådet v2 (battle rail with action economy)
 function renderCombatPanel(combat, reason, container) {
   const rail = document.getElementById('combat-rail');
   if (!rail) return;
@@ -3723,21 +3742,41 @@ function renderCombatPanel(combat, reason, container) {
   rail.classList.remove('cr-hidden');
   const en = (typeof I18N !== 'undefined' && I18N.getLang() === 'en');
 
-  // Rundmarkör (Cinzel, guld, flicker) + spelarens HP
+  // Rundmarkör + spelarens HP + AC
   const roundEl = rail.querySelector('.cr-round');
   if (roundEl) roundEl.textContent = `⚔ ${en ? 'ROUND' : 'RUNDA'} ${combat.round || 1}`;
   const hpEl = rail.querySelector('.cr-hp');
   if (hpEl) hpEl.textContent = `❤ ${_playerHp.current}/${_playerHp.max || '?'}`;
+  const acEl = rail.querySelector('.cr-ac');
+  if (acEl) acEl.textContent = `🛡 ${campaignData?.character?.ac || '?'}`;
 
-  // Initiativ-strip: sorterad fallande, första deltagaren aktiv
+  // Tur-indikator
+  const turnEl = rail.querySelector('.cr-turn-indicator');
+  if (turnEl) {
+    const order = combat.turn_order || [];
+    const idx = combat.current_index || 0;
+    const current = order[idx];
+    if (current) {
+      const isPlayer = current.key === 'player';
+      const nm = isPlayer ? (en ? 'YOUR TURN' : 'DIN TUR') : current.name;
+      turnEl.innerHTML = `<span class="cr-turn${isPlayer ? ' cr-turn-player' : ' cr-turn-enemy'}">${isPlayer ? '⚡' : '👹'} ${escapeHtml(nm)}</span>`;
+    } else {
+      turnEl.innerHTML = '';
+    }
+  }
+
+  // Initiativ-strip: sorterad fallande, aktuell deltagare markerad
   const ipEl = rail.querySelector('.cr-initiative');
   if (ipEl) {
-    const entries = (combat.initiative || []).slice().sort((a, b) => (b.value || 0) - (a.value || 0));
+    const entries = (combat.turn_order || []).slice();
+    const currentIdx = combat.current_index || 0;
     ipEl.innerHTML = entries.length
       ? entries.map((e, i) => {
           const isPlayer = e.key === 'player';
           const nm = isPlayer ? (en ? 'You' : 'Du') : (e.name || '?');
-          return `<span class="cr-ip${i === 0 ? ' active' : ''}${isPlayer ? ' player' : ''}">${escapeHtml(nm)}: ${e.value || 0}</span>`;
+          const isCurrent = i === currentIdx;
+          const acted = e.acted ? ' acted' : '';
+          return `<span class="cr-ip${isCurrent ? ' active' : ''}${isPlayer ? ' player' : ''}${acted}">${escapeHtml(nm)}: ${e.initiative || 0}</span>`;
         }).join('')
       : `<span class="cr-none">${en ? 'No initiative yet' : 'Inget initiativ ännu'}</span>`;
   }
@@ -3747,6 +3786,28 @@ function renderCombatPanel(combat, reason, container) {
   if (enEl) {
     const enemies = (combat.enemies || []).filter(e => e.alive !== false);
     enEl.innerHTML = enemies.length ? enemies.map(e => enemyTokenHtml(e)).join('') : '';
+  }
+
+  // Action economy pips
+  const pa = combat.player_actions || {};
+  rail.querySelectorAll('.cr-pip.action').forEach(pip => {
+    const action = pip.dataset.action;
+    const available = pa[action] !== false;
+    pip.classList.toggle('spent', !available);
+    pip.textContent = available ? '●' : '○';
+  });
+
+  // Spell slots
+  const ssEl = rail.querySelector('.cr-spell-slots');
+  if (ssEl) {
+    const ss = campaignData?.character?.spell_slots || {};
+    if (ss.max > 0) {
+      let pips = '';
+      for (let i = 0; i < ss.max; i++) pips += i < (ss.current || 0) ? '<span class="cr-ss full">◆</span>' : '<span class="cr-ss">◇</span>';
+      ssEl.innerHTML = `<span class="cr-ss-label">✦</span>${pips}`;
+    } else {
+      ssEl.innerHTML = '';
+    }
   }
 
   // Statusrad: dödsräddningspips när spelaren är på 0 HP
@@ -3892,6 +3953,230 @@ function maybeInitiativeReveal(combat, container) {
 
 // C5 — Resume-recap: "Senast i Mörkrets Rike…" (en gång per tab-session)
 const RESUME_FLAG = 'dnd_resume_shown';
+
+// ═══════════════════════════════════════
+// ⚔️ COMBAT UI — action-knappar (v25)
+// ═══════════════════════════════════════
+const combatUI = {
+  _busy: false,
+
+  _getCombat() { return _lastCombatJson; },
+
+  _en() { return (typeof I18N !== 'undefined' && I18N.getLang() === 'en'); },
+
+  _aliveEnemies() {
+    const c = this._getCombat();
+    return c ? (c.enemies || []).filter(e => e.alive !== false) : [];
+  },
+
+  _pickTarget() {
+    const enemies = this._aliveEnemies();
+    if (!enemies.length) return null;
+    if (enemies.length === 1) return enemies[0];
+    // Visa enkel mål-väljare
+    const en = this._en();
+    const names = enemies.map((e, i) => `${i + 1}. ${e.name} (${e.hp}/${e.max_hp} HP)`).join('\n');
+    const choice = prompt(en ? 'Choose target:\n' + names : 'Välj mål:\n' + names);
+    if (!choice) return null;
+    const idx = parseInt(choice) - 1;
+    return enemies[idx] || null;
+  },
+
+  async attack() {
+    if (this._busy) return;
+    const target = this._pickTarget();
+    if (!target) return;
+
+    // Spelaren slår attack (1d20 + attack-modifierare)
+    const char = campaignData?.character || {};
+    const strMod = char.abilities?.STR?.mod || 0;
+    const dexMod = char.abilities?.DEX?.mod || 0;
+    const prof = char.proficiency || 2;
+    // Anta att spelaren använder sin bästa attack-mod
+    const atkMod = Math.max(strMod, dexMod) + prof;
+
+    // Rulla 1d20 + mod via tärnings-API
+    this._busy = true;
+    try {
+      const dice = await fetch('/api/dice', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notation: `1d20+${atkMod}` }),
+      }).then(r => r.json());
+
+      const attackRoll = dice.total || dice.result || 10;
+
+      // Hämta vapen-skada
+      const inv = campaignData?._raw?.inventory || [];
+      const weapon = inv.find(it => it.equipped && it.damage_dice) || inv.find(it => it.damage_dice);
+      const dmgNotation = weapon?.damage_dice || '1d8';
+
+      const result = await API.combatAttack(target.id, attackRoll, dmgNotation);
+
+      // Visa resultat i chatten
+      const en = this._en();
+      const r = result.result;
+      let msg = '';
+      if (r.hit) {
+        msg = en
+          ? `⚔️ You hit **${r.target}** for **${r.damage} damage**! (roll ${r.attack_roll} vs AC ${r.target_ac})`
+          : `⚔️ Du träffar **${r.target}** för **${r.damage} skada**! (slag ${r.attack_roll} mot AC ${r.target_ac})`;
+        if (r.killed) msg += en ? ' 💀 **Slain!**' : ' 💀 **Dräpt!**';
+      } else {
+        msg = en
+          ? `🛡️ You miss **${r.target}** (roll ${r.attack_roll} vs AC ${r.target_ac})`
+          : `🛡️ Du missar **${r.target}** (slag ${r.attack_roll} mot AC ${r.target_ac})`;
+      }
+      this._chatMsg('system', msg);
+
+      // Uppdatera panelen
+      if (result.combat) {
+        _lastCombat = null; // force re-render
+        renderCombatPanel(result.combat);
+      }
+    } catch (e) {
+      this._chatMsg('system', `⚠️ ${e.message}`);
+    }
+    this._busy = false;
+  },
+
+  async cast() {
+    if (this._busy) return;
+    const en = this._en();
+    const spellName = prompt(en ? 'Spell name:' : 'Besvärjelsens namn:');
+    if (!spellName) return;
+
+    const target = this._pickTarget();
+    this._busy = true;
+    try {
+      const char = campaignData?.character || {};
+      const chaMod = char.abilities?.CHA?.mod || 0;
+      const intMod = char.abilities?.INT?.mod || 0;
+      const wisMod = char.abilities?.WIS?.mod || 0;
+      const prof = char.proficiency || 2;
+      const spellMod = Math.max(chaMod, intMod, wisMod) + prof;
+
+      // Rulla attack om det behövs
+      const dice = await fetch('/api/dice', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notation: `1d20+${spellMod}` }),
+      }).then(r => r.json());
+
+      const result = await API.combatCast({
+        target_id: target?.id ?? null,
+        spell_name: spellName,
+        attack_roll: dice.total || dice.result || 10,
+        damage_notation: '2d6', // default — DM kan justera
+        slot_level: 1,
+      });
+
+      const r = result.result;
+      let msg = en
+        ? `🔮 You cast **${spellName}**`
+        : `🔮 Du kastar **${spellName}**`;
+      if (r.damage) msg += en ? ` — **${r.damage} damage!**` : ` — **${r.damage} skada!**`;
+      if (r.killed) msg += en ? ' 💀 **Slain!**' : ' 💀 **Dräpt!**';
+      this._chatMsg('system', msg);
+
+      if (result.combat) {
+        _lastCombat = null;
+        renderCombatPanel(result.combat);
+      }
+      // Uppdatera spell slots i sidebar
+      refreshCharacter();
+    } catch (e) {
+      this._chatMsg('system', `⚠️ ${e.message}`);
+    }
+    this._busy = false;
+  },
+
+  async flee() {
+    if (this._busy) return;
+    const en = this._en();
+    if (!confirm(en ? 'Attempt to flee from combat?' : 'Försöka fly från striden?')) return;
+
+    this._busy = true;
+    try {
+      const char = campaignData?.character || {};
+      const dexMod = char.abilities?.DEX?.mod || 0;
+      const dice = await fetch('/api/dice', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notation: `1d20+${dexMod}` }),
+      }).then(r => r.json());
+
+      const result = await API.combatFlee(dice.total || dice.result || 10);
+      const r = result.result;
+      if (r.success) {
+        this._chatMsg('system', en
+          ? `🏃 You flee! (roll ${r.roll} vs DC ${r.dc}) — Combat over.`
+          : `🏃 Du flyr! (slag ${r.roll} mot DC ${r.dc}) — Striden är över.`);
+        _lastCombat = null;
+        const rail = document.getElementById('combat-rail');
+        if (rail) rail.classList.add('cr-hidden');
+      } else {
+        this._chatMsg('system', en
+          ? `🏃 You fail to flee! (roll ${r.roll} vs DC ${r.dc})`
+          : `🏃 Du misslyckas fly! (slag ${r.roll} mot DC ${r.dc})`);
+      }
+    } catch (e) {
+      this._chatMsg('system', `⚠️ ${e.message}`);
+    }
+    this._busy = false;
+  },
+
+  async endTurn() {
+    if (this._busy) return;
+    this._busy = true;
+    const en = this._en();
+
+    // Visa "fiendernas tur"-indikator
+    const statusEl = document.getElementById('guardian-status');
+    if (statusEl) statusEl.style.display = 'flex';
+
+    try {
+      const result = await API.combatEndTurn();
+
+      // Visa Guardian-rapporten i chatten
+      if (result.guardian_report) {
+        const el = buildMessage('guardian', null, result.guardian_report);
+        if (el) {
+          chat.appendChild(el);
+          chat.scrollTop = chat.scrollHeight;
+          applyCombatTag(el, result.guardian_report);
+        }
+      }
+
+      // Uppdatera HP
+      if (result.player_hp) {
+        _playerHp = result.player_hp;
+      }
+
+      // Uppdatera panelen
+      if (result.combat) {
+        _lastCombat = null;
+        renderCombatPanel(result.combat);
+      }
+
+      // Uppdatera character sidebar
+      refreshCharacter();
+    } catch (e) {
+      this._chatMsg('system', `⚠️ ${e.message}`);
+    }
+
+    if (statusEl) statusEl.style.display = 'none';
+    this._busy = false;
+  },
+
+  _chatMsg(type, text) {
+    const el = buildMessage(type, null, text);
+    if (el) {
+      chat.appendChild(el);
+      chat.scrollTop = chat.scrollHeight;
+    }
+  },
+};
 function maybeShowResumeCard(messages) {
   try {
     if (sessionStorage.getItem(RESUME_FLAG)) return null;

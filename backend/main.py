@@ -108,9 +108,25 @@ from guardian import (
     _combat_tag,
     _XP_THRESHOLDS as XP_THRESHOLDS,  # D&D 5e XP-trösklar (definieras i guardian.py)
     apply_mechanics,
+    apply_enemy_actions,
+    battle_ai_decide,
     format_guardian_summary,
     guardian_check_roll,
     guardian_extract_mechanics,
+)
+from combat import (
+    start_combat as combat_start,
+    roll_initiative as combat_roll_initiative,
+    advance_turn as combat_advance_turn,
+    player_attack as combat_player_attack,
+    player_cast_spell as combat_player_cast,
+    player_use_bonus_action as combat_bonus_action,
+    attempt_flee as combat_flee,
+    end_combat as combat_end,
+    build_combat_context,
+    combat_tag as combat_tag_fn,
+    is_player_turn,
+    get_current_actor,
 )
 
 app = FastAPI(title="Mörkrets Rike", version="1.0.0")
@@ -508,25 +524,23 @@ def _parse_mechanical_tags(text: str, state: dict) -> tuple[str, dict, list[dict
 
 
 def _parse_strid_tag(text: str, state: dict) -> tuple[str, list[dict]]:
-    """Extrahera [STRID:namn|hp|ac, namn2|hp|ac] → world['combat'].
+    """Extrahera [STRID:namn|hp|ac, namn2|hp|ac] → combat-motorn (v25).
 
-    DM öppnar striden med taggen; Guardian (Spår A) håller sedan reda på
-    skada, rundor och turordning. Taggen stripas ur narrationen.
-    Strukturen följer combat-specen EXAKT (frontend + Guardian läser den).
+    DM öppnar striden med taggen; combat.py skapar world.combat med
+    turordning, action economy och fiende-stats. Taggen stripas ur narrationen.
     """
     effects: list[dict] = []
     m = STRID_PATTERN.search(text)
     if not m:
         return text, effects
     clean = STRID_PATTERN.sub('', text)
-    # Taggen lämnar ofta dubbelblanksteg — kollapsa (rör INTE radbrytningar)
     clean = re.sub(r'[ \t]{2,}', ' ', clean).strip()
 
     world = state.setdefault('world', {})
     combat = world.get('combat')
     existing = bool(combat and combat.get('active'))
 
-    enemies: list[dict] = []
+    enemies_in: list[dict] = []
     names: list[str] = []
     for entry in m.group(1).split(','):
         entry = entry.strip()
@@ -539,35 +553,40 @@ def _parse_strid_tag(text: str, state: dict) -> tuple[str, list[dict]]:
         try:
             hp = int(parts[1])
         except (IndexError, ValueError):
-            hp = 1
+            hp = 7
         try:
             ac = int(parts[2])
         except (IndexError, ValueError):
             ac = 10
-        enemies.append({
-            'id': len(enemies),
-            'name': name,
-            'hp': hp,
-            'max_hp': hp,
-            'ac': ac,
-            'alive': True,
-            'statuses': [],
+        # attack_bonus och damage_dice: DM kan ange som 4:e och 5:e fält
+        try:
+            atk_bonus = int(parts[3])
+        except (IndexError, ValueError):
+            atk_bonus = 3
+        try:
+            dmg_dice = parts[4]
+        except IndexError:
+            dmg_dice = "1d6+1"
+        enemies_in.append({
+            "name": name, "hp": hp, "ac": ac,
+            "attack_bonus": atk_bonus, "damage_dice": dmg_dice,
         })
         names.append(name)
 
     if existing:
-        # Redan aktiv strid → ersätt fiendelistan men behåll runda/initiativ
-        combat['enemies'] = enemies
+        # Redan aktiv strid → lägg till nya fiender
+        for e in enemies_in:
+            combat.setdefault('enemies', []).append({
+                'id': len(combat.get('enemies', [])),
+                'name': e['name'], 'hp': e['hp'], 'max_hp': e['hp'],
+                'ac': e['ac'], 'alive': True, 'statuses': [],
+                'attack_bonus': e.get('attack_bonus', 3),
+                'damage_dice': e.get('damage_dice', '1d6+1'),
+                'actions_remaining': 1,
+            })
     else:
-        world['combat'] = {
-            'active': True,
-            'round': 1,
-            'initiative': [],
-            'enemies': enemies,
-            'log': [],
-            'started_turn': state.setdefault('meta', {}).get('turn_count', 0),
-            'ended_turn': None,
-        }
+        # Ny strid → combat-motorn
+        combat_start(state, enemies_in)
 
     if names:
         effects.append({'type': 'combat_start', 'value': ', '.join(names)})
@@ -1742,6 +1761,20 @@ def compact_state(state: dict, language: str = "sv") -> str:
 
     lines = [f"{name}, {klass} niv {level}. HP {hp_cur}/{hp_max}. AC {ac}. Plånbok: {wallet}. Myntvikt: {coin_wt} lb."]
 
+    # Bakgrund / backstory
+    background = char.get("background", "")
+    if background:
+        lines.append(f"Bakgrund: {background}")
+
+    # Karaktärsutveckling (Guardian character_updates → character.updates)
+    char_updates = char.get("updates", [])
+    if char_updates:
+        upd_str = "; ".join(
+            u.get("text", "")[:120] if isinstance(u, dict) else str(u)[:120]
+            for u in char_updates[-5:]  # senaste 5
+        )
+        lines.append(f"Karaktärsutveckling: {upd_str}")
+
     # Utrustade föremål
     equipped = [it.get("name", "?") for it in state.get("inventory", []) if it.get("equipped")]
     if equipped:
@@ -1875,6 +1908,21 @@ def _build_system_prompt(
         if world.get("weather"):
             parts.append(f"Väder: {world['weather']}")
 
+    # Locations (förberedda/importerade platser)
+    locations = state.get("locations", [])
+    if locations:
+        loc_str = "; ".join(
+            f"{l.get('name', '?')}: {l.get('description', '')[:80]}"
+            for l in locations[:12]
+        )
+        parts.append(f"\n## Kända platser\n{loc_str}")
+
+    # Lore (världsdetaljer, historia)
+    lore = state.get("lore", [])
+    if lore:
+        lore_str = "; ".join(str(item)[:100] for item in lore[:10])
+        parts.append(f"\n## Världens lore\n{lore_str}")
+
     # NPCs
     npcs = state.get("npcs", [])
     if npcs:
@@ -1891,35 +1939,11 @@ def _build_system_prompt(
         q_str = "; ".join(q.get("name", "?") for q in active[:5])
         parts.append(f"\n## Aktiva uppdrag\n{q_str}")
 
-    # ── ⚔️ PÅGÅENDE STRID — combat-tracker (v23) ──
-    # Injiceras när world.combat är aktiv: runda, fiender (HP/AC),
-    # turordning och spelarens HP/AC så DM:n kan hålla koll utan att gissa.
-    combat = world.get("combat")
-    if combat and combat.get("active"):
-        char = state.get("character", {})
-        hp = char.get("hp", {})
-        hp_cur = hp.get("current", 0)
-        hp_max = hp.get("max", 0)
-        ac = char.get("ac", 10)
-        c_lines = [
-            "\n## ⚔️ PÅGÅENDE STRID",
-            f"Runda: {combat.get('round', 1)}",
-        ]
-        enemies = [e for e in combat.get("enemies", []) if e.get("alive", True)]
-        if enemies:
-            e_str = ", ".join(
-                f"{e.get('name', '?')} ({e.get('hp', '?')}/{e.get('max_hp', '?')} HP, AC {e.get('ac', '?')})"
-                for e in enemies
-            )
-            c_lines.append(f"Fiender (HP/AC): {e_str}")
-        initiative = combat.get("initiative", [])
-        if initiative:
-            order = " → ".join(f"[{i.get('name', '?')}]" for i in initiative)
-            c_lines.append(f"Turordning: {order}")
-        else:
-            c_lines.append("Initiativ ännu ej rullat.")
-        c_lines.append(f"Ditt HP: {hp_cur}/{hp_max} · Ditt AC: {ac}")
-        parts.append("\n".join(c_lines))
+    # ── ⚔️ PÅGÅENDE STRID — combat-motor (v25) ──
+    # Byggd av combat.py: turordning, action economy, status, fiende-HP/AC.
+    combat_ctx = build_combat_context(state, language=lang)
+    if combat_ctx:
+        parts.append("\n" + combat_ctx)
 
     # ── 💀 DÖDSRÄDDNING — spelaren är nere (v23) ──
     # Vid 0 HP MÅSTE DM:n begära dödsräddning varje runda; Guardian/main
@@ -2074,6 +2098,201 @@ async def _generate_day_entry(username: str, campaign_id: str, prev_day: int) ->
 
 
 # ── Guardian POST-DM: kör i bakgrunden, blockerar ALDRIG HTTP-svaret ──
+# ═══════════════════════════════════════
+# GUARDIAN MANUELL KORRIGERING (/guardian)
+# ═══════════════════════════════════════
+
+GUARDIAN_CORRECTION_SYSTEM = """\
+You are the Guardian — a mechanical auditor for a D&D 5e campaign.
+The player has asked you to make a specific correction to the campaign state.
+
+You will receive:
+1. The current campaign state (NPCs, inventory, quests, character)
+2. Recent conversation history for context
+3. The player's correction instruction
+
+Analyze the instruction and return a JSON object with the corrections to apply.
+You are FREE to interpret the instruction broadly — the player trusts your judgment.
+
+Return ONLY valid JSON (no markdown):
+{
+  "npc_remove": ["Name1", "Name2"],
+  "npc_add": [{"name": "", "role": "", "relation": "neutral", "notes": "", "alive": true}],
+  "npc_relations": [{"name": "", "new_relation": ""}],
+  "items_remove": ["ItemName"],
+  "items_add": [{"name": "", "type": "", "qty": 1}],
+  "quest_updates": [{"name": "", "new_status": "aktiv|slutförd|misslyckad"}],
+  "hp_set": null,
+  "report": "A short summary of what you changed and why (shown to the player)"
+}
+
+Rules:
+- Only include fields that need changes. Omit or null for no change.
+- npc_remove: exact names to delete (case-insensitive match).
+- For duplicates: keep the BEST entry, remove the rest.
+- report: ALWAYS fill this — it's shown to the player as the Guardian's response.
+- Be conservative: only change what the player asked for.
+"""
+
+
+async def _guardian_manual_correction(
+    instruction: str,
+    state: dict,
+    username: str,
+    model_call_fn,
+    language: str = "sv",
+) -> str:
+    """Run a manual Guardian correction. Returns the formatted report string."""
+    from guardian import _format_state_for_guardian, apply_mechanics
+
+    state_ctx = _format_state_for_guardian(state, language)
+
+    # Recent transcript for context
+    recent = store.load_transcript(state, last_n=8)
+    history_lines = []
+    for entry in recent:
+        role = entry.get("role", "?")
+        content = entry.get("content", "")[:300]
+        if role == "guardian":
+            continue
+        label = "Player" if role == "user" else "DM"
+        history_lines.append(f"{label}: {content}")
+    history_block = "\n".join(history_lines) if history_lines else "(no recent history)"
+
+    user_msg = (
+        f"## Current State\n{state_ctx}\n\n"
+        f"## Recent Conversation\n{history_block}\n\n"
+        f"## Player's Correction Instruction\n{instruction}\n\n"
+        "Apply the corrections:"
+    )
+
+    messages = [
+        {"role": "system", "content": GUARDIAN_CORRECTION_SYSTEM},
+        {"role": "user", "content": user_msg},
+    ]
+
+    raw = await model_call_fn(messages)
+
+    # Parse JSON
+    import re as _re
+    cleaned = _re.sub(r"^```(?:json)?\s*", "", raw.strip())
+    cleaned = _re.sub(r"\s*```$", "", cleaned)
+    try:
+        data = json.loads(cleaned)
+    except json.JSONDecodeError:
+        # Try to find { ... }
+        match = _re.search(r"\{.*\}", cleaned, _re.DOTALL)
+        if match:
+            data = json.loads(match.group())
+        else:
+            return f"🛡️ **Guardian** · Manual Correction\n⚠️ Could not parse response. Raw:\n{raw[:500]}"
+
+    # Build a mechanics dict that apply_mechanics understands
+    effects = []
+    report_lines = []
+
+    # NPC removals
+    npcs = state.get("npcs", [])
+    for rname in data.get("npc_remove", []):
+        rname_lower = rname.strip().lower()
+        for i, npc in enumerate(npcs):
+            if npc.get("name", "").lower() == rname_lower:
+                removed = npcs.pop(i)
+                effects.append({"type": "korrigering", "value": f"NPC removed: {removed.get('name', '?')}"})
+                report_lines.append(f"🗑️ **NPC removed:** {removed.get('name', '?')}")
+                break
+
+    # NPC additions
+    for npc in data.get("npc_add", []):
+        if isinstance(npc, dict) and npc.get("name"):
+            existing = {n.get("name", "").lower() for n in npcs}
+            if npc["name"].lower() not in existing:
+                npcs.append({
+                    "name": npc["name"],
+                    "role": npc.get("role", "unknown"),
+                    "relation": npc.get("relation", "neutral"),
+                    "notes": npc.get("notes", ""),
+                    "alive": npc.get("alive", True),
+                })
+                report_lines.append(f"🧙 **NPC added:** {npc['name']} ({npc.get('role', '?')})")
+
+    # NPC relation changes
+    for rel in data.get("npc_relations", []):
+        rname = rel.get("name", "")
+        new_rel = rel.get("new_relation", "")
+        for npc in npcs:
+            if npc.get("name", "").lower() == rname.lower():
+                old_rel = npc.get("relation", "?")
+                npc["relation"] = new_rel
+                report_lines.append(f"🤝 **{rname}:** {old_rel} → {new_rel}")
+                break
+
+    # Item removals
+    inv = state.get("inventory", [])
+    for item_name in data.get("items_remove", []):
+        item_lower = item_name.strip().lower()
+        for i, it in enumerate(inv):
+            if it.get("name", "").lower() == item_lower:
+                removed = inv.pop(i)
+                report_lines.append(f"🗑️ **Item removed:** {removed.get('name', '?')}")
+                break
+
+    # Item additions
+    for item in data.get("items_add", []):
+        if isinstance(item, dict) and item.get("name"):
+            inv.append({
+                "id": f"guardian-{len(inv)}",
+                "name": item["name"],
+                "type": item.get("type", "Annat"),
+                "qty": item.get("qty", 1),
+                "weight": 0,
+                "equipped": False,
+                "rarity": "normal",
+                "description": item.get("description", ""),
+            })
+            report_lines.append(f"📦 **Item added:** {item['name']}")
+
+    # Quest status updates
+    for qu in data.get("quest_updates", []):
+        qname = qu.get("name", "")
+        new_status = qu.get("new_status", "")
+        for quest in state.get("quests", []):
+            if quest.get("name", "").lower() == qname.lower():
+                quest["status"] = new_status
+                report_lines.append(f"📜 **Quest updated:** {qname} → {new_status}")
+                break
+
+    # HP override
+    hp_set = data.get("hp_set")
+    if hp_set is not None:
+        ch = state.get("character", {})
+        hp = ch.setdefault("hp", {})
+        hp["current"] = int(hp_set)
+        report_lines.append(f"💚 **HP set to:** {hp_set}/{hp.get('max', '?')}")
+
+    # Save state
+    store.save(state)
+
+    # Build report
+    report_text = data.get("report", "")
+    header = "🛡️ **Guardian** · Manual Correction"
+    if report_lines:
+        body = "\n".join(report_lines)
+        if report_text:
+            body += f"\n\n💬 {report_text}"
+    else:
+        body = report_text or "No changes were needed."
+
+    # Store last_effects so DM sees the changes next turn
+    if effects:
+        meta = state.setdefault("meta", {})
+        existing = meta.get("last_effects", [])
+        existing.extend(effects)
+        meta["last_effects"] = existing
+
+    return f"{header}\n{body}"
+
+
 async def _guardian_post_dm(
     username: str, reply: str, player_msg: str,
     effective_turn: int, dm_npcs: list[dict],
@@ -2364,6 +2583,33 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         if result_effects:
             logger.info("🎲 Resultat-effekter: %s",
                         ", ".join(str(e.get("value", "?")) for e in result_effects))
+
+    # ── /guardian <instruktion> — manuell korrigering ──
+    # Spelaren kan be Guardian justera state direkt (ta bort dubletter,
+    # fixa items, ändra relations). Guardian får state + transkript +
+    # instruktion och returnerar JSON som appliceras. DM informeras nästa tur.
+    if req.message.strip().lower().startswith("/guardian"):
+        instruction = req.message.strip()[len("/guardian"):].strip()
+        if not instruction:
+            return {"reply": "🛡️ Usage: `/guardian <instruction>` — e.g. `/guardian remove duplicate NPCs`", "turn_count": state["meta"].get("turn_count", 0)}
+
+        try:
+            _tg = time.time()
+            guardian_report = await _guardian_manual_correction(
+                instruction, state, username,
+                lambda msgs: _call_llm(GUARDIAN_MODEL, msgs, temperature=0.1, max_tokens=2048),
+                language=_get_lang(state),
+            )
+            logger.info("🛡️ Guardian manuell korrigering (%.1fs): %s", time.time() - _tg, guardian_report[:100])
+
+            # Spara Guardian-rapporten i transkriptet
+            store.append_message(state, "guardian", guardian_report, meta={"turn": state["meta"].get("turn_count", 0), "manual": True})
+            store.save(state)
+
+            return {"reply": guardian_report, "turn_count": state["meta"].get("turn_count", 0)}
+        except Exception as e:
+            logger.error("🛡️ Guardian manuell korrigering misslyckades: %s", e)
+            return {"reply": f"🛡️ Guardian could not process the correction: {e}", "turn_count": state["meta"].get("turn_count", 0)}
 
     # Bygg meddelandelista — spelarens meddelande sparas först EFTER att LLM:n svarat,
     # så ett misslyckat anrop lämnar inga spår i transkriptet.
@@ -2674,6 +2920,242 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         "effects": effects,
         "guardian_summary": "",
         "guardian_pending": True,
+    }
+
+
+# ═══════════════════════════════════════
+# COMBAT ENDPOINTS — stridsmotorn (v25)
+# ═══════════════════════════════════════
+
+
+class CombatAttackRequest(BaseModel):
+    target_id: int
+    attack_roll: int  # 1d20 + mod (total)
+    damage_notation: str = "1d8"  # skadetärning
+
+
+class CombatCastRequest(BaseModel):
+    target_id: int | None = None
+    spell_name: str = "Besvärjelse"
+    attack_roll: int | None = None
+    save_dc: int | None = None
+    damage_notation: str | None = None
+    slot_level: int = 1
+
+
+class CombatFleeRequest(BaseModel):
+    dex_check: int  # 1d20 + DEX-mod (total)
+
+
+@app.post("/api/combat/attack")
+async def combat_attack(req: CombatAttackRequest, morkrets_token: str | None = Cookie(None)):
+    """Spelaren attackerar en fiende i pågående strid."""
+    payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    result = combat_player_attack(state, req.target_id, req.attack_roll, req.damage_notation)
+    if result.get("error"):
+        raise HTTPException(400, result["error"])
+
+    # Spara combat-state
+    store.save(state)
+
+    # Generera [COMBAT:]-tagg för frontend
+    combat = state.get("world", {}).get("combat")
+    tag = combat_tag_fn(combat) if combat else ""
+
+    return {
+        "ok": True,
+        "result": result,
+        "combat_tag": tag,
+        "combat": combat,
+    }
+
+
+@app.post("/api/combat/cast")
+async def combat_cast(req: CombatCastRequest, morkrets_token: str | None = Cookie(None)):
+    """Spelaren kastar en besvärjelse."""
+    payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    result = combat_player_cast(
+        state, req.target_id, req.spell_name,
+        req.attack_roll, req.save_dc, req.damage_notation, req.slot_level,
+    )
+    if not result.get("success"):
+        raise HTTPException(400, result.get("error", "Kast misslyckades"))
+
+    store.save(state)
+    combat = state.get("world", {}).get("combat")
+    return {"ok": True, "result": result, "combat": combat}
+
+
+@app.post("/api/combat/bonus")
+async def combat_bonus(req: dict, morkrets_token: str | None = Cookie(None)):
+    """Spelaren använder sin bonus action."""
+    payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    action_name = req.get("action", "Bonus action")
+    result = combat_bonus_action(state, action_name)
+    if not result.get("success"):
+        raise HTTPException(400, result.get("error", "Bonus action misslyckades"))
+
+    store.save(state)
+    combat = state.get("world", {}).get("combat")
+    return {"ok": True, "result": result, "combat": combat}
+
+
+@app.post("/api/combat/flee")
+async def combat_flee_endpoint(req: CombatFleeRequest, morkrets_token: str | None = Cookie(None)):
+    """Spelaren försöker fly från striden."""
+    payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    result = combat_flee(state, req.dex_check)
+    store.save(state)
+
+    combat = state.get("world", {}).get("combat")
+    return {"ok": True, "result": result, "combat": combat}
+
+
+@app.post("/api/combat/end-turn")
+async def combat_end_turn(morkrets_token: str | None = Cookie(None)):
+    """Spelaren avslutar sin tur → Battle AI kör alla fienders turer.
+
+    Detta är den centrala endpointen: efter att spelaren agerat (attack/cast/bonus)
+    anropas denna för att gå vidare i turordningen. Battle AI bestämmer fiendernas
+    handlingar och applicerar dem mekaniskt (attack mot AC, skada, status).
+    """
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    combat = state.get("world", {}).get("combat")
+    if not combat or not combat.get("active"):
+        raise HTTPException(400, "Ingen aktiv strid")
+
+    lang = _get_lang(state)
+
+    # 1. Battle AI bestämmer fiendernas handlingar
+    try:
+        enemy_actions = await battle_ai_decide(
+            state,
+            lambda msgs: _call_llm(GUARDIAN_MODEL, msgs, temperature=0.3, max_tokens=2048),
+            language=lang,
+        )
+    except Exception as e:
+        logger.warning("⚔️ Battle AI hoppade över: %s", e)
+        enemy_actions = []
+
+    # 2. Applicera fiendeaktioner mekaniskt
+    enemy_effects = apply_enemy_actions(state, enemy_actions)
+
+    # 3. Gå till nästa tur (rundövergång, status-tick)
+    combat = combat_advance_turn(state)
+
+    # 4. Spara
+    store.save(state)
+
+    # 5. Bygg Guardian-rapport för chatten
+    guardian_lines = []
+    en = lang == "en"
+    for fx in enemy_effects:
+        t = fx.get("type", "")
+        v = fx.get("value", "")
+        if t == "enemy_hit":
+            dmg = fx.get("damage", "?")
+            crit = fx.get("crit", False)
+            roll = fx.get("roll", "?")
+            crit_str = " 💥 KRITISK!" if crit else ""
+            if en:
+                guardian_lines.append(f"🗡️ **{v}** hits you — **{dmg} damage**{crit_str} (roll {roll})")
+            else:
+                guardian_lines.append(f"🗡️ **{v}** träffar dig — **{dmg} skada**{crit_str} (slag {roll})")
+        elif t == "enemy_miss":
+            roll = fx.get("roll", "?")
+            if en:
+                guardian_lines.append(f"🛡️ **{v}** misses you (roll {roll})")
+            else:
+                guardian_lines.append(f"🛡️ **{v}** missar dig (slag {roll})")
+        elif t == "enemy_fled":
+            if en:
+                guardian_lines.append(f"🏃 **{v}** flees!")
+            else:
+                guardian_lines.append(f"🏃 **{v}** flyr!")
+        elif t == "combat_end":
+            if en:
+                guardian_lines.append(f"🏁 **Combat over — {v}**")
+            else:
+                guardian_lines.append(f"🏁 **Striden är över — {v}**")
+
+    # Lägg till combat-loggen (rundans händelser)
+    combat_log = combat.get("log", [])
+    recent_log = [l for l in combat_log if l.get("round") == combat.get("round", 1)][-6:]
+    for entry in recent_log:
+        actor = entry.get("actor", "")
+        name = entry.get("name", "")
+        text = entry.get("text", "")
+        if actor == "system":
+            guardian_lines.append(f"⚙️ {text}")
+        elif actor == "enemy":
+            guardian_lines.append(f"👹 **{name}** {text}")
+
+    # Bygg rapport
+    tag = combat_tag_fn(combat) if combat else ""
+    if guardian_lines:
+        header = "🛡️ **Guardian** · ⚔️ " + ("Enemy Turn" if en else "Fiendernas tur")
+        report = header + "\n" + "\n".join(guardian_lines)
+        if tag:
+            report += "\n" + tag
+    else:
+        report = tag or ""
+
+    # Spara i transkriptet
+    if report:
+        state = store.append_message(state, "guardian", report, meta={
+            "turn": state.get("meta", {}).get("turn_count", 0),
+            "combat_turn": True,
+        })
+        store.save(state)
+
+    return {
+        "ok": True,
+        "enemy_actions": enemy_actions,
+        "effects": enemy_effects,
+        "combat": combat,
+        "guardian_report": report,
+        "player_hp": state.get("character", {}).get("hp", {}),
+    }
+
+
+@app.get("/api/combat/state")
+async def combat_state(morkrets_token: str | None = Cookie(None)):
+    """Hämta aktuell stridsstate (för polling/refresh)."""
+    payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    combat = state.get("world", {}).get("combat")
+    char = state.get("character", {})
+    return {
+        "combat": combat,
+        "player_hp": char.get("hp", {}),
+        "player_ac": char.get("ac", 10),
+        "spell_slots": char.get("spell_slots", {}),
+        "is_player_turn": is_player_turn(combat) if combat else False,
+        "current_actor": get_current_actor(combat) if combat else None,
     }
 
 
@@ -3336,7 +3818,7 @@ async def export_campaign(morkrets_token: str | None = Cookie(None)):
 
 
 # ═══════════════════════════════════════
-# IMPORT
+# IMPORT (legacy prompt — used by /api/world/build for file extraction)
 # ═══════════════════════════════════════
 
 IMPORT_PROMPT = """Du är en dataextraktor för D&D-kampanjer. Analysera texten och extrahera strukturerad data.
@@ -3347,140 +3829,15 @@ Svara ENDAST med giltig JSON (ingen markdown):
   "npcs": [{"name": "", "role": "", "relation": "neutral", "notes": "", "alive": true}],
   "locations": [{"name": "", "description": ""}],
   "lore": ["string — viktiga världsdetaljer, historia, myter"],
+  "quests": [{"name": "", "description": "", "status": "aktiv"}],
   "items": [{"name": "", "type": "Annat", "description": "", "rarity": "normal"}]
 }
 
 Om en kategori saknas i texten, returnera tom array. Extrahera bara det som faktiskt finns."""
 
 
-@app.post("/api/import")
-async def import_file(
-    file: UploadFile = File(...),
-    model_id: str = "qwen3.8-max",
-    morkrets_token: str | None = Cookie(None),
-):
-    payload = _get_current_user(morkrets_token)
-    username = payload["sub"]
-
-    state = store.get(username)
-    if not state:
-        raise HTTPException(404, "Ingen aktiv kampanj")
-
-    # Validera filtyp
-    fname = file.filename or ""
-    ext = fname.rsplit(".", 1)[-1].lower() if "." in fname else ""
-    if ext not in ("md", "pdf", "txt"):
-        raise HTTPException(400, f"Filformat ej stöd: .{ext} (tillåtna: .md, .pdf, .txt)")
-
-    content_bytes = await file.read()
-
-    # Extrahera text
-    if ext == "pdf":
-        try:
-            import fitz  # PyMuPDF
-
-            doc = fitz.open(stream=content_bytes, filetype="pdf")
-            text = "\n".join(page.get_text() for page in doc)
-            doc.close()
-        except Exception as e:
-            raise HTTPException(400, f"Kunde inte läsa PDF: {e}")
-    else:
-        text = content_bytes.decode("utf-8", errors="replace")
-
-    if not text.strip():
-        raise HTTPException(400, "Filen är tom")
-
-    # Trunkera om extremt lång
-    if len(text) > 50000:
-        text = text[:50000] + "\n\n[... trunkerad ...]"
-
-    # Anropa LLM för extraktion
-    messages = [
-        {"role": "system", "content": IMPORT_PROMPT},
-        {"role": "user", "content": f"Extrahera data från denna text:\n\n{text}"},
-    ]
-
-    try:
-        raw = await _call_llm(model_id, messages, temperature=0.2, max_tokens=2048, thinking="disabled")
-        extracted = _extract_json(raw)
-    except ValueError as e:
-        raise HTTPException(422, f"Kunde inte tolka LLM-svar: {e}")
-    except RuntimeError as e:
-        raise HTTPException(500, str(e))
-
-    # Merge in i state
-    merged = {"characters": 0, "npcs": 0, "locations": 0, "lore": 0, "items": 0}
-
-    # NPCs
-    for npc in extracted.get("npcs", []):
-        if isinstance(npc, dict) and npc.get("name"):
-            # Undvik dubbletter
-            existing_names = {n.get("name", "").lower() for n in state.get("npcs", [])}
-            if npc["name"].lower() not in existing_names:
-                state.setdefault("npcs", []).append(
-                    {
-                        "name": npc["name"],
-                        "role": npc.get("role", "okänd"),
-                        "relation": npc.get("relation", "neutral"),
-                        "notes": npc.get("notes", ""),
-                        "alive": npc.get("alive", True),
-                    }
-                )
-                merged["npcs"] += 1
-
-    # Locations
-    for loc in extracted.get("locations", []):
-        if isinstance(loc, dict) and loc.get("name"):
-            existing_locs = {l.get("name", "").lower() for l in state.get("locations", [])}
-            if loc["name"].lower() not in existing_locs:
-                state.setdefault("locations", []).append(
-                    {"name": loc["name"], "description": loc.get("description", "")}
-                )
-                merged["locations"] += 1
-
-    # Lore
-    for item in extracted.get("lore", []):
-        if isinstance(item, str) and item.strip():
-            state.setdefault("lore", []).append(item.strip())
-            merged["lore"] += 1
-
-    # Items → inventory
-    for item in extracted.get("items", []):
-        if isinstance(item, dict) and item.get("name"):
-            state.setdefault("inventory", []).append(
-                {
-                    "id": f"import-{len(state.get('inventory', []))}",
-                    "name": item["name"],
-                    "type": item.get("type", "Annat"),
-                    "qty": 1,
-                    "weight": 0,
-                    "equipped": False,
-                    "rarity": item.get("rarity", "normal"),
-                    "description": item.get("description", ""),
-                }
-            )
-            merged["items"] += 1
-
-    # Characters — spara som referens i lore om inte spelarkaraktär
-    for char in extracted.get("characters", []):
-        if isinstance(char, dict) and char.get("name"):
-            state.setdefault("lore", []).append(
-                f"Karaktär: {char['name']} ({char.get('race', '?')} {char.get('class', '?')}) — {char.get('description', '')}"
-            )
-            merged["characters"] += 1
-
-    store.save(state)
-
-    return {
-        "ok": True,
-        "filename": fname,
-        "merged": merged,
-        "total_chars_extracted": len(text),
-    }
-
-
 # ═══════════════════════════════════════
-# WORLD BUILDING
+# WORLD BUILDING (prompt + optional files)
 # ═══════════════════════════════════════
 
 WORLD_BUILD_PROMPT = """Du är en världsextraktor för D&D-kampanjer. Analysera spelarens beskrivning och extrahera strukturerad världdata.
@@ -3491,19 +3848,20 @@ Svara ENDAST med giltig JSON (ingen markdown):
 {
   "locations": [{"name": "", "description": ""}],
   "npcs": [{"name": "", "role": "", "relation": "neutral", "notes": "", "alive": true}],
-  "lore": ["string — viktiga världsdetaljer, historia, myter, stämning"]
+  "lore": ["string — viktiga världsdetaljer, historia, myter, stämning"],
+  "quests": [{"name": "", "description": "", "status": "aktiv"}]
 }
 
 Om en kategori saknas i beskrivningen, returnera tom array. Extrahera bara det som faktiskt finns."""
 
 
-class WorldBuildRequest(BaseModel):
-    prompt: str
-    model_id: str = "qwen3.8-max"
-
-
 @app.post("/api/world/build")
-async def world_build(req: WorldBuildRequest, morkrets_token: str | None = Cookie(None)):
+async def world_build(
+    prompt: str = Form(""),
+    model_id: str = Form("qwen3.8-max"),
+    files: list[UploadFile] = File(default=[]),
+    morkrets_token: str | None = Cookie(None),
+):
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
 
@@ -3511,26 +3869,82 @@ async def world_build(req: WorldBuildRequest, morkrets_token: str | None = Cooki
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
 
-    messages = [
-        {"role": "system", "content": WORLD_BUILD_PROMPT},
-        {"role": "user", "content": f"Bygg världen utifrån denna beskrivning:\n\n{req.prompt}"},
-    ]
+    if not prompt.strip() and not files:
+        raise HTTPException(400, "Ange en beskrivning eller ladda upp filer")
 
-    try:
-        raw = await _call_llm(req.model_id, messages, temperature=0.4, max_tokens=2048, thinking="disabled")
-        extracted = _extract_json(raw)
-    except ValueError as e:
-        raise HTTPException(422, f"Kunde inte tolka LLM-svar: {e}")
-    except RuntimeError as e:
-        raise HTTPException(500, str(e))
+    merged = {"locations": 0, "npcs": 0, "lore": 0, "quests": 0, "characters": 0, "items": 0}
 
-    merged = {"locations": 0, "npcs": 0, "lore": 0}
+    # ── 1. Prompt → LLM extraktion ──
+    if prompt.strip():
+        messages = [
+            {"role": "system", "content": WORLD_BUILD_PROMPT},
+            {"role": "user", "content": f"Bygg världen utifrån denna beskrivning:\n\n{prompt.strip()}"},
+        ]
+        try:
+            raw = await _call_llm(model_id, messages, temperature=0.4, max_tokens=2048, thinking="disabled")
+            extracted = _extract_json(raw)
+        except ValueError as e:
+            raise HTTPException(422, f"Kunde inte tolka LLM-svar: {e}")
+        except RuntimeError as e:
+            raise HTTPException(500, str(e))
 
+        _merge_world_data(state, extracted, merged)
+
+    # ── 2. Filer → textextraktion → LLM ──
+    for f in files:
+        fname = f.filename or ""
+        ext = fname.rsplit(".", 1)[-1].lower() if "." in fname else ""
+        if ext not in ("md", "pdf", "txt"):
+            continue  # Hoppa över bilder/okända format
+
+        content_bytes = await f.read()
+        if ext == "pdf":
+            try:
+                import fitz
+                doc = fitz.open(stream=content_bytes, filetype="pdf")
+                text = "\n".join(page.get_text() for page in doc)
+                doc.close()
+            except Exception:
+                continue
+        else:
+            text = content_bytes.decode("utf-8", errors="replace")
+
+        if not text.strip():
+            continue
+        if len(text) > 50000:
+            text = text[:50000] + "\n\n[... trunkerad ...]"
+
+        messages = [
+            {"role": "system", "content": IMPORT_PROMPT},
+            {"role": "user", "content": f"Extrahera data från denna text:\n\n{text}"},
+        ]
+        try:
+            raw = await _call_llm(model_id, messages, temperature=0.2, max_tokens=2048, thinking="disabled")
+            extracted = _extract_json(raw)
+        except (ValueError, RuntimeError):
+            continue  # Hoppa över filer som inte kan tolkas
+
+        _merge_world_data(state, extracted, merged)
+
+    store.save(state)
+
+    return {
+        "ok": True,
+        "merged": merged,
+        "locations": state.get("locations", []),
+        "npcs": state.get("npcs", []),
+        "lore": state.get("lore", []),
+        "quests": state.get("quests", []),
+    }
+
+
+def _merge_world_data(state: dict, extracted: dict, merged: dict):
+    """Merge extraherad data in i kampanjstate (dedup by name)."""
     # Locations
     for loc in extracted.get("locations", []):
         if isinstance(loc, dict) and loc.get("name"):
-            existing_locs = {l.get("name", "").lower() for l in state.get("locations", [])}
-            if loc["name"].lower() not in existing_locs:
+            existing = {l.get("name", "").lower() for l in state.get("locations", [])}
+            if loc["name"].lower() not in existing:
                 state.setdefault("locations", []).append(
                     {"name": loc["name"], "description": loc.get("description", "")}
                 )
@@ -3539,8 +3953,8 @@ async def world_build(req: WorldBuildRequest, morkrets_token: str | None = Cooki
     # NPCs
     for npc in extracted.get("npcs", []):
         if isinstance(npc, dict) and npc.get("name"):
-            existing_names = {n.get("name", "").lower() for n in state.get("npcs", [])}
-            if npc["name"].lower() not in existing_names:
+            existing = {n.get("name", "").lower() for n in state.get("npcs", [])}
+            if npc["name"].lower() not in existing:
                 state.setdefault("npcs", []).append({
                     "name": npc["name"],
                     "role": npc.get("role", "okänd"),
@@ -3556,15 +3970,40 @@ async def world_build(req: WorldBuildRequest, morkrets_token: str | None = Cooki
             state.setdefault("lore", []).append(item.strip())
             merged["lore"] += 1
 
-    store.save(state)
+    # Quests
+    for q in extracted.get("quests", []):
+        if isinstance(q, dict) and q.get("name"):
+            existing = {x.get("name", "").lower() for x in state.get("quests", [])}
+            if q["name"].lower() not in existing:
+                state.setdefault("quests", []).append({
+                    "name": q["name"],
+                    "description": q.get("description", ""),
+                    "status": q.get("status", "aktiv"),
+                })
+                merged["quests"] += 1
 
-    return {
-        "ok": True,
-        "merged": merged,
-        "locations": extracted.get("locations", []),
-        "npcs": extracted.get("npcs", []),
-        "lore": extracted.get("lore", []),
-    }
+    # Items → inventory
+    for item in extracted.get("items", []):
+        if isinstance(item, dict) and item.get("name"):
+            state.setdefault("inventory", []).append({
+                "id": f"import-{len(state.get('inventory', []))}",
+                "name": item["name"],
+                "type": item.get("type", "Annat"),
+                "qty": 1,
+                "weight": 0,
+                "equipped": False,
+                "rarity": item.get("rarity", "normal"),
+                "description": item.get("description", ""),
+            })
+            merged["items"] += 1
+
+    # Characters → lore (referens)
+    for char in extracted.get("characters", []):
+        if isinstance(char, dict) and char.get("name"):
+            state.setdefault("lore", []).append(
+                f"Karaktär: {char['name']} ({char.get('race', '?')} {char.get('class', '?')}) — {char.get('description', '')}"
+            )
+            merged["characters"] += 1
 
 
 # ═══════════════════════════════════════

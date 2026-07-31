@@ -48,8 +48,8 @@
   .rune-divider::before,.rune-divider::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.5}
   .rune-divider span{color:var(--gold);text-shadow:0 0 8px rgba(201,162,39,.6)}
 
-  /* ═══════════ Tre vägar ═══════════ */
-  .paths{display:grid;grid-template-columns:repeat(3,1fr);gap:1.3rem;margin-bottom:2rem}
+  /* ═══════════ Två vägar ═══════════ */
+  .paths{display:grid;grid-template-columns:repeat(2,1fr);gap:1.3rem;margin-bottom:2rem}
   .path{
     position:relative;cursor:pointer;text-align:center;padding:2rem 1.2rem 1.6rem;
     background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);
@@ -389,22 +389,14 @@
     </div>
   </div>
 
-  <!-- ═══════════ TRE VÄGAR ═══════════ -->
+  <!-- ═══════════ TVÅ VÄGAR ═══════════ -->
   <div class="paths">
     <div class="path" style="--pc:var(--ember);--pg:rgba(212,105,30,.14)" onclick="showPanel('prepare')">
       <div class="glow"></div>
       <span class="icon">📜</span>
       <h2>Prepare Adventure</h2>
-      <p>Write a worldbuilding prompt or upload .md/.pdf/images. Qwen extracts the world for you.</p>
-      <span class="tag">Prompt + Import</span>
-    </div>
-
-    <div class="path" style="--pc:var(--arcane);--pg:rgba(139,95,212,.14)" onclick="showPanel('import')">
-      <div class="glow"></div>
-      <span class="icon">📥</span>
-      <h2>Import Adventure</h2>
-      <p>Already have a campaign? Drag in files — Qwen reads characters, NPCs, locations and lore.</p>
-      <span class="tag">.md · .pdf · Images</span>
+      <p>Write a worldbuilding prompt, upload .md/.pdf files, or both. The world is extracted and structured for you.</p>
+      <span class="tag">Prompt + Files</span>
     </div>
 
     <div class="path" style="--pc:var(--blood-bright);--pg:rgba(212,58,77,.12)" onclick="showNewAdventureForm()">
@@ -463,59 +455,22 @@ The more you give, the richer the world becomes. But the Dungeon Master fills in
 
       <div class="extract-preview" id="preview-prepare">
         <div class="ep-grid">
+          <div class="ep-card"><div class="ep-num" id="ep-chars">0</div><div class="ep-label">Characters</div></div>
           <div class="ep-card"><div class="ep-num" id="ep-npcs">0</div><div class="ep-label">NPCs</div></div>
           <div class="ep-card"><div class="ep-num" id="ep-places">0</div><div class="ep-label">Locations</div></div>
           <div class="ep-card"><div class="ep-num" id="ep-quests">0</div><div class="ep-label">Quests</div></div>
           <div class="ep-card"><div class="ep-num" id="ep-lore">0</div><div class="ep-label">Lore fragments</div></div>
+          <div class="ep-card"><div class="ep-num" id="ep-items">0</div><div class="ep-label">Items</div></div>
         </div>
         <div class="actions">
           <button class="go-btn" onclick="proceed('prepare')">⚔️ Create Character & Begin</button>
-          <span class="hint">The world is saved and <b>Qwen</b> uses it as the foundation for the adventure</span>
+          <span class="hint">The world is saved and used as the foundation for the adventure</span>
         </div>
       </div>
 
       <div class="actions" id="actions-prepare">
         <button class="go-btn" onclick="startPrepare()">🔮 Build the World</button>
         <span class="hint">Prompt + files are sent to <b>Qwen</b> which structures everything</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══════════ IMPORT PANEL ═══════════ -->
-  <div class="expand" id="panel-import">
-    <div class="panel-box">
-      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
-      <div class="panel-title">📥 Import Existing Campaign</div>
-
-      <div class="dropzone" id="dz-import" onclick="document.getElementById('file-import').click()">
-        <span class="dz-icon">📂</span>
-        <div class="dz-text">Drag in your campaign files or <b>click to browse</b></div>
-        <div class="dz-formats">.md · .pdf · .jpg · .png — character sheets, session logs, worldbuilding documents, maps</div>
-        <input type="file" id="file-import" multiple accept=".md,.pdf,.jpg,.jpeg,.png,.webp">
-      </div>
-      <div class="file-list" id="files-import"></div>
-
-      <div class="extracting" id="extracting-import">
-        <div class="ex-text">🔮 Qwen is extracting characters, NPCs, locations and lore…</div>
-        <div class="ex-bar"><div class="ex-fill" id="ex-fill-import"></div></div>
-      </div>
-
-      <div class="extract-preview" id="preview-import">
-        <div class="ep-grid">
-          <div class="ep-card"><div class="ep-num" id="ep-chars">0</div><div class="ep-label">Characters</div></div>
-          <div class="ep-card"><div class="ep-num" id="ep-npcs2">0</div><div class="ep-label">NPCs</div></div>
-          <div class="ep-card"><div class="ep-num" id="ep-places2">0</div><div class="ep-label">Locations</div></div>
-          <div class="ep-card"><div class="ep-num" id="ep-lore2">0</div><div class="ep-label">Lore fragments</div></div>
-        </div>
-        <div class="actions">
-          <button class="go-btn" onclick="proceed('import')">⚔️ Continue Adventure</button>
-          <span class="hint">Imported data is merged into the campaign's <b>state.json</b></span>
-        </div>
-      </div>
-
-      <div class="actions" id="actions-import">
-        <button class="go-btn" onclick="startImport()">🔮 Extract & Import</button>
-        <span class="hint">Files are sent to <b>Qwen</b> (text) and <b>Qwen Vision</b> (images)</span>
       </div>
     </div>
   </div>
@@ -528,7 +483,7 @@ The more you give, the richer the world becomes. But the Dungeon Master fills in
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 </script>
-<script src="api.js?v=20260731c"></script>
+<script src="api.js?v=20260731d"></script>
 <script src="modal.js?v=20260730c"></script>
 <script src="i18n.js?v=20260730c"></script>
 <script>
@@ -689,7 +644,7 @@ async function startNewAdventure() {
 // ═══════════════════════════════════════
 // FILE HANDLING
 // ═══════════════════════════════════════
-const files = { prepare: [], import: [] };
+const files = { prepare: [] };
 
 function setupDropzone(dzId, inputId, key) {
   const dz = document.getElementById(dzId);
@@ -701,7 +656,6 @@ function setupDropzone(dzId, inputId, key) {
   input.addEventListener('change', e => { addFiles(e.target.files, key); input.value = ''; });
 }
 setupDropzone('dz-prepare', 'file-prepare', 'prepare');
-setupDropzone('dz-import', 'file-import', 'import');
 
 function addFiles(fileList, key) {
   for (const f of fileList) {
@@ -729,7 +683,7 @@ function renderFiles(key) {
 }
 
 // ═══════════════════════════════════════
-// PREPARE — bygg världen
+// PREPARE — bygg världen (prompt + filer)
 // ═══════════════════════════════════════
 async function startPrepare() {
   const prompt = document.getElementById('world-prompt').value.trim();
@@ -740,24 +694,26 @@ async function startPrepare() {
   document.getElementById('actions-prepare').style.display = 'none';
   document.getElementById('extracting-prepare').classList.add('show');
   const fill = document.getElementById('ex-fill-prepare');
-  fill.style.width = '15%';
+  fill.style.width = '10%';
 
   try {
     // Se till att kampanj finns
     const { campaign } = await API.getCampaign();
     if (!campaign) await API.createCampaign('Prepared Adventure', 'en');
-    fill.style.width = '30%';
+    fill.style.width = '20%';
 
-    // Bygg världen via backend → Qwen
-    const res = await API.buildWorld(prompt, 'qwen3.8-max');
+    // Bygg världen via backend (prompt + filer i ett anrop)
+    const res = await API.buildWorld(prompt, files.prepare);
     fill.style.width = '90%';
 
     // Visa riktiga resultat
-    const d = res.extracted || res;
-    document.getElementById('ep-npcs').textContent = (d.npcs || []).length;
-    document.getElementById('ep-places').textContent = (d.locations || []).length;
-    document.getElementById('ep-quests').textContent = (d.quests || []).length;
-    document.getElementById('ep-lore').textContent = (d.lore || []).length;
+    const m = res.merged || {};
+    document.getElementById('ep-chars').textContent = m.characters || 0;
+    document.getElementById('ep-npcs').textContent = m.npcs || 0;
+    document.getElementById('ep-places').textContent = m.locations || 0;
+    document.getElementById('ep-quests').textContent = m.quests || 0;
+    document.getElementById('ep-lore').textContent = m.lore || 0;
+    document.getElementById('ep-items').textContent = m.items || 0;
 
     fill.style.width = '100%';
     setTimeout(() => {
@@ -775,68 +731,11 @@ async function startPrepare() {
 }
 
 // ═══════════════════════════════════════
-// IMPORT — extrahera kampanj
-// ═══════════════════════════════════════
-async function startImport() {
-  if (files.import.length === 0) {
-    toast(I18N.t('⚠ Ladda upp minst en fil att importera'));
-    return;
-  }
-  document.getElementById('actions-import').style.display = 'none';
-  document.getElementById('extracting-import').classList.add('show');
-  const fill = document.getElementById('ex-fill-import');
-  fill.style.width = '10%';
-
-  try {
-    // Se till att kampanj finns
-    const { campaign } = await API.getCampaign();
-    if (!campaign) await API.createCampaign('Imported Adventure', 'en');
-    fill.style.width = '20%';
-
-    // Importera varje fil via backend
-    let totals = { characters: 0, npcs: 0, locations: 0, lore: 0, items: 0 };
-    for (let i = 0; i < files.import.length; i++) {
-      const res = await API.importFile(files.import[i], 'qwen3.8-max');
-      const m = res.merged || {};
-      for (const k of Object.keys(totals)) totals[k] += (m[k] || 0);
-      fill.style.width = (20 + 70 * ((i + 1) / files.import.length)) + '%';
-    }
-
-    // Visa riktiga resultat
-    document.getElementById('ep-chars').textContent = totals.characters;
-    document.getElementById('ep-npcs2').textContent = totals.npcs;
-    document.getElementById('ep-places2').textContent = totals.locations;
-    document.getElementById('ep-lore2').textContent = totals.lore;
-
-    fill.style.width = '100%';
-    setTimeout(() => {
-      document.getElementById('extracting-import').classList.remove('show');
-      document.getElementById('preview-import').classList.add('show');
-      SFX.levelup();
-      toast(I18N.t('📥 Kampanj extraherad!'));
-    }, 400);
-  } catch (e) {
-    document.getElementById('extracting-import').classList.remove('show');
-    document.getElementById('actions-import').style.display = 'flex';
-    SFX.error();
-    toast('⚠ ' + I18N.t('Kunde inte importera: ') + (e.message || I18N.t('okänt fel')));
-  }
-}
-
-// ═══════════════════════════════════════
-// PROCEED / NEW ADVENTURE
+// PROCEED
 // ═══════════════════════════════════════
 function proceed(mode) {
-  // I produktion: spara world/import-data till backend, sen redirect
   sessionStorage.setItem('dnd_adventure_mode', mode);
   location.href = 'newgame.html';
-}
-
-function newAdventure() {
-  // DM freestylar — ingen prep, direkt till karaktärsskapande
-  sessionStorage.setItem('dnd_adventure_mode', 'freestyle');
-  toast(I18N.t('🎲 Dungeon Master förbereder en öppningsscen…'));
-  setTimeout(() => { location.href = 'newgame.html'; }, 800);
 }
 
 // ═══════════════════════════════════════

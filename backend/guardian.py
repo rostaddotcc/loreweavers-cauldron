@@ -419,6 +419,7 @@ Skriv i dåtid, tredje person. T.ex. "Faelyndra smög förbi vakten och tog sig 
 ### Korrigeringar (KRITISKT)
 - corrections: Om DM:s narration implikerade att något hände som INTE borde ha hänt, korrigera det här. \
   Exempel: DM skrev "du tar boken" men spelaren bara läste i den → korrigera: {"field": "items_add", "action": "retract", "reason": "Spelaren läste bara i boken, plockade inte upp den"}. \
+  NPC-BORTTAGNING: Om en NPC är en dubblett, sammanslagen, eller felaktigt tillagd → {"field": "npc_remove", "action": "remove", "names": ["Namn1", "Namn2"], "reason": "Dubblett / sammanslagen"}. \
   Andra exempel: DM gav XP för något spelaren inte gjorde, DM lade till föremål spelaren bara tittade på. \
   Om allt stämmer → tom array. Använd reason för att förklara för spelaren varför.
 
@@ -656,6 +657,7 @@ async def guardian_extract_mechanics(
         "new_day": None, "day_summary": None, "logbook": "",
         "combat_start": None, "combat_round": None,
         "initiative_entries": [], "combat_end": None,
+        "enemy_actions": [], "status_apply": [],
     }
 
     for attempt in range(2):
@@ -1270,6 +1272,20 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 logger.info("🛡️ Guardian korrigering: återkallade '%s' — %s", removed.get("name", "?"), reason[:80])
             else:
                 logger.info("🛡️ Guardian korrigering: kunde inte återkalla '%s' (finns ej)", target_name or "?")
+        elif field == "npc_remove" and action == "remove":
+            # Ta bort NPC(s) med matchande namn
+            npcs = state.get("npcs", [])
+            names_to_remove = corr.get("names", [])
+            if isinstance(corr.get("name"), str):
+                names_to_remove.append(corr["name"])
+            for rname in names_to_remove:
+                rname_lower = rname.strip().lower()
+                for i, npc in enumerate(npcs):
+                    if npc.get("name", "").lower() == rname_lower:
+                        removed_npc = npcs.pop(i)
+                        effects.append({"type": "korrigering", "value": f"NPC borttagen: {removed_npc.get('name', '?')}", "reason": reason})
+                        logger.info("🛡️ Guardian korrigering: NPC '%s' borttagen — %s", removed_npc.get("name", "?"), reason[:80])
+                        break
         elif reason:
             effects.append({"type": "korrigering", "value": reason, "reason": reason})
             logger.info("🛡️ Guardian korrigering: %s — %s", field, reason[:80])
@@ -1336,7 +1352,7 @@ def _sanitize_mechanics(mech: dict) -> dict:
     for key in ("damage", "healing", "death", "items_add", "items_remove",
                 "currency", "quests_new", "quests_completed", "quests_failed",
                 "npcs_new", "npc_relations", "npc_notes", "locations_new",
-                "initiative_entries"):
+                "initiative_entries", "enemy_actions", "status_apply"):
         if not isinstance(mech.get(key), list):
             mech[key] = []
 
@@ -1367,6 +1383,275 @@ def _sanitize_mechanics(mech: dict) -> dict:
         mech["day_summary"] = None
 
     return mech
+
+
+# ═══════════════════════════════════════
+# 5. BATTLE AI — Fiendernas stridshjärna
+# ═══════════════════════════════════════
+
+BATTLE_AI_SYSTEM = """\
+Du är Battle AI — fiendernas stridshjärna i ett D&D 5e-rollspel.
+Du bestämmer vad varje fiende gör under sin tur baserat på situationen.
+
+## Regler
+1. Varje fiende får: 1 action + 1 bonus action (valfritt) + rörelse.
+2. Fiender prioriterar: attackera spelaren > använda förmåga > röra sig.
+3. Låga HP (<30%) → fienden kan försöka fly eller använda desperat förmåga.
+4. Flera fiender samordnar: om en kan ge fördel åt en annan, gör det.
+5. Bossar (HP > 20) kan ha multiattack (2 attacker).
+6. Returnera ENDAST JSON.
+
+## Format
+{
+  "actions": [
+    {
+      "enemy": "fiendens namn",
+      "type": "attack" | "spell" | "flee" | "ability" | "move",
+      "target": "player" | "fiendens namn" | null,
+      "attack_bonus": N,
+      "damage_dice": "1d6+2",
+      "description": "kort beskrivning av handlingen"
+    }
+  ]
+}
+
+## Exempel
+Fiender: Goblin A (5/7 HP), Goblin B (7/7 HP). Spelaren: 12/20 HP, AC 13.
+→ {"actions": [
+  {"enemy": "Goblin A", "type": "attack", "target": "player", "attack_bonus": 4, "damage_dice": "1d6+2", "description": "Hugger med sin dolk"},
+  {"enemy": "Goblin B", "type": "attack", "target": "player", "attack_bonus": 4, "damage_dice": "1d6+2", "description": "Skjuter med sin kortbåge"}
+]}
+"""
+
+BATTLE_AI_SYSTEM_EN = """\
+You are Battle AI — the enemy combat brain in a D&D 5e RPG.
+You decide what each enemy does on their turn based on the situation.
+
+## Rules
+1. Each enemy gets: 1 action + 1 bonus action (optional) + movement.
+2. Enemies prioritize: attack player > use ability > move.
+3. Low HP (<30%) → enemy may flee or use desperate ability.
+4. Multiple enemies coordinate: if one can give advantage to another, do it.
+5. Bosses (HP > 20) may have multiattack (2 attacks).
+6. Return ONLY JSON.
+
+## Format
+{
+  "actions": [
+    {
+      "enemy": "enemy name",
+      "type": "attack" | "spell" | "flee" | "ability" | "move",
+      "target": "player" | "enemy name" | null,
+      "attack_bonus": N,
+      "damage_dice": "1d6+2",
+      "description": "short description of the action"
+    }
+  ]
+}
+"""
+
+
+async def battle_ai_decide(
+    state: dict,
+    model_call_fn: ModelCallFn,
+    language: str = "sv",
+) -> list[dict]:
+    """Battle AI: Bestäm alla fienders handlingar för denna runda.
+
+    Returnerar lista av action-dicts:
+    [{"enemy": "Goblin", "type": "attack", "target": "player",
+      "attack_bonus": 4, "damage_dice": "1d6+2", "description": "..."}]
+    """
+    combat = state.get("world", {}).get("combat")
+    if not combat or not combat.get("active"):
+        return []
+
+    char = state.get("character", {})
+    hp = char.get("hp", {})
+    player_ac = char.get("ac", 10)
+    player_name = char.get("name", "Spelaren")
+
+    enemies = [e for e in combat.get("enemies", []) if e.get("alive", True)]
+    if not enemies:
+        return []
+
+    # Bygg kontext
+    enemy_lines = []
+    for e in enemies:
+        status_str = ""
+        if e.get("statuses"):
+            status_str = " [" + ", ".join(s["name"] for s in e["statuses"]) + "]"
+        enemy_lines.append(
+            f"- {e['name']}: {e['hp']}/{e['max_hp']} HP, AC {e['ac']}, "
+            f"attack +{e.get('attack_bonus', 3)}, damage {e.get('damage_dice', '1d6+1')}{status_str}"
+        )
+
+    if language == "en":
+        system = BATTLE_AI_SYSTEM_EN
+        user_msg = (
+            f"## Player\n{player_name}: {hp.get('current', '?')}/{hp.get('max', '?')} HP, AC {player_ac}\n\n"
+            f"## Enemies\n" + "\n".join(enemy_lines) + "\n\n"
+            f"## Round {combat.get('round', 1)}\n"
+            "Decide what each enemy does this round:"
+        )
+    else:
+        system = BATTLE_AI_SYSTEM
+        user_msg = (
+            f"## Spelaren\n{player_name}: {hp.get('current', '?')}/{hp.get('max', '?')} HP, AC {player_ac}\n\n"
+            f"## Fiender\n" + "\n".join(enemy_lines) + "\n\n"
+            f"## Runda {combat.get('round', 1)}\n"
+            "Bestäm vad varje fiende gör denna runda:"
+        )
+
+    messages = [
+        {"role": "system", "content": system},
+        {"role": "user", "content": user_msg},
+    ]
+
+    try:
+        raw = await model_call_fn(messages)
+    except Exception as e:
+        logger.warning("⚔️ Battle AI misslyckades: %s", e)
+        return _fallback_enemy_actions(enemies)
+
+    result = _parse_json(raw)
+    if not result or not isinstance(result.get("actions"), list):
+        logger.warning("⚔️ Battle AI: ogiltig JSON → fallback")
+        return _fallback_enemy_actions(enemies)
+
+    actions = result["actions"]
+    # Validera: bara levande fiender
+    alive_names = {e["name"].lower() for e in enemies}
+    valid = [a for a in actions if isinstance(a, dict) and a.get("enemy", "").lower() in alive_names]
+
+    if not valid:
+        return _fallback_enemy_actions(enemies)
+
+    logger.info("⚔️ Battle AI: %d fiendeaktioner", len(valid))
+    return valid
+
+
+def _fallback_enemy_actions(enemies: list[dict]) -> list[dict]:
+    """Fallback om Battle AI misslyckas: alla fiender attackerar."""
+    return [
+        {
+            "enemy": e["name"],
+            "type": "attack",
+            "target": "player",
+            "attack_bonus": e.get("attack_bonus", 3),
+            "damage_dice": e.get("damage_dice", "1d6+1"),
+            "description": "Attackerar spelaren",
+        }
+        for e in enemies if e.get("alive", True)
+    ]
+
+
+def apply_enemy_actions(state: dict, actions: list[dict]) -> list[dict]:
+    """Applicera Battle AI:s fiendeaktioner på state.
+
+    Varje action: {"enemy": str, "type": str, "target": str,
+                   "attack_bonus": int, "damage_dice": str, "description": str}
+
+    Returnerar effects-lista för frontend.
+    """
+    from combat import roll_dice, roll_d20, add_status, has_disadvantage
+
+    combat = state.get("world", {}).get("combat")
+    if not combat or not combat.get("active"):
+        return []
+
+    char = state.get("character", {})
+    player_ac = int(char.get("ac", 10))
+    player_name = char.get("name", "Spelaren")
+    effects: list[dict] = []
+
+    for action in actions:
+        enemy_name = action.get("enemy", "")
+        action_type = action.get("type", "attack")
+        enemy = next(
+            (e for e in combat.get("enemies", [])
+             if e.get("name", "").lower() == enemy_name.lower() and e.get("alive", True)),
+            None,
+        )
+        if not enemy:
+            continue
+
+        if action_type == "flee":
+            enemy["alive"] = False  # flyr = lämnar striden
+            combat.setdefault("log", []).append({
+                "round": combat.get("round", 1), "actor": "enemy",
+                "name": enemy["name"], "text": "flyr från striden",
+            })
+            effects.append({"type": "enemy_fled", "value": enemy["name"]})
+            logger.info("🏃 %s flyr från striden", enemy["name"])
+            continue
+
+        if action_type in ("attack", "spell", "ability"):
+            # Rulla attack mot spelarens AC
+            d20 = roll_d20()
+            disadv = has_disadvantage(enemy)
+            if disadv:
+                d20 = min(d20, roll_d20())
+
+            attack_bonus = int(action.get("attack_bonus", enemy.get("attack_bonus", 3)))
+            total = d20 + attack_bonus
+            hit = total >= player_ac or d20 == 20
+            crit = d20 == 20
+            fumble = d20 == 1
+
+            if fumble:
+                combat.setdefault("log", []).append({
+                    "round": combat.get("round", 1), "actor": "enemy",
+                    "name": enemy["name"],
+                    "text": f"missar {player_name} (nat 1!)",
+                })
+                effects.append({"type": "enemy_miss", "value": enemy["name"], "roll": total})
+            elif hit:
+                dmg_notation = action.get("damage_dice", enemy.get("damage_dice", "1d6+1"))
+                dmg, rolls = roll_dice(dmg_notation)
+                if crit:
+                    dmg2, _ = roll_dice(dmg_notation)
+                    dmg += dmg2
+                dmg = max(1, dmg)
+
+                hp = char.setdefault("hp", {"current": 1, "max": 1, "temp": 0})
+                temp = hp.get("temp", 0)
+                if temp > 0:
+                    absorbed = min(temp, dmg)
+                    hp["temp"] = temp - absorbed
+                    dmg -= absorbed
+                hp["current"] = max(0, hp.get("current", 1) - dmg)
+
+                desc = action.get("description", "")
+                log_text = f"träffar {player_name} — {dmg} skada"
+                if crit:
+                    log_text += " (KRITISK!)"
+                if desc:
+                    log_text += f" ({desc})"
+                combat.setdefault("log", []).append({
+                    "round": combat.get("round", 1), "actor": "enemy",
+                    "name": enemy["name"], "text": log_text,
+                })
+                effects.append({
+                    "type": "enemy_hit", "value": enemy["name"],
+                    "damage": dmg, "crit": crit, "roll": total,
+                })
+                logger.info("⚔️ %s → %s: %d skada (AC %d)", enemy["name"], player_name, dmg, player_ac)
+            else:
+                combat.setdefault("log", []).append({
+                    "round": combat.get("round", 1), "actor": "enemy",
+                    "name": enemy["name"],
+                    "text": f"missar {player_name} (slag {total} mot AC {player_ac})",
+                })
+                effects.append({"type": "enemy_miss", "value": enemy["name"], "roll": total})
+
+    # Auto-avsluta om alla fiender döda/flydde
+    if all(not e.get("alive", True) for e in combat.get("enemies", [])):
+        from combat import end_combat
+        end_combat(state, "alla fiender besegrade eller flydde")
+        effects.append({"type": "combat_end", "value": "alla besegrade"})
+
+    return effects
 
 
 # ═══════════════════════════════════════
@@ -1538,6 +1823,39 @@ def format_guardian_summary(
                 lines.append(f"🏁 **Combat over — {v}**")
             else:
                 lines.append(f"🏁 **Striden är över — {v}**")
+        elif t == "enemy_hit":
+            dmg = e.get("damage", "?")
+            crit = e.get("crit", False)
+            roll = e.get("roll", "?")
+            crit_str = f" {'💥 CRIT!' if crit else ''}"
+            if en:
+                lines.append(f"🗡️ **{v}** hits you — **{dmg} damage**{crit_str} (roll {roll})")
+            else:
+                lines.append(f"🗡️ **{v}** träffar dig — **{dmg} skada**{crit_str} (slag {roll})")
+        elif t == "enemy_miss":
+            roll = e.get("roll", "?")
+            if en:
+                lines.append(f"🛡️ **{v}** misses you (roll {roll})")
+            else:
+                lines.append(f"🛡️ **{v}** missar dig (slag {roll})")
+        elif t == "enemy_fled":
+            if en:
+                lines.append(f"🏃 **{v}** flees the battle!")
+            else:
+                lines.append(f"🏃 **{v}** flyr från striden!")
+        elif t == "status_dmg":
+            status = e.get("status", "?")
+            amt = e.get("amount", "?")
+            if en:
+                lines.append(f"☠️ **{status}** deals {amt} damage")
+            else:
+                lines.append(f"☠️ **{status}** ger {amt} skada")
+        elif t == "status_end":
+            status = e.get("status", "?")
+            if en:
+                lines.append(f"✨ **{status}** wears off")
+            else:
+                lines.append(f"✨ **{status}** avtar")
         elif t == "dödsräddning":
             label = "Death save" if en else "Dödsräddning"
             lines.append(f"💀 **{label}:** {v}")

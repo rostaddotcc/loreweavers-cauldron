@@ -1197,6 +1197,119 @@ button, a, .top-btn, .send-btn, .drop-item, .rr-btn, .tab-btn, .sheet-close {
   text-overflow: ellipsis;
 }
 .cr-status { flex-shrink: 0; min-height: 1.15rem; }
+
+/* ── Krigsrådet v2: AC, tur-indikator, action economy, knappar ── */
+.cr-ac {
+  font-family: 'Press Start 2P', monospace;
+  font-size: .55rem;
+  color: var(--bone);
+  white-space: nowrap;
+}
+.cr-turn-indicator {
+  flex-shrink: 0;
+  min-height: 1.2rem;
+}
+.cr-turn {
+  font-family: 'Cinzel', var(--font-display), serif;
+  font-size: .58rem;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  padding: .15rem .4rem;
+  border-radius: 2px;
+  display: inline-block;
+}
+.cr-turn-player {
+  color: var(--gold-bright);
+  background: rgba(201, 162, 39, .12);
+  border: 1px solid rgba(201, 162, 39, .3);
+  animation: cr-flicker 2s infinite;
+}
+.cr-turn-enemy {
+  color: var(--blood-bright);
+  background: rgba(180, 40, 40, .12);
+  border: 1px solid rgba(180, 40, 40, .3);
+}
+.cr-ip.acted {
+  opacity: .45;
+  text-decoration: line-through;
+}
+.cr-actions {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+}
+.cr-action-pips {
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+  flex-wrap: wrap;
+}
+.cr-pip-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: .5rem;
+  color: var(--bone-dim);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+}
+.cr-pip.action {
+  font-size: .65rem;
+  color: var(--gold-bright);
+  transition: color .2s, opacity .2s;
+}
+.cr-pip.action.spent {
+  color: var(--bone-dim);
+  opacity: .4;
+}
+.cr-spell-slots {
+  display: flex;
+  align-items: center;
+  gap: .15rem;
+  flex-wrap: wrap;
+}
+.cr-ss-label {
+  font-size: .55rem;
+  color: var(--arcane);
+  margin-right: .2rem;
+}
+.cr-ss {
+  font-size: .55rem;
+  color: var(--bone-dim);
+}
+.cr-ss.full {
+  color: var(--arcane);
+}
+.cr-buttons {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .3rem;
+}
+.cr-btn {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: .55rem;
+  padding: .35rem .3rem;
+  border: 1px solid var(--border);
+  background: rgba(20, 18, 30, .8);
+  color: var(--bone);
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all .15s;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.cr-btn:hover {
+  border-color: var(--gold-bright);
+  color: var(--gold-bright);
+  background: rgba(201, 162, 39, .08);
+}
+.cr-btn:active {
+  transform: scale(.96);
+}
+.cr-btn-attack:hover { border-color: var(--blood-bright); color: var(--blood-bright); background: rgba(180,40,40,.08); }
+.cr-btn-cast:hover { border-color: var(--arcane); color: var(--arcane); background: rgba(139,95,212,.08); }
+.cr-btn-flee:hover { border-color: #7aa35e; color: #7aa35e; background: rgba(122,163,94,.08); }
+.cr-btn-end { grid-column: 1 / -1; }
 .cr-ds {
   display: inline-flex;
   align-items: center;

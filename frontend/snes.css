@@ -306,6 +306,11 @@ button:active, .go-btn:active, .gate-btn:active, .send-btn:active {
   pointer-events: none;
 }
 .input-row textarea { padding-left: 1.8rem !important; }
+/* Composer (chat): textarea ligger transparent i panelen — ramen sitter på .composer */
+.composer .input-row textarea {
+  background: transparent !important;
+  border-color: transparent !important;
+}
 
 /* ── 8. SIDEBAR — terminal panel ── */
 .sidebar {
@@ -344,7 +349,7 @@ button:active, .go-btn:active, .gate-btn:active, .send-btn:active {
 }
 /* NPC-rader */
 .npc-row { transition: none !important; }
-.npc-row:hover { background: var(--stone-2) !important; }
+.npc-row:hover { background: var(--stone-3) !important; }
 .npc-row.dead { opacity: .4; text-decoration: line-through; }
 .npc-dot { border-radius: 0 !important; box-shadow: none !important; width: 6px !important; height: 6px !important; }
 .npc-name { font-size: .68rem !important; white-space: nowrap !important; }
@@ -962,8 +967,9 @@ button, a, .top-btn, .send-btn, .drop-item, .rr-btn, .tab-btn, .sheet-close {
     min-height: 48px !important;
     max-height: 120px;
     line-height: 1.4;
-    padding: .5rem .6rem !important;
+    padding: .5rem .6rem .5rem 1.8rem !important; /* 1.8rem = plats för '>'-prompten */
   }
+  .composer { padding: .3rem !important; }
   .send-btn {
     min-height: 48px !important;
     font-size: .65rem !important;

@@ -400,7 +400,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="sfx.js?v=20260730c"></script>
-<script src="api.js?v=20260731a"></script>
+<script src="api.js?v=20260731b"></script>
 <script src="i18n.js?v=20260730c"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
@@ -1011,11 +1011,19 @@ async function summon() {
   }, 90);
 
   try {
-    // Se till att kampanj finns (ett spel per användare)
+    // Se till att kampanj finns + uppdatera kampanjens språk till valt pill.
+    // (En BEFINTLIG kampanj behåller annars sitt gamla språk → fel DM-språk.
+    // Fix 2026-07-31: /api/campaign/language uppdaterar meta.language.)
+    const selLang = document.querySelector('.lang-pill.active')?.dataset.lang || 'en';
     const { campaign } = await API.getCampaign();
     if (!campaign) {
-      const selLang = document.querySelector('.lang-pill.active')?.dataset.lang || 'en';
       await API.createCampaign(sessionStorage.getItem('dnd_adventure_mode') || 'freestyle', selLang);
+    } else {
+      try {
+        await API.updateCampaignLanguage(selLang);
+      } catch (e) {
+        console.warn('Kunde inte uppdatera kampanjspråk', e);
+      }
     }
 
     // Generera karaktären via backend → vald modell

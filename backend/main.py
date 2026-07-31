@@ -2769,6 +2769,39 @@ async def update_character(req: dict, morkrets_token: str | None = Cookie(None))
     return {"ok": True, "character": char}
 
 
+@app.patch("/api/campaign/language")
+async def update_campaign_language(req: dict, morkrets_token: str | None = Cookie(None)):
+    """Uppdatera kampanjens språk (DM:ns berättelsespråk).
+
+    Används av newgame.html när spelaren byter språk-pill på en BEFINTLIG
+    kampanj — tidigare sattes språket bara vid skapelse, så en svensk
+    spelstart på en gammal kampanj fick engelsk DM.
+    """
+    payload = _get_current_user(morkrets_token)
+    state = store.get(payload["sub"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    language = str(req.get("language", "")).strip().lower()
+    if language not in ("en", "sv"):
+        raise HTTPException(400, "language måste vara 'en' eller 'sv'")
+
+    old_lang = state.get("meta", {}).get("language", "en")
+    state.setdefault("meta", {})["language"] = language
+
+    # Om äventyret inte startat än (awakening pågår): rulla om öppningen
+    # så den matchar det nya språket.
+    if state["meta"].get("awakening") and old_lang != language:
+        styles = OPENING_STYLES_EN if language == "en" else OPENING_STYLES
+        style_key, style_desc = random.choice(styles)
+        state["meta"]["opening_style"] = style_desc
+        state["meta"]["opening_key"] = style_key
+
+    store.save(state)
+    logger.info("🌍 Kampanjspråk %s → %s", old_lang, language)
+    return {"ok": True, "language": language}
+
+
 @app.patch("/api/campaign/inventory")
 async def update_inventory(req: dict, morkrets_token: str | None = Cookie(None)):
     """Uppdatera hela inventory-listan (frontend skickar full array)."""

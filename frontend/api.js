@@ -246,6 +246,16 @@ const API = (() => {
       return req('/api/campaign/character', { method: 'PATCH', body: JSON.stringify(data) });
     },
 
+    // ── Campaign language (DM narration language) ──
+    async updateCampaignLanguage(language) {
+      if (MOCK) {
+        const c = mock._load();
+        if (c) { c.meta = c.meta || {}; c.meta.language = language; mock._save(); }
+        return { ok: true, language };
+      }
+      return req('/api/campaign/language', { method: 'PATCH', body: JSON.stringify({ language }) });
+    },
+
     // ── Attachments (pdf/md/txt) ──
     async uploadAttachment(file) {
       if (MOCK) throw new Error('Not available in mock mode');

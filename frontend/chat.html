@@ -3457,11 +3457,11 @@ async function dmRespond(playerText) {
     // Parsa svaret — DM kan inkludera NPC-dialog
     const reply = res.reply || '…';
 
-    // DM:ns inre monolog (reasoning) — medvetet INTE visad i chatten.
-    // P1-fix från playthrough: rå chain-of-thought (inkl. [KAST:]-taggar och
-    // DC-värden) läckte till spelaren. Loggas bara till konsolen för debugging.
+    // DM:ns inre monolog (reasoning) — visas före svaret, hopfällbar.
+    // rostad VILL ha kvar denna (önskad funktion, ej en bugg) — rättat
+    // 2026-07-31 efter att QA-fixen tog bort den.
     if (res.reasoning) {
-      console.debug('[DM reasoning]', res.reasoning);
+      addReasoning(res.reasoning);
     }
 
     // Lägg till nya NPCs i registret (från DM:s svar)

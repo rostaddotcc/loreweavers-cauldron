@@ -38,6 +38,15 @@
   .ascii-map{margin:0 auto 2rem;padding:1.2rem 1.5rem;background:rgba(4,3,10,.95);border:2px solid var(--edge);box-shadow:inset 0 0 20px rgba(139,95,212,.05),5px 5px 0 rgba(0,0,0,.7);overflow-x:auto;overflow-y:hidden;text-align:center;max-width:920px}
   .ascii-map pre{font-family:'Courier New',monospace;font-size:.72rem;line-height:1.35;color:var(--arcane);text-shadow:0 0 6px rgba(139,95,212,.3);white-space:pre;display:block;text-align:left;margin:0 auto;width:fit-content;min-width:100%}
   .ascii-map .map-label{font-family:'Silkscreen',monospace;font-size:.55rem;letter-spacing:.2em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.5rem}
+
+  /* ── Kartans teckenförklaring (legend) ── */
+  .map-legend{display:flex;gap:1.1rem;flex-wrap:wrap;justify-content:center;margin:-.8rem auto 1.8rem;max-width:920px;font-family:'Silkscreen',monospace;font-size:.52rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-dim)}
+  .map-legend .ml-item{display:inline-flex;align-items:center;gap:.35rem;white-space:nowrap}
+  .map-legend .ml-cur{color:var(--gold-bright)}
+  .map-legend .ml-vis{color:var(--teal)}
+  .map-legend .ml-unv{color:rgba(138,122,94,.55)}
+  .map-legend .ml-q{color:var(--ember)}
+  .map-legend .ml-route{color:rgba(94,154,163,.55)}
   @media(max-width:960px){.ascii-map{max-width:100%}.ascii-map pre{font-size:.62rem}}
   @media(max-width:640px){.ascii-map pre{font-size:.5rem;line-height:1.25}}
 
@@ -161,7 +170,7 @@
   <a class="top-btn" href="character.html">🧙 Character</a>
   <a class="top-btn" href="npcs.html">📖 Personages</a>
   <a class="top-btn" href="loggbok.html">📜 Logbook</a>
-  <a class="top-btn" href="valvet.html">🏰 The Vault</a>
+  <button class="top-btn danger" onclick="doLogout()">🚪 Leave</button>
 </header>
 
 <div class="layout">
@@ -174,6 +183,14 @@
   <div class="ascii-map" id="ascii-map">
     <div class="map-label">✦ world map ✦</div>
     <pre id="map-art">Loading map…</pre>
+  </div>
+
+  <div class="map-legend" id="map-legend" aria-label="Map legend">
+    <span class="ml-item"><span class="ml-cur">◉</span> You are here</span>
+    <span class="ml-item"><span class="ml-vis">◆</span> Visited</span>
+    <span class="ml-item"><span class="ml-unv">◇</span> Known, not visited</span>
+    <span class="ml-item"><span class="ml-q">⚑</span> Active quest</span>
+    <span class="ml-item"><span class="ml-route">·</span> Route traveled</span>
   </div>
 
   <div class="travel-journal" id="travel-journal" style="display:none"></div>
@@ -480,8 +497,15 @@ async function loadLocations() {
   } catch (e) {
     document.getElementById('current-name').textContent = 'No active campaign';
     document.getElementById('ascii-map').style.display = 'none';
+    document.getElementById('map-legend').style.display = 'none';
     document.getElementById('places-grid').style.display = 'none';
-    document.getElementById('empty-state').style.display = 'block';
+    const empty = document.getElementById('empty-state');
+    empty.style.display = 'block';
+    empty.querySelector('p').innerHTML = 'No active campaign — create an adventure first.<br>The map will grow once the world is born.';
+    let a = empty.querySelector('a');
+    if (!a) { a = document.createElement('a'); a.className = 'top-btn'; a.style.marginTop = '1rem'; a.style.display = 'inline-block'; empty.appendChild(a); }
+    a.href = 'adventure.html';
+    a.textContent = '✦ Create Adventure';
   }
 }
 
@@ -490,6 +514,14 @@ loadLocations();
 // Toast
 let toastTimer;
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2400);}
+
+// ── Logga ut ──
+async function doLogout() {
+  SFX.click();
+  try { await API.logout(); } catch(_) {}
+  sessionStorage.removeItem('dnd_user');
+  location.href = 'login.html';
+}
 
 // Embers
 const canvas=document.getElementById('embers'),ctx=canvas.getContext('2d');

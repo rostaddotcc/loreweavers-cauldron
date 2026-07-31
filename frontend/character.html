@@ -1295,7 +1295,7 @@ function renderInventory() {
   const grid = document.getElementById('inv-grid');
   grid.innerHTML = '';
   if (!state.inventory.length) {
-    grid.innerHTML = `<div class="inv-empty">${I18N.t('Väskan är tom… än så länge.')}</div>`;
+    grid.innerHTML = `<div class="inv-empty">Your pack is empty — the world will provide…</div>`;
   }
   let totalWeight = 0;
   state.inventory.forEach((item, i) => {

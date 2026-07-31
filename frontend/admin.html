@@ -207,6 +207,7 @@
     .stat-card { padding: 0.8rem 0.5rem; }
     .stat-num { font-size: 1rem; }
     .masthead h1 { font-size: 0.85rem; }
+    .back-btn { min-height: 44px; display: inline-flex; align-items: center; }
   }
 </style>
 <link rel="stylesheet" href="snes.css?v=3">
@@ -221,7 +222,7 @@
 <div class="app">
   <header class="masthead">
     <h1>Admin · Realm of Darkness</h1>
-    <a href="adventure.html" class="back-btn">← Back</a>
+    <a href="chat.html" class="back-btn">⚔ To the Table</a>
   </header>
 
   <div id="content">
@@ -310,7 +311,7 @@ async function loadStats() {
     const res = await fetch('/api/admin/stats', { credentials: 'include' });
     if (res.status === 401) { location.href = 'login.html'; return; }
     if (res.status === 403) {
-      content.innerHTML = '<div class="error-state"><h2>⛔ You do not have admin privileges.</h2><p><a href="adventure.html">← Back to the Adventure</a></p></div>';
+      content.innerHTML = '<div class="error-state"><h2>⛔ You do not have admin privileges.</h2><p><a href="chat.html">⚔ To the Table</a></p></div>';
       return;
     }
     if (!res.ok) throw new Error('API error: ' + res.status);

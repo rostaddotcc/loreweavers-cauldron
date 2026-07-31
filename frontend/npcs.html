@@ -232,6 +232,7 @@
   <span class="brand">🐉 A Swedish D&amp;D Adventure</span>
   <span class="page-tag">Memory Codex · Known Personages</span>
   <span class="spacer"></span>
+  <a class="top-btn" href="chat.html">⚔ To the Table</a>
   <a class="top-btn" href="platser.html">🗺️ The Map</a>
   <a class="top-btn" href="loggbok.html">📜 Logbook</a>
   <a class="top-btn" href="character.html">🧙 Character</a>
@@ -355,13 +356,13 @@ function showNoCampaign(msg){
 function showEmptyHall(){
   document.getElementById('npc-list').innerHTML = `
     <div style="text-align:center;color:var(--bone-dim);font-style:italic;padding:2.5rem 1rem;font-size:.88rem;line-height:1.8">
-      🕯️<br>${I18N.t('Du har inte mött några gestalter ännu.')}<br>${I18N.t('De väntar i mörkret…')}
+      🕯️<br>No souls met yet — the world awaits…
     </div>`;
   document.getElementById('hall-count').textContent = I18N.t('0 gestalter');
   document.getElementById('dossier').innerHTML = `
     <div class="empty">
       <div class="rune">🕯️</div>
-      <p>${I18N.t('Du har inte mött några gestalter ännu. De väntar i mörkret…')}</p>
+      <p>No souls met yet — the world awaits…</p>
     </div>`;
 }
 

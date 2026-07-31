@@ -679,7 +679,6 @@
     .scene-card { width: 100%; max-width: none; }
     .scene-card .ascii-art pre { font-size: .58rem; }
     .event-batch { max-width: 100%; }
-    .console.open { width: 100%; }
   }
 
   /* Inline roll-request i chatten */
@@ -981,76 +980,65 @@
   }
   .oracle-input button:hover { box-shadow: 0 0 12px -3px rgba(139,95,212,0.5); }
 
-  /* ═══════════ 🛠️ MASKINRUMMET — live debug-konsol ═══════════ */
+  /* ═══════════ 🛠️ MASKINRUMMET — flat debug-panel (api.js #debug-panel style) ═══════════ */
   .console {
-    position: fixed; top: 0; right: 0; bottom: 0; z-index: 40;
-    width: 0; overflow: hidden;
-    background: linear-gradient(180deg, #0a0713, #06040c);
-    border-left: 1px solid rgba(51,204,51,0.35);
-    box-shadow: -8px 0 30px rgba(0,0,0,0.7);
-    transition: width 0.35s cubic-bezier(.22,1,.36,1);
-    display: flex; flex-direction: column;
+    position: fixed; bottom: 0; right: 0; z-index: 10000;
+    width: 420px; max-width: 94vw; max-height: 45vh;
+    display: none; flex-direction: column;
+    background: #0a0a12; border: 1px solid #333;
+    box-shadow: 0 -4px 20px rgba(0,0,0,.6);
+    font-family: 'VT323', 'IBM Plex Mono', monospace;
   }
-  .console.open { width: 300px; }
-  .console::after { /* scanlines */
-    content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .05;
-    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(51,204,51,.5) 3px);
-  }
+  .console.open { display: flex; }
   .console-head {
-    display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.7rem;
-    border-bottom: 1px solid rgba(61,47,82,0.5); flex-shrink: 0;
-    background: rgba(22,16,32,0.6);
+    display: flex; align-items: center; gap: 0.4rem;
+    padding: 0.3rem 0.55rem; border-bottom: 1px solid #222; flex-shrink: 0;
+    background: #111;
   }
   .console-title {
-    font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.68rem;
-    letter-spacing: 0.18em; text-transform: uppercase; color: var(--term-green);
-    text-shadow: 0 0 10px rgba(51,204,51,0.5); display: flex; align-items: center; gap: 0.5rem;
+    font-family: 'VT323', 'IBM Plex Mono', monospace; font-size: 0.82rem; letter-spacing: 0.04em;
+    color: #8f8; display: flex; align-items: center; gap: 0.4rem; white-space: nowrap;
   }
-  .console-title .pulse {
-    width: 7px; height: 7px; border-radius: 50%; background: var(--term-green);
-    box-shadow: 0 0 8px var(--term-green); animation: cpulse 1.6s ease-in-out infinite;
-  }
-  @keyframes cpulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
-  .console-filters { display: flex; gap: 0.3rem; margin-left: 0.5rem; }
+  .console-filters { display: flex; gap: 0.25rem; }
   .cchip {
-    font-family: 'Cinzel', serif; font-size: 0.52rem; letter-spacing: 0.1em; text-transform: uppercase;
-    background: transparent; border: 1px solid var(--edge); color: var(--bone-dim);
-    padding: 0.25rem 0.55rem; cursor: pointer; border-radius: 2px; transition: all 0.2s;
+    font-family: 'VT323', 'IBM Plex Mono', monospace; font-size: 0.72rem;
+    background: #222; border: 1px solid #444; color: #aaa;
+    padding: 0.14rem 0.5rem; cursor: pointer; white-space: nowrap;
   }
-  .cchip:hover { color: var(--bone-bright); border-color: var(--bone-dim); }
-  .cchip.on { color: #0a0713; background: var(--term-green); border-color: var(--term-green); box-shadow: 0 0 10px -2px rgba(51,204,51,0.6); }
+  .cchip:hover { background: #333; color: #fff; }
+  .cchip.on { background: #33cc33; border-color: #33cc33; color: #0a0a12; }
   .console-count {
-    margin-left: auto; font-family: 'VT323', monospace; font-size: 0.85rem; color: var(--bone-dim);
+    margin-left: auto; font-family: 'VT323', 'IBM Plex Mono', monospace; font-size: 0.75rem; color: #666; white-space: nowrap;
   }
   .console-btn {
-    font-family: 'Cinzel', serif; font-size: 0.55rem; letter-spacing: 0.1em; text-transform: uppercase;
-    background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
-    padding: 0.3rem 0.7rem; cursor: pointer; border-radius: 2px; transition: all 0.2s;
+    font-family: 'VT323', 'IBM Plex Mono', monospace; font-size: 0.72rem;
+    background: #222; border: 1px solid #444; color: #aaa;
+    padding: 0.14rem 0.5rem; cursor: pointer; white-space: nowrap;
   }
-  .console-btn:hover { color: var(--gold-bright); border-color: var(--gold); }
-  .console-btn.danger:hover { color: var(--blood-bright); border-color: var(--blood-bright); }
+  .console-btn:hover { background: #333; color: #fff; }
+  .console-btn.danger:hover { background: #8b1a2a; color: #fff; border-color: #d43a4d; }
   .console-log {
-    flex: 1; overflow-y: auto; padding: 0.4rem 0.7rem; font-family: 'VT323', monospace;
-    font-size: 0.82rem; line-height: 1.3;
+    overflow-y: auto; padding: 0.3rem 0.6rem; flex: 1;
+    font-family: 'VT323', 'IBM Plex Mono', monospace; font-size: 0.85rem; line-height: 1.35;
+    max-height: calc(45vh - 2.1rem);
   }
   .console-log::-webkit-scrollbar { width: 8px; }
-  .console-log::-webkit-scrollbar-thumb { background: var(--edge); border-radius: 4px; }
-  .clog { display: flex; gap: 0.5rem; padding: 0.1rem 0; animation: clog-in 0.25s ease; }
-  @keyframes clog-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-  .clog .ct { color: var(--bone-dim); flex-shrink: 0; opacity: 0.7; }
-  .clog .cl { flex-shrink: 0; width: 38px; font-weight: 700; }
+  .console-log::-webkit-scrollbar-thumb { background: var(--edge); border-radius: 0; }
+  .clog { display: flex; gap: 0.5rem; padding: 0.08rem 0; }
+  .clog .ct { color: #555; flex-shrink: 0; }
+  .clog .cl { flex-shrink: 0; width: 34px; font-weight: 700; }
   .clog .cn {
     color: var(--teal); opacity: 0.8;
     flex-shrink: 1; min-width: 0; max-width: 72px;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .clog .cm { flex: 1; min-width: 0; word-break: break-word; }
-  .clog.DEBUG .cl { color: var(--bone-dim); } .clog.DEBUG .cm { color: var(--bone-dim); }
-  .clog.INFO .cl { color: var(--term-green); } .clog.INFO .cm { color: var(--bone); }
-  .clog.WARNING .cl { color: var(--term-amber); } .clog.WARNING .cm { color: var(--term-amber); }
-  .clog.ERROR .cl { color: var(--blood-bright); } .clog.ERROR .cm { color: var(--blood-bright); }
-  .clog.CRITICAL .cl { color: #ff5566; text-shadow: 0 0 8px rgba(255,85,102,0.6); } .clog.CRITICAL .cm { color: #ff5566; }
-  .console-empty { color: var(--bone-dim); font-style: italic; padding: 1rem 0; text-align: center; }
+  .clog .cm { flex: 1; min-width: 0; word-break: break-word; color: var(--bone); }
+  .clog.DEBUG .cl, .clog.DEBUG .cm { color: var(--bone-dim); }
+  .clog.INFO .cl { color: var(--term-green); }
+  .clog.WARNING .cl, .clog.WARNING .cm { color: var(--term-amber); }
+  .clog.ERROR .cl, .clog.ERROR .cm { color: #ff5566; }
+  .clog.CRITICAL .cl, .clog.CRITICAL .cm { color: #ff5566; }
+  .console-empty { color: var(--bone-dim); font-style: italic; padding: 0.8rem 0; text-align: center; }
 
   /* ── Toast ── */
   .toast {
@@ -1137,6 +1125,269 @@
   .day-banner b { color: #cfe0ff; }
 
   /* Sidebar drawer handled by snes.css section 30c — no display:none */
+
+  /* ═══════════ CHAR/NPC DRAWER (D1.1/D1.2) — base (theme in snes.css) ═══════════ */
+  .cd-backdrop {
+    position: fixed; inset: 0; z-index: 9990;
+    background: rgba(4,3,8,0.72);
+    opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+  }
+  .cd-backdrop.open { opacity: 1; pointer-events: auto; }
+  .cd-drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; z-index: 10000;
+    width: 320px; max-width: 92vw;
+    display: flex; flex-direction: column;
+    background: #0e0e14; border-left: 1px solid var(--edge);
+    transform: translateX(100%); transition: transform 0.3s cubic-bezier(.22,1,.36,1);
+  }
+  .cd-drawer.open { transform: translateX(0); }
+  .cd-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+    padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--edge); flex-shrink: 0;
+  }
+  .cd-title {
+    font-family: 'Cinzel', serif; font-size: 0.68rem; font-weight: 700;
+    letter-spacing: 0.22em; text-transform: uppercase; color: var(--gold-bright);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .cd-close {
+    width: 34px; height: 34px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent; border: 1px solid var(--edge); color: var(--bone-dim);
+    font-size: 0.9rem; cursor: pointer;
+  }
+  .cd-close:hover { color: var(--blood-bright); border-color: var(--blood-bright); }
+  .cd-body { flex: 1; overflow-y: auto; padding: 0.9rem; -webkit-overflow-scrolling: touch; }
+  .cd-empty {
+    text-align: center; color: var(--bone-dim); font-style: italic;
+    padding: 2.5rem 1rem; font-size: 0.85rem;
+  }
+  .cd-section-title {
+    font-family: 'Cinzel', serif; font-size: 0.6rem; font-weight: 700;
+    letter-spacing: 0.26em; text-transform: uppercase; color: var(--gold);
+    display: flex; align-items: center; gap: 0.6rem; margin: 1.2rem 0 0.55rem;
+  }
+  .cd-section-title:first-child { margin-top: 0; }
+  .cd-section-title::after { content: ''; flex: 1; height: 1px; background: var(--edge); }
+  .cd-name { font-family: 'Cinzel', serif; font-size: 0.95rem; font-weight: 900; color: var(--bone-bright); line-height: 1.2; }
+  .cd-class { font-size: 0.75rem; color: var(--arcane); margin-top: 0.15rem; font-style: italic; }
+  .cd-hp-label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 0.72rem; color: var(--bone-dim); margin-bottom: 0.3rem;
+  }
+  .cd-hp-label b { color: var(--blood-bright); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+  .cd-hp-label .cd-temp { color: var(--teal); }
+  .cd-trough {
+    position: relative; height: 16px; background: #08080d;
+    border: 1px solid var(--edge); overflow: hidden;
+  }
+  .cd-trough i {
+    display: block; height: 100%;
+    background: linear-gradient(180deg, var(--blood-bright), #5e1220 85%);
+    transition: width 0.5s ease;
+  }
+  .cd-trough::after {
+    content: ''; position: absolute; top: 0; bottom: 0; width: 28%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent);
+    animation: cd-sheen 2.6s ease-in-out infinite; pointer-events: none;
+  }
+  @keyframes cd-sheen { 0% { left: -35%; } 100% { left: 105%; } }
+  .cd-trough.low { border-color: var(--blood); }
+  .cd-trough.low i { animation: cd-alarm 1s steps(2) infinite; }
+  .cd-trough.low::after { animation: none; }
+  @keyframes cd-alarm { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+  .cd-xp-label { font-size: 0.62rem; color: var(--bone-dim); margin-top: 0.25rem; text-align: right; font-variant-numeric: tabular-nums; }
+  .cd-xp-label b { color: var(--gold-bright); }
+  .cd-xp { position: relative; height: 8px; background: #08080d; border: 1px solid rgba(201,162,39,0.3); overflow: hidden; }
+  .cd-xp i { display: block; height: 100%; background: linear-gradient(90deg, #b8860b, #ffd700); }
+  .cd-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; margin-top: 0.6rem; }
+  .cd-stat {
+    text-align: center; padding: 0.45rem 0.2rem;
+    background: #12121a; border: 1px solid var(--edge);
+  }
+  .cd-stat .cd-stat-k { font-family: 'Cinzel', serif; font-size: 0.52rem; letter-spacing: 0.2em; color: var(--bone-dim); }
+  .cd-stat .cd-stat-v { font-family: 'Press Start 2P', monospace; font-size: 0.75rem; color: var(--bone-bright); margin-top: 0.3rem; }
+  .cd-abilities { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; }
+  .cd-ability { text-align: center; padding: 0.5rem 0.2rem 0.4rem; background: #12121a; border: 1px solid var(--edge); }
+  .cd-ability .cd-abbr { font-family: 'Cinzel', serif; font-size: 0.55rem; letter-spacing: 0.24em; color: var(--gold); }
+  .cd-ability .cd-score { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.05rem; color: var(--bone-bright); line-height: 1.2; }
+  .cd-ability .cd-mod { font-size: 0.72rem; color: var(--arcane); }
+  .cd-res-row {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.5rem 0.55rem; margin-bottom: 0.35rem;
+    background: #12121a; border: 1px solid var(--edge);
+  }
+  .cd-res-info { flex: 1; min-width: 0; }
+  .cd-res-label { font-size: 0.78rem; color: var(--bone-bright); }
+  .cd-res-note { font-size: 0.62rem; color: var(--bone-dim); font-style: italic; }
+  .cd-res-roll {
+    font-family: 'Cinzel', serif; font-size: 0.56rem; letter-spacing: 0.1em; text-transform: uppercase;
+    background: #181822; border: 1px solid var(--gold); color: var(--gold-bright);
+    padding: 0.4rem 0.6rem; cursor: pointer; white-space: nowrap;
+  }
+  .cd-res-roll:active { background: var(--gold); color: var(--ink); }
+  .cd-slots { display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center; }
+  .cd-slot {
+    width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--edge); background: #08080d;
+    font-family: 'Cinzel', serif; font-size: 0.65rem; color: transparent;
+  }
+  .cd-slot.lit { background: radial-gradient(circle at 35% 30%, #c9a6ff, var(--arcane) 55%, #3a1f66); border-color: #b490ee; color: rgba(255,255,255,0.85); }
+  .cd-slots-hint { font-size: 0.7rem; font-style: italic; color: var(--bone-dim); }
+  .cd-ds { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--blood-bright); }
+  .cd-ds .cd-pips { display: inline-flex; gap: 0.2rem; font-family: 'Press Start 2P', monospace; font-size: 0.6rem; }
+  .cd-ds .cd-pips b { color: var(--term-green); font-weight: 400; }
+  .cd-ds .cd-pips i { color: var(--blood-bright); font-style: normal; }
+  .cd-ds .cd-pips span { color: var(--bone-dim); }
+  /* Inventory cards (item-card pattern from character.html, drawer-adapted) */
+  .cd-item-card {
+    display: flex; gap: 0.6rem; align-items: flex-start;
+    background: #12121a; border: 1px solid var(--edge);
+    padding: 0.55rem 0.6rem; margin-bottom: 0.4rem; cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .cd-item-card:hover { border-color: var(--bone-dim); background: #181822; }
+  .cd-item-card:active { background: rgba(201,162,39,0.12); border-color: var(--gold); }
+  .cd-item-card.equipped { border-color: rgba(90,154,78,0.55); }
+  .cd-item-card.r-magic { border-color: rgba(123,79,212,0.5); }
+  .cd-item-card.r-rare { border-color: rgba(232,198,90,0.5); }
+  .cd-item-card.r-legendary { border-color: rgba(232,198,90,0.75); }
+  .cd-item-icon { font-size: 1.2rem; line-height: 1; flex-shrink: 0; }
+  .cd-item-info { flex: 1; min-width: 0; }
+  .cd-item-name { font-family: 'Cinzel', serif; font-size: 0.74rem; font-weight: 700; color: var(--bone-bright); }
+  .cd-item-name.r-magic { color: #cbb3f2; }
+  .cd-item-name.r-rare, .cd-item-name.r-legendary { color: var(--gold-bright); }
+  .cd-item-type { font-size: 0.62rem; color: var(--bone-dim); font-style: italic; margin-top: 0.1rem; }
+  .cd-item-stats { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.4rem; }
+  .cd-badge {
+    font-family: 'Cinzel', serif; font-size: 0.54rem; letter-spacing: 0.06em;
+    padding: 0.14rem 0.4rem; border: 1px solid var(--edge); background: #0e0e14; color: var(--bone);
+  }
+  .cd-badge.dmg { border-color: rgba(139,26,42,0.55); color: var(--blood-bright); }
+  .cd-badge.ac { border-color: rgba(90,154,78,0.55); color: var(--poison); }
+  .cd-badge.charges { border-color: rgba(123,79,212,0.55); color: var(--arcane); }
+  .cd-badge.magic-bonus { border-color: rgba(232,198,90,0.55); color: var(--gold-bright); }
+  .cd-badge.qty, .cd-badge.range { color: var(--bone-dim); }
+  .cd-inv-empty { text-align: center; color: var(--bone-dim); font-style: italic; padding: 1.2rem 0.5rem; font-size: 0.78rem; }
+  /* NPC card in drawer */
+  .cd-npc-top { display: flex; gap: 0.7rem; align-items: center; }
+  .cd-npc-avatar {
+    width: 46px; height: 46px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
+    background: #12121a; border: 1px solid var(--edge);
+  }
+  .cd-npc-avatar img { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+  .cd-role { font-size: 0.75rem; color: var(--bone-dim); font-style: italic; margin-top: 0.1rem; }
+  .cd-rel-badge {
+    display: inline-block; font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 0.18rem 0.5rem; margin-top: 0.4rem;
+    border: 1px solid var(--edge); color: var(--bone-dim); background: #12121a;
+  }
+  .cd-rel-badge.ally { border-color: rgba(90,154,78,0.6); color: var(--poison); }
+  .cd-rel-badge.foe { border-color: rgba(212,58,77,0.6); color: var(--blood-bright); }
+  .cd-rel-badge.neutral { border-color: rgba(107,107,128,0.6); color: var(--bone-dim); }
+  .cd-alive { font-size: 0.7rem; margin-top: 0.35rem; color: var(--poison); }
+  .cd-alive.dead { color: var(--blood-bright); }
+  .cd-notes { margin-top: 0.5rem; }
+  .cd-notes p { font-size: 0.74rem; color: var(--bone); line-height: 1.5; margin-bottom: 0.35rem; }
+  .cd-mention {
+    display: block; width: 100%; text-align: center;
+    font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase;
+    background: #181822; border: 1px solid var(--arcane); color: var(--arcane);
+    padding: 0.55rem 0.6rem; margin-top: 0.8rem; cursor: pointer;
+  }
+  .cd-mention:active { background: var(--arcane); color: var(--ink); }
+  /* Item detail modal */
+  .cd-item-overlay {
+    position: fixed; inset: 0; z-index: 11000;
+    background: rgba(4,2,8,0.82);
+    display: none; align-items: center; justify-content: center;
+  }
+  .cd-item-overlay.open { display: flex; }
+  .cd-item-modal {
+    position: relative; width: 92vw; max-width: 440px; max-height: 82vh; overflow-y: auto;
+    background: #0e0e14; border: 1px solid var(--gold); padding: 1.6rem 1.6rem 1.4rem;
+  }
+  .cd-item-close {
+    position: absolute; top: 0.55rem; right: 0.75rem;
+    background: transparent; border: none; color: var(--bone-dim);
+    font-size: 1.1rem; cursor: pointer;
+  }
+  .cd-item-close:hover { color: var(--blood-bright); }
+  .cd-item-h { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1rem; color: var(--bone-bright); margin-bottom: 0.2rem; }
+  .cd-item-h.r-magic { color: #cbb3f2; }
+  .cd-item-h.r-rare, .cd-item-h.r-legendary { color: var(--gold-bright); }
+  .cd-item-sub { font-size: 0.72rem; color: var(--bone-dim); font-style: italic; margin-bottom: 0.8rem; padding-bottom: 0.6rem; border-bottom: 1px solid rgba(42,42,58,0.6); }
+  .cd-item-row { display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px solid rgba(42,42,58,0.35); font-size: 0.78rem; }
+  .cd-item-row .cd-k { color: var(--bone-dim); font-size: 0.68rem; font-family: 'Cinzel', serif; text-transform: uppercase; letter-spacing: 0.06em; }
+  .cd-item-row .cd-v { color: var(--bone-bright); text-align: right; }
+  .cd-item-desc { margin-top: 0.8rem; padding: 0.7rem; font-size: 0.78rem; color: var(--bone); font-style: italic; line-height: 1.55; background: rgba(8,8,13,0.5); border-left: 2px solid var(--edge); }
+  .cd-item-desc.magic { border-left-color: var(--arcane); }
+  .cd-item-props { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem; }
+  .cd-item-prop { font-size: 0.62rem; padding: 0.12rem 0.45rem; border: 1px solid var(--edge); color: var(--bone-dim); background: #12121a; }
+  .cd-nav-btn {
+    display: block; width: 100%; text-align: center;
+    font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase;
+    background: #181822; border: 1px solid var(--gold); color: var(--gold-bright);
+    padding: 0.6rem 0.5rem; cursor: pointer;
+  }
+  .cd-nav-btn:active { background: var(--gold); color: var(--ink); }
+
+  /* ═══════════ 📖 CODEX MODAL (D1.3) — base (theme in snes.css) ═══════════ */
+  .cx-overlay {
+    position: fixed; inset: 0; z-index: 10000;
+    background: rgba(4,3,8,0.85);
+    display: none; align-items: center; justify-content: center;
+  }
+  .cx-overlay.open { display: flex; }
+  .cx-modal {
+    display: flex; flex-direction: column;
+    width: min(1080px, 96vw); height: min(88vh, 92vh);
+    background: var(--ink); border: 1px solid var(--edge);
+    box-shadow: 0 24px 70px rgba(0,0,0,0.8);
+  }
+  .cx-head {
+    display: flex; align-items: center; gap: 0.8rem;
+    padding: 0.55rem 0.9rem; border-bottom: 1px solid var(--edge); flex-shrink: 0;
+  }
+  .cx-title {
+    font-family: 'Cinzel', serif; font-size: 0.72rem; font-weight: 900;
+    letter-spacing: 0.32em; text-transform: uppercase; color: var(--gold-bright);
+    white-space: nowrap;
+  }
+  .cx-full {
+    margin-left: auto; font-size: 0.68rem; color: var(--bone-dim);
+    text-decoration: none; border: 1px solid var(--edge); padding: 0.25rem 0.6rem;
+  }
+  .cx-full:hover { color: var(--gold-bright); border-color: var(--gold); }
+  .cx-close {
+    width: 36px; height: 36px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent; border: 1px solid var(--edge); color: var(--bone-dim);
+    font-size: 1rem; cursor: pointer;
+  }
+  .cx-close:hover { color: var(--blood-bright); border-color: var(--blood-bright); }
+  .cx-tabs {
+    display: flex; gap: 0.35rem; padding: 0.55rem 0.9rem 0;
+    border-bottom: 1px solid var(--edge); flex-shrink: 0; overflow-x: auto;
+  }
+  .cx-tab {
+    font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase;
+    background: #12121a; border: 1px solid var(--edge); border-bottom: none;
+    color: var(--bone-dim); padding: 0.5rem 0.9rem; cursor: pointer; white-space: nowrap;
+  }
+  .cx-tab:hover { color: var(--bone-bright); }
+  .cx-tab.active { background: var(--ink); border-color: var(--gold); color: var(--gold-bright); }
+  .cx-frame { flex: 1; min-height: 0; position: relative; }
+  .cx-frame iframe {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    border: 0; background: var(--ink); display: none;
+  }
+  .cx-frame iframe.active { display: block; }
+  .cx-placeholder {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--bone-dim); font-style: italic; font-size: 0.85rem;
+  }
 </style>
 <link rel="stylesheet" href="snes.css?v=3">
 <script src="sprites.js?v=20260730e"></script>
@@ -1173,19 +1424,9 @@
     </select>
   </div>
 
-  <button class="top-btn" onclick="location.href='character.html'">🧙 Character</button>
+  <button class="top-btn" onclick="openCharDrawer()">🧙 Character</button>
+  <button class="top-btn" onclick="openCodex()">📖 Codex</button>
   <button class="top-btn admin-btn" id="admin-btn" style="display:none" onclick="location.href='admin.html'">👑 Admin</button>
-
-  <!-- ═══ Världen — dropdown ═══ -->
-  <div class="dropdown" id="dd-world">
-    <button class="top-btn drop-trigger" onclick="toggleDropdown('dd-world')">🗺️ The World <span class="caret">▾</span></button>
-    <div class="drop-menu">
-      <a class="drop-item" href="platser.html"><span class="di-icon">🗺️</span><span class="di-body"><span class="di-name">The Map</span><span class="di-hint">locations & travel routes</span></span></a>
-      <a class="drop-item" href="loggbok.html"><span class="di-icon">📜</span><span class="di-body"><span class="di-name">Logbook</span><span class="di-hint">your notes</span></span></a>
-      <a class="drop-item" href="npcs.html"><span class="di-icon">📖</span><span class="di-body"><span class="di-name">Characters</span><span class="di-hint">known NPCs</span></span></a>
-      <a class="drop-item" href="facts.html"><span class="di-icon">📚</span><span class="di-body"><span class="di-name">The Archive</span><span class="di-hint">memories & facts</span></span></a>
-    </div>
-  </div>
 
   <!-- ═══ Verktyg — dropdown ═══ -->
   <div class="dropdown" id="dd-tools">
@@ -1215,7 +1456,7 @@
     <button class="drawer-close-btn" onclick="toggleMobileSidebar()" aria-label="Close">✕</button>
     <div>
       <div class="side-label">The Party</div>
-      <div class="pc-card active" onclick="location.href='character.html'" title="Open character sheet">
+      <div class="pc-card active" onclick="openCharDrawer()" title="Open character sheet">
         <div class="pc-avatar" id="pc-avatar" onclick="event.stopPropagation();pickAvatar('player')" title="Click to change image">🎭</div>
         <div style="flex:1;min-width:0">
           <div class="pc-name" id="pc-name">—</div>
@@ -1241,13 +1482,17 @@
     </div>
 
     <div style="margin-top:auto">
-      <div class="side-label">Location</div>
+      <button class="cd-nav-btn" onclick="openCodex()" title="Open the Codex">📖 Codex</button>
+      <div class="side-label" style="margin-top:0.8rem">Location</div>
       <div id="loc-name" style="font-size:0.85rem;color:var(--bone-bright)">🗺 Unknown location</div>
       <div id="loc-sub" style="font-size:0.72rem;color:var(--bone-dim);font-style:italic;margin-top:0.2rem">—</div>
     </div>
 
     <!-- Mobile-only drawer extras -->
     <div class="drawer-extras">
+      <button class="drawer-logout" onclick="openCharDrawer()">🧙 Character</button>
+      <button class="drawer-logout" onclick="openCodex()">📖 Codex</button>
+      <button class="drawer-logout" onclick="toggleConsole()">🛠️ Engine Room</button>
       <div class="model-select">
         <span class="model-label">🔮</span>
         <select id="model-picker-mobile" onchange="switchModel(this.value)">
@@ -1334,10 +1579,10 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- 🛠️ MASKINRUMMET — live debug-konsol -->
+<!-- 🛠️ MASKINRUMMET — flat debug panel (api.js #debug-panel style) -->
 <div class="console" id="console">
   <div class="console-head">
-    <span class="console-title"><span class="pulse"></span>🛠️ The Engine Room</span>
+    <span class="console-title">🛠️ Debug</span>
     <div class="console-filters" id="console-filters">
       <button class="cchip on" data-lv="" onclick="setConsoleLevel(this,'')">All</button>
       <button class="cchip" data-lv="DEBUG" onclick="setConsoleLevel(this,'DEBUG')">Debug</button>
@@ -1347,10 +1592,51 @@
     <span class="console-count" id="console-count">0 lines</span>
     <button class="console-btn" id="console-autoscroll" onclick="toggleAutoScroll()">⬇ Auto</button>
     <button class="console-btn danger" onclick="clearConsole()">Clear</button>
-    <button class="console-btn" onclick="toggleConsole()">✕ Close</button>
+    <button class="console-btn" onclick="toggleConsole()">✕</button>
   </div>
   <div class="console-log" id="console-log">
-    <div class="console-empty">Opening the engine room… logs are streaming in live.</div>
+    <div class="console-empty">Waiting for logs… the DM's whispers will appear here.</div>
+  </div>
+</div>
+
+<!-- ═══════════ CHAR/NPC DRAWER (D1) ═══════════ -->
+<div class="cd-backdrop" id="cd-backdrop" onclick="closeCharDrawer()"></div>
+<aside class="cd-drawer" id="char-drawer" aria-hidden="true">
+  <div class="cd-head">
+    <span class="cd-title" id="cd-title">🧙 Character</span>
+    <button class="cd-close" onclick="closeCharDrawer()" aria-label="Close">✕</button>
+  </div>
+  <div class="cd-body" id="cd-body">
+    <div class="cd-empty">Opening the ledger…</div>
+  </div>
+</aside>
+
+<!-- Item detail modal (drawer) -->
+<div class="cd-item-overlay" id="cd-item-overlay" onclick="cdCloseItem(event)">
+  <div class="cd-item-modal" onclick="event.stopPropagation()">
+    <button class="cd-item-close" onclick="cdCloseItem(event, true)">✕</button>
+    <div id="cd-item-content"></div>
+  </div>
+</div>
+
+<!-- ═══════════ 📖 CODEX (D1.3) — fullscreen iframe tabs ═══════════ -->
+<div class="cx-overlay" id="codex-modal" onclick="if(event.target===this)closeCodex()" aria-hidden="true">
+  <div class="cx-modal">
+    <div class="cx-head">
+      <span class="cx-title">📖 Codex</span>
+      <a class="cx-full" id="cx-full-link" href="character.html" target="_blank" rel="noopener">Open full page ↗</a>
+      <button class="cx-close" onclick="closeCodex()" aria-label="Close">✕</button>
+    </div>
+    <div class="cx-tabs" id="cx-tabs">
+      <button class="cx-tab active" data-tab="character" onclick="activateCodexTab('character')">🧙 Character</button>
+      <button class="cx-tab" data-tab="npcs" onclick="activateCodexTab('npcs')">🧝 NPCs</button>
+      <button class="cx-tab" data-tab="map" onclick="activateCodexTab('map')">🗺 Map</button>
+      <button class="cx-tab" data-tab="journal" onclick="activateCodexTab('journal')">📖 Journal</button>
+      <button class="cx-tab" data-tab="facts" onclick="activateCodexTab('facts')">📌 Facts</button>
+    </div>
+    <div class="cx-frame" id="cx-frame">
+      <div class="cx-placeholder" id="cx-placeholder">📜 Opening the tome…</div>
+    </div>
   </div>
 </div>
 
@@ -1618,14 +1904,15 @@ function buildMessage(type, npcKey, text, meta) {
   } else if (type === 'npc') {
     const n = NPCS[npcKey] || { name: npcKey || 'Unknown', color: npcColorFor(npcKey || 'Unknown'), icon: '🎭', role: '' };
     el.style.setProperty('--npc-color', n.color);
+    el.setAttribute('data-npc', npcKey || '');
     el.innerHTML = `
       <span class="msg-avatar" data-npc-key="${npcKey}" onclick="pickAvatar('npc:${npcKey}')" title="${I18N.t('Klicka för att byta bild')}">${AVATARS['npc:' + npcKey] ? `<img src="${AVATARS['npc:' + npcKey]}" alt="">` : SPR.html(n.icon || '🎭')}</span>
       <div class="bubble">
-        <div class="who"><span class="dot"></span>${n.name}</div>
+        <div class="who" onclick="openNpcDrawer(this.closest('.msg').dataset.npc)" title="Open dossier" style="cursor:pointer"><span class="dot"></span>${n.name}</div>
         <div class="text">${mdToHtml(escapeHtml(text))}</div>
       </div>`;
   } else if (type === 'player') {
-    el.innerHTML = `<div class="bubble"><div class="who">${I18N.t(CHAR_NAME)}</div><div class="text">${text}</div></div>${avatarHtml('player', '🧙‍♀️')}`;
+    el.innerHTML = `<div class="bubble"><div class="who" onclick="openCharDrawer()" title="Open character sheet" style="cursor:pointer">${I18N.t(CHAR_NAME)}</div><div class="text">${text}</div></div>${avatarHtml('player', '🧙‍♀️')}`;
   } else if (type === 'system') {
     el.innerHTML = `<div class="box">${text}</div>`;
   } else if (type === 'guardian') {
@@ -3347,7 +3634,7 @@ function renderNpcSidebar() {
         ? `<img src="${av}" alt="" style="width:16px;height:16px;object-fit:cover;image-rendering:pixelated">`
         : SPR.html(n.icon || '🎭');
       return `
-      <div class="npc-row${n.alive === false ? ' dead' : ''}" onclick="location.href='npcs.html'" title="${I18N.t('Öppna dossier')}" style="cursor:pointer">
+      <div class="npc-row${n.alive === false ? ' dead' : ''}" data-npc="${k}" onclick="openNpcDrawer(this.dataset.npc)" title="View dossier" style="cursor:pointer">
         <span class="npc-dot" style="color:${n.color};background:${n.color}"></span>
         <span class="npc-name">${n.alive === false ? SPR.html('💀') : ''} ${icon} ${n.name}</span>
         <span class="npc-role">${n.role || ''}</span>
@@ -3465,7 +3752,7 @@ function setConsoleLevel(btn, lv) {
   // Nivåbyte → hämta hela buffern på nytt för korrekt filtrering
   consoleSince = 0;
   document.getElementById('console-log').innerHTML =
-    '<div class="console-empty">' + I18N.t('Hämtar loggar…') + '</div>';
+    '<div class="console-empty">Fetching logs…</div>';
   consoleLines = 0;
   pollConsole();
 }
@@ -3478,13 +3765,13 @@ function toggleAutoScroll() {
 
 function clearConsole() {
   document.getElementById('console-log').innerHTML =
-    '<div class="console-empty">' + I18N.t('Konsolen rensad.') + '</div>';
+    '<div class="console-empty">Console cleared.</div>';
   consoleLines = 0;
   updateConsoleCount();
 }
 
 function updateConsoleCount() {
-  document.getElementById('console-count').textContent = consoleLines + I18N.t(' rader');
+  document.getElementById('console-count').textContent = consoleLines + ' lines';
 }
 
 function appendConsoleLogs(logs) {
@@ -3631,6 +3918,9 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     const sidebar = document.querySelector('.sidebar.mobile-open');
     if (sidebar) { toggleMobileSidebar(); return; }
+    if (closeCodexIfOpen()) return;
+    if (closeItemModalIfOpen()) return;
+    if (closeCharDrawerIfOpen()) return;
     document.querySelectorAll('.sheet.open').forEach(s => closeSheet(s.id));
   }
 });
@@ -3681,11 +3971,11 @@ tick();
 
 <!-- ═══════════ MOBILE BOTTOM NAV ═══════════ -->
 <nav class="mobile-nav" id="mobile-nav">
-  <button class="nav-tab" onclick="openSheet('sheet-world');SFX.click()">
-    <span class="nav-icon">🗺️</span>
-    <span class="nav-label">The World</span>
+  <button class="nav-tab" onclick="openCodex();SFX.click()">
+    <span class="nav-icon">📖</span>
+    <span class="nav-label">Codex</span>
   </button>
-  <button class="nav-tab" onclick="location.href='character.html'">
+  <button class="nav-tab" onclick="openCharDrawer();SFX.click()">
     <span class="nav-icon">🧙</span>
     <span class="nav-label">Character</span>
   </button>
@@ -3703,21 +3993,6 @@ tick();
   </button>
 </nav>
 
-<!-- ═══════════ MOBILE SHEET: VÄRLDEN ═══════════ -->
-<div class="sheet-backdrop" id="sheet-world-backdrop" onclick="closeSheet('sheet-world')"></div>
-<div class="sheet" id="sheet-world">
-  <div class="sheet-head">
-    <span class="sheet-title">🗺️ The World</span>
-    <button class="sheet-close" onclick="closeSheet('sheet-world')">✕</button>
-  </div>
-  <div class="sheet-body">
-    <a class="sheet-row" href="platser.html"><span class="sr-icon">🗺️</span><span class="sr-body"><span class="sr-name">The Map</span><span class="sr-hint">locations &amp; travel routes</span></span></a>
-    <a class="sheet-row" href="loggbok.html"><span class="sr-icon">📜</span><span class="sr-body"><span class="sr-name">Logbook</span><span class="sr-hint">your notes</span></span></a>
-    <a class="sheet-row" href="npcs.html"><span class="sr-icon">📖</span><span class="sr-body"><span class="sr-name">Characters</span><span class="sr-hint">known NPCs</span></span></a>
-    <a class="sheet-row" href="facts.html"><span class="sr-icon">📚</span><span class="sr-body"><span class="sr-name">The Archive</span><span class="sr-hint">memories &amp; facts</span></span></a>
-  </div>
-</div>
-
 <!-- ═══════════ MOBILE SHEET: VERKTYG ═══════════ -->
 <div class="sheet-backdrop" id="sheet-tools-backdrop" onclick="closeSheet('sheet-tools')"></div>
 <div class="sheet" id="sheet-tools">
@@ -3732,6 +4007,356 @@ tick();
     <button class="sheet-row" onclick="closeSheet('sheet-tools');exportCampaign()"><span class="sr-icon">📦</span><span class="sr-body"><span class="sr-name">Export</span><span class="sr-hint">campaign as zip</span></span></button>
   </div>
 </div>
+
+<script>
+// ═══════════════════════════════════════
+// SPÅR D1 — CHAR/NPC DRAWER + CODEX MODAL (D1.1–D1.4)
+// ═══════════════════════════════════════
+let _cdOverlayCount = 0;
+function _lockScroll() { _cdOverlayCount++; document.body.style.overflow = 'hidden'; }
+function _unlockScroll() { _cdOverlayCount = Math.max(0, _cdOverlayCount - 1); if (!_cdOverlayCount) document.body.style.overflow = ''; }
+
+function cdEsc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function cdFmtMod(m) { return m >= 0 ? '+' + m : '' + m; }
+
+// ═══════════════ CHAR DRAWER (D1.1) ═══════════════
+const CD_ABILITY_ORDER = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
+const CD_TYPE_ICONS = { Vapen: '⚔️', Rustning: '🛡️', Dryck: '🧪', Magisk: '✦', Verktyg: '🔧', Annat: '📦', Weapon: '⚔️', Armor: '🛡️', Potion: '🧪', Magic: '✦', Tool: '🔧', Other: '📦' };
+let _drawerItems = [];
+
+function cdBadges(item) {
+  let b = '';
+  const dmg = item.damage || (item.damage_dice ? item.damage_dice + (item.damage_type ? ' ' + item.damage_type : '') : null);
+  if (dmg) b += `<span class="cd-badge dmg">⚔ ${cdEsc(dmg)}</span>`;
+  if (item.ac_bonus != null && item.ac_bonus !== undefined) b += `<span class="cd-badge ac">🛡 ${item.ac_bonus}</span>`;
+  if (item.magic_bonus > 0) b += `<span class="cd-badge magic-bonus">+${item.magic_bonus}</span>`;
+  if (item.charges != null || item.max_charges != null) {
+    const c = item.charges != null ? item.charges : '?';
+    const m = item.max_charges != null ? item.max_charges : '?';
+    b += `<span class="cd-badge charges">⚡ ${c}/${m}</span>`;
+  }
+  if (item.range) b += `<span class="cd-badge range">◎ ${cdEsc(item.range)}</span>`;
+  return b;
+}
+
+function openCharDrawer() {
+  SFX.click();
+  const drawer = document.getElementById('char-drawer');
+  if (!drawer) return;
+  document.getElementById('cd-title').textContent = '🧙 Character';
+  drawer.classList.add('open');
+  drawer.setAttribute('aria-hidden', 'false');
+  document.getElementById('cd-backdrop').classList.add('open');
+  _lockScroll();
+  renderCharDrawer();
+  // Färsk data från backend — drawer öppnas direkt med cachad state, uppdateras när svaret kommer
+  API.getCampaign().then(({ campaign }) => {
+    if (campaign) { campaignData = campaign; renderCharDrawer(); }
+  }).catch(() => {});
+}
+
+function closeCharDrawer() {
+  const drawer = document.getElementById('char-drawer');
+  if (drawer) { drawer.classList.remove('open'); drawer.setAttribute('aria-hidden', 'true'); }
+  const backdrop = document.getElementById('cd-backdrop');
+  if (backdrop) backdrop.classList.remove('open');
+  _unlockScroll();
+}
+
+function closeCharDrawerIfOpen() {
+  const drawer = document.getElementById('char-drawer');
+  if (drawer && drawer.classList.contains('open')) { closeCharDrawer(); return true; }
+  return false;
+}
+
+function renderCharDrawer() {
+  const body = document.getElementById('cd-body');
+  if (!body) return;
+  const raw = (campaignData && campaignData._raw) || {};
+  const ch = raw.character || {};
+  const name = cdEsc(ch.name || CHAR_NAME || 'The Adventurer');
+  const klass = [ch.race, ch.class].filter(Boolean).join(' · ') + (ch.level ? ' · Level ' + ch.level : '');
+  const hp = ch.hp || { current: 0, max: 0 };
+  const pct = hp.max > 0 ? Math.round(100 * (hp.current || 0) / hp.max) : 0;
+  const temp = hp.temp || ch.temp_hp || 0;
+  const xp = ch.xp || {};
+  const xpCur = xp.current || 0;
+  const xpNext = xp.next_level || xp.next || 300;
+  const dex = (ch.abilities && ch.abilities.DEX && ch.abilities.DEX.mod != null) ? ch.abilities.DEX.mod : 0;
+  const wis = (ch.abilities && ch.abilities.WIS && ch.abilities.WIS.mod != null) ? ch.abilities.WIS.mod : 0;
+  const ac = ch.ac != null ? ch.ac : '—';
+  const init = ch.initiative != null ? ch.initiative : dex;
+  const perc = ch.perception != null ? ch.perception : wis;
+  const abilities = ch.abilities || {};
+  const slots = ch.spell_slots || ch.spellSlots || { current: 0, max: 0 };
+  const ds = (hp.current || 0) <= 0 ? (raw.character && raw.character.death_saves) || { successes: 0, failures: 0 } : null;
+  const resources = Array.isArray(raw.resources) ? raw.resources : [];
+  const items = _drawerItems = Array.isArray(raw.inventory) ? raw.inventory : [];
+  const xpPct = xpNext > 0 ? Math.min(100, Math.round(100 * xpCur / xpNext)) : 0;
+
+  let html = '';
+  html += `<div class="cd-name">${name}</div>`;
+  if (klass) html += `<div class="cd-class">${cdEsc(klass)}</div>`;
+
+  html += `<div class="cd-section-title">❤ Vitality</div>`;
+  html += `<div class="cd-hp-label"><b>${hp.current ?? 0} / ${hp.max || 0} HP</b>${temp ? `<span class="cd-temp">+${temp} temp</span>` : ''}</div>`;
+  html += `<div class="cd-trough${hp.max > 0 && pct < 25 ? ' low' : ''}"><i style="width:${pct}%"></i></div>`;
+  html += `<div class="cd-xp" style="margin-top:.5rem"><i style="width:${xpPct}%"></i></div>`;
+  html += `<div class="cd-xp-label"><b>${xpCur}</b> / ${xpNext} XP</div>`;
+  html += `<div class="cd-stats">`;
+  html += `<div class="cd-stat"><div class="cd-stat-k">AC</div><div class="cd-stat-v">${ac}</div></div>`;
+  html += `<div class="cd-stat"><div class="cd-stat-k">INIT</div><div class="cd-stat-v">${cdFmtMod(init)}</div></div>`;
+  html += `<div class="cd-stat"><div class="cd-stat-k">PERC</div><div class="cd-stat-v">${cdFmtMod(perc)}</div></div>`;
+  html += `</div>`;
+
+  html += `<div class="cd-section-title">⚔ Abilities</div>`;
+  html += `<div class="cd-abilities">` + CD_ABILITY_ORDER.map(key => {
+    const v = abilities[key] || {};
+    const score = v.score != null ? v.score : 10;
+    const mod = v.mod != null ? v.mod : Math.floor((score - 10) / 2);
+    return `<div class="cd-ability"><div class="cd-abbr">${key}</div><div class="cd-score">${score}</div><div class="cd-mod">${cdFmtMod(mod)}</div></div>`;
+  }).join('') + `</div>`;
+
+  if (ds) {
+    const s = Math.min(3, ds.successes || 0);
+    const f = Math.min(3, ds.failures || 0);
+    html += `<div class="cd-section-title">💀 Death Saves</div>`;
+    html += `<div class="cd-ds"><span class="cd-pips">${'<b>●</b>'.repeat(s)}${'<span>○</span>'.repeat(3 - s)} <i>saves</i></span>`;
+    html += `<span class="cd-pips">${'<i>●</i>'.repeat(f)}${'<span>○</span>'.repeat(3 - f)} <i>fails</i></span></div>`;
+  }
+
+  html += `<div class="cd-section-title">🔮 Spell Slots</div>`;
+  if (slots.max > 0) {
+    html += `<div class="cd-slots">`;
+    for (let i = 0; i < slots.max; i++) html += `<div class="cd-slot${i < (slots.current || 0) ? ' lit' : ''}">✦</div>`;
+    html += `</div>`;
+    html += `<div class="cd-xp-label" style="text-align:left;margin-top:.35rem"><b>${slots.current || 0}</b> / ${slots.max} available</div>`;
+  } else {
+    html += `<div class="cd-slots-hint">No spell slots — this character casts no spells.</div>`;
+  }
+
+  if (resources.length) {
+    html += `<div class="cd-section-title">🎲 Active Resources</div>`;
+    resources.forEach(r => {
+      const label = cdEsc(r.label || r.notation || 'Roll');
+      const note = r.reason ? ' — ' + cdEsc(r.reason) : '';
+      const notation = cdEsc(r.notation || '1d20');
+      html += `<div class="cd-res-row"><div class="cd-res-info"><div class="cd-res-label">${label}</div><div class="cd-res-note">${notation}${note}</div></div>`;
+      html += `<button class="cd-res-roll" onclick="cdRollResource('${String(r.notation || '1d20').replace(/'/g, "\\'")}','${String(label).replace(/'/g, "\\'")}')">Roll 🎲</button></div>`;
+    });
+  }
+
+  html += `<div class="cd-section-title">🎒 Belongings</div>`;
+  if (items.length) {
+    items.forEach((item, i) => {
+      const rarityCls = item.rarity ? 'r-' + item.rarity : '';
+      const icon = CD_TYPE_ICONS[item.type] || CD_TYPE_ICONS.Annat;
+      html += `<div class="cd-item-card${item.equipped ? ' equipped' : ''}${rarityCls ? ' ' + rarityCls : ''}" onclick="cdOpenItem(${i})">`;
+      html += `<div class="cd-item-icon">${icon}</div>`;
+      html += `<div class="cd-item-info"><div class="cd-item-name ${rarityCls}">${item.rarity === 'magic' || item.rarity === 'legendary' ? '✦ ' : ''}${cdEsc(item.name || 'Unnamed item')}</div>`;
+      html += `<div class="cd-item-type">${cdEsc(item.type || 'Other')}</div>`;
+      html += `<div class="cd-item-stats">${cdBadges(item)}${item.qty > 1 ? `<span class="cd-badge qty">×${item.qty}</span>` : ''}</div></div></div>`;
+    });
+  } else {
+    html += `<div class="cd-inv-empty">No belongings yet — the world will provide…</div>`;
+  }
+
+  body.innerHTML = html;
+}
+
+// Resurs-tärningsknapp: rollDice + chat-meddelanden + ljud (samma mönster som /roll)
+function cdRollResource(notation, label) {
+  const roll = rollDice(notation);
+  if (!roll) { toast('⚠ Could not parse ' + notation); return; }
+  closeCharDrawer();
+  addMessage('player', null, `<i>${label} — rolling ${notation}</i>`);
+  addMessage('system', null, diceMessage(roll, label));
+  if (typeof SFX !== 'undefined') SFX.dice();
+}
+
+// ═══════════════ ITEM DETAIL MODAL (D1.1) ═══════════════
+function cdOpenItem(i) {
+  const item = _drawerItems[i];
+  if (!item) return;
+  const rarityCls = item.rarity ? 'r-' + item.rarity : '';
+  const icon = CD_TYPE_ICONS[item.type] || CD_TYPE_ICONS.Annat;
+  const dmg = item.damage || (item.damage_dice ? item.damage_dice + (item.damage_type ? ' ' + item.damage_type : '') : null);
+  let stats = '';
+  if (dmg) stats += `<div class="cd-item-row"><span class="cd-k">⚔ Damage</span><span class="cd-v">${cdEsc(dmg)}</span></div>`;
+  if (item.ac_bonus != null && item.ac_bonus !== undefined) stats += `<div class="cd-item-row"><span class="cd-k">🛡 AC bonus</span><span class="cd-v">${item.ac_bonus}</span></div>`;
+  if (item.range) stats += `<div class="cd-item-row"><span class="cd-k">◎ Range</span><span class="cd-v">${cdEsc(item.range)}</span></div>`;
+  if (item.magic_bonus > 0) stats += `<div class="cd-item-row"><span class="cd-k">✦ Magic bonus</span><span class="cd-v">+${item.magic_bonus}</span></div>`;
+  if (item.charges != null || item.max_charges != null) {
+    const c = item.charges != null ? item.charges : '?';
+    const m = item.max_charges != null ? item.max_charges : '?';
+    stats += `<div class="cd-item-row"><span class="cd-k">⚡ Charges</span><span class="cd-v">${c} / ${m}</span></div>`;
+  }
+  stats += `<div class="cd-item-row"><span class="cd-k">⚖ Weight</span><span class="cd-v">${((item.weight || 0) * (item.qty || 1)).toFixed(1)} lbs${item.qty > 1 ? ' × ' + item.qty : ''}</span></div>`;
+  stats += `<div class="cd-item-row"><span class="cd-k">📊 Rarity</span><span class="cd-v">${item.rarity === 'magic' ? '✦ ' : ''}${cdEsc(item.rarity || 'normal')}</span></div>`;
+  stats += `<div class="cd-item-row"><span class="cd-k">📦 Status</span><span class="cd-v">${item.equipped ? '⚔ Equipped' : '🎒 In pack'}</span></div>`;
+  let props = '';
+  if (Array.isArray(item.properties) && item.properties.length) {
+    props = `<div class="cd-item-props">${item.properties.map(p => `<span class="cd-item-prop">${cdEsc(p)}</span>`).join('')}</div>`;
+  }
+  let desc = '';
+  if (item.description) desc += `<div class="cd-item-desc">${cdEsc(item.description)}</div>`;
+  if (item.effects) desc += `<div class="cd-item-desc magic">${cdEsc(item.effects)}</div>`;
+  document.getElementById('cd-item-content').innerHTML = `
+    <div class="cd-item-h ${rarityCls}">${icon} ${cdEsc(item.name || 'Unnamed item')}</div>
+    <div class="cd-item-sub">${cdEsc(item.type || 'Other')}${item.rarity && item.rarity !== 'normal' ? ' · ' + cdEsc(item.rarity) : ''}</div>
+    ${stats}${props}${desc}`;
+  document.getElementById('cd-item-overlay').classList.add('open');
+  _lockScroll();
+}
+
+function cdCloseItem(e, force) {
+  if (!force && (!e || !e.target || !e.target.classList.contains('cd-item-overlay'))) return;
+  const ov = document.getElementById('cd-item-overlay');
+  if (ov) ov.classList.remove('open');
+  _unlockScroll();
+}
+
+function closeItemModalIfOpen() {
+  const ov = document.getElementById('cd-item-overlay');
+  if (ov && ov.classList.contains('open')) { cdCloseItem(null, true); return true; }
+  return false;
+}
+
+// ═══════════════ NPC DRAWER (D1.2) ═══════════════
+const CD_REL_LABEL = { allierad: 'Ally', neutral: 'Neutral', fiende: 'Foe', 'okänd': 'Unknown' };
+const CD_REL_KEYS = ['allierad', 'neutral', 'fiende', 'okänd'];
+
+function findNpcExtra(name) {
+  const raw = (campaignData && campaignData._raw) || {};
+  const list = Array.isArray(raw.npcs) ? raw.npcs : [];
+  const target = String(name || '').toLowerCase();
+  return list.find(x => x && x.name && String(x.name).toLowerCase() === target) ||
+         list.find(x => x && x.name && String(x.name).toLowerCase().includes(target)) || {};
+}
+
+function openNpcDrawer(key) {
+  const n = NPCS[key] || {};
+  SFX.click();
+  const drawer = document.getElementById('char-drawer');
+  if (!drawer) return;
+  document.getElementById('cd-title').textContent = n.name ? '🧝 ' + n.name : '🧝 NPC';
+  document.getElementById('cd-body').innerHTML = '<div class="cd-empty">Opening the dossier…</div>';
+  drawer.classList.add('open');
+  drawer.setAttribute('aria-hidden', 'false');
+  document.getElementById('cd-backdrop').classList.add('open');
+  _lockScroll();
+  renderNpcDrawer(key);
+}
+
+function renderNpcDrawer(key) {
+  const body = document.getElementById('cd-body');
+  if (!body) return;
+  const n = NPCS[key] || {};
+  const extra = findNpcExtra(n.name);
+  const rawName = n.name || key || 'Unknown';
+  const name = cdEsc(rawName);
+  const role = cdEsc(n.role || extra.role || '');
+  const relation = CD_REL_KEYS.includes(extra.relation) ? extra.relation : 'okänd';
+  const relCls = relation === 'allierad' ? 'ally' : relation === 'fiende' ? 'foe' : 'neutral';
+  const alive = n.alive !== false;
+  const avatar = AVATARS['npc:' + key]
+    ? `<img src="${AVATARS['npc:' + key]}" alt="">`
+    : (typeof SPR !== 'undefined' ? SPR.html(n.icon || '🎭') : (n.icon || '🎭'));
+  const notesRaw = extra.notes || n.notes || '';
+  const notes = Array.isArray(notesRaw) ? notesRaw : String(notesRaw).split('\n').filter(x => x.trim());
+  let notesHtml = '';
+  if (notes.length) {
+    notesHtml = `<div class="cd-notes">` + notes.slice(0, 8).map(x => `<p>✦ ${cdEsc(x)}</p>`).join('') + `</div>`;
+  }
+  const safeMention = rawName.replace(/'/g, "\\'");
+  body.innerHTML = `
+    <div class="cd-npc-top">
+      <div class="cd-npc-avatar" style="border-color:${n.color || 'var(--edge)'}">${avatar}</div>
+      <div>
+        <div class="cd-name" style="color:${n.color || 'var(--bone-bright)'}">${name}</div>
+        ${role ? `<div class="cd-role">${role}</div>` : ''}
+        <span class="cd-rel-badge ${relCls}">${CD_REL_LABEL[relation]}</span>
+        <div class="cd-alive${alive ? '' : ' dead'}">${alive ? '● Alive' : '💀 Fallen'}</div>
+      </div>
+    </div>
+    ${notesHtml}
+    <button class="cd-mention" onclick="cdMentionNpc('${safeMention}')">@ Mention in chat</button>`;
+}
+
+function cdMentionNpc(name) {
+  const prefix = input.value.trimEnd();
+  input.value = (prefix ? prefix + ' ' : '') + '@' + name + ' ';
+  input.focus();
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+  hideAtPopup();
+  closeCharDrawer();
+}
+
+// ═══════════════ 📖 CODEX MODAL (D1.3) — lazy iframes ═══════════════
+const CODEX_PAGES = {
+  character: { label: '🧙 Character', src: 'character.html' },
+  npcs:      { label: '🧝 NPCs',      src: 'npcs.html' },
+  map:       { label: '🗺 Map',       src: 'platser.html' },
+  journal:   { label: '📖 Journal',   src: 'loggbok.html' },
+  facts:     { label: '📌 Facts',     src: 'facts.html' },
+};
+const _codexIframes = {};
+let _codexLastTab = 'character';
+
+function openCodex(tabId) {
+  SFX.click();
+  const overlay = document.getElementById('codex-modal');
+  if (!overlay) return;
+  overlay.classList.add('open');
+  overlay.setAttribute('aria-hidden', 'false');
+  _lockScroll();
+  activateCodexTab(tabId || _codexLastTab);
+}
+
+function closeCodex() {
+  const overlay = document.getElementById('codex-modal');
+  if (!overlay) return;
+  overlay.classList.remove('open');
+  overlay.setAttribute('aria-hidden', 'true');
+  _unlockScroll();
+}
+
+function closeCodexIfOpen() {
+  const overlay = document.getElementById('codex-modal');
+  if (overlay && overlay.classList.contains('open')) { closeCodex(); return true; }
+  return false;
+}
+
+function activateCodexTab(id) {
+  const page = CODEX_PAGES[id];
+  if (!page) return;
+  _codexLastTab = id;
+  document.querySelectorAll('#cx-tabs .cx-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === id));
+  const frame = document.getElementById('cx-frame');
+  const placeholder = document.getElementById('cx-placeholder');
+  let ifr = _codexIframes[id];
+  if (!ifr) {
+    ifr = document.createElement('iframe');
+    ifr.src = page.src;
+    ifr.title = page.label;
+    ifr.setAttribute('loading', 'lazy');
+    ifr.setAttribute('allow', 'clipboard-write');
+    frame.appendChild(ifr);
+    _codexIframes[id] = ifr;
+    ifr.addEventListener('load', () => {
+      ifr.classList.add('loaded');
+      if (placeholder && placeholder.parentNode) placeholder.remove();
+    });
+  }
+  document.querySelectorAll('#cx-frame iframe').forEach(f => f.classList.toggle('active', f === ifr));
+  if (placeholder) placeholder.style.display = 'none';
+  const link = document.getElementById('cx-full-link');
+  if (link) link.href = page.src;
+}
+</script>
 
 </body>
 </html>

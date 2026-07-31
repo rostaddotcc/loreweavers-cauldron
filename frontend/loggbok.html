@@ -142,6 +142,7 @@
   <a class="top-btn" href="character.html">🧙 Character</a>
   <a class="top-btn" href="npcs.html">📖 Personages</a>
   <a class="top-btn" href="platser.html">🗺️ The Map</a>
+  <button class="top-btn danger" onclick="doLogout()">🚪 Leave</button>
 </header>
 
 <div class="layout">
@@ -169,7 +170,7 @@
 
   <div class="empty-state" id="empty-state" style="display:none">
     <div class="icon">📜</div>
-    <p>No logbook yet.<br>The adventure awaits being written…</p>
+    <p>No journal entries yet — your tale has just begun…</p>
   </div>
 </div>
 
@@ -286,6 +287,13 @@ async function loadLogbook() {
 }
 
 loadLogbook();
+
+// ── Logga ut ──
+async function doLogout() {
+  try { await API.logout(); } catch(_) {}
+  sessionStorage.removeItem('dnd_user');
+  location.href = 'login.html';
+}
 
 // ── Uppdatera krönikan: be servern skriva om dagens logg ──
 async function refreshToday() {

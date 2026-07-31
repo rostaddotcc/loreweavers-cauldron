@@ -130,6 +130,25 @@
     transition:border-color .25s,box-shadow .25s;
   }
   #prompt:focus{border-color:var(--arcane);box-shadow:0 0 18px -5px rgba(139,95,212,.4)}
+  /* ═══════════ Legend preview (live MD) ═══════════ */
+  .lp-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:stretch}
+  .sh-btns{display:flex;gap:.5rem;align-items:center}
+  .legend-preview{
+    min-height:230px;max-height:480px;overflow-y:auto;
+    font-family:'Spectral',serif;font-size:.9rem;line-height:1.65;color:var(--bone-bright);
+    background:var(--stone);border:1px solid var(--edge);padding:1rem 1.1rem;border-radius:0;
+  }
+  .legend-preview.lp-empty{color:var(--bone-dim);font-style:italic}
+  .legend-preview .lp-h{
+    font-family:'Cinzel',serif;font-weight:700;font-size:.95rem;color:var(--gold-bright);
+    letter-spacing:.08em;text-transform:uppercase;margin:0 0 .6rem;
+  }
+  .legend-preview .lp-h1{font-size:1.05rem;color:var(--gold)}
+  .legend-preview .lp-h4{font-size:.85rem;color:var(--arcane)}
+  .legend-preview b{color:var(--bone-bright)}
+  .legend-preview ul{list-style:none;margin:.35rem 0 .65rem;padding:0}
+  .legend-preview li{position:relative;padding-left:1.15rem;margin-bottom:.15rem}
+  .legend-preview li::before{content:'✦';position:absolute;left:0;top:.12em;color:var(--gold);font-size:.68rem}
   .scroll-actions{display:flex;align-items:center;gap:1rem;margin-top:1.2rem;flex-wrap:wrap}
   .summon-btn{
     font-family:'Cinzel',serif;font-weight:700;font-size:.82rem;letter-spacing:.18em;text-transform:uppercase;
@@ -229,6 +248,9 @@
     /* Pergament + modeller */
     .scroll-box{padding:1.3rem 1rem}
     #prompt{min-height:120px;font-size:16px}
+    .lp-grid{grid-template-columns:1fr}
+    .legend-preview{min-height:140px;font-size:16px}
+    .lp-clear{min-height:44px}
     .blank-btn{min-height:44px;display:inline-flex;align-items:center}
     .scroll-actions{flex-direction:column;align-items:stretch;gap:.7rem}
     .summon-btn{width:100%;min-height:56px;font-size:.85rem}
@@ -319,9 +341,15 @@
     <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
     <div class="scroll-head">
       <span class="mode" id="mode-label">📜 <b>Blank Parchment</b> — write freely</span>
-      <button class="blank-btn" onclick="blankScroll()">✦ Blank Parchment</button>
+      <div class="sh-btns">
+        <button class="blank-btn lp-clear" onclick="clearPrompt()" title="Empty the textarea">🗑 Clear</button>
+        <button class="blank-btn" onclick="blankScroll()">✦ Blank Parchment</button>
+      </div>
     </div>
-    <textarea id="prompt" spellcheck="false"></textarea>
+    <div class="lp-grid">
+      <textarea id="prompt" spellcheck="false" oninput="renderLegendPreview()"></textarea>
+      <div class="legend-preview" id="legend-preview" aria-live="polite"></div>
+    </div>
     <div class="scroll-actions">
       <button class="summon-btn" id="summon" onclick="summon()">🔮 Summon Character</button>
       <span style="font-size:.6rem;color:var(--bone-dim);opacity:.7">🧙 Character:</span>
@@ -781,25 +809,26 @@ Return as JSON according to the state schema.` }
   },
 };
 
-const FREE_PROMPT = `Beskriv din karaktär fritt — utseende, personlighet, bakgrund, vad de fruktar, vad de begär.
+// Mall-styrd fritext — markdown-liknande mall (SV/EN per språk-pill)
+const FREE_PROMPT = `## Legenden
 
-Dungeon Master genererar sedan:
-1. Namn, ras, klass, nivå
-2. Fullt karaktärsark (STR/DEX/CON/INT/WIS/CHA, HP, AC, saves)
-3. 3-4 förmågor & egenskaper
-4. Startutrustning (5-8 föremål)
-5. Bakgrundshistoria (max 100 ord)
-Returnera som JSON enligt state-schema.`;
+**Namn:**
+**Folk:**
+**Klass:**
+**Bakgrund:**
+**Personlighet:**
+**Ett minne som jagar dig:**
+**Vad söker du?**`;
 
-const FREE_PROMPT_EN = `Describe your character freely — appearance, personality, background, what they fear, what they desire.
+const FREE_PROMPT_EN = `## Legend
 
-The Dungeon Master will then generate:
-1. Name, race, class, level
-2. Full character sheet (STR/DEX/CON/INT/WIS/CHA, HP, AC, saves)
-3. 3-4 abilities & traits
-4. Starting equipment (5-8 items)
-5. Backstory (max 100 words)
-Return as JSON according to the state schema.`;
+**Name:**
+**Race:**
+**Class:**
+**Backstory:**
+**Personality:**
+**A memory that haunts you:**
+**What do you seek?**`;
 
 // ═══════════════════════════════════════
 // RENDER ARKETYPER (language-aware)
@@ -845,15 +874,22 @@ function onLangChange(lang) {
   if (typeof I18N !== 'undefined') {
     I18N.init(lang);
     renderArchetypes();
-    // Refresh the prompt textarea with the right language variant
+    // Byt mall bara om spelaren inte skrivit egen text (orört = samma som senast sattes)
+    const promptEl = document.getElementById('prompt');
+    const untouched = promptEl.value === lastSetValue;
     if (selectedKey && ARCHETYPES[selectedKey]) {
-      document.getElementById('prompt').value = archField(ARCHETYPES[selectedKey], 'prompt');
+      const a = ARCHETYPES[selectedKey];
+      if (untouched) setPrompt(archField(a, 'prompt'));
       document.getElementById('mode-label').innerHTML = isEn()
-        ? `📜 Archetype: <b>${archField(ARCHETYPES[selectedKey], 'name')}</b>`
-        : `📜 Arketyp: <b>${archField(ARCHETYPES[selectedKey], 'name')}</b>`;
+        ? `📜 Archetype: <b>${archField(a, 'name')}</b>`
+        : `📜 Arketyp: <b>${archField(a, 'name')}</b>`;
     } else {
-      document.getElementById('prompt').value = isEn() ? FREE_PROMPT_EN : FREE_PROMPT;
+      if (untouched) setPrompt(isEn() ? FREE_PROMPT_EN : FREE_PROMPT);
+      document.getElementById('mode-label').innerHTML = isEn()
+        ? `📜 <b>Blank Parchment</b> — write freely`
+        : `📜 <b>Tom pergament</b> — skriv fritt`;
     }
+    renderLegendPreview();
   }
 }
 
@@ -861,7 +897,7 @@ function selectArch(key) {
   selectedKey = key;
   document.querySelectorAll('.arch').forEach(el => el.classList.toggle('selected', el.dataset.key === key));
   const a = ARCHETYPES[key];
-  document.getElementById('prompt').value = archField(a, 'prompt');
+  setPrompt(archField(a, 'prompt'));
   document.getElementById('mode-label').innerHTML = isEn()
     ? `📜 Archetype: <b>${archField(a, 'name')}</b>`
     : `📜 Arketyp: <b>${archField(a, 'name')}</b>`;
@@ -872,13 +908,82 @@ function selectArch(key) {
 function blankScroll() {
   selectedKey = null;
   document.querySelectorAll('.arch').forEach(el => el.classList.remove('selected'));
-  document.getElementById('prompt').value = isEn() ? FREE_PROMPT_EN : FREE_PROMPT;
+  setPrompt(isEn() ? FREE_PROMPT_EN : FREE_PROMPT);
   document.getElementById('mode-label').innerHTML = isEn()
     ? `📜 <b>Blank scroll</b> — write freely`
     : `📜 <b>Tom pergament</b> — skriv fritt`;
   toast(isEn() ? '✦ Blank scroll — write your own legend' : '✦ Tom pergament — skriv din egen legend');
 }
-document.getElementById('prompt').value = isEn() ? FREE_PROMPT_EN : FREE_PROMPT;
+// ═══════════════════════════════════════
+// FRI-TEXT-MALL + LIVE MARKDOWN-FÖRHANDSVISNING
+// ═══════════════════════════════════════
+let lastSetValue = null; // senast programmatiskt satta värdet — avgör om mallen är orörd
+
+function setPrompt(v) {
+  const el = document.getElementById('prompt');
+  el.value = v;
+  lastSetValue = v;
+  renderLegendPreview();
+}
+
+// 🗑 Töm textarean helt → spelaren kan skriva fritt
+function clearPrompt() {
+  selectedKey = null;
+  document.querySelectorAll('.arch').forEach(el => el.classList.remove('selected'));
+  lastSetValue = null; // tom ≠ orörd mall → språkväxling fyller inte i igen
+  document.getElementById('prompt').value = '';
+  document.getElementById('mode-label').innerHTML = isEn()
+    ? `📜 <b>Free write</b> — your legend, your words`
+    : `📜 <b>Friskrivning</b> — din legend, dina ord`;
+  renderLegendPreview();
+  toast(isEn() ? '🗑 Cleared — write your own legend' : '🗑 Rensat — skriv din egen legend');
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Minimal markdown → HTML: escape → headings → bold → italic → listor → radbrytningar
+function mdToHtml(src) {
+  let s = escapeHtml(src)
+    .replace(/^###\s+(.+)$/gm, '<h4 class="lp-h lp-h4">$1</h4>')
+    .replace(/^##\s+(.+)$/gm, '<h3 class="lp-h">$1</h3>')
+    .replace(/^#\s+(.+)$/gm, '<h2 class="lp-h lp-h1">$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    .replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, '<i>$1</i>');
+  // Sammanhängande "- "/"* "-rader → <ul><li>
+  let out = '', inList = false;
+  for (const line of s.split('\n')) {
+    const m = line.match(/^\s*[-*]\s+(.+)$/);
+    if (m) {
+      if (!inList) { out += '<ul class="lp-list">'; inList = true; }
+      out += '<li>' + m[1] + '</li>';
+    } else {
+      if (inList) { out += '</ul>'; inList = false; }
+      out += line + '\n';
+    }
+  }
+  if (inList) out += '</ul>';
+  return out.replace(/\n/g, '<br>');
+}
+
+function renderLegendPreview() {
+  const el = document.getElementById('legend-preview');
+  if (!el) return;
+  const src = document.getElementById('prompt').value;
+  if (!src.trim()) {
+    el.innerHTML = 'Your legend will appear here…';
+    el.classList.add('lp-empty');
+    return;
+  }
+  el.classList.remove('lp-empty');
+  el.innerHTML = mdToHtml(src);
+}
+
+setPrompt(isEn() ? FREE_PROMPT_EN : FREE_PROMPT);
+document.getElementById('mode-label').innerHTML = isEn()
+  ? `📜 <b>Blank Parchment</b> — write freely`
+  : `📜 <b>Tom pergament</b> — skriv fritt`;
 
 // ═══════════════════════════════════════
 // SUMMON — riktig karaktärsgenerering via backend

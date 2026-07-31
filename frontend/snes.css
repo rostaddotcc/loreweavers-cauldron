@@ -971,15 +971,29 @@ button, a, .top-btn, .send-btn, .drop-item, .rr-btn, .tab-btn, .sheet-close {
   }
   .input-hint { display: none !important; }
 
-  /* ── 30g. ORACLE + CONSOLE → FULL-SCREEN SHEETS ── */
-  .oracle.open, .console.open {
+  /* ── 30g. ORACLE → FULL-SCREEN SHEET · CONSOLE → BOTTOM SHEET ── */
+  .oracle.open {
     position: fixed !important;
     inset: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
     z-index: 320 !important;
   }
-  .oracle-inner, .console-inner { width: 100% !important; }
+  .oracle-inner { width: 100% !important; }
+  /* Maskinrummet: flat debug-panel blir en bottom-sheet på mobil (max 60vh) */
+  .console {
+    position: fixed !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 60vh !important;
+    z-index: 10000 !important;
+    box-shadow: 0 -6px 24px rgba(0,0,0,.7) !important;
+  }
+  .console-log { max-height: calc(60vh - 2.1rem) !important; }
 
   /* ── 30h. CHAT MESSAGES ── */
   .msg {
@@ -1468,4 +1482,275 @@ button, a, .top-btn, .send-btn, .drop-item, .rr-btn, .tab-btn, .sheet-close {
   .cr-status { flex-shrink: 0; }
   .cr-endrow { max-height: 88px; overflow: hidden; }
   .resume-card, .initiative-reveal { max-width: 100% !important; }
+}
+
+/* ══════════════════════════════════════════
+   35. SPÅR D1 — MASKINRUMMET (flat panel) + CHAR/NPC DRAWER + CODEX
+   Klasser: console* (flat api.js-stil) · cd-* (drawer) · cx-* (codex)
+   ══════════════════════════════════════════ */
+
+/* ── 35a. MASKINRUMMET — platt, minimal, som api.js #debug-panel ── */
+.console, .console-head, .console-log {
+  background-image: none !important;
+  box-shadow: 0 -4px 20px rgba(0,0,0,.6) !important;
+}
+.console {
+  border: 1px solid #333 !important;
+  box-shadow: 0 -4px 20px rgba(0,0,0,.6) !important;
+}
+.console-head { background: #111 !important; border-bottom: 1px solid #222 !important; }
+.console-title {
+  font-family: 'VT323', 'IBM Plex Mono', monospace !important;
+  font-size: .85rem !important; letter-spacing: .04em !important;
+  color: #8f8 !important; text-shadow: none !important;
+  text-transform: none !important;
+}
+.console-count {
+  font-family: 'VT323', 'IBM Plex Mono', monospace !important;
+  color: #666 !important;
+}
+.console-log {
+  font-family: 'VT323', 'IBM Plex Mono', monospace !important;
+  font-size: .85rem !important; line-height: 1.35 !important;
+}
+.console-empty { color: var(--bone-dim) !important; }
+.cchip, .console-btn {
+  background: #222 !important;
+  border: 1px solid #444 !important;
+  color: #aaa !important;
+  font-family: 'VT323', 'IBM Plex Mono', monospace !important;
+  font-size: .72rem !important; letter-spacing: .02em !important;
+  text-transform: none !important;
+  padding: .14rem .5rem !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  min-height: 0 !important;
+}
+.cchip:hover, .console-btn:hover {
+  background: #333 !important;
+  border-color: #555 !important;
+  color: #fff !important;
+}
+.cchip:active, .console-btn:active {
+  background: #444 !important;
+  color: #fff !important;
+}
+.cchip.on {
+  background: var(--term-green) !important;
+  border-color: var(--term-green) !important;
+  color: #0a0a12 !important;
+}
+.console-btn.danger:hover {
+  background: var(--blood) !important;
+  border-color: var(--blood-bright) !important;
+  color: #fff !important;
+}
+.clog, .clog span, .clog b {
+  font-family: 'VT323', 'IBM Plex Mono', monospace !important;
+}
+.clog { border-bottom: 1px solid #1a1a2a; }
+.clog .ct { color: #555 !important; opacity: 1 !important; }
+.clog .cn { color: var(--teal) !important; opacity: .8 !important; }
+.clog .cm { color: var(--bone) !important; }
+.clog.DEBUG .cl, .clog.DEBUG .cm { color: var(--bone-dim) !important; }
+.clog.INFO .cl { color: var(--term-green) !important; }
+.clog.WARNING .cl, .clog.WARNING .cm { color: var(--term-amber) !important; }
+.clog.ERROR .cl, .clog.ERROR .cm { color: #ff5566 !important; }
+.clog.CRITICAL .cl, .clog.CRITICAL .cm { color: #ff5566 !important; text-shadow: none !important; }
+
+/* ── 35b. DRAWER — rubriker & knappar (temat vinner över globala button-regler) ── */
+.cd-title, .cd-name, .cd-section-title, .cd-stat-k, .cd-abbr, .cd-score,
+.cd-item-name, .cd-item-h, .cd-item-row .cd-k, .cd-badge,
+.cd-res-roll, .cd-mention, .cd-nav-btn {
+  font-family: var(--font-display) !important;
+  letter-spacing: .08em !important;
+  text-transform: uppercase !important;
+}
+.cd-drawer { background: var(--stone) !important; }
+.cd-head { border-bottom: 1px solid var(--edge) !important; }
+.cd-title { color: var(--gold-bright) !important; letter-spacing: .22em !important; }
+.cd-name { color: var(--bone-bright) !important; font-size: .8rem !important; }
+.cd-class { color: var(--arcane) !important; font-style: normal !important; }
+.cd-section-title { color: var(--gold) !important; letter-spacing: .26em !important; font-size: .6rem !important; }
+.cd-section-title::after { background: var(--edge) !important; }
+.cd-hp-label { color: var(--bone-dim) !important; }
+.cd-hp-label b { color: var(--blood-bright) !important; }
+.cd-trough, .cd-xp { background: var(--ink) !important; border: 1px solid var(--edge) !important; box-shadow: none !important; }
+.cd-xp { border-color: rgba(201,162,39,.35) !important; }
+.cd-xp-label b { color: var(--gold-bright) !important; }
+.cd-stat, .cd-ability, .cd-res-row {
+  background: var(--stone-2) !important;
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+}
+.cd-stat-k { color: var(--bone-dim) !important; letter-spacing: .2em !important; }
+.cd-stat-v { font-family: 'Press Start 2P', monospace !important; color: var(--bone-bright) !important; }
+.cd-abbr { color: var(--gold) !important; letter-spacing: .24em !important; }
+.cd-score { color: var(--bone-bright) !important; }
+.cd-mod { color: var(--arcane) !important; }
+.cd-slot { border: 1px solid var(--edge) !important; background: var(--ink) !important; box-shadow: none !important; }
+.cd-slots-hint, .cd-inv-empty, .cd-empty { color: var(--bone-dim) !important; }
+.cd-res-label { color: var(--bone-bright) !important; }
+.cd-res-note { color: var(--bone-dim) !important; }
+.cd-res-roll {
+  background: var(--stone-3) !important;
+  border: 1px solid var(--gold) !important;
+  color: var(--gold-bright) !important;
+  font-size: .56rem !important; letter-spacing: .12em !important;
+}
+.cd-res-roll:hover { background: var(--edge) !important; }
+.cd-res-roll:active { background: var(--gold) !important; color: var(--ink) !important; }
+.cd-item-card {
+  background: var(--stone-2) !important;
+  border: 1px solid var(--edge) !important;
+  box-shadow: none !important;
+}
+.cd-item-card:hover { border-color: var(--bone-dim) !important; }
+.cd-item-card:active { background: rgba(201,162,39,.12) !important; border-color: var(--gold) !important; }
+.cd-item-name { color: var(--bone-bright) !important; }
+.cd-item-name.r-magic { color: #cbb3f2 !important; }
+.cd-item-name.r-rare, .cd-item-name.r-legendary { color: var(--gold-bright) !important; }
+.cd-item-type { color: var(--bone-dim) !important; font-style: normal !important; }
+.cd-badge { background: var(--stone) !important; border: 1px solid var(--edge) !important; color: var(--bone) !important; }
+.cd-badge.dmg { border-color: rgba(139,26,42,.55) !important; color: var(--blood-bright) !important; }
+.cd-badge.ac { border-color: rgba(90,154,78,.55) !important; color: var(--poison) !important; }
+.cd-badge.charges { border-color: rgba(123,79,212,.55) !important; color: var(--arcane) !important; }
+.cd-badge.magic-bonus { border-color: rgba(232,198,90,.55) !important; color: var(--gold-bright) !important; }
+.cd-badge.qty, .cd-badge.range { color: var(--bone-dim) !important; }
+.cd-npc-avatar { background: var(--stone-2) !important; border: 1px solid var(--edge) !important; box-shadow: none !important; }
+.cd-role { color: var(--bone-dim) !important; font-style: normal !important; }
+.cd-rel-badge { background: var(--stone-2) !important; border: 1px solid var(--edge) !important; color: var(--bone-dim) !important; }
+.cd-alive { color: var(--poison) !important; }
+.cd-alive.dead { color: var(--blood-bright) !important; }
+.cd-notes p { color: var(--bone) !important; }
+.cd-mention {
+  background: var(--stone-3) !important;
+  border: 1px solid var(--arcane) !important;
+  color: #cbb3f2 !important;
+  font-size: .6rem !important; letter-spacing: .14em !important;
+}
+.cd-mention:hover { background: var(--edge) !important; }
+.cd-mention:active { background: var(--arcane) !important; color: var(--ink) !important; }
+.cd-nav-btn {
+  background: var(--stone-3) !important;
+  border: 1px solid var(--gold) !important;
+  color: var(--gold-bright) !important;
+  font-size: .6rem !important; letter-spacing: .18em !important;
+}
+.cd-nav-btn:hover { background: var(--edge) !important; }
+.cd-nav-btn:active { background: var(--gold) !important; color: var(--ink) !important; }
+.cd-close, .cx-close {
+  background: transparent !important;
+  border: 1px solid var(--edge) !important;
+  color: var(--bone-dim) !important;
+  box-shadow: none !important;
+}
+.cd-close:hover, .cx-close:hover {
+  background: transparent !important;
+  border-color: var(--blood-bright) !important;
+  color: var(--blood-bright) !important;
+}
+.cd-close:active, .cx-close:active { background: transparent !important; color: var(--blood-bright) !important; }
+.cd-item-overlay { background: rgba(4,2,8,.82) !important; }
+.cd-item-modal { background: var(--stone) !important; border: 1px solid var(--gold) !important; box-shadow: none !important; }
+.cd-item-close { background: none !important; border: none !important; color: var(--bone-dim) !important; }
+.cd-item-close:hover { color: var(--blood-bright) !important; }
+.cd-item-h { color: var(--bone-bright) !important; }
+.cd-item-h.r-magic { color: #cbb3f2 !important; }
+.cd-item-h.r-rare, .cd-item-h.r-legendary { color: var(--gold-bright) !important; }
+.cd-item-sub { color: var(--bone-dim) !important; font-style: normal !important; }
+.cd-item-row { border-bottom: 1px solid rgba(42,42,58,.35) !important; }
+.cd-item-row .cd-k { color: var(--bone-dim) !important; letter-spacing: .06em !important; }
+.cd-item-row .cd-v { color: var(--bone-bright) !important; }
+.cd-item-desc { background: rgba(8,8,13,.5) !important; border-left: 2px solid var(--edge) !important; color: var(--bone) !important; font-style: normal !important; }
+.cd-item-desc.magic { border-left-color: var(--arcane) !important; }
+.cd-item-prop { background: var(--stone-2) !important; border: 1px solid var(--edge) !important; color: var(--bone-dim) !important; }
+.cd-backdrop { background: rgba(4,3,8,.72) !important; }
+
+/* ── 35c. CODEX — rubriker, tabs, iframe-yta ── */
+.cx-overlay { background: rgba(4,3,8,.85) !important; }
+.cx-modal { background: var(--ink) !important; border: 1px solid var(--edge) !important; box-shadow: none !important; }
+.cx-head { border-bottom: 1px solid var(--edge) !important; }
+.cx-title {
+  font-family: var(--font-display) !important;
+  font-size: .68rem !important; letter-spacing: .3em !important;
+  color: var(--gold-bright) !important; text-transform: uppercase !important;
+}
+.cx-full {
+  font-family: var(--font-body) !important;
+  background: var(--stone-2) !important;
+  border: 1px solid var(--edge) !important;
+  color: var(--bone-dim) !important;
+  font-style: normal !important;
+  text-decoration: none !important;
+}
+.cx-full:hover { border-color: var(--gold) !important; color: var(--gold-bright) !important; background: var(--stone-3) !important; }
+.cx-tabs { border-bottom: 1px solid var(--edge) !important; }
+.cx-tab {
+  font-family: var(--font-display) !important;
+  font-size: .58rem !important; letter-spacing: .12em !important;
+  background: var(--stone-2) !important;
+  border: 1px solid var(--edge) !important;
+  border-bottom: none !important;
+  color: var(--bone-dim) !important;
+  box-shadow: none !important;
+  text-transform: uppercase !important;
+}
+.cx-tab:hover { background: var(--stone-3) !important; color: var(--bone-bright) !important; }
+.cx-tab:active { background: var(--gold) !important; color: var(--ink) !important; }
+.cx-tab.active {
+  background: var(--ink) !important;
+  border-color: var(--gold) !important;
+  color: var(--gold-bright) !important;
+}
+.cx-tab.active::before { content: '> '; color: var(--gold); }
+.cx-frame iframe { background: var(--ink) !important; border: 0 !important; }
+.cx-placeholder { color: var(--bone-dim) !important; }
+
+/* ── 35d. MOBILE ≤ 900px: drawer → bottom-sheet, codex → fullscreen ── */
+@media (max-width: 900px) {
+  .cd-drawer {
+    position: fixed !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 80vh !important;
+    border-left: none !important;
+    border-top: 2px solid var(--gold) !important;
+    transform: translateY(100%) !important;
+    transition: transform .3s cubic-bezier(.22,1,.36,1) !important;
+  }
+  .cd-drawer.open { transform: translateY(0) !important; }
+  .cd-body { padding: .8rem .75rem !important; }
+  /* 44px+ touch-mål + :active-state */
+  .cd-close, .cx-close { width: 44px !important; height: 44px !important; font-size: 1rem !important; }
+  .cd-mention, .cd-nav-btn, .cd-res-roll { min-height: 44px !important; }
+  .cd-item-card { min-height: 56px; }
+  .cd-close:active, .cx-close:active { background: rgba(212,58,77,.12) !important; }
+  .cx-modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    border: none !important;
+    border-top: 2px solid var(--gold) !important;
+  }
+  .cx-tabs { padding: .45rem .6rem 0 !important; gap: .3rem !important; }
+  .cx-tab { min-height: 44px !important; padding: .45rem .7rem !important; }
+  .cx-head { padding: .45rem .6rem !important; }
+  .cx-title { font-size: .6rem !important; }
+  .cx-full { padding: .35rem .6rem !important; }
+}
+
+/* ── 35e. MOBILE ≤ 640px: tightare paneler ── */
+@media (max-width: 640px) {
+  .console { max-height: 60vh !important; }
+  .console-log { max-height: calc(60vh - 2.1rem) !important; }
+  .console-head { flex-wrap: wrap; row-gap: .25rem; }
+  .console-count { margin-left: auto; }
+  .cd-drawer { max-height: 80vh !important; }
+  .cd-stats, .cd-abilities { gap: .3rem !important; }
 }

@@ -28,6 +28,13 @@ def load_users() -> dict:
         return json.load(f)
 
 
+def save_users(users: dict) -> None:
+    """Skriv users.json."""
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    with open(USERS_FILE, "w") as f:
+        json.dump(users, f, indent=2)
+
+
 def verify_password(plain: str, hashed: str) -> bool:
     return bcrypt.checkpw(plain.encode(), hashed.encode())
 

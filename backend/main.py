@@ -67,7 +67,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from auth import create_token, load_users, verify_password, verify_token
+from auth import create_token, hash_password, load_users, save_users, verify_password, verify_token
 from dice import roll as dice_roll
 from models import (
     AWAKENING_ASK,
@@ -746,11 +746,17 @@ async def _call_llm(
     timeout: float = 180,
     reasoning_effort: str | None = None,
     thinking_cap: int = 16000,
+    thinking: str | None = None,
 ) -> str:
     """Anropa vald modell via OpenAI-kompatibelt /chat/completions.
     Reasoning-modeller (deepseek-v4-flash) behöver högre max_tokens
     eftersom de tänker innan de svarar. `timeout` sänks för icke-kritiska
-    anrop (t.ex. ASCII-art) så de aldrig blockerar spelupplevelsen."""
+    anrop (t.ex. ASCII-art) så de aldrig blockerar spelupplevelsen.
+
+    thinking="disabled" stänger av resonemang för modeller som stöder det
+    (MiMo: {"thinking":{"type":"disabled"}}). KRITISKT för strukturerade
+    JSON-anrop — annars bränner MiMo hela tokenbudgeten på reasoning och
+    lämnar content tomt → _extract_json hittar ingen JSON → 502."""
     config = get_model(model_id)
     api_key = get_api_key(config)
 
@@ -768,6 +774,11 @@ async def _call_llm(
         "temperature": temperature,
         "max_tokens": max_tokens,
     }
+
+    # MiMo: stäng av thinking för strukturerade anrop (JSON-extraktion etc.)
+    # — annars hamnar allt i reasoning_content och content blir tomt.
+    if thinking == "disabled" and config.provider == "mimo":
+        body["thinking"] = {"type": "disabled"}
 
     # StepFun 3.7 Flash: debiterar per prompt, inte per token → high överallt.
     # High reasoning kräver stor tokenbudget (tanke + svar).
@@ -1001,20 +1012,38 @@ async def oracle(req: OracleRequest, morkrets_token: str | None = Cookie(None)):
 
 
 # ═══════════════════════════════════════
-# TTS — StepAudio 2.5 (text-till-ljud)
+# TTS — Qwen-Audio-3.0-TTS-Plus via Alibaba Token Plan (DashScope SDK WebSocket)
 # ═══════════════════════════════════════
 
+# Två fördefinierade berättarröster (systemröster på Token Plan)
+TTS_VOICE_MALE = os.getenv("TTS_VOICE_MALE", "longanlufeng")      # Long An Lu Feng — manlig
+TTS_VOICE_FEMALE = os.getenv("TTS_VOICE_FEMALE", "longanlingxin") # Long An Ling Xin — kvinnlig
+
 TTS_VOICES = [
-    {"id": "cixingnansheng", "name": "Berättaren (mörk)", "desc": "Dramatic male narrator"},
-    {"id": "cixingnvsheng", "name": "Sagorösten (ljus)", "desc": "Warm female narrator"},
-    {"id": "zhixingnansheng", "name": "Krigaren (kraftfull)", "desc": "Powerful male voice"},
-    {"id": "zhixingnvsheng", "name": "Häxan (mystisk)", "desc": "Mysterious female voice"},
+    {"id": TTS_VOICE_MALE, "name": "Berättaren (man)", "desc": "Ljus och kraftfull manlig berättarröst"},
+    {"id": TTS_VOICE_FEMALE, "name": "Berättaren (kvinna)", "desc": "Varm och empatisk kvinnlig berättarröst"},
 ]
+
+TTS_INSTRUCTIONS = {
+    TTS_VOICE_MALE: "Narrate in a deep, dramatic, immersive fantasy storytelling voice. Dark and atmospheric, slow and deliberate.",
+    TTS_VOICE_FEMALE: "Narrate in a warm, rich, immersive fantasy storytelling voice. Like a storyteller by the fire, expressive and inviting.",
+}
+
+# Token Plan TTS har INGEN REST-endpoint — går bara via DashScope SDK WebSocket
+TTS_DASHSCOPE_WS_URL = os.getenv(
+    "TTS_DASHSCOPE_WS_URL",
+    "wss://token-plan.ap-southeast-1.maas.aliyuncs.com/api-ws/v1/inference",
+)
+TTS_DASHSCOPE_KEY_ENV = os.getenv("TTS_DASHSCOPE_KEY_ENV", "DASHSCOPE_API_KEY")
+
+# Enkel minnescache — samma (röst, text) kostar bara ett API-anrop
+_TTS_CACHE: dict = {}
+_TTS_CACHE_MAX = 64
 
 
 class TTSRequest(BaseModel):
     text: str
-    voice: str = "cixingnansheng"
+    voice: str = ""  # tomt = manlig berättare
 
 
 def _truncate_tts(text: str, limit: int = 1000) -> str:
@@ -1030,50 +1059,69 @@ def _truncate_tts(text: str, limit: int = 1000) -> str:
     return cut[:sp].strip() if sp > 0 else cut.strip()
 
 
+def _synth_qwen_tts(voice: str, text: str) -> bytes:
+    """Blockande DashScope-syntes — körs i en tråd (asyncio.to_thread)."""
+    try:
+        import dashscope
+        from dashscope.audio.tts_v2 import SpeechSynthesizer, AudioFormat
+    except ImportError:
+        raise RuntimeError("dashscope SDK saknas i containern")
+
+    api_key = os.getenv(TTS_DASHSCOPE_KEY_ENV)
+    if not api_key:
+        raise RuntimeError("TTS-nyckel saknas")
+
+    dashscope.api_key = api_key
+    dashscope.base_websocket_api_url = TTS_DASHSCOPE_WS_URL
+
+    syn = SpeechSynthesizer(
+        model="qwen-audio-3.0-tts-plus",
+        voice=voice,
+        format=AudioFormat.MP3_22050HZ_MONO_256KBPS,
+        instruction=TTS_INSTRUCTIONS.get(voice, ""),
+    )
+    return syn.call(text)
+
+
 @app.get("/api/tts/voices")
 async def tts_voices(morkrets_token: str | None = Cookie(None)):
-    """Tillgängliga TTS-röster."""
+    """Tillgängliga TTS-röster (man + kvinna, berättare)."""
     _get_current_user(morkrets_token)
     return {"voices": TTS_VOICES}
 
 
 @app.post("/api/tts")
 async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
-    """Generera tal från text via StepAudio 2.5."""
+    """Generera tal från text via Qwen-Audio-3.0-TTS-Plus (Token Plan)."""
     _get_current_user(morkrets_token)
     text = req.text.strip()
     if not text:
         raise HTTPException(400, "Ingen text att läsa upp")
+    # Ta bort maskinella taggar ([KAST:...], [SKADA:...] etc.) om de finns kvar
+    text = re.sub(r"\[[A-Z_]+:[^\]]*\]", "", text).strip()
     text = _truncate_tts(text)
 
-    api_key = os.getenv("STEPFUN_API_KEY")
-    if not api_key:
-        raise HTTPException(500, "TTS-tjänsten är inte konfigurerad")
+    voice = req.voice or TTS_VOICE_MALE
+    if voice not in (TTS_VOICE_MALE, TTS_VOICE_FEMALE):
+        raise HTTPException(400, "Okänd röst")
+
+    cache_key = (voice, text)
+    cached = _TTS_CACHE.get(cache_key)
+    if cached is not None:
+        return StreamingResponse(io.BytesIO(cached), media_type="audio/mpeg")
 
     try:
-        async with httpx.AsyncClient(timeout=60) as client:
-            resp = await client.post(
-                "https://api.stepfun.ai/v1/audio/speech",
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": "stepaudio-2.5-tts",
-                    "voice": req.voice,
-                    "input": text,
-                    "instruction": "Narrate in a dramatic, immersive fantasy storytelling voice. Dark and atmospheric.",
-                },
-            )
-        if resp.status_code != 200:
-            logger.error("TTS API error %s: %s", resp.status_code, resp.text[:300])
-            raise HTTPException(502, "Kunde inte generera ljud — TTS-tjänsten svarade inte")
-        return StreamingResponse(io.BytesIO(resp.content), media_type="audio/mpeg")
+        audio = await asyncio.to_thread(_synth_qwen_tts, voice, text)
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("TTS error: %s", e)
-        raise HTTPException(502, "Kunde inte generera ljud — oväntat fel")
+        logger.error("TTS error: %s", e, exc_info=True)
+        raise HTTPException(502, f"Kunde inte generera ljud — {e}")
+
+    if len(_TTS_CACHE) >= _TTS_CACHE_MAX:
+        _TTS_CACHE.pop(next(iter(_TTS_CACHE)))
+    _TTS_CACHE[cache_key] = audio
+    return StreamingResponse(io.BytesIO(audio), media_type="audio/mpeg")
 
 
 # ═══════════════════════════════════════
@@ -1697,7 +1745,7 @@ async def _guardian_post_dm(
         _guardian_transcript = store.load_transcript(state, last_n=8)
         mech = await guardian_extract_mechanics(
             reply, player_msg, state, effective_turn,
-            lambda msgs: _call_llm(GUARDIAN_MODEL, msgs, temperature=0.2, max_tokens=1500),
+            lambda msgs: _call_llm(GUARDIAN_MODEL, msgs, temperature=0.2, max_tokens=4096, reasoning_effort="low"),
             language=_get_lang(state),
             conversation_history=_guardian_transcript,
         )
@@ -1943,7 +1991,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
                     break
             guardian_roll = await guardian_check_roll(
                 req.message, state,
-                lambda msgs: _call_llm(GUARDIAN_MODEL, msgs, temperature=0.1, max_tokens=200),
+                lambda msgs: _call_llm(GUARDIAN_MODEL, msgs, temperature=0.1, max_tokens=1024),
                 language=_get_lang(state),
                 dm_context=_dm_context,
             )
@@ -2338,7 +2386,10 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
     ]
 
     try:
-        raw = await _call_llm(req.model_id, messages, temperature=0.7, max_tokens=4000, thinking_cap=8000)
+        raw = await _call_llm(
+            req.model_id, messages, temperature=0.7, max_tokens=4000,
+            thinking_cap=8000, thinking="disabled",
+        )
         char_data = _extract_json(raw)
     except HTTPException:
         raise
@@ -2825,7 +2876,7 @@ async def import_file(
     ]
 
     try:
-        raw = await _call_llm(model_id, messages, temperature=0.2, max_tokens=2048)
+        raw = await _call_llm(model_id, messages, temperature=0.2, max_tokens=2048, thinking="disabled")
         extracted = _extract_json(raw)
     except ValueError as e:
         raise HTTPException(422, f"Kunde inte tolka LLM-svar: {e}")
@@ -2941,7 +2992,7 @@ async def world_build(req: WorldBuildRequest, morkrets_token: str | None = Cooki
     ]
 
     try:
-        raw = await _call_llm(req.model_id, messages, temperature=0.4, max_tokens=2048)
+        raw = await _call_llm(req.model_id, messages, temperature=0.4, max_tokens=2048, thinking="disabled")
         extracted = _extract_json(raw)
     except ValueError as e:
         raise HTTPException(422, f"Kunde inte tolka LLM-svar: {e}")
@@ -3397,6 +3448,54 @@ class NoCacheStaticMiddleware(BaseHTTPMiddleware):
             response.headers['Pragma'] = 'no-cache'
             response.headers['Expires'] = '0'
         return response
+
+class AdminCreateUser(BaseModel):
+    username: str
+    password: str
+    role: str = "player"
+
+
+@app.post("/api/admin/user")
+async def admin_create_user(req: AdminCreateUser, morkrets_token: str | None = Cookie(None)):
+    """Admin-only: skapa ett nytt spelarkonto. Inga restriktioner — testfas."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+
+    users = load_users()
+    if req.username in users:
+        raise HTTPException(409, f"Användare '{req.username}' finns redan")
+
+    users[req.username] = {
+        "password_hash": hash_password(req.password),
+        "role": req.role if req.role in ("player", "admin") else "player",
+    }
+    save_users(users)
+    return {"ok": True, "username": req.username, "role": users[req.username]["role"]}
+
+
+@app.delete("/api/admin/user/{username}")
+async def admin_delete_user(username: str, morkrets_token: str | None = Cookie(None)):
+    """Admin-only: radera ett spelarkonto + alla kampanjer."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+
+    users = load_users()
+    if username not in users:
+        raise HTTPException(404, f"Användare '{username}' finns inte")
+    if username == payload.get("sub"):
+        raise HTTPException(400, "Du kan inte radera ditt eget konto")
+
+    del users[username]
+    save_users(users)
+
+    # Radera kampanjdata
+    import shutil
+    user_dir = CAMPAIGNS_DIR / username
+    if user_dir.exists():
+        shutil.rmtree(user_dir)
+
+    return {"ok": True, "deleted": username}
+
 
 app.add_middleware(NoCacheStaticMiddleware)
 

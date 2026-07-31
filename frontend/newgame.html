@@ -332,16 +332,6 @@
         <option value="mimo-v2.5">MiMo 2.5</option>
         <option value="mimo-v2.5-pro">MiMo 2.5 Pro</option>
       </select>
-      <span style="font-size:.6rem;color:var(--bone-dim);opacity:.7">🎲 Spelledare:</span>
-      <select id="dm-model" style="background:var(--stone-2);border:1px solid var(--edge);color:var(--bone);padding:.4rem .6rem;font-size:.7rem;cursor:pointer">
-        <option value="step-3.7-flash" selected>Step 3.7 Flash</option>
-        <option value="qwen3.8-max">Qwen 3.8 Max</option>
-        <option value="qwen3.7-plus">Qwen 3.7 Plus</option>
-        <option value="deepseek-v4-pro">DeepSeek V4 Pro</option>
-        <option value="deepseek-v4-flash">DeepSeek V4 Flash</option>
-        <option value="mimo-v2.5">MiMo 2.5</option>
-        <option value="mimo-v2.5-pro">MiMo 2.5 Pro</option>
-      </select>
     </div>
   </div>
 
@@ -382,7 +372,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="sfx.js?v=20260730c"></script>
-<script src="api.js?v=20260730c"></script>
+<script src="api.js?v=20260731a"></script>
 <script src="i18n.js?v=20260730c"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
@@ -657,6 +647,138 @@ Generate:
 5. Backstory (max 100 words)
 Return as JSON according to the state schema.` }
   },
+  tidecaller: {
+    icon:'🌊', name:'Tidkallaren', color:'#4e8a93', glow:'rgba(78,138,147,.35)',
+    lore:'Havet svarar när hen viskar. Men havet glömmer aldrig en skuld.',
+    tags:['Människa','Druid','Hav'],
+    prompt:`Skapa en D&D 5e-karaktär utifrån denna arketyp:
+
+ARKETYP: Tidkallaren
+Ras: Människa
+Klass: Druid (Havets cirkel)
+Bakgrund: Född under en stormflod, uppfostrad av en fyr-vaktare
+Personlighet: Lugn på ytan, storm inuti, talar med havet
+Mål: Hitta den sjunkna staden som hen drömmer om varje natt
+Hemlighet: Hen dränkte en gång någon — och havet gav dem tillbaka, förändrad
+
+Generera:
+1. Namn (mörk fantasy)
+2. Fullt karaktärsark: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves
+3. 3-4 förmågor/egenskaper
+4. Startutrustning (5-8 föremål)
+5. Bakgrundshistoria (max 100 ord)
+Returnera som JSON enligt state-schema.`,
+    char:{ name:'Maren Strömfödd', cls:'Människa · Havets Druid · Nivå 5', icon:'🌊',
+      stats:{STR:12,DEX:14,CON:15,INT:11,WIS:17,CHA:10}, hp:38, ac:14, init:2, prof:3,
+      traits:['Tidviskning','Stormskinn','Djupets öga','Saltbot'],
+      gear:'<b>Korallstav</b> · <b>Fisknät (förstärkt)</b> · Läderbrynja (sjöläder) · 2× Hälsodryck · Fyr-lykta · Karta över strömmar',
+      story:'Maren föddes den natt havet tog fyren. Vaktaren hittade henne i vrakspillrorna, fortfarande torr. Hon lärde sig simma innan hon gick, och havet viskade tillbaka. Men en natt, i vrede, drog hon en fiskare under ytan. Havet gav honom tillbaka tre dagar senare — vid liv, men utan ögon. Nu söker hon den sjunkna staden från sina drömmar, för att kanske hitta ett sätt att ge tillbaka det hon tog.' },
+    en:{ name:'The Tidecaller', lore:'The sea answers when they whisper. But the sea never forgets a debt.', tags:['Human','Druid','Sea'], cls:'Human · Circle of the Sea · Level 5', traits:['Tide Whisper','Storm Skin','Eye of the Deep','Salt Cure'], gear:'<b>Coral staff</b> · <b>Fishing net (reinforced)</b> · Leather armor (sea-leather) · 2× Healing potion · Lighthouse lantern · Chart of currents', story:'Maren was born the night the sea took the lighthouse. The keeper found her in the wreckage, still dry. She learned to swim before she walked, and the sea whispered back. But one night, in anger, she pulled a fisherman beneath the surface. The sea gave him back three days later — alive, but without eyes. Now she seeks the sunken city from her dreams, hoping to find a way to return what she took.', prompt:`Create a D&D 5e character based on this archetype:
+
+ARCHETYPE: The Tidecaller
+Race: Human
+Class: Druid (Circle of the Sea)
+Background: Born during a storm surge, raised by a lighthouse keeper
+Personality: Calm on the surface, storm within, speaks to the sea
+Goal: Find the sunken city they dream of every night
+Secret: They once drowned someone — and the sea gave them back, changed
+
+Generate:
+1. Name (dark fantasy)
+2. Full character sheet: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves
+3. 3-4 abilities/traits
+4. Starting equipment (5-8 items)
+5. Backstory (max 100 words)
+Return as JSON according to the state schema.` }
+  },
+  plaguebearer: {
+    icon:'☠️', name:'Pestbäraren', color:'#5a9a4e', glow:'rgba(90,154,78,.35)',
+    lore:'Bär sjukdomen i sina ådror — och botemedlet i sin väska.',
+    tags:['Halvling','Cleric','Pestläkare'],
+    prompt:`Skapa en D&D 5e-karaktär utifrån denna arketyp:
+
+ARKETYP: Pestbäraren
+Ras: Halvling
+Klass: Cleric (Pestläkare / Grave Domain)
+Bakgrund: Överlevde en pest som tog hela hens by — bar smittan utan att dö
+Personlighet: Mörk humor, öm om de sjuka, livrädd för att röra vid friska
+Mål: Hitta botemedlet mot den pest hen bär i sitt blod
+Hemlighet: Hen smittar andra — långsamt, utan att veta om det
+
+Generera:
+1. Namn (mörk fantasy)
+2. Fullt karaktärsark: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves
+3. 3-4 förmågor/egenskaper
+4. Startutrustning (5-8 föremål)
+5. Bakgrundshistoria (max 100 ord)
+Returnera som JSON enligt state-schema.`,
+    char:{ name:'Pip Sotask', cls:'Halvling · Pestläkare · Nivå 5', icon:'☠️',
+      stats:{STR:9,DEX:13,CON:16,INT:14,WIS:16,CHA:8}, hp:35, ac:14, init:1, prof:3,
+      traits:['Pestskydd','Sjukdomssinne','Botande händer','Smittans viskning'],
+      gear:'<b>Pestläkarmask</b> · <b>Skalpell</b> · Kedjeharnesk · 3× Motgift · Örtpåse · Journal (full av symtom)',
+      story:'Byn Sotask brändes när pesten kom, men Pip överlevde — ensam, bland askan och de svarta liken. Pesten tog aldrig hen, bara alla andra. Nu vandrar Pip med en mask fylld av lavendel och en väska full av botemedel som inte fungerar på den enda sjukdom som spelar roll. De som reser med Pip blir sjuka efter en tid. Pip vet inte varför. Än.' },
+    en:{ name:'The Plaguebearer', lore:'Carries the disease in their veins — and the cure in their bag.', tags:['Halfling','Cleric','Plague Doctor'], cls:'Halfling · Plague Doctor · Level 5', traits:['Plague Ward','Disease Sense','Healing Hands','Whisper of the Blight'], gear:'<b>Plague mask</b> · <b>Scalpel</b> · Chain mail · 3× Antidote · Herb pouch · Journal (full of symptoms)', story:'The village of Sotask burned when the plague came, but Pip survived — alone, among the ash and the blackened dead. The plague never took them, only everyone else. Now Pip wanders with a mask full of lavender and a bag full of cures that don\'t work on the one disease that matters. Those who travel with Pip grow ill after a time. Pip doesn\'t know why. Yet.', prompt:`Create a D&D 5e character based on this archetype:
+
+ARCHETYPE: The Plaguebearer
+Race: Halfling
+Class: Cleric (plague doctor / Grave Domain)
+Background: Survived a plague that took their entire village — carried the infection without dying
+Personality: Dark humor, tender toward the sick, terrified of touching the healthy
+Goal: Find the cure for the plague they carry in their blood
+Secret: They infect others — slowly, without knowing it
+
+Generate:
+1. Name (dark fantasy)
+2. Full character sheet: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves
+3. 3-4 abilities/traits
+4. Starting equipment (5-8 items)
+5. Backstory (max 100 words)
+Return as JSON according to the state schema.` }
+  },
+  voidscribe: {
+    icon:'📖', name:'Tomhetens Skrivare', color:'#7b4fd4', glow:'rgba(123,79,212,.35)',
+    lore:'Skrev ett namn i en förbjuden bok. Nu skriver boken i hen.',
+    tags:['Människa','Wizard','Tomhet'],
+    prompt:`Skapa en D&D 5e-karaktär utifrån denna arketyp:
+
+ARKETYP: Tomhetens Skrivare
+Ras: Människa
+Klass: Wizard (Tomhetens skola / Void Scribe)
+Bakgrund: Bibliotekarie som hittade en bok som inte borde finnas
+Personlighet: Frånvarande, talar i citat, skriver i sömnen
+Mål: Fylla bokens tomma sidor innan den fyller hen
+Hemlighet: Varje sida hen skriver raderar ett minne — hens egna, först
+
+Generera:
+1. Namn (mörk fantasy)
+2. Fullt karaktärsark: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves
+3. 3-4 förmågor/egenskaper
+4. Startutrustning (5-8 föremål)
+5. Bakgrundshistoria (max 100 ord)
+Returnera som JSON enligt state-schema.`,
+    char:{ name:'Eramus Bläck', cls:'Människa · Tomhetens Skrivare · Nivå 5', icon:'📖',
+      stats:{STR:8,DEX:12,CON:11,INT:18,WIS:14,CHA:10}, hp:28, ac:12, init:1, prof:3,
+      traits:['Tomhetsbläck','Radering','Skrivdröm','Bokens viskning'],
+      gear:'<b>Förbjuden bok (kedjad)</b> · <b>Fjäderpenna (ben)</b> · Rob (bläckfläckad) · 2× Hälsodryck · Bläckflaska (svartare än svart) · Läs glasögon',
+      story:'Eramus var bibliotekets tystaste vaktmästare tills natten hen hittade boken utan titel, utan författare, med sidor som andades. Hen skrev ett namn — sitt eget — och boken svarade. Nu skriver den i hen: i sömnen, i vaket tillstånd, i varje ledig stund. Varje sida fylls, och varje sida tar. Hen minns inte längre sin moders ansikte. Men boken minns. Och den skriver vackert.' },
+    en:{ name:'The Voidscribe', lore:'Wrote a name in a forbidden book. Now the book writes in them.', tags:['Human','Wizard','Void'], cls:'Human · Void Scribe · Level 5', traits:['Void Ink','Erasure','Dream Writing','Whisper of the Book'], gear:'<b>Forbidden book (chained)</b> · <b>Quill (bone)</b> · Robe (ink-stained) · 2× Healing potion · Ink bottle (blacker than black) · Reading glasses', story:'Eramus was the library\'s quietest custodian until the night they found the book with no title, no author, and pages that breathed. They wrote a name — their own — and the book answered. Now it writes in them: in sleep, in waking, in every idle moment. Each page fills, and each page takes. They no longer remember their mother\'s face. But the book remembers. And it writes beautifully.', prompt:`Create a D&D 5e character based on this archetype:
+
+ARCHETYPE: The Voidscribe
+Race: Human
+Class: Wizard (Void Scribe / School of the Void)
+Background: A librarian who found a book that should not exist
+Personality: Absent-minded, speaks in quotes, writes in their sleep
+Goal: Fill the book's empty pages before it fills them
+Secret: Every page they write erases a memory — their own, first
+
+Generate:
+1. Name (dark fantasy)
+2. Full character sheet: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves
+3. 3-4 abilities/traits
+4. Starting equipment (5-8 items)
+5. Backstory (max 100 words)
+Return as JSON according to the state schema.` }
+  },
 };
 
 const FREE_PROMPT = `Beskriv din karaktär fritt — utseende, personlighet, bakgrund, vad de fruktar, vad de begär.
@@ -865,9 +987,6 @@ function renderPreview(c, ac, glow) {
 function enterGame() {
   // Karaktären är redan sparad i backend via generateCharacter
   SFX.click();
-  // Spara DM-modellvalet så att chat.html använder det
-  const dmModel = document.getElementById('dm-model').value;
-  localStorage.setItem('dnd_model', dmModel);
   location.href = 'chat.html';
 }
 

@@ -418,6 +418,27 @@ const API = (() => {
       return req('/api/campaign/chapter', { method: 'POST', body: JSON.stringify({ title }) });
     },
 
+    // ── TTS ──
+    async ttsVoices() {
+      if (MOCK) return { voices: [{ id: 'male', name: 'Berättare (man)' }, { id: 'female', name: 'Berättare (kvinna)' }] };
+      return req('/api/tts/voices');
+    },
+
+    async tts(text, voice) {
+      const res = await fetch(BASE + '/api/tts', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voice }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        const msg = typeof err.detail === 'string' ? err.detail : 'TTS-fel';
+        throw new Error(msg);
+      }
+      return res.blob();
+    },
+
     // ── Auth-guard för sidor ──
     guard() {
       if (!sessionStorage.getItem('dnd_user')) {

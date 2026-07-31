@@ -316,6 +316,24 @@
     padding: 0.25rem 0.4rem; border-radius: 3px; cursor: pointer;
   }
   .tts-voice-select:hover { border-color: var(--gold); color: var(--bone); }
+  /* TTS-röstväljare över input-raden */
+  .tts-voice-picker {
+    display: flex; align-items: center; gap: 0.4rem;
+    justify-content: flex-end; margin-bottom: 0.45rem;
+  }
+  .tts-voice-label { font-size: 0.85rem; opacity: 0.7; }
+  .tts-voice-btn {
+    font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.03em;
+    background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
+    padding: 0.3rem 0.7rem; border-radius: 3px; cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex; align-items: center; justify-content: center; line-height: 1;
+  }
+  .tts-voice-btn:hover { border-color: var(--gold); color: var(--bone); }
+  .tts-voice-btn.active {
+    background: rgba(201,162,39,0.18); border-color: var(--gold);
+    color: var(--gold-bright); box-shadow: 0 0 10px -3px rgba(232,198,90,0.5);
+  }
   .msg.dm .bubble:hover { border-color: rgba(232,198,90,0.6); }
   .msg.dm .bubble .who { color: var(--gold); }
   .msg.dm .bubble .text { font-style: italic; color: var(--bone); line-height: 1.7; font-size: 1.05rem; }
@@ -692,6 +710,65 @@
   .roll-result-inline b { font-family: 'Cinzel', serif; color: var(--gold-bright); }
   .roll-result-inline .crit { color: var(--gold-bright); text-shadow: 0 0 10px rgba(232,198,90,.7); }
   .roll-result-inline .fail { color: var(--blood-bright); text-shadow: 0 0 10px rgba(212,58,77,.6); }
+
+  /* ═══════════════════════════════════════
+     INLINE TÄRNINGS-CEREMONI (i chatten)
+     ═══════════════════════════════════════ */
+  .inline-dice {
+    display: flex; flex-direction: column; align-items: center; gap: .45rem;
+    padding: .7rem 1rem .6rem; width: 100%;
+  }
+  .inline-dice .id-label {
+    font-family: 'Cinzel', serif; font-size: .62rem; letter-spacing: .22em;
+    text-transform: uppercase; color: var(--gold); opacity: .8;
+  }
+  .inline-dice .id-die { width: 68px; height: 68px; position: relative; }
+  .inline-dice .d20 .num { font-size: 28px; }
+
+  /* Rull-fas: tärningen tumlar */
+  .inline-dice.rolling .id-die { animation: d20-tumble 0.45s ease-in-out infinite; }
+
+  /* Avslöjande: landar med studs */
+  .inline-dice.reveal .id-die { animation: d20-land .55s cubic-bezier(.34,1.56,.64,1) both; }
+  .inline-dice.reveal.crit .id-die { filter: drop-shadow(0 0 18px rgba(255,215,0,.85)); }
+  .inline-dice.reveal.crit .d20 .face { stroke: var(--gold-bright); }
+  .inline-dice.reveal.crit .d20 .num { fill: #fff8dc; }
+  .inline-dice.reveal.fail .id-die { filter: drop-shadow(0 0 18px rgba(212,58,77,.85)); }
+  .inline-dice.reveal.fail .d20 .face { stroke: var(--blood-bright); }
+  .inline-dice.reveal.fail .d20 .num { fill: #ff8a95; }
+
+  /* Spänningstext */
+  .inline-dice .id-tension {
+    font-family: 'Cinzel', serif; font-size: .55rem; letter-spacing: .2em;
+    text-transform: uppercase; color: var(--bone-dim);
+    animation: d20-tension-pulse 1s ease-in-out infinite;
+  }
+
+  /* Resultatrad under tärningen */
+  .inline-dice .id-result {
+    font-family: 'Silkscreen', monospace; font-size: .88rem; color: var(--bone-bright);
+    text-shadow: 0 0 10px rgba(232,198,90,.4);
+    opacity: 0; transform: translateY(6px); transition: all .3s;
+  }
+  .inline-dice.reveal .id-result { opacity: 1; transform: translateY(0); }
+  .inline-dice.reveal.crit .id-result { color: var(--gold-bright); text-shadow: 0 0 16px rgba(255,215,0,.8); }
+  .inline-dice.reveal.fail .id-result { color: var(--blood-bright); text-shadow: 0 0 16px rgba(212,58,77,.7); }
+
+  /* Mini-skakning vid nat 1 */
+  .inline-dice.shake { animation: id-shake .4s ease both; }
+  @keyframes id-shake {
+    10%,90% { transform: translateX(-2px); } 20%,80% { transform: translateX(3px); }
+    30%,50%,70% { transform: translateX(-4px); } 40%,60% { transform: translateX(4px); }
+  }
+
+  /* ═══════════════════════════════════════
+     PIXELPARTIKLAR (gnorp-stil, per meddelande)
+     ═══════════════════════════════════════ */
+  .px-particle {
+    position: fixed; z-index: 210; pointer-events: none;
+    image-rendering: pixelated; border-radius: 0;
+    will-change: transform, opacity;
+  }
 
   /* ═══════════════════════════════════════
      D20 KAST-CEREMONI — fullskärms-overlay
@@ -1210,6 +1287,11 @@
     </div>
 
     <div class="input-area">
+      <div class="tts-voice-picker" title="Berättarröst för uppläsning">
+        <span class="tts-voice-label">🗣️</span>
+        <button class="tts-voice-btn active" data-voice="male" onclick="setTTSVoice('male', this)">Berättare (man)</button>
+        <button class="tts-voice-btn" data-voice="female" onclick="setTTSVoice('female', this)">Berättare (kvinna)</button>
+      </div>
       <div class="input-row">
         <textarea id="player-input" rows="1" placeholder="Vad gör du? Skriv fritt — slå, smyg, tala, kasta en besvärjelse…"></textarea>
         <button class="send-btn" onclick="sendPlayer()">⚔ Utför</button>
@@ -1282,7 +1364,7 @@
 
 <script src="sfx.js?v=20260730e"></script>
 <script src="music.js?v=20260730e"></script>
-<script src="api.js?v=20260730e"></script>
+<script src="api.js?v=20260731a"></script>
 <script src="i18n.js?v=20260730e"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
@@ -1498,6 +1580,7 @@ function addMessage(type, npcKey, text, meta) {
 
   chat.appendChild(el);
   chat.scrollTop = chat.scrollHeight;
+  messageParticles(el, type);
   return el;
 }
 
@@ -1558,42 +1641,88 @@ function addReasoning(text) {
 }
 
 // ═══════════════════════════════════════
-// TTS — text-till-ljud via StepAudio
+// TTS — StepAudio 2.5 via backend (fallback: webbläsarens talsyntes)
 // ═══════════════════════════════════════
 let _ttsAudio = null;
+let _ttsVoiceIds = null;
+const TTS_VOICE_KEY = 'dnd_tts_voice';
 
-function playTTS(btn) {
-  // Browser SpeechSynthesis — gratis, inget backend-anrop
+function ttsVoice() {
+  return localStorage.getItem(TTS_VOICE_KEY) || 'male';
+}
+
+function setTTSVoice(v, btn) {
+  localStorage.setItem(TTS_VOICE_KEY, v);
+  document.querySelectorAll('.tts-voice-btn').forEach(b => b.classList.toggle('active', b === btn));
+}
+
+function initTTSVoicePicker() {
+  const v = ttsVoice();
+  document.querySelectorAll('.tts-voice-btn').forEach(b => b.classList.toggle('active', b.dataset.voice === v));
+}
+
+async function ttsVoiceIds() {
+  if (_ttsVoiceIds) return _ttsVoiceIds;
+  try {
+    const r = await API.ttsVoices();
+    _ttsVoiceIds = { male: r.voices?.[0]?.id || null, female: r.voices?.[1]?.id || null };
+  } catch (e) {
+    _ttsVoiceIds = { male: null, female: null };
+  }
+  return _ttsVoiceIds;
+}
+
+function ttsStop(btn) {
+  if (_ttsAudio) { try { _ttsAudio.pause(); } catch (e) {} _ttsAudio = null; }
+  if (btn) { btn.textContent = '🔊'; btn.classList.remove('playing'); }
+}
+
+async function playTTS(btn) {
   if (btn.classList.contains('playing')) {
-    I18N.stopSpeaking();
-    btn.textContent = '🔊'; btn.classList.remove('playing');
+    ttsStop(btn);
     return;
   }
-
   const prev = document.querySelector('.tts-btn.playing');
-  if (prev && prev !== btn) { prev.textContent = '🔊'; prev.classList.remove('playing'); }
+  if (prev && prev !== btn) ttsStop(prev);
 
   const bubble = btn.closest('.bubble');
   const textEl = bubble.querySelector('.text');
-  const text = textEl.innerText.trim();
+  const text = (textEl.innerText || '').trim();
   if (!text) return;
 
-  btn.textContent = '⏸'; btn.classList.add('playing');
-  const lang = I18N.getLang();
-  const ok = I18N.speak(text, lang);
-  if (!ok) {
-    btn.textContent = '🔊'; btn.classList.remove('playing');
-    toast(I18N.t('⚠ Talsyntes stöds inte i denna webbläsare'));
-    return;
-  }
-  // Lyssna på när talet är klart
-  const check = setInterval(() => {
-    if (!speechSynthesis.speaking) {
-      clearInterval(check);
-      btn.textContent = '🔊'; btn.classList.remove('playing');
+  btn.textContent = '⏳'; btn.classList.add('playing');
+  try {
+    const ids = await ttsVoiceIds();
+    const voiceId = ttsVoice() === 'female' ? ids.female : ids.male;
+    if (!voiceId) throw new Error('Ingen röst konfigurerad');
+
+    const blob = await API.tts(text, voiceId);
+    const url = URL.createObjectURL(blob);
+    _ttsAudio = new Audio(url);
+    _ttsAudio.onended = () => { ttsStop(btn); URL.revokeObjectURL(url); };
+    _ttsAudio.onerror = () => { ttsStop(btn); URL.revokeObjectURL(url); toast('⚠ Kunde inte spela ljud'); };
+    await _ttsAudio.play();
+    btn.textContent = '⏸';
+  } catch (e) {
+    // Fallback: webbläsarens talsyntes
+    ttsStop(btn);
+    const ok = I18N.speak(text, I18N.getLang());
+    if (ok) {
+      btn.textContent = '⏸'; btn.classList.add('playing');
+      const check = setInterval(() => {
+        if (!speechSynthesis.speaking) {
+          clearInterval(check);
+          ttsStop(btn);
+        }
+      }, 300);
+    } else {
+      toast('⚠ ' + (e.message || 'TTS-fel'));
     }
-  }, 300);
+  }
 }
+
+// Aktivera rätt röstknapp från localStorage
+initTTSVoicePicker();
 
 // ═══════════════════════════════════════
 // DICE
@@ -1746,6 +1875,55 @@ function spawnParticles(x, y, count, colors) {
   }
 }
 
+// ── PIXELPARTIKLAR (gnorp-stil) ──
+// Fyrkantiga pixlar som spricker ut ur meddelanden. Används för DM, Guardian, spelare.
+function spawnPixelBurst(x, y, count, colors, size = 4) {
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('div');
+    p.className = 'px-particle';
+    const s = size + Math.floor(Math.random() * 3); // 4-6px
+    p.style.width = s + 'px';
+    p.style.height = s + 'px';
+    p.style.left = (x + (Math.random() - 0.5) * 30) + 'px';
+    p.style.top = (y + (Math.random() - 0.5) * 20) + 'px';
+    p.style.background = colors[i % colors.length];
+    document.body.appendChild(p);
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1.5 + Math.random() * 4;
+    const vx = Math.cos(angle) * speed;
+    const vy = Math.sin(angle) * speed - 1.5;
+    const rot = (Math.random() - 0.5) * 12;
+    let life = 1;
+    let cx = parseFloat(p.style.left), cy = parseFloat(p.style.top), r = 0;
+    (function anim() {
+      life -= 0.022;
+      if (life <= 0) { p.remove(); return; }
+      cx += vx;
+      cy += vy + (1 - life) * 2.5; // gravitation
+      r += rot;
+      p.style.transform = `translate(${cx - parseFloat(p.style.left)}px, ${cy - parseFloat(p.style.top)}px) rotate(${r}deg)`;
+      p.style.opacity = life;
+      requestAnimationFrame(anim);
+    })();
+  }
+}
+
+// Partiklar per meddelandetyp — anropas från addMessage
+function messageParticles(el, type) {
+  if (!el) return;
+  const rect = el.getBoundingClientRect();
+  const cx = rect.left + rect.width * 0.15;
+  const cy = rect.top + rect.height * 0.5;
+  if (type === 'dm' || type === 'npc') {
+    spawnPixelBurst(cx, cy, 10, ['#c9a227', '#e8c65a', '#8b5fd4', '#efe2c0'], 4);
+  } else if (type === 'guardian') {
+    spawnPixelBurst(cx, cy, 8, ['#5e9aa3', '#4e8a93', '#d9c9a6'], 3);
+  } else if (type === 'player') {
+    const pcx = rect.right - rect.width * 0.15;
+    spawnPixelBurst(pcx, cy, 6, ['#d9c9a6', '#8a7a5e', '#c9a227'], 3);
+  }
+}
+
 // ═══════════════════════════════════════
 // D20 KAST-CEREMONI
 // ═══════════════════════════════════════
@@ -1841,6 +2019,85 @@ async function d20Ceremony(notation, label, roll) {
   ov.remove();
 }
 
+// ── INLINE TÄRNINGS-CEREMONI (i chatten, ingen fullskärm) ──
+// Skapar ett systemmeddelande i chatten med D20 som rullar, flimrar och avslöjar.
+// Resultatet blir kvar i chatten som en permanent post.
+async function inlineDiceCeremony(notation, label, roll) {
+  const isCrit = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 20;
+  const isFail = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 1;
+  const modStr = roll.mod !== 0 ? (roll.mod > 0 ? '+' + roll.mod : roll.mod) : '';
+
+  // Bygg inline-meddelande i chatten
+  const el = document.createElement('div');
+  el.className = 'msg system';
+  el.innerHTML = `
+    <div class="box">
+      <div class="inline-dice rolling">
+        <div class="id-label">🎲 ${escapeHtml(label)} · ${escapeHtml(notation)}</div>
+        <div class="id-die">${d20Svg()}</div>
+        <div class="id-tension">${I18N.t('Tärningen rullar…')}</div>
+        <div class="id-result"></div>
+      </div>
+    </div>`;
+  chat.appendChild(el);
+  chat.scrollTop = chat.scrollHeight;
+
+  const dice = el.querySelector('.inline-dice');
+  const num = el.querySelector('.d20 .num');
+  const tensionEl = el.querySelector('.id-tension');
+  const resultEl = el.querySelector('.id-result');
+
+  SFX.dice();
+
+  // Rull-fas: 3 sekunder med flimrande siffror
+  const ROLL_MS = 3000;
+  const start = Date.now();
+  await new Promise(resolve => {
+    (function flicker() {
+      const elapsed = Date.now() - start;
+      if (elapsed >= ROLL_MS) { resolve(); return; }
+      num.textContent = 1 + Math.floor(Math.random() * (roll.sides || 20));
+      const progress = elapsed / ROLL_MS;
+      const delay = 50 + progress * progress * 220;
+      setTimeout(flicker, delay);
+    })();
+  });
+
+  // Avslöjande!
+  dice.classList.remove('rolling');
+  dice.classList.add('reveal');
+  if (isCrit) dice.classList.add('crit');
+  if (isFail) dice.classList.add('fail');
+  num.textContent = roll.rolls[0];
+  tensionEl.style.display = 'none';
+
+  const verdict = isCrit ? I18N.t('✦ KRITISKT!') : isFail ? I18N.t('✦ PATETISKT!') : '';
+  resultEl.textContent = `${roll.rolls.join(', ')}${modStr} = ${roll.total} ${verdict}`.trim();
+
+  // Partiklar + effekter
+  const dieRect = el.querySelector('.id-die').getBoundingClientRect();
+  const cx = dieRect.left + dieRect.width / 2;
+  const cy = dieRect.top + dieRect.height / 2;
+
+  if (isCrit) {
+    SFX.crit();
+    spawnPixelBurst(cx, cy, 30, ['#ffd700', '#fff8dc', '#e8c65a', '#4dd8f0'], 5);
+    spawnParticles(cx, cy, 20, ['#ffd700', '#fff8dc', '#e0ffff']);
+  } else if (isFail) {
+    SFX.fail();
+    spawnPixelBurst(cx, cy, 20, ['#d43a4d', '#8b1a2b', '#e8dcc8'], 4);
+    dice.classList.add('shake');
+    setTimeout(() => dice.classList.remove('shake'), 500);
+  } else {
+    spawnPixelBurst(cx, cy, 10, ['#c9a227', '#e8c65a', '#8b5fd4'], 4);
+  }
+
+  chat.scrollTop = chat.scrollHeight;
+
+  // Kort paus så spelaren hinner se resultatet innan DM svarar
+  await new Promise(r => setTimeout(r, 800));
+}
+
 // Level-up: episk banner + guldregn
 function showLevelUp(level) {
   const overlay = document.createElement('div');
@@ -1889,9 +2146,10 @@ async function answerRollRequest(id, notation, label) {
   const isCrit = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 20;
   const isFail = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 1;
 
-  // D20-ceremonin — 3s spänning med flimrande siffror, sen avslöjande (vänta in)
-  await d20Ceremony(notation, label, roll);
+  // Inline-ceremonin — tärningen rullar i chatten, ingen fullskärm
+  await inlineDiceCeremony(notation, label, roll);
 
+  // Ersätt knappraden med ett kompakt resultat
   const modStr = roll.mod !== 0 ? (roll.mod > 0 ? '+' + roll.mod : roll.mod) : '';
   const cls = isCrit ? 'crit' : isFail ? 'fail' : '';
   box.innerHTML = `

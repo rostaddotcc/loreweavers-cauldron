@@ -396,6 +396,28 @@ Generera art varannan tur — inte varje tur.
 8. KARAKTÄRSUPPDATERINGAR: Om spelaren upptäcker en ny förmåga, lär sig en \
    besvärjelse, eller om bakgrundshistorien utvecklas → character_updates.
 
+## SKADA & HP (KRITISKT — MISSA ALDRIG DETTA)
+9. OM DM beskriver att spelaren TAR SKADA (huggs, bränns, faller, förgiftas, \
+   träffas av magi, misslyckas med konsekvens) → SÄTT damage med target="player". \
+   Läs DM-texten noggrant: "kylan biter", "blodet rinner", "du tappar andan", \
+   "smärtan exploderar" = SKADA. Även implicit skada från misslyckade kast \
+   (nat 1, låga slag) ska ge damage om DM beskriver konsekvenser.
+10. OM DM beskriver att en NPC TAR SKADA eller DÖR → SÄTT damage/death med NPC-namn. \
+    "Morwenna faller", "skuggvarelsen upplöses", "vakten sjunker ihop" = death.
+11. OM DM beskriver LÄKNING (dryck, magi, vila, bandage) → SÄTT healing.
+12. UPPSKATTA skada: låg (1-4), medel (5-10), hög (11-20), dödlig (21+). \
+    Vid tvekan, välj medel. Hellre för mycket än för lite — HP ska sjunka.
+
+## KONFLIKTDETEKTERING (KRITISKT)
+13. OM spelaren påstår sig ha föremål de INTE har i inventory (nedan) → \
+    SÄTT corrections med field="items_add", action="retract", \
+    reason="Spelaren påstår sig ha X men har det inte i inventory". \
+    Exempel: Spelaren säger "jag tar min lampa" men inventory är tomt → correction.
+14. OM spelaren påstår sig kunna göra något som strider mot karaktärsbladet \
+    (t.ex. "jag flyger" utan flygförmåga) → correction.
+15. OM DM accepterar en spelarpåhittad detalj som bryter mot världen \
+    (t.ex. "jag tar min mobiltelefon") → correction.
+
 ## Format
 {
   "damage": [{"target": "player", "amount": 12, "type": "slashing"}],

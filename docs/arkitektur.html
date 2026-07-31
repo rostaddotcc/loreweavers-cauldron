@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mörkrets Rike — Arkitektur &amp; Maskinrum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Silkscreen:wght@400;700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#08080d; --stone:#0e0e14; --stone-2:#12121a; --stone-3:#181822;
+    --edge:#2a2a3a; --edge-hi:#3a3a50;
+    --bone:#b8b8c8; --bone-bright:#e0e0ec; --bone-dim:#6a6a80;
+    --gold:#c9a227; --gold-bright:#e8c65a;
+    --blood:#8b1a2a; --blood-bright:#d43a4d;
+    --ember:#d4691e; --arcane:#7b4fd4; --poison:#5a9a4e; --teal:#4e8a93;
+    --term-green:#33cc33; --term-amber:#ccaa33;
+    --fd:'Press Start 2P',monospace;
+    --ft:'VT323',monospace;
+    --fs:'Silkscreen',monospace;
+    --fm:'IBM Plex Mono',monospace;
+  }
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;border-radius:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--fm);color:var(--bone);background:var(--ink);line-height:1.75;overflow-x:hidden;font-size:15px}
+  ::selection{background:var(--gold);color:var(--ink)}
+
+  /* ── ambienta lager ── */
+  .grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .scanlines{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:.14;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.8) 3px)}
+  #embers{position:fixed;inset:0;z-index:0;pointer-events:none}
+  .vignette{position:fixed;inset:0;z-index:2;pointer-events:none;box-shadow:inset 0 0 200px 80px rgba(3,2,6,.9)}
+
+  /* ── boot-skärm ── */
+  #boot{position:fixed;inset:0;z-index:100;background:#050508;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .7s ease,visibility .7s}
+  #boot.done{opacity:0;visibility:hidden}
+  #boot pre{font-family:var(--ft);font-size:clamp(1rem,2.2vw,1.4rem);color:var(--term-green);line-height:1.5;text-shadow:0 0 8px rgba(51,204,51,.5);max-width:780px;width:92%;white-space:pre-wrap}
+  #boot .skip{position:absolute;bottom:2rem;left:50%;transform:translateX(-50%);font-family:var(--fd);font-size:.55rem;color:var(--bone-dim);letter-spacing:.15em;animation:blink 1.2s step-end infinite}
+  @keyframes blink{50%{opacity:0}}
+
+  /* ── layout ── */
+  .wrap{position:relative;z-index:3;display:flex;max-width:1280px;margin:0 auto}
+
+  /* ── vänsterindex ── */
+  .index{position:sticky;top:0;align-self:flex-start;width:240px;height:100vh;flex-shrink:0;padding:2.2rem 1.2rem;border-right:1px solid var(--edge);background:linear-gradient(180deg,var(--stone),#0a0a10);overflow-y:auto}
+  .index .sigil{font-size:1.5rem;margin-bottom:.5rem;filter:drop-shadow(0 0 10px rgba(232,198,90,.5))}
+  .index h6{font-family:var(--fd);font-size:.5rem;letter-spacing:.22em;color:var(--gold);margin-bottom:1.5rem;line-height:1.8}
+  .index a{display:block;font-family:var(--fm);font-size:.72rem;color:var(--bone-dim);text-decoration:none;padding:.42rem .5rem;border-left:2px solid transparent;transition:all .18s}
+  .index a:hover,.index a.active{color:var(--gold-bright);border-left-color:var(--gold);background:rgba(201,162,39,.06);transform:translateX(3px)}
+  .index a .n{color:var(--term-green);margin-right:.4rem;font-size:.65rem}
+  .index .ver{margin-top:2rem;font-family:var(--ft);font-size:.85rem;color:var(--bone-dim);line-height:1.6}
+  .index .ver b{color:var(--term-amber)}
+
+  /* ── huvudinnehåll ── */
+  main{flex:1;min-width:0;padding:3rem 3.2rem 6rem}
+
+  /* ── rubriker ── */
+  h1{font-family:var(--fd);font-size:clamp(1.1rem,3vw,1.7rem);color:var(--gold-bright);letter-spacing:.08em;line-height:1.6;text-shadow:0 0 18px rgba(232,198,90,.35);margin-bottom:.6rem}
+  h1 .cur{display:inline-block;width:.55em;height:1.1em;background:var(--term-green);vertical-align:-.15em;animation:blink 1s step-end infinite;box-shadow:0 0 8px rgba(51,204,51,.6)}
+  .subtitle{font-family:var(--ft);font-size:1.25rem;color:var(--term-green);letter-spacing:.05em;margin-bottom:2.6rem;text-shadow:0 0 8px rgba(51,204,51,.4)}
+  h2{font-family:var(--fd);font-size:.85rem;color:var(--gold);letter-spacing:.12em;margin:3.4rem 0 1.2rem;padding-bottom:.7rem;border-bottom:1px solid var(--edge);position:relative}
+  h2::after{content:'';position:absolute;bottom:-1px;left:0;width:64px;height:1px;background:var(--gold);box-shadow:0 0 8px var(--gold)}
+  h2 .sec{color:var(--term-green);margin-right:.6rem}
+  h3{font-family:var(--fs);font-size:.95rem;color:var(--bone-bright);margin:1.8rem 0 .8rem;letter-spacing:.04em}
+  h3::before{content:'» ';color:var(--gold)}
+  p{margin-bottom:1rem;color:var(--bone)}
+  strong{color:var(--gold-bright);font-weight:600}
+  em{color:var(--term-amber);font-style:normal}
+  code{font-family:var(--fm);font-size:.85em;color:var(--term-green);background:rgba(51,204,51,.07);padding:.1em .35em;border:1px solid rgba(51,204,51,.15)}
+
+  /* ── DOS-panel ── */
+  .panel{background:var(--stone);border:1px solid var(--edge);padding:1.4rem 1.6rem;margin:1.4rem 0;position:relative}
+  .panel::before{content:'';position:absolute;inset:3px;border:1px solid rgba(58,58,80,.4);pointer-events:none}
+  .panel .plabel{position:absolute;top:-9px;left:14px;background:var(--ink);padding:0 .6rem;font-family:var(--ft);font-size:1rem;color:var(--term-green);letter-spacing:.08em}
+  .panel .plabel::before{content:'┌─ '}
+  .panel .plabel::after{content:' ─┐'}
+  .panel .plabel::before,.panel .plabel::after{color:var(--edge-hi)}
+
+  /* ── kodblock ── */
+  pre.code{background:#050509;border:1px solid var(--edge);border-left:3px solid var(--term-green);padding:1.1rem 1.3rem;overflow-x:auto;font-family:var(--fm);font-size:.8rem;line-height:1.65;color:var(--bone);margin:1.2rem 0}
+  pre.code .c{color:var(--bone-dim);font-style:italic}
+  pre.code .k{color:var(--gold-bright)}
+  pre.code .s{color:var(--term-green)}
+  pre.code .t{color:var(--arcane)}
+  pre.code .r{color:var(--blood-bright)}
+  pre.code .a{color:var(--term-amber)}
+  pre.ascii{background:#050509;border:1px solid var(--edge);padding:1.3rem;overflow-x:auto;font-family:var(--ft);font-size:1.05rem;line-height:1.45;color:var(--term-green);text-shadow:0 0 6px rgba(51,204,51,.35);margin:1.4rem 0}
+  pre.ascii .g{color:var(--gold-bright);text-shadow:0 0 6px rgba(232,198,90,.4)}
+  pre.ascii .p{color:var(--arcane);text-shadow:0 0 6px rgba(123,79,212,.4)}
+  pre.ascii .r{color:var(--blood-bright)}
+  pre.ascii .d{color:var(--bone-dim);text-shadow:none}
+
+  /* ── tabeller ── */
+  table{width:100%;border-collapse:collapse;margin:1.2rem 0;font-size:.82rem}
+  th{font-family:var(--fs);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--gold);background:var(--stone-2);border:1px solid var(--edge);padding:.6rem .8rem;text-align:left}
+  td{border:1px solid var(--edge);padding:.55rem .8rem;color:var(--bone);vertical-align:top}
+  tr:nth-child(even) td{background:rgba(18,18,26,.5)}
+  tr:hover td{background:rgba(201,162,39,.05)}
+  td code{font-size:.78em}
+
+  /* ── steg (livscykel) ── */
+  .step{display:flex;gap:1.2rem;margin:1.6rem 0;position:relative}
+  .step::before{content:'';position:absolute;left:19px;top:44px;bottom:-26px;width:1px;background:var(--edge)}
+  .step:last-child::before{display:none}
+  .step .num{flex-shrink:0;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:.7rem;color:var(--ink);background:var(--gold);box-shadow:0 0 12px rgba(201,162,39,.4);position:relative;z-index:1}
+  .step.guard .num{background:var(--arcane);box-shadow:0 0 12px rgba(123,79,212,.4)}
+  .step.dm .num{background:var(--gold-bright)}
+  .step.post .num{background:var(--teal);box-shadow:0 0 12px rgba(78,138,147,.4)}
+  .step .body{flex:1;min-width:0;padding-top:.3rem}
+  .step .body h4{font-family:var(--fs);font-size:.9rem;color:var(--bone-bright);margin-bottom:.4rem}
+  .step .body h4 .tag{font-family:var(--ft);font-size:.85rem;padding:.05rem .5rem;margin-left:.5rem;border:1px solid}
+  .tag.fast{color:var(--term-green);border-color:rgba(51,204,51,.4)}
+  .tag.slow{color:var(--term-amber);border-color:rgba(204,170,51,.4)}
+  .tag.bg{color:var(--teal);border-color:rgba(78,138,147,.4)}
+  .step .body p{font-size:.85rem;margin-bottom:.5rem}
+
+  /* ── promptblock-citat ── */
+  .prompt{background:#0a0a12;border:1px solid var(--edge);border-left:3px solid var(--gold);margin:1.2rem 0;overflow:hidden}
+  .prompt .phead{background:var(--stone-2);padding:.5rem 1rem;font-family:var(--fs);font-size:.7rem;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--edge);display:flex;justify-content:space-between;align-items:center}
+  .prompt .phead .loc{color:var(--bone-dim);text-transform:none;letter-spacing:0;font-family:var(--fm);font-size:.7rem}
+  .prompt .pbody{padding:1rem 1.2rem;font-size:.82rem;line-height:1.7;color:var(--bone)}
+  .prompt .pbody .hl{color:var(--gold-bright)}
+  .prompt .pbody .gr{color:var(--term-green)}
+  .prompt.arcane{border-left-color:var(--arcane)}
+  .prompt.arcane .phead{color:var(--arcane)}
+  .prompt.teal{border-left-color:var(--teal)}
+  .prompt.teal .phead{color:var(--teal)}
+
+  /* ── chips / badges ── */
+  .chip{display:inline-block;font-family:var(--fs);font-size:.62rem;padding:.2rem .55rem;border:1px solid;margin:.15rem .2rem .15rem 0;letter-spacing:.05em}
+  .chip.gold{color:var(--gold-bright);border-color:rgba(201,162,39,.5);background:rgba(201,162,39,.08)}
+  .chip.green{color:var(--term-green);border-color:rgba(51,204,51,.4);background:rgba(51,204,51,.07)}
+  .chip.purple{color:var(--arcane);border-color:rgba(123,79,212,.4);background:rgba(123,79,212,.08)}
+  .chip.red{color:var(--blood-bright);border-color:rgba(212,58,77,.4);background:rgba(212,58,77,.07)}
+  .chip.teal{color:var(--teal);border-color:rgba(78,138,147,.4);background:rgba(78,138,147,.08)}
+  .chip.dim{color:var(--bone-dim);border-color:var(--edge)}
+
+  /* ── stat-rutor (öppning) ── */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin:2rem 0}
+  .stat{background:var(--stone);border:1px solid var(--edge);padding:1.1rem 1rem;text-align:center;position:relative;transition:all .2s}
+  .stat:hover{border-color:var(--gold);transform:translateY(-3px);box-shadow:0 6px 0 rgba(0,0,0,.4),0 0 16px rgba(201,162,39,.15)}
+  .stat .v{font-family:var(--fd);font-size:1.05rem;color:var(--gold-bright);display:block;margin-bottom:.5rem;text-shadow:0 0 10px rgba(232,198,90,.3)}
+  .stat .l{font-family:var(--ft);font-size:.95rem;color:var(--bone-dim);letter-spacing:.06em}
+
+  /* ── flödesdiagram (horisontellt) ── */
+  .flow{display:flex;align-items:stretch;gap:0;margin:1.6rem 0;overflow-x:auto;padding-bottom:.5rem}
+  .fnode{flex-shrink:0;background:var(--stone-2);border:1px solid var(--edge);padding:.9rem 1rem;min-width:130px;text-align:center;position:relative;transition:all .2s}
+  .fnode:hover{border-color:var(--gold);box-shadow:0 0 14px rgba(201,162,39,.15)}
+  .fnode .fi{font-size:1.3rem;display:block;margin-bottom:.4rem}
+  .fnode .fn{font-family:var(--fs);font-size:.68rem;color:var(--bone-bright);letter-spacing:.05em;display:block}
+  .fnode .fd{font-family:var(--ft);font-size:.85rem;color:var(--bone-dim);display:block;margin-top:.2rem}
+  .fnode.gold{border-color:rgba(201,162,39,.5)}
+  .fnode.purple{border-color:rgba(123,79,212,.5)}
+  .fnode.teal{border-color:rgba(78,138,147,.5)}
+  .farrow{flex-shrink:0;display:flex;align-items:center;color:var(--gold);font-family:var(--ft);font-size:1.3rem;padding:0 .3rem;text-shadow:0 0 8px rgba(232,198,90,.4)}
+
+  /* ── lagerlista (systemprompt) ── */
+  .layer{display:flex;gap:1rem;margin:.9rem 0;align-items:flex-start}
+  .layer .lnum{flex-shrink:0;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:.55rem;color:var(--ink);background:var(--term-green);margin-top:.2rem}
+  .layer .lbody{flex:1;min-width:0}
+  .layer .lbody .lname{font-family:var(--fs);font-size:.82rem;color:var(--bone-bright)}
+  .layer .lbody .ldesc{font-size:.8rem;color:var(--bone-dim);margin-top:.15rem}
+  .layer .lbody .lsrc{font-family:var(--fm);font-size:.68rem;color:var(--term-amber);margin-top:.2rem}
+  .layer.hot .lnum{background:var(--gold-bright)}
+  .layer.hot .lbody .lname{color:var(--gold-bright)}
+
+  /* ── notis / varning ── */
+  .note{border:1px solid rgba(204,170,51,.4);border-left:3px solid var(--term-amber);background:rgba(204,170,51,.05);padding:.9rem 1.1rem;margin:1.2rem 0;font-size:.82rem}
+  .note::before{content:'⚠ ';color:var(--term-amber)}
+  .note.info{border-color:rgba(78,138,147,.4);border-left-color:var(--teal);background:rgba(78,138,147,.05)}
+  .note.info::before{content:'◆ ';color:var(--teal)}
+  .note.magic{border-color:rgba(123,79,212,.4);border-left-color:var(--arcane);background:rgba(123,79,212,.05)}
+  .note.magic::before{content:'✦ ';color:var(--arcane)}
+
+  /* ── scroll-avslöjande ── */
+  .reveal{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
+  .reveal.in{opacity:1;transform:none}
+
+  /* ── mobil ── */
+  @media (max-width:900px){
+    .index{display:none}
+    main{padding:2rem 1.2rem 5rem}
+    .flow{flex-direction:column}
+    .farrow{transform:rotate(90deg);justify-content:center;padding:.2rem 0}
+  }
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+<div class="scanlines"></div>
+<canvas id="embers"></canvas>
+<div class="vignette"></div>
+
+<!-- ═══════════ BOOT ═══════════ -->
+<div id="boot">
+  <pre id="boottext"></pre>
+  <div class="skip">[ KLICK FÖR ATT HOPPA ÖVER ]</div>
+</div>
+
+<div class="wrap">
+
+  <!-- ═══════════ INDEX ═══════════ -->
+  <nav class="index">
+    <div class="sigil">🐉</div>
+    <h6>MÖRKRETS RIKE<br>ARKITEKTUR-KODEX</h6>
+    <a href="#oversikt"><span class="n">01</span>Översikt</a>
+    <a href="#livscykel"><span class="n">02</span>En turs livscykel</a>
+    <a href="#systemprompt"><span class="n">03</span>Systemprompten</a>
+    <a href="#dm"><span class="n">04</span>DM:ns hjärna</a>
+    <a href="#guardian"><span class="n">05</span>Guardian</a>
+    <a href="#minne"><span class="n">06</span>Minne &amp; kontext</a>
+    <a href="#dice"><span class="n">07</span>Tärningsceremonin</a>
+    <a href="#state"><span class="n">08</span>State &amp; data</a>
+    <a href="#modeller"><span class="n">09</span>Modellparken</a>
+    <a href="#stack"><span class="n">10</span>Tech stack</a>
+    <div class="ver">
+      <b>DM-prompt</b> v21<br>
+      <b>Guardian</b> pre+post<br>
+      <b>Uppdaterad</b> 2026-07-30
+    </div>
+  </nav>
+
+  <!-- ═══════════ MAIN ═══════════ -->
+  <main>
+
+    <h1>MÖRKRETS RIKE<span class="cur"></span></h1>
+    <div class="subtitle">// arkitektur &amp; maskinrum — hur spelet faktiskt fungerar</div>
+
+    <div class="stats">
+      <div class="stat"><span class="v">117</span><span class="l">commits</span></div>
+      <div class="stat"><span class="v">20 558</span><span class="l">rader kod</span></div>
+      <div class="stat"><span class="v">7</span><span class="l">LLM-modeller</span></div>
+      <div class="stat"><span class="v">v21</span><span class="l">DM-prompt</span></div>
+      <div class="stat"><span class="v">2</span><span class="l">guardians</span></div>
+    </div>
+
+    <!-- ═══════════ 01 ÖVERSIKT ═══════════ -->
+    <h2 id="oversikt"><span class="sec">01</span>ÖVERSIKT</h2>
+
+    <p>Mörkrets Rike är en <strong>LLM-driven Dungeon Master</strong>. Spelaren skriver vad karaktären gör — en AI-DM narrerar utfallet, spelar NPCs och bygger världen i stunden. Men enbart en språkmodell räcker inte för ett spel: den glömmer, den hittar på, och den kan inte hålla reda på HP, guld och quests. Därför är spelet byggt kring en <strong>två-modellsprincip</strong>:</p>
+
+    <div class="panel">
+      <span class="plabel">KÄRNIDÉ</span>
+      <p style="margin:0"><strong>DM:n berättar. Guardian bokför.</strong> Den kreativa modellen (Qwen 3.8 Max) skriver fri narration utan mekaniska tvång. En separat mekanisk väktare (Guardian) läser narrationen i efterhand och extraherar all spellogik — skada, XP, föremål, quests, NPC-relationer — och uppdaterar det auktoritära tillståndet. DM:n behöver aldrig räkna; Guardian äger mekaniken.</p>
+    </div>
+
+    <pre class="ascii">
+<span class="d">┌─────────────────────────────────────────────────────────────────────┐</span>
+<span class="d">│</span>                        <span class="g">MÖRKRETS RIKE — SYSTEMKARTA</span>                    <span class="d">│</span>
+<span class="d">└─────────────────────────────────────────────────────────────────────┘</span>
+
+   <span class="p">SPELARE</span>
+      │  "Jag hugger närmaste goblin med mitt svärd"
+      ▼
+   <span class="g">FRONTEND</span> (vanilla JS · snes.css · sprites.js)
+      │  POST /api/chat  {message, model_id}
+      ▼
+   <span class="g">FASTAPI BACKEND</span> (main.py · 3 405 rader)
+      │
+      ├──► <span class="p">GUARDIAN PRE-DM</span> ── krävs ett tärningskast?  (&lt;2s)
+      │         StepFun 3.7 Flash · guardian_check_roll()
+      │
+      ├──► <span class="g">BYGG SYSTEMPROMPT</span> ── språk + core + strid/narrativ
+      │         + SANNING + sammanfattningar + värld + NPCs
+      │
+      ├──► <span class="g">RAG / FAKTAREGISTER</span> ── injicera relevant minne
+      │
+      ├──► <span class="g">DM (Qwen 3.8 Max)</span> ── narrerar fritt  ──► <span class="p">svar till spelaren</span>
+      │
+      └──► <span class="r">GUARDIAN POST-DM</span> ── extrahera ALL mekanik (bakgrund)
+                guardian_extract_mechanics() → apply_mechanics()
+                          │
+                          ▼
+                <span class="g">STATE (JSON per kampanj)</span> ── HP · XP · guld · items
+                NPCs · quests · platser · transkript · sammanfattningar</pre>
+
+    <div class="note info">Allt speldata lever i <strong>JSON-filer per kampanj</strong> — maskinläsbart, kompakt, versionshanterbart. Ingen databas. LLM:n får aldrig se rå JSON; den får en komprimerad <em>SANNING</em>-block istället.</div>
+
+    <!-- ═══════════ 02 LIVSCYKEL ═══════════ -->
+    <h2 id="livscykel"><span class="sec">02</span>EN TURS LIVSCYKEL</h2>
+
+    <p>När spelaren trycker Enter händer följande — steg för steg, i <code>main.py:chat()</code>:</p>
+
+    <div class="step guard">
+      <div class="num">1</div>
+      <div class="body">
+        <h4>Guardian Pre-DM — kastdetektion <span class="tag fast">&lt;2s</span></h4>
+        <p>Innan DM:n ens anropas analyserar Guardian spelarens handling + senaste DM-svar och avgör: <em>kräver detta ett tärningskast?</em> "Jag beställer en öl" → nej. "Jag hugger en goblin" → ja, <code>1d20-1</code> mot AC 13. Resultatet injiceras som ett <strong>råd</strong> i DM:ns systemprompt — och fungerar som fallback om DM:n glömmer <code>[KAST:]</code>-taggen.</p>
+      </div>
+    </div>
+
+    <div class="step dm">
+      <div class="num">2</div>
+      <div class="body">
+        <h4>Systemprompten monteras <span class="tag fast">deterministiskt</span></h4>
+        <p><code>_build_system_prompt()</code> bygger varje tur ihop prompten från scratch: språk-direktiv, DM-core (v21), strids- eller narrativ-läge, SANNING-blocket, hierarkiska sammanfattningar, förra turens händelser, värld, NPCs och aktiva quests. Inget lämnas åt slumpen — se <a href="#systemprompt" style="color:var(--gold)">sektion 03</a>.</p>
+      </div>
+    </div>
+
+    <div class="step dm">
+      <div class="num">3</div>
+      <div class="body">
+        <h4>RAG — långtidsminne injiceras <span class="tag slow">Qdrant</span></h4>
+        <p>Spelarens meddelande embeddas och matchas mot kampanjens faktaregister. Relevanta minnen ("värdshusvärden Borget är skyldig dig en tjänst") läggs till i systemprompten. Så DM:n kommer ihåg detaljer från 200 drag sedan.</p>
+      </div>
+    </div>
+
+    <div class="step dm">
+      <div class="num">4</div>
+      <div class="body">
+        <h4>DM narrerar <span class="tag slow">Qwen 3.8 Max</span></h4>
+        <p>Systemprompt + senaste transkript + spelarens meddelande skickas till DM-modellen. Den svarar med fri narration — och om Guardian Pre-DM begärde ett kast, en <code>[KAST: 1d20+3 | SMIDIGHET (DC 14)]</code>-tagg som frontend renderar som en tärningsknapp. Svaret returneras <strong>direkt</strong> till spelaren.</p>
+      </div>
+    </div>
+
+    <div class="step post">
+      <div class="num">5</div>
+      <div class="body">
+        <h4>Guardian Post-DM — mekanikextraktion <span class="tag bg">bakgrund</span></h4>
+        <p><strong>Efter</strong> att spelaren fått sitt svar kör Guardian i bakgrunden: den läser DM:ns narration och extraherar ALL mekanik (skada, XP, items, valuta, quests, NPCs, tid, vila, loggbok, ASCII-art, korrigeringar) som strukturerad JSON. <code>apply_mechanics()</code> uppdaterar state och frontend pollar fram <em>event-kort</em> i chatten. Spelaren väntar aldrig på detta.</p>
+      </div>
+    </div>
+
+    <div class="step post">
+      <div class="num">6</div>
+      <div class="body">
+        <h4>State uppdateras &amp; sammanfattas <span class="tag bg">asynkront</span></h4>
+        <p>HP, guld, inventory, NPC-relationer och quests skrivs till kampanjens JSON. Varje 20:e drag genereras en <strong>scen-sammanfattning</strong>; vid milstolpar en <strong>kapitel-sammanfattning</strong>; över hela kampanjen en <strong>kampanjbåge</strong>. Dessa matas tillbaka i nästa turs systemprompt — hierarkiskt minne.</p>
+      </div>
+    </div>
+
+    <div class="note magic">Nyckelbeslutet: <strong>DM-svaret returneras direkt, Guardian körs i bakgrunden</strong> (commit 3d46e17). Tidigare fick spelaren vänta på båda — nu känns spelet snabbt medan bokföringen ändå sker.</div>
+
+    <!-- ═══════════ 03 SYSTEMPROMPT ═══════════ -->
+    <h2 id="systemprompt"><span class="sec">03</span>SYSTEMPROMPTEN — MONTERAD VARJE TUR</h2>
+
+    <p>Systemprompten är inte en statisk text. Den <strong>byggs om från grunden varje tur</strong> av <code>_build_system_prompt()</code> (main.py:1458), i en fast ordning. Ordningen spelar roll: språk-direktivet måste komma först, SANNINGen före sammanfattningarna, osv.</p>
+
+    <div class="layer hot">
+      <div class="lnum">1</div>
+      <div class="lbody">
+        <div class="lname">[LANGUAGE] / [SPRÅK] — direktiv</div>
+        <div class="ldesc">Allra först. Tvingar DM att skriva ALLT på rätt språk. Överskriver svensk text i instruktionerna nedan — de är interna systemnoter, inte utdataspråk.</div>
+        <div class="lsrc">main.py:_build_system_prompt() · lang = _get_lang(state)</div>
+      </div>
+    </div>
+    <div class="layer hot">
+      <div class="lnum">2</div>
+      <div class="lbody">
+        <div class="lname">[DM-prompt v21] + DM_CORE_PROMPT</div>
+        <div class="ldesc">DM:ns identitet, ton, världskonsekvens, NPC-skapande, tärningsregler. Versionsnumret tvingar cache-miss vid ändringar. Se <a href="#dm" style="color:var(--gold)">sektion 04</a>.</div>
+        <div class="lsrc">models.py:173 · DM_PROMPT_VERSION = "v21"</div>
+      </div>
+    </div>
+    <div class="layer">
+      <div class="lnum">3</div>
+      <div class="lbody">
+        <div class="lname">Strid ELLER Narrativ — endast det som behövs</div>
+        <div class="ldesc">Finns det levande fiender i state injiceras <code>DM_COMBAT_PROMPT</code> (initiativ, turordning, balansguardrails per nivå). Annars <code>DM_NARRATIVE_PROMPT</code>. Sparar kontext i fred.</div>
+        <div class="lsrc">enemies = [n for n in state["npcs"] if relation=="fiende" and alive]</div>
+      </div>
+    </div>
+    <div class="layer hot">
+      <div class="lnum">4</div>
+      <div class="lbody">
+        <div class="lname">SANNING — auktoritärt tillstånd</div>
+        <div class="ldesc">Kompakt state (HP, guld, inventory, nivå) + pinmade fakta. Rubriken säger det rakt av: <em>"motsäg ALDRIG detta"</em>. LLM:n får aldrig hitta på att spelaren har föremål de inte har.</div>
+        <div class="lsrc">truth_block(state) → compact_state(state) + pinned_facts</div>
+      </div>
+    </div>
+    <div class="layer">
+      <div class="lnum">5</div>
+      <div class="lbody">
+        <div class="lname">Hierarkiska sammanfattningar</div>
+        <div class="ldesc">2 scen-sammanfattningar + 2 kapitel + 1 kampanjbåge. Det korta minnet — se <a href="#minne" style="color:var(--gold)">sektion 06</a>.</div>
+        <div class="lsrc">store.load_summaries(last_n=2) · load_chapters(2) · load_campaign_arcs(1)</div>
+      </div>
+    </div>
+    <div class="layer">
+      <div class="lnum">6</div>
+      <div class="lbody">
+        <div class="lname">Förra turens händelser</div>
+        <div class="ldesc">Guardian Post-DM:s extraktion från förra draget ("Skada: 12, Nytt föremål: Långsvärd"). Så DM:n vet vad som faktiskt hände mekaniskt, inte bara vad den själv skrev.</div>
+        <div class="lsrc">state["meta"]["last_effects"]</div>
+      </div>
+    </div>
+    <div class="layer">
+      <div class="lnum">7</div>
+      <div class="lbody">
+        <div class="lname">Värld · NPCs · Quests</div>
+        <div class="ldesc">Aktuell plats, tid, väder. Upp till 10 kända NPCs (namn, roll, relation). Upp till 5 aktiva uppdrag.</div>
+        <div class="lsrc">state["world"] · state["npcs"][:10] · active quests[:5]</div>
+      </div>
+    </div>
+    <div class="layer">
+      <div class="lnum">8</div>
+      <div class="lbody">
+        <div class="lname">Kontextuella injektioner (vid behov)</div>
+        <div class="ldesc">Om spelaren skickade ett tärningsresultat → "TÄRNINGSRESULTAT MOTTAGET, ge utfallet direkt". Om Guardian Pre-DM begärde kast → rådet injiceras. Om ny kampanj → VAKNANDEPROTOKOLLET.</div>
+        <div class="lsrc">player_input.startswith("[Resultat:") · guardian_roll · awakening_trigger</div>
+      </div>
+    </div>
+
+    <div class="note">Borttaget i v19: all <em>enforcement</em> (tag_streak, missing_roll_streak, turns_since_roll). DM:n behöver inte påminnas om mekaniska taggar längre — Guardian Pre-DM detekterar kast och Post-DM extraherar mekanik. DM-prompten bantades med 220 rader.</div>
+
+    <!-- ═══════════ 04 DM ═══════════ -->
+    <h2 id="dm"><span class="sec">04</span>DM:NS HJÄRNA — DM_CORE_PROMPT v21</h2>
+
+    <p>DM:ns systemprompt (models.py:173) definierar <em>hur</em> DM:n berättar — men aldrig <em>vad</em>. Världen är fri.</p>
+
+    <div class="prompt">
+      <div class="phead">DM_CORE_PROMPT — öppningen <span class="loc">models.py:173</span></div>
+      <div class="pbody">
+        <span class="hl">"Du är Dungeon Master i ett D&amp;D 5e-äventyr. Du är en kreativ, fri berättare — du väljer själv tema, ton, miljö och stämning</span> utifrån vad spelaren vill ha och vad berättelsen kräver. Det kan vara mörkt och hotfullt, ljust och äventyrligt, mystiskt, humoristiskt, episkt — du bestämmer. <span class="gr">Berättelsen är INTE förskriven: den formas av spelarens val, i stunden.</span>"
+      </div>
+    </div>
+
+    <h3>Viktiga sektioner i prompten</h3>
+    <table>
+      <tr><th>Sektion</th><th>Regel</th></tr>
+      <tr><td><strong>Identitet &amp; ton</strong></td><td>Standardnarration &lt;150 ord. Längre (300–600) vid bakgrund/bok/legend. Avsluta ALLTID med en öppning. Döden är verklig. NPCs har distinkta röster.</td></tr>
+      <tr><td><strong>Berättelsen arbetas fram</strong></td><td>Ingen förskriven handling, inget färdigt slut. Varje detalj spelaren ger blir en tråd. Små val får stora följder.</td></tr>
+      <tr><td><strong>Världskonsekvens</strong></td><td>ALDRIG verkliga ortsnamn (inga "Väsby" eller "Stockholm") — påhittad fantasy-värld med egna namn. Samma plats har samma namn.</td></tr>
+      <tr><td><strong>Mekanik → Guardian</strong></td><td>DM skriver INGA mekaniska taggar för skada/XP/items. Undantag: <code>[KAST:]</code> och valfria <code>[NPC:]</code>.</td></tr>
+      <tr><td><strong>@NPC-konversation</strong></td><td>Spelaren skriver <code>@Namn</code> → den NPC:n svarar direkt i sin egen röst, före DM-narration.</td></tr>
+      <tr><td><strong>Tärningskast</strong></td><td>Format: <code>[KAST: 1d20+MOD | ETIKETT (DC X)]</code>. Vid mottaget resultat: ge utfallet DIREKT, jämför mot DC, nat 20 = triumf, nat 1 = katastrof.</td></tr>
+      <tr><td><strong>Dina roller</strong></td><td>Narratör · NPC-skådespelare · <strong>Regeldomare (VIKTIGAST)</strong> · Världsbyggare · Utmanare.</td></tr>
+    </table>
+
+    <h3>Stridsprompten (injiceras endast i strid)</h3>
+    <div class="prompt">
+      <div class="phead">DM_COMBAT_PROMPT — balansguardrails <span class="loc">models.py</span></div>
+      <div class="pbody">
+        Presentera fienderna → begär initiativ <span class="gr">[KAST: 1d20+DEX | INITIATIV]</span> → håll turordning → narrera varje runda. Och en tabell som hindrar DM:n från att döda en nivå-1-spelare med en drake:<br><br>
+        <span class="hl">Nivå 1:</span> max 7 HP, max AC 12, ALDRIG multiattack, max 1d8+2<br>
+        <span class="hl">Nivå 2:</span> max 11 HP, max AC 13, max 2d6+2<br>
+        <span class="hl">Nivå 3:</span> max 16 HP, max AC 14, multiattack endast bossar<br>
+        <span class="hl">Nivå 4–5:</span> max 25 HP, max AC 15, bossar får multiattack
+      </div>
+    </div>
+
+    <div class="note magic">Designprincip (rostad): <strong>estetiken är dark fantasy, men prompten är temafri.</strong> Castlevania/DOS/terminal-utseendet är frontend-only. DM:n får aldrig låsas till "mörk fantasy" — spelaren väljer ton.</div>
+
+    <!-- ═══════════ 05 GUARDIAN ═══════════ -->
+    <h2 id="guardian"><span class="sec">05</span>GUARDIAN — DEN MEKANISKA VÄKTAREN</h2>
+
+    <p><code>guardian.py</code> (1 257 rader) är spelets bokhållare. Två lägen, två olika modeller, två olika tidsbudgetar.</p>
+
+    <h3>Pre-DM — guardian_check_roll()</h3>
+    <p>Körs <strong>före</strong> DM-anropet, måste vara snabb (&lt;2s). Modellen är <em>StepFun 3.7 Flash</em> med <code>reasoning_effort=high</code>. Får se spelarens handling + senaste DM-svar som kontext. Returnerar strikt JSON:</p>
+
+    <div class="prompt arcane">
+      <div class="phead">GUARDIAN_PRE_SYSTEM — utdrag <span class="loc">guardian.py:38</span></div>
+      <div class="pbody">
+        <span class="hl">"Din ENDA uppgift: avgör om spelarens handling kräver ett tärningskast."</span><br><br>
+        <span class="gr">KRÄV kast vid:</span> attack, smygning, klättring, övertalning under press, söka dolda ting, undvika fälla, inbrott, flykt…<br>
+        <span class="gr">KRÄV INTE kast vid:</span> vanlig gång, normalt samtal, plocka upp saker, läsa, öppna olåst dörr, köpa/sälja, vila…<br>
+        <span class="gr">Vid tvekan:</span> KRÄV INTE kast. Bara faktiska risker med meningsfulla konsekvenser rättfärdigar ett slag.<br><br>
+        Format: <code>{"needs_roll": true, "notation": "1d20+2", "label": "SMIDIGHET (DC 14)", "skill": "DEX"}</code>
+      </div>
+    </div>
+
+    <h3>Post-DM — guardian_extract_mechanics()</h3>
+    <p>Körs i <strong>bakgrund</strong> efter DM-svaret — latens spelar ingen roll, så här används <em>Qwen 3.8 Max</em> (smartare, kontextmedveten). Läser DM:ns narration + spelarens handling + de 8 senaste meddelandena och extraherar ALLT som strukturerad JSON:</p>
+
+    <div class="prompt teal">
+      <div class="phead">GUARDIAN_POST_SYSTEM — extraktionsfält <span class="loc">guardian.py:291</span></div>
+      <div class="pbody">
+        <span class="hl">Strid &amp; hälsa:</span> damage · healing · death<br>
+        <span class="hl">Progression:</span> xp (ENDAST dråp/quest/milstolpe/pussel — ALDRIG NPC-samtal) · level_up<br>
+        <span class="hl">Föremål &amp; valuta:</span> items_add (med D&amp;D-stats: damage_dice, ac_bonus, charges, magic_bonus, properties) · items_remove · currency<br>
+        <span class="hl">Uppdrag:</span> quests_new · quests_completed · quests_failed<br>
+        <span class="hl">NPCs:</span> npcs_new · npc_relations (även IMPLICITA: hjälper→allierad, attackerar→fiende) · npc_notes · npc_name_reveals<br>
+        <span class="hl">Karaktär:</span> character_updates (nya förmågor, bakgrund)<br>
+        <span class="hl">Värld &amp; tid:</span> locations_new · time_passed · rest · new_day · day_summary<br>
+        <span class="hl">Resurser:</span> roll_grants (Bardic Inspiration → spawnar tärningsknapp)<br>
+        <span class="hl">Loggbok:</span> 1–2 meningar i dåtid, tredje person<br>
+        <span class="hl">Stämning:</span> ascii_art (varannan tur)<br>
+        <span class="hl">Korrigeringar:</span> om DM:n implikerade något som INTE borde ha hänt
+      </div>
+    </div>
+
+    <div class="note">Kritisk regel i Post-DM-prompten: <strong>"Ta ENDAST med effekter som faktiskt sker."</strong> "Du ser en bok" → INGET föremål. "Du läser boken" → INGET föremål. "Du plockar upp boken" → items_add. Detta förhindrar att DM:ns beskrivningar läcker in i inventoryt.</div>
+
+    <h3>apply_mechanics() — JSON blir spellogik</h3>
+    <p>Den extraherade JSON:en översätts till faktiska state-ändringar (guardian.py:628). Varje ändring blir ett <em>event-kort</em> i chatten med egen färg och SFX:</p>
+    <div style="margin:1rem 0">
+      <span class="chip red">🩸 skada</span>
+      <span class="chip green">✨ läkning</span>
+      <span class="chip gold">⭐ XP</span>
+      <span class="chip gold">🪙 guld</span>
+      <span class="chip purple">📦 föremål</span>
+      <span class="chip teal">⚑ quest</span>
+      <span class="chip gold">🎉 level-up</span>
+      <span class="chip teal">📍 plats</span>
+      <span class="chip dim">💀 NPC död</span>
+    </div>
+
+    <!-- ═══════════ 06 MINNE ═══════════ -->
+    <h2 id="minne"><span class="sec">06</span>MINNE &amp; KONTEXT</h2>
+
+    <p>En LLM drunknar om den matas hela transkriptet. Mörkrets Rike använder en <strong>hybridmodell: State + Summary + Recent + Archive</strong> i tre nivåer:</p>
+
+    <pre class="ascii">
+<span class="g">KORTTIDSMINNE</span>   ── senaste ~15 meddelanden <span class="d">(verbatim, naturligt flyt)</span>
+      │
+<span class="g">SCEN-MINNE</span>      ── var 20:e drag → 3–5 meningar <span class="d">(2 senaste i prompten)</span>
+      │
+<span class="g">KAPITEL-MINNE</span>   ── vid milstolpar → sammanfattar en hel akt <span class="d">(2 senaste)</span>
+      │
+<span class="g">KAMPANJBÅGE</span>     ── över hela spelet → den röda tråden <span class="d">(1 senaste)</span>
+      │
+<span class="p">LÅNGTIDSMINNE</span>   ── <span class="p">RAG + Qdrant</span> · faktaregister · embeddas per meddelande
+      │             <span class="d">("Borget är skyldig dig en tjänst" → injiceras när relevant)</span>
+<span class="g">SANNING</span>         ── auktoritärt state · <span class="r">LLM:n får ALDRIG motsäga detta</span></pre>
+
+    <div class="layer">
+      <div class="lnum">A</div>
+      <div class="lbody">
+        <div class="lname">SANNING (truth_block)</div>
+        <div class="ldesc">Kompakt state, inte rå JSON. HP, guld, inventory, nivå + pinmade fakta. "Auktoritär — motsäg ALDRIG detta." Detta är grunden som hindrar hallucinerade föremål och felaktig HP.</div>
+      </div>
+    </div>
+    <div class="layer">
+      <div class="lnum">B</div>
+      <div class="lbody">
+        <div class="lname">Hierarkiska sammanfattningar</div>
+        <div class="ldesc">Scen (var 20:e drag) → Kapitel (milstolpar) → Kampanjbåge (hela spelet). Genereras av den billiga extraktionsmodellen (qwen3.6-flash), sparas som JSON med metadata, injiceras 2+2+1 i varje systemprompt.</div>
+      </div>
+    </div>
+    <div class="layer">
+      <div class="lnum">C</div>
+      <div class="lbody">
+        <div class="lname">RAG + faktaregister (rag.py · 448 rader)</div>
+        <div class="ldesc">Varje meddelande embeddas till Qdrant. Vid varje tur söks relevant långtidsminne fram och injiceras i systemprompten. Fakta kan också "pinnas" — då hamnar de i SANNING-blocket permanent.</div>
+      </div>
+    </div>
+
+    <div class="note info">Varför inte bara spara allt som .md? För att .md växer obegränsat — Qwen drunknar i kontext. JSON är kompakt, strukturerat, alltid aktuellt. Rullande sammanfattningar ger narrativ utan att spara varje "jag går norrut".</div>
+
+    <!-- ═══════════ 07 TÄRNING ═══════════ -->
+    <h2 id="dice"><span class="sec">07</span>TÄRNINGSCEREMONIN</h2>
+
+    <p>Ett tärningskast är inte en siffra — det är en <strong>händelse</strong>. Flödet från Guardian-detektion till utfall:</p>
+
+    <div class="flow">
+      <div class="fnode purple"><span class="fi">🛡️</span><span class="fn">GUARDIAN PRE</span><span class="fd">krävs kast?</span></div>
+      <div class="farrow">→</div>
+      <div class="fnode gold"><span class="fi">🐉</span><span class="fn">DM NARRERAR</span><span class="fd">+[KAST: 1d20+3]</span></div>
+      <div class="farrow">→</div>
+      <div class="fnode"><span class="fi">🎲</span><span class="fn">FRONTEND</span><span class="fd">tärningsknapp</span></div>
+      <div class="farrow">→</div>
+      <div class="fnode gold"><span class="fi">✨</span><span class="fn">D20-CEREMONI</span><span class="fd">3s spänning</span></div>
+      <div class="farrow">→</div>
+      <div class="fnode teal"><span class="fi">📤</span><span class="fn">[Resultat: 17]</span><span class="fd">tillbaka till DM</span></div>
+      <div class="farrow">→</div>
+      <div class="fnode gold"><span class="fi">⚖️</span><span class="fn">DM GER UTFALL</span><span class="fd">lyckades/misslyckades</span></div>
+    </div>
+
+    <h3>D20-ceremonin (frontend, ~3s)</h3>
+    <p>Fullskärmsoverlägg med en SVG-D20 (ikosahedron, guld-stroke). <strong>Fas 1 "rullar":</strong> tärningen vaggar ±12° medan en slumpad siffra <em>flimrar</em> — snabbt först, avtagande (delay = 50 + progress²×220ms) för att bygga spänning. <strong>Fas 2 "avslöja":</strong> tärningen landar med studs (cubic-bezier(.34,1.56,.64,1)) och resultatet tonar in.</p>
+    <table>
+      <tr><th>Utfall</th><th>Effekt</th></tr>
+      <tr><td><strong>Naturlig 20</strong></td><td>Guldglöd + guldregn-partiklar + vit blixt + SFX.crit</td></tr>
+      <tr><td><strong>Naturlig 1</strong></td><td>Blodglöd + blodpartiklar + full skärmskakning + SFX.fail</td></tr>
+      <tr><td><strong>Annat</strong></td><td>Neutrala guld/lila partiklar</td></tr>
+    </table>
+    <p>Efter avslöjandet skickas resultatet tillbaka som <code>[Resultat: 17]</code>. Systemprompten injicerar då: <em>"TÄRNINGSRESULTAT MOTTAGET — jämför mot DC/AC, ge utfallet direkt, ALDRIG fråga 'vad gör du?' först."</em></p>
+
+    <div class="note">Det finns en medveten designbegränsning: <strong>ingen fristående tärningsbricka</strong> (d4–d100-knappar som rullar klient-sidan). En sådan skickar aldrig resultatet till DM:n, så kastet "händer inte riktigt". Enda tärningsvägen är DM-begärd → round-trip till LLM.</div>
+
+    <!-- ═══════════ 08 STATE ═══════════ -->
+    <h2 id="state"><span class="sec">08</span>STATE &amp; DATA</h2>
+
+    <p>Allt speldata är <strong>JSON per kampanj</strong> i <code>backend/data/campaigns/</code>. Guardian är den <em>enda</em> auktoriteten för state-ändringar — DM:n skriver aldrig direkt till state.</p>
+
+    <pre class="code"><span class="c">// förenklat kampanj-state</span>
+{
+  <span class="k">"meta"</span>:        { turn_count, campaign_id, language, last_effects, last_roll_requests },
+  <span class="k">"character"</span>:   { name, class, level, hp, max_hp, xp, ac, abilities, inventory[], currency },
+  <span class="k">"world"</span>:       { current_location, time, weather, locations[] },
+  <span class="k">"npcs"</span>:        [ { name, role, relation, alive, notes[] } ],
+  <span class="k">"quests"</span>:      [ { name, description, status, reward } ],
+  <span class="k">"pinned_facts"</span>:[ <span class="s">"Borget är skyldig dig en tjänst"</span> ],
+  <span class="k">"transcript"</span>:  [ { role, content, ts } ],        <span class="c">// rullande fönster</span>
+  <span class="k">"summaries"</span>:   { scenes[], chapters[], arcs[] }  <span class="c">// hierarkiskt minne</span>
+}</pre>
+
+    <h3>Inventory-items med D&amp;D-stats</h3>
+    <p>Sedan item-cards-ombygget (commit 193df16) har varje föremål riktiga D&amp;D-stats som Guardian extraherar:</p>
+    <div style="margin:1rem 0">
+      <span class="chip red">damage "1d8 slashing"</span>
+      <span class="chip green">ac_bonus 16</span>
+      <span class="chip purple">charges 5/7</span>
+      <span class="chip gold">magic_bonus +1</span>
+      <span class="chip teal">range "ranged 120"</span>
+      <span class="chip dim">properties [finesse, light]</span>
+    </div>
+    <p>Frontend renderar dessa som klickbara kort med detaljmodal, sällsynthetsfärger (magic/rare/legendary) och equip-toggle.</p>
+
+    <!-- ═══════════ 09 MODELLER ═══════════ -->
+    <h2 id="modeller"><span class="sec">09</span>MODELLPARKEN</h2>
+
+    <p>7 modeller från 4 providers, routade via <code>models.py</code>. Nycklar ur <code>.env</code>, frontend skickar modell-ID.</p>
+
+    <table>
+      <tr><th>Roll</th><th>Modell</th><th>Uppgift</th><th>Krav</th></tr>
+      <tr><td><strong>DM (backbone)</strong></td><td><code>qwen3.8-max</code></td><td>Narration, NPCs, världsuppbyggnad</td><td>Kreativ, lång kontext</td></tr>
+      <tr><td><strong>Guardian Pre-DM</strong></td><td><code>step-3.7-flash</code></td><td>Kastdetektion</td><td>Snabb (&lt;2s), reasoning_effort=high</td></tr>
+      <tr><td><strong>Guardian Post-DM</strong></td><td><code>qwen3.8-max</code></td><td>Mekanikextraktion (bakgrund)</td><td>Smart, kontextmedveten</td></tr>
+      <tr><td><strong>Extraktion</strong></td><td><code>qwen3.6-flash</code></td><td>Sammanfattningar, faktaregister, orakel</td><td>Billig, strukturerad</td></tr>
+      <tr><td><strong>Karaktärsgenerering</strong></td><td><code>qwen3.8-max</code></td><td>Fullt karaktärsark från prompt</td><td>thinking_cap 8k</td></tr>
+      <tr><td>Alternativ DM</td><td><code>deepseek-v4-pro</code> / <code>mimo-v2.5-pro</code></td><td>Valbar i modellgate</td><td>—</td></tr>
+      <tr><td>Lokal</td><td><code>ollama</code></td><td>Lokalt alternativ (localhost:11434)</td><td>—</td></tr>
+    </table>
+
+    <div class="note info">Spelaren väljer DM-modell i <strong>modellgate</strong> innan äventyret startar (commit a7cb553). Guardian-modell styrs via <code>GUARDIAN_MODEL</code> i .env. Extraktionsmodell via <code>EXTRACTION_MODEL</code> (default qwen3.6-flash).</div>
+
+    <!-- ═══════════ 10 STACK ═══════════ -->
+    <h2 id="stack"><span class="sec">10</span>TECH STACK &amp; FILER</h2>
+
+    <table>
+      <tr><th>Lager</th><th>Val</th><th>Not</th></tr>
+      <tr><td>LLM</td><td>Qwen 3.8 Max · StepFun 3.7 Flash · DeepSeek · MiMo · Ollama</td><td>OpenAI-kompatibla endpoints</td></tr>
+      <tr><td>Frontend</td><td>Vanilla HTML/CSS/JS</td><td>Inget build-steg · snes.css (Terminal Gothic v3)</td></tr>
+      <tr><td>Backend</td><td>Python 3.11 / FastAPI</td><td>main.py 3 405 rader</td></tr>
+      <tr><td>State</td><td>JSON per kampanj</td><td>backend/data/campaigns/</td></tr>
+      <tr><td>RAG</td><td>Qdrant (lokal)</td><td>rag.py 448 rader</td></tr>
+      <tr><td>Auth</td><td>JWT (24h)</td><td>auth.py · bcrypt</td></tr>
+      <tr><td>Ljud</td><td>Web Audio API</td><td>sfx.js + music.js · inga ljudfiler · 6 mood-loops</td></tr>
+      <tr><td>Sprites</td><td>8×8 SVG pixel-sprites</td><td>sprites.js · MutationObserver · 88 emojis→sprites</td></tr>
+      <tr><td>Deploy</td><td>Docker Compose + nginx</td><td>port 8092 · dnd.rostad.cc · proxy_read_timeout=300s</td></tr>
+    </table>
+
+    <h3>Backend-filer</h3>
+    <table>
+      <tr><th>Fil</th><th>Rader</th><th>Ansvar</th></tr>
+      <tr><td><code>main.py</code></td><td>3 405</td><td>FastAPI, routes, DM-prompt-montering, chat, kampanjer</td></tr>
+      <tr><td><code>guardian.py</code></td><td>1 257</td><td>Pre/Post-DM Guardian, kastdetektion, mekanikextraktion</td></tr>
+      <tr><td><code>extraction.py</code></td><td>763</td><td>LLM-baserad item/fact-extraktion</td></tr>
+      <tr><td><code>atmosphere.py</code></td><td>668</td><td>ASCII-art per miljö + fallback-bank</td></tr>
+      <tr><td><code>state_manager.py</code></td><td>472</td><td>Kampanjstate, export/import</td></tr>
+      <tr><td><code>rag.py</code></td><td>448</td><td>RAG med Qdrant, embedding, retrieval</td></tr>
+      <tr><td><code>models.py</code></td><td>408</td><td>Modellrouter + DM_CORE_PROMPT v21</td></tr>
+      <tr><td><code>locations.py</code> / <code>logbook.py</code> / <code>auth.py</code> / <code>dice.py</code></td><td>305</td><td>Platser · loggbok · JWT · tärningar</td></tr>
+    </table>
+
+    <div class="panel" style="margin-top:3rem">
+      <span class="plabel">STATUS</span>
+      <p style="margin:0 0 .6rem"><strong>Pre-1.0 — aktiv utveckling.</strong> 117 commits. Fas 1 (core) och Fas 2 (Guardian + UX) klara. Fas 3 (RAG + fakta) pågående. Multi-user design diskuterad men ej implementerad.</p>
+      <p style="margin:0;font-family:var(--ft);font-size:1.05rem;color:var(--term-green)">
+        <span style="color:var(--term-amber)">repo</span> github.com/rostaddotcc/morkrets-rike (privat till 1.0)<br>
+        <span style="color:var(--term-amber)">live</span> https://dnd.rostad.cc<br>
+        <span style="color:var(--term-amber)">dokumenterad</span> 2026-07-30 · DM-prompt v21
+      </p>
+    </div>
+
+  </main>
+</div>
+
+<script>
+/* ── embers ── */
+(function(){
+  const c=document.getElementById('embers'),x=c.getContext('2d');
+  let W,H,P=[];
+  function rs(){W=c.width=innerWidth;H=c.height=innerHeight}
+  addEventListener('resize',rs);rs();
+  function spawn(p){p.x=Math.random()*W;p.y=H+10;p.r=Math.random()*2+.6;p.s=Math.random()*.6+.25;p.w=Math.random()*2*Math.PI;p.hue=Math.random()<.82?22+Math.random()*18:268+Math.random()*20;p.a=Math.random()*.5+.25;return p}
+  for(let i=0;i<42;i++){const p=spawn({});p.y=Math.random()*H;P.push(p)}
+  (function loop(){
+    x.clearRect(0,0,W,H);
+    for(const p of P){
+      p.y-=p.s;p.w+=.02;p.x+=Math.sin(p.w)*.4;
+      if(p.y<-10)spawn(p);
+      x.beginPath();x.arc(p.x,p.y,p.r,0,7);
+      x.fillStyle=`hsla(${p.hue},85%,60%,${p.a})`;
+      x.shadowBlur=8;x.shadowColor=`hsla(${p.hue},85%,60%,.8)`;
+      x.fill();x.shadowBlur=0;
+    }
+    requestAnimationFrame(loop);
+  })();
+})();
+
+/* ── boot-sekvens ── */
+(function(){
+  const lines=[
+    'MÖRKRETS RIKE — MASKINRUM v21',
+    '==============================',
+    '',
+    '> init guardian ............ OK  [pre-DM · post-DM]',
+    '> mount SANNING ............ OK  [auktoritärt state]',
+    '> load hierarkiskt minne ... OK  [2 scen · 2 kapitel · 1 båge]',
+    '> connect Qdrant RAG ....... OK  [långtidsminne]',
+    '> värm DM (qwen3.8-max) .... OK  [v21 · temafri]',
+    '> kalibrera tärningsceremoni OK  [D20 · 3s]',
+    '',
+    '> ARKITEKTUR-KODEX LADDAD.',
+    '> klicka för att stiga in _'
+  ];
+  const el=document.getElementById('boottext'),boot=document.getElementById('boot');
+  let i=0;
+  const t=setInterval(()=>{
+    if(i>=lines.length){clearInterval(t);return}
+    el.textContent+=lines[i]+'\n';i++;
+  },140);
+  boot.addEventListener('click',()=>{boot.classList.add('done');setTimeout(()=>boot.remove(),700)});
+})();
+
+/* ── scroll-avslöjande + aktiv index ── */
+(function(){
+  const io=new IntersectionObserver(es=>{
+    es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in')});
+  },{threshold:.08});
+  document.querySelectorAll('.step,.layer,.prompt,.panel,.note,.flow,pre.ascii,table').forEach(el=>{
+    el.classList.add('reveal');io.observe(el);
+  });
+  // failsafe: allt innehåll synligt efter 2.5s oavsett scroll
+  setTimeout(()=>document.querySelectorAll('.reveal:not(.in)').forEach(e=>e.classList.add('in')),2500);
+  const links=[...document.querySelectorAll('.index a')];
+  const secs=links.map(a=>document.querySelector(a.getAttribute('href')));
+  addEventListener('scroll',()=>{
+    let cur=0;
+    secs.forEach((s,i)=>{if(s&&s.getBoundingClientRect().top<140)cur=i});
+    links.forEach((a,i)=>a.classList.toggle('active',i===cur));
+  },{passive:true});
+})();
+</script>
+</body>
+</html>

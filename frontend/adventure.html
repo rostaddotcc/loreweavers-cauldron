@@ -245,6 +245,33 @@
   .paths-hidden .paths,.paths-hidden .expand{display:none!important}
   .paths-hidden .head .sub::after{content:' · ditt äventyr väntar ovan';color:var(--gold);font-style:italic}
 
+  /* ═══════════ How to play — onepager ═══════════ */
+  .htp{margin-bottom:2.4rem;animation:rise .6s cubic-bezier(.22,1,.36,1)}
+  .htp-toggle{
+    display:flex;align-items:center;justify-content:center;gap:.7rem;width:100%;cursor:pointer;
+    font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.28em;text-transform:uppercase;
+    color:var(--bone-dim);background:none;border:none;padding:.6rem 0;transition:color .25s;
+  }
+  .htp-toggle:hover{color:var(--gold-bright)}
+  .htp-toggle .caret{transition:transform .3s;font-size:.55rem}
+  .htp-toggle.open .caret{transform:rotate(90deg)}
+  .htp-body{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;
+    max-height:0;overflow:hidden;transition:max-height .5s cubic-bezier(.22,1,.36,1),opacity .4s;opacity:0;
+  }
+  .htp-body.open{max-height:600px;opacity:1;margin-top:.4rem}
+  .htp-card{
+    position:relative;padding:1.3rem 1.1rem 1.1rem;text-align:center;
+    background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);
+    border:1px solid var(--edge);overflow:hidden;
+  }
+  .htp-card::before{content:'';position:absolute;inset:5px;border:1px solid rgba(201,162,39,.1);pointer-events:none}
+  .htp-card .htp-icon{font-size:1.6rem;display:block;margin-bottom:.6rem;filter:drop-shadow(0 2px 8px rgba(0,0,0,.5))}
+  .htp-card h3{font-family:'Cinzel',serif;font-weight:700;font-size:.82rem;letter-spacing:.1em;color:var(--gold-bright);margin-bottom:.5rem}
+  .htp-card p{font-size:.78rem;line-height:1.6;color:var(--bone-dim);font-style:italic}
+  .htp-card p b{color:var(--bone);font-style:normal}
+  @media(max-width:900px){.htp-body{grid-template-columns:1fr}}
+
   /* ═══════════ Mobile — vägskälet i fickformat ═══════════ */
   html{-webkit-tap-highlight-color:transparent}
   @media(max-width:900px){
@@ -318,6 +345,30 @@
     <h1>Vägskälet</h1>
     <p class="sub">Varje äventyr börjar med ett val. Vilken väg tar du?</p>
     <div class="rune-divider"><span>✦</span></div>
+  </div>
+
+  <!-- ═══════════ SÅ SPELAR DU ═══════════ -->
+  <div class="htp">
+    <button class="htp-toggle" id="htp-toggle" onclick="toggleHtp()">
+      <span class="caret">▸</span> Så spelar du
+    </button>
+    <div class="htp-body" id="htp-body">
+      <div class="htp-card">
+        <span class="htp-icon">🧙‍♂️</span>
+        <h3>Dungeon Master</h3>
+        <p>En AI som <b>berättar världen</b> — beskriver miljöer, spelar NPCs och driver handlingen. Skriv vad du gör, så svarar DM med konsekvenser. DM hittar på världen <b>tillsammans med dig</b>, inte på förhand.</p>
+      </div>
+      <div class="htp-card">
+        <span class="htp-icon">🛡️</span>
+        <h3>Guardian</h3>
+        <p>Ett tyst system som <b>håller koll på siffrorna</b> — HP, guld, föremål, XP. När DM berättar att du tar skada eller hittar en skatt, uppdaterar Guardian ditt karaktärsblad automatiskt. Du behöver aldrig räkna själv.</p>
+      </div>
+      <div class="htp-card">
+        <span class="htp-icon">🎲</span>
+        <h3>Tärningar & mekanik</h3>
+        <p>När utfallet är osäkert begär DM ett <b>tärningskast</b>. En D20-knapp dyker upp i chatten — klicka för att slå. <b>Nat 20</b> = triumf, <b>nat 1</b> = katastrof. Skriv <b>/rulla 1d20+4</b> för att slå när du vill.</p>
+      </div>
+    </div>
   </div>
 
   <!-- ═══════════ SPARADE ÄVENTYR ═══════════ -->
@@ -471,7 +522,7 @@ Ju mer du ger, desto rikare blir världen. Men Dungeon Master fyller i luckorna 
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 </script>
-<script src="api.js?v=20260730c"></script>
+<script src="api.js?v=20260731a"></script>
 <script src="modal.js?v=20260730c"></script>
 <script src="i18n.js?v=20260730c"></script>
 <script>
@@ -582,6 +633,16 @@ initCampaignCheck();
 // PANEL TOGGLE
 // ═══════════════════════════════════════
 let activePanel = null;
+// ═══════════════════════════════════════
+// SÅ SPELAR DU — hopfällbar onepager
+// ═══════════════════════════════════════
+function toggleHtp() {
+  const btn = document.getElementById('htp-toggle');
+  const body = document.getElementById('htp-body');
+  btn.classList.toggle('open');
+  body.classList.toggle('open');
+}
+
 function showPanel(id) {
   const el = document.getElementById('panel-' + id);
   if (activePanel === id) { el.classList.remove('show'); activePanel = null; return; }

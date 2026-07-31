@@ -285,12 +285,12 @@ button:active, .go-btn:active, .gate-btn:active, .send-btn:active {
   background: var(--ink) !important;
   border: 1px solid var(--edge) !important;
   box-shadow: none !important;
-  color: var(--term-green) !important;
-  caret-color: var(--term-green);
+  color: var(--bone-bright) !important;
+  caret-color: var(--gold);
 }
 .input-row textarea:focus, #prompt:focus, .world-prompt:focus, .field input:focus {
-  border-color: var(--term-green) !important;
-  box-shadow: 0 0 0 1px rgba(51,204,51,.2) !important;
+  border-color: var(--gold) !important;
+  box-shadow: 0 0 0 1px rgba(201,162,39,.25) !important;
 }
 /* Prompt-prefix känsla */
 .input-row { position: relative; }
@@ -300,7 +300,7 @@ button:active, .go-btn:active, .gate-btn:active, .send-btn:active {
   left: .6rem;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--term-green);
+  color: var(--gold);
   font-size: .8rem;
   z-index: 2;
   pointer-events: none;
@@ -318,7 +318,7 @@ button:active, .go-btn:active, .gate-btn:active, .send-btn:active {
   border-right: 1px solid var(--edge) !important;
 }
 .side-label {
-  color: var(--term-green) !important;
+  color: var(--gold) !important;
   font-size: .55rem !important;
   text-transform: uppercase !important;
   letter-spacing: .2em !important;
@@ -445,7 +445,7 @@ button:active, .go-btn:active, .gate-btn:active, .send-btn:active {
 ::-webkit-scrollbar-track { background: var(--ink); }
 ::-webkit-scrollbar-thumb { background: var(--edge); border: 1px solid var(--ink); }
 ::-webkit-scrollbar-thumb:hover { background: var(--edge-hi); }
-::selection { background: rgba(51,204,51,.3); color: #fff; }
+::selection { background: rgba(201,162,39,.3); color: #fff; }
 
 /* ── 15. LOGIN ── */
 .gate-frame { background: var(--stone) !important; }
@@ -515,7 +515,8 @@ button:active, .go-btn:active, .gate-btn:active, .send-btn:active {
 }
 .ascii-art pre {
   font-family: 'Courier New', monospace !important;
-  color: var(--term-green) !important;
+  color: rgba(232,198,90,.92) !important;
+  text-shadow: 0 0 6px rgba(232,198,90,.35), 0 0 15px rgba(201,162,39,.12) !important;
   line-height: 1.2 !important;
   font-size: .7rem !important;
 }

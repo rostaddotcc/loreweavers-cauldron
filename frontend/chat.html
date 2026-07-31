@@ -266,7 +266,7 @@
 
   /* ── Main chat ── */
   .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-  .chat-scroll { flex: 1; overflow-y: auto; padding: 1.4rem 1.6rem 0.5rem; scroll-behavior: smooth; }
+  .chat-scroll { flex: 1; overflow-y: auto; padding: 1.4rem 1.6rem 1.4rem; scroll-behavior: smooth; }
   .chat-scroll::-webkit-scrollbar { width: 8px; }
   .chat-scroll::-webkit-scrollbar-track { background: var(--ink); }
   .chat-scroll::-webkit-scrollbar-thumb { background: var(--edge); border-radius: 4px; }
@@ -412,6 +412,52 @@
   .msg.npc .bubble .text { color: var(--bone); line-height: 1.65; font-size: 1.03rem; }
   .msg.npc .bubble .text em { color: var(--bone-dim); }
 
+  /* ── NPC-citat inuti DM-svar — egen färgkodad bubbla ── */
+  .msg.dm .npc-quote {
+    --npc-color: #a8b2c0;
+    margin: .55rem 0 .15rem .6rem;
+    padding: .5rem .7rem .6rem .85rem;
+    border-left: 3px solid var(--npc-color, #a8b2c0);
+    background: color-mix(in srgb, var(--npc-color, #a8b2c0) 7%, rgba(8,6,14,.6));
+    border-radius: 2px 4px 4px 2px;
+    box-shadow: 0 0 14px -6px color-mix(in srgb, var(--npc-color, #a8b2c0) 45%, transparent);
+    animation: npc-quote-in .45s cubic-bezier(.22,1,.36,1);
+  }
+  @keyframes npc-quote-in {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .msg.dm .npc-quote .nq-who {
+    display: flex; align-items: center; gap: .45rem;
+    font-family: 'Cinzel', serif; font-size: .62rem; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--npc-color, #a8b2c0);
+    font-weight: 700; margin-bottom: .3rem;
+    text-shadow: 0 0 12px color-mix(in srgb, var(--npc-color, #a8b2c0) 40%, transparent);
+    cursor: pointer; user-select: none;
+  }
+  .msg.dm .npc-quote .nq-who:hover { filter: brightness(1.25); }
+  .msg.dm .npc-quote .nq-who .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: currentColor; box-shadow: 0 0 8px currentColor; flex-shrink: 0;
+  }
+  .msg.dm .npc-quote .nq-text {
+    color: var(--bone-bright); font-style: italic;
+    line-height: 1.6; font-size: 1.0rem;
+  }
+  .msg.dm .npc-quote .nq-text em { color: var(--bone-dim); }
+
+  /* Typewriter-cursor under textrullning */
+  .type-cursor {
+    display: inline-block; width: .5em; height: 1.05em;
+    background: var(--gold); box-shadow: 0 0 8px var(--gold);
+    vertical-align: text-bottom; margin-left: 2px;
+    animation: type-blink .6s step-end infinite;
+  }
+  @keyframes type-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+  /* Meddelande väntar på typewriter-start (sprites.js-emojis) — håll text dold
+     så hela svaret inte blinkar fram innan rullningen börjar */
+  .tw-pending .text, .tw-pending .nq-text { visibility: hidden; }
+
   /* Spelare — lila, högerställd */
   .msg.player .bubble {
     --accent: var(--arcane);
@@ -443,8 +489,8 @@
   /* Slash-kommandon (dim, kursiv) */
   .msg.cmd { text-align: center; max-width: 520px; margin-left: auto; margin-right: auto; }
   .msg.cmd .box {
-    display: inline-block; font-size: 0.82rem; color: #7a8a6a;
-    font-style: italic; border: 1px solid rgba(122,138,106,0.25); padding: 0.4rem 1.1rem;
+    display: inline-block; font-size: 0.82rem; color: var(--bone-dim);
+    font-style: italic; border: 1px solid rgba(184,184,200,0.22); padding: 0.4rem 1.1rem;
     border-radius: 2px; background: rgba(11,8,18,0.5);
   }
 
@@ -455,14 +501,14 @@
   }
   .help-overlay.show { display: flex; }
   .help-screen {
-    font-family: 'Courier New', monospace; color: #33ff33; background: #0a0a0a;
-    border: 2px solid #33ff33; padding: 1.5rem 2rem; max-width: 560px; width: 90%;
-    font-size: 0.85rem; line-height: 1.7; box-shadow: 0 0 30px rgba(51,255,51,0.15);
+    font-family: 'Courier New', monospace; color: var(--bone); background: linear-gradient(165deg, var(--stone-2), var(--stone));
+    border: 1px solid var(--gold); padding: 1.5rem 2rem; max-width: 560px; width: 90%;
+    font-size: 0.85rem; line-height: 1.7; box-shadow: 0 0 30px rgba(201,162,39,0.12);
     position: relative;
   }
-  .help-screen .help-title { text-align: center; color: #66ff66; font-weight: bold; margin-bottom: 0.8rem; font-size: 1rem; }
-  .help-screen .help-cmd { color: #ffcc00; }
-  .help-screen .help-desc { color: #33cc33; }
+  .help-screen .help-title { text-align: center; color: var(--gold-bright); font-weight: bold; margin-bottom: 0.8rem; font-size: 1rem; text-shadow: 0 0 12px rgba(232,198,90,0.4); }
+  .help-screen .help-cmd { color: var(--gold-bright); }
+  .help-screen .help-desc { color: var(--bone-dim); }
   .help-screen .help-close {
     position: absolute; top: 0.5rem; right: 0.8rem; color: #ff4444; cursor: pointer;
     font-size: 1.1rem; background: none; border: none; font-family: inherit;
@@ -567,8 +613,8 @@
     position: relative;
     margin: .6rem 0; padding: 1rem 1.2rem;
     background: rgba(2,2,6,.97);
-    border: 1px solid rgba(80,200,120,.3);
-    box-shadow: inset 0 0 30px rgba(80,200,120,.04), 0 0 12px rgba(80,200,120,.06);
+    border: 1px solid rgba(201,162,39,.35);
+    box-shadow: inset 0 0 30px rgba(201,162,39,.05), 0 0 12px rgba(201,162,39,.08);
     overflow: hidden; text-align: center;
     animation: art-in .6s cubic-bezier(.22,1,.36,1);
     cursor: pointer;
@@ -588,14 +634,14 @@
   }
   @keyframes crt-flicker {
     0%, 100% { opacity: 0; }
-    3% { opacity: .03; background: rgba(200,255,200,.04); }
+    3% { opacity: .03; background: rgba(232,198,90,.05); }
     6% { opacity: 0; }
     50% { opacity: 0; }
-    52% { opacity: .02; background: rgba(200,255,200,.03); }
+    52% { opacity: .02; background: rgba(232,198,90,.04); }
     54% { opacity: 0; }
   }
   /* Hörndekorationer (DOS text-mode box) */
-  .ascii-art .corner { position: absolute; z-index: 4; color: rgba(80,200,120,.5); font-size: .65rem; line-height: 1; pointer-events: none; }
+  .ascii-art .corner { position: absolute; z-index: 4; color: rgba(232,198,90,.5); font-size: .65rem; line-height: 1; pointer-events: none; }
   .ascii-art .corner.tl { top: 2px; left: 4px; }
   .ascii-art .corner.tr { top: 2px; right: 4px; }
   .ascii-art .corner.bl { bottom: 2px; left: 4px; }
@@ -606,15 +652,15 @@
   }
   .ascii-art pre {
     font-family: 'Courier New', 'Lucida Console', monospace;
-    font-size: .72rem; line-height: 1.3; color: rgba(80,220,120,.9);
-    text-shadow: 0 0 6px rgba(80,220,120,.35), 0 0 15px rgba(80,220,120,.1);
+    font-size: .72rem; line-height: 1.3; color: rgba(232,198,90,.92);
+    text-shadow: 0 0 6px rgba(232,198,90,.35), 0 0 15px rgba(201,162,39,.12);
     white-space: pre; display: inline-block; text-align: left;
     margin: 0; position: relative; z-index: 1;
   }
   /* Typewriter-cursor */
   .ascii-art .art-cursor {
     display: inline-block; width: .55em; height: 1em;
-    background: rgba(80,220,120,.8); vertical-align: text-bottom;
+    background: rgba(232,198,90,.85); vertical-align: text-bottom;
     animation: cursor-blink .6s step-end infinite;
     margin-left: 1px;
   }
@@ -622,13 +668,13 @@
   .ascii-art .art-label {
     font-family: 'Silkscreen', monospace; font-size: .55rem;
     letter-spacing: .2em; text-transform: uppercase;
-    color: rgba(80,200,120,.5); margin-bottom: .5rem;
+    color: rgba(232,198,90,.55); margin-bottom: .5rem;
     display: flex; align-items: center; justify-content: center; gap: .5rem;
     position: relative; z-index: 1;
   }
   .ascii-art .art-label::before, .ascii-art .art-label::after {
     content: ''; flex: 1; max-width: 60px; height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(80,200,120,.3), transparent);
+    background: linear-gradient(90deg, transparent, rgba(232,198,90,.35), transparent);
   }
   /* ── Event-specifika färger ── */
   .ascii-art.art-level-up { border-color: rgba(255,215,0,.45); box-shadow: inset 0 0 30px rgba(255,215,0,.05), 0 0 16px rgba(255,215,0,.1); }
@@ -1415,7 +1461,7 @@
     color: var(--bone-dim); font-style: italic; font-size: 0.85rem;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=4">
+<link rel="stylesheet" href="snes.css?v=5">
 <script src="sprites.js?v=20260730e"></script>
 <script src="fonts.js?v=20260730e"></script>
 </head>
@@ -1689,7 +1735,7 @@
   </div>
 </div>
 
-<script src="sfx.js?v=20260730e"></script>
+<script src="sfx.js?v=20260731g"></script>
 <script src="music.js?v=20260730e"></script>
 <script src="api.js?v=20260731b"></script>
 <script src="i18n.js?v=20260730e"></script>
@@ -1913,7 +1959,159 @@ function addMessage(type, npcKey, text, meta) {
   messageParticles(el, type);
   // [COMBAT:]-tagg → stridslogg + krigsråd + initiativceremoni (efter append, så reveal-kort hamnar efter rapporten)
   if (type === 'guardian') applyCombatTag(el, text);
+  // Sekventiell textrullning för genererade svar (DM/NPC) — inte för batch/transcript.
+  // Fördröjd ~80ms så sprites.js hinner ersätta emojis innan vi tar textnod-snapshot.
+  // Textblocken hålls dolda tills dess (annars blinkar hela svaret fram först).
+  if (type === 'dm' || type === 'npc') {
+    el.classList.add('tw-pending');
+    setTimeout(() => startTypewriter(el, type), 80);
+  }
   return el;
+}
+
+// ═══════════════════════════════════════
+// NPC-DIALOG I DM-SVAR — egna färgkodade citatbubblor
+// ═══════════════════════════════════════
+// Splittar DM-texten i segment: {kind:'text'} = narration, {kind:'npc'} = citat.
+// Detekterar: **Namn:** "citat", Namn: "citat", "citat" … säger Namn,
+// samt stycken som börjar med ett känt NPC-namn och innehåller citat.
+const SPEECH_VERBS = /säger|sa\b|sade|viskar|ropar|mumlar|flämtar|svarar|frågar|skrattar|ryter|väser|morrar|kraxar|hostar|suckar|muttrar|brummar|skriker|yttrar|kallar|utbrister|fnyser|harklar/i;
+
+// Splittar en text i citat/narrationsdelar (svenska + engelska citattecken)
+function quoteSplit(block) {
+  const parts = [];
+  const re = /[“"]([\s\S]*?)[”"]/g;
+  let last = 0, m;
+  while ((m = re.exec(block)) !== null) {
+    if (m.index > last) parts.push({ text: block.slice(last, m.index).trim(), quote: false });
+    parts.push({ text: m[1].trim(), quote: true });
+    last = re.lastIndex;
+  }
+  if (last < block.length) parts.push({ text: block.slice(last).trim(), quote: false });
+  return parts.filter(p => p.text);
+}
+
+// Bygger segments från en blocks delar: narration före första citatet + citaten + narration efter
+function segFromParts(parts, name) {
+  const quotes = parts.filter(p => p.quote);
+  if (!quotes.length) return null;
+  const firstQ = parts.findIndex(p => p.quote);
+  const lastQ = parts.length - 1 - [...parts].reverse().findIndex(p => p.quote);
+  const before = parts.slice(0, firstQ).map(p => p.text).join(' ');
+  const after = parts.slice(lastQ + 1).map(p => p.text).join(' ');
+  // Narrationsdelar MELLAN citat (t.ex. '"A" säger X. "B"') — bevaras i ordning
+  const mid = [];
+  for (let i = firstQ + 1; i < lastQ; i++) {
+    if (!parts[i].quote && parts[i].text) mid.push(parts[i].text);
+  }
+  return { name, before, quotes, after, mid };
+}
+
+function isKnownNpc(name) {
+  const key = String(name || '').toLowerCase().replace(/\s+/g, '_');
+  return !!NPCS[key];
+}
+
+// Första kända NPC-namnet som nämns i blocket
+function knownNpcIn(block) {
+  const lower = block.toLowerCase();
+  for (const key in NPCS) {
+    if (key === 'dm') continue;
+    const n = NPCS[key];
+    if (!n || !n.name || n.name.length < 2) continue;
+    const idx = lower.indexOf(n.name.toLowerCase());
+    if (idx >= 0) return { ...n, key, idx };
+  }
+  return null;
+}
+
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Försöker hitta NPC-dialog i ett stycke. Returnerar {name, before, quotes, after} eller null.
+function matchNpcDialogue(block) {
+  // Mönster A: **Namn:** "citat" / **Namn**: "citat" / **Namn:** *citat* / **Namn:** kort replik
+  // (DM skriver båda varianterna — kolon inuti eller utanför fetstilen)
+  let m = block.match(/^\*\*(.+?)\*\*\s*:?\s*([\s\S]*)$/);
+  if (m) {
+    const name = m[1].trim().replace(/:+\s*$/, '');
+    const rest = m[2].trim();
+    if (!rest) return null;
+    const parts = quoteSplit(rest);
+    const quotes = parts.filter(p => p.quote);
+    if (quotes.length) return segFromParts(parts, name);
+    // **Namn:** utan citattecken — kort replik räknas som NPC-dialog om namnet är känt
+    // (kräver kolon — annars är det bara fet narration, t.ex. "**Brum** bara står där")
+    if (isKnownNpc(name) && m[0].includes(':') && rest.length <= 220) {
+      return { name, before: '', quotes: [{ text: rest }], after: '' };
+    }
+    return null;
+  }
+  // Mönster B: Namn: "citat" i början av stycket — förkorta till känd NPC
+  m = block.match(/^([A-ZÅÄÖ][\wåäöÅÄÖ'’\- ]{1,40}?):\s*([\s\S]*)$/);
+  if (m) {
+    const fullName = m[1].trim();
+    let name = fullName;
+    const rest = m[2].trim();
+    if (!rest || !/[“"]/.test(rest)) return null;
+    const known = knownNpcIn(block);
+    if (known) name = known.name;
+    const parts = quoteSplit(rest);
+    const quotes = parts.filter(p => p.quote);
+    const looksLikeName = isKnownNpc(name) || (name.length >= 2 && name.split(/\s+/).length <= 3 && /^[A-ZÅÄÖ]/.test(name));
+    if (!(quotes.length && (looksLikeName || /^[“"]/.test(rest)))) return null;
+    // Om namnet kortades ner (t.ex. "Miron nickar sakta och viskar" → "Miron")
+    // — behåll narrationsdelen i DM-bubblan istället för att tappa den
+    if (name !== fullName && fullName.startsWith(name)) {
+      const narration = fullName.slice(name.length).trim();
+      if (narration) return { name, before: narration, quotes, after: '' };
+    }
+    return segFromParts(parts, name);
+  }
+  // Mönster C+D: känt NPC-namn i stycket + citat (attribution eller namn i början)
+  if (/[“"]/.test(block)) {
+    const known = knownNpcIn(block);
+    if (known) {
+      const parts = quoteSplit(block);
+      const quotes = parts.filter(p => p.quote);
+      if (!quotes.length) return null;
+      const firstQuoteIdx = block.search(/[“"]/);
+      const near = firstQuoteIdx >= 0 && Math.abs(known.idx - firstQuoteIdx) <= 90;
+      const startsWithName = new RegExp('^' + escapeRegExp(known.name) + '\\b').test(block);
+      if (startsWithName || near || SPEECH_VERBS.test(block)) {
+        return segFromParts(parts, known.name);
+      }
+    }
+  }
+  return null;
+}
+
+// Huvudfunktion: delar upp ett helt DM-svar i segment
+function splitDmSegments(text) {
+  const segs = [];
+  const blocks = String(text || '').split(/\n{2,}/);
+  blocks.forEach(block => {
+    if (!block.trim()) return;
+    const trimmed = block.trim();
+    const npcMatch = matchNpcDialogue(trimmed);
+    if (npcMatch) {
+      if (npcMatch.before && npcMatch.before.trim()) segs.push({ kind: 'text', text: npcMatch.before.trim() });
+      const key = npcMatch.name.toLowerCase().replace(/\s+/g, '_');
+      const n = NPCS[key] || { name: npcMatch.name, color: npcColorFor(npcMatch.name), icon: '🎭' };
+      npcMatch.quotes.forEach((q, qi) => {
+        segs.push({ kind: 'npc', text: q.text, npcKey: key, npcName: n.name, npcColor: n.color, npcIcon: n.icon });
+        // Narrationsdel mellan detta citat och nästa, om någon
+        if (npcMatch.mid && npcMatch.mid[qi] && npcMatch.mid[qi].trim()) {
+          segs.push({ kind: 'text', text: npcMatch.mid[qi].trim() });
+        }
+      });
+      if (npcMatch.after && npcMatch.after.trim()) segs.push({ kind: 'text', text: npcMatch.after.trim() });
+    } else {
+      segs.push({ kind: 'text', text: trimmed });
+    }
+  });
+  return segs;
 }
 
 // Bygg ett meddelandeelement UTAN att appenda eller spela ljud.
@@ -1930,7 +2128,24 @@ function buildMessage(type, npcKey, text, meta) {
       const spd = meta.time ? `${meta.time}s` : '';
       footer = `<div class="dm-footer">${[mn, tok, spd].filter(Boolean).join(' · ')}</div>`;
     }
-    el.innerHTML = `${avatarHtml('dm', '🧙‍♂️')}<div class="bubble"><button class="tts-btn" title="Spela upp ljud" onclick="playTTS(this)">🔊</button><div class="who">Dungeon Master</div><div class="text">${mdToHtml(escapeHtml(text))}</div>${footer}</div>`;
+    // Dela upp svaret i narration + NPC-citat → egna färgkodade bubblor inuti DM-svaret
+    const segs = splitDmSegments(text);
+    let inner = '';
+    segs.forEach(seg => {
+      if (seg.kind === 'npc') {
+        inner += `<div class="npc-quote" style="--npc-color:${seg.npcColor}">` +
+          `<div class="nq-who" onclick="openNpcDrawer('${seg.npcKey}')" title="Open dossier"><span class="dot"></span>${escapeHtml(seg.npcName)}</div>` +
+          `<div class="nq-text">${mdToHtml(escapeHtml(seg.text))}</div></div>`;
+      } else {
+        inner += `<div class="text">${mdToHtml(escapeHtml(seg.text))}</div>`;
+      }
+    });
+    el.innerHTML = `${avatarHtml('dm', '🧙‍♂️')}<div class="bubble"><button class="tts-btn" title="Spela upp ljud" onclick="playTTS(this)">🔊</button><div class="who">Dungeon Master</div>${inner}${footer}</div>`;
+    // Transkript-parity-nyckel (kollapsad) — samma beräkning som msgDomKey, så
+    // guardian-insättning/dedup funkar även när NPC-citat ändrat bubbel-strukturen.
+    const tmp = document.createElement('div');
+    tmp.innerHTML = mdToHtml(escapeHtml(text));
+    el.setAttribute('data-key', 'd:' + (tmp.textContent || '').replace(/\s+/g, ' ').trim());
   } else if (type === 'npc') {
     const n = NPCS[npcKey] || { name: npcKey || 'Unknown', color: npcColorFor(npcKey || 'Unknown'), icon: '🎭', role: '' };
     el.style.setProperty('--npc-color', n.color);
@@ -2021,8 +2236,9 @@ async function playTTS(btn) {
   if (prev && prev !== btn) ttsStop(prev);
 
   const bubble = btn.closest('.bubble');
-  const textEl = bubble.querySelector('.text');
-  const text = (textEl.innerText || '').trim();
+  // Samla ALLA textblock — narration + NPC-citat (flera .text/.nq-text möjliga)
+  const parts = [...bubble.querySelectorAll('.text, .npc-quote .nq-text')];
+  const text = parts.map(p => (p.innerText || '')).join('\n').trim();
   if (!text) return;
 
   btn.textContent = '⏳'; btn.classList.add('playing');
@@ -2248,15 +2464,157 @@ function messageParticles(el, type) {
   if (!el) return;
   const rect = el.getBoundingClientRect();
   const cx = rect.left + rect.width * 0.15;
-  const cy = rect.top + rect.height * 0.5;
+  const cy = rect.top + Math.min(rect.height * 0.5, 60);
   if (type === 'dm' || type === 'npc') {
-    spawnPixelBurst(cx, cy, 10, ['#c9a227', '#e8c65a', '#8b5fd4', '#efe2c0'], 4);
+    spawnPixelBurst(cx, cy, 20, ['#c9a227', '#e8c65a', '#8b5fd4', '#efe2c0', '#d4691e'], 4);
+    // Sekundär våg — eftersläpande skurar gör att det "flyger runt" längre
+    setTimeout(() => {
+      const r2 = el.getBoundingClientRect();
+      if (!r2.width) return;
+      spawnPixelBurst(r2.left + r2.width * 0.3, r2.top + r2.height * 0.6, 10, ['#e8c65a', '#8b5fd4', '#efe2c0', '#c9a227'], 3);
+    }, 240);
+    setTimeout(() => {
+      const r3 = el.getBoundingClientRect();
+      if (!r3.width) return;
+      spawnPixelBurst(r3.left + r3.width * 0.85, r3.top + r3.height * 0.35, 6, ['#d4691e', '#efe2c0'], 2);
+    }, 480);
   } else if (type === 'guardian') {
-    spawnPixelBurst(cx, cy, 8, ['#5e9aa3', '#4e8a93', '#d9c9a6'], 3);
+    spawnPixelBurst(cx, cy, 14, ['#5e9aa3', '#4e8a93', '#d9c9a6', '#7aa35e'], 3);
   } else if (type === 'player') {
     const pcx = rect.right - rect.width * 0.15;
-    spawnPixelBurst(pcx, cy, 6, ['#d9c9a6', '#8a7a5e', '#c9a227'], 3);
+    spawnPixelBurst(pcx, cy, 10, ['#d9c9a6', '#8a7a5e', '#c9a227', '#8b5fd4'], 3);
   }
+}
+
+// ═══════════════════════════════════════
+// TYPEWRITER — sekventiell textrullning med ticker-ljud
+// ═══════════════════════════════════════
+// Rullar fram texten i DM/NPC-bubblor tecken för tecken (chunkat), spelar
+// mjuka "midi"-blips (SFX.type / SFX.typeNpc), droppar pixlar längs
+// rullningspunkten och hoppar till full text vid klick/tryck på meddelandet.
+const _twActive = new Set(); // pågående typewriters (element)
+
+function startTypewriter(msgEl, type) {
+  if (!msgEl || !msgEl.isConnected) return;
+  if (_twActive.has(msgEl)) return;
+  // Mål = alla textblock i DOM-ordning (narration + NPC-citat inuti DM-svar)
+  const targets = [...msgEl.querySelectorAll('.text, .npc-quote .nq-text')];
+  if (!targets.length) return;
+
+  const segs = [];
+  targets.forEach(t => {
+    const walker = document.createTreeWalker(t, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    let n;
+    while ((n = walker.nextNode())) nodes.push(n);
+    if (!nodes.length) return;
+    const full = nodes.map(x => x.nodeValue || '');
+    const starts = [];
+    let acc = 0;
+    full.forEach(s => { starts.push(acc); acc += s.length; });
+    if (!acc) return;
+    nodes.forEach(x => x.nodeValue = '');
+    segs.push({ el: t, nodes, full, starts, total: acc, isNpc: !!t.closest('.npc-quote') });
+  });
+  if (!segs.length) return;
+
+  _twActive.add(msgEl);
+  msgEl.classList.remove('tw-pending');
+  const grand = segs.reduce((a, s) => a + s.total, 0);
+  const chunk = Math.max(2, Math.ceil(grand / 240));      // max ~240 ticks
+  const interval = grand <= 60 ? 30 : grand <= 220 ? 24 : grand <= 700 ? 18 : 14;
+  let global = 0, tickIdx = 0, pitchDm = 0, pitchNpc = 0, done = false;
+  let cursor = null, dripTimer = null;
+  const startedAt = performance.now();
+
+  const revealUpTo = (g) => {
+    let acc = 0;
+    segs.forEach(s => {
+      const local = Math.max(0, Math.min(s.total, g - acc));
+      for (let i = 0; i < s.nodes.length; i++) {
+        const end = Math.min(s.full[i].length, Math.max(0, local - s.starts[i]));
+        s.nodes[i].nodeValue = s.full[i].slice(0, end);
+      }
+      acc += s.total;
+    });
+  };
+
+  const currentSeg = () => {
+    let acc = 0;
+    for (const s of segs) {
+      if (global <= acc + s.total) return s;
+      acc += s.total;
+    }
+    return segs[segs.length - 1];
+  };
+
+  const moveCursor = () => {
+    const s = currentSeg();
+    if (!s) return;
+    if (!cursor) { cursor = document.createElement('span'); cursor.className = 'type-cursor'; }
+    cursor.remove();
+    s.el.appendChild(cursor);
+  };
+
+  const drip = () => {
+    const s = currentSeg();
+    if (!s) return;
+    let acc = 0;
+    for (const seg of segs) {
+      if (seg === s) break;
+      acc += seg.total;
+    }
+    const local = Math.min(s.total, Math.max(0, global - acc));
+    const rect = s.el.getBoundingClientRect();
+    if (!rect.width) return;
+    const frac = s.total ? local / s.total : 1;
+    const x = rect.left + rect.width * Math.min(0.97, Math.max(0.03, frac));
+    const y = rect.bottom - 2;
+    const colors = s.isNpc
+      ? [(s.el.closest('.npc-quote') || {}).style?.getPropertyValue('--npc-color') || '#e8c65a', '#efe2c0']
+      : ['#c9a227', '#e8c65a', '#efe2c0'];
+    spawnPixelBurst(x, y, 2, colors, 2);
+  };
+
+  const finish = (skipped) => {
+    if (done) return;
+    done = true;
+    _twActive.delete(msgEl);
+    if (cursor) cursor.remove();
+    if (dripTimer) { clearInterval(dripTimer); dripTimer = null; }
+    revealUpTo(grand);
+    if (!skipped && performance.now() - startedAt > 450) SFX.typeDone();
+    msgEl.removeEventListener('click', skipHandler);
+  };
+
+  const skipHandler = () => finish(true);
+  msgEl.addEventListener('click', skipHandler, { once: true });
+
+  const tick = () => {
+    if (done) return;
+    tickIdx++;
+    if (global < grand) {
+      global = Math.min(grand, global + chunk);
+      revealUpTo(global);
+      moveCursor();
+      // Ticker-ljud — tunnat så det inte blir ett oljud vid stora chunkar
+      if (tickIdx % Math.max(1, Math.ceil(chunk / 4)) === 0) {
+        const cur = currentSeg();
+        if (cur && cur.isNpc) SFX.typeNpc(pitchNpc++);
+        else SFX.type(pitchDm++);
+      }
+      // Håll chatten nere om användaren redan är i botten
+      if (chat.scrollTop + chat.clientHeight >= chat.scrollHeight - 40) {
+        chat.scrollTop = chat.scrollHeight;
+      }
+      if (global >= grand) { finish(false); return; }
+    }
+    setTimeout(tick, interval);
+  };
+
+  moveCursor();
+  dripTimer = setInterval(drip, 150);
+  tick();
 }
 
 // ═══════════════════════════════════════
@@ -3029,9 +3387,21 @@ async function restoreFromTranscript(fallbackErrorMsg) {
     const messages = data.messages || [];
     const lastAssistant = [...messages].reverse().find(m => m.role === 'assistant');
     if (lastAssistant) {
-      // Kontrollera att meddelandet inte redan visas (förhindrar dubletter)
+      // Kontrollera att meddelandet inte redan visas (förhindrar dubletter) —
+      // jämför med kollapsad text som data-key/bygget gör, eftersom NPC-citat
+      // kan ha delat upp bubblan i flera block.
       const existingDm = [...chat.querySelectorAll('.msg.dm')].pop();
-      const alreadyShown = existingDm && existingDm.querySelector('.bubble')?.textContent.trim() === lastAssistant.content.trim();
+      let alreadyShown = false;
+      if (existingDm) {
+        if (existingDm.dataset.key) {
+          const tmp = document.createElement('div');
+          tmp.innerHTML = mdToHtml(escapeHtml(lastAssistant.content));
+          const expectedKey = 'd:' + (tmp.textContent || '').replace(/\s+/g, ' ').trim();
+          alreadyShown = existingDm.dataset.key === expectedKey;
+        } else {
+          alreadyShown = (existingDm.querySelector('.bubble')?.textContent || '').replace(/\s+/g, ' ').trim() === lastAssistant.content.replace(/\s+/g, ' ').trim();
+        }
+      }
       if (!alreadyShown) {
         addMessage('dm', null, lastAssistant.content);
         // Återställ effekter (föremål, guld, XP…) som tappades vid timeout
@@ -3153,7 +3523,7 @@ function domElKey(el) {
   if (!el) return null;
   const cls = el.classList;
   if (cls.contains('player'))   return 'u:' + ((el.querySelector('.text') || {}).textContent || '').replace(/\s+/g, ' ').trim();
-  if (cls.contains('dm'))       return 'd:' + ((el.querySelector('.text') || {}).textContent || '').replace(/\s+/g, ' ').trim();
+  if (cls.contains('dm'))       return el.dataset.key || ('d:' + ((el.querySelector('.bubble') || {}).textContent || '').replace(/\s+/g, ' ').trim());
   if (cls.contains('guardian')) return 'g:' + ((el.querySelector('.guardian-box') || {}).textContent || '').replace(/\s+/g, ' ').trim();
   return null;
 }

@@ -76,6 +76,19 @@ const SFX = (() => {
     click() { note(880, 0, 0.05, 'square', 0.12); },
     // Very subtle — hover (used sparingly)
     hover() { note(1300, 0, 0.025, 'sine', 0.04); },
+    // Typewriter tick — soft blip while chat text reveals. Pitch walks a
+    // small pentatonic scale so the ticks never drone. Respects mute.
+    type(i = 0) {
+      const scale = [440, 493.88, 523.25, 587.33, 659.25, 783.99];
+      note(scale[i % scale.length], 0, 0.022, 'square', 0.045);
+    },
+    // Typewriter tick for an NPC voice — slightly lower, warmer
+    typeNpc(i = 0) {
+      const scale = [329.63, 349.23, 392, 440, 493.88, 587.33];
+      note(scale[i % scale.length], 0, 0.024, 'triangle', 0.06);
+    },
+    // Typewriter completes — soft little chime up
+    typeDone() { note(880, 0, 0.05, 'sine', 0.07, 1174.66); },
     // The player sends a message
     send() { note(520, 0, 0.09, 'sine', 0.2, 780); },
     // DM/NPC responds

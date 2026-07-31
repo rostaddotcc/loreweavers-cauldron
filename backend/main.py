@@ -931,9 +931,10 @@ async def _call_llm(
         "max_tokens": max_tokens,
     }
 
-    # MiMo: stäng av thinking för strukturerade anrop (JSON-extraktion etc.)
-    # — annars hamnar allt i reasoning_content och content blir tomt.
-    if thinking == "disabled" and config.provider == "mimo":
+    # MiMo/DeepSeek: stäng av thinking för strukturerade anrop (JSON-extraktion etc.)
+    # — annars hamnar allt i reasoning_content och content blir tomt/trunkerat.
+    # DeepSeek V4-docs: {"thinking": {"type": "enabled/disabled"}} (OpenAI-format).
+    if thinking == "disabled" and config.provider in ("mimo", "deepseek"):
         body["thinking"] = {"type": "disabled"}
 
     # StepFun 3.7 Flash: debiterar per prompt, inte per token → high överallt.
@@ -941,6 +942,11 @@ async def _call_llm(
     if config.api_model == "step-3.7-flash":
         body["reasoning_effort"] = reasoning_effort or "high"
         body["max_tokens"] = max(body.get("max_tokens", 1024), 8000)
+
+    # DeepSeek V4: skicka reasoning_effort om anroparen vill styra (low/high/max).
+    # Guardian kör t.ex. reasoning_effort="low" för snabbare JSON-extraktion.
+    if config.provider == "deepseek" and reasoning_effort:
+        body["reasoning_effort"] = reasoning_effort
 
     # Qwen3-modeller: thinking mode PÅ som standard. Ge generöst med
     # utrymme så modellen kan tänka fritt OCH leverera svaret.
@@ -2654,7 +2660,7 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
 
     try:
         raw = await _call_llm(
-            req.model_id, messages, temperature=0.7, max_tokens=4000,
+            req.model_id, messages, temperature=0.7, max_tokens=8000,
             thinking_cap=8000, thinking="disabled",
         )
         char_data = _extract_json(raw)

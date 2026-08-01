@@ -35,6 +35,8 @@ def _default_state(campaign_id: str, user: str) -> dict:
             "turn_count": 0,
             "session_count": 1,
         },
+        # character fylls i vid karaktärsskapande; max_weight_lbs (= STR × 15)
+        # sätts då — inte vid kampanjskapelse.
         "character": {},
         "inventory": [],
         "currency": {"pp": 0, "gp": 0, "sp": 0, "cp": 0},

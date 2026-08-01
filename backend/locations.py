@@ -99,6 +99,7 @@ def get_locations_with_travel(state: dict) -> list[dict]:
         all_locations[name] = {
             'name': name,
             'description': loc.get('description', ''),
+            'lore': loc.get('lore', ''),
             'terrain': loc.get('terrain', 'okänd'),
             'x': loc.get('x', 50),
             'y': loc.get('y', 50),

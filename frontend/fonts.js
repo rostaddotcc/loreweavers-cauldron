@@ -12,6 +12,8 @@ const FONTS = (() => {
     { id: 'gothic',   name: 'Gothic',       display: "'Cinzel', serif",             body: "'Spectral', Georgia, serif" },
     { id: 'mono',     name: 'Mono',         display: "'IBM Plex Mono', monospace",  body: "'IBM Plex Mono', monospace" },
     { id: 'dot',      name: 'Dot',          display: "'DotGothic16', sans-serif",   body: "'DotGothic16', sans-serif" },
+    { id: 'rune',     name: 'Rune',         display: "'Uncial Antiqua', serif",     body: "'IM Fell English', Georgia, serif" },
+    { id: 'scribe',   name: 'Scribe',       display: "'MedievalSharp', cursive",    body: "'Alegreya', Georgia, serif" },
   ];
 
   const KEY = 'dnd_font';

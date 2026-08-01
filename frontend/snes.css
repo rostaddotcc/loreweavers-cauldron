@@ -3,27 +3,27 @@
    Castlevania × DOS × Linux terminal
    Länkas EFTER inline-stilar så att detta vinner.
    ═══════════════════════════════════════════════════ */
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400;500;600&family=DotGothic16&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=VT323&family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400;500;600&family=DotGothic16&family=MedievalSharp&family=IM+Fell+English:ital@0;1&family=Uncial+Antiqua&family=Alegreya:ital,wght@0,400;0,500;0,700;1,400&display=swap');
 
 /* ── PALETT ── */
 :root {
-  --ink: #08080d;
-  --stone: #0e0e14;
-  --stone-2: #12121a;
-  --stone-3: #181822;
-  --edge: #2a2a3a;
-  --edge-hi: #3a3a50;
-  --bone: #b8b8c8;
-  --bone-bright: #e0e0ec;
-  --bone-dim: #6a6a80;
-  --gold: #c9a227;
-  --gold-bright: #e8c65a;
-  --blood: #8b1a2a;
-  --blood-bright: #d43a4d;
+  --ink: #0b0812;
+  --stone: #161020;
+  --stone-2: #1d1529;
+  --stone-3: #241a33;
+  --edge: #463a60;
+  --edge-hi: #5a4a7a;
+  --bone: #d9c9a6;
+  --bone-bright: #f2e6c8;
+  --bone-dim: #9d8a6a;
+  --gold: #d4a92c;
+  --gold-bright: #f0d675;
+  --blood: #a32433;
+  --blood-bright: #e0485a;
   --ember: #d4691e;
-  --arcane: #7b4fd4;
-  --poison: #5a9a4e;
-  --teal: #4e8a93;
+  --arcane: #9a6fe0;
+  --poison: #7aa35e;
+  --teal: #5e9aa3;
   --term-green: #33cc33;
   --term-amber: #ccaa33;
   /* Typsnitt (sätts av fonts.js, dessa är fallback/default = Pixel) */
@@ -658,6 +658,19 @@ button, a, .top-btn, .send-btn, .drop-item, .rr-btn, .tab-btn, .sheet-close {
     font-size: .65rem !important;
     padding: .25rem .35rem !important;
     flex-shrink: 0;
+  }
+
+  /* Settings gear dropdown — escape topbar overflow:hidden */
+  .settings-menu {
+    position: fixed !important;
+    top: 48px !important;
+    right: 8px !important;
+    left: 8px !important;
+    min-width: 0 !important;
+    max-height: calc(100dvh - 60px);
+    overflow-y: auto;
+    z-index: 500;
+    transform-origin: top right;
   }
 
   /* Mobile menu button (☰) — visible on mobile */
@@ -1796,19 +1809,13 @@ button, a, .top-btn, .send-btn, .drop-item, .rr-btn, .tab-btn, .sheet-close {
   font-size: .68rem !important; letter-spacing: .3em !important;
   color: var(--gold-bright) !important; text-transform: uppercase !important;
 }
-.cx-full {
-  font-family: var(--font-body) !important;
-  background: var(--stone-2) !important;
-  border: 1px solid var(--edge) !important;
-  color: var(--bone-dim) !important;
-  font-style: normal !important;
-  text-decoration: none !important;
-}
-.cx-full:hover { border-color: var(--gold) !important; color: var(--gold-bright) !important; background: var(--stone-3) !important; }
-.cx-tabs { border-bottom: 1px solid var(--edge) !important; }
+.cx-tabs { border-bottom: 1px solid var(--edge) !important; display: flex !important; overflow-x: auto !important; scrollbar-width: thin !important; -webkit-overflow-scrolling: touch; }
+.cx-tabs::-webkit-scrollbar { height: 4px; }
+.cx-tabs::-webkit-scrollbar-thumb { background: var(--edge-hi); }
 .cx-tab {
   font-family: var(--font-display) !important;
-  font-size: .58rem !important; letter-spacing: .12em !important;
+  font-size: .52rem !important; letter-spacing: .08em !important;
+  white-space: nowrap !important; flex: 0 0 auto !important;
   background: var(--stone-2) !important;
   border: 1px solid var(--edge) !important;
   border-bottom: none !important;
@@ -1862,7 +1869,6 @@ button, a, .top-btn, .send-btn, .drop-item, .rr-btn, .tab-btn, .sheet-close {
   .cx-tab { min-height: 44px !important; padding: .45rem .7rem !important; }
   .cx-head { padding: .45rem .6rem !important; }
   .cx-title { font-size: .6rem !important; }
-  .cx-full { padding: .35rem .6rem !important; }
 }
 
 /* ── 35e. MOBILE ≤ 640px: tightare paneler ── */

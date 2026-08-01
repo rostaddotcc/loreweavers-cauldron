@@ -9,12 +9,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
   :root {
-    --ink:#08080d; --stone:#0e0e14; --stone-2:#12121a; --stone-3:#181822;
-    --edge:#2a2a3a; --edge-hi:#3a3a50;
-    --bone:#b8b8c8; --bone-bright:#e0e0ec; --bone-dim:#6a6a80;
-    --gold:#c9a227; --gold-bright:#e8c65a;
-    --blood:#8b1a2a; --blood-bright:#d43a4d;
-    --ember:#d4691e; --arcane:#7b4fd4; --poison:#5a9a4e; --teal:#4e8a93;
+    --ink:#0b0812; --stone:#161020; --stone-2:#1d1529; --stone-3:#241a33;
+    --edge:#463a60; --edge-hi:#5a4a7a;
+    --bone:#d9c9a6; --bone-bright:#f2e6c8; --bone-dim:#9d8a6a;
+    --gold:#d4a92c; --gold-bright:#f0d675;
+    --blood:#a32433; --blood-bright:#e0485a;
+    --ember:#d4691e; --arcane:#9a6fe0; --poison:#7aa35e; --teal:#5e9aa3;
     --term-green:#33cc33; --term-amber:#ccaa33;
   }
   *{margin:0;padding:0;box-sizing:border-box}
@@ -167,22 +167,60 @@
   .scroll-hint{font-size:.75rem;font-style:italic;color:var(--bone-dim)}
   .scroll-hint b{color:var(--arcane);font-style:normal}
 
-  /* ═══════════ Weaving / dice ═══════════ */
-  .weaving{display:none;text-align:center;padding:2rem 0 .5rem}
+  /* ═══════════ Weaving (summoning-ritual v4) ═══════════ */
+  .weaving{display:none;text-align:center;padding:2rem 0 .5rem;position:relative}
   .weaving.show{display:block;animation:msg-in .4s ease}
-  .weaving .w-text{font-style:italic;color:var(--arcane);font-size:.92rem;margin-bottom:1.2rem;text-shadow:0 0 12px rgba(139,95,212,.4)}
-  .dice-row{display:flex;justify-content:center;gap:.7rem}
-  .die{
-    width:46px;height:46px;display:flex;align-items:center;justify-content:center;
-    font-family:'Cinzel',serif;font-weight:900;font-size:1.15rem;color:var(--gold-bright);
-    background:linear-gradient(160deg,var(--stone-3),var(--stone));border:1px solid var(--gold);
-    box-shadow:0 0 14px -3px rgba(232,198,90,.5),inset 0 0 10px rgba(0,0,0,.6);
-    clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);
-    animation:die-shake .5s ease-in-out infinite;
+  .w-status{
+    font-family:var(--font-display,'Press Start 2P',monospace);font-size:.55rem;letter-spacing:.14em;
+    color:var(--gold);margin-bottom:1rem;animation:w-blink 1.6s steps(2) infinite;
   }
-  .die:nth-child(2){animation-delay:.08s}.die:nth-child(3){animation-delay:.16s}
-  .die:nth-child(4){animation-delay:.24s}.die:nth-child(5){animation-delay:.32s}.die:nth-child(6){animation-delay:.4s}
-  @keyframes die-shake{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-6px) rotate(8deg)}}
+  @keyframes w-blink{0%,100%{opacity:1}50%{opacity:.35}}
+  /* Reasoning-fönstret — samma bredd som Fateweave-rutan (scroll-box) */
+  .w-reasoning{
+    width:100%;margin:0 auto;text-align:left;
+    background:rgba(10,6,16,.85);border:1px solid rgba(139,95,212,.35);
+    box-shadow:0 0 18px -4px rgba(139,95,212,.4);
+  }
+  .w-reasoning[hidden]{display:none}
+  .w-reasoning-head{
+    display:flex;justify-content:space-between;align-items:center;gap:.6rem;
+    font-family:var(--font-display,'Press Start 2P',monospace);font-size:.48rem;
+    letter-spacing:.12em;color:var(--arcane);padding:.45rem .7rem;
+    border-bottom:1px solid rgba(139,95,212,.25);background:rgba(139,95,212,.08);
+  }
+  .w-reasoning-title{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .w-timer{
+    font-family:var(--font-display,'Press Start 2P',monospace);font-size:.55rem;
+    color:var(--bone-bright);text-shadow:0 0 10px rgba(232,198,90,.5);
+    flex-shrink:0;
+  }
+  .w-reasoning-head span:last-child{cursor:pointer;color:var(--bone-dim);font-size:.7rem;flex-shrink:0}
+  .w-reasoning-head span:last-child:hover{color:var(--bone-bright)}
+  .w-reasoning-body{
+    max-height:110px;overflow-y:auto;padding:.55rem .7rem;
+    font-size:.72rem;line-height:1.5;color:var(--arcane);
+    font-style:italic;white-space:pre-wrap;word-break:break-word;
+    scrollbar-width:thin;
+  }
+  .w-reasoning-body::-webkit-scrollbar{width:5px}
+  .w-reasoning-body::-webkit-scrollbar-thumb{background:rgba(139,95,212,.4)}
+  .w-reasoning-foot{
+    padding:.4rem .7rem;font-size:.62rem;letter-spacing:.04em;
+    color:var(--gold);border-top:1px solid rgba(201,162,39,.2);
+    background:rgba(201,162,39,.05);
+  }
+  .w-reasoning-foot[hidden]{display:none}
+  .w-warn{
+    font-size:.68rem;letter-spacing:.06em;color:var(--blood-bright,#d43a4d);
+    margin-top:.8rem;animation:w-pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes w-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+  /* Pixlar i chat-stil: fyrkantiga bursts som spricker ut med gravitation (se spawnWxPx) */
+  .w-pixels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+  .w-px{
+    position:absolute;width:5px;height:5px;image-rendering:pixelated;
+    background:var(--gold);box-shadow:0 0 6px currentColor;
+  }
 
   /* ═══════════ Character preview ═══════════ */
   .preview{display:none;margin-top:2.4rem}
@@ -264,9 +302,6 @@
     .scroll-actions>span{margin-top:.3rem;text-align:left;opacity:.85}
     .scroll-actions select{width:100%;min-height:48px;font-size:16px;padding:.6rem .7rem;background:var(--stone-2)}
     .scroll-hint{text-align:center}
-    /* Vävning */
-    .weaving .w-text{font-size:.85rem}
-    .die{width:38px;height:38px;font-size:1rem}
     /* Valvet — horisontell scrollrad */
     .vault-row{flex-wrap:nowrap;overflow-x:auto;padding-bottom:.5rem;margin:0 -.75rem 1.4rem;padding-left:.75rem;padding-right:.75rem;
       scrollbar-width:thin;scrollbar-color:var(--edge) transparent}
@@ -299,16 +334,14 @@
     .destiny-title h1{font-size:1.5rem}
     .destiny-title .over{letter-spacing:.28em}
     .pv-stats{grid-template-columns:repeat(2,1fr)}
-    .die{width:34px;height:34px;font-size:.9rem}
-    .dice-row{gap:.45rem}
     .pv-portrait{width:58px;height:58px;font-size:1.5rem}
     .pv-name{font-size:1.1rem}
     .forge-head .brand{font-size:.78rem}
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=5">
-<script src="sprites.js?v=20260730c"></script>
-<script src="fonts.js?v=20260730c"></script>
+<link rel="stylesheet" href="snes.css?v=9">
+<script src="sprites.js?v=20260801l"></script>
+<script src="fonts.js?v=20260801l"></script>
 </head>
 <body>
 <div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
@@ -360,22 +393,31 @@
       <button class="summon-btn" id="summon" onclick="summon()">🔮 Summon Character</button>
       <span style="font-size:.6rem;color:var(--bone-dim);opacity:.7">🧙 Character:</span>
       <select id="char-model" style="background:var(--stone-2);border:1px solid var(--edge);color:var(--bone);padding:.4rem .6rem;font-size:.7rem;cursor:pointer">
-        <option value="step-3.7-flash" selected>Step 3.7 Flash</option>
-        <option value="deepseek-v4-flash">DeepSeek V4 Flash</option>
-        <option value="qwen3.8-max">Qwen 3.8 Max</option>
-        <option value="mimo-v2.5">MiMo 2.5</option>
-        <option value="mimo-v2.5-pro">MiMo 2.5 Pro</option>
+        <option value="qwen3.8-max" selected>qwen3.8-max</option>
+        <option value="qwen3.6-flash">qwen3.6-flash</option>
+        <option value="deepseek-v4-flash-0731">deepseek-v4-flash-0731</option>
+        <option value="step-3.7-flash">step-3.7-flash</option>
+        <option value="deepseek-v4-flash">deepseek-v4-flash</option>
+        <option value="mimo-v2.5">mimo-v2.5</option>
+        <option value="mimo-v2.5-pro">mimo-v2.5-pro</option>
       </select>
     </div>
   </div>
 
-  <!-- ═══════════ VÄVNING ═══════════ -->
+  <!-- ═══════════ VÄVNING (summoning-ritual v4) ═══════════ -->
   <div class="weaving" id="weaving">
-    <div class="w-text" id="w-text">The Dungeon Master weaves your fate…</div>
-    <div class="dice-row">
-      <div class="die">?</div><div class="die">?</div><div class="die">?</div>
-      <div class="die">?</div><div class="die">?</div><div class="die">?</div>
+    <div class="w-pixels" id="w-pixels"></div>
+    <div class="w-status" id="w-status">📡 Sending request to the Dungeon Master…</div>
+    <div class="w-reasoning" id="w-reasoning" hidden>
+      <div class="w-reasoning-head">
+        <span class="w-reasoning-title">🧠 Dungeon Master is Conjuring…</span>
+        <span class="w-timer" id="w-timer">0:00</span>
+        <span id="w-reasoning-clear" title="Rensa">✕</span>
+      </div>
+      <div class="w-reasoning-body" id="w-reasoning-body"></div>
+      <div class="w-reasoning-foot" id="w-reasoning-foot" hidden></div>
     </div>
+    <div class="w-warn" id="w-warn">⚠ Do NOT refresh this page — the summoning is in progress.</div>
   </div>
 
   <!-- ═══════════ 3. FÖRHANDSVISNING ═══════════ -->
@@ -405,12 +447,34 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="sfx.js?v=20260731g"></script>
-<script src="api.js?v=20260731c"></script>
-<script src="i18n.js?v=20260730c"></script>
+<script src="sfx.js?v=20260801l"></script>
+<script src="api.js?v=20260801l"></script>
+<script src="i18n.js?v=20260801l"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
+</script>
+<script>
+// ── Rollbaserat modellval: icke-admin får välja mellan de tillåtna modellerna ──
+let newgameIsAdmin = false;
+const PLAYER_CHAR_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-3.7-flash'];
+// Råa ID:n visas direkt — man vet exakt vilken modell man får (inget "snabb"/"fast"-förskönande)
+const PLAYER_CHAR_LABELS = {};
+PLAYER_CHAR_MODELS.forEach(m => { PLAYER_CHAR_LABELS[m] = m; });
+API.me().then(u => {
+  if (u && u.role === 'admin') {
+    newgameIsAdmin = true;
+  } else {
+    // Begränsa modellväljaren till de tillåtna spelarmodellerna
+    const sel = document.getElementById('char-model');
+    if (sel) {
+      sel.innerHTML = PLAYER_CHAR_MODELS.map(m =>
+        `<option value="${m}">${PLAYER_CHAR_LABELS[m] || m}</option>`
+      ).join('');
+      sel.value = 'qwen3.8-max';
+    }
+  }
+}).catch(() => {});
 </script>
 <script>
 // ═══════════════════════════════════════
@@ -438,12 +502,7 @@ Generera:
 4. Startutrustning (5-8 föremål)
 5. Bakgrundshistoria (max 100 ord)
 Returnera som JSON enligt state-schema.`,
-    char:{ name:'Aldric Vane', cls:'Människa · Edsbruten Paladin · Nivå 5', icon:'⚔️',
-      stats:{STR:17,DEX:10,CON:15,INT:9,WIS:12,CHA:16}, hp:44, ac:18, init:0, prof:3,
-      traits:['Gudomlig känsla','Hämndens ed','Skyddande aura','Läggande händer'],
-      gear:'<b>Långsvärd</b> · <b>Sköld</b> · Kedjeharnesk · Heligt symbol (sprucket) · 3× Hälsodryck · Rep · Ransoner',
-      story:'Aldric var rikets yngste riddare tills natten hans befäl mördades och bevisen pekade på honom. Ingen trodde på hans oskuld — inte ens hans gud. Nu vandrar han med ett sprucket sigill och en ed som inte längre svarar. Men nattetid, när han drömmer, hör han fortfarande rustningens kalla viskning: "Hitta sanningen. Eller brinn med den."' },
-    en:{ name:'The Fallen Knight', lore:'A disgraced paladin seeking redemption — or revenge — in the darkness.', tags:['Human','Paladin','Melee'], cls:'Human · Oathbroken Paladin · Level 5', traits:['Divine Sense','Oath of Vengeance','Protective Aura','Laying on Hands'], gear:'<b>Longsword</b> · <b>Shield</b> · Chain mail · Holy symbol (cracked) · 3× Healing potion · Rope · Rations', story:'Aldric was the realm\'s youngest knight until the night his commander was murdered and the evidence pointed at him. No one believed in his innocence — not even his god. Now he wanders with a broken seal and an oath that no longer answers. But at night, when he dreams, he still hears the cold whisper of his armor: "Find the truth. Or burn with it."', prompt:`Create a D&D 5e character based on this archetype:
+    en:{ name:'The Fallen Knight', lore:'A disgraced paladin seeking redemption — or revenge — in the darkness.', tags:['Human','Paladin','Melee'], cls:'Human · Oathbroken Paladin · Level 5', traits:['Divine Sense','Oath of Vengeance','Protective Aura','Laying on Hands'], gear:'<b>Longsword</b> · <b>Shield</b> · Chain mail · Holy symbol (cracked) · 3× Healing potion · Rope · Rations', prompt:`Create a D&D 5e character based on this archetype:
 
 ARCHETYPE: The Fallen Knight
 Race: Human (variant)
@@ -482,12 +541,7 @@ Generera:
 4. Startutrustning (5-8 föremål)
 5. Bakgrundshistoria (max 100 ord)
 Returnera som JSON enligt state-schema.`,
-    char:{ name:'Sable Askfödd', cls:'Tiefling · Eldpakt-Häxa · Nivå 5', icon:'🔮',
-      stats:{STR:8,DEX:14,CON:13,INT:16,WIS:10,CHA:17}, hp:33, ac:13, init:2, prof:3,
-      traits:['Eldmotstånd','Häxeld','Asksteg','Paktens pris'],
-      gear:'<b>Askstav</b> · Komponentväska · Spellbok (bränd i kanterna) · 2× Hälsodryck · Fackla ×5 · Amulett av kol',
-      story:'Natten Sable föddes regnade aska över byn, och i hennes handflata brann ett märke som aldrig slocknat. Elden viskar till henne — ibland råd, ibland hot. Hon lärde sig tidigt att aldrig fråga varifrån rösten kommer. Men nu har märket börjat sprida sig, och viskningarna har blivit ett enda ord, om och om igen: hennes moders namn.' },
-    en:{ name:'The Ash Witch', lore:'Branded by a curse she never asked for. The flames obey her — almost.', tags:['Tiefling','Warlock','Fire'], cls:'Tiefling · Fire-Pact Warlock · Level 5', traits:['Fire Resistance','Witchfire','Ash Step','Price of the Pact'], gear:'<b>Ash staff</b> · Component pouch · Spellbook (edges burned) · 2× Healing potion · 5× Torch · Coal amulet', story:'The night Sable was born, ash rained over the village, and in her palm burned a mark that never went out. The fire whispers to her — sometimes counsel, sometimes threats. She learned early never to ask where the voice comes from. But now the mark has begun to spread, and the whispers have become a single word, over and over: her mother\'s name.', prompt:`Create a D&D 5e character based on this archetype:
+    en:{ name:'The Ash Witch', lore:'Branded by a curse she never asked for. The flames obey her — almost.', tags:['Tiefling','Warlock','Fire'], cls:'Tiefling · Fire-Pact Warlock · Level 5', traits:['Fire Resistance','Witchfire','Ash Step','Price of the Pact'], gear:'<b>Ash staff</b> · Component pouch · Spellbook (edges burned) · 2× Healing potion · 5× Torch · Coal amulet', prompt:`Create a D&D 5e character based on this archetype:
 
 ARCHETYPE: The Ash Witch
 Race: Tiefling
@@ -526,12 +580,7 @@ Generera:
 4. Startutrustning (5-8 föremål)
 5. Bakgrundshistoria (max 100 ord)
 Returnera som JSON enligt state-schema.`,
-    char:{ name:'Kaelen Grav', cls:'Halvälva · Dödjägare · Nivå 5', icon:'🏹',
-      stats:{STR:13,DEX:18,CON:14,INT:11,WIS:15,CHA:9}, hp:41, ac:15, init:4, prof:3,
-      traits:['Odödabane','Silverpil','Skuggsteg','Jägarens märke'],
-      gear:'<b>Armborst (silverbultar)</b> · <b>Kortsvärd</b> · Läderbrynja · Heligt vatten ×3 · Vitlökskrans · Karta över gravplatser',
-      story:'Kaelen lärde sig läsa innan hen lärde sig tala — i ordens bok stod allt om hur man dödar det som redan är dött. Systern var den enda som fick hen att le. När vampyren tog henne tog den också den sista mjuka delen av Kaelen. Nu är bettet i hens egen hals ett timglas, och varje silverbult är både ett löfte och en förberedelse.' },
-    en:{ name:'The Grave Hunter', lore:'Hunts what refuses to stay dead. Silver crossbow, cold heart.', tags:['Half-Elf','Ranger','Undead Slayer'], cls:'Half-Elf · Undead Slayer · Level 5', traits:['Undead Bane','Silver Bolt','Shadow Step','Hunter\'s Mark'], gear:'<b>Crossbow (silver bolts)</b> · <b>Shortsword</b> · Leather armor · 3× Holy water · Garlic wreath · Map of graveyards', story:'Kaelen learned to read before they learned to speak — the order\'s book held everything about how to kill what is already dead. Their sister was the only one who could make them smile. When the vampire took her, it took the last soft part of Kaelen too. Now the bite on their own neck is an hourglass, and every silver bolt is both a promise and a preparation.', prompt:`Create a D&D 5e character based on this archetype:
+    en:{ name:'The Grave Hunter', lore:'Hunts what refuses to stay dead. Silver crossbow, cold heart.', tags:['Half-Elf','Ranger','Undead Slayer'], cls:'Half-Elf · Undead Slayer · Level 5', traits:['Undead Bane','Silver Bolt','Shadow Step','Hunter\'s Mark'], gear:'<b>Crossbow (silver bolts)</b> · <b>Shortsword</b> · Leather armor · 3× Holy water · Garlic wreath · Map of graveyards', prompt:`Create a D&D 5e character based on this archetype:
 
 ARCHETYPE: The Grave Hunter
 Race: Half-Elf
@@ -570,12 +619,7 @@ Generera:
 4. Startutrustning (5-8 föremål)
 5. Bakgrundshistoria (max 100 ord)
 Returnera som JSON enligt state-schema.`,
-    char:{ name:'Pip Viskfot', cls:'Halvling · Viskare · Nivå 5', icon:'🎭',
-      stats:{STR:8,DEX:17,CON:12,INT:14,WIS:13,CHA:15}, hp:30, ac:14, init:3, prof:3,
-      traits:['Smygattack','Dödsviskning','Ficklås','Skuggdans'],
-      gear:'<b>Kort svärd</b> · <b>Dolk ×2</b> · Läderläder · Tjuvverktyg · 3× Rökgranat · Amulett (moderns)',
-      story:'Pip lärde sig gå tystare än de döda som bodde under kyrkogårdens jord. De blev hens första vänner — och de viskade. Hemligheter om grannarna, om skatter, om mord. Moderns död var den första gången en viskning ljög. Nu jagar Pip sanningen genom fickor och gravar, med ett leende som aldrig riktigt når ögonen.' },
-    en:{ name:'The Whispering Thief', lore:'Hears the secrets of the dead. Locks, pockets, graves — everything opens.', tags:['Halfling','Rogue','Spy'], cls:'Halfling · Whisperer · Level 5', traits:['Sneak Attack','Death Whispers','Lockpicking','Shadow Dance'], gear:'<b>Shortsword</b> · <b>2× Dagger</b> · Leather armor · Thieves\' tools · 3× Smoke bomb · Amulet (mother\'s)', story:'Pip learned to walk more quietly than the dead who lived beneath the churchyard soil. They became Pip\'s first friends — and they whispered. Secrets about the neighbors, about treasure, about murder. Their mother\'s death was the first time a whisper lied. Now Pip hunts the truth through pockets and graves, with a smile that never quite reaches their eyes.', prompt:`Create a D&D 5e character based on this archetype:
+    en:{ name:'The Whispering Thief', lore:'Hears the secrets of the dead. Locks, pockets, graves — everything opens.', tags:['Halfling','Rogue','Spy'], cls:'Halfling · Whisperer · Level 5', traits:['Sneak Attack','Death Whispers','Lockpicking','Shadow Dance'], gear:'<b>Shortsword</b> · <b>2× Dagger</b> · Leather armor · Thieves\' tools · 3× Smoke bomb · Amulet (mother\'s)', prompt:`Create a D&D 5e character based on this archetype:
 
 ARCHETYPE: The Whispering Thief
 Race: Halfling
@@ -614,12 +658,7 @@ Generera:
 4. Startutrustning (5-8 föremål)
 5. Bakgrundshistoria (max 100 ord)
 Returnera som JSON enligt state-schema.`,
-    char:{ name:'Brunja Stenhand', cls:'Dvärg · Gravväktare · Nivå 5', icon:'🛡️',
-      stats:{STR:16,DEX:11,CON:17,INT:10,WIS:13,CHA:12}, hp:49, ac:18, init:0, prof:3,
-      traits:['Andra andningen','Stenhud','Gravens ed','Skyddande ställning'],
-      gear:'<b>Stridshammare</b> · <b>Sköld (med runor)</b> · Splintbrynja · 2× Hälsodryck · Runsten · Dvärgöl (sista flaskan)',
-      story:'Brunja svor eden som barn: ingen ska passera graven. Nu är orden död, bergen tysta, och graven bakom hen är tom — plundrad för hundra år sedan. Men en ed är en ed. Hen väktar fortfarande, och berättar för alla att det är något värt att vakta därinne. Kanske är det därför hen aldrig låter någon titta.' },
-    en:{ name:'The Oathsworn Warden', lore:'Guards a forgotten tomb. The oath is all that remains of their people.', tags:['Dwarf','Fighter','Defense'], cls:'Dwarf · Grave Warden · Level 5', traits:['Second Wind','Stone Skin','Oath of the Grave','Protective Stance'], gear:'<b>Warhammer</b> · <b>Shield (runed)</b> · Splint armor · 2× Healing potion · Runestone · Dwarven ale (last bottle)', story:'Brunja swore the oath as a child: none shall pass the tomb. Now the order is dead, the mountains silent, and the tomb behind them is empty — plundered a hundred years ago. But an oath is an oath. They still keep watch, telling everyone there is something worth guarding in there. Perhaps that is why they never let anyone look.', prompt:`Create a D&D 5e character based on this archetype:
+    en:{ name:'The Oathsworn Warden', lore:'Guards a forgotten tomb. The oath is all that remains of their people.', tags:['Dwarf','Fighter','Defense'], cls:'Dwarf · Grave Warden · Level 5', traits:['Second Wind','Stone Skin','Oath of the Grave','Protective Stance'], gear:'<b>Warhammer</b> · <b>Shield (runed)</b> · Splint armor · 2× Healing potion · Runestone · Dwarven ale (last bottle)', prompt:`Create a D&D 5e character based on this archetype:
 
 ARCHETYPE: The Oathsworn Warden
 Race: Dwarf
@@ -658,12 +697,7 @@ Generera:
 4. Startutrustning (5-8 föremål)
 5. Bakgrundshistoria (max 100 ord)
 Returnera som JSON enligt state-schema.`,
-    char:{ name:'Lyriel Ormtunga', cls:'Älv · Viskarbard · Nivå 5', icon:'🐍',
-      stats:{STR:9,DEX:15,CON:12,INT:13,WIS:11,CHA:18}, hp:33, ac:13, init:2, prof:3,
-      traits:['Viskande vers','Giftig charm','Sång av rädsla','Mångtydig'],
-      gear:'<b>Fiol (med dold klinga)</b> · <b>Dolk</b> · Läderläder · 2× Giftflaska (sömn) · Förfalskningskit · Kärleksbrev (stulet)',
-      story:'Lyriels röst kunde få en domare att gråta och en bödel att tveka. Hovet kallade det magi; Lyriel kallade det sanning. Men en sång gick för lång — konungen sov in och vaknade aldrig. Nu vandrar Lyriel med en fiol som väger mer än den ser ut att göra, och en hemlighet som skulle kunna välta ett rike. Eller rädda ett.' },
-    en:{ name:'The Serpent-Tongue Skald', lore:'Songs that bend minds. Every verse is a poison — or a cure.', tags:['Elf','Bard','Beguiler'], cls:'Elf · Whisper Bard · Level 5', traits:['Whispering Verse','Venomous Charm','Song of Fear','Ambiguous'], gear:'<b>Violin (hidden blade)</b> · <b>Dagger</b> · Leather armor · 2× Poison vial (sleep) · Forgery kit · Love letter (stolen)', story:'Lyriel\'s voice could make a judge weep and an executioner hesitate. The court called it magic; Lyriel called it truth. But one song went too far — the king fell asleep and never woke. Now Lyriel wanders with a violin that weighs more than it looks, and a secret that could topple a kingdom. Or save one.', prompt:`Create a D&D 5e character based on this archetype:
+    en:{ name:'The Serpent-Tongue Skald', lore:'Songs that bend minds. Every verse is a poison — or a cure.', tags:['Elf','Bard','Beguiler'], cls:'Elf · Whisper Bard · Level 5', traits:['Whispering Verse','Venomous Charm','Song of Fear','Ambiguous'], gear:'<b>Violin (hidden blade)</b> · <b>Dagger</b> · Leather armor · 2× Poison vial (sleep) · Forgery kit · Love letter (stolen)', prompt:`Create a D&D 5e character based on this archetype:
 
 ARCHETYPE: The Serpent-Tongue Skald
 Race: Elf
@@ -702,12 +736,7 @@ Generera:
 4. Startutrustning (5-8 föremål)
 5. Bakgrundshistoria (max 100 ord)
 Returnera som JSON enligt state-schema.`,
-    char:{ name:'Maren Strömfödd', cls:'Människa · Havets Druid · Nivå 5', icon:'🌊',
-      stats:{STR:12,DEX:14,CON:15,INT:11,WIS:17,CHA:10}, hp:38, ac:14, init:2, prof:3,
-      traits:['Tidviskning','Stormskinn','Djupets öga','Saltbot'],
-      gear:'<b>Korallstav</b> · <b>Fisknät (förstärkt)</b> · Läderbrynja (sjöläder) · 2× Hälsodryck · Fyr-lykta · Karta över strömmar',
-      story:'Maren föddes den natt havet tog fyren. Vaktaren hittade henne i vrakspillrorna, fortfarande torr. Hon lärde sig simma innan hon gick, och havet viskade tillbaka. Men en natt, i vrede, drog hon en fiskare under ytan. Havet gav honom tillbaka tre dagar senare — vid liv, men utan ögon. Nu söker hon den sjunkna staden från sina drömmar, för att kanske hitta ett sätt att ge tillbaka det hon tog.' },
-    en:{ name:'The Tidecaller', lore:'The sea answers when they whisper. But the sea never forgets a debt.', tags:['Human','Druid','Sea'], cls:'Human · Circle of the Sea · Level 5', traits:['Tide Whisper','Storm Skin','Eye of the Deep','Salt Cure'], gear:'<b>Coral staff</b> · <b>Fishing net (reinforced)</b> · Leather armor (sea-leather) · 2× Healing potion · Lighthouse lantern · Chart of currents', story:'Maren was born the night the sea took the lighthouse. The keeper found her in the wreckage, still dry. She learned to swim before she walked, and the sea whispered back. But one night, in anger, she pulled a fisherman beneath the surface. The sea gave him back three days later — alive, but without eyes. Now she seeks the sunken city from her dreams, hoping to find a way to return what she took.', prompt:`Create a D&D 5e character based on this archetype:
+    en:{ name:'The Tidecaller', lore:'The sea answers when they whisper. But the sea never forgets a debt.', tags:['Human','Druid','Sea'], cls:'Human · Circle of the Sea · Level 5', traits:['Tide Whisper','Storm Skin','Eye of the Deep','Salt Cure'], gear:'<b>Coral staff</b> · <b>Fishing net (reinforced)</b> · Leather armor (sea-leather) · 2× Healing potion · Lighthouse lantern · Chart of currents', prompt:`Create a D&D 5e character based on this archetype:
 
 ARCHETYPE: The Tidecaller
 Race: Human
@@ -746,12 +775,7 @@ Generera:
 4. Startutrustning (5-8 föremål)
 5. Bakgrundshistoria (max 100 ord)
 Returnera som JSON enligt state-schema.`,
-    char:{ name:'Pip Sotask', cls:'Halvling · Pestläkare · Nivå 5', icon:'☠️',
-      stats:{STR:9,DEX:13,CON:16,INT:14,WIS:16,CHA:8}, hp:35, ac:14, init:1, prof:3,
-      traits:['Pestskydd','Sjukdomssinne','Botande händer','Smittans viskning'],
-      gear:'<b>Pestläkarmask</b> · <b>Skalpell</b> · Kedjeharnesk · 3× Motgift · Örtpåse · Journal (full av symtom)',
-      story:'Byn Sotask brändes när pesten kom, men Pip överlevde — ensam, bland askan och de svarta liken. Pesten tog aldrig hen, bara alla andra. Nu vandrar Pip med en mask fylld av lavendel och en väska full av botemedel som inte fungerar på den enda sjukdom som spelar roll. De som reser med Pip blir sjuka efter en tid. Pip vet inte varför. Än.' },
-    en:{ name:'The Plaguebearer', lore:'Carries the disease in their veins — and the cure in their bag.', tags:['Halfling','Cleric','Plague Doctor'], cls:'Halfling · Plague Doctor · Level 5', traits:['Plague Ward','Disease Sense','Healing Hands','Whisper of the Blight'], gear:'<b>Plague mask</b> · <b>Scalpel</b> · Chain mail · 3× Antidote · Herb pouch · Journal (full of symptoms)', story:'The village of Sotask burned when the plague came, but Pip survived — alone, among the ash and the blackened dead. The plague never took them, only everyone else. Now Pip wanders with a mask full of lavender and a bag full of cures that don\'t work on the one disease that matters. Those who travel with Pip grow ill after a time. Pip doesn\'t know why. Yet.', prompt:`Create a D&D 5e character based on this archetype:
+    en:{ name:'The Plaguebearer', lore:'Carries the disease in their veins — and the cure in their bag.', tags:['Halfling','Cleric','Plague Doctor'], cls:'Halfling · Plague Doctor · Level 5', traits:['Plague Ward','Disease Sense','Healing Hands','Whisper of the Blight'], gear:'<b>Plague mask</b> · <b>Scalpel</b> · Chain mail · 3× Antidote · Herb pouch · Journal (full of symptoms)', prompt:`Create a D&D 5e character based on this archetype:
 
 ARCHETYPE: The Plaguebearer
 Race: Halfling
@@ -770,7 +794,7 @@ Generate:
 Return as JSON according to the state schema.` }
   },
   voidscribe: {
-    icon:'📖', name:'Tomhetens Skrivare', color:'#7b4fd4', glow:'rgba(123,79,212,.35)',
+    icon:'📖', name:'Tomhetens Skrivare', color:'#9a6fe0', glow:'rgba(154,111,224,.35)',
     lore:'Skrev ett namn i en förbjuden bok. Nu skriver boken i hen.',
     tags:['Människa','Wizard','Tomhet'],
     prompt:`Skapa en D&D 5e-karaktär utifrån denna arketyp:
@@ -790,12 +814,7 @@ Generera:
 4. Startutrustning (5-8 föremål)
 5. Bakgrundshistoria (max 100 ord)
 Returnera som JSON enligt state-schema.`,
-    char:{ name:'Eramus Bläck', cls:'Människa · Tomhetens Skrivare · Nivå 5', icon:'📖',
-      stats:{STR:8,DEX:12,CON:11,INT:18,WIS:14,CHA:10}, hp:28, ac:12, init:1, prof:3,
-      traits:['Tomhetsbläck','Radering','Skrivdröm','Bokens viskning'],
-      gear:'<b>Förbjuden bok (kedjad)</b> · <b>Fjäderpenna (ben)</b> · Rob (bläckfläckad) · 2× Hälsodryck · Bläckflaska (svartare än svart) · Läs glasögon',
-      story:'Eramus var bibliotekets tystaste vaktmästare tills natten hen hittade boken utan titel, utan författare, med sidor som andades. Hen skrev ett namn — sitt eget — och boken svarade. Nu skriver den i hen: i sömnen, i vaket tillstånd, i varje ledig stund. Varje sida fylls, och varje sida tar. Hen minns inte längre sin moders ansikte. Men boken minns. Och den skriver vackert.' },
-    en:{ name:'The Voidscribe', lore:'Wrote a name in a forbidden book. Now the book writes in them.', tags:['Human','Wizard','Void'], cls:'Human · Void Scribe · Level 5', traits:['Void Ink','Erasure','Dream Writing','Whisper of the Book'], gear:'<b>Forbidden book (chained)</b> · <b>Quill (bone)</b> · Robe (ink-stained) · 2× Healing potion · Ink bottle (blacker than black) · Reading glasses', story:'Eramus was the library\'s quietest custodian until the night they found the book with no title, no author, and pages that breathed. They wrote a name — their own — and the book answered. Now it writes in them: in sleep, in waking, in every idle moment. Each page fills, and each page takes. They no longer remember their mother\'s face. But the book remembers. And it writes beautifully.', prompt:`Create a D&D 5e character based on this archetype:
+    en:{ name:'The Voidscribe', lore:'Wrote a name in a forbidden book. Now the book writes in them.', tags:['Human','Wizard','Void'], cls:'Human · Void Scribe · Level 5', traits:['Void Ink','Erasure','Dream Writing','Whisper of the Book'], gear:'<b>Forbidden book (chained)</b> · <b>Quill (bone)</b> · Robe (ink-stained) · 2× Healing potion · Ink bottle (blacker than black) · Reading glasses', prompt:`Create a D&D 5e character based on this archetype:
 
 ARCHETYPE: The Voidscribe
 Race: Human
@@ -824,7 +843,15 @@ const FREE_PROMPT = `## Legenden
 **Bakgrund:**
 **Personlighet:**
 **Ett minne som jagar dig:**
-**Vad söker du?**`;
+**Vad söker du?**
+
+Generera:
+1. Namn (mörk fantasy)
+2. Fullt karaktärsark: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves
+3. 3-4 förmågor/egenskaper
+4. Startutrustning (5-8 föremål)
+5. Bakgrundshistoria (max 100 ord)
+Returnera som JSON enligt state-schemat.`;
 
 const FREE_PROMPT_EN = `## Legend
 
@@ -834,7 +861,15 @@ const FREE_PROMPT_EN = `## Legend
 **Backstory:**
 **Personality:**
 **A memory that haunts you:**
-**What do you seek?**`;
+**What do you seek?**
+
+Generate:
+1. Name (dark fantasy)
+2. Full character sheet: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves
+3. 3-4 abilities/traits
+4. Starting equipment (5-8 items)
+5. Backstory (max 100 words)
+Return as JSON per the state schema.`;
 
 // ═══════════════════════════════════════
 // RENDER ARKETYPER (language-aware)
@@ -1039,6 +1074,124 @@ document.getElementById('mode-label').innerHTML = isEn()
 let summoning = false;
 let lastPrompt = '';
 
+// ── Summoning-ritual v4: timer i header + reasoning-live + stats-footer ──
+let _ritualTimers = [];
+
+function _startRitual() {
+  const en = isEn();
+  const statusEl = document.getElementById('w-status');
+  const timerEl = document.getElementById('w-timer');
+  const warnEl = document.getElementById('w-warn');
+  const titleEl = document.querySelector('.w-reasoning-title');
+  const footEl = document.getElementById('w-reasoning-foot');
+
+  statusEl.style.display = '';
+  warnEl.style.display = '';
+  statusEl.textContent = en ? '📡 SENDING REQUEST TO THE DUNGEON MASTER…' : '📡 SKICKAR FÖRFRÅGAN TILL DUNGEON MASTER…';
+  warnEl.textContent = en ? '⚠ Do NOT refresh this page — the summoning is in progress.' : '⚠ Uppdatera INTE sidan — frammaningen pågår.';
+  timerEl.textContent = '0:00';
+  if (titleEl) titleEl.textContent = en ? '🧠 Dungeon Master is Conjuring…' : '🧠 DM:n frammanar…';
+  if (footEl) { footEl.hidden = true; footEl.textContent = ''; }
+  _resetReasoning();
+
+  // Timer (visar exakt hur lång tid modellen tar — ingen progress-bar)
+  const t0 = Date.now();
+  _ritualTimers.push(setInterval(() => {
+    const s = Math.floor((Date.now() - t0) / 1000);
+    timerEl.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }, 500));
+
+  // Pixelskvätt i chat-stil — bursts som spricker ut med gravitation
+  const pxHost = document.getElementById('w-pixels');
+  const colors = ['#c9a227', '#e8c65a', '#8b5fd4', '#d4cfc4', '#ffd700'];
+  _ritualTimers.push(setInterval(() => _spawnWxPx(pxHost, colors), 600));
+  _spawnWxPx(pxHost, colors); // direkt vid start
+}
+
+// Pixlar som chatten: fyrkantiga, roterar, gravitation (samma fysik som spawnPixelBurst)
+function _spawnWxPx(host, colors) {
+  if (!host) return;
+  const hw = host.clientWidth || 600;
+  const count = 6;
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('div');
+    p.className = 'w-px';
+    const col = colors[i % colors.length];
+    p.style.background = col;
+    p.style.color = col;
+    p.style.left = (hw * (0.12 + Math.random() * 0.76)) + 'px';
+    p.style.top = (10 + Math.random() * 40) + 'px';
+    host.appendChild(p);
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1.5 + Math.random() * 3.5;
+    const vx = Math.cos(angle) * speed;
+    const vy = Math.sin(angle) * speed - 1.5;
+    const rot = (Math.random() - 0.5) * 14;
+    let life = 1;
+    const cx = parseFloat(p.style.left), cy = parseFloat(p.style.top);
+    let x = cx, y = cy, r = 0;
+    (function anim() {
+      life -= 0.02;
+      if (life <= 0) { p.remove(); return; }
+      x += vx; y += vy + (1 - life) * 2.5;
+      r += rot;
+      p.style.transform = `translate(${x - cx}px, ${y - cy}px) rotate(${r}deg)`;
+      p.style.opacity = life;
+      requestAnimationFrame(anim);
+    })();
+  }
+}
+
+// ── Reasoning-fönster: visar modellens inre monolog LIVE under generationen ──
+function _resetReasoning() {
+  const box = document.getElementById('w-reasoning');
+  const body = document.getElementById('w-reasoning-body');
+  if (box) box.hidden = true;
+  if (body) body.textContent = '';
+}
+function _appendReasoning(text) {
+  const box = document.getElementById('w-reasoning');
+  const body = document.getElementById('w-reasoning-body');
+  if (!box || !body || !text) return;
+  box.hidden = false;
+  body.textContent += text;
+  body.scrollTop = body.scrollHeight; // auto-scroll
+}
+function _initReasoningClear() {
+  const clear = document.getElementById('w-reasoning-clear');
+  if (clear) clear.onclick = () => _resetReasoning();
+}
+
+function _stopRitual() {
+  _ritualTimers.forEach(t => clearInterval(t));
+  _ritualTimers = [];
+}
+
+// Efter avslutad generation: behåll reasoning-fönstret synligt med
+// footer = token count + spenderad tid (för den som vill inspektera).
+function _finishRitual(res) {
+  _stopRitual();
+  const statusEl = document.getElementById('w-status');
+  const warnEl = document.getElementById('w-warn');
+  const box = document.getElementById('w-reasoning');
+  const titleEl = document.querySelector('.w-reasoning-title');
+  const footEl = document.getElementById('w-reasoning-foot');
+  if (statusEl) statusEl.style.display = 'none';
+  if (warnEl) warnEl.style.display = 'none';
+  if (box) box.hidden = false; // behåll fönstret
+  const en = isEn();
+  if (titleEl) titleEl.textContent = en ? '✨ Character Conjured' : '✨ Karaktär frammanad';
+  if (footEl && res) {
+    const parts = [];
+    if (typeof res.time_s === 'number') parts.push('⏱ ' + res.time_s + 's');
+    const toks = (res.tokens && (res.tokens.total_tokens || res.tokens.completion_tokens)) || 0;
+    if (toks) parts.push('🧮 ' + toks.toLocaleString('sv-SE') + ' tokens');
+    if (res.reasoning_len) parts.push('💭 ' + res.reasoning_len.toLocaleString('sv-SE') + ' ch');
+    footEl.textContent = parts.join(' · ');
+    footEl.hidden = parts.length === 0;
+  }
+}
+
 async function summon() {
   if (summoning) return;
   const prompt = document.getElementById('prompt').value.trim();
@@ -1051,12 +1204,7 @@ async function summon() {
   const weaving = document.getElementById('weaving');
   weaving.classList.add('show');
   weaving.scrollIntoView({ behavior:'smooth', block:'center' });
-
-  // Tärningarna "rullar" medan Qwen väver
-  const dice = document.querySelectorAll('.die');
-  const iv = setInterval(() => {
-    dice.forEach(d => d.textContent = 1 + Math.floor(Math.random()*20));
-  }, 90);
+  _startRitual();
 
   try {
     // Se till att kampanj finns + uppdatera kampanjens språk till valt pill.
@@ -1074,14 +1222,16 @@ async function summon() {
       }
     }
 
-    // Generera karaktären via backend → vald modell
+    // Generera karaktären via backend → vald modell (SSE-streaming:
+    // reasoning-content visas LIVE i ritualfönstret medan modellen tänker)
     const charModel = document.getElementById('char-model').value;
-    const res = await API.generateCharacter(prompt, charModel);
+    const res = await API.generateCharacterStream(prompt, charModel, (ev) => {
+      if (ev.type === 'reasoning') _appendReasoning(ev.text);
+    });
     const c = res.character || {};
     lastGeneratedChar = c; // Spara för valvet
 
-    clearInterval(iv);
-    weaving.classList.remove('show');
+    _finishRitual(res); // behåll reasoning-fönstret + stats-footer (gömmer status/varning)
 
     // Normalisera backend-data → preview-format
     const abilities = c.abilities || {};
@@ -1112,7 +1262,7 @@ async function summon() {
     SFX.levelup();
     toast('🔮 The character is woven!');
   } catch (e) {
-    clearInterval(iv);
+    _stopRitual();
     weaving.classList.remove('show');
     SFX.error();
     toast('⚠ Could not weave the character: ' + (e.message || 'unknown error'));
@@ -1170,6 +1320,9 @@ function spawn(init){return{x:Math.random()*W,y:init?Math.random()*H:H+10,r:.7+M
 for(let i=0;i<40;i++)embers.push(spawn(true));
 function tick(){ctx.clearRect(0,0,W,H);for(let i=0;i<embers.length;i++){const e=embers[i];e.life++;e.y-=e.vy;e.x+=e.vx+Math.sin(e.life*.02)*.12;const fade=Math.min(1,e.life/60)*Math.max(0,1-e.life/e.max);const fl=.5+Math.sin(e.life*.15+i)*.35;ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fillStyle=`hsla(${e.hue},90%,60%,${.45*fade*fl})`;ctx.shadowColor=`hsla(${e.hue},90%,55%,${.7*fade})`;ctx.shadowBlur=7;ctx.fill();if(e.life>e.max||e.y<-12)embers[i]=spawn(false);}requestAnimationFrame(tick);}
 tick();
+
+// Init: koppla reasoning-fönstrets rensa-knapp
+_initReasoningClear();
 </script>
 </body>
 </html>

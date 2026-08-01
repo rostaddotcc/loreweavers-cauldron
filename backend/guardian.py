@@ -357,17 +357,27 @@ Extrahera ALLA mekaniska effekter och uppdateringar.
   Inkludera D&D-stats: damage (t.ex. "1d8 slashing"), damage_dice ("1d8"), damage_type ("slashing"),
   ac_bonus (heltal, t.ex. 14 för kedjerustning), range ("melee", "ranged 30/120"),
   properties (array: ["finesse","light"]), magic_bonus (0-3), charges, max_charges, description, effects.
+  Klassificera varje föremål: category ("weapon"|"armor"|"potion"|"magic"|"tool"|"trinket") och
+  usage ("wielded" — hålls i handen, "consumable" — förbrukas vid användning, "activated" — aktiveras med laddningar).
+  Drycker och aktiverbara föremål: ange roll (t.ex. "2d4+2" för läkedryck) — tärningen som rullas vid användning.
+  Ange ALLTID `weight` (flyttal, lbs) och `lore` (1-2 meningar stämningsfull världshistoria från kampanjens egen värld — var föremålet kommer ifrån, vem som ägde det. Aldrig referenser till andra verk. VARJE föremål MÅSTE ha lore.)
+  `equipped`: sätt true ENDAST på föremål spelaren aktivt BÄR/ANVÄNDER nu (vapen i hand, rustning på sig). När spelaren byter vapen eller tar av sig rustning → items_remove för det gamla ELLER items_add med equipped:true för det nya + korrigering att det gamla inte längre bärs. Spelaren utrustar INTE själv — DM avgör vad som bärs.
   Vapen ska ha damage/damage_dice/damage_type. Rustning ska ha ac_bonus. Magiska föremål ska ha charges/effects/magic_bonus.
-  Exempel vapen: {"name":"Långsvärd","type":"Vapen","qty":1,"damage":"1d8 slashing","damage_dice":"1d8","damage_type":"slashing","range":"melee","properties":["versatile"],"magic_bonus":0}
-  Exempel rustning: {"name":"Kedjerustning","type":"Rustning","qty":1,"ac_bonus":16,"description":"AC 16, stealth disadvantage"}
-  Exempel magiskt: {"name":"Eldtrollstav","type":"Magisk","qty":1,"damage":"2d6 fire","damage_dice":"2d6","damage_type":"fire","range":"ranged 120","magic_bonus":1,"charges":5,"max_charges":7,"effects":"Kan avfyra eldbollar"}
+  Exempel vapen: {"name":"Långsvärd","type":"Vapen","category":"weapon","usage":"wielded","qty":1,"weight":3.0,"lore":"Smitt av Gråsmeden i Frostklippan, ärvd i tre generationer av vaktkaptener.","damage":"1d8 slashing","damage_dice":"1d8","damage_type":"slashing","range":"melee","properties":["versatile"],"magic_bonus":0,"equipped":true}
+  Exempel rustning: {"name":"Kedjerustning","type":"Rustning","category":"armor","usage":"wielded","qty":1,"weight":25.0,"lore":"Smidd i Grådjupets tredje sal — den bär fortfarande märken efter den dvärg som bar den i hundra år.","ac_bonus":16,"description":"AC 16, stealth disadvantage","equipped":true}
+  Exempel dryck: {"name":"Läkedryck","type":"Dryck","category":"potion","usage":"consumable","qty":1,"weight":0.5,"lore":"Bryggd av en kringvandrande helare — smaken av sött gräs och bittert järn.","roll":"2d4+2","effects":"Heals 2d4+2 HP","equipped":false}
+  Exempel magiskt: {"name":"Eldtrollstav","type":"Magisk","qty":1,"weight":2.0,"lore":"Funnen i en utbränd trollkarlsgrav, fortfarande varm vid beröring.","damage":"2d6 fire","damage_dice":"2d6","damage_type":"fire","range":"ranged 120","magic_bonus":1,"charges":5,"max_charges":7,"effects":"Kan avfyra eldbollar","equipped":false}
 - items_remove: Föremål spelaren FÖRLORAR (tappar, ger bort, säljer, förbrukar).
 - currency: Valutaändringar. Ange denom (pp/gp/sp/cp) och amount (+ för in, - för ut).
 
 ### Uppdrag
-- quests_new: Nya uppdrag. Ange name, description, reward.
-- quests_completed: Uppdrag som slutförs.
-- quests_failed: Uppdrag som misslyckas.
+- quests_new: Nya uppdrag. Ange name, description, reward (kort text), \
+  xp_reward (heltal 100-500 beroende på svårighet), gold_reward (heltal, 0 om ingen guld-belöning). \
+  Skapa ENDAST ett nytt uppdrag om spelaren faktiskt åtar sig ett mål — inte för varje litet samtal.
+- quests_completed: Uppdrag som slutförs. Ange EXAKT namn ELLER quest-ID (se "Aktiva uppdrag" i tillståndet). \
+  Matcha mot befintliga namn/ID, hitta inte på nya stavningar. \
+  XP och guld betalas ut AUTOMATISKT från questens sparade reward — ange INTE samma XP igen i xp-fältet.
+- quests_failed: Uppdrag som misslyckas. Samma regel: EXAKT befintligt namn eller ID.
 
 ### NPCs (KRITISKT — uppdatera alltid vid förändringar)
 - npcs_new: Nya NPCs som introduceras. Ange name, role, relation (allierad/neutral/fiende/okänd).
@@ -386,15 +396,18 @@ Extrahera ALLA mekaniska effekter och uppdateringar.
   och text (beskrivning av vad som ändrades).
 
 ### Värld & Tid
-- locations_new: Nya platser som nämns eller upptäcks.
+- locations_new: Nya platser som nämns eller upptäcks. Ange objekt: {"name": "...", "description": "kort beskrivning av platsen", "lore": "1-2 meningar stämningsfull historia om platsen — varför den finns, vad som hänt där", "terrain": "skog|stad|berg|hav|grotta|öken|ruin|träsk|slätt|flod"}.
+  VARJE ny plats MÅSTE ha description och lore — aldrig bara namnet. Exempel: {"name":"Gråporten","description":"En mossbelupen stenport i den norra muren","lore":"Byggd av de förlorade kungarna för att hålla något ute — ingen minns vad.","terrain":"ruin"}.
 - time_passed: Tid som förflyter. Ange hours och description.
 - rest: Om spelaren vilar. Ange kind ("short" eller "long").
 - new_day: Om en ny dag börjar. Ange description.
 
-### Strid (combat-tracker)
-- combat_start: Om en strid BÖRJAR i denna narration och DM inte använde [STRID:]-taggen. Ange enemies: [{"name": "...", "hp": N, "ac": N}] — fiender med ungefärlig HP och AC som DM nämner.
+### Strid (chat-first combat)
+- combat_start: Om en strid BÖRJAR i denna narration. Ange enemies: [{"name": "...", "hp": N, "ac": N, "max_hp": N}].
 - combat_round: Om DM:n anger en ny runda ("Runda 2", "Next round"), sätt rundnumret (heltal).
-- initiative_entries: Fiendernas initiativslag när DM nämner dem (t.ex. "Goblin A: 14"). Ange [{"name": "...", "value": N}]. Spelarens initiativ hanteras separat.
+- player_attacks: Spelarens attacker som DM narrerar. Ange: [{"target": "fiendnamn", "hit": true/false, "damage": N, "damage_type": "slashing", "crit": false}]. Extrahera ENDAST om DM explicit beskriver att spelaren träffar/missar och anger skada.
+- enemy_attacks: Fiendernas attacker som DM narrerar. Ange: [{"attacker": "fiendnamn", "hit": true/false, "damage": N, "damage_type": "piercing", "roll": N}]. DM anger slag och skada i narrationen — extrahera dem.
+- combat_events: Övriga stridshändelser (flykt, status, förstärkningar). Ange: ["Goblin flyr", "Runda 2 börjar"].
 - combat_end: Om striden SLUTAR (alla fiender döda/flydde eller spelaren flydde). Ange {"reason": "..."}.
 
 ### Tärningsresurser (roll_grants)
@@ -473,10 +486,10 @@ Skriv i dåtid, tredje person. T.ex. "Faelyndra smög förbi vakten och tog sig 
   "healing": [],
   "death": [],
   "xp": 0,
-  "items_add": [{"name": "...", "type": "Vapen", "qty": 1, "damage": "1d8 slashing", "damage_dice": "1d8", "damage_type": "slashing", "ac_bonus": null, "range": "melee", "properties": ["versatile"], "magic_bonus": 0, "charges": null, "max_charges": null, "description": "", "effects": null}],
+  "items_add": [{"name": "...", "type": "Vapen", "category": "weapon", "usage": "wielded", "qty": 1, "weight": 3.0, "lore": "Stulen från en fallen riddare vid Gråportens mur.", "damage": "1d8 slashing", "damage_dice": "1d8", "damage_type": "slashing", "ac_bonus": null, "range": "melee", "properties": ["versatile"], "magic_bonus": 0, "charges": null, "max_charges": null, "description": "", "effects": null, "roll": null}],
   "items_remove": [],
   "currency": [{"denom": "gp", "amount": 15}],
-  "quests_new": [],
+  "quests_new": [{"name": "...", "description": "...", "reward": "...", "xp_reward": 100, "gold_reward": 0}],
   "quests_completed": [],
   "quests_failed": [],
   "npcs_new": [{"name": "...", "role": "...", "relation": "neutral"}],
@@ -494,6 +507,9 @@ Skriv i dåtid, tredje person. T.ex. "Faelyndra smög förbi vakten och tog sig 
   "combat_round": null,
   "initiative_entries": [],
   "combat_end": null,
+  "player_attacks": [],
+  "enemy_attacks": [],
+  "combat_events": [],
   "roll_grants": [],
   "corrections": []
 }
@@ -534,6 +550,17 @@ def _format_state_for_guardian(state: dict, language: str = "sv") -> str:
         inv_str = ", ".join(f"{it['name']}(×{it.get('qty',1)})" for it in inv[:15])
         parts.append(f"Inventory: {inv_str}")
 
+    # Bärvikt (D&D 5e: max = STR × 15)
+    total_w = sum(float(it.get("weight", 0) or 0) * int(it.get("qty", 1) or 1) for it in inv)
+    coin_wt = sum(cur.get(d, 0) for d in ("pp", "gp", "sp", "cp")) / 50  # 50 mynt = 1 lb
+    max_w = float(ch.get("max_weight_lbs", 0) or 0)
+    grand_total = total_w + coin_wt
+    if max_w > 0:
+        pct = round(grand_total / max_w * 100)
+        parts.append(f"Bärvikt: {grand_total:.1f} / {max_w:.0f} lb ({pct}%)")
+    else:
+        parts.append(f"Bärvikt: {grand_total:.1f} lb")
+
     # Currency
     if any(cur.get(d, 0) for d in ("pp", "gp", "sp", "cp")):
         cur_label = "Currency" if language == "en" else "Valuta"
@@ -549,13 +576,26 @@ def _format_state_for_guardian(state: dict, language: str = "sv") -> str:
         )
         parts.append(f"NPCs: {npc_str}")
 
-    # Quests
+    # Quests (aktiva + avslutade, så Guardian kan matcha exakta namn/ID)
     active_statuses = ("aktiv", "active")
     active = [q for q in quests if q.get("status") in active_statuses]
     if active:
-        q_str = "; ".join(q["name"] for q in active[:5])
+        q_lines = []
+        for q in active[:6]:
+            qid = q.get("id", "")[:8] if q.get("id") else ""
+            line = f"{q['name']}"
+            if qid:
+                line += f" [ID:{qid}]"
+            q_lines.append(line)
+        q_str = "; ".join(q_lines)
         q_label = "Active quests" if language == "en" else "Aktiva uppdrag"
         parts.append(f"{q_label}: {q_str}")
+    done_statuses = ("slutförd", "completed", "misslyckad", "failed")
+    done = [q for q in quests if q.get("status") in done_statuses]
+    if done:
+        d_str = "; ".join(q["name"] for q in done[:4])
+        d_label = "Concluded quests (do not re-add)" if language == "en" else "Avslutade uppdrag (lägg ej till igen)"
+        parts.append(f"{d_label}: {d_str}")
 
     # World
     if world.get("current_location"):
@@ -565,13 +605,23 @@ def _format_state_for_guardian(state: dict, language: str = "sv") -> str:
         day_label = "Day" if language == "en" else "Dag"
         parts.append(f"{day_label}: {world['day']}")
 
-    # Combat (stridspågår) — fiender med HP/AC så Guardian kan extrahera rätt skada
+    # Combat (stridspågår) — ALLA deltagare inkl. spelaren med HP/AC så
+    # Guardian kan extrahera rätt skada OCH justera allas HP nästa tur.
     combat = world.get("combat")
     if combat and combat.get("active"):
         if language == "en":
             parts.append(f"⚔ COMBAT: Round {combat.get('round', 1)}")
         else:
             parts.append(f"⚔ STRID: Runda {combat.get('round', 1)}")
+        # Spelaren FÖRST — Guardian måste se sin egen HP/AC/status
+        ch = state.get("character", {})
+        hp = ch.get("hp", {})
+        p_status = ch.get("statuses", [])
+        p_status_str = f" [{', '.join(s.get('name', str(s)) for s in p_status)}]" if p_status else ""
+        if language == "en":
+            parts.append(f"  - PLAYER {ch.get('name', '?')} (HP {hp.get('current', '?')}/{hp.get('max', '?')}, AC {ch.get('ac', '?')}){p_status_str}")
+        else:
+            parts.append(f"  - SPELAREN {ch.get('name', '?')} (HP {hp.get('current', '?')}/{hp.get('max', '?')}, AC {ch.get('ac', '?')}){p_status_str}")
         for e in combat.get("enemies", []):
             if e.get("alive", True):
                 status = ", ".join(e.get("statuses", [])) if e.get("statuses") else ""
@@ -580,6 +630,27 @@ def _format_state_for_guardian(state: dict, language: str = "sv") -> str:
         if initiative:
             order = ", ".join(f"{i.get('name', '?')} ({i.get('value', '?')})" for i in initiative)
             parts.append(f"Initiative: {order}")
+        # Spelarens action economy (förbrukade vs tillgängliga)
+        pa = combat.get("player_actions")
+        if pa:
+            avail = [k for k, v in pa.items() if v is not False]
+            spent = [k for k, v in pa.items() if v is False]
+            if avail:
+                parts.append(f"Player actions available: {', '.join(avail)}")
+            if spent:
+                parts.append(f"Player actions spent: {', '.join(spent)}")
+        # Senaste stridslogg (max 8 poster) — så Guardian ser vad som hänt
+        clog = combat.get("log", [])
+        if clog:
+            recent_log = clog[-8:]
+            log_label = "Combat log" if language == "en" else "Stridslogg"
+            parts.append(f"{log_label}:")
+            for entry in recent_log:
+                actor = entry.get("actor", "system")
+                name = entry.get("name", "") or ""
+                text = entry.get("text", "")
+                prefix = f"{name} " if name else ""
+                parts.append(f"  · [{actor}] {prefix}{text}")
 
     return "\n".join(parts)
 
@@ -657,6 +728,7 @@ async def guardian_extract_mechanics(
         "new_day": None, "day_summary": None, "logbook": "",
         "combat_start": None, "combat_round": None,
         "initiative_entries": [], "combat_end": None,
+        "player_attacks": [], "enemy_attacks": [], "combat_events": [],
         "enemy_actions": [], "status_apply": [],
     }
 
@@ -664,7 +736,7 @@ async def guardian_extract_mechanics(
         try:
             raw = await model_call_fn(messages)
         except Exception as e:
-            logger.warning("Guardian post-DM LLM misslyckades (försök %d): %s", attempt + 1, e)
+            logger.warning("Guardian post-DM LLM failed (attempt %d): %s", attempt + 1, e)
             if attempt == 0:
                 continue
             return empty
@@ -733,6 +805,162 @@ def _combat_tag(combat: dict) -> str:
         return ""
 
 
+def _unequip_same_type(inv: list, item_type: str, keep_name: str) -> None:
+    """När ett nytt föremål utrustas, ta bort equipped från andra av samma typ.
+
+    D&D-regel: ett vapen i hand, en rustning på sig. Bara det nya namnet
+    behåller equipped:true. (DM/Guardian styr equip — spelaren utrustar
+    inte själv via UI längre.)
+    """
+    for it in inv:
+        if it.get("type") == item_type and it.get("name", "").lower() != keep_name.lower():
+            it["equipped"] = False
+
+
+# ══════════════════════════════════════════════════════════════════
+# ITEM_SCHEMA — enda källan för inventory-föremål (Aug 2026)
+# Varje väg som skapar/ändrar items (char-gen, Guardian items_add,
+# PATCH inventory) kör _normalize_item() så alla fält alltid har samma
+# form. Nya fält läggs till HÄR en gång — inte per anropsställe.
+# ══════════════════════════════════════════════════════════════════
+ITEM_CATEGORIES = {
+    # type-sträng → category (normaliseras av _normalize_item)
+    "vapen": "weapon",
+    "rustning": "armor",
+    "dryck": "potion",
+    "magisk": "magic",
+    "verktyg": "tool",
+    "annat": "trinket",
+    "weapon": "weapon",
+    "armor": "armor",
+    "potion": "potion",
+    "magic": "magic",
+    "tool": "tool",
+    "trinket": "trinket",
+    "other": "trinket",
+}
+
+# Lore-fallback per kategori — används BARA om LLM:n glömde lore.
+# Kort, stämningsfull, kampanjneutral: inga hårdkodade platser/namn.
+ITEM_LORE_FALLBACK = {
+    "weapon": "Smidd för en hand som aldrig vek sig — eggen bär minnen av strid och överlevnad.",
+    "armor": "Bärs av den som vägrar falla — bucklor vittnar om slag som kunde ha slutat annorlunda.",
+    "potion": "Bryggd i hemlighet, förvarad i mörker — en klunk förändrar allt.",
+    "magic": "Laddad med kraft ingen längre förstår — den väntar på rätt händer.",
+    "tool": "Använd av en som förstod att överlevnad är hantverk — slitet, men pålitligt.",
+    "trinket": "En liten sak från en svunnen tid — värdelös för de flesta, ovärderlig för dig.",
+}
+
+# Standardroll per kategori för drycker/aktiverbara (om LLM inte angav roll)
+ITEM_ROLL_FALLBACK = {
+    "potion": "2d4+2",
+    "magic": None,
+}
+
+
+def _category_from_type(item_type: str) -> str:
+    """Härled category ur type-strängen (case-insensitive, fuzzy)."""
+    if not item_type:
+        return "trinket"
+    t = str(item_type).strip().lower()
+    if t in ITEM_CATEGORIES:
+        return ITEM_CATEGORIES[t]
+    # Fuzzy: "vapen", "Långsvärd"→weapon, "rustning"→armor, "dryck"→potion
+    for key, cat in (("vapen", "weapon"), ("rustning", "armor"), ("dryck", "potion"),
+                     ("magisk", "magic"), ("verktyg", "tool"), ("weapon", "weapon"),
+                     ("armor", "armor"), ("potion", "potion"), ("tool", "tool")):
+        if key in t:
+            return cat
+    return "trinket"
+
+
+def _usage_from_item(item_type: str, category: str, equipped: bool, charges) -> str:
+    """Härled usage: wielded (hålls i hand), consumable (förbrukas), activated."""
+    if charges is not None:
+        return "activated"
+    if equipped:
+        return "wielded"
+    if category in ("potion",):
+        return "consumable"
+    if category in ("weapon", "armor"):
+        return "wielded"
+    return "activated" if category == "magic" else "trinket"
+
+
+def _normalize_item(raw: dict, lang: str = "sv") -> dict:
+    """Normalisera ett item till ITEM_SCHEMA — samma form oavsett källa.
+
+    Alla skapelsevägar (char-gen, Guardian items_add, PATCH inventory)
+    kör denna. Säkerställer: alla fält finns med rätt typ, lore har
+    fallback om LLM:n glömde den, category/usage/roll härleds.
+    """
+    if not isinstance(raw, dict):
+        raw = {}
+    name = str(raw.get("name", "") or "").strip()
+    item_type = str(raw.get("type", "") or "").strip() or ("Other" if lang == "en" else "Annat")
+    category = str(raw.get("category", "") or "").strip().lower()
+    if category not in ("weapon", "armor", "potion", "magic", "tool", "trinket"):
+        category = _category_from_type(item_type)
+
+    equipped = bool(raw.get("equipped", False))
+    charges = raw.get("charges")
+    usage = str(raw.get("usage", "") or "").strip().lower()
+    if usage not in ("wielded", "consumable", "activated", "trinket"):
+        usage = _usage_from_item(item_type, category, equipped, charges)
+
+    qty = 1
+    try:
+        qty = max(1, int(raw.get("qty", 1) or 1))
+    except (TypeError, ValueError):
+        qty = 1
+    weight = 1.0
+    try:
+        weight = float(raw.get("weight", 1) or 1)
+    except (TypeError, ValueError):
+        weight = 1.0
+
+    rarity = str(raw.get("rarity", "normal") or "normal").strip() or "normal"
+    if rarity not in ("normal", "magic", "rare", "legendary"):
+        rarity = "normal"
+
+    lore = raw.get("lore", None)
+    if lore is None or not str(lore).strip():
+        lore = ITEM_LORE_FALLBACK.get(category, ITEM_LORE_FALLBACK["trinket"])
+    else:
+        lore = str(lore).strip()
+
+    props = raw.get("properties", []) if isinstance(raw.get("properties", []), list) else []
+    props = [str(p) for p in props]
+
+    item = {
+        "name": name,
+        "type": item_type,
+        "category": category,
+        "usage": usage,
+        "qty": qty,
+        "weight": weight,
+        "lore": lore,
+        "equipped": equipped,
+        "rarity": rarity,
+        "description": str(raw.get("description", "") or ""),
+        "damage": raw.get("damage", None),
+        "damage_dice": raw.get("damage_dice", None),
+        "damage_type": raw.get("damage_type", None),
+        "ac_bonus": raw.get("ac_bonus", None),
+        "range": raw.get("range", None),
+        "properties": props,
+        "magic_bonus": _safe_int(raw.get("magic_bonus"), 0),
+        "charges": charges,
+        "max_charges": raw.get("max_charges", None),
+        "effects": raw.get("effects", None),
+        "roll": raw.get("roll", ITEM_ROLL_FALLBACK.get(category)),
+    }
+    # Behåll befintligt id om det finns (Guardian genererar annars)
+    if raw.get("id"):
+        item["id"] = str(raw["id"])
+    return item
+
+
 def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -> list[dict]:
     """
     Applicera Guardian-extraherade mekaniska ändringar på state.
@@ -774,7 +1002,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 amount -= absorbed
             hp["current"] = max(0, hp.get("current", 1) - amount)
             effects.append({"type": "skada", "value": dmg.get("amount", 0)})
-            logger.info("🛡️ Guardian: %d skada → HP %d/%d", dmg.get("amount", 0), hp["current"], hp["max"])
+            logger.info("🛡️ Guardian: %d damage → HP %d/%d", dmg.get("amount", 0), hp["current"], hp["max"])
         else:
             # Fiende-skada — minska fiende-HP om fienden är i pågående strid
             combat = state.get("world", {}).get("combat")
@@ -794,11 +1022,11 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                     "text": f"träffar {enemy['name']} — {amount} skada ({dmg.get('type', 'okänd')})",
                 })
                 effects.append({"type": "combat_dmg", "value": enemy["name"], "amount": amount})
-                logger.info("⚔️ Guardian: %s tar %d skada → %d/%d", enemy["name"], amount, enemy["hp"], enemy.get("max_hp", 0))
+                logger.info("⚔️ Guardian: %s takes %d damage → %d/%d", enemy["name"], amount, enemy["hp"], enemy.get("max_hp", 0))
                 if enemy["hp"] <= 0:
                     enemy["alive"] = False
                     effects.append({"type": "enemy_död", "value": enemy["name"]})
-                    logger.info("💀 %s har fallit i strid", enemy["name"])
+                    logger.info("💀 %s has fallen in battle", enemy["name"])
             else:
                 _add_npc_note(state, target, f"Tog {amount} skada ({dmg.get('type', 'okänd')})")
 
@@ -815,7 +1043,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             hp = ch.setdefault("hp", {"current": 1, "max": 1, "temp": 0})
             hp["current"] = min(hp.get("max", 1), hp.get("current", 0) + amount)
             effects.append({"type": "hela", "value": amount})
-            logger.info("🛡️ Guardian: %d läkning → HP %d/%d", amount, hp["current"], hp["max"])
+            logger.info("🛡️ Guardian: %d healing → HP %d/%d", amount, hp["current"], hp["max"])
 
     # ── Död ──
     for name in mech.get("death", []):
@@ -845,7 +1073,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 "text": "Alla fiender besegrade — striden är över",
             })
             effects.append({"type": "combat_end", "value": "alla besegrade"})
-            logger.info("🏁 Striden är över — alla fiender besegrade")
+            logger.info("🏁 Combat over — all enemies defeated")
 
     # ── XP ──
     xp_gain = max(0, int(mech.get("xp", 0)))
@@ -871,45 +1099,60 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 hp["max"] = hp.get("max", 1) + hp_gain
                 hp["current"] = hp["max"]  # Full HP vid level-up
                 effects.append({"type": "level_up", "value": ch["level"]})
-                logger.info("🛡️ Guardian: LEVEL UP → nivå %d! HP max %d (HD %d)", ch["level"], hp["max"], _hd)
+                logger.info("🛡️ Guardian: LEVEL UP → level %d! HP max %d (HD %d)", ch["level"], hp["max"], _hd)
 
     # ── Föremål ──
     inv = state.setdefault("inventory", [])
+    # Bärvikt före denna tur (för viktkontroll — max_weight_lbs = STR × 15)
+    current_weight = sum(float(it.get("weight", 0) or 0) * int(it.get("qty", 1) or 1) for it in inv)
+    max_weight = float(ch.get("max_weight_lbs", 0) or 0)
     for item in mech.get("items_add", []):
-        name = item.get("name", "").strip()
+        if not isinstance(item, dict):
+            continue
+        # ITEM_SCHEMA-normalisering (guardian.py _normalize_item) — samma
+        # form som char-gen och PATCH inventory: category/usage/roll
+        # härleds, lore får fallback om Guardian glömde den.
+        norm = _normalize_item(item)
+        name = norm["name"]
         if not name:
             continue
         # P0-dedup: [FÖREMÅL:]-taggen lade redan till samma föremål
         if ("föremål", name) in _skip_keys:
             continue
-        qty = max(1, int(item.get("qty", 1)))
+        qty = norm["qty"]
+        item_weight = norm["weight"]
+        added_weight = item_weight * qty
+        # Viktkontroll: vägra om totalen skulle överskrida bärförmågan
+        if max_weight > 0 and current_weight + added_weight > max_weight:
+            logger.warning("🛡️ Guardian WEIGHT: '%s' (%.1f lb) refused — %.1f/%.1f lb", name, added_weight, current_weight, max_weight)
+            effects.append({"type": "övervikt", "value": name, "weight": added_weight, "current": current_weight, "max": max_weight})
+            continue
         existing = next((it for it in inv if it["name"].lower() == name.lower()), None)
         if existing:
             existing["qty"] = existing.get("qty", 1) + qty
+            if item_weight > 0:
+                existing["weight"] = item_weight  # uppdatera vikt om Guardian anger ny
+            if norm.get("lore"):
+                existing["lore"] = norm["lore"]
+            # Uppdatera stat-fält om Guardian angav dem (första gången de dyker upp)
+            for stat_key in ("category", "usage", "rarity", "damage", "damage_dice", "damage_type",
+                             "ac_bonus", "range", "properties", "magic_bonus", "charges",
+                             "max_charges", "effects", "roll", "description"):
+                if norm.get(stat_key) is not None and norm.get(stat_key) != "":
+                    existing[stat_key] = norm[stat_key]
+            # Equip-status: Guardian/DM styr (spelaren utrustar inte själv)
+            if norm.get("equipped"):
+                _unequip_same_type(inv, norm["type"], name)
+                existing["equipped"] = True
             logger.info("🛡️ Guardian dedup: '%s' → qty=%d", name, existing["qty"])
         else:
-            inv.append({
-                "id": f"guardian-{len(inv)}",
-                "name": name,
-                "type": item.get("type", "Annat"),
-                "qty": qty,
-                "weight": 0,
-                "equipped": False,
-                "rarity": item.get("rarity", "normal"),
-                "description": item.get("description", ""),
-                "damage": item.get("damage", None),
-                "damage_dice": item.get("damage_dice", None),
-                "damage_type": item.get("damage_type", None),
-                # Härdad casting: explicit null får ALDRIG krascha kedjan
-                "ac_bonus": item.get("ac_bonus", None),
-                "range": item.get("range", None),
-                "properties": item.get("properties", []) if isinstance(item.get("properties", []), list) else [],
-                "magic_bonus": _safe_int(item.get("magic_bonus"), 0),
-                "charges": item.get("charges", None),
-                "max_charges": item.get("max_charges", None),
-                "effects": item.get("effects", None),
-            })
-            logger.info("🛡️ Guardian: lade till '%s'", name)
+            new_item = dict(norm)
+            new_item.setdefault("id", f"guardian-{len(inv)}")
+            inv.append(new_item)
+            if norm.get("equipped"):
+                _unequip_same_type(inv, norm["type"], name)
+            logger.info("🛡️ Guardian: added '%s'", name)
+        current_weight += added_weight
         effects.append({"type": "föremål", "value": name, "qty": qty})
 
     for item in mech.get("items_remove", []):
@@ -925,9 +1168,9 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             existing["qty"] = existing.get("qty", 1) - qty
             if existing["qty"] <= 0:
                 inv.remove(existing)
-                logger.info("🛡️ Guardian: tog bort '%s'", name)
+                logger.info("🛡️ Guardian: removed '%s'", name)
             else:
-                logger.info("🛡️ Guardian: minskade '%s' → qty=%d", name, existing["qty"])
+                logger.info("🛡️ Guardian: reduced '%s' → qty=%d", name, existing["qty"])
             effects.append({"type": "föremål_bort", "value": name, "qty": qty})
 
     # ── Valuta ──
@@ -945,35 +1188,122 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
 
     # ── Quests ──
     quests = state.setdefault("quests", [])
+
+    def _norm_quest_name(s: str) -> str:
+        """Normalisera quest-namn för robust matchning: lowercase, trim,
+        kollapsade mellanslag, borttagna accenttecken."""
+        import unicodedata
+        s = unicodedata.normalize("NFKD", str(s))
+        s = "".join(c for c in s if not unicodedata.combining(c))
+        return " ".join(s.lower().split())
+
+    def _find_quest(name_or_id: str, require_active: bool = True):
+        """Hitta quest med ID-match (prioritet) eller normaliserad namnmatchning."""
+        import uuid
+        target = str(name_or_id).strip()
+        active_set = ("aktiv", "active")
+        
+        # 1. Exakt ID-match (om det ser ut som UUID)
+        if len(target) == 36 and target.count("-") == 4:
+            for q in quests:
+                if q.get("id") == target:
+                    if not require_active or q.get("status") in active_set:
+                        return q
+        
+        # 2. Normaliserad namnmatch
+        norm_target = _norm_quest_name(target)
+        for q in quests:
+            if _norm_quest_name(q.get("name", "")) == norm_target:
+                if not require_active or q.get("status") in active_set:
+                    return q
+        
+        # 3. Substring-fallback (LLM kan parafrasera)
+        for q in quests:
+            qn = _norm_quest_name(q.get("name", ""))
+            if norm_target and (norm_target in qn or qn in norm_target):
+                if not require_active or q.get("status") in active_set:
+                    return q
+        return None
+
     for q in mech.get("quests_new", []):
-        name = q.get("name", "").strip()
+        # Validera att entry är en dict (LLM kan skicka sträng → krasch annars)
+        if not isinstance(q, dict):
+            logger.warning("🛡️ Guardian: invalid quests_new entry (not dict): %r", q)
+            continue
+        name = str(q.get("name", "")).strip()
         if not name:
             continue
-        if not any(qq.get("name", "").lower() == name.lower() for qq in quests):
+        if not _find_quest(name, require_active=False):
+            import uuid
+            quest_id = str(uuid.uuid4())
             quests.append({
+                "id": quest_id,
                 "name": name,
-                "description": q.get("description", ""),
-                "reward": q.get("reward", ""),
+                "description": str(q.get("description", "")),
+                "reward": str(q.get("reward", "")),
+                "xp_reward": int(q.get("xp_reward", 100)),  # Default 100 XP
+                "gold_reward": int(q.get("gold_reward", 0)),
                 "status": "aktiv",
+                "created_turn": state.get("meta", {}).get("turn_count", 0),
             })
             effects.append({"type": "quest", "value": name})
-            logger.info("🛡️ Guardian: nytt uppdrag '%s'", name)
+            logger.info("🛡️ Guardian: nytt uppdrag '%s' (ID: %s)", name, quest_id[:8])
 
     for name in mech.get("quests_completed", []):
-        for q in quests:
-            if q.get("name", "").lower() == name.lower() and q.get("status") == "aktiv":
-                q["status"] = "slutförd"
-                effects.append({"type": "quest_slutförd", "value": name})
-                logger.info("🛡️ Guardian: uppdrag slutfört '%s'", name)
-                break
+        if not isinstance(name, str) or not name.strip():
+            continue
+        q = _find_quest(name, require_active=True)
+        if q:
+            q["status"] = "slutförd"
+            q["completed_turn"] = state.get("meta", {}).get("turn_count", 0)
+            effects.append({"type": "quest_slutförd", "value": q["name"]})
+            logger.info("🛡️ Guardian: quest completed '%s'", q["name"])
+
+            # ── Automatisk reward-utbetalning ──
+            # XP-reward: hoppa över om LLM redan skickade samma XP via xp-fältet
+            # (xp-sektionen ovan har redan applicerat det) eller om DM-tagg dedup
+            xp_r = int(q.get("xp_reward", 0) or 0)
+            llm_xp = int(mech.get("xp", 0) or 0)
+            if xp_r > 0 and ("xp", str(xp_r)) not in _skip_keys and llm_xp != xp_r:
+                xp = ch.setdefault("xp", {"current": 0, "next_level": 900})
+                xp["current"] = xp.get("current", 0) + xp_r
+                effects.append({"type": "xp", "value": xp_r, "source": "quest"})
+                logger.info("🛡️ Guardian: +%d XP (quest-reward '%s') → %d", xp_r, q["name"], xp["current"])
+                # Level-up check (samma logik som xp-sektionen)
+                level = ch.get("level", 1)
+                if level < len(_XP_THRESHOLDS) and xp["current"] >= _XP_THRESHOLDS[level]:
+                    ch["level"] = level + 1
+                    xp["next_level"] = _XP_THRESHOLDS[level + 1] if level + 1 < len(_XP_THRESHOLDS) else None
+                    hp = ch.setdefault("hp", {"current": 1, "max": 1, "temp": 0})
+                    con_mod = ch.get("abilities", {}).get("CON", {}).get("mod", 0)
+                    _cls = str(ch.get("class", "")).lower()
+                    _hd = _HD_BY_CLASS.get(_cls, 8)
+                    hp_gain = max(1, _hd // 2 + con_mod)
+                    hp["max"] = hp.get("max", 1) + hp_gain
+                    hp["current"] = hp["max"]
+                    effects.append({"type": "level_up", "value": ch["level"]})
+                    logger.info("🛡️ Guardian: LEVEL UP (quest) → level %d!", ch["level"])
+
+            # Guld-reward
+            gold_r = int(q.get("gold_reward", 0) or 0)
+            if gold_r > 0:
+                cur = state.setdefault("currency", {"pp": 0, "gp": 0, "sp": 0, "cp": 0})
+                cur["gp"] = cur.get("gp", 0) + gold_r
+                effects.append({"type": "guld", "value": gold_r, "denom": "gp", "source": "quest"})
+                logger.info("🛡️ Guardian: +%d gp (quest-reward '%s')", gold_r, q["name"])
+        else:
+            logger.warning("🛡️ Guardian: quests_completed matchade inget aktivt uppdrag: '%s'", name)
 
     for name in mech.get("quests_failed", []):
-        for q in quests:
-            if q.get("name", "").lower() == name.lower() and q.get("status") == "aktiv":
-                q["status"] = "misslyckad"
-                effects.append({"type": "quest_misslyckad", "value": name})
-                logger.info("🛡️ Guardian: uppdrag misslyckat '%s'", name)
-                break
+        if not isinstance(name, str) or not name.strip():
+            continue
+        q = _find_quest(name, require_active=True)
+        if q:
+            q["status"] = "misslyckad"
+            effects.append({"type": "quest_misslyckad", "value": q["name"]})
+            logger.info("🛡️ Guardian: uppdrag misslyckat '%s'", q["name"])
+        else:
+            logger.warning("🛡️ Guardian: quests_failed matchade inget aktivt uppdrag: '%s'", name)
 
     # ── NPCs ──
     npcs = state.setdefault("npcs", [])
@@ -1034,7 +1364,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 if reveal_text:
                     _add_npc_note(state, new_name, f"Identitet avslöjad: {reveal_text}")
                 effects.append({"type": "npc_reveal", "value": new_name, "old_name": old_name, "reveal_text": reveal_text})
-                logger.info("🛡️ Guardian: NPC-namn avslöjat '%s' → '%s'", old_name, new_name)
+                logger.info("🛡️ Guardian: NPC name revealed '%s' → '%s'", old_name, new_name)
                 break
         else:
             # NPC hittades inte — skapa ny med avslöjat namn
@@ -1051,7 +1381,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 "alive": True,
             })
             effects.append({"type": "npc_reveal", "value": new_name, "old_name": old_name, "reveal_text": reveal_text})
-            logger.info("🛡️ Guardian: ny NPC via avslöjande '%s'", new_name)
+            logger.info("🛡️ Guardian: new NPC via reveal '%s'", new_name)
 
     # ── Karaktärsuppdateringar ──
     ch = state.setdefault("character", {})
@@ -1064,22 +1394,43 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
         updates = ch.setdefault("updates", [])
         updates.append({"field": field, "text": text, "turn": state.get("meta", {}).get("turn_count", 0)})
         effects.append({"type": "character_update", "value": field, "text": text})
-        logger.info("🛡️ Guardian: karaktärsuppdatering '%s': %s", field, text[:60])
+        logger.info("🛡️ Guardian: character update '%s': %s", field, text[:60])
 
     # ── Platser ──
     world = state.setdefault("world", {})
+    locations = state.setdefault("locations", [])  # fulla plats-objekt (platser.html + DM)
     for loc in mech.get("locations_new", []):
-        name = loc.strip() if isinstance(loc, str) else ""
+        if isinstance(loc, str):
+            loc = {"name": loc}
+        if not isinstance(loc, dict):
+            continue
+        name = str(loc.get("name", "") or "").strip()
         if not name:
             continue
         visited = world.setdefault("visited_locations", [])
-        if not any(
+        exists = any(
             (v.get("name", "") if isinstance(v, dict) else str(v)).lower() == name.lower()
             for v in visited
-        ):
-            visited.append({"name": name, "turn": state.get("meta", {}).get("turn_count", 0)})
+        )
+        if not exists:
+            loc_obj = {
+                "name": name,
+                "description": str(loc.get("description", "") or ""),
+                "lore": str(loc.get("lore", "") or ""),
+                "terrain": str(loc.get("terrain", "okänd") or "okänd"),
+                "turn": state.get("meta", {}).get("turn_count", 0),
+                "visited": True,
+            }
+            visited.append(loc_obj)
+            # Synka till state["locations"] (kartan + DM-prompten läser härifrån)
+            loc_exists = any(
+                (l.get("name", "") if isinstance(l, dict) else str(l)).lower() == name.lower()
+                for l in locations
+            )
+            if not loc_exists:
+                locations.append(loc_obj)
             effects.append({"type": "plats", "value": name})
-            logger.info("🛡️ Guardian: ny plats '%s'", name)
+            logger.info("🛡️ Guardian: ny plats '%s' (%s)", name, loc_obj["terrain"])
 
     # ── Tid ──
     tp = mech.get("time_passed")
@@ -1089,7 +1440,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
         if hours > 0:
             world["time"] = desc or world.get("time", "")
             effects.append({"type": "tid", "value": desc or f"{hours}h"})
-            logger.info("🛡️ Guardian: %dh förflyter — %s", hours, desc)
+            logger.info("🛡️ Guardian: %dh passes — %s", hours, desc)
 
     # ── Vila (5e: Hit Dice) ──
     rest = mech.get("rest")
@@ -1104,7 +1455,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             ss["current"] = ss.get("max", 0)
             hd["remaining"] = hd.get("total", 1)
             effects.append({"type": "hela", "value": hp.get("current", 0)})
-            logger.info("🛡️ Guardian: LÅNG VILA → full HP + spell slots + hit dice återställda")
+            logger.info("🛡️ Guardian: LONG REST → full HP + spell slots + hit dice restored")
         else:
             # Kort vila (5e): spendera 1 Hit Die → 1dX + CON-mod
             if hd.get("remaining", 0) > 0:
@@ -1119,14 +1470,14 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                     "type": "vila", "value": hp.get("current", 0),
                     "detail": f"+{heal} HP ({die}{con_mod:+d}) · {hd['remaining']}/{hd.get('total', 1)} kvar",
                 })
-                logger.info("🛡️ Guardian: KORT VILA → +%d HP (%s%+d), %d/%d tärningar kvar",
+                logger.info("🛡️ Guardian: SHORT REST → +%d HP (%s%+d), %d/%d dice left",
                             heal, die, con_mod, hd["remaining"], hd.get("total", 1))
             else:
                 effects.append({
                     "type": "vila", "value": hp.get("current", 0),
                     "detail": "inga tärningstärningar kvar — ingen läkning",
                 })
-                logger.info("🛡️ Guardian: KORT VILA utan hit dice → ingen läkning")
+                logger.info("🛡️ Guardian: SHORT REST without hit dice → no healing")
 
     # ── Ny dag ──
     nd = mech.get("new_day")
@@ -1216,6 +1567,92 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
         effects.append({"type": "combat_end", "value": reason})
         logger.info("🏁 Guardian combat_end: %s", reason)
 
+    # ── Chat-first combat: player_attacks, enemy_attacks, combat_events ──
+    combat = state.get("world", {}).get("combat")
+    if combat and combat.get("active"):
+        combat_log = combat.setdefault("log", [])
+        current_round = combat.get("round", 1)
+
+        # Spelarens attacker → minska fiende-HP
+        for atk in mech.get("player_attacks", []):
+            target_name = str(atk.get("target", "")).strip()
+            if not target_name:
+                continue
+            enemy = next((e for e in combat.get("enemies", []) if e.get("name", "").lower() == target_name.lower() and e.get("alive", True)), None)
+            if not enemy:
+                continue
+            if atk.get("hit"):
+                dmg = max(0, int(atk.get("damage", 0)))
+                if dmg > 0:
+                    enemy["hp"] = max(0, enemy.get("hp", 0) - dmg)
+                    crit_str = " 💥 KRITISK!" if atk.get("crit") else ""
+                    combat_log.append({"round": current_round, "actor": "player", "name": ch.get("name", "Spelaren"), "text": f"träffar {enemy['name']} — {dmg} skada ({atk.get('damage_type', 'okänd')}){crit_str}"})
+                    effects.append({"type": "combat_dmg", "value": enemy["name"], "amount": dmg})
+                    logger.info("⚔️ Player attack: %s → %s, %d skada → HP %d/%d", ch.get("name"), enemy["name"], dmg, enemy["hp"], enemy.get("max_hp", 0))
+                    if enemy["hp"] <= 0:
+                        enemy["alive"] = False
+                        combat_log.append({"round": current_round, "actor": "system", "name": "", "text": f"{enemy['name']} faller!"})
+                        effects.append({"type": "enemy_död", "value": enemy["name"]})
+                        logger.info("💀 %s har fallit", enemy["name"])
+            else:
+                combat_log.append({"round": current_round, "actor": "player", "name": ch.get("name", "Spelaren"), "text": f"missar {enemy['name']}"})
+
+        # Fiendernas attacker → minska spelar-HP
+        hp = ch.setdefault("hp", {"current": 1, "max": 1, "temp": 0})
+        for atk in mech.get("enemy_attacks", []):
+            attacker_name = str(atk.get("attacker", "")).strip()
+            if not attacker_name:
+                continue
+            if atk.get("hit"):
+                dmg = max(0, int(atk.get("damage", 0)))
+                if dmg > 0:
+                    # P0-dedup: [SKADA:]-taggen applicerade redan samma skada
+                    if ("skada", str(dmg)) in _skip_keys:
+                        continue
+                    # Temp HP absorberar först
+                    temp = hp.get("temp", 0)
+                    if temp > 0:
+                        absorbed = min(temp, dmg)
+                        hp["temp"] = temp - absorbed
+                        dmg -= absorbed
+                    hp["current"] = max(0, hp.get("current", 1) - dmg)
+                    roll_str = f" (slag {atk.get('roll', '?')})" if atk.get("roll") else ""
+                    combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"träffar dig — {dmg} skada ({atk.get('damage_type', 'okänd')}){roll_str}"})
+                    effects.append({"type": "skada", "value": dmg})
+                    logger.info("⚔️ Enemy attack: %s → spelaren, %d skada → HP %d/%d", attacker_name, dmg, hp["current"], hp["max"])
+            else:
+                roll_str = f" (slag {atk.get('roll', '?')})" if atk.get("roll") else ""
+                combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"missar dig{roll_str}"})
+
+        # Combat events → logga
+        for event in mech.get("combat_events", []):
+            event_str = str(event).strip()
+            if event_str:
+                combat_log.append({"round": current_round, "actor": "system", "name": "", "text": event_str})
+
+        # Auto-avsluta strid om alla fiender döda
+        if all(not e.get("alive", True) for e in combat.get("enemies", [])) and combat.get("enemies"):
+            combat["active"] = False
+            combat["ended_turn"] = state.get("meta", {}).get("turn_count", 0)
+            combat_log.append({"round": current_round, "actor": "system", "name": "", "text": "Alla fiender besegrade — striden är över"})
+            effects.append({"type": "combat_end", "value": "alla besegrade"})
+            logger.info("🏁 Combat over — all enemies defeated")
+        else:
+            # State-snapshot efter turen: ALLA deltagare inkl. spelaren med
+            # nuvarande HP — så nästa turs Guardian kan jämföra och justera
+            # HP/status på samtliga (krav: battle logg listar alla).
+            snapshot_parts = []
+            ph = ch.get("hp", {})
+            snapshot_parts.append(f"{ch.get('name', 'Spelaren')} {ph.get('current', '?')}/{ph.get('max', '?')} HP")
+            for e in combat.get("enemies", []):
+                alive_mark = "" if e.get("alive", True) else " (död)"
+                snapshot_parts.append(f"{e.get('name', '?')} {e.get('hp', '?')}/{e.get('max_hp', '?')} HP{alive_mark}")
+            combat_log.append({
+                "round": current_round, "actor": "system", "name": "",
+                "text": "Efter turen: " + ", ".join(snapshot_parts),
+                "snapshot": True,
+            })
+
     # ── Loggbok ──
     logbook = mech.get("logbook", "")
     if logbook:
@@ -1269,9 +1706,9 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 removed = inv.pop()
             if removed:
                 effects.append({"type": "korrigering", "value": f"Föremål återkallat: {removed.get('name', '?')}", "reason": reason})
-                logger.info("🛡️ Guardian korrigering: återkallade '%s' — %s", removed.get("name", "?"), reason[:80])
+                logger.info("🛡️ Guardian correction: revoked '%s' — %s", removed.get("name", "?"), reason[:80])
             else:
-                logger.info("🛡️ Guardian korrigering: kunde inte återkalla '%s' (finns ej)", target_name or "?")
+                logger.info("🛡️ Guardian correction: could not revoke '%s' (not found)", target_name or "?")
         elif field == "npc_remove" and action == "remove":
             # Ta bort NPC(s) med matchande namn
             npcs = state.get("npcs", [])
@@ -1305,7 +1742,7 @@ def _add_npc_note(state: dict, name: str, note: str) -> None:
             npc["notes"] = f"{existing}\n• {note}".strip() if existing else f"• {note}"
             logger.debug("🛡️ Guardian NPC-not: '%s' → %s", name, note[:60])
             return
-    logger.debug("🛡️ Guardian: NPC '%s' hittades inte för not", name)
+    logger.debug("🛡️ Guardian: NPC '%s' not found for note", name)
 
 
 def _safe_int(value, default: int = 0) -> int:
@@ -1352,7 +1789,8 @@ def _sanitize_mechanics(mech: dict) -> dict:
     for key in ("damage", "healing", "death", "items_add", "items_remove",
                 "currency", "quests_new", "quests_completed", "quests_failed",
                 "npcs_new", "npc_relations", "npc_notes", "locations_new",
-                "initiative_entries", "enemy_actions", "status_apply"):
+                "initiative_entries", "enemy_actions", "status_apply",
+                "player_attacks", "enemy_attacks", "combat_events"):
         if not isinstance(mech.get(key), list):
             mech[key] = []
 
@@ -1583,7 +2021,7 @@ def apply_enemy_actions(state: dict, actions: list[dict]) -> list[dict]:
                 "name": enemy["name"], "text": "flyr från striden",
             })
             effects.append({"type": "enemy_fled", "value": enemy["name"]})
-            logger.info("🏃 %s flyr från striden", enemy["name"])
+            logger.info("🏃 %s flees from combat", enemy["name"])
             continue
 
         if action_type in ("attack", "spell", "ability"):
@@ -1650,6 +2088,21 @@ def apply_enemy_actions(state: dict, actions: list[dict]) -> list[dict]:
         from combat import end_combat
         end_combat(state, "alla fiender besegrade eller flydde")
         effects.append({"type": "combat_end", "value": "alla besegrade"})
+    else:
+        # State-snapshot efter Battle AI-turen: ALLA deltagare inkl. spelaren
+        # med nuvarande HP — så nästa tur kan Guardian jämföra och justera
+        # HP/status på samtliga (krav: battle logg listar alla).
+        snapshot_parts = []
+        ph = char.get("hp", {})
+        snapshot_parts.append(f"{player_name} {ph.get('current', '?')}/{ph.get('max', '?')} HP")
+        for e in combat.get("enemies", []):
+            alive_mark = "" if e.get("alive", True) else " (död)"
+            snapshot_parts.append(f"{e.get('name', '?')} {e.get('hp', '?')}/{e.get('max_hp', '?')} HP{alive_mark}")
+        combat.setdefault("log", []).append({
+            "round": combat.get("round", 1), "actor": "system", "name": "",
+            "text": "Efter turen: " + ", ".join(snapshot_parts),
+            "snapshot": True,
+        })
 
     return effects
 

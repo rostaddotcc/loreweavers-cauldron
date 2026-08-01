@@ -268,6 +268,12 @@ const API = (() => {
       return req('/api/campaign/language', { method: 'PATCH', body: JSON.stringify({ language }) });
     },
 
+    // ── Guardian model (admin only, per campaign) ──
+    async setGuardianModel(modelId) {
+      if (MOCK) return { ok: true, guardian_model: modelId };
+      return req('/api/campaign/guardian-model', { method: 'PATCH', body: JSON.stringify({ guardian_model: modelId }) });
+    },
+
     // ── Attachments (pdf/md/txt) ──
     async uploadAttachment(file) {
       if (MOCK) throw new Error('Not available in mock mode');
@@ -366,8 +372,54 @@ const API = (() => {
       return req('/api/character/generate', { method: 'POST', body: JSON.stringify({ prompt, model_id: modelId }) });
     },
 
+    // SSE-streaming variant — onEvent({type:'reasoning'|'content', text}) kallas
+    // live; resolvar med {character, inventory} när 'done' kommer.
+    async generateCharacterStream(prompt, modelId, onEvent = () => {}) {
+      if (MOCK) {
+        await new Promise(r => setTimeout(r, 1200));
+        onEvent({ type: 'reasoning', text: 'The wanderer\'s fate unfolds…' });
+        await new Promise(r => setTimeout(r, 800));
+        return { character: { name: 'The Wanderer', race: 'Human', class: 'Adventurer', level: 5, hp: { current: 38, max: 38 }, abilities: { STR: { score: 13, mod: 1 }, DEX: { score: 14, mod: 2 }, CON: { score: 13, mod: 1 }, INT: { score: 12, mod: 1 }, WIS: { score: 13, mod: 1 }, CHA: { score: 12, mod: 1 } }, ac: 14, traits: ['Versatile', 'Survival Instinct'] }, inventory: [] };
+      }
+      const res = await fetch('/api/character/generate/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, model_id: modelId }),
+      });
+      if (!res.ok) {
+        let msg = 'HTTP ' + res.status;
+        try { const j = await res.json(); msg = j.detail || j.error || msg; } catch (e) {}
+        throw new Error(msg);
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let result = null;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buffer.indexOf('\n\n')) >= 0) {
+          const raw = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          for (const line of raw.split('\n')) {
+            if (!line.startsWith('data:')) continue;
+            try {
+              const ev = JSON.parse(line.slice(5).trim());
+              if (ev.type === 'done') result = ev;
+              else onEvent(ev);
+            } catch (e) {}
+          }
+        }
+      }
+      if (!result) throw new Error('Stream ended without result');
+      if (result.type === 'error') throw new Error(result.message || 'unknown error');
+      return result;
+    },
+
     // ── Rules Oracle (Qwen-driven) ──
-    async oracle(question, modelId = 'qwen3.6-flash') {
+    async oracle(question, modelId = 'qwen3.8-max') {
       if (MOCK) {
         await new Promise(r => setTimeout(r, 900));
         return { answer: "Roll a d20 and add the relevant modifier against the DM's DC." };

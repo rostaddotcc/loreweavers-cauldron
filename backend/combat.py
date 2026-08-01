@@ -652,7 +652,7 @@ def attempt_flee(state: dict, dex_check: int) -> dict:
 
     if success:
         end_combat(state, "spelaren flydde")
-        logger.info("🏃 Spelaren flydde från striden (slag %d mot DC %d)", dex_check, dc)
+        logger.info("🏃 Player fled from combat (roll %d vs DC %d)", dex_check, dc)
     else:
         combat.setdefault("log", []).append({
             "round": combat.get("round", 1), "actor": "player",
@@ -686,7 +686,7 @@ def end_combat(state: dict, reason: str = "striden avslutades") -> dict:
     char = state.get("character", {})
     char.pop("statuses", None)
 
-    logger.info("🏁 Striden är över: %s", reason)
+    logger.info("🏁 Combat over: %s", reason)
     return combat
 
 

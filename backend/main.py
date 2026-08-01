@@ -5,6 +5,7 @@ LLM-driven D&D Dungeon Master. Alla endpoints under /api/.
 """
 
 import asyncio
+import contextvars
 import copy
 import io
 import json
@@ -19,6 +20,7 @@ import zipfile
 from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import AsyncGenerator
 
 logger = logging.getLogger("morkrets")
 
@@ -31,21 +33,67 @@ logger = logging.getLogger("morkrets")
 DEBUG_LOGS: deque = deque(maxlen=600)
 _LOG_ORDER = {"DEBUG": 10, "INFO": 20, "WARNING": 30, "ERROR": 40, "CRITICAL": 50}
 
+# Loggkontext per request: bär user + aktiv kampanj så att ringbufferns
+# poster kan filtreras per instans. Sätts i _get_current_user; ärvs av
+# asyncio.create_task-bakgrundsuppgifter (guardian, dag-entry, …).
+_LOG_CTX: contextvars.ContextVar = contextvars.ContextVar(
+    "morkrets_log_ctx", default={"user": None, "campaign": None}
+)
+
 # Håller referenser till bakgrundsuppgifter så de inte garbage-collectas
 # (asyncio.create_task returnerar en svag referens annars).
 _BACKGROUND_TASKS: set = set()
+
+# Per-kampanj-lås för state read-modify-write.
+# Bakgrundsuppgifterna (_guardian_post_dm, _post_turn_tasks, dag-entry)
+# körs parallellt; var och en gör store.get() → mutera → store.save().
+# Utan lås skriver den som sparar sist över de andras ändringar
+# (t.ex. NPC tillagd av Guardian försvann när faktextraktionen sparade
+# en gammal kopia 30s senare). Nyckel: f"{username}:{campaign_id}".
+_STATE_LOCKS: dict[str, asyncio.Lock] = {}
+_STATE_LOCKS_GUARD = threading.Lock()
+
+
+def _state_lock(username: str, campaign_id: str) -> asyncio.Lock:
+    """Returnera per-kampanj-låset (thread-safe skapande)."""
+    key = f"{username}:{campaign_id}"
+    with _STATE_LOCKS_GUARD:
+        lock = _STATE_LOCKS.get(key)
+        if lock is None:
+            lock = asyncio.Lock()
+            _STATE_LOCKS[key] = lock
+        return lock
+
+
+async def _with_locked_state(
+    username: str, campaign_id: str, fn,
+):
+    """Kör fn(state) under per-kampanj-låset med färskt state.
+
+    Skyddar alla read-modify-write-endpoints (combat, character, patches)
+    mot att skriva över bakgrundsuppgifternas ändringar.
+    """
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        state = store.get(username, campaign_id)
+        if not state:
+            raise HTTPException(404, "Ingen aktiv kampanj")
+        return await fn(state)
 
 
 class _RingBufferHandler(logging.Handler):
     """Kopierar varje loggpost till ringbuffern (för live-konsolen)."""
     def emit(self, record: logging.LogRecord) -> None:
         try:
+            ctx = _LOG_CTX.get()
             DEBUG_LOGS.append({
                 "ts": record.created,
                 "time": datetime.fromtimestamp(record.created).strftime("%H:%M:%S"),
                 "level": record.levelname,
                 "name": record.name.replace("morkrets", "mr").lstrip("."),
                 "msg": record.getMessage(),
+                "user": ctx.get("user"),
+                "campaign": ctx.get("campaign"),
             })
         except Exception:
             pass  # Loggfångst får aldrig krascha spelet
@@ -106,6 +154,7 @@ import rag
 from extraction import FactRegister, extract_facts, format_facts_block
 from guardian import (
     _combat_tag,
+    _normalize_item,
     _XP_THRESHOLDS as XP_THRESHOLDS,  # D&D 5e XP-trösklar (definieras i guardian.py)
     apply_mechanics,
     apply_enemy_actions,
@@ -321,8 +370,8 @@ def apply_currency(state: dict, denom: str, amount: int) -> tuple[bool, str]:
         available_cp = currency_to_cp(currency)
         if needed_cp > available_cp:
             logger.warning(
-                f"Valuta: försök spendera {abs(amount)} {COIN_NAMES[denom]} "
-                f"men saldot är bara {currency_display(currency)}"
+                f"Currency: attempt to spend {abs(amount)} {COIN_NAMES[denom]} "
+                f"but balance is only {currency_display(currency)}"
             )
             return False, f"Otillräckligt saldo: behövde {abs(amount)} {COIN_NAMES[denom]}, hade {currency_display(currency)}"
         # Dra av
@@ -396,7 +445,7 @@ def _parse_mechanical_tags(text: str, state: dict) -> tuple[str, dict, list[dict
             existing['qty'] = existing.get('qty', 1) + 1
             logger.info("📦 Dedup: '%s' → qty=%d", name, existing['qty'])
         else:
-            inv.append({
+            inv.append(_normalize_item({
                 'id': f"tag-{len(inv)}",
                 'name': name,
                 'type': item_type,
@@ -405,40 +454,46 @@ def _parse_mechanical_tags(text: str, state: dict) -> tuple[str, dict, list[dict
                 'equipped': False,
                 'rarity': rarity,
                 'description': '',
-            })
+            }))
         effects.append({'type': 'föremål', 'value': name})
 
-    # QUEST — skapa nytt uppdrag
+    # QUEST — skapa nytt uppdrag (med dedup mot befintliga namn)
     for m in _MECH_PATTERNS['QUEST'].finditer(text):
         name = m.group(1).strip()
         desc = (m.group(2) or '').strip()
         reward = (m.group(3) or '').strip()
         quests = state.setdefault('quests', [])
-        quests.append({
-            'name': name,
-            'description': desc,
-            'reward': reward,
-            'status': 'aktiv',
-        })
-        effects.append({'type': 'quest', 'value': name})
+        if not any(qq.get('name', '').lower() == name.lower() for qq in quests):
+            import uuid
+            quests.append({
+                'id': str(uuid.uuid4()),
+                'name': name,
+                'description': desc,
+                'reward': reward,
+                'xp_reward': 100,
+                'gold_reward': 0,
+                'status': 'aktiv',
+                'created_turn': state.get('meta', {}).get('turn_count', 0),
+            })
+            effects.append({'type': 'quest', 'value': name})
 
-    # QUEST_SLUTFÖRD
+    # QUEST_SLUTFÖRD (matcha bara aktiva quests)
     for m in _MECH_PATTERNS['QUEST_SLUTFÖRD'].finditer(text):
         name = m.group(1).strip()
         for q in state.get('quests', []):
-            if q.get('name', '').lower() == name.lower():
+            if q.get('name', '').lower() == name.lower() and q.get('status') in ('aktiv', 'active'):
                 q['status'] = 'slutförd'
+                effects.append({'type': 'quest_slutförd', 'value': name})
                 break
-        effects.append({'type': 'quest_slutförd', 'value': name})
 
-    # QUEST_MISSLYCKAD
+    # QUEST_MISSLYCKAD (matcha bara aktiva quests)
     for m in _MECH_PATTERNS['QUEST_MISSLYCKAD'].finditer(text):
         name = m.group(1).strip()
         for q in state.get('quests', []):
-            if q.get('name', '').lower() == name.lower():
+            if q.get('name', '').lower() == name.lower() and q.get('status') in ('aktiv', 'active'):
                 q['status'] = 'misslyckad'
+                effects.append({'type': 'quest_misslyckad', 'value': name})
                 break
-        effects.append({'type': 'quest_misslyckad', 'value': name})
 
     # KONSEKVENS — permanent världsförändring → lore
     for m in _MECH_PATTERNS['KONSEKVENS'].finditer(text):
@@ -590,7 +645,7 @@ def _parse_strid_tag(text: str, state: dict) -> tuple[str, list[dict]]:
 
     if names:
         effects.append({'type': 'combat_start', 'value': ', '.join(names)})
-    logger.info("⚔️ [STRID:] strid registrerad: %s", ', '.join(names) if names else '(inga fiender)')
+    logger.info("⚔️ [COMBAT:] combat registered: %s", ', '.join(names) if names else '(no enemies)')
     return clean, effects
 
 
@@ -624,7 +679,7 @@ def _parse_result_tag(text: str, state: dict) -> tuple[str, list[dict]]:
                 char = state.setdefault('character', {})
                 pname = char.get('name', 'Spelaren')
                 effects.append({'type': 'initiativ', 'value': f"{pname}: {value}"})
-                logger.info("🎲 Initiativ registrerat: %s → %d", pname, value)
+                logger.info("🎲 Initiative registered: %s → %d", pname, value)
             continue
 
         # ── DÖDSRÄDDNING — D&D 5e-regler ──
@@ -636,14 +691,14 @@ def _parse_result_tag(text: str, state: dict) -> tuple[str, list[dict]]:
             if nat1:
                 ds['failures'] = ds.get('failures', 0) + 2
                 effects.append({'type': 'dödsräddning', 'value': 'naturlig 1 — 2 misslyckanden'})
-                logger.info("💀 Dödsräddning: nat 1 → 2 misslyckanden")
+                logger.info("💀 Death save: nat 1 → 2 failures")
             elif value >= 20:
                 # Nat 20: vaknar med 1 HP, dödsräddningarna nollställs
                 if hp.get('current', 0) == 0:
                     hp['current'] = 1
                 char['death_saves'] = {'successes': 0, 'failures': 0}
                 effects.append({'type': 'dödsräddning', 'value': 'naturlig 20 — vaknar med 1 HP'})
-                logger.info("💀 Dödsräddning: nat 20 — spelaren vaknar med 1 HP")
+                logger.info("💀 Death save: nat 20 — player wakes with 1 HP")
             elif value >= 10:
                 ds['successes'] = ds.get('successes', 0) + 1
                 effects.append({'type': 'dödsräddning', 'value': f"framgång ({value})"})
@@ -654,11 +709,11 @@ def _parse_result_tag(text: str, state: dict) -> tuple[str, list[dict]]:
                 # Stabiliserad — nollställ (frontend visar pips från death_saves)
                 char['death_saves'] = {'successes': 0, 'failures': 0}
                 effects.append({'type': 'dödsräddning', 'value': 'stabiliserad — 3 framgångar'})
-                logger.info("💀 Spelaren stabiliserades (3 framgångar)")
+                logger.info("💀 Player stabilized (3 successes)")
             elif ds.get('failures', 0) >= 3:
                 ds['dead'] = True
                 effects.append({'type': 'dödsräddning', 'value': 'DÖD — 3 misslyckanden'})
-                logger.info("💀 Spelaren dog (3 misslyckanden)")
+                logger.info("💀 Player died (3 failures)")
             continue
     # Flagga att combat-state ändrats via tagg-parsning → _guardian_post_dm
     # skickar [COMBAT:]-taggen till frontendens Krigsråd även om Guardian
@@ -719,10 +774,26 @@ def _turn_cap_for(username: str) -> int:
 # Atmosfär-subagent: snabb modell för ASCII-art
 ATMOSPHERE_MODEL = os.getenv("ATMOSPHERE_MODEL", "mimo-v2.5")
 ATMOSPHERE_ENABLED = os.getenv("ATMOSPHERE_ENABLED", "0") == "1"
-EXTRACTION_MODEL = os.getenv("EXTRACTION_MODEL", "qwen3.6-flash")
+EXTRACTION_MODEL = os.getenv("EXTRACTION_MODEL", "qwen3.8-max")
 # Guardian: smartare modell för kontextmedveten mekanisk extraktion
 # (NPC-avslöjanden, implicita relationsändringar, karaktärsuppdateringar)
 GUARDIAN_MODEL = os.getenv("GUARDIAN_MODEL", "qwen3.8-max")
+
+# Standardmodell för icke-admin-spelare (DM + karaktär + oracle)
+DEFAULT_PLAYER_MODEL = "qwen3.8-max"
+# Modeller som icke-admin-spelare får välja mellan
+# (admin ser alla — inkl. MiMo + DeepSeek-egen-API)
+PLAYER_MODELS = ("qwen3.8-max", "qwen3.6-flash", "deepseek-v4-flash-0731", "step-3.7-flash")
+
+
+def _clamp_player_model(model_id: str) -> str:
+    """Icke-admin: tillåt bara PLAYER_MODELS, annars default."""
+    return model_id if model_id in PLAYER_MODELS else DEFAULT_PLAYER_MODEL
+
+
+def _guardian_model_for(state: dict) -> str:
+    """Per-kampanj Guardian-modell (admin kan välja vid kampanjskapande)."""
+    return state.get("meta", {}).get("guardian_model") or GUARDIAN_MODEL
 
 
 # ═══════════════════════════════════════
@@ -760,6 +831,7 @@ class VaultUseRequest(BaseModel):
 class CampaignCreateRequest(BaseModel):
     name: str = ""
     language: str = "en"
+    guardian_model: str = ""  # Admin kan välja Guardian-modell per kampanj
 
 
 class CampaignActivateRequest(BaseModel):
@@ -948,6 +1020,13 @@ def _get_current_user(morkrets_token: str | None) -> dict:
     payload = verify_token(morkrets_token)
     if not payload:
         raise HTTPException(401, "Ogiltig eller utgången session")
+    # Sätt loggkontext för denna request — ärvs av asyncio.create_task-uppgifter.
+    username = payload["sub"]
+    try:
+        active_cid = store._get_active_pointer(username)
+    except Exception:
+        active_cid = None
+    _LOG_CTX.set({"user": username, "campaign": active_cid})
     return payload
 
 
@@ -965,6 +1044,7 @@ async def _call_llm(
     reasoning_effort: str | None = None,
     thinking_cap: int = 16000,
     thinking: str | None = None,
+    usage_out: dict | None = None,
 ) -> str:
     """Anropa vald modell via OpenAI-kompatibelt /chat/completions.
     Reasoning-modeller (deepseek-v4-flash) behöver högre max_tokens
@@ -974,12 +1054,15 @@ async def _call_llm(
     thinking="disabled" stänger av resonemang för modeller som stöder det
     (MiMo: {"thinking":{"type":"disabled"}}). KRITISKT för strukturerade
     JSON-anrop — annars bränner MiMo hela tokenbudgeten på reasoning och
-    lämnar content tomt → _extract_json hittar ingen JSON → 502."""
+    lämnar content tomt → _extract_json hittar ingen JSON → 502.
+
+    usage_out: valfri dict — fylls med {"prompt_tokens", "completion_tokens",
+    "total_tokens"} från API-svaret. Används för att spåra Guardian-tokens."""
     config = get_model(model_id)
     api_key = get_api_key(config)
 
     # Reasoning-modeller behöver mer utrymme (thinking + content)
-    if config.api_model in ("deepseek-v4-flash", "mimo-v2.5", "mimo-v2.5-pro", "step-3.7-flash"):
+    if config.api_model in ("deepseek-v4-flash", "deepseek-v4-flash-0731", "mimo-v2.5", "mimo-v2.5-pro", "step-3.7-flash"):
         max_tokens = max(max_tokens, 2048)
 
     headers = {"Content-Type": "application/json"}
@@ -1012,23 +1095,38 @@ async def _call_llm(
 
     # Qwen3-modeller: thinking mode PÅ som standard. Ge generöst med
     # utrymme så modellen kan tänka fritt OCH leverera svaret.
+    # OBS: qwen3.8-max-preview stöder INTE enable_thinking (400-fel).
+    # Bara qwen3.6/3.7-generationen har den parametern.
     if config.provider == "dashscope" and config.api_model.startswith("qwen3"):
-        if reasoning_effort == "off":
-            body["enable_thinking"] = False
+        is_38 = config.api_model.startswith("qwen3.8")
+        if thinking == "disabled" or reasoning_effort == "off":
+            if not is_38:
+                body["enable_thinking"] = False
+            # qwen3.8: skicka inte enable_thinking — modellen hanterar det själv
         else:
             # Thinking på → rejäl budget (tanke + svar)
             body["max_tokens"] = max(body.get("max_tokens", 1024), thinking_cap)
 
     url = f"{config.base_url.rstrip('/')}/chat/completions"
 
+    logger.debug("🤖 LLM call: model=%s (%s), max_tokens=%d, temp=%.1f", model_id, config.api_model, body.get("max_tokens", max_tokens), temperature)
+    _llm_t0 = time.time()
     async with httpx.AsyncClient(timeout=timeout) as client:
         resp = await client.post(url, headers=headers, json=body)
         if resp.status_code != 200:
+            logger.error("🤖 LLM error: model=%s (%s) → HTTP %d", model_id, config.api_model, resp.status_code)
             raise HTTPException(
                 502, f"LLM-fel ({resp.status_code}): {resp.text[:300]}"
             )
         data = resp.json()
+        # Fånga token-användning om anroparen vill ha den
+        if usage_out is not None:
+            u = data.get("usage", {})
+            usage_out["prompt_tokens"] = u.get("prompt_tokens", 0)
+            usage_out["completion_tokens"] = u.get("completion_tokens", 0)
+            usage_out["total_tokens"] = u.get("total_tokens", 0)
         content = data["choices"][0]["message"].get("content", "")
+        _llm_elapsed = time.time() - _llm_t0
         if not content:
             # Reasoning-modeller (StepFun, DeepSeek) kan lägga svaret i
             # reasoning/reasoning_content och lämna content tomt.
@@ -1036,12 +1134,14 @@ async def _call_llm(
             reasoning = msg.get("reasoning") or msg.get("reasoning_content") or ""
             if reasoning:
                 logger.info(
-                    "🧠 %s: tomt content → använder reasoning (%d tecken)",
-                    config.api_model, len(reasoning),
+                    "🧠 %s: empty content → using reasoning (%d chars, %.1fs)",
+                    config.api_model, len(reasoning), _llm_elapsed,
                 )
                 return reasoning
-            logger.warning("🧠 %s returnerade helt tomt svar", config.api_model)
+            logger.warning("🧠 %s returned completely empty response (%.1fs)", config.api_model, _llm_elapsed)
             return ""
+        u = data.get("usage", {})
+        logger.info("🤖 LLM done: model=%s, %d tkn in / %d tkn out (%.1fs)", config.api_model, u.get("prompt_tokens", 0), u.get("completion_tokens", 0), _llm_elapsed)
         return content
 
 
@@ -1059,7 +1159,7 @@ async def _call_llm_with_reasoning(
     api_key = get_api_key(config)
 
     # Reasoning-modeller behöver mer utrymme (thinking + content)
-    if config.api_model in ("deepseek-v4-flash", "mimo-v2.5", "mimo-v2.5-pro", "step-3.7-flash"):
+    if config.api_model in ("deepseek-v4-flash", "deepseek-v4-flash-0731", "mimo-v2.5", "mimo-v2.5-pro", "step-3.7-flash"):
         max_tokens = max(max_tokens, 4096)
 
     # Qwen3: thinking mode PÅ som standard — ge generös budget
@@ -1079,9 +1179,12 @@ async def _call_llm_with_reasoning(
 
     url = f"{config.base_url.rstrip('/')}/chat/completions"
 
+    logger.debug("🤖 LLM call (reasoning): model=%s (%s), max_tokens=%d, temp=%.1f", model_id, config.api_model, body.get("max_tokens", max_tokens), temperature)
+    _llm_t0 = time.time()
     async with httpx.AsyncClient(timeout=timeout) as client:
         resp = await client.post(url, headers=headers, json=body)
         if resp.status_code != 200:
+            logger.error("🤖 LLM error (reasoning): model=%s (%s) → HTTP %d", model_id, config.api_model, resp.status_code)
             raise HTTPException(
                 502, f"LLM-fel ({resp.status_code}): {resp.text[:300]}"
             )
@@ -1089,6 +1192,7 @@ async def _call_llm_with_reasoning(
         message = data["choices"][0]["message"]
         content = message.get("content", "")
         reasoning = (message.get("reasoning_content") or "").strip()
+        _llm_elapsed = time.time() - _llm_t0
         if not content:
             # Reasoning-modellen kan ha förbrukat hela budgeten på thinking och
             # lämnat content tomt. Försök en gång till med en tydlig uppmaning
@@ -1099,19 +1203,122 @@ async def _call_llm_with_reasoning(
             retry_body = dict(body)
             retry_body["messages"] = retry_messages
             retry_body["max_tokens"] = max(max_tokens, 2048)
-            logger.warning("🧠 %s: tomt content (%d tecken reasoning) → försöker retry", config.api_model, len(reasoning))
+            logger.warning("🧠 %s: empty content (%d chars reasoning) → retrying", config.api_model, len(reasoning))
             async with httpx.AsyncClient(timeout=timeout) as rclient:
                 rresp = await rclient.post(url, headers=headers, json=retry_body)
                 if rresp.status_code == 200:
                     rdata = rresp.json()
                     rcontent = (rdata["choices"][0]["message"].get("content") or "").strip()
                     if rcontent:
-                        logger.info("🧠 %s: retry gav svar (%d tecken)", config.api_model, len(rcontent))
+                        logger.info("🧠 %s: retry succeeded (%d chars, %.1fs)", config.api_model, len(rcontent), time.time() - _llm_t0)
                         return rcontent, reasoning, rdata.get("usage", {})
             raise RuntimeError(
                 "Modellen returnerade tomt svar (även efter retry)"
             )
+        u = data.get("usage", {})
+        logger.info("🤖 LLM done (reasoning): model=%s, %d tkn in / %d tkn out, %d chars reasoning (%.1fs)", config.api_model, u.get("prompt_tokens", 0), u.get("completion_tokens", 0), len(reasoning), _llm_elapsed)
         return content, reasoning, data.get("usage", {})
+
+
+async def _stream_llm(
+    model_id: str,
+    messages: list[dict],
+    temperature: float = 0.8,
+    max_tokens: int = 1024,
+    timeout: float = 300,
+    reasoning_effort: str | None = None,
+    thinking_cap: int = 16000,
+    thinking: str | None = None,
+) -> AsyncGenerator[tuple[str, str, dict | None], None]:
+    """Strömmande variant av _call_llm. Yieldar (reasoning_delta, content_delta,
+    usage_or_none) allt eftersom modellen genererar — reasoning-content visas LIVE
+    i frontend (karaktärsskapande-summoning). Sista yielden bär usage (tokens)
+    om providern rapporterar det (stream_options.include_usage). Samma
+    provider-routing som _call_llm: qwen3.8 tänker alltid (enable_thinking stöds
+    ej), övriga kan stänga av."""
+    config = get_model(model_id)
+    api_key = get_api_key(config)
+
+    # Reasoning-modeller behöver mer utrymme (thinking + content)
+    if config.api_model in ("deepseek-v4-flash", "deepseek-v4-flash-0731", "mimo-v2.5", "mimo-v2.5-pro", "step-3.7-flash"):
+        max_tokens = max(max_tokens, 2048)
+
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    body = {
+        "model": config.api_model,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stream": True,
+        "stream_options": {"include_usage": True},
+    }
+
+    # MiMo/DeepSeek: stäng av thinking för strukturerade anrop
+    if thinking == "disabled" and config.provider in ("mimo", "deepseek"):
+        body["thinking"] = {"type": "disabled"}
+
+    # StepFun 3.7 Flash: debiterar per prompt → high överallt
+    if config.api_model == "step-3.7-flash":
+        body["reasoning_effort"] = reasoning_effort or "high"
+        body["max_tokens"] = max(body.get("max_tokens", 1024), 8000)
+
+    # DeepSeek V4: reasoning_effort om anroparen vill styra
+    if config.provider == "deepseek" and reasoning_effort:
+        body["reasoning_effort"] = reasoning_effort
+
+    # Qwen3-modeller: thinking mode PÅ som standard. Ge generöst med utrymme.
+    # OBS: qwen3.8-max-preview stöder INTE enable_thinking (400-fel).
+    if config.provider == "dashscope" and config.api_model.startswith("qwen3"):
+        is_38 = config.api_model.startswith("qwen3.8")
+        if thinking == "disabled" or reasoning_effort == "off":
+            if not is_38:
+                body["enable_thinking"] = False
+            # qwen3.8: skicka inte enable_thinking — modellen hanterar det själv
+        else:
+            # Thinking på → rejäl budget (tanke + svar)
+            body["max_tokens"] = max(body.get("max_tokens", 1024), thinking_cap)
+
+    url = f"{config.base_url.rstrip('/')}/chat/completions"
+
+    logger.debug("🤖 LLM stream: model=%s (%s), max_tokens=%d, temp=%.1f", model_id, config.api_model, body.get("max_tokens", max_tokens), temperature)
+    _llm_t0 = time.time()
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        async with client.stream("POST", url, headers=headers, json=body) as resp:
+            if resp.status_code != 200:
+                err_body = (await resp.aread()).decode(errors="replace")
+                logger.error("🤖 LLM stream error: model=%s (%s) → HTTP %d", model_id, config.api_model, resp.status_code)
+                raise HTTPException(
+                    502, f"LLM-fel ({resp.status_code}): {err_body[:300]}"
+                )
+            usage: dict | None = None
+            async for line in resp.aiter_lines():
+                if not line.startswith("data: "):
+                    continue
+                payload = line[6:].strip()
+                if payload == "[DONE]":
+                    break
+                try:
+                    d = json.loads(payload)
+                except json.JSONDecodeError:
+                    continue
+                if d.get("usage"):
+                    usage = d["usage"]
+                ch = (d.get("choices") or [{}])[0]
+                delta = ch.get("delta") or {}
+                r = delta.get("reasoning_content") or ""
+                c = delta.get("content") or ""
+                if r or c:
+                    yield r, c, None
+            # Sista yielden bär usage (tokens) om providern rapporterade det
+            _elapsed = time.time() - _llm_t0
+            if usage:
+                logger.info("🤖 LLM stream done: model=%s, %d tkn in / %d tkn out (%.1fs)", config.api_model, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0), _elapsed)
+            else:
+                logger.info("🤖 LLM stream done: model=%s, no usage reported (%.1fs)", config.api_model, _elapsed)
+            yield "", "", usage
 
 
 def _extract_json(text: str) -> dict:
@@ -1211,7 +1418,7 @@ async def register(req: RegisterRequest, response: Response):
 
     token = create_token(username, "player")
     _set_auth_cookie(response, token)
-    logger.info("✨ Nytt konto: %s", username)
+    logger.info("✨ New account: %s", username)
     return {"ok": True, "username": username, "role": "player", "created": True}
 
 
@@ -1247,6 +1454,15 @@ async def me(morkrets_token: str | None = Cookie(None)):
     udata = load_users().get(username, {})
     if not isinstance(udata, dict):
         udata = {}
+    # Token-stats (alla kampanjer, alla roller — DM + Guardian + extraction)
+    try:
+        scan = _scan_user_transcripts(username)
+        total_tokens = scan.get("total_tokens", 0)
+    except Exception:
+        total_tokens = 0
+    # Räkna kampanjer
+    _ucamp = CAMPAIGNS_DIR / username
+    total_campaigns = sum(1 for d in _ucamp.iterdir() if d.is_dir()) if _ucamp.exists() else 0
     return {
         "username": username,
         "role": payload.get("role", "player"),
@@ -1254,6 +1470,8 @@ async def me(morkrets_token: str | None = Cookie(None)):
         "last_login": udata.get("last_login"),
         "turn_cap": int(udata.get("turn_cap", 0) or 0),
         "turns_used": store.total_turns(username),
+        "total_tokens": total_tokens,
+        "total_campaigns": total_campaigns,
     }
 
 
@@ -1289,13 +1507,16 @@ async def dice(req: DiceRequest, morkrets_token: str | None = Cookie(None)):
 
 class OracleRequest(BaseModel):
     question: str
-    model_id: str = "step-3.7-flash"
+    model_id: str = "qwen3.8-max"
 
 
 @app.post("/api/oracle")
 async def oracle(req: OracleRequest, morkrets_token: str | None = Cookie(None)):
     """Ställ en regelfråga till Regeloraklet (LLM)."""
-    _get_current_user(morkrets_token)
+    payload = _get_current_user(morkrets_token)
+    # Icke-admin spelare begränsas till tillåtna modeller
+    if payload.get("role") != "admin":
+        req.model_id = _clamp_player_model(req.model_id)
     if not req.question.strip():
         raise HTTPException(400, "Ställ en fråga först")
     try:
@@ -1413,16 +1634,20 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
     cache_key = (voice, text)
     cached = _TTS_CACHE.get(cache_key)
     if cached is not None:
+        logger.info("🔊 TTS cache hit: voice=%s, %d chars, %d bytes", voice, len(text), len(cached))
         return StreamingResponse(io.BytesIO(cached), media_type="audio/mpeg")
 
+    logger.info("🔊 TTS synth: model=qwen-audio-3.0-tts-plus, voice=%s, %d chars", voice, len(text))
+    _t0 = time.time()
     try:
         audio = await asyncio.to_thread(_synth_qwen_tts, voice, text)
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("TTS error: %s", e, exc_info=True)
+        logger.error("🔊 TTS error: voice=%s, %d chars — %s", voice, len(text), e, exc_info=True)
         raise HTTPException(502, f"Kunde inte generera ljud — {e}")
 
+    logger.info("🔊 TTS done: voice=%s, %d chars → %d bytes (%.1fs)", voice, len(text), len(audio), time.time() - _t0)
     if len(_TTS_CACHE) >= _TTS_CACHE_MAX:
         _TTS_CACHE.pop(next(iter(_TTS_CACHE)))
     _TTS_CACHE[cache_key] = audio
@@ -1442,6 +1667,10 @@ async def create_campaign(body: CampaignCreateRequest | None = None, morkrets_to
     language = (body.language if body else "en") or "en"
 
     state = store.create(username, name=name, language=language)
+    # Admin kan välja Guardian-modell per kampanj
+    guardian_model = (body.guardian_model if body else "") or ""
+    if guardian_model and payload.get("role") == "admin":
+        state["meta"]["guardian_model"] = guardian_model
     # Slumpa en äventyrsöppning (språkmedveten)
     styles = OPENING_STYLES_EN if language == "en" else OPENING_STYLES
     style_key, style_desc = random.choice(styles)
@@ -1506,7 +1735,7 @@ async def delete_campaign(
     try:
         await rag.purge_user(username)
     except Exception as e:
-        logger.debug("Qdrant-rensning vid kampanjradering: %s", e)
+        logger.debug("Qdrant cleanup on campaign deletion: %s", e)
     return {"ok": True, "message": "Kampanjen har avslutats och raderats"}
 
 
@@ -1592,81 +1821,104 @@ async def list_saves(morkrets_token: str | None = Cookie(None)):
 async def load_save(body: LoadRequest, morkrets_token: str | None = Cookie(None)):
     """Återställ kampanjtillstånd från en sparad checkpoint."""
     payload = _get_current_user(morkrets_token)
-    state = store.get(payload["sub"])
+    username = payload["sub"]
+    state = store.get(username)
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
+    campaign_id = state["meta"].get("campaign_id", "")
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        fresh = store.get(username, campaign_id)
+        if fresh:
+            state = fresh
+        saves_dir = store._saves_dir(state["meta"]["user"], state["meta"]["campaign_id"])
+        save_path = saves_dir / f"{body.save_id}.json"
+        if not save_path.exists():
+            raise HTTPException(404, f"Sparfil '{body.save_id}' hittades inte")
 
-    saves_dir = store._saves_dir(state["meta"]["user"], state["meta"]["campaign_id"])
-    save_path = saves_dir / f"{body.save_id}.json"
-    if not save_path.exists():
-        raise HTTPException(404, f"Sparfil '{body.save_id}' hittades inte")
+        with open(save_path) as f:
+            snapshot = json.load(f)
 
-    with open(save_path) as f:
-        snapshot = json.load(f)
+        # Återställ fält från snapshot
+        for key in ("character", "inventory", "currency", "npcs", "quests", "world", "lore", "pinned_facts"):
+            if key in snapshot:
+                state[key] = snapshot[key]
+        if "turn_count" in snapshot:
+            state["meta"]["turn_count"] = snapshot["turn_count"]
 
-    # Återställ fält från snapshot
-    for key in ("character", "inventory", "currency", "npcs", "quests", "world", "lore", "pinned_facts"):
-        if key in snapshot:
-            state[key] = snapshot[key]
-    if "turn_count" in snapshot:
-        state["meta"]["turn_count"] = snapshot["turn_count"]
-
-    store.save(state)
-    return {"ok": True, "restored_from": body.save_id, "state": state}
+        store.save(state)
+        return {"ok": True, "restored_from": body.save_id, "state": state}
 
 
 @app.post("/api/campaign/pin")
 async def pin_fact(body: PinRequest, morkrets_token: str | None = Cookie(None)):
     """Fäst en fakta som permanent sanning."""
     payload = _get_current_user(morkrets_token)
-    state = store.get(payload["sub"])
+    username = payload["sub"]
+    state = store.get(username)
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
-
-    facts = state.setdefault("pinned_facts", [])
-    fact = body.fact.strip()
-    if fact and fact not in facts:
-        facts.append(fact)
-    store.save(state)
-    return {"ok": True, "pinned_facts": facts}
+    campaign_id = state["meta"].get("campaign_id", "")
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        fresh = store.get(username, campaign_id)
+        if fresh:
+            state = fresh
+        facts = state.setdefault("pinned_facts", [])
+        fact = body.fact.strip()
+        if fact and fact not in facts:
+            facts.append(fact)
+        store.save(state)
+        return {"ok": True, "pinned_facts": facts}
 
 
 @app.delete("/api/campaign/pin")
 async def unpin_fact(body: PinRequest, morkrets_token: str | None = Cookie(None)):
     """Ta bort en fäst fakta."""
     payload = _get_current_user(morkrets_token)
-    state = store.get(payload["sub"])
+    username = payload["sub"]
+    state = store.get(username)
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
-
-    facts = state.setdefault("pinned_facts", [])
-    fact = body.fact.strip()
-    if fact in facts:
-        facts.remove(fact)
-    store.save(state)
-    return {"ok": True, "pinned_facts": facts}
+    campaign_id = state["meta"].get("campaign_id", "")
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        fresh = store.get(username, campaign_id)
+        if fresh:
+            state = fresh
+        facts = state.setdefault("pinned_facts", [])
+        fact = body.fact.strip()
+        if fact in facts:
+            facts.remove(fact)
+        store.save(state)
+        return {"ok": True, "pinned_facts": facts}
 
 
 @app.post("/api/campaign/lore")
 async def add_lore(body: LoreRequest, morkrets_token: str | None = Cookie(None)):
     """Lägg till en lore-post till kampanjen."""
     payload = _get_current_user(morkrets_token)
-    state = store.get(payload["sub"])
+    username = payload["sub"]
+    state = store.get(username)
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
-
-    lore = state.setdefault("lore", [])
-    text = body.text.strip()
-    if text:
-        lore.append(text)
-        # Fas 3: Indexera lore i Qdrant för semantisk sökning
-        try:
-            campaign_id = state["meta"].get("campaign_id", "")
-            await rag.index_lore(f"Lore #{len(lore)}", text, payload["sub"], campaign_id)
-        except Exception as e:
-            logger.debug("Lore-indexering hoppade över: %s", e)
-    store.save(state)
-    return {"ok": True, "lore_count": len(lore)}
+    campaign_id = state["meta"].get("campaign_id", "")
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        fresh = store.get(username, campaign_id)
+        if fresh:
+            state = fresh
+        lore = state.setdefault("lore", [])
+        text = body.text.strip()
+        if text:
+            lore.append(text)
+            # Fas 3: Indexera lore i Qdrant för semantisk sökning
+            try:
+                await rag.index_lore(f"Lore #{len(lore)}", text, username, campaign_id)
+            except Exception as e:
+                logger.debug("Lore indexing skipped: %s", e)
+        store.save(state)
+        return {"ok": True, "lore_count": len(lore)}
 
 
 @app.get("/api/facts")
@@ -1693,44 +1945,51 @@ async def get_facts(category: str | None = None, morkrets_token: str | None = Co
 async def trigger_chapter(body: ChapterRequest, morkrets_token: str | None = Cookie(None)):
     """Manuellt utlös en kapitalsammanfattning via LLM."""
     payload = _get_current_user(morkrets_token)
-    state = store.get(payload["sub"])
+    username = payload["sub"]
+    state = store.get(username)
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
+    campaign_id = state["meta"].get("campaign_id", "")
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        fresh = store.get(username, campaign_id)
+        if fresh:
+            state = fresh
 
-    # Bygg kontext från transkript + state
-    transcript = store.load_transcript(state, last_n=30)
-    t_text = "\n".join(f"{e['role']}: {e['content']}" for e in transcript[-20:])
-    char_name = state.get("character", {}).get("name", "Äventyraren")
-    location = state.get("world", {}).get("current_location", "Okänd plats")
-    npcs = ", ".join(n.get("name", "?") for n in state.get("npcs", [])[:8])
-    quests = ", ".join(q.get("name", "?") for q in state.get("quests", []) if q.get("status") == "aktiv")
+        # Bygg kontext från transkript + state
+        transcript = store.load_transcript(state, last_n=30)
+        t_text = "\n".join(f"{e['role']}: {e['content']}" for e in transcript[-20:])
+        char_name = state.get("character", {}).get("name", "Äventyraren")
+        location = state.get("world", {}).get("current_location", "Okänd plats")
+        npcs = ", ".join(n.get("name", "?") for n in state.get("npcs", [])[:8])
+        quests = ", ".join(q.get("name", "?") for q in state.get("quests", []) if q.get("status") in ("aktiv", "active"))
 
-    prompt = (
-        f"Du är en krönikör som sammanfattar ett kapitel i ett D&D-äventyr.\n"
-        f"Kapitelrubrik: {body.title}\n"
-        f"Karaktär: {char_name}, Plats: {location}\n"
-        f"NPCs: {npcs}\nAktiva uppdrag: {quests}\n\n"
-        f"Senaste händelser:\n{t_text}\n\n"
-        f"Skriv en stämningsfull kapitalsammanfattning (3-5 meningar) på svenska. "
-        f"Använd rubriken '{body.title}'. Beskriv vad som hände och vad som väntar."
-    )
-
-    try:
-        summary = await _call_llm(
-            ATMOSPHERE_MODEL,
-            [{"role": "user", "content": prompt}],
-            temperature=0.5,
-            max_tokens=512,
+        prompt = (
+            f"Du är en krönikör som sammanfattar ett kapitel i ett D&D-äventyr.\n"
+            f"Kapitelrubrik: {body.title}\n"
+            f"Karaktär: {char_name}, Plats: {location}\n"
+            f"NPCs: {npcs}\nAktiva uppdrag: {quests}\n\n"
+            f"Senaste händelser:\n{t_text}\n\n"
+            f"Skriv en stämningsfull kapitalsammanfattning (3-5 meningar) på svenska. "
+            f"Använd rubriken '{body.title}'. Beskriv vad som hände och vad som väntar."
         )
-    except Exception:
-        summary = f"Kapitel {body.title}: Äventyret fortsätter i {location}. Mörkret väntar."
 
-    # Spara sammanfattning och öka kapitelräknaren
-    store.save_summary(state, summary)
-    state["meta"]["chapter_count"] = state["meta"].get("chapter_count", 0) + 1
-    store.save(state)
+        try:
+            summary = await _call_llm(
+                ATMOSPHERE_MODEL,
+                [{"role": "user", "content": prompt}],
+                temperature=0.5,
+                max_tokens=512,
+            )
+        except Exception:
+            summary = f"Kapitel {body.title}: Äventyret fortsätter i {location}. Mörkret väntar."
 
-    return {"ok": True, "title": body.title, "summary": summary, "chapter_count": state["meta"]["chapter_count"]}
+        # Spara sammanfattning och öka kapitelräknaren
+        store.save_summary(state, summary)
+        state["meta"]["chapter_count"] = state["meta"].get("chapter_count", 0) + 1
+        store.save(state)
+
+        return {"ok": True, "title": body.title, "summary": summary, "chapter_count": state["meta"]["chapter_count"]}
 
 
 # ═══════════════════════════════════════
@@ -1790,6 +2049,16 @@ def compact_state(state: dict, language: str = "sv") -> str:
     else:
         lines.append("Inventory: tomt" if language != "en" else "Inventory: empty")
 
+    # Bärvikt (D&D 5e: max = STR × 15). coin_wt beräknas redan ovan (rad 1812).
+    total_w = sum(float(it.get("weight", 0) or 0) * int(it.get("qty", 1) or 1) for it in inv)
+    max_w = float(char.get("max_weight_lbs", 0) or 0)
+    grand_total = total_w + coin_wt
+    if max_w > 0:
+        pct = round(grand_total / max_w * 100)
+        lines.append(f"Bärvikt: {grand_total:.1f} / {max_w:.0f} lb ({pct}%)")
+    else:
+        lines.append(f"Bärvikt: {grand_total:.1f} lb")
+
     # Plats, tid, dag
     world = state.get("world", {})
     loc = world.get("current_location", "Okänd")
@@ -1804,6 +2073,31 @@ def compact_state(state: dict, language: str = "sv") -> str:
         lines.append(f"Fiender: {e_str}")
     else:
         lines.append("Fiender: inga")
+
+    # Stridsstatus (om combat aktiv)
+    combat = world.get("combat")
+    if combat and combat.get("active"):
+        lines.append(f"⚔ STRID AKTIV — Runda {combat.get('round', 1)}")
+        turn_order = combat.get("turn_order", [])
+        if turn_order:
+            order_str = ", ".join(
+                f"{'Du' if e.get('key') == 'player' else e.get('name', '?')} ({e.get('initiative', '?')})"
+                for e in turn_order
+            )
+            lines.append(f"Turordning: {order_str}")
+        for e in combat.get("enemies", []):
+            if e.get("alive", True):
+                status = ", ".join(e.get("statuses", [])) if e.get("statuses") else ""
+                lines.append(f"  Fiende: {e.get('name', '?')} — HP {e.get('hp', '?')}/{e.get('max_hp', '?')}, AC {e.get('ac', '?')}{f', Status: {status}' if status else ''}")
+        # Spelarens action economy
+        pa = combat.get("player_actions", {})
+        if pa:
+            avail = [k for k, v in pa.items() if v is not False]
+            spent = [k for k, v in pa.items() if v is False]
+            if avail:
+                lines.append(f"  Tillgängliga: {', '.join(avail)}")
+            if spent:
+                lines.append(f"  Förbrukade: {', '.join(spent)}")
 
     # Aktiva uppdrag
     active_quests = [q.get("name", "?") for q in state.get("quests", []) if q.get("status") == "aktiv"]
@@ -1910,6 +2204,7 @@ def _build_system_prompt(
     if locations:
         loc_str = "; ".join(
             f"{l.get('name', '?')}: {l.get('description', '')[:80]}"
+            + (f" [{l.get('lore', '')[:60]}]" if l.get('lore') else "")
             for l in locations[:12]
         )
         parts.append(f"\n## Kända platser\n{loc_str}")
@@ -1929,12 +2224,27 @@ def _build_system_prompt(
         )
         parts.append(f"\n## Kända NPC:er\n{npc_str}")
 
-    # Quests
+    # Quests (status kan vara "aktiv" eller "active" — matcha båda)
     quests = state.get("quests", [])
-    active = [q for q in quests if q.get("status") == "aktiv"]
+    active = [q for q in quests if q.get("status") in ("aktiv", "active")]
+    done = [q for q in quests if q.get("status") in ("slutförd", "completed", "misslyckad", "failed")]
     if active:
-        q_str = "; ".join(q.get("name", "?") for q in active[:5])
-        parts.append(f"\n## Aktiva uppdrag\n{q_str}")
+        q_lines = []
+        for q in active[:6]:
+            line = f"- {q.get('name', '?')}"
+            if q.get("description"):
+                line += f" — {q['description'][:90]}"
+            q_lines.append(line)
+        q_head = "## Aktiva uppdrag" if lang == "sv" else "## Active Quests"
+        parts.append(f"\n{q_head}\n" + "\n".join(q_lines))
+    if done:
+        d_lines = []
+        for q in done[:4]:
+            st = q.get("status", "")
+            mark = "✅" if st in ("slutförd", "completed") else "❌"
+            d_lines.append(f"- {mark} {q.get('name', '?')}")
+        d_head = "## Avslutade uppdrag" if lang == "sv" else "## Concluded Quests"
+        parts.append(f"\n{d_head}\n" + "\n".join(d_lines))
 
     # ── ⚔️ PÅGÅENDE STRID — combat-motor (v25) ──
     # Byggd av combat.py: turordning, action economy, status, fiende-HP/AC.
@@ -2022,7 +2332,7 @@ async def _retrieve_relevant_memory(
         if relevant:
             sections.append(format_facts_block(relevant))
     except Exception as e:
-        logger.debug("Faktaregister ej tillgängligt: %s", e)
+        logger.debug("Fact register unavailable: %s", e)
 
     # 2. RAG — semantisk sökning i Qdrant (transkript, lore, sammanfattningar)
     try:
@@ -2040,7 +2350,7 @@ async def _retrieve_relevant_memory(
                     + "\n".join(rag_lines)
                 )
     except Exception as e:
-        logger.debug("RAG ej tillgängligt: %s", e)
+        logger.debug("RAG unavailable: %s", e)
 
     return "\n\n".join(sections)
 
@@ -2049,6 +2359,13 @@ async def _retrieve_relevant_memory(
 async def _generate_day_entry(username: str, campaign_id: str, prev_day: int) -> None:
     """Generera en dag-entry för föregående dag via snabb LLM.
     Körs i bakgrunden efter NY_DAG — blockerar aldrig HTTP-svaret."""
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        await _generate_day_entry_locked(username, campaign_id, prev_day)
+
+
+async def _generate_day_entry_locked(username: str, campaign_id: str, prev_day: int) -> None:
+    """Hjärtat av dag-entry-genereringen — körs under per-kampanj-låset."""
     try:
         st = store.get(username, campaign_id)
         if not st:
@@ -2088,9 +2405,9 @@ async def _generate_day_entry(username: str, campaign_id: str, prev_day: int) ->
         world['last_day_turn'] = len(transcript)
         world.pop('_pending_day_entry', None)
         store.save(st)
-        logger.info("📖 Dag-entry genererad för dag %d", prev_day)
+        logger.info("📖 Day entry generated for day %d", prev_day)
     except Exception as e:
-        logger.warning("📖 Dag-entry misslyckades: %s", e)
+        logger.warning("📖 Day entry failed: %s", e)
 
 
 
@@ -2307,6 +2624,23 @@ async def _guardian_post_dm(
     (P0-dedup: se combat-spec B2.)
     """
     try:
+        lock = _state_lock(username, campaign_id)
+        async with lock:
+            await _guardian_post_dm_locked(
+                username, campaign_id, reply, player_msg,
+                effective_turn, dm_npcs, skip_effects,
+            )
+    except Exception as e:
+        logger.warning("🛡️ Guardian background skipped: %s", e, exc_info=True)
+
+
+async def _guardian_post_dm_locked(
+    username: str, campaign_id: str, reply: str, player_msg: str,
+    effective_turn: int, dm_npcs: list[dict],
+    skip_effects: list | None = None,
+) -> None:
+    """Hjärtat av Guardian post-DM — körs under per-kampanj-låset."""
+    try:
         state = store.get(username, campaign_id)
         if not state:
             return
@@ -2315,9 +2649,10 @@ async def _guardian_post_dm(
 
         _tg = time.time()
         _guardian_transcript = store.load_transcript(state, last_n=8)
+        _guardian_usage = {}
         mech = await guardian_extract_mechanics(
             reply, player_msg, state, effective_turn,
-            lambda msgs: _call_llm(GUARDIAN_MODEL, msgs, temperature=0.2, max_tokens=4096, reasoning_effort="low"),
+            lambda msgs: _call_llm(_guardian_model_for(state), msgs, temperature=0.2, max_tokens=4096, reasoning_effort="low", usage_out=_guardian_usage),
             language=_get_lang(state),
             conversation_history=_guardian_transcript,
         )
@@ -2370,19 +2705,22 @@ async def _guardian_post_dm(
             guardian_summary = "🛡️ **Guardian**\n" + guardian_summary
 
         if guardian_summary:
+            _gmeta = {"turn": effective_turn}
+            if _guardian_usage.get("total_tokens"):
+                _gmeta["tokens"] = _guardian_usage
             state = store.append_message(
                 state, "guardian", guardian_summary,
-                meta={"turn": effective_turn},
+                meta=_gmeta,
             )
-            logger.info("🛡️ Guardian bakgrund (%.1fs): %d effekter, %d DM-NPCs, loggbok=%s",
+            logger.info("🛡️ Guardian background (%.1fs): %d effects, %d DM-NPCs, logbook=%s",
                         time.time() - _tg, len(guardian_effects), len(dm_npcs),
                         "ja" if mech.get("logbook") else "nej")
         else:
-            logger.info("🛡️ Guardian bakgrund (%.1fs): inga ändringar", time.time() - _tg)
+            logger.info("🛡️ Guardian background (%.1fs): no changes", time.time() - _tg)
 
         store.save(state)
     except Exception as e:
-        logger.warning("🛡️ Guardian bakgrund hoppade över: %s", e, exc_info=True)
+        logger.warning("🛡️ Guardian background skipped: %s", e, exc_info=True)
 
 
 # ── Bakgrundsuppgifter efter ett DM-svar (icke-kritiska, blockerar ALDRIG svaret) ──
@@ -2393,6 +2731,18 @@ async def _post_turn_tasks(
     """Körs i bakgrunden EFTER att HTTP-svaret skickats till klienten.
     Faktextraktion, RAG-indexering och sammanfattning — inget av detta
     får någonsin fördröja spelarens upplevelse. Alla fel sväljs tyst."""
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        await _post_turn_tasks_locked(
+            username, campaign_id, reply, player_msg, turn_count, model_id,
+        )
+
+
+async def _post_turn_tasks_locked(
+    username: str, campaign_id: str, reply: str, player_msg: str,
+    turn_count: int, model_id: str,
+) -> None:
+    """Hjärtat av post-turn-uppgifterna — körs under per-kampanj-låset."""
     # 1. Extrahera fakta + inventory-ändringar ur DM-svaret (billig modell)
     # Varannan tur (turn_count % 2 == 0): faktextraktion är ett LLM-anrop
     # (kostnad + latens). [FÖREMÅL:]-taggar + Guardian täcker redan inventory,
@@ -2418,7 +2768,7 @@ async def _post_turn_tasks(
             if facts:
                 register = FactRegister(username, campaign_id)
                 register.add_facts(facts)
-                logger.info("Extraherade %d fakta (tur %d)", len(facts), turn_count)
+                logger.info("Extracted %d facts (turn %d)", len(facts), turn_count)
 
             # Applicera inventory-ändringar (LLM-baserat säkerhetsnät)
             if inv_changes and st:
@@ -2431,7 +2781,7 @@ async def _post_turn_tasks(
                     if ch["action"] == "add":
                         # Skippa om taggen redan lade till det
                         if name_lower in tag_added:
-                            logger.debug("📦 LLM-extraktion skippade '%s' (redan taggad)", ch["name"])
+                            logger.debug("📦 LLM extraction skipped '%s' (already tagged)", ch["name"])
                             continue
                         existing = next((it for it in inv if it["name"].lower() == name_lower), None)
                         if existing:
@@ -2448,19 +2798,19 @@ async def _post_turn_tasks(
                                 "rarity": "normal",
                                 "description": "",
                             })
-                            logger.info("📦 LLM-extraktion lade till '%s'", ch["name"])
+                            logger.info("📦 LLM extraction added '%s'", ch["name"])
                     elif ch["action"] == "remove":
                         existing = next((it for it in inv if it["name"].lower() == name_lower), None)
                         if existing:
                             existing["qty"] = existing.get("qty", 1) - ch["qty"]
                             if existing["qty"] <= 0:
                                 inv.remove(existing)
-                                logger.info("📦 LLM-extraktion tog bort '%s'", ch["name"])
+                                logger.info("📦 LLM extraction removed '%s'", ch["name"])
                             else:
-                                logger.info("📦 LLM-extraktion minskade '%s' → qty=%d", ch["name"], existing["qty"])
+                                logger.info("📦 LLM extraction reduced '%s' → qty=%d", ch["name"], existing["qty"])
                 store.save(st)
         except Exception as e:
-            logger.debug("Faktextraktion hoppade över: %s", e)
+            logger.debug("Fact extraction skipped: %s", e)
 
     # 1b. Guardian POST-DM: flyttad till /api/chat (inline) — syns nu i chatten.
 
@@ -2478,9 +2828,9 @@ async def _post_turn_tasks(
                     ]
                     if msgs_for_rag:
                         await rag.index_transcript(msgs_for_rag, username, campaign_id)
-                        logger.info("RAG-indexerade %d meddelanden (tur %d)", len(msgs_for_rag), turn_count)
+                        logger.info("RAG indexed %d messages (turn %d)", len(msgs_for_rag), turn_count)
         except Exception as e:
-            logger.debug("RAG-indexering hoppade över: %s", e)
+            logger.debug("RAG indexing skipped: %s", e)
 
     # 3. Sammanfattning (om det är dags)
     try:
@@ -2498,9 +2848,9 @@ async def _post_turn_tasks(
                 temperature=0.3, max_tokens=512,
             )
             store.save_summary(st, summary)
-            logger.info("Sammanfattning sparad (tur %d)", turn_count)
+            logger.info("Summary saved (turn %d)", turn_count)
     except Exception as e:
-        logger.debug("Sammanfattning hoppade över: %s", e)
+        logger.debug("Summary skipped: %s", e)
 
     # 4. Kapitel-sammanfattning (var 5:e scen-sammanfattning, Nivå 2)
     try:
@@ -2521,9 +2871,9 @@ async def _post_turn_tasks(
                 temperature=0.3, max_tokens=512, timeout=30,
             )
             store.save_chapter_summary(st, chapter_text)
-            logger.info("Kapitel-sammanfattning sparad (tur %d)", turn_count)
+            logger.info("Chapter summary saved (turn %d)", turn_count)
     except Exception as e:
-        logger.debug("Kapitel-sammanfattning hoppade över: %s", e)
+        logger.debug("Chapter summary skipped: %s", e)
 
     # 5. Kampanjbåge (var 3:e kapitel, Nivå 3)
     try:
@@ -2544,9 +2894,9 @@ async def _post_turn_tasks(
                 temperature=0.3, max_tokens=640, timeout=30,
             )
             store.save_campaign_arc(st, arc_text)
-            logger.info("Kampanjbåge sparad (tur %d)", turn_count)
+            logger.info("Campaign arc saved (turn %d)", turn_count)
     except Exception as e:
-        logger.debug("Kampanjbåge hoppade över: %s", e)
+        logger.debug("Campaign arc skipped: %s", e)
 
 
 @app.post("/api/chat")
@@ -2554,12 +2904,16 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
 
+    # Icke-admin spelare kan välja mellan PLAYER_MODELS (Qwen 3.8 / DeepSeek Flash)
+    if payload.get("role") != "admin":
+        req.model_id = _clamp_player_model(req.model_id)
+
     # ── Turn-tak (admin-styrt, 0 = oändligt) ──
     turn_cap = _turn_cap_for(username)
     if turn_cap > 0:
         turns_used = store.total_turns(username)
         if turns_used >= turn_cap:
-            logger.info("⛔ Turn-tak nått: %s (%d/%d)", username, turns_used, turn_cap)
+            logger.info("⛔ Turn cap reached: %s (%d/%d)", username, turns_used, turn_cap)
             raise HTTPException(
                 403,
                 "Turn limit reached. This adventure has ended — contact the administrator to raise your limit.",
@@ -2571,6 +2925,27 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
 
     # campaign_id tidigt — bakgrundsuppgifter behöver explicit ID
     campaign_id = state["meta"].get("campaign_id", "")
+
+    # Hela chat-turen körs under per-kampanj-låset: bakgrundsuppgifterna
+    # (_guardian_post_dm, _post_turn_tasks, dag-entry) skriver state
+    # asynkront — utan låset kan den som sparar sist skriva över andras
+    # ändringar (t.ex. NPC tillagd av Guardian försvann när faktextraktionen
+    # sparade en gammal kopia). Låset släpps när turen är klar; de taskar som
+    # chat skapar i slutet körs efteråt och tar låset själva.
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        # Hämta färskt state UNDER låset: en bakgrundsuppgift från förra
+        # turen kan ha skrivit sedan vi läste ovan (campaign_id-uppslag).
+        fresh_state = store.get(username, campaign_id)
+        if fresh_state:
+            state = fresh_state
+        return await _chat_locked(req, payload, username, campaign_id, state)
+
+
+async def _chat_locked(
+    req: ChatRequest, payload: dict, username: str, campaign_id: str, state: dict,
+) -> dict:
+    """Hjärtat av chat-turen — körs under per-kampanj-låset."""
 
     # Spelaren svarade på ett tärningskast → rensa väntande kast-begäran.
     # last_roll_requests fungerar då som "obesvarade kast": de finns kvar
@@ -2584,7 +2959,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         # så B4-blocket visar uppdaterade värden denna tur.
         _, result_effects = _parse_result_tag(req.message, state)
         if result_effects:
-            logger.info("🎲 Resultat-effekter: %s",
+            logger.info("🎲 Result effects: %s",
                         ", ".join(str(e.get("value", "?")) for e in result_effects))
 
     # ── /guardian <instruktion> — manuell korrigering ──
@@ -2598,20 +2973,27 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
 
         try:
             _tg = time.time()
+            _manual_usage = {}
+            # Körs redan under chat:ens per-kampanj-lås (_chat_locked) —
+            # inget extra lås här (asyncio.Lock är inte reentrant).
+            # state är redan färskt (hämtat under låset i chat()).
             guardian_report = await _guardian_manual_correction(
                 instruction, state, username,
-                lambda msgs: _call_llm(GUARDIAN_MODEL, msgs, temperature=0.1, max_tokens=2048),
+                lambda msgs: _call_llm(_guardian_model_for(state), msgs, temperature=0.1, max_tokens=2048, usage_out=_manual_usage),
                 language=_get_lang(state),
             )
-            logger.info("🛡️ Guardian manuell korrigering (%.1fs): %s", time.time() - _tg, guardian_report[:100])
+            logger.info("🛡️ Guardian manual correction (%.1fs): %s", time.time() - _tg, guardian_report[:100])
 
-            # Spara Guardian-rapporten i transkriptet
-            store.append_message(state, "guardian", guardian_report, meta={"turn": state["meta"].get("turn_count", 0), "manual": True})
+            # Spara Guardian-rapporten i transkriptet (med tokens)
+            _mmeta = {"turn": state["meta"].get("turn_count", 0), "manual": True}
+            if _manual_usage.get("total_tokens"):
+                _mmeta["tokens"] = _manual_usage
+            store.append_message(state, "guardian", guardian_report, meta=_mmeta)
             store.save(state)
 
             return {"reply": guardian_report, "turn_count": state["meta"].get("turn_count", 0)}
         except Exception as e:
-            logger.error("🛡️ Guardian manuell korrigering misslyckades: %s", e)
+            logger.error("🛡️ Guardian manual correction failed: %s", e)
             return {"reply": f"🛡️ Guardian could not process the correction: {e}", "turn_count": state["meta"].get("turn_count", 0)}
 
     # Bygg meddelandelista — spelarens meddelande sparas först EFTER att LLM:n svarat,
@@ -2620,9 +3002,9 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     is_awakening = req.message == "__VAKNA_DM__"
     _t0 = time.time()
     logger.info(
-        "▶ TUR %d · modell=%s · %s",
+        "▶ TURN %d · model=%s · %s",
         effective_turn, req.model_id,
-        "VAKNANDE" if is_awakening else f"«{req.message[:40]}»",
+        "AWAKENING" if is_awakening else f"«{req.message[:40]}»",
     )
 
     # ── Guardian PRE-DM: kast-detektion ──
@@ -2643,24 +3025,25 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
                     break
             guardian_roll = await guardian_check_roll(
                 req.message, state,
-                lambda msgs: _call_llm(GUARDIAN_MODEL, msgs, temperature=0.1, max_tokens=1024),
+                lambda msgs: _call_llm(_guardian_model_for(state), msgs, temperature=0.1, max_tokens=1024),
                 language=_get_lang(state),
                 dm_context=_dm_context,
             )
+            # Pre-DM tokens loggas (skrivs ej till transkript — ingen post att fästa vid)
             if guardian_roll:
-                logger.info("🛡️ Guardian pre-DM (%.1fs): kast %s (%s)",
+                logger.info("🛡️ Guardian pre-DM (%.1fs): roll %s (%s)",
                             time.time() - _tg, guardian_roll["notation"], guardian_roll["label"])
             else:
-                logger.debug("🛡️ Guardian pre-DM (%.1fs): inget kast", time.time() - _tg)
+                logger.debug("🛡️ Guardian pre-DM (%.1fs): no roll", time.time() - _tg)
         except Exception as e:
-            logger.warning("🛡️ Guardian pre-DM hoppade över: %s", e)
+            logger.warning("🛡️ Guardian pre-DM skipped: %s", e)
 
     messages = [{"role": "system", "content": _build_system_prompt(
         state, turn_override=effective_turn, awakening_trigger=is_awakening,
         player_input=req.message,
         guardian_roll=guardian_roll,
     )}]
-    logger.debug("Systemprompt byggd (%d tecken)", len(messages[0]["content"]))
+    logger.debug("System prompt built (%d chars)", len(messages[0]["content"]))
 
     # RAG + faktaregister: injicera relevant långtidsminne i systemprompten
     if not is_awakening:
@@ -2672,11 +3055,11 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
             )
             if memory_block:
                 messages[0]["content"] += "\n\n" + memory_block
-                logger.info("🧠 Minne injicerat (+%d tkn, %.1fs)", len(memory_block), time.time() - _tm)
+                logger.info("🧠 Memory injected (+%d tkn, %.1fs)", len(memory_block), time.time() - _tm)
             else:
-                logger.debug("🧠 Inget relevant minne hittades (%.1fs)", time.time() - _tm)
+                logger.debug("🧠 No relevant memory found (%.1fs)", time.time() - _tm)
         except Exception as e:
-            logger.warning("RAG/fakta-injektion hoppade över: %s", e)
+            logger.warning("RAG/fact injection skipped: %s", e)
 
     # Sammanfattningar injiceras numera i _build_system_prompt (hierarkiskt:
     # 2 scen + 2 kapitel + 1 kampanjbåge) — ingen separat loop behövs här.
@@ -2695,9 +3078,16 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     # Vaknandet: LLM:n ser en narrativ kallelse istället för den råa triggern
     user_content = req.message
     if is_awakening:
-        user_content = "*Du slår upp ögonen i mörkret. Någon har kallat på dig. En ny spelare sitter vid bordet och väntar.*"
+        _lang = _get_lang(state)
+        user_content = (
+            "*You open your eyes in the darkness. Someone has called upon you. "
+            "A new player sits at the table, waiting.*"
+            if _lang == "en" else
+            "*Du slår upp ögonen i mörkret. Någon har kallat på dig. "
+            "En ny spelare sitter vid bordet och väntar.*"
+        )
     messages.append({"role": "user", "content": user_content})
-    logger.debug("Kontext: %d meddelanden → DM", len(messages))
+    logger.debug("Context: %d messages → DM", len(messages))
 
     # Anropa LLM — vid fel: riktigt felmeddelande, ingen placeholder
     _tllm = time.time()
@@ -2719,22 +3109,22 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     _is_long_form = any(kw in req.message.lower() for kw in _long_form_kw) and len(req.message) > 15
     _dm_max_tokens = 4096 if _is_long_form else 1024
     if _is_long_form:
-        logger.info("📖 Long-form request — max_tokens höjt till %d", _dm_max_tokens)
+        logger.info("📖 Long-form request — max_tokens raised to %d", _dm_max_tokens)
 
     try:
         reply, reasoning, usage = await _call_llm_with_reasoning(req.model_id, messages, max_tokens=_dm_max_tokens)
         _llm_time = round(time.time() - _tllm, 1)
-        logger.info("🤖 DM svarade (%d tkn, %.1fs)", len(reply), _llm_time)
+        logger.info("🤖 DM responded (%d tkn, %.1fs)", len(reply), _llm_time)
         if reasoning:
-            logger.debug("💭 DM resonerade (%d tkn)", len(reasoning))
+            logger.debug("💭 DM reasoned (%d tkn)", len(reasoning))
     except HTTPException:
-        logger.error("❌ DM-anrop misslyckades (HTTP-fel)")
+        logger.error("❌ DM call failed (HTTP error)")
         raise
     except (ValueError, RuntimeError) as e:
-        logger.error("❌ DM-anrop misslyckades: %s", e)
+        logger.error("❌ DM call failed: %s", e)
         raise HTTPException(502, f"DM:n nås inte just nu: {e}")
     except Exception as e:
-        logger.error("❌ Oväntat LLM-fel: %s", e)
+        logger.error("❌ Unexpected LLM error: %s", e)
         raise HTTPException(502, f"Oväntat LLM-fel: {e}")
 
     # Spara spelarens meddelande + DM-svar i transkriptet
@@ -2744,9 +3134,9 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     reply, new_npcs = _parse_npcs(reply)
     reply, roll_requests = _parse_roll_requests(reply)
     if new_npcs:
-        logger.info("🎭 %d ny(a) NPC: %s", len(new_npcs), ", ".join(n["name"] for n in new_npcs))
+        logger.info("🎭 %d new NPC(s): %s", len(new_npcs), ", ".join(n["name"] for n in new_npcs))
     if roll_requests:
-        logger.info("🎲 %d kast begärt: %s", len(roll_requests), ", ".join(r["notation"] for r in roll_requests))
+        logger.info("🎲 %d roll(s) requested: %s", len(roll_requests), ", ".join(r["notation"] for r in roll_requests))
 
     # ── Säkerhetsnät: prosa-kast utan [KAST:]-tagg ──
     # Om DM skrev "Rulla tärningen" i prosa men glömde taggen spawnas ingen
@@ -2754,14 +3144,14 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     # aldrig stannar. (Taggade kast har redan rensats ur reply av _parse_roll_requests.)
     if not roll_requests and PROSE_ROLL_PATTERN.search(reply):
         roll_requests = [{"notation": "1d20", "label": "Tärningsslag"}]
-        logger.warning("🎲 Prosa-kast upptäckt (ingen [KAST:]-tagg) → auto-spawnar 1d20")
+        logger.warning("🎲 Prose roll detected (no [KAST:] tag) → auto-spawning 1d20")
 
     # ── Guardian-fallback: DM glömde [KAST:] men Guardian rekommenderade kast ──
     # Guardian pre-DM avgjorde att handlingen kräver kast. Om DM inte
     # producerade någon [KAST:]-tagg, använd Guardians rekommendation.
     if not roll_requests and guardian_roll:
         roll_requests = [{"notation": guardian_roll["notation"], "label": guardian_roll["label"]}]
-        logger.warning("🛡️ Guardian-fallback: DM glömde [KAST:] → auto-spawnar %s (%s)",
+        logger.warning("🛡️ Guardian fallback: DM forgot [KAST:] → auto-spawning %s (%s)",
                        guardian_roll["notation"], guardian_roll["label"])
 
     # Lägg till nya NPCs FÖRE taggparsning (så NPC_DÖD hittar dem)
@@ -2820,12 +3210,12 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
                 repaired, _ = _parse_roll_requests(repaired)
                 current_reply = repaired
             except Exception as e:
-                logger.warning("Repair-anrop misslyckades: %s", e)
+                logger.warning("Repair call failed: %s", e)
                 break
         else:
             # Försöken slut — behåll narrationen, förkasta trasig mekanik
             logger.warning(
-                "DM-svar ogiltigt efter 2 försök, förkastar mekanik. Fel: %s",
+                "DM response invalid after 2 attempts, discarding mechanics. Errors: %s",
                 "; ".join(errors),
             )
             reply = _strip_mechanical_tags(current_reply)
@@ -2866,7 +3256,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     if not roll_requests and re.search(r'^\s*-?\s*Kast\s*:', reply, re.MULTILINE | re.IGNORECASE):
         roll_requests = [{"notation": "1d20", "label": "Tärningsslag"}]
         reply = re.sub(r'^\s*-?\s*Kast\s*:.*$', '', reply, flags=re.MULTILINE | re.IGNORECASE).strip()
-        logger.warning("🎲 Prosa-kast 'Kast:' upptäckt → auto-spawnar 1d20")
+        logger.warning("🎲 Prose roll 'Kast:' detected → auto-spawning 1d20")
 
     # Spara DM-svar (ren text — inga taggar eller intern struktur)
     state = store.append_message(state, "assistant", reply, meta={
@@ -2878,7 +3268,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     # Rensa awakening-flaggan efter turn 2 (scenen är öppnad — aldrig igen)
     if state["meta"].get("awakening") and effective_turn >= 2:
         state["meta"]["awakening"] = False
-        logger.info("🌅 Awakening avslutad (tur %d)", effective_turn)
+        logger.info("🌅 Awakening complete (turn %d)", effective_turn)
 
     # ── Spara DM-svar + effekter (Guardian kör i bakgrunden) ──
     store.save(state)
@@ -2911,7 +3301,7 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         _BACKGROUND_TASKS.add(day_task)
         day_task.add_done_callback(_BACKGROUND_TASKS.discard)
 
-    logger.info("◀ TUR %d klar · totalt %.1fs", state["meta"]["turn_count"], time.time() - _t0)
+    logger.info("◀ TURN %d done · total %.1fs", state["meta"]["turn_count"], time.time() - _t0)
 
     return {
         "reply": reply,
@@ -2959,80 +3349,108 @@ class CombatFleeRequest(BaseModel):
 async def combat_attack(req: CombatAttackRequest, morkrets_token: str | None = Cookie(None)):
     """Spelaren attackerar en fiende i pågående strid."""
     payload = _get_current_user(morkrets_token)
-    state = store.get(payload["sub"])
+    username = payload["sub"]
+    state = store.get(username)
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
+    campaign_id = state["meta"].get("campaign_id", "")
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        fresh = store.get(username, campaign_id)
+        if fresh:
+            state = fresh
 
-    result = combat_player_attack(state, req.target_id, req.attack_roll, req.damage_notation)
-    if result.get("error"):
-        raise HTTPException(400, result["error"])
+        result = combat_player_attack(state, req.target_id, req.attack_roll, req.damage_notation)
+        if result.get("error"):
+            raise HTTPException(400, result["error"])
 
-    # Spara combat-state
-    store.save(state)
+        # Spara combat-state
+        store.save(state)
 
-    # Generera [COMBAT:]-tagg för frontend
-    combat = state.get("world", {}).get("combat")
-    tag = combat_tag_fn(combat) if combat else ""
+        # Generera [COMBAT:]-tagg för frontend
+        combat = state.get("world", {}).get("combat")
+        tag = combat_tag_fn(combat) if combat else ""
 
-    return {
-        "ok": True,
-        "result": result,
-        "combat_tag": tag,
-        "combat": combat,
-    }
+        return {
+            "ok": True,
+            "result": result,
+            "combat_tag": tag,
+            "combat": combat,
+        }
 
 
 @app.post("/api/combat/cast")
 async def combat_cast(req: CombatCastRequest, morkrets_token: str | None = Cookie(None)):
     """Spelaren kastar en besvärjelse."""
     payload = _get_current_user(morkrets_token)
-    state = store.get(payload["sub"])
+    username = payload["sub"]
+    state = store.get(username)
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
+    campaign_id = state["meta"].get("campaign_id", "")
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        fresh = store.get(username, campaign_id)
+        if fresh:
+            state = fresh
 
-    result = combat_player_cast(
-        state, req.target_id, req.spell_name,
-        req.attack_roll, req.save_dc, req.damage_notation, req.slot_level,
-    )
-    if not result.get("success"):
-        raise HTTPException(400, result.get("error", "Kast misslyckades"))
+        result = combat_player_cast(
+            state, req.target_id, req.spell_name,
+            req.attack_roll, req.save_dc, req.damage_notation, req.slot_level,
+        )
+        if not result.get("success"):
+            raise HTTPException(400, result.get("error", "Kast misslyckades"))
 
-    store.save(state)
-    combat = state.get("world", {}).get("combat")
-    return {"ok": True, "result": result, "combat": combat}
+        store.save(state)
+        combat = state.get("world", {}).get("combat")
+        return {"ok": True, "result": result, "combat": combat}
 
 
 @app.post("/api/combat/bonus")
 async def combat_bonus(req: dict, morkrets_token: str | None = Cookie(None)):
     """Spelaren använder sin bonus action."""
     payload = _get_current_user(morkrets_token)
-    state = store.get(payload["sub"])
+    username = payload["sub"]
+    state = store.get(username)
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
+    campaign_id = state["meta"].get("campaign_id", "")
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        fresh = store.get(username, campaign_id)
+        if fresh:
+            state = fresh
 
-    action_name = req.get("action", "Bonus action")
-    result = combat_bonus_action(state, action_name)
-    if not result.get("success"):
-        raise HTTPException(400, result.get("error", "Bonus action misslyckades"))
+        action_name = req.get("action", "Bonus action")
+        result = combat_bonus_action(state, action_name)
+        if not result.get("success"):
+            raise HTTPException(400, result.get("error", "Bonus action misslyckades"))
 
-    store.save(state)
-    combat = state.get("world", {}).get("combat")
-    return {"ok": True, "result": result, "combat": combat}
+        store.save(state)
+        combat = state.get("world", {}).get("combat")
+        return {"ok": True, "result": result, "combat": combat}
 
 
 @app.post("/api/combat/flee")
 async def combat_flee_endpoint(req: CombatFleeRequest, morkrets_token: str | None = Cookie(None)):
     """Spelaren försöker fly från striden."""
     payload = _get_current_user(morkrets_token)
-    state = store.get(payload["sub"])
+    username = payload["sub"]
+    state = store.get(username)
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
+    campaign_id = state["meta"].get("campaign_id", "")
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        fresh = store.get(username, campaign_id)
+        if fresh:
+            state = fresh
 
-    result = combat_flee(state, req.dex_check)
-    store.save(state)
+        result = combat_flee(state, req.dex_check)
+        store.save(state)
 
-    combat = state.get("world", {}).get("combat")
-    return {"ok": True, "result": result, "combat": combat}
+        combat = state.get("world", {}).get("combat")
+        return {"ok": True, "result": result, "combat": combat}
 
 
 @app.post("/api/combat/end-turn")
@@ -3048,109 +3466,115 @@ async def combat_end_turn(morkrets_token: str | None = Cookie(None)):
     state = store.get(username)
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
+    campaign_id = state["meta"].get("campaign_id", "")
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        fresh = store.get(username, campaign_id)
+        if fresh:
+            state = fresh
 
-    combat = state.get("world", {}).get("combat")
-    if not combat or not combat.get("active"):
-        raise HTTPException(400, "Ingen aktiv strid")
+        combat = state.get("world", {}).get("combat")
+        if not combat or not combat.get("active"):
+            raise HTTPException(400, "Ingen aktiv strid")
 
-    lang = _get_lang(state)
+        lang = _get_lang(state)
 
-    # 1. Battle AI bestämmer fiendernas handlingar
-    try:
-        enemy_actions = await battle_ai_decide(
-            state,
-            lambda msgs: _call_llm(GUARDIAN_MODEL, msgs, temperature=0.3, max_tokens=2048),
-            language=lang,
-        )
-    except Exception as e:
-        logger.warning("⚔️ Battle AI hoppade över: %s", e)
-        enemy_actions = []
+        # 1. Battle AI bestämmer fiendernas handlingar
+        try:
+            enemy_actions = await battle_ai_decide(
+                state,
+                lambda msgs: _call_llm(_guardian_model_for(state), msgs, temperature=0.3, max_tokens=2048),
+                language=lang,
+            )
+        except Exception as e:
+            logger.warning("⚔️ Battle AI skipped: %s", e)
+            enemy_actions = []
 
-    # 2. Applicera fiendeaktioner mekaniskt
-    enemy_effects = apply_enemy_actions(state, enemy_actions)
+        # 2. Applicera fiendeaktioner mekaniskt
+        enemy_effects = apply_enemy_actions(state, enemy_actions)
 
-    # 3. Hoppa till nästa runda (alla fiender har agerat via Battle AI)
-    #    advance_turn stegar ett i taget — loopa tills det är spelarens tur igen
-    for _ in range(len(combat.get("turn_order", [])) + 1):
-        combat = combat_advance_turn(state)
-        if not combat.get("active"):
-            break
-        if is_player_turn(combat):
-            break
+        # 3. Hoppa till nästa runda (alla fiender har agerat via Battle AI)
+        #    advance_turn stegar ett i taget — loopa tills det är spelarens tur igen
+        for _ in range(len(combat.get("turn_order", [])) + 1):
+            combat = combat_advance_turn(state)
+            if not combat.get("active"):
+                break
+            if is_player_turn(combat):
+                break
 
-    # 4. Spara
-    store.save(state)
-
-    # 5. Bygg Guardian-rapport för chatten
-    guardian_lines = []
-    en = lang == "en"
-    for fx in enemy_effects:
-        t = fx.get("type", "")
-        v = fx.get("value", "")
-        if t == "enemy_hit":
-            dmg = fx.get("damage", "?")
-            crit = fx.get("crit", False)
-            roll = fx.get("roll", "?")
-            crit_str = " 💥 KRITISK!" if crit else ""
-            if en:
-                guardian_lines.append(f"🗡️ **{v}** hits you — **{dmg} damage**{crit_str} (roll {roll})")
-            else:
-                guardian_lines.append(f"🗡️ **{v}** träffar dig — **{dmg} skada**{crit_str} (slag {roll})")
-        elif t == "enemy_miss":
-            roll = fx.get("roll", "?")
-            if en:
-                guardian_lines.append(f"🛡️ **{v}** misses you (roll {roll})")
-            else:
-                guardian_lines.append(f"🛡️ **{v}** missar dig (slag {roll})")
-        elif t == "enemy_fled":
-            if en:
-                guardian_lines.append(f"🏃 **{v}** flees!")
-            else:
-                guardian_lines.append(f"🏃 **{v}** flyr!")
-        elif t == "combat_end":
-            if en:
-                guardian_lines.append(f"🏁 **Combat over — {v}**")
-            else:
-                guardian_lines.append(f"🏁 **Striden är över — {v}**")
-
-    # Lägg till combat-loggen (rundans händelser)
-    combat_log = combat.get("log", [])
-    recent_log = [l for l in combat_log if l.get("round") == combat.get("round", 1)][-6:]
-    for entry in recent_log:
-        actor = entry.get("actor", "")
-        name = entry.get("name", "")
-        text = entry.get("text", "")
-        if actor == "system":
-            guardian_lines.append(f"⚙️ {text}")
-        elif actor == "enemy":
-            guardian_lines.append(f"👹 **{name}** {text}")
-
-    # Bygg rapport
-    tag = combat_tag_fn(combat) if combat else ""
-    if guardian_lines:
-        header = "🛡️ **Guardian** · ⚔️ " + ("Enemy Turn" if en else "Fiendernas tur")
-        report = header + "\n" + "\n".join(guardian_lines)
-        if tag:
-            report += "\n" + tag
-    else:
-        report = tag or ""
-
-    # Spara i transkriptet
-    if report:
-        state = store.append_message(state, "guardian", report, meta={
-            "turn": state.get("meta", {}).get("turn_count", 0),
-            "combat_turn": True,
-        })
+        # 4. Spara
         store.save(state)
 
-    return {
-        "ok": True,
-        "enemy_actions": enemy_actions,
-        "effects": enemy_effects,
-        "combat": combat,
-        "guardian_report": report,
-        "player_hp": state.get("character", {}).get("hp", {}),
-    }
+        # 5. Bygg Guardian-rapport för chatten
+        guardian_lines = []
+        en = lang == "en"
+        for fx in enemy_effects:
+            t = fx.get("type", "")
+            v = fx.get("value", "")
+            if t == "enemy_hit":
+                dmg = fx.get("damage", "?")
+                crit = fx.get("crit", False)
+                roll = fx.get("roll", "?")
+                crit_str = " 💥 KRITISK!" if crit else ""
+                if en:
+                    guardian_lines.append(f"🗡️ **{v}** hits you — **{dmg} damage**{crit_str} (roll {roll})")
+                else:
+                    guardian_lines.append(f"🗡️ **{v}** träffar dig — **{dmg} skada**{crit_str} (slag {roll})")
+            elif t == "enemy_miss":
+                roll = fx.get("roll", "?")
+                if en:
+                    guardian_lines.append(f"🛡️ **{v}** misses you (roll {roll})")
+                else:
+                    guardian_lines.append(f"🛡️ **{v}** missar dig (slag {roll})")
+            elif t == "enemy_fled":
+                if en:
+                    guardian_lines.append(f"🏃 **{v}** flees!")
+                else:
+                    guardian_lines.append(f"🏃 **{v}** flyr!")
+            elif t == "combat_end":
+                if en:
+                    guardian_lines.append(f"🏁 **Combat over — {v}**")
+                else:
+                    guardian_lines.append(f"🏁 **Striden är över — {v}**")
+
+        # Lägg till combat-loggen (rundans händelser)
+        combat_log = combat.get("log", [])
+        recent_log = [l for l in combat_log if l.get("round") == combat.get("round", 1)][-6:]
+        for entry in recent_log:
+            actor = entry.get("actor", "")
+            name = entry.get("name", "")
+            text = entry.get("text", "")
+            if actor == "system":
+                guardian_lines.append(f"⚙️ {text}")
+            elif actor == "enemy":
+                guardian_lines.append(f"👹 **{name}** {text}")
+
+        # Bygg rapport
+        tag = combat_tag_fn(combat) if combat else ""
+        if guardian_lines:
+            header = "🛡️ **Guardian** · ⚔️ " + ("Enemy Turn" if en else "Fiendernas tur")
+            report = header + "\n" + "\n".join(guardian_lines)
+            if tag:
+                report += "\n" + tag
+        else:
+            report = tag or ""
+
+        # Spara i transkriptet
+        if report:
+            state = store.append_message(state, "guardian", report, meta={
+                "turn": state.get("meta", {}).get("turn_count", 0),
+                "combat_turn": True,
+            })
+            store.save(state)
+
+        return {
+            "ok": True,
+            "enemy_actions": enemy_actions,
+            "effects": enemy_effects,
+            "combat": combat,
+            "guardian_report": report,
+            "player_hp": state.get("character", {}).get("hp", {}),
+        }
 
 
 @app.get("/api/combat/state")
@@ -3181,12 +3605,16 @@ CHARACTER_PROMPT_SV = """Du är en D&D-karaktärsgenerator för ett mörkt fanta
 
 VIKTIGT: Karaktären hör hemma i en PÅHITTAD fantasy-värld. Använd ALDRIG verkliga ortsnamn (inga svenska städer, länder eller kända platser) i namn, bakgrund eller utrustning. Hitta på stämningsfulla fantasy-namn.
 
+NAMNVARIATION (KRITISKT): Namnet ska vara UNIKT och OVÄNTAT. Variera den språkliga stilen mellan generationer — ibland nordisk (Hakon, Yrsa, Torstein), ibland keltisk (Aedan, Brannagh, Sorcha), ibland östlig (Zahir, Nilay, Ozan), ibland latin/medelhavs (Cassian, Livia, Octavian), ibland helt påhittad stavelse-poesi (Vaelen, Thrum, Grit). Kombinera gärna oväntade ljud. Använd ALDRIG samma namn, samma namnrytm eller samma ändelser som i promptens exempel — och återanvänd aldrig ett namn du redan använt i tidigare svar.
+FÖRBJUDNA NAMN (AI-klassiker — använd ALDRIG): Kaelen, Kael, Elara, Lyra, Thorne, Aldric, Edric, Vane, Vex, Pip, Sable, Brunja, Maren, Eramus, Zara, Kira, Aria, Nyx, Corvin, Draven, Alaric, Morwen, Gwendolyn, Seraphina, Caspian, Rowan, Silas, Lark, Wren. Om du känner att du vill använda ett av dessa — välj något ANNAT.
+
 Svara ENDAST med giltig JSON (ingen markdown) med detta schema:
 {
   "name": "string",
   "race": "string",
   "class": "string",
   "level": 1,
+  "max_weight_lbs": "number — STR score × 15 (D&D 5e bärvikt)",
   "alignment": "string",
   "background": "string — klass/bakgrund, kort",
   "ac": 10 + DEX-mod (+ rustning om utrustad),  // BERÄKNA från abilities!
@@ -3210,7 +3638,7 @@ Svara ENDAST med giltig JSON (ingen markdown) med detta schema:
   "gear": "string — startutrustning, 5-8 föremål separerade med ' · '",
   "story": "string — bakgrundshistoria, max 100 ord, mörk och stämningsfull",
   "inventory": [
-    {"name": "string", "type": "Vapen|Rustning|Dryck|Magisk|Verktyg|Annat", "qty": 1, "weight": 1.0, "equipped": false, "rarity": "normal|magic|rare|legendary", "damage": "1d8 slashing|null", "damage_dice": "1d8|null", "damage_type": "slashing|null", "ac_bonus": 14|null, "range": "melee|null", "properties": ["versatile"], "magic_bonus": 0, "charges": null, "max_charges": null, "description": "string", "effects": "string|null"}
+    {"name": "string", "type": "Vapen|Rustning|Dryck|Magisk|Verktyg|Annat", "category": "weapon|armor|potion|magic|tool|trinket", "usage": "wielded|consumable|activated", "qty": 1, "weight": 1.0, "lore": "string|null", "equipped": false, "rarity": "normal|magic|rare|legendary", "damage": "1d8 slashing|null", "damage_dice": "1d8|null", "damage_type": "slashing|null", "ac_bonus": 14|null, "range": "melee|null", "properties": ["versatile"], "magic_bonus": 0, "charges": null, "max_charges": null, "description": "string", "effects": "string|null", "roll": "2d4+2|null"}
   ]
 }
 
@@ -3229,6 +3657,8 @@ Fyll ALLTID inventory-arrayen med 5-8 föremål som passar karaktärens klass oc
 - **Ett klass-unikt föremål** som speglar klassens identitet (t.ex. "Runristad spellbok" för magiker, "Tjuvverktyg" för rogue, "Heligt symbol" för cleric, "Jaktbåge + 20 pilar" för ranger)
 - **2-3 ytterligare äventyrsföremål** (rep, facklor, tändstål, karta, sovsäck, etc.)
 - Sätt realistic weight (lbs) på varje föremål. Vapen 2-6 lbs, potion 0.5 lbs, mat 0.5-1 lbs per styck.
+- Sätt 'lore' på VARJE föremål: 1-2 meningar stämningsfull världshistoria — var det kommer ifrån, vem som ägde det, vad det varit med om. Skriv utifrån karaktärens bakgrund och värld. Aldrig generiska floskler. **VARJE föremål MÅSTE ha lore — om du är osäker, skriv en mening om dess ursprung. Inga föremål utan lore.**
+- Beräkna max_weight_lbs = STR score × 15 (D&D 5e bärvikt).
 - Basvapnet ska ha equipped:true, allt annat equipped:false.
 - rarity: de flesta "normal", potion kan vara "magic", det klass-unika föremålet kan vara "rare"."""
 
@@ -3236,12 +3666,16 @@ CHARACTER_PROMPT_EN = """You are a D&D character generator for a dark fantasy ad
 
 IMPORTANT: The character belongs in a FICTIONAL fantasy world. NEVER use real place names (no real cities, countries, or known locations) in names, backgrounds, or equipment. Invent atmospheric fantasy names.
 
+NAME VARIATION (CRITICAL): The name must be UNIQUE and UNEXPECTED. Vary the linguistic style between generations — sometimes Nordic (Hakon, Yrsa, Torstein), sometimes Celtic (Aedan, Brannagh, Sorcha), sometimes Eastern (Zahir, Nilay, Ozan), sometimes Latin/Mediterranean (Cassian, Livia, Octavian), sometimes invented syllable-poetry (Vaelen, Thrum, Grit). Combine unexpected sounds. NEVER use the same name, name-rhythm, or endings as any example in the prompt — and never reuse a name you have already used in previous answers.
+FORBIDDEN NAMES (AI classics — NEVER use): Kaelen, Kael, Elara, Lyra, Thorne, Aldric, Edric, Vane, Vex, Pip, Sable, Brunja, Maren, Eramus, Zara, Kira, Aria, Nyx, Corvin, Draven, Alaric, Morwen, Gwendolyn, Seraphina, Caspian, Rowan, Silas, Lark, Wren. If you feel tempted to use one of these — pick something else.
+
 Respond ONLY with valid JSON (no markdown) using this schema:
 {
   "name": "string",
   "race": "string",
   "class": "string",
   "level": 1,
+  "max_weight_lbs": "number — STR score × 15 (D&D 5e carry capacity)",
   "alignment": "string",
   "background": "string — class/background, brief",
   "ac": 10 + DEX-mod (+ armor if equipped),  // COMPUTE from abilities!
@@ -3265,7 +3699,7 @@ Respond ONLY with valid JSON (no markdown) using this schema:
   "gear": "string — starting equipment, 5-8 items separated by ' · '",
   "story": "string — backstory, max 100 words, dark and atmospheric",
   "inventory": [
-    {"name": "string", "type": "Weapon|Armor|Potion|Magic|Tool|Other", "qty": 1, "weight": 1.0, "equipped": false, "rarity": "normal|magic|rare|legendary", "damage": "1d8 slashing|null", "damage_dice": "1d8|null", "damage_type": "slashing|null", "ac_bonus": 14|null, "range": "melee|null", "properties": ["versatile"], "magic_bonus": 0, "charges": null, "max_charges": null, "description": "string", "effects": "string|null"}
+    {"name": "string", "type": "Weapon|Armor|Potion|Magic|Tool|Other", "category": "weapon|armor|potion|magic|tool|trinket", "usage": "wielded|consumable|activated", "qty": 1, "weight": 1.0, "lore": "string|null", "equipped": false, "rarity": "normal|magic|rare|legendary", "damage": "1d8 slashing|null", "damage_dice": "1d8|null", "damage_type": "slashing|null", "ac_bonus": 14|null, "range": "melee|null", "properties": ["versatile"], "magic_bonus": 0, "charges": null, "max_charges": null, "description": "string", "effects": "string|null", "roll": "2d4+2|null"}
   ]
 }
 
@@ -3284,6 +3718,8 @@ ALWAYS fill the inventory array with 5-8 items fitting the character's class and
 - **A class-unique item** reflecting class identity (e.g. "Rune-etched spellbook" for wizard, "Thieves' tools" for rogue, "Holy symbol" for cleric, "Hunting bow + 20 arrows" for ranger)
 - **2-3 additional adventure items** (rope, torches, tinderbox, map, bedroll, etc.)
 - Set realistic weight (lbs) on each item. Weapons 2-6 lbs, potions 0.5 lbs, food 0.5-1 lbs per piece.
+- Set 'lore' on EVERY item: 1-2 sentences of atmospheric world-history — where it comes from, who owned it, what it has been through. Write from the character's background and world. Never generic platitudes. **EVERY item MUST have lore — if unsure, write one sentence about its origin. No item without lore.**
+- Compute max_weight_lbs = STR score × 15 (D&D 5e carry capacity).
 - The base weapon should have equipped:true, everything else equipped:false.
 - rarity: most items "normal", potions can be "magic", the class-unique item can be "rare"."""
 
@@ -3292,6 +3728,10 @@ ALWAYS fill the inventory array with 5-8 items fitting the character's class and
 async def generate_character(req: CharacterRequest, morkrets_token: str | None = Cookie(None)):
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
+
+    # Icke-admin spelare begränsas till tillåtna modeller
+    if payload.get("role") != "admin":
+        req.model_id = _clamp_player_model(req.model_id)
 
     state = store.get(username)
     if not state:
@@ -3309,8 +3749,8 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
 
     try:
         raw = await _call_llm(
-            req.model_id, messages, temperature=0.7, max_tokens=8000,
-            thinking_cap=8000, thinking="disabled",
+            req.model_id, messages, temperature=0.95, max_tokens=8000,
+            thinking_cap=8000, reasoning_effort="low", timeout=300,
         )
         char_data = _extract_json(raw)
     except HTTPException:
@@ -3319,6 +3759,15 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
         err = _err("Karaktären kunde inte vävas", "The character could not be woven", lang)
         raise HTTPException(502, f"{err}: {e}")
 
+    return _finalize_character(char_data, state, lang)
+
+
+def _finalize_character(char_data: dict, state: dict, lang: str) -> dict:
+    """Normalisera LLM:ns karaktärs-JSON → färdig karaktär + inventory.
+
+    Delas av generate_character (JSON-svar) och generate_character_stream
+    (SSE) så båda vägarna ger identisk validering/beräkning.
+    """
     # Validera löst — se till att grundfält finns
     if not char_data.get("name"):
         char_data["name"] = "Nameless" if lang == "en" else "Namnlös"
@@ -3332,6 +3781,11 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
     # prompten), men om den glömde det (default 10/0/10) räknar vi ut det
     # här istället — så karaktärsbladet aldrig visar fel värden.
     abilities = char_data.get("abilities") or {}
+
+    # ── Bärvikt (D&D 5e): max_weight_lbs = STR × 15 ──
+    # ALDRIG från LLM — räkna alltid från STR-poängen (överriddar fel värden).
+    str_score = int((abilities.get("STR") or {}).get("score", 10) or 10)
+    char_data["max_weight_lbs"] = str_score * 15
 
     def _abil_mod(key: str) -> int:
         entry = abilities.get(key) or {}
@@ -3369,18 +3823,14 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
     inventory = char_data.pop("inventory", None)
     clean = []
     if isinstance(inventory, list):
-        # Normalisera varje föremål till frontend-formatet
+        # ITEM_SCHEMA-normalisering (guardian.py _normalize_item) — samma
+        # form som Guardian items_add och PATCH inventory. Lore får
+        # fallback om LLM:n glömde den (steg 1 Aug 2026).
         for it in inventory:
             if not isinstance(it, dict) or not it.get("name"):
                 continue
-            clean.append({
-                "name": str(it["name"]),
-                "type": str(it.get("type", "Other" if lang == "en" else "Annat")),
-                "qty": int(it.get("qty", 1) or 1),
-                "weight": float(it.get("weight", 1) or 1),
-                "equipped": bool(it.get("equipped", False)),
-                "rarity": str(it.get("rarity", "normal")),
-            })
+            norm = _normalize_item(it, lang=lang)
+            clean.append(norm)
 
     # ── Säkerhetsnät (fix 2026-07-31): gear-strängen kan innehålla startitems
     # som LLM:n glömde i inventory-arrayen (t.ex. "benplåtssköld" + "flätat
@@ -3402,10 +3852,10 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
             low = raw.lower()
             if any(low in ex or ex in low for ex in _existing):
                 continue
-            clean.append({
+            clean.append(_normalize_item({
                 "name": raw, "type": "Other" if lang == "en" else "Annat",
-                "qty": qty, "weight": 1.0, "equipped": False, "rarity": "normal",
-            })
+                "qty": qty, "weight": 1.0, "lore": None, "equipped": False, "rarity": "normal",
+            }, lang=lang))
             _existing.append(low)
 
     if clean or inventory is not None:
@@ -3415,6 +3865,77 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
     store.save(state)
 
     return {"ok": True, "character": char_data, "inventory": state.get("inventory", [])}
+
+
+@app.post("/api/character/generate/stream")
+async def generate_character_stream(req: CharacterRequest, morkrets_token: str | None = Cookie(None)):
+    """Karaktärsgenerering med SSE-streaming — frontend visar modellens
+    reasoning_content LIVE medan den väver karaktären (qwen3.8 tänker
+    i ~160s innan JSON:et börjar; spelaren ska se att något händer).
+
+    SSE-events:
+      data: {"type":"reasoning","text":"..."}   — live reasoning-content
+      data: {"type":"content","text":"..."}     — live content (karaktärs-JSON)
+      data: {"type":"done","character":{...},"inventory":[...]}
+      data: {"type":"error","message":"..."}
+    """
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+
+    # Icke-admin spelare begränsas till tillåtna modeller
+    if payload.get("role") != "admin":
+        req.model_id = _clamp_player_model(req.model_id)
+
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    lang = _get_lang(state)
+    char_prompt = CHARACTER_PROMPT_EN if lang == "en" else CHARACTER_PROMPT_SV
+    user_msg = f"Create a character: {req.prompt}" if lang == "en" else f"Skapa en karaktär: {req.prompt}"
+
+    messages = [
+        {"role": "system", "content": char_prompt},
+        {"role": "user", "content": user_msg},
+    ]
+
+    async def event_stream():
+        buf = ""
+        reasoning_buf = ""
+        t0 = time.time()
+        usage: dict | None = None
+        try:
+            async for r_delta, c_delta, u in _stream_llm(
+                req.model_id, messages, temperature=0.95, max_tokens=8000,
+                thinking_cap=8000, reasoning_effort="low",
+            ):
+                if u:
+                    usage = u
+                if r_delta:
+                    reasoning_buf += r_delta
+                    yield f"data: {json.dumps({'type': 'reasoning', 'text': r_delta}, ensure_ascii=False)}\n\n"
+                if c_delta:
+                    buf += c_delta
+                    yield f"data: {json.dumps({'type': 'content', 'text': c_delta}, ensure_ascii=False)}\n\n"
+
+            char_data = _extract_json(buf)
+            result = _finalize_character(char_data, state, lang)
+            elapsed = round(time.time() - t0, 1)
+            result["tokens"] = usage or {}
+            result["time_s"] = elapsed
+            result["reasoning_len"] = len(reasoning_buf)
+            yield f"data: {json.dumps({'type': 'done', **result}, ensure_ascii=False)}\n\n"
+        except HTTPException as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e.detail)}, ensure_ascii=False)}\n\n"
+        except Exception as e:
+            err = _err("Karaktären kunde inte vävas", "The character could not be woven", lang)
+            yield f"data: {json.dumps({'type': 'error', 'message': f'{err}: {e}'}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 # ═══════════════════════════════════════
@@ -3439,9 +3960,17 @@ async def update_character(req: dict, morkrets_token: str | None = Cookie(None))
 
     char = state.setdefault("character", {})
     # Tillåt bara kända fält (notes + framtida textfält) — aldrig abilities/hp
-    for key in ("notes",):
+    for key in ("notes", "max_weight_lbs"):
         if key in req:
-            char[key] = str(req[key])
+            if key == "max_weight_lbs":
+                char[key] = float(req[key])
+            else:
+                char[key] = str(req[key])
+    # Säkerställ att bärvikten alltid finns: max_weight_lbs = STR × 15 (D&D 5e)
+    if "max_weight_lbs" not in char:
+        _abilities = char.get("abilities") or {}
+        _str_score = int((_abilities.get("STR") or {}).get("score", 10) or 10)
+        char["max_weight_lbs"] = _str_score * 15
     store.save(state)
     return {"ok": True, "character": char}
 
@@ -3475,39 +4004,76 @@ async def update_campaign_language(req: dict, morkrets_token: str | None = Cooki
         state["meta"]["opening_key"] = style_key
 
     store.save(state)
-    logger.info("🌍 Kampanjspråk %s → %s", old_lang, language)
+    logger.info("🌍 Campaign language %s → %s", old_lang, language)
     return {"ok": True, "language": language}
 
 
-@app.patch("/api/campaign/inventory")
-async def update_inventory(req: dict, morkrets_token: str | None = Cookie(None)):
-    """Uppdatera hela inventory-listan (frontend skickar full array)."""
+@app.patch("/api/campaign/guardian-model")
+async def update_guardian_model(req: dict, morkrets_token: str | None = Cookie(None)):
+    """Välj Guardian-modell för aktiv kampanj.
+
+    Admin kan välja fritt; icke-admin klampas till PLAYER_MODELS
+    (samma modelllista som DM — se _clamp_player_model)."""
     payload = _get_current_user(morkrets_token)
     state = store.get(payload["sub"])
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
 
-    items = req.get("inventory")
-    if not isinstance(items, list):
-        raise HTTPException(400, "inventory måste vara en lista")
+    model_id = str(req.get("guardian_model", "")).strip()
+    if model_id:
+        if payload.get("role") != "admin":
+            model_id = _clamp_player_model(model_id)
+        # Validera att modellen finns i registret
+        try:
+            get_model(model_id)
+        except ValueError:
+            raise HTTPException(400, f"Okänd modell: {model_id}")
+        state.setdefault("meta", {})["guardian_model"] = model_id
+    else:
+        state.get("meta", {}).pop("guardian_model", None)
 
-    # Normalisera varje föremål
-    clean = []
-    for it in items:
-        if not isinstance(it, dict) or not it.get("name"):
-            continue
-        clean.append({
-            "id": str(it.get("id", f"item-{len(clean)}")),
-            "name": str(it["name"]),
-            "type": str(it.get("type", "Annat")),
-            "qty": max(1, int(it.get("qty", 1))),
-            "weight": max(0, float(it.get("weight", 1))),
-            "equipped": bool(it.get("equipped", False)),
-            "rarity": str(it.get("rarity", "normal")),
-        })
-    state["inventory"] = clean
     store.save(state)
-    return {"ok": True, "inventory": clean}
+    logger.info("🛡️ Guardian model → %s", model_id or "(default)")
+    return {"ok": True, "guardian_model": model_id or GUARDIAN_MODEL}
+
+
+@app.patch("/api/campaign/inventory")
+async def update_inventory(req: dict, morkrets_token: str | None = Cookie(None)):
+    """Uppdatera hela inventory-listan (frontend skickar full array).
+
+    ADMIN-ONLY: inventory styrs av DM/Guardian via prompts (items_add/
+    items_remove med equipped-status). Spelare får inte utrusta, lägga
+    till eller ta bort föremål själva — det skulle kringgå DM-granskningen.
+    """
+    payload = _get_current_user(morkrets_token)
+    if payload.get("role") != "admin":
+        raise HTTPException(403, "Inventory hanteras av DM/Guardian — ändra via spelet")
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+    campaign_id = state["meta"].get("campaign_id", "")
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        fresh = store.get(username, campaign_id)
+        if fresh:
+            state = fresh
+
+        items = req.get("inventory")
+        if not isinstance(items, list):
+            raise HTTPException(400, "inventory måste vara en lista")
+
+        # Normalisera varje föremål (ITEM_SCHEMA via _normalize_item)
+        clean = []
+        for it in items:
+            if not isinstance(it, dict) or not it.get("name"):
+                continue
+            norm = _normalize_item(it)
+            norm.setdefault("id", f"item-{len(clean)}")
+            clean.append(norm)
+        state["inventory"] = clean
+        store.save(state)
+        return {"ok": True, "inventory": clean}
 
 
 @app.post("/api/campaign/attachments")
@@ -3999,7 +4565,7 @@ def _merge_world_data(state: dict, extracted: dict, merged: dict):
     # Items → inventory
     for item in extracted.get("items", []):
         if isinstance(item, dict) and item.get("name"):
-            state.setdefault("inventory", []).append({
+            norm = _normalize_item({
                 "id": f"import-{len(state.get('inventory', []))}",
                 "name": item["name"],
                 "type": item.get("type", "Annat"),
@@ -4009,6 +4575,7 @@ def _merge_world_data(state: dict, extracted: dict, merged: dict):
                 "rarity": item.get("rarity", "normal"),
                 "description": item.get("description", ""),
             })
+            state.setdefault("inventory", []).append(norm)
             merged["items"] += 1
 
     # Characters → lore (referens)
@@ -4042,13 +4609,22 @@ async def debug_logs(
       since  – bara loggar nyare än denna timestamp (polling)
       level  – filtrera: DEBUG | INFO | WARNING | ERROR (inkl. högre)
     Returnerar {logs: [...], now: <timestamp>} där 'now' skickas tillbaka
-    som 'since' vid nästa poll. Kräver inloggning (ingen admin-gate —
-    loggarna innehåller inga hemligheter, bara spelmekanik)."""
-    _get_current_user(morkrets_token)
+    som 'since' vid nästa poll. Kräver inloggning (ingen admin-gate — men
+    loggarna filtreras per instans: bara den inloggade användarens aktiva
+    kampanj syns, aldrig andra användares/kampanjers)."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    try:
+        active_cid = store._get_active_pointer(username)
+    except Exception:
+        active_cid = None
     min_level = _LOG_ORDER.get((level or "DEBUG").upper(), 10)
     out = [
         e for e in DEBUG_LOGS
-        if e["ts"] > since and _LOG_ORDER.get(e["level"], 20) >= min_level
+        if e["ts"] > since
+        and e.get("user") == username
+        and (e.get("campaign") == active_cid)
+        and _LOG_ORDER.get(e["level"], 20) >= min_level
     ]
     return {"logs": out, "now": time.time(), "buffered": len(DEBUG_LOGS)}
 
@@ -4095,10 +4671,12 @@ async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
     # ── Guardian-logbook: konvertera enkel {day, turn, text} → {days: [...]} ──
     guardian_log = world.get("logbook", [])
     if guardian_log and isinstance(guardian_log, list):
-        # Gruppera per dag
+        # Gruppera per dag + samla turn-intervall per dag
         days_map = {}
+        day_turns = {}  # day -> [turns] för att beräkna intervall
         for entry in guardian_log:
             day = entry.get("day", 1)
+            turn = entry.get("turn", 0)
             if day not in days_map:
                 days_map[day] = {
                     "day": day,
@@ -4109,7 +4687,47 @@ async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
                     "npcs_met": [],
                     "quests": [],
                 }
+                day_turns[day] = []
             days_map[day]["events"].append(entry.get("text", ""))
+            day_turns[day].append(turn)
+
+        # Beräkna turn-intervall per dag: [min_turn, nästa dags min_turn)
+        sorted_days = sorted(days_map.keys())
+        day_bounds = {}
+        for i, day in enumerate(sorted_days):
+            turns = day_turns.get(day, [0])
+            lo = min(turns)
+            if i + 1 < len(sorted_days):
+                hi = min(day_turns.get(sorted_days[i + 1], [lo + 1]))
+            else:
+                hi = max(turns) + 1  # sista dagen: öppen övre gräns
+            day_bounds[day] = (lo, hi)
+
+        # Seeda quest-chips: tilldela varje quest till den dag vars intervall
+        # innehåller questens created_turn (eller completed_turn om slutförd)
+        active_set = ("aktiv", "active")
+        done_ok = ("slutförd", "completed")
+        for q in state.get("quests", []):
+            qname = q.get("name", "?")
+            status = q.get("status", "")
+            # Välj relevant turn: slutförda/misslyckade → completed_turn, annars created_turn
+            if status in done_ok or status in ("misslyckad", "failed"):
+                ref_turn = q.get("completed_turn", q.get("created_turn", 0))
+            else:
+                ref_turn = q.get("created_turn", 0)
+            # Hitta dagen
+            target_day = None
+            for day, (lo, hi) in day_bounds.items():
+                if lo <= ref_turn < hi:
+                    target_day = day
+                    break
+            if target_day is None:
+                # Ingen match — lägg på sista dagen om det finns dagar
+                if sorted_days:
+                    target_day = sorted_days[-1]
+            if target_day is not None and target_day in days_map:
+                mark = "✅" if status in done_ok else ("💀" if status in ("misslyckad", "failed") else "⚑")
+                days_map[target_day]["quests"].append(f"{mark} {qname}")
 
         days = sorted(days_map.values(), key=lambda d: d["day"])
         campaign_name = state.get("meta", {}).get("campaign_name", "Mörkrets Rike")
@@ -4158,7 +4776,12 @@ async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
                 "events": ["Kampanjen skapades"],
                 "location": world.get("current_location", "Okänd"),
                 "npcs_met": [n.get("name", "?") for n in state.get("npcs", [])[:5]],
-                "quests": [q.get("name", "?") for q in state.get("quests", []) if q.get("status") == "aktiv"],
+                "quests": [
+                    ("✅ " if q.get("status") in ("slutförd", "completed")
+                     else "💀 " if q.get("status") in ("misslyckad", "failed")
+                     else "⚑ ") + q.get("name", "?")
+                    for q in state.get("quests", [])[:6]
+                ],
             }],
             "summary": "Äventyret har just börjat. Mörkret väntar.",
         }
@@ -4231,7 +4854,7 @@ async def campaign_logbook_refresh_today(morkrets_token: str | None = Cookie(Non
         store.save(state)
         return {"ok": True, "entry": new_entry}
     except Exception as e:
-        logger.warning("📖 Uppdatering av dag-entry misslyckades: %s", e)
+        logger.warning("📖 Day entry update failed: %s", e)
         raise HTTPException(502, f"Kunde inte generera dag-entry: {e}")
 
 
@@ -4512,7 +5135,7 @@ async def admin_set_turn_cap(username: str, req: AdminTurnCap, morkrets_token: s
         udata["turn_cap"] = req.turn_cap
         save_users(users)
 
-    logger.info("🎚️ Turn-tak satt: %s → %d", username, req.turn_cap)
+    logger.info("🎚️ Turn cap set: %s → %d", username, req.turn_cap)
     return {"ok": True, "username": username, "turn_cap": req.turn_cap}
 
 

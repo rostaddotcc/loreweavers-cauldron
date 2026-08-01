@@ -498,7 +498,7 @@ async def extract_facts(
                 )
                 facts.append(fact)
             except Exception:
-                logger.debug("Hoppade över ogiltigt faktum: %s", item)
+                logger.debug("Skipped invalid fact: %s", item)
                 continue
 
         # Validera inventory-ändringar

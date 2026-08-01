@@ -420,6 +420,12 @@
     color: var(--bone); font-style: italic; line-height: 1.6;
     background: rgba(13,8,23,0.4); border-left: 2px solid var(--edge);
   }
+  .item-modal-lore {
+    margin-top: 1rem; padding: 0.8rem; font-size: 0.78rem;
+    color: var(--gold); font-style: italic; line-height: 1.55;
+    background: rgba(23,17,33,0.5); border-left: 2px solid rgba(201,162,39,.4);
+    letter-spacing: 0.01em;
+  }
   .item-modal-props {
     display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem;
   }
@@ -710,9 +716,9 @@
     .char-name { font-size: 1.35rem; }
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=5">
-<script src="sprites.js?v=20260730b"></script>
-<script src="fonts.js?v=20260730b"></script>
+<link rel="stylesheet" href="snes.css?v=9">
+<script src="sprites.js?v=20260801d"></script>
+<script src="fonts.js?v=20260801d"></script>
 </head>
 <body>
 
@@ -721,14 +727,14 @@
 <canvas id="embers"></canvas>
 <div class="vignette"></div>
 
-<header style="position:relative;z-index:5;display:flex;align-items:center;gap:1rem;padding:.7rem 1.2rem;background:linear-gradient(180deg,var(--stone-2),rgba(22,16,32,.95));border-bottom:1px solid var(--edge);box-shadow:0 4px 20px rgba(0,0,0,.5)">
+<header class="topbar" style="position:relative;z-index:5;display:flex;align-items:center;gap:1rem;padding:.7rem 1.2rem;background:linear-gradient(180deg,var(--stone-2),rgba(22,16,32,.95));border-bottom:1px solid var(--edge);box-shadow:0 4px 20px rgba(0,0,0,.5)">
   <span style="font-family:Cinzel,serif;font-weight:900;font-size:1.05rem;color:var(--gold-bright);letter-spacing:.06em;text-shadow:0 0 14px rgba(232,198,90,.3)">🐉 A Swedish D&amp;D Adventure</span>
   <span style="font-size:.78rem;font-style:italic;color:var(--bone-dim);border-left:1px solid var(--edge);padding-left:1rem">Character Sheet</span>
   <span style="flex:1"></span>
   <a class="top-btn" href="chat.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">⚔ To the Table</a>
   <a class="top-btn" href="loggbok.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">📜 Logbook</a>
   <a class="top-btn" href="platser.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">🗺️ The Map</a>
-  <a class="top-btn" href="npcs.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">📖 Personages</a>
+  <a class="top-btn" href="npcs.html" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">📖 NPCs</a>
   <button class="top-btn danger" onclick="doLogout()" style="font-family:Cinzel,serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px">🚪 Leave</button>
 </header>
 <div class="app">
@@ -821,40 +827,7 @@
       <span>Total weight: <b id="inv-weight">0</b> / 120 lbs <span id="inv-warn"></span></span>
       <span>Items: <b id="inv-count">0</b></span>
     </div>
-
-    <form class="add-form" onsubmit="addItem(event)">
-      <input type="text" id="add-name" placeholder="New item, e.g. Sword of Frost…" autocomplete="off">
-      <select id="add-type">
-        <option>Weapon</option><option>Armor</option><option>Potion</option>
-        <option>Magic</option><option>Tool</option><option>Other</option>
-      </select>
-      <input type="number" id="add-qty" value="1" min="1" style="width:64px" title="Qty">
-      <input type="number" id="add-weight" value="1" min="0" step="0.1" style="width:80px" title="Weight (lbs)">
-      <select id="add-rarity" title="Rarity">
-        <option value="normal">Common</option><option value="magic">✦ Magic</option><option value="rare">Rare</option>
-        <option value="legendary">⚡ Legendary</option>
-      </select>
-      <button type="submit" class="rune-btn">✦ Add</button>
-      <button type="button" class="add-adv-toggle" onclick="toggleAdvFields()">▸ D&D properties (optional)</button>
-      <div class="add-adv-fields" id="add-adv-fields">
-        <label>Damage</label>
-        <input type="text" id="add-damage" placeholder="e.g. 1d8 slashing" autocomplete="off">
-        <label>AC Bonus</label>
-        <input type="number" id="add-ac" placeholder="14" min="0" style="width:80px">
-        <label>Range</label>
-        <input type="text" id="add-range" placeholder="melee / ranged 30/120" autocomplete="off">
-        <label>Properties (comma-separated)</label>
-        <input type="text" id="add-props" placeholder="light, finesse, versatile" autocomplete="off">
-        <label>Magic Bonus</label>
-        <input type="number" id="add-magic-bonus" value="0" min="0" max="5" style="width:64px">
-        <label>Charges</label>
-        <input type="number" id="add-charges" placeholder="3" min="0" style="width:64px">
-        <label>Max Charges</label>
-        <input type="number" id="add-max-charges" placeholder="5" min="0" style="width:64px">
-        <label>Description</label>
-        <input type="text" id="add-description" placeholder="Description or effect…" autocomplete="off">
-      </div>
-    </form>
+    <div class="inv-managed-hint" style="margin-top:0.6rem;font-size:.7rem;color:var(--bone-dim);text-align:center">Inventory is managed by the DM &amp; Guardian — items appear here as you find, use, or equip them.</div>
     <div id="item-modal-container"></div>
   </section>
 
@@ -910,9 +883,9 @@ Markdown is not rendered, but the structure is yours."></textarea>
 
 <div class="toast" id="toast"></div>
 
-<script src="sfx.js?v=20260731g"></script>
-<script src="api.js?v=20260731c"></script>
-<script src="i18n.js?v=20260730b"></script>
+<script src="sfx.js?v=20260801d"></script>
+<script src="api.js?v=20260801d"></script>
+<script src="i18n.js?v=20260801d"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -1315,7 +1288,7 @@ function renderInventory() {
         </div>
       </div>
       <div class="inv-card-footer">
-        <button class="inv-card-equip ${item.equipped ? 'is-equipped' : 'not-equipped'}" onclick="event.stopPropagation();toggleEquip(${i})">${item.equipped ? I18N.t('⚔ Buren') : I18N.t('🎒 I väska')}</button>
+        <span class="inv-card-equip ${item.equipped ? 'is-equipped' : 'not-equipped'}">${item.equipped ? I18N.t('⚔ Buren') : I18N.t('🎒 I väska')}</span>
         <span class="inv-card-weight">${w.toFixed(1)} lbs</span>
       </div>`;
     grid.appendChild(card);
@@ -1339,6 +1312,14 @@ function openItemModal(i) {
   // Bygg stat-rader
   let statsHtml = '';
   const dmg = item.damage || (item.damage_dice ? item.damage_dice + (item.damage_type ? ' ' + item.damage_type : '') : null);
+  if (item.category) {
+    const catLabel = ({weapon:'⚔ Vapen', armor:'🛡 Rustning', potion:'🧪 Dryck', magic:'✦ Magisk', tool:'🔧 Verktyg', trinket:'🎒 Föremål'})[item.category] || item.category;
+    statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">🏷 ${I18N.t('Klass')}</span><span class="item-modal-stat-val">${catLabel}</span></div>`;
+  }
+  if (item.usage) {
+    const usageLabel = ({wielded:'Bärs/hålls', consumable:'Förbrukas', activated:'Aktiveras', trinket:'Passiv'})[item.usage] || item.usage;
+    statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">🎯 ${I18N.t('Användning')}</span><span class="item-modal-stat-val">${usageLabel}</span></div>`;
+  }
   if (dmg) statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">⚔ ${I18N.t('Skada')}</span><span class="item-modal-stat-val">${dmg}</span></div>`;
   if (item.ac_bonus != null && item.ac_bonus !== undefined) statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">🛡 ${I18N.t('AC-bonus')}</span><span class="item-modal-stat-val">${item.ac_bonus}</span></div>`;
   if (item.range) statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">◎ ${I18N.t('Räckvidd')}</span><span class="item-modal-stat-val">${item.range}</span></div>`;
@@ -1348,6 +1329,7 @@ function openItemModal(i) {
     const m = item.max_charges != null ? item.max_charges : '?';
     statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">⚡ ${I18N.t('Laddningar')}</span><span class="item-modal-stat-val">${c} / ${m}</span></div>`;
   }
+  if (item.roll) statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">🎲 ${I18N.t('Tärning')}</span><span class="item-modal-stat-val">${item.roll}</span></div>`;
   statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">⚖ ${I18N.t('Vikt')}</span><span class="item-modal-stat-val">${(item.weight || 0).toFixed(1)} lbs × ${item.qty || 1} = ${((item.weight || 0) * (item.qty || 1)).toFixed(1)} lbs</span></div>`;
   statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">📊 ${I18N.t('Sällsynthet')}</span><span class="item-modal-stat-val">${item.rarity === 'magic' ? '✦ ' : ''}${item.rarity || 'normal'}</span></div>`;
   statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">📦 ${I18N.t('Status')}</span><span class="item-modal-stat-val">${item.equipped ? I18N.t('⚔ Buren') : I18N.t('🎒 I väska')}</span></div>`;
@@ -1363,6 +1345,7 @@ function openItemModal(i) {
   let descHtml = '';
   if (item.description) descHtml += `<div class="item-modal-desc">${item.description}</div>`;
   if (item.effects) descHtml += `<div class="item-modal-desc" style="border-left-color:var(--arcane)">${item.effects}</div>`;
+  if (item.lore) descHtml += `<div class="item-modal-lore">"${item.lore}"</div>`;
 
   container.innerHTML = `
     <div class="item-modal-overlay" onclick="closeItemModal(event)">
@@ -1373,10 +1356,6 @@ function openItemModal(i) {
         ${statsHtml}
         ${propsHtml}
         ${descHtml}
-        <div class="item-modal-actions">
-          <button class="rune-btn" onclick="toggleEquip(${i});closeItemModal(null,true)">${item.equipped ? I18N.t('🎒 Packa ner') : I18N.t('⚔ Utrusta')}</button>
-          <button class="del-btn" onclick="removeItem(${i});closeItemModal(null,true)">${I18N.t('🗑 Släng')}</button>
-        </div>
       </div>
     </div>`;
 }
@@ -1390,93 +1369,7 @@ function closeItemModal(e, force) {
 // Stäng modal med Escape
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeItemModal(null, true); });
 
-// ── D&D-egenskaper toggle ──
-function toggleAdvFields() {
-  const el = document.getElementById('add-adv-fields');
-  const btn = el.previousElementSibling;
-  el.classList.toggle('open');
-  btn.textContent = el.classList.contains('open') ? '▾ D&D properties (optional)' : '▸ D&D properties (optional)';
-}
-
-function toggleEquip(i) {
-  state.inventory[i].equipped = !state.inventory[i].equipped;
-  renderInventory();
-  toast(state.inventory[i].equipped ? '⚔ ' + state.inventory[i].name + I18N.t(' utrustad') : '🎒 ' + state.inventory[i].name + I18N.t(' nerpackad'));
-  syncInventory();
-}
-function removeItem(i) {
-  const name = state.inventory[i].name;
-  state.inventory.splice(i, 1);
-  renderInventory();
-  toast('🗑 ' + name + I18N.t(' slängd'));
-  syncInventory();
-}
-function addItem(e) {
-  e.preventDefault();
-  const name = document.getElementById('add-name').value.trim();
-  if (!name) return;
-  const item = {
-    name,
-    type: document.getElementById('add-type').value,
-    qty: parseInt(document.getElementById('add-qty').value) || 1,
-    weight: parseFloat(document.getElementById('add-weight').value) || 1,
-    equipped: false,
-    rarity: document.getElementById('add-rarity').value || 'normal'
-  };
-  // D&D-egenskaper (valfritt — fylls bara i om fältet är synligt / ifyllt)
-  const dmg = document.getElementById('add-damage').value.trim();
-  if (dmg) {
-    item.damage = dmg;
-    // Försök separera dice och type: "1d8 slashing" → "1d8", "slashing"
-    const parts = dmg.split(/\s+/);
-    if (parts[0] && /\d+d\d+/.test(parts[0])) {
-      item.damage_dice = parts[0];
-      if (parts[1]) item.damage_type = parts.slice(1).join(' ');
-    }
-  }
-  const acVal = document.getElementById('add-ac').value;
-  if (acVal !== '') item.ac_bonus = parseInt(acVal) || null;
-  const rangeVal = document.getElementById('add-range').value.trim();
-  if (rangeVal) item.range = rangeVal;
-  const propsVal = document.getElementById('add-props').value.trim();
-  if (propsVal) item.properties = propsVal.split(',').map(s => s.trim()).filter(Boolean);
-  const mbVal = parseInt(document.getElementById('add-magic-bonus').value) || 0;
-  if (mbVal > 0) item.magic_bonus = mbVal;
-  const chVal = document.getElementById('add-charges').value;
-  if (chVal !== '') item.charges = parseInt(chVal) || 0;
-  const mchVal = document.getElementById('add-max-charges').value;
-  if (mchVal !== '') item.max_charges = parseInt(mchVal) || 0;
-  const descVal = document.getElementById('add-description').value.trim();
-  if (descVal) item.description = descVal;
-
-  state.inventory.push(item);
-  // Rensa fält
-  document.getElementById('add-name').value = '';
-  document.getElementById('add-weight').value = '1';
-  document.getElementById('add-rarity').value = 'normal';
-  document.getElementById('add-damage').value = '';
-  document.getElementById('add-ac').value = '';
-  document.getElementById('add-range').value = '';
-  document.getElementById('add-props').value = '';
-  document.getElementById('add-magic-bonus').value = '0';
-  document.getElementById('add-charges').value = '';
-  document.getElementById('add-max-charges').value = '';
-  document.getElementById('add-description').value = '';
-  renderInventory();
-  toast('✦ ' + name + I18N.t(' tillagd i packningen'));
-  syncInventory();
-}
-// ── Synca inventory till backend ──
-async function syncInventory() {
-  try {
-    await fetch('/api/campaign/inventory', {
-      method: 'PATCH',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ inventory: state.inventory }),
-    });
-  } catch (_) { /* tyst — lokal state gäller */ }
-}
+// ── D&D-egenskaper toggle (borttagen — inventory hanteras av DM/Guardian) ──
 
 // ═══════════════════════════════════════
 // CURRENCY
@@ -1571,5 +1464,6 @@ tick();
 function exportState() { return JSON.stringify(state, null, 2); }
 window.getState = exportState;
 </script>
+<script src="embed.js?v=20260801f"></script>
 </body>
 </html>

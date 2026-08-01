@@ -7,7 +7,8 @@ Arkitektur
 Den här modulen kopplar samman två externa tjänster:
 
   • **Ollama** (nomic-embed-text) — genererar 768-dimensionella vektorer
-    via HTTP-API:et ``POST {OLLAMA_URL}/api/embeddings``.
+    via HTTP-API:et ``POST {OLLAMA_URL}/api/embed`` (den moderna endpointen;
+    ``/api/embeddings`` ignorerar num_ctx och kraschar på långa sessioner).
   • **Qdrant** — vektordatabas som lagrar semantiska index i samlingen
     ``morkrets_rike`` (768-dim, Cosine-likhet).
 
@@ -103,20 +104,25 @@ async def embed_text(text: str) -> list[float]:
     """
     Generera en 768-dim vektor för *text* via Ollama nomic-embed-text.
 
+    Använder den moderna ``/api/embed``-endpointen (sedan Ollama 0.3x) —
+    den gamla ``/api/embeddings`` ignorerar num_ctx/num_batch och laddar
+    alltid n_ctx_slot=2048, vilket kraschar på längre sessioner
+    ("input is too large … increase the physical batch size").
+
     Retry-logik: upp till MAX_RETRIES försök med exponentiell backoff.
     Kastar RuntimeError om alla försök misslyckas.
     """
-    url = f"{OLLAMA_URL}/api/embeddings"
-    payload = {"model": EMBED_MODEL, "prompt": text}
+    url = f"{OLLAMA_URL}/api/embed"
+    payload = {"model": EMBED_MODEL, "input": text}
     delay = RETRY_DELAY
 
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=120) as client:
         for attempt in range(1, MAX_RETRIES + 1):
             try:
                 resp = await client.post(url, json=payload)
                 resp.raise_for_status()
                 data = resp.json()
-                embedding = data["embedding"]
+                embedding = data["embeddings"][0]
                 if len(embedding) != EMBED_DIM:
                     raise ValueError(
                         f"Förväntade {EMBED_DIM} dim, fick {len(embedding)}"
@@ -408,10 +414,10 @@ async def purge_user(username: str) -> int:
             ])),
         )
         await client.close()
-        logger.info("Rensade Qdrant-vektorer för %s", username)
+        logger.info("Cleared Qdrant vectors for %s", username)
         return len(points)
     except Exception as exc:
-        logger.warning("Qdrant-rensning misslyckades för %s: %s", username, exc)
+        logger.warning("Qdrant cleanup failed for %s: %s", username, exc)
         return 0
 
 
@@ -426,7 +432,7 @@ async def qdrant_healthy() -> bool:
             resp = await client.get(f"{QDRANT_URL}/healthz")
             return resp.status_code == 200
     except Exception as exc:
-        logger.warning("Qdrant-hälsokontroll misslyckades: %s", exc)
+        logger.warning("Qdrant health check failed: %s", exc)
         return False
 
 
@@ -444,5 +450,5 @@ async def ollama_healthy() -> bool:
             models = resp.json().get("models", [])
             return any(EMBED_MODEL in m.get("name", "") for m in models)
     except Exception as exc:
-        logger.warning("Ollama-hälsokontroll misslyckades: %s", exc)
+        logger.warning("Ollama health check failed: %s", exc)
         return False

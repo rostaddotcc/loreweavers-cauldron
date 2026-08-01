@@ -1543,8 +1543,8 @@
   }
 </style>
 <link rel="stylesheet" href="snes.css?v=9">
-<script src="sprites.js?v=20260801r"></script>
-<script src="fonts.js?v=20260801r"></script>
+<script src="sprites.js?v=20260801s"></script>
+<script src="fonts.js?v=20260801s"></script>
 </head>
 <body>
 <div class="grain"></div>
@@ -1787,10 +1787,10 @@
   </div>
 </div>
 
-<script src="sfx.js?v=20260801r"></script>
-<script src="music.js?v=20260801r"></script>
-<script src="api.js?v=20260801r"></script>
-<script src="i18n.js?v=20260801r"></script>
+<script src="sfx.js?v=20260801s"></script>
+<script src="music.js?v=20260801s"></script>
+<script src="api.js?v=20260801s"></script>
+<script src="i18n.js?v=20260801s"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -2037,7 +2037,13 @@ function addMessage(type, npcKey, text, meta) {
   // Textblocken hålls dolda tills dess (annars blinkar hela svaret fram först).
   if (type === 'dm' || type === 'npc') {
     el.classList.add('tw-pending');
+    el._twDone = new Promise(resolve => { el._twResolve = resolve; });
+    // Safety net: om typewritern aldrig startar/avslutas, häng inte för evigt
+    const _safety = setTimeout(() => { if (el._twResolve) { el._twResolve(); el._twResolve = null; } }, 90000);
+    el._twSafety = _safety;
     setTimeout(() => startTypewriter(el, type), 80);
+  } else {
+    el._twDone = Promise.resolve();
   }
   return el;
 }
@@ -2568,11 +2574,17 @@ function messageParticles(el, type) {
 const _twActive = new Set(); // pågående typewriters (element)
 
 function startTypewriter(msgEl, type) {
-  if (!msgEl || !msgEl.isConnected) return;
-  if (_twActive.has(msgEl)) return;
+  // Early returns: resolve the done-promise immediately so callers awaiting
+  // _twDone (dmRespond/answerRollRequest) never hang.
+  const bail = () => {
+    if (msgEl._twSafety) { clearTimeout(msgEl._twSafety); msgEl._twSafety = null; }
+    if (msgEl._twResolve) { msgEl._twResolve(); msgEl._twResolve = null; }
+  };
+  if (!msgEl || !msgEl.isConnected) { if (msgEl) bail(); return; }
+  if (_twActive.has(msgEl)) { bail(); return; }
   // Mål = alla textblock i DOM-ordning (narration + NPC-citat inuti DM-svar)
   const targets = [...msgEl.querySelectorAll('.text, .npc-quote .nq-text')];
-  if (!targets.length) return;
+  if (!targets.length) { bail(); return; }
 
   const segs = [];
   targets.forEach(t => {
@@ -2589,7 +2601,7 @@ function startTypewriter(msgEl, type) {
     nodes.forEach(x => x.nodeValue = '');
     segs.push({ el: t, nodes, full, starts, total: acc, isNpc: !!t.closest('.npc-quote') });
   });
-  if (!segs.length) return;
+  if (!segs.length) { bail(); return; }
 
   _twActive.add(msgEl);
   msgEl.classList.remove('tw-pending');
@@ -2663,6 +2675,10 @@ function startTypewriter(msgEl, type) {
     revealUpTo(grand);
     if (!skipped && performance.now() - startedAt > 450) SFX.typeDone();
     msgEl.removeEventListener('click', skipHandler);
+    // Always keep the chat at the bottom when the reply has finished typing
+    chat.scrollTop = chat.scrollHeight;
+    if (msgEl._twSafety) { clearTimeout(msgEl._twSafety); msgEl._twSafety = null; }
+    if (msgEl._twResolve) { msgEl._twResolve(); msgEl._twResolve = null; }
   };
 
   const skipHandler = () => finish(true);
@@ -2681,10 +2697,8 @@ function startTypewriter(msgEl, type) {
         if (cur && cur.isNpc) SFX.typeNpc(pitchNpc++);
         else SFX.type(pitchDm++);
       }
-      // Håll chatten nere om användaren redan är i botten
-      if (chat.scrollTop + chat.clientHeight >= chat.scrollHeight - 40) {
-        chat.scrollTop = chat.scrollHeight;
-      }
+      // Always keep the chat pinned to the bottom while text is being typed
+      chat.scrollTop = chat.scrollHeight;
       if (global >= grand) { finish(false); return; }
     }
     setTimeout(tick, interval);
@@ -3022,7 +3036,9 @@ async function answerRollRequest(id, notation, label) {
     const resultMsg = `[Resultat: ${label} → ${roll.total} (${roll.rolls.join(', ')}${modStr})]`;
     const res = await API.chat(resultMsg, currentModel);
     hideThoughts();
-    if (res.reply) addMessage('dm', null, res.reply);
+    const dmEl = res.reply ? addMessage('dm', null, res.reply) : null;
+    // Vänta tills DM-svaret skrivit klart innan nästa kastkort visas
+    if (dmEl && dmEl._twDone) await dmEl._twDone;
     if (res.guardian_pending) {
       showGuardianStatus();
       pollForGuardian(res.turn_count);
@@ -3654,13 +3670,18 @@ async function dmRespond(playerText) {
     }
 
     // Visa svaret som DM-narration
-    addMessage('dm', null, reply, { model: res.model_id, tokens: res.tokens, time: res.response_time });
+    const dmEl = addMessage('dm', null, reply, { model: res.model_id, tokens: res.tokens, time: res.response_time });
 
     // Stämningsdetektering → byt musikloop
     const detectedMood = MUSIC.detectMood(reply);
     if (detectedMood && detectedMood !== MUSIC.mood) {
       MUSIC.setMood(detectedMood);
     }
+
+    // Vänta tills DM-svaret skrivit klart innan effekter, Guardian-rapporter
+    // och tärningskort renderas — annars dyker de upp mitt i narrationen.
+    // (Löses direkt om spelaren klickar för att hoppa över animationen.)
+    if (dmEl && dmEl._twDone) await dmEl._twDone;
 
     // Mekaniska effekter (skada, XP, loot, quests…)
     if (res.effects && res.effects.length) {
@@ -3804,10 +3825,8 @@ function pollForGuardian(turnCount) {
 
       if (renderedAny) {
         SFX.click();
-        // Rulla till botten bara om användaren redan är nära botten —
-        // en sent infogad rapport ska inte slita bort scrollen.
-        const nearBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 200;
-        if (nearBottom) chat.scrollTop = chat.scrollHeight;
+        // Always scroll to bottom when Guardian reports arrive
+        chat.scrollTop = chat.scrollHeight;
         // Guardian kan ha uppdaterat NPCs/platser/partystate → rita om menyn
         refreshSidebar();
       }

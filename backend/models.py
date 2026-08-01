@@ -341,6 +341,7 @@ DM_COMBAT_PROMPT = """
 ## ⚔️ STRID (v26 — chat-first combat)
 Du är i strid. Du narrerar ALLT — spelarens handlingar, fiendernas attacker, rundornas gång.
 Guardian extraherar mekaniken (skada, HP, XP) från din narration. Du behöver INTE räkna HP.
+Spelaren ser en LIVE stridsstatus (fiende-HP, rundnummer, egen HP) i en statusrad + inline-meddelanden i chatten.
 
 ### Ditt jobb som DM under strid:
 1. **Öppna striden med [STRID:namn|HP|AC, ...].** Guardian registrerar fienderna.

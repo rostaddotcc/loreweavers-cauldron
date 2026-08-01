@@ -407,7 +407,7 @@ Extrahera ALLA mekaniska effekter och uppdateringar.
 - combat_round: Om DM:n anger en ny runda ("Runda 2", "Next round"), sätt rundnumret (heltal).
 - player_attacks: Spelarens attacker som DM narrerar. Ange: [{"target": "fiendnamn", "hit": true/false, "damage": N, "damage_type": "slashing", "crit": false}]. Extrahera ENDAST om DM explicit beskriver att spelaren träffar/missar och anger skada.
 - enemy_attacks: Fiendernas attacker som DM narrerar. Ange: [{"attacker": "fiendnamn", "hit": true/false, "damage": N, "damage_type": "piercing", "roll": N}]. DM anger slag och skada i narrationen — extrahera dem.
-- combat_events: Övriga stridshändelser (flykt, status, förstärkningar). Ange: ["Goblin flyr", "Runda 2 börjar"].
+- combat_events: Övriga stridshändelser (flykt, status, förstärkningar, rundsammanfattning). Ange: ["Goblin flyr", "Runda 2 börjar"]. Skriv korta, informativa rader som fungerar som en stridslogg — spelaren ser dem i chatten.
 - combat_end: Om striden SLUTAR (alla fiender döda/flydde eller spelaren flydde). Ange {"reason": "..."}.
 
 ### Tärningsresurser (roll_grants)
@@ -2369,11 +2369,16 @@ def format_guardian_summary(
     if combat:
         _changed = bool(
             {e.get("type") for e in effects}
-            & {"combat_start", "combat_dmg", "combat_round", "enemy_död", "initiativ", "combat_end"}
+            & {"combat_start", "combat_dmg", "combat_round", "enemy_död", "initiativ", "combat_end", "skada", "hela"}
         ) or any(mech.get(k) for k in ("combat_start", "combat_round", "initiative_entries", "combat_end"))
         _just_ended = combat.get("active") is False and combat.get("ended_turn") == state.get("meta", {}).get("turn_count", 0)
         if _changed or _just_ended:
-            _ct = _combat_tag(combat)
+            # Include player HP so the frontend status bar + inline messages can show it
+            ch = state.get("character", {})
+            php = ch.get("hp", {})
+            combat_for_tag = dict(combat)
+            combat_for_tag["player_hp"] = {"current": php.get("current", 0), "max": php.get("max", 0)}
+            _ct = _combat_tag(combat_for_tag)
             if _ct:
                 tags.append(_ct)
 

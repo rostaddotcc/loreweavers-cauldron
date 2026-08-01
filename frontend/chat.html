@@ -659,6 +659,43 @@
     border-color: rgba(139,26,42,.5); text-align: center;
   }
 
+  /* ── Combat status bar (sticky above input) ── */
+  .combat-status-bar {
+    display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+    padding: .3rem .7rem; font-size: .68rem;
+    background: rgba(139,26,42,.08); border-top: 1px solid rgba(139,26,42,.3);
+    border-bottom: 1px solid rgba(139,26,42,.15);
+    font-family: 'Courier New', monospace; color: var(--bone);
+    overflow-x: auto; white-space: nowrap; scrollbar-width: thin;
+  }
+  .csb-round { color: var(--gold-bright); font-weight: 700; letter-spacing: .05em; }
+  .csb-enemy { color: var(--blood-bright); }
+  .csb-enemy.dead { text-decoration: line-through; opacity: .4; }
+  .csb-player { color: var(--gold); font-weight: 700; }
+  .csb-player.low { color: var(--blood-bright); animation: hp-flash 1s infinite; }
+  .csb-sep { color: var(--bone-dim); opacity: .4; }
+
+  /* ── Player HP inline messages ── */
+  .combat-player-hp { font-size: .72rem; }
+  .combat-player-hp.dmg { color: var(--blood-bright); border-color: rgba(139,26,42,.4); }
+  .combat-player-hp.heal { color: var(--poison); border-color: rgba(122,163,94,.4); }
+
+  /* ── Round summary ── */
+  .combat-round-summary {
+    font-size: .7rem; padding: .4rem .7rem;
+    border-color: rgba(201,162,39,.25); background: rgba(201,162,39,.04);
+  }
+  .crs-title { font-family: 'Press Start 2P', monospace; font-size: .5rem; color: var(--gold); margin-bottom: .3rem; letter-spacing: .08em; }
+  .crs-line { padding: .1rem 0; }
+  .crs-line.player { color: var(--gold); }
+  .crs-line.enemy { color: var(--blood-bright); }
+  .crs-line.system { color: var(--bone-dim); font-style: italic; }
+
+  /* ── Color-coded combat log actors ── */
+  .cl-row.cl-player { color: var(--gold); }
+  .cl-row.cl-enemy { color: var(--blood-bright); }
+  .cl-row.cl-dmg { color: var(--bone-bright); }
+
   /* ── DM footer: model · tokens · time ── */
   .dm-footer {
     font-size: .6rem; color: rgba(160,150,130,.45); margin-top: .3rem;
@@ -1543,8 +1580,8 @@
   }
 </style>
 <link rel="stylesheet" href="snes.css?v=9">
-<script src="sprites.js?v=20260801t"></script>
-<script src="fonts.js?v=20260801t"></script>
+<script src="sprites.js?v=20260801u"></script>
+<script src="fonts.js?v=20260801u"></script>
 </head>
 <body>
 <div class="grain"></div>
@@ -1669,6 +1706,9 @@
       <span class="thought">🛡️ Guardian processing…</span>
     </div>
 
+    <!-- ═══ Combat status bar — live HP/round tracker ═══ -->
+    <div class="combat-status-bar" id="combat-status-bar" style="display:none"></div>
+
     <div class="input-area">
       <div class="tts-voice-picker" title="Narrator voice for reading aloud">
         <span class="tts-voice-label">🗣️</span>
@@ -1787,10 +1827,10 @@
   </div>
 </div>
 
-<script src="sfx.js?v=20260801t"></script>
-<script src="music.js?v=20260801t"></script>
-<script src="api.js?v=20260801t"></script>
-<script src="i18n.js?v=20260801t"></script>
+<script src="sfx.js?v=20260801u"></script>
+<script src="music.js?v=20260801u"></script>
+<script src="api.js?v=20260801u"></script>
+<script src="i18n.js?v=20260801u"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -3893,6 +3933,7 @@ function parseCombatTag(text) {
 function applyCombatTag(el, text, container) {
   const { clean, combat } = parseCombatTag(text);
   if (!combat) return;
+  const target = container || chat;
   const box = el && el.querySelector ? el.querySelector('.guardian-box') : null;
   if (box && clean && clean.trim()) {
     box.innerHTML = combatLogHtml(clean, combat);
@@ -3904,7 +3945,21 @@ function applyCombatTag(el, text, container) {
   if (rm) reason = rm[1].replace(/\*+/g, '').trim();
 
   // Chat-first combat: rendera inline meddelanden istället för sidebar
-  renderCombatInline(combat, reason, container || chat);
+  renderCombatInline(combat, reason, target);
+
+  // Status bar (sticky above input) — always update
+  updateCombatStatusBar(combat);
+
+  // Player HP inline message (damage/healing)
+  renderPlayerHpChange(combat, target);
+
+  // Round summary (combat log entries for current round)
+  renderRoundSummary(combat, target);
+
+  // Initiative order (always shown at combat start)
+  maybeInitiativeReveal(combat, target);
+
+  target.scrollTop = target.scrollHeight;
 }
 
 // ── Chat-first combat v26: inline stridsmeddelanden ──
@@ -3992,6 +4047,86 @@ function renderCombatInline(combat, reason, container) {
   container.scrollTop = container.scrollHeight;
 }
 
+// ── Combat status bar (sticky above input) ──
+let _lastCombatStatus = null;
+function updateCombatStatusBar(combat) {
+  const bar = document.getElementById('combat-status-bar');
+  if (!bar) return;
+  if (!combat || combat.active === false) {
+    bar.style.display = 'none';
+    _lastCombatStatus = null;
+    return;
+  }
+  const en = (typeof I18N !== 'undefined' && I18N.getLang() === 'en');
+  const round = combat.round || 1;
+  const enemies = (combat.enemies || []).filter(e => e.alive !== false);
+  const php = combat.player_hp || {};
+  
+  let html = `<span class="csb-round">⚔ ${en ? 'R' : 'R'}${round}</span>`;
+  enemies.forEach(e => {
+    const pct = e.max_hp ? Math.round(100 * (e.hp || 0) / e.max_hp) : 0;
+    html += `<span class="csb-sep">│</span><span class="csb-enemy">${SPR.html(enemySpriteFor(e.name))} ${escapeHtml(e.name)} ${e.hp}/${e.max_hp}</span>`;
+  });
+  if (php.current != null) {
+    const pPct = php.max ? Math.round(100 * php.current / php.max) : 0;
+    const lowClass = pPct < 25 ? ' low' : '';
+    html += `<span class="csb-sep">│</span><span class="csb-player${lowClass}">❤️ ${en ? 'You' : 'Du'}: ${php.current}/${php.max}</span>`;
+  }
+  bar.innerHTML = html;
+  bar.style.display = 'flex';
+  _lastCombatStatus = combat;
+}
+
+// ── Player HP inline messages ──
+let _lastPlayerHp = null;
+function renderPlayerHpChange(combat, container) {
+  if (!combat || !combat.player_hp) return;
+  const php = combat.player_hp;
+  if (_lastPlayerHp === null) {
+    _lastPlayerHp = php.current;
+    return;
+  }
+  if (php.current === _lastPlayerHp) return;
+  
+  const en = (typeof I18N !== 'undefined' && I18N.getLang() === 'en');
+  const diff = php.current - _lastPlayerHp;
+  const isDmg = diff < 0;
+  const el = document.createElement('div');
+  el.className = 'msg system';
+  const diffStr = isDmg ? `${diff}` : `+${diff}`;
+  const label = isDmg ? (en ? 'damage' : 'skada') : (en ? 'healing' : 'läkning');
+  el.innerHTML = `<div class="box combat-inline combat-player-hp ${isDmg ? 'dmg' : 'heal'}">
+    ${isDmg ? '🩸' : '💚'} ${en ? 'You take' : 'Du tar'} <b>${diffStr}</b> ${label} → HP ${php.current}/${php.max}
+  </div>`;
+  container.appendChild(el);
+  _lastPlayerHp = php.current;
+}
+
+// ── Round summary ──
+function renderRoundSummary(combat, container) {
+  if (!combat || !combat.log || !combat.log.length) return;
+  const en = (typeof I18N !== 'undefined' && I18N.getLang() === 'en');
+  const round = combat.round || 1;
+  
+  // Get log entries for this round
+  const roundLog = combat.log.filter(e => e.round === round);
+  if (!roundLog.length) return;
+  
+  const el = document.createElement('div');
+  el.className = 'msg system';
+  let html = `<div class="box combat-inline combat-round-summary">`;
+  html += `<div class="crs-title">── ${en ? 'ROUND' : 'RUNDA'} ${round} ──</div>`;
+  roundLog.forEach(entry => {
+    const actor = entry.actor || 'system';
+    const cls = actor === 'player' ? 'player' : actor === 'enemy' ? 'enemy' : 'system';
+    const icon = actor === 'player' ? '🗡️' : actor === 'enemy' ? '🐺' : '⚙️';
+    html += `<div class="crs-line ${cls}">${icon} ${escapeHtml(entry.text || '')}</div>`;
+  });
+  html += `</div>`;
+  el.innerHTML = html;
+  container.appendChild(el);
+}
+
 // C2 — Krigsrådet v2 (battle rail with action economy)
 function renderCombatPanel(combat, reason, container) {
   // v26: chat-first combat — panelen är borttagen, allt renderas inline
@@ -4073,18 +4208,14 @@ function combatLogHtml(text, combat) {
   return html;
 }
 
-// C4 — Initiativceremoni: sorterad lista + första deltagaren agerar först (en gång per tab-session)
-const INIT_REVEAL_FLAG = 'dnd_init_revealed';
+// C4 — Initiativceremoni: sorterad lista + första deltagaren agerar först
+// Visas varje gång initiativ-data ändras (ingen sessionStorage-grind)
 function maybeInitiativeReveal(combat, container) {
   const entries = (combat.initiative || []).filter(e => e && e.value != null);
   if (entries.length < 2) return;
   const key = JSON.stringify(entries.map(e => [e.key, e.value]));
   if (key === _lastInitShown) return;
   _lastInitShown = key;
-  try {
-    if (sessionStorage.getItem(INIT_REVEAL_FLAG)) return;
-    sessionStorage.setItem(INIT_REVEAL_FLAG, '1');
-  } catch (e) { /* sessionStorage otillgängligt — visa ändå */ }
 
   const en = (typeof I18N !== 'undefined' && I18N.getLang() === 'en');
   const sorted = entries.slice().sort((a, b) => (b.value || 0) - (a.value || 0));

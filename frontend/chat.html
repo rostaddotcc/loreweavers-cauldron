@@ -3049,6 +3049,7 @@ let _typeTimer = null;           // typewriter för thought-texten (scribe-loade
 let _scribeParticleTimer = null; // flygande bläckpixlar
 let _activityTimer = null;       // pollar live-aktivitet (senaste loggentry)
 let _activityShown = null;       // senast visade aktivitetstext
+let _activitySince = 0;          // maskinrums-poller (senaste timestamp — så bara NYA loggposter visas)
 
 // Typewriter: skriv text tecken för tecken (CLI-stil)
 function typeThought(text, el) {
@@ -3079,21 +3080,28 @@ function _formatCombatLogEntry(entry) {
   return `${icon} ${who}${entry.text}`;
 }
 
-// Live-aktivitet: rendera senaste kampanjlogg-entryn / pipeline-steget
+// Live-aktivitet: rendera senaste maskinrums-loggposten / pipeline-steget
 async function scribeFeed() {
   const target = _feedTarget();
   if (!target) return;
-  // 1) Senaste stridslogg-entryn (om strid är aktiv) — kampanjens egna logg
-  const clog = _lastCombatStatus && Array.isArray(_lastCombatStatus.log) ? _lastCombatStatus.log : null;
-  if (clog && clog.length) {
-    const last = _formatCombatLogEntry(clog[clog.length - 1]);
-    if (last && last !== _activityShown) {
-      _activityShown = last;
-      typeThought(last, target);
-      return;
+  // 1) Maskinrummet: senaste pipeline-loggposten (INFO+) — kampanjens egna
+  //    logg (aldrig stridsloggens gamla "combat over"-entry). since=håller
+  //    positionen så bara NYA poster visas.
+  try {
+    const data = await API.getDebugLogs(_activitySince, 'INFO');
+    if (data && data.now) _activitySince = data.now;
+    const logs = (data && data.logs) || [];
+    if (logs.length) {
+      const last = logs[logs.length - 1];
+      const text = last && last.msg ? String(last.msg) : null;
+      if (text && text !== _activityShown) {
+        _activityShown = text;
+        typeThought(text.length > 110 ? text.slice(0, 107) + '…' : text, target);
+        return;
+      }
     }
-  }
-  // 2) Pipeline-aktivitet från backend (pre-DM / DM / mekanik / post-DM / dagar)
+  } catch (e) { /* tyst — fallback-tanken ligger kvar */ }
+  // 2) Fallback: pipeline-aktivitet från backend (pre-DM / DM / mekanik / post-DM)
   try {
     const data = await API.activity();
     const entries = data && data.entries;
@@ -3922,6 +3930,7 @@ function applyCombatTag(el, text, container) {
 
 // ── Chat-first combat v26: inline stridsmeddelanden ──
 let _lastCombatRound = 0;
+let _combatEndSeen = new Set();  // dedupe: "Striden är över"-bubblan ska bara visas EN gång per stridsslut
 let _lastCombatEnemyHp = {};  // {name: hp} för att detektera HP-ändringar
 let _lastCombatAllyHp = {};   // {name: hp|'dead'} — allierad-HP-dedup (v28)
 let _allyCardEls = {};        // {name: {card, sub}} — för fallen-uppdatering (v28)
@@ -3983,6 +3992,12 @@ function renderCombatInline(combat, reason, container, storyTarget) {
 
   // Striden slutar → segerrad (i berättelsen; panelen töms av merge-back)
   if (combat.active === false) {
+    // Dedupe: samma stridsslut-tag kan levereras av VARJE guardian-poll efter
+    // striden — bubblan ska bara visas en gång (annars fastnar den längst ner
+    // och nästa strid lägger en till).
+    const endKey = 'ce_' + (combat.round || 0) + '_' + (reason || '') + '_' + (Array.isArray(combat.log) ? combat.log.length : 0);
+    if (_combatEndSeen.has(endKey)) return;
+    _combatEndSeen.add(endKey);
     const dest = storyTarget || container;
     const endEl = document.createElement('div');
     endEl.className = 'msg system';

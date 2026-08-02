@@ -112,6 +112,7 @@ if (startB < 0 || endB < 0) { console.error('MARKERS B NOT FOUND'); process.exit
 // Dedup-tillstånd som deklareras UTANFÖR slice B (L3817-18 / L3742 i chat.html)
 // → måste finnas som globals här, annars ReferenceError vid anrop.
 global._lastCombatRound = 0;
+global._combatEndSeen = new Set();
 global._lastCombatEnemyHp = {};
 global._lastCombatAllyHp = {};
 global._allyCardEls = {};
@@ -120,7 +121,7 @@ eval(html.slice(startB, endB));
 
 // _formatCombatLogEntry (activity feed) — egen liten slice
 const startF = html.indexOf('function _formatCombatLogEntry');
-const endF = html.indexOf('// Live-aktivitet: rendera senaste kampanjlogg-entryn');
+const endF = html.indexOf('// Live-aktivitet: rendera senaste maskinrums-loggposten');
 if (startF < 0 || endF < 0) { console.error('MARKERS F NOT FOUND'); process.exit(1); }
 eval(html.slice(startF, endF));
 
@@ -202,6 +203,21 @@ assert('initiative reveal lists ally with .ir-ally class', !!ir && ir.innerHTML.
 const battle5 = new El('div');
 renderCombatInline({ active: true, round: 5, enemies: [{ name: 'Goblin', hp: 4, max_hp: 7, alive: true }], allies: [], player_hp: {} }, '', battle5);
 assert('enemy cards still render (regression)', Object.keys(_lastCombatEnemyHp).includes('Goblin'));
+
+// ── Regression: "Striden är över" visas bara EN gång per stridsslut ──
+// (Samma active:false-tag kan levereras av varje guardian-poll efter striden —
+//  bubblan får inte ackumuleras längst ner i chatten.)
+const endTarget = new El('div');
+const combatEnd = { active: false, round: 4, log: [{ round: 4, actor: 'system', name: '', text: 'Striden är över' }], enemies: [], allies: [], player_hp: {} };
+renderCombatInline(combatEnd, 'alla besegrade', endTarget);
+renderCombatInline(combatEnd, 'alla besegrade', endTarget);
+renderCombatInline(combatEnd, 'alla besegrade', endTarget);
+const endCount = endTarget.children.filter(c => c.innerHTML.includes('Striden är över')).length;
+assert('combat over dedupe: bara 1 bubble trots 3 identiska taggar', endCount === 1);
+// Ny strid (annat round/reason) → ny bubbla tillåts
+const combatEnd2 = { active: false, round: 6, log: [{ round: 6, actor: 'system', name: '', text: 'Striden är över' }], enemies: [], allies: [], player_hp: {} };
+renderCombatInline(combatEnd2, 'ny seger', endTarget);
+assert('combat over dedupe: ny strid → ny bubbla', endTarget.children.filter(c => c.innerHTML.includes('Striden är över')).length === 2);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

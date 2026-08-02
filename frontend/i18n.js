@@ -1,5 +1,5 @@
 /**
- * 🌍 i18n.js — Campaign-aware language module for The Lore Weaver\'s Cauldron
+ * 🌍 i18n.js — Campaign-aware language module for The Lore Weaver's Cauldron
  *
  * The campaign's language is chosen once at campaign creation (newgame.html)
  * and stored server-side in state.meta.language. Every page initialises this
@@ -32,8 +32,8 @@ const I18N = (() => {
   // ═══════════════════════════════════════
   const T = {
     // ── Global / brand / navigation ──
-    'Ett svenskt D&D-äventyr': 'The Lore Weaver\'s Cauldron',
-    '🐉 Ett svenskt D&D-äventyr': 'The Lore Weaver\'s Cauldron',
+    'The Lore Weaver\'s Cauldron': 'The Lore Weaver\'s Cauldron',
+    '🐉 The Lore Weaver\'s Cauldron': 'The Lore Weaver\'s Cauldron',
     'Stig in i mörkret': 'What will the Cauldron Foretell?',
     'Stig in i mörkret…': 'What will the Cauldron Foretell?',
     'Till vägskälet': 'Back to the Crossroads',
@@ -100,14 +100,14 @@ const I18N = (() => {
     'lokal': 'local',
 
     // ── Page titles ──
-    '⚔️ Ett svenskt D&D-äventyr — Stig in': 'The Lore Weaver\'s Cauldron — Enter',
-    '⚔️ Ett svenskt D&D-äventyr — Vägskälet': 'The Lore Weaver\'s Cauldron — The Crossroads',
-    '⚔️ Ett svenskt D&D-äventyr — Välj ditt öde': 'The Lore Weaver\'s Cauldron — Choose Your Fate',
-    '⚔️ Ett svenskt D&D-äventyr — Vid bordet': 'The Lore Weaver\'s Cauldron — At the Table',
-    '⚔️ Ett svenskt D&D-äventyr — Karaktärsark': 'The Lore Weaver\'s Cauldron — Character Sheet',
-    '⚔️ Ett svenskt D&D-äventyr — Hur spelar man?': 'The Lore Weaver\'s Cauldron — How to Play?',
-    '⚔️ Ett svenskt D&D-äventyr — Loggbok': 'The Lore Weaver\'s Cauldron — Logbook',
-    '📚 Ett svenskt D&D-äventyr — Minnesarkivet': 'The Lore Weaver\'s Cauldron — The Memory Archive',
+    '⚔️ The Lore Weaver\'s Cauldron — Stig in': 'The Lore Weaver\'s Cauldron — Enter',
+    '⚔️ The Lore Weaver\'s Cauldron — Vägskälet': 'The Lore Weaver\'s Cauldron — The Crossroads',
+    '⚔️ The Lore Weaver\'s Cauldron — Välj ditt öde': 'The Lore Weaver\'s Cauldron — Choose Your Fate',
+    '⚔️ The Lore Weaver\'s Cauldron — Vid bordet': 'The Lore Weaver\'s Cauldron — At the Table',
+    '⚔️ The Lore Weaver\'s Cauldron — Karaktärsark': 'The Lore Weaver\'s Cauldron — Character Sheet',
+    '⚔️ The Lore Weaver\'s Cauldron — Hur spelar man?': 'The Lore Weaver\'s Cauldron — How to Play?',
+    '⚔️ The Lore Weaver\'s Cauldron — Loggbok': 'The Lore Weaver\'s Cauldron — Logbook',
+    '📚 The Lore Weaver\'s Cauldron — Minnesarkivet': 'The Lore Weaver\'s Cauldron — The Memory Archive',
     // ── login.html ──
     'Vem vågar stiga in i mörkret?': 'Where legends are brewed.',
     'Lösenord': 'Password',
@@ -351,7 +351,7 @@ const I18N = (() => {
     'Konsolen rensad.': 'Console cleared.',
 
     // ── chat.html: /help overlay ──
-    'MÖRKRETS RIKE — KOMMANDON': 'THE LORE WEAVER\'S CAULDRON — COMMANDS',
+    'THE LORE WEAVER\'S CAULDRON — COMMANDS': 'THE LORE WEAVER\'S CAULDRON — COMMANDS',
     '— Slå en tärning': '— Roll a die',
     '— Spara kampanjen (checkpoint)': '— Save the campaign (checkpoint)',
     '— Fäst en permanent sanning': '— Pin a permanent truth',
@@ -659,7 +659,7 @@ const I18N = (() => {
     'Beskriv din värld…\n\nExempel:\n- En mörk dal där askan aldrig slutar falla\n- En stad byggd på ryggen av en död gud\n- Tre fraktioner som krigar om den sista vattenkällan\n- En förbannelse som sprider sig genom drömmar\n\nJu mer du ger, desto rikare blir världen. Men Dungeon Master fyller i luckorna — inget behöver vara komplett.': 'Describe your world…\n\nExamples:\n- A dark valley where ash never stops falling\n- A city built on the back of a dead god\n- Three factions warring over the last water source\n- A curse spreading through dreams\n\nThe more you give, the richer the world becomes. But the Dungeon Master fills in the gaps — nothing needs to be complete.',
     'Typsnitt: Pixel (klicka för att byta)': 'Font: Pixel (click to switch)',
     'Klicka för att byta bild': 'Click to change image',
-    'Kampanj: Ett svenskt D&D-äventyr': 'Campaign: The Lore Weaver\'s Cauldron',
+    'Kampanj: The Lore Weaver\'s Cauldron': 'Campaign: The Lore Weaver\'s Cauldron',
     'Ingen har dykt upp ännu…': 'No one has appeared yet…',
     'Äventyraren': 'The Adventurer',
     'ÄVENTYRAREN': 'THE ADVENTURER',
@@ -749,17 +749,17 @@ const I18N = (() => {
     'Karaktärsarket fylls på när spelledaren väckt världen till liv.': 'The character sheet fills in once the Dungeon Master has brought the world to life.',
     '✦ Skapa äventyr': '✦ Create Adventure',
     'Kampanjen kunde inte laddas — kontrollera anslutningen och försök igen.': 'The campaign could not be loaded — check your connection and try again.',
-    'Ett svenskt D&amp;D-äventyr': 'The Lore Weaver\'s Cauldron',
-    '🐉 Ett svenskt D&amp;D-äventyr': 'The Lore Weaver\'s Cauldron',
-    '⚔️ Ett svenskt D&amp;D-äventyr — Vägskälet': 'The Lore Weaver\'s Cauldron — The Crossroads',
-    '⚔️ Ett svenskt D&amp;D-äventyr — Vid bordet': 'The Lore Weaver\'s Cauldron — At the Table',
-    '⚔️ Ett svenskt D&amp;D-äventyr — Karaktärsark': 'The Lore Weaver\'s Cauldron — Character Sheet',
-    '⚔️ Ett svenskt D&amp;D-äventyr — Välj ditt öde': 'The Lore Weaver\'s Cauldron — Choose Your Fate',
-    '⚔️ Ett svenskt D&amp;D-äventyr — Loggbok': 'The Lore Weaver\'s Cauldron — Logbook',
-    '📚 Ett svenskt D&amp;D-äventyr — Minnesarkivet': 'The Lore Weaver\'s Cauldron — The Memory Archive',
-    '⚔️ Ett svenskt D&amp;D-äventyr — Gestalter': 'The Lore Weaver\'s Cauldron — Characters',
-    '⚔️ Ett svenskt D&amp;D-äventyr — Kartan': 'The Lore Weaver\'s Cauldron — The Map',
-    '🏰 Ett svenskt D&amp;D-äventyr — Valvet': 'The Lore Weaver\'s Cauldron — The Vault',
+    'The Lore Weaver\'s Cauldron': 'The Lore Weaver\'s Cauldron',
+    '🐉 The Lore Weaver\'s Cauldron': 'The Lore Weaver\'s Cauldron',
+    '⚔️ The Lore Weaver\'s Cauldron — Vägskälet': 'The Lore Weaver\'s Cauldron — The Crossroads',
+    '⚔️ The Lore Weaver\'s Cauldron — Vid bordet': 'The Lore Weaver\'s Cauldron — At the Table',
+    '⚔️ The Lore Weaver\'s Cauldron — Karaktärsark': 'The Lore Weaver\'s Cauldron — Character Sheet',
+    '⚔️ The Lore Weaver\'s Cauldron — Välj ditt öde': 'The Lore Weaver\'s Cauldron — Choose Your Fate',
+    '⚔️ The Lore Weaver\'s Cauldron — Loggbok': 'The Lore Weaver\'s Cauldron — Logbook',
+    '📚 The Lore Weaver\'s Cauldron — Minnesarkivet': 'The Lore Weaver\'s Cauldron — The Memory Archive',
+    '⚔️ The Lore Weaver\'s Cauldron — Gestalter': 'The Lore Weaver\'s Cauldron — Characters',
+    '⚔️ The Lore Weaver\'s Cauldron — Kartan': 'The Lore Weaver\'s Cauldron — The Map',
+    '🏰 The Lore Weaver\'s Cauldron — Valvet': 'The Lore Weaver\'s Cauldron — The Vault',
     'Vem vågar stiga in i mörkret?': 'Who dares to step into the dark?',
     'Äventyrare': 'Adventurer',
     'Lösenord': 'Password',
@@ -815,7 +815,7 @@ const I18N = (() => {
     'Sköld': 'Shield',
     'Sköld (med runor)': 'Shield (runed)',
     'Vid bordet': 'At the Table',
-    'MÖRKRETS RIKE — KOMMANDON': 'THE LORE WEAVER\'S CAULDRON — COMMANDS',
+    'THE LORE WEAVER\'S CAULDRON — COMMANDS': 'THE LORE WEAVER\'S CAULDRON — COMMANDS',
     'Sällskapet': 'The Party',
     'Kända NPCs': 'Known NPCs',
     'Inga uppdrag ännu…': 'No quests yet…',

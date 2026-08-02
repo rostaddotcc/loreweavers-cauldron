@@ -1,5 +1,5 @@
 /**
- * 🌐 api.js — Frontend ↔ Backend bridge for The Lore Weaver\'s Cauldron
+ * 🌐 api.js — Frontend ↔ Backend bridge for The Lore Weaver's Cauldron
  *
  * MOCK mode: Set MOCK = false when the backend runs.
  * In MOCK mode every page works standalone with localStorage data.

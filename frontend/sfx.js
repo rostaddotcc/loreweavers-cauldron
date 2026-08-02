@@ -1,5 +1,5 @@
 /**
- * 🔊 sfx.js — 16-bit sound effects for The Lore Weaver\'s Cauldron
+ * 🔊 sfx.js — 16-bit sound effects for The Lore Weaver's Cauldron
  * Everything is synthesized via the Web Audio API. No audio files. Genuine SNES feel.
  *
  * Usage: SFX.coin(), SFX.battle(), SFX.dice() …

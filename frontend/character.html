@@ -144,19 +144,7 @@
     font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 0.1em;
     background: var(--stone-3); color: var(--bone-dim); border: 1px solid var(--edge);
     padding: 0.28rem 0.7rem; cursor: pointer; transition: all 0.18s;
-  }.mini-btn:hover{ color: var(--bone-bright); border-color: var(--gold); box-shadow: 0 0 10px -2px rgba(232,198,90,0.4); }.mini-btn.hurt:hover{ border-color: var(--blood-bright); color: var(--blood-bright); box-shadow: 0 0 10px -2px rgba(212,58,77,0.5); }/* ── Spell slots — glödande runor ── */.slots{ display: flex; gap: 0.55rem; flex-wrap: wrap; align-items: center; }.slot{
-    width: 30px; height: 30px; border-radius: 50%; cursor: pointer; position: relative;
-    border: 1px solid var(--edge); background: #0a0612;
-    box-shadow: inset 0 3px 8px rgba(0,0,0,0.85);
-    transition: all 0.25s; display: flex; align-items: center; justify-content: center;
-    font-family: 'Cinzel', serif; font-size: 0.7rem; color: transparent;
-  }.slot.lit{
-    background: radial-gradient(circle at 35% 30%, #c9a6ff, var(--arcane) 55%, #3a1f66 100%);
-    border-color: #b490ee; color: rgba(255,255,255,0.85);
-    box-shadow: 0 0 14px rgba(139,95,212,0.65), inset 0 0 6px rgba(255,255,255,0.35);
-    animation: slot-pulse 2.6s ease-in-out infinite;
-  }.slot.lit:nth-child(2n){ animation-delay: 0.7s; }.slot.lit:nth-child(3n){ animation-delay: 1.3s; }
-  @keyframes slot-pulse { 0%,100% { box-shadow: 0 0 10px rgba(139,95,212,0.5), inset 0 0 6px rgba(255,255,255,0.3); } 50% { box-shadow: 0 0 20px rgba(139,95,212,0.85), inset 0 0 8px rgba(255,255,255,0.45); } }.slot:hover{ transform: scale(1.15); }.slot:active{ transform: scale(0.92); }.slots-hint{ font-size: 0.85rem; font-style: italic; color: var(--bone-dim); margin-left: 0.4rem; }/* ═══════════ Förmågor — sköldar ═══════════ */.abilities{ display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.7rem; }.ability{
+  }.mini-btn:hover{ color: var(--bone-bright); border-color: var(--gold); box-shadow: 0 0 10px -2px rgba(232,198,90,0.4); }.mini-btn.hurt:hover{ border-color: var(--blood-bright); color: var(--blood-bright); box-shadow: 0 0 10px -2px rgba(212,58,77,0.5); }.empty-hint{ font-size: 0.85rem; font-style: italic; color: var(--bone-dim); margin-left: 0.4rem; }/* ═══════════ Förmågor — sköldar ═══════════ */.abilities{ display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.7rem; }.ability{
     position: relative; text-align: center; padding: 0.9rem 0.3rem 0.75rem;
     background: linear-gradient(180deg, var(--stone-3), var(--stone));
     border: 1px solid var(--edge);
@@ -380,7 +368,7 @@
     }.app{ padding: 1.25rem .75rem 3rem; }
   }
   @media (max-width: 640px) {/* Flikar: 2×2 stentavlor med full träffhöjd */.tabs{ display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; }.tab{ min-height: 44px; display: flex; align-items: center; justify-content: center;
-      padding: .55rem .35rem; font-size: .77rem; border-bottom: 1px solid var(--edge); }.panel{ padding: 1.2rem .8rem; }/* Förmågor: 2 kolumner, större siffror */.abilities{ grid-template-columns: repeat(2, 1fr); gap: .55rem; }.ability .score{ font-size: 1.35rem; }/* HP/XP-mätare: högre balkar som syns */.trough{ height: 22px; }.slot{ width: 40px; height: 40px; }/* Utrustningstabell: horisontell scroll */.inv-grid{ grid-template-columns: 1fr; gap: 0.5rem; }/* Lägg-till-formulär: staplat, 16px mot iOS-zoom */.add-form input, .add-form select{ font-size: 18px; min-height: 44px; }.add-form input{ flex: 1 1 100%; }.add-form select{ flex: 1 1 42%; }.add-form .rune-btn{ flex: 1 1 100%; min-height: 44px; }/* Skattkammare */.currency-grid{ grid-template-columns: repeat(2, 1fr); gap: .6rem; }.coin-btn{ width: 44px; height: 44px; }.tx{ flex-wrap: wrap; gap: .3rem; }/* Anteckningar */.notes-layout{ grid-template-columns: 1fr; }#notes-editor{ font-size: 18px; min-height: 280px; }.rune-btn{ min-height: 44px; }.att-item .att-del{ padding: .5rem .45rem; font-size: 1.13rem; }.att-item a{ font-size: .93rem; }
+      padding: .55rem .35rem; font-size: .77rem; border-bottom: 1px solid var(--edge); }.panel{ padding: 1.2rem .8rem; }/* Förmågor: 2 kolumner, större siffror */.abilities{ grid-template-columns: repeat(2, 1fr); gap: .55rem; }.ability .score{ font-size: 1.35rem; }/* HP/XP-mätare: högre balkar som syns */.trough{ height: 22px; }/* Utrustningstabell: horisontell scroll */.inv-grid{ grid-template-columns: 1fr; gap: 0.5rem; }/* Lägg-till-formulär: staplat, 16px mot iOS-zoom */.add-form input, .add-form select{ font-size: 18px; min-height: 44px; }.add-form input{ flex: 1 1 100%; }.add-form select{ flex: 1 1 42%; }.add-form .rune-btn{ flex: 1 1 100%; min-height: 44px; }/* Skattkammare */.currency-grid{ grid-template-columns: repeat(2, 1fr); gap: .6rem; }.coin-btn{ width: 44px; height: 44px; }.tx{ flex-wrap: wrap; gap: .3rem; }/* Anteckningar */.notes-layout{ grid-template-columns: 1fr; }#notes-editor{ font-size: 18px; min-height: 280px; }.rune-btn{ min-height: 44px; }.att-item .att-del{ padding: .5rem .45rem; font-size: 1.13rem; }.att-item a{ font-size: .93rem; }
   }
   @media (max-width: 400px) {.app{ padding: 1rem .5rem 3rem; }.panel{ padding: 1rem .6rem; }.abilities{ gap: .4rem; }.ability{ padding: .7rem .15rem .6rem; }.ability .abbr{ font-size: .63rem; letter-spacing: .15em; }.ability .score{ font-size: 1.15rem; }.coin{ padding: .85rem .3rem .7rem; }.coin-amount{ font-size: 1.25rem; }.coin-disc{ width: 44px; height: 44px; }.masthead h1{ letter-spacing: .02em; }.char-name{ font-size: 1.35rem; }
   }
@@ -442,6 +430,7 @@
 
   <nav class="tabs">
     <div class="tab active" data-tab="character">⚔ Character</div>
+    <div class="tab" data-tab="spells">✨ Spells</div>
     <div class="tab" data-tab="inventory">🎒 Equipment</div>
     <div class="tab" data-tab="currency">🪙 Treasury</div>
     <div class="tab" data-tab="notes">📜 Notes</div>
@@ -477,15 +466,6 @@
           <span class="nums"><span id="hp-cur">38</span><small> / <span id="hp-max">52</span></small></span>
         </div>
         <div class="trough" id="hp-trough"><div class="fill hp" id="hp-bar" style="width:73%"></div></div>
-      </div>
-
-      <div class="vital">
-        <div class="vital-head">
-          <span class="label">🔮 Spell Slots</span>
-          <span class="nums"><span id="slot-cur">4</span><small> / <span id="slot-max">6</span></small></span>
-        </div>
-        <div class="slots" id="slots"></div>
-        <span class="slots-hint">Click a rune to spend / restore</span>
       </div>
 
       <div class="vital wide">
@@ -655,7 +635,6 @@ function showNoCampaign(msg) {
 function renderAll() {
   renderHeader();
   renderHp();
-  renderSlots();
   renderXp();
   renderAbilities();
   renderTraits();
@@ -912,33 +891,6 @@ function renderHp() {
 }
 
 // ═══════════════════════════════════════
-// SPELL SLOTS — klickbara runor
-// ═══════════════════════════════════════
-function renderSlots() {
-  const ss = state.character.spell_slots || state.character.spellSlots || { current: 0, max: 0 };
-  const wrap = document.getElementById('slots');
-  wrap.innerHTML = '';
-  if (!ss.max) {
-    wrap.innerHTML = `<span class="slots-hint">${I18N.t('Inga besvärjelseplatser — karaktären kastar inte besvärjelser')}</span>`;
-  }
-  for (let i = 0; i < ss.max; i++) {
-    const s = document.createElement('div');
-    s.className = 'slot' + (i < ss.current ? ' lit' : '');
-    s.textContent = '✦';
-    s.title = (I18N.getLang() === 'en' ? 'Slot' : 'Plats') + ' ' + (i + 1);
-    s.addEventListener('click', () => {
-      const wasLit = i < ss.current;
-      ss.current = wasLit ? i : i + 1;
-      renderSlots();
-      toast(wasLit ? I18N.t('🔮 Besvärjelse kastad') : I18N.t('✨ Plats återställd'));
-    });
-    wrap.appendChild(s);
-  }
-  document.getElementById('slot-cur').textContent = ss.current;
-  document.getElementById('slot-max').textContent = ss.max;
-}
-
-// ═══════════════════════════════════════
 // ABILITIES / TRAITS / SAVES
 // ═══════════════════════════════════════
 function abilityNames() {
@@ -970,7 +922,7 @@ function renderTraits() {
         if (typeof t === 'string') return `<span class="trait">${t}</span>`;
         return `<span class="trait ${t.magic ? 'magic' : ''}">${t.magic ? '✦ ' : ''}${t.name}</span>`;
       }).join('')
-    : `<span class="slots-hint">${I18N.t('Inga egenskaper noterade ännu…')}</span>`;
+    : `<span class="empty-hint">${I18N.t('Inga egenskaper noterade ännu…')}</span>`;
 }
 
 function renderSaves() {
@@ -980,7 +932,7 @@ function renderSaves() {
         if (typeof s === 'string') return `<span class="trait">${s}</span>`;
         return `<span class="trait ${s.prof ? 'prof' : ''}">${s.prof ? '●' : '○'} ${s.name}</span>`;
       }).join('')
-    : `<span class="slots-hint">${I18N.t('Inga sparade sparningskast ännu…')}</span>`;
+    : `<span class="empty-hint">${I18N.t('Inga sparade sparningskast ännu…')}</span>`;
 }
 
 // ═══════════════════════════════════════

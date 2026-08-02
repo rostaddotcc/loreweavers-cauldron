@@ -1,4 +1,4 @@
-# 🐉 Mörkrets Rike — AI Dungeon Master
+# 🐉 The Lore Weaver's Cauldron — AI Dungeon Master
 
 En LLM-driven D&D Dungeon Master i mörk fantasy. Prata med en AI som narrerar,
 spelar NPCs, slår tärningar och bygger världen tillsammans med dig.

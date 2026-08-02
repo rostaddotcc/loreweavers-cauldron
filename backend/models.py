@@ -1,5 +1,5 @@
 """
-Mörkrets Rike — LLM Model Router
+The Lore Weaver's Cauldron — LLM Model Router
 =================================
 Frontend skickar modell-ID → backend slår upp provider + nyckel ur .env.
 API-nycklar exponeras ALDRIG till klienten.
@@ -130,6 +130,16 @@ MODELS: dict[str, ModelConfig] = {
         display_name="DeepSeek R1 7B (lokal)",
         provider="ollama",
         api_model="deepseek-r1:7b",
+        base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1"),
+        api_key_env="",
+        supports_vision=False,
+        local=True,
+    ),
+    "ollama:heretic": ModelConfig(
+        model_id="ollama:heretic",
+        display_name="Heretic 7B (lokal, NSFW)",
+        provider="ollama",
+        api_model="igorls/gemma-4-e4b-it-heretic-GGUF:q4_k_m",
         base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1"),
         api_key_env="",
         supports_vision=False,
@@ -332,7 +342,7 @@ Spelaren ser en tärningsknapp och slår — resultatet skickas tillbaka automat
 - **Narratör**: Beskriv miljöer, stämningar, konsekvenser. Stämningsfull, inte verbos.
 - **NPC-skådespelare**: Inled med namn. Varje NPC har egen personlighet och röst.
 - **Regeldomare (VIKTIGAST)**: Begär kast OFTA. Testa spelaren. Låt tärningarna avgöra. Tolka resultat narrativt — både framgång och misslyckande ska driva berättelsen framåt.
-- **Världsbyggare**: Bygg världen med spelaren. Kom ihåg detaljer. Använd [PLATS:] och [KONSEKVENS:].
+- **Världsbyggare**: Bygg världen med spelaren. Kom ihåg detaljer. Guardian registrerar nya platser och varaktiga världsförändringar automatiskt — du behöver inga taggar.
 - **Utmanare**: Skapa aktivt hinder, risker och val som kräver kast. Låt inte spelaren glida igenom utan motstånd.
 """
 
@@ -362,8 +372,13 @@ Spelaren ser en LIVE stridsstatus (fiende-HP, rundnummer, egen HP) i en statusra
 - Påminn spelaren om tillgängliga handlingar om de verkar osäkra.
 
 ### Turordning:
-- Du narrerar turordningen: "Goblinen hinner före dig..." eller "Du är snabbast — din tur först."
-- Guardian spårar mekanisk turordning. Du behöver inte räkna.
+- När initiativ slagits, narrera RESULTATET med siffror: "Goblinen rullar 14, du rullar 9 — goblinen agerar först!"
+- Guardian behöver de numeriska värdena för att visa initiativ-ceremonin i chatten.
+- Du narrerar sedan turordningen löpande: "Goblinen hinner före dig..." eller "Du är snabbast — din tur först."
+
+### Rundsammanfattning:
+- Spelaren ser en "── RUNDA N ──"-sammanfattning i chatten med korta logg-rader.
+- Håll dina rundbeskrivningar korta och konkreta — de visas som logg-rader.
 
 ### Flykt:
 - Spelaren kan försöka fly när som helst. Begär [KAST:1d20+DEX|FLYKT (DC 10 + antal fiender)].

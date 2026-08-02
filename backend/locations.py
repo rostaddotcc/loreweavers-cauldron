@@ -1,5 +1,5 @@
 """
-Mörkrets Rike — Platser & Resor
+The Lore Weaver's Cauldron — Platser & Resor
 ================================
 Hanterar besökta platser, sevärdheter, och restider.
 Kartan är helt dynamisk — inga hårdkodade platser. Nya platser placeras
@@ -9,6 +9,7 @@ alltid hamnar på samma koordinat inom en kampanj.
 
 import hashlib
 import math
+import re
 
 # Terräng-modifierare (dagar per "enhet" avstånd)
 TERRAIN = {
@@ -41,6 +42,109 @@ def place_location(name: str, campaign_id: str = "") -> dict:
     y = 8 + (int(seed[8:16], 16) % 85)
     terrain = TERRAIN_POOL[int(seed[16:24], 16) % len(TERRAIN_POOL)]
     return {'x': x, 'y': y, 'terrain': terrain}
+
+
+def clean_location_name(name: str) -> str:
+    """Städa platsnamn — DM:er och LLM:er ibland skickar hela stycken.
+
+    Regler:
+    - Klipp vid första em-dash (—) eller punkt följt av mellanslag + stor bokstav
+    - Klipp vid första kommatecken om namnet är > 40 tecken (beskrivning följer)
+    - Max 60 tecken
+    - Ta bort avslutande skiljetecken
+    """
+    name = name.strip()
+    if not name:
+        return name
+
+    # Klipp vid em-dash (beskrivning följer)
+    for sep in (' — ', ' – ', ' - '):
+        idx = name.find(sep)
+        if idx > 3:  # behåll minst 3 tecken före
+            name = name[:idx]
+            break
+
+    # Klipp vid ". " följt av stor bokstav (ny mening = beskrivning)
+    import re
+    m = re.search(r'\.\s+[A-ZÅÄÖ]', name)
+    if m and m.start() > 3:
+        name = name[:m.start() + 1]
+
+    # Klipp vid kommatecken om namnet fortfarande är långt
+    if len(name) > 40:
+        idx = name.find(',')
+        if idx > 3:
+            name = name[:idx]
+
+    # Hård gräns
+    if len(name) > 60:
+        name = name[:57].rstrip() + '…'
+
+    return name.rstrip(' .,;:—–-')
+
+
+# ═══════════════════════════════════════
+# Platsnamn-dedup (2026-08-02)
+# Guardian/DM kan ge samma plats olika namn över turer ("The X" vs "X",
+# "X, kvalificerare", "The X's Y" vs "The Y"). Exakt-sträng-jämförelse räcker
+# inte — dessa hjälpfunktioner normaliserar och matchar nära-duplikat.
+# ═══════════════════════════════════════
+
+_POSS_RE = re.compile(r"^[a-zåäö'’]+\s+(.+)$")
+
+
+def location_key(name: str) -> str:
+    """Normalisera ett platsnamn till en dedup-nyckel.
+
+    - clean_location_name (klipp vid em-dash/punkt/komma, max 60 tecken)
+    - lowercase + kollapsa whitespace
+    - ta bort inledande 'the '
+    - ta bort parenteser ('(Mid-Ring Docks)' → '')
+    - klipp vid kommatecken OM huvudet är >= 4 tecken (annars behålls hela,
+      så 'Halcyra, the Lantern City' → 'halcyra' — container-namnet)
+    """
+    n = clean_location_name(name).strip().lower()
+    n = re.sub(r'\s+', ' ', n)
+    n = re.sub(r'^the\s+', '', n)
+    n = re.sub(r'\s*\([^)]*\)\s*', ' ', n).strip()
+    if ',' in n and len(n.split(',')[0].strip()) >= 4:
+        n = n.split(',')[0].strip()
+    return n
+
+
+def locations_match(a: str, b: str) -> bool:
+    """True om två platsnamn refererar till SAMMA plats.
+
+    Regler (medvetet konservativa — slå ALDRIG ihop genuint olika platser):
+    - nyckel-likhet ('the hollow forge' == 'hollow forge')
+    - prefix >= 5 tecken + mellanslagsgräns ('upper rings' ⊂ 'upper rings of halcyra')
+    - possessiv: "forge's speaking chamber" ~ 'speaking chamber'
+    Skyddar mot falska matchningar: 'halcyra' vs 'upper rings of halcyra'
+    (container vs del) och korta generiska ord (< 5 tecken).
+    """
+    ka, kb = location_key(a), location_key(b)
+    if not ka or not kb:
+        return False
+    if ka == kb:
+        return True
+    short, long_ = (ka, kb) if len(ka) <= len(kb) else (kb, ka)
+    if len(short) < 5:
+        return False
+    if long_.startswith(short) and (len(long_) == len(short) or long_[len(short)] == ' '):
+        return True
+    m = _POSS_RE.match(long_)
+    return bool(m and m.group(1) == short)
+
+
+def find_location(locs: list, name: str):
+    """Hitta befintlig plats i listan som matchar namnet (fuzzy).
+
+    Returnerar (index, plats-objekt) eller (None, None).
+    """
+    for i, l in enumerate(locs):
+        if isinstance(l, dict) and locations_match(str(l.get('name', '')), name):
+            return i, l
+    return None, None
 
 
 def calculate_travel_days(from_loc: dict, to_loc: dict) -> float:
@@ -85,6 +189,15 @@ def get_locations_with_travel(state: dict) -> list[dict]:
 
     all_locations = {}
 
+    # visited_locations kan innehålla STRÄNGAR (från [PLATS:]-taggen) ELLER
+    # dict-objekt (från Guardian locations_new) — normalisera till namn-set
+    # så "visited"-flaggan funkar för båda. (fix 2026-08-01: Guardian-platser
+    # visades som dimmade ◇ istället för besökta ◆ pins)
+    visited_names = {
+        v.strip().lower() if isinstance(v, str) else str(v.get('name', '')).strip().lower()
+        for v in visited
+    }
+
     # Bara kampanjens egna platser (inga defaults)
     for loc in state.get('locations', []):
         name = loc.get('name', '')
@@ -103,7 +216,7 @@ def get_locations_with_travel(state: dict) -> list[dict]:
             'terrain': loc.get('terrain', 'okänd'),
             'x': loc.get('x', 50),
             'y': loc.get('y', 50),
-            'visited': name in visited or name == current_name,
+            'visited': name.strip().lower() in visited_names or name == current_name,
             'current': name == current_name,
             'landmarks': loc.get('landmarks', []),
         }

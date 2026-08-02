@@ -25,20 +25,20 @@
   h1{font-family:'Press Start 2P',monospace;font-size:1rem;color:var(--gold);margin-bottom:.5rem;text-shadow:2px 2px 0 #000}
   h2{font-family:'Press Start 2P',monospace;font-size:.7rem;color:var(--term-green);margin:2rem 0 .8rem;text-transform:uppercase;letter-spacing:.1em}
   h2::before{content:'> ';color:var(--edge)}
-  p,li{font-size:.78rem;color:var(--bone);margin-bottom:.6rem}
+  p,li{font-size:.91rem;color:var(--bone);margin-bottom:.6rem}
   ul{padding-left:1.2rem;list-style:none}
   li::before{content:'▸ ';color:var(--gold)}
   .box{background:var(--stone);border:1px solid var(--edge);padding:1.2rem;margin:1rem 0}
   .box::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.4}
   .box{position:relative}
-  .cmd{color:var(--term-green);background:var(--ink);padding:.15rem .4rem;border:1px solid var(--edge);font-size:.72rem}
-  .key{color:var(--term-amber);border:1px solid var(--edge);padding:.1rem .35rem;font-size:.68rem;background:var(--stone-2)}
+  .cmd{color:var(--term-green);background:var(--ink);padding:.15rem .4rem;border:1px solid var(--edge);font-size:.85rem}
+  .key{color:var(--term-amber);border:1px solid var(--edge);padding:.1rem .35rem;font-size:.81rem;background:var(--stone-2)}
   .topbar{display:flex;align-items:center;gap:1rem;padding:1rem 0;border-bottom:1px solid var(--edge);margin-bottom:2rem}
   .topbar .brand{font-family:'Press Start 2P',monospace;font-size:.6rem;color:var(--gold)}
-  .topbar a{color:var(--bone-dim);text-decoration:none;font-size:.65rem;border:1px solid var(--edge);padding:.35rem .7rem;transition:none}
+  .topbar a{color:var(--bone-dim);text-decoration:none;font-size:.78rem;border:1px solid var(--edge);padding:.35rem .7rem;transition:none}
   .topbar a:hover{border-color:var(--gold);color:var(--gold-bright)}
   .divider{border:none;border-top:1px dashed var(--edge);margin:1.5rem 0}
-  .loop{display:grid;grid-template-columns:auto 1fr;gap:.4rem .8rem;font-size:.72rem}
+  .loop{display:grid;grid-template-columns:auto 1fr;gap:.4rem .8rem;font-size:.85rem}
   .loop .step{color:var(--term-green);font-weight:700}
   .loop .desc{color:var(--bone)}
   a{color:var(--arcane)}
@@ -49,14 +49,14 @@
     .topbar { flex-wrap: wrap; gap: .4rem .5rem; }
     .topbar a {
       min-height: 44px; display: inline-flex; align-items: center;
-      padding: .4rem .7rem; font-size: .6rem;
+      padding: .4rem .7rem; font-size: .73rem;
     }
   }
   @media (max-width: 640px) {
     .app { padding: 1.25rem .75rem 3rem; }
     h1 { font-size: .85rem; line-height: 1.6; }
     h2 { font-size: .62rem; margin: 1.6rem 0 .7rem; }
-    p, li { font-size: .74rem; line-height: 1.9; }
+    p, li { font-size: .87rem; line-height: 1.9; }
     .box { padding: .9rem .8rem; }
     /* Long command tags may wrap on narrow screens */
     .cmd { word-break: break-word; display: inline-block; max-width: 100%; }
@@ -67,21 +67,23 @@
     .app { padding: 1rem .5rem 2.5rem; }
     h1 { font-size: .75rem; }
     .box { padding: .75rem .6rem; }
-    .cmd { font-size: .66rem; }
-    .key { font-size: .62rem; }
+    .cmd { font-size: .79rem; }
+    .key { font-size: .75rem; }
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=9">
-<script src="sprites.js?v=20260801d"></script>
-<script src="fonts.js?v=20260801d"></script>
+<link rel="stylesheet" href="snes.css?v=10">
+<script src="sprites.js?v=20260802a"></script>
+<script src="fonts.js?v=20260802c"></script>
+<script src="themes.js?v=20260802c"></script>
 </head>
 <body>
 <div class="app">
   <div class="topbar">
-    <span class="brand">🐉 A Swedish D&amp;D Adventure</span>
+    <span class="brand">The Lore Weaver's Cauldron</span>
     <span style="flex:1"></span>
     <a href="chat.html">⚔️ To the Table</a>
     <a href="adventure.html">🚪 The Crossroads</a>
+    <a href="releases.html">📜 Releases</a>
   </div>
 
   <h1>⚔ How to Play</h1>
@@ -115,8 +117,8 @@
   <ul>
     <li>Log in with your username and password</li>
     <li>Choose your adventure type: <b>Prepare</b> (build a world with prompt + files) or <b>New</b> (freestyle)</li>
-    <li>Create your character: choose an archetype or write freely, pick a model (DeepSeek V4 Flash / Qwen 3.8 Max)</li>
-    <li>Click "Summon Character" — the AI generates a complete character sheet</li>
+    <li>Create your character: choose an archetype or write freely, pick a model, click "Summon Character"</li>
+    <li>The AI generates a complete character sheet</li>
     <li>Click "To the Table" — the DM awakens and asks its questions</li>
   </ul>
 
@@ -130,9 +132,9 @@
 
   <h2>Dice</h2>
   <ul>
-    <li>When the outcome is uncertain, the DM calls for a roll — e.g. <span class="cmd">[ROLL: 1d20+4 | DEXTERITY]</span></li>
-    <li>A roll button appears in the chat — click it to roll</li>
-    <li>The dice tray at the bottom is <b>locked</b> (🔒) until the DM calls for a roll</li>
+    <li>When the outcome is uncertain, the DM calls for a roll — a <b>roll button appears in the chat</b></li>
+    <li>Click it to roll — or choose <b>✍️ Write instead</b> to act without rolling (the chat unlocks and you narrate freely)</li>
+    <li>The chat is locked while a roll is pending, so the dice stay fair and deliberate</li>
     <li>You can also type <span class="cmd">/roll 1d20+4</span> — the roll command (alias <span class="cmd">/rulla</span>) — directly in the chat to roll whenever you want</li>
     <li>Natural 20 = CRITICAL! Natural 1 = PATHETIC!</li>
   </ul>
@@ -148,28 +150,26 @@
   </div>
 
   <h2>Mechanical Tags (Invisible)</h2>
-  <p>The DM uses tags that the system strips from the text and converts into effects:</p>
+  <p>The DM's narration is laced with hidden markers that the system converts into real effects — you never see them:</p>
   <ul>
-    <li><span class="cmd">[DAMAGE:12]</span> — you take 12 damage (HP decreases)</li>
-    <li><span class="cmd">[HEAL:8]</span> — you are healed 8 HP</li>
-    <li><span class="cmd">[XP:250]</span> — you gain experience points</li>
-    <li><span class="cmd">[GOLD:50]</span> — you find gold</li>
-    <li><span class="cmd">[ITEM:Sword|Weapon|rare]</span> — new item in your inventory</li>
-    <li><span class="cmd">[QUEST:Save the village|Description|100 gp]</span> — new quest</li>
-    <li><span class="cmd">[NPC:Name|Role|relation]</span> — a new NPC is registered</li>
-    <li><span class="cmd">[LOCATION:Stone Circle]</span> — the location updates</li>
+    <li><b>Damage &amp; healing</b> — your HP changes automatically</li>
+    <li><b>XP &amp; gold</b> — gained and tracked for you</li>
+    <li><b>Items</b> — new equipment appears in your inventory</li>
+    <li><b>Quests</b> — new goals appear in your journal</li>
+    <li><b>NPCs</b> — characters you meet are registered</li>
+    <li><b>Locations</b> — the map updates as you travel</li>
   </ul>
 
   <h2>Models</h2>
   <div class="box">
-    <p>You can switch the AI model mid-adventure via the dropdown in the top bar.</p>
+    <p>You can switch the AI model mid-adventure from the <b>Settings (⚙️)</b> menu in the top bar — pick a new Dungeon Master or Guardian model at any time.</p>
     <ul>
-      <li><b>DeepSeek V4 Flash</b> — standard, fast, reasoning model (thinks before answering)</li>
-      <li><b>Qwen 3.8 Max</b> — powerful, great at creative narration</li>
-      <li><b>Qwen 3.6 Flash</b> — fast, used for atmosphere/ASCII art</li>
-      <li><b>Local models</b> — via Ollama (requires a local server)</li>
+      <li><b>qwen3.8-max</b> — powerful, great at creative narration</li>
+      <li><b>qwen3.6-flash</b> — fast, reliable all-rounder</li>
+      <li><b>deepseek-v4-flash-0731</b> — fast reasoning model (thinks before answering)</li>
+      <li><b>step-3.7-flash</b> — fast, budget option</li>
     </ul>
-    <p style="color:var(--bone-dim);font-size:.68rem">Your choice is saved in the browser and stays until you change it.</p>
+    <p style="color:var(--bone-dim);font-size:.81rem">Your choice is saved and stays until you change it. If the DM stops responding, try switching models here first.</p>
   </div>
 
   <h2>Music &amp; Sound</h2>
@@ -189,7 +189,7 @@
       <li><b>Combat:</b> initiative → turn order → attack → damage → repeat</li>
       <li><b>Rest:</b> short rest (1h) = restore HP, long rest (8h) = full HP + spell slots</li>
     </ul>
-    <p style="color:var(--bone-dim);font-size:.68rem">The DM is the final judge. The rules are a framework, not a prison.</p>
+    <p style="color:var(--bone-dim);font-size:.81rem">The DM is the final judge. The rules are a framework, not a prison.</p>
   </div>
 
   <h2>Tips</h2>
@@ -202,11 +202,21 @@
     <li>Export (📦) to download the entire campaign as a ZIP</li>
   </ul>
 
+  <h2>If Something Goes Wrong</h2>
+  <div class="box">
+    <ul>
+      <li><b>No reply from the DM?</b> The chat shows the underlying error — an HTTP code like <span class="cmd">HTTP 429</span> (rate limit), <span class="cmd">HTTP 500</span> (server), <span class="cmd">HTTP 402</span> (billing), or a network/empty-response message</li>
+      <li><b>If the issue persists, try changing models in the Settings (⚙️)</b> — a different model often routes around the problem</li>
+      <li><b>Connection dropped mid-reply?</b> The chat recovers the DM's answer from the transcript automatically</li>
+      <li>Check the <b>Engine Room (🛠️)</b> in Settings for live debug logs if things look wrong</li>
+    </ul>
+  </div>
+
   <hr class="divider">
-  <p style="text-align:center;color:var(--bone-dim);font-size:.65rem">
+  <p style="text-align:center;color:var(--bone-dim);font-size:.78rem">
     Powered by DeepSeek &amp; Qwen · Campaigns are saved locally · <a href="login.html">Back to the Gate</a>
   </p>
 </div>
-<script src="i18n.js?v=20260801d"></script>
+<script src="i18n.js?v=20260802b"></script>
 </body>
 </html>

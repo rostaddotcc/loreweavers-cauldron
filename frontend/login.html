@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚔️ A Swedish D&amp;D Adventure — Enter</title>
+<title>The Lore Weaver's Cauldron — Enter</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -71,7 +71,7 @@
   /* ── Rotating mystery quotes ── */
   .myst-quotes {
     text-align: center; margin-bottom: 1.5rem; min-height: 2em;
-    font-style: italic; font-size: 0.82rem; color: var(--bone-dim);
+    font-style: italic; font-size: 0.95rem; color: var(--bone-dim);
     transition: opacity 1s ease; opacity: 1; padding: 0 0.5rem;
     letter-spacing: 0.02em;
   }
@@ -94,10 +94,20 @@
   /* REMOVED: .corner rules — snes.css sets .corner { display: none !important } */
   /* REMOVED: .sigil-ring rules — snes.css kills border-radius and animation */
 
-  /* ── Sigil ── */
+  /* ── Sigil / logo ── */
   .sigil {
-    width: 72px; height: 72px; margin: 0 auto 1.2rem; position: relative;
+    width: 180px; margin: 0 auto 1.1rem; position: relative;
     display: flex; align-items: center; justify-content: center;
+  }
+  .gate-logo {
+    width: 100%; display: block;
+    mix-blend-mode: screen;
+    animation: logo-float 7s ease-in-out infinite;
+    filter: saturate(1.05) brightness(1.02);
+  }
+  @keyframes logo-float {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-7px); }
   }
   /* SVG keyframe animations (not killed by snes.css — targets HTML selectors, not SVG) */
   @keyframes sigil-spin { to { transform: rotate(360deg); } }
@@ -112,19 +122,19 @@
     margin-bottom: 0.3rem;
   }
   .gate-sub {
-    text-align: center; font-style: italic; font-size: 0.85rem;
+    text-align: center; font-style: italic; font-size: 0.98rem;
     color: var(--bone-dim); margin-bottom: 1.8rem;
   }
 
   /* ── Form ── */
   .field { margin-bottom: 1.2rem; position: relative; }
   .field label {
-    display: block; font-family: 'Cinzel', serif; font-size: 0.62rem;
+    display: block; font-family: 'Cinzel', serif; font-size: 0.75rem;
     letter-spacing: 0.28em; text-transform: uppercase; color: var(--bone-dim);
     margin-bottom: 0.4rem;
   }
   .field input {
-    width: 100%; font-family: 'Spectral', serif; font-size: 1rem; color: var(--bone-bright);
+    width: 100%; font-family: 'Spectral', serif; font-size: 1.13rem; color: var(--bone-bright);
     background: #0d0817; border: 1px solid var(--edge); padding: 0.75rem 1rem 0.75rem 2.6rem;
     outline: none; transition: border-color 0.25s;
   }
@@ -143,27 +153,27 @@
 
   /* REMOVED: .gate-btn gradient, box-shadow, ::after sheen — all killed by snes.css */
   .gate-btn {
-    width: 100%; font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.85rem;
-    letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer;
+    width: 100%; font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.98rem;
+    letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer;
     padding: 0.85rem; margin-top: 0.5rem;
   }
 
   .gate-error {
-    text-align: center; font-size: 0.8rem; color: var(--blood-bright);
+    text-align: center; font-size: 0.93rem; color: var(--blood-bright);
     margin-top: 0.8rem; min-height: 1.2em; font-style: italic;
   }
 
   .gate-footer {
     text-align: center; margin-top: 1.5rem; padding-top: 1rem;
     border-top: 1px solid rgba(42,42,58,0.4);
-    font-size: 0.72rem; color: var(--bone-dim); font-style: italic;
+    font-size: 0.85rem; color: var(--bone-dim); font-style: italic;
   }
   .gate-footer a { color: var(--arcane); text-decoration: none; }
   .gate-footer a:hover { text-shadow: 0 0 8px rgba(123,79,212,0.6); }
 
   /* ── Login ⇄ Signup toggle ── */
   .gate-toggle {
-    text-align: center; margin-top: 0.9rem; font-size: 0.75rem;
+    text-align: center; margin-top: 0.9rem; font-size: 0.88rem;
     color: var(--bone-dim); font-style: italic; cursor: pointer;
     letter-spacing: 0.02em;
   }
@@ -189,10 +199,10 @@
     body { overflow-y: auto; padding: 1.25rem .75rem; }
     .gate { width: 100%; max-width: 400px; margin: auto; padding: 0; }
     .gate-frame { padding: 2.1rem 1.25rem 1.6rem; }
-    .gate-title { font-size: 1.28rem; letter-spacing: .05em; }
-    .gate-sub { font-size: .8rem; margin-bottom: 1.4rem; }
-    .myst-quotes { font-size: .76rem; margin-bottom: 1.2rem; }
-    .field input { min-height: 48px; font-size: 16px; }
+    .gate-title { font-size: 1.18rem; letter-spacing: .05em; line-height: 1.35; }
+    .gate-sub { font-size: .93rem; margin-bottom: 1.4rem; }
+    .myst-quotes { font-size: .89rem; margin-bottom: 1.2rem; }
+    .field input { min-height: 48px; font-size: 18px; }
     .field .icon { bottom: 50%; transform: translateY(50%); }
     .gate-btn { width: 100%; min-height: 52px; }
     .gate-btn:active { transform: translateY(2px); filter: brightness(.94); }
@@ -203,15 +213,58 @@
   @media (max-width: 400px) {
     body { padding: .75rem .5rem; }
     .gate-frame { padding: 1.7rem 1rem 1.3rem; }
-    .gate-title { font-size: 1.08rem; }
-    .sigil { width: 60px; height: 60px; margin-bottom: 1rem; }
+    .gate-title { font-size: 1.02rem; line-height: 1.35; }
+    .sigil { width: 148px; margin-bottom: 1rem; }
     .field input { padding-left: 2.4rem; }
-    .gate-btn { font-size: .78rem; letter-spacing: .14em; }
+    .gate-btn { font-size: .85rem; letter-spacing: .07em; line-height: 1.5; }
+  }
+
+  /* ═══════════ Release-notes-modal ═══════════ */
+  .rn-overlay {
+    position: fixed; inset: 0; z-index: 500; display: flex;
+    align-items: center; justify-content: center; padding: 1rem;
+    background: rgba(4,2,8,.8); backdrop-filter: blur(3px);
+    opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility .25s;
+  }
+  .rn-overlay.show { opacity: 1; visibility: visible; }
+  .rn-modal {
+    width: min(440px, 100%); max-height: 82vh; overflow-y: auto;
+    background: linear-gradient(165deg, var(--stone-2), var(--stone));
+    border: 1px solid var(--gold); box-shadow: 0 0 40px rgba(201,162,39,.25), 0 24px 60px rgba(0,0,0,.7);
+    padding: 1.3rem 1.4rem 1.5rem; animation: rn-rise .35s cubic-bezier(.22,1,.36,1);
+  }
+  @keyframes rn-rise { from { opacity: 0; transform: translateY(18px) scale(.98); } to { opacity: 1; transform: none; } }
+  .rn-head {
+    display: flex; align-items: center; justify-content: space-between;
+    font-family: 'Press Start 2P', monospace; font-size: .62rem; letter-spacing: .06em;
+    color: var(--gold-bright); text-transform: uppercase; padding-bottom: .8rem;
+    border-bottom: 1px solid var(--edge); margin-bottom: .9rem;
+  }
+  .rn-close {
+    background: none; border: 1px solid var(--edge); color: var(--bone-dim);
+    width: 32px; height: 32px; cursor: pointer; font-size: .85rem;
+  }
+  .rn-close:hover { color: var(--blood-bright); border-color: var(--blood-bright); }
+  .rn-body p { font-size: .9rem; color: var(--bone); line-height: 1.7; margin-bottom: .6rem; }
+  .rn-body b { color: var(--gold-bright); }
+  .rn-more { margin-top: .7rem; }
+  .rn-more a { color: var(--arcane); font-size: .85rem; }
+  .rn-gotit {
+    width: 100%; margin-top: 1.1rem; padding: .8rem;
+    font-family: 'Press Start 2P', monospace; font-size: .6rem; letter-spacing: .1em;
+    background: var(--gold); color: var(--ink); border: none; cursor: pointer;
+    text-transform: uppercase; text-align: center;
+  }
+  .rn-gotit:hover { background: var(--gold-bright); }
+  @media (max-width: 400px) {
+    .rn-modal { padding: 1.1rem .9rem 1.2rem; }
+    .rn-body p { font-size: .85rem; }
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=9">
-<script src="sprites.js?v=20260801d"></script>
-<script src="fonts.js?v=20260801d"></script>
+<link rel="stylesheet" href="snes.css?v=10">
+<script src="sprites.js?v=20260802a"></script>
+<script src="fonts.js?v=20260802c"></script>
+<script src="themes.js?v=20260802c"></script>
 </head>
 <body>
 <div class="grain"></div>
@@ -225,50 +278,11 @@
   <div class="gate-frame" id="gate-frame">
 
     <div class="sigil">
-      <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <radialGradient id="sglow">
-            <stop offset="0%" stop-color="#c9a227" stop-opacity="0.25"/>
-            <stop offset="100%" stop-color="#c9a227" stop-opacity="0"/>
-          </radialGradient>
-        </defs>
-        <!-- Glow backdrop (pulses) -->
-        <circle cx="36" cy="36" r="30" fill="url(#sglow)" style="animation:sigil-pulse 3s ease-in-out infinite"/>
-        <!-- Outer ring — rotates clockwise -->
-        <g style="animation:sigil-spin 20s linear infinite;transform-origin:36px 36px">
-          <circle cx="36" cy="36" r="32" stroke="rgba(42,42,58,0.6)" stroke-width="1.5"/>
-          <circle cx="36" cy="4" r="2.5" fill="#c9a227"/>
-          <circle cx="36" cy="68" r="2.5" fill="#c9a227"/>
-          <circle cx="4" cy="36" r="2.5" fill="#9a6fe0"/>
-          <circle cx="68" cy="36" r="2.5" fill="#9a6fe0"/>
-          <!-- Rune tick marks -->
-          <line x1="36" y1="8" x2="36" y2="13" stroke="#c9a227" stroke-width="1" opacity="0.6"/>
-          <line x1="36" y1="59" x2="36" y2="64" stroke="#c9a227" stroke-width="1" opacity="0.6"/>
-          <line x1="8" y1="36" x2="13" y2="36" stroke="#9a6fe0" stroke-width="1" opacity="0.6"/>
-          <line x1="59" y1="36" x2="64" y2="36" stroke="#9a6fe0" stroke-width="1" opacity="0.6"/>
-        </g>
-        <!-- Inner ring — counter-rotates -->
-        <g style="animation:sigil-spin 14s linear infinite reverse;transform-origin:36px 36px">
-          <circle cx="36" cy="36" r="22" stroke="rgba(123,79,212,0.3)" stroke-width="1"/>
-          <circle cx="36" cy="14" r="2" fill="#9a6fe0"/>
-          <circle cx="36" cy="58" r="2" fill="#9a6fe0"/>
-          <circle cx="14" cy="36" r="2" fill="#c9a227"/>
-          <circle cx="58" cy="36" r="2" fill="#c9a227"/>
-        </g>
-        <!-- Center rune — pulses -->
-        <g style="animation:sigil-pulse 3s ease-in-out infinite">
-          <circle cx="36" cy="36" r="10" stroke="rgba(201,162,39,0.5)" stroke-width="1.5"/>
-          <line x1="36" y1="27" x2="36" y2="45" stroke="rgba(201,162,39,0.7)" stroke-width="1.2"/>
-          <line x1="27" y1="36" x2="45" y2="36" stroke="rgba(201,162,39,0.7)" stroke-width="1.2"/>
-          <line x1="30" y1="30" x2="42" y2="42" stroke="rgba(123,79,212,0.5)" stroke-width="0.8"/>
-          <line x1="42" y1="30" x2="30" y2="42" stroke="rgba(123,79,212,0.5)" stroke-width="0.8"/>
-          <circle cx="36" cy="36" r="3" fill="#c9a227"/>
-        </g>
-      </svg>
+      <img src="assets/logo-cauldron.png" alt="The Lore Weaver's Cauldron" class="gate-logo">
     </div>
 
-    <h1 class="gate-title">A Swedish D&amp;D Adventure</h1>
-    <p class="gate-sub">Who dares enter the darkness?</p>
+    <h1 class="gate-title">The Lore Weaver's Cauldron</h1>
+    <p class="gate-sub">Where legends are brewed.</p>
 
     <form id="login-form" onsubmit="handleAuth(event)">
       <div class="field">
@@ -286,22 +300,41 @@
         <input type="password" id="confirm" placeholder="Speak it once more…" autocomplete="new-password">
         <span class="icon">></span>
       </div>
-      <button type="submit" class="gate-btn" id="auth-btn">⚔ Enter the Darkness</button>
+      <button type="submit" class="gate-btn" id="auth-btn">What will the Cauldron Foretell?</button>
       <div class="gate-toggle" id="gate-toggle" onclick="toggleAuthMode()">New here? <b>Forge your name</b></div>
       <div class="gate-error" id="error"></div>
     </form>
 
     <div class="gate-footer">
-      Powered by Qwen · Your adventures are saved in the realm · <a href="#">The old gods remember all names.</a>
+      Powered by Qwen · Your adventures are saved in the Cauldron · <a href="releases.html" id="releases-link">What's new in v0.6</a>
     </div>
+  </div>
+</div>
+
+<!-- Release-notes-modal (first visit per version) -->
+<div class="rn-overlay" id="rn-overlay" onclick="if(event.target===this)closeReleaseModal()">
+  <div class="rn-modal">
+    <div class="rn-head">
+      <span>v0.6.0 — What's new</span>
+      <button class="rn-close" onclick="closeReleaseModal()">✕</button>
+    </div>
+    <div class="rn-body">
+      <p><b>Theme switcher</b> — five dark-fantasy palettes in the top bar.</p>
+      <p><b>Model transparency</b> — what the DM models do, and why "high reasoning" takes a little longer.</p>
+      <p><b>Longer soundscapes</b> — 10+ minute ambient loops.</p>
+      <p><b>Combat v26</b> — the DM narrates everything; the Guardian keeps the books.</p>
+      <p><b>The Codex</b> — character, NPCs, map, journal and facts in one tabbed view.</p>
+      <p class="rn-more"><a href="releases.html">Full release notes →</a></p>
+    </div>
+    <button class="rn-gotit" onclick="closeReleaseModal()">What will the Cauldron Foretell?</button>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
-<script src="sfx.js?v=20260801d"></script>
-<script src="api.js?v=20260801d"></script>
-<script src="i18n.js?v=20260801d"></script>
+<script src="sfx.js?v=20260802a"></script>
+<script src="api.js?v=20260802c"></script>
+<script src="i18n.js?v=20260802b"></script>
 <script>
 // ═══════════════════════════════════════
 // AUTH — backend validerar (JWT i httpOnly cookie)
@@ -313,8 +346,8 @@ function setAuthBusy(busy) {
   const btn = document.getElementById('auth-btn');
   btn.disabled = busy;
   btn.textContent = busy
-    ? (authMode === 'register' ? '⏳ Forging your name…' : '⏳ The Gate is testing you…')
-    : (authMode === 'register' ? '⚔ Forge Your Name' : '⚔ Enter the Darkness');
+    ? (authMode === 'register' ? 'Forging your name…' : 'The Cauldron is stirring…')
+    : (authMode === 'register' ? 'Forge Your Name' : 'What will the Cauldron Foretell?');
 }
 
 function toggleAuthMode() {
@@ -324,9 +357,9 @@ function toggleAuthMode() {
   document.getElementById('confirm').required = isReg;
   document.getElementById('lbl-username').textContent = isReg ? 'New Adventurer' : 'Adventurer';
   document.getElementById('lbl-password').textContent = isReg ? 'Create a Password' : 'Password';
-  document.getElementById('auth-btn').textContent = isReg ? '⚔ Forge Your Name' : '⚔ Enter the Darkness';
+  document.getElementById('auth-btn').textContent = isReg ? 'Forge Your Name' : 'What will the Cauldron Foretell?';
   document.getElementById('gate-toggle').innerHTML = isReg
-    ? 'Already sworn in? <b>Return to the gate</b>'
+    ? 'Already sworn in? <b>Return to the cauldron</b>'
     : 'New here? <b>Forge your name</b>';
   document.getElementById('error').textContent = '';
   if (typeof SFX !== 'undefined') SFX.click();
@@ -362,7 +395,7 @@ async function handleAuth(e) {
     sessionStorage.setItem('dnd_user', res.username);
     setTimeout(() => { window.location.href = 'adventure.html'; }, 900);
   } catch (e2) {
-    showAuthError('The Gate remains closed. Wrong name or password.');
+    showAuthError('The Cauldron remains sealed. Wrong name or password.');
   }
 }
 
@@ -388,7 +421,7 @@ async function handleRegister(e) {
     sessionStorage.setItem('dnd_user', res.username);
     setTimeout(() => { window.location.href = 'adventure.html'; }, 900);
   } catch (e2) {
-    showAuthError(e2.message || 'The Gate would not accept that name.');
+    showAuthError(e2.message || 'The Cauldron would not accept that name.');
   }
 }
 
@@ -397,6 +430,28 @@ if (sessionStorage.getItem('dnd_user')) {
   document.querySelector('.gate-sub').textContent =
     'Welcome back, ' + sessionStorage.getItem('dnd_user') + '!';
 }
+
+// ═══════════════════════════════════════
+// RELEASE NOTES — visa modal vid första besök per version
+// ═══════════════════════════════════════
+const RN_VERSION = 'v0.6.0';
+function closeReleaseModal() {
+  const ov = document.getElementById('rn-overlay');
+  if (ov) ov.classList.remove('show');
+  localStorage.setItem('dnd_seen_release', RN_VERSION);
+  try { SFX.click(); } catch (_) {}
+}
+(function maybeShowReleaseModal() {
+  if (localStorage.getItem('dnd_seen_release') !== RN_VERSION) {
+    setTimeout(() => {
+      const ov = document.getElementById('rn-overlay');
+      if (ov) ov.classList.add('show');
+    }, 900);
+  }
+})();
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeReleaseModal();
+});
 
 // ═══════════════════════════════════════
 // EMBERS
@@ -432,9 +487,9 @@ tick();
 // ═══════════════════════════════════════
 (function() {
   const quotes = [
-    'In the darkness wait tales not yet told.',
-    'The Gate knows you\u2026 or does it?',
-    'Every step into the darkness is a step away from the world you knew.',
+    'In the cauldron, tales wait to be told.',
+    'The Cauldron knows you\u2026 or does it?',
+    'Every tale poured into the cauldron becomes a world of its own.',
     'The dragons remember your name. Do you remember theirs?'
   ];
   const el = document.getElementById('myst-quotes');

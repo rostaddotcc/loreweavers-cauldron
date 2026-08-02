@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════
-# Mörkrets Rike — Docker Compose
+# The Lore Weaver's Cauldron — Docker Compose
 # ═══════════════════════════════════════
 # Starta: docker compose up -d
 # Loggar: docker compose logs -f
@@ -22,6 +22,7 @@ services:
       - PORT=8090
       - QDRANT_URL=http://qdrant:6333
       - OLLAMA_URL=http://host.docker.internal:11434
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434/v1
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:

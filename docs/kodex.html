@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📜 Mörkrets Rike — Kodex</title>
+<title>The Lore Weaver's Cauldron — Kodex</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -260,9 +260,9 @@
     <div class="title-screen" id="top">
       <div class="ts-frame">
         <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
-        <div class="ts-kicker">&gt; MORKRETS.RIKE --kodex --version<span class="cursor">&nbsp;</span></div>
-        <h1 class="game">MÖRKRETS<br>RIKE</h1>
-        <div class="ts-sub">Ett svenskt D&amp;D-äventyr</div>
+        <div class="ts-kicker">&gt; THE-LORE-WEAVERS-CAULDRON --kodex --version<span class="cursor">&nbsp;</span></div>
+        <h1 class="game">THE LORE WEAVER'S<br>CAULDRON</h1>
+        <div class="ts-sub">The Lore Weaver's Cauldron</div>
         <p class="ts-desc">
           Ett <b>LLM-drivet Dungeons &amp; Dragons 5e</b>-spel där en artificiell Dungeon Master
           väver berättelsen i realtid. Ingen förskriven handling — världen växer fram ur varje
@@ -283,7 +283,7 @@
     <section id="spelet" style="--sc:var(--gold)">
       <div class="sec-head rv"><span class="sec-num">§1</span><h2>Spelet</h2></div>
       <div class="sec-rule"></div>
-      <p class="lead rv">Mörkrets Rike är ett <b>en-spelare, en-DM</b> rollspel. Du skapar en karaktär,
+      <p class="lead rv">The Lore Weaver's Cauldron är ett <b>en-spelare, en-DM</b> rollspel. Du skapar en karaktär,
       kliver in i en mörk fantasyvärld och skriver fritt vad du gör. DM:n — en språkmodell —
       svarar, begär tärningsslag, delar ut skada och XP, och introducerar gestalter och platser.</p>
       <div class="cards">
@@ -716,8 +716,8 @@ Spelarens meddelande börjar med "[Resultat: ...]". Du MÅSTE omedelbart:
 
     <footer>
       <span class="f-sigil">🐉</span>
-      <div class="f-t">MÖRKRETS RIKE · KODEX v2.0</div>
-      <div class="f-s">Ett svenskt D&amp;D-äventyr · drivet av språkmodeller, tärningar och stjärnstoft<br>
+      <div class="f-t">THE LORE WEAVER'S CAULDRON · KODEX v2.0</div>
+      <div class="f-s">The Lore Weaver's Cauldron · drivet av språkmodeller, tärningar och stjärnstoft<br>
       dnd.rostad.cc · byggd med ❤ av rostad &amp; Hästis 🦄</div>
     </footer>
 
@@ -753,7 +753,7 @@ Spelarens meddelande börjar med "[Resultat: ...]". Du MÅSTE omedelbart:
 
 // ── Boot-sekvens ──
 const BOOT_LINES = [
-  'MÖRKRETS RIKE BIOS v3.0 — Dungeon Master Harness',
+  'THE LORE WEAVER\'S CAULDRON BIOS v3.0 — Dungeon Master Harness',
   'Copyright (c) 2026 Rostad Interactive',
   '',
   '64K base memory ............ OK',
@@ -766,7 +766,7 @@ const BOOT_LINES = [
   'DM prompt version .......... v13                [LADDAD]',
   'Dice enforcement ........... 3 mekanismer       [AKTIV]',
   '',
-  'Loading MORKRETS.RIKE — KODEX v2.0 ...',
+  'Loading THE-LORE-WEAVERS-CAULDRON — KODEX v2.0 ...',
 ];
 let bootDone = false;
 function skipBoot(){ if (bootDone) return; bootDone = true; document.getElementById('boot').classList.add('done'); }

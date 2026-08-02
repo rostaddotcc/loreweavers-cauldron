@@ -3,337 +3,121 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚔️ A Swedish D&amp;D Adventure — The Crossroads</title>
+<title>The Lore Weaver's Cauldron — The Crossroads</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
-<style>
-  :root{
+<style>:root{
     --ink:#0b0812;--stone:#161020;--stone-2:#1d1529;--stone-3:#241a33;
     --edge:#463a60;--bone:#d9c9a6;--bone-bright:#f2e6c8;--bone-dim:#9d8a6a;
     --gold:#d4a92c;--gold-bright:#f0d675;--blood:#a32433;--blood-bright:#e0485a;
     --ember:#d4691e;--arcane:#9a6fe0;--poison:#7aa35e;--teal:#5e9aa3;
-  }
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{
+  }*{margin:0;padding:0;box-sizing:border-box}body{
     font-family:'Spectral',Georgia,serif;color:var(--bone);min-height:100vh;
     background:
       radial-gradient(1100px 520px at 50% 112%, rgba(212,105,30,.13), transparent 62%),
       radial-gradient(820px 460px at 12% -8%, rgba(139,95,212,.10), transparent 58%),
       var(--ink);
     background-attachment:fixed;overflow-x:hidden;
-  }
-  .grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.05;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
-  #embers{position:fixed;inset:0;z-index:1;pointer-events:none}
-  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(4,2,8,.85)}
-
-  .app{position:relative;z-index:2;max-width:960px;margin:0 auto;padding:0 1.25rem 5rem}
-
-  /* ═══════════ Topprad (ljud + lämna) ═══════════ */
-  .topbar{display:flex;justify-content:flex-end;align-items:center;gap:.6rem;padding:1.1rem .1rem 0}
-  .top-btn{
-    font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;
+  }.grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}#embers{position:fixed;inset:0;z-index:1;pointer-events:none}.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(4,2,8,.85)}.app{position:relative;z-index:2;max-width:960px;margin:0 auto;padding:0 1.25rem 5rem}/* ═══════════ Topprad (ljud + lämna) ═══════════ */.topbar{display:flex;justify-content:flex-end;align-items:center;gap:.6rem;padding:1.1rem .1rem 0}.top-btn{
+    font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;
     background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);
     padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;white-space:nowrap;text-decoration:none;
-  }
-  .top-btn:hover{color:var(--gold-bright);border-color:var(--gold);box-shadow:0 0 12px -3px rgba(232,198,90,.4)}
-  .top-btn.danger:hover{color:var(--blood-bright);border-color:var(--blood-bright);box-shadow:0 0 12px -3px rgba(212,58,77,.4)}
-
-  .head{text-align:center;margin:1.4rem 0 2.8rem}
-  .head .over{font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.42em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.55rem}
-  .head h1{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(1.8rem,5vw,2.7rem);color:var(--bone-bright);letter-spacing:.05em}
-  .head .sub{font-style:italic;color:var(--bone-dim);font-size:.92rem;margin-top:.5rem}
-  .rune-divider{display:flex;align-items:center;gap:.9rem;margin:1rem auto 0;max-width:380px}
-  .rune-divider::before,.rune-divider::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.5}
-  .rune-divider span{color:var(--gold);text-shadow:0 0 8px rgba(201,162,39,.6)}
-
-  /* ═══════════ Två vägar ═══════════ */
-  .paths{display:grid;grid-template-columns:repeat(2,1fr);gap:1.3rem;margin-bottom:2rem}
-  .path{
+  }.top-btn:hover{color:var(--gold-bright);border-color:var(--gold);box-shadow:0 0 12px -3px rgba(232,198,90,.4)}.top-btn.danger:hover{color:var(--blood-bright);border-color:var(--blood-bright);box-shadow:0 0 12px -3px rgba(212,58,77,.4)}.head{text-align:center;margin:1.4rem 0 2.8rem}.head .over{font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.42em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.55rem}.head h1{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(1.8rem,5vw,2.7rem);color:var(--bone-bright);letter-spacing:.05em}.head .sub{font-style:italic;color:var(--bone-dim);font-size:1.05rem;margin-top:.5rem}.rune-divider{display:flex;align-items:center;gap:.9rem;margin:1rem auto 0;max-width:380px}.rune-divider::before,.rune-divider::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.5}.rune-divider span{color:var(--gold);text-shadow:0 0 8px rgba(201,162,39,.6)}/* ═══════════ Två vägar ═══════════ */.paths{display:grid;grid-template-columns:repeat(2,1fr);gap:1.3rem;margin-bottom:2rem}.path{
     position:relative;cursor:pointer;text-align:center;padding:2rem 1.2rem 1.6rem;
     background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);
     border:1px solid var(--edge);overflow:hidden;
     transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s,border-color .3s;
-  }
-  .path::before{content:'';position:absolute;inset:6px;border:1px solid rgba(201,162,39,.15);pointer-events:none;transition:border-color .3s}
-  .path:hover{transform:translateY(-8px);box-shadow:0 18px 40px -12px rgba(0,0,0,.85);border-color:var(--pc,var(--gold));z-index:2}
-  .path:hover::before{border-color:var(--pc,var(--gold))}
-  .path .glow{position:absolute;inset:0;opacity:0;transition:opacity .35s;pointer-events:none;
-    background:radial-gradient(ellipse at 50% 0%,var(--pg,rgba(201,162,39,.12)),transparent 70%)}
-  .path:hover .glow{opacity:1}
-  .path .icon{font-size:2.8rem;margin-bottom:1rem;display:block;filter:drop-shadow(0 4px 12px rgba(0,0,0,.6));transition:transform .3s}
-  .path:hover .icon{transform:scale(1.15) rotate(-3deg)}
-  .path h2{font-family:'Cinzel',serif;font-weight:700;font-size:1.05rem;color:var(--bone-bright);letter-spacing:.04em;margin-bottom:.6rem}
-  .path p{font-size:.82rem;font-style:italic;color:var(--bone-dim);line-height:1.55}
-  .path .tag{display:inline-block;margin-top:.9rem;font-family:'Cinzel',serif;font-size:.56rem;letter-spacing:.16em;text-transform:uppercase;
-    color:var(--pc,var(--gold));border:1px solid var(--pc,var(--gold));padding:.3rem .8rem;border-radius:2px;opacity:.7;transition:opacity .3s}
-  .path:hover .tag{opacity:1}
-
-  /* ═══════════ Expandable panel ═══════════ */
-  .expand{display:none;margin-top:1.5rem;animation:rise .5s cubic-bezier(.22,1,.36,1)}
-  .expand.show{display:block}
-  @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-
-  .panel-box{position:relative;background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,#120c1c);border:1px solid var(--edge);padding:1.8rem 1.6rem;box-shadow:0 20px 50px -20px rgba(0,0,0,.9)}
-  .panel-title{font-family:'Cinzel',serif;font-weight:700;font-size:.82rem;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);margin-bottom:1.2rem;display:flex;align-items:center;gap:.8rem}
-  .panel-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(201,162,39,.5),transparent)}
-
-  /* ── Prompt textarea ── */
-  .world-prompt{
+  }.path::before{content:'';position:absolute;inset:6px;border:1px solid rgba(201,162,39,.15);pointer-events:none;transition:border-color .3s}.path:hover{transform:translateY(-8px);box-shadow:0 18px 40px -12px rgba(0,0,0,.85);border-color:var(--pc,var(--gold));z-index:2}.path:hover::before{border-color:var(--pc,var(--gold))}.path .glow{position:absolute;inset:0;opacity:0;transition:opacity .35s;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 0%,var(--pg,rgba(201,162,39,.12)),transparent 70%)}.path:hover .glow{opacity:1}.path .icon{font-size:2.8rem;margin-bottom:1rem;display:block;filter:drop-shadow(0 4px 12px rgba(0,0,0,.6));transition:transform .3s}.path:hover .icon{transform:scale(1.15) rotate(-3deg)}.path h2{font-family:'Cinzel',serif;font-weight:700;font-size:1.05rem;color:var(--bone-bright);letter-spacing:.04em;margin-bottom:.6rem}.path p{font-size:.95rem;font-style:italic;color:var(--bone-dim);line-height:1.55}.path .tag{display:inline-block;margin-top:.9rem;font-family:'Cinzel',serif;font-size:.69rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--pc,var(--gold));border:1px solid var(--pc,var(--gold));padding:.3rem .8rem;border-radius:2px;opacity:.7;transition:opacity .3s}.path:hover .tag{opacity:1}/* ═══════════ Expandable panel ═══════════ */.expand{display:none;margin-top:1.5rem;animation:rise .5s cubic-bezier(.22,1,.36,1)}.expand.show{display:block}
+  @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}.panel-box{position:relative;background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,#120c1c);border:1px solid var(--edge);padding:1.8rem 1.6rem;box-shadow:0 20px 50px -20px rgba(0,0,0,.9)}.panel-title{font-family:'Cinzel',serif;font-weight:700;font-size:.82rem;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);margin-bottom:1.2rem;display:flex;align-items:center;gap:.8rem}.panel-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(201,162,39,.5),transparent)}/* ── Prompt textarea ── */.world-prompt{
     width:100%;min-height:180px;resize:vertical;
-    font-family:'Spectral',serif;font-size:.9rem;line-height:1.65;color:var(--bone-bright);
+    font-family:'Spectral',serif;font-size:1.03rem;line-height:1.65;color:var(--bone-bright);
     background:#0d0817;border:1px solid var(--edge);padding:1rem 1.1rem;outline:none;border-radius:2px;
     transition:border-color .25s,box-shadow .25s;margin-bottom:1rem;
-  }
-  .world-prompt:focus{border-color:var(--arcane);box-shadow:0 0 18px -5px rgba(139,95,212,.4)}
-  .world-prompt::placeholder{color:rgba(138,122,94,.5);font-style:italic}
-
-  /* ── Dropzone ── */
-  .dropzone{
+  }.world-prompt:focus{border-color:var(--arcane);box-shadow:0 0 18px -5px rgba(139,95,212,.4)}.world-prompt::placeholder{color:rgba(138,122,94,.5);font-style:italic}/* ── Dropzone ── */.dropzone{
     border:2px dashed var(--edge);padding:1.8rem;text-align:center;cursor:pointer;
     transition:all .25s;margin-bottom:1rem;border-radius:2px;position:relative;
-  }
-  .dropzone:hover,.dropzone.dragover{border-color:var(--gold);background:rgba(201,162,39,.04);box-shadow:0 0 20px -6px rgba(232,198,90,.3)}
-  .dropzone .dz-icon{font-size:2rem;margin-bottom:.5rem;display:block}
-  .dropzone .dz-text{font-size:.85rem;color:var(--bone-dim);font-style:italic}
-  .dropzone .dz-text b{color:var(--gold-bright);font-style:normal}
-  .dropzone .dz-formats{font-size:.7rem;color:var(--bone-dim);margin-top:.4rem}
-  .dropzone input{display:none}
-
-  .file-list{margin-bottom:1rem}
-  .file-item{display:flex;align-items:center;gap:.7rem;padding:.5rem .7rem;background:var(--stone-3);border:1px solid var(--edge);margin-bottom:.4rem;border-radius:2px;font-size:.82rem}
-  .file-item .fi-icon{font-size:1.1rem}
-  .file-item .fi-name{color:var(--bone-bright);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .file-item .fi-size{color:var(--bone-dim);font-size:.72rem}
-  .file-item .fi-del{background:none;border:none;color:var(--bone-dim);cursor:pointer;font-size:.9rem;transition:color .2s}
-  .file-item .fi-del:hover{color:var(--blood-bright)}
-
-  .actions{display:flex;gap:.8rem;flex-wrap:wrap;align-items:center}
-  .go-btn{
-    font-family:'Cinzel',serif;font-weight:700;font-size:.78rem;letter-spacing:.16em;text-transform:uppercase;
+  }.dropzone:hover,.dropzone.dragover{border-color:var(--gold);background:rgba(201,162,39,.04);box-shadow:0 0 20px -6px rgba(232,198,90,.3)}.dropzone .dz-icon{font-size:2rem;margin-bottom:.5rem;display:block}.dropzone .dz-text{font-size:.98rem;color:var(--bone-dim);font-style:italic}.dropzone .dz-text b{color:var(--gold-bright);font-style:normal}.dropzone .dz-formats{font-size:.83rem;color:var(--bone-dim);margin-top:.4rem}.dropzone input{display:none}.file-list{margin-bottom:1rem}.file-item{display:flex;align-items:center;gap:.7rem;padding:.5rem .7rem;background:var(--stone-3);border:1px solid var(--edge);margin-bottom:.4rem;border-radius:2px;font-size:.95rem}.file-item .fi-icon{font-size:1.1rem}.file-item .fi-name{color:var(--bone-bright);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.file-item .fi-size{color:var(--bone-dim);font-size:.85rem}.file-item .fi-del{background:none;border:none;color:var(--bone-dim);cursor:pointer;font-size:1.03rem;transition:color .2s}.file-item .fi-del:hover{color:var(--blood-bright)}.actions{display:flex;gap:.8rem;flex-wrap:wrap;align-items:center}.go-btn{
+    font-family:'Cinzel',serif;font-weight:700;font-size:.91rem;letter-spacing:.16em;text-transform:uppercase;
     color:#1a1206;cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);
     border:1px solid #6e5510;padding:.85rem 1.6rem;border-radius:2px;position:relative;overflow:hidden;
     box-shadow:0 6px 20px -6px rgba(232,198,90,.5),inset 0 1px 0 rgba(255,255,255,.35);transition:all .2s;
-  }
-  .go-btn:hover{filter:brightness(1.12);transform:translateY(-2px)}
-  .hint{font-size:.75rem;font-style:italic;color:var(--bone-dim)}
-  .hint b{color:var(--arcane);font-style:normal}
-
-  /* ── Extraction progress ── */
-  .extracting{display:none;text-align:center;padding:1.5rem 0}
-  .extracting.show{display:block;animation:rise .4s ease}
-  .extracting .ex-text{font-style:italic;color:var(--arcane);font-size:.9rem;margin-bottom:1rem;text-shadow:0 0 12px rgba(139,95,212,.4)}
-  .ex-bar{width:200px;height:8px;background:#0a0612;border:1px solid var(--edge);margin:0 auto;overflow:hidden;border-radius:4px}
-  .ex-fill{height:100%;width:0;background:linear-gradient(90deg,var(--arcane),var(--gold-bright));transition:width .3s;border-radius:4px}
-
-  /* ── Preview results ── */
-  .extract-preview{display:none;margin-top:1.2rem}
-  .extract-preview.show{display:block;animation:rise .5s ease}
-  .ep-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.7rem;margin-bottom:1.2rem}
-  .ep-card{background:var(--stone-3);border:1px solid var(--edge);padding:.8rem;border-radius:2px;text-align:center}
-  .ep-card .ep-num{font-family:'Cinzel',serif;font-weight:900;font-size:1.6rem;color:var(--gold-bright)}
-  .ep-card .ep-label{font-size:.7rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;font-family:'Cinzel',serif}
-
-  .toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:50;font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.12em;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);padding:.7rem 1.5rem;box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}
-  .toast.show{transform:translate(-50%,0);opacity:1}
-
-  /* ═══════════ Pågående äventyr ═══════════ */
-  .continue-wrap{display:none;margin-bottom:2.4rem}
-  .continue-wrap.show{display:block;animation:rise .55s cubic-bezier(.22,1,.36,1)}
-  .continue-panel{
+  }.go-btn:hover{filter:brightness(1.12);transform:translateY(-2px)}.hint{font-size:.88rem;font-style:italic;color:var(--bone-dim)}.hint b{color:var(--arcane);font-style:normal}/* ── Extraction progress ── */.extracting{display:none;text-align:center;padding:1.5rem 0}.extracting.show{display:block;animation:rise .4s ease}.extracting .ex-text{font-style:italic;color:var(--arcane);font-size:1.03rem;margin-bottom:1rem;text-shadow:0 0 12px rgba(139,95,212,.4)}.ex-bar{width:200px;height:8px;background:#0a0612;border:1px solid var(--edge);margin:0 auto;overflow:hidden;border-radius:4px}.ex-fill{height:100%;width:0;background:linear-gradient(90deg,var(--arcane),var(--gold-bright));transition:width .3s;border-radius:4px}/* ── Preview results ── */.extract-preview{display:none;margin-top:1.2rem}.extract-preview.show{display:block;animation:rise .5s ease}.ep-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.7rem;margin-bottom:1.2rem}.ep-card{background:var(--stone-3);border:1px solid var(--edge);padding:.8rem;border-radius:2px;text-align:center}.ep-card .ep-num{font-family:'Cinzel',serif;font-weight:900;font-size:1.6rem;color:var(--gold-bright)}.ep-card .ep-label{font-size:.83rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;font-family:'Cinzel',serif}.toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:50;font-family:'Cinzel',serif;font-size:.88rem;letter-spacing:.12em;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);padding:.7rem 1.5rem;box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}.toast.show{transform:translate(-50%,0);opacity:1}/* ═══════════ Pågående äventyr ═══════════ */.continue-wrap{display:none;margin-bottom:2.4rem}.continue-wrap.show{display:block;animation:rise .55s cubic-bezier(.22,1,.36,1)}.continue-panel{
     position:relative;overflow:hidden;
     background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,#120c1c);
     border:1px solid var(--edge);padding:1.7rem 1.6rem 1.5rem;
     box-shadow:0 20px 50px -20px rgba(0,0,0,.9),0 0 44px -18px rgba(232,198,90,.28);
-  }
-  .continue-panel::after{content:'';position:absolute;inset:0;pointer-events:none;
-    background:radial-gradient(ellipse at 50% -20%,rgba(232,198,90,.09),transparent 62%)}
-  .continue-panel .panel-title{margin-bottom:1.3rem}
-  .cp-grid{display:grid;grid-template-columns:auto 1fr;gap:1.1rem 1.4rem;align-items:center;margin-bottom:1.4rem}
-  .cp-icon{
+  }.continue-panel::after{content:'';position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse at 50% -20%,rgba(232,198,90,.09),transparent 62%)}.continue-panel .panel-title{margin-bottom:1.3rem}.cp-icon{
     width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.9rem;
     border:1px solid var(--gold);background:var(--stone-3);
     box-shadow:0 0 20px -4px rgba(232,198,90,.5),inset 0 0 14px rgba(0,0,0,.6);
     animation:cp-breathe 4s ease-in-out infinite;
   }
-  @keyframes cp-breathe{0%,100%{box-shadow:0 0 20px -4px rgba(232,198,90,.5),inset 0 0 14px rgba(0,0,0,.6)}50%{box-shadow:0 0 30px -2px rgba(232,198,90,.75),inset 0 0 14px rgba(0,0,0,.6)}}
-  .cp-name{font-family:'Cinzel',serif;font-weight:900;font-size:1.35rem;color:var(--bone-bright);letter-spacing:.04em;text-shadow:0 2px 0 #000,0 0 18px rgba(232,198,90,.25)}
-  .cp-sub{font-size:.85rem;font-style:italic;color:var(--bone-dim);margin-top:.25rem}
-  .cp-sub b{color:var(--gold-bright);font-style:normal}
-  .cp-stats{display:flex;gap:.6rem;flex-wrap:wrap;grid-column:1/-1}
-  .cp-stat{
-    font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;color:var(--bone-dim);
-    border:1px solid var(--edge);background:var(--stone-3);padding:.42rem .8rem;border-radius:2px;transition:all .2s;
-  }
-  .cp-stat b{color:var(--gold-bright);font-weight:700;margin-right:.35rem}
-  .cp-stat:hover{border-color:var(--gold);color:var(--bone)}
-  .cp-actions{display:flex;gap:.8rem;flex-wrap:wrap;align-items:center;position:relative;z-index:1}
-  .cp-rule{width:100%;font-size:.72rem;font-style:italic;color:var(--bone-dim);margin-top:.2rem}
-  .cp-rule b{color:var(--gold);font-style:normal}
-
-  /* ── Kampanjlista (flera sparade äventyr) ── */
-  .campaign-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin-bottom:1.2rem}
-  .campaign-card{
+  @keyframes cp-breathe{0%,100%{box-shadow:0 0 20px -4px rgba(232,198,90,.5),inset 0 0 14px rgba(0,0,0,.6)}50%{box-shadow:0 0 30px -2px rgba(232,198,90,.75),inset 0 0 14px rgba(0,0,0,.6)}}.cp-name{font-family:'Cinzel',serif;font-weight:900;font-size:1.35rem;color:var(--bone-bright);letter-spacing:.04em;text-shadow:0 2px 0 #000,0 0 18px rgba(232,198,90,.25)}/* ── Kampanjlista (flera sparade äventyr) ── */.campaign-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin-bottom:1.2rem}.campaign-card{
     position:relative;overflow:hidden;cursor:pointer;
     background:linear-gradient(165deg,var(--stone-2),var(--stone) 60%,#120c1c);
     border:1px solid var(--edge);padding:1.2rem 1.1rem 1rem;
     box-shadow:0 12px 30px -16px rgba(0,0,0,.85);
     transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s,border-color .3s;
-  }
-  .campaign-card::after{content:'';position:absolute;inset:0;pointer-events:none;
-    background:radial-gradient(ellipse at 50% -10%,rgba(232,198,90,.06),transparent 60%)}
-  .campaign-card:hover{transform:translateY(-4px);box-shadow:0 16px 40px -14px rgba(0,0,0,.9);border-color:var(--gold)}
-  .campaign-card .cc-head{display:flex;align-items:center;gap:.7rem;margin-bottom:.8rem}
-  .campaign-card .cc-icon{
+  }.campaign-card::after{content:'';position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse at 50% -10%,rgba(232,198,90,.06),transparent 60%)}.campaign-card:hover{transform:translateY(-4px);box-shadow:0 16px 40px -14px rgba(0,0,0,.9);border-color:var(--gold)}.campaign-card .cc-head{display:flex;align-items:center;gap:.7rem;margin-bottom:.8rem}.campaign-card .cc-icon{
     width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;
     border:1px solid var(--edge);background:var(--stone-3);flex-shrink:0;
-  }
-  .campaign-card .cc-name{font-family:'Cinzel',serif;font-weight:700;font-size:.92rem;color:var(--bone-bright);letter-spacing:.03em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .campaign-card .cc-char{font-size:.72rem;font-style:italic;color:var(--bone-dim)}
-  .campaign-card .cc-stats{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.7rem}
-  .campaign-card .cc-stat{
-    font-family:'Cinzel',serif;font-size:.52rem;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim);
-    border:1px solid var(--edge);background:var(--stone-3);padding:.28rem .55rem;border-radius:2px;
-  }
-  .campaign-card .cc-stat b{color:var(--gold-bright);font-weight:700;margin-right:.2rem}
-  .campaign-card .cc-actions{display:flex;gap:.5rem;align-items:center;position:relative;z-index:1}
-  .campaign-card .cc-del{
-    font-family:'Cinzel',serif;font-size:.52rem;letter-spacing:.12em;text-transform:uppercase;
+  }.campaign-card .cc-name{font-family:'Cinzel',serif;font-weight:700;font-size:.92rem;color:var(--bone-bright);letter-spacing:.03em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.campaign-card .cc-char{font-size:.85rem;font-style:italic;color:var(--bone-dim)}.campaign-card .cc-actions{display:flex;gap:.5rem;align-items:center;position:relative;z-index:1}.campaign-card .cc-del{
+    font-family:'Cinzel',serif;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;
     color:var(--bone-dim);background:none;border:1px solid var(--edge);padding:.3rem .55rem;cursor:pointer;border-radius:2px;transition:all .2s;
-  }
-  .campaign-card .cc-del:hover{color:var(--blood-bright);border-color:var(--blood-bright)}
-  .campaign-card .cc-body{flex:1;min-width:0}
-  .campaign-card .cc-sub{font-size:.72rem;color:var(--bone-dim);margin-top:.2rem}
-  .campaign-card .cc-sub b{color:var(--bone-bright)}
-  .campaign-card .cc-date{font-size:.65rem;color:var(--bone-dim);margin-top:.25rem;font-style:italic}
-  .campaign-card .cc-go{
-    font-family:'Cinzel',serif;font-weight:700;font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;
+  }.campaign-card .cc-del:hover{color:var(--blood-bright);border-color:var(--blood-bright)}.campaign-card .cc-body{flex:1;min-width:0}.campaign-card .cc-sub{font-size:.85rem;color:var(--bone-dim);margin-top:.2rem}.campaign-card .cc-sub b{color:var(--bone-bright)}.campaign-card .cc-date{font-size:.78rem;color:var(--bone-dim);margin-top:.25rem;font-style:italic}.campaign-card .cc-go{
+    font-family:'Cinzel',serif;font-weight:700;font-size:.77rem;letter-spacing:.14em;text-transform:uppercase;
     color:#1a1206;cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);
     border:1px solid #6e5510;padding:.5rem 1rem;border-radius:2px;position:relative;overflow:hidden;
     box-shadow:0 4px 14px -4px rgba(232,198,90,.4),inset 0 1px 0 rgba(255,255,255,.35);transition:all .2s;
     white-space:nowrap;
-  }
-  .campaign-card .cc-go:hover{filter:brightness(1.12);transform:translateY(-1px)}
-
-  /* ── Namnge äventyr (inline form) ── */
-  .name-form{display:none;margin-top:1.2rem;animation:rise .4s ease}
-  .name-form.show{display:block}
-  .name-input{
-    width:100%;font-family:'Spectral',serif;font-size:.92rem;color:var(--bone-bright);
+  }.campaign-card .cc-go:hover{filter:brightness(1.12);transform:translateY(-1px)}.name-input{
+    width:100%;font-family:'Spectral',serif;font-size:1.05rem;color:var(--bone-bright);
     background:var(--stone-3);border:1px solid var(--edge);padding:.8rem 1rem;outline:none;border-radius:2px;
     transition:border-color .25s,box-shadow .25s;margin-bottom:.8rem;
-  }
-  .name-input:focus{border-color:var(--gold);box-shadow:0 0 16px -4px rgba(232,198,90,.4)}
-  .name-input::placeholder{color:rgba(138,122,94,.5);font-style:italic}
-
-  /* ── Fara-knapp (blod) ── */
-  .danger-btn{
-    font-family:'Cinzel',serif;font-weight:700;font-size:.78rem;letter-spacing:.16em;text-transform:uppercase;
+  }.name-input:focus{border-color:var(--gold);box-shadow:0 0 16px -4px rgba(232,198,90,.4)}.name-input::placeholder{color:rgba(138,122,94,.5);font-style:italic}/* ── Fara-knapp (blod) ── */.danger-btn{
+    font-family:'Cinzel',serif;font-weight:700;font-size:.91rem;letter-spacing:.16em;text-transform:uppercase;
     color:#f3dfe2;cursor:pointer;padding:.85rem 1.6rem;border-radius:2px;
     background:linear-gradient(180deg,rgba(212,58,77,.16),rgba(163,36,51,.12));
     border:1px solid rgba(212,58,77,.55);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.06);transition:all .2s;
-  }
-  .danger-btn:hover{
+  }.danger-btn:hover{
     background:linear-gradient(180deg,var(--blood-bright),var(--blood) 55%,#5e1220);color:#fff;
     box-shadow:0 6px 20px -6px rgba(212,58,77,.6),inset 0 1px 0 rgba(255,255,255,.25);
     transform:translateY(-2px);
-  }
-
-  /* ── Vägar dolda medan äventyr pågår ── */
-  /* Paneler som öppnas EXPLICIT (t.ex. New Adventure-knappen i listan)
+  }/* ── Vägar dolda medan äventyr pågår ── *//* Paneler som öppnas EXPLICIT (t.ex. New Adventure-knappen i listan)
      måste få visa sig även när paths är dolda — annars kan man inte
-     starta en andra kampanj när man redan har en. */
-  .paths-hidden .paths{display:none!important}
-  .paths-hidden .expand{display:none!important}
-  .paths-hidden .expand.show{display:block!important}
-  .paths-hidden .head .sub::after{content:' · your adventure awaits above';color:var(--gold);font-style:italic}
-
-  /* ═══════════ How to play — onepager ═══════════ */
-  .htp{margin-bottom:2.4rem;animation:rise .6s cubic-bezier(.22,1,.36,1)}
-  .htp-toggle{
+     starta en andra kampanj när man redan har en. */.paths-hidden .paths{display:none!important}.paths-hidden .expand{display:none!important}.paths-hidden .expand.show{display:block!important}.paths-hidden .head .sub::after{content:' · your adventure awaits above';color:var(--gold);font-style:italic}/* ═══════════ How to play — onepager ═══════════ */.htp{margin-bottom:2.4rem;animation:rise .6s cubic-bezier(.22,1,.36,1)}.htp-toggle{
     display:flex;align-items:center;justify-content:center;gap:.7rem;width:100%;cursor:pointer;
-    font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.28em;text-transform:uppercase;
+    font-family:'Cinzel',serif;font-size:.81rem;letter-spacing:.28em;text-transform:uppercase;
     color:var(--bone-dim);background:none;border:none;padding:.6rem 0;transition:color .25s;
-  }
-  .htp-toggle:hover{color:var(--gold-bright)}
-  .htp-toggle .caret{transition:transform .3s;font-size:.55rem}
-  .htp-toggle.open .caret{transform:rotate(90deg)}
-  .htp-body{
+  }.htp-toggle:hover{color:var(--gold-bright)}.htp-toggle .caret{transition:transform .3s;font-size:.55rem}.htp-toggle.open .caret{transform:rotate(90deg)}.htp-body{
     display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;
     max-height:0;overflow:hidden;transition:max-height .5s cubic-bezier(.22,1,.36,1),opacity .4s;opacity:0;
-  }
-  .htp-body.open{max-height:1500px;opacity:1;margin-top:.4rem}
-  .htp-card{
+  }.htp-body.open{max-height:1500px;opacity:1;margin-top:.4rem}.htp-card{
     position:relative;padding:1.3rem 1.1rem 1.1rem;text-align:center;
     background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);
     border:1px solid var(--edge);overflow:hidden;
+  }.htp-card::before{content:'';position:absolute;inset:5px;border:1px solid rgba(201,162,39,.1);pointer-events:none}.htp-card .htp-icon{font-size:1.6rem;display:block;margin-bottom:.6rem;filter:drop-shadow(0 2px 8px rgba(0,0,0,.5))}.htp-card h3{font-family:'Cinzel',serif;font-weight:700;font-size:.82rem;letter-spacing:.1em;color:var(--gold-bright);margin-bottom:.5rem}.htp-card p{font-size:.91rem;line-height:1.6;color:var(--bone-dim);font-style:italic}.htp-card p b{color:var(--bone);font-style:normal}
+  @media(max-width:900px){.htp-body{grid-template-columns:1fr}}/* ═══════════ Mobile — vägskälet i fickformat ═══════════ */html{-webkit-tap-highlight-color:transparent}
+  @media(max-width:900px){.paths{grid-template-columns:1fr;gap:1rem}.path{padding:1.4rem 1.1rem 1.2rem;transform:none!important}.path:active{transform:translateY(2px)!important;border-color:var(--pc,var(--gold));
+      box-shadow:0 4px 14px -8px rgba(0,0,0,.8)}.path:active .glow{opacity:1}.path:active .icon{transform:scale(1.1)}.path .icon{font-size:2.3rem;margin-bottom:.7rem}.campaign-list{grid-template-columns:1fr}
   }
-  .htp-card::before{content:'';position:absolute;inset:5px;border:1px solid rgba(201,162,39,.1);pointer-events:none}
-  .htp-card .htp-icon{font-size:1.6rem;display:block;margin-bottom:.6rem;filter:drop-shadow(0 2px 8px rgba(0,0,0,.5))}
-  .htp-card h3{font-family:'Cinzel',serif;font-weight:700;font-size:.82rem;letter-spacing:.1em;color:var(--gold-bright);margin-bottom:.5rem}
-  .htp-card p{font-size:.78rem;line-height:1.6;color:var(--bone-dim);font-style:italic}
-  .htp-card p b{color:var(--bone);font-style:normal}
-  @media(max-width:900px){.htp-body{grid-template-columns:1fr}}
-
-  /* ═══════════ Mobile — vägskälet i fickformat ═══════════ */
-  html{-webkit-tap-highlight-color:transparent}
-  @media(max-width:900px){
-    .paths{grid-template-columns:1fr;gap:1rem}
-    .path{padding:1.4rem 1.1rem 1.2rem;transform:none!important}
-    .path:active{transform:translateY(2px)!important;border-color:var(--pc,var(--gold));
-      box-shadow:0 4px 14px -8px rgba(0,0,0,.8)}
-    .path:active .glow{opacity:1}
-    .path:active .icon{transform:scale(1.1)}
-    .path .icon{font-size:2.3rem;margin-bottom:.7rem}
-    .cp-grid{grid-template-columns:1fr;justify-items:center;text-align:center}
-    .cp-stats{justify-content:center}
-    .campaign-list{grid-template-columns:1fr}
+  @media(max-width:640px){.app{padding:0 .75rem 4rem}.topbar{padding:.8rem 0 0}.top-btn{min-height:44px;display:inline-flex;align-items:center;padding:.4rem .9rem}.head{margin:1.1rem 0 1.8rem}.head .sub{font-size:.98rem}.panel-box{padding:1.3rem 1rem}.panel-title{font-size:.72rem;letter-spacing:.18em}.world-prompt{min-height:150px;font-size:18px}.name-input{min-height:48px;font-size:18px}.dropzone{padding:1.4rem 1rem}.dropzone .dz-text{font-size:.95rem}.actions{flex-direction:column;align-items:stretch;gap:.6rem}.go-btn,.danger-btn{width:100%;min-height:52px}.go-btn:active,.danger-btn:active{transform:translateY(2px)!important;filter:brightness(.94)}.hint{text-align:center;font-size:.85rem}.continue-panel{padding:1.3rem 1rem 1.2rem}.cp-name{font-size:1.15rem}.campaign-card{padding:1rem .9rem .9rem;min-height:64px}.campaign-card:hover{transform:none;box-shadow:0 12px 30px -16px rgba(0,0,0,.85);border-color:var(--edge)}.campaign-card:active{transform:translateY(2px);border-color:var(--gold);
+      box-shadow:0 4px 12px -8px rgba(0,0,0,.8)}.campaign-card .cc-go{flex:1;min-height:48px;display:inline-flex;align-items:center;justify-content:center}.campaign-card .cc-del{min-width:48px;min-height:48px;display:inline-flex;align-items:center;justify-content:center;font-size:.83rem}.campaign-card .cc-del:active{color:var(--blood-bright);border-color:var(--blood-bright)}.file-item .fi-del{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}.ep-grid{grid-template-columns:repeat(2,1fr)}.toast{max-width:92%;text-align:center}
   }
-  @media(max-width:640px){
-    .app{padding:0 .75rem 4rem}
-    .topbar{padding:.8rem 0 0}
-    .top-btn{min-height:44px;display:inline-flex;align-items:center;padding:.4rem .9rem}
-    .head{margin:1.1rem 0 1.8rem}
-    .head .sub{font-size:.85rem}
-    .panel-box{padding:1.3rem 1rem}
-    .panel-title{font-size:.72rem;letter-spacing:.18em}
-    .world-prompt{min-height:150px;font-size:16px}
-    .name-input{min-height:48px;font-size:16px}
-    .dropzone{padding:1.4rem 1rem}
-    .dropzone .dz-text{font-size:.82rem}
-    .actions{flex-direction:column;align-items:stretch;gap:.6rem}
-    .go-btn,.danger-btn{width:100%;min-height:52px}
-    .go-btn:active,.danger-btn:active{transform:translateY(2px)!important;filter:brightness(.94)}
-    .hint{text-align:center;font-size:.72rem}
-    .continue-panel{padding:1.3rem 1rem 1.2rem}
-    .cp-name{font-size:1.15rem}
-    .cp-actions{flex-direction:column;align-items:stretch}
-    .campaign-card{padding:1rem .9rem .9rem;min-height:64px}
-    .campaign-card:hover{transform:none;box-shadow:0 12px 30px -16px rgba(0,0,0,.85);border-color:var(--edge)}
-    .campaign-card:active{transform:translateY(2px);border-color:var(--gold);
-      box-shadow:0 4px 12px -8px rgba(0,0,0,.8)}
-    .campaign-card .cc-go{flex:1;min-height:48px;display:inline-flex;align-items:center;justify-content:center}
-    .campaign-card .cc-del{min-width:48px;min-height:48px;display:inline-flex;align-items:center;justify-content:center;font-size:.7rem}
-    .campaign-card .cc-del:active{color:var(--blood-bright);border-color:var(--blood-bright)}
-    .file-item .fi-del{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
-    .ep-grid{grid-template-columns:repeat(2,1fr)}
-    .toast{max-width:92%;text-align:center}
-  }
-  @media(max-width:400px){
-    .app{padding:0 .5rem 3.5rem}
-    .head h1{font-size:1.55rem}
-    .head .over{letter-spacing:.28em}
-    .path h2{font-size:.95rem}
-    .path p{font-size:.78rem}
-    .cp-icon{width:54px;height:54px;font-size:1.5rem}
-    .campaign-card .cc-sub{font-size:.68rem}
+  @media(max-width:400px){.app{padding:0 .5rem 3.5rem}.head h1{font-size:1.55rem}.head .over{letter-spacing:.28em}.path h2{font-size:.95rem}.path p{font-size:.91rem}.cp-icon{width:54px;height:54px;font-size:1.5rem}.campaign-card .cc-sub{font-size:.81rem}
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=9">
-<script src="sprites.js?v=20260801d"></script>
-<script src="fonts.js?v=20260801d"></script>
+<link rel="stylesheet" href="snes.css?v=10">
+<script src="sprites.js?v=20260802a"></script>
+<script src="fonts.js?v=20260802c"></script>
+<script src="themes.js?v=20260802c"></script>
 </head>
 <body>
 <div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
@@ -342,6 +126,7 @@
   <!-- ═══════════ TOPPRAD ═══════════ -->
   <div class="topbar">
     <button class="top-btn sfx-btn" onclick="sfxToggleBtn()" title="Sound on/off">🔊</button>
+    <button class="top-btn" onclick="location.href='releases.html'" title="Release notes">📜</button>
     <button class="top-btn" id="admin-gate-btn" style="display:none" onclick="location.href='admin.html'">👑 Admin</button>
     <button class="top-btn danger" onclick="leaveGate()">🚪 Log Out</button>
   </div>
@@ -372,7 +157,7 @@
       <div class="htp-card">
         <span class="htp-icon">🎲</span>
         <h3>Dice & Mechanics</h3>
-        <p>When the outcome is uncertain, the DM calls for a <b>dice roll</b>. A D20 button appears in the chat — click to roll. <b>Nat 20</b> = triumph, <b>nat 1</b> = catastrophe. Type <b>/roll 1d20+4</b> to roll whenever you want.</p>
+        <p>When the outcome is uncertain, the DM calls for a <b>dice roll</b>. A roll button appears in the chat — click it, or choose <b>✍️ Write instead</b> to act freely. <b>Nat 20</b> = triumph, <b>nat 1</b> = catastrophe. Type <b>/roll 1d20+4</b> to roll whenever you want.</p>
       </div>
     </div>
   </div>
@@ -414,7 +199,7 @@
     <div class="panel-box">
       <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
       <div class="panel-title">🎲 New Adventure</div>
-      <p style="font-size:.85rem;font-style:italic;color:var(--bone-dim);margin-bottom:1rem">
+      <p style="font-size:.98rem;font-style:italic;color:var(--bone-dim);margin-bottom:1rem">
         Give your adventure a name — or leave it unnamed and begin right away.
       </p>
       <input type="text" class="name-input" id="adventure-name-input" placeholder="An unnamed adventure…" maxlength="60">
@@ -479,14 +264,14 @@ The more you give, the richer the world becomes. But the Dungeon Master fills in
 
 <div class="toast" id="toast"></div>
 
-<script src="sfx.js?v=20260801d"></script>
+<script src="sfx.js?v=20260802a"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 </script>
-<script src="api.js?v=20260801d"></script>
-<script src="modal.js?v=20260801d"></script>
-<script src="i18n.js?v=20260801d"></script>
+<script src="api.js?v=20260802c"></script>
+<script src="modal.js?v=20260802a"></script>
+<script src="i18n.js?v=20260802b"></script>
 <script>
 // ═══════════════════════════════════════
 // SPARADE ÄVENTYR — kontrolleras via API:et

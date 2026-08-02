@@ -1,5 +1,5 @@
 """
-Mörkrets Rike — Faktextrahering & Faktaregister
+The Lore Weaver's Cauldron — Faktextrahering & Faktaregister
 =================================================
 Extraherar strukturerade fakta ur DM-svar med en billig/snabb LLM
 och lagrar dem i ett per-användare JSON-register.

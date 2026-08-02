@@ -1,5 +1,5 @@
 """
-Mörkrets Rike — RAG-modul (Retrieval-Augmented Generation)
+The Lore Weaver's Cauldron — RAG-modul (Retrieval-Augmented Generation)
 =============================================================
 
 Arkitektur

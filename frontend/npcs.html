@@ -3,233 +3,83 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚔️ A Swedish D&amp;D Adventure — NPCs</title>
+<title>The Lore Weaver's Cauldron — NPCs</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
-<style>
-  :root{
+<style>:root{
     --ink:#0b0812;--stone:#161020;--stone-2:#1d1529;--stone-3:#241a33;
     --edge:#3d2f52;--edge-warm:#5a4433;
     --bone:#d9c9a6;--bone-bright:#efe2c0;--bone-dim:#8a7a5e;
     --gold:#c9a227;--gold-bright:#e8c65a;
     --blood:#a32433;--blood-bright:#d43a4d;
     --ember:#d4691e;--arcane:#8b5fd4;--poison:#7aa35e;--teal:#5e9aa3;
-  }
-  *{margin:0;padding:0;box-sizing:border-box}
-  html,body{height:100%}
-  body{
+  }*{margin:0;padding:0;box-sizing:border-box}html,body{height:100%}body{
     font-family:'Spectral',Georgia,serif;color:var(--bone);
     background:
       radial-gradient(1000px 500px at 50% 115%, rgba(212,105,30,.1), transparent 60%),
       radial-gradient(700px 400px at 10% -5%, rgba(139,95,212,.08), transparent 55%),
       var(--ink);
     display:flex;flex-direction:column;overflow:hidden;
-  }
-  .grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.045;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
-  #embers{position:fixed;inset:0;z-index:0;pointer-events:none}
-  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 190px 70px rgba(4,2,8,.88)}
-
-  /* ═══════════ Topbar ═══════════ */
-  .topbar{position:relative;z-index:5;display:flex;align-items:center;gap:1rem;padding:.7rem 1.2rem;
-    background:linear-gradient(180deg,var(--stone-2),rgba(22,16,32,.95));border-bottom:1px solid var(--edge);box-shadow:0 4px 20px rgba(0,0,0,.5)}
-  .topbar .brand{font-family:'Cinzel',serif;font-weight:900;font-size:1.05rem;color:var(--gold-bright);letter-spacing:.06em;white-space:nowrap;text-shadow:0 0 14px rgba(232,198,90,.3)}
-  .topbar .page-tag{font-size:.78rem;font-style:italic;color:var(--bone-dim);border-left:1px solid var(--edge);padding-left:1rem}
-  .topbar .spacer{flex:1}
-  .top-btn{font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;white-space:nowrap;text-decoration:none}
-  .top-btn:hover{color:var(--gold-bright);border-color:var(--gold);box-shadow:0 0 12px -3px rgba(232,198,90,.4)}
-  .top-btn.danger:hover{color:var(--blood-bright);border-color:var(--blood-bright);box-shadow:0 0 12px -3px rgba(212,58,77,.4)}
-
-  /* ═══════════ Layout ═══════════ */
-  .layout{position:relative;z-index:2;flex:1;display:flex;min-height:0}
-
-  /* ── Vänster: minnets hall ── */
-  .hall{width:320px;flex-shrink:0;display:flex;flex-direction:column;background:linear-gradient(180deg,var(--stone),#100b18);border-right:1px solid var(--edge)}
-  .hall-head{padding:1.1rem 1rem .8rem;border-bottom:1px solid var(--edge)}
-  .hall-title{font-family:'Cinzel',serif;font-weight:900;font-size:1.05rem;color:var(--bone-bright);letter-spacing:.05em;margin-bottom:.15rem}
-  .hall-sub{font-size:.75rem;font-style:italic;color:var(--bone-dim)}
-  .filters{display:flex;gap:.35rem;flex-wrap:wrap;padding:.8rem 1rem;border-bottom:1px solid rgba(61,47,82,.5)}
-  .fchip{font-family:'Cinzel',serif;font-size:.56rem;letter-spacing:.12em;text-transform:uppercase;background:transparent;border:1px solid var(--edge);color:var(--bone-dim);padding:.32rem .6rem;cursor:pointer;border-radius:2px;transition:all .2s}
-  .fchip:hover{color:var(--bone-bright);border-color:var(--bone-dim)}
-  .fchip.on{color:#1a1206;background:var(--gold);border-color:var(--gold);box-shadow:0 0 10px -2px rgba(232,198,90,.5)}
-  .npc-list{flex:1;overflow-y:auto;padding:.8rem}
-  .npc-list::-webkit-scrollbar{width:7px}
-  .npc-list::-webkit-scrollbar-thumb{background:var(--edge);border-radius:4px}
-
-  .ncard{position:relative;display:flex;gap:.75rem;align-items:center;padding:.75rem .7rem;margin-bottom:.55rem;cursor:pointer;
+  }.grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.045;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}#embers{position:fixed;inset:0;z-index:0;pointer-events:none}.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 190px 70px rgba(4,2,8,.88)}/* ═══════════ Topbar ═══════════ */.topbar{position:relative;z-index:5;display:flex;align-items:center;gap:1rem;padding:.7rem 1.2rem;
+    background:linear-gradient(180deg,var(--stone-2),rgba(22,16,32,.95));border-bottom:1px solid var(--edge);box-shadow:0 4px 20px rgba(0,0,0,.5)}.topbar .brand{font-family:'Cinzel',serif;font-weight:900;font-size:1.05rem;color:var(--gold-bright);letter-spacing:.06em;white-space:nowrap;text-shadow:0 0 14px rgba(232,198,90,.3)}.topbar .page-tag{font-size:.91rem;font-style:italic;color:var(--bone-dim);border-left:1px solid var(--edge);padding-left:1rem}.topbar .spacer{flex:1}.top-btn{font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;white-space:nowrap;text-decoration:none}.top-btn:hover{color:var(--gold-bright);border-color:var(--gold);box-shadow:0 0 12px -3px rgba(232,198,90,.4)}.top-btn.danger:hover{color:var(--blood-bright);border-color:var(--blood-bright);box-shadow:0 0 12px -3px rgba(212,58,77,.4)}/* ═══════════ Layout ═══════════ */.layout{position:relative;z-index:2;flex:1;display:flex;min-height:0}/* ── Vänster: minnets hall ── */.hall{width:320px;flex-shrink:0;display:flex;flex-direction:column;background:linear-gradient(180deg,var(--stone),#100b18);border-right:1px solid var(--edge)}.hall-head{padding:1.1rem 1rem .8rem;border-bottom:1px solid var(--edge)}.hall-title{font-family:'Cinzel',serif;font-weight:900;font-size:1.05rem;color:var(--bone-bright);letter-spacing:.05em;margin-bottom:.15rem}.hall-sub{font-size:.88rem;font-style:italic;color:var(--bone-dim)}.filters{display:flex;gap:.35rem;flex-wrap:wrap;padding:.8rem 1rem;border-bottom:1px solid rgba(61,47,82,.5)}.fchip{font-family:'Cinzel',serif;font-size:.69rem;letter-spacing:.12em;text-transform:uppercase;background:transparent;border:1px solid var(--edge);color:var(--bone-dim);padding:.32rem .6rem;cursor:pointer;border-radius:2px;transition:all .2s}.fchip:hover{color:var(--bone-bright);border-color:var(--bone-dim)}.fchip.on{color:#1a1206;background:var(--gold);border-color:var(--gold);box-shadow:0 0 10px -2px rgba(232,198,90,.5)}.npc-list{flex:1;overflow-y:auto;padding:.8rem}.npc-list::-webkit-scrollbar{width:7px}.npc-list::-webkit-scrollbar-thumb{background:var(--edge);border-radius:4px}.ncard{position:relative;display:flex;gap:.75rem;align-items:center;padding:.75rem .7rem;margin-bottom:.55rem;cursor:pointer;
     background:linear-gradient(160deg,var(--stone-2),var(--stone));border:1px solid var(--edge);border-radius:2px;
-    transition:transform .22s cubic-bezier(.22,1,.36,1),border-color .22s,box-shadow .22s;overflow:hidden}
-  .ncard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--nc,var(--edge));opacity:.5;transition:opacity .22s}
-  .ncard:hover{transform:translateX(5px);border-color:var(--nc,var(--gold))}
-  .ncard:hover::before{opacity:1}
-  .ncard.sel{border-color:var(--nc,var(--gold));box-shadow:0 0 18px -6px var(--ng,rgba(201,162,39,.4));transform:translateX(5px)}
-  .ncard.sel::before{opacity:1}
-  .ncard .sigil{width:42px;height:42px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.25rem;
-    border:1px solid var(--nc,var(--edge));background:var(--stone-3);box-shadow:0 0 12px -3px var(--ng,transparent),inset 0 0 8px rgba(0,0,0,.5);transition:transform .25s}
-  .ncard:hover .sigil{transform:scale(1.1) rotate(-4deg)}
-  .ncard .nm{font-weight:600;font-size:.9rem;color:var(--bone-bright);line-height:1.2}
-  .ncard .rl{font-size:.72rem;font-style:italic;color:var(--bone-dim)}
-  .ncard .badges{display:flex;gap:.3rem;margin-top:.25rem}
-  .badge{font-family:'Cinzel',serif;font-size:.5rem;letter-spacing:.1em;text-transform:uppercase;padding:.14rem .42rem;border:1px solid;border-radius:2px}
-  .b-rel-allierad{color:var(--poison);border-color:rgba(122,163,94,.55)}
-  .b-rel-neutral{color:var(--bone-dim);border-color:var(--edge)}
-  .b-rel-fiende{color:var(--blood-bright);border-color:rgba(212,58,77,.55)}
-  .b-rel-okänd{color:var(--arcane);border-color:rgba(139,95,212,.5)}
-  .b-shop{color:var(--gold-bright);border-color:rgba(201,162,39,.5)}
-  .b-quest{color:var(--ember);border-color:rgba(212,105,30,.55)}
-  .b-dead{color:var(--bone-dim);border-color:var(--edge);text-decoration:line-through}
-  .ncard .seen{font-size:.66rem;color:var(--bone-dim);margin-top:.2rem}
-  .hall-foot{padding:.7rem 1rem;border-top:1px solid var(--edge);font-size:.7rem;font-style:italic;color:var(--bone-dim);text-align:center}
-
-  /* ── Höger: dossier ── */
-  .dossier{flex:1;overflow-y:auto;padding:1.8rem 2rem 4rem;min-width:0}
-  .dossier::-webkit-scrollbar{width:8px}
-  .dossier::-webkit-scrollbar-thumb{background:var(--edge);border-radius:4px}
-
-  .empty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;color:var(--bone-dim)}
-  .empty .rune{font-size:3rem;opacity:.4;animation:candle 4s ease-in-out infinite}
-  .empty p{font-style:italic;font-size:.95rem}
-
-  .d-head{display:flex;gap:1.5rem;align-items:center;margin-bottom:1.6rem;animation:rise .5s cubic-bezier(.22,1,.36,1) both}
-  .d-portrait{width:92px;height:92px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2.4rem;
+    transition:transform .22s cubic-bezier(.22,1,.36,1),border-color .22s,box-shadow .22s;overflow:hidden}.ncard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--nc,var(--edge));opacity:.5;transition:opacity .22s}.ncard:hover{transform:translateX(5px);border-color:var(--nc,var(--gold))}.ncard:hover::before{opacity:1}.ncard.sel{border-color:var(--nc,var(--gold));box-shadow:0 0 18px -6px var(--ng,rgba(201,162,39,.4));transform:translateX(5px)}.ncard.sel::before{opacity:1}.ncard .sigil{width:42px;height:42px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.25rem;
+    border:1px solid var(--nc,var(--edge));background:var(--stone-3);box-shadow:0 0 12px -3px var(--ng,transparent),inset 0 0 8px rgba(0,0,0,.5);transition:transform .25s}.ncard:hover .sigil{transform:scale(1.1) rotate(-4deg)}.ncard .nm{font-weight:600;font-size:.9rem;color:var(--bone-bright);line-height:1.2}.ncard .rl{font-size:.85rem;font-style:italic;color:var(--bone-dim)}.ncard .badges{display:flex;gap:.3rem;margin-top:.25rem}.badge{font-family:'Cinzel',serif;font-size:.63rem;letter-spacing:.1em;text-transform:uppercase;padding:.14rem .42rem;border:1px solid;border-radius:2px}.b-rel-allierad{color:var(--poison);border-color:rgba(122,163,94,.55)}.b-rel-neutral{color:var(--bone-dim);border-color:var(--edge)}.b-quest{color:var(--ember);border-color:rgba(212,105,30,.55)}.b-dead{color:var(--bone-dim);border-color:var(--edge);text-decoration:line-through}.hall-foot{padding:.7rem 1rem;border-top:1px solid var(--edge);font-size:.83rem;font-style:italic;color:var(--bone-dim);text-align:center}/* ── Höger: dossier ── */.dossier{flex:1;overflow-y:auto;padding:1.8rem 2rem 4rem;min-width:0}.dossier::-webkit-scrollbar{width:8px}.dossier::-webkit-scrollbar-thumb{background:var(--edge);border-radius:4px}.empty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;color:var(--bone-dim)}.empty .rune{font-size:3rem;opacity:.4;animation:candle 4s ease-in-out infinite}.empty p{font-style:italic;font-size:1.08rem}.d-head{display:flex;gap:1.5rem;align-items:center;margin-bottom:1.6rem;animation:rise .5s cubic-bezier(.22,1,.36,1) both}.d-portrait{width:92px;height:92px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2.4rem;
     border:2px solid var(--dc,var(--gold));background:var(--stone-3);box-shadow:0 0 26px -4px var(--dg,rgba(201,162,39,.5)),inset 0 0 14px rgba(0,0,0,.5);
     transform:rotate(-3deg);animation:portrait-breathe 4s ease-in-out infinite}
-  @keyframes portrait-breathe{0%,100%{box-shadow:0 0 20px -4px var(--dg,rgba(201,162,39,.4)),inset 0 0 14px rgba(0,0,0,.5)}50%{box-shadow:0 0 34px -2px var(--dg,rgba(201,162,39,.65)),inset 0 0 14px rgba(0,0,0,.5)}}
-  .d-name{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(1.4rem,3vw,1.9rem);color:var(--bone-bright);text-shadow:0 2px 0 #000;line-height:1.15}
-  .d-role{font-style:italic;color:var(--dc,var(--arcane));font-size:1rem;margin:.2rem 0 .55rem}
-  .d-chips{display:flex;gap:.4rem;flex-wrap:wrap}
-  .d-chips .badge{font-size:.56rem;padding:.22rem .55rem}
-
-  .d-sec{margin-bottom:1.7rem;animation:rise .5s cubic-bezier(.22,1,.36,1) both}
-  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
-  .d-label{font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);display:flex;align-items:center;gap:.9rem;margin-bottom:.8rem}
-  .d-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(201,162,39,.5),transparent)}
-
-  .panel-box{background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,#120c1c);border:1px solid var(--edge);padding:1.1rem 1.2rem;position:relative}
-  .panel-box .corner{position:absolute;width:14px;height:14px;border-color:var(--gold);border-style:solid;opacity:.6}
-  .corner.tl{top:5px;left:5px;border-width:2px 0 0 2px}.corner.tr{top:5px;right:5px;border-width:2px 2px 0 0}
-  .corner.bl{bottom:5px;left:5px;border-width:0 0 2px 2px}.corner.br{bottom:5px;right:5px;border-width:0 2px 2px 0}
-
-  .met-loc{font-family:'Cinzel',serif;font-weight:700;font-size:1.05rem;color:var(--bone-bright)}
-  .met-when{font-size:.78rem;color:var(--gold-bright);letter-spacing:.06em;margin:.15rem 0 .5rem}
-  .met-how{font-style:italic;color:var(--bone);line-height:1.6;font-size:.9rem}
-
-  .trust-row{display:flex;align-items:center;gap:1rem}
-  .trust-bar{flex:1;height:12px;background:#0a0612;border:1px solid var(--edge);overflow:hidden;box-shadow:inset 0 3px 8px rgba(0,0,0,.8)}
-  .trust-fill{height:100%;width:0;transition:width 1s cubic-bezier(.22,1,.36,1) .2s;box-shadow:0 0 12px currentColor}
-  .trust-label{font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;min-width:90px;text-align:right}
-
-  .quest{border:1px solid var(--edge);background:var(--stone);padding:.9rem 1rem;margin-bottom:.6rem;transition:border-color .2s,transform .2s}
-  .quest:hover{border-color:var(--ember);transform:translateX(4px)}
-  .q-head{display:flex;align-items:center;gap:.6rem;margin-bottom:.35rem;flex-wrap:wrap}
-  .q-name{font-family:'Cinzel',serif;font-weight:700;font-size:.9rem;color:var(--bone-bright)}
-  .q-status{font-family:'Cinzel',serif;font-size:.52rem;letter-spacing:.12em;text-transform:uppercase;padding:.2rem .55rem;border:1px solid;border-radius:2px}
-  .qs-aktiv{color:var(--gold-bright);border-color:rgba(232,198,90,.6);animation:qpulse 2s ease-in-out infinite}
-  @keyframes qpulse{0%,100%{box-shadow:0 0 4px -1px rgba(232,198,90,.4)}50%{box-shadow:0 0 12px -1px rgba(232,198,90,.8)}}
-  .qs-slutförd{color:var(--poison);border-color:rgba(122,163,94,.55)}
-  .qs-misslyckad{color:var(--blood-bright);border-color:rgba(212,58,77,.55)}
-  .q-desc{font-size:.85rem;color:var(--bone);line-height:1.55}
-  .q-reward{font-size:.78rem;color:var(--gold-bright);margin-top:.4rem}
-  .q-reward b{font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-dim);font-weight:400}
-
-  .shop-table{width:100%;border-collapse:collapse;font-size:.85rem}
-  .shop-table th{font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--bone-dim);text-align:left;padding:.45rem .6rem;border-bottom:2px solid var(--edge-warm)}
-  .shop-table td{padding:.55rem .6rem;border-bottom:1px solid rgba(61,47,82,.5);vertical-align:middle}
-  .shop-table tr:hover td{background:rgba(201,162,39,.04)}
-  .i-name{color:var(--bone-bright);font-weight:500}
-  .i-name.rare{color:var(--gold-bright);text-shadow:0 0 10px rgba(232,198,90,.35)}
-  .i-name.magic{color:#cbb3f2;text-shadow:0 0 10px rgba(139,95,212,.45)}
-  .i-price{color:var(--gold-bright);font-family:'Cinzel',serif;font-weight:700;white-space:nowrap}
-  .i-stock{color:var(--bone-dim);font-size:.78rem;text-align:center}
-  .buy-btn{font-family:'Cinzel',serif;font-size:.56rem;letter-spacing:.12em;text-transform:uppercase;background:var(--stone-3);border:1px solid rgba(201,162,39,.45);color:var(--gold-bright);padding:.35rem .75rem;cursor:pointer;border-radius:2px;transition:all .18s}
-  .buy-btn:hover:not(:disabled){background:var(--gold);color:#1a1206;box-shadow:0 0 12px -2px rgba(232,198,90,.6)}
-  .buy-btn:disabled{opacity:.35;cursor:not-allowed}
-  .purse{font-size:.78rem;color:var(--bone-dim);margin-top:.7rem;text-align:right}
-  .purse b{color:var(--gold-bright);font-family:'Cinzel',serif}
-
-  .notes-list{list-style:none}
-  .notes-list li{padding:.45rem 0 .45rem 1.4rem;position:relative;font-size:.88rem;color:var(--bone);line-height:1.55;border-bottom:1px solid rgba(61,47,82,.35)}
-  .notes-list li::before{content:'✦';position:absolute;left:.2rem;color:var(--dc,var(--gold));text-shadow:0 0 8px var(--dg,transparent)}
-
-  .conv{margin-bottom:1.3rem}
-  .conv-head{display:flex;align-items:center;gap:.7rem;font-size:.72rem;color:var(--bone-dim);margin-bottom:.7rem}
-  .conv-head::before,.conv-head::after{content:'';flex:1;height:1px;background:rgba(61,47,82,.5)}
-  .conv-head b{color:var(--gold-bright);font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;font-weight:700}
-  .line{margin-bottom:.7rem;max-width:640px;animation:rise .4s ease both}
-  .line .who{font-family:'Cinzel',serif;font-weight:700;font-size:.78rem;margin-bottom:.2rem;display:flex;align-items:center;gap:.45rem}
-  .line .who .dot{width:8px;height:8px;border-radius:50%;box-shadow:0 0 7px currentColor}
-  .line.npc{padding-left:.9rem;border-left:2px solid var(--dc,var(--edge))}
-  .line.npc .text{font-size:.9rem;color:var(--bone);line-height:1.6}
-  .line.npc .text em{color:var(--bone-dim)}
-  .line.player{margin-left:auto;text-align:right}
-  .line.player .who{justify-content:flex-end;color:var(--arcane);font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;font-weight:400}
-  .line.player .text{display:inline-block;text-align:left;background:linear-gradient(160deg,rgba(139,95,212,.14),rgba(139,95,212,.05));border:1px solid rgba(139,95,212,.35);padding:.55rem .9rem;border-radius:8px 2px 8px 8px;font-size:.9rem;line-height:1.55;color:var(--bone-bright)}
-
-  .talk-btn{font-family:'Cinzel',serif;font-weight:700;font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;color:#1a1206;
+  @keyframes portrait-breathe{0%,100%{box-shadow:0 0 20px -4px var(--dg,rgba(201,162,39,.4)),inset 0 0 14px rgba(0,0,0,.5)}50%{box-shadow:0 0 34px -2px var(--dg,rgba(201,162,39,.65)),inset 0 0 14px rgba(0,0,0,.5)}}.d-name{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(1.4rem,3vw,1.9rem);color:var(--bone-bright);text-shadow:0 2px 0 #000;line-height:1.15}.d-role{font-style:italic;color:var(--dc,var(--arcane));font-size:1.13rem;margin:.2rem 0 .55rem}.d-chips{display:flex;gap:.4rem;flex-wrap:wrap}.d-chips .badge{font-size:.69rem;padding:.22rem .55rem}.d-sec{margin-bottom:1.7rem;animation:rise .5s cubic-bezier(.22,1,.36,1) both}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}.d-label{font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);display:flex;align-items:center;gap:.9rem;margin-bottom:.8rem}.d-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(201,162,39,.5),transparent)}.panel-box{background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,#120c1c);border:1px solid var(--edge);padding:1.1rem 1.2rem;position:relative}.panel-box .corner{position:absolute;width:14px;height:14px;border-color:var(--gold);border-style:solid;opacity:.6}.corner.tl{top:5px;left:5px;border-width:2px 0 0 2px}.corner.tr{top:5px;right:5px;border-width:2px 2px 0 0}.corner.bl{bottom:5px;left:5px;border-width:0 0 2px 2px}.corner.br{bottom:5px;right:5px;border-width:0 2px 2px 0}.trust-row{display:flex;align-items:center;gap:1rem}.trust-bar{flex:1;height:12px;background:#0a0612;border:1px solid var(--edge);overflow:hidden;box-shadow:inset 0 3px 8px rgba(0,0,0,.8)}.trust-fill{height:100%;width:0;transition:width 1s cubic-bezier(.22,1,.36,1) .2s;box-shadow:0 0 12px currentColor}.trust-label{font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;min-width:90px;text-align:right}.quest{border:1px solid var(--edge);background:var(--stone);padding:.9rem 1rem;margin-bottom:.6rem;transition:border-color .2s,transform .2s}.quest:hover{border-color:var(--ember);transform:translateX(4px)}.q-head{display:flex;align-items:center;gap:.6rem;margin-bottom:.35rem;flex-wrap:wrap}.q-name{font-family:'Cinzel',serif;font-weight:700;font-size:.9rem;color:var(--bone-bright)}.q-status{font-family:'Cinzel',serif;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;padding:.2rem .55rem;border:1px solid;border-radius:2px}
+  @keyframes qpulse{0%,100%{box-shadow:0 0 4px -1px rgba(232,198,90,.4)}50%{box-shadow:0 0 12px -1px rgba(232,198,90,.8)}}.q-desc{font-size:.98rem;color:var(--bone);line-height:1.55}.q-reward{font-size:.91rem;color:var(--gold-bright);margin-top:.4rem}.q-reward b{font-family:'Cinzel',serif;font-size:.73rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-dim);font-weight:400}.purse{font-size:.91rem;color:var(--bone-dim);margin-top:.7rem;text-align:right}.purse b{color:var(--gold-bright);font-family:'Cinzel',serif}.notes-list{list-style:none}.notes-list li{padding:.45rem 0 .45rem 1.4rem;position:relative;font-size:1.01rem;color:var(--bone);line-height:1.55;border-bottom:1px solid rgba(61,47,82,.35)}.notes-list li::before{content:'✦';position:absolute;left:.2rem;color:var(--dc,var(--gold));text-shadow:0 0 8px var(--dg,transparent)}.line{margin-bottom:.7rem;max-width:640px;animation:rise .4s ease both}.line .who{font-family:'Cinzel',serif;font-weight:700;font-size:.91rem;margin-bottom:.2rem;display:flex;align-items:center;gap:.45rem}.line .who .dot{width:8px;height:8px;border-radius:50%;box-shadow:0 0 7px currentColor}.line.npc{padding-left:.9rem;border-left:2px solid var(--dc,var(--edge))}.line.npc .text{font-size:1.03rem;color:var(--bone);line-height:1.6}.line.npc .text em{color:var(--bone-dim)}.line.player{margin-left:auto;text-align:right}.line.player .who{justify-content:flex-end;color:var(--arcane);font-size:.75rem;letter-spacing:.2em;text-transform:uppercase;font-weight:400}.line.player .text{display:inline-block;text-align:left;background:linear-gradient(160deg,rgba(139,95,212,.14),rgba(139,95,212,.05));border:1px solid rgba(139,95,212,.35);padding:.55rem .9rem;border-radius:8px 2px 8px 8px;font-size:1.03rem;line-height:1.55;color:var(--bone-bright)}.talk-btn{font-family:'Cinzel',serif;font-weight:700;font-size:.87rem;letter-spacing:.16em;text-transform:uppercase;color:#1a1206;
     background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);border:1px solid #6e5510;padding:.8rem 1.5rem;cursor:pointer;border-radius:2px;
-    box-shadow:0 6px 18px -6px rgba(232,198,90,.5);transition:all .2s;text-decoration:none;display:inline-block}
-  .talk-btn:hover{filter:brightness(1.12);transform:translateY(-2px)}
-
-  .toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:50;font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.12em;
+    box-shadow:0 6px 18px -6px rgba(232,198,90,.5);transition:all .2s;text-decoration:none;display:inline-block}.talk-btn:hover{filter:brightness(1.12);transform:translateY(-2px)}.toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:50;font-family:'Cinzel',serif;font-size:.88rem;letter-spacing:.12em;
     background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);padding:.7rem 1.5rem;
-    box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}
-  .toast.show{transform:translate(-50%,0);opacity:1}
+    box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}.toast.show{transform:translate(-50%,0);opacity:1}
 
-  @media(max-width:900px){
-    html{-webkit-tap-highlight-color:transparent}
-    .hall{width:250px}
-    .dossier{padding:1.3rem 1.1rem 3rem}
-    .topbar .page-tag{display:none}
-    /* Topnav: radbryt + 44px träffytor (snes.css laddas sist → !important) */
-    .topbar{flex-wrap:wrap!important;gap:.4rem .5rem!important;padding:.6rem .75rem!important}
-    .topbar .top-btn{min-height:44px!important;display:inline-flex!important;align-items:center!important;padding:.4rem .65rem!important;font-size:.55rem!important}
+  @media(max-width:900px){html{-webkit-tap-highlight-color:transparent}.hall{width:250px}.dossier{padding:1.3rem 1.1rem 3rem}.topbar .page-tag{display:none}/* Topnav: radbryt + 44px träffytor (snes.css laddas sist → !important) */.topbar{flex-wrap:wrap!important;gap:.4rem .5rem!important;padding:.6rem .75rem!important}.topbar .top-btn{min-height:44px!important;display:inline-flex!important;align-items:center!important;padding:.4rem .65rem!important;font-size:.68rem!important}
   }
-  @media(max-width:640px){
-    .layout{flex-direction:column}
-    .hall{width:100%;height:46%;border-right:none;border-bottom:1px solid var(--edge)}
-    .dossier{height:54%;padding:1.1rem .75rem 3rem}
-    /* Filterchips: horisontell rem, ingen radbrytning */
-    .filters{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:.7rem .8rem}
-    .filters::-webkit-scrollbar{display:none}
-    .fchip{flex:0 0 auto;min-height:44px;display:inline-flex;align-items:center}
-    /* NPC-kort: full bredd, generös träffyta */
-    .npc-list{padding:.6rem .7rem}
-    .ncard{padding:.7rem .65rem}
-    .ncard:hover{transform:none}
-    /* Dossier: porträtt + namn staplas */
-    .d-head{flex-direction:column;align-items:flex-start;gap:.9rem}
-    .d-portrait{width:76px;height:76px;font-size:2rem}
-    .trust-row{flex-wrap:wrap}
-    .trust-label{min-width:0;text-align:left;width:100%}
-    /* Butikstabell: horisontell scroll */
-    .shop-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -.4rem;padding:0 .4rem}
-    .shop-scroll::-webkit-scrollbar{height:6px}
-    .shop-scroll::-webkit-scrollbar-thumb{background:var(--edge)}
-    .shop-table{min-width:480px}
-    .buy-btn{min-height:44px;padding:.4rem .8rem}
-    .talk-btn{min-height:44px;display:flex;align-items:center;justify-content:center;width:100%;text-align:center}
-    .line{max-width:100%}
-    .panel-box{padding:.9rem .8rem}
+  @media(max-width:640px){.layout{flex-direction:column}.hall{width:100%;height:46%;border-right:none;border-bottom:1px solid var(--edge)}.dossier{height:54%;padding:1.1rem .75rem 3rem}/* Filterchips: horisontell rem, ingen radbrytning */.filters{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:.7rem .8rem}.filters::-webkit-scrollbar{display:none}.fchip{flex:0 0 auto;min-height:44px;display:inline-flex;align-items:center}/* NPC-kort: full bredd, generös träffyta */.npc-list{padding:.6rem .7rem}.ncard{padding:.7rem .65rem}.ncard:hover{transform:none}/* Dossier: porträtt + namn staplas */.d-head{flex-direction:column;align-items:flex-start;gap:.9rem}.d-portrait{width:76px;height:76px;font-size:2rem}.trust-row{flex-wrap:wrap}.trust-label{min-width:0;text-align:left;width:100%}.talk-btn{min-height:44px;display:flex;align-items:center;justify-content:center;width:100%;text-align:center}.line{max-width:100%}.panel-box{padding:.9rem .8rem}
   }
-  @media(max-width:400px){
-    .hall-head{padding:.8rem .8rem .6rem}
-    .dossier{padding:.9rem .5rem 2.5rem}
-    .d-name{font-size:1.25rem}
-    .q-head{gap:.4rem}
-    .toast{left:1rem;right:1rem;transform:translateY(80px);width:auto}
-    .toast.show{transform:translateY(0)}
+  @media(max-width:400px){.hall-head{padding:.8rem .8rem .6rem}.dossier{padding:.9rem .5rem 2.5rem}.d-name{font-size:1.25rem}.q-head{gap:.4rem}.toast{left:1rem;right:1rem;transform:translateY(80px);width:auto}.toast.show{transform:translateY(0)}
   }
+  /* ═══════════ Avatar-modal (AI-generera / uppdatera / ladda upp / ta bort) ═══════════ */
+  .d-portrait{ cursor: pointer; position: relative; }
+  .d-portrait::after{ content:'🎨'; position: absolute; right: -2px; bottom: -2px; font-size: 1rem; background: rgba(6,3,10,.85); border: 1px solid var(--gold); border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .2s; }
+  .d-portrait:hover::after{ opacity: 1; }
+  .d-portrait img{ width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+  .d-portrait .d-ph-hint{ position: absolute; inset: auto 0 0 0; padding: 3px 0; text-align: center; font-family:'Cinzel',serif; font-size:.52rem; letter-spacing:.14em; text-transform:uppercase; background: rgba(6,3,10,.82); color: var(--gold-bright); transform: translateY(100%); transition: transform .25s; border-radius: 0 0 50% 50%; }
+  .d-portrait:hover .d-ph-hint{ transform: translateY(0); }
+  .mi-overlay{ position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(4,2,8,.85); opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility .25s; }
+  .mi-overlay.show{ opacity: 1; visibility: visible; }
+  .mi-modal{ width: min(420px, 100%); max-height: 86vh; overflow-y: auto; background: linear-gradient(165deg, var(--stone-2), var(--stone)); border: 1px solid var(--gold); box-shadow: 0 0 40px rgba(201,162,39,.22), 0 24px 60px rgba(0,0,0,.7); padding: 1.3rem 1.4rem 1.5rem; }
+  .mi-head{ display: flex; align-items: center; justify-content: space-between; font-family: 'Cinzel', serif; font-size: .75rem; letter-spacing: .12em; color: var(--gold-bright); text-transform: uppercase; padding-bottom: .8rem; border-bottom: 1px solid var(--edge); margin-bottom: .9rem; }
+  .mi-close{ background: none; border: 1px solid var(--edge); color: var(--bone-dim); font-size: .85rem; padding: .3rem .55rem; cursor: pointer; }
+  .mi-close:hover{ border-color: var(--gold); color: var(--gold-bright); }
+  .mi-intro{ font-size: .85rem; color: var(--bone); line-height: 1.6; margin-bottom: .4rem; }
+  .av-btn{ display: flex; align-items: center; justify-content: center; gap: .5rem; width: 100%; padding: .8rem 1rem; font-family: 'Cinzel', serif; font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; background: linear-gradient(180deg, var(--stone-3), var(--stone)); border: 1px solid var(--edge); color: var(--bone-bright); cursor: pointer; transition: all .2s; }
+  .av-btn:hover{ border-color: var(--gold); color: var(--gold-bright); }
+  .av-btn.primary{ background: linear-gradient(180deg, var(--gold-bright), var(--gold) 55%, #8a6d14); color: #1a1206; border-color: #6e5510; }
+  .av-btn.primary:hover{ filter: brightness(1.1); }
+  .av-btn.danger{ color: var(--blood-bright); border-color: rgba(212,58,77,.4); }
+  .av-btn.danger:hover{ border-color: var(--blood-bright); }
+  .av-btn:disabled{ opacity: .5; cursor: wait; }
+  .av-lightbox{ position: fixed; inset: 0; z-index: 11000; display: flex; align-items: center; justify-content: center; background: rgba(2,1,5,.92); opacity: 0; visibility: hidden; transition: opacity .22s ease, visibility .22s; }
+  .av-lightbox.show{ opacity: 1; visibility: visible; }
+  .av-lightbox img{ max-width: min(90vw, 720px); max-height: 85vh; border: 2px solid var(--gold); box-shadow: 0 0 60px rgba(201,162,39,.25), 0 24px 60px rgba(0,0,0,.8); }
+  .av-lightbox .av-lb-close{ position: fixed; top: 1.2rem; right: 1.4rem; font-family: 'Cinzel', serif; font-size: .8rem; color: var(--gold-bright); background: none; border: 1px solid var(--edge); padding: .5rem .7rem; cursor: pointer; }
+  .av-lightbox .av-lb-title{ position: fixed; bottom: 1.2rem; left: 50%; transform: translateX(-50%); font-family: 'Cinzel', serif; font-size: .7rem; letter-spacing: .18em; text-transform: uppercase; color: var(--bone-dim); white-space: nowrap; }
 </style>
-<link rel="stylesheet" href="snes.css?v=9">
-<script src="sprites.js?v=20260801d"></script>
-<script src="fonts.js?v=20260801d"></script>
+<link rel="stylesheet" href="snes.css?v=10">
+<script src="sprites.js?v=20260802a"></script>
+<script src="fonts.js?v=20260802c"></script>
+<script src="themes.js?v=20260802c"></script>
 </head>
 <body>
 <div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
 
 <header class="topbar">
-  <span class="brand">🐉 A Swedish D&amp;D Adventure</span>
+  <span class="brand">The Lore Weaver's Cauldron</span>
   <span class="page-tag">Memory Codex · Known NPCs</span>
   <span class="spacer"></span>
   <a class="top-btn" href="chat.html">⚔ To the Table</a>
@@ -260,9 +110,9 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="sfx.js?v=20260801d"></script>
-<script src="api.js?v=20260801d"></script>
-<script src="i18n.js?v=20260801d"></script>
+<script src="sfx.js?v=20260802a"></script>
+<script src="api.js?v=20260802c"></script>
+<script src="i18n.js?v=20260802b"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -331,6 +181,8 @@ function relatedQuests(n){
       notes: n.notes || '',
     }));
     QUESTS = Array.isArray(raw.quests) ? raw.quests : [];
+    AVATARS = (raw.avatars && typeof raw.avatars === 'object') ? raw.avatars : {};
+    CURRENT_NPC = 0;
     buildFilters();
     renderList();
     if (NPCS.length) selectNpc(0);
@@ -355,7 +207,7 @@ function showNoCampaign(msg){
 
 function showEmptyHall(){
   document.getElementById('npc-list').innerHTML = `
-    <div style="text-align:center;color:var(--bone-dim);font-style:italic;padding:2.5rem 1rem;font-size:.88rem;line-height:1.8">
+    <div style="text-align:center;color:var(--bone-dim);font-style:italic;padding:2.5rem 1rem;font-size:1.01rem;line-height:1.8">
       🕯️<br>No souls met yet — the world awaits…
     </div>`;
   document.getElementById('hall-count').textContent = I18N.t('0 gestalter');
@@ -407,7 +259,7 @@ function renderList(){
         </div>
       </div>
     </div>`;
-  }).join('') || `<div style="text-align:center;color:var(--bone-dim);font-style:italic;padding:2rem 0;font-size:.85rem">${I18N.t('Inga gestalter matchar…')}</div>`;
+  }).join('') || `<div style="text-align:center;color:var(--bone-dim);font-style:italic;padding:2rem 0;font-size:.98rem">${I18N.t('Inga gestalter matchar…')}</div>`;
   document.getElementById('hall-count').textContent = `${NPCS.filter(f.test).length}${I18N.t(' av ')}${NPCS.length} ${I18N.t('gestalter')}`;
 }
 
@@ -434,7 +286,10 @@ function renderDossier(n){
 
   let html = `
     <div class="d-head" style="--dc:${n.color};--dg:${n.glow}">
-      <div class="d-portrait">${n.icon}</div>
+      <div class="d-portrait" onclick="openAvatarModal(${selectedId})" title="Avatar — click to generate / enlarge">
+        ${avatarHtmlFor(n)}
+        <div class="d-ph-hint">🎨 Avatar</div>
+      </div>
       <div>
         <div class="d-name">${esc(n.name)}</div>
         <div class="d-role" style="color:${n.color}">${esc(n.role)}</div>
@@ -464,7 +319,7 @@ function renderDossier(n){
     : [];
   html += sec(s++, '🕯️ What You Know', notes.length
     ? `<ul class="notes-list" style="--dc:${n.color};--dg:${n.glow}">${notes.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`
-    : box(`<p style="font-style:italic;color:var(--bone-dim);font-size:.88rem">Nothing recorded yet. Notes are saved automatically from the chat.</p>`));
+    : box(`<p style="font-style:italic;color:var(--bone-dim);font-size:1.01rem">Nothing recorded yet. Notes are saved automatically from the chat.</p>`));
 
   // Relaterade uppdrag
   const quests = relatedQuests(n);
@@ -505,6 +360,117 @@ async function doLogout() {
 let toastTimer;
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2400);}
 
+// ═══════════════════════════════════════
+// AVATAR-MODAL för NPC (AI-generera / uppdatera / ladda upp / ta bort)
+// ═══════════════════════════════════════
+let AVATARS = {};
+let CURRENT_NPC = 0;
+
+function npcAvatarKey() {
+  const n = NPCS[CURRENT_NPC];
+  return n ? 'npc:' + n.name : null;
+}
+function npcAvatarUrl() {
+  const key = npcAvatarKey();
+  const meta = key && AVATARS[key];
+  if (!meta) return null;
+  return API.avatarUrl(key) + '?t=' + (meta.uploaded || Date.now());
+}
+function avatarHtmlFor(n) {
+  const key = 'npc:' + n.name;
+  const has = !!AVATARS[key];
+  return has
+    ? `<img src="${API.avatarUrl(key)}?t=${AVATARS[key].uploaded || Date.now()}" alt="">`
+    : n.icon;
+}
+
+function openAvatarModal(i) {
+  CURRENT_NPC = i;
+  const n = NPCS[i];
+  if (!n) return;
+  const has = !!npcAvatarUrl();
+  const preview = document.getElementById('avatar-modal-img');
+  preview.innerHTML = has
+    ? `<img src="${npcAvatarUrl()}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+    : SPR.html('🎭');
+  preview.style.cursor = has ? 'pointer' : 'default';
+  document.getElementById('avatar-modal-title').textContent = '🎨 Avatar — ' + n.name;
+  document.getElementById('avatar-modal-desc').textContent = 'Generate an AI portrait of ' + n.name + ' from their role and notes — or upload your own image.';
+  document.getElementById('avatar-del-btn').style.display = has ? '' : 'none';
+  document.getElementById('avatar-update-btn').style.display = has ? '' : 'none';
+  document.getElementById('avatar-ai-btn').disabled = false;
+  document.getElementById('avatar-update-btn').disabled = false;
+  document.getElementById('avatar-ai-status').textContent = '';
+  document.getElementById('avatar-overlay').classList.add('show');
+  try { SFX.click(); } catch (_) {}
+}
+function closeAvatarModal() {
+  document.getElementById('avatar-overlay').classList.remove('show');
+}
+
+async function _runAvatarGen(mode, statusText, doneText, btnId) {
+  const key = npcAvatarKey();
+  if (!key) return;
+  const status = document.getElementById('avatar-ai-status');
+  const btn = document.getElementById(btnId);
+  status.textContent = statusText;
+  btn.disabled = true;
+  try {
+    const res = await API.generateAvatar(key, Date.now() % 1000000, mode);
+    if (res && res.ok) {
+      AVATARS[key] = { disk_name: 'avatar.png', uploaded: new Date().toISOString(), ai_generated: true, seed: res.seed };
+      renderDossier(NPCS[CURRENT_NPC]);
+      openAvatarModal(CURRENT_NPC);
+      status.textContent = doneText;
+      try { SFX.levelup(); } catch (_) {}
+    } else {
+      status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Failed');
+      try { SFX.error(); } catch (_) {}
+    }
+  } catch (e) {
+    status.textContent = '⚠ ' + (e.message || 'Failed');
+    try { SFX.error(); } catch (_) {}
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function generateAvatarAction() {
+  await _runAvatarGen('new', '🎨 The artist is painting… (10–30 s)', '✨ New avatar painted!', 'avatar-ai-btn');
+}
+async function updateAvatarAction() {
+  await _runAvatarGen('edit', '🔄 Updating from the dossier… (10–30 s)', '✨ Avatar updated!', 'avatar-update-btn');
+}
+
+async function deleteAvatarAction() {
+  const key = npcAvatarKey();
+  try {
+    await API.deleteAvatar(key);
+    delete AVATARS[key];
+    renderDossier(NPCS[CURRENT_NPC]);
+    closeAvatarModal();
+    toast('🗑 Avatar removed');
+  } catch (e) {
+    toast('⚠ ' + (e.message || 'Kunde inte ta bort avataren'));
+  }
+}
+
+// Större förhandsvisning (lightbox)
+function openAvatarLightbox() {
+  const src = npcAvatarUrl();
+  if (!src) return;
+  document.getElementById('avatar-lightbox-img').src = src;
+  document.getElementById('avatar-lightbox-title').textContent = document.getElementById('avatar-modal-title').textContent;
+  document.getElementById('avatar-lightbox').classList.add('show');
+  try { SFX.click(); } catch (_) {}
+}
+function closeAvatarLightbox() {
+  document.getElementById('avatar-lightbox').classList.remove('show');
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeAvatarModal(); closeAvatarLightbox(); }
+});
+
 const canvas=document.getElementById('embers'),ctx=canvas.getContext('2d');
 let W,H,embers=[];
 function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight;}
@@ -514,6 +480,58 @@ for(let i=0;i<34;i++)embers.push(spawn(true));
 function tick(){ctx.clearRect(0,0,W,H);for(let i=0;i<embers.length;i++){const e=embers[i];e.life++;e.y-=e.vy;e.x+=e.vx+Math.sin(e.life*.02)*.12;const fade=Math.min(1,e.life/60)*Math.max(0,1-e.life/e.max);const fl=.5+Math.sin(e.life*.15+i)*.35;ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fillStyle=`hsla(${e.hue},90%,60%,${.4*fade*fl})`;ctx.shadowColor=`hsla(${e.hue},90%,55%,${.6*fade})`;ctx.shadowBlur=6;ctx.fill();if(e.life>e.max||e.y<-12)embers[i]=spawn(false);}requestAnimationFrame(tick);}
 tick();
 </script>
-<script src="embed.js?v=20260801e"></script>
+<script src="embed.js?v=20260802a"></script>
+
+<input type="file" id="npc-avatar-input" accept="image/*" style="display:none">
+
+<!-- 🎨 Avatar-modal (AI-generera / uppdatera / ladda upp / ta bort) -->
+<div class="mi-overlay" id="avatar-overlay" onclick="if(event.target===this)closeAvatarModal()">
+  <div class="mi-modal">
+    <div class="mi-head">
+      <span id="avatar-modal-title">🎨 Avatar</span>
+      <button class="mi-close" onclick="closeAvatarModal()">✕</button>
+    </div>
+    <div style="text-align:center;margin:0 0 1rem">
+      <div id="avatar-modal-img" onclick="openAvatarLightbox()" style="width:112px;height:112px;border-radius:50%;margin:0 auto;border:2px solid var(--gold);overflow:hidden;background:var(--stone-3);display:flex;align-items:center;justify-content:center;font-size:2.4rem;box-shadow:0 0 22px -4px rgba(201,162,39,.45);cursor:pointer" title="Click for larger view"></div>
+      <div style="font-size:.62rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem">click to enlarge</div>
+    </div>
+    <div class="mi-intro" id="avatar-modal-desc">Generate an AI portrait from the NPC's role and notes — or upload your own image.</div>
+    <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
+      <button class="av-btn primary" id="avatar-ai-btn" onclick="generateAvatarAction()">🎨 Generate with AI</button>
+      <button class="av-btn" id="avatar-update-btn" onclick="updateAvatarAction()" style="display:none">🔄 Update from dossier</button>
+      <button class="av-btn" onclick="document.getElementById('npc-avatar-input').click()">📁 Upload image…</button>
+      <button class="av-btn danger" id="avatar-del-btn" onclick="deleteAvatarAction()" style="display:none">🗑 Remove avatar</button>
+    </div>
+    <div id="avatar-ai-status" style="font-size:.75rem;color:var(--bone-dim);text-align:center;margin-top:.8rem;min-height:1rem"></div>
+  </div>
+</div>
+
+<!-- 🔍 Avatar-lightbox — större förhandsvisning -->
+<div class="av-lightbox" id="avatar-lightbox" onclick="if(event.target===this)closeAvatarLightbox()">
+  <img id="avatar-lightbox-img" alt="Avatar">
+  <button class="av-lb-close" onclick="closeAvatarLightbox()">✕</button>
+  <div class="av-lb-title" id="avatar-lightbox-title"></div>
+</div>
+<script>
+document.getElementById('npc-avatar-input').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  const key = npcAvatarKey();
+  if (!file || !key) return;
+  try {
+    const res = await API.uploadAvatar(key, file);
+    if (res && res.ok) {
+      AVATARS[key] = { disk_name: 'avatar.png', uploaded: new Date().toISOString(), ai_generated: false };
+      renderDossier(NPCS[CURRENT_NPC]);
+      openAvatarModal(CURRENT_NPC);
+      toast('🖼 Avatar saved');
+    } else {
+      toast('⚠ ' + (res && res.detail ? res.detail : 'Upload misslyckades'));
+    }
+  } catch (err) {
+    toast('⚠ ' + (err.message || 'Upload misslyckades'));
+  }
+});
+</script>
 </body>
 </html>

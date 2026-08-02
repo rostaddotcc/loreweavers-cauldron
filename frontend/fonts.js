@@ -74,12 +74,18 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.textContent = cur.name;
     btn.title = 'Font: ' + cur.name + ' (click to switch)';
     btn.onclick = fontToggleBtn;
-    // Insert before the last element (usually the Leave/exit button) if present, otherwise last
-    const last = bar.lastElementChild;
-    if (last && (last.classList.contains('danger') || /lämna|leave|exit/i.test(last.textContent))) {
-      bar.insertBefore(btn, last);
+    // Insert before the settings gear (⚙️) so the gear stays rightmost, next to font
+    const gear = Array.from(bar.querySelectorAll('.icon-btn')).find(b => b.onclick && /toggleSettingsMenu/.test(String(b.onclick)));
+    if (gear) {
+      bar.insertBefore(btn, gear.parentElement || gear);
     } else {
-      bar.appendChild(btn);
+      // Fallback: before the last element (usually the Leave/exit button), otherwise last
+      const last = bar.lastElementChild;
+      if (last && (last.classList.contains('danger') || /lämna|leave|exit/i.test(last.textContent))) {
+        bar.insertBefore(btn, last);
+      } else {
+        bar.appendChild(btn);
+      }
     }
   }
 });

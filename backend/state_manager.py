@@ -1,5 +1,5 @@
 """
-Mörkrets Rike — Campaign State Manager
+The Lore Weaver's Cauldron — Campaign State Manager
 ========================================
 JSON-filer under data/campaigns/{user}/{campaign_id}/.
 Varje kampanj: state.json + transcripts/ + summaries/.
@@ -28,7 +28,7 @@ def _default_state(campaign_id: str, user: str) -> dict:
     return {
         "meta": {
             "campaign_id": campaign_id,
-            "campaign_name": "Ett svenskt D&D-äventyr",
+            "campaign_name": "The Lore Weaver's Cauldron",
             "user": user,
             "created": _now(),
             "last_updated": _now(),

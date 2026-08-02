@@ -1,5 +1,5 @@
 """
-Mörkrets Rike — Auth helpers
+The Lore Weaver's Cauldron — Auth helpers
 =============================
 JWT + bcrypt mot data/users.json.
 """

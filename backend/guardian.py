@@ -1,5 +1,5 @@
 """
-Guardian — Mörkrets Rikes mekaniska väktare
+Guardian — The Lore Weaver's Cauldron's mekaniska väktare
 ============================================
 Avlastar DM från all mekanisk bokhållning. Två lägen:
 
@@ -28,6 +28,8 @@ import random
 import re
 from typing import Callable, Coroutine
 from urllib.parse import quote
+
+from locations import clean_location_name, place_location, find_location, locations_match
 
 # ── Tärningstärningar (Hit Dice, 5e) — storlek per klass ──
 _HIT_DIE_BY_CLASS = {
@@ -331,7 +333,7 @@ async def guardian_check_roll(
 # ═══════════════════════════════════════
 
 GUARDIAN_POST_SYSTEM = """\
-Du är den mekaniska väktaren för ett svenskt D&D 5e-rollspel.
+Du är den mekaniska väktaren för The Lore Weaver's Cauldron, ett D&D 5e-rollspel.
 Läs DM-svaret, spelarens handling och den senaste konversationshistoriken. \
 Extrahera ALLA mekaniska effekter och uppdateringar.
 
@@ -398,6 +400,11 @@ Extrahera ALLA mekaniska effekter och uppdateringar.
 ### Värld & Tid
 - locations_new: Nya platser som nämns eller upptäcks. Ange objekt: {"name": "...", "description": "kort beskrivning av platsen", "lore": "1-2 meningar stämningsfull historia om platsen — varför den finns, vad som hänt där", "terrain": "skog|stad|berg|hav|grotta|öken|ruin|träsk|slätt|flod"}.
   VARJE ny plats MÅSTE ha description och lore — aldrig bara namnet. Exempel: {"name":"Gråporten","description":"En mossbelupen stenport i den norra muren","lore":"Byggd av de förlorade kungarna för att hålla något ute — ingen minns vad.","terrain":"ruin"}.
+- current_location: Sällskapets NYA nuvarande plats — ENDAST om de faktiskt RÖR SIG dit i denna narration (reser, anländer, går in i en byggnad/plats). Ange platsens namn.
+  Sätt INTE om: de bara nämner, planerar eller diskuterar en resa; de är kvar på samma plats. Om DM redan skrev [PLATS:namn] → ange samma namn (verifiering) eller null.
+  Kontrollera "Location"/"Plats" i tillståndet — om den redan matchar den plats de är på, sätt null.
+- world_lore: Varaktiga världsförändringar — konsekvenser av spelarens handlingar, rykten som sprids, platser som förändras, maktförskjutningar. Ange array av korta meningar (1 per förändring).
+  ENDAST saker som faktiskt hänt och som världen minns — inte stämning, inte löften. Om inget → tom array.
 - time_passed: Tid som förflyter. Ange hours och description.
 - rest: Om spelaren vilar. Ange kind ("short" eller "long").
 - new_day: Om en ny dag börjar. Ange description.
@@ -406,16 +413,19 @@ Extrahera ALLA mekaniska effekter och uppdateringar.
 - combat_start: Om en strid BÖRJAR i denna narration. Ange enemies: [{"name": "...", "hp": N, "ac": N, "max_hp": N}].
 - combat_round: Om DM:n anger en ny runda ("Runda 2", "Next round"), sätt rundnumret (heltal).
 - player_attacks: Spelarens attacker som DM narrerar. Ange: [{"target": "fiendnamn", "hit": true/false, "damage": N, "damage_type": "slashing", "crit": false}]. Extrahera ENDAST om DM explicit beskriver att spelaren träffar/missar och anger skada.
-- enemy_attacks: Fiendernas attacker som DM narrerar. Ange: [{"attacker": "fiendnamn", "hit": true/false, "damage": N, "damage_type": "piercing", "roll": N}]. DM anger slag och skada i narrationen — extrahera dem.
+- enemy_attacks: Fiendernas attacker i denna tur. Ange ENDAST attackeraren (+ valfri damage_type om DM nämner vapen): [{"attacker": "goblin", "damage_type": "piercing"}]. KODEN rullar tärningen (d20 + attack_bonus mot spelarens AC) och skadan — fyll INTE i hit/damage/roll själv. Om DM:narrationen säger att fienden träffar/missar, ignorera det — koden bestämmer utfallet.
 - combat_events: Övriga stridshändelser (flykt, status, förstärkningar, rundsammanfattning). Ange: ["Goblin flyr", "Runda 2 börjar"]. Skriv korta, informativa rader som fungerar som en stridslogg — spelaren ser dem i chatten.
 - combat_end: Om striden SLUTAR (alla fiender döda/flydde eller spelaren flydde). Ange {"reason": "..."}.
 
 ### Tärningsresurser (roll_grants)
-- roll_grants: Om DM ger spelaren en mekanisk fördel som innebär ett framtida tärningskast \
+- roll_grants: Om DM ger spelaren en NY mekanisk fördel som innebär ett framtida tärningskast \
   (Bardic Inspiration, Second Wind, Bless, Guidance, Heroism, spell slot-dice, etc.). \
   Ange notation (t.ex. "1d6", "1d8+2"), label (kort namn), och reason (varför). \
   Exempel: DM säger "du får Bardic Inspiration" → {"notation": "1d6", "label": "Bardic Inspiration", "reason": "DM gav inspiration"}. \
   Om DM ger en buff utan tärning (t.ex. "du känner dig starkare") → tom array.
+  VIKTIGT: Ge ALDRIG roll_grants för föremål som redan är konsumerade/använda (t.ex. en healing potion \
+  som redan druckits) eller för resurser som nämns i minne/tillbakablick — bara för NYA fördelar som DM \
+  ger i DENNA narration. Kontrollera state "Inventory" — om föremålet inte finns där, ge tom array.
 
 ### Loggbok
 - logbook: En kort sammanfattning av vad som hände denna tur (max 2 meningar). \
@@ -498,6 +508,8 @@ Skriv i dåtid, tredje person. T.ex. "Faelyndra smög förbi vakten och tog sig 
   "npc_name_reveals": [{"old_name": "okänd", "new_name": "...", "reveal_text": "..."}],
   "character_updates": [{"field": "trait", "text": "..."}],
   "locations_new": [],
+  "current_location": null,
+  "world_lore": [],
   "time_passed": null,
   "rest": null,
   "new_day": null,
@@ -724,12 +736,12 @@ async def guardian_extract_mechanics(
         "quests_new": [], "quests_completed": [], "quests_failed": [],
         "npcs_new": [], "npc_relations": [], "npc_notes": [],
         "npc_name_reveals": [], "character_updates": [],
-        "locations_new": [], "time_passed": None, "rest": None,
+        "locations_new": [], "current_location": None, "world_lore": [], "time_passed": None, "rest": None,
         "new_day": None, "day_summary": None, "logbook": "",
         "combat_start": None, "combat_round": None,
         "initiative_entries": [], "combat_end": None,
         "player_attacks": [], "enemy_attacks": [], "combat_events": [],
-        "enemy_actions": [], "status_apply": [],
+        "enemy_actions": [], "status_apply": [], "roll_grants": [], "corrections": [],
     }
 
     for attempt in range(2):
@@ -769,7 +781,8 @@ async def guardian_extract_mechanics(
             ("damage", "healing", "death", "items_add", "items_remove",
              "currency", "quests_new", "quests_completed", "quests_failed",
              "npcs_new", "npc_relations", "npc_notes", "locations_new")
-        ) + (1 if result.get("xp") else 0) + (1 if result.get("rest") else 0)
+        ) + (1 if result.get("xp") else 0) + (1 if result.get("rest") else 0) \
+          + (1 if result.get("current_location") else 0)
 
         logger.info(
             "🛡️ Guardian post-DM (tur %d): %d mekaniska ändringar (försök %d)",
@@ -800,7 +813,12 @@ _HD_BY_CLASS = {
 def _combat_tag(combat: dict) -> str:
     """Maskinläsbar [COMBAT:<urlencoded-json>]-tagg för frontendens Krigsråd."""
     try:
-        return f"[COMBAT:{quote(json.dumps(combat, ensure_ascii=False), safe='')}]"
+        # Trimma loggen till senaste 20 poster (hela strider → enorm JSON annars)
+        tag_data = dict(combat)
+        log = tag_data.get("log")
+        if isinstance(log, list) and len(log) > 20:
+            tag_data["log"] = log[-20:]
+        return f"[COMBAT:{quote(json.dumps(tag_data, ensure_ascii=False), safe='')}]"
     except Exception:
         return ""
 
@@ -1168,6 +1186,14 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             existing["qty"] = existing.get("qty", 1) - qty
             if existing["qty"] <= 0:
                 inv.remove(existing)
+                # Om ett roll_grant-föremål förbrukas (t.ex. Healing Potion) —
+                # ta bort matchande resurs ur state.resources så den inte
+                # loopar som "Roll 🎲" / ny roll_grant i framtida turer.
+                res = state.get("resources", [])
+                kept = [r for r in res if (r.get("label") or "").strip().lower() != name.lower()]
+                if len(kept) != len(res):
+                    state["resources"] = kept
+                    logger.info("🛡️ Removed resource '%s' (item consumed)", name)
                 logger.info("🛡️ Guardian: removed '%s'", name)
             else:
                 logger.info("🛡️ Guardian: reduced '%s' → qty=%d", name, existing["qty"])
@@ -1404,12 +1430,21 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             loc = {"name": loc}
         if not isinstance(loc, dict):
             continue
-        name = str(loc.get("name", "") or "").strip()
+        name = clean_location_name(str(loc.get("name", "") or ""))
         if not name:
             continue
+        # Dedup (2026-08-02): återanvänd kanoniskt namn om en nära-duplikat
+        # redan finns i locations[] — annars växer kartan med dubbel-platser.
+        loc_idx, loc_existing = find_location(locations, name)
+        if loc_existing:
+            name = loc_existing["name"]
         visited = world.setdefault("visited_locations", [])
+        # Normalisera befintliga dict-poster → strängar (konsistens med
+        # [PLATS:]-taggen; dicts i visited_locations bröt kartans visited-flagga)
+        if any(isinstance(v, dict) for v in visited):
+            visited[:] = [v.get("name", "") if isinstance(v, dict) else v for v in visited if (v.get("name", "") if isinstance(v, dict) else v)]
         exists = any(
-            (v.get("name", "") if isinstance(v, dict) else str(v)).lower() == name.lower()
+            locations_match(str(v), name)
             for v in visited
         )
         if not exists:
@@ -1421,16 +1456,68 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 "turn": state.get("meta", {}).get("turn_count", 0),
                 "visited": True,
             }
-            visited.append(loc_obj)
+            visited.append(name)  # sträng — kartan kollar visited_names
             # Synka till state["locations"] (kartan + DM-prompten läser härifrån)
-            loc_exists = any(
-                (l.get("name", "") if isinstance(l, dict) else str(l)).lower() == name.lower()
-                for l in locations
-            )
-            if not loc_exists:
+            if loc_idx is None:
                 locations.append(loc_obj)
             effects.append({"type": "plats", "value": name})
             logger.info("🛡️ Guardian: ny plats '%s' (%s)", name, loc_obj["terrain"])
+
+    # ── Nuvarande position (flytt) — DM kan uppdatera via [PLATS:]-taggen;
+    # Guardian verifierar/detekterar och patchar annars (post-DM).
+    # Dedup: om DM-taggen redan satte samma plats denna tur → ingen ändring.
+    new_pos = mech.get("current_location")
+    if new_pos and isinstance(new_pos, str):
+        new_pos = clean_location_name(new_pos)
+        old_pos = world.get("current_location", "")
+        # Dedup: återanvänd kanoniskt namn om nära-duplikat finns i locations[]
+        _pi, _pe = find_location(state.setdefault("locations", []), new_pos)
+        if _pe:
+            new_pos = _pe["name"]
+        tag_applied = any(
+            k[0] == "plats" and locations_match(str(k[1]), new_pos)
+            for k in _skip_keys
+        )
+        if old_pos == new_pos or tag_applied:
+            # DM gjorde rätt / DM-taggen applicerade redan — verifiera bara
+            logger.info("🛡️ Guardian: position verifierad '%s' (oförändrad)", new_pos)
+        else:
+            if old_pos and old_pos != new_pos:
+                world.setdefault("travel_log", []).append(
+                    {"from": old_pos, "to": new_pos, "day": world.get("day", 1)}
+                )
+                logger.info("🛡️ Guardian: resa %s → %s (dag %d)", old_pos, new_pos, world.get("day", 1))
+            world["current_location"] = new_pos
+            visited = world.setdefault("visited_locations", [])
+            # Normalisera befintliga dict-poster → strängar (konsistens med
+            # [PLATS:]-taggen; dicts i visited_locations bröt kartans visited-flagga)
+            if any(isinstance(v, dict) for v in visited):
+                visited[:] = [v.get("name", "") if isinstance(v, dict) else v
+                              for v in visited
+                              if (v.get("name", "") if isinstance(v, dict) else v)]
+            if new_pos not in visited:
+                visited.append(new_pos)
+            # Synka state["locations"] så kartan har koordinater + rätt current
+            locations = state.setdefault("locations", [])
+            if _pi is None:
+                placed = place_location(new_pos, state.get("meta", {}).get("campaign_id", ""))
+                locations.append({
+                    "name": new_pos, "description": "", "terrain": placed["terrain"],
+                    "x": placed["x"], "y": placed["y"], "visited": True,
+                })
+            effects.append({"type": "flytt", "value": new_pos})
+            logger.info("🛡️ Guardian: position → '%s'", new_pos)
+
+    # ── Världslore — varaktiga förändringar (stat.lore läses av DM-prompten) ──
+    for lore_text in mech.get("world_lore", []):
+        if not isinstance(lore_text, str) or not lore_text.strip():
+            continue
+        lore = state.setdefault("lore", [])
+        t = lore_text.strip()
+        if t not in lore:
+            lore.append(t)
+            effects.append({"type": "konsekvens", "value": t})
+            logger.info("🛡️ Guardian: lore → %s", t[:80])
 
     # ── Tid ──
     tp = mech.get("time_passed")
@@ -1518,7 +1605,8 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 continue
             hp = _safe_int(e.get("hp"), 1)
             ac = _safe_int(e.get("ac"), 10)
-            enemies.append({"id": i, "name": name, "hp": hp, "max_hp": hp, "ac": ac, "alive": True, "statuses": []})
+            max_hp = _safe_int(e.get("max_hp"), hp)
+            enemies.append({"id": i, "name": name, "hp": hp, "max_hp": max_hp, "ac": ac, "alive": True, "statuses": []})
             names.append(name)
         if enemies:
             world["combat"] = {
@@ -1597,32 +1685,87 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             else:
                 combat_log.append({"round": current_round, "actor": "player", "name": ch.get("name", "Spelaren"), "text": f"missar {enemy['name']}"})
 
-        # Fiendernas attacker → minska spelar-HP
+        # Fiendernas attacker → KODEN rullar tärningarna (transparens — inte DM-fusk)
+        # Guardian extraherar bara attackeraren; d20 + attack_bonus mot spelarens
+        # AC och skade-tärningarna rullas här, precis som spelarens egna kast.
         hp = ch.setdefault("hp", {"current": 1, "max": 1, "temp": 0})
+        player_ac = int(ch.get("ac", 10))
         for atk in mech.get("enemy_attacks", []):
             attacker_name = str(atk.get("attacker", "")).strip()
             if not attacker_name:
                 continue
-            if atk.get("hit"):
-                dmg = max(0, int(atk.get("damage", 0)))
-                if dmg > 0:
-                    # P0-dedup: [SKADA:]-taggen applicerade redan samma skada
-                    if ("skada", str(dmg)) in _skip_keys:
-                        continue
-                    # Temp HP absorberar först
-                    temp = hp.get("temp", 0)
-                    if temp > 0:
-                        absorbed = min(temp, dmg)
-                        hp["temp"] = temp - absorbed
-                        dmg -= absorbed
-                    hp["current"] = max(0, hp.get("current", 1) - dmg)
-                    roll_str = f" (slag {atk.get('roll', '?')})" if atk.get("roll") else ""
-                    combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"träffar dig — {dmg} skada ({atk.get('damage_type', 'okänd')}){roll_str}"})
-                    effects.append({"type": "skada", "value": dmg})
-                    logger.info("⚔️ Enemy attack: %s → spelaren, %d skada → HP %d/%d", attacker_name, dmg, hp["current"], hp["max"])
+            enemy = next(
+                (e for e in combat.get("enemies", [])
+                 if e.get("name", "").lower() == attacker_name.lower() and e.get("alive", True)),
+                None,
+            )
+            # Fiendens stats från combat (fallback: attackeraren finns inte i listan → använd DM:s angivna hit/damage om de finns)
+            if enemy is not None:
+                from combat import roll_d20, roll_dice as _roll_dice
+
+                d20 = roll_d20()
+                attack_bonus = int(enemy.get("attack_bonus", 3))
+                total = d20 + attack_bonus
+                crit = d20 == 20
+                fumble = d20 == 1
+                if fumble:
+                    combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"missar dig (nat 1!)"})
+                    effects.append({"type": "enemy_miss", "value": attacker_name, "roll": total, "d20": d20, "bonus": attack_bonus})
+                    continue
+                if total < player_ac and not crit:
+                    combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"missar dig (🎲 d20={d20}+{attack_bonus}={total} mot AC {player_ac})"})
+                    effects.append({"type": "enemy_miss", "value": attacker_name, "roll": total, "d20": d20, "bonus": attack_bonus})
+                    continue
+                # Träff → rulla skadan (fiendens damage_dice, fallback 1d6+1)
+                dmg_notation = enemy.get("damage_dice", "1d6+1")
+                dmg, rolls = _roll_dice(dmg_notation)
+                if crit:
+                    dmg2, rolls2 = _roll_dice(dmg_notation)
+                    dmg += dmg2
+                    rolls += rolls2
+                dmg = max(1, dmg)
+                # P0-dedup: [SKADA:]-taggen applicerade redan samma skada
+                if ("skada", str(dmg)) in _skip_keys:
+                    continue
+                temp = hp.get("temp", 0)
+                if temp > 0:
+                    absorbed = min(temp, dmg)
+                    hp["temp"] = temp - absorbed
+                    dmg -= absorbed
+                hp["current"] = max(0, hp.get("current", 1) - dmg)
+                crit_str = " 💥 KRITISK!" if crit else ""
+                dmg_type = atk.get("damage_type") or enemy.get("damage_type", "okänd")
+                combat_log.append({
+                    "round": current_round, "actor": "enemy", "name": attacker_name,
+                    "text": f"träffar dig — {dmg} skada ({dmg_type}){crit_str} (🎲 d20={d20}+{attack_bonus}={total} · {dmg_notation}: [{', '.join(str(x) for x in rolls)}]={dmg})",
+                })
+                effects.append({
+                    "type": "enemy_hit", "value": attacker_name, "damage": dmg, "crit": crit,
+                    "roll": total, "d20": d20, "bonus": attack_bonus,
+                    "damage_dice": dmg_notation, "damage_rolls": rolls,
+                })
+                logger.info("⚔️ Enemy attack: %s → spelaren, %d skada (d20=%d) → HP %d/%d", attacker_name, dmg, d20, hp["current"], hp["max"])
             else:
-                roll_str = f" (slag {atk.get('roll', '?')})" if atk.get("roll") else ""
-                combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"missar dig{roll_str}"})
+                # Fienden finns inte i combat-listan (t.ex. narrativ attack utanför strid) —
+                # fallback till DM:s angivna utfall (gamla beteendet)
+                if atk.get("hit"):
+                    dmg = max(0, int(atk.get("damage", 0)))
+                    if dmg > 0:
+                        if ("skada", str(dmg)) in _skip_keys:
+                            continue
+                        temp = hp.get("temp", 0)
+                        if temp > 0:
+                            absorbed = min(temp, dmg)
+                            hp["temp"] = temp - absorbed
+                            dmg -= absorbed
+                        hp["current"] = max(0, hp.get("current", 1) - dmg)
+                        roll_str = f" (slag {atk.get('roll', '?')})" if atk.get("roll") else ""
+                        combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"träffar dig — {dmg} skada ({atk.get('damage_type', 'okänd')}){roll_str}"})
+                        effects.append({"type": "skada", "value": dmg})
+                        logger.info("⚔️ Enemy attack (narrativ): %s → spelaren, %d skada → HP %d/%d", attacker_name, dmg, hp["current"], hp["max"])
+                else:
+                    roll_str = f" (slag {atk.get('roll', '?')})" if atk.get("roll") else ""
+                    combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"missar dig{roll_str}"})
 
         # Combat events → logga
         for event in mech.get("combat_events", []):
@@ -1656,7 +1799,14 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
     # ── Loggbok ──
     logbook = mech.get("logbook", "")
     if logbook:
-        world.setdefault("logbook", []).append({
+        # Shape-guard: world.logbook är Guardian-listan {day, turn, text}. Om
+        # något (gammal dag-entry-kod) skrivit ett dict här → skippa istället
+        # för att krascha hela appliceringen (audit 2026-08-02).
+        _lb = world.get("logbook")
+        if not isinstance(_lb, list):
+            _lb = []
+            world["logbook"] = _lb
+        _lb.append({
             "day": world.get("day", 1),
             "turn": state.get("meta", {}).get("turn_count", 0),
             "text": logbook,
@@ -1678,6 +1828,13 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             "turn": state.get("meta", {}).get("turn_count", 0),
         })
         effects.append({"type": "roll_grant", "value": label or notation, "notation": notation})
+        # Gör kastet VÄNTANDE via samma mekanism som DM:s [KAST:]-taggar —
+        # läggs i meta.last_roll_requests så en refresh återställer knappen.
+        # Rensas automatiskt när spelaren svarar med [Resultat:…].
+        lr = state.setdefault("meta", {}).setdefault("last_roll_requests", [])
+        lr_label = label or notation
+        if not any(r.get("notation") == notation and r.get("label") == lr_label for r in lr):
+            lr.append({"notation": notation, "label": lr_label})
         logger.info("🛡️ Guardian: roll_grant %s (%s)", notation, label)
 
     # ── Korrigeringar ──
@@ -1789,6 +1946,7 @@ def _sanitize_mechanics(mech: dict) -> dict:
     for key in ("damage", "healing", "death", "items_add", "items_remove",
                 "currency", "quests_new", "quests_completed", "quests_failed",
                 "npcs_new", "npc_relations", "npc_notes", "locations_new",
+                "world_lore", "roll_grants", "corrections",
                 "initiative_entries", "enemy_actions", "status_apply",
                 "player_attacks", "enemy_attacks", "combat_events"):
         if not isinstance(mech.get(key), list):
@@ -1803,6 +1961,13 @@ def _sanitize_mechanics(mech: dict) -> dict:
     # Loggbok ska vara str
     if not isinstance(mech.get("logbook"), str):
         mech["logbook"] = ""
+
+    # current_location: str (renad) eller None
+    _cl = mech.get("current_location")
+    if _cl is None or not isinstance(_cl, str) or not _cl.strip():
+        mech["current_location"] = None
+    else:
+        mech["current_location"] = clean_location_name(_cl)
 
     # Stridsfält: combat_start/combat_end ska vara dict eller null,
     # combat_round ska vara int eller null
@@ -2043,13 +2208,14 @@ def apply_enemy_actions(state: dict, actions: list[dict]) -> list[dict]:
                     "name": enemy["name"],
                     "text": f"missar {player_name} (nat 1!)",
                 })
-                effects.append({"type": "enemy_miss", "value": enemy["name"], "roll": total})
+                effects.append({"type": "enemy_miss", "value": enemy["name"], "roll": total, "d20": d20, "bonus": attack_bonus})
             elif hit:
                 dmg_notation = action.get("damage_dice", enemy.get("damage_dice", "1d6+1"))
                 dmg, rolls = roll_dice(dmg_notation)
                 if crit:
-                    dmg2, _ = roll_dice(dmg_notation)
+                    dmg2, rolls2 = roll_dice(dmg_notation)
                     dmg += dmg2
+                    rolls += rolls2
                 dmg = max(1, dmg)
 
                 hp = char.setdefault("hp", {"current": 1, "max": 1, "temp": 0})
@@ -2073,6 +2239,8 @@ def apply_enemy_actions(state: dict, actions: list[dict]) -> list[dict]:
                 effects.append({
                     "type": "enemy_hit", "value": enemy["name"],
                     "damage": dmg, "crit": crit, "roll": total,
+                    "d20": d20, "bonus": attack_bonus,
+                    "damage_dice": dmg_notation, "damage_rolls": rolls,
                 })
                 logger.info("⚔️ %s → %s: %d skada (AC %d)", enemy["name"], player_name, dmg, player_ac)
             else:
@@ -2081,7 +2249,7 @@ def apply_enemy_actions(state: dict, actions: list[dict]) -> list[dict]:
                     "name": enemy["name"],
                     "text": f"missar {player_name} (slag {total} mot AC {player_ac})",
                 })
-                effects.append({"type": "enemy_miss", "value": enemy["name"], "roll": total})
+                effects.append({"type": "enemy_miss", "value": enemy["name"], "roll": total, "d20": d20, "bonus": attack_bonus})
 
     # Auto-avsluta om alla fiender döda/flydde
     if all(not e.get("alive", True) for e in combat.get("enemies", [])):
@@ -2231,6 +2399,11 @@ def format_guardian_summary(
         elif t == "plats":
             label = "New location:" if en else "Ny plats:"
             lines.append(f"🗺️ **{label}** {v}")
+        elif t == "flytt":
+            if en:
+                lines.append(f"📍 **You are now at:** {v}")
+            else:
+                lines.append(f"📍 **Du är nu i:** {v}")
         elif t == "tid":
             label = "Time:" if en else "Tid:"
             lines.append(f"🕐 **{label}** {v}")

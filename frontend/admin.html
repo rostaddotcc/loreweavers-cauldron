@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📊 Admin · Realm of Darkness</title>
+<title>Admin · The Lore Weaver's Cauldron</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -121,6 +121,11 @@
   .token-num { color: var(--term-green); font-family: monospace; }
   .turn-num { color: var(--term-amber); font-family: monospace; }
   .last-active { color: var(--bone-dim); font-size: 0.68rem; }
+  .player-table th.sortable { cursor: pointer; user-select: none; white-space: nowrap; transition: color .15s; }
+  .player-table th.sortable:hover { color: var(--gold-bright); }
+  .player-table th.sortable .sort-arrow { display: inline-block; margin-left: .25rem; font-size: .6rem; opacity: .18; transition: opacity .15s, color .15s; }
+  .player-table th.sortable.active { color: var(--gold); }
+  .player-table th.sortable.active .sort-arrow { opacity: 1; }
 
   /* ── Turn cap editor ── */
   .cap-cell { white-space: nowrap; }
@@ -161,6 +166,10 @@
   .token-legend .dot { display: inline-block; width: 8px; height: 8px; margin-right: 4px; vertical-align: middle; }
   .token-legend .dot.prompt { background: var(--arcane); }
   .token-legend .dot.completion { background: var(--term-green); }
+  .role-split { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.62rem; color: var(--bone-dim); margin-top: 0.3rem; }
+  .role-split b { color: var(--bone-bright); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .model-split { display: flex; gap: 0.8rem 1.2rem; flex-wrap: wrap; font-size: 0.6rem; color: var(--bone-dim); margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px dashed rgba(139,95,212,0.25); }
+  .model-split b { color: var(--arcane); font-weight: 600; font-variant-numeric: tabular-nums; }
 
   /* Sessions */
   .session-list { margin-top: 0.5rem; }
@@ -223,9 +232,10 @@
     .back-btn { min-height: 44px; display: inline-flex; align-items: center; }
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=9">
-<script src="sprites.js?v=20260801d"></script>
-<script src="fonts.js?v=20260801d"></script>
+<link rel="stylesheet" href="snes.css?v=10">
+<script src="sprites.js?v=20260802a"></script>
+<script src="fonts.js?v=20260802c"></script>
+<script src="themes.js?v=20260802c"></script>
 </head>
 <body>
 <div class="grain"></div>
@@ -234,7 +244,7 @@
 
 <div class="app">
   <header class="masthead">
-    <h1>Admin · Realm of Darkness</h1>
+    <h1>Admin · The Lore Weaver's Cauldron</h1>
     <a href="chat.html" class="back-btn">⚔ To the Table</a>
   </header>
 
@@ -245,9 +255,9 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="sfx.js?v=20260801d"></script>
-<script src="api.js?v=20260801d"></script>
-<script src="i18n.js?v=20260801d"></script>
+<script src="sfx.js?v=20260802a"></script>
+<script src="api.js?v=20260802c"></script>
+<script src="i18n.js?v=20260802b"></script>
 <script>
 // Auth guard
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -340,6 +350,51 @@ async function deleteUser(username) {
   } catch(e) { toast('Error: ' + e.message); }
 }
 
+// ── Tabellsortering (admin-vyn) ──
+let statsData = null;
+let sortKey = 'tokens';
+let sortDir = 'desc';
+
+function _sortVal(u) {
+  switch (sortKey) {
+    case 'username': return (u.username || '').toLowerCase();
+    case 'role': return (u.role || '');
+    case 'campaigns': return u.total_campaigns || 0;
+    case 'tokens': return u.total_tokens || 0;
+    case 'turns': return u.total_turns || 0;
+    case 'last_active': { const t = Date.parse(u.last_active); return isNaN(t) ? 0 : t; }
+    case 'created': { const t = Date.parse(u.created_at); return isNaN(t) ? 0 : t; }
+    case 'last_login': { const t = Date.parse(u.last_login); return isNaN(t) ? 0 : t; }
+    case 'turn_cap': return (u.turn_cap === undefined || u.turn_cap === null) ? 0 : u.turn_cap;
+  }
+  return 0;
+}
+
+function sortUsers(users) {
+  const dir = sortDir === 'asc' ? 1 : -1;
+  return users.slice().sort((a, b) => {
+    const va = _sortVal(a), vb = _sortVal(b);
+    if (typeof va === 'string' && typeof vb === 'string') return va.localeCompare(vb) * dir;
+    return (va - vb) * dir;
+  });
+}
+
+function toggleSort(key) {
+  if (sortKey === key) {
+    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortKey = key;
+    sortDir = 'asc';
+  }
+  if (statsData) renderStats(statsData);
+}
+
+function thSort(label, key) {
+  const active = sortKey === key;
+  const arrow = active ? (sortDir === 'asc' ? '▲' : '▼') : '↕';
+  return `<th class="sortable${active ? ' active' : ''}" onclick="toggleSort('${key}')">${label} <span class="sort-arrow">${arrow}</span></th>`;
+}
+
 async function loadStats() {
   const content = document.getElementById('content');
   content.innerHTML = '<div class="loading">Loading statistics</div>';
@@ -353,6 +408,7 @@ async function loadStats() {
     }
     if (!res.ok) throw new Error('API error: ' + res.status);
     const data = await res.json();
+    statsData = data;
     renderStats(data);
   } catch (e) {
     content.innerHTML = '<div class="error-state"><h2>⚠ Could not fetch statistics</h2><p>' + e.message + '</p></div>';
@@ -361,10 +417,7 @@ async function loadStats() {
 
 function renderStats(data) {
   const content = document.getElementById('content');
-  const users = data.users || [];
-
-  // Sort by total tokens desc
-  users.sort((a, b) => (b.total_tokens || 0) - (a.total_tokens || 0));
+  const users = sortUsers(data.users || []);
 
   let html = `
     <div class="stats-grid">
@@ -390,14 +443,16 @@ function renderStats(data) {
 
   // Desktop table
   html += '<table class="player-table"><thead><tr>';
-  html += '<th>User</th><th>Role</th><th>Campaigns</th><th>Tokens</th><th>Turns</th><th>Last Active</th><th>Created</th><th>Last Login</th><th>Turn Cap</th><th></th>';
+  html += thSort('User', 'username') + thSort('Role', 'role') + thSort('Campaigns', 'campaigns') + thSort('Tokens', 'tokens') + thSort('Turns', 'turns') + thSort('Last Active', 'last_active') + thSort('Created', 'created') + thSort('Last Login', 'last_login') + thSort('Turn Cap', 'turn_cap') + '<th></th>';
   html += '</tr></thead><tbody>';
 
   users.forEach((u, i) => {
     const badge = u.role === 'admin' ? '<span class="admin-badge">ADMIN</span>' : '';
     const capVal = (u.turn_cap === undefined || u.turn_cap === null) ? 0 : u.turn_cap;
+    const flag = u.country_flag || '❓';
+    const flagTitle = u.country ? (u.country + (u.ip ? ' · ' + u.ip : '')) : 'Okänt land';
     html += `<tr class="player-row" id="row-${i}" onclick="toggleDetail(${i}, '${u.username}')">`;
-    html += `<td>${u.username}${badge}</td>`;
+    html += `<td><span title="${flagTitle}">${flag}</span> ${u.username}${badge}</td>`;
     html += `<td>${u.role}</td>`;
     html += `<td>${u.total_campaigns}</td>`;
     html += `<td class="token-num">${fmtTokens(u.total_tokens)}</td>`;
@@ -418,7 +473,7 @@ function renderStats(data) {
     const badge = u.role === 'admin' ? ' <span class="admin-badge">A</span>' : '';
     const capVal = (u.turn_cap === undefined || u.turn_cap === null) ? 0 : u.turn_cap;
     html += `<div class="m-card" onclick="toggleDetail(${i}, '${u.username}')">`;
-    html += `<div class="mc-head"><span class="mc-user">${u.username}${badge}</span><span class="mc-tokens">${fmtTokens(u.total_tokens)} tkn</span></div>`;
+    html += `<div class="mc-head"><span class="mc-user">${u.country_flag || '❓'} ${u.username}${badge}</span><span class="mc-tokens">${fmtTokens(u.total_tokens)} tkn</span></div>`;
     html += `<div class="mc-meta"><span>${u.total_campaigns} campaigns</span><span>${u.total_turns} turns</span><span>${relTime(u.last_active)}</span></div>`;
     html += `<div class="mc-meta"><span>Created ${relTime(u.created_at)}</span><span>Login ${relTime(u.last_login)}</span></div>`;
     html += `<div class="mc-cap" style="display:flex;gap:.4rem;align-items:center;margin-top:.5rem">`;
@@ -479,6 +534,7 @@ function renderDetail(container, data) {
   html += '<span>Last login: <b style="color:var(--bone);font-weight:400">' + fmtDate(data.last_login) + '</b></span>';
   html += '<span>Turn cap: <b style="color:var(--gold-bright);font-weight:700">' + (data.turn_cap === 0 ? 'Unlimited' : data.turn_cap) + '</b></span>';
   html += '<span>Turns used: <b style="color:var(--term-amber);font-weight:400">' + (data.turns_used || 0) + '</b></span>';
+  html += '<span>📍 Land: <b style="color:var(--bone);font-weight:400">' + (data.country_flag || '❓') + ' ' + (data.country || 'Okänt') + '</b>' + (data.ip ? ' <span style="opacity:.6">(' + data.ip + ')</span>' : '') + '</span>';
   html += '</div>';
   if (campaigns.length === 0) {
     container.innerHTML = html + '<p style="color:var(--bone-dim);font-size:0.7rem;padding:0.5rem 0">No campaigns found.</p>';
@@ -515,6 +571,28 @@ function renderDetail(container, data) {
       html += '<span class="dot completion"></span>Response: ' + fmtTokens(compT);
       html += '<span>Total: ' + fmtTokens(total) + '</span>';
       html += '</div>';
+      // Per-roll uppdelning — DM vs Guardian vs bakgrund (faktextraktion,
+      // sammanfattningar, dag-entries). Guardian-tokens inkluderas ALLTID.
+      const dmT = c.dm_tokens || 0;
+      const gdT = c.guardian_tokens || 0;
+      const bgT = c.background_tokens || 0;
+      html += '<div class="role-split">';
+      html += '<span>🧙 DM: <b>' + fmtTokens(dmT) + '</b></span>';
+      html += '<span>🛡️ Guardian: <b>' + fmtTokens(gdT) + '</b></span>';
+      if (bgT > 0) html += '<span>🛠️ Bakgrund (fakta/dagbok/summaries): <b>' + fmtTokens(bgT) + '</b></span>';
+      html += '</div>';
+      // Per-modell-uppdelning — vilka LLM-modeller som faktiskt användes
+      const models = c.model_breakdown || {};
+      const modelKeys = Object.keys(models);
+      if (modelKeys.length > 0) {
+        html += '<div class="model-split">';
+        modelKeys.forEach(m => {
+          const mv = models[m];
+          const mTotal = (mv.prompt_tokens || 0) + (mv.completion_tokens || 0);
+          html += '<span>🤖 ' + m + ': <b>' + fmtTokens(mTotal) + '</b> (' + (mv.calls || 0) + ' anrop)</span>';
+        });
+        html += '</div>';
+      }
     }
 
     // Sessions

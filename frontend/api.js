@@ -1,5 +1,5 @@
 /**
- * 🌐 api.js — Frontend ↔ Backend bridge for Realm of Darkness
+ * 🌐 api.js — Frontend ↔ Backend bridge for The Lore Weaver\'s Cauldron
  *
  * MOCK mode: Set MOCK = false when the backend runs.
  * In MOCK mode every page works standalone with localStorage data.
@@ -88,14 +88,35 @@ const API = (() => {
       }
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: res.statusText }));
-        const msg = typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail);
-        _dbg('err', `${path} → ${res.status} (${ms}ms)`, msg);
-        throw new Error(msg);
+        let msg = typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail);
+        if (!msg || msg === 'null') msg = res.statusText || 'error';
+        // Visa alltid HTTP-statusen så spelaren ser "HTTP 429", "HTTP 500" etc.
+        const full = `HTTP ${res.status}: ${msg}`;
+        _dbg('err', `${path} → ${res.status} (${ms}ms)`, full);
+        const e = new Error(full);
+        e.status = res.status;
+        throw e;
       }
-      const data = await res.json();
+      if (res.status === 204) return {};
+      let data;
+      try {
+        data = await res.json();
+      } catch (parseErr) {
+        // 200 med tom kropp → "tomt svar" istället för kryptiskt SyntaxError
+        const e = new Error(`HTTP ${res.status}: empty response from server`);
+        _dbg('err', `${path} → EMPTY BODY (${ms}ms)`);
+        throw e;
+      }
       _dbg('ok', `${path} → 200 (${ms}ms)`);
       return data;
     } catch (e) {
+      // Nätverksfel (fetch itself failed) — ersätt "Failed to fetch" med något tydligt
+      if (e && e.name === 'TypeError' && /fetch/i.test(e.message || '')) {
+        const netErr = new Error('Connection lost — network error. Check your connection.');
+        _dbg('err', `${path} NETWORK FAILURE`, e.message);
+        if (typeof toast === 'function') toast('⚠ ' + netErr.message);
+        throw netErr;
+      }
       if (e.message !== 'Session expired') {
         _dbg('err', `${path} CAUGHT`, e.message);
         if (typeof toast === 'function') toast('⚠ ' + e.message);
@@ -190,6 +211,13 @@ const API = (() => {
       }
     },
 
+    async getUsage() {
+      if (MOCK) {
+        return { campaign_id: 'mock', campaign_name: 'Mock', turns: 0, active_campaign: { models: {}, background_tokens: 0 }, account_total: { models: {}, prompt_tokens: 0, completion_tokens: 0, total_tokens: 0, background_tokens: 0 } };
+      }
+      return req('/api/campaign/usage');
+    },
+
     async listCampaigns() {
       if (MOCK) {
         const c = mock._load();
@@ -203,7 +231,7 @@ const API = (() => {
       if (!s) return null;
       return {
         id: s.meta?.campaign_id ?? s.campaign_id,
-        name: s.meta?.campaign_name ?? s.name ?? 'Realm of Darkness',
+        name: s.meta?.campaign_name ?? s.name ?? 'The Lore Weaver\'s Cauldron',
         character: s.character || {},
         sessions: s.meta?.session_count || 1,
         day: s.world?.time || '—',
@@ -274,6 +302,12 @@ const API = (() => {
       return req('/api/campaign/guardian-model', { method: 'PATCH', body: JSON.stringify({ guardian_model: modelId }) });
     },
 
+    // ── Extraction model (per campaign — bakgrund: fakta, dagbok, summaries) ──
+    async setExtractionModel(modelId) {
+      if (MOCK) return { ok: true, extraction_model: modelId };
+      return req('/api/campaign/extraction-model', { method: 'PATCH', body: JSON.stringify({ extraction_model: modelId }) });
+    },
+
     // ── Attachments (pdf/md/txt) ──
     async uploadAttachment(file) {
       if (MOCK) throw new Error('Not available in mock mode');
@@ -307,6 +341,16 @@ const API = (() => {
     async deleteAvatar(kind) {
       if (MOCK) throw new Error('Not available in mock mode');
       return req('/api/campaign/avatar/' + encodeURIComponent(kind), { method: 'DELETE' });
+    },
+
+    // ── AI-avatar (StepFun step-image-edit-2 — prompt byggs automatiskt i backend) ──
+    // mode: "new" = full generation (ny bild), "edit" = image-edit på befintlig
+    async generateAvatar(kind, seed, mode) {
+      if (MOCK) throw new Error('Not available in mock mode');
+      return req('/api/campaign/avatar/generate', {
+        method: 'POST',
+        body: JSON.stringify({ kind, seed, mode: mode || 'new' }),
+      });
     },
 
     // ── Transcript (latest messages) ──
@@ -461,6 +505,11 @@ const API = (() => {
     async addLore(text) {
       if (MOCK) return { ok: true, lore_count: 1 };
       return req('/api/campaign/lore', { method: 'POST', body: JSON.stringify({ text }) });
+    },
+
+    async consumeResource(label) {
+      if (MOCK) return { ok: true };
+      return req('/api/campaign/consume-resource', { method: 'POST', body: JSON.stringify({ text: label }) });
     },
 
     async triggerChapter(title) {

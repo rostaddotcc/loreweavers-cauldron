@@ -1,5 +1,5 @@
 """
-Mörkrets Rike — Atmosfär-subagent
+The Lore Weaver's Cauldron — Atmosfär-subagent
 ===================================
 Analyserar DM-svar och genererar ASCII/CLI-art inline.
 Primär: LLM-generering via MiMo 2.5. Fallback: förgenererad art-bank.

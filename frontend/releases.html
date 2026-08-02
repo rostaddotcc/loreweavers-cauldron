@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Release Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<style>
+ :root {
+  --ink:#0b0812; --stone:#161020; --stone-2:#1d1529; --stone-3:#241a33;
+  --edge:#463a60; --bone:#d9c9a6; --bone-bright:#f2e6c8; --bone-dim:#9d8a6a;
+  --gold:#d4a92c; --gold-bright:#f0d675; --blood-bright:#e0485a;
+  --arcane:#9a6fe0; --ember:#d4691e; --poison:#7aa35e; --term-green:#33cc33; --term-amber:#ccaa33;
+ }
+ *{margin:0;padding:0;box-sizing:border-box;border-radius:0}
+ body{
+  font-family:'Silkscreen',monospace;color:var(--bone);min-height:100vh;
+  background:var(--ink);line-height:1.8;
+ }
+ body::before{content:'';position:fixed;inset:0;z-index:999;pointer-events:none;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0px,rgba(0,0,0,.18) 1px,transparent 1px,transparent 3px)}
+ .app{max-width:820px;margin:0 auto;padding:2rem 1.5rem 4rem}
+ h1{font-family:'Press Start 2P',monospace;font-size:1rem;color:var(--gold);margin-bottom:.5rem;text-shadow:2px 2px 0 #000}
+ h2{font-family:'Press Start 2P',monospace;font-size:.7rem;color:var(--term-green);margin:2rem 0 .8rem;text-transform:uppercase;letter-spacing:.1em}
+ h2::before{content:'> ';color:var(--edge)}
+ h3{font-family:'Press Start 2P',monospace;font-size:.6rem;color:var(--gold);margin:1.4rem 0 .5rem;text-transform:uppercase;letter-spacing:.08em}
+ p,li{font-size:.91rem;color:var(--bone);margin-bottom:.6rem}
+ ul{padding-left:1.2rem;list-style:none}
+ li::before{content:'▸ ';color:var(--gold)}
+ .box{background:var(--stone);border:1px solid var(--edge);padding:1.2rem;margin:1rem 0;position:relative}
+ .box::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.4}
+ .cmd{color:var(--term-green);background:var(--ink);padding:.15rem .4rem;border:1px solid var(--edge);font-size:.85rem}
+ .key{color:var(--term-amber);border:1px solid var(--edge);padding:.1rem .35rem;font-size:.81rem;background:var(--stone-2)}
+ .topbar{display:flex;align-items:center;gap:1rem;padding:1rem 0;border-bottom:1px solid var(--edge);margin-bottom:2rem}
+ .topbar .brand{font-family:'Press Start 2P',monospace;font-size:.6rem;color:var(--gold)}
+ .topbar a{color:var(--bone-dim);text-decoration:none;font-size:.78rem;border:1px solid var(--edge);padding:.35rem .7rem;transition:none}
+ .topbar a:hover{border-color:var(--gold);color:var(--gold-bright)}
+ .divider{border:none;border-top:1px dashed var(--edge);margin:1.5rem 0}
+ .ver{display:inline-block;font-family:'Press Start 2P',monospace;font-size:.62rem;color:var(--ink);background:var(--gold);padding:.3rem .55rem;letter-spacing:.05em}
+ .ver.new{background:var(--gold-bright)}
+ .tag{display:inline-block;font-size:.62rem;border:1px solid var(--edge);padding:.05rem .35rem;margin-right:.3rem;color:var(--bone-dim)}
+ .tag.feat{color:var(--poison);border-color:var(--poison)}
+ .tag.fix{color:var(--blood-bright);border-color:var(--blood-bright)}
+ .tag.ux{color:var(--arcane);border-color:var(--arcane)}
+ .tag.snd{color:var(--term-amber);border-color:var(--term-amber)}
+ .tag.ai{color:var(--gold);border-color:var(--gold)}
+ .muted{color:var(--bone-dim);font-size:.8rem}
+ a{color:var(--arcane)}
+
+ @media (max-width: 900px) {
+  html { -webkit-tap-highlight-color: transparent; }
+  .topbar { flex-wrap: wrap; gap: .4rem .5rem; }
+  .topbar a { min-height: 44px; display: inline-flex; align-items: center; padding: .4rem .7rem; font-size: .73rem; }
+ }
+ @media (max-width: 640px) {
+  .app { padding: 1.25rem .75rem 3rem; }
+  h1 { font-size: .85rem; line-height: 1.6; }
+  h2 { font-size: .62rem; margin: 1.6rem 0 .7rem; }
+  p, li { font-size: .87rem; line-height: 1.9; }
+  .box { padding: .9rem .8rem; }
+  .topbar .brand { font-size: .55rem; }
+ }
+</style>
+<link rel="stylesheet" href="snes.css?v=10">
+<script src="sprites.js?v=20260802a"></script>
+<script src="fonts.js?v=20260802c"></script>
+<script src="themes.js?v=20260802c"></script>
+</head>
+<body>
+<div class="app">
+ <div class="topbar">
+  <span class="brand">The Lore Weaver's Cauldron</span>
+  <span style="flex:1"></span>
+  <a href="chat.html">To the Table</a>
+  <a href="adventure.html">The Crossroads</a>
+ </div>
+
+ <h1>RELEASE NOTES</h1>
+ <p class="muted">What's new in the realm — from v0.5 to v0.6.</p>
+
+ <div class="box">
+  <span class="ver new">v0.6.0</span>
+  <p style="margin-top:.8rem"><b>The Production Readiness Update</b> — themes, releases, transparency, and a heap of polish.</p>
+  <ul>
+   <li><b>Theme switcher</b> — five dark-fantasy palettes (Terminal / Blood / Arcane / Ember / Iron), one click away in the top bar. Your choice is remembered.</li>
+   <li><b>This release page</b> — every update now comes with notes.</li>
+   <li><b>Model transparency</b> — a guide to the Dungeon Master models, and why "high reasoning" means a slightly longer wait for a richer reply.</li>
+   <li><b>Longer soundscapes</b> — new 10+ minute ambient loops (classical MIDI, public domain, rendered in 16-bit spirit).</li>
+   <li><b>Dead code purge</b> — ~1,600 lines of orphaned CSS/JS removed; three corrupted stylesheet comments repaired; a hidden Escape-key crash fixed.</li>
+  </ul>
+ </div>
+
+ <h2>What changed since v0.5</h2>
+
+ <h3>Combat — v26 "Chat-First"</h3>
+ <ul>
+  <li><span class="tag feat">FEAT</span> The DM narrates everything; the Guardian extracts the mechanics — no hidden battle AI deciding your fate.</li>
+  <li><span class="tag feat">FEAT</span> Turn engine: initiative order, action economy, and proper turn rotation.</li>
+  <li><span class="tag feat">FEAT</span> Inline combat UI: round banners, enemy cards, HP-diff lines, and a status bar above the input (R3 │ enemy 12/24 │ Du 18/22).</li>
+  <li><span class="tag fix">FIX</span> Initiative reveal, awakening re-trigger, HP <code>null</code> crashes, log-size limits, and player-HP sync in the combat tag.</li>
+ </ul>
+
+ <h3>Design & UX — the Codex era</h3>
+ <ul>
+  <li><span class="tag ux">UX</span> The Codex: one tabbed modal for Character, NPCs, Map, Journal and Facts — no more page-hopping.</li>
+  <li><span class="tag ux">UX</span> Slim sidebar with party, quests, known NPCs and location; mobile drawer + bottom nav + sheets.</li>
+  <li><span class="tag ux">UX</span> Unified warm dark-fantasy palette on every page; pixel sprites replace emojis; site-wide font switcher (7 typefaces).</li>
+  <li><span class="tag ux">UX</span> Readable type scale (no more 0.93rem body text) and a flat, minimal Engine Room console.</li>
+  <li><span class="tag feat">FEAT</span> Uploadable chat avatars (44px, framed, role-colored).</li>
+ </ul>
+
+ <h3>The Dungeon Master</h3>
+ <ul>
+  <li><span class="tag ai">AI</span> DM prompts v23→v26: DC ladder, the DM Triad / Rule of Cool, 5e resting, advantage/disadvantage, quick rules, world-consistency name rules.</li>
+  <li><span class="tag ai">AI</span> Visible reasoning bubble — watch the DM think, with token/time readout in the reply footer.</li>
+  <li><span class="tag ai">AI</span> Dynamic narration length: short for action, long-form (4k tokens) for lore, books, legends.</li>
+  <li><span class="tag ai">AI</span> Model gate at adventure start: pick your DM model (admin chooses the Guardian freely).</li>
+  <li><span class="tag ai">AI</span> Guardian runs in the background, never blocking the reply — with a polling indicator and in-chat Guardian timeline.</li>
+  <li><span class="tag ai">AI</span> Character generation: forbidden-name lists + higher temperature for varied, unexpected names.</li>
+ </ul>
+
+ <h3>Rolls, items & the weight of things</h3>
+ <ul>
+  <li><span class="tag feat">FEAT</span> The D20 ceremony — an inline 3-second dice ritual with flicker, glitter, and nat-20/nat-1 spectacle (D20, not D6).</li>
+  <li><span class="tag feat">FEAT</span> DM-requested rolls appear as inline buttons; <span class="cmd">/rulla 1d20+4</span> works anytime; advantage rolls supported.</li>
+  <li><span class="tag feat">FEAT</span> Clickable item cards with D&D stats; item detail modal; roll buttons on usable items.</li>
+  <li><span class="tag feat">FEAT</span> Carry weight (STR × 15 lbs), coin weight, item lore — every item has a history.</li>
+  <li><span class="tag fix">FIX</span> The DM now sees your full inventory (not just equipped) and always keeps starting gear.</li>
+ </ul>
+
+ <h3>Sound & Voice</h3>
+ <ul>
+  <li><span class="tag snd">SOUND</span> Typewriter reveal with 16-bit "midi" ticks; NPC quote bubbles with per-NPC colors; pixel-particle bursts on every message.</li>
+  <li><span class="tag snd">SOUND</span> Synthesized SFX (Web Audio) — coins, crits, battle jingles — zero audio files.</li>
+  <li><span class="tag snd">SOUND</span> Mood music loops that follow the scene (night/day/battle/dungeon/town/rest).</li>
+  <li><span class="tag snd">SOUND</span> TTS via Qwen-Audio (Token Plan) — play button on DM replies, male/female voices, autoplay toggle, cache.</li>
+ </ul>
+
+ <h3>Language & accounts</h3>
+ <ul>
+  <li><span class="tag feat">FEAT</span> English-first UI with Swedish fallback; language is per-campaign and survives new games.</li>
+  <li><span class="tag feat">FEAT</span> Self-registration; admin dashboard (players, campaigns, token usage per model); per-user turn caps.</li>
+  <li><span class="tag fix">FIX</span> Campaign state isolation, race-condition locks, and English debug logs throughout the backend.</li>
+ </ul>
+
+ <h3>Notable fixes</h3>
+ <ul>
+  <li>Raw HTTP errors surface in chat (402 / 429 / 500 / network) with a "try changing models in Settings" hint.</li>
+  <li>Roll buttons and Guardian reports no longer fire mid-typewriter; the chat always pins to the bottom.</li>
+  <li>Mobile: no iOS auto-zoom, safe-area padding, 44px tap targets, drawers/sheets z-order fixed.</li>
+  <li>Logbook/facts ordering, map clipping, flexbox starvation — the usual suspects, banished.</li>
+ </ul>
+
+ <hr class="divider">
+ <p class="muted">v0.5 → v0.6 · 2026-08-02 · The Lore Weaver's Cauldron — an AI dungeon master.</p>
+</div>
+</body>
+</html>

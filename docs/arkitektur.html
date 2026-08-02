@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mörkrets Rike — Arkitektur &amp; Maskinrum</title>
+<title>The Lore Weaver's Cauldron — Arkitektur &amp; Maskinrum</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Silkscreen:wght@400;700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
@@ -206,7 +206,7 @@
   <!-- ═══════════ INDEX ═══════════ -->
   <nav class="index">
     <div class="sigil">🐉</div>
-    <h6>MÖRKRETS RIKE<br>ARKITEKTUR-KODEX</h6>
+    <h6>THE LORE WEAVER'S CAULDRON<br>ARKITEKTUR-KODEX</h6>
     <a href="#oversikt"><span class="n">01</span>Översikt</a>
     <a href="#livscykel"><span class="n">02</span>En turs livscykel</a>
     <a href="#systemprompt"><span class="n">03</span>Systemprompten</a>
@@ -227,7 +227,7 @@
   <!-- ═══════════ MAIN ═══════════ -->
   <main>
 
-    <h1>MÖRKRETS RIKE<span class="cur"></span></h1>
+    <h1>THE LORE WEAVER'S CAULDRON<span class="cur"></span></h1>
     <div class="subtitle">// arkitektur &amp; maskinrum — hur spelet faktiskt fungerar</div>
 
     <div class="stats">
@@ -241,7 +241,7 @@
     <!-- ═══════════ 01 ÖVERSIKT ═══════════ -->
     <h2 id="oversikt"><span class="sec">01</span>ÖVERSIKT</h2>
 
-    <p>Mörkrets Rike är en <strong>LLM-driven Dungeon Master</strong>. Spelaren skriver vad karaktären gör — en AI-DM narrerar utfallet, spelar NPCs och bygger världen i stunden. Men enbart en språkmodell räcker inte för ett spel: den glömmer, den hittar på, och den kan inte hålla reda på HP, guld och quests. Därför är spelet byggt kring en <strong>två-modellsprincip</strong>:</p>
+    <p>The Lore Weaver's Cauldron är en <strong>LLM-driven Dungeon Master</strong>. Spelaren skriver vad karaktären gör — en AI-DM narrerar utfallet, spelar NPCs och bygger världen i stunden. Men enbart en språkmodell räcker inte för ett spel: den glömmer, den hittar på, och den kan inte hålla reda på HP, guld och quests. Därför är spelet byggt kring en <strong>två-modellsprincip</strong>:</p>
 
     <div class="panel">
       <span class="plabel">KÄRNIDÉ</span>
@@ -250,7 +250,7 @@
 
     <pre class="ascii">
 <span class="d">┌─────────────────────────────────────────────────────────────────────┐</span>
-<span class="d">│</span>                        <span class="g">MÖRKRETS RIKE — SYSTEMKARTA</span>                    <span class="d">│</span>
+<span class="d">│</span>                        <span class="g">THE LORE WEAVER'S CAULDRON — SYSTEMKARTA</span>                    <span class="d">│</span>
 <span class="d">└─────────────────────────────────────────────────────────────────────┘</span>
 
    <span class="p">SPELARE</span>
@@ -503,7 +503,7 @@
     <!-- ═══════════ 06 MINNE ═══════════ -->
     <h2 id="minne"><span class="sec">06</span>MINNE &amp; KONTEXT</h2>
 
-    <p>En LLM drunknar om den matas hela transkriptet. Mörkrets Rike använder en <strong>hybridmodell: State + Summary + Recent + Archive</strong> i tre nivåer:</p>
+    <p>En LLM drunknar om den matas hela transkriptet. The Lore Weaver's Cauldron använder en <strong>hybridmodell: State + Summary + Recent + Archive</strong> i tre nivåer:</p>
 
     <pre class="ascii">
 <span class="g">KORTTIDSMINNE</span>   ── senaste ~15 meddelanden <span class="d">(verbatim, naturligt flyt)</span>
@@ -688,7 +688,7 @@
 /* ── boot-sekvens ── */
 (function(){
   const lines=[
-    'MÖRKRETS RIKE — MASKINRUM v21',
+    'THE LORE WEAVER\'S CAULDRON — MASKINRUM v21',
     '==============================',
     '',
     '> init guardian ............ OK  [pre-DM · post-DM]',

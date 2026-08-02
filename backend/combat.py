@@ -1,5 +1,5 @@
 """
-Combat Engine — Mörkrets Rikes stridsmotor
+Combat Engine — The Lore Weaver's Cauldron's stridsmotor
 ===========================================
 Hanterar turordning, action economy, status-effekter, fiende-AI,
 flykt och alla mekaniska aspekter av strid.
@@ -221,6 +221,12 @@ def roll_initiative(state: dict, player_roll: int | None = None) -> dict:
     combat["turn_order"] = turn_order
     combat["current_index"] = 0
     combat["phase"] = "combat"
+
+    # Synka till frontend-formatet (combat.initiative med {key, name, value})
+    combat["initiative"] = [
+        {"key": e["key"], "name": e["name"], "value": e["initiative"]}
+        for e in turn_order
+    ]
 
     # Logga
     order_str = " → ".join(f"{e['name']}({e['initiative']})" for e in turn_order)

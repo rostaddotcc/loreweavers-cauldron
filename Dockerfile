@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════
-# Mörkrets Rike — Docker
+# The Lore Weaver's Cauldron — Docker
 # ═══════════════════════════════════════
 FROM python:3.11-slim
 

@@ -1,5 +1,5 @@
 """
-Mörkrets Rike — Loggbok / Äventyrsjournal
+The Lore Weaver's Cauldron — Loggbok / Äventyrsjournal
 ============================================
 LLM extraherar en dag-för-dag tidslinje ur kampanjens transkript.
 """

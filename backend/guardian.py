@@ -1131,9 +1131,16 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             logger.info("🛡️ Guardian: %d healing → HP %d/%d", amount, hp["current"], hp["max"])
 
     # ── Död ──
-    for name in mech.get("death", []):
+    # Robust mot både sträng- och dict-form (Guardian kan skicka death som
+    # ["Namn"] ELLER [{"name": "Namn"}]) — dict-formen kraschade på
+    # name.lower() (AttributeError 2026-08-02) → striden stängdes aldrig.
+    for raw in mech.get("death", []):
+        name = raw.get("name", "") if isinstance(raw, dict) else raw
+        if not isinstance(name, str) or not name.strip():
+            continue
+        name = name.strip()
         for npc in state.get("npcs", []):
-            if npc.get("name", "").lower() == name.lower():
+            if str(npc.get("name", "")).lower() == name.lower():
                 npc["alive"] = False
                 effects.append({"type": "npc_död", "value": name})
                 logger.info("🛡️ Guardian: NPC '%s' dog", name)
@@ -1141,7 +1148,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 combat = state.get("world", {}).get("combat")
                 if combat and combat.get("active"):
                     for e in combat.get("enemies", []):
-                        if e.get("name", "").lower() == name.lower():
+                        if isinstance(e, dict) and str(e.get("name", "")).lower() == name.lower():
                             e["alive"] = False
                             effects.append({"type": "enemy_död", "value": name})
                             break
@@ -1241,8 +1248,15 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
         effects.append({"type": "föremål", "value": name, "qty": qty})
 
     for item in mech.get("items_remove", []):
-        name = item.get("name", "").strip()
-        qty = max(1, int(item.get("qty", 1)))
+        # Robust mot både dict- och sträng-form (samma klass av bugg som death)
+        if isinstance(item, dict):
+            name = str(item.get("name", "")).strip()
+            qty = max(1, int(item.get("qty", 1)))
+        elif isinstance(item, str):
+            name = item.strip()
+            qty = 1
+        else:
+            continue
         if not name:
             continue
         # P0-dedup: [FÖREMÅL_BORT:]-taggen tog redan bort samma föremål

@@ -1285,3 +1285,78 @@ body.battle-drawer-open .battle-drawer-toggle .bdt-caret{ transform: rotate(180d
   }
   body.battle-drawer-open .bl-body{ animation: bl-in .3s ease; }
 }
+/* ═══════════════════════════════════════════
+   ALLIERADE (v28) — friendly NPC combat cards
+   Arcane (purple) tint to contrast enemy blood-red / player gold.
+   ═══════════════════════════════════════════ */
+.bl-body .combat-ally-card{
+  border-color: rgba(94,154,163,.45);
+  background: rgba(94,154,163,.06);
+  transition: border-color .2s, background .2s, transform .2s, opacity .3s;
+}
+.bl-body .combat-ally-card:hover{
+  border-color: rgba(94,154,163,.7);
+  background: rgba(94,154,163,.12);
+  transform: translateX(-2px);
+}
+.combat-ally-card .cie-hpbar i{ background: var(--arcane); }
+.combat-ally-card .cie-hpbar.low i{ background: #d43a4d; animation: hp-flash 1s infinite; }
+/* Fallen allierad: gråskala + nedtonad */
+.combat-ally-card.fallen{
+  opacity: .45;
+  filter: grayscale(.85);
+  border-color: rgba(107,107,128,.4);
+  background: rgba(107,107,128,.05);
+  transform: none;
+  pointer-events: none;
+}
+.combat-ally-card.fallen .cie-name{ text-decoration: line-through; }
+.combat-ally-card.fallen .cie-sub{ color: var(--bone-dim); }
+/* HP-uppdatering för allierad */
+.combat-hp-update.ally b{ color: var(--arcane); }
+/* Round summary: allierad-rader */
+.crs-line.ally{ color: var(--arcane); }
+.crs-line.ally b{ color: var(--bone-bright); }
+/* Tärnings-badges: allierad = arcane */
+.ally-dice-badge{
+  color: var(--arcane);
+  border-color: rgba(94,154,163,.5);
+  background: rgba(94,154,163,.12);
+  text-shadow: 0 0 6px rgba(94,154,163,.4);
+}
+.ally-dice-badge:hover{ box-shadow: 0 0 10px rgba(94,154,163,.3); }
+/* Vems-tur-chip: allierad = arcane/guld */
+.bl-turn.turn-ally{
+  color: var(--gold-bright);
+  border-color: rgba(94,154,163,.5);
+  background: rgba(94,154,163,.12);
+  text-shadow: 0 0 6px rgba(94,154,163,.35);
+}
+/* Statusrad: allierade */
+.csb-ally{ color: var(--arcane); }
+.csb-ally.dead{ text-decoration: line-through; opacity: .4; }
+/* Initiativceremoni: allierad-entry */
+.ir-line .ir-ally{ color: var(--arcane); }
+
+/* ── @-NPC-chatt: "💬 Talking to {name}"-chip ovanför input ── */
+.at-chat-chip{
+  display: inline-flex;
+  align-items: center;
+  gap: .4em;
+  font-size: .62rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: rgba(201,162,39,.08);
+  border: 1px solid rgba(201,162,39,.35);
+  border-radius: 2px;
+  padding: .22rem .55rem;
+  margin: 0 0 .35rem .1rem;
+  width: fit-content;
+  animation: at-chip-in .18s ease-out;
+}
+.at-chat-chip[hidden]{ display: none !important; }
+@keyframes at-chip-in{
+  from{ opacity: 0; transform: translateY(-3px); }
+  to{ opacity: 1; transform: translateY(0); }
+}

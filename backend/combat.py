@@ -19,6 +19,7 @@ Datastruktur (world.combat):
     "turn_order": [{"key": "player", "name": "...", "initiative": 15, "acted": false}],
     "current_index": 0,
     "enemies": [{id, name, hp, max_hp, ac, alive, statuses, attack_bonus, damage_dice}],
+    "allies": [{id, name, hp, max_hp, ac, alive, statuses, attack_bonus, damage_dice}],
     "player_actions": {"action": true, "bonus": true, "reaction": true},
     "log": [],
     "started_turn": N,
@@ -170,6 +171,7 @@ def start_combat(state: dict, enemies_in: list[dict]) -> dict:
         "turn_order": [],
         "current_index": 0,
         "enemies": enemies,
+        "allies": [],
         "player_actions": {"action": True, "bonus": True, "reaction": True},
         "log": [],
         "started_turn": state.get("meta", {}).get("turn_count", 0),
@@ -177,6 +179,84 @@ def start_combat(state: dict, enemies_in: list[dict]) -> dict:
     }
     world["combat"] = combat
     logger.info("⚔️ Strid startad: %s", ", ".join(e["name"] for e in enemies))
+    return combat
+
+
+def add_allies(state: dict, allies_in: list[dict]) -> dict:
+    """Lägg till allierade NPC:er till en PÅGÅENDE strid.
+
+    Anropas när en [ALLIERAD:]-tagg anländer mitt i striden (DM låter en
+    vänlig NPC slåss vid spelarens sida). Normaliserar allierade på samma
+    sätt som fiender och ger dem initiativ (1d20 + attack_bonus) i
+    turordningen med nyckel "ally-{id}" — så de syns som egna turer.
+
+    allies_in: [{"name": "Mimmrick", "hp": 12, "ac": 14, "attack_bonus": 4, "damage_dice": "1d6+2"}]
+
+    Returnerar combat-dict (eller {} om ingen aktiv strid).
+    """
+    world = state.setdefault("world", {})
+    combat = world.get("combat")
+    if not combat or not combat.get("active"):
+        logger.warning("🤝 [ALLIERAD:] ignorerad — ingen aktiv strid")
+        return {}
+
+    allies = []
+    for i, a in enumerate(allies_in):
+        name = (a.get("name") or f"Allierad {i+1}").strip()
+        hp = max(1, int(a.get("hp", 7)))
+        allies.append({
+            "id": i,
+            "name": name,
+            "hp": hp,
+            "max_hp": hp,
+            "ac": int(a.get("ac", 10)),
+            "alive": True,
+            "statuses": [],
+            "attack_bonus": int(a.get("attack_bonus", 3)),
+            "damage_dice": a.get("damage_dice", "1d6+1"),
+            "actions_remaining": 1,
+        })
+
+    if not allies:
+        return combat
+
+    combat.setdefault("allies", []).extend(allies)
+
+    # Turordning: om den redan finns (pågående strid) ska allierade få egna
+    # turer direkt. Slå initiativ (1d20 + attack_bonus, samma mekanik som
+    # fiender i roll_initiative) och sortera in dem — utan att flytta
+    # current_index till en annan combatant.
+    order = combat.get("turn_order")
+    if order:
+        current_entry = None
+        cidx = combat.get("current_index", 0)
+        if 0 <= cidx < len(order):
+            current_entry = order[cidx]
+        for ally in allies:
+            ally_init = roll_d20() + ally.get("attack_bonus", 0)
+            order.append({
+                "key": f"ally-{ally['id']}",
+                "name": ally["name"],
+                "initiative": ally_init,
+                "acted": False,
+            })
+        order.sort(key=lambda x: x.get("initiative", 0), reverse=True)
+        # Synka frontend-formatet (combat.initiative med {key, name, value})
+        combat["initiative"] = [
+            {"key": e["key"], "name": e["name"], "value": e["initiative"]}
+            for e in order
+        ]
+        if current_entry is not None:
+            for idx, entry in enumerate(order):
+                if entry is current_entry:
+                    combat["current_index"] = idx
+                    break
+
+    combat.setdefault("log", []).append({
+        "round": combat.get("round", 1), "actor": "system", "name": "",
+        "text": ", ".join(a["name"] for a in allies) + " ansluter sig till striden!",
+    })
+    logger.info("🤝 Allierade tillkom: %s", ", ".join(a["name"] for a in allies))
     return combat
 
 
@@ -212,6 +292,18 @@ def roll_initiative(state: dict, player_roll: int | None = None) -> dict:
             "key": f"enemy:{enemy['id']}",
             "name": enemy["name"],
             "initiative": enemy_init,
+            "acted": False,
+        })
+
+    for ally in combat.get("allies", []):
+        if not ally.get("alive", True):
+            continue
+        # Allierad-initiativ: samma mekanik som fiender
+        ally_init = roll_d20() + ally.get("attack_bonus", 0)
+        turn_order.append({
+            "key": f"ally-{ally['id']}",
+            "name": ally["name"],
+            "initiative": ally_init,
             "acted": False,
         })
 
@@ -256,6 +348,32 @@ def is_player_turn(combat: dict) -> bool:
     return actor is not None and actor.get("key") == "player"
 
 
+def _turn_entry_alive(combat: dict, entry: dict) -> bool:
+    """Lever combatanten bakom en turn_order-entry?
+
+    Hanterar player ("player"), fiender ("enemy:{id}") och allierade
+    ("ally-{id}"). Okända nycklar antas levande (konservativt).
+    """
+    key = entry.get("key", "")
+    if key == "player":
+        return True
+    if key.startswith("ally-"):
+        try:
+            aid = int(key.split("-", 1)[1])
+        except (IndexError, ValueError):
+            return True
+        ally = next((a for a in combat.get("allies", []) if a.get("id") == aid), None)
+        return bool(ally and ally.get("alive", True))
+    if ":" in key:  # enemy:{id}
+        try:
+            eid = int(key.split(":", 1)[1])
+        except (IndexError, ValueError):
+            return True
+        enemy = next((e for e in combat.get("enemies", []) if e.get("id") == eid), None)
+        return bool(enemy and enemy.get("alive", True))
+    return True
+
+
 def advance_turn(state: dict) -> dict:
     """Gå till nästa tur. Hanterar rundövergångar och status-tick.
 
@@ -274,17 +392,10 @@ def advance_turn(state: dict) -> dict:
     if idx < len(order):
         order[idx]["acted"] = True
 
-    # Hitta nästa levande deltagare
+    # Hitta nästa levande deltagare (spelare, fiende eller allierad)
     next_idx = idx + 1
     while next_idx < len(order):
-        entry = order[next_idx]
-        key = entry.get("key", "")
-        if key == "player":
-            break
-        # Fiende — kolla att den lever
-        eid = int(key.split(":")[1]) if ":" in key else -1
-        enemy = next((e for e in combat.get("enemies", []) if e["id"] == eid), None)
-        if enemy and enemy.get("alive", True):
+        if _turn_entry_alive(combat, order[next_idx]):
             break
         next_idx += 1
 
@@ -301,6 +412,10 @@ def advance_turn(state: dict) -> dict:
         for enemy in combat.get("enemies", []):
             if enemy.get("alive", True):
                 enemy["actions_remaining"] = 1
+        # Återställ allierades actions
+        for ally in combat.get("allies", []):
+            if ally.get("alive", True):
+                ally["actions_remaining"] = 1
         # Ticka status-effekter på alla
         _tick_all_statuses(state, combat)
         combat.setdefault("log", []).append({
@@ -357,6 +472,31 @@ def _tick_all_statuses(state: dict, combat: dict):
             combat.setdefault("log", []).append({
                 "round": combat.get("round", 1), "actor": "system",
                 "name": enemy["name"], "text": "faller",
+            })
+
+    # Allierade
+    for ally in combat.get("allies", []):
+        if not ally.get("alive", True):
+            continue
+        fx = tick_statuses(ally)
+        for f in fx:
+            if f["type"] == "status_dmg":
+                combat.setdefault("log", []).append({
+                    "round": combat.get("round", 1), "actor": "system",
+                    "name": ally["name"],
+                    "text": f"tar {f['amount']} {f['status']}-skada",
+                })
+            elif f["type"] == "status_end":
+                combat.setdefault("log", []).append({
+                    "round": combat.get("round", 1), "actor": "system",
+                    "name": ally["name"],
+                    "text": f"{f['status']} avtar",
+                })
+        if ally["hp"] <= 0:
+            ally["alive"] = False
+            combat.setdefault("log", []).append({
+                "round": combat.get("round", 1), "actor": "system",
+                "name": ally["name"], "text": "faller",
             })
 
 
@@ -618,6 +758,104 @@ def enemy_turn(state: dict, enemy: dict) -> dict:
     return {"actions": results}
 
 
+def ally_turn(state: dict, ally: dict) -> dict:
+    """En allierad NPC:s tur. Attackerar en slumpmässig levande fiende.
+
+    Analogt med enemy_turn, men målet är en fiende och combat_log-poster
+    har actor "ally". Returnerar resultat-dict med alla handlingar.
+    """
+    combat = state.get("world", {}).get("combat")
+    if not combat or not combat.get("active"):
+        return {"actions": []}
+
+    alive_enemies = [e for e in combat.get("enemies", []) if e.get("alive", True)]
+    if not alive_enemies:
+        return {"actions": []}
+
+    results = []
+
+    # Stun-check: hoppa över tur
+    if is_stunned(ally):
+        combat.setdefault("log", []).append({
+            "round": combat.get("round", 1), "actor": "ally",
+            "name": ally["name"], "text": "är bedövad och kan inte agera",
+        })
+        return {"actions": [], "stunned": True}
+
+    # Har den allierade disadvantage från status?
+    disadv = has_disadvantage(ally)
+
+    actions_left = ally.get("actions_remaining", 1)
+    while actions_left > 0 and ally.get("alive", True):
+        # Välj ett slumpmässigt levande mål bland fienderna
+        target = random.choice(alive_enemies)
+        # Rulla attack
+        d20 = roll_d20()
+        if disadv:
+            d20_2 = roll_d20()
+            d20 = min(d20, d20_2)  # nackdel: ta sämsta
+
+        attack_bonus = ally.get("attack_bonus", 3)
+        total = d20 + attack_bonus
+        ac = target.get("ac", 10)
+        hit = total >= ac or d20 == 20
+        crit = d20 == 20
+        fumble = d20 == 1
+
+        action_result = {
+            "attack_roll": total,
+            "d20": d20,
+            "target_ac": ac,
+            "hit": hit,
+            "crit": crit,
+            "fumble": fumble,
+            "damage": 0,
+        }
+
+        if fumble:
+            combat.setdefault("log", []).append({
+                "round": combat.get("round", 1), "actor": "ally",
+                "name": ally["name"],
+                "text": f"missar {target['name']} (nat 1!)",
+            })
+        elif hit:
+            dmg_notation = ally.get("damage_dice", "1d6+1")
+            dmg, rolls = roll_dice(dmg_notation)
+            if crit:
+                dmg2, rolls2 = roll_dice(dmg_notation)
+                dmg += dmg2
+            dmg = max(1, dmg)
+
+            # Applicera skada på fienden
+            target["hp"] = max(0, target.get("hp", 0) - dmg)
+            action_result["damage"] = dmg
+            combat.setdefault("log", []).append({
+                "round": combat.get("round", 1), "actor": "ally",
+                "name": ally["name"],
+                "text": f"träffar {target['name']} — {dmg} skada{' (KRITISK!)' if crit else ''} (slag {total} mot AC {ac})",
+            })
+            logger.info("🤝 %s → %s: %d skada (AC %d)", ally["name"], target["name"], dmg, ac)
+            if target["hp"] <= 0:
+                target["alive"] = False
+                combat.setdefault("log", []).append({
+                    "round": combat.get("round", 1), "actor": "system",
+                    "name": target["name"], "text": "faller",
+                })
+        else:
+            combat.setdefault("log", []).append({
+                "round": combat.get("round", 1), "actor": "ally",
+                "name": ally["name"],
+                "text": f"missar {target['name']} (slag {total} mot AC {ac})",
+            })
+
+        results.append(action_result)
+        actions_left -= 1
+
+    ally["actions_remaining"] = 0
+    _check_combat_end(state, combat)
+    return {"actions": results}
+
+
 def run_all_enemy_turns(state: dict) -> list[dict]:
     """Kör alla fienders turer i sekvens. Returnerar alla resultat."""
     combat = state.get("world", {}).get("combat")
@@ -760,6 +998,20 @@ def build_combat_context(state: dict, language: str = "sv") -> str:
             lines.append(f"Enemies: {', '.join(e_parts)}")
         else:
             lines.append(f"Fiender: {', '.join(e_parts)}")
+
+    # Allierade (vänliga NPC:er som slåss vid spelarens sida)
+    allies = [a for a in combat.get("allies", []) if a.get("alive", True)]
+    if allies:
+        a_parts = []
+        for a in allies:
+            status_str = ""
+            if a.get("statuses"):
+                status_str = " [" + ", ".join(s["name"] for s in a["statuses"]) + "]"
+            a_parts.append(f"{a['name']} ({a['hp']}/{a['max_hp']} HP, AC {a['ac']}){status_str}")
+        if en:
+            lines.append(f"Allies: {', '.join(a_parts)}")
+        else:
+            lines.append(f"Allierade: {', '.join(a_parts)}")
 
     # Spelarens resurser
     pa = combat.get("player_actions", {})

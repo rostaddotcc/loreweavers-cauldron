@@ -874,7 +874,7 @@
     color: var(--bone-dim); font-style: italic; font-size: 0.85rem;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=15">
+<link rel="stylesheet" href="snes.css?v=17">
 <script src="sprites.js?v=20260802a"></script>
 <script src="fonts.js?v=20260802c"></script>
 <script src="themes.js?v=20260802c"></script>
@@ -1055,6 +1055,7 @@
         <button class="tts-auto-btn" id="tts-auto-btn" onclick="toggleTTSAutoplay(this)" title="Autoplay TTS when the DM answers">🔊 Auto</button>
       </div>
       <div class="composer">
+        <div class="at-chat-chip" id="at-chat-chip" hidden></div>
         <div class="input-row">
           <textarea id="player-input" rows="1" placeholder="What do you do? Write freely — fight, sneak, talk, cast a spell…"></textarea>
           <button class="send-btn" onclick="sendPlayer()">⚔ Act</button>
@@ -2813,6 +2814,8 @@ async function loadTranscript() {
   // renderas fullt i högerkolumnen (v27: battle log = enda platsen för combat).
   _lastCombatRound = 0;
   _lastCombatEnemyHp = {};
+  _lastCombatAllyHp = {};
+  _allyCardEls = {};
   _lastPlayerHp = null;
   _lastInitShown = null;
   _lastCombatStatus = null;
@@ -3009,7 +3012,7 @@ function _feedTarget() {
 // Formatera en stridslogg-entry till en läsbar statusrad
 function _formatCombatLogEntry(entry) {
   if (!entry || !entry.text) return null;
-  const icon = entry.actor === 'player' ? '🗡️' : entry.actor === 'enemy' ? '⚔️' : '📜';
+  const icon = entry.actor === 'player' ? '🗡️' : entry.actor === 'enemy' ? '⚔️' : entry.actor === 'ally' ? '🛡️' : '📜';
   const who = entry.name ? entry.name + ': ' : '';
   return `${icon} ${who}${entry.text}`;
 }
@@ -3132,6 +3135,8 @@ input.addEventListener('input', () => {
   input.style.height = Math.min(input.scrollHeight, 140) + 'px';
   // @-autocomplete
   checkAtMention();
+  // @-NPC-chatt-indikator
+  updateAtChatChip();
 });
 
 // @NPC autocomplete
@@ -3175,7 +3180,46 @@ function hideAtPopup() {
 function insertAtMention(name) {
   input.value = input.value.replace(/@\w*$/, '@' + name + ' ');
   hideAtPopup();
+  updateAtChatChip();
   input.focus();
+}
+
+// "💬 Talking to {name}" — visar vilken NPC spelaren pratar med via @-omnämnande.
+// Matchar bakåtendens logik: fullt namn var som helst (flerordiga namn OK),
+// annars första ordet i början av meddelandet. Gömmer chippet annars.
+function updateAtChatChip() {
+  const el = document.getElementById('at-chat-chip');
+  if (!el) return;
+  const val = input.value;
+  const known = Object.entries(NPCS).filter(([k]) => k !== 'dm');
+  let target = null;
+  // 1) Fullt namn — '@Mimmrick Fjäderpung …' (case-insensitivt)
+  const low = val.toLowerCase();
+  for (const [k, n] of known) {
+    if (!n || !n.name) continue;
+    const at = '@' + n.name.toLowerCase();
+    const idx = low.indexOf(at);
+    if (idx !== -1) {
+      const next = low[idx + at.length] || '';
+      // Namnet måste sluta vid en ordgräns ('@Tordsson' ska inte matcha 'Tord')
+      if (!/^[a-zåäö-]$/i.test(next)) { target = n; break; }
+    }
+  }
+  // 2) Första ordet i början av meddelandet — '@Mimmrick: hjälp!'
+  if (!target) {
+    const m = val.trim().match(/^@([A-Za-zÅÄÖåäö\-]+)/);
+    if (m) {
+      const word = m[1].toLowerCase();
+      target = known.map(([, n]) => n)
+        .find(n => n && n.name && n.name.toLowerCase().split(/\s+/)[0] === word) || null;
+    }
+  }
+  if (target && target.alive !== false) {
+    el.textContent = '💬 Talking to ' + target.name;
+    el.hidden = false;
+  } else {
+    el.hidden = true;
+  }
 }
 
 let isResponding = false;
@@ -3191,6 +3235,7 @@ function sendPlayer() {
   }
   input.value = '';
   input.style.height = 'auto';
+  updateAtChatChip();
 
   // /roll (or /rulla) command
   const rollMatch = text.match(/^\/(?:roll|rulla)\s+(.+)$/i);
@@ -3816,6 +3861,8 @@ function applyCombatTag(el, text, container) {
 // ── Chat-first combat v26: inline stridsmeddelanden ──
 let _lastCombatRound = 0;
 let _lastCombatEnemyHp = {};  // {name: hp} för att detektera HP-ändringar
+let _lastCombatAllyHp = {};   // {name: hp|'dead'} — allierad-HP-dedup (v28)
+let _allyCardEls = {};        // {name: {card, sub}} — för fallen-uppdatering (v28)
 
 // ── Combat split-view v27 — panelväxling, mobil-låda, merge-back ──
 function getBattleLogBody() { return document.getElementById('battle-log-body'); }
@@ -3882,6 +3929,8 @@ function renderCombatInline(combat, reason, container, storyTarget) {
     dest.scrollTop = dest.scrollHeight;
     _lastCombatRound = 0;
     _lastCombatEnemyHp = {};
+    _lastCombatAllyHp = {};
+    _allyCardEls = {};
     _lastPlayerHp = null;
     _lastInitShown = null;
     return;
@@ -3949,6 +3998,75 @@ function renderCombatInline(combat, reason, container, storyTarget) {
     }
   });
 
+  // ── Allierade-kort (v28): speglar fiende-korten — namn, HP-bar, fallen-state ──
+  // Bygger kortet via element (inte innerHTML) så vi behåller direkta referenser
+  // till kort/sub för fallen-uppdateringen utan DOM-query.
+  const buildAllyCardEl = (a, fallen) => {
+    const cardEl = document.createElement('div');
+    cardEl.className = 'msg system';
+    const inner = document.createElement('div');
+    inner.className = 'box combat-inline combat-ally-card' + (fallen ? ' fallen' : '');
+    const token = document.createElement('div');
+    token.className = 'cie-token'; token.textContent = '🛡️';
+    const info = document.createElement('div');
+    info.className = 'cie-info';
+    const nameEl = document.createElement('div');
+    nameEl.className = 'cie-name'; nameEl.textContent = a.name;
+    const pct = a.max_hp ? Math.max(0, Math.min(100, Math.round(100 * (a.hp || 0) / a.max_hp))) : 0;
+    const bar = document.createElement('div');
+    bar.className = 'cie-hpbar' + (pct < 25 ? ' low' : '');
+    const fill = document.createElement('i');
+    fill.style.width = pct + '%'; bar.appendChild(fill);
+    const sub = document.createElement('div');
+    sub.className = 'cie-sub';
+    sub.textContent = fallen
+      ? `Fallen — HP 0/${a.max_hp || 0}`
+      : `HP ${a.hp || 0}/${a.max_hp || 0}${a.ac ? ' · AC ' + a.ac : ''}${(a.statuses || []).length ? ' · ' + (a.statuses || []).map(runeFor).join('') : ''}`;
+    info.appendChild(nameEl); info.appendChild(bar); info.appendChild(sub);
+    inner.appendChild(token); inner.appendChild(info);
+    cardEl.appendChild(inner);
+    _allyCardEls[a.name] = { card: inner, sub };
+    return cardEl;
+  };
+
+  (combat.allies || []).forEach(a => {
+    if (a.alive === false) {
+      // Fallen allierad → gråa ut kortet (eller rita det direkt om den aldrig setts)
+      const ref = _allyCardEls[a.name];
+      if (!ref) {
+        container.appendChild(buildAllyCardEl(a, true));
+        _lastCombatAllyHp[a.name] = 'dead';
+        return;
+      }
+      if (_lastCombatAllyHp[a.name] !== 'dead') {
+        ref.card.classList.add('fallen');
+        if (ref.sub) ref.sub.textContent = `Fallen — HP 0/${a.max_hp || 0}`;
+        _lastCombatAllyHp[a.name] = 'dead';
+      }
+      return;
+    }
+    if (!(a.name in _lastCombatAllyHp)) {
+      // Ny allierad → rendera kort
+      container.appendChild(buildAllyCardEl(a, false));
+      _lastCombatAllyHp[a.name] = a.hp;
+    } else if (a.hp !== _lastCombatAllyHp[a.name]) {
+      // HP ändrad → inline uppdatering
+      const oldHp = _lastCombatAllyHp[a.name];
+      const diff = (a.hp || 0) - oldHp;
+      const diffStr = diff < 0 ? `${diff}` : `+${diff}`;
+      const pct = a.max_hp ? Math.max(0, Math.min(100, Math.round(100 * (a.hp || 0) / a.max_hp))) : 0;
+      const updEl = document.createElement('div');
+      updEl.className = 'msg system';
+      updEl.innerHTML = `<div class="box combat-inline combat-hp-update ally${diff < 0 ? ' dmg' : ' heal'}">
+        <span class="cie-token-sm">🛡️</span>
+        ${escapeHtml(a.name)}: <b>${diffStr}</b> → HP ${a.hp || 0}/${a.max_hp || 0}
+        <span class="cie-hpbar-sm${pct < 25 ? ' low' : ''}"><i style="width:${pct}%"></i></span>
+      </div>`;
+      container.appendChild(updEl);
+      _lastCombatAllyHp[a.name] = a.hp;
+    }
+  });
+
   container.scrollTop = container.scrollHeight;
 }
 
@@ -3967,12 +4085,17 @@ function updateCombatStatusBar(combat) {
   const en = (typeof I18N !== 'undefined' && I18N.getLang() === 'en');
   const round = combat.round || 1;
   const enemies = (combat.enemies || []).filter(e => e.alive !== false);
+  const allies = (combat.allies || []).filter(a => a.alive !== false);
   const php = combat.player_hp || {};
   
   let html = `<span class="csb-round">⚔ ${en ? 'R' : 'R'}${round}</span>`;
   enemies.forEach(e => {
     const pct = e.max_hp ? Math.round(100 * (e.hp || 0) / e.max_hp) : 0;
     html += `<span class="csb-sep">│</span><span class="csb-enemy">${SPR.html(enemySpriteFor(e.name))} ${escapeHtml(e.name)} ${e.hp}/${e.max_hp}</span>`;
+  });
+  // Allierade i statusraden (v28): 🛡️ + arcane-ton — speglar fienderna
+  allies.forEach(a => {
+    html += `<span class="csb-sep">│</span><span class="csb-ally">🛡️ ${escapeHtml(a.name)} ${a.hp}/${a.max_hp}</span>`;
   });
   if (php.current != null) {
     const pPct = php.max ? Math.round(100 * php.current / php.max) : 0;
@@ -3992,8 +4115,9 @@ function updateCombatStatusBar(combat) {
     const actor = order[idx] || null;
     if (actor) {
       const isP = actor.key === 'player';
-      turnChip.textContent = isP ? (en ? '🎯 Your turn' : '🎯 Din tur') : `🎯 ${actor.name || 'Fiende'}`;
-      turnChip.className = 'bl-turn ' + (isP ? 'turn-player' : 'turn-enemy');
+      const isAlly = !isP && String(actor.key || '').startsWith('ally-');
+      turnChip.textContent = isP ? (en ? '🎯 Your turn' : '🎯 Din tur') : `🎯 ${actor.name || (isAlly ? (en ? 'Ally' : 'Allierad') : 'Fiende')}`;
+      turnChip.className = 'bl-turn ' + (isP ? 'turn-player' : isAlly ? 'turn-ally' : 'turn-enemy');
     } else {
       turnChip.textContent = '';
       turnChip.className = 'bl-turn';
@@ -4043,13 +4167,14 @@ function renderRoundSummary(combat, container) {
   html += `<div class="crs-title">── ${en ? 'ROUND' : 'RUNDA'} ${round} ──</div>`;
   roundLog.forEach(entry => {
     const actor = entry.actor || 'system';
-    const cls = actor === 'player' ? 'player' : actor === 'enemy' ? 'enemy' : 'system';
-    const icon = actor === 'player' ? '🗡️' : actor === 'enemy' ? '🐺' : '⚙️';
+    const cls = actor === 'player' ? 'player' : actor === 'enemy' ? 'enemy' : actor === 'ally' ? 'ally' : 'system';
+    const icon = actor === 'player' ? '🗡️' : actor === 'enemy' ? '🐺' : actor === 'ally' ? '🛡️' : '⚙️';
     // Split-view v27: bryt ut tärningsnotationen ur texten → egna badges
-    // (fiende = blodröd .enemy-dice-badge · spelare = guld .player-dice-badge)
+    // (fiende = blodröd .enemy-dice-badge · spelare = guld .player-dice-badge
+    //  · allierad = arcane .ally-dice-badge — v28)
     const dice = extractDiceFromText(entry.text || '');
     const diceHtml = dice.badges.length ? ' ' + dice.badges.map(b =>
-      `<span class="dice-badge ${actor === 'enemy' ? 'enemy-dice-badge' : 'player-dice-badge'}" title="${escapeHtml(b)}">🎲 ${escapeHtml(b)}</span>`
+      `<span class="dice-badge ${actor === 'enemy' ? 'enemy-dice-badge' : actor === 'ally' ? 'ally-dice-badge' : 'player-dice-badge'}" title="${escapeHtml(b)}">🎲 ${escapeHtml(b)}</span>`
     ).join('') : '';
     html += `<div class="crs-line ${cls}">${icon} ${mdToHtml(escapeHtml(dice.clean))}${diceHtml}</div>`;
   });
@@ -4153,8 +4278,9 @@ function maybeInitiativeReveal(combat, container) {
   const en = (typeof I18N !== 'undefined' && I18N.getLang() === 'en');
   const sorted = entries.slice().sort((a, b) => (b.value || 0) - (a.value || 0));
   const parts = sorted.map(e => {
+    const isAlly = String(e.key || '').startsWith('ally-');
     const nm = e.key === 'player' ? (en ? 'You' : 'Du') : (e.name || '?');
-    return `<b class="${e.key === 'player' ? 'ir-player' : 'ir-enemy'}">${escapeHtml(nm)}: ${e.value}</b>`;
+    return `<b class="${e.key === 'player' ? 'ir-player' : isAlly ? 'ir-ally' : 'ir-enemy'}">${escapeHtml(nm)}: ${e.value}</b>`;
   });
   const first = sorted[0];
   const firstName = first.key === 'player' ? (en ? 'You' : 'Du') : (first.name || '?');

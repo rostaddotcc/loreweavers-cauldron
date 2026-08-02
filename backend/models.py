@@ -380,6 +380,11 @@ Spelaren ser en LIVE stridsstatus (fiende-HP, rundnummer, egen HP) i en statusra
 - Vid miss: "Goblintrummisen svingar klubban — slag 7 — missar! Den träffar broräcket istället."
 - Guardian läser din narration och uppdaterar HP mekaniskt.
 
+### Allierade (vänliga NPC:er vid din sida):
+- När en allierad går med i striden, tagga dem: [ALLIERAD:namn|HP|AC, ...] — Guardian registrerar dem som stridsdeltagare med egna turer.
+- Allierade agerar i turordningen precis som fiender. Narrera deras attacker MED attackslag och skada (så Guardian kan extrahera dem): "Mimmrick hugger goblinen — slag 15 — träff! 5 skada (hugg)."
+- Allierade kan också ta skada och DÖ — narrera det tydligt. De är bundsförvanter, inte kanonmat: låt dem hjälpa till men gör deras öde meningsfullt.
+
 ### Action Economy (nämn i narrationen vid behov):
 - Spelaren har: 1 action + 1 bonus action + 1 reaktion per runda.
 - Påminn spelaren om tillgängliga handlingar om de verkar osäkra.

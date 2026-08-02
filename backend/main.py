@@ -173,6 +173,7 @@ from combat import (
     player_use_bonus_action as combat_bonus_action,
     attempt_flee as combat_flee,
     end_combat as combat_end,
+    add_allies as combat_add_allies,
     build_combat_context,
     combat_tag as combat_tag_fn,
     is_player_turn,
@@ -284,6 +285,117 @@ def _parse_npcs(text: str) -> tuple[str, list[dict]]:
     return clean, npcs
 
 
+# ═══════════════════════════════════════
+# @-NPC-chatt — spelaren pratar direkt med en NPC
+# ═══════════════════════════════════════
+
+# Tecken som kan fortsätta ett namn — används för att undvika att '@Tordsson'
+# matchar NPC:n 'Tord' (namnet måste sluta vid en ordgräns).
+_NPC_NAME_CHARS = set("abcdefghijklmnopqrstuvwxyzåäö-")
+_AT_FIRST_WORD = re.compile(r"@([A-Za-zÅÄÖåäö\-]+)")
+
+
+def _find_at_target(message: str, npcs: list[dict]) -> dict | None:
+    """Hitta vilken NPC spelaren riktar sig till via @-omnämnande.
+
+    1. Fullt namn (flerordiga namn OK): '@Mimmrick Fjäderpung …' — matchas var
+       som helst i meddelandet, case-insensitivt. Namnet måste sluta vid en
+       ordgräns (så '@Tordsson' inte matchar NPC:n 'Tord').
+    2. Fallback: första ordet i namnet i BÖRJAN av meddelandet:
+       '@Mimmrick: hjälp!' matchar NPC:n 'Mimmrick Fjäderpung'.
+
+    Returnerar det matchade NPC-dict:et eller None. Ren detektor — filtrerar
+    INTE på levande/fiende; det görs vid injektionen.
+    """
+    if not message or not npcs:
+        return None
+    low = message.lower()
+    for npc in npcs:
+        name = (npc.get("name") or "").strip()
+        if not name:
+            continue
+        at_name = "@" + name.lower()
+        idx = low.find(at_name)
+        if idx != -1:
+            end = idx + len(at_name)
+            # Nästa tecken får inte vara en bokstav — annars är '@namnet' bara
+            # ett prefix av ett längre ord (t.ex. '@Tordsson' → 'Tord').
+            if end >= len(low) or low[end] not in _NPC_NAME_CHARS:
+                return npc
+    m = _AT_FIRST_WORD.match(message.strip())
+    if m:
+        first_word = m.group(1).lower()
+        for npc in npcs:
+            name = (npc.get("name") or "").strip()
+            npc_first = (name.split()[0] if name.split() else "").lower()
+            if npc_first == first_word:
+                return npc
+    return None
+
+
+def _build_npc_chat_context(npc: dict, lang: str) -> str:
+    """Bygg ett kompakt NPC-chatt-block för DM-systemprompten.
+
+    Instruerar DM:n att svara I KARAKTÄR som NPC:n (första person, citerat tal,
+    personlighet från anteckningarna) medan resten av världen pausar. Inkluderar
+    NPC:ns roll, relation och anteckningar om de finns. Språk: svenska för
+    'sv' (default), engelska för 'en'.
+    """
+    name = npc.get("name", "NPC")
+    role = (npc.get("role") or "").strip()
+    relation = npc.get("relation", "okänd")
+    notes = (npc.get("notes") or "").strip()
+
+    if lang == "en":
+        lines = [
+            f"The player is directly addressing **{name}**. You MUST respond "
+            f"IN CHARACTER as {name} — first-person, with quoted speech, "
+            f"personality drawn from the notes below. The rest of the world "
+            f"pauses until this conversation resolves.",
+        ]
+        facts = []
+        if role:
+            facts.append(f"Role: {role}")
+        facts.append(f"Relation to the player: {relation}")
+        if notes:
+            facts.append(f"Notes: {notes}")
+        header = "## 💬 NPC CONVERSATION"
+    else:
+        lines = [
+            f"Spelaren pratar direkt med **{name}**. Du MÅSTE svara I KARAKTÄR "
+            f"som {name} — i första person, med citerat tal, personlighet utifrån "
+            f"anteckningarna nedan. Resten av världen pausar tills samtalet är avslutat.",
+        ]
+        facts = []
+        if role:
+            facts.append(f"Roll: {role}")
+        facts.append(f"Relation till spelaren: {relation}")
+        if notes:
+            facts.append(f"Anteckningar: {notes}")
+        header = "## 💬 NPC-SAMTAL"
+
+    return header + "\n" + "\n".join(lines + [f"- {f}" for f in facts])
+
+
+def _maybe_inject_npc_context(system_content: str, message: str, state: dict) -> str:
+    """Om spelaren @nämner en levande, icke-fiende NPC → lägg NPC-chattkontexten
+    till systemprompten (appenrad, tydligt avgränsad). Annars oförändrad —
+    fullt bakåtkompatibel när inget @-omnämnande matchar.
+
+    Fiender och döda NPC:er får INGEN injektion — DM:n hanterar det som vanligt
+    (hån, hot, eller vad berättelsen kräver).
+    """
+    npc = _find_at_target(message, state.get("npcs", []))
+    if not npc:
+        return system_content
+    if npc.get("alive", True) is False:
+        return system_content
+    if npc.get("relation") == "fiende":
+        return system_content
+    block = _build_npc_chat_context(npc, _get_lang(state))
+    return system_content + "\n\n" + block
+
+
 def _parse_roll_requests(text: str) -> tuple[str, list[dict]]:
     """Extrahera [KAST: 1d20+4 | SMIDIGHET för att smyga]-taggar ur DM-svar."""
     rolls = []
@@ -324,6 +436,10 @@ _MECH_PATTERNS = {
 # [STRID:namn|hp|ac, namn2|hp|ac] — DM öppnar strid; Guardian sköter sedan
 # skada, rundor och turordning. Skapar world.combat (se combat-spec).
 STRID_PATTERN = re.compile(r'\[STRID:([^\]]+)\]')
+
+# [ALLIERAD:namn|hp|ac, namn2|hp|ac] — DM låter vänliga NPC:er gå med i en
+# PÅGÅENDE strid. Lägger till allierade i world.combat (combat.add_allies).
+ALLIERAD_PATTERN = re.compile(r'\[ALLIERAD:([^\]]+)\]')
 
 # [Resultat: ETIKETT → VÄRDE (rullar)] — spelarens tärningsresultat.
 # Uppdaterar initiative (combat) och dödsräddningar (character.death_saves).
@@ -674,6 +790,71 @@ def _parse_strid_tag(text: str, state: dict) -> tuple[str, list[dict]]:
         # [COMBAT:]-taggen till frontendens Krigsråd (utan denna syns inget UI).
         state.setdefault("meta", {})["combat_tag_dirty"] = True
     logger.info("⚔️ [STRID:] combat registered: %s", ', '.join(names) if names else '(no enemies)')
+    return clean, effects
+
+
+def _parse_allierad_tag(text: str, state: dict) -> tuple[str, list[dict]]:
+    """Extrahera [ALLIERAD:namn|hp|ac, namn2|hp|ac] → allierade i pågående strid.
+
+    Allierade är vänliga NPC:er som kämpar PÅ SPELARENS SIDA. Taggen är bara
+    meningsfull mitt i en aktiv strid (world.combat.active) — combat.add_allies
+    lägger till dem med egna turer i turordningen. Utan aktiv strid loggas en
+    varning och taggen ignoreras (allierade existerar bara i strid).
+    Taggen stripas ur narrationen oavsett.
+    """
+    effects: list[dict] = []
+    m = ALLIERAD_PATTERN.search(text)
+    if not m:
+        return text, effects
+    clean = ALLIERAD_PATTERN.sub('', text)
+    clean = re.sub(r'[ \t]{2,}', ' ', clean).strip()
+
+    world = state.setdefault('world', {})
+    combat = world.get('combat')
+    if not (combat and combat.get('active')):
+        logger.warning("🤝 [ALLIERAD:] ignorerad — ingen aktiv strid")
+        return clean, effects
+
+    allies_in: list[dict] = []
+    names: list[str] = []
+    for entry in m.group(1).split(','):
+        entry = entry.strip()
+        if not entry:
+            continue
+        parts = [p.strip() for p in entry.split('|')]
+        name = parts[0] if parts else ''
+        if not name:
+            continue
+        try:
+            hp = int(parts[1])
+        except (IndexError, ValueError):
+            hp = 7
+        try:
+            ac = int(parts[2])
+        except (IndexError, ValueError):
+            ac = 10
+        # attack_bonus och damage_dice: DM kan ange som 4:e och 5:e fält
+        try:
+            atk_bonus = int(parts[3])
+        except (IndexError, ValueError):
+            atk_bonus = 3
+        try:
+            dmg_dice = parts[4]
+        except IndexError:
+            dmg_dice = "1d6+1"
+        allies_in.append({
+            "name": name, "hp": hp, "ac": ac,
+            "attack_bonus": atk_bonus, "damage_dice": dmg_dice,
+        })
+        names.append(name)
+
+    if allies_in:
+        combat_add_allies(state, allies_in)
+        effects.append({'type': 'ally_add', 'value': ', '.join(names)})
+        # Flagga att combat-state ändrats → Guardian skickar [COMBAT:]-taggen
+        # så frontendens Krigsråd visar de nya allierade direkt.
+        state.setdefault("meta", {})["combat_tag_dirty"] = True
+    logger.info("🤝 [ALLIERAD:] allies added: %s", ', '.join(names) if names else '(none)')
     return clean, effects
 
 
@@ -3548,6 +3729,20 @@ async def _chat_locked(
         except Exception as e:
             logger.warning("RAG/fact injection skipped: %s", e)
 
+    # ── @-NPC-chatt: spelaren pratar direkt med en NPC (t.ex. '@Mimmrick: …') ──
+    # Injicera NPC-kontext + rollspelsinstruktion i systemprompten så DM:n svarar
+    # I KARAKTÄR som NPC:n. Endast levande, icke-fiende NPC:er; ingen match →
+    # ingen ändring (bakåtkompatibelt).
+    try:
+        _npc_injected = _maybe_inject_npc_context(
+            messages[0]["content"], req.message, state
+        )
+        if len(_npc_injected) > len(messages[0]["content"]):
+            messages[0]["content"] = _npc_injected
+            logger.info("💬 NPC-chatt: @-kontext injicerad i systemprompten")
+    except Exception as e:
+        logger.warning("NPC-chatt-injektion hoppades över: %s", e)
+
     # Sammanfattningar injiceras numera i _build_system_prompt (hierarkiskt:
     # 2 scen + 2 kapitel + 1 kampanjbåge) — ingen separat loop behövs här.
 
@@ -3722,6 +3917,12 @@ async def _chat_locked(
     # skickas som skip_effects till Guardian (dedup, se B2).
     reply, strid_effects = _parse_strid_tag(reply, state)
     effects = effects + strid_effects
+
+    # ── [ALLIERAD:] — allierade ansluter till PÅGÅENDE strid ──
+    # DM låter vänliga NPC:er slåss vid spelarens sida mitt i striden.
+    # Kräver aktiv strid — utan strid ignoreras taggen (bara en varning).
+    reply, allierad_effects = _parse_allierad_tag(reply, state)
+    effects = effects + allierad_effects
 
     # ── Prosa-föremål: borttaget (v18) ──
     # LLM-extraktion i _post_turn_tasks() hanterar nu föremål som DM

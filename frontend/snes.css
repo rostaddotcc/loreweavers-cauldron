@@ -1035,13 +1035,15 @@
    (fiendekort, HP, tärningar, rundor, statusbar som panelheader).
    Mobile ≤768px: stridsloggen som kollapsbar låda under berättelsen.
    ═══════════════════════════════════════════════════ */
-.main.combat-split{
+.main.combat-split,
+.main.battle-log-open{
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(250px, 40%);
   grid-template-rows: minmax(0, 1fr) auto auto;
   column-gap: .75rem;
 }
-.main.combat-split .chat-scroll{
+.main.combat-split .chat-scroll,
+.main.battle-log-open .chat-scroll{
   grid-column: 1; grid-row: 1;
   min-height: 0;
   padding-right: .8rem;
@@ -1058,7 +1060,21 @@
   box-shadow: inset 0 0 24px rgba(139,26,42,.06), 0 0 18px rgba(139,26,42,.08);
   animation: bl-in .45s cubic-bezier(.22,1,.36,1);
 }
-.main.combat-split .battle-log-pane{ display: flex; }
+.main.combat-split .battle-log-pane,
+.main.battle-log-open .battle-log-pane{ display: flex; }
+.bl-close{
+  margin-left: .4rem;
+  background: transparent;
+  border: 1px solid rgba(139,26,42,.4);
+  color: var(--bone-bright);
+  font-size: .62rem; line-height: 1;
+  padding: .22rem .4rem;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background .2s, color .2s;
+}
+.bl-close:hover{ background: rgba(139,26,42,.3); color: var(--bone-bright); }
+.bl-close:active{ background: var(--blood); color: var(--ink); }
 @keyframes bl-in{
   from{ opacity: 0; transform: translateX(14px); }
   to{ opacity: 1; transform: translateX(0); }
@@ -1112,18 +1128,18 @@
 }
 .bl-body .combat-round{ width: fit-content; margin: .3rem auto; padding: .3rem 1rem; }
 .bl-body .initiative-reveal{ margin: .4rem 0; }
-/* ── Mobil-lådans växelknapp (display:none tills strid börjar) ── */
+/* ── Stridslogg-toggle (alltid synlig — öppna/minimera högerkolumnen) ── */
 .battle-drawer-toggle{
-  display: none;
-  align-items: center; justify-content: space-between; gap: .6rem;
-  width: 100%;
-  padding: .55rem .9rem;
-  background: linear-gradient(180deg, rgba(139,26,42,.20), rgba(139,26,42,.06));
-  border: 1px solid rgba(139,26,42,.45);
-  border-left: 3px solid var(--blood);
-  color: var(--blood-bright);
+  display: flex;
+  align-items: center; justify-content: center; gap: .6rem;
+  width: fit-content;
+  margin: .3rem auto .15rem;
+  padding: .35rem .9rem;
   font-family: var(--font-display), 'Cinzel', serif;
-  font-size: .58rem; letter-spacing: .18em; text-transform: uppercase;
+  font-size: .6rem; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--bone-bright);
+  background: rgba(139,26,42,.14);
+  border: 1px solid rgba(139,26,42,.45);
   cursor: pointer;
   transition: background .2s, color .2s;
 }
@@ -1161,11 +1177,13 @@ body.battle-drawer-open .battle-drawer-toggle .bdt-caret{ transform: rotate(180d
 
 /* ── MOBILE ≤768px: stridsloggen som kollapsbar låda ── */
 @media (max-width: 768px){
-  .main.combat-split{
+  .main.combat-split,
+  .main.battle-log-open{
     display: flex;
     flex-direction: column;
   }
-  .main.combat-split .chat-scroll{ padding-right: 1.6rem; }
+  .main.combat-split .chat-scroll,
+  .main.battle-log-open .chat-scroll{ padding-right: 1.6rem; }
   .battle-log-pane{
     grid-column: auto; grid-row: auto;
     order: 5;

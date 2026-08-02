@@ -874,7 +874,7 @@
     color: var(--bone-dim); font-style: italic; font-size: 0.85rem;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=10">
+<link rel="stylesheet" href="snes.css?v=11">
 <script src="sprites.js?v=20260802a"></script>
 <script src="fonts.js?v=20260802c"></script>
 <script src="themes.js?v=20260802c"></script>
@@ -1003,13 +1003,15 @@
       <div class="bl-head">
         <span class="bl-title">⚔ STRIDSLOGG</span>
         <span class="bl-round" id="bl-round">R1</span>
+        <button class="bl-close" id="bl-close" onclick="toggleBattleLog(false)" title="Minimera stridslogg" aria-label="Minimera stridslogg">✕</button>
       </div>
       <div class="bl-status" id="combat-status-bar" style="display:none"></div>
       <div class="bl-body" id="battle-log-body"></div>
     </aside>
 
-    <!-- Mobil: kollapsbar stridslåda (endast under aktiv strid) -->
-    <button class="battle-drawer-toggle" id="battle-drawer-toggle" style="display:none" onclick="toggleBattleDrawer()" aria-expanded="false">
+    <!-- Stridslogg-toggle: alltid synlig — öppna/minimera stridsloggen (högerkolumnen).
+         Auto-öppnas vid strid; annars arkivläge för gamla strider. -->
+    <button class="battle-drawer-toggle" id="battle-drawer-toggle" onclick="toggleBattleLog()" aria-expanded="false">
       <span class="bdt-label">⚔ Stridslogg</span>
       <span class="bdt-caret">▲</span>
     </button>
@@ -2771,6 +2773,21 @@ async function loadTranscript() {
   // Återställ dag-fliknings-tillståndet (kan vara kvar från en ny dag live)
   _newDayPending = false;
   _newDayLabel = '';
+  // Återställ combat-dedup + stridspanelen innan replay → alla strider
+  // renderas fullt i högerkolumnen (v27: battle log = enda platsen för combat).
+  _lastCombatRound = 0;
+  _lastCombatEnemyHp = {};
+  _lastPlayerHp = null;
+  _lastInitShown = null;
+  _lastCombatStatus = null;
+  const blReset = getBattleLogBody();
+  if (blReset) blReset.innerHTML = '';
+  const mainReset = document.querySelector('.main');
+  if (mainReset) {
+    mainReset.classList.remove('combat-split');
+    mainReset.classList.remove('battle-log-open');
+  }
+  document.body.classList.remove('battle-drawer-open');
 
   let data;
   try {
@@ -3638,9 +3655,11 @@ function applyCombatTag(el, text, container) {
   const live = (target === chat);
   if (live) setCombatSplit(combat.active !== false);
 
-  // Stridsrenderare → högra panelen när split är aktiv, annars chatten
+  // Stridsrenderare → ALLTID högerpanelen (live + replay). Battle log = enda
+  // platsen för combat-innehåll; chatten är bara DM-berättelsen. Replay fyller
+  // panelen vid omladdning (historiska strider finns kvar som arkiv).
   const bl = getBattleLogBody();
-  const combatTarget = (live && combat.active !== false && bl) ? bl : target;
+  const combatTarget = bl || target;
 
   // Chat-first combat: rendera inline meddelanden (segerraden hamnar alltid i berättelsen)
   renderCombatInline(combat, reason, combatTarget, live ? chat : null);
@@ -3682,36 +3701,42 @@ function setCombatSplit(on) {
   if (on) {
     main.classList.add('combat-split');
     pane.setAttribute('aria-hidden', 'false');
-    if (tog) tog.style.display = '';
+    if (tog) tog.setAttribute('aria-expanded', 'true');
   } else {
     main.classList.remove('combat-split');
     pane.setAttribute('aria-hidden', 'true');
-    if (tog) { tog.style.display = 'none'; tog.setAttribute('aria-expanded', 'false'); }
+    if (tog) tog.setAttribute('aria-expanded', 'false');
     document.body.classList.remove('battle-drawer-open');
-    mergeBattleLogIntoChat();
+    // Ingen merge-back längre: stridsloggen BEHÅLLER sitt innehåll så man kan
+    // öppna den igen (arkivläge) för att se gamla strider.
   }
 }
 
-// Stridsslut → flytta stridspanelens innehåll till berättelsen (kronologisk merge-back)
-function mergeBattleLogIntoChat() {
-  const bl = getBattleLogBody();
-  if (!bl || !bl.children.length) return;
-  const frag = document.createDocumentFragment();
-  while (bl.firstChild) frag.appendChild(bl.firstChild);
-  chat.appendChild(frag);
-  chat.scrollTop = chat.scrollHeight;
-}
-
-// Mobil (≤768px): stridsloggen som kollapsbar låda under berättelsen
-function toggleBattleDrawer(force) {
-  const open = (typeof force === 'boolean') ? force : !document.body.classList.contains('battle-drawer-open');
+// Stridslogg-toggle (desktop + mobil): öppna/minimera högerkolumnen manuellt.
+// Aktiv strid → .combat-split (auto-öppen). Annars → .battle-log-open (arkiv).
+function toggleBattleLog(force) {
+  const main = document.querySelector('.main');
+  const pane = document.getElementById('battle-log');
+  if (!main || !pane) return;
+  const wasOpen = main.classList.contains('combat-split') || main.classList.contains('battle-log-open');
+  const open = (typeof force === 'boolean') ? force : !wasOpen;
+  if (open) {
+    if (_lastCombatStatus && _lastCombatStatus.active !== false) {
+      main.classList.add('combat-split');
+    } else {
+      main.classList.add('battle-log-open');
+    }
+    pane.setAttribute('aria-hidden', 'false');
+    const bl = getBattleLogBody();
+    if (bl) bl.scrollTop = bl.scrollHeight;
+  } else {
+    main.classList.remove('combat-split');
+    main.classList.remove('battle-log-open');
+    pane.setAttribute('aria-hidden', 'true');
+  }
   document.body.classList.toggle('battle-drawer-open', open);
   const tog = document.getElementById('battle-drawer-toggle');
   if (tog) tog.setAttribute('aria-expanded', String(open));
-  if (open) {
-    const bl = getBattleLogBody();
-    if (bl) bl.scrollTop = bl.scrollHeight;
-  }
 }
 
 // container = där stridsposterna hamnar (stridspanelen eller chatten)

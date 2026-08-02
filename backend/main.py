@@ -995,7 +995,7 @@ GUARDIAN_MODEL = os.getenv("GUARDIAN_MODEL", "qwen3.8-max")
 DEFAULT_PLAYER_MODEL = "qwen3.8-max"
 # Modeller som icke-admin-spelare får välja mellan
 # (admin ser alla — inkl. MiMo + DeepSeek-egen-API)
-PLAYER_MODELS = ("qwen3.8-max", "qwen3.6-flash", "deepseek-v4-flash-0731", "step-3.7-flash", "ollama:heretic")
+PLAYER_MODELS = ("qwen3.8-max", "qwen3.6-flash", "deepseek-v4-flash", "deepseek-v4-flash-0731", "step-3.7-flash", "ollama:heretic")
 
 
 def _clamp_player_model(model_id: str) -> str:
@@ -4351,6 +4351,7 @@ Svara ENDAST med giltig JSON (ingen markdown) med detta schema:
   "proficiency": 2,
   "hp": {"current": 10, "max": 10, "temp": 0},
   "spell_slots": {"current": 0, "max": 0},
+  "spells": [{"name": "string", "level": 0, "school": "string", "casting_time": "string", "damage_dice": "string|null", "description": "string"}],  // KLASS-ANPASSADE besvärjelser: cantrips (nivå 0) + nivå-1-besvärjelser för nivå 1. Icke-kasterklasser (fighter, rogue, barbarian) → []. Kasterklasser (wizard, sorcerer, cleric, druid, bard, warlock): ALLTID minst 2 cantrips + 2 nivå-1-besvärjelser.
   "xp": {"current": 0, "next_level": 300},
   "abilities": {
     "STR": {"score": 10, "mod": 0},
@@ -4412,6 +4413,7 @@ Respond ONLY with valid JSON (no markdown) using this schema:
   "proficiency": 2,
   "hp": {"current": 10, "max": 10, "temp": 0},
   "spell_slots": {"current": 0, "max": 0},
+  "spells": [{"name": "string", "level": 0, "school": "string", "casting_time": "string", "damage_dice": "string|null", "description": "string"}],  // CLASS-APPROPRIATE spells: cantrips (level 0) + level-1 spells for level 1. Non-caster classes (fighter, rogue, barbarian) → []. Caster classes (wizard, sorcerer, cleric, druid, bard, warlock): ALWAYS at least 2 cantrips + 2 level-1 spells.
   "xp": {"current": 0, "next_level": 300},
   "abilities": {
     "STR": {"score": 10, "mod": 0},
@@ -4545,6 +4547,28 @@ def _finalize_character(char_data: dict, state: dict, lang: str) -> dict:
             if cls in klass:
                 char_data["saves"] = [{"name": p, "prof": True} for p in profs]
                 break
+
+    # ── Besvärjelser (v28): säkerställ att 'spells' alltid är en lista med
+    # namngivna spells — LLM:n kan glömma den eller skicka skräp.
+    _spells = char_data.get("spells")
+    clean_spells = []
+    if isinstance(_spells, list):
+        for sp in _spells:
+            if not isinstance(sp, dict) or not sp.get("name"):
+                continue
+            clean_spells.append({
+                "name": str(sp.get("name", "")).strip()[:80],
+                "level": int(sp.get("level", 0) or 0),
+                "school": str(sp.get("school", "")).strip()[:40] or "Okänd",
+                "casting_time": str(sp.get("casting_time", "")).strip()[:40] or "",
+                "damage_dice": str(sp.get("damage_dice", "")).strip()[:40] or None,
+                "description": str(sp.get("description", "")).strip()[:300] or "",
+            })
+    elif isinstance(_spells, dict):
+        # Enstaka spell som dict — slå in i lista
+        if _spells.get("name"):
+            clean_spells = [_spells]
+    char_data["spells"] = clean_spells
 
     # Flytta startutrustning till state["inventory"] (där frontend läser den)
     inventory = char_data.pop("inventory", None)
@@ -5111,14 +5135,74 @@ STEP_IMAGE_STYLE = (
 )
 
 
-def _build_avatar_prompt(state: dict, avatar_key: str) -> str:
+# ── DM-avatar: slumpade arketyper (v28) ──
+# Öppen tolkning av "DM" — aldrig samma motiv två gånger. Seed gör valet
+# deterministiskt (samma seed = samma avatar), så "Reroll" med ny seed ger ny.
+_DM_AVATAR_ARCHETYPES = [
+    "an ancient hooded scholar, face hidden in shadow, floating arcane tomes and glowing glyphs orbiting them",
+    "a benevolent ancient dragon spirit, scales like molten gold, wisps of smoke and embers curling around them",
+    "a celestial oracle wrapped in veils of starlight, a faint halo of constellation light, the cosmos reflected in their eyes",
+    "a mysterious shadow weaver, their silhouette dissolving into threads of darkness, violet strands of magic stitching the air",
+    "an ancient forest elder, bark and moss on their skin, tiny woodland spirits gathering at their shoulders",
+    "a towering crystal being, faceted body refracting candlelight into rainbows, soft humming energy at their core",
+    "a fey trickster with an ever-shifting expression, motes of will-o-wisp light dancing around them, mushrooms at their feet",
+    "a being of the cosmic void, stars scattered across their dark cloak, a tiny galaxy slowly turning in their palm",
+    "an armored warlord of old, battle-worn plate, a glowing war table with tiny moving tokens before them",
+    "a masked librarian of forbidden knowledge, endless shelves of glowing books behind them, one candle burning",
+    "a hooded harbinger with a raven on their shoulder, feathers and loose ink drifting on a moonlit breeze",
+    "an arcane clockwork being, gold gears visible through translucent skin, floating clock-hands circling like needles",
+    "a blind seer with stitched-shut eyes, threads of prophecy unspooling from their fingertips, faint red sigils in the air",
+    "a regal lich-lord of forgotten lineage, a crown of dark iron, spectral courtiers whispering at the edges of the light",
+    "a storm-touched augur, hair crackling with static, a miniature thundercloud circling above their outstretched hand",
+    "a silver-masked duelist of fate, playing cards of light flickering between their fingers, a coiled whip of shadow",
+    "a stone-faced rune carver, glowing runes climbing their arms, a floating anvil and hammer of light beside them",
+    "a moonlit witch of the old roads, a cauldron of stars at their side, wisps of pale blue magic braided through their hair",
+]
+
+_DM_AVATAR_MOODS = [
+    "candlelit and intimate",
+    "lit by cold blue moonlight",
+    "warm hearth glow",
+    "flickering torchlight",
+    "eerie green witchlight",
+    "golden hour warmth",
+    "storm-lit by distant lightning",
+    "soft lantern glow",
+    "dim ritual chamber light",
+    "dawn light through high windows",
+]
+
+_DM_AVATAR_PALETTES = [
+    "deep purples and gold",
+    "emerald and bone white",
+    "crimson and obsidian",
+    "teal and copper",
+    "arcane violet and silver",
+    "forest green and amber",
+    "midnight blue and pale gold",
+    "ash grey and ember orange",
+    "sapphire and platinum",
+]
+
+
+def _build_dm_avatar_prompt(seed: int) -> str:
+    """Öppen, slumpad tolkning av DM:n — aldrig samma motiv (seed-styrd)."""
+    rng = random.Random(seed or 0)
+    archetype = rng.choice(_DM_AVATAR_ARCHETYPES)
+    mood = rng.choice(_DM_AVATAR_MOODS)
+    palette = rng.choice(_DM_AVATAR_PALETTES)
+    return (
+        f"An ancient, mysterious dungeon master, {archetype}, {mood}, "
+        f"color palette of {palette}, arcane runes drifting faintly around. "
+        + STEP_IMAGE_STYLE
+    )
+
+
+def _build_avatar_prompt(state: dict, avatar_key: str, seed: int = 0) -> str:
     """Bygg bildprompten AUTOMATISKT från kampanjdata (character sheet, items,
     lore, NPC-data) — användaren promptar aldrig själv."""
     if avatar_key == "dm":
-        return (
-            "An ancient, mysterious dungeon master, hooded and shadowed, candlelight "
-            "glinting on a horned mask, arcane runes drifting around. " + STEP_IMAGE_STYLE
-        )
+        return _build_dm_avatar_prompt(seed)
     if avatar_key.startswith("npc:"):
         npc_name = avatar_key[4:]
         npc = next(
@@ -5199,7 +5283,7 @@ async def generate_avatar(
     if mode not in ("new", "edit"):
         mode = "new"
 
-    prompt = _trim_prompt(_build_avatar_prompt(state, avatar_key))
+    prompt = _trim_prompt(_build_avatar_prompt(state, avatar_key, seed))
     logger.info("🎨 AI-avatar: %s (mode=%s, seed %d)", avatar_key, mode, seed)
 
     api_key = os.getenv("STEPFUN_API_KEY")

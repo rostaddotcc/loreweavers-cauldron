@@ -372,6 +372,9 @@ Extrahera ALLA mekaniska effekter och uppdateringar.
 - items_remove: Föremål spelaren FÖRLORAR (tappar, ger bort, säljer, förbrukar).
 - currency: Valutaändringar. Ange denom (pp/gp/sp/cp) och amount (+ för in, - för ut).
 
+### Besvärjelser (spells)
+- spells_add: Besvärjelser karaktären LÄR SIG (via level-up, scroll, undervisning eller DM-belöning). Ange: [{\"name\": \"Eldklot\", \"level\": 3, \"school\": \"evocation\", \"casting_time\": \"1 action\", \"damage_dice\": \"8d6\", \"description\": \"...\"}]. Cantrips = level 0. Lägg ENDAST till spells som faktiskt tilldelas i narrationen. Om karaktären är en kasterklass (wizard, sorcerer, cleric, druid, bard, warlock) och SAKNAR spells helt, extrahera passande klassbesvärjelser (minst 2 cantrips + 2 nivå-1) så karaktärsbladet aldrig är tomt.
+
 ### Uppdrag
 - quests_new: Nya uppdrag. Ange name, description, reward (kort text), \
   xp_reward (heltal 100-500 beroende på svårighet), gold_reward (heltal, 0 om ingen guld-belöning). \
@@ -504,6 +507,7 @@ Skriv i dåtid, tredje person. T.ex. "Faelyndra smög förbi vakten och tog sig 
   "items_add": [{"name": "...", "type": "Vapen", "category": "weapon", "usage": "wielded", "qty": 1, "weight": 3.0, "lore": "Stulen från en fallen riddare vid Gråportens mur.", "damage": "1d8 slashing", "damage_dice": "1d8", "damage_type": "slashing", "ac_bonus": null, "range": "melee", "properties": ["versatile"], "magic_bonus": 0, "charges": null, "max_charges": null, "description": "", "effects": null, "roll": null}],
   "items_remove": [],
   "currency": [{"denom": "gp", "amount": 15}],
+  "spells_add": [],
   "quests_new": [{"name": "...", "description": "...", "reward": "...", "xp_reward": 100, "gold_reward": 0}],
   "quests_completed": [],
   "quests_failed": [],
@@ -743,7 +747,7 @@ async def guardian_extract_mechanics(
 
     empty = {
         "damage": [], "healing": [], "death": [], "xp": 0,
-        "items_add": [], "items_remove": [], "currency": [],
+        "items_add": [], "items_remove": [], "currency": [], "spells_add": [],
         "quests_new": [], "quests_completed": [], "quests_failed": [],
         "npcs_new": [], "npc_relations": [], "npc_notes": [],
         "npc_name_reveals": [], "character_updates": [],
@@ -1260,6 +1264,27 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             logger.info("🛡️ Guardian: added '%s'", name)
         current_weight += added_weight
         effects.append({"type": "föremål", "value": name, "qty": qty})
+
+    # ── Besvärjelser (v28): spells_add — karaktären lär sig en besvärjelse ──
+    for sp in mech.get("spells_add", []):
+        if not isinstance(sp, dict) or not sp.get("name"):
+            continue
+        sname = str(sp.get("name", "")).strip()[:80]
+        if not sname:
+            continue
+        spells = ch.setdefault("spells", [])
+        if any((s.get("name") or "").lower() == sname.lower() for s in spells):
+            continue  # redan känd — dedup
+        spells.append({
+            "name": sname,
+            "level": int(sp.get("level", 0) or 0),
+            "school": str(sp.get("school", "")).strip()[:40] or "Okänd",
+            "casting_time": str(sp.get("casting_time", "")).strip()[:40] or "",
+            "damage_dice": str(sp.get("damage_dice", "")).strip()[:40] or None,
+            "description": str(sp.get("description", "")).strip()[:300] or "",
+        })
+        effects.append({"type": "spell_add", "value": sname, "level": int(sp.get("level", 0) or 0)})
+        logger.info("✨ Guardian: spell added '%s' (lvl %s)", sname, sp.get("level", 0))
 
     for item in mech.get("items_remove", []):
         # Robust mot både dict- och sträng-form (samma klass av bugg som death)

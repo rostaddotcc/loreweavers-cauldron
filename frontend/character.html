@@ -264,6 +264,29 @@
   }.inv-summary b{ color: var(--bone-bright); }.overloaded{ color: var(--blood-bright) !important; animation: hp-alarm 1.2s infinite; }.inv-empty{
     text-align: center; color: var(--bone-dim); font-style: italic;
     padding: 2.5rem 1rem; font-size: 1.03rem;
+  }/* ═══════════ Besvärjelser — spell-kort ═══════════ */.spells-grid{
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.7rem; padding: 0.2rem 0;
+  }.spell-card{
+    background: linear-gradient(180deg, rgba(139,95,212,0.10), rgba(139,95,212,0.03));
+    border: 1px solid rgba(139,95,212,0.35); padding: 0.85rem 1rem;
+    transition: all 0.22s; position: relative; overflow: hidden;
+  }.spell-card:hover{
+    transform: translateY(-3px); border-color: rgba(139,95,212,0.7);
+    box-shadow: 0 8px 20px -8px rgba(139,95,212,0.45);
+  }.spell-card.cantrip{ border-color: rgba(122,163,94,0.4); background: linear-gradient(180deg, rgba(122,163,94,0.08), rgba(122,163,94,0.02)); }.spell-card.cantrip:hover{ border-color: rgba(122,163,94,0.65); box-shadow: 0 8px 20px -8px rgba(122,163,94,0.4); }.spell-card-head{
+    display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem;
+  }.spell-name{
+    font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.82rem;
+    color: #cbb3f2; line-height: 1.25; text-shadow: 0 0 8px rgba(139,95,212,0.35);
+  }.spell-card.cantrip .spell-name{ color: var(--poison-bright, #9ec58a); text-shadow: 0 0 8px rgba(122,163,94,0.35); }.spell-level{
+    font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--bone-dim); border: 1px solid var(--edge); padding: 0.1rem 0.4rem; flex-shrink: 0;
+  }.spell-card-sub{
+    font-size: 0.78rem; color: var(--bone-dim); font-style: italic; margin-top: 0.35rem;
+  }.spell-card-desc{
+    font-size: 0.83rem; color: var(--bone); margin-top: 0.5rem; line-height: 1.45;
+    border-top: 1px dashed rgba(139,95,212,0.2); padding-top: 0.45rem;
   }.add-form{ display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1.2rem; }.add-form input, .add-form select{
     font-family: 'Spectral', serif; font-size: 0.98rem; color: var(--bone-bright);
     background: #0d0817; border: 1px solid var(--edge); padding: 0.55rem 0.8rem;
@@ -498,6 +521,15 @@
     <div id="item-modal-container"></div>
   </section>
 
+  <!-- ═══════════ BESVÄRJELSER ═══════════ -->
+  <section class="panel" id="panel-spells">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+
+    <div class="section-title">✨ Spells</div>
+    <div class="spells-grid" id="spells-grid"></div>
+    <div class="spells-hint" style="margin-top:0.6rem;font-size:.83rem;color:var(--bone-dim);text-align:center">Cantrips (level 0) are at will — higher spells draw from your spell slots. New spells are assigned by the Lorekeeper as you learn them.</div>
+  </section>
+
   <!-- ═══════════ SKATTKAMMARE ═══════════ -->
   <section class="panel" id="panel-currency">
     <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
@@ -629,6 +661,7 @@ function renderAll() {
   renderTraits();
   renderSaves();
   renderInventory();
+  renderSpells();
   renderCurrency();
   renderTransactions();
   renderNotes();
@@ -1013,6 +1046,37 @@ function renderInventory() {
   const weightEl = document.getElementById('inv-weight');
   if (totalWeight > 120) { warn.textContent = I18N.t('⚠ ÖVERBELASTAD'); weightEl.classList.add('overloaded'); }
   else { warn.textContent = ''; weightEl.classList.remove('overloaded'); }
+}
+
+// ── Besvärjelser (v28) ──
+function _esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderSpells() {
+  const grid = document.getElementById('spells-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  const spells = Array.isArray(state.character && state.character.spells) ? state.character.spells : [];
+  if (!spells.length) {
+    grid.innerHTML = `<div class="inv-empty">No spells yet — your studies will bear fruit…</div>`;
+    return;
+  }
+  [...spells].sort((a, b) => (a.level || 0) - (b.level || 0)).forEach(sp => {
+    const lvl = sp.level || 0;
+    const lvlLabel = lvl === 0 ? 'Cantrip' : 'Lvl ' + lvl;
+    const card = document.createElement('div');
+    card.className = 'spell-card' + (lvl === 0 ? ' cantrip' : '');
+    const sub = [sp.school, sp.casting_time, sp.damage_dice ? '🎲 ' + sp.damage_dice : ''].filter(Boolean).join(' · ');
+    card.innerHTML = `
+      <div class="spell-card-head">
+        <span class="spell-name">✦ ${_esc(sp.name)}</span>
+        <span class="spell-level">${lvlLabel}</span>
+      </div>
+      ${sub ? `<div class="spell-card-sub">${_esc(sub)}</div>` : ''}
+      ${sp.description ? `<div class="spell-card-desc">${_esc(sp.description)}</div>` : ''}`;
+    grid.appendChild(card);
+  });
 }
 
 // ── Detaljmodal ──

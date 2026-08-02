@@ -751,6 +751,38 @@ brew.rotation.x = -Math.PI/2;
 brew.position.y = 1.175;
 pot.add(brew);
 
+/* ---------------- the ladle — stirs when you stir ---------------- */
+const woodMat  = new THREE.MeshStandardMaterial({ color:0x8a6a45, roughness:0.72, metalness:0.05, emissive:0x2a1c0e });
+const woodDark = new THREE.MeshStandardMaterial({ color:0x5a4028, roughness:0.85, metalness:0.05, emissive:0x1a1008 });
+
+const ladlePivot = new THREE.Group();
+ladlePivot.position.set(0, 1.95, 0);          /* hand hovering just above the rim */
+pot.add(ladlePivot);
+
+const ladle = new THREE.Group();
+const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.046, 0.84, 10), woodMat);
+handle.position.y = -0.42;
+ladle.add(handle);
+const knob = new THREE.Mesh(new THREE.SphereGeometry(0.064, 12, 12), woodDark);
+knob.position.y = 0.02;
+ladle.add(knob);
+/* cup — wide lathe bowl at the end of the handle */
+const cupProfile = [
+  [0.016,0.00],[0.085,0.02],[0.135,0.07],[0.15,0.14],[0.132,0.185],[0.10,0.19],
+].map(p => new THREE.Vector2(p[0], p[1]));
+const cup = new THREE.Mesh(new THREE.LatheGeometry(cupProfile, 26), woodMat);
+cup.position.y = -0.88;
+ladle.add(cup);
+/* slime pooled inside the cup — it glows with the brew */
+const cupInner = new THREE.Mesh(new THREE.CircleGeometry(0.118, 22),
+  new THREE.MeshBasicMaterial({ color:0x6fe86f }));
+cupInner.rotation.x = -Math.PI/2;
+cupInner.position.y = -0.74;
+ladle.add(cupInner);
+
+ladle.rotation.z = 0.45;                       /* lean, so the cup sweeps through the brew */
+ladlePivot.add(ladle);
+
 /* ---------------- canvas-generated textures ---------------- */
 function radialTex(stops, size = 128) {
   const c = document.createElement('canvas'); c.width = c.height = size;
@@ -967,7 +999,7 @@ layout();
 /* ---------------- main loop ---------------- */
 const clock = new THREE.Clock();
 const lookTarget = new THREE.Vector3();
-let elapsed = 0, running = true;
+let elapsed = 0, running = true, stirAngle = 0, stirSpeed = 0.4;
 
 document.addEventListener('visibilitychange', () => {
   running = !document.hidden;
@@ -983,6 +1015,15 @@ function tick() {
 
   agitation *= Math.exp(-dt * 1.35);
   burstGlow *= Math.exp(-dt * 3.2);
+
+  /* the ladle: lazy idle stir, furious when the mouse churns the brew */
+  const targetStir = (reduced ? 0.15 : 0.35) + agitation * 5.0 + burstGlow * 2.5;
+  stirSpeed += (targetStir - stirSpeed) * Math.min(1, dt * 3.5);
+  stirAngle += stirSpeed * dt;
+  ladlePivot.rotation.y = stirAngle;
+  const churn = Math.min(1, stirSpeed * 0.35);
+  ladle.rotation.z = 0.45 + Math.sin(stirAngle * 2.0) * 0.06 * churn;
+  ladlePivot.position.y = 1.95 + Math.sin(stirAngle) * 0.03 * churn;
 
   /* scroll: the cauldron recedes as you leave the hero */
   const scrollK = Math.min(1, Math.max(0, scrollY / innerHeight));

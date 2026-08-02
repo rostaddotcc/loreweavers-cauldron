@@ -3115,7 +3115,7 @@ function hideGuardianStatus() {
 function _lockChatForGuardian() {
   const ta = document.getElementById('player-input');
   const btn = document.querySelector('.send-btn');
-  if (ta) { ta.disabled = true; ta.placeholder = I18N.t('🦉 Lorekeeper uppdaterar karaktärsbladet…'); }
+  if (ta) { ta.disabled = true; ta.placeholder = '🦉 Lorekeeper updating character sheet…'; }
   if (btn) btn.setAttribute('disabled', '');
 }
 

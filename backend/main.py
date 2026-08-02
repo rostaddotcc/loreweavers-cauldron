@@ -1884,7 +1884,7 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
             if "Throttling" in code or "Quota" in code:
                 raise HTTPException(
                     429,
-                    f"Token Plan TTS-kvoten är slut just nu ({code}) — återställs automatiskt, testa igen om en stund.",
+                    f"Token Plan TTS quota exhausted right now ({code}) — it resets automatically, try again in a moment.",
                 )
             raise HTTPException(502, f"TTS misslyckades ({code}): {emsg}")
         raise HTTPException(502, f"Kunde inte generera ljud — {msg}")
@@ -3070,7 +3070,7 @@ async def _guardian_post_dm_locked(
         meta = state.setdefault("meta", {})
         turn_count = meta.get("turn_count", 0)
 
-        _log_activity(username, "🦉 Lorekeeper uppdaterar världen…")
+        _log_activity(username, "🦉 Lorekeeper updating the world…")
         _tg = time.time()
         _guardian_transcript = store.load_transcript(state, last_n=8)
         _guardian_usage = {}
@@ -3508,7 +3508,7 @@ async def _chat_locked(
                 if entry.get("role") == "assistant":
                     _dm_context = entry.get("content", "")
                     break
-            _log_activity(username, "🦉 Lorekeeper granskar handlingen…")
+            _log_activity(username, "🦉 Lorekeeper reviewing the action…")
             guardian_roll = await guardian_check_roll(
                 req.message, state,
                 lambda msgs: _call_llm(_guardian_model_for(state), msgs, temperature=0.1, max_tokens=1024, usage_out=_guardian_roll_usage),
@@ -3598,7 +3598,7 @@ async def _chat_locked(
     if _is_long_form:
         logger.info("📖 Long-form request — max_tokens raised to %d", _dm_max_tokens)
 
-    _log_activity(username, "🧙 DM väver berättelsen…")
+    _log_activity(username, "🧙 DM weaving the tale…")
     try:
         reply, reasoning, usage = await _call_llm_with_reasoning(req.model_id, messages, max_tokens=_dm_max_tokens)
         _llm_time = round(time.time() - _tllm, 1)
@@ -3625,7 +3625,7 @@ async def _chat_locked(
         logger.info("🎭 %d new NPC(s): %s", len(new_npcs), ", ".join(n["name"] for n in new_npcs))
     if roll_requests:
         logger.info("🎲 %d roll(s) requested: %s", len(roll_requests), ", ".join(r["notation"] for r in roll_requests))
-    _log_activity(username, "📜 Tolkar mekanik…")
+    _log_activity(username, "📜 Parsing mechanics…")
 
     # ── Säkerhetsnät: prosa-kast utan [KAST:]-tagg ──
     # Om DM skrev "Rulla tärningen" i prosa men glömde taggen spawnas ingen
@@ -3713,7 +3713,7 @@ async def _chat_locked(
 
     # Logga dag-byte till aktivitetsflödet (loading-animationen)
     if any(e.get("type") == "ny_dag" for e in effects):
-        _log_activity(username, "🌅 Ny dag gryr…")
+        _log_activity(username, "🌅 A new day dawns…")
 
     # ── [STRID:] — öppna/uppdatera strid (v23) ──
     # DM öppnar striden med taggen → world.combat skapas. Körs EFTER

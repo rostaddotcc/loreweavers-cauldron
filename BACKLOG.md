@@ -1,13 +1,22 @@
-# 🗡️ BACKLOG — Mörkrets Rike
+# 🗡️ BACKLOG — Mörkrets Rike / The Lore Weaver's Cauldron
 
-Kommande features och förbättringar. Uppdaterad 2026-07-29.
+Kommande features och förbättringar. Uppdaterad 2026-08-02.
 
 ---
 
-## 🎯 Från SoloQuest-artikeln (dev.to, Austin Amento)
+## 🔴 Öppna punkter
+
+### 🐛 TTS — Qwen-audio-3.0-TTS (OÅTGÄRDAD)
+`ConnectionError: WebSocket connection is not established` från
+`dashscope/audio/tts_v2/speech_synthesizer.py:820` (call → `__start_stream` →
+`__send_str`). Model `qwen-audio-3.0-tts-plus`, voice `longanlingxin`,
+`wss://token-plan.ap-southeast-1.maas.aliyuncs.com/api-ws/v1/inference`.
+Nyckel finns (DASHSCOPE_API_KEY). POST /api/tts → 502. Anslutningen etableras
+aldrig — sannolikt SDK/endpoint-version eller fel `base_websocket_api_url`.
 
 ### 🔴 Prio 1 — Spell management per caster-typ
-DM-prompten skiljer inte på magiklasser. Lägg till caster-specifika regler:
+Spells-tilldelning är KLAR (char-gen + Guardian `spells_add` + karaktärsblad).
+Men DM-prompten skiljer fortfarande inte på magiklasser:
 - **Prepared casters** (Cleric, Druid, Paladin): förbereder spells efter long rest
 - **Known casters** (Bard, Sorcerer, Warlock): kan bara sina kända spells
 - **Spellbook casters** (Wizard): kan byta ur spellbook, men bara förberedda
@@ -28,11 +37,11 @@ Pengarna ska vara en del av inventory, inte en separat placeholder. D&D 5e-valut
 
 ### 🔴 Prio 1 — Rikare strids-state
 `truth_block()` har HP/inventory men saknar stridsfält. Lägg till:
-- Initiative-ordning + vars tur det är
 - Distans till fiender + line of sight + cover-värden
 - Villkor med rundvaraktighet (concentration, prone, poisoned)
 - Poisons med DC, disease stage progression
 - Reser: travel pace, light level, time elapsed, passive perception
+- ✅ Dödsräddningar finns (character.death_saves, DÖDSRÄDDNING-tag, nat 1/20)
 
 ### 🟡 Prio 2 — Klientvalidering av tärningskrav
 SoloQuest har en `roll:true`-flagga på varje förslag som klienten kollar
@@ -41,57 +50,69 @@ innan en handling skickas. Vi har inline-knappar men ingen hård gate.
 ### 🟡 Prio 2 — Commitment-based RNG
 DM deklarerar DC FÖRE slaget (inte efter). Förhindrar "jag ändrar DC:n i efterhand".
 
----
+### 🟡 Kartförbättringar (kvar)
+- 🔲 Karta som reflekterar storyn: vägar mellan besökta platser
+- ✅ Dynamisk karta + Guardian-position fixad (current_location i Guardian-schema)
 
-## 🔮 Fas 3 (från DM Harness-planen)
-
-### RAG + Qdrant (DELVIS KLAR)
-- ✅ Qdrant-integration, index_transcript(), retrieve()
-- ✅ purge_user() vid kampanjradering
-- 🔲 Embedding-modell: utvärdera om nomic-embed-text räcker eller om vi vill ha bättre
+### 🟡 RAG / Faktaregister (kvar)
+- 🔲 Embedding-modell: utvärdera om nomic-embed-text räcker
 - 🔲 Keyword-triggered lore (Story Cards / Lorebook-mönster)
-
-### Faktaregister (DELVIS KLAR)
-- ✅ FactRegister per kampanj, facts.json
-- ✅ /api/facts endpoint + Minnesarkivet (facts.html)
-- 🔲 Faktatillförlitlighet: automatisk konfliktupplösning (nya fakta ersätter gamla)
+- 🔲 Faktatillförlitlighet: automatisk konfliktupplösning
 - 🔲 Viktning: pinmade fakta > extraherade > RAG
 
-### Extraktionsmodell (KLAR)
-- ✅ extract_facts() med billig modell (EXTRACTION_MODEL)
-- 🔲 Utvärdera kvalitet: extraherar den rätt saker?
+---
+
+## ✅ Nyligen klart (2026-08-02)
+
+### ⚔️ Combat v28 — Allies i strid + @NPC-chatt (commit a648efa)
+- `[ALLIERAD:namn|HP|AC]`-tag → allies registreras mitt i striden, egna turer i
+  turn_order (`ally-{id}`), döda hoppas över, initiativ re-synkas
+- Guardian: `ally_attacks` + `ally_damage` — HP, död, faller-log
+- Frontend: 🛡️ ally-kort (HP-bar, arcane-lila), fallen-state, turn-chip, statusbar
+- **@NPC-chatt:** `@Mimmrick: ...` → NPC-kontext injiceras i DM-prompten efter
+  RAG-blocket → DM svarar i roll. "Talking to X"-chip i chatten
+- Tester: 18 backend + 19 DOM (31 totalt) + 18 NPC-chatt = **36/36 pytest, 31/31 DOM**
+
+### ✨ Spells tilldelade (commit 3594c8e)
+- Char-gen-schemat kräver klass-anpassade besvärjelser (≥2 cantrips + ≥2 nivå-1
+  för kasterklasser, icke-kaster → [])
+- `_finalize_character` normaliserar spells-listan (rensar skräp, single-dict)
+- Guardian `spells_add`: tilldelar spells vid level-up/scroll/undervisning, dedup
+- Karaktärsbladet renderar ✨ Spells-kort (nivå, skola, casting time, 🎲, beskrivning)
+- Tester: 12 nya (avatar + spells) = **48/48 pytest**
+
+### 🎨 DM-avatar: slumpade arketyper (commit 3594c8e)
+- Bort med hårdkodad "horned mask" → 18 arketyper × 10 moods × 9 paletter
+- Seed-styrd slump: samma seed = samma bild, ny seed = nytt motiv
+- Testat: aldrig döskalle/horn, deterministiskt per seed
+
+### 🐛 PLAYER_MODELS + deepseek-v4-flash (commit 3594c8e)
+- Direkt DeepSeek (api.deepseek.com, DEEPSEEK_API_KEY) saknades i PLAYER_MODELS →
+  icke-admin klampar till qwen3.8-max (token-plan) → 429
+- Nu: robert m.fl. kan köra `deepseek-v4-flash` som motor direkt
+- E2E verifierat: DM vaknar + öppnar scenen på svenska med DeepSeek som motor
+
+### 🪶 Scribe-loader v27.3 (commit b6a05a5)
+- Pergament + fjäderpenna + bläck i CLI/ascii-stil, typewriter-tankar,
+  flygande bläckpixlar (DM + Lorekeeper)
+
+### 🦉 Lorekeeper-rebrand (commit f476580)
+- Guardian → Lorekeeper i all användarvänd text (tekniska identiteter bevarade)
+
+### ⚔️ Combat v27 / v27.2 (commits caff8aa, e48f47b)
+- Stridslogg med split-view (chat + stridspanel), turn-order, statusar
+- Hybrid turn-avancering: LLM driver + deterministiskt skyddsnät
+- Dag-dropdowns i kampanjöversikten
 
 ---
 
-## 🎨 UI/UX
+## 🎨 UI/UX (klart sedan tidigare)
 
-### Tärningskast-spektakel (efterfrågat av rostad)
-- Partikelsystem: glittriga pixelpartiklar vid kast
-- Nat 20 → diamant-explosion
-- Nat 1 → dödskalle
-- Rullningsanimation innan resultat
-
-### XP-mekanik (efterfrågat av rostad)
-- XP-bar i UI
-- Level-up banner
-- Nya effekt-typer för level up
-
-### Quests i loggboken (efterfrågat av rostad)
-- Quest-sektion med status (aktiv/slutförd/misslyckad)
-- Quest-kort
-- Data från /api/campaign/quests
-
-### Kartförbättringar
-- ✅ Dynamisk karta (inga hårdkodade platser) — KLAR 2026-07-29
-- ✅ Seedad terräng, fog of war, quest-markörer — KLAR
-- 🔲 Karta som reflekterar storyn: vägar mellan besökta platser
-- 🔲 DM styr placering explicit: [PLATS:namn|norr|2 dagar]
-
----
-
-## ✅ Nyligen klart (2026-07-29)
-- 🛠️ Maskinrummet: live debug-konsol (ringbuffer + /api/debug/logs + frontend)
-- 🗺️ Dynamisk karta: place_location() med md5-seed, inga DEFAULT_LOCATIONS
-- 🧠 DM Harness Fas 1-2: truth_block, sliding window, Pydantic-validering,
-  hierarkisk summering, per-turn regelinjicering, /save-kommandon
-- ⚖️ Balansguardrails + prompt-versionering (v10) + combat/narrative-split
+- ✅ Tärningskast-spektakel: partiklar, nat 20 → diamant-explosion, nat 1 → dödskalle
+- ✅ XP-bar + level-up-banner (XP_THRESHOLDS, level_up-effekt)
+- ✅ Quests i loggboken (status, kort, /api/campaign/quests)
+- ✅ Dynamisk karta: seedad terräng, fog of war, quest-markörer
+- ✅ "Så spelar du"-onepager på Vägskälet (DM / Guardian / Tärningar)
+- ✅ Maskinrummet: live debug-konsol med användarfiltrerade loggar
+- ✅ Vikt/loggning: max_weight_lbs = STR×15, Guardian-vikter, övervikt-vägran
+- ✅ Item-system konsoliderat: _normalize_item enda källa, lore-fallback, roll-knapp

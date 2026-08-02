@@ -1298,6 +1298,53 @@ body.battle-drawer-open .battle-drawer-toggle .bdt-caret{ transform: rotate(180d
 /* Miss — tonas ner, rökmoln istället för gnistor */
 .dice-badge.miss{ opacity: .72; }
 
+/* ── ROLL OR TYPE-kortet (v28): stora klickbara ikoner ── */
+.roll-request{
+  flex-direction: column; align-items: flex-start; gap: .55rem;
+  max-width: 420px;
+}
+.rr-title{
+  font-family: 'Cinzel', serif; font-weight: 700; font-size: .8rem;
+  letter-spacing: .22em; text-transform: uppercase;
+  color: var(--gold-bright); text-shadow: 0 0 10px rgba(232,198,90,.45);
+  animation: rr-title-in .35s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes rr-title-in{ 0%{ transform: translateY(-6px); opacity: 0; } 100%{ transform: translateY(0); opacity: 1; } }
+.rr-prompt{ font-size: .92rem; color: var(--bone-bright); }
+.rr-prompt b{ color: var(--gold-bright); font-family: 'Cinzel', serif; }
+.rr-note{ color: var(--bone-dim); font-size: .85rem; }
+.rr-actions{ display: flex; gap: .6rem; align-items: stretch; flex-wrap: wrap; width: 100%; }
+/* Stor ikon-knapp: tärningen (guld, pulserar) resp. pennan (spök) */
+.rr-ico{
+  display: inline-flex; align-items: center; gap: .6rem;
+  font-family: 'Cinzel', serif; font-weight: 700;
+  font-size: .78rem; letter-spacing: .1em; text-transform: uppercase;
+  cursor: pointer; padding: .65rem 1.1rem; border-radius: 2px;
+  transition: all .18s; min-height: 44px; /* mobilvänligt */
+}
+.rr-ico-glyph{ font-size: 1.5rem; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,.5)); }
+.rr-ico-label{ white-space: nowrap; }
+.rr-ico-dice{
+  flex: 1 1 200px; justify-content: center;
+  color: #1a1206;
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold) 55%, #8a6d14);
+  border: 1px solid #6e5510;
+  box-shadow: 0 4px 12px -4px rgba(232,198,90,.5);
+  animation: rr-pulse 2s ease-in-out infinite;
+}
+.rr-ico-dice .rr-ico-glyph{ animation: rr-dice-bob 1.6s ease-in-out infinite; }
+@keyframes rr-dice-bob{ 0%,100%{ transform: translateY(0) rotate(-6deg); } 50%{ transform: translateY(-4px) rotate(8deg); } }
+.rr-ico-dice:hover{ filter: brightness(1.12); transform: translateY(-2px); }
+.rr-ico-pen{
+  flex: 1 1 130px; justify-content: center;
+  background: transparent; color: var(--bone-dim);
+  border: 1px solid var(--edge);
+}
+.rr-ico-pen:hover{ color: var(--bone-bright); border-color: var(--bone-dim); filter: none; transform: none; }
+.rr-ico-pen .rr-ico-glyph{ animation: rr-pen-tilt 2.2s ease-in-out infinite; }
+@keyframes rr-pen-tilt{ 0%,100%{ transform: rotate(-12deg); } 50%{ transform: rotate(6deg); } }
+.rr-ico:disabled{ opacity: .4; cursor: default; animation: none; }
+
 /* ── MOBILE ≤768px: stridsloggen som kollapsbar låda ── */
 @media (max-width: 768px){
   .main.combat-split,

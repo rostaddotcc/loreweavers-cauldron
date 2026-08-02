@@ -874,7 +874,7 @@
     color: var(--bone-dim); font-style: italic; font-size: 0.85rem;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=18">
+<link rel="stylesheet" href="snes.css?v=19">
 <script src="sprites.js?v=20260802a"></script>
 <script src="fonts.js?v=20260802c"></script>
 <script src="themes.js?v=20260802c"></script>
@@ -2570,17 +2570,36 @@ function addRollRequest(notation, label) {
   el.className = 'msg system';
   const id = 'rr-' + Date.now();
   _pendingRollId = id;
+  const en = (typeof I18N !== 'undefined' && I18N.getLang() === 'en');
+  const diceGlyph = diceIconForLabel(label);
   el.innerHTML = `
     <div class="roll-request" id="${id}">
-      <span class="rr-label">${diceIconForLabel(label)} ${I18N.t('DM begär:')} <b>${label}</b> <span style="color:var(--bone-dim)">(${notation})</span></span>
+      <div class="rr-title">${en ? '🎲 ROLL OR TYPE?' : '⚔ SLÅ ELLER SKRIV?'}</div>
+      <div class="rr-prompt">${diceGlyph} ${I18N.t('DM begär:')} <b>${label}</b> <span class="rr-note">(${notation})</span></div>
       <div class="rr-actions">
-        <button class="rr-btn" onclick="answerRollRequest('${id}','${notation}','${label.replace(/'/g,"\\'")}')">${diceIconForLabel(label)} ${I18N.t('Slå')} ${notation}</button>
-        <button class="rr-btn rr-alt" onclick="declineRollRequest('${id}')">✍️ ${I18N.t('Skriv istället')}</button>
+        <button class="rr-ico rr-ico-dice" onclick="answerRollRequest('${id}','${notation}','${label.replace(/'/g, "\\'")}')" aria-label="${I18N.t('Slå')} ${notation}">
+          <span class="rr-ico-glyph">🎲</span>
+          <span class="rr-ico-label">${I18N.t('Slå')} ${notation}</span>
+        </button>
+        <button class="rr-ico rr-ico-pen" onclick="declineRollRequest('${id}')" aria-label="${I18N.t('Skriv istället')}">
+          <span class="rr-ico-glyph">🖊️</span>
+          <span class="rr-ico-label">${I18N.t('Skriv istället')}</span>
+        </button>
       </div>
     </div>`;
   appendToChat(el);
   chat.scrollTop = chat.scrollHeight;
   SFX.click();
+  // Tärningseffekter i chatten: gnistor + rök vid 🎲-knappen när kortet dyker upp
+  requestAnimationFrame(() => {
+    const diceBtn = el.querySelector('.rr-ico-dice');
+    if (!diceBtn || !diceBtn.getBoundingClientRect) return;
+    const r = diceBtn.getBoundingClientRect();
+    if (!r.width) return;
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    spawnPixelBurst(cx, cy, 14, ['#ffd700', '#e8c65a', '#c9a227', '#fff8dc'], 4);
+    spawnPixelSmoke(cx, cy, 5, ['#e8dcc8', '#d9c9a6', '#c9a227'], 6);
+  });
   _lockChatForDice();
 }
 
@@ -2588,7 +2607,14 @@ function addRollRequest(notation, label) {
 function declineRollRequest(id) {
   const box = document.getElementById(id);
   if (box) {
-    box.innerHTML = `<div class="roll-result-inline declined"><span>✍️ ${I18N.t('Kastet avböjt — spelaren agerar fritt')}</span></div>`;
+    box.innerHTML = `<div class="roll-result-inline declined"><span>🖊️ ${I18N.t('Kastet avböjt — spelaren agerar fritt')}</span></div>`;
+    // Bläck-rök vid pennan — liten effekt i chatten
+    requestAnimationFrame(() => {
+      if (!box.getBoundingClientRect) return;
+      const r = box.getBoundingClientRect();
+      if (!r.width) return;
+      spawnPixelSmoke(r.left + 14, r.top + r.height / 2, 6, ['#8a7a5e', '#5e9aa3', '#d9c9a6'], 5);
+    });
   }
   _pendingRollId = null;
   _unlockChat();

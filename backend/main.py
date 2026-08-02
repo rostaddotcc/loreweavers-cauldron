@@ -1932,6 +1932,32 @@ async def create_campaign(body: CampaignCreateRequest | None = None, morkrets_to
     return {"ok": True, "campaign_id": state["meta"]["campaign_id"], "opening": style_key}
 
 
+# ── Live-aktivitet: pipeline-status för loading-animationen ──
+# In-memory ring-buffer per användare med de senaste stegen i DM/Lorekeeper-
+# pipelinen (pre-DM, DM, mekanik, post-DM, stridslogg, dagar). Frontenden
+# pollar /api/campaign/activity medan DM/Lorekeeper-statusen visas och
+# renderar den senaste entryn — "se vad som arbetar i bakgrunden".
+_ACTIVITY: dict[str, list] = {}
+_ACTIVITY_MAX = 25
+
+
+def _log_activity(username: str, text: str) -> None:
+    try:
+        entries = _ACTIVITY.setdefault(username, [])
+        entries.append({"ts": time.time(), "text": text})
+        del entries[:-_ACTIVITY_MAX]
+    except Exception:
+        pass
+
+
+@app.get("/api/campaign/activity")
+async def campaign_activity(morkrets_token: str | None = Cookie(None)):
+    """Senaste pipeline-aktivitet (senaste entryn först)."""
+    payload = _get_current_user(morkrets_token)
+    entries = _ACTIVITY.get(payload["sub"], [])
+    return {"entries": list(reversed(entries))}
+
+
 @app.get("/api/campaign")
 async def get_campaign(morkrets_token: str | None = Cookie(None)):
     payload = _get_current_user(morkrets_token)
@@ -3044,6 +3070,7 @@ async def _guardian_post_dm_locked(
         meta = state.setdefault("meta", {})
         turn_count = meta.get("turn_count", 0)
 
+        _log_activity(username, "🦉 Lorekeeper uppdaterar världen…")
         _tg = time.time()
         _guardian_transcript = store.load_transcript(state, last_n=8)
         _guardian_usage = {}
@@ -3059,6 +3086,13 @@ async def _guardian_post_dm_locked(
             guardian_effects = apply_mechanics(state, mech, skip_effects=skip_effects)
         except TypeError:
             guardian_effects = apply_mechanics(state, mech)
+
+        # Spegla senaste stridslogg-entryn till aktivitetsflödet — så
+        # loading-animationen visar kampanjens senaste loggentry (⚔️ …).
+        _clog = state.get("world", {}).get("combat", {}).get("log", [])
+        if _clog and _clog[-1].get("text"):
+            _e = _clog[-1]
+            _log_activity(username, f"⚔️ {(_e.get('name') + ': ') if _e.get('name') else ''}{_e.get('text')}")
 
         # ASCII-art (avstängd tills vidare)
         if ATMOSPHERE_ENABLED:
@@ -3474,6 +3508,7 @@ async def _chat_locked(
                 if entry.get("role") == "assistant":
                     _dm_context = entry.get("content", "")
                     break
+            _log_activity(username, "🦉 Lorekeeper granskar handlingen…")
             guardian_roll = await guardian_check_roll(
                 req.message, state,
                 lambda msgs: _call_llm(_guardian_model_for(state), msgs, temperature=0.1, max_tokens=1024, usage_out=_guardian_roll_usage),
@@ -3563,6 +3598,7 @@ async def _chat_locked(
     if _is_long_form:
         logger.info("📖 Long-form request — max_tokens raised to %d", _dm_max_tokens)
 
+    _log_activity(username, "🧙 DM väver berättelsen…")
     try:
         reply, reasoning, usage = await _call_llm_with_reasoning(req.model_id, messages, max_tokens=_dm_max_tokens)
         _llm_time = round(time.time() - _tllm, 1)
@@ -3589,6 +3625,7 @@ async def _chat_locked(
         logger.info("🎭 %d new NPC(s): %s", len(new_npcs), ", ".join(n["name"] for n in new_npcs))
     if roll_requests:
         logger.info("🎲 %d roll(s) requested: %s", len(roll_requests), ", ".join(r["notation"] for r in roll_requests))
+    _log_activity(username, "📜 Tolkar mekanik…")
 
     # ── Säkerhetsnät: prosa-kast utan [KAST:]-tagg ──
     # Om DM skrev "Rulla tärningen" i prosa men glömde taggen spawnas ingen
@@ -3673,6 +3710,10 @@ async def _chat_locked(
             reply = _strip_mechanical_tags(current_reply)
             effects = []
             dm_valid = False
+
+    # Logga dag-byte till aktivitetsflödet (loading-animationen)
+    if any(e.get("type") == "ny_dag" for e in effects):
+        _log_activity(username, "🌅 Ny dag gryr…")
 
     # ── [STRID:] — öppna/uppdatera strid (v23) ──
     # DM öppnar striden med taggen → world.combat skapas. Körs EFTER

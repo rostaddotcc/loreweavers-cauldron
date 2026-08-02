@@ -527,6 +527,12 @@ const API = (() => {
       return req('/api/tts/voices');
     },
 
+    // Live-pipeline-aktivitet (senaste loggentry för loading-animationen)
+    async activity() {
+      if (MOCK) return { entries: [] };
+      return req('/api/campaign/activity');
+    },
+
     async tts(text, voice) {
       const res = await fetch(BASE + '/api/tts', {
         method: 'POST',

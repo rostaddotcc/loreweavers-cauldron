@@ -874,7 +874,7 @@
     color: var(--bone-dim); font-style: italic; font-size: 0.85rem;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=14">
+<link rel="stylesheet" href="snes.css?v=15">
 <script src="sprites.js?v=20260802a"></script>
 <script src="fonts.js?v=20260802c"></script>
 <script src="themes.js?v=20260802c"></script>
@@ -1039,7 +1039,7 @@
       <div class="scribe-loader scribe-mini">
         <div class="scribe-row">
           <span class="scribe-quill" aria-hidden="true">🪶</span>
-          <span class="thought">Lorekeeper processing…</span>
+          <span class="thought" id="guardian-thought-text">Lorekeeper processing…</span>
           <span class="scribe-cursor" aria-hidden="true">▌</span>
         </div>
         <div class="scribe-inkline" aria-hidden="true"><i></i></div>
@@ -2980,12 +2980,14 @@ const THOUGHTS = {
 let thoughtTimer = null;
 let thoughtIdx = 0;
 let currentThoughts = THOUGHTS.narrate;
-let _typeTimer = null;          // typewriter för thought-texten (scribe-loader)
+let _typeTimer = null;           // typewriter för thought-texten (scribe-loader)
 let _scribeParticleTimer = null; // flygande bläckpixlar
+let _activityTimer = null;       // pollar live-aktivitet (senaste loggentry)
+let _activityShown = null;       // senast visade aktivitetstext
 
-// Typewriter: skriv thought-texten tecken för tecken (CLI-stil)
-function typeThought(text) {
-  const el = document.getElementById('thought-text');
+// Typewriter: skriv text tecken för tecken (CLI-stil)
+function typeThought(text, el) {
+  el = el || document.getElementById('thought-text');
   clearInterval(_typeTimer);
   el.textContent = '';
   let i = 0;
@@ -2993,6 +2995,62 @@ function typeThought(text) {
     el.textContent = text.slice(0, ++i);
     if (i >= text.length) clearInterval(_typeTimer);
   }, 16);
+}
+
+// Vilken loader är synlig just nu (DM-status eller Lorekeeper-status)?
+function _feedTarget() {
+  const dm = document.getElementById('dm-status');
+  const g = document.getElementById('guardian-status');
+  if (dm && dm.classList.contains('show')) return document.getElementById('thought-text');
+  if (g && g.classList.contains('show')) return document.getElementById('guardian-thought-text');
+  return null;
+}
+
+// Formatera en stridslogg-entry till en läsbar statusrad
+function _formatCombatLogEntry(entry) {
+  if (!entry || !entry.text) return null;
+  const icon = entry.actor === 'player' ? '🗡️' : entry.actor === 'enemy' ? '⚔️' : '📜';
+  const who = entry.name ? entry.name + ': ' : '';
+  return `${icon} ${who}${entry.text}`;
+}
+
+// Live-aktivitet: rendera senaste kampanjlogg-entryn / pipeline-steget
+async function scribeFeed() {
+  const target = _feedTarget();
+  if (!target) return;
+  // 1) Senaste stridslogg-entryn (om strid är aktiv) — kampanjens egna logg
+  const clog = _lastCombatStatus && Array.isArray(_lastCombatStatus.log) ? _lastCombatStatus.log : null;
+  if (clog && clog.length) {
+    const last = _formatCombatLogEntry(clog[clog.length - 1]);
+    if (last && last !== _activityShown) {
+      _activityShown = last;
+      typeThought(last, target);
+      return;
+    }
+  }
+  // 2) Pipeline-aktivitet från backend (pre-DM / DM / mekanik / post-DM / dagar)
+  try {
+    const data = await API.activity();
+    const entries = data && data.entries;
+    if (entries && entries.length) {
+      const last = entries[0];
+      if (last && last.text && last.text !== _activityShown) {
+        _activityShown = last.text;
+        typeThought(last.text, target);
+      }
+    }
+  } catch (e) { /* tyst — fallback-tanken ligger kvar */ }
+}
+
+function scribeFeedStart() {
+  scribeFeedStop();
+  _activityShown = null;
+  scribeFeed();
+  _activityTimer = setInterval(scribeFeed, 1500);
+}
+function scribeFeedStop() {
+  clearInterval(_activityTimer);
+  _activityTimer = null;
 }
 
 // Flygande bläckpixlar från fjäderpennan (använder samma fysik som spawnPixelBurst)
@@ -3006,11 +3064,11 @@ function scribeParticles(on) {
     const q = loader.querySelector('.scribe-quill');
     if (!q) return;
     const r = q.getBoundingClientRect();
-    spawnPixelBurst(r.left + r.width / 2, r.top + r.height / 2, 5,
-      ['#c9a227', '#e8c65a', '#5b4632', '#efe2c0', '#8b5fd4'], 3);
+    spawnPixelBurst(r.left + r.width / 2, r.top + r.height / 2, 12,
+      ['#c9a227', '#e8c65a', '#5b4632', '#efe2c0', '#8b5fd4', '#d4691e'], 3);
   };
   burst();
-  _scribeParticleTimer = setInterval(burst, 1100);
+  _scribeParticleTimer = setInterval(burst, 600);
 }
 
 function showThoughts(kind = 'narrate') {
@@ -3018,20 +3076,15 @@ function showThoughts(kind = 'narrate') {
   thoughtIdx = Math.floor(Math.random() * currentThoughts.length);
   document.getElementById('dm-status').classList.add('show');
   scribeParticles(true);
-  clearInterval(thoughtTimer);
-  const typeNext = () => {
-    const el = document.getElementById('thought-text');
-    el.classList.remove('fade');
-    typeThought(currentThoughts[thoughtIdx]);
-    thoughtIdx = (thoughtIdx + 1) % currentThoughts.length;
-  };
-  typeNext();
-  thoughtTimer = setInterval(typeNext, 2600);
+  // Live-feed: visa senaste loggentryn; fallback-tanke bara som förstabild
+  typeThought(currentThoughts[thoughtIdx]);
+  scribeFeedStart();
 }
 
 function hideThoughts() {
   clearInterval(thoughtTimer);
   clearInterval(_typeTimer);
+  scribeFeedStop();
   scribeParticles(false);
   document.getElementById('dm-status').classList.remove('show');
 }
@@ -3045,15 +3098,19 @@ function showGuardianStatus() {
   _guardianBusy = true;
   _lockChatForGuardian();
   scribeParticles(true);
+  scribeFeedStart();
 }
 function hideGuardianStatus() {
   const el = document.getElementById('guardian-status');
   if (el) el.classList.remove('show');
   _guardianBusy = false;
   _unlockChat();
-  // Stäng inte av pixlarna om DM-statusen fortfarande visas
+  // Stäng inte av feeden/pixlarna om DM-statusen fortfarande visas
   const dm = document.getElementById('dm-status');
-  if (!dm || !dm.classList.contains('show')) scribeParticles(false);
+  if (!dm || !dm.classList.contains('show')) {
+    scribeFeedStop();
+    scribeParticles(false);
+  }
 }
 function _lockChatForGuardian() {
   const ta = document.getElementById('player-input');

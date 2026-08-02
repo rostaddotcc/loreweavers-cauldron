@@ -209,3 +209,44 @@ def test_apply_mechanics_npcs_near_ignores_unknown_names():
     effects = guardian.apply_mechanics(state, {"npcs_near": ["Finns inte", 42, None]})
     assert not any(n["near"] for n in state["npcs"])
     assert not any(e.get("type") == "npc_near" for e in effects)
+
+
+# ── AI-avatar-prompter: realistiska, öppna, lore-aligned ──
+
+def test_avatar_style_is_realistic_and_open():
+    style = main.STEP_IMAGE_STYLE.lower()
+    assert "photorealistic" in style or "realistic" in style
+    assert "anime" not in style and "cartoon" not in style and "manga" not in style
+    # Får inte tvinga humanoid komposition
+    assert "head-and-shoulders" not in style
+
+
+def test_build_avatar_prompt_npc_uses_role_and_notes():
+    state = {
+        "character": {}, "lore": [], "npcs": [
+            {"name": "Drone-7", "role": "patrol drone",
+             "notes": "a sleek chrome surveillance drone with a single red eye, hums softly"}
+        ],
+    }
+    p = main._build_avatar_prompt(state, "npc:drone-7")
+    assert "patrol drone" in p
+    assert "sleek chrome" in p  # notes får inte slängas bara för att role finns
+
+
+def test_build_avatar_prompt_npc_fallback_is_neutral():
+    state = {"character": {}, "lore": [], "npcs": []}
+    p = main._build_avatar_prompt(state, "npc:okänd")
+    assert "mysterious figure" in p
+    assert "dark fantasy" not in p  # inte hårdkodat till fantasy-genre
+
+
+def test_dm_avatar_prompt_aligns_with_lore():
+    state = {"character": {}, "npcs": [], "lore": ["A signal pulses from the obsidian talisman near Veyl's Lantern Court."]}
+    p = main._build_dm_avatar_prompt(7, state)
+    assert ("signal" in p or "talisman" in p or "Lantern" in p)  # lore-fragment med
+    assert "dungeon master" in p
+
+
+def test_dm_avatar_archetypes_include_non_humanoid():
+    pool = " ".join(main._DM_AVATAR_ARCHETYPES).lower()
+    assert any(w in pool for w in ("drone", "nebula", "machine oracle", "swarm", "planet spirit"))

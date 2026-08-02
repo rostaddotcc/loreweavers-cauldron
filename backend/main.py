@@ -5347,11 +5347,11 @@ async def delete_avatar(kind: str, morkrets_token: str | None = Cookie(None)):
 
 STEP_IMAGE_EDIT_2 = "step-image-edit-2"
 STEP_IMAGE_STYLE = (
-    "Stylized 2D fantasy illustration, hand-drawn cartoon concept art, "
-    "cel-shaded dark gothic anime-inspired RPG portrait, bold clean outlines, "
-    "rich painterly colors, dramatic moody lighting, dark fantasy background, "
-    "centered head-and-shoulders, no text, no watermark. "
-    "NOT photorealistic, NOT 3D render, NOT a photo, NOT realistic proportions."
+    "Photorealistic cinematic image, film-grade dramatic lighting, ultra-detailed realistic "
+    "materials and textures, atmospheric depth and mood. Imaginative and open to interpretation — "
+    "the subject is exactly as described: it may be humanoid, creature, machine, energy being, "
+    "object or abstract form, never forced into a person or a portrait. "
+    "Open composition, no text, no watermark."
 )
 
 
@@ -5377,6 +5377,16 @@ _DM_AVATAR_ARCHETYPES = [
     "a silver-masked duelist of fate, playing cards of light flickering between their fingers, a coiled whip of shadow",
     "a stone-faced rune carver, glowing runes climbing their arms, a floating anvil and hammer of light beside them",
     "a moonlit witch of the old roads, a cauldron of stars at their side, wisps of pale blue magic braided through their hair",
+    "a swarm of sleek surveillance drones, red sensor eyes pulsing in unison, orbiting like slow fireflies",
+    "a sentient nebula, a coiled storm of violet gas and newborn stars, vast and patient",
+    "an ancient machine oracle, a floating core of polished alloy and crackling energy, data-glyphs streaming from its surface",
+    "a biomechanical archivist, chrome ribs and threads of optic light woven through a silhouette of living light",
+    "a holographic emissary of a long-dead civilization, flickering static wrapped around a composed, serene face",
+    "a planet spirit glimpsed at dusk, continents drifting across a translucent body like ink in water",
+    "a clockwork void-wisp, a knot of wire and gravity folding lamplight into rings",
+    "a fungal starfarer, tendrils of bioluminescent mycelium trailing behind it like a comet's tail",
+    "a weather entity of a gas giant, crowned with perpetual lightning, raining softly inside its own storm",
+    "a memory of a god, half-erased by time, gilded cracks across its form showing the void beneath",
 ]
 
 _DM_AVATAR_MOODS = [
@@ -5405,15 +5415,27 @@ _DM_AVATAR_PALETTES = [
 ]
 
 
-def _build_dm_avatar_prompt(seed: int) -> str:
+def _dm_avatar_flourish(rng: random.Random, state: dict | None = None) -> str:
+    """Lore-aligned detalj: plockar en bit ur kampanjens värld så DM-avataren
+    speglar spelets ton (space opera, mörk fantasy, …). Utan lore: klassisk runa."""
+    lore = (state or {}).get("lore") or []
+    frags = [str(x).strip() for x in lore if isinstance(x, str) and x.strip()]
+    if frags:
+        f = rng.choice(frags)[:140]
+        return f"echoes of their world around them: {f}"
+    return "arcane runes drifting faintly around"
+
+
+def _build_dm_avatar_prompt(seed: int, state: dict | None = None) -> str:
     """Öppen, slumpad tolkning av DM:n — aldrig samma motiv (seed-styrd)."""
     rng = random.Random(seed or 0)
     archetype = rng.choice(_DM_AVATAR_ARCHETYPES)
     mood = rng.choice(_DM_AVATAR_MOODS)
     palette = rng.choice(_DM_AVATAR_PALETTES)
+    flourish = _dm_avatar_flourish(rng, state)
     return (
         f"An ancient, mysterious dungeon master, {archetype}, {mood}, "
-        f"color palette of {palette}, arcane runes drifting faintly around. "
+        f"color palette of {palette}, {flourish}. "
         + STEP_IMAGE_STYLE
     )
 
@@ -5422,7 +5444,7 @@ def _build_avatar_prompt(state: dict, avatar_key: str, seed: int = 0) -> str:
     """Bygg bildprompten AUTOMATISKT från kampanjdata (character sheet, items,
     lore, NPC-data) — användaren promptar aldrig själv."""
     if avatar_key == "dm":
-        return _build_dm_avatar_prompt(seed)
+        return _build_dm_avatar_prompt(seed, state)
     if avatar_key.startswith("npc:"):
         npc_name = avatar_key[4:]
         npc = next(
@@ -5430,9 +5452,18 @@ def _build_avatar_prompt(state: dict, avatar_key: str, seed: int = 0) -> str:
             None,
         )
         if npc:
-            desc = (npc.get("role") or "").strip() or str(npc.get("notes", ""))[:180] or "a mysterious figure"
+            role = (npc.get("role") or "").strip()
+            notes = (npc.get("notes") or "").strip()
+            if role and notes and notes.lower() != role.lower():
+                desc = f"{role}; {notes[:160]}"
+            elif role:
+                desc = role
+            elif notes:
+                desc = notes[:180]
+            else:
+                desc = "a mysterious figure"
             return f"{npc.get('name')}, {desc}. {STEP_IMAGE_STYLE}"
-        return f"{npc_name}, a mysterious figure in a dark fantasy world. {STEP_IMAGE_STYLE}"
+        return f"{npc_name}, a mysterious figure in the world of this story. {STEP_IMAGE_STYLE}"
 
     # Player / standard — bygg från character sheet + inventory + lore
     ch = state.get("character", {}) or {}

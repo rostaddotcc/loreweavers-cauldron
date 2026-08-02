@@ -36,8 +36,8 @@
     box-shadow:inset 0 0 190px 60px rgba(3,2,7,.85)}
   body.no-webgl #scene{display:none}
   body.no-webgl::before{content:'';position:fixed;inset:0;z-index:0;
-    background:radial-gradient(ellipse 60% 45% at 68% 42%,rgba(212,105,30,.14),transparent 70%),
-               radial-gradient(ellipse 40% 30% at 70% 50%,rgba(201,162,39,.10),transparent 70%)}
+    background:radial-gradient(ellipse 60% 45% at 68% 42%,rgba(80,200,90,.14),transparent 70%),
+               radial-gradient(ellipse 40% 30% at 70% 50%,rgba(140,90,220,.10),transparent 70%)}
 
   /* ═══════════════ nav ═══════════════ */
   .nav{position:fixed;top:0;left:0;right:0;z-index:50;height:var(--nav-h);
@@ -595,19 +595,19 @@ camera.position.set(0, 2.18, 3.85);
 /* ---------------- lights ---------------- */
 scene.add(new THREE.HemisphereLight(0x1c1626, 0x0c0a12, 0.55));
 
-const brewLight = new THREE.PointLight(0xffb347, 16, 9, 2);
+const brewLight = new THREE.PointLight(0x7dff8a, 15, 9, 2);
 brewLight.position.set(0, 1.55, 0);
 scene.add(brewLight);
 
-const warmFill = new THREE.PointLight(0xff7a1a, 4, 7, 2);
+const warmFill = new THREE.PointLight(0x3fcc66, 4, 7, 2);
 warmFill.position.set(0.6, 0.5, 1.8);
 scene.add(warmFill);
 
-const frontFill = new THREE.PointLight(0xffa050, 3.5, 8, 2);
+const frontFill = new THREE.PointLight(0x8a5fe0, 4.5, 8, 2);
 frontFill.position.set(-1.6, 1.2, 2.2);
 scene.add(frontFill);
 
-const rimLight = new THREE.PointLight(0x5a6a9a, 9, 11, 2);
+const rimLight = new THREE.PointLight(0x6a4a9a, 9, 11, 2);
 rimLight.position.set(-0.4, 1.5, -2.7);
 scene.add(rimLight);
 
@@ -658,7 +658,7 @@ const ground = new THREE.Mesh(
 ground.rotation.x = -Math.PI/2;
 scene.add(ground);
 
-/* ---------------- the brew — boiling molten-gold shader ---------------- */
+/* ---------------- the brew — toxic slime shader ---------------- */
 const brewUniforms = { uTime:{value:0}, uAgitation:{value:0} };
 const brew = new THREE.Mesh(
   new THREE.CircleGeometry(0.455, 48),
@@ -685,47 +685,63 @@ const brew = new THREE.Mesh(
         vec2 c = vUv - 0.5;
         float d = length(c) * 2.0;
         float ang = atan(c.y, c.x);
-        float speed = 0.35 + uAgitation * 0.55;
+        float speed = 0.20 + uAgitation * 0.40;
 
-        float rot = uTime * 0.55 * (0.6 + uAgitation * 0.8);
+        /* slow viscous rotation — the poison barely stirs */
+        float rot = uTime * 0.30 * (0.6 + uAgitation * 0.8);
         vec2 rc = vec2(c.x * cos(rot * 0.3) - c.y * sin(rot * 0.3),
                        c.x * sin(rot * 0.3) + c.y * cos(rot * 0.3));
 
-        float warp = fbm(rc * 3.0 + uTime * 0.15);
-        float fil  = fbm(rc * 5.5 + vec2(warp * 1.4) + vec2(uTime * speed * 0.5, -uTime * speed * 0.35));
-        float vein = fbm(rc * 9.0 - vec2(warp * 0.9) - vec2(uTime * speed * 0.8, uTime * speed * 0.4));
+        /* fat, slow noise lobes — slime, not water */
+        float warp = fbm(rc * 2.2 + uTime * 0.08);
+        float fil  = fbm(rc * 3.8 + vec2(warp * 1.4) + vec2(uTime * speed * 0.5, -uTime * speed * 0.35));
+        float vein = fbm(rc * 6.0 - vec2(warp * 0.9) - vec2(uTime * speed * 0.8, uTime * speed * 0.4));
         float boil = fil * 0.62 + vein * 0.38;
 
-        vec2 hotC = vec2(sin(uTime * 0.4) * 0.13, cos(uTime * 0.31) * 0.13);
+        vec2 hotC = vec2(sin(uTime * 0.3) * 0.13, cos(uTime * 0.23) * 0.13);
         float hotD = length(c - hotC) * 2.0;
         float hotSpot = smoothstep(0.85, 0.1, hotD);
 
-        vec3 white = vec3(0.95, 0.85, 0.62);
-        vec3 gold  = vec3(1.00, 0.82, 0.27);
-        vec3 amber = vec3(0.98, 0.52, 0.09);
-        vec3 deep  = vec3(0.58, 0.26, 0.05);
+        vec3 white  = vec3(0.85, 1.00, 0.72);   /* pale phosphorescent core */
+        vec3 toxin  = vec3(0.32, 0.90, 0.34);   /* toxic green */
+        vec3 violet = vec3(0.44, 0.26, 0.66);   /* bruise purple */
+        vec3 deep   = vec3(0.13, 0.07, 0.22);   /* abyss */
 
         float dd = clamp(d + boil * 0.30 - 0.16, 0.0, 1.0);
-        vec3 col = mix(white, gold,  smoothstep(0.00, 0.34, dd));
-        col      = mix(col,  amber, smoothstep(0.34, 0.68, dd));
-        col      = mix(col,  deep,  smoothstep(0.68, 1.00, dd));
+        vec3 col = mix(white,  toxin,  smoothstep(0.00, 0.34, dd));
+        col      = mix(col,    violet, smoothstep(0.34, 0.70, dd));
+        col      = mix(col,    deep,   smoothstep(0.70, 1.00, dd));
 
         float filGlow = smoothstep(0.52, 0.76, fil);
-        col += vec3(0.55, 0.40, 0.10) * filGlow * (1.0 - d * 0.45) * (1.0 + uAgitation * 0.5);
+        col += vec3(0.20, 0.55, 0.18) * filGlow * (1.0 - d * 0.45) * (1.0 + uAgitation * 0.5);
 
         float veinDark = smoothstep(0.52, 0.78, vein);
-        col *= 1.0 - veinDark * 0.50 * (0.4 + 0.6 * d);
+        col *= 1.0 - veinDark * 0.55 * (0.4 + 0.6 * d);
 
-        col += vec3(0.30, 0.24, 0.09) * hotSpot * (0.7 + 0.3 * sin(uTime * 2.7));
+        col += vec3(0.30, 0.50, 0.22) * hotSpot * (0.7 + 0.3 * sin(uTime * 2.1));
 
-        float sheen = fbm(c * 3.0 - vec2(uTime * 0.22, uTime * 0.13));
-        col += vec3(0.22, 0.15, 0.04) * smoothstep(0.62, 0.85, sheen) * (1.0 - d);
+        /* fat slime bubbles swelling and popping */
+        float bub = 0.0;
+        for (int i = 0; i < 4; i++) {
+          float fi = float(i);
+          vec2 bc = vec2(sin(uTime * 0.16 + fi * 2.3), cos(uTime * 0.12 + fi * 1.9)) * 0.24;
+          float phase = fract(uTime * 0.10 + fi * 0.29);
+          float size = 0.045 + phase * 0.10;
+          float bd = length(c - bc);
+          bub += smoothstep(size, size * 0.35, bd) * (1.0 - smoothstep(0.65, 1.0, phase));
+        }
+        col += vec3(0.32, 0.60, 0.25) * bub * 0.85;
+        col += vec3(0.30, 0.16, 0.45) * bub * smoothstep(0.5, 1.0, d) * 0.6;
 
+        float sheen = fbm(c * 3.0 - vec2(uTime * 0.14, uTime * 0.09));
+        col += vec3(0.10, 0.22, 0.12) * smoothstep(0.62, 0.85, sheen) * (1.0 - d);
+
+        /* toxic meniscus where the slime kisses the iron */
         float meniscus = smoothstep(0.68, 0.86, d) * (1.0 - smoothstep(0.94, 1.0, d));
-        col += vec3(1.00, 0.68, 0.20) * meniscus * (0.9 + 0.3 * sin(ang * 6.0 + uTime * 1.4));
+        col += vec3(0.55, 1.00, 0.40) * meniscus * (0.9 + 0.3 * sin(ang * 6.0 + uTime * 1.1));
 
         col *= 1.0 - smoothstep(0.92, 1.0, d) * 0.35;
-        col *= 1.12 + 0.10 * sin(uTime * 2.3) * (1.0 - d * 0.5);
+        col *= 1.15 + 0.10 * sin(uTime * 1.8) * (1.0 - d * 0.5);
 
         gl_FragColor = vec4(col, 1.0);
       }`,
@@ -829,7 +845,25 @@ function respawnSpark(i) {
   sSeed[i] = Math.random() * 100;
 }
 for (let i = 0; i < SC; i++) { respawnSpark(i); sLife[i] = Math.random() * sMax[i]; }
+/* -- poison mist (large dim smoky puffs) -- */
+const MC = isMobile() ? 18 : 38;
+const mist = makePoints(MC, flameTex);
+const mLife = new Float32Array(MC), mMax = new Float32Array(MC),
+      mVel  = new Float32Array(MC), mSeed = new Float32Array(MC), mSize = new Float32Array(MC);
+function respawnMist(i) {
+  const a = Math.random() * Math.PI * 2;
+  const r = Math.pow(Math.random(), 0.7) * 0.4;
+  mist.pos[i*3]   = Math.cos(a) * r;
+  mist.pos[i*3+1] = BREW_Y + 0.05 + Math.random() * 0.3;
+  mist.pos[i*3+2] = Math.sin(a) * r;
+  mLife[i] = 0; mMax[i] = 3 + Math.random() * 3.5;
+  mVel[i]  = 0.10 + Math.random() * 0.16;
+  mSeed[i] = Math.random() * 100;
+  mSize[i] = 0.55 + Math.random() * 0.5;
+}
+for (let i = 0; i < MC; i++) { respawnMist(i); mLife[i] = Math.random() * mMax[i]; }
 
+/* -- click burst -- */
 const BC = 70;
 const burst = makePoints(BC, sparkTex);
 const bLife = new Float32Array(BC).fill(1), bMax = new Float32Array(BC).fill(1),
@@ -851,7 +885,7 @@ function fireBurst() {
 
 /* ---------------- halo + twinkles + bubbles ---------------- */
 const haloMat = new THREE.SpriteMaterial({
-  map: radialTex([[0,'rgba(255,170,60,.55)'],[0.4,'rgba(255,140,30,.18)'],[1,'rgba(255,120,20,0)']]),
+  map: radialTex([[0,'rgba(120,255,130,.5)'],[0.42,'rgba(90,210,90,.15)'],[1,'rgba(130,80,220,0)']]),
   blending: THREE.AdditiveBlending, depthWrite:false, transparent:true, opacity:0.5,
 });
 const halo = new THREE.Sprite(haloMat);
@@ -863,7 +897,7 @@ const twinkles = [];
 for (const [x, y, z, s] of [[-0.52, 2.15, 0.25, 0.30], [0.58, 2.30, 0.10, 0.22]]) {
   const m = new THREE.SpriteMaterial({
     map: starTex, blending:THREE.AdditiveBlending, depthWrite:false,
-    transparent:true, opacity:0.95, color:0xf0c050 });
+    transparent:true, opacity:0.95, color:0xb8ffb0 });
   const sp = new THREE.Sprite(m);
   sp.position.set(x, y, z);
   sp.scale.setScalar(s);
@@ -875,12 +909,16 @@ for (const [x, y, z, s] of [[-0.52, 2.15, 0.25, 0.30], [0.58, 2.30, 0.10, 0.22]]
 const bubbles = [];
 for (const sx of [-1, 1]) {
   const g = new THREE.Group();
+  const toxic = sx < 0;                                   /* left bubble green, right bubble purple */
   const heart = new THREE.Mesh(
     new THREE.SphereGeometry(0.062, 20, 20),
-    new THREE.MeshStandardMaterial({ color:0x8a9a4a, emissive:0x4a5a1a, roughness:0.3, metalness:0.1 }));
+    new THREE.MeshStandardMaterial({
+      color: toxic ? 0x5fae52 : 0x8a5fb0,
+      emissive: toxic ? 0x2c6a22 : 0x4a2a72,
+      roughness:0.25, metalness:0.1 }));
   const rim = new THREE.Mesh(
     new THREE.SphereGeometry(0.076, 20, 20),
-    new THREE.MeshBasicMaterial({ color:0xe8c65a, transparent:true, opacity:0.28,
+    new THREE.MeshBasicMaterial({ color: toxic ? 0x9dff8a : 0xc89aff, transparent:true, opacity:0.30,
       blending:THREE.AdditiveBlending, depthWrite:false }));
   const glint = new THREE.Sprite(new THREE.SpriteMaterial({
     map: flameTex, color:0xffffff, transparent:true, opacity:0.9, depthWrite:false }));
@@ -920,7 +958,7 @@ function layout() {
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
-  for (const p of [flame, sparks, burst])
+  for (const p of [flame, sparks, burst, mist])
     p.mat.uniforms.uScale.value = 130 * renderer.getPixelRatio();
 }
 addEventListener('resize', layout);
@@ -963,7 +1001,7 @@ function tick() {
 
   brewUniforms.uTime.value = t;
   brewUniforms.uAgitation.value = agitation;
-  brewLight.intensity = 16 + agitation * 15 + burstGlow * 34;
+  brewLight.intensity = 14 + agitation * 12 + burstGlow * 30;
   haloMat.opacity = 0.44 + Math.sin(t * 1.7) * 0.07 + agitation * 0.14 + burstGlow * 0.4;
 
   const fPos = flame.pos, fCol = flame.col, fSiz = flame.siz;
@@ -976,9 +1014,9 @@ function tick() {
     fPos[i*3]   += Math.sin(t * 3.2 + fSeed[i]) * 0.0016;
     fPos[i*3+1] += fVel[i] * dt * (1 + agitation * 0.5);
     let r, g, b;
-    if (k < 0.18)      { const u = k / 0.18;        r = 1;               g = 0.97 - u * 0.2;  b = 0.85 - u * 0.55; }
-    else if (k < 0.55) { const u = (k-0.18) / 0.37; r = 1;               g = 0.77 - u * 0.32; b = 0.30 - u * 0.20; }
-    else               { const u = (k-0.55) / 0.45; r = 1 - u * 0.95;    g = 0.45 - u * 0.42; b = 0.10 - u * 0.10; }
+    if (k < 0.2)       { const u = k / 0.2;         r = 0.85;            g = 1.0;             b = 0.75 - u * 0.15; }
+    else if (k < 0.6)  { const u = (k-0.2) / 0.4;   r = 0.85 - u * 0.45; g = 1.0 - u * 0.52;  b = 0.60 - u * 0.05; }
+    else               { const u = (k-0.6) / 0.4;   r = 0.40 - u * 0.38; g = 0.48 - u * 0.45; b = 0.55 - u * 0.50; }
     fCol[i*3] = r; fCol[i*3+1] = g; fCol[i*3+2] = b;
     const bell = Math.min(k / 0.15, 1) * (1 - Math.max(0, (k - 0.5) / 0.5));
     fSiz[i] = fBase[i] * bell * (1 + agitation * 0.35);
@@ -996,7 +1034,8 @@ function tick() {
     sPos[i*3]   += Math.sin(t * 1.4 + sSeed[i]) * 0.0022;
     const flick = 0.55 + 0.45 * Math.sin(t * 18 + sSeed[i] * 7);
     const fade  = Math.min(k / 0.1, 1) * (1 - Math.max(0, (k - 0.6) / 0.4));
-    sCol[i*3] = 1 * flick * fade; sCol[i*3+1] = 0.9 * flick * fade; sCol[i*3+2] = 0.7 * flick * fade;
+    if (sSeed[i] > 66) { sCol[i*3] = 0.65 * flick * fade; sCol[i*3+1] = 0.40 * flick * fade; sCol[i*3+2] = 1.0 * flick * fade; }
+    else               { sCol[i*3] = 0.45 * flick * fade; sCol[i*3+1] = 1.0 * flick * fade;  sCol[i*3+2] = 0.5 * flick * fade; }
     sSiz[i] = 0.045;
   }
   sparks.geo.attributes.position.needsUpdate = true;
@@ -1013,12 +1052,31 @@ function tick() {
     bPos[i*3+1] += bVel[i*3+1] * dt;
     bPos[i*3+2] += bVel[i*3+2] * dt;
     const fade = 1 - k;
-    bCol[i*3] = 1 * fade; bCol[i*3+1] = (0.8 - k * 0.4) * fade; bCol[i*3+2] = 0.3 * fade;
+    bCol[i*3] = (0.35 + k * 0.25) * fade; bCol[i*3+1] = (1.0 - k * 0.55) * fade; bCol[i*3+2] = (0.45 + k * 0.3) * fade;
     bSiz[i] = 0.06 * (1 - k * 0.5);
   }
   burst.geo.attributes.position.needsUpdate = true;
   burst.geo.attributes.aColor.needsUpdate = true;
   burst.geo.attributes.aSize.needsUpdate = true;
+
+  /* mist — slow toxic smoke curling off the brew */
+  const mPos = mist.pos, mCol = mist.col, mSiz = mist.siz;
+  for (let i = 0; i < MC; i++) {
+    mLife[i] += dt;
+    if (mLife[i] >= mMax[i]) respawnMist(i);
+    const k = mLife[i] / mMax[i];
+    mPos[i*3+1] += mVel[i] * dt;
+    mPos[i*3]   += Math.sin(t * 0.5 + mSeed[i]) * 0.0038;
+    mPos[i*3+2] += Math.cos(t * 0.42 + mSeed[i] * 1.3) * 0.003;
+    const fade = Math.min(k / 0.2, 1) * (1 - Math.max(0, (k - 0.55) / 0.45));
+    const glow = fade * (0.55 + agitation * 0.35);
+    if (mSeed[i] > 55) { mCol[i*3] = 0.22 * glow; mCol[i*3+1] = 0.11 * glow; mCol[i*3+2] = 0.34 * glow; }
+    else               { mCol[i*3] = 0.10 * glow; mCol[i*3+1] = 0.30 * glow; mCol[i*3+2] = 0.13 * glow; }
+    mSiz[i] = mSize[i] * (0.7 + k * 1.4);
+  }
+  mist.geo.attributes.position.needsUpdate = true;
+  mist.geo.attributes.aColor.needsUpdate = true;
+  mist.geo.attributes.aSize.needsUpdate = true;
 
   for (const tw of twinkles) {
     const p = 0.75 + 0.35 * Math.sin(t * 2.1 + tw.userData.phase);

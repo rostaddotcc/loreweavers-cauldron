@@ -3642,6 +3642,9 @@ async def _chat_locked(
         roll_requests = [{"notation": "1d20", "label": "Tärningsslag"}]
         reply = re.sub(r'^\s*-?\s*Kast\s*:.*$', '', reply, flags=re.MULTILINE | re.IGNORECASE).strip()
         logger.warning("🎲 Prose roll 'Kast:' detected → auto-spawning 1d20")
+        # Uppdatera last_roll_requests (sattes tidigare, men prose-fallbacken
+        # kan ha lagt till kast efteråt — spara så frontend kan återställa)
+        meta["last_roll_requests"] = roll_requests
 
     # Spara DM-svar (ren text — inga taggar eller intern struktur)
     _dm_meta = {

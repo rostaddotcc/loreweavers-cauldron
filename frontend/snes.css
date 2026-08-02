@@ -1027,3 +1027,157 @@
 }/* ── 35e. MOBILE ≤ 640px: tightare paneler ── */
 @media (max-width: 640px){.console{ max-height: 60vh !important; }.console-log{ max-height: calc(60vh - 2.1rem) !important; }.console-head{ flex-wrap: wrap; row-gap: .25rem; }.console-count{ margin-left: auto; }.cd-drawer{ max-height: 80vh !important; }.cd-stats, .cd-abilities{ gap: .3rem !important; }
 }
+
+/* ═══════════════════════════════════════════════════
+   ⚔ COMBAT SPLIT-VIEW v27 — Stridens två ansikten
+   Aktiv strid: .main.combat-split delar chatten i två paneler.
+   Vänster #chat = DM:ns berättelse · Höger #battle-log = stridsdata
+   (fiendekort, HP, tärningar, rundor, statusbar som panelheader).
+   Mobile ≤768px: stridsloggen som kollapsbar låda under berättelsen.
+   ═══════════════════════════════════════════════════ */
+.main.combat-split{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 40%);
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  column-gap: .75rem;
+}
+.main.combat-split .chat-scroll{
+  grid-column: 1; grid-row: 1;
+  min-height: 0;
+  padding-right: .8rem;
+}
+/* ── Stridspanelen (höger) ── */
+.battle-log-pane{
+  display: none;
+  grid-column: 2; grid-row: 1 / span 3;
+  flex-direction: column;
+  min-height: 0;
+  background: rgba(139,26,42,.05);
+  border: 1px solid rgba(139,26,42,.35);
+  border-left: 3px solid var(--blood);
+  box-shadow: inset 0 0 24px rgba(139,26,42,.06), 0 0 18px rgba(139,26,42,.08);
+  animation: bl-in .45s cubic-bezier(.22,1,.36,1);
+}
+.main.combat-split .battle-log-pane{ display: flex; }
+@keyframes bl-in{
+  from{ opacity: 0; transform: translateX(14px); }
+  to{ opacity: 1; transform: translateX(0); }
+}
+.bl-head{
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .45rem .7rem;
+  border-bottom: 1px solid rgba(139,26,42,.35);
+  background: linear-gradient(180deg, rgba(139,26,42,.16), rgba(139,26,42,.04));
+}
+.bl-title{
+  font-family: var(--font-display), 'Cinzel', serif;
+  font-size: .58rem; letter-spacing: .22em; text-transform: uppercase;
+  color: var(--blood-bright);
+  text-shadow: 0 0 8px rgba(224,72,90,.35);
+}
+.bl-round{
+  font-family: var(--font-display), monospace;
+  font-size: .55rem; letter-spacing: .1em;
+  color: var(--gold-bright);
+  border: 1px solid rgba(201,162,39,.4);
+  background: rgba(201,162,39,.08);
+  padding: 2px 7px;
+  animation: bl-in .3s ease;
+}
+/* Statusbaren = panelens andra header-rad (flyttad hit från ovanför input) */
+.battle-log-pane .bl-status{
+  border-top: none;
+  border-bottom: 1px solid rgba(139,26,42,.25);
+  background: rgba(11,8,18,.55);
+}
+.bl-body{
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  padding: .8rem .7rem 1.2rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139,26,42,.5) var(--ink);
+}
+.bl-body::-webkit-scrollbar{ width: 10px; }
+.bl-body::-webkit-scrollbar-thumb{ background: rgba(139,26,42,.45); border: 2px solid var(--ink); }
+.bl-body::-webkit-scrollbar-track{ background: var(--ink); }
+/* Poster i stridspanelen: kompaktare, vänsterjusterade, tightare mellanrum */
+.bl-body .msg{ margin-bottom: .55rem; max-width: none; }
+.bl-body .msg.system{ text-align: left; max-width: none; margin-left: 0; margin-right: 0; }
+.bl-body .combat-inline{ font-size: .72rem; }
+.bl-body .combat-enemy-card{ transition: border-color .2s, background .2s, transform .2s; }
+.bl-body .combat-enemy-card:hover{
+  border-color: rgba(224,72,90,.65);
+  background: rgba(139,26,42,.10);
+  transform: translateX(-2px);
+}
+.bl-body .combat-round{ width: fit-content; margin: .3rem auto; padding: .3rem 1rem; }
+.bl-body .initiative-reveal{ margin: .4rem 0; }
+/* ── Mobil-lådans växelknapp (display:none tills strid börjar) ── */
+.battle-drawer-toggle{
+  display: none;
+  align-items: center; justify-content: space-between; gap: .6rem;
+  width: 100%;
+  padding: .55rem .9rem;
+  background: linear-gradient(180deg, rgba(139,26,42,.20), rgba(139,26,42,.06));
+  border: 1px solid rgba(139,26,42,.45);
+  border-left: 3px solid var(--blood);
+  color: var(--blood-bright);
+  font-family: var(--font-display), 'Cinzel', serif;
+  font-size: .58rem; letter-spacing: .18em; text-transform: uppercase;
+  cursor: pointer;
+  transition: background .2s, color .2s;
+}
+.battle-drawer-toggle .bdt-caret{ transition: transform .3s cubic-bezier(.22,1,.36,1); font-size: .6rem; }
+.battle-drawer-toggle:hover{ background: rgba(139,26,42,.28); color: var(--bone-bright); }
+.battle-drawer-toggle:active{ background: var(--blood); color: var(--ink); }
+body.battle-drawer-open .battle-drawer-toggle .bdt-caret{ transform: rotate(180deg); }
+
+/* ── Tärnings-badges: spelare = guld, fiende = blodröd ── */
+.dice-badge{
+  display: inline-block;
+  margin-left: .35rem; padding: 1px 7px;
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+  font-size: .66rem; line-height: 1.5; white-space: nowrap;
+  border: 1px solid;
+  vertical-align: middle;
+  transition: transform .15s, box-shadow .15s;
+}
+.dice-badge:hover{ transform: translateY(-1px); }
+.enemy-dice-badge{
+  color: var(--blood-bright);
+  border-color: rgba(224,72,90,.55);
+  background: rgba(163,36,51,.14);
+  text-shadow: 0 0 6px rgba(224,72,90,.4);
+}
+.enemy-dice-badge:hover{ box-shadow: 0 0 10px rgba(224,72,90,.35); }
+.player-dice-badge{
+  color: var(--gold-bright);
+  border-color: rgba(240,214,117,.5);
+  background: rgba(201,162,39,.12);
+  text-shadow: 0 0 6px rgba(240,214,117,.4);
+}
+.player-dice-badge:hover{ box-shadow: 0 0 10px rgba(240,214,117,.3); }
+.crs-line .dice-badge{ margin-left: .4rem; }
+
+/* ── MOBILE ≤768px: stridsloggen som kollapsbar låda ── */
+@media (max-width: 768px){
+  .main.combat-split{
+    display: flex;
+    flex-direction: column;
+  }
+  .main.combat-split .chat-scroll{ padding-right: 1.6rem; }
+  .battle-log-pane{
+    grid-column: auto; grid-row: auto;
+    order: 5;
+    max-height: 0;
+    overflow: hidden;
+    border-left-width: 1px;
+    border-top: 2px solid var(--blood);
+    transition: max-height .35s cubic-bezier(.22,1,.36,1);
+  }
+  body.battle-drawer-open .battle-log-pane{
+    max-height: 46vh;
+    box-shadow: 0 -8px 24px rgba(0,0,0,.5), inset 0 0 24px rgba(139,26,42,.08);
+  }
+  body.battle-drawer-open .bl-body{ animation: bl-in .3s ease; }
+}

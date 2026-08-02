@@ -996,6 +996,24 @@
   <main class="main">
     <div class="chat-scroll" id="chat"></div>
 
+    <!-- ═══ ⚔ Battle log — högra stridspanelen (combat-split v27) ═══
+         Aktiv strid → .main.combat-split delar vyn: #chat = DM-berättelse (vänster),
+         #battle-log = fiendekort/HP/tärningar/rundor (höger). Mobile ≤768px: låda. -->
+    <aside class="battle-log-pane" id="battle-log" aria-hidden="true">
+      <div class="bl-head">
+        <span class="bl-title">⚔ STRIDSLOGG</span>
+        <span class="bl-round" id="bl-round">R1</span>
+      </div>
+      <div class="bl-status" id="combat-status-bar" style="display:none"></div>
+      <div class="bl-body" id="battle-log-body"></div>
+    </aside>
+
+    <!-- Mobil: kollapsbar stridslåda (endast under aktiv strid) -->
+    <button class="battle-drawer-toggle" id="battle-drawer-toggle" style="display:none" onclick="toggleBattleDrawer()" aria-expanded="false">
+      <span class="bdt-label">⚔ Stridslogg</span>
+      <span class="bdt-caret">▲</span>
+    </button>
+
     <!-- Quick scroll: hoppa upp/ner i historiken (döljs vid ändarna) -->
     <div class="quick-scroll" id="quick-scroll">
       <button class="qs-btn" id="qs-up" title="Scroll up in history" onclick="qsScrollUp(event)">▲</button>
@@ -1011,9 +1029,6 @@
       <div class="guardian-pulse"></div>
       <span class="thought">🛡️ Guardian processing…</span>
     </div>
-
-    <!-- ═══ Combat status bar — live HP/round tracker ═══ -->
-    <div class="combat-status-bar" id="combat-status-bar" style="display:none"></div>
 
     <div class="input-area">
       <div class="tts-voice-picker" title="Narrator voice for reading aloud">
@@ -2855,6 +2870,13 @@ async function loadTranscript() {
         _unlockChat();
       }
       chat.scrollTop = chat.scrollHeight;
+      // Split-view v27: om transkriptet slutar mitt i en strid → återaktivera
+      // delad vy (renderarna körde inline i replay-läget; nästa live-stridstagg
+      // växlar över till stridspanelen igen).
+      if (_lastCombatStatus && _lastCombatStatus.active !== false) {
+        setCombatSplit(true);
+        updateCombatStatusBar(_lastCombatStatus);
+      }
       // Guardian-rapporter i transkriptet kan ha uppdaterat NPCs/platser/partystate
       // → rita om menyn så att hård refresh inte behövs vid återkomst.
       refreshSidebar();
@@ -3603,16 +3625,27 @@ function applyCombatTag(el, text, container) {
   if (box && clean && clean.trim()) {
     box.innerHTML = combatLogHtml(clean, combat);
     box.classList.add('combat-log');
+    decorateCombatDice(box); // 🎲-parenteser → färgade dice-badges (split-view v27)
   }
   // Reason för stridsslut (ur synlig text, t.ex. "🏁 Striden är över — alla besegrade")
   let reason = '';
   const rm = clean.match(/(?:Striden är över|Combat over)[—\-–:]\s*(.+)/i);
   if (rm) reason = rm[1].replace(/\*+/g, '').trim();
 
-  // Chat-first combat: rendera inline meddelanden istället för sidebar
-  renderCombatInline(combat, reason, target);
+  // ── Combat split-view v27: aktiv strid → dela vyn i två paneler ──
+  // Vänster (#chat) = DM-berättelse · Höger (#battle-log) = stridsdata.
+  // Replay/transcript-laddning (target ≠ #chat) kör fortsatt inline i transkriptet.
+  const live = (target === chat);
+  if (live) setCombatSplit(combat.active !== false);
 
-  // Status bar (sticky above input) — always update (hides itself on combat end)
+  // Stridsrenderare → högra panelen när split är aktiv, annars chatten
+  const bl = getBattleLogBody();
+  const combatTarget = (live && combat.active !== false && bl) ? bl : target;
+
+  // Chat-first combat: rendera inline meddelanden (segerraden hamnar alltid i berättelsen)
+  renderCombatInline(combat, reason, combatTarget, live ? chat : null);
+
+  // Status bar — header i stridspanelen (gömmer sig själv vid stridsslut)
   updateCombatStatusBar(combat);
 
   // Skip remaining renderers when combat just ended — the end banner is enough
@@ -3622,14 +3655,15 @@ function applyCombatTag(el, text, container) {
   }
 
   // Player HP inline message (damage/healing)
-  renderPlayerHpChange(combat, target);
+  renderPlayerHpChange(combat, combatTarget);
 
   // Round summary (combat log entries for current round)
-  renderRoundSummary(combat, target);
+  renderRoundSummary(combat, combatTarget);
 
   // Initiative order (always shown at combat start)
-  maybeInitiativeReveal(combat, target);
+  maybeInitiativeReveal(combat, combatTarget);
 
+  combatTarget.scrollTop = combatTarget.scrollHeight;
   target.scrollTop = target.scrollHeight;
 }
 
@@ -3637,17 +3671,63 @@ function applyCombatTag(el, text, container) {
 let _lastCombatRound = 0;
 let _lastCombatEnemyHp = {};  // {name: hp} för att detektera HP-ändringar
 
-function renderCombatInline(combat, reason, container) {
+// ── Combat split-view v27 — panelväxling, mobil-låda, merge-back ──
+function getBattleLogBody() { return document.getElementById('battle-log-body'); }
+
+function setCombatSplit(on) {
+  const main = document.querySelector('.main');
+  const pane = document.getElementById('battle-log');
+  const tog = document.getElementById('battle-drawer-toggle');
+  if (!main || !pane) return;
+  if (on) {
+    main.classList.add('combat-split');
+    pane.setAttribute('aria-hidden', 'false');
+    if (tog) tog.style.display = '';
+  } else {
+    main.classList.remove('combat-split');
+    pane.setAttribute('aria-hidden', 'true');
+    if (tog) { tog.style.display = 'none'; tog.setAttribute('aria-expanded', 'false'); }
+    document.body.classList.remove('battle-drawer-open');
+    mergeBattleLogIntoChat();
+  }
+}
+
+// Stridsslut → flytta stridspanelens innehåll till berättelsen (kronologisk merge-back)
+function mergeBattleLogIntoChat() {
+  const bl = getBattleLogBody();
+  if (!bl || !bl.children.length) return;
+  const frag = document.createDocumentFragment();
+  while (bl.firstChild) frag.appendChild(bl.firstChild);
+  chat.appendChild(frag);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+// Mobil (≤768px): stridsloggen som kollapsbar låda under berättelsen
+function toggleBattleDrawer(force) {
+  const open = (typeof force === 'boolean') ? force : !document.body.classList.contains('battle-drawer-open');
+  document.body.classList.toggle('battle-drawer-open', open);
+  const tog = document.getElementById('battle-drawer-toggle');
+  if (tog) tog.setAttribute('aria-expanded', String(open));
+  if (open) {
+    const bl = getBattleLogBody();
+    if (bl) bl.scrollTop = bl.scrollHeight;
+  }
+}
+
+// container = där stridsposterna hamnar (stridspanelen eller chatten)
+// storyTarget = berättelseflödet (endast live) — segerraden ska alltid synas där
+function renderCombatInline(combat, reason, container, storyTarget) {
   if (!combat) return;
   const en = (typeof I18N !== 'undefined' && I18N.getLang() === 'en');
 
-  // Striden slutar → segerrad
+  // Striden slutar → segerrad (i berättelsen; panelen töms av merge-back)
   if (combat.active === false) {
+    const dest = storyTarget || container;
     const endEl = document.createElement('div');
     endEl.className = 'msg system';
     endEl.innerHTML = `<div class="box combat-inline combat-end">🏁 ${en ? 'Combat over' : 'Striden är över'}${reason ? ' — ' + escapeHtml(reason) : ''}</div>`;
-    container.appendChild(endEl);
-    container.scrollTop = container.scrollHeight;
+    dest.appendChild(endEl);
+    dest.scrollTop = dest.scrollHeight;
     _lastCombatRound = 0;
     _lastCombatEnemyHp = {};
     _lastPlayerHp = null;
@@ -3747,6 +3827,9 @@ function updateCombatStatusBar(combat) {
   }
   bar.innerHTML = html;
   bar.style.display = 'flex';
+  // Stridspanelens rubrik visar aktuell runda (split-view v27)
+  const roundChip = document.getElementById('bl-round');
+  if (roundChip) roundChip.textContent = 'R' + round;
   _lastCombatStatus = combat;
 }
 
@@ -3793,11 +3876,49 @@ function renderRoundSummary(combat, container) {
     const actor = entry.actor || 'system';
     const cls = actor === 'player' ? 'player' : actor === 'enemy' ? 'enemy' : 'system';
     const icon = actor === 'player' ? '🗡️' : actor === 'enemy' ? '🐺' : '⚙️';
-    html += `<div class="crs-line ${cls}">${icon} ${escapeHtml(entry.text || '')}</div>`;
+    // Split-view v27: bryt ut tärningsnotationen ur texten → egna badges
+    // (fiende = blodröd .enemy-dice-badge · spelare = guld .player-dice-badge)
+    const dice = extractDiceFromText(entry.text || '');
+    const diceHtml = dice.badges.length ? ' ' + dice.badges.map(b =>
+      `<span class="dice-badge ${actor === 'enemy' ? 'enemy-dice-badge' : 'player-dice-badge'}" title="${escapeHtml(b)}">🎲 ${escapeHtml(b)}</span>`
+    ).join('') : '';
+    html += `<div class="crs-line ${cls}">${icon} ${mdToHtml(escapeHtml(dice.clean))}${diceHtml}</div>`;
   });
   html += `</div>`;
   el.innerHTML = html;
   container.appendChild(el);
+}
+
+// ── Tärningsnotation → badges (split-view v27) ──
+// Stridslogg-texter ser ut som: 'träffar dig — 5 skada (fire) (🎲 d20=11+3=14 · 1d6+1: [4]=5)'
+// Returnerar { clean, badges } — clean = texten utan tärningsparenteser,
+// badges = de råa tärningsuttrycken som renderas som färgade .dice-badge-chips.
+function extractDiceFromText(text) {
+  const str = String(text || '');
+  const badges = [];
+  const clean = str.replace(/\(\s*🎲\s*([^()]*?)\s*\)/g, (_, expr) => {
+    const t = expr.trim();
+    if (t) badges.push(t);
+    return '';
+  }).replace(/\s{2,}/g, ' ').replace(/\s+$/, '');
+  return { clean, badges };
+}
+
+// Dekorera en renderad stridslogg (guardian-box): tärningsparenteser → badges
+function decorateCombatDice(root) {
+  if (!root || !root.querySelectorAll) return;
+  root.querySelectorAll('.cl-row').forEach(row => {
+    const raw = row.textContent || '';
+    if (!raw.includes('🎲')) return;
+    const dice = extractDiceFromText(raw);
+    if (!dice.badges.length) return;
+    const isPlayer = row.classList.contains('cl-player');
+    const cls = isPlayer ? 'player-dice-badge' : 'enemy-dice-badge';
+    const chips = dice.badges.map(b =>
+      `<span class="dice-badge ${cls}" title="${escapeHtml(b)}">🎲 ${escapeHtml(b)}</span>`
+    ).join(' ');
+    row.innerHTML = mdToHtml(escapeHtml(dice.clean)) + ' ' + chips;
+  });
 }
 
 // C2 — Krigsrådet v2 (battle rail with action economy)

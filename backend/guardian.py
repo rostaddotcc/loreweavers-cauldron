@@ -426,6 +426,9 @@ Extrahera ALLA mekaniska effekter och uppdateringar.
   VIKTIGT: Ge ALDRIG roll_grants för föremål som redan är konsumerade/använda (t.ex. en healing potion \
   som redan druckits) eller för resurser som nämns i minne/tillbakablick — bara för NYA fördelar som DM \
   ger i DENNA narration. Kontrollera state "Inventory" — om föremålet inte finns där, ge tom array.
+- LÄKEDRYCK / HEALING POTION (KRITISKT): Om DM:n narrerar att spelaren DRICKER en läkedryck/healing potion \
+  (t.ex. "du dricker läkedrycken", "hon tömmer flaskan") → ge roll_grant {"notation": "2d4+2", "label": "LÄKNING (läkedryck)", "reason": "läkedryck dracks"}. \
+  Sätt INTE ett fast healing-belopp — spelaren ska rulla 2d4+2 själv. (5e: healing potion = 2d4+2 HP.)
 
 ### Loggbok
 - logbook: En kort sammanfattning av vad som hände denna tur (max 2 meningar). \
@@ -979,6 +982,55 @@ def _normalize_item(raw: dict, lang: str = "sv") -> dict:
     return item
 
 
+def _init_turn_order(combat: dict, state: dict) -> None:
+    """Bygg turn_order från enemies + spelaren. Anropas vid combat_start."""
+    ch = state.get("character", {})
+    player_name = ch.get("name", "Spelaren")
+    turn_order = [{"key": "player", "name": player_name, "initiative": 0, "acted": False}]
+    for e in combat.get("enemies", []):
+        if e.get("alive", True):
+            turn_order.append({"key": f"enemy:{e.get('id', 0)}", "name": e.get("name", "?"), "initiative": 0, "acted": False})
+    combat["turn_order"] = turn_order
+    combat["current_index"] = 0
+    combat.setdefault("player_actions", {"action": True, "bonus": True, "reaction": True})
+    combat.setdefault("phase", "player")
+
+
+def _advance_turn(combat: dict, state: dict) -> None:
+    """Avancera turordningen: markera aktuell combatant som acted, stega
+    current_index. När alla agerat → ny runda (round+1, reset acted)."""
+    turn_order = combat.get("turn_order")
+    if not turn_order:
+        return
+    idx = combat.get("current_index", 0)
+    if idx < len(turn_order):
+        turn_order[idx]["acted"] = True
+    # Hitta nästa levande combatant
+    next_idx = idx + 1
+    # Kontrollera om alla agerat → ny runda
+    if all(t.get("acted", False) for t in turn_order):
+        combat["round"] = combat.get("round", 1) + 1
+        for t in turn_order:
+            t["acted"] = False
+        combat["current_index"] = 0
+        combat["phase"] = "player"
+        combat.setdefault("player_actions", {"action": True, "bonus": True, "reaction": True})
+        logger.info("⚔️ Ny runda %d — alla har agerat", combat["round"])
+    else:
+        # Stega till nästa levande combatant
+        while next_idx < len(turn_order):
+            entry = turn_order[next_idx]
+            if entry["key"] == "player" or any(
+                e.get("name", "").lower() == entry.get("name", "").lower() and e.get("alive", True)
+                for e in combat.get("enemies", [])
+            ):
+                break
+            next_idx += 1
+        combat["current_index"] = min(next_idx, len(turn_order) - 1)
+        current = turn_order[combat["current_index"]]
+        combat["phase"] = "player" if current["key"] == "player" else "enemies"
+
+
 def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -> list[dict]:
     """
     Applicera Guardian-extraherade mekaniska ändringar på state.
@@ -1052,6 +1104,21 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
     for heal in mech.get("healing", []):
         target = heal.get("target", "player")
         amount = max(0, int(heal.get("amount", 0)))
+        heal_type = str(heal.get("type", "")).lower()
+        # LÄKEDRYCK-säkerhetsnät: om Guardian satte ett fast belopp för en
+        # läkedryck/potion, konvertera till roll_grant (2d4+2) istället.
+        # Spelaren ska rulla själv — 5e healing potion = 2d4+2 HP.
+        _potion_kw = ("läkedryck", "potion", "healing potion", "health potion", "dryck")
+        if target == "player" and any(kw in heal_type for kw in _potion_kw):
+            lr = state.setdefault("meta", {}).setdefault("last_roll_requests", [])
+            if not any(r.get("notation") == "2d4+2" and "LÄKNING" in r.get("label", "") for r in lr):
+                lr.append({"notation": "2d4+2", "label": "LÄKNING (läkedryck)"})
+            resources = state.setdefault("resources", [])
+            if not any(r.get("notation") == "2d4+2" and "LÄKNING" in r.get("label", "") for r in resources):
+                resources.append({"notation": "2d4+2", "label": "LÄKNING (läkedryck)", "reason": "läkedryck dracks", "turn": state.get("meta", {}).get("turn_count", 0)})
+            effects.append({"type": "roll_grant", "value": "LÄKNING (läkedryck)", "notation": "2d4+2"})
+            logger.info("🛡️ Guardian: läkedryck-healing → roll_grant 2d4+2 (istället för fast %d)", amount)
+            continue
         if amount <= 0:
             continue
         # P0-dedup: [HELA:]-taggen applicerade redan samma läkning
@@ -1609,15 +1676,35 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             enemies.append({"id": i, "name": name, "hp": hp, "max_hp": max_hp, "ac": ac, "alive": True, "statuses": []})
             names.append(name)
         if enemies:
-            world["combat"] = {
-                "active": True, "round": 1, "initiative": [],
-                "enemies": enemies, "log": [],
-                "started_turn": state.get("meta", {}).get("turn_count", 0),
-                "ended_turn": None,
-            }
-            effects.append({"type": "combat_start", "value": ", ".join(names)})
-            logger.info("⚔️ Guardian combat_start: %s", ", ".join(names))
-            combat = world["combat"]
+            if combat and combat.get("active"):
+                # MERGE: strid redan aktiv — lägg till nya fiender, behåll befintliga
+                existing_names = {e.get("name", "").lower() for e in combat.get("enemies", [])}
+                next_id = max((e.get("id", 0) for e in combat.get("enemies", [])), default=-1) + 1
+                added = []
+                for e in enemies:
+                    if e["name"].lower() not in existing_names:
+                        e["id"] = next_id
+                        next_id += 1
+                        combat.setdefault("enemies", []).append(e)
+                        added.append(e["name"])
+                if added:
+                    effects.append({"type": "combat_start", "value": ", ".join(added)})
+                    logger.info("⚔️ Guardian combat_start (merge): +%s", ", ".join(added))
+                # Sätt bara turn_order om den saknas
+                if not combat.get("turn_order"):
+                    _init_turn_order(combat, state)
+            else:
+                # NY strid — skapa från grunden
+                world["combat"] = {
+                    "active": True, "round": 1, "initiative": [],
+                    "enemies": enemies, "log": [],
+                    "started_turn": state.get("meta", {}).get("turn_count", 0),
+                    "ended_turn": None,
+                }
+                combat = world["combat"]
+                _init_turn_order(combat, state)
+                effects.append({"type": "combat_start", "value": ", ".join(names)})
+                logger.info("⚔️ Guardian combat_start: %s", ", ".join(names))
 
     cr = mech.get("combat_round")
     if cr and combat and combat.get("active"):
@@ -1772,6 +1859,13 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             event_str = str(event).strip()
             if event_str:
                 combat_log.append({"round": current_round, "actor": "system", "name": "", "text": event_str})
+
+        # ── Turordning: avancera efter attacker (Bug 4-fix) ──
+        # I chat-first-läge finns inget explicit "end turn"-anrop.
+        # När Guardian har processat player_attacks och/eller enemy_attacks
+        # har denna turs combatanter agerat → avancera turn_order.
+        if mech.get("player_attacks") or mech.get("enemy_attacks"):
+            _advance_turn(combat, state)
 
         # Auto-avsluta strid om alla fiender döda
         if all(not e.get("alive", True) for e in combat.get("enemies", [])) and combat.get("enemies"):

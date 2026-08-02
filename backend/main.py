@@ -3210,6 +3210,44 @@ Rules:
 """
 
 
+def _repair_truncated_json(text: str) -> str | None:
+    """Reparera kapad JSON från reasoning-modeller (fix 2026-08-02).
+
+    När en modell trunkerar content mitt i en sträng (t.ex. deepseek-v4-pro
+    med för låg max_tokens) stänger vi oavslutade citat och lägger till
+    saknade } ] så att fälten (items_add, spells_add …) ändå appliceras.
+    Returnerar reparerad text, eller None om reparationen inte hjälper.
+    """
+    s = text.strip()
+    if not s:
+        return None
+    # Redan giltig — returnera som den är
+    try:
+        json.loads(s)
+        return s
+    except json.JSONDecodeError:
+        pass
+    # Om udda antal oescapede citattecken → oavslutad sträng: stäng den
+    quote_count = len(re.findall(r'(?<!\\)"', s))
+    if quote_count % 2 == 1:
+        s += '"'
+    # Balansera { [ mot } ] — stäng i omvänd ordning
+    stack = []
+    for ch in s:
+        if ch in "{[":
+            stack.append(ch)
+        elif ch in "}]":
+            if stack:
+                stack.pop()
+    for ch in reversed(stack):
+        s += "]" if ch == "[" else "}"
+    try:
+        json.loads(s)
+        return s
+    except json.JSONDecodeError:
+        return None
+
+
 async def _guardian_manual_correction(
     instruction: str,
     state: dict,
@@ -3273,7 +3311,17 @@ async def _guardian_manual_correction(
                 try:
                     data = json.loads(fixed)
                 except json.JSONDecodeError:
-                    return f"🛡️ **Guardian** · Manual Correction\n⚠️ Could not parse response. Raw:\n{raw[:500]}"
+                    # Sista försök: reparera kapad JSON — reasoning-modeller
+                    # (t.ex. deepseek-v4-pro) trunkerar ibland content mitt i
+                    # en sträng → stäng citat + klammer så items_add ändå
+                    # appliceras (fix 2026-08-02).
+                    repaired = _repair_truncated_json(cleaned)
+                    if repaired is None:
+                        return f"🛡️ **Guardian** · Manual Correction\n⚠️ Could not parse response. Raw:\n{raw[:500]}"
+                    try:
+                        data = json.loads(repaired)
+                    except json.JSONDecodeError:
+                        return f"🛡️ **Guardian** · Manual Correction\n⚠️ Could not parse response. Raw:\n{raw[:500]}"
     if data is None:
         return f"🛡️ **Guardian** · Manual Correction\n⚠️ Could not parse response. Raw:\n{raw[:500]}"
 
@@ -3816,7 +3864,7 @@ async def _chat_locked(
             # state är redan färskt (hämtat under låset i chat()).
             guardian_report = await _guardian_manual_correction(
                 instruction, state, username,
-                lambda msgs: _call_llm(_guardian_model_for(state), msgs, temperature=0.1, max_tokens=2048, usage_out=_manual_usage),
+                lambda msgs: _call_llm(_guardian_model_for(state), msgs, temperature=0.1, max_tokens=4096, thinking="disabled", usage_out=_manual_usage),
                 language=_get_lang(state),
             )
             logger.info("🛡️ Guardian manual correction (%.1fs): %s", time.time() - _tg, guardian_report[:100])

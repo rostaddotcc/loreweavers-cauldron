@@ -125,7 +125,15 @@
   }.side-label{
     font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.26em;
     text-transform: uppercase; color: var(--bone-dim); margin-bottom: 0.3rem;
-  }/* ── Collapsible sidebar sections ── */.side-toggle{
+  }.side-near{
+    display: none; margin-top: 0.9rem; padding-top: 0.65rem; border-top: 1px solid var(--edge);
+    font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--gold); opacity: 0.9;
+  }/* Allierade i direkt närhet — guldtonade sällskapskort i The Party */
+  #party-npcs{ display: flex; flex-direction: column; gap: 0.15rem; margin-top: 0.45rem; }
+  #party-npcs .npc-row{ border: 1px solid rgba(201,162,39,.22); background: rgba(201,162,39,.05); border-radius: 2px; }
+  #party-npcs .npc-row:hover{ background: rgba(201,162,39,.12); border-color: rgba(201,162,39,.45); }
+  #party-npcs .npc-name{ color: var(--bone-bright); }/* ── Collapsible sidebar sections ── */.side-toggle{
     cursor: pointer; user-select: none; display: flex; align-items: center;
     justify-content: space-between; padding: 0.35rem 0.4rem; margin: 0 -0.4rem;
     border: 1px solid transparent; border-radius: 2px; transition: all 0.2s;
@@ -956,6 +964,8 @@
         <div class="pc-xp" id="pc-xp-bar"><i id="pc-xp-fill" style="width:0%"></i></div>
         <div class="pc-xp-label" id="pc-xp-label">0 / 300 XP</div>
         <div class="pc-gold" id="pc-gold" title="Your purse">🪙 <span id="pc-gold-val">0</span> <span id="pc-gold-detail" style="font-size:0.65rem;color:var(--bone-dim);font-weight:400"></span></div>
+        <div class="side-near" id="near-label">✦ Nära dig</div>
+        <div class="npc-list" id="party-npcs"></div>
       </div>
     </div>
 
@@ -1348,9 +1358,13 @@ function ingestNpcs(npcList) {
         icon: npc.icon || '🎭',
         role: npc.role || '',
         alive: npc.alive !== false,
+        relation: npc.relation || 'okänd',
+        near: !!npc.near,
       };
-    } else if (npc.alive === false) {
-      NPCS[key].alive = false;
+    } else {
+      if (npc.alive === false) NPCS[key].alive = false;
+      if (npc.relation) NPCS[key].relation = npc.relation;
+      if (typeof npc.near === 'boolean') NPCS[key].near = npc.near;
     }
   });
   renderNpcSidebar();
@@ -4541,6 +4555,7 @@ const EFFECT_META = {
   quest_misslyckad:{ icon: '📜',  sfx: 'fail' },
   npc_död:        { icon: '💀',  sfx: 'fail' },
   npc_relation:   { icon: '🤝',  sfx: 'click' },
+  npc_near:       { icon: '✦',  sfx: 'click' },
   npc_new:        { icon: '🧙',  sfx: 'click' },
   npc_note:       { icon: '📝',  sfx: 'click' },
   npc_reveal:     { icon: '🎭',  sfx: 'gate' },
@@ -4575,6 +4590,7 @@ function effectText(fx) {
     case 'quest_misslyckad':return `${I18N.t('Uppdrag misslyckat: ')}<b>${v}</b>`;
     case 'level_up':     return `<b>${I18N.t('NIVÅ')} ${v}!</b> ${I18N.t('Du känner nya krafter!')}`;
     case 'npc_relation': return `${I18N.t('Relation ändrad: ')}<b>${v}</b>`;
+    case 'npc_near':     return `<b>${v}</b>`;
     case 'npc_new':      return `${I18N.t('Ny gestalt: ')}<b>${v}</b> (${fx.role || I18N.t('okänd')}, ${fx.relation || I18N.t('okänd')})`;
     case 'npc_note':     return `Om <b>${v}</b>: ${fx.note || ''}`;
     case 'npc_reveal':   return `${I18N.t('Identitet avslöjad: ')}${fx.old_name || I18N.t('okänd')} → <b>${v}</b>`;
@@ -4851,15 +4867,15 @@ function addSceneCard(art, cssClass, label) {
 
 function renderNpcSidebar() {
   const list = document.getElementById('npc-list');
+  const partyList = document.getElementById('party-npcs');
+  const nearLabel = document.getElementById('near-label');
   if (!list) return;
-  const rows = Object.entries(NPCS)
-    .filter(([k]) => k !== 'dm')
-    .map(([k, n]) => {
-      const av = AVATARS['npc:' + k];
-      const icon = av
-        ? `<img src="${av}" alt="" style="width:16px;height:16px;object-fit:cover;image-rendering:pixelated">`
-        : SPR.html(n.icon || '🎭');
-      return `
+  const row = ([k, n]) => {
+    const av = AVATARS['npc:' + k];
+    const icon = av
+      ? `<img src="${av}" alt="" style="width:16px;height:16px;object-fit:cover;image-rendering:pixelated">`
+      : SPR.html(n.icon || '🎭');
+    return `
       <div class="npc-row${n.alive === false ? ' dead' : ''}" data-npc="${k}" onclick="openNpcDrawer(this.dataset.npc)" title="View dossier" style="cursor:pointer">
         <span class="npc-dot" style="color:${n.color};background:${n.color}"></span>
         <span class="npc-info">
@@ -4867,8 +4883,16 @@ function renderNpcSidebar() {
           ${n.role ? `<div class="npc-role">${n.role}</div>` : ''}
         </span>
       </div>`;
-    }).join('');
-  list.innerHTML = rows || `<div class="npc-row" style="opacity:.45;cursor:default">${I18N.t('Ingen har dykt upp ännu…')}</div>`;
+  };
+  // Allierade i spelarens direkta närhet → The Party. Övriga → Known NPCs.
+  const entries = Object.entries(NPCS).filter(([k]) => k !== 'dm');
+  const near = entries.filter(([, n]) => n.relation === 'allierad' && n.near);
+  const rest = entries.filter(([, n]) => !(n.relation === 'allierad' && n.near));
+  if (partyList) {
+    partyList.innerHTML = near.map(row).join('');
+    if (nearLabel) nearLabel.style.display = near.length ? 'block' : 'none';
+  }
+  list.innerHTML = rest.map(row).join('') || `<div class="npc-row" style="opacity:.45;cursor:default">${I18N.t('Ingen har dykt upp ännu…')}</div>`;
 }
 
 // ── Uppdragslogg i sidebaren (från /api/campaign state.quests) ──

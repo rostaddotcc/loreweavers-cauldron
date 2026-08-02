@@ -389,6 +389,9 @@ Extrahera ALLA mekaniska effekter och uppdateringar.
 - npc_relations: Relationsändringar. Ange name och new_relation. \
   DETEKTERA ÄVEN IMPLICITA ändringar: om en NPC hjälper spelaren → allierad. \
   Om en NPC attackerar eller hotar → fiende. Om en NPC avslöjar en hemlighet → uppdatera notes.
+- npcs_near: NPCs som JUST NU befinner sig i spelarens direkta närhet — samma rum, synhåll \
+  eller pågående konversation. Ange EXAKTA namn (array). Tom lista om ingen är nära. \
+  Uppdatera VARJE tur: när en NPC lämnar närheten försvinner den ur listan.
 - npc_notes: Nya anteckningar om NPCs (personlighet, mål, hemligheter, utseende). \
   DETEKTERA NAMNAVSLÖJANDEN: om en "okänd" NPC får ett namn, eller om en NPC:s \
   identitet/roll avslöjas ("den gamle mannen visar sig vara..."), uppdatera notes.
@@ -749,7 +752,7 @@ async def guardian_extract_mechanics(
         "damage": [], "healing": [], "death": [], "xp": 0,
         "items_add": [], "items_remove": [], "currency": [], "spells_add": [],
         "quests_new": [], "quests_completed": [], "quests_failed": [],
-        "npcs_new": [], "npc_relations": [], "npc_notes": [],
+        "npcs_new": [], "npc_relations": [], "npcs_near": [], "npc_notes": [],
         "npc_name_reveals": [], "character_updates": [],
         "locations_new": [], "current_location": None, "world_lore": [], "time_passed": None, "rest": None,
         "new_day": None, "day_summary": None, "logbook": "",
@@ -1468,6 +1471,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 "name": name,
                 "role": npc.get("role", "Okänd"),
                 "relation": relation,
+                "near": False,
                 "color": _colors[h % len(_colors)],
                 "icon": _icons[h % len(_icons)],
                 "notes": "",
@@ -1488,6 +1492,16 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 effects.append({"type": "npc_relation", "value": f"{name} → {new_rel}"})
                 logger.info("🛡️ Guardian: NPC '%s' relation %s → %s", name, old, new_rel)
                 break
+
+    # ── Närvaro: vilka NPCs befinner sig i spelarens direkta närhet just nu ──
+    near_names = [str(n).strip().lower() for n in mech.get("npcs_near", []) if isinstance(n, str) and n.strip()]
+    for npc in npcs:
+        was_near = bool(npc.get("near", False))
+        is_near = npc.get("name", "").lower() in near_names
+        if was_near != is_near:
+            npc["near"] = is_near
+            effects.append({"type": "npc_near", "value": f"{npc.get('name', '?')} → {'nära' if is_near else 'lämnade närheten'}"})
+            logger.info("🛡️ Guardian: NPC '%s' närvaro → %s", npc.get("name"), "nära" if is_near else "lämnade")
 
     for note in mech.get("npc_notes", []):
         name = note.get("name", "").strip()
@@ -2162,7 +2176,7 @@ def _sanitize_mechanics(mech: dict) -> dict:
     # Säkerställ att listor är listor
     for key in ("damage", "healing", "death", "items_add", "items_remove",
                 "currency", "quests_new", "quests_completed", "quests_failed",
-                "npcs_new", "npc_relations", "npc_notes", "locations_new",
+                "npcs_new", "npc_relations", "npcs_near", "npc_notes", "locations_new",
                 "world_lore", "roll_grants", "corrections",
                 "initiative_entries", "enemy_actions", "status_apply",
                 "player_attacks", "ally_attacks", "ally_damage", "enemy_attacks", "combat_events"):

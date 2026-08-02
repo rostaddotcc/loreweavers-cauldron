@@ -166,3 +166,46 @@ def test_apply_mechanics_spells_add_creates_key_when_missing():
     state = {"character": {"name": "Utan spells"}, "inventory": [], "npcs": [], "world": {}}
     guardian.apply_mechanics(state, {"spells_add": [{"name": "Välsignelse", "level": 1}]})
     assert state["character"]["spells"][0]["name"] == "Välsignelse"
+
+
+# ── Guardian npcs_near (närvaro) ──
+
+def _state_with_npcs():
+    return {
+        "character": {"name": "Test", "hp": {"current": 10, "max": 10}},
+        "inventory": [], "world": {},
+        "meta": {}, "currency": {}, "quests": [],
+        "npcs": [
+            {"name": "Alva", "role": "Smed", "relation": "allierad", "near": False},
+            {"name": "Tor", "role": "Vakt", "relation": "neutral", "near": False},
+            {"name": "Gorm", "role": "Kapten", "relation": "fiende", "near": False},
+        ],
+    }
+
+
+def test_apply_mechanics_npcs_near_marks_presence():
+    state = _state_with_npcs()
+    effects = guardian.apply_mechanics(state, {"npcs_near": ["alva", "tor"]})
+    by_name = {n["name"]: n["near"] for n in state["npcs"]}
+    assert by_name == {"Alva": True, "Tor": True, "Gorm": False}
+    types = [e.get("type") for e in effects]
+    assert types.count("npc_near") == 2
+
+
+def test_apply_mechanics_npcs_near_clears_when_leaves():
+    state = _state_with_npcs()
+    state["npcs"][0]["near"] = True  # Alva var nära förra turen
+    effects = guardian.apply_mechanics(state, {"npcs_near": []})
+    by_name = {n["name"]: n["near"] for n in state["npcs"]}
+    assert by_name == {"Alva": False, "Tor": False, "Gorm": False}
+    # Bara Alva (som lämnade) rapporteras
+    near_effects = [e for e in effects if e.get("type") == "npc_near"]
+    assert len(near_effects) == 1
+    assert "lämnade" in near_effects[0]["value"]
+
+
+def test_apply_mechanics_npcs_near_ignores_unknown_names():
+    state = _state_with_npcs()
+    effects = guardian.apply_mechanics(state, {"npcs_near": ["Finns inte", 42, None]})
+    assert not any(n["near"] for n in state["npcs"])
+    assert not any(e.get("type") == "npc_near" for e in effects)

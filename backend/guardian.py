@@ -1760,6 +1760,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
     combat = state.get("world", {}).get("combat")
     if combat and combat.get("active"):
         combat_log = combat.setdefault("log", [])
+        combat_log_len_before = len(combat_log)  # för deterministisk turn-avancering
         current_round = combat.get("round", 1)
 
         # Spelarens attacker → minska fiende-HP
@@ -1874,11 +1875,26 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             if event_str:
                 combat_log.append({"round": current_round, "actor": "system", "name": "", "text": event_str})
 
-        # ── Turordning: avancera efter attacker (Bug 4-fix) ──
-        # I chat-first-läge finns inget explicit "end turn"-anrop.
-        # När Guardian har processat player_attacks och/eller enemy_attacks
-        # har denna turs combatanter agerat → avancera turn_order.
-        if mech.get("player_attacks") or mech.get("enemy_attacks"):
+        # ── Turordning (chat-first): hybrid-avancering ──
+        # LLM får driva när den kan (attacker/events/combat_round), men vi har
+        # ett DETERMINISTISKT skyddsnät: om något mekaniskt hände denna tur
+        # (stridsloggen växte eller combat-effekter applicerades) avancerar vi
+        # ändå. Utan detta fastnar rundan på 1 när Guardian inte skickar
+        # player_attacks/enemy_attacks (marielle 2026-08-02: 13 turer, runda 1).
+        llm_attacks = bool(
+            mech.get("player_attacks") or mech.get("enemy_attacks") or mech.get("combat_events")
+        )
+        mechanical_this_turn = len(combat_log) > combat_log_len_before or any(
+            e.get("type") in ("skada", "hela", "combat_dmg", "npc_död", "enemy_död", "combat_end")
+            for e in effects
+        )
+        if mech.get("combat_round"):
+            # LLM avancerade rundan explicit → starta den färskt
+            for _t in combat.get("turn_order", []):
+                _t["acted"] = False
+            combat["current_index"] = 0
+            combat["player_actions"] = {"action": True, "bonus": True, "reaction": True}
+        elif llm_attacks or mechanical_this_turn:
             _advance_turn(combat, state)
 
         # Auto-avsluta strid om alla fiender döda

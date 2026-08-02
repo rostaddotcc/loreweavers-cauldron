@@ -874,7 +874,7 @@
     color: var(--bone-dim); font-style: italic; font-size: 0.85rem;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=11">
+<link rel="stylesheet" href="snes.css?v=12">
 <script src="sprites.js?v=20260802a"></script>
 <script src="fonts.js?v=20260802c"></script>
 <script src="themes.js?v=20260802c"></script>
@@ -1003,6 +1003,7 @@
       <div class="bl-head">
         <span class="bl-title">⚔ STRIDSLOGG</span>
         <span class="bl-round" id="bl-round">R1</span>
+        <span class="bl-turn" id="bl-turn"></span>
         <button class="bl-close" id="bl-close" onclick="toggleBattleLog(false)" title="Minimera stridslogg" aria-label="Minimera stridslogg">✕</button>
       </div>
       <div class="bl-status" id="combat-status-bar" style="display:none"></div>
@@ -1560,6 +1561,22 @@ function parseDayLabel(text) {
   return m ? (I18N.getLang() === 'en' ? 'Day ' + m[1] : 'Dag ' + m[1]) : null;
 }
 
+// "🌅 Dag 2: En beskrivning" / "Dag 2 – beskrivning" → kort beskrivning (för rubriken)
+function parseDayTitle(text) {
+  const m = String(text || '').match(/(?:Dag|Day)\s*\d+\s*[:–—-]\s*([^\n*]+)/i);
+  if (!m) return null;
+  const desc = m[1].trim();
+  if (!desc) return null;
+  return desc.length > 42 ? desc.slice(0, 42) + '…' : desc;
+}
+
+// Rubrik för dag-dropdown: "Dag 2 · Kort beskrivning" (sökbar historik)
+function dayLabelWithTitle(text) {
+  const base = parseDayLabel(text) || (I18N.getLang() === 'en' ? 'New day' : 'Ny dag');
+  const sub = parseDayTitle(text);
+  return sub ? `${base} · ${sub}` : base;
+}
+
 function currentDayGroup() {
   const groups = chat.querySelectorAll(':scope > .day-group');
   return groups.length ? groups[groups.length - 1] : null;
@@ -1607,7 +1624,7 @@ function appendToChat(el) {
 // Markera att en ny dag just börjat → nästa meddelande startar en ny grupp
 function markNewDay(text) {
   _newDayPending = true;
-  _newDayLabel = parseDayLabel(text) || (I18N.getLang() === 'en' ? 'New day' : 'Ny dag');
+  _newDayLabel = dayLabelWithTitle(text);
 }
 
 // Group-aware insertBefore: infoga före referensen, inom samma dag-grupp
@@ -2848,7 +2865,7 @@ async function loadTranscript() {
           if (el) {
             // Ny dag (🌅) → rapporten (🌅 + dagsammanfattning) startar ny grupp
             if (hasDayMarker && gContent.includes('🌅')) {
-              startDayGroup(parseDayLabel(gContent) || (I18N.getLang() === 'en' ? 'New day' : 'Ny dag'));
+              startDayGroup(dayLabelWithTitle(gContent));
             }
             appendToFrag(el);
             // F5-safe: [COMBAT:]-taggen parsas även vid transcript-laddning (reveal-kort hamnar i fragmentet, i ordning)
@@ -3833,6 +3850,8 @@ function updateCombatStatusBar(combat) {
   if (!combat || combat.active === false) {
     bar.style.display = 'none';
     _lastCombatStatus = null;
+    const _tc = document.getElementById('bl-turn');
+    if (_tc) { _tc.textContent = ''; _tc.className = 'bl-turn'; }
     return;
   }
   const en = (typeof I18N !== 'undefined' && I18N.getLang() === 'en');
@@ -3855,6 +3874,21 @@ function updateCombatStatusBar(combat) {
   // Stridspanelens rubrik visar aktuell runda (split-view v27)
   const roundChip = document.getElementById('bl-round');
   if (roundChip) roundChip.textContent = 'R' + round;
+  // Vems tur (split-view v27.2): aktuell combatant ur turn_order
+  const turnChip = document.getElementById('bl-turn');
+  if (turnChip) {
+    const order = combat.turn_order || [];
+    const idx = combat.current_index || 0;
+    const actor = order[idx] || null;
+    if (actor) {
+      const isP = actor.key === 'player';
+      turnChip.textContent = isP ? (en ? '🎯 Your turn' : '🎯 Din tur') : `🎯 ${actor.name || 'Fiende'}`;
+      turnChip.className = 'bl-turn ' + (isP ? 'turn-player' : 'turn-enemy');
+    } else {
+      turnChip.textContent = '';
+      turnChip.className = 'bl-turn';
+    }
+  }
   _lastCombatStatus = combat;
 }
 

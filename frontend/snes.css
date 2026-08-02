@@ -1100,6 +1100,33 @@
   padding: 2px 7px;
   animation: bl-in .3s ease;
 }
+/* Vems tur (v27.2): spelare = guld, fiende = blodröd */
+.bl-turn{
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+  font-size: .52rem; letter-spacing: .05em;
+  padding: 2px 7px; border: 1px solid; border-radius: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 150px;
+}
+.bl-turn.turn-player{
+  color: var(--gold-bright);
+  border-color: rgba(201,162,39,.45);
+  background: rgba(201,162,39,.08);
+  text-shadow: 0 0 6px rgba(240,214,117,.3);
+}
+.bl-turn.turn-enemy{
+  color: var(--blood-bright);
+  border-color: rgba(224,72,90,.5);
+  background: rgba(163,36,51,.14);
+  text-shadow: 0 0 6px rgba(224,72,90,.3);
+}
+.bl-head .bl-title{ margin-right: auto; }
+/* Dag-dropdowns (v27.2): rubrik med beskrivning, ellipsis vid lång titel */
+.day-head .dh-title{
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  min-width: 0;
+}
+.day-head .dh-caret{ flex-shrink: 0; }
 /* Statusbaren = panelens andra header-rad (flyttad hit från ovanför input) */
 .battle-log-pane .bl-status{
   border-top: none;

@@ -172,6 +172,8 @@
   .field .icon{position:absolute;left:.9rem;bottom:.85rem;color:var(--gold);
     font-family:var(--font-display);font-weight:700;opacity:.45;transition:opacity .25s}
   .field input:focus ~ .icon{opacity:1}
+  .field label .opt{font-family:var(--font-body);font-style:italic;font-weight:300;
+    letter-spacing:.02em;text-transform:none;color:var(--bone-dim);font-size:.95em}
   .gate-btn{width:100%;font-family:var(--font-display);font-weight:700;font-size:.86rem;
     letter-spacing:.16em;text-transform:uppercase;color:var(--ink);cursor:pointer;
     background:linear-gradient(160deg,var(--gold-bright),var(--gold));
@@ -389,6 +391,12 @@
                      autocomplete="new-password">
               <span class="icon">&gt;</span>
             </div>
+            <div class="field" id="email-field" style="display:none">
+              <label for="email">Email <span class="opt">optional</span></label>
+              <input type="email" id="email" placeholder="A raven to reach you&hellip;"
+                     autocomplete="email">
+              <span class="icon">&gt;</span>
+            </div>
             <button type="submit" class="gate-btn" id="auth-btn">What will the Cauldron Foretell?</button>
             <div class="gate-toggle" id="gate-toggle">New here? <b>Forge your name</b></div>
             <div class="gate-error" id="gate-error"></div>
@@ -486,6 +494,7 @@ function applyAuthMode() {
   const isReg = authMode === 'register';
   document.getElementById('confirm-field').style.display = isReg ? '' : 'none';
   document.getElementById('confirm').required = isReg;
+  document.getElementById('email-field').style.display = isReg ? '' : 'none';
   document.getElementById('lbl-username').textContent = isReg ? 'New Adventurer' : 'Adventurer';
   document.getElementById('lbl-password').textContent = isReg ? 'Create a Password' : 'Password';
   document.getElementById('password').autocomplete = isReg ? 'new-password' : 'current-password';
@@ -535,7 +544,8 @@ document.getElementById('auth-form').addEventListener('submit', async (e) => {
     if (authMode === 'register') {
       const confirm = document.getElementById('confirm').value;
       if (pass !== confirm) { showAuthError('The passwords do not match.'); return; }
-      const res = await API.register(user, pass);
+      const email = document.getElementById('email').value.trim();
+      const res = await API.register(user, pass, email);
       authSuccess(res.username);
     } else {
       const res = await API.login(user, pass);

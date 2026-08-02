@@ -1601,6 +1601,7 @@ def _extract_json(text: str) -> dict:
 class RegisterRequest(BaseModel):
     username: str
     password: str
+    email: str | None = None
 
 
 def _set_auth_cookie(response: Response, token: str) -> None:
@@ -1626,6 +1627,9 @@ async def register(req: RegisterRequest, response: Response):
     err = validate_password(req.password)
     if err:
         raise HTTPException(400, err)
+    email = (req.email or "").strip().lower()
+    if email and ("@" not in email or "." not in email.split("@")[-1] or len(email) > 120):
+        raise HTTPException(400, "That email does not look right.")
     if not _register_allowed():
         raise HTTPException(429, "Too many new adventurers. Try again later.")
 
@@ -1641,6 +1645,8 @@ async def register(req: RegisterRequest, response: Response):
             "last_login": _now_iso(),
             "turn_cap": DEFAULT_TURN_CAP,
         }
+        if email:
+            users[username]["email"] = email
         save_users(users)
 
     token = create_token(username, "player")
@@ -6413,6 +6419,7 @@ async def admin_stats(morkrets_token: str | None = Cookie(None)):
         user_stats.append({
             "username": username,
             "role": role,
+            "email": udata.get("email", "") if isinstance(udata, dict) else "",
             "total_campaigns": len(campaigns),
             "total_tokens": scan["total_tokens"],
             "prompt_tokens": scan["prompt_tokens"],

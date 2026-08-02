@@ -154,9 +154,9 @@ const API = (() => {
       return req('/api/login', { method: 'POST', body: JSON.stringify({ username, password }) });
     },
 
-    async register(username, password) {
+    async register(username, password, email) {
       if (MOCK) throw new Error('Account creation is only available on the live server');
-      return req('/api/register', { method: 'POST', body: JSON.stringify({ username, password }) });
+      return req('/api/register', { method: 'POST', body: JSON.stringify({ username, password, email: email || null }) });
     },
 
     async setTurnCap(username, turnCap) {

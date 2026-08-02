@@ -373,6 +373,7 @@ function _sortVal(u) {
   switch (sortKey) {
     case 'username': return (u.username || '').toLowerCase();
     case 'role': return (u.role || '');
+    case 'email': return (u.email || '');
     case 'campaigns': return u.total_campaigns || 0;
     case 'tokens': return u.total_tokens || 0;
     case 'turns': return u.total_turns || 0;
@@ -458,7 +459,7 @@ function renderStats(data) {
 
   // Desktop table
   html += '<table class="player-table"><thead><tr>';
-  html += thSort('User', 'username') + thSort('Role', 'role') + thSort('Campaigns', 'campaigns') + thSort('Tokens', 'tokens') + thSort('Turns', 'turns') + thSort('🔊 TTS', 'tts_seconds') + thSort('Last Active', 'last_active') + thSort('Created', 'created') + thSort('Last Login', 'last_login') + thSort('Turn Cap', 'turn_cap') + '<th></th>';
+  html += thSort('User', 'username') + thSort('Role', 'role') + thSort('Email', 'email') + thSort('Campaigns', 'campaigns') + thSort('Tokens', 'tokens') + thSort('Turns', 'turns') + thSort('🔊 TTS', 'tts_seconds') + thSort('Last Active', 'last_active') + thSort('Created', 'created') + thSort('Last Login', 'last_login') + thSort('Turn Cap', 'turn_cap') + '<th></th>';
   html += '</tr></thead><tbody>';
 
   users.forEach((u, i) => {
@@ -469,6 +470,7 @@ function renderStats(data) {
     html += `<tr class="player-row" id="row-${i}" onclick="toggleDetail(${i}, '${u.username}')">`;
     html += `<td><span title="${flagTitle}">${flag}</span> ${u.username}${badge}</td>`;
     html += `<td>${u.role}</td>`;
+    html += `<td class="email-cell">${u.email ? `<a href="mailto:${u.email}" onclick="event.stopPropagation()">${u.email}</a>` : '<span style="opacity:.35">—</span>'}</td>`;
     html += `<td>${u.total_campaigns}</td>`;
     html += `<td class="token-num">${fmtTokens(u.total_tokens)}</td>`;
     html += `<td class="turn-num">${u.total_turns}</td>`;
@@ -479,7 +481,7 @@ function renderStats(data) {
     html += `<td class="cap-cell"><input type="number" min="0" step="1" value="${capVal}" id="cap-${i}" class="cap-input"><button onclick="event.stopPropagation();setCap('${u.username}', ${i})" class="cap-btn">Set</button><span class="cap-hint">0 = ∞</span></td>`;
     html += `<td><button onclick="event.stopPropagation();deleteUser('${u.username}')" style="background:none;border:1px solid var(--blood);color:var(--blood-bright);padding:.2rem .5rem;font-size:.6rem;cursor:pointer">✕ Delete</button></td>`;
     html += '</tr>';
-    html += `<tr class="campaign-detail" id="detail-${i}"><td colspan="11"><div class="campaign-inner" id="inner-${i}"></div></td></tr>`;
+    html += `<tr class="campaign-detail" id="detail-${i}"><td colspan="12"><div class="campaign-inner" id="inner-${i}"></div></td></tr>`;
   });
   html += '</tbody></table>';
 
@@ -490,6 +492,7 @@ function renderStats(data) {
     const capVal = (u.turn_cap === undefined || u.turn_cap === null) ? 0 : u.turn_cap;
     html += `<div class="m-card" onclick="toggleDetail(${i}, '${u.username}')">`;
     html += `<div class="mc-head"><span class="mc-user">${u.country_flag || '❓'} ${u.username}${badge}</span><span class="mc-tokens">${fmtTokens(u.total_tokens)} tkn</span></div>`;
+    if (u.email) html += `<div class="mc-meta"><span style="opacity:.7">✉ ${u.email}</span></div>`;
     html += `<div class="mc-meta"><span>${u.total_campaigns} campaigns</span><span>${u.total_turns} turns</span><span>${relTime(u.last_active)}</span></div>`;
     html += `<div class="mc-meta"><span>🔊 TTS: ${fmtTTS(u)}</span><span>${fmtTokens(u.tts_tokens || 0)} tkn ≈</span><span>${u.tts_calls || 0} renders</span></div>`;
     html += `<div class="mc-meta"><span>Created ${relTime(u.created_at)}</span><span>Login ${relTime(u.last_login)}</span></div>`;

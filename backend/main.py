@@ -3313,6 +3313,11 @@ async def _chat_locked(
 ) -> dict:
     """Hjärtat av chat-turen — körs under per-kampanj-låset."""
 
+    # Spara senaste DM-modellen per kampanj — så valet behålls när spelaren
+    # återvänder till kampanjen (frontend återställer den vid load).
+    if state.setdefault("meta", {}).get("dm_model") != req.model_id:
+        state["meta"]["dm_model"] = req.model_id
+
     # Spelaren svarade på ett tärningskast → rensa väntande kast-begäran.
     # last_roll_requests fungerar då som "obesvarade kast": de finns kvar
     # tills spelaren slår, så en refresh kan återställa knapparna.
@@ -4423,26 +4428,33 @@ async def update_guardian_model(req: dict, morkrets_token: str | None = Cookie(N
     """Välj Guardian-modell för aktiv kampanj.
 
     Admin kan välja fritt; icke-admin klampas till PLAYER_MODELS
-    (samma modelllista som DM — se _clamp_player_model)."""
+    (samma modelllista som DM — se _clamp_player_model).
+    Körs under per-kampanj-låset så en bakgrundsuppgift (Guardian/
+    extraction) aldrig sparar över valet med en gammal state-kopia.
+    """
     payload = _get_current_user(morkrets_token)
-    state = store.get(payload["sub"])
+    username = payload["sub"]
+    state = store.get(username)
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
+    campaign_id = state.get("meta", {}).get("campaign_id", "")
 
-    model_id = str(req.get("guardian_model", "")).strip()
-    if model_id:
-        if payload.get("role") != "admin":
-            model_id = _clamp_player_model(model_id)
-        # Validera att modellen finns i registret
-        try:
-            get_model(model_id)
-        except ValueError:
-            raise HTTPException(400, f"Okänd modell: {model_id}")
-        state.setdefault("meta", {})["guardian_model"] = model_id
-    else:
-        state.get("meta", {}).pop("guardian_model", None)
+    async with _state_lock(username, campaign_id):
+        state = store.get(username, campaign_id) or state
+        model_id = str(req.get("guardian_model", "")).strip()
+        if model_id:
+            if payload.get("role") != "admin":
+                model_id = _clamp_player_model(model_id)
+            # Validera att modellen finns i registret
+            try:
+                get_model(model_id)
+            except ValueError:
+                raise HTTPException(400, f"Okänd modell: {model_id}")
+            state.setdefault("meta", {})["guardian_model"] = model_id
+        else:
+            state.get("meta", {}).pop("guardian_model", None)
 
-    store.save(state)
+        store.save(state)
     logger.info("🛡️ Guardian model → %s", model_id or "(default)")
     return {"ok": True, "guardian_model": model_id or GUARDIAN_MODEL}
 
@@ -4453,29 +4465,70 @@ async def update_extraction_model(req: dict, morkrets_token: str | None = Cookie
 
     Spelaren väljer detta inför nytt game — samma frihet som DM/Guardian-valet.
     Extraction-modellen körs alltid med thinking=disabled (strukturerade
-    JSON-anrop) — se _call_llm.
+    JSON-anrop) — se _call_llm. Körs under per-kampanj-låset (se guardian).
     """
     payload = _get_current_user(morkrets_token)
-    state = store.get(payload["sub"])
+    username = payload["sub"]
+    state = store.get(username)
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
+    campaign_id = state.get("meta", {}).get("campaign_id", "")
 
-    model_id = str(req.get("extraction_model", "")).strip()
-    if model_id:
-        if payload.get("role") != "admin":
-            model_id = _clamp_player_model(model_id)
-        # Validera att modellen finns i registret
-        try:
-            get_model(model_id)
-        except ValueError:
-            raise HTTPException(400, f"Okänd modell: {model_id}")
-        state.setdefault("meta", {})["extraction_model"] = model_id
-    else:
-        state.get("meta", {}).pop("extraction_model", None)
+    async with _state_lock(username, campaign_id):
+        state = store.get(username, campaign_id) or state
+        model_id = str(req.get("extraction_model", "")).strip()
+        if model_id:
+            if payload.get("role") != "admin":
+                model_id = _clamp_player_model(model_id)
+            # Validera att modellen finns i registret
+            try:
+                get_model(model_id)
+            except ValueError:
+                raise HTTPException(400, f"Okänd modell: {model_id}")
+            state.setdefault("meta", {})["extraction_model"] = model_id
+        else:
+            state.get("meta", {}).pop("extraction_model", None)
 
-    store.save(state)
+        store.save(state)
     logger.info("🧠 Extraction model → %s", model_id or "(default)")
     return {"ok": True, "extraction_model": model_id or EXTRACTION_MODEL}
+
+
+@app.patch("/api/campaign/dm-model")
+async def update_dm_model(req: dict, morkrets_token: str | None = Cookie(None)):
+    """Spara DM-modellen per kampanj (server-side).
+
+    Frontend anropar detta när spelaren byter DM-modell i settings, så att
+    valet behålls när man lämnar och återvänder till kampanjen. Samma
+    clamp-regler som Guardian/Extraction: icke-admin får bara PLAYER_MODELS.
+    Chat-endpointen sparar även dm_model automatiskt vid varje tur, så
+    även utan PATCH-anropet behålls senast använda modell.
+    Körs under per-kampanj-låset (se guardian).
+    """
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+    campaign_id = state.get("meta", {}).get("campaign_id", "")
+
+    async with _state_lock(username, campaign_id):
+        state = store.get(username, campaign_id) or state
+        model_id = str(req.get("dm_model", "")).strip()
+        if model_id:
+            if payload.get("role") != "admin":
+                model_id = _clamp_player_model(model_id)
+            try:
+                get_model(model_id)
+            except ValueError:
+                raise HTTPException(400, f"Okänd modell: {model_id}")
+            state.setdefault("meta", {})["dm_model"] = model_id
+        else:
+            state.get("meta", {}).pop("dm_model", None)
+
+        store.save(state)
+    logger.info("🔮 DM model → %s", model_id or "(default)")
+    return {"ok": True, "dm_model": model_id or DEFAULT_PLAYER_MODEL}
 
 
 @app.patch("/api/campaign/inventory")

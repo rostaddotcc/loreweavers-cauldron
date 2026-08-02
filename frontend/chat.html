@@ -1168,6 +1168,13 @@ async function loadCampaign() {
     const { campaign } = await API.getCampaign();
     if (campaign) {
       campaignData = campaign;
+      // Kampanjens senaste DM-modell (server-side meta.dm_model) → behåll
+      // valet när man återvänder till kampanjen (innan gate/pickers renderas).
+      const savedDm = (campaign._raw && campaign._raw.meta && campaign._raw.meta.dm_model);
+      if (savedDm && savedDm !== currentModel) {
+        currentModel = savedDm;
+        localStorage.setItem('dnd_model', savedDm);
+      }
       // Initialize i18n with campaign language
       const lang = (campaign._raw && campaign._raw.meta && campaign._raw.meta.language) || 'en';
       I18N.init(lang);
@@ -2722,6 +2729,8 @@ function beginAdventure() {
   const sel = document.getElementById('gate-model');
   currentModel = sel.value;
   localStorage.setItem('dnd_model', currentModel);
+  // Spara DM-modellen per kampanj server-side — behålls vid återkomst
+  API.setDmModel(currentModel).catch(() => {});
 
   // Spara Guardian-modellvalet per kampanj (admin: fritt; icke-admin: backend klampar till spelarmodeller)
   const guardianSel = document.getElementById('gate-guardian');
@@ -4595,6 +4604,15 @@ function initSettingsModelPickers() {
     ? 'Handles mechanics: HP, XP, combat, dice checks.'
     : 'Guardian håller koll på mekanik: HP, XP, strid.';
 
+  // Återställ kampanjens senaste DM-modell (sparas server-side i meta.dm_model
+  // vid varje tur + PATCH /api/campaign/dm-model) — så valet behålls när man
+  // lämnar och återvänder till kampanjen.
+  const savedDm = (campaignData && campaignData._raw && campaignData._raw.meta && campaignData._raw.meta.dm_model);
+  if (savedDm && savedDm !== currentModel) {
+    currentModel = savedDm;
+    localStorage.setItem('dnd_model', savedDm);
+  }
+
   dmSel.innerHTML = allowed.map(m => `<option value="${m}"${m === currentModel ? ' selected' : ''}>${m}</option>`).join('');
 
   // Nuvarande Guardian från kampanj-metat (fallback: qwen3.8-max)
@@ -4631,6 +4649,8 @@ function settingsChangeExtraction(model) {
 
 function settingsChangeModel(model) {
   switchModel(model);
+  // Spara per kampanj server-side — så valet behålls vid återkomst
+  API.setDmModel(model).catch(() => {});
   // Notis i chatten — system-meddelande, syns bara för spelaren (ej DM:ns kontext)
   addMessage('system', null, `🔮 ${I18N.t('Dungeon Master byter röst: ')}${model}`);
   const dmSel = document.getElementById('settings-dm-model');

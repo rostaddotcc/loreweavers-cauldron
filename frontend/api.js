@@ -307,6 +307,10 @@ const API = (() => {
       if (MOCK) return { ok: true, extraction_model: modelId };
       return req('/api/campaign/extraction-model', { method: 'PATCH', body: JSON.stringify({ extraction_model: modelId }) });
     },
+    async setDmModel(modelId) {
+      if (MOCK) return { ok: true, dm_model: modelId };
+      return req('/api/campaign/dm-model', { method: 'PATCH', body: JSON.stringify({ dm_model: modelId }) });
+    },
 
     // ── Attachments (pdf/md/txt) ──
     async uploadAttachment(file) {

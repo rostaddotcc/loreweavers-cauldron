@@ -1261,6 +1261,43 @@ body.battle-drawer-open .battle-drawer-toggle .bdt-caret{ transform: rotate(180d
 .player-dice-badge:hover{ box-shadow: 0 0 10px rgba(240,214,117,.3); }
 .crs-line .dice-badge{ margin-left: .4rem; }
 
+/* ── Tärnings-badges ENHANCED (v28): pixelrök + gnistor + pop-in ── */
+.px-smoke{
+  position: fixed; z-index: 209; pointer-events: none;
+  image-rendering: pixelated; border-radius: 0; opacity: .85;
+}
+.dice-badge{
+  animation: dice-badge-pop .3s cubic-bezier(.34,1.56,.64,1) both;
+  border-radius: 2px;
+}
+@keyframes dice-badge-pop{
+  0%{ transform: scale(.4) translateY(5px); opacity: 0; }
+  70%{ transform: scale(1.15) translateY(-1px); opacity: 1; }
+  100%{ transform: scale(1) translateY(0); }
+}
+/* Kritisk — guldglöd som pulserar efter pop-in */
+.enemy-dice-badge.crit{
+  border-color: rgba(255,215,0,.9); color: var(--gold-bright);
+  background: rgba(201,162,39,.22); text-shadow: 0 0 8px rgba(255,215,0,.6);
+  animation: dice-badge-pop .3s cubic-bezier(.34,1.56,.64,1) both, badge-crit-glow 1.1s ease-in-out .3s infinite;
+}
+.player-dice-badge.crit,
+.ally-dice-badge.crit{
+  animation: dice-badge-pop .3s cubic-bezier(.34,1.56,.64,1) both, badge-crit-glow 1.1s ease-in-out .3s infinite;
+}
+@keyframes badge-crit-glow{
+  0%,100%{ box-shadow: 0 0 6px rgba(255,215,0,.35); }
+  50%{ box-shadow: 0 0 16px rgba(255,215,0,.85); }
+}
+/* Nat 1 — blodröd + skak */
+.dice-badge.fumble{
+  border-color: rgba(212,58,77,.95); background: rgba(90,15,24,.32);
+  color: var(--blood-bright);
+}
+.badge-shake{ animation: id-shake .4s ease both; }
+/* Miss — tonas ner, rökmoln istället för gnistor */
+.dice-badge.miss{ opacity: .72; }
+
 /* ── MOBILE ≤768px: stridsloggen som kollapsbar låda ── */
 @media (max-width: 768px){
   .main.combat-split,

@@ -34,6 +34,9 @@ for (const b of blocks) { try { vm.runInContext(b, ctx); } catch (e) { /* vissa 
 // Funktionerna vi vill testa
 const combatLogHtml = vm.runInContext('combatLogHtml', ctx);
 const combatLineClass = vm.runInContext('combatLineClass', ctx);
+const extractDiceFromText = vm.runInContext('extractDiceFromText', ctx);
+const diceBadgeOutcome = vm.runInContext('diceBadgeOutcome', ctx);
+const buildDiceBadges = vm.runInContext('buildDiceBadges', ctx);
 
 let pass = 0, fail = 0;
 function check(name, cond, extra) {
@@ -78,6 +81,37 @@ const html3 = combatLogHtml(log3.join('\n'), { round: 3 });
 check('nat 1 miss synlig', html3.includes('missar dig (nat 1!)'));
 check('d20=15+3=18 synlig i runda 3', html3.includes('d20=15+3=18'));
 check('runda 3 rubrik', html3.includes('RUNDA 3'));
+
+// ── Test 4: badge-extraktion (extractDiceFromText) ──
+console.log('— Badge-extraktion —');
+const ex1 = extractDiceFromText('Goblin: träffar dig — 5 skada (🎲 d20=14+3=17 · 1d6+2: [4]=6)');
+check('extrahera: badge-text korrekt', ex1.badges.length === 1 && ex1.badges[0] === 'd20=14+3=17 · 1d6+2: [4]=6');
+check('extrahera: ren text utan parentes', ex1.clean === 'Goblin: träffar dig — 5 skada');
+const ex2 = extractDiceFromText('Goblin: missar dig (🎲 d20=6+3=9 mot AC 15)');
+check('extrahera: miss-format', ex2.badges[0] === 'd20=6+3=9 mot AC 15');
+const ex3 = extractDiceFromText('rad utan tärningar');
+check('extrahera: ingen tärning → tom badges', ex3.badges.length === 0 && ex3.clean === 'rad utan tärningar');
+
+// ── Test 5: outcome-klassificering (diceBadgeOutcome) ──
+console.log('— Outcome-klassificering —');
+check('krit → crit', diceBadgeOutcome('d20=20+4=24 · 1d12+3: [12]=15') === 'crit');
+check('kritisk-text → crit', diceBadgeOutcome('d20=18+3=21 (kritisk!)') === 'crit');
+check('miss → miss', diceBadgeOutcome('d20=6+3=9 mot AC 15') === 'miss');
+check('nat 1 → fumble', diceBadgeOutcome('d20=1+3=4') === 'fumble');
+check('vanlig träff → hit', diceBadgeOutcome('d20=14+3=17 · 1d6+2: [4]=6') === 'hit');
+
+// ── Test 6: badge-HTML (buildDiceBadges) ──
+console.log('— Badge-HTML —');
+const bh = buildDiceBadges('Goblin: träffar dig — 5 skada', ['d20=14+3=17 · 1d6+2: [4]=6'], false, false);
+check('fiende-badge: enemy-dice-badge + hit-klass', bh.includes('dice-badge enemy-dice-badge hit'));
+check('fiende-badge: 🎲 synlig', bh.includes('🎲'));
+check('fiende-badge: ren text kvar', bh.includes('Goblin: träffar dig — 5 skada'));
+const bhCrit = buildDiceBadges('Orc: träffar dig', ['d20=20+4=24'], false, false);
+check('krit-badge: crit-klass', bhCrit.includes('enemy-dice-badge crit'));
+const bhAlly = buildDiceBadges('Mimmrick: träffar goblinen — 7 skada', ['d20=16+4=20 · 1d6+1: [6]=7'], false, true);
+check('ally-badge: ally-dice-badge', bhAlly.includes('ally-dice-badge hit'));
+const bhPlayer = buildDiceBadges('Du: träffar goblinen', ['d20=15+3=18'], true, false);
+check('spelare-badge: player-dice-badge', bhPlayer.includes('player-dice-badge hit'));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

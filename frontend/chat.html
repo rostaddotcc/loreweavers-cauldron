@@ -874,7 +874,7 @@
     color: var(--bone-dim); font-style: italic; font-size: 0.85rem;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=17">
+<link rel="stylesheet" href="snes.css?v=18">
 <script src="sprites.js?v=20260802a"></script>
 <script src="fonts.js?v=20260802c"></script>
 <script src="themes.js?v=20260802c"></script>
@@ -2210,6 +2210,39 @@ function spawnPixelBurst(x, y, count, colors, size = 4) {
   }
 }
 
+// PixelRÖK — stiger uppåt, expanderar, tonas ut mjukt. Kontrast till
+// gnistor som faller (spawnPixelBurst). Används vid tärningsutfall.
+function spawnPixelSmoke(x, y, count, colors, size = 6) {
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('div');
+    p.className = 'px-smoke';
+    const s = size + Math.floor(Math.random() * 4);
+    p.style.width = s + 'px';
+    p.style.height = s + 'px';
+    p.style.left = (x + (Math.random() - 0.5) * 26) + 'px';
+    p.style.top = (y + (Math.random() - 0.5) * 14) + 'px';
+    p.style.background = colors[i % colors.length];
+    document.body.appendChild(p);
+    const drift = (Math.random() - 0.5) * 1.7;   // långsam sidorörelse
+    const rise = -(0.5 + Math.random() * 1.0);   // stiger uppåt
+    const grow = 1.4 + Math.random() * 1.7;      // expanderar med åldern
+    const rot = (Math.random() - 0.5) * 10;
+    let life = 1;
+    let cx = parseFloat(p.style.left), cy = parseFloat(p.style.top), r = 0;
+    (function anim() {
+      life -= 0.016;
+      if (life <= 0) { p.remove(); return; }
+      cx += drift + Math.sin(life * 6 + i) * 0.45;   // vobbel
+      cy += rise * (1.5 - life);                      // saktar när den åldras
+      r += rot;
+      const scale = 1 + (1 - life) * grow;
+      p.style.transform = `translate(${cx - parseFloat(p.style.left)}px, ${cy - parseFloat(p.style.top)}px) scale(${scale}) rotate(${r}deg)`;
+      p.style.opacity = life * 0.85;
+      requestAnimationFrame(anim);
+    })();
+  }
+}
+
 // Partiklar per meddelandetyp — anropas från addMessage
 function messageParticles(el, type) {
   if (!el) return;
@@ -2484,15 +2517,18 @@ async function inlineDiceCeremony(notation, label, roll) {
 
   if (isCrit) {
     SFX.crit();
-    spawnPixelBurst(cx, cy, 30, ['#ffd700', '#fff8dc', '#e8c65a', '#4dd8f0'], 5);
-    spawnParticles(cx, cy, 20, ['#ffd700', '#fff8dc', '#e0ffff']);
+    spawnPixelBurst(cx, cy, 34, ['#ffd700', '#fff8dc', '#e8c65a', '#4dd8f0'], 5);
+    spawnParticles(cx, cy, 22, ['#ffd700', '#fff8dc', '#e0ffff']);
+    spawnPixelSmoke(cx, cy, 10, ['#ffd700', '#c9a227', '#fff8dc'], 7);
   } else if (isFail) {
     SFX.fail();
-    spawnPixelBurst(cx, cy, 20, ['#d43a4d', '#8b1a2b', '#e8dcc8'], 4);
+    spawnPixelBurst(cx, cy, 24, ['#d43a4d', '#8b1a2b', '#e8dcc8'], 4);
+    spawnPixelSmoke(cx, cy, 10, ['#5a0f18', '#8b1a2b', '#e8dcc8'], 7);
     dice.classList.add('shake');
     setTimeout(() => dice.classList.remove('shake'), 500);
   } else {
-    spawnPixelBurst(cx, cy, 10, ['#c9a227', '#e8c65a', '#8b5fd4'], 4);
+    spawnPixelBurst(cx, cy, 12, ['#c9a227', '#e8c65a', '#8b5fd4'], 4);
+    spawnPixelSmoke(cx, cy, 5, ['#e8dcc8', '#d9c9a6'], 6);
   }
 
   chat.scrollTop = chat.scrollHeight;
@@ -4199,6 +4235,52 @@ function extractDiceFromText(text) {
 }
 
 // Dekorera en renderad stridslogg (guardian-box): tärningsparenteser → badges
+// Tärnings-badge: klassificera utfall ur badge-texten (ren funktion — testbar)
+function diceBadgeOutcome(b) {
+  const t = String(b || '');
+  if (/kritisk|critical|d20=20[+\s]/.test(t)) return 'crit';
+  if (/nat\s*1|d20=1[+\s]/.test(t)) return 'fumble';
+  if (/mot\s*AC|missar/.test(t)) return 'miss';
+  return 'hit';
+}
+
+function buildDiceBadges(clean, badges, isPlayer, isAlly) {
+  const chips = badges.map(b =>
+    `<span class="dice-badge ${isPlayer ? 'player-dice-badge' : isAlly ? 'ally-dice-badge' : 'enemy-dice-badge'} ${diceBadgeOutcome(b)}" title="${escapeHtml(b)}">🎲 ${escapeHtml(b)}</span>`
+  ).join(' ');
+  return mdToHtml(escapeHtml(clean)) + ' ' + chips;
+}
+
+// Pixel-effekter på tärnings-badges: krit = guldgnistor + rök, träff = gnistor,
+// miss = rökmoln, nat 1 = rök + skak. Fördröjda per badge (staggered).
+function diceBadgeFx(row, badges) {
+  if (!row || !row.getBoundingClientRect) return;
+  badges.forEach((b, i) => {
+    setTimeout(() => {
+      const els = row.querySelectorAll ? row.querySelectorAll('.dice-badge') : [];
+      const el = els[i];
+      if (!el || !el.getBoundingClientRect) return;
+      const r = el.getBoundingClientRect();
+      if (!r.width) return; // osynlig (t.ex. replay) — skippa effekter
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const out = diceBadgeOutcome(b);
+      if (out === 'crit') {
+        spawnPixelBurst(cx, cy, 22, ['#ffd700', '#fff8dc', '#e8c65a', '#4dd8f0'], 5);
+        spawnPixelSmoke(cx, cy, 8, ['#c9a227', '#e8c65a', '#fff8dc'], 7);
+      } else if (out === 'fumble') {
+        spawnPixelSmoke(cx, cy, 9, ['#5a0f18', '#8b1a2b', '#e8dcc8'], 7);
+        el.classList.add('badge-shake');
+        setTimeout(() => el.classList.remove('badge-shake'), 450);
+      } else if (out === 'miss') {
+        spawnPixelSmoke(cx, cy, 6, ['#e8dcc8', '#d9c9a6', '#8a7a5e'], 6);
+      } else {
+        spawnPixelBurst(cx, cy, 8, ['#e8c65a', '#c9a227', '#8b5fd4'], 3);
+        spawnPixelSmoke(cx, cy, 4, ['#e8dcc8', '#d9c9a6'], 6);
+      }
+    }, 80 + i * 140);
+  });
+}
+
 function decorateCombatDice(root) {
   if (!root || !root.querySelectorAll) return;
   root.querySelectorAll('.cl-row').forEach(row => {
@@ -4207,11 +4289,10 @@ function decorateCombatDice(root) {
     const dice = extractDiceFromText(raw);
     if (!dice.badges.length) return;
     const isPlayer = row.classList.contains('cl-player');
-    const cls = isPlayer ? 'player-dice-badge' : 'enemy-dice-badge';
-    const chips = dice.badges.map(b =>
-      `<span class="dice-badge ${cls}" title="${escapeHtml(b)}">🎲 ${escapeHtml(b)}</span>`
-    ).join(' ');
-    row.innerHTML = mdToHtml(escapeHtml(dice.clean)) + ' ' + chips;
+    // Ally-heuristik: skada mot en fiende (raden saknar "dig"/"du") → ally-badge
+    const isAlly = !isPlayer && row.classList.contains('cl-dmg') && !/(^|\s)dig(\s|$)|(^|\s)du(\s|$)/i.test(raw);
+    row.innerHTML = buildDiceBadges(dice.clean, dice.badges, isPlayer, isAlly);
+    diceBadgeFx(row, dice.badges);
   });
 }
 

@@ -2629,9 +2629,11 @@ async function answerRollRequest(id, notation, label) {
     toast(I18N.t('🛡️ Vänta — Lorekeeper uppdaterar…'));
     return;
   }
-  const btn = box.querySelector('.rr-btn');
-  btn.disabled = true;
-  btn.textContent = diceIconForLabel(label) + ' ' + I18N.t('Rullar…');
+  const btn = box.querySelector('.rr-ico-dice') || box.querySelector('.rr-btn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = diceIconForLabel(label) + ' ' + I18N.t('Rullar…');
+  }
 
   // Fördel/Nackdel (5e): FÖRDEL/NACKDEL kan stå i etiketten ELLER i
   // notationen (DM:n blandar fritt) → kolla båda (P2-fix från playthrough:

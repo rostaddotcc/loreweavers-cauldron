@@ -2860,7 +2860,7 @@ def _build_system_prompt(
     if rules_text:
         parts.append(f"\n## RELEVANTA REGLER (denna tur)\n{rules_text}")
 
-    # ── Guardian-råd: kast-detektion ──
+    # Guardian-råd: kast-detektion ──
     # Guardian har analyserat spelarens handling och rekommenderar ett kast.
     # DM:n bör använda exakt denna [KAST:]-tagg (eller motivera varför inte).
     if guardian_roll:
@@ -2869,6 +2869,21 @@ def _build_system_prompt(
             f"Spelarens handling kräver ett tärningskast.\n"
             f"Använd: [KAST: {guardian_roll['notation']} | {guardian_roll['label']}]\n"
             f"Bygg scenen så att kastet känns naturligt. Ge konsekvenser för både lyckat och misslyckat."
+        )
+
+    # ── SPRÅKREINFORCERING (slutet): reasoning-modeller och långa transkript
+    # med svenska assistant-meddelanden kan drifta — upprepa språkdirektivet
+    # SIST i systemprompten så det väger lika tungt som toppen.
+    if lang == "en":
+        parts.append(
+            "\n[LANGUAGE REMINDER] Your response THIS TURN must be written entirely in English — "
+            "every word of narration, dialogue, and description. Never switch to Swedish, no matter "
+            "what the conversation history contains."
+        )
+    else:
+        parts.append(
+            "\n[SPRÅKPÅMINNELSE] Ditt svar DENNA TUR måste skrivas helt på svenska — varenda ord av "
+            "narration, dialog och beskrivning. Byt aldrig till engelska, oavsett vad samtalshistoriken innehåller."
         )
 
     return "\n".join(parts)

@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Lore Weaver's Cauldron — The Forge</title>
+<link rel="icon" href="/assets/logo-cauldron.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>:root{
+    --ink:#0b0812; --stone:#161020; --stone-2:#1d1529; --stone-3:#241a33;
+    --edge:#463a60; --edge-hi:#5a4a7a;
+    --bone:#d9c9a6; --bone-bright:#f2e6c8; --bone-dim:#9d8a6a;
+    --gold:#d4a92c; --gold-bright:#f0d675;
+    --blood:#a32433; --blood-bright:#e0485a;
+    --ember:#d4691e; --arcane:#9a6fe0; --poison:#7aa35e; --teal:#5e9aa3;
+  }*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}body{
+    font-family:'Spectral',Georgia,serif;color:var(--bone);min-height:100vh;
+    background:
+      radial-gradient(1100px 520px at 50% 112%, rgba(212,105,30,.13), transparent 62%),
+      radial-gradient(820px 460px at 12% -8%, rgba(139,95,212,.10), transparent 58%),
+      var(--ink);
+    background-attachment:fixed;overflow-x:hidden;
+  }.grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}#embers{position:fixed;inset:0;z-index:1;pointer-events:none}.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(4,2,8,.85)}.app{position:relative;z-index:2;max-width:1080px;margin:0 auto;padding:2rem 1.25rem 5rem}
+  /* ── Head ── */
+  .forge-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:2.4rem;flex-wrap:wrap;gap:.8rem}.forge-head .brand{font-family:'Cinzel',serif;font-weight:900;font-size:1.1rem;color:var(--gold-bright);letter-spacing:.06em;text-shadow:0 0 14px rgba(232,198,90,.3)}.forge-head .back{font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .9rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none}.forge-head .back:hover{color:var(--gold-bright);border-color:var(--gold)}
+  .destiny-title{text-align:center;margin-bottom:.4rem}.destiny-title .over{font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.42em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.55rem}.destiny-title h1{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(1.8rem,5vw,2.7rem);color:var(--bone-bright);letter-spacing:.05em}.destiny-sub{text-align:center;font-style:italic;color:var(--bone-dim);font-size:1.05rem;margin-bottom:2.2rem}.rune-divider{display:flex;align-items:center;gap:.9rem;margin:0 auto 2.4rem;max-width:380px}.rune-divider::before,.rune-divider::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.5}.rune-divider span{color:var(--gold);text-shadow:0 0 8px rgba(201,162,39,.6)}
+  .section-label{font-family:'Cinzel',serif;font-size:.8rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin:2.4rem 0 1rem;display:flex;align-items:center;gap:.8rem}.section-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(201,162,39,.4),transparent)}
+  /* ── Forge box (prompt) ── */
+  .scroll-box{position:relative;background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,#120c1c);border:1px solid var(--edge);padding:1.6rem 1.5rem;box-shadow:0 20px 50px -20px rgba(0,0,0,.9)}
+  #forge-prompt{width:100%;min-height:150px;resize:vertical;font-family:'Spectral',serif;font-size:1.03rem;line-height:1.65;color:var(--bone-bright);background:#0d0817;border:1px solid var(--edge);padding:1rem 1.1rem;outline:none;border-radius:2px;transition:border-color .25s,box-shadow .25s}#forge-prompt:focus{border-color:var(--arcane);box-shadow:0 0 18px -5px rgba(139,95,212,.4)}#forge-prompt::placeholder{color:rgba(138,122,94,.5);font-style:italic}
+  .forge-actions{display:flex;align-items:center;gap:1rem;margin-top:1.2rem;flex-wrap:wrap}
+  .summon-btn{font-family:'Cinzel',serif;font-weight:700;font-size:.95rem;letter-spacing:.18em;text-transform:uppercase;color:#1a1206;cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);border:1px solid #6e5510;padding:.9rem 1.8rem;border-radius:2px;box-shadow:0 6px 20px -6px rgba(232,198,90,.5),inset 0 1px 0 rgba(255,255,255,.35);transition:all .2s}.summon-btn:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-2px)}.summon-btn:disabled{opacity:.55;cursor:wait}
+  select.dark-select{font-family:'Spectral',serif;font-size:.9rem;color:var(--bone-bright);background:#0d0817;border:1px solid var(--edge);padding:.55rem .7rem;cursor:pointer;outline:none;border-radius:2px}
+  /* ── Weaving status ── */
+  .weaving{display:none;text-align:center;padding:2rem 0 .5rem}.weaving.show{display:block}
+  .w-status{font-family:'Cinzel',serif;font-size:.8rem;letter-spacing:.14em;color:var(--gold);margin-bottom:1rem;animation:w-blink 1.6s steps(2) infinite}
+  @keyframes w-blink{0%,100%{opacity:1}50%{opacity:.35}}
+  .w-reasoning{width:100%;margin:0 auto;text-align:left;background:rgba(10,6,16,.85);border:1px solid rgba(139,95,212,.35)}
+  .w-reasoning[hidden]{display:none}
+  .w-reasoning-head{display:flex;justify-content:space-between;align-items:center;gap:.6rem;font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.12em;color:var(--arcane);padding:.45rem .7rem;border-bottom:1px solid rgba(139,95,212,.25);background:rgba(139,95,212,.08)}
+  .w-timer{color:var(--bone-bright)}
+  .w-reasoning-body{max-height:110px;overflow-y:auto;padding:.55rem .7rem;font-size:.85rem;line-height:1.5;color:var(--arcane);font-style:italic;white-space:pre-wrap;word-break:break-word}
+  /* ── Preview (generated character) ── */
+  .preview{display:none;margin-top:2.4rem}.preview.show{display:block;animation:msg-in .55s cubic-bezier(.22,1,.36,1)}
+  @keyframes msg-in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  .pv-head{display:flex;gap:1.4rem;align-items:center;margin-bottom:1.4rem;flex-wrap:wrap}.pv-portrait{width:84px;height:84px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2.2rem;border:2px solid var(--gold);background:var(--stone-3);overflow:hidden}.pv-portrait img{width:100%;height:100%;object-fit:cover}
+  .pv-name{font-family:'Cinzel',serif;font-weight:900;font-size:1.5rem;color:var(--bone-bright)}.pv-class{font-style:italic;color:var(--arcane);font-size:1.05rem;margin-top:.15rem}
+  .pv-stats{display:grid;grid-template-columns:repeat(6,1fr);gap:.6rem;margin-bottom:1.3rem}.pv-stat{text-align:center;padding:.7rem .2rem .6rem;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--edge)}.pv-stat .a{font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.2em;color:var(--gold)}.pv-stat .s{font-family:'Cinzel',serif;font-weight:900;font-size:1.3rem;color:var(--bone-bright)}.pv-stat .m{font-size:.85rem;color:var(--arcane)}
+  .pv-vitals{display:flex;gap:1.4rem;flex-wrap:wrap;font-size:.98rem;color:var(--bone-dim);margin-bottom:1.3rem}.pv-vitals b{color:var(--bone-bright);font-size:1.05rem}
+  .pv-traits{display:flex;flex-wrap:wrap;gap:.45rem;margin-bottom:1.3rem}.pv-trait{font-size:.88rem;padding:.3rem .8rem;border:1px solid rgba(139,95,212,.5);color:#cbb3f2;background:rgba(139,95,212,.08);border-radius:2px}
+  .pv-story{font-style:italic;color:var(--bone);line-height:1.7;border-left:2px solid var(--gold);padding-left:1rem;margin-bottom:1.2rem;font-size:.95rem}
+  .pv-gear{font-size:.85rem;color:var(--bone);line-height:1.7;margin-bottom:1.4rem}.pv-gear b{color:var(--gold-bright)}
+  .pv-actions{display:flex;gap:.8rem;flex-wrap:wrap}
+  .pv-go{font-family:'Cinzel',serif;font-weight:700;font-size:.9rem;letter-spacing:.14em;text-transform:uppercase;color:#1a1206;cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);border:1px solid #6e5510;padding:.8rem 1.5rem;border-radius:2px;transition:all .2s}.pv-go:hover{filter:brightness(1.12);transform:translateY(-2px)}
+  .pv-reroll{font-family:'Cinzel',serif;font-size:.82rem;letter-spacing:.12em;text-transform:uppercase;background:transparent;border:1px solid var(--edge);color:var(--bone-dim);padding:.8rem 1.3rem;cursor:pointer;border-radius:2px;transition:all .2s}.pv-reroll:hover{color:var(--bone-bright);border-color:var(--arcane)}
+  /* ── Vault grid ── */
+  .vault-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.2rem}
+  .vcard{position:relative;background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);border:1px solid var(--edge);padding:1.4rem 1.2rem 1.2rem;cursor:pointer;transition:transform .3s,box-shadow .3s,border-color .3s;overflow:hidden}
+  .vcard::before{content:'';position:absolute;inset:6px;border:1px solid rgba(201,162,39,.15);pointer-events:none}
+  .vcard:hover{transform:translateY(-5px);box-shadow:0 16px 34px -12px rgba(0,0,0,.85);border-color:var(--gold)}
+  .vcard-head{display:flex;gap:1rem;align-items:center;margin-bottom:.8rem}
+  .vcard-avatar{width:64px;height:64px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.7rem;border:2px solid var(--edge-hi);background:var(--stone-3);overflow:hidden}
+  .vcard-avatar img{width:100%;height:100%;object-fit:cover}
+  .vcard-name{font-family:'Cinzel',serif;font-weight:700;font-size:1.02rem;color:var(--bone-bright);line-height:1.3}
+  .vcard-cls{font-style:italic;font-size:.85rem;color:var(--arcane)}
+  .vcard-meta{display:flex;gap:.9rem;flex-wrap:wrap;font-size:.82rem;color:var(--bone-dim);margin:.6rem 0}
+  .vcard-story{font-size:.86rem;color:var(--bone-dim);font-style:italic;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;min-height:3.9em}
+  .vcard-foot{display:flex;justify-content:space-between;align-items:center;margin-top:.9rem;font-size:.75rem;color:var(--bone-dim);font-style:italic}
+  .vcard-foot .saved-tag{color:var(--gold)}
+  .vault-empty{text-align:center;padding:3rem 1rem;color:var(--bone-dim);font-style:italic;border:1px dashed var(--edge)}
+  /* ── Inspect overlay ── */
+  .insp-overlay{display:none;position:fixed;inset:0;z-index:500;background:rgba(4,2,8,.88);backdrop-filter:blur(4px);padding:2rem 1rem;overflow-y:auto}
+  .insp-overlay.show{display:flex;align-items:flex-start;justify-content:center}
+  .insp-modal{width:min(680px,100%);background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,#120c1c);border:1px solid var(--gold);box-shadow:0 0 60px rgba(201,162,39,.15),0 24px 60px rgba(0,0,0,.8);padding:1.8rem 1.7rem;position:relative;animation:msg-in .35s cubic-bezier(.22,1,.36,1)}
+  .insp-close{position:absolute;top:.8rem;right:.8rem;background:none;border:1px solid var(--edge);color:var(--bone-dim);width:36px;height:36px;cursor:pointer;font-size:.95rem;transition:all .2s}.insp-close:hover{color:var(--blood-bright);border-color:var(--blood-bright)}
+  .insp-full .pv-stats{grid-template-columns:repeat(6,1fr)}
+  .inv-list{font-size:.85rem;color:var(--bone);line-height:1.8}
+  .inv-list b{color:var(--gold-bright)}
+  .spells-list{font-size:.85rem;color:var(--bone);line-height:1.7}
+  .spells-list .sp-name{color:var(--arcane);font-weight:600}
+  .toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:600;font-family:'Cinzel',serif;font-size:.88rem;letter-spacing:.1em;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);padding:.7rem 1.5rem;box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none;max-width:92%;text-align:center}.toast.show{transform:translate(-50%,0);opacity:1}
+  html{-webkit-tap-highlight-color:transparent}
+  @media(max-width:640px){
+    .app{padding:1.4rem .75rem 4rem}
+    .forge-actions{flex-direction:column;align-items:stretch}
+    .summon-btn{width:100%;min-height:54px}
+    .forge-actions select{width:100%;min-height:48px}
+    .pv-stats,.insp-full .pv-stats{grid-template-columns:repeat(3,1fr)}
+    .pv-actions{flex-direction:column;align-items:stretch}
+    .pv-go,.pv-reroll{width:100%;min-height:50px}
+    .insp-modal{padding:1.4rem 1rem}
+  }
+  @media(max-width:400px){.pv-stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+<link rel="stylesheet" href="snes.css?v=19">
+<script src="sprites.js?v=20260802a"></script>
+<script src="fonts.js?v=20260802c"></script>
+<script src="themes.js?v=20260802c"></script>
+</head>
+<body>
+<div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
+
+<div class="app">
+  <header class="forge-head">
+    <span class="brand">The Lore Weaver's Cauldron</span>
+    <a class="back" href="adventure.html">← Back to the Crossroads</a>
+  </header>
+
+  <div class="destiny-title">
+    <div class="over">The Vault of Heroes</div>
+    <h1>The Forge</h1>
+  </div>
+  <p class="destiny-sub">Weave heroes outside of any campaign — save them here, and summon them when a new adventure calls.</p>
+  <div class="rune-divider"><span>✦</span></div>
+
+  <!-- ═══════════ FORGE (skapa karaktär) ═══════════ -->
+  <div class="section-label">I. Forge a Hero</div>
+  <div class="scroll-box">
+    <textarea id="forge-prompt" spellcheck="false" placeholder="Describe your hero — race, class, personality, a wound from their past, the thing they want most in the world…&#10;&#10;Example: A tiefling warlock who sold her shadow to a candle-maker, and now collects other people's secrets like moths."></textarea>
+    <div class="forge-actions">
+      <button class="summon-btn" id="forge-btn" onclick="forgeSummon()">🔮 Forge Character</button>
+      <span style="font-size:.78rem;color:var(--bone-dim)">🧙 Model:</span>
+      <select id="forge-model">
+        <option value="qwen3.8-max" selected>qwen3.8-max</option>
+        <option value="qwen3.6-flash">qwen3.6-flash</option>
+        <option value="deepseek-v4-flash-0731">deepseek-v4-flash-0731</option>
+        <option value="step-3.7-flash">step-3.7-flash</option>
+        <option value="ollama:heretic">ollama:heretic</option>
+      </select>
+      <span style="font-size:.78rem;color:var(--bone-dim)">🌐</span>
+      <select id="forge-lang">
+        <option value="en" selected>English sheet</option>
+        <option value="sv">Svenskt ark</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Weaving status -->
+  <div class="weaving" id="weaving">
+    <div class="w-status" id="w-status">📡 The Forge is heating…</div>
+    <div class="w-reasoning" id="w-reasoning" hidden>
+      <div class="w-reasoning-head">
+        <span>🧠 The Dungeon Master is Conjuring…</span>
+        <span class="w-timer" id="w-timer">0:00</span>
+      </div>
+      <div class="w-reasoning-body" id="w-reasoning-body"></div>
+    </div>
+  </div>
+
+  <!-- Preview -->
+  <div class="preview" id="preview">
+    <div class="section-label">II. The Forged Hero</div>
+    <div class="scroll-box">
+      <div class="pv-head">
+        <div class="pv-portrait" id="pv-icon">🎭</div>
+        <div>
+          <div class="pv-name" id="pv-name"></div>
+          <div class="pv-class" id="pv-class"></div>
+        </div>
+      </div>
+      <div class="pv-stats" id="pv-stats"></div>
+      <div class="pv-vitals" id="pv-vitals"></div>
+      <div class="pv-traits" id="pv-traits"></div>
+      <div class="pv-story" id="pv-story"></div>
+      <div class="pv-gear" id="pv-gear"></div>
+      <div class="pv-actions">
+        <button class="pv-go" onclick="saveForged()">💾 Save to the Vault</button>
+        <button class="pv-reroll" onclick="forgeSummon()">🔄 Reforge</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ VAULT ═══════════ -->
+  <div class="section-label">III. The Vault <span id="vault-count" style="font-size:.75rem;letter-spacing:.1em;color:var(--bone-dim)"></span></div>
+  <div id="vault-wrap">
+    <div class="vault-empty" id="vault-empty">The vault is empty. Forge a hero above — or save one from an adventure.</div>
+    <div class="vault-grid" id="vault-grid"></div>
+  </div>
+</div>
+
+<!-- ═══════════ INSPECT OVERLAY ═══════════ -->
+<div class="insp-overlay" id="insp-overlay" onclick="if(event.target===this)closeInspect()">
+  <div class="insp-modal">
+    <button class="insp-close" onclick="closeInspect()">✕</button>
+    <div id="insp-content" class="insp-full"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="sfx.js?v=20260802a"></script>
+<script>
+// Auth-guard
+if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
+</script>
+<script src="api.js?v=20260802c"></script>
+<script src="modal.js?v=20260802a"></script>
+<script src="i18n.js?v=20260802b"></script>
+<script>
+// ═══════════════════════════════════════
+// THE FORGE — fristående karaktärsgenerering + valv
+// ═══════════════════════════════════════
+
+// Modellväljare: icke-admin begränsas till spelarmodeller
+const PLAYER_CHAR_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-3.7-flash', 'ollama:heretic'];
+API.me().then(u => {
+  if (u && u.role !== 'admin') {
+    const sel = document.getElementById('forge-model');
+    sel.innerHTML = PLAYER_CHAR_MODELS.map(m => `<option value="${m}">${m}</option>`).join('');
+    sel.value = 'qwen3.8-max';
+  }
+}).catch(() => {});
+
+let forging = false;
+let forgedChar = null;      // senast genererade karaktär (preview)
+let forgedInv = [];         // dess inventory
+
+// ── Ritual-timer ──
+let _ritualTimers = [];
+function _startRitual() {
+  const statusEl = document.getElementById('w-status');
+  const timerEl = document.getElementById('w-timer');
+  statusEl.style.display = '';
+  statusEl.textContent = '📡 The Forge is heating…';
+  document.getElementById('w-reasoning').hidden = true;
+  document.getElementById('w-reasoning-body').textContent = '';
+  let sec = 0;
+  _ritualTimers.push(setInterval(() => {
+    sec++;
+    const m = Math.floor(sec / 60), s = String(sec % 60).padStart(2, '0');
+    timerEl.textContent = `${m}:${s}`;
+  }, 1000));
+  _ritualTimers.push(setInterval(() => {
+    const msgs = ['🕯 The candles bend toward the cauldron…', '🔥 The coals whisper old names…', '🌙 Fate is being weighed…', '⚒ The hammer strikes the anvil of destiny…'];
+    statusEl.textContent = msgs[Math.floor(Math.random() * msgs.length)];
+  }, 6000));
+}
+function _stopRitual() { _ritualTimers.forEach(t => clearInterval(t)); _ritualTimers = []; }
+function _appendReasoning(text) {
+  const box = document.getElementById('w-reasoning');
+  const body = document.getElementById('w-reasoning-body');
+  if (!box || !body || !text) return;
+  box.hidden = false;
+  body.textContent += text;
+  body.scrollTop = body.scrollHeight;
+}
+
+async function forgeSummon() {
+  if (forging) return;
+  const prompt = document.getElementById('forge-prompt').value.trim();
+  if (!prompt) { toast('⚠ Write a description first'); return; }
+  forging = true;
+  document.getElementById('forge-btn').disabled = true;
+  document.getElementById('preview').classList.remove('show');
+  document.getElementById('weaving').classList.add('show');
+  document.getElementById('weaving').scrollIntoView({ behavior:'smooth', block:'center' });
+  _startRitual();
+  try {
+    const model = document.getElementById('forge-model').value;
+    const lang = document.getElementById('forge-lang').value;
+    const res = await API.vaultGenerateStream(prompt, model, lang, (ev) => {
+      if (ev.type === 'reasoning') _appendReasoning(ev.text);
+    });
+    _stopRitual();
+    forgedChar = res.character || {};
+    forgedInv = res.inventory || [];
+    renderPreview(forgedChar);
+    document.getElementById('weaving').classList.remove('show');
+    document.getElementById('preview').classList.add('show');
+    document.getElementById('preview').scrollIntoView({ behavior:'smooth', block:'start' });
+    SFX.levelup();
+    toast('🔮 The hero is forged!');
+  } catch (e) {
+    _stopRitual();
+    document.getElementById('weaving').classList.remove('show');
+    SFX.error();
+    toast('⚠ Could not forge the character: ' + (e.message || 'unknown error'));
+  } finally {
+    document.getElementById('forge-btn').disabled = false;
+    forging = false;
+  }
+}
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function mod(score) { const m = Math.floor(((score||10)-10)/2); return m >= 0 ? '+'+m : ''+m; }
+
+function charSheetHtml(ch) {
+  const abilities = ch.abilities || {};
+  const stats = ['STR','DEX','CON','INT','WIS','CHA'].map(k => {
+    const s = (abilities[k] || {}).score || 10;
+    return `<div class="pv-stat"><div class="a">${k}</div><div class="s">${s}</div><div class="m">${mod(s)}</div></div>`;
+  }).join('');
+  const hp = (ch.hp || {}).max || ch.hp || 10;
+  const traits = (Array.isArray(ch.traits) ? ch.traits : []).map(t => typeof t === 'string' ? t : (t.name || '')).filter(Boolean);
+  const vitals = `
+    <span>❤️ HP <b>${typeof hp === 'object' ? (hp.max || 10) : hp}</b></span>
+    <span>🛡️ AC <b>${ch.ac || 10}</b></span>
+    <span>⚡ Init <b>${(ch.initiative||0)>=0?'+':''}${ch.initiative||0}</b></span>
+    <span>🎯 Prof <b>+${ch.proficiency||2}</b></span>
+    <span>⚖ ${esc(ch.alignment||'')}</span>`;
+  return { stats, vitals, traits };
+}
+
+function renderPreview(ch) {
+  const { stats, vitals, traits } = charSheetHtml(ch);
+  document.getElementById('pv-icon').textContent = '🎭';
+  document.getElementById('pv-name').textContent = ch.name || 'Nameless';
+  document.getElementById('pv-class').textContent = [ch.race, ch.class].filter(Boolean).join(' · ') + (ch.level ? ' · Level ' + ch.level : '');
+  document.getElementById('pv-stats').innerHTML = stats;
+  document.getElementById('pv-vitals').innerHTML = vitals;
+  document.getElementById('pv-traits').innerHTML = traits.map(t => `<span class="pv-trait">✦ ${esc(t)}</span>`).join('');
+  document.getElementById('pv-story').textContent = ch.story || ch.background || '';
+  document.getElementById('pv-gear').innerHTML = ch.gear ? '🎒 ' + esc(ch.gear) : '';
+}
+
+async function saveForged() {
+  if (!forgedChar || !forgedChar.name) return;
+  try {
+    const res = await API.vaultSave({ character: forgedChar, inventory: forgedInv });
+    toast('💾 Saved to the Vault!');
+    SFX.gate();
+    loadVault();
+    document.getElementById('preview').classList.remove('show');
+    document.getElementById('forge-prompt').value = '';
+    document.getElementById('vault-wrap').scrollIntoView({ behavior:'smooth', block:'start' });
+  } catch (e) {
+    toast('⚠ ' + (e.message || 'Could not save'));
+  }
+}
+
+// ═══════════════════════════════════════
+// VAULT — lista / inspektera / radera
+// ═══════════════════════════════════════
+let vaultChars = [];
+
+async function loadVault() {
+  try {
+    const res = await API.vaultList();
+    vaultChars = res.characters || [];
+  } catch (e) { vaultChars = []; }
+  renderVault();
+}
+
+function renderVault() {
+  const grid = document.getElementById('vault-grid');
+  const empty = document.getElementById('vault-empty');
+  document.getElementById('vault-count').textContent = vaultChars.length ? `· ${vaultChars.length} hero${vaultChars.length>1?'es':''}` : '';
+  if (!vaultChars.length) { empty.style.display = ''; grid.innerHTML = ''; return; }
+  empty.style.display = 'none';
+  grid.innerHTML = vaultChars.map(c => {
+    const cls = [c.race, c.class].filter(Boolean).join(' · ');
+    const date = c.saved_at ? new Date(c.saved_at).toLocaleDateString('en-US', {month:'short',day:'numeric'}) : '';
+    const avatar = c.has_avatar
+      ? `<img src="${API.vaultAvatarUrl(c.id)}?t=${Date.now()}" alt="">`
+      : '🎭';
+    return `<div class="vcard" onclick="openInspect('${esc(c.id)}')">
+      <div class="vcard-head">
+        <div class="vcard-avatar">${avatar}</div>
+        <div>
+          <div class="vcard-name">${esc(c.name)}</div>
+          <div class="vcard-cls">${esc(cls)} · L${c.level||1}</div>
+        </div>
+      </div>
+      <div class="vcard-meta">
+        <span>❤️ ${c.hp_max||'?'}</span><span>🛡️ ${c.ac||'?'}</span><span>🎒 ${c.item_count} items</span>
+      </div>
+      <div class="vcard-story">${esc(c.story||'')}</div>
+      <div class="vcard-foot">
+        <span>${c.campaign_name ? '⚔ ' + esc(c.campaign_name) : '⚒ Forged free'}</span>
+        <span class="saved-tag">${date}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Inspektionsvy ──
+let inspectId = null;
+
+async function openInspect(charId) {
+  inspectId = charId;
+  let entry;
+  try {
+    const res = await API.vaultGet(charId);
+    entry = res.entry;
+  } catch (e) { toast('⚠ ' + (e.message || 'Could not load character')); return; }
+  const ch = entry.character || {};
+  const { stats, vitals, traits } = charSheetHtml(ch);
+  const inv = entry.inventory || [];
+  const invHtml = inv.length
+    ? `<div class="section-label" style="margin-top:1.2rem">Equipment</div><div class="inv-list">${inv.map(it => `▸ <b>${esc(it.name||'?')}</b>${it.qty && it.qty>1 ? ' ×'+it.qty : ''}${it.weight ? ' · '+it.weight+' lbs' : ''}${it.lore ? ' — <i>'+esc(it.lore)+'</i>' : ''}`).join('<br>')}</div>`
+    : '';
+  const spells = Array.isArray(ch.spells) ? ch.spells.filter(s => s && s.name) : [];
+  const spellsHtml = spells.length
+    ? `<div class="section-label" style="margin-top:1.2rem">Spells</div><div class="spells-list">${spells.map(s => `<div>✦ <span class="sp-name">${esc(s.name)}</span> <span style="color:var(--bone-dim)">(L${s.level||0}${s.school ? ', '+esc(s.school) : ''})</span>${s.description ? ' — <i>'+esc(s.description)+'</i>' : ''}</div>`).join('')}</div>`
+    : '';
+  const avatar = entry.avatar
+    ? `<div class="pv-portrait" id="insp-avatar"><img src="${API.vaultAvatarUrl(charId)}?t=${Date.now()}" alt=""></div>`
+    : `<div class="pv-portrait" id="insp-avatar">🎭</div>`;
+
+  document.getElementById('insp-content').innerHTML = `
+    <div class="pv-head">
+      ${avatar}
+      <div>
+        <div class="pv-name">${esc(ch.name||'Nameless')}</div>
+        <div class="pv-class">${esc([ch.race, ch.class].filter(Boolean).join(' · '))} · L${ch.level||1} · ${esc(ch.alignment||'')}</div>
+      </div>
+    </div>
+    <div class="pv-stats">${stats}</div>
+    <div class="pv-vitals">${vitals}</div>
+    <div class="pv-traits">${traits.map(t=>`<span class="pv-trait">✦ ${esc(t)}</span>`).join('')}</div>
+    <div class="pv-story">${esc(ch.story||ch.background||'')}</div>
+    ${ch.gear ? `<div class="pv-gear">🎒 ${esc(ch.gear)}</div>` : ''}
+    ${invHtml}
+    ${spellsHtml}
+    <div class="pv-actions" style="margin-top:1.4rem">
+      <button class="pv-go" onclick="useCharacter('${esc(charId)}')">⚔️ Use for New Adventure</button>
+      <button class="pv-reroll" id="insp-avatar-btn" onclick="genAvatar('${esc(charId)}')">${entry.avatar ? '🎨 Reroll Portrait' : '🎨 Paint Portrait'}</button>
+      <button class="pv-reroll" style="color:var(--blood-bright)" onclick="deleteCharacter('${esc(charId)}','${esc(ch.name||'')}')">🗑 Delete</button>
+    </div>`;
+  document.getElementById('insp-overlay').classList.add('show');
+}
+
+function closeInspect() { document.getElementById('insp-overlay').classList.remove('show'); inspectId = null; }
+
+async function useCharacter(charId) {
+  try {
+    await API.vaultUse(charId);
+    closeInspect();
+    toast('⚔️ The hero steps into the adventure!');
+    setTimeout(() => { location.href = 'chat.html'; }, 900);
+  } catch (e) {
+    if (String(e.message||'').includes('No active campaign')) {
+      toast('📜 Start a New Adventure first, then choose this hero.');
+      setTimeout(() => { location.href = 'adventure.html'; }, 1400);
+    } else {
+      toast('⚠ ' + (e.message || 'Could not use character'));
+    }
+  }
+}
+
+async function deleteCharacter(charId, name) {
+  const ok = await Modal.confirm({
+    title: 'Unmake "' + name + '"?',
+    body: '⚠️ This hero is erased from the Vault forever — portrait, gear and story alike.',
+    confirmText: '🔥 Unmake',
+    cancelText: 'Keep',
+    danger: true,
+    icon: '🩸',
+  });
+  if (!ok) return;
+  try {
+    await API.vaultDelete(charId);
+    closeInspect();
+    toast('🕯️ The hero is unmade.');
+    loadVault();
+  } catch (e) {
+    toast('⚠ ' + (e.message || 'Could not delete'));
+  }
+}
+
+async function genAvatar(charId) {
+  const btn = document.getElementById('insp-avatar-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '🎨 Painting…'; }
+  try {
+    const res = await API.vaultGenerateAvatar(charId, Date.now() % 1000000);
+    toast('🎨 Portrait painted!');
+    openInspect(charId);   // rendera om med ny bild
+    loadVault();
+  } catch (e) {
+    toast('⚠ ' + (e.message || 'Could not paint portrait'));
+    if (btn) { btn.disabled = false; btn.textContent = '🎨 Paint Portrait'; }
+  }
+}
+
+// ═══════════════════════════════════════
+// TOAST + EMBERS (samma som newgame.html)
+// ═══════════════════════════════════════
+let toastTimer;
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2600);}
+
+const canvas=document.getElementById('embers'),ctx=canvas.getContext('2d');
+let W,H,embers=[];
+function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight;}
+resize();addEventListener('resize',resize);
+function spawn(init){return{x:Math.random()*W,y:init?Math.random()*H:H+10,r:.7+Math.random()*1.6,vy:.2+Math.random()*.6,vx:(Math.random()-.5)*.3,life:0,max:400+Math.random()*500,hue:Math.random()<.82?22+Math.random()*18:268+Math.random()*20};}
+for(let i=0;i<40;i++)embers.push(spawn(true));
+function tick(){ctx.clearRect(0,0,W,H);for(let i=0;i<embers.length;i++){const e=embers[i];e.life++;e.y-=e.vy;e.x+=e.vx+Math.sin(e.life*.02)*.12;const fade=Math.min(1,e.life/60)*Math.max(0,1-e.life/e.max);const fl=.5+Math.sin(e.life*.15+i)*.35;ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fillStyle=`hsla(${e.hue},90%,60%,${.45*fade*fl})`;ctx.shadowColor=`hsla(${e.hue},90%,55%,${.7*fade})`;ctx.shadowBlur=7;ctx.fill();if(e.life>e.max||e.y<-12)embers[i]=spawn(false);}requestAnimationFrame(tick);}
+tick();
+
+loadVault();
+</script>
+</body>
+</html>

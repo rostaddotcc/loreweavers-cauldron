@@ -466,6 +466,82 @@ const API = (() => {
       return result;
     },
 
+    // ── The Forge: character vault (fristående karaktärsvalv) ──
+    // Fristående karaktärsgenerering — kräver ingen aktiv kampanj.
+    // Samma SSE-protokoll som generateCharacterStream.
+    async vaultGenerateStream(prompt, modelId, lang, onEvent = () => {}) {
+      if (MOCK) throw new Error('Not available in mock mode');
+      const res = await fetch('/api/vault/generate/stream', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, model_id: modelId, lang: lang || 'en' }),
+      });
+      if (!res.ok) {
+        let msg = 'HTTP ' + res.status;
+        try { const j = await res.json(); msg = j.detail || j.error || msg; } catch (e) {}
+        throw new Error(msg);
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let result = null;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buffer.indexOf('\n\n')) >= 0) {
+          const raw = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          for (const line of raw.split('\n')) {
+            if (!line.startsWith('data:')) continue;
+            try {
+              const ev = JSON.parse(line.slice(5).trim());
+              if (ev.type === 'done') result = ev;
+              else onEvent(ev);
+            } catch (e) {}
+          }
+        }
+      }
+      if (!result) throw new Error('Stream ended without result');
+      if (result.type === 'error') throw new Error(result.message || 'unknown error');
+      return result;
+    },
+
+    vaultList() {
+      return req('/api/vault/characters');
+    },
+
+    vaultGet(charId) {
+      return req('/api/vault/characters/' + encodeURIComponent(charId));
+    },
+
+    vaultSave(payload) {
+      return req('/api/vault/characters', { method: 'POST', body: JSON.stringify(payload) });
+    },
+
+    vaultDelete(charId) {
+      return req('/api/vault/characters/' + encodeURIComponent(charId), { method: 'DELETE' });
+    },
+
+    vaultUse(charId) {
+      return req('/api/vault/characters/' + encodeURIComponent(charId) + '/use', { method: 'POST', body: '{}' });
+    },
+
+    vaultGenerateAvatar(charId, seed, mode) {
+      const body = {};
+      if (typeof seed === 'number') body.seed = seed;
+      if (mode) body.mode = mode;
+      return req('/api/vault/characters/' + encodeURIComponent(charId) + '/avatar/generate', {
+        method: 'POST', body: JSON.stringify(body),
+      });
+    },
+
+    vaultAvatarUrl(charId) {
+      return MOCK ? null : BASE + '/api/vault/characters/' + encodeURIComponent(charId) + '/avatar';
+    },
+
     // ── Rules Oracle (Qwen-driven) ──
     async oracle(question, modelId = 'qwen3.8-max') {
       if (MOCK) {

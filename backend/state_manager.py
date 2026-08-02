@@ -462,12 +462,14 @@ class CharacterVault:
         d.mkdir(parents=True, exist_ok=True)
         return d
 
-    def save(self, user: str, character: dict, campaign_name: str = "") -> dict:
+    def save(self, user: str, character: dict, campaign_name: str = "",
+             inventory: list | None = None) -> dict:
         """Spara karaktär i valvet. Returnerar vault-posten."""
         char_id = uuid.uuid4().hex[:10]
         entry = {
             "id": char_id,
             "character": character,
+            "inventory": inventory or [],
             "campaign_name": campaign_name,
             "saved_at": _now(),
         }
@@ -475,6 +477,23 @@ class CharacterVault:
         with open(path, "w") as f:
             json.dump(entry, f, ensure_ascii=False, indent=2)
         return entry
+
+    def update(self, user: str, entry: dict) -> bool:
+        """Skriv tillbaka en uppdaterad vault-post (t.ex. efter avatar-gen)."""
+        char_id = str(entry.get("id", "")).strip()
+        if not char_id:
+            return False
+        path = self._vault_dir(user) / f"{char_id}.json"
+        if not path.exists():
+            return False
+        with open(path, "w") as f:
+            json.dump(entry, f, ensure_ascii=False, indent=2)
+        return True
+
+    def avatars_dir(self, user: str) -> Path:
+        d = VAULTS_DIR / user / "avatars"
+        d.mkdir(parents=True, exist_ok=True)
+        return d
 
     def list(self, user: str) -> list[dict]:
         """Lista alla sparade karaktärer (senast sparad först)."""
@@ -500,9 +519,18 @@ class CharacterVault:
             return None
 
     def delete(self, user: str, char_id: str) -> bool:
-        """Radera en karaktär ur valvet."""
+        """Radera en karaktär ur valvet (+ ev. avatar-bild)."""
         path = self._vault_dir(user) / f"{char_id}.json"
         if not path.exists():
             return False
+        try:
+            entry = json.load(open(path))
+            av = entry.get("avatar") or {}
+            if av.get("disk_name"):
+                img = VAULTS_DIR / user / "avatars" / av["disk_name"]
+                if img.exists():
+                    img.unlink()
+        except (json.JSONDecodeError, OSError):
+            pass
         path.unlink()
         return True

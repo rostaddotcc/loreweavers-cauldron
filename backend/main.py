@@ -150,7 +150,7 @@ from atmosphere import (
 )
 from locations import get_locations_with_travel, place_location, clean_location_name, find_location, locations_match
 from logbook import build_log_prompt
-from state_manager import CAMPAIGNS_DIR, CampaignStore, CharacterVault
+from state_manager import CAMPAIGNS_DIR, VAULTS_DIR, CampaignStore, CharacterVault
 import rag
 from extraction import FactRegister, extract_facts, format_facts_block
 from guardian import (
@@ -4717,11 +4717,13 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
     return _finalize_character(char_data, state, lang)
 
 
-def _finalize_character(char_data: dict, state: dict, lang: str) -> dict:
+def _finalize_character_data(char_data: dict, lang: str) -> tuple[dict, list, bool]:
     """Normalisera LLM:ns karaktärs-JSON → färdig karaktär + inventory.
 
-    Delas av generate_character (JSON-svar) och generate_character_stream
-    (SSE) så båda vägarna ger identisk validering/beräkning.
+    Ren funktion — rör ej kampanj-state/store. Returnerar (character,
+    inventory, had_inventory). Delas av kampanj-flödet (generate_character +
+    stream) och The Forge (fristående karaktärsvalv) så båda vägarna
+    validerar/beräknar identiskt.
     """
     # Validera löst — se till att grundfält finns
     if not char_data.get("name"):
@@ -4835,7 +4837,13 @@ def _finalize_character(char_data: dict, state: dict, lang: str) -> dict:
             }, lang=lang))
             _existing.append(low)
 
-    if clean or inventory is not None:
+    return char_data, clean, inventory is not None
+
+
+def _finalize_character(char_data: dict, state: dict, lang: str) -> dict:
+    """Normalisera + skriv till kampanj-state (generate_character + stream)."""
+    char_data, clean, had_inv = _finalize_character_data(char_data, lang)
+    if clean or had_inv:
         state["inventory"] = clean
 
     state["character"] = char_data
@@ -4913,6 +4921,327 @@ async def generate_character_stream(req: CharacterRequest, morkrets_token: str |
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+# ═══════════════════════════════════════
+# THE FORGE — fristående karaktärsvalv (vault)
+# Karaktärer som skapas oberoende av kampanjer och återanvänds.
+# ═══════════════════════════════════════
+
+
+class VaultGenRequest(BaseModel):
+    prompt: str
+    model_id: str
+    lang: str = "en"
+
+
+@app.post("/api/vault/generate/stream")
+async def vault_generate_stream(req: VaultGenRequest, morkrets_token: str | None = Cookie(None)):
+    """Fristående karaktärsgenerering för valvet — kräver INGEN aktiv kampanj.
+    Samma SSE-protokoll som /api/character/generate/stream, men resultatet
+    skrivs inte till något kampanj-state; frontend visar preview med
+    Save/Reroll."""
+    payload = _get_current_user(morkrets_token)
+    if payload.get("role") != "admin":
+        req.model_id = _clamp_player_model(req.model_id)
+
+    lang = "sv" if (req.lang or "en").lower().startswith("sv") else "en"
+    char_prompt = CHARACTER_PROMPT_EN if lang == "en" else CHARACTER_PROMPT_SV
+    user_msg = f"Create a character: {req.prompt}" if lang == "en" else f"Skapa en karaktär: {req.prompt}"
+    messages = [
+        {"role": "system", "content": char_prompt},
+        {"role": "user", "content": user_msg},
+    ]
+
+    async def event_stream():
+        buf = ""
+        reasoning_buf = ""
+        t0 = time.time()
+        usage: dict | None = None
+        try:
+            async for r_delta, c_delta, u in _stream_llm(
+                req.model_id, messages, temperature=0.95, max_tokens=8000,
+                thinking_cap=8000, reasoning_effort="low",
+            ):
+                if u:
+                    usage = u
+                if r_delta:
+                    reasoning_buf += r_delta
+                    yield f"data: {json.dumps({'type': 'reasoning', 'text': r_delta}, ensure_ascii=False)}\n\n"
+                if c_delta:
+                    buf += c_delta
+                    yield f"data: {json.dumps({'type': 'content', 'text': c_delta}, ensure_ascii=False)}\n\n"
+
+            char_data = _extract_json(buf)
+            char_data, inventory, _had = _finalize_character_data(char_data, lang)
+            elapsed = round(time.time() - t0, 1)
+            result = {"ok": True, "character": char_data, "inventory": inventory}
+            result["tokens"] = usage or {}
+            result["time_s"] = elapsed
+            result["reasoning_len"] = len(reasoning_buf)
+            yield f"data: {json.dumps({'type': 'done', **result}, ensure_ascii=False)}\n\n"
+        except HTTPException as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e.detail)}, ensure_ascii=False)}\n\n"
+        except Exception as e:
+            err = _err("Karaktären kunde inte vävas", "The character could not be woven", lang)
+            yield f"data: {json.dumps({'type': 'error', 'message': f'{err}: {e}'}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+def _vault_summary(entry: dict) -> dict:
+    """Kompakt vault-post för listningar (frontend-kort)."""
+    ch = entry.get("character") or {}
+    abilities = ch.get("abilities") or {}
+    hp = ch.get("hp") or {}
+    return {
+        "id": entry.get("id"),
+        "name": ch.get("name") or "Nameless",
+        "race": ch.get("race") or "",
+        "class": ch.get("class") or "",
+        "level": ch.get("level") or 1,
+        "alignment": ch.get("alignment") or "",
+        "background": ch.get("background") or "",
+        "hp_max": hp.get("max") if isinstance(hp, dict) else hp,
+        "ac": ch.get("ac"),
+        "story": (ch.get("story") or "")[:220],
+        "saved_at": entry.get("saved_at"),
+        "campaign_name": entry.get("campaign_name") or "",
+        "has_avatar": bool((entry.get("avatar") or {}).get("disk_name")),
+        "item_count": len(entry.get("inventory") or []),
+        "str": (abilities.get("STR") or {}).get("score"),
+        "dex": (abilities.get("DEX") or {}).get("score"),
+        "con": (abilities.get("CON") or {}).get("score"),
+        "int": (abilities.get("INT") or {}).get("score"),
+        "wis": (abilities.get("WIS") or {}).get("score"),
+        "cha": (abilities.get("CHA") or {}).get("score"),
+    }
+
+
+@app.get("/api/vault/characters")
+async def vault_list(morkrets_token: str | None = Cookie(None)):
+    """Lista alla sparade karaktärer för inloggad användare."""
+    payload = _get_current_user(morkrets_token)
+    entries = vault.list(payload["sub"])
+    return {"ok": True, "characters": [_vault_summary(e) for e in entries]}
+
+
+@app.get("/api/vault/characters/{char_id}")
+async def vault_get(char_id: str, morkrets_token: str | None = Cookie(None)):
+    """Fullständig vault-post (inspektionsvy)."""
+    payload = _get_current_user(morkrets_token)
+    entry = vault.get(payload["sub"], char_id)
+    if not entry:
+        raise HTTPException(404, "Character not found")
+    return {"ok": True, "entry": entry}
+
+
+@app.post("/api/vault/characters")
+async def vault_save(body: dict, morkrets_token: str | None = Cookie(None)):
+    """Spara en karaktär till valvet.
+
+    Två lägen:
+      - from_campaign: true → spara den aktiva kampanjens character+inventory
+      - annars: body.character (+ body.inventory) direkt från frontend
+        (t.ex. preview efter fristående generering).
+    """
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+
+    campaign_name = ""
+    state = None
+    if body.get("from_campaign"):
+        state = store.get(username)
+        if not state or not state.get("character"):
+            raise HTTPException(404, "No active character in the current campaign")
+        character = state["character"]
+        inventory = state.get("inventory") or []
+        campaign_name = state.get("meta", {}).get("campaign_name") or ""
+    else:
+        character = body.get("character")
+        inventory = body.get("inventory") or []
+        if not character or not isinstance(character, dict) or not character.get("name"):
+            raise HTTPException(400, "No character to save")
+
+    entry = vault.save(username, character, campaign_name=campaign_name, inventory=inventory)
+
+    # Om kampanjkaraktären har en spelar-avatar → kopiera in den i valvet
+    if state is not None:
+        av = (state.get("avatars") or {}).get("player")
+        if av and av.get("disk_name"):
+            cid = state["meta"]["campaign_id"]
+            src = CAMPAIGNS_DIR / username / cid / "avatars" / av["disk_name"]
+            if src.exists():
+                av_dir = vault.avatars_dir(username)
+                dst = av_dir / f"vault_{entry['id']}.png"
+                dst.write_bytes(src.read_bytes())
+                entry["avatar"] = {"disk_name": dst.name, "seed": av.get("seed"),
+                                   "ai_generated": av.get("ai_generated", False)}
+                vault.update(username, entry)
+
+    return {"ok": True, "id": entry["id"], "summary": _vault_summary(entry)}
+
+
+@app.delete("/api/vault/characters/{char_id}")
+async def vault_delete(char_id: str, morkrets_token: str | None = Cookie(None)):
+    payload = _get_current_user(morkrets_token)
+    if not vault.delete(payload["sub"], char_id):
+        raise HTTPException(404, "Character not found")
+    return {"ok": True}
+
+
+@app.post("/api/vault/characters/{char_id}/use")
+async def vault_use(char_id: str, morkrets_token: str | None = Cookie(None)):
+    """Lyft en valv-karaktär till den aktiva kampanjen: character + inventory
+    (+ spelar-avatar om valvet har en) skrivs in i kampanj-state."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+
+    entry = vault.get(username, char_id)
+    if not entry:
+        raise HTTPException(404, "Character not found")
+
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "No active campaign — create one first")
+
+    char_data = entry.get("character") or {}
+    # Backup-beräkning av härledda värden för gamla valv-poster
+    abilities = char_data.get("abilities") or {}
+    str_score = int((abilities.get("STR") or {}).get("score", 10) or 10)
+    char_data.setdefault("max_weight_lbs", str_score * 15)
+
+    state["character"] = char_data
+    inv = entry.get("inventory") or []
+    if inv:
+        state["inventory"] = inv
+
+    # Kopiera avatar-bild till kampanjen om valvet har en
+    av = entry.get("avatar") or {}
+    if av.get("disk_name"):
+        src = VAULTS_DIR / username / "avatars" / av["disk_name"]
+        if src.exists():
+            cid = state["meta"]["campaign_id"]
+            av_dir = CAMPAIGNS_DIR / username / cid / "avatars"
+            av_dir.mkdir(parents=True, exist_ok=True)
+            (av_dir / "player.png").write_bytes(src.read_bytes())
+            avatars = state.setdefault("avatars", {})
+            avatars["player"] = {
+                "disk_name": "player.png",
+                "ext": ".png",
+                "size": src.stat().st_size,
+                "ai_generated": av.get("ai_generated", False),
+                "seed": av.get("seed"),
+                "uploaded": datetime.now(timezone.utc).isoformat(),
+            }
+
+    store.save(state)
+    return {"ok": True, "character": char_data}
+
+
+@app.post("/api/vault/characters/{char_id}/avatar/generate")
+async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | None = Cookie(None)):
+    """AI-avatar för en valv-karaktär (StepFun, prompt byggs från karaktärsarket)."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+
+    entry = vault.get(username, char_id)
+    if not entry:
+        raise HTTPException(404, "Character not found")
+
+    seed = (body or {}).get("seed")
+    if not isinstance(seed, int):
+        seed = random.randint(0, 999999)
+
+    # Återanvänd kampanjens prompt-byggare med en state-liknande dict
+    fake_state = {
+        "character": entry.get("character") or {},
+        "inventory": entry.get("inventory") or [],
+        "lore": [],
+        "npcs": [],
+    }
+    prompt = _trim_prompt(_build_avatar_prompt(fake_state, "player", seed))
+
+    api_key = os.getenv("STEPFUN_API_KEY")
+    base_url = os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.ai/step_plan/v1")
+    if not api_key:
+        raise HTTPException(500, "STEPFUN_API_KEY missing on the server")
+
+    av_dir = vault.avatars_dir(username)
+    existing = entry.get("avatar") or {}
+    existing_path = None
+    if existing.get("disk_name"):
+        p = av_dir / existing["disk_name"]
+        if p.exists():
+            existing_path = p
+
+    try:
+        if existing_path and body.get("mode") == "edit":
+            edit_prompt = _trim_prompt(
+                "Update this character portrait to reflect their current story and appearance: "
+                + prompt
+                + " Keep the same character, face, art style and composition; only adjust details to match the new description."
+            )
+            async with httpx.AsyncClient(timeout=150) as client:
+                with open(existing_path, "rb") as f:
+                    resp = await client.post(
+                        f"{base_url.rstrip('/')}/images/edits",
+                        headers={"Authorization": f"Bearer {api_key}"},
+                        data={"model": STEP_IMAGE_EDIT_2, "prompt": edit_prompt,
+                              "response_format": "b64_json", "steps": 8, "seed": seed},
+                        files={"image": (existing_path.name, f, "image/png")},
+                    )
+        else:
+            async with httpx.AsyncClient(timeout=150) as client:
+                resp = await client.post(
+                    f"{base_url.rstrip('/')}/images/generations",
+                    headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
+                    json={"model": STEP_IMAGE_EDIT_2, "prompt": prompt,
+                          "response_format": "b64_json", "steps": 8, "seed": seed,
+                          "text_mode": True},
+                )
+    except Exception as e:
+        logger.error("🎨 Vault-avatar StepFun-anrop misslyckades: %s", e)
+        raise HTTPException(502, f"Could not reach StepFun: {e}")
+    if resp.status_code != 200:
+        raise HTTPException(502, f"StepFun error ({resp.status_code})")
+
+    data = resp.json()
+    try:
+        content = base64.b64decode(data["data"][0]["b64_json"])
+    except (KeyError, IndexError, ValueError):
+        raise HTTPException(502, "StepFun returned no image")
+
+    disk_name = f"vault_{char_id}.png"
+    (av_dir / disk_name).write_bytes(content)
+    entry["avatar"] = {
+        "disk_name": disk_name, "ext": ".png", "size": len(content),
+        "ai_generated": True, "seed": seed,
+        "edit_mode": bool(existing_path and body.get("mode") == "edit"),
+        "uploaded": datetime.now(timezone.utc).isoformat(),
+    }
+    vault.update(username, entry)
+    return {"ok": True, "seed": seed, "url": f"/api/vault/characters/{char_id}/avatar"}
+
+
+@app.get("/api/vault/characters/{char_id}/avatar")
+async def vault_avatar_serve(char_id: str, morkrets_token: str | None = Cookie(None)):
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    entry = vault.get(username, char_id)
+    if not entry:
+        raise HTTPException(404, "Character not found")
+    av = entry.get("avatar") or {}
+    if not av.get("disk_name"):
+        raise HTTPException(404, "No avatar for this character")
+    path = VAULTS_DIR / username / "avatars" / av["disk_name"]
+    if not path.exists():
+        raise HTTPException(404, "Avatar image missing on disk")
+    return FileResponse(path, media_type="image/png", headers={"Cache-Control": "no-cache"})
 
 
 # ═══════════════════════════════════════

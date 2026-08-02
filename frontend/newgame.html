@@ -114,6 +114,53 @@
   }
   @media(max-width:400px){.app{padding:1.2rem .5rem 3.5rem}.destiny-title h1{font-size:1.5rem}.destiny-title .over{letter-spacing:.28em}.pv-stats{grid-template-columns:repeat(2,1fr)}.pv-portrait{width:58px;height:58px;font-size:1.5rem}.pv-name{font-size:1.1rem}.forge-head .brand{font-size:.78rem}
   }
+  /* ═══════════ The Vault — välj en färdig hjälte ═══════════ */
+  .vault-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem}
+  .vcard{position:relative;background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);border:1px solid var(--edge);padding:1.2rem 1.1rem 1rem;transition:transform .3s,box-shadow .3s,border-color .3s;overflow:hidden}
+  .vcard::before{content:'';position:absolute;inset:6px;border:1px solid rgba(201,162,39,.15);pointer-events:none}
+  .vcard:hover{transform:translateY(-4px);box-shadow:0 14px 30px -12px rgba(0,0,0,.85);border-color:var(--gold)}
+  .vcard-head{display:flex;gap:.9rem;align-items:center;margin-bottom:.5rem}
+  .vcard-avatar{width:56px;height:56px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;border:2px solid var(--edge-hi);background:var(--stone-3);overflow:hidden}
+  .vcard-avatar img{width:100%;height:100%;object-fit:cover}
+  .vcard-name{font-family:'Cinzel',serif;font-weight:700;font-size:.95rem;color:var(--bone-bright);line-height:1.3}
+  .vcard-cls{font-style:italic;font-size:.8rem;color:var(--arcane)}
+  .vcard-story{font-size:.82rem;color:var(--bone-dim);font-style:italic;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.4em;margin-bottom:.7rem}
+  .vcard-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+  .vcard-use{font-family:'Cinzel',serif;font-weight:700;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:#1a1206;cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);border:1px solid #6e5510;padding:.5rem .95rem;border-radius:2px;transition:all .2s}
+  .vcard-use:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-1px)}
+  .vcard-use:disabled{opacity:.55;cursor:wait}
+  .vcard-inspect{font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;background:transparent;border:1px solid var(--edge);color:var(--bone-dim);padding:.5rem .8rem;cursor:pointer;border-radius:2px;transition:all .2s}
+  .vcard-inspect:hover{color:var(--bone-bright);border-color:var(--arcane)}
+  .vault-empty{padding:1.3rem;border:1px dashed var(--edge);color:var(--bone-dim);font-style:italic;text-align:center;font-size:.92rem}
+  .vault-note{font-size:.8rem;font-style:italic;color:var(--bone-dim);margin-top:.8rem}
+  /* Inspektionsmodal */
+  .insp-overlay{display:none;position:fixed;inset:0;z-index:500;background:rgba(4,2,8,.88);backdrop-filter:blur(4px);padding:2rem 1rem;overflow-y:auto}
+  .insp-overlay.show{display:flex;align-items:flex-start;justify-content:center}
+  .insp-modal{width:min(680px,100%);background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,#120c1c);border:1px solid var(--gold);box-shadow:0 0 60px rgba(201,162,39,.15),0 24px 60px rgba(0,0,0,.8);padding:1.8rem 1.7rem;position:relative;animation:card-in .35s cubic-bezier(.22,1,.36,1)}
+  .insp-close{position:absolute;top:.8rem;right:.8rem;background:none;border:1px solid var(--edge);color:var(--bone-dim);width:36px;height:36px;cursor:pointer;font-size:.95rem;transition:all .2s}
+  .insp-close:hover{color:var(--blood-bright);border-color:var(--blood-bright)}
+  .insp-full .pv-head{display:flex;gap:1.4rem;align-items:center;margin-bottom:1.4rem;flex-wrap:wrap}
+  .insp-full .pv-portrait{width:84px;height:84px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2.2rem;border:2px solid var(--gold);background:var(--stone-3);overflow:hidden}
+  .insp-full .pv-portrait img{width:100%;height:100%;object-fit:cover}
+  .insp-full .pv-name{font-family:'Cinzel',serif;font-weight:900;font-size:1.5rem;color:var(--bone-bright)}
+  .insp-full .pv-class{font-style:italic;color:var(--arcane);font-size:1.05rem;margin-top:.15rem}
+  .insp-full .pv-stats{display:grid;grid-template-columns:repeat(6,1fr);gap:.6rem;margin-bottom:1.3rem}
+  .insp-full .pv-stat{text-align:center;padding:.7rem .2rem .6rem;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--edge)}
+  .insp-full .pv-stat .a{font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.2em;color:var(--gold)}
+  .insp-full .pv-stat .s{font-family:'Cinzel',serif;font-weight:900;font-size:1.3rem;color:var(--bone-bright)}
+  .insp-full .pv-stat .m{font-size:.85rem;color:var(--arcane)}
+  .insp-full .pv-vitals{display:flex;gap:1.4rem;flex-wrap:wrap;font-size:.98rem;color:var(--bone-dim);margin-bottom:1.3rem}
+  .insp-full .pv-vitals b{color:var(--bone-bright);font-size:1.05rem}
+  .insp-full .pv-traits{display:flex;flex-wrap:wrap;gap:.45rem;margin-bottom:1.3rem}
+  .insp-full .pv-trait{font-size:.88rem;padding:.3rem .8rem;border:1px solid rgba(139,95,212,.5);color:#cbb3f2;background:rgba(139,95,212,.08);border-radius:2px}
+  .insp-full .pv-story{font-style:italic;color:var(--bone);line-height:1.7;border-left:2px solid var(--gold);padding-left:1rem;margin-bottom:1.2rem;font-size:.95rem}
+  .insp-full .inv-list{font-size:.85rem;color:var(--bone);line-height:1.8}
+  .insp-full .inv-list b{color:var(--gold-bright)}
+  .insp-full .pv-actions{display:flex;gap:.8rem;flex-wrap:wrap;margin-top:1.4rem}
+  .insp-full .pv-go{font-family:'Cinzel',serif;font-weight:700;font-size:.9rem;letter-spacing:.14em;text-transform:uppercase;color:#1a1206;cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);border:1px solid #6e5510;padding:.8rem 1.5rem;border-radius:2px;transition:all .2s}
+  .insp-full .pv-go:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-2px)}
+  .insp-full .pv-go:disabled{opacity:.55;cursor:wait}
+  @media(max-width:640px){.vault-grid{grid-template-columns:1fr}.insp-full .pv-stats{grid-template-columns:repeat(3,1fr)}.insp-full .pv-actions{flex-direction:column;align-items:stretch}.insp-full .pv-go{width:100%;min-height:50px}.insp-modal{padding:1.4rem 1rem}}
 </style>
 <link rel="stylesheet" href="snes.css?v=19">
 <script src="sprites.js?v=20260802a"></script>
@@ -145,6 +192,14 @@
       <option value="sv">⚔️ Svenska</option>
     </select>
     <span class="lang-hint" id="lang-hint"></span>
+  </div>
+
+  <!-- ═══════════ THE VAULT — färdiga hjältar ═══════════ -->
+  <div class="section-label"><span class="num">✦</span> The Vault — saved heroes</div>
+  <div id="vault-wrap">
+    <div class="vault-empty" id="vault-empty">No saved heroes yet. <a href="characters.html" style="color:var(--gold)">Forge one</a> — or summon below and save it for later.</div>
+    <div class="vault-grid" id="vault-grid"></div>
+    <div class="vault-note" id="vault-note" style="display:none">Choose a saved hero to step straight into this campaign — or summon a fresh one below.</div>
   </div>
 
   <!-- ═══════════ 1. ARKETYPER ═══════════ -->
@@ -233,6 +288,14 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- ═══════════ VAULT INSPECT OVERLAY ═══════════ -->
+<div class="insp-overlay" id="vault-insp-overlay" onclick="if(event.target===this)closeVaultInspect()">
+  <div class="insp-modal">
+    <button class="insp-close" onclick="closeVaultInspect()">✕</button>
+    <div id="vault-insp-content" class="insp-full"></div>
+  </div>
+</div>
 
 <script src="sfx.js?v=20260802a"></script>
 <script src="api.js?v=20260802c"></script>
@@ -1334,8 +1397,134 @@ for(let i=0;i<40;i++)embers.push(spawn(true));
 function tick(){ctx.clearRect(0,0,W,H);for(let i=0;i<embers.length;i++){const e=embers[i];e.life++;e.y-=e.vy;e.x+=e.vx+Math.sin(e.life*.02)*.12;const fade=Math.min(1,e.life/60)*Math.max(0,1-e.life/e.max);const fl=.5+Math.sin(e.life*.15+i)*.35;ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fillStyle=`hsla(${e.hue},90%,60%,${.45*fade*fl})`;ctx.shadowColor=`hsla(${e.hue},90%,55%,${.7*fade})`;ctx.shadowBlur=7;ctx.fill();if(e.life>e.max||e.y<-12)embers[i]=spawn(false);}requestAnimationFrame(tick);}
 tick();
 
+// ═══════════════════════════════════════
+// THE VAULT — färdiga hjältar att kliva in i kampanjen med
+// ═══════════════════════════════════════
+let _vaultChars = [];
+
+async function loadVaultHeroes() {
+  try {
+    const res = await API.vaultList();
+    _vaultChars = res.characters || [];
+  } catch (e) { _vaultChars = []; }
+  renderVaultHeroes();
+}
+
+function _vEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function _vMod(score) { const m = Math.floor(((score||10)-10)/2); return m >= 0 ? '+'+m : ''+m; }
+
+function renderVaultHeroes() {
+  const grid = document.getElementById('vault-grid');
+  const empty = document.getElementById('vault-empty');
+  const note = document.getElementById('vault-note');
+  if (!_vaultChars.length) { empty.style.display = ''; grid.innerHTML = ''; note.style.display = 'none'; return; }
+  empty.style.display = 'none';
+  note.style.display = '';
+  grid.innerHTML = _vaultChars.map(c => {
+    const cls = [c.race, c.class].filter(Boolean).join(' · ');
+    const avatar = c.has_avatar
+      ? `<img src="${API.vaultAvatarUrl(c.id)}?t=${Date.now()}" alt="">`
+      : '🎭';
+    return `<div class="vcard">
+      <div class="vcard-head">
+        <div class="vcard-avatar">${avatar}</div>
+        <div>
+          <div class="vcard-name">${_vEsc(c.name)}</div>
+          <div class="vcard-cls">${_vEsc(cls)} · L${c.level||1}</div>
+        </div>
+      </div>
+      <div class="vcard-story">${_vEsc(c.story||'')}</div>
+      <div class="vcard-actions">
+        <button class="vcard-use" id="vuse-${_vEsc(c.id)}" onclick="useVaultHero('${_vEsc(c.id)}', this)">⚔️ Take This Hero</button>
+        <button class="vcard-inspect" onclick="openVaultInspect('${_vEsc(c.id)}')">Inspect</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function useVaultHero(charId, btn) {
+  // Kampanjspråk krävs (samma regel som Summon)
+  const selLang = selectedLang();
+  if (!selLang) {
+    toast('🌐 ' + I18N.t('Välj kampanjspråk först!'));
+    return;
+  }
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Awakening…'; }
+  try {
+    // Säkerställ kampanj + språk (samma flöde som summon())
+    const { campaign } = await API.getCampaign();
+    if (!campaign) {
+      await API.createCampaign(sessionStorage.getItem('dnd_adventure_mode') || 'freestyle', selLang);
+    } else {
+      try { await API.updateCampaignLanguage(selLang); } catch (e) { console.warn(e); }
+    }
+    // Lyft in valv-karaktären i kampanjen
+    await API.vaultUse(charId);
+    SFX.gate();
+    toast('⚔️ The hero steps to the table!');
+    sessionStorage.setItem('dnd_vault_character', charId);
+    setTimeout(() => { location.href = 'chat.html'; }, 900);
+  } catch (e) {
+    SFX.error();
+    toast('⚠ ' + (e.message || 'Could not take this hero'));
+    if (btn) { btn.disabled = false; btn.textContent = '⚔️ Take This Hero'; }
+  }
+}
+
+// ── Inspektionsvy (read-only) ──
+async function openVaultInspect(charId) {
+  let entry;
+  try {
+    const res = await API.vaultGet(charId);
+    entry = res.entry;
+  } catch (e) { toast('⚠ ' + (e.message || 'Could not load character')); return; }
+  const ch = entry.character || {};
+  const abilities = ch.abilities || {};
+  const stats = ['STR','DEX','CON','INT','WIS','CHA'].map(k => {
+    const s = (abilities[k] || {}).score || 10;
+    return `<div class="pv-stat"><div class="a">${k}</div><div class="s">${s}</div><div class="m">${_vMod(s)}</div></div>`;
+  }).join('');
+  const hp = ch.hp || {};
+  const hpMax = typeof hp === 'object' ? (hp.max || 10) : (hp || 10);
+  const traits = (Array.isArray(ch.traits) ? ch.traits : []).map(t => typeof t === 'string' ? t : (t.name || '')).filter(Boolean);
+  const inv = entry.inventory || [];
+  const invHtml = inv.length
+    ? `<div style="font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin:1.2rem 0 .5rem">Equipment</div>
+       <div class="inv-list">${inv.map(it => `▸ <b>${_vEsc(it.name||'?')}</b>${it.qty && it.qty>1 ? ' ×'+it.qty : ''}${it.weight ? ' · '+it.weight+' lbs' : ''}`).join('<br>')}</div>`
+    : '';
+  const avatar = entry.avatar
+    ? `<div class="pv-portrait"><img src="${API.vaultAvatarUrl(charId)}?t=${Date.now()}" alt=""></div>`
+    : `<div class="pv-portrait">🎭</div>`;
+
+  document.getElementById('vault-insp-content').innerHTML = `
+    <div class="pv-head">
+      ${avatar}
+      <div>
+        <div class="pv-name">${_vEsc(ch.name||'Nameless')}</div>
+        <div class="pv-class">${_vEsc([ch.race, ch.class].filter(Boolean).join(' · '))} · L${ch.level||1} · ${_vEsc(ch.alignment||'')}</div>
+      </div>
+    </div>
+    <div class="pv-stats">${stats}</div>
+    <div class="pv-vitals">
+      <span>❤️ HP <b>${hpMax}</b></span>
+      <span>🛡️ AC <b>${ch.ac||10}</b></span>
+      <span>⚡ Init <b>${(ch.initiative||0)>=0?'+':''}${ch.initiative||0}</b></span>
+      <span>🎯 Prof <b>+${ch.proficiency||2}</b></span>
+    </div>
+    <div class="pv-traits">${traits.map(t=>`<span class="pv-trait">✦ ${_vEsc(t)}</span>`).join('')}</div>
+    <div class="pv-story">${_vEsc(ch.story||ch.background||'')}</div>
+    ${invHtml}
+    <div class="pv-actions">
+      <button class="pv-go" onclick="closeVaultInspect();useVaultHero('${_vEsc(charId)}')">⚔️ Take This Hero</button>
+    </div>`;
+  document.getElementById('vault-insp-overlay').classList.add('show');
+}
+
+function closeVaultInspect() { document.getElementById('vault-insp-overlay').classList.remove('show'); }
+
 // Init: koppla reasoning-fönstrets rensa-knapp
 _initReasoningClear();
+loadVaultHeroes();
 </script>
 </body>
 </html>

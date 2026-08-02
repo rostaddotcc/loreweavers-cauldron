@@ -4400,6 +4400,18 @@ function usageRows(models) {
       '</div>';
   }).join('');
 }
+function ttsRow(t, lang) {
+  t = t || {};
+  const calls = t.calls || 0;
+  if (!calls) return '';
+  const sec = Math.round(t.seconds || 0);
+  const min = ((t.seconds || 0) / 60).toFixed(1);
+  return '<div class="usage-row">' +
+    '<span class="u-model">🔊 ' + (lang ? 'TTS (uppläst)' : 'TTS (spoken)') + '</span>' +
+    '<span class="u-val">' + fmtTok(t.tokens || 0) + ' tkn ≈</span>' +
+    '<span class="u-sub">' + calls + ' ' + (lang ? 'uppläsningar' : 'renders') + ' · ' + fmtTok(t.chars || 0) + ' ' + (lang ? 'tecken' : 'chars') + ' · ' + sec + ' s (' + min + ' min)</span>' +
+    '</div>';
+}
 async function openUsageModal() {
   const overlay = document.getElementById('usage-overlay');
   const body = document.getElementById('usage-body');
@@ -4418,6 +4430,7 @@ async function openUsageModal() {
     if (ac.background_tokens) {
       html += '<div class="usage-row"><span class="u-model">🛠️ ' + (lang ? 'Bakgrund (fakta/dagbok/summaries)' : 'Background (facts/logbook/summaries)') + '</span><span class="u-val">' + fmtTok(ac.background_tokens) + ' tkn</span></div>';
     }
+    html += ttsRow(ac.tts, lang);
     html += '</div>';
     html += '<div class="usage-sec">';
     html += '<div class="usage-sec-title">' + (lang ? '👤 Totalt för kontot' : '👤 Account total') + '</div>';
@@ -4425,6 +4438,7 @@ async function openUsageModal() {
     if (at.background_tokens) {
       html += '<div class="usage-row"><span class="u-model">🛠️ ' + (lang ? 'Bakgrund (fakta/dagbok/summaries)' : 'Background (facts/logbook/summaries)') + '</span><span class="u-val">' + fmtTok(at.background_tokens) + ' tkn</span></div>';
     }
+    html += ttsRow(at.tts, lang);
     html += '<div class="usage-row"><span class="usage-total">Σ ' + (lang ? 'Totalt' : 'Total') + '</span><span class="u-val usage-total">' + fmtTok(at.total_tokens) + ' tkn</span></div>';
     html += '</div>';
     body.innerHTML = html;

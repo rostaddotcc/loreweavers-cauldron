@@ -1659,6 +1659,96 @@ def _split_tts_segments(text: str, limit: int = 900) -> list[str]:
     return segments
 
 
+# ── TTS-förbrukning: tokens / sekunder / minuter renderat ──
+def _tts_token_estimate(chars: int) -> int:
+    """Token-estimat för TTS (~4 tecken/token, standardheuristic).
+
+    DashScope fakturerar TTS per tecken; estimatet gör att förbrukningen
+    går att jämföra med LLM-tokenförbrukningen i usage-vyn.
+    """
+    return max(1, -(-chars // 4))  # integer-ceil av chars/4
+
+
+def _mp3_duration_seconds(data: bytes) -> float:
+    """Räkna MP3-längd i sekunder genom att räkna ramar — ingen ffmpeg behövs.
+
+    DashScope producerar MP3_22050HZ_MONO (CBR). Parsar MPEG1/2/2.5
+    Layer III-ramar: total_samples / sample_rate.
+    """
+    n = len(data)
+    if n < 4:
+        return 0.0
+    BITRATES_V1 = (0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320)
+    BITRATES_V2 = (0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160)
+    SR_V1 = (44100, 48000, 32000)
+    SR_V2 = (22050, 24000, 16000)
+    SR_V25 = (11025, 12000, 8000)
+    frames = 0
+    total_samples = 0
+    sr_last = 22050
+    i = 0
+    while i < n - 4:
+        if data[i] != 0xFF or (data[i + 1] & 0xE0) != 0xE0:
+            i += 1
+            continue
+        b1, b2, b3 = data[i + 1], data[i + 2], data[i + 3]
+        ver = (b1 >> 3) & 0x3
+        layer = (b1 >> 1) & 0x3
+        if ver == 1 or layer != 1:          # reserverad version / ej Layer III
+            i += 1
+            continue
+        br_idx = (b2 >> 4) & 0xF
+        sr_idx = (b2 >> 2) & 0x3
+        pad = (b2 >> 1) & 0x1
+        if br_idx in (0, 15) or sr_idx == 3:
+            i += 1
+            continue
+        if ver == 3:                        # MPEG1 Layer III
+            bitrate = BITRATES_V1[br_idx] * 1000
+            sr = SR_V1[sr_idx]
+            spf = 1152
+            flen = 144 * bitrate // sr + pad
+        else:                               # MPEG2 / MPEG2.5 Layer III
+            bitrate = BITRATES_V2[br_idx] * 1000
+            sr = (SR_V2 if ver == 2 else SR_V25)[sr_idx]
+            spf = 576
+            flen = 72 * bitrate // sr + pad
+        if sr == 0:
+            i += 1
+            continue
+        total_samples += spf
+        frames += 1
+        sr_last = sr
+        i += max(flen, 4)
+    if frames == 0 or total_samples == 0:
+        return 0.0
+    return total_samples / sr_last
+
+
+def _record_tts_usage(username: str, chars: int, seconds: float, api_call: bool) -> None:
+    """Bokför TTS-förbrukning i aktiva kampanjens state.meta.tts_usage.
+
+    Rullas upp i /api/campaign/usage och admin-vyn så man ser om spelare
+    använder TTS-funktionen (och hur mycket det kostar). `tokens` är ett
+    estimat (≈ chars/4) — TTS faktureras per tecken av DashScope.
+    """
+    try:
+        state = store.get(username)
+        if not state:
+            return
+        meta = state.setdefault("meta", {})
+        tts = meta.setdefault("tts_usage", {"calls": 0, "api_calls": 0, "chars": 0, "tokens": 0, "seconds": 0.0})
+        tts["calls"] = (tts.get("calls", 0) or 0) + 1
+        if api_call:
+            tts["api_calls"] = (tts.get("api_calls", 0) or 0) + 1
+        tts["chars"] = (tts.get("chars", 0) or 0) + chars
+        tts["tokens"] = (tts.get("tokens", 0) or 0) + _tts_token_estimate(chars)
+        tts["seconds"] = (tts.get("seconds", 0) or 0) + seconds
+        store.save(state)
+    except Exception:
+        logger.exception("🔊 Kunde inte bokföra TTS-usage")
+
+
 def _synth_qwen_tts(voice: str, text: str) -> bytes:
     """Blockande DashScope-syntes — körs i en tråd (asyncio.to_thread)."""
     try:
@@ -1693,7 +1783,8 @@ async def tts_voices(morkrets_token: str | None = Cookie(None)):
 @app.post("/api/tts")
 async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
     """Generera tal från text via Qwen-Audio-3.0-TTS-Plus (Token Plan)."""
-    _get_current_user(morkrets_token)
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
     text = req.text.strip()
     if not text:
         raise HTTPException(400, "Ingen text att läsa upp")
@@ -1711,6 +1802,7 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
     cached = _TTS_CACHE.get(cache_key)
     if cached is not None:
         logger.info("🔊 TTS cache hit: voice=%s, %d chars, %d bytes", voice, len(text), len(cached))
+        _record_tts_usage(username, len(text), _mp3_duration_seconds(cached), api_call=False)
         return StreamingResponse(io.BytesIO(cached), media_type="audio/mpeg")
 
     logger.info("🔊 TTS synth: model=qwen-audio-3.0-tts-plus, voice=%s, %d chars, %d segments", voice, len(text), len(segments))
@@ -1731,6 +1823,7 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
         raise HTTPException(502, f"Kunde inte generera ljud — {e}")
 
     logger.info("🔊 TTS done: voice=%s, %d chars (%d seg) → %d bytes (%.1fs)", voice, len(text), len(segments), len(audio), time.time() - _t0)
+    _record_tts_usage(username, len(text), _mp3_duration_seconds(audio), api_call=True)
     if len(_TTS_CACHE) >= _TTS_CACHE_MAX:
         _TTS_CACHE.pop(next(iter(_TTS_CACHE)))
     _TTS_CACHE[cache_key] = audio
@@ -1855,6 +1948,7 @@ async def get_campaign_usage(morkrets_token: str | None = Cookie(None)):
         "active_campaign": {
             "models": _finalize(campaign_models),
             "background_tokens": bg_campaign,
+            "tts": state.get("meta", {}).get("tts_usage", {}),
         },
         "account_total": {
             "models": _finalize(totals),
@@ -1862,6 +1956,7 @@ async def get_campaign_usage(morkrets_token: str | None = Cookie(None)):
             "prompt_tokens": scan["prompt_tokens"],
             "completion_tokens": scan["completion_tokens"],
             "total_tokens": scan["total_tokens"],
+            "tts": scan.get("tts_usage", {}),
         },
     }
 
@@ -5417,10 +5512,11 @@ def _scan_user_transcripts(user: str) -> dict:
     turns = 0
     last_active = ""
     sessions = []
+    tts_usage = {"calls": 0, "api_calls": 0, "chars": 0, "tokens": 0, "seconds": 0.0}
 
     user_dir = CAMPAIGNS_DIR / user
     if not user_dir.exists():
-        return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "turns": 0, "last_active": "", "sessions": sessions}
+        return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "turns": 0, "last_active": "", "sessions": sessions, "tts_usage": tts_usage}
 
     for campaign_dir in sorted(user_dir.iterdir()):
         if not campaign_dir.is_dir():
@@ -5538,6 +5634,14 @@ def _scan_user_transcripts(user: str) -> dict:
                         mt["prompt_tokens"] += up
                         mt["completion_tokens"] += uc
                         mt["calls"] += 1
+                    # TTS-förbrukning (tokens/sekunder/minuter renderat) per kampanj
+                    tt = st.get("meta", {}).get("tts_usage") or {}
+                    if tt:
+                        tts_usage["calls"] += tt.get("calls", 0) or 0
+                        tts_usage["api_calls"] += tt.get("api_calls", 0) or 0
+                        tts_usage["chars"] += tt.get("chars", 0) or 0
+                        tts_usage["tokens"] += tt.get("tokens", 0) or 0
+                        tts_usage["seconds"] += tt.get("seconds", 0) or 0
             except (OSError, json.JSONDecodeError):
                 pass
             sessions.append({
@@ -5559,6 +5663,7 @@ def _scan_user_transcripts(user: str) -> dict:
         "turns": turns,
         "last_active": last_active,
         "sessions": sessions,
+        "tts_usage": tts_usage,
     }
 
 
@@ -5603,6 +5708,8 @@ async def admin_stats(morkrets_token: str | None = Cookie(None)):
         total_turns += scan["turns"]
         meta = _account_meta(username, udata, campaigns)
         g = geo.get(username, {})
+        tts = scan.get("tts_usage", {})
+        tts_sec = tts.get("seconds", 0) or 0
         user_stats.append({
             "username": username,
             "role": role,
@@ -5620,6 +5727,13 @@ async def admin_stats(morkrets_token: str | None = Cookie(None)):
             "country": g.get("country", ""),
             "country_code": g.get("countryCode", ""),
             "country_flag": iplog.country_flag(g.get("countryCode", "")),
+            # TTS-förbrukning (uppläst ljud)
+            "tts_calls": tts.get("calls", 0) or 0,
+            "tts_api_calls": tts.get("api_calls", 0) or 0,
+            "tts_chars": tts.get("chars", 0) or 0,
+            "tts_tokens": tts.get("tokens", 0) or 0,
+            "tts_seconds": tts_sec,
+            "tts_minutes": round(tts_sec / 60, 1),
         })
 
     return {
@@ -5671,6 +5785,15 @@ async def admin_user_detail(username: str, morkrets_token: str | None = Cookie(N
         cid = c["campaign_id"]
         ct = campaign_tokens.get(cid, {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "turns": 0, "sessions": [], "roles": {}, "models": {}})
         roles = ct["roles"]
+        # TTS-förbrukning per kampanj — läses direkt från state.json
+        tts_usage = {}
+        try:
+            st_file = CAMPAIGNS_DIR / username / cid / "state.json"
+            if st_file.exists():
+                with open(st_file) as f:
+                    tts_usage = (json.load(f).get("meta", {}) or {}).get("tts_usage", {}) or {}
+        except (OSError, json.JSONDecodeError):
+            pass
         enriched.append({
             **c,
             "prompt_tokens": ct["prompt_tokens"],
@@ -5685,6 +5808,8 @@ async def admin_user_detail(username: str, morkrets_token: str | None = Cookie(N
             "role_breakdown": roles,
             # Per-modell-aggregation (t.ex. {"deepseek-v4-flash-0731": {...}})
             "model_breakdown": ct["models"],
+            # TTS per kampanj: tokens/sekunder/minuter renderat
+            "tts_usage": tts_usage,
         })
 
     meta = _account_meta(username, users[username], campaigns)
@@ -5707,6 +5832,7 @@ async def admin_user_detail(username: str, morkrets_token: str | None = Cookie(N
         "country": g.get("country", ""),
         "country_code": g.get("countryCode", ""),
         "country_flag": iplog.country_flag(g.get("countryCode", "")),
+        "tts_usage": scan.get("tts_usage", {}),
         "campaigns": enriched,
     }
 

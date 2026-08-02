@@ -120,6 +120,7 @@
   }
   .token-num { color: var(--term-green); font-family: monospace; }
   .turn-num { color: var(--term-amber); font-family: monospace; }
+  .tts-num { color: var(--arcane); font-family: monospace; white-space: nowrap; }
   .last-active { color: var(--bone-dim); font-size: 0.68rem; }
   .player-table th.sortable { cursor: pointer; user-select: none; white-space: nowrap; transition: color .15s; }
   .player-table th.sortable:hover { color: var(--gold-bright); }
@@ -270,6 +271,14 @@ function fmtTokens(n) {
   if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
   return String(n);
 }
+// 🔊 TTS-kolumn: "—" om ingen användning, annars minuter + sekunder
+function fmtTTS(u) {
+  const s = u.tts_seconds || 0;
+  if (!s) return '—';
+  const min = Math.floor(s / 60);
+  const sec = Math.round(s % 60);
+  return (min > 0 ? min + 'm ' : '') + sec + 's';
+}
 
 function relTime(iso) {
   if (!iso) return '—';
@@ -362,6 +371,7 @@ function _sortVal(u) {
     case 'campaigns': return u.total_campaigns || 0;
     case 'tokens': return u.total_tokens || 0;
     case 'turns': return u.total_turns || 0;
+    case 'tts_seconds': return u.tts_seconds || 0;
     case 'last_active': { const t = Date.parse(u.last_active); return isNaN(t) ? 0 : t; }
     case 'created': { const t = Date.parse(u.created_at); return isNaN(t) ? 0 : t; }
     case 'last_login': { const t = Date.parse(u.last_login); return isNaN(t) ? 0 : t; }
@@ -443,7 +453,7 @@ function renderStats(data) {
 
   // Desktop table
   html += '<table class="player-table"><thead><tr>';
-  html += thSort('User', 'username') + thSort('Role', 'role') + thSort('Campaigns', 'campaigns') + thSort('Tokens', 'tokens') + thSort('Turns', 'turns') + thSort('Last Active', 'last_active') + thSort('Created', 'created') + thSort('Last Login', 'last_login') + thSort('Turn Cap', 'turn_cap') + '<th></th>';
+  html += thSort('User', 'username') + thSort('Role', 'role') + thSort('Campaigns', 'campaigns') + thSort('Tokens', 'tokens') + thSort('Turns', 'turns') + thSort('🔊 TTS', 'tts_seconds') + thSort('Last Active', 'last_active') + thSort('Created', 'created') + thSort('Last Login', 'last_login') + thSort('Turn Cap', 'turn_cap') + '<th></th>';
   html += '</tr></thead><tbody>';
 
   users.forEach((u, i) => {
@@ -457,13 +467,14 @@ function renderStats(data) {
     html += `<td>${u.total_campaigns}</td>`;
     html += `<td class="token-num">${fmtTokens(u.total_tokens)}</td>`;
     html += `<td class="turn-num">${u.total_turns}</td>`;
+    html += `<td class="tts-num" title="${fmtTokens(u.tts_tokens || 0)} tkn ≈ · ${fmtTokens(u.tts_chars || 0)} chars · ${(u.tts_api_calls || 0)} api calls">${fmtTTS(u)}</td>`;
     html += `<td class="last-active">${relTime(u.last_active)}</td>`;
     html += `<td class="last-active">${relTime(u.created_at)}</td>`;
     html += `<td class="last-active">${relTime(u.last_login)}</td>`;
     html += `<td class="cap-cell"><input type="number" min="0" step="1" value="${capVal}" id="cap-${i}" class="cap-input"><button onclick="event.stopPropagation();setCap('${u.username}', ${i})" class="cap-btn">Set</button><span class="cap-hint">0 = ∞</span></td>`;
     html += `<td><button onclick="event.stopPropagation();deleteUser('${u.username}')" style="background:none;border:1px solid var(--blood);color:var(--blood-bright);padding:.2rem .5rem;font-size:.6rem;cursor:pointer">✕ Delete</button></td>`;
     html += '</tr>';
-    html += `<tr class="campaign-detail" id="detail-${i}"><td colspan="10"><div class="campaign-inner" id="inner-${i}"></div></td></tr>`;
+    html += `<tr class="campaign-detail" id="detail-${i}"><td colspan="11"><div class="campaign-inner" id="inner-${i}"></div></td></tr>`;
   });
   html += '</tbody></table>';
 
@@ -475,6 +486,7 @@ function renderStats(data) {
     html += `<div class="m-card" onclick="toggleDetail(${i}, '${u.username}')">`;
     html += `<div class="mc-head"><span class="mc-user">${u.country_flag || '❓'} ${u.username}${badge}</span><span class="mc-tokens">${fmtTokens(u.total_tokens)} tkn</span></div>`;
     html += `<div class="mc-meta"><span>${u.total_campaigns} campaigns</span><span>${u.total_turns} turns</span><span>${relTime(u.last_active)}</span></div>`;
+    html += `<div class="mc-meta"><span>🔊 TTS: ${fmtTTS(u)}</span><span>${fmtTokens(u.tts_tokens || 0)} tkn ≈</span><span>${u.tts_calls || 0} renders</span></div>`;
     html += `<div class="mc-meta"><span>Created ${relTime(u.created_at)}</span><span>Login ${relTime(u.last_login)}</span></div>`;
     html += `<div class="mc-cap" style="display:flex;gap:.4rem;align-items:center;margin-top:.5rem">`;
     html += `<input type="number" min="0" step="1" value="${capVal}" id="cap-${i}" class="cap-input">`;
@@ -534,6 +546,10 @@ function renderDetail(container, data) {
   html += '<span>Last login: <b style="color:var(--bone);font-weight:400">' + fmtDate(data.last_login) + '</b></span>';
   html += '<span>Turn cap: <b style="color:var(--gold-bright);font-weight:700">' + (data.turn_cap === 0 ? 'Unlimited' : data.turn_cap) + '</b></span>';
   html += '<span>Turns used: <b style="color:var(--term-amber);font-weight:400">' + (data.turns_used || 0) + '</b></span>';
+  const at = data.tts_usage || {};
+  if (at.calls) {
+    html += '<span>🔊 TTS: <b style="color:var(--arcane);font-weight:400">' + fmtTokens(at.tokens || 0) + ' tkn ≈ · ' + (at.calls || 0) + ' renders · ' + fmtTokens(at.chars || 0) + ' chars · ' + Math.round(at.seconds || 0) + 's (' + ((at.seconds || 0) / 60).toFixed(1) + ' min)</b></span>';
+  }
   html += '<span>📍 Land: <b style="color:var(--bone);font-weight:400">' + (data.country_flag || '❓') + ' ' + (data.country || 'Okänt') + '</b>' + (data.ip ? ' <span style="opacity:.6">(' + data.ip + ')</span>' : '') + '</span>';
   html += '</div>';
   if (campaigns.length === 0) {
@@ -592,6 +608,11 @@ function renderDetail(container, data) {
           html += '<span>🤖 ' + m + ': <b>' + fmtTokens(mTotal) + '</b> (' + (mv.calls || 0) + ' anrop)</span>';
         });
         html += '</div>';
+      }
+      // TTS per kampanj — tokens/sekunder/minuter renderat
+      const ctts = c.tts_usage || {};
+      if (ctts.calls) {
+        html += '<div class="role-split"><span>🔊 TTS: <b>' + fmtTokens(ctts.tokens || 0) + ' tkn ≈</b> · ' + (ctts.calls || 0) + ' uppläsningar · ' + fmtTokens(ctts.chars || 0) + ' tecken · ' + Math.round(ctts.seconds || 0) + 's (' + ((ctts.seconds || 0) / 60).toFixed(1) + ' min)</span></div>';
       }
     }
 

@@ -296,7 +296,7 @@ const API = (() => {
       return req('/api/campaign/language', { method: 'PATCH', body: JSON.stringify({ language }) });
     },
 
-    // ── Guardian model (admin only, per campaign) ──
+    // ── Lorekeeper model (admin only, per campaign) ──
     async setGuardianModel(modelId) {
       if (MOCK) return { ok: true, guardian_model: modelId };
       return req('/api/campaign/guardian-model', { method: 'PATCH', body: JSON.stringify({ guardian_model: modelId }) });

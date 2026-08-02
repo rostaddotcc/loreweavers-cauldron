@@ -63,7 +63,7 @@
   .topbar .brand { font-size: .55rem; }
  }
 </style>
-<link rel="stylesheet" href="snes.css?v=12">
+<link rel="stylesheet" href="snes.css?v=13">
 <script src="sprites.js?v=20260802a"></script>
 <script src="fonts.js?v=20260802c"></script>
 <script src="themes.js?v=20260802c"></script>
@@ -96,7 +96,7 @@
 
  <h3>Combat — v26 "Chat-First"</h3>
  <ul>
-  <li><span class="tag feat">FEAT</span> The DM narrates everything; the Guardian extracts the mechanics — no hidden battle AI deciding your fate.</li>
+  <li><span class="tag feat">FEAT</span> The DM narrates everything; the Lorekeeper extracts the mechanics — no hidden battle AI deciding your fate.</li>
   <li><span class="tag feat">FEAT</span> Turn engine: initiative order, action economy, and proper turn rotation.</li>
   <li><span class="tag feat">FEAT</span> Inline combat UI: round banners, enemy cards, HP-diff lines, and a status bar above the input (R3 │ enemy 12/24 │ Du 18/22).</li>
   <li><span class="tag fix">FIX</span> Initiative reveal, awakening re-trigger, HP <code>null</code> crashes, log-size limits, and player-HP sync in the combat tag.</li>
@@ -116,8 +116,8 @@
   <li><span class="tag ai">AI</span> DM prompts v23→v26: DC ladder, the DM Triad / Rule of Cool, 5e resting, advantage/disadvantage, quick rules, world-consistency name rules.</li>
   <li><span class="tag ai">AI</span> Visible reasoning bubble — watch the DM think, with token/time readout in the reply footer.</li>
   <li><span class="tag ai">AI</span> Dynamic narration length: short for action, long-form (4k tokens) for lore, books, legends.</li>
-  <li><span class="tag ai">AI</span> Model gate at adventure start: pick your DM model (admin chooses the Guardian freely).</li>
-  <li><span class="tag ai">AI</span> Guardian runs in the background, never blocking the reply — with a polling indicator and in-chat Guardian timeline.</li>
+  <li><span class="tag ai">AI</span> Model gate at adventure start: pick your DM model (admin chooses the Lorekeeper freely).</li>
+  <li><span class="tag ai">AI</span> Lorekeeper runs in the background, never blocking the reply — with a polling indicator and in-chat Lorekeeper timeline.</li>
   <li><span class="tag ai">AI</span> Character generation: forbidden-name lists + higher temperature for varied, unexpected names.</li>
  </ul>
 
@@ -148,7 +148,7 @@
  <h3>Notable fixes</h3>
  <ul>
   <li>Raw HTTP errors surface in chat (402 / 429 / 500 / network) with a "try changing models in Settings" hint.</li>
-  <li>Roll buttons and Guardian reports no longer fire mid-typewriter; the chat always pins to the bottom.</li>
+  <li>Roll buttons and Lorekeeper reports no longer fire mid-typewriter; the chat always pins to the bottom.</li>
   <li>Mobile: no iOS auto-zoom, safe-area padding, 44px tap targets, drawers/sheets z-order fixed.</li>
   <li>Logbook/facts ordering, map clipping, flexbox starvation — the usual suspects, banished.</li>
  </ul>

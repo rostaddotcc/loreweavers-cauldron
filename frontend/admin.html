@@ -233,7 +233,7 @@
     .back-btn { min-height: 44px; display: inline-flex; align-items: center; }
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=12">
+<link rel="stylesheet" href="snes.css?v=13">
 <script src="sprites.js?v=20260802a"></script>
 <script src="fonts.js?v=20260802c"></script>
 <script src="themes.js?v=20260802c"></script>
@@ -587,14 +587,14 @@ function renderDetail(container, data) {
       html += '<span class="dot completion"></span>Response: ' + fmtTokens(compT);
       html += '<span>Total: ' + fmtTokens(total) + '</span>';
       html += '</div>';
-      // Per-roll uppdelning — DM vs Guardian vs bakgrund (faktextraktion,
-      // sammanfattningar, dag-entries). Guardian-tokens inkluderas ALLTID.
+      // Per-roll uppdelning — DM vs Lorekeeper vs bakgrund (faktextraktion,
+      // sammanfattningar, dag-entries). Lorekeeper-tokens inkluderas ALLTID.
       const dmT = c.dm_tokens || 0;
       const gdT = c.guardian_tokens || 0;
       const bgT = c.background_tokens || 0;
       html += '<div class="role-split">';
       html += '<span>🧙 DM: <b>' + fmtTokens(dmT) + '</b></span>';
-      html += '<span>🛡️ Guardian: <b>' + fmtTokens(gdT) + '</b></span>';
+      html += '<span>🦉 Lorekeeper: <b>' + fmtTokens(gdT) + '</b></span>';
       if (bgT > 0) html += '<span>🛠️ Bakgrund (fakta/dagbok/summaries): <b>' + fmtTokens(bgT) + '</b></span>';
       html += '</div>';
       // Per-modell-uppdelning — vilka LLM-modeller som faktiskt användes

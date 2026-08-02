@@ -393,7 +393,7 @@
     animation: effect-pop .4s cubic-bezier(.22,1,.36,1);
     transition: background .2s;
   }.event-card:hover{ background: var(--ev-bg-hover, rgba(29,21,41,.6)); }.event-card .ev-icon{ font-size: .95rem; font-style: normal; flex-shrink: 0; line-height: 1.45; }.event-card .ev-text{ flex: 1; min-width: 0; }.event-card .ev-text b{ font-style: normal; font-weight: 700; }
-  @keyframes effect-pop { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }/* Effect type colors — border, bg tint, text */.event-card.e-skada{ --ev-color: #d43a4d; --ev-bg: rgba(163,36,51,.10); --ev-bg-hover: rgba(163,36,51,.18); --ev-text: var(--blood-bright); }.event-card.e-hela{ --ev-color: #7aa35e; --ev-bg: rgba(122,163,94,.08); --ev-bg-hover: rgba(122,163,94,.15); --ev-text: #8fd48a; }.event-card.e-xp{ --ev-color: #c9a227; --ev-bg: rgba(201,162,39,.08); --ev-bg-hover: rgba(201,162,39,.15); --ev-text: var(--gold-bright); }.event-card.e-level_up{ --ev-color: #e8c65a; --ev-bg: rgba(232,198,90,.12); --ev-bg-hover: rgba(232,198,90,.20); --ev-text: var(--gold-bright); text-shadow: 0 0 10px rgba(232,198,90,.4); }.event-card.e-guld{ --ev-color: #c9a227; --ev-bg: rgba(201,162,39,.08); --ev-bg-hover: rgba(201,162,39,.15); --ev-text: var(--gold-bright); }.event-card.e-guld_fail{ --ev-color: #8a1a28; --ev-bg: rgba(100,20,30,.12); --ev-bg-hover: rgba(100,20,30,.20); --ev-text: var(--blood-bright); }.event-card.e-foremal{ --ev-color: #8b5fd4; --ev-bg: rgba(139,95,212,.08); --ev-bg-hover: rgba(139,95,212,.15); --ev-text: #cbb3f2; }.event-card.e-foremal_bort{ --ev-color: #5a4f6e; --ev-bg: rgba(90,79,110,.08); --ev-bg-hover: rgba(90,79,110,.15); --ev-text: var(--bone-dim); }.event-card.e-quest{ --ev-color: #8b5fd4; --ev-bg: rgba(139,95,212,.08); --ev-bg-hover: rgba(139,95,212,.15); --ev-text: #cbb3f2; }.event-card.e-quest_slutford{ --ev-color: #5eba4a; --ev-bg: rgba(94,186,74,.08); --ev-bg-hover: rgba(94,186,74,.15); --ev-text: #8fd48a; }.event-card.e-quest_misslyckad{ --ev-color: #d43a4d; --ev-bg: rgba(163,36,51,.10); --ev-bg-hover: rgba(163,36,51,.18); --ev-text: var(--blood-bright); }.event-card.e-npc_dod{ --ev-color: #4a3d5e; --ev-bg: rgba(74,61,94,.10); --ev-bg-hover: rgba(74,61,94,.18); --ev-text: var(--bone-dim); }.event-card.e-npc_relation{ --ev-color: #5e9aa3; --ev-bg: rgba(94,154,163,.08); --ev-bg-hover: rgba(94,154,163,.15); --ev-text: #8cc4cc; }.event-card.e-plats{ --ev-color: #5e9aa3; --ev-bg: rgba(94,154,163,.08); --ev-bg-hover: rgba(94,154,163,.15); --ev-text: #8cc4cc; }.event-card.e-tid{ --ev-color: #4a6a8a; --ev-bg: rgba(74,106,138,.08); --ev-bg-hover: rgba(74,106,138,.15); --ev-text: #7a9ab8; }.event-card.e-ny_dag{ --ev-color: #d4a01e; --ev-bg: rgba(212,160,30,.10); --ev-bg-hover: rgba(212,160,30,.18); --ev-text: #e8c65a; }.event-card.e-konsekvens{ --ev-color: #d4691e; --ev-bg: rgba(212,105,30,.08); --ev-bg-hover: rgba(212,105,30,.15); --ev-text: #e89a4a; }/* Legacy compat — keep old .msg.effect classes for any remaining references */.msg.effect .box{ border-style: solid; font-weight: 600; letter-spacing: .02em; display: none; }/* ── Guardian system log entry ── */.msg.guardian{
+  @keyframes effect-pop { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }/* Effect type colors — border, bg tint, text */.event-card.e-skada{ --ev-color: #d43a4d; --ev-bg: rgba(163,36,51,.10); --ev-bg-hover: rgba(163,36,51,.18); --ev-text: var(--blood-bright); }.event-card.e-hela{ --ev-color: #7aa35e; --ev-bg: rgba(122,163,94,.08); --ev-bg-hover: rgba(122,163,94,.15); --ev-text: #8fd48a; }.event-card.e-xp{ --ev-color: #c9a227; --ev-bg: rgba(201,162,39,.08); --ev-bg-hover: rgba(201,162,39,.15); --ev-text: var(--gold-bright); }.event-card.e-level_up{ --ev-color: #e8c65a; --ev-bg: rgba(232,198,90,.12); --ev-bg-hover: rgba(232,198,90,.20); --ev-text: var(--gold-bright); text-shadow: 0 0 10px rgba(232,198,90,.4); }.event-card.e-guld{ --ev-color: #c9a227; --ev-bg: rgba(201,162,39,.08); --ev-bg-hover: rgba(201,162,39,.15); --ev-text: var(--gold-bright); }.event-card.e-guld_fail{ --ev-color: #8a1a28; --ev-bg: rgba(100,20,30,.12); --ev-bg-hover: rgba(100,20,30,.20); --ev-text: var(--blood-bright); }.event-card.e-foremal{ --ev-color: #8b5fd4; --ev-bg: rgba(139,95,212,.08); --ev-bg-hover: rgba(139,95,212,.15); --ev-text: #cbb3f2; }.event-card.e-foremal_bort{ --ev-color: #5a4f6e; --ev-bg: rgba(90,79,110,.08); --ev-bg-hover: rgba(90,79,110,.15); --ev-text: var(--bone-dim); }.event-card.e-quest{ --ev-color: #8b5fd4; --ev-bg: rgba(139,95,212,.08); --ev-bg-hover: rgba(139,95,212,.15); --ev-text: #cbb3f2; }.event-card.e-quest_slutford{ --ev-color: #5eba4a; --ev-bg: rgba(94,186,74,.08); --ev-bg-hover: rgba(94,186,74,.15); --ev-text: #8fd48a; }.event-card.e-quest_misslyckad{ --ev-color: #d43a4d; --ev-bg: rgba(163,36,51,.10); --ev-bg-hover: rgba(163,36,51,.18); --ev-text: var(--blood-bright); }.event-card.e-npc_dod{ --ev-color: #4a3d5e; --ev-bg: rgba(74,61,94,.10); --ev-bg-hover: rgba(74,61,94,.18); --ev-text: var(--bone-dim); }.event-card.e-npc_relation{ --ev-color: #5e9aa3; --ev-bg: rgba(94,154,163,.08); --ev-bg-hover: rgba(94,154,163,.15); --ev-text: #8cc4cc; }.event-card.e-plats{ --ev-color: #5e9aa3; --ev-bg: rgba(94,154,163,.08); --ev-bg-hover: rgba(94,154,163,.15); --ev-text: #8cc4cc; }.event-card.e-tid{ --ev-color: #4a6a8a; --ev-bg: rgba(74,106,138,.08); --ev-bg-hover: rgba(74,106,138,.15); --ev-text: #7a9ab8; }.event-card.e-ny_dag{ --ev-color: #d4a01e; --ev-bg: rgba(212,160,30,.10); --ev-bg-hover: rgba(212,160,30,.18); --ev-text: #e8c65a; }.event-card.e-konsekvens{ --ev-color: #d4691e; --ev-bg: rgba(212,105,30,.08); --ev-bg-hover: rgba(212,105,30,.15); --ev-text: #e89a4a; }/* Legacy compat — keep old .msg.effect classes for any remaining references */.msg.effect .box{ border-style: solid; font-weight: 600; letter-spacing: .02em; display: none; }/* ── Lorekeeper system log entry ── */.msg.guardian{
     max-width: 580px; margin: .4rem auto;
     border: 1px solid rgba(201,162,39,.25);
     border-left: 3px solid var(--gold);
@@ -612,7 +612,7 @@
     font-style: italic; color: var(--bone-dim); font-size: .84rem;
     transition: opacity .35s, transform .35s;
     text-shadow: 0 0 12px rgba(139,95,212,.25);
-  }.dm-status .thought.fade{ opacity: 0; transform: translateY(4px); }/* ── Guardian-status (bakgrundsindikator) ── */.guardian-status{ display: none; align-items: center; gap: .8rem; padding: .3rem 1.6rem .9rem; }.guardian-status.show{ display: flex; }.guardian-pulse{
+  }.dm-status .thought.fade{ opacity: 0; transform: translateY(4px); }/* ── Lorekeeper-status (bakgrundsindikator) ── */.guardian-status{ display: none; align-items: center; gap: .8rem; padding: .3rem 1.6rem .9rem; }.guardian-status.show{ display: flex; }.guardian-pulse{
     width: 20px; height: 20px; flex-shrink: 0; position: relative;
     border: 2px solid var(--gold); border-radius: 50%;
     animation: guardian-ring 1.8s ease-in-out infinite;
@@ -874,7 +874,7 @@
     color: var(--bone-dim); font-style: italic; font-size: 0.85rem;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=12">
+<link rel="stylesheet" href="snes.css?v=13">
 <script src="sprites.js?v=20260802a"></script>
 <script src="fonts.js?v=20260802c"></script>
 <script src="themes.js?v=20260802c"></script>
@@ -911,7 +911,7 @@
         <div class="mpc-title">🧠 Modeller</div>
         <label class="mpc-label">Dungeon Master</label>
         <select id="settings-dm-model" onchange="settingsChangeModel(this.value)"></select>
-        <label class="mpc-label">Guardian</label>
+        <label class="mpc-label">Lorekeeper</label>
         <select id="settings-guardian-model" onchange="settingsChangeGuardian(this.value)"></select>
         <label class="mpc-label">Bakgrund (extraction)</label>
         <select id="settings-extraction-model" onchange="settingsChangeExtraction(this.value)"></select>
@@ -1030,7 +1030,7 @@
 
     <div class="guardian-status" id="guardian-status">
       <div class="guardian-pulse"></div>
-      <span class="thought">🛡️ Guardian processing…</span>
+      <span class="thought">🦉 Lorekeeper processing…</span>
     </div>
 
     <div class="input-area">
@@ -1144,7 +1144,7 @@
     <span class="help-cmd">/unpin [fact]</span> &nbsp;<span class="help-desc">— Remove a pinned truth</span><br>
     <span class="help-cmd">/lore [text]</span> &nbsp;&nbsp;<span class="help-desc">— Add a lore entry</span><br>
     <span class="help-cmd">/chapter [title]</span> <span class="help-desc">— End chapter (summary)</span><br>
-    <span class="help-cmd">/guardian [text]</span> <span class="help-desc">— Ask the Guardian to fix state</span><br>
+    <span class="help-cmd">/guardian [text]</span> <span class="help-desc">— Ask the Lorekeeper to fix state</span><br>
     <span class="help-cmd">/facts</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="help-desc">— Show all pinned truths</span><br>
     <span class="help-cmd">/help</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="help-desc">— Show this help</span><br>
     <br>
@@ -1866,7 +1866,7 @@ function buildMessage(type, npcKey, text, meta) {
   } else if (type === 'guardian') {
     // [COMBAT:...]-taggen tas bort ur synlig text (parsas av applyCombatTag)
     const { clean } = parseCombatTag(text);
-    const gTitle = (typeof I18N !== 'undefined' && I18N.getLang() === 'en') ? '🛡️ Guardian Report' : '🛡️ Guardian-rapport';
+    const gTitle = (typeof I18N !== 'undefined' && I18N.getLang() === 'en') ? '🦉 Lorekeeper Report' : '🦉 Lorekeeper-rapport';
     el.innerHTML = `<div class="guardian-title">${gTitle}</div><div class="box guardian-box">${mdToHtml(escapeHtml(clean))}</div>`;
   }
   return el;
@@ -2158,7 +2158,7 @@ function spawnParticles(x, y, count, colors) {
 }
 
 // ── PIXELPARTIKLAR (gnorp-stil) ──
-// Fyrkantiga pixlar som spricker ut ur meddelanden. Används för DM, Guardian, spelare.
+// Fyrkantiga pixlar som spricker ut ur meddelanden. Används för DM, Lorekeeper, spelare.
 function spawnPixelBurst(x, y, count, colors, size = 4) {
   for (let i = 0; i < count; i++) {
     const p = document.createElement('div');
@@ -2542,9 +2542,9 @@ function declineRollRequest(id) {
 async function answerRollRequest(id, notation, label) {
   const box = document.getElementById(id);
   if (!box) return;
-  // Guardian-gate: vänta tills Guardian är klar innan tärningen slås
+  // Lorekeeper-gate: vänta tills Lorekeeper är klar innan tärningen slås
   if (_guardianBusy) {
-    toast(I18N.t('🛡️ Vänta — Guardian uppdaterar…'));
+    toast(I18N.t('🛡️ Vänta — Lorekeeper uppdaterar…'));
     return;
   }
   const btn = box.querySelector('.rr-btn');
@@ -2653,7 +2653,7 @@ function showModelGate() {
   const sub = en
     ? 'This AI model will narrate your entire adventure.'
     : 'Denna AI-modell kommer att berätta hela ditt äventyr.';
-  const guardianLabel = en ? '🛡️ Guardian model' : '🛡️ Guardian-modell';
+  const guardianLabel = en ? '🦉 Lorekeeper model' : '🦉 Lorekeeper-modell';
   const guardianHint = en
     ? 'Handles mechanics: HP, XP, combat, dice checks.'
     : 'Hanterar mekanik: HP, XP, strid, tärningskast.';
@@ -2663,7 +2663,7 @@ function showModelGate() {
     : 'Dagbok, fakta, sammanfattningar — körs utan thinking.';
   const btnLabel = en ? '⚔️ Begin the Adventure' : '⚔️ Påbörja äventyret';
 
-  // Icke-admin: bara spelarmodellerna (DM + Guardian). Admin: alla. Råa ID:n visas direkt.
+  // Icke-admin: bara spelarmodellerna (DM + Lorekeeper). Admin: alla. Råa ID:n visas direkt.
   const allowed = isAdmin ? Object.keys(modelNames) : PLAYER_MODEL_IDS;
 
   const opts = allowed.map(id => {
@@ -2671,7 +2671,7 @@ function showModelGate() {
     return `<option value="${id}"${sel}>${id}</option>`;
   }).join('');
 
-  // Sparad Guardian-modell från kampanj-metat (fallback: global GUARDIAN_MODEL/qwen3.8-max)
+  // Sparad Lorekeeper-modell från kampanj-metat (fallback: global GUARDIAN_MODEL/qwen3.8-max)
   const savedGuardian = (campaignData && campaignData._raw && campaignData._raw.meta && campaignData._raw.meta.guardian_model) || 'qwen3.8-max';
 
   const guardianOpts = allowed.map(id => {
@@ -2766,7 +2766,7 @@ function beginAdventure() {
   // Spara DM-modellen per kampanj server-side — behålls vid återkomst
   API.setDmModel(currentModel).catch(() => {});
 
-  // Spara Guardian-modellvalet per kampanj (admin: fritt; icke-admin: backend klampar till spelarmodeller)
+  // Spara Lorekeeper-modellvalet per kampanj (admin: fritt; icke-admin: backend klampar till spelarmodeller)
   const guardianSel = document.getElementById('gate-guardian');
   if (guardianSel) {
     API.setGuardianModel(guardianSel.value).catch(() => {});
@@ -2911,7 +2911,7 @@ async function loadTranscript() {
         setCombatSplit(true);
         updateCombatStatusBar(_lastCombatStatus);
       }
-      // Guardian-rapporter i transkriptet kan ha uppdaterat NPCs/platser/partystate
+      // Lorekeeper-rapporter i transkriptet kan ha uppdaterat NPCs/platser/partystate
       // → rita om menyn så att hård refresh inte behövs vid återkomst.
       refreshSidebar();
       return;
@@ -2987,8 +2987,8 @@ function hideThoughts() {
   document.getElementById('dm-status').classList.remove('show');
 }
 
-// ── Guardian-status: visar att Guardian bearbetar i bakgrunden ──
-let _guardianBusy = false;  // true medan post-DM Guardian kör → chatten låst
+// ── Lorekeeper-status: visar att Lorekeeper bearbetar i bakgrunden ──
+let _guardianBusy = false;  // true medan post-DM Lorekeeper kör → chatten låst
 
 function showGuardianStatus() {
   const el = document.getElementById('guardian-status');
@@ -3005,7 +3005,7 @@ function hideGuardianStatus() {
 function _lockChatForGuardian() {
   const ta = document.getElementById('player-input');
   const btn = document.querySelector('.send-btn');
-  if (ta) { ta.disabled = true; ta.placeholder = I18N.t('🛡️ Guardian uppdaterar karaktärsbladet…'); }
+  if (ta) { ta.disabled = true; ta.placeholder = I18N.t('🦉 Lorekeeper uppdaterar karaktärsbladet…'); }
   if (btn) btn.setAttribute('disabled', '');
 }
 
@@ -3217,7 +3217,7 @@ async function handleSlashCommand(text) {
     return;
   }
 
-  // /guardian — skicka till backend (Guardian manuell korrigering)
+  // /guardian — skicka till backend (Lorekeeper manuell korrigering)
   if (lower.startsWith('/guardian')) {
     addMessage('player', null, escapeHtml(text));
     dmRespond(text);
@@ -3432,7 +3432,7 @@ async function dmRespond(playerText) {
       MUSIC.setMood(detectedMood);
     }
 
-    // Vänta tills DM-svaret skrivit klart innan effekter, Guardian-rapporter
+    // Vänta tills DM-svaret skrivit klart innan effekter, Lorekeeper-rapporter
     // och tärningskort renderas — annars dyker de upp mitt i narrationen.
     // (Löses direkt om spelaren klickar för att hoppa över animationen.)
     if (dmEl && dmEl._twDone) await dmEl._twDone;
@@ -3446,7 +3446,7 @@ async function dmRespond(playerText) {
       renderEffects(res.effects, res.turn_count);
     }
 
-    // Guardian-rapport: körs nu i bakgrunden → polla transkriptet
+    // Lorekeeper-rapport: körs nu i bakgrunden → polla transkriptet
     if (res.guardian_pending) {
       showGuardianStatus();
       pollForGuardian(res.turn_count);
@@ -3587,9 +3587,9 @@ function pollForGuardian(turnCount) {
 
       if (renderedAny) {
         SFX.click();
-        // Always scroll to bottom when Guardian reports arrive
+        // Always scroll to bottom when Lorekeeper reports arrive
         chat.scrollTop = chat.scrollHeight;
-        // Guardian kan ha uppdaterat NPCs/platser/partystate → rita om menyn
+        // Lorekeeper kan ha uppdaterat NPCs/platser/partystate → rita om menyn
         refreshSidebar();
         // Position kan ha ändrats (📍 flytt-rapport) → ladda om kartan
         const moved = [...chat.querySelectorAll('.msg.guardian .guardian-box')]
@@ -3598,7 +3598,7 @@ function pollForGuardian(turnCount) {
       }
 
       // 2) Stoppa när DENNA turs rapport är renderad OCH inget äldre väntar.
-      //    (Guardian skriver meta.turn sedan 2026-07-31; äldre rapporter utan
+      //    (Lorekeeper skriver meta.turn sedan 2026-07-31; äldre rapporter utan
       //    meta behandlas som tillhörande en tidigare tur → måste också renderas.)
       const currentTurnDone = messages.some(m =>
         m.role === 'guardian' && m.meta && m.meta.turn === turnCount &&
@@ -4003,7 +4003,7 @@ function runeFor(status) {
 }
 
 
-// C3 — Guardian-rapporten som DOS-stridslogg (fallback: plain guardian-box)
+// C3 — Lorekeeper-rapporten som DOS-stridslogg (fallback: plain guardian-box)
 function combatLineClass(line) {
   const t = line.replace(/\*\*/g, '').trim();
   if (/^rund[aå] ?\d+/i.test(t)) return { cls: ' cl-round', marker: '', text: t };
@@ -4257,7 +4257,7 @@ function renderEffects(effects, turnCount) {
 }
 
 // Ladda om Codex-kartan om den är öppen — positionen kan ha ändrats av
-// Guardian/DM (flytt/plats-effekt). Iframen är cachad (lazy), så vi bara
+// Lorekeeper/DM (flytt/plats-effekt). Iframen är cachad (lazy), så vi bara
 // hoppar src med cache-buster för att tvinga platser.html att hämta nytt state.
 function reloadMapIframe() {
   try {
@@ -4300,9 +4300,9 @@ async function refreshCharacter() {
 }
 
 // ═══════════════════════════════════════
-// SIDEBAR-REFRESH — Guardian post-DM uppdateringar ska synas direkt
+// SIDEBAR-REFRESH — Lorekeeper post-DM uppdateringar ska synas direkt
 // ═══════════════════════════════════════
-// Buggen: Guardian (post-DM) uppdaterar NPCs/platser/partystate i kampanj-
+// Buggen: Lorekeeper (post-DM) uppdaterar NPCs/platser/partystate i kampanj-
 // staten i BAKGRUNDEN. Frontend renderade bara guardian-meddelandet i chatten
 // men ritade ALDRIG om vänstermenyn → spelaren såg nya NPCs/platser först
 // efter hård refresh. Denna funktion hämtar färsk state och ritar om hela
@@ -4314,7 +4314,7 @@ async function refreshSidebar() {
     if (!campaign) return;
     campaignData = campaign;
     const raw = campaign._raw || {};
-    // NPC-registret — Guardian kan ha lagt till nya gestalter post-DM
+    // NPC-registret — Lorekeeper kan ha lagt till nya gestalter post-DM
     ingestNpcs(raw.npcs);
     // Uppdragslogg + valuta
     renderQuests(raw.quests);
@@ -4770,7 +4770,7 @@ function switchModel(model) {
   toast(`🔮 ${I18N.t('Dungeon Master byter röst: ')}${model}${local ? I18N.t(' körs lokalt') : ''}`);
 }
 
-// ── In-game modell-picker (settings ⚙️): byt DM/Guardian/Extraction utan att lämna chatten ──
+// ── In-game modell-picker (settings ⚙️): byt DM/Lorekeeper/Extraction utan att lämna chatten ──
 function initSettingsModelPickers() {
   const allowed = isAdmin ? Object.keys(modelNames) : PLAYER_MODEL_IDS;
   const dmSel = document.getElementById('settings-dm-model');
@@ -4782,7 +4782,7 @@ function initSettingsModelPickers() {
   const hint = document.getElementById('settings-guardian-hint');
   if (hint) hint.textContent = en
     ? 'Handles mechanics: HP, XP, combat, dice checks.'
-    : 'Guardian håller koll på mekanik: HP, XP, strid.';
+    : 'Lorekeeper håller koll på mekanik: HP, XP, strid.';
 
   // Återställ kampanjens senaste DM-modell (sparas server-side i meta.dm_model
   // vid varje tur + PATCH /api/campaign/dm-model) — så valet behålls när man
@@ -4795,7 +4795,7 @@ function initSettingsModelPickers() {
 
   dmSel.innerHTML = allowed.map(m => `<option value="${m}"${m === currentModel ? ' selected' : ''}>${m}</option>`).join('');
 
-  // Nuvarande Guardian från kampanj-metat (fallback: qwen3.8-max)
+  // Nuvarande Lorekeeper från kampanj-metat (fallback: qwen3.8-max)
   const gm = (campaignData && campaignData._raw && campaignData._raw.meta && campaignData._raw.meta.guardian_model) || 'qwen3.8-max';
   gSel.innerHTML = allowed.map(m => `<option value="${m}"${m === gm ? ' selected' : ''}>${m}</option>`).join('');
 
@@ -4841,16 +4841,16 @@ function settingsChangeGuardian(model) {
   const gSel = document.getElementById('settings-guardian-model');
   API.setGuardianModel(model).then(() => {
     const en = (typeof I18N !== 'undefined' && I18N.getLang() === 'en');
-    addMessage('system', null, `🛡️ ${en ? 'Guardian changes model: ' : 'Guardian byter modell: '}${model}`);
+    addMessage('system', null, `🛡️ ${en ? 'Lorekeeper changes model: ' : 'Lorekeeper byter modell: '}${model}`);
     if (gSel) gSel.value = model;
     // Synka lokal kampanjdata så gate/settings visar rätt vid nästa öppning
     if (campaignData && campaignData._raw) {
       campaignData._raw.meta = campaignData._raw.meta || {};
       campaignData._raw.meta.guardian_model = model;
     }
-    toast('🛡️ ' + I18N.t('Guardian-modell uppdaterad'));
+    toast('🛡️ ' + I18N.t('Lorekeeper-modell uppdaterad'));
   }).catch(() => {
-    toast('⚠ ' + I18N.t('Kunde inte byta Guardian-modell'));
+    toast('⚠ ' + I18N.t('Kunde inte byta Lorekeeper-modell'));
     if (gSel && campaignData) {
       const gm = (campaignData._raw && campaignData._raw.meta && campaignData._raw.meta.guardian_model) || 'qwen3.8-max';
       gSel.value = gm;
@@ -5488,9 +5488,9 @@ document.addEventListener('keydown', e => {
       <button class="mi-close" onclick="closeModelInfo()">✕</button>
     </div>
     <div class="mi-intro">
-      The <b>Dungeon Master</b> writes the world. The <b>Guardian</b> quietly tracks
+      The <b>Dungeon Master</b> writes the world. The <b>Lorekeeper</b> quietly tracks
       HP, gold, XP and items in the background. The <b>extraction</b> model handles
-      facts, the journal and summaries. You can switch the DM and Guardian in
+      facts, the journal and summaries. You can switch the DM and Lorekeeper in
       Settings ⚙️ (the DM choice also appears when you start a new adventure).
     </div>
     <div class="mi-row"><div class="mi-id">qwen3.8-max</div><div class="mi-desc">The flagship. Deep reasoning, rich narration, fewest mistakes — but it thinks long and hard before every reply.<span class="mi-speed">⏱ slowest · best quality · thinks a lot</span></div></div>

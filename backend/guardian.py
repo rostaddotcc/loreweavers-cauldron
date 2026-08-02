@@ -126,7 +126,7 @@ Spelare: "Jag försöker övertala vakten att släppa in mig"
 """
 
 GUARDIAN_PRE_SYSTEM_EN = """\
-You are a mechanical guardian for a D&D 5e RPG.
+You are a mechanical Lorekeeper for a D&D 5e RPG.
 Your ONLY task: determine whether the player's action requires a dice roll.
 
 ## Rules
@@ -2684,6 +2684,6 @@ def format_guardian_summary(
         return "".join(tags) if tags else ""
 
     turn_label = f" · {('Turn' if en else 'Tur')} {turn}" if turn else ""
-    header = "🛡️ **Guardian**" + turn_label
+    header = "🦉 **Lorekeeper**" + turn_label
 
     return header + "\n" + "\n".join(lines) + ("\n" + "".join(tags) if tags else "")

@@ -283,7 +283,7 @@
     color: var(--bone-bright); background: var(--stone-2);
     border: 1px solid var(--edge); padding: 1rem 1.1rem; outline: none; border-radius: 2px;
     transition: border-color 0.2s, box-shadow 0.2s;
-  }#notes-editor:focus{ border-color: var(--gold); box-shadow: 0 0 16px -5px rgba(232,198,90,0.35); }#notes-editor::placeholder{ color: rgba(138,122,94,0.45); font-style: italic; }.notes-actions{ display: flex; align-items: center; gap: 1rem; margin-top: 0.9rem; }.notes-status{ font-size: 0.88rem; font-style: italic; color: var(--poison); min-height: 1em; }.notes-status.err{ color: var(--blood-bright); }/* ── Character Growth (Guardian character_updates) — read-only kort ── */.growth-wrap{ margin-top: 2.2rem; padding-top: 1.6rem; border-top: 1px solid var(--edge); }.growth-list{ display: flex; flex-direction: column; gap: 0.7rem; margin-top: 0.9rem; }.growth-item{
+  }#notes-editor:focus{ border-color: var(--gold); box-shadow: 0 0 16px -5px rgba(232,198,90,0.35); }#notes-editor::placeholder{ color: rgba(138,122,94,0.45); font-style: italic; }.notes-actions{ display: flex; align-items: center; gap: 1rem; margin-top: 0.9rem; }.notes-status{ font-size: 0.88rem; font-style: italic; color: var(--poison); min-height: 1em; }.notes-status.err{ color: var(--blood-bright); }/* ── Character Growth (Lorekeeper character_updates) — read-only kort ── */.growth-wrap{ margin-top: 2.2rem; padding-top: 1.6rem; border-top: 1px solid var(--edge); }.growth-list{ display: flex; flex-direction: column; gap: 0.7rem; margin-top: 0.9rem; }.growth-item{
     position: relative; padding: 0.8rem 1rem 0.8rem 1.1rem;
     background: linear-gradient(160deg, rgba(139,95,212,0.10), rgba(139,95,212,0.03));
     border: 1px solid rgba(139,95,212,0.35); border-left: 3px solid var(--arcane);
@@ -382,7 +382,7 @@
   .av-lightbox .av-lb-close{ position: fixed; top: 1.2rem; right: 1.4rem; font-family: 'Cinzel', serif; font-size: .8rem; color: var(--gold-bright); background: none; border: 1px solid var(--edge); padding: .5rem .7rem; cursor: pointer; }
   .av-lightbox .av-lb-title{ position: fixed; bottom: 1.2rem; left: 50%; transform: translateX(-50%); font-family: 'Cinzel', serif; font-size: .7rem; letter-spacing: .18em; text-transform: uppercase; color: var(--bone-dim); white-space: nowrap; }
 </style>
-<link rel="stylesheet" href="snes.css?v=12">
+<link rel="stylesheet" href="snes.css?v=13">
 <script src="sprites.js?v=20260802a"></script>
 <script src="fonts.js?v=20260802c"></script>
 <script src="themes.js?v=20260802c"></script>
@@ -494,7 +494,7 @@
       <span>Total weight: <b id="inv-weight">0</b> / 120 lbs <span id="inv-warn"></span></span>
       <span>Items: <b id="inv-count">0</b></span>
     </div>
-    <div class="inv-managed-hint" style="margin-top:0.6rem;font-size:.83rem;color:var(--bone-dim);text-align:center">Inventory is managed by the DM &amp; Guardian — items appear here as you find, use, or equip them.</div>
+    <div class="inv-managed-hint" style="margin-top:0.6rem;font-size:.83rem;color:var(--bone-dim);text-align:center">Inventory is managed by the DM &amp; Lorekeeper — items appear here as you find, use, or equip them.</div>
     <div id="item-modal-container"></div>
   </section>
 
@@ -545,12 +545,12 @@ Markdown is not rendered, but the structure is yours."></textarea>
       </div>
     </div>
 
-    <!-- ── KARAKTÄRSUTVECKLING (Guardian character_updates) — read-only ──
-         Guardian lägger till backstory/traits/förmågor här allt eftersom
+    <!-- ── KARAKTÄRSUTVECKLING (Lorekeeper character_updates) — read-only ──
+         Lorekeeper lägger till backstory/traits/förmågor här allt eftersom
          spelet utvecklas. Separat från dina egna anteckningar (ovan) så att
          inget skrivs över. -->
     <div class="growth-wrap">
-      <div class="section-title">🛡️ Character Growth <span class="notes-hint">— things the Guardian has learned about you</span></div>
+      <div class="section-title">🛡️ Character Growth <span class="notes-hint">— things the Lorekeeper has learned about you</span></div>
       <div class="growth-list" id="growth-list"></div>
     </div>
   </section>
@@ -732,7 +732,7 @@ async function saveNotes() {
 }
 
 // ═══════════════════════════════════════
-// KARAKTÄRSUTVECKLING — Guardian:s character_updates (read-only)
+// KARAKTÄRSUTVECKLING — Lorekeeper:s character_updates (read-only)
 // ═══════════════════════════════════════
 function _esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -742,7 +742,7 @@ function renderGrowth() {
   if (!list) return;
   const updates = state.character.updates || [];
   if (!updates.length) {
-    list.innerHTML = `<div class="growth-empty">${I18N.t('Inget ännu — Guardian lägger till backstory, drag och förmågor här allt eftersom äventyret utvecklar din karaktär.')}</div>`;
+    list.innerHTML = `<div class="growth-empty">${I18N.t('Inget ännu — Lorekeeper lägger till backstory, drag och förmågor här allt eftersom äventyret utvecklar din karaktär.')}</div>`;
     return;
   }
   // Nyaste först
@@ -754,7 +754,7 @@ function renderGrowth() {
     return `<div class="growth-item">
       <span class="growth-field">${field}</span>
       <div class="growth-text">${text}</div>
-      <div class="growth-turn">🛡️ Guardian${turn}</div>
+      <div class="growth-turn">🦉 Lorekeeper${turn}</div>
     </div>`;
   }).join('');
 }
@@ -867,7 +867,7 @@ portraitInput.addEventListener('change', async e => {
 });
 
 // ═══════════════════════════════════════
-// HP — visas från backend-state, ändras via DM/Guardian
+// HP — visas från backend-state, ändras via DM/Lorekeeper
 // ═══════════════════════════════════════
 function renderHp() {
   const hp = state.character.hp || { current: 0, max: 0 };
@@ -1083,7 +1083,7 @@ function closeItemModal(e, force) {
 // Stäng modal med Escape
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeItemModal(null, true); });
 
-// ── D&D-egenskaper toggle (borttagen — inventory hanteras av DM/Guardian) ──
+// ── D&D-egenskaper toggle (borttagen — inventory hanteras av DM/Lorekeeper) ──
 
 // ═══════════════════════════════════════
 // CURRENCY

@@ -2732,7 +2732,7 @@ async def _generate_day_entry_locked(username: str, campaign_id: str, prev_day: 
 # ═══════════════════════════════════════
 
 GUARDIAN_CORRECTION_SYSTEM = """\
-You are the Guardian — a mechanical auditor for a D&D 5e campaign.
+You are the Lorekeeper — a mechanical auditor for a D&D 5e campaign.
 The player has asked you to make a specific correction to the campaign state.
 
 You will receive:
@@ -2759,7 +2759,7 @@ Rules:
 - Only include fields that need changes. Omit or null for no change.
 - npc_remove: exact names to delete (case-insensitive match).
 - For duplicates: keep the BEST entry, remove the rest.
-- report: ALWAYS fill this — it's shown to the player as the Guardian's response.
+- report: ALWAYS fill this — it's shown to the player as the Lorekeeper's response.
 - Be conservative: only change what the player asked for.
 """
 
@@ -3377,7 +3377,7 @@ async def _chat_locked(
             return {"reply": guardian_report, "turn_count": state["meta"].get("turn_count", 0)}
         except Exception as e:
             logger.error("🛡️ Guardian manual correction failed: %s", e)
-            return {"reply": f"🛡️ Guardian could not process the correction: {e}", "turn_count": state["meta"].get("turn_count", 0)}
+            return {"reply": f"🦉 Lorekeeper could not process the correction: {e}", "turn_count": state["meta"].get("turn_count", 0)}
 
     # Bygg meddelandelista — spelarens meddelande sparas först EFTER att LLM:n svarat,
     # så ett misslyckat anrop lämnar inga spår i transkriptet.

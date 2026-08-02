@@ -1999,8 +1999,14 @@ async function playTTS(btn) {
     await _ttsAudio.play();
     btn.textContent = '⏸';
   } catch (e) {
-    // Fallback: webbläsarens talsyntes
+    // Fel från API:et — visa riktiga orsaken istället för tyst browser-fallback
     ttsStop(btn);
+    const msg = (e && e.message) || 'TTS error';
+    if (/quota|kvot|Throttling|429/i.test(msg)) {
+      toast('⚠ ' + msg);
+      return;
+    }
+    // Fallback: webbläsarens talsyntes
     const ok = I18N.speak(text, I18N.getLang());
     if (ok) {
       btn.textContent = '⏸'; btn.classList.add('playing');
@@ -2011,7 +2017,7 @@ async function playTTS(btn) {
         }
       }, 300);
     } else {
-      toast('⚠ ' + (e.message || 'TTS error'));
+      toast('⚠ ' + msg);
     }
   }
 }

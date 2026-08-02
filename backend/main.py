@@ -1750,10 +1750,16 @@ def _record_tts_usage(username: str, chars: int, seconds: float, api_call: bool)
 
 
 def _synth_qwen_tts(voice: str, text: str) -> bytes:
-    """Blockande DashScope-syntes — körs i en tråd (asyncio.to_thread)."""
+    """Blockande DashScope-syntes — körs i en tråd (asyncio.to_thread).
+
+    Använder async-läget (streaming_call + egen ResultCallback) så att
+    riktiga serverfel — t.ex. Throttling.AllocationQuota (Token Plan-kvoten
+    slut) — fångas och förs vidare. SDK:ns call()-läge sväljer TaskFailed i
+    websocket-tråden och ger bara en vilseledande ConnectionError.
+    """
     try:
         import dashscope
-        from dashscope.audio.tts_v2 import SpeechSynthesizer, AudioFormat
+        from dashscope.audio.tts_v2 import SpeechSynthesizer, AudioFormat, ResultCallback
     except ImportError:
         raise RuntimeError("dashscope SDK saknas i containern")
 
@@ -1764,13 +1770,65 @@ def _synth_qwen_tts(voice: str, text: str) -> bytes:
     dashscope.api_key = api_key
     dashscope.base_websocket_api_url = TTS_DASHSCOPE_WS_URL
 
+    class _Capture(ResultCallback):
+        def __init__(self):
+            super().__init__()
+            self.audio = bytearray()
+            self.error = None
+            self.done = threading.Event()
+
+        def on_data(self, data):
+            self.audio.extend(data)
+
+        def on_error(self, message):
+            self.error = str(message)
+            self.done.set()
+
+        def on_complete(self):
+            self.done.set()
+
+        def on_close(self):
+            self.done.set()
+
+    cb = _Capture()
     syn = SpeechSynthesizer(
         model="qwen-audio-3.0-tts-plus",
         voice=voice,
         format=AudioFormat.MP3_22050HZ_MONO_256KBPS,
         instruction=TTS_INSTRUCTIONS.get(voice, ""),
+        callback=cb,
     )
-    return syn.call(text)
+    try:
+        syn.streaming_call(text)
+    except ConnectionError:
+        # Servern kan stänga WS direkt efter task-failed (t.ex. kvot slut) —
+        # då kastar streaming_call en vilseledande ConnectionError. Det
+        # riktiga felet kommer via callback:en i websocket-tråden: vänta.
+        pass
+    if not cb.done.wait(120):
+        raise RuntimeError("TTS timeout (120s)")
+    if cb.error:
+        raise RuntimeError(cb.error)
+    if not cb.audio:
+        raise RuntimeError("TTS returnerade inget ljud")
+    return bytes(cb.audio)
+
+
+def _parse_tts_error(msg: str):
+    """Extrahera (error_code, error_message) från SDK-fel.
+
+    Hanterar både 'TaskFailed: {...}' (sync-call) och ren JSON '{...}'
+    (async-callback). Returnerar (None, msg) om det inte är JSON.
+    """
+    s = msg
+    if s.startswith("TaskFailed:"):
+        s = s[len("TaskFailed:"):].strip()
+    try:
+        data = json.loads(s)
+    except (json.JSONDecodeError, ValueError):
+        return None, msg
+    hdr = data.get("header", {})
+    return hdr.get("error_code"), hdr.get("error_message", msg)
 
 
 @app.get("/api/tts/voices")
@@ -1820,7 +1878,16 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
         raise
     except Exception as e:
         logger.error("🔊 TTS error: voice=%s, %d chars — %s", voice, len(text), e, exc_info=True)
-        raise HTTPException(502, f"Kunde inte generera ljud — {e}")
+        msg = str(e)
+        code, emsg = _parse_tts_error(msg)
+        if code:
+            if "Throttling" in code or "Quota" in code:
+                raise HTTPException(
+                    429,
+                    f"Token Plan TTS-kvoten är slut just nu ({code}) — återställs automatiskt, testa igen om en stund.",
+                )
+            raise HTTPException(502, f"TTS misslyckades ({code}): {emsg}")
+        raise HTTPException(502, f"Kunde inte generera ljud — {msg}")
 
     logger.info("🔊 TTS done: voice=%s, %d chars (%d seg) → %d bytes (%.1fs)", voice, len(text), len(segments), len(audio), time.time() - _t0)
     _record_tts_usage(username, len(text), _mp3_duration_seconds(audio), api_call=True)

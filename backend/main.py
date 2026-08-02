@@ -2757,6 +2757,21 @@ def compact_state(state: dict, language: str = "sv") -> str:
     else:
         lines.append(f"Bärvikt: {grand_total:.1f} lb")
 
+    # Besvärjelser + spell slots — fix 2026-08-02: Guardian påstod att state
+    # inte spårar spells (såg dem inte i truth_blocket). Nu visas de alltid.
+    spells = char.get("spells", []) or []
+    if spells:
+        sp_str = ", ".join(
+            f"{s.get('name', '?')}{' (niv ' + str(s.get('level', 0)) + ')' if int(s.get('level', 0) or 0) > 0 else ' (cantrip)'}"
+            for s in spells[:15]
+        )
+        lines.append(f"Besvärjelser: {sp_str}")
+    else:
+        lines.append("Besvärjelser: inga" if language != "en" else "Spells: none")
+    slots = char.get("spell_slots", {})
+    if isinstance(slots, dict) and (slots.get("max") or 0) > 0:
+        lines.append(f"Spell slots: {slots.get('current', 0)}/{slots.get('max', 0)}")
+
     # Plats, tid, dag
     world = state.get("world", {})
     loc = world.get("current_location", "Okänd")

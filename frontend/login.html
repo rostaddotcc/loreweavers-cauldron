@@ -2,516 +2,1018 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Lore Weaver's Cauldron — Enter</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>The Lore Weaver's Cauldron — What will the Cauldron Foretell?</title>
+<meta name="description" content="A free AI dungeon master with a memory. Persistent campaigns, strict D&D 5e rules, powered by Qwen & StepFun. What will the Cauldron Foretell?">
+<link rel="icon" href="/assets/logo-cauldron.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
 <style>
-  /* ══ :root aligned with snes.css Terminal Gothic v3 ══ */
-  :root {
-    --ink: #0b0812;
-    --stone: #161020;
-    --stone-2: #1d1529;
-    --stone-3: #241a33;
-    --edge: #463a60;
-    --bone: #d9c9a6;
-    --bone-bright: #f2e6c8;
-    --bone-dim: #9d8a6a;
-    --gold: #d4a92c;
-    --gold-bright: #f0d675;
-    --blood: #a32433;
-    --blood-bright: #e0485a;
-    --ember: #d4691e;
-    --arcane: #9a6fe0;
-    --poison: #7aa35e;
-    --teal: #5e9aa3;
-    --term-green: #33cc33;
-    --term-amber: #ccaa33;
+  /* ═══════════════ tokens ═══════════════ */
+  :root{
+    --ink:#07070c;
+    --stone:#0e0e14; --stone-2:#12121a; --stone-3:#181822;
+    --edge:#2a2a3a; --edge-hi:#3a3a50;
+    --bone:#b8b8c8; --bone-bright:#e6e2d4; --bone-dim:#77778c;
+    --gold:#c9a227; --gold-bright:#e8c65a;
+    --blood:#8b1a2a; --blood-bright:#d43a4d;
+    --ember:#d4691e; --arcane:#7b4fd4;
+    --font-display:'Cinzel',serif;
+    --font-body:'Spectral',Georgia,serif;
+    --nav-h:64px;
   }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: 'Spectral', Georgia, serif;
-    color: var(--bone);
-    min-height: 100vh;
-    display: flex; align-items: center; justify-content: center;
-    overflow: hidden;
-  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font-body);color:var(--bone);background:var(--ink);
+    overflow-x:hidden;-webkit-tap-highlight-color:transparent}
 
-  /* ── Atmosphere layers (survive snes.css) ── */
-  .grain {
-    position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.045;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
-  }
-  #embers { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
-  .vignette { position: fixed; inset: 0; z-index: 1; pointer-events: none; box-shadow: inset 0 0 200px 80px rgba(4,2,8,0.9); }
+  /* ═══════════════ 3D canvas + overlays ═══════════════ */
+  #scene{position:fixed;inset:0;z-index:0;display:block;width:100%;height:100%}
+  .grain{position:fixed;inset:0;z-index:3;pointer-events:none;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .vignette{position:fixed;inset:0;z-index:3;pointer-events:none;
+    box-shadow:inset 0 0 190px 60px rgba(3,2,7,.85)}
+  body.no-webgl #scene{display:none}
+  body.no-webgl::before{content:'';position:fixed;inset:0;z-index:0;
+    background:radial-gradient(ellipse 60% 45% at 68% 42%,rgba(212,105,30,.14),transparent 70%),
+               radial-gradient(ellipse 40% 30% at 70% 50%,rgba(201,162,39,.10),transparent 70%)}
 
-  /* ── Atmospheric fog (.myst-fog — not killed by snes.css .fog rule) ── */
-  .myst-fog {
-    position: fixed; inset: 0; z-index: 0; pointer-events: none;
-  }
-  .myst-fog::before, .myst-fog::after {
-    content: ''; position: absolute;
-    width: 60vw; height: 60vw; border-radius: 50%;
-    filter: blur(80px); opacity: 0.4;
-  }
-  .myst-fog::before {
-    left: -10%; top: 15%;
-    background: radial-gradient(circle, rgba(123,79,212,0.08), transparent 60%);
-    animation: fog-drift-a 60s ease-in-out infinite alternate;
-  }
-  .myst-fog::after {
-    right: -15%; bottom: 5%;
-    background: radial-gradient(circle, rgba(212,105,30,0.06), transparent 60%);
-    animation: fog-drift-b 80s ease-in-out infinite alternate;
-  }
-  @keyframes fog-drift-a { from{transform:translate(0,0) scale(1)} to{transform:translate(12vw,-6vh) scale(1.2)} }
-  @keyframes fog-drift-b { from{transform:translate(0,0) scale(1.1)} to{transform:translate(-10vw,5vh) scale(.85)} }
+  /* ═══════════════ nav ═══════════════ */
+  .nav{position:fixed;top:0;left:0;right:0;z-index:50;height:var(--nav-h);
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 clamp(1.2rem,4vw,3.5rem);
+    transition:background .4s ease,border-color .4s ease;border-bottom:1px solid transparent}
+  .nav.scrolled{background:rgba(7,7,12,.86);backdrop-filter:blur(10px);border-bottom-color:var(--edge)}
+  .nav-brand{display:flex;align-items:center;gap:.7rem;text-decoration:none}
+  .nav-brand img{width:30px;height:30px;mix-blend-mode:screen}
+  .nav-brand span{font-family:var(--font-display);font-weight:700;font-size:.82rem;
+    letter-spacing:.22em;text-transform:uppercase;color:var(--bone-bright)}
+  .nav-links{display:flex;align-items:center;gap:clamp(1rem,2.5vw,2.2rem)}
+  .nav-links a{font-family:var(--font-display);font-size:.66rem;font-weight:700;
+    letter-spacing:.24em;text-transform:uppercase;color:var(--bone-dim);
+    text-decoration:none;padding:.5rem 0;transition:color .25s}
+  .nav-links a:hover{color:var(--gold-bright)}
+  .nav-cta{font-family:var(--font-display);font-size:.66rem;font-weight:700;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));
+    border:none;padding:.65em 1.5em;cursor:pointer;text-decoration:none;
+    box-shadow:0 4px 22px rgba(201,162,39,.28);transition:transform .2s,box-shadow .2s}
+  .nav-cta:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(201,162,39,.42)}
 
-  /* ── Rotating mystery quotes ── */
-  .myst-quotes {
-    text-align: center; margin-bottom: 1.5rem; min-height: 2em;
-    font-style: italic; font-size: 0.95rem; color: var(--bone-dim);
-    transition: opacity 1s ease; opacity: 1; padding: 0 0.5rem;
-    letter-spacing: 0.02em;
-  }
+  /* ═══════════════ content wrapper ═══════════════ */
+  .content{position:relative;z-index:5}
+  section{position:relative}
+  .wrap{max-width:1140px;margin:0 auto;padding:0 clamp(1.4rem,5vw,3.5rem)}
 
-  /* ── Gate entrance animation ── */
-  @keyframes gate-rise {
-    from { opacity: 0; transform: translateY(60px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
+  .eyebrow{font-family:var(--font-display);font-size:.64rem;font-weight:700;
+    letter-spacing:.44em;text-transform:uppercase;color:var(--gold);margin-bottom:1.15rem}
+  h1,h2,h3{font-family:var(--font-display);color:var(--bone-bright)}
+  h2{font-size:clamp(1.7rem,3.6vw,2.7rem);font-weight:900;line-height:1.12;letter-spacing:.015em}
+  .lede{font-size:clamp(1rem,1.6vw,1.15rem);font-weight:300;color:var(--bone);
+    line-height:1.75;max-width:56ch;margin-top:1.1rem}
+  .lede b{color:var(--gold-bright);font-weight:600}
 
-  /* ── Gate / portal frame ── */
-  .gate {
-    position: relative; z-index: 2; width: 100%; max-width: 420px; padding: 1.5rem;
-    animation: gate-rise 1.2s cubic-bezier(.22,1,.36,1) both;
-  }
-  .gate-frame {
-    position: relative; padding: 2.5rem 2.2rem 2rem;
-    border: 1px solid var(--edge);
-  }
-  /* REMOVED: .corner rules — snes.css sets .corner { display: none !important } */
-  /* REMOVED: .sigil-ring rules — snes.css kills border-radius and animation */
+  /* scroll reveal */
+  .rv{opacity:0;transform:translateY(26px);transition:opacity .8s ease,transform .8s cubic-bezier(.22,1,.36,1)}
+  .rv.in{opacity:1;transform:none}
+  .rv.d1{transition-delay:.12s}.rv.d2{transition-delay:.24s}.rv.d3{transition-delay:.36s}
 
-  /* ── Sigil / logo ── */
-  .sigil {
-    width: 180px; margin: 0 auto 1.1rem; position: relative;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .gate-logo {
-    width: 100%; display: block;
-    mix-blend-mode: screen;
-    animation: logo-float 7s ease-in-out infinite;
-    filter: saturate(1.05) brightness(1.02);
-  }
-  @keyframes logo-float {
-    0%,100% { transform: translateY(0); }
-    50% { transform: translateY(-7px); }
-  }
-  /* SVG keyframe animations (not killed by snes.css — targets HTML selectors, not SVG) */
-  @keyframes sigil-spin { to { transform: rotate(360deg); } }
-  @keyframes sigil-pulse {
-    0%,100% { opacity: 0.6; }
-    50% { opacity: 1; }
-  }
+  /* ═══════════════ hero ═══════════════ */
+  .hero{min-height:100svh;display:flex;align-items:center;pointer-events:none}
+  .hero a,.hero button{pointer-events:auto}
+  .hero-copy{max-width:480px;padding-top:var(--nav-h)}
+  .hero h1{font-size:clamp(2.4rem,5.4vw,4.3rem);font-weight:900;line-height:1.04;
+    text-shadow:0 0 22px rgba(232,198,90,.28),0 0 60px rgba(212,105,30,.14);
+    animation:candle 5.5s 1.4s infinite}
+  .hero h1 .of{display:block;font-weight:400;font-size:.40em;letter-spacing:.34em;
+    text-transform:uppercase;color:var(--gold);margin-top:.6em}
+  .hero .tagline{font-style:italic;font-weight:300;font-size:clamp(1.05rem,1.9vw,1.3rem);
+    color:var(--bone);margin-top:1.5rem;line-height:1.65;letter-spacing:.02em}
+  .hero-actions{display:flex;align-items:center;gap:1.4rem;margin-top:2.3rem;flex-wrap:wrap}
+  .btn-gold{font-family:var(--font-display);font-weight:700;font-size:.82rem;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--ink);
+    background:linear-gradient(160deg,var(--gold-bright),var(--gold));
+    border:none;padding:1em 2.2em;cursor:pointer;text-decoration:none;display:inline-block;
+    box-shadow:0 6px 30px rgba(201,162,39,.32);transition:transform .2s,box-shadow .2s}
+  .btn-gold:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(201,162,39,.5)}
+  .btn-gold:active{transform:translateY(1px)}
+  .btn-ghost{font-family:var(--font-display);font-weight:700;font-size:.78rem;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--bone-dim);text-decoration:none;
+    padding:1em 0;border-bottom:1px solid var(--edge-hi);transition:color .25s,border-color .25s}
+  .btn-ghost:hover{color:var(--gold-bright);border-color:var(--gold)}
+  .myst-quote{margin-top:2.6rem;font-style:italic;font-size:.92rem;color:#8f8fa5;
+    min-height:1.6em;transition:opacity 1s ease;letter-spacing:.02em}
+  .scroll-cue{position:absolute;bottom:2rem;left:50%;transform:translateX(-50%);
+    color:var(--bone-dim);font-size:1.1rem;animation:cue-bob 2.4s ease-in-out infinite;pointer-events:none}
+  @keyframes cue-bob{0%,100%{transform:translate(-50%,0);opacity:.5}50%{transform:translate(-50%,8px);opacity:1}}
+  @keyframes candle{
+    0%,100%{text-shadow:0 0 18px rgba(232,198,90,.30),0 0 48px rgba(212,105,30,.15)}
+    42%{text-shadow:0 0 26px rgba(232,198,90,.48),0 0 64px rgba(212,105,30,.26)}
+    47%{text-shadow:0 0 13px rgba(232,198,90,.24),0 0 36px rgba(212,105,30,.11)}
+    76%{text-shadow:0 0 22px rgba(232,198,90,.40),0 0 56px rgba(212,105,30,.20)}}
 
-  .gate-title {
-    font-family: 'Cinzel', serif; font-weight: 900; text-align: center;
-    font-size: 1.6rem; color: var(--bone-bright); letter-spacing: 0.08em;
-    margin-bottom: 0.3rem;
-  }
-  .gate-sub {
-    text-align: center; font-style: italic; font-size: 0.98rem;
-    color: var(--bone-dim); margin-bottom: 1.8rem;
-  }
+  /* ═══════════════ solid sections ═══════════════ */
+  .solid{background:var(--ink)}
+  .solid::before{content:'';position:absolute;top:-120px;left:0;right:0;height:120px;
+    background:linear-gradient(to bottom,transparent,var(--ink));pointer-events:none}
+  .sect{padding:clamp(4.5rem,9vw,7.5rem) 0}
 
-  /* ── Form ── */
-  .field { margin-bottom: 1.2rem; position: relative; }
-  .field label {
-    display: block; font-family: 'Cinzel', serif; font-size: 0.75rem;
-    letter-spacing: 0.28em; text-transform: uppercase; color: var(--bone-dim);
-    margin-bottom: 0.4rem;
-  }
-  .field input {
-    width: 100%; font-family: 'Spectral', serif; font-size: 1.13rem; color: var(--bone-bright);
-    background: #0d0817; border: 1px solid var(--edge); padding: 0.75rem 1rem 0.75rem 2.6rem;
-    outline: none; transition: border-color 0.25s;
-  }
-  .field input::placeholder { color: rgba(106,106,128,0.5); font-style: italic; }
-  .field input:focus {
-    border-color: var(--term-green);
-    box-shadow: 0 0 10px -2px rgba(51,204,51,0.3);
-  }
-  .field .icon {
-    position: absolute; left: 0.85rem; bottom: 0.78rem;
-    font-size: 1rem; opacity: 0.4;
-    color: var(--term-green); font-family: 'VT323', monospace; font-weight: 700;
-    transition: opacity 0.25s;
-  }
-  .field input:focus ~ .icon { opacity: 1; }
+  /* features */
+  .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4rem;margin-top:3rem}
+  .tablet{position:relative;background:linear-gradient(170deg,var(--stone-2),var(--stone));
+    border:1px solid var(--edge);padding:2.1rem 1.7rem 1.9rem;
+    transition:transform .3s ease,border-color .3s ease,box-shadow .3s ease}
+  .tablet:hover{transform:translateY(-5px);border-color:var(--gold);
+    box-shadow:0 14px 44px rgba(0,0,0,.5),0 0 26px rgba(201,162,39,.10)}
+  .tablet .corner{position:absolute;width:14px;height:14px;opacity:.65;pointer-events:none}
+  .tablet .corner.tl{top:6px;left:6px;border-top:2px solid var(--gold);border-left:2px solid var(--gold)}
+  .tablet .corner.br{bottom:6px;right:6px;border-bottom:2px solid var(--gold);border-right:2px solid var(--gold)}
+  .tablet .sig{font-size:1.5rem;color:var(--gold);line-height:1;display:block;margin-bottom:1.1rem}
+  .tablet h3{font-size:1.02rem;font-weight:700;letter-spacing:.06em;line-height:1.4;margin-bottom:.8rem}
+  .tablet p{font-size:.95rem;font-weight:300;line-height:1.7;color:var(--bone)}
+  .tablet p em{color:var(--bone-bright)}
 
-  /* REMOVED: .gate-btn gradient, box-shadow, ::after sheen — all killed by snes.css */
-  .gate-btn {
-    width: 100%; font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.98rem;
-    letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer;
-    padding: 0.85rem; margin-top: 0.5rem;
-  }
+  /* ═══════════════ the gate (login) ═══════════════ */
+  .gate-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(2rem,5vw,4.5rem);
+    align-items:center;margin-top:.5rem}
+  .pitch-list{list-style:none;margin-top:2rem}
+  .pitch-list li{position:relative;padding:0 0 1.35rem 2rem;font-weight:300;
+    font-size:1.02rem;line-height:1.65;color:var(--bone)}
+  .pitch-list li::before{content:'✦';position:absolute;left:.2rem;top:.05rem;
+    color:var(--gold);font-size:.85rem}
+  .pitch-list li b{color:var(--bone-bright);font-weight:600}
+  .pitch-list .tag{display:inline-block;font-family:var(--font-display);font-size:.56rem;
+    font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--arcane);border:1px solid var(--arcane);padding:.25em .7em;margin-left:.5rem;
+    vertical-align:middle}
+  .pitch-note{font-style:italic;font-size:.86rem;color:var(--bone-dim);margin-top:.4rem}
 
-  .gate-error {
-    text-align: center; font-size: 0.93rem; color: var(--blood-bright);
-    margin-top: 0.8rem; min-height: 1.2em; font-style: italic;
-  }
+  .gate-card{position:relative;background:rgba(10,10,16,.82);backdrop-filter:blur(9px);
+    border:1px solid var(--edge);padding:clamp(1.8rem,3.5vw,2.6rem)}
+  .gate-card .corner{position:absolute;width:22px;height:22px;opacity:.8;pointer-events:none}
+  .gate-card .corner.tl{top:8px;left:8px;border-top:2px solid var(--gold);border-left:2px solid var(--gold)}
+  .gate-card .corner.tr{top:8px;right:8px;border-top:2px solid var(--gold);border-right:2px solid var(--gold)}
+  .gate-card .corner.bl{bottom:8px;left:8px;border-bottom:2px solid var(--gold);border-left:2px solid var(--gold)}
+  .gate-card .corner.br{bottom:8px;right:8px;border-bottom:2px solid var(--gold);border-right:2px solid var(--gold)}
+  .gate-head{text-align:center;margin-bottom:1.8rem}
+  .gate-head h3{font-size:1.25rem;font-weight:900;letter-spacing:.05em}
+  .gate-head p{font-style:italic;font-size:.9rem;color:var(--bone-dim);margin-top:.45rem}
 
-  .gate-footer {
-    text-align: center; margin-top: 1.5rem; padding-top: 1rem;
-    border-top: 1px solid rgba(42,42,58,0.4);
-    font-size: 0.85rem; color: var(--bone-dim); font-style: italic;
-  }
-  .gate-footer a { color: var(--arcane); text-decoration: none; }
-  .gate-footer a:hover { text-shadow: 0 0 8px rgba(123,79,212,0.6); }
+  .field{margin-bottom:1.15rem;position:relative}
+  .field label{display:block;font-family:var(--font-display);font-size:.62rem;font-weight:700;
+    letter-spacing:.28em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.45rem}
+  .field input{width:100%;font-family:var(--font-body);font-size:16px;color:var(--bone-bright);
+    background:#0c0b12;border:1px solid var(--edge);padding:.85rem 1rem .85rem 2.5rem;
+    outline:none;transition:border-color .25s,box-shadow .25s;border-radius:2px}
+  .field input::placeholder{color:rgba(119,119,140,.55);font-style:italic}
+  .field input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,162,39,.14)}
+  .field .icon{position:absolute;left:.9rem;bottom:.85rem;color:var(--gold);
+    font-family:var(--font-display);font-weight:700;opacity:.45;transition:opacity .25s}
+  .field input:focus ~ .icon{opacity:1}
+  .gate-btn{width:100%;font-family:var(--font-display);font-weight:700;font-size:.86rem;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--ink);cursor:pointer;
+    background:linear-gradient(160deg,var(--gold-bright),var(--gold));
+    border:none;padding:1em;margin-top:.4rem;border-radius:2px;
+    box-shadow:0 6px 26px rgba(201,162,39,.30);transition:transform .2s,box-shadow .2s,opacity .2s}
+  .gate-btn:hover{transform:translateY(-2px);box-shadow:0 10px 34px rgba(201,162,39,.46)}
+  .gate-btn:active{transform:translateY(1px)}
+  .gate-btn:disabled{opacity:.6;cursor:wait;transform:none}
+  .gate-toggle{text-align:center;margin-top:1.1rem;font-size:.9rem;color:var(--bone-dim);
+    font-style:italic;cursor:pointer}
+  .gate-toggle b{color:var(--gold-bright);font-style:normal;font-weight:600}
+  .gate-toggle:hover b{text-shadow:0 0 10px rgba(232,198,90,.55)}
+  .gate-error{text-align:center;font-size:.9rem;color:var(--blood-bright);
+    margin-top:.9rem;min-height:1.3em;font-style:italic}
+  .gate-foot{text-align:center;margin-top:1.5rem;padding-top:1.1rem;
+    border-top:1px solid rgba(42,42,58,.5);font-size:.8rem;color:var(--bone-dim);font-style:italic}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}
+    40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+  .gate-card.shake{animation:shake .4s ease}
+  .gate-card.success{border-color:var(--gold)}
 
-  /* ── Login ⇄ Signup toggle ── */
-  .gate-toggle {
-    text-align: center; margin-top: 0.9rem; font-size: 0.88rem;
-    color: var(--bone-dim); font-style: italic; cursor: pointer;
-    letter-spacing: 0.02em;
-  }
-  .gate-toggle b { color: var(--arcane); font-weight: 700; font-style: normal; }
-  .gate-toggle:hover b { text-shadow: 0 0 8px rgba(123,79,212,0.6); }
+  /* ═══════════════ ledger (release notes) ═══════════════ */
+  .ledger{background:var(--stone)}
+  .ledger::before{content:'';position:absolute;top:-120px;left:0;right:0;height:120px;
+    background:linear-gradient(to bottom,transparent,var(--stone));pointer-events:none}
+  .ledger::after{content:'';position:absolute;bottom:-120px;left:0;right:0;height:120px;
+    background:linear-gradient(to top,transparent,var(--stone));pointer-events:none}
+  .ver-chip{display:inline-block;font-family:var(--font-display);font-size:.62rem;font-weight:700;
+    letter-spacing:.2em;color:var(--ink);background:var(--gold);padding:.4em .9em;margin-bottom:1.6rem}
+  .ledger-list{list-style:none;margin-top:1.6rem;max-width:760px}
+  .ledger-list li{padding:1.05rem 0 1.05rem 1.6rem;border-bottom:1px solid var(--edge);
+    position:relative;font-weight:300;font-size:1rem;line-height:1.6}
+  .ledger-list li::before{content:'▸';position:absolute;left:.1rem;color:var(--gold)}
+  .ledger-list li b{color:var(--gold-bright);font-weight:600}
+  .ledger-more{margin-top:2rem}
+  .ledger-more a{color:var(--bone-dim);font-family:var(--font-display);font-size:.7rem;
+    font-weight:700;letter-spacing:.22em;text-transform:uppercase;text-decoration:none;
+    border-bottom:1px solid var(--edge-hi);padding-bottom:.35rem;transition:color .25s,border-color .25s}
+  .ledger-more a:hover{color:var(--gold-bright);border-color:var(--gold)}
 
-  /* ── Shake on error ── */
-  @keyframes shake {
-    0%,100% { transform: translateX(0); }
-    20% { transform: translateX(-8px); }
-    40% { transform: translateX(8px); }
-    60% { transform: translateX(-5px); }
-    80% { transform: translateX(5px); }
-  }
-  .gate-frame.shake { animation: shake 0.4s ease; }
+  /* ═══════════════ footer ═══════════════ */
+  footer{background:var(--ink);padding:3.5rem 0 3rem;text-align:center}
+  footer .foot-sig{color:var(--gold);font-size:.9rem;margin-bottom:1.1rem}
+  footer p{font-size:.88rem;font-weight:300;color:var(--bone-dim);line-height:1.9}
+  footer a{color:var(--bone);text-decoration:none;border-bottom:1px solid var(--edge-hi);
+    transition:color .25s,border-color .25s}
+  footer a:hover{color:var(--gold-bright);border-color:var(--gold)}
+  footer .foot-small{margin-top:1.4rem;font-size:.76rem;font-style:italic}
 
-  /* ── Success flash ── */
-  .gate-frame.success { border-color: var(--gold); }
-
-  /* ═══════════ Mobile — porten i fickformat ═══════════ */
-  html { -webkit-tap-highlight-color: transparent; }
-  @media (max-width: 640px) {
-    body { overflow-y: auto; padding: 1.25rem .75rem; }
-    .gate { width: 100%; max-width: 400px; margin: auto; padding: 0; }
-    .gate-frame { padding: 2.1rem 1.25rem 1.6rem; }
-    .gate-title { font-size: 1.18rem; letter-spacing: .05em; line-height: 1.35; }
-    .gate-sub { font-size: .93rem; margin-bottom: 1.4rem; }
-    .myst-quotes { font-size: .89rem; margin-bottom: 1.2rem; }
-    .field input { min-height: 48px; font-size: 18px; }
-    .field .icon { bottom: 50%; transform: translateY(50%); }
-    .gate-btn { width: 100%; min-height: 52px; }
-    .gate-btn:active { transform: translateY(2px); filter: brightness(.94); }
-    .gate-footer a { display: inline-block; min-height: 44px; line-height: 44px; }
-    .gate-toggle { display: flex; align-items: center; justify-content: center; min-height: 44px; }
-    .toast { max-width: 92%; text-align: center; }
+  /* ═══════════════ mobile ═══════════════ */
+  @media (max-width:900px){
+    .feat-grid{grid-template-columns:1fr;max-width:560px}
+    .gate-grid{grid-template-columns:1fr}
+    .nav-links a:not(.nav-cta){display:none}
   }
-  @media (max-width: 400px) {
-    body { padding: .75rem .5rem; }
-    .gate-frame { padding: 1.7rem 1rem 1.3rem; }
-    .gate-title { font-size: 1.02rem; line-height: 1.35; }
-    .sigil { width: 148px; margin-bottom: 1rem; }
-    .field input { padding-left: 2.4rem; }
-    .gate-btn { font-size: .85rem; letter-spacing: .07em; line-height: 1.5; }
+  @media (max-width:720px){
+    .hero{align-items:flex-end;padding-bottom:9vh}
+    .hero-copy{max-width:none}
+    .hero h1{font-size:clamp(2rem,9vw,2.7rem)}
+    .scroll-cue{display:none}
+    .myst-quote{margin-top:1.8rem}
+    .field input{min-height:50px}
+    .gate-btn{min-height:52px}
+    .nav-brand span{font-size:.7rem;letter-spacing:.16em}
   }
-
-  /* ═══════════ Release-notes-modal ═══════════ */
-  .rn-overlay {
-    position: fixed; inset: 0; z-index: 500; display: flex;
-    align-items: center; justify-content: center; padding: 1rem;
-    background: rgba(4,2,8,.8); backdrop-filter: blur(3px);
-    opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility .25s;
-  }
-  .rn-overlay.show { opacity: 1; visibility: visible; }
-  .rn-modal {
-    width: min(440px, 100%); max-height: 82vh; overflow-y: auto;
-    background: linear-gradient(165deg, var(--stone-2), var(--stone));
-    border: 1px solid var(--gold); box-shadow: 0 0 40px rgba(201,162,39,.25), 0 24px 60px rgba(0,0,0,.7);
-    padding: 1.3rem 1.4rem 1.5rem; animation: rn-rise .35s cubic-bezier(.22,1,.36,1);
-  }
-  @keyframes rn-rise { from { opacity: 0; transform: translateY(18px) scale(.98); } to { opacity: 1; transform: none; } }
-  .rn-head {
-    display: flex; align-items: center; justify-content: space-between;
-    font-family: 'Press Start 2P', monospace; font-size: .62rem; letter-spacing: .06em;
-    color: var(--gold-bright); text-transform: uppercase; padding-bottom: .8rem;
-    border-bottom: 1px solid var(--edge); margin-bottom: .9rem;
-  }
-  .rn-close {
-    background: none; border: 1px solid var(--edge); color: var(--bone-dim);
-    width: 32px; height: 32px; cursor: pointer; font-size: .85rem;
-  }
-  .rn-close:hover { color: var(--blood-bright); border-color: var(--blood-bright); }
-  .rn-body p { font-size: .9rem; color: var(--bone); line-height: 1.7; margin-bottom: .6rem; }
-  .rn-body b { color: var(--gold-bright); }
-  .rn-more { margin-top: .7rem; }
-  .rn-more a { color: var(--arcane); font-size: .85rem; }
-  .rn-gotit {
-    width: 100%; margin-top: 1.1rem; padding: .8rem;
-    font-family: 'Press Start 2P', monospace; font-size: .6rem; letter-spacing: .1em;
-    background: var(--gold); color: var(--ink); border: none; cursor: pointer;
-    text-transform: uppercase; text-align: center;
-  }
-  .rn-gotit:hover { background: var(--gold-bright); }
-  @media (max-width: 400px) {
-    .rn-modal { padding: 1.1rem .9rem 1.2rem; }
-    .rn-body p { font-size: .85rem; }
+  @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    .rv{opacity:1;transform:none;transition:none}
+    .hero h1{animation:none}
+    .scroll-cue{animation:none}
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=19">
-<script src="sprites.js?v=20260802a"></script>
-<script src="fonts.js?v=20260802c"></script>
-<script src="themes.js?v=20260802c"></script>
 </head>
 <body>
+
+<canvas id="scene"></canvas>
 <div class="grain"></div>
-<canvas id="embers"></canvas>
 <div class="vignette"></div>
-<div class="myst-fog"></div>
 
-<div class="gate">
-  <div class="myst-quotes" id="myst-quotes"></div>
-
-  <div class="gate-frame" id="gate-frame">
-
-    <div class="sigil">
-      <img src="assets/logo-cauldron.png" alt="The Lore Weaver's Cauldron" class="gate-logo">
-    </div>
-
-    <h1 class="gate-title">The Lore Weaver's Cauldron</h1>
-    <p class="gate-sub">Where legends are brewed.</p>
-
-    <form id="login-form" onsubmit="handleAuth(event)">
-      <div class="field">
-        <label for="username" id="lbl-username">Adventurer</label>
-        <input type="text" id="username" placeholder="Your name, brave one…" autocomplete="username" required>
-        <span class="icon">></span>
-      </div>
-      <div class="field">
-        <label for="password" id="lbl-password">Password</label>
-        <input type="password" id="password" placeholder="The secret word…" autocomplete="current-password" required>
-        <span class="icon">></span>
-      </div>
-      <div class="field reg-only" id="confirm-field" style="display:none">
-        <label for="confirm">Confirm Password</label>
-        <input type="password" id="confirm" placeholder="Speak it once more…" autocomplete="new-password">
-        <span class="icon">></span>
-      </div>
-      <button type="submit" class="gate-btn" id="auth-btn">What will the Cauldron Foretell?</button>
-      <div class="gate-toggle" id="gate-toggle" onclick="toggleAuthMode()">New here? <b>Forge your name</b></div>
-      <div class="gate-error" id="error"></div>
-    </form>
-
-    <div class="gate-footer">
-      Powered by Qwen · Your adventures are saved in the Cauldron · <a href="releases.html" id="releases-link">What's new in v0.6</a>
-    </div>
+<!-- ═══════════════ nav ═══════════════ -->
+<nav class="nav" id="nav">
+  <a class="nav-brand" href="#top">
+    <img src="assets/logo-cauldron.png" alt="">
+    <span>Lore Weaver's Cauldron</span>
+  </a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#ledger">Release Notes</a>
+    <a class="nav-cta" href="#gate">Enter</a>
   </div>
-</div>
+</nav>
 
-<!-- Release-notes-modal (first visit per version) -->
-<div class="rn-overlay" id="rn-overlay" onclick="if(event.target===this)closeReleaseModal()">
-  <div class="rn-modal">
-    <div class="rn-head">
-      <span>v0.6.0 — What's new</span>
-      <button class="rn-close" onclick="closeReleaseModal()">✕</button>
-    </div>
-    <div class="rn-body">
-      <p><b>Theme switcher</b> — five dark-fantasy palettes in the top bar.</p>
-      <p><b>Model transparency</b> — what the DM models do, and why "high reasoning" takes a little longer.</p>
-      <p><b>Longer soundscapes</b> — 10+ minute ambient loops.</p>
-      <p><b>Combat v26</b> — the DM narrates everything; the Lorekeeper keeps the books.</p>
-      <p><b>The Codex</b> — character, NPCs, map, journal and facts in one tabbed view.</p>
-      <p class="rn-more"><a href="releases.html">Full release notes →</a></p>
-    </div>
-    <button class="rn-gotit" onclick="closeReleaseModal()">What will the Cauldron Foretell?</button>
-  </div>
-</div>
+<div class="content" id="top">
 
-<div class="toast" id="toast"></div>
+  <!-- ═══════════════ hero ═══════════════ -->
+  <section class="hero">
+    <div class="wrap">
+      <div class="hero-copy">
+        <p class="eyebrow rv in">A Free AI Dungeon Master &middot; Open Beta</p>
+        <h1 class="rv in d1">The Lore Weaver&rsquo;s Cauldron
+          <span class="of">What will the Cauldron Foretell?</span>
+        </h1>
+        <p class="tagline rv in d2">A world that remembers. A dungeon master that never sleeps.
+          Your campaign is brewed one turn at a time &mdash; and the pot does not forget.</p>
+        <div class="hero-actions rv in d3">
+          <a class="btn-gold" href="#gate" id="hero-begin">Begin Your Journey</a>
+          <a class="btn-ghost" href="#features">Learn more &#8595;</a>
+        </div>
+        <p class="myst-quote rv in d3" id="myst-quote"></p>
+      </div>
+    </div>
+    <div class="scroll-cue">&#8595;</div>
+  </section>
+
+  <!-- ═══════════════ features ═══════════════ -->
+  <section class="solid sect" id="features">
+    <div class="wrap">
+      <p class="eyebrow rv">What Brews Inside</p>
+      <h2 class="rv">Not a chatbot. A campaign.</h2>
+      <p class="lede rv d1">Most AI games are a conversation you close and forget.
+        The Cauldron is a <b>table</b> &mdash; with rules that bite, a world that keeps
+        score, and a DM waiting whenever you return.</p>
+
+      <div class="feat-grid">
+        <div class="tablet rv d1">
+          <span class="corner tl"></span><span class="corner br"></span>
+          <span class="sig">&#10047;</span>
+          <h3>Persistent Story &amp; Memory</h3>
+          <p>The realm does not reset when you close the window. Every choice settles
+            into the world&rsquo;s memory &mdash; grudges, favors, prophecies half-fulfilled.
+            Leave for a season; <em>the innkeeper still remembers what you did.</em></p>
+        </div>
+        <div class="tablet rv d2">
+          <span class="corner tl"></span><span class="corner br"></span>
+          <span class="sig">&#9824;</span>
+          <h3>Strict D&amp;D 5e Ruleset</h3>
+          <p>Initiative, action economy, advantage, saving throws &mdash; real rolls with
+            real stakes. The DM narrates everything; the Lorekeeper keeps the books.
+            <em>A natural 20 still feels like lightning.</em></p>
+        </div>
+        <div class="tablet rv d3">
+          <span class="corner tl"></span><span class="corner br"></span>
+          <span class="sig">&#10040;</span>
+          <h3>Powered by Qwen &amp; StepFun</h3>
+          <p>Choose the mind behind the mask. Frontier models, transparent token usage,
+            and reasoning you can watch as it happens.
+            <em>You decide who runs your table.</em></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ the gate ═══════════════ -->
+  <section class="solid sect" id="gate">
+    <div class="wrap">
+      <div class="gate-grid">
+        <div>
+          <p class="eyebrow rv">The Gate</p>
+          <h2 class="rv">Swear yourself in.</h2>
+          <ul class="pitch-list">
+            <li class="rv d1"><b>Free, forever.</b> Unlimited turns &mdash; no subscription,
+              no hourglass, no metered fate.</li>
+            <li class="rv d2"><b>Your adventures are yours.</b> Saved in the Cauldron,
+              never sold, never trained on by strangers.</li>
+            <li class="rv d3"><b>Heretic models incoming<span class="tag">Incoming</span></b>
+              &mdash; unbound storytelling for NSFW campaigns. Some cauldrons brew
+              darker things, for those old enough to ask.</li>
+          </ul>
+          <p class="pitch-note rv d3">No rules to memorize before you start.
+            The DM teaches you as you play &mdash; or enforces them strictly, if you prefer the iron road.</p>
+        </div>
+
+        <div class="gate-card rv d2" id="gate-card">
+          <span class="corner tl"></span><span class="corner tr"></span>
+          <span class="corner bl"></span><span class="corner br"></span>
+          <div class="gate-head">
+            <h3 id="gate-title">Return to the Cauldron</h3>
+            <p id="gate-sub">The fire has been kept burning.</p>
+          </div>
+          <form id="auth-form">
+            <div class="field">
+              <label for="username" id="lbl-username">Adventurer</label>
+              <input type="text" id="username" placeholder="Your name, brave one&hellip;"
+                     autocomplete="username" required>
+              <span class="icon">&gt;</span>
+            </div>
+            <div class="field">
+              <label for="password" id="lbl-password">Password</label>
+              <input type="password" id="password" placeholder="The secret word&hellip;"
+                     autocomplete="current-password" required>
+              <span class="icon">&gt;</span>
+            </div>
+            <div class="field" id="confirm-field" style="display:none">
+              <label for="confirm">Confirm Password</label>
+              <input type="password" id="confirm" placeholder="Speak it once more&hellip;"
+                     autocomplete="new-password">
+              <span class="icon">&gt;</span>
+            </div>
+            <button type="submit" class="gate-btn" id="auth-btn">What will the Cauldron Foretell?</button>
+            <div class="gate-toggle" id="gate-toggle">New here? <b>Forge your name</b></div>
+            <div class="gate-error" id="gate-error"></div>
+          </form>
+          <div class="gate-foot">Powered by Qwen &amp; StepFun &middot; self-registration, no email required</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ ledger ═══════════════ -->
+  <section class="solid ledger sect" id="ledger">
+    <div class="wrap">
+      <p class="eyebrow rv">From the Ledger</p>
+      <h2 class="rv">What&rsquo;s new in the realm</h2>
+      <span class="ver-chip rv d1">v0.6.0 &mdash; The Production Readiness Update</span>
+      <ul class="ledger-list">
+        <li class="rv d1"><b>The D20 ceremony</b> &mdash; an inline dice ritual: three seconds
+          of flicker and glitter, then the verdict. Nat 20 in gold, nat 1 in blood.</li>
+        <li class="rv d1"><b>The Codex</b> &mdash; character, NPCs, map, journal and facts
+          in one tabbed view. No more page-hopping mid-encounter.</li>
+        <li class="rv d2"><b>Combat v26, chat-first</b> &mdash; the DM narrates everything;
+          the Lorekeeper extracts the mechanics. Initiative and turn order kept honest.</li>
+        <li class="rv d2"><b>Theme switcher</b> &mdash; five dark-fantasy palettes, one click
+          away in the top bar. Your choice is remembered.</li>
+        <li class="rv d3"><b>Model transparency</b> &mdash; what your DM model is, why
+          &ldquo;high reasoning&rdquo; takes a little longer, and where every token went.</li>
+        <li class="rv d3"><b>Voice of the DM</b> &mdash; play buttons on narration,
+          male and female storyteller voices, mood music that follows the scene.</li>
+      </ul>
+      <p class="ledger-more rv d3"><a href="releases.html">Read the full ledger &#8594;</a></p>
+    </div>
+  </section>
+
+  <!-- ═══════════════ footer ═══════════════ -->
+  <footer>
+    <div class="wrap">
+      <div class="foot-sig">&#10022;</div>
+      <p>The Lore Weaver&rsquo;s Cauldron &mdash; an AI dungeon master.<br>
+        Contact: <a href="mailto:web@rostad.cc">web@rostad.cc</a></p>
+      <p class="foot-small">Forged by rostad &middot; brewed on a small server in Stockholm &middot; 2026</p>
+    </div>
+  </footer>
+
+</div><!-- /content -->
+
+<noscript><style>.rv{opacity:1;transform:none}</style></noscript>
 
 <script src="sfx.js?v=20260802a"></script>
 <script src="api.js?v=20260802c"></script>
-<script src="i18n.js?v=20260802b"></script>
+
 <script>
-// ═══════════════════════════════════════
-// AUTH — backend validerar (JWT i httpOnly cookie)
-// Login ⇄ Signup (iteration 1: ingen email-verifiering)
-// ═══════════════════════════════════════
+/* ═══════════════ nav + scroll reveal ═══════════════ */
+const nav = document.getElementById('nav');
+addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', scrollY > 40);
+}, { passive: true });
+
+const io = new IntersectionObserver(entries => {
+  for (const e of entries) if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+}, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+document.querySelectorAll('.rv:not(.in)').forEach(el => io.observe(el));
+
+/* ═══════════════ rotating mystery quotes ═══════════════ */
+(function () {
+  const quotes = [
+    'In the cauldron, tales wait to be told.',
+    'The Cauldron knows you\u2026 or does it?',
+    'Every tale poured in becomes a world of its own.',
+    'The dragons remember your name. Do you remember theirs?'
+  ];
+  const el = document.getElementById('myst-quote');
+  let idx = 0;
+  el.textContent = quotes[0];
+  setInterval(() => {
+    el.style.opacity = '0';
+    setTimeout(() => { idx = (idx + 1) % quotes.length; el.textContent = quotes[idx]; el.style.opacity = '1'; }, 1000);
+  }, 7000);
+})();
+
+/* ═══════════════ AUTH — same flow as before (JWT httpOnly cookie) ═══════════════ */
 let authMode = 'login'; // 'login' | 'register'
+
+function sfx(name) { try { if (typeof SFX !== 'undefined') SFX[name](); } catch (_) {} }
 
 function setAuthBusy(busy) {
   const btn = document.getElementById('auth-btn');
   btn.disabled = busy;
   btn.textContent = busy
-    ? (authMode === 'register' ? 'Forging your name…' : 'The Cauldron is stirring…')
+    ? (authMode === 'register' ? 'Forging your name\u2026' : 'The Cauldron is stirring\u2026')
     : (authMode === 'register' ? 'Forge Your Name' : 'What will the Cauldron Foretell?');
 }
 
-function toggleAuthMode() {
-  authMode = authMode === 'login' ? 'register' : 'login';
+function applyAuthMode() {
   const isReg = authMode === 'register';
   document.getElementById('confirm-field').style.display = isReg ? '' : 'none';
   document.getElementById('confirm').required = isReg;
   document.getElementById('lbl-username').textContent = isReg ? 'New Adventurer' : 'Adventurer';
   document.getElementById('lbl-password').textContent = isReg ? 'Create a Password' : 'Password';
+  document.getElementById('password').autocomplete = isReg ? 'new-password' : 'current-password';
   document.getElementById('auth-btn').textContent = isReg ? 'Forge Your Name' : 'What will the Cauldron Foretell?';
+  document.getElementById('gate-title').textContent = isReg ? 'Forge Your Name' : 'Return to the Cauldron';
+  document.getElementById('gate-sub').textContent = isReg
+    ? 'The Cauldron has been waiting for someone like you.'
+    : 'The fire has been kept burning.';
   document.getElementById('gate-toggle').innerHTML = isReg
     ? 'Already sworn in? <b>Return to the cauldron</b>'
     : 'New here? <b>Forge your name</b>';
-  document.getElementById('error').textContent = '';
-  if (typeof SFX !== 'undefined') SFX.click();
+  document.getElementById('gate-error').textContent = '';
 }
 
+document.getElementById('gate-toggle').addEventListener('click', () => {
+  authMode = authMode === 'login' ? 'register' : 'login';
+  applyAuthMode();
+  sfx('click');
+});
+
 function showAuthError(msg) {
-  const frame = document.getElementById('gate-frame');
-  document.getElementById('error').textContent = '⚠ ' + msg;
-  if (typeof SFX !== 'undefined') SFX.error();
-  frame.classList.remove('shake');
-  void frame.offsetWidth;
-  frame.classList.add('shake');
+  const card = document.getElementById('gate-card');
+  document.getElementById('gate-error').textContent = msg;
+  sfx('error');
+  card.classList.remove('shake');
+  void card.offsetWidth;
+  card.classList.add('shake');
   setAuthBusy(false);
 }
 
-async function handleAuth(e) {
-  e.preventDefault();
-  if (authMode === 'register') return handleRegister(e);
-
-  const user = document.getElementById('username').value.trim().toLowerCase();
-  const pass = document.getElementById('password').value;
-  const frame = document.getElementById('gate-frame');
-  const err = document.getElementById('error');
-
-  setAuthBusy(true);
-  err.textContent = '';
-
-  try {
-    const res = await API.login(user, pass);
-    err.textContent = '';
-    frame.classList.add('success');
-    SFX.gate();
-    sessionStorage.setItem('dnd_user', res.username);
-    setTimeout(() => { window.location.href = 'adventure.html'; }, 900);
-  } catch (e2) {
-    showAuthError('The Cauldron remains sealed. Wrong name or password.');
-  }
+function authSuccess(username) {
+  const card = document.getElementById('gate-card');
+  document.getElementById('gate-error').textContent = '';
+  card.classList.add('success');
+  sfx('gate');
+  sessionStorage.setItem('dnd_user', username);
+  setTimeout(() => { window.location.href = 'adventure.html'; }, 900);
 }
 
-async function handleRegister(e) {
+document.getElementById('auth-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const user = document.getElementById('username').value.trim().toLowerCase();
   const pass = document.getElementById('password').value;
-  const confirm = document.getElementById('confirm').value;
-  const err = document.getElementById('error');
-
-  err.textContent = '';
-  if (pass !== confirm) {
-    showAuthError('The passwords do not match.');
-    return;
-  }
   setAuthBusy(true);
-
+  document.getElementById('gate-error').textContent = '';
   try {
-    const res = await API.register(user, pass);
-    err.textContent = '';
-    document.getElementById('gate-frame').classList.add('success');
-    SFX.gate();
-    sessionStorage.setItem('dnd_user', res.username);
-    setTimeout(() => { window.location.href = 'adventure.html'; }, 900);
-  } catch (e2) {
-    showAuthError(e2.message || 'The Cauldron would not accept that name.');
+    if (authMode === 'register') {
+      const confirm = document.getElementById('confirm').value;
+      if (pass !== confirm) { showAuthError('The passwords do not match.'); return; }
+      const res = await API.register(user, pass);
+      authSuccess(res.username);
+    } else {
+      const res = await API.login(user, pass);
+      authSuccess(res.username);
+    }
+  } catch (err) {
+    showAuthError(authMode === 'register'
+      ? (err && err.message && !/HTTP/.test(err.message) ? err.message : 'The Cauldron would not accept that name.')
+      : 'The Cauldron remains sealed. Wrong name or password.');
   }
-}
-
-// Redan inloggad?
-if (sessionStorage.getItem('dnd_user')) {
-  document.querySelector('.gate-sub').textContent =
-    'Welcome back, ' + sessionStorage.getItem('dnd_user') + '!';
-}
-
-// ═══════════════════════════════════════
-// RELEASE NOTES — visa modal vid första besök per version
-// ═══════════════════════════════════════
-const RN_VERSION = 'v0.6.0';
-function closeReleaseModal() {
-  const ov = document.getElementById('rn-overlay');
-  if (ov) ov.classList.remove('show');
-  localStorage.setItem('dnd_seen_release', RN_VERSION);
-  try { SFX.click(); } catch (_) {}
-}
-(function maybeShowReleaseModal() {
-  if (localStorage.getItem('dnd_seen_release') !== RN_VERSION) {
-    setTimeout(() => {
-      const ov = document.getElementById('rn-overlay');
-      if (ov) ov.classList.add('show');
-    }, 900);
-  }
-})();
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeReleaseModal();
 });
 
-// ═══════════════════════════════════════
-// EMBERS
-// ═══════════════════════════════════════
-const canvas = document.getElementById('embers');
-const ctx = canvas.getContext('2d');
-let W, H, embers = [];
-function resize() { W = canvas.width = innerWidth; H = canvas.height = innerHeight; }
-resize(); addEventListener('resize', resize);
-function spawn(init) {
-  return { x: Math.random()*W, y: init ? Math.random()*H : H+10, r: 0.7+Math.random()*1.6,
-    vy: 0.2+Math.random()*0.6, vx: (Math.random()-0.5)*0.3, life: 0,
-    max: 400+Math.random()*500, hue: Math.random()<0.8 ? 22+Math.random()*18 : 268+Math.random()*20 };
+/* already logged in? */
+if (sessionStorage.getItem('dnd_user')) {
+  document.getElementById('gate-title').textContent = 'Welcome back, ' + sessionStorage.getItem('dnd_user');
+  document.getElementById('gate-sub').textContent = 'Your seat at the table is still warm.';
 }
-for (let i=0;i<38;i++) embers.push(spawn(true));
-function tick() {
-  ctx.clearRect(0,0,W,H);
-  for (let i=0;i<embers.length;i++) {
-    const e=embers[i]; e.life++; e.y-=e.vy; e.x+=e.vx+Math.sin(e.life*0.02)*0.12;
-    const fade=Math.min(1,e.life/60)*Math.max(0,1-e.life/e.max);
-    const fl=0.5+Math.sin(e.life*0.15+i)*0.35;
-    ctx.beginPath(); ctx.arc(e.x,e.y,e.r,0,Math.PI*2);
-    ctx.fillStyle=`hsla(${e.hue},90%,60%,${0.45*fade*fl})`;
-    ctx.shadowColor=`hsla(${e.hue},90%,55%,${0.7*fade})`; ctx.shadowBlur=7; ctx.fill();
-    if (e.life>e.max||e.y<-12) embers[i]=spawn(false);
+</script>
+
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+/* ============================================================
+   THE LORE WEAVER'S CAULDRON — three.js hero scene
+   Palette matched to the pixel-art logo: dark iron pot, cream
+   rolled rim, molten-gold brew, amber glow, cool blue rim light,
+   twin bubbles + star twinkles.
+   ============================================================ */
+
+const canvas = document.getElementById('scene');
+const reduced  = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const isMobile = () => innerWidth < 720;
+
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias:true, powerPreference:'high-performance' });
+} catch (e) {
+  document.body.classList.add('no-webgl');
+  throw e;
+}
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+renderer.setSize(innerWidth, innerHeight);
+renderer.setClearColor(0x07070c, 1);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.12;
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x07070c, 0.095);
+
+const camera = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 0.1, 40);
+camera.position.set(0, 2.18, 3.85);
+
+/* ---------------- lights ---------------- */
+scene.add(new THREE.HemisphereLight(0x1c1626, 0x0c0a12, 0.55));
+
+const brewLight = new THREE.PointLight(0xffb347, 16, 9, 2);
+brewLight.position.set(0, 1.55, 0);
+scene.add(brewLight);
+
+const warmFill = new THREE.PointLight(0xff7a1a, 4, 7, 2);
+warmFill.position.set(0.6, 0.5, 1.8);
+scene.add(warmFill);
+
+const frontFill = new THREE.PointLight(0xffa050, 3.5, 8, 2);
+frontFill.position.set(-1.6, 1.2, 2.2);
+scene.add(frontFill);
+
+const rimLight = new THREE.PointLight(0x5a6a9a, 9, 11, 2);
+rimLight.position.set(-0.4, 1.5, -2.7);
+scene.add(rimLight);
+
+/* ---------------- cauldron group ---------------- */
+const pot = new THREE.Group();
+scene.add(pot);
+
+const ironMat = new THREE.MeshStandardMaterial({
+  color:0x302a38, roughness:0.52, metalness:0.78, side:THREE.DoubleSide });
+const rimMat  = new THREE.MeshStandardMaterial({ color:0xc9b896, roughness:0.45, metalness:0.55 });
+const legMat  = new THREE.MeshStandardMaterial({ color:0x262028, roughness:0.6,  metalness:0.7 });
+
+const profile = [
+  [0.02,0.00],[0.30,0.02],[0.44,0.08],[0.58,0.22],[0.68,0.42],
+  [0.71,0.60],[0.68,0.78],[0.60,0.90],[0.55,0.97],[0.56,1.02],
+  [0.64,1.05],[0.70,1.10],[0.68,1.16],[0.58,1.19],[0.50,1.16],
+  [0.465,1.08],[0.46,1.00],
+].map(p => new THREE.Vector2(p[0], p[1]));
+const body = new THREE.Mesh(new THREE.LatheGeometry(profile, 56), ironMat);
+body.position.y = 0.10;
+pot.add(body);
+
+const lip = new THREE.Mesh(new THREE.TorusGeometry(0.615, 0.056, 14, 56), rimMat);
+lip.rotation.x = Math.PI/2;
+lip.position.y = 1.235;
+pot.add(lip);
+
+for (const s of [-1, 1]) {
+  const h = new THREE.Mesh(new THREE.TorusGeometry(0.10, 0.03, 10, 22), ironMat);
+  h.rotation.y = Math.PI/2;
+  h.position.set(s * 0.73, 0.82, 0);
+  pot.add(h);
+}
+
+for (let i = 0; i < 3; i++) {
+  const a = (i / 3) * Math.PI * 2 + Math.PI / 6;
+  const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.072, 0.17, 10), legMat);
+  leg.position.set(Math.cos(a) * 0.30, 0.085, Math.sin(a) * 0.30);
+  leg.rotation.z = -Math.cos(a) * 0.22;
+  leg.rotation.x =  Math.sin(a) * 0.22;
+  pot.add(leg);
+}
+
+const ground = new THREE.Mesh(
+  new THREE.CircleGeometry(2.4, 48),
+  new THREE.MeshStandardMaterial({ color:0x1a1622, roughness:0.95, metalness:0 })
+);
+ground.rotation.x = -Math.PI/2;
+scene.add(ground);
+
+/* ---------------- the brew — boiling molten-gold shader ---------------- */
+const brewUniforms = { uTime:{value:0}, uAgitation:{value:0} };
+const brew = new THREE.Mesh(
+  new THREE.CircleGeometry(0.455, 48),
+  new THREE.ShaderMaterial({
+    uniforms: brewUniforms,
+    vertexShader: /* glsl */`
+      varying vec2 vUv;
+      void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+    fragmentShader: /* glsl */`
+      uniform float uTime; uniform float uAgitation;
+      varying vec2 vUv;
+      float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453123); }
+      float noise(vec2 p){
+        vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
+        return mix(mix(hash(i), hash(i+vec2(1.,0.)), f.x),
+                   mix(hash(i+vec2(0.,1.)), hash(i+vec2(1.,1.)), f.x), f.y);
+      }
+      float fbm(vec2 p){
+        float v = 0.0, a = 0.5;
+        for(int i=0;i<4;i++){ v += a*noise(p); p *= 2.1; a *= 0.5; }
+        return v;
+      }
+      void main(){
+        vec2 c = vUv - 0.5;
+        float d = length(c) * 2.0;
+        float ang = atan(c.y, c.x);
+        float speed = 0.35 + uAgitation * 0.55;
+
+        float rot = uTime * 0.55 * (0.6 + uAgitation * 0.8);
+        vec2 rc = vec2(c.x * cos(rot * 0.3) - c.y * sin(rot * 0.3),
+                       c.x * sin(rot * 0.3) + c.y * cos(rot * 0.3));
+
+        float warp = fbm(rc * 3.0 + uTime * 0.15);
+        float fil  = fbm(rc * 5.5 + vec2(warp * 1.4) + vec2(uTime * speed * 0.5, -uTime * speed * 0.35));
+        float vein = fbm(rc * 9.0 - vec2(warp * 0.9) - vec2(uTime * speed * 0.8, uTime * speed * 0.4));
+        float boil = fil * 0.62 + vein * 0.38;
+
+        vec2 hotC = vec2(sin(uTime * 0.4) * 0.13, cos(uTime * 0.31) * 0.13);
+        float hotD = length(c - hotC) * 2.0;
+        float hotSpot = smoothstep(0.85, 0.1, hotD);
+
+        vec3 white = vec3(0.95, 0.85, 0.62);
+        vec3 gold  = vec3(1.00, 0.82, 0.27);
+        vec3 amber = vec3(0.98, 0.52, 0.09);
+        vec3 deep  = vec3(0.58, 0.26, 0.05);
+
+        float dd = clamp(d + boil * 0.30 - 0.16, 0.0, 1.0);
+        vec3 col = mix(white, gold,  smoothstep(0.00, 0.34, dd));
+        col      = mix(col,  amber, smoothstep(0.34, 0.68, dd));
+        col      = mix(col,  deep,  smoothstep(0.68, 1.00, dd));
+
+        float filGlow = smoothstep(0.52, 0.76, fil);
+        col += vec3(0.55, 0.40, 0.10) * filGlow * (1.0 - d * 0.45) * (1.0 + uAgitation * 0.5);
+
+        float veinDark = smoothstep(0.52, 0.78, vein);
+        col *= 1.0 - veinDark * 0.50 * (0.4 + 0.6 * d);
+
+        col += vec3(0.30, 0.24, 0.09) * hotSpot * (0.7 + 0.3 * sin(uTime * 2.7));
+
+        float sheen = fbm(c * 3.0 - vec2(uTime * 0.22, uTime * 0.13));
+        col += vec3(0.22, 0.15, 0.04) * smoothstep(0.62, 0.85, sheen) * (1.0 - d);
+
+        float meniscus = smoothstep(0.68, 0.86, d) * (1.0 - smoothstep(0.94, 1.0, d));
+        col += vec3(1.00, 0.68, 0.20) * meniscus * (0.9 + 0.3 * sin(ang * 6.0 + uTime * 1.4));
+
+        col *= 1.0 - smoothstep(0.92, 1.0, d) * 0.35;
+        col *= 1.12 + 0.10 * sin(uTime * 2.3) * (1.0 - d * 0.5);
+
+        gl_FragColor = vec4(col, 1.0);
+      }`,
+  })
+);
+brew.rotation.x = -Math.PI/2;
+brew.position.y = 1.175;
+pot.add(brew);
+
+/* ---------------- canvas-generated textures ---------------- */
+function radialTex(stops, size = 128) {
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const x = c.getContext('2d');
+  const g = x.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+  for (const [o, col] of stops) g.addColorStop(o, col);
+  x.fillStyle = g; x.fillRect(0, 0, size, size);
+  return new THREE.CanvasTexture(c);
+}
+const flameTex = radialTex([[0,'rgba(255,255,255,1)'],[0.35,'rgba(255,255,255,.6)'],[1,'rgba(255,255,255,0)']]);
+const sparkTex = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 16;
+  const x = c.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(5, 5, 6, 6);
+  return new THREE.CanvasTexture(c);
+})();
+const starTex = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const x = c.getContext('2d');
+  x.shadowColor = 'rgba(255,240,200,.9)'; x.shadowBlur = 14;
+  x.fillStyle = '#fff';
+  x.beginPath();
+  x.moveTo(64,6); x.lineTo(75,53); x.lineTo(122,64); x.lineTo(75,75);
+  x.lineTo(64,122); x.lineTo(53,75); x.lineTo(6,64); x.lineTo(53,53);
+  x.closePath(); x.fill();
+  return new THREE.CanvasTexture(c);
+})();
+
+/* ---------------- particle engine ---------------- */
+function makePoints(count, tex) {
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count*3), 3).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('aColor',   new THREE.BufferAttribute(new Float32Array(count*3), 3).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('aSize',    new THREE.BufferAttribute(new Float32Array(count),   1).setUsage(THREE.DynamicDrawUsage));
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { uTex:{value:tex}, uScale:{value:130 * renderer.getPixelRatio()} },
+    vertexShader: /* glsl */`
+      attribute float aSize; attribute vec3 aColor;
+      varying vec3 vColor;
+      uniform float uScale;
+      void main(){
+        vColor = aColor;
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = min(aSize * uScale / -mv.z, 110.0);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: /* glsl */`
+      uniform sampler2D uTex; varying vec3 vColor;
+      void main(){ gl_FragColor = texture2D(uTex, gl_PointCoord) * vec4(vColor, 1.0); }`,
+    transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+  });
+  const pts = new THREE.Points(geo, mat);
+  pts.frustumCulled = false;
+  pot.add(pts);
+  return { pts, geo, mat, count,
+    pos: geo.attributes.position.array,
+    col: geo.attributes.aColor.array,
+    siz: geo.attributes.aSize.array };
+}
+
+const BREW_Y = 1.18;
+
+const FC = (reduced || isMobile()) ? 90 : 170;
+const flame = makePoints(FC, flameTex);
+const fLife = new Float32Array(FC), fMax = new Float32Array(FC),
+      fVel  = new Float32Array(FC), fSeed = new Float32Array(FC), fBase = new Float32Array(FC);
+function respawnFlame(i) {
+  const a = Math.random() * Math.PI * 2;
+  const r = Math.pow(Math.random(), 0.6) * 0.30;
+  flame.pos[i*3]   = Math.cos(a) * r;
+  flame.pos[i*3+1] = BREW_Y + Math.random() * 0.06;
+  flame.pos[i*3+2] = Math.sin(a) * r;
+  fLife[i] = 0; fMax[i] = 0.7 + Math.random() * 0.8;
+  fVel[i]  = 0.55 + Math.random() * 0.8;
+  fSeed[i] = Math.random() * 100;
+  fBase[i] = 0.16 + Math.random() * 0.20;
+}
+for (let i = 0; i < FC; i++) { respawnFlame(i); fLife[i] = Math.random() * fMax[i]; }
+
+const SC = isMobile() ? 20 : 36;
+const sparks = makePoints(SC, sparkTex);
+const sLife = new Float32Array(SC), sMax = new Float32Array(SC),
+      sVel  = new Float32Array(SC), sSeed = new Float32Array(SC);
+function respawnSpark(i) {
+  const a = Math.random() * Math.PI * 2;
+  const r = 0.25 + Math.random() * 0.35;
+  sparks.pos[i*3]   = Math.cos(a) * r;
+  sparks.pos[i*3+1] = BREW_Y + 0.1 + Math.random() * 0.5;
+  sparks.pos[i*3+2] = Math.sin(a) * r;
+  sLife[i] = 0; sMax[i] = 1.6 + Math.random() * 1.8;
+  sVel[i]  = 0.18 + Math.random() * 0.3;
+  sSeed[i] = Math.random() * 100;
+}
+for (let i = 0; i < SC; i++) { respawnSpark(i); sLife[i] = Math.random() * sMax[i]; }
+
+const BC = 70;
+const burst = makePoints(BC, sparkTex);
+const bLife = new Float32Array(BC).fill(1), bMax = new Float32Array(BC).fill(1),
+      bVel  = new Float32Array(BC*3);
+let burstGlow = 0;
+function fireBurst() {
+  burstGlow = 1;
+  for (let i = 0; i < BC; i++) {
+    burst.pos[i*3]   = (Math.random() - 0.5) * 0.3;
+    burst.pos[i*3+1] = BREW_Y + 0.05;
+    burst.pos[i*3+2] = (Math.random() - 0.5) * 0.3;
+    const a = Math.random() * Math.PI * 2;
+    bVel[i*3]   = Math.cos(a) * (0.3 + Math.random() * 0.9);
+    bVel[i*3+1] = 0.9 + Math.random() * 1.6;
+    bVel[i*3+2] = Math.sin(a) * (0.3 + Math.random() * 0.9);
+    bLife[i] = 0; bMax[i] = 0.6 + Math.random() * 0.7;
   }
+}
+
+/* ---------------- halo + twinkles + bubbles ---------------- */
+const haloMat = new THREE.SpriteMaterial({
+  map: radialTex([[0,'rgba(255,170,60,.55)'],[0.4,'rgba(255,140,30,.18)'],[1,'rgba(255,120,20,0)']]),
+  blending: THREE.AdditiveBlending, depthWrite:false, transparent:true, opacity:0.5,
+});
+const halo = new THREE.Sprite(haloMat);
+halo.position.set(0, 1.62, 0);
+halo.scale.setScalar(3.1);
+pot.add(halo);
+
+const twinkles = [];
+for (const [x, y, z, s] of [[-0.52, 2.15, 0.25, 0.30], [0.58, 2.30, 0.10, 0.22]]) {
+  const m = new THREE.SpriteMaterial({
+    map: starTex, blending:THREE.AdditiveBlending, depthWrite:false,
+    transparent:true, opacity:0.95, color:0xf0c050 });
+  const sp = new THREE.Sprite(m);
+  sp.position.set(x, y, z);
+  sp.scale.setScalar(s);
+  sp.userData = { base:s, phase: Math.random() * 6 };
+  pot.add(sp);
+  twinkles.push(sp);
+}
+
+const bubbles = [];
+for (const sx of [-1, 1]) {
+  const g = new THREE.Group();
+  const heart = new THREE.Mesh(
+    new THREE.SphereGeometry(0.062, 20, 20),
+    new THREE.MeshStandardMaterial({ color:0x8a9a4a, emissive:0x4a5a1a, roughness:0.3, metalness:0.1 }));
+  const rim = new THREE.Mesh(
+    new THREE.SphereGeometry(0.076, 20, 20),
+    new THREE.MeshBasicMaterial({ color:0xe8c65a, transparent:true, opacity:0.28,
+      blending:THREE.AdditiveBlending, depthWrite:false }));
+  const glint = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: flameTex, color:0xffffff, transparent:true, opacity:0.9, depthWrite:false }));
+  glint.position.set(-0.024, 0.028, 0.05);
+  glint.scale.setScalar(0.045);
+  g.add(heart, rim, glint);
+  g.position.set(sx * 0.66, 1.88, 0.16);
+  g.userData = { phase: sx > 0 ? 0 : Math.PI * 0.7 };
+  pot.add(g);
+  bubbles.push(g);
+}
+
+/* ---------------- interaction ---------------- */
+let mouseNX = 0, mouseNY = 0, agitation = 0, lastPX = null, lastPY = null;
+addEventListener('pointermove', e => {
+  if (lastPX !== null) {
+    const speed = Math.hypot(e.clientX - lastPX, e.clientY - lastPY);
+    agitation = Math.min(1, agitation + speed * 0.0016);
+  }
+  lastPX = e.clientX; lastPY = e.clientY;
+  mouseNX = (e.clientX / innerWidth)  * 2 - 1;
+  mouseNY = (e.clientY / innerHeight) * 2 - 1;
+});
+addEventListener('pointerdown', e => {
+  /* don't spark when typing in the gate form */
+  if (e.target.closest('#gate-card')) return;
+  fireBurst();
+  agitation = Math.min(1, agitation + 0.55);
+});
+
+/* ---------------- layout ---------------- */
+function layout() {
+  const mobile = isMobile();
+  pot.position.x = mobile ? 0 : 1.45;
+  pot.scale.setScalar(mobile ? 0.92 : 1);
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+  for (const p of [flame, sparks, burst])
+    p.mat.uniforms.uScale.value = 130 * renderer.getPixelRatio();
+}
+addEventListener('resize', layout);
+layout();
+
+/* ---------------- main loop ---------------- */
+const clock = new THREE.Clock();
+const lookTarget = new THREE.Vector3();
+let elapsed = 0, running = true;
+
+document.addEventListener('visibilitychange', () => {
+  running = !document.hidden;
+  if (running) { clock.getDelta(); requestAnimationFrame(tick); }
+});
+
+function tick() {
+  if (!running) return;
   requestAnimationFrame(tick);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  elapsed += dt;
+  const t = elapsed;
+
+  agitation *= Math.exp(-dt * 1.35);
+  burstGlow *= Math.exp(-dt * 3.2);
+
+  /* scroll: the cauldron recedes as you leave the hero */
+  const scrollK = Math.min(1, Math.max(0, scrollY / innerHeight));
+
+  /* camera: slow sway + mouse parallax + scroll pull-back */
+  const swayAmp = reduced ? 0.12 : 0.5;
+  const sway = Math.sin(t * 0.12) * swayAmp;
+  const camX = sway + mouseNX * 0.55;
+  const camY = 2.18 - mouseNY * 0.30 + scrollK * 0.9 + (reduced ? 0 : Math.sin(t * 0.08) * 0.07);
+  const camZ = 3.85 - Math.abs(sway) * 0.12 + scrollK * 1.6;
+  camera.position.x += (camX - camera.position.x) * 0.045;
+  camera.position.y += (camY - camera.position.y) * 0.045;
+  camera.position.z += (camZ - camera.position.z) * 0.045;
+  lookTarget.set(pot.position.x * 0.38, 0.95 + scrollK * 0.35, 0);
+  camera.lookAt(lookTarget);
+
+  brewUniforms.uTime.value = t;
+  brewUniforms.uAgitation.value = agitation;
+  brewLight.intensity = 16 + agitation * 15 + burstGlow * 34;
+  haloMat.opacity = 0.44 + Math.sin(t * 1.7) * 0.07 + agitation * 0.14 + burstGlow * 0.4;
+
+  const fPos = flame.pos, fCol = flame.col, fSiz = flame.siz;
+  for (let i = 0; i < FC; i++) {
+    fLife[i] += dt * (1 + agitation * 0.7);
+    if (fLife[i] >= fMax[i]) respawnFlame(i);
+    const k = fLife[i] / fMax[i];
+    fPos[i*3]   *= (1 - dt * 1.3);
+    fPos[i*3+2] *= (1 - dt * 1.3);
+    fPos[i*3]   += Math.sin(t * 3.2 + fSeed[i]) * 0.0016;
+    fPos[i*3+1] += fVel[i] * dt * (1 + agitation * 0.5);
+    let r, g, b;
+    if (k < 0.18)      { const u = k / 0.18;        r = 1;               g = 0.97 - u * 0.2;  b = 0.85 - u * 0.55; }
+    else if (k < 0.55) { const u = (k-0.18) / 0.37; r = 1;               g = 0.77 - u * 0.32; b = 0.30 - u * 0.20; }
+    else               { const u = (k-0.55) / 0.45; r = 1 - u * 0.95;    g = 0.45 - u * 0.42; b = 0.10 - u * 0.10; }
+    fCol[i*3] = r; fCol[i*3+1] = g; fCol[i*3+2] = b;
+    const bell = Math.min(k / 0.15, 1) * (1 - Math.max(0, (k - 0.5) / 0.5));
+    fSiz[i] = fBase[i] * bell * (1 + agitation * 0.35);
+  }
+  flame.geo.attributes.position.needsUpdate = true;
+  flame.geo.attributes.aColor.needsUpdate = true;
+  flame.geo.attributes.aSize.needsUpdate = true;
+
+  const sPos = sparks.pos, sCol = sparks.col, sSiz = sparks.siz;
+  for (let i = 0; i < SC; i++) {
+    sLife[i] += dt;
+    if (sLife[i] >= sMax[i]) respawnSpark(i);
+    const k = sLife[i] / sMax[i];
+    sPos[i*3+1] += sVel[i] * dt;
+    sPos[i*3]   += Math.sin(t * 1.4 + sSeed[i]) * 0.0022;
+    const flick = 0.55 + 0.45 * Math.sin(t * 18 + sSeed[i] * 7);
+    const fade  = Math.min(k / 0.1, 1) * (1 - Math.max(0, (k - 0.6) / 0.4));
+    sCol[i*3] = 1 * flick * fade; sCol[i*3+1] = 0.9 * flick * fade; sCol[i*3+2] = 0.7 * flick * fade;
+    sSiz[i] = 0.045;
+  }
+  sparks.geo.attributes.position.needsUpdate = true;
+  sparks.geo.attributes.aColor.needsUpdate = true;
+  sparks.geo.attributes.aSize.needsUpdate = true;
+
+  const bPos = burst.pos, bCol = burst.col, bSiz = burst.siz;
+  for (let i = 0; i < BC; i++) {
+    if (bLife[i] >= bMax[i]) { bCol[i*3] = bCol[i*3+1] = bCol[i*3+2] = 0; bSiz[i] = 0; continue; }
+    bLife[i] += dt;
+    const k = bLife[i] / bMax[i];
+    bVel[i*3+1] -= 2.4 * dt;
+    bPos[i*3]   += bVel[i*3]   * dt;
+    bPos[i*3+1] += bVel[i*3+1] * dt;
+    bPos[i*3+2] += bVel[i*3+2] * dt;
+    const fade = 1 - k;
+    bCol[i*3] = 1 * fade; bCol[i*3+1] = (0.8 - k * 0.4) * fade; bCol[i*3+2] = 0.3 * fade;
+    bSiz[i] = 0.06 * (1 - k * 0.5);
+  }
+  burst.geo.attributes.position.needsUpdate = true;
+  burst.geo.attributes.aColor.needsUpdate = true;
+  burst.geo.attributes.aSize.needsUpdate = true;
+
+  for (const tw of twinkles) {
+    const p = 0.75 + 0.35 * Math.sin(t * 2.1 + tw.userData.phase);
+    tw.scale.setScalar(tw.userData.base * p);
+    tw.material.opacity = 0.5 + 0.45 * p;
+    tw.material.rotation += dt * 0.25;
+  }
+  for (const bb of bubbles) {
+    bb.position.y = 1.88 + Math.sin(t * 1.3 + bb.userData.phase) * 0.09;
+    bb.position.x = (bb.userData.phase > 1 ? 0.66 : -0.66) + Math.sin(t * 0.7 + bb.userData.phase) * 0.05;
+  }
+
+  /* only render while the canvas can actually be seen */
+  if (scrollY < innerHeight * 1.6) renderer.render(scene, camera);
 }
 tick();
-
-// ═══════════════════════════════════════
-// MYSTERY QUOTES — rotating atmospheric text
-// ═══════════════════════════════════════
-(function() {
-  const quotes = [
-    'In the cauldron, tales wait to be told.',
-    'The Cauldron knows you\u2026 or does it?',
-    'Every tale poured into the cauldron becomes a world of its own.',
-    'The dragons remember your name. Do you remember theirs?'
-  ];
-  const el = document.getElementById('myst-quotes');
-  if (!el) return;
-  let idx = 0;
-  el.textContent = quotes[0];
-  setInterval(function() {
-    el.style.opacity = '0';
-    setTimeout(function() {
-      idx = (idx + 1) % quotes.length;
-      el.textContent = quotes[idx];
-      el.style.opacity = '1';
-    }, 1000);
-  }, 5000);
-})();
-
-// ═══════════════════════════════════════
-// INPUT FOCUS SFX
-// ═══════════════════════════════════════
-document.querySelectorAll('.field input').forEach(function(inp) {
-  inp.addEventListener('focus', function() { if (typeof SFX !== 'undefined') SFX.click(); });
-});
 </script>
 </body>
 </html>

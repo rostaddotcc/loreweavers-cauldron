@@ -103,7 +103,7 @@
     position:relative;padding:1.3rem 1.1rem 1.1rem;text-align:center;
     background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);
     border:1px solid var(--edge);overflow:hidden;
-  }.htp-card::before{content:'';position:absolute;inset:5px;border:1px solid rgba(201,162,39,.1);pointer-events:none}.htp-card .htp-icon{font-size:1.6rem;display:block;margin-bottom:.6rem;filter:drop-shadow(0 2px 8px rgba(0,0,0,.5))}.htp-card h3{font-family:'Cinzel',serif;font-weight:700;font-size:.82rem;letter-spacing:.1em;color:var(--gold-bright);margin-bottom:.5rem}.htp-card p{font-size:.91rem;line-height:1.6;color:var(--bone-dim);font-style:italic}.htp-card p b{color:var(--bone);font-style:normal}/* ═══════════ Kontakt — footer ═══════════ */.contact{ text-align:center; padding:2.6rem 1rem .5rem }.contact .rune-divider{ margin-bottom:1rem }.contact a{ font-family:'Cinzel',serif; font-size:.95rem; letter-spacing:.12em; color:var(--gold); text-decoration:none; border-bottom:1px solid rgba(201,162,39,.3); padding-bottom:2px; transition:all .25s }.contact a:hover{ color:var(--gold-bright); border-color:var(--gold); text-shadow:0 0 14px rgba(232,198,90,.4) }.contact p{ margin:.55rem 0 0; font-size:.78rem; font-style:italic; color:var(--bone-dim) }
+  }.htp-card::before{content:'';position:absolute;inset:5px;border:1px solid rgba(201,162,39,.1);pointer-events:none}.htp-card .htp-icon{font-size:1.6rem;display:block;margin-bottom:.6rem;filter:drop-shadow(0 2px 8px rgba(0,0,0,.5))}.htp-card h3{font-family:'Cinzel',serif;font-weight:700;font-size:.82rem;letter-spacing:.1em;color:var(--gold-bright);margin-bottom:.5rem}.htp-card p{font-size:.91rem;line-height:1.6;color:var(--bone-dim);font-style:italic}.htp-card p b{color:var(--bone);font-style:normal}/* ═══════════ Release Notes accordion ═══════════ */.rn-body{display:block;max-height:0;overflow:hidden;transition:max-height .5s cubic-bezier(.22,1,.36,1),opacity .4s;opacity:0}.rn-body.open{max-height:1600px;opacity:1;margin-top:.4rem}.rn-inner{background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);border:1px solid var(--edge);padding:1.5rem 1.4rem;position:relative;text-align:left}.rn-inner::before{content:'';position:absolute;inset:5px;border:1px solid rgba(201,162,39,.1);pointer-events:none}.rn-ver{display:inline-block;font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;color:#1a1206;background:linear-gradient(180deg,var(--gold-bright),var(--gold));padding:.35rem .8rem;margin-bottom:1rem}.rn-list{list-style:none;margin:0 0 1.2rem;padding:0}.rn-list li{padding:.55rem 0 .55rem 1.4rem;position:relative;font-size:.95rem;line-height:1.6;color:var(--bone-dim);border-bottom:1px solid rgba(42,42,58,.4)}.rn-list li:last-child{border-bottom:none}.rn-list li::before{content:'▸';position:absolute;left:.1rem;color:var(--gold)}.rn-list li b{color:var(--bone);font-weight:600}.rn-more{font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);text-decoration:none;border-bottom:1px solid rgba(201,162,39,.3);padding-bottom:2px;transition:all .25s}.rn-more:hover{color:var(--gold-bright);border-color:var(--gold);text-shadow:0 0 12px rgba(232,198,90,.4)}/* ═══════════ Kontakt — footer ═══════════ */.contact{ text-align:center; padding:2.6rem 1rem .5rem }.contact .rune-divider{ margin-bottom:1rem }.contact a{ font-family:'Cinzel',serif; font-size:.95rem; letter-spacing:.12em; color:var(--gold); text-decoration:none; border-bottom:1px solid rgba(201,162,39,.3); padding-bottom:2px; transition:all .25s }.contact a:hover{ color:var(--gold-bright); border-color:var(--gold); text-shadow:0 0 14px rgba(232,198,90,.4) }.contact p{ margin:.55rem 0 0; font-size:.78rem; font-style:italic; color:var(--bone-dim) }
   @media(max-width:900px){.htp-body{grid-template-columns:1fr}}/* ═══════════ Mobile — vägskälet i fickformat ═══════════ */html{-webkit-tap-highlight-color:transparent}
   @media(max-width:900px){.paths{grid-template-columns:1fr;gap:1rem}.path{padding:1.4rem 1.1rem 1.2rem;transform:none!important}.path:active{transform:translateY(2px)!important;border-color:var(--pc,var(--gold));
       box-shadow:0 4px 14px -8px rgba(0,0,0,.8)}.path:active .glow{opacity:1}.path:active .icon{transform:scale(1.1)}.path .icon{font-size:2.3rem;margin-bottom:.7rem}.campaign-list{grid-template-columns:1fr}
@@ -137,6 +137,29 @@
     <h1>The Lore Weaver's Cauldron</h1>
     <p class="sub">Every adventure begins with a choice. Which path will you take?</p>
     <div class="rune-divider"><span>✦</span></div>
+  </div>
+
+  <!-- ═══════════ RELEASE NOTES ═══════════ -->
+  <div class="htp">
+    <button class="htp-toggle" id="rn-toggle" onclick="toggleRn()">
+      <span class="caret">▸</span> Release Notes
+    </button>
+    <div class="rn-body" id="rn-body">
+      <div class="rn-inner">
+        <span class="rn-ver">v0.6.0 — The Production Readiness Update</span>
+        <ul class="rn-list">
+          <li><b>The D20 ceremony</b> — an inline dice ritual: three seconds of flicker and glitter, then the verdict. Nat 20 in gold, nat 1 in blood.</li>
+          <li><b>Roll or Write</b> — when the DM calls for a roll, choose the dice or the pen. The chat unlocks when you write instead.</li>
+          <li><b>The Codex</b> — character, NPCs, map, journal and facts in one tabbed view.</li>
+          <li><b>Combat v26, chat-first</b> — the DM narrates everything; the Lorekeeper extracts the mechanics. Initiative and turn order kept honest.</li>
+          <li><b>Voice of the DM</b> — play buttons on narration, storyteller voices, mood music that follows the scene.</li>
+          <li><b>Theme switcher</b> — five dark-fantasy palettes in the top bar. Your choice is remembered.</li>
+          <li><b>Model transparency</b> — what your DM model is, why high reasoning takes a little longer, and where every token went.</li>
+          <li><b>@NPC chat</b> — address any NPC directly in their own voice, with autocomplete.</li>
+        </ul>
+        <a class="rn-more" href="releases.html">Read the full ledger →</a>
+      </div>
+    </div>
   </div>
 
   <!-- ═══════════ SÅ SPELAR DU ═══════════ -->
@@ -402,6 +425,13 @@ let activePanel = null;
 function toggleHtp() {
   const btn = document.getElementById('htp-toggle');
   const body = document.getElementById('htp-body');
+  btn.classList.toggle('open');
+  body.classList.toggle('open');
+}
+
+function toggleRn() {
+  const btn = document.getElementById('rn-toggle');
+  const body = document.getElementById('rn-body');
   btn.classList.toggle('open');
   body.classList.toggle('open');
 }

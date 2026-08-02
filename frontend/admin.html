@@ -62,6 +62,8 @@
     text-decoration: none; border-radius: 0; transition: all 0.2s;
   }
   .back-btn:hover { color: var(--gold-bright); border-color: var(--gold); }
+  .masthead-actions { display: flex; gap: 0.6rem; }
+  .back-btn.leave:hover { color: var(--blood-bright); border-color: var(--blood-bright); }
 
   /* ── Stat cards ── */
   .stats-grid {
@@ -246,7 +248,10 @@
 <div class="app">
   <header class="masthead">
     <h1>Admin · The Lore Weaver's Cauldron</h1>
-    <a href="chat.html" class="back-btn">⚔ To the Table</a>
+    <div class="masthead-actions">
+      <a href="adventure.html" class="back-btn leave">🚪 Leave</a>
+      <a href="chat.html" class="back-btn">⚔ To the Table</a>
+    </div>
   </header>
 
   <div id="content">

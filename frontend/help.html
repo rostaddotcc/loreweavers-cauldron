@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚔️ How to Play</title>
+<title>How to Play — The Lore Weaver's Cauldron</title>
+<link rel="icon" href="/assets/logo-cauldron.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
@@ -28,9 +29,8 @@
   p,li{font-size:.91rem;color:var(--bone);margin-bottom:.6rem}
   ul{padding-left:1.2rem;list-style:none}
   li::before{content:'▸ ';color:var(--gold)}
-  .box{background:var(--stone);border:1px solid var(--edge);padding:1.2rem;margin:1rem 0}
+  .box{background:var(--stone);border:1px solid var(--edge);padding:1.2rem;margin:1rem 0;position:relative}
   .box::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.4}
-  .box{position:relative}
   .cmd{color:var(--term-green);background:var(--ink);padding:.15rem .4rem;border:1px solid var(--edge);font-size:.85rem}
   .key{color:var(--term-amber);border:1px solid var(--edge);padding:.1rem .35rem;font-size:.81rem;background:var(--stone-2)}
   .topbar{display:flex;align-items:center;gap:1rem;padding:1rem 0;border-bottom:1px solid var(--edge);margin-bottom:2rem}
@@ -58,7 +58,6 @@
     h2 { font-size: .62rem; margin: 1.6rem 0 .7rem; }
     p, li { font-size: .87rem; line-height: 1.9; }
     .box { padding: .9rem .8rem; }
-    /* Long command tags may wrap on narrow screens */
     .cmd { word-break: break-word; display: inline-block; max-width: 100%; }
     .loop { gap: .5rem .6rem; }
     .topbar .brand { font-size: .55rem; }
@@ -82,12 +81,12 @@
     <span class="brand">The Lore Weaver's Cauldron</span>
     <span style="flex:1"></span>
     <a href="chat.html">⚔️ To the Table</a>
-    <a href="adventure.html">🚪 The Crossroads</a>
+    <a href="adventure.html">🚪 Leave</a>
     <a href="releases.html">📜 Releases</a>
   </div>
 
-  <h1>⚔ How to Play</h1>
-  <p style="color:var(--bone-dim)">A guide to the adventure — from first login to the final dice roll.</p>
+  <h1>How to Play</h1>
+  <p style="color:var(--bone-dim)">A guide to the adventure — from the first step to the last dice. The short version: speak naturally, and let the world keep the numbers.</p>
 
   <hr class="divider">
 
@@ -96,125 +95,115 @@
     <div class="loop">
       <span class="step">1.</span><span class="desc"><b>The DM awakens</b> — asks 2-3 questions about your character and the world</span>
       <span class="step">2.</span><span class="desc"><b>You answer</b> — the DM weaves your answers into the opening scene</span>
-      <span class="step">3.</span><span class="desc"><b>You act</b> — write freely: fight, sneak, speak, explore</span>
-      <span class="step">4.</span><span class="desc"><b>The DM responds</b> — describes consequences, NPCs, new choices</span>
-      <span class="step">5.</span><span class="desc"><b>Dice</b> — when the outcome is uncertain, the DM calls for a roll and you roll</span>
+      <span class="step">3.</span><span class="desc"><b>You act</b> — write what you do in plain words: fight, sneak, speak, explore. No syntax, no commands — intent is enough</span>
+      <span class="step">4.</span><span class="desc"><b>The DM responds</b> — describes consequences, plays the NPCs, opens new choices</span>
+      <span class="step">5.</span><span class="desc"><b>The Lorekeeper writes</b> — HP, gold, items, XP and quests update in the background, quietly</span>
       <span class="step">6.</span><span class="desc"><b>Repeat</b> — the story is built from your choices, nothing is predetermined</span>
     </div>
   </div>
 
-  <h2>How Turns Work</h2>
+  <h2>Two Minds at the Table</h2>
   <div class="box">
-    <p>Every exchange at the table counts as one <b>turn</b>: your action, followed by the DM's response.</p>
     <ul>
-      <li>The current turn is shown in the chat header: <span style="color:var(--term-green)">Campaign: … · Turn N</span></li>
-      <li>Turns are counted automatically — you never have to track them yourself</li>
-      <li>Checkpoints (<span class="cmd">/save</span>) remember which turn you saved at, so you can always see where the story stands</li>
+      <li><b>The Dungeon Master</b> narrates everything — the world, the NPCs, the drama. It thinks in stories, not spreadsheets</li>
+      <li><b>The Lorekeeper</b> is the quiet scribe behind the DM — it reads every reply and turns it into real mechanics: damage applied, treasure added, map updated, journal filled</li>
+      <li>While the DM answers you, the Lorekeeper works in parallel — you can see its progress live (<b>Lorekeeper reviewing the action… → DM weaving the tale… → Parsing mechanics… → Lorekeeper updating the world…</b>). The story never pauses for bookkeeping</li>
+      <li>Mechanical effects arrive as a <b>🦉 Lorekeeper Report</b> in the chat — that's your proof the numbers landed</li>
     </ul>
   </div>
 
   <h2>Getting Started</h2>
   <ul>
-    <li>Log in with your username and password</li>
-    <li>Choose your adventure type: <b>Prepare</b> (build a world with prompt + files) or <b>New</b> (freestyle)</li>
-    <li>Create your character: choose an archetype or write freely, pick a model, click "Summon Character"</li>
-    <li>The AI generates a complete character sheet</li>
-    <li>Click "To the Table" — the DM awakens and asks its questions</li>
+    <li>Sign in at the Gate — free account, unlimited turns, no email needed</li>
+    <li>Choose how to begin: <b>Prepare Adventure</b> (describe a world and/or upload .md/.pdf files — Qwen extracts characters, locations, quests and lore) or <b>New Adventure</b> (the DM freestyles an opening on the spot)</li>
+    <li>Create your character: pick an archetype or describe your own, then <b>Summon Character</b> — the AI writes the full sheet</li>
+    <li>Pick your DM model and step to the table. The DM awakens and asks its first questions</li>
+  </ul>
+
+  <h2>Dice — Roll or Write</h2>
+  <ul>
+    <li>When an outcome is uncertain, the DM calls for a roll and a <b>Roll or Write card</b> appears in the chat</li>
+    <li>Click the <b>🎲 dice</b> to roll — a short ceremony, flicker and glitter, then the verdict</li>
+    <li>Or click the <b>🖊️ pen</b> to describe your attempt in words instead — the chat unlocks and you narrate freely</li>
+    <li>The chat is locked while a roll is pending, so the dice stay fair and deliberate</li>
+    <li><b>Natural 20</b> = triumph, rendered in gold. <b>Natural 1</b> = catastrophe, rendered in blood</li>
+    <li>You never need to type dice notation anywhere — the DM and Lorekeeper handle the math</li>
   </ul>
 
   <h2>Talking to NPCs</h2>
   <div class="box">
-    <p>Type <span class="cmd">@Name</span> in the chat to address an NPC directly.</p>
-    <p>Example: <span class="cmd">@Lyra Vane</span> <span style="color:var(--bone-dim)">"What are you doing here?"</span></p>
-    <p>The NPC answers in its own voice. The DM can step in with narration at any time.</p>
-    <p>You get autocomplete when you type <span class="cmd">@</span> — every known NPC is listed.</p>
+    <p>Type <span class="cmd">@Name</span> in the chat to address an NPC directly — e.g. <span class="cmd">@Lyra Vane</span> <i>"What are you doing here?"</i></p>
+    <p>The NPC answers in its own voice, with its own opinions and memory of you. The DM can step in with narration at any time.</p>
+    <p>Typing <span class="cmd">@</span> gives you autocomplete — every NPC you've met is listed. NPCs standing close to you join <b>The Party</b> panel in the sidebar.</p>
   </div>
 
-  <h2>Dice</h2>
-  <ul>
-    <li>When the outcome is uncertain, the DM calls for a roll — a <b>roll button appears in the chat</b></li>
-    <li>Click it to roll — or choose <b>✍️ Write instead</b> to act without rolling (the chat unlocks and you narrate freely)</li>
-    <li>The chat is locked while a roll is pending, so the dice stay fair and deliberate</li>
-    <li>You can also type <span class="cmd">/roll 1d20+4</span> — the roll command (alias <span class="cmd">/rulla</span>) — directly in the chat to roll whenever you want</li>
-    <li>Natural 20 = CRITICAL! Natural 1 = PATHETIC!</li>
-  </ul>
-
-  <h2>The Lorekeeper</h2>
+  <h2>The Codex — Everything in One Place</h2>
   <div class="box">
-    <p>The <b>Lorekeeper</b> is the keeper of mechanics. While the DM narrates, the Lorekeeper works in the background — applying damage, healing, XP, gold, items and quests to your character.</p>
+    <p>The <b>📖 Codex</b> is your tabbed view of the whole campaign — no page-hopping:</p>
     <ul>
-      <li>Mechanical effects appear as a <span style="color:var(--gold-bright)">🦉 Lorekeeper Report</span> card in the chat (e.g. the combat log)</li>
-      <li>A pulsing indicator shows the Lorekeeper is processing — keep playing, the story never stops for bookkeeping</li>
-      <li>Your character sheet updates automatically: HP, inventory, quests, NPCs, locations</li>
+      <li><b>Character</b> — full sheet: stats, HP, inventory, equipment, notes</li>
+      <li><b>NPCs</b> — every person you've met, with trust and lore</li>
+      <li><b>Map</b> — locations discovered so far</li>
+      <li><b>Journal</b> — the logbook of your adventure</li>
+      <li><b>Facts</b> — pinned truths about the world</li>
+      <li><b>Spells</b> — known spells and slots</li>
     </ul>
   </div>
 
-  <h2>Mechanical Tags (Invisible)</h2>
-  <p>The DM's narration is laced with hidden markers that the system converts into real effects — you never see them:</p>
+  <h2>Voice, Music &amp; Themes</h2>
   <ul>
-    <li><b>Damage &amp; healing</b> — your HP changes automatically</li>
-    <li><b>XP &amp; gold</b> — gained and tracked for you</li>
-    <li><b>Items</b> — new equipment appears in your inventory</li>
-    <li><b>Quests</b> — new goals appear in your journal</li>
-    <li><b>NPCs</b> — characters you meet are registered</li>
-    <li><b>Locations</b> — the map updates as you travel</li>
+    <li><b>Voice of the DM</b> — a ▶ play button on every DM reply reads the narration aloud; pick a male or female storyteller voice above the input. Voices are generated on demand and cached</li>
+    <li><span class="key">♫</span> Music on/off — mood-based loops that follow the scene (night, day, battle, town, rest, dungeon)</li>
+    <li><span class="key">🔊</span> Sound effects on/off — dice, coins, crits and battle jingles, all synthesized in the browser</li>
+    <li><b>Theme switcher</b> in the top bar — five dark-fantasy palettes (Terminal, Blood, Arcane, Ember, Iron), remembered between visits</li>
+    <li>Typewriter reveal on messages, with pixel-particle bursts on every DM, Lorekeeper and player message</li>
   </ul>
 
   <h2>Models</h2>
   <div class="box">
-    <p>You can switch the AI model mid-adventure from the <b>Settings (⚙️)</b> menu in the top bar — pick a new Dungeon Master or Lorekeeper model at any time.</p>
+    <p>Three roles, each with its own model — all switchable mid-adventure from <b>Settings (⚙️)</b>:</p>
     <ul>
-      <li><b>qwen3.8-max</b> — powerful, great at creative narration</li>
-      <li><b>qwen3.6-flash</b> — fast, reliable all-rounder</li>
-      <li><b>deepseek-v4-flash-0731</b> — fast reasoning model (thinks before answering)</li>
-      <li><b>step-3.7-flash</b> — fast, budget option</li>
+      <li><b>Dungeon Master</b> — the storyteller. Higher reasoning models think longer but write richer prose; watch the DM's reasoning bubble if you're curious what it's weighing</li>
+      <li><b>Lorekeeper</b> — the mechanic extracting numbers from the narration</li>
+      <li><b>Background (extraction)</b> — used for worldbuilding uploads and avatars</li>
     </ul>
-    <p style="color:var(--bone-dim);font-size:.81rem">Your choice is saved and stays until you change it. If the DM stops responding, try switching models here first.</p>
+    <p style="color:var(--bone-dim);font-size:.81rem">Open <b>About the Models</b> in Settings for what each model does and why thinking takes time. Your choices are saved per campaign. If the DM stops responding, switching models is the first thing to try.</p>
   </div>
 
-  <h2>Music &amp; Sound</h2>
-  <ul>
-    <li><span class="key">♫</span> — music on/off (mood-based loops: night, day, battle, town, rest, dungeon)</li>
-    <li><span class="key">🔊</span> — sound effects on/off (dice, coins, battle, level-up)</li>
-    <li>The music changes mood automatically based on the DM's text</li>
-  </ul>
-
-  <h2>Rules (D&amp;D 5e, Simplified)</h2>
+  <h2>Rules (D&amp;D 5e)</h2>
   <div class="box">
     <ul>
-      <li><b>Roll:</b> 1d20 + modifier vs DC (Difficulty Class)</li>
-      <li><b>DC 10</b> = easy, <b>DC 15</b> = medium, <b>DC 20</b> = hard</li>
-      <li><b>HP 0</b> = death saves (1d20, 3 successes = stable, 3 failures = dead)</li>
-      <li><b>XP</b> = experience points, level-up at thresholds (300, 900, 2700...)</li>
-      <li><b>Combat:</b> initiative → turn order → attack → damage → repeat</li>
-      <li><b>Rest:</b> short rest (1h) = restore HP, long rest (8h) = full HP + spell slots</li>
+      <li>The DM runs the table on the 5e ruleset: 1d20 + modifier vs DC, initiative and turn order in combat, advantage/disadvantage, rests, death saves</li>
+      <li>You don't need to know any of it — the DM applies the rules and explains them as they matter</li>
+      <li>Unsure about a rule? Ask the <b>📜 Rule Oracle</b> in Settings — it answers 5e questions directly</li>
+      <li>The DM is still the final judge. The rules are a framework, not a prison</li>
     </ul>
-    <p style="color:var(--bone-dim);font-size:.81rem">The DM is the final judge. The rules are a framework, not a prison.</p>
   </div>
 
   <h2>Tips</h2>
   <ul>
     <li>Write freely — you can attempt anything (you may try, you may not always succeed)</li>
-    <li>Ask the Rules Oracle (📜) if you are unsure about D&amp;D rules</li>
-    <li>Explore the Map (🗺️) to see locations and travel times</li>
-    <li>Read the Logbook (📜) for a summary of the adventure</li>
-    <li>Save your character in the Vault (🏰) to reuse it</li>
-    <li>Export (📦) to download the entire campaign as a ZIP</li>
+    <li>Everything is remembered — grudges, favors, prophecies half-fulfilled. Leave for a season; the world keeps your place</li>
+    <li>Click any avatar (yours or an NPC's) to change its image</li>
+    <li><b>📊 Usage</b> in Settings shows exactly which models ran and what they cost in tokens — full transparency</li>
+    <li><b>📦 Export</b> in Settings downloads your entire campaign as a ZIP</li>
+    <li><b>🚪 Leave</b> in Settings returns you to adventure select — your campaigns wait for you there</li>
   </ul>
 
   <h2>If Something Goes Wrong</h2>
   <div class="box">
     <ul>
-      <li><b>No reply from the DM?</b> The chat shows the underlying error — an HTTP code like <span class="cmd">HTTP 429</span> (rate limit), <span class="cmd">HTTP 500</span> (server), <span class="cmd">HTTP 402</span> (billing), or a network/empty-response message</li>
-      <li><b>If the issue persists, try changing models in the Settings (⚙️)</b> — a different model often routes around the problem</li>
+      <li><b>The state looks wrong?</b> (missing item, wrong HP) — tell the Lorekeeper directly with <span class="cmd">/guardian my HP should be 18</span> and it corrects the books</li>
+      <li><b>No reply from the DM?</b> The chat shows the underlying error — an HTTP code like <span class="cmd">HTTP 429</span> (rate limit), <span class="cmd">HTTP 500</span> (server), or a network message</li>
+      <li><b>If the issue persists, change models in Settings (⚙️)</b> — a different model often routes around the problem</li>
       <li><b>Connection dropped mid-reply?</b> The chat recovers the DM's answer from the transcript automatically</li>
-      <li>Check the <b>Engine Room (🛠️)</b> in Settings for live debug logs if things look wrong</li>
+      <li>Check the <b>🛠️ Engine Room</b> in Settings for live debug logs if things look wrong; <span class="cmd">/help</span> in the chat lists the few remaining shortcuts</li>
     </ul>
   </div>
 
   <hr class="divider">
   <p style="text-align:center;color:var(--bone-dim);font-size:.78rem">
-    Powered by DeepSeek &amp; Qwen · Campaigns are saved locally · <a href="login.html">Back to the Gate</a>
+    Powered by Qwen &amp; StepFun · Your adventures are saved in the Cauldron · <a href="login.html">Back to the Gate</a>
   </p>
 </div>
 <script src="i18n.js?v=20260802b"></script>

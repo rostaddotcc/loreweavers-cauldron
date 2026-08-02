@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Lore Weaver's Cauldron — The Crossroads</title>
+<title>The Lore Weaver's Cauldron</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
@@ -20,7 +20,7 @@
       var(--ink);
     background-attachment:fixed;overflow-x:hidden;
   }.grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.05;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}#embers{position:fixed;inset:0;z-index:1;pointer-events:none}.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(4,2,8,.85)}.app{position:relative;z-index:2;max-width:960px;margin:0 auto;padding:0 1.25rem 5rem}/* ═══════════ Topprad (ljud + lämna) ═══════════ */.topbar{display:flex;justify-content:flex-end;align-items:center;gap:.6rem;padding:1.1rem .1rem 0}.top-btn{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}#embers{position:fixed;inset:0;z-index:1;pointer-events:none}.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(4,2,8,.85)}.app{position:relative;z-index:2;max-width:960px;margin:0 auto;padding:0 1.25rem 5rem}.head-logo{width:150px;display:block;margin:0 auto .8rem;mix-blend-mode:screen;filter:saturate(1.05) brightness(1.02);animation:head-float 7s ease-in-out infinite}@keyframes head-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}/* ═══════════ Topprad (ljud + lämna) ═══════════ */.topbar{display:flex;justify-content:flex-end;align-items:center;gap:.6rem;padding:1.1rem .1rem 0}.top-btn{
     font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;
     background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);
     padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;white-space:nowrap;text-decoration:none;
@@ -132,8 +132,9 @@
   </div>
 
   <div class="head">
-    <div class="over">Step one of four</div>
-    <h1>The Crossroads</h1>
+    <img src="assets/logo-cauldron.png" alt="The Lore Weaver's Cauldron" class="head-logo">
+    <div class="over">What will the Cauldron Foretell?</div>
+    <h1>The Lore Weaver's Cauldron</h1>
     <p class="sub">Every adventure begins with a choice. Which path will you take?</p>
     <div class="rune-divider"><span>✦</span></div>
   </div>
@@ -147,17 +148,17 @@
       <div class="htp-card">
         <span class="htp-icon">🧙‍♂️</span>
         <h3>Dungeon Master</h3>
-        <p>An AI that <b>tells the world</b> — describes environments, plays NPCs and drives the plot. Write what you do, and the DM answers with consequences. The DM invents the world <b>together with you</b>, not in advance.</p>
+        <p>An AI that <b>tells the world</b> — describes environments, plays NPCs and drives the plot. Just write what you do <b>in plain words</b>, the way you'd speak at a real table. No syntax, no commands — the DM understands intent and answers with consequences.</p>
       </div>
       <div class="htp-card">
-        <span class="htp-icon">🛡️</span>
-        <h3>Lorekeeper</h3>
-        <p>A quiet system that <b>keeps track of the numbers</b> — HP, gold, items, XP. When the DM says you take damage or find treasure, the Lorekeeper updates your character sheet automatically. You never need to count yourself.</p>
+        <span class="htp-icon">🦉</span>
+        <h3>The Lorekeeper</h3>
+        <p>A quiet scribe that <b>keeps the books</b> — HP, gold, items, XP, quests, locations. When the DM says you take damage or find treasure, the Lorekeeper updates everything in the background. You never track numbers yourself; the world remembers.</p>
       </div>
       <div class="htp-card">
         <span class="htp-icon">🎲</span>
-        <h3>Dice & Mechanics</h3>
-        <p>When the outcome is uncertain, the DM calls for a <b>dice roll</b>. A roll button appears in the chat — click it, or choose <b>✍️ Write instead</b> to act freely. <b>Nat 20</b> = triumph, <b>nat 1</b> = catastrophe. Type <b>/roll 1d20+4</b> to roll whenever you want.</p>
+        <h3>Dice &amp; Mechanics</h3>
+        <p>When the outcome is uncertain, the DM calls for a roll and a <b>Roll or Write card</b> appears in the chat. Click the dice to roll, or the pen to describe your attempt in words instead. <b>Nat 20</b> = triumph, <b>nat 1</b> = catastrophe.</p>
       </div>
     </div>
   </div>

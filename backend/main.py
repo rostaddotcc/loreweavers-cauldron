@@ -1764,22 +1764,50 @@ async def oracle(req: OracleRequest, morkrets_token: str | None = Cookie(None)):
 
 
 # ═══════════════════════════════════════
-# TTS — Qwen-Audio-3.0-TTS-Plus via Alibaba Token Plan (DashScope SDK WebSocket)
+# TTS — Qwen-Audio-3.0-TTS-Plus (Alibaba Token Plan) + StepFun (Step Plan)
 # ═══════════════════════════════════════
 
 # Två fördefinierade berättarröster (systemröster på Token Plan)
 TTS_VOICE_MALE = os.getenv("TTS_VOICE_MALE", "longanlufeng")      # Long An Lu Feng — manlig
 TTS_VOICE_FEMALE = os.getenv("TTS_VOICE_FEMALE", "longanlingxin") # Long An Ling Xin — kvinnlig
 
-TTS_VOICES = [
-    {"id": TTS_VOICE_MALE, "name": "Berättaren (man)", "desc": "Ljus och kraftfull manlig berättarröst"},
-    {"id": TTS_VOICE_FEMALE, "name": "Berättaren (kvinna)", "desc": "Varm och empatisk kvinnlig berättarröst"},
-]
+# TTS-leverantörer: qwen (Alibaba Token Plan) + stepfun (StepFun Step Plan).
+# StepFun körs via /step_plan/v1/audio/speech med officiella systemröster —
+# inga snippet-uppladdningar krävs (fix 2026-08-02).
+TTS_PROVIDERS = {
+    "qwen": {
+        "name": "Qwen (Token Plan)",
+        "voices": [
+            {"id": TTS_VOICE_MALE, "gender": "male", "name": "Berättaren (man)", "desc": "Ljus och kraftfull manlig berättarröst"},
+            {"id": TTS_VOICE_FEMALE, "gender": "female", "name": "Berättaren (kvinna)", "desc": "Varm och empatisk kvinnlig berättarröst"},
+        ],
+    },
+    "stepfun": {
+        "name": "StepFun (Step Plan)",
+        "voices": [
+            {"id": "vibrant-youth", "gender": "male", "name": "Vibrant Youth (EN)", "desc": "Male English voice — warm and gentle (docs: 男，英文音色)"},
+            {"id": "magnetic-voiced-male", "gender": "male", "name": "Magnetic Male (EN)", "desc": "Male English voice — deep and commanding"},
+            {"id": "soft-spoken-gentleman", "gender": "male", "name": "Soft Gentleman (EN)", "desc": "Male English voice — calm and soft"},
+            {"id": "elegantgentle-female", "gender": "female", "name": "Elegant Female (EN)", "desc": "Female English voice — elegant and warm"},
+            {"id": "livelybreezy-female", "gender": "female", "name": "Lively Breezy (EN)", "desc": "Female English voice — lively and bright"},
+        ],
+    },
+}
+TTS_DEFAULT_PROVIDER = os.getenv("TTS_PROVIDER", "stepfun")
 
 TTS_INSTRUCTIONS = {
     # OBS: instruktionen får vara MAX 128 tecken — längre ger "Instruction is invalid!"
     TTS_VOICE_MALE: "Speak Swedish with Standard Swedish pronunciation and natural rhythm. Dramatic dark fantasy narration, slow and atmospheric.",
     TTS_VOICE_FEMALE: "Speak Swedish with Standard Swedish pronunciation and natural rhythm. Warm rich storytelling voice, expressive and inviting.",
+}
+
+# StepFun-instruktion per röst — styr stil/emfas (kort; stöds av stepaudio-2.5-tts)
+STEPFUN_INSTRUCTIONS = {
+    "vibrant-youth": "Speak with a calm Germanic storytelling voice, slow atmospheric dark fantasy narration.",
+    "magnetic-voiced-male": "Speak with a deep commanding Germanic voice, slow atmospheric dark fantasy narration.",
+    "soft-spoken-gentleman": "Speak softly and calmly, slow atmospheric dark fantasy narration.",
+    "elegantgentle-female": "Speak with a warm elegant voice, slow atmospheric dark fantasy narration.",
+    "livelybreezy-female": "Speak with a lively warm voice, expressive storytelling.",
 }
 
 # Token Plan TTS har INGEN REST-endpoint — går bara via DashScope SDK WebSocket
@@ -1796,7 +1824,8 @@ _TTS_CACHE_MAX = 64
 
 class TTSRequest(BaseModel):
     text: str
-    voice: str = ""  # tomt = manlig berättare
+    voice: str = ""  # kön ('male'/'female') eller voice-id
+    provider: str = ""  # 'qwen' | 'stepfun' — tomt = kampanjens val / default
 
 
 def _truncate_tts(text: str, limit: int = 1000) -> str:
@@ -1930,13 +1959,17 @@ def _record_tts_usage(username: str, chars: int, seconds: float, api_call: bool)
         logger.exception("🔊 Kunde inte bokföra TTS-usage")
 
 
-def _synth_qwen_tts(voice: str, text: str) -> bytes:
+def _synth_qwen_tts(voice: str, text: str, use_instruction: bool = True) -> bytes:
     """Blockande DashScope-syntes — körs i en tråd (asyncio.to_thread).
 
     Använder async-läget (streaming_call + egen ResultCallback) så att
     riktiga serverfel — t.ex. Throttling.AllocationQuota (Token Plan-kvoten
     slut) — fångas och förs vidare. SDK:ns call()-läge sväljer TaskFailed i
     websocket-tråden och ger bara en vilseledande ConnectionError.
+
+    use_instruction=False: skicka INGEN instruction-parameter. Token-plan-
+    servern har varit flaky med instruction (task-failed "request timeout
+    after 23 seconds") — retry utan instruction löser oftast.
     """
     try:
         import dashscope
@@ -1972,11 +2005,12 @@ def _synth_qwen_tts(voice: str, text: str) -> bytes:
             self.done.set()
 
     cb = _Capture()
+    instr = TTS_INSTRUCTIONS.get(voice, "") if use_instruction else None
     syn = SpeechSynthesizer(
         model="qwen-audio-3.0-tts-plus",
         voice=voice,
         format=AudioFormat.MP3_22050HZ_MONO_256KBPS,
-        instruction=TTS_INSTRUCTIONS.get(voice, ""),
+        instruction=instr,
         callback=cb,
     )
     try:
@@ -1993,6 +2027,69 @@ def _synth_qwen_tts(voice: str, text: str) -> bytes:
     if not cb.audio:
         raise RuntimeError("TTS returnerade inget ljud")
     return bytes(cb.audio)
+
+
+def _synth_qwen_tts_retry(voice: str, text: str) -> bytes:
+    """Qwen TTS med retry — token-plan-servern är flaky med instruction.
+
+    1) Försök med instruction (styr accent/stil)
+    2) Vid "request timeout"-fel → retry UTAN instruction
+    3) Vid kvarvarande fel → kasta vidare
+    """
+    try:
+        return _synth_qwen_tts(voice, text, use_instruction=True)
+    except Exception as e:
+        msg = str(e)
+        if "request timeout" in msg:
+            logger.warning("🔊 Qwen TTS request timeout — retry utan instruction")
+            return _synth_qwen_tts(voice, text, use_instruction=False)
+        raise
+
+
+def _synth_stepfun_tts(voice: str, text: str) -> bytes:
+    """StepFun TTS via Step Plan (/step_plan/v1/audio/speech).
+
+    OpenAI-kompatibel REST — officiella systemröster, inga snippet-
+    uppladdningar. Model: stepaudio-2.5-tts. Max 1000 tecken per anrop
+    (segmentering sker i /api/tts). ( ) tolkas som instruktioner av
+    stepaudio — byts till fullwidth så allt talas.
+    """
+    import urllib.request as _ur
+    import urllib.error as _uer
+
+    api_key = os.getenv("STEPFUN_API_KEY")
+    if not api_key:
+        raise RuntimeError("StepFun-nyckel saknas (STEPFUN_API_KEY)")
+    base = os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.ai/step_plan/v1")
+    text = text.replace("(", "（").replace(")", "）")
+    body = {
+        "model": "stepaudio-2.5-tts",
+        "input": text,
+        "voice": voice,
+        "response_format": "mp3",
+    }
+    inst = STEPFUN_INSTRUCTIONS.get(voice)
+    if inst:
+        body["instruction"] = inst
+    req = _ur.Request(
+        base.rstrip("/") + "/audio/speech",
+        data=json.dumps(body).encode(),
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with _ur.urlopen(req, timeout=120) as r:
+            data = r.read()
+    except _uer.HTTPError as e:
+        msg = e.read().decode("utf-8", "replace")[:300]
+        if e.code == 429:
+            raise RuntimeError("StepFun TTS kvot slut just nu — försök igen om en stund")
+        raise RuntimeError(f"StepFun TTS HTTP {e.code}: {msg}")
+    except Exception as e:
+        raise RuntimeError(f"StepFun TTS fel: {e}")
+    if not data:
+        raise RuntimeError("StepFun TTS returnerade inget ljud")
+    return data
 
 
 def _parse_tts_error(msg: str):
@@ -2014,51 +2111,73 @@ def _parse_tts_error(msg: str):
 
 @app.get("/api/tts/voices")
 async def tts_voices(morkrets_token: str | None = Cookie(None)):
-    """Tillgängliga TTS-röster (man + kvinna, berättare)."""
+    """Tillgängliga TTS-leverantörer + röster (qwen + stepfun)."""
     _get_current_user(morkrets_token)
-    return {"voices": TTS_VOICES}
+    return {
+        "providers": [
+            {"id": pid, "name": p["name"], "voices": p["voices"]}
+            for pid, p in TTS_PROVIDERS.items()
+        ],
+        "default_provider": TTS_DEFAULT_PROVIDER,
+    }
 
 
 @app.post("/api/tts")
 async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
-    """Generera tal från text via Qwen-Audio-3.0-TTS-Plus (Token Plan)."""
+    """Generera tal från text via vald TTS-leverantör (qwen eller stepfun)."""
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
     text = req.text.strip()
     if not text:
         raise HTTPException(400, "Ingen text att läsa upp")
+
+    # ── Leverantör: request → kampanjens val → default ──
+    state = store.get(username)
+    campaign_provider = (state.get("meta", {}).get("tts_provider") or "") if state else ""
+    provider = (req.provider or campaign_provider or TTS_DEFAULT_PROVIDER).strip().lower()
+    if provider not in TTS_PROVIDERS:
+        raise HTTPException(400, f"Okänd TTS-leverantör: {provider}")
+    pvoices = TTS_PROVIDERS[provider]["voices"]
+
+    # ── Röst: kön ('male'/'female') → första rösten med könet; annars voice-id ──
+    if req.voice in ("male", "female"):
+        voice = next((v["id"] for v in pvoices if v["gender"] == req.voice), None)
+        if not voice:
+            raise HTTPException(400, f"Ingen {req.voice}-röst hos {provider}")
+    else:
+        voice = req.voice or (pvoices[0]["id"] if pvoices else "")
+    if not voice or not any(v["id"] == voice for v in pvoices):
+        raise HTTPException(400, f"Okänd röst för {provider}: {voice}")
+
     # Ta bort maskinella taggar ([KAST:...], [SKADA:...] etc.) om de finns kvar
     text = re.sub(r"\[[A-Z_]+:[^\]]*\]", "", text).strip()
     # Långa meddelanden kapas INTE längre (fix 2026-08-01) — texten delas i
     # segment som syntetiseras var för sig och sys ihop till en MP3.
     segments = _split_tts_segments(text)
 
-    voice = req.voice or TTS_VOICE_MALE
-    if voice not in (TTS_VOICE_MALE, TTS_VOICE_FEMALE):
-        raise HTTPException(400, "Okänd röst")
-
-    cache_key = (voice, text)
+    cache_key = (provider, voice, text)
     cached = _TTS_CACHE.get(cache_key)
     if cached is not None:
-        logger.info("🔊 TTS cache hit: voice=%s, %d chars, %d bytes", voice, len(text), len(cached))
+        logger.info("🔊 TTS cache hit: provider=%s voice=%s, %d chars, %d bytes", provider, voice, len(text), len(cached))
         _record_tts_usage(username, len(text), _mp3_duration_seconds(cached), api_call=False)
         return StreamingResponse(io.BytesIO(cached), media_type="audio/mpeg")
 
-    logger.info("🔊 TTS synth: model=qwen-audio-3.0-tts-plus, voice=%s, %d chars, %d segments", voice, len(text), len(segments))
+    logger.info("🔊 TTS synth: provider=%s model=%s, voice=%s, %d chars, %d segments", provider, _tts_model_label(provider), voice, len(text), len(segments))
+    synth = _synth_qwen_tts_retry if provider == "qwen" else _synth_stepfun_tts
     _t0 = time.time()
     try:
         if len(segments) == 1:
-            audio = await asyncio.to_thread(_synth_qwen_tts, voice, segments[0])
+            audio = await asyncio.to_thread(synth, voice, segments[0])
         else:
             # Syntetisera varje segment sekventiellt (rate limits) och sy ihop
             parts = []
             for seg in segments:
-                parts.append(await asyncio.to_thread(_synth_qwen_tts, voice, seg))
+                parts.append(await asyncio.to_thread(synth, voice, seg))
             audio = b"".join(parts)
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("🔊 TTS error: voice=%s, %d chars — %s", voice, len(text), e, exc_info=True)
+        logger.error("🔊 TTS error: provider=%s voice=%s, %d chars — %s", provider, voice, len(text), e, exc_info=True)
         msg = str(e)
         code, emsg = _parse_tts_error(msg)
         if code:
@@ -2068,14 +2187,37 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
                     f"Token Plan TTS quota exhausted right now ({code}) — it resets automatically, try again in a moment.",
                 )
             raise HTTPException(502, f"TTS misslyckades ({code}): {emsg}")
+        if "kvot slut" in msg:
+            raise HTTPException(429, msg)
         raise HTTPException(502, f"Kunde inte generera ljud — {msg}")
 
-    logger.info("🔊 TTS done: voice=%s, %d chars (%d seg) → %d bytes (%.1fs)", voice, len(text), len(segments), len(audio), time.time() - _t0)
+    logger.info("🔊 TTS done: provider=%s voice=%s, %d chars (%d seg) → %d bytes (%.1fs)", provider, voice, len(text), len(segments), len(audio), time.time() - _t0)
     _record_tts_usage(username, len(text), _mp3_duration_seconds(audio), api_call=True)
     if len(_TTS_CACHE) >= _TTS_CACHE_MAX:
         _TTS_CACHE.pop(next(iter(_TTS_CACHE)))
     _TTS_CACHE[cache_key] = audio
     return StreamingResponse(io.BytesIO(audio), media_type="audio/mpeg")
+
+
+def _tts_model_label(provider: str) -> str:
+    """Modellnamn för loggning."""
+    return "qwen-audio-3.0-tts-plus" if provider == "qwen" else "stepaudio-2.5-tts"
+
+
+@app.post("/api/campaign/tts-settings")
+async def set_tts_settings(req: dict, morkrets_token: str | None = Cookie(None)):
+    """Spara TTS-leverantör per kampanj (state.meta.tts_provider)."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    provider = str((req or {}).get("provider", "")).strip().lower()
+    if provider not in TTS_PROVIDERS:
+        raise HTTPException(400, "Okänd TTS-leverantör")
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+    state.setdefault("meta", {})["tts_provider"] = provider
+    store.save(state)
+    return {"ok": True, "provider": provider}
 
 
 # ═══════════════════════════════════════

@@ -533,12 +533,12 @@ const API = (() => {
       return req('/api/campaign/activity');
     },
 
-    async tts(text, voice) {
+    async tts(text, voice, provider) {
       const res = await fetch(BASE + '/api/tts', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, voice }),
+        body: JSON.stringify({ text, voice, provider }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: res.statusText }));
@@ -546,6 +546,11 @@ const API = (() => {
         throw new Error(msg);
       }
       return res.blob();
+    },
+
+    // Spara TTS-leverantör per kampanj (state.meta.tts_provider)
+    async setTtsProvider(provider) {
+      return req('/api/campaign/tts-settings', { method: 'POST', body: JSON.stringify({ provider }) });
     },
 
     // ── Combat (v25 — stridsmotorn) ──

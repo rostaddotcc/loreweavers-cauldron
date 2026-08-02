@@ -242,7 +242,16 @@
   @keyframes tts-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }/* TTS-röstväljare över input-raden */.tts-voice-picker{
     display: flex; align-items: center; gap: 0.4rem;
     justify-content: flex-start; margin-bottom: 0.45rem;
-  }.tts-voice-label{ font-size: 0.85rem; opacity: 0.7; }.tts-voice-btn{
+  }.tts-voice-label{ font-size: 0.85rem; opacity: 0.7; }.tts-provider-btn{
+    font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.03em;
+    background: transparent; border: 1px dashed var(--arcane); color: var(--arcane);
+    padding: 0.3rem 0.7rem; border-radius: 3px; cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex; align-items: center; justify-content: center; line-height: 1;
+  }.tts-provider-btn:hover{ border-color: var(--gold); color: var(--bone); }.tts-provider-btn.active{
+    background: rgba(94,154,163,0.18); border-color: var(--arcane);
+    color: var(--arcane-bright); box-shadow: 0 0 10px -3px rgba(94,154,163,0.5);
+  }.tts-voice-btn{
     font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.03em;
     background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
     padding: 0.3rem 0.7rem; border-radius: 3px; cursor: pointer;
@@ -1049,8 +1058,11 @@
     <div class="input-area">
       <div class="tts-voice-picker" title="Narrator voice for reading aloud">
         <span class="tts-voice-label">🗣️</span>
-        <button class="tts-voice-btn active" data-voice="male" onclick="setTTSVoice('male', this)">Narrator (male)</button>
-        <button class="tts-voice-btn" data-voice="female" onclick="setTTSVoice('female', this)">Narrator (female)</button>
+        <button class="tts-provider-btn active" data-provider="stepfun" onclick="setTTSProvider('stepfun', this)" title="StepFun (Step Plan) — official English voices">StepFun</button>
+        <button class="tts-provider-btn" data-provider="qwen" onclick="setTTSProvider('qwen', this)" title="Qwen (Alibaba Token Plan)">Qwen</button>
+        <span class="tts-auto-sep">·</span>
+        <button class="tts-voice-btn active" data-voice="male" onclick="setTTSVoice('male', this)">Male</button>
+        <button class="tts-voice-btn" data-voice="female" onclick="setTTSVoice('female', this)">Female</button>
         <span class="tts-auto-sep">·</span>
         <button class="tts-auto-btn" id="tts-auto-btn" onclick="toggleTTSAutoplay(this)" title="Autoplay TTS when the DM answers">🔊 Auto</button>
       </div>
@@ -1913,6 +1925,19 @@ function addReasoning(text) {
 let _ttsAudio = null;
 let _ttsVoiceIds = null;
 const TTS_VOICE_KEY = 'dnd_tts_voice';
+const TTS_PROVIDER_KEY = 'dnd_tts_provider';
+
+function ttsProvider() {
+  return localStorage.getItem(TTS_PROVIDER_KEY) || 'stepfun';
+}
+
+function setTTSProvider(p, btn) {
+  localStorage.setItem(TTS_PROVIDER_KEY, p);
+  document.querySelectorAll('.tts-provider-btn').forEach(b => b.classList.toggle('active', b === btn));
+  _ttsVoiceIds = null; // ny leverantör → uppdatera röst-id:n
+  // Spara per kampanj server-side så valet följer med mellan enheter
+  API.setTtsProvider(p).catch(() => {});
+}
 
 function ttsVoice() {
   return localStorage.getItem(TTS_VOICE_KEY) || 'male';
@@ -1926,6 +1951,8 @@ function setTTSVoice(v, btn) {
 function initTTSVoicePicker() {
   const v = ttsVoice();
   document.querySelectorAll('.tts-voice-btn').forEach(b => b.classList.toggle('active', b.dataset.voice === v));
+  const p = ttsProvider();
+  document.querySelectorAll('.tts-provider-btn').forEach(b => b.classList.toggle('active', b.dataset.provider === p));
 }
 
 // ── Autoplay TTS när DM svarar ──
@@ -1960,9 +1987,17 @@ async function ttsVoiceIds() {
   if (_ttsVoiceIds) return _ttsVoiceIds;
   try {
     const r = await API.ttsVoices();
-    _ttsVoiceIds = { male: r.voices?.[0]?.id || null, female: r.voices?.[1]?.id || null };
+    const provs = r.providers || [];
+    const map = {};
+    for (const p of provs) {
+      const male = (p.voices || []).find(v => v.gender === 'male');
+      const female = (p.voices || []).find(v => v.gender === 'female');
+      map[p.id] = { male: male ? male.id : null, female: female ? female.id : null };
+    }
+    map._default = r.default_provider || 'stepfun';
+    _ttsVoiceIds = map;
   } catch (e) {
-    _ttsVoiceIds = { male: null, female: null };
+    _ttsVoiceIds = { _default: 'stepfun' };
   }
   return _ttsVoiceIds;
 }
@@ -1989,10 +2024,12 @@ async function playTTS(btn) {
   btn.textContent = '⏳'; btn.classList.add('playing');
   try {
     const ids = await ttsVoiceIds();
-    const voiceId = ttsVoice() === 'female' ? ids.female : ids.male;
+    const provider = ttsProvider();
+    const pids = ids[provider] || ids[ids._default] || {};
+    const voiceId = ttsVoice() === 'female' ? pids.female : pids.male;
     if (!voiceId) throw new Error('No voice configured');
 
-    const blob = await API.tts(text, voiceId);
+    const blob = await API.tts(text, voiceId, provider);
     const url = URL.createObjectURL(blob);
     _ttsAudio = new Audio(url);
     _ttsAudio.onended = () => { ttsStop(btn); URL.revokeObjectURL(url); };
@@ -2771,6 +2808,17 @@ function showModelGate() {
     return `<option value="${id}"${sel}>${id}</option>`;
   }).join('');
 
+  // TTS-leverantör — kampanjens val (server) annars localStorage, default stepfun
+  const savedTtsProvider = (campaignData && campaignData._raw && campaignData._raw.meta && campaignData._raw.meta.tts_provider) || ttsProvider();
+  const ttsLabel = en ? '🔊 Narrator (TTS provider)' : '🔊 Berättarröst (TTS-leverantör)';
+  const ttsHint = en
+    ? 'StepFun: official English voices. Qwen: Alibaba Token Plan.'
+    : 'StepFun: officiella engelska röster. Qwen: Alibaba Token Plan.';
+  const ttsOpts = [
+    { id: 'stepfun', name: 'StepFun (Step Plan)' },
+    { id: 'qwen', name: 'Qwen (Token Plan)' },
+  ].map(o => `<option value="${o.id}"${o.id === savedTtsProvider ? ' selected' : ''}>${o.name}</option>`).join('');
+
   const gate = document.createElement('div');
   gate.id = 'model-gate';
   gate.innerHTML = `
@@ -2834,6 +2882,11 @@ function showModelGate() {
         <div class="hint">${extractionHint}</div>
         <select id="gate-extraction">${extractionOpts}</select>
       </div>
+      <div class="guardian-section">
+        <label>${ttsLabel}</label>
+        <div class="hint">${ttsHint}</div>
+        <select id="gate-tts">${ttsOpts}</select>
+      </div>
       <button onclick="beginAdventure()">${btnLabel}</button>
     </div>`;
   document.body.appendChild(gate);
@@ -2860,6 +2913,14 @@ function beginAdventure() {
   const extractionSel = document.getElementById('gate-extraction');
   if (extractionSel) {
     API.setExtractionModel(extractionSel.value).catch(() => {});
+  }
+
+  // Spara TTS-leverantören per kampanj (berättarröst: stepfun/qwen)
+  const ttsSel = document.getElementById('gate-tts');
+  if (ttsSel) {
+    localStorage.setItem(TTS_PROVIDER_KEY, ttsSel.value);
+    _ttsVoiceIds = null;
+    API.setTtsProvider(ttsSel.value).catch(() => {});
   }
 
   document.getElementById('model-gate').remove();

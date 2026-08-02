@@ -874,7 +874,7 @@
     color: var(--bone-dim); font-style: italic; font-size: 0.85rem;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=13">
+<link rel="stylesheet" href="snes.css?v=14">
 <script src="sprites.js?v=20260802a"></script>
 <script src="fonts.js?v=20260802c"></script>
 <script src="themes.js?v=20260802c"></script>
@@ -1024,13 +1024,26 @@
     </div>
 
     <div class="dm-status" id="dm-status">
-      <div class="rune-spinner"></div>
-      <span class="thought" id="thought-text">🧙‍♂️ Weaving the tale…</span>
+      <div class="scribe-loader">
+        <div class="scribe-row">
+          <span class="scribe-quill" aria-hidden="true">🪶</span>
+          <span class="scribe-prompt" aria-hidden="true">❯</span>
+          <span class="thought" id="thought-text">Weaving the tale…</span>
+          <span class="scribe-cursor" aria-hidden="true">▌</span>
+        </div>
+        <div class="scribe-inkline" aria-hidden="true"><i></i></div>
+      </div>
     </div>
 
     <div class="guardian-status" id="guardian-status">
-      <div class="guardian-pulse"></div>
-      <span class="thought">🦉 Lorekeeper processing…</span>
+      <div class="scribe-loader scribe-mini">
+        <div class="scribe-row">
+          <span class="scribe-quill" aria-hidden="true">🪶</span>
+          <span class="thought">Lorekeeper processing…</span>
+          <span class="scribe-cursor" aria-hidden="true">▌</span>
+        </div>
+        <div class="scribe-inkline" aria-hidden="true"><i></i></div>
+      </div>
     </div>
 
     <div class="input-area">
@@ -2961,29 +2974,59 @@ const THOUGHTS = {
 let thoughtTimer = null;
 let thoughtIdx = 0;
 let currentThoughts = THOUGHTS.narrate;
+let _typeTimer = null;          // typewriter för thought-texten (scribe-loader)
+let _scribeParticleTimer = null; // flygande bläckpixlar
+
+// Typewriter: skriv thought-texten tecken för tecken (CLI-stil)
+function typeThought(text) {
+  const el = document.getElementById('thought-text');
+  clearInterval(_typeTimer);
+  el.textContent = '';
+  let i = 0;
+  _typeTimer = setInterval(() => {
+    el.textContent = text.slice(0, ++i);
+    if (i >= text.length) clearInterval(_typeTimer);
+  }, 16);
+}
+
+// Flygande bläckpixlar från fjäderpennan (använder samma fysik som spawnPixelBurst)
+function scribeParticles(on) {
+  clearInterval(_scribeParticleTimer);
+  _scribeParticleTimer = null;
+  if (!on) return;
+  const burst = () => {
+    const loader = document.querySelector('.dm-status.show .scribe-loader, .guardian-status.show .scribe-loader');
+    if (!loader) return;
+    const q = loader.querySelector('.scribe-quill');
+    if (!q) return;
+    const r = q.getBoundingClientRect();
+    spawnPixelBurst(r.left + r.width / 2, r.top + r.height / 2, 5,
+      ['#c9a227', '#e8c65a', '#5b4632', '#efe2c0', '#8b5fd4'], 3);
+  };
+  burst();
+  _scribeParticleTimer = setInterval(burst, 1100);
+}
 
 function showThoughts(kind = 'narrate') {
   currentThoughts = THOUGHTS[kind] || THOUGHTS.narrate;
   thoughtIdx = Math.floor(Math.random() * currentThoughts.length);
-  const el = document.getElementById('thought-text');
-  el.textContent = currentThoughts[thoughtIdx];
-  el.classList.remove('fade');
   document.getElementById('dm-status').classList.add('show');
-
-  // Rotera fras var 2.5:e sekund (mjuk fade)
+  scribeParticles(true);
   clearInterval(thoughtTimer);
-  thoughtTimer = setInterval(() => {
-    el.classList.add('fade');
-    setTimeout(() => {
-      thoughtIdx = (thoughtIdx + 1) % currentThoughts.length;
-      el.textContent = currentThoughts[thoughtIdx];
-      el.classList.remove('fade');
-    }, 350);
-  }, 2500);
+  const typeNext = () => {
+    const el = document.getElementById('thought-text');
+    el.classList.remove('fade');
+    typeThought(currentThoughts[thoughtIdx]);
+    thoughtIdx = (thoughtIdx + 1) % currentThoughts.length;
+  };
+  typeNext();
+  thoughtTimer = setInterval(typeNext, 2600);
 }
 
 function hideThoughts() {
   clearInterval(thoughtTimer);
+  clearInterval(_typeTimer);
+  scribeParticles(false);
   document.getElementById('dm-status').classList.remove('show');
 }
 
@@ -2995,12 +3038,16 @@ function showGuardianStatus() {
   if (el) el.classList.add('show');
   _guardianBusy = true;
   _lockChatForGuardian();
+  scribeParticles(true);
 }
 function hideGuardianStatus() {
   const el = document.getElementById('guardian-status');
   if (el) el.classList.remove('show');
   _guardianBusy = false;
   _unlockChat();
+  // Stäng inte av pixlarna om DM-statusen fortfarande visas
+  const dm = document.getElementById('dm-status');
+  if (!dm || !dm.classList.contains('show')) scribeParticles(false);
 }
 function _lockChatForGuardian() {
   const ta = document.getElementById('player-input');

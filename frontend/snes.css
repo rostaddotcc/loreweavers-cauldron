@@ -1127,6 +1127,72 @@
   min-width: 0;
 }
 .day-head .dh-caret{ flex-shrink: 0; }
+/* ═══════════════════════════════════════════
+   SCRIBE-LOADER (v27.3) — pergament + fjäderpenna + bläck
+   DM/Lorekeeper-status: skrivande på pergament i CLI/ascii-stil
+   med flygande bläckpixlar (partiklarna spawnas av scribeParticles()).
+   ═══════════════════════════════════════════ */
+.scribe-loader{
+  position: relative;
+  display: flex; flex-direction: column; gap: .35rem;
+  padding: .5rem .85rem .55rem;
+  background:
+    radial-gradient(ellipse at 18% 0%, rgba(122,90,40,.16), transparent 60%),
+    radial-gradient(ellipse at 85% 100%, rgba(90,58,28,.14), transparent 55%),
+    repeating-linear-gradient(0deg, rgba(110,78,38,.04) 0 1px, transparent 1px 3px),
+    linear-gradient(160deg, #efe2c0, #e4d4ac 45%, #d8c598);
+  border: 1px solid rgba(110,78,38,.55);
+  border-left: 3px solid #8a6a3a;
+  border-radius: 3px;
+  box-shadow: inset 0 0 16px rgba(90,58,28,.20), 0 2px 12px rgba(0,0,0,.35);
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+  color: #3a2d1c;
+  max-width: 500px;
+}
+.scribe-row{ display: flex; align-items: center; gap: .5rem; line-height: 1; min-height: 1.25em; }
+.scribe-quill{
+  font-size: 1.05rem; flex-shrink: 0; line-height: 1;
+  transform-origin: 50% 90%;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.45));
+  animation: quill-bob 1.7s ease-in-out infinite;
+}
+@keyframes quill-bob{
+  0%,100%{ transform: rotate(-7deg) translateY(0); }
+  50%{ transform: rotate(6deg) translateY(-2px); }
+}
+.scribe-prompt{ color: #a0812a; font-weight: 700; }
+.scribe-loader .thought{
+  font-style: normal !important;
+  color: #3a2d1c !important;
+  font-size: .8rem !important;
+  text-shadow: none !important;
+  letter-spacing: .02em;
+  animation: none !important; /* stänger av gamla blink på hela texten */
+}
+.scribe-cursor{
+  color: #3a2d1c; font-size: .8rem; flex-shrink: 0;
+  animation: blink-cursor 1.1s steps(1) infinite;
+}
+.scribe-inkline{
+  height: 3px; border-radius: 2px; overflow: hidden;
+  background: rgba(110,78,38,.14);
+}
+.scribe-inkline i{
+  display: block; height: 100%; width: 100%;
+  background: linear-gradient(90deg, #4a3520, #6b4d28, #8a6a3a);
+  transform-origin: left center;
+  animation: ink-draw 2.6s ease-in-out infinite;
+}
+@keyframes ink-draw{
+  0%{ transform: scaleX(0); }
+  40%{ transform: scaleX(.9); }
+  65%{ transform: scaleX(.65); }
+  100%{ transform: scaleX(1); }
+}
+.scribe-mini{ max-width: 340px; padding: .38rem .7rem .45rem; }
+.scribe-mini .scribe-quill{ font-size: .85rem; }
+.scribe-mini .scribe-cursor{ font-size: .72rem; }
+.scribe-mini .scribe-inkline{ height: 2px; }
 /* Statusbaren = panelens andra header-rad (flyttad hit från ovanför input) */
 .battle-log-pane .bl-status{
   border-top: none;

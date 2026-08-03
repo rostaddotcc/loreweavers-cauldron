@@ -250,3 +250,55 @@ def test_dm_avatar_prompt_aligns_with_lore():
 def test_dm_avatar_archetypes_include_non_humanoid():
     pool = " ".join(main._DM_AVATAR_ARCHETYPES).lower()
     assert any(w in pool for w in ("drone", "nebula", "machine oracle", "swarm", "planet spirit"))
+
+
+# ── Klass-specifika avatar-ledtrådar (v30) ──
+
+def test_class_visual_cue_druid():
+    cue = main._class_visual_cues("Druid")
+    assert "druid" in cue.lower()
+    assert "beasts" in cue or "raven" in cue or "stag" in cue
+
+def test_class_visual_cue_subclass_matches():
+    # "Druid (Circle of the Moon)" ska träffa substring-matchet
+    assert main._class_visual_cues("Druid (Circle of the Moon)") != ""
+    assert main._class_visual_cues("druid") != ""
+
+def test_class_visual_cue_unknown_is_empty():
+    assert main._class_visual_cues("adventurer") == ""
+    assert main._class_visual_cues("") == ""
+    assert main._class_visual_cues(None) == ""
+
+def test_player_avatar_druid_gets_cue():
+    state = {
+        "character": {"name": "Fern", "race": "elf", "class": "Druid"},
+        "inventory": [], "lore": [], "npcs": [],
+    }
+    p = main._build_avatar_prompt(state, "player")
+    assert "wild druid" in p or "druid" in p.lower()
+    assert "beasts" in p or "raven" in p or "stag" in p
+
+def test_player_avatar_style_survives_truncation():
+    """Den gamla buggen: STEP_IMAGE_STYLE låg sist och klipptes bort av
+    _trim_prompt(490). Nu ligger stilen tidigt så den överlever även en
+    lång story/inventory. Verifiera att porträtt-stilen finns kvar efter trim."""
+    state = {
+        "character": {
+            "name": "Very Long Character Name Indeed",
+            "race": "half-elf",
+            "class": "Druid (Circle of the Moon)",
+            "background": "A very long and detailed backstory about growing up in the deep forest, learning the old ways, speaking with animals, and wandering the wild places of the realm for many long years before answering the call to adventure.",
+            "story": "An equally long story of travels, battles, friendships forged and lost, ancient groves tended, and a growing bond with the beasts and spirits of the land that never seems to end or repeat itself at all.",
+        },
+        "inventory": [{"name": "Staff"}, {"name": "Cloak"}, {"name": "Pouch"}, {"name": "Herbs"}],
+        "lore": ["The forest whispers.", "Ancient omen.", "A drake circles above."],
+        "npcs": [],
+    }
+    raw = main._build_avatar_prompt(state, "player")
+    trimmed = main._trim_prompt(raw)
+    assert len(trimmed) <= 490
+    # Stilen måste överleva klippen
+    assert "Photorealistic" in trimmed
+    # Klass-ledtråden måste överleva klippen
+    assert "druid" in trimmed.lower()
+

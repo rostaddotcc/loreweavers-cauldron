@@ -235,10 +235,10 @@
     .back-btn { min-height: 44px; display: inline-flex; align-items: center; }
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=19">
+<link rel="stylesheet" href="snes.css?v=22">
 <script src="sprites.js?v=20260802a"></script>
-<script src="fonts.js?v=20260802c"></script>
-<script src="themes.js?v=20260802c"></script>
+<script src="fonts.js?v=20260803a"></script>
+<script src="themes.js?v=20260804a"></script>
 </head>
 <body>
 <div class="grain"></div>
@@ -262,7 +262,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="sfx.js?v=20260802a"></script>
-<script src="api.js?v=20260802c"></script>
+<script src="api.js?v=20260804c"></script>
 <script src="i18n.js?v=20260802b"></script>
 <script>
 // Auth guard
@@ -378,6 +378,8 @@ function _sortVal(u) {
     case 'tokens': return u.total_tokens || 0;
     case 'turns': return u.total_turns || 0;
     case 'tts_seconds': return u.tts_seconds || 0;
+    case 'char_creation_tokens': return u.char_creation_tokens || 0;
+    case 'image_gen_calls': return u.image_gen_calls || 0;
     case 'last_active': { const t = Date.parse(u.last_active); return isNaN(t) ? 0 : t; }
     case 'created': { const t = Date.parse(u.created_at); return isNaN(t) ? 0 : t; }
     case 'last_login': { const t = Date.parse(u.last_login); return isNaN(t) ? 0 : t; }
@@ -459,7 +461,7 @@ function renderStats(data) {
 
   // Desktop table
   html += '<table class="player-table"><thead><tr>';
-  html += thSort('User', 'username') + thSort('Role', 'role') + thSort('Email', 'email') + thSort('Campaigns', 'campaigns') + thSort('Tokens', 'tokens') + thSort('Turns', 'turns') + thSort('🔊 TTS', 'tts_seconds') + thSort('Last Active', 'last_active') + thSort('Created', 'created') + thSort('Last Login', 'last_login') + thSort('Turn Cap', 'turn_cap') + '<th></th>';
+  html += thSort('User', 'username') + thSort('Role', 'role') + thSort('Email', 'email') + thSort('Campaigns', 'campaigns') + thSort('Tokens', 'tokens') + thSort('Turns', 'turns') + thSort('🔊 TTS', 'tts_seconds') + thSort('🎭 Char', 'char_creation_tokens') + thSort('🖼️ Img', 'image_gen_calls') + thSort('Last Active', 'last_active') + thSort('Created', 'created') + thSort('Last Login', 'last_login') + thSort('Turn Cap', 'turn_cap') + '<th></th>';
   html += '</tr></thead><tbody>';
 
   users.forEach((u, i) => {
@@ -475,13 +477,15 @@ function renderStats(data) {
     html += `<td class="token-num">${fmtTokens(u.total_tokens)}</td>`;
     html += `<td class="turn-num">${u.total_turns}</td>`;
     html += `<td class="tts-num" title="${fmtTokens(u.tts_tokens || 0)} tkn ≈ · ${fmtTokens(u.tts_chars || 0)} chars · ${(u.tts_api_calls || 0)} api calls">${fmtTTS(u)}</td>`;
+    html += `<td class="token-num" title="${(u.char_creation_calls || 0)} char generations">${u.char_creation_tokens ? fmtTokens(u.char_creation_tokens) : '—'}</td>`;
+    html += `<td class="turn-num" title="AI-bildgenereringar">${u.image_gen_calls || '—'}</td>`;
     html += `<td class="last-active">${relTime(u.last_active)}</td>`;
     html += `<td class="last-active">${relTime(u.created_at)}</td>`;
     html += `<td class="last-active">${relTime(u.last_login)}</td>`;
     html += `<td class="cap-cell"><input type="number" min="0" step="1" value="${capVal}" id="cap-${i}" class="cap-input"><button onclick="event.stopPropagation();setCap('${u.username}', ${i})" class="cap-btn">Set</button><span class="cap-hint">0 = ∞</span></td>`;
     html += `<td><button onclick="event.stopPropagation();deleteUser('${u.username}')" style="background:none;border:1px solid var(--blood);color:var(--blood-bright);padding:.2rem .5rem;font-size:.6rem;cursor:pointer">✕ Delete</button></td>`;
     html += '</tr>';
-    html += `<tr class="campaign-detail" id="detail-${i}"><td colspan="12"><div class="campaign-inner" id="inner-${i}"></div></td></tr>`;
+    html += `<tr class="campaign-detail" id="detail-${i}"><td colspan="14"><div class="campaign-inner" id="inner-${i}"></div></td></tr>`;
   });
   html += '</tbody></table>';
 
@@ -495,6 +499,7 @@ function renderStats(data) {
     if (u.email) html += `<div class="mc-meta"><span style="opacity:.7">✉ ${u.email}</span></div>`;
     html += `<div class="mc-meta"><span>${u.total_campaigns} campaigns</span><span>${u.total_turns} turns</span><span>${relTime(u.last_active)}</span></div>`;
     html += `<div class="mc-meta"><span>🔊 TTS: ${fmtTTS(u)}</span><span>${fmtTokens(u.tts_tokens || 0)} tkn ≈</span><span>${u.tts_calls || 0} renders</span></div>`;
+    html += `<div class="mc-meta"><span>🎭 Char: ${u.char_creation_tokens ? fmtTokens(u.char_creation_tokens) : '—'} tkn</span><span>🖼️ Img: ${u.image_gen_calls || 0}</span></div>`;
     html += `<div class="mc-meta"><span>Created ${relTime(u.created_at)}</span><span>Login ${relTime(u.last_login)}</span></div>`;
     html += `<div class="mc-cap" style="display:flex;gap:.4rem;align-items:center;margin-top:.5rem">`;
     html += `<input type="number" min="0" step="1" value="${capVal}" id="cap-${i}" class="cap-input">`;
@@ -557,6 +562,18 @@ function renderDetail(container, data) {
   const at = data.tts_usage || {};
   if (at.calls) {
     html += '<span>🔊 TTS: <b style="color:var(--arcane);font-weight:400">' + fmtTokens(at.tokens || 0) + ' tkn ≈ · ' + (at.calls || 0) + ' renders · ' + fmtTokens(at.chars || 0) + ' chars · ' + Math.round(at.seconds || 0) + 's (' + ((at.seconds || 0) / 60).toFixed(1) + ' min)</b></span>';
+  }
+  const cc = data.character_creation || {};
+  if (cc.tokens) {
+    html += '<span>🎭 Char-gen: <b style="color:var(--gold-bright);font-weight:400">' + fmtTokens(cc.tokens) + ' tkn</b> · ' + (cc.calls || 0) + ' gens</span>';
+  }
+  const ig = data.image_gen || {};
+  if (ig.calls) {
+    html += '<span>🖼️ Bildgen: <b style="color:var(--gold-bright);font-weight:400">' + (ig.calls || 0) + '</b> iterationer</span>';
+  }
+  const dc = data.deleted_campaigns || {};
+  if (dc.total_tokens || dc.turns) {
+    html += '<span>🗑️ Raderade kampanjer: <b style="color:var(--term-amber);font-weight:400">' + fmtTokens(dc.total_tokens || 0) + ' tkn</b> · ' + (dc.turns || 0) + ' turns' + (dc.tts && dc.tts.tokens ? ' · 🔊 ' + fmtTokens(dc.tts.tokens) + ' tts' : '') + '</span>';
   }
   html += '<span>📍 Land: <b style="color:var(--bone);font-weight:400">' + (data.country_flag || '❓') + ' ' + (data.country || 'Okänt') + '</b>' + (data.ip ? ' <span style="opacity:.6">(' + data.ip + ')</span>' : '') + '</span>';
   html += '</div>';

@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>The Lore Weaver's Cauldron — 3D Prototype</title>
+<link rel="icon" href="/assets/logo-cauldron.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#07070c;
+    --bone:#b8b8c8; --bone-bright:#e6e2d4; --bone-dim:#6a6a80;
+    --gold:#c9a227; --gold-bright:#e8c65a;
+    --ember:#d4691e;
+    --font-display:'Cinzel',serif;
+    --font-body:'Spectral',serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden;background:var(--ink)}
+  body{font-family:var(--font-body);color:var(--bone)}
+
+  /* ---------- 3D canvas ---------- */
+  #scene-wrap{position:fixed;inset:0;z-index:1}
+  #scene{display:block;width:100%;height:100%;cursor:crosshair}
+
+  /* ---------- ambient overlays ---------- */
+  .grain{position:fixed;inset:0;z-index:5;pointer-events:none;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");}
+  .vignette{position:fixed;inset:0;z-index:5;pointer-events:none;
+    box-shadow:inset 0 0 190px 70px rgba(3,2,7,.88)}
+
+  /* gold corner ornaments */
+  .corner{position:fixed;width:30px;height:30px;z-index:6;pointer-events:none;opacity:.55}
+  .corner.tl{top:16px;left:16px;border-top:2px solid var(--gold);border-left:2px solid var(--gold)}
+  .corner.tr{top:16px;right:16px;border-top:2px solid var(--gold);border-right:2px solid var(--gold)}
+  .corner.bl{bottom:16px;left:16px;border-bottom:2px solid var(--gold);border-left:2px solid var(--gold)}
+  .corner.br{bottom:16px;right:16px;border-bottom:2px solid var(--gold);border-right:2px solid var(--gold)}
+
+  /* ---------- copy block (left-aligned, farlands-style) ---------- */
+  .copy{position:fixed;z-index:10;left:clamp(1.6rem,6vw,5.5rem);top:50%;transform:translateY(-52%);
+    max-width:520px;pointer-events:none}
+  .eyebrow{font-family:var(--font-display);font-size:.66rem;font-weight:700;letter-spacing:.44em;
+    text-transform:uppercase;color:var(--gold);margin-bottom:1.3rem;
+    animation:rise .9s .15s both}
+  h1{font-family:var(--font-display);font-weight:900;color:var(--bone-bright);
+    font-size:clamp(2.1rem,4.9vw,4rem);line-height:1.06;letter-spacing:.02em;
+    animation:rise .9s .3s both, candle 5.5s 1.4s infinite}
+  h1 .of{display:block;font-weight:400;font-size:.42em;letter-spacing:.34em;
+    text-transform:uppercase;color:var(--gold);margin:.55em 0 .3em}
+  .tagline{font-style:italic;font-weight:300;color:var(--bone);
+    font-size:clamp(1.05rem,1.9vw,1.35rem);margin-top:1.4rem;letter-spacing:.03em;
+    animation:rise .9s .5s both}
+  .rule{display:flex;align-items:center;gap:.7rem;margin-top:1.7rem;animation:rise .9s .65s both}
+  .rule::before{content:"";width:150px;height:1px;
+    background:linear-gradient(90deg,var(--gold),transparent)}
+  .rule::after{content:"◆";color:var(--gold);font-size:.55rem}
+  .hint{margin-top:1.5rem;font-family:var(--font-display);font-size:.62rem;font-weight:700;
+    letter-spacing:.26em;text-transform:uppercase;color:var(--bone-dim);
+    display:flex;align-items:center;gap:.7rem;animation:rise .9s .8s both}
+  .hint .dot{width:6px;height:6px;border-radius:50%;background:var(--gold-bright);
+    box-shadow:0 0 8px var(--gold-bright);animation:pulse 2.2s infinite}
+
+  /* prototype badge */
+  .badge{position:fixed;top:22px;right:58px;z-index:10;pointer-events:none;
+    font-family:var(--font-display);font-size:.58rem;font-weight:700;letter-spacing:.3em;
+    text-transform:uppercase;color:var(--bone-dim);
+    border:1px solid #2a2a3a;padding:.55em 1.1em;background:rgba(8,8,13,.5);
+    animation:rise .9s .9s both}
+  .badge b{color:var(--gold);font-weight:700}
+
+  /* ---------- fallbacks ---------- */
+  #fallback{display:none;position:fixed;inset:0;z-index:20;background:var(--ink);
+    flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;text-align:center;padding:2rem}
+  #fallback img{width:min(280px,60vw);mix-blend-mode:screen;animation:float 5s ease-in-out infinite}
+  #fallback p{font-style:italic;color:var(--bone-dim);max-width:34ch}
+  noscript .ns{position:fixed;inset:0;z-index:30;background:var(--ink);display:flex;
+    align-items:center;justify-content:center;color:var(--bone-dim);font-style:italic;padding:2rem;text-align:center}
+
+  @keyframes rise{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+  @keyframes candle{
+    0%,100%{text-shadow:0 0 18px rgba(232,198,90,.32),0 0 48px rgba(212,105,30,.16)}
+    42%{text-shadow:0 0 26px rgba(232,198,90,.5),0 0 64px rgba(212,105,30,.28)}
+    47%{text-shadow:0 0 13px rgba(232,198,90,.26),0 0 36px rgba(212,105,30,.12)}
+    76%{text-shadow:0 0 22px rgba(232,198,90,.42),0 0 56px rgba(212,105,30,.22)}
+  }
+
+  /* ---------- mobile ---------- */
+  @media (max-width:720px){
+    .copy{left:1.4rem;right:1.4rem;top:auto;bottom:clamp(2.6rem,7vh,4.5rem);
+      transform:none;max-width:none;
+      background:linear-gradient(0deg,rgba(7,7,12,.85) 0%,rgba(7,7,12,.4) 60%,transparent 100%);
+      padding:2.5rem .4rem 0}
+    h1{font-size:clamp(1.9rem,8.5vw,2.6rem)}
+    .tagline{margin-top:1rem}
+    .rule,.hint{display:none}
+    .badge{right:auto;left:50%;transform:translateX(-50%);top:18px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    h1{animation:rise .9s .3s both}
+    .hint .dot{animation:none}
+    #fallback img{animation:none}
+  }
+</style>
+</head>
+<body>
+
+<div id="scene-wrap"><canvas id="scene"></canvas></div>
+
+<div class="grain"></div>
+<div class="vignette"></div>
+<div class="corner tl"></div><div class="corner tr"></div>
+<div class="corner bl"></div><div class="corner br"></div>
+
+<main class="copy">
+  <p class="eyebrow">A Prototype &middot; Realtime 3D Scene</p>
+  <h1>The Lore Weaver&rsquo;s Cauldron
+    <span class="of">What will the Cauldron Foretell?</span>
+  </h1>
+  <p class="tagline">An AI-woven D&amp;D adventure, brewed in darkness &mdash; every flame a story, every spark a fate not yet sealed.</p>
+  <div class="rule"></div>
+  <p class="hint"><span class="dot"></span>Move to stir the brew &middot; click to cast a spark</p>
+</main>
+
+<div class="badge"><b>three.js</b> r170 &middot; no build step</div>
+
+<div id="fallback">
+  <img src="/assets/logo-cauldron.png" alt="The Lore Weaver's Cauldron">
+  <p>Your browser refuses the cauldron&rsquo;s magic &mdash; WebGL is unavailable. The brew will have to wait.</p>
+</div>
+
+<noscript><div class="ns">The cauldron needs JavaScript to brew.</div></noscript>
+
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+/* ============================================================
+   THE LORE WEAVER'S CAULDRON — three.js prototype scene
+   Palette matched to the pixel-art logo: dark iron pot, cream
+   rolled rim, molten-gold brew, amber glow, cool blue rim light,
+   twin bubbles + star twinkles.
+   ============================================================ */
+
+const canvas   = document.getElementById('scene');
+const fallback = document.getElementById('fallback');
+const reduced  = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const isMobile = () => innerWidth < 720;
+
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias:true, powerPreference:'high-performance' });
+} catch (e) {
+  fallback.style.display = 'flex';
+  throw e;
+}
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+renderer.setSize(innerWidth, innerHeight);
+renderer.setClearColor(0x07070c, 1);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.12;
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x07070c, 0.095);
+
+const camera = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 0.1, 40);
+camera.position.set(0, 2.18, 3.85);
+
+/* ---------------- lights ---------------- */
+scene.add(new THREE.HemisphereLight(0x1c1626, 0x0c0a12, 0.55));
+
+const brewLight = new THREE.PointLight(0xffb347, 16, 9, 2);   // molten glow from the brew
+brewLight.position.set(0, 1.55, 0);
+scene.add(brewLight);
+
+const warmFill = new THREE.PointLight(0xff7a1a, 4, 7, 2);     // low front warmth
+warmFill.position.set(0.6, 0.5, 1.8);
+scene.add(warmFill);
+
+const frontFill = new THREE.PointLight(0xffa050, 3.5, 8, 2);  // soft key on shadow side
+frontFill.position.set(-1.6, 1.2, 2.2);
+scene.add(frontFill);
+
+const rimLight = new THREE.PointLight(0x5a6a9a, 9, 11, 2);    // cool moonlight rim (logo's blue edge)
+rimLight.position.set(-0.4, 1.5, -2.7);
+scene.add(rimLight);
+
+/* ---------------- cauldron group ---------------- */
+const pot = new THREE.Group();
+scene.add(pot);
+
+const ironMat = new THREE.MeshStandardMaterial({
+  color:0x302a38, roughness:0.52, metalness:0.78, side:THREE.DoubleSide });
+const rimMat  = new THREE.MeshStandardMaterial({
+  color:0xc9b896, roughness:0.45, metalness:0.55 });
+const legMat  = new THREE.MeshStandardMaterial({
+  color:0x262028, roughness:0.6,  metalness:0.7 });
+
+/* body — lathe profile: bulbous belly, tapered neck, rolled rim fold */
+const profile = [
+  [0.02,0.00],[0.30,0.02],[0.44,0.08],[0.58,0.22],[0.68,0.42],
+  [0.71,0.60],[0.68,0.78],[0.60,0.90],[0.55,0.97],[0.56,1.02],
+  [0.64,1.05],[0.70,1.10],[0.68,1.16],[0.58,1.19],[0.50,1.16],
+  [0.465,1.08],[0.46,1.00],
+].map(p => new THREE.Vector2(p[0], p[1]));
+const body = new THREE.Mesh(new THREE.LatheGeometry(profile, 56), ironMat);
+body.position.y = 0.10;
+pot.add(body);
+
+/* cream rolled lip */
+const lip = new THREE.Mesh(new THREE.TorusGeometry(0.615, 0.056, 14, 56), rimMat);
+lip.rotation.x = Math.PI/2;
+lip.position.y = 1.235;
+pot.add(lip);
+
+/* ear handles */
+for (const s of [-1, 1]) {
+  const h = new THREE.Mesh(new THREE.TorusGeometry(0.10, 0.03, 10, 22), ironMat);
+  h.rotation.y = Math.PI/2;
+  h.position.set(s * 0.73, 0.82, 0);
+  pot.add(h);
+}
+
+/* stubby peg legs, splayed */
+for (let i = 0; i < 3; i++) {
+  const a = (i / 3) * Math.PI * 2 + Math.PI / 6;
+  const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.072, 0.17, 10), legMat);
+  leg.position.set(Math.cos(a) * 0.30, 0.085, Math.sin(a) * 0.30);
+  leg.rotation.z = -Math.cos(a) * 0.22;
+  leg.rotation.x =  Math.sin(a) * 0.22;
+  pot.add(leg);
+}
+
+/* dark ground disc catching the glow */
+const ground = new THREE.Mesh(
+  new THREE.CircleGeometry(2.4, 48),
+  new THREE.MeshStandardMaterial({ color:0x1a1622, roughness:0.95, metalness:0 })
+);
+ground.rotation.x = -Math.PI/2;
+scene.add(ground);
+
+/* ---------------- the brew — boiling molten-gold shader ---------------- */
+const brewUniforms = { uTime:{value:0}, uAgitation:{value:0} };
+const brew = new THREE.Mesh(
+  new THREE.CircleGeometry(0.455, 48),
+  new THREE.ShaderMaterial({
+    uniforms: brewUniforms,
+    vertexShader: /* glsl */`
+      varying vec2 vUv;
+      void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+    fragmentShader: /* glsl */`
+      uniform float uTime; uniform float uAgitation;
+      varying vec2 vUv;
+      float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453123); }
+      float noise(vec2 p){
+        vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
+        return mix(mix(hash(i), hash(i+vec2(1.,0.)), f.x),
+                   mix(hash(i+vec2(0.,1.)), hash(i+vec2(1.,1.)), f.x), f.y);
+      }
+      float fbm(vec2 p){
+        float v = 0.0, a = 0.5;
+        for(int i=0;i<4;i++){ v += a*noise(p); p *= 2.1; a *= 0.5; }
+        return v;
+      }
+      void main(){
+        vec2 c = vUv - 0.5;
+        float d = length(c) * 2.0;
+        float ang = atan(c.y, c.x);
+        float speed = 0.35 + uAgitation * 0.55;
+
+        /* strong rotational swirl — bright filaments winding around */
+        float rot = uTime * 0.55 * (0.6 + uAgitation * 0.8);
+        vec2 rc = vec2(c.x * cos(rot * 0.3) - c.y * sin(rot * 0.3),
+                       c.x * sin(rot * 0.3) + c.y * cos(rot * 0.3));
+
+        /* domain-warped convection: two noise layers shearing past each other */
+        float warp = fbm(rc * 3.0 + uTime * 0.15);
+        float fil  = fbm(rc * 5.5 + vec2(warp * 1.4) + vec2(uTime * speed * 0.5, -uTime * speed * 0.35));
+        float vein = fbm(rc * 9.0 - vec2(warp * 0.9) - vec2(uTime * speed * 0.8, uTime * speed * 0.4));
+        float boil = fil * 0.62 + vein * 0.38;
+
+        /* drifting off-center hotspot — convection, not a lamp */
+        vec2 hotC = vec2(sin(uTime * 0.4) * 0.13, cos(uTime * 0.31) * 0.13);
+        float hotD = length(c - hotC) * 2.0;
+        float hotSpot = smoothstep(0.85, 0.1, hotD);
+
+        vec3 white = vec3(0.95, 0.85, 0.62);
+        vec3 gold  = vec3(1.00, 0.82, 0.27);
+        vec3 amber = vec3(0.98, 0.52, 0.09);
+        vec3 deep  = vec3(0.58, 0.26, 0.05);
+
+        float dd = clamp(d + boil * 0.30 - 0.16, 0.0, 1.0);
+        vec3 col = mix(white, gold,  smoothstep(0.00, 0.34, dd));
+        col      = mix(col,  amber, smoothstep(0.34, 0.68, dd));
+        col      = mix(col,  deep,  smoothstep(0.68, 1.00, dd));
+
+        /* bright winding filaments */
+        float filGlow = smoothstep(0.52, 0.76, fil);
+        col += vec3(0.55, 0.40, 0.10) * filGlow * (1.0 - d * 0.45) * (1.0 + uAgitation * 0.5);
+
+        /* darker cooling veins — the molten surface churns */
+        float veinDark = smoothstep(0.52, 0.78, vein);
+        col *= 1.0 - veinDark * 0.50 * (0.4 + 0.6 * d);
+
+        /* the wandering hot bloom (tamed so it doesn't erase detail) */
+        col += vec3(0.30, 0.24, 0.09) * hotSpot * (0.7 + 0.3 * sin(uTime * 2.7));
+
+        /* moving specular sheen across the surface */
+        float sheen = fbm(c * 3.0 - vec2(uTime * 0.22, uTime * 0.13));
+        col += vec3(0.22, 0.15, 0.04) * smoothstep(0.62, 0.85, sheen) * (1.0 - d);
+
+        /* bright meniscus where the liquid kisses the inner wall */
+        float meniscus = smoothstep(0.68, 0.86, d) * (1.0 - smoothstep(0.94, 1.0, d));
+        col += vec3(1.00, 0.68, 0.20) * meniscus * (0.9 + 0.3 * sin(ang * 6.0 + uTime * 1.4));
+
+        col *= 1.0 - smoothstep(0.92, 1.0, d) * 0.35;                 /* inner-wall shadow */
+        col *= 1.12 + 0.10 * sin(uTime * 2.3) * (1.0 - d * 0.5);      /* breathing pulse  */
+
+        gl_FragColor = vec4(col, 1.0);
+      }`,
+  })
+);
+brew.rotation.x = -Math.PI/2;
+brew.position.y = 1.175;
+pot.add(brew);
+
+/* ---------------- canvas-generated textures ---------------- */
+function radialTex(stops, size = 128) {
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const x = c.getContext('2d');
+  const g = x.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+  for (const [o, col] of stops) g.addColorStop(o, col);
+  x.fillStyle = g; x.fillRect(0, 0, size, size);
+  return new THREE.CanvasTexture(c);
+}
+const flameTex = radialTex([[0,'rgba(255,255,255,1)'],[0.35,'rgba(255,255,255,.6)'],[1,'rgba(255,255,255,0)']]);
+const sparkTex = (() => {                       /* hard pixel square — retro spark */
+  const c = document.createElement('canvas'); c.width = c.height = 16;
+  const x = c.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(5, 5, 6, 6);
+  return new THREE.CanvasTexture(c);
+})();
+const starTex = (() => {                        /* four-pointed twinkle */
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const x = c.getContext('2d');
+  x.shadowColor = 'rgba(255,240,200,.9)'; x.shadowBlur = 14;
+  x.fillStyle = '#fff';
+  x.beginPath();
+  x.moveTo(64,6); x.lineTo(75,53); x.lineTo(122,64); x.lineTo(75,75);
+  x.lineTo(64,122); x.lineTo(53,75); x.lineTo(6,64); x.lineTo(53,53);
+  x.closePath(); x.fill();
+  return new THREE.CanvasTexture(c);
+})();
+
+/* ---------------- particle engine (flame / sparks / burst) ---------------- */
+function makePoints(count, tex, sizeScale) {
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count*3), 3).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('aColor',   new THREE.BufferAttribute(new Float32Array(count*3), 3).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('aSize',    new THREE.BufferAttribute(new Float32Array(count),   1).setUsage(THREE.DynamicDrawUsage));
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { uTex:{value:tex}, uScale:{value:130 * renderer.getPixelRatio()} },
+    vertexShader: /* glsl */`
+      attribute float aSize; attribute vec3 aColor;
+      varying vec3 vColor;
+      uniform float uScale;
+      void main(){
+        vColor = aColor;
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = min(aSize * uScale / -mv.z, 110.0);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: /* glsl */`
+      uniform sampler2D uTex; varying vec3 vColor;
+      void main(){ gl_FragColor = texture2D(uTex, gl_PointCoord) * vec4(vColor, 1.0); }`,
+    transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+  });
+  const pts = new THREE.Points(geo, mat);
+  pts.frustumCulled = false;
+  pot.add(pts);
+  return { pts, geo, mat, count, sizeScale,
+    pos: geo.attributes.position.array,
+    col: geo.attributes.aColor.array,
+    siz: geo.attributes.aSize.array };
+}
+
+const BREW_Y = 1.18;
+
+/* -- flame -- */
+const FC = (reduced || isMobile()) ? 90 : 170;
+const flame = makePoints(FC, flameTex, 1);
+const fLife = new Float32Array(FC), fMax = new Float32Array(FC),
+      fVel  = new Float32Array(FC), fSeed = new Float32Array(FC), fBase = new Float32Array(FC);
+function respawnFlame(i, scatter = 1) {
+  const a = Math.random() * Math.PI * 2;
+  const r = Math.pow(Math.random(), 0.6) * 0.30;
+  flame.pos[i*3]   = Math.cos(a) * r;
+  flame.pos[i*3+1] = BREW_Y + Math.random() * 0.06;
+  flame.pos[i*3+2] = Math.sin(a) * r;
+  fLife[i] = 0;
+  fMax[i]  = (0.7 + Math.random() * 0.8) * scatter;
+  fVel[i]  = 0.55 + Math.random() * 0.8;
+  fSeed[i] = Math.random() * 100;
+  fBase[i] = 0.16 + Math.random() * 0.20;
+}
+for (let i = 0; i < FC; i++) { respawnFlame(i); fLife[i] = Math.random() * fMax[i]; }
+
+/* -- ambient sparks (pixel squares drifting up) -- */
+const SC = isMobile() ? 20 : 36;
+const sparks = makePoints(SC, sparkTex, 1);
+const sLife = new Float32Array(SC), sMax = new Float32Array(SC),
+      sVel  = new Float32Array(SC), sSeed = new Float32Array(SC);
+function respawnSpark(i) {
+  const a = Math.random() * Math.PI * 2;
+  const r = 0.25 + Math.random() * 0.35;
+  sparks.pos[i*3]   = Math.cos(a) * r;
+  sparks.pos[i*3+1] = BREW_Y + 0.1 + Math.random() * 0.5;
+  sparks.pos[i*3+2] = Math.sin(a) * r;
+  sLife[i] = 0;
+  sMax[i]  = 1.6 + Math.random() * 1.8;
+  sVel[i]  = 0.18 + Math.random() * 0.3;
+  sSeed[i] = Math.random() * 100;
+}
+for (let i = 0; i < SC; i++) { respawnSpark(i); sLife[i] = Math.random() * sMax[i]; }
+
+/* -- click burst -- */
+const BC = 70;
+const burst = makePoints(BC, sparkTex, 1);
+const bLife = new Float32Array(BC).fill(1), bMax = new Float32Array(BC).fill(1),
+      bVel  = new Float32Array(BC*3);
+let burstGlow = 0;
+function fireBurst() {
+  burstGlow = 1;
+  for (let i = 0; i < BC; i++) {
+    burst.pos[i*3]   = (Math.random() - 0.5) * 0.3;
+    burst.pos[i*3+1] = BREW_Y + 0.05;
+    burst.pos[i*3+2] = (Math.random() - 0.5) * 0.3;
+    const a = Math.random() * Math.PI * 2;
+    const up = 0.9 + Math.random() * 1.6;
+    const out = 0.3 + Math.random() * 0.9;
+    bVel[i*3]   = Math.cos(a) * out;
+    bVel[i*3+1] = up;
+    bVel[i*3+2] = Math.sin(a) * out;
+    bLife[i] = 0;
+    bMax[i]  = 0.6 + Math.random() * 0.7;
+  }
+}
+
+/* ---------------- glow halo + twinkles + bubbles ---------------- */
+const haloMat = new THREE.SpriteMaterial({
+  map: radialTex([[0,'rgba(255,170,60,.55)'],[0.4,'rgba(255,140,30,.18)'],[1,'rgba(255,120,20,0)']]),
+  blending: THREE.AdditiveBlending, depthWrite:false, transparent:true, opacity:0.5,
+});
+const halo = new THREE.Sprite(haloMat);
+halo.position.set(0, 1.62, 0);
+halo.scale.setScalar(3.1);
+pot.add(halo);
+
+const twinkles = [];
+for (const [x, y, z, s] of [[-0.52, 2.15, 0.25, 0.30], [0.58, 2.30, 0.10, 0.22]]) {
+  const m = new THREE.SpriteMaterial({
+    map: starTex, blending:THREE.AdditiveBlending, depthWrite:false,
+    transparent:true, opacity:0.95, color:0xf0c050 });
+  const sp = new THREE.Sprite(m);
+  sp.position.set(x, y, z);
+  sp.scale.setScalar(s);
+  sp.userData = { base:s, phase: Math.random() * 6 };
+  pot.add(sp);
+  twinkles.push(sp);
+}
+
+/* the logo's twin floating bubbles — golden rim, olive heart */
+const bubbles = [];
+for (const sx of [-1, 1]) {
+  const g = new THREE.Group();
+  const heart = new THREE.Mesh(
+    new THREE.SphereGeometry(0.062, 20, 20),
+    new THREE.MeshStandardMaterial({ color:0x8a9a4a, emissive:0x4a5a1a, roughness:0.3, metalness:0.1 }));
+  const rim = new THREE.Mesh(
+    new THREE.SphereGeometry(0.076, 20, 20),
+    new THREE.MeshBasicMaterial({ color:0xe8c65a, transparent:true, opacity:0.28,
+      blending:THREE.AdditiveBlending, depthWrite:false }));
+  const glint = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: flameTex, color:0xffffff, transparent:true, opacity:0.9, depthWrite:false }));
+  glint.position.set(-0.024, 0.028, 0.05);
+  glint.scale.setScalar(0.045);
+  g.add(heart, rim, glint);
+  g.position.set(sx * 0.66, 1.88, 0.16);
+  g.userData = { phase: sx > 0 ? 0 : Math.PI * 0.7 };
+  pot.add(g);
+  bubbles.push(g);
+}
+
+/* ---------------- interaction ---------------- */
+let mouseNX = 0, mouseNY = 0, agitation = 0, lastPX = null, lastPY = null;
+addEventListener('pointermove', e => {
+  if (lastPX !== null) {
+    const speed = Math.hypot(e.clientX - lastPX, e.clientY - lastPY);
+    agitation = Math.min(1, agitation + speed * 0.0016);
+  }
+  lastPX = e.clientX; lastPY = e.clientY;
+  mouseNX = (e.clientX / innerWidth)  * 2 - 1;
+  mouseNY = (e.clientY / innerHeight) * 2 - 1;
+});
+addEventListener('pointerdown', () => { fireBurst(); agitation = Math.min(1, agitation + 0.55); });
+
+/* ---------------- layout (desktop: pot right of copy / mobile: centered) ---------------- */
+function layout() {
+  const mobile = isMobile();
+  pot.position.x = mobile ? 0 : 1.08;
+  pot.scale.setScalar(mobile ? 0.92 : 1);
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
+  for (const p of [flame, sparks, burst])
+    p.mat.uniforms.uScale.value = 130 * renderer.getPixelRatio();
+}
+addEventListener('resize', layout);
+layout();
+
+/* ---------------- main loop ---------------- */
+const clock = new THREE.Clock();
+const lookTarget = new THREE.Vector3();
+let elapsed = 0, running = true;
+
+document.addEventListener('visibilitychange', () => {
+  running = !document.hidden;
+  if (running) { clock.getDelta(); requestAnimationFrame(tick); }
+});
+
+function tick() {
+  if (!running) return;
+  requestAnimationFrame(tick);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  elapsed += dt;
+  const t = elapsed;
+
+  agitation *= Math.exp(-dt * 1.35);
+  burstGlow *= Math.exp(-dt * 3.2);
+
+  /* camera: slow sway + mouse parallax */
+  const swayAmp = reduced ? 0.12 : 0.85;
+  const sway = Math.sin(t * 0.12) * swayAmp;
+  const camX = sway + mouseNX * 0.55;
+  const camY = 2.18 - mouseNY * 0.30 + (reduced ? 0 : Math.sin(t * 0.08) * 0.07);
+  const camZ = 3.85 - Math.abs(sway) * 0.12;
+  camera.position.x += (camX - camera.position.x) * 0.045;
+  camera.position.y += (camY - camera.position.y) * 0.045;
+  camera.position.z += (camZ - camera.position.z) * 0.045;
+  lookTarget.set(pot.position.x * 0.38, 0.95, 0);
+  camera.lookAt(lookTarget);
+
+  /* brew + light respond to stirring */
+  brewUniforms.uTime.value = t;
+  brewUniforms.uAgitation.value = agitation;
+  brewLight.intensity = 16 + agitation * 15 + burstGlow * 34;
+  haloMat.opacity = 0.44 + Math.sin(t * 1.7) * 0.07 + agitation * 0.14 + burstGlow * 0.4;
+
+  /* flame */
+  const fPos = flame.pos, fCol = flame.col, fSiz = flame.siz;
+  for (let i = 0; i < FC; i++) {
+    fLife[i] += dt * (1 + agitation * 0.7);
+    if (fLife[i] >= fMax[i]) respawnFlame(i);
+    const k = fLife[i] / fMax[i];
+    fPos[i*3]   *= (1 - dt * 1.3);                                   /* converge to a tongue */
+    fPos[i*3+2] *= (1 - dt * 1.3);
+    fPos[i*3]   += Math.sin(t * 3.2 + fSeed[i]) * 0.0016;
+    fPos[i*3+1] += fVel[i] * dt * (1 + agitation * 0.5);
+    /* white -> gold -> orange -> black (additive fade) */
+    let r, g, b;
+    if (k < 0.18)      { const u = k / 0.18;        r = 1;               g = 0.97 - u * 0.2;  b = 0.85 - u * 0.55; }
+    else if (k < 0.55) { const u = (k-0.18) / 0.37; r = 1;               g = 0.77 - u * 0.32; b = 0.30 - u * 0.20; }
+    else               { const u = (k-0.55) / 0.45; r = 1 - u * 0.95;    g = 0.45 - u * 0.42; b = 0.10 - u * 0.10; }
+    fCol[i*3] = r; fCol[i*3+1] = g; fCol[i*3+2] = b;
+    const bell = Math.min(k / 0.15, 1) * (1 - Math.max(0, (k - 0.5) / 0.5));
+    fSiz[i] = fBase[i] * bell * (1 + agitation * 0.35);
+  }
+  flame.geo.attributes.position.needsUpdate = true;
+  flame.geo.attributes.aColor.needsUpdate = true;
+  flame.geo.attributes.aSize.needsUpdate = true;
+
+  /* sparks */
+  const sPos = sparks.pos, sCol = sparks.col, sSiz = sparks.siz;
+  for (let i = 0; i < SC; i++) {
+    sLife[i] += dt;
+    if (sLife[i] >= sMax[i]) respawnSpark(i);
+    const k = sLife[i] / sMax[i];
+    sPos[i*3+1] += sVel[i] * dt;
+    sPos[i*3]   += Math.sin(t * 1.4 + sSeed[i]) * 0.0022;
+    const flick = 0.55 + 0.45 * Math.sin(t * 18 + sSeed[i] * 7);
+    const fade  = Math.min(k / 0.1, 1) * (1 - Math.max(0, (k - 0.6) / 0.4));
+    sCol[i*3] = 1 * flick * fade; sCol[i*3+1] = 0.9 * flick * fade; sCol[i*3+2] = 0.7 * flick * fade;
+    sSiz[i] = 0.045;
+  }
+  sparks.geo.attributes.position.needsUpdate = true;
+  sparks.geo.attributes.aColor.needsUpdate = true;
+  sparks.geo.attributes.aSize.needsUpdate = true;
+
+  /* burst */
+  const bPos = burst.pos, bCol = burst.col, bSiz = burst.siz;
+  for (let i = 0; i < BC; i++) {
+    if (bLife[i] >= bMax[i]) { bCol[i*3] = bCol[i*3+1] = bCol[i*3+2] = 0; bSiz[i] = 0; continue; }
+    bLife[i] += dt;
+    const k = bLife[i] / bMax[i];
+    bVel[i*3+1] -= 2.4 * dt;                                        /* light gravity */
+    bPos[i*3]   += bVel[i*3]   * dt;
+    bPos[i*3+1] += bVel[i*3+1] * dt;
+    bPos[i*3+2] += bVel[i*3+2] * dt;
+    const fade = 1 - k;
+    bCol[i*3] = 1 * fade; bCol[i*3+1] = (0.8 - k * 0.4) * fade; bCol[i*3+2] = 0.3 * fade;
+    bSiz[i] = 0.06 * (1 - k * 0.5);
+  }
+  burst.geo.attributes.position.needsUpdate = true;
+  burst.geo.attributes.aColor.needsUpdate = true;
+  burst.geo.attributes.aSize.needsUpdate = true;
+
+  /* twinkles + bubbles bob */
+  for (const tw of twinkles) {
+    const p = 0.75 + 0.35 * Math.sin(t * 2.1 + tw.userData.phase);
+    tw.scale.setScalar(tw.userData.base * p);
+    tw.material.opacity = 0.5 + 0.45 * p;
+    tw.material.rotation += dt * 0.25;
+  }
+  for (const bb of bubbles) {
+    bb.position.y = 1.88 + Math.sin(t * 1.3 + bb.userData.phase) * 0.09;
+    bb.position.x = (bb.userData.phase > 1 ? 0.66 : -0.66) + Math.sin(t * 0.7 + bb.userData.phase) * 0.05;
+  }
+
+  renderer.render(scene, camera);
+}
+tick();
+</script>
+</body>
+</html>

@@ -24,7 +24,13 @@
     font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;
     background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);
     padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;white-space:nowrap;text-decoration:none;
-  }.top-btn:hover{color:var(--gold-bright);border-color:var(--gold);box-shadow:0 0 12px -3px rgba(232,198,90,.4)}.top-btn.danger:hover{color:var(--blood-bright);border-color:var(--blood-bright);box-shadow:0 0 12px -3px rgba(212,58,77,.4)}.head{text-align:center;margin:1.4rem 0 2.8rem}.head .over{font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.42em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.55rem}.head h1{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(1.8rem,5vw,2.7rem);color:var(--bone-bright);letter-spacing:.05em}.head .sub{font-style:italic;color:var(--bone-dim);font-size:1.05rem;margin-top:.5rem}.rune-divider{display:flex;align-items:center;gap:.9rem;margin:1rem auto 0;max-width:380px}.rune-divider::before,.rune-divider::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.5}.rune-divider span{color:var(--gold);text-shadow:0 0 8px rgba(201,162,39,.6)}/* ═══════════ Två vägar ═══════════ */.paths{display:grid;grid-template-columns:repeat(2,1fr);gap:1.3rem;margin-bottom:2rem}.path{
+  }.top-btn:hover{color:var(--gold-bright);border-color:var(--gold);box-shadow:0 0 12px -3px rgba(232,198,90,.4)}.top-btn.danger:hover{color:var(--blood-bright);border-color:var(--blood-bright);box-shadow:0 0 12px -3px rgba(212,58,77,.4)}.head{text-align:center;margin:1.4rem 0 2.8rem}.head .over{font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.42em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.55rem}.head h1{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(1.8rem,5vw,2.7rem);color:var(--bone-bright);letter-spacing:.05em}.head .sub{font-style:italic;color:var(--bone-dim);font-size:1.05rem;margin-top:.5rem}.rune-divider{display:flex;align-items:center;gap:.9rem;margin:1rem auto 0;max-width:380px}.rune-divider::before,.rune-divider::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.5}.rune-divider span{color:var(--gold);text-shadow:0 0 8px rgba(201,162,39,.6)}/* ═══════════ Nyhetsbanner (Qwen 3.8 Max) ═══════════ */.news-banner{
+    display:flex;align-items:center;gap:.9rem;max-width:640px;margin:0 auto 2rem;
+    padding:.85rem 1.2rem;cursor:pointer;
+    background:linear-gradient(120deg,rgba(212,169,44,.10),rgba(212,169,44,.04) 60%,transparent);
+    border:1px solid rgba(201,162,39,.35);border-left:3px solid var(--gold);
+    transition:box-shadow .25s,transform .25s;animation:rise .5s .3s cubic-bezier(.22,1,.36,1) both;
+  }.news-banner:hover{box-shadow:0 6px 24px -8px rgba(212,169,44,.4);transform:translateY(-2px)}.news-banner .nb-icon{font-size:1.5rem;filter:drop-shadow(0 2px 8px rgba(212,169,44,.5))}.news-banner .nb-body{flex:1}.news-banner .nb-title{font-family:'Cinzel',serif;font-size:.72rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-bright);margin-bottom:.15rem}.news-banner .nb-text{font-size:.86rem;font-style:italic;color:var(--bone-dim);line-height:1.4}.news-banner .nb-text b{color:var(--bone);font-style:normal}.news-banner .nb-close{background:none;border:none;color:var(--bone-dim);font-size:1rem;cursor:pointer;padding:.2rem;line-height:1;transition:color .2s}.news-banner .nb-close:hover{color:var(--blood-bright)}/* ═══════════ Två vägar ═══════════ */.paths{display:grid;grid-template-columns:repeat(2,1fr);gap:1.3rem;margin-bottom:2rem}.path{
     position:relative;cursor:pointer;text-align:center;padding:2rem 1.2rem 1.6rem;
     background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);
     border:1px solid var(--edge);overflow:hidden;
@@ -104,7 +110,136 @@
     background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);
     border:1px solid var(--edge);overflow:hidden;
   }.htp-card::before{content:'';position:absolute;inset:5px;border:1px solid rgba(201,162,39,.1);pointer-events:none}.htp-card .htp-icon{font-size:1.6rem;display:block;margin-bottom:.6rem;filter:drop-shadow(0 2px 8px rgba(0,0,0,.5))}.htp-card h3{font-family:'Cinzel',serif;font-weight:700;font-size:.82rem;letter-spacing:.1em;color:var(--gold-bright);margin-bottom:.5rem}.htp-card p{font-size:.91rem;line-height:1.6;color:var(--bone-dim);font-style:italic}.htp-card p b{color:var(--bone);font-style:normal}/* ═══════════ Release Notes accordion ═══════════ */.rn-body{display:block;max-height:0;overflow:hidden;transition:max-height .5s cubic-bezier(.22,1,.36,1),opacity .4s;opacity:0}.rn-body.open{max-height:1600px;opacity:1;margin-top:.4rem}.rn-inner{background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);border:1px solid var(--edge);padding:1.5rem 1.4rem;position:relative;text-align:left}.rn-inner::before{content:'';position:absolute;inset:5px;border:1px solid rgba(201,162,39,.1);pointer-events:none}.rn-ver{display:inline-block;font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;color:#1a1206;background:linear-gradient(180deg,var(--gold-bright),var(--gold));padding:.35rem .8rem;margin-bottom:1rem}.rn-list{list-style:none;margin:0 0 1.2rem;padding:0}.rn-list li{padding:.55rem 0 .55rem 1.4rem;position:relative;font-size:.95rem;line-height:1.6;color:var(--bone-dim);border-bottom:1px solid rgba(42,42,58,.4)}.rn-list li:last-child{border-bottom:none}.rn-list li::before{content:'▸';position:absolute;left:.1rem;color:var(--gold)}.rn-list li b{color:var(--bone);font-weight:600}.rn-more{font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);text-decoration:none;border-bottom:1px solid rgba(201,162,39,.3);padding-bottom:2px;transition:all .25s}.rn-more:hover{color:var(--gold-bright);border-color:var(--gold);text-shadow:0 0 12px rgba(232,198,90,.4)}.htp-more-row{grid-column:1/-1;text-align:center;margin-top:.9rem}/* ═══════════ Kontakt — footer ═══════════ */.contact{ text-align:center; padding:2.6rem 1rem .5rem }.contact .rune-divider{ margin-bottom:1rem }.contact a{ font-family:'Cinzel',serif; font-size:.95rem; letter-spacing:.12em; color:var(--gold); text-decoration:none; border-bottom:1px solid rgba(201,162,39,.3); padding-bottom:2px; transition:all .25s }.contact a:hover{ color:var(--gold-bright); border-color:var(--gold); text-shadow:0 0 14px rgba(232,198,90,.4) }.contact p{ margin:.55rem 0 0; font-size:.78rem; font-style:italic; color:var(--bone-dim) }
-  @media(max-width:900px){.htp-body{grid-template-columns:1fr}}/* ═══════════ Mobile — vägskälet i fickformat ═══════════ */html{-webkit-tap-highlight-color:transparent}
+  /* ═══════════ ONBOARDING-STEPPER (login-stil — smooth scroll per steg) ═══════════ */
+  .step{position:relative;background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);border:1px solid var(--edge);padding:1.9rem 1.7rem 1.7rem;margin-bottom:1.6rem;overflow:hidden;box-shadow:0 18px 44px -20px rgba(0,0,0,.9)}
+  .step::before{content:'';position:absolute;inset:6px;border:1px solid rgba(201,162,39,.13);pointer-events:none}
+  .step-head{display:flex;align-items:center;gap:1rem;margin-bottom:1.2rem}
+  .step-num{flex-shrink:0;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-weight:900;font-size:1.05rem;color:#1a1206;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);box-shadow:0 0 18px -4px rgba(232,198,90,.5),inset 0 1px 0 rgba(255,255,255,.35)}
+  .step-title{font-family:'Cinzel',serif;font-weight:700;font-size:.95rem;letter-spacing:.2em;text-transform:uppercase;color:var(--bone-bright)}
+  .step-sub{font-size:.88rem;font-style:italic;color:var(--bone-dim);margin-top:.15rem}
+  .step-actions{display:flex;gap:.8rem;flex-wrap:wrap;align-items:center;margin-top:1.2rem}
+  /* Språkkort — två stora val */
+  .lang-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:1.1rem}
+  .lang-card{position:relative;cursor:pointer;text-align:center;padding:1.9rem 1.2rem 1.5rem;background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);border:1px solid var(--edge);transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s,border-color .3s;overflow:hidden}
+  .lang-card::before{content:'';position:absolute;inset:5px;border:1px solid rgba(201,162,39,.14);pointer-events:none;transition:border-color .3s}
+  .lang-card:hover{transform:translateY(-6px);box-shadow:0 16px 34px -12px rgba(0,0,0,.85);border-color:var(--gold);z-index:2}
+  .lang-card:hover::before{border-color:var(--gold)}
+  .lang-card .lc-icon{font-size:2.4rem;display:block;margin-bottom:.7rem;filter:drop-shadow(0 4px 12px rgba(0,0,0,.6))}
+  .lang-card h3{font-family:'Cinzel',serif;font-weight:700;font-size:1rem;color:var(--bone-bright);letter-spacing:.06em;margin-bottom:.4rem}
+  .lang-card p{font-size:.92rem;font-style:italic;color:var(--bone-dim);line-height:1.5}
+  .lang-card.selected{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),0 16px 34px -12px rgba(232,198,90,.45)}
+  .lang-card.selected::before{border-color:var(--gold)}
+  .lang-card .lc-check{position:absolute;top:.55rem;right:.7rem;font-size:1.05rem;opacity:0;transition:opacity .3s;color:var(--gold-bright)}
+  .lang-card.selected .lc-check{opacity:1}
+  /* Modellgate */
+  .dm-model-row{display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
+  .dm-model-select{flex:1;min-width:240px;font-family:'Spectral',serif;font-size:.98rem;color:var(--bone-bright);background:#0d0817;border:1px solid var(--edge);padding:.7rem .9rem;cursor:pointer;outline:none;transition:border-color .25s,box-shadow .25s}
+  .dm-model-select:focus{border-color:var(--gold);box-shadow:0 0 16px -4px rgba(232,198,90,.4)}
+  .dm-model-note{font-size:.8rem;font-style:italic;color:var(--bone-dim);margin-top:.6rem}
+  .dm-model-note b{color:var(--gold);font-style:normal}
+  /* Arketypgrid (delas med newgame.html) */
+  .spread{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+  .arch{position:relative;cursor:pointer;text-align:center;padding:1.4rem 1rem 1.2rem;background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);border:1px solid var(--edge);transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s,border-color .3s;overflow:hidden}
+  .arch::before{content:'';position:absolute;inset:6px;border:1px solid rgba(201,162,39,.18);pointer-events:none;transition:border-color .3s}
+  .arch:nth-child(1){transform:rotate(-1.6deg)}.arch:nth-child(2){transform:rotate(1.1deg)}.arch:nth-child(3){transform:rotate(-.8deg)}.arch:nth-child(4){transform:rotate(1.4deg)}.arch:nth-child(5){transform:rotate(-1.2deg)}.arch:nth-child(6){transform:rotate(.9deg)}
+  .arch:hover{transform:rotate(0) translateY(-8px);box-shadow:0 18px 34px -12px rgba(0,0,0,.85);border-color:var(--ac,var(--gold));z-index:2}
+  .arch:hover::before{border-color:var(--ac,var(--gold))}
+  .arch .glow{position:absolute;inset:0;opacity:0;transition:opacity .35s;pointer-events:none;background:radial-gradient(ellipse at 50% 0%,var(--ac-glow,rgba(201,162,39,.14)),transparent 70%)}
+  .arch:hover .glow{opacity:1}
+  .arch .icon{width:56px;height:56px;margin:0 auto .8rem;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.6rem;border:1px solid var(--ac,var(--gold));background:var(--stone-3);box-shadow:0 0 16px -4px var(--ac-glow,rgba(201,162,39,.4)),inset 0 0 12px rgba(0,0,0,.5);transition:transform .3s,box-shadow .3s}
+  .arch:hover .icon{transform:scale(1.12);box-shadow:0 0 24px -2px var(--ac-glow,rgba(201,162,39,.6)),inset 0 0 12px rgba(0,0,0,.5)}
+  .arch h3{font-family:'Cinzel',serif;font-weight:700;font-size:.95rem;color:var(--bone-bright);letter-spacing:.04em;margin-bottom:.45rem}
+  .arch .lore{font-style:italic;font-size:.93rem;color:var(--bone-dim);line-height:1.5;margin-bottom:.8rem;min-height:3.6em}
+  .arch .tags{display:flex;justify-content:center;gap:.35rem;flex-wrap:wrap}
+  .arch .tag{font-family:'Cinzel',serif;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim);border:1px solid var(--edge);padding:.2rem .5rem;border-radius:2px}
+  .arch .ribbon{position:absolute;top:10px;right:-30px;transform:rotate(38deg);font-family:'Cinzel',serif;font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;background:var(--ac,var(--gold));color:#1a1206;padding:.25rem 2.2rem;opacity:0;transition:opacity .3s}
+  .arch.selected{border-color:var(--ac,var(--gold));transform:rotate(0) translateY(-6px);box-shadow:0 0 0 1px var(--ac,var(--gold)),0 16px 34px -12px var(--ac-glow,rgba(201,162,39,.5))}
+  .arch.selected .ribbon{opacity:1}.arch.selected::before{border-color:var(--ac,var(--gold))}
+  .dark-drop{margin-top:1.4rem;padding:1rem 1.1rem;background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#0f0a14);border:1px solid var(--edge);border-left:3px solid #a32433}
+  .dark-drop-label{display:flex;align-items:baseline;gap:.5rem;flex-wrap:wrap;margin-bottom:.6rem}
+  .dark-drop-label .dd-icon{font-size:1rem}
+  .dark-drop-label .dd-name{font-family:'Cinzel',serif;font-weight:700;font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--blood-bright)}
+  .dark-drop-label .dd-sub{font-size:.75rem;font-style:italic;color:var(--bone-dim)}
+  .dark-select{width:100%;font-family:'Spectral',serif;font-size:.98rem;color:var(--bone-bright);background:#0d0817;border:1px solid var(--edge);padding:.6rem .8rem;cursor:pointer;outline:none}
+  .blank-row{margin-top:1.2rem;display:flex;justify-content:center}
+  .blank-btn{font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim);background:none;border:1px solid var(--edge);padding:.55rem 1.1rem;cursor:pointer;transition:all .25s;border-radius:2px}
+  .blank-btn:hover{color:var(--arcane);border-color:var(--arcane);box-shadow:0 0 14px -5px rgba(139,95,212,.5)}
+  /* Start + weaving (summoning-ritual) */
+  .start-btn{font-family:'Cinzel',serif;font-weight:700;font-size:1rem;letter-spacing:.16em;text-transform:uppercase;color:#1a1206;cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);border:1px solid #6e5510;padding:1rem 2.2rem;border-radius:2px;position:relative;overflow:hidden;box-shadow:0 8px 24px -6px rgba(232,198,90,.5),inset 0 1px 0 rgba(255,255,255,.35);transition:all .2s}
+  .start-btn:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-2px)}
+  .start-btn:disabled{opacity:.55;cursor:wait}
+  .weaving-ad{display:none;text-align:center;padding:1.6rem 0 .4rem;position:relative}
+  .weaving-ad.show{display:block;animation:rise .4s ease}
+  .weaving-ad .wa-status{font-style:italic;color:var(--arcane);font-size:1.02rem;margin-bottom:.7rem;text-shadow:0 0 12px rgba(139,95,212,.4);animation:w-blink 2s ease-in-out infinite}
+  .weaving-ad .wa-reasoning{max-height:180px;overflow-y:auto;text-align:left;background:#0d0817;border:1px solid var(--edge);padding:.8rem .9rem;font-size:.83rem;color:var(--arcane);font-style:italic;line-height:1.55;margin:.6rem auto 0;max-width:560px}
+  .weaving-ad .wa-warn{font-size:.78rem;color:var(--blood-bright);margin-top:.5rem;letter-spacing:.08em}
+  @keyframes w-blink{0%,100%{opacity:1}50%{opacity:.35}}
+  .prepare-link{margin-top:1.6rem;text-align:center}
+  .prepare-link a{font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim);text-decoration:none;border-bottom:1px solid var(--edge);padding-bottom:2px;transition:all .25s;cursor:pointer}
+  .prepare-link a:hover{color:var(--gold);border-color:var(--gold)}
+  /* Reveal-on-scroll (login-stil) */
+  .step,.continue-wrap,.prepare-link,.htp{opacity:0;transform:translateY(22px);transition:opacity .6s cubic-bezier(.22,1,.36,1),transform .6s cubic-bezier(.22,1,.36,1)}
+  .step.reveal,.continue-wrap.reveal,.prepare-link.reveal,.htp.reveal{opacity:1;transform:translateY(0)}
+  /* Tabs — Summon vs Forge */
+  .tab-row{display:flex;gap:.6rem;margin-bottom:1.4rem;flex-wrap:wrap}
+  .tab-btn{font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--bone-dim);background:none;border:1px solid var(--edge);padding:.65rem 1.2rem;cursor:pointer;border-radius:2px;transition:all .25s}
+  .tab-btn:hover{color:var(--bone-bright);border-color:var(--gold)}
+  .tab-btn.active{color:#1a1206;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);border-color:#6e5510;box-shadow:0 6px 18px -6px rgba(232,198,90,.45)}
+  .tab-panel{display:none}.tab-panel.show{display:block;animation:rise .4s ease}
+  /* Generate-knapp */
+  .gen-btn{font-family:'Cinzel',serif;font-weight:700;font-size:.92rem;letter-spacing:.16em;text-transform:uppercase;color:#1a1206;cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);border:1px solid #6e5510;padding:.9rem 1.8rem;border-radius:2px;box-shadow:0 6px 20px -6px rgba(232,198,90,.5),inset 0 1px 0 rgba(255,255,255,.35);transition:all .2s}
+  .gen-btn:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-2px)}
+  .gen-btn:disabled{opacity:.45;cursor:not-allowed}
+  /* Character preview (port från newgame) */
+  .preview{display:none;margin-top:2rem}.preview.show{display:block;animation:rise .55s cubic-bezier(.22,1,.36,1)}
+  @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  .pv-head{display:flex;gap:1.2rem;align-items:center;margin-bottom:1.3rem;flex-wrap:wrap}
+  .pv-portrait{width:78px;height:78px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;border:2px solid var(--pv-ac,var(--gold));background:var(--stone-3);box-shadow:0 0 22px -4px var(--pv-glow,rgba(201,162,39,.5));transform:rotate(-3deg);overflow:hidden}
+  .pv-portrait img{width:100%;height:100%;object-fit:cover}
+  .pv-name{font-family:'Cinzel',serif;font-weight:900;font-size:1.35rem;color:var(--bone-bright);text-shadow:0 2px 0 #000}
+  .pv-class{font-style:italic;color:var(--pv-ac,var(--arcane));font-size:1rem;margin-top:.15rem}
+  .pv-stats{display:grid;grid-template-columns:repeat(6,1fr);gap:.6rem;margin-bottom:1.2rem}
+  .pv-stat{text-align:center;padding:.65rem .2rem .55rem;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--edge);clip-path:polygon(50% 0,100% 12%,100% 88%,50% 100%,0 88%,0 12%)}
+  .pv-stat .a{font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.2em;color:var(--gold)}
+  .pv-stat .s{font-family:'Cinzel',serif;font-weight:900;font-size:1.25rem;color:var(--bone-bright)}
+  .pv-stat .m{font-size:.85rem;color:var(--arcane)}
+  .pv-vitals{display:flex;gap:1.3rem;flex-wrap:wrap;font-size:.95rem;color:var(--bone-dim);margin-bottom:1.2rem}
+  .pv-vitals b{color:var(--bone-bright);font-size:1.1rem}
+  .pv-traits{display:flex;flex-wrap:wrap;gap:.45rem;margin-bottom:1.2rem}
+  .pv-trait{font-size:.9rem;padding:.3rem .8rem;border:1px solid rgba(139,95,212,.5);color:#cbb3f2;background:rgba(139,95,212,.08);border-radius:2px}
+  .pv-gear{font-size:.85rem;color:var(--bone);line-height:1.7;margin-bottom:1.2rem}
+  .pv-gear b{color:var(--gold-bright)}
+  .pv-story{font-style:italic;color:var(--bone);line-height:1.7;border-left:2px solid var(--pv-ac,var(--gold));padding-left:1rem;margin-bottom:1.5rem;font-size:.92rem}
+  .pv-actions{display:flex;gap:.8rem;flex-wrap:wrap;align-items:center}
+  .pv-go{font-family:'Cinzel',serif;font-weight:700;font-size:.9rem;letter-spacing:.14em;text-transform:uppercase;color:#1a1206;cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);border:1px solid #6e5510;padding:.8rem 1.5rem;border-radius:2px;box-shadow:0 6px 18px -6px rgba(232,198,90,.5),inset 0 1px 0 rgba(255,255,255,.35);transition:all .2s}
+  .pv-go:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-2px)}
+  .pv-go:disabled{opacity:.45;cursor:not-allowed}
+  .pv-reroll{font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-dim);background:none;border:1px solid var(--edge);padding:.8rem 1.2rem;cursor:pointer;border-radius:2px;transition:all .2s}
+  .pv-reroll:hover:not(:disabled){color:var(--arcane);border-color:var(--arcane);box-shadow:0 0 14px -5px rgba(139,95,212,.5)}
+  .pv-reroll:disabled{opacity:.45;cursor:wait}
+  /* The Forge — välj färdig hjälte */
+  .vault-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem}
+  .vcard{position:relative;background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);border:1px solid var(--edge);padding:1.2rem 1.1rem 1rem;transition:transform .3s,box-shadow .3s,border-color .3s;overflow:hidden;cursor:pointer}
+  .vcard::before{content:'';position:absolute;inset:6px;border:1px solid rgba(201,162,39,.15);pointer-events:none}
+  .vcard:hover{transform:translateY(-4px);box-shadow:0 14px 30px -12px rgba(0,0,0,.85);border-color:var(--gold)}
+  .vcard.selected{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),0 14px 30px -12px rgba(232,198,90,.45)}
+  .vcard-head{display:flex;gap:.9rem;align-items:center;margin-bottom:.5rem}
+  .vcard-avatar{width:54px;height:54px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;border:2px solid var(--edge-hi);background:var(--stone-3);overflow:hidden}
+  .vcard-avatar img{width:100%;height:100%;object-fit:cover}
+  .vcard-name{font-family:'Cinzel',serif;font-weight:700;font-size:.93rem;color:var(--bone-bright);line-height:1.3}
+  .vcard-cls{font-style:italic;font-size:.8rem;color:var(--arcane)}
+  .vcard-story{font-size:.8rem;font-style:italic;color:var(--bone-dim);line-height:1.5;margin:.5rem 0 .7rem}
+  .vcard-stats{display:flex;gap:.35rem;margin-bottom:.7rem}
+  .vcard-stat{flex:1;text-align:center;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--edge);padding:.25rem .1rem}
+  .vcard-stat .a{font-family:'Cinzel',serif;font-size:.5rem;letter-spacing:.1em;color:var(--gold)}
+  .vcard-stat .s{font-family:'Cinzel',serif;font-weight:800;font-size:.85rem;color:var(--bone-bright)}
+  .vcard-use{font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;width:100%;color:#1a1206;cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);border:1px solid #6e5510;padding:.6rem .8rem;border-radius:2px;transition:all .2s}
+  .vcard-use:hover:not(:disabled){filter:brightness(1.12)}
+  .vcard-use:disabled{opacity:.45;cursor:wait}
+  .vault-empty{padding:1.3rem;border:1px dashed var(--edge);color:var(--bone-dim);font-style:italic;text-align:center;font-size:.92rem}
+  .vault-note{font-size:.8rem;font-style:italic;color:var(--bone-dim);margin-top:.8rem}
+  @media(max-width:900px){.pv-stats{grid-template-columns:repeat(3,1fr)}.vault-grid{grid-template-columns:1fr}}
+  @media(max-width:900px){.htp-body{grid-template-columns:1fr}.spread{grid-template-columns:repeat(2,1fr)}
   @media(max-width:900px){.paths{grid-template-columns:1fr;gap:1rem}.path{padding:1.4rem 1.1rem 1.2rem;transform:none!important}.path:active{transform:translateY(2px)!important;border-color:var(--pc,var(--gold));
       box-shadow:0 4px 14px -8px rgba(0,0,0,.8)}.path:active .glow{opacity:1}.path:active .icon{transform:scale(1.1)}.path .icon{font-size:2.3rem;margin-bottom:.7rem}.campaign-list{grid-template-columns:1fr}
   }
@@ -113,11 +248,12 @@
   }
   @media(max-width:400px){.app{padding:0 .5rem 3.5rem}.head h1{font-size:1.55rem}.head .over{letter-spacing:.28em}.path h2{font-size:.95rem}.path p{font-size:.91rem}.cp-icon{width:54px;height:54px;font-size:1.5rem}.campaign-card .cc-sub{font-size:.81rem}
   }
+  /* ═══════════ Feedback-modal ═══════════ */.fb-btn{display:inline-block;margin:.7rem auto 0;font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .9rem;cursor:pointer;border-radius:2px;transition:color .2s,border-color .2s}.fb-btn:hover{color:var(--gold-bright);border-color:var(--gold)}.fb-modal{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;background:rgba(4,2,8,.82);backdrop-filter:blur(3px);padding:1rem}.fb-modal.show{display:flex}.fb-card{position:relative;width:100%;max-width:440px;background:linear-gradient(165deg,var(--stone-2),var(--stone));border:1px solid var(--edge);padding:1.6rem 1.5rem 1.4rem;box-shadow:0 30px 80px -20px rgba(0,0,0,.9)}.fb-corner{position:absolute;width:16px;height:16px;border-style:solid;opacity:.8;border-color:var(--gold)}.fb-corner.tl{top:6px;left:6px;border-width:2px 0 0 2px}.fb-corner.tr{top:6px;right:6px;border-width:2px 2px 0 0}.fb-corner.bl{bottom:6px;left:6px;border-width:0 0 2px 2px}.fb-corner.br{bottom:6px;right:6px;border-width:0 2px 2px 0}.fb-title{font-family:'Cinzel',serif;font-weight:900;font-size:1.02rem;color:var(--gold-bright);letter-spacing:.06em;text-align:center;margin-bottom:.35rem}.fb-sub{font-size:.86rem;font-style:italic;color:var(--bone-dim);text-align:center;margin-bottom:1rem}.fb-label{display:block;font-family:'Cinzel',serif;font-size:.64rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim);margin:.85rem 0 .35rem}.fb-label .fb-opt{text-transform:none;letter-spacing:.04em;opacity:.75}.fb-input,.fb-textarea{width:100%;font-family:'Spectral',serif;font-size:1rem;line-height:1.5;color:var(--bone-bright);background:var(--ink);border:1px solid var(--edge);padding:.6rem .75rem;outline:none;border-radius:2px;transition:border-color .2s,box-shadow .2s}.fb-input:focus,.fb-textarea:focus{border-color:var(--gold);box-shadow:0 0 14px -4px rgba(232,198,90,.45)}.fb-textarea{resize:vertical;min-height:110px}.fb-input::placeholder,.fb-textarea::placeholder{color:var(--bone-dim);opacity:.55;font-style:italic}.fb-actions{display:flex;gap:.7rem;justify-content:flex-end;margin-top:1.2rem}.fb-cancel{font-size:.72rem;padding:.55rem 1.1rem}.fb-submit{font-size:.78rem;padding:.6rem 1.4rem;min-width:110px}.fb-submit:disabled{opacity:.6;cursor:default}.fb-error{display:none;margin-top:.85rem;font-size:.8rem;font-style:italic;color:var(--blood-bright);text-align:center}.fb-card.has-error .fb-error{display:block}.fb-card.has-error .fb-textarea{border-color:var(--blood-bright)}@media(max-width:640px){.fb-btn,.fb-cancel,.fb-submit{min-height:44px}}
 </style>
-<link rel="stylesheet" href="snes.css?v=19">
+<link rel="stylesheet" href="snes.css?v=22">
 <script src="sprites.js?v=20260802a"></script>
-<script src="fonts.js?v=20260802c"></script>
-<script src="themes.js?v=20260802c"></script>
+<script src="fonts.js?v=20260803a"></script>
+<script src="themes.js?v=20260804a"></script>
 </head>
 <body>
 <div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
@@ -140,6 +276,16 @@
     <div class="rune-divider"><span>✦</span></div>
   </div>
 
+  <!-- ═══════════ NYHET: QWEN 3.8 MAX ═══════════ -->
+  <div class="news-banner" id="news-qwen38" onclick="newsQwenToast(event)" style="display:none">
+    <span class="nb-icon">🔥</span>
+    <div class="nb-body">
+      <div class="nb-title">New — Qwen 3.8 Max (full release)</div>
+      <div class="nb-text">Alibaba's flagship model, released Aug&nbsp;3, 2026, is now available as a <b>Dungeon Master</b> choice: 2.4T parameters (95B active per request), 1M context, deep reasoning. Select it at the model gate.</div>
+    </div>
+    <button class="nb-close" onclick="newsQwenDismiss(event)" title="Dismiss">✕</button>
+  </div>
+
   <!-- ═══════════ RELEASE NOTES ═══════════ -->
   <div class="htp">
     <button class="htp-toggle" id="rn-toggle" onclick="toggleRn()">
@@ -147,16 +293,10 @@
     </button>
     <div class="rn-body" id="rn-body">
       <div class="rn-inner">
-        <span class="rn-ver">v0.6.0 — The Production Readiness Update</span>
+        <span class="rn-ver">v0.6.3 — The Forge Release</span>
         <ul class="rn-list">
-          <li><b>The D20 ceremony</b> — an inline dice ritual: three seconds of flicker and glitter, then the verdict. Nat 20 in gold, nat 1 in blood.</li>
-          <li><b>Roll or Write</b> — when the DM calls for a roll, choose the dice or the pen. The chat unlocks when you write instead.</li>
-          <li><b>The Codex</b> — character, NPCs, map, journal and facts in one tabbed view.</li>
-          <li><b>Combat v26, chat-first</b> — the DM narrates everything; the Lorekeeper extracts the mechanics. Initiative and turn order kept honest.</li>
-          <li><b>Voice of the DM</b> — play buttons on narration, storyteller voices, mood music that follows the scene.</li>
-          <li><b>Theme switcher</b> — five dark-fantasy palettes in the top bar. Your choice is remembered.</li>
-          <li><b>Model transparency</b> — what your DM model is, why high reasoning takes a little longer, and where every token went.</li>
-          <li><b>@NPC chat</b> — address any NPC directly in their own voice, with autocomplete.</li>
+          <li><b>Export your hero to The Forge</b> — from the Codex character sheet, save the adventurer you've lived to the Vault: level, gear, story and all. Then start a brand-new campaign with the same hero.</li>
+          <li><b>No more hero-twins</b> — exporting a hero whose name already rests in your Vault asks first: overwrite the old copy, or keep both.</li>
         </ul>
         <a class="rn-more" href="releases.html">Read the full ledger →</a>
       </div>
@@ -196,45 +336,144 @@
       <div class="campaign-list" id="campaign-list"></div>
       <div class="actions">
         <span class="hint">Choose an adventure to continue, or start a new one.</span>
-        <button class="go-btn" onclick="showNewAdventureForm()">🎲 New Adventure</button>
+        <button class="go-btn" onclick="resetStepper()">🎲 New Adventure</button>
       </div>
     </div>
   </div>
 
-  <!-- ═══════════ TVÅ VÄGAR ═══════════ -->
-  <div class="paths">
-    <div class="path" style="--pc:var(--ember);--pg:rgba(212,105,30,.14)" onclick="showPanel('prepare')">
-      <div class="glow"></div>
-      <span class="icon">📜</span>
-      <h2>Prepare Adventure</h2>
-      <p>Write a worldbuilding prompt, upload .md/.pdf files, or both. The world is extracted and structured for you.</p>
-      <span class="tag">Prompt + Files</span>
+  <!-- ═══════════ ONBOARDING — STEG 1: KAMPANJSPRÅK ═══════════ -->
+  <div class="step" id="step-lang">
+    <div class="step-head">
+      <div class="step-num">1</div>
+      <div>
+        <div class="step-title">Choose Campaign Language</div>
+        <div class="step-sub">The Dungeon Master speaks this language — in every scene, every NPC, every whisper.</div>
+      </div>
     </div>
-
-    <div class="path" style="--pc:var(--blood-bright);--pg:rgba(212,58,77,.12)" onclick="showNewAdventureForm()">
-      <div class="glow"></div>
-      <span class="icon">🎲</span>
-      <h2>New Adventure</h2>
-      <p>No prep. The Dungeon Master freestyles an opening scene and throws you into the darkness.</p>
-      <span class="tag">Freestyle · Instant</span>
-    </div>
-  </div>
-
-  <!-- ═══════════ NAMNGE ÄVENTYR (inline form) ═══════════ -->
-  <div class="expand" id="panel-newadventure">
-    <div class="panel-box">
-      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
-      <div class="panel-title">🎲 New Adventure</div>
-      <p style="font-size:.98rem;font-style:italic;color:var(--bone-dim);margin-bottom:1rem">
-        Give your adventure a name — or leave it unnamed and begin right away.
-      </p>
-      <input type="text" class="name-input" id="adventure-name-input" placeholder="An unnamed adventure…" maxlength="60">
-      <div class="actions">
-        <button class="go-btn" onclick="startNewAdventure()">⚔️ Begin the Adventure</button>
-        <span class="hint">The DM freestyles an opening scene for you</span>
+    <div class="lang-cards">
+      <div class="lang-card" id="lang-en" onclick="pickLang('en')">
+        <span class="lc-check">✓</span>
+        <span class="lc-icon">🌐</span>
+        <h3>English</h3>
+        <p>The adventure, the DM and all responses in English.</p>
+      </div>
+      <div class="lang-card" id="lang-sv" onclick="pickLang('sv')">
+        <span class="lc-check">✓</span>
+        <span class="lc-icon">⚔️</span>
+        <h3>Svenska</h3>
+        <p>Äventyret, DM:n och alla svar på svenska.</p>
       </div>
     </div>
   </div>
+
+  <!-- ═══════════ STEG 2: NAMN ═══════════ -->
+  <div class="step" id="step-name" style="display:none">
+    <div class="step-head">
+      <div class="step-num">2</div>
+      <div>
+        <div class="step-title">Name Your Adventure</div>
+        <div class="step-sub">A name the bards will remember — or leave it unnamed and begin right away.</div>
+      </div>
+    </div>
+    <input type="text" class="name-input" id="adventure-name-input" placeholder="An unnamed adventure…" maxlength="60">
+    <div class="step-actions">
+      <button class="go-btn" onclick="continueFromName()">Continue →</button>
+    </div>
+  </div>
+
+  <!-- ═══════════ STEG 3: VÄLJ HJÄLTE (arketyper + Forge) ═══════════ -->
+  <div class="step" id="step-arch" style="display:none">
+    <div class="step-head">
+      <div class="step-num">3</div>
+      <div>
+        <div class="step-title">Choose Your Hero</div>
+        <div class="step-sub">Summon a fresh hero from a fate already woven — or step in with one from The Forge.</div>
+      </div>
+    </div>
+    <div class="tab-row">
+      <button class="tab-btn active" id="tab-summon" onclick="showHeroTab('summon')">✨ Summon a new hero</button>
+      <button class="tab-btn" id="tab-forge" onclick="showHeroTab('forge')">⚒ From The Forge</button>
+    </div>
+
+    <!-- Summon-tab: arketyper → generera → förhandsvisning → reroll -->
+    <div class="tab-panel show" id="hero-tab-summon">
+      <div class="step-sub" style="margin-bottom:1.1rem">Pick a fate — then summon your hero and look them in the eye before you continue. Don't like the weave? Reroll.</div>
+      <div class="spread" id="spread"></div>
+      <div class="dark-drop" id="dark-drop" style="display:none">
+        <div class="dark-drop-label"><span class="dd-icon">🖤</span> <span class="dd-name" id="dd-name">Dark Paths</span> <span class="dd-sub" id="dd-sub">mature archetypes</span></div>
+        <select id="dark-select" class="dark-select" onchange="selectDarkArch(this.value)">
+          <option value="">— choose a darker path —</option>
+        </select>
+      </div>
+      <div class="blank-row">
+        <button class="blank-btn" onclick="blankScroll()">✦ Blank Parchment — write your own</button>
+      </div>
+      <div class="step-actions" id="gen-row">
+        <button class="gen-btn" id="gen-btn" onclick="generateHero()" disabled>🔮 Generate Hero</button>
+        <span class="hint" id="gen-hint">Pick an archetype first — or take the blank parchment</span>
+      </div>
+      <!-- Vävning (summoning-ritual) -->
+      <div class="weaving-ad" id="weaving-gen">
+        <div class="wa-status" id="wa-gen-status">📡 Sending request to the Dungeon Master…</div>
+        <div class="wa-reasoning" id="wa-gen-reasoning" hidden></div>
+        <div class="wa-warn">⚠ Do NOT refresh this page — the summoning is in progress.</div>
+      </div>
+      <!-- Förhandsvisning av den vävda hjälten -->
+      <div class="preview" id="adv-preview">
+        <div class="pv-head">
+          <div class="pv-portrait" id="adv-pv-portrait">🎭</div>
+          <div>
+            <div class="pv-name" id="adv-pv-name"></div>
+            <div class="pv-class" id="adv-pv-class"></div>
+          </div>
+        </div>
+        <div class="pv-stats" id="adv-pv-stats"></div>
+        <div class="pv-vitals" id="adv-pv-vitals"></div>
+        <div class="pv-traits" id="adv-pv-traits"></div>
+        <div class="pv-gear" id="adv-pv-gear"></div>
+        <div class="pv-story" id="adv-pv-story"></div>
+        <div class="pv-actions">
+          <button class="pv-reroll" id="adv-reroll" onclick="rerollHero()">🎲 Reroll</button>
+          <button class="pv-go" id="adv-continue" onclick="continueHero()">Continue →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Forge-tab: färdiga hjältar från valvet -->
+    <div class="tab-panel" id="hero-tab-forge">
+      <div class="step-sub" style="margin-bottom:1.1rem">A hero you've already forged — with their level, gear and story — steps straight into this campaign.</div>
+      <div id="adv-vault-wrap">
+        <div class="vault-empty" id="adv-vault-empty">No saved heroes yet. <a href="characters.html" style="color:var(--gold)">Forge one</a> — or summon a fresh hero in the other tab.</div>
+        <div class="vault-grid" id="adv-vault-grid"></div>
+        <div class="vault-note" id="adv-vault-note" style="display:none">Pick a hero, then Continue below.</div>
+        <div class="pv-actions" style="margin-top:1.2rem">
+          <button class="pv-go" id="adv-forge-continue" onclick="continueHero()" disabled>Continue →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ STEG 4: DM-MODELL ═══════════ -->
+  <div class="step" id="step-model" style="display:none">
+    <div class="step-head">
+      <div class="step-num">4</div>
+      <div>
+        <div class="step-title">Choose Your Dungeon Master</div>
+        <div class="step-sub">The mind behind the veil — pick the model that tells your story.</div>
+      </div>
+    </div>
+    <div class="dm-model-row">
+      <select class="dm-model-select" id="adventure-dm-model"></select>
+    </div>
+    <div class="dm-model-note">🔄 <b>Can be changed at any time in the campaign</b> — from the settings inside the chat, if the mood shifts.</div>
+    <div class="step-actions">
+      <button class="start-btn" id="adventure-start" onclick="startAdventure()">⚔️ Start — Awaken the Dungeon Master</button>
+      <span class="hint" id="adventure-start-hint">Your hero steps to the table — the DM opens the first scene.</span>
+    </div>
+  </div>
+
+  <!-- ═══════════ VÄVNING flyttad till steg 3 (summon-tabben) ═══════════ -->
+  <div class="prepare-link"><a onclick="showPanel('prepare')">or prepare a world first — prompt & files →</a></div>
 
   <!-- ═══════════ FÖRBERED PANEL ═══════════ -->
   <div class="expand" id="panel-prepare">
@@ -291,8 +530,29 @@ The more you give, the richer the world becomes. But the Dungeon Master fills in
   <footer class="contact">
     <div class="rune-divider"><span>✦</span></div>
     <a href="mailto:web@rostad.cc">web@rostad.cc</a>
+    <button type="button" class="fb-btn top-btn" id="fb-open" onclick="openFeedback()" aria-haspopup="dialog">💬 Feedback</button>
     <p>Questions, feedback or just to say hello</p>
   </footer>
+</div>
+
+<!-- ═══════════ FEEDBACK — spelarens röst ═══════════ -->
+<div class="fb-modal" id="fb-modal" role="dialog" aria-modal="true" aria-labelledby="fb-title" aria-describedby="fb-sub">
+  <div class="fb-card" id="fb-card">
+    <i class="fb-corner tl"></i><i class="fb-corner tr"></i><i class="fb-corner bl"></i><i class="fb-corner br"></i>
+    <div class="fb-title" id="fb-title">💬 Feedback</div>
+    <p class="fb-sub" id="fb-sub">A whisper for the Lorekeeper — suggestions, praise, or a bug report.</p>
+    <form id="fb-form" onsubmit="submitFeedback(event)">
+      <label class="fb-label" for="fb-email">Email <span class="fb-opt">(optional)</span></label>
+      <input class="fb-input" type="email" id="fb-email" name="email" placeholder="you@example.com" autocomplete="email">
+      <label class="fb-label" for="fb-message">Message</label>
+      <textarea class="fb-textarea" id="fb-message" name="message" rows="4" placeholder="Your thoughts, ideas and tales…" required></textarea>
+      <div class="fb-actions">
+        <button type="button" class="fb-cancel top-btn" id="fb-cancel">Cancel</button>
+        <button type="submit" class="fb-submit go-btn" id="fb-submit">Send</button>
+      </div>
+    </form>
+    <p class="fb-error" id="fb-error">Please write a message first.</p>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -302,9 +562,10 @@ The more you give, the richer the world becomes. But the Dungeon Master fills in
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 </script>
-<script src="api.js?v=20260802c"></script>
+<script src="api.js?v=20260803d"></script>
 <script src="modal.js?v=20260802a"></script>
 <script src="i18n.js?v=20260802b"></script>
+<script src="archetypes.js?v=20260803a"></script>
 <script>
 // ═══════════════════════════════════════
 // SPARADE ÄVENTYR — kontrolleras via API:et
@@ -416,6 +677,7 @@ async function leaveGate() {
 document.querySelectorAll('.sfx-btn').forEach(b => b.textContent = SFX.enabled ? '🔊' : '🔇');
 
 initCampaignCheck();
+newsQwenInit();
 
 // ═══════════════════════════════════════
 // PANEL TOGGLE
@@ -472,6 +734,338 @@ async function startNewAdventure() {
   } catch (e) {
     SFX.error();
     toast('⚠ ' + (e.message || I18N.t('Kunde inte skapa kampanj')));
+  }
+}
+
+// ═══════════════════════════════════════
+// ONBOARDING-STEPPER (login-stil — smooth scroll per steg)
+// ═══════════════════════════════════════
+let advLang = null;
+let advArchKey = null;
+
+// Reveal-on-scroll (login-stil) — step, accordions och kampanjlistan
+(function () {
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('reveal'); io.unobserve(e.target); } });
+  }, { threshold: 0.06 });
+  document.querySelectorAll('.step, .continue-wrap, .prepare-link, .htp').forEach(el => io.observe(el));
+})();
+
+function revealStep(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = '';
+  requestAnimationFrame(() => el.classList.add('reveal'));
+  setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+}
+
+function resetStepper() {
+  advLang = null; advArchKey = null;
+  document.querySelectorAll('.lang-card').forEach(c => c.classList.remove('selected'));
+  ['step-name', 'step-arch', 'step-model'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  const st = document.getElementById('step-lang');
+  if (st) st.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function pickLang(lang) {
+  advLang = lang;
+  document.querySelectorAll('.lang-card').forEach(c => c.classList.toggle('selected', c.id === 'lang-' + lang));
+  try { SFX.click(); } catch (_) {}
+  try { if (typeof I18N !== 'undefined') I18N.init(lang); } catch (_) {}
+  renderArchetypes();
+  renderDarkSelect();
+  revealStep('step-name');
+  setTimeout(() => { const i = document.getElementById('adventure-name-input'); if (i) i.focus(); }, 420);
+}
+
+function continueFromName() { revealStep('step-arch'); }
+
+// ── Arketyper (delas med newgame.html via archetypes.js) ──
+function isEn() { return advLang === 'en'; }
+function archField(a, field) { return (isEn() && a.en && a.en[field]) ? a.en[field] : a[field]; }
+
+function renderArchetypes() {
+  const spread = document.getElementById('spread');
+  if (!spread || typeof ARCHETYPES === 'undefined') return;
+  spread.innerHTML = Object.entries(ARCHETYPES)
+    .filter(([, a]) => !a.dark)
+    .map(([key, a]) => `
+  <div class="arch" data-key="${key}" style="--ac:${a.color};--ac-glow:${a.glow}" onclick="selectArch('${key}')">
+    <div class="glow"></div>
+    <div class="ribbon">${isEn() ? 'Chosen' : 'Vald'}</div>
+    <div class="icon">${a.icon}</div>
+    <h3>${archField(a, 'name')}</h3>
+    <p class="lore">${archField(a, 'lore')}</p>
+    <div class="tags">${archField(a, 'tags').map(t => `<span class="tag">${t}</span>`).join('')}</div>
+  </div>`).join('');
+  if (advArchKey) {
+    document.querySelectorAll('.arch').forEach(el => el.classList.toggle('selected', el.dataset.key === advArchKey));
+  }
+}
+
+const DARK_ARCH_KEYS = (typeof ARCHETYPES !== 'undefined')
+  ? Object.entries(ARCHETYPES).filter(([, a]) => a.dark).map(([k]) => k)
+  : [];
+
+function renderDarkSelect() {
+  const sel = document.getElementById('dark-select');
+  const dd = document.getElementById('dark-drop');
+  if (!sel || !dd) return;
+  dd.style.display = DARK_ARCH_KEYS.length ? '' : 'none';
+  sel.innerHTML = '<option value="">' + (isEn() ? '— choose a darker path —' : '— välj en mörkare väg —') + '</option>' +
+    DARK_ARCH_KEYS.map(k => {
+      const a = ARCHETYPES[k];
+      return `<option value="${k}">${a.icon} ${archField(a, 'name')}</option>`;
+    }).join('');
+  const dn = document.getElementById('dd-name'); if (dn) dn.textContent = isEn() ? 'Dark Paths' : 'Mörka vägar';
+  const ds = document.getElementById('dd-sub'); if (ds) ds.textContent = isEn() ? 'mature archetypes' : 'mogna arketyper';
+}
+
+function selectArch(key) {
+  advArchKey = key;
+  document.querySelectorAll('.arch').forEach(el => el.classList.toggle('selected', el.dataset.key === key));
+  const darkSel = document.getElementById('dark-select');
+  if (darkSel) darkSel.value = (ARCHETYPES[key] && ARCHETYPES[key].dark) ? key : '';
+  try { SFX.click(); } catch (_) {}
+  enableGen();
+}
+
+function selectDarkArch(key) { if (key) selectArch(key); }
+
+function blankScroll() {
+  advArchKey = null;
+  document.querySelectorAll('.arch').forEach(el => el.classList.remove('selected'));
+  const darkSel = document.getElementById('dark-select');
+  if (darkSel) darkSel.value = '';
+  try { SFX.click(); } catch (_) {}
+  enableGen();
+}
+
+function enableGen() {
+  const b = document.getElementById('gen-btn');
+  if (b) b.disabled = false;
+  const h = document.getElementById('gen-hint');
+  if (h) h.textContent = advArchKey
+    ? (isEn() ? 'Ready — the archetype is woven into the prompt' : 'Redo — arketypen är invävd i prompten')
+    : (isEn() ? 'Blank parchment — write your own legend' : 'Tomt pergament — skriv din egen legend');
+}
+
+// ── Hjälteval: summon (generera + preview + reroll) eller Forge (färdig) ──
+let advHero = null;      // genererad karaktär (objekt)
+let advHeroInv = [];     // inventory (genererad)
+let advHeroId = null;    // vault-id — krävs av start
+let advHeroMode = null;  // 'summon' | 'forge'
+let advGenBusy = false;
+let _forgeLoaded = false;
+
+function showHeroTab(mode) {
+  document.getElementById('tab-summon').classList.toggle('active', mode === 'summon');
+  document.getElementById('tab-forge').classList.toggle('active', mode === 'forge');
+  document.getElementById('hero-tab-summon').classList.toggle('show', mode === 'summon');
+  document.getElementById('hero-tab-forge').classList.toggle('show', mode === 'forge');
+  if (mode === 'forge' && !_forgeLoaded) { _forgeLoaded = true; loadForgeHeroes(); }
+}
+
+async function generateHero() {
+  if (advGenBusy) return;
+  advGenBusy = true;
+  const btn = document.getElementById('gen-btn');
+  btn.disabled = true;
+  const prev = document.getElementById('adv-preview');
+  prev.classList.remove('show');
+  const weaving = document.getElementById('weaving-gen');
+  const status = document.getElementById('wa-gen-status');
+  const reasoning = document.getElementById('wa-gen-reasoning');
+  status.classList.remove('wa-warn');
+  weaving.classList.add('show');
+  status.textContent = '🧙 The Dungeon Master is weaving your hero…';
+  reasoning.hidden = false; reasoning.textContent = '';
+  weaving.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  try {
+    const res = await API.vaultGenerateStream(advPrompt(), 'step-3.7-flash', advLang || 'en', (ev) => {
+      if (ev.type === 'reasoning') {
+        reasoning.textContent += ev.text;
+        reasoning.scrollTop = reasoning.scrollHeight;
+      }
+    });
+    advHero = res.character || {};
+    advHeroInv = res.inventory || [];
+    advHeroMode = 'summon';
+    weaving.classList.remove('show');
+    renderHeroPreview(advHero);
+    prev.classList.add('show');
+    prev.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    try { SFX.levelup(); } catch (_) {}
+  } catch (e) {
+    weaving.classList.remove('show');
+    status.classList.add('wa-warn');
+    status.textContent = '⚠ ' + (e.message || 'Could not weave the hero');
+    try { SFX.error(); } catch (_) {}
+  } finally {
+    advGenBusy = false;
+    btn.disabled = false;
+  }
+}
+
+async function rerollHero() {
+  document.getElementById('adv-preview').classList.remove('show');
+  await generateHero();
+}
+
+function _mod(s) { const m = Math.floor(((s || 10) - 10) / 2); return m >= 0 ? '+' + m : '' + m; }
+function _esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function renderHeroPreview(c) {
+  const a = (advArchKey && ARCHETYPES[advArchKey]) ? ARCHETYPES[advArchKey] : null;
+  const ac = a ? a.color : '#8b5fd4';
+  const glow = a ? a.glow : 'rgba(139,95,212,.35)';
+  const box = document.getElementById('adv-preview');
+  box.style.setProperty('--pv-ac', ac);
+  box.style.setProperty('--pv-glow', glow);
+  const abilities = c.abilities || {};
+  const stats = {};
+  for (const k of ['STR','DEX','CON','INT','WIS','CHA']) stats[k] = (abilities[k] && abilities[k].score) || 10;
+  document.getElementById('adv-pv-portrait').textContent = c.icon || '🎭';
+  document.getElementById('adv-pv-name').textContent = c.name || (isEn() ? 'Nameless' : 'Namnlös');
+  document.getElementById('adv-pv-class').textContent = [c.race, c.class].filter(Boolean).join(' · ') + (c.level ? ' · Lvl ' + c.level : '');
+  document.getElementById('adv-pv-stats').innerHTML = Object.entries(stats).map(([k, v]) =>
+    `<div class="pv-stat"><div class="a">${k}</div><div class="s">${v}</div><div class="m">${_mod(v)}</div></div>`).join('');
+  const hp = (c.hp && c.hp.max) || c.hp || 10;
+  document.getElementById('adv-pv-vitals').innerHTML = [
+    '❤️ HP <b>' + hp + '</b>',
+    '🛡️ AC <b>' + (c.ac || 10) + '</b>',
+    '⚡ Init <b>' + (c.initiative || 0) + '</b>',
+    '🎓 Prof <b>+' + (c.proficiency || 2) + '</b>',
+    '🎒 ' + (advHeroInv.length || 0) + ' items',
+  ].map(v => '<span>' + v + '</span>').join('');
+  const traits = Array.isArray(c.traits) ? c.traits.map(t => typeof t === 'string' ? t : (t.name || '')) : [];
+  document.getElementById('adv-pv-traits').innerHTML = traits.filter(Boolean).map(t => `<span class="pv-trait">✦ ${_esc(t)}</span>`).join('');
+  const gear = Array.isArray(advHeroInv) && advHeroInv.length
+    ? advHeroInv.slice(0, 8).map(i => typeof i === 'string' ? i : (i.name || '')).filter(Boolean).join(' · ')
+    : (c.gear || (isEn() ? 'A lone wanderer with an unknown past.' : 'En ensam vandrare med ett okänt förflutet.'));
+  document.getElementById('adv-pv-gear').innerHTML = '<b>' + (isEn() ? 'Gear' : 'Utrustning') + ':</b> ' + _esc(gear);
+  document.getElementById('adv-pv-story').textContent = c.story || c.background || (isEn() ? "This character's story is yet unwritten." : 'Denna karaktärs berättelse är ännu oskriven.');
+}
+
+// ── Forge: välj en färdig hjälte ──
+async function loadForgeHeroes() {
+  let chars = [];
+  try { const res = await API.vaultList(); chars = res.characters || []; } catch (e) { chars = []; }
+  const empty = document.getElementById('adv-vault-empty');
+  const grid = document.getElementById('adv-vault-grid');
+  if (!chars.length) { empty.style.display = ''; grid.innerHTML = ''; return; }
+  empty.style.display = 'none';
+  grid.innerHTML = chars.map(ch => `
+    <div class="vcard" data-id="${ch.id}" onclick="selectForgeHero('${ch.id}')">
+      <div class="vcard-head">
+        <div class="vcard-avatar">${ch.has_avatar
+          ? '<img src="' + API.vaultAvatarUrl(ch.id) + '" alt="">'
+          : '<span>🎭</span>'}</div>
+        <div>
+          <div class="vcard-name">${_esc(ch.name)}</div>
+          <div class="vcard-cls">${[ch.race, ch.class].filter(Boolean).join(' · ')} · Lvl ${ch.level || 1}</div>
+        </div>
+      </div>
+      <div class="vcard-story">${_esc(ch.story || '')}</div>
+      <div class="vcard-stats">
+        ${['str','dex','con','int','wis','cha'].map(k => `<div class="vcard-stat"><div class="a">${k.toUpperCase()}</div><div class="s">${ch[k] || 10}</div></div>`).join('')}
+      </div>
+      <button class="vcard-use">${isEn() ? 'Choose this hero' : 'Välj denna hjälte'}</button>
+    </div>`).join('');
+}
+
+function selectForgeHero(id) {
+  document.getElementById('adv-vault-grid').querySelectorAll('.vcard').forEach(el => el.classList.toggle('selected', el.dataset.id === id));
+  advHeroMode = 'forge';
+  advHeroId = id;
+  advHero = null;
+  const btn = document.getElementById('adv-forge-continue');
+  if (btn) btn.disabled = false;
+  try { SFX.click(); } catch (_) {}
+}
+
+// ── Continue → steg 4 (modellgate) ──
+async function continueHero() {
+  if (advHeroMode === 'forge' && advHeroId) { revealStep('step-model'); return; }
+  if (advHeroMode !== 'summon' || !advHero || !advHero.name) {
+    try { SFX.error(); } catch (_) {}
+    toast('⚠ ' + (isEn() ? 'Generate a hero first' : 'Generera en hjälte först'));
+    return;
+  }
+  const btn = document.getElementById('adv-continue');
+  btn.disabled = true;
+  btn.textContent = '💾 Saving to The Forge…';
+  try {
+    const res = await API.vaultSave({ character: advHero, inventory: advHeroInv });
+    advHeroId = res.id;
+    toast('💾 ' + advHero.name + (isEn() ? ' saved to The Forge' : ' sparad i The Forge'));
+    revealStep('step-model');
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = 'Continue →';
+    toast('⚠ ' + (e.message || 'Could not save the hero'));
+  }
+}
+
+function advPrompt() {
+  if (advArchKey && ARCHETYPES[advArchKey]) return archField(ARCHETYPES[advArchKey], 'prompt');
+  return isEn()
+    ? '## Legend\n\n**Name:**\n**Race:**\n**Class:**\n**Backstory:**\n**Personality:**\n**A memory that haunts you:**\n**What do you seek?**\n\nGenerate:\n1. Name (dark fantasy)\n2. Full character sheet: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves\n3. 3-4 abilities/traits\n4. Starting equipment (5-8 items)\n5. Backstory (max 100 words)\nReturn as JSON per the state schema.'
+    : '## Legenden\n\n**Namn:**\n**Folk:**\n**Klass:**\n**Bakgrund:**\n**Personlighet:**\n**Ett minne som jagar dig:**\n**Vad söker du?**\n\nGenerera:\n1. Namn (mörk fantasy)\n2. Fullt karaktärsark: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves\n3. 3-4 förmågor/egenskaper\n4. Startutrustning (5-8 föremål)\n5. Bakgrundshistoria (max 100 ord)\nReturnera som JSON enligt state-schemat.';
+}
+
+// ── Modellgate (DM-modell — kan ändras när som helst i kampanjen) ──
+const PLAYER_DM_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-3.7-flash', 'ollama:heretic'];
+(function populateModelGate() {
+  const sel = document.getElementById('adventure-dm-model');
+  if (!sel) return;
+  const fill = (models) => {
+    sel.innerHTML = models.map(m => `<option value="${m}">${m}</option>`).join('');
+    sel.value = models.includes('deepseek-v4-flash') ? 'deepseek-v4-flash' : (models[0] || '');
+  };
+  API.me().then(u => {
+    if (u && u.role === 'admin') {
+      API.models().then(list => fill((list || []).map(m => m.id || m))).catch(() => fill(PLAYER_DM_MODELS));
+    } else {
+      fill(PLAYER_DM_MODELS);
+    }
+  }).catch(() => fill(PLAYER_DM_MODELS));
+})();
+
+// ── Start: skapa kampanj → sätt DM-modell → lyft in hjälten → chat (uppvaknandet) ──
+let advStarting = false;
+async function startAdventure() {
+  if (advStarting) return;
+  if (!advHeroId) {
+    try { SFX.error(); } catch (_) {}
+    toast('⚠ ' + (isEn() ? 'Choose your hero first' : 'Välj din hjälte först'));
+    return;
+  }
+  advStarting = true;
+  const name = document.getElementById('adventure-name-input').value.trim();
+  const lang = advLang || 'en';
+  const dmModel = document.getElementById('adventure-dm-model').value;
+  const btn = document.getElementById('adventure-start');
+  btn.disabled = true;
+  btn.textContent = '⚔️ Opening the table…';
+  try {
+    // 1) Kampanj + språk
+    await API.createCampaign(name, lang);
+    // 2) DM-modell (kan ändras när som helst i kampanjen)
+    try { await API.setDmModel(dmModel); } catch (e) { console.warn('setDmModel', e); }
+    // 3) Lyft in hjälten (genererad → sparad i Forge; eller färdig Forge-hjälte)
+    await API.vaultUse(advHeroId);
+    sessionStorage.setItem('dnd_vault_character', advHeroId);
+    location.href = 'chat.html';
+  } catch (e) {
+    try { SFX.error(); } catch (_) {}
+    toast('⚠ ' + (e.message || 'Could not start'));
+    advStarting = false;
+    btn.disabled = false;
+    btn.textContent = '⚔️ Start — Awaken the Dungeon Master';
   }
 }
 
@@ -577,6 +1171,67 @@ function proceed(mode) {
 // ═══════════════════════════════════════
 let toastTimer;
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2400);}
+
+// ── Feedback-modal ──
+const fbModal = document.getElementById('fb-modal');
+function openFeedback() {
+  fbModal.classList.add('show');
+  document.getElementById('fb-email').focus();
+}
+function closeFeedback() {
+  if (!fbModal.classList.contains('show')) return;
+  fbModal.classList.remove('show');
+  const btn = document.getElementById('fb-open');
+  if (btn) btn.focus();
+}
+document.getElementById('fb-cancel').addEventListener('click', closeFeedback);
+fbModal.addEventListener('click', e => { if (e.target === fbModal) closeFeedback(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeFeedback(); });
+async function submitFeedback(ev) {
+  ev.preventDefault();
+  const card = document.getElementById('fb-card');
+  const emailEl = document.getElementById('fb-email');
+  const msgEl = document.getElementById('fb-message');
+  const message = msgEl.value.trim();
+  if (!message) {
+    card.classList.add('has-error');
+    msgEl.focus();
+    return;
+  }
+  card.classList.remove('has-error');
+  const submitBtn = document.getElementById('fb-submit');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Sending…';
+  try {
+    await API.sendFeedback({ email: emailEl.value.trim() || null, message });
+    closeFeedback();
+    emailEl.value = '';
+    msgEl.value = '';
+    toast('💬 Thanks — the Lorekeeper has your words');
+  } catch (e) {
+    toast('⚠ ' + (e.message || 'Could not send feedback'));
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Send';
+  }
+}
+
+// ── Nyhet: Qwen 3.8 Max full release (2026-08-03) ──
+// Banner visas tills besökaren klickar bort den (localStorage-minne).
+function newsQwenInit() {
+  try { if (localStorage.getItem('news_qwen38_dismissed') === '1') return; } catch (e) {}
+  const el = document.getElementById('news-qwen38');
+  if (el) el.style.display = '';
+}
+function newsQwenToast(e) {
+  toast('🔥 Qwen 3.8 Max — välj den vid modell-valet när du startar ett äventyr');
+}
+function newsQwenDismiss(e) {
+  e.stopPropagation();
+  try { localStorage.setItem('news_qwen38_dismissed', '1'); } catch (err) {}
+  const el = document.getElementById('news-qwen38');
+  if (el) el.style.display = 'none';
+}
 
 const canvas=document.getElementById('embers'),ctx=canvas.getContext('2d');
 let W,H,embers=[];

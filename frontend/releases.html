@@ -63,10 +63,10 @@
   .topbar .brand { font-size: .55rem; }
  }
 </style>
-<link rel="stylesheet" href="snes.css?v=19">
+<link rel="stylesheet" href="snes.css?v=22">
 <script src="sprites.js?v=20260802a"></script>
-<script src="fonts.js?v=20260802c"></script>
-<script src="themes.js?v=20260802c"></script>
+<script src="fonts.js?v=20260803a"></script>
+<script src="themes.js?v=20260804a"></script>
 </head>
 <body>
 <div class="app">
@@ -81,13 +81,41 @@
  <p class="muted">What's new in the realm — from v0.5 to v0.6.</p>
 
  <div class="box">
+  <span class="ver new">v0.6.3</span>
+  <p style="margin-top:.8rem"><b>The Forge Release</b> — your hero is no longer bound to a single story.</p>
+  <ul>
+   <li><b>Export your hero to The Forge</b> — from the Codex character sheet, save the adventurer you've lived to the Vault: level, gear, story and all. Then start a brand-new campaign with the same hero.</li>
+   <li><b>No more hero-twins</b> — exporting a hero whose name already rests in your Vault asks first: overwrite the old copy, or keep both.</li>
+  </ul>
+ </div>
+
+ <div class="box">
+  <span class="ver new">v0.6.2</span>
+  <p style="margin-top:.8rem"><b>The UX Update</b> — a quieter table and a sharper forge.</p>
+  <ul>
+   <li><b>Music removed</b> — the ambient soundtrack is retired. Sound effects and the narrator's voice remain; bring your own songs for the road.</li>
+   <li><b>Theme switching on every screen</b> — the five palettes now live in the mobile topbar menu too, so your chosen look follows you on phones as well as desktops.</li>
+   <li><b>A 50-turn welcome</b> — fresh accounts begin with a 50-turn allowance, enough to find your footing. Keep playing and the allowance grows.</li>
+   <li><b>The Forge, sharpened</b> — heroes can no longer be saved twice by a stray double-click, and forging a name that already rests in your Vault asks before it creates a twin.</li>
+  </ul>
+ </div>
+
+ <div class="box">
+  <span class="ver new">v0.6.1</span>
+  <p style="margin-top:.8rem"><b>The Trim &amp; Navigation Update</b></p>
+  <ul>
+   <li><b>Music removed</b> — the mood-music loops are gone. Players bring their own soundtrack (Spotify, whatever) instead; sound effects and TTS voice remain.</li>
+   <li><b>Mobile topbar menu</b> — the ☰ button now opens a proper navigation menu with all the links that were hidden on phones: Codex, Character, Admin, Rule Oracle, Engine Room, Usage, Help and Leave.</li>
+  </ul>
+ </div>
+
+ <div class="box">
   <span class="ver new">v0.6.0</span>
   <p style="margin-top:.8rem"><b>The Production Readiness Update</b> — themes, releases, transparency, and a heap of polish.</p>
   <ul>
    <li><b>Theme switcher</b> — five dark-fantasy palettes (Terminal / Blood / Arcane / Ember / Iron), one click away in the top bar. Your choice is remembered.</li>
    <li><b>This release page</b> — every update now comes with notes.</li>
    <li><b>Model transparency</b> — a guide to the Dungeon Master models, and why "high reasoning" means a slightly longer wait for a richer reply.</li>
-   <li><b>Longer soundscapes</b> — new 10+ minute ambient loops (classical MIDI, public domain, rendered in 16-bit spirit).</li>
    <li><b>Dead code purge</b> — ~1,600 lines of orphaned CSS/JS removed; three corrupted stylesheet comments repaired; a hidden Escape-key crash fixed.</li>
   </ul>
  </div>
@@ -134,7 +162,6 @@
  <ul>
   <li><span class="tag snd">SOUND</span> Typewriter reveal with 16-bit "midi" ticks; NPC quote bubbles with per-NPC colors; pixel-particle bursts on every message.</li>
   <li><span class="tag snd">SOUND</span> Synthesized SFX (Web Audio) — coins, crits, battle jingles — zero audio files.</li>
-  <li><span class="tag snd">SOUND</span> Mood music loops that follow the scene (night/day/battle/dungeon/town/rest).</li>
   <li><span class="tag snd">SOUND</span> TTS via Qwen-Audio (Token Plan) — play button on DM replies, male/female voices, autoplay toggle, cache.</li>
  </ul>
 

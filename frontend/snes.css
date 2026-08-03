@@ -22,6 +22,8 @@
   --blood-bright: #e0485a;
   --ember: #d4691e;
   --arcane: #9a6fe0;
+  --arcane-bright: #c9a6ff;
+  --arcane-deep: #3a1f66;
   --poison: #7aa35e;
   --teal: #5e9aa3;
   --term-green: #33cc33;
@@ -191,17 +193,21 @@
 }.input-row textarea:focus, #prompt:focus, .world-prompt:focus, .field input:focus{
   border-color: var(--gold) !important;
   box-shadow: 0 0 0 1px rgba(201,162,39,.25) !important;
-}/* Prompt-prefix känsla */.input-row{ position: relative; }.input-row::before{
-  content: '>';
+}/* Prompt-prefix känsla — blinkande terminal-markör */.input-row{ position: relative; }.input-row::before{
+  content: '❯';
   position: absolute;
   left: .6rem;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--gold);
-  font-size: .8rem;
+  color: var(--term-green);
+  font-size: .85rem;
   z-index: 2;
   pointer-events: none;
-}.input-row textarea{ padding-left: 1.8rem !important; }/* Composer (chat): textarea ligger transparent i panelen — ramen sitter på .composer */.composer .input-row textarea{
+  animation: prompt-blink 1.1s steps(1) infinite;
+  text-shadow: 0 0 6px color-mix(in srgb, var(--term-green) 55%, transparent);
+}
+@keyframes prompt-blink { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
+.input-row textarea{ padding-left: 1.8rem !important; }/* Composer (chat): textarea ligger transparent i panelen — ramen sitter på .composer */.composer .input-row textarea{
   background: transparent !important;
   border-color: transparent !important;
 }/* ── 8. SIDEBAR — terminal panel ── */.sidebar{
@@ -321,13 +327,31 @@
   background: var(--stone-2) !important;
   border: 1px solid var(--edge) !important;
   box-shadow: none !important;
-}.vault-chip:hover{ border-color: var(--gold) !important; transform: none !important; }/* ── 26. RUBRIK-SKALA ── */.gate-title{ font-size: .85rem !important; }.destiny-title h1{ font-size: 1.1rem !important; }.masthead h1, .head h1{ font-size: .9rem !important; }.topbar .brand, .forge-head .brand{ font-size: .6rem !important; }.char-name, .pv-name, .d-name{ font-size: .9rem !important; }.hall-title{ font-size: .7rem !important; }.cp-name{ font-size: .9rem !important; }/* ── 27. BLINKING CURSOR (terminal feel) ── */.input-row textarea::after{
-  content: '█';
-  animation: blink-cursor 1s steps(1) infinite;
-  color: var(--term-green);
-}/* ── 28. GLOBAL MOBILE POLISH ── */html{ -webkit-tap-highlight-color: transparent; }body{ overscroll-behavior-y: none; }button, a, .top-btn, .send-btn, .drop-item, .rr-btn, .sheet-close{
+}.vault-chip:hover{ border-color: var(--gold) !important; transform: none !important; }/* ── 26. RUBRIK-SKALA ── */.gate-title{ font-size: .85rem !important; }.destiny-title h1{ font-size: 1.1rem !important; }.masthead h1, .head h1{ font-size: .9rem !important; }.topbar .brand, .forge-head .brand{ font-size: .6rem !important; }.char-name, .pv-name, .d-name{ font-size: .9rem !important; }.hall-title{ font-size: .7rem !important; }.cp-name{ font-size: .9rem !important; }/* ── 28. GLOBAL MOBILE POLISH ── */html{ -webkit-tap-highlight-color: transparent; }body{ overscroll-behavior-y: none; }button, a, .top-btn, .send-btn, .drop-item, .rr-btn, .sheet-close{
   touch-action: manipulation;
-}::selection{ background: rgba(201,162,39,.35); color: var(--bone-bright); }/* Scrollbars — thin, dark */*{ scrollbar-width: thin; scrollbar-color: var(--edge) transparent; }*::-webkit-scrollbar{ width: 5px; height: 5px; }*::-webkit-scrollbar-track{ background: transparent; }*::-webkit-scrollbar-thumb{ background: var(--edge); }/* ── 29. MOBILE ELEMENTS (hidden on desktop) ── */.mobile-hp-line,
+}/* ── 27b. THEME POPOVER (v31) ── */.theme-pop{
+  position: fixed; z-index: 30000;
+  min-width: 168px;
+  background: var(--stone-2);
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.7);
+  padding: .35rem;
+  animation: theme-pop-in .16s cubic-bezier(.22,1,.36,1);
+}
+@keyframes theme-pop-in { from { opacity: 0; transform: translateY(-6px) scale(.97); } to { opacity: 1; transform: none; } }
+.theme-row{
+  display: flex; align-items: center; gap: .6rem; width: 100%;
+  padding: .45rem .6rem; margin: 0; border: none; background: transparent;
+  cursor: pointer; border-radius: 4px; text-align: left;
+  transition: background .15s;
+}
+.theme-row:hover{ background: var(--stone-3); }
+.theme-row.active .theme-name{ color: var(--gold-bright); }
+.theme-swatches{ display: inline-flex; gap: 3px; flex-shrink: 0; }
+.theme-swatches i{ width: 14px; height: 14px; display: block; border-radius: 50%; border: 1px solid rgba(255,255,255,.15); }
+.theme-name{ font-family: var(--font-display), 'Cinzel', serif; font-size: .72rem; letter-spacing: .06em; color: var(--bone); text-transform: uppercase; }
+::selection{ background: rgba(201,162,39,.35); color: var(--bone-bright); }/* Scrollbars — thin, dark */*{ scrollbar-width: thin; scrollbar-color: var(--edge) transparent; }*::-webkit-scrollbar{ width: 5px; height: 5px; }*::-webkit-scrollbar-track{ background: transparent; }*::-webkit-scrollbar-thumb{ background: var(--edge); }/* ── 29. MOBILE ELEMENTS (hidden on desktop) ── */.mobile-hp-line,
 .mobile-menu-btn,
 .drawer-close-btn,
 .drawer-backdrop,
@@ -345,7 +369,7 @@
     padding: .35rem .5rem !important;
     min-height: 40px;
     overflow: hidden;
-  }.topbar > .top-btn:not(.sfx-btn):not(.music-btn),
+  }.topbar > .top-btn:not(.sfx-btn),
   .topbar .dropdown,
   .topbar .top-divider,
   .topbar > .danger{
@@ -366,8 +390,7 @@
     white-space: nowrap;
     opacity: .6;
     flex-shrink: 2;
-  }.topbar .spacer{ flex: 1; }.topbar .sfx-btn,
-  .topbar .music-btn{
+  }.topbar .spacer{ flex: 1; }.topbar .sfx-btn{
     font-size: .78rem !important;
     padding: .25rem .35rem !important;
     flex-shrink: 0;
@@ -542,6 +565,13 @@
     opacity: 0;
     pointer-events: none;
     transition: opacity .3s ease;
+  }/* Stridslogg-knappen höjs över bottom-nav på mobil */.battle-drawer-toggle{
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    right: .8rem;
+    padding: .42rem .7rem;
+  }.battle-drawer-toggle .bdt-label{ display: none; }.battle-drawer-toggle .bdt-icon{ font-size: 1.15rem; }/* Maskinrums-tab ovanför bottom-nav, ovanför stridslogg-knappen */.console-tab{
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    right: 4.6rem;
   }.sheet-backdrop.open{
     opacity: 1;
     pointer-events: auto;
@@ -972,10 +1002,10 @@
   background: var(--stone-2) !important;
   border: 1px solid var(--edge) !important;
   box-shadow: none !important;
-}.cd-item-card:hover{ border-color: var(--bone-dim) !important; }.cd-item-card:active{ background: rgba(201,162,39,.12) !important; border-color: var(--gold) !important; }.cd-item-name{ color: var(--bone-bright) !important; }.cd-item-name.r-magic{ color: #cbb3f2 !important; }.cd-item-name.r-rare, .cd-item-name.r-legendary{ color: var(--gold-bright) !important; }.cd-item-type{ color: var(--bone-dim) !important; font-style: normal !important; }.cd-badge{ background: var(--stone) !important; border: 1px solid var(--edge) !important; color: var(--bone) !important; }.cd-badge.dmg{ border-color: rgba(139,26,42,.55) !important; color: var(--blood-bright) !important; }.cd-badge.ac{ border-color: rgba(90,154,78,.55) !important; color: var(--poison) !important; }.cd-badge.charges{ border-color: rgba(123,79,212,.55) !important; color: var(--arcane) !important; }.cd-badge.magic-bonus{ border-color: rgba(232,198,90,.55) !important; color: var(--gold-bright) !important; }.cd-badge.qty, .cd-badge.range{ color: var(--bone-dim) !important; }.cd-npc-avatar{ background: var(--stone-2) !important; border: 1px solid var(--edge) !important; box-shadow: none !important; }.cd-role{ color: var(--bone-dim) !important; font-style: normal !important; }.cd-rel-badge{ background: var(--stone-2) !important; border: 1px solid var(--edge) !important; color: var(--bone-dim) !important; }.cd-alive{ color: var(--poison) !important; }.cd-alive.dead{ color: var(--blood-bright) !important; }.cd-notes p{ color: var(--bone) !important; }.cd-mention{
+}.cd-item-card:hover{ border-color: var(--bone-dim) !important; }.cd-item-card:active{ background: rgba(201,162,39,.12) !important; border-color: var(--gold) !important; }.cd-item-name{ color: var(--bone-bright) !important; }.cd-item-name.r-magic{ color: var(--arcane-bright) !important; }.cd-item-name.r-rare, .cd-item-name.r-legendary{ color: var(--gold-bright) !important; }.cd-item-type{ color: var(--bone-dim) !important; font-style: normal !important; }.cd-badge{ background: var(--stone) !important; border: 1px solid var(--edge) !important; color: var(--bone) !important; }.cd-badge.dmg{ border-color: rgba(139,26,42,.55) !important; color: var(--blood-bright) !important; }.cd-badge.ac{ border-color: rgba(90,154,78,.55) !important; color: var(--poison) !important; }.cd-badge.charges{ border-color: color-mix(in srgb, var(--arcane) 55%, transparent) !important; color: var(--arcane) !important; }.cd-badge.magic-bonus{ border-color: rgba(232,198,90,.55) !important; color: var(--gold-bright) !important; }.cd-badge.qty, .cd-badge.range{ color: var(--bone-dim) !important; }.cd-npc-avatar{ background: var(--stone-2) !important; border: 1px solid var(--edge) !important; box-shadow: none !important; }.cd-role{ color: var(--bone-dim) !important; font-style: normal !important; }.cd-rel-badge{ background: var(--stone-2) !important; border: 1px solid var(--edge) !important; color: var(--bone-dim) !important; }.cd-alive{ color: var(--poison) !important; }.cd-alive.dead{ color: var(--blood-bright) !important; }.cd-notes p{ color: var(--bone) !important; }.cd-mention{
   background: var(--stone-3) !important;
   border: 1px solid var(--arcane) !important;
-  color: #cbb3f2 !important;
+  color: var(--arcane-bright) !important;
   font-size: .73rem !important; letter-spacing: .14em !important;
 }.cd-mention:hover{ background: var(--edge) !important; }.cd-mention:active{ background: var(--arcane) !important; color: var(--ink) !important; }.cd-nav-btn{
   background: var(--stone-3) !important;
@@ -1172,7 +1202,7 @@
 }
 .scribe-inkline i{
   display: block; height: 100%; width: 100%;
-  background: linear-gradient(90deg, #c9a227, #e8c65a, #8b5fd4);
+  background: linear-gradient(90deg, var(--gold), var(--gold-bright), var(--arcane));
   transform-origin: left center;
   animation: ink-draw 2.6s ease-in-out infinite;
 }
@@ -1216,22 +1246,28 @@
 .bl-body .initiative-reveal{ margin: .4rem 0; }
 /* ── Stridslogg-toggle (alltid synlig — öppna/minimera högerkolumnen) ── */
 .battle-drawer-toggle{
+  position: fixed;
+  right: 1.1rem;
+  bottom: 1.1rem;
+  z-index: 850;
   display: flex;
-  align-items: center; justify-content: center; gap: .6rem;
+  align-items: center; justify-content: center; gap: .45rem;
   width: fit-content;
-  margin: .3rem auto .15rem;
-  padding: .35rem .9rem;
+  padding: .5rem .85rem;
   font-family: var(--font-display), 'Cinzel', serif;
-  font-size: .6rem; letter-spacing: .18em; text-transform: uppercase;
+  font-size: .62rem; letter-spacing: .16em; text-transform: uppercase;
   color: var(--bone-bright);
-  background: rgba(139,26,42,.14);
-  border: 1px solid rgba(139,26,42,.45);
+  background: linear-gradient(160deg, rgba(139,26,42,.5), rgba(139,26,42,.28));
+  border: 1px solid rgba(139,26,42,.55);
+  border-radius: 4px;
   cursor: pointer;
-  transition: background .2s, color .2s;
+  box-shadow: 0 6px 22px rgba(0,0,0,.6);
+  transition: background .2s, color .2s, transform .2s, box-shadow .2s;
 }
+.battle-drawer-toggle .bdt-icon{ font-size: 1rem; line-height: 1; }
 .battle-drawer-toggle .bdt-caret{ transition: transform .3s cubic-bezier(.22,1,.36,1); font-size: .6rem; }
-.battle-drawer-toggle:hover{ background: rgba(139,26,42,.28); color: var(--bone-bright); }
-.battle-drawer-toggle:active{ background: var(--blood); color: var(--ink); }
+.battle-drawer-toggle:hover{ background: linear-gradient(160deg, rgba(139,26,42,.7), rgba(139,26,42,.4)); color: var(--bone-bright); transform: translateY(-2px); box-shadow: 0 10px 28px rgba(0,0,0,.7); }
+.battle-drawer-toggle:active{ background: var(--blood); color: var(--ink); transform: translateY(0); }
 body.battle-drawer-open .battle-drawer-toggle .bdt-caret{ transform: rotate(180deg); }
 
 /* ── Tärnings-badges: spelare = guld, fiende = blodröd ── */

@@ -986,13 +986,14 @@ def _turn_cap_for(username: str) -> int:
 # Atmosfär-subagent: snabb modell för ASCII-art
 ATMOSPHERE_MODEL = os.getenv("ATMOSPHERE_MODEL", "mimo-v2.5")
 ATMOSPHERE_ENABLED = os.getenv("ATMOSPHERE_ENABLED", "0") == "1"
-EXTRACTION_MODEL = os.getenv("EXTRACTION_MODEL", "qwen3.8-max")
+EXTRACTION_MODEL = os.getenv("EXTRACTION_MODEL", "step-3.7-flash")
 # Guardian: smartare modell för kontextmedveten mekanisk extraktion
 # (NPC-avslöjanden, implicita relationsändringar, karaktärsuppdateringar)
-GUARDIAN_MODEL = os.getenv("GUARDIAN_MODEL", "qwen3.8-max")
+GUARDIAN_MODEL = os.getenv("GUARDIAN_MODEL", "step-3.7-flash")
 
-# Standardmodell för icke-admin-spelare (DM + karaktär + oracle)
-DEFAULT_PLAYER_MODEL = "qwen3.8-max"
+# Standardmodell för icke-admin-spelare (DM + karaktär + oracle).
+# StepFun 3.7 Flash är default — spelaren måste aktivt välja annan modell.
+DEFAULT_PLAYER_MODEL = "step-3.7-flash"
 # Modeller som icke-admin-spelare får välja mellan
 # (admin ser alla — inkl. MiMo + DeepSeek-egen-API)
 PLAYER_MODELS = ("qwen3.8-max", "qwen3.6-flash", "deepseek-v4-flash", "deepseek-v4-flash-0731", "step-3.7-flash", "ollama:heretic")
@@ -1311,9 +1312,13 @@ async def _call_llm(
 
     # StepFun 3.7 Flash: debiterar per prompt, inte per token → high överallt.
     # High reasoning kräver stor tokenbudget (tanke + svar).
+    # OBS: StepFun räknar reasoning-tokens MOT max_tokens-budgeten. Vid liten
+    # budget kan tänkandet äta allt → finish=length → JSON trunkeras
+    # (intermittent fail i karaktärsgenerering). 32768 ger marginal — och är
+    # gratis eftersom StepFun debiterar per prompt, inte per token.
     if config.api_model == "step-3.7-flash":
         body["reasoning_effort"] = reasoning_effort or "high"
-        body["max_tokens"] = max(body.get("max_tokens", 1024), 8000)
+        body["max_tokens"] = max(body.get("max_tokens", 1024), 32768)
 
     # DeepSeek V4: skicka reasoning_effort om anroparen vill styra (low/high/max).
     # Guardian kör t.ex. reasoning_effort="low" för snabbare JSON-extraktion.
@@ -1322,14 +1327,11 @@ async def _call_llm(
 
     # Qwen3-modeller: thinking mode PÅ som standard. Ge generöst med
     # utrymme så modellen kan tänka fritt OCH leverera svaret.
-    # OBS: qwen3.8-max-preview stöder INTE enable_thinking (400-fel).
-    # Bara qwen3.6/3.7-generationen har den parametern.
+    # qwen3.8-max (full release 2026-08-03) stödjer enable_thinking —
+    # tänker alltid som default, parametern accepteras i båda riktningarna.
     if config.provider == "dashscope" and config.api_model.startswith("qwen3"):
-        is_38 = config.api_model.startswith("qwen3.8")
         if thinking == "disabled" or reasoning_effort == "off":
-            if not is_38:
-                body["enable_thinking"] = False
-            # qwen3.8: skicka inte enable_thinking — modellen hanterar det själv
+            body["enable_thinking"] = False
         else:
             # Thinking på → rejäl budget (tanke + svar)
             body["max_tokens"] = max(body.get("max_tokens", 1024), thinking_cap)
@@ -1461,8 +1463,8 @@ async def _stream_llm(
     usage_or_none) allt eftersom modellen genererar — reasoning-content visas LIVE
     i frontend (karaktärsskapande-summoning). Sista yielden bär usage (tokens)
     om providern rapporterar det (stream_options.include_usage). Samma
-    provider-routing som _call_llm: qwen3.8 tänker alltid (enable_thinking stöds
-    ej), övriga kan stänga av."""
+    provider-routing som _call_llm: qwen3-modeller tänker som standard
+    (enable_thinking kan stängas av explicit)."""
     config = get_model(model_id)
     api_key = get_api_key(config)
 
@@ -1487,23 +1489,23 @@ async def _stream_llm(
     if thinking == "disabled" and config.provider in ("mimo", "deepseek"):
         body["thinking"] = {"type": "disabled"}
 
-    # StepFun 3.7 Flash: debiterar per prompt → high överallt
+    # StepFun 3.7 Flash: debiterar per prompt → high överallt.
+    # OBS: StepFun räknar reasoning-tokens MOT max_tokens. Vid liten budget kan
+    # tänkandet äta allt → finish=length → JSON trunkeras (intermittent fail i
+    # karaktärsgenerering). 32768 ger marginal — gratis (debiterar per prompt).
     if config.api_model == "step-3.7-flash":
         body["reasoning_effort"] = reasoning_effort or "high"
-        body["max_tokens"] = max(body.get("max_tokens", 1024), 8000)
+        body["max_tokens"] = max(body.get("max_tokens", 1024), 32768)
 
     # DeepSeek V4: reasoning_effort om anroparen vill styra
     if config.provider == "deepseek" and reasoning_effort:
         body["reasoning_effort"] = reasoning_effort
 
     # Qwen3-modeller: thinking mode PÅ som standard. Ge generöst med utrymme.
-    # OBS: qwen3.8-max-preview stöder INTE enable_thinking (400-fel).
+    # qwen3.8-max (full release) stödjer enable_thinking i båda riktningarna.
     if config.provider == "dashscope" and config.api_model.startswith("qwen3"):
-        is_38 = config.api_model.startswith("qwen3.8")
         if thinking == "disabled" or reasoning_effort == "off":
-            if not is_38:
-                body["enable_thinking"] = False
-            # qwen3.8: skicka inte enable_thinking — modellen hanterar det själv
+            body["enable_thinking"] = False
         else:
             # Thinking på → rejäl budget (tanke + svar)
             body["max_tokens"] = max(body.get("max_tokens", 1024), thinking_cap)
@@ -1705,7 +1707,32 @@ async def me(morkrets_token: str | None = Cookie(None)):
         "turns_used": store.total_turns(username),
         "total_tokens": total_tokens,
         "total_campaigns": total_campaigns,
+        # Utseende (tema + typsnitt) — persistas per konto så det följer med
+        # mellan enheter/webbläsare. Frontend hydratar localStorage härifrån.
+        "theme": udata.get("theme") or "",
+        "font": udata.get("font") or "",
     }
+
+
+@app.put("/api/me/appearance")
+async def save_appearance(body: dict, morkrets_token: str | None = Cookie(None)):
+    """Spara valt tema/typsnitt på kontot (persistens mellan enheter)."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    theme = str((body or {}).get("theme") or "").strip()[:32]
+    font = str((body or {}).get("font") or "").strip()[:32]
+    with _USER_LOCK:
+        users = load_users()
+        u = users.get(username)
+        if not isinstance(u, dict):
+            raise HTTPException(404, "User not found")
+        if theme:
+            u["theme"] = theme
+        if font:
+            u["font"] = font
+        users[username] = u
+        save_users(users)
+    return {"ok": True, "theme": theme or None, "font": font or None}
 
 
 # ═══════════════════════════════════════
@@ -1740,7 +1767,7 @@ async def dice(req: DiceRequest, morkrets_token: str | None = Cookie(None)):
 
 class OracleRequest(BaseModel):
     question: str
-    model_id: str = "qwen3.8-max"
+    model_id: str = "step-3.7-flash"
 
 
 @app.post("/api/oracle")
@@ -1767,6 +1794,39 @@ async def oracle(req: OracleRequest, morkrets_token: str | None = Cookie(None)):
     except (ValueError, RuntimeError) as e:
         raise HTTPException(502, f"Oraklet tiger: {e}")
     return {"answer": answer.strip()}
+
+
+# ═══════════════════════════════════════
+# FEEDBACK — spelarfeedback till JSONL (backend/data/feedback.jsonl)
+# ═══════════════════════════════════════
+
+
+class FeedbackRequest(BaseModel):
+    """POST /api/feedback — {email: string|null, message: string}."""
+    email: str | None = None
+    message: str = ""
+
+
+@app.post("/api/feedback")
+async def feedback(req: FeedbackRequest, morkrets_token: str | None = Cookie(None)):
+    """Ta emot spelarfeedback (cookie-auth) och lägg till feedback.jsonl."""
+    _get_current_user(morkrets_token)
+    if not isinstance(req.message, str) or not req.message.strip():
+        raise HTTPException(400, "Message is required")
+    try:
+        feedback_dir = Path(__file__).resolve().parent / "data"
+        feedback_dir.mkdir(parents=True, exist_ok=True)
+        entry = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "email": str(req.email or "").strip() or None,
+            "message": req.message.strip(),
+        }
+        with open(feedback_dir / "feedback.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except OSError as e:
+        logger.error("Feedback write failed: %s", e)
+        raise HTTPException(500, "Could not store feedback")
+    return {"ok": True}
 
 
 # ═══════════════════════════════════════
@@ -1803,20 +1863,31 @@ TTS_DEFAULT_PROVIDER = os.getenv("TTS_PROVIDER", "stepfun")
 
 TTS_INSTRUCTIONS = {
     # OBS: instruktionen får vara MAX 128 tecken — längre ger "Instruction is invalid!"
-    TTS_VOICE_MALE: "Speak Swedish with Standard Swedish pronunciation and natural rhythm. Dramatic dark fantasy narration, slow and atmospheric.",
-    TTS_VOICE_FEMALE: "Speak Swedish with Standard Swedish pronunciation and natural rhythm. Warm rich storytelling voice, expressive and inviting.",
+    # Hastighet: rate=1.1 i _synth_qwen_tts (snabbare än default), inga "slow"-ord här.
+    TTS_VOICE_MALE: "Speak Swedish with Standard Swedish pronunciation, natural rhythm. Dark fantasy storytelling, atmospheric and vivid.",
+    TTS_VOICE_FEMALE: "Speak Swedish with Standard Swedish pronunciation, natural rhythm. Warm expressive storytelling, rich and inviting.",
 }
 
-# StepFun-instruktion per röst — styr stil/emfas (kort; stöds av stepaudio-2.5-tts)
+# StepFun-instruktion per röst — styr stil/emfas (kort; stöds av stepaudio-2.5-tts).
+# Hastighet: speed=1.1 i _synth_stepfun_tts (snabbare än default), inga "slow"-ord.
 STEPFUN_INSTRUCTIONS = {
-    "vibrant-youth": "Speak with a calm Germanic storytelling voice, slow atmospheric dark fantasy narration.",
-    "magnetic-voiced-male": "Speak with a deep commanding Germanic voice, slow atmospheric dark fantasy narration.",
-    "soft-spoken-gentleman": "Speak softly and calmly, slow atmospheric dark fantasy narration.",
-    "elegantgentle-female": "Speak with a warm elegant voice, slow atmospheric dark fantasy narration.",
-    "livelybreezy-female": "Speak with a lively warm voice, expressive storytelling.",
+    "vibrant-youth": "Calm Germanic storytelling voice, atmospheric dark fantasy narration.",
+    "magnetic-voiced-male": "Deep commanding Germanic voice, atmospheric dark fantasy narration.",
+    "soft-spoken-gentleman": "Soft calm voice, atmospheric dark fantasy narration.",
+    "elegantgentle-female": "Warm elegant voice, atmospheric dark fantasy narration.",
+    "livelybreezy-female": "Lively warm voice, expressive storytelling.",
 }
 
-# Token Plan TTS har INGEN REST-endpoint — går bara via DashScope SDK WebSocket
+# Token Plan TTS: REST-endpoint (dokumenterad för Token Plan, 2026-08-03).
+# WS-vägen (dashscope SDK) slutade fungera — se _synth_qwen_tts. REST:
+#   POST /api/v1/services/audio/tts/SpeechSynthesizer
+#   {"model": "qwen-audio-3.0-tts-plus",
+#    "input": {"text", "voice", "format": "mp3", "sample_rate": 24000, "instruction"?}}
+# → svar innehåller output.audio.url (signerad OSS-URL) → ladda ner MP3.
+TTS_DASHSCOPE_REST_URL = os.getenv(
+    "TTS_DASHSCOPE_REST_URL",
+    "https://token-plan.ap-southeast-1.maas.aliyuncs.com/api/v1/services/audio/tts/SpeechSynthesizer",
+)
 TTS_DASHSCOPE_WS_URL = os.getenv(
     "TTS_DASHSCOPE_WS_URL",
     "wss://token-plan.ap-southeast-1.maas.aliyuncs.com/api-ws/v1/inference",
@@ -1965,74 +2036,242 @@ def _record_tts_usage(username: str, chars: int, seconds: float, api_call: bool)
         logger.exception("🔊 Kunde inte bokföra TTS-usage")
 
 
-def _synth_qwen_tts(voice: str, text: str, use_instruction: bool = True) -> bytes:
-    """Blockande DashScope-syntes — körs i en tråd (asyncio.to_thread).
+# ── Beständig per-konto usage-ackumulator ──────────────────────────────
+# Kontots förbrukning som INTE ska försvinna när en kampanj raderas/rollas
+# om, eller som inte alls hör till en kampanj:
+#   deleted            — LLM-tokens + turns + TTS från RADERADE kampanjer
+#   character_creation — LLM-tokens spenderade på karaktärsgenerering
+#   image_gen          — antal AI-bilder genererade (iterations)
+# Filen ligger direkt i användarmappen (CAMPAIGNS_DIR/<user>/_account_usage.json)
+# och rörs aldrig av store.delete (som bara tar bort kampanj-underkatalogen).
+# Rullas upp i _scan_user_transcripts → account_total + admin-vyn.
+_USAGE_LOCK = threading.Lock()
 
-    Använder async-läget (streaming_call + egen ResultCallback) så att
-    riktiga serverfel — t.ex. Throttling.AllocationQuota (Token Plan-kvoten
-    slut) — fångas och förs vidare. SDK:ns call()-läge sväljer TaskFailed i
-    websocket-tråden och ger bara en vilseledande ConnectionError.
 
-    use_instruction=False: skicka INGEN instruction-parameter. Token-plan-
-    servern har varit flaky med instruction (task-failed "request timeout
-    after 23 seconds") — retry utan instruction löser oftast.
-    """
+def _empty_account_usage() -> dict:
+    return {
+        "deleted": {
+            "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "turns": 0,
+            "tts": {"calls": 0, "api_calls": 0, "chars": 0, "tokens": 0, "seconds": 0.0},
+        },
+        "character_creation": {"tokens": 0, "calls": 0},
+        "image_gen": {"calls": 0},
+    }
+
+
+def _account_usage_path(username: str) -> Path:
+    return CAMPAIGNS_DIR / username / "_account_usage.json"
+
+
+def _load_account_usage(username: str) -> dict:
+    """Läs kontots beständiga usage-ackumulator (med defaults + migration)."""
+    base = _empty_account_usage()
+    raw = None
     try:
-        import dashscope
-        from dashscope.audio.tts_v2 import SpeechSynthesizer, AudioFormat, ResultCallback
-    except ImportError:
-        raise RuntimeError("dashscope SDK saknas i containern")
+        p = _account_usage_path(username)
+        if p.exists():
+            with open(p) as f:
+                raw = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        logger.exception("📊 Kunde inte läsa per-konto usage-ackumulator")
+    if not isinstance(raw, dict):
+        raw = {}
+    # Migrera gammal _deleted_tts.json → deleted.tts (2026-08-03)
+    if not raw.get("deleted"):
+        try:
+            old = CAMPAIGNS_DIR / username / "_deleted_tts.json"
+            if old.exists():
+                with open(old) as f:
+                    old_tts = json.load(f)
+                raw["deleted"] = {"prompt_tokens": 0, "completion_tokens": 0,
+                                  "total_tokens": 0, "turns": 0,
+                                  "tts": {"calls": 0, "api_calls": 0, "chars": 0,
+                                          "tokens": 0, "seconds": 0.0}}
+                for k in ("calls", "api_calls", "chars", "tokens", "seconds"):
+                    raw["deleted"]["tts"][k] += old_tts.get(k, 0) or 0
+        except (OSError, json.JSONDecodeError):
+            pass
+    # Fyll saknade nycklar med defaults
+    for k, v in base.items():
+        if not isinstance(raw.get(k), dict):
+            raw[k] = v
+    d = raw.setdefault("deleted", {})
+    for k, v in base["deleted"].items():
+        if k == "tts":
+            d.setdefault("tts", dict(v))
+        else:
+            d.setdefault(k, v)
+    cc = raw.setdefault("character_creation", {})
+    cc.setdefault("tokens", 0); cc.setdefault("calls", 0)
+    ig = raw.setdefault("image_gen", {})
+    ig.setdefault("calls", 0)
+    return raw
+
+
+def _save_account_usage(username: str, acc: dict) -> None:
+    try:
+        p = _account_usage_path(username)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        tmp = p.with_suffix(".tmp")
+        with open(tmp, "w") as f:
+            json.dump(acc, f, ensure_ascii=False)
+        tmp.replace(p)
+    except OSError:
+        logger.exception("📊 Kunde inte spara per-konto usage-ackumulator")
+
+
+def _mutate_account_usage(username: str, fn) -> None:
+    """Lås + läs + mutera + skriv kontots usage-ackumulator atomiskt."""
+    with _USAGE_LOCK:
+        acc = _load_account_usage(username)
+        fn(acc)
+        _save_account_usage(username, acc)
+
+
+def _add_character_creation(username: str, usage: dict | None) -> None:
+    """Bokför LLM-tokens för en karaktärsgenerering (livstid, alla rerolls)."""
+    t = (usage or {}).get("total_tokens", 0) or 0
+    if not t:
+        return
+    def fn(acc):
+        cc = acc["character_creation"]
+        cc["tokens"] = (cc.get("tokens", 0) or 0) + t
+        cc["calls"] = (cc.get("calls", 0) or 0) + 1
+    _mutate_account_usage(username, fn)
+
+
+def _add_image_gen(username: str) -> None:
+    """Bokför en AI-bildgenerering (iteration)."""
+    def fn(acc):
+        acc["image_gen"]["calls"] = (acc["image_gen"].get("calls", 0) or 0) + 1
+    _mutate_account_usage(username, fn)
+
+
+def _add_deleted_campaign(username: str, snap: dict) -> None:
+    """Lägg en raderad/rollad kampanjs totala förbrukning till ackumulatorn."""
+    if not snap:
+        return
+    def fn(acc):
+        d = acc["deleted"]
+        d["prompt_tokens"] = (d.get("prompt_tokens", 0) or 0) + (snap.get("prompt_tokens", 0) or 0)
+        d["completion_tokens"] = (d.get("completion_tokens", 0) or 0) + (snap.get("completion_tokens", 0) or 0)
+        d["total_tokens"] = (d.get("total_tokens", 0) or 0) + (snap.get("total_tokens", 0) or 0)
+        d["turns"] = (d.get("turns", 0) or 0) + (snap.get("turns", 0) or 0)
+        tt = snap.get("tts") or {}
+        for k in ("calls", "api_calls", "chars", "tokens", "seconds"):
+            d["tts"][k] = (d["tts"].get(k, 0) or 0) + (tt.get(k, 0) or 0)
+    _mutate_account_usage(username, fn)
+
+
+def _campaign_usage_snapshot(user: str, campaign_id: str) -> dict:
+    """Ögonblicksbild av en kampanjs totala förbrukning (transcripts + state).
+
+    Används för att bevara förbrukningen när en kampanj raderas/rollas om.
+    Speglar logiken i _scan_user_transcripts fast för EN kampanj."""
+    prompt = completion = turns = 0
+    tts = {"calls": 0, "api_calls": 0, "chars": 0, "tokens": 0, "seconds": 0.0}
+    cdir = CAMPAIGNS_DIR / user / campaign_id
+    transcript_dir = cdir / "transcripts"
+    if transcript_dir.exists():
+        for ts_file in sorted(transcript_dir.glob("session-*.jsonl")):
+            try:
+                with open(ts_file) as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            entry = json.loads(line)
+                        except json.JSONDecodeError:
+                            continue
+                        if entry.get("role") == "assistant":
+                            turns += 1
+                        meta = entry.get("meta", {})
+                        tokens = meta.get("tokens", {})
+                        p = tokens.get("prompt_tokens", 0) or 0
+                        c = tokens.get("completion_tokens", 0) or 0
+                        gpd = meta.get("guardian_pre_dm_tokens", {}) or {}
+                        p += gpd.get("prompt_tokens", 0) or 0
+                        c += gpd.get("completion_tokens", 0) or 0
+                        prompt += p
+                        completion += c
+            except OSError:
+                continue
+    try:
+        st_file = cdir / "state.json"
+        if st_file.exists():
+            with open(st_file) as f:
+                st = json.load(f)
+            ut = st.get("meta", {}).get("unguarded_tokens", {}) or {}
+            prompt += ut.get("prompt_tokens", 0) or 0
+            completion += ut.get("completion_tokens", 0) or 0
+            tt = st.get("meta", {}).get("tts_usage") or {}
+            for k in ("calls", "api_calls", "chars", "tokens", "seconds"):
+                tts[k] += tt.get(k, 0) or 0
+    except (OSError, json.JSONDecodeError):
+        pass
+    return {
+        "prompt_tokens": prompt, "completion_tokens": completion,
+        "total_tokens": prompt + completion, "turns": turns, "tts": tts,
+    }
+
+
+def _synth_qwen_tts(voice: str, text: str, use_instruction: bool = True) -> bytes:
+    """Token Plan TTS via REST (2026-08-03).
+
+    WebSocket-vägen (dashscope SDK) blev trasig: servern svarade task-failed
+    "request timeout after 23 seconds" på ALLA anrop, och en engine-pod
+    avvisade dessutom sample_rate 22050 ("Invalid sample rate parameter").
+    Token Plan-dokumentationen visar en REST-endpoint som fungerar:
+      POST {TTS_DASHSCOPE_REST_URL}
+      {"model": "qwen-audio-3.0-tts-plus",
+       "input": {"text", "voice", "format": "mp3", "sample_rate": 24000, "instruction"?}}
+    → svar innehåller output.audio.url (signerad OSS-URL) → ladda ner MP3.
+    """
+    import base64
+    import urllib.error as _uer
+    import urllib.request as _ur
 
     api_key = os.getenv(TTS_DASHSCOPE_KEY_ENV)
     if not api_key:
         raise RuntimeError("TTS-nyckel saknas")
 
-    dashscope.api_key = api_key
-    dashscope.base_websocket_api_url = TTS_DASHSCOPE_WS_URL
+    inp = {"text": text, "voice": voice, "format": "mp3", "sample_rate": 24000, "rate": 1.1}
+    if use_instruction:
+        instr = TTS_INSTRUCTIONS.get(voice, "")
+        if instr:
+            inp["instruction"] = instr
 
-    class _Capture(ResultCallback):
-        def __init__(self):
-            super().__init__()
-            self.audio = bytearray()
-            self.error = None
-            self.done = threading.Event()
-
-        def on_data(self, data):
-            self.audio.extend(data)
-
-        def on_error(self, message):
-            self.error = str(message)
-            self.done.set()
-
-        def on_complete(self):
-            self.done.set()
-
-        def on_close(self):
-            self.done.set()
-
-    cb = _Capture()
-    instr = TTS_INSTRUCTIONS.get(voice, "") if use_instruction else None
-    syn = SpeechSynthesizer(
-        model="qwen-audio-3.0-tts-plus",
-        voice=voice,
-        format=AudioFormat.MP3_22050HZ_MONO_256KBPS,
-        instruction=instr,
-        callback=cb,
+    body = json.dumps({"model": "qwen-audio-3.0-tts-plus", "input": inp}).encode()
+    req = _ur.Request(
+        TTS_DASHSCOPE_REST_URL,
+        data=body,
+        headers={"Authorization": "Bearer " + api_key, "Content-Type": "application/json"},
     )
     try:
-        syn.streaming_call(text)
-    except ConnectionError:
-        # Servern kan stänga WS direkt efter task-failed (t.ex. kvot slut) —
-        # då kastar streaming_call en vilseledande ConnectionError. Det
-        # riktiga felet kommer via callback:en i websocket-tråden: vänta.
-        pass
-    if not cb.done.wait(120):
-        raise RuntimeError("TTS timeout (120s)")
-    if cb.error:
-        raise RuntimeError(cb.error)
-    if not cb.audio:
-        raise RuntimeError("TTS returnerade inget ljud")
-    return bytes(cb.audio)
+        with _ur.urlopen(req, timeout=120) as r:
+            resp = json.loads(r.read().decode("utf-8"))
+    except _uer.HTTPError as e:
+        detail = e.read().decode("utf-8", errors="replace")[:300]
+        raise RuntimeError(f"Qwen TTS HTTP {e.code}: {detail}")
+    except Exception as e:
+        raise RuntimeError(f"Qwen TTS fel: {e}")
+
+    audio = resp.get("output", {}).get("audio", {}) or {}
+    data = audio.get("data") or ""
+    if data:
+        try:
+            return base64.b64decode(data)
+        except Exception:
+            return data.encode("latin1")
+    dl_url = audio.get("url") or ""
+    if not dl_url:
+        raise RuntimeError(f"Qwen TTS: inget ljud i svar — {json.dumps(resp)[:200]}")
+    try:
+        with _ur.urlopen(dl_url, timeout=120) as ar:
+            return ar.read()
+    except Exception as e:
+        raise RuntimeError(f"Qwen TTS nedladdning fel: {e}")
 
 
 def _synth_qwen_tts_retry(voice: str, text: str) -> bytes:
@@ -2073,6 +2312,7 @@ def _synth_stepfun_tts(voice: str, text: str) -> bytes:
         "input": text,
         "voice": voice,
         "response_format": "mp3",
+        "speed": 1.2,  # stepaudio: 1.1 försvinner i modellbrus, 1.2 ger tydlig ~14% ökning
     }
     inst = STEPFUN_INSTRUCTIONS.get(voice)
     if inst:
@@ -2379,6 +2619,9 @@ async def get_campaign_usage(morkrets_token: str | None = Cookie(None)):
             "completion_tokens": scan["completion_tokens"],
             "total_tokens": scan["total_tokens"],
             "tts": scan.get("tts_usage", {}),
+            "character_creation": scan.get("character_creation", {}),
+            "image_gen": scan.get("image_gen", {}),
+            "deleted_campaigns": scan.get("deleted_campaigns", {}),
         },
     }
 
@@ -2402,6 +2645,10 @@ async def delete_campaign(
     cid = campaign_id
     if not cid:
         raise HTTPException(400, "campaign_id krävs för att radera en specifik kampanj")
+    # Sparar kampanjens FULLA förbrukning (LLM-tokens + turns + TTS) i den
+    # beständiga per-konto-ackumulatorn INNAN katalogen raderas, så kontots
+    # totala förbrukning överlever raderingen/roll-over.
+    _add_deleted_campaign(username, _campaign_usage_snapshot(username, cid))
     deleted = store.delete(username, cid)
     if not deleted:
         raise HTTPException(404, "Ingen kampanj att radera")
@@ -4703,11 +4950,15 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
     ]
 
     try:
+        usage_out: dict = {}
         raw = await _call_llm(
             req.model_id, messages, temperature=0.95, max_tokens=8000,
             thinking_cap=8000, reasoning_effort="low", timeout=300,
+            usage_out=usage_out,
         )
         char_data = _extract_json(raw)
+        # Bokför karaktärsgenererings-tokens (livstid, överlever radering)
+        _add_character_creation(username, usage_out)
     except HTTPException:
         raise
     except (ValueError, RuntimeError) as e:
@@ -4905,6 +5156,8 @@ async def generate_character_stream(req: CharacterRequest, morkrets_token: str |
 
             char_data = _extract_json(buf)
             result = _finalize_character(char_data, state, lang)
+            # Bokför karaktärsgenererings-tokens (livstid, överlever radering)
+            _add_character_creation(username, usage)
             elapsed = round(time.time() - t0, 1)
             result["tokens"] = usage or {}
             result["time_s"] = elapsed
@@ -4942,6 +5195,7 @@ async def vault_generate_stream(req: VaultGenRequest, morkrets_token: str | None
     skrivs inte till något kampanj-state; frontend visar preview med
     Save/Reroll."""
     payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
     if payload.get("role") != "admin":
         req.model_id = _clamp_player_model(req.model_id)
 
@@ -4974,6 +5228,8 @@ async def vault_generate_stream(req: VaultGenRequest, morkrets_token: str | None
 
             char_data = _extract_json(buf)
             char_data, inventory, _had = _finalize_character_data(char_data, lang)
+            # Bokför karaktärsgenererings-tokens (livstid, överlever radering)
+            _add_character_creation(username, usage)
             elapsed = round(time.time() - t0, 1)
             result = {"ok": True, "character": char_data, "inventory": inventory}
             result["tokens"] = usage or {}
@@ -5067,9 +5323,24 @@ async def vault_save(body: dict, morkrets_token: str | None = Cookie(None)):
         if not character or not isinstance(character, dict) or not character.get("name"):
             raise HTTPException(400, "No character to save")
 
-    entry = vault.save(username, character, campaign_name=campaign_name, inventory=inventory)
+    entry = None
+    # Overwrite-stöd: om frontend skickar overwrite_id och posten finns,
+    # uppdatera den befintliga posten i stället för att skapa en duplikat.
+    overwrite_id = (body.get("overwrite_id") or "").strip()
+    existing = vault.get(username, overwrite_id) if overwrite_id else None
 
-    # Om kampanjkaraktären har en spelar-avatar → kopiera in den i valvet
+    if existing is not None:
+        existing["character"] = character
+        existing["inventory"] = inventory
+        if campaign_name:
+            existing["campaign_name"] = campaign_name
+        existing["saved_at"] = _now_iso()
+        entry = existing
+    else:
+        entry = vault.save(username, character, campaign_name=campaign_name, inventory=inventory)
+
+    # Om kampanjkaraktären har en spelar-avatar → kopiera in den i valvet.
+    # Vid overwrite skrivs vault_{samma_id}.png → gamla avataren ersätts.
     if state is not None:
         av = (state.get("avatars") or {}).get("player")
         if av and av.get("disk_name"):
@@ -5081,9 +5352,17 @@ async def vault_save(body: dict, morkrets_token: str | None = Cookie(None)):
                 dst.write_bytes(src.read_bytes())
                 entry["avatar"] = {"disk_name": dst.name, "seed": av.get("seed"),
                                    "ai_generated": av.get("ai_generated", False)}
-                vault.update(username, entry)
 
-    return {"ok": True, "id": entry["id"], "summary": _vault_summary(entry)}
+    # Persist: ny post skrevs redan av vault.save(); overwrite-posten skrivs här
+    # (och ny post med avatar uppdateras så avatar-fältet följer med).
+    if existing is not None:
+        if not vault.update(username, entry):
+            raise HTTPException(404, "Character not found")
+    elif entry.get("avatar"):
+        vault.update(username, entry)
+
+    return {"ok": True, "id": entry["id"], "overwritten": existing is not None,
+            "summary": _vault_summary(entry)}
 
 
 @app.delete("/api/vault/characters/{char_id}")
@@ -5165,6 +5444,10 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
         "npcs": [],
     }
     prompt = _trim_prompt(_build_avatar_prompt(fake_state, "player", seed))
+    # Fri användarprompt (valfri) — väger tyngst, auto-prompten blir kontext.
+    user_prompt = ((body or {}).get("prompt") or "").strip()
+    if user_prompt:
+        prompt = _trim_prompt(f"{user_prompt}\nAdditional visual context from the character sheet: {prompt}")
 
     api_key = os.getenv("STEPFUN_API_KEY")
     base_url = os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.ai/step_plan/v1")
@@ -5225,6 +5508,8 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
         "uploaded": datetime.now(timezone.utc).isoformat(),
     }
     vault.update(username, entry)
+    # Bokför en AI-bildgenerering (iteration), livstid
+    _add_image_gen(username)
     return {"ok": True, "seed": seed, "url": f"/api/vault/characters/{char_id}/avatar"}
 
 
@@ -5775,6 +6060,88 @@ def _build_dm_avatar_prompt(seed: int, state: dict | None = None) -> str:
     )
 
 
+# ── Klass-specifika visuella ledtrådar (v30) ──
+# Utan dessa smälter alla klasser ihop till en generic "western fantasy rogue".
+# Substring-match på class-fältet (lower) så "Druid (Circle of the Moon)" träffar.
+# Okänd klass → tom sträng (ingen tvingad stil — StepFun tolkar fritt).
+# Cues hålls ~110–160 tecken så de + identitet + stil får plats i 490-budgeten.
+_CLASS_VISUAL_CUES = {
+    "druid": (
+        "visibly a wild druid: leaves and moss woven into their look, antlers or bark "
+        "garments, a raven or stag gathered close as companion, one who speaks the tongue of beasts"
+    ),
+    "ranger": (
+        "a weathered wilderness scout in a worn cloak, bow slung at the shoulder, keen "
+        "watchful eyes, trail dust on their boots"
+    ),
+    "wizard": (
+        "a scholarly spellcaster in rune-etched robes, arcane glyphs and glowing tomes "
+        "orbiting them, starlight caught in their sleeves"
+    ),
+    "trollkarl": (
+        "a scholarly spellcaster in rune-etched robes, arcane glyphs and glowing tomes "
+        "orbiting them, starlight caught in their sleeves"
+    ),
+    "sorcerer": (
+        "a spellcaster with raw innate magic crackling across their skin, glowing eyes, "
+        "sparks and embers swirling around them"
+    ),
+    "warlock": (
+        "a pact-bound occultist with unsettling otherworldly sigils, shadowy tendrils, "
+        "a patron's mark glowing faintly nearby"
+    ),
+    "cleric": (
+        "a devoted holy figure in layered vestments, a sacred symbol glowing at their "
+        "chest, gentle divine light around their hands"
+    ),
+    "präst": (
+        "a devoted holy figure in layered vestments, a sacred symbol glowing at their "
+        "chest, gentle divine light around their hands"
+    ),
+    "paladin": (
+        "a radiant oath-sworn knight in battle-worn armor, a holy aura, banner-light "
+        "gleaming on polished steel"
+    ),
+    "bard": (
+        "a charismatic performer with an instrument in hand, notes of light drifting in "
+        "the air, flamboyant traveling clothes"
+    ),
+    "skald": (
+        "a charismatic performer with an instrument in hand, notes of light drifting in "
+        "the air, flamboyant traveling clothes"
+    ),
+    "rogue": (
+        "a shadow-walker in a hooded cloak, daggers glinting at their belt, half their "
+        "face lost in shadow, quick and sly"
+    ),
+    "barbarian": (
+        "a fierce warrior of the wilds in scarred hide and furs, war-paint and trophies "
+        "of old hunts, raw power barely contained"
+    ),
+    "monk": (
+        "a serene unarmed mystic in simple traveling garments, prayer beads, faint "
+        "ki-light around their hands, balanced posture"
+    ),
+}
+
+
+def _class_visual_cues(cls: str | None) -> str:
+    """Visuell klassignatur till avatar-prompten. Tom sträng om klassen är okänd."""
+    c = (cls or "").lower()
+    for key, cue in _CLASS_VISUAL_CUES.items():
+        if key in c:
+            return cue
+    return ""
+
+
+# Kompakt porträttstil för spelarkaraktärer (full STEP_IMAGE_STYLE är för lång
+# för att få plats tillsammans med klass-ledtrådar inom StepFuns 512-tecken).
+STEP_PORTRAIT_STYLE = (
+    "Photorealistic cinematic portrait, film-grade dramatic lighting, ultra-detailed "
+    "realistic materials and textures, atmospheric depth and mood. No text, no watermark."
+)
+
+
 def _build_avatar_prompt(state: dict, avatar_key: str, seed: int = 0) -> str:
     """Bygg bildprompten AUTOMATISKT från kampanjdata (character sheet, items,
     lore, NPC-data) — användaren promptar aldrig själv."""
@@ -5817,7 +6184,17 @@ def _build_avatar_prompt(state: dict, avatar_key: str, seed: int = 0) -> str:
     lore = state.get("lore") or []
     lore_s = " ".join(str(x) for x in lore[:3])[:220] if lore else ""
 
+    # Ordning spelar roll: _trim_prompt klipper BAKIFRÅN (490 tecken). Därför
+    # läggs det som definierar bilden FÖRST — identitet, klass-ledtråd och stil —
+    # så de aldrig klipps bort. Bakgrund/utrustning/story (det som kan tummas
+    # på) kommer sist och klipps före något viktigt. Gamla STEP_IMAGE_STYLE
+    # ("never forced into a person or a portrait") var sist + motsade ett
+    # porträtt → StepFun föll tillbaka på generisk västerländsk fantasy-rogue.
     parts = [f"{name}, a {race} {cls}."]
+    cue = _class_visual_cues(cls)
+    if cue:
+        parts.append(f"They are {cue}.")
+    parts.append(STEP_PORTRAIT_STYLE)
     if background:
         parts.append(f"Background: {background}.")
     if traits_s:
@@ -5828,7 +6205,6 @@ def _build_avatar_prompt(state: dict, avatar_key: str, seed: int = 0) -> str:
         parts.append(f"Story: {story}.")
     if lore_s:
         parts.append(f"Recent events: {lore_s}.")
-    parts.append(STEP_IMAGE_STYLE)
     return " ".join(parts)
 
 
@@ -5870,6 +6246,11 @@ async def generate_avatar(
         mode = "new"
 
     prompt = _trim_prompt(_build_avatar_prompt(state, avatar_key, seed))
+    # Fri användarprompt (valfri) — ligger FÖRE den auto-byggda kontexten så
+    # spelarens önskemål väger tyngst, auto-prompten blir kompletterande kontext.
+    user_prompt = ((body or {}).get("prompt") or "").strip()
+    if user_prompt:
+        prompt = _trim_prompt(f"{user_prompt}\nAdditional visual context from the game: {prompt}")
     logger.info("🎨 AI-avatar: %s (mode=%s, seed %d)", avatar_key, mode, seed)
 
     api_key = os.getenv("STEPFUN_API_KEY")
@@ -5953,6 +6334,8 @@ async def generate_avatar(
         "uploaded": datetime.now(timezone.utc).isoformat(),
     }
     store.save(state)
+    # Bokför en AI-bildgenerering (iteration), livstid
+    _add_image_gen(username)
 
     return {"ok": True, "kind": avatar_key, "url": f"/api/campaign/avatar/{avatar_key}", "seed": seed, "edit_mode": bool(existing_path and mode == "edit")}
 
@@ -6104,7 +6487,7 @@ Om en kategori saknas i beskrivningen, returnera tom array. Extrahera bara det s
 @app.post("/api/world/build")
 async def world_build(
     prompt: str = Form(""),
-    model_id: str = Form("qwen3.8-max"),
+    model_id: str = Form("step-3.7-flash"),
     files: list[UploadFile] = File(default=[]),
     morkrets_token: str | None = Cookie(None),
 ):
@@ -6551,7 +6934,11 @@ def _scan_user_transcripts(user: str) -> dict:
 
     user_dir = CAMPAIGNS_DIR / user
     if not user_dir.exists():
-        return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "turns": 0, "last_active": "", "sessions": sessions, "tts_usage": tts_usage}
+        base = _empty_account_usage()
+        return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "turns": 0,
+                "last_active": "", "sessions": sessions, "tts_usage": tts_usage,
+                "character_creation": base["character_creation"], "image_gen": base["image_gen"],
+                "deleted_campaigns": base["deleted"]}
 
     for campaign_dir in sorted(user_dir.iterdir()):
         if not campaign_dir.is_dir():
@@ -6691,6 +7078,20 @@ def _scan_user_transcripts(user: str) -> dict:
                 "model_tokens": model_tokens,
             })
 
+    # Lägg till förbrukning från RADERADE kampanjer (beständig ackumulator)
+    # så kontots totala tokens/turns/TTS overlever kampanjradering. Uppdateras
+    # i delete_campaign via _add_deleted_campaign. Karaktärsgenerering och
+    # bildgen är livstid-räknare som inte hör till någon specifik kampanj.
+    _acc = _load_account_usage(user)
+    _del = _acc.get("deleted", {})
+    if (_del.get("total_tokens") or 0) or (_del.get("turns") or 0):
+        prompt_tokens += _del.get("prompt_tokens", 0) or 0
+        completion_tokens += _del.get("completion_tokens", 0) or 0
+        turns += _del.get("turns", 0) or 0
+        _del_tts = _del.get("tts", {}) or {}
+        for k in ("calls", "api_calls", "chars", "tokens", "seconds"):
+            tts_usage[k] = (tts_usage.get(k, 0) or 0) + (_del_tts.get(k, 0) or 0)
+
     return {
         "prompt_tokens": prompt_tokens,
         "completion_tokens": completion_tokens,
@@ -6699,6 +7100,9 @@ def _scan_user_transcripts(user: str) -> dict:
         "last_active": last_active,
         "sessions": sessions,
         "tts_usage": tts_usage,
+        "character_creation": _acc.get("character_creation", {}),
+        "image_gen": _acc.get("image_gen", {}),
+        "deleted_campaigns": _del,
     }
 
 
@@ -6770,6 +7174,13 @@ async def admin_stats(morkrets_token: str | None = Cookie(None)):
             "tts_tokens": tts.get("tokens", 0) or 0,
             "tts_seconds": tts_sec,
             "tts_minutes": round(tts_sec / 60, 1),
+            # Karaktärsgenerering (livstid, alla rerolls)
+            "char_creation_tokens": (scan.get("character_creation", {}) or {}).get("tokens", 0) or 0,
+            "char_creation_calls": (scan.get("character_creation", {}) or {}).get("calls", 0) or 0,
+            # AI-bildgenerering (antal iterationer)
+            "image_gen_calls": (scan.get("image_gen", {}) or {}).get("calls", 0) or 0,
+            # Raderade/rollade kampanjer (tokens + turns + tts)
+            "deleted_campaigns": scan.get("deleted_campaigns", {}),
         })
 
     return {
@@ -6869,6 +7280,9 @@ async def admin_user_detail(username: str, morkrets_token: str | None = Cookie(N
         "country_code": g.get("countryCode", ""),
         "country_flag": iplog.country_flag(g.get("countryCode", "")),
         "tts_usage": scan.get("tts_usage", {}),
+        "character_creation": scan.get("character_creation", {}),
+        "image_gen": scan.get("image_gen", {}),
+        "deleted_campaigns": scan.get("deleted_campaigns", {}),
         "campaigns": enriched,
     }
 

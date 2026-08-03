@@ -349,11 +349,12 @@ const API = (() => {
 
     // ── AI-avatar (StepFun step-image-edit-2 — prompt byggs automatiskt i backend) ──
     // mode: "new" = full generation (ny bild), "edit" = image-edit på befintlig
-    async generateAvatar(kind, seed, mode) {
+    // prompt: valfri fri text från användaren — väger tyngst, auto-prompten blir kontext.
+    async generateAvatar(kind, seed, mode, prompt) {
       if (MOCK) throw new Error('Not available in mock mode');
       return req('/api/campaign/avatar/generate', {
         method: 'POST',
-        body: JSON.stringify({ kind, seed, mode: mode || 'new' }),
+        body: JSON.stringify({ kind, seed, mode: mode || 'new', prompt: prompt || '' }),
       });
     },
 
@@ -381,7 +382,7 @@ const API = (() => {
     },
 
     // ── World building (prompt + optional files → structured world data) ──
-    async buildWorld(prompt, fileList = [], modelId = 'qwen3.8-max') {
+    async buildWorld(prompt, fileList = [], modelId = 'step-3.7-flash') {
       if (MOCK) {
         await new Promise(r => setTimeout(r, 1800));
         return {
@@ -529,8 +530,8 @@ const API = (() => {
       return req('/api/vault/characters/' + encodeURIComponent(charId) + '/use', { method: 'POST', body: '{}' });
     },
 
-    vaultGenerateAvatar(charId, seed, mode) {
-      const body = {};
+    vaultGenerateAvatar(charId, seed, mode, prompt) {
+      const body = { prompt: prompt || '' };
       if (typeof seed === 'number') body.seed = seed;
       if (mode) body.mode = mode;
       return req('/api/vault/characters/' + encodeURIComponent(charId) + '/avatar/generate', {
@@ -543,12 +544,18 @@ const API = (() => {
     },
 
     // ── Rules Oracle (Qwen-driven) ──
-    async oracle(question, modelId = 'qwen3.8-max') {
+    async oracle(question, modelId = 'step-3.7-flash') {
       if (MOCK) {
         await new Promise(r => setTimeout(r, 900));
         return { answer: "Roll a d20 and add the relevant modifier against the DM's DC." };
       }
       return req('/api/oracle', { method: 'POST', body: JSON.stringify({ question, model_id: modelId }) });
+    },
+
+    // ── Feedback ──
+    async sendFeedback({ email, message }) {
+      if (MOCK) return { ok: true };
+      return req('/api/feedback', { method: 'POST', body: JSON.stringify({ email: email || null, message }) });
     },
 
     // ── Export ──

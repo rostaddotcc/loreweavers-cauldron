@@ -14,14 +14,14 @@
     --bone:#d9c9a6;--bone-bright:#efe2c0;--bone-dim:#8a7a5e;
     --gold:#c9a227;--gold-bright:#e8c65a;
     --blood:#a32433;--blood-bright:#d43a4d;
-    --ember:#d4691e;--arcane:#8b5fd4;--poison:#7aa35e;--teal:#5e9aa3;
+    --ember:#d4691e;--arcane:#8b5fd4;--arcane-bright:#c9a6ff;--arcane-deep:#3a1f66;--poison:#7aa35e;--teal:#5e9aa3;
   }
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{height:100%}
   body{
     font-family:'Spectral',Georgia,serif;color:var(--bone);
     background:
-      radial-gradient(1000px 500px at 50% 115%, rgba(139,95,212,.1), transparent 60%),
+      radial-gradient(1000px 500px at 50% 115%, color-mix(in srgb, var(--arcane) 10%, transparent), transparent 60%),
       radial-gradient(700px 400px at 90% -5%, rgba(201,162,39,.07), transparent 55%),
       var(--ink);
     display:flex;flex-direction:column;overflow:hidden;
@@ -45,7 +45,7 @@
   .layout{position:relative;z-index:2;flex:1;display:flex;min-height:0}
 
   /* ── Vänster: Arkivets hyllor ── */
-  .shelves{width:300px;flex-shrink:0;display:flex;flex-direction:column;background:linear-gradient(180deg,var(--stone),#100b18);border-right:1px solid var(--edge)}
+  .shelves{width:300px;flex-shrink:0;display:flex;flex-direction:column;background:linear-gradient(180deg,var(--stone),var(--ink));border-right:1px solid var(--edge)}
   .shelves-head{padding:1.1rem 1rem .8rem;border-bottom:1px solid var(--edge)}
   .shelves-title{font-family:'Cinzel',serif;font-weight:900;font-size:1.05rem;color:var(--bone-bright);letter-spacing:.05em;margin-bottom:.15rem}
   .shelves-sub{font-size:.88rem;font-style:italic;color:var(--bone-dim)}
@@ -56,22 +56,22 @@
     transition:border-color .2s,box-shadow .2s}
   .search-wrap input::placeholder{color:var(--bone-dim);font-style:italic}
   .search-wrap input:focus{border-color:var(--gold);box-shadow:0 0 14px -4px rgba(232,198,90,.35)}
-  .filters{display:flex;gap:.35rem;flex-wrap:wrap;padding:.6rem 1rem .8rem;border-bottom:1px solid rgba(61,47,82,.5)}
+  .filters{display:flex;gap:.35rem;flex-wrap:wrap;padding:.6rem 1rem .8rem;border-bottom:1px solid color-mix(in srgb, var(--edge) 50%, transparent)}
   .fchip{font-family:'Cinzel',serif;font-size:.69rem;letter-spacing:.12em;text-transform:uppercase;background:transparent;border:1px solid var(--edge);color:var(--bone-dim);padding:.32rem .6rem;cursor:pointer;border-radius:2px;transition:all .2s;display:inline-flex;align-items:center;gap:.35rem}
   .fchip:hover{color:var(--bone-bright);border-color:var(--bone-dim)}
   .fchip.on{color:#1a1206;background:var(--gold);border-color:var(--gold);box-shadow:0 0 10px -2px rgba(232,198,90,.5)}
   .fchip .cnt{font-size:.63rem;opacity:.75}
 
   /* ── Statistik ── */
-  .stats{padding:.9rem 1rem;border-bottom:1px solid rgba(61,47,82,.5)}
+  .stats{padding:.9rem 1rem;border-bottom:1px solid color-mix(in srgb, var(--edge) 50%, transparent)}
   .stats-title{font-family:'Cinzel',serif;font-size:.56rem;letter-spacing:.2em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.55rem}
   .stat-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem}
-  .stat-bar-track{flex:1;height:6px;background:var(--stone-3);border:1px solid rgba(61,47,82,.5);overflow:hidden}
+  .stat-bar-track{flex:1;height:6px;background:var(--stone-3);border:1px solid color-mix(in srgb, var(--edge) 50%, transparent);overflow:hidden}
   .stat-bar{height:100%;transition:width .6s cubic-bezier(.22,1,.36,1)}
   .stat-label{font-size:.81rem;color:var(--bone-dim);width:82px;flex-shrink:0}
   .stat-num{font-family:'Cinzel',serif;font-size:.75rem;color:var(--bone-bright);width:22px;text-align:right;flex-shrink:0}
 
-  .shelves-foot{margin-top:auto;padding:.8rem 1rem;border-top:1px solid rgba(61,47,82,.5);font-size:.85rem;font-style:italic;color:var(--bone-dim);text-align:center}
+  .shelves-foot{margin-top:auto;padding:.8rem 1rem;border-top:1px solid color-mix(in srgb, var(--edge) 50%, transparent);font-size:.85rem;font-style:italic;color:var(--bone-dim);text-align:center}
 
   /* ── Höger: Arkivsalen ── */
   .archive{flex:1;overflow-y:auto;padding:1.6rem 2rem 4rem;min-width:0;word-wrap:break-word;overflow-wrap:break-word}
@@ -82,7 +82,7 @@
 
   .cat-section{margin-bottom:1.8rem;animation:rise .45s ease both}
   .cat-head{display:flex;align-items:center;gap:.7rem;margin-bottom:.7rem}
-  .cat-head::before,.cat-head::after{content:'';flex:1;height:1px;background:rgba(61,47,82,.5)}
+  .cat-head::before,.cat-head::after{content:'';flex:1;height:1px;background:color-mix(in srgb, var(--edge) 50%, transparent)}
   .cat-head b{font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:var(--cc,var(--gold-bright));display:flex;align-items:center;gap:.45rem}
 
   .fact{position:relative;padding:.7rem .9rem .6rem 1.1rem;margin-bottom:.5rem;
@@ -158,10 +158,10 @@
     .cat-head b{font-size:.56rem;letter-spacing:.12em}
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=19">
+<link rel="stylesheet" href="snes.css?v=22">
 <script src="sprites.js?v=20260802a"></script>
 <script src="fonts.js?v=20260802c"></script>
-<script src="themes.js?v=20260802c"></script>
+<script src="themes.js?v=20260804a"></script>
 </head>
 <body>
 <div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
@@ -203,7 +203,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="sfx.js?v=20260802a"></script>
-<script src="api.js?v=20260802c"></script>
+<script src="api.js?v=20260804c"></script>
 <script src="i18n.js?v=20260802b"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
@@ -214,7 +214,7 @@ if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 // MINNESARKIVET — Faktaregister (Fas 3)
 // ═══════════════════════════════════════
 const CATS = {
-  npc:          { label:'Gestalter',    icon:'🎭', color:'#8b5fd4', glow:'rgba(139,95,212,.4)' },
+  npc:          { label:'Gestalter',    icon:'🎭', color:'var(--arcane)', glow:'color-mix(in srgb, var(--arcane) 40%, transparent)' },
   location:     { label:'Platser',      icon:'🗺️', color:'#5e9aa3', glow:'rgba(94,154,163,.4)' },
   item:         { label:'Föremål',      icon:'🗡️', color:'#c9a227', glow:'rgba(201,162,39,.4)' },
   event:        { label:'Händelser',    icon:'⚡', color:'#d4691e', glow:'rgba(212,105,30,.4)' },

@@ -52,6 +52,8 @@ function fontToggleBtn() {
   const next = FONTS.cycle();
   const btns = document.querySelectorAll('.font-btn');
   btns.forEach(b => { b.textContent = next.name; b.title = 'Font: ' + next.name + ' (click to switch)'; });
+  // Persista tema+typsnitt till kontot (themes.js äger server-syncen)
+  if (typeof THEMES !== 'undefined' && THEMES.syncToServer) THEMES.syncToServer();
   if (typeof toast === 'function') toast('🔤 Font: ' + next.name);
   if (typeof SFX !== 'undefined') SFX.click();
 }

@@ -7,15 +7,15 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="snes.css?v=19">
+<link rel="stylesheet" href="snes.css?v=22">
 <script src="sprites.js?v=20260802a"></script>
 <script src="fonts.js?v=20260802c"></script>
-<script src="themes.js?v=20260802c"></script>
+<script src="themes.js?v=20260804b"></script>
 <style>
-  :root{--ink:#0b0812;--stone:#161020;--stone-2:#1d1529;--stone-3:#241a33;--edge:#3d2f52;--bone:#d9c9a6;--bone-bright:#efe2c0;--bone-dim:#8a7a5e;--gold:#c9a227;--gold-bright:#e8c65a;--blood:#a32433;--blood-bright:#d43a4d;--ember:#d4691e;--arcane:#8b5fd4;--poison:#7aa35e;--teal:#5e9aa3}
+  :root{--ink:#0b0812;--stone:#161020;--stone-2:#1d1529;--stone-3:#241a33;--edge:#3d2f52;--bone:#d9c9a6;--bone-bright:#efe2c0;--bone-dim:#8a7a5e;--gold:#c9a227;--gold-bright:#e8c65a;--blood:#a32433;--blood-bright:#d43a4d;--ember:#d4691e;--arcane:#8b5fd4;--arcane-bright:#c9a6ff;--arcane-deep:#3a1f66;--poison:#7aa35e;--teal:#5e9aa3}
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{height:100%}
-  body{font-family:'Spectral',Georgia,serif;color:var(--bone);background:radial-gradient(1000px 500px at 50% 115%,rgba(212,105,30,.1),transparent 60%),radial-gradient(700px 400px at 10% -5%,rgba(139,95,212,.08),transparent 55%),var(--ink);display:flex;flex-direction:column;overflow:hidden}
+  body{font-family:'Spectral',Georgia,serif;color:var(--bone);background:radial-gradient(1000px 500px at 50% 115%,rgba(212,105,30,.1),transparent 60%),radial-gradient(700px 400px at 10% -5%,color-mix(in srgb, var(--arcane) 8%, transparent),transparent 55%),var(--ink);display:flex;flex-direction:column;overflow:hidden}
   .grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.045;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
   #embers{position:fixed;inset:0;z-index:0;pointer-events:none}
   .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 190px 70px rgba(4,2,8,.88)}
@@ -39,13 +39,13 @@
   /* flex-shrink:0 = KLIPP-BUGG FIXAD: utan detta krossas kartan till ~38px
      av flexbox (overflow-x:auto ⇒ auto min-height:0) när sidans innehåll
      växer (nya platser) och overflow-y:hidden döljer allt. */
-  .ascii-map{margin:0 auto 2rem;padding:1.2rem 1.5rem;background:rgba(4,3,10,.95);border:2px solid var(--edge);box-shadow:inset 0 0 20px rgba(139,95,212,.05),5px 5px 0 rgba(0,0,0,.7);overflow-x:auto;overflow-y:visible;text-align:center;max-width:100%;flex-shrink:0}
+  .ascii-map{margin:0 auto 2rem;padding:1.2rem 1.5rem;background:rgba(4,3,10,.95);border:2px solid var(--edge);box-shadow:inset 0 0 20px color-mix(in srgb, var(--arcane) 5%, transparent),5px 5px 0 rgba(0,0,0,.7);overflow-x:auto;overflow-y:visible;text-align:center;max-width:100%;flex-shrink:0}
   /* pre som inline-block (ej block+margin:auto) — annars centreras en
      för bred karta så att vänsterkanten hamnar utanför scroll-området
      och inte går att nå (bara mitten syns). Med inline-block + text-align
      center på behållaren: smal karta centreras, bred karta scrollas från
      vänsterkant. */
-  .ascii-map pre{font-family:'Courier New',monospace;font-size:.7rem;line-height:1.35;color:var(--arcane);text-shadow:0 0 6px rgba(139,95,212,.3);white-space:pre;display:inline-block;margin:0;text-align:left}
+  .ascii-map pre{font-family:'Courier New',monospace;font-size:.7rem;line-height:1.35;color:var(--arcane);text-shadow:0 0 6px color-mix(in srgb, var(--arcane) 30%, transparent);white-space:pre;display:inline-block;margin:0;text-align:left}
   .ascii-map .map-label{font-family:'Silkscreen',monospace;font-size:.55rem;letter-spacing:.2em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.5rem}
 
   /* ── Kartans teckenförklaring (legend) ── */
@@ -61,7 +61,7 @@
 
   /* ── Platskort ── */
   .places-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem;max-width:1000px;margin:0 auto}
-  .place-card{position:relative;background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,#120c1c);border:2px solid var(--edge);padding:1.1rem 1.2rem;box-shadow:5px 5px 0 rgba(0,0,0,.7);transition:transform .2s,border-color .2s,box-shadow .2s}
+  .place-card{position:relative;background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,var(--ink));border:2px solid var(--edge);padding:1.1rem 1.2rem;box-shadow:5px 5px 0 rgba(0,0,0,.7);transition:transform .2s,border-color .2s,box-shadow .2s}
   .place-card:hover{transform:translate(-2px,-2px);border-color:var(--gold);box-shadow:7px 7px 0 rgba(0,0,0,.8)}
   .place-card.current{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),5px 5px 0 rgba(0,0,0,.7)}
   .place-card.visited{opacity:1}
@@ -87,7 +87,7 @@
   .pc-status.current{color:var(--gold-bright)}
   .pc-status.unknown{color:var(--bone-dim)}
 
-  .pc-landmarks{margin-top:.6rem;padding-top:.5rem;border-top:1px solid rgba(61,47,82,.4)}
+  .pc-landmarks{margin-top:.6rem;padding-top:.5rem;border-top:1px solid color-mix(in srgb, var(--edge) 40%, transparent)}
   .pc-landmarks .lm-label{font-family:'Silkscreen',monospace;font-size:.52rem;letter-spacing:.15em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.3rem}
   .pc-landmarks ul{list-style:none;padding:0}
   .pc-landmarks li{font-size:.91rem;color:var(--bone);padding:.15rem 0 .15rem 1rem;position:relative}
@@ -131,14 +131,20 @@
 
   /* ── ASCII-karta: individuella celler ── */
   .ascii-map pre .mc{transition:color .2s,text-shadow .2s}
-  .ascii-map pre .mc.bg{color:rgba(139,95,212,.18);text-shadow:none}
+  .ascii-map pre .mc.bg{color:color-mix(in srgb, var(--arcane) 18%, transparent);text-shadow:none}
   .ascii-map pre .mc.visited{color:var(--teal);text-shadow:0 0 4px rgba(94,154,163,.4)}
   .ascii-map pre .mc.unvisited{color:rgba(138,122,94,.3);text-shadow:none}
   .ascii-map pre .mc.current{color:var(--gold-bright);text-shadow:0 0 8px rgba(232,198,90,.8),0 0 20px rgba(232,198,90,.4);animation:map-glow 2s ease-in-out infinite}
   .ascii-map pre .mc.quest{color:var(--ember)}
   .ascii-map pre .mc.quest.current{color:var(--gold-bright)}
-  .ascii-map pre .mc[data-loc]{cursor:pointer}
+  /* ── Kartnålar: stora träffytor (500%+ större än glyfen) ──
+     Glyfen behåller sin plats i ASCII-gridden (transform påverkar ej layout),
+     men en osynlig ::after-zon fångar klick/taps långt utanför tecknet.
+     Zonens storlek är em-baserad så den skalar med fitMapToWidth. */
+  .ascii-map pre .mc[data-loc]{position:relative;display:inline-block;cursor:pointer;z-index:2;transform:scale(1.8)}
+  .ascii-map pre .mc[data-loc]::after{content:'';position:absolute;inset:-1em -1.2em;z-index:3}
   .ascii-map pre .mc[data-loc]:hover{filter:brightness(1.6)}
+  .ascii-map pre .mc[data-loc]:hover::after{background:color-mix(in srgb, var(--arcane) 7%, transparent);border-radius:3px}
   @keyframes map-glow{0%,100%{text-shadow:0 0 8px rgba(232,198,90,.8),0 0 20px rgba(232,198,90,.4)}50%{text-shadow:0 0 14px rgba(232,198,90,1),0 0 30px rgba(232,198,90,.6)}}
   .ascii-map pre .mc.route{color:var(--teal);opacity:.5;text-shadow:none}
 
@@ -222,7 +228,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="sfx.js?v=20260802a"></script>
-<script src="api.js?v=20260802c"></script>
+<script src="api.js?v=20260804c"></script>
 <script src="i18n.js?v=20260802b"></script>
 <script>
 // Auth-guard

@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<script src="themes.js?v=20260804a"></script>
 <style>
   /* ═══════════════ tokens ═══════════════ */
   :root{
@@ -28,16 +29,32 @@
   body{font-family:var(--font-body);color:var(--bone);background:var(--ink);
     overflow-x:hidden;-webkit-tap-highlight-color:transparent}
 
-  /* ═══════════════ 3D canvas + overlays ═══════════════ */
-  #scene{position:fixed;inset:0;z-index:0;display:block;width:100%;height:100%}
+  /* ═══════════════ hero-scene: painted cauldron + fx overlay ═══════════════ */
+  .hero-scene{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1}
+  .hero-art-wrap{position:absolute;right:0;bottom:0;width:clamp(430px,56vw,920px);
+    animation:art-breathe 9s ease-in-out infinite;will-change:transform}
+  #hero-art{display:block;width:100%;mix-blend-mode:screen;
+    filter:drop-shadow(0 0 70px rgba(90,220,110,.16)) drop-shadow(0 0 24px rgba(140,90,220,.10));
+    -webkit-mask-image:radial-gradient(ellipse 118% 106% at 68% 46%, #000 52%, transparent 90%),
+                       linear-gradient(to bottom, transparent 0%, #000 7%, #000 94%, transparent 100%);
+            mask-image:radial-gradient(ellipse 118% 106% at 68% 46%, #000 52%, transparent 90%),
+                       linear-gradient(to bottom, transparent 0%, #000 7%, #000 94%, transparent 100%);
+    -webkit-mask-composite:intersect; mask-composite:intersect;
+    user-select:none;-webkit-user-drag:none}
+  #fx{position:absolute;inset:0;width:100%;height:100%}
+  @keyframes art-breathe{
+    0%,100%{transform:translateY(0) rotate(-.35deg) scale(1)}
+    50%{transform:translateY(-12px) rotate(.35deg) scale(1.018)}}
   .grain{position:fixed;inset:0;z-index:3;pointer-events:none;opacity:.05;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
   .vignette{position:fixed;inset:0;z-index:3;pointer-events:none;
     box-shadow:inset 0 0 190px 60px rgba(3,2,7,.85)}
-  body.no-webgl #scene{display:none}
-  body.no-webgl::before{content:'';position:fixed;inset:0;z-index:0;
-    background:radial-gradient(ellipse 60% 45% at 68% 42%,rgba(80,200,90,.14),transparent 70%),
-               radial-gradient(ellipse 40% 30% at 70% 50%,rgba(140,90,220,.10),transparent 70%)}
+  @media(max-width:900px){
+    .hero-art-wrap{width:min(135vw,640px);right:-16%;bottom:1%;opacity:.92}
+  }
+  @media(prefers-reduced-motion:reduce){
+    .hero-art-wrap{animation:none}
+  }
 
   /* ═══════════════ nav ═══════════════ */
   .nav{position:fixed;top:0;left:0;right:0;z-index:50;height:var(--nav-h);
@@ -56,9 +73,18 @@
   .nav-links a:hover{color:var(--gold-bright)}
   .nav-cta{font-family:var(--font-display);font-size:.66rem;font-weight:700;letter-spacing:.22em;
     text-transform:uppercase;color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));
-    border:none;padding:.65em 1.5em;cursor:pointer;text-decoration:none;
-    box-shadow:0 4px 22px rgba(201,162,39,.28);transition:transform .2s,box-shadow .2s}
-  .nav-cta:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(201,162,39,.42)}
+    border:1px solid rgba(232,198,90,.45);padding:.55em 1.35em;cursor:pointer;text-decoration:none;
+    text-shadow:0 0 10px rgba(232,198,90,.30);
+    box-shadow:0 0 14px rgba(201,162,39,.20),0 4px 22px rgba(201,162,39,.26),inset 0 1px 0 rgba(255,255,255,.16);
+    transition:transform .2s,box-shadow .2s}
+  .nav-cta:hover{transform:translateY(-2px);
+    box-shadow:0 0 22px rgba(232,198,90,.34),0 8px 30px rgba(201,162,39,.42),inset 0 1px 0 rgba(255,255,255,.20)}
+  .nav-theme-btn{font-family:var(--font-display);font-size:.62rem;font-weight:700;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--bone);
+    background:transparent;border:1px solid var(--edge);padding:.55em .9em;cursor:pointer;
+    transition:color .25s,border-color .25s,box-shadow .25s}
+  .nav-theme-btn:hover{color:var(--gold-bright);border-color:var(--gold);
+    box-shadow:0 0 14px -4px rgba(201,162,39,.5)}
 
   /* ═══════════════ content wrapper ═══════════════ */
   .content{position:relative;z-index:5}
@@ -83,19 +109,23 @@
   .hero a,.hero button{pointer-events:auto}
   .hero-copy{max-width:480px;padding-top:var(--nav-h)}
   .hero h1{font-size:clamp(2.4rem,5.4vw,4.3rem);font-weight:900;line-height:1.04;
-    text-shadow:0 0 22px rgba(232,198,90,.28),0 0 60px rgba(212,105,30,.14);
+    text-shadow:0 0 24px rgba(232,198,90,.32),0 0 70px rgba(201,162,39,.16);
     animation:candle 5.5s 1.4s infinite}
   .hero h1 .of{display:block;font-weight:400;font-size:.40em;letter-spacing:.34em;
-    text-transform:uppercase;color:var(--gold);margin-top:.6em}
+    text-transform:uppercase;color:var(--gold);margin-top:.6em;
+    text-shadow:0 0 16px rgba(201,162,39,.42)}
   .hero .tagline{font-style:italic;font-weight:300;font-size:clamp(1.05rem,1.9vw,1.3rem);
     color:var(--bone);margin-top:1.5rem;line-height:1.65;letter-spacing:.02em}
   .hero-actions{display:flex;align-items:center;gap:1.4rem;margin-top:2.3rem;flex-wrap:wrap}
   .btn-gold{font-family:var(--font-display);font-weight:700;font-size:.82rem;letter-spacing:.2em;
     text-transform:uppercase;color:var(--ink);
     background:linear-gradient(160deg,var(--gold-bright),var(--gold));
-    border:none;padding:1em 2.2em;cursor:pointer;text-decoration:none;display:inline-block;
-    box-shadow:0 6px 30px rgba(201,162,39,.32);transition:transform .2s,box-shadow .2s}
-  .btn-gold:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(201,162,39,.5)}
+    border:1px solid rgba(232,198,90,.45);padding:.95em 2.1em;cursor:pointer;text-decoration:none;display:inline-block;
+    text-shadow:0 0 12px rgba(232,198,90,.35);
+    box-shadow:0 0 18px rgba(201,162,39,.22),0 6px 30px rgba(201,162,39,.30),inset 0 1px 0 rgba(255,255,255,.16);
+    transition:transform .2s,box-shadow .2s}
+  .btn-gold:hover{transform:translateY(-2px);
+    box-shadow:0 0 28px rgba(232,198,90,.38),0 12px 40px rgba(201,162,39,.5),inset 0 1px 0 rgba(255,255,255,.22)}
   .btn-gold:active{transform:translateY(1px)}
   .btn-ghost{font-family:var(--font-display);font-weight:700;font-size:.78rem;letter-spacing:.2em;
     text-transform:uppercase;color:var(--bone-dim);text-decoration:none;
@@ -107,10 +137,10 @@
     color:var(--bone-dim);font-size:1.1rem;animation:cue-bob 2.4s ease-in-out infinite;pointer-events:none}
   @keyframes cue-bob{0%,100%{transform:translate(-50%,0);opacity:.5}50%{transform:translate(-50%,8px);opacity:1}}
   @keyframes candle{
-    0%,100%{text-shadow:0 0 18px rgba(232,198,90,.30),0 0 48px rgba(212,105,30,.15)}
-    42%{text-shadow:0 0 26px rgba(232,198,90,.48),0 0 64px rgba(212,105,30,.26)}
-    47%{text-shadow:0 0 13px rgba(232,198,90,.24),0 0 36px rgba(212,105,30,.11)}
-    76%{text-shadow:0 0 22px rgba(232,198,90,.40),0 0 56px rgba(212,105,30,.20)}}
+    0%,100%{text-shadow:0 0 16px rgba(232,198,90,.30),0 0 44px rgba(201,162,39,.14)}
+    42%{text-shadow:0 0 24px rgba(232,198,90,.50),0 0 60px rgba(201,162,39,.26)}
+    47%{text-shadow:0 0 12px rgba(232,198,90,.24),0 0 32px rgba(201,162,39,.10)}
+    76%{text-shadow:0 0 20px rgba(232,198,90,.40),0 0 52px rgba(201,162,39,.18)}}
 
   /* ═══════════════ solid sections ═══════════════ */
   .solid{background:var(--ink)}
@@ -136,8 +166,8 @@
   .tablet.wide h3{margin-bottom:.6rem}
 
   /* ═══════════════ the gate (login) ═══════════════ */
-  .gate-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(2rem,5vw,4.5rem);
-    align-items:center;margin-top:.5rem}
+  .gate-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(1.6rem,4vw,3.5rem);
+    align-items:center;margin-top:.25rem}
   .pitch-list{list-style:none;margin-top:2rem}
   .pitch-list li{position:relative;padding:0 0 1.35rem 2rem;font-weight:300;
     font-size:1.02rem;line-height:1.65;color:var(--bone)}
@@ -151,45 +181,48 @@
   .pitch-note{font-style:italic;font-size:.86rem;color:var(--bone-dim);margin-top:.4rem}
 
   .gate-card{position:relative;background:rgba(10,10,16,.82);backdrop-filter:blur(9px);
-    border:1px solid var(--edge);padding:clamp(1.8rem,3.5vw,2.6rem)}
-  .gate-card .corner{position:absolute;width:22px;height:22px;opacity:.8;pointer-events:none}
-  .gate-card .corner.tl{top:8px;left:8px;border-top:2px solid var(--gold);border-left:2px solid var(--gold)}
-  .gate-card .corner.tr{top:8px;right:8px;border-top:2px solid var(--gold);border-right:2px solid var(--gold)}
-  .gate-card .corner.bl{bottom:8px;left:8px;border-bottom:2px solid var(--gold);border-left:2px solid var(--gold)}
-  .gate-card .corner.br{bottom:8px;right:8px;border-bottom:2px solid var(--gold);border-right:2px solid var(--gold)}
-  .gate-head{text-align:center;margin-bottom:1.8rem}
-  .gate-head h3{font-size:1.25rem;font-weight:900;letter-spacing:.05em}
-  .gate-head p{font-style:italic;font-size:.9rem;color:var(--bone-dim);margin-top:.45rem}
+    border:1px solid var(--edge);padding:clamp(1.1rem,2.2vw,1.55rem)}
+  .gate-card .corner{position:absolute;width:15px;height:15px;opacity:.8;pointer-events:none}
+  .gate-card .corner.tl{top:6px;left:6px;border-top:2px solid var(--gold);border-left:2px solid var(--gold)}
+  .gate-card .corner.tr{top:6px;right:6px;border-top:2px solid var(--gold);border-right:2px solid var(--gold)}
+  .gate-card .corner.bl{bottom:6px;left:6px;border-bottom:2px solid var(--gold);border-left:2px solid var(--gold)}
+  .gate-card .corner.br{bottom:6px;right:6px;border-bottom:2px solid var(--gold);border-right:2px solid var(--gold)}
+  .gate-head{text-align:center;margin-bottom:.95rem}
+  .gate-head h3{font-size:1.05rem;font-weight:900;letter-spacing:.05em}
+  .gate-head p{font-style:italic;font-size:.8rem;color:var(--bone-dim);margin-top:.3rem}
 
-  .field{margin-bottom:1.15rem;position:relative}
+  .field{margin-bottom:.8rem;position:relative}
   .field label{display:block;font-family:var(--font-display);font-size:.62rem;font-weight:700;
-    letter-spacing:.28em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.45rem}
+    letter-spacing:.28em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.28rem}
   .field input{width:100%;font-family:var(--font-body);font-size:16px;color:var(--bone-bright);
-    background:#0c0b12;border:1px solid var(--edge);padding:.85rem 1rem .85rem 2.5rem;
+    background:var(--stone);border:1px solid var(--edge);padding:.6rem .8rem .6rem 2.15rem;
     outline:none;transition:border-color .25s,box-shadow .25s;border-radius:2px}
   .field input::placeholder{color:rgba(119,119,140,.55);font-style:italic}
   .field input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,162,39,.14)}
-  .field .icon{position:absolute;left:.9rem;bottom:.85rem;color:var(--gold);
+  .field .icon{position:absolute;left:.72rem;bottom:.6rem;color:var(--gold);
     font-family:var(--font-display);font-weight:700;opacity:.45;transition:opacity .25s}
   .field input:focus ~ .icon{opacity:1}
   .field label .opt{font-family:var(--font-body);font-style:italic;font-weight:300;
     letter-spacing:.02em;text-transform:none;color:var(--bone-dim);font-size:.95em}
-  .gate-btn{width:100%;font-family:var(--font-display);font-weight:700;font-size:.86rem;
+  .gate-btn{width:100%;font-family:var(--font-display);font-weight:700;font-size:.76rem;
     letter-spacing:.16em;text-transform:uppercase;color:var(--ink);cursor:pointer;
     background:linear-gradient(160deg,var(--gold-bright),var(--gold));
-    border:none;padding:1em;margin-top:.4rem;border-radius:2px;
-    box-shadow:0 6px 26px rgba(201,162,39,.30);transition:transform .2s,box-shadow .2s,opacity .2s}
-  .gate-btn:hover{transform:translateY(-2px);box-shadow:0 10px 34px rgba(201,162,39,.46)}
+    border:none;padding:.8em;margin-top:.3rem;border-radius:2px;
+    text-shadow:0 0 10px rgba(232,198,90,.30);
+    box-shadow:0 0 16px rgba(201,162,39,.20),0 6px 26px rgba(201,162,39,.30);
+    transition:transform .2s,box-shadow .2s,opacity .2s}
+  .gate-btn:hover{transform:translateY(-2px);
+    box-shadow:0 0 22px rgba(232,198,90,.34),0 10px 34px rgba(201,162,39,.46)}
   .gate-btn:active{transform:translateY(1px)}
   .gate-btn:disabled{opacity:.6;cursor:wait;transform:none}
-  .gate-toggle{text-align:center;margin-top:1.1rem;font-size:.9rem;color:var(--bone-dim);
+  .gate-toggle{text-align:center;margin-top:.75rem;font-size:.82rem;color:var(--bone-dim);
     font-style:italic;cursor:pointer}
   .gate-toggle b{color:var(--gold-bright);font-style:normal;font-weight:600}
   .gate-toggle:hover b{text-shadow:0 0 10px rgba(232,198,90,.55)}
-  .gate-error{text-align:center;font-size:.9rem;color:var(--blood-bright);
-    margin-top:.9rem;min-height:1.3em;font-style:italic}
-  .gate-foot{text-align:center;margin-top:1.5rem;padding-top:1.1rem;
-    border-top:1px solid rgba(42,42,58,.5);font-size:.8rem;color:var(--bone-dim);font-style:italic}
+  .gate-error{text-align:center;font-size:.84rem;color:var(--blood-bright);
+    margin-top:.6rem;min-height:1.3em;font-style:italic}
+  .gate-foot{text-align:center;margin-top:1rem;padding-top:.75rem;
+    border-top:1px solid rgba(42,42,58,.5);font-size:.76rem;color:var(--bone-dim);font-style:italic}
   @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}
     40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
   .gate-card.shake{animation:shake .4s ease}
@@ -208,6 +241,14 @@
     position:relative;font-weight:300;font-size:1rem;line-height:1.6}
   .ledger-list li::before{content:'▸';position:absolute;left:.1rem;color:var(--gold)}
   .ledger-list li b{color:var(--gold-bright);font-weight:600}
+  .ledger-list li.hot{background:linear-gradient(105deg,rgba(212,169,44,.10),rgba(212,169,44,.03) 70%,transparent);
+    border:1px solid rgba(201,162,39,.35);border-left:3px solid var(--gold);
+    padding:1.05rem 1rem 1.05rem 1.6rem;margin-bottom:1rem;box-shadow:0 6px 24px -10px rgba(212,169,44,.35)}
+  .ledger-list li.hot::before{content:'🔥';left:.55rem;top:1.15rem}
+  .ledger-list li.hot .tag{display:inline-block;font-family:var(--font-display);font-size:.56rem;font-weight:700;
+    letter-spacing:.18em;text-transform:uppercase;color:var(--ink);background:var(--gold);
+    padding:.25em .7em;margin-left:.6em;vertical-align:middle;animation:hot-pulse 2.4s ease-in-out infinite}
+  @keyframes hot-pulse{0%,100%{box-shadow:0 0 0 0 rgba(212,169,44,.45)}50%{box-shadow:0 0 14px 2px rgba(212,169,44,.55)}}
   .ledger-more{margin-top:2rem}
   .ledger-more a{color:var(--bone-dim);font-family:var(--font-display);font-size:.7rem;
     font-weight:700;letter-spacing:.22em;text-transform:uppercase;text-decoration:none;
@@ -235,8 +276,8 @@
     .hero h1{font-size:clamp(2rem,9vw,2.7rem)}
     .scroll-cue{display:none}
     .myst-quote{margin-top:1.8rem}
-    .field input{min-height:50px}
-    .gate-btn{min-height:52px}
+    .field input{min-height:46px}
+    .gate-btn{min-height:46px}
     .nav-brand span{font-size:.7rem;letter-spacing:.16em}
   }
   @media (prefers-reduced-motion:reduce){
@@ -249,7 +290,12 @@
 </head>
 <body>
 
-<canvas id="scene"></canvas>
+<div class="hero-scene" id="hero-scene">
+  <div class="hero-art-wrap">
+    <img id="hero-art" src="assets/cauldron-hero.png" alt="A cauldron of boiling slime, stirred by a pale hand" fetchpriority="high">
+    <canvas id="fx"></canvas>
+  </div>
+</div>
 <div class="grain"></div>
 <div class="vignette"></div>
 
@@ -412,20 +458,16 @@
     <div class="wrap">
       <p class="eyebrow rv">From the Ledger</p>
       <h2 class="rv">What&rsquo;s new in the realm</h2>
-      <span class="ver-chip rv d1">v0.6.0 &mdash; The Production Readiness Update</span>
+      <span class="ver-chip rv d1">v0.6.3 &mdash; The Forge Release</span>
       <ul class="ledger-list">
-        <li class="rv d1"><b>The D20 ceremony</b> &mdash; an inline dice ritual: three seconds
-          of flicker and glitter, then the verdict. Nat 20 in gold, nat 1 in blood.</li>
-        <li class="rv d1"><b>The Codex</b> &mdash; character, NPCs, map, journal and facts
-          in one tabbed view. No more page-hopping mid-encounter.</li>
-        <li class="rv d2"><b>Combat v26, chat-first</b> &mdash; the DM narrates everything;
-          the Lorekeeper extracts the mechanics. Initiative and turn order kept honest.</li>
-        <li class="rv d2"><b>Theme switcher</b> &mdash; five dark-fantasy palettes, one click
-          away in the top bar. Your choice is remembered.</li>
-        <li class="rv d3"><b>Model transparency</b> &mdash; what your DM model is, why
-          &ldquo;high reasoning&rdquo; takes a little longer, and where every token went.</li>
-        <li class="rv d3"><b>Voice of the DM</b> &mdash; play buttons on narration,
-          male and female storyteller voices, mood music that follows the scene.</li>
+        <li class="hot rv d1"><b>Qwen 3.8 Max &mdash; the full release<span class="tag">New</span></b>
+          &mdash; Alibaba&rsquo;s 2.4-trillion-parameter flagship (95B active per request) as your Dungeon Master:
+          1M context, deep reasoning that always thinks. Pick it at the model gate when you start your adventure.</li>
+        <li class="rv d1"><b>Export your hero to The Forge</b> &mdash; from the Codex character sheet,
+          save the adventurer you&rsquo;ve lived to the Vault: level, gear, story and all.
+          Then start a brand-new campaign with the same hero.</li>
+        <li class="rv d2"><b>No more hero-twins</b> &mdash; exporting a hero whose name already rests in
+          your Vault asks first: overwrite the old copy, or keep both.</li>
       </ul>
       <p class="ledger-more rv d3"><a href="releases.html">Read the full ledger &#8594;</a></p>
     </div>
@@ -446,7 +488,7 @@
 <noscript><style>.rv{opacity:1;transform:none}</style></noscript>
 
 <script src="sfx.js?v=20260802a"></script>
-<script src="api.js?v=20260802c"></script>
+<script src="api.js?v=20260804c"></script>
 
 <script>
 /* ═══════════════ nav + scroll reveal ═══════════════ */
@@ -565,585 +607,200 @@ if (sessionStorage.getItem('dnd_user')) {
 }
 </script>
 
-<script type="importmap">
-{ "imports": { "three": "./vendor/three.module.min.js" } }
-</script>
-
-<script type="module">
-import * as THREE from 'three';
-
+<script>
 /* ============================================================
-   THE LORE WEAVER'S CAULDRON — three.js hero scene
-   Palette matched to the pixel-art logo: dark iron pot, cream
-   rolled rim, molten-gold brew, amber glow, cool blue rim light,
-   twin bubbles + star twinkles.
+   CAULDRON FX — 2D overlay over the painted cauldron:
+   boiling bubbles rising + popping, steam curling up,
+   slime drips from the rim. Pointer motion churns the brew,
+   clicks make it spit.
    ============================================================ */
+(function () {
+  const art  = document.getElementById('hero-art');
+  const fx   = document.getElementById('fx');
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!art || !fx || reduced || !fx.getContext) return;
+  const ctx = fx.getContext('2d');
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
 
-const canvas = document.getElementById('scene');
-const reduced  = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const isMobile = () => innerWidth < 720;
+  let W = 0, H = 0;                       /* css px of the art box */
+  function size() {
+    const r = fx.getBoundingClientRect();
+    W = Math.max(1, r.width); H = Math.max(1, r.height);
+    fx.width  = Math.round(W * DPR);
+    fx.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  size();
+  addEventListener('resize', size);
 
-let renderer;
-try {
-  renderer = new THREE.WebGLRenderer({ canvas, antialias:true, powerPreference:'high-performance' });
-} catch (e) {
-  document.body.classList.add('no-webgl');
-  throw e;
-}
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
-renderer.setSize(innerWidth, innerHeight);
-renderer.setClearColor(0x07070c, 1);
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.12;
+  /* normalized pot zone inside the art (0..1 of the art box):
+     brew surface ~ y .52, pot spans x .38..97, steam starts ~ .30 */
+  const P = { sx: 0.38, ex: 0.97, surf: 0.52, top: 0.30 };
+  const rand = (a, b) => a + Math.random() * (b - a);
 
-const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x07070c, 0.095);
+  /* soft sprite for steam */
+  const spr = document.createElement('canvas'); spr.width = spr.height = 96;
+  const s2 = spr.getContext('2d');
+  const grd = s2.createRadialGradient(48, 48, 0, 48, 48, 48);
+  grd.addColorStop(0, 'rgba(160,255,175,.55)');
+  grd.addColorStop(0.55, 'rgba(120,220,140,.18)');
+  grd.addColorStop(1, 'rgba(120,220,140,0)');
+  s2.fillStyle = grd; s2.fillRect(0, 0, 96, 96);
 
-const camera = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 0.1, 40);
-camera.position.set(0, 2.18, 3.85);
+  /* boiling bubbles */
+  const bubbles = [];
+  const NB = 26;
+  function makeBubble(init) {
+    return {
+      x: rand(P.sx, P.ex),
+      y: P.surf + rand(0.02, 0.10),
+      r: rand(0.9, 2.4),
+      grow: rand(0.5, 1.1),
+      vx: rand(-0.14, 0.14),
+      vy: rand(-0.42, -0.2),
+      life: init ? Math.random() * 2 : 0,
+      max: rand(1.4, 2.6),
+    };
+  }
+  for (let i = 0; i < NB; i++) bubbles.push(makeBubble(true));
 
-/* ---------------- lights ---------------- */
-scene.add(new THREE.HemisphereLight(0x1c1626, 0x0c0a12, 0.55));
+  /* pooled pop droplets */
+  const drops = [];
+  const ND = 40;
+  for (let i = 0; i < ND; i++) drops.push({ x: 0, y: 0, vx: 0, vy: 0, life: 1, max: 1, active: false, r: rand(0.8, 1.6) });
+  function splash(x, y, n, power) {
+    for (let k = 0; k < n; k++) {
+      const d = drops.find(p => !p.active) || drops[(Math.random() * ND) | 0];
+      const a = Math.random() * Math.PI * 2;
+      const sp = rand(0.5, 1.5) * power;
+      d.active = true; d.x = x; d.y = y;
+      d.vx = Math.cos(a) * sp; d.vy = Math.sin(a) * sp - 0.4;
+      d.life = 0; d.max = rand(0.4, 0.8);
+    }
+  }
 
-const brewLight = new THREE.PointLight(0x7dff8a, 15, 9, 2);
-brewLight.position.set(0, 1.55, 0);
-scene.add(brewLight);
-
-const warmFill = new THREE.PointLight(0x3fcc66, 4, 7, 2);
-warmFill.position.set(0.6, 0.5, 1.8);
-scene.add(warmFill);
-
-const frontFill = new THREE.PointLight(0x8a5fe0, 4.5, 8, 2);
-frontFill.position.set(-1.6, 1.2, 2.2);
-scene.add(frontFill);
-
-const rimLight = new THREE.PointLight(0x6a4a9a, 9, 11, 2);
-rimLight.position.set(-0.4, 1.5, -2.7);
-scene.add(rimLight);
-
-/* ---------------- cauldron group ---------------- */
-const pot = new THREE.Group();
-scene.add(pot);
-
-const ironMat = new THREE.MeshStandardMaterial({
-  color:0x302a38, roughness:0.52, metalness:0.78, side:THREE.DoubleSide });
-const rimMat  = new THREE.MeshStandardMaterial({ color:0xc9b896, roughness:0.45, metalness:0.55 });
-const legMat  = new THREE.MeshStandardMaterial({ color:0x262028, roughness:0.6,  metalness:0.7 });
-
-const profile = [
-  [0.02,0.00],[0.30,0.02],[0.44,0.08],[0.58,0.22],[0.68,0.42],
-  [0.71,0.60],[0.68,0.78],[0.60,0.90],[0.55,0.97],[0.56,1.02],
-  [0.64,1.05],[0.70,1.10],[0.68,1.16],[0.58,1.19],[0.50,1.16],
-  [0.465,1.08],[0.46,1.00],
-].map(p => new THREE.Vector2(p[0], p[1]));
-const body = new THREE.Mesh(new THREE.LatheGeometry(profile, 56), ironMat);
-body.position.y = 0.10;
-pot.add(body);
-
-const lip = new THREE.Mesh(new THREE.TorusGeometry(0.615, 0.056, 14, 56), rimMat);
-lip.rotation.x = Math.PI/2;
-lip.position.y = 1.235;
-pot.add(lip);
-
-for (const s of [-1, 1]) {
-  const h = new THREE.Mesh(new THREE.TorusGeometry(0.10, 0.03, 10, 22), ironMat);
-  h.rotation.y = Math.PI/2;
-  h.position.set(s * 0.73, 0.82, 0);
-  pot.add(h);
-}
-
-for (let i = 0; i < 3; i++) {
-  const a = (i / 3) * Math.PI * 2 + Math.PI / 6;
-  const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.072, 0.17, 10), legMat);
-  leg.position.set(Math.cos(a) * 0.30, 0.085, Math.sin(a) * 0.30);
-  leg.rotation.z = -Math.cos(a) * 0.22;
-  leg.rotation.x =  Math.sin(a) * 0.22;
-  pot.add(leg);
-}
-
-const ground = new THREE.Mesh(
-  new THREE.CircleGeometry(2.4, 48),
-  new THREE.MeshStandardMaterial({ color:0x1a1622, roughness:0.95, metalness:0 })
-);
-ground.rotation.x = -Math.PI/2;
-scene.add(ground);
-
-/* ---------------- the brew — toxic slime shader ---------------- */
-const brewUniforms = { uTime:{value:0}, uAgitation:{value:0} };
-const brew = new THREE.Mesh(
-  new THREE.CircleGeometry(0.455, 48),
-  new THREE.ShaderMaterial({
-    uniforms: brewUniforms,
-    vertexShader: /* glsl */`
-      varying vec2 vUv;
-      void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
-    fragmentShader: /* glsl */`
-      uniform float uTime; uniform float uAgitation;
-      varying vec2 vUv;
-      float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453123); }
-      float noise(vec2 p){
-        vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
-        return mix(mix(hash(i), hash(i+vec2(1.,0.)), f.x),
-                   mix(hash(i+vec2(0.,1.)), hash(i+vec2(1.,1.)), f.x), f.y);
-      }
-      float fbm(vec2 p){
-        float v = 0.0, a = 0.5;
-        for(int i=0;i<4;i++){ v += a*noise(p); p *= 2.1; a *= 0.5; }
-        return v;
-      }
-      void main(){
-        vec2 c = vUv - 0.5;
-        float d = length(c) * 2.0;
-        float ang = atan(c.y, c.x);
-        float speed = 0.20 + uAgitation * 0.40;
-
-        /* slow viscous rotation — the poison barely stirs */
-        float rot = uTime * 0.30 * (0.6 + uAgitation * 0.8);
-        vec2 rc = vec2(c.x * cos(rot * 0.3) - c.y * sin(rot * 0.3),
-                       c.x * sin(rot * 0.3) + c.y * cos(rot * 0.3));
-
-        /* fat, slow noise lobes — slime, not water */
-        float warp = fbm(rc * 2.2 + uTime * 0.08);
-        float fil  = fbm(rc * 3.8 + vec2(warp * 1.4) + vec2(uTime * speed * 0.5, -uTime * speed * 0.35));
-        float vein = fbm(rc * 6.0 - vec2(warp * 0.9) - vec2(uTime * speed * 0.8, uTime * speed * 0.4));
-        float boil = fil * 0.62 + vein * 0.38;
-
-        vec2 hotC = vec2(sin(uTime * 0.3) * 0.13, cos(uTime * 0.23) * 0.13);
-        float hotD = length(c - hotC) * 2.0;
-        float hotSpot = smoothstep(0.85, 0.1, hotD);
-
-        vec3 white  = vec3(0.85, 1.00, 0.72);   /* pale phosphorescent core */
-        vec3 toxin  = vec3(0.32, 0.90, 0.34);   /* toxic green */
-        vec3 violet = vec3(0.44, 0.26, 0.66);   /* bruise purple */
-        vec3 deep   = vec3(0.13, 0.07, 0.22);   /* abyss */
-
-        float dd = clamp(d + boil * 0.30 - 0.16, 0.0, 1.0);
-        vec3 col = mix(white,  toxin,  smoothstep(0.00, 0.34, dd));
-        col      = mix(col,    violet, smoothstep(0.34, 0.70, dd));
-        col      = mix(col,    deep,   smoothstep(0.70, 1.00, dd));
-
-        float filGlow = smoothstep(0.52, 0.76, fil);
-        col += vec3(0.20, 0.55, 0.18) * filGlow * (1.0 - d * 0.45) * (1.0 + uAgitation * 0.5);
-
-        float veinDark = smoothstep(0.52, 0.78, vein);
-        col *= 1.0 - veinDark * 0.55 * (0.4 + 0.6 * d);
-
-        col += vec3(0.30, 0.50, 0.22) * hotSpot * (0.7 + 0.3 * sin(uTime * 2.1));
-
-        /* fat slime bubbles swelling and popping */
-        float bub = 0.0;
-        for (int i = 0; i < 4; i++) {
-          float fi = float(i);
-          vec2 bc = vec2(sin(uTime * 0.16 + fi * 2.3), cos(uTime * 0.12 + fi * 1.9)) * 0.24;
-          float phase = fract(uTime * 0.10 + fi * 0.29);
-          float size = 0.045 + phase * 0.10;
-          float bd = length(c - bc);
-          bub += smoothstep(size, size * 0.35, bd) * (1.0 - smoothstep(0.65, 1.0, phase));
-        }
-        col += vec3(0.32, 0.60, 0.25) * bub * 0.85;
-        col += vec3(0.30, 0.16, 0.45) * bub * smoothstep(0.5, 1.0, d) * 0.6;
-
-        float sheen = fbm(c * 3.0 - vec2(uTime * 0.14, uTime * 0.09));
-        col += vec3(0.10, 0.22, 0.12) * smoothstep(0.62, 0.85, sheen) * (1.0 - d);
-
-        /* toxic meniscus where the slime kisses the iron */
-        float meniscus = smoothstep(0.68, 0.86, d) * (1.0 - smoothstep(0.94, 1.0, d));
-        col += vec3(0.55, 1.00, 0.40) * meniscus * (0.9 + 0.3 * sin(ang * 6.0 + uTime * 1.1));
-
-        col *= 1.0 - smoothstep(0.92, 1.0, d) * 0.35;
-        col *= 1.15 + 0.10 * sin(uTime * 1.8) * (1.0 - d * 0.5);
-
-        gl_FragColor = vec4(col, 1.0);
-      }`,
-  })
-);
-brew.rotation.x = -Math.PI/2;
-brew.position.y = 1.175;
-pot.add(brew);
-
-/* ---------------- the ladle — stirs when you stir ---------------- */
-const woodMat  = new THREE.MeshStandardMaterial({ color:0x8a6a45, roughness:0.72, metalness:0.05, emissive:0x2a1c0e });
-const woodDark = new THREE.MeshStandardMaterial({ color:0x5a4028, roughness:0.85, metalness:0.05, emissive:0x1a1008 });
-
-const ladlePivot = new THREE.Group();
-ladlePivot.position.set(0, 1.95, 0);          /* hand hovering just above the rim */
-pot.add(ladlePivot);
-
-const ladle = new THREE.Group();
-const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.046, 0.84, 10), woodMat);
-handle.position.y = -0.42;
-ladle.add(handle);
-const knob = new THREE.Mesh(new THREE.SphereGeometry(0.064, 12, 12), woodDark);
-knob.position.y = 0.02;
-ladle.add(knob);
-/* cup — wide lathe bowl at the end of the handle */
-const cupProfile = [
-  [0.016,0.00],[0.085,0.02],[0.135,0.07],[0.15,0.14],[0.132,0.185],[0.10,0.19],
-].map(p => new THREE.Vector2(p[0], p[1]));
-const cup = new THREE.Mesh(new THREE.LatheGeometry(cupProfile, 26), woodMat);
-cup.position.y = -0.88;
-ladle.add(cup);
-/* slime pooled inside the cup — it glows with the brew */
-const cupInner = new THREE.Mesh(new THREE.CircleGeometry(0.118, 22),
-  new THREE.MeshBasicMaterial({ color:0x6fe86f }));
-cupInner.rotation.x = -Math.PI/2;
-cupInner.position.y = -0.74;
-ladle.add(cupInner);
-
-ladle.rotation.z = 0.45;                       /* lean, so the cup sweeps through the brew */
-ladlePivot.add(ladle);
-
-/* ---------------- canvas-generated textures ---------------- */
-function radialTex(stops, size = 128) {
-  const c = document.createElement('canvas'); c.width = c.height = size;
-  const x = c.getContext('2d');
-  const g = x.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
-  for (const [o, col] of stops) g.addColorStop(o, col);
-  x.fillStyle = g; x.fillRect(0, 0, size, size);
-  return new THREE.CanvasTexture(c);
-}
-const flameTex = radialTex([[0,'rgba(255,255,255,1)'],[0.35,'rgba(255,255,255,.6)'],[1,'rgba(255,255,255,0)']]);
-const sparkTex = (() => {
-  const c = document.createElement('canvas'); c.width = c.height = 16;
-  const x = c.getContext('2d');
-  x.fillStyle = '#fff'; x.fillRect(5, 5, 6, 6);
-  return new THREE.CanvasTexture(c);
-})();
-const starTex = (() => {
-  const c = document.createElement('canvas'); c.width = c.height = 128;
-  const x = c.getContext('2d');
-  x.shadowColor = 'rgba(255,240,200,.9)'; x.shadowBlur = 14;
-  x.fillStyle = '#fff';
-  x.beginPath();
-  x.moveTo(64,6); x.lineTo(75,53); x.lineTo(122,64); x.lineTo(75,75);
-  x.lineTo(64,122); x.lineTo(53,75); x.lineTo(6,64); x.lineTo(53,53);
-  x.closePath(); x.fill();
-  return new THREE.CanvasTexture(c);
-})();
-
-/* ---------------- particle engine ---------------- */
-function makePoints(count, tex) {
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count*3), 3).setUsage(THREE.DynamicDrawUsage));
-  geo.setAttribute('aColor',   new THREE.BufferAttribute(new Float32Array(count*3), 3).setUsage(THREE.DynamicDrawUsage));
-  geo.setAttribute('aSize',    new THREE.BufferAttribute(new Float32Array(count),   1).setUsage(THREE.DynamicDrawUsage));
-  const mat = new THREE.ShaderMaterial({
-    uniforms: { uTex:{value:tex}, uScale:{value:130 * renderer.getPixelRatio()} },
-    vertexShader: /* glsl */`
-      attribute float aSize; attribute vec3 aColor;
-      varying vec3 vColor;
-      uniform float uScale;
-      void main(){
-        vColor = aColor;
-        vec4 mv = modelViewMatrix * vec4(position, 1.0);
-        gl_PointSize = min(aSize * uScale / -mv.z, 110.0);
-        gl_Position = projectionMatrix * mv;
-      }`,
-    fragmentShader: /* glsl */`
-      uniform sampler2D uTex; varying vec3 vColor;
-      void main(){ gl_FragColor = texture2D(uTex, gl_PointCoord) * vec4(vColor, 1.0); }`,
-    transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+  /* steam puffs */
+  const steam = [];
+  const NS = 18;
+  for (let i = 0; i < NS; i++) steam.push({
+    x: rand(P.sx, P.ex), y: P.top - rand(0, 0.2),
+    r: rand(16, 38), grow: rand(0.6, 1.4),
+    vx: rand(-0.1, 0.1), vy: rand(-0.42, -0.18),
+    life: Math.random() * 5, max: rand(4, 7),
   });
-  const pts = new THREE.Points(geo, mat);
-  pts.frustumCulled = false;
-  pot.add(pts);
-  return { pts, geo, mat, count,
-    pos: geo.attributes.position.array,
-    col: geo.attributes.aColor.array,
-    siz: geo.attributes.aSize.array };
-}
 
-const BREW_Y = 1.18;
-
-const FC = (reduced || isMobile()) ? 90 : 170;
-const flame = makePoints(FC, flameTex);
-const fLife = new Float32Array(FC), fMax = new Float32Array(FC),
-      fVel  = new Float32Array(FC), fSeed = new Float32Array(FC), fBase = new Float32Array(FC);
-function respawnFlame(i) {
-  const a = Math.random() * Math.PI * 2;
-  const r = Math.pow(Math.random(), 0.6) * 0.30;
-  flame.pos[i*3]   = Math.cos(a) * r;
-  flame.pos[i*3+1] = BREW_Y + Math.random() * 0.06;
-  flame.pos[i*3+2] = Math.sin(a) * r;
-  fLife[i] = 0; fMax[i] = 0.7 + Math.random() * 0.8;
-  fVel[i]  = 0.55 + Math.random() * 0.8;
-  fSeed[i] = Math.random() * 100;
-  fBase[i] = 0.16 + Math.random() * 0.20;
-}
-for (let i = 0; i < FC; i++) { respawnFlame(i); fLife[i] = Math.random() * fMax[i]; }
-
-const SC = isMobile() ? 20 : 36;
-const sparks = makePoints(SC, sparkTex);
-const sLife = new Float32Array(SC), sMax = new Float32Array(SC),
-      sVel  = new Float32Array(SC), sSeed = new Float32Array(SC);
-function respawnSpark(i) {
-  const a = Math.random() * Math.PI * 2;
-  const r = 0.25 + Math.random() * 0.35;
-  sparks.pos[i*3]   = Math.cos(a) * r;
-  sparks.pos[i*3+1] = BREW_Y + 0.1 + Math.random() * 0.5;
-  sparks.pos[i*3+2] = Math.sin(a) * r;
-  sLife[i] = 0; sMax[i] = 1.6 + Math.random() * 1.8;
-  sVel[i]  = 0.18 + Math.random() * 0.3;
-  sSeed[i] = Math.random() * 100;
-}
-for (let i = 0; i < SC; i++) { respawnSpark(i); sLife[i] = Math.random() * sMax[i]; }
-/* -- poison mist (large dim smoky puffs) -- */
-const MC = isMobile() ? 18 : 38;
-const mist = makePoints(MC, flameTex);
-const mLife = new Float32Array(MC), mMax = new Float32Array(MC),
-      mVel  = new Float32Array(MC), mSeed = new Float32Array(MC), mSize = new Float32Array(MC);
-function respawnMist(i) {
-  const a = Math.random() * Math.PI * 2;
-  const r = Math.pow(Math.random(), 0.7) * 0.4;
-  mist.pos[i*3]   = Math.cos(a) * r;
-  mist.pos[i*3+1] = BREW_Y + 0.05 + Math.random() * 0.3;
-  mist.pos[i*3+2] = Math.sin(a) * r;
-  mLife[i] = 0; mMax[i] = 3 + Math.random() * 3.5;
-  mVel[i]  = 0.10 + Math.random() * 0.16;
-  mSeed[i] = Math.random() * 100;
-  mSize[i] = 0.55 + Math.random() * 0.5;
-}
-for (let i = 0; i < MC; i++) { respawnMist(i); mLife[i] = Math.random() * mMax[i]; }
-
-/* -- click burst -- */
-const BC = 70;
-const burst = makePoints(BC, sparkTex);
-const bLife = new Float32Array(BC).fill(1), bMax = new Float32Array(BC).fill(1),
-      bVel  = new Float32Array(BC*3);
-let burstGlow = 0;
-function fireBurst() {
-  burstGlow = 1;
-  for (let i = 0; i < BC; i++) {
-    burst.pos[i*3]   = (Math.random() - 0.5) * 0.3;
-    burst.pos[i*3+1] = BREW_Y + 0.05;
-    burst.pos[i*3+2] = (Math.random() - 0.5) * 0.3;
-    const a = Math.random() * Math.PI * 2;
-    bVel[i*3]   = Math.cos(a) * (0.3 + Math.random() * 0.9);
-    bVel[i*3+1] = 0.9 + Math.random() * 1.6;
-    bVel[i*3+2] = Math.sin(a) * (0.3 + Math.random() * 0.9);
-    bLife[i] = 0; bMax[i] = 0.6 + Math.random() * 0.7;
-  }
-}
-
-/* ---------------- halo + twinkles + bubbles ---------------- */
-const haloMat = new THREE.SpriteMaterial({
-  map: radialTex([[0,'rgba(120,255,130,.5)'],[0.42,'rgba(90,210,90,.15)'],[1,'rgba(130,80,220,0)']]),
-  blending: THREE.AdditiveBlending, depthWrite:false, transparent:true, opacity:0.5,
-});
-const halo = new THREE.Sprite(haloMat);
-halo.position.set(0, 1.62, 0);
-halo.scale.setScalar(3.1);
-pot.add(halo);
-
-const twinkles = [];
-for (const [x, y, z, s] of [[-0.52, 2.15, 0.25, 0.30], [0.58, 2.30, 0.10, 0.22]]) {
-  const m = new THREE.SpriteMaterial({
-    map: starTex, blending:THREE.AdditiveBlending, depthWrite:false,
-    transparent:true, opacity:0.95, color:0xb8ffb0 });
-  const sp = new THREE.Sprite(m);
-  sp.position.set(x, y, z);
-  sp.scale.setScalar(s);
-  sp.userData = { base:s, phase: Math.random() * 6 };
-  pot.add(sp);
-  twinkles.push(sp);
-}
-
-const bubbles = [];
-for (const sx of [-1, 1]) {
-  const g = new THREE.Group();
-  const toxic = sx < 0;                                   /* left bubble green, right bubble purple */
-  const heart = new THREE.Mesh(
-    new THREE.SphereGeometry(0.062, 20, 20),
-    new THREE.MeshStandardMaterial({
-      color: toxic ? 0x5fae52 : 0x8a5fb0,
-      emissive: toxic ? 0x2c6a22 : 0x4a2a72,
-      roughness:0.25, metalness:0.1 }));
-  const rim = new THREE.Mesh(
-    new THREE.SphereGeometry(0.076, 20, 20),
-    new THREE.MeshBasicMaterial({ color: toxic ? 0x9dff8a : 0xc89aff, transparent:true, opacity:0.30,
-      blending:THREE.AdditiveBlending, depthWrite:false }));
-  const glint = new THREE.Sprite(new THREE.SpriteMaterial({
-    map: flameTex, color:0xffffff, transparent:true, opacity:0.9, depthWrite:false }));
-  glint.position.set(-0.024, 0.028, 0.05);
-  glint.scale.setScalar(0.045);
-  g.add(heart, rim, glint);
-  g.position.set(sx * 0.66, 1.88, 0.16);
-  g.userData = { phase: sx > 0 ? 0 : Math.PI * 0.7 };
-  pot.add(g);
-  bubbles.push(g);
-}
-
-/* ---------------- interaction ---------------- */
-let mouseNX = 0, mouseNY = 0, agitation = 0, lastPX = null, lastPY = null;
-addEventListener('pointermove', e => {
-  if (lastPX !== null) {
-    const speed = Math.hypot(e.clientX - lastPX, e.clientY - lastPY);
-    agitation = Math.min(1, agitation + speed * 0.0016);
-  }
-  lastPX = e.clientX; lastPY = e.clientY;
-  mouseNX = (e.clientX / innerWidth)  * 2 - 1;
-  mouseNY = (e.clientY / innerHeight) * 2 - 1;
-});
-addEventListener('pointerdown', e => {
-  /* don't spark when typing in the gate form */
-  if (e.target.closest('#gate-card')) return;
-  fireBurst();
-  agitation = Math.min(1, agitation + 0.55);
-});
-
-/* ---------------- layout ---------------- */
-function layout() {
-  const mobile = isMobile();
-  pot.position.x = mobile ? 0 : 1.45;
-  pot.scale.setScalar(mobile ? 0.92 : 1);
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
-  for (const p of [flame, sparks, burst, mist])
-    p.mat.uniforms.uScale.value = 130 * renderer.getPixelRatio();
-}
-addEventListener('resize', layout);
-layout();
-
-/* ---------------- main loop ---------------- */
-const clock = new THREE.Clock();
-const lookTarget = new THREE.Vector3();
-let elapsed = 0, running = true, stirAngle = 0, stirSpeed = 0.4;
-
-document.addEventListener('visibilitychange', () => {
-  running = !document.hidden;
-  if (running) { clock.getDelta(); requestAnimationFrame(tick); }
-});
-
-function tick() {
-  if (!running) return;
-  requestAnimationFrame(tick);
-  const dt = Math.min(clock.getDelta(), 0.05);
-  elapsed += dt;
-  const t = elapsed;
-
-  agitation *= Math.exp(-dt * 1.35);
-  burstGlow *= Math.exp(-dt * 3.2);
-
-  /* the ladle: lazy idle stir, furious when the mouse churns the brew */
-  const targetStir = (reduced ? 0.15 : 0.35) + agitation * 5.0 + burstGlow * 2.5;
-  stirSpeed += (targetStir - stirSpeed) * Math.min(1, dt * 3.5);
-  stirAngle += stirSpeed * dt;
-  ladlePivot.rotation.y = stirAngle;
-  const churn = Math.min(1, stirSpeed * 0.35);
-  ladle.rotation.z = 0.45 + Math.sin(stirAngle * 2.0) * 0.06 * churn;
-  ladlePivot.position.y = 1.95 + Math.sin(stirAngle) * 0.03 * churn;
-
-  /* scroll: the cauldron recedes as you leave the hero */
-  const scrollK = Math.min(1, Math.max(0, scrollY / innerHeight));
-
-  /* camera: slow sway + mouse parallax + scroll pull-back */
-  const swayAmp = reduced ? 0.12 : 0.5;
-  const sway = Math.sin(t * 0.12) * swayAmp;
-  const camX = sway + mouseNX * 0.55;
-  const camY = 2.18 - mouseNY * 0.30 + scrollK * 0.9 + (reduced ? 0 : Math.sin(t * 0.08) * 0.07);
-  const camZ = 3.85 - Math.abs(sway) * 0.12 + scrollK * 1.6;
-  camera.position.x += (camX - camera.position.x) * 0.045;
-  camera.position.y += (camY - camera.position.y) * 0.045;
-  camera.position.z += (camZ - camera.position.z) * 0.045;
-  lookTarget.set(pot.position.x * 0.38, 0.95 + scrollK * 0.35, 0);
-  camera.lookAt(lookTarget);
-
-  brewUniforms.uTime.value = t;
-  brewUniforms.uAgitation.value = agitation;
-  brewLight.intensity = 14 + agitation * 12 + burstGlow * 30;
-  haloMat.opacity = 0.44 + Math.sin(t * 1.7) * 0.07 + agitation * 0.14 + burstGlow * 0.4;
-
-  const fPos = flame.pos, fCol = flame.col, fSiz = flame.siz;
-  for (let i = 0; i < FC; i++) {
-    fLife[i] += dt * (1 + agitation * 0.7);
-    if (fLife[i] >= fMax[i]) respawnFlame(i);
-    const k = fLife[i] / fMax[i];
-    fPos[i*3]   *= (1 - dt * 1.3);
-    fPos[i*3+2] *= (1 - dt * 1.3);
-    fPos[i*3]   += Math.sin(t * 3.2 + fSeed[i]) * 0.0016;
-    fPos[i*3+1] += fVel[i] * dt * (1 + agitation * 0.5);
-    let r, g, b;
-    if (k < 0.2)       { const u = k / 0.2;         r = 0.85;            g = 1.0;             b = 0.75 - u * 0.15; }
-    else if (k < 0.6)  { const u = (k-0.2) / 0.4;   r = 0.85 - u * 0.45; g = 1.0 - u * 0.52;  b = 0.60 - u * 0.05; }
-    else               { const u = (k-0.6) / 0.4;   r = 0.40 - u * 0.38; g = 0.48 - u * 0.45; b = 0.55 - u * 0.50; }
-    fCol[i*3] = r; fCol[i*3+1] = g; fCol[i*3+2] = b;
-    const bell = Math.min(k / 0.15, 1) * (1 - Math.max(0, (k - 0.5) / 0.5));
-    fSiz[i] = fBase[i] * bell * (1 + agitation * 0.35);
-  }
-  flame.geo.attributes.position.needsUpdate = true;
-  flame.geo.attributes.aColor.needsUpdate = true;
-  flame.geo.attributes.aSize.needsUpdate = true;
-
-  const sPos = sparks.pos, sCol = sparks.col, sSiz = sparks.siz;
-  for (let i = 0; i < SC; i++) {
-    sLife[i] += dt;
-    if (sLife[i] >= sMax[i]) respawnSpark(i);
-    const k = sLife[i] / sMax[i];
-    sPos[i*3+1] += sVel[i] * dt;
-    sPos[i*3]   += Math.sin(t * 1.4 + sSeed[i]) * 0.0022;
-    const flick = 0.55 + 0.45 * Math.sin(t * 18 + sSeed[i] * 7);
-    const fade  = Math.min(k / 0.1, 1) * (1 - Math.max(0, (k - 0.6) / 0.4));
-    if (sSeed[i] > 66) { sCol[i*3] = 0.65 * flick * fade; sCol[i*3+1] = 0.40 * flick * fade; sCol[i*3+2] = 1.0 * flick * fade; }
-    else               { sCol[i*3] = 0.45 * flick * fade; sCol[i*3+1] = 1.0 * flick * fade;  sCol[i*3+2] = 0.5 * flick * fade; }
-    sSiz[i] = 0.045;
-  }
-  sparks.geo.attributes.position.needsUpdate = true;
-  sparks.geo.attributes.aColor.needsUpdate = true;
-  sparks.geo.attributes.aSize.needsUpdate = true;
-
-  const bPos = burst.pos, bCol = burst.col, bSiz = burst.siz;
-  for (let i = 0; i < BC; i++) {
-    if (bLife[i] >= bMax[i]) { bCol[i*3] = bCol[i*3+1] = bCol[i*3+2] = 0; bSiz[i] = 0; continue; }
-    bLife[i] += dt;
-    const k = bLife[i] / bMax[i];
-    bVel[i*3+1] -= 2.4 * dt;
-    bPos[i*3]   += bVel[i*3]   * dt;
-    bPos[i*3+1] += bVel[i*3+1] * dt;
-    bPos[i*3+2] += bVel[i*3+2] * dt;
-    const fade = 1 - k;
-    bCol[i*3] = (0.35 + k * 0.25) * fade; bCol[i*3+1] = (1.0 - k * 0.55) * fade; bCol[i*3+2] = (0.45 + k * 0.3) * fade;
-    bSiz[i] = 0.06 * (1 - k * 0.5);
-  }
-  burst.geo.attributes.position.needsUpdate = true;
-  burst.geo.attributes.aColor.needsUpdate = true;
-  burst.geo.attributes.aSize.needsUpdate = true;
-
-  /* mist — slow toxic smoke curling off the brew */
-  const mPos = mist.pos, mCol = mist.col, mSiz = mist.siz;
-  for (let i = 0; i < MC; i++) {
-    mLife[i] += dt;
-    if (mLife[i] >= mMax[i]) respawnMist(i);
-    const k = mLife[i] / mMax[i];
-    mPos[i*3+1] += mVel[i] * dt;
-    mPos[i*3]   += Math.sin(t * 0.5 + mSeed[i]) * 0.0038;
-    mPos[i*3+2] += Math.cos(t * 0.42 + mSeed[i] * 1.3) * 0.003;
-    const fade = Math.min(k / 0.2, 1) * (1 - Math.max(0, (k - 0.55) / 0.45));
-    const glow = fade * (0.55 + agitation * 0.35);
-    if (mSeed[i] > 55) { mCol[i*3] = 0.22 * glow; mCol[i*3+1] = 0.11 * glow; mCol[i*3+2] = 0.34 * glow; }
-    else               { mCol[i*3] = 0.10 * glow; mCol[i*3+1] = 0.30 * glow; mCol[i*3+2] = 0.13 * glow; }
-    mSiz[i] = mSize[i] * (0.7 + k * 1.4);
-  }
-  mist.geo.attributes.position.needsUpdate = true;
-  mist.geo.attributes.aColor.needsUpdate = true;
-  mist.geo.attributes.aSize.needsUpdate = true;
-
-  for (const tw of twinkles) {
-    const p = 0.75 + 0.35 * Math.sin(t * 2.1 + tw.userData.phase);
-    tw.scale.setScalar(tw.userData.base * p);
-    tw.material.opacity = 0.5 + 0.45 * p;
-    tw.material.rotation += dt * 0.25;
-  }
-  for (const bb of bubbles) {
-    bb.position.y = 1.88 + Math.sin(t * 1.3 + bb.userData.phase) * 0.09;
-    bb.position.x = (bb.userData.phase > 1 ? 0.66 : -0.66) + Math.sin(t * 0.7 + bb.userData.phase) * 0.05;
+  /* slime drips from the rim */
+  const drips = [];
+  function spawnDrip() {
+    drips.push({ x: rand(0.52, 0.95), y: 0.28, v: rand(0.9, 1.5), len: rand(8, 16), life: 0, max: 1.2 });
   }
 
-  /* only render while the canvas can actually be seen */
-  if (scrollY < innerHeight * 1.6) renderer.render(scene, camera);
-}
-tick();
+  /* interaction */
+  let agitation = 0, lastX = null, lastY = null;
+  addEventListener('pointermove', e => {
+    if (lastX !== null) {
+      const sp = Math.hypot(e.clientX - lastX, e.clientY - lastY);
+      agitation = Math.min(1, agitation + sp * 0.0012);
+    }
+    lastX = e.clientX; lastY = e.clientY;
+  });
+  addEventListener('pointerdown', e => {
+    if (e.target.closest('#gate-card')) return;
+    agitation = Math.min(1, agitation + 0.6);
+    splash(rand(P.sx, P.ex) * W, P.surf * H, 14, 1.6);
+  });
+
+  /* main loop */
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min((now - last) / 1000, 0.05);
+    last = now;
+    agitation *= Math.exp(-dt * 1.3);
+    ctx.clearRect(0, 0, W, H);
+    const boost = 1 + agitation * 1.6;
+
+    /* steam */
+    for (const s of steam) {
+      s.life += dt * boost * 0.8;
+      if (s.life >= s.max) {
+        s.life = 0; s.max = rand(4, 7);
+        s.x = rand(P.sx, P.ex); s.y = P.top - rand(0, 0.1);
+        s.r = rand(16, 36);
+      }
+      const k = s.life / s.max;
+      s.x += s.vx * dt + Math.sin(now * 0.0008 + s.life * 1.7) * 0.05;
+      s.y += s.vy * dt * boost;
+      const fade = Math.min(k / 0.15, 1) * (1 - Math.max(0, (k - 0.6) / 0.4));
+      if (fade > 0.01) {
+        const r = s.r * (0.7 + k * 1.5);
+        ctx.globalAlpha = fade * 0.45;
+        ctx.drawImage(spr, s.x * W - r, s.y * H - r, r * 2, r * 2);
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    /* bubbles */
+    for (const b of bubbles) {
+      b.life += dt * boost;
+      if (b.life >= b.max) {
+        splash(b.x * W, (b.y) * H, 3, 1.1);
+        Object.assign(b, makeBubble(false));
+        continue;
+      }
+      b.x += b.vx * dt;
+      b.y += b.vy * dt * boost;
+      if (b.y <= P.surf - 0.015) {
+        splash(b.x * W, P.surf * H, 3, 1.1);
+        Object.assign(b, makeBubble(false));
+        continue;
+      }
+      const k = b.life / b.max;
+      const r = b.r * (1 + k * 3.0);
+      const a = Math.min(1, (1 - k) * 2.0);
+      const bx = b.x * W, by = b.y * H;
+      ctx.beginPath(); ctx.arc(bx, by, r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(160,255,170,' + (a * 0.6) + ')';
+      ctx.fill();
+      ctx.beginPath(); ctx.arc(bx, by, r * 0.55, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(120,255,140,' + (a * 0.9) + ')';
+      ctx.fill();
+    }
+
+    /* drips */
+    if (Math.random() < 0.02 * boost) spawnDrip();
+    for (let i = drips.length - 1; i >= 0; i--) {
+      const d = drips[i];
+      d.life += dt * 3;
+      d.y += d.v * dt * 0.28;
+      const dx = d.x * W, dy = d.y * H;
+      const grad = ctx.createLinearGradient(dx, dy, dx, dy + d.len);
+      grad.addColorStop(0, 'rgba(140,255,150,.9)');
+      grad.addColorStop(1, 'rgba(90,220,110,0)');
+      ctx.strokeStyle = grad; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(dx, dy); ctx.lineTo(dx, dy + d.len); ctx.stroke();
+      if (d.y > 0.50 || d.life >= d.max) {
+        splash(dx, 0.50 * H, 2, 0.8);
+        drips.splice(i, 1);
+      }
+    }
+
+    /* pop droplets */
+    for (const d of drops) {
+      if (!d.active) continue;
+      d.life += dt;
+      if (d.life >= d.max) { d.active = false; continue; }
+      d.vy += 1.2 * dt;
+      d.x += d.vx * dt; d.y += d.vy * dt;
+      const a = 1 - d.life / d.max;
+      ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(150,255,160,' + (a * 0.9) + ')';
+      ctx.fill();
+    }
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
 </script>
 </body>
 </html>

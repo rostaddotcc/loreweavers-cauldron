@@ -8,6 +8,15 @@
  * Semantic accent mapping is preserved in EVERY theme:
  *   gold = sacred/UI · blood = HP/danger · arcane = magic/player
  *   ember = warmth/quests · poison = success/equipped
+ *
+ * v30: Server-persistence — theme (+ font) is also stored on the user
+ * account (PUT /api/me/appearance) so it survives across devices and
+ * origins (LAN IP vs dnd.rostad.cc vs mobile). On load, if localStorage
+ * has no saved choice, the server value hydrates it.
+ *
+ * v31: Swatch popover — the theme button now opens a small palette menu
+ * (5 swatches) instead of cycling on every click. Empty-button click
+ * still cycles (accessibility). The injection logic (.theme-btn) stays.
  */
 const THEMES = (() => {
   // id, name (shown on the button), palette (CSS variables)
@@ -20,7 +29,8 @@ const THEMES = (() => {
         '--bone': '#d9c9a6', '--bone-bright': '#f2e6c8', '--bone-dim': '#9d8a6a',
         '--gold': '#d4a92c', '--gold-bright': '#f0d675',
         '--blood': '#a32433', '--blood-bright': '#e0485a',
-        '--ember': '#d4691e', '--arcane': '#9a6fe0', '--poison': '#7aa35e', '--teal': '#5e9aa3',
+        '--ember': '#d4691e', '--arcane': '#9a6fe0', '--arcane-bright': '#c9a6ff', '--arcane-deep': '#3a1f66',
+        '--poison': '#7aa35e', '--teal': '#5e9aa3',
         '--term-green': '#33cc33', '--term-amber': '#ccaa33',
       },
     },
@@ -32,7 +42,8 @@ const THEMES = (() => {
         '--bone': '#e0c0a8', '--bone-bright': '#f8e0cc', '--bone-dim': '#a07860',
         '--gold': '#d4552f', '--gold-bright': '#f0875a',
         '--blood': '#8f1426', '--blood-bright': '#e0455e',
-        '--ember': '#e06a1e', '--arcane': '#c05aa0', '--poison': '#7aa35e', '--teal': '#5e9aa3',
+        '--ember': '#e06a1e', '--arcane': '#c05aa0', '--arcane-bright': '#e8a6d0', '--arcane-deep': '#4a1f40',
+        '--poison': '#7aa35e', '--teal': '#5e9aa3',
         '--term-green': '#3fbf4f', '--term-amber': '#dda33a',
       },
     },
@@ -44,7 +55,8 @@ const THEMES = (() => {
         '--bone': '#c8c8e8', '--bone-bright': '#e8e6ff', '--bone-dim': '#8a86b8',
         '--gold': '#c9a227', '--gold-bright': '#e8c65a',
         '--blood': '#a32433', '--blood-bright': '#e0485a',
-        '--ember': '#d4691e', '--arcane': '#b07df5', '--poison': '#7aa35e', '--teal': '#5ec8d4',
+        '--ember': '#d4691e', '--arcane': '#b07df5', '--arcane-bright': '#d4b8ff', '--arcane-deep': '#3a1f66',
+        '--poison': '#7aa35e', '--teal': '#5ec8d4',
         '--term-green': '#33cc33', '--term-amber': '#ccaa33',
       },
     },
@@ -56,7 +68,8 @@ const THEMES = (() => {
         '--bone': '#d9c9a6', '--bone-bright': '#f2e6c8', '--bone-dim': '#9d8a6a',
         '--gold': '#d4a92c', '--gold-bright': '#f0d675',
         '--blood': '#a32433', '--blood-bright': '#e0485a',
-        '--ember': '#e07a2a', '--arcane': '#9a6fe0', '--poison': '#7aa35e', '--teal': '#5e9aa3',
+        '--ember': '#e07a2a', '--arcane': '#9a6fe0', '--arcane-bright': '#c9a6ff', '--arcane-deep': '#3a1f66',
+        '--poison': '#7aa35e', '--teal': '#5e9aa3',
         '--term-green': '#33cc33', '--term-amber': '#ccaa33',
       },
     },
@@ -68,7 +81,8 @@ const THEMES = (() => {
         '--bone': '#b8c8d8', '--bone-bright': '#dce8f4', '--bone-dim': '#6f8098',
         '--gold': '#c9a227', '--gold-bright': '#e8c65a',
         '--blood': '#a32433', '--blood-bright': '#e0485a',
-        '--ember': '#d4691e', '--arcane': '#7ea8f0', '--poison': '#7aa35e', '--teal': '#5ec8d4',
+        '--ember': '#d4691e', '--arcane': '#7ea8f0', '--arcane-bright': '#b8d4ff', '--arcane-deep': '#1f3a66',
+        '--poison': '#7aa35e', '--teal': '#5ec8d4',
         '--term-green': '#33cc33', '--term-amber': '#ccaa33',
       },
     },
@@ -102,17 +116,124 @@ const THEMES = (() => {
     const next = PALETTES[(idx + 1) % PALETTES.length];
     localStorage.setItem(KEY, next.id);
     apply(next);
+    syncToServer();
     return next;
+  }
+
+  // ── Server-persistens (v30) ──
+  // Spara tema + typsnitt på kontot så valet följer med mellan enheter/origins.
+  function syncToServer() {
+    try {
+      const body = { theme: current().id };
+      if (typeof FONTS !== 'undefined') body.font = FONTS.current().id;
+      fetch('/api/me/appearance', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).catch(() => {});
+    } catch (_) { /* inte inloggad / offline — localStorage gäller */ }
+  }
+
+  // Hydrata: om localStorage saknar tema (ny enhet/webbläsare) — hämta kontots
+  // sparade tema + typsnitt från servern och applicera. Körs async i init.
+  async function hydrateFromServer() {
+    const hadLocalTheme = !!localStorage.getItem(KEY);
+    const hadLocalFont = !!localStorage.getItem('dnd_font');
+    if (hadLocalTheme && hadLocalFont) return; // lokalt val vinner
+    try {
+      const res = await fetch('/api/me');
+      if (!res.ok) return;
+      const me = await res.json();
+      if (!hadLocalTheme && me.theme) {
+        const p = PALETTES.find(x => x.id === me.theme);
+        if (p) { localStorage.setItem(KEY, p.id); apply(p); }
+      }
+      if (!hadLocalFont && me.font && typeof FONTS !== 'undefined') {
+        const f = FONTS.THEMES.find(x => x.id === me.font);
+        if (f) { localStorage.setItem('dnd_font', f.id); FONTS.apply(f); }
+      }
+    } catch (_) { /* ej inloggad — hoppa över */ }
+  }
+
+  // ── v31: Swatch popover ──
+  // Build & show a small palette menu anchored to the clicked button.
+  let _pop = null;
+  function _swatchVars(p) {
+    return [p.colors['--gold'], p.colors['--arcane'], p.colors['--blood'], p.colors['--teal']];
+  }
+  function _closePop() {
+    if (_pop) { _pop.remove(); _pop = null; }
+    document.removeEventListener('click', _outside);
+  }
+  function _outside(e) {
+    if (_pop && !_pop.contains(e.target) && !(e.target.closest && e.target.closest('.theme-btn'))) _closePop();
+  }
+  function openPopover(anchor) {
+    _closePop();
+    const pop = document.createElement('div');
+    pop.className = 'theme-pop';
+    const frag = document.createElement('div');
+    PALETTES.forEach(p => {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'theme-row' + (p.id === current().id ? ' active' : '');
+      row.setAttribute('data-id', p.id);
+      const sw = document.createElement('span');
+      sw.className = 'theme-swatches';
+      _swatchVars(p).forEach(c => {
+        const d = document.createElement('i');
+        d.style.background = c;
+        sw.appendChild(d);
+      });
+      const nm = document.createElement('span');
+      nm.className = 'theme-name';
+      nm.textContent = p.name;
+      row.appendChild(sw);
+      row.appendChild(nm);
+      row.onclick = (e) => {
+        e.stopPropagation();
+        localStorage.setItem(KEY, p.id);
+        apply(p);
+        syncToServer();
+        _closePop();
+        if (typeof SFX !== 'undefined') SFX.click();
+      };
+      frag.appendChild(row);
+    });
+    pop.appendChild(frag);
+    document.body.appendChild(pop);
+    // Positiona precis under/över knappen
+    const r = anchor.getBoundingClientRect();
+    const pRect = pop.offsetHeight;
+    let top = r.bottom + 8;
+    if (top + pRect > window.innerHeight - 8) top = r.top - pRect - 8;
+    pop.style.top = Math.max(8, top) + 'px';
+    pop.style.left = Math.min(r.left, window.innerWidth - pop.offsetWidth - 8) + 'px';
+    _pop = pop;
+    setTimeout(() => document.addEventListener('click', _outside), 0);
   }
 
   // Init — applicera direkt så tema sitter vid första paint
   apply(current());
 
-  return { PALETTES, current, cycle, apply };
+  return { PALETTES, current, cycle, apply, hydrateFromServer, syncToServer, openPopover };
 })();
 
 // ── Global theme button (topbar, bredvid font-knappen) ──
 function themeToggleBtn() {
+  const btn = document.querySelector('.theme-btn');
+  if (btn) {
+    THEMES.openPopover(btn);
+    return;
+  }
+  // Fallback (ingen knapp i DOM): cykla
+  const next = THEMES.cycle();
+  if (typeof toast === 'function') toast('🎨 Theme: ' + next.name);
+  if (typeof SFX !== 'undefined') SFX.click();
+}
+
+// Rapid cycle (used by compact mobile menu items — no popover, just switch).
+function themeCycle() {
   const next = THEMES.cycle();
   if (typeof toast === 'function') toast('🎨 Theme: ' + next.name);
   if (typeof SFX !== 'undefined') SFX.click();
@@ -128,29 +249,40 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Injicera en theme-knapp i topbaren om ingen finns
-  const bar = document.querySelector('.topbar') || document.querySelector('.forge-head');
+  const bar = document.querySelector('.topbar') || document.querySelector('.forge-head') || document.querySelector('nav.nav');
   if (bar && !bar.querySelector('.theme-btn')) {
     const btn = document.createElement('button');
-    btn.className = 'top-btn theme-btn';
+    btn.className = bar.classList.contains('nav') ? 'theme-btn nav-theme-btn' : 'top-btn theme-btn';
     btn.textContent = '🎨 ' + cur.name;
     btn.title = 'Theme: ' + cur.name + ' (click to switch)';
-    btn.onclick = themeToggleBtn;
-    // Före font-knappen (och settings-gearet) så ordningen blir: [font] [theme] ⚙️
-    const fontBtn = bar.querySelector('.font-btn');
-    if (fontBtn) {
-      bar.insertBefore(btn, fontBtn);
+    btn.onclick = (e) => { e.stopPropagation(); THEMES.openPopover(btn); };
+
+    // Login-sidans .nav — lägg knappen i nav-links före Enter-CTA:n
+    const navLinks = bar.querySelector('.nav-links');
+    if (navLinks) {
+      const cta = navLinks.querySelector('.nav-cta');
+      if (cta) navLinks.insertBefore(btn, cta); else navLinks.appendChild(btn);
     } else {
-      const gear = Array.from(bar.querySelectorAll('.icon-btn')).find(b => b.onclick && /toggleSettingsMenu/.test(String(b.onclick)));
-      if (gear) {
-        bar.insertBefore(btn, gear.parentElement || gear);
+      // Före font-knappen (och settings-gearet) så ordningen blir: [font] [theme] ⚙️
+      const fontBtn = bar.querySelector('.font-btn');
+      if (fontBtn) {
+        bar.insertBefore(btn, fontBtn);
       } else {
-        const last = bar.lastElementChild;
-        if (last && (last.classList.contains('danger') || /lämna|leave|exit/i.test(last.textContent))) {
-          bar.insertBefore(btn, last);
+        const gear = Array.from(bar.querySelectorAll('.icon-btn')).find(b => b.onclick && /toggleSettingsMenu/.test(String(b.onclick)));
+        if (gear) {
+          bar.insertBefore(btn, gear.parentElement || gear);
         } else {
-          bar.appendChild(btn);
+          const last = bar.lastElementChild;
+          if (last && (last.classList.contains('danger') || /lämna|leave|exit/i.test(last.textContent))) {
+            bar.insertBefore(btn, last);
+          } else {
+            bar.appendChild(btn);
+          }
         }
       }
     }
   }
+
+  // Hämta kontots sparade tema om localStorage är tomt (ny enhet)
+  THEMES.hydrateFromServer();
 });

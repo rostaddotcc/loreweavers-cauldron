@@ -22,7 +22,7 @@
     --blood: #a32433;
     --blood-bright: #d43a4d;
     --ember: #d4691e;
-    --arcane: #8b5fd4;
+    --arcane: #8b5fd4; --arcane-bright: #c9a6ff; --arcane-deep: #3a1f66;
     --poison: #7aa35e;
     --hp-glow: rgba(212, 58, 77, 0.55);
   }*{ margin: 0; padding: 0; box-sizing: border-box; }html{ scroll-behavior: smooth; }body{
@@ -31,7 +31,7 @@
     min-height: 100vh;
     background:
       radial-gradient(1100px 520px at 50% 112%, rgba(212,105,30,0.13), transparent 62%),
-      radial-gradient(820px 460px at 12% -8%, rgba(139,95,212,0.10), transparent 58%),
+      radial-gradient(820px 460px at 12% -8%, color-mix(in srgb, var(--arcane) 10%, transparent), transparent 58%),
       radial-gradient(640px 380px at 88% -4%, rgba(163,36,51,0.09), transparent 56%),
       var(--ink);
     background-attachment: fixed;
@@ -44,7 +44,7 @@
     filter: blur(90px); opacity: 0.5;
   }.fog::before{
     left: -10%; top: 20%;
-    background: radial-gradient(circle, rgba(139,95,212,0.07), transparent 65%);
+    background: radial-gradient(circle, color-mix(in srgb, var(--arcane) 7%, transparent), transparent 65%);
     animation: drift-a 70s ease-in-out infinite alternate;
   }.fog::after{
     right: -15%; bottom: 5%;
@@ -89,7 +89,7 @@
     text-shadow: 0 0 10px rgba(232,198,90,0.5);
   }/* ═══════════ Paneler — stenplattor med hörnornament ═══════════ */.panel{
     display: none; position: relative;
-    background: linear-gradient(165deg, var(--stone-2) 0%, var(--stone) 55%, #120c1c 100%);
+    background: linear-gradient(165deg, var(--stone-2) 0%, var(--stone) 55%, var(--ink) 100%);
     border: 1px solid var(--edge);
     box-shadow: 0 24px 60px -24px rgba(0,0,0,0.9), inset 0 1px 0 rgba(239,226,192,0.05);
     padding: 2rem 1.75rem;
@@ -126,12 +126,19 @@
   }.char-class{
     font-family: 'Spectral', serif; font-style: italic; font-weight: 400;
     color: var(--arcane); font-size: 1.13rem; margin: 0.3rem 0 0.7rem;
-    text-shadow: 0 0 12px rgba(139,95,212,0.4);
-  }.char-meta{ display: flex; gap: 0.5rem 1.1rem; flex-wrap: wrap; font-size: 0.95rem; color: var(--bone-dim); }.char-meta b{ color: var(--bone-bright); font-weight: 600; }.char-meta .stat{ display: flex; gap: 0.35rem; align-items: baseline; }.char-meta .stat i{ font-style: normal; color: var(--gold); font-size: 0.85rem; letter-spacing: 0.08em; }/* ═══════════ Mätare ═══════════ */.vitals{ display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem 1.5rem; }.vital{ grid-column: span 1; }.vital.wide{ grid-column: 1 / -1; }.vital-head{
+    text-shadow: 0 0 12px color-mix(in srgb, var(--arcane) 40%, transparent);
+  }.char-meta{ display: flex; gap: 0.5rem 1.1rem; flex-wrap: wrap; font-size: 0.95rem; color: var(--bone-dim); }.char-meta b{ color: var(--bone-bright); font-weight: 600; }.char-meta .stat{ display: flex; gap: 0.35rem; align-items: baseline; }.char-meta .stat i{ font-style: normal; color: var(--gold); font-size: 0.85rem; letter-spacing: 0.08em; }/* ═══════════ Export till The Forge ═══════════ */.forge-row{ display: flex; justify-content: flex-end; margin: 0.2rem 0 0.9rem; }.forge-export-btn{
+    font-family: 'Cinzel', serif; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
+    background: linear-gradient(180deg, var(--stone-3), var(--stone));
+    border: 1px solid var(--gold); color: var(--gold-bright);
+    padding: 0.6rem 1.2rem; cursor: pointer; border-radius: 2px; transition: all 0.2s;
+    display: inline-flex; align-items: center; gap: 0.45rem; min-height: 42px;
+  }.forge-export-btn:hover{ filter: brightness(1.15); box-shadow: 0 0 14px -4px rgba(232,198,90,0.5); }
+  .forge-export-btn:disabled{ opacity: 0.5; cursor: default; box-shadow: none; }/* ═══════════ Mätare ═══════════ */.vitals{ display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem 1.5rem; }.vital{ grid-column: span 1; }.vital.wide{ grid-column: 1 / -1; }.vital-head{
     display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.4rem;
     font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.22em; text-transform: uppercase;
   }.vital-head .label{ color: var(--bone-dim); }.vital-head .nums{ font-family: 'Spectral', serif; font-size: 1.08rem; letter-spacing: 0; color: var(--bone-bright); font-weight: 600; }.vital-head .nums small{ color: var(--bone-dim); font-weight: 400; }.trough{
-    position: relative; height: 16px; background: #0a0612;
+    position: relative; height: 16px; background: var(--ink);
     border: 1px solid var(--edge); box-shadow: inset 0 3px 8px rgba(0,0,0,0.8);
     overflow: hidden;
   }.fill{ position: absolute; inset: 0 auto 0 0; transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }.fill::after{
@@ -155,10 +162,10 @@
     background: var(--stone); color: var(--bone); border-radius: 2px;
     transition: all 0.2s; cursor: default;
   }.trait:hover{ transform: translateY(-2px); border-color: var(--bone-dim); }.trait.magic{
-    border-color: rgba(139,95,212,0.55); color: #cbb3f2;
-    background: linear-gradient(180deg, rgba(139,95,212,0.14), rgba(139,95,212,0.04));
-    box-shadow: 0 0 10px -3px rgba(139,95,212,0.5);
-  }.trait.magic:hover{ border-color: var(--arcane); box-shadow: 0 0 16px -3px rgba(139,95,212,0.8); }.trait.prof{ border-color: rgba(201,162,39,0.45); color: var(--gold-bright); }/* ═══════════ Utrustning — kortlayout ═══════════ */.inv-grid{
+    border-color: color-mix(in srgb, var(--arcane) 55%, transparent); color: var(--arcane-bright);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--arcane) 14%, transparent), color-mix(in srgb, var(--arcane) 4%, transparent));
+    box-shadow: 0 0 10px -3px color-mix(in srgb, var(--arcane) 50%, transparent);
+  }.trait.magic:hover{ border-color: var(--arcane); box-shadow: 0 0 16px -3px color-mix(in srgb, var(--arcane) 80%, transparent); }.trait.prof{ border-color: rgba(201,162,39,0.45); color: var(--gold-bright); }/* ═══════════ Utrustning — kortlayout ═══════════ */.inv-grid{
     display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 0.7rem; padding: 0.2rem 0;
   }.inv-card{
@@ -171,7 +178,7 @@
   }.inv-card.equipped{ border-color: rgba(122,163,94,0.5); }.inv-card.equipped::before{
     content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
     background: linear-gradient(90deg, transparent, var(--poison), transparent);
-  }/* Rarity: magic */.inv-card.r-magic{ border-color: rgba(139,95,212,0.45); }.inv-card.r-magic:hover{ box-shadow: 0 8px 24px -8px rgba(139,95,212,0.4); }/* Rarity: rare */.inv-card.r-rare{ border-color: rgba(232,198,90,0.45); }.inv-card.r-rare:hover{ box-shadow: 0 8px 24px -8px rgba(232,198,90,0.4); }/* Rarity: legendary */.inv-card.r-legendary{
+  }/* Rarity: magic */.inv-card.r-magic{ border-color: color-mix(in srgb, var(--arcane) 45%, transparent); }.inv-card.r-magic:hover{ box-shadow: 0 8px 24px -8px color-mix(in srgb, var(--arcane) 40%, transparent); }/* Rarity: rare */.inv-card.r-rare{ border-color: rgba(232,198,90,0.45); }.inv-card.r-rare:hover{ box-shadow: 0 8px 24px -8px rgba(232,198,90,0.4); }/* Rarity: legendary */.inv-card.r-legendary{
     border-color: rgba(232,198,90,0.7);
     background: linear-gradient(180deg, rgba(232,198,90,0.08), var(--stone-3) 40%, var(--stone));
   }.inv-card.r-legendary:hover{ box-shadow: 0 8px 28px -8px rgba(232,198,90,0.6); }.inv-card.r-legendary .inv-card-name{ animation: candle 4s ease-in-out infinite; }.inv-card-row{ display: flex; align-items: flex-start; gap: 0.6rem; }.inv-card-icon{
@@ -181,7 +188,7 @@
     font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.82rem;
     color: var(--bone-bright); line-height: 1.25;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }.inv-card-name.r-magic{ color: #cbb3f2; text-shadow: 0 0 8px rgba(139,95,212,0.45); }.inv-card-name.r-rare{ color: var(--gold-bright); text-shadow: 0 0 8px rgba(232,198,90,0.35); }.inv-card-name.r-legendary{ color: var(--gold-bright); text-shadow: 0 0 12px rgba(232,198,90,0.6); }.inv-card-type{
+  }.inv-card-name.r-magic{ color: var(--arcane-bright); text-shadow: 0 0 8px color-mix(in srgb, var(--arcane) 45%, transparent); }.inv-card-name.r-rare{ color: var(--gold-bright); text-shadow: 0 0 8px rgba(232,198,90,0.35); }.inv-card-name.r-legendary{ color: var(--gold-bright); text-shadow: 0 0 12px rgba(232,198,90,0.6); }.inv-card-type{
     font-size: 0.83rem; color: var(--bone-dim); font-style: italic; margin-top: 0.15rem;
   }.inv-card-stats{
     display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.5rem;
@@ -189,10 +196,10 @@
     font-family: 'Cinzel', serif; font-size: 0.71rem; letter-spacing: 0.08em;
     padding: 0.18rem 0.5rem; border: 1px solid var(--edge); background: var(--stone);
     color: var(--bone); white-space: nowrap; border-radius: 2px;
-  }.inv-badge.dmg{ border-color: rgba(163,36,51,0.5); color: var(--blood-bright); }.inv-badge.ac{ border-color: rgba(122,163,94,0.5); color: var(--poison); }.inv-badge.charges{ border-color: rgba(139,95,212,0.5); color: var(--arcane); }.inv-badge.magic-bonus{ border-color: rgba(232,198,90,0.5); color: var(--gold-bright); }.inv-badge.range{ color: var(--bone-dim); }.inv-badge.qty{ color: var(--bone-dim); }.inv-card-footer{
+  }.inv-badge.dmg{ border-color: rgba(163,36,51,0.5); color: var(--blood-bright); }.inv-badge.ac{ border-color: rgba(122,163,94,0.5); color: var(--poison); }.inv-badge.charges{ border-color: color-mix(in srgb, var(--arcane) 50%, transparent); color: var(--arcane); }.inv-badge.magic-bonus{ border-color: rgba(232,198,90,0.5); color: var(--gold-bright); }.inv-badge.range{ color: var(--bone-dim); }.inv-badge.qty{ color: var(--bone-dim); }.inv-card-footer{
     display: flex; justify-content: space-between; align-items: center;
     margin-top: 0.55rem; padding-top: 0.45rem;
-    border-top: 1px solid rgba(61,47,82,0.4);
+    border-top: 1px solid color-mix(in srgb, var(--edge) 40%, transparent);
   }.inv-card-equip{
     font-family: 'Cinzel', serif; font-size: 0.65rem; letter-spacing: 0.12em;
     text-transform: uppercase; padding: 0.2rem 0.55rem; border: 1px solid;
@@ -220,13 +227,13 @@
     font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.15rem;
     color: var(--bone-bright); margin-bottom: 0.3rem;
     text-shadow: 0 2px 0 #000;
-  }.item-modal-header.r-magic{ color: #cbb3f2; text-shadow: 0 0 12px rgba(139,95,212,0.5); }.item-modal-header.r-rare{ color: var(--gold-bright); text-shadow: 0 0 12px rgba(232,198,90,0.4); }.item-modal-header.r-legendary{ color: var(--gold-bright); text-shadow: 0 0 16px rgba(232,198,90,0.7); }.item-modal-sub{
+  }.item-modal-header.r-magic{ color: var(--arcane-bright); text-shadow: 0 0 12px color-mix(in srgb, var(--arcane) 50%, transparent); }.item-modal-header.r-rare{ color: var(--gold-bright); text-shadow: 0 0 12px rgba(232,198,90,0.4); }.item-modal-header.r-legendary{ color: var(--gold-bright); text-shadow: 0 0 16px rgba(232,198,90,0.7); }.item-modal-sub{
     font-size: 0.91rem; color: var(--bone-dim); font-style: italic;
     margin-bottom: 1.1rem; padding-bottom: 0.8rem;
-    border-bottom: 1px solid rgba(61,47,82,0.5);
+    border-bottom: 1px solid color-mix(in srgb, var(--edge) 50%, transparent);
   }.item-modal-stat-row{
     display: flex; justify-content: space-between; padding: 0.35rem 0;
-    border-bottom: 1px solid rgba(61,47,82,0.25); font-size: 0.98rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--edge) 25%, transparent); font-size: 0.98rem;
   }.item-modal-stat-label{
     color: var(--bone-dim); font-size: 0.88rem; letter-spacing: 0.04em;
     font-family: 'Cinzel', serif; text-transform: uppercase;
@@ -247,7 +254,7 @@
     background: var(--stone); border-radius: 2px;
   }.inv-summary{
     display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;
-    margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid rgba(61,47,82,0.5);
+    margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid color-mix(in srgb, var(--edge) 50%, transparent);
     font-size: 0.93rem; color: var(--bone-dim);
   }.inv-summary b{ color: var(--bone-bright); }.overloaded{ color: var(--blood-bright) !important; animation: hp-alarm 1.2s infinite; }.inv-empty{
     text-align: center; color: var(--bone-dim); font-style: italic;
@@ -256,17 +263,17 @@
     display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 0.7rem; padding: 0.2rem 0;
   }.spell-card{
-    background: linear-gradient(180deg, rgba(139,95,212,0.10), rgba(139,95,212,0.03));
-    border: 1px solid rgba(139,95,212,0.35); padding: 0.85rem 1rem;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--arcane) 10%, transparent), color-mix(in srgb, var(--arcane) 3%, transparent));
+    border: 1px solid color-mix(in srgb, var(--arcane) 35%, transparent); padding: 0.85rem 1rem;
     transition: all 0.22s; position: relative; overflow: hidden;
   }.spell-card:hover{
-    transform: translateY(-3px); border-color: rgba(139,95,212,0.7);
-    box-shadow: 0 8px 20px -8px rgba(139,95,212,0.45);
+    transform: translateY(-3px); border-color: color-mix(in srgb, var(--arcane) 70%, transparent);
+    box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--arcane) 45%, transparent);
   }.spell-card.cantrip{ border-color: rgba(122,163,94,0.4); background: linear-gradient(180deg, rgba(122,163,94,0.08), rgba(122,163,94,0.02)); }.spell-card.cantrip:hover{ border-color: rgba(122,163,94,0.65); box-shadow: 0 8px 20px -8px rgba(122,163,94,0.4); }.spell-card-head{
     display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem;
   }.spell-name{
     font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.82rem;
-    color: #cbb3f2; line-height: 1.25; text-shadow: 0 0 8px rgba(139,95,212,0.35);
+    color: var(--arcane-bright); line-height: 1.25; text-shadow: 0 0 8px color-mix(in srgb, var(--arcane) 35%, transparent);
   }.spell-card.cantrip .spell-name{ color: var(--poison-bright, #9ec58a); text-shadow: 0 0 8px rgba(122,163,94,0.35); }.spell-level{
     font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
     color: var(--bone-dim); border: 1px solid var(--edge); padding: 0.1rem 0.4rem; flex-shrink: 0;
@@ -274,7 +281,7 @@
     font-size: 0.78rem; color: var(--bone-dim); font-style: italic; margin-top: 0.35rem;
   }.spell-card-desc{
     font-size: 0.83rem; color: var(--bone); margin-top: 0.5rem; line-height: 1.45;
-    border-top: 1px dashed rgba(139,95,212,0.2); padding-top: 0.45rem;
+    border-top: 1px dashed color-mix(in srgb, var(--arcane) 20%, transparent); padding-top: 0.45rem;
   }.add-form{ display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1.2rem; }.add-form input, .add-form select{
     font-family: 'Spectral', serif; font-size: 0.98rem; color: var(--bone-bright);
     background: #0d0817; border: 1px solid var(--edge); padding: 0.55rem 0.8rem;
@@ -296,10 +303,10 @@
     transition: border-color 0.2s, box-shadow 0.2s;
   }#notes-editor:focus{ border-color: var(--gold); box-shadow: 0 0 16px -5px rgba(232,198,90,0.35); }#notes-editor::placeholder{ color: rgba(138,122,94,0.45); font-style: italic; }.notes-actions{ display: flex; align-items: center; gap: 1rem; margin-top: 0.9rem; }.notes-status{ font-size: 0.88rem; font-style: italic; color: var(--poison); min-height: 1em; }.notes-status.err{ color: var(--blood-bright); }/* ── Character Growth (Lorekeeper character_updates) — read-only kort ── */.growth-wrap{ margin-top: 2.2rem; padding-top: 1.6rem; border-top: 1px solid var(--edge); }.growth-list{ display: flex; flex-direction: column; gap: 0.7rem; margin-top: 0.9rem; }.growth-item{
     position: relative; padding: 0.8rem 1rem 0.8rem 1.1rem;
-    background: linear-gradient(160deg, rgba(139,95,212,0.10), rgba(139,95,212,0.03));
-    border: 1px solid rgba(139,95,212,0.35); border-left: 3px solid var(--arcane);
+    background: linear-gradient(160deg, color-mix(in srgb, var(--arcane) 10%, transparent), color-mix(in srgb, var(--arcane) 3%, transparent));
+    border: 1px solid color-mix(in srgb, var(--arcane) 35%, transparent); border-left: 3px solid var(--arcane);
     transition: border-color .2s, transform .2s, box-shadow .2s;
-  }.growth-item:hover{ border-color: rgba(139,95,212,0.6); transform: translateX(3px); box-shadow: 0 0 14px -6px rgba(139,95,212,0.5); }.growth-field{
+  }.growth-item:hover{ border-color: color-mix(in srgb, var(--arcane) 60%, transparent); transform: translateX(3px); box-shadow: 0 0 14px -6px color-mix(in srgb, var(--arcane) 50%, transparent); }.growth-field{
     font-family: 'Cinzel', serif; font-size: 0.69rem; font-weight: 700;
     letter-spacing: 0.22em; text-transform: uppercase; color: var(--arcane);
     display: inline-block; margin-bottom: 0.35rem;
@@ -344,7 +351,7 @@
     text-shadow: 0 0 20px rgba(232,198,90,0.45), 0 2px 0 #000; margin: 0.2rem 0;
   }.hoard .sub{ font-size: 0.95rem; font-style: italic; color: var(--bone-dim); }.tx{
     display: flex; justify-content: space-between; align-items: center; gap: 1rem;
-    padding: 0.6rem 0.2rem; border-bottom: 1px solid rgba(61,47,82,0.4); font-size: 0.98rem;
+    padding: 0.6rem 0.2rem; border-bottom: 1px solid color-mix(in srgb, var(--edge) 40%, transparent); font-size: 0.98rem;
     transition: background 0.2s;
   }.tx:hover{ background: rgba(201,162,39,0.04); }.tx-desc{ color: var(--bone); }.tx-date{ font-size: 0.85rem; font-style: italic; color: var(--bone-dim); margin-top: 0.1rem; }.tx-amount{ font-family: 'Cinzel', serif; font-weight: 700; white-space: nowrap; }.tx-amount.pos{ color: var(--poison); }.tx-amount.neg{ color: var(--blood-bright); }/* ═══════════ Toast ═══════════ */.toast{
     position: fixed; bottom: 1.5rem; left: 50%; transform: translate(-50%, 80px);
@@ -393,10 +400,10 @@
   .av-lightbox .av-lb-close{ position: fixed; top: 1.2rem; right: 1.4rem; font-family: 'Cinzel', serif; font-size: .8rem; color: var(--gold-bright); background: none; border: 1px solid var(--edge); padding: .5rem .7rem; cursor: pointer; }
   .av-lightbox .av-lb-title{ position: fixed; bottom: 1.2rem; left: 50%; transform: translateX(-50%); font-family: 'Cinzel', serif; font-size: .7rem; letter-spacing: .18em; text-transform: uppercase; color: var(--bone-dim); white-space: nowrap; }
 </style>
-<link rel="stylesheet" href="snes.css?v=19">
+<link rel="stylesheet" href="snes.css?v=22">
 <script src="sprites.js?v=20260802a"></script>
 <script src="fonts.js?v=20260802c"></script>
-<script src="themes.js?v=20260802c"></script>
+<script src="themes.js?v=20260804a"></script>
 </head>
 <body>
 
@@ -457,6 +464,10 @@
           <span class="stat"><i>PROF</i><b>+3</b></span>
         </div>
       </div>
+    </div>
+
+    <div class="forge-row">
+      <button class="forge-export-btn" id="forge-export-btn" onclick="exportToForge()" title="Save this hero to The Forge — start a new campaign with them later">⚒ Export to Forge</button>
     </div>
 
     <div class="vitals">
@@ -572,7 +583,7 @@ Markdown is not rendered, but the structure is yours."></textarea>
 <div class="toast" id="toast"></div>
 
 <script src="sfx.js?v=20260802a"></script>
-<script src="api.js?v=20260802c"></script>
+<script src="api.js?v=20260804c"></script>
 <script src="i18n.js?v=20260802b"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
@@ -740,6 +751,39 @@ async function saveNotes() {
   } catch (e) {
     notesStatus.classList.add('err');
     notesStatus.textContent = I18N.t('⚠ Kunde inte spara: ') + (e.message || I18N.t('okänt fel'));
+  }
+}
+
+// ═══════════════════════════════════════
+// EXPORT TILL THE FORGE — spara den levda hjälten i valvet
+// ═══════════════════════════════════════
+let _exporting = false;
+async function exportToForge() {
+  if (_exporting) return;
+  const name = (state.character && state.character.name) || '';
+  if (!name) { toast('⚠ No hero to export yet'); return; }
+  _exporting = true;
+  const btn = document.getElementById('forge-export-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⚒ Saving…'; }
+  try {
+    // Hämta valvet för duplikat-koll — fråga innan en befintlig hjälte skrivs över
+    let overwrite_id = null;
+    const { characters } = await API.vaultList();
+    const dup = (characters || []).find(c => (c.name || '').toLowerCase() === name.toLowerCase());
+    if (dup) {
+      const ok = confirm('Do you wish to overwrite "' + dup.name + '" with "' + name + '" from campaign?');
+      if (ok) overwrite_id = dup.id;
+    }
+    const res = await API.vaultSave({ from_campaign: true, overwrite_id });
+    toast(res.overwritten
+      ? '💾 ' + name + ' overwritten in The Forge'
+      : '💾 ' + name + ' saved to The Forge');
+    SFX.gate();
+  } catch (e) {
+    toast('⚠ ' + (e.message || 'Could not export to The Forge'));
+  } finally {
+    _exporting = false;
+    if (btn) { btn.disabled = false; btn.textContent = '⚒ Export to Forge'; }
   }
 }
 
@@ -1222,7 +1266,8 @@ async function _runAvatarGen(mode, statusText, doneText, btnId) {
   status.textContent = statusText;
   btn.disabled = true;
   try {
-    const res = await API.generateAvatar('player', Date.now() % 1000000, mode);
+    const freePrompt = (document.getElementById('avatar-prompt-input') || {}).value || '';
+    const res = await API.generateAvatar('player', Date.now() % 1000000, mode, freePrompt);
     if (res && res.ok) {
       state.avatars = state.avatars || {};
       state.avatars.player = { disk_name: 'player.png', uploaded: new Date().toISOString(), ai_generated: true, seed: res.seed };
@@ -1294,9 +1339,10 @@ window.getState = exportState;
       <div id="avatar-modal-img" onclick="openAvatarLightbox()" style="width:112px;height:112px;border-radius:50%;margin:0 auto;border:2px solid var(--gold);overflow:hidden;background:var(--stone-3);display:flex;align-items:center;justify-content:center;font-size:2.4rem;box-shadow:0 0 22px -4px rgba(201,162,39,.45);cursor:pointer" title="Click for larger view"></div>
       <div style="font-size:.62rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem">click to enlarge</div>
     </div>
-    <div class="mi-intro">Generate an AI portrait from your character sheet — items, traits and lore included. Or upload your own image.</div>
+    <div class="mi-intro">Paint a new avatar from your character sheet — items, traits and lore included. Or upload your own image.</div>
+    <textarea id="avatar-prompt-input" placeholder="Optional: describe exactly what you want painted… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)" style="width:100%;min-height:56px;margin-top:.7rem;padding:.5rem .6rem;font-family:'Cinzel',serif;font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>
     <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
-      <button class="av-btn primary" id="avatar-ai-btn" onclick="generateAvatarAction()">🎨 Generate with AI</button>
+      <button class="av-btn primary" id="avatar-ai-btn" onclick="generateAvatarAction()">🎨 Paint a new avatar</button>
       <button class="av-btn" id="avatar-update-btn" onclick="updateAvatarAction()" style="display:none">🔄 Update from sheet</button>
       <button class="av-btn" onclick="portraitInput.click()">📁 Upload image…</button>
       <button class="av-btn danger" id="avatar-del-btn" onclick="deleteAvatarAction()" style="display:none">🗑 Remove avatar</button>

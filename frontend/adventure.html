@@ -240,7 +240,7 @@
   .vault-empty{padding:1.3rem;border:1px dashed var(--edge);color:var(--bone-dim);font-style:italic;text-align:center;font-size:.92rem}
   .vault-note{font-size:.8rem;font-style:italic;color:var(--bone-dim);margin-top:.8rem}
   @media(max-width:900px){.pv-stats{grid-template-columns:repeat(3,1fr)}.vault-grid{grid-template-columns:1fr}}
-  @media(max-width:900px){.htp-body{grid-template-columns:1fr}.spread{grid-template-columns:repeat(2,1fr)}
+  @media(max-width:900px){.htp-body{grid-template-columns:1fr}.spread{grid-template-columns:repeat(2,1fr)}}
   @media(max-width:900px){.paths{grid-template-columns:1fr;gap:1rem}.path{padding:1.4rem 1.1rem 1.2rem;transform:none!important}.path:active{transform:translateY(2px)!important;border-color:var(--pc,var(--gold));
       box-shadow:0 4px 14px -8px rgba(0,0,0,.8)}.path:active .glow{opacity:1}.path:active .icon{transform:scale(1.1)}.path .icon{font-size:2.3rem;margin-bottom:.7rem}.campaign-list{grid-template-columns:1fr}
   }
@@ -249,7 +249,28 @@
   }
   @media(max-width:400px){.app{padding:0 .5rem 3.5rem}.head h1{font-size:1.55rem}.head .over{letter-spacing:.28em}.path h2{font-size:.95rem}.path p{font-size:.91rem}.cp-icon{width:54px;height:54px;font-size:1.5rem}.campaign-card .cc-sub{font-size:.81rem}
   }
-  /* ═══════════ Feedback-modal ═══════════ */.fb-btn{display:inline-block;margin:.7rem auto 0;font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .9rem;cursor:pointer;border-radius:2px;transition:color .2s,border-color .2s}.fb-btn:hover{color:var(--gold-bright);border-color:var(--gold)}.fb-modal{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;background:rgba(4,2,8,.82);backdrop-filter:blur(3px);padding:1rem}.fb-modal.show{display:flex}.fb-card{position:relative;width:100%;max-width:440px;background:linear-gradient(165deg,var(--stone-2),var(--stone));border:1px solid var(--edge);padding:1.6rem 1.5rem 1.4rem;box-shadow:0 30px 80px -20px rgba(0,0,0,.9)}.fb-corner{position:absolute;width:16px;height:16px;border-style:solid;opacity:.8;border-color:var(--gold)}.fb-corner.tl{top:6px;left:6px;border-width:2px 0 0 2px}.fb-corner.tr{top:6px;right:6px;border-width:2px 2px 0 0}.fb-corner.bl{bottom:6px;left:6px;border-width:0 0 2px 2px}.fb-corner.br{bottom:6px;right:6px;border-width:0 2px 2px 0}.fb-title{font-family:'Cinzel',serif;font-weight:900;font-size:1.02rem;color:var(--gold-bright);letter-spacing:.06em;text-align:center;margin-bottom:.35rem}.fb-sub{font-size:.86rem;font-style:italic;color:var(--bone-dim);text-align:center;margin-bottom:1rem}.fb-label{display:block;font-family:'Cinzel',serif;font-size:.64rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim);margin:.85rem 0 .35rem}.fb-label .fb-opt{text-transform:none;letter-spacing:.04em;opacity:.75}.fb-input,.fb-textarea{width:100%;font-family:'Spectral',serif;font-size:1rem;line-height:1.5;color:var(--bone-bright);background:var(--ink);border:1px solid var(--edge);padding:.6rem .75rem;outline:none;border-radius:2px;transition:border-color .2s,box-shadow .2s}.fb-input:focus,.fb-textarea:focus{border-color:var(--gold);box-shadow:0 0 14px -4px rgba(232,198,90,.45)}.fb-textarea{resize:vertical;min-height:110px}.fb-input::placeholder,.fb-textarea::placeholder{color:var(--bone-dim);opacity:.55;font-style:italic}.fb-actions{display:flex;gap:.7rem;justify-content:flex-end;margin-top:1.2rem}.fb-cancel{font-size:.72rem;padding:.55rem 1.1rem}.fb-submit{font-size:.78rem;padding:.6rem 1.4rem;min-width:110px}.fb-submit:disabled{opacity:.6;cursor:default}.fb-error{display:none;margin-top:.85rem;font-size:.8rem;font-style:italic;color:var(--blood-bright);text-align:center}.fb-card.has-error .fb-error{display:block}.fb-card.has-error .fb-textarea{border-color:var(--blood-bright)}@media(max-width:640px){.fb-btn,.fb-cancel,.fb-submit{min-height:44px}}
+  /* ═══════════ ⚙️ Kugghjul-meny (topbar) ═══════════ */
+  .gear-wrap{position:relative}
+  .gear-btn{font-size:1rem}
+  .gear-menu{position:absolute;top:calc(100% + 8px);right:0;z-index:900;min-width:210px;
+    background:var(--stone-2);border:1px solid var(--edge);border-radius:4px;
+    box-shadow:0 18px 50px -12px rgba(0,0,0,.85);padding:.4rem;display:none;flex-direction:column;gap:2px}
+  .gear-menu.show{display:flex}
+  .gm-row{display:flex;align-items:center;gap:.55rem;width:100%;font-family:'Cinzel',serif;
+    font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--bone);
+    background:transparent;border:none;padding:.5rem .65rem;cursor:pointer;border-radius:3px;
+    text-align:left;transition:color .18s,background .18s}
+  .gm-row:hover{color:var(--gold-bright);background:var(--stone-3)}
+  .gm-row.danger:hover{color:var(--blood-bright)}
+  .gm-ico{width:1.25rem;text-align:center;font-size:.95rem;flex:none}
+  .gm-txt{line-height:1.2}
+  .gm-sep{height:1px;background:var(--edge);margin:.3rem .2rem;opacity:.6}
+  .gm-row.theme-btn{font-weight:700;color:var(--gold);text-transform:none;letter-spacing:.04em}
+  .gm-row.theme-btn:hover{color:var(--gold-bright)}
+  @media(max-width:640px){
+    .gear-menu{position:fixed;top:auto;right:.75rem;bottom:calc(env(safe-area-inset-bottom,0px) + 4.5rem);left:.75rem;min-width:0;max-height:70vh;overflow-y:auto}
+    .gm-row{min-height:46px;font-size:.78rem}
+  }
 </style>
 <link rel="stylesheet" href="snes.css?v=23">
 <script src="sprites.js?v=20260802a"></script>
@@ -262,13 +283,19 @@
 <div class="app">
   <!-- ═══════════ TOPPRAD ═══════════ -->
   <div class="topbar">
-    <button class="top-btn sfx-btn" onclick="sfxToggleBtn()" title="Sound on/off">🔊</button>
-    <button class="top-btn" onclick="location.href='releases.html'" title="Release notes">📜</button>
-    <button class="top-btn" onclick="location.href='characters.html'" title="The Forge — create and manage saved heroes">⚒ The Forge</button>
-    <button class="top-btn" id="admin-gate-btn" style="display:none" onclick="location.href='admin.html'">👑 Admin</button>
-    <button class="top-btn danger" onclick="leaveGate()">🚪 Log Out</button>
+    <div class="gear-wrap">
+      <button class="top-btn gear-btn" onclick="toggleGearMenu(event)" title="Menu" aria-haspopup="true" aria-expanded="false">⚙️</button>
+      <div class="gear-menu" id="gear-menu">
+        <button type="button" class="gm-row gm-sound-btn" onclick="toggleGearSound(this)"><span class="gm-ico" id="gear-sound-ico">🔊</span><span class="gm-txt">Sound</span></button>
+        <button type="button" class="gm-row theme-btn" id="gear-theme-btn" onclick="THEMES.openPopover(this)"></button>
+        <button type="button" class="gm-row" onclick="location.href='releases.html'"><span class="gm-ico">📜</span><span class="gm-txt">Release Notes</span></button>
+        <button type="button" class="gm-row" onclick="location.href='characters.html'"><span class="gm-ico">⚒</span><span class="gm-txt">The Forge</span></button>
+        <button type="button" class="gm-row" id="admin-gate-btn" style="display:none" onclick="location.href='admin.html'"><span class="gm-ico">👑</span><span class="gm-txt">Admin</span></button>
+        <div class="gm-sep"></div>
+        <button type="button" class="gm-row danger" onclick="leaveGate()"><span class="gm-ico">🚪</span><span class="gm-txt">Log Out</span></button>
+      </div>
+    </div>
   </div>
-
   <div class="head">
     <img src="assets/logo-cauldron.png" alt="The Lore Weaver's Cauldron" class="head-logo">
     <div class="over">What will the Cauldron Foretell?</div>
@@ -554,29 +581,8 @@ The more you give, the richer the world becomes. But the Dungeon Master fills in
   <footer class="contact">
     <div class="rune-divider"><span>✦</span></div>
     <a href="mailto:web@rostad.cc">web@rostad.cc</a>
-    <button type="button" class="fb-btn top-btn" id="fb-open" onclick="openFeedback()" aria-haspopup="dialog">💬 Feedback</button>
     <p>Questions, feedback or just to say hello</p>
   </footer>
-</div>
-
-<!-- ═══════════ FEEDBACK — spelarens röst ═══════════ -->
-<div class="fb-modal" id="fb-modal" role="dialog" aria-modal="true" aria-labelledby="fb-title" aria-describedby="fb-sub">
-  <div class="fb-card" id="fb-card">
-    <i class="fb-corner tl"></i><i class="fb-corner tr"></i><i class="fb-corner bl"></i><i class="fb-corner br"></i>
-    <div class="fb-title" id="fb-title">💬 Feedback</div>
-    <p class="fb-sub" id="fb-sub">A whisper for the Lorekeeper — suggestions, praise, or a bug report.</p>
-    <form id="fb-form" onsubmit="submitFeedback(event)">
-      <label class="fb-label" for="fb-email">Email <span class="fb-opt">(optional)</span></label>
-      <input class="fb-input" type="email" id="fb-email" name="email" placeholder="you@example.com" autocomplete="email">
-      <label class="fb-label" for="fb-message">Message</label>
-      <textarea class="fb-textarea" id="fb-message" name="message" rows="4" placeholder="Your thoughts, ideas and tales…" required></textarea>
-      <div class="fb-actions">
-        <button type="button" class="fb-cancel top-btn" id="fb-cancel">Cancel</button>
-        <button type="submit" class="fb-submit go-btn" id="fb-submit">Send</button>
-      </div>
-    </form>
-    <p class="fb-error" id="fb-error">Please write a message first.</p>
-  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1229,49 +1235,44 @@ function proceed(mode) {
 let toastTimer;
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2400);}
 
-// ── Feedback-modal ──
-const fbModal = document.getElementById('fb-modal');
-function openFeedback() {
-  fbModal.classList.add('show');
-  document.getElementById('fb-email').focus();
+// ── ⚙️ Kugghjul-meny (topbar) ──
+function toggleGearSound(btn) {
+  if (typeof SFX !== 'undefined') SFX.toggle();
+  const ico = document.getElementById('gear-sound-ico');
+  if (ico) ico.textContent = (typeof SFX !== 'undefined' && SFX.enabled) ? '🔊' : '🔇';
 }
-function closeFeedback() {
-  if (!fbModal.classList.contains('show')) return;
-  fbModal.classList.remove('show');
-  const btn = document.getElementById('fb-open');
-  if (btn) btn.focus();
+function gearSoundInit() {
+  const ico = document.getElementById('gear-sound-ico');
+  if (ico && typeof SFX !== 'undefined') ico.textContent = SFX.enabled ? '🔊' : '🔇';
 }
-document.getElementById('fb-cancel').addEventListener('click', closeFeedback);
-fbModal.addEventListener('click', e => { if (e.target === fbModal) closeFeedback(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeFeedback(); });
-async function submitFeedback(ev) {
-  ev.preventDefault();
-  const card = document.getElementById('fb-card');
-  const emailEl = document.getElementById('fb-email');
-  const msgEl = document.getElementById('fb-message');
-  const message = msgEl.value.trim();
-  if (!message) {
-    card.classList.add('has-error');
-    msgEl.focus();
-    return;
+gearSoundInit();
+function toggleGearMenu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('gear-menu');
+  if (!menu) return;
+  const open = menu.classList.toggle('show');
+  const btn = document.querySelector('.gear-btn');
+  if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (typeof SFX !== 'undefined') SFX.click();
+}
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('gear-menu');
+  if (menu && menu.classList.contains('show') && !e.target.closest('.gear-wrap')) {
+    menu.classList.remove('show');
+    const btn = document.querySelector('.gear-btn');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
   }
-  card.classList.remove('has-error');
-  const submitBtn = document.getElementById('fb-submit');
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Sending…';
-  try {
-    await API.sendFeedback({ email: emailEl.value.trim() || null, message });
-    closeFeedback();
-    emailEl.value = '';
-    msgEl.value = '';
-    toast('💬 Thanks — the Lorekeeper has your words');
-  } catch (e) {
-    toast('⚠ ' + (e.message || 'Could not send feedback'));
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Send';
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const menu = document.getElementById('gear-menu');
+    if (menu && menu.classList.contains('show')) {
+      menu.classList.remove('show');
+      const btn = document.querySelector('.gear-btn');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+    }
   }
-}
+});
 
 // ── Nyhet: Qwen 3.8 Max full release (2026-08-03) ──
 // Banner visas tills besökaren klickar bort den (localStorage-minne).

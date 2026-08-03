@@ -1260,20 +1260,21 @@ function closeAvatarModal() {
   document.getElementById('avatar-overlay').classList.remove('show');
 }
 
-async function _runAvatarGen(mode, statusText, doneText, btnId) {
+async function _runAvatarGen(mode, statusText, btnId) {
   const status = document.getElementById('avatar-ai-status');
   const btn = document.getElementById(btnId);
   status.textContent = statusText;
   btn.disabled = true;
   try {
     const freePrompt = (document.getElementById('avatar-prompt-input') || {}).value || '';
+    const usedWords = !!freePrompt.trim();
     const res = await API.generateAvatar('player', Date.now() % 1000000, mode, freePrompt);
     if (res && res.ok) {
       state.avatars = state.avatars || {};
       state.avatars.player = { disk_name: 'player.png', uploaded: new Date().toISOString(), ai_generated: true, seed: res.seed };
       renderHeader();
       openAvatarModal();
-      status.textContent = doneText;
+      status.textContent = (mode === 'edit' ? '✨ Avatar updated — ' : '✨ New avatar painted — ') + (usedWords ? 'used your words' : 'used your character sheet');
       try { SFX.levelup(); } catch (_) {}
     } else {
       status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Failed');
@@ -1288,10 +1289,10 @@ async function _runAvatarGen(mode, statusText, doneText, btnId) {
 }
 
 async function generateAvatarAction() {
-  await _runAvatarGen('new', '🎨 The artist is painting… (10–30 s)', '✨ New avatar painted!', 'avatar-ai-btn');
+  await _runAvatarGen('new', '🎨 The artist is painting… (10–30 s)', 'avatar-ai-btn');
 }
 async function updateAvatarAction() {
-  await _runAvatarGen('edit', '🔄 Updating from your sheet… (10–30 s)', '✨ Avatar updated from sheet!', 'avatar-update-btn');
+  await _runAvatarGen('edit', '🔄 Updating from your sheet… (10–30 s)', 'avatar-update-btn');
 }
 
 async function deleteAvatarAction() {
@@ -1340,10 +1341,14 @@ window.getState = exportState;
       <div style="font-size:.62rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem">click to enlarge</div>
     </div>
     <div class="mi-intro">Paint a new avatar from your character sheet — items, traits and lore included. Or upload your own image.</div>
-    <textarea id="avatar-prompt-input" placeholder="Optional: describe exactly what you want painted… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)" style="width:100%;min-height:56px;margin-top:.7rem;padding:.5rem .6rem;font-family:'Cinzel',serif;font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>
+    <div style="margin-top:.7rem">
+      <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">🎨 YOUR OWN WORDS (optional)</div>
+      <textarea id="avatar-prompt-input" placeholder="Optional: describe exactly what you want painted… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)" style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:'Cinzel',serif;font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>
+      <div style="font-size:.72rem;color:var(--bone-dim);margin-top:.35rem">Overrides the auto-built prompt from your sheet — describe exactly what you want painted.</div>
+    </div>
     <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
-      <button class="av-btn primary" id="avatar-ai-btn" onclick="generateAvatarAction()">🎨 Paint a new avatar</button>
-      <button class="av-btn" id="avatar-update-btn" onclick="updateAvatarAction()" style="display:none">🔄 Update from sheet</button>
+      <button class="av-btn primary" id="avatar-ai-btn" onclick="generateAvatarAction()">✨ Paint new from my words</button>
+      <button class="av-btn" id="avatar-update-btn" onclick="updateAvatarAction()" style="display:none">🔄 Update from sheet (keeps face)</button>
       <button class="av-btn" onclick="portraitInput.click()">📁 Upload image…</button>
       <button class="av-btn danger" id="avatar-del-btn" onclick="deleteAvatarAction()" style="display:none">🗑 Remove avatar</button>
     </div>

@@ -430,7 +430,11 @@ async function openInspect(charId) {
     ${ch.gear ? `<div class="pv-gear">🎒 ${esc(ch.gear)}</div>` : ''}
     ${invHtml}
     ${spellsHtml}
-    <textarea id="insp-prompt-input" placeholder="Optional: describe exactly what you want painted… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)" style="width:100%;min-height:52px;margin-top:1rem;padding:.5rem .6rem;font-family:'Cinzel',serif;font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>
+    <div style="margin-top:1rem">
+      <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">🎨 YOUR OWN WORDS (optional)</div>
+      <textarea id="insp-prompt-input" placeholder="Optional: describe exactly what you want painted… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)" style="width:100%;min-height:52px;padding:.5rem .6rem;font-family:'Cinzel',serif;font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>
+      <div style="font-size:.72rem;color:var(--bone-dim);margin-top:.35rem">Overrides the auto-built prompt from your sheet — describe exactly what you want painted.</div>
+    </div>
     <div class="pv-actions" style="margin-top:1.4rem">
       <button class="pv-go" onclick="useCharacter('${esc(charId)}')">⚔️ Use for New Adventure</button>
       <button class="pv-reroll" id="insp-avatar-btn" onclick="genAvatar('${esc(charId)}')">${entry.avatar ? '🎨 Reroll Portrait' : '🎨 Paint Portrait'}</button>
@@ -482,8 +486,9 @@ async function genAvatar(charId) {
   if (btn) { btn.disabled = true; btn.textContent = '🎨 Painting…'; }
   try {
     const freePrompt = (document.getElementById('insp-prompt-input') || {}).value || '';
+    const usedWords = !!freePrompt.trim();
     const res = await API.vaultGenerateAvatar(charId, Date.now() % 1000000, null, freePrompt);
-    toast('🎨 Portrait painted!');
+    toast(usedWords ? '🎨 Portrait painted — used your words' : '🎨 Portrait painted — used your character sheet');
     openInspect(charId);   // rendera om med ny bild
     loadVault();
   } catch (e) {

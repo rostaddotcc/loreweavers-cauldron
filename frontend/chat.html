@@ -924,6 +924,31 @@
   }.cx-frame iframe.active{ display: block; }.cx-placeholder{
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
     color: var(--bone-dim); font-style: italic; font-size: 0.85rem;
+  }/* ═══════════════════════════════════════
+     CLI TÄRNINGS-CEREMONI — text-glyfer i raden (Track C)
+     body.cli-chat only: dice render as plain text glyphs,
+     inline in the stream — no SVG, no 68px boxes. Bubble
+     mode keeps the SVG path (`.inline-dice`) untouched.
+     ═══════════════════════════════════════ */.cli-dice{
+    display: block; line-height: 1.55; color: var(--bone-dim);
+  }.cli-dice .cli-dice-line{
+    color: var(--gold);
+  }.cli-dice .cli-dice-note{ color: var(--bone-dim); }.cli-dice .cli-dice-flicker{
+    color: var(--term-amber); min-height: 1.2em; white-space: nowrap;
+    animation: cli-dice-flicker .16s steps(2) infinite;
+  }.cli-dice .cli-dice-result{
+    color: var(--bone-bright);
+  }.cli-dice .cli-dice-result.crit{ color: var(--gold-bright); text-shadow: 0 0 10px rgba(255,215,0,.55); }.cli-dice .cli-dice-result.fail{ color: var(--blood-bright); text-shadow: 0 0 10px rgba(212,58,77,.5); }
+  @keyframes cli-dice-flicker{
+    0%{ opacity: 1; } 50%{ opacity: .5; } 100%{ opacity: 1; }
+  }/* ═══════════════════════════════════════
+     CLI ROLL-REQUEST — flat terminal buttons (Track C)
+     Track B flattened the card; these small tweaks finish the
+     terminal look: [🎲 …] / [🖊 …] as pure text links.
+     ═══════════════════════════════════════ */.roll-request .rr-ico .rr-ico-glyph{
+    filter: none !important;
+  }.roll-request .rr-ico .rr-ico-label{
+    font-family: var(--cli-mono, ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace) !important;
   }
 </style>
 <link rel="stylesheet" href="snes.css?v=23">
@@ -1516,12 +1541,13 @@ async function generateAvatarAction() {
   try {
     // mode "new" = full generation → alltid en NY bild
     const freePrompt = (document.getElementById('avatar-prompt-input') || {}).value || '';
+    const usedWords = !!freePrompt.trim();
     const res = await API.generateAvatar(kind, Date.now() % 1000000, 'new', freePrompt);
     if (res && res.ok) {
       AVATARS[kind] = API.avatarUrl(kind) + '?t=' + Date.now();
       refreshAvatars();
       pickAvatar(kind); // uppdatera förhandsvisningen i modalen
-      status.textContent = '✨ New avatar painted!';
+      status.textContent = usedWords ? '✨ New avatar painted — used your words' : '✨ New avatar painted — used your character sheet';
       try { SFX.levelup(); } catch (_) {}
     } else {
       status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Generation failed');
@@ -1544,12 +1570,14 @@ async function updateAvatarAction() {
   status.textContent = '🔄 Updating from your sheet… (10–30 s)';
   btn.disabled = true;
   try {
-    const res = await API.generateAvatar(kind, Date.now() % 1000000, 'edit');
+    const freePrompt = (document.getElementById('avatar-prompt-input') || {}).value || '';
+    const usedWords = !!freePrompt.trim();
+    const res = await API.generateAvatar(kind, Date.now() % 1000000, 'edit', freePrompt);
     if (res && res.ok) {
       AVATARS[kind] = API.avatarUrl(kind) + '?t=' + Date.now();
       refreshAvatars();
       pickAvatar(kind);
-      status.textContent = '✨ Avatar updated from sheet!';
+      status.textContent = usedWords ? '✨ Avatar updated — used your words' : '✨ Avatar updated — used your character sheet';
       try { SFX.levelup(); } catch (_) {}
     } else {
       status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Update failed');
@@ -2552,10 +2580,101 @@ function d20Svg() {
 
 // Fullskärms-tärningsceremoni. Returnerar Promise som löser när avslöjandet är klart.
 
+// ── CLI-TERMINAL TÄRNINGS-CEREMONI (Track C) ──
+// body.cli-chat → tärningen renderas som TEXT-glyfer i raden:
+// en systemrad med 🎲 + notation, en flimmerrad med rullande siffror,
+// sedan resultatraden. Ingen SVG, inga 68px-boxar — allt flyter inline.
+async function inlineDiceCeremonyCli(notation, label, roll) {
+  const isCrit = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 20;
+  const isFail = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 1;
+  const modStr = roll.mod !== 0 ? (roll.mod > 0 ? '+' + roll.mod : roll.mod) : '';
+  const modPretty = roll.mod > 0 ? ' + ' + roll.mod : roll.mod < 0 ? ' - ' + Math.abs(roll.mod) : '';
+  const verdict = isCrit ? I18N.t('✦ KRITISKT!') : isFail ? I18N.t('✦ PATETISKT!') : '';
+
+  // En systemrad per steg — allt är text i strömmen
+  const el = document.createElement('div');
+  el.className = 'msg system';
+  el.innerHTML = `
+    <div class="box">
+      <div class="cli-dice">
+        <div class="cli-dice-line">🎲 ${escapeHtml(label)} <span class="cli-dice-note">(${escapeHtml(notation)})</span></div>
+        <div class="cli-dice-flicker"></div>
+        <div class="cli-dice-result"></div>
+      </div>
+    </div>`;
+  appendToChat(el);
+  chat.scrollTop = chat.scrollHeight;
+
+  SFX.dice();
+
+  const flickerEl = el.querySelector('.cli-dice-flicker');
+  const resultEl = el.querySelector('.cli-dice-result');
+
+  // Rull-fas: ~2.8s flimmer med rullande siffror (inline, ingen box)
+  const ROLL_MS = 2800;
+  const sides = roll.sides || 20;
+  const start = Date.now();
+  await new Promise(resolve => {
+    (function flicker() {
+      const elapsed = Date.now() - start;
+      if (elapsed >= ROLL_MS) { resolve(); return; }
+      flickerEl.textContent = '⣿ ' + (roll.advantage
+        ? (1 + Math.floor(Math.random() * sides)) + '  ' + (1 + Math.floor(Math.random() * sides))
+        : String(1 + Math.floor(Math.random() * sides))) + ' ⣿';
+      const progress = elapsed / ROLL_MS;
+      const delay = 50 + progress * progress * 220;
+      setTimeout(flicker, delay);
+    })();
+  });
+
+  // Avslöjande — resultatrad i terminalstil
+  flickerEl.style.display = 'none';
+  let resultText;
+  if (roll.advantage) {
+    const advTag = roll.advMode === 'adv' ? I18N.t('FÖRDEL') : I18N.t('NACKDEL');
+    resultText = `→ [${roll.raw.join(', ')}] → ${roll.chosen}${modPretty} = ${roll.total} (${advTag})`;
+  } else {
+    resultText = `→ [${escapeHtml(notation)}] ${roll.rolls.join(', ')}${modPretty} = ${roll.total}`;
+  }
+  resultEl.innerHTML = resultText + (verdict ? ` <b>${verdict}</b>` : '');
+  if (isCrit) resultEl.classList.add('crit');
+  if (isFail) resultEl.classList.add('fail');
+
+  // Partiklar + effekter — centrerade på meddelanderaden (liten rad,
+  // effekten sprids runt den, precis som i bubbel-läget)
+  const r = el.getBoundingClientRect();
+  const cx = r.left + r.width / 2;
+  const cy = r.top + r.height / 2;
+
+  if (isCrit) {
+    SFX.crit();
+    spawnPixelBurst(cx, cy, 34, ['#ffd700', '#fff8dc', '#e8c65a', '#4dd8f0'], 5);
+    spawnParticles(cx, cy, 22, ['#ffd700', '#fff8dc', '#e0ffff']);
+    spawnPixelSmoke(cx, cy, 10, ['#ffd700', '#c9a227', '#fff8dc'], 7);
+  } else if (isFail) {
+    SFX.fail();
+    spawnPixelBurst(cx, cy, 24, ['#d43a4d', '#8b1a2b', '#e8dcc8'], 4);
+    spawnPixelSmoke(cx, cy, 10, ['#5a0f18', '#8b1a2b', '#e8dcc8'], 7);
+  } else {
+    spawnPixelBurst(cx, cy, 12, ['#c9a227', '#e8c65a', '#8b5fd4'], 4);
+    spawnPixelSmoke(cx, cy, 5, ['#e8dcc8', '#d9c9a6'], 6);
+  }
+
+  chat.scrollTop = chat.scrollHeight;
+
+  // Kort paus så spelaren hinner se resultatet innan DM svarar
+  await new Promise(r => setTimeout(r, 800));
+}
+
 // ── INLINE TÄRNINGS-CEREMONI (i chatten, ingen fullskärm) ──
 // Skapar ett systemmeddelande i chatten med D20 som rullar, flimrar och avslöjar.
 // Resultatet blir kvar i chatten som en permanent post.
 async function inlineDiceCeremony(notation, label, roll) {
+  // Track C: CLI-läge → text-glyfer i raden (ingen SVG, inga boxar).
+  // Bubbel-läget behåller hela SVG-vägen nedan.
+  if (document.body.classList.contains('cli-chat')) {
+    return inlineDiceCeremonyCli(notation, label, roll);
+  }
   const isCrit = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 20;
   const isFail = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 1;
   const modStr = roll.mod !== 0 ? (roll.mod > 0 ? '+' + roll.mod : roll.mod) : '';
@@ -6008,10 +6127,14 @@ document.addEventListener('keydown', e => {
       <div style="font-size:.62rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem">click to enlarge</div>
     </div>
     <div class="mi-intro" id="avatar-modal-desc" style="font-size:.82rem;line-height:1.55">Paint a new avatar from your character sheet — items, traits and lore included. Or upload your own image.</div>
-    <textarea id="avatar-prompt-input" placeholder="Optional: describe exactly what you want painted… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)" style="width:100%;min-height:56px;margin-top:.7rem;padding:.5rem .6rem;font-family:'Cinzel',serif;font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>
+    <div style="margin-top:.7rem">
+      <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">🎨 YOUR OWN WORDS (optional)</div>
+      <textarea id="avatar-prompt-input" placeholder="Optional: describe exactly what you want painted… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)" style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:'Cinzel',serif;font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>
+      <div style="font-size:.72rem;color:var(--bone-dim);margin-top:.35rem">Overrides the auto-built prompt from your sheet — describe exactly what you want painted.</div>
+    </div>
     <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
-      <button class="av-btn primary" id="avatar-ai-btn" onclick="generateAvatarAction()">🎨 Paint a new avatar</button>
-      <button class="av-btn" id="avatar-update-btn" onclick="updateAvatarAction()" style="display:none">🔄 Update from sheet</button>
+      <button class="av-btn primary" id="avatar-ai-btn" onclick="generateAvatarAction()">✨ Paint new from my words</button>
+      <button class="av-btn" id="avatar-update-btn" onclick="updateAvatarAction()" style="display:none">🔄 Update from sheet (keeps face)</button>
       <button class="av-btn" onclick="uploadAvatarAction()">📁 Upload image…</button>
       <button class="av-btn danger" id="avatar-del-btn" onclick="deleteAvatarAction()" style="display:none">🗑 Remove avatar</button>
     </div>

@@ -1482,16 +1482,32 @@ body.battle-drawer-open .battle-drawer-toggle .bdt-caret{ transform: rotate(180d
 }
 
 /* ══════════════════════════════════════════
-   36. CLI CHAT UI (v32) — 'use new chat ui'-switchen
-   body.cli-chat = ny terminal-känsla: inga bubbel-ramar,
-   allt "sitter ihop". Av-aktiveras → klassiska bubblor.
+   36. CLI CHAT UI (v33) — REAL TERMINAL MODE
+   body.cli-chat = every chat line renders like a terminal
+   (oh-my-zsh style): no boxes anywhere, composer merges
+   flush with the stream. Disabled → classic bubbles.
    ══════════════════════════════════════════ */
+
+/* Mono stack for the whole CLI chat stream */
+body.cli-chat{
+  --cli-mono: ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace;
+}
+/* Force mono on every element inside the chat stream — beats the global
+   section-1 font-family !important on p/span/div/button etc. */
+body.cli-chat #chat,
+body.cli-chat #chat *{
+  font-family: var(--cli-mono) !important;
+}
+
+/* ── Line rhythm: tight terminal rows ── */
 body.cli-chat .msg{
-  margin-bottom: .45rem;
+  margin-bottom: .3rem;
 }
 body.cli-chat .msg-avatar{
   display: none !important;
 }
+
+/* ── Bubble frames off — everything is flat lines ── */
 body.cli-chat .bubble{
   background: transparent !important;
   border: none !important;
@@ -1504,46 +1520,572 @@ body.cli-chat .bubble::before,
 body.cli-chat .bubble::after{
   display: none !important;
 }
+/* Kill the global section-6 left accent bars on DM/NPC rows */
+body.cli-chat .msg.dm,
+body.cli-chat .msg.npc{
+  border-left: none !important;
+  padding-left: 0 !important;
+}
+
+/* ── Sender labels = prompt segments: ❯ DM / ❯ You / ❯ NPC ── */
 body.cli-chat .bubble .who{
+  font-family: var(--cli-mono) !important;
+  font-size: .68rem !important;
+  letter-spacing: .06em !important;
+  text-transform: lowercase !important;
+  text-shadow: none !important;
   margin-bottom: .1rem;
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  justify-content: flex-start !important;
 }
 body.cli-chat .msg.dm .bubble .who::before,
-body.cli-chat .msg.npc .bubble .who::before{
-  content: '❯ ';
-  color: var(--gold);
-  font-weight: 700;
-}
+body.cli-chat .msg.npc .bubble .who::before,
 body.cli-chat .msg.player .bubble .who::before{
   content: '❯ ';
-  color: var(--arcane);
   font-weight: 700;
 }
+body.cli-chat .msg.dm .bubble .who::before{ color: var(--gold); }
+body.cli-chat .msg.npc .bubble .who::before{ color: var(--npc-color, #a8b2c0); }
+body.cli-chat .msg.player .bubble .who::before{ color: var(--arcane); }
+body.cli-chat .bubble .who .dot{ display: none !important; }
+
+/* ── DM gutter: [♪] TTS link sits left of the prompt line ── */
+body.cli-chat .msg.dm .bubble .who{
+  padding-left: 1.9rem;
+}
+
+/* ── Text: mono, slightly smaller, terminal line-height ── */
 body.cli-chat .msg.dm .bubble .text,
 body.cli-chat .msg.npc .bubble .text,
 body.cli-chat .msg.player .bubble .text{
-  font-size: 1.05rem;
-  line-height: 1.6;
+  font-family: var(--cli-mono) !important;
+  font-size: .95rem;
+  line-height: 1.5;
 }
 body.cli-chat .msg.dm .bubble .text{
   font-style: italic;
   color: var(--bone);
 }
+body.cli-chat .msg.npc .bubble .text{
+  color: var(--bone);
+}
 body.cli-chat .msg.player .bubble .text{
   color: var(--bone-bright);
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  display: block;
+  text-align: left;
 }
 body.cli-chat .msg.player{
   margin-left: 0;
   justify-content: flex-start;
 }
-body.cli-chat .composer{
+
+/* ── NPC quotes inside DM replies: flat indented rows ── */
+body.cli-chat .msg.dm .npc-quote{
+  margin: .3rem 0 .15rem 1.5rem;
+  padding: 0;
+  border-left: none !important;
   background: transparent !important;
-  border-color: transparent !important;
-  padding: .2rem .1rem !important;
-}
-body.cli-chat .composer:focus-within{
+  border-radius: 0 !important;
   box-shadow: none !important;
 }
+body.cli-chat .msg.dm .npc-quote .nq-who{
+  font-family: var(--cli-mono) !important;
+  font-size: .66rem !important;
+  letter-spacing: .06em !important;
+  text-transform: lowercase !important;
+  color: var(--npc-color, #a8b2c0);
+  text-shadow: none !important;
+  margin-bottom: .05rem;
+}
+body.cli-chat .msg.dm .npc-quote .nq-who::before{
+  content: '❯ ';
+  color: var(--npc-color, #a8b2c0);
+  font-weight: 700;
+}
+body.cli-chat .msg.dm .npc-quote .nq-who .dot{ display: none !important; }
+body.cli-chat .msg.dm .npc-quote .nq-text{
+  font-family: var(--cli-mono) !important;
+  font-size: .92rem;
+  line-height: 1.5;
+}
+
+/* ── System / slash-cmd lines: comment style with '# ' prefix ── */
+body.cli-chat .msg.system,
+body.cli-chat .msg.cmd{
+  text-align: left;
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+}
+body.cli-chat .msg.system .box,
+body.cli-chat .msg.cmd .box{
+  display: block;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: .15rem 0;
+  font-family: var(--cli-mono) !important;
+  font-size: .85rem;
+  line-height: 1.5;
+  color: var(--bone-dim);
+  text-align: left;
+}
+body.cli-chat .msg.system .box:not(:has(.inline-dice))::before,
+body.cli-chat .msg.cmd .box::before{
+  content: '# ';
+  color: var(--bone-dim);
+  opacity: .65;
+}
+body.cli-chat .msg.system .box b,
+body.cli-chat .msg.cmd .box b{
+  font-family: var(--cli-mono) !important;
+}
+
+/* ── Roll-request: flat terminal lines, no card chrome ── */
+body.cli-chat .roll-request{
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .2rem;
+  max-width: none;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: .15rem 0 .3rem;
+}
+body.cli-chat .roll-request .rr-title{
+  font-family: var(--cli-mono) !important;
+  font-size: .66rem !important;
+  letter-spacing: .1em !important;
+  text-transform: lowercase !important;
+  color: var(--bone-dim);
+  text-shadow: none !important;
+  animation: none !important;
+}
+body.cli-chat .roll-request .rr-prompt{
+  font-family: var(--cli-mono) !important;
+  font-size: .88rem;
+  color: var(--bone-bright);
+}
+body.cli-chat .roll-request .rr-prompt b{
+  font-family: var(--cli-mono) !important;
+  color: var(--gold-bright);
+}
+body.cli-chat .roll-request .rr-note{
+  font-family: var(--cli-mono) !important;
+  font-size: .78rem;
+  color: var(--bone-dim);
+}
+body.cli-chat .roll-request .rr-actions{
+  gap: .4rem;
+  width: auto;
+}
+body.cli-chat .roll-request .rr-ico{
+  font-family: var(--cli-mono) !important;
+  font-size: .78rem !important;
+  letter-spacing: .04em !important;
+  text-transform: none !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: .15rem .4rem .15rem 0 !important;
+  min-height: 0 !important;
+  animation: none !important;
+  color: var(--gold) !important;
+}
+body.cli-chat .roll-request .rr-ico .rr-ico-glyph{
+  font-size: .85rem !important;
+  filter: none !important;
+  animation: none !important;
+}
+body.cli-chat .roll-request .rr-ico-pen{
+  color: var(--bone-dim) !important;
+}
+body.cli-chat .roll-request .rr-ico:hover{
+  filter: none !important;
+  transform: none !important;
+  color: var(--gold-bright) !important;
+}
+body.cli-chat .roll-request .rr-ico-pen:hover{
+  color: var(--bone-bright) !important;
+}
+body.cli-chat .roll-result-inline b{
+  font-family: var(--cli-mono) !important;
+}
+
+/* ── Event log: flat rows, turn label as header line ── */
+body.cli-chat .event-batch{
+  max-width: none;
+  margin: .3rem 0;
+  padding: .1rem 0 .2rem;
+  border: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+body.cli-chat .event-batch .batch-turn{
+  position: static;
+  font-family: var(--cli-mono) !important;
+  font-size: .62rem !important;
+  letter-spacing: .1em !important;
+  text-transform: uppercase !important;
+  color: var(--gold-bright);
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0;
+  margin-bottom: .1rem;
+}
+body.cli-chat .event-card{
+  display: flex;
+  align-items: flex-start;
+  gap: .5rem;
+  margin: .08rem 0;
+  padding: .05rem 0 .05rem 1.5rem;
+  border-left: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  font-family: var(--cli-mono) !important;
+  font-size: .78rem;
+  font-style: normal;
+  line-height: 1.5;
+}
+body.cli-chat .event-card:hover{
+  background: transparent !important;
+}
+body.cli-chat .event-card .ev-icon{
+  font-size: .8rem;
+}
+
+/* ── Guardian / Lorekeeper report: flat ── */
+body.cli-chat .msg.guardian .guardian-title{
+  font-family: var(--cli-mono) !important;
+  font-size: .6rem !important;
+  letter-spacing: .12em !important;
+  text-transform: uppercase !important;
+  color: var(--gold-bright);
+  padding: .25rem 0 .05rem;
+  border-bottom: none !important;
+}
+body.cli-chat .msg.guardian .guardian-box{
+  font-family: var(--cli-mono) !important;
+  font-size: .78rem;
+  line-height: 1.5;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: .15rem 0 .3rem;
+}
+body.cli-chat .msg.guardian .guardian-box strong{
+  font-family: var(--cli-mono) !important;
+}
+
+/* ── Scene card: flat, header as a row ── */
+body.cli-chat .scene-card{
+  width: 100%;
+  max-width: none;
+  margin: .4rem 0;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+body.cli-chat .scene-card .scene-header{
+  font-family: var(--cli-mono) !important;
+  font-size: .62rem !important;
+  letter-spacing: .1em !important;
+  text-transform: lowercase !important;
+  color: var(--bone-dim);
+  padding: .15rem 0;
+  border-bottom: 1px dashed color-mix(in srgb, var(--edge) 40%, transparent);
+}
+body.cli-chat .scene-card .scene-header:hover{
+  background: transparent;
+  color: var(--bone-bright);
+}
+body.cli-chat .scene-card .ascii-art{
+  margin: .2rem 0;
+  border-radius: 0;
+}
+
+/* ── Resume recap: flat rows ── */
+body.cli-chat .resume-card{
+  max-width: none;
+  margin: .4rem 0;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+body.cli-chat .resume-card .rc-head{
+  padding: .15rem 0;
+}
+body.cli-chat .resume-card .rc-title{
+  font-family: var(--cli-mono) !important;
+  font-size: .62rem !important;
+  letter-spacing: .1em !important;
+  text-transform: uppercase !important;
+  color: var(--gold-bright);
+}
+body.cli-chat .resume-card .rc-caret{
+  font-size: .62rem;
+}
+body.cli-chat .resume-card .rc-body{
+  border-top: none !important;
+  padding: .2rem 0 .3rem;
+  gap: .15rem;
+}
+body.cli-chat .resume-card .rc-row{
+  font-family: var(--cli-mono) !important;
+  font-size: .78rem;
+  line-height: 1.5;
+}
+body.cli-chat .resume-card .rc-k{
+  font-size: .68rem;
+  min-width: 4.5rem;
+}
+body.cli-chat .resume-card .rc-dm{
+  font-family: var(--cli-mono) !important;
+  font-size: .78rem;
+  color: var(--bone-dim);
+}
+
+/* ── Reasoning (DM inner monologue): flat indented rows ── */
+body.cli-chat .reasoning{
+  max-width: none;
+  margin: .25rem 0 .25rem 1.5rem;
+  border: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+body.cli-chat .reasoning-head{
+  font-family: var(--cli-mono) !important;
+  font-size: .58rem !important;
+  letter-spacing: .12em !important;
+  text-transform: uppercase !important;
+  color: var(--arcane);
+  padding: .1rem 0;
+}
+body.cli-chat .reasoning-head:hover{
+  background: transparent;
+}
+body.cli-chat .reasoning-head .orb{
+  display: none !important;
+}
+body.cli-chat .reasoning-body .inner{
+  font-family: var(--cli-mono) !important;
+  font-size: .78rem;
+  line-height: 1.5;
+  border-top: 1px dashed color-mix(in srgb, var(--arcane) 30%, transparent);
+  margin: 0;
+  padding-top: .35rem;
+}
+
+/* ── Day headers: dim mono separator rows ── */
+body.cli-chat .day-head{
+  font-family: var(--cli-mono) !important;
+  font-size: .62rem !important;
+  letter-spacing: .12em !important;
+  text-transform: uppercase !important;
+  color: var(--gold-bright);
+  text-shadow: none !important;
+  background: transparent !important;
+  border: none !important;
+  border-left: none !important;
+  border-radius: 0 !important;
+  margin: .8rem 0 .35rem;
+  padding: .1rem 0;
+}
+body.cli-chat .day-head:hover{
+  background: transparent;
+  border: none;
+  border-left: none;
+}
+
+/* ── Composer: merges flush with the stream — no box ── */
 body.cli-chat .input-area{
   background: transparent !important;
-  border-top: 1px solid var(--edge);
+  border-top: 1px dashed color-mix(in srgb, var(--edge) 45%, transparent);
+  padding: .3rem 1.6rem .45rem;
+}
+body.cli-chat .composer{
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: .15rem 0 !important;
+}
+body.cli-chat .composer:focus-within{
+  border: none !important;
+  box-shadow: none !important;
+}
+body.cli-chat .input-row::before{
+  color: var(--gold);
+}
+body.cli-chat .input-row textarea{
+  font-family: var(--cli-mono) !important;
+  font-size: .95rem;
+  line-height: 1.5;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  padding: .35rem .5rem .35rem 1.7rem !important;
+  color: var(--bone-bright);
+  caret-color: var(--gold);
+  min-height: 34px;
+}
+body.cli-chat .input-row textarea:focus{
+  border: none !important;
+  box-shadow: none !important;
+}
+body.cli-chat .input-row textarea::placeholder{
+  color: rgba(184,184,200,.4);
+  font-style: normal;
+}
+body.cli-chat .send-btn{
+  font-family: var(--cli-mono) !important;
+  font-size: .8rem !important;
+  letter-spacing: .05em !important;
+  text-transform: none !important;
+  font-weight: 400 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: var(--gold) !important;
+  padding: .35rem .3rem !important;
+}
+body.cli-chat .send-btn:hover{
+  background: transparent !important;
+  color: var(--gold-bright) !important;
+}
+body.cli-chat .send-btn:disabled{
+  opacity: .4 !important;
+}
+body.cli-chat .input-hint{
+  font-family: var(--cli-mono) !important;
+  font-size: .66rem;
+  font-style: normal;
+  color: var(--bone-dim);
+}
+body.cli-chat .input-hint kbd{
+  font-family: var(--cli-mono) !important;
+  font-size: .66rem;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0;
+  color: var(--bone-dim);
+}
+
+/* ── TTS controls: one compact terminal line ── */
+body.cli-chat .tts-voice-picker{
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  justify-content: flex-start;
+  margin-bottom: .15rem;
+  padding: 0;
+}
+body.cli-chat .tts-voice-label{
+  font-size: .78rem;
+  opacity: .85;
+}
+body.cli-chat .tts-select{
+  font-family: var(--cli-mono) !important;
+  font-size: .7rem !important;
+  letter-spacing: .04em !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  color: var(--bone-dim) !important;
+  padding: .05rem .1rem !important;
+  max-width: 110px;
+  cursor: pointer;
+}
+body.cli-chat .tts-select:hover{
+  color: var(--bone) !important;
+}
+body.cli-chat .tts-select:focus{
+  outline: none;
+  border: none !important;
+}
+body.cli-chat .tts-select.provider{
+  color: var(--arcane) !important;
+}
+body.cli-chat .tts-select.provider:hover{
+  color: var(--arcane-bright) !important;
+}
+body.cli-chat .tts-auto-btn{
+  font-family: var(--cli-mono) !important;
+  font-size: .7rem !important;
+  letter-spacing: .04em !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  color: var(--bone-dim) !important;
+  padding: .05rem .15rem !important;
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  line-height: 1;
+}
+body.cli-chat .tts-auto-btn:hover{
+  color: var(--bone-bright) !important;
+}
+body.cli-chat .tts-auto-btn.active{
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: var(--gold-bright) !important;
+  animation: cli-tts-pulse 2.4s infinite;
+}
+
+/* ── TTS button on DM lines: '[♪]' text link in the gutter ── */
+body.cli-chat .tts-btn{
+  position: absolute;
+  top: .18rem;
+  left: 0;
+  right: auto !important;   /* base .tts-btn sets right:.4rem — must not stretch the hit box */
+  display: inline-block;
+  font-family: var(--cli-mono) !important;
+  font-size: 0 !important;   /* hides the 🔊 emoji — glyph comes from ::before */
+  line-height: 1.4;
+  color: var(--gold) !important;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0;
+  opacity: .85;
+  vertical-align: baseline;
+  cursor: pointer;
+}
+body.cli-chat .tts-btn::before{
+  content: '[♪]';
+  font-size: .72rem;
+  letter-spacing: .02em;
+  color: inherit;
+}
+body.cli-chat .tts-btn:hover{
+  opacity: 1;
+  color: var(--gold-bright) !important;
+}
+body.cli-chat .tts-btn.playing{
+  opacity: 1;
+  animation: cli-tts-pulse 1.2s infinite;
+}
+@keyframes cli-tts-pulse{
+  0%, 100%{ color: var(--gold); text-shadow: none; }
+  50%{ color: var(--gold-bright); text-shadow: 0 0 8px rgba(232,198,90,.75); }
 }

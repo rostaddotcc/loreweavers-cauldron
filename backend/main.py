@@ -3165,15 +3165,39 @@ def _build_system_prompt(
         if world.get("weather"):
             parts.append(f"Väder: {world['weather']}")
 
-    # Locations (förberedda/importerade platser)
+    # Locations (förberedda/importerade platser) — med restid från nuvarande plats
     locations = state.get("locations", [])
     if locations:
-        loc_str = "; ".join(
-            f"{l.get('name', '?')}: {l.get('description', '')[:80]}"
-            + (f" [{l.get('lore', '')[:60]}]" if l.get('lore') else "")
-            for l in locations[:12]
-        )
+        try:
+            with_travel = get_locations_with_travel(state)
+        except Exception:
+            with_travel = []
+        if with_travel:
+            loc_str = "; ".join(
+                f"{l.get('name', '?')} ({l.get('terrain', 'okänd')}, {l.get('travel_text', '?')})"
+                + (f": {l.get('description', '')[:60]}" if l.get('description') else "")
+                for l in with_travel[:12]
+            )
+        else:
+            loc_str = "; ".join(
+                f"{l.get('name', '?')}: {l.get('description', '')[:80]}"
+                + (f" [{l.get('lore', '')[:60]}]" if l.get('lore') else "")
+                for l in locations[:12]
+            )
         parts.append(f"\n## Kända platser\n{loc_str}")
+        # B: Terrängregeln — DM ska kunna uppskatta restid även för okända platser
+        travel_rule = (
+            "RESOR: Restid mellan platser = avstånd ÷ 10 × terrängmodifierare. "
+            "Terrängmodifierare (dagar per enhet): väg 0.5, stig 0.8, slätt 0.6, hav 0.4, "
+            "skog 1.2, berg 1.8, träsk 1.5, is 1.4, okänd 1.0. Minst en halv dag per resa. "
+            "När spelaren reser: narrera en trovärdig restid och låt tiden passera ([NY_DAG:] vid övernattning)."
+            if lang == "sv" else
+            "TRAVEL: Travel time between locations = distance ÷ 10 × terrain modifier. "
+            "Terrain modifiers (days per unit): road 0.5, trail 0.8, plains 0.6, sea 0.4, "
+            "forest 1.2, mountains 1.8, swamp 1.5, ice 1.4, unknown 1.0. Minimum half a day per journey. "
+            "When the player travels: narrate a believable travel time and let time pass ([NY_DAG:] when camping overnight)."
+        )
+        parts.append(travel_rule)
 
     # Lore (världsdetaljer, historia)
     lore = state.get("lore", [])
@@ -5465,9 +5489,9 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
     try:
         if existing_path and body.get("mode") == "edit":
             edit_prompt = _trim_prompt(
-                "Update this character portrait to reflect their current story and appearance: "
+                "Reimagine this character freely from their current story and appearance — "
                 + prompt
-                + " Keep the same character, face, art style and composition; only adjust details to match the new description."
+                + " You may change anything: face, species, form, clothes and art style. Do not preserve the old face."
             )
             async with httpx.AsyncClient(timeout=150) as client:
                 with open(existing_path, "rb") as f:
@@ -6054,8 +6078,10 @@ def _build_dm_avatar_prompt(seed: int, state: dict | None = None) -> str:
     palette = rng.choice(_DM_AVATAR_PALETTES)
     flourish = _dm_avatar_flourish(rng, state)
     return (
-        f"An ancient, mysterious dungeon master, {archetype}, {mood}, "
-        f"color palette of {palette}, {flourish}. "
+        f"A mysterious presence — the Dungeon Master of this tale — imagined as: {archetype}, "
+        f"{mood}, color palette of {palette}, {flourish}. "
+        "Depict the presence EXACTLY as described: it may be a person, machine, swarm, "
+        "nebula, energy being, object or abstract form — never force it into a human. "
         + STEP_IMAGE_STYLE
     )
 
@@ -6164,8 +6190,20 @@ def _build_avatar_prompt(state: dict, avatar_key: str, seed: int = 0) -> str:
                 desc = notes[:180]
             else:
                 desc = "a mysterious figure"
-            return f"{npc.get('name')}, {desc}. {STEP_IMAGE_STYLE}"
-        return f"{npc_name}, a mysterious figure in the world of this story. {STEP_IMAGE_STYLE}"
+            # Form-direktiv: NPC:er kan vara maskiner, varelser, energiväsen —
+            # tvinga ALDRIG humanoid form (Meredith-drönaren blev en skallig gubbe).
+            return (
+                f"{npc.get('name')}, {desc}. "
+                "Depict the character EXACTLY as described — if they are a machine, drone, "
+                "creature, energy being or abstract entity, depict them AS THAT, never as a human. "
+                + STEP_IMAGE_STYLE
+            )
+        return (
+            f"{npc_name}, a mysterious figure in the world of this story. "
+            "Depict them exactly as described — they may be humanoid, machine, creature, "
+            "energy being, object or abstract form, never forced into a person. "
+            + STEP_IMAGE_STYLE
+        )
 
     # Player / standard — bygg från character sheet + inventory + lore
     ch = state.get("character", {}) or {}
@@ -6273,9 +6311,9 @@ async def generate_avatar(
     try:
         if existing_path and mode == "edit":
             edit_prompt = _trim_prompt(
-                "Update this character portrait to reflect their current story and appearance: "
+                "Reimagine this character freely from their current story and appearance — "
                 + prompt
-                + " Keep the same character, face, art style and composition; only adjust details to match the new description."
+                + " You may change anything: face, species, form, clothes and art style. Do not preserve the old face."
             )
             async with httpx.AsyncClient(timeout=150) as client:
                 with open(existing_path, "rb") as f:

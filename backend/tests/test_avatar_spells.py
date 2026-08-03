@@ -23,7 +23,7 @@ def test_dm_avatar_prompt_is_deterministic_per_seed():
     p1 = main._build_dm_avatar_prompt(42)
     p2 = main._build_dm_avatar_prompt(42)
     assert p1 == p2
-    assert "dungeon master" in p1
+    assert "Dungeon Master" in p1
 
 
 def test_dm_avatar_prompt_varies_across_seeds():
@@ -244,7 +244,18 @@ def test_dm_avatar_prompt_aligns_with_lore():
     state = {"character": {}, "npcs": [], "lore": ["A signal pulses from the obsidian talisman near Veyl's Lantern Court."]}
     p = main._build_dm_avatar_prompt(7, state)
     assert ("signal" in p or "talisman" in p or "Lantern" in p)  # lore-fragment med
-    assert "dungeon master" in p
+    assert "Dungeon Master" in p
+    # Form-direktiv: arketypen får ALDRIG tvingas till human
+    assert "never force it into a human" in p
+
+
+def test_npc_avatar_prompt_has_form_directive():
+    # En drönare ska promptas SOM drönare, aldrig tvingas till människa
+    state = {"character": {}, "npcs": [{"name": "Meredith", "role": "surveillance drone in a space opera", "notes": "a sleek machine"}], "lore": []}
+    p = main._build_avatar_prompt(state, "npc:Meredith")
+    assert "Meredith" in p
+    assert "drone" in p
+    assert "never as a human" in p
 
 
 def test_dm_avatar_archetypes_include_non_humanoid():

@@ -1,7 +1,8 @@
 /**
  * 🎨 themes.js — Color theme switcher for the whole site
  * ------------------------------------------------------
- * 5 dark-fantasy palettes, site-wide, saved in localStorage.
+ * 8 palettes (5 dark-fantasy + 3 classic terminal: Dracula,
+ * Catppuccin Mocha, Gruvbox), site-wide, saved in localStorage.
  * Overrides the CSS variables on <html> (inline style beats every
  * stylesheet, including snes.css's :root). Same pattern as fonts.js.
  *
@@ -84,6 +85,45 @@ const THEMES = (() => {
         '--ember': '#d4691e', '--arcane': '#7ea8f0', '--arcane-bright': '#b8d4ff', '--arcane-deep': '#1f3a66',
         '--poison': '#7aa35e', '--teal': '#5ec8d4',
         '--term-green': '#33cc33', '--term-amber': '#ccaa33',
+      },
+    },
+    {
+      id: 'dracula', name: 'Dracula',
+      colors: {
+        '--ink': '#282a36', '--stone': '#21222c', '--stone-2': '#313244', '--stone-3': '#3a3b4a',
+        '--edge': '#44475a', '--edge-hi': '#6272a4',
+        '--bone': '#f8f8f2', '--bone-bright': '#ffffff', '--bone-dim': '#a9b0bd',
+        '--gold': '#f1fa8c', '--gold-bright': '#ffffb3',
+        '--blood': '#ff5555', '--blood-bright': '#ff6e6e',
+        '--ember': '#ffb86c', '--arcane': '#bd93f9', '--arcane-bright': '#d6b7ff', '--arcane-deep': '#4a3a6e',
+        '--poison': '#50fa7b', '--teal': '#8be9fd',
+        '--term-green': '#50fa7b', '--term-amber': '#f1fa8c',
+      },
+    },
+    {
+      id: 'catppuccin', name: 'Catppuccin',
+      colors: {
+        '--ink': '#1e1e2e', '--stone': '#181825', '--stone-2': '#1e1e2e', '--stone-3': '#313244',
+        '--edge': '#45475a', '--edge-hi': '#585b70',
+        '--bone': '#cdd6f4', '--bone-bright': '#f5f0ff', '--bone-dim': '#a6adc8',
+        '--gold': '#f9e2af', '--gold-bright': '#f5e0dc',
+        '--blood': '#f38ba8', '--blood-bright': '#eba0ac',
+        '--ember': '#fab387', '--arcane': '#cba6f7', '--arcane-bright': '#e3d1ff', '--arcane-deep': '#3a2a5e',
+        '--poison': '#a6e3a1', '--teal': '#94e2d5',
+        '--term-green': '#a6e3a1', '--term-amber': '#f9e2af',
+      },
+    },
+    {
+      id: 'gruvbox', name: 'Gruvbox',
+      colors: {
+        '--ink': '#282828', '--stone': '#1d2021', '--stone-2': '#282828', '--stone-3': '#3c3836',
+        '--edge': '#504945', '--edge-hi': '#665c54',
+        '--bone': '#ebdbb2', '--bone-bright': '#fbf1c7', '--bone-dim': '#a89984',
+        '--gold': '#fabd2f', '--gold-bright': '#fe8019',
+        '--blood': '#fb4934', '--blood-bright': '#fb695c',
+        '--ember': '#d65d0e', '--arcane': '#d3869b', '--arcane-bright': '#e8a0b4', '--arcane-deep': '#4a2a3e',
+        '--poison': '#b8bb26', '--teal': '#8ec07c',
+        '--term-green': '#b8bb26', '--term-amber': '#fabd2f',
       },
     },
   ];

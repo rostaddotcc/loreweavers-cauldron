@@ -196,9 +196,20 @@
     letter-spacing:.28em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.28rem}
   .field input{width:100%;font-family:var(--font-body);font-size:16px;color:var(--bone-bright);
     background:var(--stone);border:1px solid var(--edge);padding:.6rem .8rem .6rem 2.15rem;
-    outline:none;transition:border-color .25s,box-shadow .25s;border-radius:2px}
+    outline:none;transition:border-color .25s,box-shadow .25s,background .25s;border-radius:4px}
   .field input::placeholder{color:rgba(119,119,140,.55);font-style:italic}
+  .field input:hover{border-color:color-mix(in srgb, var(--edge) 60%, var(--gold) 40%)}
   .field input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,162,39,.14)}
+  /* Krossa webbläsarens autofill-beige — håll fälten mörka även med sparade uppgifter */
+  .field input:-webkit-autofill,
+  .field input:-webkit-autofill:hover,
+  .field input:-webkit-autofill:focus{
+    -webkit-text-fill-color:var(--bone-bright);
+    -webkit-box-shadow:0 0 0 1000px var(--stone) inset;
+    box-shadow:0 0 0 1000px var(--stone) inset;
+    transition:background-color 9999s ease-in-out 0s;
+    caret-color:var(--gold);
+  }
   .field .icon{position:absolute;left:.72rem;bottom:.6rem;color:var(--gold);
     font-family:var(--font-display);font-weight:700;opacity:.45;transition:opacity .25s}
   .field input:focus ~ .icon{opacity:1}

@@ -1844,8 +1844,12 @@ TTS_PROVIDERS = {
     "qwen": {
         "name": "Qwen (Token Plan)",
         "voices": [
-            {"id": TTS_VOICE_MALE, "gender": "male", "name": "Berättaren (man)", "desc": "Ljus och kraftfull manlig berättarröst"},
-            {"id": TTS_VOICE_FEMALE, "gender": "female", "name": "Berättaren (kvinna)", "desc": "Varm och empatisk kvinnlig berättarröst"},
+            {"id": TTS_VOICE_MALE, "gender": "male", "name": "Berättaren (man)", "desc": "Ljus och kraftfull manlig berättarröst (kinesisk/engelska)"},
+            {"id": TTS_VOICE_FEMALE, "gender": "female", "name": "Berättaren (kvinna)", "desc": "Varm och empatisk kvinnlig berättarröst (kinesisk/engelska)"},
+            {"id": "qwen-audio-3.0-tts-plus-loongadriangao", "gender": "male", "name": "Adrian (EN)", "desc": "Male English voice — calm & dignified, audio reading"},
+            {"id": "qwen-audio-3.0-tts-plus-loongalexanderhu", "gender": "male", "name": "Alexander (EN)", "desc": "Male English voice — retro cassette tone"},
+            {"id": "qwen-audio-3.0-tts-plus-loongjameszhao", "gender": "male", "name": "James (EN)", "desc": "Male English voice — news broadcast"},
+            {"id": "qwen-audio-3.0-tts-plus-loongryanma", "gender": "male", "name": "Ryan (EN)", "desc": "Male English voice — electronic & trendy"},
         ],
     },
     "stepfun": {
@@ -1866,6 +1870,10 @@ TTS_INSTRUCTIONS = {
     # Hastighet: rate=1.1 i _synth_qwen_tts (snabbare än default), inga "slow"-ord här.
     TTS_VOICE_MALE: "Speak Swedish with Standard Swedish pronunciation, natural rhythm. Dark fantasy storytelling, atmospheric and vivid.",
     TTS_VOICE_FEMALE: "Speak Swedish with Standard Swedish pronunciation, natural rhythm. Warm expressive storytelling, rich and inviting.",
+    "qwen-audio-3.0-tts-plus-loongadriangao": "Calm dignified British-style narration, dark fantasy atmosphere, steady measured pace.",
+    "qwen-audio-3.0-tts-plus-loongalexanderhu": "Warm retro storyteller tone, dark fantasy narration, clear and friendly.",
+    "qwen-audio-3.0-tts-plus-loongjameszhao": "Authoritative news-style narration, dark fantasy atmosphere, crisp delivery.",
+    "qwen-audio-3.0-tts-plus-loongryanma": "Modern engaging storyteller voice, dark fantasy narration, vivid and clear.",
 }
 
 # StepFun-instruktion per röst — styr stil/emfas (kort; stöds av stepaudio-2.5-tts).
@@ -3475,6 +3483,8 @@ Return ONLY valid JSON (no markdown):
   "items_add": [{"name": "", "type": "", "qty": 1}],
   "quest_updates": [{"name": "", "new_status": "aktiv|slutförd|misslyckad"}],
   "hp_set": null,
+  "set_day": null,
+  "day_description": "",
   "report": "A short summary of what you changed and why (shown to the player)"
 }
 
@@ -3684,6 +3694,25 @@ async def _guardian_manual_correction(
         hp = ch.setdefault("hp", {})
         hp["current"] = int(hp_set)
         report_lines.append(f"💚 **HP set to:** {hp_set}/{hp.get('max', '?')}")
+
+    # Dag-avancering (set_day) — uppdaterar world.day + day_log + journal-entry
+    set_day = data.get("set_day")
+    if set_day is not None:
+        world = state.setdefault("world", {})
+        old_day = world.get("day", 1)
+        new_day = int(set_day)
+        if new_day != old_day:
+            desc = (data.get("day_description") or "").strip()
+            if not desc:
+                desc = f"Day {new_day} begins."
+            world["day"] = new_day
+            world["day_description"] = desc
+            world.setdefault("day_log", []).append({"day": new_day, "description": desc})
+            world["_pending_day_entry"] = True
+            effects.append({"type": "ny_dag", "value": f"Dag {new_day}: {desc}"})
+            report_lines.append(f"🌅 **Day advanced:** {old_day} → {new_day}")
+            # Spola logbook-cachen så journalen byggs om med den nya dagen
+            world.pop("logbook_llm", None)
 
     # Save state
     store.save(state)

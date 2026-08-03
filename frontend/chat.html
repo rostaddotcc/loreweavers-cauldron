@@ -2459,7 +2459,7 @@ function startTypewriter(msgEl, type) {
   const footerEl = msgEl.querySelector('.dm-footer');
   if (footerEl) footerEl.style.visibility = 'hidden';
   const grand = segs.reduce((a, s) => a + s.total, 0);
-  const chunk = Math.max(2, Math.ceil(grand / 240));      // max ~240 ticks
+  const chunk = Math.max(2, Math.ceil(grand / 480));      // max ~120 ticks (2× snabbare, 2026-08-04)
   const interval = grand <= 60 ? 40 : grand <= 220 ? 32 : grand <= 700 ? 24 : 18;
   let global = 0, tickIdx = 0, pitchDm = 0, pitchNpc = 0, done = false;
   let cursor = null, dripTimer = null;
@@ -3895,7 +3895,7 @@ function pollForGuardian(turnCount) {
   if (_guardianPollTimer) { clearInterval(_guardianPollTimer); _guardianPollTimer = null; }
 
   let attempts = 0;
-  const maxAttempts = 25; // 25 × 2s = 50s max
+  const maxAttempts = 50; // 50 × 1s = 50s max (poll 1s → halva tiden, 2026-08-04)
 
   _guardianPollTimer = setInterval(async () => {
     attempts++;
@@ -3972,7 +3972,7 @@ function pollForGuardian(turnCount) {
       _guardianPollTimer = null;
       hideGuardianStatus();
     }
-  }, 2000);
+  }, 1000);
 }
 
 // ═══════════════════════════════════════

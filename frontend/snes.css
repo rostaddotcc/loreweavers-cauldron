@@ -315,7 +315,7 @@
   background: var(--stone) !important;
 }.rr-btn{ border-color: var(--gold) !important; color: var(--gold) !important; }#thought-text{
   font-style: normal !important;
-  color: var(--term-green) !important;
+  color: var(--gold-bright) !important;
 }#dm-status.show #thought-text{
   animation: blink-cursor 1.2s steps(1) infinite;
 }
@@ -1479,4 +1479,71 @@ body.battle-drawer-open .battle-drawer-toggle .bdt-caret{ transform: rotate(180d
 @keyframes at-chip-in{
   from{ opacity: 0; transform: translateY(-3px); }
   to{ opacity: 1; transform: translateY(0); }
+}
+
+/* ══════════════════════════════════════════
+   36. CLI CHAT UI (v32) — 'use new chat ui'-switchen
+   body.cli-chat = ny terminal-känsla: inga bubbel-ramar,
+   allt "sitter ihop". Av-aktiveras → klassiska bubblor.
+   ══════════════════════════════════════════ */
+body.cli-chat .msg{
+  margin-bottom: .45rem;
+}
+body.cli-chat .msg-avatar{
+  display: none !important;
+}
+body.cli-chat .bubble{
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: .1rem 0 .15rem !important;
+  max-width: none !important;
+}
+body.cli-chat .bubble::before,
+body.cli-chat .bubble::after{
+  display: none !important;
+}
+body.cli-chat .bubble .who{
+  margin-bottom: .1rem;
+}
+body.cli-chat .msg.dm .bubble .who::before,
+body.cli-chat .msg.npc .bubble .who::before{
+  content: '❯ ';
+  color: var(--gold);
+  font-weight: 700;
+}
+body.cli-chat .msg.player .bubble .who::before{
+  content: '❯ ';
+  color: var(--arcane);
+  font-weight: 700;
+}
+body.cli-chat .msg.dm .bubble .text,
+body.cli-chat .msg.npc .bubble .text,
+body.cli-chat .msg.player .bubble .text{
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+body.cli-chat .msg.dm .bubble .text{
+  font-style: italic;
+  color: var(--bone);
+}
+body.cli-chat .msg.player .bubble .text{
+  color: var(--bone-bright);
+}
+body.cli-chat .msg.player{
+  margin-left: 0;
+  justify-content: flex-start;
+}
+body.cli-chat .composer{
+  background: transparent !important;
+  border-color: transparent !important;
+  padding: .2rem .1rem !important;
+}
+body.cli-chat .composer:focus-within{
+  box-shadow: none !important;
+}
+body.cli-chat .input-area{
+  background: transparent !important;
+  border-top: 1px solid var(--edge);
 }

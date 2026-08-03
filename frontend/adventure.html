@@ -137,6 +137,7 @@
   .dm-model-select:focus{border-color:var(--gold);box-shadow:0 0 16px -4px rgba(232,198,90,.4)}
   .dm-model-note{font-size:.8rem;font-style:italic;color:var(--bone-dim);margin-top:.6rem}
   .dm-model-note b{color:var(--gold);font-style:normal}
+  .dm-model-label{font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim);min-width:200px;display:flex;flex-direction:column;gap:.3rem}
   /* Arketypgrid (delas med newgame.html) */
   .spread{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
   .arch{position:relative;cursor:pointer;text-align:center;padding:1.4rem 1rem 1.2rem;background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);border:1px solid var(--edge);transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s,border-color .3s;overflow:hidden}
@@ -250,7 +251,7 @@
   }
   /* ═══════════ Feedback-modal ═══════════ */.fb-btn{display:inline-block;margin:.7rem auto 0;font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .9rem;cursor:pointer;border-radius:2px;transition:color .2s,border-color .2s}.fb-btn:hover{color:var(--gold-bright);border-color:var(--gold)}.fb-modal{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;background:rgba(4,2,8,.82);backdrop-filter:blur(3px);padding:1rem}.fb-modal.show{display:flex}.fb-card{position:relative;width:100%;max-width:440px;background:linear-gradient(165deg,var(--stone-2),var(--stone));border:1px solid var(--edge);padding:1.6rem 1.5rem 1.4rem;box-shadow:0 30px 80px -20px rgba(0,0,0,.9)}.fb-corner{position:absolute;width:16px;height:16px;border-style:solid;opacity:.8;border-color:var(--gold)}.fb-corner.tl{top:6px;left:6px;border-width:2px 0 0 2px}.fb-corner.tr{top:6px;right:6px;border-width:2px 2px 0 0}.fb-corner.bl{bottom:6px;left:6px;border-width:0 0 2px 2px}.fb-corner.br{bottom:6px;right:6px;border-width:0 2px 2px 0}.fb-title{font-family:'Cinzel',serif;font-weight:900;font-size:1.02rem;color:var(--gold-bright);letter-spacing:.06em;text-align:center;margin-bottom:.35rem}.fb-sub{font-size:.86rem;font-style:italic;color:var(--bone-dim);text-align:center;margin-bottom:1rem}.fb-label{display:block;font-family:'Cinzel',serif;font-size:.64rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim);margin:.85rem 0 .35rem}.fb-label .fb-opt{text-transform:none;letter-spacing:.04em;opacity:.75}.fb-input,.fb-textarea{width:100%;font-family:'Spectral',serif;font-size:1rem;line-height:1.5;color:var(--bone-bright);background:var(--ink);border:1px solid var(--edge);padding:.6rem .75rem;outline:none;border-radius:2px;transition:border-color .2s,box-shadow .2s}.fb-input:focus,.fb-textarea:focus{border-color:var(--gold);box-shadow:0 0 14px -4px rgba(232,198,90,.45)}.fb-textarea{resize:vertical;min-height:110px}.fb-input::placeholder,.fb-textarea::placeholder{color:var(--bone-dim);opacity:.55;font-style:italic}.fb-actions{display:flex;gap:.7rem;justify-content:flex-end;margin-top:1.2rem}.fb-cancel{font-size:.72rem;padding:.55rem 1.1rem}.fb-submit{font-size:.78rem;padding:.6rem 1.4rem;min-width:110px}.fb-submit:disabled{opacity:.6;cursor:default}.fb-error{display:none;margin-top:.85rem;font-size:.8rem;font-style:italic;color:var(--blood-bright);text-align:center}.fb-card.has-error .fb-error{display:block}.fb-card.has-error .fb-textarea{border-color:var(--blood-bright)}@media(max-width:640px){.fb-btn,.fb-cancel,.fb-submit{min-height:44px}}
 </style>
-<link rel="stylesheet" href="snes.css?v=22">
+<link rel="stylesheet" href="snes.css?v=23">
 <script src="sprites.js?v=20260802a"></script>
 <script src="fonts.js?v=20260803a"></script>
 <script src="themes.js?v=20260804a"></script>
@@ -409,6 +410,9 @@
         <button class="blank-btn" onclick="blankScroll()">✦ Blank Parchment — write your own</button>
       </div>
       <div class="step-actions" id="gen-row">
+        <label class="dm-model-label" for="adv-char-model">🧠 Character model
+          <select id="adv-char-model" class="dm-model-select" style="max-width:260px"></select>
+        </label>
         <button class="gen-btn" id="gen-btn" onclick="generateHero()" disabled>🔮 Generate Hero</button>
         <span class="hint" id="gen-hint">Pick an archetype first — or take the blank parchment</span>
       </div>
@@ -459,12 +463,32 @@
       <div class="step-num">4</div>
       <div>
         <div class="step-title">Choose Your Dungeon Master</div>
-        <div class="step-sub">The mind behind the veil — pick the model that tells your story.</div>
+        <div class="step-sub">The minds behind the veil — pick the models that tell your story.</div>
       </div>
     </div>
     <div class="dm-model-row">
+      <label class="dm-model-label" for="adventure-dm-model">🧠 Dungeon Master</label>
       <select class="dm-model-select" id="adventure-dm-model"></select>
     </div>
+    <div class="dm-model-note">Narrates the world — every scene, every NPC, every whisper.</div>
+    <div class="dm-model-row">
+      <label class="dm-model-label" for="adventure-guardian-model">🦉 Lorekeeper / Guardian</label>
+      <select class="dm-model-select" id="adventure-guardian-model"></select>
+    </div>
+    <div class="dm-model-note">The quiet scribe that keeps the books — HP, gold, items, XP, quests.</div>
+    <div class="dm-model-row">
+      <label class="dm-model-label" for="adventure-extraction-model">📜 Extraction</label>
+      <select class="dm-model-select" id="adventure-extraction-model"></select>
+    </div>
+    <div class="dm-model-note">Reads your world files and structures the lore before the tale begins.</div>
+    <div class="dm-model-row">
+      <label class="dm-model-label" for="adventure-tts">🗣️ Voice (TTS)</label>
+      <select class="dm-model-select" id="adventure-tts">
+        <option value="stepfun">StepFun (Step Plan)</option>
+        <option value="qwen">Qwen (Token Plan)</option>
+      </select>
+    </div>
+    <div class="dm-model-note">Which provider whispers the spoken word when the DM speaks aloud.</div>
     <div class="dm-model-note">🔄 <b>Can be changed at any time in the campaign</b> — from the settings inside the chat, if the mood shifts.</div>
     <div class="step-actions">
       <button class="start-btn" id="adventure-start" onclick="startAdventure()">⚔️ Start — Awaken the Dungeon Master</button>
@@ -881,11 +905,13 @@ async function generateHero() {
   const reasoning = document.getElementById('wa-gen-reasoning');
   status.classList.remove('wa-warn');
   weaving.classList.add('show');
-  status.textContent = '🧙 The Dungeon Master is weaving your hero…';
+  const charModelSel = document.getElementById('adv-char-model');
+  const charModel = (charModelSel && charModelSel.value) || 'step-3.7-flash';
+  status.textContent = '🧙 The Dungeon Master is weaving your hero with ' + charModel + '…';
   reasoning.hidden = false; reasoning.textContent = '';
   weaving.scrollIntoView({ behavior: 'smooth', block: 'center' });
   try {
-    const res = await API.vaultGenerateStream(advPrompt(), 'step-3.7-flash', advLang || 'en', (ev) => {
+    const res = await API.vaultGenerateStream(advPrompt(), charModel, advLang || 'en', (ev) => {
       if (ev.type === 'reasoning') {
         reasoning.textContent += ev.text;
         reasoning.scrollTop = reasoning.scrollHeight;
@@ -1017,15 +1043,36 @@ function advPrompt() {
     : '## Legenden\n\n**Namn:**\n**Folk:**\n**Klass:**\n**Bakgrund:**\n**Personlighet:**\n**Ett minne som jagar dig:**\n**Vad söker du?**\n\nGenerera:\n1. Namn (mörk fantasy)\n2. Fullt karaktärsark: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves\n3. 3-4 förmågor/egenskaper\n4. Startutrustning (5-8 föremål)\n5. Bakgrundshistoria (max 100 ord)\nReturnera som JSON enligt state-schemat.';
 }
 
-// ── Modellgate (DM-modell — kan ändras när som helst i kampanjen) ──
+// ── Modellgate (DM/Guardian/Extraction + Character-sheet modell — kan ändras när som helst i kampanjen) ──
 const PLAYER_DM_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-3.7-flash', 'ollama:heretic'];
+const TTS_PROVIDERS = [{ id: 'stepfun', name: 'StepFun (Step Plan)' }, { id: 'qwen', name: 'Qwen (Token Plan)' }];
 (function populateModelGate() {
-  const sel = document.getElementById('adventure-dm-model');
-  if (!sel) return;
+  const dmSel = document.getElementById('adventure-dm-model');
+  const guardSel = document.getElementById('adventure-guardian-model');
+  const extSel = document.getElementById('adventure-extraction-model');
+  const charSel = document.getElementById('adv-char-model');
+  const ttsSel = document.getElementById('adventure-tts');
   const fill = (models) => {
-    sel.innerHTML = models.map(m => `<option value="${m}">${m}</option>`).join('');
-    sel.value = models.includes('deepseek-v4-flash') ? 'deepseek-v4-flash' : (models[0] || '');
+    const opts = models.map(m => `<option value="${m}">${m}</option>`).join('');
+    [dmSel, guardSel, extSel].forEach(sel => {
+      if (!sel) return;
+      sel.innerHTML = opts;
+      // Default: step-3.7-flash (användarens beslut 2026-08-03) om tillgänglig
+      sel.value = models.includes('step-3.7-flash') ? 'step-3.7-flash' : (models[0] || '');
+    });
+    if (charSel) {
+      charSel.innerHTML = opts;
+      charSel.value = models.includes('step-3.7-flash') ? 'step-3.7-flash' : (models[0] || '');
+    }
   };
+  if (ttsSel) {
+    ttsSel.innerHTML = TTS_PROVIDERS.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    try {
+      const saved = localStorage.getItem('dnd_tts_provider');
+      if (saved && TTS_PROVIDERS.some(p => p.id === saved)) ttsSel.value = saved;
+    } catch (e) {}
+  }
+  if (!dmSel && !guardSel && !extSel && !charSel) return;
   API.me().then(u => {
     if (u && u.role === 'admin') {
       API.models().then(list => fill((list || []).map(m => m.id || m))).catch(() => fill(PLAYER_DM_MODELS));
@@ -1048,14 +1095,24 @@ async function startAdventure() {
   const name = document.getElementById('adventure-name-input').value.trim();
   const lang = advLang || 'en';
   const dmModel = document.getElementById('adventure-dm-model').value;
+  const guardianModel = document.getElementById('adventure-guardian-model').value;
+  const extractionModel = document.getElementById('adventure-extraction-model').value;
+  const ttsSel = document.getElementById('adventure-tts');
+  const ttsVal = ttsSel ? ttsSel.value : null;
   const btn = document.getElementById('adventure-start');
   btn.disabled = true;
   btn.textContent = '⚔️ Opening the table…';
   try {
     // 1) Kampanj + språk
     await API.createCampaign(name, lang);
-    // 2) DM-modell (kan ändras när som helst i kampanjen)
+    // 2) Spara alla modeller (en misslyckad modell ska aldrig blockera starten)
     try { await API.setDmModel(dmModel); } catch (e) { console.warn('setDmModel', e); }
+    try { await API.setGuardianModel(guardianModel); } catch (e) { console.warn('setGuardianModel', e); }
+    try { await API.setExtractionModel(extractionModel); } catch (e) { console.warn('setExtractionModel', e); }
+    if (ttsVal) {
+      try { localStorage.setItem('dnd_tts_provider', ttsVal); } catch (e) {}
+      API.setTtsProvider(ttsVal).catch(() => {});
+    }
     // 3) Lyft in hjälten (genererad → sparad i Forge; eller färdig Forge-hjälte)
     await API.vaultUse(advHeroId);
     sessionStorage.setItem('dnd_vault_character', advHeroId);

@@ -926,7 +926,7 @@
     color: var(--bone-dim); font-style: italic; font-size: 0.85rem;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=22">
+<link rel="stylesheet" href="snes.css?v=23">
 <script src="sprites.js?v=20260802a"></script>
 <script src="fonts.js?v=20260803a"></script>
 <script src="themes.js?v=20260804a"></script>
@@ -949,6 +949,7 @@
       <button class="drop-item" onclick="openUsageModal();closeMobileMenu()"><span class="di-icon">📊</span><span class="di-body"><span class="di-name">Usage</span><span class="di-hint">model & token stats</span></span></button>
       <a class="drop-item" href="help.html"><span class="di-icon">❓</span><span class="di-body"><span class="di-name">How to Play?</span><span class="di-hint">commands & tips</span></span></a>
       <button class="drop-item" id="mobile-menu-theme" onclick="themeCycle();closeMobileMenu()"><span class="di-icon">🎨</span><span class="di-body"><span class="di-name">Theme</span><span class="di-hint">switch palette</span></span></button>
+      <button class="drop-item" data-cli-label onclick="toggleCliChat();closeMobileMenu()"><span class="di-icon">🖥️</span><span class="di-body"><span class="di-name">Chat UI: CLI</span><span class="di-hint">terminal style — toggle to bubbles</span></span></button>
       <button class="drop-item" onclick="openFeedbackModal();closeMobileMenu()"><span class="di-icon">💬</span><span class="di-body"><span class="di-name">Feedback</span><span class="di-hint">suggestions or bug reports</span></span></button>
       <div class="drop-sep"></div>
       <button class="drop-item" style="color:var(--blood-bright)" onclick="location.href='adventure.html'"><span class="di-icon">🚪</span><span class="di-body"><span class="di-name">Leave</span><span class="di-hint">return to adventure select</span></span></button>
@@ -974,6 +975,7 @@
       <button class="drop-item" onclick="openUsageModal();closeSettingsMenu()"><span class="di-icon">📊</span><span class="di-body"><span class="di-name">Usage</span><span class="di-hint">model & token stats</span></span></button>
       <a class="drop-item" href="help.html"><span class="di-icon">❓</span><span class="di-body"><span class="di-name">How to Play?</span><span class="di-hint">commands & tips</span></span></a>
       <div class="drop-sep"></div>
+      <button class="drop-item" data-cli-label onclick="toggleCliChat();closeSettingsMenu()"><span class="di-icon">🖥️</span><span class="di-body"><span class="di-name">Chat UI: CLI</span><span class="di-hint">terminal style — toggle to bubbles</span></span></button>
       <button class="drop-item" onclick="openFeedbackModal();closeSettingsMenu()"><span class="di-icon">💬</span><span class="di-body"><span class="di-name">Feedback</span><span class="di-hint">suggestions or bug reports</span></span></button>
       <div class="model-picker-card">
         <div class="mpc-title">🧠 Modeller</div>
@@ -2840,169 +2842,21 @@ function diceMessage(roll, label) {
 // den sparas i transkriptet men visas aldrig i chatten.
 const AWAKENING_TRIGGER = '__VAKNA_DM__';
 
-// ── Modellgate: välj DM innan vaknandet ──
+// ── Modellgate BORTTAGEN (2026-08-03): modellval sker i onboardingens sista steg
+// (adventure.html step 4 — DM/Lorekeeper/Extraction/TTS) och sparas server-side.
+// Här vaknar DM bara automatiskt med de sparade modellerna. In-game-bytet sker
+// via settings-menyn (⚙️ → Modeller).
 // Spelarmodeller (icke-admin): samma lista som backend PLAYER_MODELS
 const PLAYER_MODEL_IDS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-3.7-flash', 'ollama:heretic'];
-function showModelGate() {
-  // Vänta på rollkontrollen innan vi bestämmer gate-beteende
-  const doGate = () => {
-  const en = (typeof I18N !== 'undefined' && I18N.getLang() === 'en');
-  const title = en ? '⚔️ Choose your Dungeon Master' : '⚔️ Välj din Dungeon Master';
-  const sub = en
-    ? 'This AI model will narrate your entire adventure.'
-    : 'Denna AI-modell kommer att berätta hela ditt äventyr.';
-  const guardianLabel = en ? '🦉 Lorekeeper model' : '🦉 Lorekeeper-modell';
-  const guardianHint = en
-    ? 'Handles mechanics: HP, XP, combat, dice checks.'
-    : 'Hanterar mekanik: HP, XP, strid, tärningskast.';
-  const extractionLabel = en ? '🧠 Background (extraction) model' : '🧠 Bakgrundsmodell (extraction)';
-  const extractionHint = en
-    ? 'Logbook, facts, summaries — runs without thinking.'
-    : 'Dagbok, fakta, sammanfattningar — körs utan thinking.';
-  const btnLabel = en ? '⚔️ Begin the Adventure' : '⚔️ Påbörja äventyret';
 
-  // Icke-admin: bara spelarmodellerna (DM + Lorekeeper). Admin: alla. Råa ID:n visas direkt.
-  const allowed = isAdmin ? Object.keys(modelNames) : PLAYER_MODEL_IDS;
-
-  const opts = allowed.map(id => {
-    const sel = id === currentModel ? ' selected' : '';
-    return `<option value="${id}"${sel}>${id}</option>`;
-  }).join('');
-
-  // Sparad Lorekeeper-modell från kampanj-metat (fallback: global GUARDIAN_MODEL/step-3.7-flash)
-  const savedGuardian = (campaignData && campaignData._raw && campaignData._raw.meta && campaignData._raw.meta.guardian_model) || 'step-3.7-flash';
-
-  const guardianOpts = allowed.map(id => {
-    const sel = id === savedGuardian ? ' selected' : '';
-    return `<option value="${id}"${sel}>${id}</option>`;
-  }).join('');
-
-  // Sparad extraction-modell från kampanj-metat (fallback: global EXTRACTION_MODEL/step-3.7-flash)
-  const savedExtraction = (campaignData && campaignData._raw && campaignData._raw.meta && campaignData._raw.meta.extraction_model) || 'step-3.7-flash';
-
-  const extractionOpts = allowed.map(id => {
-    const sel = id === savedExtraction ? ' selected' : '';
-    return `<option value="${id}"${sel}>${id}</option>`;
-  }).join('');
-
-  // TTS-leverantör — kampanjens val (server) annars localStorage, default stepfun
-  const savedTtsProvider = (campaignData && campaignData._raw && campaignData._raw.meta && campaignData._raw.meta.tts_provider) || ttsProvider();
-  const ttsLabel = en ? '🔊 Narrator (TTS provider)' : '🔊 Berättarröst (TTS-leverantör)';
-  const ttsHint = en
-    ? 'StepFun: official English voices. Qwen: Alibaba Token Plan.'
-    : 'StepFun: officiella engelska röster. Qwen: Alibaba Token Plan.';
-  const ttsOpts = [
-    { id: 'stepfun', name: 'StepFun (Step Plan)' },
-    { id: 'qwen', name: 'Qwen (Token Plan)' },
-  ].map(o => `<option value="${o.id}"${o.id === savedTtsProvider ? ' selected' : ''}>${o.name}</option>`).join('');
-
-  const gate = document.createElement('div');
-  gate.id = 'model-gate';
-  gate.innerHTML = `
-    <style>#model-gate{
-        position: fixed; inset: 0; z-index: 9999;
-        background: rgba(5,3,10,.96);
-        display: flex; align-items: center; justify-content: center;
-        animation: fadeIn .5s ease;
-      }#model-gate .gate-card{
-        background: var(--stone-2);
-        border: 1px solid rgba(201,162,39,.35);
-        border-radius: 0; padding: 2.5rem 2.2rem 2rem;
-        max-width: 420px; width: 90%; text-align: center;
-      }#model-gate h2{
-        font-family: 'Cinzel', serif; color: var(--gold-bright);
-        font-size: 1.15rem; margin: 0 0 .5rem; letter-spacing: .2em;
-      }#model-gate p{
-        color: rgba(180,170,150,.6); font-size: .75rem; margin: 0 0 1.5rem;
-        line-height: 1.5;
-      }#model-gate select{
-        width: 100%; padding: .6rem .8rem; font-size: .85rem;
-        background: var(--ink); color: var(--bone);
-        border: 1px solid rgba(201,162,39,.3); border-radius: 0;
-        cursor: pointer; margin-bottom: 1.2rem;
-        font-family: 'Courier New', monospace;
-      }#model-gate select:focus{ outline: none; border-color: var(--gold); }#model-gate .guardian-section{
-        text-align: left; margin-bottom: 1.2rem;
-        padding: .8rem; border: 1px solid rgba(201,162,39,.15);
-        background: rgba(0,0,0,.2);
-      }#model-gate .guardian-section label{
-        display: block; font-size: .8rem; color: var(--gold);
-        margin-bottom: .3rem; font-family: 'Cinzel', serif;
-      }#model-gate .guardian-section .hint{
-        font-size: .65rem; color: rgba(180,170,150,.5);
-        margin-bottom: .5rem;
-      }#model-gate button{
-        font-family: 'Cinzel', serif; font-size: .85rem;
-        padding: .65rem 2rem; cursor: pointer;
-        background: var(--gold);
-        color: var(--ink); border: 1px solid var(--gold-bright); border-radius: 0;
-        font-weight: 700; letter-spacing: .05em;
-        transition: background .15s;
-      }#model-gate button:hover{
-        background: var(--gold-bright);
-        color: var(--ink);
-      }
-      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }#model-gate .gate-card{ animation: fadeIn .45s ease; }
-    </style>
-    <div class="gate-card">
-      <h2>${title}</h2>
-      <p>${sub}</p>
-      <p style="font-size:.68rem;color:rgba(180,170,150,.5);margin:-.6rem 0 1.2rem;line-height:1.5">High-reasoning models take a little longer to answer — but they think deeper. <a onclick="openModelInfo()" style="color:var(--arcane);cursor:pointer;text-decoration:underline">ℹ️ About the models</a></p>
-      <select id="gate-model">${opts}</select>
-      <div class="guardian-section">
-        <label>${guardianLabel}</label>
-        <div class="hint">${guardianHint}</div>
-        <select id="gate-guardian">${guardianOpts}</select>
-      </div>
-      <div class="guardian-section">
-        <label>${extractionLabel}</label>
-        <div class="hint">${extractionHint}</div>
-        <select id="gate-extraction">${extractionOpts}</select>
-      </div>
-      <div class="guardian-section">
-        <label>${ttsLabel}</label>
-        <div class="hint">${ttsHint}</div>
-        <select id="gate-tts">${ttsOpts}</select>
-      </div>
-      <button onclick="beginAdventure()">${btnLabel}</button>
-    </div>`;
-  document.body.appendChild(gate);
-  SFX.gate();
-  }; // end doGate
-  roleReady.then(doGate);
-}
-
-function beginAdventure() {
-  SFX.click();
-  const sel = document.getElementById('gate-model');
-  currentModel = sel.value;
-  localStorage.setItem('dnd_model', currentModel);
-  // Spara DM-modellen per kampanj server-side — behålls vid återkomst
-  API.setDmModel(currentModel).catch(() => {});
-
-  // Spara Lorekeeper-modellvalet per kampanj (admin: fritt; icke-admin: backend klampar till spelarmodeller)
-  const guardianSel = document.getElementById('gate-guardian');
-  if (guardianSel) {
-    API.setGuardianModel(guardianSel.value).catch(() => {});
-  }
-
-  // Spara extraction-modellvalet per kampanj (bakgrund: fakta, dagbok, summaries)
-  const extractionSel = document.getElementById('gate-extraction');
-  if (extractionSel) {
-    API.setExtractionModel(extractionSel.value).catch(() => {});
-  }
-
-  // Spara TTS-leverantören per kampanj (berättarröst: stepfun/qwen)
-  const ttsSel = document.getElementById('gate-tts');
-  if (ttsSel) {
-    localStorage.setItem(TTS_PROVIDER_KEY, ttsSel.value);
-    _ttsVoiceIds = null;
-    API.setTtsProvider(ttsSel.value).catch(() => {});
-  }
-
-  document.getElementById('model-gate').remove();
-  addMessage('system', null, '🕯️ <b>' + I18N.t('Dungeon Master vaknar…') + '</b> ' + I18N.t(' Mörkret rör på sig.'));
-  dmRespond(AWAKENING_TRIGGER);
+function autoAwakenDM() {
+  roleReady.then(() => {
+    // Lite fördröjning så UI:n hinner ritas (composer, sidebar) innan DM vaknar
+    setTimeout(() => {
+      addMessage('system', null, '🕯️ <b>' + I18N.t('Dungeon Master vaknar…') + '</b> ' + I18N.t(' Mörkret rör på sig.'));
+      dmRespond(AWAKENING_TRIGGER);
+    }, 350);
+  });
 }
 
 async function loadTranscript() {
@@ -3141,8 +2995,10 @@ async function loadTranscript() {
       return;
     }
 
-  // Tomt transkript (faktiskt tomt, inte API-fel) → visa modellgate innan DM vaknar
-  showModelGate();
+  // Tomt transkript (faktiskt tomt, inte API-fel) → DM vaknar automatiskt.
+  // Modellerna är redan satta i onboardingens sista steg (adventure.html step 4)
+  // eller via settings-menyn — ingen popup längre.
+  autoAwakenDM();
 }
 
 // ═══════════════════════════════════════
@@ -3157,6 +3013,18 @@ const THOUGHTS = {
     '🌫️ Painting the fog over the valley…',
     '📜 Leafing through the book of fate…',
     '🎭 Conjuring the next scene…',
+  ],
+  bg: [
+    '🪶 The quill writes…',
+    '✨ Stardust settles on the page…',
+    '🌑 Listening to the dark…',
+    '🔥 Stirring the cauldron…',
+    '🗝️ Unlocking a hidden door…',
+    '🕸️ The threads of fate tighten…',
+    '🌌 Somewhere, a star blinks…',
+    '🏰 A distant tower lights a candle…',
+    '🦉 An owl turns its head…',
+    '⚗️ The brew bubbles…',
   ],
   memory: [
     '🕰️ Looking back through time…',
@@ -3221,6 +3089,15 @@ function _formatCombatLogEntry(entry) {
 }
 
 // Live-aktivitet: rendera senaste maskinrums-loggposten / pipeline-steget
+// Blandar generiska fantasy-termer (THOUGHTS.bg) med riktiga bakgrundsloggar —
+// spelaren ser alltid NÅGOT hända, inte bara en statisk rad.
+let _bgRotateIdx = 0;
+function _nextBgThought() {
+  const pool = THOUGHTS.bg || THOUGHTS.narrate;
+  const t = pool[_bgRotateIdx % pool.length];
+  _bgRotateIdx++;
+  return t;
+}
 async function scribeFeed() {
   const target = _feedTarget();
   if (!target) return;
@@ -3236,23 +3113,21 @@ async function scribeFeed() {
       const text = last && last.msg ? String(last.msg) : null;
       if (text && text !== _activityShown) {
         _activityShown = text;
-        typeThought(text.length > 110 ? text.slice(0, 107) + '…' : text, target);
+        // Riktig bakgrundspost — visa den (förkortad), med fantasy-prefix
+        const clean = text.length > 100 ? text.slice(0, 97) + '…' : text;
+        typeThought('🪶 ' + clean, target);
         return;
       }
     }
   } catch (e) { /* tyst — fallback-tanken ligger kvar */ }
-  // 2) Fallback: pipeline-aktivitet från backend (pre-DM / DM / mekanik / post-DM)
+  // 2) Inga nya loggposter → rotera en generisk fantasy-term så raden aldrig står still
   try {
-    const data = await API.activity();
-    const entries = data && data.entries;
-    if (entries && entries.length) {
-      const last = entries[0];
-      if (last && last.text && last.text !== _activityShown) {
-        _activityShown = last.text;
-        typeThought(last.text, target);
-      }
+    const next = _nextBgThought();
+    if (next !== _activityShown) {
+      _activityShown = next;
+      typeThought(next, target);
     }
-  } catch (e) { /* tyst — fallback-tanken ligger kvar */ }
+  } catch (e) { /* tyst */ }
 }
 
 function scribeFeedStart() {
@@ -5205,6 +5080,35 @@ function toggleConsole() {
   if (consoleOpen) startConsolePolling();
   else stopConsolePolling();
 }
+
+// ── 🖥️ CLI Chat UI — 'use new chat ui'-switch ──
+// New look: no bubble frames, everything "sits together" terminal-style.
+// Old look: classic bubble player feeling. Persisted in localStorage.
+const CLI_CHAT_KEY = 'dnd_cli_chat';
+function cliChatOn() {
+  return localStorage.getItem(CLI_CHAT_KEY) !== '0';
+}
+function applyCliChat() {
+  document.body.classList.toggle('cli-chat', cliChatOn());
+}
+function toggleCliChat() {
+  const next = !cliChatOn();
+  localStorage.setItem(CLI_CHAT_KEY, next ? '1' : '0');
+  applyCliChat();
+  syncCliChatLabels();
+  if (typeof SFX !== 'undefined') SFX.click();
+  if (typeof toast === 'function') toast(next ? '🖥️ New CLI chat UI' : '💬 Classic bubble chat');
+}
+function syncCliChatLabels() {
+  const on = cliChatOn();
+  document.querySelectorAll('[data-cli-label]').forEach(el => {
+    const name = el.querySelector('.di-name');
+    const hint = el.querySelector('.di-hint');
+    if (name) name.textContent = on ? 'Chat UI: CLI' : 'Chat UI: Bubbles';
+    if (hint) hint.textContent = on ? 'terminal style — toggle to bubbles' : 'bubbles — toggle to CLI terminal';
+  });
+}
+applyCliChat();
 
 // ── 💬 Feedback modal ──
 function openFeedbackModal() {

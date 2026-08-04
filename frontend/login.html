@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-default-theme="blood" data-no-theme-btn="true">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -121,6 +121,14 @@
     text-shadow:0 0 16px rgba(201,162,39,.42)}
   .hero .tagline{font-style:italic;font-weight:300;font-size:clamp(1.05rem,1.9vw,1.3rem);
     color:var(--bone);margin-top:1.5rem;line-height:1.65;letter-spacing:.02em}
+  .free-slogan{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;
+    margin-top:1.15rem;font-size:.92rem;font-style:italic;color:var(--bone-dim);line-height:1.5}
+  .free-slogan .fs-badge{font-family:var(--font-display);font-style:normal;font-size:.6rem;
+    font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--ink);
+    background:linear-gradient(160deg,var(--gold-bright),var(--gold));
+    border:1px solid rgba(232,198,90,.45);padding:.32em .7em;white-space:nowrap;
+    box-shadow:0 0 14px rgba(201,162,39,.25)}
+  .free-slogan b{color:var(--gold-bright);font-style:normal;font-weight:600}
   .hero-actions{display:flex;align-items:center;gap:1.4rem;margin-top:2.3rem;flex-wrap:wrap}
   .btn-gold{font-family:var(--font-display);font-weight:700;font-size:.82rem;letter-spacing:.2em;
     text-transform:uppercase;color:var(--ink);
@@ -316,7 +324,24 @@
   /* ═══════════════ mobile ═══════════════ */
   @media (max-width:900px){
     .feat-grid{grid-template-columns:1fr;max-width:560px}
-    .gate-grid{grid-template-columns:1fr}
+    /* Features = expanderbara menyer på mobil (rostad 2026-08-04) */
+    .feat-grid .tablet{padding:1.15rem 1.4rem;cursor:pointer;transition:border-color .25s}
+    .feat-grid .tablet:hover{transform:none;box-shadow:none}
+    .feat-grid .tablet .sig{display:none}
+    .feat-grid .tablet h3{margin-bottom:0;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+    .feat-grid .tablet h3::after{content:'+';font-family:var(--font-display);font-size:1.15rem;color:var(--gold);flex:none;transition:transform .3s ease}
+    .feat-grid .tablet.open h3::after{transform:rotate(45deg)}
+    .feat-grid .tablet p,
+    .feat-grid .tablet .tablet-more{max-height:0;overflow:hidden;opacity:0;margin-top:0;
+      transition:max-height .35s ease,opacity .3s ease,margin-top .3s ease}
+    .feat-grid .tablet.open p{max-height:420px;opacity:1;margin-top:.85rem}
+    .feat-grid .tablet.open .tablet-more{max-height:80px;opacity:1;margin-top:1rem}
+    /* Gate: rubrik + formulär syns samtidigt på mobil (rostad 2026-08-04) —
+       pitch-listan döljs så "Swear yourself in" + formuläret ryms i samma vy */
+    .gate-grid{grid-template-columns:1fr;align-items:start}
+    .gate-grid > div:first-child{padding-top:.25rem}
+    .pitch-list{display:none}
+    .pitch-note{display:none}
     .nav-links a:not(.nav-cta):not(.nav-user){display:none}
   }
   @media (max-width:720px){
@@ -402,8 +427,9 @@
         </h1>
         <p class="tagline rv in d2">A world that remembers. A dungeon master that never sleeps.
           Your campaign is brewed one turn at a time &mdash; and the pot does not forget.</p>
+        <p class="free-slogan rv in d2"><span class="fs-badge">FREE TO PLAY</span> No card, no catch &mdash; 50 turns a day and StepFun TTS, forever.</p>
         <div class="hero-actions rv in d3">
-          <a class="btn-gold" href="#gate" id="hero-begin">Begin Your Journey</a>
+          <a class="btn-gold" href="#pricing" id="hero-begin">Begin Your Journey</a>
           <a class="btn-ghost" href="#features">Learn more &#8595;</a>
         </div>
         <p class="myst-quote rv in d3" id="myst-quote"></p>
@@ -417,12 +443,11 @@
     <div class="wrap">
       <span class="promo-badge">Founding Offer</span>
       <div class="promo-text">
-        Subscribe for one month and get <b><span data-promo-free="tier1">2</span> months free</b> on <b>Companion</b>
-        &mdash; or <b><span data-promo-free="tier2">3</span> months free</b> on <b>Adventurer</b>.
+        Subscribe for one month and get <b><span data-promo-free="tier1">2</span> months free</b> on <b>Companion</b>.
         &nbsp;<b>Lifetime for 50€</b> — half price, one-time.
         <span class="promo-timer">Ends in <span class="t-seg" id="promo-days">00</span><span class="t-sep">d</span><span class="t-seg" id="promo-hours">00</span><span class="t-sep">:</span><span class="t-seg" id="promo-mins">00</span><span class="t-sep">:</span><span class="t-seg" id="promo-secs">00</span></span>
       </div>
-      <a class="promo-cta" href="pricing.html">Claim the offer &#8594;</a>
+      <a class="promo-cta" href="#pricing" id="promo-cta">Claim the offer &#8595;</a>
     </div>
   </div>
 
@@ -484,6 +509,53 @@
     </div>
   </section>
 
+  <!-- ═══════════════ paths into the realm (pricing) ═══════════════ -->
+  <style>
+    .pricing-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.1rem;margin-top:2.6rem}
+    .ptier{position:relative;background:linear-gradient(170deg,var(--stone-2),var(--stone));border:1px solid var(--edge);padding:1.6rem 1.3rem 1.4rem;transition:transform .3s,border-color .3s;cursor:pointer}
+    .ptier:hover{transform:translateY(-4px);border-color:var(--edge-hi)}
+    .ptier.hot{border-color:rgba(201,162,39,.55);box-shadow:0 0 34px rgba(201,162,39,.10)}
+    .ptier .go-hint{display:block;margin-top:.9rem;font-family:var(--font-display);font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);opacity:0;transition:opacity .25s;text-align:center}
+    .ptier:hover .go-hint{opacity:1}
+    .pt-flag{position:absolute;top:-11px;right:12px;font-family:var(--font-display);font-size:.56rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));padding:.22rem .6rem}
+    .pt-flag.promo-flag{background:linear-gradient(160deg,#ffd76a,#c9a227);animation:pt-promo-pulse 2.2s ease-in-out infinite}
+    @keyframes pt-promo-pulse{0%,100%{box-shadow:0 0 10px rgba(201,162,39,.4)}50%{box-shadow:0 0 20px rgba(232,198,90,.85)}}
+    .pt-name{font-family:var(--font-display);font-weight:700;font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;color:var(--bone-bright);margin-bottom:.5rem}
+    .pt-price{font-family:var(--font-display);font-weight:900;font-size:1.7rem;color:var(--gold-bright);margin-bottom:.7rem}
+    .pt-price small{font-size:.72rem;font-weight:400;color:var(--bone-dim);letter-spacing:.05em}
+    .pt-price .strike{font-size:.95rem;font-weight:400;color:var(--bone-dim);text-decoration:line-through;text-decoration-thickness:2px;margin-left:.3rem;vertical-align:.3em}
+    .ptier ul{list-style:none}
+    .ptier li{padding:.34rem 0 .34rem 1.2rem;position:relative;font-size:.88rem;color:var(--bone);line-height:1.45}
+    .ptier li::before{content:'◆';position:absolute;left:0;top:.4rem;color:var(--gold);font-size:.55rem}
+    .ptier li b{color:var(--bone-bright);font-weight:600}
+    .pt-more{text-align:center;margin-top:2rem;font-family:var(--font-display);font-size:.7rem;letter-spacing:.22em;text-transform:uppercase}
+    .pt-more a{color:var(--gold);text-decoration:none}
+    .pt-more a:hover{color:var(--gold-bright);text-shadow:0 0 12px rgba(232,198,90,.5)}
+    @media(max-width:860px){.pricing-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:520px){.pricing-grid{grid-template-columns:1fr}}
+  </style>
+  <section class="solid sect" id="pricing">
+    <div class="wrap">
+      <p class="eyebrow rv">Paths into the realm</p>
+      <h2 class="rv">Choose your path</h2>
+      <p class="lede rv d1">Wander free with your daily ration of turns — or take up a sigil and shape the realm itself.</p>
+      <div class="pricing-grid">
+        <div class="ptier rv d1" onclick="location.href='#gate'">
+          <div class="pt-name">Wanderer</div>
+          <div class="pt-price">Free</div>
+          <ul>
+            <li><b>50 turns</b> every day — refreshed at midnight</li>
+            <li><b>StepFun TTS</b> — always free</li>
+            <li>The steadfast Dungeon Master</li>
+            <li>Persistent world, memory &amp; Codex</li>
+          </ul>
+          <span class="go-hint">Forge your name →</span>
+        </div>
+      </div>
+      <p class="pt-more rv d3"><a href="pricing.html">See the full paths &#8594;</a></p>
+    </div>
+  </section>
+
   <!-- ═══════════════ the gate ═══════════════ -->
   <section class="solid sect" id="gate">
     <div class="wrap">
@@ -492,10 +564,11 @@
           <p class="eyebrow rv">The Gate</p>
           <h2 class="rv">Swear yourself in.</h2>
           <ul class="pitch-list">
-            <li class="rv d1"><b>Free, forever.</b> Unlimited turns &mdash; no subscription,
-              no hourglass, no metered fate.</li>
-            <li class="rv d2"><b>Your adventures are yours.</b> Saved in the Cauldron,
-              never sold, never trained on by strangers.</li>
+            <li class="rv d1"><b>Free, forever.</b> 50 turns every day &mdash; refreshed at
+              midnight &mdash; and <b>StepFun TTS always free</b>. No card, no hourglass,
+              no metered fate.</li>
+            <li class="rv d2"><b>Your identity stays yours.</b> We don&rsquo;t log who
+              you are at the table &mdash; no names to the ledger, no tracking of players.</li>
             <li class="rv d3"><b>Heretic models incoming<span class="tag">Incoming</span></b>
               &mdash; unbound storytelling for NSFW campaigns. Some cauldrons brew
               darker things, for those old enough to ask.</li>
@@ -538,92 +611,29 @@
             </div>
             <button type="submit" class="gate-btn" id="auth-btn">What will the Cauldron Foretell?</button>
             <div class="gate-toggle" id="gate-toggle">New here? <b>Forge your name</b></div>
-            <div class="gate-toggle" id="gate-reset" style="font-size:.75rem">Lost your word? <b>Re-forge it</b></div>
+            <div class="gate-toggle" id="gate-reset" style="font-size:.75rem">Lost your name? <b>Re-forge it</b></div>
             <button type="button" class="gate-toggle" id="reset-link-btn" style="display:none;font-size:.75rem">📧 Send me a reset link</button>
             <div class="gate-error" id="gate-error"></div>
           </form>
-          <div class="gate-foot">Powered by Qwen, DeepSeek &amp; StepFun &middot; self-registration, no email required</div>
+          <div class="gate-foot">Powered by Qwen, DeepSeek &amp; StepFun &middot; self-registration, no email required &mdash; an email is added to your account before your first purchase</div>
+        </div>
+
+        <!-- Redan inloggad: "Continue your journey" istället för formuläret -->
+        <div class="gate-card continue-card rv d2" id="gate-continue" style="display:none">
+          <span class="corner tl"></span><span class="corner tr"></span>
+          <span class="corner bl"></span><span class="corner br"></span>
+          <div class="gate-head">
+            <h3>Continue your journey</h3>
+            <p>Welcome back, <b class="gc-name">adventurer</b> &mdash; the fire is still burning.</p>
+          </div>
+          <a class="gate-btn" href="adventure.html" style="display:block;text-align:center;text-decoration:none;margin-top:.4rem">Continue to the realm &rarr;</a>
+          <div class="gate-toggle" style="font-size:.75rem" onclick="doLogout()">Not you? <b>Sign out</b></div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ═══════════════ paths into the realm (pricing) ═══════════════ -->
-  <style>
-    .pricing-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.1rem;margin-top:2.6rem}
-    .ptier{position:relative;background:linear-gradient(170deg,var(--stone-2),var(--stone));border:1px solid var(--edge);padding:1.6rem 1.3rem 1.4rem;transition:transform .3s,border-color .3s;cursor:pointer}
-    .ptier:hover{transform:translateY(-4px);border-color:var(--edge-hi)}
-    .ptier.hot{border-color:rgba(201,162,39,.55);box-shadow:0 0 34px rgba(201,162,39,.10)}
-    .ptier .go-hint{display:block;margin-top:.9rem;font-family:var(--font-display);font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);opacity:0;transition:opacity .25s;text-align:center}
-    .ptier:hover .go-hint{opacity:1}
-    .pt-flag{position:absolute;top:-11px;right:12px;font-family:var(--font-display);font-size:.56rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));padding:.22rem .6rem}
-    .pt-flag.promo-flag{background:linear-gradient(160deg,#ffd76a,#c9a227);animation:pt-promo-pulse 2.2s ease-in-out infinite}
-    @keyframes pt-promo-pulse{0%,100%{box-shadow:0 0 10px rgba(201,162,39,.4)}50%{box-shadow:0 0 20px rgba(232,198,90,.85)}}
-    .pt-name{font-family:var(--font-display);font-weight:700;font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;color:var(--bone-bright);margin-bottom:.5rem}
-    .pt-price{font-family:var(--font-display);font-weight:900;font-size:1.7rem;color:var(--gold-bright);margin-bottom:.7rem}
-    .pt-price small{font-size:.72rem;font-weight:400;color:var(--bone-dim);letter-spacing:.05em}
-    .pt-price .strike{font-size:.95rem;font-weight:400;color:var(--bone-dim);text-decoration:line-through;text-decoration-thickness:2px;margin-left:.3rem;vertical-align:.3em}
-    .ptier ul{list-style:none}
-    .ptier li{padding:.34rem 0 .34rem 1.2rem;position:relative;font-size:.88rem;color:var(--bone);line-height:1.45}
-    .ptier li::before{content:'◆';position:absolute;left:0;top:.4rem;color:var(--gold);font-size:.55rem}
-    .ptier li b{color:var(--bone-bright);font-weight:600}
-    .pt-more{text-align:center;margin-top:2rem;font-family:var(--font-display);font-size:.7rem;letter-spacing:.22em;text-transform:uppercase}
-    .pt-more a{color:var(--gold);text-decoration:none}
-    .pt-more a:hover{color:var(--gold-bright);text-shadow:0 0 12px rgba(232,198,90,.5)}
-    @media(max-width:860px){.pricing-grid{grid-template-columns:repeat(2,1fr)}}
-    @media(max-width:520px){.pricing-grid{grid-template-columns:1fr}}
-  </style>
-  <section class="solid sect" id="pricing">
-    <div class="wrap">
-      <p class="eyebrow rv">Paths into the realm</p>
-      <h2 class="rv">Choose your path</h2>
-      <p class="lede rv d1">Wander free with your daily ration of turns — or take up a sigil and shape the realm itself.</p>
-      <div class="pricing-grid">
-        <div class="ptier rv d1" onclick="location.href='pricing.html'">
-          <div class="pt-name">Wanderer</div>
-          <div class="pt-price">Free</div>
-          <ul>
-            <li><b>50 turns</b> every day — refreshed at midnight</li>
-            <li>The steadfast Dungeon Master</li>
-            <li>Persistent world, memory &amp; Codex</li>
-          </ul>
-          <span class="go-hint">View the path →</span>
-        </div>
-        <div class="ptier rv d2" onclick="location.href='pricing.html'">
-          <div class="pt-name">Companion</div>
-          <div class="pt-price">3€<small>/ month</small></div>
-          <ul>
-            <li><b>50 turns</b> refreshed every <b>6 hours</b></li>
-            <li><b>AI avatars</b> for hero &amp; NPCs</li>
-            <li>Everything in the Wanderer path</li>
-          </ul>
-          <span class="go-hint">View the path →</span>
-        </div>
-        <div class="ptier hot rv d2" onclick="location.href='pricing.html'">
-          <div class="pt-flag">Most popular</div>
-          <div class="pt-name">Adventurer</div>
-          <div class="pt-price">9€<small>/ month</small></div>
-          <ul>
-            <li><b>All Dungeon Masters</b> — Qwen 3.8 Max, DeepSeek&hellip;</li>
-            <li><b>Both narrator voices</b> + custom style</li>
-            <li>50 turns every 6 hours · AI avatars</li>
-          </ul>
-          <span class="go-hint">View the path →</span>
-        </div>
-        <div class="ptier rv d3" onclick="location.href='pricing.html'">
-          <div class="pt-flag promo-flag" id="pt-lifetime-flag" style="display:none">Founding offer</div>
-          <div class="pt-name">Lifetime</div>
-          <div class="pt-price">50€<small> once</small><span class="strike" id="pt-lifetime-strike" style="display:none">100€</span></div>
-          <ul>
-            <li><b>Unlimited turns</b> — never count again</li>
-            <li>All Dungeon Masters · both voices · avatars</li>
-          </ul>
-          <span class="go-hint">View the path →</span>
-        </div>
-      </div>
-      <p class="pt-more rv d3"><a href="pricing.html">See the full paths &#8594;</a></p>
-    </div>
-  </section>
+  
 
   <!-- ═══════════════ ledger ═══════════════ -->
   <section class="solid ledger sect" id="ledger">
@@ -632,12 +642,16 @@
       <h2 class="rv">What&rsquo;s new in the realm</h2>
       <span class="ver-chip rv d1">v0.7 &mdash; The Forge, Earning</span>
       <ul class="ledger-list">
-        <li class="hot rv d1"><b>Qwen 3.8 Max &mdash; the full release<span class="tag">New</span></b>
+        <li class="hot rv d1"><b>StepFun TTS &mdash; always free<span class="tag">New</span></b>
+          &mdash; the narrator's voice belongs to every adventurer, on every path.
+          Wanderers keep their <b>50 turns a day</b> at no cost &mdash; StepFun reads your
+          story aloud, free, forever.</li>
+        <li class="rv d1"><b>Qwen 3.8 Max &mdash; the full release<span class="tag">New</span></b>
           &mdash; Alibaba&rsquo;s 2.4-trillion-parameter flagship (95B active per request) as your Dungeon Master:
           1M context, deep reasoning that always thinks. Pick it at the model gate when you start your adventure.</li>
         <li class="rv d1"><b>Founding offer &mdash; two free months<span class="tag">Limited</span></b>
-          &mdash; for the next seven days, subscribe for one month and get <b>2 months free</b> on Companion
-          or <b>3 months free</b> on Adventurer. And <b>Lifetime for 50€</b> — half price, one-time.
+          &mdash; for the next seven days, subscribe for one month and get <b>2 months free</b> on Companion.
+          And <b>Lifetime for 50€</b> — half price, one-time.
           The timer is counting down on this very page.</li>
         <li class="rv d2"><b>Four paths into the realm</b> &mdash; Wanderer (free), Companion, Adventurer, and Lifetime.
           Real tiers, real Stripe checkout, and a free road that never closes.</li>
@@ -721,8 +735,8 @@ function setAuthBusy(busy) {
   const btn = document.getElementById('auth-btn');
   btn.disabled = busy;
   btn.textContent = busy
-    ? (authMode === 'register' ? 'Forging your name\u2026' : authMode === 'reset' ? 'Re-forging your word\u2026' : 'The Cauldron is stirring\u2026')
-    : (authMode === 'register' ? 'Forge Your Name' : authMode === 'reset' ? 'Re-forge My Word' : 'What will the Cauldron Foretell?');
+    ? (authMode === 'register' ? 'Forging your name\u2026' : authMode === 'reset' ? 'Re-forging your name\u2026' : 'The Cauldron is stirring\u2026')
+    : (authMode === 'register' ? 'Forge Your Name' : authMode === 'reset' ? 'Re-forge My Name' : 'What will the Cauldron Foretell?');
 }
 
 function applyAuthMode() {
@@ -734,8 +748,8 @@ function applyAuthMode() {
   document.getElementById('lbl-username').textContent = isReg ? 'New Adventurer' : 'Adventurer';
   document.getElementById('lbl-password').textContent = isReg ? 'Create a Password' : (isReset ? 'New Password' : 'Password');
   document.getElementById('password').autocomplete = (isReg || isReset) ? 'new-password' : 'current-password';
-  document.getElementById('auth-btn').textContent = isReg ? 'Forge Your Name' : (isReset ? 'Re-forge My Word' : 'What will the Cauldron Foretell?');
-  document.getElementById('gate-title').textContent = isReg ? 'Forge Your Name' : (isReset ? 'Re-forge Your Word' : 'Return to the Cauldron');
+  document.getElementById('auth-btn').textContent = isReg ? 'Forge Your Name' : (isReset ? 'Re-forge My Name' : 'What will the Cauldron Foretell?');
+  document.getElementById('gate-title').textContent = isReg ? 'Forge Your Name' : (isReset ? 'Re-forge Your Name' : 'Return to the Cauldron');
   document.getElementById('gate-sub').textContent = isReg
     ? 'The Cauldron has been waiting for someone like you.'
     : (isReset
@@ -910,16 +924,27 @@ fetch('/api/me', { credentials: 'include' })
   .then(function (u) {
     if (!u) return;
     PROFILE_USER = u;
+    // Sätt sessionStorage så adventure.html:s auth-guard inte slänger tillbaka
+    // hit — detta är "auto-login" för tidigare inloggade (rostad 2026-08-04).
+    try { sessionStorage.setItem('dnd_user', u.username); } catch (e) {}
     var nu = document.getElementById('nav-user');
     var nname = document.getElementById('nav-user-name');
     var cta = document.getElementById('nav-cta');
     if (nu) nu.style.display = '';
     if (nname) nname.textContent = u.username;
     if (cta) {
-      cta.textContent = 'Return to the realm';
+      cta.textContent = 'Continue your journey';
       cta.href = 'adventure.html';
     }
-    // Redan inloggad → byt gate-rubrik
+    // Redan inloggad → ersätt formuläret med "Continue your journey"-vyn
+    var fc = document.getElementById('gate-card');
+    var cont = document.getElementById('gate-continue');
+    if (fc) fc.style.display = 'none';
+    if (cont) {
+      cont.style.display = '';
+      var cn = cont.querySelector('.gc-name');
+      if (cn) cn.textContent = u.username;
+    }
     var gt = document.getElementById('gate-title');
     var gs = document.getElementById('gate-sub');
     if (gt) gt.textContent = 'Welcome back, ' + u.username;
@@ -1125,6 +1150,25 @@ fetch('/api/me', { credentials: 'include' })
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
+})();
+
+// ── Features = expanderbara menyer på mobil (max-width:900px) ──
+(function () {
+  const cards = document.querySelectorAll('.feat-grid .tablet');
+  const mq = window.matchMedia('(max-width:900px)');
+  function toggle(e) {
+    if (e.target.closest('a')) return; // "Read more"-länken får inte trigga accordion
+    const card = e.currentTarget;
+    card.classList.toggle('open');
+  }
+  function bind() {
+    cards.forEach(function (card) {
+      card.removeEventListener('click', toggle);
+      if (mq.matches) card.addEventListener('click', toggle);
+    });
+  }
+  if (mq.addEventListener) mq.addEventListener('change', bind); else if (mq.addListener) mq.addListener(bind);
+  bind();
 })();
 </script>
 </body>

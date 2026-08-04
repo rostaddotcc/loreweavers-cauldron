@@ -49,9 +49,9 @@
   }.dropzone:hover,.dropzone.dragover{border-color:var(--gold);background:rgba(201,162,39,.04);box-shadow:0 0 20px -6px rgba(232,198,90,.3)}.dropzone .dz-icon{font-size:2rem;margin-bottom:.5rem;display:block}.dropzone .dz-text{font-size:.98rem;color:var(--bone-dim);font-style:italic}.dropzone .dz-text b{color:var(--gold-bright);font-style:normal}.dropzone .dz-formats{font-size:.83rem;color:var(--bone-dim);margin-top:.4rem}.dropzone input{display:none}.file-list{margin-bottom:1rem}.file-item{display:flex;align-items:center;gap:.7rem;padding:.5rem .7rem;background:var(--stone-3);border:1px solid var(--edge);margin-bottom:.4rem;border-radius:2px;font-size:.95rem}.file-item .fi-icon{font-size:1.1rem}.file-item .fi-name{color:var(--bone-bright);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.file-item .fi-size{color:var(--bone-dim);font-size:.85rem}.file-item .fi-del{background:none;border:none;color:var(--bone-dim);cursor:pointer;font-size:1.03rem;transition:color .2s}.file-item .fi-del:hover{color:var(--blood-bright)}.actions{display:flex;gap:.8rem;flex-wrap:wrap;align-items:center}.go-btn{
     font-family:'Cinzel',serif;font-weight:700;font-size:.91rem;letter-spacing:.16em;text-transform:uppercase;
     color:#1a1206;cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);
-    border:1px solid #6e5510;padding:.85rem 1.6rem;border-radius:2px;position:relative;overflow:hidden;
-    box-shadow:0 6px 20px -6px rgba(232,198,90,.5),inset 0 1px 0 rgba(255,255,255,.35);transition:all .2s;
-  }.go-btn:hover{filter:brightness(1.12);transform:translateY(-2px)}.hint{font-size:.88rem;font-style:italic;color:var(--bone-dim)}.hint b{color:var(--arcane);font-style:normal}/* ── Extraction progress ── */.extracting{display:none;text-align:center;padding:1.5rem 0}.extracting.show{display:block;animation:rise .4s ease}.extracting .ex-text{font-style:italic;color:var(--arcane);font-size:1.03rem;margin-bottom:1rem;text-shadow:0 0 12px rgba(139,95,212,.4)}.ex-bar{width:200px;height:8px;background:#0a0612;border:1px solid var(--edge);margin:0 auto;overflow:hidden;border-radius:4px}.ex-fill{height:100%;width:0;background:linear-gradient(90deg,var(--arcane),var(--gold-bright));transition:width .3s;border-radius:4px}/* ── Preview results ── */.extract-preview{display:none;margin-top:1.2rem}.extract-preview.show{display:block;animation:rise .5s ease}.ep-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.7rem;margin-bottom:1.2rem}.ep-card{background:var(--stone-3);border:1px solid var(--edge);padding:.8rem;border-radius:2px;text-align:center}.ep-card .ep-num{font-family:'Cinzel',serif;font-weight:900;font-size:1.6rem;color:var(--gold-bright)}.ep-card .ep-label{font-size:.83rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;font-family:'Cinzel',serif}.toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:50;font-family:'Cinzel',serif;font-size:.88rem;letter-spacing:.12em;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);padding:.7rem 1.5rem;box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}.toast.show{transform:translate(-50%,0);opacity:1}/* ═══════════ Pågående äventyr ═══════════ */.continue-wrap{display:none;margin-bottom:2.4rem}.continue-wrap.show{display:block;animation:rise .55s cubic-bezier(.22,1,.36,1)}.continue-panel{
+    border:1px solid #6e5510;padding:.85rem 1.6rem;border-radius:6px;position:relative;overflow:hidden;
+    box-shadow:0 0 18px rgba(201,162,39,.22),0 6px 30px rgba(201,162,39,.30),inset 0 1px 0 rgba(255,255,255,.16);transition:all .2s;
+  }.go-btn:hover{filter:brightness(1.12);transform:translateY(-2px);box-shadow:0 0 28px rgba(232,198,90,.38),0 12px 40px rgba(201,162,39,.5),inset 0 1px 0 rgba(255,255,255,.22)}.hint{font-size:.88rem;font-style:italic;color:var(--bone-dim)}.hint b{color:var(--arcane);font-style:normal}/* ── Extraction progress ── */.extracting{display:none;text-align:center;padding:1.5rem 0}.extracting.show{display:block;animation:rise .4s ease}.extracting .ex-text{font-style:italic;color:var(--arcane);font-size:1.03rem;margin-bottom:1rem;text-shadow:0 0 12px rgba(139,95,212,.4)}.ex-bar{width:200px;height:8px;background:#0a0612;border:1px solid var(--edge);margin:0 auto;overflow:hidden;border-radius:4px}.ex-fill{height:100%;width:0;background:linear-gradient(90deg,var(--arcane),var(--gold-bright));transition:width .3s;border-radius:4px}/* ── Preview results ── */.extract-preview{display:none;margin-top:1.2rem}.extract-preview.show{display:block;animation:rise .5s ease}.ep-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:.7rem;margin-bottom:1.2rem}.ep-card{background:var(--stone-3);border:1px solid var(--edge);padding:.8rem;border-radius:2px;text-align:center}.ep-card .ep-num{font-family:'Cinzel',serif;font-weight:900;font-size:1.6rem;color:var(--gold-bright)}.ep-card .ep-label{font-size:.83rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;font-family:'Cinzel',serif}.toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:50;font-family:'Cinzel',serif;font-size:.88rem;letter-spacing:.12em;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);padding:.7rem 1.5rem;box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}.toast.show{transform:translate(-50%,0);opacity:1}/* ═══════════ Pågående äventyr ═══════════ */.continue-wrap{display:none;margin-bottom:2.4rem}.continue-wrap.show{display:block;animation:rise .55s cubic-bezier(.22,1,.36,1)}.continue-panel{
     position:relative;overflow:hidden;
     background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,#120c1c);
     border:1px solid var(--edge);padding:1.7rem 1.6rem 1.5rem;
@@ -137,7 +137,21 @@
   .dm-model-select:focus{border-color:var(--gold);box-shadow:0 0 16px -4px rgba(232,198,90,.4)}
   .dm-model-note{font-size:.8rem;font-style:italic;color:var(--bone-dim);margin-top:.6rem}
   .dm-model-note b{color:var(--gold);font-style:normal}
+  /* Ask-the-DM hover-hints — "hovers" med uppmaning att fråga DM */
+  .ask-wrap{position:relative;display:inline-flex;align-items:center;gap:.35rem}
+  .ask-ico{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border:1px solid var(--edge);border-radius:50%;font-size:.58rem;color:var(--bone-dim);cursor:help;transition:all .2s;flex-shrink:0}
+  .ask-ico:hover{color:var(--gold-bright);border-color:var(--gold);box-shadow:0 0 10px -2px rgba(232,198,90,.6)}
+  .ask-tip{position:absolute;left:50%;bottom:calc(100% + 9px);transform:translateX(-50%) translateY(4px);width:max-content;max-width:250px;background:var(--stone-3);border:1px solid var(--edge);border-radius:6px;padding:.5rem .7rem;font-size:.72rem;font-style:italic;line-height:1.5;color:var(--bone);box-shadow:0 12px 30px -10px rgba(0,0,0,.85);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .22s,transform .22s,visibility .22s;z-index:40;text-align:center}
+  .ask-tip b{color:var(--gold);font-style:normal}
+  .ask-tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:var(--edge)}
+  .ask-wrap:hover .ask-tip{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
+  @media(hover:none),(max-width:640px){.ask-tip{position:static;transform:none;width:100%;max-width:100%;margin-top:.4rem;opacity:1;visibility:visible;background:none;border:none;box-shadow:none;padding:0;text-align:left}.ask-tip::after{display:none}.ask-wrap{display:flex;flex-direction:column;align-items:flex-start}}
+
   .dm-model-label{font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim);min-width:200px;display:flex;flex-direction:column;gap:.3rem}
+  /* gen-row: modellväljaren ska ligga I RAD med Generate-knappen (ej staplad) */
+  #gen-row{display:flex;gap:.9rem;flex-wrap:wrap;align-items:center}
+  #gen-row .dm-model-label{flex-direction:row;align-items:center;gap:.6rem;min-width:0;flex-wrap:wrap}
+  #gen-row .dm-model-label::after{content:'';flex:0 0 1px}
   /* Arketypgrid (delas med newgame.html) */
   .spread{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
   .arch{position:relative;cursor:pointer;text-align:center;padding:1.4rem 1rem 1.2rem;background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);border:1px solid var(--edge);transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s,border-color .3s;overflow:hidden}
@@ -163,11 +177,16 @@
   .dark-drop-label .dd-sub{font-size:.75rem;font-style:italic;color:var(--bone-dim)}
   .dark-select{width:100%;font-family:'Spectral',serif;font-size:.98rem;color:var(--bone-bright);background:#0d0817;border:1px solid var(--edge);padding:.6rem .8rem;cursor:pointer;outline:none}
   .blank-row{margin-top:1.2rem;display:flex;justify-content:center}
-  .blank-btn{font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim);background:none;border:1px solid var(--edge);padding:.55rem 1.1rem;cursor:pointer;transition:all .25s;border-radius:2px}
+  .blank-btn{font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim);background:none;border:1px solid var(--edge);padding:.55rem 1.1rem;cursor:pointer;transition:all .25s;border-radius:6px}
   .blank-btn:hover{color:var(--arcane);border-color:var(--arcane);box-shadow:0 0 14px -5px rgba(139,95,212,.5)}
+  .blank-btn.active{color:#1a1206;background:linear-gradient(180deg,var(--arcane-bright),var(--arcane) 55%,#5b3a8f);border-color:#4a2f75;box-shadow:0 6px 18px -6px rgba(139,95,212,.55),inset 0 1px 0 rgba(255,255,255,.2)}
+  .blank-editor{max-width:620px;margin:1.1rem auto 0;text-align:left;animation:rise .35s ease}
+  .blank-text{width:100%;font-family:'Spectral',serif;font-size:.96rem;color:var(--bone-bright);background:#0d0817;border:1px solid rgba(139,95,212,.5);padding:.75rem .9rem;outline:none;resize:vertical;min-height:96px;box-shadow:0 0 18px -8px rgba(139,95,212,.5)}
+  .blank-text:focus{border-color:var(--arcane);box-shadow:0 0 0 3px rgba(139,95,212,.14),0 0 22px -6px rgba(139,95,212,.6)}
+  .blank-note{font-size:.78rem;font-style:italic;color:var(--bone-dim);margin-top:.5rem}
   /* Start + weaving (summoning-ritual) */
-  .start-btn{font-family:'Cinzel',serif;font-weight:700;font-size:1rem;letter-spacing:.16em;text-transform:uppercase;color:#1a1206;cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);border:1px solid #6e5510;padding:1rem 2.2rem;border-radius:2px;position:relative;overflow:hidden;box-shadow:0 8px 24px -6px rgba(232,198,90,.5),inset 0 1px 0 rgba(255,255,255,.35);transition:all .2s}
-  .start-btn:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-2px)}
+  .start-btn{font-family:'Cinzel',serif;font-weight:700;font-size:1rem;letter-spacing:.16em;text-transform:uppercase;color:#1a1206;cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);border:1px solid #6e5510;padding:1rem 2.2rem;border-radius:8px;position:relative;overflow:hidden;box-shadow:0 0 18px rgba(201,162,39,.22),0 6px 30px rgba(201,162,39,.30),inset 0 1px 0 rgba(255,255,255,.16);transition:all .2s}
+  .start-btn:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-2px);box-shadow:0 0 28px rgba(232,198,90,.38),0 12px 40px rgba(201,162,39,.5),inset 0 1px 0 rgba(255,255,255,.22)}
   .start-btn:disabled{opacity:.55;cursor:wait}
   .weaving-ad{display:none;text-align:center;padding:1.6rem 0 .4rem;position:relative}
   .weaving-ad.show{display:block;animation:rise .4s ease}
@@ -183,13 +202,13 @@
   .step.reveal,.continue-wrap.reveal,.prepare-link.reveal,.htp.reveal{opacity:1;transform:translateY(0)}
   /* Tabs — Summon vs Forge */
   .tab-row{display:flex;gap:.6rem;margin-bottom:1.4rem;flex-wrap:wrap}
-  .tab-btn{font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--bone-dim);background:none;border:1px solid var(--edge);padding:.65rem 1.2rem;cursor:pointer;border-radius:2px;transition:all .25s}
-  .tab-btn:hover{color:var(--bone-bright);border-color:var(--gold)}
-  .tab-btn.active{color:#1a1206;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);border-color:#6e5510;box-shadow:0 6px 18px -6px rgba(232,198,90,.45)}
+  .tab-btn{font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--bone-dim);background:none;border:1px solid var(--edge);padding:.65rem 1.2rem;cursor:pointer;border-radius:6px;transition:all .25s}
+  .tab-btn:hover{color:var(--bone-bright);border-color:var(--gold);box-shadow:0 0 14px -4px rgba(201,162,39,.4)}
+  .tab-btn.active{color:#1a1206;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);border-color:#6e5510;box-shadow:0 0 16px rgba(201,162,39,.25),0 4px 20px rgba(201,162,39,.35),inset 0 1px 0 rgba(255,255,255,.2)}
   .tab-panel{display:none}.tab-panel.show{display:block;animation:rise .4s ease}
   /* Generate-knapp */
-  .gen-btn{font-family:'Cinzel',serif;font-weight:700;font-size:.92rem;letter-spacing:.16em;text-transform:uppercase;color:#1a1206;cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);border:1px solid #6e5510;padding:.9rem 1.8rem;border-radius:2px;box-shadow:0 6px 20px -6px rgba(232,198,90,.5),inset 0 1px 0 rgba(255,255,255,.35);transition:all .2s}
-  .gen-btn:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-2px)}
+  .gen-btn{font-family:'Cinzel',serif;font-weight:700;font-size:.92rem;letter-spacing:.16em;text-transform:uppercase;color:#1a1206;cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);border:1px solid #6e5510;padding:.9rem 1.8rem;border-radius:6px;box-shadow:0 0 18px rgba(201,162,39,.22),0 6px 30px rgba(201,162,39,.30),inset 0 1px 0 rgba(255,255,255,.16);transition:all .2s}
+  .gen-btn:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-2px);box-shadow:0 0 28px rgba(232,198,90,.38),0 12px 40px rgba(201,162,39,.5),inset 0 1px 0 rgba(255,255,255,.22)}
   .gen-btn:disabled{opacity:.45;cursor:not-allowed}
   /* Character preview (port från newgame) */
   .preview{display:none;margin-top:2rem}.preview.show{display:block;animation:rise .55s cubic-bezier(.22,1,.36,1)}
@@ -212,10 +231,10 @@
   .pv-gear b{color:var(--gold-bright)}
   .pv-story{font-style:italic;color:var(--bone);line-height:1.7;border-left:2px solid var(--pv-ac,var(--gold));padding-left:1rem;margin-bottom:1.5rem;font-size:.92rem}
   .pv-actions{display:flex;gap:.8rem;flex-wrap:wrap;align-items:center}
-  .pv-go{font-family:'Cinzel',serif;font-weight:700;font-size:.9rem;letter-spacing:.14em;text-transform:uppercase;color:#1a1206;cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);border:1px solid #6e5510;padding:.8rem 1.5rem;border-radius:2px;box-shadow:0 6px 18px -6px rgba(232,198,90,.5),inset 0 1px 0 rgba(255,255,255,.35);transition:all .2s}
-  .pv-go:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-2px)}
+  .pv-go{font-family:'Cinzel',serif;font-weight:700;font-size:.9rem;letter-spacing:.14em;text-transform:uppercase;color:#1a1206;cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);border:1px solid #6e5510;padding:.8rem 1.5rem;border-radius:6px;box-shadow:0 0 18px rgba(201,162,39,.22),0 6px 30px rgba(201,162,39,.30),inset 0 1px 0 rgba(255,255,255,.16);transition:all .2s}
+  .pv-go:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-2px);box-shadow:0 0 28px rgba(232,198,90,.38),0 12px 40px rgba(201,162,39,.5),inset 0 1px 0 rgba(255,255,255,.22)}
   .pv-go:disabled{opacity:.45;cursor:not-allowed}
-  .pv-reroll{font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-dim);background:none;border:1px solid var(--edge);padding:.8rem 1.2rem;cursor:pointer;border-radius:2px;transition:all .2s}
+  .pv-reroll{font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-dim);background:none;border:1px solid var(--edge);padding:.8rem 1.2rem;cursor:pointer;border-radius:6px;transition:all .2s}
   .pv-reroll:hover:not(:disabled){color:var(--arcane);border-color:var(--arcane);box-shadow:0 0 14px -5px rgba(139,95,212,.5)}
   .pv-reroll:disabled{opacity:.45;cursor:wait}
   /* The Forge — välj färdig hjälte */
@@ -323,8 +342,8 @@
       <div class="rn-inner">
         <span class="rn-ver">v0.6.3 — The Forge Release</span>
         <ul class="rn-list">
-          <li><b>Export your hero to The Forge</b> — from the Codex character sheet, save the adventurer you've lived to the Vault: level, gear, story and all. Then start a brand-new campaign with the same hero.</li>
-          <li><b>No more hero-twins</b> — exporting a hero whose name already rests in your Vault asks first: overwrite the old copy, or keep both.</li>
+          <li><b>Export your adventurer to The Forge</b> — from the Codex character sheet, save the adventurer you've lived to the Vault: level, gear, story and all. Then start a brand-new campaign with the same adventurer.</li>
+          <li><b>No more adventurer-twins</b> — exporting an adventurer whose name already rests in your Vault asks first: overwrite the old copy, or keep both.</li>
         </ul>
         <a class="rn-more" href="releases.html">Read the full ledger →</a>
       </div>
@@ -405,6 +424,7 @@
     </div>
     <input type="text" class="name-input" id="adventure-name-input" placeholder="An unnamed adventure…" maxlength="60">
     <div class="step-actions">
+      <button class="top-btn" onclick="goStep('step-lang')">← Back</button>
       <button class="go-btn" onclick="continueFromName()">Continue →</button>
     </div>
   </div>
@@ -414,18 +434,18 @@
     <div class="step-head">
       <div class="step-num">3</div>
       <div>
-        <div class="step-title">Choose Your Hero</div>
-        <div class="step-sub">Summon a fresh hero from a fate already woven — or step in with one from The Forge.</div>
+        <div class="step-title">Choose Your Adventurer</div>
+        <div class="step-sub">Summon a fresh adventurer from a fate already woven — or step in with one from The Forge.</div>
       </div>
     </div>
     <div class="tab-row">
-      <button class="tab-btn active" id="tab-summon" onclick="showHeroTab('summon')">✨ Summon a new hero</button>
+      <button class="tab-btn active" id="tab-summon" onclick="showHeroTab('summon')">✨ Summon a new adventurer</button>
       <button class="tab-btn" id="tab-forge" onclick="showHeroTab('forge')">⚒ From The Forge</button>
     </div>
 
     <!-- Summon-tab: arketyper → generera → förhandsvisning → reroll -->
     <div class="tab-panel show" id="hero-tab-summon">
-      <div class="step-sub" style="margin-bottom:1.1rem">Pick a fate — then summon your hero and look them in the eye before you continue. Don't like the weave? Reroll.</div>
+      <div class="step-sub" style="margin-bottom:1.1rem">Pick a fate — then summon your adventurer and look them in the eye before you continue. Don't like the weave? Reroll.</div>
       <div class="spread" id="spread"></div>
       <div class="dark-drop" id="dark-drop" style="display:none">
         <div class="dark-drop-label"><span class="dd-icon">🖤</span> <span class="dd-name" id="dd-name">Dark Paths</span> <span class="dd-sub" id="dd-sub">mature archetypes</span></div>
@@ -434,13 +454,19 @@
         </select>
       </div>
       <div class="blank-row">
-        <button class="blank-btn" onclick="blankScroll()">✦ Blank Parchment — write your own</button>
+        <button class="blank-btn" id="blank-btn" onclick="blankScroll()">✦ Blank Parchment — write your own</button>
+      </div>
+      <div class="blank-editor" id="blank-editor" style="display:none">
+        <textarea id="blank-text" class="blank-text" rows="4" maxlength="900" oninput="enableGen()"
+          placeholder="Describe your own adventurer — race, class, look, history, flaws, what they seek…"></textarea>
+        <div class="blank-note" id="blank-note">Or lean on the Dungeon Master's inspiration — the more you write, the more the weaver has to work with.</div>
       </div>
       <div class="step-actions" id="gen-row">
         <label class="dm-model-label" for="adv-char-model">🧠 Character model
           <select id="adv-char-model" class="dm-model-select" style="max-width:260px"></select>
         </label>
-        <button class="gen-btn" id="gen-btn" onclick="generateHero()" disabled>🔮 Generate Hero</button>
+        <span class="ask-wrap"><span class="ask-ico">?</span><span class="ask-tip" data-ask="char">Which mind weaves your adventurer — faster models are snappier, deeper models think longer. <b>Ask the Dungeon Master if unsure.</b></span></span>
+        <button class="gen-btn" id="gen-btn" onclick="generateHero()" disabled>🔮 Generate Adventurer</button>
         <span class="hint" id="gen-hint">Pick an archetype first — or take the blank parchment</span>
       </div>
       <!-- Vävning (summoning-ritual) -->
@@ -472,15 +498,18 @@
 
     <!-- Forge-tab: färdiga hjältar från valvet -->
     <div class="tab-panel" id="hero-tab-forge">
-      <div class="step-sub" style="margin-bottom:1.1rem">A hero you've already forged — with their level, gear and story — steps straight into this campaign.</div>
+      <div class="step-sub" style="margin-bottom:1.1rem">An adventurer you've already forged — with their level, gear and story — steps straight into this campaign.</div>
       <div id="adv-vault-wrap">
-        <div class="vault-empty" id="adv-vault-empty">No saved heroes yet. <a href="characters.html" style="color:var(--gold)">Forge one</a> — or summon a fresh hero in the other tab.</div>
+        <div class="vault-empty" id="adv-vault-empty">No saved adventurers yet. <a href="characters.html" style="color:var(--gold)">Forge one</a> — or summon a fresh adventurer in the other tab.</div>
         <div class="vault-grid" id="adv-vault-grid"></div>
-        <div class="vault-note" id="adv-vault-note" style="display:none">Pick a hero, then Continue below.</div>
+        <div class="vault-note" id="adv-vault-note" style="display:none">Pick an adventurer, then Continue below.</div>
         <div class="pv-actions" style="margin-top:1.2rem">
           <button class="pv-go" id="adv-forge-continue" onclick="continueHero()" disabled>Continue →</button>
         </div>
       </div>
+    </div>
+    <div class="step-actions" style="margin-top:1.4rem">
+      <button class="top-btn" onclick="goStep('step-name')">← Back</button>
     </div>
   </div>
 
@@ -496,16 +525,19 @@
     <div class="dm-model-row">
       <label class="dm-model-label" for="adventure-dm-model">🧠 Dungeon Master</label>
       <select class="dm-model-select" id="adventure-dm-model"></select>
+      <span class="ask-wrap"><span class="ask-ico">?</span><span class="ask-tip" data-ask="dm">The storyteller — every scene, every NPC, every whisper. <b>Ask the Dungeon Master if unsure.</b></span></span>
     </div>
     <div class="dm-model-note">Narrates the world — every scene, every NPC, every whisper.</div>
     <div class="dm-model-row">
       <label class="dm-model-label" for="adventure-guardian-model">🦉 Lorekeeper / Guardian</label>
       <select class="dm-model-select" id="adventure-guardian-model"></select>
+      <span class="ask-wrap"><span class="ask-ico">?</span><span class="ask-tip" data-ask="guardian">The quiet scribe that keeps the books — HP, gold, items, XP, quests. <b>Ask the Dungeon Master if unsure.</b></span></span>
     </div>
     <div class="dm-model-note">The quiet scribe that keeps the books — HP, gold, items, XP, quests.</div>
     <div class="dm-model-row">
       <label class="dm-model-label" for="adventure-extraction-model">📜 Extraction</label>
       <select class="dm-model-select" id="adventure-extraction-model"></select>
+      <span class="ask-wrap"><span class="ask-ico">?</span><span class="ask-tip" data-ask="extraction">Reads your world files and structures the lore before the tale begins. <b>Ask the Dungeon Master if unsure.</b></span></span>
     </div>
     <div class="dm-model-note">Reads your world files and structures the lore before the tale begins.</div>
     <div class="dm-model-row">
@@ -514,12 +546,14 @@
         <option value="stepfun">StepFun (Step Plan)</option>
         <option value="qwen">Qwen (Token Plan)</option>
       </select>
+      <span class="ask-wrap"><span class="ask-ico">?</span><span class="ask-tip" data-ask="tts">Which provider whispers the spoken word when the DM speaks aloud. <b>Ask the Dungeon Master if unsure.</b></span></span>
     </div>
     <div class="dm-model-note">Which provider whispers the spoken word when the DM speaks aloud.</div>
     <div class="dm-model-note">🔄 <b>Can be changed at any time in the campaign</b> — from the settings inside the chat, if the mood shifts.</div>
     <div class="step-actions">
+      <button class="top-btn" onclick="goStep('step-arch')">← Back</button>
       <button class="start-btn" id="adventure-start" onclick="startAdventure()">⚔️ Start — Awaken the Dungeon Master</button>
-      <span class="hint" id="adventure-start-hint">Your hero steps to the table — the DM opens the first scene.</span>
+      <span class="hint" id="adventure-start-hint">Your adventurer steps to the table — the DM opens the first scene.</span>
     </div>
   </div>
 
@@ -627,7 +661,7 @@ function showCampaignList(campaigns) {
     const ch = c.character || {};
     const icon = c.character_icon || ch.icon || '🎭';
     const name = c.name || I18N.t('Namnlös kampanj');
-    const charName = c.character_name || ch.name || I18N.t('Ingen hjälte än');
+    const charName = c.character_name || ch.name || I18N.t('Ingen äventyrare än');
     const level = c.level || ch.level || 1;
     const turns = c.turn_count || 0;
     const loc = c.location || I18N.t('Okänd');
@@ -789,6 +823,21 @@ function revealStep(id) {
   setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
 }
 
+// Gå till ett godtyckligt steg i onboardingen (framåt ELLER bakåt) —
+// döljer alla andra steg så backa-navigation fungerar utan refresh.
+function goStep(id) {
+  const target = document.getElementById(id);
+  if (!target) return;
+  ['step-lang', 'step-name', 'step-arch', 'step-model'].forEach(sid => {
+    const el = document.getElementById(sid);
+    if (el && el !== target) el.style.display = 'none';
+  });
+  target.style.display = '';
+  requestAnimationFrame(() => target.classList.add('reveal'));
+  setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  try { SFX.click(); } catch (_) {}
+}
+
 function resetStepper() {
   advLang = null; advArchKey = null;
   document.querySelectorAll('.lang-card').forEach(c => c.classList.remove('selected'));
@@ -807,6 +856,7 @@ function pickLang(lang) {
   try { if (typeof I18N !== 'undefined') I18N.init(lang); } catch (_) {}
   renderArchetypes();
   renderDarkSelect();
+  renderBlankI18n();
   revealStep('step-name');
   setTimeout(() => { const i = document.getElementById('adventure-name-input'); if (i) i.focus(); }, 420);
 }
@@ -857,6 +907,14 @@ function renderDarkSelect() {
 function selectArch(key) {
   advArchKey = key;
   document.querySelectorAll('.arch').forEach(el => el.classList.toggle('selected', el.dataset.key === key));
+  // Väljer man en arketyp stängs det tomma pergamentet
+  const editor = document.getElementById('blank-editor');
+  if (editor) editor.style.display = 'none';
+  const btn = document.getElementById('blank-btn');
+  if (btn) {
+    btn.classList.remove('active');
+    btn.innerHTML = isEn() ? '✦ Blank Parchment — write your own' : '✦ Tomt pergament — skriv din egen';
+  }
   const darkSel = document.getElementById('dark-select');
   if (darkSel) darkSel.value = (ARCHETYPES[key] && ARCHETYPES[key].dark) ? key : '';
   try { SFX.click(); } catch (_) {}
@@ -866,21 +924,85 @@ function selectArch(key) {
 function selectDarkArch(key) { if (key) selectArch(key); }
 
 function blankScroll() {
+  const editor = document.getElementById('blank-editor');
+  const btn = document.getElementById('blank-btn');
+  const isOpen = editor && editor.style.display !== 'none';
   advArchKey = null;
   document.querySelectorAll('.arch').forEach(el => el.classList.remove('selected'));
   const darkSel = document.getElementById('dark-select');
   if (darkSel) darkSel.value = '';
+  if (editor) editor.style.display = isOpen ? 'none' : '';
+  if (btn) btn.classList.toggle('active', !isOpen);
+  if (!isOpen) {
+    setTimeout(() => { const t = document.getElementById('blank-text'); if (t) t.focus(); }, 80);
+  }
   try { SFX.click(); } catch (_) {}
   enableGen();
+}
+
+// Uppmaningen anpassas till det språk som valdes i steg 1 (ingen språkknapp behövs)
+function renderBlankI18n() {
+  const btn = document.getElementById('blank-btn');
+  if (btn) btn.innerHTML = isEn()
+    ? '✦ Blank Parchment — write your own'
+    : '✦ Tomt pergament — skriv din egen';
+  const t = document.getElementById('blank-text');
+  if (t) t.placeholder = isEn()
+    ? 'Describe your own adventurer — race, class, look, history, flaws, what they seek…'
+    : 'Beskriv din egen äventyrare — folk, klass, utseende, historia, brister, vad du söker…';
+  const n = document.getElementById('blank-note');
+  if (n) n.textContent = isEn()
+    ? 'Or lean on the Dungeon Master\'s inspiration — the more you write, the more the weaver has to work with.'
+    : 'Eller luta dig mot Dungeon Masterns inspiration — ju mer du skriver, desto mer har väverskan att arbeta med.';
+  renderAskHints();
+}
+
+// Ask-the-DM hover-hints — översätts efter valt kampanjspråk
+const ASK_HINTS = {
+  char: ['Which mind weaves your adventurer — faster models are snappier, deeper models think longer. <b>Ask the Dungeon Master if unsure.</b>',
+         'Vilken hjärna väver din äventyrare — snabbare modeller är rappare, djupare modeller tänker längre. <b>Fråga Dungeon Mastern om du är osäker.</b>'],
+  dm: ['The storyteller — every scene, every NPC, every whisper. <b>Ask the Dungeon Master if unsure.</b>',
+       'Berättaren — varje scen, varje NPC, varje viskning. <b>Fråga Dungeon Mastern om du är osäker.</b>'],
+  guardian: ['The quiet scribe that keeps the books — HP, gold, items, XP, quests. <b>Ask the Dungeon Master if unsure.</b>',
+             'Den tysta skrivaren som bokför — HP, guld, föremål, XP, uppdrag. <b>Fråga Dungeon Mastern om du är osäker.</b>'],
+  extraction: ['Reads your world files and structures the lore before the tale begins. <b>Ask the Dungeon Master if unsure.</b>',
+               'Läser dina världsfiler och strukturerar historien innan berättelsen börjar. <b>Fråga Dungeon Mastern om du är osäker.</b>'],
+  tts: ['Which provider whispers the spoken word when the DM speaks aloud. <b>Ask the Dungeon Master if unsure.</b>',
+        'Vilken leverantör viskar orden när DM talar högt. <b>Fråga Dungeon Mastern om du är osäker.</b>'],
+};
+function renderAskHints() {
+  const en = isEn();
+  document.querySelectorAll('.ask-tip[data-ask]').forEach(tip => {
+    const pair = ASK_HINTS[tip.dataset.ask];
+    if (pair) tip.innerHTML = en ? pair[0] : pair[1];
+  });
+}
+
+function blankText() {
+  const t = document.getElementById('blank-text');
+  return t ? t.value.trim() : '';
 }
 
 function enableGen() {
   const b = document.getElementById('gen-btn');
   if (b) b.disabled = false;
   const h = document.getElementById('gen-hint');
-  if (h) h.textContent = advArchKey
-    ? (isEn() ? 'Ready — the archetype is woven into the prompt' : 'Redo — arketypen är invävd i prompten')
-    : (isEn() ? 'Blank parchment — write your own legend' : 'Tomt pergament — skriv din egen legend');
+  const blank = blankText();
+  if (h) {
+    if (blank) {
+      h.textContent = isEn()
+        ? 'Your own legend is ready to be woven'
+        : 'Din egen legend är redo att vävas';
+    } else if (advArchKey) {
+      h.textContent = isEn()
+        ? 'Ready — the archetype is woven into the prompt'
+        : 'Redo — arketypen är invävd i prompten';
+    } else {
+      h.textContent = isEn()
+        ? 'Blank parchment — write your own legend'
+        : 'Tomt pergament — skriv din egen legend';
+    }
+  }
 }
 
 // ── Hjälteval: summon (generera + preview + reroll) eller Forge (färdig) ──
@@ -913,7 +1035,7 @@ async function generateHero() {
   weaving.classList.add('show');
   const charModelSel = document.getElementById('adv-char-model');
   const charModel = (charModelSel && charModelSel.value) || 'step-3.7-flash';
-  status.textContent = '🧙 The Dungeon Master is weaving your hero with ' + charModel + '…';
+  status.textContent = '🧙 The Dungeon Master is weaving your adventurer with ' + charModel + '…';
   reasoning.hidden = false; reasoning.textContent = '';
   weaving.scrollIntoView({ behavior: 'smooth', block: 'center' });
   try {
@@ -934,7 +1056,7 @@ async function generateHero() {
   } catch (e) {
     weaving.classList.remove('show');
     status.classList.add('wa-warn');
-    status.textContent = '⚠ ' + (e.message || 'Could not weave the hero');
+    status.textContent = '⚠ ' + (e.message || 'Could not weave the adventurer');
     try { SFX.error(); } catch (_) {}
   } finally {
     advGenBusy = false;
@@ -1005,7 +1127,7 @@ async function loadForgeHeroes() {
       <div class="vcard-stats">
         ${['str','dex','con','int','wis','cha'].map(k => `<div class="vcard-stat"><div class="a">${k.toUpperCase()}</div><div class="s">${ch[k] || 10}</div></div>`).join('')}
       </div>
-      <button class="vcard-use">${isEn() ? 'Choose this hero' : 'Välj denna hjälte'}</button>
+      <button class="vcard-use">${isEn() ? 'Choose this adventurer' : 'Välj denna äventyrare'}</button>
     </div>`).join('');
 }
 
@@ -1024,7 +1146,7 @@ async function continueHero() {
   if (advHeroMode === 'forge' && advHeroId) { revealStep('step-model'); return; }
   if (advHeroMode !== 'summon' || !advHero || !advHero.name) {
     try { SFX.error(); } catch (_) {}
-    toast('⚠ ' + (isEn() ? 'Generate a hero first' : 'Generera en hjälte först'));
+    toast('⚠ ' + (isEn() ? 'Generate an adventurer first' : 'Generera en äventyrare först'));
     return;
   }
   const btn = document.getElementById('adv-continue');
@@ -1038,11 +1160,19 @@ async function continueHero() {
   } catch (e) {
     btn.disabled = false;
     btn.textContent = 'Continue →';
-    toast('⚠ ' + (e.message || 'Could not save the hero'));
+    toast('⚠ ' + (e.message || 'Could not save the adventurer'));
   }
 }
 
 function advPrompt() {
+  const blank = blankText();
+  if (blank) {
+    // Spelarens egen beskrivning — väv in den som kärnan i legenden
+    const tpl = isEn()
+      ? '## Legend\n\n**The player\'s own vision:**\n"""\n%s\n"""\n\nWeave this vision into a full adventurer. Flesh out anything left open, stay faithful to what is written. Generate:\n1. Name (dark fantasy)\n2. Full character sheet: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves\n3. 3-4 abilities/traits\n4. Starting equipment (5-8 items)\n5. Backstory (max 100 words)\nReturn as JSON per the state schema.'
+      : '## Legenden\n\n**Spelarens egen vision:**\n"""\n%s\n"""\n\nVäv denna vision till en fullständig äventyrare. Fyll i det som lämnas öppet, håll dig trogen mot det skrivna. Generera:\n1. Namn (mörk fantasy)\n2. Fullt karaktärsark: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves\n3. 3-4 förmågor/egenskaper\n4. Startutrustning (5-8 föremål)\n5. Bakgrundshistoria (max 100 ord)\nReturnera som JSON enligt state-schemat.';
+    return tpl.replace('%s', blank);
+  }
   if (advArchKey && ARCHETYPES[advArchKey]) return archField(ARCHETYPES[advArchKey], 'prompt');
   return isEn()
     ? '## Legend\n\n**Name:**\n**Race:**\n**Class:**\n**Backstory:**\n**Personality:**\n**A memory that haunts you:**\n**What do you seek?**\n\nGenerate:\n1. Name (dark fantasy)\n2. Full character sheet: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves\n3. 3-4 abilities/traits\n4. Starting equipment (5-8 items)\n5. Backstory (max 100 words)\nReturn as JSON per the state schema.'
@@ -1094,7 +1224,7 @@ async function startAdventure() {
   if (advStarting) return;
   if (!advHeroId) {
     try { SFX.error(); } catch (_) {}
-    toast('⚠ ' + (isEn() ? 'Choose your hero first' : 'Välj din hjälte först'));
+    toast('⚠ ' + (isEn() ? 'Choose your adventurer first' : 'Välj din äventyrare först'));
     return;
   }
   advStarting = true;

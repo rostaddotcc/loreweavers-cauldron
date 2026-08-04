@@ -1800,6 +1800,9 @@ async def oracle(req: OracleRequest, morkrets_token: str | None = Cookie(None)):
 # FEEDBACK — spelarfeedback till JSONL (backend/data/feedback.jsonl)
 # ═══════════════════════════════════════
 
+# Sökväg till feedback-filen (monkeypatchbar i tester)
+_FEEDBACK_DIR = Path(__file__).resolve().parent / "data"
+
 
 class FeedbackRequest(BaseModel):
     """POST /api/feedback — {email: string|null, message: string}."""
@@ -1814,7 +1817,7 @@ async def feedback(req: FeedbackRequest, morkrets_token: str | None = Cookie(Non
     if not isinstance(req.message, str) or not req.message.strip():
         raise HTTPException(400, "Message is required")
     try:
-        feedback_dir = Path(__file__).resolve().parent / "data"
+        feedback_dir = _FEEDBACK_DIR
         feedback_dir.mkdir(parents=True, exist_ok=True)
         entry = {
             "ts": datetime.now(timezone.utc).isoformat(),
@@ -7280,6 +7283,30 @@ async def admin_stats(morkrets_token: str | None = Cookie(None)):
         "total_turns": total_turns,
         "users": user_stats,
     }
+
+
+@app.get("/api/admin/feedback")
+async def admin_feedback(morkrets_token: str | None = Cookie(None)):
+    """Admin-only: läs all spelarfeedback från feedback.jsonl (senaste först)."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+    path = _FEEDBACK_DIR / "feedback.jsonl"
+    items = []
+    if path.exists():
+        try:
+            for line in path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    items.append(json.loads(line))
+                except json.JSONDecodeError:
+                    logger.warning("Skipping malformed feedback line: %.80s", line)
+        except OSError as e:
+            logger.error("Feedback read failed: %s", e)
+            raise HTTPException(500, "Could not read feedback")
+    items.reverse()  # senaste först
+    return {"total": len(items), "items": items}
 
 
 @app.get("/api/admin/user/{username}")

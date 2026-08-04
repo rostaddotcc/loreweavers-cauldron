@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Mechanics of the Cauldron — Mörkrets Rike Engine</title>
+<style>
+/* ══════════════════════════════════════════════════════════════
+   MÖRKRETS RIKA — ENGINE MECHANICS v27 (standalone, offline-safe)
+   Dark fantasy × terminal. No external assets.
+   ══════════════════════════════════════════════════════════════ */
+:root{
+  --ink:#08080d; --stone:#0e0e14; --stone-2:#12121a; --stone-3:#181822;
+  --edge:#2a2a3a; --edge-hi:#3a3a50;
+  --bone:#b8b8c8; --bone-bright:#e0e0ec; --bone-dim:#6a6a80;
+  --gold:#c9a227; --gold-bright:#e8c65a;
+  --blood:#8b1a2a; --blood-bright:#d43a4d;
+  --ember:#d4691e; --arcane:#7b4fd4; --arcane-bright:#a885f0;
+  --poison:#5a9a4e; --teal:#4e8a93;
+  --term-green:#33cc33; --term-amber:#ccaa33; --term-red:#ff5566;
+  --font-display:"Cinzel","Trajan Pro","Palatino Linotype","Book Antiqua",Palatino,Georgia,"Times New Roman",serif;
+  --font-body:"Spectral","Palatino Linotype","Book Antiqua",Palatino,Georgia,serif;
+  --font-mono:ui-monospace,"Cascadia Code","JetBrains Mono","IBM Plex Mono",Menlo,Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--font-body);color:var(--bone);font-size:16.5px;line-height:1.65;
+  background:
+    radial-gradient(1100px 520px at 50% 112%,rgba(212,105,30,.13),transparent 62%),
+    radial-gradient(820px 460px at 12% -8%,rgba(139,95,212,.10),transparent 58%),
+    radial-gradient(640px 380px at 88% -4%,rgba(163,36,51,.09),transparent 56%),
+    var(--ink);
+  background-attachment:fixed;
+  overflow-x:hidden;
+}
+::selection{background:rgba(201,162,39,.32);color:#fff}
+a{color:var(--gold-bright);text-decoration:none}
+a:hover{text-shadow:0 0 10px rgba(232,198,90,.6)}
+code,kbd,.mono{font-family:var(--font-mono);font-size:.9em}
+
+/* ── Ambient layers ─────────────────────────────────────────── */
+.grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.045;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
+.fog{position:fixed;inset:-20%;z-index:0;pointer-events:none}
+.fog::before,.fog::after{content:'';position:absolute;width:70vw;height:70vw;border-radius:50%;filter:blur(90px);opacity:.5}
+.fog::before{left:-10%;top:20%;background:radial-gradient(circle,rgba(123,79,212,.08),transparent 60%);animation:drift-a 70s ease-in-out infinite alternate}
+.fog::after{right:-15%;bottom:5%;background:radial-gradient(circle,rgba(212,105,30,.06),transparent 60%);animation:drift-b 90s ease-in-out infinite alternate}
+@keyframes drift-a{from{transform:translate(0,0) scale(1)}to{transform:translate(14vw,-8vh) scale(1.25)}}
+@keyframes drift-b{from{transform:translate(0,0) scale(1.15)}to{transform:translate(-12vw,6vh) scale(.9)}}
+#embers{position:fixed;inset:0;z-index:1;pointer-events:none}
+.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(4,2,8,.85)}
+
+/* ── Boot overlay ───────────────────────────────────────────── */
+#boot{position:fixed;inset:0;z-index:9999;background:#020206;display:flex;align-items:center;justify-content:center;cursor:pointer}
+#boot.done{opacity:0;pointer-events:none;transition:opacity .6s}
+.boot-term{width:min(680px,92vw);background:rgba(2,2,6,.97);border:1px solid var(--edge);
+  box-shadow:0 0 80px rgba(123,79,212,.12),inset 0 0 40px rgba(0,0,0,.8);position:relative}
+.boot-term::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:2;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 2px,transparent 2px 4px)}
+.boot-bar{display:flex;gap:.45rem;align-items:center;padding:.5rem .8rem;border-bottom:1px solid var(--edge);background:#0b0b12}
+.boot-bar i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.boot-bar i:nth-child(1){background:#8b1a2a}.boot-bar i:nth-child(2){background:#8a6d14}.boot-bar i:nth-child(3){background:#2a6e3a}
+.boot-bar span{margin-left:.5rem;font-family:var(--font-mono);font-size:.68rem;letter-spacing:.22em;color:var(--bone-dim);text-transform:uppercase}
+.boot-lines{padding:1.2rem 1.4rem 1.4rem;font-family:var(--font-mono);font-size:.82rem;line-height:1.85;color:var(--term-green);min-height:230px;white-space:pre-wrap;word-break:break-word}
+.boot-lines .b-ok{color:var(--term-green)}
+.boot-lines .b-dim{color:var(--bone-dim)}
+.boot-lines .b-gold{color:var(--gold-bright)}
+.boot-cursor{display:inline-block;width:.55em;height:1em;background:var(--term-green);vertical-align:-.15em;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.boot-hint{position:absolute;bottom:.6rem;right:.9rem;font-family:var(--font-mono);font-size:.62rem;letter-spacing:.2em;color:var(--bone-dim)}
+
+/* ── Scroll progress ────────────────────────────────────────── */
+#prog{position:fixed;top:0;left:0;height:2px;width:0;z-index:8000;background:linear-gradient(90deg,var(--gold),var(--gold-bright));box-shadow:0 0 8px rgba(232,198,90,.7)}
+
+/* ── Layout ─────────────────────────────────────────────────── */
+.wrap{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:0 1.4rem}
+main{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1.4rem 4rem;display:grid;grid-template-columns:230px minmax(0,1fr);gap:2.6rem}
+.content{min-width:0}
+
+/* ── Hero ───────────────────────────────────────────────────── */
+.hero{position:relative;z-index:2;padding:5.5rem 1.4rem 3rem;text-align:center;max-width:900px;margin:0 auto}
+.eyebrow{font-family:var(--font-display);font-size:.68rem;letter-spacing:.42em;text-transform:uppercase;color:var(--gold);margin-bottom:1.1rem}
+.hero h1{font-family:var(--font-display);font-weight:900;font-size:clamp(2rem,5.6vw,3.4rem);color:var(--bone-bright);line-height:1.12;
+  animation:candle 6s ease-in-out infinite;text-shadow:0 2px 0 #000,0 0 26px rgba(232,198,90,.28)}
+@keyframes candle{0%,100%{text-shadow:0 2px 0 #000,0 0 24px rgba(232,198,90,.25)}42%{text-shadow:0 2px 0 #000,0 0 34px rgba(232,198,90,.42)}76%{text-shadow:0 2px 0 #000,0 0 27px rgba(212,105,30,.36)}}
+.hero .sub{margin:1.2rem auto 0;max-width:640px;color:var(--bone);font-style:italic;font-size:1.02rem}
+.hero .sub b{color:var(--gold-bright);font-style:normal}
+.chips{display:flex;flex-wrap:wrap;justify-content:center;gap:.55rem;margin-top:1.6rem}
+.chip{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone);
+  border:1px solid var(--edge);background:rgba(14,14,20,.72);padding:.32rem .7rem}
+.chip.g{color:var(--gold-bright);border-color:rgba(201,162,39,.4)}
+.chip.p{color:var(--arcane-bright);border-color:rgba(123,79,212,.4)}
+.chip.t{color:var(--teal);border-color:rgba(78,138,147,.4)}
+.chip.e{color:var(--ember);border-color:rgba(212,105,30,.4)}
+.scroll-hint{margin-top:2.4rem;font-family:var(--font-mono);font-size:.66rem;letter-spacing:.3em;color:var(--bone-dim);text-transform:uppercase;animation:bob 2.4s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0);opacity:.55}50%{transform:translateY(6px);opacity:1}}
+
+/* ── Index / scroll-spy ─────────────────────────────────────── */
+.index{position:sticky;top:1.4rem;align-self:start;font-family:var(--font-mono);font-size:.74rem}
+.index h2{font-family:var(--font-display);font-size:.66rem;letter-spacing:.34em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.9rem}
+.index ol{list-style:none;border-left:1px solid var(--edge)}
+.index li{border-left:2px solid transparent;transition:all .25s}
+.index a{display:block;padding:.42rem .9rem;color:var(--bone-dim);letter-spacing:.06em;transition:color .2s;border-left:1px solid transparent;margin-left:-1px}
+.index a:hover{color:var(--gold-bright)}
+.index li.active{border-left-color:var(--gold)}
+.index li.active a{color:var(--gold-bright);text-shadow:0 0 10px rgba(232,198,90,.35)}
+.index .ix-num{color:var(--gold);opacity:.7;margin-right:.55rem;font-size:.68rem}
+.index .ix-tag{display:block;font-size:.58rem;letter-spacing:.14em;color:var(--bone-dim);text-transform:uppercase;margin-top:.05rem}
+
+/* ── Section headers ────────────────────────────────────────── */
+.sec{margin-bottom:4.6rem;scroll-margin-top:2.2rem}
+.sec-head{display:flex;align-items:baseline;gap:1rem;margin-bottom:1.1rem}
+.sec-num{font-family:var(--font-display);font-weight:900;font-size:clamp(1.6rem,3vw,2.2rem);color:var(--gold);opacity:.9;line-height:1}
+.sec-title{font-family:var(--font-display);font-weight:700;font-size:clamp(1.15rem,2.6vw,1.55rem);letter-spacing:.1em;text-transform:uppercase;color:var(--bone-bright)}
+.sec-rule{flex:1;height:1px;background:linear-gradient(90deg,rgba(201,162,39,.55),transparent);margin-top:.6rem}
+.sec-mark{color:var(--gold);font-size:.8rem;margin-right:.4rem}
+.sec-lede{color:var(--bone-dim);font-style:italic;margin:-.2rem 0 1.6rem;max-width:70ch}
+
+/* ── Panels / tablets ───────────────────────────────────────── */
+.panel{position:relative;background:linear-gradient(165deg,var(--stone-2) 0%,var(--stone) 55%,#120c1c 100%);
+  border:1px solid var(--edge);padding:1.6rem 1.5rem;margin-bottom:1.4rem;
+  box-shadow:0 24px 60px -24px rgba(0,0,0,.9),inset 0 1px 0 rgba(239,226,192,.05)}
+.corner{position:absolute;width:16px;height:16px;border-color:var(--gold);border-style:solid;opacity:.7}
+.corner.tl{top:5px;left:5px;border-width:2px 0 0 2px}
+.corner.tr{top:5px;right:5px;border-width:2px 2px 0 0}
+.corner.bl{bottom:5px;left:5px;border-width:0 0 2px 2px}
+.corner.br{bottom:5px;right:5px;border-width:0 2px 2px 0}
+.panel h3{font-family:var(--font-display);font-size:.82rem;letter-spacing:.26em;text-transform:uppercase;color:var(--gold-bright);margin-bottom:.8rem}
+.panel h3 .dot{color:var(--gold)}
+.panel p{margin-bottom:.8rem}
+.panel p:last-child{margin-bottom:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4rem}
+.stat{font-family:var(--font-mono);font-size:.78rem;color:var(--bone-dim)}
+.stat b{color:var(--bone-bright);font-weight:600}
+.stat .v{color:var(--gold-bright)}
+.tag-row{display:flex;flex-wrap:wrap;gap:.45rem;margin:.6rem 0 .9rem}
+.tg{font-family:var(--font-mono);font-size:.68rem;padding:.22rem .5rem;border:1px solid var(--edge);color:var(--bone)}
+.tg.g{color:var(--gold-bright);border-color:rgba(201,162,39,.45)}
+.tg.p{color:var(--arcane-bright);border-color:rgba(123,79,212,.45)}
+.tg.t{color:var(--teal);border-color:rgba(78,138,147,.45)}
+.tg.e{color:var(--ember);border-color:rgba(212,105,30,.45)}
+.tg.dead{color:var(--bone-dim);border-style:dashed;text-decoration:line-through;text-decoration-color:rgba(212,58,77,.6)}
+
+/* ── Terminal windows ───────────────────────────────────────── */
+.term{background:rgba(2,2,6,.97);border:1px solid var(--edge);margin:1.2rem 0;position:relative;
+  box-shadow:inset 0 0 40px rgba(0,0,0,.8)}
+.term::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:2;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.2) 0 2px,transparent 2px 4px)}
+.term::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:3;
+  animation:crt 4s ease-in-out infinite;opacity:.5}
+@keyframes crt{0%,100%{background:rgba(255,255,255,.012)}50%{background:rgba(255,255,255,.028)}}
+.term-bar{display:flex;gap:.45rem;align-items:center;padding:.45rem .8rem;border-bottom:1px solid var(--edge);background:#0b0b12}
+.term-bar i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.term-bar i:nth-child(1){background:#8b1a2a}.term-bar i:nth-child(2){background:#8a6d14}.term-bar i:nth-child(3){background:#2a6e3a}
+.term-bar span{margin-left:.5rem;font-family:var(--font-mono);font-size:.64rem;letter-spacing:.2em;color:var(--bone-dim);text-transform:uppercase}
+.term-body{padding:1rem 1.1rem;font-family:var(--font-mono);font-size:.78rem;line-height:1.8;color:var(--term-green);text-shadow:0 0 6px rgba(80,220,120,.28);overflow-x:auto}
+.term-body .c-dim{color:var(--bone-dim)}.term-body .c-gold{color:var(--gold-bright)}
+.term-body .c-p{color:var(--arcane-bright)}.term-body .c-red{color:var(--term-red)}
+.term-body .c-amb{color:var(--term-amber)}.term-body .c-teal{color:var(--teal)}
+.term.dm .term-body{color:var(--gold-bright);text-shadow:0 0 6px rgba(232,198,90,.25)}
+.term.dm .term-body .c-dim{color:var(--bone-dim);text-shadow:none}
+
+/* ── Flow diagrams (SVG) ────────────────────────────────────── */
+.flowbox{background:linear-gradient(170deg,var(--stone-2),var(--stone) 70%,#0d0d14);border:1px solid var(--edge);padding:1rem;margin:1.2rem 0;overflow-x:auto}
+.flowbox svg{display:block;width:100%;height:auto;min-width:560px}
+.fn rect{fill:#12121a;stroke:var(--edge);stroke-width:1}
+.fn .f-label{font-family:var(--font-mono);font-size:10.5px;fill:var(--bone);letter-spacing:.04em}
+.fn .f-sub{font-family:var(--font-mono);font-size:8px;fill:var(--bone-dim);letter-spacing:.06em}
+.fn.gold rect{stroke:rgba(201,162,39,.55);fill:linear-gradient(#181410,#14100a)}
+.fn.gold .f-label{fill:var(--gold-bright)}
+.fn.pur rect{stroke:rgba(123,79,212,.55)}
+.fn.pur .f-label{fill:var(--arcane-bright)}
+.fn.poison rect{stroke:rgba(90,154,78,.5)}
+.fn.poison .f-label{fill:var(--poison)}
+.fn.teal rect{stroke:rgba(78,138,147,.55)}
+.fn.teal .f-label{fill:var(--teal)}
+.fn.ember rect{stroke:rgba(212,105,30,.5)}
+.fn.ember .f-label{fill:var(--ember)}
+.fn.bone .f-label{fill:var(--bone-bright)}
+.fn .f-pulse{animation:node-pulse 3.2s ease-in-out infinite}
+@keyframes node-pulse{0%,100%{opacity:.25}50%{opacity:.85}}
+.flowline{stroke:var(--edge-hi);stroke-width:1.2;fill:none}
+.flowline.anim{stroke-dasharray:5 5;animation:flow-dash 1.1s linear infinite}
+.flowline.anim.gold{stroke:rgba(201,162,39,.75)}
+.flowline.anim.pur{stroke:rgba(123,79,212,.7)}
+.flowline.anim.poison{stroke:rgba(90,154,78,.65)}
+.flowline.anim.teal{stroke:rgba(78,138,147,.7)}
+.flowline.anim.ember{stroke:rgba(212,105,30,.65)}
+@keyframes flow-dash{to{stroke-dashoffset:-10}}
+.dot{fill:var(--gold-bright)}
+.dot.pur{fill:var(--arcane-bright)}.dot.poison{fill:var(--poison)}.dot.teal{fill:var(--teal)}
+.flow-label{font-family:var(--font-mono);font-size:8.2px;fill:var(--bone-dim);letter-spacing:.08em}
+.legend{display:flex;flex-wrap:wrap;gap:1rem;margin-top:.7rem;font-family:var(--font-mono);font-size:.64rem;letter-spacing:.1em;color:var(--bone-dim);text-transform:uppercase}
+.legend i{display:inline-block;width:9px;height:9px;margin-right:.35rem;vertical-align:-1px}
+
+/* ── Expanders ──────────────────────────────────────────────── */
+.exp{border:1px solid var(--edge);background:rgba(14,14,20,.6);margin-bottom:.8rem}
+.exp-toggle{display:flex;align-items:center;gap:.7rem;width:100%;cursor:pointer;text-align:left;background:none;border:none;
+  padding:.85rem 1rem;color:var(--bone);transition:color .2s;font-family:var(--font-body);font-size:.95rem}
+.exp-toggle:hover{color:var(--gold-bright)}
+.exp-toggle .caret{transition:transform .3s;font-size:.6rem;color:var(--gold);flex:none}
+.exp-toggle.open .caret{transform:rotate(90deg)}
+.exp-toggle .et-t{font-family:var(--font-display);font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-bright)}
+.exp-toggle .et-d{display:block;font-family:var(--font-mono);font-size:.66rem;letter-spacing:.04em;color:var(--bone-dim);text-transform:none;margin-top:.15rem}
+.exp-body{max-height:0;overflow:hidden;opacity:0;transition:max-height .55s cubic-bezier(.22,1,.36,1),opacity .4s}
+.exp-body.open{max-height:2400px;opacity:1}
+.exp-inner{padding:0 1rem 1.1rem}
+.exp-inner p{color:var(--bone);font-size:.9rem;margin-bottom:.7rem}
+.exp-inner p:last-child{margin-bottom:0}
+
+/* ── Prompt excerpts ────────────────────────────────────────── */
+pre.prompt{background:#05050a;border:1px solid var(--edge);border-left:2px solid var(--gold);
+  padding:.9rem 1rem;overflow-x:auto;font-family:var(--font-mono);font-size:.72rem;line-height:1.75;color:var(--bone);margin:.6rem 0 1rem}
+pre.prompt .pt{color:var(--gold-bright);font-weight:700}
+pre.prompt .pk{color:var(--arcane-bright)}
+pre.prompt .pd{color:var(--bone-dim)}
+pre.prompt .pe{color:var(--ember)}
+pre.prompt .pneg{color:var(--term-red)}
+pre.prompt .pok{color:var(--term-green)}
+pre.prompt.lang{border-left-color:var(--arcane)}
+pre.prompt.truth{border-left-color:var(--blood)}
+
+/* ── Tables ─────────────────────────────────────────────────── */
+table.dc{width:100%;border-collapse:collapse;font-size:.86rem;margin:.6rem 0 .9rem}
+table.dc th{font-family:var(--font-display);font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold-bright);
+  text-align:left;padding:.45rem .7rem;border-bottom:1px solid var(--gold);font-weight:700}
+table.dc td{padding:.42rem .7rem;border-bottom:1px solid var(--edge);color:var(--bone)}
+table.dc tr:last-child td{border-bottom:none}
+table.dc td.mono{font-family:var(--font-mono);font-size:.76rem;color:var(--gold-bright)}
+
+/* ── Dice roller ────────────────────────────────────────────── */
+.roller{border:1px solid var(--edge);background:linear-gradient(170deg,var(--stone-2),var(--stone) 70%,#0d0d14);padding:1.4rem;margin:1.2rem 0}
+.roller .r-label{font-family:var(--font-display);font-size:.7rem;letter-spacing:.28em;text-transform:uppercase;color:var(--gold-bright);margin-bottom:.9rem}
+.r-row{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+.r-expr{flex:1 1 220px;background:#05050a;border:1px solid var(--edge);color:var(--term-green);
+  font-family:var(--font-mono);font-size:1rem;padding:.6rem .8rem;min-width:0}
+.r-expr:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),0 0 14px rgba(201,162,39,.25)}
+.r-btn{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;
+  color:var(--bone);background:#0b0b12;border:1px solid var(--edge);padding:.55rem .85rem;transition:all .15s}
+.r-btn:hover{color:var(--gold-bright);border-color:var(--gold);transform:translateY(-1px)}
+.r-btn:active{transform:translateY(1px)}
+.r-btn.primary{color:#1a1206;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 60%,#8a6d14);border-color:#6e5510;font-weight:700}
+.r-btn.primary:hover{filter:brightness(1.12);color:#1a1206}
+.r-adv{display:flex;align-items:center;gap:.5rem;font-family:var(--font-mono);font-size:.7rem;color:var(--bone-dim);letter-spacing:.08em;cursor:pointer;user-select:none}
+.r-adv input{accent-color:var(--arcane)}
+.dice-stage{display:flex;flex-wrap:wrap;gap:.7rem;min-height:74px;align-items:center;margin:.9rem 0 .4rem}
+.die-face{width:58px;height:58px;display:flex;align-items:center;justify-content:center;position:relative;
+  font-family:var(--font-display);font-weight:900;font-size:1.35rem;color:var(--bone-bright);
+  background:radial-gradient(circle at 35% 30%,#23233a,#0c0c14 70%);border:1px solid var(--edge-hi);
+  box-shadow:0 8px 22px -6px rgba(0,0,0,.9),inset 0 2px 6px rgba(255,255,255,.06);
+  animation:die-pop .45s cubic-bezier(.22,1,.36,1) both}
+@keyframes die-pop{from{opacity:0;transform:scale(.3) rotate(-160deg)}to{opacity:1;transform:scale(1) rotate(0)}}
+.die-face.d20{clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+.die-face.d6{border-radius:8px}
+.die-face.d4{clip-path:polygon(50% 0,100% 100%,0 100%)}
+.die-face.crit{border-color:var(--gold);color:var(--gold-bright);box-shadow:0 0 22px rgba(232,198,90,.55),inset 0 2px 6px rgba(255,255,255,.08);animation:die-pop .45s cubic-bezier(.22,1,.36,1) both,crit-glow 1.2s ease-in-out infinite}
+.die-face.fail{border-color:var(--blood-bright);color:var(--blood-bright);box-shadow:0 0 22px rgba(212,58,77,.5)}
+.die-face.adv-best{border-color:var(--poison);box-shadow:0 0 18px rgba(90,154,78,.5)}
+@keyframes crit-glow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.5)}}
+.r-result{font-family:var(--font-mono);font-size:.9rem;color:var(--term-green);min-height:1.6em;word-break:break-word}
+.r-result .plus{color:var(--bone-dim)}
+.r-crit{font-family:var(--font-display);font-size:.78rem;letter-spacing:.24em;text-transform:uppercase;margin-top:.3rem;min-height:1.2em}
+.r-crit.good{color:var(--gold-bright);text-shadow:0 0 12px rgba(232,198,90,.6);animation:crit-flash 1s ease-in-out infinite}
+.r-crit.bad{color:var(--blood-bright);text-shadow:0 0 12px rgba(212,58,77,.6)}
+@keyframes crit-flash{0%,100%{opacity:1}50%{opacity:.55}}
+.r-history{margin-top:.9rem;border-top:1px dashed var(--edge);padding-top:.7rem;font-family:var(--font-mono);font-size:.72rem;color:var(--bone-dim);max-height:150px;overflow-y:auto}
+.r-history .h-line{padding:.18rem 0;border-bottom:1px solid rgba(42,42,58,.4)}
+.r-history .h-line:last-child{border-bottom:none}
+.r-history .h-t{color:var(--gold);opacity:.6;margin-right:.5rem}
+
+/* ── JSON typewriter ────────────────────────────────────────── */
+.json-box{background:#05050a;border:1px solid var(--edge);border-left:2px solid var(--arcane);padding:1rem 1.1rem;margin:1rem 0;position:relative}
+.json-box .jb-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;flex-wrap:wrap;gap:.5rem}
+.json-box .jb-title{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--bone-dim)}
+.json-box pre{font-family:var(--font-mono);font-size:.72rem;line-height:1.7;color:var(--bone);white-space:pre-wrap;word-break:break-word;min-height:220px}
+.j-key{color:var(--gold-bright)}.j-str{color:var(--bone-bright)}.j-num{color:var(--teal)}
+.j-kw{color:var(--poison)}.j-null{color:var(--bone-dim);font-style:italic}.j-punct{color:var(--edge-hi)}
+.j-cursor{display:inline-block;width:.55em;height:1em;background:var(--arcane-bright);vertical-align:-.15em;animation:blink 1s steps(1) infinite}
+.jb-btn{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;
+  color:var(--arcane-bright);background:none;border:1px solid rgba(123,79,212,.5);padding:.4rem .8rem;transition:all .2s}
+.jb-btn:hover{background:rgba(123,79,212,.15);color:#fff}
+.jb-btn:disabled{opacity:.35;cursor:default}
+
+/* ── State tree ─────────────────────────────────────────────── */
+.tree{background:#05050a;border:1px solid var(--edge);padding:1rem 1.1rem;margin:1rem 0;font-family:var(--font-mono);font-size:.76rem;line-height:1.8}
+.tree .t-line{white-space:pre-wrap;word-break:break-word}
+.tree .k{color:var(--bone-bright)}
+.tree .kg{color:var(--gold-bright)}
+.tree .d{color:var(--bone-dim)}
+.tree .p{color:var(--arcane-bright)}
+.tree .t{color:var(--teal)}
+.tree .e{color:var(--ember)}
+.tree .g{color:var(--poison)}
+.tree details{margin-left:1.1rem;border-left:1px dashed var(--edge);padding-left:.7rem}
+.tree summary{cursor:pointer;color:var(--bone);list-style:none;display:flex;align-items:center;gap:.5rem}
+.tree summary::-webkit-details-marker{display:none}
+.tree summary::before{content:'▸';color:var(--gold);font-size:.6rem;transition:transform .25s;flex:none}
+.tree details[open] summary::before{transform:rotate(90deg)}
+.tree summary:hover{color:var(--gold-bright)}
+.tree .sz{font-size:.62rem;color:var(--bone-dim);letter-spacing:.08em;margin-left:.4rem}
+
+/* ── XP ladder ──────────────────────────────────────────────── */
+.xp-ladder{margin:1rem 0}
+.xp-bar{display:flex;height:26px;border:1px solid var(--edge);background:#0a0612;overflow:hidden}
+.xp-step{flex:1;border-right:1px solid rgba(42,42,58,.7);position:relative;transition:background .6s}
+.xp-step:last-child{border-right:none}
+.xp-step.l1{background:linear-gradient(180deg,#2c2110,#14100a)}
+.xp-step.mid{background:linear-gradient(180deg,#3a2a12,#181206)}
+.xp-step.late{background:linear-gradient(180deg,#4a3414,#1c1408)}
+.xp-step .lvl{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);font-family:var(--font-mono);font-size:.56rem;color:var(--gold-bright);opacity:.85}
+.xp-cap{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:.62rem;color:var(--bone-dim);margin-top:.35rem}
+.xp-table{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:.3rem .8rem;margin-top:.7rem;font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim)}
+.xp-table b{color:var(--gold-bright);font-weight:600}
+
+/* ── TTS sim ────────────────────────────────────────────────── */
+.tts-sim{margin-top:1rem}
+.tts-cache{display:flex;flex-wrap:wrap;gap:.5rem;min-height:34px;margin:.7rem 0}
+.tts-key{font-family:var(--font-mono);font-size:.66rem;color:var(--bone);border:1px solid var(--edge);background:#0b0b12;
+  padding:.28rem .55rem;animation:die-pop .4s cubic-bezier(.22,1,.36,1) both;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tts-key.hit{border-color:var(--poison);color:var(--poison)}
+.tts-key.miss{border-color:var(--term-amber);color:var(--term-amber)}
+.tts-log{font-family:var(--font-mono);font-size:.74rem;color:var(--term-green);min-height:1.5em;word-break:break-word}
+.tts-log .m{color:var(--term-amber)}.tts-log .h{color:var(--poison)}.tts-log .d{color:var(--bone-dim)}
+
+/* ── Footer ─────────────────────────────────────────────────── */
+footer{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1.4rem 3.5rem;text-align:center;
+  border-top:1px solid var(--edge)}
+footer .f-title{font-family:var(--font-display);font-size:.68rem;letter-spacing:.34em;text-transform:uppercase;color:var(--gold);margin-bottom:.6rem}
+footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);line-height:1.9}
+
+/* ── Toast ──────────────────────────────────────────────────── */
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);opacity:0;z-index:9000;
+  font-family:var(--font-display);font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;
+  background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);
+  color:var(--gold-bright);padding:.7rem 1.5rem;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}
+.toast.show{transform:translate(-50%,0);opacity:1}
+
+/* ── Scroll reveal ──────────────────────────────────────────── */
+.rv{opacity:0;transform:translateY(24px);transition:opacity .7s cubic-bezier(.22,1,.36,1),transform .7s cubic-bezier(.22,1,.36,1)}
+.rv.in{opacity:1;transform:none}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media(max-width:1000px){
+  main{grid-template-columns:1fr}
+  .index{position:static;display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.5rem}
+  .index h2{display:none}
+  .index ol{display:contents}
+  .index li{border:none;display:inline-block}
+  .index li.active{border-left:none}
+  .index a{border:1px solid var(--edge);background:rgba(14,14,20,.6);padding:.34rem .6rem;font-size:.66rem;margin:0}
+  .index .ix-num{display:none}
+  .index .ix-tag{display:none}
+}
+@media(max-width:760px){
+  body{font-size:15.5px}
+  .grid2,.grid3{grid-template-columns:1fr}
+  .hero{padding-top:3.6rem}
+  .flowbox svg{min-width:520px}
+}
+@media(max-width:480px){
+  .sec-head{flex-wrap:wrap;gap:.4rem}
+  .r-row .r-expr{flex-basis:100%}
+}
+
+/* ── Reduced motion ─────────────────────────────────────────── */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+  .fog{display:none}
+  html{scroll-behavior:auto}
+}
+</style>
+<noscript><style>.rv{opacity:1;transform:none}#boot{display:none}.boot-lines{min-height:0}</style></noscript>
+</head>
+<body>
+
+<!-- Ambient layers -->
+<div class="grain"></div>
+<div class="fog"></div>
+<canvas id="embers"></canvas>
+<div class="vignette"></div>
+<div id="prog"></div>
+
+<!-- ═══════════ BOOT OVERLAY ═══════════ -->
+<div id="boot" onclick="bootSkip()" role="button" aria-label="Skip boot sequence" title="Click to skip">
+  <div class="boot-term">
+    <div class="boot-bar"><i></i><i></i><i></i><span>engine_boot · morkrets-rika · v27</span></div>
+    <div class="boot-lines" id="boot-lines"></div>
+    <div class="boot-hint">CLICK TO SKIP — ENTER TO BEGIN</div>
+  </div>
+</div>
+
+<!-- ═══════════ HERO ═══════════ -->
+<header class="hero">
+  <div class="eyebrow">The Lore Weaver's Cauldron — under the table</div>
+  <h1>The Mechanics of the Cauldron</h1>
+  <p class="sub">How the engine runs beneath the game: a <b>Dungeon Master</b> that writes stories, a <b>Guardian</b> that turns prose into state, dice that only the player may roll, a <b>voice cache</b> that never speaks the same line twice, and one JSON file that remembers everything.</p>
+  <div class="chips">
+    <span class="chip g">DM prompt v27</span>
+    <span class="chip p">Guardian 38-field contract</span>
+    <span class="chip">Two-phase dice</span>
+    <span class="chip t">TTS cache · 64 slots · 600s TTL</span>
+    <span class="chip e">SSE character weaving</span>
+  </div>
+  <div class="scroll-hint">▼ scroll to open the hatch ▼</div>
+</header>
+
+<!-- ═══════════ INDEX (sticky left rail — first child of main's grid) ═══════════ -->
+<main>
+<nav class="index rv" id="index" aria-label="Section index">
+  <h2>Index</h2>
+  <ol>
+    <li data-ix="s1"><a href="#s1"><span class="ix-num">§1</span>The Dual Mind<span class="ix-tag">DM + Guardian</span></a></li>
+    <li data-ix="s2"><a href="#s2"><span class="ix-num">§2</span>Turn Pipeline<span class="ix-tag">one round, eight steps</span></a></li>
+    <li data-ix="s3"><a href="#s3"><span class="ix-num">§3</span>Prompt Injection<span class="ix-tag">what the DM sees</span></a></li>
+    <li data-ix="s4"><a href="#s4"><span class="ix-num">§4</span>Guardian Contract<span class="ix-tag">prose → JSON</span></a></li>
+    <li data-ix="s5"><a href="#s5"><span class="ix-num">§5</span>Dice Engine<span class="ix-tag">the player rolls</span></a></li>
+    <li data-ix="s6"><a href="#s6"><span class="ix-num">§6</span>Voice &amp; TTS Cache<span class="ix-tag">speak once, reuse</span></a></li>
+    <li data-ix="s7"><a href="#s7"><span class="ix-num">§7</span>Character Weaving<span class="ix-tag">SSE hero creation</span></a></li>
+    <li data-ix="s8"><a href="#s8"><span class="ix-num">§8</span>State Model<span class="ix-tag">the one truth</span></a></li>
+  </ol>
+</nav>
+
+<div class="content">
+
+<!-- ═══════════ §1 DUAL MIND ═══════════ -->
+<section class="sec rv" id="s1" data-sec="s1">
+  <div class="sec-head">
+    <span class="sec-num">§1</span>
+    <h2 class="sec-title"><span class="sec-mark">◆</span>The Dual Mind</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <p class="sec-lede">Every turn is resolved by two minds that never write to the same place. One is an artist, the other an accountant — and they only meet through a contract of square brackets and JSON.</p>
+
+  <div class="grid2">
+    <div class="panel rv">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3><span class="dot">✦</span> The Dungeon Master</h3>
+      <p>A free, creative LLM storyteller. Its identity, craft rules and world-consistency laws live in <code>DM_CORE_PROMPT</code>, versioned as <span class="stat"><b class="v">v27</b></span> — bumping the version forces a cache miss so the model can never serve a stale persona.</p>
+      <p>It is told: <em>"The story is NOT pre-written: it is shaped by the player's choices, in the moment."</em> It chooses theme, tone and atmosphere. It may say no. Death is real.</p>
+      <div class="stat"><b>Role split:</b> Narrator · NPC actor · Rules arbiter · World builder · Challenger</div>
+    </div>
+    <div class="panel rv">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3><span class="dot">✦</span> The Guardian</h3>
+      <p>A second LLM pass that reads the DM's narration and extracts <b>every mechanical effect</b> into a strict <span class="stat"><b class="v">38-field JSON contract</b></span>: damage, healing, XP, items, currency, quests, NPC changes, combat, rest, world lore.</p>
+      <p>It works in <b>two phases</b>: <span class="stat"><b>PRE</b></span> (before the DM writes — decides <em>if</em> a roll is needed) and <span class="stat"><b>POST</b></span> (after — turns prose into state). It never writes a sentence; the DM never writes a number.</p>
+      <div class="stat"><b>Fallback:</b> a legacy regex tag pipeline (<span class="v">[SKADA:] [GULD:]</span>…) still exists but is nearly dead since v27 told the DM "you do NOT need mechanical tags".</div>
+    </div>
+  </div>
+
+  <div class="flowbox rv">
+    <svg viewBox="0 0 900 352" role="img" aria-label="Turn flow: player to guardian pre, DM, chat, validation, guardian post, apply, state">
+      <defs>
+        <linearGradient id="gGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#181410"/><stop offset="1" stop-color="#120f0a"/></linearGradient>
+        <linearGradient id="gPur" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#181226"/><stop offset="1" stop-color="#120d1c"/></linearGradient>
+        <linearGradient id="gSt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#10161a"/><stop offset="1" stop-color="#0c1014"/></linearGradient>
+      </defs>
+      <!-- Row 1 -->
+      <g class="fn bone"><rect x="30" y="58" width="118" height="44" rx="2" fill="url(#gPur)" stroke="rgba(123,79,212,.6)"/><text class="f-label" x="89" y="76" text-anchor="middle">PLAYER</text><text class="f-sub" x="89" y="90" text-anchor="middle">action · SSE</text></g>
+      <g class="fn pur"><rect class="f-pulse" x="196" y="58" width="118" height="44" rx="2" fill="url(#gPur)" stroke="rgba(123,79,212,.55)"/><text class="f-label" x="255" y="76" text-anchor="middle">GUARDIAN PRE</text><text class="f-sub" x="255" y="90" text-anchor="middle">roll? → [KAST:] hint</text></g>
+      <g class="fn gold"><rect x="362" y="58" width="118" height="44" rx="2" fill="url(#gGold)" stroke="rgba(201,162,39,.55)"/><text class="f-label" x="421" y="76" text-anchor="middle">DUNGEON MASTER</text><text class="f-sub" x="421" y="90" text-anchor="middle">system prompt v27</text></g>
+      <g class="fn bone"><rect x="528" y="58" width="118" height="44" rx="2" fill="#12121a" stroke="#2a2a3a"/><text class="f-label" x="587" y="76" text-anchor="middle">CHAT STREAM</text><text class="f-sub" x="587" y="90" text-anchor="middle">reasoning + content</text></g>
+      <g class="fn ember"><rect x="694" y="58" width="118" height="44" rx="2" fill="#14100a" stroke="rgba(212,105,30,.5)"/><text class="f-label" x="753" y="76" text-anchor="middle">VALIDATE</text><text class="f-sub" x="753" y="90" text-anchor="middle">strip · parse rolls</text></g>
+      <!-- Row 2 -->
+      <g class="fn pur"><rect x="196" y="210" width="118" height="44" rx="2" fill="url(#gPur)" stroke="rgba(123,79,212,.55)"/><text class="f-label" x="255" y="228" text-anchor="middle">GUARDIAN POST</text><text class="f-sub" x="255" y="242" text-anchor="middle">prose → JSON contract</text></g>
+      <g class="fn poison"><rect x="362" y="210" width="118" height="44" rx="2" fill="#101408" stroke="rgba(90,154,78,.5)"/><text class="f-label" x="421" y="228" text-anchor="middle">APPLY MECHANICS</text><text class="f-sub" x="421" y="242" text-anchor="middle">mutate state · dedup</text></g>
+      <g class="fn teal"><rect x="528" y="210" width="118" height="44" rx="2" fill="url(#gSt)" stroke="rgba(78,138,147,.55)"/><text class="f-label" x="587" y="228" text-anchor="middle">STATE.JSON</text><text class="f-sub" x="587" y="242" text-anchor="middle">the one truth</text></g>
+      <!-- connectors row1 -->
+      <path class="flowline anim pur" id="p1a" d="M148 80 H196"/>
+      <circle class="dot pur" r="3"><animateMotion dur="1.6s" repeatCount="indefinite"><mpath href="#p1a"/></animateMotion></circle>
+      <path class="flowline anim gold" id="p1b" d="M314 80 H362"/>
+      <circle class="dot" r="3"><animateMotion dur="1.6s" repeatCount="indefinite"><mpath href="#p1b"/></animateMotion></circle>
+      <path class="flowline anim" id="p1c" d="M480 80 H528"/>
+      <circle class="dot" r="3" fill="#e0e0ec"><animateMotion dur="1.6s" repeatCount="indefinite"><mpath href="#p1c"/></animateMotion></circle>
+      <path class="flowline anim ember" id="p1d" d="M646 80 H694"/>
+      <circle class="dot" r="3" fill="#d4691e"><animateMotion dur="1.6s" repeatCount="indefinite"><mpath href="#p1d"/></animateMotion></circle>
+      <!-- row1 → row2 -->
+      <path class="flowline" d="M753 102 V210 H716"/>
+      <path class="flowline anim ember" id="p1e" d="M753 102 V210 H716"/>
+      <circle class="dot" r="3" fill="#d4691e"><animateMotion dur="1.8s" repeatCount="indefinite"><mpath href="#p1e"/></animateMotion></circle>
+      <!-- row2 connectors -->
+      <path class="flowline anim pur" id="p1f" d="M148 232 H196"/>
+      <circle class="dot pur" r="3"><animateMotion dur="1.6s" repeatCount="indefinite"><mpath href="#p1f"/></animateMotion></circle>
+      <path class="flowline anim poison" id="p1g" d="M314 232 H362"/>
+      <circle class="dot poison" r="3"><animateMotion dur="1.6s" repeatCount="indefinite"><mpath href="#p1g"/></animateMotion></circle>
+      <path class="flowline anim teal" id="p1h" d="M480 232 H528"/>
+      <circle class="dot teal" r="3"><animateMotion dur="1.6s" repeatCount="indefinite"><mpath href="#p1h"/></animateMotion></circle>
+      <!-- state → player feedback loop -->
+      <path class="flowline anim teal" id="p1loop" d="M587 254 V312 H89 V102"/>
+      <circle class="dot teal" r="3"><animateMotion dur="3.4s" repeatCount="indefinite"><mpath href="#p1loop"/></animateMotion></circle>
+      <text class="flow-label" x="250" y="326" text-anchor="middle">TRUTH BLOCK + SUMMARIES feed the next system prompt</text>
+      <!-- player → guardian pre note -->
+      <text class="flow-label" x="89" y="50" text-anchor="middle">1. action</text>
+      <text class="flow-label" x="255" y="50" text-anchor="middle">2. need a roll?</text>
+      <text class="flow-label" x="421" y="50" text-anchor="middle">3. narrate + [KAST:]</text>
+      <text class="flow-label" x="587" y="50" text-anchor="middle">4. stream to chat</text>
+      <text class="flow-label" x="753" y="50" text-anchor="middle">5. clean</text>
+      <text class="flow-label" x="255" y="202" text-anchor="middle">6. extract JSON</text>
+      <text class="flow-label" x="421" y="202" text-anchor="middle">7. write state</text>
+      <text class="flow-label" x="587" y="202" text-anchor="middle">8. save + lock</text>
+    </svg>
+    <div class="legend">
+      <span><i style="background:var(--gold)"></i>DM path</span>
+      <span><i style="background:var(--arcane)"></i>Guardian</span>
+      <span><i style="background:var(--poison)"></i>state writes</span>
+      <span><i style="background:var(--teal)"></i>persistence</span>
+      <span><i style="background:var(--ember)"></i>validation</span>
+    </div>
+  </div>
+
+  <div class="panel rv">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <h3><span class="dot">✦</span> Four knobs, one clamp</h3>
+    <p>Each campaign carries <b>four model choices</b>, saved in <code>meta</code> and swappable from the in-game settings: the <span class="stat"><b>DM model</b></span> (storyteller), the <span class="stat"><b>Guardian model</b></span> (roll judge), the <span class="stat"><b>Extraction model</b></span> (POST parser) and the <span class="stat"><b>TTS provider</b></span> (StepFun "Step Plan" or Qwen "Token Plan").</p>
+    <p>Non-admin players are clamped to a whitelist server-side — the picker in onboarding is only a UX affordance; <code>_clamp_player_model</code> is the real gate.</p>
+    <div class="tag-row">
+      <span class="tg g">step-3.7-flash</span><span class="tg">deepseek-v4-flash</span><span class="tg">qwen3.6-flash</span><span class="tg">qwen3.8-max</span><span class="tg p">ollama:heretic (local)</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ §2 TURN PIPELINE ═══════════ -->
+<section class="sec rv" id="s2" data-sec="s2">
+  <div class="sec-head">
+    <span class="sec-num">§2</span>
+    <h2 class="sec-title"><span class="sec-mark">◆</span>The Turn Pipeline</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <p class="sec-lede">One player message triggers eight serialized stages. The DM stream is the only thing the player watches; everything after it happens in the dark.</p>
+
+  <div class="grid3">
+    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3><span class="dot">1</span> Action in</h3>
+      <p>The player's message arrives via SSE. A per-campaign <span class="stat"><b>asyncio lock</b></span> is taken — every state write is serialized, no two turns may race.</p>
+    </div>
+    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3><span class="dot">2</span> Guardian PRE</h3>
+      <p><code>guardian_check_roll</code> reads the action + compact state and decides if the outcome is uncertain. If so it hands the DM the exact <span class="stat"><b>[KAST: 1d20+MOD | LABEL (DC X)]</b></span> tag to use.</p>
+    </div>
+    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3><span class="dot">3</span> DM writes</h3>
+      <p><code>_build_system_prompt</code> assembles the layered prompt (see §3). The DM streams tokens — reasoning shown as a thought bubble, then narration — into the chat.</p>
+    </div>
+    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3><span class="dot">4</span> Validate &amp; strip</h3>
+      <p><code>validate_dm_response</code> checks the shape; mechanical tags are stripped from display text. <span class="stat"><b>[KAST:]</b></span> is parsed into a real dice button the player must press.</p>
+    </div>
+    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3><span class="dot">5</span> Guardian POST</h3>
+      <p>In the background, <code>guardian_extract_mechanics</code> sends the reply + last 6 transcript entries + compact state to the extraction model. Invalid JSON triggers a <span class="stat"><b>2-attempt repair loop</b></span>; total failure returns an empty dict — the turn survives.</p>
+    </div>
+    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3><span class="dot">6</span> Apply &amp; save</h3>
+      <p><code>apply_mechanics</code> mutates state with dedup (<code>skip_effects</code>) against anything the legacy tag pipeline already applied. <code>state.json</code> is written, <code>last_effects</code> recorded — and the loop feeds §1.</p>
+    </div>
+  </div>
+
+  <div class="term dm rv">
+    <div class="term-bar"><i></i><i></i><i></i><span>transcript.snapshot · turn 42</span></div>
+    <div class="term-body">
+      <div><span class="c-dim"># player action (SSE)</span></div>
+      <div><span class="c-p">❯ you:</span> I edge toward the door, dagger ready, and try to slip past the guard. <span class="c-dim">[sneak]</span></div>
+      <div>&nbsp;</div>
+      <div><span class="c-dim"># guardian_pre · qwen3.6-flash · 0.9s</span></div>
+      <div><span class="c-teal">🛡 pre:</span> uncertain → recommend <span class="c-gold">[KAST: 1d20+3 | DEXTERITY to sneak (DC 14)]</span></div>
+      <div>&nbsp;</div>
+      <div><span class="c-dim"># dm stream · step-3.7-flash · 6.2s · 412 tokens</span></div>
+      <div><span class="c-gold">DM:</span> You press your back to the damp stone, torchlight crawling across the floor… <span class="c-gold">[KAST: 1d20+3 | DEXTERITY to sneak (DC 14)]</span></div>
+      <div>&nbsp;</div>
+      <div><span class="c-dim"># validate · strip tags · parse_roll_requests</span></div>
+      <div><span class="c-amb">⚙ parsed:</span> 1 roll request → dice button spawned in chat</div>
+      <div>&nbsp;</div>
+      <div><span class="c-dim"># player roll (the only number in this turn)</span></div>
+      <div><span class="c-p">❯ you:</span> <span class="c-gold">[Resultat: 1d20+3 → 17]</span> <span class="c-dim">(button click, auto-sent)</span></div>
+      <div>&nbsp;</div>
+      <div><span class="c-dim"># guardian_post · extraction model · 2.1s · 3 changes</span></div>
+      <div><span class="c-teal">🛡 post:</span> <span class="c-dim">xp:0 · logbook:"Faelyndra smög förbi vakten…" · npcs_near:[Kip] · time_passed:1h</span></div>
+      <div>&nbsp;</div>
+      <div><span class="c-dim"># apply_mechanics → state.json · lock released</span></div>
+      <div><span class="c-gold">✍ saved:</span> turn 42 · <span class="c-dim">hp 21/26 · gp 15 · 2 quests active</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ §3 PROMPT INJECTION ═══════════ -->
+<section class="sec rv" id="s3" data-sec="s3">
+  <div class="sec-head">
+    <span class="sec-num">§3</span>
+    <h2 class="sec-title"><span class="sec-mark">◆</span>Prompt Injection</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <p class="sec-lede">The DM never sees raw JSON. Every turn the engine welds a stack of layers into one system prompt — language first, truth forever, memory in tiers. Expand each layer.</p>
+
+  <div class="exp rv">
+    <button class="exp-toggle" id="exp-layer1-toggle" onclick="toggleExp('layer1')" aria-expanded="false">
+      <span class="caret">▸</span><span><span class="et-t">Layer 1 — Language directive</span><span class="et-d">[LANGUAGE: ENGLISH] / [SPRÅK: SVENSKA] — must come before everything else</span></span>
+    </button>
+    <div class="exp-body" id="exp-layer1-body"><div class="exp-inner">
+      <p>The very first line of the system prompt pins the output language and overrides any Swedish internal notes. The game can be played in Swedish while the UI stays English — language is a per-campaign setting, not a code constant.</p>
+<pre class="prompt lang"><span class="pt">[LANGUAGE: ENGLISH]</span> You MUST write ALL narration, dialogue, NPC speech, descriptions, and every single word of your response in English. This overrides any Swedish text in the instructions below — those are internal system notes, NOT the output language.</pre>
+      <p>Then the version stamp — <span class="stat"><b class="v">[DM-prompt v27]</b></span> — which forces a provider cache miss on every prompt change, so a deployed update is instantly live.</p>
+    </div></div>
+  </div>
+
+  <div class="exp rv">
+    <button class="exp-toggle" id="exp-layer2-toggle" onclick="toggleExp('layer2')" aria-expanded="false">
+      <span class="caret">▸</span><span><span class="et-t">Layer 2 — Core identity (DM_CORE_PROMPT)</span><span class="et-d">the persona: storyteller, world-keeper, rules arbiter</span></span>
+    </button>
+    <div class="exp-body" id="exp-layer2-body"><div class="exp-inner">
+      <p>The personality charter. The key covenants the model is sworn to:</p>
+<pre class="prompt"><span class="pk">## Identity and tone</span>
+- You are an engaged, atmospheric storyteller. Adapt the mood to the scene — threatening in combat, warm by the campfire, tense in mysteries.
+- ALWAYS respond in the language specified in the [LANGUAGE] or [SPRÅK] directive at the top.
+- ALWAYS end with an opening — the last sentence should invite the player to act.
+- Do NOT be afraid to say no. Consequences must be felt. <span class="pe">Death is real.</span>
+
+<span class="pk">## 🖋️ STORYTELLING CRAFT</span>
+- <span class="pe">SHOW, DON'T TELL</span>: "The innkeeper's hands tremble as she fills your tankard" instead of "she is afraid".
+- ENGAGE THE SENSES: aim for at least two senses per scene.
+- <span class="pe">IMPLICATION IS STRONGER THAN DESCRIPTION</span>: a sound in the dark, the empty chair, the door left ajar.
+- EVERY SCENE IS A PROMISE: spark curiosity — a mystery, a threat, an opportunity.
+
+<span class="pk">## 🗺️ WORLD CONSISTENCY (CRITICAL)</span>
+- The world is a FICTIONAL fantasy world. <span class="pneg">NEVER use real place names.</span>
+- Every NPC gets a UNIQUE, UNEXPECTED name — never reuse a name style from an earlier NPC.
+- Keep the world consistent: the same place has the same name, the same NPC has the same personality.</pre>
+      <p>Mechanics are explicitly delegated: <em>"A separate system (Guardian) automatically extracts mechanical effects from your narration… You do NOT need mechanical tags — just write what happens."</em> The exception that stays alive: the <span class="stat"><b>[KAST:]</b></span> roll tag.</p>
+    </div></div>
+  </div>
+
+  <div class="exp rv">
+    <button class="exp-toggle" id="exp-layer3-toggle" onclick="toggleExp('layer3')" aria-expanded="false">
+      <span class="caret">▸</span><span><span class="et-t">Layer 3 — Anti-hallucination &amp; the DM triad</span><span class="et-d">say yes · say no · or roll dice — never invent what the TRUTH block doesn't own</span></span>
+    </button>
+    <div class="exp-body" id="exp-layer3-body"><div class="exp-inner">
+      <p>The player must never win an item, spell or resource by simply claiming it. The DM is sworn to contradict them, kindly but firmly, offering an alternative path:</p>
+<pre class="prompt"><span class="pk">## ⚠️ ANTI-HALLUCINATION (CRITICAL)</span>
+- If the player says "I take my lamp" but the lamp is NOT in the inventory → SAY NO:
+  <span class="pe">"You have no lamp. Your hands search the dark but find only cold stone."</span>
+- If the player says "I cast my spell" but it is not on the character sheet → SAY NO.
+- You NEVER accept player-invented details that give mechanical advantage.
+  The WORLD and INVENTORY are authoritative.
+
+<span class="pk">## ⚖️ THE DM TRIAD — each action is resolved by exactly ONE of three responses</span>
+1. <span class="pok">SAY YES</span> — creative, reasonable, cinematic (Rule of Cool).
+2. <span class="pneg">SAY NO</span> — breaks the world or the sheet; always offer an alternative.
+3. <span class="pe">ROLL DICE</span> — outcome uncertain + consequences matter → [KAST:].
+
+<span class="pk">## 🚨 [KAST:] BEFORE OUTCOME — ABSOLUTE RULE (CRITICAL)</span>
+❌ WRONG: "You slash at the goblin — the sword hits! 8 damage."
+✅ RIGHT: "You slash at the goblin! <span class="pt">[KAST: 1d20+5 | ATTACK vs AC 13]</span>"
+- If you write that the player hits/misses WITHOUT having requested [KAST:] first, it is a SERIOUS ERROR.
+- The player must ALWAYS roll the die themselves. NEVER narrate the outcome before the tag.</pre>
+      <table class="dc">
+        <tr><th>Difficulty</th><th>DC</th></tr>
+        <tr><td>Easy</td><td class="mono">8–10</td></tr>
+        <tr><td>Medium</td><td class="mono">12–14</td></tr>
+        <tr><td>Hard</td><td class="mono">16–18</td></tr>
+        <tr><td>Very hard</td><td class="mono">20–22</td></tr>
+        <tr><td>Nearly impossible</td><td class="mono">25+</td></tr>
+      </table>
+      <p>Mechanical advantages (Bardic Inspiration, Bless, Guidance…) must be <b>mentioned with their die</b> in the narration — <em>"A warm melody fills you — you gain Bardic Inspiration (1d6)"</em> — so the Guardian can create the dice button. Active resources must be reminded when appropriate.</p>
+    </div></div>
+  </div>
+
+  <div class="exp rv">
+    <button class="exp-toggle" id="exp-layer4-toggle" onclick="toggleExp('layer4')" aria-expanded="false">
+      <span class="caret">▸</span><span><span class="et-t">Layer 4 — Conditional injection: combat vs narrative</span><span class="et-d">only the prompt the turn needs</span></span>
+    </button>
+    <div class="exp-body" id="exp-layer4-body"><div class="exp-inner">
+      <p>Every turn the engine scans <code>state.npcs</code> for living enemies (<span class="stat"><b>relation == "fiende"</b></span> and <span class="stat"><b>alive</b></span>). Enemies present → <code>DM_COMBAT_PROMPT</code> (chat-first combat law, turn order, death saves); otherwise → <code>DM_NARRATIVE_PROMPT</code>. Combat rules only weigh on the context when combat is real.</p>
+      <p>Combat is <b>chat-first</b>: no battle arena. The DM opens it with the <span class="stat"><b>[STRID:name|HP|AC, name2|HP|AC]</b></span> tag; the Guardian tracks damage, rounds and turn order from narration. Death saves follow D&D 5e exactly: nat 1 = two failures, nat 20 = wake at 1 HP, three of three decides.</p>
+      <p>NPCs are tagged on introduction — <span class="stat"><b>[NPC:Morvaine|Enigmatic wizard|unknown]</b></span> — and a player can write <span class="stat"><b>@Name</b></span> to make that NPC answer in their own voice, with the DM allowed only brief interjections.</p>
+    </div></div>
+  </div>
+
+  <div class="exp rv">
+    <button class="exp-toggle" id="exp-layer5-toggle" onclick="toggleExp('layer5')" aria-expanded="false">
+      <span class="caret">▸</span><span><span class="et-t">Layer 5 — The TRUTH block</span><span class="et-d">authoritative state, compacted — the DM may never contradict it</span></span>
+    </button>
+    <div class="exp-body" id="exp-layer5-body"><div class="exp-inner">
+      <p><code>truth_block(state)</code> compacts the whole campaign state into a readable digest (HP, inventory, currency, known NPCs, quests, location, pinned facts) and ships it under a threat:</p>
+<pre class="prompt truth"><span class="pt">## SANNING (auktoritär — motsäg ALDRIG detta)</span> <span class="pd">/ TRUTH (authoritative — never contradict this)</span>
+<span class="pd">HP 21/26 · AC 15 · gold 15gp 4sp · longsword (equipped) · 2 quests active</span>
+<span class="pd">Pinmade fakta: "The Gray Gate has been sealed since the Sundering."</span></pre>
+      <p>Pinned facts are player-controlled truth — the only part of the world the model is forbidden to forget or revise.</p>
+    </div></div>
+  </div>
+
+  <div class="exp rv">
+    <button class="exp-toggle" id="exp-layer6-toggle" onclick="toggleExp('layer6')" aria-expanded="false">
+      <span class="caret">▸</span><span><span class="et-t">Layer 6 — Hierarchical memory + last turn's effects</span><span class="et-d">2 scenes · 2 chapters · 1 campaign arc — then yesterday's ledger</span></span>
+    </button>
+    <div class="exp-body" id="exp-layer6-body"><div class="exp-inner">
+      <p>Raw transcripts would drown the context, so memory is distilled into tiers and injected newest-first: the two most recent <b>scene summaries</b>, the two most recent <b>chapter summaries</b>, and the single <b>campaign arc</b> summary. Each is tagged with its turn or chapter number so the DM can reason about chronology.</p>
+      <p>Then the engine reports what <em>just happened mechanically</em>, from <code>meta.last_effects</code> — "Skada: 12 · Föremål: Torch · Tid: 2h" — so the DM can react to consequences it already caused. Finally: world (location, time, weather), known locations with travel times, lore, NPC list, quests and the character sheet.</p>
+      <p>Travel time is a formula the DM is handed verbatim: <span class="stat"><b>distance ÷ 10 × terrain modifier</b></span> — road 0.5, plains 0.6, forest 1.2, mountains 1.8, swamp 1.5, minimum half a day per journey.</p>
+    </div></div>
+  </div>
+
+  <div class="panel rv">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <h3><span class="dot">✦</span> The assembly order</h3>
+    <div class="stat"><b>1</b> Language directive → <b>2</b> Core prompt v27 → <b>3</b> Combat <i>or</i> Narrative → <b>4</b> TRUTH block + pinned facts → <b>5</b> Scene ×2, Chapter ×2, Arc ×1 → <b>6</b> Last turn's effects → <b>7</b> World &amp; locations &amp; travel rule → <b>8</b> Lore → <b>9</b> NPCs → <b>10</b> Quests → <b>11</b> Inventory &amp; character</div>
+  </div>
+</section>
+
+<!-- ═══════════ §4 GUARDIAN CONTRACT ═══════════ -->
+<section class="sec rv" id="s4" data-sec="s4">
+  <div class="sec-head">
+    <span class="sec-num">§4</span>
+    <h2 class="sec-title"><span class="sec-mark">◆</span>The Guardian Contract</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <p class="sec-lede">After the DM speaks, the Guardian must answer with exactly one thing: a JSON object with all 38 fields present. Never an explanation, never a missing key. Watch the extraction happen.</p>
+
+  <div class="json-box rv">
+    <div class="jb-head">
+      <span class="jb-title">guardian_extract_mechanics → JSON (38-field contract)</span>
+      <button class="jb-btn" id="json-replay" onclick="replayJson()">↻ replay extraction</button>
+    </div>
+    <pre id="json-demo" aria-live="polite"></pre>
+  </div>
+
+  <div class="grid2">
+    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3><span class="dot">✦</span> The reading</h3>
+      <p>The Guardian receives the DM reply, the player's action, the last <b>6 transcript entries</b> and a compact state snapshot. It is a paranoid reader: implicit damage ("the cold bites", "your breath catches") must be caught; a potion drunk is a <span class="stat"><b>roll grant</b></span> (2d4+2), never a fixed number; a "you see a book" is <b>not</b> an item — only "you take the book" is.</p>
+      <p>If the reply contains invalid JSON, the engine appends a correction — <em>"Returnera ENDAST JSON-objektet, inget annat."</em> — and retries once. Two failures return the empty contract and the turn continues untouched.</p>
+    </div>
+    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3><span class="dot">✦</span> The rules it obeys</h3>
+      <p><span class="stat"><b>XP:</b></span> only kills, quests, milestones, complex puzzles — <b>never</b> walking, resting, trading or small talk. Most turns pay zero XP. Quests pay their stored reward automatically, never double-paid.</p>
+      <p><span class="stat"><b>Items:</b></span> every item needs D&amp;D stats, a <b>weight</b>, and a <b>lore line</b> from the campaign's own world. The player never equips themselves — the DM decides what is worn.</p>
+      <p><span class="stat"><b>NPCs:</b></span> updates are aggressive — implicit relation shifts (helping → allied, threatening → enemy), name reveals, secrets. <span class="stat"><b>Corrections:</b></span> retract anything the DM implied that shouldn't have happened.</p>
+      <p><span class="stat"><b>Enemy attacks:</b></span> the Guardian names the attacker only — <em>"the CODE rolls the dice and the damage"</em> (d20 + attack bonus vs the player's AC). The LLM is never allowed to decide whether an enemy hits.</p>
+    </div>
+  </div>
+
+  <div class="exp rv">
+    <button class="exp-toggle" id="exp-g1-toggle" onclick="toggleExp('g1')" aria-expanded="false">
+      <span class="caret">▸</span><span><span class="et-t">Contract groups at a glance</span><span class="et-d">the 38 fields, grouped by what they mutate</span></span>
+    </button>
+    <div class="exp-body" id="exp-g1-body"><div class="exp-inner">
+      <div class="grid2">
+        <div class="stat"><b class="v">Health &amp; combat</b><br>damage · healing · death · combat_start · combat_round · combat_end · player_attacks · ally_attacks · ally_damage · enemy_attacks · combat_events · initiative_entries</div>
+        <div class="stat"><b class="v">Progression</b><br>xp · level_up · spells_add · character_updates</div>
+        <div class="stat"><b class="v">Possessions</b><br>items_add · items_remove · currency (pp/gp/sp/cp)</div>
+        <div class="stat"><b class="v">Quests</b><br>quests_new · quests_completed · quests_failed</div>
+        <div class="stat"><b class="v">People</b><br>npcs_new · npc_relations · npcs_near · npc_notes · npc_name_reveals</div>
+        <div class="stat"><b class="v">World &amp; time</b><br>locations_new · current_location · world_lore · time_passed · rest · new_day · day_summary · logbook</div>
+        <div class="stat"><b class="v">Grants &amp; fixes</b><br>roll_grants (Bardic Inspiration → 1d6 button) · corrections (retract &amp; explain)</div>
+      </div>
+      <p style="margin-top:.8rem">Two fields are famously dead: <span class="stat"><b>enemy_actions</b></span> and <span class="stat"><b>status_apply</b></span> still ride in the empty contract but are never consumed — relics of the unwired click-combat engine. The audit that found them also found (and fixed) the shape-conflict landmine where a day-entry dict could crash the logbook append inside a swallowed background task, silently eating a turn's effects.</p>
+    </div></div>
+  </div>
+</section>
+
+<!-- ═══════════ §5 DICE ENGINE ═══════════ -->
+<section class="sec rv" id="s5" data-sec="s5">
+  <div class="sec-head">
+    <span class="sec-num">§5</span>
+    <h2 class="sec-title"><span class="sec-mark">◆</span>The Dice Engine</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <p class="sec-lede">The single most sacred rule: <b>the LLM never rolls.</b> The DM requests, the Guardian judges, the player rolls — and the result is the only number that ever enters state. Try it below; this roller runs the same notation parser as the backend.</p>
+
+  <div class="roller rv">
+    <div class="r-label">✦ dice console — /api/dice · dice_roll(notation)</div>
+    <div class="r-row">
+      <input class="r-expr" id="dice-expr" value="1d20+3" spellcheck="false" aria-label="Dice expression" onkeydown="if(event.key==='Enter'){rollNow()}">
+      <button class="r-btn" onclick="quickDice('1d20')">d20</button>
+      <button class="r-btn" onclick="quickDice('1d20+5')">d20+5</button>
+      <button class="r-btn" onclick="quickDice('2d6')">2d6</button>
+      <button class="r-btn" onclick="quickDice('2d6+2')">2d6+2</button>
+      <button class="r-btn" onclick="quickDice('1d12')">d12</button>
+      <button class="r-btn" onclick="quickDice('1d8')">d8</button>
+      <label class="r-adv" title="Roll two d20, keep the best — D&D advantage"><input type="checkbox" id="dice-adv" onchange="toggleAdv()"> ADVANTAGE (2d20)</label>
+      <button class="r-btn primary" onclick="rollNow()">⚄ Roll</button>
+    </div>
+    <div class="dice-stage" id="dice-stage" aria-live="polite"></div>
+    <div class="r-result" id="dice-result"></div>
+    <div class="r-crit" id="dice-crit"></div>
+    <div class="r-history" id="dice-history" aria-label="Roll history"></div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3><span class="dot">✦</span> The two-phase flow</h3>
+      <p><span class="stat"><b>1 ·</b></span> Guardian PRE reads the action and decides the outcome is uncertain. <span class="stat"><b>2 ·</b></span> The DM writes the <span class="stat"><b>[KAST: 1d20+MOD | LABEL (DC X)]</b></span> tag — the only syntax that can spawn a die. <span class="stat"><b>3 ·</b></span> The frontend renders a dice button; the click sends the result back as <span class="stat"><b>[Resultat: …]</b></span>. <span class="stat"><b>4 ·</b></span> The DM must narrate the outcome immediately — never "what do you do?" before resolving.</p>
+      <p>Advantage/disadvantage is declared in the tag itself (<span class="stat"><b>ADVANTAGE</b></span>/<span class="stat"><b>FÖRDEL</b></span>): two d20, keep best/worst.</p>
+    </div>
+    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3><span class="dot">✦</span> Edge rules encoded</h3>
+      <p><span class="stat"><b>Nat 20</b></span> = critical triumph · <span class="stat"><b>nat 1</b></span> = catastrophe. <span class="stat"><b>Death saves:</b></span> 3 successes vs 3 failures; nat 1 counts as two failures, nat 20 wakes the character at 1 HP. <span class="stat"><b>Healing potions</b></span> are always rolled (2d4+2) by the player — the DM may never narrate a fixed heal. <span class="stat"><b>Concentration:</b></span> hit while concentrating → CON save DC 10.</p>
+      <p>Spell-slot dice and buffs (Bless, Guidance, Heroism) arrive through <span class="stat"><b>roll_grants</b></span> — Guardian reads the narration and creates the button automatically.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ §6 TTS CACHE ═══════════ -->
+<section class="sec rv" id="s6" data-sec="s6">
+  <div class="sec-head">
+    <span class="sec-num">§6</span>
+    <h2 class="sec-title"><span class="sec-mark">◆</span>Voice &amp; the TTS Cache</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <p class="sec-lede">Every DM line can be spoken aloud — but synthesis is billed per character. So the engine never speaks the same line twice: a small in-memory cache with a ten-minute memory and a hard cap of 64 voices.</p>
+
+  <div class="flowbox rv">
+    <svg viewBox="0 0 880 190" role="img" aria-label="TTS pipeline: text to segments to synthesis to cache to speaker">
+      <defs>
+        <linearGradient id="gTts" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#14121a"/><stop offset="1" stop-color="#0e0c14"/></linearGradient>
+      </defs>
+      <g class="fn gold"><rect x="20" y="70" width="130" height="44" rx="2" fill="url(#gTts)" stroke="rgba(201,162,39,.5)"/><text class="f-label" x="85" y="88" text-anchor="middle">DM TEXT</text><text class="f-sub" x="85" y="102" text-anchor="middle">"the wind howls…"</text></g>
+      <g class="fn bone"><rect x="200" y="70" width="130" height="44" rx="2" fill="#12121a" stroke="#2a2a3a"/><text class="f-label" x="265" y="88" text-anchor="middle">SEGMENTER</text><text class="f-sub" x="265" y="102" text-anchor="middle">≤900 chars / sentence</text></g>
+      <g class="fn pur"><rect x="380" y="70" width="130" height="44" rx="2" fill="url(#gTts)" stroke="rgba(123,79,212,.55)"/><text class="f-label" x="445" y="88" text-anchor="middle">SYNTHESIZER</text><text class="f-sub" x="445" y="102" text-anchor="middle">StepFun / Qwen · 1.1×</text></g>
+      <g class="fn teal"><rect x="560" y="70" width="130" height="44" rx="2" fill="url(#gTts)" stroke="rgba(78,138,147,.55)"/><text class="f-label" x="625" y="88" text-anchor="middle">CACHE</text><text class="f-sub" x="625" y="102" text-anchor="middle">64 slots · TTL 600s</text></g>
+      <g class="fn ember"><rect x="740" y="70" width="120" height="44" rx="2" fill="#14100a" stroke="rgba(212,105,30,.5)"/><text class="f-label" x="800" y="88" text-anchor="middle">SPEAKER</text><text class="f-sub" x="800" y="102" text-anchor="middle">MP3 in browser</text></g>
+      <path class="flowline anim gold" id="t1" d="M150 92 H200"/>
+      <circle class="dot" r="3"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#t1"/></animateMotion></circle>
+      <path class="flowline anim" id="t2" d="M330 92 H380"/>
+      <circle class="dot" r="3" fill="#e0e0ec"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#t2"/></animateMotion></circle>
+      <path class="flowline anim pur" id="t3" d="M510 92 H560"/>
+      <circle class="dot pur" r="3"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#t3"/></animateMotion></circle>
+      <path class="flowline anim teal" id="t4" d="M690 92 H740"/>
+      <circle class="dot teal" r="3"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#t4"/></animateMotion></circle>
+      <!-- cache hit shortcut -->
+      <path class="flowline anim ember" id="t5" d="M625 114 V140 H800 V114"/>
+      <circle class="dot" r="3" fill="#d4691e"><animateMotion dur="2.2s" repeatCount="indefinite"><mpath href="#t5"/></animateMotion></circle>
+      <text class="flow-label" x="660" y="156" text-anchor="middle">HIT → skip synthesis, serve MP3</text>
+      <text class="flow-label" x="265" y="60" text-anchor="middle">split at sentence ends</text>
+      <text class="flow-label" x="625" y="60" text-anchor="middle">miss → synth → store</text>
+    </svg>
+    <div class="legend">
+      <span><i style="background:var(--gold)"></i>text</span>
+      <span><i style="background:var(--arcane)"></i>provider call</span>
+      <span><i style="background:var(--teal)"></i>cache</span>
+      <span><i style="background:var(--ember)"></i>hit path</span>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3><span class="dot">✦</span> How a line becomes voice</h3>
+      <p>Long DM messages (2000+ chars) are split at sentence boundaries into segments of at most <span class="stat"><b>900 characters</b></span> — Qwen's synthesis chokes on long texts, so each segment is synthesized separately and the MP3 frames are stitched back into one file. Truncation at 1000 chars falls back to the last sentence boundary, never mid-word.</p>
+      <p>Providers: <span class="stat"><b>StepFun</b></span> (Step Plan) and <span class="stat"><b>Qwen</b></span> (Token Plan), both rendered ~10% faster (1.1× speed) so narration never drags.</p>
+    </div>
+    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3><span class="dot">✦</span> The cache contract</h3>
+      <p><span class="stat"><b>Key</b></span> = provider + voice + normalized text hash. <span class="stat"><b>TTL</b></span> = 600 seconds — a stale entry is a miss and is evicted. <span class="stat"><b>Capacity</b></span> = 64 entries; at the cap the oldest (insertion order) is evicted. <span class="stat"><b>Usage</b></span> is still booked on every request — chars, estimated tokens (~4 chars/token), and true MP3 duration computed by parsing the audio frames (no ffmpeg needed) into each user's ledger.</p>
+      <p>Try the simulation below: request the same line twice and watch the second one hit.</p>
+    </div>
+  </div>
+
+  <div class="term rv">
+    <div class="term-bar"><i></i><i></i><i></i><span>tts_cache_sim · _TTS_CACHE · max 64 · ttl 600s</span></div>
+    <div class="term-body">
+      <div class="tts-sim">
+        <button class="r-btn primary" onclick="simTts('repeat')" style="margin-right:.5rem">🗣 Request "the wind howls…" again</button>
+        <button class="r-btn" onclick="simTts('new')">🗣 Request a new line</button>
+        <div class="tts-cache" id="tts-cache"></div>
+        <div class="tts-log" id="tts-log">$ <span class="d">cache empty — first request will miss</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ §7 CHARACTER WEAVING ═══════════ -->
+<section class="sec rv" id="s7" data-sec="s7">
+  <div class="sec-head">
+    <span class="sec-num">§7</span>
+    <h2 class="sec-title"><span class="sec-mark">◆</span>Character Weaving</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <p class="sec-lede">A hero is not generated — it is woven, live, on an SSE stream, from a free-text dream into a finished D&amp;D sheet with inventory, story and stats, ready to preview, save or unravel and re-roll.</p>
+
+  <div class="flowbox rv">
+    <svg viewBox="0 0 880 190" role="img" aria-label="Character generation stream: prompt to SSE to LLM to JSON to preview">
+      <defs>
+        <linearGradient id="gW" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#14121a"/><stop offset="1" stop-color="#0e0c14"/></linearGradient>
+      </defs>
+      <g class="fn pur"><rect x="20" y="70" width="130" height="44" rx="2" fill="url(#gW)" stroke="rgba(123,79,212,.55)"/><text class="f-label" x="85" y="88" text-anchor="middle">PLAYER DREAM</text><text class="f-sub" x="85" y="102" text-anchor="middle">"a scarred ranger…"</text></g>
+      <g class="fn gold"><rect x="200" y="70" width="150" height="44" rx="2" fill="url(#gW)" stroke="rgba(201,162,39,.5)"/><text class="f-label" x="275" y="88" text-anchor="middle">/vault/generate/stream</text><text class="f-sub" x="275" y="102" text-anchor="middle">SSE · temp 0.95 · 8k tokens</text></g>
+      <g class="fn bone"><rect x="400" y="70" width="130" height="44" rx="2" fill="#12121a" stroke="#2a2a3a"/><text class="f-label" x="465" y="88" text-anchor="middle">LLM WEAVES</text><text class="f-sub" x="465" y="102" text-anchor="middle">reasoning + content deltas</text></g>
+      <g class="fn ember"><rect x="580" y="70" width="130" height="44" rx="2" fill="#14100a" stroke="rgba(212,105,30,.5)"/><text class="f-label" x="645" y="88" text-anchor="middle">EXTRACT + FINALIZE</text><text class="f-sub" x="645" y="102" text-anchor="middle">_extract_json → inventory</text></g>
+      <g class="fn teal"><rect x="760" y="70" width="100" height="44" rx="2" fill="url(#gW)" stroke="rgba(78,138,147,.55)"/><text class="f-label" x="810" y="88" text-anchor="middle">PREVIEW</text><text class="f-sub" x="810" y="102" text-anchor="middle">Save / Reroll</text></g>
+      <path class="flowline anim pur" id="w1" d="M150 92 H200"/>
+      <circle class="dot pur" r="3"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#w1"/></animateMotion></circle>
+      <path class="flowline anim gold" id="w2" d="M350 92 H400"/>
+      <circle class="dot" r="3"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#w2"/></animateMotion></circle>
+      <path class="flowline anim" id="w3" d="M530 92 H580"/>
+      <circle class="dot" r="3" fill="#e0e0ec"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#w3"/></animateMotion></circle>
+      <path class="flowline anim ember" id="w4" d="M710 92 H760"/>
+      <circle class="dot" r="3" fill="#d4691e"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#w4"/></animateMotion></circle>
+      <path class="flowline anim teal" id="w5" d="M810 114 V140 H85 V114"/>
+      <circle class="dot teal" r="3"><animateMotion dur="2.6s" repeatCount="indefinite"><mpath href="#w5"/></animateMotion></circle>
+      <text class="flow-label" x="470" y="160" text-anchor="middle">reroll → new stream · save → vault (survives campaign deletion)</text>
+    </svg>
+  </div>
+
+  <div class="grid2">
+    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3><span class="dot">✦</span> The weave</h3>
+      <p>The request is a single line — <em>"Skapa en karaktär: {prompt}"</em> — against <code>CHARACTER_PROMPT</code> at <span class="stat"><b>temperature 0.95</b></span> (the most creative setting in the whole engine) with an 8000-token budget and low reasoning effort. The stream pushes two kinds of frames: <span class="stat"><b>reasoning</b></span> (the invisible thoughts) and <span class="stat"><b>content</b></span> (the growing character JSON), then a <span class="stat"><b>done</b></span> frame with tokens used, seconds elapsed and reasoning length.</p>
+      <p>The raw text is passed through <code>_extract_json</code>, then <code>_finalize_character_data</code> fills hit dice, ability modifiers, starting equipment and inventory. Token usage is booked to a lifetime ledger that survives even character deletion.</p>
+    </div>
+    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3><span class="dot">✦</span> The vault</h3>
+      <p>Saved heroes live in a <span class="stat"><b>vault</b></span> — one per account, not per campaign — so a hero survives a campaign's end. Each entry keeps the full sheet, inventory, story and painted avatar. Summoning into a campaign copies the hero into that campaign's state; rerolling spawns a fresh stream.</p>
+      <p>Avatars are painted separately by an image model — either from the player's <b>own words</b> or from an auto-built sheet prompt — and the status line always tells you which source won.</p>
+    </div>
+  </div>
+
+  <div class="term rv">
+    <div class="term-bar"><i></i><i></i><i></i><span>sse_frames · vault_generate_stream</span></div>
+    <div class="term-body">
+      <div><span class="c-dim">POST /api/vault/generate/stream</span></div>
+      <div><span class="c-dim">{"prompt":"a scarred ranger who hunts the things that hunt villages","lang":"en"}</span></div>
+      <div>&nbsp;</div>
+      <div><span class="c-amb">data: {"type":"reasoning","text":"The player wants a ranger with a scar, a hunter… I will build…"}</span></div>
+      <div><span class="c-gold">data: {"type":"content","text":"{\"name\":\"Faelyndra\",\"race\":\"Half-elf\","}</span></div>
+      <div><span class="c-gold">data: {"type":"content","text":"\"class\":\"Ranger\",\"level\":1,\"hp\":{\"max\":12},"}</span></div>
+      <div><span class="c-gold">data: {"type":"content","text":"\"abilities\":{\"DEX\":{\"score\":16,\"mod\":3}},"}</span></div>
+      <div><span class="c-gold">data: {"type":"content","text":"\"story\":\"She carries the scar of the hollow…\"}}"}</span></div>
+      <div>&nbsp;</div>
+      <div><span class="c-teal">data: {"type":"done","ok":true,"time_s":31.2,"tokens":{…},</span></div>
+      <div><span class="c-teal">        "character":{…},"inventory":[{…longsword…},{…shortbow…}]}</span></div>
+      <div>&nbsp;</div>
+      <div><span class="c-dim"># frontend → preview card → [Save to Vault] [Unravel &amp; Reroll]</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ §8 STATE MODEL ═══════════ -->
+<section class="sec rv" id="s8" data-sec="s8">
+  <div class="sec-head">
+    <span class="sec-num">§8</span>
+    <h2 class="sec-title"><span class="sec-mark">◆</span>The State Model</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <p class="sec-lede">One JSON file per campaign is the single source of truth. The DM reads a compact digest of it every turn; the Guardian mutates it every turn; everything else — characters page, NPC dossiers, map, logbook — is just a projection of it.</p>
+
+  <div class="tree rv">
+    <div class="t-line"><span class="kg">state.json</span> <span class="d">— one file per campaign · written under an asyncio lock</span></div>
+    <details open>
+      <summary><span class="k">meta</span><span class="sz">— identity &amp; ledger</span></summary>
+      <div class="t-line"><span class="d">campaign_id · campaign_name · language · opening_style · created · last_updated</span></div>
+      <div class="t-line"><span class="p">dm_model</span> · <span class="p">guardian_model</span> · <span class="p">extraction_model</span> · <span class="p">tts_provider</span></div>
+      <div class="t-line"><span class="e">turn_count</span> · <span class="e">session_count</span> · <span class="e">last_effects[]</span> · <span class="e">last_roll_requests[]</span></div>
+      <div class="t-line"><span class="t">unguarded_tokens</span> <span class="d">{prompt · completion · by_model} — usage that survives resets</span></div>
+      <div class="t-line"><span class="t">tts_usage</span> <span class="d">{calls · api_calls · chars · tokens · seconds}</span></div>
+    </details>
+    <details>
+      <summary><span class="k">character</span><span class="sz">— the sheet</span></summary>
+      <div class="t-line"><span class="d">name · race · class · level · alignment · background · ac · initiative · perception · speed · proficiency</span></div>
+      <div class="t-line"><span class="e">hp</span> <span class="d">{current · max · temp}</span> · <span class="e">xp</span> <span class="d">{current · next_level}</span> · <span class="e">spell_slots</span> <span class="d">{current · max}</span></div>
+      <div class="t-line"><span class="p">abilities</span> <span class="d">STR·DEX·CON·INT·WIS·CHA → {score, mod}</span></div>
+      <div class="t-line"><span class="g">hit_dice</span> <span class="d">{dice · total · remaining} — spent on short rests</span> · <span class="g">saves[6]</span></div>
+      <div class="t-line"><span class="t">traits[] · spells[] · updates[]</span> <span class="d">(every Guardian character_update, stamped with turn)</span></div>
+      <div class="t-line"><span class="d">story · gear · notes</span></div>
+    </details>
+    <div class="t-line"><span class="k">inventory[]</span> <span class="d">— name · type · category · usage · qty · weight · lore · equipped · rarity · damage · ac_bonus …</span></div>
+    <div class="t-line"><span class="k">currency</span> <span class="d">{pp · gp · sp · cp} — normalized, weighted, displayed</span></div>
+    <details>
+      <summary><span class="k">npcs[]</span><span class="sz">— dossier</span></summary>
+      <div class="t-line"><span class="d">name · role · relation <span class="e">(allied / neutral / enemy / unknown)</span> · color · icon · notes · alive · near</span></div>
+      <div class="t-line"><span class="d">near is recomputed every turn by Guardian — <span class="e">npcs_near[]</span> — proximity drives the @-mention list</span></div>
+    </details>
+    <div class="t-line"><span class="k">quests[]</span> <span class="d">— id · name · description · reward · xp_reward · gold_reward · status · created_turn</span></div>
+    <details>
+      <summary><span class="k">world</span><span class="sz">— the living world</span></summary>
+      <div class="t-line"><span class="d">current_location · visited_locations[] · time · weather · day · day_description</span></div>
+      <div class="t-line"><span class="t">logbook[{day, turn, text}]</span> · <span class="t">travel_log[{from, to, day}]</span> · <span class="t">day_summaries[{day, title, events, quests, mood}]</span></div>
+      <details>
+        <summary><span class="k">combat</span><span class="sz">— chat-first battle state</span></summary>
+        <div class="t-line"><span class="d">active · round · phase · started_turn · ended_turn</span></div>
+        <div class="t-line"><span class="e">enemies[{id, name, hp, max_hp, ac, alive, statuses}]</span> · <span class="e">initiative[] · turn_order[]</span></div>
+        <div class="t-line"><span class="p">player_actions</span> <span class="d">{action · bonus · reaction} — one each per round</span> · <span class="t">log[]</span></div>
+      </details>
+    </details>
+    <div class="t-line"><span class="k">lore[]</span> <span class="d">— durable world memories, written by Guardian <span class="e">world_lore</span></span></div>
+    <div class="t-line"><span class="k">pinned_facts[]</span> <span class="d">— player-pinned truth, injected into every TRUTH block</span></div>
+    <div class="t-line"><span class="k">locations[]</span> <span class="d">— name · description · terrain · x · y · visited — the map is a projection of this</span></div>
+    <div class="t-line"><span class="k">avatars{}</span> <span class="d">— player · dm · npc:Name → {disk_name, seed, ai_generated, edit_mode}</span></div>
+    <div class="t-line"><span class="k">images[]</span> · <span class="k">resources[]</span></div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3><span class="dot">✦</span> Concurrency &amp; durability</h3>
+      <p>Every read-modify-write runs under a per-campaign <span class="stat"><b>asyncio lock</b></span> — two turns can never interleave. Writes are journaled as JSONL transcripts (one file per session) plus periodic chapter and scene summaries, so the hierarchy in §3 can be rebuilt even after a crash.</p>
+      <p>The audit that shaped this page found the classic trap: a background writer appending a <b>list</b> to a field another path had written as a <b>dict</b> — an AttributeError inside a swallowed try/except that silently erased a turn's mechanics. The logbook shape is now guarded on both sides.</p>
+    </div>
+    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3><span class="dot">✦</span> One XP table, two consumers</h3>
+      <p>D&amp;D 5e level thresholds live in exactly one place — <code>_XP_THRESHOLDS</code> — and both the legacy tag pipeline and the Guardian's level-up check import it. Guardian pays XP only for kills, quests, milestones and puzzles; quest completion pays its stored reward automatically.</p>
+      <div class="xp-ladder">
+        <div class="xp-bar" id="xp-bar" role="img" aria-label="XP thresholds for levels 1 to 20">
+          <div class="xp-step l1"><span class="lvl">1</span></div><div class="xp-step l1"><span class="lvl">2</span></div><div class="xp-step l1"><span class="lvl">3</span></div><div class="xp-step mid"><span class="lvl">4</span></div><div class="xp-step mid"><span class="lvl">5</span></div><div class="xp-step mid"><span class="lvl">6</span></div><div class="xp-step mid"><span class="lvl">7</span></div><div class="xp-step mid"><span class="lvl">8</span></div><div class="xp-step mid"><span class="lvl">9</span></div><div class="xp-step mid"><span class="lvl">10</span></div><div class="xp-step late"><span class="lvl">11</span></div><div class="xp-step late"><span class="lvl">12</span></div><div class="xp-step late"><span class="lvl">13</span></div><div class="xp-step late"><span class="lvl">14</span></div><div class="xp-step late"><span class="lvl">15</span></div><div class="xp-step late"><span class="lvl">16</span></div><div class="xp-step late"><span class="lvl">17</span></div><div class="xp-step late"><span class="lvl">18</span></div><div class="xp-step late"><span class="lvl">19</span></div><div class="xp-step late"><span class="lvl">20</span></div>
+        </div>
+        <div class="xp-cap"><span>lvl 1 → 2: 300 XP</span><span>lvl 3 → 4: 2,700 XP</span><span>lvl 9 → 10: 64,000 XP</span><span>lvl 19 → 20: 355,000 XP</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel rv">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <h3><span class="dot">✦</span> The invariant</h3>
+    <p class="stat" style="font-size:.9rem">Everything the player sees — the sheet, the dossier, the map, the logbook, the next DM line — is derived from <b class="v">state.json</b>. The DM may never invent what it holds; the Guardian may never forget to update it. That asymmetry is the whole game.</p>
+  </div>
+</section>
+
+</div>
+</main>
+
+<footer>
+  <div class="f-title">✦ the lore weaver's cauldron — engine mechanics ✦</div>
+  <p>Compiled from the engine itself: backend/main.py · backend/guardian.py · backend/models.py · DM prompt v27 · Guardian 38-field contract<br>
+  dnd.rostad.cc — Mörkrets Rike / The Lore Weaver's Cauldron</p>
+</footer>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   ENGINE MECHANICS — runtime (vanilla JS, offline-safe)
+   ══════════════════════════════════════════════════════════════ */
+(function(){
+"use strict";
+
+/* ── Boot sequence ─────────────────────────────────────────── */
+var bootLines = [
+  ["MÖRKRETS RIKA — ENGINE DIAGNOSTIC", "b-gold"],
+  ["> mounting DM_CORE_PROMPT .......... ", "b-dim"], ["OK (v27)", "b-ok"],
+  ["> mounting GUARDIAN_POST_SYSTEM .... ", "b-dim"], ["OK (38-field contract)", "b-ok"],
+  ["> truth_block ...................... ", "b-dim"], ["OK (authoritative)", "b-ok"],
+  ["> dice_roll(notation) .............. ", "b-dim"], ["OK (player rolls)", "b-ok"],
+  ["> priming TTS cache ................ ", "b-dim"], ["OK (64 slots / 600s TTL)", "b-ok"],
+  ["> state lock ....................... ", "b-dim"], ["OK (per campaign)", "b-ok"],
+  ["> embers lit. the table is ready.", "b-gold"]
+];
+var bootEl = document.getElementById("boot");
+var bootLinesEl = document.getElementById("boot-lines");
+var bootIdx = 0;
+var bootTimer = null;
+function bootAppend(text, cls){
+  var span = document.createElement("span");
+  if(cls) span.className = cls;
+  span.textContent = text;
+  bootLinesEl.appendChild(span);
+}
+function bootStep2(){
+  if(bootIdx >= bootLines.length){ bootDone(); return; }
+  var label = bootLines[bootIdx], status = bootLines[bootIdx+1];
+  bootAppend(label[0], label[1]);
+  if(status){
+    setTimeout(function(){ bootAppend(status[0], status[1]); bootAppend("\n", ""); }, 90);
+  }
+  bootIdx += 2;
+  bootTimer = setTimeout(bootStep2, 170);
+}
+function bootDone(){
+  if(!bootEl || bootEl.classList.contains("done")) return;
+  clearTimeout(bootTimer);
+  bootEl.classList.add("done");
+  setTimeout(function(){ if(bootEl && bootEl.parentNode) bootEl.parentNode.removeChild(bootEl); }, 700);
+}
+window.bootSkip = function(){
+  bootLinesEl.innerHTML = "";
+  bootDone();
+};
+document.addEventListener("keydown", function(e){
+  if(e.key === "Escape" || e.key === "Enter"){ window.bootSkip(); }
+});
+bootStep2();
+
+/* ── Embers ────────────────────────────────────────────────── */
+var embersCanvas = document.getElementById("embers");
+var embers = [];
+var E_W = 0, E_H = 0;
+function resizeEmbers(){
+  if(!embersCanvas) return;
+  E_W = embersCanvas.width = window.innerWidth;
+  E_H = embersCanvas.height = window.innerHeight;
+}
+function spawnEmber(init){
+  return { x: Math.random()*E_W, y: init ? Math.random()*E_H : E_H + 10,
+    r: .7 + Math.random()*1.6, vy: .2 + Math.random()*.6, vx: (Math.random()-.5)*.3,
+    life: 0, max: 400 + Math.random()*500,
+    hue: Math.random() < .82 ? 22 + Math.random()*18 : 268 + Math.random()*20 };
+}
+function tickEmbers(){
+  var ctx = embersCanvas ? embersCanvas.getContext("2d") : null;
+  if(!ctx) return;
+  ctx.clearRect(0, 0, E_W, E_H);
+  for(var i = 0; i < embers.length; i++){
+    var e = embers[i];
+    e.life++; e.y -= e.vy; e.x += e.vx + Math.sin(e.life*.02)*.12;
+    var fade = Math.min(1, e.life/60) * Math.max(0, 1 - e.life/e.max);
+    var fl = .5 + Math.sin(e.life*.15 + i)*.35;
+    ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, Math.PI*2);
+    ctx.fillStyle = "hsla(" + e.hue + ",90%,60%," + (.45*fade*fl) + ")";
+    ctx.shadowColor = "hsla(" + e.hue + ",90%,55%," + (.7*fade) + ")";
+    ctx.shadowBlur = 7; ctx.fill();
+    if(e.life > e.max || e.y < -12) embers[i] = spawnEmber(false);
+  }
+  requestAnimationFrame(tickEmbers);
+}
+function initEmbers(){
+  if(!embersCanvas) return;
+  resizeEmbers();
+  window.addEventListener("resize", resizeEmbers);
+  for(var i = 0; i < 40; i++) embers.push(spawnEmber(true));
+  tickEmbers();
+}
+
+/* ── Scroll reveal + progress + spy ────────────────────────── */
+var revealEls = document.querySelectorAll(".rv");
+function initReveal(){
+  if(!("IntersectionObserver" in window)){
+    revealEls.forEach(function(el){ el.classList.add("in"); });
+    return;
+  }
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(en.isIntersecting){ en.target.classList.add("in"); io.unobserve(en.target); }
+    });
+  }, { threshold: .08, rootMargin: "0px 0px -40px 0px" });
+  revealEls.forEach(function(el){ io.observe(el); });
+}
+var progEl = document.getElementById("prog");
+var secEls = Array.prototype.slice.call(document.querySelectorAll("[data-sec]"));
+var ixLinks = Array.prototype.slice.call(document.querySelectorAll("#index li"));
+function onScroll(){
+  var y = window.scrollY || document.documentElement.scrollTop;
+  var h = document.documentElement.scrollHeight - window.innerHeight;
+  if(progEl) progEl.style.width = (h > 0 ? (y/h)*100 : 0) + "%";
+  var current = "s1";
+  secEls.forEach(function(sec){
+    if(y >= sec.offsetTop - 140) current = sec.getAttribute("data-sec");
+  });
+  ixLinks.forEach(function(li){
+    li.classList.toggle("active", li.getAttribute("data-ix") === current);
+  });
+}
+function initSpy(){
+  window.addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+}
+
+/* ── Toast ─────────────────────────────────────────────────── */
+var toastTimer = null;
+function toast(msg){
+  var t = document.getElementById("toast");
+  if(!t) return;
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 2600);
+}
+
+/* ── Expanders ─────────────────────────────────────────────── */
+function toggleExp(id){
+  var btn = document.getElementById("exp-" + id + "-toggle");
+  var body = document.getElementById("exp-" + id + "-body");
+  if(!btn || !body) return;
+  var open = btn.classList.toggle("open");
+  body.classList.toggle("open", open);
+  btn.setAttribute("aria-expanded", open ? "true" : "false");
+}
+
+/* ── JSON typewriter demo ──────────────────────────────────── */
+var jsonDemoObj = {
+  "damage": [{"target": "player", "amount": 6, "type": "piercing"}],
+  "healing": [],
+  "death": [],
+  "xp": 0,
+  "items_add": [{"name": "Rusty Key", "type": "Trinket", "category": "trinket", "usage": "activated", "qty": 1, "weight": 0.2, "lore": "Cut for a lock that no longer exists in the keep's walls.", "equipped": false}],
+  "currency": [{"denom": "sp", "amount": -2}],
+  "quests_new": [],
+  "npcs_near": ["Kip"],
+  "npc_notes": [{"name": "Kip", "note": "Fears the bell tower — flinches when it rings."}],
+  "locations_new": [{"name": "Ravenhall", "description": "A blackened manor above the village", "lore": "The old lords sealed something beneath the chapel — no one remembers what.", "terrain": "ruin"}],
+  "current_location": "Ravenhall",
+  "world_lore": ["The villagers now whisper that the gate was never meant to open."],
+  "time_passed": {"hours": 1, "description": "Crossed the square in the rain"},
+  "rest": null,
+  "new_day": null,
+  "logbook": "Faelyndra slipped past the guard and reached Ravenhall's courtyard.",
+  "combat_events": [],
+  "roll_grants": [],
+  "corrections": []
+};
+function hlJson(str){
+  return str.replace(/(\"(?:[^\"\\\\]|\\\\.)*\")(\s*:)?|\b(true|false)\b|\bnull\b|(-?\d+(?:\.\d+)?)/g, function(m, str, colon, kw, num){
+    if(str) return colon ? '<span class="j-key">' + str + '</span>' + colon : '<span class="j-str">' + str + '</span>';
+    if(kw) return '<span class="j-kw">' + kw + '</span>';
+    if(num) return '<span class="j-num">' + num + '</span>';
+    return m;
+  });
+}
+var jsonFull = JSON.stringify(jsonDemoObj, null, 2);
+var jsonTick = null;
+var jsonRunning = false;
+function typeJsonDemo(){
+  var el = document.getElementById("json-demo");
+  if(!el || jsonRunning) return;
+  jsonRunning = true;
+  var btn = document.getElementById("json-replay");
+  if(btn) btn.disabled = true;
+  el.innerHTML = "";
+  var i = 0;
+  (function step(){
+    i += 1 + Math.floor(Math.random()*2);
+    if(i > jsonFull.length) i = jsonFull.length;
+    el.innerHTML = hlJson(jsonFull.slice(0, i)) + (i < jsonFull.length ? '<span class="j-cursor"></span>' : "");
+    if(i < jsonFull.length){ jsonTick = setTimeout(step, 12); }
+    else { jsonRunning = false; if(btn) btn.disabled = false; }
+  })();
+}
+function replayJson(){
+  clearTimeout(jsonTick);
+  jsonRunning = false;
+  typeJsonDemo();
+}
+
+/* ── Dice roller ───────────────────────────────────────────── */
+var diceHistory = [];
+function parseDice(expr, adv){
+  var s = String(expr).trim().toLowerCase();
+  var m = s.match(/^(\d*)d(\d+)([+-]\d+)?$/);
+  if(!m) return null;
+  var count = m[1] ? parseInt(m[1], 10) : 1;
+  var sides = parseInt(m[2], 10);
+  var mod = m[3] ? parseInt(m[3], 10) : 0;
+  if(count < 1 || count > 12) return null;
+  if(sides < 2 || sides > 100) return null;
+  var rolls = [];
+  if(adv && sides === 20 && count === 1){
+    rolls.push(1 + Math.floor(Math.random()*20));
+    rolls.push(1 + Math.floor(Math.random()*20));
+  } else {
+    for(var i = 0; i < count; i++) rolls.push(1 + Math.floor(Math.random()*sides));
+  }
+  var raw = rolls.reduce(function(a,b){ return a+b; }, 0);
+  var total = (adv && sides === 20 && count === 1) ? Math.max.apply(null, rolls) + mod : raw + mod;
+  return { count: count, sides: sides, mod: mod, rolls: rolls, total: total, adv: adv };
+}
+function renderDice(res){
+  var stage = document.getElementById("dice-stage");
+  var resultEl = document.getElementById("dice-result");
+  var critEl = document.getElementById("dice-crit");
+  if(!stage || !resultEl || !critEl) return;
+  stage.innerHTML = "";
+  resultEl.textContent = "";
+  critEl.textContent = "";
+  var best = res.adv ? Math.max.apply(null, res.rolls) : null;
+  var isD20 = res.sides === 20;
+  res.rolls.forEach(function(r, idx){
+    var face = document.createElement("div");
+    face.className = "die-face d" + res.sides;
+    face.textContent = r;
+    face.style.animationDelay = (idx*0.12) + "s";
+    if(res.adv && r === best) face.classList.add("adv-best");
+    if(isD20 && r === 20 && res.count === 1 && !res.adv) face.classList.add("crit");
+    if(isD20 && r === 1 && res.count === 1 && !res.adv) face.classList.add("fail");
+    stage.appendChild(face);
+  });
+  var parts = [];
+  res.rolls.forEach(function(r){ parts.push(r); });
+  var modTxt = res.mod !== 0 ? (res.mod > 0 ? " + " + res.mod : " − " + Math.abs(res.mod)) : "";
+  var line = "→ [" + exprNow() + "] " + parts.join(" + ") + modTxt + " = " + res.total;
+  if(res.adv) line = "→ [" + exprNow() + " adv] [" + res.rolls.join(", ") + "] → keep " + best + modTxt + " = " + res.total;
+  setTimeout(function(){
+    resultEl.textContent = line;
+    var crit = "";
+    if(isD20 && res.rolls.indexOf(20) !== -1 && res.count === 1 && !res.adv) crit = "✦ CRITICAL SUCCESS";
+    else if(isD20 && res.rolls.indexOf(1) !== -1 && res.count === 1 && !res.adv) crit = "✦ CATASTROPHIC FAILURE";
+    if(crit){
+      critEl.textContent = crit;
+      critEl.className = "r-crit " + (crit.indexOf("CRITICAL") !== -1 ? "good" : "bad");
+    } else { critEl.className = "r-crit"; }
+    addDiceHistory(exprNow(), res);
+  }, 560 + res.rolls.length*120);
+}
+function exprNow(){
+  var el = document.getElementById("dice-expr");
+  return el ? el.value.trim() : "1d20";
+}
+function addDiceHistory(expr, res){
+  var h = document.getElementById("dice-history");
+  if(!h) return;
+  var line = document.createElement("div");
+  line.className = "h-line";
+  var t = new Date();
+  var stamp = ("0"+t.getHours()).slice(-2) + ":" + ("0"+t.getMinutes()).slice(-2) + ":" + ("0"+t.getSeconds()).slice(-2);
+  var detail = res.adv ? "[" + res.rolls.join(", ") + "] → " + (res.total - res.mod) + (res.mod ? " + " + res.mod : "") : res.rolls.join(" + ") + (res.mod ? " + " + res.mod : "");
+  line.innerHTML = '<span class="h-t">' + stamp + '</span>' + expr + " → " + detail + " = <b style=\"color:var(--gold-bright)\">" + res.total + "</b>";
+  h.insertBefore(line, h.firstChild);
+  while(h.children.length > 10) h.removeChild(h.lastChild);
+}
+function rollNow(){
+  var el = document.getElementById("dice-expr");
+  var advEl = document.getElementById("dice-adv");
+  var expr = el ? el.value : "1d20";
+  var adv = !!(advEl && advEl.checked);
+  var res = parseDice(expr, adv);
+  if(!res){ toast("Invalid notation — try 2d6+3 or 1d20"); return; }
+  renderDice(res);
+}
+function quickDice(v){
+  var el = document.getElementById("dice-expr");
+  if(el) el.value = v;
+  rollNow();
+}
+function toggleAdv(){
+  var el = document.getElementById("dice-adv");
+  if(el && el.checked) toast("Advantage: two d20, keep the best");
+  rollNow();
+}
+
+/* ── TTS cache sim ─────────────────────────────────────────── */
+var ttsSimCache = {};
+var ttsSimOrder = [];
+var ttsLines = [
+  "The wind howls through the broken windows.",
+  "Kip shifts his weight, watching the door.",
+  "You find a rusted key beneath the straw.",
+  "The bell in the tower tolls once — then silence.",
+  "Cold rain taps against the glass."
+];
+var ttsLineIdx = 0;
+var ttsSimLastTick = Date.now() / 1000;
+function ttsKeyFor(line){
+  return "qwen::female::" + line.replace(/[^a-z0-9]/gi, "").slice(0, 26).toLowerCase();
+}
+function ttsRenderCache(){
+  var box = document.getElementById("tts-cache");
+  if(!box) return;
+  box.innerHTML = "";
+  if(ttsSimOrder.length === 0){
+    box.innerHTML = '<span class="tts-key" style="border-style:dashed;color:var(--bone-dim)">(cache empty — 64 slots · TTL 600s)</span>';
+    return;
+  }
+  ttsSimOrder.forEach(function(k){
+    var chip = document.createElement("span");
+    chip.className = "tts-key";
+    chip.textContent = k.slice(0, 8) + "…" + Math.round(ttsSimCache[k].ttl) + "s";
+    box.appendChild(chip);
+  });
+}
+function ttsLog(text, cls){
+  var log = document.getElementById("tts-log");
+  if(!log) return;
+  log.innerHTML = "$ " + (cls ? '<span class="' + cls + '">' + text + '</span>' : text);
+}
+function ttsAge(){
+  var now = Date.now() / 1000;
+  ttsSimOrder.forEach(function(k){ ttsSimCache[k].ttl = Math.max(0, ttsSimCache[k].ttl - (now - ttsSimLastTick)); });
+  ttsSimLastTick = now;
+}
+function simTts(mode){
+  ttsAge();
+  var line;
+  if(mode === "repeat" && ttsSimOrder.length > 0){
+    line = ttsSimCache[ttsSimOrder[0]].text;
+  } else {
+    line = ttsLines[ttsLineIdx % ttsLines.length];
+    ttsLineIdx++;
+  }
+  var key = ttsKeyFor(line);
+  var shown = line.length > 36 ? line.slice(0, 36) + "…" : line;
+  if(ttsSimCache[key]){
+    ttsSimCache[key].ttl = 600; // TTL refreshed on hit
+    ttsLog('HIT  "' + shown + '" → serving cached MP3 (TTL refreshed to 600s)', "h");
+  } else {
+    if(ttsSimOrder.length >= 64){
+      var oldest = ttsSimOrder.shift();
+      delete ttsSimCache[oldest];
+    }
+    ttsSimCache[key] = { ttl: 600, text: line };
+    ttsSimOrder.push(key);
+    ttsLog('MISS "' + shown + '" → split ≤900 chars → synth (StepFun/Qwen) → store MP3 · 1 API call', "m");
+  }
+  ttsRenderCache();
+}
+
+/* ── Init ──────────────────────────────────────────────────── */
+initEmbers();
+initReveal();
+initSpy();
+setTimeout(typeJsonDemo, 1400);
+
+/* ── Expose handlers to inline HTML (onclick / onchange / onkeydown) ── */
+window.bootSkip = bootSkip;
+window.toggleExp = toggleExp;
+window.replayJson = replayJson;
+window.rollNow = rollNow;
+window.quickDice = quickDice;
+window.toggleAdv = toggleAdv;
+window.simTts = simTts;
+
+})();
+</script>
+</body>
+</html>

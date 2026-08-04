@@ -207,6 +207,18 @@
   }
   .section-title .refresh:hover { color: var(--gold-bright); border-color: var(--gold); }
 
+  /* ── Feedback inbox ── */
+  .feedback-inbox { display: flex; flex-direction: column; gap: 0.7rem; margin-bottom: 2rem; }
+  .fb-item {
+    background: var(--stone-2); border: 1px solid var(--edge); border-left: 3px solid var(--gold);
+    padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.4rem;
+  }
+  .fb-item-head { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; }
+  .fb-item-ts { font-family: monospace; font-size: 0.62rem; color: var(--bone-dim); }
+  .fb-item-email { font-size: 0.62rem; color: var(--arcane); font-style: italic; }
+  .fb-item-msg { font-size: 0.82rem; color: var(--bone-bright); line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+  .fb-empty { color: var(--bone-dim); font-size: 0.8rem; font-style: italic; padding: 1rem 0; }
+
   /* ── Player table ── */
   .player-table { width: 100%; border-collapse: collapse; }
   .player-table th {
@@ -592,6 +604,9 @@ function renderStats(data) {
       </select>
       <button class="cu-btn" onclick="createUser()">+ Create</button>
     </div>
+
+    <div class="section-title">Feedback Inbox <button class="refresh" onclick="loadFeedback()">↻ Refresh</button></div>
+    <div id="feedback-inbox" class="feedback-inbox"><div class="loading">Loading feedback…</div></div>
   `;
 
   // Desktop table
@@ -604,6 +619,35 @@ function renderStats(data) {
 
   content.innerHTML = html;
   applyFilters();
+  loadFeedback();
+}
+
+// ═══════════════════════════════════════
+// FEEDBACK INBOX
+// ═══════════════════════════════════════
+async function loadFeedback() {
+  const box = document.getElementById('feedback-inbox');
+  if (!box) return;
+  box.innerHTML = '<div class="loading">Loading feedback…</div>';
+  try {
+    const res = await fetch('/api/admin/feedback', { credentials: 'include' });
+    if (!res.ok) throw new Error('API error: ' + res.status);
+    const data = await res.json();
+    const items = data.items || [];
+    if (!items.length) {
+      box.innerHTML = '<div class="fb-empty">🕊 No feedback yet — the inbox is quiet.</div>';
+      return;
+    }
+    box.innerHTML = items.map(f => {
+      const ts = f.ts ? new Date(f.ts).toLocaleString() : '';
+      const email = f.email ? '· <span class="fb-item-email">' + esc(f.email) + '</span>' : '';
+      return '<div class="fb-item"><div class="fb-item-head">' +
+        '<span class="fb-item-ts">' + esc(ts) + '</span>' + email +
+        '</div><div class="fb-item-msg">' + esc(f.message) + '</div></div>';
+    }).join('');
+  } catch (e) {
+    box.innerHTML = '<div class="fb-empty">⚠ Could not load feedback: ' + esc(e.message) + '</div>';
+  }
 }
 
 // ═══════════════════════════════════════

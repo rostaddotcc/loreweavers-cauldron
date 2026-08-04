@@ -112,6 +112,10 @@
   .tier-btn.go:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(232,198,90,.3)}
   .tier-btn.busy{opacity:.55;pointer-events:none;cursor:wait}
   .tier-btn.busy::after{animation:none}
+  .tier-btn.current{color:var(--bone-bright);background:linear-gradient(160deg,var(--stone-3),var(--stone-2));
+    border:1px solid rgba(201,162,39,.5);cursor:default;pointer-events:none;
+    box-shadow:inset 0 0 18px rgba(201,162,39,.12)}
+  .tier-btn.current::after{animation:none}
   .tier-btn.soon{color:var(--bone-dim);background:var(--stone-3);border:1px solid var(--edge);
     cursor:not-allowed}
   .tier-btn.soon span{display:inline-block;animation:soon-pulse 2.6s ease-in-out infinite}
@@ -192,7 +196,7 @@
         <li>Persistent world, memory, and Codex</li>
         <li>Qwen voice narration · dice ritual</li>
       </ul>
-      <a class="tier-btn go" href="login.html">Begin your adventure</a>
+      <a class="tier-btn go" href="login.html" data-tier="free">Begin your adventure</a>
     </div>
 
     <!-- Tier 1 — Companion -->
@@ -304,6 +308,22 @@
       alert('The sigil could not be forged: ' + e.message);
     });
   }
+
+  // ── Current subscription — markera vilken tier jag redan har ──
+  // (pricing.html laddar inte api.js → rå fetch med credentials)
+  fetch('/api/me', { credentials: 'include' }).then(function (r) {
+    return r.ok ? r.json() : null;
+  }).then(function (u) {
+    if (!u) return;
+    var key = { free: 'free', tier1: 'tier1', tier2: 'tier2', lifetime: 'lifetime' }[u.subscription_status];
+    if (!key) return;
+    var btn = document.querySelector('.tier-btn[data-tier="' + key + '"]');
+    if (!btn) return;
+    btn.textContent = '✓ Current subscription';
+    btn.classList.add('current');
+    btn.removeAttribute('onclick');
+    btn.href = '#';
+  }).catch(function () {});
 </script>
 </body>
 </html>

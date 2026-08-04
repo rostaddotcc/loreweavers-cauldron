@@ -348,6 +348,33 @@
 /* continue-panelen: uppmaningen centrerad OVANFÖR New Adventure-knappen */
 .continue-panel .actions{flex-direction:column;align-items:center;gap:.6rem}
 .continue-panel .actions .hint{text-align:center}
+/* ═══════════ Font-bump + knapp-alignment (rostad 2026-08-04) ═══════════ */
+html{font-size:17px}
+.step-title{font-size:1.18rem!important}
+.step-sub{font-size:1.02rem!important}
+.step-num{font-size:1.2rem!important}
+.panel-title{font-size:.98rem!important}
+.hint{font-size:1rem!important}
+.world-prompt{font-size:1.12rem!important}
+.dm-model-note{font-size:.94rem!important}
+.campaign-card .cc-name{font-size:1.06rem!important}
+.campaign-card .cc-sub{font-size:.96rem!important}
+.campaign-card .cc-date{font-size:.9rem!important}
+.campaign-card .cc-go{font-size:.8rem!important}
+.news-banner .nb-title{font-size:.84rem!important}
+.news-banner .nb-text{font-size:.97rem!important}
+.path h2{font-size:1.2rem!important}
+.path p{font-size:1.03rem!important}
+.htp-toggle{font-size:.88rem!important}
+.name-input{font-size:1.08rem!important}
+/* Steg-2-knappen (Continue →) ska matcha top-btn-storleken, inte dominera */
+.step-actions .go-btn{
+  font-size:.78rem!important;padding:.45rem .95rem!important;
+  border-radius:6px!important;white-space:nowrap
+}
+@media(max-width:640px){
+  .step-actions .go-btn{min-height:44px;display:inline-flex;align-items:center}
+}
 </style>
 <script src="sprites.js?v=20260802a"></script>
 <script src="fonts.js?v=20260803b"></script>
@@ -382,25 +409,25 @@
     .pf-overlay{position:fixed;inset:0;z-index:110;display:none;align-items:center;justify-content:center;
       background:rgba(4,2,8,.85);backdrop-filter:blur(4px);padding:1rem}
     .pf-overlay.show{display:flex}
-    .pf-box{position:relative;width:min(560px,100%);max-height:88vh;overflow-y:auto;
+    .pf-box{position:relative;width:min(620px,100%);max-height:88vh;overflow-y:auto;
       background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,#120c1c);
-      border:1px solid var(--edge);padding:1.8rem 1.6rem 1.6rem;
+      border:1px solid var(--edge);padding:1.9rem 1.7rem 1.7rem;
       box-shadow:0 30px 80px -20px rgba(0,0,0,.9)}
     .pf-close{position:absolute;top:.6rem;right:.8rem;background:none;border:0;
-      color:var(--bone-dim);font-size:1.1rem;cursor:pointer;padding:.3rem}
+      color:var(--bone-dim);font-size:1.2rem;cursor:pointer;padding:.3rem}
     .pf-close:hover{color:var(--bone-bright)}
-    .pf-head{display:flex;align-items:center;gap:.7rem;margin-bottom:1.1rem}
-    .pf-ico{font-size:1.6rem}
-    .pf-name{font-family:'Cinzel',serif;font-weight:900;font-size:1.1rem;color:var(--bone-bright)}
-    .pf-tier{display:inline-block;margin-top:.2rem;font-size:.64rem;letter-spacing:.12em;
+    .pf-head{display:flex;align-items:center;gap:.8rem;margin-bottom:1.2rem}
+    .pf-ico{font-size:1.9rem}
+    .pf-name{font-family:'Cinzel',serif;font-weight:900;font-size:1.4rem;color:var(--bone-bright)}
+    .pf-tier{display:inline-block;margin-top:.25rem;font-size:.8rem;letter-spacing:.12em;
       text-transform:uppercase;color:var(--gold-bright);border:1px solid var(--edge-hi);
-      border-radius:999px;padding:.12rem .5rem}
-    .pf-grid{display:grid;grid-template-columns:1fr 1fr;gap:.55rem .9rem}
-    .pf-cell{background:rgba(255,255,255,.03);border:1px solid var(--edge);border-radius:6px;padding:.5rem .7rem}
+      border-radius:999px;padding:.18rem .6rem}
+    .pf-grid{display:grid;grid-template-columns:1fr 1fr;gap:.7rem 1rem}
+    .pf-cell{background:rgba(255,255,255,.03);border:1px solid var(--edge);border-radius:6px;padding:.65rem .85rem}
     .pf-cell.full{grid-column:1/-1}
-    .pf-cell .k{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.14rem}
-    .pf-cell .v{font-size:.83rem;color:var(--bone-bright);word-break:break-word}
-    .pf-bar{height:5px;background:var(--stone-3);border-radius:3px;margin-top:.35rem;overflow:hidden}
+    .pf-cell .k{font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.18rem}
+    .pf-cell .v{font-size:1.05rem;color:var(--bone-bright);word-break:break-word}
+    .pf-bar{height:6px;background:var(--stone-3);border-radius:3px;margin-top:.4rem;overflow:hidden}
     .pf-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-bright))}
     @media(max-width:520px){.pf-grid{grid-template-columns:1fr}}
   </style>
@@ -1740,9 +1767,9 @@ function renderProfile(s) {
   if (s.turn_bonus > 0) h += cell('Turn bonus', fmt(s.turn_bonus));
   // 💳 Uppgraderingsväg — free/tier1 ser tydlig CTA, premium ser billing-länk
   if (s.subscription_status === 'free' || s.subscription_status === 'tier1') {
-    h += '<div class="pf-cell full"><a href="pricing.html" style="display:block;text-align:center;font-family:Cinzel,serif;font-size:.74rem;letter-spacing:.18em;text-transform:uppercase;color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));padding:.85rem 1rem;border-radius:2px;text-decoration:none">💳 Upgrade your path</a></div>';
+    h += '<div class="pf-cell full"><a href="pricing.html" style="display:block;text-align:center;font-family:Cinzel,serif;font-size:.82rem;letter-spacing:.18em;text-transform:uppercase;color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));padding:.9rem 1rem;border-radius:2px;text-decoration:none">💳 Upgrade your path</a></div>';
   } else {
-    h += '<div class="pf-cell full" style="text-align:center;font-size:.78rem"><a href="pricing.html" style="color:var(--gold);text-decoration:none">👑 Membership &amp; billing →</a></div>';
+    h += '<div class="pf-cell full" style="text-align:center;font-size:.9rem"><a href="pricing.html" style="color:var(--gold);text-decoration:none">👑 Membership &amp; billing →</a></div>';
   }
   document.getElementById('pf-grid').innerHTML = h;
 }

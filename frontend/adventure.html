@@ -184,10 +184,24 @@
   .blank-btn{font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim);background:none;border:1px solid var(--edge);padding:.55rem 1.1rem;cursor:pointer;transition:all .25s;border-radius:6px}
   .blank-btn:hover{color:var(--arcane);border-color:var(--arcane);box-shadow:0 0 14px -5px rgba(139,95,212,.5)}
   .blank-btn.active{color:#1a1206;background:linear-gradient(180deg,var(--arcane-bright),var(--arcane) 55%,#5b3a8f);border-color:#4a2f75;box-shadow:0 6px 18px -6px rgba(139,95,212,.55),inset 0 1px 0 rgba(255,255,255,.2)}
-  .blank-editor{max-width:620px;margin:1.1rem auto 0;text-align:left;animation:rise .35s ease}
-  .blank-text{width:100%;font-family:'Spectral',serif;font-size:.96rem;color:var(--bone-bright);background:#0d0817;border:1px solid rgba(139,95,212,.5);padding:.75rem .9rem;outline:none;resize:vertical;min-height:96px;box-shadow:0 0 18px -8px rgba(139,95,212,.5)}
-  .blank-text:focus{border-color:var(--arcane);box-shadow:0 0 0 3px rgba(139,95,212,.14),0 0 22px -6px rgba(139,95,212,.6)}
-  .blank-note{font-size:.78rem;font-style:italic;color:var(--bone-dim);margin-top:.5rem}
+  /* Fateweave — redigerbar prompt-mall (MD-preview ⇄ edit) */
+  .fw-wrap{max-width:680px;margin:1.1rem auto 0;text-align:left;animation:rise .35s ease}
+  .fw-head{display:flex;align-items:center;justify-content:space-between;gap:.8rem;flex-wrap:wrap;margin-bottom:.55rem}
+  .fw-mode{font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--bone-dim)}
+  .fw-mode b{color:var(--arcane);font-weight:700}
+  .fw-btns{display:flex;gap:.5rem}
+  .lp-single{position:relative}
+  .lp-single textarea{display:none}
+  .lp-single.edit textarea{display:block}
+  .lp-single.edit .legend-preview{display:none}
+  .lp-single #fw-prompt{width:100%;font-family:'Spectral',serif;font-size:.96rem;color:var(--bone-bright);background:#0d0817;border:1px solid rgba(139,95,212,.5);padding:.75rem .9rem;outline:none;resize:vertical;min-height:150px;box-shadow:0 0 18px -8px rgba(139,95,212,.5)}
+  .lp-single #fw-prompt:focus{border-color:var(--arcane);box-shadow:0 0 0 3px rgba(139,95,212,.14),0 0 22px -6px rgba(139,95,212,.6)}
+  .legend-preview{width:100%;min-height:150px;font-family:'Spectral',serif;font-size:.96rem;color:var(--bone);background:#0d0817;border:1px solid rgba(139,95,212,.35);padding:.75rem .9rem;cursor:text;line-height:1.7;box-shadow:inset 0 0 30px -12px rgba(139,95,212,.4)}
+  .legend-preview.lp-empty{color:var(--bone-dim);font-style:italic}
+  .legend-preview .lp-h{font-family:'Cinzel',serif;color:var(--gold);font-weight:700;font-size:.95rem;margin:.35rem 0}
+  .legend-preview b{color:var(--gold-bright)}
+  .legend-preview .lp-list{margin:.3rem 0 .3rem 1.1rem;padding:0;list-style:none}
+  .legend-preview .lp-list li::before{content:'✦ ';color:var(--arcane);font-size:.75em}
   /* Start + weaving (summoning-ritual) */
   .start-btn{font-family:'Cinzel',serif;font-weight:700;font-size:1rem;letter-spacing:.16em;text-transform:uppercase;color:#1a1206;cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);border:1px solid #6e5510;padding:1rem 2.2rem;border-radius:8px;position:relative;overflow:hidden;box-shadow:0 0 18px rgba(201,162,39,.22),0 6px 30px rgba(201,162,39,.30),inset 0 1px 0 rgba(255,255,255,.16);transition:all .2s}
   .start-btn:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-2px);box-shadow:0 0 28px rgba(232,198,90,.38),0 12px 40px rgba(201,162,39,.5),inset 0 1px 0 rgba(255,255,255,.22)}
@@ -494,10 +508,20 @@
       <div class="blank-row">
         <button class="blank-btn" id="blank-btn" onclick="blankScroll()">✦ Blank Parchment — write your own</button>
       </div>
-      <div class="blank-editor" id="blank-editor" style="display:none">
-        <textarea id="blank-text" class="blank-text" rows="4" maxlength="900" oninput="enableGen()"
-          placeholder="Describe your own adventurer — race, class, look, history, flaws, what they seek…"></textarea>
-        <div class="blank-note" id="blank-note">Or lean on the Dungeon Master's inspiration — the more you write, the more the weaver has to work with.</div>
+      <!-- Fateweave — redigerbar prompt-mall (arketyp ELLER fri text), MD-preview ⇄ edit -->
+      <div class="fw-wrap" id="fw-wrap" style="display:none">
+        <div class="fw-head">
+          <span class="fw-mode" id="fw-mode">📜 <b>Blank Parchment</b></span>
+          <div class="fw-btns">
+            <button class="blank-btn" id="fw-toggle" onclick="toggleFateweave()">✏️ Edit</button>
+            <button class="blank-btn" onclick="clearPrompt()">🗑 Clear</button>
+          </div>
+        </div>
+        <div class="lp-single" id="fw-editor">
+          <textarea id="fw-prompt" spellcheck="false" oninput="renderFwPreview()" onblur="onFwBlur(event)"></textarea>
+          <div class="legend-preview" id="fw-preview" onclick="enterFwEdit()"></div>
+        </div>
+        <div class="blank-note">Tweak the template before the weaver gets it — your own name, a pet, a pouch of coins, a crown…</div>
       </div>
       <div class="step-actions" id="gen-row">
         <label class="dm-model-label" for="adv-char-model">🧠 Character model
@@ -581,8 +605,8 @@
     <div class="dm-model-row">
       <label class="dm-model-label" for="adventure-tts">🗣️ Voice (TTS)</label>
       <select class="dm-model-select" id="adventure-tts">
+        <option value="qwen" selected>Qwen (Token Plan) ⭐ — recommended</option>
         <option value="stepfun">StepFun (Step Plan)</option>
-        <option value="qwen">Qwen (Token Plan)</option>
       </select>
       <span class="ask-wrap"><span class="ask-ico">?</span><span class="ask-tip" data-ask="tts">Which provider whispers the spoken word when the DM speaks aloud. <b>Ask the Dungeon Master if unsure.</b></span></span>
     </div>
@@ -894,7 +918,11 @@ function pickLang(lang) {
   try { if (typeof I18N !== 'undefined') I18N.init(lang); } catch (_) {}
   renderArchetypes();
   renderDarkSelect();
-  renderBlankI18n();
+  renderAskHints();
+  const btn = document.getElementById('blank-btn');
+  if (btn) btn.innerHTML = (lang === 'en')
+    ? '✦ Blank Parchment — write your own'
+    : '✦ Tomt pergament — skriv din egen';
   revealStep('step-name');
   setTimeout(() => { const i = document.getElementById('adventure-name-input'); if (i) i.focus(); }, 420);
 }
@@ -945,14 +973,9 @@ function renderDarkSelect() {
 function selectArch(key) {
   advArchKey = key;
   document.querySelectorAll('.arch').forEach(el => el.classList.toggle('selected', el.dataset.key === key));
-  // Väljer man en arketyp stängs det tomma pergamentet
-  const editor = document.getElementById('blank-editor');
-  if (editor) editor.style.display = 'none';
-  const btn = document.getElementById('blank-btn');
-  if (btn) {
-    btn.classList.remove('active');
-    btn.innerHTML = isEn() ? '✦ Blank Parchment — write your own' : '✦ Tomt pergament — skriv din egen';
-  }
+  // Arketyp-prompten laddas in i Fateweave-editorn → spelaren kan justera fritt
+  const a = ARCHETYPES[key];
+  if (a) setFwPrompt(archField(a, 'prompt'), false);
   const darkSel = document.getElementById('dark-select');
   if (darkSel) darkSel.value = (ARCHETYPES[key] && ARCHETYPES[key].dark) ? key : '';
   try { SFX.click(); } catch (_) {}
@@ -962,37 +985,160 @@ function selectArch(key) {
 function selectDarkArch(key) { if (key) selectArch(key); }
 
 function blankScroll() {
-  const editor = document.getElementById('blank-editor');
+  const wrap = document.getElementById('fw-wrap');
   const btn = document.getElementById('blank-btn');
-  const isOpen = editor && editor.style.display !== 'none';
+  const isOpen = wrap && wrap.style.display !== 'none';
   advArchKey = null;
   document.querySelectorAll('.arch').forEach(el => el.classList.remove('selected'));
   const darkSel = document.getElementById('dark-select');
   if (darkSel) darkSel.value = '';
-  if (editor) editor.style.display = isOpen ? 'none' : '';
-  if (btn) btn.classList.toggle('active', !isOpen);
-  if (!isOpen) {
-    setTimeout(() => { const t = document.getElementById('blank-text'); if (t) t.focus(); }, 80);
+  if (wrap) {
+    wrap.style.display = isOpen ? 'none' : '';
+    if (!isOpen) setFwPrompt(isEn() ? FREE_PROMPT_EN : FREE_PROMPT, true);
   }
+  if (btn) btn.classList.toggle('active', !isOpen);
   try { SFX.click(); } catch (_) {}
   enableGen();
 }
 
-// Uppmaningen anpassas till det språk som valdes i steg 1 (ingen språkknapp behövs)
-function renderBlankI18n() {
-  const btn = document.getElementById('blank-btn');
-  if (btn) btn.innerHTML = isEn()
-    ? '✦ Blank Parchment — write your own'
-    : '✦ Tomt pergament — skriv din egen';
-  const t = document.getElementById('blank-text');
-  if (t) t.placeholder = isEn()
-    ? 'Describe your own adventurer — race, class, look, history, flaws, what they seek…'
-    : 'Beskriv din egen äventyrare — folk, klass, utseende, historia, brister, vad du söker…';
-  const n = document.getElementById('blank-note');
-  if (n) n.textContent = isEn()
-    ? 'Or lean on the Dungeon Master\'s inspiration — the more you write, the more the weaver has to work with.'
-    : 'Eller luta dig mot Dungeon Masterns inspiration — ju mer du skriver, desto mer har väverskan att arbeta med.';
-  renderAskHints();
+// ── Fateweave-editor: fri-text-mall (SV/EN) + redigerbar arketyp-prompt ──
+const FREE_PROMPT = `## Legenden
+
+**Namn:**
+**Folk:**
+**Klass:**
+**Bakgrund:**
+**Personlighet:**
+**Ett minne som jagar dig:**
+**Vad söker du?**
+
+Generera:
+1. Namn (mörk fantasy)
+2. Fullt karaktärsark: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves
+3. 3-4 förmågor/egenskaper
+4. Startutrustning (5-8 föremål)
+5. Bakgrundshistoria (max 100 ord)
+Returnera som JSON enligt state-schemat.`;
+
+const FREE_PROMPT_EN = `## Legend
+
+**Name:**
+**Race:**
+**Class:**
+**Backstory:**
+**Personality:**
+**A memory that haunts you:**
+**What do you seek?**
+
+Generate:
+1. Name (dark fantasy)
+2. Full character sheet: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves
+3. 3-4 abilities/traits
+4. Starting equipment (5-8 items)
+5. Backstory (max 100 words)
+Return as JSON per the state schema.`;
+
+let _lastFwValue = null; // senast programmatiskt satta värdet — avgör om mallen är orörd
+
+function setFwPrompt(v, asBlank) {
+  const ta = document.getElementById('fw-prompt');
+  if (!ta) return;
+  ta.value = v;
+  _lastFwValue = v;
+  renderFwPreview();
+  enterFwPreview();
+  const mode = document.getElementById('fw-mode');
+  if (mode) {
+    if (asBlank) {
+      mode.innerHTML = isEn() ? '📜 <b>Blank Parchment</b> — write freely' : '📜 <b>Tomt pergament</b> — skriv fritt';
+    } else if (advArchKey && ARCHETYPES[advArchKey]) {
+      mode.innerHTML = isEn()
+        ? '📜 Archetype: <b>' + archField(ARCHETYPES[advArchKey], 'name') + '</b> — tweak freely'
+        : '📜 Arketyp: <b>' + archField(ARCHETYPES[advArchKey], 'name') + '</b> — justera fritt';
+    }
+  }
+  const wrap = document.getElementById('fw-wrap');
+  if (wrap) wrap.style.display = '';
+  enableGen();
+}
+
+function fwPromptText() {
+  const ta = document.getElementById('fw-prompt');
+  if (!ta) return '';
+  // Orörd mall (samma som senast sattes) → null så advPrompt faller tillbaka på arketypen
+  if (ta.value === _lastFwValue) return null;
+  return ta.value.trim();
+}
+
+function clearPrompt() {
+  advArchKey = null;
+  document.querySelectorAll('.arch').forEach(el => el.classList.remove('selected'));
+  const darkSel = document.getElementById('dark-select');
+  if (darkSel) darkSel.value = '';
+  _lastFwValue = null;
+  const ta = document.getElementById('fw-prompt');
+  if (ta) ta.value = '';
+  const mode = document.getElementById('fw-mode');
+  if (mode) mode.innerHTML = isEn() ? '📜 <b>Free write</b> — your legend, your words' : '📜 <b>Friskrivning</b> — din legend, dina ord';
+  renderFwPreview();
+  enableGen();
+  try { SFX.click(); } catch (_) {}
+}
+
+function enterFwEdit() {
+  const box = document.getElementById('fw-editor');
+  if (!box || box.classList.contains('edit')) return;
+  box.classList.add('edit');
+  const t = document.getElementById('fw-toggle');
+  if (t) t.innerHTML = '👁 Preview';
+  const ta = document.getElementById('fw-prompt');
+  if (ta) { ta.focus(); const end = ta.value.length; ta.setSelectionRange(end, end); }
+}
+function enterFwPreview() {
+  const box = document.getElementById('fw-editor');
+  if (!box || !box.classList.contains('edit')) return;
+  box.classList.remove('edit');
+  renderFwPreview();
+  const t = document.getElementById('fw-toggle');
+  if (t) t.innerHTML = '✏️ Edit';
+}
+function toggleFateweave() {
+  const box = document.getElementById('fw-editor');
+  if (box && box.classList.contains('edit')) enterFwPreview(); else enterFwEdit();
+}
+function onFwBlur(e) {
+  if (e && e.relatedTarget && (e.relatedTarget.id === 'fw-toggle' || e.relatedTarget.className.includes('blank-btn'))) return;
+  enterFwPreview();
+}
+function _fwEsc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function _fwMd(src) {
+  let s = _fwEsc(src)
+    .replace(/^###\s+(.+)$/gm, '<h4 class="lp-h">$1</h4>')
+    .replace(/^##\s+(.+)$/gm, '<h3 class="lp-h">$1</h3>')
+    .replace(/^#\s+(.+)$/gm, '<h2 class="lp-h">$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+  let out = '', inList = false;
+  for (const line of s.split('\n')) {
+    const m = line.match(/^\s*[-*]\s+(.+)$/);
+    if (m) {
+      if (!inList) { out += '<ul class="lp-list">'; inList = true; }
+      out += '<li>' + m[1] + '</li>';
+    } else {
+      if (inList) { out += '</ul>'; inList = false; }
+      out += line + '\n';
+    }
+  }
+  if (inList) out += '</ul>';
+  return out.replace(/\n/g, '<br>');
+}
+function renderFwPreview() {
+  const el = document.getElementById('fw-preview');
+  if (!el) return;
+  const ta = document.getElementById('fw-prompt');
+  const src = ta ? ta.value : '';
+  if (!src.trim()) { el.innerHTML = '✍️ Click to write your legend…'; el.classList.add('lp-empty'); return; }
+  el.classList.remove('lp-empty');
+  el.innerHTML = _fwMd(src);
 }
 
 // Ask-the-DM hover-hints — översätts efter valt kampanjspråk
@@ -1017,31 +1163,31 @@ function renderAskHints() {
 }
 
 function blankText() {
-  const t = document.getElementById('blank-text');
-  return t ? t.value.trim() : '';
+  return (fwPromptText() || '');
 }
 
 function enableGen() {
   const b = document.getElementById('gen-btn');
   if (b) b.disabled = false;
   const h = document.getElementById('gen-hint');
-  const blank = blankText();
+  const custom = fwPromptText();
   if (h) {
-    if (blank) {
+    if (custom) {
       h.textContent = isEn()
-        ? 'Your own legend is ready to be woven'
-        : 'Din egen legend är redo att vävas';
+        ? 'Your tweaked legend is ready to be woven'
+        : 'Din justerade legend är redo att vävas';
     } else if (advArchKey) {
       h.textContent = isEn()
         ? 'Ready — the archetype is woven into the prompt'
         : 'Redo — arketypen är invävd i prompten';
     } else {
       h.textContent = isEn()
-        ? 'Blank parchment — write your own legend'
-        : 'Tomt pergament — skriv din egen legend';
+        ? 'Pick an archetype — or take the blank parchment'
+        : 'Välj en arketyp — eller ta det tomma pergamentet';
     }
   }
 }
+
 
 // ── Hjälteval: summon (generera + preview + reroll) eller Forge (färdig) ──
 let advHero = null;      // genererad karaktär (objekt)
@@ -1203,14 +1349,9 @@ async function continueHero() {
 }
 
 function advPrompt() {
-  const blank = blankText();
-  if (blank) {
-    // Spelarens egen beskrivning — väv in den som kärnan i legenden
-    const tpl = isEn()
-      ? '## Legend\n\n**The player\'s own vision:**\n"""\n%s\n"""\n\nWeave this vision into a full adventurer. Flesh out anything left open, stay faithful to what is written. Generate:\n1. Name (dark fantasy)\n2. Full character sheet: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves\n3. 3-4 abilities/traits\n4. Starting equipment (5-8 items)\n5. Backstory (max 100 words)\nReturn as JSON per the state schema.'
-      : '## Legenden\n\n**Spelarens egen vision:**\n"""\n%s\n"""\n\nVäv denna vision till en fullständig äventyrare. Fyll i det som lämnas öppet, håll dig trogen mot det skrivna. Generera:\n1. Namn (mörk fantasy)\n2. Fullt karaktärsark: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves\n3. 3-4 förmågor/egenskaper\n4. Startutrustning (5-8 föremål)\n5. Bakgrundshistoria (max 100 ord)\nReturnera som JSON enligt state-schemat.';
-    return tpl.replace('%s', blank);
-  }
+  // Spelarens justerade mall (arketyp-prompt tweakad ELLER fri text) vinner alltid
+  const tweaked = fwPromptText();
+  if (tweaked) return tweaked;
   if (advArchKey && ARCHETYPES[advArchKey]) return archField(ARCHETYPES[advArchKey], 'prompt');
   return isEn()
     ? '## Legend\n\n**Name:**\n**Race:**\n**Class:**\n**Backstory:**\n**Personality:**\n**A memory that haunts you:**\n**What do you seek?**\n\nGenerate:\n1. Name (dark fantasy)\n2. Full character sheet: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves\n3. 3-4 abilities/traits\n4. Starting equipment (5-8 items)\n5. Backstory (max 100 words)\nReturn as JSON per the state schema.'
@@ -1219,7 +1360,10 @@ function advPrompt() {
 
 // ── Modellgate (DM/Guardian/Extraction + Character-sheet modell — kan ändras när som helst i kampanjen) ──
 const PLAYER_DM_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-3.7-flash', 'ollama:heretic'];
-const TTS_PROVIDERS = [{ id: 'stepfun', name: 'StepFun (Step Plan)' }, { id: 'qwen', name: 'Qwen (Token Plan)' }];
+const TTS_PROVIDERS = [
+  { id: 'qwen', name: 'Qwen (Token Plan) ⭐', recommended: true },
+  { id: 'stepfun', name: 'StepFun (Step Plan)' },
+];
 (function populateModelGate() {
   const dmSel = document.getElementById('adventure-dm-model');
   const guardSel = document.getElementById('adventure-guardian-model');
@@ -1240,10 +1384,17 @@ const TTS_PROVIDERS = [{ id: 'stepfun', name: 'StepFun (Step Plan)' }, { id: 'qw
     }
   };
   if (ttsSel) {
-    ttsSel.innerHTML = TTS_PROVIDERS.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    ttsSel.innerHTML = TTS_PROVIDERS.map(p => `<option value="${p.id}">${p.name}${p.recommended ? ' — recommended' : ''}</option>`).join('');
     try {
       const saved = localStorage.getItem('dnd_tts_provider');
-      if (saved && TTS_PROVIDERS.some(p => p.id === saved)) ttsSel.value = saved;
+      // Rekommendation (2026-08-04): Qwen (Token Plan) är default för nya
+      // äventyr — men en tidigare explicit spelar-ändring respekteras.
+      if (saved && TTS_PROVIDERS.some(p => p.id === saved)) {
+        ttsSel.value = saved;
+      } else {
+        const rec = TTS_PROVIDERS.find(p => p.recommended);
+        if (rec) ttsSel.value = rec.id;
+      }
     } catch (e) {}
   }
   if (!dmSel && !guardSel && !extSel && !charSel) return;

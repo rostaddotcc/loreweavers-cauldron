@@ -19,7 +19,7 @@ import uuid
 import zipfile
 import base64
 from collections import deque
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import AsyncGenerator
 
@@ -974,14 +974,202 @@ def _register_allowed() -> bool:
 
 
 def _turn_cap_for(username: str) -> int:
-    """Kontots turn-tak (0 = oändligt). Läser users.json — snabbt och litet."""
+    """Kontots turn-tak (0 = oändligt). Läser users.json — snabbt och litet.
+
+    FAS A: backfilla nya free-tier-fält (setdefault) så gamla konton inte
+    kraschar när de nya fälten saknas."""
     try:
         udata = load_users().get(username, {})
         if not isinstance(udata, dict):
             return 0
+        udata = _ensure_user_fields(username, udata)
         return int(udata.get("turn_cap", 0) or 0)
     except Exception:
         return 0
+
+
+# ═══════════════════════════════════════
+# FAS A — free account system (periodbaserad turn-räkning)
+# ═══════════════════════════════════════
+# Period = 30 dagar från reset_date. turns_used nollställs vid rollover,
+# turn_bonus (admin top-up) behålls. Premium → oändliga turns.
+PERIOD_DAYS = 30
+
+_FREE_FIELD_DEFAULTS = {
+    "turns_used": 0,
+    "turn_bonus": 0,
+    "reset_date": None,  # sätts dynamiskt till _today_str()
+    "subscription_status": "free",
+    "subscription_until": None,
+}
+
+
+def _today_str() -> str:
+    """Dagens datum som ISO-sträng (YYYY-MM-DD, UTC)."""
+    return datetime.now(timezone.utc).date().isoformat()
+
+
+def _today_date():
+    """Dagens datum (date-objekt, UTC)."""
+    return datetime.now(timezone.utc).date()
+
+
+def _ensure_user_fields(username: str, udata: dict) -> dict:
+    """Backfilla FAS A-fält (setdefault-mönstret) för konton som saknar dem.
+
+    Sparar users.json ENDAST om något lades till. Returnerar uppdaterad udata.
+    Får INTE anropas innanför _USER_LOCK (threading.Lock är inte reentrant)."""
+    missing = [k for k in _FREE_FIELD_DEFAULTS if k not in udata]
+    if not missing:
+        return udata
+    with _USER_LOCK:
+        users = load_users()
+        u = users.get(username)
+        if isinstance(u, dict):
+            for k in _FREE_FIELD_DEFAULTS:
+                u.setdefault(k, _today_str() if k == "reset_date" else _FREE_FIELD_DEFAULTS[k])
+            save_users(users)
+            return u
+        for k, v in _FREE_FIELD_DEFAULTS.items():
+            udata.setdefault(k, _today_str() if k == "reset_date" else v)
+        return udata
+
+
+def _tier_for(username: str) -> str:
+    """free|premium. Premium = subscription_status=premium OCH subscription_until
+    ej passerad (sista giltiga dag = until-datumet). Utgången premium → demote
+    till free i users.json (status=free)."""
+    try:
+        udata = load_users().get(username, {})
+        if not isinstance(udata, dict):
+            udata = {}
+        udata = _ensure_user_fields(username, udata)
+        if udata.get("subscription_status") != "premium":
+            return "free"
+        until = udata.get("subscription_until")
+        if until:
+            try:
+                until_date = datetime.fromisoformat(str(until)).date()
+            except ValueError:
+                until_date = None
+            if until_date is not None and until_date >= _today_date():
+                return "premium"
+        # Premium utgången (eller utan datum) → demote
+        with _USER_LOCK:
+            users = load_users()
+            u = users.get(username)
+            if isinstance(u, dict) and u.get("subscription_status") == "premium":
+                u["subscription_status"] = "free"
+                save_users(users)
+        return "free"
+    except Exception:
+        return "free"
+
+
+def _maybe_rollover(username: str, udata: dict) -> dict:
+    """Period-rollover: om reset_date passerad (idag >= reset_date) → nollställ
+    turns_used, BEHÅLL turn_bonus, flytta reset_date till idag + 30 dagar."""
+    today = _today_date()
+    reset = udata.get("reset_date")
+    due = False
+    if reset:
+        try:
+            due = today >= datetime.fromisoformat(str(reset)).date()
+        except ValueError:
+            due = False
+    if not due:
+        return udata
+    new_reset = (today + timedelta(days=PERIOD_DAYS)).isoformat()
+    with _USER_LOCK:
+        users = load_users()
+        u = users.get(username)
+        if isinstance(u, dict):
+            u["turns_used"] = 0
+            u["reset_date"] = new_reset
+            save_users(users)
+            return u
+    udata["turns_used"] = 0
+    udata["reset_date"] = new_reset
+    return udata
+
+
+def _turns_available(username: str) -> int:
+    """Antal turns kvar denna period.
+
+    Free: max(0, turn_cap + turn_bonus - turns_used) — turn_bonus förbrukas
+    FÖRE cap-turns (de första `bonus` förbrukade turarna äter bonusen, sedan
+    cap-sloten). Ekvivalent med spec-formeln `turn_bonus + max(0, turn_cap -
+    turns_used)` när turns_used <= turn_cap; låter dessutom bonusen ta slut så
+    403 nås (annars skulle top-ups aldrig förbrukas). Premium: 999999.
+    turn_cap <= 0 = oändligt (samma semantik som före FAS A)."""
+    try:
+        udata = load_users().get(username, {})
+        if not isinstance(udata, dict):
+            udata = {}
+        udata = _ensure_user_fields(username, udata)
+        if _tier_for(username) == "premium":
+            return 999999
+        udata = _maybe_rollover(username, udata)
+        turn_cap = int(udata.get("turn_cap", 0) or 0)
+        turns_used = int(udata.get("turns_used", 0) or 0)
+        turn_bonus = int(udata.get("turn_bonus", 0) or 0)
+        if turn_cap <= 0:
+            return 999999
+        return max(0, turn_cap + turn_bonus - turns_used)
+    except Exception:
+        return 0
+
+
+def _consume_turn(username: str) -> None:
+    """turns_used += 1 (efter ev. period-rollover). Spara under _USER_LOCK.
+
+    Anropas bara när en turn faktiskt skickas (alla 403-checks passerade)."""
+    with _USER_LOCK:
+        users = load_users()
+        u = users.get(username)
+        if not isinstance(u, dict):
+            return
+        # setdefault-backfill inline (vi är redan innanför låset)
+        u.setdefault("turns_used", 0)
+        u.setdefault("turn_bonus", 0)
+        u.setdefault("reset_date", _today_str())
+        u.setdefault("subscription_status", "free")
+        u.setdefault("subscription_until", None)
+        # Period-rollover om reset_date passerad
+        today = _today_date()
+        reset = u.get("reset_date")
+        if reset:
+            try:
+                rd = datetime.fromisoformat(str(reset)).date()
+            except ValueError:
+                rd = None
+            if rd is not None and today >= rd:
+                u["turns_used"] = 0
+                u["reset_date"] = (today + timedelta(days=PERIOD_DAYS)).isoformat()
+        u["turns_used"] = int(u.get("turns_used", 0) or 0) + 1
+        save_users(users)
+
+
+def _user_free_info(username: str) -> dict:
+    """FAS A: periodbaserad turn-info för /api/me (backfill + rollover applicerade)."""
+    udata = load_users().get(username, {})
+    if not isinstance(udata, dict):
+        udata = {}
+    udata = _ensure_user_fields(username, udata)
+    if _tier_for(username) != "premium":
+        udata = _maybe_rollover(username, udata)
+    # Färsk rad — demote/rollover kan ha skrivit users.json sedan vår första läsning
+    fresh = load_users().get(username)
+    if isinstance(fresh, dict):
+        udata = fresh
+    return {
+        "turns_used": int(udata.get("turns_used", 0) or 0),
+        "turn_bonus": int(udata.get("turn_bonus", 0) or 0),
+        "reset_date": udata.get("reset_date"),
+        "subscription_status": udata.get("subscription_status", "free"),
+        "subscription_until": udata.get("subscription_until"),
+        "turns_available": _turns_available(username),
+    }
 
 # Atmosfär-subagent: snabb modell för ASCII-art
 ATMOSPHERE_MODEL = os.getenv("ATMOSPHERE_MODEL", "mimo-v2.5")
@@ -999,8 +1187,13 @@ DEFAULT_PLAYER_MODEL = "step-3.7-flash"
 PLAYER_MODELS = ("qwen3.8-max", "qwen3.6-flash", "deepseek-v4-flash", "deepseek-v4-flash-0731", "step-3.7-flash", "ollama:heretic")
 
 
-def _clamp_player_model(model_id: str) -> str:
-    """Icke-admin: tillåt bara PLAYER_MODELS, annars default."""
+def _clamp_player_model(model_id: str, tier: str | None = None) -> str:
+    """Icke-admin: tillåt bara PLAYER_MODELS, annars default.
+
+    FAS A: free-tier → ALLTID step-3.7-flash (oavsett vald modell).
+    Premium (eller tier=None, t.ex. interna anrop) → befintlig logik."""
+    if tier == "free":
+        return DEFAULT_PLAYER_MODEL
     return model_id if model_id in PLAYER_MODELS else DEFAULT_PLAYER_MODEL
 
 
@@ -1646,6 +1839,12 @@ async def register(req: RegisterRequest, response: Response):
             "created_at": _now_iso(),
             "last_login": _now_iso(),
             "turn_cap": DEFAULT_TURN_CAP,
+            # FAS A: periodbaserad turn-räkning (30 dagar från reset_date)
+            "turns_used": 0,
+            "turn_bonus": 0,
+            "reset_date": _today_str(),
+            "subscription_status": "free",
+            "subscription_until": None,
         }
         if email:
             users[username]["email"] = email
@@ -1655,6 +1854,43 @@ async def register(req: RegisterRequest, response: Response):
     _set_auth_cookie(response, token)
     logger.info("✨ New account: %s", username)
     return {"ok": True, "username": username, "role": "player", "created": True}
+
+
+class PasswordResetRequest(BaseModel):
+    username: str
+    password: str
+
+
+@app.post("/api/auth/reset-password")
+async def reset_password(req: PasswordResetRequest, response: Response):
+    """Återställ lösenord för ett befintligt konto (ingen e-post krävs).
+
+    Medvetet enkel: konton här är få och kända — den som vet användarnamnet
+    kan återställa lösenordet direkt (lämpligt för liten användarbas, ingen
+    identitetsverifiering). Sätter även en ny session-cookie så användaren
+    är inloggad direkt efter återställningen.
+    """
+    username = normalize_username(req.username)
+
+    err = validate_username(username)
+    if err:
+        raise HTTPException(400, err)
+    err = validate_password(req.password)
+    if err:
+        raise HTTPException(400, err)
+
+    with _USER_LOCK:
+        users = load_users()
+        if username not in users:
+            raise HTTPException(404, "No adventurer by that name. Check the spelling.")
+        users[username]["password_hash"] = hash_password(req.password)
+        users[username]["last_login"] = _now_iso()
+        save_users(users)
+
+    token = create_token(username, users[username].get("role", "player"))
+    _set_auth_cookie(response, token)
+    logger.info("🔑 Password reset: %s", username)
+    return {"ok": True, "username": username, "role": users[username].get("role", "player")}
 
 
 @app.post("/api/login")
@@ -1689,6 +1925,8 @@ async def me(morkrets_token: str | None = Cookie(None)):
     udata = load_users().get(username, {})
     if not isinstance(udata, dict):
         udata = {}
+    # FAS A: periodbaserad turn-info (turns_used nollställs vid reset_date)
+    free_info = _user_free_info(username)
     # Token-stats (alla kampanjer, alla roller — DM + Guardian + extraction)
     try:
         scan = _scan_user_transcripts(username)
@@ -1704,7 +1942,13 @@ async def me(morkrets_token: str | None = Cookie(None)):
         "created_at": udata.get("created_at"),
         "last_login": udata.get("last_login"),
         "turn_cap": int(udata.get("turn_cap", 0) or 0),
-        "turns_used": store.total_turns(username),
+        # FAS A: periodbaserad turn-räkning + tier
+        "turns_used": free_info["turns_used"],
+        "turn_bonus": free_info["turn_bonus"],
+        "reset_date": free_info["reset_date"],
+        "subscription_status": free_info["subscription_status"],
+        "subscription_until": free_info["subscription_until"],
+        "turns_available": free_info["turns_available"],
         "total_tokens": total_tokens,
         "total_campaigns": total_campaigns,
         # Utseende (tema + typsnitt) — persistas per konto så det följer med
@@ -1774,9 +2018,9 @@ class OracleRequest(BaseModel):
 async def oracle(req: OracleRequest, morkrets_token: str | None = Cookie(None)):
     """Ställ en regelfråga till Regeloraklet (LLM)."""
     payload = _get_current_user(morkrets_token)
-    # Icke-admin spelare begränsas till tillåtna modeller
+    # Icke-admin spelare begränsas till tillåtna modeller; free-tier → step-3.7-flash (FAS A)
     if payload.get("role") != "admin":
-        req.model_id = _clamp_player_model(req.model_id)
+        req.model_id = _clamp_player_model(req.model_id, tier=_tier_for(payload["sub"]))
     if not req.question.strip():
         raise HTTPException(400, "Ställ en fråga först")
     try:
@@ -4104,20 +4348,27 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
 
-    # Icke-admin spelare kan välja mellan PLAYER_MODELS (Qwen 3.8 / DeepSeek Flash)
+    # Icke-admin spelare kan välja mellan PLAYER_MODELS (Qwen 3.8 / DeepSeek Flash);
+    # free-tier klampas alltid till step-3.7-flash (FAS A).
     if payload.get("role") != "admin":
-        req.model_id = _clamp_player_model(req.model_id)
+        req.model_id = _clamp_player_model(req.model_id, tier=_tier_for(username))
 
-    # ── Turn-tak (admin-styrt, 0 = oändligt) ──
-    turn_cap = _turn_cap_for(username)
-    if turn_cap > 0:
-        turns_used = store.total_turns(username)
-        if turns_used >= turn_cap:
-            logger.info("⛔ Turn cap reached: %s (%d/%d)", username, turns_used, turn_cap)
-            raise HTTPException(
-                403,
-                "Turn limit reached. This adventure has ended — contact the administrator to raise your limit.",
-            )
+    # ── Turn-tak (FAS A: periodbaserad; premium = oändligt, 0 = oändligt) ──
+    # total_turns() används FORTFARANDE i admin-stats — men inte för cap.
+    turns_left = _turns_available(username)
+    if turns_left <= 0:
+        _udata = load_users().get(username, {})
+        _reset = _udata.get("reset_date") if isinstance(_udata, dict) else None
+        _reset = _reset or _today_str()
+        logger.info("⛔ Turn cap reached: %s", username)
+        raise HTTPException(
+            403,
+            detail={
+                "cap_reached": True,
+                "reset_date": _reset,
+                "message": f"Your free turns are spent. New turns on {_reset} — or upgrade for unlimited.",
+            },
+        )
 
     state = store.get(username)
     if not state:
@@ -4344,6 +4595,10 @@ async def _chat_locked(
     _dm_max_tokens = 4096 if _is_long_form else 1024
     if _is_long_form:
         logger.info("📖 Long-form request — max_tokens raised to %d", _dm_max_tokens)
+
+    # FAS A: förbruka en turn först när turen faktiskt skickas — alla 403-checks
+    # är passerade och LLM-anropet är nästa steg (/guardian returnerar tidigare).
+    _consume_turn(username)
 
     _log_activity(username, "🧙 DM weaving the tale…")
     try:
@@ -5010,9 +5265,9 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
 
-    # Icke-admin spelare begränsas till tillåtna modeller
+    # Icke-admin spelare begränsas till tillåtna modeller; free-tier → step-3.7-flash (FAS A)
     if payload.get("role") != "admin":
-        req.model_id = _clamp_player_model(req.model_id)
+        req.model_id = _clamp_player_model(req.model_id, tier=_tier_for(username))
 
     state = store.get(username)
     if not state:
@@ -5197,9 +5452,9 @@ async def generate_character_stream(req: CharacterRequest, morkrets_token: str |
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
 
-    # Icke-admin spelare begränsas till tillåtna modeller
+    # Icke-admin spelare begränsas till tillåtna modeller; free-tier → step-3.7-flash (FAS A)
     if payload.get("role") != "admin":
-        req.model_id = _clamp_player_model(req.model_id)
+        req.model_id = _clamp_player_model(req.model_id, tier=_tier_for(username))
 
     state = store.get(username)
     if not state:
@@ -5276,7 +5531,7 @@ async def vault_generate_stream(req: VaultGenRequest, morkrets_token: str | None
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
     if payload.get("role") != "admin":
-        req.model_id = _clamp_player_model(req.model_id)
+        req.model_id = _clamp_player_model(req.model_id, tier=_tier_for(username))
 
     lang = "sv" if (req.lang or "en").lower().startswith("sv") else "en"
     char_prompt = CHARACTER_PROMPT_EN if lang == "en" else CHARACTER_PROMPT_SV
@@ -5710,7 +5965,7 @@ async def update_guardian_model(req: dict, morkrets_token: str | None = Cookie(N
         model_id = str(req.get("guardian_model", "")).strip()
         if model_id:
             if payload.get("role") != "admin":
-                model_id = _clamp_player_model(model_id)
+                model_id = _clamp_player_model(model_id, tier=_tier_for(username))
             # Validera att modellen finns i registret
             try:
                 get_model(model_id)
@@ -5745,7 +6000,7 @@ async def update_extraction_model(req: dict, morkrets_token: str | None = Cookie
         model_id = str(req.get("extraction_model", "")).strip()
         if model_id:
             if payload.get("role") != "admin":
-                model_id = _clamp_player_model(model_id)
+                model_id = _clamp_player_model(model_id, tier=_tier_for(username))
             # Validera att modellen finns i registret
             try:
                 get_model(model_id)
@@ -5783,7 +6038,7 @@ async def update_dm_model(req: dict, morkrets_token: str | None = Cookie(None)):
         model_id = str(req.get("dm_model", "")).strip()
         if model_id:
             if payload.get("role") != "admin":
-                model_id = _clamp_player_model(model_id)
+                model_id = _clamp_player_model(model_id, tier=_tier_for(username))
             try:
                 get_model(model_id)
             except ValueError:
@@ -7072,6 +7327,91 @@ def _require_admin(payload: dict):
         raise HTTPException(403, "Admin-rättigheter krävs")
 
 
+# ═══════════════════════════════════════
+# FAS D — billing ledger + admin top-up
+# ═══════════════════════════════════════
+# Intäktsledger: rad per betalningshändelse
+#   {"ts", "user", "amount_sek", "type", "stripe_sub_id", "event_id"}
+# Skapas tom om den saknas. ALDRIG commit (backend/data committas inte).
+PREMIUM_PRICE_SEK = 49
+
+_LEDGER_FILE = Path(__file__).resolve().parent / "data" / "_billing_ledger.json"
+_LEDGER_LOCK = threading.Lock()
+
+
+def _ledger_load() -> list:
+    """Läs hela ledgern (lista av dicts). Skapar filen tom om den saknas.
+
+    Tar INTE _LEDGER_LOCK (kallas även inifrån _ledger_append som redan
+    håller låset — threading.Lock är inte reentrant). Skapandet är
+    idempotent ("[]"), så en eventuell race är ofarlig."""
+    try:
+        if not _LEDGER_FILE.exists():
+            _LEDGER_FILE.parent.mkdir(parents=True, exist_ok=True)
+            _LEDGER_FILE.write_text("[]", encoding="utf-8")
+            return []
+        with open(_LEDGER_FILE, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, list) else []
+    except (OSError, json.JSONDecodeError):
+        return []
+
+
+def _ledger_append(entry: dict) -> dict:
+    """Lägg till en betalningshändelse och spara ledgern atomiskt.
+
+    entry förväntas ha ts/user/amount_sek/type/stripe_sub_id/event_id —
+    saknade nycklar backfillas med None så rader alltid har samma form."""
+    row = {
+        "ts": entry.get("ts") or _now_iso(),
+        "user": entry.get("user"),
+        "amount_sek": int(entry.get("amount_sek") or 0),
+        "type": entry.get("type"),
+        "stripe_sub_id": entry.get("stripe_sub_id"),
+        "event_id": entry.get("event_id"),
+    }
+    with _LEDGER_LOCK:
+        ledger = _ledger_load()
+        ledger.append(row)
+        tmp = _LEDGER_FILE.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(ledger, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.replace(_LEDGER_FILE)
+    return row
+
+
+def _ledger_per_user() -> dict:
+    """Summera amount_sek per användare → {username: sek}."""
+    per_user: dict = {}
+    for row in _ledger_load():
+        user = row.get("user")
+        if not user:
+            continue
+        per_user[user] = per_user.get(user, 0) + int(row.get("amount_sek") or 0)
+    return per_user
+
+
+def _ledger_totals() -> dict:
+    """Aggregerad intäktsstatistik → {mrr, transactions, total}.
+
+    MRR = PREMIUM_PRICE_SEK × antal användare med AKTIV premium
+    (subscription_status=premium och subscription_until ej passerad)."""
+    ledger = _ledger_load()
+    premium_users = 0
+    for username, udata in load_users().items():
+        if not isinstance(udata, dict):
+            continue
+        try:
+            if _tier_for(username) == "premium":
+                premium_users += 1
+        except Exception:
+            continue
+    return {
+        "mrr": PREMIUM_PRICE_SEK * premium_users,
+        "transactions": len(ledger),
+        "total": sum(int(r.get("amount_sek") or 0) for r in ledger),
+    }
+
+
 def _scan_user_transcripts(user: str) -> dict:
     """Skanna alla transkript för en användare och returnera token- och tursstatistik."""
     prompt_tokens = 0
@@ -7286,6 +7626,9 @@ async def admin_stats(morkrets_token: str | None = Cookie(None)):
     # Batch-uppslag av IP → land för alla användare (cachat i iplog.py)
     geo = await iplog.geo_for_users(users)
 
+    # FAS D: intäkter per användare (från billing-ledgern)
+    ledger_per_user = _ledger_per_user()
+
     for username, udata in users.items():
         role = udata.get("role", "player") if isinstance(udata, dict) else "player"
         store = CampaignStore()
@@ -7296,6 +7639,10 @@ async def admin_stats(morkrets_token: str | None = Cookie(None)):
         total_turns += scan["turns"]
         meta = _account_meta(username, udata, campaigns)
         g = geo.get(username, {})
+        # FAS D: färsk rad efter ev. premium-demote (skrivs av _tier_for)
+        tier = _tier_for(username)
+        fresh = load_users().get(username)
+        fresh = fresh if isinstance(fresh, dict) else {}
         tts = scan.get("tts_usage", {})
         tts_sec = tts.get("seconds", 0) or 0
         user_stats.append({
@@ -7312,6 +7659,12 @@ async def admin_stats(morkrets_token: str | None = Cookie(None)):
             "last_login": meta["last_login"],
             "turn_cap": meta["turn_cap"],
             "turns_used": meta["turns_used"],
+            # FAS D: medlemskap + intäkter (period-räkning från users.json)
+            "subscription_status": tier,
+            "subscription_until": fresh.get("subscription_until"),
+            "turn_bonus": int(fresh.get("turn_bonus", 0) or 0),
+            "period_turns_used": int(fresh.get("turns_used", 0) or 0),
+            "revenue": ledger_per_user.get(username, 0),
             "ip": g.get("ip", ""),
             "country": g.get("country", ""),
             "country_code": g.get("countryCode", ""),
@@ -7435,6 +7788,10 @@ async def admin_user_detail(username: str, morkrets_token: str | None = Cookie(N
     meta = _account_meta(username, users[username], campaigns)
     geo = await iplog.geo_for_users({username: users[username]})
     g = geo.get(username, {})
+    # FAS D: medlemskap + intäkter (färsk rad efter ev. premium-demote)
+    tier = _tier_for(username)
+    fresh = load_users().get(username)
+    fresh = fresh if isinstance(fresh, dict) else {}
     return {
         "username": username,
         "role": users[username].get("role", "player") if isinstance(users[username], dict) else "player",
@@ -7448,6 +7805,12 @@ async def admin_user_detail(username: str, morkrets_token: str | None = Cookie(N
         "last_login": meta["last_login"],
         "turn_cap": meta["turn_cap"],
         "turns_used": meta["turns_used"],
+        # FAS D: medlemskap + intäkter (period-räkning från users.json)
+        "subscription_status": tier,
+        "subscription_until": fresh.get("subscription_until"),
+        "turn_bonus": int(fresh.get("turn_bonus", 0) or 0),
+        "period_turns_used": int(fresh.get("turns_used", 0) or 0),
+        "revenue": _ledger_per_user().get(username, 0),
         "ip": g.get("ip", ""),
         "country": g.get("country", ""),
         "country_code": g.get("countryCode", ""),
@@ -7488,6 +7851,15 @@ class AdminTurnCap(BaseModel):
     turn_cap: int
 
 
+class AdminTurnBonus(BaseModel):
+    bonus: int
+
+
+class AdminSubscription(BaseModel):
+    status: str
+    until: str | None = None
+
+
 @app.post("/api/admin/user")
 async def admin_create_user(req: AdminCreateUser, morkrets_token: str | None = Cookie(None)):
     """Admin-only: skapa ett nytt spelarkonto. Samma validering som självregistrering."""
@@ -7513,6 +7885,12 @@ async def admin_create_user(req: AdminCreateUser, morkrets_token: str | None = C
             "created_at": _now_iso(),
             "last_login": None,
             "turn_cap": DEFAULT_TURN_CAP,
+            # FAS A: periodbaserad turn-räkning (30 dagar från reset_date)
+            "turns_used": 0,
+            "turn_bonus": 0,
+            "reset_date": _today_str(),
+            "subscription_status": "free",
+            "subscription_until": None,
         }
         save_users(users)
     return {"ok": True, "username": username, "role": users[username]["role"]}
@@ -7539,6 +7917,114 @@ async def admin_set_turn_cap(username: str, req: AdminTurnCap, morkrets_token: s
 
     logger.info("🎚️ Turn cap set: %s → %d", username, req.turn_cap)
     return {"ok": True, "username": username, "turn_cap": req.turn_cap}
+
+
+@app.get("/api/admin/billing")
+async def admin_billing(morkrets_token: str | None = Cookie(None)):
+    """Admin-only: intäktsöversikt — MRR, transaktioner, total per användare
+    och de senaste 50 ledger-raderna."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+
+    totals = _ledger_totals()
+    per_user = _ledger_per_user()
+    ledger = _ledger_load()[-50:]  # senaste 50 raderna (filordning)
+    return {
+        "mrr": totals["mrr"],
+        "transactions": totals["transactions"],
+        "total": totals["total"],
+        "per_user": per_user,
+        "ledger": ledger,
+    }
+
+
+@app.put("/api/admin/user/{username}/turn-topup")
+async def admin_turn_topup(username: str, req: AdminTurnBonus, morkrets_token: str | None = Cookie(None)):
+    """Admin-only: lägg turn_bonus på ett konto (förbrukas före cap-turns)."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+
+    if not isinstance(req.bonus, int) or req.bonus <= 0:
+        raise HTTPException(400, "Bonus must be a positive integer")
+
+    with _USER_LOCK:
+        users = load_users()
+        if username not in users:
+            raise HTTPException(404, f"Användare '{username}' finns inte")
+        udata = users[username]
+        if not isinstance(udata, dict):
+            raise HTTPException(500, "Kontodata är korrupt")
+        udata.setdefault("turn_bonus", 0)
+        udata["turn_bonus"] = int(udata.get("turn_bonus", 0) or 0) + req.bonus
+        save_users(users)
+
+    logger.info("➕ Turn top-up: %s +%d bonus (total %d)", username, req.bonus, udata["turn_bonus"])
+    return {"ok": True, "username": username, "turn_bonus": udata["turn_bonus"]}
+
+
+@app.put("/api/admin/user/{username}/turn-reset")
+async def admin_turn_reset(username: str, morkrets_token: str | None = Cookie(None)):
+    """Admin-only: nollställ turns_used för aktuell period (bonus behålls)."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+
+    with _USER_LOCK:
+        users = load_users()
+        if username not in users:
+            raise HTTPException(404, f"Användare '{username}' finns inte")
+        udata = users[username]
+        if not isinstance(udata, dict):
+            raise HTTPException(500, "Kontodata är korrupt")
+        udata.setdefault("turns_used", 0)
+        udata["turns_used"] = 0
+        save_users(users)
+
+    logger.info("🔄 Turn reset: %s → turns_used=0", username)
+    return {"ok": True, "username": username, "turns_used": 0}
+
+
+@app.put("/api/admin/user/{username}/subscription")
+async def admin_set_subscription(username: str, req: AdminSubscription, morkrets_token: str | None = Cookie(None)):
+    """Admin-only: sätt medlemskap.
+
+    premium → turn_cap sätts till 0 (oändliga turns); free → DEFAULT_TURN_CAP
+    om cap:et var 0. `until` = sista giltiga dag (YYYY-MM-DD) eller null."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+
+    status = (req.status or "").strip().lower()
+    if status not in ("free", "premium"):
+        raise HTTPException(400, "Status must be 'free' or 'premium'")
+    until = req.until
+    if until is not None:
+        try:
+            datetime.fromisoformat(str(until)).date()
+        except ValueError:
+            raise HTTPException(400, "until must be YYYY-MM-DD or null")
+
+    with _USER_LOCK:
+        users = load_users()
+        if username not in users:
+            raise HTTPException(404, f"Användare '{username}' finns inte")
+        udata = users[username]
+        if not isinstance(udata, dict):
+            raise HTTPException(500, "Kontodata är korrupt")
+        udata["subscription_status"] = status
+        udata["subscription_until"] = until
+        if status == "premium":
+            udata["turn_cap"] = 0
+        elif int(udata.get("turn_cap", 0) or 0) == 0:
+            udata["turn_cap"] = DEFAULT_TURN_CAP
+        save_users(users)
+
+    logger.info("👑 Subscription set: %s → %s (until %s)", username, status, until)
+    return {
+        "ok": True,
+        "username": username,
+        "subscription_status": status,
+        "subscription_until": until,
+        "turn_cap": udata["turn_cap"],
+    }
 
 
 @app.delete("/api/admin/user/{username}")

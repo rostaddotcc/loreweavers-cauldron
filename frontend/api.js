@@ -159,6 +159,11 @@ const API = (() => {
       return req('/api/register', { method: 'POST', body: JSON.stringify({ username, password, email: email || null }) });
     },
 
+    async resetPassword(username, password) {
+      if (MOCK) throw new Error('Password reset is only available on the live server');
+      return req('/api/auth/reset-password', { method: 'POST', body: JSON.stringify({ username, password }) });
+    },
+
     async setTurnCap(username, turnCap) {
       if (MOCK) return { ok: true };
       return req('/api/admin/user/' + encodeURIComponent(username) + '/turn-cap', {

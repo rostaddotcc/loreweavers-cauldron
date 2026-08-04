@@ -456,6 +456,7 @@
             </div>
             <button type="submit" class="gate-btn" id="auth-btn">What will the Cauldron Foretell?</button>
             <div class="gate-toggle" id="gate-toggle">New here? <b>Forge your name</b></div>
+            <div class="gate-toggle" id="gate-reset" style="font-size:.75rem">Lost your word? <b>Re-forge it</b></div>
             <div class="gate-error" id="gate-error"></div>
           </form>
           <div class="gate-foot">Powered by Qwen &amp; StepFun &middot; self-registration, no email required</div>
@@ -531,7 +532,7 @@ document.querySelectorAll('.rv:not(.in)').forEach(el => io.observe(el));
 })();
 
 /* ═══════════════ AUTH — same flow as before (JWT httpOnly cookie) ═══════════════ */
-let authMode = 'login'; // 'login' | 'register'
+let authMode = 'login'; // 'login' | 'register' | 'reset'
 
 function sfx(name) { try { if (typeof SFX !== 'undefined') SFX[name](); } catch (_) {} }
 
@@ -539,31 +540,43 @@ function setAuthBusy(busy) {
   const btn = document.getElementById('auth-btn');
   btn.disabled = busy;
   btn.textContent = busy
-    ? (authMode === 'register' ? 'Forging your name\u2026' : 'The Cauldron is stirring\u2026')
-    : (authMode === 'register' ? 'Forge Your Name' : 'What will the Cauldron Foretell?');
+    ? (authMode === 'register' ? 'Forging your name\u2026' : authMode === 'reset' ? 'Re-forging your word\u2026' : 'The Cauldron is stirring\u2026')
+    : (authMode === 'register' ? 'Forge Your Name' : authMode === 'reset' ? 'Re-forge My Word' : 'What will the Cauldron Foretell?');
 }
 
 function applyAuthMode() {
   const isReg = authMode === 'register';
-  document.getElementById('confirm-field').style.display = isReg ? '' : 'none';
-  document.getElementById('confirm').required = isReg;
+  const isReset = authMode === 'reset';
+  document.getElementById('confirm-field').style.display = (isReg || isReset) ? '' : 'none';
+  document.getElementById('confirm').required = isReg || isReset;
   document.getElementById('email-field').style.display = isReg ? '' : 'none';
   document.getElementById('lbl-username').textContent = isReg ? 'New Adventurer' : 'Adventurer';
-  document.getElementById('lbl-password').textContent = isReg ? 'Create a Password' : 'Password';
-  document.getElementById('password').autocomplete = isReg ? 'new-password' : 'current-password';
-  document.getElementById('auth-btn').textContent = isReg ? 'Forge Your Name' : 'What will the Cauldron Foretell?';
-  document.getElementById('gate-title').textContent = isReg ? 'Forge Your Name' : 'Return to the Cauldron';
+  document.getElementById('lbl-password').textContent = isReg ? 'Create a Password' : (isReset ? 'New Password' : 'Password');
+  document.getElementById('password').autocomplete = (isReg || isReset) ? 'new-password' : 'current-password';
+  document.getElementById('auth-btn').textContent = isReg ? 'Forge Your Name' : (isReset ? 'Re-forge My Word' : 'What will the Cauldron Foretell?');
+  document.getElementById('gate-title').textContent = isReg ? 'Forge Your Name' : (isReset ? 'Re-forge Your Word' : 'Return to the Cauldron');
   document.getElementById('gate-sub').textContent = isReg
     ? 'The Cauldron has been waiting for someone like you.'
-    : 'The fire has been kept burning.';
+    : (isReset
+      ? 'Speak your name and a new secret word — the pot remembers the rest.'
+      : 'The fire has been kept burning.');
   document.getElementById('gate-toggle').innerHTML = isReg
     ? 'Already sworn in? <b>Return to the cauldron</b>'
-    : 'New here? <b>Forge your name</b>';
+    : (isReset
+      ? 'Remembered it after all? <b>Return to the cauldron</b>'
+      : 'New here? <b>Forge your name</b>');
+  document.getElementById('gate-reset').style.display = (authMode === 'login') ? '' : 'none';
   document.getElementById('gate-error').textContent = '';
 }
 
 document.getElementById('gate-toggle').addEventListener('click', () => {
   authMode = authMode === 'login' ? 'register' : 'login';
+  applyAuthMode();
+  sfx('click');
+});
+
+document.getElementById('gate-reset').addEventListener('click', () => {
+  authMode = 'reset';
   applyAuthMode();
   sfx('click');
 });
@@ -600,6 +613,11 @@ document.getElementById('auth-form').addEventListener('submit', async (e) => {
       const email = document.getElementById('email').value.trim();
       const res = await API.register(user, pass, email);
       authSuccess(res.username);
+    } else if (authMode === 'reset') {
+      const confirm = document.getElementById('confirm').value;
+      if (pass !== confirm) { showAuthError('The new words do not match.'); return; }
+      const res = await API.resetPassword(user, pass);
+      authSuccess(res.username);
     } else {
       const res = await API.login(user, pass);
       authSuccess(res.username);
@@ -607,7 +625,9 @@ document.getElementById('auth-form').addEventListener('submit', async (e) => {
   } catch (err) {
     showAuthError(authMode === 'register'
       ? (err && err.message && !/HTTP/.test(err.message) ? err.message : 'The Cauldron would not accept that name.')
-      : 'The Cauldron remains sealed. Wrong name or password.');
+      : authMode === 'reset'
+        ? (err && err.message && !/HTTP/.test(err.message) ? err.message : 'The Cauldron could not re-forge that name.')
+        : 'The Cauldron remains sealed. Wrong name or password.');
   }
 });
 

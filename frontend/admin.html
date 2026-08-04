@@ -67,7 +67,7 @@
 
   /* ── Stat cards ── */
   .stats-grid {
-    display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 1.2rem;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.2rem;
   }
   .stat-card {
     background: var(--stone); border: 1px solid var(--edge); padding: 1.2rem 1rem;
@@ -255,6 +255,45 @@
   }
   .cap-btn:hover { color: var(--gold-bright); border-color: var(--gold); }
   .cap-hint { font-size: .55rem; color: var(--bone-dim); margin-left: .3rem; }
+
+  /* ── FAS D: membership + billing ── */
+  .membership-badge {
+    display: inline-block; font-size: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 2px 7px; font-weight: 700; font-family: 'Cinzel', serif; white-space: nowrap;
+  }
+  .membership-badge.m-premium {
+    background: linear-gradient(135deg, rgba(212,169,44,0.22), rgba(240,214,117,0.08));
+    border: 1px solid var(--gold); color: var(--gold-bright);
+    box-shadow: 0 0 10px rgba(212,169,44,0.35);
+  }
+  .membership-badge.m-free { background: transparent; border: 1px solid var(--edge); color: var(--bone-dim); }
+  /* Premium-rad → guldglow */
+  .player-table tr.premium-row { box-shadow: 0 0 14px rgba(212,169,44,0.22); }
+  .player-table tr.premium-row td { background: linear-gradient(90deg, rgba(212,169,44,0.12), rgba(212,169,44,0.02) 55%, transparent); }
+  .player-table tr.premium-row td:first-child { border-left: 3px solid var(--gold); }
+  .rev-num { color: var(--gold-bright); font-family: monospace; white-space: nowrap; }
+  /* Mini progress-bar för period-turns */
+  .cap-progress { display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.3rem; }
+  .cap-track { width: 88px; height: 7px; background: var(--ink); border: 1px solid var(--edge); flex: 0 0 auto; }
+  .cap-fill { height: 100%; background: var(--term-green); box-shadow: 0 0 5px rgba(51,204,51,0.5); transition: width .2s; }
+  .cap-fill.warn { background: var(--term-amber); box-shadow: 0 0 5px rgba(204,170,51,0.5); }
+  .cap-fill.danger { background: var(--blood-bright); box-shadow: 0 0 6px rgba(224,72,90,0.7); }
+  .cap-fill.premium { background: var(--gold); box-shadow: 0 0 6px rgba(212,169,44,0.6); }
+  .cap-used { font-family: monospace; font-size: 0.66rem; color: var(--bone); white-space: nowrap; }
+  /* Billing controls (detaljvy + mobil) */
+  .billing-controls {
+    display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;
+    padding: 0.7rem 0 0.9rem; margin-bottom: 0.9rem;
+    border-bottom: 1px solid rgba(42,42,58,.4);
+  }
+  .billing-controls .bc-label { font-size: 0.62rem; color: var(--bone-dim); }
+  .bc-btn {
+    background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
+    padding: .32rem .6rem; font-size: .62rem; cursor: pointer; letter-spacing: .05em; font-family: inherit;
+  }
+  .bc-btn:hover { color: var(--gold-bright); border-color: var(--gold); }
+  .bc-btn.danger:hover { color: var(--blood-bright); border-color: var(--blood-bright); }
+  .bc-btn.gold { background: rgba(212,169,44,0.14); border-color: var(--gold); color: var(--gold-bright); }
 
   /* ── Expanded campaign detail ── */
   .campaign-detail { display: none; }
@@ -452,6 +491,61 @@ async function setCap(username, idx) {
   } catch(e) { toast('Error: ' + e.message); }
 }
 
+// ── FAS D: billing controls ──
+function fmtSek(n) { return (n || 0) + ' kr'; }
+
+async function topUp(username) {
+  const input = document.getElementById('topup-' + username);
+  if (!input) { toast('Top-up field not found'); return; }
+  const bonus = parseInt(input.value, 10);
+  if (isNaN(bonus) || bonus <= 0) { toast('Bonus must be a positive number'); return; }
+  try {
+    const res = await fetch('/api/admin/user/' + encodeURIComponent(username) + '/turn-topup', {
+      method: 'PUT', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ bonus })
+    });
+    const data = await res.json();
+    if (!res.ok) { toast(data.detail || 'Could not top up'); return; }
+    toast('✓ Top-up: +' + bonus + ' bonus for ' + username);
+    if (typeof loadedUsers !== 'undefined') loadedUsers[username] = null; // refresh cached detail
+    loadStats();
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+async function resetTurns(username) {
+  if (!confirm(`Reset "${username}" turns_used to 0 for this period? (bonus is kept)`)) return;
+  try {
+    const res = await fetch('/api/admin/user/' + encodeURIComponent(username) + '/turn-reset', {
+      method: 'PUT', credentials: 'include'
+    });
+    const data = await res.json();
+    if (!res.ok) { toast(data.detail || 'Could not reset turns'); return; }
+    toast('🔄 Turns reset for ' + username);
+    if (typeof loadedUsers !== 'undefined') loadedUsers[username] = null; // refresh cached detail
+    loadStats();
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+async function togglePremium(username, currentlyPremium) {
+  const status = currentlyPremium ? 'free' : 'premium';
+  const until = status === 'premium' ? new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10) : null;
+  try {
+    const res = await fetch('/api/admin/user/' + encodeURIComponent(username) + '/subscription', {
+      method: 'PUT', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ status, until })
+    });
+    const data = await res.json();
+    if (!res.ok) { toast(data.detail || 'Could not change subscription'); return; }
+    toast(status === 'premium'
+      ? '👑 Premium granted to ' + username + ' (until ' + until + ')'
+      : '⭱ ' + username + ' is now Free');
+    if (typeof loadedUsers !== 'undefined') loadedUsers[username] = null; // refresh cached detail
+    loadStats();
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
 // ═══════════════════════════════════════
 // LOAD STATS
 // ═══════════════════════════════════════
@@ -490,6 +584,7 @@ async function deleteUser(username) {
 
 // ── Tabellsortering (admin-vyn) ──
 let statsData = null;
+let billingData = null; // FAS D: GET /api/admin/billing → {mrr, transactions, total, per_user, ledger}
 let sortKey = 'tokens';
 let sortDir = 'desc';
 
@@ -509,6 +604,8 @@ function _sortVal(u) {
     case 'created': { const t = Date.parse(u.created_at); return isNaN(t) ? 0 : t; }
     case 'last_login': { const t = Date.parse(u.last_login); return isNaN(t) ? 0 : t; }
     case 'turn_cap': return (u.turn_cap === undefined || u.turn_cap === null) ? 0 : u.turn_cap;
+    case 'subscription_status': return (u.subscription_status || 'free');
+    case 'revenue': return u.revenue || 0;
   }
   return 0;
 }
@@ -557,15 +654,19 @@ async function loadStats() {
   content.innerHTML = '<div class="loading">Loading statistics</div>';
 
   try {
-    const res = await fetch('/api/admin/stats', { credentials: 'include' });
-    if (res.status === 401) { location.href = 'login.html'; return; }
-    if (res.status === 403) {
+    const [res, billingRes] = await Promise.all([
+      fetch('/api/admin/stats', { credentials: 'include' }),
+      fetch('/api/admin/billing', { credentials: 'include' })
+    ]);
+    if (res.status === 401 || billingRes.status === 401) { location.href = 'login.html'; return; }
+    if (res.status === 403 || billingRes.status === 403) {
       content.innerHTML = '<div class="error-state"><h2>⛔ You do not have admin privileges.</h2><p><a href="chat.html">⚔ To the Table</a></p></div>';
       return;
     }
     if (!res.ok) throw new Error('API error: ' + res.status);
     const data = await res.json();
     statsData = data;
+    billingData = billingRes.ok ? await billingRes.json() : null;
     renderStats(data);
   } catch (e) {
     content.innerHTML = '<div class="error-state"><h2>⚠ Could not fetch statistics</h2><p>' + e.message + '</p></div>';
@@ -611,7 +712,7 @@ function renderStats(data) {
 
   // Desktop table
   html += '<div class="table-wrap"><table class="player-table"><thead><tr>';
-  html += thSort('User', 'username') + thSort('Role', 'role') + thSort('Email', 'email') + thSort('Country', 'country') + thSort('Campaigns', 'campaigns') + thSort('Tokens', 'tokens') + thSort('Turns', 'turns') + thSort('🔊 TTS', 'tts_seconds') + thSort('🎭 Char', 'char_creation_tokens') + thSort('🖼️ Img', 'image_gen_calls') + thSort('Last Active', 'last_active') + thSort('Created', 'created') + thSort('Last Login', 'last_login') + thSort('Turn Cap', 'turn_cap') + '<th></th>';
+  html += thSort('User', 'username') + thSort('Role', 'role') + thSort('Email', 'email') + thSort('Country', 'country') + thSort('Campaigns', 'campaigns') + thSort('Tokens', 'tokens') + thSort('Turns', 'turns') + thSort('🔊 TTS', 'tts_seconds') + thSort('🎭 Char', 'char_creation_tokens') + thSort('🖼️ Img', 'image_gen_calls') + thSort('Last Active', 'last_active') + thSort('Created', 'created') + thSort('Last Login', 'last_login') + thSort('Turn Cap', 'turn_cap') + thSort('💳 Medlemskap', 'subscription_status') + thSort('💰 Rev', 'revenue') + '<th></th>';
   html += '</tr></thead><tbody id="players-tbody"></tbody></table></div>';
 
   // Mobile cards
@@ -863,13 +964,20 @@ function renderFiltered(filtered, totalCount) {
     turnsNum = sumUsers(filtered, 'total_turns');
   }
   const ttsMin = Math.round(sumUsers(filtered, 'tts_minutes') * 10) / 10;
+  // FAS D: intäktskort — alltid globala (från GET /api/admin/billing)
+  const mrr = billingData ? (billingData.mrr || 0) : 0;
+  const txs = billingData ? (billingData.transactions || 0) : 0;
+  const rev = billingData ? (billingData.total || 0) : 0;
   const cards = document.getElementById('stat-cards');
   if (cards) cards.innerHTML = `
     <div class="stat-card"><div class="stat-num">${usersNum}</div><div class="stat-label">Users</div></div>
     <div class="stat-card"><div class="stat-num">${campaignsNum}</div><div class="stat-label">Campaigns</div></div>
     <div class="stat-card"><div class="stat-num">${fmtTokens(tokensNum)}</div><div class="stat-label">Tokens</div></div>
     <div class="stat-card"><div class="stat-num">${turnsNum}</div><div class="stat-label">Turns</div></div>
-    <div class="stat-card"><div class="stat-num">${ttsMin}</div><div class="stat-label">TTS Minutes</div></div>`;
+    <div class="stat-card"><div class="stat-num">${ttsMin}</div><div class="stat-label">TTS Minutes</div></div>
+    <div class="stat-card"><div class="stat-num">${fmtSek(mrr)}</div><div class="stat-label">💰 MRR</div></div>
+    <div class="stat-card"><div class="stat-num">${txs}</div><div class="stat-label">🧾 Transactions</div></div>
+    <div class="stat-card"><div class="stat-num">${fmtSek(rev)}</div><div class="stat-label">💰 Total Revenue</div></div>`;
 
   // Charts reflect the filtered subset
   renderCharts(filtered);
@@ -895,7 +1003,28 @@ function tableRows(users) {
     const flag = u.country_flag || '❓';
     const country = u.country || 'Unknown';
     const flagTitle = country + (u.ip ? ' · ' + u.ip : '');
-    html += `<tr class="player-row" id="row-${i}" onclick="toggleDetail(${i}, '${u.username}')">`;
+    // FAS D: medlemskap + intäkter
+    const tier = u.subscription_status || 'free';
+    const isPremium = tier === 'premium';
+    const memBadge = isPremium
+      ? '<span class="membership-badge m-premium">👑 Premium</span>'
+      : '<span class="membership-badge m-free">Free</span>';
+    const bonus = u.turn_bonus || 0;
+    const used = u.period_turns_used || 0;
+    // Mini progress-bar: cap (used X) — röd när perioden är slut
+    let capFrag;
+    if (isPremium) {
+      capFrag = '<div class="cap-progress"><span class="cap-used" title="Unlimited turns (premium)">∞ Premium</span></div>';
+    } else if (capVal === 0) {
+      capFrag = '<div class="cap-progress"><span class="cap-used" title="Unlimited turns">∞ Unlimited</span></div>';
+    } else {
+      const total = capVal + bonus;
+      const pct = Math.min(100, Math.round(used / total * 100));
+      const cls = used >= total ? 'danger' : (used >= total * 0.8 ? 'warn' : '');
+      const hint = capVal + (bonus ? ' cap + ' + bonus + ' bonus' : ' cap') + ' · ' + used + ' used this period';
+      capFrag = `<div class="cap-progress"><div class="cap-track"><div class="cap-fill ${cls}" style="width:${pct}%"></div></div><span class="cap-used" title="${esc(hint)}">${capVal}${bonus ? '+' + bonus : ''} (${used})</span></div>`;
+    }
+    html += `<tr class="player-row${isPremium ? ' premium-row' : ''}" id="row-${i}" onclick="toggleDetail(${i}, '${u.username}')">`;
     html += `<td>${esc(u.username)}</td>`;
     html += `<td>${badge}</td>`;
     html += `<td class="email-cell">${u.email ? `<a href="mailto:${u.email}" onclick="event.stopPropagation()">${esc(u.email)}</a>` : '<span style="opacity:.35">—</span>'}</td>`;
@@ -909,12 +1038,14 @@ function tableRows(users) {
     html += `<td class="last-active">${relTime(u.last_active)}</td>`;
     html += `<td class="last-active">${relTime(u.created_at)}</td>`;
     html += `<td class="last-active">${relTime(u.last_login)}</td>`;
-    html += `<td class="cap-cell"><input type="number" min="0" step="1" value="${capVal}" id="cap-${i}" class="cap-input"><button onclick="event.stopPropagation();setCap('${u.username}', ${i})" class="cap-btn">Set</button><span class="cap-hint">0 = ∞</span></td>`;
+    html += `<td class="cap-cell">${capFrag}<input type="number" min="0" step="1" value="${capVal}" id="cap-${i}" class="cap-input"><button onclick="event.stopPropagation();setCap('${u.username}', ${i})" class="cap-btn">Set</button><span class="cap-hint">0 = ∞</span></td>`;
+    html += `<td>${memBadge}</td>`;
+    html += `<td class="rev-num">${u.revenue ? fmtSek(u.revenue) : '—'}</td>`;
     html += `<td><button onclick="event.stopPropagation();deleteUser('${u.username}')" class="del-btn">✕ Delete</button></td>`;
     html += '</tr>';
-    html += `<tr class="campaign-detail" id="detail-${i}"><td colspan="15"><div class="campaign-inner" id="inner-${i}"></div></td></tr>`;
+    html += `<tr class="campaign-detail" id="detail-${i}"><td colspan="17"><div class="campaign-inner" id="inner-${i}"></div></td></tr>`;
   });
-  if (!users.length) html = '<tr><td colspan="15" class="no-rows">No players match the current filters</td></tr>';
+  if (!users.length) html = '<tr><td colspan="17" class="no-rows">No players match the current filters</td></tr>';
   return html;
 }
 
@@ -924,17 +1055,30 @@ function mobRows(users) {
     const isAdmin = (u.role || 'player') === 'admin';
     const badge = `<span class="role-badge ${isAdmin ? 'role-admin' : 'role-player'}" style="margin-left:.35rem">${isAdmin ? 'Admin' : 'Player'}</span>`;
     const capVal = (u.turn_cap === undefined || u.turn_cap === null) ? 0 : u.turn_cap;
-    html += `<div class="m-card" onclick="toggleDetail(${i}, '${u.username}')">`;
-    html += `<div class="mc-head"><span class="mc-user">${u.country_flag || '❓'} ${esc(u.username)}${badge}</span><span class="mc-tokens">${fmtTokens(u.total_tokens)} tkn</span></div>`;
+    // FAS D: medlemskap + intäkter
+    const tier = u.subscription_status || 'free';
+    const isPremium = tier === 'premium';
+    const memBadge = isPremium
+      ? '<span class="membership-badge m-premium">👑 Premium</span>'
+      : '<span class="membership-badge m-free">Free</span>';
+    html += `<div class="m-card${isPremium ? ' premium-row' : ''}" onclick="toggleDetail(${i}, '${u.username}')">`;
+    html += `<div class="mc-head"><span class="mc-user">${u.country_flag || '❓'} ${esc(u.username)}${badge}${memBadge}</span><span class="mc-tokens">${fmtTokens(u.total_tokens)} tkn</span></div>`;
     if (u.email) html += `<div class="mc-meta"><span style="opacity:.7">✉ ${esc(u.email)}</span></div>`;
     html += `<div class="mc-meta"><span>${u.total_campaigns} campaigns</span><span>${u.total_turns} turns</span><span>${relTime(u.last_active)}</span></div>`;
     html += `<div class="mc-meta"><span>🔊 TTS: ${fmtTTS(u)}</span><span>${fmtTokens(u.tts_tokens || 0)} tkn</span><span>${u.tts_calls || 0} renders</span></div>`;
     html += `<div class="mc-meta"><span>🎭 Char: ${u.char_creation_tokens ? fmtTokens(u.char_creation_tokens) : '—'} tkn</span><span>🖼️ Img: ${u.image_gen_calls || 0}</span></div>`;
     html += `<div class="mc-meta"><span>Created ${relTime(u.created_at)}</span><span>Login ${relTime(u.last_login)}</span></div>`;
-    html += `<div class="mc-cap" style="display:flex;gap:.4rem;align-items:center;margin-top:.5rem">`;
+    html += `<div class="mc-meta"><span>💳 ${isPremium ? 'Premium' : 'Free'}</span><span>💰 Rev: ${u.revenue ? fmtSek(u.revenue) : '—'}</span><span>🎚️ Cap: ${capVal === 0 ? '∞' : capVal} (used ${u.period_turns_used || 0}${u.turn_bonus ? ' +' + u.turn_bonus + ' bonus' : ''})</span></div>`;
+    html += `<div class="mc-cap" style="display:flex;gap:.4rem;align-items:center;margin-top:.5rem;flex-wrap:wrap">`;
     html += `<input type="number" min="0" step="1" value="${capVal}" id="cap-${i}" class="cap-input">`;
     html += `<button onclick="event.stopPropagation();setCap('${u.username}', ${i})" class="cap-btn">Set cap</button>`;
     html += `<span class="cap-hint">0 = unlimited</span></div>`;
+    html += `<div class="mc-billing" style="display:flex;gap:.4rem;align-items:center;margin-top:.4rem;flex-wrap:wrap">`;
+    html += `<input type="number" min="1" step="1" value="10" id="topup-${u.username}" class="cap-input" style="width:60px">`;
+    html += `<button onclick="event.stopPropagation();topUp('${u.username}')" class="bc-btn">➕ Top up</button>`;
+    html += `<button onclick="event.stopPropagation();resetTurns('${u.username}')" class="bc-btn">🔄 Reset</button>`;
+    html += `<button onclick="event.stopPropagation();togglePremium('${u.username}', ${isPremium})" class="bc-btn${isPremium ? '' : ' gold'}">${isPremium ? '⭱ Free' : '👑 Premium'}</button>`;
+    html += '</div>';
     html += '</div>';
   });
   if (!users.length) html = '<div class="chart-empty" style="padding:.8rem">No players match the current filters</div>';
@@ -988,6 +1132,11 @@ function renderDetail(container, data) {
   html += '<span>Last login: <b style="color:var(--bone);font-weight:400">' + fmtDate(data.last_login) + '</b></span>';
   html += '<span>Turn cap: <b style="color:var(--gold-bright);font-weight:700">' + (data.turn_cap === 0 ? 'Unlimited' : data.turn_cap) + '</b></span>';
   html += '<span>Turns used: <b style="color:var(--term-amber);font-weight:400">' + (data.turns_used || 0) + '</b></span>';
+  // FAS D: medlemskap + intäkter
+  const isPremium = (data.subscription_status || 'free') === 'premium';
+  html += '<span>💳 Membership: <b style="color:' + (isPremium ? 'var(--gold-bright);font-weight:700' : 'var(--bone);font-weight:400') + '">' + (isPremium ? '👑 Premium' + (data.subscription_until ? ' until ' + fmtDate(data.subscription_until) : '') : 'Free') + '</b></span>';
+  html += '<span>Turn bonus: <b style="color:var(--term-amber);font-weight:400">' + (data.turn_bonus || 0) + '</b></span>';
+  html += '<span>💰 Revenue: <b style="color:var(--gold-bright);font-weight:400">' + fmtSek(data.revenue) + '</b></span>';
   const at = data.tts_usage || {};
   if (at.calls) {
     html += '<span>🔊 TTS: <b style="color:var(--arcane);font-weight:400">' + fmtTokens(at.tokens || 0) + ' tkn ≈ · ' + (at.calls || 0) + ' renders · ' + fmtTokens(at.chars || 0) + ' chars · ' + Math.round(at.seconds || 0) + 's (' + ((at.seconds || 0) / 60).toFixed(1) + ' min)</b></span>';
@@ -1005,6 +1154,14 @@ function renderDetail(container, data) {
     html += '<span>🗑️ Deleted campaigns: <b style="color:var(--term-amber);font-weight:400">' + fmtTokens(dc.total_tokens || 0) + ' tkn</b> · ' + (dc.turns || 0) + ' turns' + (dc.tts && dc.tts.tokens ? ' · 🔊 ' + fmtTokens(dc.tts.tokens) + ' tts' : '') + '</span>';
   }
   html += '<span>📍 Country: <b style="color:var(--bone);font-weight:400">' + (data.country_flag || '❓') + ' ' + (data.country || 'Unknown') + '</b>' + (data.ip ? ' <span style="opacity:.6">(' + data.ip + ')</span>' : '') + '</span>';
+  html += '</div>';
+  // FAS D: top-up / reset / premium-toggle
+  html += '<div class="billing-controls">';
+  html += '<span class="bc-label">Turn bonus: <b style="color:var(--term-amber)">' + (data.turn_bonus || 0) + '</b> · used: <b style="color:var(--term-amber)">' + (data.period_turns_used || 0) + '</b></span>';
+  html += '<input type="number" min="1" step="1" value="10" id="topup-' + data.username + '" class="cap-input" style="width:64px">';
+  html += '<button onclick="topUp(\'' + data.username + '\')" class="bc-btn">➕ Top up</button>';
+  html += '<button onclick="resetTurns(\'' + data.username + '\')" class="bc-btn danger">🔄 Reset turns</button>';
+  html += '<button onclick="togglePremium(\'' + data.username + '\', ' + isPremium + ')" class="bc-btn' + (isPremium ? '' : ' gold') + '">' + (isPremium ? '⭱ Revert to Free' : '👑 Grant Premium (1 month)') + '</button>';
   html += '</div>';
   if (campaigns.length === 0) {
     container.innerHTML = html + '<p style="color:var(--bone-dim);font-size:0.7rem;padding:0.5rem 0">No campaigns found.</p>';

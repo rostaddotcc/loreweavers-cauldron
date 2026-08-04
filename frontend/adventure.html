@@ -365,6 +365,7 @@
         <button type="button" class="gm-row theme-btn" id="gear-theme-btn" onclick="THEMES.openPopover(this)"></button>
         <button type="button" class="gm-row" onclick="fontToggleBtn()"><span class="gm-ico">🔤</span><span class="gm-txt">Font</span></button>
         <button type="button" class="gm-row" onclick="location.href='releases.html'"><span class="gm-ico">📜</span><span class="gm-txt">Release Notes</span></button>
+        <button type="button" class="gm-row" onclick="openProfileModal()"><span class="gm-ico">🪞</span><span class="gm-txt">Profile</span></button>
         <button type="button" class="gm-row" onclick="location.href='characters.html'"><span class="gm-ico">⚒</span><span class="gm-txt">The Forge</span></button>
         <button type="button" class="gm-row" id="admin-gate-btn" style="display:none" onclick="location.href='admin.html'"><span class="gm-ico">👑</span><span class="gm-txt">Admin</span></button>
         <div class="gm-sep"></div>
@@ -372,6 +373,48 @@
       </div>
     </div>
   </div>
+
+  <!-- ═══════════════ 🪞 Profil-modal (spelarens egna stats) ═══════════════ -->
+  <style>
+    .pf-overlay{position:fixed;inset:0;z-index:110;display:none;align-items:center;justify-content:center;
+      background:rgba(4,2,8,.85);backdrop-filter:blur(4px);padding:1rem}
+    .pf-overlay.show{display:flex}
+    .pf-box{position:relative;width:min(560px,100%);max-height:88vh;overflow-y:auto;
+      background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,#120c1c);
+      border:1px solid var(--edge);padding:1.8rem 1.6rem 1.6rem;
+      box-shadow:0 30px 80px -20px rgba(0,0,0,.9)}
+    .pf-close{position:absolute;top:.6rem;right:.8rem;background:none;border:0;
+      color:var(--bone-dim);font-size:1.1rem;cursor:pointer;padding:.3rem}
+    .pf-close:hover{color:var(--bone-bright)}
+    .pf-head{display:flex;align-items:center;gap:.7rem;margin-bottom:1.1rem}
+    .pf-ico{font-size:1.6rem}
+    .pf-name{font-family:'Cinzel',serif;font-weight:900;font-size:1.1rem;color:var(--bone-bright)}
+    .pf-tier{display:inline-block;margin-top:.2rem;font-size:.64rem;letter-spacing:.12em;
+      text-transform:uppercase;color:var(--gold-bright);border:1px solid var(--edge-hi);
+      border-radius:999px;padding:.12rem .5rem}
+    .pf-grid{display:grid;grid-template-columns:1fr 1fr;gap:.55rem .9rem}
+    .pf-cell{background:rgba(255,255,255,.03);border:1px solid var(--edge);border-radius:6px;padding:.5rem .7rem}
+    .pf-cell.full{grid-column:1/-1}
+    .pf-cell .k{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.14rem}
+    .pf-cell .v{font-size:.83rem;color:var(--bone-bright);word-break:break-word}
+    .pf-bar{height:5px;background:var(--stone-3);border-radius:3px;margin-top:.35rem;overflow:hidden}
+    .pf-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-bright))}
+    @media(max-width:520px){.pf-grid{grid-template-columns:1fr}}
+  </style>
+  <div class="pf-overlay" id="pf-overlay" onclick="if(event.target===this)closeProfileModal()">
+    <div class="pf-box">
+      <button class="pf-close" onclick="closeProfileModal()" title="Close">✕</button>
+      <div class="pf-head">
+        <span class="pf-ico">🪞</span>
+        <div>
+          <div class="pf-name" id="pf-name">Adventurer</div>
+          <span class="pf-tier" id="pf-tier">Free</span>
+        </div>
+      </div>
+      <div class="pf-grid" id="pf-grid"><div class="pf-cell full" style="color:var(--bone-dim);text-align:center">The mirror is clouding&hellip;</div></div>
+    </div>
+  </div>
+
   <div class="head">
     <img src="assets/logo-cauldron-alpha.png" alt="The Lore Weaver's Cauldron" class="head-logo">
     <div class="over">What will the Cauldron Foretell?</div>
@@ -1602,8 +1645,65 @@ document.addEventListener('keydown', (e) => {
       const btn = document.querySelector('.gear-btn');
       if (btn) btn.setAttribute('aria-expanded', 'false');
     }
+    if (document.getElementById('pf-overlay')?.classList.contains('show')) closeProfileModal();
   }
 });
+
+// ── 🪞 Profil-modal: spelaren ser BARA sina egna stats (exkl. ip/land) ──
+async function openProfileModal() {
+  const ovl = document.getElementById('pf-overlay');
+  if (!ovl) return;
+  document.getElementById('pf-grid').innerHTML = '<div class="pf-cell full" style="color:var(--bone-dim);text-align:center">The mirror is clouding&hellip;</div>';
+  ovl.classList.add('show');
+  if (typeof SFX !== 'undefined') SFX.click();
+  try {
+    const res = await fetch('/api/me/stats', { credentials: 'include' });
+    if (!res.ok) {
+      let msg = 'HTTP ' + res.status;
+      try { msg = (await res.json()).detail || msg; } catch (_) {}
+      throw new Error(msg);
+    }
+    renderProfile((await res.json()).stats);
+  } catch (e) {
+    document.getElementById('pf-grid').innerHTML =
+      '<div class="pf-cell full" style="color:var(--blood-bright);text-align:center">' + _esc(e.message || 'Could not read your stats.') + '</div>';
+  }
+}
+function closeProfileModal() {
+  const ovl = document.getElementById('pf-overlay');
+  if (ovl) ovl.classList.remove('show');
+}
+function renderProfile(s) {
+  if (!s) return;
+  document.getElementById('pf-name').textContent = s.username || 'Adventurer';
+  const tierNames = { free: 'Wanderer · Free', tier1: '🔹 Tier 1', tier2: '👑 Tier 2', lifetime: '♾️ Lifetime' };
+  document.getElementById('pf-tier').textContent = tierNames[s.subscription_status] || s.subscription_status || 'Free';
+  const fmt = n => (n === null || n === undefined || isNaN(n)) ? '—' : Number(n).toLocaleString('en-US');
+  const bar = (used, cap) => (cap && cap > 0)
+    ? '<div class="pf-bar"><i style="width:' + Math.min(100, Math.round(used / cap * 100)) + '%"></i></div>'
+    : '';
+  const cell = (k, v, full) => '<div class="pf-cell' + (full ? ' full' : '') + '"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>';
+  const dt = (t) => t ? String(t).slice(0, 16).replace('T', ' ') : '—';
+  let h = '';
+  h += cell('Adventurer', _esc(s.username));
+  h += cell('Role', _esc(s.role || 'player'));
+  h += cell('Turns this period', fmt(s.period_turns_used) + ' / ' + (s.turn_cap === 0 ? '∞' : fmt(s.turn_cap)) + bar(s.period_turns_used, s.turn_cap), true);
+  h += cell('Total turns', fmt(s.total_turns));
+  h += cell('Campaigns', fmt(s.total_campaigns));
+  h += cell('Total tokens', fmt(s.total_tokens));
+  h += cell('Prompt tokens', fmt(s.prompt_tokens));
+  h += cell('Completion tokens', fmt(s.completion_tokens));
+  h += cell('TTS seconds', fmt(s.tts_seconds));
+  h += cell('TTS calls', fmt(s.tts_calls));
+  h += cell('Avatar generations', fmt(s.image_gen_calls));
+  h += cell('Characters forged', fmt(s.char_creation_calls));
+  if (s.email) h += cell('Email', _esc(s.email));
+  h += cell('Member since', _esc(dt(s.created_at)));
+  h += cell('Last active', _esc(dt(s.last_active)));
+  if (s.revenue > 0) h += cell('Contributions (SEK)', fmt(s.revenue));
+  if (s.turn_bonus > 0) h += cell('Turn bonus', fmt(s.turn_bonus));
+  document.getElementById('pf-grid').innerHTML = h;
+}
 
 // ── Nyhet: Qwen 3.8 Max full release (2026-08-03) ──
 // Banner visas tills besökaren klickar bort den (localStorage-minne).

@@ -7865,6 +7865,64 @@ def _account_meta(username: str, udata: dict, campaigns: list) -> dict:
     }
 
 
+def _user_stat_row(username: str, geo: dict | None = None, ledger_per_user: dict | None = None) -> dict:
+    """Gemensam per-användar-statistikrad (admin-vyn + spelarens egen profil).
+
+    Innehåller ALLT utom ip/land — geo-fälten läggs bara till när `geo`
+    skickas med (admin). Spelarens /api/me/stats exkluderar ip/land alltid.
+    """
+    udata = load_users().get(username) or {}
+    if not isinstance(udata, dict):
+        udata = {}
+    role = udata.get("role", "player")
+    campaigns = store.list_campaigns(username)
+    scan = _scan_user_transcripts(username)
+    meta = _account_meta(username, udata, campaigns)
+    tier = _tier_for(username)
+    fresh = load_users().get(username)
+    fresh = fresh if isinstance(fresh, dict) else {}
+    tts = scan.get("tts_usage", {})
+    tts_sec = tts.get("seconds", 0) or 0
+    ledger = ledger_per_user if ledger_per_user is not None else _ledger_per_user()
+    row = {
+        "username": username,
+        "role": role,
+        "email": udata.get("email", ""),
+        "total_campaigns": len(campaigns),
+        "total_tokens": scan["total_tokens"],
+        "prompt_tokens": scan["prompt_tokens"],
+        "completion_tokens": scan["completion_tokens"],
+        "total_turns": scan["turns"],
+        "last_active": scan["last_active"],
+        "created_at": meta["created_at"],
+        "last_login": meta["last_login"],
+        "turn_cap": meta["turn_cap"],
+        "turns_used": meta["turns_used"],
+        "subscription_status": tier,
+        "subscription_until": fresh.get("subscription_until"),
+        "turn_bonus": int(fresh.get("turn_bonus", 0) or 0),
+        "period_turns_used": int(fresh.get("turns_used", 0) or 0),
+        "revenue": ledger.get(username, 0),
+        "tts_calls": tts.get("calls", 0) or 0,
+        "tts_api_calls": tts.get("api_calls", 0) or 0,
+        "tts_chars": tts.get("chars", 0) or 0,
+        "tts_tokens": tts.get("tokens", 0) or 0,
+        "tts_seconds": tts_sec,
+        "tts_minutes": round(tts_sec / 60, 1),
+        "char_creation_tokens": (scan.get("character_creation", {}) or {}).get("tokens", 0) or 0,
+        "char_creation_calls": (scan.get("character_creation", {}) or {}).get("calls", 0) or 0,
+        "image_gen_calls": (scan.get("image_gen", {}) or {}).get("calls", 0) or 0,
+        "deleted_campaigns": scan.get("deleted_campaigns", {}),
+    }
+    if geo:
+        g = geo.get(username, {})
+        row["ip"] = g.get("ip", "")
+        row["country"] = g.get("country", "")
+        row["country_code"] = g.get("countryCode", "")
+        row["country_flag"] = iplog.country_flag(g.get("countryCode", ""))
+    return row
+
+
 @app.get("/api/admin/stats")
 async def admin_stats(morkrets_token: str | None = Cookie(None)):
     """Admin-only: översikt av alla användare."""
@@ -7879,65 +7937,15 @@ async def admin_stats(morkrets_token: str | None = Cookie(None)):
 
     # Batch-uppslag av IP → land för alla användare (cachat i iplog.py)
     geo = await iplog.geo_for_users(users)
-
     # FAS D: intäkter per användare (från billing-ledgern)
     ledger_per_user = _ledger_per_user()
 
-    for username, udata in users.items():
-        role = udata.get("role", "player") if isinstance(udata, dict) else "player"
-        store = CampaignStore()
-        campaigns = store.list_campaigns(username)
-        scan = _scan_user_transcripts(username)
-        total_campaigns += len(campaigns)
-        total_tokens += scan["total_tokens"]
-        total_turns += scan["turns"]
-        meta = _account_meta(username, udata, campaigns)
-        g = geo.get(username, {})
-        # FAS D: färsk rad efter ev. premium-demote (skrivs av _tier_for)
-        tier = _tier_for(username)
-        fresh = load_users().get(username)
-        fresh = fresh if isinstance(fresh, dict) else {}
-        tts = scan.get("tts_usage", {})
-        tts_sec = tts.get("seconds", 0) or 0
-        user_stats.append({
-            "username": username,
-            "role": role,
-            "email": udata.get("email", "") if isinstance(udata, dict) else "",
-            "total_campaigns": len(campaigns),
-            "total_tokens": scan["total_tokens"],
-            "prompt_tokens": scan["prompt_tokens"],
-            "completion_tokens": scan["completion_tokens"],
-            "total_turns": scan["turns"],
-            "last_active": scan["last_active"],
-            "created_at": meta["created_at"],
-            "last_login": meta["last_login"],
-            "turn_cap": meta["turn_cap"],
-            "turns_used": meta["turns_used"],
-            # FAS D: medlemskap + intäkter (period-räkning från users.json)
-            "subscription_status": tier,
-            "subscription_until": fresh.get("subscription_until"),
-            "turn_bonus": int(fresh.get("turn_bonus", 0) or 0),
-            "period_turns_used": int(fresh.get("turns_used", 0) or 0),
-            "revenue": ledger_per_user.get(username, 0),
-            "ip": g.get("ip", ""),
-            "country": g.get("country", ""),
-            "country_code": g.get("countryCode", ""),
-            "country_flag": iplog.country_flag(g.get("countryCode", "")),
-            # TTS-förbrukning (uppläst ljud)
-            "tts_calls": tts.get("calls", 0) or 0,
-            "tts_api_calls": tts.get("api_calls", 0) or 0,
-            "tts_chars": tts.get("chars", 0) or 0,
-            "tts_tokens": tts.get("tokens", 0) or 0,
-            "tts_seconds": tts_sec,
-            "tts_minutes": round(tts_sec / 60, 1),
-            # Karaktärsgenerering (livstid, alla rerolls)
-            "char_creation_tokens": (scan.get("character_creation", {}) or {}).get("tokens", 0) or 0,
-            "char_creation_calls": (scan.get("character_creation", {}) or {}).get("calls", 0) or 0,
-            # AI-bildgenerering (antal iterationer)
-            "image_gen_calls": (scan.get("image_gen", {}) or {}).get("calls", 0) or 0,
-            # Raderade/rollade kampanjer (tokens + turns + tts)
-            "deleted_campaigns": scan.get("deleted_campaigns", {}),
-        })
+    for username in users:
+        row = _user_stat_row(username, geo=geo, ledger_per_user=ledger_per_user)
+        user_stats.append(row)
+        total_campaigns += row["total_campaigns"]
+        total_tokens += row["total_tokens"]
+        total_turns += row["total_turns"]
 
     return {
         "total_users": len(users),
@@ -7946,6 +7954,22 @@ async def admin_stats(morkrets_token: str | None = Cookie(None)):
         "total_turns": total_turns,
         "users": user_stats,
     }
+
+
+@app.get("/api/me/stats")
+async def me_stats(morkrets_token: str | None = Cookie(None)):
+    """Inloggad spelare ser BARA sina egna stats (exkl. ip/land).
+
+    Samma rad som adminvyn bygger (se _user_stat_row) — utan geo-fält.
+    Endpointen tar ingen user-parameter: det finns inget sätt att titta på
+    någon annans profil.
+    """
+    payload = _get_current_user(morkrets_token)
+    username = payload.get("sub")
+    if not username:
+        raise HTTPException(401, "Ej inloggad")
+    row = _user_stat_row(username)
+    return {"ok": True, "stats": row}
 
 
 @app.get("/api/admin/feedback")

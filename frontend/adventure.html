@@ -30,7 +30,23 @@
     background:linear-gradient(120deg,rgba(212,169,44,.10),rgba(212,169,44,.04) 60%,transparent);
     border:1px solid rgba(201,162,39,.35);border-left:3px solid var(--gold);
     transition:box-shadow .25s,transform .25s;animation:rise .5s .3s cubic-bezier(.22,1,.36,1) both;
-  }.news-banner:hover{box-shadow:0 6px 24px -8px rgba(212,169,44,.4);transform:translateY(-2px)}.news-banner .nb-icon{font-size:1.5rem;filter:drop-shadow(0 2px 8px rgba(212,169,44,.5))}.news-banner .nb-body{flex:1}.news-banner .nb-title{font-family:'Cinzel',serif;font-size:.72rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-bright);margin-bottom:.15rem}.news-banner .nb-text{font-size:.86rem;font-style:italic;color:var(--bone-dim);line-height:1.4}.news-banner .nb-text b{color:var(--bone);font-style:normal}.news-banner .nb-close{background:none;border:none;color:var(--bone-dim);font-size:1rem;cursor:pointer;padding:.2rem;line-height:1;transition:color .2s}.news-banner .nb-close:hover{color:var(--blood-bright)}/* ═══════════ Två vägar ═══════════ */.paths{display:grid;grid-template-columns:repeat(2,1fr);gap:1.3rem;margin-bottom:2rem}.path{
+  }.news-banner:hover{box-shadow:0 6px 24px -8px rgba(212,169,44,.4);transform:translateY(-2px)}.news-banner .nb-icon{font-size:1.5rem;filter:drop-shadow(0 2px 8px rgba(212,169,44,.5))}.news-banner .nb-body{flex:1}.news-banner .nb-title{font-family:'Cinzel',serif;font-size:.72rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-bright);margin-bottom:.15rem}.news-banner .nb-text{font-size:.86rem;font-style:italic;color:var(--bone-dim);line-height:1.4}.news-banner .nb-text b{color:var(--bone);font-style:normal}.news-banner .nb-close{background:none;border:none;color:var(--bone-dim);font-size:1rem;cursor:pointer;padding:.2rem;line-height:1;transition:color .2s}.news-banner .nb-close:hover{color:var(--blood-bright)}
+  /* ── Founder promo banner ── */
+  .promo{display:flex;align-items:center;justify-content:space-between;gap:.9rem;flex-wrap:wrap;
+    margin:0 0 1.1rem;padding:.85rem 1rem;background:linear-gradient(120deg,rgba(212,169,44,.14),rgba(212,169,44,.05) 60%,transparent);
+    border:1px solid rgba(201,162,39,.4);border-left:3px solid var(--gold);animation:rise .5s .35s cubic-bezier(.22,1,.36,1) both}
+  .promo .promo-badge{font-family:'Cinzel',serif;font-size:.6rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--ink);background:var(--gold-bright);padding:.28rem .55rem;box-shadow:0 0 12px rgba(232,198,90,.45);white-space:nowrap}
+  .promo .promo-text{flex:1;font-size:.84rem;font-style:italic;color:var(--bone-dim);line-height:1.45;min-width:200px}
+  .promo .promo-text b{color:var(--gold-bright);font-style:normal}
+  .promo .promo-timer{display:inline-flex;align-items:center;gap:.3rem;font-family:'IBM Plex Mono',ui-monospace,monospace;
+    font-size:.78rem;color:var(--gold-bright);letter-spacing:.04em;white-space:nowrap}
+  .promo .promo-timer .t-seg{display:inline-block;min-width:1.55em;text-align:center;background:rgba(0,0,0,.45);
+    border:1px solid rgba(201,162,39,.4);padding:.16rem .28rem;font-variant-numeric:tabular-nums}
+  .promo .promo-cta{font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--gold-bright);text-decoration:none;border:1px solid var(--gold);padding:.4rem .8rem;transition:background .2s,color .2s;white-space:nowrap}
+  .promo .promo-cta:hover{background:var(--gold);color:var(--ink)}
+  @media(max-width:640px){.promo{flex-direction:column;align-items:flex-start}.promo .promo-text{min-width:0}}/* ═══════════ Två vägar ═══════════ */.paths{display:grid;grid-template-columns:repeat(2,1fr);gap:1.3rem;margin-bottom:2rem}.path{
     position:relative;cursor:pointer;text-align:center;padding:2rem 1.2rem 1.6rem;
     background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);
     border:1px solid var(--edge);overflow:hidden;
@@ -463,6 +479,17 @@ html{font-size:17px}
     <button class="nb-close" onclick="newsQwenDismiss(event)" title="Dismiss">✕</button>
   </div>
 
+  <!-- ═══════════ GRUNDARERBJUDANDE: 7-dagars promo ═══════════ -->
+  <div class="promo" id="promo-banner" style="display:none">
+    <span class="promo-badge">Founding Offer</span>
+    <div class="promo-text">
+      Subscribe for one month and get <b><span data-promo-free="tier1">2</span> months free</b> on <b>Companion</b>
+      &mdash; or <b><span data-promo-free="tier2">3</span> months free</b> on <b>Adventurer</b>.
+      <span class="promo-timer">Ends in <span class="t-seg" id="promo-days">00</span><span class="t-sep">d</span><span class="t-seg" id="promo-hours">00</span><span class="t-sep">:</span><span class="t-seg" id="promo-mins">00</span><span class="t-sep">:</span><span class="t-seg" id="promo-secs">00</span></span>
+    </div>
+    <a class="promo-cta" href="pricing.html">Claim the offer →</a>
+  </div>
+
   <!-- ═══════════ RELEASE NOTES ═══════════ -->
   <div class="htp">
     <button class="htp-toggle" id="rn-toggle" onclick="toggleRn()">
@@ -470,10 +497,14 @@ html{font-size:17px}
     </button>
     <div class="rn-body" id="rn-body">
       <div class="rn-inner">
-        <span class="rn-ver">v0.6.3 — The Forge Release</span>
+        <span class="rn-ver">v0.7 — The Forge, Earning</span>
         <ul class="rn-list">
-          <li><b>Export your adventurer to The Forge</b> — from the Codex character sheet, save the adventurer you've lived to the Vault: level, gear, story and all. Then start a brand-new campaign with the same adventurer.</li>
-          <li><b>No more adventurer-twins</b> — exporting an adventurer whose name already rests in your Vault asks first: overwrite the old copy, or keep both.</li>
+          <li><b>Founding offer</b> — for the next seven days, subscribe for one month and get <b>2 months free</b> on Companion or <b>3 months free</b> on Adventurer. The countdown is right above.</li>
+          <li><b>Four paths into the realm</b> — Wanderer (free), Companion, Adventurer, and Lifetime, wired to real Stripe checkout.</li>
+          <li><b>Qwen 3.8 Max &amp; DeepSeek</b> — the full release is here: 2.4T parameters (95B active per request), 1M context, deep reasoning. Pick your Dungeon Master at the model gate.</li>
+          <li><b>Model gating by tier</b> — paid paths unlock DeepSeek, Qwen 3.8 Max, and Qwen 3.6 Flash; free players travel with the steadfast step-3.7-flash.</li>
+          <li><b>Custom narrator voice</b> — happy, calm, scary, or your own style, in the Two Voices.</li>
+          <li><b>Export your adventurer to The Forge</b> — save the hero you've lived: level, gear, story and all. Start a new campaign with the same hero — no more adventurer-twins.</li>
         </ul>
         <a class="rn-more" href="releases.html">Read the full ledger →</a>
       </div>
@@ -1739,7 +1770,7 @@ function closeProfileModal() {
 function renderProfile(s) {
   if (!s) return;
   document.getElementById('pf-name').textContent = s.username || 'Adventurer';
-  const tierNames = { free: 'Wanderer · Free', tier1: '🔹 Tier 1', tier2: '👑 Tier 2', lifetime: '♾️ Lifetime' };
+  const tierNames = { free: 'Wanderer · Free', tier1: '🔹 Companion', tier2: '⚔ Adventurer', lifetime: '♾️ Lifetime' };
   document.getElementById('pf-tier').textContent = tierNames[s.subscription_status] || s.subscription_status || 'Free';
   const fmt = n => (n === null || n === undefined || isNaN(n)) ? '—' : Number(n).toLocaleString('en-US');
   const bar = (used, cap) => (cap && cap > 0)
@@ -1804,6 +1835,40 @@ function newsQwenDismiss(e) {
   const el = document.getElementById('news-qwen38');
   if (el) el.style.display = 'none';
 }
+
+// ── Founder promo banner: hämta offer + countdown-timer ──
+(function () {
+  const banner = document.getElementById('promo-banner');
+  if (!banner) return;
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function tick(untilMs) {
+    const diff = untilMs - Date.now();
+    if (diff <= 0) { banner.style.display = 'none'; return; }
+    const el = id => document.getElementById(id);
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor(diff % 86400000 / 3600000);
+    const m = Math.floor(diff % 3600000 / 60000);
+    const s = Math.floor(diff % 60000 / 1000);
+    if (el('promo-days')) el('promo-days').textContent = pad(d);
+    if (el('promo-hours')) el('promo-hours').textContent = pad(h);
+    if (el('promo-mins')) el('promo-mins').textContent = pad(m);
+    if (el('promo-secs')) el('promo-secs').textContent = pad(s);
+  }
+  fetch('/api/promo')
+    .then(r => r.json())
+    .then(data => {
+      if (!data || !data.active) return;
+      const until = Date.parse(data.until);
+      if (isNaN(until)) return;
+      const off = data.offer || {};
+      if (off.tier1) { const e1 = document.querySelector('[data-promo-free="tier1"]'); if (e1) e1.textContent = off.tier1.free_months; }
+      if (off.tier2) { const e2 = document.querySelector('[data-promo-free="tier2"]'); if (e2) e2.textContent = off.tier2.free_months; }
+      banner.style.display = '';
+      tick(until);
+      setInterval(() => tick(until), 1000);
+    })
+    .catch(() => { /* tyst — ingen banner om API:et inte svarar */ });
+})();
 
 const canvas=document.getElementById('embers'),ctx=canvas.getContext('2d');
 let W,H,embers=[];

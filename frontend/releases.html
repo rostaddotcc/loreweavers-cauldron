@@ -2,186 +2,515 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Release Notes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>The Lore Weaver's Cauldron — Release Notes</title>
+<meta name="description" content="Release notes for The Lore Weaver's Cauldron — an AI dungeon master with a memory. v0.7 and the paths into the realm.">
+<link rel="icon" href="/assets/logo-cauldron.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
-<style>
- :root {
-  --ink:#0b0812; --stone:#161020; --stone-2:#1d1529; --stone-3:#241a33;
-  --edge:#463a60; --bone:#d9c9a6; --bone-bright:#f2e6c8; --bone-dim:#9d8a6a;
-  --gold:#d4a92c; --gold-bright:#f0d675; --blood-bright:#e0485a;
-  --arcane:#9a6fe0; --ember:#d4691e; --poison:#7aa35e; --term-green:#33cc33; --term-amber:#ccaa33;
- }
- *{margin:0;padding:0;box-sizing:border-box;border-radius:0}
- body{
-  font-family:'Silkscreen',monospace;color:var(--bone);min-height:100vh;
-  background:var(--ink);line-height:1.8;
- }
- body::before{content:'';position:fixed;inset:0;z-index:999;pointer-events:none;
-  background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0px,rgba(0,0,0,.18) 1px,transparent 1px,transparent 3px)}
- .app{max-width:820px;margin:0 auto;padding:2rem 1.5rem 4rem}
- h1{font-family:'Press Start 2P',monospace;font-size:1rem;color:var(--gold);margin-bottom:.5rem;text-shadow:2px 2px 0 #000}
- h2{font-family:'Press Start 2P',monospace;font-size:.7rem;color:var(--term-green);margin:2rem 0 .8rem;text-transform:uppercase;letter-spacing:.1em}
- h2::before{content:'> ';color:var(--edge)}
- h3{font-family:'Press Start 2P',monospace;font-size:.6rem;color:var(--gold);margin:1.4rem 0 .5rem;text-transform:uppercase;letter-spacing:.08em}
- p,li{font-size:.91rem;color:var(--bone);margin-bottom:.6rem}
- ul{padding-left:1.2rem;list-style:none}
- li::before{content:'▸ ';color:var(--gold)}
- .box{background:var(--stone);border:1px solid var(--edge);padding:1.2rem;margin:1rem 0;position:relative}
- .box::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.4}
- .cmd{color:var(--term-green);background:var(--ink);padding:.15rem .4rem;border:1px solid var(--edge);font-size:.85rem}
- .key{color:var(--term-amber);border:1px solid var(--edge);padding:.1rem .35rem;font-size:.81rem;background:var(--stone-2)}
- .topbar{display:flex;align-items:center;gap:1rem;padding:1rem 0;border-bottom:1px solid var(--edge);margin-bottom:2rem}
- .topbar .brand{font-family:'Press Start 2P',monospace;font-size:.6rem;color:var(--gold)}
- .topbar a{color:var(--bone-dim);text-decoration:none;font-size:.78rem;border:1px solid var(--edge);padding:.35rem .7rem;transition:none}
- .topbar a:hover{border-color:var(--gold);color:var(--gold-bright)}
- .divider{border:none;border-top:1px dashed var(--edge);margin:1.5rem 0}
- .ver{display:inline-block;font-family:'Press Start 2P',monospace;font-size:.62rem;color:var(--ink);background:var(--gold);padding:.3rem .55rem;letter-spacing:.05em}
- .ver.new{background:var(--gold-bright)}
- .tag{display:inline-block;font-size:.62rem;border:1px solid var(--edge);padding:.05rem .35rem;margin-right:.3rem;color:var(--bone-dim)}
- .tag.feat{color:var(--poison);border-color:var(--poison)}
- .tag.fix{color:var(--blood-bright);border-color:var(--blood-bright)}
- .tag.ux{color:var(--arcane);border-color:var(--arcane)}
- .tag.snd{color:var(--term-amber);border-color:var(--term-amber)}
- .tag.ai{color:var(--gold);border-color:var(--gold)}
- .muted{color:var(--bone-dim);font-size:.8rem}
- a{color:var(--arcane)}
-
- @media (max-width: 900px) {
-  html { -webkit-tap-highlight-color: transparent; }
-  .topbar { flex-wrap: wrap; gap: .4rem .5rem; }
-  .topbar a { min-height: 44px; display: inline-flex; align-items: center; padding: .4rem .7rem; font-size: .73rem; }
- }
- @media (max-width: 640px) {
-  .app { padding: 1.25rem .75rem 3rem; }
-  h1 { font-size: .85rem; line-height: 1.6; }
-  h2 { font-size: .62rem; margin: 1.6rem 0 .7rem; }
-  p, li { font-size: .87rem; line-height: 1.9; }
-  .box { padding: .9rem .8rem; }
-  .topbar .brand { font-size: .55rem; }
- }
-</style>
-<link rel="stylesheet" href="snes.css?v=23">
-<script src="sprites.js?v=20260802a"></script>
-<script src="fonts.js?v=20260803b"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
 <script src="themes.js?v=20260804b"></script>
+<style>
+  /* ═══════════════ tokens ═══════════════ */
+  :root{
+    --ink:#07070c;
+    --stone:#0e0e14; --stone-2:#12121a; --stone-3:#181822;
+    --edge:#2a2a3a; --edge-hi:#3a3a50;
+    --bone:#b8b8c8; --bone-bright:#e6e2d4; --bone-dim:#77778c;
+    --gold:#c9a227; --gold-bright:#e8c65a;
+    --blood:#8b1a2a; --blood-bright:#d43a4d;
+    --ember:#d4691e; --arcane:#7b4fd4; --poison:#5a9a4e; --teal:#4e8a93;
+    --font-display:'Cinzel',serif;
+    --font-body:'Spectral',Georgia,serif;
+    --nav-h:64px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font-body);color:var(--bone);background:var(--ink);
+    overflow-x:hidden;-webkit-tap-highlight-color:transparent;
+    background-image:
+      radial-gradient(900px 520px at 50% 110%, rgba(212,105,30,.07), transparent 70%),
+      radial-gradient(700px 460px at 8% -6%, rgba(123,79,212,.06), transparent 70%),
+      radial-gradient(700px 460px at 96% -8%, rgba(139,26,42,.07), transparent 70%);
+    background-attachment:fixed}
+  .grain{position:fixed;inset:0;z-index:3;pointer-events:none;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .vignette{position:fixed;inset:0;z-index:3;pointer-events:none;
+    box-shadow:inset 0 0 190px 60px rgba(3,2,7,.85)}
+
+  /* ═══════════════ nav ═══════════════ */
+  .nav{position:fixed;top:0;left:0;right:0;z-index:50;height:var(--nav-h);
+    display:flex;align-items:center;justify-content:space-between;padding:0 clamp(1rem,4vw,2.5rem);
+    border-bottom:1px solid rgba(58,58,80,.5);
+    background:linear-gradient(to bottom, rgba(7,7,12,.92), rgba(7,7,12,.55) 78%, transparent);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+  .nav-brand{display:flex;align-items:center;gap:.65rem;text-decoration:none}
+  .nav-brand img{width:34px;height:34px;mix-blend-mode:screen;animation:float-logo 7s ease-in-out infinite}
+  @keyframes float-logo{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  .nav-brand span{font-family:var(--font-display);font-weight:700;font-size:.86rem;
+    letter-spacing:.22em;text-transform:uppercase;color:var(--bone-bright)}
+  .nav-links{display:flex;gap:1.4rem;align-items:center}
+  .nav-link{font-family:var(--font-display);font-size:.7rem;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--bone-dim);text-decoration:none;transition:color .2s}
+  .nav-link:hover{color:var(--gold-bright)}
+  .nav-cta{font-family:var(--font-display);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));
+    padding:.5rem 1rem;text-decoration:none;border-radius:2px;
+    transition:transform .2s,box-shadow .2s}
+  .nav-cta:hover{transform:translateY(-2px);box-shadow:0 4px 18px rgba(232,198,90,.25)}
+
+  /* ═══════════════ hero ═══════════════ */
+  .ledger{max-width:900px;margin:0 auto;padding:calc(var(--nav-h) + 4rem) 1.25rem 6rem}
+  .eyebrow{font-family:var(--font-display);font-size:.68rem;letter-spacing:.44em;
+    text-transform:uppercase;color:var(--gold);text-align:center;margin-bottom:1rem}
+  .ledger h1{font-family:var(--font-display);font-weight:900;font-size:clamp(1.9rem,4.6vw,3rem);
+    text-align:center;color:var(--bone-bright);letter-spacing:.08em;text-transform:uppercase;
+    margin-bottom:1rem;text-shadow:0 0 42px rgba(201,162,39,.28),0 2px 0 #000}
+  .ledger-sub{max-width:620px;margin:0 auto 2.6rem;text-align:center;color:var(--bone-dim);
+    font-size:1.02rem;line-height:1.65}
+  .ledger-sub b{color:var(--bone);font-weight:600}
+
+  /* current version chip */
+  .current-box{display:flex;align-items:center;justify-content:center;gap:.9rem;flex-wrap:wrap;
+    margin-bottom:3rem}
+  .ver-chip{display:inline-flex;align-items:center;gap:.55rem;
+    font-family:var(--font-display);font-size:.72rem;letter-spacing:.26em;text-transform:uppercase;
+    color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));
+    padding:.55rem 1.1rem;border-radius:2px;box-shadow:0 2px 14px rgba(201,162,39,.35)}
+  .ver-chip .ver-name{font-weight:900}
+  .ver-chip .ver-note{color:rgba(7,7,12,.72);letter-spacing:.14em;font-size:.62rem}
+  .ver-tag{font-family:var(--font-display);font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--bone-dim);border:1px solid var(--edge);padding:.4rem .8rem;border-radius:2px}
+
+  /* ═══════════════ sections ═══════════════ */
+  .sec{margin-bottom:3.4rem}
+  .sec-head{display:flex;align-items:baseline;gap:.9rem;margin-bottom:1.4rem;
+    border-bottom:1px solid var(--edge);padding-bottom:.7rem}
+  .sec-num{font-family:var(--font-display);font-weight:900;font-size:.9rem;color:var(--gold);opacity:.8}
+  .sec-head h2{font-family:var(--font-display);font-weight:700;font-size:1.05rem;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--bone-bright)}
+  .sec-head .rule{height:1px;flex:1;background:linear-gradient(to right,var(--edge-hi),transparent);
+    align-self:center}
+  .sec-head .ruler{height:3px;width:44px;background:var(--gold);align-self:center;flex:none}
+
+  /* stone tablet */
+  .tablet{position:relative;background:linear-gradient(160deg,var(--stone-2),var(--stone));
+    border:1px solid var(--edge);border-radius:2px;padding:1.9rem 1.8rem 1.5rem;margin-bottom:1.6rem}
+  .corner{position:absolute;width:14px;height:14px;border:2px solid var(--gold);opacity:.8}
+  .corner.tl{top:6px;left:6px;border-right:none;border-bottom:none}
+  .corner.tr{top:6px;right:6px;border-left:none;border-bottom:none}
+  .corner.bl{bottom:6px;left:6px;border-right:none;border-top:none}
+  .corner.br{bottom:6px;right:6px;border-left:none;border-top:none}
+  .tablet-h{display:flex;align-items:center;gap:.8rem;margin-bottom:.9rem;flex-wrap:wrap}
+  .chip{font-family:var(--font-display);font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));
+    padding:.26rem .6rem;border-radius:2px}
+  .chip.pay{background:linear-gradient(160deg,#e8c65a,#c9a227)}
+  .tablet-title{font-family:var(--font-display);font-weight:700;font-size:.86rem;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--bone-bright)}
+  .tablet-lead{color:var(--bone-dim);font-size:.95rem;line-height:1.6;margin-bottom:1.1rem}
+  .tablet-lead b{color:var(--bone);font-weight:600}
+
+  /* feature list */
+  .feat{list-style:none}
+  .feat li{padding:.55rem 0 .55rem 1.6rem;position:relative;color:var(--bone);font-size:.95rem;line-height:1.55}
+  .feat li::before{content:'◆';position:absolute;left:0;top:.62rem;color:var(--gold);font-size:.6rem}
+  .feat li b{color:var(--bone-bright);font-weight:600}
+  .feat li .dim{color:var(--bone-dim)}
+  .feat li + li{border-top:1px dashed rgba(58,58,80,.5)}
+
+  /* inline tags */
+  .tag{display:inline-block;font-family:var(--font-display);font-size:.56rem;letter-spacing:.16em;
+    text-transform:uppercase;padding:.14rem .5rem;border-radius:2px;margin-right:.35rem;vertical-align:middle}
+  .tag.feat{color:var(--poison);border:1px solid rgba(90,154,78,.5)}
+  .tag.fix{color:var(--blood-bright);border:1px solid rgba(212,58,77,.45)}
+  .tag.ux{color:var(--arcane);border:1px solid rgba(123,79,212,.5)}
+  .tag.ai{color:var(--gold);border:1px solid rgba(201,162,39,.5)}
+  .tag.snd{color:var(--ember);border:1px solid rgba(212,105,30,.5)}
+  .tag.pay{color:var(--teal);border:1px solid rgba(78,138,147,.5)}
+
+  /* two-column for tier grid */
+  .duo{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem}
+  @media(max-width:720px){.duo{grid-template-columns:1fr}}
+
+  /* tier mini-card */
+  .tier{background:linear-gradient(165deg,var(--stone-3),var(--stone-2) 60%,var(--stone));
+    border:1px solid var(--edge);border-radius:2px;padding:1.6rem 1.5rem}
+  .tier.hot{border-color:rgba(201,162,39,.5);box-shadow:0 0 34px rgba(201,162,39,.08)}
+  .tier-name{font-family:var(--font-display);font-weight:700;font-size:.78rem;letter-spacing:.24em;
+    text-transform:uppercase;color:var(--bone-bright);margin-bottom:.3rem}
+  .tier-flag{font-family:var(--font-display);font-size:.56rem;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--gold-bright);margin-bottom:.5rem}
+  .tier-price{font-family:var(--font-display);font-weight:900;font-size:1.5rem;color:var(--gold-bright);margin-bottom:.5rem}
+  .tier-price small{font-size:.72rem;font-weight:400;color:var(--bone-dim);letter-spacing:.05em}
+  .tier ul{list-style:none}
+  .tier li{padding:.3rem 0 .3rem 1.3rem;position:relative;color:var(--bone);font-size:.9rem;line-height:1.5}
+  .tier li::before{content:'◆';position:absolute;left:0;top:.38rem;color:var(--gold);font-size:.55rem}
+  .tier li b{color:var(--bone-bright);font-weight:600}
+
+  /* historical versions */
+  .hist-toggle{display:flex;align-items:center;justify-content:center;gap:.6rem;width:100%;
+    font-family:var(--font-display);font-size:.7rem;letter-spacing:.24em;text-transform:uppercase;
+    color:var(--bone-dim);background:var(--stone);border:1px solid var(--edge);border-radius:2px;
+    padding:.85rem 1rem;cursor:pointer;transition:color .2s,border-color .2s;-webkit-tap-highlight-color:transparent}
+  .hist-toggle:hover{color:var(--gold-bright);border-color:var(--gold)}
+  .hist-toggle .caret{color:var(--gold);transition:transform .25s;display:inline-block}
+  .hist-toggle.open .caret{transform:rotate(90deg)}
+  .hist-body{max-height:0;overflow:hidden;transition:max-height .5s ease}
+  .hist-body.open{max-height:4000px}
+  .hist-inner{padding-top:1.6rem}
+  .hist-ver{display:flex;align-items:baseline;gap:.8rem;margin:1.6rem 0 .7rem;padding-top:1.2rem;
+    border-top:1px dashed rgba(58,58,80,.5)}
+  .hist-ver:first-child{margin-top:0;padding-top:0;border-top:none}
+  .hist-ver .vchip{font-family:var(--font-display);font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--gold);flex:none}
+  .hist-ver h3{font-family:var(--font-display);font-weight:700;font-size:.82rem;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--bone-bright)}
+  .hist-ver .muted{font-family:var(--font-body);font-size:.8rem;color:var(--bone-dim);letter-spacing:0;text-transform:none}
+  .hist-ver ul{list-style:none;margin-top:.4rem}
+  .hist-ver li{padding:.32rem 0 .32rem 1.4rem;position:relative;color:var(--bone);font-size:.9rem;line-height:1.55}
+  .hist-ver li::before{content:'▸';position:absolute;left:0;color:var(--gold);font-size:.7rem}
+
+  .footer{margin-top:4rem;text-align:center;color:var(--bone-dim);font-size:.82rem;line-height:1.7;
+    border-top:1px solid var(--edge);padding-top:2rem}
+  .footer b{color:var(--bone)}
+  .footer a{color:var(--gold);text-decoration:none}
+  .footer a:hover{color:var(--gold-bright);text-shadow:0 0 12px rgba(232,198,90,.5)}
+
+  /* reveal */
+  .rv{opacity:0;transform:translateY(22px);transition:opacity .6s ease,transform .6s ease}
+  .rv.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){
+    .nav-brand img{animation:none}
+    .rv{opacity:1;transform:none;transition:none}
+  }
+  @media(max-width:640px){
+    .nav-links .nav-link{display:none}
+    .ledger{padding-top:calc(var(--nav-h) + 3rem)}
+    .tablet{padding:1.5rem 1.2rem 1.3rem}
+    .sec-head h2{font-size:.92rem}
+  }
+</style>
+<noscript><style>.rv{opacity:1;transform:none}</style></noscript>
 </head>
 <body>
-<div class="app">
- <div class="topbar">
-  <span class="brand">The Lore Weaver's Cauldron</span>
-  <span style="flex:1"></span>
-  <a href="chat.html">To the Table</a>
-  <a href="adventure.html">The Crossroads</a>
- </div>
+<div class="grain"></div>
+<div class="vignette"></div>
 
- <h1>RELEASE NOTES</h1>
- <p class="muted">What's new in the realm — from v0.5 to v0.6.</p>
+<nav class="nav">
+  <a class="nav-brand" href="adventure.html">
+    <img src="/assets/logo-cauldron.png" alt="">
+    <span>The Cauldron</span>
+  </a>
+  <div class="nav-links">
+    <a class="nav-link" href="pricing.html">Paths</a>
+    <a class="nav-link" href="adventure.html">The Crossroads</a>
+    <a class="nav-cta" href="login.html">Enter</a>
+  </div>
+</nav>
 
- <div class="box">
-  <span class="ver new">v0.6.3</span>
-  <p style="margin-top:.8rem"><b>The Forge Release</b> — your hero is no longer bound to a single story.</p>
-  <ul>
-   <li><b>Export your hero to The Forge</b> — from the Codex character sheet, save the adventurer you've lived to the Vault: level, gear, story and all. Then start a brand-new campaign with the same hero.</li>
-   <li><b>No more hero-twins</b> — exporting a hero whose name already rests in your Vault asks first: overwrite the old copy, or keep both.</li>
-  </ul>
- </div>
+<section class="ledger">
+  <p class="eyebrow rv">The Ledger of the Realm</p>
+  <h1 class="rv">Release Notes</h1>
+  <p class="ledger-sub rv">Every update written in the ledger, so the realm's history stays legible. This entry — the forge takes its first coin.<br><b>v0.6 → v0.7</b> · 2026-08-04</p>
 
- <div class="box">
-  <span class="ver new">v0.6.2</span>
-  <p style="margin-top:.8rem"><b>The UX Update</b> — a quieter table and a sharper forge.</p>
-  <ul>
-   <li><b>Music removed</b> — the ambient soundtrack is retired. Sound effects and the narrator's voice remain; bring your own songs for the road.</li>
-   <li><b>Theme switching on every screen</b> — the five palettes now live in the mobile topbar menu too, so your chosen look follows you on phones as well as desktops.</li>
-   <li><b>A 50-turn welcome</b> — fresh accounts begin with a 50-turn allowance, enough to find your footing. Keep playing and the allowance grows.</li>
-   <li><b>The Forge, sharpened</b> — heroes can no longer be saved twice by a stray double-click, and forging a name that already rests in your Vault asks before it creates a twin.</li>
-  </ul>
- </div>
+  <div class="current-box rv">
+    <span class="ver-chip"><span class="ver-name">v0.7</span><span class="ver-note">The Forge, Earning</span></span>
+    <span class="ver-tag">Membership</span>
+    <span class="ver-tag">Stripe</span>
+    <span class="ver-tag">Narrator voices</span>
+    <span class="ver-tag">Avatars</span>
+  </div>
 
- <div class="box">
-  <span class="ver new">v0.6.1</span>
-  <p style="margin-top:.8rem"><b>The Trim &amp; Navigation Update</b></p>
-  <ul>
-   <li><b>Music removed</b> — the mood-music loops are gone. Players bring their own soundtrack (Spotify, whatever) instead; sound effects and TTS voice remain.</li>
-   <li><b>Mobile topbar menu</b> — the ☰ button now opens a proper navigation menu with all the links that were hidden on phones: Codex, Character, Admin, Rule Oracle, Engine Room, Usage, Help and Leave.</li>
-  </ul>
- </div>
+  <!-- ═══════════════ 0.7 headline ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">0.7</span>
+      <h2>The Forge, Earning</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tablet-h">
+        <span class="chip pay">PAY</span>
+        <span class="tablet-title">The Cauldron takes a payment</span>
+      </div>
+      <p class="tablet-lead">The realm now carries its own keep. After a season of free tables, the forge accepts coin — and with it, the fire burns steadier. Every path is real, wired end-to-end through Stripe, and every adventurer keeps a free road forever.</p>
+      <ul class="feat">
+        <li><span class="tag feat">FEAT</span><b>Founding offer — two free months</b> — for the first seven days, subscribe for one month and get <b>2 months free</b> on Companion or <b>3 months free</b> on Adventurer. The countdown lives on the login page and the table.</li>
+        <li><span class="tag feat">FEAT</span><b>Four paths into the realm</b> — Wanderer (free), Companion, Adventurer, and Lifetime. Each a real tier: free stays free, the paid paths unlock the deeper models and the twin voices.</li>
+        <li><span class="tag feat">FEAT</span><b>Stripe checkout, live</b> — the pricing page is wired to a real Stripe account: products, prices, and a webhook that records payment. No more mock buttons.</li>
+        <li><span class="tag feat">FEAT</span><b>Webhook idempotency</b> — a delivered payment event is recorded exactly once, even if Stripe retries it. The ledger never double-counts a coin.</li>
+        <li><span class="tag feat">FEAT</span><b>Lifetime is truly forever</b> — a Lifetime purchase never expires (holds until the end of time, not a date). Granting a tier writes a line into the player's transcript.</li>
+        <li><span class="tag ai">AI</span><b>Model gating by tier</b> — free players travel with the steadfast <b>step-3.7-flash</b>; paid paths unlock <b>DeepSeek, Qwen 3.8 Max, and Qwen 3.6 Flash</b> as their Dungeon Master. Locked models are visibly grayed out, never silently ignored.</li>
+        <li><span class="tag ux">UX</span><b>Your tier is visible</b> — the profile card in the gear menu shows your path, and the pricing page marks your current subscription with a lit sigil.</li>
+      </ul>
+    </div>
+  </div>
 
- <div class="box">
-  <span class="ver new">v0.6.0</span>
-  <p style="margin-top:.8rem"><b>The Production Readiness Update</b> — themes, releases, transparency, and a heap of polish.</p>
-  <ul>
-   <li><b>Theme switcher</b> — five dark-fantasy palettes (Terminal / Blood / Arcane / Ember / Iron), one click away in the top bar. Your choice is remembered.</li>
-   <li><b>This release page</b> — every update now comes with notes.</li>
-   <li><b>Model transparency</b> — a guide to the Dungeon Master models, and why "high reasoning" means a slightly longer wait for a richer reply.</li>
-   <li><b>Dead code purge</b> — ~1,600 lines of orphaned CSS/JS removed; three corrupted stylesheet comments repaired; a hidden Escape-key crash fixed.</li>
-  </ul>
- </div>
+  <!-- ═══════════════ paths ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">✦</span>
+      <h2>The Paths</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="duo">
+      <div class="tier">
+        <div class="tier-name">Wanderer</div>
+        <div class="tier-price">Free<small> · no card</small></div>
+        <ul>
+          <li><b>50 turns</b> every day, refreshed at midnight</li>
+          <li>The steadfast Dungeon Master (<b>step-3.7-flash</b>)</li>
+          <li>Persistent world, memory, and the Codex</li>
+          <li>Qwen voice narration &amp; the dice ritual</li>
+        </ul>
+      </div>
+      <div class="tier">
+        <div class="tier-name">Companion</div>
+        <div class="tier-price">3€<small> / month</small></div>
+        <ul>
+          <li><b>50 turns</b> refreshed <b>every 6 hours</b></li>
+          <li><b>AI avatars</b> for your hero and the NPCs you meet</li>
+          <li>Everything in the Wanderer path</li>
+        </ul>
+      </div>
+      <div class="tier hot">
+        <div class="tier-flag">Most popular</div>
+        <div class="tier-name">Adventurer</div>
+        <div class="tier-price">9€<small> / month</small></div>
+        <ul>
+          <li><b>All Dungeon Masters</b> — DeepSeek, Qwen 3.8 Max, Qwen 3.6 Flash</li>
+          <li><b>Both narrator voices</b> — Qwen and StepFun TTS</li>
+          <li><b>Customize the narrator</b> — happy, calm, scary, or your own style</li>
+          <li><b>50 turns</b> every 6 hours &middot; <b>AI avatars</b></li>
+        </ul>
+      </div>
+      <div class="tier">
+        <div class="tier-name">Lifetime</div>
+        <div class="tier-price">100€<small> · once</small></div>
+        <ul>
+          <li><b>Unlimited turns</b> — the Cauldron never sleeps</li>
+          <li>All Dungeon Masters &middot; both voices &middot; avatars</li>
+          <li>A thank-you from the forge — you keep this realm burning</li>
+        </ul>
+      </div>
+    </div>
+  </div>
 
- <h2>What changed since v0.5</h2>
+  <!-- ═══════════════ free tier ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">✦</span>
+      <h2>The Free Road</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tablet-h">
+        <span class="chip">FREE</span>
+        <span class="tablet-title">A fair ration, honestly counted</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">FEAT</span><b>Turn counter in the header</b> — turn, day, free turns left, and the reset date, all visible at a glance. On mobile it tucks into the menu so the top bar stays clean.</li>
+        <li><span class="tag feat">FEAT</span><b>Daily renewal</b> — your 50 turns refresh each day at midnight, whether you were here or not. A cron keeps the dates in step, and the count rolls over lazily even if the cron sleeps.</li>
+        <li><span class="tag ux">UX</span><b>An honest cap modal</b> — when the free turns run out, the game tells you plainly: new turns on the reset date, or upgrade for unlimited. No dead buttons, no tricks.</li>
+        <li><span class="tag pay">PAY</span><b>Admin top-ups</b> — the realm-keeper can grant bonus turns (consumed before the cap) or reset a player's count, without touching the monthly ceiling.</li>
+      </ul>
+    </div>
+  </div>
 
- <h3>Combat — v26 "Chat-First"</h3>
- <ul>
-  <li><span class="tag feat">FEAT</span> The DM narrates everything; the Lorekeeper extracts the mechanics — no hidden battle AI deciding your fate.</li>
-  <li><span class="tag feat">FEAT</span> Turn engine: initiative order, action economy, and proper turn rotation.</li>
-  <li><span class="tag feat">FEAT</span> Inline combat UI: round banners, enemy cards, HP-diff lines, and a status bar above the input (R3 │ enemy 12/24 │ Du 18/22).</li>
-  <li><span class="tag fix">FIX</span> Initiative reveal, awakening re-trigger, HP <code>null</code> crashes, log-size limits, and player-HP sync in the combat tag.</li>
- </ul>
+  <!-- ═══════════════ narrator & voice ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">✦</span>
+      <h2>The Two Voices</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tablet-h">
+        <span class="chip snd">SOUND</span>
+        <span class="tablet-title">A narrator you can give a mood</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag snd">SOUND</span><b>Custom narrator voice</b> — pick a style for the one who reads your story: <b>happy, calm, scary</b>, or a custom description of your own. Premium-only, and gated honestly in the UI.</li>
+        <li><span class="tag snd">SOUND</span><b>Qwen English voices</b> — the Qwen narrator gained English voices alongside the original set.</li>
+        <li><span class="tag snd">SOUND</span><b>Faster loading</b> — a TTS cache with a time-to-live keeps repeated lines from re-rendering, and a speed button lets you set the read's pace.</li>
+        <li><span class="tag fix">FIX</span><b>Guardian day-correction</b> — the day counter no longer drifts when the Guardian reconciles the world state.</li>
+      </ul>
+    </div>
+  </div>
 
- <h3>Design & UX — the Codex era</h3>
- <ul>
-  <li><span class="tag ux">UX</span> The Codex: one tabbed modal for Character, NPCs, Map, Journal and Facts — no more page-hopping.</li>
-  <li><span class="tag ux">UX</span> Slim sidebar with party, quests, known NPCs and location; mobile drawer + bottom nav + sheets.</li>
-  <li><span class="tag ux">UX</span> Unified warm dark-fantasy palette on every page; pixel sprites replace emojis; site-wide font switcher (7 typefaces).</li>
-  <li><span class="tag ux">UX</span> Readable type scale (no more 0.93rem body text) and a flat, minimal Engine Room console.</li>
-  <li><span class="tag feat">FEAT</span> Uploadable chat avatars (44px, framed, role-colored).</li>
- </ul>
+  <!-- ═══════════════ avatars ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">✦</span>
+      <h2>The Forge &amp; Avatars</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tablet-h">
+        <span class="chip">FORGE</span>
+        <span class="tablet-title">Faces you can actually shape</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">FEAT</span><b>Clean free prompt</b> — avatar prompts are now a blank page (`new` mode), so you describe the face you want without a template already deciding it.</li>
+        <li><span class="tag ux">UX</span><b>Update from sheet</b> — one button rebuilds your avatar straight from the character sheet state, so the picture follows the story. No more "keeps face" magic that quietly made things worse.</li>
+        <li><span class="tag ux">UX</span><b>Companion avatars</b> — AI faces for your hero and the NPCs you meet, granted to the Companion path and above.</li>
+      </ul>
+    </div>
+  </div>
 
- <h3>The Dungeon Master</h3>
- <ul>
-  <li><span class="tag ai">AI</span> DM prompts v23→v26: DC ladder, the DM Triad / Rule of Cool, 5e resting, advantage/disadvantage, quick rules, world-consistency name rules.</li>
-  <li><span class="tag ai">AI</span> Visible reasoning bubble — watch the DM think, with token/time readout in the reply footer.</li>
-  <li><span class="tag ai">AI</span> Dynamic narration length: short for action, long-form (4k tokens) for lore, books, legends.</li>
-  <li><span class="tag ai">AI</span> Model gate at adventure start: pick your DM model (admin chooses the Lorekeeper freely).</li>
-  <li><span class="tag ai">AI</span> Lorekeeper runs in the background, never blocking the reply — with a polling indicator and in-chat Lorekeeper timeline.</li>
-  <li><span class="tag ai">AI</span> Character generation: forbidden-name lists + higher temperature for varied, unexpected names.</li>
- </ul>
+  <!-- ═══════════════ codex & navigation ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">✦</span>
+      <h2>The Codex &amp; Navigation</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tablet-h">
+        <span class="chip ux">UX</span>
+        <span class="tablet-title">A calmer table</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ux">UX</span><b>Codex NPC list, easier to navigate</b> — the dossier is now quick to scan; the mobile Character tab stepped aside so the flow stays at the table.</li>
+        <li><span class="tag fix">FIX</span><b>Party drawer fixed on mobile</b> — the slide-in now sits above the right layer (z-index), and the bottom nav reads <b>Party | Codex | Tools</b>.</li>
+        <li><span class="tag ux">UX</span><b>Sidebar polish</b> — a journey entry, a quest flag, smoother NPC scrolling, and a jump into the Codex from the side panel.</li>
+        <li><span class="tag ux">UX</span><b>Settings menu tooltips</b> — the hint lines in the gear became hover tooltips, so the menu stays quiet until you need it.</li>
+      </ul>
+    </div>
+  </div>
 
- <h3>Rolls, items & the weight of things</h3>
- <ul>
-  <li><span class="tag feat">FEAT</span> The D20 ceremony — an inline 3-second dice ritual with flicker, glitter, and nat-20/nat-1 spectacle (D20, not D6).</li>
-  <li><span class="tag feat">FEAT</span> DM-requested rolls appear as inline buttons; <span class="cmd">/rulla 1d20+4</span> works anytime; advantage rolls supported.</li>
-  <li><span class="tag feat">FEAT</span> Clickable item cards with D&D stats; item detail modal; roll buttons on usable items.</li>
-  <li><span class="tag feat">FEAT</span> Carry weight (STR × 15 lbs), coin weight, item lore — every item has a history.</li>
-  <li><span class="tag fix">FIX</span> The DM now sees your full inventory (not just equipped) and always keeps starting gear.</li>
- </ul>
+  <!-- ═══════════════ DM & engine ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">✦</span>
+      <h2>The Dungeon Master</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tablet-h">
+        <span class="chip ai">AI</span>
+        <span class="tablet-title">Sharper instincts, cleaner room</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ai">AI</span><b>Terrain rules in the DM's head</b> — the prompt now carries the realm's terrain and travel-times, so the DM stops guessing how long a road takes.</li>
+        <li><span class="tag ai">AI</span><b>Onboarding model choice</b> — at the start you pick which Dungeon Master will guide you; the campaign wakes itself on load.</li>
+        <li><span class="tag ux">UX</span><b>Engine Room buttons moved</b> — combat and engine-room controls now sit on the TTS row, out of the way of the players' words.</li>
+        <li><span class="tag ai">AI</span><b>Terminal theme v33</b> — the CLI/DOS look refined again, with avatar-prompt fixes riding along.</li>
+      </ul>
+    </div>
+  </div>
 
- <h3>Sound & Voice</h3>
- <ul>
-  <li><span class="tag snd">SOUND</span> Typewriter reveal with 16-bit "midi" ticks; NPC quote bubbles with per-NPC colors; pixel-particle bursts on every message.</li>
-  <li><span class="tag snd">SOUND</span> Synthesized SFX (Web Audio) — coins, crits, battle jingles — zero audio files.</li>
-  <li><span class="tag snd">SOUND</span> TTS via Qwen-Audio (Token Plan) — play button on DM replies, male/female voices, autoplay toggle, cache.</li>
- </ul>
+  <!-- ═══════════════ accounts & fixes ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">✦</span>
+      <h2>Accounts &amp; Fixes</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tablet-h">
+        <span class="chip fix">FIX</span>
+        <span class="tablet-title">The ledger stays straight</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">FEAT</span><b>Email-based password reset</b> — a one-time token link lets you back into the realm without a remembered password.</li>
+        <li><span class="tag ux">UX</span><b>Your own stats in the gear</b> — players see their own turn usage and path in the profile card.</li>
+        <li><span class="tag pay">PAY</span><b>Admin billing dashboard</b> — MRR, transactions, and total revenue at a glance; per-player revenue split; a quick grant of premium straight from the table row, with a selectable length.</li>
+        <li><span class="tag ux">UX</span><b>Admin dashboard grows up</b> — a <b>New Users by Day</b> chart and a <b>Revenue chart</b> (MRR/ARR with day/week/month views) joined the donuts; the player table sorts by <b>Last Active</b> by default, its hidden columns are now reachable, and the whole view is easier on the eyes.</li>
+        <li><span class="tag ux">UX</span><b>Pricing on the login page</b> — a path into the realm's ways, plus a profile link that no longer hides inside the gear.</li>
+        <li><span class="tag fix">FIX</span><b>Login fields</b> — autofill no longer fights the styling; the inputs look proper.</li>
+        <li><span class="tag fix">FIX</span><b>Admin vault heroes restored</b> — Ysrian and the others, returned after an accidental deletion in an earlier build.</li>
+      </ul>
+    </div>
+  </div>
 
- <h3>Language & accounts</h3>
- <ul>
-  <li><span class="tag feat">FEAT</span> English-first UI with Swedish fallback; language is per-campaign and survives new games.</li>
-  <li><span class="tag feat">FEAT</span> Self-registration; admin dashboard (players, campaigns, token usage per model); per-user turn caps.</li>
-  <li><span class="tag fix">FIX</span> Campaign state isolation, race-condition locks, and English debug logs throughout the backend.</li>
- </ul>
+  <!-- ═══════════════ historical ═══════════════ -->
+  <div class="sec rv">
+    <button class="hist-toggle" id="hist-toggle" onclick="toggleHist()">
+      <span class="caret">▸</span> Older entries
+    </button>
+    <div class="hist-body" id="hist-body">
+      <div class="hist-inner">
 
- <h3>Notable fixes</h3>
- <ul>
-  <li>Raw HTTP errors surface in chat (402 / 429 / 500 / network) with a "try changing models in Settings" hint.</li>
-  <li>Roll buttons and Lorekeeper reports no longer fire mid-typewriter; the chat always pins to the bottom.</li>
-  <li>Mobile: no iOS auto-zoom, safe-area padding, 44px tap targets, drawers/sheets z-order fixed.</li>
-  <li>Logbook/facts ordering, map clipping, flexbox starvation — the usual suspects, banished.</li>
- </ul>
+        <div class="hist-ver">
+          <span class="vchip">v0.6.3</span>
+          <h3>The Forge Release <span class="muted">— no more hero-twins</span></h3>
+          <ul>
+            <li><b>Export your hero to The Forge</b> — from the Codex character sheet, save the adventurer you've lived to the Vault: level, gear, story and all. Then start a brand-new campaign with the same hero.</li>
+            <li><b>No more hero-twins</b> — exporting a hero whose name already rests in your Vault asks first: overwrite the old copy, or keep both.</li>
+          </ul>
+        </div>
 
- <hr class="divider">
- <p class="muted">v0.5 → v0.6 · 2026-08-02 · The Lore Weaver's Cauldron — an AI dungeon master.</p>
-</div>
+        <div class="hist-ver">
+          <span class="vchip">v0.6.2</span>
+          <h3>The UX Update <span class="muted">— a quieter table</span></h3>
+          <ul>
+            <li><b>Music removed</b> — the ambient soundtrack is retired; sound effects and the narrator's voice remain.</li>
+            <li><b>Theme switching on every screen</b> — the five palettes now live in the mobile topbar menu too.</li>
+            <li><b>A 50-turn welcome</b> — fresh accounts begin with a 50-turn allowance.</li>
+            <li><b>The Forge, sharpened</b> — no double-save on a stray double-click; name conflicts ask before creating a twin.</li>
+          </ul>
+        </div>
+
+        <div class="hist-ver">
+          <span class="vchip">v0.6.0</span>
+          <h3>The Production Readiness Update <span class="muted">— themes, transparency, polish</span></h3>
+          <ul>
+            <li><b>Theme switcher</b> — five dark-fantasy palettes (Terminal / Blood / Arcane / Ember / Iron), remembered across visits.</li>
+            <li><b>This release page</b> — every update now comes with notes.</li>
+            <li><b>Model transparency</b> — a guide to the Dungeon Master models, and why "high reasoning" means a slightly longer wait for a richer reply.</li>
+            <li><b>Dead code purge</b> — about 1,600 lines of orphaned CSS/JS removed; a hidden Escape-key crash fixed.</li>
+            <li><b>Combat v26</b> — the DM narrates everything; the Lorekeeper extracts the mechanics; turn engine, initiative order, and inline combat UI.</li>
+            <li><b>The D20 ceremony</b> — a 3-second dice ritual with flicker, glitter, and nat-20/nat-1 spectacle.</li>
+            <li><b>The Codex</b> — one tabbed modal for Character, NPCs, Map, Journal and Facts.</li>
+            <li><b>Voice of the DM</b> — Qwen TTS with play button, male/female voices, autoplay toggle, and cache.</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="footer rv">
+    <b>The Lore Weaver's Cauldron</b> — an AI dungeon master with a memory.<br>
+    <a href="pricing.html">Choose your path</a> &middot; <a href="adventure.html">Return to the realm</a><br>
+    <span>v0.6 → v0.7 · 2026-08-04 · Questions? <a href="mailto:web@rostad.cc">web@rostad.cc</a></span>
+  </div>
+</section>
+
+<script>
+  // reveal on scroll
+  (function(){
+    var els = document.querySelectorAll('.rv');
+    if(!('IntersectionObserver' in window)){ els.forEach(function(e){e.classList.add('in')}); return; }
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+    }, {threshold:0.12});
+    els.forEach(function(e){ io.observe(e); });
+  })();
+
+  // historical toggle
+  window.toggleHist = function(){
+    var btn = document.getElementById('hist-toggle');
+    var body = document.getElementById('hist-body');
+    var open = btn.classList.toggle('open');
+    body.classList.toggle('open', open);
+  };
+</script>
 </body>
 </html>

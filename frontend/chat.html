@@ -2377,8 +2377,8 @@ function tierBadge(s) {
   const st = (s === 'premium' ? 'tier2' : s) || 'free';
   const map = {
     'free': '<span style="color:var(--bone-dim)">free</span>',
-    'tier1': '<span style="color:var(--bone)">🔹 Tier 1</span>',
-    'tier2': '<span style="color:var(--gold-bright)">👑 Tier 2</span>',
+    'tier1': '<span style="color:var(--bone)">🔹 Companion</span>',
+    'tier2': '<span style="color:var(--gold-bright)">⚔ Adventurer</span>',
     'lifetime': '<span style="color:var(--arcane)">💜 Lifetime</span>',
   };
   return map[st] || map['free'];

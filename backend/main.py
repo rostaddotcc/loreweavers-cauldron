@@ -22,7 +22,7 @@ import base64
 import hashlib
 import hmac
 from collections import deque
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, date, timedelta, timezone
 from pathlib import Path
 from typing import AsyncGenerator
 
@@ -1049,6 +1049,18 @@ def _ensure_user_fields(username: str, udata: dict) -> dict:
 # Legacy "premium" i users.json → behandlas som tier2 (bakåtkompatibilitet).
 
 TIER_ORDER = ("free", "tier1", "tier2", "lifetime")
+
+# ── Grundarerbjudande (2026-08-04 → 2026-08-11) ──
+# Betala 1 månad, få 2 gratismånader (Companion/tier1) eller 3 (Adventurer/tier2).
+# Efter deadline: vanlig 1-månads-prenumeration.
+PROMO_UNTIL_DATE = date(2026, 8, 11)
+PROMO_MONTHS = {"tier1": 3, "tier2": 4}  # totala månader vid checkout under promo
+
+def _promo_months_for(tier: str) -> int:
+    """Antal månader en ny prenumeration ger just nu (promo- eller normal)."""
+    if datetime.now(timezone.utc).date() <= PROMO_UNTIL_DATE:
+        return PROMO_MONTHS.get(tier, 1)
+    return 1
 
 # Betalda tiers är giltiga t.o.m. subscription_until (sista giltiga dag = until).
 # Turn-period (timmar) per tier: free = 24h (daglig), tier1/tier2 = 6h, lifetime = ∞ (0).
@@ -8119,7 +8131,8 @@ async def stripe_webhook(request: Request):
                 u["turn_cap"] = 0
             elif tier in ("tier1", "tier2"):
                 u["subscription_status"] = tier
-                u["subscription_until"] = (datetime.now(timezone.utc).date() + timedelta(days=30)).isoformat()
+                months = _promo_months_for(tier)
+                u["subscription_until"] = (datetime.now(timezone.utc).date() + timedelta(days=30 * months)).isoformat()
                 u["turn_cap"] = DEFAULT_TURN_CAP
                 if not u.get("reset_ts"):
                     u["reset_ts"] = (datetime.now(timezone.utc) + timedelta(hours=6)).isoformat()
@@ -8402,6 +8415,21 @@ async def admin_set_turn_cap(username: str, req: AdminTurnCap, morkrets_token: s
 
     logger.info("🎚️ Turn cap set: %s → %d", username, req.turn_cap)
     return {"ok": True, "username": username, "turn_cap": req.turn_cap}
+
+
+@app.get("/api/promo")
+async def promo_info():
+    """Publik: aktuellt grundarerbjudande (om aktivt) + deadline för timer."""
+    active = datetime.now(timezone.utc).date() <= PROMO_UNTIL_DATE
+    return {
+        "active": active,
+        "until": PROMO_UNTIL_DATE.isoformat(),
+        "offer": {
+            "tier1": {"free_months": 2, "total_months": 3},
+            "tier2": {"free_months": 3, "total_months": 4},
+        },
+        "tier_names": {"tier1": "Companion", "tier2": "Adventurer"},
+    }
 
 
 @app.get("/api/admin/billing")

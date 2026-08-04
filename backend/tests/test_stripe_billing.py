@@ -8,6 +8,7 @@ import hashlib
 import hmac
 import json
 import sys
+from datetime import datetime, timezone
 import time
 from pathlib import Path
 
@@ -197,6 +198,56 @@ def test_webhook_checkout_tier2_grants_access(client):
     state = main.store.get("alice")
     trans = main.store.load_transcript(state, last_n=10)
     assert any("upgraded as a token of appreciation" in e["content"] for e in trans)
+
+
+def test_webhook_checkout_promo_gives_extra_months(client):
+    """Grundarerbjudande (fram till 2026-08-11): 1 månad → 3 (tier1) / 4 (tier2)."""
+    _seed("alice")
+    body = _event("checkout.session.completed", {
+        "metadata": {"username": "alice", "tier": "tier1"},
+        "client_reference_id": "alice",
+        "payment_status": "paid",
+        "customer": "cus_p1",
+        "subscription": "sub_p1",
+        "amount_total": 350,
+    }, event_id="evt_promo_t1")
+    r = client.post("/api/stripe/webhook", content=body,
+                    headers={"stripe-signature": _sign(body)})
+    assert r.status_code == 200
+    u = main.load_users()["alice"]
+    assert u["subscription_status"] == "tier1"
+    days = (datetime.fromisoformat(u["subscription_until"]).date() - datetime.now(timezone.utc).date()).days
+    # Under promo ger tier1 3 månader (~90 dagar, datum-baserat → 89–90).
+    assert 80 <= days <= 92, f"tier1 promo gav {days} dagar, förväntat ~90"
+
+    # tier2 → ~120 dagar
+    _seed("bob")
+    body2 = _event("checkout.session.completed", {
+        "metadata": {"username": "bob", "tier": "tier2"},
+        "client_reference_id": "bob",
+        "payment_status": "paid",
+        "customer": "cus_p2",
+        "subscription": "sub_p2",
+        "amount_total": 900,
+    }, event_id="evt_promo_t2")
+    r2 = client.post("/api/stripe/webhook", content=body2,
+                     headers={"stripe-signature": _sign(body2)})
+    assert r2.status_code == 200
+    u2 = main.load_users()["bob"]
+    assert u2["subscription_status"] == "tier2"
+    days2 = (datetime.fromisoformat(u2["subscription_until"]).date() - datetime.now(timezone.utc).date()).days
+    assert 110 <= days2 <= 122, f"tier2 promo gav {days2} dagar, förväntat ~120"
+
+
+def test_promo_info_endpoint(client):
+    """/api/promo är publik och beskriver erbjudandet."""
+    r = client.get("/api/promo")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["active"] is True
+    assert data["offer"]["tier1"]["free_months"] == 2
+    assert data["offer"]["tier2"]["free_months"] == 3
+    assert data["tier_names"]["tier2"] == "Adventurer"
 
 
 def test_webhook_checkout_lifetime(client):

@@ -1275,7 +1275,7 @@ function tableRows(users) {
     const isPremium = tier !== 'free';
     const memBadge = tier === 'free'
       ? '<span class="membership-badge m-free">Free</span>'
-      : `<span class="membership-badge m-premium">${tier === 'lifetime' ? '♾️ Lifetime' : (tier === 'tier1' ? '🔹 Tier 1' : '👑 Tier 2')}</span>`;
+      : `<span class="membership-badge m-premium">${tier === 'lifetime' ? '♾️ Lifetime' : (tier === 'tier1' ? '🔹 Companion' : '⚔ Adventurer')}</span>`;
     const bonus = u.turn_bonus || 0;
     const used = u.period_turns_used || 0;
     // Mini progress-bar: cap (used X) — röd när perioden är slut
@@ -1329,7 +1329,7 @@ function mobRows(users) {
     const isPremium = tier !== 'free';
     const memBadge = tier === 'free'
       ? '<span class="membership-badge m-free">Free</span>'
-      : `<span class="membership-badge m-premium">${tier === 'lifetime' ? '♾️ Lifetime' : (tier === 'tier1' ? '🔹 Tier 1' : '👑 Tier 2')}</span>`;
+      : `<span class="membership-badge m-premium">${tier === 'lifetime' ? '♾️ Lifetime' : (tier === 'tier1' ? '🔹 Companion' : '⚔ Adventurer')}</span>`;
     html += `<div class="m-card${isPremium ? ' premium-row' : ''}" onclick="toggleDetail(${i}, '${u.username}')">`;
     html += `<div class="mc-head"><span class="mc-user">${u.country_flag || '❓'} ${esc(u.username)}${badge}${memBadge}</span><span class="mc-tokens">${fmtTokens(u.total_tokens)} tkn</span></div>`;
     if (u.email) html += `<div class="mc-meta"><span style="opacity:.7">✉ ${esc(u.email)}</span></div>`;

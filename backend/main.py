@@ -1069,6 +1069,9 @@ def _tier_for(username: str) -> str:
             status = "tier2"
         if status not in TIER_ORDER or status == "free":
             return "free"
+        # Lifetime är oändlig — upphör ALDRIG, kräver inget until-datum.
+        if status == "lifetime":
+            return "lifetime"
         until = udata.get("subscription_until")
         if until:
             try:
@@ -8119,6 +8122,34 @@ async def admin_turn_reset(username: str, morkrets_token: str | None = Cookie(No
     return {"ok": True, "username": username, "turns_used": 0}
 
 
+def _append_tier_log(username: str, status: str, until: str | None) -> None:
+    """Skriv en loggpost i spelarens chatt vid admin-ändring av medlemskap.
+
+    Läggs i den aktiva kampanjens transkript (eller senast uppdaterade om
+    ingen pekarfil finns) som en guardian-post med tidsstämpel. Spelaren
+    ser den nästa gång chatten öppnas. Konsumerar INGEN turn.
+    """
+    store = CampaignStore()
+    state = store.get(username)  # aktiv kampanj, annars senast uppdaterad
+    if not state:
+        return
+    names = {"free": "Free", "tier1": "Tier 1", "tier2": "Tier 2", "lifetime": "Lifetime"}
+    label = names.get(status, status or "Free")
+    if status == "free":
+        text = "ℹ️ Your account was reverted to **Free**."
+    elif status == "lifetime":
+        text = "🎉 Your account have been upgraded as a token of appreciation — new tier: **Lifetime** (∞ turns, all features)."
+    else:
+        suffix = f" — valid until **{until}**" if until else ""
+        text = f"🎉 Your account have been upgraded as a token of appreciation — new tier: **{label}**{suffix}."
+    try:
+        state = store.append_message(state, "guardian", text, meta={"log": True, "tier": status})
+        store.save(state)
+        logger.info("📜 Tier log appended for %s → %s", username, status)
+    except Exception as e:  # loggposten får ALDRIG krascha grantet
+        logger.warning("Tier log append failed for %s: %s", username, e)
+
+
 @app.put("/api/admin/user/{username}/subscription")
 async def admin_set_subscription(username: str, req: AdminSubscription, morkrets_token: str | None = Cookie(None)):
     """Admin-only: sätt medlemskap.
@@ -8135,6 +8166,8 @@ async def admin_set_subscription(username: str, req: AdminSubscription, morkrets
     if status not in TIER_ORDER:
         raise HTTPException(400, f"Status must be one of: {', '.join(TIER_ORDER)}")
     until = req.until
+    if status == "lifetime":
+        until = None  # riktig lifetime: ingen utgång, turn_cap 0
     if until is not None:
         try:
             datetime.fromisoformat(str(until)).date()
@@ -8163,6 +8196,11 @@ async def admin_set_subscription(username: str, req: AdminSubscription, morkrets
         save_users(users)
 
     logger.info("👑 Subscription set: %s → %s (until %s)", username, status, until)
+    # Loggpost i spelarens chatt (aktiv/senaste kampanj) — "token of appreciation".
+    try:
+        _append_tier_log(username, status, until)
+    except Exception as e:
+        logger.warning("Tier log append failed for %s: %s", username, e)
     return {
         "ok": True,
         "username": username,

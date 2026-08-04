@@ -187,3 +187,76 @@ def test_vault_avatar_gate_free_403(client, monkeypatch):
                     cookies={"morkrets_token": _tok()})
     assert r.status_code == 403
     assert "Tier 1" in r.json()["detail"]
+
+
+# ── Riktig lifetime (∞) + chattlogg vid grant ──────────────────────────
+
+def test_lifetime_without_until_never_expires():
+    """lifetime med until=None får ALDRIG demotas till free (2026-08-04)."""
+    _seed("alice", tier="lifetime", until=None, turn_cap=0)
+    assert main._tier_for("alice") == "lifetime"
+    assert main._turns_available("alice") == 999999
+
+
+def test_lifetime_old_until_date_still_valid():
+    """lifetime med passerat until-datum (legacy +3650-dagar) upphör inte."""
+    _seed("alice", tier="lifetime", until=_in_days(-1), turn_cap=0)
+    assert main._tier_for("alice") == "lifetime"
+
+
+def test_admin_subscription_lifetime_forces_until_null(client):
+    """Admin-grant av lifetime → until=null (oändlig), turn_cap 0."""
+    _seed("the_admin", role="admin")
+    _seed("alice")
+    r = client.put("/api/admin/user/alice/subscription",
+                   json={"status": "lifetime", "until": "2027-01-01"},
+                   cookies={"morkrets_token": _tok("the_admin", "admin")})
+    assert r.status_code == 200
+    data = r.json()
+    assert data["subscription_status"] == "lifetime"
+    assert data["subscription_until"] is None
+    assert data["turn_cap"] == 0
+    assert main._tier_for("alice") == "lifetime"
+
+
+def test_admin_subscription_appends_chat_log(client):
+    """Grant skriver en loggpost i spelarens aktiva kampanjtranskript."""
+    _seed("the_admin", role="admin")
+    _seed("alice")
+    _seed_campaign("alice")
+    r = client.put("/api/admin/user/alice/subscription",
+                   json={"status": "tier2", "until": _in_days(30)},
+                   cookies={"morkrets_token": _tok("the_admin", "admin")})
+    assert r.status_code == 200
+    state = main.store.get("alice")
+    assert state is not None
+    trans = main.store.load_transcript(state, last_n=10)
+    assert any("upgraded as a token of appreciation" in e["content"] for e in trans)
+    assert any("Tier 2" in e["content"] for e in trans)
+
+
+def test_admin_subscription_lifetime_log_says_lifetime(client):
+    _seed("the_admin", role="admin")
+    _seed("alice")
+    _seed_campaign("alice")
+    r = client.put("/api/admin/user/alice/subscription",
+                   json={"status": "lifetime"},
+                   cookies={"morkrets_token": _tok("the_admin", "admin")})
+    assert r.status_code == 200
+    state = main.store.get("alice")
+    trans = main.store.load_transcript(state, last_n=10)
+    assert any("Lifetime" in e["content"] and "∞" in e["content"] for e in trans)
+
+
+def test_admin_subscription_free_log(client):
+    """Återkallning till free skriver en informativ loggpost."""
+    _seed("the_admin", role="admin")
+    _seed("alice", tier="tier2", until=_in_days(30))
+    _seed_campaign("alice")
+    r = client.put("/api/admin/user/alice/subscription",
+                   json={"status": "free"},
+                   cookies={"morkrets_token": _tok("the_admin", "admin")})
+    assert r.status_code == 200
+    state = main.store.get("alice")
+    trans = main.store.load_transcript(state, last_n=10)
+    assert any("reverted to" in e["content"] for e in trans)

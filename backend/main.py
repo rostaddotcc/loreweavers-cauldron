@@ -13,6 +13,7 @@ import logging
 import os
 import random
 import re
+import secrets
 import threading
 import time
 import uuid
@@ -1988,6 +1989,119 @@ async def login(req: LoginRequest, response: Response):
     return {"ok": True, "username": username, "role": user["role"]}
 
 
+class RequestResetRequest(BaseModel):
+    username: str
+
+
+class ResetWithTokenRequest(BaseModel):
+    token: str
+    password: str
+
+
+RESET_TOKEN_TTL = timedelta(minutes=30)
+RESET_RATE_LIMIT = timedelta(minutes=5)
+
+
+@app.post("/api/auth/request-reset")
+async def request_reset(req: RequestResetRequest):
+    """Skicka en engångs-återställningslänk till kontots e-post (om det finns).
+
+    Svaret är ALLTID ok:true — vi avslöjar inte vilka konton som har e-post.
+    Konton utan e-post använder det gamla direkt-flödet (reset-password).
+    Länken skrivs som en outbox-fil som hostens cauldron-mailer skickar via
+    Proton Bridge (backend körs i Docker och når inte hostens SMTP).
+    """
+    username = normalize_username(req.username)
+    if not username:
+        raise HTTPException(400, "Write your adventurer's name.")
+
+    with _USER_LOCK:
+        users = load_users()
+        udata = users.get(username)
+        if isinstance(udata, dict) and udata.get("email"):
+            last = udata.get("reset_requested_at")
+            if last:
+                try:
+                    last_dt = datetime.fromisoformat(last)
+                    if datetime.now(timezone.utc) - last_dt < RESET_RATE_LIMIT:
+                        raise HTTPException(429, "A raven is already on its way. Check your inbox.")
+                except ValueError:
+                    pass
+            token = secrets.token_urlsafe(32)
+            udata["reset_token"] = token
+            udata["reset_token_expiry"] = (datetime.now(timezone.utc) + RESET_TOKEN_TTL).isoformat()
+            udata["reset_requested_at"] = datetime.now(timezone.utc).isoformat()
+            save_users(users)
+            try:
+                OUTBOX_DIR.mkdir(parents=True, exist_ok=True)
+                try:
+                    os.chmod(OUTBOX_DIR, 0o777)  # hostens mailer måste kunna radera filer (Docker=root)
+                except OSError:
+                    pass
+                link = f"https://dnd.rostad.cc/reset.html?token={token}"
+                body = (
+                    "The Lore Weaver's Cauldron — re-forge your word.\n\n"
+                    "Click the link below to set a new password. It works once and "
+                    "expires in 30 minutes.\n\n"
+                    f"{link}\n\n"
+                    "If you did not ask for this, you can safely ignore this raven."
+                )
+                outbox = OUTBOX_DIR / f"reset-{token[:8]}-{int(time.time())}.json"
+                outbox.write_text(json.dumps({
+                    "to": udata["email"],
+                    "subject": "Re-forge your word — The Lore Weaver's Cauldron",
+                    "body": body,
+                }, ensure_ascii=False), encoding="utf-8")
+                logger.info("🔑 Reset link requested for %s (email outbox)", username)
+            except Exception as e:
+                logger.warning("Reset outbox write failed for %s: %s", username, e)
+    return {"ok": True}
+
+
+@app.post("/api/auth/reset-with-token")
+async def reset_with_token(req: ResetWithTokenRequest, response: Response):
+    """Sätt nytt lösenord med engångs-token från reset-länken.
+
+    Token verifieras + raderas (one-time-use). Expirerar efter 30 min.
+    Sätter session-cookie så spelaren är inloggad direkt.
+    """
+    err = validate_password(req.password)
+    if err:
+        raise HTTPException(400, err)
+    token = (req.token or "").strip()
+    if not token:
+        raise HTTPException(400, "That reset link looks broken.")
+
+    with _USER_LOCK:
+        users = load_users()
+        found = None
+        for uname, udata in users.items():
+            if isinstance(udata, dict) and udata.get("reset_token") == token:
+                found = (uname, udata)
+                break
+        if not found:
+            raise HTTPException(400, "That reset link is invalid or already used.")
+        uname, udata = found
+        expiry = udata.get("reset_token_expiry")
+        if expiry:
+            try:
+                if datetime.now(timezone.utc) > datetime.fromisoformat(expiry):
+                    raise HTTPException(400, "That reset link has expired. Ask for a new one.")
+            except ValueError:
+                raise HTTPException(400, "That reset link is invalid.")
+        # One-time-use: radera token oavsett utfall
+        udata.pop("reset_token", None)
+        udata.pop("reset_token_expiry", None)
+        udata["password_hash"] = hash_password(req.password)
+        udata["last_login"] = _now_iso()
+        save_users(users)
+
+    token = create_token(uname, users[uname].get("role", "player"))
+    _set_auth_cookie(response, token)
+    logger.info("🔑 Password re-forged via token: %s", uname)
+    return {"ok": True, "username": uname, "role": users[uname].get("role", "player")}
+
+
 @app.post("/api/logout")
 async def logout(response: Response):
     response.delete_cookie(COOKIE_NAME, path="/")
@@ -2124,6 +2238,7 @@ async def oracle(req: OracleRequest, morkrets_token: str | None = Cookie(None)):
 
 # Sökväg till feedback-filen (monkeypatchbar i tester)
 _FEEDBACK_DIR = Path(__file__).resolve().parent / "data"
+OUTBOX_DIR = Path(__file__).resolve().parent / "data" / "outbox"
 
 
 class FeedbackRequest(BaseModel):

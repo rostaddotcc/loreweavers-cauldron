@@ -458,6 +458,7 @@
             <button type="submit" class="gate-btn" id="auth-btn">What will the Cauldron Foretell?</button>
             <div class="gate-toggle" id="gate-toggle">New here? <b>Forge your name</b></div>
             <div class="gate-toggle" id="gate-reset" style="font-size:.75rem">Lost your word? <b>Re-forge it</b></div>
+            <button type="button" class="gate-toggle" id="reset-link-btn" style="display:none;font-size:.75rem">📧 Send me a reset link</button>
             <div class="gate-error" id="gate-error"></div>
           </form>
           <div class="gate-foot">Powered by Qwen &amp; StepFun &middot; self-registration, no email required</div>
@@ -567,6 +568,7 @@ function applyAuthMode() {
       ? 'Remembered it after all? <b>Return to the cauldron</b>'
       : 'New here? <b>Forge your name</b>');
   document.getElementById('gate-reset').style.display = (authMode === 'login') ? '' : 'none';
+  document.getElementById('reset-link-btn').style.display = isReset ? '' : 'none';
   document.getElementById('gate-error').textContent = '';
 }
 
@@ -580,6 +582,24 @@ document.getElementById('gate-reset').addEventListener('click', () => {
   authMode = 'reset';
   applyAuthMode();
   sfx('click');
+});
+
+// 📧 E-postbaserad reset: skickar länk till kontots e-post (om det finns).
+document.getElementById('reset-link-btn').addEventListener('click', async () => {
+  const user = document.getElementById('username').value.trim().toLowerCase();
+  if (!user) { showAuthError("Write your adventurer's name first."); return; }
+  const btn = document.getElementById('reset-link-btn');
+  btn.disabled = true;
+  try {
+    await API.requestReset(user);
+    document.getElementById('gate-error').textContent = '🕊️ If that adventurer has an email, a reset link is on its way. Check your inbox.';
+    authMode = 'login';
+    applyAuthMode();
+  } catch (err) {
+    showAuthError(err && err.message && !/HTTP/.test(err.message) ? err.message : 'The raven could not be sent. Try again shortly.');
+  } finally {
+    btn.disabled = false;
+  }
 });
 
 function showAuthError(msg) {

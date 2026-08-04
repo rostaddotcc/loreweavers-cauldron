@@ -185,7 +185,13 @@ function relatedQuests(n){
     CURRENT_NPC = 0;
     buildFilters();
     renderList();
-    if (NPCS.length) selectNpc(0);
+    if (NPCS.length) {
+      // Hash-stöd: #npc:<namn> från sidopanelens klick → öppna rätt dossier
+      const h = decodeURIComponent((location.hash || '').replace(/^#/, ''));
+      const wanted = h.startsWith('npc:') ? h.slice(4).toLowerCase() : '';
+      const idx = wanted ? NPCS.findIndex(n => (n.name || '').toLowerCase() === wanted) : -1;
+      selectNpc(idx >= 0 ? idx : 0);
+    }
     else showEmptyHall();
   } catch (e) {
     showNoCampaign('The Memory Codex could not be loaded — check your connection and try again.');

@@ -193,7 +193,8 @@
   }.npc-list{
     display: flex; flex-direction: column;
     background: var(--stone-2); border: 1px solid var(--edge);
-  }.npc-row{
+    max-height: 38vh; overflow-y: auto;
+  }.npc-list::-webkit-scrollbar{ width: 5px; }.npc-list::-webkit-scrollbar-thumb{ background: var(--edge-hi, var(--edge)); border-radius: 3px; }.npc-row{
     display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem;
     padding: 0.45rem 0.55rem; transition: background 0.2s; cursor: default;
     border-bottom: 1px solid color-mix(in srgb, var(--edge) 45%, transparent);
@@ -210,7 +211,16 @@
   }.quest-desc{ font-size: 0.93rem; color: var(--bone-dim); font-style: italic; line-height: 1.4; margin-top: 0.15rem; }.quest-reward{
     font-size: 0.76rem; color: var(--poison); margin-top: 0.2rem;
     text-shadow: 0 0 8px rgba(122,163,94,0.25);
-  }.quest-item.done{ border-left-color: rgba(122,163,94,0.5); background: rgba(122,163,94,0.05); }.quest-item.done .quest-name{ text-decoration: line-through; color: var(--bone-dim); }.quest-item.done .quest-reward{ color: var(--poison); opacity: 0.75; }.quest-item.failed{ border-left-color: rgba(163,36,51,0.5); background: rgba(163,36,51,0.06); }.quest-item.failed .quest-name{ text-decoration: line-through; color: rgba(212,58,77,0.6); }.quest-empty{ font-size: 0.93rem; color: var(--bone-dim); font-style: italic; opacity: 0.55; padding: 0.2rem 0.4rem; }/* ── Platskort + Codex-knapp — samma kort-grammatik som resten ── */.loc-card{
+  }.quest-item.done{ border-left-color: rgba(122,163,94,0.5); background: rgba(122,163,94,0.05); }.quest-item.done .quest-name{ text-decoration: line-through; color: var(--bone-dim); }.quest-item.done .quest-reward{ color: var(--poison); opacity: 0.75; }.quest-item.failed{ border-left-color: rgba(163,36,51,0.5); background: rgba(163,36,51,0.06); }.quest-item.failed .quest-name{ text-decoration: line-through; color: rgba(212,58,77,0.6); }.quest-empty{ font-size: 0.93rem; color: var(--bone-dim); font-style: italic; opacity: 0.55; padding: 0.2rem 0.4rem; }/* ── Journey entry (sidebar) — senaste loggboksraden ── */.journey-entry{
+    background: var(--stone-2); border: 1px solid var(--edge); border-left: 2px solid rgba(139,95,212,0.6);
+    padding: 0.5rem 0.55rem; transition: background 0.2s, border-color 0.2s, transform 0.2s;
+  }.journey-entry:hover{ background: var(--stone-3); border-color: var(--arcane); transform: translateX(2px); }.je-head{
+    font-family: 'Cinzel', serif; font-size: 0.72rem; letter-spacing: 0.08em;
+    color: var(--arcane-bright); text-transform: uppercase; margin-bottom: 0.25rem;
+  }.je-text{
+    font-size: 0.85rem; color: var(--bone-dim); font-style: italic; line-height: 1.35;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }/* ── Platskort + Codex-knapp — samma kort-grammatik som resten ── */.loc-card{
     background: var(--stone-2); border: 1px solid var(--edge);
     padding: 0.55rem 0.6rem; margin-top: 0.4rem;
   }.sidebar .cd-nav-btn{
@@ -1056,6 +1066,16 @@
       </div>
     </div>
 
+    <div class="side-section" id="sec-journey">
+      <div class="side-label side-toggle" onclick="toggleSideSection('journey')">📖 Journey <span class="side-caret">▾</span></div>
+      <div class="side-body">
+        <div class="journey-entry" id="journey-entry" onclick="openCodex('journal')" title="Open journal in Codex" style="cursor:pointer">
+          <div class="je-head">—</div>
+          <div class="je-text">No journey entries yet…</div>
+        </div>
+      </div>
+    </div>
+
     <div class="side-section" id="sec-npcs">
       <div class="side-label side-toggle" onclick="toggleSideSection('npcs')">Known NPCs <span class="side-caret">▾</span></div>
       <div class="side-body">
@@ -1070,8 +1090,8 @@
           <div class="loc-card" onclick="openCodex('map')" title="Open map in Codex" style="cursor:pointer">
             <div id="loc-name" style="font-size:0.9rem;color:var(--bone-bright)">🗺 Unknown location</div>
             <div id="loc-sub" style="font-size:0.68rem;color:var(--bone-dim);font-style:italic;margin-top:0.2rem">—</div>
+            <div id="loc-quest" style="display:none;margin-top:0.35rem;font-size:0.72rem;color:var(--gold-bright);border-top:1px dashed color-mix(in srgb, var(--edge) 60%, transparent);padding-top:0.3rem">⚑ Quest here</div>
           </div>
-          <div id="loc-list" style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.25rem"></div>
         </div>
       </div>
     </div>
@@ -1341,6 +1361,8 @@ async function loadCampaign() {
       renderQuests(campaign._raw && campaign._raw.quests);
       // Fyll platslistan i sidebaren (besökta platser → karta)
       renderLocations(campaign._raw);
+      // Senaste journey-entry (loggbok)
+      renderJourney(campaign._raw);
       // Fyll avatar-registret (spelare, DM, NPCs)
       ingestAvatars(campaign._raw && campaign._raw.avatars);
       refreshAvatars();
@@ -4804,6 +4826,7 @@ async function refreshSidebar() {
     const raw = campaign._raw || {};
     // NPC-registret — Lorekeeper kan ha lagt till nya gestalter post-DM
     ingestNpcs(raw.npcs);
+    renderNpcSidebar();
     // Uppdragslogg + valuta
     renderQuests(raw.quests);
     updateCurrency(raw.currency ?? {});
@@ -4832,6 +4855,7 @@ async function refreshSidebar() {
       if (sub) sub.textContent = w.time;
     }
     renderLocations(raw);
+    renderJourney(raw);
   } catch (e) { /* tyst */ }
 }
 
@@ -4926,8 +4950,9 @@ function renderNpcSidebar() {
     const icon = av
       ? `<img src="${av}" alt="" style="width:16px;height:16px;object-fit:cover;image-rendering:pixelated">`
       : SPR.html(n.icon || '🎭');
+    const safeName = String(n.name || k || '').replace(/'/g, "\\'");
     return `
-      <div class="npc-row${n.alive === false ? ' dead' : ''}" data-npc="${k}" onclick="openNpcDrawer(this.dataset.npc)" title="View dossier" style="cursor:pointer">
+      <div class="npc-row${n.alive === false ? ' dead' : ''}" data-npc="${k}" onclick="openNpcCodex('${safeName}')" title="Open dossier in Codex" style="cursor:pointer">
         <span class="npc-dot" style="color:${n.color};background:${n.color}"></span>
         <span class="npc-info">
           <div class="npc-name">${n.alive === false ? SPR.html('💀') : ''} ${icon} ${n.name}</div>
@@ -4943,10 +4968,44 @@ function renderNpcSidebar() {
     partyList.innerHTML = near.map(row).join('');
     if (nearLabel) nearLabel.style.display = near.length ? 'block' : 'none';
   }
-  list.innerHTML = rest.map(row).join('') || `<div class="npc-row" style="opacity:.45;cursor:default">${I18N.t('Ingen har dykt upp ännu…')}</div>`;
+  const MAX_SHOWN = 12;
+  const total = rest.length;
+  if (!total) {
+    list.innerHTML = `<div class="npc-row" style="opacity:.45;cursor:default">${I18N.t('Ingen har dykt upp ännu…')}</div>`;
+    return;
+  }
+  // Visa max MAX_SHOWN — resten bakom en "visa alla"-rad (klick → öppna Codex NPC-hall)
+  const shown = rest.slice(0, MAX_SHOWN).map(row).join('');
+  const more = total > MAX_SHOWN
+    ? `<div class="npc-row npc-more" onclick="openCodex('npcs')" title="Open NPC hall in Codex" style="cursor:pointer;justify-content:center;color:var(--arcane-bright);font-size:0.78rem;font-style:italic;border-bottom:none">+ ${total - MAX_SHOWN} more…</div>`
+    : '';
+  list.innerHTML = shown + more;
+}
+
+// Öppna en specifik NPC i Codex (NPC-hallen, hoppar till rätt dossier)
+function openNpcCodex(name) {
+  SFX.click();
+  closeMobileSidebar();
+  openCodex('npcs', '#npc:' + encodeURIComponent(name || ''));
 }
 
 // ── Uppdragslogg i sidebaren (från /api/campaign state.quests) ──
+let _currentLocForFlag = '';
+function updateLocQuestFlag(quests) {
+  const flag = document.getElementById('loc-quest');
+  if (!flag) return;
+  const active = (quests || []).filter(q => q && q.status === 'aktiv' && q.location);
+  const match = active.find(q => {
+    const qloc = typeof q.location === 'string' ? q.location : (q.location && q.location.name) || '';
+    return String(qloc).toLowerCase() === String(_currentLocForFlag).toLowerCase();
+  });
+  if (match) {
+    flag.style.display = 'block';
+    flag.textContent = '⚑ ' + String(match.name || 'Quest here').slice(0, 46);
+  } else {
+    flag.style.display = 'none';
+  }
+}
 function renderQuests(quests) {
   const list = document.getElementById('quest-list');
   if (!list) return;
@@ -4973,43 +5032,70 @@ function renderQuests(quests) {
       ${q.reward ? `<div class="quest-reward">🪙 ${escapeHtml(q.reward)}</div>` : ''}
     </div>`;
   }).join('');
+  updateLocQuestFlag(qs);
 }
 
-// ── Platslista i sidebaren (besökta platser) — klick öppnar kartan på platsen ──
+// ── Platskort i sidebaren — bara nuvarande location + questflagga ──
 function renderLocations(raw) {
-  const list = document.getElementById('loc-list');
-  if (!list) return;
   const world = (raw && raw.world) || {};
-  const locs = (raw && raw.locations) || [];
-  const visitedNames = (world.visited_locations || []).map(v =>
-    (typeof v === 'string' ? v : (v && v.name) || '').toLowerCase()
-  );
-  // Prioritera: nuvarande plats först, sedan besökta, sedan kända
   const current = world.current_location || '';
-  const known = [];
-  locs.forEach(l => {
-    const name = l && l.name;
-    if (!name) return;
-    const isVisited = visitedNames.includes(name.toLowerCase()) || name === current;
-    if (isVisited) known.push(l);
-  });
-  // Fallback: visited_locations som inte finns i state["locations"]
-  world.visited_locations && world.visited_locations.forEach(v => {
-    const name = typeof v === 'string' ? v : (v && v.name);
-    if (!name) return;
-    if (!known.some(k => k.name === name)) known.push({ name, description: '', lore: '' });
-  });
-  if (!known.length) { list.innerHTML = ''; return; }
-  list.innerHTML = known.map(l => {
-    const name = escapeHtml(l.name || '');
-    const sub = l.description ? escapeHtml(String(l.description).slice(0, 60)) :
-      (l.lore ? escapeHtml(String(l.lore).slice(0, 60)) : '');
-    const here = name === escapeHtml(current) ? ' · 📍' : '';
-    return `<div class="loc-row" onclick="openMapAt('${escapeHtml(l.name || '').replace(/'/g, "\\'")}')" title="${name} — ${escapeHtml(l.lore || l.description || '')}" style="cursor:pointer;font-size: 0.83rem;color:var(--bone);padding:0.25rem 0.3rem;border:1px solid var(--edge);border-radius:2px;display:flex;flex-direction:column;gap:0.1rem;transition:border-color .2s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--edge)'">
-      <span style="color:var(--bone-bright)">🗺 ${name}${here}</span>
-      ${sub ? `<span style="font-size:0.62rem;color:var(--bone-dim);font-style:italic">${sub}</span>` : ''}
-    </div>`;
-  }).join('');
+  _currentLocForFlag = current;
+  const el = document.getElementById('loc-name');
+  if (el) el.textContent = '🗺 ' + (current || I18N.t('Okänd plats'));
+  const sub = document.getElementById('loc-sub');
+  if (sub) sub.textContent = world.time || (current ? '' : '—');
+  // Questflagga: aktiv quest vars plats matchar nuvarande location
+  const flag = document.getElementById('loc-quest');
+  if (flag) {
+    const quests = (raw && raw.quests) || [];
+    const active = quests.filter(q => q && q.status === 'aktiv' && q.location);
+    const match = active.find(q => {
+      const qloc = typeof q.location === 'string' ? q.location : (q.location && q.location.name) || '';
+      return String(qloc).toLowerCase() === String(current).toLowerCase();
+    });
+    if (match) {
+      flag.style.display = 'block';
+      flag.textContent = '⚑ ' + String(match.name || 'Quest here').slice(0, 46);
+    } else {
+      flag.style.display = 'none';
+    }
+  }
+}
+
+// ── Senaste journey-entry (loggbok) i sidebaren — klick öppnar journalen ──
+function renderJourney(raw) {
+  const box = document.getElementById('journey-entry');
+  if (!box) return;
+  const world = (raw && raw.world) || {};
+  const head = box.querySelector('.je-head');
+  const text = box.querySelector('.je-text');
+  // Prioritera LLM-loggboken (day-entries), fallback till Guardian-loggen
+  const llm = world.logbook_llm || {};
+  const llmDays = Array.isArray(llm.days) ? llm.days : [];
+  let entry = null;
+  if (llmDays.length) {
+    const last = llmDays[llmDays.length - 1];
+    entry = {
+      title: (last.title ? last.title : ('Day ' + (last.day || ''))).trim(),
+      body: Array.isArray(last.events) ? last.events.join(' · ') : (last.mood || ''),
+    };
+  } else {
+    const lb = Array.isArray(world.logbook) ? world.logbook : [];
+    const last = lb.length ? lb[lb.length - 1] : null;
+    if (last) {
+      entry = {
+        title: 'Day ' + (last.day || '?'),
+        body: String(last.text || ''),
+      };
+    }
+  }
+  if (!entry) {
+    head.textContent = '—';
+    text.textContent = I18N.t('Inga journalanteckningar ännu…');
+    return;
+  }
+  head.textContent = entry.title;
+  text.textContent = entry.body || '…';
 }
 
 // ═══════════════════════════════════════

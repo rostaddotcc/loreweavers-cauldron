@@ -282,6 +282,7 @@ const I18N = (() => {
     'koppar': 'copper',
     'Inga uppdrag ännu…': 'No quests yet…',
     'Ingen har dykt upp ännu…': 'No one has shown up yet…',
+    'Inga journalanteckningar ännu…': 'No journal entries yet…',
     'Slutfört': 'Completed',
     'Misslyckat': 'Failed',
     'Aktivt': 'Active',

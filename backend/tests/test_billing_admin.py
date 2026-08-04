@@ -123,24 +123,24 @@ def test_ledger_load_creates_empty_file(ledger_file):
 def test_ledger_append_and_totals(ledger_file):
     _seed_admin()
     _seed_player("alice", subscription_status="tier2", subscription_until=_in_days(30), turn_cap=0)
-    row = main._ledger_append({"user": "alice", "amount_sek": 105, "type": "invoice.paid",
+    row = main._ledger_append({"user": "alice", "amount_sek": 105, "type": "stripe:tier2",
                                "stripe_sub_id": "sub_1", "event_id": "evt_1"})
     assert row["ts"]  # backfillad med _now_iso()
     assert row["user"] == "alice"
     assert row["amount_sek"] == 105
     assert main._ledger_per_user() == {"alice": 105}
     totals = main._ledger_totals()
-    assert totals["mrr"] == 105         # 1 aktiv tier2
+    assert totals["mrr"] == 105         # 1 aktiv betald tier2 (stripe-rad i ledgern)
     assert totals["transactions"] == 1
     assert totals["total"] == 105
     # fler rader summeras per user + saknade nycklar backfillas med None
-    main._ledger_append({"user": "alice", "amount_sek": 105, "type": "invoice.paid"})
+    main._ledger_append({"user": "alice", "amount_sek": 105, "type": "stripe:renewal"})
     main._ledger_append({"user": "bob", "amount_sek": 10, "type": "topup"})
     assert main._ledger_per_user() == {"alice": 210, "bob": 10}
     totals = main._ledger_totals()
     assert totals["transactions"] == 3
     assert totals["total"] == 220
-    assert totals["mrr"] == 105         # bob är free
+    assert totals["mrr"] == 105         # bob är free, renewal dubblar inte MRR
 
 
 def test_mrr_counts_only_active_premium(ledger_file):
@@ -148,8 +148,23 @@ def test_mrr_counts_only_active_premium(ledger_file):
     _seed_player("active", subscription_status="tier2", subscription_until=_in_days(10))
     _seed_player("expired", subscription_status="tier2", subscription_until=_in_days(-1))
     _seed_player("freebie")
+    # Bara riktiga Stripe-betalningar räknas — admin-given tier (ingen ledger-rad) ger INGEN MRR.
+    main._ledger_append({"user": "active", "amount_sek": 105, "type": "stripe:tier2",
+                         "stripe_sub_id": "sub_a", "event_id": "evt_a"})
+    main._ledger_append({"user": "expired", "amount_sek": 105, "type": "stripe:tier2",
+                         "stripe_sub_id": "sub_e", "event_id": "evt_e"})
     totals = main._ledger_totals()
-    assert totals["mrr"] == 105  # utgånget tier räknas inte
+    assert totals["mrr"] == 105  # active betald+aktiv; expired utgången; freebie ingen betalning
+
+
+def test_mrr_ignores_admintier_without_payment(ledger_file):
+    """Admin-given tier via setTier skriver inget till ledgern → MRR 0 trots premium-status."""
+    _seed_admin()
+    _seed_player("granted", subscription_status="tier2", subscription_until=_in_days(30))
+    totals = main._ledger_totals()
+    assert totals["mrr"] == 0
+    assert totals["transactions"] == 0
+    assert totals["total"] == 0
 
 
 def test_mrr_includes_tier1_and_excludes_lifetime(ledger_file):
@@ -158,8 +173,12 @@ def test_mrr_includes_tier1_and_excludes_lifetime(ledger_file):
     _seed_player("t1", subscription_status="tier1", subscription_until=_in_days(10))
     _seed_player("t2", subscription_status="tier2", subscription_until=_in_days(10))
     _seed_player("life", subscription_status="lifetime", subscription_until=_in_days(3650))
+    main._ledger_append({"user": "t1", "amount_sek": 35, "type": "stripe:tier1", "event_id": "evt_t1"})
+    main._ledger_append({"user": "t2", "amount_sek": 105, "type": "stripe:tier2", "event_id": "evt_t2"})
+    main._ledger_append({"user": "life", "amount_sek": 1170, "type": "stripe:lifetime", "event_id": "evt_lt"})
     totals = main._ledger_totals()
     assert totals["mrr"] == 35 + 105
+    assert totals["total"] == 35 + 105 + 1170  # lifetime ligger i total, ej i MRR
 
 
 def test_ledger_corrupt_file_is_empty(ledger_file):
@@ -172,8 +191,9 @@ def test_ledger_corrupt_file_is_empty(ledger_file):
 def test_billing_endpoint_shape(client, ledger_file):
     _seed_admin()
     _seed_player("alice", subscription_status="tier2", subscription_until=_in_days(30), turn_cap=0)
-    for _ in range(3):
-        main._ledger_append({"user": "alice", "amount_sek": 105, "type": "invoice.paid"})
+    main._ledger_append({"user": "alice", "amount_sek": 105, "type": "stripe:tier2", "event_id": "evt_1"})
+    main._ledger_append({"user": "alice", "amount_sek": 105, "type": "stripe:renewal", "event_id": "evt_2"})
+    main._ledger_append({"user": "alice", "amount_sek": 105, "type": "stripe:renewal", "event_id": "evt_3"})
     r = client.get("/api/admin/billing", cookies={"morkrets_token": _atok()})
     assert r.status_code == 200
     body = r.json()

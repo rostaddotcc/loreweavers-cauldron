@@ -7674,17 +7674,28 @@ def _ledger_per_user() -> dict:
 def _ledger_totals() -> dict:
     """Aggregerad intäktsstatistik → {mrr, transactions, total}.
 
-    MRR = (TIER_PRICES_SEK["tier1"] × tier1-konton) + (TIER_PRICES_SEK["tier2"] × tier2-konton)
-    (subscription_status=tier1/tier2 och subscription_until ej passerad).
+    MRR räknas ENBART från faktiska betalningar i ledgern: en användare
+    med en stripe:tier1/tier2-rad (checkout) vars prenumeration fortfarande
+    är aktiv (subscription_until ej passerad). Admin-givna tiers (setTier)
+    skriver inget till ledgern → räknas INTE i MRR.
     Lifetime räknas som engångsintäkt i `total` (ledger), inte i MRR."""
     ledger = _ledger_load()
+    # Senast betalda månadstier per användare (kronologisk ledgern → sista raden vinner)
+    paid_tier: dict[str, str] = {}
+    for row in ledger:
+        user = row.get("user")
+        rtype = row.get("type") or ""
+        if not user:
+            continue
+        if rtype in ("stripe:tier1", "stripe:tier2"):
+            paid_tier[user] = rtype.split(":", 1)[1]
     mrr = 0
-    for username, udata in load_users().items():
-        if not isinstance(udata, dict):
+    for username, tier in paid_tier.items():
+        if tier not in TIER_PRICES_SEK:
             continue
         try:
-            tier = _tier_for(username)
-            if tier in TIER_PRICES_SEK and tier != "lifetime":
+            # Räkna bara om prenumerationen fortfarande är aktiv med samma tier.
+            if _tier_for(username) == tier:
                 mrr += TIER_PRICES_SEK[tier]
         except Exception:
             continue

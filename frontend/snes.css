@@ -565,13 +565,14 @@
     opacity: 0;
     pointer-events: none;
     transition: opacity .3s ease;
-  }/* Stridslogg-knappen höjs över bottom-nav på mobil */.battle-drawer-toggle{
-    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-    right: .8rem;
-    padding: .42rem .7rem;
-  }.battle-drawer-toggle .bdt-label{ display: none; }.battle-drawer-toggle .bdt-icon{ font-size: 1.15rem; }/* Maskinrums-tab ovanför bottom-nav, ovanför stridslogg-knappen */.console-tab{
-    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-    right: 4.6rem;
+  }/* Stridslogg-knappen: inline i TTS-raden även på mobil */.battle-drawer-toggle{
+    bottom: auto;
+    right: auto;
+    padding: .3rem .55rem;
+  }.battle-drawer-toggle .bdt-label{ display: none; }.battle-drawer-toggle .bdt-icon{ font-size: 1.05rem; }/* Maskinrums-tab: inline i TTS-raden även på mobil */.console-tab{
+    bottom: auto;
+    right: auto;
+    width: 32px; height: 30px;
   }.sheet-backdrop.open{
     opacity: 1;
     pointer-events: auto;
@@ -1246,27 +1247,21 @@
 .bl-body .initiative-reveal{ margin: .4rem 0; }
 /* ── Stridslogg-toggle (alltid synlig — öppna/minimera högerkolumnen) ── */
 .battle-drawer-toggle{
-  position: fixed;
-  right: 1.1rem;
-  bottom: 1.1rem;
-  z-index: 850;
-  display: flex;
-  align-items: center; justify-content: center; gap: .45rem;
-  width: fit-content;
-  padding: .5rem .85rem;
+  display: inline-flex;
+  align-items: center; justify-content: center; gap: .4rem;
+  padding: .3rem .55rem;
   font-family: var(--font-display), 'Cinzel', serif;
   font-size: .62rem; letter-spacing: .16em; text-transform: uppercase;
   color: var(--bone-bright);
   background: linear-gradient(160deg, rgba(139,26,42,.5), rgba(139,26,42,.28));
   border: 1px solid rgba(139,26,42,.55);
-  border-radius: 4px;
+  border-radius: 3px;
   cursor: pointer;
-  box-shadow: 0 6px 22px rgba(0,0,0,.6);
   transition: background .2s, color .2s, transform .2s, box-shadow .2s;
 }
 .battle-drawer-toggle .bdt-icon{ font-size: 1rem; line-height: 1; }
 .battle-drawer-toggle .bdt-caret{ transition: transform .3s cubic-bezier(.22,1,.36,1); font-size: .6rem; }
-.battle-drawer-toggle:hover{ background: linear-gradient(160deg, rgba(139,26,42,.7), rgba(139,26,42,.4)); color: var(--bone-bright); transform: translateY(-2px); box-shadow: 0 10px 28px rgba(0,0,0,.7); }
+.battle-drawer-toggle:hover{ background: linear-gradient(160deg, rgba(139,26,42,.7), rgba(139,26,42,.4)); color: var(--bone-bright); transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.6); }
 .battle-drawer-toggle:active{ background: var(--blood); color: var(--ink); transform: translateY(0); }
 body.battle-drawer-open .battle-drawer-toggle .bdt-caret{ transform: rotate(180deg); }
 

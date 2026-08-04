@@ -721,12 +721,10 @@
     background: var(--stone-3); border: 1px solid color-mix(in srgb, var(--arcane) 4%, transparent); color: var(--arcane);
     padding: 0.55rem 0.9rem; cursor: pointer; border-radius: 2px; transition: all 0.2s;
   }.oracle-input button:hover{ box-shadow: 0 0 12px -3px color-mix(in srgb, var(--arcane) 5%, transparent); }/* ═══════════ 🛠️ MASKINRUMMET — flat debug-panel (api.js #debug-panel style) ═══════════ */.console-tab{
-    position: fixed; bottom: 1.1rem; right: 7.4rem;
-    z-index: 9999; width: 40px; height: 40px;
-    display: flex; align-items: center; justify-content: center;
-    background: #111; border: 1px solid #333; border-radius: 6px;
-    color: var(--term-green); font-size: 1.05rem; cursor: pointer;
-    box-shadow: 0 4px 16px rgba(0,0,0,.6);
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 30px;
+    background: #111; border: 1px solid #333; border-radius: 3px;
+    color: var(--term-green); font-size: .95rem; cursor: pointer;
     transition: background .2s, transform .2s, border-color .2s;
   }.console-tab:hover{ background: #1a1a1a; transform: translateY(-2px); border-color: var(--term-green); }
   /* ── 💬 Feedback modal ── */
@@ -986,7 +984,7 @@
     font-family: var(--cli-mono, ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace) !important;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=23">
+<link rel="stylesheet" href="snes.css?v=24">
 <script src="sprites.js?v=20260802a"></script>
 <script src="fonts.js?v=20260803b"></script>
 <script src="themes.js?v=20260804b"></script>
@@ -1163,14 +1161,6 @@
       <div class="bl-body" id="battle-log-body"></div>
     </aside>
 
-    <!-- Stridslogg-toggle: alltid synlig — öppna/minimera stridsloggen (högerkolumnen).
-         Auto-öppnas vid strid; annars arkivläge för gamla strider. -->
-    <button class="battle-drawer-toggle" id="battle-drawer-toggle" onclick="toggleBattleLog()" aria-expanded="false" title="Toggle combat log">
-      <span class="bdt-icon">⚔️</span>
-      <span class="bdt-label">Combat</span>
-      <span class="bdt-caret">▲</span>
-    </button>
-
     <!-- Quick scroll: hoppa upp/ner i historiken (döljs vid ändarna) -->
     <div class="quick-scroll" id="quick-scroll">
       <button class="qs-btn" id="qs-up" title="Scroll up in history" onclick="qsScrollUp(event)">▲</button>
@@ -1223,6 +1213,12 @@
                onchange="setTTSStyleCustom(this.value)" oninput="setTTSStyleCustom(this.value)">
         <button class="tts-auto-btn" id="tts-auto-btn" onclick="toggleTTSAutoplay(this)" title="Autoplay TTS when the DM answers">🔊 Auto</button>
         <button class="tts-auto-btn tts-speed-btn" id="tts-speed-btn" onclick="cycleTTSSpeed()" title="Playback speed (independent of the TTS API)">⏩ 1×</button>
+        <button class="battle-drawer-toggle" id="battle-drawer-toggle" onclick="toggleBattleLog()" aria-expanded="false" title="Toggle combat log">
+          <span class="bdt-icon">⚔️</span>
+          <span class="bdt-label">Combat</span>
+          <span class="bdt-caret">▲</span>
+        </button>
+        <div class="console-tab" id="console-tab" onclick="toggleConsole()" title="Open Engine Room" aria-label="Open Engine Room">🛠️</div>
       </div>
       <div class="composer">
         <div class="at-chat-chip" id="at-chat-chip" hidden></div>
@@ -1314,7 +1310,6 @@
 </div>
 
 <!-- 🛠️ MASKINRUMMET — flat debug panel (api.js #debug-panel style) -->
-<div class="console-tab" id="console-tab" onclick="toggleConsole()" title="Open Engine Room" aria-label="Open Engine Room">🛠️</div>
 <div class="console" id="console">
   <div class="console-head">
     <span class="console-title">🛠️ Engine Room</span>
@@ -5653,7 +5648,7 @@ function toggleConsole() {
   consoleOpen = !consoleOpen;
   document.getElementById('console').classList.toggle('open', consoleOpen);
   const tab = document.getElementById('console-tab');
-  if (tab) tab.style.display = consoleOpen ? 'none' : 'flex';
+  if (tab) tab.style.display = consoleOpen ? 'none' : 'inline-flex';
   if (consoleOpen) startConsolePolling();
   else stopConsolePolling();
 }

@@ -15,7 +15,7 @@ import jwt
 
 JWT_SECRET = os.getenv("JWT_SECRET", "byt-mig-till-nagot-langt-och-slumpmassigt")
 JWT_ALGORITHM = "HS256"
-JWT_EXPIRY_HOURS = int(os.getenv("JWT_EXPIRY_HOURS", "24"))
+JWT_EXPIRY_HOURS = int(os.getenv("JWT_EXPIRY_HOURS", "2"))
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
 USERS_FILE = DATA_DIR / "users.json"

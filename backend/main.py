@@ -1891,11 +1891,12 @@ class RegisterRequest(BaseModel):
 
 
 def _set_auth_cookie(response: Response, token: str) -> None:
+    # 2h-session: cookie och JWT-expiry matchar (JWT_EXPIRY_HOURS=2 i auth.py).
     response.set_cookie(
         key=COOKIE_NAME,
         value=token,
         httponly=True,
-        max_age=86400,
+        max_age=7200,
         samesite="lax",
         path="/",
     )
@@ -8010,6 +8011,7 @@ STRIPE_PRICES = {
     "tier1": os.getenv("STRIPE_PRICE_TIER1", ""),
     "tier2": os.getenv("STRIPE_PRICE_TIER2", ""),
     "lifetime": os.getenv("STRIPE_PRICE_LIFETIME", ""),
+    "lifetime_promo": os.getenv("STRIPE_PRICE_LIFETIME_PROMO", ""),
 }
 STRIPE_PUBLIC_BASE = os.getenv("STRIPE_PUBLIC_BASE", "https://dnd.rostad.cc")
 # Ungefärlig EUR→SEK-kurs för ledgern (visas bara för admin).
@@ -8068,6 +8070,9 @@ async def billing_checkout(req: BillingCheckoutRequest, morkrets_token: str | No
     if not STRIPE_SECRET_KEY:
         raise HTTPException(503, "Payments are not configured yet")
     price = STRIPE_PRICES[tier]
+    # Grundarerbjudande: Lifetime för 50€ (one-time) under promoperioden.
+    if tier == "lifetime" and _promo_months_for("tier2") > 1 and STRIPE_PRICES.get("lifetime_promo"):
+        price = STRIPE_PRICES["lifetime_promo"]
     mode = "subscription" if tier in ("tier1", "tier2") else "payment"
     session = await _stripe_post("checkout/sessions", {
         "mode": mode,
@@ -8427,6 +8432,7 @@ async def promo_info():
         "offer": {
             "tier1": {"free_months": 2, "total_months": 3},
             "tier2": {"free_months": 3, "total_months": 4},
+            "lifetime": {"promo_price_eur": 50, "promo_price_sek": 585, "normal_price_eur": 100},
         },
         "tier_names": {"tier1": "Companion", "tier2": "Adventurer"},
     }

@@ -90,6 +90,11 @@
     font-size:.6rem;letter-spacing:.24em;text-transform:uppercase;color:var(--ink);
     background:linear-gradient(160deg,var(--gold-bright),var(--gold));
     padding:.28rem .7rem;border-radius:2px;box-shadow:0 2px 12px rgba(201,162,39,.4)}
+  .tier-flag.promo-flag{background:linear-gradient(160deg,#ffd76a,#c9a227);
+    animation:promo-pulse 2.2s ease-in-out infinite}
+  @keyframes promo-pulse{0%,100%{box-shadow:0 2px 12px rgba(201,162,39,.4)}50%{box-shadow:0 2px 22px rgba(232,198,90,.85)}}
+  .tier-price .strike{font-size:1.05rem;font-weight:400;color:var(--bone-dim);
+    text-decoration:line-through;text-decoration-thickness:2px;margin-left:.35rem;letter-spacing:.04em;vertical-align:.35em}
   .tier-price{font-family:var(--font-display);font-weight:900;font-size:2.1rem;color:var(--gold-bright);
     margin:.3rem 0 .2rem}
   .tier-price small{font-size:.8rem;font-weight:400;color:var(--bone-dim);letter-spacing:.06em}
@@ -144,6 +149,49 @@
     font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);
     text-decoration:none}
   .back:hover{color:var(--gold-bright);text-shadow:0 0 12px rgba(232,198,90,.5)}
+
+  /* ═══════════════ plan detail modal ═══════════════ */
+  .plan-overlay{position:fixed;inset:0;z-index:90;display:none;align-items:center;justify-content:center;
+    padding:1.25rem;background:rgba(3,2,7,.78);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+  .plan-overlay.show{display:flex}
+  .plan-modal{position:relative;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;
+    background:linear-gradient(165deg,var(--stone-3),var(--stone) 60%,#120c1c);
+    border:1px solid rgba(201,162,39,.4);box-shadow:0 30px 80px -20px rgba(0,0,0,.95),0 0 60px rgba(201,162,39,.08);
+    padding:2rem 1.8rem 1.7rem;animation:plan-in .28s cubic-bezier(.22,1,.36,1)}
+  @keyframes plan-in{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+  .plan-close{position:absolute;top:.7rem;right:.9rem;background:none;border:none;color:var(--bone-dim);
+    font-size:1.15rem;cursor:pointer;line-height:1;padding:.3rem;transition:color .2s}
+  .plan-close:hover{color:var(--blood-bright)}
+  .plan-eyebrow{font-family:var(--font-display);font-size:.6rem;letter-spacing:.34em;text-transform:uppercase;
+    color:var(--gold);margin-bottom:.7rem}
+  .plan-name{font-family:var(--font-display);font-weight:900;font-size:1.5rem;color:var(--bone-bright);
+    letter-spacing:.06em;margin-bottom:.4rem}
+  .plan-price{font-family:var(--font-display);font-weight:900;font-size:2.2rem;color:var(--gold-bright);margin-bottom:.35rem}
+  .plan-price small{font-size:.8rem;font-weight:400;color:var(--bone-dim);letter-spacing:.06em}
+  .plan-price .strike{font-size:1.1rem;font-weight:400;color:var(--bone-dim);text-decoration:line-through;
+    text-decoration-thickness:2px;margin-left:.4rem;vertical-align:.3em}
+  .plan-promo{display:inline-block;font-family:var(--font-display);font-size:.58rem;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--ink);background:linear-gradient(160deg,#ffd76a,#c9a227);
+    padding:.26rem .55rem;margin-bottom:.9rem;box-shadow:0 0 14px rgba(232,198,90,.5)}
+  .plan-desc{color:var(--bone-dim);font-style:italic;font-size:.95rem;line-height:1.6;margin-bottom:1.2rem}
+  .plan-list{list-style:none;margin-bottom:1.6rem}
+  .plan-list li{padding:.5rem 0 .5rem 1.5rem;position:relative;color:var(--bone);font-size:.96rem;line-height:1.5}
+  .plan-list li::before{content:'◆';position:absolute;left:0;top:.5rem;color:var(--gold);font-size:.6rem}
+  .plan-list li b{color:var(--bone-bright);font-weight:600}
+  .plan-list li.dim{color:var(--bone-dim)}
+  .plan-list li.dim::before{color:var(--edge-hi)}
+  .plan-cta{display:block;text-align:center;font-family:var(--font-display);font-size:.74rem;
+    letter-spacing:.22em;text-transform:uppercase;text-decoration:none;color:var(--ink);
+    background:linear-gradient(160deg,var(--gold-bright),var(--gold));padding:.9rem 1rem;border-radius:2px;
+    transition:transform .2s,box-shadow .2s;position:relative;overflow:hidden;border:none;cursor:pointer;width:100%}
+  .plan-cta:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(232,198,90,.3)}
+  .plan-cta.ghost{color:var(--bone-bright);background:var(--stone-3);border:1px solid var(--edge-hi)}
+  .plan-cta.ghost:hover{color:var(--gold-bright);border-color:var(--gold)}
+  .plan-cta.busy{opacity:.55;pointer-events:none;cursor:wait}
+  .plan-login-hint{margin-top:.8rem;text-align:center;font-size:.82rem;color:var(--bone-dim);line-height:1.5}
+  .plan-login-hint a{color:var(--gold-bright);text-decoration:none;border-bottom:1px solid rgba(201,162,39,.4)}
+  .plan-login-hint a:hover{color:var(--gold)}
+  .plan-note{margin-top:.9rem;text-align:center;font-size:.78rem;color:var(--bone-dim);line-height:1.55}
 
   @media(max-width:640px){
     .nav-links .nav-link{display:none}
@@ -211,7 +259,7 @@
         <li><b>AI avatars</b> for your hero and the NPCs you meet</li>
         <li>Everything in the Wanderer path</li>
       </ul>
-      <a class="tier-btn go" href="#" data-tier="tier1" onclick="startCheckout(event,'tier1')">Take the sigil</a>
+      <a class="tier-btn go" href="#" data-tier="tier1" onclick="openPlan(event,'tier1')">Take the sigil</a>
     </div>
 
     <!-- Tier 2 — Adventurer -->
@@ -230,22 +278,24 @@
         <li><b>AI avatars</b> for your hero and the NPCs you meet</li>
         <li>Everything in the Companion path</li>
       </ul>
-      <a class="tier-btn go" href="#" data-tier="tier2" onclick="startCheckout(event,'tier2')">Hold the sigil</a>
+      <a class="tier-btn go" href="#" data-tier="tier2" onclick="openPlan(event,'tier2')">Hold the sigil</a>
     </div>
 
     <!-- Tier 3 — Lifetime -->
-    <div class="tier">
+    <div class="tier" id="tier-lifetime">
       <span class="corner tl"></span><span class="corner tr"></span>
       <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tier-flag promo-flag" id="lifetime-promo-flag" style="display:none">Founding offer</div>
       <div class="tier-name">Lifetime</div>
-      <div class="tier-price"><span class="cur-price" data-eur="100" data-sek="1170">100€</span><small> once</small></div>
-      <div class="tier-desc">Support the dev. Never count a turn again.</div>
+      <div class="tier-price"><span class="cur-price" data-eur="50" data-sek="585">50€</span><small> once</small>
+        <span class="strike" id="lifetime-strike" style="display:none">100€</span></div>
+      <div class="tier-desc" id="lifetime-desc">Support the dev. Never count a turn again.</div>
       <ul>
         <li><b>Unlimited turns</b> — the Cauldron never sleeps</li>
         <li>All Dungeon Masters · both narrator voices · avatars</li>
         <li>A thank-you from the forge — you keep this realm burning</li>
       </ul>
-      <a class="tier-btn go" href="#" data-tier="lifetime" onclick="startCheckout(event,'lifetime')">Forge forever</a>
+      <a class="tier-btn go" href="#" data-tier="lifetime" onclick="openPlan(event,'lifetime')">Forge forever</a>
     </div>
   </div>
 
@@ -256,10 +306,30 @@
   <a class="back" href="adventure.html">← Return to the realm</a>
 </section>
 
+<!-- ═══════════════ plan detail modal ═══════════════ -->
+<div class="plan-overlay" id="plan-overlay" onclick="if(event.target===this)closePlan()">
+  <div class="plan-modal" role="dialog" aria-modal="true" aria-labelledby="plan-name">
+    <button class="plan-close" onclick="closePlan()" title="Close">✕</button>
+    <div class="plan-eyebrow" id="plan-eyebrow">The Path</div>
+    <div class="plan-name" id="plan-name">Companion</div>
+    <div class="plan-price" id="plan-price"><span id="plan-price-main">3€</span><small id="plan-price-per"> / month</small><span class="strike" id="plan-price-strike" style="display:none"></span></div>
+    <div class="plan-promo" id="plan-promo" style="display:none">Founding offer</div>
+    <div class="plan-desc" id="plan-desc"></div>
+    <ul class="plan-list" id="plan-list"></ul>
+    <button class="plan-cta" id="plan-cta" onclick="planCta()">Continue to checkout</button>
+    <div class="plan-login-hint" id="plan-login-hint" style="display:none">Not signed in — <a href="login.html?next=pricing.html">sign in to continue</a></div>
+    <div class="plan-note" id="plan-note">Payments are processed securely by Stripe.</div>
+  </div>
+</div>
+
 <script>
   // EUR ↔ SEK-konvertering (fast kurs ≈ 11.7, utan API-anrop)
   var CUR_SEK = false;
   var CUR_RATE = 11.7;
+  function fmtPrice(eur, sek) {
+    if (CUR_SEK) return sek + ' kr';
+    return (Number.isInteger(eur) ? eur : eur.toFixed(2)) + '€';
+  }
   function toggleCurrency() {
     CUR_SEK = !CUR_SEK;
     var label = document.getElementById('cur-label');
@@ -269,28 +339,139 @@
     document.querySelectorAll('.cur-price').forEach(function (el) {
       var eur = parseFloat(el.getAttribute('data-eur'));
       var sek = parseInt(el.getAttribute('data-sek'), 10);
-      if (CUR_SEK) {
-        el.textContent = sek + ' kr';
-      } else {
-        el.textContent = (Number.isInteger(eur) ? eur : eur.toFixed(2)) + '€';
-      }
+      el.textContent = fmtPrice(eur, sek);
     });
+    if (PLAN_OPEN) renderPlan(PLAN_OPEN);
   }
 
-  // ── Checkout → Stripe ──
-  // Klick på betald tier: skapa Checkout Session hos backend. Inte inloggad
-  // (401) → login med återkomst hit. Lyckad → Stripe-hosted checkout-sida.
-  function startCheckout(ev, tier) {
+  // ── Plan-data (detaljerad vy per tier) ──
+  // PROMO_ACTIVE sätts nedan via /api/promo; under erbjudandet:
+  //   Companion  = 1 månad betald → 2 gratismånader (3 totalt)
+  //   Adventurer = 1 månad betald → 3 gratismånader (4 totalt)
+  //   Lifetime   = 50€ engång istället för 100€
+  var PROMO_ACTIVE = false;
+  var PLAN_OPEN = null;
+  var PLAN_DATA = {
+    tier1: {
+      name: 'Companion',
+      price: { eur: 3, sek: 35, per: ' / month' },
+      desc: 'More turns, more often — and faces for your story.',
+      features: [
+        '<b>50 turns</b> refreshed <b>every 6 hours</b>',
+        '<b>AI avatars</b> for your hero and the NPCs you meet',
+        'Everything in the Wanderer path',
+      ],
+      promo: null,
+    },
+    tier2: {
+      name: 'Adventurer',
+      price: { eur: 9, sek: 105, per: ' / month' },
+      desc: 'The full mind of the Cauldron.',
+      features: [
+        '<b>All Dungeon Masters</b> — DeepSeek, Qwen 3.8 Max, Qwen 3.6 Flash',
+        '<b>Both narrator voices</b> — Qwen and StepFun TTS',
+        '<b>Customize the narrator</b> — happy, calm, scary, or your own style',
+        '<b>50 turns</b> refreshed <b>every 6 hours</b>',
+        '<b>AI avatars</b> for your hero and the NPCs you meet',
+        'Everything in the Companion path',
+      ],
+      promo: null,
+    },
+    lifetime: {
+      name: 'Lifetime',
+      price: { eur: 100, sek: 1170, per: ' once' },
+      desc: 'Support the dev. Never count a turn again.',
+      features: [
+        '<b>Unlimited turns</b> — the Cauldron never sleeps',
+        'All Dungeon Masters · both narrator voices · avatars',
+        'A thank-you from the forge — you keep this realm burning',
+      ],
+      promo: null,
+    },
+  };
+
+  // ── Modal: visa planen (mer detaljerad) ──
+  function openPlan(ev, tier) {
     ev.preventDefault();
-    var btn = ev.currentTarget;
-    var label = btn.textContent;
+    PLAN_OPEN = tier;
+    renderPlan(tier);
+    document.getElementById('plan-overlay').classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+  function closePlan() {
+    PLAN_OPEN = null;
+    document.getElementById('plan-overlay').classList.remove('show');
+    document.body.style.overflow = '';
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && PLAN_OPEN) closePlan();
+  });
+
+  function renderPlan(tier) {
+    var p = PLAN_DATA[tier];
+    if (!p) return;
+    var promo = null;
+    if (PROMO_ACTIVE) {
+      if (tier === 'tier1') promo = { label: 'Founding offer', text: 'Pay 1 month, get 2 months free — 3 months for the price of one.', price: p.price, strike: null };
+      else if (tier === 'tier2') promo = { label: 'Founding offer', text: 'Pay 1 month, get 3 months free — 4 months for the price of one.', price: p.price, strike: null };
+      else if (tier === 'lifetime') promo = { label: 'Founding offer', text: 'Lifetime for 50€ — half price, one-time. Forever, no renewal.', price: { eur: 50, sek: 585, per: ' once' }, strike: p.price };
+    }
+    document.getElementById('plan-eyebrow').textContent = 'The Path';
+    document.getElementById('plan-name').textContent = p.name;
+    var priceEl = document.getElementById('plan-price-main');
+    var perEl = document.getElementById('plan-price-per');
+    var strikeEl = document.getElementById('plan-price-strike');
+    if (promo) {
+      priceEl.textContent = fmtPrice(promo.price.eur, promo.price.sek);
+      perEl.textContent = promo.price.per;
+      if (promo.strike) {
+        strikeEl.textContent = fmtPrice(promo.strike.eur, promo.strike.sek);
+        strikeEl.style.display = '';
+      } else {
+        strikeEl.style.display = 'none';
+      }
+      var pr = document.getElementById('plan-promo');
+      pr.style.display = '';
+      pr.textContent = promo.label;
+      document.getElementById('plan-desc').textContent = promo.text;
+    } else {
+      priceEl.textContent = fmtPrice(p.price.eur, p.price.sek);
+      perEl.textContent = p.price.per;
+      strikeEl.style.display = 'none';
+      document.getElementById('plan-promo').style.display = 'none';
+      document.getElementById('plan-desc').textContent = p.desc;
+    }
+    document.getElementById('plan-list').innerHTML = p.features.map(function (f) {
+      return '<li>' + f + '</li>';
+    }).join('');
+    var hint = document.getElementById('plan-login-hint');
+    if (LOGGED_IN) {
+      hint.style.display = 'none';
+      var cta = document.getElementById('plan-cta');
+      cta.textContent = 'Continue to checkout';
+      cta.classList.remove('ghost');
+    } else {
+      hint.style.display = '';
+      var cta = document.getElementById('plan-cta');
+      cta.textContent = 'Sign in to subscribe';
+      cta.classList.add('ghost');
+    }
+  }
+
+  // ── CTA i modalen: inloggad → checkout; ej inloggad → login ──
+  function planCta() {
+    if (!LOGGED_IN || !PLAN_OPEN) {
+      location.href = 'login.html?next=pricing.html';
+      return;
+    }
+    var btn = document.getElementById('plan-cta');
     btn.classList.add('busy');
     btn.textContent = 'Forging sigil…';
     fetch('/api/billing/checkout', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tier: tier })
+      body: JSON.stringify({ tier: PLAN_OPEN })
     }).then(function (res) {
       if (res.status === 401) {
         location.href = 'login.html?next=pricing.html';
@@ -304,16 +485,18 @@
       if (data && data.url) location.href = data.url;
     }).catch(function (e) {
       btn.classList.remove('busy');
-      btn.textContent = label;
+      btn.textContent = 'Continue to checkout';
       alert('The sigil could not be forged: ' + e.message);
     });
   }
 
-  // ── Current subscription — markera vilken tier jag redan har ──
+  var LOGGED_IN = false;
+  // ── Current subscription + inloggningsstatus ──
   // (pricing.html laddar inte api.js → rå fetch med credentials)
   fetch('/api/me', { credentials: 'include' }).then(function (r) {
     return r.ok ? r.json() : null;
   }).then(function (u) {
+    LOGGED_IN = !!u;
     if (!u) return;
     var key = { free: 'free', tier1: 'tier1', tier2: 'tier2', lifetime: 'lifetime' }[u.subscription_status];
     if (!key) return;
@@ -323,6 +506,29 @@
     btn.classList.add('current');
     btn.removeAttribute('onclick');
     btn.href = '#';
+  }).catch(function () {});
+
+  // ── Promo-status (grundarerbjudande) ──
+  fetch('/api/promo', { credentials: 'include' }).then(function (r) {
+    return r.json();
+  }).then(function (d) {
+    if (d && d.active) {
+      PROMO_ACTIVE = true;
+      // Lifetime-kortet: visa 50€ + överstruket 100€ + badge
+      var flag = document.getElementById('lifetime-promo-flag');
+      if (flag) flag.style.display = '';
+      var strike = document.getElementById('lifetime-strike');
+      if (strike) strike.style.display = '';
+      var cur = document.querySelector('#tier-lifetime .cur-price');
+      if (cur) {
+        cur.setAttribute('data-eur', '50');
+        cur.setAttribute('data-sek', '585');
+        cur.textContent = fmtPrice(50, 585);
+      }
+      var desc = document.getElementById('lifetime-desc');
+      if (desc) desc.textContent = 'Lifetime for 50€ — half price, one-time. Forever, no renewal.';
+      if (PLAN_OPEN) renderPlan(PLAN_OPEN);
+    }
   }).catch(function () {});
 </script>
 </body>

@@ -380,6 +380,7 @@
       <div class="promo-text">
         Subscribe for one month and get <b><span data-promo-free="tier1">2</span> months free</b> on <b>Companion</b>
         &mdash; or <b><span data-promo-free="tier2">3</span> months free</b> on <b>Adventurer</b>.
+        &nbsp;<b>Lifetime for 50€</b> — half price, one-time.
         <span class="promo-timer">Ends in <span class="t-seg" id="promo-days">00</span><span class="t-sep">d</span><span class="t-seg" id="promo-hours">00</span><span class="t-sep">:</span><span class="t-seg" id="promo-mins">00</span><span class="t-sep">:</span><span class="t-seg" id="promo-secs">00</span></span>
       </div>
       <a class="promo-cta" href="pricing.html">Claim the offer &#8594;</a>
@@ -510,13 +511,18 @@
   <!-- ═══════════════ paths into the realm (pricing) ═══════════════ -->
   <style>
     .pricing-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.1rem;margin-top:2.6rem}
-    .ptier{position:relative;background:linear-gradient(170deg,var(--stone-2),var(--stone));border:1px solid var(--edge);padding:1.6rem 1.3rem 1.4rem;transition:transform .3s,border-color .3s}
+    .ptier{position:relative;background:linear-gradient(170deg,var(--stone-2),var(--stone));border:1px solid var(--edge);padding:1.6rem 1.3rem 1.4rem;transition:transform .3s,border-color .3s;cursor:pointer}
     .ptier:hover{transform:translateY(-4px);border-color:var(--edge-hi)}
     .ptier.hot{border-color:rgba(201,162,39,.55);box-shadow:0 0 34px rgba(201,162,39,.10)}
+    .ptier .go-hint{display:block;margin-top:.9rem;font-family:var(--font-display);font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);opacity:0;transition:opacity .25s;text-align:center}
+    .ptier:hover .go-hint{opacity:1}
     .pt-flag{position:absolute;top:-11px;right:12px;font-family:var(--font-display);font-size:.56rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));padding:.22rem .6rem}
+    .pt-flag.promo-flag{background:linear-gradient(160deg,#ffd76a,#c9a227);animation:pt-promo-pulse 2.2s ease-in-out infinite}
+    @keyframes pt-promo-pulse{0%,100%{box-shadow:0 0 10px rgba(201,162,39,.4)}50%{box-shadow:0 0 20px rgba(232,198,90,.85)}}
     .pt-name{font-family:var(--font-display);font-weight:700;font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;color:var(--bone-bright);margin-bottom:.5rem}
     .pt-price{font-family:var(--font-display);font-weight:900;font-size:1.7rem;color:var(--gold-bright);margin-bottom:.7rem}
     .pt-price small{font-size:.72rem;font-weight:400;color:var(--bone-dim);letter-spacing:.05em}
+    .pt-price .strike{font-size:.95rem;font-weight:400;color:var(--bone-dim);text-decoration:line-through;text-decoration-thickness:2px;margin-left:.3rem;vertical-align:.3em}
     .ptier ul{list-style:none}
     .ptier li{padding:.34rem 0 .34rem 1.2rem;position:relative;font-size:.88rem;color:var(--bone);line-height:1.45}
     .ptier li::before{content:'◆';position:absolute;left:0;top:.4rem;color:var(--gold);font-size:.55rem}
@@ -533,7 +539,7 @@
       <h2 class="rv">Choose your path</h2>
       <p class="lede rv d1">Wander free with your daily ration of turns — or take up a sigil and shape the realm itself.</p>
       <div class="pricing-grid">
-        <div class="ptier rv d1">
+        <div class="ptier rv d1" onclick="location.href='pricing.html'">
           <div class="pt-name">Wanderer</div>
           <div class="pt-price">Free</div>
           <ul>
@@ -541,8 +547,9 @@
             <li>The steadfast Dungeon Master</li>
             <li>Persistent world, memory &amp; Codex</li>
           </ul>
+          <span class="go-hint">View the path →</span>
         </div>
-        <div class="ptier rv d2">
+        <div class="ptier rv d2" onclick="location.href='pricing.html'">
           <div class="pt-name">Companion</div>
           <div class="pt-price">3€<small>/ month</small></div>
           <ul>
@@ -550,8 +557,9 @@
             <li><b>AI avatars</b> for hero &amp; NPCs</li>
             <li>Everything in the Wanderer path</li>
           </ul>
+          <span class="go-hint">View the path →</span>
         </div>
-        <div class="ptier hot rv d2">
+        <div class="ptier hot rv d2" onclick="location.href='pricing.html'">
           <div class="pt-flag">Most popular</div>
           <div class="pt-name">Adventurer</div>
           <div class="pt-price">9€<small>/ month</small></div>
@@ -560,14 +568,17 @@
             <li><b>Both narrator voices</b> + custom style</li>
             <li>50 turns every 6 hours · AI avatars</li>
           </ul>
+          <span class="go-hint">View the path →</span>
         </div>
-        <div class="ptier rv d3">
+        <div class="ptier rv d3" onclick="location.href='pricing.html'">
+          <div class="pt-flag promo-flag" id="pt-lifetime-flag" style="display:none">Founding offer</div>
           <div class="pt-name">Lifetime</div>
-          <div class="pt-price">100€<small> once</small></div>
+          <div class="pt-price">50€<small> once</small><span class="strike" id="pt-lifetime-strike" style="display:none">100€</span></div>
           <ul>
             <li><b>Unlimited turns</b> — never count again</li>
             <li>All Dungeon Masters · both voices · avatars</li>
           </ul>
+          <span class="go-hint">View the path →</span>
         </div>
       </div>
       <p class="pt-more rv d3"><a href="pricing.html">See the full paths &#8594;</a></p>
@@ -586,7 +597,8 @@
           1M context, deep reasoning that always thinks. Pick it at the model gate when you start your adventure.</li>
         <li class="rv d1"><b>Founding offer &mdash; two free months<span class="tag">Limited</span></b>
           &mdash; for the next seven days, subscribe for one month and get <b>2 months free</b> on Companion
-          or <b>3 months free</b> on Adventurer. The timer is counting down on this very page.</li>
+          or <b>3 months free</b> on Adventurer. And <b>Lifetime for 50€</b> — half price, one-time.
+          The timer is counting down on this very page.</li>
         <li class="rv d2"><b>Four paths into the realm</b> &mdash; Wanderer (free), Companion, Adventurer, and Lifetime.
           Real tiers, real Stripe checkout, and a free road that never closes.</li>
         <li class="rv d2"><b>Model gating by tier</b> &mdash; paid paths unlock <b>DeepSeek, Qwen 3.8 Max, and Qwen 3.6 Flash</b>
@@ -801,6 +813,11 @@ if (sessionStorage.getItem('dnd_user')) {
       var off = data.offer || {};
       if (off.tier1) { var e1 = document.querySelector('[data-promo-free="tier1"]'); if (e1) e1.textContent = off.tier1.free_months; }
       if (off.tier2) { var e2 = document.querySelector('[data-promo-free="tier2"]'); if (e2) e2.textContent = off.tier2.free_months; }
+      // Lifetime-kortet: visa 50€ + överstruket 100€ + Founding offer-flagga
+      var ltFlag = document.getElementById('pt-lifetime-flag');
+      var ltStrike = document.getElementById('pt-lifetime-strike');
+      if (ltFlag) ltFlag.style.display = '';
+      if (ltStrike) ltStrike.style.display = '';
       banner.style.display = '';
       tick(until);
       setInterval(function () { tick(until); }, 1000);

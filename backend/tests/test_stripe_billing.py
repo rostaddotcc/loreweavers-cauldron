@@ -60,6 +60,7 @@ def stripe_env(monkeypatch):
     monkeypatch.setattr(main, "STRIPE_WEBHOOK_SECRET", "whsec_test123")
     monkeypatch.setattr(main, "STRIPE_PRICES", {
         "tier1": "price_t1", "tier2": "price_t2", "lifetime": "price_lt",
+        "lifetime_promo": "price_lt_promo",
     })
 
 
@@ -146,6 +147,25 @@ def test_checkout_lifetime_uses_payment_mode(client, monkeypatch):
                     cookies={"morkrets_token": _tok()})
     assert r.status_code == 200
     assert captured["mode"] == "payment"
+
+
+def test_checkout_lifetime_uses_promo_price_during_founding_offer(client, monkeypatch):
+    """Grundarerbjudande: lifetime → 50€-priset (price_lt_promo), engångsbetalning."""
+    _seed()
+    captured = {}
+
+    async def fake_post(path, data):
+        captured["data"] = data
+        return {"url": "https://checkout.stripe.com/c/pay/x"}
+
+    monkeypatch.setattr(main, "_stripe_post", fake_post)
+    # Promo är aktiv fram till 2026-08-11 (dagens datum i testmiljön är 2026-08-04).
+    r = client.post("/api/billing/checkout", json={"tier": "lifetime"},
+                    cookies={"morkrets_token": _tok()})
+    assert r.status_code == 200
+    assert captured["data"]["mode"] == "payment"
+    assert captured["data"]["line_items[0][price]"] == "price_lt_promo"
+    assert captured["data"]["metadata[tier]"] == "lifetime"
 
 
 # ── Webhook: signatur ────────────────────────────────────────────────

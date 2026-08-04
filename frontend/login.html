@@ -71,6 +71,11 @@
     letter-spacing:.24em;text-transform:uppercase;color:var(--bone-dim);
     text-decoration:none;padding:.5rem 0;transition:color .25s}
   .nav-links a:hover{color:var(--gold-bright)}
+  .nav-user{display:inline-flex;align-items:center;gap:.45rem;cursor:pointer;border:1px solid var(--edge-hi);
+    padding:.5em 1em;background:linear-gradient(160deg,var(--stone-3),var(--stone-2));transition:border-color .2s,color .2s}
+  .nav-user:hover{border-color:var(--gold);color:var(--gold-bright)}
+  .nav-user .nu-ico{font-size:.9rem}
+  .nav-user .nu-name{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:none;letter-spacing:.05em}
   .nav-cta{font-family:var(--font-display);font-size:.66rem;font-weight:700;letter-spacing:.22em;
     text-transform:uppercase;color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));
     border:1px solid rgba(232,198,90,.45);padding:.55em 1.35em;cursor:pointer;text-decoration:none;
@@ -306,7 +311,7 @@
   @media (max-width:900px){
     .feat-grid{grid-template-columns:1fr;max-width:560px}
     .gate-grid{grid-template-columns:1fr}
-    .nav-links a:not(.nav-cta){display:none}
+    .nav-links a:not(.nav-cta):not(.nav-user){display:none}
   }
   @media (max-width:720px){
     .hero{align-items:flex-end;padding-bottom:9vh}
@@ -324,6 +329,31 @@
     .hero h1{animation:none}
     .scroll-cue{animation:none}
   }
+
+  /* ═══════════════ profile modal ═══════════════ */
+  .prof-overlay{position:fixed;inset:0;z-index:90;display:none;align-items:center;justify-content:center;
+    padding:1.25rem;background:rgba(3,2,7,.78);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+  .prof-overlay.show{display:flex}
+  .prof-modal{position:relative;width:100%;max-width:420px;
+    background:linear-gradient(165deg,var(--stone-3),var(--stone) 60%,#120c1c);
+    border:1px solid rgba(201,162,39,.4);box-shadow:0 30px 80px -20px rgba(0,0,0,.95);
+    padding:2rem 1.8rem 1.7rem;animation:plan-in .28s cubic-bezier(.22,1,.36,1);text-align:center}
+  @keyframes plan-in{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+  .prof-close{position:absolute;top:.7rem;right:.9rem;background:none;border:none;color:var(--bone-dim);
+    font-size:1.15rem;cursor:pointer;line-height:1;padding:.3rem;transition:color .2s}
+  .prof-close:hover{color:var(--blood-bright)}
+  .prof-ico{font-size:2.2rem;margin-bottom:.5rem;display:block;filter:drop-shadow(0 4px 14px rgba(201,162,39,.35))}
+  .prof-name{font-family:var(--font-display);font-weight:900;font-size:1.25rem;color:var(--bone-bright);letter-spacing:.04em;margin-bottom:.3rem}
+  .prof-tier{font-family:var(--font-display);font-size:.62rem;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);margin-bottom:1.2rem}
+  .prof-actions{display:flex;flex-direction:column;gap:.7rem}
+  .prof-btn{display:block;text-align:center;font-family:var(--font-display);font-size:.68rem;letter-spacing:.2em;
+    text-transform:uppercase;text-decoration:none;padding:.8rem 1rem;border-radius:2px;transition:transform .2s,box-shadow .2s;cursor:pointer;border:none}
+  .prof-btn.gold{color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));box-shadow:0 0 14px rgba(201,162,39,.2)}
+  .prof-btn.gold:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(232,198,90,.3)}
+  .prof-btn.ghost{color:var(--bone-bright);background:var(--stone-3);border:1px solid var(--edge-hi)}
+  .prof-btn.ghost:hover{color:var(--gold-bright);border-color:var(--gold)}
+  .prof-btn.danger{color:var(--blood-bright);background:var(--stone-3);border:1px solid rgba(139,26,42,.55)}
+  .prof-btn.danger:hover{color:var(--blood-bright);border-color:var(--blood-bright)}
 </style>
 </head>
 <body>
@@ -347,7 +377,10 @@
     <a href="#features">Features</a>
     <a href="#ledger">Release Notes</a>
     <a href="pricing.html">Pricing</a>
-    <a class="nav-cta" href="#gate">Enter</a>
+    <a class="nav-user" id="nav-user" href="#" onclick="openProfile(event)" style="display:none">
+      <span class="nu-ico">🪞</span><span class="nu-name" id="nav-user-name"></span>
+    </a>
+    <a class="nav-cta" href="#gate" id="nav-cta">Enter</a>
   </div>
 </nav>
 
@@ -623,6 +656,21 @@
 
 </div><!-- /content -->
 
+<!-- ═══════════════ profile modal ═══════════════ -->
+<div class="prof-overlay" id="prof-overlay" onclick="if(event.target===this)closeProfile()">
+  <div class="prof-modal" role="dialog" aria-modal="true" aria-labelledby="prof-name">
+    <button class="prof-close" onclick="closeProfile()" title="Close">✕</button>
+    <span class="prof-ico">🪞</span>
+    <div class="prof-name" id="prof-name"></div>
+    <div class="prof-tier" id="prof-tier"></div>
+    <div class="prof-actions">
+      <a class="prof-btn gold" href="adventure.html">Return to the realm →</a>
+      <a class="prof-btn ghost" href="pricing.html">Membership &amp; billing</a>
+      <button class="prof-btn danger" onclick="doLogout()">Log out</button>
+    </div>
+  </div>
+</div>
+
 <noscript><style>.rv{opacity:1;transform:none}</style></noscript>
 
 <script src="sfx.js?v=20260802a"></script>
@@ -824,6 +872,53 @@ if (sessionStorage.getItem('dnd_user')) {
     })
     .catch(function () { /* tyst — ingen banner om API:et inte svarar */ });
 })();
+
+/* ── Inloggad status + profil i top bar ── */
+var PROFILE_USER = null;
+function openProfile(ev) {
+  if (ev) ev.preventDefault();
+  if (!PROFILE_USER) return;
+  document.getElementById('prof-name').textContent = PROFILE_USER.username;
+  var tierNames = { free: 'Wanderer · Free', tier1: 'Companion', tier2: 'Adventurer', lifetime: 'Lifetime' };
+  var t = tierNames[PROFILE_USER.subscription_status] || PROFILE_USER.subscription_status || 'Free';
+  document.getElementById('prof-tier').textContent = t;
+  document.getElementById('prof-overlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+function closeProfile() {
+  document.getElementById('prof-overlay').classList.remove('show');
+  document.body.style.overflow = '';
+}
+function doLogout() {
+  try { API.logout(); } catch (e) {}
+  try { sessionStorage.removeItem('dnd_user'); } catch (e) {}
+  try { sessionStorage.removeItem('dnd_token'); } catch (e) {}
+  location.href = 'login.html';
+}
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') closeProfile();
+});
+fetch('/api/me', { credentials: 'include' })
+  .then(function (r) { return r.ok ? r.json() : null; })
+  .then(function (u) {
+    if (!u) return;
+    PROFILE_USER = u;
+    var nu = document.getElementById('nav-user');
+    var nname = document.getElementById('nav-user-name');
+    var cta = document.getElementById('nav-cta');
+    if (nu) nu.style.display = '';
+    if (nname) nname.textContent = u.username;
+    if (cta) {
+      cta.textContent = 'Return to the realm';
+      cta.href = 'adventure.html';
+    }
+    // Redan inloggad → byt gate-rubrik
+    var gt = document.getElementById('gate-title');
+    var gs = document.getElementById('gate-sub');
+    if (gt) gt.textContent = 'Welcome back, ' + u.username;
+    if (gs) gs.textContent = 'Your seat at the table is still warm.';
+  })
+  .catch(function () {});
 </script>
 
 <script>

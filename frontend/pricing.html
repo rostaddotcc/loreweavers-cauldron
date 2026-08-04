@@ -191,6 +191,8 @@
   .plan-login-hint{margin-top:.8rem;text-align:center;font-size:.82rem;color:var(--bone-dim);line-height:1.5}
   .plan-login-hint a{color:var(--gold-bright);text-decoration:none;border-bottom:1px solid rgba(201,162,39,.4)}
   .plan-login-hint a:hover{color:var(--gold)}
+  .plan-grant{margin-top:.9rem;text-align:center;font-size:.82rem;color:var(--bone-dim);line-height:1.5}
+  .plan-grant b{color:var(--gold-bright);font-weight:700;letter-spacing:.04em}
   .plan-note{margin-top:.9rem;text-align:center;font-size:.78rem;color:var(--bone-dim);line-height:1.55}
 
   @media(max-width:640px){
@@ -318,6 +320,7 @@
     <ul class="plan-list" id="plan-list"></ul>
     <button class="plan-cta" id="plan-cta" onclick="planCta()">Continue to checkout</button>
     <div class="plan-login-hint" id="plan-login-hint" style="display:none">Not signed in — <a href="login.html?next=pricing.html">sign in to continue</a></div>
+    <div class="plan-grant" id="plan-grant" style="display:none">✦ Subscription will be granted to <b id="plan-grant-user">you</b></div>
     <div class="plan-note" id="plan-note">Payments are processed securely by Stripe.</div>
   </div>
 </div>
@@ -445,13 +448,20 @@
       return '<li>' + f + '</li>';
     }).join('');
     var hint = document.getElementById('plan-login-hint');
+    var grant = document.getElementById('plan-grant');
     if (LOGGED_IN) {
       hint.style.display = 'none';
+      if (grant) {
+        grant.style.display = '';
+        var gu = document.getElementById('plan-grant-user');
+        if (gu) gu.textContent = LOGGED_IN_USER;
+      }
       var cta = document.getElementById('plan-cta');
       cta.textContent = 'Continue to checkout';
       cta.classList.remove('ghost');
     } else {
       hint.style.display = '';
+      if (grant) grant.style.display = 'none';
       var cta = document.getElementById('plan-cta');
       cta.textContent = 'Sign in to subscribe';
       cta.classList.add('ghost');
@@ -491,12 +501,14 @@
   }
 
   var LOGGED_IN = false;
+  var LOGGED_IN_USER = '';
   // ── Current subscription + inloggningsstatus ──
   // (pricing.html laddar inte api.js → rå fetch med credentials)
   fetch('/api/me', { credentials: 'include' }).then(function (r) {
     return r.ok ? r.json() : null;
   }).then(function (u) {
     LOGGED_IN = !!u;
+    LOGGED_IN_USER = (u && u.username) || '';
     if (!u) return;
     var key = { free: 'free', tier1: 'tier1', tier2: 'tier2', lifetime: 'lifetime' }[u.subscription_status];
     if (!key) return;

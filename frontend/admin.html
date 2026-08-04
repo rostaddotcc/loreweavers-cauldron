@@ -50,15 +50,15 @@
   /* ── Header ── */
   .masthead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; }
   .masthead h1 {
-    font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.1rem;
+    font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.35rem;
     color: var(--gold-bright); letter-spacing: 0.06em;
   }
   .masthead h1::before { content: '┌─ '; color: var(--edge); }
   .masthead h1::after { content: ' ─┐'; color: var(--edge); }
   .back-btn {
-    font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.14em;
+    font-family: 'Cinzel', serif; font-size: 0.72rem; letter-spacing: 0.14em;
     text-transform: uppercase; background: var(--stone-3); border: 1px solid var(--edge);
-    color: var(--bone-dim); padding: 0.45rem 0.9rem; cursor: pointer;
+    color: var(--bone-dim); padding: 0.55rem 1.1rem; cursor: pointer;
     text-decoration: none; border-radius: 0; transition: all 0.2s;
   }
   .back-btn:hover { color: var(--gold-bright); border-color: var(--gold); }
@@ -70,7 +70,7 @@
     display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.2rem;
   }
   .stat-card {
-    background: var(--stone); border: 1px solid var(--edge); padding: 1.2rem 1rem;
+    background: var(--stone); border: 1px solid var(--edge); padding: 1.5rem 1.2rem;
     position: relative; text-align: center;
   }
   .stat-card::before {
@@ -78,12 +78,12 @@
     border: 1px solid var(--edge); opacity: 0.3; pointer-events: none;
   }
   .stat-num {
-    font-family: 'Press Start 2P', monospace; font-size: 1.4rem;
+    font-family: 'Press Start 2P', monospace; font-size: 1.8rem;
     color: var(--term-green); text-shadow: 0 0 6px rgba(51,204,51,0.3);
-    margin-bottom: 0.4rem;
+    margin-bottom: 0.5rem;
   }
   .stat-label {
-    font-family: 'Cinzel', serif; font-size: 0.52rem; letter-spacing: 0.16em;
+    font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.16em;
     text-transform: uppercase; color: var(--bone-dim);
   }
 
@@ -92,7 +92,7 @@
     display: grid; grid-template-columns: repeat(12, 1fr); gap: 1rem; margin-bottom: 1.5rem;
   }
   .chart-card {
-    background: var(--stone); border: 1px solid var(--edge); padding: 1rem 1.1rem 1.15rem;
+    background: var(--stone); border: 1px solid var(--edge); padding: 1.2rem 1.3rem 1.35rem;
     position: relative; min-width: 0;
   }
   .chart-card::before {
@@ -103,39 +103,39 @@
   .chart-card.span-7 { grid-column: span 7; }
   .chart-card.span-12 { grid-column: span 12; }
   .chart-head {
-    font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.16em;
-    text-transform: uppercase; color: var(--gold); margin-bottom: 0.9rem;
+    font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--gold); margin-bottom: 1rem;
   }
   .chart-body { display: flex; gap: 1.1rem; align-items: center; flex-wrap: wrap; }
   .donut {
-    width: 148px; height: 148px; display: block; flex: 0 0 auto;
+    width: 185px; height: 185px; display: block; flex: 0 0 auto;
     filter: drop-shadow(0 0 7px rgba(154,111,224,0.28));
   }
   .donut-slice { transition: opacity 0.15s; }
   .donut-slice:hover { opacity: 0.78; }
-  .donut-center-num { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 15px; fill: var(--bone-bright); }
-  .donut-center-sub { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 7.5px; fill: var(--bone-dim); letter-spacing: 0.14em; text-transform: uppercase; }
-  .legend { flex: 1 1 170px; min-width: 160px; display: flex; flex-direction: column; gap: 0.3rem; }
-  .legend-item { display: flex; align-items: center; gap: 0.45rem; font-size: 0.66rem; color: var(--bone); }
-  .legend-dot { width: 8px; height: 8px; flex: 0 0 auto; }
+  .donut-center-num { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 18px; fill: var(--bone-bright); }
+  .donut-center-sub { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 9px; fill: var(--bone-dim); letter-spacing: 0.14em; text-transform: uppercase; }
+  .legend { flex: 1 1 170px; min-width: 160px; display: flex; flex-direction: column; gap: 0.35rem; }
+  .legend-item { display: flex; align-items: center; gap: 0.45rem; font-size: 0.78rem; color: var(--bone); }
+  .legend-dot { width: 10px; height: 10px; flex: 0 0 auto; }
   .legend-label { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .legend-val { font-family: 'IBM Plex Mono', ui-monospace, monospace; color: var(--bone-bright); font-variant-numeric: tabular-nums; }
-  .legend-pct { font-family: 'IBM Plex Mono', ui-monospace, monospace; color: var(--bone-dim); width: 40px; text-align: right; font-variant-numeric: tabular-nums; }
-  .chart-empty { color: var(--bone-dim); font-size: 0.68rem; font-style: italic; padding: 0.6rem 0; }
+  .legend-pct { font-family: 'IBM Plex Mono', ui-monospace, monospace; color: var(--bone-dim); width: 46px; text-align: right; font-variant-numeric: tabular-nums; }
+  .chart-empty { color: var(--bone-dim); font-size: 0.8rem; font-style: italic; padding: 0.6rem 0; }
 
   /* ── Bar list (TTS per player) ── */
-  .bar-list { display: flex; flex-direction: column; gap: 0.5rem; }
-  .bar-row { display: grid; grid-template-columns: 150px 1fr 92px; gap: 0.6rem; align-items: center; font-size: 0.68rem; }
+  .bar-list { display: flex; flex-direction: column; gap: 0.6rem; }
+  .bar-row { display: grid; grid-template-columns: 170px 1fr 100px; gap: 0.6rem; align-items: center; font-size: 0.78rem; }
   .bar-label { color: var(--bone); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .bar-track { height: 10px; background: var(--ink); border: 1px solid var(--edge); }
+  .bar-track { height: 12px; background: var(--ink); border: 1px solid var(--edge); }
   .bar-fill { height: 100%; opacity: 0.85; box-shadow: 0 0 6px rgba(94,154,163,0.35); transition: opacity .15s; }
   .bar-fill:hover { opacity: 1; }
   .bar-val { font-family: 'IBM Plex Mono', ui-monospace, monospace; color: var(--bone-bright); text-align: right; font-variant-numeric: tabular-nums; }
 
   /* ── Vertical bar chart (new users per day) ── */
-  .vchart { display: flex; align-items: flex-end; gap: 4px; height: 150px; padding: 0 0.2rem 0; }
+  .vchart { display: flex; align-items: flex-end; gap: 4px; height: 185px; padding: 0 0.2rem 0; }
   .vcol { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; position: relative; }
-  .vbar-track { width: 100%; max-width: 34px; height: 118px; display: flex; align-items: flex-end; border-bottom: 1px solid var(--edge); }
+  .vbar-track { width: 100%; max-width: 40px; height: 145px; display: flex; align-items: flex-end; border-bottom: 1px solid var(--edge); }
   .vbar-fill {
     width: 100%; min-height: 2px;
     background: linear-gradient(180deg, var(--gold-bright), var(--gold));
@@ -144,10 +144,23 @@
   }
   .vcol:hover .vbar-fill { opacity: 0.8; }
   .vbar-fill.zero { background: var(--edge); box-shadow: none; opacity: 0.45; }
-  .vbar-num { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 0.58rem; color: var(--bone-bright); line-height: 1; margin-top: 3px; font-variant-numeric: tabular-nums; }
-  .vbar-label { font-size: 0.52rem; color: var(--bone-dim); margin-top: 3px; white-space: nowrap; }
+  .vbar-num { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 0.68rem; color: var(--bone-bright); line-height: 1; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .vbar-label { font-size: 0.62rem; color: var(--bone-dim); margin-top: 4px; white-space: nowrap; }
   .vbar-label.today { color: var(--gold); }
-  .vchart-empty { color: var(--bone-dim); font-size: 0.68rem; font-style: italic; padding: 0.6rem 0; }
+  .vchart-empty { color: var(--bone-dim); font-size: 0.8rem; font-style: italic; padding: 0.6rem 0; }
+
+  /* ── Revenue bar chart (MRR/ARR + day/week/month) ── */
+  .rev-chart-head { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+  .rev-totals { display: flex; gap: 1.4rem; flex-wrap: wrap; font-size: 0.78rem; }
+  .rev-totals b { font-family: 'IBM Plex Mono', ui-monospace, monospace; color: var(--gold-bright); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+  .rev-toggle { display: flex; gap: 0.3rem; }
+  .rev-toggle button {
+    font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase;
+    background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
+    padding: 0.3rem 0.7rem; cursor: pointer; transition: all 0.15s;
+  }
+  .rev-toggle button.active { color: var(--gold-bright); border-color: var(--gold); background: rgba(212,169,44,0.12); }
+  .rev-toggle button:hover { color: var(--gold-bright); border-color: var(--gold); }
 
   /* ── Filters row ── */
   .filters-row {
@@ -263,13 +276,13 @@
   .table-wrap.at-end ~ .table-scroll-hint { opacity: 0; }
   .player-table { width: 100%; min-width: 1560px; border-collapse: collapse; }
   .player-table th {
-    font-family: 'Cinzel', serif; font-size: 0.5rem; letter-spacing: 0.12em;
+    font-family: 'Cinzel', serif; font-size: 0.56rem; letter-spacing: 0.12em;
     text-transform: uppercase; color: var(--bone-dim); text-align: left;
-    padding: 0.55rem 0.4rem; border-bottom: 1px solid var(--edge);
+    padding: 0.6rem 0.45rem; border-bottom: 1px solid var(--edge);
   }
   .player-table td {
-    padding: 0.6rem 0.4rem; border-bottom: 1px solid rgba(42,42,58,0.4);
-    font-size: 0.74rem; color: var(--bone-bright);
+    padding: 0.65rem 0.45rem; border-bottom: 1px solid rgba(42,42,58,0.4);
+    font-size: 0.8rem; color: var(--bone-bright);
   }
   .player-row { cursor: pointer; transition: background 0.15s; }
   .player-row:hover { background: var(--stone-2); }
@@ -677,7 +690,7 @@ async function deleteUser(username) {
 // ── Tabellsortering (admin-vyn) ──
 let statsData = null;
 let billingData = null; // FAS D: GET /api/admin/billing → {mrr, transactions, total, per_user, ledger}
-let sortKey = 'tokens';
+let sortKey = 'last_active';
 let sortDir = 'desc';
 
 function _sortVal(u) {
@@ -945,7 +958,7 @@ function barChartDayHtml(users, days = 14) {
   const hasAny = arr.some(a => a.value > 0);
   if (!hasAny) return '<div class="vchart-empty">' + (users.length ? 'No data yet' : 'No players match the current filters') + '</div>';
   return '<div class="vchart" role="img" aria-label="New users per day">' + arr.map(a => {
-    const h = Math.max(2, Math.round(a.value / max * 118));
+    const h = Math.max(2, Math.round(a.value / max * 145));
     const cls = a.value === 0 ? 'vbar-fill zero' : 'vbar-fill';
     return `<div class="vcol" title="${a.key} — ${a.value} new user${a.value === 1 ? '' : 's'}">
       <div class="vbar-track"><div class="${cls}" style="height:${h}px"></div></div>
@@ -957,6 +970,108 @@ function barChartDayHtml(users, days = 14) {
 
 function chartCard(span, title, body) {
   return `<div class="chart-card span-${span}"><div class="chart-head">${title}</div>${body}</div>`;
+}
+
+// ── Revenue bar chart: MRR/ARR totals + revenue per day/week/month ──
+let revMode = 'day'; // day | week | month
+
+function _revBuckets(ledger, mode) {
+  // Returnera [{key, label, value, isCurrent}] — senaste N perioder, 0 om ingen intäkt.
+  const counts = {};
+  (ledger || []).forEach(r => {
+    if (!r.ts || !r.amount_sek) return;
+    const d = new Date(r.ts);
+    if (isNaN(d)) return;
+    let key, label;
+    if (mode === 'day') {
+      key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } else if (mode === 'week') {
+      // Vecka börjar på måndag
+      const dow = (d.getDay() + 6) % 7;
+      const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dow);
+      key = monday.getFullYear() + '-W' + String(Math.ceil(((monday - new Date(monday.getFullYear(), 0, 1)) / 86400000 + 1) / 7)).padStart(2, '0');
+      label = monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } else {
+      key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      label = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+    }
+    counts[key] = (counts[key] || 0) + Math.round(r.amount_sek);
+  });
+  const today = new Date();
+  const arr = [];
+  const N = mode === 'day' ? 14 : (mode === 'week' ? 8 : 6);
+  for (let i = N - 1; i >= 0; i--) {
+    let d;
+    if (mode === 'day') d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+    else if (mode === 'week') d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i * 7);
+    else d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    let key, label;
+    if (mode === 'day') {
+      key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } else if (mode === 'week') {
+      const dow = (d.getDay() + 6) % 7;
+      const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dow);
+      key = monday.getFullYear() + '-W' + String(Math.ceil(((monday - new Date(monday.getFullYear(), 0, 1)) / 86400000 + 1) / 7)).padStart(2, '0');
+      label = monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } else {
+      key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      label = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+    }
+    arr.push({ key, label, value: counts[key] || 0, isCurrent: i === 0 });
+  }
+  return arr;
+}
+
+function renderRevenueChart() {
+  const el = document.getElementById('rev-chart-body');
+  if (!el) return;
+  const ledger = billingData && billingData.ledger ? billingData.ledger : [];
+  const mrr = billingData && billingData.mrr ? billingData.mrr : 0;
+  const arr = _revBuckets(ledger, revMode);
+  const max = Math.max(...arr.map(a => a.value), 1);
+  const hasAny = arr.some(a => a.value > 0);
+  const body = !hasAny
+    ? '<div class="vchart-empty">No revenue yet — the ledger is quiet.</div>'
+    : '<div class="vchart" role="img" aria-label="Revenue per ' + revMode + '">' + arr.map(a => {
+        const h = Math.max(2, Math.round(a.value / max * 145));
+        const cls = a.value === 0 ? 'vbar-fill zero' : 'vbar-fill';
+        return `<div class="vcol" title="${a.key} — ${fmtSek(a.value)}">
+          <div class="vbar-track"><div class="${cls}" style="height:${h}px"></div></div>
+          <div class="vbar-num">${a.value ? fmtSek(a.value) : ''}</div>
+          <div class="vbar-label${a.isCurrent ? ' today' : ''}">${esc(a.label)}</div>
+        </div>`;
+      }).join('') + '</div>';
+  el.innerHTML = body;
+  // Markera aktiv toggle
+  document.querySelectorAll('.rev-toggle button').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === revMode);
+  });
+}
+
+function setRevMode(mode) {
+  revMode = mode;
+  renderRevenueChart();
+}
+
+function revenueChartCard() {
+  const mrr = billingData && billingData.mrr ? billingData.mrr : 0;
+  const arr = (billingData && billingData.ledger) ? billingData.ledger.length : 0;
+  const head = `<div class="rev-chart-head">
+    <div class="rev-totals">
+      <span>MRR <b>${fmtSek(mrr)}</b></span>
+      <span>ARR <b>${fmtSek(mrr * 12)}</b></span>
+      <span>Lifetime <b>${fmtSek(billingData && billingData.total ? billingData.total : 0)}</b></span>
+      <span>TX <b>${arr}</b></span>
+    </div>
+    <div class="rev-toggle">
+      <button data-mode="day" onclick="setRevMode('day')" class="${revMode === 'day' ? 'active' : ''}">Day</button>
+      <button data-mode="week" onclick="setRevMode('week')" class="${revMode === 'week' ? 'active' : ''}">Week</button>
+      <button data-mode="month" onclick="setRevMode('month')" class="${revMode === 'month' ? 'active' : ''}">Month</button>
+    </div>
+  </div>`;
+  return `<div class="chart-card span-12"><div class="chart-head">💰 Revenue</div>${head}<div id="rev-chart-body"><div class="vchart-empty">Loading…</div></div></div>`;
 }
 
 function renderCharts(users) {
@@ -1039,7 +1154,9 @@ function renderCharts(users) {
     chartCard(7, '⌖ Usage by Country', b3) +
     chartCard(5, '⚖ Role Split', b4) +
     chartCard(12, '✛ New Users by Day', b6) +
+    revenueChartCard() +
     chartCard(12, '♪ TTS Seconds by Player', b5);
+  renderRevenueChart();
 }
 
 // ── Filters ──

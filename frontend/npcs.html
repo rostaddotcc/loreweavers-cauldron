@@ -35,11 +35,11 @@
     background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);border:1px solid #6e5510;padding:.8rem 1.5rem;cursor:pointer;border-radius:2px;
     box-shadow:0 6px 18px -6px rgba(232,198,90,.5);transition:all .2s;text-decoration:none;display:inline-block}.talk-btn:hover{filter:brightness(1.12);transform:translateY(-2px)}.toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:50;font-family:'Cinzel',serif;font-size:.88rem;letter-spacing:.12em;
     background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);padding:.7rem 1.5rem;
-    box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}.toast.show{transform:translate(-50%,0);opacity:1}
+    box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}.toast.show{transform:translate(-50%,0);opacity:1}/* Mobil/drawer: back-knapp — stäng dossiern och återgå till listan */.d-back{display:none;position:absolute;top:.7rem;left:.7rem;z-index:7;font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-bright);background:var(--stone-3);border:1px solid var(--edge);padding:.5rem .8rem;cursor:pointer;border-radius:2px;transition:all .2s}.d-back:hover{border-color:var(--gold);color:var(--gold-bright);box-shadow:0 0 12px -3px rgba(232,198,90,.4)}
 
   @media(max-width:900px){html{-webkit-tap-highlight-color:transparent}.hall{width:250px}.dossier{padding:1.3rem 1.1rem 3rem}.topbar .page-tag{display:none}/* Topnav: radbryt + 44px träffytor (snes.css laddas sist → !important) */.topbar{flex-wrap:wrap!important;gap:.4rem .5rem!important;padding:.6rem .75rem!important}.topbar .top-btn{min-height:44px!important;display:inline-flex!important;align-items:center!important;padding:.4rem .65rem!important;font-size:.68rem!important}
   }
-  @media(max-width:640px){.layout{flex-direction:column}.hall{width:100%;height:46%;border-right:none;border-bottom:1px solid var(--edge)}.dossier{height:54%;padding:1.1rem .75rem 3rem}/* Filterchips: horisontell rem, ingen radbrytning */.filters{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:.7rem .8rem}.filters::-webkit-scrollbar{display:none}.fchip{flex:0 0 auto;min-height:44px;display:inline-flex;align-items:center}.hall-search input{min-height:48px;font-size:18px;padding:.6rem .9rem}/* NPC-kort: full bredd, generös träffyta */.npc-list{padding:.6rem .7rem}.ncard{padding:.7rem .65rem}.ncard:hover{transform:none}/* Dossier: porträtt + namn staplas */.d-head{flex-direction:column;align-items:flex-start;gap:.9rem}.d-portrait{width:76px;height:76px;font-size:2rem}.trust-row{flex-wrap:wrap}.trust-label{min-width:0;text-align:left;width:100%}.talk-btn{min-height:44px;display:flex;align-items:center;justify-content:center;width:100%;text-align:center}.line{max-width:100%}.panel-box{padding:.9rem .8rem}
+  @media(max-width:640px){.layout{flex-direction:column;position:relative}.hall{width:100%;height:100%;border-right:none;border-bottom:1px solid var(--edge)}.dossier{position:absolute;inset:0;z-index:6;display:none;padding:1.1rem .75rem 3rem}.layout.dossier-open .hall{display:none}.layout.dossier-open .dossier{display:block}.layout.dossier-open .d-back{display:block}/* Filterchips: horisontell rem, ingen radbrytning */.filters{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:.7rem .8rem}.filters::-webkit-scrollbar{display:none}.fchip{flex:0 0 auto;min-height:44px;display:inline-flex;align-items:center}.hall-search input{min-height:48px;font-size:18px;padding:.6rem .9rem}/* NPC-kort: full bredd, generös träffyta */.npc-list{padding:.6rem .7rem}.ncard{padding:.7rem .65rem}.ncard:hover{transform:none}/* Dossier: porträtt + namn staplas, plats för back-knappen */.d-head{flex-direction:column;align-items:flex-start;gap:.9rem;padding-top:2.4rem}.d-portrait{width:76px;height:76px;font-size:2rem}.trust-row{flex-wrap:wrap}.trust-label{min-width:0;text-align:left;width:100%}.talk-btn{min-height:44px;display:flex;align-items:center;justify-content:center;width:100%;text-align:center}.line{max-width:100%}.panel-box{padding:.9rem .8rem}
   }
   @media(max-width:400px){.hall-head{padding:.8rem .8rem .6rem}.dossier{padding:.9rem .5rem 2.5rem}.d-name{font-size:1.25rem}.q-head{gap:.4rem}.toast{left:1rem;right:1rem;transform:translateY(80px);width:auto}.toast.show{transform:translateY(0)}
   }
@@ -109,6 +109,7 @@
       <p>Choose a person from the Hall of Memories…</p>
     </div>
   </main>
+  <button class="d-back" id="d-back" onclick="closeDossierMobile()" aria-label="Back to hall">← Hall</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -193,7 +194,12 @@ function relatedQuests(n){
       const h = decodeURIComponent((location.hash || '').replace(/^#/, ''));
       const wanted = h.startsWith('npc:') ? h.slice(4).toLowerCase() : '';
       const idx = wanted ? NPCS.findIndex(n => (n.name || '').toLowerCase() === wanted) : -1;
-      selectNpc(idx >= 0 ? idx : 0);
+      if (idx >= 0) {
+        selectNpc(idx);            // hash-hopp → öppna direkt (även mobil)
+      } else if (window.innerWidth > 640) {
+        selectNpc(0);              // desktop: första NPC vald som förut
+      }
+      // Mobil/narrow: ingen auto-dossier — hela rutan är listan tills man väljer
     }
     else showEmptyHall();
   } catch (e) {
@@ -298,6 +304,11 @@ function selectNpc(i){
   selectedId = i;
   renderList();
   renderDossier(NPCS[i]);
+  // Mobil/narrow (dossier som overlay): öppna dossiern fullskärm — back-knappen stänger
+  if (window.innerWidth <= 640) {
+    const layout = document.querySelector('.layout');
+    if (layout) layout.classList.add('dossier-open');
+  }
   // Synka listan med dossiern: scrolla den valda NPC:n i sikte så man
   // alltid ser var man är i hallen (2026-08-04 — många NPCs → lättnavigerat)
   try {
@@ -306,6 +317,13 @@ function selectNpc(i){
       cards[i].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
   } catch (_) {}
+}
+
+// Mobil/narrow: stäng dossiern och återgå till NPC-listan (back-knappen)
+function closeDossierMobile(){
+  const layout = document.querySelector('.layout');
+  if (layout) layout.classList.remove('dossier-open');
+  try { if (location.hash) history.replaceState(null, '', location.pathname + location.search); } catch (_) {}
 }
 
 function renderDossier(n){

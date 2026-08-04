@@ -1042,15 +1042,15 @@
       <button class="drop-item" data-cli-label onclick="toggleCliChat();closeSettingsMenu()"><span class="di-icon">🖥️</span><span class="di-body"><span class="di-name">Chat UI: CLI</span><span class="di-hint">terminal style — toggle to bubbles</span></span></button>
       <button class="drop-item" onclick="openFeedbackModal();closeSettingsMenu()"><span class="di-icon">💬</span><span class="di-body"><span class="di-name">Feedback</span><span class="di-hint">suggestions or bug reports</span></span></button>
       <div class="model-picker-card">
-        <div class="mpc-title">🧠 Modeller <span id="model-picker-lock" style="display:none;color:var(--gold);font-size:.68rem">🔒 Tier 2</span></div>
+        <div class="mpc-title">🧠 Models <span id="model-picker-lock" style="display:none;color:var(--gold);font-size:.68rem">🔒 Tier 2</span></div>
         <label class="mpc-label">Dungeon Master</label>
         <select id="settings-dm-model" onchange="settingsChangeModel(this.value)"></select>
         <label class="mpc-label">Lorekeeper</label>
         <select id="settings-guardian-model" onchange="settingsChangeGuardian(this.value)"></select>
-        <label class="mpc-label">Bakgrund (extraction)</label>
+        <label class="mpc-label">Background (extraction)</label>
         <select id="settings-extraction-model" onchange="settingsChangeExtraction(this.value)"></select>
         <div class="mpc-hint" id="settings-guardian-hint"></div>
-        <div class="mpc-hint" id="model-picker-premium-hint" style="display:none;color:var(--gold)">🔒 Premium-modeller låsta — Tier 2 krävs för att växla DM-röst.</div>
+        <div class="mpc-hint" id="model-picker-premium-hint" style="display:none;color:var(--gold)">🔒 Premium models locked — Tier 2 required to switch the DM voice.</div>
       </div>
       <div class="model-picker-card" id="tts-test-card">
         <div class="mpc-title">🎙 Narrator test <span id="tts-test-lock" style="color:var(--gold);font-size:.68rem">🔒 Tier 2</span></div>
@@ -1060,7 +1060,7 @@
                  onkeydown="if(event.key==='Enter')ttsTestPlay()">
           <button class="tts-auto-btn" id="tts-test-btn" onclick="ttsTestPlay()" title="Play a test line with the current voice + style" style="flex-shrink:0">▶</button>
         </div>
-        <div class="mpc-hint">Testa en rad med vald röst &amp; stil — 50 tecken.</div>
+        <div class="mpc-hint">Test a line with the selected voice &amp; style — 50 characters.</div>
       </div>
       <button class="drop-item" onclick="openModelInfo();closeSettingsMenu()"><span class="di-icon">ℹ️</span><span class="di-body"><span class="di-name">About the Models</span><span class="di-hint">what each DM model does · why thinking takes time</span></span></button>
       <div class="drop-sep"></div>

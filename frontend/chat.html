@@ -48,6 +48,19 @@
   }.topbar .campaign{
     font-size: 0.78rem; font-style: italic; color: var(--bone-dim);
     border-left: 1px solid var(--edge); padding-left: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }/* ── FAS A/B: header-info (Turn/Dag/🆓/reset) bredvid kampanjnamnet ── */
+  .topbar .header-turns-info{
+    font-size: 0.78rem; color: var(--bone-dim); white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; max-width: 46vw; min-width: 0; flex-shrink: 1;
+  }.mobile-menu-turns{
+    display: none; padding: 0.55rem 0.7rem; margin: 0.1rem 0 0.2rem;
+    font-size: 0.78rem; color: var(--gold-bright); letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--edge); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  /* Mobil (≤900px): topbaren är trång → header-info flyttas till ☰-menyns topp */
+  @media (max-width: 900px){
+    .topbar .header-turns-info{ display: none !important; }
+    .mobile-menu-turns{ display: block !important; }
   }.topbar .spacer{ flex: 1; }.top-btn{
     font-family: 'Cinzel', serif; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
     background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
@@ -975,6 +988,7 @@
   <div style="position:relative">
     <button class="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Open menu">☰</button>
     <div class="mobile-menu" id="mobile-menu">
+      <div class="mobile-menu-turns" id="mobile-menu-turns"></div>
       <button class="drop-item" onclick="openCodex();closeMobileMenu()"><span class="di-icon">📖</span><span class="di-body"><span class="di-name">Codex</span><span class="di-hint">lore · map · character</span></span></button>
       <button class="drop-item" id="mobile-menu-admin" style="display:none" onclick="location.href='admin.html'"><span class="di-icon">👑</span><span class="di-body"><span class="di-name">Admin</span><span class="di-hint">player overview & tokens</span></span></button>
       <div class="drop-sep"></div>
@@ -991,6 +1005,7 @@
   </div>
   <span class="brand">The Lore Weaver's Cauldron</span>
   <span class="campaign" id="campaign-tag">Campaign: —</span>
+  <span class="header-turns-info" id="header-turns-info"></span>
   <span class="user-tag" id="user-tag" onclick="toggleProfilePopup()" style="cursor:pointer;color:var(--bone-dim);font-size:.75rem;padding:.2rem .5rem;border:1px solid transparent;transition:all .2s" onmouseover="this.style.borderColor='rgba(201,162,39,.3)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='transparent';this.style.color='var(--bone-dim)'">👤 —</span>
   <span class="spacer"></span>
 
@@ -1249,6 +1264,22 @@
   </div>
 </div>
 
+<!-- ⏳ Cap-modal (FAS B) — inga gratis-turns kvar / premium utgången -->
+<div class="fb-backdrop" id="cap-backdrop" onclick="closeCapModal()"></div>
+<div class="fb-modal" id="cap-modal" role="dialog" aria-modal="true" aria-labelledby="cap-title">
+  <div class="fb-head">
+    <span class="fb-title" id="cap-title">⏳ No free turns left</span>
+    <button class="fb-close" onclick="closeCapModal()" aria-label="Close">✕</button>
+  </div>
+  <div class="fb-body">
+    <p class="fb-sub" id="cap-msg" style="font-style:normal;line-height:1.6">Your free turns are spent. New turns on <b>…</b> — or upgrade for unlimited.</p>
+  </div>
+  <div class="fb-foot">
+    <button class="fb-btn fb-cancel" onclick="closeCapModal()">Close</button>
+    <a class="fb-btn fb-send" id="cap-upgrade-btn" href="pricing.html" style="display:inline-flex;align-items:center;text-decoration:none">👑 Upgrade</a>
+  </div>
+</div>
+
 <!-- 🛠️ MASKINRUMMET — flat debug panel (api.js #debug-panel style) -->
 <div class="console-tab" id="console-tab" onclick="toggleConsole()" title="Open Engine Room" aria-label="Open Engine Room">🛠️</div>
 <div class="console" id="console">
@@ -1395,9 +1426,10 @@ async function loadCampaign() {
         I18N.getLang() === 'en'
           ? `What does ${CHAR_NAME} do? Write freely — fight, sneak, talk, cast a spell…`
           : `Vad gör ${CHAR_NAME}? Skriv fritt — slå, smyg, tala, kasta en besvärjelse…`;
-      // Uppdatera topbar
+      // Uppdatera topbar — kampanjnamn + FAS A/B header-info (Turn/Dag/🆓/reset)
       const tag = document.querySelector('.topbar .campaign');
-      if (tag) tag.textContent = `${I18N.t('Kampanj:')} ${campaign.name} · ${I18N.t('Tur')} ${campaign.turn_count}`;
+      if (tag) tag.textContent = `${I18N.t('Kampanj:')} ${campaign.name}`;
+      updateHeaderInfo();
     } else {
       // Ingen kampanj — tillbaka till vägskälet
       location.href = 'adventure.html';
@@ -1429,8 +1461,10 @@ let profileData = null;
 const roleReady = API.me().then(u => {
   if (u) {
     profileData = u;
+    _meData = u;
     const tag = document.getElementById('user-tag');
     if (tag) tag.textContent = '👤 ' + u.username;
+    updateHeaderInfo();
   }
   if (u && u.role === 'admin') {
     isAdmin = true;
@@ -1446,6 +1480,155 @@ const roleReady = API.me().then(u => {
     }
   }
 }).catch(() => {});
+
+// ═══════════════════════════════════════
+// FAS A/B — header-info + cap-modal (2026-08-04)
+// ═══════════════════════════════════════
+// Senaste /api/me-svar: turns_used/turn_bonus/turn_cap/reset_date/
+// subscription_status/turns_available — driver header-info + premium-expired-detektering.
+let _meData = null;
+
+// Hämta färska turn-siffror från /api/me och uppdatera headern (körs efter
+// varje lyckad tur — _consume_turn har då hunnit öka turns_used på servern).
+async function refreshMeData() {
+  try {
+    const u = await API.me();
+    if (u) { _meData = u; updateHeaderInfo(); }
+    return u;
+  } catch (e) { return null; }
+}
+
+// Nuvarande tur: kampanjstate (uppdateras lokalt efter varje lyckad tur).
+function currentTurnNum() {
+  if (campaignData && campaignData.turn_count != null) return campaignData.turn_count;
+  return null;
+}
+
+// Nuvarande dag: senast renderade dag-gruppsrubrik (alltid i synk med DOM),
+// annars kampanjstate (world.day / world.time).
+function currentDayNum() {
+  const g = currentDayGroup();
+  if (g) {
+    const t = g.querySelector('.dh-title');
+    const m = String(t && t.textContent || '').match(/\d+/);
+    if (m) return m[0];
+  }
+  let raw = null;
+  if (campaignData && campaignData.world) raw = campaignData.world.day || campaignData.world.time;
+  const m2 = String(raw || '').match(/\d+/);
+  return m2 ? m2[0] : null;
+}
+
+// "2026-09-04" → "4 sep" (engelska månadsnamn — UI-chrome är EN).
+function fmtResetDate(iso) {
+  if (!iso) return null;
+  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  const MON = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+  return parseInt(m[3], 10) + ' ' + (MON[parseInt(m[2], 10) - 1] || m[2]);
+}
+
+// Header-strängen: "Turn N · Day M · 🆓 X/Y · reset D" (premium → 👑 istället
+// för siffror). I18N.getLang() styr Tur/Turn + Dag/Day; siffror är universella.
+function turnInfoText() {
+  const en = (typeof I18N !== 'undefined' && I18N.getLang && I18N.getLang() === 'en');
+  const tLabel = en ? 'Turn' : 'Tur';
+  const dLabel = en ? 'Day' : 'Dag';
+  const parts = [];
+  const turn = currentTurnNum();
+  if (turn != null) parts.push(tLabel + ' ' + turn);
+  const day = currentDayNum();
+  if (day != null) parts.push(dLabel + ' ' + day);
+  const me = _meData || {};
+  if (me.subscription_status === 'premium') {
+    parts.push('👑');
+  } else {
+    const cap = parseInt(me.turn_cap, 10) || 0;
+    const available = parseInt(me.turns_available, 10);
+    if (cap > 0 && !isNaN(available)) {
+      const total = cap + (parseInt(me.turn_bonus, 10) || 0);
+      parts.push('🆓 ' + (available >= 999999 ? '∞' : available) + '/' + total);
+      const rd = fmtResetDate(me.reset_date);
+      if (rd) parts.push('reset ' + rd);
+    } else if (!isNaN(available) && available >= 999999) {
+      parts.push('🆓 ∞');
+    }
+  }
+  return parts.join(' · ');
+}
+
+// Uppdatera header-info: desktop (.topbar) + mobil (☰-menyns topp).
+function updateHeaderInfo() {
+  const text = turnInfoText();
+  const el = document.getElementById('header-turns-info');
+  if (el) el.textContent = text ? ' · ' + text : '';
+  const mel = document.getElementById('mobile-menu-turns');
+  if (mel) mel.textContent = text || '';
+}
+
+// api.js inbäddar JSON.stringify(detail) i e.message ("HTTP 403: {...}").
+// Extrahera cap_reached + reset_date därifrån; fallback till _meData.
+function capInfoFromError(e) {
+  if (!e || e.status !== 403) return null;
+  let info = null;
+  try {
+    const idx = String(e.message || '').indexOf('{');
+    if (idx >= 0) {
+      const obj = JSON.parse(String(e.message).slice(idx));
+      if (obj && obj.cap_reached) info = obj;
+    }
+  } catch (_) { info = null; }
+  return info || { cap_reached: true, reset_date: (_meData && _meData.reset_date) || null };
+}
+
+// 403 med cap_reached → färsk /api/me + cap-modalen. Premium som nyss gått ut
+// (senaste /api/me sa premium) får egen text. Returnerar true om modalen visades.
+async function handleCapError(e) {
+  const cap = capInfoFromError(e);
+  if (!cap) return false;
+  const wasPremium = !!(_meData && _meData.subscription_status === 'premium');
+  await refreshMeData();
+  openCapModal({
+    reset_date: cap.reset_date || (_meData && _meData.reset_date) || null,
+    premium_expired: wasPremium,
+  });
+  return true;
+}
+
+// ── Cap-modal (FAS B) ──
+function openCapModal(info) {
+  info = info || {};
+  const reset = info.reset_date || (_meData && _meData.reset_date) || null;
+  const resetStr = fmtResetDate(reset) || String(reset || '…');
+  const title = document.getElementById('cap-title');
+  const msg = document.getElementById('cap-msg');
+  const upgrade = document.getElementById('cap-upgrade-btn');
+  if (info.premium_expired) {
+    if (title) title.textContent = '👑 Premium expired';
+    if (msg) msg.innerHTML = 'Your premium period has ended, so your free turns are back. ' +
+      'New free turns arrive on <b>' + escapeHtml(resetStr) + '</b> — or renew for unlimited turns.';
+    if (upgrade) upgrade.textContent = '👑 Renew Premium';
+  } else {
+    if (title) title.textContent = '⏳ No free turns left';
+    if (msg) msg.innerHTML = 'Your free turns are spent. New turns on <b>' + escapeHtml(resetStr) +
+      '</b> — or upgrade for unlimited.';
+    if (upgrade) upgrade.textContent = '👑 Upgrade';
+  }
+  const backdrop = document.getElementById('cap-backdrop');
+  const modal = document.getElementById('cap-modal');
+  if (backdrop) backdrop.style.display = 'block';
+  if (modal) modal.classList.add('open');
+  // api.js visar en toast med rå HTTP-feltexten — dölj den, modalen räcker
+  const t = document.getElementById('toast');
+  if (t) t.classList.remove('show');
+  try { SFX.fail(); } catch (_) {}
+}
+function closeCapModal() {
+  const backdrop = document.getElementById('cap-backdrop');
+  const modal = document.getElementById('cap-modal');
+  if (backdrop) backdrop.style.display = 'none';
+  if (modal) modal.classList.remove('open');
+}
 
 // ── bfcache-skydd ──
 // När man navigerar tillbaka till chatten kan browsern återställa sidan
@@ -2961,6 +3144,10 @@ async function answerRollRequest(id, notation, label) {
     const resultMsg = `[Resultat: ${label} → ${roll.total} (${roll.rolls.join(', ')}${modStr})]`;
     const res = await API.chat(resultMsg, currentModel);
     hideThoughts();
+    // Uppdatera tur-räknare + header-info (FAS A/B)
+    if (res.turn_count && campaignData) campaignData.turn_count = res.turn_count;
+    updateHeaderInfo();
+    refreshMeData();
     const dmEl = res.reply ? addMessage('dm', null, res.reply) : null;
     // Vänta tills DM-svaret skrivit klart innan nästa kastkort visas
     if (dmEl && dmEl._twDone) await dmEl._twDone;
@@ -2982,7 +3169,10 @@ async function answerRollRequest(id, notation, label) {
   } catch (e) {
     hideThoughts();
     hideGuardianStatus();
-    await restoreFromTranscript(dmErrorMsg(e, 'The DM could not deliver the outcome'), e && e.message);
+    // Cap nådd (403 + cap_reached) → modal istället för felmeddelande
+    if (!(await handleCapError(e))) {
+      await restoreFromTranscript(dmErrorMsg(e, 'The DM could not deliver the outcome'), e && e.message);
+    }
   } finally {
     isResponding = false;
     _pendingRollId = null;
@@ -3865,14 +4055,15 @@ async function dmRespond(playerText) {
       res.roll_requests.forEach(r => addRollRequest(r.notation, r.label));
     }
 
-    // Uppdatera tur-räknare
-    if (res.turn_count) {
-      const tag = document.querySelector('.topbar .campaign');
-      if (tag && campaignData) tag.textContent = `${I18N.t('Kampanj:')} ${campaignData.name} · ${I18N.t('Tur')} ${res.turn_count}`;
-    }
+    // Uppdatera tur-räknare + header-info (FAS A/B)
+    if (res.turn_count && campaignData) campaignData.turn_count = res.turn_count;
+    updateHeaderInfo();
+    refreshMeData();
   } catch (e) {
     hideThoughts();
     hideGuardianStatus();
+    // Cap nådd (403 + cap_reached) → modal istället för felmeddelande
+    if (await handleCapError(e)) return;
     await restoreFromTranscript(dmErrorMsg(e, 'The DM could not reply'), e && e.message);
   } finally {
     isResponding = false;
@@ -6194,7 +6385,7 @@ function closeModelInfo() {
   if (ov) ov.classList.remove('show');
 }
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeModelInfo(); closeAvatarModal(); closeAvatarLightbox(); }
+  if (e.key === 'Escape') { closeModelInfo(); closeAvatarModal(); closeAvatarLightbox(); closeCapModal(); }
 });
 </script>
 

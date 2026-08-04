@@ -316,12 +316,15 @@ API.me().then(u => {
   if (u && u.role === 'admin') {
     newgameIsAdmin = true;
   } else {
-    // Begränsa modellväljaren till de tillåtna spelarmodellerna
+    // Begränsa modellväljaren till de tillåtna spelarmodellerna; free/tier1
+    // låses till step-3.7-flash (premium gråas ut + 🔒 — backend klämmer ändå).
+    const locked = (u && (u.subscription_status === 'free' || u.subscription_status === 'tier1'));
     const sel = document.getElementById('char-model');
     if (sel) {
-      sel.innerHTML = PLAYER_CHAR_MODELS.map(m =>
-        `<option value="${m}">${PLAYER_CHAR_LABELS[m] || m}</option>`
-      ).join('');
+      sel.innerHTML = PLAYER_CHAR_MODELS.map(m => {
+        const dis = locked && m !== 'step-3.7-flash';
+        return `<option value="${m}"${dis ? ' disabled' : ''}>${dis ? '🔒 ' + (PLAYER_CHAR_LABELS[m] || m) + ' — Tier 2' : (PLAYER_CHAR_LABELS[m] || m)}</option>`;
+      }).join('');
       sel.value = 'step-3.7-flash';
     }
   }

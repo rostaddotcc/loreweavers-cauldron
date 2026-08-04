@@ -204,12 +204,18 @@ if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 // THE FORGE — fristående karaktärsgenerering + valv
 // ═══════════════════════════════════════
 
-// Modellväljare: icke-admin begränsas till spelarmodeller
+// Modellväljare: icke-admin begränsas till spelarmodeller; free/tier1 låses
+// till step-3.7-flash (premium-modeller gråas ut + 🔒 — backend klämmer ändå).
 const PLAYER_CHAR_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-3.7-flash', 'ollama:heretic'];
+const PREMIUM_CHAR_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'ollama:heretic'];
 API.me().then(u => {
   if (u && u.role !== 'admin') {
+    const locked = (u.subscription_status === 'free' || u.subscription_status === 'tier1');
     const sel = document.getElementById('forge-model');
-    sel.innerHTML = PLAYER_CHAR_MODELS.map(m => `<option value="${m}">${m}</option>`).join('');
+    sel.innerHTML = PLAYER_CHAR_MODELS.map(m => {
+      const dis = locked && PREMIUM_CHAR_MODELS.includes(m);
+      return `<option value="${m}"${dis ? ' disabled' : ''}>${dis ? '🔒 ' + m + ' — Tier 2' : m}</option>`;
+    }).join('');
     sel.value = 'step-3.7-flash';
   }
 }).catch(() => {});

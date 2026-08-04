@@ -137,6 +137,7 @@
   .dm-model-row{display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
   .dm-model-select{flex:1;min-width:240px;font-family:'Spectral',serif;font-size:.98rem;color:var(--bone-bright);background:#0d0817;border:1px solid var(--edge);padding:.7rem .9rem;cursor:pointer;outline:none;transition:border-color .25s,box-shadow .25s}
   .dm-model-select:focus{border-color:var(--gold);box-shadow:0 0 16px -4px rgba(232,198,90,.4)}
+  .dm-model-select option:disabled{color:#5a5a6e;font-style:italic}
   .dm-model-note{font-size:.8rem;font-style:italic;color:var(--bone-dim);margin-top:.6rem}
   .dm-model-note b{color:var(--gold);font-style:normal}
   /* Ask-the-DM hover-hints — "hovers" med uppmaning att fråga DM */
@@ -366,6 +367,7 @@
         <button type="button" class="gm-row" onclick="fontToggleBtn()"><span class="gm-ico">🔤</span><span class="gm-txt">Font</span></button>
         <button type="button" class="gm-row" onclick="location.href='releases.html'"><span class="gm-ico">📜</span><span class="gm-txt">Release Notes</span></button>
         <button type="button" class="gm-row" onclick="openProfileModal()"><span class="gm-ico">🪞</span><span class="gm-txt">Profile</span></button>
+        <button type="button" class="gm-row" id="upgrade-gate-btn" onclick="location.href='pricing.html'"><span class="gm-ico">💳</span><span class="gm-txt">Upgrade</span></button>
         <button type="button" class="gm-row" onclick="location.href='characters.html'"><span class="gm-ico">⚒</span><span class="gm-txt">The Forge</span></button>
         <button type="button" class="gm-row" id="admin-gate-btn" style="display:none" onclick="location.href='admin.html'"><span class="gm-ico">👑</span><span class="gm-txt">Admin</span></button>
         <div class="gm-sep"></div>
@@ -661,6 +663,7 @@
     </div>
     <div class="dm-model-note">Which provider whispers the spoken word when the DM speaks aloud.</div>
     <div class="dm-model-note">🔄 <b>Can be changed at any time in the campaign</b> — from the settings inside the chat, if the mood shifts.</div>
+    <div class="dm-model-note" id="model-gate-upgrade-note" style="display:none">🔒 <b>Qwen 3.8, DeepSeek &amp; the full mind of the Cauldron unlock at Tier 2</b> — <a href="pricing.html" style="color:var(--gold);font-weight:600">View the paths →</a></div>
     <div class="step-actions">
       <button class="top-btn" onclick="goStep('step-arch')">← Back</button>
       <button class="start-btn" id="adventure-start" onclick="startAdventure()">⚔️ Start — Awaken the Dungeon Master</button>
@@ -831,11 +834,21 @@ async function askDeleteCampaign(campaignId, name) {
   }
 }
 
-// 👑 Visa admin-knapp om inloggad som admin
+// 👑 Visa admin-knapp om inloggad som admin; 💳 Upgrade/Membership etikett per tier
 API.me().then(u => {
   if (u && u.role === 'admin') {
     const btn = document.getElementById('admin-gate-btn');
     if (btn) btn.style.display = '';
+  }
+  if (u) {
+    const up = document.getElementById('upgrade-gate-btn');
+    if (up) {
+      const prem = (u.subscription_status === 'tier2' || u.subscription_status === 'lifetime');
+      const ico = up.querySelector('.gm-ico');
+      const txt = up.querySelector('.gm-txt');
+      if (ico) ico.textContent = prem ? '👑' : '💳';
+      if (txt) txt.textContent = prem ? 'Membership' : 'Upgrade';
+    }
   }
 }).catch(() => {});
 
@@ -1425,8 +1438,16 @@ const TTS_PROVIDERS = [
   const extSel = document.getElementById('adventure-extraction-model');
   const charSel = document.getElementById('adv-char-model');
   const ttsSel = document.getElementById('adventure-tts');
-  const fill = (models) => {
-    const opts = models.map(m => `<option value="${m}">${m}</option>`).join('');
+  // Modeller som kräver Tier 2+ (backend klämmer redan free/tier1 → step-3.7-flash;
+  // här låses de i UI:t så spelaren inte kan välja något som tyst ignoreras).
+  const PREMIUM_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4-flash', 'deepseek-v4-flash-0731', 'ollama:heretic'];
+  const optionHtml = (m, locked) => {
+    const prem = PREMIUM_MODELS.includes(m);
+    const dis = locked && prem;
+    return `<option value="${m}"${dis ? ' disabled' : ''}>${dis ? '🔒 ' + m + ' — Tier 2' : m}</option>`;
+  };
+  const fill = (models, locked) => {
+    const opts = models.map(m => optionHtml(m, locked)).join('');
     [dmSel, guardSel, extSel].forEach(sel => {
       if (!sel) return;
       sel.innerHTML = opts;
@@ -1438,28 +1459,42 @@ const TTS_PROVIDERS = [
       charSel.value = models.includes('step-3.7-flash') ? 'step-3.7-flash' : (models[0] || '');
     }
   };
-  if (ttsSel) {
-    ttsSel.innerHTML = TTS_PROVIDERS.map(p => `<option value="${p.id}">${p.name}${p.recommended ? ' — recommended' : ''}</option>`).join('');
+  const fillTTS = (locked) => {
+    if (!ttsSel) return;
+    ttsSel.innerHTML = TTS_PROVIDERS.map(p => {
+      const stepfun = p.id === 'stepfun';
+      const dis = locked && stepfun;
+      return `<option value="${p.id}"${dis ? ' disabled' : ''}>${p.name}${dis ? ' 🔒 — Tier 2' : ''}${p.recommended ? ' — recommended' : ''}</option>`;
+    }).join('');
     try {
       const saved = localStorage.getItem('dnd_tts_provider');
       // Rekommendation (2026-08-04): Qwen (Token Plan) är default för nya
       // äventyr — men en tidigare explicit spelar-ändring respekteras.
-      if (saved && TTS_PROVIDERS.some(p => p.id === saved)) {
+      if (saved && TTS_PROVIDERS.some(p => p.id === saved) && !(locked && saved === 'stepfun')) {
         ttsSel.value = saved;
       } else {
         const rec = TTS_PROVIDERS.find(p => p.recommended);
         if (rec) ttsSel.value = rec.id;
       }
     } catch (e) {}
-  }
-  if (!dmSel && !guardSel && !extSel && !charSel) return;
+  };
+  if (!dmSel && !guardSel && !extSel && !charSel && !ttsSel) return;
   API.me().then(u => {
-    if (u && u.role === 'admin') {
-      API.models().then(list => fill((list || []).map(m => m.id || m))).catch(() => fill(PLAYER_DM_MODELS));
+    const isAdmin = !!(u && u.role === 'admin');
+    // free/tier1 (och okänd status) → låst till step-3.7-flash + Qwen-TTS
+    const locked = !isAdmin && (!u || u.subscription_status === 'free' || u.subscription_status === 'tier1');
+    fillTTS(locked);
+    if (isAdmin) {
+      API.models().then(list => fill((list || []).map(m => m.id || m), false)).catch(() => fill(PLAYER_DM_MODELS, false));
     } else {
-      fill(PLAYER_DM_MODELS);
+      fill(PLAYER_DM_MODELS, locked);
     }
-  }).catch(() => fill(PLAYER_DM_MODELS));
+    const note = document.getElementById('model-gate-upgrade-note');
+    if (note) note.style.display = locked ? '' : 'none';
+  }).catch(() => {
+    fillTTS(false);
+    fill(PLAYER_DM_MODELS, false);
+  });
 })();
 
 // ── Start: skapa kampanj → sätt DM-modell → lyft in hjälten → chat (uppvaknandet) ──
@@ -1702,6 +1737,12 @@ function renderProfile(s) {
   h += cell('Last active', _esc(dt(s.last_active)));
   if (s.revenue > 0) h += cell('Contributions (SEK)', fmt(s.revenue));
   if (s.turn_bonus > 0) h += cell('Turn bonus', fmt(s.turn_bonus));
+  // 💳 Uppgraderingsväg — free/tier1 ser tydlig CTA, premium ser billing-länk
+  if (s.subscription_status === 'free' || s.subscription_status === 'tier1') {
+    h += '<div class="pf-cell full"><a href="pricing.html" style="display:block;text-align:center;font-family:Cinzel,serif;font-size:.74rem;letter-spacing:.18em;text-transform:uppercase;color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));padding:.85rem 1rem;border-radius:2px;text-decoration:none">💳 Upgrade your path</a></div>';
+  } else {
+    h += '<div class="pf-cell full" style="text-align:center;font-size:.78rem"><a href="pricing.html" style="color:var(--gold);text-decoration:none">👑 Membership &amp; billing →</a></div>';
+  }
   document.getElementById('pf-grid').innerHTML = h;
 }
 

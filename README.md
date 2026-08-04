@@ -163,8 +163,6 @@ loreweavers-cauldron/
 └── LICENSE                        # MIT
 ```
 
-Root-level `*.md` files (ARCHITECTURE.md, BACKLOG.md, BRAINSTORM.md, …) are historical planning documents kept for reference.
-
 ---
 
 ## 🚀 Quickstart

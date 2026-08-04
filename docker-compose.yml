@@ -17,6 +17,7 @@ services:
       - ./backend/data:/app/backend/data
     env_file:
       - ./backend/.env
+      - ./backend/.env.stripe
     environment:
       - HOST=0.0.0.0
       - PORT=8090

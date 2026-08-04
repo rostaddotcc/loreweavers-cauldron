@@ -19,6 +19,8 @@ import time
 import uuid
 import zipfile
 import base64
+import hashlib
+import hmac
 from collections import deque
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -112,7 +114,7 @@ _stream.setLevel(logging.INFO)
 logger.addHandler(_stream)
 
 import httpx
-from fastapi import Cookie, FastAPI, File, Form, HTTPException, Response, UploadFile
+from fastapi import Cookie, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -7970,6 +7972,191 @@ async def me_stats(morkrets_token: str | None = Cookie(None)):
         raise HTTPException(401, "Ej inloggad")
     row = _user_stat_row(username)
     return {"ok": True, "stats": row}
+
+
+# ═══════════════════════════════════════
+# STRIPE (FAS C) — checkout + webhook
+# ═══════════════════════════════════════
+
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_PRICES = {
+    "tier1": os.getenv("STRIPE_PRICE_TIER1", ""),
+    "tier2": os.getenv("STRIPE_PRICE_TIER2", ""),
+    "lifetime": os.getenv("STRIPE_PRICE_LIFETIME", ""),
+}
+STRIPE_PUBLIC_BASE = os.getenv("STRIPE_PUBLIC_BASE", "https://dnd.rostad.cc")
+# Ungefärlig EUR→SEK-kurs för ledgern (visas bara för admin).
+_EUR_TO_SEK = 11.7
+
+
+class BillingCheckoutRequest(BaseModel):
+    tier: str
+
+
+async def _stripe_post(path: str, data: dict) -> dict:
+    """Rå Stripe-REST (form-urlencoded, basic auth) — inga nya beroenden."""
+    url = f"https://api.stripe.com/v1/{path}"
+    async with httpx.AsyncClient(timeout=20) as client:
+        resp = await client.post(url, data=data, auth=(STRIPE_SECRET_KEY, ""))
+    if resp.status_code >= 400:
+        logger.warning("Stripe API %s → %s: %.120s", path, resp.status_code, resp.text)
+        raise HTTPException(502, "Stripe could not process the request")
+    return resp.json()
+
+
+def _stripe_verify_signature(payload: bytes, header: str) -> bool:
+    """Verifiera Stripe-signaturen (`t=ts,v1=hmac`) — HMAC-SHA256, constant-time.
+
+    Returnerar False om secret saknas (endpointen är då stängd).
+    """
+    if not STRIPE_WEBHOOK_SECRET:
+        return False
+    parts = {}
+    for item in (header or "").split(","):
+        k, _, v = item.partition("=")
+        parts[k.strip()] = v.strip()
+    ts, sig = parts.get("t"), parts.get("v1")
+    if not ts or not sig:
+        return False
+    try:
+        float(ts)
+    except ValueError:
+        return False
+    signed = str(ts).encode() + b"." + payload
+    expected = hmac.new(STRIPE_WEBHOOK_SECRET.encode(), signed, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, sig)
+
+
+@app.post("/api/billing/checkout")
+async def billing_checkout(req: BillingCheckoutRequest, morkrets_token: str | None = Cookie(None)):
+    """Skapa Stripe Checkout Session (hosted).
+
+    Åtkomst ges ALDRIG här — bara via webhook (checkout.session.completed).
+    """
+    payload = _get_current_user(morkrets_token)
+    username = payload.get("sub")
+    tier = (req.tier or "").strip().lower()
+    if tier not in STRIPE_PRICES or not STRIPE_PRICES[tier]:
+        raise HTTPException(400, "Tier must be tier1, tier2 or lifetime")
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(503, "Payments are not configured yet")
+    price = STRIPE_PRICES[tier]
+    mode = "subscription" if tier in ("tier1", "tier2") else "payment"
+    session = await _stripe_post("checkout/sessions", {
+        "mode": mode,
+        "line_items[0][price]": price,
+        "line_items[0][quantity]": "1",
+        "success_url": f"{STRIPE_PUBLIC_BASE}/adventure.html?billing=success",
+        "cancel_url": f"{STRIPE_PUBLIC_BASE}/pricing.html",
+        "client_reference_id": username,
+        "metadata[username]": username,
+        "metadata[tier]": tier,
+    })
+    logger.info("💳 Checkout session for %s (%s)", username, tier)
+    return {"ok": True, "url": session["url"]}
+
+
+@app.post("/api/stripe/webhook")
+async def stripe_webhook(request: Request):
+    """Stripe webhook — verifierad signatur, uppdaterar users.json.
+
+    Endpointen är OBEHÖRIG men kräver giltig Stripe-signatur. Åtkomst ges
+    endast här — aldrig i checkout-svaret.
+    """
+    raw = await request.body()
+    header = request.headers.get("stripe-signature", "")
+    if not _stripe_verify_signature(raw, header):
+        raise HTTPException(400, "Invalid signature")
+    try:
+        event = json.loads(raw)
+    except json.JSONDecodeError:
+        raise HTTPException(400, "Bad event body")
+    etype = event.get("type", "")
+    obj = event.get("data", {}).get("object", {}) or {}
+    event_id = event.get("id", "")
+    logger.info("💳 Stripe webhook: %s (%s)", etype, event_id)
+
+    if etype == "checkout.session.completed":
+        meta = obj.get("metadata", {}) or {}
+        username = meta.get("username") or obj.get("client_reference_id")
+        tier = (meta.get("tier") or "tier2").strip().lower()
+        if not username or tier not in TIER_ORDER:
+            return {"received": True}
+        if obj.get("payment_status") not in (None, "paid"):
+            return {"received": True}
+        cust = obj.get("customer")
+        sub_id = obj.get("subscription")
+        amount_total = int(obj.get("amount_total", 0) or 0)  # minor units (ören)
+        with _USER_LOCK:
+            users = load_users()
+            if username not in users:
+                return {"received": True}
+            u = users[username]
+            if tier == "lifetime":
+                u["subscription_status"] = "lifetime"
+                u["subscription_until"] = None
+                u["turn_cap"] = 0
+            elif tier in ("tier1", "tier2"):
+                u["subscription_status"] = tier
+                u["subscription_until"] = (datetime.now(timezone.utc).date() + timedelta(days=30)).isoformat()
+                u["turn_cap"] = DEFAULT_TURN_CAP
+                if not u.get("reset_ts"):
+                    u["reset_ts"] = (datetime.now(timezone.utc) + timedelta(hours=6)).isoformat()
+            if cust:
+                u["stripe_customer_id"] = cust
+            if sub_id:
+                u["stripe_subscription_id"] = sub_id
+            save_users(users)
+        _append_tier_log(username, tier, u.get("subscription_until") if tier != "lifetime" else None)
+        _ledger_append({
+            "user": username,
+            "amount_sek": round(amount_total / 100 * _EUR_TO_SEK),
+            "type": f"stripe:{tier}",
+            "stripe_sub_id": sub_id,
+            "event_id": event_id,
+        })
+    elif etype == "customer.subscription.deleted":
+        sub_id = obj.get("id")
+        cust = obj.get("customer")
+        with _USER_LOCK:
+            users = load_users()
+            for uname, u in users.items():
+                if not isinstance(u, dict):
+                    continue
+                if u.get("stripe_subscription_id") == sub_id or u.get("stripe_customer_id") == cust:
+                    u["subscription_status"] = "free"
+                    u["subscription_until"] = None
+                    u["turn_cap"] = DEFAULT_TURN_CAP
+                    save_users(users)
+                    _append_tier_log(uname, "free", None)
+                    logger.info("💳 Subscription deleted → free: %s", uname)
+                    break
+    elif etype == "invoice.paid":
+        sub_id = obj.get("subscription")
+        amount_paid = int(obj.get("amount_paid", 0) or 0)
+        with _USER_LOCK:
+            users = load_users()
+            for uname, u in users.items():
+                if not isinstance(u, dict) or u.get("stripe_subscription_id") != sub_id:
+                    continue
+                until = u.get("subscription_until")
+                try:
+                    base = datetime.fromisoformat(until).date() if until else datetime.now(timezone.utc).date()
+                except ValueError:
+                    base = datetime.now(timezone.utc).date()
+                u["subscription_until"] = (base + timedelta(days=30)).isoformat()
+                save_users(users)
+                _ledger_append({
+                    "user": uname,
+                    "amount_sek": round(amount_paid / 100 * _EUR_TO_SEK),
+                    "type": "stripe:renewal",
+                    "stripe_sub_id": sub_id,
+                    "event_id": event_id,
+                })
+                logger.info("💳 Invoice paid → extended: %s", uname)
+                break
+    return {"received": True}
 
 
 @app.get("/api/admin/feedback")

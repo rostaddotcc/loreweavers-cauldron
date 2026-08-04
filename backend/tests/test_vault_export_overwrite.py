@@ -63,7 +63,7 @@ def _run(coro):
 def test_export_creates_vault_entry(tmp_vault):
     user = "zagreus"
     token = main.create_token(user, "player")
-    _make_campaign(tmp_vault, user, "c1", "Thalindra", 3)
+    _make_campaign(tmp_vault, user, "c0ffee000001", "Thalindra", 3)
 
     res = _run(main.vault_save({"from_campaign": True}, token))
     assert res["ok"] is True
@@ -79,13 +79,13 @@ def test_export_creates_vault_entry(tmp_vault):
 def test_export_overwrite_keeps_same_id(tmp_vault):
     user = "nyx"
     token = main.create_token(user, "player")
-    _make_campaign(tmp_vault, user, "c1", "Thalindra", 3)
+    _make_campaign(tmp_vault, user, "c0ffee000001", "Thalindra", 3)
 
     first = _run(main.vault_save({"from_campaign": True}, token))
     assert first["overwritten"] is False
 
     # Karaktären växer (level 5) → andra export med overwrite_id
-    _make_campaign(tmp_vault, user, "c1", "Thalindra", 5)
+    _make_campaign(tmp_vault, user, "c0ffee000001", "Thalindra", 5)
     second = _run(main.vault_save({"from_campaign": True, "overwrite_id": first["id"]}, token))
     assert second["overwritten"] is True
     assert second["id"] == first["id"]  # samma post, ingen duplikat
@@ -98,7 +98,7 @@ def test_export_overwrite_keeps_same_id(tmp_vault):
 def test_export_without_overwrite_allows_duplicate(tmp_vault):
     user = "morpheus"
     token = main.create_token(user, "player")
-    _make_campaign(tmp_vault, user, "c1", "Kain", 2)
+    _make_campaign(tmp_vault, user, "c0ffee000001", "Kain", 2)
 
     _run(main.vault_save({"from_campaign": True}, token))
     _run(main.vault_save({"from_campaign": True}, token))  # ingen overwrite_id

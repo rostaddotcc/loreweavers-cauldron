@@ -22,6 +22,8 @@ def users_file(tmp_path, monkeypatch):
     """Peka users.json mot tmp-fil — autouse så inget test rör riktiga data."""
     f = tmp_path / "users.json"
     monkeypatch.setattr(auth, "USERS_FILE", f)
+    # Direkt-flödets rate limit (in-memory) får inte läcka mellan tester.
+    main._DIRECT_RESET_TIMES.clear()
     return f
 
 
@@ -98,6 +100,39 @@ def test_reset_password_sets_session_cookie(client):
                     json={"username": "alice", "password": "freshpass1"})
     assert r.status_code == 200
     assert "morkrets_token" in r.headers.get("set-cookie", "")
+
+
+# ── Härdning 2026-08-04 (security audit P0) ────────────────────────────
+
+def test_reset_password_admin_blocked(client):
+    u = {"password_hash": hash_password("adminpw123"), "role": "admin",
+         "turn_cap": 0, "turns_used": 0, "turn_bonus": 0,
+         "reset_date": "2026-08-04", "subscription_status": "free",
+         "subscription_until": None}
+    main.save_users({"admin": u})
+    r = client.post("/api/auth/reset-password",
+                    json={"username": "admin", "password": "HACKED123"})
+    assert r.status_code == 403
+    # Lösenordet får INTE ha ändrats
+    assert auth.verify_password("adminpw123", main.load_users()["admin"]["password_hash"])
+
+
+def test_reset_password_email_account_blocked(client):
+    _seed("alice", "oldpass123", email="alice@example.com")
+    r = client.post("/api/auth/reset-password",
+                    json={"username": "alice", "password": "HACKED123"})
+    assert r.status_code == 403
+    assert auth.verify_password("oldpass123", main.load_users()["alice"]["password_hash"])
+
+
+def test_reset_password_rate_limited(client):
+    _seed("alice", "oldpass123")
+    r1 = client.post("/api/auth/reset-password",
+                     json={"username": "alice", "password": "newpass456"})
+    assert r1.status_code == 200
+    r2 = client.post("/api/auth/reset-password",
+                     json={"username": "alice", "password": "newpass789"})
+    assert r2.status_code == 429
 
 
 # ── E-postbaserad reset (request-reset + reset-with-token) ─────────────

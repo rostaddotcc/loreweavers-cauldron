@@ -6,6 +6,7 @@ Varje kampanj: state.json + transcripts/ + summaries/.
 """
 
 import json
+import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,6 +14,10 @@ from pathlib import Path
 DATA_DIR = Path(__file__).resolve().parent / "data"
 CAMPAIGNS_DIR = DATA_DIR / "campaigns"
 VAULTS_DIR = DATA_DIR / "vaults"
+
+# Server-genererade ID-format — används för att blockera path traversal.
+_CAMPAIGN_ID_RE = re.compile(r"^[0-9a-f]{12}$")   # uuid4().hex[:12]
+_CHAR_ID_RE = re.compile(r"^[0-9a-f]{10}$")        # uuid4().hex[:10]
 
 SUMMARY_INTERVAL = 20  # Var 20:e tur → sammanfattning (Nivå 1: scen)
 CHAPTER_EVERY = 5      # Var 5:e scen-sammanfattning → kapitel (Nivå 2)
@@ -121,6 +126,11 @@ class CampaignStore:
     def get(self, user: str, campaign_id: str | None = None) -> dict | None:
         """Hämta en specifik kampanj eller den aktiva (via pekarfil)."""
         if campaign_id:
+            # Security (2026-08-04): kampanj-id:n är server-genererade uuid-hex.
+            # Utan checken kunde campaign_id innehålla ../.. → läsa/skriva
+            # andra användares kampanjtillstånd (path traversal).
+            if not _CAMPAIGN_ID_RE.match(campaign_id):
+                return None
             sp = self._state_path(user, campaign_id)
             if not sp.exists():
                 return None
@@ -195,6 +205,8 @@ class CampaignStore:
     def delete(self, user: str, campaign_id: str) -> bool:
         """Radera en specifik kampanj. Returnerar True om något raderades."""
         import shutil
+        if not _CAMPAIGN_ID_RE.match(campaign_id or ""):
+            return False
         cdir = self._campaign_dir(user, campaign_id)
         if not cdir.exists():
             return False
@@ -481,7 +493,7 @@ class CharacterVault:
     def update(self, user: str, entry: dict) -> bool:
         """Skriv tillbaka en uppdaterad vault-post (t.ex. efter avatar-gen)."""
         char_id = str(entry.get("id", "")).strip()
-        if not char_id:
+        if not char_id or not _CHAR_ID_RE.match(char_id):
             return False
         path = self._vault_dir(user) / f"{char_id}.json"
         if not path.exists():
@@ -509,6 +521,8 @@ class CharacterVault:
 
     def get(self, user: str, char_id: str) -> dict | None:
         """Hämta en specifik karaktär ur valvet."""
+        if not _CHAR_ID_RE.match(char_id or ""):
+            return None
         path = self._vault_dir(user) / f"{char_id}.json"
         if not path.exists():
             return None
@@ -520,6 +534,8 @@ class CharacterVault:
 
     def delete(self, user: str, char_id: str) -> bool:
         """Radera en karaktär ur valvet (+ ev. avatar-bild)."""
+        if not _CHAR_ID_RE.match(char_id or ""):
+            return False
         path = self._vault_dir(user) / f"{char_id}.json"
         if not path.exists():
             return False

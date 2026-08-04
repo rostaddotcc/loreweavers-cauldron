@@ -1957,12 +1957,12 @@ class PasswordResetRequest(BaseModel):
 
 @app.post("/api/auth/reset-password")
 async def reset_password(req: PasswordResetRequest, response: Response):
-    """Återställ lösenord för ett befintligt konto (ingen e-post krävs).
+    """Återställ lösenord för konton UTAN e-post (direkt-flödet).
 
-    Medvetet enkel: konton här är få och kända — den som vet användarnamnet
-    kan återställa lösenordet direkt (lämpligt för liten användarbas, ingen
-    identitetsverifiering). Sätter även en ny session-cookie så användaren
-    är inloggad direkt efter återställningen.
+    Härdat 2026-08-04 (security audit, P0):
+      - admin-konton kan ALDRIG återställas via denna öppna endpoint
+      - konton med e-post dirigeras till e-postflödet (request-reset)
+      - per-användare rate limit (5 min) mot brute force
     """
     username = normalize_username(req.username)
 
@@ -1973,10 +1973,29 @@ async def reset_password(req: PasswordResetRequest, response: Response):
     if err:
         raise HTTPException(400, err)
 
+    now = datetime.now(timezone.utc)
     with _USER_LOCK:
+        # Rate limit (per användare) — samma fönster som e-postflödet.
+        last = _DIRECT_RESET_TIMES.get(username)
+        if last and now - last < RESET_RATE_LIMIT:
+            raise HTTPException(429, "A raven is already on its way. Wait a few minutes.")
+        _DIRECT_RESET_TIMES[username] = now
+        # Trimma gamla poster så dict inte växer utan gräns.
+        stale = [u for u, t in _DIRECT_RESET_TIMES.items() if now - t > timedelta(hours=1)]
+        for u in stale:
+            _DIRECT_RESET_TIMES.pop(u, None)
+
         users = load_users()
-        if username not in users:
+        udata = users.get(username)
+        if not isinstance(udata, dict):
             raise HTTPException(404, "No adventurer by that name. Check the spelling.")
+        # Security (2026-08-04): admin kan bara återställas från servern.
+        if udata.get("role") == "admin":
+            raise HTTPException(403, "Admin accounts are reset from the server only.")
+        # Konton med e-post ska använda reset-länken (request-reset).
+        if (udata.get("email") or "").strip():
+            raise HTTPException(403, "This account uses email-based reset — request a reset link instead.")
+
         users[username]["password_hash"] = hash_password(req.password)
         users[username]["last_login"] = _now_iso()
         save_users(users)
@@ -2017,6 +2036,8 @@ class ResetWithTokenRequest(BaseModel):
 
 RESET_TOKEN_TTL = timedelta(minutes=30)
 RESET_RATE_LIMIT = timedelta(minutes=5)
+# In-memory rate limit för direkt-flödet (reset-password) — per användarnamn.
+_DIRECT_RESET_TIMES: dict[str, datetime] = {}
 
 
 @app.post("/api/auth/request-reset")
@@ -3218,7 +3239,12 @@ async def delete_campaign(
 async def activate_campaign(body: CampaignActivateRequest, morkrets_token: str | None = Cookie(None)):
     """Sätt en specifik kampanj som aktiv."""
     payload = _get_current_user(morkrets_token)
-    state = store.set_active(payload["sub"], body.campaign_id)
+    cid = (body.campaign_id or "").strip()
+    # Security (2026-08-04, P0): kampanj-id:n är uuid-hex (12). Utan checken
+    # kunde campaign_id peka på en annan användares katalog (path traversal).
+    if not re.fullmatch(r"[0-9a-f]{12}", cid):
+        raise HTTPException(404, "Kampanjen hittades inte")
+    state = store.set_active(payload["sub"], cid)
     if not state:
         raise HTTPException(404, "Kampanjen hittades inte")
     return {"ok": True, "campaign_id": body.campaign_id}
@@ -3307,8 +3333,15 @@ async def load_save(body: LoadRequest, morkrets_token: str | None = Cookie(None)
         if fresh:
             state = fresh
         saves_dir = store._saves_dir(state["meta"]["user"], state["meta"]["campaign_id"])
-        save_path = saves_dir / f"{body.save_id}.json"
-        if not save_path.exists():
+        save_id = (body.save_id or "").strip()
+        # Security (2026-08-04, P0): endast server-genererade save-id:n
+        # (save-YYYYMMDD-HHMMSS). Utan denna check kunde save_id innehålla
+        # ../.. → läsa andra användares kampanjtillstånd / godtyckliga
+        # JSON-filer (path traversal, verifierad i audit).
+        if not re.fullmatch(r"save-\d{8}-\d{6}", save_id):
+            raise HTTPException(400, "Invalid save id.")
+        save_path = (saves_dir / f"{save_id}.json").resolve()
+        if save_path.parent != saves_dir.resolve() or not save_path.exists():
             raise HTTPException(404, f"Sparfil '{body.save_id}' hittades inte")
 
         with open(save_path) as f:
@@ -5937,6 +5970,10 @@ async def vault_save(body: dict, morkrets_token: str | None = Cookie(None)):
     # Overwrite-stöd: om frontend skickar overwrite_id och posten finns,
     # uppdatera den befintliga posten i stället för att skapa en duplikat.
     overwrite_id = (body.get("overwrite_id") or "").strip()
+    # Security (2026-08-04, P0): vault-id:n är uuid-hex (10) — blockera
+    # traversal-försök innan vault.get/update bygger sökvägen.
+    if overwrite_id and not re.fullmatch(r"[0-9a-f]{10}", overwrite_id):
+        raise HTTPException(400, "Invalid overwrite id.")
     existing = vault.get(username, overwrite_id) if overwrite_id else None
 
     if existing is not None:

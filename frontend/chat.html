@@ -128,7 +128,7 @@
     padding: 0.55rem 0.7rem; border: none; border-radius: 2px;
     background: transparent; cursor: pointer; text-align: left;
     text-decoration: none; transition: background 0.15s, transform 0.15s;
-  }.drop-item:hover{ background: rgba(232,198,90,0.1); transform: translateX(3px); }.di-icon{ font-size: 1.05rem; flex-shrink: 0; filter: drop-shadow(0 0 4px rgba(232,198,90,0.3)); }.di-body{ display: flex; flex-direction: column; min-width: 0; }.di-name{ font-family: 'Cinzel', serif; font-size: 0.87rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-bright); }.drop-item:hover .di-name{ color: var(--gold-bright); }.di-hint{ font-size: 0.79rem; font-style: italic; color: var(--bone-dim); }/* Settings-menyn (⚙️): hint-rad → hover-tooltip (desktop). Menyn är högerjusterad → tooltip pekar vänsterut */.settings-menu .drop-item{ position: relative; }.settings-menu .di-hint{ position: absolute; top: 50%; right: calc(100% + 10px); transform: translateY(-50%); white-space: nowrap; font-size: 0.78rem; font-style: italic; color: var(--bone-dim); background: var(--stone-3); border: 1px solid var(--edge); border-radius: 3px; padding: 0.32rem 0.6rem; box-shadow: 0 10px 28px -10px rgba(0,0,0,0.8); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.16s ease, visibility 0.16s ease; z-index: 70; }.settings-menu .drop-item:hover .di-hint{ opacity: 1; visibility: visible; }.settings-menu .drop-item:hover .di-name{ color: var(--gold-bright); }@media(hover:none), (max-width:640px){ .settings-menu .di-hint{ position: static; transform: none; opacity: 1; visibility: visible; background: none; border: none; box-shadow: none; padding: 0; } }.drop-sep{ height: 1px; background: var(--edge); margin: 0.4rem 0.3rem; }/* ═══════════ Layout ═══════════ */.layout{ position: relative; z-index: 2; flex: 1; display: flex; min-height: 0; }/* ── Sidebar: party ── */.sidebar{
+  }.drop-item:hover{ background: rgba(232,198,90,0.1); transform: translateX(3px); }.di-icon{ font-size: 1.05rem; flex-shrink: 0; filter: drop-shadow(0 0 4px rgba(232,198,90,0.3)); }.di-body{ display: flex; flex-direction: column; min-width: 0; }.di-name{ font-family: 'Cinzel', serif; font-size: 0.87rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-bright); }.drop-item:hover .di-name{ color: var(--gold-bright); }.di-hint{ font-size: 0.79rem; font-style: italic; color: var(--bone-dim); }/* Settings-menyn (⚙️): hint-rad → hover-tooltip (desktop). Menyn är högerjusterad → tooltip pekar vänsterut */.settings-menu .drop-item{ position: relative; }.settings-menu .di-hint{ position: absolute; top: 50%; right: calc(100% + 10px); transform: translateY(-50%); white-space: nowrap; font-size: 0.78rem; font-style: italic; color: var(--bone-dim); background: var(--stone-3); border: 1px solid var(--edge); border-radius: 3px; padding: 0.32rem 0.6rem; box-shadow: 0 10px 28px -10px rgba(0,0,0,0.8); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.16s ease, visibility 0.16s ease; z-index: 70; }.settings-menu .drop-item:hover .di-hint{ opacity: 1; visibility: visible; }.settings-menu .drop-item:hover .di-name{ color: var(--gold-bright); }@media(hover:none), (max-width:640px){ .settings-menu .di-hint{ position: static; transform: none; opacity: 1; visibility: visible; background: none; border: none; box-shadow: none; padding: 0; } }.drop-sep{ height: 1px; background: var(--edge); margin: 0.4rem 0.3rem; }/* ═══════════ Layout ═══════════ */.layout{ position: relative; z-index: auto; flex: 1; display: flex; min-height: 0; }/* ── Sidebar: party ── */.sidebar{
     width: 240px; flex-shrink: 0;
     background: linear-gradient(180deg, var(--stone), var(--ink));
     border-right: 1px solid var(--edge);
@@ -5666,6 +5666,15 @@ function closeAllOverlays() {
   if (chat) chat.scrollTop = chat.scrollHeight;
 }
 
+// Mobile-nav mittknapp: Codex toggle — öppna om stängd, stäng (tillbaka
+// till chatten) om öppen. (2026-08-04)
+function toggleCodexNav() {
+  SFX.click();
+  if (closeCodexIfOpen()) return;
+  closeMobileSidebar();
+  openCodex();
+}
+
 function openSheet(id) {
   const sheet = document.getElementById(id);
   const backdrop = document.getElementById(id + '-backdrop');
@@ -5743,27 +5752,19 @@ function tick() {
 tick();
 </script>
 
-<!-- ═══════════ MOBILE BOTTOM NAV ═══════════ -->
+<!-- ═══════════ MOBILE BOTTOM NAV — Party | Codex (center) | Tools ═══════════ -->
 <nav class="mobile-nav" id="mobile-nav">
-  <button class="nav-tab" onclick="openCodex();SFX.click()">
+  <button class="nav-tab" onclick="toggleMobileSidebar()">
+    <span class="nav-icon">☰</span>
+    <span class="nav-label">Party</span>
+  </button>
+  <button class="nav-tab nav-center nav-active" onclick="toggleCodexNav()">
     <span class="nav-icon">📖</span>
     <span class="nav-label">Codex</span>
-  </button>
-  <button class="nav-tab" onclick="openCodex('character');SFX.click()">
-    <span class="nav-icon">🧙</span>
-    <span class="nav-label">Character</span>
-  </button>
-  <button class="nav-tab nav-center nav-active" onclick="closeAllOverlays();SFX.click()">
-    <span class="nav-icon">⚔️</span>
-    <span class="nav-label">Chat</span>
   </button>
   <button class="nav-tab" onclick="openSheet('sheet-tools');SFX.click()">
     <span class="nav-icon">⚙️</span>
     <span class="nav-label">Tools</span>
-  </button>
-  <button class="nav-tab" onclick="toggleMobileSidebar()">
-    <span class="nav-icon">☰</span>
-    <span class="nav-label">Party</span>
   </button>
 </nav>
 

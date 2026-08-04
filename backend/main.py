@@ -5521,12 +5521,23 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
         "inventory": entry.get("inventory") or [],
         "lore": [],
         "npcs": [],
+        "world": {},
     }
-    prompt = _trim_prompt(_build_avatar_prompt(fake_state, "player", seed))
-    # Fri användarprompt (valfri) — väger tyngst, auto-prompten blir kontext.
+    # Fri användarprompt (valfri). mode=new: skickas HELT REN — ingen
+    # auto-prompt, ingen pre-injektion. mode=edit: bygg från state-snapshot
+    # (HP/inventory) så valv-karaktären följer sin utveckling.
     user_prompt = ((body or {}).get("prompt") or "").strip()
-    if user_prompt:
-        prompt = _trim_prompt(f"{user_prompt}\nAdditional visual context from the character sheet: {prompt}")
+    mode = (body or {}).get("mode", "new")
+    if mode == "edit":
+        sheet_prompt = _build_sheet_update_prompt(fake_state)
+        if user_prompt:
+            prompt = _trim_prompt(f"{user_prompt}\nThe character's current state: {sheet_prompt}")
+        else:
+            prompt = _trim_prompt(sheet_prompt)
+    elif user_prompt:
+        prompt = _trim_prompt(user_prompt)
+    else:
+        prompt = _trim_prompt(_build_avatar_prompt(fake_state, "player", seed))
 
     api_key = os.getenv("STEPFUN_API_KEY")
     base_url = os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.ai/step_plan/v1")
@@ -6313,6 +6324,41 @@ def _trim_prompt(p: str, limit: int = 490) -> str:
     return cut.rstrip(" ,.") + "."
 
 
+def _build_sheet_update_prompt(state: dict) -> str:
+    """Bygg en 'Update from sheet'-prompt från FAKTISK kampanjstate — inte
+    från generisk story. Tar det som syns på arket och i världen just nu:
+    HP, inventory, location (och klass/utseende-ledtråd). (2026-08-04)"""
+    ch = state.get("character", {}) or {}
+    name = ch.get("name") or "The Adventurer"
+    race = ch.get("race") or "human"
+    cls = ch.get("class") or "adventurer"
+    hp = ch.get("hp") or {}
+    hp_cur = hp.get("current")
+    hp_max = hp.get("max")
+    hp_s = f"{hp_cur}/{hp_max}" if hp_cur is not None and hp_max is not None else ""
+    inv = []
+    for it in (state.get("inventory") or []):
+        if isinstance(it, dict) and it.get("name"):
+            inv.append(str(it["name"]))
+        elif isinstance(it, str):
+            inv.append(it)
+        if len(inv) >= 6:
+            break
+    inv_s = ", ".join(inv) if inv else "modest belongings"
+    world = state.get("world") or {}
+    loc = (world.get("current_location") or state.get("current_location") or "").strip()
+    parts = [f"{name}, a {race} {cls}."]
+    if hp_s:
+        parts.append(f"Current health: {hp_s}.")
+    parts.append(f"Carrying: {inv_s}.")
+    if loc:
+        parts.append(f"Currently at: {loc}.")
+    cue = _class_visual_cues(cls)
+    if cue:
+        parts.append(f"They are {cue}.")
+    return " ".join(parts)
+
+
 @app.post("/api/campaign/avatar/generate")
 async def generate_avatar(
     body: dict,
@@ -6338,12 +6384,22 @@ async def generate_avatar(
     if mode not in ("new", "edit"):
         mode = "new"
 
-    prompt = _trim_prompt(_build_avatar_prompt(state, avatar_key, seed))
-    # Fri användarprompt (valfri) — ligger FÖRE den auto-byggda kontexten så
-    # spelarens önskemål väger tyngst, auto-prompten blir kompletterande kontext.
+    # Fri användarprompt (valfri). mode=new: skickas HELT REN — ingen
+    # auto-prompt, ingen pre-injektion. Spelarens ord ÄR prompten.
     user_prompt = ((body or {}).get("prompt") or "").strip()
-    if user_prompt:
-        prompt = _trim_prompt(f"{user_prompt}\nAdditional visual context from the game: {prompt}")
+    if mode == "edit":
+        # Update from sheet: bygg från FAKTISK state (HP, inventory,
+        # location) så avataren följer karaktärens utveckling. Fri text
+        # väger tyngst om den finns, annars state-snapshot:et.
+        sheet_prompt = _build_sheet_update_prompt(state)
+        if user_prompt:
+            prompt = _trim_prompt(f"{user_prompt}\nThe character's current state: {sheet_prompt}")
+        else:
+            prompt = _trim_prompt(sheet_prompt)
+    elif user_prompt:
+        prompt = _trim_prompt(user_prompt)
+    else:
+        prompt = _trim_prompt(_build_avatar_prompt(state, avatar_key, seed))
     logger.info("🎨 AI-avatar: %s (mode=%s, seed %d)", avatar_key, mode, seed)
 
     api_key = os.getenv("STEPFUN_API_KEY")

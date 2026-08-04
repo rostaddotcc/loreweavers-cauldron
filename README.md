@@ -18,7 +18,6 @@ The game speaks **Svenska and English** (campaign-aware, chosen when you start a
 - **`@NPC` direct chat** — address any known NPC by name and the DM role-plays them with their own context (personality, relation, memories)
 - **Oracle rule-lookups** — ask rules questions in a sidebar without breaking the scene
 - **Streamed narration** — tokens appear as the DM "speaks"
-- **Atmosphere subagent** — ambient ASCII/CLI art injected inline into the story (battles, rest, discovery, forests…)
 
 ### 🎲 Dice & Combat
 - Full **dice engine** (`NdX±M` notation) with a dramatic d20 animation — gold flash on a natural 20, blood on a natural 1
@@ -87,12 +86,11 @@ The core idea: **the DM tells the story, the Guardian owns the mechanics, and th
 └──────┬──────────────────────┬─────────────────┘
        │                      │
        ▼                      ▼
-┌──────────────────┐  ┌────────────────────────────────┐
-│  ATMOSPHERE      │  │  GUARDIAN — post-DM extraction  │  ◀─ [SKADA:12] damage,
-│  ASCII-art scene │  │  → state.json (single source    │     [GULD:15] gold,
-└──────────────────┘  │    of truth for all mechanics)  │     [XP:], [FÖREMÅL:] items,
-                      └───────────────┬────────────────┘     [PLATS:namn] places
-                                      ▼
+┌────────────────────────────────┐
+│  GUARDIAN — post-DM extraction  │  ◀─ [SKADA:12] damage,
+│  → state.json (single source    │     [GULD:15] gold,
+└───────────────┬────────────────┘     [XP:], [FÖREMÅL:] items,
+                ▼                     [PLATS:namn] places
 ┌───────────────────────────────────────────────┐
 │  EXTRACTION — facts → FactRegister            │  ◀─ npc · location · item ·
 │  (deduplicated + versioned, injected next     │     event · promise · world ·
@@ -118,7 +116,6 @@ The core idea: **the DM tells the story, the Guardian owns the mechanics, and th
 | `backend/state_manager.py` | JSON persistence — campaigns, saves, vaults, rolling summaries (scene → chapter → arc) |
 | `backend/models.py` | Model router — provider configs & keys read from env, **never** exposed to clients |
 | `backend/auth.py` | JWT (HS256) + bcrypt against `data/users.json` |
-| `backend/atmosphere.py` | ASCII-art subagent with per-environment art banks and cooldown |
 | `backend/locations.py` | Dynamic seeded map, deterministic placement, terrain travel times |
 | `backend/logbook.py` | LLM-generated day-by-day adventure journal |
 | `backend/dice.py` | Dice notation parser (`NdX±M`) |
@@ -138,7 +135,7 @@ loreweavers-cauldron/
 │   ├── rag.py                     # Qdrant + Ollama vector memory
 │   ├── state_manager.py           # Campaign / vault JSON persistence
 │   ├── models.py                  # LLM model router (keys stay server-side)
-│   ├── auth.py · iplog.py · atmosphere.py
+│   ├── auth.py · iplog.py
 │   ├── locations.py · logbook.py · dice.py
 │   ├── requirements.txt · .env.example
 │   ├── data/                      # Runtime data (git-ignored): campaigns/, vaults/,
@@ -228,8 +225,6 @@ All configuration lives in environment variables (`backend/.env` for the app, `b
 | `JWT_EXPIRY_HOURS` | | Auth token lifetime in hours (default `24`) |
 | `GUARDIAN_MODEL` | | Model for mechanics extraction (default `step-3.7-flash`) |
 | `EXTRACTION_MODEL` | | Model for facts extraction (default `step-3.7-flash`) |
-| `ATMOSPHERE_MODEL` | | Model for the ASCII-art subagent (default `mimo-v2.5`) |
-| `ATMOSPHERE_ENABLED` | | Set `1` to enable inline ASCII art |
 | `TTS_PROVIDER` | | `stepfun` (default, always free) or `qwen` |
 | `TTS_VOICE_MALE` / `TTS_VOICE_FEMALE` | | Narrator voice IDs (defaults `longanlufeng` / `longanlingxin`) |
 | `TTS_DASHSCOPE_KEY_ENV` | | Env var holding the Qwen TTS key (default `DASHSCOPE_API_KEY`) |

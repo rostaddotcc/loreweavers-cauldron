@@ -88,7 +88,6 @@ Hybrid-modell: State + Summary + Recent + Archive
 | main.py | 3 405 | FastAPI app, routes, DM-prompt, chat, kampanjer |
 | guardian.py | 1 257 | Pre/Post-DM Guardian, kastdetektion, mekanikextraktion |
 | extraction.py | 763 | LLM-baserad item/fact-extraktion |
-| atmosphere.py | 668 | Atmosfärssystem (ljud, visuella effekter) |
 | state_manager.py | 472 | Kampanjstate-hantering, export/import |
 | rag.py | 448 | RAG med Qdrant, embedding, retrieval |
 | models.py | 408 | Modellrouter (7 modeller, 4 providers) |
@@ -217,7 +216,6 @@ docker logs -f loreweavers-cauldron --tail 50
 | OLLAMA_BASE_URL | Lokal Ollama (localhost:11434) |
 | QWEN_DEFAULT_MODEL | qwen3.8-max |
 | GUARDIAN_MODEL | Modell för Guardian |
-| ATMOSPHERE_MODEL | qwen3.6-flash |
 | JWT_SECRET | Auth-hemlighet |
 | ADMIN_USER / ADMIN_PASSWORD | Admin-konto |
 

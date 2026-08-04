@@ -122,34 +122,44 @@ def test_ledger_load_creates_empty_file(ledger_file):
 
 def test_ledger_append_and_totals(ledger_file):
     _seed_admin()
-    _seed_player("alice", subscription_status="premium", subscription_until=_in_days(30), turn_cap=0)
-    row = main._ledger_append({"user": "alice", "amount_sek": 49, "type": "invoice.paid",
+    _seed_player("alice", subscription_status="tier2", subscription_until=_in_days(30), turn_cap=0)
+    row = main._ledger_append({"user": "alice", "amount_sek": 105, "type": "invoice.paid",
                                "stripe_sub_id": "sub_1", "event_id": "evt_1"})
     assert row["ts"]  # backfillad med _now_iso()
     assert row["user"] == "alice"
-    assert row["amount_sek"] == 49
-    assert main._ledger_per_user() == {"alice": 49}
+    assert row["amount_sek"] == 105
+    assert main._ledger_per_user() == {"alice": 105}
     totals = main._ledger_totals()
-    assert totals["mrr"] == 49          # 1 aktiv premium
+    assert totals["mrr"] == 105         # 1 aktiv tier2
     assert totals["transactions"] == 1
-    assert totals["total"] == 49
+    assert totals["total"] == 105
     # fler rader summeras per user + saknade nycklar backfillas med None
-    main._ledger_append({"user": "alice", "amount_sek": 49, "type": "invoice.paid"})
+    main._ledger_append({"user": "alice", "amount_sek": 105, "type": "invoice.paid"})
     main._ledger_append({"user": "bob", "amount_sek": 10, "type": "topup"})
-    assert main._ledger_per_user() == {"alice": 98, "bob": 10}
+    assert main._ledger_per_user() == {"alice": 210, "bob": 10}
     totals = main._ledger_totals()
     assert totals["transactions"] == 3
-    assert totals["total"] == 108
-    assert totals["mrr"] == 49          # bob är free
+    assert totals["total"] == 220
+    assert totals["mrr"] == 105         # bob är free
 
 
 def test_mrr_counts_only_active_premium(ledger_file):
     _seed_admin()
-    _seed_player("active", subscription_status="premium", subscription_until=_in_days(10))
-    _seed_player("expired", subscription_status="premium", subscription_until=_in_days(-1))
+    _seed_player("active", subscription_status="tier2", subscription_until=_in_days(10))
+    _seed_player("expired", subscription_status="tier2", subscription_until=_in_days(-1))
     _seed_player("freebie")
     totals = main._ledger_totals()
-    assert totals["mrr"] == 49  # utgången premium räknas inte
+    assert totals["mrr"] == 105  # utgånget tier räknas inte
+
+
+def test_mrr_includes_tier1_and_excludes_lifetime(ledger_file):
+    """tier1 (3 €) + tier2 (9 €) räknas i MRR; lifetime är engångsintäkt."""
+    _seed_admin()
+    _seed_player("t1", subscription_status="tier1", subscription_until=_in_days(10))
+    _seed_player("t2", subscription_status="tier2", subscription_until=_in_days(10))
+    _seed_player("life", subscription_status="lifetime", subscription_until=_in_days(3650))
+    totals = main._ledger_totals()
+    assert totals["mrr"] == 35 + 105
 
 
 def test_ledger_corrupt_file_is_empty(ledger_file):
@@ -161,18 +171,18 @@ def test_ledger_corrupt_file_is_empty(ledger_file):
 
 def test_billing_endpoint_shape(client, ledger_file):
     _seed_admin()
-    _seed_player("alice", subscription_status="premium", subscription_until=_in_days(30), turn_cap=0)
+    _seed_player("alice", subscription_status="tier2", subscription_until=_in_days(30), turn_cap=0)
     for _ in range(3):
-        main._ledger_append({"user": "alice", "amount_sek": 49, "type": "invoice.paid"})
+        main._ledger_append({"user": "alice", "amount_sek": 105, "type": "invoice.paid"})
     r = client.get("/api/admin/billing", cookies={"morkrets_token": _atok()})
     assert r.status_code == 200
     body = r.json()
-    assert body["mrr"] == 49
+    assert body["mrr"] == 105
     assert body["transactions"] == 3
-    assert body["total"] == 147
-    assert body["per_user"] == {"alice": 147}
+    assert body["total"] == 315
+    assert body["per_user"] == {"alice": 315}
     assert len(body["ledger"]) == 3
-    assert body["ledger"][0]["amount_sek"] == 49
+    assert body["ledger"][0]["amount_sek"] == 105
 
 
 def test_billing_ledger_last_50(client, ledger_file):
@@ -276,17 +286,16 @@ def test_subscription_grant_premium_and_revert(client):
     _seed_admin()
     _seed_player("alice", turn_cap=50)
     r = client.put("/api/admin/user/alice/subscription",
-                   json={"status": "premium", "until": _in_days(30)},
+                   json={"status": "tier2", "until": _in_days(30)},
                    cookies={"morkrets_token": _atok()})
     assert r.status_code == 200, r.text
     body = r.json()
-    assert body["subscription_status"] == "premium"
-    assert body["turn_cap"] == 0  # premium → oändliga turns
+    assert body["subscription_status"] == "tier2"
+    assert body["turn_cap"] == main.DEFAULT_TURN_CAP  # tier2 = 50 turns / 6 h
     u = main.load_users()["alice"]
-    assert u["subscription_status"] == "premium"
+    assert u["subscription_status"] == "tier2"
     assert u["subscription_until"] == _in_days(30)
-    assert main._tier_for("alice") == "premium"
-    assert main._turns_available("alice") == 999999
+    assert main._tier_for("alice") == "tier2"
 
     # tillbaka till free → DEFAULT_TURN_CAP återställs (cap:et var 0)
     r = client.put("/api/admin/user/alice/subscription",
@@ -298,6 +307,34 @@ def test_subscription_grant_premium_and_revert(client):
     assert u["subscription_until"] is None
     assert u["turn_cap"] == main.DEFAULT_TURN_CAP
     assert main._tier_for("alice") == "free"
+
+
+def test_subscription_lifetime_unlimited(client):
+    """lifetime → turn_cap 0 = oändliga turns."""
+    _seed_admin()
+    _seed_player("alice", turn_cap=50)
+    r = client.put("/api/admin/user/alice/subscription",
+                   json={"status": "lifetime", "until": _in_days(3650)},
+                   cookies={"morkrets_token": _atok()})
+    assert r.status_code == 200, r.text
+    assert r.json()["turn_cap"] == 0
+    assert main._tier_for("alice") == "lifetime"
+    assert main._turns_available("alice") == 999999
+
+
+def test_subscription_tier1_sets_reset_ts(client):
+    """tier1 → 50 turns / 6 h: reset_ts sätts om det saknas."""
+    _seed_admin()
+    _seed_player("alice", turn_cap=50)
+    r = client.put("/api/admin/user/alice/subscription",
+                   json={"status": "tier1", "until": _in_days(30)},
+                   cookies={"morkrets_token": _atok()})
+    assert r.status_code == 200, r.text
+    u = main.load_users()["alice"]
+    assert u["subscription_status"] == "tier1"
+    assert u.get("reset_ts")  # sätts för 6-timmars-period
+    assert main._tier_for("alice") == "tier1"
+    assert main._turns_available("alice") == main.DEFAULT_TURN_CAP
 
 
 def test_subscription_keeps_custom_cap_on_revert(client):
@@ -336,14 +373,14 @@ def test_subscription_validation_404_403(client):
 
 def test_admin_stats_has_billing_fields(client, ledger_file):
     _seed_admin()
-    _seed_player("alice", subscription_status="premium", subscription_until=_in_days(30),
-                 turn_cap=0, turn_bonus=4, turns_used=2)
-    main._ledger_append({"user": "alice", "amount_sek": 98, "type": "invoice.paid"})
+    _seed_player("alice", subscription_status="tier2", subscription_until=_in_days(30),
+                 turn_cap=50, turn_bonus=4, turns_used=2)
+    main._ledger_append({"user": "alice", "amount_sek": 105, "type": "invoice.paid"})
     r = client.get("/api/admin/stats", cookies={"morkrets_token": _atok()})
     assert r.status_code == 200
     row = next(u for u in r.json()["users"] if u["username"] == "alice")
-    assert row["subscription_status"] == "premium"
+    assert row["subscription_status"] == "tier2"
     assert row["subscription_until"] == _in_days(30)
     assert row["turn_bonus"] == 4
     assert row["period_turns_used"] == 2
-    assert row["revenue"] == 98
+    assert row["revenue"] == 105

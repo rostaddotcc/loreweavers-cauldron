@@ -39,13 +39,14 @@ def client(users_file, campaigns_dir):
         yield c
 
 
-def _seed(username="alice", premium=False, turn_cap=50):
+def _seed(username="alice", premium=False, tier=None, turn_cap=50):
+    status = tier or ("tier2" if premium else "free")
     main.save_users({
         username: {"password_hash": hash_password("secret123"), "role": "player",
                    "turn_cap": turn_cap, "turns_used": 0, "turn_bonus": 0,
                    "reset_date": "2026-08-04",
-                   "subscription_status": "premium" if premium else "free",
-                   "subscription_until": "2027-01-01" if premium else None},
+                   "subscription_status": status,
+                   "subscription_until": "2027-01-01" if status != "free" else None},
     })
 
 
@@ -91,10 +92,46 @@ def test_style_ignored_for_free(client, monkeypatch):
     def fake_synth(voice, text, style=""):
         seen["style"] = style
         return b"ID3fake"
-    monkeypatch.setattr(main, "_synth_stepfun_tts", fake_synth)
-    r = client.post("/api/tts", json={"text": "Hej världen", "voice": "male", "provider": "stepfun", "style": "scary"})
+    monkeypatch.setattr(main, "_synth_qwen_tts_retry", fake_synth)
+    r = client.post("/api/tts", json={"text": "Hej världen", "voice": "male", "provider": "qwen", "style": "scary"})
     assert r.status_code == 200
     assert seen.get("style", "?") == ""
+
+
+def test_stepfun_falls_back_to_qwen_for_free(client, monkeypatch):
+    """Free/tier1: stepfun TTS är låst → tyst fallback till qwen."""
+    _seed("alice", premium=False)
+    _login(client)
+    seen = {}
+    def fake_qwen(voice, text, style=""):
+        seen["provider"] = "qwen"
+        return b"ID3fake"
+    def fake_step(voice, text, style=""):
+        seen["provider"] = "stepfun"
+        return b"ID3fake"
+    monkeypatch.setattr(main, "_synth_qwen_tts_retry", fake_qwen)
+    monkeypatch.setattr(main, "_synth_stepfun_tts", fake_step)
+    r = client.post("/api/tts", json={"text": "Hej", "voice": "male", "provider": "stepfun"})
+    assert r.status_code == 200
+    assert seen.get("provider") == "qwen"  # stepfun → qwen
+
+
+def test_stepfun_allowed_for_tier2(client, monkeypatch):
+    """tier2: stepfun TTS tillåten."""
+    _seed("alice", tier="tier2")
+    _login(client)
+    seen = {}
+    def fake_qwen(voice, text, style=""):
+        seen["provider"] = "qwen"
+        return b"ID3fake"
+    def fake_step(voice, text, style=""):
+        seen["provider"] = "stepfun"
+        return b"ID3fake"
+    monkeypatch.setattr(main, "_synth_qwen_tts_retry", fake_qwen)
+    monkeypatch.setattr(main, "_synth_stepfun_tts", fake_step)
+    r = client.post("/api/tts", json={"text": "Hej", "voice": "male", "provider": "stepfun"})
+    assert r.status_code == 200
+    assert seen.get("provider") == "stepfun"  # tier2 behåller stepfun
 
 
 def test_style_passed_for_premium(client, monkeypatch):

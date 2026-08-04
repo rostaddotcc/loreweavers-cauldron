@@ -187,17 +187,18 @@ def test_cap_reached_403(client):
 def test_me_returns_free_fields(client):
     _register(client)
     until = _in_days(30)
-    _patch_user("alice", turn_bonus=3, subscription_status="premium", subscription_until=until)
+    _patch_user("alice", turn_bonus=3, subscription_status="tier2", subscription_until=until)
     me = client.get("/api/me")
     assert me.status_code == 200
     body = me.json()
     for key in ("turns_used", "turn_bonus", "reset_date", "subscription_status",
-                "subscription_until", "turns_available"):
+                "subscription_until", "turns_available", "period_hours"):
         assert key in body, f"missing /api/me field: {key}"
     assert body["turn_bonus"] == 3
-    assert body["subscription_status"] == "premium"
+    assert body["subscription_status"] == "tier2"
     assert body["subscription_until"] == until
-    assert body["turns_available"] == 999999
+    assert body["period_hours"] == 6  # tier2 = 6-timmarsperiod
+    assert body["turns_available"] == main.DEFAULT_TURN_CAP + 3
 
 
 # ── Reset-rollover ───────────────────────────────────────────────────────
@@ -243,10 +244,21 @@ def test_free_model_clamp(client, llm_mocks):
 def test_premium_model_ok(client, llm_mocks):
     _register(client)
     _make_campaign("alice")
-    _patch_user("alice", subscription_status="premium", subscription_until=_in_days(30))
+    _patch_user("alice", subscription_status="tier2", subscription_until=_in_days(30))
     r = _chat(client, model="qwen3.8-max")
     assert r.status_code == 200, r.text
-    assert llm_mocks["models"] == ["qwen3.8-max"]  # premium behåller valet
+    assert llm_mocks["models"] == ["qwen3.8-max"]  # tier2 behåller valet
+
+
+def test_tier1_model_clamped(client, llm_mocks):
+    """tier1 ger avatars + 6h-turns men INTE premium-modeller → klamp till step."""
+    _register(client)
+    _make_campaign("alice")
+    _patch_user("alice", subscription_status="tier1", subscription_until=_in_days(30))
+    r = _chat(client, model="qwen3.8-max")
+    assert r.status_code == 200, r.text
+    assert llm_mocks["models"] == ["step-3.7-flash"]
+    assert main._clamp_player_model("qwen3.8-max", tier="tier1") == "step-3.7-flash"
 
 
 def test_turn_cap_zero_is_unlimited(client):
@@ -262,17 +274,26 @@ def test_turn_cap_zero_is_unlimited(client):
     assert r.status_code == 200, r.text
 
 
-def test_premium_unlimited(client):
+def test_lifetime_unlimited(client):
     _register(client)
-    _patch_user("alice", subscription_status="premium", subscription_until=_in_days(30),
+    _patch_user("alice", subscription_status="lifetime", subscription_until=_in_days(3650),
                 turn_cap=1, turns_used=100, turn_bonus=0)
-    assert main._tier_for("alice") == "premium"
+    assert main._tier_for("alice") == "lifetime"
     assert main._turns_available("alice") == 999999
+
+
+def test_tier2_not_unlimited(client):
+    """tier2 = 50 turns per 6-timmarsperiod — INTE obegränsat (det är lifetime)."""
+    _register(client)
+    _patch_user("alice", subscription_status="tier2", subscription_until=_in_days(30),
+                turn_cap=50, turns_used=100, turn_bonus=0)
+    assert main._tier_for("alice") == "tier2"
+    assert main._turns_available("alice") == 0  # 100 använda > cap 50
 
 
 def test_expired_premium_demoted(client):
     _register(client)
-    _patch_user("alice", subscription_status="premium", subscription_until=_in_days(-1),
+    _patch_user("alice", subscription_status="tier2", subscription_until=_in_days(-1),
                 turn_cap=5, turns_used=0)
     assert main._tier_for("alice") == "free"
     # demote är sparat i users.json

@@ -1038,7 +1038,7 @@
       <button class="drop-item" data-cli-label onclick="toggleCliChat();closeSettingsMenu()"><span class="di-icon">🖥️</span><span class="di-body"><span class="di-name">Chat UI: CLI</span><span class="di-hint">terminal style — toggle to bubbles</span></span></button>
       <button class="drop-item" onclick="openFeedbackModal();closeSettingsMenu()"><span class="di-icon">💬</span><span class="di-body"><span class="di-name">Feedback</span><span class="di-hint">suggestions or bug reports</span></span></button>
       <div class="model-picker-card">
-        <div class="mpc-title">🧠 Modeller <span id="model-picker-lock" style="display:none;color:var(--gold);font-size:.68rem">🔒 premium</span></div>
+        <div class="mpc-title">🧠 Modeller <span id="model-picker-lock" style="display:none;color:var(--gold);font-size:.68rem">🔒 Tier 2</span></div>
         <label class="mpc-label">Dungeon Master</label>
         <select id="settings-dm-model" onchange="settingsChangeModel(this.value)"></select>
         <label class="mpc-label">Lorekeeper</label>
@@ -1046,10 +1046,10 @@
         <label class="mpc-label">Bakgrund (extraction)</label>
         <select id="settings-extraction-model" onchange="settingsChangeExtraction(this.value)"></select>
         <div class="mpc-hint" id="settings-guardian-hint"></div>
-        <div class="mpc-hint" id="model-picker-premium-hint" style="display:none;color:var(--gold)">🔒 Premium-modeller låsta — uppgradera för att växla DM-röst.</div>
+        <div class="mpc-hint" id="model-picker-premium-hint" style="display:none;color:var(--gold)">🔒 Premium-modeller låsta — Tier 2 krävs för att växla DM-röst.</div>
       </div>
       <div class="model-picker-card" id="tts-test-card">
-        <div class="mpc-title">🎙 Narrator test <span id="tts-test-lock" style="color:var(--gold);font-size:.68rem">🔒 premium</span></div>
+        <div class="mpc-title">🎙 Narrator test <span id="tts-test-lock" style="color:var(--gold);font-size:.68rem">🔒 Tier 2</span></div>
         <div style="display:flex;gap:.4rem;margin-top:.3rem">
           <input type="text" id="tts-test-input" maxlength="50" placeholder="The raven cries in the dark…"
                  style="flex:1;min-width:0;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone);padding:.35rem .5rem;font-size:.78rem;border-radius:3px"
@@ -1528,9 +1528,9 @@ async function refreshMeData() {
 }
 
 // Ticka countdown varje sekund så "reset om HH:MM:SS" räknar ner live.
-// Bara när en free-användare med reset_date finns (annars gör inget).
+// Bara när en användare med turn-tak och reset (free/tier1/tier2) finns.
 setInterval(() => {
-  if (_meData && _meData.reset_date && _meData.subscription_status !== 'premium') {
+  if (_meData && (_meData.reset_date || _meData.reset_ts) && _tier() !== 'lifetime') {
     updateHeaderInfo();
   }
 }, 1000);
@@ -1565,14 +1565,22 @@ function fmtResetDate(iso) {
   return parseInt(m[3], 10) + ' ' + (MON[parseInt(m[2], 10) - 1] || m[2]);
 }
 
-// Nedräkning till nästa turn-reset (reset_date). Returnerar "HH:MM:SS" som
-// tickar — "2d 07:42:15" om mer än ett dygn kvar. Återanvänds av header-info.
-function resetCountdown(iso) {
+// Nedräkning till nästa turn-reset. reset_date (YYYY-MM-DD) = daglig (free);
+// reset_ts (full ISO-timestamp) = 6-timmarsperiod (tier1/tier2). Returnerar
+// "HH:MM:SS" som tickar — "2d 07:42:15" om mer än ett dygn kvar.
+function resetCountdown(iso, isTs) {
   if (!iso) return null;
-  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!m) return null;
-  // reset_date = datumet (midnatt UTC). Nästa reset sker vid reset_date 00:00.
-  const target = Date.UTC(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
+  let target;
+  if (isTs) {
+    const t = Date.parse(String(iso));
+    if (isNaN(t)) return null;
+    target = t;
+  } else {
+    const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return null;
+    // reset_date = datumet (midnatt UTC). Nästa reset sker vid reset_date 00:00.
+    target = Date.UTC(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
+  }
   let ms = target - Date.now();
   if (ms <= 0) ms = 0;
   const s = Math.floor(ms / 1000);
@@ -1583,9 +1591,9 @@ function resetCountdown(iso) {
   return d > 0 ? (d + 'd ' + hh + ':' + mm + ':' + ss) : (hh + ':' + mm + ':' + ss);
 }
 
-// Header-strängen: "Turn N · Day M · 🆓 X/Y · reset in 07:42:15" (premium →
-// 👑 istället för siffror). I18N.getLang() styr Tur/Turn + Dag/Day; siffror
-// är universella. Countdown tickar via _resetTick.
+// Header-strängen: "Turn N · Day M · 🆓 X/Y · reset in 07:42:15" (lifetime →
+// 👑 istället för siffror; tier1/tier2 visar 6h-countdown via reset_ts).
+// I18N.getLang() styr Tur/Turn + Dag/Day; siffror är universella.
 function turnInfoText() {
   const en = (typeof I18N !== 'undefined' && I18N.getLang && I18N.getLang() === 'en');
   const tLabel = en ? 'Turn' : 'Tur';
@@ -1596,15 +1604,18 @@ function turnInfoText() {
   const day = currentDayNum();
   if (day != null) parts.push(dLabel + ' ' + day);
   const me = _meData || {};
-  if (me.subscription_status === 'premium') {
-    parts.push('👑');
+  const tier = _tier();
+  if (tier === 'lifetime') {
+    parts.push('👑 Lifetime');
   } else {
     const cap = parseInt(me.turn_cap, 10) || 0;
     const available = parseInt(me.turns_available, 10);
     if (cap > 0 && !isNaN(available)) {
       const total = cap + (parseInt(me.turn_bonus, 10) || 0);
       parts.push('🆓 ' + (available >= 999999 ? '∞' : available) + '/' + total);
-      const cd = resetCountdown(me.reset_date);
+      // tier1/tier2 → 6-timmarsperiod (reset_ts); free → daglig (reset_date)
+      const hasTs = (tier === 'tier1' || tier === 'tier2') && me.reset_ts;
+      const cd = resetCountdown(hasTs ? me.reset_ts : me.reset_date, hasTs);
       if (cd) parts.push((en ? 'reset in ' : 'reset om ') + cd);
     } else if (!isNaN(available) && available >= 999999) {
       parts.push('🆓 ∞');
@@ -1642,7 +1653,7 @@ function capInfoFromError(e) {
 async function handleCapError(e) {
   const cap = capInfoFromError(e);
   if (!cap) return false;
-  const wasPremium = !!(_meData && _meData.subscription_status === 'premium');
+  const wasPremium = !!(_meData && ['tier1', 'tier2', 'lifetime', 'premium'].includes(_meData.subscription_status));
   await refreshMeData();
   openCapModal({
     reset_date: cap.reset_date || (_meData && _meData.reset_date) || null,
@@ -1773,6 +1784,12 @@ function pickAvatar(kind) {
   const delBtn = document.getElementById('avatar-del-btn');
   const updBtn = document.getElementById('avatar-update-btn');
   const aiBtn = document.getElementById('avatar-ai-btn');
+  // TIERS: AI-avatarer är tier1+ (free hänvisas till uppgradering)
+  if (!_tierHasAvatars()) {
+    try { toast('🔒 AI avatars are a Tier 1 feature — upgrade to paint your hero and the faces you meet.'); } catch (_) {}
+    try { SFX.error(); } catch (_) {}
+    return;
+  }
   const label = kind === 'dm' ? 'the Dungeon Master'
     : kind.startsWith('npc:') ? 'NPC · ' + kind.slice(4)
     : 'The Adventurer';
@@ -2344,7 +2361,30 @@ function initTTSStyle() {
   }
   updateTTSStyleLock();
 }
-// Premium-gate: style-väljaren + narrator-testet låst för free-konton
+// TIERS: free < tier1 < tier2 < lifetime. /api/me skickar subscription_status.
+// Legacy 'premium' från servern → tier2 (backend mappar redan, men defensivt här också).
+function _tier() {
+  const s = (_meData && _meData.subscription_status) || 'free';
+  if (s === 'premium') return 'tier2';
+  return s;
+}
+function _tierIs(one, two) { const t = _tier(); return t === one || (two && t === two); }
+function _tierHasModels() { const t = _tier(); return t === 'tier2' || t === 'lifetime'; }
+function _tierHasAvatars() { const t = _tier(); return t !== 'free'; }
+
+// Tier-badge för profilkortet: free (dim) / tier1 / tier2 (guld) / lifetime (lila).
+function tierBadge(s) {
+  const st = (s === 'premium' ? 'tier2' : s) || 'free';
+  const map = {
+    'free': '<span style="color:var(--bone-dim)">free</span>',
+    'tier1': '<span style="color:var(--bone)">🔹 Tier 1</span>',
+    'tier2': '<span style="color:var(--gold-bright)">👑 Tier 2</span>',
+    'lifetime': '<span style="color:var(--arcane)">💜 Lifetime</span>',
+  };
+  return map[st] || map['free'];
+}
+
+// Premium-gate: style-väljaren + narrator-testet låst för free/tier1
 // (backend ignorerar ändå). Körs efter /api/me — uppdaterar även modell-pickern.
 function updateTTSStyleLock() {
   const sel = document.getElementById('tts-style-select');
@@ -2354,21 +2394,38 @@ function updateTTSStyleLock() {
   const testLock = document.getElementById('tts-test-lock');
   const card = document.getElementById('tts-test-card');
   if (!sel) return;
-  const premium = !!(_meData && _meData.subscription_status === 'premium');
-  sel.disabled = !premium;
-  if (inp) inp.disabled = !premium;
-  sel.title = premium
+  const hasStyle = _tierHasModels();
+  sel.disabled = !hasStyle;
+  if (inp) inp.disabled = !hasStyle;
+  sel.title = hasStyle
     ? 'Narrator style — happy, calm, scary, or your own'
-    : '🔒 Narrator style — premium feature';
-  // Narrator-testkort: låst för free (test = premium-funktion)
-  if (testBtn) testBtn.disabled = !premium;
-  if (testInp) testInp.disabled = !premium;
-  if (testLock) testLock.style.display = premium ? 'none' : '';
+    : '🔒 Narrator style — Tier 2 feature';
+  // Narrator-testkort: låst för free/tier1 (test = tier2-funktion)
+  if (testBtn) testBtn.disabled = !hasStyle;
+  if (testInp) testInp.disabled = !hasStyle;
+  if (testLock) testLock.style.display = hasStyle ? 'none' : '';
   if (card) {
-    card.style.opacity = premium ? '1' : '0.55';
-    card.style.pointerEvents = premium ? 'auto' : 'none';
+    card.style.opacity = hasStyle ? '1' : '0.55';
+    card.style.pointerEvents = hasStyle ? 'auto' : 'none';
   }
-  // Modell-pickern: premium-modeller gråade för free
+  // StepFun TTS: låst för free/tier1 (Tier 2 feature)
+  const ps = document.getElementById('tts-provider-select');
+  if (ps) {
+    const stepOpt = ps.querySelector('option[value="stepfun"]');
+    if (stepOpt) {
+      stepOpt.disabled = !hasStyle;
+      stepOpt.textContent = hasStyle ? 'StepFun' : 'StepFun 🔒';
+    }
+    // Fallback till qwen om stepfun vald men låst
+    if (!hasStyle && ps.value === 'stepfun') {
+      ps.value = 'qwen';
+      if (localStorage.getItem(TTS_PROVIDER_KEY) === 'stepfun') {
+        localStorage.setItem(TTS_PROVIDER_KEY, 'qwen');
+      }
+    }
+    ps.title = hasStyle ? 'TTS provider' : '🔒 StepFun TTS — Tier 2 feature';
+  }
+  // Modell-pickern: premium-modeller gråade för free/tier1
   if (typeof initSettingsModelPickers === 'function') {
     try { initSettingsModelPickers(); } catch (e) {}
   }
@@ -5836,9 +5893,9 @@ function initSettingsModelPickers() {
   const eSel = document.getElementById('settings-extraction-model');
   if (!dmSel || !gSel) return;
 
-  // Free-konton: ENDAST step-3.7-flash valbar. Premium-modeller visas gråade
-  // med 🔒 så spelaren inte tror att valet funkar (backend gate-ar ändå).
-  const isFree = !isAdmin && !(_meData && _meData.subscription_status === 'premium');
+  // free/tier1-konton: ENDAST step-3.7-flash valbar. Premium-modeller visas
+  // gråade med 🔒 så spelaren inte tror att valet funkar (backend gate-ar ändå).
+  const isFree = !isAdmin && !_tierHasModels();
   const lockedIds = isFree ? allowed.filter(m => m !== 'step-3.7-flash') : [];
   const lockEl = document.getElementById('model-picker-lock');
   const hintEl = document.getElementById('model-picker-premium-hint');
@@ -5951,7 +6008,7 @@ function toggleProfilePopup() {
     <div style="font-family:'Cinzel',serif;color:var(--gold-bright);font-size:.9rem;margin-bottom:.8rem;letter-spacing:.1em">👤 ${d.username || '—'}</div>
     <div style="display:grid;grid-template-columns:auto 1fr;gap:.3rem .8rem;font-size:.75rem;color:var(--bone)">
       <span style="color:var(--bone-dim)">Role</span><span>${d.role === 'admin' ? '👑 Admin' : '⚔️ Player'}</span>
-      <span style="color:var(--bone-dim)">Tier</span><span>${d.subscription_status === 'premium' ? '<span style="color:var(--gold-bright)">👑 Premium</span>' : '<span style="color:var(--bone-dim)">free</span>'}</span>
+      <span style="color:var(--bone-dim)">Tier</span><span>${tierBadge(d.subscription_status)}</span>
       <span style="color:var(--bone-dim)">Campaigns</span><span>${d.total_campaigns || 0}</span>
       <span style="color:var(--bone-dim)">Turns</span><span>${d.turns_used || 0}</span>
       <span style="color:var(--bone-dim)">Tokens</span><span>${tokenStr}</span>

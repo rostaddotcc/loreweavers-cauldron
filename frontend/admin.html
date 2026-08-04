@@ -543,10 +543,16 @@ async function resetTurns(username) {
   } catch(e) { toast('Error: ' + e.message); }
 }
 
-async function togglePremium(username, currentlyPremium, months) {
-  const status = currentlyPremium ? 'free' : 'premium';
+// TIERS: sätt tier (free/tier1/tier2/lifetime) med automatisk until.
+// tier1/tier2 → +N månader (default 1); lifetime → +10 år (engång).
+async function setTier(username, tier, months) {
+  const status = tier || 'free';
   let until = null;
-  if (status === 'premium') {
+  if (status === 'lifetime') {
+    const d = new Date();
+    d.setDate(d.getDate() + 3650);
+    until = d.toISOString().slice(0, 10);
+  } else if (status !== 'free') {
     const m = months && !isNaN(months) ? Math.max(1, Math.min(120, parseInt(months, 10))) : 1;
     const d = new Date();
     d.setDate(d.getDate() + m * 30);
@@ -560,19 +566,27 @@ async function togglePremium(username, currentlyPremium, months) {
     });
     const data = await res.json();
     if (!res.ok) { toast(data.detail || 'Could not change subscription'); return; }
-    toast(status === 'premium'
-      ? '👑 Premium granted to ' + username + ' (until ' + until + ')'
-      : '⭱ ' + username + ' is now Free');
+    const names = { free: 'Free', tier1: 'Tier 1', tier2: 'Tier 2', lifetime: 'Lifetime' };
+    toast(status === 'free'
+      ? '⭱ ' + username + ' is now Free'
+      : '👑 ' + (names[status] || status) + ' granted to ' + username + (until ? ' (until ' + until + ')' : ''));
     if (typeof loadedUsers !== 'undefined') loadedUsers[username] = null; // refresh cached detail
     loadStats();
   } catch(e) { toast('Error: ' + e.message); }
 }
 
-// Snabb-grant från tabellraden: läser längden ur radens select
+// Bakåtkompatibel wrapper: gamla knappar (premium = tier2)
+async function togglePremium(username, currentlyPremium, months) {
+  setTier(username, currentlyPremium ? 'free' : 'tier2', months);
+}
+
+// Snabb-grant: läser tier + längd ur radens selects (desktop- eller mobil-ID).
 function grantPremiumFromRow(username) {
-  const sel = document.getElementById('pg-months-' + username);
+  const tierSel = document.getElementById('pg-tier-' + username) || document.getElementById('pg-m-tier-' + username);
+  const sel = document.getElementById('pg-months-' + username) || document.getElementById('pg-m-months-' + username);
+  const tier = tierSel ? tierSel.value : 'tier2';
   const months = sel ? sel.value : 1;
-  togglePremium(username, false, months);
+  setTier(username, tier, months);
 }
 
 // ═══════════════════════════════════════
@@ -633,7 +647,10 @@ function _sortVal(u) {
     case 'created': { const t = Date.parse(u.created_at); return isNaN(t) ? 0 : t; }
     case 'last_login': { const t = Date.parse(u.last_login); return isNaN(t) ? 0 : t; }
     case 'turn_cap': return (u.turn_cap === undefined || u.turn_cap === null) ? 0 : u.turn_cap;
-    case 'subscription_status': return (u.subscription_status || 'free');
+    case 'subscription_status': {
+      const order = { free: 0, tier1: 1, tier2: 2, lifetime: 3, premium: 2 };
+      return (order[(u.subscription_status || 'free')] ?? 0);
+    }
     case 'revenue': return u.revenue || 0;
   }
   return 0;
@@ -1034,10 +1051,10 @@ function tableRows(users) {
     const flagTitle = country + (u.ip ? ' · ' + u.ip : '');
     // FAS D: medlemskap + intäkter
     const tier = u.subscription_status || 'free';
-    const isPremium = tier === 'premium';
-    const memBadge = isPremium
-      ? '<span class="membership-badge m-premium">👑 Premium</span>'
-      : '<span class="membership-badge m-free">Free</span>';
+    const isPremium = tier !== 'free';
+    const memBadge = tier === 'free'
+      ? '<span class="membership-badge m-free">Free</span>'
+      : `<span class="membership-badge m-premium">${tier === 'lifetime' ? '♾️ Lifetime' : (tier === 'tier1' ? '🔹 Tier 1' : '👑 Tier 2')}</span>`;
     const bonus = u.turn_bonus || 0;
     const used = u.period_turns_used || 0;
     // Mini progress-bar: cap (used X) — röd när perioden är slut
@@ -1069,8 +1086,8 @@ function tableRows(users) {
     html += `<td class="last-active">${relTime(u.last_login)}</td>`;
     html += `<td class="cap-cell">${capFrag}<input type="number" min="0" step="1" value="${capVal}" id="cap-${i}" class="cap-input"><button onclick="event.stopPropagation();setCap('${u.username}', ${i})" class="cap-btn">Set</button><span class="cap-hint">0 = ∞</span></td>`;
     html += `<td class="membership-cell">${memBadge}${isPremium
-      ? `<span class="prem-grant"><button onclick="event.stopPropagation();togglePremium('${u.username}', true)" class="pg-btn revoke" title="Revoke premium">⭱ Free</button></span>`
-      : `<span class="prem-grant"><select id="pg-months-${esc(u.username)}" onclick="event.stopPropagation()" title="Premium duration"><option value="1">1 mo</option><option value="3">3 mo</option><option value="6">6 mo</option><option value="12">12 mo</option></select><button onclick="event.stopPropagation();grantPremiumFromRow('${esc(u.username)}')" class="pg-btn" title="Grant premium for the chosen duration">👑 Grant</button></span>`}</td>`;
+      ? `<span class="prem-grant"><button onclick="event.stopPropagation();setTier('${u.username}', 'free')" class="pg-btn revoke" title="Revoke to Free">⭱ Free</button></span>`
+      : `<span class="prem-grant"><select id="pg-tier-${esc(u.username)}" onclick="event.stopPropagation()" title="Tier"><option value="tier1">T1 · 3€</option><option value="tier2" selected>T2 · 9€</option><option value="lifetime">♾ 100€</option></select><select id="pg-months-${esc(u.username)}" onclick="event.stopPropagation()" title="Duration"><option value="1">1 mo</option><option value="3">3 mo</option><option value="6">6 mo</option><option value="12">12 mo</option></select><button onclick="event.stopPropagation();grantPremiumFromRow('${esc(u.username)}')" class="pg-btn" title="Grant the chosen tier">👑 Grant</button></span>`}</td>`;
     html += `<td class="rev-num">${u.revenue ? fmtSek(u.revenue) : '—'}</td>`;
     html += `<td><button onclick="event.stopPropagation();deleteUser('${u.username}')" class="del-btn">✕ Delete</button></td>`;
     html += '</tr>';
@@ -1088,10 +1105,10 @@ function mobRows(users) {
     const capVal = (u.turn_cap === undefined || u.turn_cap === null) ? 0 : u.turn_cap;
     // FAS D: medlemskap + intäkter
     const tier = u.subscription_status || 'free';
-    const isPremium = tier === 'premium';
-    const memBadge = isPremium
-      ? '<span class="membership-badge m-premium">👑 Premium</span>'
-      : '<span class="membership-badge m-free">Free</span>';
+    const isPremium = tier !== 'free';
+    const memBadge = tier === 'free'
+      ? '<span class="membership-badge m-free">Free</span>'
+      : `<span class="membership-badge m-premium">${tier === 'lifetime' ? '♾️ Lifetime' : (tier === 'tier1' ? '🔹 Tier 1' : '👑 Tier 2')}</span>`;
     html += `<div class="m-card${isPremium ? ' premium-row' : ''}" onclick="toggleDetail(${i}, '${u.username}')">`;
     html += `<div class="mc-head"><span class="mc-user">${u.country_flag || '❓'} ${esc(u.username)}${badge}${memBadge}</span><span class="mc-tokens">${fmtTokens(u.total_tokens)} tkn</span></div>`;
     if (u.email) html += `<div class="mc-meta"><span style="opacity:.7">✉ ${esc(u.email)}</span></div>`;
@@ -1109,9 +1126,10 @@ function mobRows(users) {
     html += `<button onclick="event.stopPropagation();topUp('${u.username}')" class="bc-btn">➕ Top up</button>`;
     html += `<button onclick="event.stopPropagation();resetTurns('${u.username}')" class="bc-btn">🔄 Reset</button>`;
     if (!isPremium) {
-      html += `<select id="pg-m-months-${u.username}" onclick="event.stopPropagation()" style="background:var(--ink);border:1px solid var(--edge);color:var(--bone);font-size:.6rem;padding:.2rem;border-radius:2px;max-width:74px"><option value="1">1 mo</option><option value="3">3 mo</option><option value="6">6 mo</option><option value="12">12 mo</option></select>`;
+      html += `<select id="pg-m-tier-${u.username}" onclick="event.stopPropagation()" style="background:var(--ink);border:1px solid var(--edge);color:var(--bone);font-size:.6rem;padding:.2rem;border-radius:2px;max-width:64px"><option value="tier1">T1</option><option value="tier2" selected>T2</option><option value="lifetime">♾</option></select>`;
+      html += `<select id="pg-m-months-${u.username}" onclick="event.stopPropagation()" style="background:var(--ink);border:1px solid var(--edge);color:var(--bone);font-size:.6rem;padding:.2rem;border-radius:2px;max-width:52px"><option value="1">1mo</option><option value="3">3mo</option><option value="6">6mo</option><option value="12">1y</option></select>`;
     }
-    html += `<button onclick="event.stopPropagation();togglePremium('${u.username}', ${isPremium}, ${isPremium ? '1' : "document.getElementById('pg-m-months-" + u.username + "').value"})" class="bc-btn${isPremium ? '' : ' gold'}">${isPremium ? '⭱ Free' : '👑 Grant'}</button>`;
+    html += `<button onclick="event.stopPropagation();${isPremium ? "setTier('" + u.username + "', 'free')" : "grantPremiumFromRow('" + u.username + "')"}" class="bc-btn${isPremium ? '' : ' gold'}">${isPremium ? '⭱ Free' : '👑 Grant'}</button>`;
     html += '</div>';
     html += '</div>';
   });
@@ -1166,9 +1184,10 @@ function renderDetail(container, data) {
   html += '<span>Last login: <b style="color:var(--bone);font-weight:400">' + fmtDate(data.last_login) + '</b></span>';
   html += '<span>Turn cap: <b style="color:var(--gold-bright);font-weight:700">' + (data.turn_cap === 0 ? 'Unlimited' : data.turn_cap) + '</b></span>';
   html += '<span>Turns used: <b style="color:var(--term-amber);font-weight:400">' + (data.turns_used || 0) + '</b></span>';
-  // FAS D: medlemskap + intäkter
-  const isPremium = (data.subscription_status || 'free') === 'premium';
-  html += '<span>💳 Membership: <b style="color:' + (isPremium ? 'var(--gold-bright);font-weight:700' : 'var(--bone);font-weight:400') + '">' + (isPremium ? '👑 Premium' + (data.subscription_until ? ' until ' + fmtDate(data.subscription_until) : '') : 'Free') + '</b></span>';
+  const tier = (data.subscription_status || 'free') === 'premium' ? 'tier2' : (data.subscription_status || 'free');
+  const isPremium = tier !== 'free';
+  const tierNames = { tier1: '🔹 Tier 1', tier2: '👑 Tier 2', lifetime: '♾️ Lifetime' };
+  html += '<span>💳 Membership: <b style="color:' + (isPremium ? 'var(--gold-bright);font-weight:700' : 'var(--bone);font-weight:400') + '">' + (isPremium ? (tierNames[tier] || '👑 ' + tier) + (data.subscription_until ? ' until ' + fmtDate(data.subscription_until) : '') : 'Free') + '</b></span>';
   html += '<span>Turn bonus: <b style="color:var(--term-amber);font-weight:400">' + (data.turn_bonus || 0) + '</b></span>';
   html += '<span>💰 Revenue: <b style="color:var(--gold-bright);font-weight:400">' + fmtSek(data.revenue) + '</b></span>';
   const at = data.tts_usage || {};
@@ -1189,13 +1208,19 @@ function renderDetail(container, data) {
   }
   html += '<span>📍 Country: <b style="color:var(--bone);font-weight:400">' + (data.country_flag || '❓') + ' ' + (data.country || 'Unknown') + '</b>' + (data.ip ? ' <span style="opacity:.6">(' + data.ip + ')</span>' : '') + '</span>';
   html += '</div>';
-  // FAS D: top-up / reset / premium-toggle
+  // TIERS: top-up / reset / tier-knappar
   html += '<div class="billing-controls">';
   html += '<span class="bc-label">Turn bonus: <b style="color:var(--term-amber)">' + (data.turn_bonus || 0) + '</b> · used: <b style="color:var(--term-amber)">' + (data.period_turns_used || 0) + '</b></span>';
   html += '<input type="number" min="1" step="1" value="10" id="topup-' + data.username + '" class="cap-input" style="width:64px">';
   html += '<button onclick="topUp(\'' + data.username + '\')" class="bc-btn">➕ Top up</button>';
   html += '<button onclick="resetTurns(\'' + data.username + '\')" class="bc-btn danger">🔄 Reset turns</button>';
-  html += '<button onclick="togglePremium(\'' + data.username + '\', ' + isPremium + ')" class="bc-btn' + (isPremium ? '' : ' gold') + '">' + (isPremium ? '⭱ Revert to Free' : '👑 Grant Premium (1 month)') + '</button>';
+  if (isPremium) {
+    html += '<button onclick="setTier(\'' + data.username + '\', \'free\')" class="bc-btn">⭱ Revert to Free</button>';
+  } else {
+    html += '<select id="dt-tier-' + data.username + '" class="cap-input" style="width:auto;background:var(--ink);color:var(--bone);border:1px solid var(--edge)"><option value="tier1">Tier 1 · 3€</option><option value="tier2" selected>Tier 2 · 9€</option><option value="lifetime">Lifetime · 100€</option></select>';
+    html += '<select id="dt-months-' + data.username + '" class="cap-input" style="width:auto;background:var(--ink);color:var(--bone);border:1px solid var(--edge)"><option value="1">1 mo</option><option value="3">3 mo</option><option value="6">6 mo</option><option value="12">12 mo</option></select>';
+    html += '<button onclick="setTier(\'' + data.username + '\', document.getElementById(\'dt-tier-' + data.username + '\').value, document.getElementById(\'dt-months-' + data.username + '\').value)" class="bc-btn gold">👑 Grant</button>';
+  }
   html += '</div>';
   if (campaigns.length === 0) {
     container.innerHTML = html + '<p style="color:var(--bone-dim);font-size:0.7rem;padding:0.5rem 0">No campaigns found.</p>';

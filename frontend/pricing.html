@@ -115,6 +115,21 @@
   .tier-btn.soon span{display:inline-block;animation:soon-pulse 2.6s ease-in-out infinite}
   @keyframes soon-pulse{0%,100%{opacity:.55}50%{opacity:1}}
 
+  /* ═══════════════ EUR/SEK-konvertering ═══════════════ */
+  .currency-toggle{
+    display:flex;align-items:center;justify-content:center;gap:.5rem;
+    margin:0 auto 1.8rem;width:fit-content;cursor:pointer;
+    font-family:var(--font-display);font-size:.68rem;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--bone-dim);
+    border:1px solid var(--edge);border-radius:2px;padding:.5rem 1rem;
+    background:linear-gradient(160deg,var(--stone-2),var(--stone));
+    transition:border-color .2s,color .2s;
+    -webkit-tap-highlight-color:transparent;user-select:none}
+  .currency-toggle:hover{border-color:var(--gold);color:var(--bone)}
+  .currency-toggle b{color:var(--gold-bright);font-weight:700}
+  .currency-toggle .cur-arrow{color:var(--gold);font-size:.8rem}
+  .currency-toggle .cur-note{font-size:.58rem;color:var(--bone-dim);letter-spacing:.08em}
+
   /* ═══════════════ fine print ═══════════════ */
   .fine{max-width:620px;margin:3rem auto 0;text-align:center;color:var(--bone-dim);
     font-size:.86rem;line-height:1.7}
@@ -152,7 +167,14 @@
 <section class="pricing">
   <p class="eyebrow">Paths into the realm</p>
   <h1>Choose your path</h1>
-  <p class="pricing-sub">The fire burns for every adventurer. Wander free with your daily ration of turns — or hold the <b>golden sigil</b> and never count them again.</p>
+  <p class="pricing-sub">The fire burns for every adventurer. Wander free with your daily ration of turns — or take up a sigil and shape the realm itself.</p>
+
+  <div class="currency-toggle" id="currency-toggle" onclick="toggleCurrency()" title="Toggle EUR / SEK">
+    <span>Prices in</span>
+    <b id="cur-label">EUR</b>
+    <span class="cur-arrow">⇄</span>
+    <span class="cur-note" id="cur-note">SEK ≈ ×11.7</span>
+  </div>
 
   <div class="tiers">
     <!-- Free -->
@@ -166,36 +188,89 @@
         <li><b>50 turns</b> every day — refreshed at midnight</li>
         <li>The steadfast Dungeon Master (<b>step-3.7-flash</b>)</li>
         <li>Persistent world, memory, and Codex</li>
-        <li>Voice narration · character art · dice ritual</li>
+        <li>Qwen voice narration · dice ritual</li>
       </ul>
       <a class="tier-btn go" href="login.html">Begin your adventure</a>
     </div>
 
-    <!-- Premium -->
+    <!-- Tier 1 — Companion -->
+    <div class="tier">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tier-name">Companion</div>
+      <div class="tier-price"><span class="cur-price" data-eur="3" data-sek="35">3€</span><small> / month</small></div>
+      <div class="tier-desc">More turns, more often — and faces for your story.</div>
+      <ul>
+        <li><b>50 turns</b> refreshed <b>every 6 hours</b></li>
+        <li><b>AI avatars</b> for your hero and the NPCs you meet</li>
+        <li>Everything in the Wanderer path</li>
+      </ul>
+      <a class="tier-btn go" href="login.html">Take the sigil</a>
+    </div>
+
+    <!-- Tier 2 — Golden Sigil -->
     <div class="tier hot">
       <span class="corner tl"></span><span class="corner tr"></span>
       <span class="corner bl"></span><span class="corner br"></span>
-      <div class="tier-flag">Coming soon</div>
+      <div class="tier-flag">Most popular</div>
       <div class="tier-name">Golden Sigil</div>
-      <div class="tier-price">49 kr<small> / month</small></div>
-      <div class="tier-desc">Never count a turn again.</div>
+      <div class="tier-price"><span class="cur-price" data-eur="9" data-sek="105">9€</span><small> / month</small></div>
+      <div class="tier-desc">The full mind of the Cauldron.</div>
+      <ul>
+        <li><b>All Dungeon Masters</b> — DeepSeek, Qwen 3.8 Max, Qwen 3.6 Flash</li>
+        <li><b>Both narrator voices</b> — Qwen <i>and</i> StepFun TTS</li>
+        <li><b>Customize the narrator voice</b> — happy, calm, scary, or your own style</li>
+        <li><b>50 turns</b> refreshed <b>every 6 hours</b></li>
+        <li><b>AI avatars</b> for your hero and the NPCs you meet</li>
+        <li>Everything in the Companion path</li>
+      </ul>
+      <a class="tier-btn go" href="login.html">Hold the sigil</a>
+    </div>
+
+    <!-- Tier 3 — Lifetime -->
+    <div class="tier">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tier-name">Lifetime</div>
+      <div class="tier-price"><span class="cur-price" data-eur="100" data-sek="1170">100€</span><small> once</small></div>
+      <div class="tier-desc">Support the dev. Never count a turn again.</div>
       <ul>
         <li><b>Unlimited turns</b> — the Cauldron never sleeps</li>
-        <li>The <b>Qwen 3.8 Max</b> Dungeon Master — deeper, darker, more alive</li>
-        <li><b>Customize the narrator voice</b> — happy, calm, scary, or your own style</li>
-        <li>All guardian and oracle models unlocked</li>
-        <li><b>Qwen voice</b> narration, richer and warmer</li>
-        <li>Everything in the Wanderer path</li>
+        <li>All Dungeon Masters · both narrator voices · avatars</li>
+        <li>A thank-you from the forge — you keep this realm burning</li>
       </ul>
-      <a class="tier-btn soon" href="#" onclick="return false;"><span>Coming soon</span></a>
+      <a class="tier-btn go" href="login.html">Forge forever</a>
     </div>
   </div>
 
   <p class="fine">
     <b>How the free path works</b> — your 50 turns renew every day at midnight, whether you were here or not.
-    Premium payments are not live yet; the golden sigil is being forged. When it arrives, it will unlock on this page.
+    Payments are not live yet — the sigils are being forged. When they arrive, they will unlock on this page.
+    Lifetime is a one-time purchase; monthly tiers renew until you end them.
   </p>
   <a class="back" href="adventure.html">← Return to the realm</a>
 </section>
+
+<script>
+  // EUR ↔ SEK-konvertering (fast kurs ≈ 11.7, utan API-anrop)
+  var CUR_SEK = false;
+  var CUR_RATE = 11.7;
+  function toggleCurrency() {
+    CUR_SEK = !CUR_SEK;
+    var label = document.getElementById('cur-label');
+    var note = document.getElementById('cur-note');
+    label.textContent = CUR_SEK ? 'SEK' : 'EUR';
+    note.textContent = CUR_SEK ? 'EUR ≈ ÷11.7' : 'SEK ≈ ×11.7';
+    document.querySelectorAll('.cur-price').forEach(function (el) {
+      var eur = parseFloat(el.getAttribute('data-eur'));
+      var sek = parseInt(el.getAttribute('data-sek'), 10);
+      if (CUR_SEK) {
+        el.textContent = sek + ' kr';
+      } else {
+        el.textContent = (Number.isInteger(eur) ? eur : eur.toFixed(2)) + '€';
+      }
+    });
+  }
+</script>
 </body>
 </html>

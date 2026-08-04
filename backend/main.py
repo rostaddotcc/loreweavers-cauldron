@@ -1036,16 +1036,38 @@ def _ensure_user_fields(username: str, udata: dict) -> dict:
         return udata
 
 
+# ═══════════════════════════════════════
+# TIERS — free < tier1 < tier2 < lifetime
+# ═══════════════════════════════════════
+# free      — 50 turns/dag (midnatt), bara step-3.7-flash, Qwen TTS, inga avatarer
+# tier1     — 50 turns var 6:e timme, AI-avatarer (hero + NPCs)
+# tier2     — allt i tier1 + alla spelarmodeller (deepseek/qwen) + Qwen+StepFun TTS
+# lifetime  — allt i tier2 + obegränsade turns (turn_cap 0)
+# Legacy "premium" i users.json → behandlas som tier2 (bakåtkompatibilitet).
+
+TIER_ORDER = ("free", "tier1", "tier2", "lifetime")
+
+# Betalda tiers är giltiga t.o.m. subscription_until (sista giltiga dag = until).
+# Turn-period (timmar) per tier: free = 24h (daglig), tier1/tier2 = 6h, lifetime = ∞ (0).
+def _period_hours_for(tier: str) -> int:
+    return 6 if tier in ("tier1", "tier2") else 0 if tier == "lifetime" else 24
+
+
 def _tier_for(username: str) -> str:
-    """free|premium. Premium = subscription_status=premium OCH subscription_until
-    ej passerad (sista giltiga dag = until-datumet). Utgången premium → demote
-    till free i users.json (status=free)."""
+    """free|tier1|tier2|lifetime. Betalda tiers = subscription_status satt OCH
+    subscription_until ej passerad (sista giltiga dag = until-datumet). Utgånget
+    betalt tier → demote till free i users.json (status=free).
+
+    Legacy 'premium' → tier2 (bakåtkompatibilitet med tidigare fas D)."""
     try:
         udata = load_users().get(username, {})
         if not isinstance(udata, dict):
             udata = {}
         udata = _ensure_user_fields(username, udata)
-        if udata.get("subscription_status") != "premium":
+        status = (udata.get("subscription_status") or "free").strip().lower()
+        if status == "premium":
+            status = "tier2"
+        if status not in TIER_ORDER or status == "free":
             return "free"
         until = udata.get("subscription_until")
         if until:
@@ -1054,12 +1076,12 @@ def _tier_for(username: str) -> str:
             except ValueError:
                 until_date = None
             if until_date is not None and until_date >= _today_date():
-                return "premium"
-        # Premium utgången (eller utan datum) → demote
+                return status
+        # Betalt tier utgånget (eller utan datum) → demote
         with _USER_LOCK:
             users = load_users()
             u = users.get(username)
-            if isinstance(u, dict) and u.get("subscription_status") == "premium":
+            if isinstance(u, dict) and u.get("subscription_status") not in (None, "free"):
                 u["subscription_status"] = "free"
                 save_users(users)
         return "free"
@@ -1068,48 +1090,77 @@ def _tier_for(username: str) -> str:
 
 
 def _maybe_rollover(username: str, udata: dict) -> dict:
-    """Period-rollover: om reset_date passerad (idag >= reset_date) → nollställ
-    turns_used, BEHÅLL turn_bonus, flytta reset_date till idag + PERIOD_DAYS (1).
+    """Period-rollover baserad på tier:
+    - free:  daglig (reset_date YYYY-MM-DD, midnatt UTC)
+    - tier1/tier2: var 6:e timme (reset_ts full ISO-timestamp)
+    - lifetime: ingen rollover (∞ turns)
+
+    Nollställer turns_used, BEHÅLLER turn_bonus, flyttar reset till nästa period.
     Körs lazy vid varje API-anrop — ingen extern cron behövs."""
-    today = _today_date()
-    reset = udata.get("reset_date")
-    due = False
-    if reset:
-        try:
-            due = today >= datetime.fromisoformat(str(reset)).date()
-        except ValueError:
-            due = False
-    if not due:
-        return udata
-    new_reset = (today + timedelta(days=PERIOD_DAYS)).isoformat()
+    tier = _tier_for(username)
+    hours = _period_hours_for(tier)
+    now = datetime.now(timezone.utc)
+    if hours <= 0:
+        return udata  # lifetime: ∞
+
+    if hours >= 24:
+        # Daglig (free): reset_date = YYYY-MM-DD
+        today = _today_date()
+        reset = udata.get("reset_date")
+        due = False
+        if reset:
+            try:
+                due = today >= datetime.fromisoformat(str(reset)).date()
+            except ValueError:
+                due = False
+        if not due:
+            return udata
+        new_reset = (today + timedelta(days=1)).isoformat()
+    else:
+        # Tim-baserad (tier1/tier2): reset_ts = full ISO-timestamp
+        reset_ts = udata.get("reset_ts")
+        due = False
+        if reset_ts:
+            try:
+                due = now >= datetime.fromisoformat(str(reset_ts))
+            except ValueError:
+                due = False
+        if not due:
+            return udata
+        new_reset = (now + timedelta(hours=hours)).isoformat()
+
     with _USER_LOCK:
         users = load_users()
         u = users.get(username)
         if isinstance(u, dict):
             u["turns_used"] = 0
-            u["reset_date"] = new_reset
+            if hours >= 24:
+                u["reset_date"] = new_reset
+            else:
+                u["reset_ts"] = new_reset
             save_users(users)
             return u
     udata["turns_used"] = 0
-    udata["reset_date"] = new_reset
+    if hours >= 24:
+        udata["reset_date"] = new_reset
+    else:
+        udata["reset_ts"] = new_reset
     return udata
 
 
 def _turns_available(username: str) -> int:
     """Antal turns kvar denna period.
 
-    Free: max(0, turn_cap + turn_bonus - turns_used) — turn_bonus förbrukas
-    FÖRE cap-turns (de första `bonus` förbrukade turarna äter bonusen, sedan
-    cap-sloten). Ekvivalent med spec-formeln `turn_bonus + max(0, turn_cap -
-    turns_used)` när turns_used <= turn_cap; låter dessutom bonusen ta slut så
-    403 nås (annars skulle top-ups aldrig förbrukas). Premium: 999999.
+    Free/tier1/tier2: max(0, turn_cap + turn_bonus - turns_used) — turn_bonus
+    förbrukas FÖRE cap-turns (de första `bonus` förbrukade turarna äter bonusen,
+    sedan cap-sloten). Lifetime (turn_cap 0) eller ∞: 999999.
     turn_cap <= 0 = oändligt (samma semantik som före FAS A)."""
     try:
         udata = load_users().get(username, {})
         if not isinstance(udata, dict):
             udata = {}
         udata = _ensure_user_fields(username, udata)
-        if _tier_for(username) == "premium":
+        if _tier_for(username) == "lifetime":
             return 999999
         udata = _maybe_rollover(username, udata)
         turn_cap = int(udata.get("turn_cap", 0) or 0)
@@ -1137,17 +1188,34 @@ def _consume_turn(username: str) -> None:
         u.setdefault("reset_date", _today_str())
         u.setdefault("subscription_status", "free")
         u.setdefault("subscription_until", None)
-        # Period-rollover om reset_date passerad
-        today = _today_date()
-        reset = u.get("reset_date")
-        if reset:
-            try:
-                rd = datetime.fromisoformat(str(reset)).date()
-            except ValueError:
+        # Period-rollover (tier-baserad) innan turns_used += 1
+        tier = _tier_for(username)
+        hours = _period_hours_for(tier)
+        now = datetime.now(timezone.utc)
+        if hours > 0:
+            if hours >= 24:
+                today = _today_date()
+                reset = u.get("reset_date")
                 rd = None
-            if rd is not None and today >= rd:
-                u["turns_used"] = 0
-                u["reset_date"] = (today + timedelta(days=PERIOD_DAYS)).isoformat()
+                if reset:
+                    try:
+                        rd = datetime.fromisoformat(str(reset)).date()
+                    except ValueError:
+                        rd = None
+                if rd is not None and today >= rd:
+                    u["turns_used"] = 0
+                    u["reset_date"] = (today + timedelta(days=1)).isoformat()
+            else:
+                reset_ts = u.get("reset_ts")
+                due = False
+                if reset_ts:
+                    try:
+                        due = now >= datetime.fromisoformat(str(reset_ts))
+                    except ValueError:
+                        due = False
+                if due:
+                    u["turns_used"] = 0
+                    u["reset_ts"] = (now + timedelta(hours=hours)).isoformat()
         u["turns_used"] = int(u.get("turns_used", 0) or 0) + 1
         save_users(users)
 
@@ -1158,7 +1226,8 @@ def _user_free_info(username: str) -> dict:
     if not isinstance(udata, dict):
         udata = {}
     udata = _ensure_user_fields(username, udata)
-    if _tier_for(username) != "premium":
+    tier = _tier_for(username)
+    if tier != "lifetime":
         udata = _maybe_rollover(username, udata)
     # Färsk rad — demote/rollover kan ha skrivit users.json sedan vår första läsning
     fresh = load_users().get(username)
@@ -1168,9 +1237,11 @@ def _user_free_info(username: str) -> dict:
         "turns_used": int(udata.get("turns_used", 0) or 0),
         "turn_bonus": int(udata.get("turn_bonus", 0) or 0),
         "reset_date": udata.get("reset_date"),
-        "subscription_status": udata.get("subscription_status", "free"),
+        "reset_ts": udata.get("reset_ts"),
+        "subscription_status": tier,
         "subscription_until": udata.get("subscription_until"),
         "turns_available": _turns_available(username),
+        "period_hours": _period_hours_for(tier),
     }
 
 # Atmosfär-subagent: snabb modell för ASCII-art
@@ -1192,9 +1263,9 @@ PLAYER_MODELS = ("qwen3.8-max", "qwen3.6-flash", "deepseek-v4-flash", "deepseek-
 def _clamp_player_model(model_id: str, tier: str | None = None) -> str:
     """Icke-admin: tillåt bara PLAYER_MODELS, annars default.
 
-    FAS A: free-tier → ALLTID step-3.7-flash (oavsett vald modell).
-    Premium (eller tier=None, t.ex. interna anrop) → befintlig logik."""
-    if tier == "free":
+    TIERS: free/tier1 → ALLTID step-3.7-flash (oavsett vald modell).
+    tier2/lifetime (eller tier=None, t.ex. interna anrop) → befintlig logik."""
+    if tier in ("free", "tier1"):
         return DEFAULT_PLAYER_MODEL
     return model_id if model_id in PLAYER_MODELS else DEFAULT_PLAYER_MODEL
 
@@ -1951,6 +2022,8 @@ async def me(morkrets_token: str | None = Cookie(None)):
         "subscription_status": free_info["subscription_status"],
         "subscription_until": free_info["subscription_until"],
         "turns_available": free_info["turns_available"],
+        "period_hours": free_info["period_hours"],
+        "reset_ts": free_info.get("reset_ts"),
         "total_tokens": total_tokens,
         "total_campaigns": total_campaigns,
         # Utseende (tema + typsnitt) — persistas per konto så det följer med
@@ -2692,6 +2765,12 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
     provider = (req.provider or campaign_provider or TTS_DEFAULT_PROVIDER).strip().lower()
     if provider not in TTS_PROVIDERS:
         raise HTTPException(400, f"Okänd TTS-leverantör: {provider}")
+
+    # ── TIERS: StepFun TTS är tier2+ — free/tier1 hänvisas till upgrade.
+    # Tyst fallback till qwen så spelet aldrig kraschar; UI:et låser väljaren. ──
+    tier = _tier_for(username)
+    if provider == "stepfun" and tier not in ("tier2", "lifetime"):
+        provider = "qwen"
     pvoices = TTS_PROVIDERS[provider]["voices"]
 
     # ── Röst: kön ('male'/'female') → första rösten med könet; annars voice-id ──
@@ -2704,10 +2783,10 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
     if not voice or not any(v["id"] == voice for v in pvoices):
         raise HTTPException(400, f"Okänd röst för {provider}: {voice}")
 
-    # ── Berättar-stil (premium: customize narrator voice) ──
-    # Free-konton: style ignoreras tyst (premium-feature). Presets + egen fras.
+    # ── Berättar-stil (tier2+: customize narrator voice) ──
+    # free/tier1: style ignoreras tyst (premium-feature). Presets + egen fras.
     style = (req.style or "").strip()[:120]
-    if style and _tier_for(username) != "premium":
+    if style and tier not in ("tier2", "lifetime"):
         style = ""
 
     # Ta bort maskinella taggar ([KAST:...], [SKADA:...] etc.) om de finns kvar
@@ -5797,6 +5876,9 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
 
+    # TIERS: AI-avatarer är tier1+ (free → hänvisa till uppgradering)
+    _require_avatar_tier(payload, username)
+
     entry = vault.get(username, char_id)
     if not entry:
         raise HTTPException(404, "Character not found")
@@ -6659,6 +6741,10 @@ async def generate_avatar(
     användarprompt krävs. 'seed' styr slumpen (samma seed = samma bild)."""
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
+
+    # TIERS: AI-avatarer är tier1+ (free → hänvisa till uppgradering)
+    _require_avatar_tier(payload, username)
+
     state = store.get(username)
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
@@ -7362,13 +7448,26 @@ def _require_admin(payload: dict):
         raise HTTPException(403, "Admin-rättigheter krävs")
 
 
+def _require_avatar_tier(payload: dict, username: str):
+    """TIERS: AI-avatarer (hero + NPCs) kräver tier1+. Admin har alltid tillgång.
+    Free → 403 med tydlig uppgraderingshänvisning (UI:et låser + hänvisar)."""
+    if payload.get("role") == "admin":
+        return
+    if _tier_for(username) == "free":
+        raise HTTPException(403, "AI avatars are a Tier 1 feature — upgrade to paint your hero and the faces you meet.")
+
+
 # ═══════════════════════════════════════
 # FAS D — billing ledger + admin top-up
 # ═══════════════════════════════════════
 # Intäktsledger: rad per betalningshändelse
 #   {"ts", "user", "amount_sek", "type", "stripe_sub_id", "event_id"}
 # Skapas tom om den saknas. ALDRIG commit (backend/data committas inte).
-PREMIUM_PRICE_SEK = 49
+PREMIUM_PRICE_SEK = 49  # legacy (fas D) — ersatt av TIER_PRICES_SEK
+
+# TIERS: priser i SEK (EUR → SEK ≈ 11.7; avrundat för admin-översikt).
+# tier1 = 3 €/mån ≈ 35 kr · tier2 = 9 €/mån ≈ 105 kr · lifetime = 100 € engång ≈ 1170 kr
+TIER_PRICES_SEK = {"tier1": 35, "tier2": 105, "lifetime": 1170}
 
 _LEDGER_FILE = Path(__file__).resolve().parent / "data" / "_billing_ledger.json"
 _LEDGER_LOCK = threading.Lock()
@@ -7428,20 +7527,22 @@ def _ledger_per_user() -> dict:
 def _ledger_totals() -> dict:
     """Aggregerad intäktsstatistik → {mrr, transactions, total}.
 
-    MRR = PREMIUM_PRICE_SEK × antal användare med AKTIV premium
-    (subscription_status=premium och subscription_until ej passerad)."""
+    MRR = (TIER_PRICES_SEK["tier1"] × tier1-konton) + (TIER_PRICES_SEK["tier2"] × tier2-konton)
+    (subscription_status=tier1/tier2 och subscription_until ej passerad).
+    Lifetime räknas som engångsintäkt i `total` (ledger), inte i MRR."""
     ledger = _ledger_load()
-    premium_users = 0
+    mrr = 0
     for username, udata in load_users().items():
         if not isinstance(udata, dict):
             continue
         try:
-            if _tier_for(username) == "premium":
-                premium_users += 1
+            tier = _tier_for(username)
+            if tier in TIER_PRICES_SEK and tier != "lifetime":
+                mrr += TIER_PRICES_SEK[tier]
         except Exception:
             continue
     return {
-        "mrr": PREMIUM_PRICE_SEK * premium_users,
+        "mrr": mrr,
         "transactions": len(ledger),
         "total": sum(int(r.get("amount_sek") or 0) for r in ledger),
     }
@@ -8022,14 +8123,17 @@ async def admin_turn_reset(username: str, morkrets_token: str | None = Cookie(No
 async def admin_set_subscription(username: str, req: AdminSubscription, morkrets_token: str | None = Cookie(None)):
     """Admin-only: sätt medlemskap.
 
-    premium → turn_cap sätts till 0 (oändliga turns); free → DEFAULT_TURN_CAP
-    om cap:et var 0. `until` = sista giltiga dag (YYYY-MM-DD) eller null."""
+    TIERS: free → DEFAULT_TURN_CAP; tier1/tier2 → DEFAULT_TURN_CAP med
+    6-timmars-rollover (reset_ts sätts vid nästa anrop); lifetime → turn_cap 0
+    (oändliga turns). `until` = sista giltiga dag (YYYY-MM-DD) eller null."""
     payload = _get_current_user(morkrets_token)
     _require_admin(payload)
 
     status = (req.status or "").strip().lower()
-    if status not in ("free", "premium"):
-        raise HTTPException(400, "Status must be 'free' or 'premium'")
+    if status == "premium":
+        status = "tier2"  # legacy → tier2
+    if status not in TIER_ORDER:
+        raise HTTPException(400, f"Status must be one of: {', '.join(TIER_ORDER)}")
     until = req.until
     if until is not None:
         try:
@@ -8046,10 +8150,16 @@ async def admin_set_subscription(username: str, req: AdminSubscription, morkrets
             raise HTTPException(500, "Kontodata är korrupt")
         udata["subscription_status"] = status
         udata["subscription_until"] = until
-        if status == "premium":
+        if status == "lifetime":
             udata["turn_cap"] = 0
-        elif int(udata.get("turn_cap", 0) or 0) == 0:
+        elif status in ("tier1", "tier2"):
+            # 50 turns per 6-timmarsperiod; sätt reset_ts om det saknas
             udata["turn_cap"] = DEFAULT_TURN_CAP
+            if not udata.get("reset_ts"):
+                udata["reset_ts"] = (datetime.now(timezone.utc) + timedelta(hours=6)).isoformat()
+        else:  # free
+            if int(udata.get("turn_cap", 0) or 0) == 0:
+                udata["turn_cap"] = DEFAULT_TURN_CAP
         save_users(users)
 
     logger.info("👑 Subscription set: %s → %s (until %s)", username, status, until)

@@ -1498,6 +1498,14 @@ async function refreshMeData() {
   } catch (e) { return null; }
 }
 
+// Ticka countdown varje sekund så "reset om HH:MM:SS" räknar ner live.
+// Bara när en free-användare med reset_date finns (annars gör inget).
+setInterval(() => {
+  if (_meData && _meData.reset_date && _meData.subscription_status !== 'premium') {
+    updateHeaderInfo();
+  }
+}, 1000);
+
 // Nuvarande tur: kampanjstate (uppdateras lokalt efter varje lyckad tur).
 function currentTurnNum() {
   if (campaignData && campaignData.turn_count != null) return campaignData.turn_count;
@@ -1528,8 +1536,27 @@ function fmtResetDate(iso) {
   return parseInt(m[3], 10) + ' ' + (MON[parseInt(m[2], 10) - 1] || m[2]);
 }
 
-// Header-strängen: "Turn N · Day M · 🆓 X/Y · reset D" (premium → 👑 istället
-// för siffror). I18N.getLang() styr Tur/Turn + Dag/Day; siffror är universella.
+// Nedräkning till nästa turn-reset (reset_date). Returnerar "HH:MM:SS" som
+// tickar — "2d 07:42:15" om mer än ett dygn kvar. Återanvänds av header-info.
+function resetCountdown(iso) {
+  if (!iso) return null;
+  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  // reset_date = datumet (midnatt UTC). Nästa reset sker vid reset_date 00:00.
+  const target = Date.UTC(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
+  let ms = target - Date.now();
+  if (ms <= 0) ms = 0;
+  const s = Math.floor(ms / 1000);
+  const d = Math.floor(s / 86400);
+  const hh = String(Math.floor((s % 86400) / 3600)).padStart(2, '0');
+  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+  const ss = String(s % 60).padStart(2, '0');
+  return d > 0 ? (d + 'd ' + hh + ':' + mm + ':' + ss) : (hh + ':' + mm + ':' + ss);
+}
+
+// Header-strängen: "Turn N · Day M · 🆓 X/Y · reset in 07:42:15" (premium →
+// 👑 istället för siffror). I18N.getLang() styr Tur/Turn + Dag/Day; siffror
+// är universella. Countdown tickar via _resetTick.
 function turnInfoText() {
   const en = (typeof I18N !== 'undefined' && I18N.getLang && I18N.getLang() === 'en');
   const tLabel = en ? 'Turn' : 'Tur';
@@ -1548,8 +1575,8 @@ function turnInfoText() {
     if (cap > 0 && !isNaN(available)) {
       const total = cap + (parseInt(me.turn_bonus, 10) || 0);
       parts.push('🆓 ' + (available >= 999999 ? '∞' : available) + '/' + total);
-      const rd = fmtResetDate(me.reset_date);
-      if (rd) parts.push('reset ' + rd);
+      const cd = resetCountdown(me.reset_date);
+      if (cd) parts.push((en ? 'reset in ' : 'reset om ') + cd);
     } else if (!isNaN(available) && available >= 999999) {
       parts.push('🆓 ∞');
     }
@@ -1600,17 +1627,20 @@ function openCapModal(info) {
   info = info || {};
   const reset = info.reset_date || (_meData && _meData.reset_date) || null;
   const resetStr = fmtResetDate(reset) || String(reset || '…');
+  const cd = resetCountdown(reset);
+  // Visar countdown live om reset är nära (inom 2 dygn) — annars datum.
+  const whenStr = cd && cd.indexOf('d ') < 0 ? cd : resetStr;
   const title = document.getElementById('cap-title');
   const msg = document.getElementById('cap-msg');
   const upgrade = document.getElementById('cap-upgrade-btn');
   if (info.premium_expired) {
     if (title) title.textContent = '👑 Premium expired';
     if (msg) msg.innerHTML = 'Your premium period has ended, so your free turns are back. ' +
-      'New free turns arrive on <b>' + escapeHtml(resetStr) + '</b> — or renew for unlimited turns.';
+      'New free turns arrive in <b>' + escapeHtml(whenStr) + '</b> — or renew for unlimited turns.';
     if (upgrade) upgrade.textContent = '👑 Renew Premium';
   } else {
     if (title) title.textContent = '⏳ No free turns left';
-    if (msg) msg.innerHTML = 'Your free turns are spent. New turns on <b>' + escapeHtml(resetStr) +
+    if (msg) msg.innerHTML = 'Your free turns are spent. New turns in <b>' + escapeHtml(whenStr) +
       '</b> — or upgrade for unlimited.';
     if (upgrade) upgrade.textContent = '👑 Upgrade';
   }

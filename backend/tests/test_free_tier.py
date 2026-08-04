@@ -210,7 +210,7 @@ def test_reset_date_rollover(client):
     u = _user()
     assert u["turns_used"] == 0
     assert u["turn_bonus"] == 7          # bonus behålls över rollover
-    assert u["reset_date"] == _in_days(30)  # flyttad till idag + 30
+    assert u["reset_date"] == _in_days(1)  # flyttad till idag + 1 (daglig rollover)
 
 
 def test_turn_bonus_consumed_first(client):
@@ -290,8 +290,8 @@ def test_legacy_account_backfilled(client):
     u = _user("old_timer")
     assert u["turns_used"] == 0
     assert u["turn_bonus"] == 0
-    # Backfill sätter reset_date=today; första kollen rullar direkt till +30
+    # Backfill sätter reset_date=today; första kollen rullar direkt till +1
     # (idag >= reset_date) — utan att förlora några turns.
-    assert u["reset_date"] == _in_days(30)
+    assert u["reset_date"] == _in_days(1)
     assert u["subscription_status"] == "free"
     assert u["subscription_until"] is None

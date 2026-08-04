@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>The Lore Weaver's Cauldron — Pricing</title>
+<meta name="description" content="The Lore Weaver's Cauldron — an AI dungeon master with a memory. Free and premium paths into the realm.">
+<link rel="icon" href="/assets/logo-cauldron.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<script src="themes.js?v=20260804b"></script>
+<style>
+  /* ═══════════════ tokens ═══════════════ */
+  :root{
+    --ink:#07070c;
+    --stone:#0e0e14; --stone-2:#12121a; --stone-3:#181822;
+    --edge:#2a2a3a; --edge-hi:#3a3a50;
+    --bone:#b8b8c8; --bone-bright:#e6e2d4; --bone-dim:#77778c;
+    --gold:#c9a227; --gold-bright:#e8c65a;
+    --blood:#8b1a2a; --blood-bright:#d43a4d;
+    --ember:#d4691e; --arcane:#7b4fd4; --poison:#5a9a4e;
+    --font-display:'Cinzel',serif;
+    --font-body:'Spectral',Georgia,serif;
+    --nav-h:64px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font-body);color:var(--bone);background:var(--ink);
+    overflow-x:hidden;-webkit-tap-highlight-color:transparent;
+    background-image:
+      radial-gradient(900px 520px at 50% 110%, rgba(212,105,30,.07), transparent 70%),
+      radial-gradient(700px 460px at 8% -6%, rgba(123,79,212,.06), transparent 70%),
+      radial-gradient(700px 460px at 96% -8%, rgba(139,26,42,.07), transparent 70%);
+    background-attachment:fixed}
+  .grain{position:fixed;inset:0;z-index:3;pointer-events:none;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .vignette{position:fixed;inset:0;z-index:3;pointer-events:none;
+    box-shadow:inset 0 0 190px 60px rgba(3,2,7,.85)}
+
+  /* ═══════════════ nav ═══════════════ */
+  .nav{position:fixed;top:0;left:0;right:0;z-index:50;height:var(--nav-h);
+    display:flex;align-items:center;justify-content:space-between;padding:0 clamp(1rem,4vw,2.5rem);
+    border-bottom:1px solid rgba(58,58,80,.5);
+    background:linear-gradient(to bottom, rgba(7,7,12,.92), rgba(7,7,12,.55) 78%, transparent);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+  .nav-brand{display:flex;align-items:center;gap:.65rem;text-decoration:none}
+  .nav-brand img{width:34px;height:34px;mix-blend-mode:screen;animation:float-logo 7s ease-in-out infinite}
+  @keyframes float-logo{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  .nav-brand span{font-family:var(--font-display);font-weight:700;font-size:.86rem;
+    letter-spacing:.22em;text-transform:uppercase;color:var(--bone-bright)}
+  .nav-links{display:flex;gap:1.4rem;align-items:center}
+  .nav-link{font-family:var(--font-display);font-size:.7rem;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--bone-dim);text-decoration:none;transition:color .2s}
+  .nav-link:hover{color:var(--gold-bright)}
+  .nav-cta{font-family:var(--font-display);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));
+    padding:.5rem 1rem;text-decoration:none;border-radius:2px;
+    transition:transform .2s,box-shadow .2s}
+  .nav-cta:hover{transform:translateY(-2px);box-shadow:0 4px 18px rgba(232,198,90,.25)}
+
+  /* ═══════════════ pricing hero ═══════════════ */
+  .pricing{max-width:1080px;margin:0 auto;padding:calc(var(--nav-h) + 4.5rem) 1.25rem 5rem}
+  .eyebrow{font-family:var(--font-display);font-size:.68rem;letter-spacing:.44em;
+    text-transform:uppercase;color:var(--gold);text-align:center;margin-bottom:1rem}
+  .pricing h1{font-family:var(--font-display);font-weight:900;font-size:clamp(1.9rem,4.6vw,3rem);
+    text-align:center;color:var(--bone-bright);letter-spacing:.08em;text-transform:uppercase;
+    margin-bottom:1rem;text-shadow:0 0 42px rgba(201,162,39,.28),0 2px 0 #000}
+  .pricing-sub{max-width:600px;margin:0 auto 3rem;text-align:center;color:var(--bone-dim);
+    font-size:1.02rem;line-height:1.65}
+  .pricing-sub b{color:var(--bone);font-weight:600}
+
+  /* ═══════════════ tier cards ═══════════════ */
+  .tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.4rem;align-items:stretch}
+  .tier{position:relative;background:linear-gradient(160deg,var(--stone-2),var(--stone));
+    border:1px solid var(--edge);border-radius:2px;padding:2.2rem 1.8rem 1.8rem;
+    display:flex;flex-direction:column;transition:border-color .25s,transform .25s}
+  .tier:hover{border-color:var(--edge-hi);transform:translateY(-3px)}
+  .tier.hot{border-color:rgba(201,162,39,.55);
+    background:linear-gradient(165deg,var(--stone-3),var(--stone-2) 60%,var(--stone));
+    box-shadow:0 0 42px rgba(201,162,39,.10),inset 0 0 60px rgba(201,162,39,.04)}
+  .corner{position:absolute;width:14px;height:14px;border:2px solid var(--gold);opacity:.85}
+  .corner.tl{top:6px;left:6px;border-right:none;border-bottom:none}
+  .corner.tr{top:6px;right:6px;border-left:none;border-bottom:none}
+  .corner.bl{bottom:6px;left:6px;border-right:none;border-top:none}
+  .corner.br{bottom:6px;right:6px;border-left:none;border-top:none}
+  .tier-name{font-family:var(--font-display);font-weight:700;font-size:.82rem;letter-spacing:.3em;
+    text-transform:uppercase;color:var(--bone-bright);margin-bottom:.4rem}
+  .tier-flag{position:absolute;top:-12px;right:14px;font-family:var(--font-display);
+    font-size:.6rem;letter-spacing:.24em;text-transform:uppercase;color:var(--ink);
+    background:linear-gradient(160deg,var(--gold-bright),var(--gold));
+    padding:.28rem .7rem;border-radius:2px;box-shadow:0 2px 12px rgba(201,162,39,.4)}
+  .tier-price{font-family:var(--font-display);font-weight:900;font-size:2.1rem;color:var(--gold-bright);
+    margin:.3rem 0 .2rem}
+  .tier-price small{font-size:.8rem;font-weight:400;color:var(--bone-dim);letter-spacing:.06em}
+  .tier-desc{color:var(--bone-dim);font-size:.92rem;line-height:1.6;margin-bottom:1.4rem;min-height:2.6em}
+  .tier ul{list-style:none;margin-bottom:1.8rem;flex:1}
+  .tier li{padding:.5rem 0 .5rem 1.5rem;position:relative;color:var(--bone);font-size:.95rem;line-height:1.5}
+  .tier li::before{content:'◆';position:absolute;left:0;top:.5rem;color:var(--gold);font-size:.6rem}
+  .tier li b{color:var(--bone-bright);font-weight:600}
+  .tier li.dim{color:var(--bone-dim)}
+  .tier li.dim::before{color:var(--edge-hi)}
+  .tier-btn{display:block;text-align:center;font-family:var(--font-display);font-size:.74rem;
+    letter-spacing:.22em;text-transform:uppercase;text-decoration:none;padding:.85rem 1rem;border-radius:2px;
+    transition:transform .2s,box-shadow .2s}
+  .tier-btn.go{color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));
+    position:relative;overflow:hidden}
+  .tier-btn.go::after{content:'';position:absolute;top:0;left:-80%;width:50%;height:100%;
+    background:linear-gradient(105deg,transparent,rgba(255,255,255,.35),transparent);
+    transform:skewX(-20deg);animation:sheen 3.4s ease-in-out infinite}
+  @keyframes sheen{0%,55%{left:-80%}85%,100%{left:130%}}
+  .tier-btn.go:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(232,198,90,.3)}
+  .tier-btn.soon{color:var(--bone-dim);background:var(--stone-3);border:1px solid var(--edge);
+    cursor:not-allowed}
+  .tier-btn.soon span{display:inline-block;animation:soon-pulse 2.6s ease-in-out infinite}
+  @keyframes soon-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+
+  /* ═══════════════ fine print ═══════════════ */
+  .fine{max-width:620px;margin:3rem auto 0;text-align:center;color:var(--bone-dim);
+    font-size:.86rem;line-height:1.7}
+  .fine b{color:var(--bone)}
+  .back{display:block;margin-top:2.2rem;text-align:center;font-family:var(--font-display);
+    font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);
+    text-decoration:none}
+  .back:hover{color:var(--gold-bright);text-shadow:0 0 12px rgba(232,198,90,.5)}
+
+  @media(max-width:640px){
+    .nav-links .nav-link{display:none}
+    .pricing{padding-top:calc(var(--nav-h) + 3rem)}
+    .tier:hover{transform:none}
+  }
+  @media(prefers-reduced-motion:reduce){
+    .nav-brand img,.tier-btn.go::after,.tier-btn.soon span{animation:none}
+  }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<div class="vignette"></div>
+
+<nav class="nav">
+  <a class="nav-brand" href="adventure.html">
+    <img src="/assets/logo-cauldron.png" alt="">
+    <span>The Cauldron</span>
+  </a>
+  <div class="nav-links">
+    <a class="nav-link" href="adventure.html">Return to the realm</a>
+    <a class="nav-cta" href="login.html">Enter</a>
+  </div>
+</nav>
+
+<section class="pricing">
+  <p class="eyebrow">Paths into the realm</p>
+  <h1>Choose your path</h1>
+  <p class="pricing-sub">The fire burns for every adventurer. Wander free with your daily ration of turns — or hold the <b>golden sigil</b> and never count them again.</p>
+
+  <div class="tiers">
+    <!-- Free -->
+    <div class="tier">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tier-name">Wanderer</div>
+      <div class="tier-price">Free</div>
+      <div class="tier-desc">The realm, at your own pace.</div>
+      <ul>
+        <li><b>50 turns</b> every day — refreshed at midnight</li>
+        <li>The steadfast Dungeon Master (<b>step-3.7-flash</b>)</li>
+        <li>Persistent world, memory, and Codex</li>
+        <li>Voice narration · character art · dice ritual</li>
+      </ul>
+      <a class="tier-btn go" href="login.html">Begin your adventure</a>
+    </div>
+
+    <!-- Premium -->
+    <div class="tier hot">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tier-flag">Coming soon</div>
+      <div class="tier-name">Golden Sigil</div>
+      <div class="tier-price">49 kr<small> / month</small></div>
+      <div class="tier-desc">Never count a turn again.</div>
+      <ul>
+        <li><b>Unlimited turns</b> — the Cauldron never sleeps</li>
+        <li>The <b>Qwen 3.8 Max</b> Dungeon Master — deeper, darker, more alive</li>
+        <li>All guardian and oracle models unlocked</li>
+        <li><b>Qwen voice</b> narration, richer and warmer</li>
+        <li>Everything in the Wanderer path</li>
+      </ul>
+      <a class="tier-btn soon" href="#" onclick="return false;"><span>Coming soon</span></a>
+    </div>
+  </div>
+
+  <p class="fine">
+    <b>How the free path works</b> — your 50 turns renew every day at midnight, whether you were here or not.
+    Premium payments are not live yet; the golden sigil is being forged. When it arrives, it will unlock on this page.
+  </p>
+  <a class="back" href="adventure.html">← Return to the realm</a>
+</section>
+</body>
+</html>

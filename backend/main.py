@@ -991,9 +991,10 @@ def _turn_cap_for(username: str) -> int:
 # ═══════════════════════════════════════
 # FAS A — free account system (periodbaserad turn-räkning)
 # ═══════════════════════════════════════
-# Period = 30 dagar från reset_date. turns_used nollställs vid rollover,
-# turn_bonus (admin top-up) behålls. Premium → oändliga turns.
-PERIOD_DAYS = 30
+# Period = daglig (PERIOD_DAYS=1). turns_used nollställs vid rollover (lazy,
+# vid nästa API-anrop efter midnatt), turn_bonus (admin top-up) behålls.
+# Premium → oändliga turns.
+PERIOD_DAYS = 1  # daglig förnyelse in-app: vid nästa API-anrop efter midnatt rullas turns_used=0
 
 _FREE_FIELD_DEFAULTS = {
     "turns_used": 0,
@@ -1068,7 +1069,8 @@ def _tier_for(username: str) -> str:
 
 def _maybe_rollover(username: str, udata: dict) -> dict:
     """Period-rollover: om reset_date passerad (idag >= reset_date) → nollställ
-    turns_used, BEHÅLL turn_bonus, flytta reset_date till idag + 30 dagar."""
+    turns_used, BEHÅLL turn_bonus, flytta reset_date till idag + PERIOD_DAYS (1).
+    Körs lazy vid varje API-anrop — ingen extern cron behövs."""
     today = _today_date()
     reset = udata.get("reset_date")
     due = False

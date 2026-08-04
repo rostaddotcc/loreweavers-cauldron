@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>The Lore Weaver's Cauldron — What will the Cauldron Foretell?</title>
-<meta name="description" content="A free AI dungeon master with a memory. Persistent campaigns, strict D&D 5e rules, powered by Qwen & StepFun. What will the Cauldron Foretell?">
+<meta name="description" content="A free AI dungeon master with a memory. Persistent campaigns, strict D&D 5e rules, powered by Qwen, DeepSeek & StepFun. What will the Cauldron Foretell?">
 <link rel="icon" href="/assets/logo-cauldron.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -169,6 +169,12 @@
   .tablet p em{color:var(--bone-bright)}
   .tablet.wide{grid-column:1/-1;text-align:center;max-width:640px;justify-self:center}
   .tablet.wide h3{margin-bottom:.6rem}
+  .tablet-more{margin-top:1.1rem;font-size:.85rem !important}
+  .tablet-more a{font-family:var(--font-display);font-size:.62rem;font-weight:700;
+    letter-spacing:.22em;text-transform:uppercase;color:var(--gold);text-decoration:none;
+    border-bottom:1px solid rgba(201,162,39,.35);padding-bottom:.18rem;transition:color .25s,border-color .25s}
+  .tablet-more a:hover{color:var(--gold-bright);border-color:var(--gold-bright);
+    text-shadow:0 0 12px rgba(232,198,90,.5)}
 
   /* ═══════════════ the gate (login) ═══════════════ */
   .gate-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(1.6rem,4vw,3.5rem);
@@ -468,10 +474,11 @@
         <div class="tablet wide rv d1">
           <span class="corner tl"></span><span class="corner br"></span>
           <span class="sig">&#10040;</span>
-          <h3>Powered by Qwen &amp; StepFun</h3>
+          <h3>Powered by Qwen, DeepSeek &amp; StepFun</h3>
           <p>Choose the mind behind the mask &mdash; frontier models for narration,
             extraction and image craft, with transparent token usage and reasoning you can
             watch as it happens. <em>You decide who runs your table.</em></p>
+          <p class="tablet-more"><a href="models.html">Read more about the minds &#8594;</a></p>
         </div>
       </div>
     </div>
@@ -535,7 +542,7 @@
             <button type="button" class="gate-toggle" id="reset-link-btn" style="display:none;font-size:.75rem">📧 Send me a reset link</button>
             <div class="gate-error" id="gate-error"></div>
           </form>
-          <div class="gate-foot">Powered by Qwen &amp; StepFun &middot; self-registration, no email required</div>
+          <div class="gate-foot">Powered by Qwen, DeepSeek &amp; StepFun &middot; self-registration, no email required</div>
         </div>
       </div>
     </div>

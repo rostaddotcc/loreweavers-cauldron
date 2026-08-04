@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>The Lore Weaver's Cauldron — The Minds Behind the Mask</title>
+<meta name="description" content="The minds behind the mask — StepFun 3.7 Flash, Qwen 3.6 Flash, Qwen 3.8 Max and DeepSeek V4 Flash 0731. Context windows, parameters, tokens per second, and what each model does at your table.">
+<link rel="icon" href="/assets/logo-cauldron.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<script src="themes.js?v=20260804b"></script>
+<style>
+  /* ═══════════════ tokens ═══════════════ */
+  :root{
+    --ink:#07070c;
+    --stone:#0e0e14; --stone-2:#12121a; --stone-3:#181822;
+    --edge:#2a2a3a; --edge-hi:#3a3a50;
+    --bone:#b8b8c8; --bone-bright:#e6e2d4; --bone-dim:#77778c;
+    --gold:#c9a227; --gold-bright:#e8c65a;
+    --blood:#8b1a2a; --blood-bright:#d43a4d;
+    --ember:#d4691e; --arcane:#7b4fd4; --poison:#5a9a4e; --teal:#4e8a93;
+    --font-display:'Cinzel',serif;
+    --font-body:'Spectral',Georgia,serif;
+    --nav-h:64px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font-body);color:var(--bone);background:var(--ink);
+    overflow-x:hidden;-webkit-tap-highlight-color:transparent;
+    background-image:
+      radial-gradient(900px 520px at 50% 110%, rgba(212,105,30,.07), transparent 70%),
+      radial-gradient(700px 460px at 8% -6%, rgba(123,79,212,.06), transparent 70%),
+      radial-gradient(700px 460px at 96% -8%, rgba(139,26,42,.07), transparent 70%);
+    background-attachment:fixed}
+  .grain{position:fixed;inset:0;z-index:3;pointer-events:none;opacity:.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .vignette{position:fixed;inset:0;z-index:3;pointer-events:none;
+    box-shadow:inset 0 0 190px 60px rgba(3,2,7,.85)}
+
+  /* ═══════════════ nav ═══════════════ */
+  .nav{position:fixed;top:0;left:0;right:0;z-index:50;height:var(--nav-h);
+    display:flex;align-items:center;justify-content:space-between;padding:0 clamp(1rem,4vw,2.5rem);
+    border-bottom:1px solid rgba(58,58,80,.5);
+    background:linear-gradient(to bottom, rgba(7,7,12,.92), rgba(7,7,12,.55) 78%, transparent);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+  .nav-brand{display:flex;align-items:center;gap:.65rem;text-decoration:none}
+  .nav-brand img{width:34px;height:34px;mix-blend-mode:screen;animation:float-logo 7s ease-in-out infinite}
+  @keyframes float-logo{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  .nav-brand span{font-family:var(--font-display);font-weight:700;font-size:.86rem;
+    letter-spacing:.22em;text-transform:uppercase;color:var(--bone-bright)}
+  .nav-links{display:flex;gap:1.4rem;align-items:center}
+  .nav-link{font-family:var(--font-display);font-size:.7rem;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--bone-dim);text-decoration:none;transition:color .2s}
+  .nav-link:hover{color:var(--gold-bright)}
+  .nav-link.active{color:var(--gold)}
+  .nav-cta{font-family:var(--font-display);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));
+    padding:.5rem 1rem;text-decoration:none;border-radius:2px;
+    transition:transform .2s,box-shadow .2s}
+  .nav-cta:hover{transform:translateY(-2px);box-shadow:0 4px 18px rgba(232,198,90,.25)}
+
+  /* ═══════════════ hero ═══════════════ */
+  .ledger{max-width:960px;margin:0 auto;padding:calc(var(--nav-h) + 4rem) 1.25rem 6rem}
+  .eyebrow{font-family:var(--font-display);font-size:.68rem;letter-spacing:.44em;
+    text-transform:uppercase;color:var(--gold);text-align:center;margin-bottom:1rem}
+  .ledger h1{font-family:var(--font-display);font-weight:900;font-size:clamp(1.9rem,4.6vw,3rem);
+    text-align:center;color:var(--bone-bright);letter-spacing:.08em;text-transform:uppercase;
+    margin-bottom:1rem;text-shadow:0 0 42px rgba(201,162,39,.28),0 2px 0 #000}
+  .ledger-sub{max-width:640px;margin:0 auto 2.6rem;text-align:center;color:var(--bone-dim);
+    font-size:1.02rem;line-height:1.65}
+  .ledger-sub b{color:var(--bone);font-weight:600}
+
+  /* ═══════════════ sections ═══════════════ */
+  .sec{margin-bottom:3rem}
+  .sec-head{display:flex;align-items:baseline;gap:.9rem;margin-bottom:1.3rem;
+    border-bottom:1px solid var(--edge);padding-bottom:.7rem}
+  .sec-num{font-family:var(--font-display);font-weight:900;font-size:.9rem;color:var(--gold);opacity:.8}
+  .sec-head h2{font-family:var(--font-display);font-weight:700;font-size:1.05rem;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--bone-bright)}
+  .sec-head .rule{height:1px;flex:1;background:linear-gradient(to right,var(--edge-hi),transparent);
+    align-self:center}
+  .sec-head .ruler{height:3px;width:44px;background:var(--gold);align-self:center;flex:none}
+
+  /* model card */
+  .model{position:relative;background:linear-gradient(160deg,var(--stone-2),var(--stone));
+    border:1px solid var(--edge);border-radius:2px;padding:1.7rem 1.6rem 1.4rem;margin-bottom:1.6rem}
+  .model.hot{border-color:rgba(201,162,39,.5);box-shadow:0 0 34px rgba(201,162,39,.08)}
+  .corner{position:absolute;width:14px;height:14px;border:2px solid var(--gold);opacity:.8}
+  .corner.tl{top:6px;left:6px;border-right:none;border-bottom:none}
+  .corner.tr{top:6px;right:6px;border-left:none;border-bottom:none}
+  .corner.bl{bottom:6px;left:6px;border-right:none;border-top:none}
+  .corner.br{bottom:6px;right:6px;border-left:none;border-top:none}
+  .model-head{display:flex;align-items:center;gap:.8rem;margin-bottom:.4rem;flex-wrap:wrap}
+  .m-logo{width:40px;height:40px;flex:none;display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-display);font-weight:900;font-size:1.05rem;color:var(--ink);
+    background:linear-gradient(160deg,var(--gold-bright),var(--gold));border-radius:2px;
+    box-shadow:0 0 16px rgba(201,162,39,.22)}
+  .m-logo.qwen{background:linear-gradient(160deg,#e8c65a,#b8860b)}
+  .m-logo.stepfun{background:linear-gradient(160deg,#7fd4c0,#2f8f7a)}
+  .m-logo.deepseek{background:linear-gradient(160deg,#6aa9ff,#2f5fd4)}
+  .m-title{font-family:var(--font-display);font-weight:700;font-size:.95rem;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--bone-bright)}
+  .m-maker{font-family:var(--font-body);font-size:.78rem;color:var(--bone-dim);letter-spacing:.02em;
+    text-transform:none;font-style:italic}
+  .m-tag{font-family:var(--font-display);font-size:.56rem;letter-spacing:.18em;text-transform:uppercase;
+    padding:.22rem .55rem;border-radius:2px;margin-left:auto}
+  .m-tag.dm{color:var(--poison);border:1px solid rgba(90,154,78,.5)}
+  .m-tag.guardian{color:var(--teal);border:1px solid rgba(78,138,147,.5)}
+  .m-tag.flagship{color:var(--gold);border:1px solid rgba(201,162,39,.5)}
+  .m-desc{color:var(--bone);font-size:.96rem;line-height:1.65;margin:.7rem 0 1.1rem}
+  .m-desc b{color:var(--bone-bright);font-weight:600}
+
+  /* spec grid */
+  .spec-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.7rem;margin-bottom:1.1rem}
+  .spec{background:var(--stone-3);border:1px solid var(--edge);border-radius:2px;padding:.7rem .8rem}
+  .spec .k{font-family:var(--font-display);font-size:.55rem;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--bone-dim);display:block;margin-bottom:.28rem}
+  .spec .v{font-family:var(--font-display);font-weight:700;font-size:.95rem;color:var(--gold-bright);
+    letter-spacing:.03em}
+  .spec .v small{font-family:var(--font-body);font-size:.72rem;font-weight:400;color:var(--bone-dim);
+    display:block;margin-top:.1rem;letter-spacing:0}
+  @media(max-width:720px){.spec-grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:420px){.spec-grid{grid-template-columns:1fr 1fr;gap:.5rem}.spec{padding:.55rem .6rem}}
+
+  /* role line */
+  .m-role{display:flex;gap:.55rem;align-items:flex-start;color:var(--bone-dim);font-size:.88rem;
+    line-height:1.55;border-top:1px dashed rgba(58,58,80,.5);padding-top:.85rem}
+  .m-role .ico{color:var(--gold);flex:none;font-size:.8rem;margin-top:.12rem}
+  .m-role b{color:var(--bone);font-weight:600}
+
+  /* compare table */
+  .cmp-wrap{overflow-x:auto;border:1px solid var(--edge);border-radius:2px}
+  .cmp{width:100%;border-collapse:collapse;min-width:640px}
+  .cmp th{font-family:var(--font-display);font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--gold);text-align:left;padding:.85rem 1rem;border-bottom:1px solid var(--edge-hi);
+    background:var(--stone-3);white-space:nowrap}
+  .cmp td{font-size:.9rem;color:var(--bone);padding:.75rem 1rem;border-bottom:1px solid rgba(42,42,58,.6);
+    vertical-align:top;line-height:1.5}
+  .cmp tr:last-child td{border-bottom:none}
+  .cmp td b{color:var(--bone-bright);font-weight:600}
+  .cmp td .dim{color:var(--bone-dim)}
+  .cmp .mname{font-family:var(--font-display);font-weight:700;font-size:.8rem;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--bone-bright);white-space:nowrap}
+
+  .note{margin-top:1.4rem;font-size:.82rem;color:var(--bone-dim);line-height:1.7}
+  .note b{color:var(--bone);font-weight:600}
+
+  .footer{margin-top:4rem;text-align:center;color:var(--bone-dim);font-size:.82rem;line-height:1.7;
+    border-top:1px solid var(--edge);padding-top:2rem}
+  .footer b{color:var(--bone)}
+  .footer a{color:var(--gold);text-decoration:none}
+  .footer a:hover{color:var(--gold-bright);text-shadow:0 0 12px rgba(232,198,90,.5)}
+
+  /* reveal */
+  .rv{opacity:0;transform:translateY(22px);transition:opacity .6s ease,transform .6s ease}
+  .rv.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){
+    .nav-brand img{animation:none}
+    .rv{opacity:1;transform:none;transition:none}
+  }
+  @media(max-width:640px){
+    .nav-links .nav-link{display:none}
+    .ledger{padding-top:calc(var(--nav-h) + 3rem)}
+    .model{padding:1.4rem 1.1rem 1.2rem}
+    .sec-head h2{font-size:.92rem}
+  }
+</style>
+<noscript><style>.rv{opacity:1;transform:none}</style></noscript>
+</head>
+<body>
+<div class="grain"></div>
+<div class="vignette"></div>
+
+<nav class="nav">
+  <a class="nav-brand" href="adventure.html">
+    <img src="/assets/logo-cauldron.png" alt="">
+    <span>The Cauldron</span>
+  </a>
+  <div class="nav-links">
+    <a class="nav-link" href="pricing.html">Paths</a>
+    <a class="nav-link active" href="models.html">The Minds</a>
+    <a class="nav-link" href="adventure.html">The Crossroads</a>
+    <a class="nav-cta" href="login.html">Enter</a>
+  </div>
+</nav>
+
+<section class="ledger">
+  <p class="eyebrow rv">The Grimoire of Minds</p>
+  <h1 class="rv">The Minds Behind the Mask</h1>
+  <p class="ledger-sub rv">Four minds can sit at your table. Each is a different kind of Dungeon Master — a different weight of thought, a different pace of speech. Here is what each one is made of, and what it is best at.<br><b>Powered by Qwen, DeepSeek &amp; StepFun</b></p>
+
+  <!-- ═══════════════ stepfun ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">✦</span>
+      <h2>StepFun 3.7 Flash</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="model">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="model-head">
+        <span class="m-logo stepfun">SF</span>
+        <div>
+          <div class="m-title">StepFun 3.7 Flash</div>
+          <div class="m-maker">StepFun · released May 29, 2026</div>
+        </div>
+        <span class="m-tag dm">Steadfast DM</span>
+      </div>
+      <p class="m-desc">The <b>steadfast Dungeon Master</b> — the default voice at every free table. Fast, dependable, and built for structured play: it runs the rules engine, the Guardian, and the extraction of every scene into the world state. A sparse mixture-of-experts model that wakes only a sliver of itself per token, it answers with a brisk, reliable cadence and offers <b>three selectable reasoning levels</b> (low, medium, high) so you can trade depth for speed.</p>
+      <div class="spec-grid">
+        <div class="spec"><span class="k">Context window</span><span class="v">256K</span></div>
+        <div class="spec"><span class="k">Total parameters</span><span class="v">198B<small>sparse MoE</small></span></div>
+        <div class="spec"><span class="k">Active per token</span><span class="v">~11B</span></div>
+        <div class="spec"><span class="k">Prompt speed</span><span class="v">~425 tok/s<small>prompt processing, long context</small></span></div>
+      </div>
+      <div class="m-role"><span class="ico">◆</span><span>Runs your table by default — <b>free and Companion players</b> travel with this mind. Also the hidden hand that keeps the books: Guardian and extraction.</span></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ qwen 3.6 ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">✦</span>
+      <h2>Qwen 3.6 Flash</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="model">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="model-head">
+        <span class="m-logo qwen">Q</span>
+        <div>
+          <div class="m-title">Qwen 3.6 Flash</div>
+          <div class="m-maker">Alibaba Qwen · released April 27, 2026</div>
+        </div>
+        <span class="m-tag dm">Swift DM</span>
+      </div>
+      <p class="m-desc">The <b>swift mind</b> — a budget-conscious alternative from the Qwen family. It reads text, images and video, holds a full <b>1M-token context window</b>, and pairs a hybrid linear-attention core with a MoE body so it stays fast on long campaigns. The economical choice when you want Alibaba&rsquo;s storytelling without the heavyweight bill.</p>
+      <div class="spec-grid">
+        <div class="spec"><span class="k">Context window</span><span class="v">1M<small>1,000,000 tokens</small></span></div>
+        <div class="spec"><span class="k">Total parameters</span><span class="v">MoE<small>hybrid linear attention</small></span></div>
+        <div class="spec"><span class="k">Input</span><span class="v">Text · Image · Video</span></div>
+        <div class="spec"><span class="k">SWE-bench</span><span class="v">78.8%<small>verified</small></span></div>
+      </div>
+      <div class="m-role"><span class="ico">◆</span><span>Available as a player-chosen Dungeon Master on paid paths — a lighter Alibaba voice that still remembers the whole realm.</span></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ qwen 3.8 ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">✦</span>
+      <h2>Qwen 3.8 Max</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="model hot">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="model-head">
+        <span class="m-logo qwen">Q</span>
+        <div>
+          <div class="m-title">Qwen 3.8 Max</div>
+          <div class="m-maker">Alibaba Qwen · flagship, generally available Aug 3, 2026</div>
+        </div>
+        <span class="m-tag flagship">The Grand DM</span>
+      </div>
+      <p class="m-desc">The <b>grand mind</b> — Alibaba&rsquo;s 2.4-trillion-parameter flagship, a sparse MoE that activates only <b>95 billion parameters</b> per request. A full <b>1M-token context window</b> (roughly 750,000 words — entire books at once), deep reasoning that always thinks, and the richest prose of the four. When your campaign deserves the full ceremony, this is the voice that delivers it.</p>
+      <div class="spec-grid">
+        <div class="spec"><span class="k">Context window</span><span class="v">1M<small>~750,000 words</small></span></div>
+        <div class="spec"><span class="k">Total parameters</span><span class="v">2.4T<small>sparse MoE</small></span></div>
+        <div class="spec"><span class="k">Active per request</span><span class="v">95B</span></div>
+        <div class="spec"><span class="k">Output speed</span><span class="v">~46 tok/s<small>Alibaba API, measured</small></span></div>
+      </div>
+      <div class="m-role"><span class="ico">◆</span><span>The storyteller&rsquo;s choice — available as a player-chosen Dungeon Master on the Adventurer and Lifetime paths.</span></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ deepseek ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">✦</span>
+      <h2>DeepSeek V4 Flash 0731</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="model">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="model-head">
+        <span class="m-logo deepseek">DS</span>
+        <div>
+          <div class="m-title">DeepSeek V4 Flash 0731</div>
+          <div class="m-maker">DeepSeek · fast reasoning model</div>
+        </div>
+        <span class="m-tag dm">Swift DM</span>
+      </div>
+      <p class="m-desc">The <b>quick-thinking mind</b> — a sparse MoE reasoning model from DeepSeek with <b>13B active parameters</b> out of 284B total. It reasons fast (<b>~113 tokens per second</b> measured) and reads the whole realm in its <b>1M-token context window</b>. The pragmatic pick: strong reasoning at a fraction of the weight.</p>
+      <div class="spec-grid">
+        <div class="spec"><span class="k">Context window</span><span class="v">1M<small>1,000,000 tokens</small></span></div>
+        <div class="spec"><span class="k">Total parameters</span><span class="v">284B<small>sparse MoE</small></span></div>
+        <div class="spec"><span class="k">Active per token</span><span class="v">13B</span></div>
+        <div class="spec"><span class="k">Output speed</span><span class="v">~113 tok/s<small>measured</small></span></div>
+      </div>
+      <div class="m-role"><span class="ico">◆</span><span>Available as a player-chosen Dungeon Master on paid paths — the fast-reasoning alternative that keeps pace with long, rules-heavy sessions.</span></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ compare ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">⚖</span>
+      <h2>Side by Side</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="cmp-wrap">
+      <table class="cmp">
+        <thead>
+          <tr>
+            <th>Mind</th>
+            <th>Context</th>
+            <th>Parameters</th>
+            <th>Active</th>
+            <th>Speed</th>
+            <th>Best at</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mname">StepFun 3.7 Flash</td>
+            <td>256K</td>
+            <td>198B</td>
+            <td>~11B / token</td>
+            <td>~425 tok/s <span class="dim">(prompt)</span></td>
+            <td>Structured play, rules, Guardian</td>
+          </tr>
+          <tr>
+            <td class="mname">Qwen 3.6 Flash</td>
+            <td>1M</td>
+            <td>MoE</td>
+            <td class="dim">—</td>
+            <td class="dim">fast</td>
+            <td>Budget storytelling, long memory</td>
+          </tr>
+          <tr>
+            <td class="mname">Qwen 3.8 Max</td>
+            <td>1M</td>
+            <td>2.4T</td>
+            <td>95B / request</td>
+            <td>~46 tok/s <span class="dim">(output)</span></td>
+            <td>Deepest prose &amp; reasoning</td>
+          </tr>
+          <tr>
+            <td class="mname">DeepSeek V4 Flash 0731</td>
+            <td>1M</td>
+            <td>284B</td>
+            <td>13B / token</td>
+            <td>~113 tok/s <span class="dim">(output)</span></td>
+            <td>Fast reasoning, long sessions</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note rv"><b>A note on numbers.</b> Context windows and parameter counts come from each model&rsquo;s official release material. Token-per-second figures are independent measurements (Artificial Analysis / Intelligence Index) or the vendor&rsquo;s own prompt-processing figure — real speed at your table varies with load, context length and reasoning level. Free players always travel with StepFun 3.7 Flash; the others unlock on paid paths.</p>
+  </div>
+
+  <div class="footer rv">
+    <b>The Lore Weaver's Cauldron</b> — an AI dungeon master with a memory.<br>
+    <a href="pricing.html">Choose your path</a> &middot; <a href="adventure.html">Return to the realm</a> &middot; <a href="login.html">The Gate</a><br>
+    <span>v0.7 · The Minds Behind the Mask · Questions? <a href="mailto:web@rostad.cc">web@rostad.cc</a></span>
+  </div>
+</section>
+
+<script>
+  // reveal on scroll
+  (function(){
+    var els = document.querySelectorAll('.rv');
+    if(!('IntersectionObserver' in window)){ els.forEach(function(e){e.classList.add('in')}); return; }
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+    }, {threshold:0.12});
+    els.forEach(function(e){ io.observe(e); });
+  })();
+</script>
+</body>
+</html>

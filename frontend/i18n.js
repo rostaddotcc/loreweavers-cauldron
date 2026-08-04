@@ -116,7 +116,7 @@ const I18N = (() => {
     '⚔ Stig in i mörkret': '⚔ What will the Cauldron Foretell?',
     '⏳ Porten prövar dig…': '⏳ The Gate is testing you…',
     '⚠ Porten förblir stängd. Fel namn eller lösenord.': '⚠ The Gate remains closed. Wrong name or password.',
-    'Driven av Qwen · Kampanjer sparas lokalt · ': 'Powered by Qwen · Campaigns are saved locally · ',
+    'Driven av Qwen · Kampanjer sparas lokalt · ': 'Powered by Qwen, DeepSeek &amp; StepFun · Campaigns are saved locally · ',
     'Glömt lösenordet?': 'Forgot your password?',
 
     // ── adventure.html ──

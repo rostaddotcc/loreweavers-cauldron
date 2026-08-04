@@ -47,6 +47,13 @@ def ledger_file(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def churn_file(tmp_path, monkeypatch):
+    f = tmp_path / "_churn.json"
+    monkeypatch.setattr(main, "_CHURN_FILE", f)
+    return f
+
+
+@pytest.fixture(autouse=True)
 def outbox_dir(tmp_path, monkeypatch):
     d = tmp_path / "outbox"
     monkeypatch.setattr(main, "OUTBOX_DIR", d)
@@ -76,7 +83,8 @@ def _seed(username="alice", role="player", tier="free"):
         username: {"password_hash": hash_password("secret123"), "role": role,
                    "turn_cap": 50, "turns_used": 0, "turn_bonus": 0,
                    "reset_date": "2026-08-04", "subscription_status": tier,
-                   "subscription_until": None},
+                   "subscription_until": None,
+                   "email": "alice@example.com"},  # e-post krävs före köp (2026-08-04)
     })
 
 
@@ -240,7 +248,7 @@ def test_webhook_checkout_promo_gives_extra_months(client):
     # Under promo ger tier1 3 månader (~90 dagar, datum-baserat → 89–90).
     assert 80 <= days <= 92, f"tier1 promo gav {days} dagar, förväntat ~90"
 
-    # tier2 → ~120 dagar
+    # tier2 → ~30 dagar (1 månad — ingen gratismånad sedan 2026-08-04)
     _seed("bob")
     body2 = _event("checkout.session.completed", {
         "metadata": {"username": "bob", "tier": "tier2"},
@@ -256,7 +264,7 @@ def test_webhook_checkout_promo_gives_extra_months(client):
     u2 = main.load_users()["bob"]
     assert u2["subscription_status"] == "tier2"
     days2 = (datetime.fromisoformat(u2["subscription_until"]).date() - datetime.now(timezone.utc).date()).days
-    assert 110 <= days2 <= 122, f"tier2 promo gav {days2} dagar, förväntat ~120"
+    assert 25 <= days2 <= 32, f"tier2 gav {days2} dagar, förväntat ~30"
 
 
 def test_promo_info_endpoint(client):
@@ -266,7 +274,7 @@ def test_promo_info_endpoint(client):
     data = r.json()
     assert data["active"] is True
     assert data["offer"]["tier1"]["free_months"] == 2
-    assert data["offer"]["tier2"]["free_months"] == 3
+    assert data["offer"]["tier2"]["free_months"] == 0  # bara Companion + Lifetime i promon (2026-08-04)
     assert data["tier_names"]["tier2"] == "Adventurer"
 
 
@@ -325,6 +333,29 @@ def test_webhook_subscription_deleted_demotes(client):
     assert u["subscription_status"] == "free"
     assert u["subscription_until"] is None
     assert u["turn_cap"] == 50
+    # Churn-datapoint: ledger-rad + per-dag-ackumulator (rostad 2026-08-04)
+    ledger = main._ledger_load()
+    churn_rows = [row for row in ledger if row.get("type") == "stripe:churn"]
+    assert len(churn_rows) == 1
+    assert churn_rows[0]["user"] == "alice"
+    assert churn_rows[0]["amount_sek"] == 0
+    churn = main._churn_load()
+    today = datetime.now(timezone.utc).date().isoformat()
+    assert churn.get(today) == 1
+    # Churn-rader räknas inte som transaktioner
+    totals = main._ledger_totals()
+    assert totals["transactions"] == 0
+
+
+def test_churn_record_in_billing_api(client):
+    """/api/admin/billing exponerar churn per dag."""
+    _seed("boss", role="admin")
+    main._churn_record("alice", "sub_123")
+    r = client.get("/api/admin/billing", cookies={"morkrets_token": _tok("boss", "admin")})
+    assert r.status_code == 200
+    data = r.json()
+    today = datetime.now(timezone.utc).date().isoformat()
+    assert data["churn"].get(today) == 1
 
 
 def test_webhook_invoice_paid_extends(client):
@@ -393,3 +424,77 @@ def test_webhook_duplicate_invoice_paid_no_double_extend(client):
     assert main.load_users()["alice"]["subscription_until"] == "2026-10-04"
     ledger = json.loads(main._LEDGER_FILE.read_text())
     assert len([e for e in ledger if e["event_id"] == "evt_inv_dup"]) == 1
+
+
+# ── Uppsägning via kundportalen (2026-08-04, test: nomis via kvittot) ─────
+
+def _seed_subscribed(username="alice", sub_id="sub_123", tier="tier1"):
+    u = main.load_users()
+    u[username] = u.get(username, {})
+    u[username].update({
+        "password_hash": hash_password("secret123"), "role": "player",
+        "turn_cap": 50, "turns_used": 0, "turn_bonus": 0,
+        "reset_date": "2026-08-04", "subscription_status": tier,
+        "subscription_until": "2026-11-02",
+        "stripe_customer_id": "cus_123",
+        "stripe_subscription_id": sub_id,
+        "email": "alice@example.com",
+    })
+    main.save_users(u)
+
+
+def test_webhook_cancel_scheduled_captures_intent(client):
+    """customer.subscription.updated med cancel_at → flagga + ledger-rad direkt
+    (annars väntar vi på deleted vid periodens slut)."""
+    _seed_subscribed()
+    body = _event("customer.subscription.updated",
+                  {"id": "sub_123", "customer": "cus_123",
+                   "cancel_at": 1788533572, "cancel_at_period_end": False},
+                  event_id="evt_cancel_sched")
+    r = client.post("/api/stripe/webhook", content=body,
+                    headers={"stripe-signature": _sign(body)})
+    assert r.status_code == 200
+    u = main.load_users()["alice"]
+    assert u["cancel_scheduled_at"]
+    # Förmånerna ska vara INTACTA till periodens slut (ingen demotion ännu)
+    assert u["subscription_status"] == "tier1"
+    assert u["turn_cap"] == 50
+    ledger = json.loads(main._LEDGER_FILE.read_text())
+    assert any(e["type"] == "stripe:cancel_scheduled" and e["user"] == "alice" for e in ledger)
+
+
+def test_webhook_cancel_reverted_removes_flag(client):
+    """cancel_at rensat (kunden ångrade sig i portalen) → flaggan tas bort."""
+    _seed_subscribed()
+    u = main.load_users()
+    u["alice"]["cancel_scheduled_at"] = "2026-08-04T20:00:00"
+    main.save_users(u)
+    body = _event("customer.subscription.updated",
+                  {"id": "sub_123", "customer": "cus_123",
+                   "cancel_at": None, "cancel_at_period_end": False},
+                  event_id="evt_cancel_revert")
+    r = client.post("/api/stripe/webhook", content=body,
+                    headers={"stripe-signature": _sign(body)})
+    assert r.status_code == 200
+    assert "cancel_scheduled_at" not in main.load_users()["alice"]
+    ledger = json.loads(main._LEDGER_FILE.read_text())
+    assert any(e["type"] == "stripe:cancel_reverted" for e in ledger)
+
+
+def test_webhook_deleted_after_scheduled(client):
+    """Vid periodens slut: deleted → riktig churn + flaggan rensas."""
+    _seed_subscribed()
+    u = main.load_users()
+    u["alice"]["cancel_scheduled_at"] = "2026-08-04T20:00:00"
+    main.save_users(u)
+    body = _event("customer.subscription.deleted",
+                  {"id": "sub_123", "customer": "cus_123"},
+                  event_id="evt_sub_deleted")
+    r = client.post("/api/stripe/webhook", content=body,
+                    headers={"stripe-signature": _sign(body)})
+    assert r.status_code == 200
+    u = main.load_users()["alice"]
+    assert u["subscription_status"] == "free"
+    assert "cancel_scheduled_at" not in u
+    churn = json.loads(main._CHURN_FILE.read_text())
+    assert sum(churn.values()) == 1

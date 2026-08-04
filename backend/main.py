@@ -8398,6 +8398,46 @@ async def stripe_webhook(request: Request):
             "stripe_sub_id": sub_id,
             "event_id": event_id,
         })
+    elif etype == "customer.subscription.updated":
+        # Uppsägning via kundportalen → Stripe sätter cancel_at/cancel_at_period_end
+        # MEN skickar bara customer.subscription.deleted vid periodens SLUT.
+        # (rostad 2026-08-04, test: nomis sa upp via kvittot → cancel_at satt.)
+        # Vi bokför intentionen direkt så admin ser den utan att vänta 30 dagar.
+        sub_id = obj.get("id")
+        cancel_at = obj.get("cancel_at")
+        cancel_at_period_end = bool(obj.get("cancel_at_period_end"))
+        with _USER_LOCK:
+            users = load_users()
+            for uname, u in users.items():
+                if not isinstance(u, dict) or u.get("stripe_subscription_id") != sub_id:
+                    continue
+                if cancel_at or cancel_at_period_end:
+                    if not u.get("cancel_scheduled_at"):
+                        u["cancel_scheduled_at"] = _now_iso()
+                        save_users(users)
+                        _ledger_append({
+                            "user": uname,
+                            "amount_sek": 0,
+                            "type": "stripe:cancel_scheduled",
+                            "stripe_sub_id": sub_id,
+                            "event_id": event_id,
+                        })
+                        _append_tier_log(uname, "cancel_scheduled", None)
+                        logger.info("💳 Cancel scheduled (portal): %s", uname)
+                else:
+                    # Uppsägningen återtogs i portalen (cancel_at rensat)
+                    if u.get("cancel_scheduled_at"):
+                        u.pop("cancel_scheduled_at", None)
+                        save_users(users)
+                        _ledger_append({
+                            "user": uname,
+                            "amount_sek": 0,
+                            "type": "stripe:cancel_reverted",
+                            "stripe_sub_id": sub_id,
+                            "event_id": event_id,
+                        })
+                        logger.info("💳 Cancel reverted: %s", uname)
+                break
     elif etype == "customer.subscription.deleted":
         sub_id = obj.get("id")
         cust = obj.get("customer")
@@ -8413,6 +8453,7 @@ async def stripe_webhook(request: Request):
                     u["subscription_status"] = "free"
                     u["subscription_until"] = None
                     u["turn_cap"] = DEFAULT_TURN_CAP
+                    u.pop("cancel_scheduled_at", None)  # intentionen realiserad
                     save_users(users)
                     _append_tier_log(uname, "free", None)
                     logger.info("💳 Subscription deleted → free: %s", uname)

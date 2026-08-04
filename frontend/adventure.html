@@ -145,13 +145,17 @@
   .ask-tip b{color:var(--gold);font-style:normal}
   .ask-tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:var(--edge)}
   .ask-wrap:hover .ask-tip{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
-  @media(hover:none),(max-width:640px){.ask-tip{position:static;transform:none;width:100%;max-width:100%;margin-top:.4rem;opacity:1;visibility:visible;background:none;border:none;box-shadow:none;padding:0;text-align:left}.ask-tip::after{display:none}.ask-wrap{display:flex;flex-direction:column;align-items:flex-start}}
+  @media(hover:none),(max-width:640px){.ask-tip{position:static;transform:none;width:100%;max-width:100%;margin-top:.4rem;opacity:1;visibility:visible;background:none;border:none;box-shadow:none;padding:0;text-align:left}.ask-tip::after{display:none}.ask-wrap{display:flex;flex-direction:column;align-items:flex-start}#gen-row .ask-tip{display:none}}
 
   .dm-model-label{font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim);min-width:200px;display:flex;flex-direction:column;gap:.3rem}
   /* gen-row: modellväljaren ska ligga I RAD med Generate-knappen (ej staplad) */
-  #gen-row{display:flex;gap:.9rem;flex-wrap:wrap;align-items:center}
+  #gen-row{display:grid;grid-template-columns:auto auto 1fr;gap:.9rem;align-items:center}
   #gen-row .dm-model-label{flex-direction:row;align-items:center;gap:.6rem;min-width:0;flex-wrap:wrap}
   #gen-row .dm-model-label::after{content:'';flex:0 0 1px}
+  #gen-row .dm-model-select{max-width:240px !important;min-width:180px;flex:0 1 auto}
+  #gen-row .gen-btn{white-space:nowrap;justify-self:start}
+  #gen-row .hint{grid-column:1/-1;text-align:center;margin-top:.2rem}
+  @media(max-width:700px){#gen-row{grid-template-columns:1fr}#gen-row .hint{grid-column:auto}}
   /* Arketypgrid (delas med newgame.html) */
   .spread{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
   .arch{position:relative;cursor:pointer;text-align:center;padding:1.4rem 1rem 1.2rem;background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);border:1px solid var(--edge);transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s,border-color .3s;overflow:hidden}
@@ -292,6 +296,40 @@
   }
 </style>
 <link rel="stylesheet" href="snes.css?v=23">
+<style>
+/* ═══════════ Login-känslan — mjuka knappar (override snes.css DOS-flatten) ═══════════
+   snes.css laddas efter inline-blocket och tvingar platta knappar med !important.
+   Denna block körs EFTER snes.css → återställer den mjuka login-känslan på
+   adventure.html utan att röra chatten/terminalen. */
+.go-btn, .gen-btn, .pv-go, .start-btn, .tab-btn.active, .blank-btn.active{
+  background: linear-gradient(160deg, var(--gold-bright), var(--gold)) !important;
+  border: 1px solid rgba(232,198,90,.45) !important;
+  color: var(--ink) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 0 18px rgba(201,162,39,.22), 0 6px 30px rgba(201,162,39,.30), inset 0 1px 0 rgba(255,255,255,.16) !important;
+  text-shadow: 0 0 12px rgba(232,198,90,.35) !important;
+  transition: transform .2s, box-shadow .2s, filter .2s !important;
+  font-weight: 700 !important;
+}
+.start-btn{ border-radius: 8px !important; }
+.go-btn:hover, .gen-btn:hover:not(:disabled), .pv-go:hover:not(:disabled), .start-btn:hover:not(:disabled), .tab-btn.active:hover, .blank-btn.active:hover{
+  background: linear-gradient(160deg, var(--gold-bright), var(--gold)) !important;
+  color: var(--ink) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 0 28px rgba(232,198,90,.38), 0 12px 40px rgba(201,162,39,.5), inset 0 1px 0 rgba(255,255,255,.22) !important;
+  filter: brightness(1.1) !important;
+}
+.go-btn:active, .pv-go:active, .start-btn:active, .gen-btn:active{ transform: translateY(1px) !important; }
+.tab-btn, .blank-btn, .pv-reroll, .top-btn{
+  border-radius: 6px !important;
+  transition: color .2s, border-color .2s, box-shadow .2s, transform .2s !important;
+}
+.tab-btn:hover, .blank-btn:hover, .pv-reroll:hover, .top-btn:hover{
+  transform: translateY(-1px) !important;
+  box-shadow: 0 0 14px -4px rgba(201,162,39,.4) !important;
+}
+.tab-btn.active{ transform: none !important; }
+</style>
 <script src="sprites.js?v=20260802a"></script>
 <script src="fonts.js?v=20260803a"></script>
 <script src="themes.js?v=20260804a"></script>

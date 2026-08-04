@@ -359,6 +359,7 @@
 <div class="app">
   <!-- ═══════════ TOPPRAD ═══════════ -->
   <div class="topbar">
+    <button class="top-btn" onclick="openProfileModal()" title="Profile">🪞 Profile</button>
     <div class="gear-wrap">
       <button class="top-btn gear-btn" onclick="toggleGearMenu(event)" title="Menu" aria-haspopup="true" aria-expanded="false">⚙️</button>
       <div class="gear-menu" id="gear-menu">
@@ -1748,13 +1749,27 @@ function renderProfile(s) {
 
 // ── Nyhet: Qwen 3.8 Max full release (2026-08-03) ──
 // Banner visas tills besökaren klickar bort den (localStorage-minne).
+// Free/tier1 ser en Tier 2-version (de senaste hjärnorna låses upp där).
+let newsQwenLocked = false;
 function newsQwenInit() {
   try { if (localStorage.getItem('news_qwen38_dismissed') === '1') return; } catch (e) {}
   const el = document.getElementById('news-qwen38');
-  if (el) el.style.display = '';
+  if (!el) return;
+  API.me().then(u => {
+    newsQwenLocked = !u || (u.role !== 'admin' && (u.subscription_status === 'free' || u.subscription_status === 'tier1'));
+    if (newsQwenLocked) {
+      const t = el.querySelector('.nb-title');
+      const x = el.querySelector('.nb-text');
+      if (t) t.textContent = 'New — Qwen 3.8 Max & DeepSeek V4 (Tier 2)';
+      if (x) x.innerHTML = "Alibaba's flagship and DeepSeek V4 are here — <b>unlock them at Tier 2</b> and choose them at the model gate: 2.4T parameters (95B active per request), 1M context, deep reasoning. <a href='pricing.html' style='color:var(--gold);font-weight:600'>View the paths →</a>";
+    }
+    el.style.display = '';
+  }).catch(() => { el.style.display = ''; });
 }
 function newsQwenToast(e) {
-  toast('🔥 Qwen 3.8 Max — välj den vid modell-valet när du startar ett äventyr');
+  toast(newsQwenLocked
+    ? '🔥 Qwen 3.8 Max & DeepSeek V4 låses upp på Tier 2 — se pricing.html'
+    : '🔥 Qwen 3.8 Max — välj den vid modell-valet när du startar ett äventyr');
 }
 function newsQwenDismiss(e) {
   e.stopPropagation();

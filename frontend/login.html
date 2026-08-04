@@ -467,6 +467,73 @@
     </div>
   </section>
 
+  <!-- ═══════════════ paths into the realm (pricing) ═══════════════ -->
+  <style>
+    .pricing-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.1rem;margin-top:2.6rem}
+    .ptier{position:relative;background:linear-gradient(170deg,var(--stone-2),var(--stone));border:1px solid var(--edge);padding:1.6rem 1.3rem 1.4rem;transition:transform .3s,border-color .3s}
+    .ptier:hover{transform:translateY(-4px);border-color:var(--edge-hi)}
+    .ptier.hot{border-color:rgba(201,162,39,.55);box-shadow:0 0 34px rgba(201,162,39,.10)}
+    .pt-flag{position:absolute;top:-11px;right:12px;font-family:var(--font-display);font-size:.56rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));padding:.22rem .6rem}
+    .pt-name{font-family:var(--font-display);font-weight:700;font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;color:var(--bone-bright);margin-bottom:.5rem}
+    .pt-price{font-family:var(--font-display);font-weight:900;font-size:1.7rem;color:var(--gold-bright);margin-bottom:.7rem}
+    .pt-price small{font-size:.72rem;font-weight:400;color:var(--bone-dim);letter-spacing:.05em}
+    .ptier ul{list-style:none}
+    .ptier li{padding:.34rem 0 .34rem 1.2rem;position:relative;font-size:.88rem;color:var(--bone);line-height:1.45}
+    .ptier li::before{content:'◆';position:absolute;left:0;top:.4rem;color:var(--gold);font-size:.55rem}
+    .ptier li b{color:var(--bone-bright);font-weight:600}
+    .pt-more{text-align:center;margin-top:2rem;font-family:var(--font-display);font-size:.7rem;letter-spacing:.22em;text-transform:uppercase}
+    .pt-more a{color:var(--gold);text-decoration:none}
+    .pt-more a:hover{color:var(--gold-bright);text-shadow:0 0 12px rgba(232,198,90,.5)}
+    @media(max-width:860px){.pricing-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:520px){.pricing-grid{grid-template-columns:1fr}}
+  </style>
+  <section class="solid sect" id="pricing">
+    <div class="wrap">
+      <p class="eyebrow rv">Paths into the realm</p>
+      <h2 class="rv">Choose your path</h2>
+      <p class="lede rv d1">Wander free with your daily ration of turns — or take up a sigil and shape the realm itself.</p>
+      <div class="pricing-grid">
+        <div class="ptier rv d1">
+          <div class="pt-name">Wanderer</div>
+          <div class="pt-price">Free</div>
+          <ul>
+            <li><b>50 turns</b> every day — refreshed at midnight</li>
+            <li>The steadfast Dungeon Master</li>
+            <li>Persistent world, memory &amp; Codex</li>
+          </ul>
+        </div>
+        <div class="ptier rv d2">
+          <div class="pt-name">Companion</div>
+          <div class="pt-price">3€<small>/ month</small></div>
+          <ul>
+            <li><b>50 turns</b> refreshed every <b>6 hours</b></li>
+            <li><b>AI avatars</b> for hero &amp; NPCs</li>
+            <li>Everything in the Wanderer path</li>
+          </ul>
+        </div>
+        <div class="ptier hot rv d2">
+          <div class="pt-flag">Most popular</div>
+          <div class="pt-name">Golden Sigil</div>
+          <div class="pt-price">9€<small>/ month</small></div>
+          <ul>
+            <li><b>All Dungeon Masters</b> — Qwen 3.8 Max, DeepSeek&hellip;</li>
+            <li><b>Both narrator voices</b> + custom style</li>
+            <li>50 turns every 6 hours · AI avatars</li>
+          </ul>
+        </div>
+        <div class="ptier rv d3">
+          <div class="pt-name">Lifetime</div>
+          <div class="pt-price">100€<small> once</small></div>
+          <ul>
+            <li><b>Unlimited turns</b> — never count again</li>
+            <li>All Dungeon Masters · both voices · avatars</li>
+          </ul>
+        </div>
+      </div>
+      <p class="pt-more rv d3"><a href="pricing.html">See the full paths &#8594;</a></p>
+    </div>
+  </section>
+
   <!-- ═══════════════ ledger ═══════════════ -->
   <section class="solid ledger sect" id="ledger">
     <div class="wrap">
@@ -670,6 +737,10 @@ if (sessionStorage.getItem('dnd_user')) {
    clicks make it spit.
    ============================================================ */
 (function () {
+  // AVSTÄNGT 2026-08-04 (rostad): de gröna overlaybubblorna över kitteln
+  // skulle bort. Målningen (#hero-art) ligger kvar — bara den animerade
+  // FX-overlayen (bubblor/ånga/dropp/splash) ritas inte längre.
+  return;
   const art  = document.getElementById('hero-art');
   const fx   = document.getElementById('fx');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;

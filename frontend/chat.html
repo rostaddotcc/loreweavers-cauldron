@@ -263,6 +263,15 @@
     color: var(--gold-bright); text-shadow: 0 0 10px rgba(232,198,90,0.25);
     transition: background 0.2s, border-color 0.2s;
   }.day-head:hover{ background: rgba(212,160,30,0.14); border-color: rgba(212,160,30,0.7); }.day-head .dh-caret{ font-size: 0.6rem; opacity: 0.75; transition: transform 0.25s; }.day-group.collapsed .day-head .dh-caret{ transform: rotate(-90deg); }.day-group.collapsed .day-head{ opacity: 0.65; }.msg{ margin-bottom: 1.1rem; animation: msg-in 0.4s cubic-bezier(0.22,1,0.36,1); max-width: 760px; }
+  /* ── Atmosphere A — state-baserad ambiensrad (plats · tid · väder) ── */
+  .amb{ display: flex; align-items: center; gap: 10px; margin: 0.2rem 0 1rem; opacity: 0.9; max-width: 760px; }
+  .amb .amb-line{ flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--arcane), transparent); }
+  .amb .amb-text{ font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--arcane-bright); text-shadow: 0 0 8px rgba(123,79,212,0.55); white-space: nowrap; }
+  .amb .amb-text .a-loc{ color: var(--arcane-bright); }
+  .amb .amb-text .a-tm{ color: var(--ember); }
+  .amb .amb-text .a-wth{ color: var(--teal); }
+  .amb .amb-text .a-sep{ color: var(--bone-dim); margin: 0 6px; }
+  .amb .amb-text .a-day{ color: var(--gold); }
   @keyframes msg-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }/* ── Avatarer i chatten (inramade, rollfärgade, klickbara för uppladdning) ── */.msg-avatar{
     width: 44px; height: 44px; flex-shrink: 0;
     display: inline-flex; align-items: center; justify-content: center;
@@ -2081,10 +2090,46 @@ function insertBeforeInChat(el, ref) {
   container.insertBefore(el, ref);
 }
 
+// ── Atmosphere A — state-baserad ambiensrad (plats · tid · väder) ──
+// Visas vid scenbyte (ny dag / ny plats / väderändring) som en dekorativ
+// rad mellan DM-svar. Ingen LLM — enbart world-state från servern.
+let _ambLast = '';  // senast renderade ambiens (för scenbytesdetektering)
+
+function ambienceKey(world) {
+  if (!world) return '';
+  return [world.current_location, world.time, world.weather, world.day].join('¦');
+}
+
+// Bygg ambiens-raden (utan att appenda) — används av maybeAddAmbience.
+function buildAmbienceEl(world) {
+  const el = document.createElement('div');
+  el.className = 'amb';
+  const loc = world.current_location || '';
+  const tm = world.time || '';
+  const wth = world.weather || '';
+  const day = world.day ? `${I18N.getLang() === 'en' ? 'Dag' : 'Dag'} ${world.day}` : '';
+  const parts = [];
+  if (loc) parts.push(`<span class="a-loc">✧ ${escapeHtml(loc)}</span>`);
+  if (tm) parts.push(`<span class="a-tm">${escapeHtml(tm)}</span>`);
+  if (wth) parts.push(`<span class="a-wth">~ ${escapeHtml(wth)} ~</span>`);
+  if (day) parts.push(`<span class="a-day">☠ ${escapeHtml(day)}</span>`);
+  el.innerHTML = `<div class="amb-line"></div><div class="amb-text">${parts.join('<span class="a-sep">·</span>')}</div><div class="amb-line"></div>`;
+  return el;
+}
+
+// Rendera ambiens-rad FÖRE ett DM-svar om scenen bytt (dag/plats/väder).
+function maybeAddAmbience(world, type) {
+  if (!world) return;
+  const key = ambienceKey(world);
+  if (!key || key === _ambLast) return;
+  _ambLast = key;
+  const el = buildAmbienceEl(world);
+  appendToChat(el);
+}
+
 function addMessage(type, npcKey, text, meta) {
   const el = buildMessage(type, npcKey, text, meta);
   if (!el) return null;
-
   // Ljud (spelas ej vid batch-rendering via buildMessage)
   if (type === 'dm' || type === 'npc') SFX.receive();
   else if (type === 'player') SFX.send();
@@ -3377,6 +3422,11 @@ async function answerRollRequest(id, notation, label) {
     updateHeaderInfo();
     refreshMeData();
     const dmEl = res.reply ? addMessage('dm', null, res.reply) : null;
+    // Atmosphere A — ambiensrad vid scenbyte (plats · tid · väder)
+    if (res.world) {
+      try { maybeAddAmbience(res.world, 'dm'); } catch (e) { console.warn('ambience:', e); }
+      if (campaignData) campaignData.world = Object.assign({}, campaignData.world || {}, res.world);
+    }
     // Vänta tills DM-svaret skrivit klart innan nästa kastkort visas
     if (dmEl && dmEl._twDone) await dmEl._twDone;
     // Autoplay TTS — läs upp DM-svaret om toggeln är på

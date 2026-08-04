@@ -297,6 +297,8 @@ def _parse_npcs(text: str) -> tuple[str, list[dict]]:
             'color': NPC_COLORS[h % len(NPC_COLORS)],
             'icon': NPC_ICONS[h % len(NPC_ICONS)],
             'notes': '', 'alive': True,
+            'mentions': 1,       # rank-meta (rörligt fönster)
+            'last_seen_turn': 0,
         })
     clean = NPC_PATTERN.sub('', text).strip()
     return clean, npcs
@@ -3530,8 +3532,15 @@ async def get_facts(category: str | None = None, morkrets_token: str | None = Co
             facts = register.get_facts_by_category(category)
         else:
             facts = [f for f in register._facts if not f.superseded_by]
+        # Rank-poäng per faktum (rörligt fönster) — frontend visar
+        # nedrankade entries tydligare än bara superseded.
+        facts_out = []
+        for f in facts:
+            d = f.model_dump()
+            d["rank_score"] = register.rank_score(f)
+            facts_out.append(d)
         return {
-            "facts": [f.model_dump() for f in facts],
+            "facts": facts_out,
             "stats": register.stats(),
         }
     except Exception:
@@ -4607,6 +4616,88 @@ async def _post_turn_tasks_locked(
 
     # 1b. Guardian POST-DM: flyttad till /api/chat (inline) — syns nu i chatten.
 
+    # 1c. NPC rank-meta — räkna omnämnanden av kända NPC:er i DM-svar +
+    #     spelarmeddelande (gratis strängmatchning, inget LLM-anrop).
+    #     NPC:er som nämns ofta stiger i rank; de som aldrig nämns glider
+    #     ut ur fönstret (rörligt faktafönster, 2026-08-04).
+    try:
+        st = store.get(username, campaign_id)
+        if st and st.get("npcs"):
+            search_text = (reply or "") + "\n" + (player_msg or "")
+            search_lower = search_text.lower()
+            bumped = False
+            for n in st["npcs"]:
+                nm = (n.get("name") or "").strip()
+                if not nm or len(nm) < 2:
+                    continue
+                count = search_lower.count(nm.lower())
+                if count > 0:
+                    n["mentions"] = int(n.get("mentions") or 1) + count
+                    n["last_seen_turn"] = turn_count
+                    bumped = True
+            if bumped:
+                store.save(st)
+    except Exception as e:
+        logger.debug("NPC rank update skipped: %s", e)
+
+    # 1d. Kompakteringspass (var 50:e turn) — extraction-modellen bedömer
+    #     vilka aktiva fakta som inte längre är relevanta och de sänks i
+    #     rank (relevance → 0.2) så det rörliga faktafönstret hålls rent.
+    if turn_count % 50 == 0 and turn_count > 0:
+        try:
+            st = store.get(username, campaign_id)
+            if st:
+                register = FactRegister(username, campaign_id)
+                active = [f for f in register._facts if not f.superseded_by]
+                if active:
+                    _compact_usage = {}
+                    fact_lines = "\n".join(
+                        f"- [{f.category}] {f.text} (ID: {f.id}, omnämnd {f.mentions}g, tur {f.source_turn})"
+                        for f in active[:80]
+                    )
+                    lang = _get_lang(st)
+                    compact_prompt = (
+                        "Du är en arkivarie som städar ett faktaarkiv för en D&D-kampanj.\n"
+                        "Läs listan över fakta. Markera de som INTE längre är relevanta för "
+                        "den pågående storyn — t.ex. lösa påståenden, något någon sa som inte "
+                        "påverkade något, avslutade händelser utan fortsatt betydelse, eller "
+                        "detaljer som aldrig återkommit.\n"
+                        "SVARA ENDAST med en JSON-array av ID:n, t.ex. [\"abc123\", \"def456\"]. "
+                        "Ingen markdown, ingen förklaring. Om inget ska markeras: []\n\n"
+                        + fact_lines
+                    )
+                    raw = await _call_llm(
+                        _extraction_model_for(st),
+                        [{"role": "user", "content": compact_prompt}],
+                        temperature=0.1, max_tokens=600, thinking="disabled",
+                        timeout=45, usage_out=_compact_usage,
+                    )
+                    low_ids: set[str] = set()
+                    raw_s = raw or "" if isinstance(raw, str) else ""
+                    try:
+                        parsed = _extract_json(raw_s)
+                        if isinstance(parsed, list):
+                            low_ids = {str(i) for i in parsed if isinstance(i, (str, int))}
+                        elif isinstance(parsed, dict):
+                            arr = parsed.get("ids") or parsed.get("facts") or []
+                            low_ids = {str(i) for i in arr if isinstance(i, (str, int))}
+                    except Exception:
+                        # Fallback: JSON-array direkt (["abc", ...]) eller 12-hex-ID:n
+                        try:
+                            arr = json.loads(raw_s)
+                            if isinstance(arr, list):
+                                low_ids = {str(i) for i in arr if isinstance(i, (str, int))}
+                        except Exception:
+                            low_ids = set(re.findall(r'[0-9a-f]{12}', raw_s))
+                    n_compacted = register.compact(low_ids)
+                    # Logga till ringbuffern → syns i /api/debug/logs + admin
+                    logger.info("🧹 Kompakteringspass (turn %d): %d fakta nedrankade av %d", turn_count, n_compacted, len(active))
+                    if _compact_usage.get("total_tokens"):
+                        _track_unguarded(st, _extraction_model_for(st), _compact_usage)
+                    store.save(st)
+        except Exception as e:
+            logger.debug("Compaction pass skipped: %s", e)
+
     # 2. Indexera senaste transkriptet i Qdrant (var 5:e tur)
     if turn_count % 5 == 0 and turn_count > 0:
         try:
@@ -5195,6 +5286,14 @@ async def _chat_locked(
         "effects": effects,
         "guardian_summary": "",
         "guardian_pending": True,
+        # World-state → frontend renderar Atmosphere-raden vid scenbyte
+        # (plats · tid · väder). Rörligt faktafönster, 2026-08-04.
+        "world": {
+            "current_location": state.get("world", {}).get("current_location", ""),
+            "time": state.get("world", {}).get("time", ""),
+            "weather": state.get("world", {}).get("weather", ""),
+            "day": state.get("world", {}).get("day", 0),
+        },
     }
 
 
@@ -7815,6 +7914,32 @@ def _churn_save(data: dict) -> None:
         logger.exception("💔 Kunde inte spara churn-ackumulatorn")
 
 
+def _churn_bump() -> None:
+    """Öka churn-ackumulatorn för idag (utan ledger-rad).
+
+    Används när en uppsägningsintention bokförs (cancel_scheduled) så
+    adminvyn ser churn direkt, utan att vänta på periodens slut.
+    Tar _LEDGER_LOCK själv (samma lås som ledgern — ackumulatorn är en
+    härledd vy av den).
+    """
+    day = datetime.now(timezone.utc).date().isoformat()
+    with _LEDGER_LOCK:
+        churn = _churn_load()
+        churn[day] = int(churn.get(day, 0) or 0) + 1
+        _churn_save(churn)
+
+
+def _churn_unbump() -> None:
+    """Minska churn-ackumulatorn för idag (återtagen uppsägning)."""
+    day = datetime.now(timezone.utc).date().isoformat()
+    with _LEDGER_LOCK:
+        churn = _churn_load()
+        cur = int(churn.get(day, 0) or 0)
+        if cur > 0:
+            churn[day] = cur - 1
+            _churn_save(churn)
+
+
 def _churn_record(username: str, sub_id: str | None = None) -> None:
     """Bokför en uppsägning: ledger-rad (stripe:churn) + per-dag-räknare.
 
@@ -7829,10 +7954,7 @@ def _churn_record(username: str, sub_id: str | None = None) -> None:
         "stripe_sub_id": sub_id,
         "event_id": f"churn-{day}-{username}-{sub_id or ''}",
     })
-    with _LEDGER_LOCK:
-        churn = _churn_load()
-        churn[day] = int(churn.get(day, 0) or 0) + 1
-        _churn_save(churn)
+    _churn_bump()
 
 
 def _ledger_has_event(event_id: str) -> bool:
@@ -8424,6 +8546,7 @@ async def stripe_webhook(request: Request):
                         })
                         _append_tier_log(uname, "cancel_scheduled", None)
                         logger.info("💳 Cancel scheduled (portal): %s", uname)
+                        _churn_bump()  # admin ser churn direkt vid intentionen
                 else:
                     # Uppsägningen återtogs i portalen (cancel_at rensat)
                     if u.get("cancel_scheduled_at"):
@@ -8437,6 +8560,7 @@ async def stripe_webhook(request: Request):
                             "event_id": event_id,
                         })
                         logger.info("💳 Cancel reverted: %s", uname)
+                        _churn_unbump()  # intentionen återtagen → churn dras bort
                 break
     elif etype == "customer.subscription.deleted":
         sub_id = obj.get("id")

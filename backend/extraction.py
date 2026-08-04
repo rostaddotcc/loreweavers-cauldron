@@ -100,6 +100,18 @@ class Fact(BaseModel):
     superseded_by: Optional[str] = Field(
         default=None, description="ID på det faktum som ersätter detta"
     )
+    # ── Rank-meta (rörligt faktafönster, 2026-08-04) ──
+    mentions: int = Field(
+        default=1, ge=1, description="Hur många gånger faktat nämnts igen"
+    )
+    last_seen_turn: int = Field(
+        default=0, ge=0, description="Senaste turn faktat nämndes/återkom"
+    )
+    relevance: float = Field(
+        default=1.0, ge=0.0, le=1.0,
+        description="Aktuell relevans — sänks av kompakteringspasset för "
+                    "irrelevanta/glömda fakta (0.0–1.0)",
+    )
 
     @field_validator("category", mode="before")
     @classmethod
@@ -631,15 +643,17 @@ class FactRegister:
         for new_fact in facts:
             # Kontrollera mot alla aktiva (inte ersatta) fakta
             is_duplicate = False
+            matched_existing: Fact | None = None
             for existing in self._facts:
                 if existing.superseded_by is not None:
                     continue  # Ersatta fakta jämförs inte
 
                 ratio = _token_overlap_ratio(new_fact.text, existing.text)
 
-                # Exakt eller nästan exakt matchning → hoppa över
+                # Exakt eller nästan exakt matchning → räkna som omnämnande
                 if new_fact.text.strip() == existing.text.strip() or ratio > 0.90:
                     is_duplicate = True
+                    matched_existing = existing
                     break
 
                 # Samma kategori + tydlig överlapp → ersätt det gamla
@@ -651,7 +665,20 @@ class FactRegister:
                         new_fact.text[:60],
                     )
 
+            if is_duplicate and matched_existing is not None:
+                # Omnämnande av redan känd fakta → boostar rank (rörligt fönster)
+                matched_existing.mentions += 1
+                if new_fact.source_turn > matched_existing.last_seen_turn:
+                    matched_existing.last_seen_turn = new_fact.source_turn
+                logger.debug(
+                    "Faktum omnämnt igen (mentions=%d): '%s'",
+                    matched_existing.mentions,
+                    matched_existing.text[:60],
+                )
+
             if not is_duplicate:
+                # Nytt faktum — sätt last_seen_turn till sin källturn
+                new_fact.last_seen_turn = new_fact.source_turn
                 self._facts.append(new_fact)
                 added += 1
 
@@ -662,6 +689,9 @@ class FactRegister:
                 added,
                 len(facts) - added,
             )
+        elif any(f.mentions > 1 for f in facts):
+            # Inga nya men omnämnanden uppdaterade → spara ändå
+            self.save()
         return added
 
     # ── Frågor ──────────────────────────
@@ -672,10 +702,11 @@ class FactRegister:
 
     def get_relevant_facts(self, query: str, limit: int = 10) -> list[Fact]:
         """
-        Hitta relevanta fakta med nyckelordsbaserad scoring.
+        Hitta relevanta fakta med nyckelordsbaserad scoring + rank-meta.
 
-        Scoring: ordöverlapp mellan fråga och faktatext,
-        med bonus för nyare fakta (högre turn = högre score).
+        Scoring: ordöverlapp mellan fråga och faktatext, med bonus för
+        nyare fakta (högre turn), omnämnanden (mentions) och aktuell
+        relevans (relevance — sänkt av kompakteringspasset).
         """
         query_tokens = _tokenize(query)
         if not query_tokens:
@@ -687,23 +718,71 @@ class FactRegister:
 
         # Högsta turn för recentsboost
         max_turn = max((f.source_turn for f in active), default=1) or 1
+        max_mentions = max((f.mentions for f in active), default=1) or 1
 
         scored: list[tuple[float, Fact]] = []
         for fact in active:
             fact_tokens = _tokenize(fact.text)
             overlap = query_tokens & fact_tokens
             if not overlap:
-                continue
-            # Bas: andel överlappande ord
-            base_score = len(overlap) / len(query_tokens)
+                # Ingen nyckelordsträff: om faktat är VÄLDIGT hett (många
+                # omnämnanden + hög relevans) kan det ändå komma med —
+                # annars filtreras det bort (rörligt fönster).
+                hotness = (fact.mentions / max_mentions) * fact.relevance
+                if hotness < 0.5:
+                    continue
+                base_score = 0.15
+            else:
+                # Bas: andel överlappande ord
+                base_score = len(overlap) / len(query_tokens)
             # Recentsboost: nyare fakta får upp till +30 %
             recency = 0.3 * (fact.source_turn / max_turn)
+            # Omnämnanden: ofta nämnda fakta får upp till +25 %
+            mention_boost = 0.25 * (fact.mentions / max_mentions)
+            # Aktuell relevans: kompakterat/glömt → straffas med upp till −50 %
+            relevance_w = 0.5 + 0.5 * fact.relevance
             # Konfidensvikt
-            score = (base_score + recency) * (0.5 + 0.5 * fact.confidence)
+            score = ((base_score + recency + mention_boost) * relevance_w) * (0.5 + 0.5 * fact.confidence)
             scored.append((score, fact))
 
         scored.sort(key=lambda x: x[0], reverse=True)
         return [fact for _, fact in scored[:limit]]
+
+    def rank_score(self, fact: Fact, max_turn: int | None = None, max_mentions: int | None = None) -> float:
+        """
+        Normaliserad rank-poäng för ett faktum (0–1) — för visning i
+        frontend så spelaren ser HUR relevanta fakta är.
+
+        Kombinerar omnämnanden, färskhet och kompakterad relevans.
+        """
+        active = self._active_facts()
+        if not active:
+            return 0.0
+        mt = max_turn or max((f.source_turn for f in active), default=1) or 1
+        mm = max_mentions or max((f.mentions for f in active), default=1) or 1
+        recency = fact.source_turn / mt
+        mention = fact.mentions / mm
+        return round((0.45 * recency + 0.30 * mention + 0.25 * fact.relevance) * (0.5 + 0.5 * fact.confidence), 3)
+
+    def compact(self, low_relevance_ids: set[str]) -> int:
+        """
+        Kompakteringspass: sänk relevance för fakta som LLM:n markerat som
+        irrelevanta/glömda. Returnerar antal nedrankade.
+
+        Anropas av bakgrundsuppgiften (var 50:e turn) med ID:n från
+        extraction-modellens bedömning.
+        """
+        changed = 0
+        for f in self._facts:
+            if f.superseded_by is not None:
+                continue
+            if f.id in low_relevance_ids and f.relevance > 0.2:
+                f.relevance = 0.2
+                changed += 1
+                logger.info("🧹 Kompakterat faktum (relevance→0.2): '%s'", f.text[:60])
+        if changed:
+            self.save()
+        return changed
 
     def get_facts_by_category(self, category: str) -> list[Fact]:
         """Hämta alla aktiva fakta i en given kategori."""

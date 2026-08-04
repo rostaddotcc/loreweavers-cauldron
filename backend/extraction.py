@@ -45,7 +45,7 @@ from typing import Callable, Coroutine, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-logger = logging.getLogger("morkrets.extraction")
+logger = logging.getLogger("loreweavers.extraction")
 
 # ═══════════════════════════════════════
 # SÖKVÄGAR

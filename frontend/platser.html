@@ -542,10 +542,10 @@ async function loadLocations() {
       const camp = await campRes.json();
       // Initialize i18n with campaign language
       I18N.init((camp.meta && camp.meta.language) || 'en');
-      campaignSeed = hashStr(camp.meta?.campaign_id || 'morkrets-rike');
+      campaignSeed = hashStr(camp.meta?.campaign_id || 'loreweavers-cauldron');
       quests = camp.quests || [];
     } else {
-      campaignSeed = hashStr('morkrets-rike');
+      campaignSeed = hashStr('loreweavers-cauldron');
     }
 
     // Bygg questLocations: platser nämnda i aktiva uppdrag

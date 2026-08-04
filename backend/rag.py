@@ -10,7 +10,7 @@ Den här modulen kopplar samman två externa tjänster:
     via HTTP-API:et ``POST {OLLAMA_URL}/api/embed`` (den moderna endpointen;
     ``/api/embeddings`` ignorerar num_ctx och kraschar på långa sessioner).
   • **Qdrant** — vektordatabas som lagrar semantiska index i samlingen
-    ``morkrets_rike`` (768-dim, Cosine-likhet).
+    ``loreweavers_cauldron`` (768-dim, Cosine-likhet).
 
 Flöde
 -----
@@ -52,12 +52,12 @@ from qdrant_client.models import (
     PointStruct,
 )
 
-logger = logging.getLogger("morkrets.rag")
+logger = logging.getLogger("loreweavers.rag")
 
 # ── Konfiguration ──────────────────────────────────────────────────
 QDRANT_URL: str = os.environ.get("QDRANT_URL", "http://localhost:6333")
 OLLAMA_URL: str = os.environ.get("OLLAMA_URL", "http://localhost:11434")
-COLLECTION: str = "morkrets_rike"
+COLLECTION: str = "loreweavers_cauldron"
 EMBED_MODEL: str = "nomic-embed-text"
 EMBED_DIM: int = 768
 

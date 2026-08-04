@@ -1,14 +1,14 @@
-# 🐉 Mörkrets Rike — Projektdokumentation
+# 🐉 The Lore Weaver's Cauldron — Projektdokumentation
 
 > Senast uppdaterad: 2026-07-30 · 117 commits · Pre-1.0
 
 ## Översikt
 
-Mörkrets Rike är en LLM-driven D&D Dungeon Master. Spelaren pratar med en AI-DM som narrerar fritt, spelar NPCs, och bygger världen dynamiskt. En separat **Guardian** hanterar all mekanik (tärningar, skada, XP, föremål, quests) så att DM:n kan fokusera helt på berättelsen.
+The Lore Weaver's Cauldron är en LLM-driven D&D Dungeon Master. Spelaren pratar med en AI-DM som narrerar fritt, spelar NPCs, och bygger världen dynamiskt. En separat **Guardian** hanterar all mekanik (tärningar, skada, XP, föremål, quests) så att DM:n kan fokusera helt på berättelsen.
 
 - **URL**: https://dnd.rostad.cc
-- **Repo**: github.com/rostaddotcc/morkrets-rike (privat till 1.0)
-- **Docker**: port 8092, container `morkrets-rike`
+- **Repo**: github.com/rostaddotcc/loreweavers-cauldron (privat till 1.0)
+- **Docker**: port 8092, container `loreweavers-cauldron`
 - **Admin**: admin / rostad2026
 
 ---
@@ -199,7 +199,7 @@ cd ~/dnd-llm && docker compose up -d --build
 curl -s http://localhost:8092/health | python3 -m json.tool
 
 # Loggar
-docker logs -f morkrets-rike --tail 50
+docker logs -f loreweavers-cauldron --tail 50
 
 # Nginx proxy: dnd.rostad.cc → localhost:8092
 # proxy_read_timeout=300s (långa DM-svar)

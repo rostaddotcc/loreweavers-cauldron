@@ -1,4 +1,4 @@
-# 🗡️ UI/UX-förbättringsplan — Mörkrets Rike
+# 🗡️ UI/UX-förbättringsplan — The Lore Weaver's Cauldron
 
 **Audit-datum:** 2026-07-29
 **Omfattning:** chat.html, loggbok.html, platser.html, npcs.html, valvet.html, character.html, snes.css, sprites.js + backend (main.py, logbook.py, state-schema.json)
@@ -171,7 +171,7 @@ PLATS               (befintlig, längst ner)
 - Uppdatera `campaign._raw.quests` lokalt när effekter anländer (backend har redan uppdaterat state; frontend speglar).
 
 **Mobil (sidebar döljs <900px, rad 426–431):**
-- Lägg till en quest-räknare i topbar-campaign-taggen: `Kampanj: Mörkrets Rike · Tur 12 · ⚑ 2`.
+- Lägg till en quest-räknare i topbar-campaign-taggen: `Kampanj: The Lore Weaver's Cauldron · Tur 12 · ⚑ 2`.
 
 ---
 

@@ -1,4 +1,4 @@
-# Design Polish Spec — Mörkrets Rike / The Lore Weaver's Cauldron (2026-08-03)
+# Design Polish Spec — The Lore Weaver's Cauldron (2026-08-03)
 
 D&D LLM game at `~/dnd-llm/`. Brand: **The Lore Weaver's Cauldron** (dnd.rostad.cc). Dark-fantasy × terminal, **not** flashy. English UI chrome (game language separate). Do NOT use generic templates / "50% template" looks.
 

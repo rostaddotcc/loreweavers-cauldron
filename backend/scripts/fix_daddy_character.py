@@ -14,7 +14,7 @@ Patchen:
      nuvarande HP) — inget narrativt ändras
   4. Appendar en admin-notis till transcriptet så spelaren ser vad som hände
 
-Körs INUTI containern: docker exec morkrets-rike python3 /app/backend/scripts/fix_daddy_character.py
+Körs INUTI containern: docker exec loreweavers-cauldron python3 /app/backend/scripts/fix_daddy_character.py
 """
 import json
 import os

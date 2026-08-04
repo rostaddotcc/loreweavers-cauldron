@@ -1,6 +1,6 @@
 # DM-HARNESS: Arkitekturforskning för LLM-drivna D&D-spel
 
-**Fördjupad forskningsrapport för Mörkrets Rike (dnd.rostad.cc)**
+**Fördjupad forskningsrapport för The Lore Weaver's Cauldron (dnd.rostad.cc)**
 *Datum: 2026-07-29 · Författare: Hermes-forskningssubagent*
 
 ---
@@ -15,7 +15,7 @@ En "DM-harness" är kodlagret mellan LLM:n och spelet. Dess jobb är att **LLM:n
 4. **Flerlagsminne**: korttids (verbatim) + episodisk (arkiv) + semantisk (faktaregister/kunskapsgraf) + hämtning via RAG.
 5. **Två modeller**: en kreativ för narration, en billig för state-extraktion och validering.
 
-Mörkrets Rike har redan en stark grund (mekaniska taggar, rullande summaries, tagg-enforcement). De största vinsterna ligger i: **hierarkisk minnessökning (RAG), ett auktoritärt faktaregister, strukturerad JSON-validering med retry, och en dedikerad extraktionsmodell.**
+The Lore Weaver's Cauldron har redan en stark grund (mekaniska taggar, rullande summaries, tagg-enforcement). De största vinsterna ligger i: **hierarkisk minnessökning (RAG), ett auktoritärt faktaregister, strukturerad JSON-validering med retry, och en dedikerad extraktionsmodell.**
 
 ---
 
@@ -27,7 +27,7 @@ Det finns ingen universell procentsats, men mönstret är konsekvent: **systempr
 
 AI Dungeon använder en uttrycklig **70%-regel**: om de "nödvändiga elementen" (instruktioner, plot essentials, summary, story cards) överstiger 70% av fönstret, trimmas lägre-prioriterade sektioner. Minnet närmast nutid och senaste handlingen inkluderas alltid i sin helhet.
 
-En praktisk budget för ett 32k-fönster (Qwen3.8-max) i Mörkrets Rike:
+En praktisk budget för ett 32k-fönster (Qwen3.8-max) i The Lore Weaver's Cauldron:
 
 ```
 ┌──────────────────────────────────────────────────────────┐
@@ -53,7 +53,7 @@ En praktisk budget för ett 32k-fönster (Qwen3.8-max) i Mörkrets Rike:
 
 ### 1.2 Sliding window: hur många meddelanden?
 
-Mörkrets Rike kör idag `last_n=16`. Det är rimligt, men gränsen är skör: ett meddelande kan vara allt från 20 till 400 tokens. Bättre strategi är en **token-baserad** window, inte meddelandebaserad:
+The Lore Weaver's Cauldron kör idag `last_n=16`. Det är rimligt, men gränsen är skör: ett meddelande kan vara allt från 20 till 400 tokens. Bättre strategi är en **token-baserad** window, inte meddelandebaserad:
 
 ```python
 def sliding_window_by_tokens(transcript, budget_tokens, min_messages=8):
@@ -72,7 +72,7 @@ def sliding_window_by_tokens(transcript, budget_tokens, min_messages=8):
 
 ### 1.3 Hierarkisk summering
 
-Mörkrets Rike summerar var 20:e tur till en platt lista. Forskningen (arXiv 2308.15022 "Recursively Summarizing Enables Long-Term Dialogue Memory") visar att **rekursiv/hierarkisk** summering slår platt summering rejält för långa konversationer:
+The Lore Weaver's Cauldron summerar var 20:e tur till en platt lista. Forskningen (arXiv 2308.15022 "Recursively Summarizing Enables Long-Term Dialogue Memory") visar att **rekursiv/hierarkisk** summering slår platt summering rejält för långa konversationer:
 
 ```
 Nivå 0 (rådata):    [tur 1..20] [tur 21..40] [tur 41..60] ...
@@ -83,7 +83,7 @@ Nivå 3 (kampanj):          campaign-arc       ← var 3:e kapitel
 
 Varje nivå sammanfattar nivån under. Prompten injicerar **senaste 2-3 på varje nivå** — detta ger både detalj (nivå 1) och långtidsbåge (nivå 3) inom en fast token-budget oavsett kampanjlängd.
 
-**Vilken modell?** En billig/snabb modell (Mörkrets Rikes `ATMOSPHERE_MODEL`-mönster, eller `qwen3.6-flash`) — summering kräver precision, inte kreativitet. dnd-llm-game använder `granite4:350m` för denna typ av utility-arbete.
+**Vilken modell?** En billig/snabb modell (The Lore Weaver's Cauldron's `ATMOSPHERE_MODEL`-mönster, eller `qwen3.6-flash`) — summering kräver precision, inte kreativitet. dnd-llm-game använder `granite4:350m` för denna typ av utility-arbete.
 
 **Vad ska bevaras exakt?** NarrativeEngine-P:s regel: tärningsresultat, HP/MP-värden och alla egennamn bevaras ordagrant genom varje komprimering. "Dramatiska ögonblick" taggas och överlever omkomprimering. Detta är kritiskt — en summary som tappar att "Kael dog" eller "spelaren lovade att återlämna svärdet" bryter immersionen permanent.
 
@@ -100,7 +100,7 @@ När fönstret svämmar över, i stigande kapningsordning (det som kapas först 
 
 ## 2. DM-harness-mönstret
 
-En harness är en pipeline med tre faser: **PRE → LLM → POST**. Mörkrets Rike har redan en ansats till detta i `chat()`-endpointen, men den kan formaliseras.
+En harness är en pipeline med tre faser: **PRE → LLM → POST**. The Lore Weaver's Cauldron har redan en ansats till detta i `chat()`-endpointen, men den kan formaliseras.
 
 ### 2.1 Pre-processing (FÖRE LLM-anropet)
 
@@ -133,7 +133,7 @@ def pre_process(state, player_input, turn):
 
 ### 2.2 Post-processing (EFTER LLM-anropet)
 
-Mörkrets Rike gör redan mycket här (`_parse_npcs`, `_parse_roll_requests`, `_parse_mechanical_tags`). Det som saknas är **validering och retry**:
+The Lore Weaver's Cauldron gör redan mycket här (`_parse_npcs`, `_parse_roll_requests`, `_parse_mechanical_tags`). Det som saknas är **validering och retry**:
 
 ```python
 async def post_process(raw_reply, state, max_retries=2):
@@ -167,7 +167,7 @@ async def post_process(raw_reply, state, max_retries=2):
 
 Det finns tre nivåer av strukturering, i stigande tillförlitlighet:
 
-**Nivå 1 — Inline-taggar (Mörkrets Rikes nuvarande):** `[SKADA:12]` i fri prosa. Lätt att implementera, men LLM:n kan "glömma" taggar eller narrera skada utan tagg. Kräver enforcement-streaks (som redan finns).
+**Nivå 1 — Inline-taggar (The Lore Weaver's Cauldron's nuvarande):** `[SKADA:12]` i fri prosa. Lätt att implementera, men LLM:n kan "glömma" taggar eller narrera skada utan tagg. Kräver enforcement-streaks (som redan finns).
 
 **Nivå 2 — Sektionsblock (SoloQuest):** kräv fyra explicita sektioner varje tur:
 
@@ -191,7 +191,7 @@ Parsern mappar MECHANICS direkt till state-övergångar. Klienten kollar `roll:t
 
 **Nivå 3 — Constrained decoding / JSON mode:** grammatikbegränsad avkodning (Outlines, XGrammar, OpenAI `response_format`) *garanterar* giltig JSON vid genereringstillfället. Kombinera med post-validering (Pydantic/Instructor) för innehållskorrekthet — "defense in depth". Instructor-biblioteket patchar LLM-klienten, validerar mot en Pydantic-modell och **retry:ar automatiskt med valideringsfelet** om det blir fel.
 
-**Rekommendation för Mörkrets Rike:** behåll inline-taggar för prosa-nära mekanik (de fungerar och är spelarvänliga), men lägg till ett `<STATE_UPDATE>`-JSON-block + Pydantic-validering med retry för de tunga state-förändringarna. Qwen3.8 stödjer `response_format`/JSON-läge via DashScope.
+**Rekommendation för The Lore Weaver's Cauldron:** behåll inline-taggar för prosa-nära mekanik (de fungerar och är spelarvänliga), men lägg till ett `<STATE_UPDATE>`-JSON-block + Pydantic-validering med retry för de tunga state-förändringarna. Qwen3.8 stödjer `response_format`/JSON-läge via DashScope.
 
 ### 2.4 Multi-pass-arkitektur
 
@@ -213,7 +213,7 @@ Pass 3 (valfri):          validering/konsistenskontroll (lore check)
 
 ### 3.1 Narrationslängd
 
-Mörkrets Rike har "håll narration under 150 ord" i prompten. Det fungerar, men modeller driver mot längre svar över tid. Tre förstärkningar:
+The Lore Weaver's Cauldron har "håll narration under 150 ord" i prompten. Det fungerar, men modeller driver mot längre svar över tid. Tre förstärkningar:
 
 - **Hård `max_tokens`** (redan 1024) — det fysiska taket.
 - **Explicit intervall** istället för tak: "Skriv 80-150 ord. Action: kortare (60-100). Atmosfär: längre (120-180)."
@@ -221,14 +221,14 @@ Mörkrets Rike har "håll narration under 150 ord" i prompten. Det fungerar, men
 
 ### 3.2 NPC-dialog-separation
 
-Mörkrets Rike har redan `@NPC`-konvention och NPC-registry med färger/ikoner. Nästa steg (från NarrativeEngine-P):
+The Lore Weaver's Cauldron har redan `@NPC`-konvention och NPC-registry med färger/ikoner. Nästa steg (från NarrativeEngine-P):
 
 - **Personlighets-hexagon** per NPC (6 axlar, −3 till +3: Drive, Diligence, Boldness, Warmth, Empathy, Composure) som styr *hur* NPC:n talar. Värdena driver naturligt över tid — ett svek urholkar Warmth.
 - **Voice-profil i state:** ålderdomligt för gamla, kort för soldater, poetiskt för alver (finns redan i prompten — gör det till data per NPC istället för global instruktion).
 
 ### 3.3 Tonkonsistens över hundratals turer
 
-- **Author's Note / ton-ankare (NovelAI):** en kort ton-beskrivning injiceras *sent* i prompten (nära generation = högre uppmärksamhetsvikt). Mörkrets Rike lägger ton i början av systemprompten; att duplicera en komprimerad ton-påminnelse precis före historiken förstärker efterlevnaden.
+- **Author's Note / ton-ankare (NovelAI):** en kort ton-beskrivning injiceras *sent* i prompten (nära generation = högre uppmärksamhetsvikt). The Lore Weaver's Cauldron lägger ton i början av systemprompten; att duplicera en komprimerad ton-påminnelse precis före historiken förstärker efterlevnaden.
 - **Lore Check (NarrativeEngine-P):** ett QA-verktyg som kör på valfritt meddelande och korsrefererar mot lore + arkiv, returnerar en dom (consistent / unsupported / contradicts) med citat och omskrivningsförslag. Kan automatiseras som ett bakgrundspass.
 
 ### 3.4 Spelar-synlig vs intern text
@@ -243,7 +243,7 @@ Allt som lagras ska inte visas:
 | DM-intern resonemang (`<think>`) | ❌ (strippas) | ❌ |
 | Faktaregister-extraktion | ✅ | ❌ (kan visas i debugpanel) |
 
-Mörkrets Rike strippar redan `<think>`-taggar i `_extract_json` — bra. Utöka så att *all* intern struktur strippas innan `append_message` sparar till transkriptet, så att arkivet bara innehåller ren prosa.
+The Lore Weaver's Cauldron strippar redan `<think>`-taggar i `_extract_json` — bra. Utöka så att *all* intern struktur strippas innan `append_message` sparar till transkriptet, så att arkivet bara innehåller ren prosa.
 
 ---
 
@@ -251,7 +251,7 @@ Mörkrets Rike strippar redan `<think>`-taggar i `_extract_json` — bra. Utöka
 
 ### 4.1 JSON vs naturligt språk vs hybrid
 
-Forskning och praktik pekar mot **hybrid**: strukturerad JSON för maskinläsbar state, men *renderad till kompakt naturligt språk* i prompten. Ren JSON med `indent=2` (Mörkrets Rikes nuvarande `json.dumps(char, indent=1)`) slösar tokens på formatering.
+Forskning och praktik pekar mot **hybrid**: strukturerad JSON för maskinläsbar state, men *renderad till kompakt naturligt språk* i prompten. Ren JSON med `indent=2` (The Lore Weaver's Cauldron's nuvarande `json.dumps(char, indent=1)`) slösar tokens på formatering.
 
 ```python
 # FÖRE (slösar tokens):
@@ -275,17 +275,17 @@ föremål finns i inventariet om det inte står nedan.
 HP: 38/52 | Plats: Kvarnens källare | Fiender: Skelett (4/22 HP)
 ```
 
-Mörkrets Rike har redan "Motsäg dig inte" i prompten — gör det till en **maskingenererad, alltid-närvarande sanningsektion** snarare än en allmän instruktion.
+The Lore Weaver's Cauldron har redan "Motsäg dig inte" i prompten — gör det till en **maskingenererad, alltid-närvarande sanningsektion** snarare än en allmän instruktion.
 
 ### 4.3 Delta vs full state
 
-- **Full state varje tur** för små states (<1k tokens) — enkelt, robust, ingen drift. Mörkrets Rike är här idag och det fungerar.
+- **Full state varje tur** för små states (<1k tokens) — enkelt, robust, ingen drift. The Lore Weaver's Cauldron är här idag och det fungerar.
 - **Delta-uppdateringar** när statet växer: skicka full state var N:e tur, däremellan bara `[FÖRÄNDRAT sedan förra turen: HP 52→38, ny NPC: Aldric]`. Kräver att harnessen diff:ar state mellan turer.
 - **Previous-turn mechanical trace (SoloQuest):** skicka med förra turnens *faktiskt applicerade* mekanik ("Goblin Scout tog 6 skada, nu 4 HP"). Förhindrar drift där modellen åter-narrerar en träff som egentligen var en miss.
 
 ### 4.4 Entitet-relation-representation
 
-Mörkrets Rikes `npcs[]` är en platt lista. Nästa steg är en **typad relationsgraf** (open-tabletop-gm, NarrativeEngine-P):
+The Lore Weaver's Cauldron's `npcs[]` är en platt lista. Nästa steg är en **typad relationsgraf** (open-tabletop-gm, NarrativeEngine-P):
 
 ```json
 {
@@ -311,7 +311,7 @@ Varje relation har en **verbatim käll-ankare** (vilken tur den uppstod). En `sc
 
 ### 5.1 RAG för kampanjhistorik
 
-Mörkrets Rikes största gap. Idag: senaste 2 summaries + 16 meddelanden. Allt äldre är osynligt för LLM:n.
+The Lore Weaver's Cauldron's största gap. Idag: senaste 2 summaries + 16 meddelanden. Allt äldre är osynligt för LLM:n.
 
 **Tvåfas-hämtning (NarrativeEngine-P):**
 1. **Kapitel-skann:** utvärdera LLM-genererade kapitelöversikter för att identifiera vilka förseglade kapitel som är relevanta.
@@ -319,7 +319,7 @@ Mörkrets Rikes största gap. Idag: senaste 2 summaries + 16 meddelanden. Allt �
 
 Resultat: "GM:n kan exakt minnas att Bob svek sällskapet i kapitel 3 och citera den exakta dialogen — även om det var 50 kapitel och 200 sessioner sedan."
 
-**Implementation för Mörkrets Rike:**
+**Implementation för The Lore Weaver's Cauldron:**
 - Embedding-modell: `nomic-embed-text` (Ollama, lokalt) eller DashScope-embedding.
 - Vektorlager: `sqlite-vec` (passar den befintliga JSON-per-kampanj-strukturen) eller LanceDB (dnd-llm-game).
 - Chunkning: en embedding per scen/summary + en per NPC-interaktion.
@@ -336,7 +336,7 @@ Zep (arXiv 2501.13956) och MRAgent (arXiv 2606.06036) visar att **hybrid-hämtni
 | **Episodisk** | "vad hände" — händelser i tid | Vektor-arkiv, tidsstämplar | "I tur 42 stred vi mot skelett i kvarnen" |
 | **Semantisk** | "vad är sant" — fakta om världen | Faktaregister / kunskapsgraf | "Kael är död. Byn Gråvakt brändes. Spelaren är skyldig Aldric 50 gp." |
 
-Mörkrets Rike har embryot till semantiskt minne i `lore[]` (via `[KONSEKVENS:]`-taggen) och `state.json`. Det som saknas är att **systematiskt extrahera och deduplicera** fakta.
+The Lore Weaver's Cauldron har embryot till semantiskt minne i `lore[]` (via `[KONSEKVENS:]`-taggen) och `state.json`. Det som saknas är att **systematiskt extrahera och deduplicera** fakta.
 
 ### 5.3 Minneskonsolidering
 
@@ -360,11 +360,11 @@ Råtranskript (100 sessioner)
 
 ## 6. Riktiga implementationer (kodnivå)
 
-| Repo | Nyckelmönster | Lärdom för Mörkrets Rike |
+| Repo | Nyckelmönster | Lärdom för The Lore Weaver's Cauldron |
 |---|---|---|
 | **NarrativeEngine-P** (Sagesheep) | Förlustfritt scen-arkiv, tvåfas RAG, auto-condensation (3 strategier), Divergence Register, NPC personlighets-hexagon, witness tracking, Lore Check, scene-level rollback | Den mest kompletta referensen. Prioritera: Divergence Register + tvåfas RAG. |
-| **dnd-llm-game** (tegridydev) | Dual model (DM + utility), SSE-streaming, LanceDB RAG för PDF-lore, hård svarskapning (1000 tkn), utility-modell genererar spelarval | Bekräftar dual-model + RAG. Lätt att läsa (FastAPI, som Mörkrets Rike). |
-| **SoloQuest** (dev.to) | 4-lagers prompt (Rules Contract, per-turn SRD-injection, authoritative state, enforced structure), WRONG/RIGHT-exempel, previous-turn trace | Mörkrets Rike har redan WRONG/RIGHT + authoritative-inslag. Lägg till per-turn regelinjicering. |
+| **dnd-llm-game** (tegridydev) | Dual model (DM + utility), SSE-streaming, LanceDB RAG för PDF-lore, hård svarskapning (1000 tkn), utility-modell genererar spelarval | Bekräftar dual-model + RAG. Lätt att läsa (FastAPI, som The Lore Weaver's Cauldron). |
+| **SoloQuest** (dev.to) | 4-lagers prompt (Rules Contract, per-turn SRD-injection, authoritative state, enforced structure), WRONG/RIGHT-exempel, previous-turn trace | The Lore Weaver's Cauldron har redan WRONG/RIGHT + authoritative-inslag. Lägg till per-turn regelinjicering. |
 | **Multihog D&D Framework** (SillyTavern) | Second-pass state-extraktion, Lorebook Agent, World Progression, hybrid RNG (commitment-based), temporal buff-decay | Second-pass extraktion + commitment-RNG (deklarera DC före kast). |
 | **open-tabletop-gm** (Bobby-Gray) | Allt i Markdown, typad relationsgraf med käll-ankare, scene-context-fråga, Python hanterar ALL mekanik (noll LLM) | Relationsgraf + "LLM rör aldrig mekanik"-princip. |
 | **llm_RPG** (gddickinson) | Strukturerat JSON-protokoll för NPC-dialog, retrieval-scored NPC-minne, "Legendarium" (världens kollektiva minne), heuristisk offline-fallback | JSON-protokoll + fallback om LLM:n fallerar. |
@@ -372,7 +372,7 @@ Råtranskript (100 sessioner)
 
 ---
 
-## 7. Föreslagen DM-HARNESS-ARKITEKTUR för Mörkrets Rike
+## 7. Föreslagen DM-HARNESS-ARKITEKTUR för The Lore Weaver's Cauldron
 
 Konkret design byggd på den befintliga kodbasen (`main.py`, `state_manager.py`, `models.py`).
 

@@ -26,12 +26,12 @@ from datetime import datetime, date, timedelta, timezone
 from pathlib import Path
 from typing import AsyncGenerator
 
-logger = logging.getLogger("morkrets")
+logger = logging.getLogger("loreweavers")
 
 # ═══════════════════════════════════════
 # 🛠️ MASKINRUMMET — ringbuffer för live-debugloggar
 # ═══════════════════════════════════════
-# Fångar alla loggar från morkrets.* (main, rag, extraction, …) i en
+# Fångar alla loggar från loreweavers.* (main, rag, extraction, …) i en
 # ringbuffer som frontend kan polla via /api/debug/logs. Påverkar inte
 # den vanliga stdout-loggen — bara en extra kopia i minnet.
 DEBUG_LOGS: deque = deque(maxlen=600)
@@ -41,7 +41,7 @@ _LOG_ORDER = {"DEBUG": 10, "INFO": 20, "WARNING": 30, "ERROR": 40, "CRITICAL": 5
 # poster kan filtreras per instans. Sätts i _get_current_user; ärvs av
 # asyncio.create_task-bakgrundsuppgifter (guardian, dag-entry, …).
 _LOG_CTX: contextvars.ContextVar = contextvars.ContextVar(
-    "morkrets_log_ctx", default={"user": None, "campaign": None}
+    "loreweavers_log_ctx", default={"user": None, "campaign": None}
 )
 
 # Håller referenser till bakgrundsuppgifter så de inte garbage-collectas
@@ -94,7 +94,7 @@ class _RingBufferHandler(logging.Handler):
                 "ts": record.created,
                 "time": datetime.fromtimestamp(record.created).strftime("%H:%M:%S"),
                 "level": record.levelname,
-                "name": record.name.replace("morkrets", "mr").lstrip("."),
+                "name": record.name.replace("loreweavers", "lw").lstrip("."),
                 "msg": record.getMessage(),
                 "user": ctx.get("user"),
                 "campaign": ctx.get("campaign"),

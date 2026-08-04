@@ -1,4 +1,4 @@
-# 🔍 GAP-ANALYS — Mörkrets Rike
+# 🔍 GAP-ANALYS — The Lore Weaver's Cauldron
 
 **Datum:** 2026-07-28
 **Omfattning:** Alla frontend/*.html, frontend/sfx.js, backend/*.py, *.md, state-schema.json

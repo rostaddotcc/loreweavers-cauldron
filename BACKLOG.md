@@ -1,4 +1,4 @@
-# 🗡️ BACKLOG — Mörkrets Rike / The Lore Weaver's Cauldron
+# 🗡️ BACKLOG — The Lore Weaver's Cauldron
 
 Kommande features och förbättringar. Uppdaterad 2026-08-02.
 

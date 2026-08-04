@@ -35,7 +35,7 @@ import random
 import re
 from urllib.parse import quote
 
-logger = logging.getLogger("morkrets.combat")
+logger = logging.getLogger("loreweavers.combat")
 
 # ═══════════════════════════════════════
 # TÄRNINGAR

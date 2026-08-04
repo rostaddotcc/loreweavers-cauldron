@@ -63,7 +63,7 @@ def _ensure_hit_dice(ch: dict) -> dict:
     hd.setdefault("remaining", hd["total"])
     return hd
 
-logger = logging.getLogger("morkrets.guardian")
+logger = logging.getLogger("loreweavers.guardian")
 
 ModelCallFn = Callable[[list[dict]], Coroutine[None, None, str]]
 

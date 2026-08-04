@@ -1,4 +1,4 @@
-# 🐉 Mörkrets Rike — Speldesignanalys
+# 🐉 The Lore Weaver's Cauldron — Speldesignanalys
 
 **Datum:** 2026-07-28
 **Analys:** Fullständig spelupplevelse, inte kodgranskning
@@ -395,7 +395,7 @@ DM:n kan trigga detta via `[SLUMPA:encounter]`-tagg, eller backend kan injecta e
 
 ## 8. Slutdom
 
-**Mörkrets Rike har en av de vackraste fasaderna jag sett i ett webbaserat rollspel.** Login-skärmen, arketypkorten, NPC-kodexen, ember-partiklarna, DM-tankarna — det är genomtänkt, atmosfäriskt, och genuint vackert. Texten i NPC-kodexen är bättre skriven än i många publicerade D&D-äventyr.
+**The Lore Weaver's Cauldron har en av de vackraste fasaderna jag sett i ett webbaserat rollspel.** Login-skärmen, arketypkorten, NPC-kodexen, ember-partiklarna, DM-tankarna — det är genomtänkt, atmosfäriskt, och genuint vackert. Texten i NPC-kodexen är bättre skriven än i många publicerade D&D-äventyr.
 
 **Men under fasaden finns inget spel.** Det finns en chatbot. En väldigt bra chatbot med en fantastisk kostym, men en chatbot. Karaktären spelaren skapar försvinner. NPCs i kodexen existerar inte i chatten. Tärningarna påverkar ingenting. HP är en siffra på en sida som ingen läser. Quests är text som aldrig markeras som slutförd. Världen är en sträng.
 

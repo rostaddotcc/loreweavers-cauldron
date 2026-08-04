@@ -1,6 +1,6 @@
 # Design Polish Spec v2 — Onboarding models + Gate removal + Loading + CLI chat (2026-08-03)
 
-Project: `~/dnd-llm/` — Mörkrets Rike / The Lore Weaver's Cauldron (dnd.rostad.cc). Dark-fantasy × terminal. English UI chrome.
+Project: `~/dnd-llm/` — The Lore Weaver's Cauldron (dnd.rostad.cc). Dark-fantasy × terminal. English UI chrome.
 
 ## File ownership (NON-NEGOTIABLE)
 

@@ -1,6 +1,6 @@
 # ⚔️ Combat Tracker + Audit Fixes — Implementation Spec (2026-07-31)
 
-Projekt: `~/dnd-llm` (repo rostaddotcc/morkrets-rike). Live: dnd.rostad.cc:8092.
+Projekt: `~/dnd-llm` (repo rostaddotcc/loreweavers-cauldron). Live: dnd.rostad.cc:8092.
 Kontrakt mellan tre parallella subagent-spår. Läs HELA denna fil innan du börjar.
 
 ## SHARED JSON KONTRAKT (alla spår)
@@ -199,9 +199,9 @@ Filwhitelist: `frontend/chat.html`, `frontend/snes.css`, `frontend/sprites.js`. 
 ### C4. Initiativceremoni
 - När `[COMBAT:]`-tagg innehåller initiative (och det inte redan visats): rendera i chatten en `.initiative-reveal`-kort: `Goblin A: 14 · Du: 17 → **Du agerar först**` (sortera, markera första). SFX.battle().
 
-### C5. Resume-recap "Senast i Mörkrets Rike…" (P1 UX)
+### C5. Resume-recap "Senast i The Lore Weaver's Cauldron…" (P1 UX)
 - I `loadTranscript`, om kampanjen har historik (transcript längre än ~2 meddelanden OCH inte redan visat denna session): lägg en hopfällbar `.resume-card` överst i chatten:
-  - Titeln: "🕯️ Senast i Mörkrets Rike…"
+  - Titeln: "🕯️ Senast i The Lore Weaver's Cauldron…"
   - Innehåll: Plats (world.current_location), Dag (world.day), HP (current/max), Aktiva uppdrag (första 3), senaste 1-2 DM-meddelanden (kort, 140 tecken).
   - Data från `API.getCampaign()` + transkriptet. Kollapsbar (klicka headern).
   - Visa bara en gång per sidladdning (sessionStorage-flagga).

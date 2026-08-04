@@ -739,6 +739,7 @@ const I18N = (() => {
     'ur valvet? Detta kan inte ångras.': 'from the vault? This cannot be undone.',
     'Kunde inte radera': 'Could not delete',
     'Mörkrets Rike': 'The Lore Weaver\'s Cauldron',    // ── npcs.html filter labels ──
+    'The Lore Weaver\'s Cauldron': 'The Lore Weaver\'s Cauldron',
     'Alla': 'All',
     'Allierade': 'Allies',
     'Uppdrag': 'Quests',

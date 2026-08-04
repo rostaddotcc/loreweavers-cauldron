@@ -11,6 +11,10 @@ services:
     container_name: morkrets-rike
     restart: unless-stopped
     ports:
+      # 2026-08-04: bindning hålls på 0.0.0.0 — nginx (NPM) proxar till
+      # 192.168.0.53:8092 och 127.0.0.1-bindning gav 502. Exposure-hantering:
+      # (a) Cloudflare frontar domänen, (b) REKOMMENDERAD: ta bort port-
+      # forwarden för 8092 i routern så origin-porten inte nås utifrån.
       - "8092:8090"
     volumes:
       # Kampanjdata + användare persistas
@@ -21,6 +25,8 @@ services:
     environment:
       - HOST=0.0.0.0
       - PORT=8090
+      # HTTPS-only (Cloudflare/nginx) → Secure-cookie flaggan på
+      - COOKIE_SECURE=1
       - QDRANT_URL=http://qdrant:6333
       - OLLAMA_URL=http://host.docker.internal:11434
       - OLLAMA_BASE_URL=http://host.docker.internal:11434/v1

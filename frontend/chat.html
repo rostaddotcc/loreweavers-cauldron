@@ -2283,7 +2283,7 @@ function buildMessage(type, npcKey, text, meta) {
     segs.forEach(seg => {
       if (seg.kind === 'npc') {
         inner += `<div class="npc-quote" style="--npc-color:${seg.npcColor}">` +
-          `<div class="nq-who" onclick="openNpcDrawer('${seg.npcKey}')" title="Open dossier"><span class="dot"></span>${escapeHtml(seg.npcName)}</div>` +
+          `<div class="nq-who" onclick="openNpcDrawer('${jsStr(seg.npcKey)}')" title="Open dossier"><span class="dot"></span>${escapeHtml(seg.npcName)}</div>` +
           `<div class="nq-text">${highlightTerms(mdToHtml(escapeHtml(seg.text)))}</div></div>`;
       } else {
         inner += `<div class="text">${highlightTerms(mdToHtml(escapeHtml(seg.text)))}</div>`;
@@ -2300,7 +2300,7 @@ function buildMessage(type, npcKey, text, meta) {
     el.style.setProperty('--npc-color', n.color);
     el.setAttribute('data-npc', npcKey || '');
     el.innerHTML = `
-      <span class="msg-avatar" data-npc-key="${npcKey}" onclick="pickAvatar('npc:${npcKey}')" title="${I18N.t('Klicka för att byta bild')}">${AVATARS['npc:' + npcKey] ? `<img src="${AVATARS['npc:' + npcKey]}" alt="">` : SPR.html(n.icon || '🎭')}</span>
+      <span class="msg-avatar" data-npc-key="${attrEscape(npcKey || '')}" onclick="pickAvatar('npc:${jsStr(npcKey || '')}')" title="${I18N.t('Klicka för att byta bild')}">${AVATARS['npc:' + npcKey] ? `<img src="${AVATARS['npc:' + npcKey]}" alt="">` : SPR.html(n.icon || '🎭')}</span>
       <div class="bubble">
         <div class="who" onclick="openNpcDrawer(this.closest('.msg').dataset.npc)" title="Open dossier" style="cursor:pointer"><span class="dot"></span>${n.name}</div>
         <div class="text">${highlightTerms(mdToHtml(escapeHtml(text)))}</div>
@@ -4055,6 +4055,17 @@ async function handleSlashCommand(text) {
 
 function escapeHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Escape för HTML-attributkontext (data-x="...") — escapeHtml täcker inte citattecken.
+function attrEscape(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Escape för JS-strängkontext (onclick='...') — backslash + enkla citattecken.
+// Skyddar mot XSS via LLM-genererade NPC-namn (2026-08-04, security audit P2).
+function jsStr(s) {
+  return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
 // Enkel markdown → HTML för DM/NPC-text (**fet**, *kursiv*, radbrytningar)

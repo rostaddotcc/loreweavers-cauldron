@@ -46,6 +46,9 @@ const I18N = (() => {
     'Läser in': 'Loading',
     'Ljud av/på': 'Sound on/off',
     'Musik av/på': 'Music on/off',
+    // ── Battle log (2026-08-04: engelska versionen visade svenska) ──
+    '⚔ STRIDSLOGG': '⚔ BATTLE LOG',
+    'Minimera stridslogg': 'Minimize battle log',
     'Vägskälet': 'The Crossroads',
     '🚪 Vägskälet': '🚪 The Crossroads',
     'Karaktär': 'Character',

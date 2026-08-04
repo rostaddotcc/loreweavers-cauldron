@@ -189,9 +189,17 @@ app = FastAPI(title="The Lore Weaver's Cauldron", version="1.0.0")
 
 @app.middleware("http")
 async def ip_tracking_middleware(request, call_next):
-    """Spåra klient-IP per användare (för admin-landskoll). Läser X-Forwarded-For
-    (nginx sätter den), fallback till direkt anslutning. Körs för varje request —
-    gör aldrig nätverksanrop, bara en snabb token-decode + in-memory-update."""
+    """Spåra klient-IP per användare (för admin-landskoll) + säkerhetsheaders.
+
+    IP: läser X-Forwarded-For (nginx sätter den), fallback till direkt
+    anslutning. Körs för varje request — gör aldrig nätverksanrop, bara en
+    snabb token-decode + in-memory-update.
+
+    Headers (2026-08-04, security audit P1): X-Content-Type-Options,
+    X-Frame-Options (Codex-iframe är same-origin), Referrer-Policy,
+    Permissions-Policy + HSTS. CSP utelämnas medvetet — UI:t är tätt
+    inline-stilat/scriptat och en strikt CSP skulle bryta spelet.
+    """
     try:
         cookie = request.cookies.get(COOKIE_NAME)
         if cookie:
@@ -202,7 +210,13 @@ async def ip_tracking_middleware(request, call_next):
                     iplog.record_ip(payload["sub"], ip)
     except Exception:
         pass  # aldrig blockera spelet för IP-spårning
-    return await call_next(request)
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000"
+    return response
 
 # ═══════════════════════════════════════
 # Language helpers
@@ -937,7 +951,9 @@ def _parse_result_tag(text: str, state: dict) -> tuple[str, list[dict]]:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    # 2026-08-04 (security audit P1): appen är same-origin (FastAPI serverar
+    # frontenden) — "*" + credentials var onödigt öppet. Endast publika domänen.
+    allow_origins=["https://dnd.rostad.cc"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -947,6 +963,8 @@ store = CampaignStore()
 vault = CharacterVault()
 
 COOKIE_NAME = "morkrets_token"
+# Sätts i docker-compose (prod = HTTPS-only). Tester/lokal http-dev default false.
+_COOKIE_SECURE = os.getenv("COOKIE_SECURE", "0").lower() in ("1", "true", "yes")
 
 # ── Konto-säkerhet (iteration 1) ──
 # Lås för alla users.json-mutationer (login last_login, register, admin-ändringar).
@@ -1191,6 +1209,28 @@ def _turns_available(username: str) -> int:
         return max(0, turn_cap + turn_bonus - turns_used)
     except Exception:
         return 0
+
+
+def _gate_turn_quota(username: str) -> None:
+    """Kasta 403 om kontot har 0 turns kvar (samma shape som chat-gaten).
+
+    Används av LLM-tunga endpoints som INTE är chatten (karaktärsgenerering)
+    så de inte blir gratis kostnadsmissbruk. 2026-08-04 (security audit P1).
+    """
+    turns_left = _turns_available(username)
+    if turns_left <= 0:
+        _udata = load_users().get(username, {})
+        _reset = _udata.get("reset_date") if isinstance(_udata, dict) else None
+        _reset = _reset or _today_str()
+        logger.info("⛔ Turn cap reached (char-gen): %s", username)
+        raise HTTPException(
+            403,
+            detail={
+                "cap_reached": True,
+                "reset_date": _reset,
+                "message": f"Your free turns are spent. New turns on {_reset} — or upgrade for unlimited.",
+            },
+        )
 
 
 def _consume_turn(username: str) -> None:
@@ -1894,10 +1934,14 @@ class RegisterRequest(BaseModel):
 
 def _set_auth_cookie(response: Response, token: str) -> None:
     # 2h-session: cookie och JWT-expiry matchar (JWT_EXPIRY_HOURS=2 i auth.py).
+    # secure (2026-08-04, security audit P1): sätts via COOKIE_SECURE=1 i
+    # docker-compose (prod körs enbart bakom HTTPS). Default av — TestClient
+    # och lokal http-dev vägrar annars spara Secure-cookies.
     response.set_cookie(
         key=COOKIE_NAME,
         value=token,
         httponly=True,
+        secure=_COOKIE_SECURE,
         max_age=7200,
         samesite="lax",
         path="/",
@@ -2009,11 +2053,22 @@ async def reset_password(req: PasswordResetRequest, response: Response):
 @app.post("/api/login")
 async def login(req: LoginRequest, response: Response):
     username = normalize_username(req.username)
+    # ── Brute-force-lås (2026-08-04, security audit P1): 10 misslyckade
+    # försök inom 5 min → 429. Per användarnamn (proxy/IP-säkert). ──
+    now = datetime.now(timezone.utc)
+    fails = [t for t in _LOGIN_FAILS.get(username, []) if now - t < _LOGIN_FAIL_WINDOW]
+    if len(fails) >= _LOGIN_FAIL_MAX:
+        raise HTTPException(429, "Too many login attempts. Wait a few minutes.")
+    _LOGIN_FAILS[username] = fails
     with _USER_LOCK:
         users = load_users()
         user = users.get(username)
         if not user or not isinstance(user, dict) or not verify_password(req.password, user["password_hash"]):
+            _LOGIN_FAILS.setdefault(username, []).append(now)
+            # Trimma gamla poster så dict inte växer utan gräns.
+            _LOGIN_FAILS[username] = [t for t in _LOGIN_FAILS[username] if now - t < timedelta(hours=1)]
             raise HTTPException(401, "Fel användarnamn eller lösenord")
+        _LOGIN_FAILS.pop(username, None)
         # Om gamla konton saknar fält — backfilla utan att krascha
         user.setdefault("created_at", _now_iso())
         user["last_login"] = _now_iso()
@@ -2038,6 +2093,10 @@ RESET_TOKEN_TTL = timedelta(minutes=30)
 RESET_RATE_LIMIT = timedelta(minutes=5)
 # In-memory rate limit för direkt-flödet (reset-password) — per användarnamn.
 _DIRECT_RESET_TIMES: dict[str, datetime] = {}
+# Brute-force-lås för /api/login: per användarnamn, 10 misslyckade / 5 min → 429.
+_LOGIN_FAILS: dict[str, list] = {}
+_LOGIN_FAIL_WINDOW = timedelta(minutes=5)
+_LOGIN_FAIL_MAX = 10
 
 
 @app.post("/api/auth/request-reset")
@@ -5578,6 +5637,10 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
     if payload.get("role") != "admin":
         req.model_id = _clamp_player_model(req.model_id, tier=_tier_for(username))
 
+    # ── Turn-tak (2026-08-04, security audit P1): karaktärsgenerering
+    # förbrukar en turn — samma gate som chatten, mot kostnadsmissbruk.
+    _gate_turn_quota(username)
+
     state = store.get(username)
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
@@ -5592,6 +5655,7 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
         {"role": "user", "content": user_msg},
     ]
 
+    _consume_turn(username)
     try:
         usage_out: dict = {}
         raw = await _call_llm(
@@ -5765,6 +5829,10 @@ async def generate_character_stream(req: CharacterRequest, morkrets_token: str |
     if payload.get("role") != "admin":
         req.model_id = _clamp_player_model(req.model_id, tier=_tier_for(username))
 
+    # ── Turn-tak (2026-08-04, security audit P1): streamad karaktärsgenerering
+    # förbrukar en turn — samma gate som chatten, mot kostnadsmissbruk.
+    _gate_turn_quota(username)
+
     state = store.get(username)
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
@@ -5777,6 +5845,8 @@ async def generate_character_stream(req: CharacterRequest, morkrets_token: str |
         {"role": "system", "content": char_prompt},
         {"role": "user", "content": user_msg},
     ]
+
+    _consume_turn(username)
 
     async def event_stream():
         buf = ""

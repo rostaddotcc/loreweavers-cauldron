@@ -39,30 +39,34 @@
     display: flex; align-items: center; gap: 1rem;
     padding: 0.7rem 1.2rem;
     background: linear-gradient(180deg, var(--stone-2), rgba(22,16,32,0.95));
-    border-bottom: 1px solid var(--edge);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    border-bottom: 1px solid rgba(201,162,39,0.28);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 22px -6px rgba(201,162,39,0.35), inset 0 -1px 0 rgba(201,162,39,0.12);
   }.topbar .brand{
-    font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.15rem;
+    font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.28rem;
     color: var(--gold-bright); letter-spacing: 0.06em; white-space: nowrap;
-    text-shadow: 0 0 14px rgba(232,198,90,0.3);
+    text-shadow: 0 0 14px rgba(232,198,90,0.3), 0 0 36px rgba(201,162,39,0.18), 0 2px 0 #000;
   }.topbar .campaign{
-    font-size: 0.78rem; font-style: italic; color: var(--bone-dim);
-    border-left: 1px solid var(--edge); padding-left: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-size: 0.95rem; font-style: italic; color: var(--bone-bright);
+    border-left: 1px solid rgba(201,162,39,0.4); padding-left: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    text-shadow: 0 0 12px rgba(212,105,30,0.3), 0 1px 2px rgba(0,0,0,0.8);
   }/* ── FAS A/B: header-info (Turn/Dag/🆓/reset) bredvid kampanjnamnet ── */
   .topbar .header-turns-info{
-    font-size: 0.78rem; color: var(--bone-dim); white-space: nowrap;
+    font-size: 0.95rem; color: var(--bone); white-space: nowrap;
     overflow: hidden; text-overflow: ellipsis; max-width: 46vw; min-width: 0; flex-shrink: 1;
+    font-variant-numeric: tabular-nums; letter-spacing: 0.02em;
+    text-shadow: 0 0 12px rgba(201,162,39,0.28), 0 1px 2px rgba(0,0,0,0.85);
   }.mobile-menu-turns{
     display: none; padding: 0.55rem 0.7rem; margin: 0.1rem 0 0.2rem;
-    font-size: 0.78rem; color: var(--gold-bright); letter-spacing: 0.04em;
+    font-size: 0.95rem; color: var(--gold-bright); letter-spacing: 0.04em;
     border-bottom: 1px solid var(--edge); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    text-shadow: 0 0 10px rgba(232,198,90,0.35);
   }
   /* Mobil (≤900px): topbaren är trång → header-info flyttas till ☰-menyns topp */
   @media (max-width: 900px){
     .topbar .header-turns-info{ display: none !important; }
     .mobile-menu-turns{ display: block !important; }
   }.topbar .spacer{ flex: 1; }.top-btn{
-    font-family: 'Cinzel', serif; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
+    font-family: 'Cinzel', serif; font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase;
     background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
     padding: 0.55rem 1.05rem; cursor: pointer; transition: all 0.2s; border-radius: 2px; white-space: nowrap;
   }.top-btn:hover{ color: var(--gold-bright); border-color: var(--gold); box-shadow: 0 0 12px -3px rgba(232,198,90,0.4); }.top-btn.admin-btn{ border-color: rgba(232,198,90,0.45); color: var(--gold); }.top-btn.admin-btn:hover{ color: #fff8dc; border-color: var(--gold-bright); box-shadow: 0 0 16px -2px rgba(255,215,0,0.55); text-shadow: 0 0 10px rgba(255,215,0,0.7); }.top-btn.danger:hover{ color: var(--blood-bright); border-color: var(--blood-bright); box-shadow: 0 0 12px -3px rgba(212,58,77,0.4); }.top-btn.icon-btn{
@@ -1016,7 +1020,7 @@
   <span class="brand">The Lore Weaver's Cauldron</span>
   <span class="campaign" id="campaign-tag">Campaign: —</span>
   <span class="header-turns-info" id="header-turns-info"></span>
-  <span class="user-tag" id="user-tag" onclick="toggleProfilePopup()" style="cursor:pointer;color:var(--bone-dim);font-size:.75rem;padding:.2rem .5rem;border:1px solid transparent;transition:all .2s" onmouseover="this.style.borderColor='rgba(201,162,39,.3)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='transparent';this.style.color='var(--bone-dim)'">👤 —</span>
+  <span class="user-tag" id="user-tag" onclick="toggleProfilePopup()" style="cursor:pointer;color:var(--bone);font-size:.88rem;padding:.25rem .6rem;border:1px solid rgba(201,162,39,.28);border-radius:2px;background:rgba(201,162,39,.06);text-shadow:0 0 10px rgba(201,162,39,.25);transition:all .2s" onmouseover="this.style.borderColor='rgba(201,162,39,.55)';this.style.color='var(--gold-bright)';this.style.boxShadow='0 0 14px -2px rgba(201,162,39,.4)'" onmouseout="this.style.borderColor='rgba(201,162,39,.28)';this.style.color='var(--bone)'">👤 —</span>
   <span class="spacer"></span>
 
   <button class="top-btn" onclick="openCodex()">📖 Codex</button>

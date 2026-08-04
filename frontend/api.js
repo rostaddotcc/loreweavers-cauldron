@@ -621,12 +621,12 @@ const API = (() => {
       return req('/api/campaign/activity');
     },
 
-    async tts(text, voice, provider) {
+    async tts(text, voice, provider, style) {
       const res = await fetch(BASE + '/api/tts', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, voice, provider }),
+        body: JSON.stringify({ text, voice, provider, style: style || '' }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: res.statusText }));

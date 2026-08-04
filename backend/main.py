@@ -2135,6 +2135,32 @@ STEPFUN_INSTRUCTIONS = {
     "livelybreezy-female": "Lively warm voice, expressive storytelling.",
 }
 
+# Premium: berättar-stil (customize narrator voice). Korta fraser som läggs
+# FÖRE basinstruktionen så tonen styr. Qwen-instruktion max 128 tecken totalt
+# → basen kapas vid ordgräns för att ge plats åt stilen.
+TTS_STYLE_FRASES = {
+    "happy": "Bright cheerful warm tone.",
+    "calm": "Slow calm soothing unhurried tone.",
+    "scary": "Low ominous eerie tone, tense and creeping.",
+}
+
+def _tts_instruction(base: str, style: str, max_len: int = 128) -> str:
+    """Bygg TTS-instruktion = [style-fras] + bas, kapad vid ordgräns.
+
+    style = preset (happy/calm/scary) eller godtycklig kort fras (custom).
+    Free-konton skickar aldrig style hit (backend-gate i /api/tts).
+    """
+    hook = (TTS_STYLE_FRASES.get(style) or style or "").strip()
+    if not hook:
+        return base
+    budget = max_len - len(hook) - 1
+    short = base
+    if len(short) > budget:
+        cut = short[:budget]
+        sp = cut.rfind(" ")
+        short = cut[:sp] if sp > 0 else cut
+    return f"{hook} {short}".strip()[:max_len]
+
 # Token Plan TTS: REST-endpoint (dokumenterad för Token Plan, 2026-08-03).
 # WS-vägen (dashscope SDK) slutade fungera — se _synth_qwen_tts. REST:
 #   POST /api/v1/services/audio/tts/SpeechSynthesizer
@@ -2185,6 +2211,7 @@ class TTSRequest(BaseModel):
     text: str
     voice: str = ""  # kön ('male'/'female') eller voice-id
     provider: str = ""  # 'qwen' | 'stepfun' — tomt = kampanjens val / default
+    style: str = ""  # premium: happy/calm/scary eller egen fras (customize narrator voice)
 
 
 def _truncate_tts(text: str, limit: int = 1000) -> str:
@@ -2498,7 +2525,7 @@ def _campaign_usage_snapshot(user: str, campaign_id: str) -> dict:
     }
 
 
-def _synth_qwen_tts(voice: str, text: str, use_instruction: bool = True) -> bytes:
+def _synth_qwen_tts(voice: str, text: str, use_instruction: bool = True, style: str = "") -> bytes:
     """Token Plan TTS via REST (2026-08-03).
 
     WebSocket-vägen (dashscope SDK) blev trasig: servern svarade task-failed
@@ -2520,7 +2547,7 @@ def _synth_qwen_tts(voice: str, text: str, use_instruction: bool = True) -> byte
 
     inp = {"text": text, "voice": voice, "format": "mp3", "sample_rate": 24000, "rate": 1.1}
     if use_instruction:
-        instr = TTS_INSTRUCTIONS.get(voice, "")
+        instr = _tts_instruction(TTS_INSTRUCTIONS.get(voice, ""), style)
         if instr:
             inp["instruction"] = instr
 
@@ -2556,7 +2583,7 @@ def _synth_qwen_tts(voice: str, text: str, use_instruction: bool = True) -> byte
         raise RuntimeError(f"Qwen TTS nedladdning fel: {e}")
 
 
-def _synth_qwen_tts_retry(voice: str, text: str) -> bytes:
+def _synth_qwen_tts_retry(voice: str, text: str, style: str = "") -> bytes:
     """Qwen TTS med retry — token-plan-servern är flaky med instruction.
 
     1) Försök med instruction (styr accent/stil)
@@ -2564,7 +2591,7 @@ def _synth_qwen_tts_retry(voice: str, text: str) -> bytes:
     3) Vid kvarvarande fel → kasta vidare
     """
     try:
-        return _synth_qwen_tts(voice, text, use_instruction=True)
+        return _synth_qwen_tts(voice, text, use_instruction=True, style=style)
     except Exception as e:
         msg = str(e)
         if "request timeout" in msg:
@@ -2573,7 +2600,7 @@ def _synth_qwen_tts_retry(voice: str, text: str) -> bytes:
         raise
 
 
-def _synth_stepfun_tts(voice: str, text: str) -> bytes:
+def _synth_stepfun_tts(voice: str, text: str, style: str = "") -> bytes:
     """StepFun TTS via Step Plan (/step_plan/v1/audio/speech).
 
     OpenAI-kompatibel REST — officiella systemröster, inga snippet-
@@ -2596,7 +2623,7 @@ def _synth_stepfun_tts(voice: str, text: str) -> bytes:
         "response_format": "mp3",
         "speed": 1.2,  # stepaudio: 1.1 försvinner i modellbrus, 1.2 ger tydlig ~14% ökning
     }
-    inst = STEPFUN_INSTRUCTIONS.get(voice)
+    inst = _tts_instruction(STEPFUN_INSTRUCTIONS.get(voice, ""), style)
     if inst:
         body["instruction"] = inst
     req = _ur.Request(
@@ -2677,13 +2704,19 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
     if not voice or not any(v["id"] == voice for v in pvoices):
         raise HTTPException(400, f"Okänd röst för {provider}: {voice}")
 
+    # ── Berättar-stil (premium: customize narrator voice) ──
+    # Free-konton: style ignoreras tyst (premium-feature). Presets + egen fras.
+    style = (req.style or "").strip()[:120]
+    if style and _tier_for(username) != "premium":
+        style = ""
+
     # Ta bort maskinella taggar ([KAST:...], [SKADA:...] etc.) om de finns kvar
     text = re.sub(r"\[[A-Z_]+:[^\]]*\]", "", text).strip()
     # Långa meddelanden kapas INTE längre (fix 2026-08-01) — texten delas i
     # segment som syntetiseras var för sig och sys ihop till en MP3.
     segments = _split_tts_segments(text)
 
-    cache_key = (provider, voice, text)
+    cache_key = (provider, voice, style, text)
     cached = _tts_cache_get(cache_key)
     if cached is not None:
         logger.info("🔊 TTS cache hit: provider=%s voice=%s, %d chars, %d bytes", provider, voice, len(text), len(cached))
@@ -2695,12 +2728,12 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
     _t0 = time.time()
     try:
         if len(segments) == 1:
-            audio = await asyncio.to_thread(synth, voice, segments[0])
+            audio = await asyncio.to_thread(synth, voice, segments[0], style)
         else:
             # Syntetisera varje segment sekventiellt (rate limits) och sy ihop
             parts = []
             for seg in segments:
-                parts.append(await asyncio.to_thread(synth, voice, seg))
+                parts.append(await asyncio.to_thread(synth, voice, seg, style))
             audio = b"".join(parts)
     except HTTPException:
         raise

@@ -303,7 +303,19 @@
     background: rgba(201,162,39,0.18); border-color: var(--gold);
     color: var(--gold-bright); box-shadow: 0 0 10px -3px rgba(232,198,90,0.5);
     animation: tts-pulse 2.4s infinite;
-  }.msg.dm .bubble:hover{ border-color: rgba(232,198,90,0.6); }.msg.dm .bubble .who{ color: var(--gold); }.msg.dm .bubble .text{ font-style: italic; color: var(--bone); line-height: 1.7; font-size: 1.18rem; }/* ── DM:ns inre monolog (reasoning) — eterisk, hopfällbar tankebubbla ── */.reasoning{
+  }
+  /* Berättar-stil (premium): custom-fras-input + låst tillstånd */
+  .tts-style-custom{
+    font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.03em;
+    background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone);
+    padding: 0.28rem 0.45rem; border-radius: 3px; max-width: 150px; width: 8rem;
+    transition: all 0.2s;
+  }
+  .tts-style-custom:focus{ outline: none; border-color: var(--gold); }
+  .tts-select:disabled, .tts-style-custom:disabled{
+    opacity: 0.45; cursor: not-allowed; filter: grayscale(0.6);
+  }
+  .tts-select:disabled:hover{ border-color: var(--edge); color: var(--bone-dim); }.msg.dm .bubble:hover{ border-color: rgba(232,198,90,0.6); }.msg.dm .bubble .who{ color: var(--gold); }.msg.dm .bubble .text{ font-style: italic; color: var(--bone); line-height: 1.7; font-size: 1.18rem; }/* ── DM:ns inre monolog (reasoning) — eterisk, hopfällbar tankebubbla ── */.reasoning{
     max-width: 600px; margin-left: 60px;  /* indragen — viskar under DM:s röst */
     border: 1px solid color-mix(in srgb, var(--arcane) 28%, transparent);
     border-left: 2px solid color-mix(in srgb, var(--arcane) 65%, transparent);
@@ -1188,6 +1200,16 @@
           <option value="male">Male</option>
           <option value="female">Female</option>
         </select>
+        <select class="tts-select" id="tts-style-select" onchange="setTTSStyle(this.value)" title="Narrator style — premium feature">
+          <option value="">Style: neutral</option>
+          <option value="happy">😊 happy</option>
+          <option value="calm">🌊 calm</option>
+          <option value="scary">👻 scary</option>
+          <option value="custom">✏️ custom…</option>
+        </select>
+        <input type="text" class="tts-style-custom" id="tts-style-custom"
+               placeholder="your own style…" style="display:none"
+               onchange="setTTSStyleCustom(this.value)" oninput="setTTSStyleCustom(this.value)">
         <button class="tts-auto-btn" id="tts-auto-btn" onclick="toggleTTSAutoplay(this)" title="Autoplay TTS when the DM answers">🔊 Auto</button>
         <button class="tts-auto-btn tts-speed-btn" id="tts-speed-btn" onclick="cycleTTSSpeed()" title="Playback speed (independent of the TTS API)">⏩ 1×</button>
       </div>
@@ -1462,6 +1484,7 @@ const roleReady = API.me().then(u => {
   if (u) {
     profileData = u;
     _meData = u;
+    updateTTSStyleLock();
     const tag = document.getElementById('user-tag');
     if (tag) tag.textContent = '👤 ' + u.username;
     updateHeaderInfo();
@@ -2281,8 +2304,52 @@ let _ttsVoiceIds = null;
 const TTS_VOICE_KEY = 'dnd_tts_voice';
 const TTS_PROVIDER_KEY = 'dnd_tts_provider';
 const TTS_SPEED_KEY = 'dnd_tts_speed';
+const TTS_STYLE_KEY = 'dnd_tts_style';
 const TTS_SPEEDS = [1, 1.25, 1.5, 2, 0.75];
 let _ttsSpeedIdx = 0;
+
+// Berättar-stil (premium: customize narrator voice). Preset (happy/calm/scary)
+// eller egen fras via "custom". Sparas lokalt; backend gate-ar på premium.
+function ttsStyle() {
+  const v = localStorage.getItem(TTS_STYLE_KEY) || '';
+  if (v === 'custom') {
+    const c = localStorage.getItem(TTS_STYLE_KEY + '_custom') || '';
+    return c.trim();
+  }
+  return v;
+}
+function setTTSStyle(v) {
+  localStorage.setItem(TTS_STYLE_KEY, v);
+  const inp = document.getElementById('tts-style-custom');
+  if (inp) inp.style.display = v === 'custom' ? '' : 'none';
+  sfx && sfx('click');
+}
+function setTTSStyleCustom(txt) {
+  localStorage.setItem(TTS_STYLE_KEY + '_custom', txt);
+}
+function initTTSStyle() {
+  const v = localStorage.getItem(TTS_STYLE_KEY) || '';
+  const sel = document.getElementById('tts-style-select');
+  if (sel) sel.value = v;
+  const inp = document.getElementById('tts-style-custom');
+  if (inp) {
+    inp.style.display = v === 'custom' ? '' : 'none';
+    if (v === 'custom') inp.value = localStorage.getItem(TTS_STYLE_KEY + '_custom') || '';
+  }
+  updateTTSStyleLock();
+}
+// Premium-gate: style-väljaren låst för free-konton (backend ignorerar ändå).
+function updateTTSStyleLock() {
+  const sel = document.getElementById('tts-style-select');
+  const inp = document.getElementById('tts-style-custom');
+  if (!sel) return;
+  const premium = !!(_meData && _meData.subscription_status === 'premium');
+  sel.disabled = !premium;
+  if (inp) inp.disabled = !premium;
+  sel.title = premium
+    ? 'Narrator style — happy, calm, scary, or your own'
+    : '🔒 Narrator style — premium feature';
+}
 
 // Spelhastighet — lokalt playbackRate på Audio-elementet, oberoende av API:et
 function ttsSpeed() {
@@ -2409,7 +2476,7 @@ async function playTTS(btn) {
     const voiceId = ttsVoice() === 'female' ? pids.female : pids.male;
     if (!voiceId) throw new Error('No voice configured');
 
-    const blob = await API.tts(text, voiceId, provider);
+    const blob = await API.tts(text, voiceId, provider, ttsStyle());
     const url = URL.createObjectURL(blob);
     _ttsAudio = new Audio(url);
     _ttsAudio.playbackRate = ttsSpeed();
@@ -2428,6 +2495,7 @@ async function playTTS(btn) {
 
 // Aktivera rätt röstknapp från localStorage
 initTTSVoicePicker();
+initTTSStyle();
 initTTSAutoplay();
 initTTSSpeed();
 

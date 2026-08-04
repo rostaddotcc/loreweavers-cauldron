@@ -268,3 +268,57 @@ def test_webhook_invoice_paid_extends(client):
                     headers={"stripe-signature": _sign(body)})
     assert r.status_code == 200
     assert main.load_users()["alice"]["subscription_until"] == "2026-10-04"
+
+
+# ── Webhook: idempotens (Stripe levererar om events) ─────────────────
+
+def test_webhook_duplicate_checkout_not_granted_twice(client):
+    _seed()
+    _seed_campaign("alice")
+    body = _event("checkout.session.completed", {
+        "metadata": {"username": "alice", "tier": "tier2"},
+        "client_reference_id": "alice",
+        "payment_status": "paid",
+        "customer": "cus_123",
+        "subscription": "sub_123",
+        "amount_total": 900,
+    }, event_id="evt_dup")
+    sig = _sign(body)
+    r1 = client.post("/api/stripe/webhook", content=body,
+                     headers={"stripe-signature": sig})
+    assert r1.status_code == 200
+    until_first = main.load_users()["alice"]["subscription_until"]
+
+    # Samma event levererat IGEN (Stripe-retry) — måste ignoreras helt.
+    r2 = client.post("/api/stripe/webhook", content=body,
+                     headers={"stripe-signature": sig})
+    assert r2.status_code == 200
+    assert r2.json() == {"received": True}
+
+    u = main.load_users()["alice"]
+    assert u["subscription_status"] == "tier2"
+    # Expiry får INTE återställas/förkortas av dubbelleveransen.
+    assert u["subscription_until"] == until_first
+    # Endast EN ledger-rad för eventet.
+    ledger = json.loads(main._LEDGER_FILE.read_text())
+    assert len([e for e in ledger if e["event_id"] == "evt_dup"]) == 1
+
+
+def test_webhook_duplicate_invoice_paid_no_double_extend(client):
+    _seed("alice", tier="tier2")
+    u = main.load_users()
+    u["alice"]["stripe_subscription_id"] = "sub_123"
+    u["alice"]["subscription_until"] = "2026-09-04"
+    main.save_users(u)
+    body = _event("invoice.paid",
+                  {"subscription": "sub_123", "amount_paid": 900},
+                  event_id="evt_inv_dup")
+    sig = _sign(body)
+    client.post("/api/stripe/webhook", content=body,
+                headers={"stripe-signature": sig})
+    client.post("/api/stripe/webhook", content=body,
+                headers={"stripe-signature": sig})
+    # +30d en gång, inte två (annars skulle det bli 2026-11-03).
+    assert main.load_users()["alice"]["subscription_until"] == "2026-10-04"
+    ledger = json.loads(main._LEDGER_FILE.read_text())
+    assert len([e for e in ledger if e["event_id"] == "evt_inv_dup"]) == 1

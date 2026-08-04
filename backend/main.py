@@ -7633,6 +7633,20 @@ def _ledger_append(entry: dict) -> dict:
     return row
 
 
+def _ledger_has_event(event_id: str) -> bool:
+    """Har vi redan behandlat detta Stripe-event?
+
+    Stripe levererar om events vid retry/timeout — samma event kan komma
+    flera gånger. Utan denna koll skulle en dubbelleverans av
+    checkout.session.completed ÅTERSTÄLLA subscription_until till +30d från
+    nu (dvs förkorta en sub) och dubbla ledger-raderna.
+    """
+    if not event_id:
+        return False
+    with _LEDGER_LOCK:
+        return any(row.get("event_id") == event_id for row in _ledger_load())
+
+
 def _ledger_per_user() -> dict:
     """Summera amount_sek per användare → {username: sek}."""
     per_user: dict = {}
@@ -8076,6 +8090,12 @@ async def stripe_webhook(request: Request):
     obj = event.get("data", {}).get("object", {}) or {}
     event_id = event.get("id", "")
     logger.info("💳 Stripe webhook: %s (%s)", etype, event_id)
+
+    # Idempotens: Stripe levererar om events vid retry — hoppa över sådana
+    # vi redan behandlat (annars risk: dubbel grant / förkortad expiry).
+    if _ledger_has_event(event_id):
+        logger.info("💳 Stripe webhook duplicate, ignoring: %s", event_id)
+        return {"received": True}
 
     if etype == "checkout.session.completed":
         meta = obj.get("metadata", {}) or {}

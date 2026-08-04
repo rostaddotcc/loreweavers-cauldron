@@ -618,7 +618,10 @@ function authSuccess(username) {
   card.classList.add('success');
   sfx('gate');
   sessionStorage.setItem('dnd_user', username);
-  setTimeout(() => { window.location.href = 'adventure.html'; }, 900);
+  // ?next= stöd (t.ex. pricing.html efter checkout-klick) — bara lokala .html-sidor.
+  let next = new URLSearchParams(location.search).get('next');
+  if (!next || !/^(?:[a-zA-Z0-9_-]+\.html)(?:[?#].*)?$/.test(next)) next = 'adventure.html';
+  setTimeout(() => { window.location.href = next; }, 900);
 }
 
 document.getElementById('auth-form').addEventListener('submit', async (e) => {

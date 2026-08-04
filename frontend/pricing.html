@@ -110,6 +110,8 @@
     transform:skewX(-20deg);animation:sheen 3.4s ease-in-out infinite}
   @keyframes sheen{0%,55%{left:-80%}85%,100%{left:130%}}
   .tier-btn.go:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(232,198,90,.3)}
+  .tier-btn.busy{opacity:.55;pointer-events:none;cursor:wait}
+  .tier-btn.busy::after{animation:none}
   .tier-btn.soon{color:var(--bone-dim);background:var(--stone-3);border:1px solid var(--edge);
     cursor:not-allowed}
   .tier-btn.soon span{display:inline-block;animation:soon-pulse 2.6s ease-in-out infinite}
@@ -205,7 +207,7 @@
         <li><b>AI avatars</b> for your hero and the NPCs you meet</li>
         <li>Everything in the Wanderer path</li>
       </ul>
-      <a class="tier-btn go" href="login.html">Take the sigil</a>
+      <a class="tier-btn go" href="#" data-tier="tier1" onclick="startCheckout(event,'tier1')">Take the sigil</a>
     </div>
 
     <!-- Tier 2 — Golden Sigil -->
@@ -224,7 +226,7 @@
         <li><b>AI avatars</b> for your hero and the NPCs you meet</li>
         <li>Everything in the Companion path</li>
       </ul>
-      <a class="tier-btn go" href="login.html">Hold the sigil</a>
+      <a class="tier-btn go" href="#" data-tier="tier2" onclick="startCheckout(event,'tier2')">Hold the sigil</a>
     </div>
 
     <!-- Tier 3 — Lifetime -->
@@ -239,14 +241,13 @@
         <li>All Dungeon Masters · both narrator voices · avatars</li>
         <li>A thank-you from the forge — you keep this realm burning</li>
       </ul>
-      <a class="tier-btn go" href="login.html">Forge forever</a>
+      <a class="tier-btn go" href="#" data-tier="lifetime" onclick="startCheckout(event,'lifetime')">Forge forever</a>
     </div>
   </div>
 
   <p class="fine">
     <b>How the free path works</b> — your 50 turns renew every day at midnight, whether you were here or not.
-    Payments are not live yet — the sigils are being forged. When they arrive, they will unlock on this page.
-    Lifetime is a one-time purchase; monthly tiers renew until you end them.
+    Payments are processed securely by Stripe. Monthly tiers renew until you end them; Lifetime is a one-time purchase.
   </p>
   <a class="back" href="adventure.html">← Return to the realm</a>
 </section>
@@ -269,6 +270,38 @@
       } else {
         el.textContent = (Number.isInteger(eur) ? eur : eur.toFixed(2)) + '€';
       }
+    });
+  }
+
+  // ── Checkout → Stripe ──
+  // Klick på betald tier: skapa Checkout Session hos backend. Inte inloggad
+  // (401) → login med återkomst hit. Lyckad → Stripe-hosted checkout-sida.
+  function startCheckout(ev, tier) {
+    ev.preventDefault();
+    var btn = ev.currentTarget;
+    var label = btn.textContent;
+    btn.classList.add('busy');
+    btn.textContent = 'Forging sigil…';
+    fetch('/api/billing/checkout', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tier: tier })
+    }).then(function (res) {
+      if (res.status === 401) {
+        location.href = 'login.html?next=pricing.html';
+        return null;
+      }
+      return res.json().then(function (data) {
+        if (!res.ok) throw new Error(data.detail || ('HTTP ' + res.status));
+        return data;
+      });
+    }).then(function (data) {
+      if (data && data.url) location.href = data.url;
+    }).catch(function (e) {
+      btn.classList.remove('busy');
+      btn.textContent = label;
+      alert('The sigil could not be forged: ' + e.message);
     });
   }
 </script>

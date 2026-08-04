@@ -294,6 +294,22 @@
   .bc-btn:hover { color: var(--gold-bright); border-color: var(--gold); }
   .bc-btn.danger:hover { color: var(--blood-bright); border-color: var(--blood-bright); }
   .bc-btn.gold { background: rgba(212,169,44,0.14); border-color: var(--gold); color: var(--gold-bright); }
+  /* Premium-grant: kompakt längdselect + knapp i tabellraden */
+  .prem-grant { display: inline-flex; align-items: center; gap: .25rem; margin-left: .35rem; vertical-align: middle; }
+  .prem-grant select {
+    background: var(--ink); border: 1px solid var(--edge); color: var(--bone);
+    font-size: .6rem; padding: .18rem .2rem; border-radius: 2px; cursor: pointer;
+    max-width: 74px; font-family: inherit;
+  }
+  .prem-grant select:focus { border-color: var(--gold); outline: none; }
+  .prem-grant .pg-btn {
+    background: rgba(212,169,44,0.14); border: 1px solid var(--gold); color: var(--gold-bright);
+    padding: .22rem .45rem; font-size: .6rem; cursor: pointer; letter-spacing: .05em; font-family: inherit; white-space: nowrap;
+  }
+  .prem-grant .pg-btn:hover { background: var(--gold); color: var(--ink); }
+  .prem-grant .pg-btn.revoke { background: var(--stone-3); border-color: var(--edge); color: var(--bone-dim); }
+  .prem-grant .pg-btn.revoke:hover { color: var(--blood-bright); border-color: var(--blood-bright); background: rgba(139,26,42,.15); }
+  .membership-cell { white-space: nowrap; }
 
   /* ── Expanded campaign detail ── */
   .campaign-detail { display: none; }
@@ -527,9 +543,15 @@ async function resetTurns(username) {
   } catch(e) { toast('Error: ' + e.message); }
 }
 
-async function togglePremium(username, currentlyPremium) {
+async function togglePremium(username, currentlyPremium, months) {
   const status = currentlyPremium ? 'free' : 'premium';
-  const until = status === 'premium' ? new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10) : null;
+  let until = null;
+  if (status === 'premium') {
+    const m = months && !isNaN(months) ? Math.max(1, Math.min(120, parseInt(months, 10))) : 1;
+    const d = new Date();
+    d.setDate(d.getDate() + m * 30);
+    until = d.toISOString().slice(0, 10);
+  }
   try {
     const res = await fetch('/api/admin/user/' + encodeURIComponent(username) + '/subscription', {
       method: 'PUT', credentials: 'include',
@@ -544,6 +566,13 @@ async function togglePremium(username, currentlyPremium) {
     if (typeof loadedUsers !== 'undefined') loadedUsers[username] = null; // refresh cached detail
     loadStats();
   } catch(e) { toast('Error: ' + e.message); }
+}
+
+// Snabb-grant från tabellraden: läser längden ur radens select
+function grantPremiumFromRow(username) {
+  const sel = document.getElementById('pg-months-' + username);
+  const months = sel ? sel.value : 1;
+  togglePremium(username, false, months);
 }
 
 // ═══════════════════════════════════════
@@ -1039,7 +1068,9 @@ function tableRows(users) {
     html += `<td class="last-active">${relTime(u.created_at)}</td>`;
     html += `<td class="last-active">${relTime(u.last_login)}</td>`;
     html += `<td class="cap-cell">${capFrag}<input type="number" min="0" step="1" value="${capVal}" id="cap-${i}" class="cap-input"><button onclick="event.stopPropagation();setCap('${u.username}', ${i})" class="cap-btn">Set</button><span class="cap-hint">0 = ∞</span></td>`;
-    html += `<td>${memBadge}</td>`;
+    html += `<td class="membership-cell">${memBadge}${isPremium
+      ? `<span class="prem-grant"><button onclick="event.stopPropagation();togglePremium('${u.username}', true)" class="pg-btn revoke" title="Revoke premium">⭱ Free</button></span>`
+      : `<span class="prem-grant"><select id="pg-months-${esc(u.username)}" onclick="event.stopPropagation()" title="Premium duration"><option value="1">1 mo</option><option value="3">3 mo</option><option value="6">6 mo</option><option value="12">12 mo</option></select><button onclick="event.stopPropagation();grantPremiumFromRow('${esc(u.username)}')" class="pg-btn" title="Grant premium for the chosen duration">👑 Grant</button></span>`}</td>`;
     html += `<td class="rev-num">${u.revenue ? fmtSek(u.revenue) : '—'}</td>`;
     html += `<td><button onclick="event.stopPropagation();deleteUser('${u.username}')" class="del-btn">✕ Delete</button></td>`;
     html += '</tr>';
@@ -1077,7 +1108,10 @@ function mobRows(users) {
     html += `<input type="number" min="1" step="1" value="10" id="topup-${u.username}" class="cap-input" style="width:60px">`;
     html += `<button onclick="event.stopPropagation();topUp('${u.username}')" class="bc-btn">➕ Top up</button>`;
     html += `<button onclick="event.stopPropagation();resetTurns('${u.username}')" class="bc-btn">🔄 Reset</button>`;
-    html += `<button onclick="event.stopPropagation();togglePremium('${u.username}', ${isPremium})" class="bc-btn${isPremium ? '' : ' gold'}">${isPremium ? '⭱ Free' : '👑 Premium'}</button>`;
+    if (!isPremium) {
+      html += `<select id="pg-m-months-${u.username}" onclick="event.stopPropagation()" style="background:var(--ink);border:1px solid var(--edge);color:var(--bone);font-size:.6rem;padding:.2rem;border-radius:2px;max-width:74px"><option value="1">1 mo</option><option value="3">3 mo</option><option value="6">6 mo</option><option value="12">12 mo</option></select>`;
+    }
+    html += `<button onclick="event.stopPropagation();togglePremium('${u.username}', ${isPremium}, ${isPremium ? '1' : "document.getElementById('pg-m-months-" + u.username + "').value"})" class="bc-btn${isPremium ? '' : ' gold'}">${isPremium ? '⭱ Free' : '👑 Grant'}</button>`;
     html += '</div>';
     html += '</div>';
   });

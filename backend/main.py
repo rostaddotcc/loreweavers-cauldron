@@ -1042,19 +1042,21 @@ def _ensure_user_fields(username: str, udata: dict) -> dict:
 # ═══════════════════════════════════════
 # TIERS — free < tier1 < tier2 < lifetime
 # ═══════════════════════════════════════
-# free      — 50 turns/dag (midnatt), bara step-3.7-flash, Qwen TTS, inga avatarer
-# tier1     — 50 turns var 6:e timme, AI-avatarer (hero + NPCs)
-# tier2     — allt i tier1 + alla spelarmodeller (deepseek/qwen) + Qwen+StepFun TTS
+# free      — 50 turns/dag (midnatt), bara step-3.7-flash, StepFun TTS (Qwen 🔒 Tier 2),
+#             inga avatarer (varken AI-genererade eller uppladdade)
+# tier1     — 50 turns var 6:e timme, AI-avatarer + avatar-uppladdning (hero + NPCs)
+# tier2     — allt i tier1 + alla spelarmodeller (deepseek/qwen) + Qwen TTS + narrator-style
 # lifetime  — allt i tier2 + obegränsade turns (turn_cap 0)
 # Legacy "premium" i users.json → behandlas som tier2 (bakåtkompatibilitet).
 
 TIER_ORDER = ("free", "tier1", "tier2", "lifetime")
 
 # ── Grundarerbjudande (2026-08-04 → 2026-08-11) ──
-# Betala 1 månad, få 2 gratismånader (Companion/tier1) eller 3 (Adventurer/tier2).
+# Grundarerbjudande: Betala 1 månad, få 2 gratismånader (Companion/tier1).
+# Adventurer/tier2 + Lifetime: se pricing-priserna (Lifetime 50€ under promo).
 # Efter deadline: vanlig 1-månads-prenumeration.
 PROMO_UNTIL_DATE = date(2026, 8, 11)
-PROMO_MONTHS = {"tier1": 3, "tier2": 4}  # totala månader vid checkout under promo
+PROMO_MONTHS = {"tier1": 3, "tier2": 1}  # totala månader vid checkout under promo — bara tier1 får gratismånader (rostad 2026-08-04)
 
 def _promo_months_for(tier: str) -> int:
     """Antal månader en ny prenumeration ger just nu (promo- eller normal)."""
@@ -2162,6 +2164,9 @@ async def me(morkrets_token: str | None = Cookie(None)):
         # mellan enheter/webbläsare. Frontend hydratar localStorage härifrån.
         "theme": udata.get("theme") or "",
         "font": udata.get("font") or "",
+        # E-post — krävs innan köp (rostad 2026-08-04). Maskerad i /api/me
+        # (admin-vyn ser hela via /api/admin/stats).
+        "has_email": bool((udata.get("email") or "").strip()),
     }
 
 
@@ -2184,6 +2189,29 @@ async def save_appearance(body: dict, morkrets_token: str | None = Cookie(None))
         users[username] = u
         save_users(users)
     return {"ok": True, "theme": theme or None, "font": font or None}
+
+
+class EmailRequest(BaseModel):
+    email: str
+
+
+@app.put("/api/me/email")
+async def save_email(req: EmailRequest, morkrets_token: str | None = Cookie(None)):
+    """Lägg till/uppdatera e-postadress på kontot (krävs före köp)."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    email = (req.email or "").strip().lower()
+    if not email or "@" not in email or "." not in email.split("@")[-1] or len(email) > 120:
+        raise HTTPException(400, "That email does not look right.")
+    with _USER_LOCK:
+        users = load_users()
+        u = users.get(username)
+        if not isinstance(u, dict):
+            raise HTTPException(404, "User not found")
+        u["email"] = email
+        users[username] = u
+        save_users(users)
+    return {"ok": True, "email": email}
 
 
 # ═══════════════════════════════════════
@@ -2899,11 +2927,12 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
     if provider not in TTS_PROVIDERS:
         raise HTTPException(400, f"Okänd TTS-leverantör: {provider}")
 
-    # ── TIERS: StepFun TTS är tier2+ — free/tier1 hänvisas till upgrade.
-    # Tyst fallback till qwen så spelet aldrig kraschar; UI:et låser väljaren. ──
+    # ── TIERS: StepFun TTS är ALLTID GRATIS (alla tier) — rostad 2026-08-04:
+    # "stepfun 'always free'". Qwen TTS är tier2+-premium (tyst fallback till
+    # stepfun så spelet aldrig kraschar; UI:et låser väljaren). ──
     tier = _tier_for(username)
-    if provider == "stepfun" and tier not in ("tier2", "lifetime"):
-        provider = "qwen"
+    if provider == "qwen" and tier not in ("tier2", "lifetime"):
+        provider = "stepfun"
     pvoices = TTS_PROVIDERS[provider]["voices"]
 
     # ── Röst: kön ('male'/'female') → första rösten med könet; annars voice-id ──
@@ -6471,6 +6500,9 @@ async def upload_avatar(
     """Ladda upp en avatar för spelaren, DM eller en NPC."""
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
+    # TIERS: avatar-uppladdning är tier1+ (samma gate som AI-generering —
+    # free → 403 med uppgraderingshänvisning; UI:et låser + hänvisar).
+    _require_avatar_tier(payload, username)
     state = store.get(username)
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
@@ -7646,6 +7678,56 @@ def _ledger_append(entry: dict) -> dict:
     return row
 
 
+# ── Churn-datapoint (rostad 2026-08-04) ──────────────────────────────────
+# När en prenumeration sägs upp (customer.subscription.deleted) skrivs en
+# ledger-rad av typ "stripe:churn" (amount_sek=0) och en per-dag-ackumulator
+# uppdateras så adminvyn kan visa churn per dag utan att räkna om hela ledgern.
+
+_CHURN_FILE = Path(__file__).resolve().parent / "data" / "_churn.json"
+
+
+def _churn_load() -> dict:
+    """Läs churn-ackumulatorn: {dag-iso: antal}. Skapar tom om den saknas."""
+    try:
+        if not _CHURN_FILE.exists():
+            return {}
+        with open(_CHURN_FILE, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _churn_save(data: dict) -> None:
+    try:
+        _CHURN_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = _CHURN_FILE.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.replace(_CHURN_FILE)
+    except OSError:
+        logger.exception("💔 Kunde inte spara churn-ackumulatorn")
+
+
+def _churn_record(username: str, sub_id: str | None = None) -> None:
+    """Bokför en uppsägning: ledger-rad (stripe:churn) + per-dag-räknare.
+
+    OBS: _ledger_append tar själv _LEDGER_LOCK — tag INTE låset här runt
+    anropet (threading.Lock är inte reentrant → deadlock). (bugg 2026-08-04)
+    """
+    day = datetime.now(timezone.utc).date().isoformat()
+    _ledger_append({
+        "user": username,
+        "amount_sek": 0,
+        "type": "stripe:churn",
+        "stripe_sub_id": sub_id,
+        "event_id": f"churn-{day}-{username}-{sub_id or ''}",
+    })
+    with _LEDGER_LOCK:
+        churn = _churn_load()
+        churn[day] = int(churn.get(day, 0) or 0) + 1
+        _churn_save(churn)
+
+
 def _ledger_has_event(event_id: str) -> bool:
     """Har vi redan behandlat detta Stripe-event?
 
@@ -7701,7 +7783,8 @@ def _ledger_totals() -> dict:
             continue
     return {
         "mrr": mrr,
-        "transactions": len(ledger),
+        # Churn-rader (uppsägningar) är INTE transaktioner — räkna allt utom dem
+        "transactions": sum(1 for r in ledger if (r.get("type") or "") != "stripe:churn"),
         "total": sum(int(r.get("amount_sek") or 0) for r in ledger),
     }
 
@@ -8080,9 +8163,21 @@ async def billing_checkout(req: BillingCheckoutRequest, morkrets_token: str | No
         raise HTTPException(400, "Tier must be tier1, tier2 or lifetime")
     if not STRIPE_SECRET_KEY:
         raise HTTPException(503, "Payments are not configured yet")
+    # ── E-post krävs innan köp (rostad 2026-08-04): kontot måste ha en
+    # e-postadress så kvitton/återställning når spelaren. Frontend fångar
+    # detail.email_required och visar e-postformuläret. ──
+    _udata = load_users().get(username, {})
+    if not isinstance(_udata, dict) or not (_udata.get("email") or "").strip():
+        raise HTTPException(400, detail={
+            "email_required": True,
+            "message": "Add an email to your account before subscribing — it's where your receipts and reset links go.",
+        })
     price = STRIPE_PRICES[tier]
     # Grundarerbjudande: Lifetime för 50€ (one-time) under promoperioden.
-    if tier == "lifetime" and _promo_months_for("tier2") > 1 and STRIPE_PRICES.get("lifetime_promo"):
+    # (Kollar PROMO_UNTIL_DATE direkt — inte tier2-månaderna, som nu bara
+    # gäller Companion sedan 2026-08-04.)
+    promo_active = datetime.now(timezone.utc).date() <= PROMO_UNTIL_DATE
+    if tier == "lifetime" and promo_active and STRIPE_PRICES.get("lifetime_promo"):
         price = STRIPE_PRICES["lifetime_promo"]
     mode = "subscription" if tier in ("tier1", "tier2") else "payment"
     session = await _stripe_post("checkout/sessions", {
@@ -8096,6 +8191,37 @@ async def billing_checkout(req: BillingCheckoutRequest, morkrets_token: str | No
         "metadata[tier]": tier,
     })
     logger.info("💳 Checkout session for %s (%s)", username, tier)
+    return {"ok": True, "url": session["url"]}
+
+
+@app.post("/api/billing/portal")
+async def billing_portal(morkrets_token: str | None = Cookie(None)):
+    """Skapa en Stripe Customer Portal-session (säg upp / hantera prenumeration).
+
+    Kräver att kontot har ett stripe_customer_id (sätts vid checkout).
+    Portalen låter spelaren själv säga upp, byta kort eller byta plan.
+    """
+    payload = _get_current_user(morkrets_token)
+    username = payload.get("sub")
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(503, "Payments are not configured yet")
+    _udata = load_users().get(username, {})
+    if not isinstance(_udata, dict) or not _udata.get("stripe_customer_id"):
+        raise HTTPException(400, detail={
+            "no_customer": True,
+            "message": "No Stripe customer linked to this account yet.",
+        })
+    try:
+        session = await _stripe_post("billing_portal/sessions", {
+            "customer": _udata["stripe_customer_id"],
+            "return_url": f"{STRIPE_PUBLIC_BASE}/adventure.html?billing=portal",
+        })
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("💳 Portal session error for %s: %s", username, e)
+        raise HTTPException(502, "Could not open the billing portal.")
+    logger.info("💳 Portal session for %s", username)
     return {"ok": True, "url": session["url"]}
 
 
@@ -8174,6 +8300,9 @@ async def stripe_webhook(request: Request):
                 if not isinstance(u, dict):
                     continue
                 if u.get("stripe_subscription_id") == sub_id or u.get("stripe_customer_id") == cust:
+                    # Churn-datapoint (rostad 2026-08-04): logga uppsägningen i
+                    # ledgern så adminvyn kan visa churn per dag.
+                    _churn_record(uname, sub_id)
                     u["subscription_status"] = "free"
                     u["subscription_until"] = None
                     u["turn_cap"] = DEFAULT_TURN_CAP
@@ -8183,11 +8312,19 @@ async def stripe_webhook(request: Request):
                     break
     elif etype == "invoice.paid":
         sub_id = obj.get("subscription")
+        # Ingen prenumeration → inget att förlänga. Utan denna guard kan en
+        # test-/replay-händelse (subscription=null) matcha användare som saknar
+        # stripe_subscription_id (None != None → falskt → träff) och ge dem en
+        # falsk renewal-rad + förlängd until. (bugg 2026-08-04)
+        if not sub_id:
+            return {"received": True}
         amount_paid = int(obj.get("amount_paid", 0) or 0)
         with _USER_LOCK:
             users = load_users()
             for uname, u in users.items():
-                if not isinstance(u, dict) or u.get("stripe_subscription_id") != sub_id:
+                if not isinstance(u, dict) or not u.get("stripe_subscription_id"):
+                    continue
+                if u.get("stripe_subscription_id") != sub_id:
                     continue
                 until = u.get("subscription_until")
                 try:
@@ -8442,7 +8579,7 @@ async def promo_info():
         "until": PROMO_UNTIL_DATE.isoformat(),
         "offer": {
             "tier1": {"free_months": 2, "total_months": 3},
-            "tier2": {"free_months": 3, "total_months": 4},
+            "tier2": {"free_months": 0, "total_months": 1},
             "lifetime": {"promo_price_eur": 50, "promo_price_sek": 585, "normal_price_eur": 100},
         },
         "tier_names": {"tier1": "Companion", "tier2": "Adventurer"},
@@ -8465,6 +8602,8 @@ async def admin_billing(morkrets_token: str | None = Cookie(None)):
         "total": totals["total"],
         "per_user": per_user,
         "ledger": ledger,
+        # Churn-datapoint (rostad 2026-08-04): uppsägningar per dag
+        "churn": _churn_load(),
     }
 
 

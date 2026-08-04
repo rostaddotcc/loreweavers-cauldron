@@ -177,6 +177,32 @@ def test_campaign_avatar_gate_admin_ok(client, monkeypatch):
     assert r.status_code == 200, r.text
 
 
+# ── Avatar-UPPladdning är också tier1+ (2026-08-04) ────────────────────
+
+def test_campaign_avatar_upload_gate_free_403(client, monkeypatch):
+    """Upload-avataren ligger bakom paywall — free → 403."""
+    _seed("alice")
+    _seed_campaign("alice")
+    r = client.post("/api/campaign/avatar",
+                    data={"kind": "player"},
+                    files={"file": ("avatar.png", b"fake-image-bytes", "image/png")},
+                    cookies={"morkrets_token": _tok()})
+    assert r.status_code == 403
+    assert "Tier 1" in r.json()["detail"]
+
+
+def test_campaign_avatar_upload_gate_tier1_ok(client, monkeypatch):
+    """tier1 får ladda upp (samma gate som AI-generering)."""
+    _seed("alice", tier="tier1", until=_in_days(30))
+    _seed_campaign("alice")
+    r = client.post("/api/campaign/avatar",
+                    data={"kind": "player"},
+                    files={"file": ("avatar.png", b"fake-image-bytes", "image/png")},
+                    cookies={"morkrets_token": _tok()})
+    assert r.status_code == 200, r.text
+    assert r.json()["ok"] is True
+
+
 def test_vault_avatar_gate_free_403(client, monkeypatch):
     _seed("alice")
     # Skapa en valv-karaktär

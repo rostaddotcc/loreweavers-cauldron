@@ -24,7 +24,7 @@
     --arcane: #8b5fd4;
     --poison: #7aa35e;
     --teal: #5e9aa3;
-  }*{ margin: 0; padding: 0; box-sizing: border-box; }html, body{ height: 100%; }body{
+  }*{ margin: 0; padding: 0; box-sizing: border-box; }html{ font-size: 18px; }html, body{ height: 100%; }body{
     font-family: 'Spectral', Georgia, serif;
     color: var(--bone);
     background:
@@ -72,7 +72,7 @@
   }.top-divider{ width: 1px; height: 20px; background: var(--edge); flex-shrink: 0; }/* ═══════════ Dropdown-meny (Världen / Verktyg) ═══════════ */.dropdown{ position: relative; }/* ── Settings menu (gear icon, standalone) ──
      v30: RADIKALT krympt — liten kompakt meny som inte täcker spelvyn. */.settings-menu{
     position: absolute; top: calc(100% + 0.5rem); right: 0; z-index: 60;
-    min-width: 178px; max-width: 220px; padding: 0.28rem;
+    min-width: 200px; max-width: 300px; padding: 0.35rem;
     background: linear-gradient(180deg, var(--stone-2), var(--ink));
     border: 1px solid var(--gold); border-radius: 3px;
     box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 20px -6px rgba(232,198,90,0.25);
@@ -91,18 +91,18 @@
     transform-origin: top left;
     transition: opacity 0.2s, transform 0.22s cubic-bezier(.22,1,.36,1), visibility 0.2s;
   }.mobile-menu.open{ opacity: 1; visibility: visible; transform: translateY(0) scale(1); }.model-picker-card{
-    padding: 0.35rem 0.45rem; margin: 0.05rem 0;
+    padding: 0.45rem 0.55rem; margin: 0.1rem 0;
     background: rgba(0,0,0,0.25); border: 1px solid color-mix(in srgb, var(--arcane) 25%, transparent);
     border-radius: 2px;
   }.mpc-title{
-    font-family: 'Cinzel', serif; font-size: 0.5rem; letter-spacing: 0.08em;
-    color: var(--gold); margin-bottom: 0.25rem;
-  }.mpc-label{ display: block; font-size: 0.52rem; color: var(--bone-dim); margin: 0.22rem 0 0.1rem; }.model-picker-card select{
-    width: 100%; padding: 0.14rem 0.3rem; font-size: 0.56rem;
+    font-family: 'Cinzel', serif; font-size: 0.74rem; letter-spacing: 0.08em;
+    color: var(--gold); margin-bottom: 0.3rem;
+  }.mpc-label{ display: block; font-size: 0.74rem; color: var(--bone-dim); margin: 0.28rem 0 0.14rem; }.model-picker-card select{
+    width: 100%; padding: 0.2rem 0.35rem; font-size: 0.8rem;
     background: var(--stone); color: var(--bone);
     border: 1px solid var(--edge); border-radius: 0; cursor: pointer;
     font-family: 'Courier New', monospace;
-  }.model-picker-card select:focus{ outline: none; border-color: var(--gold); }.mpc-hint{ font-size: 0.5rem; color: rgba(180,170,150,0.45); margin-top: 0.25rem; line-height: 1.3; }
+  }.model-picker-card select:focus{ outline: none; border-color: var(--gold); }.mpc-hint{ font-size: 0.7rem; color: rgba(180,170,150,0.6); margin-top: 0.3rem; line-height: 1.35; }
   /* ═══════════ Model-info-modal ═══════════ */
   .mi-overlay{ position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(4,2,8,.82); opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility .25s; }
   .mi-overlay.show{ opacity: 1; visibility: visible; }
@@ -141,14 +141,14 @@
     padding: 0.55rem 0.7rem; border: none; border-radius: 2px;
     background: transparent; cursor: pointer; text-align: left;
     text-decoration: none; transition: background 0.15s, transform 0.15s;
-  }.drop-item:hover{ background: rgba(232,198,90,0.1); transform: translateX(3px); }.di-icon{ font-size: 1.05rem; flex-shrink: 0; filter: drop-shadow(0 0 4px rgba(232,198,90,0.3)); }.di-body{ display: flex; flex-direction: column; min-width: 0; }.di-name{ font-family: 'Cinzel', serif; font-size: 0.87rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-bright); }.drop-item:hover .di-name{ color: var(--gold-bright); }.di-hint{ font-size: 0.79rem; font-style: italic; color: var(--bone-dim); }/* Settings-menyn (⚙️): hint-rad → hover-tooltip (desktop). Menyn är högerjusterad → tooltip pekar vänsterut */.settings-menu .drop-item{ position: relative; }.settings-menu .di-hint{ position: absolute; top: 50%; right: calc(100% + 10px); transform: translateY(-50%); white-space: nowrap; font-size: 0.78rem; font-style: italic; color: var(--bone-dim); background: var(--stone-3); border: 1px solid var(--edge); border-radius: 3px; padding: 0.32rem 0.6rem; box-shadow: 0 10px 28px -10px rgba(0,0,0,0.8); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.16s ease, visibility 0.16s ease; z-index: 70; }.settings-menu .drop-item:hover .di-hint{ opacity: 1; visibility: visible; }.settings-menu .drop-item:hover .di-name{ color: var(--gold-bright); }@media(hover:none), (max-width:640px){ .settings-menu .di-hint{ position: static; transform: none; opacity: 1; visibility: visible; background: none; border: none; box-shadow: none; padding: 0; } }.drop-sep{ height: 1px; background: var(--edge); margin: 0.4rem 0.3rem; }/* ═══════════ Layout ═══════════ */.layout{ position: relative; z-index: auto; flex: 1; display: flex; min-height: 0; }/* ── Sidebar: party ── */.sidebar{
-    width: 240px; flex-shrink: 0;
+  }.drop-item:hover{ background: rgba(232,198,90,0.1); transform: translateX(3px); }.di-icon{ font-size: 1.05rem; flex-shrink: 0; filter: drop-shadow(0 0 4px rgba(232,198,90,0.3)); }.di-body{ display: flex; flex-direction: column; min-width: 0; }.di-name{ font-family: 'Cinzel', serif; font-size: 0.96rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-bright); }.drop-item:hover .di-name{ color: var(--gold-bright); }.di-hint{ font-size: 0.86rem; font-style: italic; color: var(--bone-dim); }/* Settings-menyn (⚙️): hint-rad → hover-tooltip (desktop). Menyn är högerjusterad → tooltip pekar vänsterut */.settings-menu .drop-item{ position: relative; }.settings-menu .di-hint{ position: absolute; top: 50%; right: calc(100% + 10px); transform: translateY(-50%); white-space: nowrap; font-size: 0.84rem; font-style: italic; color: var(--bone-dim); background: var(--stone-3); border: 1px solid var(--edge); border-radius: 3px; padding: 0.32rem 0.6rem; box-shadow: 0 10px 28px -10px rgba(0,0,0,0.8); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.16s ease, visibility 0.16s ease; z-index: 70; }.settings-menu .drop-item:hover .di-hint{ opacity: 1; visibility: visible; }.settings-menu .drop-item:hover .di-name{ color: var(--gold-bright); }@media(hover:none), (max-width:640px){ .settings-menu .di-hint{ position: static; transform: none; opacity: 1; visibility: visible; background: none; border: none; box-shadow: none; padding: 0; } }.drop-sep{ height: 1px; background: var(--edge); margin: 0.4rem 0.3rem; }/* ═══════════ Layout ═══════════ */.layout{ position: relative; z-index: auto; flex: 1; display: flex; min-height: 0; }/* ── Sidebar: party ── */.sidebar{
+    width: 250px; flex-shrink: 0;
     background: linear-gradient(180deg, var(--stone), var(--ink));
     border-right: 1px solid var(--edge);
     padding: 1rem 0.9rem; overflow-y: auto;
     display: flex; flex-direction: column; gap: 0.8rem;
   }.side-label{
-    font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.26em;
+    font-family: 'Cinzel', serif; font-size: 0.8rem; letter-spacing: 0.26em;
     text-transform: uppercase; color: var(--bone-dim); margin-bottom: 0.3rem;
   }.side-near{
     display: none; margin-top: 0.9rem; padding-top: 0.65rem; border-top: 1px solid var(--edge);
@@ -166,14 +166,14 @@
     display: flex; gap: 0.6rem; align-items: center;
     background: var(--stone-2); border: 1px solid var(--edge); padding: 0.6rem;
     cursor: pointer; transition: all 0.2s; border-radius: 2px;
-  }.pc-card:hover{ border-color: var(--gold); transform: translateX(3px); }.pc-card.active{ border-color: var(--gold); box-shadow: 0 0 14px -4px rgba(232,198,90,0.4); }.pc-avatar{
-    width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
-    border: 1px solid var(--edge); background: var(--stone-3);
-  }.pc-name{ font-weight: 600; font-size: 0.98rem; color: var(--bone-bright); line-height: 1.2; }.pc-sub{ font-size: 0.88rem; color: var(--bone-dim); font-style: italic; }.pc-hp{ height: 4px; background: var(--ink); margin-top: 0.3rem; border-radius: 2px; overflow: hidden; }.pc-hp i{ display: block; height: 100%; background: linear-gradient(90deg, #5e1220, var(--blood-bright)); border-radius: 2px; }.pc-xp{ position: relative; height: 6px; background: var(--ink); margin-top: 0.35rem; border-radius: 2px; overflow: hidden; border: 1px solid rgba(201,162,39,0.25); }.pc-xp i{ display: block; height: 100%; background: linear-gradient(90deg, #b8860b, #ffd700); border-radius: 2px; transition: width 0.8s cubic-bezier(0.22,1,0.36,1); box-shadow: 0 0 8px rgba(255,215,0,0.45); }.pc-xp::after{ content: ''; position: absolute; inset: 0; pointer-events: none;
-    background: repeating-linear-gradient(90deg, transparent 0 6px, color-mix(in srgb, var(--ink) 55%, transparent) 6px 8px); }.pc-xp-label{ font-size: 0.75rem; color: var(--bone-dim); margin-top: 0.2rem; letter-spacing: 0.05em; text-align: right; font-variant-numeric: tabular-nums; }.pc-xp-label b{ color: var(--gold-bright); font-style: normal; }/* ── Guld-räknare ── */.pc-gold{
+  }.pc-card:hover{ border-color: var(--gold); transform: translateX(3px); }.pc-card.active{ border-color: var(--gold); box-shadow: 0 0 14px -4px rgba(232,198,90,0.4); }/* ── Profilavatar som bakgrund "bakom" namn/klass/HP/XP ── */.pc-wrap{ position: relative; }.pc-avatar-bg{ position: absolute; inset: 0; z-index: 0; border-radius: 2px; overflow: hidden; background-size: cover; background-position: center 20%; opacity: 0; transition: opacity 0.35s ease; }.pc-avatar-bg::after{ content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(100deg, rgba(11,8,18,0.94), rgba(11,8,18,0.72) 50%, rgba(11,8,18,0.5)); }.pc-wrap.has-bg .pc-avatar-bg{ opacity: 0.62; }.pc-wrap > *:not(.pc-avatar-bg){ position: relative; z-index: 1; }.pc-wrap.has-bg .pc-card{ background: transparent; }.pc-wrap.has-bg .pc-xp{ background: rgba(11,8,18,0.88); }.pc-wrap.has-bg .pc-xp-label, .pc-wrap.has-bg .pc-gold{ text-shadow: 0 1px 4px rgba(0,0,0,0.95), 0 0 10px rgba(232,198,90,0.3); }.pc-avatar{
+   width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+   display: flex; align-items: center; justify-content: center; font-size: 1.25rem;
+   border: 1px solid var(--edge); background: var(--stone-3);
+ }.pc-name{ font-weight: 600; font-size: 1.15rem; color: var(--bone-bright); line-height: 1.2; }.pc-sub{ font-size: 1.02rem; color: var(--bone-dim); font-style: italic; }.pc-hp{ height: 4px; background: var(--ink); margin-top: 0.3rem; border-radius: 2px; overflow: hidden; }.pc-hp i{ display: block; height: 100%; background: linear-gradient(90deg, #5e1220, var(--blood-bright)); border-radius: 2px; }.pc-xp{ position: relative; height: 6px; background: var(--ink); margin-top: 0.35rem; border-radius: 2px; overflow: hidden; border: 1px solid rgba(201,162,39,0.25); }.pc-xp i{ display: block; height: 100%; background: linear-gradient(90deg, #b8860b, #ffd700); border-radius: 2px; transition: width 0.8s cubic-bezier(0.22,1,0.36,1); box-shadow: 0 0 8px rgba(255,215,0,0.45); }.pc-xp::after{ content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(90deg, transparent 0 6px, color-mix(in srgb, var(--ink) 55%, transparent) 6px 8px); }.pc-xp-label{ font-size: 0.88rem; color: var(--bone-dim); margin-top: 0.2rem; letter-spacing: 0.05em; text-align: right; font-variant-numeric: tabular-nums; }.pc-xp-label b{ color: var(--gold-bright); font-style: normal; }/* ── Guld-räknare ── */.pc-gold{
     display: inline-flex; align-items: center; gap: 0.35rem; margin-top: 0.45rem;
-    font-family: 'Cinzel', serif; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.06em;
+    font-family: 'Cinzel', serif; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.06em;
     color: var(--gold-bright); font-variant-numeric: tabular-nums;
     text-shadow: 0 0 10px rgba(232,198,90,0.35); transition: transform 0.2s, text-shadow 0.2s;
   }.pc-gold.bump{ animation: gold-bump 0.5s cubic-bezier(.22,1,.36,1); }
@@ -212,7 +212,7 @@
     padding: 0.45rem 0.55rem; transition: background 0.2s; cursor: default;
     border-bottom: 1px solid color-mix(in srgb, var(--edge) 45%, transparent);
   }.npc-row:last-child{ border-bottom: none; }.npc-row:hover{ background: color-mix(in srgb, var(--arcane) 7%, transparent); }.npc-dot{ width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 6px currentColor; }/* Staplat format: namn + roll under — långa roller (t.ex. "Head Librarian
-     Marrowink") klipps med ellips istället för att svämma ut ur ramen. */.npc-info{ min-width: 0; flex: 1; }.npc-name{ color: var(--bone); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.npc-role{ color: var(--bone-dim); font-size: 0.85rem; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 0.05rem; }/* ── Uppdragslogg (sidebar) ── */.quest-list{ display: flex; flex-direction: column; gap: 0.5rem; }.quest-item{
+     Marrowink") klipps med ellips istället för att svämma ut ur ramen. */.npc-info{ min-width: 0; flex: 1; }.npc-name{ color: var(--bone); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.npc-role{ color: var(--bone-dim); font-size: 0.95rem; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 0.05rem; }/* ── Uppdragslogg (sidebar) ── */.quest-list{ display: flex; flex-direction: column; gap: 0.5rem; }.quest-item{
     padding: 0.5rem 0.55rem;
     background: var(--stone-2);
     border: 1px solid var(--edge);
@@ -1077,17 +1077,20 @@
     <div class="side-section" id="sec-party">
       <div class="side-label side-toggle" onclick="toggleSideSection('party')">The Party <span class="side-caret">▾</span></div>
       <div class="side-body">
-        <div class="pc-card active" onclick="openCodex('character')" title="Open character sheet in Codex">
-          <div class="pc-avatar" id="pc-avatar" onclick="event.stopPropagation();pickAvatar('player')" title="Click to change image">🎭</div>
-          <div style="flex:1;min-width:0">
-            <div class="pc-name" id="pc-name">—</div>
-            <div class="pc-sub" id="pc-sub">—</div>
-            <div class="pc-hp" id="pc-hp-bar"><i id="pc-hp-fill" style="width:100%"></i></div>
+        <div class="pc-wrap" id="pc-wrap">
+          <div class="pc-avatar-bg" id="pc-avatar-bg"></div>
+          <div class="pc-card active" onclick="openCodex('character')" title="Open character sheet in Codex">
+            <div class="pc-avatar" id="pc-avatar" onclick="event.stopPropagation();pickAvatar('player')" title="Click to change image">🎭</div>
+            <div style="flex:1;min-width:0">
+              <div class="pc-name" id="pc-name">—</div>
+              <div class="pc-sub" id="pc-sub">—</div>
+              <div class="pc-hp" id="pc-hp-bar"><i id="pc-hp-fill" style="width:100%"></i></div>
+            </div>
           </div>
+          <div class="pc-xp" id="pc-xp-bar"><i id="pc-xp-fill" style="width:0%"></i></div>
+          <div class="pc-xp-label" id="pc-xp-label">0 / 300 XP</div>
+          <div class="pc-gold" id="pc-gold" title="Your purse">🪙 <span id="pc-gold-val">0</span> <span id="pc-gold-detail" style="font-size:0.65rem;color:var(--bone-dim);font-weight:400"></span></div>
         </div>
-        <div class="pc-xp" id="pc-xp-bar"><i id="pc-xp-fill" style="width:0%"></i></div>
-        <div class="pc-xp-label" id="pc-xp-label">0 / 300 XP</div>
-        <div class="pc-gold" id="pc-gold" title="Your purse">🪙 <span id="pc-gold-val">0</span> <span id="pc-gold-detail" style="font-size:0.65rem;color:var(--bone-dim);font-weight:400"></span></div>
         <div class="side-near" id="near-label">✦ Nära dig</div>
         <div class="npc-list" id="party-npcs"></div>
       </div>
@@ -1936,6 +1939,18 @@ function refreshAvatars() {
       ? `<img src="${AVATARS['player']}" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">`
       : SPR.html('🎭');
   }
+  // Profilavatar som bakgrund "bakom" namn/klass/HP/XP
+  const pcWrap = document.getElementById('pc-wrap');
+  const pcBg = document.getElementById('pc-avatar-bg');
+  if (pcWrap && pcBg) {
+    if (AVATARS['player']) {
+      pcBg.style.backgroundImage = `url('${AVATARS['player']}')`;
+      pcWrap.classList.add('has-bg');
+    } else {
+      pcBg.style.backgroundImage = '';
+      pcWrap.classList.remove('has-bg');
+    }
+  }
   // NPC-listan i sidebaren
   renderNpcSidebar();
   // Chattens avsändar-rader
@@ -2408,22 +2423,22 @@ function updateTTSStyleLock() {
     card.style.opacity = hasStyle ? '1' : '0.55';
     card.style.pointerEvents = hasStyle ? 'auto' : 'none';
   }
-  // StepFun TTS: låst för free/tier1 (Tier 2 feature)
+  // Qwen TTS: låst för free/tier1 (StepFun är alltid gratis — rostad 2026-08-04)
   const ps = document.getElementById('tts-provider-select');
   if (ps) {
-    const stepOpt = ps.querySelector('option[value="stepfun"]');
-    if (stepOpt) {
-      stepOpt.disabled = !hasStyle;
-      stepOpt.textContent = hasStyle ? 'StepFun' : 'StepFun 🔒';
+    const qwenOpt = ps.querySelector('option[value="qwen"]');
+    if (qwenOpt) {
+      qwenOpt.disabled = !hasStyle;
+      qwenOpt.textContent = hasStyle ? 'Qwen' : 'Qwen 🔒';
     }
-    // Fallback till qwen om stepfun vald men låst
-    if (!hasStyle && ps.value === 'stepfun') {
-      ps.value = 'qwen';
-      if (localStorage.getItem(TTS_PROVIDER_KEY) === 'stepfun') {
-        localStorage.setItem(TTS_PROVIDER_KEY, 'qwen');
+    // Fallback till stepfun om qwen vald men låst
+    if (!hasStyle && ps.value === 'qwen') {
+      ps.value = 'stepfun';
+      if (localStorage.getItem(TTS_PROVIDER_KEY) === 'qwen') {
+        localStorage.setItem(TTS_PROVIDER_KEY, 'stepfun');
       }
     }
-    ps.title = hasStyle ? 'TTS provider' : '🔒 StepFun TTS — Tier 2 feature';
+    ps.title = hasStyle ? 'TTS provider' : 'StepFun TTS — always free' + ' · Qwen 🔒 Tier 2';
   }
   // Modell-pickern: premium-modeller gråade för free/tier1
   if (typeof initSettingsModelPickers === 'function') {

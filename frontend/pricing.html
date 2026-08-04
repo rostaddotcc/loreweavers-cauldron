@@ -193,6 +193,17 @@
   .plan-login-hint a:hover{color:var(--gold)}
   .plan-grant{margin-top:.9rem;text-align:center;font-size:.82rem;color:var(--bone-dim);line-height:1.5}
   .plan-grant b{color:var(--gold-bright);font-weight:700;letter-spacing:.04em}
+  .plan-email{margin-top:1rem;padding:1.1rem;border:1px solid var(--edge-hi);background:var(--stone-3);text-align:left;border-radius:3px}
+  .plan-email .pe-title{font-family:var(--font-display);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-bright);margin-bottom:.35rem}
+  .plan-email .pe-label{font-size:.88rem;color:var(--bone);line-height:1.55;margin-bottom:.9rem}
+  .plan-email .pe-row{display:flex;flex-direction:column;gap:.65rem}
+  .plan-email .pe-row input{width:100%;font-family:var(--font-body);font-size:16px;color:var(--bone-bright);
+    background:var(--stone);border:1px solid var(--edge);padding:.85rem 1rem;outline:none;border-radius:3px;
+    transition:border-color .2s, box-shadow .2s}
+  .plan-email .pe-row input::placeholder{color:var(--bone-dim);opacity:.75}
+  .plan-email .pe-row input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,162,39,.14)}
+  .plan-email .pe-row .plan-cta{margin-top:0;padding:.85rem 1rem;white-space:nowrap;font-size:.8rem}
+  .plan-email .pe-err{margin-top:.6rem;font-size:.8rem;color:var(--blood-bright);font-style:italic;min-height:1em}
   .plan-note{margin-top:.9rem;text-align:center;font-size:.78rem;color:var(--bone-dim);line-height:1.55}
 
   @media(max-width:640px){
@@ -216,7 +227,7 @@
   </a>
   <div class="nav-links">
     <a class="nav-link" href="adventure.html">Return to the realm</a>
-    <a class="nav-cta" href="login.html">Enter</a>
+    <a class="nav-cta" href="login.html#gate">Enter</a>
   </div>
 </nav>
 
@@ -242,9 +253,10 @@
       <div class="tier-desc">The realm, at your own pace.</div>
       <ul>
         <li><b>50 turns</b> every day — refreshed at midnight</li>
+        <li><b>StepFun TTS</b> — always free</li>
         <li>The steadfast Dungeon Master (<b>step-3.7-flash</b>)</li>
+        <li class="dim">Avatars — AI or upload · Tier 1</li>
         <li>Persistent world, memory, and Codex</li>
-        <li>Qwen voice narration · dice ritual</li>
       </ul>
       <a class="tier-btn go" href="login.html" data-tier="free">Begin your adventure</a>
     </div>
@@ -258,7 +270,7 @@
       <div class="tier-desc">More turns, more often — and faces for your story.</div>
       <ul>
         <li><b>50 turns</b> refreshed <b>every 6 hours</b></li>
-        <li><b>AI avatars</b> for your hero and the NPCs you meet</li>
+        <li><b>AI + uploaded avatars</b> for your hero and the NPCs you meet</li>
         <li>Everything in the Wanderer path</li>
       </ul>
       <a class="tier-btn go" href="#" data-tier="tier1" onclick="openPlan(event,'tier1')">Take the sigil</a>
@@ -277,7 +289,7 @@
         <li><b>Both narrator voices</b> — Qwen <i>and</i> StepFun TTS</li>
         <li><b>Customize the narrator voice</b> — happy, calm, scary, or your own style</li>
         <li><b>50 turns</b> refreshed <b>every 6 hours</b></li>
-        <li><b>AI avatars</b> for your hero and the NPCs you meet</li>
+        <li><b>AI + uploaded avatars</b> for your hero and the NPCs you meet</li>
         <li>Everything in the Companion path</li>
       </ul>
       <a class="tier-btn go" href="#" data-tier="tier2" onclick="openPlan(event,'tier2')">Hold the sigil</a>
@@ -294,7 +306,7 @@
       <div class="tier-desc" id="lifetime-desc">Support the dev. Never count a turn again.</div>
       <ul>
         <li><b>Unlimited turns</b> — the Cauldron never sleeps</li>
-        <li>All Dungeon Masters · both narrator voices · avatars</li>
+        <li>All Dungeon Masters · both narrator voices · all avatars (AI + upload)</li>
         <li>A thank-you from the forge — you keep this realm burning</li>
       </ul>
       <a class="tier-btn go" href="#" data-tier="lifetime" onclick="openPlan(event,'lifetime')">Forge forever</a>
@@ -321,6 +333,15 @@
     <button class="plan-cta" id="plan-cta" onclick="planCta()">Continue to checkout</button>
     <div class="plan-login-hint" id="plan-login-hint" style="display:none">Not signed in — <a href="login.html?next=pricing.html">sign in to continue</a></div>
     <div class="plan-grant" id="plan-grant" style="display:none">✦ Subscription will be granted to <b id="plan-grant-user">you</b></div>
+    <div class="plan-email" id="plan-email" style="display:none">
+      <div class="pe-title">✉ Add your email</div>
+      <div class="pe-label">Your account has no email yet — we need one to send receipts and reset links before you subscribe.</div>
+      <div class="pe-row">
+        <input type="email" id="plan-email-input" placeholder="you@example.com" autocomplete="email" />
+        <button type="button" class="plan-cta" id="plan-email-btn" onclick="planSaveEmail()">Save email &amp; continue</button>
+      </div>
+      <div class="pe-err" id="plan-email-err"></div>
+    </div>
     <div class="plan-note" id="plan-note">Payments are processed securely by Stripe.</div>
   </div>
 </div>
@@ -361,7 +382,7 @@
       desc: 'More turns, more often — and faces for your story.',
       features: [
         '<b>50 turns</b> refreshed <b>every 6 hours</b>',
-        '<b>AI avatars</b> for your hero and the NPCs you meet',
+        '<b>AI + uploaded avatars</b> for your hero and the NPCs you meet',
         'Everything in the Wanderer path',
       ],
       promo: null,
@@ -375,7 +396,7 @@
         '<b>Both narrator voices</b> — Qwen and StepFun TTS',
         '<b>Customize the narrator</b> — happy, calm, scary, or your own style',
         '<b>50 turns</b> refreshed <b>every 6 hours</b>',
-        '<b>AI avatars</b> for your hero and the NPCs you meet',
+        '<b>AI + uploaded avatars</b> for your hero and the NPCs you meet',
         'Everything in the Companion path',
       ],
       promo: null,
@@ -386,7 +407,7 @@
       desc: 'Support the dev. Never count a turn again.',
       features: [
         '<b>Unlimited turns</b> — the Cauldron never sleeps',
-        'All Dungeon Masters · both narrator voices · avatars',
+        'All Dungeon Masters · both narrator voices · all avatars (AI + upload)',
         'A thank-you from the forge — you keep this realm burning',
       ],
       promo: null,
@@ -416,7 +437,6 @@
     var promo = null;
     if (PROMO_ACTIVE) {
       if (tier === 'tier1') promo = { label: 'Founding offer', text: 'Pay 1 month, get 2 months free — 3 months for the price of one.', price: p.price, strike: null };
-      else if (tier === 'tier2') promo = { label: 'Founding offer', text: 'Pay 1 month, get 3 months free — 4 months for the price of one.', price: p.price, strike: null };
       else if (tier === 'lifetime') promo = { label: 'Founding offer', text: 'Lifetime for 50€ — half price, one-time. Forever, no renewal.', price: { eur: 50, sek: 585, per: ' once' }, strike: p.price };
     }
     document.getElementById('plan-eyebrow').textContent = 'The Path';
@@ -469,6 +489,8 @@
   }
 
   // ── CTA i modalen: inloggad → checkout; ej inloggad → login ──
+  // 2026-08-04: e-post krävs före köp — om /api/billing/checkout svarar
+  // {detail:{email_required:true}} visas e-postformuläret i modalen.
   function planCta() {
     if (!LOGGED_IN || !PLAN_OPEN) {
       location.href = 'login.html?next=pricing.html';
@@ -488,7 +510,14 @@
         return null;
       }
       return res.json().then(function (data) {
-        if (!res.ok) throw new Error(data.detail || ('HTTP ' + res.status));
+        if (!res.ok) {
+          // E-post saknas → visa formuläret i stället för ett generiskt fel
+          if (data && data.detail && data.detail.email_required) {
+            showPlanEmail();
+            return null;
+          }
+          throw new Error((data && data.detail && data.detail.message) || data.detail || ('HTTP ' + res.status));
+        }
         return data;
       });
     }).then(function (data) {
@@ -497,6 +526,48 @@
       btn.classList.remove('busy');
       btn.textContent = 'Continue to checkout';
       alert('The sigil could not be forged: ' + e.message);
+    });
+  }
+
+  // Visa e-postformuläret i modalen (checkout kräver e-post på kontot).
+  function showPlanEmail() {
+    var btn = document.getElementById('plan-cta');
+    btn.classList.remove('busy');
+    btn.textContent = 'Continue to checkout';
+    document.getElementById('plan-email').style.display = '';
+    var inp = document.getElementById('plan-email-input');
+    if (inp) { inp.focus(); }
+  }
+
+  function planSaveEmail() {
+    var inp = document.getElementById('plan-email-input');
+    var err = document.getElementById('plan-email-err');
+    var btn = document.getElementById('plan-email-btn');
+    var email = (inp && inp.value || '').trim();
+    if (!email || !/@/.test(email) || !/\.[^.]+$/.test(email.split('@')[1] || '')) {
+      if (err) err.textContent = 'That email does not look right.';
+      return;
+    }
+    if (err) err.textContent = '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+    fetch('/api/me/email', {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email })
+    }).then(function (res) {
+      return res.json().then(function (data) {
+        if (!res.ok) throw new Error((data && data.detail) || ('HTTP ' + res.status));
+        return data;
+      });
+    }).then(function () {
+      // E-post sparat → dölj formuläret och försök checkout igen
+      document.getElementById('plan-email').style.display = 'none';
+      if (btn) { btn.disabled = false; btn.textContent = 'Save & continue'; }
+      planCta();
+    }).catch(function (e) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Save & continue'; }
+      if (err) err.textContent = e.message || 'Could not save the email. Try again shortly.';
     });
   }
 

@@ -12,7 +12,7 @@
     --edge:#463a60;--bone:#d9c9a6;--bone-bright:#f2e6c8;--bone-dim:#9d8a6a;
     --gold:#d4a92c;--gold-bright:#f0d675;--blood:#a32433;--blood-bright:#e0485a;
     --ember:#d4691e;--arcane:#9a6fe0;--poison:#7aa35e;--teal:#5e9aa3;
-  }*{margin:0;padding:0;box-sizing:border-box}body{
+  }*{margin:0;padding:0;box-sizing:border-box}html{font-size:18px}body{
     font-family:'Spectral',Georgia,serif;color:var(--bone);min-height:100vh;
     background:
       radial-gradient(1100px 520px at 50% 112%, rgba(212,105,30,.13), transparent 62%),
@@ -483,8 +483,7 @@ html{font-size:17px}
   <div class="promo" id="promo-banner" style="display:none">
     <span class="promo-badge">Founding Offer</span>
     <div class="promo-text">
-      Subscribe for one month and get <b><span data-promo-free="tier1">2</span> months free</b> on <b>Companion</b>
-      &mdash; or <b><span data-promo-free="tier2">3</span> months free</b> on <b>Adventurer</b>.
+      Subscribe for one month and get <b><span data-promo-free="tier1">2</span> months free</b> on <b>Companion</b>.
       &nbsp;<b>Lifetime for 50€</b> — half price, one-time.
       <span class="promo-timer">Ends in <span class="t-seg" id="promo-days">00</span><span class="t-sep">d</span><span class="t-seg" id="promo-hours">00</span><span class="t-sep">:</span><span class="t-seg" id="promo-mins">00</span><span class="t-sep">:</span><span class="t-seg" id="promo-secs">00</span></span>
     </div>
@@ -500,7 +499,8 @@ html{font-size:17px}
       <div class="rn-inner">
         <span class="rn-ver">v0.7 — The Forge, Earning</span>
         <ul class="rn-list">
-          <li><b>Founding offer</b> — for the next seven days, subscribe for one month and get <b>2 months free</b> on Companion or <b>3 months free</b> on Adventurer — and <b>Lifetime for 50€</b>, half price, one-time. The countdown is right above.</li>
+          <li><b>StepFun TTS — always free</b> — the narrator's voice belongs to every adventurer. Wanderers keep their <b>50 turns a day</b> and StepFun reads your story aloud, free, forever.</li>
+          <li><b>Founding offer</b> — for the next seven days, subscribe for one month and get <b>2 months free</b> on Companion — and <b>Lifetime for 50€</b>, half price, one-time. The countdown is right above.</li>
           <li><b>Four paths into the realm</b> — Wanderer (free), Companion, Adventurer, and Lifetime, wired to real Stripe checkout.</li>
           <li><b>Qwen 3.8 Max &amp; DeepSeek</b> — the full release is here: 2.4T parameters (95B active per request), 1M context, deep reasoning. Pick your Dungeon Master at the model gate.</li>
           <li><b>Model gating by tier</b> — paid paths unlock DeepSeek, Qwen 3.8 Max, and Qwen 3.6 Flash; free players travel with the steadfast step-3.7-flash.</li>
@@ -1522,26 +1522,26 @@ const TTS_PROVIDERS = [
   const fillTTS = (locked) => {
     if (!ttsSel) return;
     ttsSel.innerHTML = TTS_PROVIDERS.map(p => {
-      const stepfun = p.id === 'stepfun';
-      const dis = locked && stepfun;
-      return `<option value="${p.id}"${dis ? ' disabled' : ''}>${p.name}${dis ? ' 🔒 — Tier 2' : ''}${p.recommended ? ' — recommended' : ''}</option>`;
+      const qwen = p.id === 'qwen';
+      const dis = locked && qwen;
+      return `<option value="${p.id}"${dis ? ' disabled' : ''}>${p.name}${dis ? ' 🔒 — Tier 2' : ''}${!locked && p.recommended ? ' — recommended' : ''}</option>`;
     }).join('');
     try {
       const saved = localStorage.getItem('dnd_tts_provider');
       // Rekommendation (2026-08-04): Qwen (Token Plan) är default för nya
       // äventyr — men en tidigare explicit spelar-ändring respekteras.
-      if (saved && TTS_PROVIDERS.some(p => p.id === saved) && !(locked && saved === 'stepfun')) {
+      // Låsta konton (free/tier1): ENDAST StepFun (Qwen 🔒 Tier 2).
+      if (saved && TTS_PROVIDERS.some(p => p.id === saved) && (!locked || saved === 'stepfun')) {
         ttsSel.value = saved;
       } else {
-        const rec = TTS_PROVIDERS.find(p => p.recommended);
-        if (rec) ttsSel.value = rec.id;
+        ttsSel.value = locked ? 'stepfun' : (TTS_PROVIDERS.find(p => p.recommended) || TTS_PROVIDERS[0]).id;
       }
     } catch (e) {}
   };
   if (!dmSel && !guardSel && !extSel && !charSel && !ttsSel) return;
   API.me().then(u => {
     const isAdmin = !!(u && u.role === 'admin');
-    // free/tier1 (och okänd status) → låst till step-3.7-flash + Qwen-TTS
+    // free/tier1 (och okänd status) → låst till step-3.7-flash + StepFun-TTS (Qwen 🔒 Tier 2)
     const locked = !isAdmin && (!u || u.subscription_status === 'free' || u.subscription_status === 'tier1');
     fillTTS(locked);
     if (isAdmin) {
@@ -1782,7 +1782,12 @@ function renderProfile(s) {
   let h = '';
   h += cell('Adventurer', _esc(s.username));
   h += cell('Role', _esc(s.role || 'player'));
-  h += cell('Turns this period', fmt(s.period_turns_used) + ' / ' + (s.turn_cap === 0 ? '∞' : fmt(s.turn_cap)) + bar(s.period_turns_used, s.turn_cap), true);
+  // Bättre turncap-beskrivning (rostad 2026-08-04): visa perioden så man inte
+  // tror att "50" är veckans total — det är per period (6h för tier1/2, dagligen free).
+  const st = s.subscription_status;
+  const periodLabel = (st === 'tier1' || st === 'tier2') ? ' per 6h' : ' per day';
+  const capLabel = s.turn_cap === 0 ? '∞ (lifetime)' : fmt(s.turn_cap) + periodLabel;
+  h += cell('Turns', fmt(s.period_turns_used) + ' / ' + capLabel + bar(s.period_turns_used, s.turn_cap), true);
   h += cell('Total turns', fmt(s.total_turns));
   h += cell('Campaigns', fmt(s.total_campaigns));
   h += cell('Total tokens', fmt(s.total_tokens));
@@ -1795,15 +1800,42 @@ function renderProfile(s) {
   if (s.email) h += cell('Email', _esc(s.email));
   h += cell('Member since', _esc(dt(s.created_at)));
   h += cell('Last active', _esc(dt(s.last_active)));
+  // 💳 Subscription-förnyelse — inloggade spelare ska se NÄR det förnyas
+  if (s.subscription_status === 'tier1' || s.subscription_status === 'tier2') {
+    const until = s.subscription_until;
+    h += cell('Renews on', _esc(until ? String(until).slice(0, 10) : '—'), true);
+  } else if (s.subscription_status === 'lifetime') {
+    h += cell('Renews on', 'Forever — never expires', true);
+  }
   if (s.revenue > 0) h += cell('Contributions (SEK)', fmt(s.revenue));
   if (s.turn_bonus > 0) h += cell('Turn bonus', fmt(s.turn_bonus));
   // 💳 Uppgraderingsväg — free/tier1 ser tydlig CTA, premium ser billing-länk
   if (s.subscription_status === 'free' || s.subscription_status === 'tier1') {
     h += '<div class="pf-cell full"><a href="pricing.html" style="display:block;text-align:center;font-family:Cinzel,serif;font-size:.82rem;letter-spacing:.18em;text-transform:uppercase;color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));padding:.9rem 1rem;border-radius:2px;text-decoration:none">💳 Upgrade your path</a></div>';
   } else {
-    h += '<div class="pf-cell full" style="text-align:center;font-size:.9rem"><a href="pricing.html" style="color:var(--gold);text-decoration:none">👑 Membership &amp; billing →</a></div>';
+    // Betalande (tier2/lifetime) → "Manage" öppnar Stripe Customer Portal
+    h += '<div class="pf-cell full" style="text-align:center;font-size:.9rem"><a href="#" onclick="openBillingPortal(event)" style="color:var(--gold);text-decoration:none">👑 Manage subscription →</a></div>';
   }
   document.getElementById('pf-grid').innerHTML = h;
+}
+
+// 💳 Stripe Customer Portal — säg upp / hantera prenumeration (2026-08-04)
+async function openBillingPortal(e) {
+  if (e) e.preventDefault();
+  try {
+    const res = await fetch('/api/billing/portal', {
+      method: 'POST',
+      credentials: 'include',
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      const msg = (data && data.detail && data.detail.message) || (data && data.detail) || ('HTTP ' + res.status);
+      throw new Error(msg);
+    }
+    if (data && data.url) window.location.href = data.url;
+  } catch (err) {
+    toast('⚠ ' + (err.message || 'Could not open the billing portal.'));
+  }
 }
 
 // ── Nyhet: Qwen 3.8 Max full release (2026-08-03) ──
@@ -1869,6 +1901,18 @@ function newsQwenDismiss(e) {
       setInterval(() => tick(until), 1000);
     })
     .catch(() => { /* tyst — ingen banner om API:et inte svarar */ });
+})();
+
+// ── 💳 Payment processed — bekräftelse när man kommer tillbaka från Stripe ──
+(function () {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('billing') === 'success') {
+      toast('✅ Payment processed — your path is forged!');
+      // Städa bort parametern så en refresh inte toastar igen
+      history.replaceState(null, '', window.location.pathname);
+    }
+  } catch (e) { /* tyst */ }
 })();
 
 const canvas=document.getElementById('embers'),ctx=canvas.getContext('2d');

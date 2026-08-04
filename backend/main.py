@@ -1902,9 +1902,34 @@ TTS_DASHSCOPE_WS_URL = os.getenv(
 )
 TTS_DASHSCOPE_KEY_ENV = os.getenv("TTS_DASHSCOPE_KEY_ENV", "DASHSCOPE_API_KEY")
 
-# Enkel minnescache — samma (röst, text) kostar bara ett API-anrop
+# Enkel minnescache — samma (röst, text) kostar bara ett API-anrop.
+# Värde = (monotonic-tid, bytes). Poster äldre än TTL rensas vid hämtning
+# (spelare som spelar om DM-meddelanden inom 10 min sparar tokens).
 _TTS_CACHE: dict = {}
 _TTS_CACHE_MAX = 64
+_TTS_CACHE_TTL = 600  # sekunder (10 min)
+
+
+def _tts_cache_get(key):
+    """Hämta cache-post med TTL-koll (äldre än 10 min = miss + rensa)."""
+    hit = _TTS_CACHE.get(key)
+    if hit is None:
+        return None
+    ts, data = hit
+    if time.monotonic() - ts > _TTS_CACHE_TTL:
+        _TTS_CACHE.pop(key, None)
+        return None
+    return data
+
+
+def _tts_cache_set(key, data):
+    if len(_TTS_CACHE) >= _TTS_CACHE_MAX:
+        # Rensa äldsta posten (heuristic: första — dict behåller insertion order)
+        try:
+            _TTS_CACHE.pop(next(iter(_TTS_CACHE)))
+        except (StopIteration, KeyError):
+            pass
+    _TTS_CACHE[key] = (time.monotonic(), data)
 
 
 class TTSRequest(BaseModel):
@@ -2410,7 +2435,7 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
     segments = _split_tts_segments(text)
 
     cache_key = (provider, voice, text)
-    cached = _TTS_CACHE.get(cache_key)
+    cached = _tts_cache_get(cache_key)
     if cached is not None:
         logger.info("🔊 TTS cache hit: provider=%s voice=%s, %d chars, %d bytes", provider, voice, len(text), len(cached))
         _record_tts_usage(username, len(text), _mp3_duration_seconds(cached), api_call=False)
@@ -2447,9 +2472,7 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
 
     logger.info("🔊 TTS done: provider=%s voice=%s, %d chars (%d seg) → %d bytes (%.1fs)", provider, voice, len(text), len(segments), len(audio), time.time() - _t0)
     _record_tts_usage(username, len(text), _mp3_duration_seconds(audio), api_call=True)
-    if len(_TTS_CACHE) >= _TTS_CACHE_MAX:
-        _TTS_CACHE.pop(next(iter(_TTS_CACHE)))
-    _TTS_CACHE[cache_key] = audio
+    _tts_cache_set(cache_key, audio)
     return StreamingResponse(io.BytesIO(audio), media_type="audio/mpeg")
 
 

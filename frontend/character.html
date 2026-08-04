@@ -259,7 +259,23 @@
   }.inv-summary b{ color: var(--bone-bright); }.overloaded{ color: var(--blood-bright) !important; animation: hp-alarm 1.2s infinite; }.inv-empty{
     text-align: center; color: var(--bone-dim); font-style: italic;
     padding: 2.5rem 1rem; font-size: 1.03rem;
-  }/* ═══════════ Besvärjelser — spell-kort ═══════════ */.spells-grid{
+  }/* ═══════════ Besvärjelser — spell-kort ═══════════ */.spell-slots{
+    display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--arcane) 9%, transparent), color-mix(in srgb, var(--arcane) 2%, transparent));
+    border: 1px solid color-mix(in srgb, var(--arcane) 30%, transparent);
+    padding: 0.7rem 0.9rem; margin-bottom: 0.9rem;
+  }.ss-label{ font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-dim); }.ss-pips{
+    display: flex; gap: 0.3rem; flex-wrap: wrap;
+  }.ss-pip{
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--arcane) 60%, transparent);
+    background: var(--stone-3); display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.62rem; color: var(--arcane-bright); transition: all 0.2s;
+  }.ss-pip.used{ border-color: var(--gold); color: var(--gold-bright); box-shadow: 0 0 10px rgba(232,198,90,0.25); background: color-mix(in srgb, var(--gold) 12%, transparent); }
+  .ss-pip.available{ opacity: 0.45; border-style: dashed; }.ss-count{
+    font-size: 0.95rem; color: var(--bone-bright); font-variant-numeric: tabular-nums;
+  }.ss-count b{ color: var(--gold-bright); }.ss-note{ font-size: 0.72rem; color: var(--bone-dim); font-style: italic; flex-basis: 100%; margin-top: 0.15rem; }
+  .spells-grid{
     display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 0.7rem; padding: 0.2rem 0;
   }.spell-card{
@@ -425,7 +441,6 @@
 <div class="app">
 
   <header class="masthead">
-    <div class="over">Qwen-driven Dungeon Master</div>
     <h1>The Lore Weaver's Cauldron</h1>
     <div class="rune-divider"><span>✦</span></div>
   </header>
@@ -517,8 +532,9 @@
     <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
 
     <div class="section-title">✨ Spells</div>
+    <div class="spell-slots" id="spell-slots"></div>
     <div class="spells-grid" id="spells-grid"></div>
-    <div class="spells-hint" style="margin-top:0.6rem;font-size:.83rem;color:var(--bone-dim);text-align:center">Cantrips (level 0) are at will — higher spells draw from your spell slots. New spells are assigned by the Lorekeeper as you learn them.</div>
+    <div class="spells-hint" style="margin-top:0.6rem;font-size:.83rem;color:var(--bone-dim);text-align:center">Cantrips (level 0) are at will — higher spells draw from your spell slots. New spells and slots are assigned by the Lorekeeper as you learn — ask the DM during a long rest to reallocate them.</div>
   </section>
 
   <!-- ═══════════ SKATTKAMMARE ═══════════ -->
@@ -1053,6 +1069,28 @@ function renderSpells() {
   const grid = document.getElementById('spells-grid');
   if (!grid) return;
   grid.innerHTML = '';
+  // Spell slots — tydlig vy: used (guld, fast) vs available (dashed)
+  const slotsBox = document.getElementById('spell-slots');
+  const ss = (state.character && state.character.spell_slots) || {};
+  const maxSlots = parseInt(ss.max, 10) || 0;
+  const usedSlots = Math.min(parseInt(ss.current, 10) || 0, maxSlots);
+  if (slotsBox) {
+    if (maxSlots > 0) {
+      let pips = '';
+      for (let i = 0; i < maxSlots; i++) {
+        const used = i < usedSlots;
+        pips += `<span class="ss-pip ${used ? 'used' : 'available'}" title="${used ? 'Used' : 'Available'}">${used ? '✷' : ''}</span>`;
+      }
+      const avail = maxSlots - usedSlots;
+      slotsBox.innerHTML = `
+        <span class="ss-label">Slots</span>
+        <span class="ss-pips">${pips}</span>
+        <span class="ss-count"><b>${usedSlots}</b> / ${maxSlots} used · <b style="color:var(--poison)">${avail} available</b></span>
+        <span class="ss-note">Equipped spells draw from these. Ask the DM to reassign slots during a long rest.</span>`;
+    } else {
+      slotsBox.innerHTML = '';
+    }
+  }
   const spells = Array.isArray(state.character && state.character.spells) ? state.character.spells : [];
   if (!spells.length) {
     grid.innerHTML = `<div class="inv-empty">No spells yet — your studies will bear fruit…</div>`;

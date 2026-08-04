@@ -67,7 +67,7 @@
 
   /* ── Stat cards ── */
   .stats-grid {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem;
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 1.2rem;
   }
   .stat-card {
     background: var(--stone); border: 1px solid var(--edge); padding: 1.2rem 1rem;
@@ -86,6 +86,112 @@
     font-family: 'Cinzel', serif; font-size: 0.52rem; letter-spacing: 0.16em;
     text-transform: uppercase; color: var(--bone-dim);
   }
+
+  /* ── Dashboard charts ── */
+  .charts-grid {
+    display: grid; grid-template-columns: repeat(12, 1fr); gap: 1rem; margin-bottom: 1.5rem;
+  }
+  .chart-card {
+    background: var(--stone); border: 1px solid var(--edge); padding: 1rem 1.1rem 1.15rem;
+    position: relative; min-width: 0;
+  }
+  .chart-card::before {
+    content: ''; position: absolute; inset: 3px;
+    border: 1px solid var(--edge); opacity: 0.22; pointer-events: none;
+  }
+  .chart-card.span-5 { grid-column: span 5; }
+  .chart-card.span-7 { grid-column: span 7; }
+  .chart-card.span-12 { grid-column: span 12; }
+  .chart-head {
+    font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--gold); margin-bottom: 0.9rem;
+  }
+  .chart-body { display: flex; gap: 1.1rem; align-items: center; flex-wrap: wrap; }
+  .donut {
+    width: 148px; height: 148px; display: block; flex: 0 0 auto;
+    filter: drop-shadow(0 0 7px rgba(154,111,224,0.28));
+  }
+  .donut-slice { transition: opacity 0.15s; }
+  .donut-slice:hover { opacity: 0.78; }
+  .donut-center-num { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 15px; fill: var(--bone-bright); }
+  .donut-center-sub { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 7.5px; fill: var(--bone-dim); letter-spacing: 0.14em; text-transform: uppercase; }
+  .legend { flex: 1 1 170px; min-width: 160px; display: flex; flex-direction: column; gap: 0.3rem; }
+  .legend-item { display: flex; align-items: center; gap: 0.45rem; font-size: 0.66rem; color: var(--bone); }
+  .legend-dot { width: 8px; height: 8px; flex: 0 0 auto; }
+  .legend-label { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .legend-val { font-family: 'IBM Plex Mono', ui-monospace, monospace; color: var(--bone-bright); font-variant-numeric: tabular-nums; }
+  .legend-pct { font-family: 'IBM Plex Mono', ui-monospace, monospace; color: var(--bone-dim); width: 40px; text-align: right; font-variant-numeric: tabular-nums; }
+  .chart-empty { color: var(--bone-dim); font-size: 0.68rem; font-style: italic; padding: 0.6rem 0; }
+
+  /* ── Bar list (TTS per player) ── */
+  .bar-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .bar-row { display: grid; grid-template-columns: 150px 1fr 92px; gap: 0.6rem; align-items: center; font-size: 0.68rem; }
+  .bar-label { color: var(--bone); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-track { height: 10px; background: var(--ink); border: 1px solid var(--edge); }
+  .bar-fill { height: 100%; opacity: 0.85; box-shadow: 0 0 6px rgba(94,154,163,0.35); transition: opacity .15s; }
+  .bar-fill:hover { opacity: 1; }
+  .bar-val { font-family: 'IBM Plex Mono', ui-monospace, monospace; color: var(--bone-bright); text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* ── Filters row ── */
+  .filters-row {
+    display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;
+    background: var(--stone); border: 1px solid var(--edge);
+    padding: 0.65rem 0.7rem; margin-bottom: 1rem; position: relative;
+  }
+  .filters-row::before {
+    content: ''; position: absolute; inset: 3px;
+    border: 1px solid var(--edge); opacity: 0.22; pointer-events: none;
+  }
+  .filter-input, .filter-select {
+    background: var(--stone-2); border: 1px solid var(--edge); color: var(--bone);
+    padding: 0.42rem 0.6rem; font-size: 0.72rem; font-family: inherit; border-radius: 0;
+  }
+  .filter-input { width: 230px; }
+  .filter-input:focus, .filter-select:focus { outline: none; border-color: var(--gold); }
+  .filter-select { cursor: pointer; }
+  .filter-clear {
+    background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
+    padding: 0.42rem 0.7rem; font-size: 0.62rem; cursor: pointer; letter-spacing: 0.08em; font-family: inherit;
+  }
+  .filter-clear:hover { color: var(--blood-bright); border-color: var(--blood-bright); }
+  .filter-count { margin-left: auto; font-size: 0.62rem; color: var(--bone-dim); font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+
+  /* ── Create user form ── */
+  .create-user-form {
+    display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.2rem;
+  }
+  .create-user-form input, .create-user-form select {
+    background: var(--stone-2); border: 1px solid var(--edge); color: var(--bone);
+    padding: 0.42rem 0.6rem; font-size: 0.74rem; font-family: inherit; border-radius: 0;
+  }
+  .create-user-form input:focus, .create-user-form select:focus { outline: none; border-color: var(--gold); }
+  .create-user-form .cu-user { width: 150px; }
+  .create-user-form .cu-pass { width: 130px; }
+  .create-user-form .cu-btn {
+    background: var(--gold); color: var(--ink); border: none; padding: 0.44rem 0.9rem;
+    font-size: 0.68rem; cursor: pointer; font-weight: bold; font-family: 'Cinzel', serif; letter-spacing: 0.08em;
+  }
+  .create-user-form .cu-btn:hover { background: var(--gold-bright); }
+
+  /* ── Role badges ── */
+  .role-badge {
+    display: inline-block; font-size: 0.45rem; letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 2px 6px; font-weight: 700; font-family: 'Cinzel', serif; vertical-align: middle;
+  }
+  .role-badge.role-admin { background: var(--gold); color: var(--ink); box-shadow: 0 0 8px rgba(212,169,44,0.35); }
+  .role-badge.role-player { background: transparent; border: 1px solid var(--arcane); color: var(--arcane); }
+
+  /* ── Table extras ── */
+  .table-wrap { overflow-x: auto; }
+  .country-cell { color: var(--bone-bright); white-space: nowrap; }
+  .email-cell a { color: var(--teal); text-decoration: none; }
+  .email-cell a:hover { color: var(--gold-bright); text-decoration: underline; }
+  .del-btn {
+    background: none; border: 1px solid var(--blood); color: var(--blood-bright);
+    padding: 0.22rem 0.5rem; font-size: 0.6rem; cursor: pointer; white-space: nowrap;
+  }
+  .del-btn:hover { background: rgba(163,36,51,0.15); border-color: var(--blood-bright); }
+  .no-rows { text-align: center; color: var(--bone-dim); font-size: 0.72rem; padding: 2rem 0 !important; }
 
   /* ── Section title ── */
   .section-title {
@@ -115,11 +221,6 @@
   .player-row { cursor: pointer; transition: background 0.15s; }
   .player-row:hover { background: var(--stone-2); }
   .player-row.expanded { background: var(--stone-2); }
-  .admin-badge {
-    display: inline-block; font-size: 0.45rem; background: var(--gold);
-    color: var(--ink); padding: 1px 5px; letter-spacing: 0.1em;
-    text-transform: uppercase; margin-left: 0.3rem; font-weight: 700;
-  }
   .token-num { color: var(--term-green); font-family: monospace; }
   .turn-num { color: var(--term-amber); font-family: monospace; }
   .tts-num { color: var(--arcane); font-family: monospace; white-space: nowrap; }
@@ -212,17 +313,24 @@
   /* ═══════════ Mobile ═══════════ */
   @media (max-width: 900px) {
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .charts-grid { grid-template-columns: 1fr; }
+    .chart-card.span-5, .chart-card.span-7, .chart-card.span-12 { grid-column: span 1; }
     .player-table { display: none; }
     .mobile-cards { display: flex; flex-direction: column; gap: 0.8rem; }
     .m-card {
       background: var(--stone); border: 1px solid var(--edge); padding: 0.8rem;
-      cursor: pointer;
+      cursor: pointer; position: relative;
+    }
+    .m-card::before {
+      content: ''; position: absolute; inset: 3px;
+      border: 1px solid var(--edge); opacity: 0.25; pointer-events: none;
     }
     .m-card:active { background: var(--stone-2); }
     .m-card .mc-head { display: flex; justify-content: space-between; align-items: center; }
     .m-card .mc-user { font-size: 0.85rem; color: var(--bone-bright); }
     .m-card .mc-tokens { font-size: 0.7rem; color: var(--term-green); font-family: monospace; }
-    .m-card .mc-meta { display: flex; gap: 1rem; margin-top: 0.4rem; font-size: 0.6rem; color: var(--bone-dim); }
+    .m-card .mc-meta { display: flex; gap: 1rem; margin-top: 0.4rem; font-size: 0.6rem; color: var(--bone-dim); flex-wrap: wrap; }
+    .bar-row { grid-template-columns: 110px 1fr 74px; }
   }
   @media (min-width: 901px) {
     .mobile-cards { display: none; }
@@ -233,6 +341,10 @@
     .stat-num { font-size: 1rem; }
     .masthead h1 { font-size: 0.85rem; }
     .back-btn { min-height: 44px; display: inline-flex; align-items: center; }
+    .filter-input { width: 100%; }
+    .filter-count { width: 100%; margin-left: 0; }
+    .donut { width: 128px; height: 128px; }
+    .chart-body { justify-content: center; }
   }
 </style>
 <link rel="stylesheet" href="snes.css?v=23">
@@ -374,6 +486,7 @@ function _sortVal(u) {
     case 'username': return (u.username || '').toLowerCase();
     case 'role': return (u.role || '');
     case 'email': return (u.email || '');
+    case 'country': return (u.country || '').toLowerCase();
     case 'campaigns': return u.total_campaigns || 0;
     case 'tokens': return u.total_tokens || 0;
     case 'turns': return u.total_turns || 0;
@@ -404,7 +517,21 @@ function toggleSort(key) {
     sortKey = key;
     sortDir = 'asc';
   }
-  if (statsData) renderStats(statsData);
+  if (statsData) {
+    // Preserve active filters across the re-render
+    const q = document.getElementById('filter-q');
+    const r = document.getElementById('filter-role');
+    const c = document.getElementById('filter-country');
+    const sv = { q: q ? q.value : '', r: r ? r.value : 'all', c: c ? c.value : 'all' };
+    renderStats(statsData);
+    const q2 = document.getElementById('filter-q');
+    const r2 = document.getElementById('filter-role');
+    const c2 = document.getElementById('filter-country');
+    if (q2) q2.value = sv.q;
+    if (r2) r2.value = sv.r;
+    if (c2) c2.value = sv.c;
+    applyFilters();
+  }
 }
 
 function thSort(label, key) {
@@ -435,70 +562,329 @@ async function loadStats() {
 
 function renderStats(data) {
   const content = document.getElementById('content');
-  const users = sortUsers(data.users || []);
+  const users = data.users || [];
 
   let html = `
-    <div class="stats-grid">
-      <div class="stat-card"><div class="stat-num">${data.total_users}</div><div class="stat-label">Users</div></div>
-      <div class="stat-card"><div class="stat-num">${data.total_campaigns}</div><div class="stat-label">Campaigns</div></div>
-      <div class="stat-card"><div class="stat-num">${fmtTokens(data.total_tokens)}</div><div class="stat-label">Tokens</div></div>
-      <div class="stat-card"><div class="stat-num">${data.total_turns}</div><div class="stat-label">Turns</div></div>
+    <div class="section-title">Realm Statistics</div>
+    <div class="stats-grid" id="stat-cards"></div>
+
+    <div class="section-title">Dashboard <button class="refresh" onclick="loadStats()">↻ Refresh</button></div>
+    <div class="charts-grid" id="charts-grid"></div>
+
+    <div class="section-title">Player Accounts</div>
+    <div class="filters-row">
+      <input id="filter-q" class="filter-input" type="search" placeholder="Search username or email…" oninput="applyFilters()" autocomplete="off">
+      <select id="filter-role" class="filter-select" onchange="applyFilters()">
+        <option value="all">All roles</option>
+        <option value="player">Players</option>
+        <option value="admin">Admins</option>
+      </select>
+      <select id="filter-country" class="filter-select" onchange="applyFilters()">${countryOptions(users)}</select>
+      <button class="filter-clear" onclick="clearFilters()">✕ Clear</button>
+      <span class="filter-count" id="filter-count"></span>
     </div>
-    <div class="section-title">
-      Player Accounts
-      <button class="refresh" onclick="loadStats()">↻ Refresh</button>
-    </div>
-    <div class="create-user-form" style="display:flex;gap:.5rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
-      <input id="new-user" placeholder="Username" style="background:var(--stone-2);border:1px solid var(--edge);color:var(--bone);padding:.4rem .6rem;font-size:.75rem;width:140px">
-      <input id="new-pass" placeholder="Password" type="password" style="background:var(--stone-2);border:1px solid var(--edge);color:var(--bone);padding:.4rem .6rem;font-size:.75rem;width:120px">
-      <select id="new-role" style="background:var(--stone-2);border:1px solid var(--edge);color:var(--bone);padding:.4rem .6rem;font-size:.75rem">
+    <div class="create-user-form">
+      <input id="new-user" class="cu-user" placeholder="Username" autocomplete="off">
+      <input id="new-pass" class="cu-pass" placeholder="Password" type="password" autocomplete="new-password">
+      <select id="new-role">
         <option value="player">Player</option>
         <option value="admin">Admin</option>
       </select>
-      <button onclick="createUser()" style="background:var(--gold);color:var(--ink);border:none;padding:.4rem .8rem;font-size:.7rem;cursor:pointer;font-weight:bold">+ Create</button>
+      <button class="cu-btn" onclick="createUser()">+ Create</button>
     </div>
   `;
 
   // Desktop table
-  html += '<table class="player-table"><thead><tr>';
-  html += thSort('User', 'username') + thSort('Role', 'role') + thSort('Email', 'email') + thSort('Campaigns', 'campaigns') + thSort('Tokens', 'tokens') + thSort('Turns', 'turns') + thSort('🔊 TTS', 'tts_seconds') + thSort('🎭 Char', 'char_creation_tokens') + thSort('🖼️ Img', 'image_gen_calls') + thSort('Last Active', 'last_active') + thSort('Created', 'created') + thSort('Last Login', 'last_login') + thSort('Turn Cap', 'turn_cap') + '<th></th>';
-  html += '</tr></thead><tbody>';
+  html += '<div class="table-wrap"><table class="player-table"><thead><tr>';
+  html += thSort('User', 'username') + thSort('Role', 'role') + thSort('Email', 'email') + thSort('Country', 'country') + thSort('Campaigns', 'campaigns') + thSort('Tokens', 'tokens') + thSort('Turns', 'turns') + thSort('🔊 TTS', 'tts_seconds') + thSort('🎭 Char', 'char_creation_tokens') + thSort('🖼️ Img', 'image_gen_calls') + thSort('Last Active', 'last_active') + thSort('Created', 'created') + thSort('Last Login', 'last_login') + thSort('Turn Cap', 'turn_cap') + '<th></th>';
+  html += '</tr></thead><tbody id="players-tbody"></tbody></table></div>';
 
+  // Mobile cards
+  html += '<div class="mobile-cards" id="mobile-cards"></div>';
+
+  content.innerHTML = html;
+  applyFilters();
+}
+
+// ═══════════════════════════════════════
+// DASHBOARD CHARTS + FILTERS
+// ═══════════════════════════════════════
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function cssVar(name, fb) {
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v || fb;
+}
+
+function chartColors() {
+  return [
+    cssVar('--gold', '#d4a92c'), cssVar('--arcane', '#9a6fe0'), cssVar('--teal', '#5e9aa3'),
+    cssVar('--blood-bright', '#e0485a'), cssVar('--ember', '#d4691e'), cssVar('--poison', '#7aa35e'),
+    cssVar('--term-green', '#33cc33'), cssVar('--term-amber', '#ccaa33'), cssVar('--edge-hi', '#5a4a7a'),
+    cssVar('--bone-dim', '#9d8a6a')
+  ];
+}
+
+function sumUsers(users, key) { return users.reduce((a, u) => a + (u[key] || 0), 0); }
+
+function fmtSecs(s) {
+  s = Math.round(s || 0);
+  if (s < 60) return s + 's';
+  const m = Math.floor(s / 60), r = s % 60;
+  return (m > 0 ? m + 'm ' : '') + (r ? r + 's' : '');
+}
+
+// ── SVG donut ──
+function donutSVG(slices, centerNum, centerSub) {
+  const R = 62, C = 2 * Math.PI * R, CX = 100, CY = 100;
+  const total = slices.reduce((a, s) => a + s.value, 0);
+  if (!total) return null;
+  let html = `<svg class="donut" viewBox="0 0 200 200" role="img" aria-label="Donut chart">`;
+  html += `<circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="${cssVar('--edge', '#463a60')}" stroke-opacity="0.28" stroke-width="20"/>`;
+  let off = 0;
+  slices.forEach(s => {
+    const frac = s.value / total;
+    const dash = Math.max(frac * C - 1.6, 0.001);
+    html += `<circle class="donut-slice" cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="${s.color}" stroke-width="20"
+      stroke-dasharray="${dash.toFixed(2)} ${(C - dash).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"
+      transform="rotate(-90 ${CX} ${CY})">
+      <title>${esc(s.label)} — ${fmtTokens(s.value)} (${(frac * 100).toFixed(1)}%)</title></circle>`;
+    off += frac * C;
+  });
+  html += `<text x="${CX}" y="${CY - 2}" class="donut-center-num" text-anchor="middle">${esc(centerNum)}</text>`;
+  if (centerSub) html += `<text x="${CX}" y="${CY + 15}" class="donut-center-sub" text-anchor="middle">${esc(centerSub)}</text>`;
+  html += '</svg>';
+  return html;
+}
+
+function legendHtml(slices, fmt) {
+  const total = slices.reduce((a, s) => a + s.value, 0) || 1;
+  return '<div class="legend">' + slices.map(s => {
+    const pct = (s.value / total * 100).toFixed(1);
+    return `<div class="legend-item" title="${esc(s.label)}">
+      <span class="legend-dot" style="background:${s.color}"></span>
+      <span class="legend-label">${esc(s.label)}</span>
+      <span class="legend-val">${fmt ? fmt(s.value) : s.value}</span>
+      <span class="legend-pct">${pct}%</span></div>`;
+  }).join('') + '</div>';
+}
+
+function barListHtml(items, fmt) {
+  const max = Math.max(...items.map(i => i.value), 1);
+  return '<div class="bar-list">' + items.map(i => `
+    <div class="bar-row">
+      <div class="bar-label" title="${esc(i.label)}">${esc(i.label)}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(i.value / max * 100).toFixed(1)}%;background:${i.color}"></div></div>
+      <div class="bar-val">${fmt ? fmt(i.value) : i.value}</div>
+    </div>`).join('') + '</div>';
+}
+
+function chartCard(span, title, body) {
+  return `<div class="chart-card span-${span}"><div class="chart-head">${title}</div>${body}</div>`;
+}
+
+function renderCharts(users) {
+  const grid = document.getElementById('charts-grid');
+  if (!grid) return;
+  const COL = chartColors();
+  const DIM = cssVar('--edge-hi', '#5a4a7a');
+  const emptyMsg = users.length ? 'No data yet' : 'No players match the current filters';
+
+  // 1) Token share per player (top 8 + rest)
+  const byTok = users.slice().sort((a, b) => (b.total_tokens || 0) - (a.total_tokens || 0));
+  let s1 = byTok.slice(0, 8).map((u, i) => ({ label: u.username, value: u.total_tokens || 0, color: COL[i % COL.length] }));
+  const rest1 = byTok.slice(8).reduce((a, u) => a + (u.total_tokens || 0), 0);
+  if (rest1 > 0) s1.push({ label: 'Rest', value: rest1, color: DIM });
+  s1 = s1.filter(s => s.value > 0);
+  const tot1 = s1.reduce((a, s) => a + s.value, 0);
+  const b1 = s1.length
+    ? `<div class="chart-body"><div class="donut-wrap">${donutSVG(s1, fmtTokens(tot1), 'tokens')}</div>${legendHtml(s1, fmtTokens)}</div>`
+    : `<div class="chart-empty">${emptyMsg}</div>`;
+
+  // 2) Token split: prompt / completion / TTS / char-gen / other
+  const pT = sumUsers(users, 'prompt_tokens'), cT = sumUsers(users, 'completion_tokens');
+  const tT = sumUsers(users, 'tts_tokens'), ccT = sumUsers(users, 'char_creation_tokens');
+  const totTk = sumUsers(users, 'total_tokens');
+  const oT = Math.max(0, totTk - pT - cT - tT - ccT);
+  let s2 = [
+    { label: 'Prompt', value: pT, color: COL[1] },
+    { label: 'Completion', value: cT, color: COL[6] },
+    { label: 'TTS tokens', value: tT, color: COL[2] },
+    { label: 'Character gen', value: ccT, color: COL[0] }
+  ];
+  if (oT > 0) s2.push({ label: 'Other', value: oT, color: DIM });
+  s2 = s2.filter(s => s.value > 0);
+  const tot2 = s2.reduce((a, s) => a + s.value, 0);
+  const b2 = s2.length
+    ? `<div class="chart-body"><div class="donut-wrap">${donutSVG(s2, fmtTokens(tot2), 'tokens')}</div>${legendHtml(s2, fmtTokens)}</div>`
+    : `<div class="chart-empty">${emptyMsg}</div>`;
+
+  // 3) Usage by country (top 8 + rest)
+  const byC = {};
+  users.forEach(u => {
+    const key = u.country_code || '__none__';
+    if (!byC[key]) byC[key] = { label: (u.country_flag || '❓') + ' ' + (u.country || 'Unknown'), value: 0 };
+    byC[key].value += u.total_tokens || 0;
+  });
+  const cArr = Object.values(byC).sort((a, b) => b.value - a.value);
+  let s3 = cArr.slice(0, 8).map((c, i) => ({ label: c.label, value: c.value, color: COL[i % COL.length] }));
+  const rest3 = cArr.slice(8).reduce((a, c) => a + c.value, 0);
+  if (rest3 > 0) s3.push({ label: 'Rest', value: rest3, color: DIM });
+  s3 = s3.filter(s => s.value > 0);
+  const tot3 = s3.reduce((a, s) => a + s.value, 0);
+  const b3 = s3.length
+    ? `<div class="chart-body"><div class="donut-wrap">${donutSVG(s3, fmtTokens(tot3), 'tokens')}</div>${legendHtml(s3, fmtTokens)}</div>`
+    : `<div class="chart-empty">${emptyMsg}</div>`;
+
+  // 4) Role split (by user count)
+  const admins = users.filter(u => (u.role || 'player') === 'admin').length;
+  const players = users.length - admins;
+  let s4 = [
+    { label: 'Admins', value: admins, color: COL[0] },
+    { label: 'Players', value: players, color: COL[1] }
+  ].filter(s => s.value > 0);
+  const b4 = s4.length
+    ? `<div class="chart-body"><div class="donut-wrap">${donutSVG(s4, String(users.length), 'players')}</div>${legendHtml(s4, null)}</div>`
+    : `<div class="chart-empty">${emptyMsg}</div>`;
+
+  // 5) TTS seconds per player (top 8 + rest)
+  const byTts = users.slice().sort((a, b) => (b.tts_seconds || 0) - (a.tts_seconds || 0)).filter(u => (u.tts_seconds || 0) > 0);
+  let items5 = byTts.slice(0, 8).map((u, i) => ({ label: u.username, value: u.tts_seconds || 0, color: COL[i % COL.length] }));
+  const rest5 = byTts.slice(8).reduce((a, u) => a + (u.tts_seconds || 0), 0);
+  if (rest5 > 0) items5.push({ label: 'Rest', value: rest5, color: DIM });
+  const b5 = items5.length ? barListHtml(items5, fmtSecs) : `<div class="chart-empty">${emptyMsg}</div>`;
+
+  grid.innerHTML =
+    chartCard(7, '◉ Token Share by Player', b1) +
+    chartCard(5, '◈ Token Split', b2) +
+    chartCard(7, '⌖ Usage by Country', b3) +
+    chartCard(5, '⚖ Role Split', b4) +
+    chartCard(12, '♪ TTS Seconds by Player', b5);
+}
+
+// ── Filters ──
+let filterQ = '', filterRole = 'all', filterCountry = 'all';
+
+function countryOptions(users) {
+  const map = {};
+  users.forEach(u => {
+    const key = u.country_code || '__none__';
+    if (!map[key]) map[key] = (u.country_flag || '❓') + ' ' + (u.country || 'Unknown');
+  });
+  return '<option value="all">All countries</option>' +
+    Object.keys(map).sort((a, b) => map[a].localeCompare(map[b]))
+      .map(k => `<option value="${esc(k)}">${map[k]}</option>`).join('');
+}
+
+function applyFilters() {
+  const qEl = document.getElementById('filter-q');
+  const rEl = document.getElementById('filter-role');
+  const cEl = document.getElementById('filter-country');
+  filterQ = (qEl ? qEl.value : '').trim().toLowerCase();
+  filterRole = rEl ? rEl.value : 'all';
+  filterCountry = cEl ? cEl.value : 'all';
+  const all = statsData ? (statsData.users || []) : [];
+  const filtered = all.filter(u => {
+    if (filterQ && !(u.username || '').toLowerCase().includes(filterQ) && !(u.email || '').toLowerCase().includes(filterQ)) return false;
+    if (filterRole !== 'all' && (u.role || 'player') !== filterRole) return false;
+    if (filterCountry !== 'all' && (u.country_code || '__none__') !== filterCountry) return false;
+    return true;
+  });
+  renderFiltered(filtered, all.length);
+}
+
+function clearFilters() {
+  const qEl = document.getElementById('filter-q'); if (qEl) qEl.value = '';
+  const rEl = document.getElementById('filter-role'); if (rEl) rEl.value = 'all';
+  const cEl = document.getElementById('filter-country'); if (cEl) cEl.value = 'all';
+  applyFilters();
+}
+
+function renderFiltered(filtered, totalCount) {
+  const noFilter = !filterQ && filterRole === 'all' && filterCountry === 'all';
+
+  // Stat cards — backend totals when unfiltered, filtered sums otherwise
+  let usersNum, campaignsNum, tokensNum, turnsNum;
+  if (noFilter && statsData) {
+    usersNum = statsData.total_users;
+    campaignsNum = statsData.total_campaigns;
+    tokensNum = statsData.total_tokens;
+    turnsNum = statsData.total_turns;
+  } else {
+    usersNum = filtered.length;
+    campaignsNum = sumUsers(filtered, 'total_campaigns');
+    tokensNum = sumUsers(filtered, 'total_tokens');
+    turnsNum = sumUsers(filtered, 'total_turns');
+  }
+  const ttsMin = Math.round(sumUsers(filtered, 'tts_minutes') * 10) / 10;
+  const cards = document.getElementById('stat-cards');
+  if (cards) cards.innerHTML = `
+    <div class="stat-card"><div class="stat-num">${usersNum}</div><div class="stat-label">Users</div></div>
+    <div class="stat-card"><div class="stat-num">${campaignsNum}</div><div class="stat-label">Campaigns</div></div>
+    <div class="stat-card"><div class="stat-num">${fmtTokens(tokensNum)}</div><div class="stat-label">Tokens</div></div>
+    <div class="stat-card"><div class="stat-num">${turnsNum}</div><div class="stat-label">Turns</div></div>
+    <div class="stat-card"><div class="stat-num">${ttsMin}</div><div class="stat-label">TTS Minutes</div></div>`;
+
+  // Charts reflect the filtered subset
+  renderCharts(filtered);
+
+  // Count line
+  const cnt = document.getElementById('filter-count');
+  if (cnt) cnt.textContent = filtered.length === totalCount ? totalCount + ' players' : filtered.length + ' of ' + totalCount + ' players';
+
+  // Table + mobile cards
+  const tbody = document.getElementById('players-tbody');
+  const mob = document.getElementById('mobile-cards');
+  const sorted = sortUsers(filtered);
+  if (tbody) tbody.innerHTML = tableRows(sorted);
+  if (mob) mob.innerHTML = mobRows(sorted);
+}
+
+function tableRows(users) {
+  let html = '';
   users.forEach((u, i) => {
-    const badge = u.role === 'admin' ? '<span class="admin-badge">ADMIN</span>' : '';
+    const isAdmin = (u.role || 'player') === 'admin';
+    const badge = `<span class="role-badge ${isAdmin ? 'role-admin' : 'role-player'}">${isAdmin ? 'Admin' : 'Player'}</span>`;
     const capVal = (u.turn_cap === undefined || u.turn_cap === null) ? 0 : u.turn_cap;
     const flag = u.country_flag || '❓';
-    const flagTitle = u.country ? (u.country + (u.ip ? ' · ' + u.ip : '')) : 'Okänt land';
+    const country = u.country || 'Unknown';
+    const flagTitle = country + (u.ip ? ' · ' + u.ip : '');
     html += `<tr class="player-row" id="row-${i}" onclick="toggleDetail(${i}, '${u.username}')">`;
-    html += `<td><span title="${flagTitle}">${flag}</span> ${u.username}${badge}</td>`;
-    html += `<td>${u.role}</td>`;
-    html += `<td class="email-cell">${u.email ? `<a href="mailto:${u.email}" onclick="event.stopPropagation()">${u.email}</a>` : '<span style="opacity:.35">—</span>'}</td>`;
+    html += `<td>${esc(u.username)}</td>`;
+    html += `<td>${badge}</td>`;
+    html += `<td class="email-cell">${u.email ? `<a href="mailto:${u.email}" onclick="event.stopPropagation()">${esc(u.email)}</a>` : '<span style="opacity:.35">—</span>'}</td>`;
+    html += `<td class="country-cell" title="${esc(flagTitle)}">${flag} ${esc(country)}</td>`;
     html += `<td>${u.total_campaigns}</td>`;
     html += `<td class="token-num">${fmtTokens(u.total_tokens)}</td>`;
     html += `<td class="turn-num">${u.total_turns}</td>`;
-    html += `<td class="tts-num" title="${fmtTokens(u.tts_tokens || 0)} tkn ≈ · ${fmtTokens(u.tts_chars || 0)} chars · ${(u.tts_api_calls || 0)} api calls">${fmtTTS(u)}</td>`;
+    html += `<td class="tts-num" title="${fmtTokens(u.tts_tokens || 0)} tkn · ${fmtTokens(u.tts_chars || 0)} chars · ${(u.tts_api_calls || 0)} api calls">${fmtTTS(u)}</td>`;
     html += `<td class="token-num" title="${(u.char_creation_calls || 0)} char generations">${u.char_creation_tokens ? fmtTokens(u.char_creation_tokens) : '—'}</td>`;
-    html += `<td class="turn-num" title="AI-bildgenereringar">${u.image_gen_calls || '—'}</td>`;
+    html += `<td class="turn-num" title="AI image generations">${u.image_gen_calls || '—'}</td>`;
     html += `<td class="last-active">${relTime(u.last_active)}</td>`;
     html += `<td class="last-active">${relTime(u.created_at)}</td>`;
     html += `<td class="last-active">${relTime(u.last_login)}</td>`;
     html += `<td class="cap-cell"><input type="number" min="0" step="1" value="${capVal}" id="cap-${i}" class="cap-input"><button onclick="event.stopPropagation();setCap('${u.username}', ${i})" class="cap-btn">Set</button><span class="cap-hint">0 = ∞</span></td>`;
-    html += `<td><button onclick="event.stopPropagation();deleteUser('${u.username}')" style="background:none;border:1px solid var(--blood);color:var(--blood-bright);padding:.2rem .5rem;font-size:.6rem;cursor:pointer">✕ Delete</button></td>`;
+    html += `<td><button onclick="event.stopPropagation();deleteUser('${u.username}')" class="del-btn">✕ Delete</button></td>`;
     html += '</tr>';
-    html += `<tr class="campaign-detail" id="detail-${i}"><td colspan="14"><div class="campaign-inner" id="inner-${i}"></div></td></tr>`;
+    html += `<tr class="campaign-detail" id="detail-${i}"><td colspan="15"><div class="campaign-inner" id="inner-${i}"></div></td></tr>`;
   });
-  html += '</tbody></table>';
+  if (!users.length) html = '<tr><td colspan="15" class="no-rows">No players match the current filters</td></tr>';
+  return html;
+}
 
-  // Mobile cards
-  html += '<div class="mobile-cards">';
+function mobRows(users) {
+  let html = '';
   users.forEach((u, i) => {
-    const badge = u.role === 'admin' ? ' <span class="admin-badge">A</span>' : '';
+    const isAdmin = (u.role || 'player') === 'admin';
+    const badge = `<span class="role-badge ${isAdmin ? 'role-admin' : 'role-player'}" style="margin-left:.35rem">${isAdmin ? 'Admin' : 'Player'}</span>`;
     const capVal = (u.turn_cap === undefined || u.turn_cap === null) ? 0 : u.turn_cap;
     html += `<div class="m-card" onclick="toggleDetail(${i}, '${u.username}')">`;
-    html += `<div class="mc-head"><span class="mc-user">${u.country_flag || '❓'} ${u.username}${badge}</span><span class="mc-tokens">${fmtTokens(u.total_tokens)} tkn</span></div>`;
-    if (u.email) html += `<div class="mc-meta"><span style="opacity:.7">✉ ${u.email}</span></div>`;
+    html += `<div class="mc-head"><span class="mc-user">${u.country_flag || '❓'} ${esc(u.username)}${badge}</span><span class="mc-tokens">${fmtTokens(u.total_tokens)} tkn</span></div>`;
+    if (u.email) html += `<div class="mc-meta"><span style="opacity:.7">✉ ${esc(u.email)}</span></div>`;
     html += `<div class="mc-meta"><span>${u.total_campaigns} campaigns</span><span>${u.total_turns} turns</span><span>${relTime(u.last_active)}</span></div>`;
-    html += `<div class="mc-meta"><span>🔊 TTS: ${fmtTTS(u)}</span><span>${fmtTokens(u.tts_tokens || 0)} tkn ≈</span><span>${u.tts_calls || 0} renders</span></div>`;
+    html += `<div class="mc-meta"><span>🔊 TTS: ${fmtTTS(u)}</span><span>${fmtTokens(u.tts_tokens || 0)} tkn</span><span>${u.tts_calls || 0} renders</span></div>`;
     html += `<div class="mc-meta"><span>🎭 Char: ${u.char_creation_tokens ? fmtTokens(u.char_creation_tokens) : '—'} tkn</span><span>🖼️ Img: ${u.image_gen_calls || 0}</span></div>`;
     html += `<div class="mc-meta"><span>Created ${relTime(u.created_at)}</span><span>Login ${relTime(u.last_login)}</span></div>`;
     html += `<div class="mc-cap" style="display:flex;gap:.4rem;align-items:center;margin-top:.5rem">`;
@@ -507,9 +893,8 @@ function renderStats(data) {
     html += `<span class="cap-hint">0 = unlimited</span></div>`;
     html += '</div>';
   });
-  html += '</div>';
-
-  content.innerHTML = html;
+  if (!users.length) html = '<div class="chart-empty" style="padding:.8rem">No players match the current filters</div>';
+  return html;
 }
 
 // ═══════════════════════════════════════
@@ -569,13 +954,13 @@ function renderDetail(container, data) {
   }
   const ig = data.image_gen || {};
   if (ig.calls) {
-    html += '<span>🖼️ Bildgen: <b style="color:var(--gold-bright);font-weight:400">' + (ig.calls || 0) + '</b> iterationer</span>';
+    html += '<span>🖼️ Image gen: <b style="color:var(--gold-bright);font-weight:400">' + (ig.calls || 0) + '</b> iterations</span>';
   }
   const dc = data.deleted_campaigns || {};
   if (dc.total_tokens || dc.turns) {
-    html += '<span>🗑️ Raderade kampanjer: <b style="color:var(--term-amber);font-weight:400">' + fmtTokens(dc.total_tokens || 0) + ' tkn</b> · ' + (dc.turns || 0) + ' turns' + (dc.tts && dc.tts.tokens ? ' · 🔊 ' + fmtTokens(dc.tts.tokens) + ' tts' : '') + '</span>';
+    html += '<span>🗑️ Deleted campaigns: <b style="color:var(--term-amber);font-weight:400">' + fmtTokens(dc.total_tokens || 0) + ' tkn</b> · ' + (dc.turns || 0) + ' turns' + (dc.tts && dc.tts.tokens ? ' · 🔊 ' + fmtTokens(dc.tts.tokens) + ' tts' : '') + '</span>';
   }
-  html += '<span>📍 Land: <b style="color:var(--bone);font-weight:400">' + (data.country_flag || '❓') + ' ' + (data.country || 'Okänt') + '</b>' + (data.ip ? ' <span style="opacity:.6">(' + data.ip + ')</span>' : '') + '</span>';
+  html += '<span>📍 Country: <b style="color:var(--bone);font-weight:400">' + (data.country_flag || '❓') + ' ' + (data.country || 'Unknown') + '</b>' + (data.ip ? ' <span style="opacity:.6">(' + data.ip + ')</span>' : '') + '</span>';
   html += '</div>';
   if (campaigns.length === 0) {
     container.innerHTML = html + '<p style="color:var(--bone-dim);font-size:0.7rem;padding:0.5rem 0">No campaigns found.</p>';
@@ -630,14 +1015,14 @@ function renderDetail(container, data) {
         modelKeys.forEach(m => {
           const mv = models[m];
           const mTotal = (mv.prompt_tokens || 0) + (mv.completion_tokens || 0);
-          html += '<span>🤖 ' + m + ': <b>' + fmtTokens(mTotal) + '</b> (' + (mv.calls || 0) + ' anrop)</span>';
+          html += '<span>🤖 ' + m + ': <b>' + fmtTokens(mTotal) + '</b> (' + (mv.calls || 0) + ' calls)</span>';
         });
         html += '</div>';
       }
       // TTS per kampanj — tokens/sekunder/minuter renderat
       const ctts = c.tts_usage || {};
       if (ctts.calls) {
-        html += '<div class="role-split"><span>🔊 TTS: <b>' + fmtTokens(ctts.tokens || 0) + ' tkn ≈</b> · ' + (ctts.calls || 0) + ' uppläsningar · ' + fmtTokens(ctts.chars || 0) + ' tecken · ' + Math.round(ctts.seconds || 0) + 's (' + ((ctts.seconds || 0) / 60).toFixed(1) + ' min)</span></div>';
+        html += '<div class="role-split"><span>🔊 TTS: <b>' + fmtTokens(ctts.tokens || 0) + ' tkn</b> · ' + (ctts.calls || 0) + ' readouts · ' + fmtTokens(ctts.chars || 0) + ' chars · ' + Math.round(ctts.seconds || 0) + 's (' + ((ctts.seconds || 0) / 60).toFixed(1) + ' min)</span></div>';
       }
     }
 

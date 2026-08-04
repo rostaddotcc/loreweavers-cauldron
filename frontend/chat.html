@@ -1174,6 +1174,7 @@
           <option value="female">Female</option>
         </select>
         <button class="tts-auto-btn" id="tts-auto-btn" onclick="toggleTTSAutoplay(this)" title="Autoplay TTS when the DM answers">🔊 Auto</button>
+        <button class="tts-auto-btn tts-speed-btn" id="tts-speed-btn" onclick="cycleTTSSpeed()" title="Playback speed (independent of the TTS API)">⏩ 1×</button>
       </div>
       <div class="composer">
         <div class="at-chat-chip" id="at-chat-chip" hidden></div>
@@ -2066,6 +2067,28 @@ let _ttsAudio = null;
 let _ttsVoiceIds = null;
 const TTS_VOICE_KEY = 'dnd_tts_voice';
 const TTS_PROVIDER_KEY = 'dnd_tts_provider';
+const TTS_SPEED_KEY = 'dnd_tts_speed';
+const TTS_SPEEDS = [1, 1.25, 1.5, 2, 0.75];
+let _ttsSpeedIdx = 0;
+
+// Spelhastighet — lokalt playbackRate på Audio-elementet, oberoende av API:et
+function ttsSpeed() {
+  return TTS_SPEEDS[_ttsSpeedIdx] || 1;
+}
+function cycleTTSSpeed() {
+  _ttsSpeedIdx = (_ttsSpeedIdx + 1) % TTS_SPEEDS.length;
+  localStorage.setItem(TTS_SPEED_KEY, String(_ttsSpeedIdx));
+  const btn = document.getElementById('tts-speed-btn');
+  if (btn) btn.textContent = '⏩ ' + ttsSpeed() + '×';
+  if (_ttsAudio) { try { _ttsAudio.playbackRate = ttsSpeed(); } catch (e) {} }
+  SFX.click();
+}
+function initTTSSpeed() {
+  const saved = parseInt(localStorage.getItem(TTS_SPEED_KEY), 10);
+  if (!isNaN(saved) && saved >= 0 && saved < TTS_SPEEDS.length) _ttsSpeedIdx = saved;
+  const btn = document.getElementById('tts-speed-btn');
+  if (btn) btn.textContent = '⏩ ' + ttsSpeed() + '×';
+}
 
 function ttsProvider() {
   return localStorage.getItem(TTS_PROVIDER_KEY) || 'stepfun';
@@ -2176,6 +2199,7 @@ async function playTTS(btn) {
     const blob = await API.tts(text, voiceId, provider);
     const url = URL.createObjectURL(blob);
     _ttsAudio = new Audio(url);
+    _ttsAudio.playbackRate = ttsSpeed();
     _ttsAudio.onended = () => { ttsStop(btn); URL.revokeObjectURL(url); };
     _ttsAudio.onerror = () => { ttsStop(btn); URL.revokeObjectURL(url); toast('⚠ Could not play audio'); };
     await _ttsAudio.play();
@@ -2192,6 +2216,7 @@ async function playTTS(btn) {
 // Aktivera rätt röstknapp från localStorage
 initTTSVoicePicker();
 initTTSAutoplay();
+initTTSSpeed();
 
 // ═══════════════════════════════════════
 // DICE

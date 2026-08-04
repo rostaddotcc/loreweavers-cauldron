@@ -23,7 +23,7 @@
     display:flex;flex-direction:column;overflow:hidden;
   }.grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.045;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}#embers{position:fixed;inset:0;z-index:0;pointer-events:none}.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 190px 70px rgba(4,2,8,.88)}/* ═══════════ Topbar ═══════════ */.topbar{position:relative;z-index:5;display:flex;align-items:center;gap:1rem;padding:.7rem 1.2rem;
-    background:linear-gradient(180deg,var(--stone-2),rgba(22,16,32,.95));border-bottom:1px solid var(--edge);box-shadow:0 4px 20px rgba(0,0,0,.5)}.topbar .brand{font-family:'Cinzel',serif;font-weight:900;font-size:1.05rem;color:var(--gold-bright);letter-spacing:.06em;white-space:nowrap;text-shadow:0 0 14px rgba(232,198,90,.3)}.topbar .page-tag{font-size:.91rem;font-style:italic;color:var(--bone-dim);border-left:1px solid var(--edge);padding-left:1rem}.topbar .spacer{flex:1}.top-btn{font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;white-space:nowrap;text-decoration:none}.top-btn:hover{color:var(--gold-bright);border-color:var(--gold);box-shadow:0 0 12px -3px rgba(232,198,90,.4)}.top-btn.danger:hover{color:var(--blood-bright);border-color:var(--blood-bright);box-shadow:0 0 12px -3px rgba(212,58,77,.4)}/* ═══════════ Layout ═══════════ */.layout{position:relative;z-index:2;flex:1;display:flex;min-height:0}/* ── Vänster: minnets hall ── */.hall{width:320px;flex-shrink:0;display:flex;flex-direction:column;background:linear-gradient(180deg,var(--stone),var(--ink));border-right:1px solid var(--edge)}.hall-head{padding:1.1rem 1rem .8rem;border-bottom:1px solid var(--edge)}.hall-title{font-family:'Cinzel',serif;font-weight:900;font-size:1.05rem;color:var(--bone-bright);letter-spacing:.05em;margin-bottom:.15rem}.hall-sub{font-size:.88rem;font-style:italic;color:var(--bone-dim)}.filters{display:flex;gap:.35rem;flex-wrap:wrap;padding:.8rem 1rem;border-bottom:1px solid color-mix(in srgb, var(--edge) 50%, transparent)}.fchip{font-family:'Cinzel',serif;font-size:.69rem;letter-spacing:.12em;text-transform:uppercase;background:transparent;border:1px solid var(--edge);color:var(--bone-dim);padding:.32rem .6rem;cursor:pointer;border-radius:2px;transition:all .2s}.fchip:hover{color:var(--bone-bright);border-color:var(--bone-dim)}.fchip.on{color:#1a1206;background:var(--gold);border-color:var(--gold);box-shadow:0 0 10px -2px rgba(232,198,90,.5)}.npc-list{flex:1;overflow-y:auto;padding:.8rem}.npc-list::-webkit-scrollbar{width:7px}.npc-list::-webkit-scrollbar-thumb{background:var(--edge);border-radius:4px}.ncard{position:relative;display:flex;gap:.75rem;align-items:center;padding:.75rem .7rem;margin-bottom:.55rem;cursor:pointer;
+    background:linear-gradient(180deg,var(--stone-2),rgba(22,16,32,.95));border-bottom:1px solid var(--edge);box-shadow:0 4px 20px rgba(0,0,0,.5)}.topbar .brand{font-family:'Cinzel',serif;font-weight:900;font-size:1.05rem;color:var(--gold-bright);letter-spacing:.06em;white-space:nowrap;text-shadow:0 0 14px rgba(232,198,90,.3)}.topbar .page-tag{font-size:.91rem;font-style:italic;color:var(--bone-dim);border-left:1px solid var(--edge);padding-left:1rem}.topbar .spacer{flex:1}.top-btn{font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;white-space:nowrap;text-decoration:none}.top-btn:hover{color:var(--gold-bright);border-color:var(--gold);box-shadow:0 0 12px -3px rgba(232,198,90,.4)}.top-btn.danger:hover{color:var(--blood-bright);border-color:var(--blood-bright);box-shadow:0 0 12px -3px rgba(212,58,77,.4)}/* ═══════════ Layout ═══════════ */.layout{position:relative;z-index:2;flex:1;display:flex;min-height:0}/* ── Vänster: minnets hall ── */.hall{width:320px;flex-shrink:0;display:flex;flex-direction:column;background:linear-gradient(180deg,var(--stone),var(--ink));border-right:1px solid var(--edge)}.hall-head{padding:1.1rem 1rem .8rem;border-bottom:1px solid var(--edge)}.hall-title{font-family:'Cinzel',serif;font-weight:900;font-size:1.05rem;color:var(--bone-bright);letter-spacing:.05em;margin-bottom:.15rem}.hall-sub{font-size:.88rem;font-style:italic;color:var(--bone-dim)}.hall-search{padding:.8rem 1rem .4rem}.hall-search input{width:100%;font-family:'Spectral',serif;font-size:1rem;color:var(--bone-bright);background:var(--stone-3);border:1px solid var(--edge);padding:.55rem .8rem;outline:none;border-radius:2px;transition:border-color .2s,box-shadow .2s}.hall-search input::placeholder{color:var(--bone-dim);font-style:italic}.hall-search input:focus{border-color:var(--gold);box-shadow:0 0 14px -4px rgba(232,198,90,.35)}.filters{display:flex;gap:.35rem;flex-wrap:wrap;padding:.8rem 1rem;border-bottom:1px solid color-mix(in srgb, var(--edge) 50%, transparent)}.fchip{font-family:'Cinzel',serif;font-size:.69rem;letter-spacing:.12em;text-transform:uppercase;background:transparent;border:1px solid var(--edge);color:var(--bone-dim);padding:.32rem .6rem;cursor:pointer;border-radius:2px;transition:all .2s}.fchip:hover{color:var(--bone-bright);border-color:var(--bone-dim)}.fchip.on{color:#1a1206;background:var(--gold);border-color:var(--gold);box-shadow:0 0 10px -2px rgba(232,198,90,.5)}.npc-list{flex:1;overflow-y:auto;padding:.8rem .8rem 1rem}.npc-group{margin-bottom:.2rem}.npc-letter{position:sticky;top:0;z-index:5;font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-bright);background:var(--stone);padding:.5rem .35rem .3rem;margin-bottom:.3rem;border-bottom:1px solid color-mix(in srgb, var(--gold) 35%, transparent);text-shadow:0 1px 0 #000}.npc-list::-webkit-scrollbar{width:7px}.npc-list::-webkit-scrollbar-thumb{background:var(--edge);border-radius:4px}.ncard{position:relative;display:flex;gap:.75rem;align-items:center;padding:.75rem .7rem;margin-bottom:.55rem;cursor:pointer;
     background:linear-gradient(160deg,var(--stone-2),var(--stone));border:1px solid var(--edge);border-radius:2px;
     transition:transform .22s cubic-bezier(.22,1,.36,1),border-color .22s,box-shadow .22s;overflow:hidden}.ncard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--nc,var(--edge));opacity:.5;transition:opacity .22s}.ncard:hover{transform:translateX(5px);border-color:var(--nc,var(--gold))}.ncard:hover::before{opacity:1}.ncard.sel{border-color:var(--nc,var(--gold));box-shadow:0 0 18px -6px var(--ng,rgba(201,162,39,.4));transform:translateX(5px)}.ncard.sel::before{opacity:1}.ncard .sigil{width:42px;height:42px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.25rem;
     border:1px solid var(--nc,var(--edge));background:var(--stone-3);box-shadow:0 0 12px -3px var(--ng,transparent),inset 0 0 8px rgba(0,0,0,.5);transition:transform .25s}.ncard:hover .sigil{transform:scale(1.1) rotate(-4deg)}.ncard .nm{font-weight:600;font-size:.9rem;color:var(--bone-bright);line-height:1.2}.ncard .rl{font-size:.85rem;font-style:italic;color:var(--bone-dim)}.ncard .badges{display:flex;gap:.3rem;margin-top:.25rem}.badge{font-family:'Cinzel',serif;font-size:.63rem;letter-spacing:.1em;text-transform:uppercase;padding:.14rem .42rem;border:1px solid;border-radius:2px}.b-rel-allierad{color:var(--poison);border-color:rgba(122,163,94,.55)}.b-rel-neutral{color:var(--bone-dim);border-color:var(--edge)}.b-quest{color:var(--ember);border-color:rgba(212,105,30,.55)}.b-dead{color:var(--bone-dim);border-color:var(--edge);text-decoration:line-through}.hall-foot{padding:.7rem 1rem;border-top:1px solid var(--edge);font-size:.83rem;font-style:italic;color:var(--bone-dim);text-align:center}/* ── Höger: dossier ── */.dossier{flex:1;overflow-y:auto;padding:1.8rem 2rem 4rem;min-width:0}.dossier::-webkit-scrollbar{width:8px}.dossier::-webkit-scrollbar-thumb{background:var(--edge);border-radius:4px}.empty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;color:var(--bone-dim)}.empty .rune{font-size:3rem;opacity:.4;animation:candle 4s ease-in-out infinite}.empty p{font-style:italic;font-size:1.08rem}.d-head{display:flex;gap:1.5rem;align-items:center;margin-bottom:1.6rem;animation:rise .5s cubic-bezier(.22,1,.36,1) both}.d-portrait{width:92px;height:92px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2.4rem;
@@ -39,7 +39,7 @@
 
   @media(max-width:900px){html{-webkit-tap-highlight-color:transparent}.hall{width:250px}.dossier{padding:1.3rem 1.1rem 3rem}.topbar .page-tag{display:none}/* Topnav: radbryt + 44px träffytor (snes.css laddas sist → !important) */.topbar{flex-wrap:wrap!important;gap:.4rem .5rem!important;padding:.6rem .75rem!important}.topbar .top-btn{min-height:44px!important;display:inline-flex!important;align-items:center!important;padding:.4rem .65rem!important;font-size:.68rem!important}
   }
-  @media(max-width:640px){.layout{flex-direction:column}.hall{width:100%;height:46%;border-right:none;border-bottom:1px solid var(--edge)}.dossier{height:54%;padding:1.1rem .75rem 3rem}/* Filterchips: horisontell rem, ingen radbrytning */.filters{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:.7rem .8rem}.filters::-webkit-scrollbar{display:none}.fchip{flex:0 0 auto;min-height:44px;display:inline-flex;align-items:center}/* NPC-kort: full bredd, generös träffyta */.npc-list{padding:.6rem .7rem}.ncard{padding:.7rem .65rem}.ncard:hover{transform:none}/* Dossier: porträtt + namn staplas */.d-head{flex-direction:column;align-items:flex-start;gap:.9rem}.d-portrait{width:76px;height:76px;font-size:2rem}.trust-row{flex-wrap:wrap}.trust-label{min-width:0;text-align:left;width:100%}.talk-btn{min-height:44px;display:flex;align-items:center;justify-content:center;width:100%;text-align:center}.line{max-width:100%}.panel-box{padding:.9rem .8rem}
+  @media(max-width:640px){.layout{flex-direction:column}.hall{width:100%;height:46%;border-right:none;border-bottom:1px solid var(--edge)}.dossier{height:54%;padding:1.1rem .75rem 3rem}/* Filterchips: horisontell rem, ingen radbrytning */.filters{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:.7rem .8rem}.filters::-webkit-scrollbar{display:none}.fchip{flex:0 0 auto;min-height:44px;display:inline-flex;align-items:center}.hall-search input{min-height:48px;font-size:18px;padding:.6rem .9rem}/* NPC-kort: full bredd, generös träffyta */.npc-list{padding:.6rem .7rem}.ncard{padding:.7rem .65rem}.ncard:hover{transform:none}/* Dossier: porträtt + namn staplas */.d-head{flex-direction:column;align-items:flex-start;gap:.9rem}.d-portrait{width:76px;height:76px;font-size:2rem}.trust-row{flex-wrap:wrap}.trust-label{min-width:0;text-align:left;width:100%}.talk-btn{min-height:44px;display:flex;align-items:center;justify-content:center;width:100%;text-align:center}.line{max-width:100%}.panel-box{padding:.9rem .8rem}
   }
   @media(max-width:400px){.hall-head{padding:.8rem .8rem .6rem}.dossier{padding:.9rem .5rem 2.5rem}.d-name{font-size:1.25rem}.q-head{gap:.4rem}.toast{left:1rem;right:1rem;transform:translateY(80px);width:auto}.toast.show{transform:translateY(0)}
   }
@@ -73,7 +73,7 @@
 <link rel="stylesheet" href="snes.css?v=23">
 <script src="sprites.js?v=20260802a"></script>
 <script src="fonts.js?v=20260802c"></script>
-<script src="themes.js?v=20260804a"></script>
+<script src="themes.js?v=20260804b"></script>
 </head>
 <body>
 <div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
@@ -94,6 +94,9 @@
     <div class="hall-head">
       <div class="hall-title">📖 The Hall of Memories</div>
       <div class="hall-sub">Everyone you have met along the way</div>
+    </div>
+    <div class="hall-search">
+      <input type="text" id="npc-search" placeholder="Search name, role, relation…" oninput="renderList()" autocomplete="off">
     </div>
     <div class="filters" id="filters"></div>
     <div class="npc-list" id="npc-list"></div>
@@ -250,9 +253,16 @@ function setFilter(id){
 
 function renderList(){
   const f = FILTERS.find(x=>x.id===activeFilter) || FILTERS[0];
-  document.getElementById('npc-list').innerHTML = NPCS.map((n, i) => {
-    if (!f.test(n)) return '';
-    return `
+  const q = (document.getElementById('npc-search').value || '').toLowerCase().trim();
+  const relLabel = rl => (REL_LABEL[rl] || '').toLowerCase();
+  const matches = n =>
+    (n.name || '').toLowerCase().includes(q) ||
+    (n.role || '').toLowerCase().includes(q) ||
+    relLabel(n.relation).includes(q) ||
+    String(n.relation || '').toLowerCase().includes(q) ||
+    (n.race || '').toLowerCase().includes(q);
+  const visible = NPCS.map((n, i) => ({ n, i })).filter(({ n }) => f.test(n) && (!q || matches(n)));
+  const card = ({ n, i }) => `
     <div class="ncard ${selectedId===i?'sel':''}" style="--nc:${n.color};--ng:${n.glow}" onclick="selectNpc(${i})">
       <div class="sigil">${n.icon}</div>
       <div style="min-width:0">
@@ -265,8 +275,20 @@ function renderList(){
         </div>
       </div>
     </div>`;
-  }).join('') || `<div style="text-align:center;color:var(--bone-dim);font-style:italic;padding:2rem 0;font-size:.98rem">${I18N.t('Inga gestalter matchar…')}</div>`;
-  document.getElementById('hall-count').textContent = `${NPCS.filter(f.test).length}${I18N.t(' av ')}${NPCS.length} ${I18N.t('gestalter')}`;
+  const listEl = document.getElementById('npc-list');
+  if (!visible.length) {
+    listEl.innerHTML = `<div style="text-align:center;color:var(--bone-dim);font-style:italic;padding:2rem 0;font-size:.98rem">${I18N.t('Inga gestalter matchar…')}</div>`;
+  } else {
+    const groups = {};
+    for (const v of visible) {
+      const letter = ((v.n.name || '').trim()[0] || '?').toUpperCase();
+      (groups[letter] = groups[letter] || []).push(v);
+    }
+    listEl.innerHTML = Object.keys(groups).sort().map(letter =>
+      `<div class="npc-group"><div class="npc-letter">${letter}</div>${groups[letter].map(card).join('')}</div>`
+    ).join('');
+  }
+  document.getElementById('hall-count').textContent = `${visible.length}${I18N.t(' av ')}${NPCS.length} ${I18N.t('gestalter')}`;
 }
 
 // ═══════════════════════════════════════

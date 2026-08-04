@@ -148,7 +148,32 @@ const THEMES = (() => {
       b.textContent = '🎨 ' + palette.name;
       b.title = 'Theme: ' + palette.name + ' (click to switch)';
     });
+    // Live-synk: Codex-sidor ligger i iframes — broadcasta temat så öppna
+    // iframes uppdateras direkt (2026-08-04). Init-broadcast är ofarlig:
+    // iframes som laddas senare läser ändå localStorage vid start.
+    try {
+      document.querySelectorAll('iframe').forEach(f => {
+        try {
+          if (f.contentWindow) f.contentWindow.postMessage({ type: 'dnd-theme', theme: palette.id }, '*');
+        } catch (_) {}
+      });
+    } catch (_) {}
   }
+
+  // Ta emot tema-broadcast från en föräldrasida (chatten → Codex-iframes).
+  // Samma origin → localStorage stämmer redan, men live-uppdatering utan
+  // reload kräver postMessage. (2026-08-04)
+  window.addEventListener('message', (ev) => {
+    try {
+      if (ev.data && ev.data.type === 'dnd-theme' && typeof ev.data.theme === 'string') {
+        const p = PALETTES.find(x => x.id === ev.data.theme);
+        if (p) {
+          localStorage.setItem(KEY, p.id);
+          apply(p);
+        }
+      }
+    } catch (_) {}
+  });
 
   function cycle() {
     const cur = current();

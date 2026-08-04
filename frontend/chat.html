@@ -963,8 +963,8 @@
 </style>
 <link rel="stylesheet" href="snes.css?v=23">
 <script src="sprites.js?v=20260802a"></script>
-<script src="fonts.js?v=20260803a"></script>
-<script src="themes.js?v=20260804a"></script>
+<script src="fonts.js?v=20260803b"></script>
+<script src="themes.js?v=20260804b"></script>
 </head>
 <body>
 <div class="grain"></div>
@@ -1008,6 +1008,7 @@
       <button class="drop-item" onclick="toggleOracle();closeSettingsMenu()"><span class="di-icon">📜</span><span class="di-body"><span class="di-name">Rule Oracle</span><span class="di-hint">ask about 5e rules</span></span></button>
       <button class="drop-item" onclick="toggleConsole();closeSettingsMenu()"><span class="di-icon">🛠️</span><span class="di-body"><span class="di-name">The Engine Room</span><span class="di-hint">live debug logs</span></span></button>
       <button class="drop-item" onclick="openUsageModal();closeSettingsMenu()"><span class="di-icon">📊</span><span class="di-body"><span class="di-name">Usage</span><span class="di-hint">model & token stats</span></span></button>
+      <button class="drop-item" onclick="fontToggleBtn();closeSettingsMenu()"><span class="di-icon">🔤</span><span class="di-body"><span class="di-name">Font</span><span class="di-hint" id="settings-font-hint">typeface</span></span></button>
       <a class="drop-item" href="help.html"><span class="di-icon">❓</span><span class="di-body"><span class="di-name">How to Play?</span><span class="di-hint">commands & tips</span></span></a>
       <div class="drop-sep"></div>
       <button class="drop-item" data-cli-label onclick="toggleCliChat();closeSettingsMenu()"><span class="di-icon">🖥️</span><span class="di-body"><span class="di-name">Chat UI: CLI</span><span class="di-hint">terminal style — toggle to bubbles</span></span></button>

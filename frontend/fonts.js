@@ -52,6 +52,13 @@ function fontToggleBtn() {
   const next = FONTS.cycle();
   const btns = document.querySelectorAll('.font-btn');
   btns.forEach(b => { b.textContent = next.name; b.title = 'Font: ' + next.name + ' (click to switch)'; });
+  // Uppdatera ev. drop-item-etikett i settings-menyn (🔤 Font)
+  document.querySelectorAll('.drop-item .di-name').forEach(n => {
+    if (/font/i.test(n.textContent)) {
+      const hint = n.parentElement.querySelector('.di-hint');
+      if (hint) hint.textContent = 'typeface — ' + next.name;
+    }
+  });
   // Persista tema+typsnitt till kontot (themes.js äger server-syncen)
   if (typeof THEMES !== 'undefined' && THEMES.syncToServer) THEMES.syncToServer();
   if (typeof toast === 'function') toast('🔤 Font: ' + next.name);
@@ -67,6 +74,10 @@ document.addEventListener('DOMContentLoaded', () => {
     b.textContent = cur.name;
     b.title = 'Font: ' + cur.name + ' (click to switch)';
   });
+
+  // Sidor med kugghjul (settings-menu / gear-menu) har typsnittet i menyn
+  // istället — ingen topbar-knapp injiceras då. (2026-08-04)
+  if (document.querySelector('.settings-menu') || document.querySelector('.gear-menu')) return;
 
   // Find the topbar and inject a font button if one doesn't already exist
   const bar = document.querySelector('.topbar') || document.querySelector('.forge-head');

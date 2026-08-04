@@ -20,7 +20,7 @@
       var(--ink);
     background-attachment:fixed;overflow-x:hidden;
   }.grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.05;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}#embers{position:fixed;inset:0;z-index:1;pointer-events:none}.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(4,2,8,.85)}.app{position:relative;z-index:2;max-width:960px;margin:0 auto;padding:0 1.25rem 5rem}.head-logo{width:150px;display:block;margin:0 auto .8rem;mix-blend-mode:screen;filter:saturate(1.05) brightness(1.02);animation:head-float 7s ease-in-out infinite}@keyframes head-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}/* ═══════════ Topprad (ljud + lämna) ═══════════ */.topbar{display:flex;justify-content:flex-end;align-items:center;gap:.6rem;padding:1.1rem .1rem 0}.top-btn{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}#embers{position:fixed;inset:0;z-index:1;pointer-events:none}.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(4,2,8,.85)}.app{position:relative;z-index:2;max-width:960px;margin:0 auto;padding:0 1.25rem 5rem}.head-logo{width:150px;display:block;margin:0 auto .8rem;filter:drop-shadow(0 0 14px rgba(201,162,39,.25)) saturate(1.05);animation:head-float 7s ease-in-out infinite}@keyframes head-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}/* ═══════════ Topprad (ljud + lämna) ═══════════ */.topbar{display:flex;justify-content:flex-end;align-items:center;gap:.6rem;padding:1.1rem .1rem 0}.top-btn{
     font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;
     background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);
     padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;white-space:nowrap;text-decoration:none;
@@ -98,7 +98,7 @@
     transform:translateY(-2px);
   }/* ── Vägar dolda medan äventyr pågår ── *//* Paneler som öppnas EXPLICIT (t.ex. New Adventure-knappen i listan)
      måste få visa sig även när paths är dolda — annars kan man inte
-     starta en andra kampanj när man redan har en. */.paths-hidden .paths{display:none!important}.paths-hidden .expand{display:none!important}.paths-hidden .expand.show{display:block!important}.paths-hidden .head .sub::after{content:' · your adventure awaits above';color:var(--gold);font-style:italic}/* ═══════════ How to play — onepager ═══════════ */.htp{margin-bottom:2.4rem;animation:rise .6s cubic-bezier(.22,1,.36,1)}.htp-toggle{
+     starta en andra kampanj när man redan har en. */.paths-hidden .paths{display:none!important}.paths-hidden .expand{display:none!important}.paths-hidden .expand.show{display:block!important}.paths-hidden .head .sub::after{content:' · your adventure awaits below';color:var(--gold);font-style:italic}/* ═══════════ How to play — onepager ═══════════ */.htp{margin-bottom:2.4rem;animation:rise .6s cubic-bezier(.22,1,.36,1)}.htp-toggle{
     display:flex;align-items:center;justify-content:center;gap:.7rem;width:100%;cursor:pointer;
     font-family:'Cinzel',serif;font-size:.81rem;letter-spacing:.28em;text-transform:uppercase;
     color:var(--bone-dim);background:none;border:none;padding:.6rem 0;transition:color .25s;
@@ -117,6 +117,8 @@
   .step-num{flex-shrink:0;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-weight:900;font-size:1.05rem;color:#1a1206;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);box-shadow:0 0 18px -4px rgba(232,198,90,.5),inset 0 1px 0 rgba(255,255,255,.35)}
   .step-title{font-family:'Cinzel',serif;font-weight:700;font-size:.95rem;letter-spacing:.2em;text-transform:uppercase;color:var(--bone-bright)}
   .step-sub{font-size:.88rem;font-style:italic;color:var(--bone-dim);margin-top:.15rem}
+  .fw-encourage{font-size:.9rem;font-style:italic;color:var(--bone-dim);text-align:center;margin:0 0 1.1rem}
+  .fw-encourage b{color:var(--gold);font-style:normal}
   .step-actions{display:flex;gap:.8rem;flex-wrap:wrap;align-items:center;margin-top:1.2rem}
   /* Språkkort — två stora val */
   .lang-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:1.1rem}
@@ -148,14 +150,13 @@
   @media(hover:none),(max-width:640px){.ask-tip{position:static;transform:none;width:100%;max-width:100%;margin-top:.4rem;opacity:1;visibility:visible;background:none;border:none;box-shadow:none;padding:0;text-align:left}.ask-tip::after{display:none}.ask-wrap{display:flex;flex-direction:column;align-items:flex-start}#gen-row .ask-tip{display:none}}
 
   .dm-model-label{font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim);min-width:200px;display:flex;flex-direction:column;gap:.3rem}
-  /* gen-row: modellväljaren ska ligga I RAD med Generate-knappen (ej staplad) */
-  #gen-row{display:grid;grid-template-columns:auto auto 1fr;gap:.9rem;align-items:center}
-  #gen-row .dm-model-label{flex-direction:row;align-items:center;gap:.6rem;min-width:0;flex-wrap:wrap}
-  #gen-row .dm-model-label::after{content:'';flex:0 0 1px}
-  #gen-row .dm-model-select{max-width:240px !important;min-width:180px;flex:0 1 auto}
-  #gen-row .gen-btn{white-space:nowrap;justify-self:start}
-  #gen-row .hint{grid-column:1/-1;text-align:center;margin-top:.2rem}
-  @media(max-width:700px){#gen-row{grid-template-columns:1fr}#gen-row .hint{grid-column:auto}}
+  /* gen-row: centrerad kolumn — modell på toppen, tooltip under, Summon-knappen sist */
+  #gen-row{display:flex;flex-direction:column;align-items:center;gap:.8rem;max-width:420px;margin:1.2rem auto 0}
+  #gen-row .dm-model-label{flex-direction:column;align-items:center;gap:.5rem;min-width:0;width:100%}
+  #gen-row .dm-model-select{max-width:300px;width:100%;min-width:0}
+  #gen-row .gen-btn{white-space:nowrap}
+  #gen-row .hint{text-align:center;margin-top:.1rem}
+  @media(max-width:700px){#gen-row{max-width:100%}}
   /* Arketypgrid (delas med newgame.html) */
   .spread{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
   .arch{position:relative;cursor:pointer;text-align:center;padding:1.4rem 1rem 1.2rem;background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);border:1px solid var(--edge);transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s,border-color .3s;overflow:hidden}
@@ -315,7 +316,7 @@
    snes.css laddas efter inline-blocket och tvingar platta knappar med !important.
    Denna block körs EFTER snes.css → återställer den mjuka login-känslan på
    adventure.html utan att röra chatten/terminalen. */
-.go-btn, .gen-btn, .pv-go, .start-btn, .tab-btn.active, .blank-btn.active{
+.go-btn, .gen-btn, .pv-go, .start-btn, .tab-btn.active, .blank-btn.active, .cc-go{
   background: linear-gradient(160deg, var(--gold-bright), var(--gold)) !important;
   border: 1px solid rgba(232,198,90,.45) !important;
   color: var(--ink) !important;
@@ -326,14 +327,14 @@
   font-weight: 700 !important;
 }
 .start-btn{ border-radius: 8px !important; }
-.go-btn:hover, .gen-btn:hover:not(:disabled), .pv-go:hover:not(:disabled), .start-btn:hover:not(:disabled), .tab-btn.active:hover, .blank-btn.active:hover{
+.go-btn:hover, .gen-btn:hover:not(:disabled), .pv-go:hover:not(:disabled), .start-btn:hover:not(:disabled), .tab-btn.active:hover, .blank-btn.active:hover, .cc-go:hover{
   background: linear-gradient(160deg, var(--gold-bright), var(--gold)) !important;
   color: var(--ink) !important;
   transform: translateY(-2px) !important;
   box-shadow: 0 0 28px rgba(232,198,90,.38), 0 12px 40px rgba(201,162,39,.5), inset 0 1px 0 rgba(255,255,255,.22) !important;
   filter: brightness(1.1) !important;
 }
-.go-btn:active, .pv-go:active, .start-btn:active, .gen-btn:active{ transform: translateY(1px) !important; }
+.go-btn:active, .pv-go:active, .start-btn:active, .gen-btn:active, .cc-go:active{ transform: translateY(1px) !important; }
 .tab-btn, .blank-btn, .pv-reroll, .top-btn{
   border-radius: 6px !important;
   transition: color .2s, border-color .2s, box-shadow .2s, transform .2s !important;
@@ -343,10 +344,13 @@
   box-shadow: 0 0 14px -4px rgba(201,162,39,.4) !important;
 }
 .tab-btn.active{ transform: none !important; }
+/* continue-panelen: uppmaningen centrerad OVANFÖR New Adventure-knappen */
+.continue-panel .actions{flex-direction:column;align-items:center;gap:.6rem}
+.continue-panel .actions .hint{text-align:center}
 </style>
 <script src="sprites.js?v=20260802a"></script>
-<script src="fonts.js?v=20260803a"></script>
-<script src="themes.js?v=20260804a"></script>
+<script src="fonts.js?v=20260803b"></script>
+<script src="themes.js?v=20260804b"></script>
 </head>
 <body>
 <div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
@@ -359,6 +363,7 @@
       <div class="gear-menu" id="gear-menu">
         <button type="button" class="gm-row gm-sound-btn" onclick="toggleGearSound(this)"><span class="gm-ico" id="gear-sound-ico">🔊</span><span class="gm-txt">Sound</span></button>
         <button type="button" class="gm-row theme-btn" id="gear-theme-btn" onclick="THEMES.openPopover(this)"></button>
+        <button type="button" class="gm-row" onclick="fontToggleBtn()"><span class="gm-ico">🔤</span><span class="gm-txt">Font</span></button>
         <button type="button" class="gm-row" onclick="location.href='releases.html'"><span class="gm-ico">📜</span><span class="gm-txt">Release Notes</span></button>
         <button type="button" class="gm-row" onclick="location.href='characters.html'"><span class="gm-ico">⚒</span><span class="gm-txt">The Forge</span></button>
         <button type="button" class="gm-row" id="admin-gate-btn" style="display:none" onclick="location.href='admin.html'"><span class="gm-ico">👑</span><span class="gm-txt">Admin</span></button>
@@ -368,7 +373,7 @@
     </div>
   </div>
   <div class="head">
-    <img src="assets/logo-cauldron.png" alt="The Lore Weaver's Cauldron" class="head-logo">
+    <img src="assets/logo-cauldron-alpha.png" alt="The Lore Weaver's Cauldron" class="head-logo">
     <div class="over">What will the Cauldron Foretell?</div>
     <h1>The Lore Weaver's Cauldron</h1>
     <p class="sub">Every adventure begins with a choice. Which path will you take?</p>
@@ -498,6 +503,7 @@
     <!-- Summon-tab: arketyper → generera → förhandsvisning → reroll -->
     <div class="tab-panel show" id="hero-tab-summon">
       <div class="step-sub" style="margin-bottom:1.1rem">Pick a fate — then summon your adventurer and look them in the eye before you continue. Don't like the weave? Reroll.</div>
+      <p class="fw-encourage" id="fw-encourage">Pick an archetype below — then tweak the template to your liking: your own name, a pet, a pouch of coins, a crown. Easiest way to start.</p>
       <div class="spread" id="spread"></div>
       <div class="dark-drop" id="dark-drop" style="display:none">
         <div class="dark-drop-label"><span class="dd-icon">🖤</span> <span class="dd-name" id="dd-name">Dark Paths</span> <span class="dd-sub" id="dd-sub">mature archetypes</span></div>
@@ -525,10 +531,10 @@
       </div>
       <div class="step-actions" id="gen-row">
         <label class="dm-model-label" for="adv-char-model">🧠 Character model
-          <select id="adv-char-model" class="dm-model-select" style="max-width:260px"></select>
+          <select id="adv-char-model" class="dm-model-select"></select>
         </label>
         <span class="ask-wrap"><span class="ask-ico">?</span><span class="ask-tip" data-ask="char">Which mind weaves your adventurer — faster models are snappier, deeper models think longer. <b>Ask the Dungeon Master if unsure.</b></span></span>
-        <button class="gen-btn" id="gen-btn" onclick="generateHero()" disabled>🔮 Generate Adventurer</button>
+        <button class="gen-btn" id="gen-btn" onclick="generateHero()" disabled>🔮 Summon Adventurer</button>
         <span class="hint" id="gen-hint">Pick an archetype first — or take the blank parchment</span>
       </div>
       <!-- Vävning (summoning-ritual) -->
@@ -923,6 +929,12 @@ function pickLang(lang) {
   if (btn) btn.innerHTML = (lang === 'en')
     ? '✦ Blank Parchment — write your own'
     : '✦ Tomt pergament — skriv din egen';
+  const enc = document.getElementById('fw-encourage');
+  if (enc) enc.textContent = (lang === 'en')
+    ? 'Pick an archetype below — then tweak the template to your liking: your own name, a pet, a pouch of coins, a crown. Easiest way to start.'
+    : 'Välj en arketyp nedan — och justera mallen som du vill: eget namn, ett husdjur, en pung med mynt, en krona. Enklast att börja.';
+  const gb = document.getElementById('gen-btn');
+  if (gb) gb.innerHTML = (lang === 'en') ? '🔮 Summon Adventurer' : '🔮 Frammana Äventyrare';
   revealStep('step-name');
   setTimeout(() => { const i = document.getElementById('adventure-name-input'); if (i) i.focus(); }, 420);
 }

@@ -12,6 +12,7 @@ och skickas ALDRIG till ip-api.com.
 """
 
 import json
+import re
 import time
 from pathlib import Path
 
@@ -81,6 +82,11 @@ def is_private(ip: str) -> bool:
         return True
     if ip.startswith("::ffff:"):
         ip = ip[7:]
+    # Inte en riktig IP (t.ex. hostname "testclient" från TestClient, eller
+    # tomt) → behandla som privat. 2026-08-05: annars blockerade register
+    # 1-konto-per-IP på icke-IP-värden och alla tester sprack.
+    if ":" not in ip and not re.fullmatch(r"\d{1,3}(\.\d{1,3}){3}", ip):
+        return True
     return ip.startswith(_PRIVATE_PREFIXES)
 
 
@@ -105,6 +111,22 @@ def record_ip(username: str, ip: str) -> None:
 def get_user_ip(username: str) -> str:
     _load()
     return (_ip_store.get(username) or {}).get("ip", "")
+
+
+def find_username_for_ip(ip: str) -> str | None:
+    """Returnera en befintlig användare med samma PUBLIKA IP, annars None.
+
+    Används av register för 1-konto-per-IP (2026-08-05). Privata IP:er
+    (LAN/localhost) hoppas över — blockering är meningslös bakom NAT och
+    skulle bryta lokal utveckling. _ip_store uppdateras av record_ip() på
+    varje autentiserad request, så befintliga användares IP:er finns där."""
+    if not ip or is_private(ip):
+        return None
+    _load()
+    for uname, rec in _ip_store.items():
+        if rec and rec.get("ip") == ip:
+            return uname
+    return None
 
 
 def country_flag(country_code: str) -> str:

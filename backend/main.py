@@ -1052,6 +1052,10 @@ _FREE_FIELD_DEFAULTS = {
     "features": {},
     "features_until": None,  # legacy-fält: models_until hedras som fallback
     "start_bonus_granted": False,  # har kontot fått sina 300 startturns?
+    # 2026-08-05 v3 (turn-ordning): promo_bonus = signup-300 (spenderas FÖRST,
+    # före 50/day-cappen). turn_bonus = KÖPTA turns (Support/Patron, spenderas
+    # SIST). Daglig cap (turns_used) ligger i mitten: promo → cap → köpta.
+    "promo_bonus": 0,
     # Wan-bildkvot (10/dag): wan_used_today + wan_reset_date
     "wan_used_today": 0,
     "wan_reset_date": None,
@@ -1104,7 +1108,9 @@ def _grant_start_bonus_if_needed(username: str, udata: dict) -> dict:
             u = users.get(username)
             if isinstance(u, dict) and not u.get("start_bonus_granted") and int(u.get("turn_cap", 0) or 0) > 0:
                 u["start_bonus_granted"] = True
-                u["turn_bonus"] = int(u.get("turn_bonus", 0) or 0) + START_BONUS_TURNS
+                # 2026-08-05 v3: signup-300 går till promo_bonus (spenderas
+                # FÖRE 50/day-cappen) — inte turn_bonus (köpta = spenderas sist).
+                u["promo_bonus"] = int(u.get("promo_bonus", 0) or 0) + START_BONUS_TURNS
                 save_users(users)
                 return u
         return udata
@@ -1320,10 +1326,9 @@ def _maybe_rollover(username: str, udata: dict) -> dict:
 def _turns_available(username: str) -> int:
     """Antal turns kvar denna period.
 
-    Free/tier1/tier2: max(0, turn_cap + turn_bonus - turns_used) — turn_bonus
-    förbrukas FÖRE cap-turns (de första `bonus` förbrukade turarna äter bonusen,
-    sedan cap-sloten). Lifetime (turn_cap 0) eller ∞: 999999.
-    turn_cap <= 0 = oändligt (samma semantik som före FAS A)."""
+    Spenderingsordning (2026-08-05 v3, rostad): promo (signup-300) → daglig
+    cap (50/dag) → köpta turns (turn_bonus). Available = promo_left +
+    cap_left + purchased_left. Lifetime (turn_cap 0) eller ∞: 999999."""
     try:
         udata = load_users().get(username, {})
         if not isinstance(udata, dict):
@@ -1335,10 +1340,12 @@ def _turns_available(username: str) -> int:
         udata = _maybe_rollover(username, udata)
         turn_cap = int(udata.get("turn_cap", 0) or 0)
         turns_used = int(udata.get("turns_used", 0) or 0)
-        turn_bonus = int(udata.get("turn_bonus", 0) or 0)
+        promo = int(udata.get("promo_bonus", 0) or 0)
+        purchased = int(udata.get("turn_bonus", 0) or 0)
         if turn_cap <= 0:
             return 999999
-        return max(0, turn_cap + turn_bonus - turns_used)
+        cap_left = max(0, turn_cap - turns_used)
+        return promo + cap_left + purchased
     except Exception:
         return 0
 
@@ -1366,9 +1373,19 @@ def _gate_turn_quota(username: str) -> None:
 
 
 def _consume_turn(username: str) -> None:
-    """turns_used += 1 (efter ev. period-rollover). Spara under _USER_LOCK.
+    """Bokför en förbrukad turn (efter ev. period-rollover). Spara under _USER_LOCK.
 
-    Anropas bara när en turn faktiskt skickas (alla 403-checks passerade)."""
+    Spenderingsordning (2026-08-05 v3): promo (signup-300) → daglig cap →
+    köpta turns. Anropas bara när en turn faktiskt skickas (403-checks klara).
+
+    PITFALL (deadlock 2026-08-05): _tier_for → _ensure_user_fields tar
+    _USER_LOCK (non-reentrant) — beräkna tier INNAN låset, aldrig innanför.
+    """
+    # Tier/period beräknas UTOM låset — _tier_for kan skriva users.json
+    # (ensure-fields, demote) och får inte köra innanför _USER_LOCK.
+    tier = _tier_for(username)
+    hours = _period_hours_for(tier)
+    now = datetime.now(timezone.utc)
     with _USER_LOCK:
         users = load_users()
         u = users.get(username)
@@ -1377,13 +1394,11 @@ def _consume_turn(username: str) -> None:
         # setdefault-backfill inline (vi är redan innanför låset)
         u.setdefault("turns_used", 0)
         u.setdefault("turn_bonus", 0)
+        u.setdefault("promo_bonus", 0)
         u.setdefault("reset_date", _today_str())
         u.setdefault("subscription_status", "free")
         u.setdefault("subscription_until", None)
         # Period-rollover (tier-baserad) innan turns_used += 1
-        tier = _tier_for(username)
-        hours = _period_hours_for(tier)
-        now = datetime.now(timezone.utc)
         if hours > 0:
             if hours >= 24:
                 today = _today_date()
@@ -1408,7 +1423,21 @@ def _consume_turn(username: str) -> None:
                 if due:
                     u["turns_used"] = 0
                     u["reset_ts"] = (now + timedelta(hours=hours)).isoformat()
-        u["turns_used"] = int(u.get("turns_used", 0) or 0) + 1
+        # Spenderingsordning (2026-08-05 v3): promo (signup-300) → daglig cap
+        # → köpta turns. Promo-300 förbrukas FÖRE 50/day-cappen så de som vill
+        # maxa kan göra det i en kort burst; köpta turns sparas till sist.
+        promo = int(u.get("promo_bonus", 0) or 0)
+        if promo > 0:
+            u["promo_bonus"] = promo - 1
+        else:
+            cap = int(u.get("turn_cap", 0) or 0)
+            used = int(u.get("turns_used", 0) or 0)
+            if cap <= 0 or used < cap:
+                u["turns_used"] = used + 1
+            else:
+                purchased = int(u.get("turn_bonus", 0) or 0)
+                if purchased > 0:
+                    u["turn_bonus"] = purchased - 1
         save_users(users)
 
 
@@ -1461,6 +1490,7 @@ def _user_free_info(username: str) -> dict:
     return {
         "turns_used": int(udata.get("turns_used", 0) or 0),
         "turn_bonus": int(udata.get("turn_bonus", 0) or 0),
+        "promo_bonus": int(udata.get("promo_bonus", 0) or 0),
         "reset_date": udata.get("reset_date"),
         "reset_ts": udata.get("reset_ts"),
         "subscription_status": tier,
@@ -2126,7 +2156,7 @@ def _set_auth_cookie(response: Response, token: str) -> None:
 
 
 @app.post("/api/register")
-async def register(req: RegisterRequest, response: Response):
+async def register(req: RegisterRequest, response: Response, request: Request):
     """Skapa ett spelarkonto (publik självregistrering). Iteration 1:
     ingen SMTP/verifiering — direkt inloggning. Dublettskydd + validering."""
     username = normalize_username(req.username)
@@ -2143,6 +2173,17 @@ async def register(req: RegisterRequest, response: Response):
     if not _register_allowed():
         raise HTTPException(429, "Too many new adventurers. Try again later.")
 
+    # 2026-08-05 v3: max ETT konto per publik IP (rostad: "blockera 1 konto
+    # per IP"). Privata IP:er (LAN/localhost) hoppas över — de saknar mening.
+    reg_ip = iplog.client_ip(request)
+    if not iplog.is_private(reg_ip):
+        existing_ip_user = iplog.find_username_for_ip(reg_ip)
+        if existing_ip_user:
+            raise HTTPException(
+                403,
+                "One adventurer per fire — an account already exists on this network.",
+            )
+
     with _USER_LOCK:
         users = load_users()
         if username in users:
@@ -2156,7 +2197,10 @@ async def register(req: RegisterRequest, response: Response):
             "turn_cap": DEFAULT_TURN_CAP,
             # FAS A: periodbaserad turn-räkning (30 dagar från reset_date)
             "turns_used": 0,
-            "turn_bonus": START_BONUS_TURNS,  # 300 startturns (2026-08-05)
+            # 2026-08-05 v3: signup-300 = promo_bonus (spenderas före cappen).
+            # Köpta turns (Support/Patron) hamnar i turn_bonus och spenderas sist.
+            "promo_bonus": START_BONUS_TURNS,  # 300 startturns (promotion)
+            "turn_bonus": 0,
             "reset_date": _today_str(),
             "subscription_status": "free",
             "subscription_until": None,
@@ -2169,6 +2213,8 @@ async def register(req: RegisterRequest, response: Response):
             users[username]["email"] = email
         save_users(users)
 
+    if reg_ip:
+        iplog.record_ip(username, reg_ip)
     token = create_token(username, "player")
     _set_auth_cookie(response, token)
     logger.info("✨ New account: %s", username)
@@ -2413,6 +2459,7 @@ async def me(morkrets_token: str | None = Cookie(None)):
         # FAS A: periodbaserad turn-räkning + tier
         "turns_used": free_info["turns_used"],
         "turn_bonus": free_info["turn_bonus"],
+        "promo_bonus": free_info["promo_bonus"],
         "reset_date": free_info["reset_date"],
         "subscription_status": free_info["subscription_status"],
         "subscription_until": free_info["subscription_until"],
@@ -8836,6 +8883,7 @@ def _user_stat_row(username: str, geo: dict | None = None, ledger_per_user: dict
         "subscription_status": tier,
         "subscription_until": fresh.get("subscription_until"),
         "turn_bonus": int(fresh.get("turn_bonus", 0) or 0),
+        "promo_bonus": int(fresh.get("promo_bonus", 0) or 0),
         "period_turns_used": int(fresh.get("turns_used", 0) or 0),
         "revenue": ledger.get(username, 0),
         "tts_calls": tts.get("calls", 0) or 0,
@@ -9456,7 +9504,9 @@ async def admin_create_user(req: AdminCreateUser, morkrets_token: str | None = C
             "turn_cap": DEFAULT_TURN_CAP,
             # FAS A: periodbaserad turn-räkning (30 dagar från reset_date)
             "turns_used": 0,
-            "turn_bonus": START_BONUS_TURNS,  # 300 startturns (2026-08-05)
+            # 2026-08-05 v3: signup-300 = promo_bonus (spenderas före cappen)
+            "promo_bonus": START_BONUS_TURNS,
+            "turn_bonus": 0,
             "reset_date": _today_str(),
             "subscription_status": "free",
             "subscription_until": None,

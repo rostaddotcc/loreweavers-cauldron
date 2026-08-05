@@ -367,11 +367,20 @@
     padding:.55rem 1rem;font-size:.78rem;letter-spacing:.04em;color:var(--gold);background:var(--stone-3);
     border-bottom:1px solid rgba(201,162,39,.3);text-align:center}
   #deleted-banner.show{display:flex}
+  #promo-banner{position:sticky;top:0;z-index:45;display:flex;align-items:center;justify-content:center;gap:.6rem;flex-wrap:wrap;padding:.5rem 1rem;font-size:.8rem;letter-spacing:.03em;color:var(--gold);background:linear-gradient(90deg,var(--stone-3),var(--stone-2),var(--stone-3));border-bottom:1px solid rgba(201,162,39,.35);text-align:center}
+  #promo-banner .pb-ico{filter:drop-shadow(0 0 8px rgba(201,162,39,.5))}
+  #promo-banner .pb-timer{font-family:'IBM Plex Mono',ui-monospace,monospace;color:var(--bone-bright);background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.3);border-radius:3px;padding:.12rem .5rem;font-size:.76rem}
 </style>
 </head>
 <body>
 
 <div id="deleted-banner">🕊️ Your account has been deleted. The Cauldron will remember your stories.</div>
+
+<div id="promo-banner">
+  <span class="pb-ico">🎉</span>
+  <span class="pb-text"><b>300 turns on signup</b> — a limited-time promotion for new adventurers.</span>
+  <span class="pb-timer" id="pb-timer"></span>
+</div>
 
 <div class="hero-scene" id="hero-scene">
   <div class="hero-art-wrap">
@@ -411,7 +420,7 @@
         </h1>
         <p class="tagline rv in d2">A world that remembers. A dungeon master that never sleeps.
           Your campaign is brewed one turn at a time &mdash; and the pot does not forget.</p>
-        <p class="free-slogan rv in d2"><span class="fs-badge">FREE TO PLAY</span> 300 turns when you start, then 50 fresh every day. No card. No email needed.</p>
+        <p class="free-slogan rv in d2"><span class="fs-badge">FREE TO PLAY</span> 300 turns on signup — a limited-time promotion — then 50 fresh every day. No card. No email needed.</p>
         <div class="hero-actions rv in d3">
           <a class="btn-gold" href="#pricing" id="hero-begin">Begin Your Journey</a>
           <a class="btn-ghost" href="#features">Learn more &#8595;</a>
@@ -520,7 +529,7 @@
     <div class="wrap">
       <p class="eyebrow rv">Free to play · No subscription</p>
       <h2 class="rv">Unlimited. No lock-in.</h2>
-      <p class="lede rv d1">Start with 300 turns — then 50 fresh every day, forever. No card. No email. Support the Cauldron with a one-time top-up when you feel like it.</p>
+      <p class="lede rv d1">Start with 300 turns on signup (limited-time promotion) — then 50 fresh every day, forever. No card. No email. Support the Cauldron with a one-time top-up when you feel like it.</p>
       <div class="pricing-grid">
         <div class="ptier rv d1" onclick="location.href='#gate'">
           <div class="pt-name">Free</div>
@@ -545,7 +554,7 @@
           <p class="eyebrow rv">The Gate</p>
           <h2 class="rv">Swear yourself in.</h2>
           <ul class="pitch-list">
-            <li class="rv d1"><b>Free, forever.</b> 300 turns when you start &mdash; then
+            <li class="rv d1"><b>Free, forever.</b> 300 turns on signup — a limited-time promotion — then
              50 fresh every day. No card, no hourglass,
              no metered fate.</li>
             <li class="rv d2"><b>Your identity stays yours.</b> We don&rsquo;t log who
@@ -621,28 +630,27 @@
     <div class="wrap">
       <p class="eyebrow rv">From the Ledger</p>
       <h2 class="rv">What&rsquo;s new in the realm</h2>
-      <span class="ver-chip rv d1">v0.8 &mdash; The Portrait, the Path</span>
+      <span class="ver-chip rv d1">v0.9 &mdash; The Full Mind</span>
       <ul class="ledger-list">
-        <li class="hot rv d1"><b>Wan 2.7 Pro painting &mdash; Patron tier<span class="tag">New</span></b>
-          &mdash; the premium image engine paints your hero, the DM and every NPC in sharp
-          high-resolution portraits, in seconds. StepFun painting unlocks with the <b>Support top-up (3€)</b>.</li>
-        <li class="rv d1"><b>Your face, your hero<span class="tag">New</span></b>
-          &mdash; your profile portrait is now separate from your adventurer&rsquo;s &mdash; the header pill is
-          <i>your</i> face at the table, the party card is your hero&rsquo;s. Paint one without touching the other.</li>
-        <li class="rv d1"><b>Themes that stick &amp; a softer table<span class="tag">New</span></b>
-          &mdash; the palette you choose survives reloads and follows you across devices; rounded buttons and
-          calmer edges across the top bar, the Codex and the composer. Narrator settings now follow the campaign,
-          not the browser.</li>
-        <li class="rv d2"><b>StepFun TTS &mdash; Support feature</b>
-          &mdash; the narrator's voice unlocks with the one-time Support top-up (3€);
-          Qwen's premium narrators with Patron (10€).</li>
-        <li class="rv d2"><b>Qwen 3.8 Max &mdash; the full release</b>
-          &mdash; Alibaba&rsquo;s 2.4-trillion-parameter flagship (95B active per request) as your Dungeon Master:
-          1M context, deep reasoning that always thinks. Pick it at the model gate when you start your adventure.</li>
+        <li class="hot rv d1"><b>DeepSeek &amp; Qwen take the chair<span class="tag">New</span></b>
+          &mdash; the full reasoning power of <b>Qwen</b> and <b>DeepSeek</b> sits behind your adventure:
+          massive storylines, quests that hold together, and a DM that thinks before it speaks &mdash; without
+          breaking immersion. Wan 2.7 paints the faces, Qwen 3.0 TTS narrates the Patron path.</li>
+        <li class="rv d1"><b>A month of fire, stackable<span class="tag">New</span></b>
+          &mdash; Support (3€) and Patron (10€) packs unlock <b>30 days</b> of benefits, one-time, no renewal.
+          Buy again to stack more time (+30 days, +turns). Your purchased turns are yours forever.</li>
+        <li class="rv d1"><b>Launch promotions read clearly<span class="tag">New</span></b>
+          &mdash; the <b>300 turns on signup</b> now carry a countdown on the gate: a limited-time welcome,
+          spent before your daily 50, while purchased turns are saved for last.</li>
+        <li class="rv d2"><b>Portraits you keep</b>
+          &mdash; download any painted face from The Forge, and exports now carry every image, so your
+          adventure leaves with its faces.</li>
+        <li class="rv d2"><b>Preparing spells is clearer</b>
+          &mdash; the spellbook shows what is equipped and what is available, where you actually look for it.</li>
         <li class="rv d2"><b>Unlimited, no lock-in</b> &mdash; every account starts with 300 turns,
           then refreshes 50 every day. One-time Support and Patron top-ups add turns and features.
           No subscriptions, no renewals, no surprises.</li>
-        <li class="rv d3"><b>Custom narrator voice</b> &mdash; happy, calm, scary, or your own style, in the Two Voices.</li>
+        <li class="rv d3"><b>Priority API</b> &mdash; Support and Patron words reach the Dungeon Master first, even when the cauldron is busy.</li>
         <li class="rv d3"><b>Export your hero to The Forge</b> &mdash; save the adventurer you&rsquo;ve lived: level, gear, story and all.
           Then start a brand-new campaign with the same hero &mdash; no more hero-twins.</li>
       </ul>
@@ -690,6 +698,32 @@
   const b = document.getElementById('deleted-banner');
   if (b) b.classList.add('show');
   try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
+})();
+
+/* ═══════════════ 300-turns promo countdown (2026-08-05 → 2026-09-04) ═══════════════ */
+(function () {
+  const el = document.getElementById('pb-timer');
+  if (!el) return;
+  const DEADLINE = Date.parse('2026-09-04T00:00:00Z');
+  function _fmt(n) { return String(n).padStart(2, '0'); }
+  let timer = null;
+  function tick() {
+    const diff = DEADLINE - Date.now();
+    if (diff <= 0) {
+      const banner = document.getElementById('promo-banner');
+      if (banner) banner.style.display = 'none';
+      clearInterval(timer);
+      return;
+    }
+    const s = Math.floor(diff / 1000);
+    const d = Math.floor(s / 86400);
+    const h = Math.floor((s % 86400) / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    el.textContent = d > 0 ? `${d}d ${_fmt(h)}h ${_fmt(m)}m ${_fmt(sec)}s` : `${_fmt(h)}h ${_fmt(m)}m ${_fmt(sec)}s`;
+  }
+  tick();
+  timer = setInterval(tick, 1000);
 })();
 
 /* ═══════════════ nav + scroll reveal ═══════════════ */

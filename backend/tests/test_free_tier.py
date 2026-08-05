@@ -129,7 +129,10 @@ def test_register_creates_free_fields(client):
     u = _user()
     assert u["turn_cap"] == main.DEFAULT_TURN_CAP
     assert u["turns_used"] == 0
-    assert u["turn_bonus"] == main.START_BONUS_TURNS  # 300 startturns
+    # 2026-08-05 v3: signup-300 = promo_bonus (spenderas före cappen);
+    # turn_bonus = köpta turns (Support/Patron) börjar på 0.
+    assert u["promo_bonus"] == main.START_BONUS_TURNS  # 300 startturns (promotion)
+    assert u["turn_bonus"] == 0
     assert u["reset_date"] == _today()
     assert u["subscription_status"] == "free"
     assert u["subscription_until"] is None
@@ -149,7 +152,8 @@ def test_admin_create_adds_free_fields(client):
     assert r.status_code == 200, r.text
     u = _user("charlie")
     assert u["turns_used"] == 0
-    assert u["turn_bonus"] == main.START_BONUS_TURNS  # 300 startturns
+    assert u["promo_bonus"] == main.START_BONUS_TURNS  # 300 startturns (promotion)
+    assert u["turn_bonus"] == 0
     assert u["reset_date"] == _today()
     assert u["subscription_status"] == "free"
     assert u["subscription_until"] is None
@@ -162,19 +166,21 @@ def test_turns_used_increments(client):
     _make_campaign("alice")
     r = _chat(client)
     assert r.status_code == 200, r.text
-    assert _user()["turns_used"] == 1
+    # 2026-08-05 v3: första turen äter PROMO (signup-300), inte cap-sloten
+    assert _user()["turns_used"] == 0
+    assert _user()["promo_bonus"] == main.START_BONUS_TURNS - 1
     # /api/me speglar period-räkningen
     me = client.get("/api/me")
     assert me.status_code == 200
     body = me.json()
-    assert body["turns_used"] == 1
+    assert body["promo_bonus"] == main.START_BONUS_TURNS - 1
     assert body["turns_available"] == main.DEFAULT_TURN_CAP + main.START_BONUS_TURNS - 1
 
 
 def test_cap_reached_403(client):
     _register(client)
     _make_campaign("alice")
-    _patch_user("alice", turn_cap=1, turn_bonus=0)
+    _patch_user("alice", turn_cap=1, turn_bonus=0, promo_bonus=0)
     r1 = _chat(client)
     assert r1.status_code == 200, r1.text
     r2 = _chat(client)
@@ -188,12 +194,13 @@ def test_cap_reached_403(client):
 def test_me_returns_free_fields(client):
     _register(client)
     until = _in_days(30)
-    _patch_user("alice", turn_bonus=3, features={"export": True, "wan1080": True, "all_models": True},
+    _patch_user("alice", turn_bonus=3, promo_bonus=0,
+                features={"export": True, "wan1080": True, "all_models": True},
                 models_until=until, subscription_status="tier2", subscription_until=until)
     me = client.get("/api/me")
     assert me.status_code == 200
     body = me.json()
-    for key in ("turns_used", "turn_bonus", "reset_date", "subscription_status",
+    for key in ("turns_used", "turn_bonus", "promo_bonus", "reset_date", "subscription_status",
                 "subscription_until", "turns_available", "period_hours"):
         assert key in body, f"missing /api/me field: {key}"
     assert body["turn_bonus"] == 3
@@ -210,26 +217,56 @@ def test_me_returns_free_fields(client):
 
 def test_reset_date_rollover(client):
     _register(client)
-    _patch_user("alice", turns_used=5, turn_bonus=7, turn_cap=50, reset_date=_in_days(-1))
+    _patch_user("alice", turns_used=5, turn_bonus=7, promo_bonus=0, turn_cap=50, reset_date=_in_days(-1))
     avail = main._turns_available("alice")
-    assert avail == 57  # nollställd (50 cap) + bonus behållen (7)
+    assert avail == 57  # nollställd (50 cap) + köpta behållna (7)
     u = _user()
     assert u["turns_used"] == 0
-    assert u["turn_bonus"] == 7          # bonus behålls över rollover
+    assert u["turn_bonus"] == 7          # köpta turns behålls över rollover
     assert u["reset_date"] == _in_days(1)  # flyttad till idag + 1 (daglig rollover)
 
 
-def test_turn_bonus_consumed_first(client):
+def test_cap_consumed_before_purchased_turns(client):
+    """2026-08-05 v3-ordning: daglig cap före KÖPTA turns (turn_bonus sist)."""
     _register(client)
-    _patch_user("alice", turn_cap=1, turn_bonus=100, turns_used=0)
-    # 0 förbrukade: hela bonusen + cap-sloten
+    _patch_user("alice", turn_cap=1, turn_bonus=100, promo_bonus=0, turns_used=0)
+    # 0 förbrukade: hela cap-sloten + alla köpta
     assert main._turns_available("alice") == 101
-    # 1 förbrukad: bonusen är orörd (100) — cap-sloten förbrukades
+    # 1 förbrukad: cap-sloten förbrukades — köpta orörda (100)
     _patch_user("alice", turns_used=1)
     assert main._turns_available("alice") == 100
-    # Bonusen tar slut också: efter 101 förbrukade → 0 → 403
-    _patch_user("alice", turns_used=101)
+    # Allt tar slut: cap (1) + köpta (100) förbrukade → 0 → 403.
+    # (Köpta förbrukas via turn_bonus-saldo, inte turns_used — simulera båda.)
+    _patch_user("alice", turns_used=101, turn_bonus=0)
     assert main._turns_available("alice") == 0
+    # _consume_turn äter cap först, köpta först när capen är slut
+    _patch_user("alice", turn_cap=1, turn_bonus=10, promo_bonus=0, turns_used=0)
+    main._consume_turn("alice")
+    assert _user()["turns_used"] == 1 and _user()["turn_bonus"] == 10  # cap först
+    main._consume_turn("alice")
+    assert _user()["turns_used"] == 1 and _user()["turn_bonus"] == 9  # köpta sist
+
+
+def test_promo_consumed_before_cap(client):
+    """2026-08-05 v3-ordning: signup-300 (promo) spenderas FÖRE 50/day-cappen."""
+    _register(client)  # promo 300, cap 50
+    u = _user()
+    assert u["promo_bonus"] == main.START_BONUS_TURNS
+    assert u["turn_bonus"] == 0
+    # Snäva cap så ordningen syns: cap = 1
+    _patch_user("alice", turn_cap=1, turns_used=0)
+    # Första turen äter PROMO, inte cap-sloten
+    main._consume_turn("alice")
+    u = _user()
+    assert u["promo_bonus"] == main.START_BONUS_TURNS - 1
+    assert u["turns_used"] == 0  # cap orörd — promo först
+    assert main._turns_available("alice") == (main.START_BONUS_TURNS - 1) + 1
+    # När promon är slut förbrukas cap-sloten
+    _patch_user("alice", promo_bonus=0)
+    main._consume_turn("alice")
+    u = _user()
+    assert u["promo_bonus"] == 0
+    assert u["turns_used"] == 1  # cap-sloten förbrukad nu
 
 
 # ── Modellgating ─────────────────────────────────────────────────────────
@@ -293,7 +330,7 @@ def test_tier2_not_unlimited(client):
     _register(client)
     _patch_user("alice", features={"all_models": True, "export": True, "wan1080": True},
                 models_until=_in_days(30), subscription_status="tier2", subscription_until=_in_days(30),
-                turn_cap=50, turns_used=100, turn_bonus=0, reset_date=_in_days(1))  # framtida reset → ingen daglig rollover
+                turn_cap=50, turns_used=100, turn_bonus=0, promo_bonus=0, reset_date=_in_days(1))  # framtida reset → ingen daglig rollover
     assert main._tier_for("alice") == "tier2"
     assert main._turns_available("alice") == 0  # 100 använda > cap 50
 
@@ -336,7 +373,7 @@ def test_legacy_account_backfilled(client):
     assert main._turns_available("old_timer") == main.DEFAULT_TURN_CAP + main.START_BONUS_TURNS
     u = _user("old_timer")
     assert u["turns_used"] == 0
-    assert u["turn_bonus"] == main.START_BONUS_TURNS  # migrerad startbonus
+    assert u["promo_bonus"] == main.START_BONUS_TURNS  # migrerad startbonus (spenderas först)
     # Backfill sätter reset_date=today; första kollen rullar direkt till +1
     # (idag >= reset_date) — utan att förlora några turns.
     assert u["reset_date"] == _in_days(1)

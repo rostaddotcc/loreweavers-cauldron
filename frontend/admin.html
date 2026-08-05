@@ -1143,6 +1143,54 @@ function renderCharts(users) {
     ? `<div class="chart-body"><div class="donut-wrap">${donutSVG(s4, String(users.length), 'players')}</div>${legendHtml(s4, null)}</div>`
     : `<div class="chart-empty">${emptyMsg}</div>`;
 
+  // 4b) Token share by provider (global statsData — not filter-bound)
+  const PROV_LABEL = {
+    dashscope: '🌊 Qwen / DashScope',
+    deepseek: '🧠 DeepSeek',
+    stepfun: '⚗️ StepFun',
+    mimo: '📱 MiMo',
+    ollama: '🖥️ Local',
+    unknown: '❓ Unknown'
+  };
+  const provs = (statsData && statsData.providers) || {};
+  const provKeys = Object.keys(provs).filter(k => (provs[k].tokens || 0) > 0);
+  const sProv = provKeys.map((k, i) => ({
+    label: PROV_LABEL[k] || k,
+    value: provs[k].tokens || 0,
+    color: k === 'unknown' ? DIM : COL[i % COL.length]
+  }));
+  const totProv = sProv.reduce((a, s) => a + s.value, 0);
+  const bProv = sProv.length
+    ? `<div class="chart-body"><div class="donut-wrap">${donutSVG(sProv, fmtTokens(totProv), 'tokens')}</div>${legendHtml(sProv, fmtTokens)}</div>`
+    : '<div class="chart-empty">No data yet</div>';
+
+  // 4c) Calls by provider + top models (global statsData — not filter-bound)
+  const fmtNum = v => (v || 0).toLocaleString('en-US');
+  const callKeys = Object.keys(provs)
+    .filter(k => (provs[k].calls || 0) > 0)
+    .sort((a, b) => (provs[b].calls || 0) - (provs[a].calls || 0));
+  const itemsCalls = callKeys.map((k, i) => ({
+    label: PROV_LABEL[k] || k,
+    value: provs[k].calls || 0,
+    color: k === 'unknown' ? DIM : COL[i % COL.length]
+  }));
+  const totCalls = itemsCalls.reduce((a, s) => a + s.value, 0);
+  const models = (statsData && statsData.models) || {};
+  const topModels = Object.keys(models)
+    .filter(m => (models[m].calls || 0) > 0)
+    .sort((a, b) => (models[b].calls || 0) - (models[a].calls || 0))
+    .slice(0, 5)
+    .map(m => ({ name: m, provider: models[m].provider || 'unknown', calls: models[m].calls || 0 }));
+  const modelLine = topModels.length
+    ? '<div class="role-split">' + topModels.map(m => {
+        const pct = totCalls ? Math.round(m.calls / totCalls * 100) : 0;
+        return `<span><b>${esc(m.name)}</b> (${esc(m.provider)}) — ${fmtNum(m.calls)} calls · ${pct}%</span>`;
+      }).join('') + '</div>'
+    : '';
+  const bCalls = itemsCalls.length
+    ? `<div class="chart-body">${barListHtml(itemsCalls, fmtNum)}${modelLine}</div>`
+    : '<div class="chart-empty">No data yet</div>';
+
   // 5) TTS seconds per player (top 8 + rest)
   const byTts = users.slice().sort((a, b) => (b.tts_seconds || 0) - (a.tts_seconds || 0)).filter(u => (u.tts_seconds || 0) > 0);
   let items5 = byTts.slice(0, 8).map((u, i) => ({ label: u.username, value: u.tts_seconds || 0, color: COL[i % COL.length] }));
@@ -1158,6 +1206,8 @@ function renderCharts(users) {
     chartCard(5, '◈ Token Split', b2) +
     chartCard(7, '⌖ Usage by Country', b3) +
     chartCard(5, '⚖ Role Split', b4) +
+    chartCard(7, '◉ Token Share by Provider', bProv) +
+    chartCard(5, '⧉ Calls by Provider', bCalls) +
     chartCard(12, '✛ New Users by Day', b6) +
     revenueChartCard() +
     chartCard(12, '♪ TTS Seconds by Player', b5);

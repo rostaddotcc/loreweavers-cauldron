@@ -8,7 +8,7 @@ import hashlib
 import hmac
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import time
 from pathlib import Path
 
@@ -242,7 +242,12 @@ def test_webhook_checkout_patron500_grants_access(client):
     assert u["features"]["export"] is True
     assert u["features"]["wan1080"] is True
     assert u["features"]["all_models"] is True
-    assert u["models_until"]  # 30 dagar framåt
+    # 2026-08-05 v2: hela förmånspaketet får features_until = +30 dagar
+    # (enhetligt fönster, stackbart). models_until migreras bort.
+    assert u["features_until"]
+    assert "models_until" not in u
+    expected = (datetime.now(timezone.utc).date() + timedelta(days=30)).isoformat()
+    assert u["features_until"] == expected
     assert u["stripe_customer_id"] == "cus_123"
     assert u["turn_cap"] == 50  # 50/dag — INTE oändligt
     # Ledger-rad + chattlogg

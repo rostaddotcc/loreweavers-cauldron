@@ -11,6 +11,7 @@ Ingen riktig data rörs: users.json + kampanj-data pekas om till tmp
 """
 
 import sys
+import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -370,7 +371,14 @@ def test_vault_export_support_ok(client):
     _seed("alice", tier="tier1", until=_in_days(30), features={"export": True})
     r = client.get("/api/vault/export", cookies={"morkrets_token": _tok()})
     assert r.status_code == 200, r.text
-    assert "characters" in r.json()
+    # 2026-08-05 v2: zip med forge-export.json + avatars/ (bilder följer med)
+    import io
+    import zipfile
+    zf = zipfile.ZipFile(io.BytesIO(r.content))
+    names = zf.namelist()
+    assert "forge-export.json" in names
+    data = json.loads(zf.read("forge-export.json"))
+    assert "characters" in data
 
 
 # ── Spelarprofilens avatar (konto — StepFun, Support-feature 3€, SEPARAT) ──

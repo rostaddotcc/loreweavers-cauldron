@@ -141,6 +141,7 @@ from models import (
     DM_CORE_PROMPT,
     DM_NARRATIVE_PROMPT,
     DM_PROMPT_VERSION,
+    MODELS,
     get_api_key,
     get_model,
     list_models_for_frontend,
@@ -1044,9 +1045,12 @@ _FREE_FIELD_DEFAULTS = {
     # One-time-förmåner (2026-08-05): features = dict med flaggor.
     #   export:     3€ — kampanjexport + forge-karaktärs-export
     #   wan1080:   10€ — Wan 2.7 Pro (2048²) avatarer
-    #   all_models:10€ — premiummodeller t.o.m. models_until
-    #   models_until: ISO-datum för när premiummodellerna går ut
+    #   all_models:10€ — premiummodeller + Qwen TTS
+    #   features_until: ISO-datum för när ALLA features-förmåner går ut.
+    #   (2026-08-05 v2: 3€/10€ = en MÅNAD förmåner, stackbart. Köpta turns
+    #   behålls alltid — turn_bonus rörs inte av features_until.)
     "features": {},
+    "features_until": None,  # legacy-fält: models_until hedras som fallback
     "start_bonus_granted": False,  # har kontot fått sina 300 startturns?
     # Wan-bildkvot (10/dag): wan_used_today + wan_reset_date
     "wan_used_today": 0,
@@ -1117,8 +1121,8 @@ def _grant_start_bonus_if_needed(username: str, udata: dict) -> dict:
 # TIERS — one-time-förmåner (2026-08-05, ersätter subskriptionsmodellen)
 # ═══════════════════════════════════════
 # free      — 300 startturns, sedan 50 turns/dag; bara step-3.7-flash; StepFun TTS
-# tier1     — 3€ Support: +300 turns, export + forge-export (features.export)
-# tier2     — 10€ Patron: +500 turns, alla modeller 30 dagar, Wan 2.7 Pro 1080²
+# tier1     — 3€ Support: +300 turns (permanenta), export+forge+StepFun i 30 dagar
+# tier2     — 10€ Patron: +500 turns (permanenta), alla modeller+Qwen TTS+Wan 2.7 Pro i 30 dagar
 # lifetime  — ∞ turns (turn_cap 0), allt (befintliga 100€-köpare)
 # Legacy "premium" → tier2 (bakåtkompatibilitet).
 TIER_ORDER = ("free", "tier1", "tier2", "lifetime")
@@ -1150,6 +1154,56 @@ def _features_for(username: str) -> dict:
         return {}
 
 
+def _benefits_until(username: str, udata: dict | None = None) -> str | None:
+    """Kontots features-förmåner går ut detta datum (ISO YYYY-MM-DD) eller None.
+
+    Enhetligt fönster för ALLA features (Support 3€ och Patron 10€ = 30 dagar,
+    stackbart — 2026-08-05 v2). Legacy: `models_until` hedras som fallback så
+    gamla patron-köp (och testseeds) fortsätter fungera utan features_until.
+    """
+    if udata is None:
+        udata = load_users().get(username, {})
+        if not isinstance(udata, dict):
+            udata = {}
+    return udata.get("features_until") or udata.get("models_until") or None
+
+
+def _benefits_active(username: str, udata: dict | None = None) -> bool:
+    """True om kontots features-förmåner är aktiva (inom 30-dagarsfönstret).
+
+    Legacy-regel: features utan något utgångsdatum (admin-grants, tidiga köp)
+    = permanent aktiva — säkrast för konton som redan fått förmåner.
+    """
+    try:
+        fu = _benefits_until(username, udata)
+        if not fu:
+            f = (udata.get("features") if udata else None)
+            if f is None:
+                f = _features_for(username)
+            return bool(f)
+        return datetime.fromisoformat(str(fu)).date() >= _today_date()
+    except ValueError:
+        return True  # korrupt datum → behandla som aktiv (säkert håll)
+    except Exception:
+        return False
+
+
+def _stack_benefits_until(udata: dict, days: int = PATRON_MODEL_DAYS) -> str:
+    """Nytt features_until efter ett köp: +30 dagar från max(dagens datum,
+    nuvarande aktiva fönster). Flera köp staplas — köper man igen medan
+    förmånerna är aktiva förlängs fönstret, annars startar det idag."""
+    today = _today_date()
+    current = None
+    fu = udata.get("features_until") or udata.get("models_until")
+    if fu:
+        try:
+            current = datetime.fromisoformat(str(fu)).date()
+        except ValueError:
+            current = None
+    base = max(today, current) if current else today
+    return (base + timedelta(days=days)).isoformat()
+
+
 def _tier_for(username: str) -> str:
     """free|tier1|tier2|lifetime.
 
@@ -1175,17 +1229,12 @@ def _tier_for(username: str) -> str:
         features = udata.get("features") or {}
         if not isinstance(features, dict):
             features = {}
-        # Patron-förmåner: premiummodeller t.o.m. models_until (30 dagar)
-        if features.get("all_models"):
-            mu = udata.get("models_until")
-            if mu:
-                try:
-                    if datetime.fromisoformat(str(mu)).date() >= today:
-                        return "tier2"
-                except ValueError:
-                    pass
-        # Support-förmåner: export (permanent efter köp)
-        if features.get("export"):
+        # Patron-förmåner: premiummodeller + Qwen TTS t.o.m. features_until
+        # (30 dagar, stackbart). Legacy: models_until hedras som fallback.
+        if features.get("all_models") and _benefits_active(username, udata):
+            return "tier2"
+        # Support-förmåner: export + StepFun t.o.m. features_until (30 dagar).
+        if features.get("export") and _benefits_active(username, udata):
             return "tier1"
         # Legacy-subscription (befintliga prenumeranter) — hedra tills den går ut
         if status in TIER_ORDER and status != "free":
@@ -1422,6 +1471,10 @@ def _user_free_info(username: str) -> dict:
             "export": bool((udata.get("features") or {}).get("export")),
             "all_models": _tier_for(username) in ("tier2", "lifetime"),
             "models_until": udata.get("models_until"),
+            # 2026-08-05 v2: hela förmånspaketet (Support+Patron) går ut på
+            # features_until — köpta turns behålls alltid (turn_bonus).
+            "features_until": _benefits_until(username, udata),
+            "benefits_active": _benefits_active(username, udata),
             "wan1080": bool((udata.get("features") or {}).get("wan1080")) or _tier_for(username) == "lifetime",
             "wan_used_today": int(udata.get("wan_used_today", 0) or 0),
             "wan_daily_limit": WAN_DAILY_LIMIT,
@@ -6247,7 +6300,10 @@ async def vault_list(morkrets_token: str | None = Cookie(None)):
 
 @app.get("/api/vault/export")
 async def vault_export(morkrets_token: str | None = Cookie(None)):
-    """Exportera alla valv-karaktärer (Forge) som JSON — 3€ Support-förmån."""
+    """Exportera alla valv-karaktärer (Forge) + deras avatar-bilder som zip.
+
+    3€ Support-förmån. (2026-08-05 v2: bilderna följer med — 'alla bilder med'.)
+    """
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
     if payload.get("role") != "admin" and _tier_for(username) not in ("tier1", "tier2", "lifetime"):
@@ -6262,10 +6318,22 @@ async def vault_export(morkrets_token: str | None = Cookie(None)):
         "characters": entries,
     }
     content = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
-    return Response(
-        content=content,
-        media_type="application/json",
-        headers={"Content-Disposition": 'attachment; filename="cauldron-forge-export.json"'},
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("forge-export.json", content)
+        av_dir = vault.avatars_dir(username)
+        if av_dir.exists():
+            for avf in sorted(av_dir.iterdir()):
+                if avf.is_file():
+                    try:
+                        zf.writestr(f"avatars/{avf.name}", avf.read_bytes())
+                    except OSError:
+                        continue
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="cauldron-forge-export.zip"'},
     )
 
 
@@ -7767,6 +7835,17 @@ async def export_campaign(morkrets_token: str | None = Cookie(None)):
                 if img_path.exists():
                     zf.writestr(f"bilagor/{img_path.name}", img_path.read_bytes())
 
+        # bilagor/avatars/ — genererade porträtt (spelare/DM/NPC) så ALLA bilder
+        # följer med vid export (rostad 2026-08-05 v2: "alla bilder följer med").
+        av_dir = CAMPAIGNS_DIR / username / meta.get("campaign_id", "") / "avatars"
+        if av_dir.exists():
+            for avf in sorted(av_dir.iterdir()):
+                if avf.is_file():
+                    try:
+                        zf.writestr(f"bilagor/avatars/{avf.name}", avf.read_bytes())
+                    except OSError:
+                        continue
+
     buf.seek(0)
     filename = f"the-lore-weavers-cauldron-{meta['campaign_id']}.zip"
     return StreamingResponse(
@@ -8481,6 +8560,36 @@ def _ledger_totals() -> dict:
     }
 
 
+def _provider_for_model(model_name: str) -> str:
+    """Mappa transkriptets modellnamn → provider (dashscope/deepseek/stepfun/mimo/ollama).
+
+    Transkripten sparar config.api_model (t.ex. 'qwen3.8-max', 'step-3.7-flash',
+    'igorls/gemma-4-…'). Slå upp i MODELS-registret (model_id + api_model),
+    fallback på prefix, annars 'unknown'. Används för admin-dashboardens
+    token-share-per-provider (2026-08-05 v2)."""
+    if not model_name:
+        return "unknown"
+    name = str(model_name)
+    cfg = MODELS.get(name)
+    if cfg:
+        return cfg.provider
+    for cfg in MODELS.values():
+        if cfg.api_model == name:
+            return cfg.provider
+    low = name.lower()
+    if low.startswith(("qwen", "wan", "glm")) or "dashscope" in low:
+        return "dashscope"
+    if low.startswith("deepseek"):
+        return "deepseek"
+    if low.startswith(("step", "stepfun")):
+        return "stepfun"
+    if low.startswith("mimo"):
+        return "mimo"
+    if low.startswith(("ollama", "igorls", "hermes")):
+        return "ollama"
+    return "unknown"
+
+
 def _scan_user_transcripts(user: str) -> dict:
     """Skanna alla transkript för en användare och returnera token- och tursstatistik."""
     prompt_tokens = 0
@@ -8650,6 +8759,16 @@ def _scan_user_transcripts(user: str) -> dict:
         for k in ("calls", "api_calls", "chars", "tokens", "seconds"):
             tts_usage[k] = (tts_usage.get(k, 0) or 0) + (_del_tts.get(k, 0) or 0)
 
+    # Aggregera per-modell-förbrukning över ALLA sessioner (top-level), så
+    # admin-dashboarden kan visa token-share per provider utan att dubbelscanna.
+    model_tokens_total: dict = {}
+    for _s in sessions:
+        for _m, _mv in (_s.get("model_tokens") or {}).items():
+            mt = model_tokens_total.setdefault(_m, {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0})
+            mt["prompt_tokens"] += _mv.get("prompt_tokens", 0) or 0
+            mt["completion_tokens"] += _mv.get("completion_tokens", 0) or 0
+            mt["calls"] += _mv.get("calls", 0) or 0
+
     return {
         "prompt_tokens": prompt_tokens,
         "completion_tokens": completion_tokens,
@@ -8657,6 +8776,7 @@ def _scan_user_transcripts(user: str) -> dict:
         "turns": turns,
         "last_active": last_active,
         "sessions": sessions,
+        "model_tokens": model_tokens_total,
         "tts_usage": tts_usage,
         "character_creation": _acc.get("character_creation", {}),
         "image_gen": _acc.get("image_gen", {}),
@@ -8728,6 +8848,7 @@ def _user_stat_row(username: str, geo: dict | None = None, ledger_per_user: dict
         "char_creation_calls": (scan.get("character_creation", {}) or {}).get("calls", 0) or 0,
         "image_gen_calls": (scan.get("image_gen", {}) or {}).get("calls", 0) or 0,
         "deleted_campaigns": scan.get("deleted_campaigns", {}),
+        "model_tokens": scan.get("model_tokens", {}),
     }
     if geo:
         g = geo.get(username, {})
@@ -8762,12 +8883,30 @@ async def admin_stats(morkrets_token: str | None = Cookie(None)):
         total_tokens += row["total_tokens"]
         total_turns += row["total_turns"]
 
+    # Per-provider-aggregation (2026-08-05 v2): token-share + totala anrop.
+    # Aggregerar per-användarens model_tokens → provider via MODELS-registret.
+    providers: dict = {}
+    models_list: dict = {}
+    for row in user_stats:
+        for m_name, mv in (row.get("model_tokens") or {}).items():
+            prov = _provider_for_model(m_name)
+            pt = providers.setdefault(prov, {"tokens": 0, "calls": 0})
+            pt["tokens"] += (mv.get("prompt_tokens", 0) or 0) + (mv.get("completion_tokens", 0) or 0)
+            pt["calls"] += mv.get("calls", 0) or 0
+            mm = models_list.setdefault(m_name, {"provider": prov, "tokens": 0, "calls": 0})
+            mm["tokens"] += (mv.get("prompt_tokens", 0) or 0) + (mv.get("completion_tokens", 0) or 0)
+            mm["calls"] += mv.get("calls", 0) or 0
+    providers = dict(sorted(providers.items(), key=lambda kv: kv[1]["tokens"], reverse=True))
+    models_list = dict(sorted(models_list.items(), key=lambda kv: kv[1]["tokens"], reverse=True))
+
     return {
         "total_users": len(users),
         "total_campaigns": total_campaigns,
         "total_tokens": total_tokens,
         "total_turns": total_turns,
         "users": user_stats,
+        "providers": providers,
+        "models": models_list,
     }
 
 
@@ -8794,8 +8933,8 @@ async def me_stats(morkrets_token: str | None = Cookie(None)):
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 # One-time-priser (engångsbetalningar, inga abonnemang):
-#   support300 — 3€: +300 turns, export + forge (features.export)
-#   patron500  — 10€: +500 turns, alla modeller 30 dagar, Wan 2.7 Pro
+#   support300 — 3€: +300 turns (permanenta), export+StepFun i 30 dagar (stackbart)
+#   patron500  — 10€: +500 turns (permanenta), premiummodeller+Qwen TTS+Wan 2.7 Pro i 30 dagar (stackbart)
 #   donation   — valfri summa: rensupport, inga förmåner
 STRIPE_PRICES = {
     "support300": os.getenv("STRIPE_PRICE_SUPPORT300", ""),
@@ -8992,18 +9131,24 @@ async def stripe_webhook(request: Request):
                 u["subscription_until"] = None
                 u["turn_cap"] = 0
             elif tier == "support300":
-                # 3€ — +300 turns, export + forge (permanent)
+                # 3€ — +300 turns (BEHÅLLS alltid), export + StepFun i 30 dagar.
+                # Flera köp staplas: turn_bonus ackumuleras, features_until
+                # förlängs +30 dagar från max(idag, nuvarande fönster).
                 u["turn_bonus"] = int(u.get("turn_bonus", 0) or 0) + 300
                 features["export"] = True
                 u["features"] = features
+                u["features_until"] = _stack_benefits_until(u)
+                u.pop("models_until", None)  # enhetligt fönster framåt
             elif tier == "patron500":
-                # 10€ — +500 turns, alla modeller 30 dagar, Wan 2.7 Pro
+                # 10€ — +500 turns (BEHÅLLS alltid), premiummodeller + Qwen TTS
+                # + Wan 2.7 Pro i 30 dagar. Stackbart (se support300).
                 u["turn_bonus"] = int(u.get("turn_bonus", 0) or 0) + 500
                 features["export"] = True
                 features["wan1080"] = True
                 features["all_models"] = True
                 u["features"] = features
-                u["models_until"] = (datetime.now(timezone.utc).date() + timedelta(days=PATRON_MODEL_DAYS)).isoformat()
+                u["features_until"] = _stack_benefits_until(u)
+                u.pop("models_until", None)
                 u["subscription_status"] = "tier2"
             elif tier == "donation":
                 # Valfri summa — rensupport, inga förmåner. Bara ledgern.
@@ -9538,6 +9683,59 @@ async def admin_delete_user(username: str, morkrets_token: str | None = Cookie(N
     if user_dir.exists():
         shutil.rmtree(user_dir)
 
+    return {"ok": True, "deleted": username}
+
+
+@app.delete("/api/me/account")
+async def me_delete_account(morkrets_token: str | None = Cookie(None)):
+    """Self-service: radera DITT eget konto + alla kampanjer, valv, avatarer.
+
+    (2026-08-05 v2, rostad: "Delete account i sin profil med are-you-sure".)
+    Radera görs omedelbart — frontend visar en are-you-sure-dialog först.
+    Skyddar bootstrap-kontot 'admin' (rostads eget testkonto) från självradering.
+    """
+    payload = _get_current_user(morkrets_token)
+    username = payload.get("sub")
+    if not username:
+        raise HTTPException(401, "Ej inloggad")
+    if username == "admin":
+        raise HTTPException(400, "The bootstrap admin account cannot delete itself.")
+
+    users = load_users()
+    if username not in users:
+        raise HTTPException(404, "Konto finns inte")
+    del users[username]
+    save_users(users)
+
+    import shutil
+    # Kampanjdata + _account_usage.json (ligger i användarmappen)
+    user_dir = CAMPAIGNS_DIR / username
+    if user_dir.exists():
+        shutil.rmtree(user_dir)
+    # Forge-valv (karaktärer + avatar-bilder)
+    vault_dir = VAULTS_DIR / username
+    if vault_dir.exists():
+        shutil.rmtree(vault_dir)
+    # Profilporträtt (konto-avatar)
+    av_path = _user_avatar_path(username)
+    if av_path.exists():
+        try:
+            av_path.unlink()
+        except OSError:
+            pass
+    # Ledger-rader (privacy: ingen spårbar historik kvar)
+    try:
+        with _LEDGER_LOCK:
+            ledger = _ledger_load()
+            kept = [r for r in ledger if (r.get("user") or "") != username]
+            if len(kept) != len(ledger):
+                tmp = _LEDGER_FILE.with_suffix(".tmp")
+                tmp.write_text(json.dumps(kept, ensure_ascii=False, indent=2), encoding="utf-8")
+                tmp.replace(_LEDGER_FILE)
+    except Exception as e:
+        logger.warning("Ledger cleanup failed for %s: %s", username, e)
+
+    logger.info("🗑️ Self-delete account: %s", username)
     return {"ok": True, "deleted": username}
 
 

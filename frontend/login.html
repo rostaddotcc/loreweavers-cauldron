@@ -358,9 +358,20 @@
   .prof-btn.ghost:hover{color:var(--gold-bright);border-color:var(--gold)}
   .prof-btn.danger{color:var(--blood-bright);background:var(--stone-3);border:1px solid rgba(139,26,42,.55)}
   .prof-btn.danger:hover{color:var(--blood-bright);border-color:var(--blood-bright)}
+  .prof-confirm{padding:.4rem 0 0;text-align:left}
+  .prof-confirm .pc-title{font-family:var(--font-display);font-size:.85rem;letter-spacing:.14em;text-transform:uppercase;color:var(--blood-bright);margin-bottom:.5rem}
+  .prof-confirm .pc-text{font-size:.8rem;line-height:1.5;color:var(--bone);margin-bottom:1rem}
+  .prof-confirm .pc-row{display:flex;flex-direction:column;gap:.6rem}
+  .prof-confirm .pc-err{font-size:.75rem;color:var(--blood-bright);margin-top:.6rem;text-align:center}
+  #deleted-banner{position:sticky;top:var(--nav-h);z-index:40;display:none;justify-content:center;align-items:center;gap:.5rem;
+    padding:.55rem 1rem;font-size:.78rem;letter-spacing:.04em;color:var(--gold);background:var(--stone-3);
+    border-bottom:1px solid rgba(201,162,39,.3);text-align:center}
+  #deleted-banner.show{display:flex}
 </style>
 </head>
 <body>
+
+<div id="deleted-banner">🕊️ Your account has been deleted. The Cauldron will remember your stories.</div>
 
 <div class="hero-scene" id="hero-scene">
   <div class="hero-art-wrap">
@@ -662,6 +673,7 @@
       <a class="prof-btn gold" href="adventure.html">Return to the realm →</a>
       <a class="prof-btn ghost" href="pricing.html">Membership &amp; billing</a>
       <button class="prof-btn danger" onclick="doLogout()">Log out</button>
+      <button class="prof-btn danger" id="prof-delete-btn" onclick="askDeleteAccount()">Delete account</button>
     </div>
   </div>
 </div>
@@ -672,6 +684,14 @@
 <script src="api.js?v=20260805c"></script>
 
 <script>
+/* ═══════════════ deleted-account banner ═══════════════ */
+(function () {
+  if (!location.search.includes('deleted=1')) return;
+  const b = document.getElementById('deleted-banner');
+  if (b) b.classList.add('show');
+  try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
+})();
+
 /* ═══════════════ nav + scroll reveal ═══════════════ */
 const nav = document.getElementById('nav');
 addEventListener('scroll', () => {
@@ -851,6 +871,44 @@ function doLogout() {
   try { sessionStorage.removeItem('dnd_user'); } catch (e) {}
   try { sessionStorage.removeItem('dnd_token'); } catch (e) {}
   location.href = 'login.html';
+}
+let _deleteConfirming = false;
+function askDeleteAccount() {
+  if (_deleteConfirming) return;
+  _deleteConfirming = true;
+  const actions = document.querySelector('#prof-actions');
+  const name = document.getElementById('prof-name').textContent || 'your account';
+  actions.innerHTML = `
+    <div class="prof-confirm">
+      <div class="pc-title">Are you sure?</div>
+      <div class="pc-text">This permanently deletes <b>${name.replace(/[<>&"]/g, '')}</b> — all campaigns, characters, portraits and images. This cannot be undone.</div>
+      <div class="pc-row">
+        <button class="prof-btn danger" id="prof-delete-yes" onclick="confirmDeleteAccount()">Yes — delete forever</button>
+        <button class="prof-btn ghost" onclick="cancelDeleteAccount()">Cancel</button>
+      </div>
+      <div class="pc-err" id="prof-delete-err" style="display:none"></div>
+    </div>`;
+}
+function cancelDeleteAccount() {
+  _deleteConfirming = false;
+  closeProfile();
+  setTimeout(() => { openProfile(); }, 50);
+}
+async function confirmDeleteAccount() {
+  const err = document.getElementById('prof-delete-err');
+  const yes = document.getElementById('prof-delete-yes');
+  if (yes) { yes.disabled = true; yes.textContent = 'Erasing…'; }
+  if (err) err.style.display = 'none';
+  try {
+    await API.deleteAccount();
+    try { API.logout(); } catch (e) {}
+    try { sessionStorage.removeItem('dnd_user'); } catch (e) {}
+    try { sessionStorage.removeItem('dnd_token'); } catch (e) {}
+    location.href = 'login.html?deleted=1';
+  } catch (e) {
+    if (yes) { yes.disabled = false; yes.textContent = 'Yes — delete forever'; }
+    if (err) { err.style.display = ''; err.textContent = '⚠ ' + (e.message || 'Could not delete account'); }
+  }
 }
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') closeProfile();

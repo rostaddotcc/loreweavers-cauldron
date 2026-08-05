@@ -284,7 +284,8 @@
         <li><b>Export your campaign</b> — the whole story as a zip</li>
         <li><b>Export your heroes</b> from The Forge</li>
         <li><b>Uploaded avatars</b> — your own images for your hero and the NPCs you meet</li>
-        <li>One-time. No subscription, no renewal, ever</li>
+        <li>One-time — <b>30 days</b> of Support benefits. Your <b>+300 turns are yours forever</b></li>
+        <li>Buy again anytime — <b>packs stack</b> (+30 days, +300 more turns)</li>
       </ul>
       <a class="tier-btn go" href="#" data-tier="support300" onclick="openPlan(event,'support300')">Support the Cauldron</a>
     </div>
@@ -298,12 +299,15 @@
       <div class="tier-price"><span class="cur-price" data-eur="10" data-sek="117">10€</span><small> once</small></div>
       <div class="tier-desc">The full mind of the Cauldron — when you need it most.</div>
       <ul>
+        <li>How it is meant to be played — massive storylines, quests without breaking immersion with the full reasoning power of <b>Qwen and DeepSeek</b>, along with premium text-to-speech Dungeon Master narration with <b>Qwen 3.0 TTS</b>.</li>
         <li><b>+500 turns</b> on your account, instantly</li>
-        <li><b>All Dungeon Masters</b> — DeepSeek, Qwen 3.8 Max &amp; more, for <b>30 days</b></li>
+        <li><b>All Dungeon Masters</b> — DeepSeek, Qwen 3.8 Max &amp; more, for <b>30 days</b> (stackable)</li>
         <li><b>Wan 2.7 Pro painting</b> — 1080² portraits, up to <b>10 per day</b></li>
+        <li><b>Premium TTS narration</b> — Qwen 3.0 Dungeon Master voices, for <b>30 days</b></li>
         <li><b>Premium charactergen powered Wan 2.7</b> — full 1080p avatars for your Dungeon Master, characters and everyone you meet during your adventures</li>
         <li>Everything in Support — StepFun TTS &amp; painting, export and uploads included</li>
-        <li>One-time. No subscription, no renewal, ever</li>
+        <li>One-time — <b>30 days</b> of Patron benefits. Your <b>+500 turns are yours forever</b></li>
+        <li>Buy again anytime — <b>packs stack</b> (+30 days, +500 more turns)</li>
       </ul>
       <a class="tier-btn go" href="#" data-tier="patron500" onclick="openPlan(event,'patron500')">Become a Patron</a>
     </div>
@@ -329,7 +333,7 @@
 
   <p class="fine">
     <b>How the free path works</b> — every new account starts with <b>300 turns</b>. When they're spent, you get <b>50 fresh turns every day</b>, whether you were here or not.
-    Support, Patron and donations are <b>one-time purchases</b> — no subscription, no renewal, no lock-in.
+    Support and Patron are <b>one-time purchases</b> that each unlock <b>30 days</b> of benefits — buy again to stack more time, and your purchased turns never expire. Donations are pure support. No subscription, no renewal, no lock-in.
     Payments are processed securely by Stripe.
   </p>
   <a class="back" href="adventure.html">← Return to the realm</a>
@@ -398,20 +402,24 @@
         '<b>Export your campaign</b> — the whole story as a zip',
         '<b>Export your heroes</b> from The Forge',
         '<b>Uploaded avatars</b> — your own images for your hero and the NPCs you meet',
-        'One-time. No subscription, no renewal, ever',
+        'One-time — <b>30 days</b> of Support benefits. Your <b>+300 turns are yours forever</b>',
+        'Buy again anytime — <b>packs stack</b> (+30 days, +300 more turns)',
       ],
     },
     patron500: {
       name: 'Patron',
       price: { eur: 10, sek: 117, per: ' once' },
       desc: 'The full mind of the Cauldron — when you need it most.',
+      promo: 'How it is meant to be played — massive storylines, quests without breaking immersion with the full reasoning power of Qwen and DeepSeek, along with premium text-to-speech Dungeon Master narration with Qwen 3.0 TTS.',
       features: [
         '<b>+500 turns</b> on your account, instantly',
-        '<b>All Dungeon Masters</b> — DeepSeek, Qwen 3.8 Max &amp; more, for <b>30 days</b>',
+        '<b>All Dungeon Masters</b> — DeepSeek, Qwen 3.8 Max &amp; more, for <b>30 days</b> (stackable)',
         '<b>Wan 2.7 Pro painting</b> — 1080² portraits, up to <b>10 per day</b>',
+        '<b>Premium TTS narration</b> — Qwen 3.0 Dungeon Master voices, for <b>30 days</b>',
         '<b>Premium charactergen powered Wan 2.7</b> — full 1080p avatars for your Dungeon Master, characters and everyone you meet during your adventures',
         'Everything in Support — StepFun TTS &amp; painting, export and uploads included',
-        'One-time. No subscription, no renewal, ever',
+        'One-time — <b>30 days</b> of Patron benefits. Your <b>+500 turns are yours forever</b>',
+        'Buy again anytime — <b>packs stack</b> (+30 days, +500 more turns)',
       ],
     },
     donation: {
@@ -463,7 +471,14 @@
     priceEl.textContent = fmtPrice(p.price.eur, p.price.sek);
     perEl.textContent = p.price.per;
     strikeEl.style.display = 'none';
-    document.getElementById('plan-promo').style.display = 'none';
+    var promoEl = document.getElementById('plan-promo');
+    if (p.promo) {
+      promoEl.innerHTML = '“' + p.promo + '”';
+      promoEl.style.display = '';
+    } else {
+      promoEl.style.display = 'none';
+      promoEl.innerHTML = '';
+    }
     document.getElementById('plan-desc').textContent = p.desc;
     document.getElementById('plan-list').innerHTML = p.features.map(function (f) {
       return '<li>' + f + '</li>';

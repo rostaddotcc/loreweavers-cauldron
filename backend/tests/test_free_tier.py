@@ -299,17 +299,22 @@ def test_tier2_not_unlimited(client):
 
 
 def test_patron_models_expire(client):
-    """Patron-modellerna (all_models) gäller 30 dagar — sedan faller kontot
-    tillbaka till tier1 (export kvar) eller free."""
+    """Patron-förmånerna (all_models) gäller 30 dagar — sedan faller kontot
+    tillbaka till free (2026-08-05 v2: ÄVEN export går ut med fönstret;
+    köpta turns behålls men inga features-förmåner kvar)."""
     _register(client)
     _patch_user("alice", features={"all_models": True, "export": True, "wan1080": True},
                 models_until=_in_days(-1), subscription_status="tier2", subscription_until=_in_days(-1),
                 turn_cap=50, turns_used=0)
     # modellerna gick ut → inte längre tier2
     assert main._tier_for("alice") != "tier2"
-    # export är permanent → tier1 (Support)
-    assert main._tier_for("alice") == "tier1"
+    # 2026-08-05 v2: export-förmånen går ut med 30-dagarsfönstret → free
+    assert main._tier_for("alice") == "free"
     assert main._clamp_player_model("qwen3.8-max", tier=main._tier_for("alice")) == "step-3.7-flash"
+    # Köpta turns behålls efter att förmånerna löpt ut
+    info = main._user_free_info("alice")
+    assert info["turn_bonus"] >= 0
+    assert info["subscription_status"] == "free"
 
 
 def test_expired_premium_demoted(client):

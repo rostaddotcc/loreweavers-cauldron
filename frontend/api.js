@@ -187,6 +187,11 @@ const API = (() => {
       if (!MOCK) await req('/api/logout', { method: 'POST' }).catch(() => {});
     },
 
+    async deleteAccount() {
+      if (MOCK) throw new Error('Not available in mock mode');
+      return req('/api/me/account', { method: 'DELETE' });
+    },
+
     async me() {
       if (MOCK) {
         const u = sessionStorage.getItem('dnd_user');

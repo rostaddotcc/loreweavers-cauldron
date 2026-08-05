@@ -6658,11 +6658,13 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
             )
             async with httpx.AsyncClient(timeout=150) as client:
                 with open(existing_path, "rb") as f:
+                    # Fix httpx #1482: unicode i data= med files= → fel Content-Length.
+                    # Pre-encoda till UTF-8-bytes. (2026-08-05)
                     resp = await client.post(
                         f"{base_url.rstrip('/')}/images/edits",
                         headers={"Authorization": f"Bearer {api_key}"},
-                        data={"model": STEP_IMAGE_EDIT_2, "prompt": edit_prompt,
-                              "response_format": "b64_json", "steps": 8, "seed": seed},
+                        data={"model": STEP_IMAGE_EDIT_2, "prompt": edit_prompt.encode("utf-8"),
+                              "response_format": "b64_json", "steps": str(8), "seed": str(seed)},
                         files={"image": (existing_path.name, f, "image/png")},
                     )
         else:
@@ -7734,15 +7736,19 @@ async def generate_avatar(
             )
             async with httpx.AsyncClient(timeout=150) as client:
                 with open(existing_path, "rb") as f:
+                    # Fix httpx #1482: unicode-strängar i data= med files= ger fel
+                    # Content-Length (len(str) istället för len(bytes)) →
+                    # "Too much data for declared Content-Length". Pre-encoda till
+                    # UTF-8-bytes så multipart-längden stämmer. (2026-08-05)
                     resp = await client.post(
                         f"{base_url.rstrip('/')}/images/edits",
                         headers={"Authorization": f"Bearer {api_key}"},
                         data={
                             "model": STEP_IMAGE_EDIT_2,
-                            "prompt": edit_prompt,
+                            "prompt": edit_prompt.encode("utf-8"),
                             "response_format": "b64_json",
-                            "steps": 8,
-                            "seed": seed,
+                            "steps": str(8),
+                            "seed": str(seed),
                         },
                         files={"image": (existing_path.name, f, "image/png")},
                     )

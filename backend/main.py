@@ -852,7 +852,7 @@ def _parse_allierad_tag(text: str, state: dict) -> tuple[str, list[dict]]:
     world = state.setdefault('world', {})
     combat = world.get('combat')
     if not (combat and combat.get('active')):
-        logger.warning("🤝 [ALLIERAD:] ignorerad — ingen aktiv strid")
+        logger.warning("🤝 [ALLIERAD:] ignored — no active combat")
         return clean, effects
 
     allies_in: list[dict] = []
@@ -2195,7 +2195,7 @@ async def register(req: RegisterRequest, response: Response, request: Request):
     if email and ("@" not in email or "." not in email.split("@")[-1] or len(email) > 120):
         raise HTTPException(400, "That email does not look right.")
     if not _register_allowed():
-        raise HTTPException(429, "Too many new adventurers. Try again later.")
+        raise HTTPException(429, "Too many new adventurers right now — try again in about an hour.")
 
     # 2026-08-05 v3: max ETT konto per publik IP (rostad: "blockera 1 konto
     # per IP"). Privata IP:er (LAN/localhost) hoppas över — de saknar mening.
@@ -2205,13 +2205,13 @@ async def register(req: RegisterRequest, response: Response, request: Request):
         if existing_ip_user:
             raise HTTPException(
                 403,
-                "One adventurer per fire — an account already exists on this network.",
+                "One account per network — an adventurer already exists on this connection. If that's you, just log in instead.",
             )
 
     with _USER_LOCK:
         users = load_users()
         if username in users:
-            raise HTTPException(409, "That name is already taken. Choose another.")
+            raise HTTPException(409, "That name is already taken — try another, or log in if it's yours.")
 
         users[username] = {
             "password_hash": hash_password(req.password),
@@ -3128,7 +3128,7 @@ def _synth_qwen_tts_retry(voice: str, text: str, style: str = "") -> bytes:
     except Exception as e:
         msg = str(e)
         if "request timeout" in msg:
-            logger.warning("🔊 Qwen TTS request timeout — retry utan instruction")
+            logger.warning("🔊 Qwen TTS request timeout — retry without instruction")
             return _synth_qwen_tts(voice, text, use_instruction=False)
         raise
 
@@ -4962,7 +4962,7 @@ async def _post_turn_tasks_locked(
                             low_ids = set(re.findall(r'[0-9a-f]{12}', raw_s))
                     n_compacted = register.compact(low_ids)
                     # Logga till ringbuffern → syns i /api/debug/logs + admin
-                    logger.info("🧹 Kompakteringspass (turn %d): %d fakta nedrankade av %d", turn_count, n_compacted, len(active))
+                    logger.info("🧹 Compaction pass (turn %d): %d facts downranked of %d", turn_count, n_compacted, len(active))
                     if _compact_usage.get("total_tokens"):
                         _track_unguarded(st, _extraction_model_for(st), _compact_usage)
                     store.save(st)
@@ -5272,9 +5272,9 @@ async def _chat_locked(
         )
         if len(_npc_injected) > len(messages[0]["content"]):
             messages[0]["content"] = _npc_injected
-            logger.info("💬 NPC-chatt: @-kontext injicerad i systemprompten")
+            logger.info("💬 NPC chat: @-context injected into system prompt")
     except Exception as e:
-        logger.warning("NPC-chatt-injektion hoppades över: %s", e)
+        logger.warning("NPC chat injection skipped: %s", e)
 
     # Sammanfattningar injiceras numera i _build_system_prompt (hierarkiskt:
     # 2 scen + 2 kapitel + 1 kampanjbåge) — ingen separat loop behövs här.
@@ -6380,7 +6380,7 @@ async def vault_export(morkrets_token: str | None = Cookie(None)):
     if payload.get("role") != "admin" and _tier_for(username) not in ("tier1", "tier2", "lifetime"):
         raise HTTPException(
             403,
-            "Forge export is a Support feature (3€) — support the Cauldron to export your heroes.",
+            "Forge export is a Support feature (3€) — support the Cauldron to export your adventurers.",
         )
     entries = vault.list(username)
     data = {
@@ -6639,7 +6639,7 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
                     },
                 )
             if resp.status_code != 200:
-                logger.error("🎨 Vault-Wan-fel: HTTP %d %s", resp.status_code, resp.text[:400])
+                logger.error("🎨 Vault-Wan error: HTTP %d %s", resp.status_code, resp.text[:400])
                 raise HTTPException(502, f"Wan error ({resp.status_code})")
             wdata = resp.json()
             try:
@@ -6679,7 +6679,7 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("🎨 Vault-avatar (provider=%s) misslyckades: %s", provider, e)
+        logger.error("🎨 Vault avatar (provider=%s) failed: %s", provider, e)
         raise HTTPException(502, f"Could not reach {provider}: {e}")
     if provider != "wan":
         if resp.status_code != 200:
@@ -7224,7 +7224,7 @@ async def me_avatar_generate(body: dict | None = None, morkrets_token: str | Non
                     },
                 )
             if resp.status_code != 200:
-                logger.error("🎨 Profilavatar-Wan-fel: HTTP %d %s", resp.status_code, resp.text[:400])
+                logger.error("🎨 Profile avatar Wan error: HTTP %d %s", resp.status_code, resp.text[:400])
                 raise HTTPException(502, f"Wan error ({resp.status_code})")
             wdata = resp.json()
             try:
@@ -7254,7 +7254,7 @@ async def me_avatar_generate(body: dict | None = None, morkrets_token: str | Non
                     },
                 )
             if resp.status_code != 200:
-                logger.error("🎨 Profilavatar StepFun-fel: HTTP %d %s", resp.status_code, resp.text[:300])
+                logger.error("🎨 Profile avatar StepFun error: HTTP %d %s", resp.status_code, resp.text[:300])
                 raise HTTPException(502, f"StepFun-fel ({resp.status_code})")
             try:
                 b64 = resp.json()["data"][0]["b64_json"]
@@ -7264,7 +7264,7 @@ async def me_avatar_generate(body: dict | None = None, morkrets_token: str | Non
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("🎨 Profilavatar (provider=%s) misslyckades: %s", provider, e)
+        logger.error("🎨 Profile avatar (provider=%s) failed: %s", provider, e)
         raise HTTPException(502, f"Kunde inte nå {provider}: {e}")
 
     USER_AVATARS_DIR = _user_avatar_path(username).parent
@@ -7654,7 +7654,7 @@ async def generate_avatar(
         prompt = _trim_prompt(user_prompt)
     else:
         prompt = _trim_prompt(_build_avatar_prompt(state, avatar_key, seed))
-    logger.info("🎨 AI-avatar: %s (mode=%s, seed %d)", avatar_key, mode, seed)
+    logger.info("🎨 AI avatar: %s (mode=%s, seed %d)", avatar_key, mode, seed)
 
     api_key = os.getenv("STEPFUN_API_KEY")
     base_url = os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.ai/step_plan/v1")
@@ -7716,7 +7716,7 @@ async def generate_avatar(
                     },
                 )
             if resp.status_code != 200:
-                logger.error("🎨 Wan-fel: HTTP %d %s", resp.status_code, resp.text[:400])
+                logger.error("🎨 Wan error: HTTP %d %s", resp.status_code, resp.text[:400])
                 raise HTTPException(502, f"Wan-fel ({resp.status_code})")
             wdata = resp.json()
             try:
@@ -7769,11 +7769,11 @@ async def generate_avatar(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("🎨 AI-avatar (provider=%s) misslyckades: %s", provider, e)
+        logger.error("🎨 AI avatar (provider=%s) failed: %s", provider, e)
         raise HTTPException(502, f"Kunde inte nå {provider}: {e}")
     if provider != "wan":
         if resp.status_code != 200:
-            logger.error("🎨 StepFun-fel: HTTP %d %s", resp.status_code, resp.text[:300])
+            logger.error("🎨 StepFun error: HTTP %d %s", resp.status_code, resp.text[:300])
             raise HTTPException(502, f"StepFun-fel ({resp.status_code})")
 
     if provider == "wan":
@@ -8431,7 +8431,7 @@ def _require_image_gen_tier(username: str, provider: str, payload: dict | None =
         if tier == "free":
             raise HTTPException(
                 403,
-                "AI painting is a Support feature (3€) — support the Cauldron to paint your hero, the DM and every NPC with StepFun.",
+                "AI painting is a Support feature (3€) — support the Cauldron to paint your adventurer, the DM and every NPC with StepFun.",
             )
 
 
@@ -9233,8 +9233,12 @@ async def stripe_webhook(request: Request):
                 u.pop("models_until", None)
                 u["subscription_status"] = "tier2"
             elif tier == "donation":
-                # Valfri summa — rensupport, inga förmåner. Bara ledgern.
-                pass
+                # Valfri summa — ren support, ingen feature-window, men varje
+                # € ger +100 turns. amount_total är i ören (ören/100 EUR × 100
+                # turns/€ = amount_total), så antalet turns = amount_total.
+                _don_turns = max(0, int(amount_total))
+                u["turn_bonus"] = int(u.get("turn_bonus", 0) or 0) + _don_turns
+                logger.info("💳 Donation: +%d turns for %s", _don_turns, username)
             if cust:
                 u["stripe_customer_id"] = cust
             if sub_id:

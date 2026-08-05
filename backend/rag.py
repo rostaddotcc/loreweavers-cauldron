@@ -356,7 +356,7 @@ async def index_transcript(
     """
     chunks = chunk_transcript(messages)
     if not chunks:
-        logger.info("Tomt transkript — inget att indexera.")
+        logger.info("Empty transcript — nothing to index.")
         return 0
     return await index_chunks(chunks, username, campaign_id)
 

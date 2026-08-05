@@ -117,12 +117,12 @@
   }.portrait-frame .emoji{ font-size: 3.6rem; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6)); }.portrait-frame img{ width: 100%; height: 100%; object-fit: cover; }.portrait-frame .hint{
     position: absolute; inset: auto 0 0 0; padding: 5px 0; text-align: center;
     font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase;
-    background: rgba(6,3,10,0.82); color: var(--gold-bright);
+    background: color-mix(in srgb, var(--ink) 82%, transparent); color: var(--gold-bright);
     transform: translateY(100%); transition: transform 0.25s;
   }.portrait-frame:hover .hint{ transform: translateY(0); }.portrait-frame input{ display: none; }.char-identity{ flex: 1; min-width: 0; }.char-name{
     font-family: 'Cinzel', serif; font-weight: 900; font-size: clamp(1.5rem, 4vw, 2.1rem);
     color: var(--bone-bright); letter-spacing: 0.03em; line-height: 1.1;
-    text-shadow: 0 2px 0 #000, 0 0 24px rgba(163,36,51,0.25);
+    text-shadow: 0 2px 0 #000, 0 0 24px color-mix(in srgb, var(--blood) 25%, transparent);
   }.char-class{
     font-family: 'Spectral', serif; font-style: italic; font-weight: 400;
     color: var(--arcane); font-size: 1.13rem; margin: 0.3rem 0 0.7rem;
@@ -131,7 +131,7 @@
     font-family: 'Cinzel', serif; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
     background: linear-gradient(180deg, var(--stone-3), var(--stone));
     border: 1px solid var(--gold); color: var(--gold-bright);
-    padding: 0.6rem 1.2rem; cursor: pointer; border-radius: 2px; transition: all 0.2s;
+    padding: 0.6rem 1.2rem; cursor: pointer; border-radius: 8px; transition: all 0.2s;
     display: inline-flex; align-items: center; gap: 0.45rem; min-height: 42px;
   }.forge-export-btn:hover{ filter: brightness(1.15); box-shadow: 0 0 14px -4px rgba(232,198,90,0.5); }
   .forge-export-btn:disabled{ opacity: 0.5; cursor: default; box-shadow: none; }/* ═══════════ Mätare ═══════════ */.vitals{ display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem 1.5rem; }.vital{ grid-column: span 1; }.vital.wide{ grid-column: 1 / -1; }.vital-head{
@@ -146,7 +146,7 @@
     background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.22) 50%, transparent 70%);
     background-size: 220% 100%; animation: sheen 3.4s linear infinite;
   }
-  @keyframes sheen { from { background-position: 200% 0; } to { background-position: -60% 0; } }.fill.hp{ background: linear-gradient(180deg, var(--blood-bright), #5e1220 85%); box-shadow: 0 0 14px var(--hp-glow); }.fill.xp{ background: linear-gradient(180deg, var(--gold-bright), #7a5c10 85%); box-shadow: 0 0 12px rgba(232,198,90,0.4); }.trough.low .fill.hp{ animation: hp-alarm 1s ease-in-out infinite; }
+  @keyframes sheen { from { background-position: 200% 0; } to { background-position: -60% 0; } }.fill.hp{ background: linear-gradient(180deg, var(--blood-bright), color-mix(in srgb, var(--blood-bright) 35%, var(--ink)) 85%); box-shadow: 0 0 14px var(--hp-glow); }.fill.xp{ background: linear-gradient(180deg, var(--gold-bright), color-mix(in srgb, var(--gold-bright) 35%, var(--ink)) 85%); box-shadow: 0 0 12px rgba(232,198,90,0.4); }.trough.low .fill.hp{ animation: hp-alarm 1s ease-in-out infinite; }
   @keyframes hp-alarm { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.6); } }.mini-btn{
     font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 0.1em;
     background: var(--stone-3); color: var(--bone-dim); border: 1px solid var(--edge);
@@ -159,7 +159,7 @@
     transition: transform 0.2s, filter 0.2s; cursor: default;
   }.ability:hover{ transform: translateY(-4px); filter: brightness(1.25) drop-shadow(0 6px 12px rgba(0,0,0,0.6)); }.ability .abbr{ font-family: 'Cinzel', serif; font-size: 0.73rem; letter-spacing: 0.25em; color: var(--gold); }.ability .score{ font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.55rem; color: var(--bone-bright); line-height: 1.15; text-shadow: 0 2px 0 #000; }.ability .mod{ font-size: 0.91rem; color: var(--arcane); font-weight: 600; }/* ═══════════ Egenskaper — runchips ═══════════ */.traits{ display: flex; flex-wrap: wrap; gap: 0.5rem; }.trait{
     font-size: 0.93rem; padding: 0.32rem 0.85rem; border: 1px solid var(--edge);
-    background: var(--stone); color: var(--bone); border-radius: 2px;
+    background: var(--stone); color: var(--bone); border-radius: 8px;
     transition: all 0.2s; cursor: default;
   }.trait:hover{ transform: translateY(-2px); border-color: var(--bone-dim); }.trait.magic{
     border-color: color-mix(in srgb, var(--arcane) 55%, transparent); color: var(--arcane-bright);
@@ -426,8 +426,8 @@
   }
   #panel-character .char-header::after{
     content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
-    background: linear-gradient(90deg, rgba(8,4,10,.9) 0%, rgba(8,4,10,.6) 45%, rgba(8,4,10,.15) 72%, rgba(8,4,10,0) 85%),
-                linear-gradient(180deg, rgba(8,4,10,0) 42%, rgba(8,4,10,.5) 100%);
+    background: linear-gradient(90deg, color-mix(in srgb, var(--ink) 90%, transparent) 0%, color-mix(in srgb, var(--ink) 60%, transparent) 45%, color-mix(in srgb, var(--ink) 15%, transparent) 72%, transparent 85%),
+                linear-gradient(180deg, transparent 42%, color-mix(in srgb, var(--ink) 50%, transparent) 100%);
   }
   #panel-character .portrait-frame{
     position: absolute; top: -26px; right: -8px; width: 273px; height: calc(100% + 26px);
@@ -453,6 +453,7 @@
 .tab{ border-radius: 8px !important; transition: all .2s !important; }
 .panel{ border-radius: 10px !important; }
 .ability{ border-radius: 8px !important; }
+.trait{ border-radius: 8px !important; }
 .inv-card-row{ border-radius: 8px !important; }
 .forge-row{ border-radius: 8px !important; }
 .coin-btn{ border-radius: 8px !important; }
@@ -464,9 +465,9 @@
 .av-btn{ border-radius: 8px !important; }
 .add-form input, .add-form select{ border-radius: 6px !important; }
 </style>
-<script src="sprites.js?v=20260802a"></script>
-<script src="fonts.js?v=20260802c"></script>
-<script src="themes.js?v=20260804b"></script>
+<script src="sprites.js?v=20260806a"></script>
+<script src="fonts.js?v=20260806c"></script>
+<script src="themes.js?v=20260806b"></script>
 </head>
 <body>
 
@@ -475,15 +476,15 @@
 <canvas id="embers"></canvas>
 <div class="vignette"></div>
 
-<header class="topbar" style="position:relative;z-index:5;display:flex;align-items:center;gap:1rem;padding:.7rem 1.2rem;background:linear-gradient(180deg,var(--stone-2),rgba(22,16,32,.95));border-bottom:1px solid var(--edge);box-shadow:0 4px 20px rgba(0,0,0,.5)">
+<header class="topbar" style="position:relative;z-index:5;display:flex;align-items:center;gap:1rem;padding:.7rem 1.2rem;background:linear-gradient(180deg,var(--stone-2),color-mix(in srgb, var(--stone) 95%, transparent));border-bottom:1px solid var(--edge);box-shadow:0 4px 20px rgba(0,0,0,.5)">
   <span style="font-family:Cinzel,serif;font-weight:900;font-size:1.05rem;color:var(--gold-bright);letter-spacing:.06em;text-shadow:0 0 14px rgba(232,198,90,.3)">The Lore Weaver's Cauldron</span>
   <span style="font-size:.91rem;font-style:italic;color:var(--bone-dim);border-left:1px solid var(--edge);padding-left:1rem">Character Sheet</span>
   <span style="flex:1"></span>
-  <a class="top-btn" href="chat.html" style="font-family:Cinzel,serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">⚔ To the Table</a>
-  <a class="top-btn" href="loggbok.html" style="font-family:Cinzel,serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">📜 Logbook</a>
-  <a class="top-btn" href="platser.html" style="font-family:Cinzel,serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">🗺️ The Map</a>
-  <a class="top-btn" href="npcs.html" style="font-family:Cinzel,serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none">📖 NPCs</a>
-  <button class="top-btn danger" onclick="doLogout()" style="font-family:Cinzel,serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px">🚪 Leave</button>
+  <a class="top-btn" href="chat.html" style="font-family:Cinzel,serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:8px;text-decoration:none">⚔ To the Table</a>
+  <a class="top-btn" href="loggbok.html" style="font-family:Cinzel,serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:8px;text-decoration:none">📜 Logbook</a>
+  <a class="top-btn" href="platser.html" style="font-family:Cinzel,serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:8px;text-decoration:none">🗺️ The Map</a>
+  <a class="top-btn" href="npcs.html" style="font-family:Cinzel,serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:8px;text-decoration:none">📖 NPCs</a>
+  <button class="top-btn danger" onclick="doLogout()" style="font-family:Cinzel,serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:8px">🚪 Leave</button>
 </header>
 <div class="app">
 
@@ -547,7 +548,7 @@
 
     <div class="forge-row">
       <button class="forge-export-btn" id="forge-paint-btn" onclick="openAvatarModal()" title="Paint your adventurer's portrait — StepFun (Support 3€) or Wan 2.7 Pro (Patron 10€)">🎨 Paint your adventurer</button>
-      <button class="forge-export-btn" id="forge-export-btn" onclick="exportToForge()" title="Save this hero to The Forge — start a new campaign with them later">⚒ Export to Forge</button>
+      <button class="forge-export-btn" id="forge-export-btn" onclick="exportToForge()" title="Save this adventurer to The Forge — start a new campaign with them later">⚒ Export to Forge</button>
     </div>
 
     <div class="section-title">Abilities</div>
@@ -645,9 +646,9 @@ Markdown is not rendered, but the structure is yours."></textarea>
 
 <div class="toast" id="toast"></div>
 
-<script src="sfx.js?v=20260802a"></script>
-<script src="api.js?v=20260804c"></script>
-<script src="i18n.js?v=20260802b"></script>
+<script src="sfx.js?v=20260806a"></script>
+<script src="api.js?v=20260806c"></script>
+<script src="i18n.js?v=20260806b"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -846,7 +847,7 @@ let _exporting = false;
 async function exportToForge() {
   if (_exporting) return;
   const name = (state.character && state.character.name) || '';
-  if (!name) { toast('⚠ No hero to export yet'); return; }
+  if (!name) { toast('⚠ No adventurer to export yet'); return; }
   _exporting = true;
   const btn = document.getElementById('forge-export-btn');
   if (btn) { btn.disabled = true; btn.textContent = '⚒ Saving…'; }
@@ -1380,7 +1381,7 @@ function avatarProvider() {
 }
 function avatarGenGate(provider) {
   if (_charTier === 'free') {
-    toast('🔒 AI painting is a Support feature (3€) — support the Cauldron to paint your hero, the DM and every NPC with StepFun.');
+    toast('🔒 AI painting is a Support feature (3€) — support the Cauldron to paint your adventurer, the DM and every NPC with StepFun.');
     try { SFX.error(); } catch (_) {}
     return false;
   }
@@ -1502,7 +1503,7 @@ document.addEventListener('keydown', e => {
 function exportState() { return JSON.stringify(state, null, 2); }
 window.getState = exportState;
 </script>
-<script src="embed.js?v=20260802a"></script>
+<script src="embed.js?v=20260806a"></script>
 
 <!-- 🎨 Avatar-modal (AI-generera / uppdatera / ladda upp / ta bort) -->
 <div class="mi-overlay" id="avatar-overlay" onclick="if(event.target===this)closeAvatarModal()">

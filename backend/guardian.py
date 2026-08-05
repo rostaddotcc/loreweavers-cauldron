@@ -774,7 +774,7 @@ async def guardian_extract_mechanics(
         result = _parse_json(raw)
         if result is None:
             logger.warning(
-                "Guardian post-DM: ogiltig JSON (försök %d). Rådata: %.200s",
+                "Guardian post-DM: invalid JSON (attempt %d). Raw: %.200s",
                 attempt + 1, raw,
             )
             if attempt == 0:
@@ -803,7 +803,7 @@ async def guardian_extract_mechanics(
           + (1 if result.get("current_location") else 0)
 
         logger.info(
-            "🛡️ Guardian post-DM (tur %d): %d mekaniska ändringar (försök %d)",
+            "🛡️ Guardian post-DM (turn %d): %d mechanical changes (attempt %d)",
             turn, n_changes, attempt + 1,
         )
         return result
@@ -1033,7 +1033,7 @@ def _advance_turn(combat: dict, state: dict) -> None:
         combat["current_index"] = 0
         combat["phase"] = "player"
         combat.setdefault("player_actions", {"action": True, "bonus": True, "reaction": True})
-        logger.info("⚔️ Ny runda %d — alla har agerat", combat["round"])
+        logger.info("⚔️ New round %d — everyone has acted", combat["round"])
     else:
         # Stega till nästa levande combatant
         while next_idx < len(turn_order):
@@ -1138,7 +1138,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             if not any(r.get("notation") == "2d4+2" and "LÄKNING" in r.get("label", "") for r in resources):
                 resources.append({"notation": "2d4+2", "label": "LÄKNING (läkedryck)", "reason": "läkedryck dracks", "turn": state.get("meta", {}).get("turn_count", 0)})
             effects.append({"type": "roll_grant", "value": "LÄKNING (läkedryck)", "notation": "2d4+2"})
-            logger.info("🛡️ Guardian: läkedryck-healing → roll_grant 2d4+2 (istället för fast %d)", amount)
+            logger.info("🛡️ Guardian: potion-heal → roll_grant 2d4+2 (instead of flat %d)", amount)
             continue
         if amount <= 0:
             continue
@@ -1396,7 +1396,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 "created_turn": state.get("meta", {}).get("turn_count", 0),
             })
             effects.append({"type": "quest", "value": name})
-            logger.info("🛡️ Guardian: nytt uppdrag '%s' (ID: %s)", name, quest_id[:8])
+            logger.info("🛡️ Guardian: new quest '%s' (ID: %s)", name, quest_id[:8])
 
     for name in mech.get("quests_completed", []):
         if not isinstance(name, str) or not name.strip():
@@ -1441,7 +1441,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 effects.append({"type": "guld", "value": gold_r, "denom": "gp", "source": "quest"})
                 logger.info("🛡️ Guardian: +%d gp (quest-reward '%s')", gold_r, q["name"])
         else:
-            logger.warning("🛡️ Guardian: quests_completed matchade inget aktivt uppdrag: '%s'", name)
+            logger.warning("🛡️ Guardian: quests_completed matched no active quest: '%s'", name)
 
     for name in mech.get("quests_failed", []):
         if not isinstance(name, str) or not name.strip():
@@ -1450,9 +1450,9 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
         if q:
             q["status"] = "misslyckad"
             effects.append({"type": "quest_misslyckad", "value": q["name"]})
-            logger.info("🛡️ Guardian: uppdrag misslyckat '%s'", q["name"])
+            logger.info("🛡️ Guardian: quest failed '%s'", q["name"])
         else:
-            logger.warning("🛡️ Guardian: quests_failed matchade inget aktivt uppdrag: '%s'", name)
+            logger.warning("🛡️ Guardian: quests_failed matched no active quest: '%s'", name)
 
     # ── NPCs ──
     npcs = state.setdefault("npcs", [])
@@ -1478,7 +1478,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 "alive": True,
             })
             effects.append({"type": "npc_new", "value": name, "role": npc.get("role", "Okänd"), "relation": relation})
-            logger.info("🛡️ Guardian: ny NPC '%s' (%s)", name, relation)
+            logger.info("🛡️ Guardian: new NPC '%s' (%s)", name, relation)
 
     for rel in mech.get("npc_relations", []):
         name = rel.get("name", "").strip()
@@ -1501,7 +1501,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
         if was_near != is_near:
             npc["near"] = is_near
             effects.append({"type": "npc_near", "value": f"{npc.get('name', '?')} → {'nära' if is_near else 'lämnade närheten'}"})
-            logger.info("🛡️ Guardian: NPC '%s' närvaro → %s", npc.get("name"), "nära" if is_near else "lämnade")
+            logger.info("🛡️ Guardian: NPC '%s' presence → %s", npc.get("name"), "near" if is_near else "left")
 
     for note in mech.get("npc_notes", []):
         name = note.get("name", "").strip()
@@ -1595,7 +1595,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             if loc_idx is None:
                 locations.append(loc_obj)
             effects.append({"type": "plats", "value": name})
-            logger.info("🛡️ Guardian: ny plats '%s' (%s)", name, loc_obj["terrain"])
+            logger.info("🛡️ Guardian: new location '%s' (%s)", name, loc_obj["terrain"])
 
     # ── Nuvarande position (flytt) — DM kan uppdatera via [PLATS:]-taggen;
     # Guardian verifierar/detekterar och patchar annars (post-DM).
@@ -1614,13 +1614,13 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
         )
         if old_pos == new_pos or tag_applied:
             # DM gjorde rätt / DM-taggen applicerade redan — verifiera bara
-            logger.info("🛡️ Guardian: position verifierad '%s' (oförändrad)", new_pos)
+            logger.info("🛡️ Guardian: position verified '%s' (unchanged)", new_pos)
         else:
             if old_pos and old_pos != new_pos:
                 world.setdefault("travel_log", []).append(
                     {"from": old_pos, "to": new_pos, "day": world.get("day", 1)}
                 )
-                logger.info("🛡️ Guardian: resa %s → %s (dag %d)", old_pos, new_pos, world.get("day", 1))
+                logger.info("🛡️ Guardian: travel %s → %s (day %d)", old_pos, new_pos, world.get("day", 1))
             world["current_location"] = new_pos
             visited = world.setdefault("visited_locations", [])
             # Normalisera befintliga dict-poster → strängar (konsistens med
@@ -1719,10 +1719,10 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 "quests": ds.get("quests", ""),
                 "mood": ds.get("mood", ""),
             })
-            logger.info("🛡️ Guardian dagsammanfattning Dag %d: %s", prev_day, ds.get("title", ""))
+            logger.info("🛡️ Guardian day summary Day %d: %s", prev_day, ds.get("title", ""))
 
         effects.append({"type": "ny_dag", "value": f"Dag {world['day']}: {desc}"})
-        logger.info("🛡️ Guardian: NY DAG %d — %s", world["day"], desc)
+        logger.info("🛡️ Guardian: NEW DAY %d — %s", world["day"], desc)
 
     # ── Strid (combat-tracker) — Guardian-extraherade fält ──
     world = state.setdefault("world", {})
@@ -1782,7 +1782,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 "round": new_round, "actor": "system", "name": "", "text": f"Runda {new_round} börjar",
             })
             effects.append({"type": "combat_round", "value": new_round})
-            logger.info("⚔️ Guardian: ny runda %d", new_round)
+            logger.info("⚔️ Guardian: new round %d", new_round)
 
     if combat and combat.get("active"):
         for ent in mech.get("initiative_entries", []) or []:
@@ -1796,7 +1796,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             eid = next((i for i, e in enumerate(combat.get("enemies", [])) if e.get("name", "").lower() == name.lower()), 0)
             initiative.append({"key": f"enemy:{eid}", "name": name, "value": value})
             effects.append({"type": "initiativ", "value": f"{name}: {value}"})
-            logger.info("🎲 Guardian initiativ: %s → %d", name, value)
+            logger.info("🎲 Guardian initiative: %s → %d", name, value)
 
     ce = mech.get("combat_end")
     if ce and combat and combat.get("active"):
@@ -1831,12 +1831,12 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                     crit_str = " 💥 KRITISK!" if atk.get("crit") else ""
                     combat_log.append({"round": current_round, "actor": "player", "name": ch.get("name", "Spelaren"), "text": f"träffar {enemy['name']} — {dmg} skada ({atk.get('damage_type', 'okänd')}){crit_str}"})
                     effects.append({"type": "combat_dmg", "value": enemy["name"], "amount": dmg})
-                    logger.info("⚔️ Player attack: %s → %s, %d skada → HP %d/%d", ch.get("name"), enemy["name"], dmg, enemy["hp"], enemy.get("max_hp", 0))
+                    logger.info("⚔️ Player attack: %s → %s, %d damage → HP %d/%d", ch.get("name"), enemy["name"], dmg, enemy["hp"], enemy.get("max_hp", 0))
                     if enemy["hp"] <= 0:
                         enemy["alive"] = False
                         combat_log.append({"round": current_round, "actor": "system", "name": "", "text": f"{enemy['name']} faller!"})
                         effects.append({"type": "enemy_död", "value": enemy["name"]})
-                        logger.info("💀 %s har fallit", enemy["name"])
+                        logger.info("💀 %s has fallen", enemy["name"])
             else:
                 combat_log.append({"round": current_round, "actor": "player", "name": ch.get("name", "Spelaren"), "text": f"missar {enemy['name']}"})
 
@@ -1858,12 +1858,12 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                     roll_str = f" (slag {atk.get('roll', '?')})" if atk.get("roll") else ""
                     combat_log.append({"round": current_round, "actor": "ally", "name": ally_name, "text": f"träffar {enemy['name']} — {dmg} skada ({atk.get('damage_type', 'okänd')}){crit_str}{roll_str}"})
                     effects.append({"type": "combat_dmg", "value": enemy["name"], "amount": dmg})
-                    logger.info("🤝 Ally attack: %s → %s, %d skada → HP %d/%d", ally_name, enemy["name"], dmg, enemy["hp"], enemy.get("max_hp", 0))
+                    logger.info("🤝 Ally attack: %s → %s, %d damage → HP %d/%d", ally_name, enemy["name"], dmg, enemy["hp"], enemy.get("max_hp", 0))
                     if enemy["hp"] <= 0:
                         enemy["alive"] = False
                         combat_log.append({"round": current_round, "actor": "system", "name": "", "text": f"{enemy['name']} faller!"})
                         effects.append({"type": "enemy_död", "value": enemy["name"]})
-                        logger.info("💀 %s har fallit", enemy["name"])
+                        logger.info("💀 %s has fallen", enemy["name"])
             else:
                 roll_str = f" (slag {atk.get('roll', '?')})" if atk.get("roll") else ""
                 combat_log.append({"round": current_round, "actor": "ally", "name": ally_name, "text": f"missar {enemy['name']}{roll_str}"})
@@ -1883,12 +1883,12 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             attacker = str(atk.get("attacker", "")).strip() or "fienden"
             combat_log.append({"round": current_round, "actor": "enemy", "name": attacker, "text": f"träffar {ally['name']} — {amount} skada ({atk.get('damage_type', 'okänd')})"})
             effects.append({"type": "ally_dmg", "value": ally["name"], "amount": amount})
-            logger.info("🤝 Ally damage: %s tar %d skada → HP %d/%d", ally["name"], amount, ally["hp"], ally.get("max_hp", 0))
+            logger.info("🤝 Ally damage: %s takes %d damage → HP %d/%d", ally["name"], amount, ally["hp"], ally.get("max_hp", 0))
             if ally["hp"] <= 0:
                 ally["alive"] = False
                 combat_log.append({"round": current_round, "actor": "system", "name": "", "text": f"{ally['name']} faller!"})
                 effects.append({"type": "ally_död", "value": ally["name"]})
-                logger.info("💀 %s har fallit", ally["name"])
+                logger.info("💀 %s has fallen", ally["name"])
 
         # Fiendernas attacker → KODEN rullar tärningarna (transparens — inte DM-fusk)
         # Guardian extraherar bara attackeraren; d20 + attack_bonus mot spelarens
@@ -1949,7 +1949,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                     "roll": total, "d20": d20, "bonus": attack_bonus,
                     "damage_dice": dmg_notation, "damage_rolls": rolls,
                 })
-                logger.info("⚔️ Enemy attack: %s → spelaren, %d skada (d20=%d) → HP %d/%d", attacker_name, dmg, d20, hp["current"], hp["max"])
+                logger.info("⚔️ Enemy attack: %s → the player, %d damage (d20=%d) → HP %d/%d", attacker_name, dmg, d20, hp["current"], hp["max"])
             else:
                 # Fienden finns inte i combat-listan (t.ex. narrativ attack utanför strid) —
                 # fallback till DM:s angivna utfall (gamla beteendet)
@@ -1967,7 +1967,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                         roll_str = f" (slag {atk.get('roll', '?')})" if atk.get("roll") else ""
                         combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"träffar dig — {dmg} skada ({atk.get('damage_type', 'okänd')}){roll_str}"})
                         effects.append({"type": "skada", "value": dmg})
-                        logger.info("⚔️ Enemy attack (narrativ): %s → spelaren, %d skada → HP %d/%d", attacker_name, dmg, hp["current"], hp["max"])
+                        logger.info("⚔️ Enemy attack (narrative): %s → the player, %d damage → HP %d/%d", attacker_name, dmg, hp["current"], hp["max"])
                 else:
                     roll_str = f" (slag {atk.get('roll', '?')})" if atk.get("roll") else ""
                     combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"missar dig{roll_str}"})
@@ -2042,7 +2042,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             "turn": state.get("meta", {}).get("turn_count", 0),
             "text": logbook,
         })
-        logger.info("🛡️ Guardian loggbok: %s", logbook[:80])
+        logger.info("🛡️ Guardian logbook: %s", logbook[:80])
 
     # ── Tärningsresurser (roll_grants) ──
     for grant in mech.get("roll_grants", []):
@@ -2109,11 +2109,11 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                     if npc.get("name", "").lower() == rname_lower:
                         removed_npc = npcs.pop(i)
                         effects.append({"type": "korrigering", "value": f"NPC borttagen: {removed_npc.get('name', '?')}", "reason": reason})
-                        logger.info("🛡️ Guardian korrigering: NPC '%s' borttagen — %s", removed_npc.get("name", "?"), reason[:80])
+                        logger.info("🛡️ Guardian correction: NPC '%s' removed — %s", removed_npc.get("name", "?"), reason[:80])
                         break
         elif reason:
             effects.append({"type": "korrigering", "value": reason, "reason": reason})
-            logger.info("🛡️ Guardian korrigering: %s — %s", field, reason[:80])
+            logger.info("🛡️ Guardian correction: %s — %s", field, reason[:80])
 
     return effects
 
@@ -2345,12 +2345,12 @@ async def battle_ai_decide(
     try:
         raw = await model_call_fn(messages)
     except Exception as e:
-        logger.warning("⚔️ Battle AI misslyckades: %s", e)
+        logger.warning("⚔️ Battle AI failed: %s", e)
         return _fallback_enemy_actions(enemies)
 
     result = _parse_json(raw)
     if not result or not isinstance(result.get("actions"), list):
-        logger.warning("⚔️ Battle AI: ogiltig JSON → fallback")
+        logger.warning("⚔️ Battle AI: invalid JSON → fallback")
         return _fallback_enemy_actions(enemies)
 
     actions = result["actions"]
@@ -2361,7 +2361,7 @@ async def battle_ai_decide(
     if not valid:
         return _fallback_enemy_actions(enemies)
 
-    logger.info("⚔️ Battle AI: %d fiendeaktioner", len(valid))
+    logger.info("⚔️ Battle AI: %d enemy actions", len(valid))
     return valid
 
 
@@ -2473,7 +2473,7 @@ def apply_enemy_actions(state: dict, actions: list[dict]) -> list[dict]:
                     "d20": d20, "bonus": attack_bonus,
                     "damage_dice": dmg_notation, "damage_rolls": rolls,
                 })
-                logger.info("⚔️ %s → %s: %d skada (AC %d)", enemy["name"], player_name, dmg, player_ac)
+                logger.info("⚔️ %s → %s: %d damage (AC %d)", enemy["name"], player_name, dmg, player_ac)
             else:
                 combat.setdefault("log", []).append({
                     "round": combat.get("round", 1), "actor": "enemy",

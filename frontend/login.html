@@ -368,13 +368,10 @@
     border-bottom:1px solid rgba(201,162,39,.3);text-align:center}
   #deleted-banner.show{display:flex}
   #promo-banner{position:sticky;top:var(--nav-h);z-index:45;display:flex;align-items:center;justify-content:center;gap:.9rem;flex-wrap:wrap;padding:.95rem 1.5rem;font-size:1.05rem;letter-spacing:.04em;color:var(--gold);background:linear-gradient(90deg,var(--stone-3),var(--stone-2),var(--stone-3));border-bottom:1px solid rgba(201,162,39,.45);text-align:center;box-shadow:0 10px 30px -12px rgba(0,0,0,.6)}
-  #promo-banner .pb-ico{filter:drop-shadow(0 0 10px rgba(201,162,39,.7));font-size:1.35rem;animation:pb-pop 3.4s ease-in-out infinite}
-  @keyframes pb-pop{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-3px) scale(1.08)}}
   #promo-banner .pb-text b{color:var(--gold-bright);font-weight:800}
   #promo-banner .pb-timer{font-family:'IBM Plex Mono',ui-monospace,monospace;color:var(--bone-bright);background:rgba(201,162,39,.12);border:1px solid rgba(201,162,39,.4);border-radius:4px;padding:.2rem .7rem;font-size:.9rem}
   @media (max-width:720px){
     #promo-banner{font-size:.92rem;gap:.6rem;padding:.8rem 1rem}
-    #promo-banner .pb-ico{font-size:1.1rem}
     #promo-banner .pb-timer{font-size:.78rem;padding:.16rem .5rem}
   }
 </style>
@@ -384,10 +381,8 @@
 <div id="deleted-banner">🕊️ Your account has been deleted. The Cauldron will remember your stories.</div>
 
 <div id="promo-banner">
-  <span class="pb-ico">🎆</span>
   <span class="pb-text"><b>300 turns on signup</b> — a limited-time promotion for new adventurers.</span>
   <span class="pb-timer" id="pb-timer"></span>
-  <span class="pb-ico">🎆</span>
 </div>
 
 <div class="hero-scene" id="hero-scene">
@@ -474,7 +469,7 @@
           <span class="corner tl"></span><span class="corner br"></span>
           <span class="sig">&#9823;</span>
           <h3>Create Your Own Avatars</h3>
-          <p>Give every face at the table a portrait. Your hero, the NPCs you meet,
+          <p>Give every face at the table a portrait. Your adventurer, the NPCs you meet,
             even the DM &mdash; each avatar is painted by AI from the character&rsquo;s own
             story, and can be rerolled until it feels right. <em>StepFun painting unlocks
             with the one-time Support top-up (3€)</em> &mdash; and <b>Patron</b> (one-time 10€) unlocks <b>Wan 2.7 Pro</b>,
@@ -492,7 +487,7 @@
           <span class="corner tl"></span><span class="corner br"></span>
           <span class="sig">&#9876;</span>
           <h3>The Forge &mdash; Carry Your Legend</h3>
-          <p>Every hero you summon is saved in <b>The Forge</b> &mdash; full sheet, level,
+          <p>Every adventurer you summon is saved in <b>The Forge</b> &mdash; full sheet, level,
             items, gold and story intact. Start a new adventure any time and
             <em>walk back in as the same adventurer</em>: your history travels with you,
             the new world has no idea what you're capable of.</p>
@@ -660,8 +655,8 @@
           then refreshes 50 every day. One-time Support and Patron top-ups add turns and features.
           No subscriptions, no renewals, no surprises.</li>
         <li class="rv d3"><b>Priority API</b> &mdash; Support and Patron words reach the Dungeon Master first, even when the cauldron is busy.</li>
-        <li class="rv d3"><b>Export your hero to The Forge</b> &mdash; save the adventurer you&rsquo;ve lived: level, gear, story and all.
-          Then start a brand-new campaign with the same hero &mdash; no more hero-twins.</li>
+        <li class="rv d3"><b>Export your adventurer to The Forge</b> &mdash; save the adventurer you&rsquo;ve lived: level, gear, story and all.
+          Then start a brand-new campaign with the same adventurer &mdash; no more adventurer-twins.</li>
       </ul>
       <p class="ledger-more rv d3"><a href="releases.html">Read the full ledger &#8594;</a></p>
     </div>
@@ -877,11 +872,18 @@ document.getElementById('auth-form').addEventListener('submit', async (e) => {
       authSuccess(res.username);
     }
   } catch (err) {
-    showAuthError(authMode === 'register'
-      ? (err && err.message && !/HTTP/.test(err.message) ? err.message : 'The Cauldron would not accept that name.')
-      : authMode === 'reset'
-        ? (err && err.message && !/HTTP/.test(err.message) ? err.message : 'The Cauldron could not re-forge that name.')
-        : 'The Cauldron remains sealed. Wrong name or password.');
+    // Visa serverns RIKTIGA orsak (api.js prefixar "HTTP <status>: ") —
+    // annars fattar man inte vad som krävs när registreringen failar.
+    const raw = (err && err.message) || '';
+    const detail = raw.replace(/^HTTP \d+: /, '').trim();
+    if (authMode === 'register' || authMode === 'reset') {
+      showAuthError(detail || (authMode === 'register'
+        ? 'The Cauldron would not accept that name. Try another.'
+        : 'The Cauldron could not re-forge that name.'));
+    } else {
+      // Login håller medvetet generiskt (läcker inte om namnet finns).
+      showAuthError('The Cauldron remains sealed. Wrong name or password.');
+    }
   }
 });
 

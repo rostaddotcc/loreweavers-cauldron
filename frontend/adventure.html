@@ -312,7 +312,7 @@
     .gm-row{min-height:46px;font-size:.78rem}
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=23">
+<link rel="stylesheet" href="snes.css?v=24">
 <style>
 /* ═══════════ Login-känslan — mjuka knappar (override snes.css DOS-flatten) ═══════════
    snes.css laddas efter inline-blocket och tvingar platta knappar med !important.
@@ -401,6 +401,38 @@ html{font-size:17px}
 .av-btn.primary{background:linear-gradient(160deg,var(--gold-bright),var(--gold));border:1px solid rgba(232,198,90,.45);color:var(--ink);font-weight:700;box-shadow:0 0 18px rgba(201,162,39,.22),0 6px 30px rgba(201,162,39,.30),inset 0 1px 0 rgba(255,255,255,.16)}
 .av-btn.primary:hover:not(:disabled){filter:brightness(1.1);box-shadow:0 0 28px rgba(232,198,90,.38),0 12px 40px rgba(201,162,39,.5),inset 0 1px 0 rgba(255,255,255,.22)}
 .av-btn:disabled{opacity:.5;cursor:not-allowed}
+/* ═══════════ 🔍 Portrait preview-modal + klickbart porträtt (2026-08-06) ═══════════ */
+.pv-portrait{
+  cursor:pointer;position:relative;
+  border-radius:50%!important;
+  border:2px solid var(--pv-ac,var(--gold))!important;
+  box-shadow:0 0 22px -4px var(--pv-glow,rgba(201,162,39,.5))!important;
+  background:var(--stone-3)!important;
+  transition:transform .25s,box-shadow .25s,border-color .25s!important;
+}
+.pv-portrait:hover{ transform:rotate(-3deg) scale(1.07)!important; box-shadow:0 0 30px -2px var(--pv-glow,rgba(201,162,39,.8))!important; border-color:var(--gold-bright)!important; }
+.pv-portrait::after{
+  content:'🔍';position:absolute;right:0;bottom:0;width:19px;height:19px;font-size:.6rem;
+  display:flex;align-items:center;justify-content:center;background:rgba(4,2,8,.8);
+  border:1px solid var(--gold);border-radius:50%;opacity:0;transition:opacity .2s;pointer-events:none;z-index:2;
+}
+.pv-portrait:hover::after,.pv-portrait:focus-visible::after{opacity:1}
+.pp-portrait{
+  width:min(340px,100%);aspect-ratio:1/1;margin:0 auto 1rem;position:relative;
+  border-radius:50%!important;overflow:hidden;border:2px solid var(--gold)!important;
+  box-shadow:0 0 34px -6px rgba(201,162,39,.5),inset 0 0 24px rgba(0,0,0,.5)!important;
+  background:var(--stone-3);display:flex;align-items:center;justify-content:center;font-size:3.2rem;
+}
+.pp-portrait img{width:100%;height:100%;object-fit:cover}
+.pp-name{font-family:'Cinzel',serif;font-weight:900;font-size:1.15rem;color:var(--bone-bright);text-align:center;margin-bottom:1.1rem;text-shadow:0 2px 0 #000}
+.pp-actions{display:flex;flex-direction:column;gap:.6rem}
+.pp-status{font-size:.75rem;color:var(--bone-dim);text-align:center;margin-top:.7rem;min-height:1rem;font-style:italic}
+/* ═══════════ MJUKA UPP RUNDA 3 — Release Notes + How to Play-accordions (2026-08-06) ═══════════ */
+.rn-inner, .htp-card{ border-radius: 8px !important; }
+.rn-ver{ border-radius: 8px !important; }
+.htp-toggle{ border-radius: 8px !important; }
+.mi-modal, .pf-box, .step, .vault-empty, .toast{ border-radius: 8px !important; }
+.arch .tag, .pv-trait, .vcard-use, .cc-del, .gm-row, .gear-menu, .dark-drop, .dropzone, .file-item{ border-radius: 6px !important; }
 /* ═══════════ Onboarding mjukare kanter (2026-08-05) ═══════════ */
 .name-input, .danger-btn, .dark-select, .dm-model-select, .campaign-card .cc-go, .blank-btn, .tab-btn, .pv-reroll, .top-btn{
   border-radius: 8px !important;
@@ -413,9 +445,9 @@ html{font-size:17px}
   .dark-select, .dm-model-select{ min-height: 44px !important; font-size: 16px !important; }
 }
 </style>
-<script src="sprites.js?v=20260802a"></script>
-<script src="fonts.js?v=20260805a"></script>
-<script src="themes.js?v=20260805a"></script>
+<script src="sprites.js?v=20260803a"></script>
+<script src="fonts.js?v=20260806a"></script>
+<script src="themes.js?v=20260806a"></script>
 </head>
 <body>
 <div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
@@ -479,6 +511,24 @@ html{font-size:17px}
         </div>
       </div>
       <div class="pf-grid" id="pf-grid"><div class="pf-cell full" style="color:var(--bone-dim);text-align:center">The mirror is clouding&hellip;</div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ 🔍 Portrait preview-modal (klicka på porträttet i förhandsvisningen) ═══════════════ -->
+  <div class="mi-overlay" id="adv-portrait-overlay" onclick="if(event.target===this)closeAdvPortraitPreview()">
+    <div class="mi-modal" style="max-width:440px;text-align:center">
+      <div class="mi-head">
+        <span>🔍 Portrait Preview</span>
+        <button class="mi-close" onclick="closeAdvPortraitPreview()" title="Close">✕</button>
+      </div>
+      <div class="pp-portrait" id="adv-portrait-img">🎭</div>
+      <div class="pp-name" id="adv-portrait-name"></div>
+      <div class="pp-actions">
+        <button class="av-btn primary" id="adv-portrait-reroll" onclick="rerollPortrait()">🎲 Re-roll portrait</button>
+        <button class="av-btn" onclick="closeAdvPortraitPreview();openAdvPaintModal()">🎨 Paint portrait</button>
+        <button class="av-btn" onclick="closeAdvPortraitPreview()">✕ Close</button>
+      </div>
+      <div class="pp-status" id="adv-portrait-status"></div>
     </div>
   </div>
 
@@ -637,12 +687,12 @@ html{font-size:17px}
       </div>
     </div>
     <div class="tab-row">
-      <button class="tab-btn active" id="tab-summon" onclick="showHeroTab('summon')">✨ Summon a new adventurer</button>
-      <button class="tab-btn" id="tab-forge" onclick="showHeroTab('forge')">⚒ From The Forge</button>
+      <button class="tab-btn active" id="tab-summon" onclick="showAdventurerTab('summon')">✨ Summon a new adventurer</button>
+      <button class="tab-btn" id="tab-forge" onclick="showAdventurerTab('forge')">⚒ From The Forge</button>
     </div>
 
     <!-- Summon-tab: arketyper → generera → förhandsvisning → reroll -->
-    <div class="tab-panel show" id="hero-tab-summon">
+    <div class="tab-panel show" id="adventurer-tab-summon">
       <div class="step-sub" style="margin-bottom:1.1rem">Pick a fate — then summon your adventurer and look them in the eye before you continue. Don't like the weave? Reroll.</div>
       <p class="fw-encourage" id="fw-encourage">Pick an archetype below — then tweak the template to your liking: your own name, a pet, a pouch of coins, a crown. Easiest way to start.</p>
       <div class="spread" id="spread"></div>
@@ -675,7 +725,7 @@ html{font-size:17px}
           <select id="adv-char-model" class="dm-model-select"></select>
         </label>
         <span class="ask-wrap"><span class="ask-ico">?</span><span class="ask-tip" data-ask="char">Which mind weaves your adventurer — faster models are snappier, deeper models think longer. <b>Ask the Dungeon Master if unsure.</b></span></span>
-        <button class="gen-btn" id="gen-btn" onclick="generateHero()" disabled>🔮 Summon Adventurer</button>
+        <button class="gen-btn" id="gen-btn" onclick="generateAdventurer()" disabled>🔮 Summon Adventurer</button>
         <span class="hint" id="gen-hint">Pick an archetype first — or take the blank parchment</span>
       </div>
       <!-- Vävning (summoning-ritual) -->
@@ -687,7 +737,7 @@ html{font-size:17px}
       <!-- Förhandsvisning av den vävda hjälten -->
       <div class="preview" id="adv-preview">
         <div class="pv-head">
-          <div class="pv-portrait" id="adv-pv-portrait">🎭</div>
+          <div class="pv-portrait" id="adv-pv-portrait" onclick="openAdvPortraitPreview()" title="🔍 Enlarge portrait" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAdvPortraitPreview()}">🎭</div>
           <div>
             <div class="pv-name" id="adv-pv-name"></div>
             <div class="pv-class" id="adv-pv-class"></div>
@@ -700,21 +750,21 @@ html{font-size:17px}
         <div class="pv-story" id="adv-pv-story"></div>
         <div class="pv-actions">
           <button class="pv-reroll" id="adv-paint-btn" onclick="openAdvPaintModal()" title="Paint your adventurer's portrait — StepFun (Support 3€) or Wan 2.7 Pro (Patron 10€)">🎨 Paint portrait</button>
-          <button class="pv-reroll" id="adv-reroll" onclick="rerollHero()">🎲 Reroll</button>
-          <button class="pv-go" id="adv-continue" onclick="continueHero()">Continue →</button>
+          <button class="pv-reroll" id="adv-reroll" onclick="rerollAdventurer()">🎲 Reroll</button>
+          <button class="pv-go" id="adv-continue" onclick="continueAdventurer()">Continue →</button>
         </div>
       </div>
     </div>
 
     <!-- Forge-tab: färdiga hjältar från valvet -->
-    <div class="tab-panel" id="hero-tab-forge">
+    <div class="tab-panel" id="adventurer-tab-forge">
       <div class="step-sub" style="margin-bottom:1.1rem">An adventurer you've already forged — with their level, gear and story — steps straight into this campaign.</div>
       <div id="adv-vault-wrap">
         <div class="vault-empty" id="adv-vault-empty">No saved adventurers yet. <a href="characters.html" style="color:var(--gold)">Forge one</a> — or summon a fresh adventurer in the other tab.</div>
         <div class="vault-grid" id="adv-vault-grid"></div>
         <div class="vault-note" id="adv-vault-note" style="display:none">Pick an adventurer, then Continue below.</div>
         <div class="pv-actions" style="margin-top:1.2rem">
-          <button class="pv-go" id="adv-forge-continue" onclick="continueHero()" disabled>Continue →</button>
+          <button class="pv-go" id="adv-forge-continue" onclick="continueAdventurer()" disabled>Continue →</button>
         </div>
       </div>
     </div>
@@ -832,15 +882,15 @@ The more you give, the richer the world becomes. But the Dungeon Master fills in
 
 <div class="toast" id="toast"></div>
 
-<script src="sfx.js?v=20260802a"></script>
+<script src="sfx.js?v=20260803a"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 </script>
-<script src="api.js?v=20260805c"></script>
-<script src="modal.js?v=20260802a"></script>
-<script src="i18n.js?v=20260802b"></script>
-<script src="archetypes.js?v=20260803a"></script>
+<script src="api.js?v=20260806a"></script>
+<script src="modal.js?v=20260803a"></script>
+<script src="i18n.js?v=20260803a"></script>
+<script src="archetypes.js?v=20260804a"></script>
 <script>
 // ═══════════════════════════════════════
 // SPARADE ÄVENTYR — kontrolleras via API:et
@@ -904,7 +954,7 @@ async function activateAndContinue(campaignId) {
   SFX.click();
   try {
     await API.activateCampaign(campaignId);
-    location.href = 'chat.html?v=20260805c';
+    location.href = 'chat.html?v=20260806a';
   } catch (e) {
     toast('⚠ ' + I18N.t('Kunde inte aktivera kampanj: ') + (e.message || I18N.t('okänt fel')));
   }
@@ -1355,22 +1405,22 @@ function enableGen() {
 
 
 // ── Hjälteval: summon (generera + preview + reroll) eller Forge (färdig) ──
-let advHero = null;      // genererad karaktär (objekt)
-let advHeroInv = [];     // inventory (genererad)
-let advHeroId = null;    // vault-id — krävs av start
-let advHeroMode = null;  // 'summon' | 'forge'
+let advAdventurer = null;      // genererad karaktär (objekt)
+let advAdventurerInv = [];     // inventory (genererad)
+let advAdventurerId = null;    // vault-id — krävs av start
+let advAdventurerMode = null;  // 'summon' | 'forge'
 let advGenBusy = false;
 let _forgeLoaded = false;
 
-function showHeroTab(mode) {
+function showAdventurerTab(mode) {
   document.getElementById('tab-summon').classList.toggle('active', mode === 'summon');
   document.getElementById('tab-forge').classList.toggle('active', mode === 'forge');
-  document.getElementById('hero-tab-summon').classList.toggle('show', mode === 'summon');
-  document.getElementById('hero-tab-forge').classList.toggle('show', mode === 'forge');
-  if (mode === 'forge' && !_forgeLoaded) { _forgeLoaded = true; loadForgeHeroes(); }
+  document.getElementById('adventurer-tab-summon').classList.toggle('show', mode === 'summon');
+  document.getElementById('adventurer-tab-forge').classList.toggle('show', mode === 'forge');
+  if (mode === 'forge' && !_forgeLoaded) { _forgeLoaded = true; loadForgeAdventurers(); }
 }
 
-async function generateHero() {
+async function generateAdventurer() {
   if (advGenBusy) return;
   advGenBusy = true;
   const btn = document.getElementById('gen-btn');
@@ -1394,11 +1444,11 @@ async function generateHero() {
         reasoning.scrollTop = reasoning.scrollHeight;
       }
     });
-    advHero = res.character || {};
-    advHeroInv = res.inventory || [];
-    advHeroMode = 'summon';
+    advAdventurer = res.character || {};
+    advAdventurerInv = res.inventory || [];
+    advAdventurerMode = 'summon';
     weaving.classList.remove('show');
-    renderHeroPreview(advHero);
+    renderAdventurerPreview(advAdventurer);
     prev.classList.add('show');
     prev.scrollIntoView({ behavior: 'smooth', block: 'start' });
     try { SFX.levelup(); } catch (_) {}
@@ -1413,15 +1463,15 @@ async function generateHero() {
   }
 }
 
-async function rerollHero() {
+async function rerollAdventurer() {
   document.getElementById('adv-preview').classList.remove('show');
-  await generateHero();
+  await generateAdventurer();
 }
 
 function _mod(s) { const m = Math.floor(((s || 10) - 10) / 2); return m >= 0 ? '+' + m : '' + m; }
 function _esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-function renderHeroPreview(c) {
+function renderAdventurerPreview(c) {
   const a = (advArchKey && ARCHETYPES[advArchKey]) ? ARCHETYPES[advArchKey] : null;
   const ac = a ? a.color : '#8b5fd4';
   const glow = a ? a.glow : 'rgba(139,95,212,.35)';
@@ -1442,19 +1492,19 @@ function renderHeroPreview(c) {
     '🛡️ AC <b>' + (c.ac || 10) + '</b>',
     '⚡ Init <b>' + (c.initiative || 0) + '</b>',
     '🎓 Prof <b>+' + (c.proficiency || 2) + '</b>',
-    '🎒 ' + (advHeroInv.length || 0) + ' items',
+    '🎒 ' + (advAdventurerInv.length || 0) + ' items',
   ].map(v => '<span>' + v + '</span>').join('');
   const traits = Array.isArray(c.traits) ? c.traits.map(t => typeof t === 'string' ? t : (t.name || '')) : [];
   document.getElementById('adv-pv-traits').innerHTML = traits.filter(Boolean).map(t => `<span class="pv-trait">✦ ${_esc(t)}</span>`).join('');
-  const gear = Array.isArray(advHeroInv) && advHeroInv.length
-    ? advHeroInv.slice(0, 8).map(i => typeof i === 'string' ? i : (i.name || '')).filter(Boolean).join(' · ')
+  const gear = Array.isArray(advAdventurerInv) && advAdventurerInv.length
+    ? advAdventurerInv.slice(0, 8).map(i => typeof i === 'string' ? i : (i.name || '')).filter(Boolean).join(' · ')
     : (c.gear || (isEn() ? 'A lone wanderer with an unknown past.' : 'En ensam vandrare med ett okänt förflutet.'));
   document.getElementById('adv-pv-gear').innerHTML = '<b>' + (isEn() ? 'Gear' : 'Utrustning') + ':</b> ' + _esc(gear);
   document.getElementById('adv-pv-story').textContent = c.story || c.background || (isEn() ? "This character's story is yet unwritten." : 'Denna karaktärs berättelse är ännu oskriven.');
 }
 
 // ── Forge: välj en färdig hjälte ──
-async function loadForgeHeroes() {
+async function loadForgeAdventurers() {
   let chars = [];
   try { const res = await API.vaultList(); chars = res.characters || []; } catch (e) { chars = []; }
   const empty = document.getElementById('adv-vault-empty');
@@ -1462,7 +1512,7 @@ async function loadForgeHeroes() {
   if (!chars.length) { empty.style.display = ''; grid.innerHTML = ''; return; }
   empty.style.display = 'none';
   grid.innerHTML = chars.map(ch => `
-    <div class="vcard" data-id="${ch.id}" onclick="selectForgeHero('${ch.id}')">
+    <div class="vcard" data-id="${ch.id}" onclick="selectForgeAdventurer('${ch.id}')">
       <div class="vcard-head">
         <div class="vcard-avatar">${ch.has_avatar
           ? '<img src="' + API.vaultAvatarUrl(ch.id) + '" alt="">'
@@ -1480,20 +1530,20 @@ async function loadForgeHeroes() {
     </div>`).join('');
 }
 
-function selectForgeHero(id) {
+function selectForgeAdventurer(id) {
   document.getElementById('adv-vault-grid').querySelectorAll('.vcard').forEach(el => el.classList.toggle('selected', el.dataset.id === id));
-  advHeroMode = 'forge';
-  advHeroId = id;
-  advHero = null;
+  advAdventurerMode = 'forge';
+  advAdventurerId = id;
+  advAdventurer = null;
   const btn = document.getElementById('adv-forge-continue');
   if (btn) btn.disabled = false;
   try { SFX.click(); } catch (_) {}
 }
 
 // ── Continue → steg 4 (modellgate) ──
-async function continueHero() {
-  if (advHeroMode === 'forge' && advHeroId) { revealStep('step-model'); return; }
-  if (advHeroMode !== 'summon' || !advHero || !advHero.name) {
+async function continueAdventurer() {
+  if (advAdventurerMode === 'forge' && advAdventurerId) { revealStep('step-model'); return; }
+  if (advAdventurerMode !== 'summon' || !advAdventurer || !advAdventurer.name) {
     try { SFX.error(); } catch (_) {}
     toast('⚠ ' + (isEn() ? 'Generate an adventurer first' : 'Generera en äventyrare först'));
     return;
@@ -1506,11 +1556,11 @@ async function continueHero() {
     // onboarding) ska vi UPPDATERA den posten — annars skapar vaultSave en
     // ny post och den målade avataren tappas. (2026-08-05 fix: avataren
     // följde inte med från onboarding → kampanjen startade utan porträtt.)
-    const payload = { character: advHero, inventory: advHeroInv };
-    if (advHeroId) payload.overwrite_id = advHeroId;
+    const payload = { character: advAdventurer, inventory: advAdventurerInv };
+    if (advAdventurerId) payload.overwrite_id = advAdventurerId;
     const res = await API.vaultSave(payload);
-    advHeroId = res.id;
-    toast('💾 ' + advHero.name + (isEn() ? ' saved to The Forge' : ' sparad i The Forge'));
+    advAdventurerId = res.id;
+    toast('💾 ' + advAdventurer.name + (isEn() ? ' saved to The Forge' : ' sparad i The Forge'));
     revealStep('step-model');
   } catch (e) {
     btn.disabled = false;
@@ -1523,13 +1573,15 @@ async function continueHero() {
 // Öppnar paint-modalen: 2 val (free prompt / från karaktärskortet) +
 // engine-val (StepFun = Support 3€ · Wan 2.7 Pro = Patron 10€).
 let advPaintTier = null;  // free | tier1 | tier2 | lifetime (från /api/me)
+let advPaintLastPrompt = null;   // senast använda målnings-prompt (för portrait re-roll)
+let advPaintLastProvider = null; // senast använda engine (stepfun | wan)
 function advPaintProvider() {
   const sel = document.getElementById('adv-paint-provider');
   return (sel && sel.value) || 'stepfun';
 }
 function advPaintGate(provider) {
   if (advPaintTier === 'free') {
-    toast('🔒 AI painting is a Support feature (3€) — support the Cauldron to paint your hero with StepFun.');
+    toast('🔒 AI painting is a Support feature (3€) — support the Cauldron to paint your adventurer with StepFun.');
     try { SFX.error(); } catch (_) {}
     return false;
   }
@@ -1573,17 +1625,17 @@ async function openAdvPaintModal() {
     try { SFX.error(); } catch (_) {}
     return;
   }
-  // Se till att hjälten har ett vault-id (continueHero sparar annars senare)
-  if (!advHeroId && advHero && advHero.name && advHeroMode === 'summon') {
+  // Se till att hjälten har ett vault-id (continueAdventurer sparar annars senare)
+  if (!advAdventurerId && advAdventurer && advAdventurer.name && advAdventurerMode === 'summon') {
     try {
-      const res = await API.vaultSave({ character: advHero, inventory: advHeroInv });
-      advHeroId = res.id;
+      const res = await API.vaultSave({ character: advAdventurer, inventory: advAdventurerInv });
+      advAdventurerId = res.id;
     } catch (e) {
       toast('⚠ ' + (e.message || 'Could not save the adventurer before painting'));
       return;
     }
   }
-  if (!advHeroId) {
+  if (!advAdventurerId) {
     toast('⚠ ' + (isEn() ? 'Summon or choose your adventurer first' : 'Frammana eller välj din äventyrare först'));
     return;
   }
@@ -1603,13 +1655,20 @@ async function advPaintRun(prompt) {
   const status = document.getElementById('adv-paint-status');
   const freeBtn = document.getElementById('adv-paint-free-btn');
   const prov = advPaintProvider();
+  advPaintLastPrompt = prompt;
+  advPaintLastProvider = prov;
   status.textContent = (prov === 'wan' ? '🖼️ Painting with Wan 2.7 Pro… (15–40 s)' : '🎨 Painting with StepFun… (10–30 s)');
   freeBtn.disabled = true;
   try {
-    const res = await API.vaultGenerateAvatar(advHeroId, Date.now() % 1000000, 'new', prompt, prov);
+    const res = await API.vaultGenerateAvatar(advAdventurerId, Date.now() % 1000000, 'new', prompt, prov);
     if (res && res.ok) {
       const port = document.getElementById('adv-pv-portrait');
-      if (port) port.innerHTML = `<img src="${API.vaultAvatarUrl(advHeroId)}?t=${Date.now()}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+      if (port) port.innerHTML = `<img src="${API.vaultAvatarUrl(advAdventurerId)}?t=${Date.now()}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+      const pvOv = document.getElementById('adv-portrait-overlay');
+      if (pvOv && pvOv.classList.contains('show')) {
+        const ib = document.getElementById('adv-portrait-img');
+        if (ib) { ib.innerHTML = ''; const ni = document.createElement('img'); ni.src = API.vaultAvatarUrl(advAdventurerId) + '?t=' + Date.now(); ni.alt = ''; ib.appendChild(ni); }
+      }
       status.textContent = (prov === 'wan' ? '✨ Portrait painted — Wan 2.7 Pro, used your words' : '✨ Portrait painted — StepFun, used your words');
       try { SFX.levelup(); } catch (_) {}
     } else {
@@ -1633,6 +1692,86 @@ async function advPaintFreePrompt() {
     return;
   }
   await advPaintRun(text);
+}
+
+// ── 🔍 Portrait preview-modal: klicka på porträttet → förstora, re-roll eller måla ──
+function openAdvPortraitPreview() {
+  const ov = document.getElementById('adv-portrait-overlay');
+  if (!ov) return;
+  const imgBox = document.getElementById('adv-portrait-img');
+  const small = document.getElementById('adv-pv-portrait');
+  if (imgBox) {
+    const im = small ? small.querySelector('img') : null;
+    if (im && im.src) {
+      imgBox.innerHTML = '';
+      const ni = document.createElement('img'); ni.src = im.src; ni.alt = '';
+      imgBox.appendChild(ni);
+    } else {
+      imgBox.textContent = (small && small.textContent.trim()) || '🎭';
+    }
+  }
+  const nameEl = document.getElementById('adv-portrait-name');
+  if (nameEl) nameEl.textContent = (advAdventurer && advAdventurer.name) ? advAdventurer.name : (isEn() ? 'Your adventurer' : 'Din äventyrare');
+  const st = document.getElementById('adv-portrait-status');
+  if (st) st.textContent = '';
+  const rb = document.getElementById('adv-portrait-reroll');
+  if (rb) rb.disabled = false;
+  ov.classList.add('show');
+  try { SFX.click(); } catch (_) {}
+}
+function closeAdvPortraitPreview() {
+  const ov = document.getElementById('adv-portrait-overlay');
+  if (ov) ov.classList.remove('show');
+}
+async function rerollPortrait() {
+  const rb = document.getElementById('adv-portrait-reroll');
+  const st = document.getElementById('adv-portrait-status');
+  if (rb) rb.disabled = true;
+  if (st) st.textContent = '🎨 Weaving a new portrait…';
+  try {
+    if (advPaintTier === null) {
+      try {
+        const me = await API.me();
+        advPaintTier = (me && me.subscription_status) || 'free';
+        if (advPaintTier === 'premium') advPaintTier = 'tier2';
+      } catch (_) { advPaintTier = 'free'; }
+    }
+    const prov = advPaintLastProvider || 'stepfun';
+    if (!advPaintGate(prov)) { if (rb) rb.disabled = false; return; }
+    // Se till att hjälten har ett vault-id (samma logik som openAdvPaintModal)
+    if (!advAdventurerId && advAdventurer && advAdventurer.name && advAdventurerMode === 'summon') {
+      try {
+        const res = await API.vaultSave({ character: advAdventurer, inventory: advAdventurerInv });
+        advAdventurerId = res.id;
+      } catch (e) {
+        if (st) st.textContent = '⚠ ' + (e.message || 'Could not save the adventurer before painting');
+        if (rb) rb.disabled = false; return;
+      }
+    }
+    if (!advAdventurerId) {
+      if (st) st.textContent = '⚠ ' + (isEn() ? 'Summon or choose your adventurer first' : 'Frammana eller välj din äventyrare först');
+      if (rb) rb.disabled = false; return;
+    }
+    const prompt = advPaintLastPrompt || fwPromptText() || (advArchKey && ARCHETYPES[advArchKey] ? archField(ARCHETYPES[advArchKey], 'prompt') : '') || (isEn() ? 'A mysterious dark-fantasy adventurer, painted portrait' : 'Ett mystiskt dark-fantasy-äventyrareporträtt');
+    const res = await API.vaultGenerateAvatar(advAdventurerId, Date.now() % 1000000, 'new', prompt, prov);
+    if (res && res.ok) {
+      const url = API.vaultAvatarUrl(advAdventurerId) + '?t=' + Date.now();
+      const small = document.getElementById('adv-pv-portrait');
+      if (small) small.innerHTML = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+      const imgBox = document.getElementById('adv-portrait-img');
+      if (imgBox) { imgBox.innerHTML = ''; const ni = document.createElement('img'); ni.src = url; ni.alt = ''; imgBox.appendChild(ni); }
+      if (st) st.textContent = (prov === 'wan' ? '✨ New portrait painted — Wan 2.7 Pro' : '✨ New portrait painted — StepFun');
+      try { SFX.levelup(); } catch (_) {}
+    } else {
+      if (st) st.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Generation failed');
+      try { SFX.error(); } catch (_) {}
+    }
+  } catch (e) {
+    if (st) st.textContent = '⚠ ' + (e.message || 'Generation failed');
+    try { SFX.error(); } catch (_) {}
+  } finally {
+    if (rb) rb.disabled = false;
+  }
 }
 
 function advPrompt() {
@@ -1744,7 +1883,7 @@ function advTTSChanged(sel) {
 let advStarting = false;
 async function startAdventure() {
   if (advStarting) return;
-  if (!advHeroId) {
+  if (!advAdventurerId) {
     try { SFX.error(); } catch (_) {}
     toast('⚠ ' + (isEn() ? 'Choose your adventurer first' : 'Välj din äventyrare först'));
     return;
@@ -1772,9 +1911,9 @@ async function startAdventure() {
       API.setTtsProvider(ttsVal).catch(() => {});
     }
     // 3) Lyft in hjälten (genererad → sparad i Forge; eller färdig Forge-hjälte)
-    await API.vaultUse(advHeroId);
-    sessionStorage.setItem('dnd_vault_character', advHeroId);
-    location.href = 'chat.html?v=20260805c';
+    await API.vaultUse(advAdventurerId);
+    sessionStorage.setItem('dnd_vault_character', advAdventurerId);
+    location.href = 'chat.html?v=20260806a';
   } catch (e) {
     try { SFX.error(); } catch (_) {}
     toast('⚠ ' + (e.message || 'Could not start'));

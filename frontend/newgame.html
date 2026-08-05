@@ -195,11 +195,11 @@
   </div>
 
   <!-- ═══════════ THE VAULT — färdiga hjältar ═══════════ -->
-  <div class="section-label"><span class="num">✦</span> The Vault — saved heroes</div>
+  <div class="section-label"><span class="num">✦</span> The Vault — saved adventurers</div>
   <div id="vault-wrap">
-    <div class="vault-empty" id="vault-empty">No saved heroes yet. <a href="characters.html" style="color:var(--gold)">Forge one</a> — or summon below and save it for later.</div>
+    <div class="vault-empty" id="vault-empty">No saved adventurers yet. <a href="characters.html" style="color:var(--gold)">Forge one</a> — or summon below and save it for later.</div>
     <div class="vault-grid" id="vault-grid"></div>
-    <div class="vault-note" id="vault-note" style="display:none">Choose a saved hero to step straight into this campaign — or summon a fresh one below.</div>
+    <div class="vault-note" id="vault-note" style="display:none">Choose a saved adventurer to step straight into this campaign — or summon a fresh one below.</div>
   </div>
 
   <!-- ═══════════ 1. ARKETYPER ═══════════ -->
@@ -263,7 +263,7 @@
 
   <!-- ═══════════ 3. FÖRHANDSVISNING ═══════════ -->
   <div class="preview" id="preview">
-    <div class="section-label"><span class="num">III.</span> Your Hero</div>
+    <div class="section-label"><span class="num">III.</span> Your Adventurer</div>
     <div class="scroll-box" id="pv-box">
       <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
       <div class="pv-head">
@@ -299,7 +299,7 @@
 
 <script src="sfx.js?v=20260802a"></script>
 <script src="api.js?v=20260804c"></script>
-<script src="i18n.js?v=20260802b"></script>
+<script src="i18n.js?v=20260806a"></script>
 <script src="archetypes.js?v=20260803a"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
@@ -856,7 +856,7 @@ function renderPreview(c, ac, glow) {
 let _avatarBusy = false;
 function newgameAvatarGenGate() {
   if (_newgameTier === 'free') {
-    toast('🔒 AI painting is a Support feature (3€) — support the Cauldron to paint your hero, the DM and every NPC with StepFun.');
+    toast('🔒 AI painting is a Support feature (3€) — support the Cauldron to paint your adventurer, the DM and every NPC with StepFun.');
     return false;
   }
   return true;
@@ -981,7 +981,7 @@ function renderVaultHeroes() {
       </div>
       <div class="vcard-story">${_vEsc(c.story||'')}</div>
       <div class="vcard-actions">
-        <button class="vcard-use" id="vuse-${_vEsc(c.id)}" onclick="useVaultHero('${_vEsc(c.id)}', this)">⚔️ Take This Hero</button>
+        <button class="vcard-use" id="vuse-${_vEsc(c.id)}" onclick="useVaultHero('${_vEsc(c.id)}', this)">⚔️ Take This Adventurer</button>
         <button class="vcard-inspect" onclick="openVaultInspect('${_vEsc(c.id)}')">Inspect</button>
       </div>
     </div>`;
@@ -1007,13 +1007,13 @@ async function useVaultHero(charId, btn) {
     // Lyft in valv-karaktären i kampanjen
     await API.vaultUse(charId);
     SFX.gate();
-    toast('⚔️ The hero steps to the table!');
+    toast('⚔️ The adventurer steps to the table!');
     sessionStorage.setItem('dnd_vault_character', charId);
     setTimeout(() => { location.href = 'chat.html'; }, 900);
   } catch (e) {
     SFX.error();
-    toast('⚠ ' + (e.message || 'Could not take this hero'));
-    if (btn) { btn.disabled = false; btn.textContent = '⚔️ Take This Hero'; }
+    toast('⚠ ' + (e.message || 'Could not take this adventurer'));
+    if (btn) { btn.disabled = false; btn.textContent = '⚔️ Take This Adventurer'; }
   }
 }
 
@@ -1061,7 +1061,7 @@ async function openVaultInspect(charId) {
     <div class="pv-story">${_vEsc(ch.story||ch.background||'')}</div>
     ${invHtml}
     <div class="pv-actions">
-      <button class="pv-go" onclick="closeVaultInspect();useVaultHero('${_vEsc(charId)}')">⚔️ Take This Hero</button>
+      <button class="pv-go" onclick="closeVaultInspect();useVaultHero('${_vEsc(charId)}')">⚔️ Take This Adventurer</button>
     </div>`;
   document.getElementById('vault-insp-overlay').classList.add('show');
 }

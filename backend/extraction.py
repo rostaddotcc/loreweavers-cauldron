@@ -623,7 +623,7 @@ class FactRegister:
         self._path.write_text(
             json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
         )
-        logger.debug("Sparade %d fakta till %s", len(data), self._path)
+        logger.debug("Saved %d facts to %s", len(data), self._path)
 
     # ── Lägg till / deduplicera ────────
 
@@ -779,7 +779,7 @@ class FactRegister:
             if f.id in low_relevance_ids and f.relevance > 0.2:
                 f.relevance = 0.2
                 changed += 1
-                logger.info("🧹 Kompakterat faktum (relevance→0.2): '%s'", f.text[:60])
+                logger.info("🧹 Compacted fact (relevance→0.2): '%s'", f.text[:60])
         if changed:
             self.save()
         return changed

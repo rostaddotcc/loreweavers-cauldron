@@ -21,7 +21,8 @@ DATA_DIR = Path(__file__).resolve().parent / "data"
 USERS_FILE = DATA_DIR / "users.json"
 
 # Kontoregler (iteration 1 — SMTP/verifiering/återställning kommer senare)
-USERNAME_RE = re.compile(r"^[a-z0-9][a-z0-9_.-]{2,19}$")  # 3-20 tecken, börjar med bokstav/siffra
+# 2026-08-06: tillåter å/ä/ö — svenska namn ska fungera i ett svenskt spel.
+USERNAME_RE = re.compile(r"^[a-z0-9åäö][a-z0-9åäö_.-]{2,19}$")  # 3-20 tecken, startar med bokstav/siffra
 PASSWORD_MIN_LEN = 6
 
 
@@ -36,7 +37,7 @@ def validate_username(username: str) -> str | None:
     if not uname:
         return "Username is required."
     if not USERNAME_RE.match(uname):
-        return "Username must be 3-20 characters (letters, numbers, _ - .) and start with a letter or number."
+        return "Names must be 3–20 characters: letters a–z (å ä ö ok), numbers, _ - . Start with a letter or number."
     return None
 
 

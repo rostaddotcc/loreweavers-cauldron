@@ -33,11 +33,11 @@
 
   /* ═══════════ Topbar ═══════════ */
   .topbar{position:relative;z-index:5;display:flex;align-items:center;gap:1rem;padding:.7rem 1.2rem;
-    background:linear-gradient(180deg,var(--stone-2),rgba(22,16,32,.95));border-bottom:1px solid var(--edge);box-shadow:0 4px 20px rgba(0,0,0,.5)}
+    background:linear-gradient(180deg,var(--stone-2),color-mix(in srgb, var(--stone) 95%, transparent));border-bottom:1px solid var(--edge);box-shadow:0 4px 20px rgba(0,0,0,.5)}
   .topbar .brand{font-family:'Cinzel',serif;font-weight:900;font-size:1.05rem;color:var(--gold-bright);letter-spacing:.06em;white-space:nowrap;text-shadow:0 0 14px rgba(232,198,90,.3)}
   .topbar .page-tag{font-size:.91rem;font-style:italic;color:var(--bone-dim);border-left:1px solid var(--edge);padding-left:1rem}
   .topbar .spacer{flex:1}
-  .top-btn{font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:2px;white-space:nowrap;text-decoration:none}
+  .top-btn{font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:8px;white-space:nowrap;text-decoration:none}
   .top-btn:hover{color:var(--gold-bright);border-color:var(--gold);box-shadow:0 0 12px -3px rgba(232,198,90,.4)}
   .top-btn.danger:hover{color:var(--blood-bright);border-color:var(--blood-bright);box-shadow:0 0 12px -3px rgba(212,58,77,.4)}
 
@@ -52,14 +52,14 @@
   .search-wrap{padding:.8rem 1rem .5rem}
   .search-wrap input{
     width:100%;font-family:'Spectral',serif;font-size:1.03rem;color:var(--bone-bright);
-    background:var(--stone-3);border:1px solid var(--edge);padding:.55rem .8rem;outline:none;border-radius:2px;
+    background:var(--stone-3);border:1px solid var(--edge);padding:.55rem .8rem;outline:none;border-radius:8px;
     transition:border-color .2s,box-shadow .2s}
   .search-wrap input::placeholder{color:var(--bone-dim);font-style:italic}
   .search-wrap input:focus{border-color:var(--gold);box-shadow:0 0 14px -4px rgba(232,198,90,.35)}
   .filters{display:flex;gap:.35rem;flex-wrap:wrap;padding:.6rem 1rem .8rem;border-bottom:1px solid color-mix(in srgb, var(--edge) 50%, transparent)}
-  .fchip{font-family:'Cinzel',serif;font-size:.69rem;letter-spacing:.12em;text-transform:uppercase;background:transparent;border:1px solid var(--edge);color:var(--bone-dim);padding:.32rem .6rem;cursor:pointer;border-radius:2px;transition:all .2s;display:inline-flex;align-items:center;gap:.35rem}
+  .fchip{font-family:'Cinzel',serif;font-size:.69rem;letter-spacing:.12em;text-transform:uppercase;background:transparent;border:1px solid var(--edge);color:var(--bone-dim);padding:.32rem .6rem;cursor:pointer;border-radius:7px;transition:all .2s;display:inline-flex;align-items:center;gap:.35rem}
   .fchip:hover{color:var(--bone-bright);border-color:var(--bone-dim)}
-  .fchip.on{color:#1a1206;background:var(--gold);border-color:var(--gold);box-shadow:0 0 10px -2px rgba(232,198,90,.5)}
+  .fchip.on{color:var(--ink);background:var(--gold);border-color:var(--gold);box-shadow:0 0 10px -2px rgba(232,198,90,.5)}
   .fchip .cnt{font-size:.63rem;opacity:.75}
 
   /* ── Statistik ── */
@@ -86,7 +86,7 @@
   .cat-head b{font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:var(--cc,var(--gold-bright));display:flex;align-items:center;gap:.45rem}
 
   .fact{position:relative;padding:.7rem .9rem .6rem 1.1rem;margin-bottom:.5rem;
-    background:linear-gradient(160deg,var(--stone-2),var(--stone));border:1px solid var(--edge);border-radius:2px;
+    background:linear-gradient(160deg,var(--stone-2),var(--stone));border:1px solid var(--edge);border-radius:8px;
     transition:transform .22s cubic-bezier(.22,1,.36,1),border-color .22s,box-shadow .22s;overflow:hidden;
     animation:rise .4s ease both}
   .fact::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--cc,var(--edge));opacity:.55;transition:opacity .22s}
@@ -106,7 +106,7 @@
   .fact.downranked{opacity:.62;border-style:dashed}
   .fact.downranked::before{background:var(--bone-dim)}
   .fact.downranked .fmeta::after{content:'▼ nedgraderad · fallit ur det aktiva minnet';color:var(--bone-dim);font-style:italic;opacity:.85}
-  .frank{display:inline-flex;align-items:center;gap:.25rem;margin-left:.4rem;font-size:.72rem;letter-spacing:.06em;color:var(--bone-dim);border:1px solid var(--edge);padding:1px 6px;border-radius:2px}
+  .frank{display:inline-flex;align-items:center;gap:.25rem;margin-left:.4rem;font-size:.72rem;letter-spacing:.06em;color:var(--bone-dim);border:1px solid var(--edge);padding:1px 6px;border-radius:6px}
   .frank.hot{color:var(--gold-bright);border-color:rgba(232,198,90,.4);text-shadow:0 0 6px rgba(232,198,90,.3)}
   .frank.cold{color:var(--bone-dim);border-color:var(--edge)}
   .frank b{font-family:'Cinzel',serif;font-variant-numeric:tabular-nums}
@@ -114,8 +114,8 @@
   .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:60%;text-align:center;color:var(--bone-dim)}
   .empty .rune{font-size:3rem;margin-bottom:1rem;filter:grayscale(.5);animation:flicker 3s ease-in-out infinite}
   .empty p{font-size:1.08rem;font-style:italic;line-height:1.8;max-width:400px}
-  .talk-btn{font-family:'Cinzel',serif;font-weight:700;font-size:.87rem;letter-spacing:.16em;text-transform:uppercase;color:#1a1206;
-    background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,#8a6d14);border:1px solid #6e5510;padding:.8rem 1.5rem;cursor:pointer;border-radius:2px;
+  .talk-btn{font-family:'Cinzel',serif;font-weight:700;font-size:.87rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ink);
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,color-mix(in srgb, var(--gold) 65%, var(--ink)));border:1px solid color-mix(in srgb, var(--gold) 50%, var(--ink));padding:.8rem 1.5rem;cursor:pointer;border-radius:8px;
     box-shadow:0 6px 18px -6px rgba(232,198,90,.5);transition:all .2s;text-decoration:none;display:inline-block;margin-top:1.2rem}
   .talk-btn:hover{filter:brightness(1.12);transform:translateY(-2px)}
 
@@ -183,9 +183,9 @@
 .archive-head{ border-radius: 10px !important; }
 .talk-btn{ border-radius: 8px !important; }
 </style>
-<script src="sprites.js?v=20260802a"></script>
-<script src="fonts.js?v=20260802c"></script>
-<script src="themes.js?v=20260804b"></script>
+<script src="sprites.js?v=20260806a"></script>
+<script src="fonts.js?v=20260806c"></script>
+<script src="themes.js?v=20260806b"></script>
 </head>
 <body>
 <div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
@@ -226,9 +226,9 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="sfx.js?v=20260802a"></script>
-<script src="api.js?v=20260804c"></script>
-<script src="i18n.js?v=20260802b"></script>
+<script src="sfx.js?v=20260806a"></script>
+<script src="api.js?v=20260806c"></script>
+<script src="i18n.js?v=20260806b"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -419,6 +419,6 @@ async function doLogout() {
   location.href = 'login.html';
 }
 </script>
-<script src="embed.js?v=20260802a"></script>
+<script src="embed.js?v=20260806a"></script>
 </body>
 </html>

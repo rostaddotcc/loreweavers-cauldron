@@ -305,8 +305,8 @@
     box-shadow: 0 2px 10px -6px rgba(0,0,0,.5);
   }.bubble:hover{ transform: translateY(-2px); box-shadow: 0 8px 24px -10px rgba(0,0,0,0.7); }/* Hörnbeslag (terminal-gotik) — accentfärg per roll, mjukare */.bubble::before, .bubble::after{ content: ''; position: absolute; width: 9px; height: 9px; pointer-events: none; opacity: 0.85; border-radius: 1px; }.bubble::before{ top: -1px; left: -1px; border-top: 2px solid var(--accent, var(--gold)); border-left: 2px solid var(--accent, var(--gold)); }.bubble::after{ bottom: -1px; right: -1px; border-bottom: 2px solid var(--accent, var(--gold)); border-right: 2px solid var(--accent, var(--gold)); }/* DM — guld, kursiv berättarröst */.msg.dm .bubble{
     --accent: var(--gold);
-    background: linear-gradient(160deg, rgba(201,162,39,0.11), rgba(201,162,39,0.03));
-    border-color: rgba(201,162,39,0.32);
+    background: linear-gradient(160deg, rgba(201,162,39,0.17), rgba(201,162,39,0.05));
+    border-color: rgba(232,198,90,0.55);
   }/* TTS-knapp på DM-bubblor */.tts-btn{
     position: absolute; top: 0.35rem; right: 0.4rem;
     background: none; border: none; cursor: pointer;
@@ -347,7 +347,7 @@
   .tts-select:disabled, .tts-style-custom:disabled{
     opacity: 0.45; cursor: not-allowed; filter: grayscale(0.6);
   }
-  .tts-select:disabled:hover{ border-color: var(--edge); color: var(--bone-dim); }.msg.dm .bubble:hover{ border-color: rgba(232,198,90,0.6); }.msg.dm .bubble .who{ color: var(--gold); }.msg.dm .bubble .text{ font-style: italic; color: var(--bone); line-height: 1.7; font-size: 1.18rem; }/* ── DM:ns inre monolog (reasoning) — eterisk, hopfällbar tankebubbla ── */.reasoning{
+  .tts-select:disabled:hover{ border-color: var(--edge); color: var(--bone-dim); }.msg.dm .bubble:hover{ border-color: rgba(232,198,90,0.6); }.msg.dm .bubble .who{ color: var(--gold-bright); letter-spacing: .06em; text-shadow: 0 0 10px rgba(232,198,90,.35); }.msg.dm .bubble .text{ font-style: italic; color: var(--bone); line-height: 1.7; font-size: 1.18rem; }/* ── DM:ns inre monolog (reasoning) — eterisk, hopfällbar tankebubbla ── */.reasoning{
     max-width: 600px; margin-left: 60px;  /* indragen — viskar under DM:s röst */
     border: 1px solid color-mix(in srgb, var(--arcane) 28%, transparent);
     border-left: 2px solid color-mix(in srgb, var(--arcane) 65%, transparent);
@@ -419,9 +419,10 @@
      var "saker händer". Typewriter-kompatibelt (wrappas innan snapshot).
      12 kategorier, ~150 termer per språk (sv/en), språkmedvetet. */.term{ font-style: italic; font-weight: 700; }.term-cold{ color: #8ec5f0; text-shadow: 0 0 8px rgba(142,197,240,.55); }.term-fire{ color: #f0955a; text-shadow: 0 0 8px rgba(240,149,90,.55); }.term-poison{ color: #9cc46e; text-shadow: 0 0 8px rgba(156,196,110,.5); }.term-pain{ color: #e05a6b; text-shadow: 0 0 8px rgba(224,90,107,.5); }.term-magic{ color: var(--arcane-bright); text-shadow: 0 0 9px rgba(177,140,240,.6); }.term-shadow{ color: #a89ec9; text-shadow: 0 0 8px rgba(120,100,170,.5); }.term-nature{ color: #7fc4bd; text-shadow: 0 0 8px rgba(127,196,189,.5); }.term-motion{ color: #e8c65a; text-shadow: 0 0 8px rgba(232,198,90,.5); }.term-light{ color: #f5edd6; text-shadow: 0 0 10px rgba(250,240,210,.7); }.term-fear{ color: #c77b9b; text-shadow: 0 0 8px rgba(199,123,155,.55); }.term-combat{ color: #b8c8d8; text-shadow: 0 0 8px rgba(184,200,216,.5); }.term-treasure{ color: #e0a04f; text-shadow: 0 0 8px rgba(224,160,79,.55); }/* Spelare — lila, högerställd */.msg.player .bubble{
     --accent: var(--arcane);
-    background: linear-gradient(160deg, color-mix(in srgb, var(--arcane) 14%, transparent), color-mix(in srgb, var(--arcane) 4%, transparent));
-    border-color: color-mix(in srgb, var(--arcane) 30%, transparent);
-  }.msg.player .bubble:hover{ border-color: color-mix(in srgb, var(--arcane) 60%, transparent); }.msg.player .bubble .who{ color: var(--arcane); justify-content: flex-end; }.msg.player .bubble .text{ color: var(--bone-bright); line-height: 1.65; font-size: 1.16rem; }/* Namnskylt + text i bubblan */.bubble .who{
+    background: linear-gradient(160deg, color-mix(in srgb, var(--arcane) 24%, transparent), color-mix(in srgb, var(--arcane) 8%, transparent));
+    border-color: color-mix(in srgb, var(--arcane) 60%, transparent);
+    box-shadow: 0 0 18px -8px color-mix(in srgb, var(--arcane) 55%, transparent);
+  }.msg.player .bubble:hover{ border-color: color-mix(in srgb, var(--arcane) 60%, transparent); }.msg.player .bubble .who{ color: var(--arcane-bright); justify-content: flex-end; text-shadow: 0 0 10px color-mix(in srgb, var(--arcane) 45%, transparent); }.msg.player .bubble .text{ color: var(--bone-bright); line-height: 1.65; font-size: 1.16rem; }/* Namnskylt + text i bubblan */.bubble .who{
     font-family: 'Cinzel', serif; font-size: 0.64rem; letter-spacing: 0.22em;
     text-transform: uppercase; margin-bottom: 0.45rem;
     display: flex; align-items: center; gap: 0.5rem;
@@ -481,25 +482,23 @@
     transition: background .2s;
   }.event-card:hover{ background: var(--ev-bg-hover, rgba(29,21,41,.6)); }.event-card .ev-icon{ font-size: .95rem; font-style: normal; flex-shrink: 0; line-height: 1.45; }.event-card .ev-text{ flex: 1; min-width: 0; }.event-card .ev-text b{ font-style: normal; font-weight: 700; }
   @keyframes effect-pop { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }/* Effect type colors — border, bg tint, text */.event-card.e-skada{ --ev-color: #d43a4d; --ev-bg: rgba(163,36,51,.10); --ev-bg-hover: rgba(163,36,51,.18); --ev-text: var(--blood-bright); }.event-card.e-hela{ --ev-color: #7aa35e; --ev-bg: rgba(122,163,94,.08); --ev-bg-hover: rgba(122,163,94,.15); --ev-text: #8fd48a; }.event-card.e-xp{ --ev-color: #c9a227; --ev-bg: rgba(201,162,39,.08); --ev-bg-hover: rgba(201,162,39,.15); --ev-text: var(--gold-bright); }.event-card.e-level_up{ --ev-color: #e8c65a; --ev-bg: rgba(232,198,90,.12); --ev-bg-hover: rgba(232,198,90,.20); --ev-text: var(--gold-bright); text-shadow: 0 0 10px rgba(232,198,90,.4); }.event-card.e-guld{ --ev-color: #c9a227; --ev-bg: rgba(201,162,39,.08); --ev-bg-hover: rgba(201,162,39,.15); --ev-text: var(--gold-bright); }.event-card.e-guld_fail{ --ev-color: #8a1a28; --ev-bg: rgba(100,20,30,.12); --ev-bg-hover: rgba(100,20,30,.20); --ev-text: var(--blood-bright); }.event-card.e-foremal{ --ev-color: var(--arcane); --ev-bg: color-mix(in srgb, var(--arcane) 8%, transparent); --ev-bg-hover: color-mix(in srgb, var(--arcane) 15%, transparent); --ev-text: var(--arcane-bright); }.event-card.e-foremal_bort{ --ev-color: color-mix(in srgb, var(--arcane) 45%, var(--bone-dim)); --ev-bg: rgba(90,79,110,.08); --ev-bg-hover: rgba(90,79,110,.15); --ev-text: var(--bone-dim); }.event-card.e-quest{ --ev-color: var(--arcane); --ev-bg: color-mix(in srgb, var(--arcane) 8%, transparent); --ev-bg-hover: color-mix(in srgb, var(--arcane) 15%, transparent); --ev-text: var(--arcane-bright); }.event-card.e-quest_slutford{ --ev-color: #5eba4a; --ev-bg: rgba(94,186,74,.08); --ev-bg-hover: rgba(94,186,74,.15); --ev-text: #8fd48a; }.event-card.e-quest_misslyckad{ --ev-color: #d43a4d; --ev-bg: rgba(163,36,51,.10); --ev-bg-hover: rgba(163,36,51,.18); --ev-text: var(--blood-bright); }.event-card.e-npc_dod{ --ev-color: color-mix(in srgb, var(--arcane) 35%, var(--bone-dim)); --ev-bg: rgba(74,61,94,.10); --ev-bg-hover: rgba(74,61,94,.18); --ev-text: var(--bone-dim); }.event-card.e-npc_relation{ --ev-color: #5e9aa3; --ev-bg: rgba(94,154,163,.08); --ev-bg-hover: rgba(94,154,163,.15); --ev-text: #8cc4cc; }.event-card.e-plats{ --ev-color: #5e9aa3; --ev-bg: rgba(94,154,163,.08); --ev-bg-hover: rgba(94,154,163,.15); --ev-text: #8cc4cc; }.event-card.e-tid{ --ev-color: #4a6a8a; --ev-bg: rgba(74,106,138,.08); --ev-bg-hover: rgba(74,106,138,.15); --ev-text: #7a9ab8; }.event-card.e-ny_dag{ --ev-color: #d4a01e; --ev-bg: rgba(212,160,30,.10); --ev-bg-hover: rgba(212,160,30,.18); --ev-text: #e8c65a; }.event-card.e-konsekvens{ --ev-color: #d4691e; --ev-bg: rgba(212,105,30,.08); --ev-bg-hover: rgba(212,105,30,.15); --ev-text: #e89a4a; }/* Legacy compat — keep old .msg.effect classes for any remaining references */.msg.effect .box{ border-style: solid; font-weight: 600; letter-spacing: .02em; display: none; }/* ── Lorekeeper system log entry ── */.msg.guardian{
-    max-width: 580px; margin: .4rem auto;
-    border: 1px solid rgba(201,162,39,.25);
-    border-left: 3px solid var(--gold);
-    background: rgba(8,5,14,.85);
-    border-radius: 0 4px 4px 0;
+    max-width: 520px; margin: .4rem 0 .4rem 1.2rem;
+    border: 1px solid color-mix(in srgb, var(--teal) 45%, transparent);
+    border-left: 3px solid var(--teal);
+    background: linear-gradient(160deg, color-mix(in srgb, var(--teal) 16%, transparent), color-mix(in srgb, var(--teal) 4%, transparent));
+    border-radius: 14px;
     padding: 0; text-align: left;
-    font-family: 'Courier New', 'Lucida Console', monospace;
     animation: batch-in .4s cubic-bezier(.22,1,.36,1);
   }.msg.guardian .guardian-title{
     font-family: 'Cinzel', serif; font-size: .62rem; letter-spacing: .18em;
-    text-transform: uppercase; color: var(--gold-bright);
-    padding: .4rem .8rem .25rem; border-bottom: 1px solid rgba(201,162,39,.15);
+    text-transform: uppercase; color: #8cc4cc;
+    padding: .4rem .8rem .25rem; border-bottom: 1px solid color-mix(in srgb, var(--teal) 25%, transparent);
     display: flex; align-items: center; gap: .4rem;
   }.msg.guardian .guardian-box{
-    font-size: .78rem; color: #b0a890; border: none;
+    font-size: .82rem; color: var(--bone); border: none;
     background: transparent; padding: .45rem .8rem .55rem;
-    border-radius: 0; line-height: 1.55; text-align: left;
-    font-family: 'Courier New', 'Lucida Console', monospace;
-  }.msg.guardian .guardian-box strong{ color: var(--gold-bright); }/* Chat-first combat v26 — inline stridsmeddelanden */.combat-inline{ font-size: .78rem; padding: .4rem .7rem; }.combat-round{
+    border-radius: 0; line-height: 1.6; text-align: left;
+  }.msg.guardian .guardian-box strong{ color: #8cc4cc; }/* Chat-first combat v26 — inline stridsmeddelanden */.combat-inline{ font-size: .78rem; padding: .4rem .7rem; }.combat-round{
     font-family: 'Press Start 2P', monospace; font-size: .6rem; letter-spacing: .1em;
     color: var(--gold-bright); text-align: center; border-color: rgba(201,162,39,.4);
     background: rgba(201,162,39,.06);
@@ -1121,10 +1120,11 @@
 }
 </style>
 <script src="sprites.js?v=20260802a"></script>
-<script src="fonts.js?v=20260805a"></script>
-<script src="themes.js?v=20260805a"></script>
+<script src="fonts.js?v=20260806a"></script>
+<script src="themes.js?v=20260806a"></script>
 </head>
 <body>
+<!-- <marker> -->
 <div class="grain"></div>
 <canvas id="embers"></canvas>
 
@@ -1148,7 +1148,7 @@
   <span class="brand">The Lore Weaver's Cauldron</span>
   <span class="campaign" id="campaign-tag">Campaign: —</span>
   <span class="header-turns-info" id="header-turns-info"></span>
-  <span class="user-tag" id="user-tag" onclick="openProfileAvatarModal()" title="Your profile portrait — click to paint a new one" style="cursor:pointer;display:inline-flex;align-items:center;gap:.5rem;color:var(--bone);font-size:.85rem;padding:.22rem .65rem .22rem .3rem;border:1px solid rgba(201,162,39,.30);border-radius:999px;background:rgba(201,162,39,.07);text-shadow:0 0 10px rgba(201,162,39,.25);transition:all .2s"><span class="ut-avatar" id="user-tag-avatar" style="width:28px;height:28px;border-radius:50%;overflow:hidden;border:1px solid rgba(201,162,39,.45);background:var(--stone-3);display:inline-flex;align-items:center;justify-content:center;font-size:1.05rem;flex-shrink:0;box-shadow:0 0 12px -2px rgba(201,162,39,.35)">👤</span><span id="user-tag-name">—</span></span>
+  <span class="user-tag" id="user-tag" onclick="openChatProfileModal()" title="Your profile — stats, tier and portrait" style="cursor:pointer;display:inline-flex;align-items:center;gap:.5rem;color:var(--bone);font-size:.85rem;padding:.22rem .65rem .22rem .3rem;border:1px solid rgba(201,162,39,.30);border-radius:999px;background:rgba(201,162,39,.07);text-shadow:0 0 10px rgba(201,162,39,.25);transition:all .2s"><span class="ut-avatar" id="user-tag-avatar" style="width:28px;height:28px;border-radius:50%;overflow:hidden;border:1px solid rgba(201,162,39,.45);background:var(--stone-3);display:inline-flex;align-items:center;justify-content:center;font-size:1.05rem;flex-shrink:0;box-shadow:0 0 12px -2px rgba(201,162,39,.35)">👤</span><span id="user-tag-name">—</span></span>
   <span class="spacer"></span>
 
   <button class="top-btn" onclick="openCodex()">📖 Codex</button>
@@ -1178,16 +1178,6 @@
         <select id="settings-extraction-model" onchange="settingsChangeExtraction(this.value)"></select>
         <div class="mpc-hint" id="settings-guardian-hint"></div>
         <div class="mpc-hint" id="model-picker-premium-hint" style="display:none;color:var(--gold)">🔒 Premium models locked — one-time Patron unlocks all DMs for 30 days.</div>
-      </div>
-      <div class="model-picker-card" id="tts-test-card">
-        <div class="mpc-title">🎙 Narrator test <span id="tts-test-lock" style="color:var(--gold);font-size:.68rem">🔒 Patron</span></div>
-        <div style="display:flex;gap:.4rem;margin-top:.3rem">
-          <input type="text" id="tts-test-input" maxlength="50" placeholder="The raven cries in the dark…"
-                 style="flex:1;min-width:0;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone);padding:.35rem .5rem;font-size:.78rem;border-radius:3px"
-                 onkeydown="if(event.key==='Enter')ttsTestPlay()">
-          <button class="tts-auto-btn" id="tts-test-btn" onclick="ttsTestPlay()" title="Play a test line with the current voice + style" style="flex-shrink:0">▶</button>
-        </div>
-        <div class="mpc-hint">Test a line with the selected voice &amp; style — 50 characters.</div>
       </div>
       <button class="drop-item" onclick="openModelInfo();closeSettingsMenu()"><span class="di-icon">ℹ️</span><span class="di-body"><span class="di-name">About the Models</span><span class="di-hint">what each DM model does · why thinking takes time</span></span></button>
       <div class="drop-sep"></div>
@@ -1325,6 +1315,12 @@
     </div>
 
     <div class="input-area">
+      <!-- TTS-player-bar: smal progressrad — visas när ljud spelas (play/pause + tid) -->
+      <div class="tts-player" id="tts-player">
+        <button class="ttp-toggle" id="ttp-toggle" onclick="ttsPlayerToggle()" title="Play / pause">⏯</button>
+        <div class="ttp-track"><div class="ttp-fill" id="ttp-fill"></div></div>
+        <span class="ttp-time" id="ttp-time">0:00 / 0:00</span>
+      </div>
       <div class="tts-voice-picker" title="Narrator voice for reading aloud">
         <span class="tts-voice-label">🗣️</span>
         <select class="tts-select provider" id="tts-provider-select" onchange="setTTSProvider(this.value)" title="TTS provider">
@@ -1509,7 +1505,7 @@
 </div>
 
 <script src="sfx.js?v=20260802a"></script>
-<script src="api.js?v=20260805c"></script>
+<script src="api.js?v=20260806a"></script>
 <script src="i18n.js?v=20260802b"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
@@ -1973,7 +1969,7 @@ function pickAvatar(kind) {
 // (step-image-edit-2, Support 3€) och Wan 2.7 Pro (Patron 10€) — med
 // tier-lås (free → båda 🔒, tier1 → Wan 🔒, tier2/lifetime → båda öppna).
 // Headerns porträtt hör hit.
-function openProfileAvatarModal() {
+function openProfileAvatarModal(prefProvider) {
   _avatarProfileMode = true;
   AVATAR_KIND = 'player';
   const ov = document.getElementById('avatar-overlay');
@@ -2000,6 +1996,11 @@ function openProfileAvatarModal() {
   if (promptInp) promptInp.placeholder = 'Describe yourself — e.g. \'hooded figure, lantern light, old leather\' (or leave empty)';
   document.getElementById('avatar-ai-status').textContent = '';
   _updateProfilePaintButtons();
+  // Profil-modalens två knappar väljer motor — markera den valda (båda finns kvar).
+  if (prefProvider === 'stepfun' || prefProvider === 'wan') {
+    const focusBtn = document.getElementById(prefProvider === 'wan' ? 'avatar-ai-btn-wan' : 'avatar-ai-btn');
+    if (focusBtn) focusBtn.classList.add('av-suggest');
+  }
   if (ov) ov.classList.add('show');
   try { SFX.click(); } catch (_) {}
 }
@@ -2024,6 +2025,66 @@ function closeAvatarModal() {
   if (ov) ov.classList.remove('show');
 }
 
+// ── 🪞 Profil-modal (konto-avatar → stats + tier + målningsknappar) ──
+// Öppnas när man klickar på kontots avatar i headern (#user-tag). Visar
+// konto-stats (Role/Tier/Campaigns/Turns/Tokens/Since) från /api/me +
+// /api/me/stats, och en Portrait-sektion som återanvänder den befintliga
+// målnings-modalen (openProfileAvatarModal('stepfun'|'wan')).
+async function openChatProfileModal() {
+  const ovl = document.getElementById('cp-overlay');
+  if (!ovl) return;
+  const grid = document.getElementById('cp-grid');
+  if (grid) grid.innerHTML = '<div class="cp-cell full" style="color:var(--bone-dim);text-align:center">Loading&hellip;</div>';
+  ovl.classList.add('show');
+  // Header: konto-avatar (samma källa som #user-tag-avatar), namn + tier
+  const me = _meData || profileData || {};
+  const av = document.getElementById('cp-avatar');
+  if (av) {
+    av.innerHTML = _hasAccountAvatar
+      ? `<img src="${API.accountAvatarUrl()}?t=${Date.now()}" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">`
+      : '👤';
+  }
+  const nm = document.getElementById('cp-name');
+  if (nm) nm.textContent = me.username || 'Adventurer';
+  const tier = document.getElementById('cp-tier');
+  if (tier) tier.innerHTML = tierBadge(me.subscription_status);
+  try { SFX.click(); } catch (_) {}
+  try {
+    const res = await fetch('/api/me/stats', { credentials: 'include' });
+    if (!res.ok) {
+      let msg = 'HTTP ' + res.status;
+      try { msg = (await res.json()).detail || msg; } catch (_) {}
+      throw new Error(msg);
+    }
+    renderChatProfile((await res.json()).stats || {}, me);
+  } catch (e) {
+    if (grid) grid.innerHTML =
+      '<div class="cp-cell full" style="color:var(--blood-bright);text-align:center">' + escapeHtml((e && e.message) || 'Could not read your stats.') + '</div>';
+  }
+}
+function closeChatProfileModal() {
+  const ovl = document.getElementById('cp-overlay');
+  if (ovl) ovl.classList.remove('show');
+}
+function renderChatProfile(s, me) {
+  const grid = document.getElementById('cp-grid');
+  if (!grid) return;
+  const fmt = n => (n === null || n === undefined || isNaN(n)) ? '—' : Number(n).toLocaleString('en-US');
+  const cell = (k, v, full) => '<div class="cp-cell' + (full ? ' full' : '') + '"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>';
+  const role = (s.role || me.role || 'player') === 'admin' ? '👑 Admin' : '⚔️ Player';
+  const tokens = (s.total_tokens != null ? s.total_tokens : (me.total_tokens != null ? me.total_tokens : 0)) || 0;
+  const tokenStr = tokens >= 1000000 ? (tokens / 1000000).toFixed(1) + 'M' : tokens >= 1000 ? (tokens / 1000).toFixed(1) + 'K' : tokens;
+  const since = s.created_at || me.created_at || null;
+  let h = '';
+  h += cell('Role', role);
+  h += cell('Tier', tierBadge(s.subscription_status || me.subscription_status));
+  h += cell('Campaigns', fmt(s.total_campaigns != null ? s.total_campaigns : me.total_campaigns));
+  h += cell('Turns', fmt(s.total_turns != null ? s.total_turns : me.turns_used));
+  h += cell('Tokens', tokenStr);
+  if (since) h += cell('Since', String(since).slice(0, 10));
+  grid.innerHTML = h;
+}
+
 // ── Bildleverantör (StepFun — Support 3€ · Wan 2.7 Pro — Patron 10€) ──
 function avatarProvider() {
   const sel = document.getElementById('avatar-provider-select');
@@ -2033,7 +2094,7 @@ function avatarProvider() {
 // StepFun = Support (3€); Wan = Patron (10€). Returnerar false + informerar.
 function avatarGenGate(provider) {
   if (!_tierHasAvatars()) {
-    toast('🔒 AI painting is a Support feature (3€) — support the Cauldron to paint your hero, the DM and every NPC with StepFun.');
+    toast('🔒 AI painting is a Support feature (3€) — support the Cauldron to paint your adventurer, the DM and every NPC with StepFun.');
     try { SFX.error(); } catch (_) {}
     return false;
   }
@@ -2692,10 +2753,53 @@ function addReasoning(text) {
 // ═══════════════════════════════════════
 let _ttsAudio = null;
 let _ttsVoiceIds = null;
+let _ttsGen = 0; // generationsräknare — en sen playTTS ska aldrig starta ljud efter stop
 const TTS_VOICE_KEY = 'dnd_tts_voice';
 const TTS_PROVIDER_KEY = 'dnd_tts_provider';
 const TTS_SPEED_KEY = 'dnd_tts_speed';
 const TTS_STYLE_KEY = 'dnd_tts_style';
+
+// ── TTS-player-bar: smal progressrad ovanför röstväljaren ──
+// Dold som standard; visas när ljud spelas och uppdateras via Audio-events.
+function _fmtTTS(t) {
+  if (!isFinite(t) || t < 0) t = 0;
+  const m = Math.floor(t / 60), s = Math.floor(t % 60);
+  return m + ':' + (s < 10 ? '0' : '') + s;
+}
+function ttsPlayerShow() {
+  const p = document.getElementById('tts-player');
+  if (p) p.classList.add('show');
+}
+function ttsPlayerHide() {
+  const p = document.getElementById('tts-player');
+  if (p) p.classList.remove('show');
+}
+function ttsPlayerSync() {
+  const p = document.getElementById('tts-player');
+  if (!p) return;
+  const a = _ttsAudio;
+  const fill = document.getElementById('ttp-fill');
+  const time = document.getElementById('ttp-time');
+  const toggle = document.getElementById('ttp-toggle');
+  const dur = (a && isFinite(a.duration)) ? a.duration : 0;
+  const cur = a ? (a.currentTime || 0) : 0;
+  if (fill) fill.style.width = dur > 0 ? Math.min(100, (cur / dur) * 100) + '%' : '0%';
+  if (time) time.textContent = _fmtTTS(cur) + ' / ' + _fmtTTS(dur);
+  if (toggle) toggle.textContent = (a && !a.paused && !a.ended) ? '⏸' : '⏯';
+}
+function ttsPlayerToggle() {
+  const a = _ttsAudio;
+  if (!a) return;
+  if (a.paused) { a.play().catch(() => {}); } else { a.pause(); }
+}
+function _wireTtsPlayer(a) {
+  if (!a) return;
+  a.addEventListener('timeupdate', ttsPlayerSync);
+  a.addEventListener('play', () => { ttsPlayerShow(); ttsPlayerSync(); });
+  a.addEventListener('pause', ttsPlayerSync);
+  a.addEventListener('ended', () => { ttsPlayerHide(); });
+  a.addEventListener('error', () => { ttsPlayerHide(); });
+}
 
 // Säkert localStorage — om webbläsaren nekar lagring (privat läge, inbäddad
 // vy, strikt sekretess) ska TTS-inställningarna ÄNDÅ fungera i sessionen.
@@ -2718,6 +2822,7 @@ function ttsStyle() {
   return v;
 }
 function setTTSStyle(v) {
+  if (_ttsAudio) { _ttsGen++; ttsStop(null); } // byte av stil stoppar pågående ljud
   _safeLS.set(TTS_STYLE_KEY, v);
   const inp = document.getElementById('tts-style-custom');
   if (inp) inp.style.display = v === 'custom' ? '' : 'none';
@@ -2725,6 +2830,7 @@ function setTTSStyle(v) {
   saveTtsSettings();
 }
 function setTTSStyleCustom(txt) {
+  if (_ttsAudio) { _ttsGen++; ttsStop(null); } // byte av egen stil stoppar pågående ljud
   _safeLS.set(TTS_STYLE_KEY + '_custom', txt);
   saveTtsSettings();
 }
@@ -2767,10 +2873,6 @@ function tierBadge(s) {
 function updateTTSStyleLock() {
   const sel = document.getElementById('tts-style-select');
   const inp = document.getElementById('tts-style-custom');
-  const testBtn = document.getElementById('tts-test-btn');
-  const testInp = document.getElementById('tts-test-input');
-  const testLock = document.getElementById('tts-test-lock');
-  const card = document.getElementById('tts-test-card');
   if (!sel) return;
   const hasStyle = _tierHasModels();
   sel.disabled = !hasStyle;
@@ -2778,14 +2880,6 @@ function updateTTSStyleLock() {
   sel.title = hasStyle
     ? 'Narrator style — happy, calm, scary, or your own'
     : '🔒 Narrator style — Patron feature (10€)';
-  // Narrator-testkort: låst för free/tier1 (test = tier2-funktion)
-  if (testBtn) testBtn.disabled = !hasStyle;
-  if (testInp) testInp.disabled = !hasStyle;
-  if (testLock) testLock.style.display = hasStyle ? 'none' : '';
-  if (card) {
-    card.style.opacity = hasStyle ? '1' : '0.55';
-    card.style.pointerEvents = hasStyle ? 'auto' : 'none';
-  }
   // TTS-providers: StepFun = Support (3€)+, Qwen = Patron (10€)+ (2026-08-05)
   const ps = document.getElementById('tts-provider-select');
   if (ps) {
@@ -2826,11 +2920,11 @@ function ttsSpeed() {
   return TTS_SPEEDS[_ttsSpeedIdx] || 1;
 }
 function cycleTTSSpeed() {
+  if (_ttsAudio) { _ttsGen++; ttsStop(null); } // byte av hastighet stoppar pågående ljud
   _ttsSpeedIdx = (_ttsSpeedIdx + 1) % TTS_SPEEDS.length;
   _safeLS.set(TTS_SPEED_KEY, String(_ttsSpeedIdx));
   const btn = document.getElementById('tts-speed-btn');
   if (btn) btn.textContent = '⏩ ' + ttsSpeed() + '×';
-  if (_ttsAudio) { try { _ttsAudio.playbackRate = ttsSpeed(); } catch (e) {} }
   SFX.click();
   saveTtsSettings();
 }
@@ -2855,6 +2949,7 @@ function ttsProviderAllowed(p) {
 }
 
 function setTTSProvider(p) {
+  if (_ttsAudio) { _ttsGen++; ttsStop(null); } // byte av provider stoppar pågående ljud
   _safeLS.set(TTS_PROVIDER_KEY, p);
   const sel = document.getElementById('tts-provider-select');
   if (sel) sel.value = p;
@@ -2867,6 +2962,7 @@ function ttsVoice() {
 }
 
 function setTTSVoice(v) {
+  if (_ttsAudio) { _ttsGen++; ttsStop(null); } // byte av röst stoppar pågående ljud
   _safeLS.set(TTS_VOICE_KEY, v);
   const sel = document.getElementById('tts-voice-select');
   if (sel) sel.value = v;
@@ -2958,7 +3054,11 @@ function maybeAutoplayTTS(dmEl) {
   if (!ttsAutoplayEnabled()) return;
   if (!dmEl) return;
   const btn = dmEl.querySelector('.tts-btn');
-  if (btn) playTTS(btn);
+  if (!btn) return;
+  if (btn.dataset.autoPlayed) return; // samma meddelande autoplayas aldrig två gånger
+  btn.dataset.autoPlayed = '1';
+  btn.dataset.auto = '1'; // autoplay-anrop får aldrig toggle-stoppa (se playTTS)
+  playTTS(btn);
 }
 
 async function ttsVoiceIds() {
@@ -2981,17 +3081,34 @@ async function ttsVoiceIds() {
 }
 
 function ttsStop(btn) {
-  if (_ttsAudio) { try { _ttsAudio.pause(); } catch (e) {} _ttsAudio = null; }
+  if (_ttsAudio) {
+    try { _ttsAudio.pause(); } catch (e) {}
+    _ttsAudio = null;
+    _ttsGen++; // ogiltigförklara ev. väntande playTTS-await
+  }
+  ttsPlayerHide();
   if (btn) { btn.textContent = '🔊'; btn.classList.remove('playing'); }
 }
 
 async function playTTS(btn) {
-  if (btn.classList.contains('playing')) {
+  // (a) Autoplay-anrop får ALDRIG toggle-stoppa — markören tas bort direkt
+  //     så en senare manuell klick på samma knapp fungerar normalt igen.
+  const isAuto = btn.dataset.auto === '1';
+  if (isAuto) delete btn.dataset.auto;
+  if (!isAuto && btn.classList.contains('playing')) {
     ttsStop(btn);
     return;
   }
-  const prev = document.querySelector('.tts-btn.playing');
-  if (prev && prev !== btn) ttsStop(prev);
+
+  // (b) Stoppa ALL befintlig uppspelning innan en ny startas — annars kan
+  //     två ljud ligga på varandra. Generationen bumpas så att ev. väntande
+  //     playTTS-await i ett annat anrop ogiltigförklaras.
+  _ttsGen++;
+  ttsStop(null);
+  // ttsStop(null) rör inte knappar — återställ alla som fortfarande ser spelande ut.
+  document.querySelectorAll('.tts-btn.playing').forEach(b => {
+    b.textContent = '🔊'; b.classList.remove('playing');
+  });
 
   const bubble = btn.closest('.bubble');
   // Samla ALLA textblock — narration + NPC-citat (flera .text/.nq-text möjliga)
@@ -3008,6 +3125,7 @@ async function playTTS(btn) {
   }
 
   btn.textContent = '⏳'; btn.classList.add('playing');
+  let gen = 0; // generations-id för DENNA uppspelning (sätts precis före play)
   try {
     const ids = await ttsVoiceIds();
     const pids = ids[provider] || ids[ids._default] || {};
@@ -3016,48 +3134,27 @@ async function playTTS(btn) {
 
     const blob = await API.tts(text, voiceId, provider, ttsStyle());
     const url = URL.createObjectURL(blob);
-    _ttsAudio = new Audio(url);
-    _ttsAudio.playbackRate = ttsSpeed();
-    _ttsAudio.onended = () => { ttsStop(btn); URL.revokeObjectURL(url); };
-    _ttsAudio.onerror = () => { ttsStop(btn); URL.revokeObjectURL(url); toast('⚠ Could not play audio'); };
-    await _ttsAudio.play();
+    const audio = new Audio(url);
+    _ttsAudio = audio;
+    audio.playbackRate = ttsSpeed();
+    // (c) Spelarraden: progress/time/toggle + visas när ljudet startar
+    _wireTtsPlayer(audio);
+    // (d) Först NU binds generations-id:t — allt som händer efter detta
+    //     (ttsStop / ny playTTS) bumpas förbi och ogiltigförklarar oss.
+    gen = ++_ttsGen;
+    audio.onended = () => { if (gen === _ttsGen) ttsStop(btn); URL.revokeObjectURL(url); };
+    audio.onerror = () => { if (gen === _ttsGen) ttsStop(btn); URL.revokeObjectURL(url); toast('⚠ Could not play audio'); };
+    await audio.play();
+    if (gen !== _ttsGen) return; // en nyare uppspelning tog över — tyst avbryt
     btn.textContent = '⏸';
   } catch (e) {
+    // (e) Superseded av nyare playTTS/ttsStop → avbryt utan felmeddelande
+    if (gen !== _ttsGen) return;
     // Fel från API:et — visa riktiga orsaken. Ingen webbläsar-fallback:
     // robotrösten (SpeechSynthesis) ska ALDRIG ersätta riktiga TTS-röster.
     ttsStop(btn);
     const msg = (e && e.message) || 'TTS error';
     toast('⚠ ' + msg);
-  }
-}
-
-// ── Narrator test (settings ⚙️): spela en egen rad med vald röst + stil ──
-async function ttsTestPlay() {
-  const btn = document.getElementById('tts-test-btn');
-  const inp = document.getElementById('tts-test-input');
-  if (!btn || !inp) return;
-  if (btn.textContent === '⏸') { ttsStop(btn); btn.textContent = '▶'; return; }
-  const text = (inp.value || '').trim();
-  if (!text) { toast('⚠ Write a line to test first'); return; }
-  btn.textContent = '⏳'; btn.disabled = true;
-  try {
-    const ids = await ttsVoiceIds();
-    const provider = ttsProvider();
-    const pids = ids[provider] || ids[ids._default] || {};
-    const voiceId = ttsVoice() === 'female' ? pids.female : pids.male;
-    if (!voiceId) throw new Error('No voice configured');
-    const blob = await API.tts(text, voiceId, provider, ttsStyle());
-    const url = URL.createObjectURL(blob);
-    _ttsAudio = new Audio(url);
-    _ttsAudio.playbackRate = ttsSpeed();
-    _ttsAudio.onended = () => { ttsStop(btn); btn.textContent = '▶'; btn.disabled = false; URL.revokeObjectURL(url); };
-    _ttsAudio.onerror = () => { ttsStop(btn); btn.textContent = '▶'; btn.disabled = false; URL.revokeObjectURL(url); toast('⚠ Could not play audio'); };
-    await _ttsAudio.play();
-    btn.textContent = '⏸'; btn.disabled = false;
-  } catch (e) {
-    ttsStop(btn);
-    btn.textContent = '▶'; btn.disabled = false;
-    toast('⚠ ' + ((e && e.message) || 'TTS error'));
   }
 }
 
@@ -4815,7 +4912,7 @@ function pollForGuardian(turnCount) {
   if (_guardianPollTimer) { clearInterval(_guardianPollTimer); _guardianPollTimer = null; }
 
   let attempts = 0;
-  const maxAttempts = 50; // 50 × 1s = 50s max (poll 1s → halva tiden, 2026-08-04)
+  const maxAttempts = 600; // 600 × 1s = 10 min per cykel — nollställs om Lorekeeper är busy
 
   _guardianPollTimer = setInterval(async () => {
     attempts++;
@@ -4887,10 +4984,18 @@ function pollForGuardian(turnCount) {
       }
     } catch (e) { /* tyst */ }
 
+    // 3) Ge inte upp bara för att tiden gick ut — långa Lorekeeper-rapporter kan
+    //    ta flera minuter. Så länge Lorekeeper fortfarande jobbar (_guardianBusy)
+    //    nollställs räknaren och pollen fortsätter; stopp sker bara via steg 2
+    //    (rapporten klar) eller när Lorekeeper är ledig.
     if (attempts >= maxAttempts) {
-      clearInterval(_guardianPollTimer);
-      _guardianPollTimer = null;
-      hideGuardianStatus();
+      if (_guardianBusy) {
+        attempts = 0;
+      } else {
+        clearInterval(_guardianPollTimer);
+        _guardianPollTimer = null;
+        hideGuardianStatus();
+      }
     }
   }, 1000);
 }
@@ -6953,11 +7058,11 @@ function cdMentionNpc(name) {
 
 // ═══════════════ 📖 CODEX MODAL (D1.3) — lazy iframes ═══════════════
 const CODEX_PAGES = {
-  character: { label: '🧙 Character', src: 'character.html?v=20260805e' },
-  npcs:      { label: '🧝 NPCs',      src: 'npcs.html?v=20260803a' },
-  map:       { label: '🗺 Map',       src: 'platser.html?v=20260803b' },
-  journal:   { label: '📖 Journal',   src: 'loggbok.html?v=20260803a' },
-  facts:     { label: '📌 Facts',     src: 'facts.html?v=20260803a' },
+  character: { label: '🧙 Character', src: 'character.html?v=20260806a' },
+  npcs:      { label: '🧝 NPCs',      src: 'npcs.html?v=20260806a' },
+  map:       { label: '🗺 Map',       src: 'platser.html?v=20260806a' },
+  journal:   { label: '📖 Journal',   src: 'loggbok.html?v=20260806a' },
+  facts:     { label: '📌 Facts',     src: 'facts.html?v=20260806a' },
 };
 const _codexIframes = {};
 let _codexLastTab = 'character';
@@ -7123,6 +7228,80 @@ document.addEventListener('keydown', e => {
       reply, but also a longer wait (sometimes 30–90 seconds). Fast models answer in seconds
       but with less depth. If a reply ever feels slow, that's the DM working — or switch to a
       faster model in Settings ⚙️.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 🪞 Profil-modal (konto-avatar → stats + tier + målningsknappar) -->
+<style>
+  .cp-overlay{ position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center;
+    padding: 1rem; background: rgba(4,2,8,.85); backdrop-filter: blur(4px);
+    opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility .25s; }
+  .cp-overlay.show{ opacity: 1; visibility: visible; }
+  .cp-box{ width: min(520px, 100%); max-height: 86vh; overflow-y: auto;
+    background: linear-gradient(165deg, var(--stone-2), var(--stone) 55%, #120c1c);
+    border: 1px solid var(--edge); padding: 1.5rem 1.5rem 1.6rem;
+    box-shadow: 0 30px 80px -20px rgba(0,0,0,.9), 0 0 40px rgba(201,162,39,.12);
+    animation: mi-rise .35s cubic-bezier(.22,1,.36,1); }
+  .cp-close{ position: absolute; top: .6rem; right: .8rem; background: none; border: 0;
+    color: var(--bone-dim); font-size: 1.2rem; cursor: pointer; padding: .3rem; }
+  .cp-close:hover{ color: var(--bone-bright); }
+  .cp-head{ display: flex; align-items: center; gap: .9rem; margin-bottom: 1.1rem; position: relative; }
+  .cp-avatar{ width: 56px; height: 56px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+    border: 2px solid rgba(201,162,39,.5); background: var(--stone-3);
+    display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 16px -4px rgba(201,162,39,.5); }
+  .cp-name{ font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.25rem; color: var(--bone-bright); }
+  .cp-tier{ display: inline-block; margin-top: .25rem; font-size: .78rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--gold-bright); border: 1px solid var(--edge-hi);
+    border-radius: 999px; padding: .16rem .55rem; }
+  .cp-grid{ display: grid; grid-template-columns: 1fr 1fr; gap: .7rem 1rem; }
+  .cp-cell{ background: rgba(255,255,255,.03); border: 1px solid var(--edge); border-radius: 6px; padding: .6rem .8rem; }
+  .cp-cell.full{ grid-column: 1/-1; }
+  .cp-cell .k{ font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--bone-dim); margin-bottom: .18rem; }
+  .cp-cell .v{ font-size: 1rem; color: var(--bone-bright); word-break: break-word; }
+  .cp-sec{ margin-top: 1.1rem; padding-top: .9rem; border-top: 1px solid var(--edge); }
+  .cp-sec-title{ font-family: 'Cinzel', serif; font-size: .68rem; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--teal); margin-bottom: .6rem; }
+  .cp-actions{ display: flex; flex-direction: column; gap: .55rem; }
+  .cp-paint-btn{ display: flex; align-items: center; justify-content: center; gap: .5rem; width: 100%;
+    padding: .7rem 1rem; font-family: 'Cinzel', serif; font-size: .78rem; letter-spacing: .12em; text-transform: uppercase;
+    background: linear-gradient(180deg, var(--stone-3), var(--stone)); border: 1px solid var(--edge);
+    color: var(--bone-bright); cursor: pointer; border-radius: 2px; transition: all .2s; }
+  .cp-paint-btn:hover{ border-color: var(--gold); color: var(--gold-bright); }
+  .av-suggest{ outline: 2px solid var(--gold); outline-offset: 1px; }
+  @media(max-width:520px){ .cp-grid{ grid-template-columns: 1fr; } .cp-box{ padding: 1.2rem 1rem 1.3rem; } }
+  /* TTS-player-bar: smal progressrad ovanför röstväljaren */
+  .tts-player{ display: none; align-items: center; gap: .55rem; margin-bottom: .45rem;
+    padding: .28rem .6rem; background: rgba(8,5,14,.6); border: 1px solid var(--edge);
+    border-radius: 999px; max-width: 420px; }
+  .tts-player.show{ display: flex; }
+  .ttp-toggle{ background: none; border: 1px solid var(--edge); color: var(--gold-bright);
+    width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-size: .72rem; line-height: 1;
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all .2s; }
+  .ttp-toggle:hover{ border-color: var(--gold); box-shadow: 0 0 10px -2px rgba(232,198,90,.5); }
+  .ttp-track{ flex: 1; min-width: 0; height: 4px; background: var(--stone-3); border-radius: 2px; overflow: hidden; }
+  .ttp-fill{ display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--gold), var(--gold-bright));
+    transition: width .2s linear; }
+  .ttp-time{ font-size: .64rem; color: var(--bone-dim); font-variant-numeric: tabular-nums; white-space: nowrap; flex-shrink: 0; }
+</style>
+<div class="cp-overlay" id="cp-overlay" onclick="if(event.target===this)closeChatProfileModal()">
+  <div class="cp-box">
+    <button class="cp-close" onclick="closeChatProfileModal()" title="Close">✕</button>
+    <div class="cp-head">
+      <span class="cp-avatar" id="cp-avatar">👤</span>
+      <div style="min-width:0">
+        <div class="cp-name" id="cp-name">Adventurer</div>
+        <span class="cp-tier" id="cp-tier"></span>
+      </div>
+    </div>
+    <div class="cp-grid" id="cp-grid"><div class="cp-cell full" style="color:var(--bone-dim);text-align:center">Loading&hellip;</div></div>
+    <div class="cp-sec">
+      <div class="cp-sec-title">🎨 Portrait</div>
+      <div class="cp-actions">
+        <button class="cp-paint-btn" onclick="openProfileAvatarModal('stepfun')">✨ Paint profile (StepFun)</button>
+        <button class="cp-paint-btn" onclick="openProfileAvatarModal('wan')">✨ Paint profile (Wan 2.7)</button>
+      </div>
     </div>
   </div>
 </div>

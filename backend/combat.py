@@ -180,7 +180,7 @@ def start_combat(state: dict, enemies_in: list[dict]) -> dict:
         "ended_turn": None,
     }
     world["combat"] = combat
-    logger.info("⚔️ Strid startad: %s", ", ".join(e["name"] for e in enemies))
+    logger.info("⚔️ Combat started: %s", ", ".join(e["name"] for e in enemies))
     return combat
 
 
@@ -199,7 +199,7 @@ def add_allies(state: dict, allies_in: list[dict]) -> dict:
     world = state.setdefault("world", {})
     combat = world.get("combat")
     if not combat or not combat.get("active"):
-        logger.warning("🤝 [ALLIERAD:] ignorerad — ingen aktiv strid")
+        logger.warning("🤝 [ALLIERAD:] ignored — no active combat")
         return {}
 
     allies = []
@@ -258,7 +258,7 @@ def add_allies(state: dict, allies_in: list[dict]) -> dict:
         "round": combat.get("round", 1), "actor": "system", "name": "",
         "text": ", ".join(a["name"] for a in allies) + " ansluter sig till striden!",
     })
-    logger.info("🤝 Allierade tillkom: %s", ", ".join(a["name"] for a in allies))
+    logger.info("🤝 Allies joined: %s", ", ".join(a["name"] for a in allies))
     return combat
 
 
@@ -424,7 +424,7 @@ def advance_turn(state: dict) -> dict:
             "round": combat["round"], "actor": "system", "name": "",
             "text": f"Runda {combat['round']} börjar",
         })
-        logger.info("⚔️ Runda %d", combat["round"])
+        logger.info("⚔️ Round %d", combat["round"])
     else:
         combat["current_index"] = next_idx
 
@@ -572,7 +572,7 @@ def player_attack(state: dict, target_id: int, attack_roll: int, damage_notation
                 "round": combat.get("round", 1), "actor": "system",
                 "name": enemy["name"], "text": "faller",
             })
-            logger.info("💀 %s besegrad", enemy["name"])
+            logger.info("💀 %s defeated", enemy["name"])
     else:
         combat.setdefault("log", []).append({
             "round": combat.get("round", 1), "actor": "player",
@@ -745,7 +745,7 @@ def enemy_turn(state: dict, enemy: dict) -> dict:
                 "name": enemy["name"],
                 "text": f"träffar {player_name} — {dmg} skada{' (KRITISK!)' if crit else ''} (slag {total} mot AC {player_ac})",
             })
-            logger.info("⚔️ %s → %s: %d skada (AC %d)", enemy["name"], player_name, dmg, player_ac)
+            logger.info("⚔️ %s → %s: %d damage (AC %d)", enemy["name"], player_name, dmg, player_ac)
         else:
             combat.setdefault("log", []).append({
                 "round": combat.get("round", 1), "actor": "enemy",
@@ -836,7 +836,7 @@ def ally_turn(state: dict, ally: dict) -> dict:
                 "name": ally["name"],
                 "text": f"träffar {target['name']} — {dmg} skada{' (KRITISK!)' if crit else ''} (slag {total} mot AC {ac})",
             })
-            logger.info("🤝 %s → %s: %d skada (AC %d)", ally["name"], target["name"], dmg, ac)
+            logger.info("🤝 %s → %s: %d damage (AC %d)", ally["name"], target["name"], dmg, ac)
             if target["hp"] <= 0:
                 target["alive"] = False
                 combat.setdefault("log", []).append({
@@ -906,7 +906,7 @@ def attempt_flee(state: dict, dex_check: int) -> dict:
             "text": f"försöker fly men misslyckas (slag {dex_check} mot DC {dc})",
         })
         # Fienderna får en extra attack (opportunity)
-        logger.info("🏃 Flykt misslyckades (slag %d mot DC %d)", dex_check, dc)
+        logger.info("🏃 Flee failed (roll %d vs DC %d)", dex_check, dc)
 
     return {"success": success, "dc": dc, "roll": dex_check}
 

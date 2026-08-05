@@ -111,16 +111,16 @@
   </header>
 
   <div class="destiny-title">
-    <div class="over">The Vault of Heroes</div>
+    <div class="over">The Vault of Adventurers</div>
     <h1>The Forge</h1>
   </div>
-  <p class="destiny-sub">Weave heroes outside of any campaign — save them here, and summon them when a new adventure calls.</p>
+  <p class="destiny-sub">Weave adventurers outside of any campaign — save them here, and summon them when a new adventure calls.</p>
   <div class="rune-divider"><span>✦</span></div>
 
   <!-- ═══════════ FORGE (skapa karaktär) ═══════════ -->
-  <div class="section-label">I. Forge a Hero</div>
+  <div class="section-label">I. Forge an Adventurer</div>
   <div class="scroll-box">
-    <textarea id="forge-prompt" spellcheck="false" placeholder="Describe your hero — race, class, personality, a wound from their past, the thing they want most in the world…&#10;&#10;Example: A tiefling warlock who sold her shadow to a candle-maker, and now collects other people's secrets like moths."></textarea>
+    <textarea id="forge-prompt" spellcheck="false" placeholder="Describe your adventurer — race, class, personality, a wound from their past, the thing they want most in the world…&#10;&#10;Example: A tiefling warlock who sold her shadow to a candle-maker, and now collects other people's secrets like moths."></textarea>
     <div class="forge-actions">
       <button class="summon-btn" id="forge-btn" onclick="forgeSummon()">🔮 Forge Character</button>
       <span style="font-size:.78rem;color:var(--bone-dim)">🧙 Model:</span>
@@ -153,7 +153,7 @@
 
   <!-- Preview -->
   <div class="preview" id="preview">
-    <div class="section-label">II. The Forged Hero</div>
+    <div class="section-label">II. The Forged Adventurer</div>
     <div class="scroll-box">
       <div class="pv-head">
         <div class="pv-portrait" id="pv-icon">🎭</div>
@@ -177,7 +177,7 @@
   <!-- ═══════════ VAULT ═══════════ -->
   <div class="section-label">III. The Vault <span id="vault-count" style="font-size:.75rem;letter-spacing:.1em;color:var(--bone-dim)"></span></div>
   <div id="vault-wrap">
-    <div class="vault-empty" id="vault-empty">The vault is empty. Forge a hero above — or save one from an adventure.</div>
+    <div class="vault-empty" id="vault-empty">The vault is empty. Forge an adventurer above — or save one from an adventure.</div>
     <div class="vault-grid" id="vault-grid"></div>
   </div>
 </div>
@@ -199,7 +199,7 @@ if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 </script>
 <script src="api.js?v=20260804c"></script>
 <script src="modal.js?v=20260802a"></script>
-<script src="i18n.js?v=20260802b"></script>
+<script src="i18n.js?v=20260806a"></script>
 <script>
 // ═══════════════════════════════════════
 // THE FORGE — fristående karaktärsgenerering + valv
@@ -226,7 +226,7 @@ API.me().then(u => {
 // StepFun = Support (3€); Wan = Patron (10€). Returnerar false + informerar.
 function forgeAvatarGenGate(provider) {
   if (_forgeTier === 'free') {
-    toast('🔒 AI painting is a Support feature (3€) — support the Cauldron to paint your hero, the DM and every NPC with StepFun.');
+    toast('🔒 AI painting is a Support feature (3€) — support the Cauldron to paint your adventurer, the DM and every NPC with StepFun.');
     return false;
   }
   if (provider === 'wan' && _forgeTier !== 'tier2' && _forgeTier !== 'lifetime') {
@@ -294,7 +294,7 @@ async function forgeSummon() {
     document.getElementById('preview').classList.add('show');
     document.getElementById('preview').scrollIntoView({ behavior:'smooth', block:'start' });
     SFX.levelup();
-    toast('🔮 The hero is forged!');
+    toast('🔮 The adventurer is forged!');
   } catch (e) {
     _stopRitual();
     document.getElementById('weaving').classList.remove('show');
@@ -384,7 +384,7 @@ async function loadVault() {
 function renderVault() {
   const grid = document.getElementById('vault-grid');
   const empty = document.getElementById('vault-empty');
-  document.getElementById('vault-count').textContent = vaultChars.length ? `· ${vaultChars.length} hero${vaultChars.length>1?'es':''}` : '';
+  document.getElementById('vault-count').textContent = vaultChars.length ? `· ${vaultChars.length} adventurer${vaultChars.length>1?'s':''}` : '';
   if (!vaultChars.length) { empty.style.display = ''; grid.innerHTML = ''; return; }
   empty.style.display = 'none';
   grid.innerHTML = vaultChars.map(c => {
@@ -484,11 +484,11 @@ async function useCharacter(charId) {
   try {
     await API.vaultUse(charId);
     closeInspect();
-    toast('⚔️ The hero steps into the adventure!');
+    toast('⚔️ The adventurer steps into the adventure!');
     setTimeout(() => { location.href = 'chat.html'; }, 900);
   } catch (e) {
     if (String(e.message||'').includes('No active campaign')) {
-      toast('📜 Start a New Adventure first, then choose this hero.');
+      toast('📜 Start a New Adventure first, then choose this adventurer.');
       setTimeout(() => { location.href = 'adventure.html'; }, 1400);
     } else {
       toast('⚠ ' + (e.message || 'Could not use character'));
@@ -499,7 +499,7 @@ async function useCharacter(charId) {
 async function deleteCharacter(charId, name) {
   const ok = await Modal.confirm({
     title: 'Unmake "' + name + '"?',
-    body: '⚠️ This hero is erased from the Vault forever — portrait, gear and story alike.',
+    body: '⚠️ This adventurer is erased from the Vault forever — portrait, gear and story alike.',
     confirmText: '🔥 Unmake',
     cancelText: 'Keep',
     danger: true,
@@ -509,7 +509,7 @@ async function deleteCharacter(charId, name) {
   try {
     await API.vaultDelete(charId);
     closeInspect();
-    toast('🕯️ The hero is unmade.');
+    toast('🕯️ The adventurer is unmade.');
     loadVault();
   } catch (e) {
     toast('⚠ ' + (e.message || 'Could not delete'));

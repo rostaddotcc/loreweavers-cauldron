@@ -477,7 +477,7 @@ html{font-size:17px}
         <span>🎨 Paint your adventurer</span>
         <button class="mi-close" onclick="closeAdvPaintModal()">✕</button>
       </div>
-      <div class="mi-intro" id="adv-paint-desc" style="font-size:.82rem;line-height:1.55">Two ways to paint: <b>🖌️ Free prompt</b> paints ONLY your own words, <b>🎨 Paint from character card</b> auto-builds the prompt from the adventurer you just summoned (race, class, gear, story). Engine: StepFun (Support 3€) or Wan 2.7 Pro (Patron 10€).</div>
+      <div class="mi-intro" id="adv-paint-desc" style="font-size:.82rem;line-height:1.55">Paint with your own words — <b>🖌️ Free prompt</b> paints ONLY what you describe. Engine: StepFun (Support 3€) or Wan 2.7 Pro (Patron 10€).</div>
       <div style="margin-top:.7rem">
         <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">🖌️ YOUR OWN WORDS (free prompt)</div>
         <textarea id="adv-paint-prompt" placeholder="Describe exactly what you want painted — e.g. 'hooded figure, lantern light, rain'. Paints ONLY your words." style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:'Cinzel',serif;font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:6px;resize:vertical"></textarea>
@@ -491,7 +491,6 @@ html{font-size:17px}
       </div>
       <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
         <button class="av-btn primary" id="adv-paint-free-btn" onclick="advPaintFreePrompt()">🖌️ Free prompt</button>
-        <button class="av-btn" id="adv-paint-card-btn" onclick="advPaintFromCard()">🎨 Paint from character card</button>
       </div>
       <div id="adv-paint-status" style="font-size:.75rem;color:var(--bone-dim);text-align:center;margin-top:.8rem;min-height:1rem"></div>
     </div>
@@ -1541,9 +1540,7 @@ function advPaintUpdateLock() {
   if (sel.value === 'wan' && !wanUnlocked) sel.value = 'stepfun';
   if (sel.value === 'stepfun' && !canPaint) sel.value = '';
   const freeBtn = document.getElementById('adv-paint-free-btn');
-  const cardBtn = document.getElementById('adv-paint-card-btn');
   if (freeBtn) freeBtn.disabled = !canPaint;
-  if (cardBtn) cardBtn.disabled = !canPaint;
 }
 async function openAdvPaintModal() {
   if (advPaintTier === null) {
@@ -1583,22 +1580,19 @@ function closeAdvPaintModal() {
   const ov = document.getElementById('adv-paint-overlay');
   if (ov) ov.classList.remove('show');
 }
-async function advPaintRun(prompt, fromCard) {
+async function advPaintRun(prompt) {
   if (!advPaintGate(advPaintProvider())) return;
   const status = document.getElementById('adv-paint-status');
   const freeBtn = document.getElementById('adv-paint-free-btn');
-  const cardBtn = document.getElementById('adv-paint-card-btn');
   const prov = advPaintProvider();
   status.textContent = (prov === 'wan' ? '🖼️ Painting with Wan 2.7 Pro… (15–40 s)' : '🎨 Painting with StepFun… (10–30 s)');
-  freeBtn.disabled = true; cardBtn.disabled = true;
+  freeBtn.disabled = true;
   try {
     const res = await API.vaultGenerateAvatar(advHeroId, Date.now() % 1000000, 'new', prompt, prov);
     if (res && res.ok) {
       const port = document.getElementById('adv-pv-portrait');
       if (port) port.innerHTML = `<img src="${API.vaultAvatarUrl(advHeroId)}?t=${Date.now()}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
-      status.textContent = fromCard
-        ? (prov === 'wan' ? '✨ Portrait painted — Wan 2.7 Pro, from your character card' : '✨ Portrait painted — StepFun, from your character card')
-        : (prov === 'wan' ? '✨ Portrait painted — Wan 2.7 Pro, used your words' : '✨ Portrait painted — StepFun, used your words');
+      status.textContent = (prov === 'wan' ? '✨ Portrait painted — Wan 2.7 Pro, used your words' : '✨ Portrait painted — StepFun, used your words');
       try { SFX.levelup(); } catch (_) {}
     } else {
       status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Generation failed');
@@ -1608,7 +1602,7 @@ async function advPaintRun(prompt, fromCard) {
     status.textContent = '⚠ ' + (e.message || 'Generation failed');
     try { SFX.error(); } catch (_) {}
   } finally {
-    freeBtn.disabled = false; cardBtn.disabled = false;
+    freeBtn.disabled = false;
     advPaintUpdateLock();
   }
 }
@@ -1620,10 +1614,7 @@ async function advPaintFreePrompt() {
     try { SFX.error(); } catch (_) {}
     return;
   }
-  await advPaintRun(text, false);
-}
-async function advPaintFromCard() {
-  await advPaintRun('', true);
+  await advPaintRun(text);
 }
 
 function advPrompt() {

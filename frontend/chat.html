@@ -215,7 +215,19 @@
     display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem;
     padding: 0.45rem 0.55rem; transition: background 0.2s; cursor: default;
     border-bottom: 1px solid color-mix(in srgb, var(--edge) 45%, transparent);
-  }.npc-row:last-child{ border-bottom: none; }.npc-row:hover{ background: color-mix(in srgb, var(--arcane) 7%, transparent); }.npc-dot{ width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 6px currentColor; }/* Staplat format: namn + roll under — långa roller (t.ex. "Head Librarian
+  }.npc-row:last-child{ border-bottom: none; }.npc-row:hover{ background: color-mix(in srgb, var(--arcane) 7%, transparent); }
+  /* 2026-08-05: NPC-kort med porträtt i bakgrunden — mjukt renderade mini-kort */
+  .npc-row.has-av{ position: relative; overflow: hidden; margin: 3px 5px; padding: 0.62rem 0.6rem;
+    border: 1px solid color-mix(in srgb, var(--edge) 75%, transparent); border-radius: 7px; }
+  .npc-row.has-av .npc-bg{ position: absolute; inset: -8px; width: calc(100% + 16px); height: calc(100% + 16px);
+    object-fit: cover; opacity: 0.5; filter: blur(3px) saturate(0.85) brightness(0.8); pointer-events: none; }
+  .npc-row.has-av::after{ content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(100deg, rgba(14,14,20,0.92) 25%, rgba(14,14,20,0.55) 70%, rgba(14,14,20,0.15)); }
+  .npc-row.has-av .npc-info{ position: relative; z-index: 1; text-shadow: 0 1px 5px rgba(0,0,0,0.85); }
+  .npc-row.has-av .npc-name{ color: var(--bone-bright); }
+  .npc-row.has-av .npc-role{ color: color-mix(in srgb, var(--bone-dim) 80%, var(--bone)); }
+  .npc-row.has-av:hover{ border-color: var(--gold); background: color-mix(in srgb, var(--arcane) 7%, transparent); }
+  .npc-dot{ width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 6px currentColor; }/* Staplat format: namn + roll under — långa roller (t.ex. "Head Librarian
      Marrowink") klipps med ellips istället för att svämma ut ur ramen. */.npc-info{ min-width: 0; flex: 1; }.npc-name{ color: var(--bone); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.npc-role{ color: var(--bone-dim); font-size: 0.95rem; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 0.05rem; }/* ── Uppdragslogg (sidebar) ── */.quest-list{ display: flex; flex-direction: column; gap: 0.5rem; }.quest-item{
     padding: 0.5rem 0.55rem;
     background: var(--stone-2);
@@ -5800,11 +5812,13 @@ function renderNpcSidebar() {
       ? `<img src="${av}" alt="" style="width:16px;height:16px;object-fit:cover;image-rendering:pixelated">`
       : SPR.html(n.icon || '🎭');
     const safeName = String(n.name || k || '').replace(/'/g, "\\'");
+    // 2026-08-05: har NPC:n ett porträtt → renderas som mjukt kort med bilden i bakgrunden
+    const avClass = av ? ' has-av' : '';
     return `
-      <div class="npc-row${n.alive === false ? ' dead' : ''}" data-npc="${k}" onclick="openNpcCodex('${safeName}')" title="Open dossier in Codex" style="cursor:pointer">
-        <span class="npc-dot" style="color:${n.color};background:${n.color}"></span>
+      <div class="npc-row${n.alive === false ? ' dead' : ''}${avClass}" data-npc="${k}" onclick="openNpcCodex('${safeName}')" title="Open dossier in Codex" style="cursor:pointer">
+        ${av ? `<img class="npc-bg" src="${av}" alt="" loading="lazy">` : `<span class="npc-dot" style="color:${n.color};background:${n.color}"></span>`}
         <span class="npc-info">
-          <div class="npc-name">${n.alive === false ? SPR.html('💀') : ''} ${icon} ${n.name}</div>
+          <div class="npc-name">${n.alive === false ? SPR.html('💀') : ''} ${av ? '' : icon} ${n.name}</div>
           ${n.role ? `<div class="npc-role">${n.role}</div>` : ''}
         </span>
       </div>`;

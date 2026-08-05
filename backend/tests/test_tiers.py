@@ -165,19 +165,20 @@ def test_lifetime_never_rolls_over(client):
     assert main._turns_available("alice") == 999999
 
 
-# ── Avatar-generering är GRATIS för alla tier (2026-08-05) ──────────────
-# "Paint new from my words" är fritt — haken för att locka fler karaktärer.
-# Upload förblir tier1+ (Support).
+# ── Avatar-generering är tier-gated (2026-08-05) ─────────────────────────
+# StepFun = Support (3€); Wan 2.7 = Patron (10€). Free tier målar INTE.
+# Upload är också tier1+ (Support).
 
-def test_campaign_avatar_generate_free_ok(client, monkeypatch):
-    """Free-tier får AI-generera avatar (friprompt) — ingen paywall."""
+def test_campaign_avatar_generate_free_403(client, monkeypatch):
+    """Free-tier får INTE AI-generera avatar — 403 med Support-hänvisning."""
     monkeypatch.setenv("STEPFUN_API_KEY", "test-key")
     _seed("alice")
     _seed_campaign("alice")
     monkeypatch.setattr(main.httpx, "AsyncClient", _FakePost)
     r = client.post("/api/campaign/avatar/generate", json={"kind": "player", "prompt": "a hooded hero"},
                     cookies={"morkrets_token": _tok()})
-    assert r.status_code == 200, r.text
+    assert r.status_code == 403
+    assert "Support" in r.json()["detail"]
 
 
 # ── Wan 2.7 = Patron+ (10€, premium-bildmotor) ──────────────────────────
@@ -275,10 +276,24 @@ def test_campaign_avatar_upload_gate_tier1_ok(client, monkeypatch):
     assert r.json()["ok"] is True
 
 
-def test_vault_avatar_generate_free_ok(client, monkeypatch):
-    """Valvet: StepFun-generering är GRATIS för free (2026-08-05)."""
+def test_vault_avatar_generate_free_403(client, monkeypatch):
+    """Valvet: free-tier får INTE generera med StepFun — 403 Support-hänvisning."""
     monkeypatch.setenv("STEPFUN_API_KEY", "test-key")
     _seed("alice")
+    vault = sm.CharacterVault()
+    entry = vault.save("alice", {"name": "Al", "race": "Human", "class": "Fighter", "level": 1})
+    monkeypatch.setattr(main, "vault", vault)
+    monkeypatch.setattr(main.httpx, "AsyncClient", _FakePost)
+    r = client.post(f"/api/vault/characters/{entry['id']}/avatar/generate", json={},
+                    cookies={"morkrets_token": _tok()})
+    assert r.status_code == 403
+    assert "Support" in r.json()["detail"]
+
+
+def test_vault_avatar_generate_tier1_ok(client, monkeypatch):
+    """Valvet: Support (3€) genererar med StepFun — 200."""
+    monkeypatch.setenv("STEPFUN_API_KEY", "test-key")
+    _seed("alice", tier="tier1", until=_in_days(30), features={"export": True})
     vault = sm.CharacterVault()
     entry = vault.save("alice", {"name": "Al", "race": "Human", "class": "Fighter", "level": 1})
     monkeypatch.setattr(main, "vault", vault)
@@ -358,12 +373,23 @@ def test_vault_export_support_ok(client):
     assert "characters" in r.json()
 
 
-# ── Spelarprofilens avatar (konto — StepFun, gratis, SEPARAT) ───────────
+# ── Spelarprofilens avatar (konto — StepFun, Support-feature 3€, SEPARAT) ──
 
-def test_me_avatar_generate_free_ok(client, monkeypatch):
-    """Free-tier målar sin PROFILavatar med StepFun — alltid gratis."""
+def test_me_avatar_generate_free_403(client, monkeypatch):
+    """Free-tier får INTE måla sin PROFILavatar — 403 med Support-hänvisning."""
     monkeypatch.setenv("STEPFUN_API_KEY", "test-key")
     _seed("alice")
+    monkeypatch.setattr(main.httpx, "AsyncClient", _FakePost)
+    r = client.post("/api/me/avatar/generate", json={"prompt": "a hooded mage"},
+                    cookies={"morkrets_token": _tok()})
+    assert r.status_code == 403
+    assert "Support" in r.json()["detail"]
+
+
+def test_me_avatar_generate_support_ok(client, monkeypatch):
+    """Support (3€) målar sin PROFILavatar med StepFun — 200."""
+    monkeypatch.setenv("STEPFUN_API_KEY", "test-key")
+    _seed("alice", tier="tier1", until=_in_days(30), features={"export": True})
     monkeypatch.setattr(main.httpx, "AsyncClient", _FakePost)
     r = client.post("/api/me/avatar/generate", json={"prompt": "a hooded mage"},
                     cookies={"morkrets_token": _tok()})
@@ -377,7 +403,7 @@ def test_me_avatar_generate_free_ok(client, monkeypatch):
 
 def test_me_avatar_delete(client, monkeypatch):
     monkeypatch.setenv("STEPFUN_API_KEY", "test-key")
-    _seed("alice")
+    _seed("alice", tier="tier1", until=_in_days(30), features={"export": True})
     monkeypatch.setattr(main.httpx, "AsyncClient", _FakePost)
     client.post("/api/me/avatar/generate", json={}, cookies={"morkrets_token": _tok()})
     r = client.delete("/api/me/avatar", cookies={"morkrets_token": _tok()})

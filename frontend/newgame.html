@@ -308,11 +308,13 @@ if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 <script>
 // ── Rollbaserat modellval: icke-admin får välja mellan de tillåtna modellerna ──
 let newgameIsAdmin = false;
+let _newgameTier = 'free';  // free | tier1 | tier2 | lifetime
 const PLAYER_CHAR_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-3.7-flash', 'ollama:heretic'];
 // Råa ID:n visas direkt — man vet exakt vilken modell man får (inget "snabb"/"fast"-förskönande)
 const PLAYER_CHAR_LABELS = {};
 PLAYER_CHAR_MODELS.forEach(m => { PLAYER_CHAR_LABELS[m] = m; });
 API.me().then(u => {
+  if (u) _newgameTier = u.subscription_status === 'premium' ? 'tier2' : (u.subscription_status || 'free');
   if (u && u.role === 'admin') {
     newgameIsAdmin = true;
   } else {
@@ -323,7 +325,7 @@ API.me().then(u => {
     if (sel) {
       sel.innerHTML = PLAYER_CHAR_MODELS.map(m => {
         const dis = locked && m !== 'step-3.7-flash';
-        return `<option value="${m}"${dis ? ' disabled' : ''}>${dis ? '🔒 ' + (PLAYER_CHAR_LABELS[m] || m) + ' — Tier 2' : (PLAYER_CHAR_LABELS[m] || m)}</option>`;
+        return `<option value="${m}"${dis ? ' disabled' : ''}>${dis ? '🔒 ' + (PLAYER_CHAR_LABELS[m] || m) + ' — Patron (10€)' : (PLAYER_CHAR_LABELS[m] || m)}</option>`;
       }).join('');
       sel.value = 'step-3.7-flash';
     }
@@ -850,9 +852,18 @@ function renderPreview(c, ac, glow) {
 
 // 🎨 Generera AI-avatar från character sheet (automatiskt — backend bygger prompten
 // från karaktär, inventory och lore; ingen användarprompt krävs)
+// TIERS: bildgenerering är gated (2026-08-05) — StepFun = Support (3€).
 let _avatarBusy = false;
+function newgameAvatarGenGate() {
+  if (_newgameTier === 'free') {
+    toast('🔒 AI painting is a Support feature (3€) — support the Cauldron to paint your hero, the DM and every NPC with StepFun.');
+    return false;
+  }
+  return true;
+}
 async function autoAvatar() {
   if (_avatarBusy) return;
+  if (!newgameAvatarGenGate()) return;
   _avatarBusy = true;
   const rerollBtn = document.getElementById('pv-avatar-reroll');
   try {
@@ -862,6 +873,10 @@ async function autoAvatar() {
       if (rerollBtn) rerollBtn.style.display = '';
       toast('🎨 Avatar painted from your sheet!');
     } else {
+      if (res && res.detail && /Support feature/.test(res.detail)) {
+        if (rerollBtn) rerollBtn.style.display = '';
+        rerollBtn.textContent = '🔒 Paint Avatar — Support';
+      }
       console.warn('Avatar-gen misslyckades:', res);
     }
   } catch (e) {
@@ -873,6 +888,7 @@ async function autoAvatar() {
 
 async function rerollAvatar() {
   if (_avatarBusy) return;
+  if (!newgameAvatarGenGate()) return;
   _avatarBusy = true;
   const rerollBtn = document.getElementById('pv-avatar-reroll');
   if (rerollBtn) { rerollBtn.disabled = true; rerollBtn.textContent = '🎨 Painting…'; }

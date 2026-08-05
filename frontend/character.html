@@ -1352,42 +1352,64 @@ function closeAvatarModal() {
   document.getElementById('avatar-overlay').classList.remove('show');
 }
 
-// ── Bildleverantör (StepFun — gratis · Wan 2.7 — Adventurer+) ──
-let _charWanUnlocked = null;
+// ── Bildleverantör (StepFun — Support 3€ · Wan 2.7 — Patron 10€) ──
+let _charTier = null;  // free | tier1 | tier2 | lifetime (från /api/me)
 function avatarProvider() {
   const sel = document.getElementById('avatar-provider-select');
   return (sel && sel.value) || 'stepfun';
 }
+function avatarGenGate(provider) {
+  if (_charTier === 'free') {
+    toast('🔒 AI painting is a Support feature (3€) — support the Cauldron to paint your hero, the DM and every NPC with StepFun.');
+    try { SFX.error(); } catch (_) {}
+    return false;
+  }
+  if (provider === 'wan' && _charTier !== 'tier2' && _charTier !== 'lifetime') {
+    toast('🔒 Wan 2.7 is a Patron feature (10€) — upgrade to paint with Wan.');
+    try { SFX.error(); } catch (_) {}
+    return false;
+  }
+  return true;
+}
 function avatarProviderChanged(sel) {
-  if (sel && sel.value === 'wan' && _charWanUnlocked !== true) {
+  if (sel && sel.value === 'wan' && _charTier !== 'tier2' && _charTier !== 'lifetime') {
     sel.value = 'stepfun';
-    try { toast('🔒 Wan 2.7 is an Adventurer-tier feature — StepFun is always free.'); } catch (_) {}
+    toast('🔒 Wan 2.7 is a Patron feature (10€) — upgrade to paint with Wan.');
   }
 }
 function updateAvatarProviderLock() {
   const sel = document.getElementById('avatar-provider-select');
   if (!sel) return;
   const wanOpt = sel.querySelector('option[value="wan"]');
-  if (!wanOpt) return;
-  if (_charWanUnlocked === null) {
+  const stepOpt = sel.querySelector('option[value="stepfun"]');
+  if (_charTier === null) {
     try {
       fetch('/api/me').then(r => r.ok ? r.json() : null).then(me => {
-        const t = (me && me.subscription_status) || 'free';
-        _charWanUnlocked = (t === 'tier2' || t === 'lifetime');
+        _charTier = (me && me.subscription_status) || 'free';
+        if (_charTier === 'premium') _charTier = 'tier2';
         updateAvatarProviderLock();
-      }).catch(() => { _charWanUnlocked = false; updateAvatarProviderLock(); });
-    } catch (_) { _charWanUnlocked = false; }
+      }).catch(() => { _charTier = 'free'; updateAvatarProviderLock(); });
+    } catch (_) { _charTier = 'free'; }
     return;
   }
-  const unlocked = _charWanUnlocked === true;
-  wanOpt.disabled = !unlocked;
-  wanOpt.textContent = unlocked ? 'Wan 2.7 — Adventurer' : 'Wan 2.7 — Adventurer 🔒';
-  if (sel.value === 'wan' && !unlocked) sel.value = 'stepfun';
+  const canPaint = _charTier !== 'free';          // Support+ (3€)
+  const wanUnlocked = _charTier === 'tier2' || _charTier === 'lifetime';  // Patron (10€)
+  if (stepOpt) {
+    stepOpt.disabled = !canPaint;
+    stepOpt.textContent = canPaint ? 'StepFun — Support' : 'StepFun — Support 🔒';
+  }
+  if (wanOpt) {
+    wanOpt.disabled = !wanUnlocked;
+    wanOpt.textContent = wanUnlocked ? 'Wan 2.7 — Patron' : 'Wan 2.7 — Patron 🔒';
+  }
+  if (sel.value === 'wan' && !wanUnlocked) sel.value = 'stepfun';
+  if (sel.value === 'stepfun' && !canPaint) sel.value = '';
 }
 
 async function _runAvatarGen(mode, statusText, btnId) {
   const status = document.getElementById('avatar-ai-status');
   const btn = document.getElementById(btnId);
+  if (!avatarGenGate(avatarProvider())) return;
   status.textContent = statusText;
   btn.disabled = true;
   try {
@@ -1474,8 +1496,8 @@ window.getState = exportState;
     <div style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
       <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
       <select id="avatar-provider-select" class="tts-select" style="flex:1;min-width:0" onchange="avatarProviderChanged(this)" title="Image provider for painting">
-        <option value="stepfun">StepFun — free</option>
-        <option value="wan">Wan 2.7 — Adventurer 🔒</option>
+        <option value="stepfun">StepFun — Support</option>
+        <option value="wan">Wan 2.7 — Patron 🔒</option>
       </select>
     </div>
     <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">

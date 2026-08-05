@@ -30,23 +30,8 @@
     background:linear-gradient(120deg,rgba(212,169,44,.10),rgba(212,169,44,.04) 60%,transparent);
     border:1px solid rgba(201,162,39,.35);border-left:3px solid var(--gold);
     transition:box-shadow .25s,transform .25s;animation:rise .5s .3s cubic-bezier(.22,1,.36,1) both;
-  }.news-banner:hover{box-shadow:0 6px 24px -8px rgba(212,169,44,.4);transform:translateY(-2px)}.news-banner .nb-icon{font-size:1.5rem;filter:drop-shadow(0 2px 8px rgba(212,169,44,.5))}.news-banner .nb-body{flex:1}.news-banner .nb-title{font-family:'Cinzel',serif;font-size:.72rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-bright);margin-bottom:.15rem}.news-banner .nb-text{font-size:.86rem;font-style:italic;color:var(--bone-dim);line-height:1.4}.news-banner .nb-text b{color:var(--bone);font-style:normal}.news-banner .nb-close{background:none;border:none;color:var(--bone-dim);font-size:1rem;cursor:pointer;padding:.2rem;line-height:1;transition:color .2s}.news-banner .nb-close:hover{color:var(--blood-bright)}
-  /* ── Founder promo banner ── */
-  .promo{display:flex;align-items:center;justify-content:space-between;gap:.9rem;flex-wrap:wrap;
-    margin:0 0 1.1rem;padding:.85rem 1rem;background:linear-gradient(120deg,rgba(212,169,44,.14),rgba(212,169,44,.05) 60%,transparent);
-    border:1px solid rgba(201,162,39,.4);border-left:3px solid var(--gold);animation:rise .5s .35s cubic-bezier(.22,1,.36,1) both}
-  .promo .promo-badge{font-family:'Cinzel',serif;font-size:.6rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
-    color:var(--ink);background:var(--gold-bright);padding:.28rem .55rem;box-shadow:0 0 12px rgba(232,198,90,.45);white-space:nowrap}
-  .promo .promo-text{flex:1;font-size:.84rem;font-style:italic;color:var(--bone-dim);line-height:1.45;min-width:200px}
-  .promo .promo-text b{color:var(--gold-bright);font-style:normal}
-  .promo .promo-timer{display:inline-flex;align-items:center;gap:.3rem;font-family:'IBM Plex Mono',ui-monospace,monospace;
-    font-size:.78rem;color:var(--gold-bright);letter-spacing:.04em;white-space:nowrap}
-  .promo .promo-timer .t-seg{display:inline-block;min-width:1.55em;text-align:center;background:rgba(0,0,0,.45);
-    border:1px solid rgba(201,162,39,.4);padding:.16rem .28rem;font-variant-numeric:tabular-nums}
-  .promo .promo-cta{font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;
-    color:var(--gold-bright);text-decoration:none;border:1px solid var(--gold);padding:.4rem .8rem;transition:background .2s,color .2s;white-space:nowrap}
-  .promo .promo-cta:hover{background:var(--gold);color:var(--ink)}
-  @media(max-width:640px){.promo{flex-direction:column;align-items:flex-start}.promo .promo-text{min-width:0}}/* ═══════════ Två vägar ═══════════ */.paths{display:grid;grid-template-columns:repeat(2,1fr);gap:1.3rem;margin-bottom:2rem}.path{
+  }.news-banner .nb-close:hover{color:var(--blood-bright)}
+  /* ═══════════ Två vägar ═══════════ */.paths{display:grid;grid-template-columns:repeat(2,1fr);gap:1.3rem;margin-bottom:2rem}.path{
     position:relative;cursor:pointer;text-align:center;padding:2rem 1.2rem 1.6rem;
     background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);
     border:1px solid var(--edge);overflow:hidden;
@@ -479,17 +464,6 @@ html{font-size:17px}
     <button class="nb-close" onclick="newsQwenDismiss(event)" title="Dismiss">✕</button>
   </div>
 
-  <!-- ═══════════ GRUNDARERBJUDANDE: 7-dagars promo ═══════════ -->
-  <div class="promo" id="promo-banner" style="display:none">
-    <span class="promo-badge">Founding Offer</span>
-    <div class="promo-text">
-      Subscribe for one month and get <b><span data-promo-free="tier1">2</span> months free</b> on <b>Companion</b>.
-      &nbsp;<b>Lifetime for 50€</b> — half price, one-time.
-      <span class="promo-timer">Ends in <span class="t-seg" id="promo-days">00</span><span class="t-sep">d</span><span class="t-seg" id="promo-hours">00</span><span class="t-sep">:</span><span class="t-seg" id="promo-mins">00</span><span class="t-sep">:</span><span class="t-seg" id="promo-secs">00</span></span>
-    </div>
-    <a class="promo-cta" href="pricing.html">Claim the offer →</a>
-  </div>
-
   <!-- ═══════════ RELEASE NOTES ═══════════ -->
   <div class="htp">
     <button class="htp-toggle" id="rn-toggle" onclick="toggleRn()">
@@ -499,7 +473,7 @@ html{font-size:17px}
       <div class="rn-inner">
         <span class="rn-ver">v0.8 — The Portrait, the Path</span>
         <ul class="rn-list">
-          <li><b>Wan 2.7 painting — Adventurer tier+</b> — the premium image engine paints your hero, the DM and every NPC in sharp high-resolution portraits, in seconds. StepFun painting stays <b>free for every adventurer</b>; pick the engine at the easel.</li>
+          <li><b>Wan 2.7 painting — Patron tier (10€)</b> — the premium image engine paints your hero, the DM and every NPC in sharp high-resolution portraits, in seconds. StepFun painting unlocks with the <b>Support top-up (3€)</b>; pick the engine at the easel.</li>
           <li><b>Your face, your hero</b> — your profile portrait is now separate from your adventurer's: the header pill is <i>your</i> face at the table, the party card is your hero's. Paint one without touching the other.</li>
           <li><b>Themes that stick &amp; a softer table</b> — palettes survive reloads and follow you across devices; rounded buttons and calmer edges across the top bar, the Codex and the composer. Narrator settings (voice, style, your custom prompt) now follow the campaign, not the browser.</li>
           <li><b>StepFun TTS — always free</b> — the narrator's voice belongs to every adventurer. Wanderers keep their <b>50 turns a day</b> and StepFun reads your story aloud, free, forever.</li>
@@ -723,7 +697,7 @@ html{font-size:17px}
     </div>
     <div class="dm-model-note">Which provider whispers the spoken word when the DM speaks aloud.</div>
     <div class="dm-model-note">🔄 <b>Can be changed at any time in the campaign</b> — from the settings inside the chat, if the mood shifts.</div>
-    <div class="dm-model-note" id="model-gate-upgrade-note" style="display:none">🔒 <b>Qwen 3.8, DeepSeek &amp; the full mind of the Cauldron unlock at Tier 2</b> — <a href="pricing.html" style="color:var(--gold);font-weight:600">View the paths →</a></div>
+    <div class="dm-model-note" id="model-gate-upgrade-note" style="display:none">🔒 <b>Qwen 3.8, DeepSeek &amp; the full mind of the Cauldron unlock with the one-time Patron top-up (10€)</b> — <a href="pricing.html" style="color:var(--gold);font-weight:600">View the paths →</a></div>
     <div class="step-actions">
       <button class="top-btn" onclick="goStep('step-arch')">← Back</button>
       <button class="start-btn" id="adventure-start" onclick="startAdventure()">⚔️ Start — Awaken the Dungeon Master</button>
@@ -1498,13 +1472,13 @@ const TTS_PROVIDERS = [
   const extSel = document.getElementById('adventure-extraction-model');
   const charSel = document.getElementById('adv-char-model');
   const ttsSel = document.getElementById('adventure-tts');
-  // Modeller som kräver Tier 2+ (backend klämmer redan free/tier1 → step-3.7-flash;
+  // Modeller som kräver Patron (10€)+ (backend klämmer redan free/tier1 → step-3.7-flash;
   // här låses de i UI:t så spelaren inte kan välja något som tyst ignoreras).
   const PREMIUM_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4-flash', 'deepseek-v4-flash-0731', 'ollama:heretic'];
   const optionHtml = (m, locked) => {
     const prem = PREMIUM_MODELS.includes(m);
     const dis = locked && prem;
-    return `<option value="${m}"${dis ? ' disabled' : ''}>${dis ? '🔒 ' + m + ' — Tier 2' : m}</option>`;
+    return `<option value="${m}"${dis ? ' disabled' : ''}>${dis ? '🔒 ' + m + ' — Patron (10€)' : m}</option>`;
   };
   const fill = (models, locked) => {
     const opts = models.map(m => optionHtml(m, locked)).join('');
@@ -1524,13 +1498,13 @@ const TTS_PROVIDERS = [
     ttsSel.innerHTML = TTS_PROVIDERS.map(p => {
       const qwen = p.id === 'qwen';
       const dis = locked && qwen;
-      return `<option value="${p.id}"${dis ? ' disabled' : ''}>${p.name}${dis ? ' 🔒 — Tier 2' : ''}${!locked && p.recommended ? ' — recommended' : ''}</option>`;
+      return `<option value="${p.id}"${dis ? ' disabled' : ''}>${p.name}${dis ? ' 🔒 — Patron (10€)' : ''}${!locked && p.recommended ? ' — recommended' : ''}</option>`;
     }).join('');
     try {
       const saved = localStorage.getItem('dnd_tts_provider');
       // Rekommendation (2026-08-04): Qwen (Token Plan) är default för nya
       // äventyr — men en tidigare explicit spelar-ändring respekteras.
-      // Låsta konton (free/tier1): ENDAST StepFun (Qwen 🔒 Tier 2).
+      // Låsta konton (free/tier1): ENDAST StepFun (Qwen 🔒 Patron 10€).
       if (saved && TTS_PROVIDERS.some(p => p.id === saved) && (!locked || saved === 'stepfun')) {
         ttsSel.value = saved;
       } else {
@@ -1541,7 +1515,7 @@ const TTS_PROVIDERS = [
   if (!dmSel && !guardSel && !extSel && !charSel && !ttsSel) return;
   API.me().then(u => {
     const isAdmin = !!(u && u.role === 'admin');
-    // free/tier1 (och okänd status) → låst till step-3.7-flash + StepFun-TTS (Qwen 🔒 Tier 2)
+    // free/tier1 (och okänd status) → låst till step-3.7-flash + StepFun-TTS (Qwen 🔒 Patron 10€)
     const locked = !isAdmin && (!u || u.subscription_status === 'free' || u.subscription_status === 'tier1');
     fillTTS(locked);
     if (isAdmin) {
@@ -1840,7 +1814,7 @@ async function openBillingPortal(e) {
 
 // ── Nyhet: Qwen 3.8 Max full release (2026-08-03) ──
 // Banner visas tills besökaren klickar bort den (localStorage-minne).
-// Free/tier1 ser en Tier 2-version (de senaste hjärnorna låses upp där).
+// Free/tier1 ser en Patron-version (de senaste hjärnorna låses upp där).
 let newsQwenLocked = false;
 function newsQwenInit() {
   try { if (localStorage.getItem('news_qwen38_dismissed') === '1') return; } catch (e) {}
@@ -1851,8 +1825,8 @@ function newsQwenInit() {
     if (newsQwenLocked) {
       const t = el.querySelector('.nb-title');
       const x = el.querySelector('.nb-text');
-      if (t) t.textContent = 'New — Qwen 3.8 Max & DeepSeek V4 (Tier 2)';
-      if (x) x.innerHTML = "Alibaba's flagship and DeepSeek V4 are here — <b>unlock them at Tier 2</b> and choose them at the model gate: 2.4T parameters (95B active per request), 1M context, deep reasoning. <a href='pricing.html' style='color:var(--gold);font-weight:600'>View the paths →</a>";
+      if (t) t.textContent = 'New — Qwen 3.8 Max & DeepSeek V4 (Patron 10€)';
+      if (x) x.innerHTML = "Alibaba's flagship and DeepSeek V4 are here — <b>unlock them with the one-time Patron top-up (10€)</b> and choose them at the model gate: 2.4T parameters (95B active per request), 1M context, deep reasoning. <a href='pricing.html' style='color:var(--gold);font-weight:600'>View the paths →</a>";
     }
     el.style.display = '';
   }).catch(() => { el.style.display = ''; });
@@ -1868,40 +1842,6 @@ function newsQwenDismiss(e) {
   const el = document.getElementById('news-qwen38');
   if (el) el.style.display = 'none';
 }
-
-// ── Founder promo banner: hämta offer + countdown-timer ──
-(function () {
-  const banner = document.getElementById('promo-banner');
-  if (!banner) return;
-  function pad(n) { return String(n).padStart(2, '0'); }
-  function tick(untilMs) {
-    const diff = untilMs - Date.now();
-    if (diff <= 0) { banner.style.display = 'none'; return; }
-    const el = id => document.getElementById(id);
-    const d = Math.floor(diff / 86400000);
-    const h = Math.floor(diff % 86400000 / 3600000);
-    const m = Math.floor(diff % 3600000 / 60000);
-    const s = Math.floor(diff % 60000 / 1000);
-    if (el('promo-days')) el('promo-days').textContent = pad(d);
-    if (el('promo-hours')) el('promo-hours').textContent = pad(h);
-    if (el('promo-mins')) el('promo-mins').textContent = pad(m);
-    if (el('promo-secs')) el('promo-secs').textContent = pad(s);
-  }
-  fetch('/api/promo')
-    .then(r => r.json())
-    .then(data => {
-      if (!data || !data.active) return;
-      const until = Date.parse(data.until);
-      if (isNaN(until)) return;
-      const off = data.offer || {};
-      if (off.tier1) { const e1 = document.querySelector('[data-promo-free="tier1"]'); if (e1) e1.textContent = off.tier1.free_months; }
-      if (off.tier2) { const e2 = document.querySelector('[data-promo-free="tier2"]'); if (e2) e2.textContent = off.tier2.free_months; }
-      banner.style.display = '';
-      tick(until);
-      setInterval(() => tick(until), 1000);
-    })
-    .catch(() => { /* tyst — ingen banner om API:et inte svarar */ });
-})();
 
 // ── 💳 Payment processed — bekräftelse när man kommer tillbaka från Stripe ──
 (function () {

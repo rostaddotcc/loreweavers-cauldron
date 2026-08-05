@@ -155,7 +155,7 @@ from logbook import build_log_prompt
 from state_manager import CAMPAIGNS_DIR, VAULTS_DIR, CampaignStore, CharacterVault
 
 # Spelarprofilens avatar (konto) — SEPARAT från äventyrarens kort. Genereras
-# alltid med StepFun step-image-edit-2 (gratis). (2026-08-05)
+# alltid med StepFun step-image-edit-2 (Support-feature 3€). (2026-08-05)
 # Beräknas lazy via CAMPAIGNS_DIR så testerna kan monkeypatcha sökvägen.
 
 
@@ -1365,7 +1365,7 @@ def _consume_turn(username: str) -> None:
 
 def _wan_model_and_size(username: str) -> tuple[str, str]:
     """Patron (10€, features.wan1080) → Wan 2.7 Pro 2048²; lifetime → Pro.
-    Annars standard wan2.7-image 1024² (gratis StepFun-vägen används normalt)."""
+    Annars standard wan2.7-image 1024² (nås endast via Patron-gaten)."""
     f = _features_for(username)
     if f.get("wan1080") or _tier_for(username) == "lifetime":
         return "wan2.7-image-pro", "2048*2048"
@@ -6407,15 +6407,12 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
 
-    # TIERS: StepFun-valv-avatarer är gratis för alla; Wan 2.7 = Patron+ (10€) (2026-08-05)
+    # TIERS: AI-bildgenerering är tier-gated (2026-08-05):
+    # StepFun = Support (3€); Wan 2.7 = Patron (10€). Free tier målar inte.
     provider = str((body or {}).get("provider", "") or "").strip().lower()
     if provider not in ("stepfun", "wan"):
         provider = "stepfun"
-    if provider == "wan" and _tier_for(username) not in ("tier2", "lifetime"):
-        raise HTTPException(
-            403,
-            "Wan 2.7 painting is a Patron feature (10€) — upgrade to paint with Wan.",
-        )
+    _require_image_gen_tier(username, provider, payload)
     if provider == "wan":
         _consume_wan_quota(username)  # 10 bilder/dag; varje bild = 1 turn
 
@@ -7014,7 +7011,7 @@ async def delete_avatar(kind: str, morkrets_token: str | None = Cookie(None)):
 # ═══════════════════════════════════════
 # Profilavataren hör till KONTOT (headerns porträtt) — inte till kampanjens
 # äventyrare/NPC/DM-kort. Genereras ALLTID med StepFun step-image-edit-2,
-# gratis för alla tier. (2026-08-05)
+# Support-feature (3€). (2026-08-05)
 
 
 @app.get("/api/me/avatar")
@@ -7030,11 +7027,12 @@ async def me_avatar(morkrets_token: str | None = Cookie(None)):
 
 @app.post("/api/me/avatar/generate")
 async def me_avatar_generate(body: dict | None = None, morkrets_token: str | None = Cookie(None)):
-    """Måla profilavataren med StepFun step-image-edit-2 — alltid gratis,
-    ALLTID StepFun. Spelarens egna ord (fri prompt) eller en standardporträtt-
-    prompt om ingen text ges."""
+    """Måla profilavataren med StepFun step-image-edit-2 — Support-feature
+    (3€). ALLTID StepFun. Spelarens egna ord (fri prompt) eller en
+    standardporträtt-prompt om ingen text ges."""
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
+    _require_image_gen_tier(username, "stepfun", payload)
     api_key = os.getenv("STEPFUN_API_KEY")
     base_url = os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.ai/step_plan/v1")
     if not api_key:
@@ -7421,21 +7419,13 @@ async def generate_avatar(
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
 
-    # Fri AI-avatar-generering för ALLA tier (2026-08-05): "paint new from my
-    # words" är gratis via StepFun — haken för att locka spelare att skapa fler
-    # karaktärer. (Upload förblir tier1+ via upload_avatar.)
-    # Wan 2.7 är premium-leverantören: Patron (10€)+ — dyrare, snyggare.
+    # TIERS (2026-08-05): AI-bildgenerering är tier-gated.
+    # StepFun = Support (3€); Wan 2.7 = Patron (10€). Free tier målar inte.
     provider = str((body or {}).get("provider", "") or "").strip().lower()
     if provider not in ("stepfun", "wan"):
         provider = "stepfun"
+    _require_image_gen_tier(username, provider, payload)
     if provider == "wan":
-        tier = _tier_for(username)
-        if tier not in ("tier2", "lifetime"):
-            raise HTTPException(
-                403,
-                "Wan 2.7 painting is a Patron feature (10€) — upgrade to paint with Wan. "
-                "StepFun stays free for every adventurer.",
-            )
         _consume_wan_quota(username)  # 10 bilder/dag; varje bild = 1 turn
 
     state = store.get(username)
@@ -8209,10 +8199,36 @@ def _require_admin(payload: dict):
         raise HTTPException(403, "Admin-rättigheter krävs")
 
 
+def _require_image_gen_tier(username: str, provider: str, payload: dict | None = None) -> None:
+    """TIERS (2026-08-05): AI-bildgenerering är tier-gated.
+
+    - StepFun = Support (3€) — free tier kan inte måla alls längre.
+    - Wan 2.7 = Patron (10€) — dyrare, snyggare premium-leverantör.
+    Admin har alltid tillgång. Lifetime = allt.
+    """
+    if payload and payload.get("role") == "admin":
+        return
+    tier = _tier_for(username)
+    if tier == "lifetime":
+        return
+    if provider == "wan":
+        if tier != "tier2":
+            raise HTTPException(
+                403,
+                "Wan 2.7 painting is a Patron feature (10€) — upgrade to paint with Wan.",
+            )
+    else:
+        if tier == "free":
+            raise HTTPException(
+                403,
+                "AI painting is a Support feature (3€) — support the Cauldron to paint your hero, the DM and every NPC with StepFun.",
+            )
+
+
 def _require_avatar_tier(payload: dict, username: str):
     """TIERS (one-time 2026-08-05): avatar-UPPLADDNING kräver tier1+ (Support).
-    AI-generering (StepFun) är gratis för alla; Wan 2.7 gatas separat vid
-    själva wan-genereringen (Patron 10€+). Admin har alltid tillgång."""
+    AI-generering är gated via _require_image_gen_tier (StepFun = Support 3€,
+    Wan 2.7 = Patron 10€). Admin har alltid tillgång."""
     if payload.get("role") == "admin":
         return
     if _tier_for(username) == "free":

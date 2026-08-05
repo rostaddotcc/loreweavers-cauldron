@@ -1445,7 +1445,7 @@ function renderDetail(container, data) {
   if (isPremium) {
     html += '<button onclick="setTier(\'' + data.username + '\', \'free\')" class="bc-btn">⭱ Revert to Free</button>';
   } else {
-    html += '<select id="dt-tier-' + data.username + '" onchange="syncTierDuration(\'' + data.username + '\')" class="cap-input" style="width:auto;background:var(--ink);color:var(--bone);border:1px solid var(--edge)"><option value="tier1">Tier 1 · 3€</option><option value="tier2" selected>Tier 2 · 9€</option><option value="lifetime">Lifetime · 100€</option></select>';
+    html += '<select id="dt-tier-' + data.username + '" onchange="syncTierDuration(\'' + data.username + '\')" class="cap-input" style="width:auto;background:var(--ink);color:var(--bone);border:1px solid var(--edge)"><option value="tier1">Support · 3€</option><option value="tier2" selected>Patron · 10€</option><option value="lifetime">Lifetime · 100€</option></select>';
     html += '<select id="dt-months-' + data.username + '" class="cap-input" style="width:auto;background:var(--ink);color:var(--bone);border:1px solid var(--edge)"><option value="1">1 mo</option><option value="3">3 mo</option><option value="6">6 mo</option><option value="12">12 mo</option><option value="0">∞ forever</option></select>';
     html += '<button onclick="setTier(\'' + data.username + '\', document.getElementById(\'dt-tier-' + data.username + '\').value, document.getElementById(\'dt-months-' + data.username + '\').value)" class="bc-btn gold">👑 Grant</button>';
   }

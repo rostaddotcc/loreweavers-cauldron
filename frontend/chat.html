@@ -989,6 +989,10 @@
 <style>
 /* ═══════════ CODEX 2-RAD-TABBAR — override snes.css (måste ligga EFTER linken) ═══════════ */
 .cx-tabs{ display: flex !important; flex-direction: column !important; gap: 0.28rem !important; padding: 0.5rem 0.6rem 0.55rem !important; overflow-x: hidden !important; }
+/* Radordning låst: Character/NPCs/Map/Journal/Facts ovanför, karaktärsraden
+   (Spells/Equipment/Treasury/Notes) längst ned — oavsett DOM-ordning. */
+#cx-row-main{ order: 1 !important; }
+#cx-row-sub{ order: 2 !important; }
 .cx-row{ display: flex !important; gap: 0.2rem !important; flex-wrap: nowrap !important; min-width: 0 !important; }
 .cx-tab{
   flex: 1 1 0 !important; min-width: 0 !important; text-align: center !important;
@@ -1889,8 +1893,8 @@ function pickAvatar(kind) {
     : 'The Adventurer';
   title.textContent = '🎨 Avatar — ' + label;
   desc.textContent = kind === 'player'
-    ? 'Paint a new avatar from your character sheet — items, traits and lore included. Free for every adventurer. Or upload your own image.'
-    : 'Paint a new avatar of ' + (kind === 'dm' ? 'the Dungeon Master' : 'this NPC') + '. Or upload your own image.';
+    ? 'Paint a new avatar from your character sheet — items, traits and lore included. Support feature (3€). Or upload your own image.'
+    : 'Paint a new avatar of ' + (kind === 'dm' ? 'the Dungeon Master' : 'this NPC') + '. Support feature (3€). Or upload your own image.';
   preview.innerHTML = AVATARS[kind]
     ? `<img src="${AVATARS[kind]}" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">`
     : SPR.html('🎭');
@@ -1912,7 +1916,7 @@ function pickAvatar(kind) {
 
 // ── Spelarprofilens avatar (konto — SEPARAT från äventyraren) ──
 // Öppnar avatar-modalen i PROFILE-läge: alltid StepFun (step-image-edit-2),
-// gratis för alla tier, ingen Engine-väljare. Headerns porträtt hör hit.
+// Support-feature (3€), ingen Engine-väljare. Headerns porträtt hör hit.
 function openProfileAvatarModal() {
   _avatarProfileMode = true;
   AVATAR_KIND = 'player';
@@ -1926,7 +1930,7 @@ function openProfileAvatarModal() {
   const provRow = document.getElementById('avatar-provider-row');
   const promptInp = document.getElementById('avatar-prompt-input');
   title.textContent = '🎨 Your profile portrait';
-  desc.textContent = 'Paint YOUR profile portrait — the face at your table, separate from your adventurer. Always StepFun, always free.';
+  desc.textContent = 'Paint YOUR profile portrait — the face at your table, separate from your adventurer. StepFun — Support feature (3€).';
   const url = _hasAccountAvatar ? API.accountAvatarUrl() + '?t=' + Date.now() : null;
   preview.innerHTML = url
     ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">`
@@ -1946,15 +1950,30 @@ function closeAvatarModal() {
   if (ov) ov.classList.remove('show');
 }
 
-// ── Bildleverantör (StepFun — gratis · Wan 2.7 Pro — Patron+) ──
+// ── Bildleverantör (StepFun — Support 3€ · Wan 2.7 Pro — Patron 10€) ──
 function avatarProvider() {
   const sel = document.getElementById('avatar-provider-select');
   return (sel && sel.value) || 'stepfun';
 }
+// TIERS: bildgenerering är gated (2026-08-05). Free = ingen målning;
+// StepFun = Support (3€); Wan = Patron (10€). Returnerar false + informerar.
+function avatarGenGate(provider) {
+  if (!_tierHasAvatars()) {
+    toast('🔒 AI painting is a Support feature (3€) — support the Cauldron to paint your hero, the DM and every NPC with StepFun.');
+    try { SFX.error(); } catch (_) {}
+    return false;
+  }
+  if (provider === 'wan' && !_tierHasModels()) {
+    toast('🔒 Wan 2.7 Pro is a Patron feature (10€) — upgrade to paint with Wan.');
+    try { SFX.error(); } catch (_) {}
+    return false;
+  }
+  return true;
+}
 function avatarProviderChanged(sel) {
   if (sel && sel.value === 'wan' && !_tierHasModels()) {
     sel.value = 'stepfun';
-    try { toast('🔒 Wan 2.7 Pro is a Patron feature (10€) — StepFun is always free.'); } catch (_) {}
+    toast('🔒 Wan 2.7 Pro is a Patron feature (10€) — upgrade to paint with Wan.');
     try { SFX.error(); } catch (_) {}
   }
 }
@@ -1962,19 +1981,28 @@ function updateAvatarProviderLock() {
   const sel = document.getElementById('avatar-provider-select');
   if (!sel) return;
   const wanOpt = sel.querySelector('option[value="wan"]');
-  if (!wanOpt) return;
-  const unlocked = _tierHasModels(); // tier2/lifetime
-  wanOpt.disabled = !unlocked;
-  wanOpt.textContent = unlocked ? 'Wan 2.7 Pro — Patron' : 'Wan 2.7 Pro — Patron 🔒';
-  if (sel.value === 'wan' && !unlocked) sel.value = 'stepfun';
+  const stepOpt = sel.querySelector('option[value="stepfun"]');
+  const canPaint = _tierHasAvatars();     // Support+ (3€)
+  const wanUnlocked = _tierHasModels();   // Patron (10€)
+  if (stepOpt) {
+    stepOpt.disabled = !canPaint;
+    stepOpt.textContent = canPaint ? 'StepFun — Support' : 'StepFun — Support 🔒';
+  }
+  if (wanOpt) {
+    wanOpt.disabled = !wanUnlocked;
+    wanOpt.textContent = wanUnlocked ? 'Wan 2.7 Pro — Patron' : 'Wan 2.7 Pro — Patron 🔒';
+  }
+  if (sel.value === 'wan' && !wanUnlocked) sel.value = 'stepfun';
+  if (sel.value === 'stepfun' && !canPaint) sel.value = '';
 }
 
 // Generera AI-avatar (prompt byggs i backend från karaktär/NPC-data)
 async function generateAvatarAction() {
   const status = document.getElementById('avatar-ai-status');
   const btn = document.getElementById('avatar-ai-btn');
-  // Profil-läge: konto-avataren genereras ALLTID med StepFun (step-image-edit-2)
+  // TIERS: bildgenerering är gated — informera innan API-anropet.
   if (_avatarProfileMode) {
+    if (!avatarGenGate('stepfun')) return;
     status.textContent = '🎨 Painting your profile portrait… (10–30 s)';
     btn.disabled = true;
     try {
@@ -1984,7 +2012,7 @@ async function generateAvatarAction() {
         _hasAccountAvatar = true;
         refreshAvatars();
         openProfileAvatarModal();
-        status.textContent = '✨ Profile portrait painted — always StepFun';
+        status.textContent = '✨ Profile portrait painted — StepFun';
         try { SFX.levelup(); } catch (_) {}
       } else {
         status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Generation failed');
@@ -1999,6 +2027,7 @@ async function generateAvatarAction() {
     return;
   }
   const kind = AVATAR_KIND;
+  if (!avatarGenGate(avatarProvider())) return;
   status.textContent = '🎨 The artist is painting… (10–30 s)';
   btn.disabled = true;
   try {
@@ -2028,6 +2057,7 @@ async function generateAvatarAction() {
 async function updateAvatarAction() {
   const kind = AVATAR_KIND;
   if (!AVATARS[kind]) return;
+  if (!avatarGenGate(avatarProvider())) return;
   const status = document.getElementById('avatar-ai-status');
   const btn = document.getElementById('avatar-update-btn');
   status.textContent = '🔄 Updating from your sheet… (10–30 s)';
@@ -2667,7 +2697,7 @@ function updateTTSStyleLock() {
   if (inp) inp.disabled = !hasStyle;
   sel.title = hasStyle
     ? 'Narrator style — happy, calm, scary, or your own'
-    : '🔒 Narrator style — Tier 2 feature';
+    : '🔒 Narrator style — Patron feature (10€)';
   // Narrator-testkort: låst för free/tier1 (test = tier2-funktion)
   if (testBtn) testBtn.disabled = !hasStyle;
   if (testInp) testInp.disabled = !hasStyle;
@@ -2691,7 +2721,7 @@ function updateTTSStyleLock() {
         _safeLS.set(TTS_PROVIDER_KEY, 'stepfun');
       }
     }
-    ps.title = hasStyle ? 'TTS provider' : 'StepFun TTS — always free' + ' · Qwen 🔒 Tier 2';
+    ps.title = hasStyle ? 'TTS provider' : 'StepFun TTS — always free' + ' · Qwen 🔒 Patron (10€)';
   }
   // Modell-pickern: premium-modeller gråade för free/tier1
   if (typeof initSettingsModelPickers === 'function') {
@@ -7005,8 +7035,8 @@ document.addEventListener('keydown', e => {
     <div id="avatar-provider-row" style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
       <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
       <select id="avatar-provider-select" class="tts-select" style="flex:1;min-width:0" onchange="avatarProviderChanged(this)" title="Image provider for painting">
-        <option value="stepfun">StepFun — free</option>
-        <option value="wan">Wan 2.7 — Adventurer 🔒</option>
+        <option value="stepfun">StepFun — Support</option>
+        <option value="wan">Wan 2.7 Pro — Patron 🔒</option>
       </select>
     </div>
     <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">

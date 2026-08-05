@@ -365,7 +365,7 @@ const API = (() => {
     // ── AI-avatar (StepFun step-image-edit-2 — prompt byggs automatiskt i backend) ──
     // mode: "new" = full generation (ny bild), "edit" = image-edit på befintlig
     // prompt: valfri fri text från användaren — väger tyngst, auto-prompten blir kontext.
-    // ── AI-avatar (StepFun gratis · Wan 2.7 = Adventurer+, provider i body) ──
+    // ── AI-avatar (StepFun = Support 3€ · Wan 2.7 = Patron 10€, provider i body) ──
     async generateAvatar(kind, seed, mode, prompt, provider = 'stepfun') {
       if (MOCK) throw new Error('Not available in mock mode');
       return req('/api/campaign/avatar/generate', {

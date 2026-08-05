@@ -208,17 +208,32 @@ if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 // till step-3.7-flash (premium-modeller gråas ut + 🔒 — backend klämmer ändå).
 const PLAYER_CHAR_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-3.7-flash', 'ollama:heretic'];
 const PREMIUM_CHAR_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'ollama:heretic'];
+let _forgeTier = 'free';  // free | tier1 | tier2 | lifetime
 API.me().then(u => {
+  if (u) _forgeTier = u.subscription_status === 'premium' ? 'tier2' : (u.subscription_status || 'free');
   if (u && u.role !== 'admin') {
     const locked = (u.subscription_status === 'free' || u.subscription_status === 'tier1');
     const sel = document.getElementById('forge-model');
     sel.innerHTML = PLAYER_CHAR_MODELS.map(m => {
       const dis = locked && PREMIUM_CHAR_MODELS.includes(m);
-      return `<option value="${m}"${dis ? ' disabled' : ''}>${dis ? '🔒 ' + m + ' — Tier 2' : m}</option>`;
+      return `<option value="${m}"${dis ? ' disabled' : ''}>${dis ? '🔒 ' + m + ' — Patron (10€)' : m}</option>`;
     }).join('');
     sel.value = 'step-3.7-flash';
   }
 }).catch(() => {});
+// TIERS: bildgenerering är gated (2026-08-05). Free = ingen målning;
+// StepFun = Support (3€); Wan = Patron (10€). Returnerar false + informerar.
+function forgeAvatarGenGate(provider) {
+  if (_forgeTier === 'free') {
+    toast('🔒 AI painting is a Support feature (3€) — support the Cauldron to paint your hero, the DM and every NPC with StepFun.');
+    return false;
+  }
+  if (provider === 'wan' && _forgeTier !== 'tier2' && _forgeTier !== 'lifetime') {
+    toast('🔒 Wan 2.7 is a Patron feature (10€) — upgrade to paint with Wan.');
+    return false;
+  }
+  return true;
+}
 
 let forging = false;
 let forgedChar = null;      // senast genererade karaktär (preview)
@@ -489,6 +504,7 @@ async function deleteCharacter(charId, name) {
 
 async function genAvatar(charId) {
   const btn = document.getElementById('insp-avatar-btn');
+  if (!forgeAvatarGenGate('stepfun')) return;
   if (btn) { btn.disabled = true; btn.textContent = '🎨 Painting…'; }
   try {
     const freePrompt = (document.getElementById('insp-prompt-input') || {}).value || '';

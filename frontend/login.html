@@ -367,9 +367,16 @@
     padding:.55rem 1rem;font-size:.78rem;letter-spacing:.04em;color:var(--gold);background:var(--stone-3);
     border-bottom:1px solid rgba(201,162,39,.3);text-align:center}
   #deleted-banner.show{display:flex}
-  #promo-banner{position:sticky;top:0;z-index:45;display:flex;align-items:center;justify-content:center;gap:.6rem;flex-wrap:wrap;padding:.5rem 1rem;font-size:.8rem;letter-spacing:.03em;color:var(--gold);background:linear-gradient(90deg,var(--stone-3),var(--stone-2),var(--stone-3));border-bottom:1px solid rgba(201,162,39,.35);text-align:center}
-  #promo-banner .pb-ico{filter:drop-shadow(0 0 8px rgba(201,162,39,.5))}
-  #promo-banner .pb-timer{font-family:'IBM Plex Mono',ui-monospace,monospace;color:var(--bone-bright);background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.3);border-radius:3px;padding:.12rem .5rem;font-size:.76rem}
+  #promo-banner{position:sticky;top:var(--nav-h);z-index:45;display:flex;align-items:center;justify-content:center;gap:.9rem;flex-wrap:wrap;padding:.95rem 1.5rem;font-size:1.05rem;letter-spacing:.04em;color:var(--gold);background:linear-gradient(90deg,var(--stone-3),var(--stone-2),var(--stone-3));border-bottom:1px solid rgba(201,162,39,.45);text-align:center;box-shadow:0 10px 30px -12px rgba(0,0,0,.6)}
+  #promo-banner .pb-ico{filter:drop-shadow(0 0 10px rgba(201,162,39,.7));font-size:1.35rem;animation:pb-pop 3.4s ease-in-out infinite}
+  @keyframes pb-pop{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-3px) scale(1.08)}}
+  #promo-banner .pb-text b{color:var(--gold-bright);font-weight:800}
+  #promo-banner .pb-timer{font-family:'IBM Plex Mono',ui-monospace,monospace;color:var(--bone-bright);background:rgba(201,162,39,.12);border:1px solid rgba(201,162,39,.4);border-radius:4px;padding:.2rem .7rem;font-size:.9rem}
+  @media (max-width:720px){
+    #promo-banner{font-size:.92rem;gap:.6rem;padding:.8rem 1rem}
+    #promo-banner .pb-ico{font-size:1.1rem}
+    #promo-banner .pb-timer{font-size:.78rem;padding:.16rem .5rem}
+  }
 </style>
 </head>
 <body>
@@ -377,9 +384,10 @@
 <div id="deleted-banner">🕊️ Your account has been deleted. The Cauldron will remember your stories.</div>
 
 <div id="promo-banner">
-  <span class="pb-ico">🎉</span>
+  <span class="pb-ico">🎆</span>
   <span class="pb-text"><b>300 turns on signup</b> — a limited-time promotion for new adventurers.</span>
   <span class="pb-timer" id="pb-timer"></span>
+  <span class="pb-ico">🎆</span>
 </div>
 
 <div class="hero-scene" id="hero-scene">

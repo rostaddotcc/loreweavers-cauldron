@@ -419,11 +419,12 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     <li data-ix="s1"><a href="#s1"><span class="ix-num">§1</span>The Dual Mind<span class="ix-tag">DM + Guardian</span></a></li>
     <li data-ix="s2"><a href="#s2"><span class="ix-num">§2</span>Turn Pipeline<span class="ix-tag">one round, eight steps</span></a></li>
     <li data-ix="s3"><a href="#s3"><span class="ix-num">§3</span>Prompt Injection<span class="ix-tag">what the DM sees</span></a></li>
-    <li data-ix="s4"><a href="#s4"><span class="ix-num">§4</span>Guardian Contract<span class="ix-tag">prose → JSON</span></a></li>
-    <li data-ix="s5"><a href="#s5"><span class="ix-num">§5</span>Dice Engine<span class="ix-tag">the player rolls</span></a></li>
-    <li data-ix="s6"><a href="#s6"><span class="ix-num">§6</span>Voice &amp; TTS Cache<span class="ix-tag">speak once, reuse</span></a></li>
-    <li data-ix="s7"><a href="#s7"><span class="ix-num">§7</span>Character Weaving<span class="ix-tag">SSE hero creation</span></a></li>
-    <li data-ix="s8"><a href="#s8"><span class="ix-num">§8</span>State Model<span class="ix-tag">the one truth</span></a></li>
+    <li data-ix="s4"><a href="#s4"><span class="ix-num">§4</span>Fact Memory<span class="ix-tag">the moving window</span></a></li>
+    <li data-ix="s5"><a href="#s5"><span class="ix-num">§5</span>Guardian Contract<span class="ix-tag">prose → JSON</span></a></li>
+    <li data-ix="s6"><a href="#s6"><span class="ix-num">§6</span>Dice Engine<span class="ix-tag">the player rolls</span></a></li>
+    <li data-ix="s7"><a href="#s7"><span class="ix-num">§7</span>Voice &amp; TTS Cache<span class="ix-tag">speak once, reuse</span></a></li>
+    <li data-ix="s8"><a href="#s8"><span class="ix-num">§8</span>Character Weaving<span class="ix-tag">SSE adventurer creation</span></a></li>
+    <li data-ix="s9"><a href="#s9"><span class="ix-num">§9</span>State Model<span class="ix-tag">the one truth</span></a></li>
   </ol>
 </nav>
 
@@ -705,17 +706,82 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     </div></div>
   </div>
 
+  <div class="exp rv">
+    <button class="exp-toggle" id="exp-layer7-toggle" onclick="toggleExp('layer7')" aria-expanded="false">
+      <span class="caret">▸</span><span><span class="et-t">Layer 7 — Fact memory &amp; RAG</span><span class="et-d">the moving window: top 8 facts + top 4 semantic chunks, re-scored every turn</span></span>
+    </button>
+    <div class="exp-body" id="exp-layer7-body"><div class="exp-inner">
+      <p>After the prompt is assembled, the engine asks the fact register which stored facts are relevant <em>to this turn's message</em> and appends the winners as a small authoritative block the DM may never contradict — joined by the four best semantic chunks from the Qdrant index. Full mechanics in <a href="#s4" style="color:var(--gold-bright)">§4 — Fact Memory</a>.</p>
+<pre class="prompt facts"><span class="pt">## FACT REGISTER (authoritative — never contradict)</span>
+<span class="pd">- [NPC] Kaelen Voss bears the party no ill will (turn 12)</span>
+<span class="pd">- [PLATS] The Hollow Forge hides a second entrance behind the smithy (turn 8)</span></pre>
+    </div></div>
+  </div>
+
   <div class="panel rv">
     <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
     <h3><span class="dot">✦</span> The assembly order</h3>
-    <div class="stat"><b>1</b> Language directive → <b>2</b> Core prompt v27 → <b>3</b> Combat <i>or</i> Narrative → <b>4</b> TRUTH block + pinned facts → <b>5</b> Scene ×2, Chapter ×2, Arc ×1 → <b>6</b> Last turn's effects → <b>7</b> World &amp; locations &amp; travel rule → <b>8</b> Lore → <b>9</b> NPCs → <b>10</b> Quests → <b>11</b> Inventory &amp; character</div>
+    <div class="stat"><b>1</b> Language directive → <b>2</b> Core prompt v27 → <b>3</b> Combat <i>or</i> Narrative → <b>4</b> TRUTH block + pinned facts → <b>5</b> Scene ×2, Chapter ×2, Arc ×1 → <b>6</b> Last turn's effects → <b>7</b> World &amp; locations &amp; travel rule → <b>8</b> Lore → <b>9</b> NPCs → <b>10</b> Quests → <b>11</b> Inventory &amp; character → <b>12</b> Fact memory &amp; RAG — top 8 facts · top 4 chunks (<a href="#s4" style="color:var(--gold-bright)">§4</a>)</div>
   </div>
 </section>
 
-<!-- ═══════════ §4 GUARDIAN CONTRACT ═══════════ -->
+<!-- ═══════════ §4 FACT MEMORY ═══════════ -->
 <section class="sec rv" id="s4" data-sec="s4">
   <div class="sec-head">
     <span class="sec-num">§4</span>
+    <h2 class="sec-title"><span class="sec-mark">◆</span>Fact Memory</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <p class="sec-lede">Facts are extracted after every turn, ranked before every DM reply — and only the top eight make it into the prompt. Nothing is deleted; everything competes.</p>
+
+  <div class="grid2">
+    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3><span class="dot">✦</span> The register</h3>
+      <p>The extraction model reads every Guardian POST and stores durable facts in a per-campaign <span class="stat"><b>FactRegister</b></span> (facts.json): people, places, promises, grudges, discoveries. Each entry carries its <span class="stat"><b>category</b></span>, <span class="stat"><b>source turn</b></span>, <span class="stat"><b>mentions</b></span>, <span class="stat"><b>confidence</b></span>, and a <span class="stat"><b>relevance</b></span> score between 0.2 and 1.0.</p>
+      <p>Facts never collide blindly: a new fact that replaces an old one sets <span class="stat"><b>superseded_by</b></span> on its predecessor — replaced facts are excluded from the active set forever.</p>
+    </div>
+    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3><span class="dot">✦</span> The ranking</h3>
+      <p>Before each DM turn, every active fact is scored against the player's message:</p>
+      <p class="stat" style="font-size:.9rem">score = (keyword-overlap + recency + mentions) × relevance-weight × confidence-weight</p>
+      <p><span class="stat"><b>Recency</b></span> adds up to +30% for newer facts · <span class="stat"><b>mentions</b></span> add up to +25% for facts the story keeps returning to · a compacted fact's <span class="stat"><b>relevance</b></span> cuts its score by up to −50%. The <span class="stat"><b>top 8</b></span> are injected as an authoritative block, joined by <span class="stat"><b>4 semantic chunks</b></span> from the Qdrant index (transcript · lore · summaries).</p>
+    </div>
+  </div>
+
+  <div class="term dm rv">
+    <div class="term-bar"><i></i><i></i><i></i><span>get_relevant_facts · limit 8 · scores</span></div>
+    <div class="term-body">
+      <div><span class="c-dim"># player message: "I ask Kaelen about the Hollow Forge…"</span></div>
+      <div><span class="c-gold">0.81</span> <span class="c-teal">[NPC]</span> Kaelen Voss bears the party no ill will (turn 12)</div>
+      <div><span class="c-gold">0.74</span> <span class="c-teal">[PLATS]</span> The Hollow Forge hides a second entrance behind the smithy (turn 8)</div>
+      <div><span class="c-gold">0.31</span> <span class="c-amb">[HÄNDELSE]</span> The north gate guard lost his purse to a pickpocket (turn 3)</div>
+      <div><span class="c-dim">…more compete — only the top 8 ship. The 0.31 fact loses the window this turn.</span></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3><span class="dot">✦</span> When facts fall out</h3>
+      <p><span class="stat"><b>Superseded</b></span> — replaced by a newer, truer fact; never injected again.</p>
+      <p><span class="stat"><b>Not hot enough</b></span> — a turn with no keyword overlap and few mentions filters the fact out for that turn (the moving window).</p>
+      <p><span class="stat"><b>Recency decay</b></span> — as the campaign grows, old turns score less; old facts sink below the top-8 cut.</p>
+      <p><span class="stat"><b>Compaction (every 50 turns)</b></span> — an archivist LLM reads up to 80 active facts and marks the stale ones; their relevance drops to <span class="stat"><b>0.2</b></span> — a permanent −50% unless the story re-mentions them hard.</p>
+      <p><span class="stat"><b>Pinned facts</b></span> are the exception: player-pinned truth (the <span class="stat"><b>/pin</b></span> command) is injected uncapped in every TRUTH block and never falls out.</p>
+    </div>
+    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3><span class="dot">✦</span> Nothing is deleted</h3>
+      <p>The register keeps every fact forever — eviction is only ever <em>ranking</em>. A fact that loses the window today can win it back tomorrow if the story returns to it; that is what makes a 200-turn campaign remember turn 3 <em>when it matters</em>.</p>
+      <div class="tag-row">
+        <span class="tg g">limit 8</span><span class="tg">top_k 4 RAG</span><span class="tg">compact every 50 turns</span><span class="tg p">pinned = never evicted</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ §5 GUARDIAN CONTRACT ═══════════ -->
+<section class="sec rv" id="s5" data-sec="s5">
+  <div class="sec-head">
+    <span class="sec-num">§5</span>
     <h2 class="sec-title"><span class="sec-mark">◆</span>The Guardian Contract</h2>
     <div class="sec-rule"></div>
   </div>
@@ -758,15 +824,15 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
         <div class="stat"><b class="v">World &amp; time</b><br>locations_new · current_location · world_lore · time_passed · rest · new_day · day_summary · logbook</div>
         <div class="stat"><b class="v">Grants &amp; fixes</b><br>roll_grants (Bardic Inspiration → 1d6 button) · corrections (retract &amp; explain)</div>
       </div>
-      <p style="margin-top:.8rem">Two fields are famously dead: <span class="stat"><b>enemy_actions</b></span> and <span class="stat"><b>status_apply</b></span> still ride in the empty contract but are never consumed — relics of the unwired click-combat engine. The audit that found them also found (and fixed) the shape-conflict landmine where a day-entry dict could crash the logbook append inside a swallowed background task, silently eating a turn's effects.</p>
+      <p style="margin-top:.8rem">One field is famously dead: <span class="stat"><b>status_apply</b></span> still rides in the empty contract but is never consumed — a relic of an unwired status engine. <span class="stat"><b>enemy_actions</b></span>, by contrast, was <b>resurrected by the Battle AI</b>: when enemies are alive, the Guardian decides their moves and the <b>code rolls the dice</b> — no enemy ever hits or misses by LLM fiat. The audit that found the dead field also found (and fixed) the shape-conflict landmine where a day-entry dict could crash the logbook append inside a swallowed background task, silently eating a turn's effects.</p>
     </div></div>
   </div>
 </section>
 
 <!-- ═══════════ §5 DICE ENGINE ═══════════ -->
-<section class="sec rv" id="s5" data-sec="s5">
+<section class="sec rv" id="s6" data-sec="s6">
   <div class="sec-head">
-    <span class="sec-num">§5</span>
+    <span class="sec-num">§6</span>
     <h2 class="sec-title"><span class="sec-mark">◆</span>The Dice Engine</h2>
     <div class="sec-rule"></div>
   </div>
@@ -813,9 +879,9 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
 </section>
 
 <!-- ═══════════ §6 TTS CACHE ═══════════ -->
-<section class="sec rv" id="s6" data-sec="s6">
+<section class="sec rv" id="s7" data-sec="s7">
   <div class="sec-head">
-    <span class="sec-num">§6</span>
+    <span class="sec-num">§7</span>
     <h2 class="sec-title"><span class="sec-mark">◆</span>Voice &amp; the TTS Cache</h2>
     <div class="sec-rule"></div>
   </div>
@@ -881,13 +947,13 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
 </section>
 
 <!-- ═══════════ §7 CHARACTER WEAVING ═══════════ -->
-<section class="sec rv" id="s7" data-sec="s7">
+<section class="sec rv" id="s8" data-sec="s8">
   <div class="sec-head">
-    <span class="sec-num">§7</span>
+    <span class="sec-num">§8</span>
     <h2 class="sec-title"><span class="sec-mark">◆</span>Character Weaving</h2>
     <div class="sec-rule"></div>
   </div>
-  <p class="sec-lede">A hero is not generated — it is woven, live, on an SSE stream, from a free-text dream into a finished D&amp;D sheet with inventory, story and stats, ready to preview, save or unravel and re-roll.</p>
+  <p class="sec-lede">An adventurer is not generated — it is woven, live, on an SSE stream, from a free-text dream into a finished D&amp;D sheet with inventory, story and stats, ready to preview, save or unravel and re-roll.</p>
 
   <div class="flowbox rv">
     <svg viewBox="0 0 880 190" role="img" aria-label="Character generation stream: prompt to SSE to LLM to JSON to preview">
@@ -922,7 +988,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     </div>
     <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
       <h3><span class="dot">✦</span> The vault</h3>
-      <p>Saved heroes live in a <span class="stat"><b>vault</b></span> — one per account, not per campaign — so a hero survives a campaign's end. Each entry keeps the full sheet, inventory, story and painted avatar. Summoning into a campaign copies the hero into that campaign's state; rerolling spawns a fresh stream.</p>
+      <p>Saved adventurers live in a <span class="stat"><b>vault</b></span> — one per account, not per campaign — so an adventurer survives a campaign's end. Each entry keeps the full sheet, inventory, story and painted avatar. Summoning into a campaign copies the adventurer into that campaign's state; rerolling spawns a fresh stream.</p>
       <p>Avatars are painted separately by an image model — either from the player's <b>own words</b> or from an auto-built sheet prompt — and the status line always tells you which source won.</p>
     </div>
   </div>
@@ -948,9 +1014,9 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
 </section>
 
 <!-- ═══════════ §8 STATE MODEL ═══════════ -->
-<section class="sec rv" id="s8" data-sec="s8">
+<section class="sec rv" id="s9" data-sec="s9">
   <div class="sec-head">
-    <span class="sec-num">§8</span>
+    <span class="sec-num">§9</span>
     <h2 class="sec-title"><span class="sec-mark">◆</span>The State Model</h2>
     <div class="sec-rule"></div>
   </div>
@@ -1031,7 +1097,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
 
 <footer>
   <div class="f-title">✦ the lore weaver's cauldron — engine mechanics ✦</div>
-  <p>Compiled from the engine itself: backend/main.py · backend/guardian.py · backend/models.py · DM prompt v27 · Guardian 38-field contract<br>
+  <p>Compiled from the engine itself: backend/main.py · backend/guardian.py · backend/extraction.py (FactRegister) · backend/models.py · DM prompt v27 · Guardian 38-field contract<br>
   dnd.rostad.cc — The Lore Weaver's Cauldron</p>
 </footer>
 
@@ -1053,6 +1119,7 @@ var bootLines = [
   ["> dice_roll(notation) .............. ", "b-dim"], ["OK (player rolls)", "b-ok"],
   ["> priming TTS cache ................ ", "b-dim"], ["OK (64 slots / 600s TTL)", "b-ok"],
   ["> state lock ....................... ", "b-dim"], ["OK (per campaign)", "b-ok"],
+  ["> mounting FACT REGISTER ............ ", "b-dim"], ["OK (top 8 · moving window)", "b-ok"],
   ["> embers lit. the table is ready.", "b-gold"]
 ];
 var bootEl = document.getElementById("boot");

@@ -20,12 +20,17 @@ import httpx
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
 IP_GEO_FILE = DATA_DIR / "ip_geo.json"
+VISITS_FILE = DATA_DIR / "visits.json"
 GEO_CACHE_TTL = 86400 * 7  # 7 dygn innan vi slår upp samma IP igen
 
 # In-memory cache: {"ip": {"country": ..., "countryCode": ..., "ts": ...}}
 _geo_cache: dict[str, dict] = {}
 # Per-användare senast sedda IP:er (skrivs till disk vid ändring)
 _ip_store: dict[str, dict] = {}
+# Besöksräkning (2026-08-05, rostad): {total, by_day, by_ip}. by_ip används
+# för att aggregera "besök per land" vid admin-stats (geokodas via cache).
+_visit_store: dict = {"total": 0, "by_day": {}, "by_ip": {}}
+_visits_loaded = False
 _loaded = False
 
 # CIDR-nät som aldrig slås upp (privata + loopback + link-local)
@@ -111,6 +116,112 @@ def record_ip(username: str, ip: str) -> None:
 def get_user_ip(username: str) -> str:
     _load()
     return (_ip_store.get(username) or {}).get("ip", "")
+
+
+def _visits_load() -> None:
+    global _visits_loaded, _visit_store
+    if _visits_loaded:
+        return
+    _visits_loaded = True
+    try:
+        if VISITS_FILE.exists():
+            data = json.loads(VISITS_FILE.read_text())
+            _visit_store["total"] = int(data.get("total", 0) or 0)
+            _visit_store["by_day"] = data.get("by_day", {}) or {}
+            _visit_store["by_ip"] = data.get("by_ip", {}) or {}
+    except (OSError, json.JSONDecodeError):
+        pass
+
+
+def _visits_save() -> None:
+    try:
+        VISITS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        VISITS_FILE.write_text(json.dumps(_visit_store, ensure_ascii=False))
+    except OSError:
+        pass
+
+
+def record_visit(ip: str) -> None:
+    """Räkna en sidvisning (anropas från middleware för HTML-sidor).
+
+    by_day sparas i ~32 dagar; by_ip = {count, last_seen} per IP för
+    unique-besök (antal distinkta besökare) i admin-stats. Geokodning sker
+    lat i visits_summary via _geo_cache — inget nätverksanrop här."""
+    _visits_load()
+    now = time.time()
+    today = time.strftime("%Y-%m-%d", time.localtime(now))
+    _visit_store["total"] += 1
+    _visit_store["by_day"][today] = int(_visit_store["by_day"].get(today, 0) or 0) + 1
+    if ip:
+        cur = _visit_store["by_ip"].get(ip)
+        if isinstance(cur, dict):
+            cur["count"] = int(cur.get("count", 0) or 0) + 1
+            cur["last_seen"] = now
+        else:
+            # Migrera legacy-format (int) → {count, last_seen}
+            _visit_store["by_ip"][ip] = {"count": int(cur or 0) + 1, "last_seen": now}
+    # Trimma by_day till ~32 dagar
+    days = sorted(_visit_store["by_day"].keys())
+    if len(days) > 32:
+        for d in days[: len(days) - 32]:
+            _visit_store["by_day"].pop(d, None)
+    _visits_save()
+
+
+async def visits_summary() -> dict:
+    """Admin-sammanfattning: total, idag, 7 dagar, per dag (14) + per land.
+
+    Per-land aggregeras från by_ip via geo-cachen; okända IP:er slås upp
+    lat (geo_for_ip, cachad) — samma mekanism som admin-landskollen."""
+    _visits_load()
+    now = time.time()
+    today = time.strftime("%Y-%m-%d", time.localtime(now))
+    last_7 = 0
+    for i in range(7):
+        d = time.strftime("%Y-%m-%d", time.localtime(now - i * 86400))
+        last_7 += int(_visit_store["by_day"].get(d, 0) or 0)
+    days = sorted(_visit_store["by_day"].keys())[-14:]
+    by_day = {d: int(_visit_store["by_day"].get(d, 0) or 0) for d in days}
+    # Unique-besök (distinkta IP:er): total, idag, senaste 7 dygn
+    now = time.time()
+    day_start = time.mktime(time.strptime(today, "%Y-%m-%d"))
+    unique_total = 0
+    unique_today = 0
+    unique_7d = 0
+    for rec in _visit_store["by_ip"].values():
+        if not isinstance(rec, dict):
+            continue
+        last = float(rec.get("last_seen", 0) or 0)
+        unique_total += 1
+        if last >= day_start:
+            unique_today += 1
+        if last >= now - 7 * 86400:
+            unique_7d += 1
+    by_country: dict[str, int] = {}
+    for ip, n in _visit_store["by_ip"].items():
+        cnt = n.get("count", 1) if isinstance(n, dict) else int(n or 1)
+        cc = "??"
+        if ip and not is_private(ip):
+            cached = _geo_cache.get(ip)
+            if cached and time.time() - cached.get("ts", 0) < GEO_CACHE_TTL:
+                cc = cached.get("countryCode") or "??"
+            else:
+                info = await geo_for_ip(ip)
+                cc = info.get("countryCode") or "??"
+        else:
+            cc = "LOCAL" if (ip and is_private(ip)) else "??"
+        by_country[cc] = by_country.get(cc, 0) + cnt
+    by_country = dict(sorted(by_country.items(), key=lambda kv: kv[1], reverse=True))
+    return {
+        "total": _visit_store["total"],
+        "today": int(_visit_store["by_day"].get(today, 0) or 0),
+        "last_7": last_7,
+        "unique_total": unique_total,
+        "unique_today": unique_today,
+        "unique_7d": unique_7d,
+        "by_day": by_day,
+        "by_country": by_country,
+    }
 
 
 def find_username_for_ip(ip: str) -> str | None:

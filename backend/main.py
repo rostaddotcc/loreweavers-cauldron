@@ -225,6 +225,17 @@ async def ip_tracking_middleware(request, call_next):
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    # Besöksräkning (2026-08-05, rostad): bara sidvisningar — HTML-sidor,
+    # inte API-anrop. Private/localhost hoppas inte över helt (dev-besök
+    # syns som LOCAL i admin) men bokförs ändå — det är ändå "ett besök".
+    try:
+        path = request.url.path
+        if request.method == "GET" and not path.startswith("/api") and (
+            path.endswith(".html") or path in ("/", "/index.html")
+        ):
+            iplog.record_visit(iplog.client_ip(request))
+    except Exception:
+        pass
     response.headers["Strict-Transport-Security"] = "max-age=31536000"
     return response
 
@@ -1920,13 +1931,23 @@ async def _call_llm_with_reasoning(
     config = get_model(model_id)
     api_key = get_api_key(config)
 
-    # Reasoning-modeller behöver mer utrymme (thinking + content)
-    if config.api_model in ("deepseek-v4-flash", "deepseek-v4-flash-0731", "mimo-v2.5", "mimo-v2.5-pro", "step-3.7-flash"):
-        max_tokens = max(max_tokens, 4096)
-
-    # Qwen3: thinking mode PÅ som standard — ge generös budget
+    # 2026-08-05 "full mind"-policy (rostad): DM-vägen får ALLTID maximal
+    # tokenbudget + hög reasoning — det är vår nisch (fullstora modeller,
+    # inget kvantiserat, inget nerkapat, inga konstgjorda rate limits på
+    # tänkandet). Latens accepteras medvetet.
+    reasoning_effort_override: str | None = None
     if config.provider == "dashscope" and config.api_model.startswith("qwen3"):
+        # Qwen3: thinking PÅ som standard — generös budget (tanke + svar)
         max_tokens = max(max_tokens, 16000)
+    elif config.api_model == "step-3.7-flash":
+        # StepFun debiterar per prompt, inte per token → fri maximal budget
+        max_tokens = max(max_tokens, 32768)
+        reasoning_effort_override = "high"
+    elif config.provider == "deepseek":
+        max_tokens = max(max_tokens, 8192)
+        reasoning_effort_override = "high"
+    else:
+        max_tokens = max(max_tokens, 8192)
 
     headers = {"Content-Type": "application/json"}
     if api_key:
@@ -1938,6 +1959,9 @@ async def _call_llm_with_reasoning(
         "temperature": temperature,
         "max_tokens": max_tokens,
     }
+
+    if reasoning_effort_override:
+        body["reasoning_effort"] = reasoning_effort_override
 
     url = f"{config.base_url.rstrip('/')}/chat/completions"
 
@@ -5298,7 +5322,7 @@ async def _chat_locked(
         "memory", "dream", "vision", "past",
     ]
     _is_long_form = any(kw in req.message.lower() for kw in _long_form_kw) and len(req.message) > 15
-    _dm_max_tokens = 4096 if _is_long_form else 1024
+    _dm_max_tokens = 16000 if _is_long_form else 8192
     if _is_long_form:
         logger.info("📖 Long-form request — max_tokens raised to %d", _dm_max_tokens)
 
@@ -6006,7 +6030,7 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
         usage_out: dict = {}
         raw = await _call_llm(
             req.model_id, messages, temperature=0.95, max_tokens=8000,
-            thinking_cap=8000, reasoning_effort="low", timeout=300,
+            thinking_cap=8000, reasoning_effort="high", timeout=300,
             usage_out=usage_out,
         )
         char_data = _extract_json(raw)
@@ -6202,7 +6226,7 @@ async def generate_character_stream(req: CharacterRequest, morkrets_token: str |
         try:
             async for r_delta, c_delta, u in _stream_llm(
                 req.model_id, messages, temperature=0.95, max_tokens=8000,
-                thinking_cap=8000, reasoning_effort="low",
+                thinking_cap=8000, reasoning_effort="high",
             ):
                 if u:
                     usage = u
@@ -6274,7 +6298,7 @@ async def vault_generate_stream(req: VaultGenRequest, morkrets_token: str | None
         try:
             async for r_delta, c_delta, u in _stream_llm(
                 req.model_id, messages, temperature=0.95, max_tokens=8000,
-                thinking_cap=8000, reasoning_effort="low",
+                thinking_cap=8000, reasoning_effort="high",
             ):
                 if u:
                     usage = u
@@ -8947,6 +8971,9 @@ async def admin_stats(morkrets_token: str | None = Cookie(None)):
     providers = dict(sorted(providers.items(), key=lambda kv: kv[1]["tokens"], reverse=True))
     models_list = dict(sorted(models_list.items(), key=lambda kv: kv[1]["tokens"], reverse=True))
 
+    # Besöksstatistik (2026-08-05, rostad): total, idag, 7 dagar, per dag + per land
+    visits = await iplog.visits_summary()
+
     return {
         "total_users": len(users),
         "total_campaigns": total_campaigns,
@@ -8955,6 +8982,7 @@ async def admin_stats(morkrets_token: str | None = Cookie(None)):
         "users": user_stats,
         "providers": providers,
         "models": models_list,
+        "visits": visits,
     }
 
 

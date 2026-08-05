@@ -33,10 +33,11 @@
   .box::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.4}
   .cmd{color:var(--term-green);background:var(--ink);padding:.15rem .4rem;border:1px solid var(--edge);font-size:.85rem}
   .key{color:var(--term-amber);border:1px solid var(--edge);padding:.1rem .35rem;font-size:.81rem;background:var(--stone-2)}
-  .topbar{display:flex;align-items:center;gap:1rem;padding:1rem 0;border-bottom:1px solid var(--edge);margin-bottom:2rem}
-  .topbar .brand{font-family:'Press Start 2P',monospace;font-size:.6rem;color:var(--gold)}
-  .topbar a{color:var(--bone-dim);text-decoration:none;font-size:.78rem;border:1px solid var(--edge);padding:.35rem .7rem;transition:none}
-  .topbar a:hover{border-color:var(--gold);color:var(--gold-bright)}
+  .topbar{display:flex;align-items:center;gap:1.2rem;padding:1.15rem 0;border-bottom:1px solid rgba(42,42,58,.55);margin-bottom:2rem}
+  .topbar .brand{display:flex;align-items:center;gap:.6rem;font-family:'Cinzel',serif;font-size:.74rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-bright)}
+  .topbar .brand img{width:26px;height:26px;border-radius:6px;box-shadow:0 0 10px rgba(201,162,39,.25)}
+  .topbar a{color:var(--bone-dim);text-decoration:none;font-family:'Cinzel',serif;font-size:.66rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:.35rem .1rem;border:none;background:none;transition:color .25s}
+  .topbar a:hover{color:var(--gold-bright);text-shadow:0 0 12px rgba(232,198,90,.35)}
   .divider{border:none;border-top:1px dashed var(--edge);margin:1.5rem 0}
   .loop{display:grid;grid-template-columns:auto 1fr;gap:.4rem .8rem;font-size:.85rem}
   .loop .step{color:var(--term-green);font-weight:700}
@@ -64,10 +65,10 @@
   /* ═══════════ Mobile — touchscreen ═══════════ */
   @media (max-width: 900px) {
     html { -webkit-tap-highlight-color: transparent; }
-    .topbar { flex-wrap: wrap; gap: .4rem .5rem; }
+    .topbar { flex-wrap: wrap; gap: .4rem .9rem; }
     .topbar a {
       min-height: 44px; display: inline-flex; align-items: center;
-      padding: .4rem .7rem; font-size: .73rem;
+      padding: .4rem 0; font-size: .68rem;
     }
   }
   @media (max-width: 640px) {
@@ -78,7 +79,7 @@
     .box { padding: .9rem .8rem; }
     .cmd { word-break: break-word; display: inline-block; max-width: 100%; }
     .loop { gap: .5rem .6rem; }
-    .topbar .brand { font-size: .55rem; }
+    .topbar .brand { font-size: .62rem; }
     .ledger-grid { grid-template-columns: 1fr; }
   }
   @media (max-width: 400px) {
@@ -97,8 +98,9 @@
 <body>
 <div class="app">
   <div class="topbar">
-    <span class="brand">The Lore Weaver's Cauldron</span>
+    <span class="brand"><img src="assets/logo-cauldron.png" alt="">The Lore Weaver's Cauldron</span>
     <span style="flex:1"></span>
+    <a href="mechanics.html">⚙️ Mechanics</a>
     <a href="chat.html">⚔️ To the Table</a>
     <a href="adventure.html">🚪 Leave</a>
     <a href="releases.html">📜 Releases</a>
@@ -157,6 +159,7 @@
 
   <h2 class="rv">The Guardian — Keeping the Truth</h2>
   <p class="rv d1" style="color:var(--bone-dim);font-size:.86rem">The DM is a storyteller, and storytellers make mistakes. The Guardian is the part of the engine that <b>owns the numbers</b> — so a wrong sentence in the tale never becomes a wrong fact in the world.</p>
+  <p class="rv d2" style="color:var(--bone-dim);font-size:.86rem"><span class="truth">The rule of the books:</span> the Guardian corrects the ledger <b>only when the Dungeon Master's own narration states it as truth in the world</b> — it never writes a fact the DM did not speak. Truth flows from the DM's books, mechanics flow from the Guardian. That split is what hardens the realm against AI drift: a wandering sentence can never quietly rewrite the state.</p>
   <div class="ledger-grid rv d2">
     <div class="ledger-cell">
       <span class="lc-tag">Before the story</span>

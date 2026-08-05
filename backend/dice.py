@@ -5,6 +5,7 @@ Parserar notation som '1d20+4', '2d6-1', '1d20'.
 """
 
 import random
+import secrets
 import re
 
 
@@ -27,7 +28,7 @@ def roll(notation: str) -> dict:
     if sides < 2 or sides > 1000:
         raise ValueError("Tärningssidor måste vara 2–1000")
 
-    rolls = [random.randint(1, sides) for _ in range(count)]
+    rolls = [secrets.randbelow(sides) + 1 for _ in range(count)]
     total = sum(rolls) + modifier
 
     # Crit/fail bara för enskilda d20-kast

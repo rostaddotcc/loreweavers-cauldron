@@ -32,7 +32,9 @@ from __future__ import annotations
 import json
 import logging
 import random
+import secrets
 import re
+from typing import Any
 from urllib.parse import quote
 
 logger = logging.getLogger("loreweavers.combat")
@@ -56,12 +58,12 @@ def roll_dice(notation: str) -> tuple[int, list[int]]:
     else:
         count, sides = int(m.group(1)), int(m.group(2))
         mod = int(m.group(3) or 0)
-    rolls = [random.randint(1, sides) for _ in range(count)]
+    rolls = [secrets.randbelow(sides) + 1 for _ in range(count)]
     return sum(rolls) + mod, rolls
 
 
 def roll_d20() -> int:
-    return random.randint(1, 20)
+    return secrets.randbelow(20) + 1
 
 
 # ═══════════════════════════════════════

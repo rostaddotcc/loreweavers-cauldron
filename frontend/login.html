@@ -617,7 +617,7 @@
             <h3>Continue your journey</h3>
             <p>Welcome back, <b class="gc-name">adventurer</b> &mdash; the fire is still burning.</p>
           </div>
-          <a class="gate-btn" href="adventure.html" style="display:block;text-align:center;text-decoration:none;margin-top:.4rem">Continue to the realm &rarr;</a>
+          <a class="gate-btn" href="adventure.html?v=20260805c" style="display:block;text-align:center;text-decoration:none;margin-top:.4rem">Continue to the realm &rarr;</a>
           <div class="gate-toggle" style="font-size:.75rem" onclick="doLogout()">Not you? <b>Sign out</b></div>
         </div>
       </div>
@@ -679,7 +679,7 @@
     <div class="prof-name" id="prof-name"></div>
     <div class="prof-tier" id="prof-tier"></div>
     <div class="prof-actions">
-      <a class="prof-btn gold" href="adventure.html">Return to the realm →</a>
+      <a class="prof-btn gold" href="adventure.html?v=20260805c">Return to the realm →</a>
       <a class="prof-btn ghost" href="pricing.html">Membership &amp; billing</a>
       <button class="prof-btn danger" onclick="doLogout()">Log out</button>
       <button class="prof-btn danger" id="prof-delete-btn" onclick="askDeleteAccount()">Delete account</button>
@@ -842,7 +842,7 @@ function authSuccess(username) {
   sessionStorage.setItem('dnd_user', username);
   // ?next= stöd (t.ex. pricing.html efter checkout-klick) — bara lokala .html-sidor.
   let next = new URLSearchParams(location.search).get('next');
-  if (!next || !/^(?:[a-zA-Z0-9_-]+\.html)(?:[?#].*)?$/.test(next)) next = 'adventure.html';
+  if (!next || !/^(?:[a-zA-Z0-9_-]+\.html)(?:[?#].*)?$/.test(next)) next = 'adventure.html?v=20260805c';
   setTimeout(() => { window.location.href = next; }, 900);
 }
 

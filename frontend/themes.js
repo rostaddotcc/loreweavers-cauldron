@@ -330,6 +330,12 @@ function themeCycle() {
 document.addEventListener('DOMContentLoaded', () => {
   const cur = THEMES.applied() || THEMES.current();
 
+  // Hydrera kontots sparade tema från servern OAVSETT menystruktur — annars
+  // hoppas det över på sidor med kugghjul/settings-meny (chat/adventure) och
+  // temat fastnar i default när localStorage är tom (ny enhet/origin).
+  // (2026-08-05 fix: anropet låg efter en tidig return → bugg.)
+  THEMES.hydrateFromServer();
+
   // Sidor med data-no-theme-btn (login.html): inga temaknappar alls — temat
   // är låst till sidans default (Blood) tills man är inloggad i spelet.
   const noThemeBtn = document.documentElement.getAttribute('data-no-theme-btn') === 'true';
@@ -383,6 +389,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Hämta kontots sparade tema om localStorage är tomt (ny enhet)
-  THEMES.hydrateFromServer();
+  // Hydrate körs nu tidigt i DOMContentLoaded (se toppen) så den aldrig
+  // hoppas över på sidor med kugghjul/settings-meny.
 });

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-default-theme="blood">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -210,19 +210,25 @@
   }.npc-list{
     display: flex; flex-direction: column;
     background: var(--stone-2); border: 1px solid var(--edge);
+    border-radius: 10px; overflow: hidden; padding: 4px 2px;
     max-height: 38vh; overflow-y: auto;
-  }.npc-list::-webkit-scrollbar{ width: 5px; }.npc-list::-webkit-scrollbar-thumb{ background: var(--edge-hi, var(--edge)); border-radius: 3px; }.npc-row{
+  }
+  .npc-list::-webkit-scrollbar{ width: 5px; }.npc-list::-webkit-scrollbar-thumb{ background: var(--edge-hi, var(--edge)); border-radius: 3px; }.npc-row{
     display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem;
     padding: 0.45rem 0.55rem; transition: background 0.2s; cursor: default;
     border-bottom: 1px solid color-mix(in srgb, var(--edge) 45%, transparent);
   }.npc-row:last-child{ border-bottom: none; }.npc-row:hover{ background: color-mix(in srgb, var(--arcane) 7%, transparent); }
-  /* 2026-08-05: NPC-kort med porträtt i bakgrunden — mjukt renderade mini-kort */
-  .npc-row.has-av{ position: relative; overflow: hidden; margin: 3px 5px; padding: 0.62rem 0.6rem;
-    border: 1px solid color-mix(in srgb, var(--edge) 75%, transparent); border-radius: 7px; }
-  .npc-row.has-av .npc-bg{ position: absolute; inset: -8px; width: calc(100% + 16px); height: calc(100% + 16px);
-    object-fit: cover; opacity: 0.5; filter: blur(3px) saturate(0.85) brightness(0.8); pointer-events: none; }
+  /* 2026-08-05: NPC-kort med porträtt — renderas som äventyrarens kort:
+     stor cirkel-thumb + bakgrundsporträtt över hela kortet (mjukt, blur+gradient) */
+  .npc-row.has-av{ position: relative; overflow: hidden; margin: 4px 6px; padding: 0.7rem 0.75rem; min-height: 68px;
+    border: 1px solid color-mix(in srgb, var(--edge) 75%, transparent); border-radius: 10px; align-items: center; }
+  .npc-row.has-av .npc-bg{ position: absolute; inset: -14px; width: calc(100% + 28px); height: calc(100% + 28px);
+    object-fit: cover; opacity: 1; filter: blur(0.5px) saturate(1.1) brightness(0.72); pointer-events: none; }
   .npc-row.has-av::after{ content: ''; position: absolute; inset: 0; pointer-events: none;
-    background: linear-gradient(100deg, rgba(14,14,20,0.92) 25%, rgba(14,14,20,0.55) 70%, rgba(14,14,20,0.15)); }
+    background: linear-gradient(100deg, rgba(14,14,20,0.94) 34%, rgba(14,14,20,0.55) 70%, rgba(14,14,20,0.06)); }
+  .npc-row.has-av .npc-av-thumb{ position: relative; z-index: 1; width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
+    object-fit: cover; border: 2px solid color-mix(in srgb, var(--gold) 55%, transparent);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.6); }
   .npc-row.has-av .npc-info{ position: relative; z-index: 1; text-shadow: 0 1px 5px rgba(0,0,0,0.85); }
   .npc-row.has-av .npc-name{ color: var(--bone-bright); }
   .npc-row.has-av .npc-role{ color: color-mix(in srgb, var(--bone-dim) 80%, var(--bone)); }
@@ -1874,6 +1880,14 @@ function ingestAvatars(avatarMap) {
   Object.keys(AVATARS).forEach(k => delete AVATARS[k]);
   Object.keys(avatarMap || {}).forEach(kind => {
     AVATARS[kind] = API.avatarUrl(kind);
+    // NPC-nycklar kan ligga som 'npc:Keeper of Paths' (visningsnamn) i staten
+    // medan chatten slår upp 'npc:keeper_of_paths' (normaliserad) — alisa båda
+    // formerna till samma URL så porträttet hittas oavsett källa. (2026-08-05)
+    if (kind.startsWith('npc:')) {
+      const display = kind.slice(4);
+      const norm = display.toLowerCase().replace(/\s+/g, '_');
+      if (norm !== display) AVATARS['npc:' + norm] = API.avatarUrl(kind);
+    }
   });
 }
 
@@ -5809,14 +5823,16 @@ function renderNpcSidebar() {
   const row = ([k, n]) => {
     const av = AVATARS['npc:' + k];
     const icon = av
-      ? `<img src="${av}" alt="" style="width:16px;height:16px;object-fit:cover;image-rendering:pixelated">`
+      ? `<img class="npc-av-thumb" src="${av}" alt="" loading="lazy">`
       : SPR.html(n.icon || '🎭');
     const safeName = String(n.name || k || '').replace(/'/g, "\\'");
-    // 2026-08-05: har NPC:n ett porträtt → renderas som mjukt kort med bilden i bakgrunden
+    // 2026-08-05: har NPC:n ett porträtt → renderas som äventyrarens kort:
+    // stor cirkel-thumb + porträtt i bakgrunden. Utan porträtt: dot + ikon.
     const avClass = av ? ' has-av' : '';
     return `
       <div class="npc-row${n.alive === false ? ' dead' : ''}${avClass}" data-npc="${k}" onclick="openNpcCodex('${safeName}')" title="Open dossier in Codex" style="cursor:pointer">
         ${av ? `<img class="npc-bg" src="${av}" alt="" loading="lazy">` : `<span class="npc-dot" style="color:${n.color};background:${n.color}"></span>`}
+        ${av ? icon : ''}
         <span class="npc-info">
           <div class="npc-name">${n.alive === false ? SPR.html('💀') : ''} ${av ? '' : icon} ${n.name}</div>
           ${n.role ? `<div class="npc-role">${n.role}</div>` : ''}

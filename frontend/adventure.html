@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-default-theme="blood">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -892,7 +892,7 @@ async function activateAndContinue(campaignId) {
   SFX.click();
   try {
     await API.activateCampaign(campaignId);
-    location.href = 'chat.html';
+    location.href = 'chat.html?v=20260805c';
   } catch (e) {
     toast('⚠ ' + I18N.t('Kunde inte aktivera kampanj: ') + (e.message || I18N.t('okänt fel')));
   }
@@ -1740,7 +1740,7 @@ async function startAdventure() {
     // 3) Lyft in hjälten (genererad → sparad i Forge; eller färdig Forge-hjälte)
     await API.vaultUse(advHeroId);
     sessionStorage.setItem('dnd_vault_character', advHeroId);
-    location.href = 'chat.html';
+    location.href = 'chat.html?v=20260805c';
   } catch (e) {
     try { SFX.error(); } catch (_) {}
     toast('⚠ ' + (e.message || 'Could not start'));

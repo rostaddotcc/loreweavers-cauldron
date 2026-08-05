@@ -954,7 +954,7 @@ async function activateAndContinue(campaignId) {
   SFX.click();
   try {
     await API.activateCampaign(campaignId);
-    location.href = 'chat.html?v=20260806c';
+    location.href = 'chat.html?v=20260806d';
   } catch (e) {
     toast('⚠ ' + I18N.t('Kunde inte aktivera kampanj: ') + (e.message || I18N.t('okänt fel')));
   }
@@ -1913,7 +1913,7 @@ async function startAdventure() {
     // 3) Lyft in hjälten (genererad → sparad i Forge; eller färdig Forge-hjälte)
     await API.vaultUse(advAdventurerId);
     sessionStorage.setItem('dnd_vault_character', advAdventurerId);
-    location.href = 'chat.html?v=20260806c';
+    location.href = 'chat.html?v=20260806d';
   } catch (e) {
     try { SFX.error(); } catch (_) {}
     toast('⚠ ' + (e.message || 'Could not start'));

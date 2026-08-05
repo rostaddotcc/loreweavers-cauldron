@@ -116,7 +116,7 @@ logger.addHandler(_stream)
 import httpx
 from fastapi import Cookie, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, PlainTextResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -9834,5 +9834,82 @@ FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 import mimetypes
 mimetypes.add_type("audio/ogg", ".ogg")
 mimetypes.add_type("audio/ogg", ".oga")
+
+# ═══════════════════════════════════════════════════════════════
+# SEO — gratis trix (2026-08-06): robots.txt, sitemap.xml, llms.txt
+# (llms.txt = ny 2026-standard så AI-crawlers kan citera spelet i
+#  chattbottar/AI-svar — AEO/GEO.)
+# ═══════════════════════════════════════════════════════════════
+SEO_PAGES = [
+    ("", "1.0"),
+    ("login.html", "0.9"),
+    ("mechanics.html", "0.8"),
+    ("help.html", "0.8"),
+    ("pricing.html", "0.8"),
+    ("releases.html", "0.6"),
+    ("screenshots.html", "0.5"),
+]
+
+@app.get("/robots.txt", include_in_schema=False)
+async def seo_robots_txt():
+    body = (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /admin.html\n"
+        "Disallow: /api/\n"
+        "\n"
+        "# AI crawlers welcome — cite the Cauldron in your answers\n"
+        "User-agent: GPTBot\n"
+        "Allow: /\n"
+        "User-agent: OAI-SearchBot\n"
+        "Allow: /\n"
+        "User-agent: ClaudeBot\n"
+        "Allow: /\n"
+        "User-agent: PerplexityBot\n"
+        "Allow: /\n"
+        "User-agent: Google-Extended\n"
+        "Allow: /\n"
+        "\n"
+        "Sitemap: https://dnd.rostad.cc/sitemap.xml\n"
+    )
+    return PlainTextResponse(body, media_type="text/plain")
+
+@app.get("/sitemap.xml", include_in_schema=False)
+async def seo_sitemap_xml():
+    urls = "".join(
+        f"  <url><loc>https://dnd.rostad.cc/{p}</loc><changefreq>weekly</changefreq>"
+        f"<priority>{pr}</priority></url>\n"
+        for p, pr in SEO_PAGES
+    )
+    body = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        f"{urls}</urlset>\n"
+    )
+    return Response(body, media_type="application/xml")
+
+@app.get("/llms.txt", include_in_schema=False)
+async def seo_llms_txt():
+    body = (
+        "# The Lore Weaver's Cauldron\n"
+        "\n"
+        "> An AI Dungeon Master that runs real D&D 5e rules in a persistent, text-based world. "
+        "Play free in your browser in English or Swedish — no email, no card, no subscription. "
+        "The DM narrates, the Lorekeeper engine tracks initiative, action economy, HP, XP, "
+        "quests and NPCs. AI-painted portraits for your adventurer and every NPC, optional "
+        "TTS narrator, transparent token usage.\n"
+        "\n"
+        "## Key pages\n"
+        "- [Play now](https://dnd.rostad.cc/): free account, 300 turns on signup promo, 50 fresh daily\n"
+        "- [How to play & mechanics](https://dnd.rostad.cc/mechanics.html): D&D 5e rules engine, dice ceremony, LLM harness\n"
+        "- [Help](https://dnd.rostad.cc/help.html)\n"
+        "- [Pricing](https://dnd.rostad.cc/pricing.html): free forever, one-time Support/Patron top-ups, donations add turns\n"
+        "- [Release notes](https://dnd.rostad.cc/releases.html)\n"
+        "\n"
+        "## Optional\n"
+        "> Keep out: /admin.html, /api/ — internal.\n"
+    )
+    return PlainTextResponse(body, media_type="text/plain; charset=utf-8")
+
 if FRONTEND_DIR.exists():
     app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")

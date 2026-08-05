@@ -7071,8 +7071,8 @@ function cdMentionNpc(name) {
 
 // ═══════════════ 📖 CODEX MODAL (D1.3) — lazy iframes ═══════════════
 const CODEX_PAGES = {
-  character: { label: '🧙 Character', src: 'character.html?v=20260806a' },
-  npcs:      { label: '🧝 NPCs',      src: 'npcs.html?v=20260806a' },
+  character: { label: '🧙 Character', src: 'character.html?v=20260806b' },
+  npcs:      { label: '🧝 NPCs',      src: 'npcs.html?v=20260806b' },
   map:       { label: '🗺 Map',       src: 'platser.html?v=20260806a' },
   journal:   { label: '📖 Journal',   src: 'loggbok.html?v=20260806a' },
   facts:     { label: '📌 Facts',     src: 'facts.html?v=20260806a' },
@@ -7274,11 +7274,13 @@ document.addEventListener('keydown', e => {
     text-transform: uppercase; color: var(--gold-bright); border: 1px solid var(--edge-hi);
     border-radius: 999px; padding: .16rem .55rem; }
   .cp-grid{ display: grid; grid-template-columns: 1fr 1fr; gap: .7rem 1rem; }
-  .cp-cell{ background: rgba(255,255,255,.03); border: 1px solid var(--edge); border-radius: 6px; padding: .6rem .8rem; }
+  .cp-cell{ background: linear-gradient(180deg, color-mix(in srgb, var(--stone-3) 72%, transparent), color-mix(in srgb, var(--stone) 72%, transparent));
+    border: 1px solid rgba(201,162,39,.16); border-radius: 10px; padding: .65rem .85rem;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.02); }
   .cp-cell.full{ grid-column: 1/-1; }
   .cp-cell .k{ font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--bone-dim); margin-bottom: .18rem; }
   .cp-cell .v{ font-size: 1rem; color: var(--bone-bright); word-break: break-word; }
-  .cp-sec{ margin-top: 1.1rem; padding-top: .9rem; border-top: 1px solid var(--edge); }
+  .cp-sec{ margin-top: 1.1rem; padding-top: .9rem; border-top: 1px solid rgba(201,162,39,.15); }
   .cp-sec-title{ font-family: 'Cinzel', serif; font-size: .68rem; letter-spacing: .18em; text-transform: uppercase;
     color: var(--teal); margin-bottom: .6rem; }
   .cp-actions{ display: flex; flex-direction: column; gap: .55rem; }

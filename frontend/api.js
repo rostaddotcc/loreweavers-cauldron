@@ -378,11 +378,11 @@ const API = (() => {
     accountAvatarUrl() {
       return MOCK ? null : BASE + '/api/me/avatar';
     },
-    async generateAccountAvatar(prompt, seed) {
+    async generateAccountAvatar(prompt, seed, provider = 'stepfun') {
       if (MOCK) throw new Error('Not available in mock mode');
       return req('/api/me/avatar/generate', {
         method: 'POST',
-        body: JSON.stringify({ prompt: prompt || '', seed: seed || Date.now() % 1000000 }),
+        body: JSON.stringify({ prompt: prompt || '', seed: seed || Date.now() % 1000000, provider }),
       });
     },
     async deleteAccountAvatar() {

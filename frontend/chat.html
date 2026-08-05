@@ -1052,13 +1052,15 @@
 .cd-nav-btn{ border-radius: 8px !important; }
 .drawer-logout{ border-radius: 8px !important; }
 .mobile-menu-btn{ border-radius: 8px !important; box-shadow: 0 2px 10px -6px rgba(0,0,0,.6) !important; }
-.side-toggle{ border-radius: 6px !important; }
+.side-toggle{ border-radius: 8px !important; }
 .pc-card{ border-radius: 8px !important; }
-.npc-row{ border-radius: 6px !important; }
-.quest-item{ border-radius: 6px !important; }
-.journey-entry{ border-radius: 6px !important; }
+.pc-avatar-bg{ border-radius: 8px !important; }
+.npc-row{ border-radius: 8px !important; }
+.quest-item{ border-radius: 8px !important; }
+.journey-entry{ border-radius: 8px !important; }
 .cd-close{ border-radius: 8px !important; }
 .cx-close{ border-radius: 8px !important; }
+.cd-roll-btn{ border-radius: 5px !important; }
 /* Codex-flikarna: bump 6→8px + mjuk hover-glow */
 .cx-tab{ border-radius: 8px !important; transition: all .2s !important; }
 .cx-tab:hover{ transform: translateY(-1px) !important; box-shadow: 0 3px 12px -5px rgba(232,198,90,.3) !important; }
@@ -1906,6 +1908,9 @@ function pickAvatar(kind) {
   const provRow = document.getElementById('avatar-provider-row');
   if (provRow) provRow.style.display = '';
   aiBtn.textContent = '✨ Paint new from my words';
+  aiBtn.title = '';
+  const wanBtn = document.getElementById('avatar-ai-btn-wan');
+  if (wanBtn) { wanBtn.style.display = 'none'; wanBtn.title = ''; }
   const promptInp = document.getElementById('avatar-prompt-input');
   if (promptInp) promptInp.placeholder = "Optional: describe exactly what you want painted… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)";
   document.getElementById('avatar-ai-status').textContent = '';
@@ -1915,8 +1920,10 @@ function pickAvatar(kind) {
 }
 
 // ── Spelarprofilens avatar (konto — SEPARAT från äventyraren) ──
-// Öppnar avatar-modalen i PROFILE-läge: alltid StepFun (step-image-edit-2),
-// Support-feature (3€), ingen Engine-väljare. Headerns porträtt hör hit.
+// Öppnar avatar-modalen i PROFILE-läge: TVÅ målningsknappar — StepFun
+// (step-image-edit-2, Support 3€) och Wan 2.7 Pro (Patron 10€) — med
+// tier-lås (free → båda 🔒, tier1 → Wan 🔒, tier2/lifetime → båda öppna).
+// Headerns porträtt hör hit.
 function openProfileAvatarModal() {
   _avatarProfileMode = true;
   AVATAR_KIND = 'player';
@@ -1927,23 +1934,41 @@ function openProfileAvatarModal() {
   const delBtn = document.getElementById('avatar-del-btn');
   const updBtn = document.getElementById('avatar-update-btn');
   const aiBtn = document.getElementById('avatar-ai-btn');
+  const wanBtn = document.getElementById('avatar-ai-btn-wan');
   const provRow = document.getElementById('avatar-provider-row');
   const promptInp = document.getElementById('avatar-prompt-input');
   title.textContent = '🎨 Your profile portrait';
-  desc.textContent = 'Paint YOUR profile portrait — the face at your table, separate from your adventurer. StepFun — Support feature (3€).';
+  desc.textContent = 'Paint YOUR profile portrait — the face at your table, separate from your adventurer. StepFun (Support 3€) or Wan 2.7 Pro (Patron 10€).';
   const url = _hasAccountAvatar ? API.accountAvatarUrl() + '?t=' + Date.now() : null;
   preview.innerHTML = url
     ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">`
     : SPR.html('👤');
   delBtn.style.display = _hasAccountAvatar ? '' : 'none';
   updBtn.style.display = 'none';
-  aiBtn.disabled = false;
-  aiBtn.textContent = '✨ Paint my profile (StepFun)';
   if (provRow) provRow.style.display = 'none';
+  if (aiBtn) { aiBtn.style.display = ''; aiBtn.disabled = false; }
+  if (wanBtn) { wanBtn.style.display = ''; wanBtn.disabled = false; }
   if (promptInp) promptInp.placeholder = 'Describe yourself — e.g. \'hooded figure, lantern light, old leather\' (or leave empty)';
   document.getElementById('avatar-ai-status').textContent = '';
+  _updateProfilePaintButtons();
   if (ov) ov.classList.add('show');
   try { SFX.click(); } catch (_) {}
+}
+// Tier-lås för profil-lägets två knappar: free → båda 🔒 (toast vid klick),
+// tier1 (Support) → StepFun öppen + Wan 🔒, tier2/lifetime → båda öppna.
+function _updateProfilePaintButtons() {
+  const aiBtn = document.getElementById('avatar-ai-btn');
+  const wanBtn = document.getElementById('avatar-ai-btn-wan');
+  const canPaint = _tierHasAvatars();     // Support+ (3€)
+  const wanUnlocked = _tierHasModels();   // Patron (10€)
+  if (aiBtn) {
+    aiBtn.textContent = '✨ Paint profile (StepFun)' + (canPaint ? '' : ' 🔒');
+    aiBtn.title = canPaint ? '' : '🔒 AI painting is a Support feature (3€) — support the Cauldron to paint.';
+  }
+  if (wanBtn) {
+    wanBtn.textContent = '✨ Paint profile (Wan 2.7)' + (wanUnlocked ? '' : ' 🔒');
+    wanBtn.title = wanUnlocked ? '' : '🔒 Wan 2.7 Pro is a Patron feature (10€) — upgrade to paint with Wan.';
+  }
 }
 function closeAvatarModal() {
   const ov = document.getElementById('avatar-overlay');
@@ -1997,22 +2022,26 @@ function updateAvatarProviderLock() {
 }
 
 // Generera AI-avatar (prompt byggs i backend från karaktär/NPC-data)
-async function generateAvatarAction() {
+// provider: 'stepfun' | 'wan' — i profil-läget väljer knappen; annars
+// avatarProvider() (Engine-väljaren).
+async function generateAvatarAction(provider) {
   const status = document.getElementById('avatar-ai-status');
-  const btn = document.getElementById('avatar-ai-btn');
   // TIERS: bildgenerering är gated — informera innan API-anropet.
   if (_avatarProfileMode) {
-    if (!avatarGenGate('stepfun')) return;
+    const prov = provider === 'wan' ? 'wan' : 'stepfun';
+    if (!avatarGenGate(prov)) return;
+    const btn = document.getElementById(prov === 'wan' ? 'avatar-ai-btn-wan' : 'avatar-ai-btn');
     status.textContent = '🎨 Painting your profile portrait… (10–30 s)';
-    btn.disabled = true;
+    if (btn) btn.disabled = true;
     try {
       const freePrompt = (document.getElementById('avatar-prompt-input') || {}).value || '';
-      const res = await API.generateAccountAvatar(freePrompt);
+      const seed = Date.now() % 1000000;
+      const res = await API.generateAccountAvatar(freePrompt, seed, prov);
       if (res && res.ok) {
         _hasAccountAvatar = true;
         refreshAvatars();
         openProfileAvatarModal();
-        status.textContent = '✨ Profile portrait painted — StepFun';
+        status.textContent = '✨ Profile portrait painted — ' + (prov === 'wan' ? 'Wan 2.7' : 'StepFun');
         try { SFX.levelup(); } catch (_) {}
       } else {
         status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Generation failed');
@@ -2022,19 +2051,21 @@ async function generateAvatarAction() {
       status.textContent = '⚠ ' + (e.message || 'Generation failed');
       try { SFX.error(); } catch (_) {}
     } finally {
-      btn.disabled = false;
+      if (btn) btn.disabled = false;
     }
     return;
   }
   const kind = AVATAR_KIND;
-  if (!avatarGenGate(avatarProvider())) return;
+  const prov = (provider === 'wan' || provider === 'stepfun') ? provider : avatarProvider();
+  const btn = document.getElementById('avatar-ai-btn');
+  if (!avatarGenGate(prov)) return;
   status.textContent = '🎨 The artist is painting… (10–30 s)';
   btn.disabled = true;
   try {
     // mode "new" = full generation → alltid en NY bild
     const freePrompt = (document.getElementById('avatar-prompt-input') || {}).value || '';
     const usedWords = !!freePrompt.trim();
-    const res = await API.generateAvatar(kind, Date.now() % 1000000, 'new', freePrompt, avatarProvider());
+    const res = await API.generateAvatar(kind, Date.now() % 1000000, 'new', freePrompt, prov);
     if (res && res.ok) {
       AVATARS[kind] = API.avatarUrl(kind) + '?t=' + Date.now();
       refreshAvatars();
@@ -2706,22 +2737,34 @@ function updateTTSStyleLock() {
     card.style.opacity = hasStyle ? '1' : '0.55';
     card.style.pointerEvents = hasStyle ? 'auto' : 'none';
   }
-  // Qwen TTS: låst för free/tier1 (StepFun är alltid gratis — rostad 2026-08-04)
+  // TTS-providers: StepFun = Support (3€)+, Qwen = Patron (10€)+ (2026-08-05)
   const ps = document.getElementById('tts-provider-select');
   if (ps) {
+    const hasTTS = _tierHasAvatars(); // Support+ (3€) → StepFun tillåten
+    const stepOpt = ps.querySelector('option[value="stepfun"]');
+    if (stepOpt) {
+      stepOpt.disabled = !hasTTS;
+      stepOpt.textContent = hasTTS ? 'StepFun' : 'StepFun 🔒 Support 3€';
+    }
     const qwenOpt = ps.querySelector('option[value="qwen"]');
     if (qwenOpt) {
       qwenOpt.disabled = !hasStyle;
-      qwenOpt.textContent = hasStyle ? 'Qwen' : 'Qwen 🔒';
+      qwenOpt.textContent = hasStyle ? 'Qwen' : 'Qwen 🔒 Patron 10€';
     }
-    // Fallback till stepfun om qwen vald men låst
-    if (!hasStyle && ps.value === 'qwen') {
-      ps.value = 'stepfun';
-      if (_safeLS.get(TTS_PROVIDER_KEY) === 'qwen') {
-        _safeLS.set(TTS_PROVIDER_KEY, 'stepfun');
+    // Fallback: om nuvarande val är låst → första tillåtna provider
+    // (stepfun om tillåten, annars qwen, annars none) + uppdatera localStorage.
+    const t = _tier();
+    const cur = ps.value;
+    const curAllowed = (cur === 'stepfun' && hasTTS) || (cur === 'qwen' && hasStyle);
+    if (!curAllowed) {
+      const next = hasTTS ? 'stepfun' : (hasStyle ? 'qwen' : '');
+      ps.value = next;
+      if (_safeLS.get(TTS_PROVIDER_KEY) !== next) {
+        _safeLS.set(TTS_PROVIDER_KEY, next);
       }
     }
-    ps.title = hasStyle ? 'TTS provider' : 'StepFun TTS — always free' + ' · Qwen 🔒 Patron (10€)';
+    ps.title = t === 'free' ? 'TTS — Support feature (3€)'
+      : (t === 'tier1' ? 'StepFun TTS · Qwen 🔒 Patron (10€)' : 'TTS provider');
   }
   // Modell-pickern: premium-modeller gråade för free/tier1
   if (typeof initSettingsModelPickers === 'function') {
@@ -2751,6 +2794,15 @@ function initTTSSpeed() {
 
 function ttsProvider() {
   return _safeLS.get(TTS_PROVIDER_KEY) || 'stepfun';
+}
+
+// Tier-gate för TTS-providers (backend klämmer ändå med 403):
+// StepFun = Support (3€)+, Qwen = Patron (10€)+.
+function ttsProviderAllowed(p) {
+  const t = _tier();
+  if (p === 'stepfun') return t !== 'free';
+  if (p === 'qwen') return t === 'tier2' || t === 'lifetime';
+  return false;
 }
 
 function setTTSProvider(p) {
@@ -2898,10 +2950,17 @@ async function playTTS(btn) {
   const text = parts.map(p => (p.innerText || '')).join('\n').trim();
   if (!text) return;
 
+  // Tier-guard: TTS är låst för free (StepFun = Support 3€+, Qwen = Patron 10€+).
+  const provider = ttsProvider();
+  if (!ttsProviderAllowed(provider)) {
+    toast('🔒 TTS is a Support feature (3€) — support the Cauldron to give your story a voice.');
+    try { SFX.error(); } catch (_) {}
+    return;
+  }
+
   btn.textContent = '⏳'; btn.classList.add('playing');
   try {
     const ids = await ttsVoiceIds();
-    const provider = ttsProvider();
     const pids = ids[provider] || ids[ids._default] || {};
     const voiceId = ttsVoice() === 'female' ? pids.female : pids.male;
     if (!voiceId) throw new Error('No voice configured');
@@ -7041,6 +7100,7 @@ document.addEventListener('keydown', e => {
     </div>
     <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
       <button class="av-btn primary" id="avatar-ai-btn" onclick="generateAvatarAction()">✨ Paint new from my words</button>
+      <button class="av-btn primary" id="avatar-ai-btn-wan" onclick="generateAvatarAction('wan')" style="display:none">✨ Paint profile (Wan 2.7)</button>
       <button class="av-btn" id="avatar-update-btn" onclick="updateAvatarAction()" style="display:none">🔄 Update from sheet</button>
       <button class="av-btn" onclick="uploadAvatarAction()">📁 Upload image…</button>
       <button class="av-btn danger" id="avatar-del-btn" onclick="deleteAvatarAction()" style="display:none">🗑 Remove avatar</button>

@@ -472,8 +472,11 @@ function openAvatarModal(i) {
   document.getElementById('avatar-del-btn').style.display = has ? '' : 'none';
   document.getElementById('avatar-update-btn').style.display = has ? '' : 'none';
   document.getElementById('avatar-ai-btn').disabled = false;
+  const freeBtn = document.getElementById('avatar-free-btn');
+  if (freeBtn) freeBtn.disabled = false;
   document.getElementById('avatar-update-btn').disabled = false;
   document.getElementById('avatar-ai-status').textContent = '';
+  updateAvatarProviderLock();
   document.getElementById('avatar-overlay').classList.add('show');
   try { SFX.click(); } catch (_) {}
 }
@@ -481,17 +484,83 @@ function closeAvatarModal() {
   document.getElementById('avatar-overlay').classList.remove('show');
 }
 
+// ── Bildleverantör (StepFun — Support 3€ · Wan 2.7 — Patron 10€) ──
+// Samma mönster som character.html: _npcTier laddas från /api/me och
+// låser Wan-optionen för free/tier1. (2026-08-05)
+let _npcTier = null;  // free | tier1 | tier2 | lifetime (från /api/me)
+function avatarProvider() {
+  const sel = document.getElementById('avatar-provider-select');
+  return (sel && sel.value) || 'stepfun';
+}
+function avatarGenGate(provider) {
+  if (_npcTier === 'free') {
+    toast('🔒 AI painting is a Support feature (3€) — support the Cauldron to paint your hero, the DM and every NPC with StepFun.');
+    try { SFX.error(); } catch (_) {}
+    return false;
+  }
+  if (provider === 'wan' && _npcTier !== 'tier2' && _npcTier !== 'lifetime') {
+    toast('🔒 Wan 2.7 is a Patron feature (10€) — upgrade to paint with Wan.');
+    try { SFX.error(); } catch (_) {}
+    return false;
+  }
+  return true;
+}
+function avatarProviderChanged(sel) {
+  if (sel && sel.value === 'wan' && _npcTier !== 'tier2' && _npcTier !== 'lifetime') {
+    sel.value = 'stepfun';
+    toast('🔒 Wan 2.7 is a Patron feature (10€) — upgrade to paint with Wan.');
+    try { SFX.error(); } catch (_) {}
+  }
+}
+function updateAvatarProviderLock() {
+  const sel = document.getElementById('avatar-provider-select');
+  if (!sel) return;
+  const wanOpt = sel.querySelector('option[value="wan"]');
+  const stepOpt = sel.querySelector('option[value="stepfun"]');
+  if (_npcTier === null) {
+    try {
+      fetch('/api/me').then(r => r.ok ? r.json() : null).then(me => {
+        _npcTier = (me && me.subscription_status) || 'free';
+        if (_npcTier === 'premium') _npcTier = 'tier2';
+        updateAvatarProviderLock();
+      }).catch(() => { _npcTier = 'free'; updateAvatarProviderLock(); });
+    } catch (_) { _npcTier = 'free'; }
+    return;
+  }
+  const canPaint = _npcTier !== 'free';          // Support+ (3€)
+  const wanUnlocked = _npcTier === 'tier2' || _npcTier === 'lifetime';  // Patron (10€)
+  if (stepOpt) {
+    stepOpt.disabled = !canPaint;
+    stepOpt.textContent = canPaint ? 'StepFun — Support' : 'StepFun — Support 🔒';
+  }
+  if (wanOpt) {
+    wanOpt.disabled = !wanUnlocked;
+    wanOpt.textContent = wanUnlocked ? 'Wan 2.7 — Patron' : 'Wan 2.7 — Patron 🔒';
+  }
+  if (sel.value === 'wan' && !wanUnlocked) sel.value = 'stepfun';
+  if (sel.value === 'stepfun' && !canPaint) sel.value = '';
+}
+
 async function _runAvatarGen(mode, statusText, btnId) {
   const key = npcAvatarKey();
   if (!key) return;
   const status = document.getElementById('avatar-ai-status');
   const btn = document.getElementById(btnId);
+  if (!avatarGenGate(avatarProvider())) return;
+  let freePrompt = (document.getElementById('avatar-prompt-input') || {}).value || '';
+  // 🖌️ Free prompt: BARA spelarens ord — tom text är ett fel (ingen auto-prompt).
+  if (mode === 'free') {
+    if (!freePrompt.trim()) {
+      toast('✍️ Write what you want painted first — free prompt paints ONLY your words.');
+      try { SFX.error(); } catch (_) {}
+      return;
+    }
+  }
   status.textContent = statusText;
   btn.disabled = true;
   try {
-    const freePrompt = (document.getElementById('avatar-prompt-input') || {}).value || '';
     const usedWords = !!freePrompt.trim();
-    const res = await API.generateAvatar(key, Date.now() % 1000000, mode, freePrompt);
+    const res = await API.generateAvatar(key, Date.now() % 1000000, mode, freePrompt, avatarProvider());
     if (res && res.ok) {
       AVATARS[key] = { disk_name: 'avatar.png', uploaded: new Date().toISOString(), ai_generated: true, seed: res.seed };
       renderDossier(NPCS[CURRENT_NPC]);
@@ -511,7 +580,10 @@ async function _runAvatarGen(mode, statusText, btnId) {
 }
 
 async function generateAvatarAction() {
-  await _runAvatarGen('new', '🎨 The artist is painting… (10–30 s)', 'avatar-ai-btn');
+  await _runAvatarGen('new', '🎨 The artist is painting from the dossier… (10–30 s)', 'avatar-ai-btn');
+}
+async function freePromptAction() {
+  await _runAvatarGen('free', '🎨 Painting ONLY your words… (10–30 s)', 'avatar-free-btn');
 }
 async function updateAvatarAction() {
   await _runAvatarGen('edit', '🔄 Updating from the dossier… (10–30 s)', 'avatar-update-btn');
@@ -572,12 +644,20 @@ tick();
     </div>
     <div class="mi-intro" id="avatar-modal-desc">Paint a new avatar from the NPC's role and notes — or upload your own image.</div>
     <div style="margin-top:.7rem">
-      <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">🎨 YOUR OWN WORDS (optional)</div>
-      <textarea id="avatar-prompt-input" placeholder="Optional: describe exactly what you want painted… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)" style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:'Cinzel',serif;font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>
-      <div style="font-size:.72rem;color:var(--bone-dim);margin-top:.35rem">Overrides the auto-built prompt from your sheet — describe exactly what you want painted.</div>
+      <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">✍️ YOUR OWN WORDS</div>
+      <textarea id="avatar-prompt-input" placeholder="Free prompt: describe exactly what you want painted — e.g. 'hooded figure, lantern light, rain'. Empty = paint from the dossier." style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:'Cinzel',serif;font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>
+      <div style="font-size:.72rem;color:var(--bone-dim);margin-top:.35rem">Free prompt paints ONLY your words — the dossier button ignores this box and paints from the NPC's role &amp; notes.</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
+      <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
+      <select id="avatar-provider-select" class="tts-select" style="flex:1;min-width:0" onchange="avatarProviderChanged(this)" title="Image provider for painting">
+        <option value="stepfun">StepFun — Support</option>
+        <option value="wan">Wan 2.7 — Patron 🔒</option>
+      </select>
     </div>
     <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
-      <button class="av-btn primary" id="avatar-ai-btn" onclick="generateAvatarAction()">✨ Paint new from my words</button>
+      <button class="av-btn primary" id="avatar-free-btn" onclick="freePromptAction()">🖌️ Free prompt</button>
+      <button class="av-btn" id="avatar-ai-btn" onclick="generateAvatarAction()">🎨 Paint from the dossier</button>
       <button class="av-btn" id="avatar-update-btn" onclick="updateAvatarAction()" style="display:none">🔄 Update from sheet</button>
       <button class="av-btn" onclick="document.getElementById('npc-avatar-input').click()">📁 Upload image…</button>
       <button class="av-btn danger" id="avatar-del-btn" onclick="deleteAvatarAction()" style="display:none">🗑 Remove avatar</button>

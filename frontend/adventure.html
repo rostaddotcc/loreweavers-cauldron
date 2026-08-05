@@ -376,6 +376,30 @@ html{font-size:17px}
 @media(max-width:640px){
   .step-actions .go-btn{min-height:44px;display:inline-flex;align-items:center}
 }
+/* ═══════════ Paint portrait-modal (onboarding, 2026-08-05) ═══════════ */
+.mi-overlay{position:fixed;inset:0;z-index:120;display:none;align-items:center;justify-content:center;background:rgba(4,2,8,.72);backdrop-filter:blur(3px);padding:1rem}
+.mi-overlay.show{display:flex}
+.mi-modal{width:min(420px,100%);max-height:86vh;overflow-y:auto;background:linear-gradient(165deg,var(--stone-2),var(--stone));border:1px solid var(--gold);box-shadow:0 0 40px rgba(201,162,39,.22),0 24px 60px rgba(0,0,0,.7);padding:1.3rem 1.4rem 1.5rem;border-radius:8px}
+.mi-head{display:flex;align-items:center;justify-content:space-between;gap:.8rem;font-family:'Cinzel',serif;font-weight:900;font-size:1rem;letter-spacing:.06em;text-transform:uppercase;color:var(--gold-bright);margin-bottom:1rem}
+.mi-close{background:none;border:1px solid var(--edge);color:var(--bone-dim);width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:.85rem;transition:all .2s}
+.mi-close:hover{color:var(--blood-bright);border-color:var(--blood-bright)}
+.mi-intro{font-size:.85rem;color:var(--bone-dim);line-height:1.5}
+.av-btn{display:block;width:100%;font-family:'Cinzel',serif;font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;padding:.65rem .9rem;cursor:pointer;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:6px;transition:all .2s;text-align:center}
+.av-btn:hover:not(:disabled){transform:translateY(-1px);border-color:var(--gold);color:var(--gold-bright);box-shadow:0 4px 14px -6px rgba(0,0,0,.55)}
+.av-btn.primary{background:linear-gradient(160deg,var(--gold-bright),var(--gold));border:1px solid rgba(232,198,90,.45);color:var(--ink);font-weight:700;box-shadow:0 0 18px rgba(201,162,39,.22),0 6px 30px rgba(201,162,39,.30),inset 0 1px 0 rgba(255,255,255,.16)}
+.av-btn.primary:hover:not(:disabled){filter:brightness(1.1);box-shadow:0 0 28px rgba(232,198,90,.38),0 12px 40px rgba(201,162,39,.5),inset 0 1px 0 rgba(255,255,255,.22)}
+.av-btn:disabled{opacity:.5;cursor:not-allowed}
+/* ═══════════ Onboarding mjukare kanter (2026-08-05) ═══════════ */
+.name-input, .danger-btn, .dark-select, .dm-model-select, .campaign-card .cc-go, .blank-btn, .tab-btn, .pv-reroll, .top-btn{
+  border-radius: 8px !important;
+  transition: border-color .25s, box-shadow .25s, transform .2s, filter .2s !important;
+}
+.dark-select:hover, .dm-model-select:hover{ border-color: var(--gold) !important; box-shadow: 0 0 14px -5px rgba(232,198,90,.35) !important; }
+.danger-btn:hover{ transform: translateY(-1px) !important; box-shadow: 0 4px 14px -5px rgba(212,58,77,.45) !important; }
+.campaign-card .cc-go:hover{ transform: translateY(-1px) !important; }
+@media(max-width:640px){
+  .dark-select, .dm-model-select{ min-height: 44px !important; font-size: 16px !important; }
+}
 </style>
 <script src="sprites.js?v=20260802a"></script>
 <script src="fonts.js?v=20260805a"></script>
@@ -446,6 +470,33 @@ html{font-size:17px}
     </div>
   </div>
 
+  <!-- ═══════════════ 🎨 Paint portrait-modal (onboarding — före modellvalen) ═══════════════ -->
+  <div class="mi-overlay" id="adv-paint-overlay" onclick="if(event.target===this)closeAdvPaintModal()">
+    <div class="mi-modal" style="max-width:420px">
+      <div class="mi-head">
+        <span>🎨 Paint your adventurer</span>
+        <button class="mi-close" onclick="closeAdvPaintModal()">✕</button>
+      </div>
+      <div class="mi-intro" id="adv-paint-desc" style="font-size:.82rem;line-height:1.55">Two ways to paint: <b>🖌️ Free prompt</b> paints ONLY your own words, <b>🎨 Paint from character card</b> auto-builds the prompt from the adventurer you just summoned (race, class, gear, story). Engine: StepFun (Support 3€) or Wan 2.7 Pro (Patron 10€).</div>
+      <div style="margin-top:.7rem">
+        <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">🖌️ YOUR OWN WORDS (free prompt)</div>
+        <textarea id="adv-paint-prompt" placeholder="Describe exactly what you want painted — e.g. 'hooded figure, lantern light, rain'. Paints ONLY your words." style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:'Cinzel',serif;font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:6px;resize:vertical"></textarea>
+      </div>
+      <div style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
+        <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
+        <select id="adv-paint-provider" class="tts-select" style="flex:1;min-width:0;font-size:.8rem;padding:.35rem .5rem;border-radius:6px;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright)" onchange="advPaintProviderChanged(this)" title="Image provider for painting">
+          <option value="stepfun">StepFun — Support</option>
+          <option value="wan">Wan 2.7 Pro — Patron 🔒</option>
+        </select>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
+        <button class="av-btn primary" id="adv-paint-free-btn" onclick="advPaintFreePrompt()">🖌️ Free prompt</button>
+        <button class="av-btn" id="adv-paint-card-btn" onclick="advPaintFromCard()">🎨 Paint from character card</button>
+      </div>
+      <div id="adv-paint-status" style="font-size:.75rem;color:var(--bone-dim);text-align:center;margin-top:.8rem;min-height:1rem"></div>
+    </div>
+  </div>
+
   <div class="head">
     <img src="assets/logo-cauldron-alpha.png" alt="The Lore Weaver's Cauldron" class="head-logo">
     <div class="over">What will the Cauldron Foretell?</div>
@@ -476,7 +527,7 @@ html{font-size:17px}
           <li><b>Wan 2.7 painting — Patron tier (10€)</b> — the premium image engine paints your hero, the DM and every NPC in sharp high-resolution portraits, in seconds. StepFun painting unlocks with the <b>Support top-up (3€)</b>; pick the engine at the easel.</li>
           <li><b>Your face, your hero</b> — your profile portrait is now separate from your adventurer's: the header pill is <i>your</i> face at the table, the party card is your hero's. Paint one without touching the other.</li>
           <li><b>Themes that stick &amp; a softer table</b> — palettes survive reloads and follow you across devices; rounded buttons and calmer edges across the top bar, the Codex and the composer. Narrator settings (voice, style, your custom prompt) now follow the campaign, not the browser.</li>
-          <li><b>StepFun TTS — always free</b> — the narrator's voice belongs to every adventurer. Wanderers keep their <b>50 turns a day</b> and StepFun reads your story aloud, free, forever.</li>
+          <li><b>StepFun TTS — Support feature</b> — the narrator's voice unlocks with the one-time Support top-up (3€); Qwen's premium narrators with Patron (10€).</li>
           <li><b>Four paths into the realm</b> — Wanderer (free), Companion, Adventurer, and Lifetime, wired to real Stripe checkout.</li>
           <li><b>Qwen 3.8 Max &amp; DeepSeek</b> — the full release is here: 2.4T parameters (95B active per request), 1M context, deep reasoning. Pick your Dungeon Master at the model gate.</li>
           <li><b>Export your adventurer to The Forge</b> — save the hero you've lived: level, gear, story and all. Start a new campaign with the same hero — no more adventurer-twins.</li>
@@ -637,6 +688,7 @@ html{font-size:17px}
         <div class="pv-gear" id="adv-pv-gear"></div>
         <div class="pv-story" id="adv-pv-story"></div>
         <div class="pv-actions">
+          <button class="pv-reroll" id="adv-paint-btn" onclick="openAdvPaintModal()" title="Paint your adventurer's portrait — StepFun (Support 3€) or Wan 2.7 Pro (Patron 10€)">🎨 Paint portrait</button>
           <button class="pv-reroll" id="adv-reroll" onclick="rerollHero()">🎲 Reroll</button>
           <button class="pv-go" id="adv-continue" onclick="continueHero()">Continue →</button>
         </div>
@@ -690,8 +742,8 @@ html{font-size:17px}
     <div class="dm-model-row">
       <label class="dm-model-label" for="adventure-tts">🗣️ Voice (TTS)</label>
       <select class="dm-model-select" id="adventure-tts">
-        <option value="qwen" selected>Qwen (Token Plan) ⭐ — recommended</option>
         <option value="stepfun">StepFun (Step Plan)</option>
+        <option value="qwen">Qwen (Token Plan) ⭐ — recommended</option>
       </select>
       <span class="ask-wrap"><span class="ask-ico">?</span><span class="ask-tip" data-ask="tts">Which provider whispers the spoken word when the DM speaks aloud. <b>Ask the Dungeon Master if unsure.</b></span></span>
     </div>
@@ -1450,6 +1502,130 @@ async function continueHero() {
   }
 }
 
+// ── 🎨 Paint portrait (onboarding — före modellvalen, 2026-08-05) ──
+// Öppnar paint-modalen: 2 val (free prompt / från karaktärskortet) +
+// engine-val (StepFun = Support 3€ · Wan 2.7 Pro = Patron 10€).
+let advPaintTier = null;  // free | tier1 | tier2 | lifetime (från /api/me)
+function advPaintProvider() {
+  const sel = document.getElementById('adv-paint-provider');
+  return (sel && sel.value) || 'stepfun';
+}
+function advPaintGate(provider) {
+  if (advPaintTier === 'free') {
+    toast('🔒 AI painting is a Support feature (3€) — support the Cauldron to paint your hero with StepFun.');
+    try { SFX.error(); } catch (_) {}
+    return false;
+  }
+  if (provider === 'wan' && advPaintTier !== 'tier2' && advPaintTier !== 'lifetime') {
+    toast('🔒 Wan 2.7 Pro is a Patron feature (10€) — upgrade to paint with Wan.');
+    try { SFX.error(); } catch (_) {}
+    return false;
+  }
+  return true;
+}
+function advPaintProviderChanged(sel) {
+  if (sel && sel.value === 'wan' && advPaintTier !== 'tier2' && advPaintTier !== 'lifetime') {
+    sel.value = 'stepfun';
+    toast('🔒 Wan 2.7 Pro is a Patron feature (10€) — upgrade to paint with Wan.');
+  }
+}
+function advPaintUpdateLock() {
+  const sel = document.getElementById('adv-paint-provider');
+  if (!sel) return;
+  const wanOpt = sel.querySelector('option[value="wan"]');
+  const stepOpt = sel.querySelector('option[value="stepfun"]');
+  const canPaint = advPaintTier !== 'free';
+  const wanUnlocked = advPaintTier === 'tier2' || advPaintTier === 'lifetime';
+  if (stepOpt) { stepOpt.disabled = !canPaint; stepOpt.textContent = canPaint ? 'StepFun — Support' : 'StepFun — Support 🔒'; }
+  if (wanOpt) { wanOpt.disabled = !wanUnlocked; wanOpt.textContent = wanUnlocked ? 'Wan 2.7 Pro — Patron' : 'Wan 2.7 Pro — Patron 🔒'; }
+  if (sel.value === 'wan' && !wanUnlocked) sel.value = 'stepfun';
+  if (sel.value === 'stepfun' && !canPaint) sel.value = '';
+  const freeBtn = document.getElementById('adv-paint-free-btn');
+  const cardBtn = document.getElementById('adv-paint-card-btn');
+  if (freeBtn) freeBtn.disabled = !canPaint;
+  if (cardBtn) cardBtn.disabled = !canPaint;
+}
+async function openAdvPaintModal() {
+  if (advPaintTier === null) {
+    try {
+      const me = await API.me();
+      advPaintTier = (me && me.subscription_status) || 'free';
+      if (advPaintTier === 'premium') advPaintTier = 'tier2';
+    } catch (_) { advPaintTier = 'free'; }
+  }
+  if (advPaintTier === 'free') {
+    toast('🔒 Painting is a Support feature (3€) — support the Cauldron to paint your adventurer.');
+    try { SFX.error(); } catch (_) {}
+    return;
+  }
+  // Se till att hjälten har ett vault-id (continueHero sparar annars senare)
+  if (!advHeroId && advHero && advHero.name && advHeroMode === 'summon') {
+    try {
+      const res = await API.vaultSave({ character: advHero, inventory: advHeroInv });
+      advHeroId = res.id;
+    } catch (e) {
+      toast('⚠ ' + (e.message || 'Could not save the adventurer before painting'));
+      return;
+    }
+  }
+  if (!advHeroId) {
+    toast('⚠ ' + (isEn() ? 'Summon or choose your adventurer first' : 'Frammana eller välj din äventyrare först'));
+    return;
+  }
+  const promptInp = document.getElementById('adv-paint-prompt');
+  if (promptInp) promptInp.value = '';
+  document.getElementById('adv-paint-status').textContent = '';
+  advPaintUpdateLock();
+  document.getElementById('adv-paint-overlay').classList.add('show');
+  try { SFX.click(); } catch (_) {}
+}
+function closeAdvPaintModal() {
+  const ov = document.getElementById('adv-paint-overlay');
+  if (ov) ov.classList.remove('show');
+}
+async function advPaintRun(prompt, fromCard) {
+  if (!advPaintGate(advPaintProvider())) return;
+  const status = document.getElementById('adv-paint-status');
+  const freeBtn = document.getElementById('adv-paint-free-btn');
+  const cardBtn = document.getElementById('adv-paint-card-btn');
+  const prov = advPaintProvider();
+  status.textContent = (prov === 'wan' ? '🖼️ Painting with Wan 2.7 Pro… (15–40 s)' : '🎨 Painting with StepFun… (10–30 s)');
+  freeBtn.disabled = true; cardBtn.disabled = true;
+  try {
+    const res = await API.vaultGenerateAvatar(advHeroId, Date.now() % 1000000, 'new', prompt, prov);
+    if (res && res.ok) {
+      const port = document.getElementById('adv-pv-portrait');
+      if (port) port.innerHTML = `<img src="${API.vaultAvatarUrl(advHeroId)}?t=${Date.now()}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+      status.textContent = fromCard
+        ? (prov === 'wan' ? '✨ Portrait painted — Wan 2.7 Pro, from your character card' : '✨ Portrait painted — StepFun, from your character card')
+        : (prov === 'wan' ? '✨ Portrait painted — Wan 2.7 Pro, used your words' : '✨ Portrait painted — StepFun, used your words');
+      try { SFX.levelup(); } catch (_) {}
+    } else {
+      status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Generation failed');
+      try { SFX.error(); } catch (_) {}
+    }
+  } catch (e) {
+    status.textContent = '⚠ ' + (e.message || 'Generation failed');
+    try { SFX.error(); } catch (_) {}
+  } finally {
+    freeBtn.disabled = false; cardBtn.disabled = false;
+    advPaintUpdateLock();
+  }
+}
+async function advPaintFreePrompt() {
+  const inp = document.getElementById('adv-paint-prompt');
+  const text = (inp && inp.value || '').trim();
+  if (!text) {
+    toast('✍️ Write what you want painted first — free prompt paints ONLY your words.');
+    try { SFX.error(); } catch (_) {}
+    return;
+  }
+  await advPaintRun(text, false);
+}
+async function advPaintFromCard() {
+  await advPaintRun('', true);
+}
+
 function advPrompt() {
   // Spelarens justerade mall (arketyp-prompt tweakad ELLER fri text) vinner alltid
   const tweaked = fwPromptText();
@@ -1493,31 +1669,38 @@ const TTS_PROVIDERS = [
       charSel.value = models.includes('step-3.7-flash') ? 'step-3.7-flash' : (models[0] || '');
     }
   };
-  const fillTTS = (locked) => {
+  const fillTTS = (tier) => {
     if (!ttsSel) return;
+    // tier: 'free' | 'tier1' (Support) | 'tier2' (Patron) | 'lifetime' | 'admin'
+    // StepFun TTS = Support (3€)+, Qwen TTS = Patron (10€)+ (backend klämmer ändå).
     ttsSel.innerHTML = TTS_PROVIDERS.map(p => {
       const qwen = p.id === 'qwen';
-      const dis = locked && qwen;
-      return `<option value="${p.id}"${dis ? ' disabled' : ''}>${p.name}${dis ? ' 🔒 — Patron (10€)' : ''}${!locked && p.recommended ? ' — recommended' : ''}</option>`;
+      const dis = qwen ? (tier === 'free' || tier === 'tier1') : (tier === 'free');
+      const base = p.name.replace(' ⭐', '');
+      const lock = qwen ? ' 🔒 — Patron (10€)' : ' 🔒 — Support (3€)';
+      const rec = !dis && p.recommended && (tier === 'tier2' || tier === 'lifetime') ? ' — recommended' : '';
+      return `<option value="${p.id}"${dis ? ' disabled' : ''}>${base}${dis ? lock : ''}${rec}</option>`;
     }).join('');
     try {
       const saved = localStorage.getItem('dnd_tts_provider');
-      // Rekommendation (2026-08-04): Qwen (Token Plan) är default för nya
-      // äventyr — men en tidigare explicit spelar-ändring respekteras.
-      // Låsta konton (free/tier1): ENDAST StepFun (Qwen 🔒 Patron 10€).
-      if (saved && TTS_PROVIDERS.some(p => p.id === saved) && (!locked || saved === 'stepfun')) {
+      const allowed = (id) => id === 'stepfun' ? tier !== 'free' : (id === 'qwen' ? (tier === 'tier2' || tier === 'lifetime') : false);
+      // Spara bara val som inte är låsta — annars första tillåtna provider.
+      if (saved && allowed(saved)) {
         ttsSel.value = saved;
       } else {
-        ttsSel.value = locked ? 'stepfun' : (TTS_PROVIDERS.find(p => p.recommended) || TTS_PROVIDERS[0]).id;
+        const first = TTS_PROVIDERS.find(p => allowed(p.id));
+        ttsSel.value = first ? first.id : '';
       }
     } catch (e) {}
   };
   if (!dmSel && !guardSel && !extSel && !charSel && !ttsSel) return;
   API.me().then(u => {
     const isAdmin = !!(u && u.role === 'admin');
-    // free/tier1 (och okänd status) → låst till step-3.7-flash + StepFun-TTS (Qwen 🔒 Patron 10€)
-    const locked = !isAdmin && (!u || u.subscription_status === 'free' || u.subscription_status === 'tier1');
-    fillTTS(locked);
+    // free/tier1 (och okänd status) → låst till step-3.7-flash;
+    // TTS: StepFun = Support (3€)+, Qwen = Patron (10€)+.
+    const tier = isAdmin ? 'tier2' : ((u && u.subscription_status) || 'free');
+    const locked = !isAdmin && (tier === 'free' || tier === 'tier1');
+    fillTTS(tier);
     if (isAdmin) {
       API.models().then(list => fill((list || []).map(m => m.id || m), false)).catch(() => fill(PLAYER_DM_MODELS, false));
     } else {
@@ -1526,7 +1709,8 @@ const TTS_PROVIDERS = [
     const note = document.getElementById('model-gate-upgrade-note');
     if (note) note.style.display = locked ? '' : 'none';
   }).catch(() => {
-    fillTTS(false);
+    // /api/me svarade inte → lås inte (backend klämmer ändå på 403)
+    fillTTS('tier2');
     fill(PLAYER_DM_MODELS, false);
   });
 })();

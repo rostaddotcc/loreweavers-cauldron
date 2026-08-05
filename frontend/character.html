@@ -127,7 +127,7 @@
     font-family: 'Spectral', serif; font-style: italic; font-weight: 400;
     color: var(--arcane); font-size: 1.13rem; margin: 0.3rem 0 0.7rem;
     text-shadow: 0 0 12px color-mix(in srgb, var(--arcane) 40%, transparent);
-  }.char-meta{ display: flex; gap: 0.5rem 1.1rem; flex-wrap: wrap; font-size: 0.95rem; color: var(--bone-dim); }.char-meta b{ color: var(--bone-bright); font-weight: 600; }.char-meta .stat{ display: flex; gap: 0.35rem; align-items: baseline; }.char-meta .stat i{ font-style: normal; color: var(--gold); font-size: 0.85rem; letter-spacing: 0.08em; }/* ═══════════ Export till The Forge ═══════════ */.forge-row{ display: flex; justify-content: flex-end; margin: 0.2rem 0 0.9rem; }.forge-export-btn{
+  }.char-meta{ display: flex; gap: 0.5rem 1.1rem; flex-wrap: wrap; font-size: 0.95rem; color: var(--bone-dim); }.char-meta b{ color: var(--bone-bright); font-weight: 600; }.char-meta .stat{ display: flex; gap: 0.35rem; align-items: baseline; }.char-meta .stat i{ font-style: normal; color: var(--gold); font-size: 0.85rem; letter-spacing: 0.08em; }/* ═══════════ Export till The Forge ═══════════ */.forge-row{ display: flex; justify-content: flex-end; gap: 0.6rem; margin: 0.2rem 0 0.9rem; }.forge-export-btn{
     font-family: 'Cinzel', serif; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
     background: linear-gradient(180deg, var(--stone-3), var(--stone));
     border: 1px solid var(--gold); color: var(--gold-bright);
@@ -528,6 +528,7 @@
     </div>
 
     <div class="forge-row">
+      <button class="forge-export-btn" id="forge-paint-btn" onclick="openAvatarModal()" title="Paint your adventurer's portrait — StepFun (Support 3€) or Wan 2.7 Pro (Patron 10€)">🎨 Paint your adventurer</button>
       <button class="forge-export-btn" id="forge-export-btn" onclick="exportToForge()" title="Save this hero to The Forge — start a new campaign with them later">⚒ Export to Forge</button>
     </div>
 
@@ -1342,6 +1343,8 @@ function openAvatarModal() {
   document.getElementById('avatar-del-btn').style.display = has ? '' : 'none';
   document.getElementById('avatar-update-btn').style.display = has ? '' : 'none';
   document.getElementById('avatar-ai-btn').disabled = false;
+  const freeBtn = document.getElementById('avatar-free-btn');
+  if (freeBtn) freeBtn.disabled = false;
   document.getElementById('avatar-update-btn').disabled = false;
   document.getElementById('avatar-ai-status').textContent = '';
   updateAvatarProviderLock();
@@ -1410,10 +1413,18 @@ async function _runAvatarGen(mode, statusText, btnId) {
   const status = document.getElementById('avatar-ai-status');
   const btn = document.getElementById(btnId);
   if (!avatarGenGate(avatarProvider())) return;
+  let freePrompt = (document.getElementById('avatar-prompt-input') || {}).value || '';
+  // 🖌️ Free prompt: BARA spelarens ord — tom text är ett fel (ingen auto-prompt).
+  if (mode === 'free') {
+    if (!freePrompt.trim()) {
+      toast('✍️ Write what you want painted first — free prompt paints ONLY your words.');
+      try { SFX.error(); } catch (_) {}
+      return;
+    }
+  }
   status.textContent = statusText;
   btn.disabled = true;
   try {
-    const freePrompt = (document.getElementById('avatar-prompt-input') || {}).value || '';
     const usedWords = !!freePrompt.trim();
     const res = await API.generateAvatar('player', Date.now() % 1000000, mode, freePrompt, avatarProvider());
     if (res && res.ok) {
@@ -1436,7 +1447,10 @@ async function _runAvatarGen(mode, statusText, btnId) {
 }
 
 async function generateAvatarAction() {
-  await _runAvatarGen('new', '🎨 The artist is painting… (10–30 s)', 'avatar-ai-btn');
+  await _runAvatarGen('new', '🎨 The artist is painting from your character card… (10–30 s)', 'avatar-ai-btn');
+}
+async function freePromptAction() {
+  await _runAvatarGen('free', '🎨 Painting ONLY your words… (10–30 s)', 'avatar-free-btn');
 }
 async function updateAvatarAction() {
   await _runAvatarGen('edit', '🔄 Updating from your sheet… (10–30 s)', 'avatar-update-btn');
@@ -1487,11 +1501,11 @@ window.getState = exportState;
       <div id="avatar-modal-img" onclick="openAvatarLightbox()" style="width:112px;height:112px;border-radius:50%;margin:0 auto;border:2px solid var(--gold);overflow:hidden;background:var(--stone-3);display:flex;align-items:center;justify-content:center;font-size:2.4rem;box-shadow:0 0 22px -4px rgba(201,162,39,.45);cursor:pointer" title="Click for larger view"></div>
       <div style="font-size:.62rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem">click to enlarge</div>
     </div>
-    <div class="mi-intro">Paint a new avatar from your character sheet — items, traits and lore included. Or upload your own image.</div>
+    <div class="mi-intro">Paint your adventurer — two ways: <b>🖌️ Free prompt</b> paints ONLY your own words, <b>🎨 Paint from character card</b> auto-builds the prompt from your sheet (items, traits, lore). Engine: StepFun (Support 3€) or Wan 2.7 Pro (Patron 10€). Or upload your own image.</div>
     <div style="margin-top:.7rem">
-      <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">🎨 YOUR OWN WORDS (optional)</div>
-      <textarea id="avatar-prompt-input" placeholder="Optional: describe exactly what you want painted… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)" style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:'Cinzel',serif;font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>
-      <div style="font-size:.72rem;color:var(--bone-dim);margin-top:.35rem">Overrides the auto-built prompt from your sheet — describe exactly what you want painted.</div>
+      <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">✍️ YOUR OWN WORDS</div>
+      <textarea id="avatar-prompt-input" placeholder="Free prompt: describe exactly what you want painted — e.g. 'hooded figure, lantern light, rain'. Empty = paint from character card." style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:'Cinzel',serif;font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>
+      <div style="font-size:.72rem;color:var(--bone-dim);margin-top:.35rem">Free prompt paints ONLY your words — the character card button ignores this box and paints from your sheet.</div>
     </div>
     <div style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
       <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
@@ -1501,7 +1515,8 @@ window.getState = exportState;
       </select>
     </div>
     <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
-      <button class="av-btn primary" id="avatar-ai-btn" onclick="generateAvatarAction()">✨ Paint new from my words</button>
+      <button class="av-btn primary" id="avatar-free-btn" onclick="freePromptAction()">🖌️ Free prompt</button>
+      <button class="av-btn" id="avatar-ai-btn" onclick="generateAvatarAction()">🎨 Paint from character card</button>
       <button class="av-btn" id="avatar-update-btn" onclick="updateAvatarAction()" style="display:none">🔄 Update from sheet</button>
       <button class="av-btn" onclick="portraitInput.click()">📁 Upload image…</button>
       <button class="av-btn danger" id="avatar-del-btn" onclick="deleteAvatarAction()" style="display:none">🗑 Remove avatar</button>

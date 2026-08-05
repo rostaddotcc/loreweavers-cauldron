@@ -3088,7 +3088,11 @@ async def tts_voices(morkrets_token: str | None = Cookie(None)):
 
 @app.post("/api/tts")
 async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
-    """Generera tal från text via vald TTS-leverantör (qwen eller stepfun)."""
+    """Generera tal från text via vald TTS-leverantör (qwen eller stepfun).
+
+    TIERS (2026-08-05): StepFun = Support (3€)+, Qwen = Patron (10€)+.
+    Free tier får 403 — ingen tyst fallback till billigare röst.
+    """
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
     text = req.text.strip()
@@ -3102,12 +3106,16 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
     if provider not in TTS_PROVIDERS:
         raise HTTPException(400, f"Okänd TTS-leverantör: {provider}")
 
-    # ── TIERS: StepFun TTS är ALLTID GRATIS (alla tier) — rostad 2026-08-04:
-    # "stepfun 'always free'". Qwen TTS är tier2+-premium (tyst fallback till
-    # stepfun så spelet aldrig kraschar; UI:et låser väljaren). ──
+    # ── TIERS (2026-08-05): TTS är tier-gated — INGEN tyst fallback längre.
+    # StepFun = Support (3€): free tier får 403 (förr "always free").
+    # Qwen = Patron (10€): tier1 räcker inte — 403 istället för att smyg-köra
+    # stepfun, så free/tier1 aldrig byts till en billigare röst i smyg.
+    # Lifetime = allt. (rostad 2026-08-04 → skärpt 2026-08-05)
     tier = _tier_for(username)
     if provider == "qwen" and tier not in ("tier2", "lifetime"):
-        provider = "stepfun"
+        raise HTTPException(403, "Qwen TTS is a Patron feature (10€) — upgrade to unlock the premium narrators.")
+    if provider == "stepfun" and tier == "free":
+        raise HTTPException(403, "StepFun TTS is a Support feature (3€) — support the Cauldron to give your DM, characters and NPCs a voice.")
     pvoices = TTS_PROVIDERS[provider]["voices"]
 
     # ── Röst: kön ('male'/'female') → första rösten med könet; annars voice-id ──
@@ -7010,8 +7018,8 @@ async def delete_avatar(kind: str, morkrets_token: str | None = Cookie(None)):
 # SPELARPROFILENS AVATAR (konto — SEPARAT från äventyraren)
 # ═══════════════════════════════════════
 # Profilavataren hör till KONTOT (headerns porträtt) — inte till kampanjens
-# äventyrare/NPC/DM-kort. Genereras ALLTID med StepFun step-image-edit-2,
-# Support-feature (3€). (2026-08-05)
+# äventyrare/NPC/DM-kort. Målas med StepFun step-image-edit-2 (Support 3€)
+# eller Wan 2.7 (Patron 10€) via provider-fältet. (2026-08-05)
 
 
 @app.get("/api/me/avatar")
@@ -7027,50 +7035,96 @@ async def me_avatar(morkrets_token: str | None = Cookie(None)):
 
 @app.post("/api/me/avatar/generate")
 async def me_avatar_generate(body: dict | None = None, morkrets_token: str | None = Cookie(None)):
-    """Måla profilavataren med StepFun step-image-edit-2 — Support-feature
-    (3€). ALLTID StepFun. Spelarens egna ord (fri prompt) eller en
-    standardporträtt-prompt om ingen text ges."""
+    """Måla profilavataren — StepFun step-image-edit-2 (Support 3€) eller
+    Wan 2.7 (Patron 10€) via provider-fältet ('stepfun'|'wan', default
+    stepfun; okänt → stepfun). Spelarens egna ord (fri prompt) eller en
+    standardporträtt-prompt om ingen text ges. (2026-08-05)"""
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
-    _require_image_gen_tier(username, "stepfun", payload)
-    api_key = os.getenv("STEPFUN_API_KEY")
-    base_url = os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.ai/step_plan/v1")
-    if not api_key:
-        raise HTTPException(500, "STEPFUN_API_KEY saknas på servern")
+    provider = str((body or {}).get("provider", "") or "").strip().lower()
+    if provider not in ("stepfun", "wan"):
+        provider = "stepfun"
+    _require_image_gen_tier(username, provider, payload)
+    if provider == "wan":
+        _consume_wan_quota(username)  # 10 bilder/dag; varje bild = 1 turn
 
     user_prompt = ((body or {}).get("prompt") or "").strip()[:450]
     seed = (body or {}).get("seed")
     if not isinstance(seed, int):
         seed = random.randint(0, 999999)
     default = "A moody dark-fantasy portrait of the player, painterly oil painting style, dramatic chiaroscuro lighting, brooding atmosphere."
-    prompt = _trim_prompt(f"{user_prompt}\n{default}" if user_prompt else default + STEP_IMAGE_STYLE)
+    # FREE-PROMPT-läge (2026-08-05): om spelaren skriver egna ord används BARA
+    # dem — ingen default-suffix, ingen auto-prompt (samma mönster som vault-
+    # generate). Tom prompt → standardporträtt-prompten + stil-suffixet.
+    prompt = _trim_prompt(user_prompt) if user_prompt else _trim_prompt(default + STEP_IMAGE_STYLE)
 
+    content: bytes = b""
     try:
-        async with httpx.AsyncClient(timeout=150) as client:
-            resp = await client.post(
-                f"{base_url.rstrip('/')}/images/generations",
-                headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
-                json={
-                    "model": STEP_IMAGE_EDIT_2,
-                    "prompt": prompt,
-                    "response_format": "b64_json",
-                    "steps": 8,
-                    "seed": seed,
-                    "text_mode": True,
-                },
+        if provider == "wan":
+            # Wan 2.7 (Token Plan) — text-to-image. Patron får Wan 2.7 Pro
+            # (2048², features.wan1080), övriga standard 1024². Samma mönster
+            # som vault/campaign wan-grenen (wan2.7-image(-pro), size, seed).
+            wan_model, wan_size = _wan_model_and_size(username)
+            wan_api_key = os.getenv("DASHSCOPE_API_KEY") or os.getenv("ALIBABA_TOKEN_PLAN_API_KEY")
+            wan_base = os.getenv(
+                "WAN_BASE_URL",
+                "https://token-plan.ap-southeast-1.maas.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
             )
+            if not wan_api_key:
+                raise HTTPException(500, "DASHSCOPE_API_KEY missing on the server (Wan needs the Token Plan key)")
+            async with httpx.AsyncClient(timeout=150) as client:
+                resp = await client.post(
+                    wan_base,
+                    headers={"Content-Type": "application/json", "Authorization": f"Bearer {wan_api_key}"},
+                    json={
+                        "model": wan_model,
+                        "input": {"messages": [{"role": "user", "content": [{"text": prompt}]}]},
+                        "parameters": {"size": wan_size, "n": 1, "watermark": False, "thinking_mode": False, "seed": seed},
+                    },
+                )
+            if resp.status_code != 200:
+                logger.error("🎨 Profilavatar-Wan-fel: HTTP %d %s", resp.status_code, resp.text[:400])
+                raise HTTPException(502, f"Wan error ({resp.status_code})")
+            wdata = resp.json()
+            try:
+                img_url = wdata["output"]["choices"][0]["message"]["content"][0]["image"]
+            except (KeyError, IndexError, TypeError):
+                raise HTTPException(502, "Wan returned no image")
+            async with httpx.AsyncClient(timeout=60) as dl:
+                dl_resp = await dl.get(img_url)
+                dl_resp.raise_for_status()
+                content = dl_resp.content
+        else:
+            api_key = os.getenv("STEPFUN_API_KEY")
+            base_url = os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.ai/step_plan/v1")
+            if not api_key:
+                raise HTTPException(500, "STEPFUN_API_KEY saknas på servern")
+            async with httpx.AsyncClient(timeout=150) as client:
+                resp = await client.post(
+                    f"{base_url.rstrip('/')}/images/generations",
+                    headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
+                    json={
+                        "model": STEP_IMAGE_EDIT_2,
+                        "prompt": prompt,
+                        "response_format": "b64_json",
+                        "steps": 8,
+                        "seed": seed,
+                        "text_mode": True,
+                    },
+                )
+            if resp.status_code != 200:
+                logger.error("🎨 Profilavatar StepFun-fel: HTTP %d %s", resp.status_code, resp.text[:300])
+                raise HTTPException(502, f"StepFun-fel ({resp.status_code})")
+            try:
+                b64 = resp.json()["data"][0]["b64_json"]
+                content = base64.b64decode(b64)
+            except (KeyError, IndexError, ValueError):
+                raise HTTPException(502, "StepFun returnerade ingen bild")
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error("🎨 Profilavatar StepFun-anrop misslyckades: %s", e)
-        raise HTTPException(502, f"Kunde inte nå StepFun: {e}")
-    if resp.status_code != 200:
-        logger.error("🎨 Profilavatar StepFun-fel: HTTP %d %s", resp.status_code, resp.text[:300])
-        raise HTTPException(502, f"StepFun-fel ({resp.status_code})")
-
-    try:
-        b64 = resp.json()["data"][0]["b64_json"]
-        content = base64.b64decode(b64)
-    except (KeyError, IndexError, ValueError):
-        raise HTTPException(502, "StepFun returnerade ingen bild")
+        logger.error("🎨 Profilavatar (provider=%s) misslyckades: %s", provider, e)
+        raise HTTPException(502, f"Kunde inte nå {provider}: {e}")
 
     USER_AVATARS_DIR = _user_avatar_path(username).parent
     USER_AVATARS_DIR.mkdir(parents=True, exist_ok=True)
@@ -7082,7 +7136,7 @@ async def me_avatar_generate(body: dict | None = None, morkrets_token: str | Non
         users[username]["avatar"] = True
         save_users(users)
 
-    return {"ok": True, "url": "/api/me/avatar", "seed": seed}
+    return {"ok": True, "url": "/api/me/avatar", "seed": seed, "provider": provider}
 
 
 @app.delete("/api/me/avatar")

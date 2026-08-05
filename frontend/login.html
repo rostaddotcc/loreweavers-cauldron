@@ -450,6 +450,7 @@
             in words. You write what you do, the DM narrates what happens, and your
             imagination renders the graphics. <em>The oldest kind of role-playing,
             powered by the newest kind of mind.</em></p>
+          <p class="tablet-more"><a href="screenshots.html">See the game &#8594;</a></p>
         </div>
         <div class="tablet rv d2">
           <span class="corner tl"></span><span class="corner br"></span>
@@ -459,6 +460,7 @@
             characters, growth and relationships are tracked across every session.
             Leave for a season; <em>the innkeeper still remembers what you did,
             and who you did it with.</em></p>
+          <p class="tablet-more"><a href="mechanics.html">See core mechanics &#8594;</a></p>
         </div>
         <div class="tablet rv d1">
           <span class="corner tl"></span><span class="corner br"></span>
@@ -502,8 +504,8 @@
 
   <!-- ═══════════════ paths into the realm (pricing) ═══════════════ -->
   <style>
-    .pricing-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.1rem;margin-top:2.6rem}
-    .ptier{position:relative;background:linear-gradient(170deg,var(--stone-2),var(--stone));border:1px solid var(--edge);padding:1.6rem 1.3rem 1.4rem;transition:transform .3s,border-color .3s;cursor:pointer}
+    .pricing-grid{display:grid;grid-template-columns:repeat(4,minmax(0,240px));justify-content:center;gap:1.1rem;margin-top:2.6rem}
+    .ptier{position:relative;background:linear-gradient(170deg,var(--stone-2),var(--stone));border:1px solid var(--edge);padding:1.6rem 1.3rem 1.4rem;transition:transform .3s,border-color .3s;cursor:pointer;text-align:center}
     .ptier:hover{transform:translateY(-4px);border-color:var(--edge-hi)}
     .ptier.hot{border-color:rgba(201,162,39,.55);box-shadow:0 0 34px rgba(201,162,39,.10)}
     .ptier .go-hint{display:block;margin-top:.9rem;font-family:var(--font-display);font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);opacity:0;transition:opacity .25s;text-align:center}
@@ -515,14 +517,14 @@
     .pt-price{font-family:var(--font-display);font-weight:900;font-size:1.7rem;color:var(--gold-bright);margin-bottom:.7rem}
     .pt-price small{font-size:.72rem;font-weight:400;color:var(--bone-dim);letter-spacing:.05em}
     .pt-price .strike{font-size:.95rem;font-weight:400;color:var(--bone-dim);text-decoration:line-through;text-decoration-thickness:2px;margin-left:.3rem;vertical-align:.3em}
-    .ptier ul{list-style:none}
+    .ptier ul{list-style:none;display:inline-block;text-align:left}
     .ptier li{padding:.34rem 0 .34rem 1.2rem;position:relative;font-size:.88rem;color:var(--bone);line-height:1.45}
     .ptier li::before{content:'◆';position:absolute;left:0;top:.4rem;color:var(--gold);font-size:.55rem}
     .ptier li b{color:var(--bone-bright);font-weight:600}
     .pt-more{text-align:center;margin-top:2rem;font-family:var(--font-display);font-size:.7rem;letter-spacing:.22em;text-transform:uppercase}
     .pt-more a{color:var(--gold);text-decoration:none}
     .pt-more a:hover{color:var(--gold-bright);text-shadow:0 0 12px rgba(232,198,90,.5)}
-    @media(max-width:860px){.pricing-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:860px){.pricing-grid{grid-template-columns:repeat(2,minmax(0,240px));justify-content:center}}
     @media(max-width:520px){.pricing-grid{grid-template-columns:1fr}}
   </style>
   <section class="solid sect" id="pricing">

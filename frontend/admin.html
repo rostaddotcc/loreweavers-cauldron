@@ -1386,6 +1386,7 @@ function tableRows(users) {
       ? '<span class="membership-badge m-free">Free</span>'
       : `<span class="membership-badge m-premium">${tier === 'lifetime' ? '♾️ Lifetime' : (tier === 'tier1' ? '🔹 Support' : '⚔ Patron')}</span>`;
     const bonus = u.turn_bonus || 0;
+    const promo = u.promo_bonus || 0;
     const used = u.period_turns_used || 0;
     // Mini progress-bar: cap (used X) — röd när perioden är slut
     // FIX 2026-08-04: bara lifetime (turn_cap 0) visar ∞. tier1/tier2 har
@@ -1396,11 +1397,12 @@ function tableRows(users) {
         ? '<div class="cap-progress"><span class="cap-used" title="Unlimited turns (lifetime)">∞ Lifetime</span></div>'
         : '<div class="cap-progress"><span class="cap-used" title="Unlimited turns">∞ Unlimited</span></div>';
     } else {
-      const total = capVal + bonus;
+      // Alla turn-källor: cap + köpta (turn_bonus) + signup-promo (promo_bonus).
+      const total = capVal + bonus + promo;
       const pct = Math.min(100, Math.round(used / total * 100));
       const cls = used >= total ? 'danger' : (used >= total * 0.8 ? 'warn' : '');
-      const hint = capVal + (bonus ? ' cap + ' + bonus + ' bonus' : ' cap') + ' · ' + used + ' used this period';
-      capFrag = `<div class="cap-progress"><div class="cap-track"><div class="cap-fill ${cls}" style="width:${pct}%"></div></div><span class="cap-used" title="${esc(hint)}">${capVal}${bonus ? '+' + bonus : ''} (${used})</span></div>`;
+      const hint = capVal + (bonus ? ' cap + ' + bonus + ' bought' : ' cap') + (promo ? ' + ' + promo + ' promo' : '') + ' · ' + used + ' used this period';
+      capFrag = `<div class="cap-progress"><div class="cap-track"><div class="cap-fill ${cls}" style="width:${pct}%"></div></div><span class="cap-used" title="${esc(hint)}">${capVal}${bonus ? '+' + bonus : ''}${promo ? '+' + promo : ''} (${used})</span></div>`;
     }
     html += `<tr class="player-row${isPremium ? ' premium-row' : ''}" id="row-${i}" onclick="toggleDetail(${i}, '${u.username}')">`;
     html += `<td>${esc(u.username)}</td>`;
@@ -1448,7 +1450,7 @@ function mobRows(users) {
     html += `<div class="mc-meta"><span>🔊 TTS: ${fmtTTS(u)}</span><span>${fmtTokens(u.tts_tokens || 0)} tkn</span><span>${u.tts_calls || 0} renders</span></div>`;
     html += `<div class="mc-meta"><span>🎭 Char: ${u.char_creation_tokens ? fmtTokens(u.char_creation_tokens) : '—'} tkn</span><span>🖼️ Img: ${u.image_gen_calls || 0}</span></div>`;
     html += `<div class="mc-meta"><span>Created ${relTime(u.created_at)}</span><span>Login ${relTime(u.last_login)}</span></div>`;
-    html += `<div class="mc-meta"><span>💳 ${isPremium ? 'Premium' : 'Free'}</span><span>💰 Rev: ${u.revenue ? fmtSek(u.revenue) : '—'}</span><span>🎚️ Cap: ${capVal === 0 ? '∞' : capVal} (used ${u.period_turns_used || 0}${u.turn_bonus ? ' +' + u.turn_bonus + ' bonus' : ''})</span></div>`;
+    html += `<div class="mc-meta"><span>💳 ${isPremium ? 'Premium' : 'Free'}</span><span>💰 Rev: ${u.revenue ? fmtSek(u.revenue) : '—'}</span><span>🎚️ Cap: ${capVal === 0 ? '∞' : capVal} (used ${u.period_turns_used || 0}${u.turn_bonus ? ' +' + u.turn_bonus + ' bought' : ''}${u.promo_bonus ? ' +' + u.promo_bonus + ' promo' : ''})</span></div>`;
     html += `<div class="mc-cap" style="display:flex;gap:.4rem;align-items:center;margin-top:.5rem;flex-wrap:wrap">`;
     html += `<input type="number" min="0" step="1" value="${capVal}" id="cap-${i}" class="cap-input">`;
     html += `<button onclick="event.stopPropagation();setCap('${u.username}', ${i})" class="cap-btn">Set cap</button>`;
@@ -1521,6 +1523,7 @@ function renderDetail(container, data) {
   const tierNames = { tier1: '🔹 Support', tier2: '⚔ Patron', lifetime: '♾️ Lifetime' };
   html += '<span>💳 Membership: <b style="color:' + (isPremium ? 'var(--gold-bright);font-weight:700' : 'var(--bone);font-weight:400') + '">' + (isPremium ? (tierNames[tier] || '👑 ' + tier) + (data.subscription_until ? ' until ' + fmtDate(data.subscription_until) : '') : 'Free') + '</b></span>';
   html += '<span>Turn bonus: <b style="color:var(--term-amber);font-weight:400">' + (data.turn_bonus || 0) + '</b></span>';
+  html += '<span>Promo (signup): <b style="color:var(--term-green);font-weight:400">' + (data.promo_bonus || 0) + '</b></span>';
   html += '<span>💰 Revenue: <b style="color:var(--gold-bright);font-weight:400">' + fmtSek(data.revenue) + '</b></span>';
   const at = data.tts_usage || {};
   if (at.calls) {
@@ -1542,7 +1545,7 @@ function renderDetail(container, data) {
   html += '</div>';
   // TIERS: top-up / reset / tier-knappar
   html += '<div class="billing-controls">';
-  html += '<span class="bc-label">Turn bonus: <b style="color:var(--term-amber)">' + (data.turn_bonus || 0) + '</b> · used: <b style="color:var(--term-amber)">' + (data.period_turns_used || 0) + '</b></span>';
+  html += '<span class="bc-label">Turn bonus: <b style="color:var(--term-amber)">' + (data.turn_bonus || 0) + '</b> · promo: <b style="color:var(--term-green)">' + (data.promo_bonus || 0) + '</b> · used: <b style="color:var(--term-amber)">' + (data.period_turns_used || 0) + '</b></span>';
   html += '<input type="number" min="1" step="1" value="10" id="topup-' + data.username + '" class="cap-input" style="width:64px">';
   html += '<button onclick="topUp(\'' + data.username + '\')" class="bc-btn">➕ Top up</button>';
   html += '<button onclick="resetTurns(\'' + data.username + '\')" class="bc-btn danger">🔄 Reset turns</button>';

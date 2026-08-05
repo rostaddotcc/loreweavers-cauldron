@@ -1971,6 +1971,7 @@ function renderProfile(s) {
   const periodLabel = (st === 'tier1' || st === 'tier2') ? ' per 6h' : ' per day';
   const capLabel = s.turn_cap === 0 ? '∞ (lifetime)' : fmt(s.turn_cap) + periodLabel;
   h += cell('Turns', fmt(s.period_turns_used) + ' / ' + capLabel + bar(s.period_turns_used, s.turn_cap), true);
+  if (s.promo_bonus > 0) h += cell('Signup promo', fmt(s.promo_bonus) + ' left', true);
   h += cell('Total turns', fmt(s.total_turns));
   h += cell('Campaigns', fmt(s.total_campaigns));
   h += cell('Total tokens', fmt(s.total_tokens));

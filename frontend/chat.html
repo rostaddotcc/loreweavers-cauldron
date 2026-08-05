@@ -1742,7 +1742,10 @@ function turnInfoText() {
     const cap = parseInt(me.turn_cap, 10) || 0;
     const available = parseInt(me.turns_available, 10);
     if (cap > 0 && !isNaN(available)) {
-      const total = cap + (parseInt(me.turn_bonus, 10) || 0);
+      // Nämnaren = ALLA turn-källor: daglig cap + köpta (turn_bonus) +
+      // signup-promo (promo_bonus). Utan promo_bonus visades "350/50" för
+      // nya konton — såg ut som att 300-bonusen saknades. (2026-08-05 fix)
+      const total = cap + (parseInt(me.turn_bonus, 10) || 0) + (parseInt(me.promo_bonus, 10) || 0);
       parts.push('🆓 ' + (available >= 999999 ? '∞' : available) + '/' + total);
       const cd = resetCountdown(me.reset_date, false);
       if (cd) parts.push((en ? 'reset in ' : 'reset om ') + cd);

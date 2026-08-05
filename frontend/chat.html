@@ -1086,6 +1086,24 @@
 .cx-tab.active{ box-shadow: 0 3px 14px -5px rgba(232,198,90,.45) !important; }
 /* Sidebar-kort: mjukare hover-lyft */
 .pc-card:hover, .npc-row:hover, .quest-item:hover{ transform: translateY(-1px) !important; box-shadow: 0 4px 14px -6px rgba(0,0,0,.55) !important; }
+/* ═══════════ MJUKA UPP RUNDA 3 — chattbubblorna (2026-08-05) ═══════════ */
+/* Grundbubbla: 6px → 14px. DM/NPC vänster-ankrad (mjuk mot avataren),
+   spelaren höger-ankrad (mjuk mot avataren) — riktig chattbubbla-form. */
+.bubble{ border-radius: 6px 16px 16px 16px !important; }
+.msg.player .bubble{ border-radius: 16px 6px 16px 16px !important; }
+/* Hörnbeslagen: större + rundare (9px/1px → 12px/3px), subtilare — de ska
+   dekorera, inte skära. */
+.bubble::before, .bubble::after{ width: 12px !important; height: 12px !important; border-radius: 3px !important; opacity: 0.55 !important; }
+.bubble::before{ top: -2px !important; left: -2px !important; border-width: 2px !important; }
+.bubble::after{ bottom: -2px !important; right: -2px !important; border-width: 2px !important; }
+/* NPC-citat inuti DM-svar */
+.npc-quote{ border-radius: 8px 12px 12px 8px !important; }
+/* DM:ns inre monolog (reasoning) */
+.reasoning{ border-radius: 10px !important; }
+/* System-/tärningsrutor */
+.msg.system .box, .box{ border-radius: 8px !important; }
+/* Bubblorna får ett mjukare lyft i hover (matchar övriga kort) */
+.bubble:hover{ box-shadow: 0 8px 24px -10px rgba(0,0,0,.7), 0 0 0 1px color-mix(in srgb, var(--accent, var(--gold)) 22%, transparent) !important; }
 @media (max-width: 768px){
   .codex-panel{ border-radius: 0 !important; }
   /* Mobil: Codex-flikarna som bottenmeny — tabs längst ned i stället för topp */
@@ -1145,7 +1163,7 @@
     <div class="settings-menu" id="settings-menu">
       <button class="drop-item" onclick="openUsageModal();closeSettingsMenu()"><span class="di-icon">📊</span><span class="di-body"><span class="di-name">Usage</span><span class="di-hint">model & token stats</span></span></button>
       <button class="drop-item" onclick="fontToggleBtn();closeSettingsMenu()"><span class="di-icon">🔤</span><span class="di-body"><span class="di-name">Font</span><span class="di-hint" id="settings-font-hint">typeface</span></span></button>
-      <button class="drop-item" id="settings-menu-theme" onclick="themeCycle();closeSettingsMenu()"><span class="di-icon">🎨</span><span class="di-body"><span class="di-name">Theme</span><span class="di-hint" id="settings-theme-hint">switch palette</span></span></button>
+      <button class="drop-item" id="settings-menu-theme" onclick="THEMES.openPopover(this);closeSettingsMenu()"><span class="di-icon">🎨</span><span class="di-body"><span class="di-name">Theme</span><span class="di-hint" id="settings-theme-hint">choose palette</span></span></button>
       <a class="drop-item" href="help.html"><span class="di-icon">❓</span><span class="di-body"><span class="di-name">How to Play?</span><span class="di-hint">commands & tips</span></span></a>
       <div class="drop-sep"></div>
       <button class="drop-item" data-cli-label onclick="toggleCliChat();closeSettingsMenu()"><span class="di-icon">🖥️</span><span class="di-body"><span class="di-name">Chat UI: CLI</span><span class="di-hint">terminal style — toggle to bubbles</span></span></button>

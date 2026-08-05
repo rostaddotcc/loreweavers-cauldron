@@ -752,7 +752,7 @@ html{font-size:17px}
     <div class="dm-model-note">Reads your world files and structures the lore before the tale begins.</div>
     <div class="dm-model-row">
       <label class="dm-model-label" for="adventure-tts">🗣️ Voice (TTS)</label>
-      <select class="dm-model-select" id="adventure-tts">
+      <select class="dm-model-select" id="adventure-tts" onchange="advTTSChanged(this)">
         <option value="stepfun">StepFun (Step Plan)</option>
         <option value="qwen">Qwen (Token Plan) ⭐ — recommended</option>
       </select>
@@ -1502,7 +1502,13 @@ async function continueHero() {
   btn.disabled = true;
   btn.textContent = '💾 Saving to The Forge…';
   try {
-    const res = await API.vaultSave({ character: advHero, inventory: advHeroInv });
+    // Om hjälten redan har ett vault-id (t.ex. från avatar-målningen i
+    // onboarding) ska vi UPPDATERA den posten — annars skapar vaultSave en
+    // ny post och den målade avataren tappas. (2026-08-05 fix: avataren
+    // följde inte med från onboarding → kampanjen startade utan porträtt.)
+    const payload = { character: advHero, inventory: advHeroInv };
+    if (advHeroId) payload.overwrite_id = advHeroId;
+    const res = await API.vaultSave(payload);
     advHeroId = res.id;
     toast('💾 ' + advHero.name + (isEn() ? ' saved to The Forge' : ' sparad i The Forge'));
     revealStep('step-model');
@@ -1676,6 +1682,7 @@ const TTS_PROVIDERS = [
     if (!ttsSel) return;
     // tier: 'free' | 'tier1' (Support) | 'tier2' (Patron) | 'lifetime' | 'admin'
     // StepFun TTS = Support (3€)+, Qwen TTS = Patron (10€)+ (backend klämmer ändå).
+    const prev = ttsSel.value;              // användarens nuvarande val (om något)
     ttsSel.innerHTML = TTS_PROVIDERS.map(p => {
       const qwen = p.id === 'qwen';
       const dis = qwen ? (tier === 'free' || tier === 'tier1') : (tier === 'free');
@@ -1687,10 +1694,17 @@ const TTS_PROVIDERS = [
     try {
       const saved = localStorage.getItem('dnd_tts_provider');
       const allowed = (id) => id === 'stepfun' ? tier !== 'free' : (id === 'qwen' ? (tier === 'tier2' || tier === 'lifetime') : false);
-      // Spara bara val som inte är låsta — annars första tillåtna provider.
-      if (saved && allowed(saved)) {
-        ttsSel.value = saved;
-      } else {
+      // 1) Användaren har redan valt ett tillåtet provider (onchange sparar
+      //    direkt) → respektera det, skriv ALDRIG över ett färskt val. Detta
+      //    fixar att Qwen "resettades" till StepFun: fillTTS körs async efter
+      //    API.me() och hann skriva över användarens val med gammal localStorage.
+      if (prev && allowed(prev)) { ttsSel.value = prev; return; }
+      // 2) Qwen är rekommenderad (⭐) — när den är tillåten ska den VINNA över
+      //    ett gammalt sparat 'stepfun' (annars fastnar man i StepFun för evigt).
+      if (allowed('qwen')) { ttsSel.value = 'qwen'; return; }
+      // 3) Annars: sparat val om tillåtet, annars första tillåtna.
+      if (saved && allowed(saved)) ttsSel.value = saved;
+      else {
         const first = TTS_PROVIDERS.find(p => allowed(p.id));
         ttsSel.value = first ? first.id : '';
       }
@@ -1717,6 +1731,14 @@ const TTS_PROVIDERS = [
     fill(PLAYER_DM_MODELS, false);
   });
 })();
+
+// TTS-provider vald i onboarding → spara direkt så fillTTS (async) aldrig
+// skriver över det med ett gammalt localStorage-värde. (2026-08-05 fix)
+function advTTSChanged(sel) {
+  if (!sel || !sel.value) return;
+  try { localStorage.setItem('dnd_tts_provider', sel.value); } catch (e) {}
+  try { SFX.click(); } catch (_) {}
+}
 
 // ── Start: skapa kampanj → sätt DM-modell → lyft in hjälten → chat (uppvaknandet) ──
 let advStarting = false;

@@ -233,6 +233,18 @@ function relatedQuests(n){
   }
 })();
 
+// Codex-iframe: när man klickar på en annan NPC i vänsterlistan (chat.html)
+// ändras bara hash:en (#npc:namn) — sidan laddas INTE om, så init-koden
+// ovan körs inte igen. Lyssnar på hashchange och väljer om manuellt.
+// (2026-08-05 fix: Codex stannade på samma NPC.)
+window.addEventListener('hashchange', () => {
+  if (!NPCS.length) return;
+  const h = decodeURIComponent((location.hash || '').replace(/^#/, ''));
+  const wanted = h.startsWith('npc:') ? h.slice(4).toLowerCase() : '';
+  const idx = wanted ? NPCS.findIndex(n => (n.name || '').toLowerCase() === wanted) : -1;
+  if (idx >= 0) selectNpc(idx);
+});
+
 function showNoCampaign(msg){
   document.getElementById('npc-list').innerHTML = '';
   document.getElementById('hall-count').textContent = '';

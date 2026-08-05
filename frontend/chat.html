@@ -185,7 +185,7 @@
     display: inline-flex; align-items: center; justify-content: center;
     font-family: 'Cinzel', serif; font-size: .55rem; font-weight: 900; line-height: 1;
     box-shadow: inset 0 -2px 3px rgba(0,0,0,.35), 0 1px 3px rgba(0,0,0,.5);
-  }.cc-pp{ background: linear-gradient(180deg,#f4f6fb,#aab2c8); color: #2a2f3d; border: 1px solid #c8cfdf; }
+  }.cc-pp{ background: linear-gradient(180deg,#eef2ff,#9fb0d8); color: #232a3d; border: 1px solid #bcc8ea; }
   .cc-gp{ background: linear-gradient(180deg,#ffe9a3,#c9a227); color: #3a2c00; border: 1px solid #e8c65a; }
   .cc-sp{ background: linear-gradient(180deg,#f4f6f8,#b8c0cc); color: #333a44; border: 1px solid #d0d6de; }
   .cc-cp{ background: linear-gradient(180deg,#e8b48a,#a56a3c); color: #3a2410; border: 1px solid #c98a5e; }
@@ -3217,7 +3217,9 @@ function updateCurrency(currency) {
     const v = cur[key] || 0;
     if (key === 'gp') {
       chips += `<span class="coin ${cls}" title="${label}">${letter}</span><b class="pc-gold-num" id="pc-gold-val">${v}</b>`;
-    } else if (v > 0) {
+    } else {
+      // Alla fyra valörer (pp/gp/sp/cp) visas alltid — fullständig börs,
+      // D&D 5e-standard. Nollor med, så det inte ser ut som att de saknas.
       chips += `<span class="coin ${cls}" title="${label}">${letter}</span><b class="pc-gold-num">${v}</b>`;
     }
   }

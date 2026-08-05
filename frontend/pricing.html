@@ -101,6 +101,7 @@
   .tier-desc{color:var(--bone-dim);font-size:.92rem;line-height:1.6;margin-bottom:1.4rem;min-height:2.6em}
   .tier ul{list-style:none;margin-bottom:1.8rem;flex:1}
   .tier li{padding:.5rem 0 .5rem 1.5rem;position:relative;color:var(--bone);font-size:.95rem;line-height:1.5}
+.tier li .tier-includes{color:var(--gold-bright);font-size:.9rem;letter-spacing:.04em;text-shadow:0 0 12px rgba(201,162,39,.25)}
   .tier li::before{content:'◆';position:absolute;left:0;top:.5rem;color:var(--gold);font-size:.6rem}
   .tier li b{color:var(--bone-bright);font-weight:600}
   .tier li.dim{color:var(--bone-dim)}
@@ -206,6 +207,14 @@
   .plan-email .pe-err{margin-top:.6rem;font-size:.8rem;color:var(--blood-bright);font-style:italic;min-height:1em}
   .plan-note{margin-top:.9rem;text-align:center;font-size:.78rem;color:var(--bone-dim);line-height:1.55}
 
+  /* Donationsraden på kortet */
+  .donate-row{display:flex;gap:.5rem;margin-top:1.1rem}
+  .donate-input{flex:1;min-width:0;font-family:var(--font-body);font-size:16px;color:var(--bone-bright);
+    background:var(--stone);border:1px solid var(--edge);padding:.7rem .8rem;outline:none;border-radius:3px;
+    transition:border-color .2s, box-shadow .2s}
+  .donate-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,162,39,.14)}
+  .donate-row .tier-btn{margin-top:0;flex-shrink:0}
+
   @media(max-width:640px){
     .nav-links .nav-link{display:none}
     .pricing{padding-top:calc(var(--nav-h) + 3rem)}
@@ -232,9 +241,9 @@
 </nav>
 
 <section class="pricing">
-  <p class="eyebrow">Paths into the realm</p>
-  <h1>Choose your path</h1>
-  <p class="pricing-sub">The fire burns for every adventurer. Wander free with your daily ration of turns — or take up a sigil and shape the realm itself.</p>
+  <p class="eyebrow">Free to play · No subscription</p>
+  <h1>Unlimited. No lock-in.</h1>
+  <p class="pricing-sub">Start your adventure with <b>300 turns</b> — when they run out, your account refreshes <b>50 turns every day</b>. No card. No email needed. Support the Cauldron with a one-time top-up when you feel like it.</p>
 
   <div class="currency-toggle" id="currency-toggle" onclick="toggleCurrency()" title="Toggle EUR / SEK">
     <span>Prices in</span>
@@ -248,74 +257,78 @@
     <div class="tier">
       <span class="corner tl"></span><span class="corner tr"></span>
       <span class="corner bl"></span><span class="corner br"></span>
-      <div class="tier-name">Wanderer</div>
-      <div class="tier-price">Free</div>
-      <div class="tier-desc">The realm, at your own pace.</div>
+      <div class="tier-name">Free</div>
+      <div class="tier-price">0€</div>
+      <div class="tier-desc">The realm, at your own pace — no card, no email needed.</div>
       <ul>
-        <li><b>1 month of Adventurer</b> — new players, no card needed</li>
-        <li><b>50 turns</b> every day — refreshed at midnight</li>
+        <li><b>300 turns</b> when you start — a real head start</li>
+        <li>Then <b>50 turns</b> refresh <b>every day</b> — forever</li>
         <li><b>StepFun TTS</b> — always free</li>
+        <li><b>StepFun painting</b> — free-prompt avatars for your hero, the DM and every NPC</li>
         <li>The steadfast Dungeon Master (<b>step-3.7-flash</b>)</li>
         <li>Persistent world, memory, and Codex</li>
       </ul>
       <a class="tier-btn go" href="login.html" data-tier="free">Begin your adventure</a>
     </div>
 
-    <!-- Tier 1 — Companion -->
+    <!-- Support 3€ -->
     <div class="tier">
       <span class="corner tl"></span><span class="corner tr"></span>
       <span class="corner bl"></span><span class="corner br"></span>
-      <div class="tier-name">Companion</div>
-      <div class="tier-price"><span class="cur-price" data-eur="3" data-sek="35">3€</span><small> / month</small></div>
-      <div class="tier-desc">More turns, more often — and faces for your story.</div>
+      <div class="tier-name">Support</div>
+      <div class="tier-price"><span class="cur-price" data-eur="3" data-sek="35">3€</span><small> once</small></div>
+      <div class="tier-desc">Top up the fire — and take your story with you.</div>
       <ul>
-        <li><b>50 turns</b> refreshed <b>every 6 hours</b></li>
-        <li><b>AI + uploaded avatars</b> for your hero and the NPCs you meet</li>
-        <li>Everything in the Wanderer path</li>
+        <li><b>+300 turns</b> on your account, instantly</li>
+        <li><b>Export your campaign</b> — the whole story as a zip</li>
+        <li><b>Export your heroes</b> from The Forge</li>
+        <li><b>Uploaded avatars</b> — your own images for your hero and the NPCs you meet</li>
+        <li>One-time. No subscription, no renewal, ever</li>
       </ul>
-      <a class="tier-btn go" href="#" data-tier="tier1" onclick="openPlan(event,'tier1')">Take the sigil</a>
+      <a class="tier-btn go" href="#" data-tier="support300" onclick="openPlan(event,'support300')">Support the Cauldron</a>
     </div>
 
-    <!-- Tier 2 — Adventurer -->
+    <!-- Patron 10€ -->
     <div class="tier hot">
       <span class="corner tl"></span><span class="corner tr"></span>
       <span class="corner bl"></span><span class="corner br"></span>
-      <div class="tier-flag">Most popular</div>
-      <div class="tier-name">Adventurer</div>
-      <div class="tier-price"><span class="cur-price" data-eur="9" data-sek="105">9€</span><small> / month</small></div>
-      <div class="tier-desc">The full mind of the Cauldron.</div>
+      <div class="tier-flag">Best value</div>
+      <div class="tier-name">Patron</div>
+      <div class="tier-price"><span class="cur-price" data-eur="10" data-sek="117">10€</span><small> once</small></div>
+      <div class="tier-desc">The full mind of the Cauldron — when you need it most.</div>
       <ul>
-        <li><b>All Dungeon Masters</b> — DeepSeek, Qwen 3.8 Max, Qwen 3.6 Flash</li>
-        <li><b>Both narrator voices</b> — Qwen <i>and</i> StepFun TTS</li>
-        <li><b>Customize the narrator voice</b> — happy, calm, scary, or your own style</li>
-        <li><b>50 turns</b> refreshed <b>every 6 hours</b></li>
-        <li><b>AI + uploaded avatars</b> for your hero and the NPCs you meet</li>
-        <li>Everything in the Companion path</li>
+        <li><b>+500 turns</b> on your account, instantly</li>
+        <li><b>All Dungeon Masters</b> — DeepSeek, Qwen 3.8 Max &amp; more, for <b>30 days</b></li>
+        <li><b>Wan 2.7 Pro painting</b> — 1080² portraits, up to <b>10 per day</b></li>
+        <li>Everything in Support — export and uploads included</li>
+        <li>One-time. No subscription, no renewal, ever</li>
       </ul>
-      <a class="tier-btn go" href="#" data-tier="tier2" onclick="openPlan(event,'tier2')">Hold the sigil</a>
+      <a class="tier-btn go" href="#" data-tier="patron500" onclick="openPlan(event,'patron500')">Become a Patron</a>
     </div>
 
-    <!-- Tier 3 — Lifetime -->
-    <div class="tier" id="tier-lifetime">
+    <!-- Donation -->
+    <div class="tier" id="tier-donation">
       <span class="corner tl"></span><span class="corner tr"></span>
       <span class="corner bl"></span><span class="corner br"></span>
-      <div class="tier-flag promo-flag" id="lifetime-promo-flag" style="display:none">Founding offer</div>
-      <div class="tier-name">Lifetime</div>
-      <div class="tier-price"><span class="cur-price" data-eur="50" data-sek="585">50€</span><small> once</small>
-        <span class="strike" id="lifetime-strike" style="display:none">100€</span></div>
-      <div class="tier-desc" id="lifetime-desc">Support the dev. Never count a turn again.</div>
+      <div class="tier-name">Donation</div>
+      <div class="tier-price"><span id="donation-price">Your pick</span></div>
+      <div class="tier-desc">Keep the cauldron burning. Any amount, full heart.</div>
       <ul>
-        <li><b>Unlimited turns</b> — the Cauldron never sleeps</li>
-        <li>All Dungeon Masters · both narrator voices · all avatars (AI + upload)</li>
-        <li>A thank-you from the forge — you keep this realm burning</li>
+        <li>Support the dev &amp; maintenance — every euro keeps the fires lit</li>
+        <li>No features attached — this one is pure love</li>
+        <li>One-time, of course. No subscription, ever</li>
       </ul>
-      <a class="tier-btn go" href="#" data-tier="lifetime" onclick="openPlan(event,'lifetime')">Forge forever</a>
+      <div class="donate-row">
+        <input type="number" id="donate-amount" min="1" max="1000" step="1" placeholder="5" class="donate-input" />
+        <a class="tier-btn go" href="#" data-tier="donation" onclick="openPlan(event,'donation')">Donate</a>
+      </div>
     </div>
   </div>
 
   <p class="fine">
-    <b>How the free path works</b> — your 50 turns renew every day at midnight, whether you were here or not.
-    Payments are processed securely by Stripe. Monthly tiers renew until you end them; Lifetime is a one-time purchase.
+    <b>How the free path works</b> — every new account starts with <b>300 turns</b>. When they're spent, you get <b>50 fresh turns every day</b>, whether you were here or not.
+    Support, Patron and donations are <b>one-time purchases</b> — no subscription, no renewal, no lock-in.
+    Payments are processed securely by Stripe.
   </p>
   <a class="back" href="adventure.html">← Return to the realm</a>
 </section>
@@ -325,17 +338,17 @@
   <div class="plan-modal" role="dialog" aria-modal="true" aria-labelledby="plan-name">
     <button class="plan-close" onclick="closePlan()" title="Close">✕</button>
     <div class="plan-eyebrow" id="plan-eyebrow">The Path</div>
-    <div class="plan-name" id="plan-name">Companion</div>
-    <div class="plan-price" id="plan-price"><span id="plan-price-main">3€</span><small id="plan-price-per"> / month</small><span class="strike" id="plan-price-strike" style="display:none"></span></div>
-    <div class="plan-promo" id="plan-promo" style="display:none">Founding offer</div>
+    <div class="plan-name" id="plan-name">Support</div>
+    <div class="plan-price" id="plan-price"><span id="plan-price-main">3€</span><small id="plan-price-per"> once</small><span class="strike" id="plan-price-strike" style="display:none"></span></div>
+    <div class="plan-promo" id="plan-promo" style="display:none"></div>
     <div class="plan-desc" id="plan-desc"></div>
     <ul class="plan-list" id="plan-list"></ul>
     <button class="plan-cta" id="plan-cta" onclick="planCta()">Continue to checkout</button>
     <div class="plan-login-hint" id="plan-login-hint" style="display:none">Not signed in — <a href="login.html?next=pricing.html">sign in to continue</a></div>
-    <div class="plan-grant" id="plan-grant" style="display:none">✦ Subscription will be granted to <b id="plan-grant-user">you</b></div>
+    <div class="plan-grant" id="plan-grant" style="display:none">✦ Purchase will be applied to <b id="plan-grant-user">you</b></div>
     <div class="plan-email" id="plan-email" style="display:none">
       <div class="pe-title">✉ Add your email</div>
-      <div class="pe-label">Your account has no email yet — we need one to send receipts and reset links before you subscribe.</div>
+      <div class="pe-label">Your account has no email yet — we need one to send receipts and reset links before you purchase.</div>
       <div class="pe-row">
         <input type="email" id="plan-email-input" placeholder="you@example.com" autocomplete="email" />
         <button type="button" class="plan-cta" id="plan-email-btn" onclick="planSaveEmail()">Save email &amp; continue</button>
@@ -368,49 +381,42 @@
     if (PLAN_OPEN) renderPlan(PLAN_OPEN);
   }
 
-  // ── Plan-data (detaljerad vy per tier) ──
-  // PROMO_ACTIVE sätts nedan via /api/promo; under erbjudandet:
-  //   Companion  = 1 månad betald → 2 gratismånader (3 totalt)
-  //   Adventurer = 1 månad betald → 3 gratismånader (4 totalt)
-  //   Lifetime   = 50€ engång istället för 100€
-  var PROMO_ACTIVE = false;
+  // ── Plan-data (detaljerad vy per kort) — one-time-modellen (2026-08-05) ──
   var PLAN_OPEN = null;
   var PLAN_DATA = {
-    tier1: {
-      name: 'Companion',
-      price: { eur: 3, sek: 35, per: ' / month' },
-      desc: 'More turns, more often — and faces for your story.',
+    support300: {
+      name: 'Support',
+      price: { eur: 3, sek: 35, per: ' once' },
+      desc: 'Top up the fire — and take your story with you.',
       features: [
-        '<b>50 turns</b> refreshed <b>every 6 hours</b>',
-        '<b>AI + uploaded avatars</b> for your hero and the NPCs you meet',
-        'Everything in the Wanderer path',
+        '<b>+300 turns</b> on your account, instantly',
+        '<b>Export your campaign</b> — the whole story as a zip',
+        '<b>Export your heroes</b> from The Forge',
+        '<b>Uploaded avatars</b> — your own images for your hero and the NPCs you meet',
+        'One-time. No subscription, no renewal, ever',
       ],
-      promo: null,
     },
-    tier2: {
-      name: 'Adventurer',
-      price: { eur: 9, sek: 105, per: ' / month' },
-      desc: 'The full mind of the Cauldron.',
+    patron500: {
+      name: 'Patron',
+      price: { eur: 10, sek: 117, per: ' once' },
+      desc: 'The full mind of the Cauldron — when you need it most.',
       features: [
-        '<b>All Dungeon Masters</b> — DeepSeek, Qwen 3.8 Max, Qwen 3.6 Flash',
-        '<b>Both narrator voices</b> — Qwen and StepFun TTS',
-        '<b>Customize the narrator</b> — happy, calm, scary, or your own style',
-        '<b>50 turns</b> refreshed <b>every 6 hours</b>',
-        '<b>AI + uploaded avatars</b> for your hero and the NPCs you meet',
-        'Everything in the Companion path',
+        '<b>+500 turns</b> on your account, instantly',
+        '<b>All Dungeon Masters</b> — DeepSeek, Qwen 3.8 Max &amp; more, for <b>30 days</b>',
+        '<b>Wan 2.7 Pro painting</b> — 1080² portraits, up to <b>10 per day</b>',
+        'Everything in Support — export and uploads included',
+        'One-time. No subscription, no renewal, ever',
       ],
-      promo: null,
     },
-    lifetime: {
-      name: 'Lifetime',
-      price: { eur: 100, sek: 1170, per: ' once' },
-      desc: 'Support the dev. Never count a turn again.',
+    donation: {
+      name: 'Donation',
+      price: { eur: 0, sek: 0, per: '' },
+      desc: 'Keep the cauldron burning. Any amount, full heart.',
       features: [
-        '<b>Unlimited turns</b> — the Cauldron never sleeps',
-        'All Dungeon Masters · both narrator voices · all avatars (AI + upload)',
-        'A thank-you from the forge — you keep this realm burning',
+        'Support the dev &amp; maintenance — every euro keeps the fires lit',
+        'No features attached — this one is pure love',
+        'One-time, of course. No subscription, ever',
       ],
-      promo: null,
     },
   };
 
@@ -418,6 +424,15 @@
   function openPlan(ev, tier) {
     ev.preventDefault();
     PLAN_OPEN = tier;
+    if (tier === 'donation') {
+      var amt = (document.getElementById('donate-amount') || {}).value;
+      if (amt) {
+        var eur = parseFloat(amt);
+        if (eur >= 1 && eur <= 1000) {
+          PLAN_DATA.donation.price = { eur: eur, sek: Math.round(eur * 11.7), per: ' once' };
+        }
+      }
+    }
     renderPlan(tier);
     document.getElementById('plan-overlay').classList.add('show');
     document.body.style.overflow = 'hidden';
@@ -434,36 +449,16 @@
   function renderPlan(tier) {
     var p = PLAN_DATA[tier];
     if (!p) return;
-    var promo = null;
-    if (PROMO_ACTIVE) {
-      if (tier === 'tier1') promo = { label: 'Founding offer', text: 'Pay 1 month, get 2 months free — 3 months for the price of one.', price: p.price, strike: null };
-      else if (tier === 'lifetime') promo = { label: 'Founding offer', text: 'Lifetime for 50€ — half price, one-time. Forever, no renewal.', price: { eur: 50, sek: 585, per: ' once' }, strike: p.price };
-    }
     document.getElementById('plan-eyebrow').textContent = 'The Path';
     document.getElementById('plan-name').textContent = p.name;
     var priceEl = document.getElementById('plan-price-main');
     var perEl = document.getElementById('plan-price-per');
     var strikeEl = document.getElementById('plan-price-strike');
-    if (promo) {
-      priceEl.textContent = fmtPrice(promo.price.eur, promo.price.sek);
-      perEl.textContent = promo.price.per;
-      if (promo.strike) {
-        strikeEl.textContent = fmtPrice(promo.strike.eur, promo.strike.sek);
-        strikeEl.style.display = '';
-      } else {
-        strikeEl.style.display = 'none';
-      }
-      var pr = document.getElementById('plan-promo');
-      pr.style.display = '';
-      pr.textContent = promo.label;
-      document.getElementById('plan-desc').textContent = promo.text;
-    } else {
-      priceEl.textContent = fmtPrice(p.price.eur, p.price.sek);
-      perEl.textContent = p.price.per;
-      strikeEl.style.display = 'none';
-      document.getElementById('plan-promo').style.display = 'none';
-      document.getElementById('plan-desc').textContent = p.desc;
-    }
+    priceEl.textContent = fmtPrice(p.price.eur, p.price.sek);
+    perEl.textContent = p.price.per;
+    strikeEl.style.display = 'none';
+    document.getElementById('plan-promo').style.display = 'none';
+    document.getElementById('plan-desc').textContent = p.desc;
     document.getElementById('plan-list').innerHTML = p.features.map(function (f) {
       return '<li>' + f + '</li>';
     }).join('');
@@ -483,7 +478,7 @@
       hint.style.display = '';
       if (grant) grant.style.display = 'none';
       var cta = document.getElementById('plan-cta');
-      cta.textContent = 'Sign in to subscribe';
+      cta.textContent = 'Sign in to continue';
       cta.classList.add('ghost');
     }
   }
@@ -491,6 +486,7 @@
   // ── CTA i modalen: inloggad → checkout; ej inloggad → login ──
   // 2026-08-04: e-post krävs före köp — om /api/billing/checkout svarar
   // {detail:{email_required:true}} visas e-postformuläret i modalen.
+  // Donation skickar med beloppet (amount i EUR).
   function planCta() {
     if (!LOGGED_IN || !PLAN_OPEN) {
       location.href = 'login.html?next=pricing.html';
@@ -499,11 +495,15 @@
     var btn = document.getElementById('plan-cta');
     btn.classList.add('busy');
     btn.textContent = 'Forging sigil…';
+    var body = { tier: PLAN_OPEN };
+    if (PLAN_OPEN === 'donation') {
+      body.amount = PLAN_DATA.donation.price.eur || null;
+    }
     fetch('/api/billing/checkout', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tier: PLAN_OPEN })
+      body: JSON.stringify(body)
     }).then(function (res) {
       if (res.status === 401) {
         location.href = 'login.html?next=pricing.html';
@@ -573,7 +573,7 @@
 
   var LOGGED_IN = false;
   var LOGGED_IN_USER = '';
-  // ── Current subscription + inloggningsstatus ──
+  // ── Current status + inloggningsstatus ──
   // (pricing.html laddar inte api.js → rå fetch med credentials)
   fetch('/api/me', { credentials: 'include' }).then(function (r) {
     return r.ok ? r.json() : null;
@@ -581,37 +581,20 @@
     LOGGED_IN = !!u;
     LOGGED_IN_USER = (u && u.username) || '';
     if (!u) return;
-    var key = { free: 'free', tier1: 'tier1', tier2: 'tier2', lifetime: 'lifetime' }[u.subscription_status];
-    if (!key) return;
-    var btn = document.querySelector('.tier-btn[data-tier="' + key + '"]');
+    // one-time-modellen: support300 → Support-kortet, patron500 → Patron-kortet
+    var tierKey = { tier1: 'support300', tier2: 'patron500', lifetime: 'patron500' }[u.subscription_status];
+    var feats = (u.features || {});
+    if (!tierKey) {
+      if (feats.export && !feats.all_models) tierKey = 'support300';
+      else if (feats.all_models || feats.wan1080) tierKey = 'patron500';
+    }
+    if (!tierKey) return;
+    var btn = document.querySelector('.tier-btn[data-tier="' + tierKey + '"]');
     if (!btn) return;
-    btn.textContent = '✓ Current subscription';
+    btn.textContent = '✓ You have this';
     btn.classList.add('current');
     btn.removeAttribute('onclick');
     btn.href = '#';
-  }).catch(function () {});
-
-  // ── Promo-status (grundarerbjudande) ──
-  fetch('/api/promo', { credentials: 'include' }).then(function (r) {
-    return r.json();
-  }).then(function (d) {
-    if (d && d.active) {
-      PROMO_ACTIVE = true;
-      // Lifetime-kortet: visa 50€ + överstruket 100€ + badge
-      var flag = document.getElementById('lifetime-promo-flag');
-      if (flag) flag.style.display = '';
-      var strike = document.getElementById('lifetime-strike');
-      if (strike) strike.style.display = '';
-      var cur = document.querySelector('#tier-lifetime .cur-price');
-      if (cur) {
-        cur.setAttribute('data-eur', '50');
-        cur.setAttribute('data-sek', '585');
-        cur.textContent = fmtPrice(50, 585);
-      }
-      var desc = document.getElementById('lifetime-desc');
-      if (desc) desc.textContent = 'Lifetime for 50€ — half price, one-time. Forever, no renewal.';
-      if (PLAN_OPEN) renderPlan(PLAN_OPEN);
-    }
   }).catch(function () {});
 </script>
 </body>

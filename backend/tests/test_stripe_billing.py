@@ -66,8 +66,8 @@ def stripe_env(monkeypatch):
     monkeypatch.setattr(main, "STRIPE_SECRET_KEY", "sk_test_abc")
     monkeypatch.setattr(main, "STRIPE_WEBHOOK_SECRET", "whsec_test123")
     monkeypatch.setattr(main, "STRIPE_PRICES", {
-        "tier1": "price_t1", "tier2": "price_t2", "lifetime": "price_lt",
-        "lifetime_promo": "price_lt_promo",
+        "support300": "price_sup300", "patron500": "price_pat500",
+        "donation": "", "lifetime": "price_lt",
     })
 
 
@@ -78,12 +78,14 @@ def client(users_file, campaigns_dir, ledger_file, outbox_dir, stripe_env):
         yield c
 
 
-def _seed(username="alice", role="player", tier="free"):
+def _seed(username="alice", role="player", tier="free", features=None):
     main.save_users({
         username: {"password_hash": hash_password("secret123"), "role": role,
                    "turn_cap": 50, "turns_used": 0, "turn_bonus": 0,
                    "reset_date": "2026-08-04", "subscription_status": tier,
                    "subscription_until": None,
+                   "features": features or {},
+                   "start_bonus_granted": True,
                    "email": "alice@example.com"},  # e-post krävs före köp (2026-08-04)
     })
 
@@ -130,16 +132,57 @@ def test_checkout_tier2_returns_stripe_url(client, monkeypatch):
         return {"url": "https://checkout.stripe.com/c/pay/test123", "id": "cs_1"}
 
     monkeypatch.setattr(main, "_stripe_post", fake_post)
-    r = client.post("/api/billing/checkout", json={"tier": "tier2"},
+    r = client.post("/api/billing/checkout", json={"tier": "patron500"},
                     cookies={"morkrets_token": _tok()})
     assert r.status_code == 200
     assert "checkout.stripe.com" in r.json()["url"]
     assert captured["path"] == "checkout/sessions"
-    assert captured["data"]["mode"] == "subscription"
-    assert captured["data"]["line_items[0][price]"] == "price_t2"
+    assert captured["data"]["mode"] == "payment"  # one-time — ingen subscription
+    assert captured["data"]["line_items[0][price]"] == "price_pat500"
     assert captured["data"]["metadata[username]"] == "alice"
     # Åtkomst ges INTE i checkout-svaret — users.json orörd
     assert main.load_users()["alice"]["subscription_status"] == "free"
+
+
+def test_checkout_support300_payment_mode(client, monkeypatch):
+    _seed()
+    captured = {}
+
+    async def fake_post(path, data):
+        captured["mode"] = data["mode"]
+        captured["price"] = data.get("line_items[0][price]")
+        return {"url": "https://checkout.stripe.com/c/pay/x"}
+
+    monkeypatch.setattr(main, "_stripe_post", fake_post)
+    r = client.post("/api/billing/checkout", json={"tier": "support300"},
+                    cookies={"morkrets_token": _tok()})
+    assert r.status_code == 200
+    assert captured["mode"] == "payment"
+    assert captured["price"] == "price_sup300"
+
+
+def test_checkout_donation_custom_amount(client, monkeypatch):
+    _seed()
+    captured = {}
+
+    async def fake_post(path, data):
+        captured["data"] = data
+        return {"url": "https://checkout.stripe.com/c/pay/x"}
+
+    monkeypatch.setattr(main, "_stripe_post", fake_post)
+    r = client.post("/api/billing/checkout", json={"tier": "donation", "amount": 5.0},
+                    cookies={"morkrets_token": _tok()})
+    assert r.status_code == 200
+    assert captured["data"]["mode"] == "payment"
+    assert captured["data"]["line_items[0][price_data][unit_amount]"] == "500"  # 5€ = 500 ören
+    assert captured["data"]["line_items[0][price_data][product_data][name]"] == "Support the Cauldron"
+
+
+def test_checkout_donation_bad_amount(client, monkeypatch):
+    _seed()
+    r = client.post("/api/billing/checkout", json={"tier": "donation", "amount": 0.5},
+                    cookies={"morkrets_token": _tok()})
+    assert r.status_code == 400
 
 
 def test_checkout_lifetime_uses_payment_mode(client, monkeypatch):
@@ -155,25 +198,6 @@ def test_checkout_lifetime_uses_payment_mode(client, monkeypatch):
                     cookies={"morkrets_token": _tok()})
     assert r.status_code == 200
     assert captured["mode"] == "payment"
-
-
-def test_checkout_lifetime_uses_promo_price_during_founding_offer(client, monkeypatch):
-    """Grundarerbjudande: lifetime → 50€-priset (price_lt_promo), engångsbetalning."""
-    _seed()
-    captured = {}
-
-    async def fake_post(path, data):
-        captured["data"] = data
-        return {"url": "https://checkout.stripe.com/c/pay/x"}
-
-    monkeypatch.setattr(main, "_stripe_post", fake_post)
-    # Promo är aktiv fram till 2026-08-11 (dagens datum i testmiljön är 2026-08-04).
-    r = client.post("/api/billing/checkout", json={"tier": "lifetime"},
-                    cookies={"morkrets_token": _tok()})
-    assert r.status_code == 200
-    assert captured["data"]["mode"] == "payment"
-    assert captured["data"]["line_items[0][price]"] == "price_lt_promo"
-    assert captured["data"]["metadata[tier]"] == "lifetime"
 
 
 # ── Webhook: signatur ────────────────────────────────────────────────
@@ -200,82 +224,76 @@ def test_webhook_tampered_body_rejected(client):
 
 # ── Webhook: checkout.session.completed ──────────────────────────────
 
-def test_webhook_checkout_tier2_grants_access(client):
+def test_webhook_checkout_patron500_grants_access(client):
     _seed()
     _seed_campaign("alice")
     body = _event("checkout.session.completed", {
-        "metadata": {"username": "alice", "tier": "tier2"},
+        "metadata": {"username": "alice", "tier": "patron500"},
         "client_reference_id": "alice",
         "payment_status": "paid",
         "customer": "cus_123",
-        "subscription": "sub_123",
-        "amount_total": 900,
+        "amount_total": 1000,
     }, event_id="evt_completed")
     r = client.post("/api/stripe/webhook", content=body,
                     headers={"stripe-signature": _sign(body)})
     assert r.status_code == 200
     u = main.load_users()["alice"]
-    assert u["subscription_status"] == "tier2"
+    assert u["turn_bonus"] == 500  # +500 turns
+    assert u["features"]["export"] is True
+    assert u["features"]["wan1080"] is True
+    assert u["features"]["all_models"] is True
+    assert u["models_until"]  # 30 dagar framåt
     assert u["stripe_customer_id"] == "cus_123"
-    assert u["stripe_subscription_id"] == "sub_123"
-    assert u["turn_cap"] == 50
-    assert u["reset_ts"]
+    assert u["turn_cap"] == 50  # 50/dag — INTE oändligt
     # Ledger-rad + chattlogg
     ledger = json.loads(main._LEDGER_FILE.read_text())
-    assert any(e["type"] == "stripe:tier2" and e["user"] == "alice" for e in ledger)
+    assert any(e["type"] == "stripe:patron500" and e["user"] == "alice" for e in ledger)
     state = main.store.get("alice")
     trans = main.store.load_transcript(state, last_n=10)
     assert any("upgraded as a token of appreciation" in e["content"] for e in trans)
 
 
-def test_webhook_checkout_promo_gives_extra_months(client):
-    """Grundarerbjudande (fram till 2026-08-11): 1 månad → 3 (tier1) / 4 (tier2)."""
+def test_webhook_checkout_support300_grants_export(client):
+    """3€ Support: +300 turns + export (permanent) — inga premiummodeller."""
     _seed("alice")
     body = _event("checkout.session.completed", {
-        "metadata": {"username": "alice", "tier": "tier1"},
+        "metadata": {"username": "alice", "tier": "support300"},
         "client_reference_id": "alice",
         "payment_status": "paid",
-        "customer": "cus_p1",
-        "subscription": "sub_p1",
-        "amount_total": 350,
-    }, event_id="evt_promo_t1")
+        "customer": "cus_s1",
+        "amount_total": 300,
+    }, event_id="evt_support")
     r = client.post("/api/stripe/webhook", content=body,
                     headers={"stripe-signature": _sign(body)})
     assert r.status_code == 200
     u = main.load_users()["alice"]
-    assert u["subscription_status"] == "tier1"
-    days = (datetime.fromisoformat(u["subscription_until"]).date() - datetime.now(timezone.utc).date()).days
-    # Under promo ger tier1 3 månader (~90 dagar, datum-baserat → 89–90).
-    assert 80 <= days <= 92, f"tier1 promo gav {days} dagar, förväntat ~90"
+    assert u["turn_bonus"] == 300
+    assert u["features"]["export"] is True
+    assert "all_models" not in u["features"]
+    assert "wan1080" not in u["features"]
+    assert main._tier_for("alice") == "tier1"  # Support
+    # modellerna är FORTFARANDE klampade (Support = stepfun only)
+    assert main._clamp_player_model("qwen3.8-max", tier="tier1") == "step-3.7-flash"
 
-    # tier2 → ~30 dagar (1 månad — ingen gratismånad sedan 2026-08-04)
-    _seed("bob")
-    body2 = _event("checkout.session.completed", {
-        "metadata": {"username": "bob", "tier": "tier2"},
-        "client_reference_id": "bob",
+
+def test_webhook_checkout_donation_no_features(client):
+    """Valfri summa: bara ledger — inga förmåner."""
+    _seed("alice")
+    body = _event("checkout.session.completed", {
+        "metadata": {"username": "alice", "tier": "donation"},
+        "client_reference_id": "alice",
         "payment_status": "paid",
-        "customer": "cus_p2",
-        "subscription": "sub_p2",
-        "amount_total": 900,
-    }, event_id="evt_promo_t2")
-    r2 = client.post("/api/stripe/webhook", content=body2,
-                     headers={"stripe-signature": _sign(body2)})
-    assert r2.status_code == 200
-    u2 = main.load_users()["bob"]
-    assert u2["subscription_status"] == "tier2"
-    days2 = (datetime.fromisoformat(u2["subscription_until"]).date() - datetime.now(timezone.utc).date()).days
-    assert 25 <= days2 <= 32, f"tier2 gav {days2} dagar, förväntat ~30"
-
-
-def test_promo_info_endpoint(client):
-    """/api/promo är publik och beskriver erbjudandet."""
-    r = client.get("/api/promo")
+        "amount_total": 500,
+    }, event_id="evt_donation")
+    r = client.post("/api/stripe/webhook", content=body,
+                    headers={"stripe-signature": _sign(body)})
     assert r.status_code == 200
-    data = r.json()
-    assert data["active"] is True
-    assert data["offer"]["tier1"]["free_months"] == 2
-    assert data["offer"]["tier2"]["free_months"] == 0  # bara Companion + Lifetime i promon (2026-08-04)
-    assert data["tier_names"]["tier2"] == "Adventurer"
+    u = main.load_users()["alice"]
+    assert u["turn_bonus"] == 0
+    assert u["features"] == {}
+    assert u["subscription_status"] == "free"
+    ledger = json.loads(main._LEDGER_FILE.read_text())
+    assert any(e["type"] == "stripe:donation" and e["user"] == "alice" for e in ledger)
 
 
 def test_webhook_checkout_lifetime(client):
@@ -295,7 +313,7 @@ def test_webhook_checkout_lifetime(client):
 
 def test_webhook_checkout_unknown_user_ignored(client):
     body = _event("checkout.session.completed", {
-        "metadata": {"username": "ghost", "tier": "tier2"},
+        "metadata": {"username": "ghost", "tier": "patron500"},
         "payment_status": "paid",
     })
     r = client.post("/api/stripe/webhook", content=body,
@@ -306,13 +324,13 @@ def test_webhook_checkout_unknown_user_ignored(client):
 def test_webhook_unpaid_checkout_ignored(client):
     _seed()
     body = _event("checkout.session.completed", {
-        "metadata": {"username": "alice", "tier": "tier2"},
+        "metadata": {"username": "alice", "tier": "patron500"},
         "payment_status": "unpaid",
     })
     r = client.post("/api/stripe/webhook", content=body,
                     headers={"stripe-signature": _sign(body)})
     assert r.status_code == 200
-    assert main.load_users()["alice"]["subscription_status"] == "free"
+    assert main.load_users()["alice"]["turn_bonus"] == 0
 
 
 # ── Webhook: subscription.deleted + invoice.paid ─────────────────────
@@ -378,18 +396,17 @@ def test_webhook_duplicate_checkout_not_granted_twice(client):
     _seed()
     _seed_campaign("alice")
     body = _event("checkout.session.completed", {
-        "metadata": {"username": "alice", "tier": "tier2"},
+        "metadata": {"username": "alice", "tier": "patron500"},
         "client_reference_id": "alice",
         "payment_status": "paid",
         "customer": "cus_123",
-        "subscription": "sub_123",
-        "amount_total": 900,
+        "amount_total": 1000,
     }, event_id="evt_dup")
     sig = _sign(body)
     r1 = client.post("/api/stripe/webhook", content=body,
                      headers={"stripe-signature": sig})
     assert r1.status_code == 200
-    until_first = main.load_users()["alice"]["subscription_until"]
+    bonus_first = main.load_users()["alice"]["turn_bonus"]
 
     # Samma event levererat IGEN (Stripe-retry) — måste ignoreras helt.
     r2 = client.post("/api/stripe/webhook", content=body,
@@ -398,9 +415,8 @@ def test_webhook_duplicate_checkout_not_granted_twice(client):
     assert r2.json() == {"received": True}
 
     u = main.load_users()["alice"]
-    assert u["subscription_status"] == "tier2"
-    # Expiry får INTE återställas/förkortas av dubbelleveransen.
-    assert u["subscription_until"] == until_first
+    # Bonusen får INTE dubblas av dubbelleveransen.
+    assert u["turn_bonus"] == bonus_first
     # Endast EN ledger-rad för eventet.
     ledger = json.loads(main._LEDGER_FILE.read_text())
     assert len([e for e in ledger if e["event_id"] == "evt_dup"]) == 1

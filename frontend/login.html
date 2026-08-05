@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
-<script src="themes.js?v=20260804b"></script>
+<script src="themes.js?v=20260805a"></script>
 <style>
   /* ═══════════════ tokens ═══════════════ */
   :root{
@@ -294,33 +294,6 @@
   footer a:hover{color:var(--gold-bright);border-color:var(--gold)}
   footer .foot-small{margin-top:1.4rem;font-size:.76rem;font-style:italic}
 
-  /* ═══════════════ founder promo banner ═══════════════ */
-  .promo{
-    position:relative;z-index:5;background:linear-gradient(180deg,#1a150a,#141019 70%);
-    border-top:1px solid rgba(201,162,39,.35);border-bottom:1px solid rgba(201,162,39,.35);
-    box-shadow:0 0 30px -8px rgba(201,162,39,.28);
-  }
-  .promo .wrap{display:flex;align-items:center;justify-content:center;gap:1.1rem;
-    padding:.85rem 1.25rem;flex-wrap:wrap;text-align:center}
-  .promo-badge{
-    font-family:var(--font-display);font-size:.62rem;font-weight:700;letter-spacing:.2em;
-    text-transform:uppercase;color:var(--ink);background:var(--gold-bright);
-    padding:.32rem .6rem;box-shadow:0 0 12px rgba(232,198,90,.5);white-space:nowrap}
-  .promo-text{font-size:.86rem;font-style:italic;color:var(--bone);line-height:1.45}
-  .promo-text b{color:var(--gold-bright);font-style:normal;font-weight:700}
-  .promo-timer{display:inline-flex;align-items:center;gap:.35rem;font-family:'IBM Plex Mono',ui-monospace,monospace;
-    font-size:.8rem;color:var(--gold-bright);letter-spacing:.05em;white-space:nowrap}
-  .promo-timer .t-seg{display:inline-block;min-width:1.65em;text-align:center;background:rgba(0,0,0,.4);
-    border:1px solid rgba(201,162,39,.4);padding:.18rem .3rem;font-variant-numeric:tabular-nums}
-  .promo-cta{font-family:var(--font-display);font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;
-    color:var(--gold-bright);text-decoration:none;border:1px solid var(--gold);padding:.42rem .85rem;
-    transition:background .2s,color .2s;white-space:nowrap}
-  .promo-cta:hover{background:rgba(201,162,39,.16);color:var(--ink);background:var(--gold);color:var(--ink)}
-  @media (max-width:720px){
-    .promo .wrap{flex-direction:column;gap:.5rem;padding:.7rem 1rem}
-    .promo-text{font-size:.8rem}
-  }
-
   /* ═══════════════ mobile ═══════════════ */
   @media (max-width:900px){
     .feat-grid{grid-template-columns:1fr;max-width:560px}
@@ -427,7 +400,7 @@
         </h1>
         <p class="tagline rv in d2">A world that remembers. A dungeon master that never sleeps.
           Your campaign is brewed one turn at a time &mdash; and the pot does not forget.</p>
-        <p class="free-slogan rv in d2"><span class="fs-badge">FREE TO PLAY</span> No card, no catch &mdash; 50 turns a day and StepFun TTS, forever.</p>
+        <p class="free-slogan rv in d2"><span class="fs-badge">FREE TO PLAY</span> 300 turns when you start, then 50 fresh every day. No card. No email needed.</p>
         <div class="hero-actions rv in d3">
           <a class="btn-gold" href="#pricing" id="hero-begin">Begin Your Journey</a>
           <a class="btn-ghost" href="#features">Learn more &#8595;</a>
@@ -437,19 +410,6 @@
     </div>
     <div class="scroll-cue">&#8595;</div>
   </section>
-
-  <!-- ═══════════════ founder promo banner ═══════════════ -->
-  <div class="promo" id="promo-banner" style="display:none">
-    <div class="wrap">
-      <span class="promo-badge">Founding Offer</span>
-      <div class="promo-text">
-        Subscribe for one month and get <b><span data-promo-free="tier1">2</span> months free</b> on <b>Companion</b>.
-        &nbsp;<b>Lifetime for 50€</b> — half price, one-time.
-        <span class="promo-timer">Ends in <span class="t-seg" id="promo-days">00</span><span class="t-sep">d</span><span class="t-seg" id="promo-hours">00</span><span class="t-sep">:</span><span class="t-seg" id="promo-mins">00</span><span class="t-sep">:</span><span class="t-seg" id="promo-secs">00</span></span>
-      </div>
-      <a class="promo-cta" href="#pricing" id="promo-cta">Claim the offer &#8595;</a>
-    </div>
-  </div>
 
   <!-- ═══════════════ features ═══════════════ -->
   <section class="solid sect" id="features">
@@ -485,8 +445,9 @@
           <h3>Create Your Own Avatars</h3>
           <p>Give every face at the table a portrait. Your hero, the NPCs you meet,
             even the DM &mdash; each avatar is painted by AI from the character&rsquo;s own
-            story, and can be rerolled until it feels right. <em>Click any face
-            to remake it.</em></p>
+            story, and can be rerolled until it feels right. <em>StepFun painting is free
+            for every adventurer</em> &mdash; and <b>Patron</b> (one-time 10€) unlocks <b>Wan 2.7 Pro</b>,
+            the premium image engine.</p>
         </div>
         <div class="tablet rv d2">
           <span class="corner tl"></span><span class="corner br"></span>
@@ -509,10 +470,10 @@
         <div class="tablet wide rv d1">
           <span class="corner tl"></span><span class="corner br"></span>
           <span class="sig">&#10040;</span>
-          <h3>Powered by Qwen, DeepSeek &amp; StepFun</h3>
+          <h3>Powered by Qwen, DeepSeek, StepFun &amp; Wan</h3>
           <p>Choose the mind behind the mask &mdash; frontier models for narration,
             extraction and image craft, with transparent token usage and reasoning you can
-            watch as it happens. <em>You decide who runs your table.</em></p>
+            watch as it happens. <em>Wan 2.7 Pro painting unlocks with the one-time Patron top-up.</em></p>
           <p class="tablet-more"><a href="models.html">Read more about the minds &#8594;</a></p>
         </div>
       </div>
@@ -546,24 +507,24 @@
   </style>
   <section class="solid sect" id="pricing">
     <div class="wrap">
-      <p class="eyebrow rv">Paths into the realm</p>
-      <h2 class="rv">Choose your path</h2>
-      <p class="lede rv d1">Wander free with your daily ration of turns — or take up a sigil and shape the realm itself.</p>
+      <p class="eyebrow rv">Free to play · No subscription</p>
+      <h2 class="rv">Unlimited. No lock-in.</h2>
+      <p class="lede rv d1">Start with 300 turns — then 50 fresh every day, forever. No card. No email. Support the Cauldron with a one-time top-up when you feel like it.</p>
       <div class="pricing-grid">
         <div class="ptier rv d1" onclick="location.href='#gate'">
-          <div class="pt-name">Wanderer</div>
-          <div class="pt-price">Free</div>
+          <div class="pt-name">Free</div>
+          <div class="pt-price">0€</div>
           <ul>
-            <li><b>1 month of Adventurer</b> — new players, no card needed</li>
-            <li><b>50 turns</b> every day — refreshed at midnight</li>
+            <li><b>300 turns</b> when you start</li>
+            <li>Then <b>50 turns</b> every day — forever</li>
             <li><b>StepFun TTS</b> — always free</li>
-            <li>The steadfast Dungeon Master</li>
+            <li><b>StepFun painting</b> — free avatars</li>
             <li>Persistent world, memory &amp; Codex</li>
           </ul>
-          <span class="go-hint">Forge your name →</span>
+          <span class="go-hint">Begin your adventure →</span>
         </div>
       </div>
-      <p class="pt-more rv d3"><a href="pricing.html">See the full paths &#8594;</a></p>
+      <p class="pt-more rv d3"><a href="pricing.html">Support &amp; Patron — one-time top-ups &#8594;</a></p>
     </div>
   </section>
 
@@ -575,14 +536,14 @@
           <p class="eyebrow rv">The Gate</p>
           <h2 class="rv">Swear yourself in.</h2>
           <ul class="pitch-list">
-            <li class="rv d1"><b>Free, forever.</b> 50 turns every day &mdash; refreshed at
-              midnight &mdash; and <b>StepFun TTS always free</b>. No card, no hourglass,
+            <li class="rv d1"><b>Free, forever.</b> 300 turns when you start &mdash; then
+              50 fresh every day &mdash; and <b>StepFun TTS always free</b>. No card, no hourglass,
               no metered fate.</li>
             <li class="rv d2"><b>Your identity stays yours.</b> We don&rsquo;t log who
               you are at the table &mdash; no names to the ledger, no tracking of players.</li>
-            <li class="rv d3"><b>Heretic models incoming<span class="tag">Incoming</span></b>
-              &mdash; unbound storytelling for NSFW campaigns. Some cauldrons brew
-              darker things, for those old enough to ask.</li>
+            <li class="rv d3"><b>No subscription, ever.</b> Top up with a one-time
+              Support or Patron purchase when it feels right &mdash; or donate whatever
+              the realm is worth to you.</li>
           </ul>
           <p class="pitch-note rv d3">No rules to memorize before you start.
             The DM teaches you as you play &mdash; or enforces them strictly, if you prefer the iron road.</p>
@@ -651,23 +612,28 @@
     <div class="wrap">
       <p class="eyebrow rv">From the Ledger</p>
       <h2 class="rv">What&rsquo;s new in the realm</h2>
-      <span class="ver-chip rv d1">v0.7 &mdash; The Forge, Earning</span>
+      <span class="ver-chip rv d1">v0.8 &mdash; The Portrait, the Path</span>
       <ul class="ledger-list">
-        <li class="hot rv d1"><b>StepFun TTS &mdash; always free<span class="tag">New</span></b>
+        <li class="hot rv d1"><b>Wan 2.7 Pro painting &mdash; Patron tier<span class="tag">New</span></b>
+          &mdash; the premium image engine paints your hero, the DM and every NPC in sharp
+          high-resolution portraits, in seconds. StepFun painting stays <b>free for every adventurer</b>.</li>
+        <li class="rv d1"><b>Your face, your hero<span class="tag">New</span></b>
+          &mdash; your profile portrait is now separate from your adventurer&rsquo;s &mdash; the header pill is
+          <i>your</i> face at the table, the party card is your hero&rsquo;s. Paint one without touching the other.</li>
+        <li class="rv d1"><b>Themes that stick &amp; a softer table<span class="tag">New</span></b>
+          &mdash; the palette you choose survives reloads and follows you across devices; rounded buttons and
+          calmer edges across the top bar, the Codex and the composer. Narrator settings now follow the campaign,
+          not the browser.</li>
+        <li class="rv d2"><b>StepFun TTS &mdash; always free</b>
           &mdash; the narrator's voice belongs to every adventurer, on every path.
-          Wanderers keep their <b>50 turns a day</b> at no cost &mdash; StepFun reads your
+          Free players keep their <b>50 turns a day</b> at no cost &mdash; StepFun reads your
           story aloud, free, forever.</li>
-        <li class="rv d1"><b>Qwen 3.8 Max &mdash; the full release<span class="tag">New</span></b>
+        <li class="rv d2"><b>Qwen 3.8 Max &mdash; the full release</b>
           &mdash; Alibaba&rsquo;s 2.4-trillion-parameter flagship (95B active per request) as your Dungeon Master:
           1M context, deep reasoning that always thinks. Pick it at the model gate when you start your adventure.</li>
-        <li class="rv d1"><b>Founding offer &mdash; two free months<span class="tag">Limited</span></b>
-          &mdash; for the next seven days, subscribe for one month and get <b>2 months free</b> on Companion.
-          And <b>Lifetime for 50€</b> — half price, one-time.
-          The timer is counting down on this very page.</li>
-        <li class="rv d2"><b>Four paths into the realm</b> &mdash; Wanderer (free), Companion, Adventurer, and Lifetime.
-          Real tiers, real Stripe checkout, and a free road that never closes.</li>
-        <li class="rv d2"><b>Model gating by tier</b> &mdash; paid paths unlock <b>DeepSeek, Qwen 3.8 Max, and Qwen 3.6 Flash</b>
-          as your Dungeon Master; free players travel with the steadfast step-3.7-flash.</li>
+        <li class="rv d2"><b>Unlimited, no lock-in</b> &mdash; every account starts with 300 turns,
+          then refreshes 50 every day. One-time Support and Patron top-ups add turns and features.
+          No subscriptions, no renewals, no surprises.</li>
         <li class="rv d3"><b>Custom narrator voice</b> &mdash; happy, calm, scary, or your own style, in the Two Voices.</li>
         <li class="rv d3"><b>Export your hero to The Forge</b> &mdash; save the adventurer you&rsquo;ve lived: level, gear, story and all.
           Then start a brand-new campaign with the same hero &mdash; no more hero-twins.</li>
@@ -706,7 +672,7 @@
 <noscript><style>.rv{opacity:1;transform:none}</style></noscript>
 
 <script src="sfx.js?v=20260802a"></script>
-<script src="api.js?v=20260804c"></script>
+<script src="api.js?v=20260805c"></script>
 
 <script>
 /* ═══════════════ nav + scroll reveal ═══════════════ */
@@ -865,45 +831,7 @@ if (sessionStorage.getItem('dnd_user')) {
   document.getElementById('gate-sub').textContent = 'Your seat at the table is still warm.';
 }
 
-/* ── Founder promo banner: hämta offer + countdown-timer ── */
-(function () {
-  var banner = document.getElementById('promo-banner');
-  if (!banner) return;
-  function pad(n) { return String(n).padStart(2, '0'); }
-  function tick(untilMs) {
-    var diff = untilMs - Date.now();
-    if (diff <= 0) { banner.style.display = 'none'; return; }
-    var d = Math.floor(diff / 86400000);
-    var h = Math.floor(diff % 86400000 / 3600000);
-    var m = Math.floor(diff % 3600000 / 60000);
-    var s = Math.floor(diff % 60000 / 1000);
-    var el = function (id) { return document.getElementById(id); };
-    if (el('promo-days')) el('promo-days').textContent = pad(d);
-    if (el('promo-hours')) el('promo-hours').textContent = pad(h);
-    if (el('promo-mins')) el('promo-mins').textContent = pad(m);
-    if (el('promo-secs')) el('promo-secs').textContent = pad(s);
-  }
-  fetch('/api/promo')
-    .then(function (r) { return r.json(); })
-    .then(function (data) {
-      if (!data || !data.active) return;
-      var until = Date.parse(data.until);
-      if (isNaN(until)) return;
-      // Fyll i gratismånader från API om sidan inte redan har dem
-      var off = data.offer || {};
-      if (off.tier1) { var e1 = document.querySelector('[data-promo-free="tier1"]'); if (e1) e1.textContent = off.tier1.free_months; }
-      if (off.tier2) { var e2 = document.querySelector('[data-promo-free="tier2"]'); if (e2) e2.textContent = off.tier2.free_months; }
-      // Lifetime-kortet: visa 50€ + överstruket 100€ + Founding offer-flagga
-      var ltFlag = document.getElementById('pt-lifetime-flag');
-      var ltStrike = document.getElementById('pt-lifetime-strike');
-      if (ltFlag) ltFlag.style.display = '';
-      if (ltStrike) ltStrike.style.display = '';
-      banner.style.display = '';
-      tick(until);
-      setInterval(function () { tick(until); }, 1000);
-    })
-    .catch(function () { /* tyst — ingen banner om API:et inte svarar */ });
-})();
+/* ── Founder promo-bannern togs bort 2026-08-05 (one-time-modellen har inget erbjudande) ── */
 
 /* ── Inloggad status + profil i top bar ── */
 var PROFILE_USER = null;
@@ -911,7 +839,7 @@ function openProfile(ev) {
   if (ev) ev.preventDefault();
   if (!PROFILE_USER) return;
   document.getElementById('prof-name').textContent = PROFILE_USER.username;
-  var tierNames = { free: 'Wanderer · Free', tier1: 'Companion', tier2: 'Adventurer', lifetime: 'Lifetime' };
+  var tierNames = { free: 'Free', tier1: 'Support', tier2: 'Patron', lifetime: 'Lifetime' };
   var t = tierNames[PROFILE_USER.subscription_status] || PROFILE_USER.subscription_status || 'Free';
   document.getElementById('prof-tier').textContent = t;
   document.getElementById('prof-overlay').classList.add('show');

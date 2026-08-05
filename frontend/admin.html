@@ -621,7 +621,7 @@ async function setTier(username, tier, months) {
     });
     const data = await res.json();
     if (!res.ok) { toast(data.detail || 'Could not change subscription'); return; }
-    const names = { free: 'Free', tier1: 'Tier 1', tier2: 'Tier 2', lifetime: 'Lifetime' };
+    const names = { free: 'Free', tier1: 'Support', tier2: 'Patron', lifetime: 'Lifetime' };
     toast(status === 'free'
       ? '⭱ ' + username + ' is now Free'
       : '👑 ' + (names[status] || status) + ' granted to ' + username + (status === 'lifetime' ? ' (∞ forever)' : (until ? ' (until ' + until + ')' : '')));
@@ -1058,12 +1058,17 @@ function setRevMode(mode) {
 function revenueChartCard() {
   const mrr = billingData && billingData.mrr ? billingData.mrr : 0;
   const arr = (billingData && billingData.ledger) ? billingData.ledger.length : 0;
+  const churnMap = (billingData && billingData.churn) ? billingData.churn : {};
+  const churnTotal = Object.values(churnMap).reduce((a, b) => a + (parseInt(b, 10) || 0), 0);
+  const today = new Date().toISOString().slice(0, 10);
+  const churnToday = parseInt(churnMap[today] || 0, 10);
   const head = `<div class="rev-chart-head">
     <div class="rev-totals">
       <span>MRR <b>${fmtSek(mrr)}</b></span>
       <span>ARR <b>${fmtSek(mrr * 12)}</b></span>
       <span>Lifetime <b>${fmtSek(billingData && billingData.total ? billingData.total : 0)}</b></span>
       <span>TX <b>${arr}</b></span>
+      <span title="Subscription cancellations — churn datapoint">💔 Churn <b>${churnToday}${churnTotal > churnToday ? ' (' + churnTotal + ' total)' : ''}</b></span>
     </div>
     <div class="rev-toggle">
       <button data-mode="day" onclick="setRevMode('day')" class="${revMode === 'day' ? 'active' : ''}">Day</button>
@@ -1275,15 +1280,17 @@ function tableRows(users) {
     const isPremium = tier !== 'free';
     const memBadge = tier === 'free'
       ? '<span class="membership-badge m-free">Free</span>'
-      : `<span class="membership-badge m-premium">${tier === 'lifetime' ? '♾️ Lifetime' : (tier === 'tier1' ? '🔹 Companion' : '⚔ Adventurer')}</span>`;
+      : `<span class="membership-badge m-premium">${tier === 'lifetime' ? '♾️ Lifetime' : (tier === 'tier1' ? '🔹 Support' : '⚔ Patron')}</span>`;
     const bonus = u.turn_bonus || 0;
     const used = u.period_turns_used || 0;
     // Mini progress-bar: cap (used X) — röd när perioden är slut
+    // FIX 2026-08-04: bara lifetime (turn_cap 0) visar ∞. tier1/tier2 har
+    // en riktig cap (50) och ska visa progress som alla andra.
     let capFrag;
-    if (isPremium) {
-      capFrag = '<div class="cap-progress"><span class="cap-used" title="Unlimited turns (premium)">∞ Premium</span></div>';
-    } else if (capVal === 0) {
-      capFrag = '<div class="cap-progress"><span class="cap-used" title="Unlimited turns">∞ Unlimited</span></div>';
+    if (capVal === 0) {
+      capFrag = isPremium
+        ? '<div class="cap-progress"><span class="cap-used" title="Unlimited turns (lifetime)">∞ Lifetime</span></div>'
+        : '<div class="cap-progress"><span class="cap-used" title="Unlimited turns">∞ Unlimited</span></div>';
     } else {
       const total = capVal + bonus;
       const pct = Math.min(100, Math.round(used / total * 100));
@@ -1329,7 +1336,7 @@ function mobRows(users) {
     const isPremium = tier !== 'free';
     const memBadge = tier === 'free'
       ? '<span class="membership-badge m-free">Free</span>'
-      : `<span class="membership-badge m-premium">${tier === 'lifetime' ? '♾️ Lifetime' : (tier === 'tier1' ? '🔹 Companion' : '⚔ Adventurer')}</span>`;
+      : `<span class="membership-badge m-premium">${tier === 'lifetime' ? '♾️ Lifetime' : (tier === 'tier1' ? '🔹 Support' : '⚔ Patron')}</span>`;
     html += `<div class="m-card${isPremium ? ' premium-row' : ''}" onclick="toggleDetail(${i}, '${u.username}')">`;
     html += `<div class="mc-head"><span class="mc-user">${u.country_flag || '❓'} ${esc(u.username)}${badge}${memBadge}</span><span class="mc-tokens">${fmtTokens(u.total_tokens)} tkn</span></div>`;
     if (u.email) html += `<div class="mc-meta"><span style="opacity:.7">✉ ${esc(u.email)}</span></div>`;
@@ -1403,11 +1410,11 @@ function renderDetail(container, data) {
   let html = '<div class="account-meta" style="display:flex;gap:1.2rem;flex-wrap:wrap;font-size:.65rem;color:var(--bone-dim);margin-bottom:.9rem;padding-bottom:.6rem;border-bottom:1px solid rgba(42,42,58,.4)">';
   html += '<span>Created: <b style="color:var(--bone);font-weight:400">' + fmtDate(data.created_at) + '</b></span>';
   html += '<span>Last login: <b style="color:var(--bone);font-weight:400">' + fmtDate(data.last_login) + '</b></span>';
-  html += '<span>Turn cap: <b style="color:var(--gold-bright);font-weight:700">' + (data.turn_cap === 0 ? 'Unlimited' : data.turn_cap) + '</b></span>';
+  html += '<span>Turn cap: <b style="color:var(--gold-bright);font-weight:700">' + (data.turn_cap === 0 ? '∞ Lifetime' : data.turn_cap + ' / day') + '</b></span>';
   html += '<span>Turns used: <b style="color:var(--term-amber);font-weight:400">' + (data.turns_used || 0) + '</b></span>';
   const tier = (data.subscription_status || 'free') === 'premium' ? 'tier2' : (data.subscription_status || 'free');
   const isPremium = tier !== 'free';
-  const tierNames = { tier1: '🔹 Tier 1', tier2: '👑 Tier 2', lifetime: '♾️ Lifetime' };
+  const tierNames = { tier1: '🔹 Support', tier2: '⚔ Patron', lifetime: '♾️ Lifetime' };
   html += '<span>💳 Membership: <b style="color:' + (isPremium ? 'var(--gold-bright);font-weight:700' : 'var(--bone);font-weight:400') + '">' + (isPremium ? (tierNames[tier] || '👑 ' + tier) + (data.subscription_until ? ' until ' + fmtDate(data.subscription_until) : '') : 'Free') + '</b></span>';
   html += '<span>Turn bonus: <b style="color:var(--term-amber);font-weight:400">' + (data.turn_bonus || 0) + '</b></span>';
   html += '<span>💰 Revenue: <b style="color:var(--gold-bright);font-weight:400">' + fmtSek(data.revenue) + '</b></span>';

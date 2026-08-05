@@ -53,6 +53,8 @@ def _seed(username="alice", password="secret123", turn_cap=50, turns_used=0):
         "turn_cap": turn_cap, "turns_used": turns_used, "turn_bonus": 0,
         "reset_date": reset_date, "subscription_status": "free",
         "subscription_until": None,
+        "features": {},
+        "start_bonus_granted": True,  # ingen +300-startbonus i dessa tester
     }})
 
 

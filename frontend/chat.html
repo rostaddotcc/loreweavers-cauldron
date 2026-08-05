@@ -713,28 +713,7 @@
   }.send-btn:disabled{ opacity: 0.4; cursor: not-allowed; }.input-hint{ font-size: 0.74rem; color: var(--bone-dim); font-style: italic; margin-top: 0.4rem; }.input-hint kbd{
     font-family: 'Cinzel', serif; font-size: 0.58rem; background: var(--stone-3);
     border: 1px solid var(--edge); padding: 0.1rem 0.4rem; border-radius: 2px; color: var(--bone);
-  }/* ── Rules oracle panel ── */.oracle{
-    width: 0; overflow: hidden; flex-shrink: 0;
-    background: linear-gradient(180deg, var(--stone), var(--ink));
-    border-left: 1px solid var(--edge);
-    transition: width 0.35s cubic-bezier(0.22,1,0.36,1);
-    display: flex; flex-direction: column;
-  }.oracle.open{ width: 320px; }.oracle-inner{ width: 320px; display: flex; flex-direction: column; height: 100%; }.oracle-head{
-    padding: 0.9rem 1rem; border-bottom: 1px solid var(--edge);
-    display: flex; align-items: center; justify-content: space-between;
-  }.oracle-head h3{
-    font-family: 'Cinzel', serif; font-size: 0.72rem; letter-spacing: 0.22em;
-    text-transform: uppercase; color: var(--arcane);
-    text-shadow: 0 0 10px color-mix(in srgb, var(--arcane) 4%, transparent);
-  }.oracle-close{ background: none; border: none; color: var(--bone-dim); cursor: pointer; font-size: 1rem; transition: color 0.2s; }.oracle-close:hover{ color: var(--blood-bright); }.oracle-log{ flex: 1; overflow-y: auto; padding: 1rem; }.oracle-msg{ margin-bottom: 0.9rem; font-size: 0.85rem; line-height: 1.55; }.oracle-msg.q{ color: var(--bone-bright); }.oracle-msg.q::before{ content: '❓ '; }.oracle-msg.a{ color: var(--bone); border-left: 2px solid color-mix(in srgb, var(--arcane) 4%, transparent); padding-left: 0.8rem; font-style: italic; }.oracle-input{ display: flex; gap: 0.5rem; padding: 0.8rem; border-top: 1px solid var(--edge); }.oracle-input input{
-    flex: 1; font-family: 'Spectral', serif; font-size: 0.85rem; color: var(--bone-bright);
-    background: #0d0817; border: 1px solid var(--edge); padding: 0.55rem 0.8rem;
-    outline: none; border-radius: 2px;
-  }.oracle-input input:focus{ border-color: var(--arcane); }.oracle-input button{
-    font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.12em;
-    background: var(--stone-3); border: 1px solid color-mix(in srgb, var(--arcane) 4%, transparent); color: var(--arcane);
-    padding: 0.55rem 0.9rem; cursor: pointer; border-radius: 2px; transition: all 0.2s;
-  }.oracle-input button:hover{ box-shadow: 0 0 12px -3px color-mix(in srgb, var(--arcane) 5%, transparent); }/* ═══════════ 🛠️ MASKINRUMMET — flat debug-panel (api.js #debug-panel style) ═══════════ */.console-tab{
+  }/* ═══════════ 🛠️ MASKINRUMMET — flat debug-panel (api.js #debug-panel style) ═══════════ */.console-tab{
     display: inline-flex; align-items: center; justify-content: center;
     width: 34px; height: 30px;
     background: #111; border: 1px solid #333; border-radius: 3px;
@@ -959,13 +938,21 @@
     background: transparent; border: 1px solid var(--edge); color: var(--bone-dim);
     font-size: 1rem; cursor: pointer;
   }.cx-close:hover{ color: var(--blood-bright); border-color: var(--blood-bright); }.cx-tabs{
-    display: flex; gap: 0.35rem; padding: 0.55rem 0.9rem 0;
-    border-bottom: 1px solid var(--edge); flex-shrink: 0; overflow-x: auto;
-  }.cx-tab{
-    font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase;
-    background: var(--stone-2); border: 1px solid var(--edge); border-bottom: none;
-    color: var(--bone-dim); padding: 0.5rem 0.9rem; cursor: pointer; white-space: nowrap;
-  }.cx-tab:hover{ color: var(--bone-bright); }.cx-tab.active{ background: var(--ink); border-color: var(--gold); color: var(--gold-bright); }.cx-frame{ flex: 1; min-height: 0; position: relative; }.cx-frame iframe{
+      display: flex; flex-direction: column; gap: 0.28rem; padding: 0.5rem 0.6rem 0.55rem;
+      border-bottom: 1px solid var(--edge); flex-shrink: 0;
+    }.cx-row{ display: flex; gap: 0.2rem; flex-wrap: nowrap; min-width: 0; }.cx-tab{
+      flex: 1 1 0; min-width: 0; text-align: center; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+      font-family: 'Cinzel', serif; font-size: 0.5rem; letter-spacing: 0.03em; text-transform: uppercase;
+      background: var(--stone-2); border: 1px solid var(--edge);
+      color: var(--bone-dim); padding: 0.42rem 0.08rem; cursor: pointer;
+    }.cx-tab:hover{ color: var(--bone-bright); }.cx-tab.active{ background: var(--ink); border-color: var(--gold); color: var(--gold-bright); }.cx-tab.cx-subtab{
+      background: rgba(58,31,102,0.30); border-color: rgba(201,162,39,0.30);
+      color: var(--bone-dim); font-size: 0.5rem; letter-spacing: 0.03em;
+    }.cx-tab.cx-subtab:hover{ color: var(--bone-bright); }.cx-tab.cx-subtab.active{
+      background: var(--arcane-deep); border-color: var(--gold); color: var(--gold-bright);
+      box-shadow: inset 0 0 12px rgba(201,162,39,0.18);
+    }.cx-frame{ flex: 1; min-height: 0; position: relative; }.cx-frame iframe{
     position: absolute; inset: 0; width: 100%; height: 100%;
     border: 0; background: var(--ink); display: none;
   }.cx-frame iframe.active{ display: block; }.cx-placeholder{
@@ -999,9 +986,101 @@
   }
 </style>
 <link rel="stylesheet" href="snes.css?v=24">
+<style>
+/* ═══════════ CODEX 2-RAD-TABBAR — override snes.css (måste ligga EFTER linken) ═══════════ */
+.cx-tabs{ display: flex !important; flex-direction: column !important; gap: 0.28rem !important; padding: 0.5rem 0.6rem 0.55rem !important; overflow-x: hidden !important; }
+.cx-row{ display: flex !important; gap: 0.2rem !important; flex-wrap: nowrap !important; min-width: 0 !important; }
+.cx-tab{
+  flex: 1 1 0 !important; min-width: 0 !important; text-align: center !important;
+  white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;
+  font-family: 'Cinzel', serif !important; font-size: 0.5rem !important; letter-spacing: 0.03em !important;
+  background: var(--stone-2) !important; border: 1px solid var(--edge) !important;
+  color: var(--bone-dim) !important; padding: 0.42rem 0.08rem !important;
+}
+.cx-tab:hover{ background: var(--stone-3) !important; color: var(--bone-bright) !important; }
+.cx-tab.active{ background: var(--ink) !important; border-color: var(--gold) !important; color: var(--gold-bright) !important; }
+.cx-tab.active::before{ content: '' !important; }
+.cx-tab.cx-subtab{
+  background: rgba(58,31,102,0.30) !important; border-color: rgba(201,162,39,0.30) !important;
+  color: var(--bone-dim) !important; font-size: 0.5rem !important; letter-spacing: 0.03em !important;
+}
+.cx-tab.cx-subtab.active{
+  background: var(--arcane-deep) !important; border-color: var(--gold) !important; color: var(--gold-bright) !important;
+  box-shadow: inset 0 0 12px rgba(201,162,39,0.18) !important;
+}
+@media (max-width: 420px){
+  .cx-tab{ font-size: 0.46rem !important; letter-spacing: 0.02em !important; padding: 0.4rem 0.06rem !important; }
+  .cx-tab.cx-subtab{ font-size: 0.46rem !important; letter-spacing: 0.02em !important; }
+}
+/* ═══════════ MJUKA UPP — topbar, profil, admin, codex (2026-08-05) ═══════════ */
+.top-btn{ border-radius: 8px !important; box-shadow: 0 2px 12px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; }
+.top-btn:hover{ transform: translateY(-1px) !important; }
+.top-btn.admin-btn{ border-color: rgba(232,198,90,.40) !important; color: var(--gold) !important; box-shadow: 0 0 14px -4px rgba(232,198,90,.35) !important; }
+.top-btn.admin-btn:hover{ color: #fff8dc !important; border-color: var(--gold-bright) !important; box-shadow: 0 0 18px -2px rgba(255,215,0,.5) !important; }
+.user-tag:hover{ border-color: rgba(201,162,39,.65) !important; color: var(--gold-bright) !important; box-shadow: 0 0 16px -2px rgba(201,162,39,.45) !important; }
+.codex-panel{ border-radius: 14px 0 0 14px !important; }
+.cx-head{ background: linear-gradient(180deg, rgba(201,162,39,.06), transparent) !important; }
+.cx-close{ border-radius: 6px !important; }
+.cx-tab{ border-radius: 6px !important; }
+.cx-tab.cx-subtab{ border-radius: 6px !important; }
+/* Header får aldrig klämmas — text ellipsas, ikoner behåller bredd */
+.topbar{ gap: .7rem !important; padding: .6rem .9rem !important; }
+.campaign{ max-width: 28vw; min-width: 0; flex-shrink: 1; }
+.header-turns-info{ max-width: 22vw !important; }
+.top-btn.icon-btn{ flex-shrink: 0 !important; }
+/* Mjuka upp TTS-pickern + kompositören så de matchar topbaren (2026-08-05) */
+.tts-select{ border-radius: 7px !important; box-shadow: 0 2px 10px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; border-color: var(--edge) !important; }
+.tts-select:focus{ outline: none !important; border-color: var(--gold) !important; box-shadow: 0 0 0 3px rgba(201,162,39,.15), 0 2px 10px -6px rgba(0,0,0,.6) !important; }
+.tts-auto-btn, .tts-speed-btn{ border-radius: 7px !important; box-shadow: 0 2px 10px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; }
+.tts-auto-btn:hover, .tts-speed-btn:hover{ transform: translateY(-1px) !important; }
+.send-btn{ border-radius: 8px !important; box-shadow: 0 4px 16px -6px rgba(201,162,39,.45), 0 2px 10px -5px rgba(0,0,0,.6) !important; transition: all .2s !important; }
+.send-btn:hover{ transform: translateY(-1px) !important; filter: brightness(1.06) !important; box-shadow: 0 6px 22px -6px rgba(201,162,39,.6) !important; }
+.avatar-provider-row select, #avatar-provider-select{ border-radius: 7px !important; }
+/* ═══════════ MJUKA UPP RUNDA 2 — alla hårda knappar (2026-08-05) ═══════════ */
+.drop-item{ border-radius: 8px !important; transition: background .2s, transform .2s, box-shadow .2s !important; }
+.drop-item:hover{ box-shadow: 0 4px 14px -6px rgba(232,198,90,.25) !important; }
+.sheet-row{ border-radius: 8px !important; }
+.sheet-close{ border-radius: 8px !important; }
+.nav-tab{ border-radius: 8px !important; }
+.console-tab{ border-radius: 8px !important; box-shadow: 0 2px 10px -6px rgba(0,0,0,.6) !important; }
+.cchip{ border-radius: 6px !important; }
+.console-btn{ border-radius: 6px !important; }
+.cd-nav-btn{ border-radius: 8px !important; }
+.drawer-logout{ border-radius: 8px !important; }
+.mobile-menu-btn{ border-radius: 8px !important; box-shadow: 0 2px 10px -6px rgba(0,0,0,.6) !important; }
+.side-toggle{ border-radius: 6px !important; }
+.pc-card{ border-radius: 8px !important; }
+.npc-row{ border-radius: 6px !important; }
+.quest-item{ border-radius: 6px !important; }
+.journey-entry{ border-radius: 6px !important; }
+.cd-close{ border-radius: 8px !important; }
+.cx-close{ border-radius: 8px !important; }
+/* Codex-flikarna: bump 6→8px + mjuk hover-glow */
+.cx-tab{ border-radius: 8px !important; transition: all .2s !important; }
+.cx-tab:hover{ transform: translateY(-1px) !important; box-shadow: 0 3px 12px -5px rgba(232,198,90,.3) !important; }
+.cx-tab.cx-subtab{ border-radius: 8px !important; }
+.cx-tab.active{ box-shadow: 0 3px 14px -5px rgba(232,198,90,.45) !important; }
+/* Sidebar-kort: mjukare hover-lyft */
+.pc-card:hover, .npc-row:hover, .quest-item:hover{ transform: translateY(-1px) !important; box-shadow: 0 4px 14px -6px rgba(0,0,0,.55) !important; }
+@media (max-width: 768px){
+  .codex-panel{ border-radius: 0 !important; }
+  /* Mobil: Codex-flikarna som bottenmeny — tabs längst ned i stället för topp */
+  .codex-panel .cx-head{ order: 1 !important; }
+  .codex-panel .cx-frame{ order: 2 !important; flex: 1 !important; }
+  .codex-panel .cx-tabs{
+    order: 3 !important;
+    border-bottom: none !important;
+    border-top: 1px solid var(--edge) !important;
+    background: var(--ink) !important;
+    padding-bottom: calc(0.55rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .brand{ max-width: 34vw; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .campaign{ max-width: 30vw; }
+}
+</style>
 <script src="sprites.js?v=20260802a"></script>
-<script src="fonts.js?v=20260803b"></script>
-<script src="themes.js?v=20260804b"></script>
+<script src="fonts.js?v=20260805a"></script>
+<script src="themes.js?v=20260805a"></script>
 </head>
 <body>
 <div class="grain"></div>
@@ -1016,11 +1095,8 @@
       <button class="drop-item" onclick="openCodex();closeMobileMenu()"><span class="di-icon">📖</span><span class="di-body"><span class="di-name">Codex</span><span class="di-hint">lore · map · character</span></span></button>
       <button class="drop-item" id="mobile-menu-admin" style="display:none" onclick="location.href='admin.html'"><span class="di-icon">👑</span><span class="di-body"><span class="di-name">Admin</span><span class="di-hint">player overview & tokens</span></span></button>
       <div class="drop-sep"></div>
-      <button class="drop-item" onclick="toggleOracle();closeMobileMenu()"><span class="di-icon">📜</span><span class="di-body"><span class="di-name">Rule Oracle</span><span class="di-hint">ask about 5e rules</span></span></button>
-      <button class="drop-item" onclick="toggleConsole();closeMobileMenu()"><span class="di-icon">🛠️</span><span class="di-body"><span class="di-name">The Engine Room</span><span class="di-hint">live debug logs</span></span></button>
       <button class="drop-item" onclick="openUsageModal();closeMobileMenu()"><span class="di-icon">📊</span><span class="di-body"><span class="di-name">Usage</span><span class="di-hint">model & token stats</span></span></button>
       <a class="drop-item" href="help.html"><span class="di-icon">❓</span><span class="di-body"><span class="di-name">How to Play?</span><span class="di-hint">commands & tips</span></span></a>
-      <button class="drop-item" id="mobile-menu-theme" onclick="themeCycle();closeMobileMenu()"><span class="di-icon">🎨</span><span class="di-body"><span class="di-name">Theme</span><span class="di-hint">switch palette</span></span></button>
       <button class="drop-item" data-cli-label onclick="toggleCliChat();closeMobileMenu()"><span class="di-icon">🖥️</span><span class="di-body"><span class="di-name">Chat UI: CLI</span><span class="di-hint">terminal style — toggle to bubbles</span></span></button>
       <button class="drop-item" onclick="openFeedbackModal();closeMobileMenu()"><span class="di-icon">💬</span><span class="di-body"><span class="di-name">Feedback</span><span class="di-hint">suggestions or bug reports</span></span></button>
       <div class="drop-sep"></div>
@@ -1030,7 +1106,7 @@
   <span class="brand">The Lore Weaver's Cauldron</span>
   <span class="campaign" id="campaign-tag">Campaign: —</span>
   <span class="header-turns-info" id="header-turns-info"></span>
-  <span class="user-tag" id="user-tag" onclick="toggleProfilePopup()" style="cursor:pointer;color:var(--bone);font-size:.88rem;padding:.25rem .6rem;border:1px solid rgba(201,162,39,.28);border-radius:2px;background:rgba(201,162,39,.06);text-shadow:0 0 10px rgba(201,162,39,.25);transition:all .2s" onmouseover="this.style.borderColor='rgba(201,162,39,.55)';this.style.color='var(--gold-bright)';this.style.boxShadow='0 0 14px -2px rgba(201,162,39,.4)'" onmouseout="this.style.borderColor='rgba(201,162,39,.28)';this.style.color='var(--bone)'">👤 —</span>
+  <span class="user-tag" id="user-tag" onclick="openProfileAvatarModal()" title="Your profile portrait — click to paint a new one" style="cursor:pointer;display:inline-flex;align-items:center;gap:.5rem;color:var(--bone);font-size:.85rem;padding:.22rem .65rem .22rem .3rem;border:1px solid rgba(201,162,39,.30);border-radius:999px;background:rgba(201,162,39,.07);text-shadow:0 0 10px rgba(201,162,39,.25);transition:all .2s"><span class="ut-avatar" id="user-tag-avatar" style="width:28px;height:28px;border-radius:50%;overflow:hidden;border:1px solid rgba(201,162,39,.45);background:var(--stone-3);display:inline-flex;align-items:center;justify-content:center;font-size:1.05rem;flex-shrink:0;box-shadow:0 0 12px -2px rgba(201,162,39,.35)">👤</span><span id="user-tag-name">—</span></span>
   <span class="spacer"></span>
 
   <button class="top-btn" onclick="openCodex()">📖 Codex</button>
@@ -1043,16 +1119,15 @@
   <div style="position:relative">
     <button class="top-btn icon-btn" onclick="toggleSettingsMenu()" title="Settings" style="font-size:1rem">⚙️</button>
     <div class="settings-menu" id="settings-menu">
-      <button class="drop-item" onclick="toggleOracle();closeSettingsMenu()"><span class="di-icon">📜</span><span class="di-body"><span class="di-name">Rule Oracle</span><span class="di-hint">ask about 5e rules</span></span></button>
-      <button class="drop-item" onclick="toggleConsole();closeSettingsMenu()"><span class="di-icon">🛠️</span><span class="di-body"><span class="di-name">The Engine Room</span><span class="di-hint">live debug logs</span></span></button>
       <button class="drop-item" onclick="openUsageModal();closeSettingsMenu()"><span class="di-icon">📊</span><span class="di-body"><span class="di-name">Usage</span><span class="di-hint">model & token stats</span></span></button>
       <button class="drop-item" onclick="fontToggleBtn();closeSettingsMenu()"><span class="di-icon">🔤</span><span class="di-body"><span class="di-name">Font</span><span class="di-hint" id="settings-font-hint">typeface</span></span></button>
+      <button class="drop-item" id="settings-menu-theme" onclick="themeCycle();closeSettingsMenu()"><span class="di-icon">🎨</span><span class="di-body"><span class="di-name">Theme</span><span class="di-hint" id="settings-theme-hint">switch palette</span></span></button>
       <a class="drop-item" href="help.html"><span class="di-icon">❓</span><span class="di-body"><span class="di-name">How to Play?</span><span class="di-hint">commands & tips</span></span></a>
       <div class="drop-sep"></div>
       <button class="drop-item" data-cli-label onclick="toggleCliChat();closeSettingsMenu()"><span class="di-icon">🖥️</span><span class="di-body"><span class="di-name">Chat UI: CLI</span><span class="di-hint">terminal style — toggle to bubbles</span></span></button>
       <button class="drop-item" onclick="openFeedbackModal();closeSettingsMenu()"><span class="di-icon">💬</span><span class="di-body"><span class="di-name">Feedback</span><span class="di-hint">suggestions or bug reports</span></span></button>
       <div class="model-picker-card">
-        <div class="mpc-title">🧠 Models <span id="model-picker-lock" style="display:none;color:var(--gold);font-size:.68rem">🔒 Tier 2</span></div>
+        <div class="mpc-title">🧠 Models <span id="model-picker-lock" style="display:none;color:var(--gold);font-size:.68rem">🔒 Patron</span></div>
         <label class="mpc-label">Dungeon Master</label>
         <select id="settings-dm-model" onchange="settingsChangeModel(this.value)"></select>
         <label class="mpc-label">Lorekeeper</label>
@@ -1060,10 +1135,10 @@
         <label class="mpc-label">Background (extraction)</label>
         <select id="settings-extraction-model" onchange="settingsChangeExtraction(this.value)"></select>
         <div class="mpc-hint" id="settings-guardian-hint"></div>
-        <div class="mpc-hint" id="model-picker-premium-hint" style="display:none;color:var(--gold)">🔒 Premium models locked — Tier 2 required to switch the DM voice.</div>
+        <div class="mpc-hint" id="model-picker-premium-hint" style="display:none;color:var(--gold)">🔒 Premium models locked — one-time Patron unlocks all DMs for 30 days.</div>
       </div>
       <div class="model-picker-card" id="tts-test-card">
-        <div class="mpc-title">🎙 Narrator test <span id="tts-test-lock" style="color:var(--gold);font-size:.68rem">🔒 Tier 2</span></div>
+        <div class="mpc-title">🎙 Narrator test <span id="tts-test-lock" style="color:var(--gold);font-size:.68rem">🔒 Patron</span></div>
         <div style="display:flex;gap:.4rem;margin-top:.3rem">
           <input type="text" id="tts-test-input" maxlength="50" placeholder="The raven cries in the dark…"
                  style="flex:1;min-width:0;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone);padding:.35rem .5rem;font-size:.78rem;border-radius:3px"
@@ -1257,31 +1332,22 @@
       <button class="cx-close" onclick="closeCodex()" aria-label="Close">✕</button>
     </div>
     <div class="cx-tabs" id="cx-tabs">
-      <button class="cx-tab active" data-tab="character" onclick="activateCodexTab('character')">🧙 Character</button>
-      <button class="cx-tab" data-tab="npcs" onclick="activateCodexTab('npcs')">🧝 NPCs</button>
-      <button class="cx-tab" data-tab="map" onclick="activateCodexTab('map')">🗺 Map</button>
-      <button class="cx-tab" data-tab="journal" onclick="activateCodexTab('journal')">📖 Journal</button>
-      <button class="cx-tab" data-tab="facts" onclick="activateCodexTab('facts')">📌 Facts</button>
+      <div class="cx-row" id="cx-row-main">
+        <button class="cx-tab active" data-tab="character" onclick="openCodexCharacter()">🧙 Character</button>
+        <button class="cx-tab" data-tab="npcs" onclick="activateCodexTab('npcs')">🧝 NPCs</button>
+        <button class="cx-tab" data-tab="map" onclick="activateCodexTab('map')">🗺 Map</button>
+        <button class="cx-tab" data-tab="journal" onclick="activateCodexTab('journal')">📖 Journal</button>
+        <button class="cx-tab" data-tab="facts" onclick="activateCodexTab('facts')">📌 Facts</button>
+      </div>
+      <div class="cx-row cx-subrow" id="cx-row-sub">
+        <button class="cx-tab cx-subtab" data-subtab="spells" onclick="activateCodexSubTab('spells')">✨ Spells</button>
+        <button class="cx-tab cx-subtab" data-subtab="inventory" onclick="activateCodexSubTab('inventory')">🎒 Equipment</button>
+        <button class="cx-tab cx-subtab" data-subtab="currency" onclick="activateCodexSubTab('currency')">🪙 Treasury</button>
+        <button class="cx-tab cx-subtab" data-subtab="notes" onclick="activateCodexSubTab('notes')">📜 Notes</button>
+      </div>
     </div>
     <div class="cx-frame" id="cx-frame">
       <div class="cx-placeholder" id="cx-placeholder">📜 Opening the tome…</div>
-    </div>
-  </aside>
-
-  <!-- ═══════════ RULES ORACLE ═══════════ -->
-  <aside class="oracle" id="oracle">
-    <div class="oracle-inner">
-      <div class="oracle-head">
-        <h3>📜 Rule Oracle</h3>
-        <button class="oracle-close" onclick="toggleOracle()">✕</button>
-      </div>
-      <div class="oracle-log" id="oracle-log">
-        <div class="oracle-msg a">Ask the oracle about D&D 5e rules without interrupting the game. The answers do not affect the story.</div>
-      </div>
-      <div class="oracle-input">
-        <input type="text" id="oracle-q" placeholder="E.g. What is the DC to climb?" onkeydown="if(event.key==='Enter')askOracle()">
-        <button onclick="askOracle()">Ask</button>
-      </div>
     </div>
   </aside>
 
@@ -1310,7 +1376,7 @@
   </div>
 </div>
 
-<!-- ⏳ Cap-modal (FAS B) — inga gratis-turns kvar / premium utgången -->
+<!-- ⏳ Cap-modal (FAS B) — inga gratis-turns kvar / patron-modeller utgångna -->
 <div class="fb-backdrop" id="cap-backdrop" onclick="closeCapModal()"></div>
 <div class="fb-modal" id="cap-modal" role="dialog" aria-modal="true" aria-labelledby="cap-title">
   <div class="fb-head">
@@ -1318,11 +1384,11 @@
     <button class="fb-close" onclick="closeCapModal()" aria-label="Close">✕</button>
   </div>
   <div class="fb-body">
-    <p class="fb-sub" id="cap-msg" style="font-style:normal;line-height:1.6">Your free turns are spent. New turns on <b>…</b> — or upgrade for unlimited.</p>
+    <p class="fb-sub" id="cap-msg" style="font-style:normal;line-height:1.6">Your turns are spent. New free turns arrive in <b>…</b> — or top up once to keep playing.</p>
   </div>
   <div class="fb-foot">
     <button class="fb-btn fb-cancel" onclick="closeCapModal()">Close</button>
-    <a class="fb-btn fb-send" id="cap-upgrade-btn" href="pricing.html" style="display:inline-flex;align-items:center;text-decoration:none">👑 Upgrade</a>
+    <a class="fb-btn fb-send" id="cap-upgrade-btn" href="pricing.html" style="display:inline-flex;align-items:center;text-decoration:none">⚡ Top up</a>
   </div>
 </div>
 
@@ -1401,7 +1467,7 @@
 </div>
 
 <script src="sfx.js?v=20260802a"></script>
-<script src="api.js?v=20260804c"></script>
+<script src="api.js?v=20260805c"></script>
 <script src="i18n.js?v=20260802b"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
@@ -1426,6 +1492,9 @@ async function loadCampaign() {
         currentModel = savedDm;
         localStorage.setItem('dnd_model', savedDm);
       }
+      // Kampanjens TTS-inställningar (provider, röst, stil, egen fras, autoplay,
+      // hastighet) → pickers + localStorage så de inte resettas vid återkomst.
+      hydrateTtsFromCampaign(campaign._raw && campaign._raw.meta);
       // Initialize i18n with campaign language
       const lang = (campaign._raw && campaign._raw.meta && campaign._raw.meta.language) || 'en';
       I18N.init(lang);
@@ -1471,9 +1540,11 @@ async function loadCampaign() {
         I18N.getLang() === 'en'
           ? `What does ${CHAR_NAME} do? Write freely — fight, sneak, talk, cast a spell…`
           : `Vad gör ${CHAR_NAME}? Skriv fritt — slå, smyg, tala, kasta en besvärjelse…`;
-      // Uppdatera topbar — kampanjnamn + FAS A/B header-info (Turn/Dag/🆓/reset)
+      // Uppdatera topbar — kampanjnamn + FAS A/B header-info (Turn/Dag/🆓/reset).
+      // Headern visar bara namnet (kompakt) — "Kampanj:"-prefixet finns i
+      // mobilmenyn och på äventyrsväljaren. (2026-08-05)
       const tag = document.querySelector('.topbar .campaign');
-      if (tag) tag.textContent = `${I18N.t('Kampanj:')} ${campaign.name}`;
+      if (tag) tag.textContent = campaign.name;
       updateHeaderInfo();
     } else {
       // Ingen kampanj — tillbaka till vägskälet
@@ -1507,9 +1578,10 @@ const roleReady = API.me().then(u => {
   if (u) {
     profileData = u;
     _meData = u;
+    _hasAccountAvatar = !!u.has_avatar;
     updateTTSStyleLock();
-    const tag = document.getElementById('user-tag');
-    if (tag) tag.textContent = '👤 ' + u.username;
+    const tagName = document.getElementById('user-tag-name');
+    if (tagName) tagName.textContent = u.username;
     updateHeaderInfo();
   }
   if (u && u.role === 'admin') {
@@ -1609,7 +1681,7 @@ function resetCountdown(iso, isTs) {
 }
 
 // Header-strängen: "Turn N · Day M · 🆓 X/Y · reset in 07:42:15" (lifetime →
-// 👑 istället för siffror; tier1/tier2 visar 6h-countdown via reset_ts).
+// 👑 istället för siffror). Alla icke-lifetime har daglig reset (reset_date).
 // I18N.getLang() styr Tur/Turn + Dag/Day; siffror är universella.
 function turnInfoText() {
   const en = (typeof I18N !== 'undefined' && I18N.getLang && I18N.getLang() === 'en');
@@ -1630,9 +1702,7 @@ function turnInfoText() {
     if (cap > 0 && !isNaN(available)) {
       const total = cap + (parseInt(me.turn_bonus, 10) || 0);
       parts.push('🆓 ' + (available >= 999999 ? '∞' : available) + '/' + total);
-      // tier1/tier2 → 6-timmarsperiod (reset_ts); free → daglig (reset_date)
-      const hasTs = (tier === 'tier1' || tier === 'tier2') && me.reset_ts;
-      const cd = resetCountdown(hasTs ? me.reset_ts : me.reset_date, hasTs);
+      const cd = resetCountdown(me.reset_date, false);
       if (cd) parts.push((en ? 'reset in ' : 'reset om ') + cd);
     } else if (!isNaN(available) && available >= 999999) {
       parts.push('🆓 ∞');
@@ -1642,10 +1712,18 @@ function turnInfoText() {
 }
 
 // Uppdatera header-info: desktop (.topbar) + mobil (☰-menyns topp).
+// Desktop-headern är trång — där tas "Day N" + "reset in …" bort så
+// kampanjnamnet alltid får plats; mobilmenyn visar hela strängen. (2026-08-05)
+function compactTurnInfo(text) {
+  if (!text) return '';
+  return text
+    .replace(/\s*·?\s*Day\s+\d+\s*/i, '')
+    .replace(/\s*·?\s*reset (in|om).*$/i, '');
+}
 function updateHeaderInfo() {
   const text = turnInfoText();
   const el = document.getElementById('header-turns-info');
-  if (el) el.textContent = text ? ' · ' + text : '';
+  if (el) el.textContent = compactTurnInfo(text) ? ' · ' + compactTurnInfo(text) : '';
   const mel = document.getElementById('mobile-menu-turns');
   if (mel) mel.textContent = text || '';
 }
@@ -1691,15 +1769,16 @@ function openCapModal(info) {
   const msg = document.getElementById('cap-msg');
   const upgrade = document.getElementById('cap-upgrade-btn');
   if (info.premium_expired) {
-    if (title) title.textContent = '👑 Premium expired';
-    if (msg) msg.innerHTML = 'Your premium period has ended, so your free turns are back. ' +
-      'New free turns arrive in <b>' + escapeHtml(whenStr) + '</b> — or renew for unlimited turns.';
-    if (upgrade) upgrade.textContent = '👑 Renew Premium';
+    if (title) title.textContent = '⚔ Patron period ended';
+    if (msg) msg.innerHTML = 'Your Patron model access has ended, so your free turns are back. ' +
+      'New free turns arrive in <b>' + escapeHtml(whenStr) + '</b> — or top up once for more.' +
+      ' Your Support perks (export, uploads) stay forever.';
+    if (upgrade) upgrade.textContent = '⚡ Top up';
   } else {
     if (title) title.textContent = '⏳ No free turns left';
-    if (msg) msg.innerHTML = 'Your free turns are spent. New turns in <b>' + escapeHtml(whenStr) +
-      '</b> — or upgrade for unlimited.';
-    if (upgrade) upgrade.textContent = '👑 Upgrade';
+    if (msg) msg.innerHTML = 'Your turns are spent. New free turns arrive in <b>' + escapeHtml(whenStr) +
+      '</b> — or top up once to keep playing. No subscription, ever.';
+    if (upgrade) upgrade.textContent = '⚡ Top up';
   }
   const backdrop = document.getElementById('cap-backdrop');
   const modal = document.getElementById('cap-modal');
@@ -1792,8 +1871,12 @@ function avatarHtml(kind, fallbackEmoji) {
 
 // Öppna avatar-modalen (AI-generera / ladda upp / ta bort)
 let AVATAR_KIND = 'player';
+// Spelarprofilens avatar (konto) är SEPARAT från äventyrarens kort.
+let _hasAccountAvatar = false;
+let _avatarProfileMode = false;
 function pickAvatar(kind) {
   AVATAR_KIND = kind;
+  _avatarProfileMode = false;
   const ov = document.getElementById('avatar-overlay');
   const title = document.getElementById('avatar-modal-title');
   const desc = document.getElementById('avatar-modal-desc');
@@ -1801,18 +1884,12 @@ function pickAvatar(kind) {
   const delBtn = document.getElementById('avatar-del-btn');
   const updBtn = document.getElementById('avatar-update-btn');
   const aiBtn = document.getElementById('avatar-ai-btn');
-  // TIERS: AI-avatarer är tier1+ (free hänvisas till uppgradering)
-  if (!_tierHasAvatars()) {
-    try { toast('🔒 AI avatars are a Tier 1 feature — upgrade to paint your hero and the faces you meet.'); } catch (_) {}
-    try { SFX.error(); } catch (_) {}
-    return;
-  }
   const label = kind === 'dm' ? 'the Dungeon Master'
     : kind.startsWith('npc:') ? 'NPC · ' + kind.slice(4)
     : 'The Adventurer';
   title.textContent = '🎨 Avatar — ' + label;
   desc.textContent = kind === 'player'
-    ? 'Paint a new avatar from your character sheet — items, traits and lore included. Or upload your own image.'
+    ? 'Paint a new avatar from your character sheet — items, traits and lore included. Free for every adventurer. Or upload your own image.'
     : 'Paint a new avatar of ' + (kind === 'dm' ? 'the Dungeon Master' : 'this NPC') + '. Or upload your own image.';
   preview.innerHTML = AVATARS[kind]
     ? `<img src="${AVATARS[kind]}" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">`
@@ -1821,6 +1898,45 @@ function pickAvatar(kind) {
   updBtn.style.display = AVATARS[kind] ? '' : 'none';
   aiBtn.disabled = false;
   updBtn.disabled = false;
+  // Återställ från ev. profil-läge: Engine-väljaren + knapptext ska synas igen
+  const provRow = document.getElementById('avatar-provider-row');
+  if (provRow) provRow.style.display = '';
+  aiBtn.textContent = '✨ Paint new from my words';
+  const promptInp = document.getElementById('avatar-prompt-input');
+  if (promptInp) promptInp.placeholder = "Optional: describe exactly what you want painted… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)";
+  document.getElementById('avatar-ai-status').textContent = '';
+  updateAvatarProviderLock();
+  if (ov) ov.classList.add('show');
+  try { SFX.click(); } catch (_) {}
+}
+
+// ── Spelarprofilens avatar (konto — SEPARAT från äventyraren) ──
+// Öppnar avatar-modalen i PROFILE-läge: alltid StepFun (step-image-edit-2),
+// gratis för alla tier, ingen Engine-väljare. Headerns porträtt hör hit.
+function openProfileAvatarModal() {
+  _avatarProfileMode = true;
+  AVATAR_KIND = 'player';
+  const ov = document.getElementById('avatar-overlay');
+  const title = document.getElementById('avatar-modal-title');
+  const desc = document.getElementById('avatar-modal-desc');
+  const preview = document.getElementById('avatar-modal-img');
+  const delBtn = document.getElementById('avatar-del-btn');
+  const updBtn = document.getElementById('avatar-update-btn');
+  const aiBtn = document.getElementById('avatar-ai-btn');
+  const provRow = document.getElementById('avatar-provider-row');
+  const promptInp = document.getElementById('avatar-prompt-input');
+  title.textContent = '🎨 Your profile portrait';
+  desc.textContent = 'Paint YOUR profile portrait — the face at your table, separate from your adventurer. Always StepFun, always free.';
+  const url = _hasAccountAvatar ? API.accountAvatarUrl() + '?t=' + Date.now() : null;
+  preview.innerHTML = url
+    ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">`
+    : SPR.html('👤');
+  delBtn.style.display = _hasAccountAvatar ? '' : 'none';
+  updBtn.style.display = 'none';
+  aiBtn.disabled = false;
+  aiBtn.textContent = '✨ Paint my profile (StepFun)';
+  if (provRow) provRow.style.display = 'none';
+  if (promptInp) promptInp.placeholder = 'Describe yourself — e.g. \'hooded figure, lantern light, old leather\' (or leave empty)';
   document.getElementById('avatar-ai-status').textContent = '';
   if (ov) ov.classList.add('show');
   try { SFX.click(); } catch (_) {}
@@ -1830,18 +1946,66 @@ function closeAvatarModal() {
   if (ov) ov.classList.remove('show');
 }
 
-// Generera AI-avatar (StepFun — prompt byggs i backend från karaktär/NPC-data)
+// ── Bildleverantör (StepFun — gratis · Wan 2.7 Pro — Patron+) ──
+function avatarProvider() {
+  const sel = document.getElementById('avatar-provider-select');
+  return (sel && sel.value) || 'stepfun';
+}
+function avatarProviderChanged(sel) {
+  if (sel && sel.value === 'wan' && !_tierHasModels()) {
+    sel.value = 'stepfun';
+    try { toast('🔒 Wan 2.7 Pro is a Patron feature (10€) — StepFun is always free.'); } catch (_) {}
+    try { SFX.error(); } catch (_) {}
+  }
+}
+function updateAvatarProviderLock() {
+  const sel = document.getElementById('avatar-provider-select');
+  if (!sel) return;
+  const wanOpt = sel.querySelector('option[value="wan"]');
+  if (!wanOpt) return;
+  const unlocked = _tierHasModels(); // tier2/lifetime
+  wanOpt.disabled = !unlocked;
+  wanOpt.textContent = unlocked ? 'Wan 2.7 Pro — Patron' : 'Wan 2.7 Pro — Patron 🔒';
+  if (sel.value === 'wan' && !unlocked) sel.value = 'stepfun';
+}
+
+// Generera AI-avatar (prompt byggs i backend från karaktär/NPC-data)
 async function generateAvatarAction() {
-  const kind = AVATAR_KIND;
   const status = document.getElementById('avatar-ai-status');
   const btn = document.getElementById('avatar-ai-btn');
+  // Profil-läge: konto-avataren genereras ALLTID med StepFun (step-image-edit-2)
+  if (_avatarProfileMode) {
+    status.textContent = '🎨 Painting your profile portrait… (10–30 s)';
+    btn.disabled = true;
+    try {
+      const freePrompt = (document.getElementById('avatar-prompt-input') || {}).value || '';
+      const res = await API.generateAccountAvatar(freePrompt);
+      if (res && res.ok) {
+        _hasAccountAvatar = true;
+        refreshAvatars();
+        openProfileAvatarModal();
+        status.textContent = '✨ Profile portrait painted — always StepFun';
+        try { SFX.levelup(); } catch (_) {}
+      } else {
+        status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Generation failed');
+        try { SFX.error(); } catch (_) {}
+      }
+    } catch (e) {
+      status.textContent = '⚠ ' + (e.message || 'Generation failed');
+      try { SFX.error(); } catch (_) {}
+    } finally {
+      btn.disabled = false;
+    }
+    return;
+  }
+  const kind = AVATAR_KIND;
   status.textContent = '🎨 The artist is painting… (10–30 s)';
   btn.disabled = true;
   try {
     // mode "new" = full generation → alltid en NY bild
     const freePrompt = (document.getElementById('avatar-prompt-input') || {}).value || '';
     const usedWords = !!freePrompt.trim();
-    const res = await API.generateAvatar(kind, Date.now() % 1000000, 'new', freePrompt);
+    const res = await API.generateAvatar(kind, Date.now() % 1000000, 'new', freePrompt, avatarProvider());
     if (res && res.ok) {
       AVATARS[kind] = API.avatarUrl(kind) + '?t=' + Date.now();
       refreshAvatars();
@@ -1871,7 +2035,7 @@ async function updateAvatarAction() {
   try {
     const freePrompt = (document.getElementById('avatar-prompt-input') || {}).value || '';
     const usedWords = !!freePrompt.trim();
-    const res = await API.generateAvatar(kind, Date.now() % 1000000, 'edit', freePrompt);
+    const res = await API.generateAvatar(kind, Date.now() % 1000000, 'edit', freePrompt, avatarProvider());
     if (res && res.ok) {
       AVATARS[kind] = API.avatarUrl(kind) + '?t=' + Date.now();
       refreshAvatars();
@@ -1914,6 +2078,18 @@ function uploadAvatarAction() {
 
 // Ta bort avatar → standard-sprite
 async function deleteAvatarAction() {
+  if (_avatarProfileMode) {
+    try {
+      await API.deleteAccountAvatar();
+      _hasAccountAvatar = false;
+      refreshAvatars();
+      closeAvatarModal();
+      toast('🗑 Profile portrait removed');
+    } catch (e) {
+      toast('⚠ ' + (e.message || 'Kunde inte ta bort profilavataren'));
+    }
+    return;
+  }
   const kind = AVATAR_KIND;
   try {
     await API.deleteAvatar(kind);
@@ -1928,6 +2104,16 @@ async function deleteAvatarAction() {
 
 // Större förhandsvisning — klick på preview-bilden i modalen öppnar lightbox
 function openAvatarLightbox() {
+  if (_avatarProfileMode) {
+    const url = _hasAccountAvatar ? API.accountAvatarUrl() : null;
+    if (!url) return;
+    const lb = document.getElementById('avatar-lightbox');
+    document.getElementById('avatar-lightbox-img').src = url;
+    document.getElementById('avatar-lightbox-title').textContent =
+      document.getElementById('avatar-modal-title').textContent;
+    if (lb) lb.classList.add('show');
+    return;
+  }
   const kind = AVATAR_KIND;
   const src = AVATARS[kind];
   if (!src) return;
@@ -1946,6 +2132,13 @@ function closeAvatarLightbox() {
 
 // Uppdatera alla avatarer på sidan (efter uppladdning)
 function refreshAvatars() {
+  // Profil-porträtt i headern (konto-avatar — SEPARAT från äventyraren)
+  const utAv = document.getElementById('user-tag-avatar');
+  if (utAv) {
+    utAv.innerHTML = _hasAccountAvatar
+      ? `<img src="${API.accountAvatarUrl()}?t=${Date.now()}" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">`
+      : '👤';
+  }
   // Spelarens kort i sidebaren
   const pcAv = document.getElementById('pc-avatar');
   if (pcAv) {
@@ -2393,36 +2586,46 @@ const TTS_VOICE_KEY = 'dnd_tts_voice';
 const TTS_PROVIDER_KEY = 'dnd_tts_provider';
 const TTS_SPEED_KEY = 'dnd_tts_speed';
 const TTS_STYLE_KEY = 'dnd_tts_style';
+
+// Säkert localStorage — om webbläsaren nekar lagring (privat läge, inbäddad
+// vy, strikt sekretess) ska TTS-inställningarna ÄNDÅ fungera i sessionen.
+// Per-kampanj-synken (state.meta.tts_*) sköter persistensen istället. (2026-08-05)
+const _safeLS = {
+  get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} },
+};
 const TTS_SPEEDS = [1, 1.25, 1.5, 2, 0.75];
 let _ttsSpeedIdx = 0;
 
 // Berättar-stil (premium: customize narrator voice). Preset (happy/calm/scary)
 // eller egen fras via "custom". Sparas lokalt; backend gate-ar på premium.
 function ttsStyle() {
-  const v = localStorage.getItem(TTS_STYLE_KEY) || '';
+  const v = _safeLS.get(TTS_STYLE_KEY) || '';
   if (v === 'custom') {
-    const c = localStorage.getItem(TTS_STYLE_KEY + '_custom') || '';
+    const c = _safeLS.get(TTS_STYLE_KEY + '_custom') || '';
     return c.trim();
   }
   return v;
 }
 function setTTSStyle(v) {
-  localStorage.setItem(TTS_STYLE_KEY, v);
+  _safeLS.set(TTS_STYLE_KEY, v);
   const inp = document.getElementById('tts-style-custom');
   if (inp) inp.style.display = v === 'custom' ? '' : 'none';
-  sfx && sfx('click');
+  try { SFX.click(); } catch (_) {}
+  saveTtsSettings();
 }
 function setTTSStyleCustom(txt) {
-  localStorage.setItem(TTS_STYLE_KEY + '_custom', txt);
+  _safeLS.set(TTS_STYLE_KEY + '_custom', txt);
+  saveTtsSettings();
 }
 function initTTSStyle() {
-  const v = localStorage.getItem(TTS_STYLE_KEY) || '';
+  const v = _safeLS.get(TTS_STYLE_KEY) || '';
   const sel = document.getElementById('tts-style-select');
   if (sel) sel.value = v;
   const inp = document.getElementById('tts-style-custom');
   if (inp) {
     inp.style.display = v === 'custom' ? '' : 'none';
-    if (v === 'custom') inp.value = localStorage.getItem(TTS_STYLE_KEY + '_custom') || '';
+    if (v === 'custom') inp.value = _safeLS.get(TTS_STYLE_KEY + '_custom') || '';
   }
   updateTTSStyleLock();
 }
@@ -2437,13 +2640,13 @@ function _tierIs(one, two) { const t = _tier(); return t === one || (two && t ==
 function _tierHasModels() { const t = _tier(); return t === 'tier2' || t === 'lifetime'; }
 function _tierHasAvatars() { const t = _tier(); return t !== 'free'; }
 
-// Tier-badge för profilkortet: free (dim) / tier1 / tier2 (guld) / lifetime (lila).
+// Tier-badge för profilkortet: free (dim) / tier1 (Support) / tier2 (Patron) / lifetime (lila).
 function tierBadge(s) {
   const st = (s === 'premium' ? 'tier2' : s) || 'free';
   const map = {
     'free': '<span style="color:var(--bone-dim)">free</span>',
-    'tier1': '<span style="color:var(--bone)">🔹 Companion</span>',
-    'tier2': '<span style="color:var(--gold-bright)">⚔ Adventurer</span>',
+    'tier1': '<span style="color:var(--bone)">🔹 Support</span>',
+    'tier2': '<span style="color:var(--gold-bright)">⚔ Patron</span>',
     'lifetime': '<span style="color:var(--arcane)">💜 Lifetime</span>',
   };
   return map[st] || map['free'];
@@ -2484,8 +2687,8 @@ function updateTTSStyleLock() {
     // Fallback till stepfun om qwen vald men låst
     if (!hasStyle && ps.value === 'qwen') {
       ps.value = 'stepfun';
-      if (localStorage.getItem(TTS_PROVIDER_KEY) === 'qwen') {
-        localStorage.setItem(TTS_PROVIDER_KEY, 'stepfun');
+      if (_safeLS.get(TTS_PROVIDER_KEY) === 'qwen') {
+        _safeLS.set(TTS_PROVIDER_KEY, 'stepfun');
       }
     }
     ps.title = hasStyle ? 'TTS provider' : 'StepFun TTS — always free' + ' · Qwen 🔒 Tier 2';
@@ -2502,40 +2705,41 @@ function ttsSpeed() {
 }
 function cycleTTSSpeed() {
   _ttsSpeedIdx = (_ttsSpeedIdx + 1) % TTS_SPEEDS.length;
-  localStorage.setItem(TTS_SPEED_KEY, String(_ttsSpeedIdx));
+  _safeLS.set(TTS_SPEED_KEY, String(_ttsSpeedIdx));
   const btn = document.getElementById('tts-speed-btn');
   if (btn) btn.textContent = '⏩ ' + ttsSpeed() + '×';
   if (_ttsAudio) { try { _ttsAudio.playbackRate = ttsSpeed(); } catch (e) {} }
   SFX.click();
+  saveTtsSettings();
 }
 function initTTSSpeed() {
-  const saved = parseInt(localStorage.getItem(TTS_SPEED_KEY), 10);
+  const saved = parseInt(_safeLS.get(TTS_SPEED_KEY), 10);
   if (!isNaN(saved) && saved >= 0 && saved < TTS_SPEEDS.length) _ttsSpeedIdx = saved;
   const btn = document.getElementById('tts-speed-btn');
   if (btn) btn.textContent = '⏩ ' + ttsSpeed() + '×';
 }
 
 function ttsProvider() {
-  return localStorage.getItem(TTS_PROVIDER_KEY) || 'stepfun';
+  return _safeLS.get(TTS_PROVIDER_KEY) || 'stepfun';
 }
 
 function setTTSProvider(p) {
-  localStorage.setItem(TTS_PROVIDER_KEY, p);
+  _safeLS.set(TTS_PROVIDER_KEY, p);
   const sel = document.getElementById('tts-provider-select');
   if (sel) sel.value = p;
   _ttsVoiceIds = null; // ny leverantör → uppdatera röst-id:n
-  // Spara per kampanj server-side så valet följer med mellan enheter
-  API.setTtsProvider(p).catch(() => {});
+  saveTtsSettings(); // spara per kampanj (state.meta.tts_*) så valet följer med
 }
 
 function ttsVoice() {
-  return localStorage.getItem(TTS_VOICE_KEY) || 'male';
+  return _safeLS.get(TTS_VOICE_KEY) || 'male';
 }
 
 function setTTSVoice(v) {
-  localStorage.setItem(TTS_VOICE_KEY, v);
+  _safeLS.set(TTS_VOICE_KEY, v);
   const sel = document.getElementById('tts-voice-select');
   if (sel) sel.value = v;
+  saveTtsSettings();
 }
 
 function initTTSVoicePicker() {
@@ -2547,18 +2751,69 @@ function initTTSVoicePicker() {
   if (ps) ps.value = p;
 }
 
+// ── Per-kampanj TTS-inställningar (2026-08-05) ──
+// Alla TTS-val (provider, röst, stil, egen stil-fras, autoplay, hastighet)
+// sparas i kampanjens meta (state.meta.tts_*) så de följer med när spelaren
+// återvänder — på alla enheter/origins. Debounce: den egna stil-frasen
+// skrivs tecken för tecken, så vi sparar max en gång per halvsekund.
+function _ttsCurrentSettings() {
+  let speed = parseInt(_safeLS.get(TTS_SPEED_KEY), 10);
+  if (isNaN(speed) || speed < 0 || speed >= TTS_SPEEDS.length) speed = 0;
+  return {
+    provider: ttsProvider(),
+    voice: ttsVoice(),
+    style: _safeLS.get(TTS_STYLE_KEY) || '',
+    style_custom: _safeLS.get(TTS_STYLE_KEY + '_custom') || '',
+    autoplay: _safeLS.get(TTS_AUTOPLAY_KEY) === '1' ? '1' : '0',
+    speed: speed,
+  };
+}
+let _ttsSaveTimer = null;
+function saveTtsSettings() {
+  clearTimeout(_ttsSaveTimer);
+  _ttsSaveTimer = setTimeout(() => {
+    try {
+      API.setTtsProvider(ttsProvider(), _ttsCurrentSettings()).catch(() => {});
+    } catch (_) {}
+  }, 500);
+}
+
+// Kampanjens sparade TTS-inställningar (state.meta.tts_*) → localStorage +
+// pickers. Körs när kampanjen laddats; kampanj-meta vinner över lokalt val
+// (det är det senaste valet per kampanj och följer med mellan enheter).
+function hydrateTtsFromCampaign(meta) {
+  if (!meta) return;
+  const lsSet = (k, v) => {
+    if (v === undefined || v === null || v === '') return;
+    try { localStorage.setItem(k, v); } catch (_) {}
+  };
+  if (meta.tts_provider) lsSet(TTS_PROVIDER_KEY, meta.tts_provider);
+  if (meta.tts_voice) lsSet(TTS_VOICE_KEY, meta.tts_voice);
+  if (meta.tts_style !== undefined && meta.tts_style !== null) lsSet(TTS_STYLE_KEY, meta.tts_style);
+  if (meta.tts_style_custom !== undefined && meta.tts_style_custom !== null) lsSet(TTS_STYLE_KEY + '_custom', meta.tts_style_custom);
+  if (meta.tts_autoplay) lsSet(TTS_AUTOPLAY_KEY, meta.tts_autoplay);
+  if (meta.tts_speed !== undefined && meta.tts_speed !== null) lsSet(TTS_SPEED_KEY, String(meta.tts_speed));
+  // Rendera om pickers med de hydrerade värdena
+  initTTSVoicePicker();
+  initTTSStyle();
+  initTTSAutoplay();
+  initTTSSpeed();
+  updateTTSStyleLock();
+}
+
 // ── Autoplay TTS när DM svarar ──
 const TTS_AUTOPLAY_KEY = 'dnd_tts_autoplay';
 
 function ttsAutoplayEnabled() {
-  return localStorage.getItem(TTS_AUTOPLAY_KEY) === '1';
+  return _safeLS.get(TTS_AUTOPLAY_KEY) === '1';
 }
 
 function toggleTTSAutoplay(btn) {
   const on = !ttsAutoplayEnabled();
-  localStorage.setItem(TTS_AUTOPLAY_KEY, on ? '1' : '0');
+  _safeLS.set(TTS_AUTOPLAY_KEY, on ? '1' : '0');
   if (btn) btn.classList.toggle('active', on);
   toast(on ? '🔊 Autoplay ON — the DM will read their replies aloud' : '🔇 Autoplay OFF');
+  saveTtsSettings();
 }
 
 function initTTSAutoplay() {
@@ -5604,42 +5859,6 @@ function renderJourney(raw) {
 }
 
 // ═══════════════════════════════════════
-// RULES ORACLE — Qwen-driven via backend
-// ═══════════════════════════════════════
-function toggleOracle() {
-  document.getElementById('oracle').classList.toggle('open');
-}
-
-async function askOracle() {
-  const q = document.getElementById('oracle-q').value.trim();
-  if (!q) return;
-  document.getElementById('oracle-q').value = '';
-  const log = document.getElementById('oracle-log');
-  const qEl = document.createElement('div');
-  qEl.className = 'oracle-msg q';
-  qEl.textContent = q;
-  log.appendChild(qEl);
-
-  // Oraklet "tänker" medan Qwen slår upp i reglerna
-  showThoughts('rules');
-  try {
-    const { answer } = await API.oracle(q);
-    hideThoughts();
-    const aEl = document.createElement('div');
-    aEl.className = 'oracle-msg a';
-    aEl.textContent = answer;
-    log.appendChild(aEl);
-  } catch (e) {
-    hideThoughts();
-    const aEl = document.createElement('div');
-    aEl.className = 'oracle-msg a';
-    aEl.textContent = '⚠ ' + I18N.t('Oraklet tiger: ') + (e.message || I18N.t('okänt fel'));
-    log.appendChild(aEl);
-  }
-  log.scrollTop = log.scrollHeight;
-}
-
-// ═══════════════════════════════════════
 // 🗺️ DROPDOWN-MENYER — borttagna 2026-08 (Codex ersatte); settings-menu lever
 // ═══════════════════════════════════════
 // ── Settings menu (gear icon) ──
@@ -6272,8 +6491,6 @@ tick();
     <button class="sheet-close" onclick="closeSheet('sheet-tools')">✕</button>
   </div>
   <div class="sheet-body">
-    <button class="sheet-row" onclick="closeSheet('sheet-tools');toggleOracle()"><span class="sr-icon">📜</span><span class="sr-body"><span class="sr-name">Rule Oracle</span><span class="sr-hint">ask about 5e rules</span></span></button>
-    <button class="sheet-row" onclick="closeSheet('sheet-tools');toggleConsole()"><span class="sr-icon">🛠️</span><span class="sr-body"><span class="sr-name">The Engine Room</span><span class="sr-hint">live debug logs</span></span></button>
     <a class="sheet-row" href="help.html"><span class="sr-icon">❓</span><span class="sr-body"><span class="sr-name">How to Play?</span><span class="sr-hint">commands &amp; tips</span></span></a>
     <button class="sheet-row" onclick="closeSheet('sheet-tools');exportCampaign()"><span class="sr-icon">📦</span><span class="sr-body"><span class="sr-name">Export</span><span class="sr-hint">campaign as zip</span></span></button>
   </div>
@@ -6594,7 +6811,7 @@ function cdMentionNpc(name) {
 
 // ═══════════════ 📖 CODEX MODAL (D1.3) — lazy iframes ═══════════════
 const CODEX_PAGES = {
-  character: { label: '🧙 Character', src: 'character.html?v=20260803b' },
+  character: { label: '🧙 Character', src: 'character.html?v=20260805e' },
   npcs:      { label: '🧝 NPCs',      src: 'npcs.html?v=20260803a' },
   map:       { label: '🗺 Map',       src: 'platser.html?v=20260803b' },
   journal:   { label: '📖 Journal',   src: 'loggbok.html?v=20260803a' },
@@ -6602,6 +6819,8 @@ const CODEX_PAGES = {
 };
 const _codexIframes = {};
 let _codexLastTab = 'character';
+// Aktiv sub-vy i karaktärsbladet (character.html) — styrs av rad 2 i Codex-tabben.
+let _codexSubTab = 'character';
 
 function openCodex(tabId, placeHash) {
   SFX.click();
@@ -6636,7 +6855,7 @@ function activateCodexTab(id, placeHash) {
   const page = CODEX_PAGES[id];
   if (!page) return;
   _codexLastTab = id;
-  document.querySelectorAll('#cx-tabs .cx-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === id));
+  document.querySelectorAll('#cx-tabs .cx-tab:not(.cx-subtab)').forEach(t => t.classList.toggle('active', t.dataset.tab === id));
   const frame = document.getElementById('cx-frame');
   const placeholder = document.getElementById('cx-placeholder');
   let ifr = _codexIframes[id];
@@ -6651,6 +6870,7 @@ function activateCodexTab(id, placeHash) {
     ifr.addEventListener('load', () => {
       ifr.classList.add('loaded');
       if (placeholder && placeholder.parentNode) placeholder.remove();
+      if (id === 'character') postSubTabToChar();
     });
   } else {
     // Iframe finns redan — sätt hash direkt för att hoppa till platsen
@@ -6658,7 +6878,49 @@ function activateCodexTab(id, placeHash) {
   }
   document.querySelectorAll('#cx-frame iframe').forEach(f => f.classList.toggle('active', f === ifr));
   if (placeholder) placeholder.style.display = 'none';
+  // Rad 2 (karaktärsbladets sub-vyer): aktiva bara när Character är aktiv
+  if (id === 'character') {
+    document.querySelectorAll('#cx-tabs .cx-subtab').forEach(b => b.classList.toggle('active', b.dataset.subtab === _codexSubTab));
+    postSubTabToChar();
+  } else {
+    document.querySelectorAll('#cx-tabs .cx-subtab').forEach(b => b.classList.remove('active'));
+  }
 }
+
+// Rad 1 "Character": återställer till karaktärsöversikten (ej sub-vy)
+function openCodexCharacter() {
+  activateCodexTab('character');
+  _codexSubTab = 'character';
+  document.querySelectorAll('#cx-tabs .cx-subtab').forEach(b => b.classList.remove('active'));
+  postSubTabToChar();
+}
+
+// Rad 2: hoppa direkt till en sub-vy i karaktärsbladet
+function activateCodexSubTab(tab) {
+  SFX.click();
+  _codexSubTab = tab;
+  activateCodexTab('character');
+}
+
+// Be karaktärsbladet (character.html) visa sub-vyn _codexSubTab
+function postSubTabToChar() {
+  const ifr = _codexIframes['character'];
+  if (!ifr) return;
+  const send = () => { try { ifr.contentWindow.postMessage({ type: 'codex-subtab', tab: _codexSubTab }, '*'); } catch (_) {} };
+  if (ifr.contentWindow && ifr.classList.contains('loaded')) send();
+  else ifr.addEventListener('load', send, { once: true });
+}
+
+// Karaktärsbladet rapporterar sin sub-vy — håll rad 2 i synk
+window.addEventListener('message', (e) => {
+  const d = e.data || {};
+  if (d && d.type === 'codex-subtab-changed' && typeof d.tab === 'string') {
+    _codexSubTab = d.tab;
+    if (_codexLastTab === 'character') {
+      document.querySelectorAll('#cx-tabs .cx-subtab').forEach(b => b.classList.toggle('active', b.dataset.subtab === d.tab));
+    }
+  }
+});
 
 // ═══════════════════════════════════════
 // 🚀 INITIERING — körs sist, efter alla const/let-deklarationer
@@ -6739,6 +7001,13 @@ document.addEventListener('keydown', e => {
       <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">🎨 YOUR OWN WORDS (optional)</div>
       <textarea id="avatar-prompt-input" placeholder="Optional: describe exactly what you want painted… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)" style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:'Cinzel',serif;font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>
       <div style="font-size:.72rem;color:var(--bone-dim);margin-top:.35rem">Overrides the auto-built prompt from your sheet — describe exactly what you want painted.</div>
+    </div>
+    <div id="avatar-provider-row" style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
+      <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
+      <select id="avatar-provider-select" class="tts-select" style="flex:1;min-width:0" onchange="avatarProviderChanged(this)" title="Image provider for painting">
+        <option value="stepfun">StepFun — free</option>
+        <option value="wan">Wan 2.7 — Adventurer 🔒</option>
+      </select>
     </div>
     <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
       <button class="av-btn primary" id="avatar-ai-btn" onclick="generateAvatarAction()">✨ Paint new from my words</button>

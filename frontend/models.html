@@ -181,7 +181,7 @@
     <a class="nav-link" href="pricing.html">Paths</a>
     <a class="nav-link active" href="models.html">The Minds</a>
     <a class="nav-link" href="adventure.html">The Crossroads</a>
-    <a class="nav-cta" href="login.html">Enter</a>
+    <a class="nav-cta" href="login.html#gate">Enter</a>
   </div>
 </nav>
 
@@ -189,6 +189,23 @@
   <p class="eyebrow rv">The Grimoire of Minds</p>
   <h1 class="rv">The Minds Behind the Mask</h1>
   <p class="ledger-sub rv">Four minds can sit at your table. Each is a different kind of Dungeon Master — a different weight of thought, a different pace of speech. Here is what each one is made of, and what it is best at.<br><b>Powered by Qwen, DeepSeek &amp; StepFun</b></p>
+
+  <!-- ═══════════════ hur det funkar ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">⚙</span>
+      <h2>How the Table Works</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="model">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="m-role" style="border-top:none;padding-top:0"><span class="ico">🧙</span><span><b>The Dungeon Master</b> — the voice you hear. Every turn, your words go to the DM model, which narrates the world, plays the NPCs and drives the story. This is the model you choose at the model gate when you start a campaign — and you can change it at any time in the settings.</span></div>
+      <div class="m-role"><span class="ico">🦉</span><span><b>The Lorekeeper (Guardian)</b> — the quiet bookkeeper. After every exchange, a separate model reads the scene and updates the world state: HP, gold, items, XP, quests, locations. It works in the background, so you never have to track numbers yourself — the world simply remembers.</span></div>
+      <div class="m-role"><span class="ico">✎</span><span><b>The Extraction model</b> — the scribe that turns free-form actions into mechanics. When you write "I draw my sword and lunge", extraction decides what that means in dice terms, damage and consequence — keeping the 5e rules honest even when you don't use the exact phrasing.</span></div>
+      <div class="m-role"><span class="ico">⏱</span><span><b>Response time</b> — heavier minds think longer. A turn with the fast StepFun 3.7 Flash usually answers in a few seconds; Qwen 3.8 Max may pause several seconds more because it reasons deeply before it speaks. The Lorekeeper and Extraction run in parallel after the DM replies, so they rarely add visible wait — but a long, action-heavy turn can take a little longer overall. Pick the fastest mind that still feels like your storyteller.</span></div>
+    </div>
+  </div>
 
   <!-- ═══════════════ stepfun ═══════════════ -->
   <div class="sec rv">
@@ -358,10 +375,18 @@
             <td>~113 tok/s <span class="dim">(output)</span></td>
             <td>Fast reasoning, long sessions</td>
           </tr>
+          <tr>
+            <td class="mname">Wan 2.7 <span class="dim">(image)</span></td>
+            <td>—</td>
+            <td class="dim">—</td>
+            <td class="dim">—</td>
+            <td>~3–5 s <span class="dim">per image</span></td>
+            <td>Painting avatars — <b>Adventurer tier +</b></td>
+          </tr>
         </tbody>
       </table>
     </div>
-    <p class="note rv"><b>A note on numbers.</b> Context windows and parameter counts come from each model&rsquo;s official release material. Token-per-second figures are independent measurements (Artificial Analysis / Intelligence Index) or the vendor&rsquo;s own prompt-processing figure — real speed at your table varies with load, context length and reasoning level. Free players always travel with StepFun 3.7 Flash; the others unlock on paid paths.</p>
+    <p class="note rv"><b>A note on numbers.</b> Context windows and parameter counts come from each model&rsquo;s official release material. Token-per-second figures are independent measurements (Artificial Analysis / Intelligence Index) or the vendor&rsquo;s own prompt-processing figure — real speed at your table varies with load, context length and reasoning level. Free players always travel with StepFun 3.7 Flash; the others unlock on paid paths. <b>Wan 2.7 image painting</b> unlocks at the Adventurer tier — StepFun painting stays free for every adventurer.</p>
   </div>
 
   <div class="footer rv">

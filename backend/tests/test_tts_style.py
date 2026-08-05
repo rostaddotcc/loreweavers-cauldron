@@ -85,7 +85,11 @@ def test_instruction_capped_at_128():
 # ── Premium-gate i /api/tts ───────────────────────────────────────────────
 
 def test_style_ignored_for_free(client, monkeypatch):
-    """Free-konto: style skickas men backend nollställer → synth får style=''."""
+    """Free-konto: style skickas men backend nollställer → synth får style=''.
+
+    OBS: free → qwen fallbackar numera till stepfun (always free), så stepfun
+    mockas här — själva style-gaten är samma oavsett leverantör.
+    """
     _seed("alice", premium=False)
     _login(client)
     seen = {}
@@ -93,13 +97,14 @@ def test_style_ignored_for_free(client, monkeypatch):
         seen["style"] = style
         return b"ID3fake"
     monkeypatch.setattr(main, "_synth_qwen_tts_retry", fake_synth)
+    monkeypatch.setattr(main, "_synth_stepfun_tts", fake_synth)
     r = client.post("/api/tts", json={"text": "Hej världen", "voice": "male", "provider": "qwen", "style": "scary"})
     assert r.status_code == 200
     assert seen.get("style", "?") == ""
 
 
-def test_stepfun_falls_back_to_qwen_for_free(client, monkeypatch):
-    """Free/tier1: stepfun TTS är låst → tyst fallback till qwen."""
+def test_stepfun_always_free_for_free(client, monkeypatch):
+    """StepFun TTS är ALLTID GRATIS (rostad 2026-08-04) — free behåller stepfun."""
     _seed("alice", premium=False)
     _login(client)
     seen = {}
@@ -113,11 +118,31 @@ def test_stepfun_falls_back_to_qwen_for_free(client, monkeypatch):
     monkeypatch.setattr(main, "_synth_stepfun_tts", fake_step)
     r = client.post("/api/tts", json={"text": "Hej", "voice": "male", "provider": "stepfun"})
     assert r.status_code == 200
-    assert seen.get("provider") == "qwen"  # stepfun → qwen
+    assert seen.get("provider") == "stepfun"  # always free
 
 
-def test_stepfun_allowed_for_tier2(client, monkeypatch):
-    """tier2: stepfun TTS tillåten."""
+def test_qwen_falls_back_to_stepfun_for_free(client, monkeypatch):
+    """Free/tier1: qwen TTS är tier2+ → tyst fallback till stepfun (always free)."""
+    _seed("alice", premium=False)
+    _login(client)
+    seen = {}
+    def fake_qwen(voice, text, style=""):
+        seen["provider"] = "qwen"
+        return b"ID3fake"
+    def fake_step(voice, text, style=""):
+        seen["provider"] = "stepfun"
+        return b"ID3fake"
+    monkeypatch.setattr(main, "_synth_qwen_tts_retry", fake_qwen)
+    monkeypatch.setattr(main, "_synth_stepfun_tts", fake_step)
+    # Unik text — TTS-cachen är processglobal och testet ovan kan ha cachat
+    # samma text för stepfun (annars cache-hit utan synth-anrop).
+    r = client.post("/api/tts", json={"text": "Hej qwen-gate", "voice": "male", "provider": "qwen"})
+    assert r.status_code == 200
+    assert seen.get("provider") == "stepfun"  # qwen → stepfun
+
+
+def test_qwen_allowed_for_tier2(client, monkeypatch):
+    """tier2: qwen TTS tillåten (premium-röst)."""
     _seed("alice", tier="tier2")
     _login(client)
     seen = {}
@@ -129,9 +154,9 @@ def test_stepfun_allowed_for_tier2(client, monkeypatch):
         return b"ID3fake"
     monkeypatch.setattr(main, "_synth_qwen_tts_retry", fake_qwen)
     monkeypatch.setattr(main, "_synth_stepfun_tts", fake_step)
-    r = client.post("/api/tts", json={"text": "Hej", "voice": "male", "provider": "stepfun"})
+    r = client.post("/api/tts", json={"text": "Hej", "voice": "male", "provider": "qwen"})
     assert r.status_code == 200
-    assert seen.get("provider") == "stepfun"  # tier2 behåller stepfun
+    assert seen.get("provider") == "qwen"  # tier2 behåller qwen
 
 
 def test_style_passed_for_premium(client, monkeypatch):

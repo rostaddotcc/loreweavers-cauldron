@@ -5,6 +5,12 @@
 
 **Status:** 🔧 Pre-1.0 · active development · **License:** MIT · **Stack:** Python 3.11 / FastAPI · Vanilla JS (no build step)
 
+## 🎮 Play now
+
+> **Live game: [dnd.rostad.cc](https://dnd.rostad.cc)** — free to play, open beta, no card and no email required to start.
+>
+> Free players get **50 turns a day** (refreshed at midnight) plus **StepFun TTS narration — always free, forever**. Paid tiers (Companion / Adventurer / Lifetime) unlock all DM models, AI-painted avatars, and Qwen TTS. Full pricing on the live site.
+
 The Lore Weaver's Cauldron is a single-player, browser-based D&D 5e campaign engine. Instead of a rulebook and a dice tower, you get a living table: an LLM weaves the narration, plays every NPC, and reacts to whatever you type — while a dedicated *Guardian* module silently handles all the mechanics (dice, damage, XP, items, gold, quests) so the story never has to stop for bookkeeping.
 
 The game speaks **Svenska and English** (campaign-aware, chosen when you start a campaign), carries a retro terminal aesthetic, and keeps a persistent memory of your adventures — facts, NPCs, places, and quests survive across sessions.

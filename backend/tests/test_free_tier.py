@@ -129,10 +129,11 @@ def test_register_creates_free_fields(client):
     u = _user()
     assert u["turn_cap"] == main.DEFAULT_TURN_CAP
     assert u["turns_used"] == 0
-    assert u["turn_bonus"] == 0
+    assert u["turn_bonus"] == main.START_BONUS_TURNS  # 300 startturns
     assert u["reset_date"] == _today()
     assert u["subscription_status"] == "free"
     assert u["subscription_until"] is None
+    assert u["start_bonus_granted"] is True
 
 
 def test_admin_create_adds_free_fields(client):
@@ -148,7 +149,7 @@ def test_admin_create_adds_free_fields(client):
     assert r.status_code == 200, r.text
     u = _user("charlie")
     assert u["turns_used"] == 0
-    assert u["turn_bonus"] == 0
+    assert u["turn_bonus"] == main.START_BONUS_TURNS  # 300 startturns
     assert u["reset_date"] == _today()
     assert u["subscription_status"] == "free"
     assert u["subscription_until"] is None
@@ -167,7 +168,7 @@ def test_turns_used_increments(client):
     assert me.status_code == 200
     body = me.json()
     assert body["turns_used"] == 1
-    assert body["turns_available"] == main.DEFAULT_TURN_CAP - 1
+    assert body["turns_available"] == main.DEFAULT_TURN_CAP + main.START_BONUS_TURNS - 1
 
 
 def test_cap_reached_403(client):
@@ -187,7 +188,8 @@ def test_cap_reached_403(client):
 def test_me_returns_free_fields(client):
     _register(client)
     until = _in_days(30)
-    _patch_user("alice", turn_bonus=3, subscription_status="tier2", subscription_until=until)
+    _patch_user("alice", turn_bonus=3, features={"export": True, "wan1080": True, "all_models": True},
+                models_until=until, subscription_status="tier2", subscription_until=until)
     me = client.get("/api/me")
     assert me.status_code == 200
     body = me.json()
@@ -197,7 +199,10 @@ def test_me_returns_free_fields(client):
     assert body["turn_bonus"] == 3
     assert body["subscription_status"] == "tier2"
     assert body["subscription_until"] == until
-    assert body["period_hours"] == 6  # tier2 = 6-timmarsperiod
+    assert body["period_hours"] == 24  # alla får 50/dag (one-time-modellen)
+    assert body["features"]["export"] is True
+    assert body["features"]["all_models"] is True
+    assert body["features"]["wan1080"] is True
     assert body["turns_available"] == main.DEFAULT_TURN_CAP + 3
 
 
@@ -244,17 +249,18 @@ def test_free_model_clamp(client, llm_mocks):
 def test_premium_model_ok(client, llm_mocks):
     _register(client)
     _make_campaign("alice")
-    _patch_user("alice", subscription_status="tier2", subscription_until=_in_days(30))
+    _patch_user("alice", features={"all_models": True, "export": True, "wan1080": True},
+                models_until=_in_days(30), subscription_status="tier2", subscription_until=_in_days(30))
     r = _chat(client, model="qwen3.8-max")
     assert r.status_code == 200, r.text
     assert llm_mocks["models"] == ["qwen3.8-max"]  # tier2 behåller valet
 
 
 def test_tier1_model_clamped(client, llm_mocks):
-    """tier1 ger avatars + 6h-turns men INTE premium-modeller → klamp till step."""
+    """tier1 (Support 3€) ger export men INTE premium-modeller → klamp till step."""
     _register(client)
     _make_campaign("alice")
-    _patch_user("alice", subscription_status="tier1", subscription_until=_in_days(30))
+    _patch_user("alice", features={"export": True}, subscription_status="free")
     r = _chat(client, model="qwen3.8-max")
     assert r.status_code == 200, r.text
     assert llm_mocks["models"] == ["step-3.7-flash"]
@@ -283,12 +289,27 @@ def test_lifetime_unlimited(client):
 
 
 def test_tier2_not_unlimited(client):
-    """tier2 = 50 turns per 6-timmarsperiod — INTE obegränsat (det är lifetime)."""
+    """tier2 (Patron 10€) = 50 turns/dag + köpta bonus — INTE obegränsat (det är lifetime)."""
     _register(client)
-    _patch_user("alice", subscription_status="tier2", subscription_until=_in_days(30),
-                turn_cap=50, turns_used=100, turn_bonus=0)
+    _patch_user("alice", features={"all_models": True, "export": True, "wan1080": True},
+                models_until=_in_days(30), subscription_status="tier2", subscription_until=_in_days(30),
+                turn_cap=50, turns_used=100, turn_bonus=0, reset_date=_in_days(1))  # framtida reset → ingen daglig rollover
     assert main._tier_for("alice") == "tier2"
     assert main._turns_available("alice") == 0  # 100 använda > cap 50
+
+
+def test_patron_models_expire(client):
+    """Patron-modellerna (all_models) gäller 30 dagar — sedan faller kontot
+    tillbaka till tier1 (export kvar) eller free."""
+    _register(client)
+    _patch_user("alice", features={"all_models": True, "export": True, "wan1080": True},
+                models_until=_in_days(-1), subscription_status="tier2", subscription_until=_in_days(-1),
+                turn_cap=50, turns_used=0)
+    # modellerna gick ut → inte längre tier2
+    assert main._tier_for("alice") != "tier2"
+    # export är permanent → tier1 (Support)
+    assert main._tier_for("alice") == "tier1"
+    assert main._clamp_player_model("qwen3.8-max", tier=main._tier_for("alice")) == "step-3.7-flash"
 
 
 def test_expired_premium_demoted(client):
@@ -303,16 +324,17 @@ def test_expired_premium_demoted(client):
 # ── Bakåtkompatibilitet ──────────────────────────────────────────────────
 
 def test_legacy_account_backfilled(client):
-    """Konto utan FAS A-fält → setdefault fyller i utan krasch."""
+    """Konto utan FAS A-fält → setdefault fyller i utan krasch + får startbonus."""
     main.save_users({
         "old_timer": {"password_hash": hash_password("secret123"), "role": "player", "turn_cap": 50},
     })
-    assert main._turns_available("old_timer") == 50
+    assert main._turns_available("old_timer") == main.DEFAULT_TURN_CAP + main.START_BONUS_TURNS
     u = _user("old_timer")
     assert u["turns_used"] == 0
-    assert u["turn_bonus"] == 0
+    assert u["turn_bonus"] == main.START_BONUS_TURNS  # migrerad startbonus
     # Backfill sätter reset_date=today; första kollen rullar direkt till +1
     # (idag >= reset_date) — utan att förlora några turns.
     assert u["reset_date"] == _in_days(1)
     assert u["subscription_status"] == "free"
     assert u["subscription_until"] is None
+    assert u["start_bonus_granted"] is True

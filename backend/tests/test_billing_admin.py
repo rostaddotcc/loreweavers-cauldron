@@ -18,6 +18,7 @@ Ingen riktig data rörs: users.json + billing-ledgern pekas om till tmp
 (state_manager.CAMPAIGNS_DIR + main.CAMPAIGNS_DIR).
 """
 
+import json
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -100,6 +101,8 @@ def _seed_player(username="alice", **fields):
         "reset_date": _today(),
         "subscription_status": "free",
         "subscription_until": None,
+        "features": {},
+        "start_bonus_granted": True,  # undvik att migreringen lägger på +300 i testerna
     })
     u.update(fields)
     main.save_users(users)
@@ -219,7 +222,7 @@ def test_billing_empty_ledger(client, ledger_file):
     _seed_admin()
     r = client.get("/api/admin/billing", cookies={"morkrets_token": _atok()})
     assert r.status_code == 200
-    assert r.json() == {"mrr": 0, "transactions": 0, "total": 0, "per_user": {}, "ledger": []}
+    assert r.json() == {"mrr": 0, "transactions": 0, "total": 0, "per_user": {}, "ledger": [], "churn": {}}
 
 
 def test_billing_403_non_admin(client):
@@ -342,8 +345,8 @@ def test_subscription_lifetime_unlimited(client):
     assert main._turns_available("alice") == 999999
 
 
-def test_subscription_tier1_sets_reset_ts(client):
-    """tier1 → 50 turns / 6 h: reset_ts sätts om det saknas."""
+def test_subscription_tier1_sets_daily_rollover(client):
+    """one-time-modellen: tier1 (Support) får 50 turns/dag — ingen reset_ts (6h)."""
     _seed_admin()
     _seed_player("alice", turn_cap=50)
     r = client.put("/api/admin/user/alice/subscription",
@@ -352,7 +355,8 @@ def test_subscription_tier1_sets_reset_ts(client):
     assert r.status_code == 200, r.text
     u = main.load_users()["alice"]
     assert u["subscription_status"] == "tier1"
-    assert u.get("reset_ts")  # sätts för 6-timmars-period
+    assert not u.get("reset_ts")  # ingen 6-timmars-period längre
+    assert main._period_hours_for(main._tier_for("alice")) == 24
     assert main._tier_for("alice") == "tier1"
     assert main._turns_available("alice") == main.DEFAULT_TURN_CAP
 
@@ -404,3 +408,108 @@ def test_admin_stats_has_billing_fields(client, ledger_file):
     assert row["turn_bonus"] == 4
     assert row["period_turns_used"] == 2
     assert row["revenue"] == 105
+
+
+# ── E-post krävs före köp (rostad 2026-08-04) ─────────────────────────────
+
+def test_checkout_requires_email(client, monkeypatch, ledger_file):
+    """Utan e-post på kontot → 400 med detail.email_required (inget Stripe-anrop)."""
+    _seed_admin()
+    _seed_player("alice")  # ingen email
+    called = []
+    async def fake_post(path, data):
+        called.append(path)
+        return {"url": "https://checkout.stripe.test/x"}
+    monkeypatch.setattr(main, "STRIPE_SECRET_KEY", "sk_test_x")
+    monkeypatch.setattr(main, "STRIPE_PRICES", {"tier1": "price_x", "tier2": "price_y", "lifetime": "price_z"})
+    monkeypatch.setattr(main, "_stripe_post", fake_post)
+    r = client.post("/api/billing/checkout", json={"tier": "tier1"},
+                    cookies={"morkrets_token": _ptok()})
+    assert r.status_code == 400
+    body = r.json()
+    assert body["detail"]["email_required"] is True
+    assert called == []  # Stripe-session skapades aldrig
+
+
+def test_checkout_ok_with_email(client, monkeypatch, ledger_file):
+    """Med e-post på kontot → Stripe-session skapas."""
+    _seed_admin()
+    _seed_player("alice", email="alice@example.com")
+    seen = {}
+    async def fake_post(path, data):
+        seen["path"] = path
+        return {"url": "https://checkout.stripe.test/x"}
+    monkeypatch.setattr(main, "STRIPE_SECRET_KEY", "sk_test_x")
+    monkeypatch.setattr(main, "STRIPE_PRICES", {"tier1": "price_x", "tier2": "price_y", "lifetime": "price_z"})
+    monkeypatch.setattr(main, "_stripe_post", fake_post)
+    r = client.post("/api/billing/checkout", json={"tier": "tier1"},
+                    cookies={"morkrets_token": _ptok()})
+    assert r.status_code == 200
+    assert seen.get("path") == "checkout/sessions"
+    assert r.json()["url"] == "https://checkout.stripe.test/x"
+
+
+def test_me_has_email_flag(client):
+    """/api/me rapporterar has_email (maskerad) — true med e-post, false utan."""
+    _seed_admin()
+    _seed_player("alice", email="alice@example.com")
+    r = client.get("/api/me", cookies={"morkrets_token": _ptok()})
+    assert r.status_code == 200
+    assert r.json()["has_email"] is True
+    assert "alice@example.com" not in json.dumps(r.json())
+    _seed_player("bob")
+    bobtok = create_token("bob", "player")
+    r = client.get("/api/me", cookies={"morkrets_token": bobtok})
+    assert r.json()["has_email"] is False
+
+
+def test_put_me_email(client):
+    """PUT /api/me/email sparar e-post och validerar formatet."""
+    _seed_admin()
+    _seed_player("alice")
+    r = client.put("/api/me/email", json={"email": "ALICE@Example.COM "},
+                   cookies={"morkrets_token": _ptok()})
+    assert r.status_code == 200
+    assert r.json()["email"] == "alice@example.com"
+    assert main.load_users()["alice"].get("email") == "alice@example.com"
+    r = client.put("/api/me/email", json={"email": "not-an-email"},
+                   cookies={"morkrets_token": _ptok()})
+    assert r.status_code == 400
+
+
+# ── Stripe Customer Portal (säg upp / hantera sub) ─────────────────────────
+
+def test_portal_requires_customer(client, monkeypatch):
+    """Utan stripe_customer_id → 400 med detail.no_customer (ingen portal)."""
+    _seed_admin()
+    _seed_player("alice", email="alice@example.com")
+    monkeypatch.setattr(main, "STRIPE_SECRET_KEY", "sk_test_x")
+    called = []
+    async def fake_post(path, data):
+        called.append(path)
+        return {"url": "https://billing.stripe.test/p/session"}
+    monkeypatch.setattr(main, "_stripe_post", fake_post)
+    r = client.post("/api/billing/portal", cookies={"morkrets_token": _ptok()})
+    assert r.status_code == 400
+    assert r.json()["detail"]["no_customer"] is True
+    assert called == []
+
+
+def test_portal_creates_session(client, monkeypatch):
+    """Med stripe_customer_id → portal-session skapas med return_url."""
+    _seed_admin()
+    _seed_player("alice", email="alice@example.com",
+                 stripe_customer_id="cus_abc", stripe_subscription_id="sub_1")
+    seen = {}
+    async def fake_post(path, data):
+        seen["path"] = path
+        seen["data"] = data
+        return {"url": "https://billing.stripe.test/p/session"}
+    monkeypatch.setattr(main, "STRIPE_SECRET_KEY", "sk_test_x")
+    monkeypatch.setattr(main, "_stripe_post", fake_post)
+    r = client.post("/api/billing/portal", cookies={"morkrets_token": _ptok()})
+    assert r.status_code == 200
+    assert seen.get("path") == "billing_portal/sessions"
+    assert seen.get("data", {}).get("customer") == "cus_abc"
+    assert "return_url" in seen.get("data", {})
+    assert r.json()["url"] == "https://billing.stripe.test/p/session"

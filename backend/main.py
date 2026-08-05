@@ -141,7 +141,6 @@ from models import (
     DM_CORE_PROMPT,
     DM_NARRATIVE_PROMPT,
     DM_PROMPT_VERSION,
-    ORACLE_PROMPT,
     get_api_key,
     get_model,
     list_models_for_frontend,
@@ -154,6 +153,16 @@ from atmosphere import (
 from locations import get_locations_with_travel, place_location, clean_location_name, find_location, locations_match
 from logbook import build_log_prompt
 from state_manager import CAMPAIGNS_DIR, VAULTS_DIR, CampaignStore, CharacterVault
+
+# Spelarprofilens avatar (konto) — SEPARAT från äventyrarens kort. Genereras
+# alltid med StepFun step-image-edit-2 (gratis). (2026-08-05)
+# Beräknas lazy via CAMPAIGNS_DIR så testerna kan monkeypatcha sökvägen.
+
+
+def _user_avatar_path(username: str) -> Path:
+    return (CAMPAIGNS_DIR.parent / "user_avatars") / f"{username}.png"
+
+
 import rag
 from extraction import FactRegister, extract_facts, format_facts_block
 from guardian import (
@@ -974,6 +983,13 @@ _USER_LOCK = threading.Lock()
 
 # Default turn-tak för NYA konton (0 = oändligt). Admin höjer via admin-vyn.
 DEFAULT_TURN_CAP = 50
+# STARTBONUS: nya konton (och befintliga free-konton vid migrering) får
+# 300 turns direkt (turn_bonus förbrukas före de dagliga 50).
+START_BONUS_TURNS = 300
+# Patron (10€): premiummodell-access gäller i 30 dagar från köpet.
+PATRON_MODEL_DAYS = 30
+# Patron (10€): Wan-bilder max 10/dag; varje bild drar en turn.
+WAN_DAILY_LIMIT = 10
 
 # Globalt tak för nya registreringar (skript-skydd; per-IP funkar inte bakom proxy).
 _REGISTER_LIMIT = 30          # max registreringar…
@@ -1025,6 +1041,16 @@ _FREE_FIELD_DEFAULTS = {
     "reset_date": None,  # sätts dynamiskt till _today_str()
     "subscription_status": "free",
     "subscription_until": None,
+    # One-time-förmåner (2026-08-05): features = dict med flaggor.
+    #   export:     3€ — kampanjexport + forge-karaktärs-export
+    #   wan1080:   10€ — Wan 2.7 Pro (2048²) avatarer
+    #   all_models:10€ — premiummodeller t.o.m. models_until
+    #   models_until: ISO-datum för när premiummodellerna går ut
+    "features": {},
+    "start_bonus_granted": False,  # har kontot fått sina 300 startturns?
+    # Wan-bildkvot (10/dag): wan_used_today + wan_reset_date
+    "wan_used_today": 0,
+    "wan_reset_date": None,
 }
 
 
@@ -1059,43 +1085,82 @@ def _ensure_user_fields(username: str, udata: dict) -> dict:
         return udata
 
 
+def _grant_start_bonus_if_needed(username: str, udata: dict) -> dict:
+    """Ge kontot 300 startturns EN gång (nya konton får dem vid registrering;
+    befintliga konton migreras lazy här). Lifetime (turn_cap 0) skippas —
+    de har ∞ ändå. Körs innanför eget lås; anroparens udata uppdateras ej —
+    returnera färsk rad om den ändrades."""
+    try:
+        if udata.get("start_bonus_granted"):
+            return udata
+        if int(udata.get("turn_cap", 0) or 0) <= 0:
+            return udata
+        with _USER_LOCK:
+            users = load_users()
+            u = users.get(username)
+            if isinstance(u, dict) and not u.get("start_bonus_granted") and int(u.get("turn_cap", 0) or 0) > 0:
+                u["start_bonus_granted"] = True
+                u["turn_bonus"] = int(u.get("turn_bonus", 0) or 0) + START_BONUS_TURNS
+                save_users(users)
+                return u
+        return udata
+    except Exception:
+        return udata
+
+
 # ═══════════════════════════════════════
 # TIERS — free < tier1 < tier2 < lifetime
 # ═══════════════════════════════════════
 # free      — 50 turns/dag (midnatt), bara step-3.7-flash, StepFun TTS (Qwen 🔒 Tier 2),
 #             inga avatarer (varken AI-genererade eller uppladdade)
-# tier1     — 50 turns var 6:e timme, AI-avatarer + avatar-uppladdning (hero + NPCs)
-# tier2     — allt i tier1 + alla spelarmodeller (deepseek/qwen) + Qwen TTS + narrator-style
-# lifetime  — allt i tier2 + obegränsade turns (turn_cap 0)
-# Legacy "premium" i users.json → behandlas som tier2 (bakåtkompatibilitet).
-
+# ═══════════════════════════════════════
+# TIERS — one-time-förmåner (2026-08-05, ersätter subskriptionsmodellen)
+# ═══════════════════════════════════════
+# free      — 300 startturns, sedan 50 turns/dag; bara step-3.7-flash; StepFun TTS
+# tier1     — 3€ Support: +300 turns, export + forge-export (features.export)
+# tier2     — 10€ Patron: +500 turns, alla modeller 30 dagar, Wan 2.7 Pro 1080²
+# lifetime  — ∞ turns (turn_cap 0), allt (befintliga 100€-köpare)
+# Legacy "premium" → tier2 (bakåtkompatibilitet).
 TIER_ORDER = ("free", "tier1", "tier2", "lifetime")
 
-# ── Grundarerbjudande (2026-08-04 → 2026-08-11) ──
-# Grundarerbjudande: Betala 1 månad, få 2 gratismånader (Companion/tier1).
-# Adventurer/tier2 + Lifetime: se pricing-priserna (Lifetime 50€ under promo).
-# Efter deadline: vanlig 1-månads-prenumeration.
-PROMO_UNTIL_DATE = date(2026, 8, 11)
-PROMO_MONTHS = {"tier1": 3, "tier2": 1}  # totala månader vid checkout under promo — bara tier1 får gratismånader (rostad 2026-08-04)
+# Grundarerbjudande försvann 2026-08-05 med subskriptionsmodellen.
+PROMO_UNTIL_DATE = date(2026, 8, 11)  # legacy — används inte längre av checkout
+PROMO_MONTHS = {"tier1": 3, "tier2": 1}  # legacy — används inte längre av checkout
+
 
 def _promo_months_for(tier: str) -> int:
-    """Antal månader en ny prenumeration ger just nu (promo- eller normal)."""
-    if datetime.now(timezone.utc).date() <= PROMO_UNTIL_DATE:
-        return PROMO_MONTHS.get(tier, 1)
-    return 1
+    return PROMO_MONTHS.get(tier, 1)
 
-# Betalda tiers är giltiga t.o.m. subscription_until (sista giltiga dag = until).
-# Turn-period (timmar) per tier: free = 24h (daglig), tier1/tier2 = 6h, lifetime = ∞ (0).
+
+# Turn-period (timmar): ALLA får 50/dag (24h) — tier1/tier2 ger inga extra
+# dagliga turns längre (de får bonus-turns vid köp istället). Lifetime = ∞ (0).
 def _period_hours_for(tier: str) -> int:
-    return 6 if tier in ("tier1", "tier2") else 0 if tier == "lifetime" else 24
+    return 0 if tier == "lifetime" else 24
+
+
+def _features_for(username: str) -> dict:
+    """Kontots one-time-förmåner (features-dict). Alltid en dict."""
+    try:
+        udata = load_users().get(username, {})
+        if not isinstance(udata, dict):
+            return {}
+        f = udata.get("features")
+        return f if isinstance(f, dict) else {}
+    except Exception:
+        return {}
 
 
 def _tier_for(username: str) -> str:
-    """free|tier1|tier2|lifetime. Betalda tiers = subscription_status satt OCH
-    subscription_until ej passerad (sista giltiga dag = until-datumet). Utgånget
-    betalt tier → demote till free i users.json (status=free).
+    """free|tier1|tier2|lifetime.
 
-    Legacy 'premium' → tier2 (bakåtkompatibilitet med tidigare fas D)."""
+    one-time-modellen (2026-08-05):
+      - lifetime (turn_cap 0) → lifetime, upphör aldrig
+      - features.all_models aktiv (models_until ej passerad) → tier2
+      - features.export → tier1
+      - annars free
+    Legacy subscription_status (subscription_until) hedras tills den går ut
+    (befintliga prenumeranter), sedan demote till free — men features vinner.
+    """
     try:
         udata = load_users().get(username, {})
         if not isinstance(udata, dict):
@@ -1104,26 +1169,41 @@ def _tier_for(username: str) -> str:
         status = (udata.get("subscription_status") or "free").strip().lower()
         if status == "premium":
             status = "tier2"
-        if status not in TIER_ORDER or status == "free":
-            return "free"
-        # Lifetime är oändlig — upphör ALDRIG, kräver inget until-datum.
         if status == "lifetime":
             return "lifetime"
-        until = udata.get("subscription_until")
-        if until:
-            try:
-                until_date = datetime.fromisoformat(str(until)).date()
-            except ValueError:
-                until_date = None
-            if until_date is not None and until_date >= _today_date():
-                return status
-        # Betalt tier utgånget (eller utan datum) → demote
-        with _USER_LOCK:
-            users = load_users()
-            u = users.get(username)
-            if isinstance(u, dict) and u.get("subscription_status") not in (None, "free"):
-                u["subscription_status"] = "free"
-                save_users(users)
+        today = _today_date()
+        features = udata.get("features") or {}
+        if not isinstance(features, dict):
+            features = {}
+        # Patron-förmåner: premiummodeller t.o.m. models_until (30 dagar)
+        if features.get("all_models"):
+            mu = udata.get("models_until")
+            if mu:
+                try:
+                    if datetime.fromisoformat(str(mu)).date() >= today:
+                        return "tier2"
+                except ValueError:
+                    pass
+        # Support-förmåner: export (permanent efter köp)
+        if features.get("export"):
+            return "tier1"
+        # Legacy-subscription (befintliga prenumeranter) — hedra tills den går ut
+        if status in TIER_ORDER and status != "free":
+            until = udata.get("subscription_until")
+            if until:
+                try:
+                    until_date = datetime.fromisoformat(str(until)).date()
+                except ValueError:
+                    until_date = None
+                if until_date is not None and until_date >= today:
+                    return status
+            # Betalt tier utgånget (eller utan datum) → demote
+            with _USER_LOCK:
+                users = load_users()
+                u = users.get(username)
+                if isinstance(u, dict) and u.get("subscription_status") not in (None, "free"):
+                    u["subscription_status"] = "free"
+                    save_users(users)
         return "free"
     except Exception:
         return "free"
@@ -1200,6 +1280,7 @@ def _turns_available(username: str) -> int:
         if not isinstance(udata, dict):
             udata = {}
         udata = _ensure_user_fields(username, udata)
+        udata = _grant_start_bonus_if_needed(username, udata)
         if _tier_for(username) == "lifetime":
             return 999999
         udata = _maybe_rollover(username, udata)
@@ -1282,12 +1363,45 @@ def _consume_turn(username: str) -> None:
         save_users(users)
 
 
+def _wan_model_and_size(username: str) -> tuple[str, str]:
+    """Patron (10€, features.wan1080) → Wan 2.7 Pro 2048²; lifetime → Pro.
+    Annars standard wan2.7-image 1024² (gratis StepFun-vägen används normalt)."""
+    f = _features_for(username)
+    if f.get("wan1080") or _tier_for(username) == "lifetime":
+        return "wan2.7-image-pro", "2048*2048"
+    return "wan2.7-image", "1024*1024"
+
+
+def _consume_wan_quota(username: str) -> None:
+    """Wan-bildkvot: max 10 bilder/dag (wan_used_today rollover vid datumbyte).
+    Varje Wan-bild drar dessutom EN turn (bilder räknas som turns). 403 om
+    kvoten eller turn-saldot är slut. Körs strax innan själva genereringen."""
+    with _USER_LOCK:
+        users = load_users()
+        u = users.get(username)
+        if not isinstance(u, dict):
+            raise HTTPException(404, "Användare saknas")
+        today = _today_str()
+        if u.get("wan_reset_date") != today:
+            u["wan_used_today"] = 0
+            u["wan_reset_date"] = today
+        used = int(u.get("wan_used_today", 0) or 0)
+        if used >= WAN_DAILY_LIMIT:
+            raise HTTPException(403, f"Wan daily limit reached ({WAN_DAILY_LIMIT} images/day). Try again tomorrow.")
+        u["wan_used_today"] = used + 1
+        save_users(users)
+    # Bilden räknas som en turn — kvot + turn-saldo måste räcka
+    _gate_turn_quota(username)
+    _consume_turn(username)
+
+
 def _user_free_info(username: str) -> dict:
     """FAS A: periodbaserad turn-info för /api/me (backfill + rollover applicerade)."""
     udata = load_users().get(username, {})
     if not isinstance(udata, dict):
         udata = {}
     udata = _ensure_user_fields(username, udata)
+    udata = _grant_start_bonus_if_needed(username, udata)
     tier = _tier_for(username)
     if tier != "lifetime":
         udata = _maybe_rollover(username, udata)
@@ -1304,6 +1418,14 @@ def _user_free_info(username: str) -> dict:
         "subscription_until": udata.get("subscription_until"),
         "turns_available": _turns_available(username),
         "period_hours": _period_hours_for(tier),
+        "features": {
+            "export": bool((udata.get("features") or {}).get("export")),
+            "all_models": _tier_for(username) in ("tier2", "lifetime"),
+            "models_until": udata.get("models_until"),
+            "wan1080": bool((udata.get("features") or {}).get("wan1080")) or _tier_for(username) == "lifetime",
+            "wan_used_today": int(udata.get("wan_used_today", 0) or 0),
+            "wan_daily_limit": WAN_DAILY_LIMIT,
+        },
     }
 
 # Atmosfär-subagent: snabb modell för ASCII-art
@@ -1314,7 +1436,7 @@ EXTRACTION_MODEL = os.getenv("EXTRACTION_MODEL", "step-3.7-flash")
 # (NPC-avslöjanden, implicita relationsändringar, karaktärsuppdateringar)
 GUARDIAN_MODEL = os.getenv("GUARDIAN_MODEL", "step-3.7-flash")
 
-# Standardmodell för icke-admin-spelare (DM + karaktär + oracle).
+# Standardmodell för icke-admin-spelare (DM + karaktär).
 # StepFun 3.7 Flash är default — spelaren måste aktivt välja annan modell.
 DEFAULT_PLAYER_MODEL = "step-3.7-flash"
 # Modeller som icke-admin-spelare får välja mellan
@@ -1981,10 +2103,14 @@ async def register(req: RegisterRequest, response: Response):
             "turn_cap": DEFAULT_TURN_CAP,
             # FAS A: periodbaserad turn-räkning (30 dagar från reset_date)
             "turns_used": 0,
-            "turn_bonus": 0,
+            "turn_bonus": START_BONUS_TURNS,  # 300 startturns (2026-08-05)
             "reset_date": _today_str(),
             "subscription_status": "free",
             "subscription_until": None,
+            "features": {},
+            "start_bonus_granted": True,  # nya konton får bonusen direkt
+            "wan_used_today": 0,
+            "wan_reset_date": None,
         }
         if email:
             users[username]["email"] = email
@@ -2240,6 +2366,7 @@ async def me(morkrets_token: str | None = Cookie(None)):
         "turns_available": free_info["turns_available"],
         "period_hours": free_info["period_hours"],
         "reset_ts": free_info.get("reset_ts"),
+        "features": free_info.get("features", {}),
         "total_tokens": total_tokens,
         "total_campaigns": total_campaigns,
         # Utseende (tema + typsnitt) — persistas per konto så det följer med
@@ -2249,6 +2376,8 @@ async def me(morkrets_token: str | None = Cookie(None)):
         # E-post — krävs innan köp (rostad 2026-08-04). Maskerad i /api/me
         # (admin-vyn ser hela via /api/admin/stats).
         "has_email": bool((udata.get("email") or "").strip()),
+        # Spelarprofilens avatar (konto — separat från äventyraren)
+        "has_avatar": bool(_user_avatar_path(username).exists()),
     }
 
 
@@ -2319,42 +2448,6 @@ async def dice(req: DiceRequest, morkrets_token: str | None = Cookie(None)):
         return dice_roll(req.notation)
     except ValueError as e:
         raise HTTPException(400, str(e))
-
-
-# ═══════════════════════════════════════
-# REGELORAKLET — Qwen-driven (ersätter hårdkodade svar)
-# ═══════════════════════════════════════
-
-
-class OracleRequest(BaseModel):
-    question: str
-    model_id: str = "step-3.7-flash"
-
-
-@app.post("/api/oracle")
-async def oracle(req: OracleRequest, morkrets_token: str | None = Cookie(None)):
-    """Ställ en regelfråga till Regeloraklet (LLM)."""
-    payload = _get_current_user(morkrets_token)
-    # Icke-admin spelare begränsas till tillåtna modeller; free-tier → step-3.7-flash (FAS A)
-    if payload.get("role") != "admin":
-        req.model_id = _clamp_player_model(req.model_id, tier=_tier_for(payload["sub"]))
-    if not req.question.strip():
-        raise HTTPException(400, "Ställ en fråga först")
-    try:
-        answer = await _call_llm(
-            req.model_id,
-            [
-                {"role": "system", "content": ORACLE_PROMPT},
-                {"role": "user", "content": req.question},
-            ],
-            temperature=0.4,
-            max_tokens=300,
-        )
-    except HTTPException:
-        raise
-    except (ValueError, RuntimeError) as e:
-        raise HTTPException(502, f"Oraklet tiger: {e}")
-    return {"answer": answer.strip()}
 
 
 # ═══════════════════════════════════════
@@ -3088,18 +3181,45 @@ def _tts_model_label(provider: str) -> str:
 
 @app.post("/api/campaign/tts-settings")
 async def set_tts_settings(req: dict, morkrets_token: str | None = Cookie(None)):
-    """Spara TTS-leverantör per kampanj (state.meta.tts_provider)."""
+    """Spara TTS-inställningar per kampanj (state.meta.tts_*) — provider,
+    röst (kön), berättar-stil, egen stil-fras, autoplay och hastighet.
+    Valen följer med när spelaren återvänder till kampanjen, på alla enheter."""
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
-    provider = str((req or {}).get("provider", "")).strip().lower()
-    if provider not in TTS_PROVIDERS:
+    provider = str((req or {}).get("provider", "") or "").strip().lower()
+    if provider and provider not in TTS_PROVIDERS:
         raise HTTPException(400, "Okänd TTS-leverantör")
     state = store.get(username)
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
-    state.setdefault("meta", {})["tts_provider"] = provider
+    meta = state.setdefault("meta", {})
+    if provider:
+        meta["tts_provider"] = provider
+    # Röst (kön) — male/female
+    voice = str((req or {}).get("voice", "") or "").strip().lower()
+    if voice in ("male", "female"):
+        meta["tts_voice"] = voice
+    # Berättar-stil: '' | happy | calm | scary | custom
+    style = str((req or {}).get("style", "") or "").strip()
+    if style in ("", "happy", "calm", "scary", "custom"):
+        meta["tts_style"] = style
+    # Egen stil-fras (max 120 tecken — backend gate-ar på tier i /api/tts)
+    style_custom = str((req or {}).get("style_custom", "") or "").strip()[:120]
+    if "style_custom" in (req or {}):
+        meta["tts_style_custom"] = style_custom
+    # Autoplay ('1'/'0')
+    autoplay = str((req or {}).get("autoplay", "") or "").strip()
+    if autoplay in ("0", "1"):
+        meta["tts_autoplay"] = autoplay
+    # Hastighets-index (0..4)
+    try:
+        speed = int((req or {}).get("speed", -1))
+    except (TypeError, ValueError):
+        speed = -1
+    if 0 <= speed <= 4:
+        meta["tts_speed"] = speed
     store.save(state)
-    return {"ok": True, "provider": provider}
+    return {"ok": True, "provider": provider, "saved": {k: meta.get(k) for k in ("tts_provider", "tts_voice", "tts_style", "tts_style_custom", "tts_autoplay", "tts_speed")}}
 
 
 # ═══════════════════════════════════════
@@ -4130,6 +4250,7 @@ Return ONLY valid JSON (no markdown):
   "items_add": [{"name": "", "type": "", "qty": 1}],
   "quest_updates": [{"name": "", "new_status": "aktiv|slutförd|misslyckad"}],
   "hp_set": null,
+  "spell_slots_set": {"current": 2, "max": 2},
   "set_day": null,
   "day_description": "",
   "report": "A short summary of what you changed and why (shown to the player)"
@@ -4139,6 +4260,11 @@ Rules:
 - Only include fields that need changes. Omit or null for no change.
 - npc_remove: exact names to delete (case-insensitive match).
 - For duplicates: keep the BEST entry, remove the rest.
+- hp_set: set the character's current HP (e.g. after a long rest: hp_set = max HP).
+- spell_slots_set: set the character's spell slots {current, max}. current = slots
+  available right now, max = total. After a long rest, a caster's slots are fully
+  restored: spell_slots_set = {"current": <max>, "max": <max>}. Also use this when
+  the player learns new spells, levels up, or asks to refill/reduce slots.
 - report: ALWAYS fill this — it's shown to the player as the Lorekeeper's response.
 - Be conservative: only change what the player asked for.
 """
@@ -4341,6 +4467,19 @@ async def _guardian_manual_correction(
         hp = ch.setdefault("hp", {})
         hp["current"] = int(hp_set)
         report_lines.append(f"💚 **HP set to:** {hp_set}/{hp.get('max', '?')}")
+
+    # Spell slots override (fix 2026-08-05 — Guardian kunde inte återställa
+    # slots via manual correction: påstod det i text men applicerade inget,
+    # eftersom spell_slots inte fanns i korrigerings-JSON:en.)
+    ss_set = data.get("spell_slots_set") or data.get("spell_slots")
+    if isinstance(ss_set, dict):
+        ch = state.get("character", {})
+        ss = ch.setdefault("spell_slots", {"current": 0, "max": 0})
+        if "max" in ss_set:
+            ss["max"] = int(ss_set["max"])
+        if "current" in ss_set:
+            ss["current"] = int(ss_set["current"])
+        report_lines.append(f"🔮 **Spell slots set to:** {ss.get('current', 0)}/{ss.get('max', 0)}")
 
     # Dag-avancering (set_day) — uppdaterar world.day + day_log + journal-entry
     set_day = data.get("set_day")
@@ -6098,6 +6237,30 @@ async def vault_list(morkrets_token: str | None = Cookie(None)):
     return {"ok": True, "characters": [_vault_summary(e) for e in entries]}
 
 
+@app.get("/api/vault/export")
+async def vault_export(morkrets_token: str | None = Cookie(None)):
+    """Exportera alla valv-karaktärer (Forge) som JSON — 3€ Support-förmån."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    if payload.get("role") != "admin" and _tier_for(username) not in ("tier1", "tier2", "lifetime"):
+        raise HTTPException(
+            403,
+            "Forge export is a Support feature (3€) — support the Cauldron to export your heroes.",
+        )
+    entries = vault.list(username)
+    data = {
+        "exported_at": _now_iso(),
+        "user": username,
+        "characters": entries,
+    }
+    content = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+    return Response(
+        content=content,
+        media_type="application/json",
+        headers={"Content-Disposition": 'attachment; filename="cauldron-forge-export.json"'},
+    )
+
+
 @app.get("/api/vault/characters/{char_id}")
 async def vault_get(char_id: str, morkrets_token: str | None = Cookie(None)):
     """Fullständig vault-post (inspektionsvy)."""
@@ -6244,8 +6407,17 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
 
-    # TIERS: AI-avatarer är tier1+ (free → hänvisa till uppgradering)
-    _require_avatar_tier(payload, username)
+    # TIERS: StepFun-valv-avatarer är gratis för alla; Wan 2.7 = Patron+ (10€) (2026-08-05)
+    provider = str((body or {}).get("provider", "") or "").strip().lower()
+    if provider not in ("stepfun", "wan"):
+        provider = "stepfun"
+    if provider == "wan" and _tier_for(username) not in ("tier2", "lifetime"):
+        raise HTTPException(
+            403,
+            "Wan 2.7 painting is a Patron feature (10€) — upgrade to paint with Wan.",
+        )
+    if provider == "wan":
+        _consume_wan_quota(username)  # 10 bilder/dag; varje bild = 1 turn
 
     entry = vault.get(username, char_id)
     if not entry:
@@ -6281,7 +6453,7 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
 
     api_key = os.getenv("STEPFUN_API_KEY")
     base_url = os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.ai/step_plan/v1")
-    if not api_key:
+    if provider != "wan" and not api_key:
         raise HTTPException(500, "STEPFUN_API_KEY missing on the server")
 
     av_dir = vault.avatars_dir(username)
@@ -6292,8 +6464,49 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
         if p.exists():
             existing_path = p
 
+    content: bytes = b""
     try:
-        if existing_path and body.get("mode") == "edit":
+        if provider == "wan":
+            # Wan 2.7 (Token Plan) — text-to-image. Patron får Wan 2.7 Pro
+            # (2048², features.wan1080), övriga standard 1024².
+            wan_model, wan_size = _wan_model_and_size(username)
+            wan_api_key = os.getenv("DASHSCOPE_API_KEY") or os.getenv("ALIBABA_TOKEN_PLAN_API_KEY")
+            wan_base = os.getenv(
+                "WAN_BASE_URL",
+                "https://token-plan.ap-southeast-1.maas.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
+            )
+            if not wan_api_key:
+                raise HTTPException(500, "DASHSCOPE_API_KEY missing on the server (Wan needs the Token Plan key)")
+            wan_prompt = prompt
+            if existing_path and body.get("mode") == "edit":
+                wan_prompt = _trim_prompt(
+                    "Reimagine this character freely from their current story and appearance — "
+                    + prompt
+                    + " You may change anything: face, species, form, clothes and art style. Do not preserve the old face."
+                )
+            async with httpx.AsyncClient(timeout=150) as client:
+                resp = await client.post(
+                    wan_base,
+                    headers={"Content-Type": "application/json", "Authorization": f"Bearer {wan_api_key}"},
+                    json={
+                        "model": wan_model,
+                        "input": {"messages": [{"role": "user", "content": [{"text": wan_prompt}]}]},
+                        "parameters": {"size": wan_size, "n": 1, "watermark": False, "thinking_mode": False, "seed": seed},
+                    },
+                )
+            if resp.status_code != 200:
+                logger.error("🎨 Vault-Wan-fel: HTTP %d %s", resp.status_code, resp.text[:400])
+                raise HTTPException(502, f"Wan error ({resp.status_code})")
+            wdata = resp.json()
+            try:
+                img_url = wdata["output"]["choices"][0]["message"]["content"][0]["image"]
+            except (KeyError, IndexError, TypeError):
+                raise HTTPException(502, "Wan returned no image")
+            async with httpx.AsyncClient(timeout=60) as dl:
+                dl_resp = await dl.get(img_url)
+                dl_resp.raise_for_status()
+                content = dl_resp.content
+        elif existing_path and body.get("mode") == "edit":
             edit_prompt = _trim_prompt(
                 "Reimagine this character freely from their current story and appearance — "
                 + prompt
@@ -6317,17 +6530,19 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
                           "response_format": "b64_json", "steps": 8, "seed": seed,
                           "text_mode": True},
                 )
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error("🎨 Vault-avatar StepFun-anrop misslyckades: %s", e)
-        raise HTTPException(502, f"Could not reach StepFun: {e}")
-    if resp.status_code != 200:
-        raise HTTPException(502, f"StepFun error ({resp.status_code})")
-
-    data = resp.json()
-    try:
-        content = base64.b64decode(data["data"][0]["b64_json"])
-    except (KeyError, IndexError, ValueError):
-        raise HTTPException(502, "StepFun returned no image")
+        logger.error("🎨 Vault-avatar (provider=%s) misslyckades: %s", provider, e)
+        raise HTTPException(502, f"Could not reach {provider}: {e}")
+    if provider != "wan":
+        if resp.status_code != 200:
+            raise HTTPException(502, f"StepFun error ({resp.status_code})")
+        data = resp.json()
+        try:
+            content = base64.b64decode(data["data"][0]["b64_json"])
+        except (KeyError, IndexError, ValueError):
+            raise HTTPException(502, "StepFun returned no image")
 
     disk_name = f"vault_{char_id}.png"
     (av_dir / disk_name).write_bytes(content)
@@ -6795,6 +7010,99 @@ async def delete_avatar(kind: str, morkrets_token: str | None = Cookie(None)):
 
 
 # ═══════════════════════════════════════
+# SPELARPROFILENS AVATAR (konto — SEPARAT från äventyraren)
+# ═══════════════════════════════════════
+# Profilavataren hör till KONTOT (headerns porträtt) — inte till kampanjens
+# äventyrare/NPC/DM-kort. Genereras ALLTID med StepFun step-image-edit-2,
+# gratis för alla tier. (2026-08-05)
+
+
+@app.get("/api/me/avatar")
+async def me_avatar(morkrets_token: str | None = Cookie(None)):
+    """Spelarprofilens avatar-bild (konto)."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    path = _user_avatar_path(username)
+    if not path.exists():
+        raise HTTPException(404, "Ingen profilavatar")
+    return FileResponse(path, media_type="image/png", headers={"Cache-Control": "no-cache"})
+
+
+@app.post("/api/me/avatar/generate")
+async def me_avatar_generate(body: dict | None = None, morkrets_token: str | None = Cookie(None)):
+    """Måla profilavataren med StepFun step-image-edit-2 — alltid gratis,
+    ALLTID StepFun. Spelarens egna ord (fri prompt) eller en standardporträtt-
+    prompt om ingen text ges."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    api_key = os.getenv("STEPFUN_API_KEY")
+    base_url = os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.ai/step_plan/v1")
+    if not api_key:
+        raise HTTPException(500, "STEPFUN_API_KEY saknas på servern")
+
+    user_prompt = ((body or {}).get("prompt") or "").strip()[:450]
+    seed = (body or {}).get("seed")
+    if not isinstance(seed, int):
+        seed = random.randint(0, 999999)
+    default = "A moody dark-fantasy portrait of the player, painterly oil painting style, dramatic chiaroscuro lighting, brooding atmosphere."
+    prompt = _trim_prompt(f"{user_prompt}\n{default}" if user_prompt else default + STEP_IMAGE_STYLE)
+
+    try:
+        async with httpx.AsyncClient(timeout=150) as client:
+            resp = await client.post(
+                f"{base_url.rstrip('/')}/images/generations",
+                headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
+                json={
+                    "model": STEP_IMAGE_EDIT_2,
+                    "prompt": prompt,
+                    "response_format": "b64_json",
+                    "steps": 8,
+                    "seed": seed,
+                    "text_mode": True,
+                },
+            )
+    except Exception as e:
+        logger.error("🎨 Profilavatar StepFun-anrop misslyckades: %s", e)
+        raise HTTPException(502, f"Kunde inte nå StepFun: {e}")
+    if resp.status_code != 200:
+        logger.error("🎨 Profilavatar StepFun-fel: HTTP %d %s", resp.status_code, resp.text[:300])
+        raise HTTPException(502, f"StepFun-fel ({resp.status_code})")
+
+    try:
+        b64 = resp.json()["data"][0]["b64_json"]
+        content = base64.b64decode(b64)
+    except (KeyError, IndexError, ValueError):
+        raise HTTPException(502, "StepFun returnerade ingen bild")
+
+    USER_AVATARS_DIR = _user_avatar_path(username).parent
+    USER_AVATARS_DIR.mkdir(parents=True, exist_ok=True)
+    path = _user_avatar_path(username)
+    path.write_bytes(content)
+
+    users = load_users()
+    if isinstance(users.get(username), dict):
+        users[username]["avatar"] = True
+        save_users(users)
+
+    return {"ok": True, "url": "/api/me/avatar", "seed": seed}
+
+
+@app.delete("/api/me/avatar")
+async def me_avatar_delete(morkrets_token: str | None = Cookie(None)):
+    """Ta bort profilavataren (återgår till standard-ikon)."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    path = _user_avatar_path(username)
+    if path.exists():
+        path.unlink()
+    users = load_users()
+    if isinstance(users.get(username), dict):
+        users[username].pop("avatar", None)
+        save_users(users)
+    return {"ok": True, "message": "Profilavatar borttagen"}
+
+
+# ═══════════════════════════════════════
 # AI-AVATAR-GENERERING (StepFun step-image-edit-2)
 # ═══════════════════════════════════════
 
@@ -7113,8 +7421,22 @@ async def generate_avatar(
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
 
-    # TIERS: AI-avatarer är tier1+ (free → hänvisa till uppgradering)
-    _require_avatar_tier(payload, username)
+    # Fri AI-avatar-generering för ALLA tier (2026-08-05): "paint new from my
+    # words" är gratis via StepFun — haken för att locka spelare att skapa fler
+    # karaktärer. (Upload förblir tier1+ via upload_avatar.)
+    # Wan 2.7 är premium-leverantören: Patron (10€)+ — dyrare, snyggare.
+    provider = str((body or {}).get("provider", "") or "").strip().lower()
+    if provider not in ("stepfun", "wan"):
+        provider = "stepfun"
+    if provider == "wan":
+        tier = _tier_for(username)
+        if tier not in ("tier2", "lifetime"):
+            raise HTTPException(
+                403,
+                "Wan 2.7 painting is a Patron feature (10€) — upgrade to paint with Wan. "
+                "StepFun stays free for every adventurer.",
+            )
+        _consume_wan_quota(username)  # 10 bilder/dag; varje bild = 1 turn
 
     state = store.get(username)
     if not state:
@@ -7151,7 +7473,7 @@ async def generate_avatar(
 
     api_key = os.getenv("STEPFUN_API_KEY")
     base_url = os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.ai/step_plan/v1")
-    if not api_key:
+    if provider != "wan" and not api_key:
         raise HTTPException(500, "STEPFUN_API_KEY saknas på servern")
 
     cid = state["meta"]["campaign_id"]
@@ -7166,8 +7488,62 @@ async def generate_avatar(
         if not existing_path.exists():
             existing_path = None
 
+    content: bytes = b""
     try:
-        if existing_path and mode == "edit":
+        if provider == "wan":
+            # ── Wan 2.7 (DashScope Token Plan) — text-to-image. Patron (10€)
+            #    får Wan 2.7 Pro 2048² (features.wan1080); övriga 1024².
+            #    n=1, watermark=false, thinking_mode=false. Seed för
+            #    reproducerbarhet. Edit-läge = färsk målning från sheet-data.
+            wan_model, wan_size = _wan_model_and_size(username)
+            wan_api_key = os.getenv("DASHSCOPE_API_KEY") or os.getenv("ALIBABA_TOKEN_PLAN_API_KEY")
+            wan_base = os.getenv(
+                "WAN_BASE_URL",
+                "https://token-plan.ap-southeast-1.maas.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
+            )
+            if not wan_api_key:
+                raise HTTPException(500, "DASHSCOPE_API_KEY saknas på servern (Wan behöver Token Plan-nyckeln)")
+            wan_prompt = prompt
+            if existing_path and mode == "edit":
+                wan_prompt = _trim_prompt(
+                    "Reimagine this character freely from their current story and appearance — "
+                    + prompt
+                    + " You may change anything: face, species, form, clothes and art style. Do not preserve the old face."
+                )
+            async with httpx.AsyncClient(timeout=150) as client:
+                resp = await client.post(
+                    wan_base,
+                    headers={"Content-Type": "application/json", "Authorization": f"Bearer {wan_api_key}"},
+                    json={
+                        "model": wan_model,
+                        "input": {
+                            "messages": [
+                                {"role": "user", "content": [{"text": wan_prompt}]}
+                            ]
+                        },
+                        "parameters": {
+                            "size": wan_size,
+                            "n": 1,
+                            "watermark": False,
+                            "thinking_mode": False,
+                            "seed": seed,
+                        },
+                    },
+                )
+            if resp.status_code != 200:
+                logger.error("🎨 Wan-fel: HTTP %d %s", resp.status_code, resp.text[:400])
+                raise HTTPException(502, f"Wan-fel ({resp.status_code})")
+            wdata = resp.json()
+            try:
+                img_url = wdata["output"]["choices"][0]["message"]["content"][0]["image"]
+            except (KeyError, IndexError, TypeError):
+                raise HTTPException(502, "Wan returnerade ingen bild")
+            # Ladda ner bilden och spara lokalt (URL:er från DashScope går ut efter 24 h)
+            async with httpx.AsyncClient(timeout=60) as dl:
+                dl_resp = await dl.get(img_url)
+                dl_resp.raise_for_status()
+                content = dl_resp.content
+        elif existing_path and mode == "edit":
             edit_prompt = _trim_prompt(
                 "Reimagine this character freely from their current story and appearance — "
                 + prompt
@@ -7201,19 +7577,25 @@ async def generate_avatar(
                         "text_mode": True,
                     },
                 )
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error("🎨 StepFun-anrop misslyckades: %s", e)
-        raise HTTPException(502, f"Kunde inte nå StepFun: {e}")
-    if resp.status_code != 200:
-        logger.error("🎨 StepFun-fel: HTTP %d %s", resp.status_code, resp.text[:300])
-        raise HTTPException(502, f"StepFun-fel ({resp.status_code})")
+        logger.error("🎨 AI-avatar (provider=%s) misslyckades: %s", provider, e)
+        raise HTTPException(502, f"Kunde inte nå {provider}: {e}")
+    if provider != "wan":
+        if resp.status_code != 200:
+            logger.error("🎨 StepFun-fel: HTTP %d %s", resp.status_code, resp.text[:300])
+            raise HTTPException(502, f"StepFun-fel ({resp.status_code})")
 
-    data = resp.json()
-    try:
-        b64 = data["data"][0]["b64_json"]
-        content = base64.b64decode(b64)
-    except (KeyError, IndexError, ValueError):
-        raise HTTPException(502, "StepFun returnerade ingen bild")
+    if provider == "wan":
+        b64 = None  # content redan nerladdad
+    else:
+        data = resp.json()
+        try:
+            b64 = data["data"][0]["b64_json"]
+            content = base64.b64decode(b64)
+        except (KeyError, IndexError, ValueError):
+            raise HTTPException(502, "StepFun returnerade ingen bild")
 
     av_dir.mkdir(parents=True, exist_ok=True)
     disk_name = avatar_key.replace(":", "_") + ".png"
@@ -7243,8 +7625,16 @@ async def generate_avatar(
 
 @app.get("/api/campaign/export")
 async def export_campaign(morkrets_token: str | None = Cookie(None)):
+    """Exportera kampanjen som zip (3€ Support-förmån — features.export)."""
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
+
+    # One-time-modellen (2026-08-05): export kräver features.export (3€+) eller lifetime.
+    if payload.get("role") != "admin" and _tier_for(username) not in ("tier1", "tier2", "lifetime"):
+        raise HTTPException(
+            403,
+            "Campaign export is a Support feature (3€) — support the Cauldron to export your story.",
+        )
 
     state = store.get(username)
     if not state:
@@ -7820,12 +8210,13 @@ def _require_admin(payload: dict):
 
 
 def _require_avatar_tier(payload: dict, username: str):
-    """TIERS: AI-avatarer (hero + NPCs) kräver tier1+. Admin har alltid tillgång.
-    Free → 403 med tydlig uppgraderingshänvisning (UI:et låser + hänvisar)."""
+    """TIERS (one-time 2026-08-05): avatar-UPPLADDNING kräver tier1+ (Support).
+    AI-generering (StepFun) är gratis för alla; Wan 2.7 gatas separat vid
+    själva wan-genereringen (Patron 10€+). Admin har alltid tillgång."""
     if payload.get("role") == "admin":
         return
     if _tier_for(username) == "free":
-        raise HTTPException(403, "AI avatars are a Tier 1 feature — upgrade to paint your hero and the faces you meet.")
+        raise HTTPException(403, "Avatar uploads are a Support feature (3€) — support the Cauldron to add your own images.")
 
 
 # ═══════════════════════════════════════
@@ -7837,8 +8228,10 @@ def _require_avatar_tier(payload: dict, username: str):
 PREMIUM_PRICE_SEK = 49  # legacy (fas D) — ersatt av TIER_PRICES_SEK
 
 # TIERS: priser i SEK (EUR → SEK ≈ 11.7; avrundat för admin-översikt).
-# tier1 = 3 €/mån ≈ 35 kr · tier2 = 9 €/mån ≈ 105 kr · lifetime = 100 € engång ≈ 1170 kr
-TIER_PRICES_SEK = {"tier1": 35, "tier2": 105, "lifetime": 1170}
+# support300 = 3€ engång · patron500 = 10€ engång · lifetime = 100€ engång.
+# tier1/tier2 = legacy-prenumeranter (MRR-bas tills de löper ut).
+TIER_PRICES_SEK = {"support300": 35, "patron500": 117, "lifetime": 1170,
+                   "tier1": 35, "tier2": 105}  # legacy: 3€/9€ ≈ 35/105 kr
 
 _LEDGER_FILE = Path(__file__).resolve().parent / "data" / "_billing_ledger.json"
 _LEDGER_LOCK = threading.Lock()
@@ -7985,11 +8378,11 @@ def _ledger_per_user() -> dict:
 def _ledger_totals() -> dict:
     """Aggregerad intäktsstatistik → {mrr, transactions, total}.
 
-    MRR räknas ENBART från faktiska betalningar i ledgern: en användare
-    med en stripe:tier1/tier2-rad (checkout) vars prenumeration fortfarande
-    är aktiv (subscription_until ej passerad). Admin-givna tiers (setTier)
-    skriver inget till ledgern → räknas INTE i MRR.
-    Lifetime räknas som engångsintäkt i `total` (ledger), inte i MRR."""
+    one-time-modellen (2026-08-05): support300/patron500/donation/lifetime
+    är engångsintäkter → ligger i `total`. MRR räknas ENBART för legacy-
+    prenumeranter (stripe:tier1/tier2-rader med aktiv subscription_until) —
+    efter att de löpt ut finns inga nya prenumerationer att räkna.
+    Admin-givna tiers (setTier) skriver inget till ledgern → räknas INTE."""
     ledger = _ledger_load()
     # Senast betalda månadstier per användare (kronologisk ledgern → sista raden vinner)
     paid_tier: dict[str, str] = {}
@@ -8325,16 +8718,20 @@ async def me_stats(morkrets_token: str | None = Cookie(None)):
 
 
 # ═══════════════════════════════════════
-# STRIPE (FAS C) — checkout + webhook
+# STRIPE (one-time 2026-08-05) — checkout + webhook
 # ═══════════════════════════════════════
 
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+# One-time-priser (engångsbetalningar, inga abonnemang):
+#   support300 — 3€: +300 turns, export + forge (features.export)
+#   patron500  — 10€: +500 turns, alla modeller 30 dagar, Wan 2.7 Pro
+#   donation   — valfri summa: rensupport, inga förmåner
 STRIPE_PRICES = {
-    "tier1": os.getenv("STRIPE_PRICE_TIER1", ""),
-    "tier2": os.getenv("STRIPE_PRICE_TIER2", ""),
-    "lifetime": os.getenv("STRIPE_PRICE_LIFETIME", ""),
-    "lifetime_promo": os.getenv("STRIPE_PRICE_LIFETIME_PROMO", ""),
+    "support300": os.getenv("STRIPE_PRICE_SUPPORT300", ""),
+    "patron500": os.getenv("STRIPE_PRICE_PATRON500", ""),
+    "donation": os.getenv("STRIPE_PRICE_DONATION", ""),
+    "lifetime": os.getenv("STRIPE_PRICE_LIFETIME", ""),  # legacy — behålls
 }
 STRIPE_PUBLIC_BASE = os.getenv("STRIPE_PUBLIC_BASE", "https://dnd.rostad.cc")
 # Ungefärlig EUR→SEK-kurs för ledgern (visas bara för admin).
@@ -8343,6 +8740,8 @@ _EUR_TO_SEK = 11.7
 
 class BillingCheckoutRequest(BaseModel):
     tier: str
+    # Valfri summa (donation): belopp i EUR (t.ex. 5.0). Används bara för tier="donation".
+    amount: float | None = None
 
 
 async def _stripe_post(path: str, data: dict) -> dict:
@@ -8381,15 +8780,19 @@ def _stripe_verify_signature(payload: bytes, header: str) -> bool:
 
 @app.post("/api/billing/checkout")
 async def billing_checkout(req: BillingCheckoutRequest, morkrets_token: str | None = Cookie(None)):
-    """Skapa Stripe Checkout Session (hosted).
+    """Skapa Stripe Checkout Session (hosted) — one-time purchases (2026-08-05).
 
+    support300 (3€) / patron500 (10€) / donation (valfri summa) / lifetime (legacy).
     Åtkomst ges ALDRIG här — bara via webhook (checkout.session.completed).
     """
     payload = _get_current_user(morkrets_token)
     username = payload.get("sub")
     tier = (req.tier or "").strip().lower()
-    if tier not in STRIPE_PRICES or not STRIPE_PRICES[tier]:
-        raise HTTPException(400, "Tier must be tier1, tier2 or lifetime")
+    if tier == "donation":
+        # Valfri summa — använder custom amount, inget Stripe Price-ID behövs
+        pass
+    elif tier not in STRIPE_PRICES or not STRIPE_PRICES[tier]:
+        raise HTTPException(400, "Tier must be support300, patron500, donation or lifetime")
     if not STRIPE_SECRET_KEY:
         raise HTTPException(503, "Payments are not configured yet")
     # ── E-post krävs innan köp (rostad 2026-08-04): kontot måste ha en
@@ -8399,20 +8802,34 @@ async def billing_checkout(req: BillingCheckoutRequest, morkrets_token: str | No
     if not isinstance(_udata, dict) or not (_udata.get("email") or "").strip():
         raise HTTPException(400, detail={
             "email_required": True,
-            "message": "Add an email to your account before subscribing — it's where your receipts and reset links go.",
+            "message": "Add an email to your account before purchasing — it's where your receipts and reset links go.",
         })
-    price = STRIPE_PRICES[tier]
-    # Grundarerbjudande: Lifetime för 50€ (one-time) under promoperioden.
-    # (Kollar PROMO_UNTIL_DATE direkt — inte tier2-månaderna, som nu bara
-    # gäller Companion sedan 2026-08-04.)
-    promo_active = datetime.now(timezone.utc).date() <= PROMO_UNTIL_DATE
-    if tier == "lifetime" and promo_active and STRIPE_PRICES.get("lifetime_promo"):
-        price = STRIPE_PRICES["lifetime_promo"]
-    mode = "subscription" if tier in ("tier1", "tier2") else "payment"
+
+    line_items: dict = {}
+    if tier == "donation":
+        # Valfri summa (EUR, min 1€). Stripe Checkout kräver price_data med
+        # unit_amount (ören) — ett dynamiskt engångspris per donation.
+        amount = float(req.amount or 0)
+        if amount < 1 or amount > 1000:
+            raise HTTPException(400, "Donation amount must be between €1 and €1000")
+        amount_minor = int(round(amount * 100))
+        line_items = {
+            "line_items[0][price_data][currency]": "eur",
+            "line_items[0][price_data][unit_amount]": str(amount_minor),
+            "line_items[0][price_data][product_data][name]": "Support the Cauldron",
+            "line_items[0][price_data][product_data][tax_code]": "txcd_10000000",
+            "line_items[0][quantity]": "1",
+        }
+    else:
+        price = STRIPE_PRICES[tier]
+        line_items = {
+            "line_items[0][price]": price,
+            "line_items[0][quantity]": "1",
+        }
+
     session = await _stripe_post("checkout/sessions", {
-        "mode": mode,
-        "line_items[0][price]": price,
-        "line_items[0][quantity]": "1",
+        "mode": "payment",
+        **line_items,
         "success_url": f"{STRIPE_PUBLIC_BASE}/adventure.html?billing=success",
         "cancel_url": f"{STRIPE_PUBLIC_BASE}/pricing.html",
         "client_reference_id": username,
@@ -8483,8 +8900,8 @@ async def stripe_webhook(request: Request):
     if etype == "checkout.session.completed":
         meta = obj.get("metadata", {}) or {}
         username = meta.get("username") or obj.get("client_reference_id")
-        tier = (meta.get("tier") or "tier2").strip().lower()
-        if not username or tier not in TIER_ORDER:
+        tier = (meta.get("tier") or "support300").strip().lower()
+        if not username:
             return {"received": True}
         if obj.get("payment_status") not in (None, "paid"):
             return {"received": True}
@@ -8496,17 +8913,31 @@ async def stripe_webhook(request: Request):
             if username not in users:
                 return {"received": True}
             u = users[username]
+            features = u.get("features")
+            if not isinstance(features, dict):
+                features = {}
             if tier == "lifetime":
+                # Legacy: befintliga 100€-köpare — ∞ turns, allt
                 u["subscription_status"] = "lifetime"
                 u["subscription_until"] = None
                 u["turn_cap"] = 0
-            elif tier in ("tier1", "tier2"):
-                u["subscription_status"] = tier
-                months = _promo_months_for(tier)
-                u["subscription_until"] = (datetime.now(timezone.utc).date() + timedelta(days=30 * months)).isoformat()
-                u["turn_cap"] = DEFAULT_TURN_CAP
-                if not u.get("reset_ts"):
-                    u["reset_ts"] = (datetime.now(timezone.utc) + timedelta(hours=6)).isoformat()
+            elif tier == "support300":
+                # 3€ — +300 turns, export + forge (permanent)
+                u["turn_bonus"] = int(u.get("turn_bonus", 0) or 0) + 300
+                features["export"] = True
+                u["features"] = features
+            elif tier == "patron500":
+                # 10€ — +500 turns, alla modeller 30 dagar, Wan 2.7 Pro
+                u["turn_bonus"] = int(u.get("turn_bonus", 0) or 0) + 500
+                features["export"] = True
+                features["wan1080"] = True
+                features["all_models"] = True
+                u["features"] = features
+                u["models_until"] = (datetime.now(timezone.utc).date() + timedelta(days=PATRON_MODEL_DAYS)).isoformat()
+                u["subscription_status"] = "tier2"
+            elif tier == "donation":
+                # Valfri summa — rensupport, inga förmåner. Bara ledgern.
+                pass
             if cust:
                 u["stripe_customer_id"] = cust
             if sub_id:
@@ -8810,10 +9241,14 @@ async def admin_create_user(req: AdminCreateUser, morkrets_token: str | None = C
             "turn_cap": DEFAULT_TURN_CAP,
             # FAS A: periodbaserad turn-räkning (30 dagar från reset_date)
             "turns_used": 0,
-            "turn_bonus": 0,
+            "turn_bonus": START_BONUS_TURNS,  # 300 startturns (2026-08-05)
             "reset_date": _today_str(),
             "subscription_status": "free",
             "subscription_until": None,
+            "features": {},
+            "start_bonus_granted": True,  # nya konton får bonusen direkt
+            "wan_used_today": 0,
+            "wan_reset_date": None,
         }
         save_users(users)
     return {"ok": True, "username": username, "role": users[username]["role"]}
@@ -8988,10 +9423,10 @@ async def admin_set_subscription(username: str, req: AdminSubscription, morkrets
         if status == "lifetime":
             udata["turn_cap"] = 0
         elif status in ("tier1", "tier2"):
-            # 50 turns per 6-timmarsperiod; sätt reset_ts om det saknas
+            # one-time-modellen (2026-08-05): alla får 50 turns/dag (24h) —
+            # ingen 6-timmars-rollover längre. reset_ts tas bort om den finns.
             udata["turn_cap"] = DEFAULT_TURN_CAP
-            if not udata.get("reset_ts"):
-                udata["reset_ts"] = (datetime.now(timezone.utc) + timedelta(hours=6)).isoformat()
+            udata.pop("reset_ts", None)
         else:  # free
             if int(udata.get("turn_cap", 0) or 0) == 0:
                 udata["turn_cap"] = DEFAULT_TURN_CAP

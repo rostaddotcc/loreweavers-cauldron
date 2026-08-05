@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>The Lore Weaver's Cauldron — Release Notes</title>
-<meta name="description" content="Release notes for The Lore Weaver's Cauldron — an AI dungeon master with a memory. v0.7 and the paths into the realm.">
+<meta name="description" content="Release notes for The Lore Weaver's Cauldron — an AI dungeon master with a memory. v0.8 Wan 2.7 painting, profile portraits and the paths into the realm.">
 <link rel="icon" href="/assets/logo-cauldron.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
-<script src="themes.js?v=20260804b"></script>
+<script src="themes.js?v=20260805a"></script>
 <style>
   /* ═══════════════ tokens ═══════════════ */
   :root{
@@ -205,21 +205,92 @@
   <div class="nav-links">
     <a class="nav-link" href="pricing.html">Paths</a>
     <a class="nav-link" href="adventure.html">The Crossroads</a>
-    <a class="nav-cta" href="login.html">Enter</a>
+    <a class="nav-cta" href="login.html#gate">Enter</a>
   </div>
 </nav>
 
 <section class="ledger">
   <p class="eyebrow rv">The Ledger of the Realm</p>
   <h1 class="rv">Release Notes</h1>
-  <p class="ledger-sub rv">Every update written in the ledger, so the realm's history stays legible. This entry — the forge takes its first coin.<br><b>v0.6 → v0.7</b> · 2026-08-04</p>
+  <p class="ledger-sub rv">Every update written in the ledger, so the realm's history stays legible. This entry — the easel, the portrait, and the small fixes that make the table sit right.<br><b>v0.7 → v0.8</b> · 2026-08-05</p>
 
   <div class="current-box rv">
-    <span class="ver-chip"><span class="ver-name">v0.7</span><span class="ver-note">The Forge, Earning</span></span>
-    <span class="ver-tag">Membership</span>
-    <span class="ver-tag">Stripe</span>
-    <span class="ver-tag">Narrator voices</span>
+    <span class="ver-chip"><span class="ver-name">v0.8</span><span class="ver-note">The Portrait, the Path</span></span>
+    <span class="ver-tag">Wan 2.7</span>
     <span class="ver-tag">Avatars</span>
+    <span class="ver-tag">Per-campaign TTS</span>
+    <span class="ver-tag">Polishing</span>
+  </div>
+
+  <!-- ═══════════════ 0.8 headline ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">0.8</span>
+      <h2>The Portrait, the Path</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tablet-h">
+        <span class="chip ai">WAN 2.7</span>
+        <span class="tablet-title">The premium painter arrives</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">FEAT</span><b>Wan 2.7 painting — Adventurer tier and up</b> — the premium image engine now paints your hero, the DM and every NPC in sharp high-resolution portraits, in seconds. Gated honestly on every page: login, pricing and the model hall all carry the path.</li>
+        <li><span class="tag ai">AI</span><b>Choose the engine at the easel</b> — a new engine picker sits in the avatar hall: <b>StepFun (always free)</b> or <b>Wan 2.7 (Adventurer+)</b>. The same choice follows you into the Vault, so an Adventurer can paint Wan portraits everywhere a face can be painted.</li>
+        <li><span class="tag feat">FEAT</span><b>StepFun painting is free for every adventurer</b> — the free-prompt easel costs nothing on any path, so anyone can paint their hero, the DM and the faces they meet.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tablet-h">
+        <span class="chip ux">PROFILE</span>
+        <span class="tablet-title">Your face, your hero</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">FEAT</span><b>Your profile portrait is separate from your adventurer's</b> — the pill in the header is <i>your</i> face at the table (painted with StepFun, always free), while the party card and character sheet keep your hero's portrait. Paint one without touching the other.</li>
+        <li><span class="tag ux">UX</span><b>Click the portrait to repaint it</b> — the header pill opens the profile easel; any card in the realm opens its own.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tablet-h">
+        <span class="chip fix">SMALL FIXES</span>
+        <span class="tablet-title">The table sits right</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag fix">FIX</span><b>Themes that actually stick</b> — the palette you choose now survives reloads, works even in browsers that block local storage, and follows you across devices via your account.</li>
+        <li><span class="tag fix">FIX</span><b>Narrator settings follow the campaign</b> — voice, provider, style and your own custom narrator prompt are remembered per campaign, not per browser, so the story reads the same on any device.</li>
+        <li><span class="tag ux">UX</span><b>A softer table</b> — rounded buttons, gentler edges and calmer shadows across the top bar, the Codex and the composer; the header no longer squeezes the campaign name or the turn counter out of view.</li>
+        <li><span class="tag ux">UX</span><b>The Codex reads in two rows</b> — character, NPCs, map, journal and facts above; spells, equipment, treasury and notes below, living with the same buttons as the rest of the realm.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════ KNOWN ISSUES ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">⚠</span>
+      <h2>Known Issues</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tablet-h">
+        <span class="chip fix">KNOWN</span>
+        <span class="tablet-title">What we are still working on</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag fix">KNOWN</span><b>Language leakage</b> — the game is being translated from Swedish to English from the ground up. While the translation work is in progress, an English campaign can occasionally still receive a Swedish response.</li>
+        <li><span class="tag fix">KNOWN</span><b>Unfinished translations in the Codex</b> — a few Codex panels still show Swedish labels; the sweep is ongoing and will land before 1.0.</li>
+        <li><span class="tag feat">NEXT</span><b>Multiplayer campaigns — coming in 1.0</b> — play with your friends at the same table, in the same world.</li>
+        <li><span class="tag feat">NEXT</span><b>More languages — coming in 1.0</b> — German, French, Spanish and more.</li>
+      </ul>
+    </div>
   </div>
 
   <!-- ═══════════════ 0.7 headline ═══════════════ -->
@@ -238,7 +309,7 @@
       </div>
       <p class="tablet-lead">The realm now carries its own keep. After a season of free tables, the forge accepts coin — and with it, the fire burns steadier. Every path is real, wired end-to-end through Stripe, and every adventurer keeps a free road forever.</p>
       <ul class="feat">
-        <li><span class="tag feat">FEAT</span><b>Founding offer — two free months</b> — for the first seven days, subscribe for one month and get <b>2 months free</b> on Companion or <b>3 months free</b> on Adventurer. And <b>Lifetime for 50€</b> — half price, one-time. The countdown lives on the login page and the table.</li>
+        <li><span class="tag feat">FEAT</span><b>Founding offer — two free months</b> — for the first seven days, subscribe for one month and get <b>2 months free</b> on Companion. And <b>Lifetime for 50€</b> — half price, one-time. The countdown lives on the login page and the table.</li>
         <li><span class="tag feat">FEAT</span><b>Four paths into the realm</b> — Wanderer (free), Companion, Adventurer, and Lifetime. Each a real tier: free stays free, the paid paths unlock the deeper models and the twin voices.</li>
         <li><span class="tag feat">FEAT</span><b>Stripe checkout, live</b> — the pricing page is wired to a real Stripe account: products, prices, and a webhook that records payment. No more mock buttons.</li>
         <li><span class="tag feat">FEAT</span><b>Webhook idempotency</b> — a delivered payment event is recorded exactly once, even if Stripe retries it. The ledger never double-counts a coin.</li>
@@ -264,7 +335,7 @@
           <li><b>50 turns</b> every day, refreshed at midnight</li>
           <li>The steadfast Dungeon Master (<b>step-3.7-flash</b>)</li>
           <li>Persistent world, memory, and the Codex</li>
-          <li>Qwen voice narration &amp; the dice ritual</li>
+          <li><b>StepFun TTS</b> — always free &amp; the dice ritual</li>
         </ul>
       </div>
       <div class="tier">
@@ -337,8 +408,9 @@
         <span class="tablet-title">A narrator you can give a mood</span>
       </div>
       <ul class="feat">
-        <li><span class="tag snd">SOUND</span><b>Custom narrator voice</b> — pick a style for the one who reads your story: <b>happy, calm, scary</b>, or a custom description of your own. Premium-only, and gated honestly in the UI.</li>
-        <li><span class="tag snd">SOUND</span><b>Qwen English voices</b> — the Qwen narrator gained English voices alongside the original set.</li>
+        <li><span class="tag feat">FEAT</span><b>StepFun TTS — always free</b> — the narrator's voice belongs to every adventurer, on every path. Wanderers get StepFun narration at no cost, alongside their daily ration of turns.</li>
+        <li><span class="tag snd">SOUND</span><b>Custom narrator voice</b> — pick a style for the one who reads your story: <b>happy, calm, scary</b>, or a custom description of your own. A Tier 2 feature, and gated honestly in the UI.</li>
+        <li><span class="tag snd">SOUND</span><b>Qwen English voices</b> — the Qwen narrator gained English voices alongside the original set. Qwen TTS joins the Tier 2 path.</li>
         <li><span class="tag snd">SOUND</span><b>Faster loading</b> — a TTS cache with a time-to-live keeps repeated lines from re-rendering, and a speed button lets you set the read's pace.</li>
         <li><span class="tag fix">FIX</span><b>Guardian day-correction</b> — the day counter no longer drifts when the Guardian reconciles the world state.</li>
       </ul>

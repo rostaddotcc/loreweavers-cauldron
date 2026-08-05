@@ -18,8 +18,23 @@ const FONTS = (() => {
 
   const KEY = 'dnd_font';
 
+  // Säkert localStorage — samma guard som themes.js (2026-08-05)
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} },
+  };
+
+  // Vad som FAKTISKT är applicerat (font-<id>-klassen på <html>)
+  function applied() {
+    const cls = document.documentElement.className;
+    for (const t of THEMES) {
+      if (cls.includes('font-' + t.id)) return t;
+    }
+    return current();
+  }
+
   function current() {
-    const id = localStorage.getItem(KEY) || 'pixel';
+    const id = store.get(KEY) || 'pixel';
     return THEMES.find(t => t.id === id) || THEMES[0];
   }
 
@@ -30,21 +45,24 @@ const FONTS = (() => {
     root.classList.add('font-' + theme.id);
     root.style.setProperty('--font-display', theme.display);
     root.style.setProperty('--font-body', theme.body);
+    // Kugghjulets Font-rad: uppdatera hint med aktuellt typsnitt (2026-08-05)
+    const fontHint = document.getElementById('settings-font-hint');
+    if (fontHint && !/—|–/.test(fontHint.textContent)) fontHint.textContent = 'typeface — ' + theme.name;
   }
 
   function cycle() {
     const cur = current();
     const idx = THEMES.findIndex(t => t.id === cur.id);
     const next = THEMES[(idx + 1) % THEMES.length];
-    localStorage.setItem(KEY, next.id);
-    apply(next);
+    apply(next);            // applicera först — bytet måste ALLTID synas
+    store.set(KEY, next.id);
     return next;
   }
 
   // Init
   apply(current());
 
-  return { THEMES, current, cycle, apply };
+  return { THEMES, current, applied, cycle, apply };
 })();
 
 // ── Global font button (in the topbar, next to music/mute) ──

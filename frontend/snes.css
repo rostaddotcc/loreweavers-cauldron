@@ -45,14 +45,13 @@
 }/* ── Flex-bärare: sprite + text centrerade med gap ──
    (endan element som redan är inline/flex — rör inte block/tabell-layouter) */.top-btn, .send-btn, .rune-btn, .go-btn, .summon-btn, .gate-btn,
 .msg .who, .at-item, .att-item, .fi-name,
-.roll-request .rr-label, .oracle-head h3, .rr-btn, #loc-name, .att-dropzone .att-text, .toast{
+.roll-request .rr-label, .rr-btn, #loc-name, .att-dropzone .att-text, .toast{
   display: inline-flex;
   align-items: center;
   gap: 0.45em;
 }/* ── Sprite-storlek per kontext (konsekvent skala) ── *//* Knappar + labels: 0.9em */.top-btn .pxs, .send-btn .pxs, .rune-btn .pxs, .go-btn .pxs,
 .summon-btn .pxs, .gate-btn .pxs, .at-item .pxs, .att-item .pxs,
 .fi-name .pxs, .toast .pxs, .rr-btn .pxs, .roll-request .rr-label .pxs,
-.oracle-head h3 .pxs,
 .att-dropzone .att-text .pxs{
   width: 0.9em; height: 0.9em;
 }/* Chattens avsändar-rader: sprite i textstorlek */.msg .who .pxs{ width: 1em; height: 1em; }/* NPC-listan (redan flex): sprite i textstorlek */.npc-row .pxs{ width: 0.95em; height: 0.95em; }/* Sidebar-plats: block-flex så texten radbryts inuti och ikonen centreras mot hela blocket */#loc-name{ display: flex; align-items: center; gap: 0.4em; }#loc-name .pxs{ width: 0.95em; height: 0.95em; }/* Brand/loggor: 1em */.brand .pxs{ width: 1em; height: 1em; }/* Porträtt/avatarer: större, i sin ruta */.pv-portrait .pxs, .pc-avatar .pxs, .cp-icon .pxs, .vc-icon .pxs,
@@ -67,7 +66,7 @@
   line-height: 1.6 !important;
   text-shadow: 2px 2px 0 #000 !important;
   animation: none !important;
-}/* Brödtext i chatten — läsbar body-font */.msg .text, .pv-story, .pv-gear, .oracle-msg.a{
+}/* Brödtext i chatten — läsbar body-font */.msg .text, .pv-story, .pv-gear{
   font-family: var(--font-body) !important;
   font-style: normal !important;
   font-size: .95rem !important;
@@ -101,7 +100,7 @@
   content: ''; position: fixed; inset: 0; z-index: 998; pointer-events: none;
   background: radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,.5) 100%);
 }/* ── 4. PANELER — terminal-fönster ── */.panel, .panel-box, .scroll-box, .gate-frame, .hoard, .modal-box,
-.continue-panel, .path, .arch, .oracle, .roll-request{
+.continue-panel, .path, .arch, .roll-request{
   background: var(--stone) !important;
   border: 1px solid var(--edge) !important;
   box-shadow: none !important;
@@ -184,7 +183,7 @@
   font-style: normal !important;
   color: var(--bone-dim) !important;
 }/* ── 7. INPUTFÄLT — terminal prompt ── */.input-row textarea, #prompt, .world-prompt,
-.add-form input, .add-form select, .oracle-input input, .field input{
+.add-form input, .add-form select, .field input{
   background: var(--ink) !important;
   border: 1px solid var(--edge) !important;
   box-shadow: none !important;
@@ -295,11 +294,7 @@
   border: 1px solid var(--edge) !important;
   box-shadow: none !important;
   background: var(--stone-2) !important;
-}.pv-stat .s, .ability .score{ font-family: 'Press Start 2P', monospace !important; font-size: 1.03rem !important; }.pv-trait{ border: 1px solid var(--edge) !important; box-shadow: none !important; background: var(--stone-2) !important; }.pv-story{ border-left: 2px solid var(--gold) !important; font-style: normal !important; }/* ── 18. ORACLE ── */.oracle{
-  border: 1px solid var(--edge) !important;
-  box-shadow: none !important;
-  background: var(--stone) !important;
-}.oracle-msg{ border-radius: 0 !important; }.oracle-msg.q{ border: 1px solid var(--arcane) !important; box-shadow: none !important; }.oracle-msg.a{ border: 1px solid var(--edge) !important; box-shadow: none !important; }/* ── 19. ASCII-ART ── */.ascii-art{
+}.pv-stat .s, .ability .score{ font-family: 'Press Start 2P', monospace !important; font-size: 1.03rem !important; }.pv-trait{ border: 1px solid var(--edge) !important; box-shadow: none !important; background: var(--stone-2) !important; }.pv-story{ border-left: 2px solid var(--gold) !important; font-style: normal !important; }/* ── 19. ASCII-ART ── */.ascii-art{
   border: 1px solid var(--edge) !important;
   box-shadow: none !important;
   background: var(--ink) !important;
@@ -655,13 +650,7 @@
     min-height: 48px !important;
     font-size: .78rem !important;
     padding: .5rem .8rem !important;
-  }.input-hint{ display: none !important; }/* ── 30g. ORACLE → FULL-SCREEN SHEET · CONSOLE → BOTTOM SHEET ── */.oracle.open{
-    position: fixed !important;
-    inset: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    z-index: 320 !important;
-  }.oracle-inner{ width: 100% !important; }/* Maskinrummet: flat debug-panel blir en bottom-sheet på mobil (max 60vh) */.console{
+  }.input-hint{ display: none !important; }/* Maskinrummet: flat debug-panel blir en bottom-sheet på mobil (max 60vh) */.console{
     position: fixed !important;
     top: auto !important;
     bottom: 0 !important;

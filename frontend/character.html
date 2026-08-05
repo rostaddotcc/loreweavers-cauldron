@@ -415,6 +415,35 @@
   .av-lightbox img{ max-width: min(90vw, 720px); max-height: 85vh; border: 2px solid var(--gold); box-shadow: 0 0 60px rgba(201,162,39,.25), 0 24px 60px rgba(0,0,0,.8); }
   .av-lightbox .av-lb-close{ position: fixed; top: 1.2rem; right: 1.4rem; font-family: 'Cinzel', serif; font-size: .8rem; color: var(--gold-bright); background: none; border: 1px solid var(--edge); padding: .5rem .7rem; cursor: pointer; }
   .av-lightbox .av-lb-title{ position: fixed; bottom: 1.2rem; left: 50%; transform: translateX(-50%); font-family: 'Cinzel', serif; font-size: .7rem; letter-spacing: .18em; text-transform: uppercase; color: var(--bone-dim); white-space: nowrap; }
+/* ═══════════ Inuti Codex (iframe): dölj slogan + sub-tabbar — Codex-headern styr ═══════════ */
+  .in-codex .masthead{ display: none; }
+  .in-codex .tabs{ display: none; }
+/* ═══════════ Stor avatar-bakgrund i karaktärsvyn (hero) ═══════════ */
+  #panel-character .char-header{
+    position: relative; display: flex; flex-direction: column; align-items: flex-start;
+    justify-content: flex-end; text-align: left; gap: 0.9rem; min-height: 300px;
+    margin-bottom: 0.9rem;
+  }
+  #panel-character .char-header::after{
+    content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background: linear-gradient(90deg, rgba(8,4,10,.9) 0%, rgba(8,4,10,.6) 45%, rgba(8,4,10,.15) 72%, rgba(8,4,10,0) 85%),
+                linear-gradient(180deg, rgba(8,4,10,0) 42%, rgba(8,4,10,.5) 100%);
+  }
+  #panel-character .portrait-frame{
+    position: absolute; top: -26px; right: -8px; width: 273px; height: calc(100% + 26px);
+    z-index: 0; transform: rotate(-1.5deg);
+    background: transparent; border: 1px solid rgba(201,162,39,.22); box-shadow: none;
+    display: flex; align-items: flex-end; justify-content: flex-end;
+  }
+  #panel-character .portrait-frame .emoji{ font-size: 8rem; opacity: .92; }
+  #panel-character .char-identity{ position: relative; z-index: 2; padding-right: 120px; }
+  #panel-character .char-class, #panel-character .char-meta{ text-shadow: 0 1px 3px #000, 0 0 14px rgba(0,0,0,.85); }
+  #panel-character .vitals{ position: relative; z-index: 2; width: 100%; margin: 0.4rem 0 0; padding-right: 10px; }
+  #panel-character .vitals .label, #panel-character .vitals .nums{ text-shadow: 0 1px 3px #000, 0 0 12px rgba(0,0,0,.95); }
+/* ═══════════ MJUKA UPP — Codex-knappar (2026-08-05) ═══════════ */
+.av-btn, .rune-btn, .forge-export-btn, .top-btn{ border-radius: 8px !important; }
+.av-btn:hover, .rune-btn:hover, .forge-export-btn:hover{ transform: translateY(-1px) !important; box-shadow: 0 4px 16px -6px rgba(0,0,0,.55) !important; }
+
 </style>
 <link rel="stylesheet" href="snes.css?v=23">
 <script src="sprites.js?v=20260802a"></script>
@@ -479,28 +508,27 @@
           <span class="stat"><i>PROF</i><b>+3</b></span>
         </div>
       </div>
+      <div class="vitals">
+        <div class="vital">
+          <div class="vital-head">
+            <span class="label">❤ Hit Points</span>
+            <span class="nums"><span id="hp-cur">38</span><small> / <span id="hp-max">52</span></small></span>
+          </div>
+          <div class="trough" id="hp-trough"><div class="fill hp" id="hp-bar" style="width:73%"></div></div>
+        </div>
+
+        <div class="vital wide">
+          <div class="vital-head">
+            <span class="label">⭐ Experience</span>
+            <span class="nums"><span id="xp-cur">0</span><small> / <span id="xp-next">—</span></small></span>
+          </div>
+          <div class="trough"><div class="fill xp" id="xp-bar" style="width:0%"></div></div>
+        </div>
+      </div>
     </div>
 
     <div class="forge-row">
       <button class="forge-export-btn" id="forge-export-btn" onclick="exportToForge()" title="Save this hero to The Forge — start a new campaign with them later">⚒ Export to Forge</button>
-    </div>
-
-    <div class="vitals">
-      <div class="vital">
-        <div class="vital-head">
-          <span class="label">❤ Hit Points</span>
-          <span class="nums"><span id="hp-cur">38</span><small> / <span id="hp-max">52</span></small></span>
-        </div>
-        <div class="trough" id="hp-trough"><div class="fill hp" id="hp-bar" style="width:73%"></div></div>
-      </div>
-
-      <div class="vital wide">
-        <div class="vital-head">
-          <span class="label">⭐ Experience</span>
-          <span class="nums"><span id="xp-cur">0</span><small> / <span id="xp-next">—</span></small></span>
-        </div>
-        <div class="trough"><div class="fill xp" id="xp-bar" style="width:0%"></div></div>
-      </div>
     </div>
 
     <div class="section-title">Abilities</div>
@@ -534,7 +562,7 @@
     <div class="section-title">✨ Spells</div>
     <div class="spell-slots" id="spell-slots"></div>
     <div class="spells-grid" id="spells-grid"></div>
-    <div class="spells-hint" style="margin-top:0.6rem;font-size:.83rem;color:var(--bone-dim);text-align:center">Cantrips (level 0) are at will — higher spells draw from your spell slots. New spells and slots are assigned by the Lorekeeper as you learn — ask the DM during a long rest to reallocate them.</div>
+    <div class="spells-hint" style="margin-top:0.6rem;font-size:.83rem;color:var(--bone-dim);text-align:center">Cantrips (level 0) are always ready and cost no slots. Each leveled spell you cast spends one spell slot — when a slot is spent it stays spent until a long rest restores it. The Lorekeeper assigns new spells as you learn them, and long rests refill your slots automatically.</div>
   </section>
 
   <!-- ═══════════ SKATTKAMMARE ═══════════ -->
@@ -740,6 +768,28 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
   });
 });
+
+// ═══════════════════════════════════════
+// KODEX-IFRAME — sub-vyerna (Spells/Equipment/Treasury/Notes) styrs av
+// rad 2 i Codex-headern (chat.html) när sidan ligger i Codex-iframe.
+// ═══════════════════════════════════════
+function codexNotifyTab() {
+  const active = document.querySelector('.tab.active');
+  const t = active ? active.dataset.tab : null;
+  if (!t) return;
+  try { window.parent.postMessage({ type: 'codex-subtab-changed', tab: t }, '*'); } catch (_) {}
+}
+if (window.self !== window.top) {
+  document.documentElement.classList.add('in-codex');
+  window.addEventListener('message', (e) => {
+    const d = e.data || {};
+    if (d.type === 'codex-subtab' && typeof d.tab === 'string') {
+      const tab = document.querySelector('.tab[data-tab="' + d.tab + '"]');
+      if (tab && !tab.classList.contains('active')) tab.click();
+    }
+  });
+  codexNotifyTab();
+}
 
 // ═══════════════════════════════════════
 // ANTECKNINGAR — fria noteringar om karaktären
@@ -1069,24 +1119,27 @@ function renderSpells() {
   const grid = document.getElementById('spells-grid');
   if (!grid) return;
   grid.innerHTML = '';
-  // Spell slots — tydlig vy: used (guld, fast) vs available (dashed)
+  // Spell slots — tydlig vy: used (guld, fast) vs available (dashed).
+  // OBS: state.spell_slots.current = TILLGÄNGLIGA slots nu (minskar vid kast,
+  // återställs till max vid long rest). used = max - current (fix 2026-08-05:
+  // logiken var inverterad → visade '2/2 used' när allt var fullt).
   const slotsBox = document.getElementById('spell-slots');
   const ss = (state.character && state.character.spell_slots) || {};
   const maxSlots = parseInt(ss.max, 10) || 0;
-  const usedSlots = Math.min(parseInt(ss.current, 10) || 0, maxSlots);
+  const availSlots = Math.min(parseInt(ss.current, 10) || 0, maxSlots);
+  const usedSlots = Math.max(0, maxSlots - availSlots);
   if (slotsBox) {
     if (maxSlots > 0) {
       let pips = '';
       for (let i = 0; i < maxSlots; i++) {
         const used = i < usedSlots;
-        pips += `<span class="ss-pip ${used ? 'used' : 'available'}" title="${used ? 'Used' : 'Available'}">${used ? '✷' : ''}</span>`;
+        pips += `<span class="ss-pip ${used ? 'used' : 'available'}" title="${used ? 'Used (spent)' : 'Available'}">${used ? '✷' : ''}</span>`;
       }
-      const avail = maxSlots - usedSlots;
       slotsBox.innerHTML = `
-        <span class="ss-label">Slots</span>
+        <span class="ss-label">Spell Slots</span>
         <span class="ss-pips">${pips}</span>
-        <span class="ss-count"><b>${usedSlots}</b> / ${maxSlots} used · <b style="color:var(--poison)">${avail} available</b></span>
-        <span class="ss-note">Equipped spells draw from these. Ask the DM to reassign slots during a long rest.</span>`;
+        <span class="ss-count"><b>${availSlots}</b> / ${maxSlots} available · <b style="color:var(--gold)">${usedSlots} used</b></span>
+        <span class="ss-note">Cantrips (level 0) cost nothing — they are always ready. Casting a leveled spell spends one slot. A long rest restores all spent slots.</span>`;
     } else {
       slotsBox.innerHTML = '';
     }
@@ -1291,11 +1344,45 @@ function openAvatarModal() {
   document.getElementById('avatar-ai-btn').disabled = false;
   document.getElementById('avatar-update-btn').disabled = false;
   document.getElementById('avatar-ai-status').textContent = '';
+  updateAvatarProviderLock();
   document.getElementById('avatar-overlay').classList.add('show');
   try { SFX.click(); } catch (_) {}
 }
 function closeAvatarModal() {
   document.getElementById('avatar-overlay').classList.remove('show');
+}
+
+// ── Bildleverantör (StepFun — gratis · Wan 2.7 — Adventurer+) ──
+let _charWanUnlocked = null;
+function avatarProvider() {
+  const sel = document.getElementById('avatar-provider-select');
+  return (sel && sel.value) || 'stepfun';
+}
+function avatarProviderChanged(sel) {
+  if (sel && sel.value === 'wan' && _charWanUnlocked !== true) {
+    sel.value = 'stepfun';
+    try { toast('🔒 Wan 2.7 is an Adventurer-tier feature — StepFun is always free.'); } catch (_) {}
+  }
+}
+function updateAvatarProviderLock() {
+  const sel = document.getElementById('avatar-provider-select');
+  if (!sel) return;
+  const wanOpt = sel.querySelector('option[value="wan"]');
+  if (!wanOpt) return;
+  if (_charWanUnlocked === null) {
+    try {
+      fetch('/api/me').then(r => r.ok ? r.json() : null).then(me => {
+        const t = (me && me.subscription_status) || 'free';
+        _charWanUnlocked = (t === 'tier2' || t === 'lifetime');
+        updateAvatarProviderLock();
+      }).catch(() => { _charWanUnlocked = false; updateAvatarProviderLock(); });
+    } catch (_) { _charWanUnlocked = false; }
+    return;
+  }
+  const unlocked = _charWanUnlocked === true;
+  wanOpt.disabled = !unlocked;
+  wanOpt.textContent = unlocked ? 'Wan 2.7 — Adventurer' : 'Wan 2.7 — Adventurer 🔒';
+  if (sel.value === 'wan' && !unlocked) sel.value = 'stepfun';
 }
 
 async function _runAvatarGen(mode, statusText, btnId) {
@@ -1306,7 +1393,7 @@ async function _runAvatarGen(mode, statusText, btnId) {
   try {
     const freePrompt = (document.getElementById('avatar-prompt-input') || {}).value || '';
     const usedWords = !!freePrompt.trim();
-    const res = await API.generateAvatar('player', Date.now() % 1000000, mode, freePrompt);
+    const res = await API.generateAvatar('player', Date.now() % 1000000, mode, freePrompt, avatarProvider());
     if (res && res.ok) {
       state.avatars = state.avatars || {};
       state.avatars.player = { disk_name: 'player.png', uploaded: new Date().toISOString(), ai_generated: true, seed: res.seed };
@@ -1383,6 +1470,13 @@ window.getState = exportState;
       <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">🎨 YOUR OWN WORDS (optional)</div>
       <textarea id="avatar-prompt-input" placeholder="Optional: describe exactly what you want painted… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)" style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:'Cinzel',serif;font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>
       <div style="font-size:.72rem;color:var(--bone-dim);margin-top:.35rem">Overrides the auto-built prompt from your sheet — describe exactly what you want painted.</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
+      <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
+      <select id="avatar-provider-select" class="tts-select" style="flex:1;min-width:0" onchange="avatarProviderChanged(this)" title="Image provider for painting">
+        <option value="stepfun">StepFun — free</option>
+        <option value="wan">Wan 2.7 — Adventurer 🔒</option>
+      </select>
     </div>
     <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
       <button class="av-btn primary" id="avatar-ai-btn" onclick="generateAvatarAction()">✨ Paint new from my words</button>

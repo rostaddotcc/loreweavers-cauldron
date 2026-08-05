@@ -365,12 +365,28 @@ const API = (() => {
     // ── AI-avatar (StepFun step-image-edit-2 — prompt byggs automatiskt i backend) ──
     // mode: "new" = full generation (ny bild), "edit" = image-edit på befintlig
     // prompt: valfri fri text från användaren — väger tyngst, auto-prompten blir kontext.
-    async generateAvatar(kind, seed, mode, prompt) {
+    // ── AI-avatar (StepFun gratis · Wan 2.7 = Adventurer+, provider i body) ──
+    async generateAvatar(kind, seed, mode, prompt, provider = 'stepfun') {
       if (MOCK) throw new Error('Not available in mock mode');
       return req('/api/campaign/avatar/generate', {
         method: 'POST',
-        body: JSON.stringify({ kind, seed, mode: mode || 'new', prompt: prompt || '' }),
+        body: JSON.stringify({ kind, seed, mode: mode || 'new', prompt: prompt || '', provider }),
       });
+    },
+
+    // ── Spelarprofilens avatar (konto — separat från äventyraren) ──
+    accountAvatarUrl() {
+      return MOCK ? null : BASE + '/api/me/avatar';
+    },
+    async generateAccountAvatar(prompt, seed) {
+      if (MOCK) throw new Error('Not available in mock mode');
+      return req('/api/me/avatar/generate', {
+        method: 'POST',
+        body: JSON.stringify({ prompt: prompt || '', seed: seed || Date.now() % 1000000 }),
+      });
+    },
+    async deleteAccountAvatar() {
+      return req('/api/me/avatar', { method: 'DELETE' });
     },
 
     // ── Transcript (latest messages) ──
@@ -545,8 +561,8 @@ const API = (() => {
       return req('/api/vault/characters/' + encodeURIComponent(charId) + '/use', { method: 'POST', body: '{}' });
     },
 
-    vaultGenerateAvatar(charId, seed, mode, prompt) {
-      const body = { prompt: prompt || '' };
+    vaultGenerateAvatar(charId, seed, mode, prompt, provider = 'stepfun') {
+      const body = { prompt: prompt || '', provider };
       if (typeof seed === 'number') body.seed = seed;
       if (mode) body.mode = mode;
       return req('/api/vault/characters/' + encodeURIComponent(charId) + '/avatar/generate', {
@@ -556,15 +572,6 @@ const API = (() => {
 
     vaultAvatarUrl(charId) {
       return MOCK ? null : BASE + '/api/vault/characters/' + encodeURIComponent(charId) + '/avatar';
-    },
-
-    // ── Rules Oracle (Qwen-driven) ──
-    async oracle(question, modelId = 'step-3.7-flash') {
-      if (MOCK) {
-        await new Promise(r => setTimeout(r, 900));
-        return { answer: "Roll a d20 and add the relevant modifier against the DM's DC." };
-      }
-      return req('/api/oracle', { method: 'POST', body: JSON.stringify({ question, model_id: modelId }) });
     },
 
     // ── Feedback ──
@@ -646,9 +653,13 @@ const API = (() => {
       return res.blob();
     },
 
-    // Spara TTS-leverantör per kampanj (state.meta.tts_provider)
-    async setTtsProvider(provider) {
-      return req('/api/campaign/tts-settings', { method: 'POST', body: JSON.stringify({ provider }) });
+    // Spara TTS-inställningar per kampanj (state.meta.tts_*): provider,
+    // röst (kön), stil, egen stil-fras, autoplay, hastighet.
+    async setTtsProvider(provider, extra = {}) {
+      return req('/api/campaign/tts-settings', {
+        method: 'POST',
+        body: JSON.stringify({ provider, ...extra }),
+      });
     },
 
     // ── Combat (v25 — stridsmotorn) ──

@@ -262,9 +262,6 @@ const I18N = (() => {
     'Kända NPCs': 'Known NPCs',
     'minnen & fakta': 'memories & facts',
     'inventarium & skatter': 'inventory & treasures',
-    'Regel-orakel': 'Rule Oracle',
-    '📜 Regel-orakel': '📜 Rule Oracle',
-    'fråga om 5e-regler': 'ask about 5e rules',
     'Maskinrummet': 'The Engine Room',
     '🛠️ Maskinrummet': '🛠️ The Engine Room',
     'live debug-loggar': 'live debug logs',
@@ -340,11 +337,6 @@ const I18N = (() => {
     '🎲 Rullar…': '🎲 Rolling…',
     'Slår ': 'Rolling ',
     'Resultat: ': 'Result: ',
-
-    // ── chat.html: oracle ──
-    'Fråga oraklet om D&D 5e-regler utan att avbryta spelet. Svaren påverkar inte berättelsen.': 'Ask the oracle about D&D 5e rules without interrupting the game. The answers do not affect the story.',
-    'T.ex. Vad är DC för att klättra?': 'E.g. What is the DC to climb?',
-    '⚠ Oraklet tiger: ': '⚠ The oracle is silent: ',
 
     // ── chat.html: engine room console ──
     ' rader': ' lines',
@@ -616,7 +608,6 @@ const I18N = (() => {
     'DM:n är den slutgiltiga domaren. Reglerna är ett ramverk, inte ett fängelse.': 'The DM is the final judge. The rules are a framework, not a prison.',
     'Tips': 'Tips',
     'Skriv fritt — du kan göra vad som helst (försöka, inte alltid lyckas)': 'Write freely — you can do anything (attempt, not always succeed)',
-    'Fråga Regel-oraklet (📜) om du är osäker på D&D-regler': 'Ask the Rule Oracle (📜) if you are unsure about D&D rules',
     'Utforska Kartan (🗺️) för att se platser och restider': 'Explore the Map (🗺️) to see locations and travel times',
     'Läs Loggboken (📜) för en sammanfattning av äventyret': 'Read the Logbook (📜) for a summary of the adventure',
     'Spara din karaktär i Valvet (🏰) för att återanvända den': 'Save your character in the Vault (🏰) to reuse it',
@@ -1048,10 +1039,6 @@ const I18N = (() => {
 
     // ── adventure.html: naming panel ──
     'Namnge ditt äventyr': 'Name your adventure',
-
-    // ── chat.html: oracle error ──
-    'Oraklet tiger: ': 'The oracle is silent: ',
-    'okänt fel': 'unknown error',
 
     // ── chat.html: reason / DM monolog ──
     'DM:ns inre monolog': "The DM's inner monologue",

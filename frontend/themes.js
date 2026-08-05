@@ -130,8 +130,26 @@ const THEMES = (() => {
 
   const KEY = 'dnd_theme';
 
+  // Säkert localStorage — om webbläsaren nekar lagring (privat läge, inbäddad
+  // vy, strikt sekretess) ska temat ÄNDÅ appliceras; persistensen tas då över
+  // av servern via /api/me/appearance. (2026-08-05)
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} },
+  };
+
+  // Vad som FAKTISKT är applicerat just nu (data-theme sätts av apply()).
+  // Knappetiketter och popover-aktiva ska alltid utgå från DETTA — inte från
+  // localStorage — så etiketten aldrig kan ljuga om renderingen. (2026-08-04)
+  function applied() {
+    const id = document.documentElement.getAttribute('data-theme');
+    return PALETTES.find(p => p.id === id) || current();
+  }
+
   function current() {
-    const id = localStorage.getItem(KEY) || 'terminal';
+    // Fallback-kedja: lokalt val → sidans default (data-default-theme) → terminal
+    const pageDefault = document.documentElement.getAttribute('data-default-theme');
+    const id = store.get(KEY) || pageDefault || 'terminal';
     return PALETTES.find(p => p.id === id) || PALETTES[0];
   }
 
@@ -148,6 +166,9 @@ const THEMES = (() => {
       b.textContent = '🎨 ' + palette.name;
       b.title = 'Theme: ' + palette.name + ' (click to switch)';
     });
+    // Kugghjulets Theme-rad: uppdatera hint med aktuellt tema (2026-08-05)
+    const themeHint = document.getElementById('settings-theme-hint');
+    if (themeHint) themeHint.textContent = palette.name;
     // Live-synk: Codex-sidor ligger i iframes — broadcasta temat så öppna
     // iframes uppdateras direkt (2026-08-04). Init-broadcast är ofarlig:
     // iframes som laddas senare läser ändå localStorage vid start.
@@ -168,7 +189,7 @@ const THEMES = (() => {
       if (ev.data && ev.data.type === 'dnd-theme' && typeof ev.data.theme === 'string') {
         const p = PALETTES.find(x => x.id === ev.data.theme);
         if (p) {
-          localStorage.setItem(KEY, p.id);
+          store.set(KEY, p.id);
           apply(p);
         }
       }
@@ -179,18 +200,20 @@ const THEMES = (() => {
     const cur = current();
     const idx = PALETTES.findIndex(p => p.id === cur.id);
     const next = PALETTES[(idx + 1) % PALETTES.length];
-    localStorage.setItem(KEY, next.id);
     apply(next);
+    store.set(KEY, next.id);
     syncToServer();
     return next;
   }
 
   // ── Server-persistens (v30) ──
   // Spara tema + typsnitt på kontot så valet följer med mellan enheter/origins.
+  // Skickar DET APPLICERADE temat — inte current() — så det funkar även när
+  // localStorage är blockerad (då faller current() tillbaka till default).
   function syncToServer() {
     try {
-      const body = { theme: current().id };
-      if (typeof FONTS !== 'undefined') body.font = FONTS.current().id;
+      const body = { theme: applied().id };
+      if (typeof FONTS !== 'undefined') body.font = FONTS.applied().id;
       fetch('/api/me/appearance', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -202,8 +225,8 @@ const THEMES = (() => {
   // Hydrata: om localStorage saknar tema (ny enhet/webbläsare) — hämta kontots
   // sparade tema + typsnitt från servern och applicera. Körs async i init.
   async function hydrateFromServer() {
-    const hadLocalTheme = !!localStorage.getItem(KEY);
-    const hadLocalFont = !!localStorage.getItem('dnd_font');
+    const hadLocalTheme = !!store.get(KEY);
+    const hadLocalFont = !!store.get('dnd_font');
     if (hadLocalTheme && hadLocalFont) return; // lokalt val vinner
     try {
       const res = await fetch('/api/me');
@@ -211,11 +234,11 @@ const THEMES = (() => {
       const me = await res.json();
       if (!hadLocalTheme && me.theme) {
         const p = PALETTES.find(x => x.id === me.theme);
-        if (p) { localStorage.setItem(KEY, p.id); apply(p); }
+        if (p) { store.set(KEY, p.id); apply(p); }
       }
       if (!hadLocalFont && me.font && typeof FONTS !== 'undefined') {
         const f = FONTS.THEMES.find(x => x.id === me.font);
-        if (f) { localStorage.setItem('dnd_font', f.id); FONTS.apply(f); }
+        if (f) { store.set('dnd_font', f.id); FONTS.apply(f); }
       }
     } catch (_) { /* ej inloggad — hoppa över */ }
   }
@@ -241,7 +264,7 @@ const THEMES = (() => {
     PALETTES.forEach(p => {
       const row = document.createElement('button');
       row.type = 'button';
-      row.className = 'theme-row' + (p.id === current().id ? ' active' : '');
+      row.className = 'theme-row' + (p.id === applied().id ? ' active' : '');
       row.setAttribute('data-id', p.id);
       const sw = document.createElement('span');
       sw.className = 'theme-swatches';
@@ -257,8 +280,8 @@ const THEMES = (() => {
       row.appendChild(nm);
       row.onclick = (e) => {
         e.stopPropagation();
-        localStorage.setItem(KEY, p.id);
-        apply(p);
+        apply(p);            // applicera först — bytet måste ALLTID synas,
+        store.set(KEY, p.id); // även om localStorage är blockerad
         syncToServer();
         _closePop();
         if (typeof SFX !== 'undefined') SFX.click();
@@ -281,7 +304,7 @@ const THEMES = (() => {
   // Init — applicera direkt så tema sitter vid första paint
   apply(current());
 
-  return { PALETTES, current, cycle, apply, hydrateFromServer, syncToServer, openPopover };
+  return { PALETTES, current, applied, cycle, apply, hydrateFromServer, syncToServer, openPopover };
 })();
 
 // ── Global theme button (topbar, bredvid font-knappen) ──
@@ -305,13 +328,25 @@ function themeCycle() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const cur = THEMES.current();
+  const cur = THEMES.applied() || THEMES.current();
+
+  // Sidor med data-no-theme-btn (login.html): inga temaknappar alls — temat
+  // är låst till sidans default (Blood) tills man är inloggad i spelet.
+  const noThemeBtn = document.documentElement.getAttribute('data-no-theme-btn') === 'true';
+  if (noThemeBtn) {
+    document.querySelectorAll('.theme-btn').forEach(b => { b.style.display = 'none'; });
+    return;
+  }
 
   // Uppdatera befintliga theme-buttons
   document.querySelectorAll('.theme-btn').forEach(b => {
     b.textContent = '🎨 ' + cur.name;
     b.title = 'Theme: ' + cur.name + ' (click to switch)';
   });
+
+  // Sidor med kugghjul (settings-menu / gear-menu) har temat i menyn
+  // istället — ingen topbar-knapp injiceras då. (2026-08-05, samma som fonts.js)
+  if (document.querySelector('.settings-menu') || document.querySelector('.gear-menu')) return;
 
   // Injicera en theme-knapp i topbaren om ingen finns
   const bar = document.querySelector('.topbar') || document.querySelector('.forge-head') || document.querySelector('nav.nav');

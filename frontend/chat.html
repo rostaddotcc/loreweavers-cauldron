@@ -1927,7 +1927,9 @@ function pickAvatar(kind) {
     ? `<img src="${AVATARS[kind]}" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">`
     : SPR.html('🎭');
   delBtn.style.display = AVATARS[kind] ? '' : 'none';
-  updBtn.style.display = AVATARS[kind] ? '' : 'none';
+  // "Update from sheet" är bara meningsfullt för äventyraren (som har ett sheet) —
+  // DM och NPC:er har ingen sheet att uppdatera från. (2026-08-05)
+  updBtn.style.display = (kind === 'player' && AVATARS[kind]) ? '' : 'none';
   aiBtn.disabled = false;
   updBtn.disabled = false;
   // Återställ från ev. profil-läge: Engine-väljaren + knapptext ska synas igen

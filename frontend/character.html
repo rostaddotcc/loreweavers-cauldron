@@ -437,6 +437,9 @@
   }
   #panel-character .portrait-frame .emoji{ font-size: 8rem; opacity: .92; }
   #panel-character .char-identity{ position: relative; z-index: 2; padding-right: 120px; }
+  /* 2026-08-06: textlagret får inte äta klick — hela porträttet ska öppna
+     avatar-modalen (som NPC-dossién). Endast text/siffror här, inga knappar. */
+  #panel-character .char-identity, #panel-character .vitals{ pointer-events: none; }
   #panel-character .char-class, #panel-character .char-meta{ text-shadow: 0 1px 3px #000, 0 0 14px rgba(0,0,0,.85); }
   #panel-character .vitals{ position: relative; z-index: 2; width: 100%; margin: 0.4rem 0 0; padding-right: 10px; }
   #panel-character .vitals .label, #panel-character .vitals .nums{ text-shadow: 0 1px 3px #000, 0 0 12px rgba(0,0,0,.95); }

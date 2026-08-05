@@ -222,6 +222,8 @@
     border-radius: 10px; overflow: hidden; padding: 4px 2px;
     max-height: 38vh; overflow-y: auto;
   }
+  /* Tom partylista = ingen "bar" under pengarna (2026-08-06) */
+  #party-npcs:empty{ display: none; }
   .npc-list::-webkit-scrollbar{ width: 5px; }.npc-list::-webkit-scrollbar-thumb{ background: var(--edge-hi, var(--edge)); border-radius: 3px; }.npc-row{
     display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem;
     padding: 0.45rem 0.55rem; transition: background 0.2s; cursor: default;
@@ -7073,7 +7075,7 @@ function cdMentionNpc(name) {
 
 // ═══════════════ 📖 CODEX MODAL (D1.3) — lazy iframes ═══════════════
 const CODEX_PAGES = {
-  character: { label: '🧙 Character', src: 'character.html?v=20260806b' },
+  character: { label: '🧙 Character', src: 'character.html?v=20260806c' },
   npcs:      { label: '🧝 NPCs',      src: 'npcs.html?v=20260806b' },
   map:       { label: '🗺 Map',       src: 'platser.html?v=20260806a' },
   journal:   { label: '📖 Journal',   src: 'loggbok.html?v=20260806a' },

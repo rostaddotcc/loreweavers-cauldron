@@ -180,7 +180,16 @@
     font-family: 'Cinzel', serif; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.06em;
     color: var(--gold-bright); font-variant-numeric: tabular-nums;
     text-shadow: 0 0 10px rgba(232,198,90,0.35); transition: transform 0.2s, text-shadow 0.2s;
-  }.pc-gold.bump{ animation: gold-bump 0.5s cubic-bezier(.22,1,.36,1); }
+  }.pc-gold.bump{ animation: gold-bump 0.5s cubic-bezier(.22,1,.36,1); }/* ── Valuta-mynt: en ikon per metall (pp/gp/sp/cp) ── */.coin{
+    width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: 'Cinzel', serif; font-size: .55rem; font-weight: 900; line-height: 1;
+    box-shadow: inset 0 -2px 3px rgba(0,0,0,.35), 0 1px 3px rgba(0,0,0,.5);
+  }.cc-pp{ background: linear-gradient(180deg,#f4f6fb,#aab2c8); color: #2a2f3d; border: 1px solid #c8cfdf; }
+  .cc-gp{ background: linear-gradient(180deg,#ffe9a3,#c9a227); color: #3a2c00; border: 1px solid #e8c65a; }
+  .cc-sp{ background: linear-gradient(180deg,#f4f6f8,#b8c0cc); color: #333a44; border: 1px solid #d0d6de; }
+  .cc-cp{ background: linear-gradient(180deg,#e8b48a,#a56a3c); color: #3a2410; border: 1px solid #c98a5e; }
+  .pc-gold-num{ font-weight: 700; color: var(--gold-bright); text-shadow: 0 0 8px rgba(232,198,90,.35); }
   @keyframes gold-bump {
     0% { transform: scale(1); }
     40% { transform: scale(1.35); text-shadow: 0 0 18px rgba(255,215,0,0.9); }
@@ -1005,33 +1014,33 @@
 <link rel="stylesheet" href="snes.css?v=24">
 <style>
 /* ═══════════ CODEX 2-RAD-TABBAR — override snes.css (måste ligga EFTER linken) ═══════════ */
-.cx-tabs{ display: flex !important; flex-direction: column !important; gap: 0.28rem !important; padding: 0.5rem 0.6rem 0.55rem !important; overflow-x: hidden !important; }
+.cx-tabs{ display: flex !important; flex-direction: column !important; gap: 0.34rem !important; padding: 0.55rem 0.6rem 0.6rem !important; overflow-x: hidden !important; }
 /* Radordning låst: Character/NPCs/Map/Journal/Facts ovanför, karaktärsraden
    (Spells/Equipment/Treasury/Notes) längst ned — oavsett DOM-ordning. */
 #cx-row-main{ order: 1 !important; }
 #cx-row-sub{ order: 2 !important; }
-.cx-row{ display: flex !important; gap: 0.2rem !important; flex-wrap: nowrap !important; min-width: 0 !important; }
+.cx-row{ display: flex !important; gap: 0.3rem !important; flex-wrap: nowrap !important; min-width: 0 !important; }
 .cx-tab{
   flex: 1 1 0 !important; min-width: 0 !important; text-align: center !important;
   white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;
-  font-family: 'Cinzel', serif !important; font-size: 0.5rem !important; letter-spacing: 0.03em !important;
+  font-family: 'Cinzel', serif !important; font-size: 0.62rem !important; letter-spacing: 0.04em !important;
   background: var(--stone-2) !important; border: 1px solid var(--edge) !important;
-  color: var(--bone-dim) !important; padding: 0.42rem 0.08rem !important;
+  color: var(--bone-dim) !important; padding: 0.5rem 0.3rem !important;
 }
 .cx-tab:hover{ background: var(--stone-3) !important; color: var(--bone-bright) !important; }
 .cx-tab.active{ background: var(--ink) !important; border-color: var(--gold) !important; color: var(--gold-bright) !important; }
 .cx-tab.active::before{ content: '' !important; }
 .cx-tab.cx-subtab{
   background: rgba(58,31,102,0.30) !important; border-color: rgba(201,162,39,0.30) !important;
-  color: var(--bone-dim) !important; font-size: 0.5rem !important; letter-spacing: 0.03em !important;
+  color: var(--bone-dim) !important; font-size: 0.6rem !important; letter-spacing: 0.04em !important;
 }
 .cx-tab.cx-subtab.active{
   background: var(--arcane-deep) !important; border-color: var(--gold) !important; color: var(--gold-bright) !important;
   box-shadow: inset 0 0 12px rgba(201,162,39,0.18) !important;
 }
 @media (max-width: 420px){
-  .cx-tab{ font-size: 0.46rem !important; letter-spacing: 0.02em !important; padding: 0.4rem 0.06rem !important; }
-  .cx-tab.cx-subtab{ font-size: 0.46rem !important; letter-spacing: 0.02em !important; }
+  .cx-tab{ font-size: 0.55rem !important; letter-spacing: 0.02em !important; padding: 0.46rem 0.12rem !important; }
+  .cx-tab.cx-subtab{ font-size: 0.52rem !important; letter-spacing: 0.02em !important; }
 }
 /* ═══════════ MJUKA UPP — topbar, profil, admin, codex (2026-08-05) ═══════════ */
 .top-btn{ border-radius: 8px !important; box-shadow: 0 2px 12px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; }
@@ -1052,8 +1061,8 @@
 /* Mjuka upp TTS-pickern + kompositören så de matchar topbaren (2026-08-05) */
 .tts-select{ border-radius: 7px !important; box-shadow: 0 2px 10px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; border-color: var(--edge) !important; }
 .tts-select:focus{ outline: none !important; border-color: var(--gold) !important; box-shadow: 0 0 0 3px rgba(201,162,39,.15), 0 2px 10px -6px rgba(0,0,0,.6) !important; }
-.tts-auto-btn, .tts-speed-btn{ border-radius: 7px !important; box-shadow: 0 2px 10px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; }
-.tts-auto-btn:hover, .tts-speed-btn:hover{ transform: translateY(-1px) !important; }
+.tts-auto-btn, .tts-speed-btn, .battle-drawer-toggle{ border-radius: 7px !important; box-shadow: 0 2px 10px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; }
+.tts-auto-btn:hover, .tts-speed-btn:hover, .battle-drawer-toggle:hover{ transform: translateY(-1px) !important; }
 .send-btn{ border-radius: 8px !important; box-shadow: 0 4px 16px -6px rgba(201,162,39,.45), 0 2px 10px -5px rgba(0,0,0,.6) !important; transition: all .2s !important; }
 .send-btn:hover{ transform: translateY(-1px) !important; filter: brightness(1.06) !important; box-shadow: 0 6px 22px -6px rgba(201,162,39,.6) !important; }
 .avatar-provider-row select, #avatar-provider-select{ border-radius: 7px !important; }
@@ -1156,6 +1165,9 @@
 
   <span class="top-divider"></span>
   <button class="top-btn icon-btn sfx-btn" onclick="sfxToggleBtn()" title="Sound on/off">🔊</button>
+
+  <!-- ═══ Engine Room (debug) — vänster om kugghjulet; klick = visa/dölj ═══ -->
+  <button class="top-btn icon-btn" id="console-tab" onclick="toggleConsole()" title="Open Engine Room" aria-label="Open Engine Room" style="font-size:1rem">🛠️</button>
 
   <!-- ═══ Settings — gear icon (längst till höger, bredvid typsnittsvalen) ═══ -->
   <div style="position:relative">
@@ -1348,7 +1360,6 @@
           <span class="bdt-label">Combat</span>
           <span class="bdt-caret">▲</span>
         </button>
-        <div class="console-tab" id="console-tab" onclick="toggleConsole()" title="Open Engine Room" aria-label="Open Engine Room">🛠️</div>
       </div>
       <div class="composer">
         <div class="at-chat-chip" id="at-chat-chip" hidden></div>
@@ -1969,7 +1980,7 @@ function pickAvatar(kind) {
 // (step-image-edit-2, Support 3€) och Wan 2.7 Pro (Patron 10€) — med
 // tier-lås (free → båda 🔒, tier1 → Wan 🔒, tier2/lifetime → båda öppna).
 // Headerns porträtt hör hit.
-function openProfileAvatarModal(prefProvider) {
+function openProfileAvatarModal() {
   _avatarProfileMode = true;
   AVATAR_KIND = 'player';
   const ov = document.getElementById('avatar-overlay');
@@ -1983,43 +1994,25 @@ function openProfileAvatarModal(prefProvider) {
   const provRow = document.getElementById('avatar-provider-row');
   const promptInp = document.getElementById('avatar-prompt-input');
   title.textContent = '🎨 Your profile portrait';
-  desc.textContent = 'Paint YOUR profile portrait — the face at your table, separate from your adventurer. StepFun (Support 3€) or Wan 2.7 Pro (Patron 10€).';
+  desc.textContent = 'Paint YOUR profile portrait — the face at your table, separate from your adventurer. Pick an engine below: StepFun (Support 3€) or Wan 2.7 Pro (Patron 10€).';
   const url = _hasAccountAvatar ? API.accountAvatarUrl() + '?t=' + Date.now() : null;
   preview.innerHTML = url
     ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">`
     : SPR.html('👤');
   delBtn.style.display = _hasAccountAvatar ? '' : 'none';
   updBtn.style.display = 'none';
-  if (provRow) provRow.style.display = 'none';
-  if (aiBtn) { aiBtn.style.display = ''; aiBtn.disabled = false; }
-  if (wanBtn) { wanBtn.style.display = ''; wanBtn.disabled = false; }
+  // Profil-läget använder SAMMA Engine-väljare som äventyraren: en knapp + dropdown.
+  if (provRow) provRow.style.display = '';
+  if (aiBtn) { aiBtn.style.display = ''; aiBtn.disabled = false; aiBtn.textContent = '✨ Paint your account profile avatar'; aiBtn.title = ''; }
+  if (wanBtn) { wanBtn.style.display = 'none'; wanBtn.title = ''; }
   if (promptInp) promptInp.placeholder = 'Describe yourself — e.g. \'hooded figure, lantern light, old leather\' (or leave empty)';
   document.getElementById('avatar-ai-status').textContent = '';
-  _updateProfilePaintButtons();
-  // Profil-modalens två knappar väljer motor — markera den valda (båda finns kvar).
-  if (prefProvider === 'stepfun' || prefProvider === 'wan') {
-    const focusBtn = document.getElementById(prefProvider === 'wan' ? 'avatar-ai-btn-wan' : 'avatar-ai-btn');
-    if (focusBtn) focusBtn.classList.add('av-suggest');
-  }
+  updateAvatarProviderLock();
   if (ov) ov.classList.add('show');
   try { SFX.click(); } catch (_) {}
 }
-// Tier-lås för profil-lägets två knappar: free → båda 🔒 (toast vid klick),
-// tier1 (Support) → StepFun öppen + Wan 🔒, tier2/lifetime → båda öppna.
-function _updateProfilePaintButtons() {
-  const aiBtn = document.getElementById('avatar-ai-btn');
-  const wanBtn = document.getElementById('avatar-ai-btn-wan');
-  const canPaint = _tierHasAvatars();     // Support+ (3€)
-  const wanUnlocked = _tierHasModels();   // Patron (10€)
-  if (aiBtn) {
-    aiBtn.textContent = '✨ Paint profile (StepFun)' + (canPaint ? '' : ' 🔒');
-    aiBtn.title = canPaint ? '' : '🔒 AI painting is a Support feature (3€) — support the Cauldron to paint.';
-  }
-  if (wanBtn) {
-    wanBtn.textContent = '✨ Paint profile (Wan 2.7)' + (wanUnlocked ? '' : ' 🔒');
-    wanBtn.title = wanUnlocked ? '' : '🔒 Wan 2.7 Pro is a Patron feature (10€) — upgrade to paint with Wan.';
-  }
-}
+// Tier-lås för profil-läget sköts av updateAvatarProviderLock() (Engine-väljaren)
+// + avatarGenGate() (toast vid klick) — samma väg som äventyrarens avatar.
 function closeAvatarModal() {
   const ov = document.getElementById('avatar-overlay');
   if (ov) ov.classList.remove('show');
@@ -2138,9 +2131,9 @@ async function generateAvatarAction(provider) {
   const status = document.getElementById('avatar-ai-status');
   // TIERS: bildgenerering är gated — informera innan API-anropet.
   if (_avatarProfileMode) {
-    const prov = provider === 'wan' ? 'wan' : 'stepfun';
+    const prov = provider === 'wan' || provider === 'stepfun' ? provider : avatarProvider();
     if (!avatarGenGate(prov)) return;
-    const btn = document.getElementById(prov === 'wan' ? 'avatar-ai-btn-wan' : 'avatar-ai-btn');
+    const btn = document.getElementById('avatar-ai-btn');
     status.textContent = '🎨 Painting your profile portrait… (10–30 s)';
     if (btn) btn.disabled = true;
     try {
@@ -2299,6 +2292,17 @@ function openAvatarLightbox() {
 function closeAvatarLightbox() {
   const lb = document.getElementById('avatar-lightbox');
   if (lb) lb.classList.remove('show');
+}
+// Konto-avataren i profil-modalen: klick → full-size preview (eller måla om
+// om det ännu inte finns något porträtt).
+function openCpAvatarLightbox() {
+  const url = _hasAccountAvatar ? API.accountAvatarUrl() : null;
+  if (!url) { openProfileAvatarModal(); return; }
+  document.getElementById('avatar-lightbox-img').src = url;
+  document.getElementById('avatar-lightbox-title').textContent = '🪞 Your profile portrait';
+  const lb = document.getElementById('avatar-lightbox');
+  if (lb) lb.classList.add('show');
+  try { SFX.click(); } catch (_) {}
 }
 
 // Uppdatera alla avatarer på sidan (efter uppladdning)
@@ -3197,29 +3201,37 @@ function updateXpBar(xp) {
 // ── Valuta-räknare med count-up ──
 let _goldShown = 0;
 function updateCurrency(currency) {
-  const el = document.getElementById('pc-gold-val');
-  const detail = document.getElementById('pc-gold-detail');
   const wrap = document.getElementById('pc-gold');
-  if (!el) return;
+  if (!wrap) return;
   const cur = currency || {};
   const gp = cur.gp || 0;
-  // Visa gp som primär siffra
-  const target = gp;
-  // Detalj: övriga valörer
-  const parts = [];
-  if (cur.pp) parts.push(cur.pp + ' pp');
-  if (cur.sp) parts.push(cur.sp + ' sp');
-  if (cur.cp) parts.push(cur.cp + ' cp');
-  if (detail) detail.textContent = parts.length ? '(' + parts.join(', ') + ')' : '';
-  // Tooltip med allt
-  if (wrap) {
-    const all = [];
-    if (cur.pp) all.push(cur.pp + ' platina');
-    if (cur.gp) all.push(cur.gp + ' guld');
-    if (cur.sp) all.push(cur.sp + ' silver');
-    if (cur.cp) all.push(cur.cp + ' koppar');
-    wrap.title = all.length ? 'Purse: ' + all.join(', ') : 'Purse: empty';
+  // 2026-08-06: en ikon per metall-mynt man bär — pp/gp/sp/cp som färgade mynt.
+  const meta = [
+    ['pp', 'cc-pp', 'P', 'Platinum'],
+    ['gp', 'cc-gp', 'G', 'Gold'],
+    ['sp', 'cc-sp', 'S', 'Silver'],
+    ['cp', 'cc-cp', 'C', 'Copper'],
+  ];
+  let chips = '';
+  for (const [key, cls, letter, label] of meta) {
+    const v = cur[key] || 0;
+    if (key === 'gp') {
+      chips += `<span class="coin ${cls}" title="${label}">${letter}</span><b class="pc-gold-num" id="pc-gold-val">${v}</b>`;
+    } else if (v > 0) {
+      chips += `<span class="coin ${cls}" title="${label}">${letter}</span><b class="pc-gold-num">${v}</b>`;
+    }
   }
+  wrap.innerHTML = chips || '<b class="pc-gold-num">0</b>';
+  const el = document.getElementById('pc-gold-val');
+  if (!el) return;
+  const target = gp;
+  // Tooltip med allt
+  const all = [];
+  if (cur.pp) all.push(cur.pp + ' platinum');
+  if (cur.gp) all.push(cur.gp + ' gold');
+  if (cur.sp) all.push(cur.sp + ' silver');
+  if (cur.cp) all.push(cur.cp + ' copper');
+  wrap.title = all.length ? 'Purse: ' + all.join(', ') : 'Purse: empty';
   if (target === _goldShown) return;
   // Animera från visat värde till nytt (count-up / count-down)
   const from = _goldShown, diff = target - from;
@@ -5971,6 +5983,8 @@ function renderNpcSidebar() {
   const entries = Object.entries(NPCS).filter(([k]) => k !== 'dm');
   const near = entries.filter(([, n]) => n.relation === 'allierad' && n.near);
   const rest = entries.filter(([, n]) => !(n.relation === 'allierad' && n.near));
+  // 2026-08-06: NPC:er med målade porträtt sorteras överst — favoriterna syns.
+  rest.sort((a, b) => (AVATARS['npc:' + b[0]] ? 1 : 0) - (AVATARS['npc:' + a[0]] ? 1 : 0));
   if (partyList) {
     partyList.innerHTML = near.map(row).join('');
     if (nearLabel) nearLabel.style.display = near.length ? 'block' : 'none';
@@ -6251,8 +6265,7 @@ const CONSOLE_MAX = 400;       // max rader i DOM (prestanda)
 function toggleConsole() {
   consoleOpen = !consoleOpen;
   document.getElementById('console').classList.toggle('open', consoleOpen);
-  const tab = document.getElementById('console-tab');
-  if (tab) tab.style.display = consoleOpen ? 'none' : 'inline-flex';
+  // Klick på 🛠️ i topbaren = visa debug, nästa klick = dölj (knappen stannar synlig)
   if (consoleOpen) startConsolePolling();
   else stopConsolePolling();
 }
@@ -7240,17 +7253,22 @@ document.addEventListener('keydown', e => {
   .cp-overlay.show{ opacity: 1; visibility: visible; }
   .cp-box{ width: min(520px, 100%); max-height: 86vh; overflow-y: auto;
     background: linear-gradient(165deg, var(--stone-2), var(--stone) 55%, #120c1c);
-    border: 1px solid var(--edge); padding: 1.5rem 1.5rem 1.6rem;
-    box-shadow: 0 30px 80px -20px rgba(0,0,0,.9), 0 0 40px rgba(201,162,39,.12);
+    border: 1px solid rgba(201,162,39,.28); border-radius: 16px;
+    padding: 1.5rem 1.5rem 1.6rem;
+    box-shadow: 0 30px 80px -20px rgba(0,0,0,.9), 0 0 40px rgba(201,162,39,.14);
     animation: mi-rise .35s cubic-bezier(.22,1,.36,1); }
   .cp-close{ position: absolute; top: .6rem; right: .8rem; background: none; border: 0;
-    color: var(--bone-dim); font-size: 1.2rem; cursor: pointer; padding: .3rem; }
+    color: var(--bone-dim); font-size: 1.2rem; cursor: pointer; padding: .3rem; border-radius: 6px; }
   .cp-close:hover{ color: var(--bone-bright); }
-  .cp-head{ display: flex; align-items: center; gap: .9rem; margin-bottom: 1.1rem; position: relative; }
-  .cp-avatar{ width: 56px; height: 56px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+  .cp-head{ display: flex; align-items: center; gap: 1.1rem; margin-bottom: 1.1rem; position: relative; }
+  .cp-avatar{ width: 112px; height: 112px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
     border: 2px solid rgba(201,162,39,.5); background: var(--stone-3);
-    display: inline-flex; align-items: center; justify-content: center;
-    box-shadow: 0 0 16px -4px rgba(201,162,39,.5); }
+    display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+    font-size: 2.6rem;
+    box-shadow: 0 0 22px -6px rgba(201,162,39,.55);
+    transition: transform .25s, box-shadow .25s, border-color .25s; }
+  .cp-avatar:hover{ transform: scale(1.04); border-color: var(--gold-bright); box-shadow: 0 0 30px -4px rgba(232,198,90,.7); }
+  .cp-avatar img{ width: 100%; height: 100%; object-fit: cover; }
   .cp-name{ font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.25rem; color: var(--bone-bright); }
   .cp-tier{ display: inline-block; margin-top: .25rem; font-size: .78rem; letter-spacing: .12em;
     text-transform: uppercase; color: var(--gold-bright); border: 1px solid var(--edge-hi);
@@ -7267,8 +7285,8 @@ document.addEventListener('keydown', e => {
   .cp-paint-btn{ display: flex; align-items: center; justify-content: center; gap: .5rem; width: 100%;
     padding: .7rem 1rem; font-family: 'Cinzel', serif; font-size: .78rem; letter-spacing: .12em; text-transform: uppercase;
     background: linear-gradient(180deg, var(--stone-3), var(--stone)); border: 1px solid var(--edge);
-    color: var(--bone-bright); cursor: pointer; border-radius: 2px; transition: all .2s; }
-  .cp-paint-btn:hover{ border-color: var(--gold); color: var(--gold-bright); }
+    color: var(--bone-bright); cursor: pointer; border-radius: 8px; transition: all .2s; }
+  .cp-paint-btn:hover{ border-color: var(--gold); color: var(--gold-bright); transform: translateY(-1px); box-shadow: 0 4px 14px -6px rgba(232,198,90,.25); }
   .av-suggest{ outline: 2px solid var(--gold); outline-offset: 1px; }
   @media(max-width:520px){ .cp-grid{ grid-template-columns: 1fr; } .cp-box{ padding: 1.2rem 1rem 1.3rem; } }
   /* TTS-player-bar: smal progressrad ovanför röstväljaren */
@@ -7289,7 +7307,7 @@ document.addEventListener('keydown', e => {
   <div class="cp-box">
     <button class="cp-close" onclick="closeChatProfileModal()" title="Close">✕</button>
     <div class="cp-head">
-      <span class="cp-avatar" id="cp-avatar">👤</span>
+      <span class="cp-avatar" id="cp-avatar" onclick="openCpAvatarLightbox()" title="Click for full-size preview">👤</span>
       <div style="min-width:0">
         <div class="cp-name" id="cp-name">Adventurer</div>
         <span class="cp-tier" id="cp-tier"></span>
@@ -7299,8 +7317,7 @@ document.addEventListener('keydown', e => {
     <div class="cp-sec">
       <div class="cp-sec-title">🎨 Portrait</div>
       <div class="cp-actions">
-        <button class="cp-paint-btn" onclick="openProfileAvatarModal('stepfun')">✨ Paint profile (StepFun)</button>
-        <button class="cp-paint-btn" onclick="openProfileAvatarModal('wan')">✨ Paint profile (Wan 2.7)</button>
+        <button class="cp-paint-btn" onclick="openProfileAvatarModal()">✨ Paint your account profile avatar</button>
       </div>
     </div>
   </div>
@@ -7332,7 +7349,6 @@ document.addEventListener('keydown', e => {
     </div>
     <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
       <button class="av-btn primary" id="avatar-ai-btn" onclick="generateAvatarAction()">✨ Paint new from my words</button>
-      <button class="av-btn primary" id="avatar-ai-btn-wan" onclick="generateAvatarAction('wan')" style="display:none">✨ Paint profile (Wan 2.7)</button>
       <button class="av-btn" id="avatar-update-btn" onclick="updateAvatarAction()" style="display:none">🔄 Update from sheet</button>
       <button class="av-btn" onclick="uploadAvatarAction()">📁 Upload image…</button>
       <button class="av-btn danger" id="avatar-del-btn" onclick="deleteAvatarAction()" style="display:none">🗑 Remove avatar</button>

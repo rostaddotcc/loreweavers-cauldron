@@ -281,8 +281,9 @@ def test_webhook_checkout_support300_grants_export(client):
     assert main._clamp_player_model("qwen3.8-max", tier="tier1") == "step-3.7-flash"
 
 
-def test_webhook_checkout_donation_no_features(client):
-    """Valfri summa: bara ledger — inga förmåner."""
+def test_webhook_checkout_donation_turns_no_features(client):
+    """Donation (valfri summa): +100 turns per € (amount_total i ören = turns),
+    inga förmåner/fönster (2026-08-04)."""
     _seed("alice")
     body = _event("checkout.session.completed", {
         "metadata": {"username": "alice", "tier": "donation"},
@@ -294,7 +295,7 @@ def test_webhook_checkout_donation_no_features(client):
                     headers={"stripe-signature": _sign(body)})
     assert r.status_code == 200
     u = main.load_users()["alice"]
-    assert u["turn_bonus"] == 0
+    assert u["turn_bonus"] == 500  # 5€ × 100 turns/€
     assert u["features"] == {}
     assert u["subscription_status"] == "free"
     ledger = json.loads(main._LEDGER_FILE.read_text())

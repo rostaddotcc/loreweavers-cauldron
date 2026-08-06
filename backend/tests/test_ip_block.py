@@ -1,8 +1,8 @@
-"""2026-08-05 v3: 1-konto-per-IP vid registrering.
+"""IP-hantering vid registrering.
 
-Rostad: "Vi behöver också blockera 1 konto per IP får skapas."
-- Register blockerar en andra registrering från samma PUBLIKA IP (403).
-- Privata IP:er (LAN/localhost) hoppas över — blockering är meningslös bakom NAT.
+Historik: 2026-08-05 v3 blockerades >1 konto per publik IP.
+2026-08-06 togs IP-låset BORT (rostad): registrering stoppas aldrig av
+IP-skäl — reg_ip loggas fortfarande för statistik.
 - iplog._ip_store isoleras till tmp så riktig data aldrig rörs (autouse).
 
 Ingen riktig data rörs: users.json + kampanj-data + ip-store pekas om till tmp.
@@ -74,12 +74,13 @@ def _register(username, ip=None):
                       headers=headers)
 
 
-def test_second_account_same_public_ip_blocked(ip_store):
+def test_second_account_same_public_ip_allowed(ip_store):
+    """IP-låset borttaget 2026-08-06: flera konton från samma publika IP OK."""
     r1 = _register("alice", ip="1.2.3.4")
     assert r1.status_code == 200, r1.text
     r2 = _register("bob", ip="1.2.3.4")
-    assert r2.status_code == 403
-    assert "already exists" in r2.json()["detail"].lower()
+    assert r2.status_code == 200, r2.text
+    assert "bob" in main.load_users()
 
 
 def test_different_ip_allowed(ip_store):
@@ -107,12 +108,12 @@ def test_no_xff_header_uses_direct_ip(ip_store):
     assert "bob" in main.load_users()
 
 
-def test_existing_user_ip_in_store_blocks_new(ip_store):
-    """Befintliga användares IP:er (från autentiserade requests) räknas också."""
+def test_existing_user_ip_does_not_block_new(ip_store):
+    """IP-låset borttaget 2026-08-06 — befintliga användares IP:er blockerar inte."""
     iplog.record_ip("oldplayer", "77.88.99.10")
     r = _register("newbie", ip="77.88.99.10")
-    assert r.status_code == 403
-    assert "already exists" in r.json()["detail"].lower()
+    assert r.status_code == 200, r.text
+    assert "newbie" in main.load_users()
 
 
 def test_register_records_ip_for_new_user(ip_store):

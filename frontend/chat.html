@@ -145,7 +145,7 @@
     padding: 0.55rem 0.7rem; border: none; border-radius: 2px;
     background: transparent; cursor: pointer; text-align: left;
     text-decoration: none; transition: background 0.15s, transform 0.15s;
-  }.drop-item:hover{ background: rgba(232,198,90,0.1); transform: translateX(3px); }.di-icon{ font-size: 1.05rem; flex-shrink: 0; filter: drop-shadow(0 0 4px rgba(232,198,90,0.3)); }.di-body{ display: flex; flex-direction: column; min-width: 0; }.di-name{ font-family: 'Cinzel', serif; font-size: 0.96rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-bright); }.drop-item:hover .di-name{ color: var(--gold-bright); }.di-hint{ font-size: 0.86rem; font-style: italic; color: var(--bone-dim); }/* Settings-menyn (⚙️): hint-rad → hover-tooltip (desktop). Menyn är högerjusterad → tooltip pekar vänsterut */.settings-menu .drop-item{ position: relative; }.settings-menu .di-hint{ position: absolute; top: 50%; right: calc(100% + 10px); transform: translateY(-50%); white-space: nowrap; font-size: 0.84rem; font-style: italic; color: var(--bone-dim); background: var(--stone-3); border: 1px solid var(--edge); border-radius: 3px; padding: 0.32rem 0.6rem; box-shadow: 0 10px 28px -10px rgba(0,0,0,0.8); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.16s ease, visibility 0.16s ease; z-index: 70; }.settings-menu .drop-item:hover .di-hint{ opacity: 1; visibility: visible; }.settings-menu .drop-item:hover .di-name{ color: var(--gold-bright); }@media(hover:none), (max-width:640px){ .settings-menu .di-hint{ position: static; transform: none; opacity: 1; visibility: visible; background: none; border: none; box-shadow: none; padding: 0; } /* TTS-raden: kompaktare så Combat/Engine Room aldrig klipps bort */ .tts-voice-picker{ gap: 0.3rem 0.4rem; }.tts-voice-label{ display: none; }.tts-select{ font-size: 0.7rem; padding: 0.26rem 0.4rem; max-width: 122px; flex-shrink: 1; min-width: 0; }.tts-auto-btn{ font-size: 0.7rem; padding: 0.28rem 0.55rem; }.tts-style-custom{ width: 7rem; } }.drop-sep{ height: 1px; background: var(--edge); margin: 0.4rem 0.3rem; }/* ═══════════ Layout ═══════════ */.layout{ position: relative; z-index: auto; flex: 1; display: flex; min-height: 0; }/* ── Sidebar: party ── */.sidebar{
+  }.drop-item:hover{ background: rgba(232,198,90,0.1); transform: translateX(3px); }.di-icon{ font-size: 1.05rem; flex-shrink: 0; filter: drop-shadow(0 0 4px rgba(232,198,90,0.3)); }.di-body{ display: flex; flex-direction: column; min-width: 0; }.di-name{ font-family: 'Cinzel', serif; font-size: 0.96rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-bright); }.drop-item:hover .di-name{ color: var(--gold-bright); }.di-hint{ font-size: 0.86rem; font-style: italic; color: var(--bone-dim); }/* Settings-menyn (⚙️): hint-rad → hover-tooltip (desktop). Menyn är högerjusterad → tooltip pekar vänsterut */.settings-menu .drop-item{ position: relative; }.settings-menu .di-hint{ position: absolute; top: 50%; right: calc(100% + 10px); transform: translateY(-50%); white-space: nowrap; font-size: 0.84rem; font-style: italic; color: var(--bone-dim); background: var(--stone-3); border: 1px solid var(--edge); border-radius: 3px; padding: 0.32rem 0.6rem; box-shadow: 0 10px 28px -10px rgba(0,0,0,0.8); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.16s ease, visibility 0.16s ease; z-index: 70; }.settings-menu .drop-item:hover .di-hint{ opacity: 1; visibility: visible; }.settings-menu .drop-item:hover .di-name{ color: var(--gold-bright); }@media(hover:none), (max-width:640px){ .settings-menu .di-hint{ position: static; transform: none; opacity: 1; visibility: visible; background: none; border: none; box-shadow: none; padding: 0; } /* TTS-raden: kompaktare så Combat/Engine Room aldrig klipps bort */ .tts-voice-picker{ gap: 0.3rem 0.4rem; }.tts-voice-label{ display: none; }.tts-select{ font-size: 0.7rem; padding: 0.26rem 0.4rem; max-width: 122px; flex-shrink: 1; min-width: 0; }.tts-auto-btn{ font-size: 0.7rem; padding: 0.28rem 0.55rem; } }.drop-sep{ height: 1px; background: var(--edge); margin: 0.4rem 0.3rem; }/* ═══════════ Layout ═══════════ */.layout{ position: relative; z-index: auto; flex: 1; display: flex; min-height: 0; }/* ── Sidebar: party ── */.sidebar{
     width: 250px; flex-shrink: 0;
     background: linear-gradient(180deg, var(--stone), var(--ink));
     border-right: 1px solid var(--edge);
@@ -347,15 +347,7 @@
     color: var(--gold-bright); box-shadow: 0 0 10px -3px rgba(232,198,90,0.5);
     animation: tts-pulse 2.4s infinite;
   }
-  /* Berättar-stil (premium): custom-fras-input + låst tillstånd */
-  .tts-style-custom{
-    font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.03em;
-    background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone);
-    padding: 0.28rem 0.45rem; border-radius: 3px; max-width: 150px; width: 8rem;
-    transition: all 0.2s;
-  }
-  .tts-style-custom:focus{ outline: none; border-color: var(--gold); }
-  .tts-select:disabled, .tts-style-custom:disabled{
+  .tts-select:disabled{
     opacity: 0.45; cursor: not-allowed; filter: grayscale(0.6);
   }
   .tts-select:disabled:hover{ border-color: var(--edge); color: var(--bone-dim); }.msg.dm .bubble:hover{ border-color: rgba(232,198,90,0.6); }.msg.dm .bubble .who{ color: var(--gold-bright); letter-spacing: .06em; text-shadow: 0 0 10px rgba(232,198,90,.35); }.msg.dm .bubble .text{ font-style: italic; color: var(--bone); line-height: 1.7; font-size: 1.18rem; }/* ── DM:ns inre monolog (reasoning) — eterisk, hopfällbar tankebubbla ── */.reasoning{
@@ -1087,7 +1079,6 @@
 .pc-gold{ display: inline-flex !important; align-items: baseline !important; }
 .pc-gold-num{ font-family: var(--font-mono, 'IBM Plex Mono', ui-monospace, monospace) !important; }
 .tts-voice-picker{ flex-wrap: wrap !important; gap: 0.4rem !important; row-gap: 0.3rem !important; }
-#tts-style-select{ min-width: 8.5rem !important; flex-shrink: 0 !important; }
 .input-hint{ margin-top: 0.6rem !important; }
 /* Mjuka upp TTS-pickern + kompositören så de matchar topbaren (2026-08-05) */
 .tts-select{ border-radius: 7px !important; box-shadow: 0 2px 10px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; border-color: var(--edge) !important; }
@@ -1480,16 +1471,6 @@
           <option value="male">Male</option>
           <option value="female">Female</option>
         </select>
-        <select class="tts-select" id="tts-style-select" onchange="setTTSStyle(this.value)" title="Narrator style — premium feature">
-          <option value="">Style: neutral</option>
-          <option value="happy">😊 happy</option>
-          <option value="calm">🌊 calm</option>
-          <option value="scary">👻 scary</option>
-          <option value="custom">✏️ custom…</option>
-        </select>
-        <input type="text" class="tts-style-custom" id="tts-style-custom"
-               placeholder="your own style…" style="display:none"
-               onchange="setTTSStyleCustom(this.value)" oninput="setTTSStyleCustom(this.value)">
         <button class="tts-auto-btn" id="tts-auto-btn" onclick="toggleTTSAutoplay(this)" title="Autoplay TTS when the DM answers">🔊 Auto</button>
         <button class="tts-auto-btn tts-speed-btn" id="tts-speed-btn" onclick="cycleTTSSpeed()" title="Playback speed (independent of the TTS API)">⏩ 1×</button>
         <button class="battle-drawer-toggle" id="battle-drawer-toggle" onclick="toggleBattleLog()" aria-expanded="false" title="Toggle combat log">
@@ -2901,7 +2882,6 @@ let _ttsGen = 0; // generationsräknare — en sen playTTS ska aldrig starta lju
 const TTS_VOICE_KEY = 'dnd_tts_voice';
 const TTS_PROVIDER_KEY = 'dnd_tts_provider';
 const TTS_SPEED_KEY = 'dnd_tts_speed';
-const TTS_STYLE_KEY = 'dnd_tts_style';
 
 // ── TTS-player-bar: smal progressrad ovanför röstväljaren ──
 // Dold som standard; visas när ljud spelas och uppdateras via Audio-events.
@@ -3007,38 +2987,13 @@ const _safeLS = {
 const TTS_SPEEDS = [1, 1.25, 1.5, 2, 0.75];
 let _ttsSpeedIdx = 0;
 
-// Berättar-stil (premium: customize narrator voice). Preset (happy/calm/scary)
-// eller egen fras via "custom". Sparas lokalt; backend gate-ar på premium.
+// Berättar-stil borttagen 2026-08-06 — tweaks gav ingen hörbar skillnad.
+// ttsStyle() finns kvar som stub (API.tts-signaturen) och skickar alltid ''.
 function ttsStyle() {
-  const v = _safeLS.get(TTS_STYLE_KEY) || '';
-  if (v === 'custom') {
-    const c = _safeLS.get(TTS_STYLE_KEY + '_custom') || '';
-    return c.trim();
-  }
-  return v;
-}
-function setTTSStyle(v) {
-  if (_ttsAudio) { _ttsGen++; ttsStop(null); } // byte av stil stoppar pågående ljud
-  _safeLS.set(TTS_STYLE_KEY, v);
-  const inp = document.getElementById('tts-style-custom');
-  if (inp) inp.style.display = v === 'custom' ? '' : 'none';
-  try { SFX.click(); } catch (_) {}
-  saveTtsSettings();
-}
-function setTTSStyleCustom(txt) {
-  if (_ttsAudio) { _ttsGen++; ttsStop(null); } // byte av egen stil stoppar pågående ljud
-  _safeLS.set(TTS_STYLE_KEY + '_custom', txt);
-  saveTtsSettings();
+  return '';
 }
 function initTTSStyle() {
-  const v = _safeLS.get(TTS_STYLE_KEY) || '';
-  const sel = document.getElementById('tts-style-select');
-  if (sel) sel.value = v;
-  const inp = document.getElementById('tts-style-custom');
-  if (inp) {
-    inp.style.display = v === 'custom' ? '' : 'none';
-    if (v === 'custom') inp.value = _safeLS.get(TTS_STYLE_KEY + '_custom') || '';
-  }
+  // Ingen stilväljare längre — men provider-låset bor i updateTTSStyleLock.
   updateTTSStyleLock();
 }
 // TIERS: free < tier1 < tier2 < lifetime. /api/me skickar subscription_status.
@@ -3064,18 +3019,10 @@ function tierBadge(s) {
   return map[st] || map['free'];
 }
 
-// Premium-gate: style-väljaren + narrator-testet låst för free/tier1
-// (backend ignorerar ändå). Körs efter /api/me — uppdaterar även modell-pickern.
+// Premium-gate: TTS-provider-låset (StepFun/Qwen) + modell-pickern.
+// (Stilväljaren togs bort 2026-08-06 — namnet lever kvar av historiska skäl.)
 function updateTTSStyleLock() {
-  const sel = document.getElementById('tts-style-select');
-  const inp = document.getElementById('tts-style-custom');
-  if (!sel) return;
   const hasStyle = _tierHasModels();
-  sel.disabled = !hasStyle;
-  if (inp) inp.disabled = !hasStyle;
-  sel.title = hasStyle
-    ? 'Narrator style — happy, calm, scary, or your own'
-    : '🔒 Narrator style — Patron feature (10€)';
   // TTS-providers: StepFun = Support (3€)+, Qwen = Patron (10€)+ (2026-08-05)
   const ps = document.getElementById('tts-provider-select');
   if (ps) {
@@ -3185,8 +3132,6 @@ function _ttsCurrentSettings() {
   return {
     provider: ttsProvider(),
     voice: ttsVoice(),
-    style: _safeLS.get(TTS_STYLE_KEY) || '',
-    style_custom: _safeLS.get(TTS_STYLE_KEY + '_custom') || '',
     autoplay: _safeLS.get(TTS_AUTOPLAY_KEY) === '1' ? '1' : '0',
     speed: speed,
   };
@@ -3212,8 +3157,6 @@ function hydrateTtsFromCampaign(meta) {
   };
   if (meta.tts_provider) lsSet(TTS_PROVIDER_KEY, meta.tts_provider);
   if (meta.tts_voice) lsSet(TTS_VOICE_KEY, meta.tts_voice);
-  if (meta.tts_style !== undefined && meta.tts_style !== null) lsSet(TTS_STYLE_KEY, meta.tts_style);
-  if (meta.tts_style_custom !== undefined && meta.tts_style_custom !== null) lsSet(TTS_STYLE_KEY + '_custom', meta.tts_style_custom);
   if (meta.tts_autoplay) lsSet(TTS_AUTOPLAY_KEY, meta.tts_autoplay);
   if (meta.tts_speed !== undefined && meta.tts_speed !== null) lsSet(TTS_SPEED_KEY, String(meta.tts_speed));
   // Rendera om pickers med de hydrerade värdena

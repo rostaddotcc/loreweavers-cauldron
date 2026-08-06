@@ -86,7 +86,7 @@
   }.settings-menu.open{ opacity: 1; visibility: visible; transform: translateY(0) scale(1); }/* ── Mobile topbar-menu (☰) — mobilens riktiga navigeringsmeny ──
      Alla topplänkar som göms på mobil (Codex, Admin, Help, …) samlas här. */.mobile-menu{
     position: fixed; top: 48px; left: 8px; right: 8px; z-index: 520;
-    min-width: 0; max-height: calc(100dvh - 60px); overflow-y: auto;
+    min-width: 0; max-height: calc(100vh - 60px); max-height: calc(100dvh - 60px); overflow-y: auto;
     padding: 0.28rem;
     background: linear-gradient(180deg, var(--stone-2), var(--ink));
     border: 1px solid var(--gold); border-radius: 3px;
@@ -733,7 +733,7 @@
     background: transparent; border: none; padding: 0.5rem 0.9rem 0.5rem 1.7rem;
     outline: none; resize: none; min-height: 40px; max-height: 120px;
     line-height: 1.45;
-  }.input-row textarea::placeholder{ color: rgba(184,184,200,0.42); font-style: italic; }.send-btn{
+  }.input-row textarea::placeholder{ color: rgba(184,184,200,0.42); font-style: italic; }.cli-prompt,.cli-cursor{ display: none; }.send-btn{
     font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.16em;
     text-transform: uppercase; color: var(--ink); cursor: pointer;
     background: var(--gold); border: 1px solid var(--gold-bright);
@@ -1001,6 +1001,10 @@
   }.cli-dice .cli-dice-result{
     color: var(--bone-bright);
   }.cli-dice .cli-dice-result.crit{ color: var(--gold-bright); text-shadow: 0 0 10px rgba(255,215,0,.55); }.cli-dice .cli-dice-result.fail{ color: var(--blood-bright); text-shadow: 0 0 10px rgba(212,58,77,.5); }
+  body.cli-chat .cli-dice-result .cli-exit{ font-weight: 700; letter-spacing: .06em !important; margin-left: .5ch; }
+  body.cli-chat .cli-dice-result .cli-exit.ok{ color: var(--term-green); }
+  body.cli-chat .cli-dice-result .cli-exit.fail{ color: var(--blood-bright); }
+  body.cli-chat .cli-dice-result .cli-exit.crit{ color: var(--gold-bright); text-shadow: 0 0 8px color-mix(in srgb, var(--gold-bright) 60%, transparent); }
   @keyframes cli-dice-flicker{
     0%{ opacity: 1; } 50%{ opacity: .5; } 100%{ opacity: 1; }
   }/* ═══════════════════════════════════════
@@ -1013,21 +1017,29 @@
     font-family: var(--cli-mono, ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace) !important;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=24">
+<link rel="stylesheet" href="snes.css?v=30">
 <style>
 /* ═══════════ CODEX 2-RAD-TABBAR — override snes.css (måste ligga EFTER linken) ═══════════ */
 .cx-tabs{ display: flex !important; flex-direction: column !important; gap: 0.34rem !important; padding: 0.55rem 0.6rem 0.6rem !important; overflow-x: hidden !important; }
 /* Radordning låst: Character/NPCs/Map/Journal/Facts ovanför, karaktärsraden
    (Spells/Equipment/Treasury/Notes) längst ned — oavsett DOM-ordning. */
 #cx-row-main{ order: 1 !important; }
-#cx-row-sub{ order: 2 !important; }
-.cx-row{ display: flex !important; gap: 0.3rem !important; flex-wrap: nowrap !important; min-width: 0 !important; }
+#cx-row-sub{ order: 2 !important; display: none !important; }
+#cx-row-sub.show{ display: flex !important; }
+/* Raderna scrollar HORISONTELT (flex:none-barn) så hela ikon+etikett alltid syns —
+   ingen ellipsis-trunkering längre (buggfix 2026-08-06). */
+.cx-row{ display: flex !important; gap: 0.3rem !important; flex-wrap: nowrap !important; min-width: 0 !important; overflow-x: auto !important; scrollbar-width: thin !important; scrollbar-color: rgba(201,162,39,0.5) transparent !important; }
+.cx-row::-webkit-scrollbar{ height: 5px !important; }
+.cx-row::-webkit-scrollbar-track{ background: transparent !important; }
+.cx-row::-webkit-scrollbar-thumb{ background: rgba(201,162,39,0.5) !important; border-radius: 3px !important; }
+.cx-row::-webkit-scrollbar-thumb:hover{ background: rgba(232,198,90,0.75) !important; }
 .cx-tab{
-  flex: 1 1 0 !important; min-width: 0 !important; text-align: center !important;
-  white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;
-  font-family: var(--font-body) !important; font-size: 0.62rem !important; letter-spacing: 0.04em !important;
+  flex: 0 0 auto !important; text-align: center !important;
+  white-space: nowrap !important;
+  font-family: var(--font-accent, 'Silkscreen', monospace) !important;
+  font-size: 0.62rem !important; letter-spacing: 0.02em !important;
   background: var(--stone-2) !important; border: 1px solid var(--edge) !important;
-  color: var(--bone-dim) !important; padding: 0.5rem 0.3rem !important;
+  color: var(--bone-dim) !important; padding: 0.5rem 0.55rem !important;
 }
 .cx-tab:hover{ background: var(--stone-3) !important; color: var(--bone-bright) !important; }
 .cx-tab.active{ background: var(--ink) !important; border-color: var(--gold) !important; color: var(--gold-bright) !important; }
@@ -1041,8 +1053,8 @@
   box-shadow: inset 0 0 12px rgba(201,162,39,0.18) !important;
 }
 @media (max-width: 420px){
-  .cx-tab{ font-size: 0.55rem !important; letter-spacing: 0.02em !important; padding: 0.46rem 0.12rem !important; }
-  .cx-tab.cx-subtab{ font-size: 0.52rem !important; letter-spacing: 0.02em !important; }
+  .cx-tab{ font-size: 0.62rem !important; letter-spacing: 0.02em !important; padding: 0.46rem 0.4rem !important; }
+  .cx-tab.cx-subtab{ font-size: 0.62rem !important; letter-spacing: 0.02em !important; }
 }
 /* ═══════════ MJUKA UPP — topbar, profil, admin, codex (2026-08-05) ═══════════ */
 .top-btn{ border-radius: 8px !important; box-shadow: 0 2px 12px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; }
@@ -1058,8 +1070,25 @@
 /* Header får aldrig klämmas — text ellipsas, ikoner behåller bredd */
 .topbar{ gap: .7rem !important; padding: .6rem .9rem !important; }
 .campaign{ max-width: 28vw; min-width: 0; flex-shrink: 1; }
-.header-turns-info{ max-width: 22vw !important; }
+.header-turns-info{ max-width: 22vw !important; margin-left: 0.4rem !important; }
 .top-btn.icon-btn{ flex-shrink: 0 !important; }
+/* ═══════════ TOPBAR-luft + SIDEBAR-läsbarhet + TTS/kompositör (2026-08-06) ═══════════
+   Måste ligga EFTER snes.css: §1 tvingar font-family !important, §8 plattar sidebar,
+   §14 styr scrollbars — allt här vinner med !important. */
+#user-tag{ margin-left: 0.45rem !important; padding: 0.28rem 0.75rem 0.28rem 0.4rem !important; }
+.sidebar{ scrollbar-width: thin !important; scrollbar-color: rgba(201,162,39,0.55) transparent !important; }
+.sidebar::-webkit-scrollbar{ width: 6px !important; }
+.sidebar::-webkit-scrollbar-track{ background: transparent !important; }
+.sidebar::-webkit-scrollbar-thumb{ background: rgba(201,162,39,0.5) !important; border-radius: 3px !important; }
+.sidebar::-webkit-scrollbar-thumb:hover{ background: rgba(232,198,90,0.75) !important; }
+.pc-name{ font-family: var(--font-display, 'Cinzel', serif) !important; font-size: 0.92rem !important; line-height: 1.3 !important; word-break: break-word !important; }
+.side-label{ font-family: var(--font-accent, 'Silkscreen', monospace) !important; font-size: 0.58rem !important; text-transform: uppercase !important; letter-spacing: 0.22em !important; color: var(--gold-bright) !important; }
+.side-body{ font-family: var(--font-body, 'Spectral', Georgia, serif) !important; }
+.pc-gold{ display: inline-flex !important; align-items: baseline !important; }
+.pc-gold-num{ font-family: var(--font-mono, 'IBM Plex Mono', ui-monospace, monospace) !important; }
+.tts-voice-picker{ flex-wrap: wrap !important; gap: 0.4rem !important; row-gap: 0.3rem !important; }
+#tts-style-select{ min-width: 8.5rem !important; flex-shrink: 0 !important; }
+.input-hint{ margin-top: 0.6rem !important; }
 /* Mjuka upp TTS-pickern + kompositören så de matchar topbaren (2026-08-05) */
 .tts-select{ border-radius: 7px !important; box-shadow: 0 2px 10px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; border-color: var(--edge) !important; }
 .tts-select:focus{ outline: none !important; border-color: var(--gold) !important; box-shadow: 0 0 0 3px rgba(201,162,39,.15), 0 2px 10px -6px rgba(0,0,0,.6) !important; }
@@ -1096,24 +1125,87 @@
 .cx-tab.active{ box-shadow: 0 3px 14px -5px rgba(232,198,90,.45) !important; }
 /* Sidebar-kort: mjukare hover-lyft */
 .pc-card:hover, .npc-row:hover, .quest-item:hover{ transform: translateY(-1px) !important; box-shadow: 0 4px 14px -6px rgba(0,0,0,.55) !important; }
-/* ═══════════ MJUKA UPP RUNDA 3 — chattbubblorna (2026-08-05) ═══════════ */
-/* Grundbubbla: 6px → 14px. DM/NPC vänster-ankrad (mjuk mot avataren),
-   spelaren höger-ankrad (mjuk mot avataren) — riktig chattbubbla-form. */
-.bubble{ border-radius: 6px 16px 16px 16px !important; }
-.msg.player .bubble{ border-radius: 16px 6px 16px 16px !important; }
-/* Hörnbeslagen: större + rundare (9px/1px → 12px/3px), subtilare — de ska
-   dekorera, inte skära. */
-.bubble::before, .bubble::after{ width: 12px !important; height: 12px !important; border-radius: 3px !important; opacity: 0.55 !important; }
-.bubble::before{ top: -2px !important; left: -2px !important; border-width: 2px !important; }
-.bubble::after{ bottom: -2px !important; right: -2px !important; border-width: 2px !important; }
+/* ═══════════ MJUKA UPP RUNDA 4 — chattbubblorna: tidlöst mjuka (2026-08-06) ═══════════ */
+/* Grundbubbla: djupare asymetri + mjukare kanter. DM/NPC vänster-ankrad
+   (mjuk mot avataren), spelaren höger-ankrad — riktig chattbubbla-form. */
+.bubble{
+  border-radius: 10px 20px 20px 20px !important;
+  border-color: color-mix(in srgb, var(--accent, var(--gold)) 32%, transparent) !important;
+  box-shadow:
+    0 8px 28px -14px rgba(0,0,0,.7),
+    0 0 22px -10px color-mix(in srgb, var(--accent, var(--gold)) 40%, transparent),
+    inset 0 1px 0 rgba(255,255,255,.055) !important;
+}
+.msg.player .bubble{ border-radius: 20px 10px 20px 20px !important; }
+/* Per-roll bakgrund: mjukt ljus ovanifrån (radial) över tonad gradient —
+   tyg-/papper-känsla i stället för platt färgfält. */
+.msg.dm .bubble{
+  background:
+    radial-gradient(130% 100% at 10% 0%, rgba(232,198,90,.13), transparent 60%),
+    linear-gradient(172deg, rgba(201,162,39,.10), rgba(11,9,15,.42)) !important;
+}
+.msg.npc .bubble{
+  background:
+    radial-gradient(130% 100% at 10% 0%, color-mix(in srgb, var(--npc-color, #a8b2c0) 15%, transparent), transparent 60%),
+    linear-gradient(172deg, color-mix(in srgb, var(--npc-color, #a8b2c0) 8%, transparent), rgba(11,9,15,.42)) !important;
+}
+.msg.player .bubble{
+  background:
+    radial-gradient(130% 100% at 90% 0%, color-mix(in srgb, var(--arcane) 16%, transparent), transparent 60%),
+    linear-gradient(172deg, color-mix(in srgb, var(--arcane) 9%, transparent), rgba(11,9,15,.42)) !important;
+}
+/* Hörnbeslagen: smala, rundade, knappt synliga — de ska glimta, inte skära. */
+.bubble::before, .bubble::after{
+  width: 11px !important; height: 11px !important;
+  border-radius: 4px !important; opacity: 0.35 !important;
+}
+.bubble::before{ top: -1px !important; left: -1px !important; border-width: 1px !important; }
+.bubble::after{ bottom: -1px !important; right: -1px !important; border-width: 1px !important; }
 /* NPC-citat inuti DM-svar */
-.npc-quote{ border-radius: 8px 12px 12px 8px !important; }
+.npc-quote{ border-radius: 10px 14px 14px 10px !important; }
 /* DM:ns inre monolog (reasoning) */
-.reasoning{ border-radius: 10px !important; }
+.reasoning{ border-radius: 12px !important; }
 /* System-/tärningsrutor */
-.msg.system .box, .box{ border-radius: 8px !important; }
-/* Bubblorna får ett mjukare lyft i hover (matchar övriga kort) */
-.bubble:hover{ box-shadow: 0 8px 24px -10px rgba(0,0,0,.7), 0 0 0 1px color-mix(in srgb, var(--accent, var(--gold)) 22%, transparent) !important; }
+.msg.system .box, .box{ border-radius: 10px !important; }
+/* Hover: mjukt lyft + färgat sken — ingen hård ring */
+.bubble:hover{
+  transform: translateY(-2px) !important;
+  border-color: color-mix(in srgb, var(--accent, var(--gold)) 55%, transparent) !important;
+  box-shadow:
+    0 10px 30px -12px rgba(0,0,0,.75),
+    0 0 28px -8px color-mix(in srgb, var(--accent, var(--gold)) 55%, transparent),
+    inset 0 1px 0 rgba(255,255,255,.07) !important;
+}
+/* ═══════════ COMPOSER — tightare skrivfönster (2026-08-06) ═══════════
+   Måste ligga EFTER snes.css: global reset + §7 tvingar radius 0 och
+   padding-left 1.8rem (plats för ❯-markören). Vi tightar resten men
+   BEHÅLLER vänsterpadden ≥1.7rem så texten aldrig kolliderar med ❯. */
+.composer{
+  border-radius: 12px !important;
+  padding: 0.18rem 0.35rem 0.18rem 0.15rem !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.045) !important;
+}
+.composer:focus-within{
+  box-shadow: 0 0 16px -4px rgba(232,198,90,0.35), inset 0 1px 0 rgba(255,255,255,.05) !important;
+}
+.input-row textarea{
+  padding: 0.3rem 0.55rem 0.34rem 1.7rem !important;
+  /* 2-radig placeholder får aldrig klippas: 3.6rem (root 18px → 64.8px)
+     = 2×1.45-rad + padding. Mobil behåller 44px+ i media-frågan nedan. */
+  min-height: 3.6rem !important;
+}
+.send-btn{
+  padding: 0.5rem 1.05rem !important;
+}
+.input-area{
+  padding: 0.35rem 1.6rem 0.5rem !important;
+}
+/* Mobil: behåll bekväm touch-yta (iOS-zoom-skydd behöver 16px+ text,
+   men knapparna kan tightas lite mot snes 48px) */
+@media (max-width: 768px){
+  .input-row textarea{ min-height: 44px !important; padding: 0.45rem 0.6rem 0.45rem 1.8rem !important; }
+  .send-btn{ min-height: 44px !important; padding: 0.5rem 0.8rem !important; }
+}
 @media (max-width: 768px){
   .codex-panel{ border-radius: 0 !important; }
   /* Mobil: Codex-flikarna som bottenmeny — tabs längst ned i stället för topp */
@@ -1129,10 +1221,52 @@
   .brand{ max-width: 34vw; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .campaign{ max-width: 30vw; }
 }
+/* ═══════════ ENGINE ROOM — polerad debug-konsol (2026-08-06) ═══════════
+   Temamedveten istället för hårdkodad #111/#333; klick utanför stänger. */
+.console{
+  background: linear-gradient(180deg, var(--stone-3), var(--ink)) !important;
+  border: 1px solid var(--edge) !important;
+  border-top: 2px solid var(--term-green) !important;
+  box-shadow: 0 -8px 32px rgba(0,0,0,.7) !important;
+}
+.console-head{
+  background: rgba(0,0,0,.35) !important;
+  border-bottom: 1px solid var(--edge) !important;
+  padding: 0.4rem 0.6rem !important;
+}
+.console-title{
+  color: var(--term-green) !important;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--term-green) 45%, transparent);
+}
+.cchip, .console-btn{
+  background: var(--stone-2) !important;
+  border-color: var(--edge) !important;
+  color: var(--bone-dim) !important;
+}
+.cchip:hover, .console-btn:hover{
+  background: var(--stone-3) !important;
+  color: var(--bone-bright) !important;
+  border-color: var(--gold) !important;
+}
+.cchip.on{
+  background: var(--term-green) !important;
+  border-color: var(--term-green) !important;
+  color: var(--ink) !important;
+}
+.console-btn.danger:hover{ background: var(--blood) !important; color: #fff !important; border-color: var(--blood) !important; }
+.console-log{ scrollbar-width: thin; scrollbar-color: var(--edge) transparent; }
+.clog{ gap: .6rem; padding: .12rem 0; border-bottom: 1px dashed rgba(255,255,255,.05); }
+.clog .ct{ color: var(--bone-dim); font-size: .78rem; }
+.clog .cl{ width: 34px; letter-spacing: .04em; }
+.clog .cn{ max-width: 90px; font-size: .78rem; }
+/* Kompakt retry-knapp (2026-08-06) — i mediaspelarens anda */
+.rr-btn{ padding: .3rem .7rem !important; font-size: .66rem !important; }
+/* Väntetext under nedlåst tärningsknapp (2026-08-06) */
+.rr-wait{ font-size: .7rem; color: var(--bone-dim); font-style: italic; margin-top: .35rem; }
 </style>
-<script src="sprites.js?v=20260802a"></script>
-<script src="fonts.js?v=20260806a"></script>
-<script src="themes.js?v=20260806a"></script>
+<script src="sprites.js?v=20260806b"></script>
+<script src="fonts.js?v=20260806b"></script>
+<script src="themes.js?v=20260806b"></script>
 </head>
 <body>
 <!-- <marker> -->
@@ -1176,7 +1310,6 @@
     <button class="top-btn icon-btn" onclick="toggleSettingsMenu()" title="Settings" style="font-size:1rem">⚙️</button>
     <div class="settings-menu" id="settings-menu">
       <button class="drop-item" onclick="openUsageModal();closeSettingsMenu()"><span class="di-icon">📊</span><span class="di-body"><span class="di-name">Usage</span><span class="di-hint">model & token stats</span></span></button>
-      <button class="drop-item" onclick="fontToggleBtn();closeSettingsMenu()"><span class="di-icon">🔤</span><span class="di-body"><span class="di-name">Font</span><span class="di-hint" id="settings-font-hint">typeface</span></span></button>
       <button class="drop-item" id="settings-menu-theme" onclick="THEMES.openPopover(this);closeSettingsMenu()"><span class="di-icon">🎨</span><span class="di-body"><span class="di-name">Theme</span><span class="di-hint" id="settings-theme-hint">choose palette</span></span></button>
       <a class="drop-item" href="help.html"><span class="di-icon">❓</span><span class="di-body"><span class="di-name">How to Play?</span><span class="di-hint">commands & tips</span></span></a>
       <div class="drop-sep"></div>
@@ -1331,9 +1464,11 @@
     <div class="input-area">
       <!-- TTS-player-bar: smal progressrad — visas när ljud spelas (play/pause + tid) -->
       <div class="tts-player" id="tts-player">
-        <button class="ttp-toggle" id="ttp-toggle" onclick="ttsPlayerToggle()" title="Play / pause">⏯</button>
+        <button class="ttp-toggle" id="ttp-toggle" onclick="ttsPlayerToggle()" title="Play latest narration">▶</button>
         <div class="ttp-track"><div class="ttp-fill" id="ttp-fill"></div></div>
         <span class="ttp-time" id="ttp-time">0:00 / 0:00</span>
+        <span class="ttp-idle" id="ttp-idle">[♪] latest narration — press ▶</span>
+        <span class="ttp-synth" id="ttp-synth"></span>
       </div>
       <div class="tts-voice-picker" title="Narrator voice for reading aloud">
         <span class="tts-voice-label">🗣️</span>
@@ -1366,7 +1501,8 @@
       <div class="composer">
         <div class="at-chat-chip" id="at-chat-chip" hidden></div>
         <div class="input-row">
-          <textarea id="player-input" rows="1" placeholder="What do you do? Write freely — fight, sneak, talk, cast a spell…"></textarea>
+          <span class="cli-prompt" id="cli-prompt" aria-hidden="true"><span class="cp-user"></span><span class="cp-at">@</span><span class="cp-host"></span> <span class="cp-path">~</span> <span class="cp-pct">%</span></span><span class="cli-cursor" id="cli-cursor">▌</span>
+          <textarea id="player-input" rows="1" enterkeyhint="send" placeholder="What do you do? Write freely — fight, sneak, talk, cast a spell…"></textarea>
           <button class="send-btn" onclick="sendPlayer()">⚔ Act</button>
         </div>
       </div>
@@ -1597,6 +1733,7 @@ async function loadCampaign() {
       const tag = document.querySelector('.topbar .campaign');
       if (tag) tag.textContent = campaign.name;
       updateHeaderInfo();
+      updateCliPrompt();
     } else {
       // Ingen kampanj — tillbaka till vägskälet
       location.href = 'adventure.html';
@@ -2721,7 +2858,8 @@ function buildMessage(type, npcKey, text, meta) {
         <div class="text">${highlightTerms(mdToHtml(escapeHtml(text)))}</div>
       </div>`;
   } else if (type === 'player') {
-    el.innerHTML = `<div class="bubble"><div class="who" onclick="openCodex('character')" title="Open character sheet" style="cursor:pointer">${I18N.t(CHAR_NAME)}</div><div class="text">${text}</div></div>${avatarHtml('player', '🧙‍♀️')}`;
+    const whoTxt = document.body.classList.contains('cli-chat') ? escapeHtml(cliPromptStr()) : I18N.t(CHAR_NAME);
+    el.innerHTML = `<div class="bubble"><div class="who" onclick="openCodex('character')" title="Open character sheet" style="cursor:pointer">${whoTxt}</div><div class="text">${text}</div></div>${avatarHtml('player', '🧙‍♀️')}`;
   } else if (type === 'system') {
     el.innerHTML = `<div class="box">${text}</div>`;
   } else if (type === 'guardian') {
@@ -2773,12 +2911,52 @@ function _fmtTTS(t) {
   return m + ':' + (s < 10 ? '0' : '') + s;
 }
 function ttsPlayerShow() {
+  ttsSynthStop();
   const p = document.getElementById('tts-player');
-  if (p) p.classList.add('show');
+  if (p) { p.classList.add('show'); p.classList.remove('idle'); }
 }
 function ttsPlayerHide() {
+  ttsPlayerIdle();
+}
+// Alltid-synlig TTS-rad: viloläge = smal terminalrad utan ljudkälla.
+// Anropas vid start och när uppspelning stoppas/felar.
+function ttsPlayerIdle() {
+  ttsSynthStop();
   const p = document.getElementById('tts-player');
-  if (p) p.classList.remove('show');
+  if (!p) return;
+  p.classList.remove('show');
+  p.classList.remove('synth');
+  p.classList.add('idle');
+  const toggle = document.getElementById('ttp-toggle');
+  if (toggle) toggle.textContent = '▶';
+  const fill = document.getElementById('ttp-fill');
+  if (fill) fill.style.width = '0%';
+  const time = document.getElementById('ttp-time');
+  if (time) time.textContent = '0:00 / 0:00';
+}
+// Syntes-räknare: tickar medan TTS-begäran är i flykt (långa dialoger kan ta
+// upp emot en minut att rendera). gen-guard stoppar tickern om en nyare
+// play/stop tagit över.
+let _ttsSynthTimer = null;
+function ttsSynthStart(gen) {
+  ttsSynthStop();
+  const p = document.getElementById('tts-player');
+  if (p) { p.classList.remove('idle'); p.classList.add('synth'); }
+  const label = document.getElementById('ttp-synth');
+  const t0 = Date.now();
+  const render = () => {
+    if (gen !== _ttsGen) { ttsSynthStop(); return; }
+    const s = Math.floor((Date.now() - t0) / 1000);
+    if (label) label.innerHTML = '<i class="synth-dot"></i><span>⏳ synthesizing… ' +
+      Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + '</span>';
+  };
+  render();
+  _ttsSynthTimer = setInterval(render, 1000);
+}
+function ttsSynthStop() {
+  if (_ttsSynthTimer !== null) { clearInterval(_ttsSynthTimer); _ttsSynthTimer = null; }
+  const p = document.getElementById('tts-player');
+  if (p) p.classList.remove('synth');
 }
 function ttsPlayerSync() {
   const p = document.getElementById('tts-player');
@@ -2795,8 +2973,20 @@ function ttsPlayerSync() {
 }
 function ttsPlayerToggle() {
   const a = _ttsAudio;
-  if (!a) return;
+  if (!a) { playLatestDm(); return; } // ingen ljudkälla → spela senaste DM-narrationen
   if (a.paused) { a.play().catch(() => {}); } else { a.pause(); }
+}
+// Spela upp den senaste DM-narrationen (▶-knappen i TTS-raden utan ljudkälla).
+function playLatestDm() {
+  const chatEl = document.getElementById('chat');
+  const dms = chatEl ? chatEl.querySelectorAll('.msg.dm') : [];
+  let btn = null;
+  for (let i = dms.length - 1; i >= 0; i--) {
+    const b = dms[i].querySelector('.tts-btn');
+    if (b) { btn = b; break; }
+  }
+  if (!btn) { toast('No narration yet'); return; }
+  playTTS(btn);
 }
 function _wireTtsPlayer(a) {
   if (!a) return;
@@ -3132,6 +3322,10 @@ async function playTTS(btn) {
 
   btn.textContent = '⏳'; btn.classList.add('playing');
   let gen = 0; // generations-id för DENNA uppspelning (sätts precis före play)
+  // Syntes-räknare: tickar medan TTS-renderingen pågår (långa dialoger tar
+  // upp emot en minut). Binds till nuvarande generation så stop/ny play
+  // stoppar tickern.
+  ttsSynthStart(_ttsGen);
   try {
     const ids = await ttsVoiceIds();
     const pids = ids[provider] || ids[ids._default] || {};
@@ -3169,6 +3363,7 @@ initTTSVoicePicker();
 initTTSStyle();
 initTTSAutoplay();
 initTTSSpeed();
+ttsPlayerIdle(); // TTS-raden är alltid synlig — börja i viloläge
 
 // ═══════════════════════════════════════
 // DICE
@@ -3645,7 +3840,10 @@ async function inlineDiceCeremonyCli(notation, label, roll) {
   } else {
     resultText = `→ [${escapeHtml(notation)}] ${roll.rolls.join(', ')}${modPretty} = ${roll.total}`;
   }
-  resultEl.innerHTML = resultText + (verdict ? ` <b>${verdict}</b>` : '');
+  const exitChip = isCrit ? ' <span class="cli-exit crit">[CRIT!]</span>'
+    : isFail ? ' <span class="cli-exit fail">[FAIL]</span>'
+    : ' <span class="cli-exit ok">[OK]</span>';
+  resultEl.innerHTML = resultText + exitChip + (verdict ? ` <b>${verdict}</b>` : '');
   if (isCrit) resultEl.classList.add('crit');
   if (isFail) resultEl.classList.add('fail');
 
@@ -3816,20 +4014,26 @@ function addRollRequest(notation, label) {
   _pendingRollId = id;
   const en = (typeof I18N !== 'undefined' && I18N.getLang() === 'en');
   const diceGlyph = diceIconForLabel(label);
+  // Tärningslås (2026-08-06): medan Lorekeeper jobbar renderas knapparna
+  // NEDLÅSTA med en väntetext — tärningen låses tills jobbet är klart
+  // (hideGuardianStatus → _enablePendingRollButtons). Klick-skyddet i
+  // answerRollRequest finns kvar som dubbelt säkerhetsnät.
+  const busy = _guardianBusy;
   el.innerHTML = `
     <div class="roll-request" id="${id}">
       <div class="rr-title">${en ? '🎲 ROLL OR TYPE?' : '⚔ SLÅ ELLER SKRIV?'}</div>
       <div class="rr-prompt">${diceGlyph} ${I18N.t('DM begär:')} <b>${label}</b> <span class="rr-note">(${notation})</span></div>
       <div class="rr-actions">
-        <button class="rr-ico rr-ico-dice" onclick="answerRollRequest('${id}','${notation}','${label.replace(/'/g, "\\'")}')" aria-label="${I18N.t('Slå')} ${notation}">
+        <button class="rr-ico rr-ico-dice" onclick="answerRollRequest('${id}','${notation}','${label.replace(/'/g, "\\'")}')" aria-label="${I18N.t('Slå')} ${notation}"${busy ? ' disabled' : ''}>
           <span class="rr-ico-glyph">🎲</span>
           <span class="rr-ico-label">${I18N.t('Slå')} ${notation}</span>
         </button>
-        <button class="rr-ico rr-ico-pen" onclick="declineRollRequest('${id}')" aria-label="${I18N.t('Skriv istället')}">
+        <button class="rr-ico rr-ico-pen" onclick="declineRollRequest('${id}')" aria-label="${I18N.t('Skriv istället')}"${busy ? ' disabled' : ''}>
           <span class="rr-ico-glyph">🖊️</span>
           <span class="rr-ico-label">${I18N.t('Skriv istället')}</span>
         </button>
       </div>
+      ${busy ? `<div class="rr-wait">🦉 ${I18N.t('Lorekeeper uppdaterar världen — tärningen låses upp när jobbet är klart…')}</div>` : ''}
     </div>`;
   appendToChat(el);
   chat.scrollTop = chat.scrollHeight;
@@ -3849,6 +4053,12 @@ function addRollRequest(notation, label) {
 
 // Spelaren avböjer kastet och vill agera fritt istället
 function declineRollRequest(id) {
+  // Tärningslås (2026-08-06): inte heller "skriv istället" får låsa upp
+  // chatten medan Lorekeeper jobbar — då kunde man chatta/rolla i race.
+  if (_guardianBusy) {
+    toast(I18N.t('🛡️ Vänta — Lorekeeper uppdaterar…'));
+    return;
+  }
   const box = document.getElementById(id);
   if (box) {
     box.innerHTML = `<div class="roll-result-inline declined"><span>🖊️ ${I18N.t('Kastet avböjt — spelaren agerar fritt')}</span></div>`;
@@ -4089,10 +4299,19 @@ async function loadTranscript() {
             // F5-safe: [COMBAT:]-taggen parsas även vid transcript-laddning (reveal-kort hamnar i fragmentet, i ordning)
             applyCombatTag(el, gContent, curBody || frag);
           }
+        } else if (m.role === 'user') {
+          const el = buildMessage('player', null, escapeHtml(m.content));
+          if (el) appendToFrag(el);
         } else {
-          const el = (m.role === 'user')
-            ? buildMessage('player', null, escapeHtml(m.content))
-            : buildMessage('dm', null, m.content, m.meta);
+          // Replay: DM-meddelanden kan innehålla [ROLL_GRANT:notation|label]-taggar
+          // (t.ex. när DM:n själv citerar ett kast) — rensa taggen ur den VISADE
+          // texten. Live-flödet (addRollRequest / last_roll_requests) rörs INTE.
+          let dmContent = (m.content == null) ? '' : String(m.content);
+          dmContent = dmContent
+            .replace(/\[ROLL_GRANT:[^\]|]*\|[^\]]*\]/g, '')
+            .replace(/\[ROLL_GRANT:[^\]|]*\]/g, '')
+            .trim();
+          const el = buildMessage('dm', null, dmContent, m.meta);
           if (el) appendToFrag(el);
         }
       });
@@ -4332,6 +4551,7 @@ function hideGuardianStatus() {
   const el = document.getElementById('guardian-status');
   if (el) el.classList.remove('show');
   _guardianBusy = false;
+  _enablePendingRollButtons();
   _unlockChat();
   // Stäng inte av feeden/pixlarna om DM-statusen fortfarande visas
   const dm = document.getElementById('dm-status');
@@ -4339,6 +4559,13 @@ function hideGuardianStatus() {
     scribeFeedStop();
     scribeParticles(false);
   }
+}
+
+// Tärningslås (2026-08-06): när Lorekeeper-jobbet är klart låses väntande
+// tärningsknappar upp (de renderades nedlåsta i addRollRequest).
+function _enablePendingRollButtons() {
+  document.querySelectorAll('.roll-request .rr-ico[disabled]').forEach(b => b.removeAttribute('disabled'));
+  document.querySelectorAll('.roll-request .rr-wait').forEach(el => el.remove());
 }
 function _lockChatForGuardian() {
   const ta = document.getElementById('player-input');
@@ -4362,6 +4589,7 @@ input.addEventListener('input', () => {
   checkAtMention();
   // @-NPC-chatt-indikator
   updateAtChatChip();
+  syncCliCursor();
 });
 
 // @NPC autocomplete
@@ -4461,6 +4689,7 @@ function sendPlayer() {
   input.value = '';
   input.style.height = 'auto';
   updateAtChatChip();
+  syncCliCursor();
 
   // /roll (or /rulla) command
   const rollMatch = text.match(/^\/(?:roll|rulla)\s+(.+)$/i);
@@ -4983,16 +5212,19 @@ function pollForGuardian(turnCount) {
         if (moved) reloadMapIframe();
       }
 
-      // 2) Stoppa när DENNA turs rapport är renderad OCH inget äldre väntar.
+      // 2) Stoppa när DENNA turs rapport är renderad OCH inget äldre väntar
+      //    OCH Lorekeeper-jobbet är helt klart (guardian_running=false).
       //    (Lorekeeper skriver meta.turn sedan 2026-07-31; äldre rapporter utan
-      //    meta behandlas som tillhörande en tidigare tur → måste också renderas.)
+      //    meta behandlas som tillhörande en tidigare tur → måste också renderas.
+      //    Tärningslås 2026-08-06: rapporten kan synas INNAN fakta är sparade —
+      //    då håller vi tärningen låst tills guardian_running slocknat.)
       const currentTurnDone = messages.some(m =>
         m.role === 'guardian' && m.meta && m.meta.turn === turnCount &&
         _renderedGuardianKeys.has(msgDomKey('guardian', m.content)));
       const olderPending = messages.some(m =>
         m.role === 'guardian' && !_renderedGuardianKeys.has(msgDomKey('guardian', m.content)) &&
         (!m.meta || typeof m.meta.turn !== 'number' || m.meta.turn <= turnCount));
-      if (currentTurnDone && !olderPending) {
+      if (currentTurnDone && !olderPending && !data.guardian_running) {
         clearInterval(_guardianPollTimer);
         _guardianPollTimer = null;
         hideGuardianStatus();
@@ -5875,6 +6107,7 @@ async function refreshSidebar() {
     }
     renderLocations(raw);
     renderJourney(raw);
+    updateCliPrompt();
   } catch (e) { /* tyst */ }
 }
 
@@ -6274,6 +6507,17 @@ function toggleConsole() {
   else stopConsolePolling();
 }
 
+// Klick utanför Engine Room stänger den (2026-08-06) — panelen ska aldrig
+// ligga kvar och skymma chatten när man klickar vidare i UI:t.
+document.addEventListener('click', (e) => {
+  if (!consoleOpen) return;
+  const panel = document.getElementById('console');
+  const tab = document.getElementById('console-tab');
+  if (panel && !panel.contains(e.target) && tab && !tab.contains(e.target)) {
+    toggleConsole();
+  }
+});
+
 // ── 🖥️ CLI Chat UI — 'use new chat ui'-switch ──
 // New look: no bubble frames, everything "sits together" terminal-style.
 // Old look: classic bubble player feeling. Persisted in localStorage.
@@ -6281,8 +6525,39 @@ const CLI_CHAT_KEY = 'dnd_cli_chat';
 function cliChatOn() {
   return localStorage.getItem(CLI_CHAT_KEY) !== '0';
 }
+let _cliUser = 'you';
+let _cliHost = 'the-void';
+function _cliSlug(s) {
+  return String(s || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+function updateCliPrompt() {
+  const loc = (campaignData && campaignData.world && campaignData.world.current_location) || '';
+  _cliUser = _cliSlug(CHAR_NAME || 'you') || 'you';
+  _cliHost = _cliSlug(loc) || 'the-void';
+  const u = document.querySelector('.cp-user');
+  const h = document.querySelector('.cp-host');
+  if (u) u.textContent = _cliUser;
+  if (h) h.textContent = _cliHost;
+}
+function cliPromptStr() {
+  return _cliUser + '@' + _cliHost + ' ~ %';
+}
+function syncCliCursor() {
+  const cur = document.getElementById('cli-cursor');
+  const row = document.querySelector('.input-row');
+  // visibility (not opacity): the cli-blink animation animates opacity and would
+  // override an inline opacity — visibility hides the stick reliably.
+  if (cur) cur.style.visibility = input.value ? 'hidden' : '';
+  if (row) row.classList.toggle('empty', !input.value);
+}
 function applyCliChat() {
   document.body.classList.toggle('cli-chat', cliChatOn());
+  updateCliPrompt();
+  syncCliCursor();
 }
 function toggleCliChat() {
   const next = !cliChatOn();
@@ -6929,6 +7204,12 @@ function renderCharDrawer() {
 
 // Resurs-tärningsknapp: rollDice + chat-meddelanden + ljud (samma mönster som /roll)
 function cdRollResource(notation, label) {
+  // Tärningslås (2026-08-06): resurs-tärningar (karaktärsdragaren) får inte
+  // rulla medan Lorekeeper jobbar — samma race-skydd som chat-tärningen.
+  if (_guardianBusy) {
+    toast(I18N.t('🛡️ Vänta — Lorekeeper uppdaterar…'));
+    return;
+  }
   const roll = rollDice(notation);
   if (!roll) { toast('⚠ Could not parse ' + notation); return; }
   closeCharDrawer();
@@ -7142,7 +7423,9 @@ function activateCodexTab(id, placeHash) {
   }
   document.querySelectorAll('#cx-frame iframe').forEach(f => f.classList.toggle('active', f === ifr));
   if (placeholder) placeholder.style.display = 'none';
-  // Rad 2 (karaktärsbladets sub-vyer): aktiva bara när Character är aktiv
+  // Rad 2 (Spells/Equipment/Treasury/Notes): visas + aktiveras bara när Character är aktiv
+  const subRow = document.getElementById('cx-row-sub');
+  if (subRow) subRow.classList.toggle('show', id === 'character');
   if (id === 'character') {
     document.querySelectorAll('#cx-tabs .cx-subtab').forEach(b => b.classList.toggle('active', b.dataset.subtab === _codexSubTab));
     postSubTabToChar();
@@ -7156,6 +7439,9 @@ function openCodexCharacter() {
   activateCodexTab('character');
   _codexSubTab = 'character';
   document.querySelectorAll('#cx-tabs .cx-subtab').forEach(b => b.classList.remove('active'));
+  // Rad 2 visas bara med Character-tabben
+  const subRow = document.getElementById('cx-row-sub');
+  if (subRow) subRow.classList.add('show');
   postSubTabToChar();
 }
 
@@ -7295,11 +7581,24 @@ document.addEventListener('keydown', e => {
   .cp-paint-btn:hover{ border-color: var(--gold); color: var(--gold-bright); transform: translateY(-1px); box-shadow: 0 4px 14px -6px rgba(232,198,90,.25); }
   .av-suggest{ outline: 2px solid var(--gold); outline-offset: 1px; }
   @media(max-width:520px){ .cp-grid{ grid-template-columns: 1fr; } .cp-box{ padding: 1.2rem 1rem 1.3rem; } }
-  /* TTS-player-bar: smal progressrad ovanför röstväljaren */
-  .tts-player{ display: none; align-items: center; gap: .55rem; margin-bottom: .45rem;
+  /* TTS-player-bar: alltid synlig — viloläge = smal terminalrad, spelande = fill+time */
+  .tts-player{ display: flex; align-items: center; gap: .55rem; margin-bottom: .45rem;
     padding: .28rem .6rem; background: rgba(8,5,14,.6); border: 1px solid var(--edge);
     border-radius: 999px; max-width: 420px; }
   .tts-player.show{ display: flex; }
+  .tts-player .ttp-idle{ display: none; font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: .72rem; color: var(--bone-dim); white-space: nowrap; overflow: hidden;
+    text-overflow: ellipsis; }
+  .tts-player.idle .ttp-track, .tts-player.idle .ttp-time{ display: none; }
+  .tts-player.idle .ttp-idle{ display: inline-block; }
+  .tts-player .ttp-synth{ display: none; font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: .72rem; color: var(--term-amber); white-space: nowrap;
+    align-items: center; gap: .4rem; }
+  .tts-player.synth .ttp-track, .tts-player.synth .ttp-time, .tts-player.synth .ttp-idle{ display: none; }
+  .tts-player.synth .ttp-synth{ display: inline-flex; }
+  .synth-dot{ width: 6px; height: 6px; border-radius: 50%; background: var(--term-amber);
+    flex-shrink: 0; animation: synth-pulse 1s ease-in-out infinite; }
+  @keyframes synth-pulse{ 0%, 100%{ opacity: 1; } 50%{ opacity: .25; } }
   .ttp-toggle{ background: none; border: 1px solid var(--edge); color: var(--gold-bright);
     width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-size: .72rem; line-height: 1;
     display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all .2s; }

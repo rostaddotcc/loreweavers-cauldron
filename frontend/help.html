@@ -18,14 +18,14 @@
   }
   *{margin:0;padding:0;box-sizing:border-box;border-radius:0}
   body{
-    font-family:'Silkscreen',monospace;color:var(--bone);min-height:100vh;
+    font-family:var(--font-accent,'Silkscreen',monospace);color:var(--bone);min-height:100vh;
     background:var(--ink);line-height:1.8;
   }
   body::before{content:'';position:fixed;inset:0;z-index:999;pointer-events:none;
     background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0px,rgba(0,0,0,.18) 1px,transparent 1px,transparent 3px)}
   .app{max-width:800px;margin:0 auto;padding:2rem 1.5rem 4rem}
-  h1{font-family:'Press Start 2P',monospace;font-size:1rem;color:var(--gold);margin-bottom:.5rem;text-shadow:2px 2px 0 #000}
-  h2{font-family:'Press Start 2P',monospace;font-size:.7rem;color:var(--term-green);margin:2rem 0 .8rem;text-transform:uppercase;letter-spacing:.1em}
+  h1{font-family:var(--font-accent,'Press Start 2P',monospace);font-size:1rem;color:var(--gold);margin-bottom:.5rem;text-shadow:2px 2px 0 #000}
+  h2{font-family:var(--font-accent,'Press Start 2P',monospace);font-size:.7rem;color:var(--term-green);margin:2rem 0 .8rem;text-transform:uppercase;letter-spacing:.1em}
   h2::before{content:'> ';color:var(--edge)}
   p,li{font-size:.91rem;color:var(--bone);margin-bottom:.6rem}
   ul{padding-left:1.2rem;list-style:none}
@@ -35,9 +35,9 @@
   .cmd{color:var(--term-green);background:var(--ink);padding:.15rem .4rem;border:1px solid var(--edge);font-size:.85rem}
   .key{color:var(--term-amber);border:1px solid var(--edge);padding:.1rem .35rem;font-size:.81rem;background:var(--stone-2)}
   .topbar{display:flex;align-items:center;gap:1.2rem;padding:1.15rem 0;border-bottom:1px solid rgba(42,42,58,.55);margin-bottom:2rem}
-  .topbar .brand{display:flex;align-items:center;gap:.6rem;font-family:'Cinzel',serif;font-size:.74rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-bright)}
+  .topbar .brand{display:flex;align-items:center;gap:.6rem;font-family:var(--font-display,'Cinzel',serif);font-size:.74rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-bright)}
   .topbar .brand img{width:26px;height:26px;border-radius:6px;box-shadow:0 0 10px rgba(201,162,39,.25)}
-  .topbar a{color:var(--bone-dim);text-decoration:none;font-family:'Cinzel',serif;font-size:.66rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:.35rem .1rem;border:none;background:none;transition:color .25s}
+  .topbar a{color:var(--bone-dim);text-decoration:none;font-family:var(--font-display,'Cinzel',serif);font-size:.66rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:.35rem .1rem;border:none;background:none;transition:color .25s}
   .topbar a:hover{color:var(--gold-bright);text-shadow:0 0 12px rgba(232,198,90,.35)}
   .divider{border:none;border-top:1px dashed var(--edge);margin:1.5rem 0}
   .loop{display:grid;grid-template-columns:auto 1fr;gap:.4rem .8rem;font-size:.85rem}
@@ -55,10 +55,10 @@
   .ledger-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0}
   .ledger-cell{background:var(--stone);border:1px solid var(--edge);padding:1rem 1.1rem;position:relative}
   .ledger-cell::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.35}
-  .ledger-cell .lc-tag{font-family:'Press Start 2P',monospace;font-size:.52rem;letter-spacing:.12em;color:var(--term-green);text-transform:uppercase;display:block;margin-bottom:.5rem}
-  .ledger-cell .lc-title{font-family:'Press Start 2P',monospace;font-size:.58rem;color:var(--gold);margin-bottom:.4rem}
+  .ledger-cell .lc-tag{font-family:var(--font-accent,'Press Start 2P',monospace);font-size:.52rem;letter-spacing:.12em;color:var(--term-green);text-transform:uppercase;display:block;margin-bottom:.5rem}
+  .ledger-cell .lc-title{font-family:var(--font-accent,'Press Start 2P',monospace);font-size:.58rem;color:var(--gold);margin-bottom:.4rem}
   .ledger-cell p, .ledger-cell li{font-size:.86rem}
-  .ledger-cell .lc-ex{display:block;margin-top:.5rem;font-family:'Silkscreen',monospace;font-size:.78rem;color:var(--bone-dim);border-left:2px solid var(--gold);padding-left:.6rem}
+  .ledger-cell .lc-ex{display:block;margin-top:.5rem;font-family:var(--font-accent,'Silkscreen',monospace);font-size:.78rem;color:var(--bone-dim);border-left:2px solid var(--gold);padding-left:.6rem}
   .truth{color:var(--term-green)}
   .truth-bad{color:var(--blood-bright)}
   .truth-fix{color:var(--term-amber)}
@@ -91,10 +91,10 @@
     .key { font-size: .75rem; }
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=23">
-<script src="sprites.js?v=20260802a"></script>
-<script src="fonts.js?v=20260803b"></script>
-<script src="themes.js?v=20260804b"></script>
+<link rel="stylesheet" href="snes.css?v=30">
+<script src="sprites.js?v=20260806b"></script>
+<script src="fonts.js?v=20260806b"></script>
+<script src="themes.js?v=20260806b"></script>
 </head>
 <body>
 <div class="app">

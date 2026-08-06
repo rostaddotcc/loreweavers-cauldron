@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="snes.css?v=23">
+<link rel="stylesheet" href="snes.css?v=30">
 <style>
 /* ═══════════ MJUKA UPP — Codex karta (2026-08-05) — EFTER snes.css ═══════════ */
 .top-btn{ border-radius: 8px !important; box-shadow: 0 2px 12px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; }
@@ -21,31 +21,31 @@
 .map-head{ border-radius: 10px !important; }
 .legend-item{ border-radius: 6px !important; }
 </style>
-<script src="sprites.js?v=20260806a"></script>
-<script src="fonts.js?v=20260806c"></script>
+<script src="sprites.js?v=20260806b"></script>
+<script src="fonts.js?v=20260806b"></script>
 <script src="themes.js?v=20260806b"></script>
 <style>
   :root{--ink:#0b0812;--stone:#161020;--stone-2:#1d1529;--stone-3:#241a33;--edge:#3d2f52;--bone:#d9c9a6;--bone-bright:#efe2c0;--bone-dim:#8a7a5e;--gold:#c9a227;--gold-bright:#e8c65a;--blood:#a32433;--blood-bright:#d43a4d;--ember:#d4691e;--arcane:#8b5fd4;--arcane-bright:#c9a6ff;--arcane-deep:#3a1f66;--poison:#7aa35e;--teal:#5e9aa3}
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{height:100%}
-  body{font-family:'Spectral',Georgia,serif;color:var(--bone);background:radial-gradient(1000px 500px at 50% 115%,rgba(212,105,30,.1),transparent 60%),radial-gradient(700px 400px at 10% -5%,color-mix(in srgb, var(--arcane) 8%, transparent),transparent 55%),var(--ink);display:flex;flex-direction:column;overflow:hidden}
+  body{font-family:var(--font-body,'Spectral',Georgia,serif);color:var(--bone);background:radial-gradient(1000px 500px at 50% 115%,rgba(212,105,30,.1),transparent 60%),radial-gradient(700px 400px at 10% -5%,color-mix(in srgb, var(--arcane) 8%, transparent),transparent 55%),var(--ink);display:flex;flex-direction:column;overflow:hidden}
   .grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.045;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
   #embers{position:fixed;inset:0;z-index:0;pointer-events:none}
   .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 190px 70px rgba(4,2,8,.88)}
 
   .topbar{position:relative;z-index:5;display:flex;align-items:center;gap:1rem;padding:.7rem 1.2rem;background:linear-gradient(180deg,var(--stone-2),color-mix(in srgb, var(--stone) 95%, transparent));border-bottom:1px solid var(--edge);box-shadow:0 4px 20px rgba(0,0,0,.5)}
-  .topbar .brand{font-family:'Cinzel',serif;font-weight:900;font-size:1.05rem;color:var(--gold-bright);letter-spacing:.06em;white-space:nowrap;text-shadow:0 0 14px rgba(232,198,90,.3)}
+  .topbar .brand{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:1.05rem;color:var(--gold-bright);letter-spacing:.06em;white-space:nowrap;text-shadow:0 0 14px rgba(232,198,90,.3)}
   .topbar .page-tag{font-size:.91rem;font-style:italic;color:var(--bone-dim);border-left:1px solid var(--edge);padding-left:1rem}
   .topbar .spacer{flex:1}
-  .top-btn{font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:8px;white-space:nowrap;text-decoration:none}
+  .top-btn{font-family:var(--font-display,'Cinzel',serif);font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:8px;white-space:nowrap;text-decoration:none}
   .top-btn:hover{color:var(--gold-bright);border-color:var(--gold);box-shadow:0 0 12px -3px rgba(232,198,90,.4)}
 
   .layout{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;min-height:0;overflow-y:auto;padding:1.5rem 2rem 3rem}
 
   .map-head{text-align:center;margin-bottom:1.8rem}
-  .map-head h1{font-family:'Cinzel',serif;font-weight:900;font-size:1.4rem;color:var(--bone-bright);text-shadow:0 2px 0 #000}
+  .map-head h1{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:1.4rem;color:var(--bone-bright);text-shadow:0 2px 0 #000}
   .map-head .sub{font-style:italic;color:var(--bone-dim);font-size:.98rem;margin-top:.3rem}
-  .current-loc{display:inline-flex;align-items:center;gap:.5rem;margin-top:.7rem;padding:.5rem 1.2rem;background:rgba(201,162,39,.08);border:2px solid rgba(201,162,39,.4);font-family:'Cinzel',serif;font-size:.88rem;letter-spacing:.1em;color:var(--gold-bright)}
+  .current-loc{display:inline-flex;align-items:center;gap:.5rem;margin-top:.7rem;padding:.5rem 1.2rem;background:rgba(201,162,39,.08);border:2px solid rgba(201,162,39,.4);font-family:var(--font-display,'Cinzel',serif);font-size:.88rem;letter-spacing:.1em;color:var(--gold-bright)}
   .current-loc .pin{font-size:1.1rem}
 
   /* ── ASCII-karta ── */
@@ -59,10 +59,10 @@
      center på behållaren: smal karta centreras, bred karta scrollas från
      vänsterkant. */
   .ascii-map pre{font-family:'Courier New',monospace;font-size:.7rem;line-height:1.35;color:var(--arcane);text-shadow:0 0 6px color-mix(in srgb, var(--arcane) 30%, transparent);white-space:pre;display:inline-block;margin:0;text-align:left}
-  .ascii-map .map-label{font-family:'Silkscreen',monospace;font-size:.55rem;letter-spacing:.2em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.5rem}
+  .ascii-map .map-label{font-family:var(--font-accent,'Silkscreen',monospace);font-size:.55rem;letter-spacing:.2em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.5rem}
 
   /* ── Kartans teckenförklaring (legend) ── */
-  .map-legend{display:flex;gap:1.1rem;flex-wrap:wrap;justify-content:center;margin:-.8rem auto 1.8rem;max-width:920px;font-family:'Silkscreen',monospace;font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-dim)}
+  .map-legend{display:flex;gap:1.1rem;flex-wrap:wrap;justify-content:center;margin:-.8rem auto 1.8rem;max-width:920px;font-family:var(--font-accent,'Silkscreen',monospace);font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-dim)}
   .map-legend .ml-item{display:inline-flex;align-items:center;gap:.35rem;white-space:nowrap}
   .map-legend .ml-cur{color:var(--gold-bright)}
   .map-legend .ml-vis{color:var(--teal)}
@@ -85,23 +85,23 @@
 
   .pc-top{display:flex;align-items:center;gap:.7rem;margin-bottom:.5rem}
   .pc-icon{width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;border:2px solid var(--edge);background:var(--stone-3);flex-shrink:0}
-  .pc-name{font-family:'Cinzel',serif;font-weight:700;font-size:.9rem;color:var(--bone-bright)}
+  .pc-name{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:.9rem;color:var(--bone-bright)}
   .pc-terrain{font-size:.81rem;color:var(--bone-dim);font-style:italic}
   .pc-desc{font-size:.95rem;color:var(--bone);line-height:1.5;margin-bottom:.7rem;font-style:italic}
   .pc-lore{font-size:.87rem;color:var(--gold);line-height:1.45;margin-bottom:.7rem;font-style:italic;opacity:.85;border-left:2px solid rgba(201,162,39,.35);padding-left:.55rem}
   .pc-footer{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap}
-  .pc-travel{font-family:'Silkscreen',monospace;font-size:.75rem;letter-spacing:.08em;padding:.3rem .7rem;border:1px solid var(--edge);color:var(--bone-dim)}
+  .pc-travel{font-family:var(--font-accent,'Silkscreen',monospace);font-size:.75rem;letter-spacing:.08em;padding:.3rem .7rem;border:1px solid var(--edge);color:var(--bone-dim)}
   .pc-travel.here{color:var(--gold-bright);border-color:rgba(201,162,39,.5);background:rgba(201,162,39,.08)}
   .pc-travel.near{color:var(--poison);border-color:rgba(122,163,94,.4)}
   .pc-travel.far{color:var(--ember);border-color:rgba(212,105,30,.4)}
   .pc-travel.very-far{color:var(--blood-bright);border-color:rgba(212,58,77,.4)}
-  .pc-status{font-family:'Silkscreen',monospace;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase}
+  .pc-status{font-family:var(--font-accent,'Silkscreen',monospace);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase}
   .pc-status.visited{color:var(--poison)}
   .pc-status.current{color:var(--gold-bright)}
   .pc-status.unknown{color:var(--bone-dim)}
 
   .pc-landmarks{margin-top:.6rem;padding-top:.5rem;border-top:1px solid color-mix(in srgb, var(--edge) 40%, transparent)}
-  .pc-landmarks .lm-label{font-family:'Silkscreen',monospace;font-size:.52rem;letter-spacing:.15em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.3rem}
+  .pc-landmarks .lm-label{font-family:var(--font-accent,'Silkscreen',monospace);font-size:.52rem;letter-spacing:.15em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.3rem}
   .pc-landmarks ul{list-style:none;padding:0}
   .pc-landmarks li{font-size:.91rem;color:var(--bone);padding:.15rem 0 .15rem 1rem;position:relative}
   .pc-landmarks li::before{content:'◆';position:absolute;left:0;color:var(--arcane);font-size:.6rem;top:.25rem}
@@ -110,7 +110,7 @@
   .empty-state .icon{font-size:3rem;margin-bottom:1rem;opacity:.4}
   .empty-state p{font-style:italic;font-size:1.03rem}
 
-  .toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:50;font-family:'Cinzel',serif;font-size:.88rem;letter-spacing:.12em;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);padding:.7rem 1.5rem;box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}
+  .toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:50;font-family:var(--font-display,'Cinzel',serif);font-size:.88rem;letter-spacing:.12em;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);padding:.7rem 1.5rem;box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}
   .toast.show{transform:translate(-50%,0);opacity:1}
 
   @media(max-width:640px){
@@ -165,8 +165,8 @@
   .travel-journal{max-width:700px;margin:0 auto 1.5rem;padding:.65rem 1rem;background:rgba(94,154,163,.05);border:1px solid rgba(94,154,163,.28);box-shadow:inset 0 0 14px rgba(94,154,163,.06);overflow-x:auto;white-space:nowrap;scrollbar-width:thin}
   .travel-journal::-webkit-scrollbar{height:5px}
   .travel-journal::-webkit-scrollbar-thumb{background:var(--edge);border-radius:6px}
-  .travel-journal .tj-label{font-family:'Silkscreen',monospace;font-size:.65rem;letter-spacing:.22em;text-transform:uppercase;color:var(--teal);margin-right:.9rem}
-  .travel-journal .tj-entry{display:inline-block;font-family:'Silkscreen',monospace;font-size:.68rem;letter-spacing:.05em;color:var(--bone);cursor:pointer;padding:.15rem .3rem;transition:color .2s,text-shadow .2s,transform .2s}
+  .travel-journal .tj-label{font-family:var(--font-accent,'Silkscreen',monospace);font-size:.65rem;letter-spacing:.22em;text-transform:uppercase;color:var(--teal);margin-right:.9rem}
+  .travel-journal .tj-entry{display:inline-block;font-family:var(--font-accent,'Silkscreen',monospace);font-size:.68rem;letter-spacing:.05em;color:var(--bone);cursor:pointer;padding:.15rem .3rem;transition:color .2s,text-shadow .2s,transform .2s}
   .travel-journal .tj-entry:hover{color:var(--gold-bright);text-shadow:0 0 8px rgba(232,198,90,.55);transform:translateY(-1px)}
   .travel-journal .tj-day{color:var(--bone-dim)}
   .travel-journal .tj-entry:hover .tj-day{color:var(--gold)}
@@ -177,13 +177,13 @@
   /* ── Karta-tooltip ── */
   .map-tooltip{position:fixed;z-index:60;max-width:280px;padding:.8rem 1rem;background:linear-gradient(165deg,var(--stone-2),var(--stone));border:1px solid var(--gold);box-shadow:0 8px 30px rgba(0,0,0,.8);font-size:.93rem;line-height:1.5;color:var(--bone);pointer-events:none;opacity:0;transition:opacity .2s}
   .map-tooltip.show{opacity:1}
-  .map-tooltip .tt-name{font-family:'Cinzel',serif;font-weight:700;color:var(--gold-bright);margin-bottom:.3rem}
+  .map-tooltip .tt-name{font-family:var(--font-display,'Cinzel',serif);font-weight:700;color:var(--gold-bright);margin-bottom:.3rem}
   .map-tooltip .tt-terrain{font-size:.83rem;font-style:italic;color:var(--bone-dim)}
   .map-tooltip .tt-quest{font-size:.85rem;color:var(--ember);margin-top:.3rem}
 
   /* ── Quest-panel ── */
   .quest-panel{max-width:700px;margin:0 auto 1.5rem;padding:.8rem 1.2rem;background:rgba(212,105,30,.06);border:1px solid rgba(212,105,30,.3)}
-  .quest-panel .qp-label{font-family:'Silkscreen',monospace;font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ember);margin-bottom:.4rem}
+  .quest-panel .qp-label{font-family:var(--font-accent,'Silkscreen',monospace);font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ember);margin-bottom:.4rem}
   .quest-panel .qp-item{font-size:.95rem;color:var(--bone);padding:.2rem 0 .2rem 1rem;position:relative}
   .quest-panel .qp-item::before{content:'⚑';position:absolute;left:0;color:var(--ember)}
 /* ═══════════ MJUKA UPP — Codex-knappar (2026-08-05) ═══════════ */

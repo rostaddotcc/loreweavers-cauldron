@@ -48,6 +48,12 @@ _LOG_CTX: contextvars.ContextVar = contextvars.ContextVar(
 # (asyncio.create_task returnerar en svag referens annars).
 _BACKGROUND_TASKS: set = set()
 
+# Bakgrundsuppgifter som frontenden ska vänta på innan tärningen låses upp
+# (guardian post-DM + faktextraktion/RAG = "lorekeeper jobbar och sparar ned
+# fakta"). Nyckel: (username, campaign_id). Exponeras via
+# /api/campaign/transcript → guardian_running (2026-08-06, dice-lock).
+_RUNNING_BG: set = set()
+
 # Per-kampanj-lås för state read-modify-write.
 # Bakgrundsuppgifterna (_guardian_post_dm, _post_turn_tasks, dag-entry)
 # körs parallellt; var och en gör store.get() → mutera → store.save().
@@ -2197,16 +2203,10 @@ async def register(req: RegisterRequest, response: Response, request: Request):
     if not _register_allowed():
         raise HTTPException(429, "Too many new adventurers right now — try again in about an hour.")
 
-    # 2026-08-05 v3: max ETT konto per publik IP (rostad: "blockera 1 konto
-    # per IP"). Privata IP:er (LAN/localhost) hoppas över — de saknar mening.
+    # IP-lås BORTTAGET (rostad 2026-08-06): tidigare blockerade vi mer än
+    # ett konto per publik IP här. reg_ip loggas fortfarande nedan för
+    # statistik, men ingen registrering stoppas längre av IP-skäl.
     reg_ip = iplog.client_ip(request)
-    if not iplog.is_private(reg_ip):
-        existing_ip_user = iplog.find_username_for_ip(reg_ip)
-        if existing_ip_user:
-            raise HTTPException(
-                403,
-                "One account per network — an adventurer already exists on this connection. If that's you, just log in instead.",
-            )
 
     with _USER_LOCK:
         users = load_users()
@@ -2616,7 +2616,7 @@ async def feedback(req: FeedbackRequest, morkrets_token: str | None = Cookie(Non
 # ═══════════════════════════════════════
 
 # Två fördefinierade berättarröster (systemröster på Token Plan)
-TTS_VOICE_MALE = os.getenv("TTS_VOICE_MALE", "longanlufeng")      # Long An Lu Feng — manlig
+TTS_VOICE_MALE = os.getenv("TTS_VOICE_MALE", "qwen-audio-3.0-tts-plus-loongjameszhao")  # James (EN) — auktoritativ (vald 2026-08-06, ersatte longanlufeng)
 TTS_VOICE_FEMALE = os.getenv("TTS_VOICE_FEMALE", "longanlingxin") # Long An Ling Xin — kvinnlig
 
 # TTS-leverantörer: qwen (Alibaba Token Plan) + stepfun (StepFun Step Plan).
@@ -2626,19 +2626,18 @@ TTS_PROVIDERS = {
     "qwen": {
         "name": "Qwen (Token Plan)",
         "voices": [
-            {"id": TTS_VOICE_MALE, "gender": "male", "name": "Berättaren (man)", "desc": "Ljus och kraftfull manlig berättarröst (kinesisk/engelska)"},
+            {"id": TTS_VOICE_MALE, "gender": "male", "name": "James (EN)", "desc": "Male English voice — authoritative & crisp, dark fantasy narration"},
             {"id": TTS_VOICE_FEMALE, "gender": "female", "name": "Berättaren (kvinna)", "desc": "Varm och empatisk kvinnlig berättarröst (kinesisk/engelska)"},
             {"id": "qwen-audio-3.0-tts-plus-loongadriangao", "gender": "male", "name": "Adrian (EN)", "desc": "Male English voice — calm & dignified, audio reading"},
             {"id": "qwen-audio-3.0-tts-plus-loongalexanderhu", "gender": "male", "name": "Alexander (EN)", "desc": "Male English voice — retro cassette tone"},
-            {"id": "qwen-audio-3.0-tts-plus-loongjameszhao", "gender": "male", "name": "James (EN)", "desc": "Male English voice — news broadcast"},
             {"id": "qwen-audio-3.0-tts-plus-loongryanma", "gender": "male", "name": "Ryan (EN)", "desc": "Male English voice — electronic & trendy"},
         ],
     },
     "stepfun": {
         "name": "StepFun (Step Plan)",
         "voices": [
-            {"id": "vibrant-youth", "gender": "male", "name": "Vibrant Youth (EN)", "desc": "Male English voice — warm and gentle (docs: 男，英文音色)"},
             {"id": "magnetic-voiced-male", "gender": "male", "name": "Magnetic Male (EN)", "desc": "Male English voice — deep and commanding"},
+            {"id": "vibrant-youth", "gender": "male", "name": "Vibrant Youth (EN)", "desc": "Male English voice — warm and gentle (docs: 男，英文音色)"},
             {"id": "soft-spoken-gentleman", "gender": "male", "name": "Soft Gentleman (EN)", "desc": "Male English voice — calm and soft"},
             {"id": "elegantgentle-female", "gender": "female", "name": "Elegant Female (EN)", "desc": "Female English voice — elegant and warm"},
             {"id": "livelybreezy-female", "gender": "female", "name": "Lively Breezy (EN)", "desc": "Female English voice — lively and bright"},
@@ -2650,11 +2649,11 @@ TTS_DEFAULT_PROVIDER = os.getenv("TTS_PROVIDER", "stepfun")
 TTS_INSTRUCTIONS = {
     # OBS: instruktionen får vara MAX 128 tecken — längre ger "Instruction is invalid!"
     # Hastighet: rate=1.1 i _synth_qwen_tts (snabbare än default), inga "slow"-ord här.
-    TTS_VOICE_MALE: "Speak Swedish with Standard Swedish pronunciation, natural rhythm. Dark fantasy storytelling, atmospheric and vivid.",
+    # TTS_VOICE_MALE = James (EN): auktoritativ dark fantasy-instruktion.
+    TTS_VOICE_MALE: "Authoritative news-style narration, dark fantasy atmosphere, crisp delivery.",
     TTS_VOICE_FEMALE: "Speak Swedish with Standard Swedish pronunciation, natural rhythm. Warm expressive storytelling, rich and inviting.",
     "qwen-audio-3.0-tts-plus-loongadriangao": "Calm dignified British-style narration, dark fantasy atmosphere, steady measured pace.",
     "qwen-audio-3.0-tts-plus-loongalexanderhu": "Warm retro storyteller tone, dark fantasy narration, clear and friendly.",
-    "qwen-audio-3.0-tts-plus-loongjameszhao": "Authoritative news-style narration, dark fantasy atmosphere, crisp delivery.",
     "qwen-audio-3.0-tts-plus-loongryanma": "Modern engaging storyteller voice, dark fantasy narration, vivid and clear.",
 }
 
@@ -2854,12 +2853,14 @@ def _mp3_duration_seconds(data: bytes) -> float:
     return total_samples / sr_last
 
 
-def _record_tts_usage(username: str, chars: int, seconds: float, api_call: bool) -> None:
+def _record_tts_usage(username: str, chars: int, seconds: float, api_call: bool, provider: str = "") -> None:
     """Bokför TTS-förbrukning i aktiva kampanjens state.meta.tts_usage.
 
     Rullas upp i /api/campaign/usage och admin-vyn så man ser om spelare
     använder TTS-funktionen (och hur mycket det kostar). `tokens` är ett
     estimat (≈ chars/4) — TTS faktureras per tecken av DashScope.
+    by_model (2026-08-06): per-modell-uppdelning för admin-vyns
+    "Calls by provider" (qwen-audio-3.0-tts-plus vs stepaudio-2.5-tts).
     """
     try:
         state = store.get(username)
@@ -2873,6 +2874,10 @@ def _record_tts_usage(username: str, chars: int, seconds: float, api_call: bool)
         tts["chars"] = (tts.get("chars", 0) or 0) + chars
         tts["tokens"] = (tts.get("tokens", 0) or 0) + _tts_token_estimate(chars)
         tts["seconds"] = (tts.get("seconds", 0) or 0) + seconds
+        if provider:
+            by_model = tts.setdefault("by_model", {})
+            label = _tts_model_label(provider)
+            by_model[label] = (by_model.get(label, 0) or 0) + 1
         store.save(state)
     except Exception:
         logger.exception("🔊 Kunde inte bokföra TTS-usage")
@@ -2894,10 +2899,10 @@ def _empty_account_usage() -> dict:
     return {
         "deleted": {
             "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "turns": 0,
-            "tts": {"calls": 0, "api_calls": 0, "chars": 0, "tokens": 0, "seconds": 0.0},
+            "tts": {"calls": 0, "api_calls": 0, "chars": 0, "tokens": 0, "seconds": 0.0, "by_model": {}},
         },
         "character_creation": {"tokens": 0, "calls": 0},
-        "image_gen": {"calls": 0},
+        "image_gen": {"calls": 0, "by_model": {}},
     }
 
 
@@ -2982,10 +2987,19 @@ def _add_character_creation(username: str, usage: dict | None) -> None:
     _mutate_account_usage(username, fn)
 
 
-def _add_image_gen(username: str) -> None:
-    """Bokför en AI-bildgenerering (iteration)."""
+def _add_image_gen(username: str, model: str = "") -> None:
+    """Bokför en AI-bildgenerering (iteration).
+
+    model (2026-08-06): bildmodellen (t.ex. wan2.7-image / step-image-edit-2)
+    för admin-vyns "Calls by provider" — alla anropade modeller ska synas,
+    inte bara LLM:erna.
+    """
     def fn(acc):
-        acc["image_gen"]["calls"] = (acc["image_gen"].get("calls", 0) or 0) + 1
+        ig = acc["image_gen"]
+        ig["calls"] = (ig.get("calls", 0) or 0) + 1
+        if model:
+            by_model = ig.setdefault("by_model", {})
+            by_model[model] = (by_model.get(model, 0) or 0) + 1
     _mutate_account_usage(username, fn)
 
 
@@ -3002,6 +3016,9 @@ def _add_deleted_campaign(username: str, snap: dict) -> None:
         tt = snap.get("tts") or {}
         for k in ("calls", "api_calls", "chars", "tokens", "seconds"):
             d["tts"][k] = (d["tts"].get(k, 0) or 0) + (tt.get(k, 0) or 0)
+        # Per-modell-uppdelning överlever kampanjradering (2026-08-06)
+        for m, n in (tt.get("by_model") or {}).items():
+            d["tts"].setdefault("by_model", {})[m] = (d["tts"]["by_model"].get(m, 0) or 0) + n
     _mutate_account_usage(username, fn)
 
 
@@ -3268,7 +3285,7 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
     cached = _tts_cache_get(cache_key)
     if cached is not None:
         logger.info("🔊 TTS cache hit: provider=%s voice=%s, %d chars, %d bytes", provider, voice, len(text), len(cached))
-        _record_tts_usage(username, len(text), _mp3_duration_seconds(cached), api_call=False)
+        _record_tts_usage(username, len(text), _mp3_duration_seconds(cached), api_call=False, provider=provider)
         return StreamingResponse(io.BytesIO(cached), media_type="audio/mpeg")
 
     logger.info("🔊 TTS synth: provider=%s model=%s, voice=%s, %d chars, %d segments", provider, _tts_model_label(provider), voice, len(text), len(segments))
@@ -3301,7 +3318,7 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
         raise HTTPException(502, f"Kunde inte generera ljud — {msg}")
 
     logger.info("🔊 TTS done: provider=%s voice=%s, %d chars (%d seg) → %d bytes (%.1fs)", provider, voice, len(text), len(segments), len(audio), time.time() - _t0)
-    _record_tts_usage(username, len(text), _mp3_duration_seconds(audio), api_call=True)
+    _record_tts_usage(username, len(text), _mp3_duration_seconds(audio), api_call=True, provider=provider)
     _tts_cache_set(cache_key, audio)
     return StreamingResponse(io.BytesIO(audio), media_type="audio/mpeg")
 
@@ -3436,10 +3453,15 @@ async def get_transcript(morkrets_token: str | None = Cookie(None)):
         raise HTTPException(404, "Ingen aktiv kampanj")
     entries = store.load_transcript(state, last_n=100)
     meta = state.get("meta", {})
+    active_cid = meta.get("campaign_id", "")
     return {
         "messages": entries,
         "last_effects": meta.get("last_effects", []),
         "last_roll_requests": meta.get("last_roll_requests", []),
+        # Tärningslås (2026-08-06): true medan Lorekeeper-jobben (guardian
+        # post-DM + faktextraktion) fortfarande körs i bakgrunden. Frontend
+        # håller tärningen låst tills detta är false OCH rapporten renderats.
+        "guardian_running": (payload["sub"], active_cid) in _RUNNING_BG,
     }
 
 
@@ -4671,6 +4693,8 @@ async def _guardian_post_dm(
     (t.ex. [SKADA:12]) — Guardian ska inte applicera dem en andra gång.
     (P0-dedup: se combat-spec B2.)
     """
+    key = (username, campaign_id)
+    _RUNNING_BG.add(key)
     try:
         lock = _state_lock(username, campaign_id)
         async with lock:
@@ -4680,6 +4704,8 @@ async def _guardian_post_dm(
             )
     except Exception as e:
         logger.warning("🛡️ Guardian background skipped: %s", e, exc_info=True)
+    finally:
+        _RUNNING_BG.discard(key)
 
 
 async def _guardian_post_dm_locked(
@@ -4795,11 +4821,16 @@ async def _post_turn_tasks(
     """Körs i bakgrunden EFTER att HTTP-svaret skickats till klienten.
     Faktextraktion, RAG-indexering och sammanfattning — inget av detta
     får någonsin fördröja spelarens upplevelse. Alla fel sväljs tyst."""
-    lock = _state_lock(username, campaign_id)
-    async with lock:
-        await _post_turn_tasks_locked(
-            username, campaign_id, reply, player_msg, turn_count, model_id,
-        )
+    key = (username, campaign_id)
+    _RUNNING_BG.add(key)
+    try:
+        lock = _state_lock(username, campaign_id)
+        async with lock:
+            await _post_turn_tasks_locked(
+                username, campaign_id, reply, player_msg, turn_count, model_id,
+            )
+    finally:
+        _RUNNING_BG.discard(key)
 
 
 async def _post_turn_tasks_locked(
@@ -6700,7 +6731,7 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
     }
     vault.update(username, entry)
     # Bokför en AI-bildgenerering (iteration), livstid
-    _add_image_gen(username)
+    _add_image_gen(username, wan_model if provider == "wan" else STEP_IMAGE_EDIT_2)
     return {"ok": True, "seed": seed, "url": f"/api/vault/characters/{char_id}/avatar"}
 
 
@@ -7802,7 +7833,7 @@ async def generate_avatar(
     }
     store.save(state)
     # Bokför en AI-bildgenerering (iteration), livstid
-    _add_image_gen(username)
+    _add_image_gen(username, wan_model if provider == "wan" else STEP_IMAGE_EDIT_2)
 
     return {"ok": True, "kind": avatar_key, "url": f"/api/campaign/avatar/{avatar_key}", "seed": seed, "edit_mode": bool(existing_path and mode == "edit")}
 
@@ -8808,6 +8839,11 @@ def _scan_user_transcripts(user: str) -> dict:
                         tts_usage["chars"] += tt.get("chars", 0) or 0
                         tts_usage["tokens"] += tt.get("tokens", 0) or 0
                         tts_usage["seconds"] += tt.get("seconds", 0) or 0
+                        # Per-modell-uppdelning (2026-08-06) — TTS-modeller
+                        # ska synas i admin-vyns "Calls by provider".
+                        bm = tts_usage.setdefault("by_model", {})
+                        for m, n in (tt.get("by_model") or {}).items():
+                            bm[m] = (bm.get(m, 0) or 0) + (n or 0)
             except (OSError, json.JSONDecodeError):
                 pass
             sessions.append({
@@ -8835,6 +8871,8 @@ def _scan_user_transcripts(user: str) -> dict:
         _del_tts = _del.get("tts", {}) or {}
         for k in ("calls", "api_calls", "chars", "tokens", "seconds"):
             tts_usage[k] = (tts_usage.get(k, 0) or 0) + (_del_tts.get(k, 0) or 0)
+        for m, n in (_del_tts.get("by_model") or {}).items():
+            tts_usage.setdefault("by_model", {})[m] = (tts_usage["by_model"].get(m, 0) or 0) + (n or 0)
 
     # Aggregera per-modell-förbrukning över ALLA sessioner (top-level), så
     # admin-dashboarden kan visa token-share per provider utan att dubbelscanna.
@@ -8922,6 +8960,10 @@ def _user_stat_row(username: str, geo: dict | None = None, ledger_per_user: dict
         "tts_tokens": tts.get("tokens", 0) or 0,
         "tts_seconds": tts_sec,
         "tts_minutes": round(tts_sec / 60, 1),
+        # Per-modell-uppdelning (2026-08-06): TTS- och bildmodeller ska synas
+        # i admin-vyns "Calls by provider".
+        "tts_by_model": tts.get("by_model", {}),
+        "image_gen_by_model": (scan.get("image_gen", {}) or {}).get("by_model", {}),
         "char_creation_tokens": (scan.get("character_creation", {}) or {}).get("tokens", 0) or 0,
         "char_creation_calls": (scan.get("character_creation", {}) or {}).get("calls", 0) or 0,
         "image_gen_calls": (scan.get("image_gen", {}) or {}).get("calls", 0) or 0,
@@ -8974,6 +9016,31 @@ async def admin_stats(morkrets_token: str | None = Cookie(None)):
             mm = models_list.setdefault(m_name, {"provider": prov, "tokens": 0, "calls": 0})
             mm["tokens"] += (mv.get("prompt_tokens", 0) or 0) + (mv.get("completion_tokens", 0) or 0)
             mm["calls"] += mv.get("calls", 0) or 0
+
+    # TTS + bildmodeller (2026-08-06): även dessa bokförs som "anrop" så
+    # admin-vyns "Calls by provider" visar ALLA anropade modeller — inte bara
+    # LLM:erna. (Token-delen är 0 — TTS/bild har ingen token-mätare här.)
+    _MEDIA_PROV = {
+        "stepaudio-2.5-tts": "stepfun",
+        "qwen-audio-3.0-tts-plus": "dashscope",
+        "wan2.7-image": "dashscope",
+        "wan2.7-image-pro": "dashscope",
+        "step-image-edit-2": "stepfun",
+    }
+    for row in user_stats:
+        for m_name, n in (row.get("tts_by_model") or {}).items():
+            prov = _MEDIA_PROV.get(m_name, "unknown")
+            pt = providers.setdefault(prov, {"tokens": 0, "calls": 0})
+            pt["calls"] += n or 0
+            mm = models_list.setdefault(m_name, {"provider": prov, "tokens": 0, "calls": 0})
+            mm["calls"] += n or 0
+        for m_name, n in (row.get("image_gen_by_model") or {}).items():
+            prov = _MEDIA_PROV.get(m_name, "unknown")
+            pt = providers.setdefault(prov, {"tokens": 0, "calls": 0})
+            pt["calls"] += n or 0
+            mm = models_list.setdefault(m_name, {"provider": prov, "tokens": 0, "calls": 0})
+            mm["calls"] += n or 0
+
     providers = dict(sorted(providers.items(), key=lambda kv: kv[1]["tokens"], reverse=True))
     models_list = dict(sorted(models_list.items(), key=lambda kv: kv[1]["tokens"], reverse=True))
 
@@ -9515,6 +9582,15 @@ class AdminSubscription(BaseModel):
     until: str | None = None
 
 
+class AdminGrant(BaseModel):
+    tier: str  # 'support' | 'patron'
+    days: int = 30
+
+
+class AdminRole(BaseModel):
+    role: str  # 'admin' | 'player'
+
+
 @app.post("/api/admin/user")
 async def admin_create_user(req: AdminCreateUser, morkrets_token: str | None = Cookie(None)):
     """Admin-only: skapa ett nytt spelarkonto. Samma validering som självregistrering."""
@@ -9673,7 +9749,8 @@ def _append_tier_log(username: str, status: str, until: str | None) -> None:
     state = store.get(username)  # aktiv kampanj, annars senast uppdaterad
     if not state:
         return
-    names = {"free": "Free", "tier1": "Tier 1", "tier2": "Tier 2", "lifetime": "Lifetime"}
+    names = {"free": "Free", "tier1": "Tier 1", "tier2": "Tier 2", "lifetime": "Lifetime",
+             "support": "Support", "patron": "Patron"}
     label = names.get(status, status or "Free")
     if status == "free":
         text = "ℹ️ Your account was reverted to **Free**."
@@ -9748,6 +9825,94 @@ async def admin_set_subscription(username: str, req: AdminSubscription, morkrets
         "subscription_until": until,
         "turn_cap": udata["turn_cap"],
     }
+
+
+@app.put("/api/admin/user/{username}/grant")
+async def admin_grant_tier(username: str, req: AdminGrant, morkrets_token: str | None = Cookie(None)):
+    """Admin-only: bevilja Support/Patron i `days` dagar (default 30).
+
+    Speglar exakt vad ett riktigt Stripe-köp ger (webhooken checkout.session.completed):
+      - support: features.export + features_until (stackbart 30-dagarsfönster)
+      - patron:  features.export + wan1080 + all_models + features_until
+    Dessutom sätts subscription_status ('support'|'patron') + subscription_until
+    så att admin-vyn och legacy-läsare ser medlemskapet direkt. Inga bonus-turns
+    läggs på här — det gör turn-topup separat.
+    """
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+
+    tier = (req.tier or "").strip().lower()
+    if tier not in ("support", "patron"):
+        raise HTTPException(400, "tier must be 'support' or 'patron'")
+    days = int(req.days or 30)
+    if days < 1 or days > 365:
+        raise HTTPException(400, "days must be between 1 and 365")
+
+    with _USER_LOCK:
+        users = load_users()
+        if username not in users:
+            raise HTTPException(404, f"Användare '{username}' finns inte")
+        udata = users[username]
+        if not isinstance(udata, dict):
+            raise HTTPException(500, "Kontodata är korrupt")
+        features = udata.get("features")
+        if not isinstance(features, dict):
+            features = {}
+        # Exakt samma features som webhooken (support300 / patron500):
+        if tier == "support":
+            features["export"] = True
+        else:  # patron
+            features["export"] = True
+            features["wan1080"] = True
+            features["all_models"] = True
+        udata["features"] = features
+        udata["features_until"] = _stack_benefits_until(udata, days=days)
+        udata.pop("models_until", None)  # enhetligt fönster framåt
+        udata["subscription_status"] = tier
+        udata["subscription_until"] = (datetime.now(timezone.utc).date() + timedelta(days=days)).isoformat()
+        save_users(users)
+
+    logger.info("👑 Admin grant: %s → %s (%d dagar)", username, tier, days)
+    try:
+        _append_tier_log(username, tier, udata["subscription_until"])
+    except Exception as e:
+        logger.warning("Tier log append failed for %s: %s", username, e)
+    return {
+        "ok": True,
+        "username": username,
+        "tier": tier,
+        "subscription_status": tier,
+        "subscription_until": udata["subscription_until"],
+        "features_until": udata["features_until"],
+        "features": udata["features"],
+        "effective_tier": _tier_for(username),
+    }
+
+
+@app.put("/api/admin/user/{username}/role")
+async def admin_set_role(username: str, req: AdminRole, morkrets_token: str | None = Cookie(None)):
+    """Admin-only: befordra till admin / demota till player."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+
+    role = (req.role or "").strip().lower()
+    if role not in ("admin", "player"):
+        raise HTTPException(400, "role must be 'admin' or 'player'")
+    if username == payload.get("sub") and role != "admin":
+        raise HTTPException(400, "Du kan inte ta bort din egen admin-rättighet")
+
+    with _USER_LOCK:
+        users = load_users()
+        if username not in users:
+            raise HTTPException(404, f"Användare '{username}' finns inte")
+        udata = users[username]
+        if not isinstance(udata, dict):
+            raise HTTPException(500, "Kontodata är korrupt")
+        udata["role"] = role
+        save_users(users)
+
+    logger.info("🎖️ Role set: %s → %s", username, role)
+    return {"ok": True, "username": username, "role": role}
 
 
 @app.delete("/api/admin/user/{username}")

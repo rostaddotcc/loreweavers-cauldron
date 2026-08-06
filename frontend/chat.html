@@ -2947,7 +2947,7 @@ function ttsSynthStart(gen) {
   const render = () => {
     if (gen !== _ttsGen) { ttsSynthStop(); return; }
     const s = Math.floor((Date.now() - t0) / 1000);
-    if (label) label.innerHTML = '<i class="synth-dot"></i><span>⏳ synthesizing… ' +
+    if (label) label.innerHTML = '<i class="synth-dot"></i><span>⏳ buffering… ' +
       Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + '</span>';
   };
   render();

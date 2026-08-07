@@ -3889,25 +3889,60 @@ async function inlineDiceCeremonyCli(notation, label, roll) {
   const resultEl = el.querySelector('.cli-dice-result');
 
   // ── Rull-fas: Braille-spinner + rullande siffror, saktar ner mot slutet ──
+  // Multi-dice (2d4, 3d6…): kasta EN tärning i taget (IRL-stil) — första
+  // rullar och landar, sedan nästa. (2026-08-07, rostad önskemål)
   const SPIN = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-  const ROLL_MS = 2400;
   const sides = roll.sides || 20;
-  const start = Date.now();
-  let si = 0;
-  await new Promise(resolve => {
+  const landed = [];
+
+  // Rulla EN tärning: flimrande siffra som saktar ner, landar på finalVal
+  const rollOne = (finalVal) => new Promise(resolve => {
+    const DUR = 900 + Math.random() * 400;
+    const start = Date.now();
+    let si = 0;
     (function flicker() {
       const elapsed = Date.now() - start;
-      const progress = elapsed / ROLL_MS;
-      if (elapsed >= ROLL_MS) { resolve(); return; }
+      const progress = elapsed / DUR;
+      if (elapsed >= DUR) { resolve(); return; }
       si++;
-      const digits = roll.advantage
-        ? (1 + Math.floor(Math.random() * sides)) + '  ' + (1 + Math.floor(Math.random() * sides))
-        : String(1 + Math.floor(Math.random() * sides));
-      const delay = 40 + progress * progress * 300;  // decelererar → spänning
-      flickerEl.textContent = SPIN[si % SPIN.length] + ' d20 ' + digits;
+      const rolling = 1 + Math.floor(Math.random() * sides);
+      const shown = [...landed, rolling].join(' · ');
+      const delay = 45 + progress * progress * 260;  // decelererar → spänning
+      flickerEl.textContent = SPIN[si % SPIN.length] + ' ' + escapeHtml(notation) + ' · ' + shown;
       setTimeout(flicker, delay);
     })();
   });
+
+  if (roll.advantage) {
+    // Fördel/Nackdel: två tärningar rullar parallellt, vald markeras sen
+    const ROLL_MS = 2400;
+    const start = Date.now();
+    let si = 0;
+    await new Promise(resolve => {
+      (function flicker() {
+        const elapsed = Date.now() - start;
+        const progress = elapsed / ROLL_MS;
+        if (elapsed >= ROLL_MS) { resolve(); return; }
+        si++;
+        const r1 = 1 + Math.floor(Math.random() * sides);
+        const r2 = 1 + Math.floor(Math.random() * sides);
+        const delay = 40 + progress * progress * 300;
+        flickerEl.textContent = SPIN[si % SPIN.length] + ' ' + escapeHtml(notation) + ' · ' + r1 + '  ' + r2;
+        setTimeout(flicker, delay);
+      })();
+    });
+  } else if ((roll.count || 1) > 1) {
+    // Sekventiellt: en tärning i taget, med landningspaus emellan
+    for (let i = 0; i < roll.count; i++) {
+      await rollOne(roll.rolls[i]);
+      landed.push(roll.rolls[i]);
+      flickerEl.textContent = '· ' + escapeHtml(notation) + ' · ' + landed.join(' · ');
+      await new Promise(r => setTimeout(r, 320));
+    }
+  } else {
+    await rollOne(roll.rolls[0] != null ? roll.rolls[0] : roll.total);
+    landed.push(roll.rolls[0] != null ? roll.rolls[0] : roll.total);
+  }
 
   // ── Spänningspaus före avslöjandet ──
   flickerEl.textContent = '⏳ …';
@@ -3917,8 +3952,18 @@ async function inlineDiceCeremonyCli(notation, label, roll) {
   flickerEl.style.display = 'none';
   if (isCrit) diceEl.classList.add('crit');
   if (isFailLike) diceEl.classList.add('fail');
-  const word = isCrit ? '✦ GREAT SUCCESS ✦' : isFail ? '☠ CATASTROPHIC ☠' : missedDc ? '☠ MISS ☠' : 'd20';
-  const numStr = '🎲 ' + finalNum;
+  const word = isCrit ? '✦ GREAT SUCCESS ✦' : isFail ? '☠ CATASTROPHIC ☠' : missedDc ? '☠ MISS ☠' : notation;
+  // Visa notationen + exakt vilka tärningar som kastades (2d4+2 → 🎲 4+3+2=9).
+  // Förut stod alltid "d20" och bara första tärningens värde (2026-08-07).
+  let numStr;
+  if (roll.advantage) {
+    const advTag = roll.advMode === 'adv' ? 'FÖRDEL' : 'NACKDEL';
+    numStr = '🎲 ' + roll.chosen + ' (' + (roll.raw || []).join(', ') + ') ' + advTag;
+  } else if (roll.count > 1 || roll.mod !== 0) {
+    numStr = '🎲 ' + roll.rolls.join('+') + (modStr ? modStr : '') + '=' + roll.total;
+  } else {
+    numStr = '🎲 ' + roll.total;
+  }
   const IW = Math.max(14, word.length + 6, numStr.length + 4);
   const padC = s => { const t = s.length; const l = Math.max(0, Math.floor((IW - t) / 2)); return ' '.repeat(l) + s + ' '.repeat(Math.max(0, IW - t - l)); };
   const top = '┌─ ' + word + ' ' + '─'.repeat(IW - word.length - 3) + '┐';
@@ -3981,10 +4026,13 @@ async function inlineDiceCeremony(notation, label, roll) {
   const mod = numOrZero(roll.mod);
   const modStr = mod !== 0 ? (mod > 0 ? '+' + mod : mod) : '';
 
-  // Fördel/Nackdel → två tärningar sida vid sida
-  const dieHtml = roll.advantage
-    ? `<div class="id-dice-row"><div class="id-die" data-i="0">${d20Svg()}</div><div class="id-die" data-i="1">${d20Svg()}</div></div>`
-    : `<div class="id-die">${d20Svg()}</div>`;
+  // Fördel/Nackdel → två tärningar sida vid sida; flera tärningar (2d4, 3d6…)
+  // → EN form per tärning så man ser exakt hur många som rullas (2026-08-07).
+  const nDie = roll.advantage ? 2 : Math.max(1, roll.count || 1);
+  const dieHtml = `<div class="id-dice-row${roll.advantage ? '' : ' id-multi'}">`
+    + Array.from({ length: nDie }, (_, i) =>
+        `<div class="id-die" data-i="${i}">${d20Svg()}</div>`).join('')
+    + `</div>`;
 
   // Bygg inline-meddelande i chatten
   const el = document.createElement('div');
@@ -4008,19 +4056,59 @@ async function inlineDiceCeremony(notation, label, roll) {
 
   SFX.dice();
 
-  // Rull-fas: 3 sekunder med flimrande siffror
-  const ROLL_MS = 3000;
-  const start = Date.now();
-  await new Promise(resolve => {
-    (function flicker() {
-      const elapsed = Date.now() - start;
-      if (elapsed >= ROLL_MS) { resolve(); return; }
-      nums.forEach(n => { n.textContent = 1 + Math.floor(Math.random() * (roll.sides || 20)); });
-      const progress = elapsed / ROLL_MS;
-      const delay = 50 + progress * progress * 220;
-      setTimeout(flicker, delay);
-    })();
-  });
+  // Rull-fas: multi-dice (2d4, 3d6…) kastar EN tärning i taget (IRL-stil);
+  // fördel/nackdel och enstaka tärningar rullar parallellt som förut.
+  const dies = [...el.querySelectorAll('.id-die')];
+  const sides = roll.sides || 20;
+  if (roll.advantage) {
+    const ROLL_MS = 3000;
+    const start = Date.now();
+    await new Promise(resolve => {
+      (function flicker() {
+        const elapsed = Date.now() - start;
+        if (elapsed >= ROLL_MS) { resolve(); return; }
+        nums.forEach(n => { n.textContent = 1 + Math.floor(Math.random() * sides); });
+        const progress = elapsed / ROLL_MS;
+        const delay = 50 + progress * progress * 220;
+        setTimeout(flicker, delay);
+      })();
+    });
+  } else if (dies.length > 1) {
+    // Sekventiellt: rulla och landa varje tärning i tur och ordning
+    for (let i = 0; i < dies.length; i++) {
+      const n = dies[i].querySelector('.num');
+      const finalVal = roll.rolls[i] != null ? roll.rolls[i] : roll.total;
+      const DUR = 900 + Math.random() * 400;
+      const start = Date.now();
+      await new Promise(resolve => {
+        (function flicker() {
+          const elapsed = Date.now() - start;
+          const progress = elapsed / DUR;
+          if (elapsed >= DUR) { resolve(); return; }
+          n.textContent = 1 + Math.floor(Math.random() * sides);
+          const delay = 45 + progress * progress * 240;
+          setTimeout(flicker, delay);
+        })();
+      });
+      n.textContent = finalVal;
+      // Landningspaus — nästa tärning rullar först efter en kort stund
+      await new Promise(r => setTimeout(r, 300));
+    }
+  } else {
+    const n = dies[0] ? dies[0].querySelector('.num') : null;
+    const ROLL_MS = 3000;
+    const start = Date.now();
+    await new Promise(resolve => {
+      (function flicker() {
+        const elapsed = Date.now() - start;
+        if (elapsed >= ROLL_MS) { resolve(); return; }
+        if (n) n.textContent = 1 + Math.floor(Math.random() * sides);
+        const progress = elapsed / ROLL_MS;
+        const delay = 50 + progress * progress * 220;
+        setTimeout(flicker, delay);
+      })();
+    });
+  }
 
   // Avslöjande!
   dice.classList.remove('rolling');
@@ -4028,14 +4116,17 @@ async function inlineDiceCeremony(notation, label, roll) {
   if (isCrit) dice.classList.add('crit');
   if (isFail) dice.classList.add('fail');
   if (roll.advantage) {
-    const dies = el.querySelectorAll('.id-die');
     dies[0].querySelector('.num').textContent = roll.raw[0];
     dies[1].querySelector('.num').textContent = roll.raw[1];
     const chosenIdx = roll.chosen === roll.raw[0] ? 0 : 1;
     dies[chosenIdx].classList.add('chosen');
     dies[1 - chosenIdx].classList.add('dropped');
-  } else if (nums[0]) {
-    nums[0].textContent = roll.rolls[0];
+  } else {
+    // Multi-dice (2d4, 3d6…): sätt varje tärnings form till sitt värde
+    dies.forEach((d, i) => {
+      const n = d.querySelector('.num');
+      if (n) n.textContent = roll.rolls[i] != null ? roll.rolls[i] : (roll.total ?? '');
+    });
   }
   tensionEl.style.display = 'none';
 

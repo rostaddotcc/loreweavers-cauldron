@@ -1385,7 +1385,8 @@ function openAvatarModal() {
     : SPR.html('🎭');
   preview.style.cursor = has ? 'pointer' : 'default';
   document.getElementById('avatar-del-btn').style.display = has ? '' : 'none';
-  document.getElementById('avatar-update-btn').style.display = has ? '' : 'none';
+  // "Create from dossier" visas ALLTID — även för en ny karaktär utan
+  // befintlig avatar (regression fixad 2026-08-07).
   const freeBtn = document.getElementById('avatar-free-btn');
   if (freeBtn) freeBtn.disabled = false;
   document.getElementById('avatar-update-btn').disabled = false;
@@ -1493,7 +1494,9 @@ async function freePromptAction() {
   await _runAvatarGen('free', '🎨 Painting ONLY your words… (10–30 s)', 'avatar-free-btn');
 }
 async function updateAvatarAction() {
-  await _runAvatarGen('edit', '🔄 Updating from your sheet… (10–30 s)', 'avatar-update-btn');
+  // "Create from dossier": mode='new' → backend bygger auto-prompt från
+  // backstory + inventory + senaste loggpost (samma som NPC-dossién).
+  await _runAvatarGen('new', '🎨 Painting from your dossier… (10–30 s)', 'avatar-update-btn');
 }
 
 async function deleteAvatarAction() {
@@ -1556,7 +1559,7 @@ window.getState = exportState;
     </div>
     <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
       <button class="av-btn primary" id="avatar-free-btn" onclick="freePromptAction()">🖌️ Free prompt</button>
-      <button class="av-btn" id="avatar-update-btn" onclick="updateAvatarAction()" style="display:none">🔄 Update from sheet</button>
+      <button class="av-btn" id="avatar-update-btn" onclick="updateAvatarAction()">🎨 Create from dossier</button>
       <button class="av-btn" onclick="portraitInput.click()">📁 Upload image…</button>
       <button class="av-btn danger" id="avatar-del-btn" onclick="deleteAvatarAction()" style="display:none">🗑 Remove avatar</button>
     </div>

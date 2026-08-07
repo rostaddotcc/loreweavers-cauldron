@@ -2251,6 +2251,49 @@ def _extract_json(text: str) -> dict:
     raise ValueError("Kunde inte extrahera JSON ur LLM-svaret")
 
 
+def _parse_threads(raw: str, turn_count: int) -> list[dict]:
+    """Parsa ACTIVE THREADS-array ur LLM-svar. Tolerant: accept JSON-array
+    direkt eller inbäddad i en dict ({"threads": [...]}). Returnerar
+    normaliserade trådar: {name, status, last_turn, summary} (max 5)."""
+    if not raw or not raw.strip():
+        return []
+    text = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL | re.IGNORECASE).strip()
+    # Prova direkt som lista
+    arr = None
+    try:
+        parsed = json.loads(text)
+        arr = parsed if isinstance(parsed, list) else parsed.get("threads")
+    except json.JSONDecodeError:
+        arr = None
+    if not isinstance(arr, list):
+        # Inbäddad i ```json ... ``` eller hitta [ ... ]
+        m = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", text, re.DOTALL)
+        if m:
+            try:
+                parsed = json.loads(m.group(1))
+                arr = parsed if isinstance(parsed, list) else parsed.get("threads")
+            except json.JSONDecodeError:
+                arr = None
+    if not isinstance(arr, list):
+        return []
+    out = []
+    for t in arr[:5]:
+        if not isinstance(t, dict):
+            continue
+        name = str(t.get("name") or t.get("tråd") or "").strip()[:60]
+        if not name:
+            continue
+        status = str(t.get("status") or "active").strip()[:16]
+        summary = str(t.get("summary") or t.get("kort") or "").strip()[:140]
+        last = t.get("last_turn") or t.get("turn") or turn_count
+        try:
+            last = int(last)
+        except (TypeError, ValueError):
+            last = turn_count
+        out.append({"name": name, "status": status, "last_turn": last, "summary": summary})
+    return out
+
+
 # ═══════════════════════════════════════
 # AUTH ENDPOINTS
 # ═══════════════════════════════════════
@@ -4184,6 +4227,46 @@ def _build_system_prompt(
     for a in campaign_arcs:
         parts.append(f"\n[Kampanjbåge {a.get('arc', '?')}]: {a.get('text', '')}")
 
+    # ACTIVE THREADS — trådkartan som ALLTID ligger på bordet (2026-08-07).
+    # 3-5 pågående storytrådar, uppdateras var 10:e turn av en billig LLM.
+    # Injiceras oavsett vad spelaren skriver — så DM:n aldrig tappar
+    # parallella trådar (Hildas uppdrag, pesten, löftet…) bara för att
+    # spelaren pratar om något annat just nu.
+    threads = state.get("meta", {}).get("active_threads") or []
+    if threads:
+        t_lines = []
+        for t in threads[:5]:
+            name = str(t.get("name") or "?").strip()
+            status = str(t.get("status") or "active").strip()
+            last = t.get("last_turn")
+            summary = str(t.get("summary") or "").strip()[:120]
+            t_lines.append(f"- {name} ({status}, last seen turn {last}): {summary}")
+        if t_lines:
+            parts.append("\n## ACTIVE THREADS\n" + "\n".join(t_lines))
+
+    # [SÖK:]/[SEARCH:] — DM-egna minnessökningar (2026-08-07). DM:n kan be
+    # backend om mer historik när spelarens senaste meddelande inte matchar
+    # de injicerade minnena. Taggen fångas av backend, hämtar relevanta
+    # fakta+RAG, och DM:n färdigställer svaret med den nya kontexten.
+    if lang == "en":
+        parts.append(
+            "\n## MEMORY SEARCH TOOL\n"
+            "If you need more context than the memories above provide (an old thread, "
+            "a promise, a NPC not mentioned recently) you may end your reply with "
+            "[SEARCH: your question]. The system will look it up and let you finish "
+            "your reply with the found context. Use it sparingly — it costs a second "
+            "call. Never show the tag in your narration."
+        )
+    else:
+        parts.append(
+            "\n## MINNESSÖKNINGSVERKTYG\n"
+            "Om du behöver mer kontext än minnena ovan ger (en gammal tråd, ett löfte, "
+            "en NPC som inte nämnts nyligen) kan du avsluta ditt svar med "
+            "[SÖK: din fråga]. Systemet hämtar det och låter dig färdigställa svaret "
+            "med den hittade kontexten. Använd sparsamt — det kostar ett extra anrop. "
+            "Visa aldrig taggen i din berättelse."
+        )
+
     # Förra turens mekaniska händelser
     last_effects = state.get("meta", {}).get("last_effects")
     if last_effects:
@@ -5019,6 +5102,7 @@ async def _post_turn_tasks_locked(
     """Hjärtat av post-turn-uppgifterna — körs under per-kampanj-låset."""
     import time as _ptt
     _ptt_start = _ptt.time()
+    _threads_usage = {}  # ACTIVE THREADS (var 10:e turn) — alltid definierad
     logger.info(
         "⚙️ Post-turn pipeline START (turn %d, user=%s, camp=%s)",
         turn_count, username, campaign_id or "<none>",
@@ -5202,6 +5286,62 @@ async def _post_turn_tasks_locked(
     except Exception as e:
         logger.debug("Archival pass skipped: %s", e)
 
+    # 1f. ACTIVE THREADS (var 10:e turn) — billig LLM läser de senaste
+    #     meddelandena + senaste scen-sammanfattningen och skriver ut de
+    #     3-5 PÅGÅENDE storytrådarna. Injiceras ALLTID i DM-prompten så
+    #     DM:n håller koll på parallella trådar även när spelaren pratar
+    #     om något annat just nu (2026-08-07).
+    if turn_count % 10 == 0 and turn_count > 0:
+        _threads_usage = {}
+        try:
+            st = store.get(username, campaign_id)
+            if st:
+                recent = store.load_transcript(st, last_n=20)
+                t_text = "\n".join(
+                    f"{e['role']}: {str(e.get('content'))[:160]}"
+                    for e in recent
+                    if e.get("content") != "__VAKNA_DM__"
+                )[:3000]
+                scenes = store.load_summaries(st, last_n=1)
+                s_text = scenes[0].get("text", "")[:300] if scenes else ""
+                lang = _get_lang(st)
+                prompt = (
+                    "You are a story archivist for a D&D campaign. "
+                    "Read the recent events and identify the 3-5 ACTIVE story threads "
+                    "(ongoing quests, promises, relationships, threats, mysteries). "
+                    "Skip finished or one-off events. Reply ONLY with a JSON array, e.g. "
+                    '[{"name": "Hilda\'s quest", "status": "active", "last_turn": 45, '
+                    '"summary": "Find the map to Greywatch Caverns"}]. '
+                    "No markdown, no explanation.\n\n"
+                    "Recent scene summary:\n" + s_text + "\n\nRecent events:\n" + t_text
+                )
+                if lang != "en":
+                    prompt = (
+                        "Du är en arkivarie som håller koll på storytrådar i en D&D-kampanj. "
+                        "Läs de senaste händelserna och identifiera de 3-5 AKTIVA storytrådarna "
+                        "(pågående uppdrag, löften, relationer, hot, mysterier). "
+                        "Hoppa över avslutade eller engångshändelser. "
+                        "SVARA ENDAST med en JSON-array, t.ex. "
+                        '[{"name": "Hildas uppdrag", "status": "aktiv", "last_turn": 45, '
+                        '"summary": "Hämta kartan till Gråvakts grottor"}]. '
+                        "Ingen markdown, ingen förklaring.\n\n"
+                        "Senaste scen-sammanfattning:\n" + s_text + "\n\nSenaste händelser:\n" + t_text
+                    )
+                raw = await _call_llm(
+                    _extraction_model_for(st), [{"role": "user", "content": prompt}],
+                    temperature=0.3, max_tokens=600, timeout=45, thinking="disabled",
+                    usage_out=_threads_usage,
+                )
+                threads = _parse_threads(raw, turn_count)
+                if threads:
+                    st["meta"]["active_threads"] = threads
+                    store.save(st)
+                    logger.info("🧵 Active threads updated (turn %d): %d threads", turn_count, len(threads))
+                else:
+                    logger.debug("🧵 Active threads parse failed (turn %d): %.120s", turn_count, (raw or "")[:120])
+        except Exception as e:
+            logger.debug("Active threads update skipped: %s", e)
+
     # 2. Indexera senaste transkriptet i Qdrant (var 5:e tur)
     if turn_count % 5 == 0 and turn_count > 0:
         try:
@@ -5311,7 +5451,7 @@ async def _post_turn_tasks_locked(
         "⚙️ Post-turn pipeline DONE (turn %d, %.1fs)",
         turn_count, _ptt.time() - _ptt_start,
     )
-    for _u in (_summary_usage, _chapter_usage, _arc_usage):
+    for _u in (_summary_usage, _chapter_usage, _arc_usage, _threads_usage):
         _bg_usage["prompt_tokens"] += _u.get("prompt_tokens", 0) or 0
         _bg_usage["completion_tokens"] += _u.get("completion_tokens", 0) or 0
         _bg_usage["total_tokens"] += _u.get("total_tokens", 0) or 0
@@ -5605,6 +5745,56 @@ async def _chat_locked(
     except Exception as e:
         logger.error("❌ Unexpected LLM error: %s", e)
         raise HTTPException(502, f"Oväntat LLM-fel: {e}")
+
+    # ── [SÖK: fråga] — DM-egna minnessökningar (2026-08-07) ──
+    # Om DM:n känner att den saknar kontext (en gammal tråd, en NPC som inte
+    # dök upp bland minnena) kan den avsluta sitt svar med [SÖK: fråga].
+    # Backend hämtar relevanta fakta + RAG-chunks och gör ett ANDRA anrop så
+    # DM:n färdigställer svaret med den nya informationen. Taggen tas bort
+    # ur det slutgiltiga svaret. Kostar 2x den turen — en undantagsmekanism.
+    _search_re = re.compile(r"\[(?:SÖK|SEARCH):\s*(.*?)\]", re.DOTALL | re.IGNORECASE)
+    _search_m = _search_re.search(reply or "")
+    if _search_m and not is_awakening:
+        _query = _search_m.group(1).strip()[:200]
+        logger.info("🔍 DM requested memory search: %.120s", _query)
+        try:
+            _mem = await _retrieve_relevant_memory(username, campaign_id, _query, state)
+            _mem_text = (_mem or {}).get("text", "")
+            _base = reply.replace(_search_m.group(0), "").strip()
+            if _mem_text:
+                _cont_prompt = (
+                    "The player is waiting for your reply. You asked for more context — "
+                    "here it is:\n\n" + _mem_text +
+                    "\n\nFinish your reply to the player now, weaving in anything from "
+                    "this memory that matters. Output ONLY the final narration (no [SÖK:] tag)."
+                )
+                _cont_messages = [
+                    {"role": "system", "content": messages[0]["content"]},
+                    {"role": "assistant", "content": _base},
+                    {"role": "user", "content": _cont_prompt},
+                ]
+                _reply2, _reasoning2, _usage2 = await _call_llm_with_reasoning(
+                    req.model_id, _cont_messages, max_tokens=_dm_max_tokens,
+                )
+                if _reply2 and len(_reply2.strip()) > 10:
+                    reply = _reply2
+                    if _reasoning2:
+                        reasoning = reasoning or _reasoning2
+                    if _usage2 and _usage2.get("total_tokens"):
+                        usage = usage or _usage2
+                    logger.info("🔍 DM search continuation (%d tkn)", len(_reply2))
+                else:
+                    reply = _base
+                    logger.warning("🔍 DM search continuation empty → kept original reply")
+            else:
+                reply = _base
+                logger.info("🔍 DM search found no memory → kept original reply")
+        except Exception as e:
+            logger.warning("🔍 DM search failed: %s", e)
+            reply = _search_re.sub("", reply or "").strip()
+    elif _search_m and is_awakening:
+        # Under vaknandet finns inget minne att söka — rensa taggen tyst.
+        reply = _search_re.sub("", reply or "").strip()
 
     # Spara spelarens meddelande + DM-svar i transkriptet
     state = store.append_message(state, "user", req.message)

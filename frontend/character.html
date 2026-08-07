@@ -326,7 +326,7 @@
     font-family: var(--font-display,'Cinzel',serif); font-size: 0.69rem; font-weight: 700;
     letter-spacing: 0.22em; text-transform: uppercase; color: var(--arcane);
     display: inline-block; margin-bottom: 0.35rem;
-  }.growth-text{ font-size: 1.01rem; color: var(--bone-bright); line-height: 1.55; font-style: italic; }.growth-turn{ font-size: 0.75rem; color: var(--bone-dim); margin-top: 0.4rem; font-family: var(--font-accent,'Silkscreen',monospace); letter-spacing: 0.08em; }.growth-empty{ font-size: 0.93rem; font-style: italic; color: var(--bone-dim); }.att-dropzone{
+  }.growth-text{ font-size: 1.01rem; color: var(--bone-bright); line-height: 1.55; font-style: italic; }.growth-turn{ font-size: 0.75rem; color: var(--bone-dim); margin-top: 0.4rem; font-family: var(--font-accent,'Silkscreen',monospace); letter-spacing: 0.08em; }.growth-empty{ font-size: 0.93rem; font-style: italic; color: var(--bone-dim); }.backstory-wrap{ margin-top: 2.2rem; padding-top: 1.6rem; border-top: 1px solid var(--edge); }.backstory-text{ font-size: 1.02rem; color: var(--bone-bright); line-height: 1.7; font-style: italic; white-space: pre-line; }.backstory-empty{ font-size: 0.93rem; font-style: italic; color: var(--bone-dim); }.att-dropzone{
     position: relative; border: 2px dashed var(--edge); padding: 1.4rem 1rem; text-align: center;
     cursor: pointer; transition: all 0.2s; border-radius: 2px; margin-bottom: 1rem;
   }.att-dropzone:hover, .att-dropzone.dragover{ border-color: var(--gold); background: rgba(201,162,39,0.05); }.att-dropzone .att-icon{ font-size: 1.6rem; display: block; margin-bottom: 0.4rem; }.att-dropzone .att-text{ font-size: 0.93rem; color: var(--bone-dim); display: block; }.att-dropzone .att-text b{ color: var(--gold-bright); }.att-dropzone .att-formats{ font-size: 0.81rem; color: var(--bone-dim); display: block; margin-top: 0.3rem; opacity: 0.7; }.att-dropzone input{ display: none; }.att-list{ display: flex; flex-direction: column; gap: 0.5rem; }.att-item{
@@ -448,7 +448,7 @@
 .av-btn:hover, .rune-btn:hover, .forge-export-btn:hover{ transform: translateY(-1px) !important; box-shadow: 0 4px 16px -6px rgba(0,0,0,.55) !important; }
 
 </style>
-<link rel="stylesheet" href="snes.css?v=30">
+<link rel="stylesheet" href="snes.css?v=31">
 <style>
 /* ═══════════ MJUKA UPP — Codex karaktärsblad (2026-08-05) — EFTER snes.css ═══════════ */
 .top-btn{ border-radius: 8px !important; box-shadow: 0 2px 12px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; }
@@ -562,6 +562,12 @@
 
     <div class="section-title">Saving Throws</div>
     <div class="traits" id="saves"></div>
+
+    <!-- ── BACKSTORY — genererad vid karaktärsskapande (read-only) ── -->
+    <div class="backstory-wrap">
+      <div class="section-title">📜 Backstory <span class="notes-hint">— the tale of who you were before the adventure began</span></div>
+      <div class="backstory-text" id="backstory-text"></div>
+    </div>
   </section>
 
   <!-- ═══════════ UTRUSTNING ═══════════ -->
@@ -724,6 +730,7 @@ function renderAll() {
   renderNotes();
   renderAttachments();
   renderGrowth();
+  renderBackstory();
 }
 
 // ═══════════════════════════════════════
@@ -902,6 +909,21 @@ function renderGrowth() {
       <div class="growth-turn">🦉 Lorekeeper${turn}</div>
     </div>`;
   }).join('');
+}
+
+// ═══════════════════════════════════════
+// BACKSTORY — genererad backstory (read-only)
+// ═══════════════════════════════════════
+function renderBackstory() {
+  const el = document.getElementById('backstory-text');
+  if (!el) return;
+  const c = state.character || {};
+  const story = c.story || c.background || '';
+  if (!story) {
+    el.innerHTML = `<div class="backstory-empty">No backstory written yet — the story unfolds as you adventure.</div>`;
+    return;
+  }
+  el.innerHTML = _esc(story).replace(/\n/g, '<br>');
 }
 
 // ═══════════════════════════════════════
@@ -1205,8 +1227,8 @@ function openItemModal(i) {
     statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">🏷 ${I18N.t('Klass')}</span><span class="item-modal-stat-val">${catLabel}</span></div>`;
   }
   if (item.usage) {
-    const usageLabel = ({wielded:'Bärs/hålls', consumable:'Förbrukas', activated:'Aktiveras', trinket:'Passiv'})[item.usage] || item.usage;
-    statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">🎯 ${I18N.t('Användning')}</span><span class="item-modal-stat-val">${usageLabel}</span></div>`;
+    const usageLabel = ({wielded:'Wielded/carried', consumable:'Consumed', activated:'Activated', trinket:'Passive'})[item.usage] || item.usage;
+    statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">🎯 ${I18N.t('Usage')}</span><span class="item-modal-stat-val">${usageLabel}</span></div>`;
   }
   if (dmg) statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">⚔ ${I18N.t('Skada')}</span><span class="item-modal-stat-val">${dmg}</span></div>`;
   if (item.ac_bonus != null && item.ac_bonus !== undefined) statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">🛡 ${I18N.t('AC-bonus')}</span><span class="item-modal-stat-val">${item.ac_bonus}</span></div>`;

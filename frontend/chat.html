@@ -325,8 +325,8 @@
     opacity: 0.35; transition: opacity 0.2s;
     color: var(--bone-dim);
   }.tts-btn:hover{ opacity: 1; }.tts-btn.playing{ opacity: 1; animation: tts-pulse 1.2s infinite; }
-  @keyframes tts-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }/* TTS-röstväljare över input-raden — 2 dropdowns (provider + röstläge) + Auto */.tts-voice-picker{
-    display: flex; align-items: center; gap: 0.4rem;
+  @keyframes tts-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }/* TTS-röstväljare över input-raden — kompakt knapp + popover (provider & röstläge) */.tts-voice-picker{
+    display: flex; align-items: center; gap: 0.4rem; position: relative;
     justify-content: flex-start; margin-bottom: 0.45rem;
     flex-wrap: wrap; row-gap: 0.3rem;
   }.tts-voice-label{ font-size: 0.85rem; opacity: 0.7; }.tts-select{
@@ -346,6 +346,43 @@
     background: rgba(201,162,39,0.18); border-color: var(--gold);
     color: var(--gold-bright); box-shadow: 0 0 10px -3px rgba(232,198,90,0.5);
     animation: tts-pulse 2.4s infinite;
+  }
+  /* Voice-knappen (öppnar popover) — fast bredd så alla tre får plats på en rad */
+  .tts-voice-btn{ gap: 0.3rem; white-space: nowrap; }
+  .tts-voice-btn .tts-caret{ font-size: 0.6rem; opacity: 0.7; transition: transform 0.2s; }
+  .tts-voice-btn[aria-expanded="true"] .tts-caret{ transform: rotate(180deg); }
+  .tts-popover{
+    position: absolute; left: 0; bottom: calc(100% + 0.5rem); z-index: 60;
+    min-width: 240px; padding: 0.6rem 0.65rem;
+    background: var(--stone-2); border: 1px solid var(--edge);
+    border-radius: 8px; box-shadow: 0 14px 34px -12px rgba(0,0,0,0.9), 0 0 0 1px rgba(201,162,39,0.08);
+    display: flex; flex-direction: column; gap: 0.55rem;
+    animation: pop-in 0.16s cubic-bezier(0.22,1,0.36,1);
+  }
+  .tts-popover[hidden]{ display: none; }
+  @keyframes pop-in{ from{ opacity: 0; transform: translateY(6px); } to{ opacity: 1; transform: translateY(0); } }
+  .tts-pop-row{ display: flex; align-items: center; gap: 0.55rem; }
+  .tts-pop-label{
+    font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--bone-dim); width: 3.4rem; flex-shrink: 0;
+  }
+  .tts-pop-opts{ display: flex; gap: 0.35rem; flex-wrap: wrap; }
+  .tts-pop-opt{
+    font-family: 'Cinzel', serif; font-size: 0.64rem; letter-spacing: 0.02em;
+    background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
+    padding: 0.28rem 0.6rem; border-radius: 5px; cursor: pointer; transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .tts-pop-opt:hover:not(:disabled){ border-color: var(--gold); color: var(--bone); }
+  .tts-pop-opt.sel{
+    background: rgba(201,162,39,0.18); border-color: var(--gold);
+    color: var(--gold-bright); box-shadow: 0 0 8px -3px rgba(232,198,90,0.5);
+  }
+  .tts-pop-opt:disabled{ opacity: 0.5; cursor: not-allowed; }
+  @media (max-width: 420px){
+    .tts-popover{ left: 0; right: 0; min-width: 0; }
+    .tts-pop-label{ width: 3rem; font-size: 0.55rem; }
+    .tts-pop-opt{ flex: 1; text-align: center; padding: 0.34rem 0.4rem; font-size: 0.62rem; }
   }
   .tts-select:disabled{
     opacity: 0.45; cursor: not-allowed; filter: grayscale(0.6);
@@ -1465,17 +1502,13 @@
         </button>
       </div>
       <div class="tts-voice-picker" title="Narrator voice for reading aloud">
-        <span class="tts-voice-label">🗣️</span>
-        <select class="tts-select provider" id="tts-provider-select" onchange="setTTSProvider(this.value)" title="TTS provider">
-          <option value="stepfun">StepFun</option>
-          <option value="qwen">Qwen</option>
-        </select>
-        <select class="tts-select" id="tts-voice-select" onchange="setTTSVoice(this.value)" title="Voice">
-          <option value="male">Male</option>
-          <option value="female">Female</option>
-        </select>
+        <button type="button" class="tts-auto-btn tts-voice-btn" id="tts-voice-btn" onclick="toggleTTSVoicePopover(event)" aria-expanded="false" title="Narrator voice — provider & gender">🗣 <span id="tts-voice-btn-label">…</span> <span class="tts-caret">▾</span></button>
         <button class="tts-auto-btn" id="tts-auto-btn" onclick="toggleTTSAutoplay(this)" title="Autoplay TTS when the DM answers">🔊 Auto</button>
         <button class="tts-auto-btn tts-speed-btn" id="tts-speed-btn" onclick="cycleTTSSpeed()" title="Playback speed (independent of the TTS API)">⏩ 1×</button>
+        <div class="tts-popover" id="tts-popover" hidden>
+          <div class="tts-pop-row"><span class="tts-pop-label">Engine</span><div class="tts-pop-opts" id="tts-pop-provider"></div></div>
+          <div class="tts-pop-row"><span class="tts-pop-label">Voice</span><div class="tts-pop-opts" id="tts-pop-voice"></div></div>
+        </div>
       </div>
       <div class="composer">
         <div class="at-chat-chip" id="at-chat-chip" hidden></div>
@@ -3022,34 +3055,16 @@ function tierBadge(s) {
 function updateTTSStyleLock() {
   const hasStyle = _tierHasModels();
   // TTS-providers: StepFun = Support (3€)+, Qwen = Patron (30€)+ (2026-08-05)
-  const ps = document.getElementById('tts-provider-select');
-  if (ps) {
-    const hasTTS = _tierHasAvatars(); // Support+ (3€) → StepFun tillåten
-    const stepOpt = ps.querySelector('option[value="stepfun"]');
-    if (stepOpt) {
-      stepOpt.disabled = !hasTTS;
-      stepOpt.textContent = hasTTS ? 'StepFun' : 'StepFun 🔒 Support 3€';
-    }
-    const qwenOpt = ps.querySelector('option[value="qwen"]');
-    if (qwenOpt) {
-      qwenOpt.disabled = !hasStyle;
-      qwenOpt.textContent = hasStyle ? 'Qwen' : 'Qwen 🔒 Patron 30€';
-    }
-    // Fallback: om nuvarande val är låst → första tillåtna provider
-    // (stepfun om tillåten, annars qwen, annars none) + uppdatera localStorage.
-    const t = _tier();
-    const cur = ps.value;
-    const curAllowed = (cur === 'stepfun' && hasTTS) || (cur === 'qwen' && hasStyle);
-    if (!curAllowed) {
-      const next = hasTTS ? 'stepfun' : (hasStyle ? 'qwen' : '');
-      ps.value = next;
-      if (_safeLS.get(TTS_PROVIDER_KEY) !== next) {
-        _safeLS.set(TTS_PROVIDER_KEY, next);
-      }
-    }
-    ps.title = t === 'free' ? 'TTS — Support feature (3€)'
-      : (t === 'tier1' ? 'StepFun TTS · Qwen 🔒 Patron (30€)' : 'TTS provider');
+  const hasTTS = _tierHasAvatars(); // Support+ (3€) → StepFun tillåten
+  // Fallback: om nuvarande val är låst → första tillåtna provider
+  // (stepfun om tillåten, annars qwen, annars tom) + uppdatera localStorage.
+  const cur = ttsProvider();
+  const curAllowed = (cur === 'stepfun' && hasTTS) || (cur === 'qwen' && hasStyle);
+  if (!curAllowed) {
+    const next = hasTTS ? 'stepfun' : (hasStyle ? 'qwen' : '');
+    _safeLS.set(TTS_PROVIDER_KEY, next);
   }
+  renderTTSVoicePopover(); // ritar popover-optionerna med låsstatus + synkar knappetiketten
   // Modell-pickern: premium-modeller gråade för free/tier1
   if (typeof initSettingsModelPickers === 'function') {
     try { initSettingsModelPickers(); } catch (e) {}
@@ -3092,9 +3107,8 @@ function ttsProviderAllowed(p) {
 function setTTSProvider(p) {
   if (_ttsAudio) { _ttsGen++; ttsStop(null); } // byte av provider stoppar pågående ljud
   _safeLS.set(TTS_PROVIDER_KEY, p);
-  const sel = document.getElementById('tts-provider-select');
-  if (sel) sel.value = p;
   _ttsVoiceIds = null; // ny leverantör → uppdatera röst-id:n
+  renderTTSVoicePopover();
   saveTtsSettings(); // spara per kampanj (state.meta.tts_*) så valet följer med
 }
 
@@ -3105,18 +3119,73 @@ function ttsVoice() {
 function setTTSVoice(v) {
   if (_ttsAudio) { _ttsGen++; ttsStop(null); } // byte av röst stoppar pågående ljud
   _safeLS.set(TTS_VOICE_KEY, v);
-  const sel = document.getElementById('tts-voice-select');
-  if (sel) sel.value = v;
+  renderTTSVoicePopover();
   saveTtsSettings();
 }
 
-function initTTSVoicePicker() {
-  const v = ttsVoice();
-  const vs = document.getElementById('tts-voice-select');
-  if (vs) vs.value = v;
+// ── Voice-popover: en kompakt knapp (provider + röstläge) ──
+const TTS_PROVIDER_LABELS = { stepfun: 'StepFun', qwen: 'Qwen' };
+
+function _ttsVoiceBtnLabel() {
   const p = ttsProvider();
-  const ps = document.getElementById('tts-provider-select');
-  if (ps) ps.value = p;
+  const v = ttsVoice();
+  const pLabel = TTS_PROVIDER_LABELS[p] || '—';
+  return pLabel + ' · ' + (v === 'female' ? 'Female' : 'Male');
+}
+
+function renderTTSVoicePopover() {
+  const label = document.getElementById('tts-voice-btn-label');
+  if (label) label.textContent = _ttsVoiceBtnLabel();
+  const provHost = document.getElementById('tts-pop-provider');
+  const voiceHost = document.getElementById('tts-pop-voice');
+  if (!provHost || !voiceHost) return;
+  const hasTTS = _tierHasAvatars();   // Support+ → StepFun
+  const hasStyle = _tierHasModels();   // Patron+ → Qwen
+  const curP = ttsProvider();
+  const curV = ttsVoice();
+  const provOpts = [
+    { key: 'stepfun', name: 'StepFun', allowed: hasTTS, lock: '🔒 Support 3€' },
+    { key: 'qwen', name: 'Qwen', allowed: hasStyle, lock: '🔒 Patron 30€' },
+  ];
+  provHost.innerHTML = provOpts.map(o => {
+    const sel = o.key === curP ? ' sel' : '';
+    const dis = o.allowed ? '' : ' disabled';
+    const txt = o.allowed ? o.name : (o.name + ' ' + o.lock);
+    return `<button type="button" class="tts-pop-opt${sel}"${dis} onclick="setTTSProvider('${o.key}')">${txt}</button>`;
+  }).join('');
+  voiceHost.innerHTML = ['male', 'female'].map(v => {
+    const sel = v === curV ? ' sel' : '';
+    return `<button type="button" class="tts-pop-opt${sel}" onclick="setTTSVoice('${v}')">${v === 'female' ? 'Female' : 'Male'}</button>`;
+  }).join('');
+}
+
+function toggleTTSVoicePopover(ev) {
+  if (ev) ev.stopPropagation();
+  const pop = document.getElementById('tts-popover');
+  const btn = document.getElementById('tts-voice-btn');
+  if (!pop) return;
+  const open = pop.hidden;
+  pop.hidden = !open;
+  if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) renderTTSVoicePopover();
+}
+
+function closeTTSVoicePopover() {
+  const pop = document.getElementById('tts-popover');
+  const btn = document.getElementById('tts-voice-btn');
+  if (pop && !pop.hidden) { pop.hidden = true; if (btn) btn.setAttribute('aria-expanded', 'false'); }
+}
+
+// Klick utanför popovern → stäng
+document.addEventListener('click', (e) => {
+  const pop = document.getElementById('tts-popover');
+  if (!pop || pop.hidden) return;
+  if (e.target.closest('.tts-popover') || e.target.closest('#tts-voice-btn')) return;
+  closeTTSVoicePopover();
+});
+
+function initTTSVoicePicker() {
+  renderTTSVoicePopover();
 }
 
 // ── Per-kampanj TTS-inställningar (2026-08-05) ──

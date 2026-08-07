@@ -288,6 +288,13 @@
     margin-top:.6rem;min-height:1.3em;font-style:italic}
   .gate-foot{text-align:center;margin-top:1rem;padding-top:.75rem;
     border-top:1px solid rgba(42,42,58,.5);font-size:.76rem;color:var(--bone-dim);font-style:italic}
+
+  /* Keep me logged in (2026-08-07) */
+  .keep-logged-in{display:flex;align-items:center;gap:.5rem;margin:.2rem 0 .8rem;cursor:pointer;
+    font-size:.78rem;color:var(--bone-dim);user-select:none}
+  .keep-logged-in input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:pointer;flex-shrink:0}
+  .keep-logged-in span em{font-style:normal;opacity:.65;font-size:.72rem}
+  .keep-logged-in:hover{color:var(--bone)}
   @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}
     40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
   .gate-card.shake{animation:shake .4s ease}
@@ -576,6 +583,14 @@
             <em>A natural 20 still feels like lightning.</em></p>
         </div>
         <div class="d-card">
+          <span class="sig">&#9969;</span>
+          <h3>Save &amp; Export</h3>
+          <p>Save and export almost every piece of your adventures &mdash; NPCs, avatars,
+            characters and all dialogue &mdash; as a single <b>.zip</b>. The story is yours;
+            it leaves the cauldron with you, faces and all.
+            <em>Export unlocks with the one-time Support top-up (3€).</em></p>
+        </div>
+        <div class="d-card">
           <span class="sig">&#9876;</span>
           <h3>The Forge &mdash; Carry Your Legend</h3>
           <p>Every adventurer you summon is saved in <b>The Forge</b> &mdash; full sheet, level, items,
@@ -665,6 +680,15 @@
           <p>Initiative, action economy, advantage, saving throws &mdash; real rolls with
             real stakes. The DM narrates everything; the Lorekeeper keeps the books.
             <em>A natural 20 still feels like lightning.</em></p>
+        </div>
+        <div class="tablet rv d1">
+          <span class="corner tl"></span><span class="corner br"></span>
+          <span class="sig">&#9969;</span>
+          <h3>Save &amp; Export</h3>
+          <p>Save and export almost every piece of your adventures &mdash; NPCs, avatars,
+            characters and all dialogue &mdash; as a single <b>.zip</b>. The story is yours;
+            it leaves the cauldron with you, faces and all.
+            <em>Export unlocks with the one-time Support top-up (3€).</em></p>
         </div>
         <div class="tablet wide rv d1">
           <span class="corner tl"></span><span class="corner br"></span>
@@ -774,6 +798,10 @@
                      autocomplete="current-password" required>
               <span class="icon">&gt;</span>
             </div>
+            <label class="keep-logged-in" id="keep-logged-in-row" for="keep-logged-in">
+              <input type="checkbox" id="keep-logged-in" checked>
+              <span>Keep me logged in <em>(30 days)</em></span>
+            </label>
             <div class="field" id="confirm-field" style="display:none">
               <label for="confirm">Confirm Password</label>
               <input type="password" id="confirm" placeholder="Speak it once more&hellip;"
@@ -1207,9 +1235,10 @@
     <span class="about-ico">🎲</span>
     <div class="about-title" id="about-title">About the game creator</div>
     <div class="about-body">
-      <p>The Lore Weaver&rsquo;s Cauldron is a <b>solo project</b> &mdash; designed, written, coded and paid for by one person.</p>
+      <p>The Lore Weaver&rsquo;s Cauldron is a <b>solo project</b> &mdash; and it was <b>vibed</b>, from first sketch to final spell. Every line of code was written in conversation between me and AI models. No team, no boilerplate &mdash; just me, the models, and an idea that refused to let go.</p>
       <p>I&rsquo;m a D&amp;D dad. I started building this for a friend &mdash; a small experiment to see if an AI could actually be a dungeon master. It turned into something much bigger: a persistent world with its own lorekeeper, its own dice, its own stories.</p>
-      <p>It&rsquo;s a passion project I run and finance entirely on my own. No team, no investors &mdash; just me, a small server in Stockholm, and a love of good stories.</p>
+      <p><b>Every API cost of this game is mine.</b> Every word the DM writes, every portrait the engines paint, every reasoning token &mdash; I pay for it all. That&rsquo;s what keeps the game free for you, and keeps it honest: no investors, no ads, no data deals.</p>
+      <p>And the whole thing runs on a <b>small mini-PC in Stockholm</b> &mdash; no cloud provider, no server farm. One little box on a desk is holding every story told at this table.</p>
       <p>It&rsquo;s free to play, because it started as a gift. If it gives you a story worth telling, that&rsquo;s payment enough.</p>
       <p class="about-sig">&mdash; rostad</p>
     </div>
@@ -1244,6 +1273,13 @@
   const b = document.getElementById('deleted-banner');
   if (b) b.classList.add('show');
   try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
+})();
+
+/* ═══════════════ deep-link: ?about=1 öppnar About-modalen (pricing-länken, 2026-08-07) ═══════════════ */
+(function () {
+  if (!location.search.includes('about=1')) return;
+  try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
+  setTimeout(() => { openAbout(); }, 250);
 })();
 
 /* ═══════════════ 300-turns promo countdown (2026-08-05 → 2026-09-04) ═══════════════ */
@@ -1336,6 +1372,9 @@ function applyAuthMode() {
       : 'New here? <b>Forge your name</b>');
   document.getElementById('gate-reset').style.display = (authMode === 'login') ? '' : 'none';
   document.getElementById('reset-link-btn').style.display = isReset ? '' : 'none';
+  // "Keep me logged in" visas bara vid inloggning (register/reset ger ny session).
+  const keepRow = document.getElementById('keep-logged-in-row');
+  if (keepRow) keepRow.style.display = (authMode === 'login') ? '' : 'none';
   document.getElementById('gate-error').textContent = '';
 }
 
@@ -1410,7 +1449,8 @@ document.getElementById('auth-form').addEventListener('submit', async (e) => {
       const res = await API.resetPassword(user, pass);
       authSuccess(res.username);
     } else {
-      const res = await API.login(user, pass);
+      const remember = document.getElementById('keep-logged-in').checked;
+      const res = await API.login(user, pass, remember);
       authSuccess(res.username);
     }
   } catch (err) {

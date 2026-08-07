@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="snes.css?v=30">
+<link rel="stylesheet" href="snes.css?v=32">
 <style>
 /* ═══════════ MJUKA UPP — Codex karta (2026-08-05) — EFTER snes.css ═══════════ */
 .top-btn{ border-radius: 8px !important; box-shadow: 0 2px 12px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; }
@@ -143,7 +143,13 @@
   }
 
   /* ── ASCII-karta: individuella celler ── */
-  .ascii-map pre .mc{transition:color .2s,text-shadow .2s}
+  /* FONT-FIX (2026-08-07): snes.css §1 tvingar font-family:var(--font-body)
+     !important på ALLA spans → kartcellerna renderades i proportionell
+     Spectral-font. I en ASCII-karta måste varje tecken vara LIKA brett —
+     med proportionell font hamnade höger-║-ramen på olika x per rad och
+     raderna wrap:ade i Codex-panelens smala bredd. Tvinga mono med högre
+     specificitet + !important (slår §1). */
+  .ascii-map pre .mc{font-family:'Courier New',monospace !important;transition:color .2s,text-shadow .2s}
   .ascii-map pre .mc.bg{color:color-mix(in srgb, var(--arcane) 18%, transparent);text-shadow:none}
   .ascii-map pre .mc.visited{color:var(--teal);text-shadow:0 0 4px rgba(94,154,163,.4)}
   .ascii-map pre .mc.unvisited{color:rgba(138,122,94,.3);text-shadow:none}

@@ -1009,7 +1009,7 @@
     font-family: var(--cli-mono, ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace) !important;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=30">
+<link rel="stylesheet" href="snes.css?v=32">
 <style>
 /* ═══════════ CODEX 2-RAD-TABBAR — override snes.css (måste ligga EFTER linken) ═══════════ */
 .cx-tabs{ display: flex !important; flex-direction: column !important; gap: 0.34rem !important; padding: 0.55rem 0.6rem 0.6rem !important; overflow-x: hidden !important; }
@@ -1083,8 +1083,8 @@
 /* Mjuka upp TTS-pickern + kompositören så de matchar topbaren (2026-08-05) */
 .tts-select{ border-radius: 7px !important; box-shadow: 0 2px 10px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; border-color: var(--edge) !important; }
 .tts-select:focus{ outline: none !important; border-color: var(--gold) !important; box-shadow: 0 0 0 3px rgba(201,162,39,.15), 0 2px 10px -6px rgba(0,0,0,.6) !important; }
-.tts-auto-btn, .tts-speed-btn, .battle-drawer-toggle{ border-radius: 7px !important; box-shadow: 0 2px 10px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; }
-.tts-auto-btn:hover, .tts-speed-btn:hover, .battle-drawer-toggle:hover{ transform: translateY(-1px) !important; }
+.tts-auto-btn, .tts-speed-btn{ border-radius: 7px !important; box-shadow: 0 2px 10px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; }
+.tts-auto-btn:hover, .tts-speed-btn:hover{ transform: translateY(-1px) !important; }
 .send-btn{ border-radius: 8px !important; box-shadow: 0 4px 16px -6px rgba(201,162,39,.45), 0 2px 10px -5px rgba(0,0,0,.6) !important; transition: all .2s !important; }
 .send-btn:hover{ transform: translateY(-1px) !important; filter: brightness(1.06) !important; box-shadow: 0 6px 22px -6px rgba(201,162,39,.6) !important; }
 .avatar-provider-row select, #avatar-provider-select{ border-radius: 7px !important; }
@@ -1434,7 +1434,7 @@
         <div class="scribe-row">
           <span class="scribe-quill" aria-hidden="true">🪶</span>
           <span class="scribe-prompt" aria-hidden="true">❯</span>
-          <span class="thought" id="thought-text">Weaving the tale…</span>
+          <span class="thought" id="thought-text">…</span>
           <span class="scribe-cursor" aria-hidden="true">▌</span>
         </div>
         <div class="scribe-inkline" aria-hidden="true"><i></i></div>
@@ -1460,6 +1460,9 @@
         <span class="ttp-time" id="ttp-time">0:00 / 0:00</span>
         <span class="ttp-idle" id="ttp-idle">[♪] latest narration — press ▶</span>
         <span class="ttp-synth" id="ttp-synth"></span>
+        <button class="battle-drawer-toggle" id="battle-drawer-toggle" onclick="toggleBattleLog()" aria-expanded="false" title="Toggle combat log">
+          <span class="bdt-icon">⚔</span><span class="bdt-label">combat</span><span class="bdt-caret">▲</span>
+        </button>
       </div>
       <div class="tts-voice-picker" title="Narrator voice for reading aloud">
         <span class="tts-voice-label">🗣️</span>
@@ -1473,11 +1476,6 @@
         </select>
         <button class="tts-auto-btn" id="tts-auto-btn" onclick="toggleTTSAutoplay(this)" title="Autoplay TTS when the DM answers">🔊 Auto</button>
         <button class="tts-auto-btn tts-speed-btn" id="tts-speed-btn" onclick="cycleTTSSpeed()" title="Playback speed (independent of the TTS API)">⏩ 1×</button>
-        <button class="battle-drawer-toggle" id="battle-drawer-toggle" onclick="toggleBattleLog()" aria-expanded="false" title="Toggle combat log">
-          <span class="bdt-icon">⚔️</span>
-          <span class="bdt-label">Combat</span>
-          <span class="bdt-caret">▲</span>
-        </button>
       </div>
       <div class="composer">
         <div class="at-chat-chip" id="at-chat-chip" hidden></div>
@@ -4304,62 +4302,15 @@ async function loadTranscript() {
 }
 
 // ═══════════════════════════════════════
-// DM-TANKAR — roterande statusfraser
+// DM-TANKAR — live från maskinrummet (ingen fluff)
 // ═══════════════════════════════════════
-// Olika "tankar" beroende på vad DM:n gör. Backend kan skicka
-// en specifik fas via { thought: '...' } i svaret.
-const THOUGHTS = {
-  narrate: [
-    '🧙‍♂️ Weaving the tale…',
-    '🕯️ Letting the shadows speak…',
-    '🌫️ Painting the fog over the valley…',
-    '📜 Leafing through the book of fate…',
-    '🎭 Conjuring the next scene…',
-  ],
-  bg: [
-    '🪶 The quill writes…',
-    '✨ Stardust settles on the page…',
-    '🌑 Listening to the dark…',
-    '🔥 Stirring the cauldron…',
-    '🗝️ Unlocking a hidden door…',
-    '🕸️ The threads of fate tighten…',
-    '🌌 Somewhere, a star blinks…',
-    '🏰 A distant tower lights a candle…',
-    '🦉 An owl turns its head…',
-    '⚗️ The brew bubbles…',
-  ],
-  memory: [
-    '🕰️ Looking back through time…',
-    '📖 Browsing the halls of memory…',
-    '🔮 Searching old conversations…',
-    '🗝️ Unlocking forgotten memories…',
-    '🌒 Digging through what once was…',
-  ],
-  rules: [
-    '⚖️ Consulting the rules…',
-    '📚 Looking it up in the judge\'s book…',
-    '🎲 Weighing the verdict of the dice…',
-  ],
-  npc: [
-    '🎭 Borrowing another\'s voice…',
-    '🗣️ Whispering through a stranger…',
-    '👁️ Seeing through other eyes…',
-  ],
-  world: [
-    '🗺️ Redrawing the world…',
-    '🏔️ Raising mountains and valleys…',
-    '🌑 Listening to the darkness…',
-  ],
-};
-
-let thoughtTimer = null;
-let thoughtIdx = 0;
-let currentThoughts = THOUGHTS.narrate;
+// Laddningsanimationen visar ENDAST den senaste posten i debug-loggen —
+// riktig transparens i stället för utfyllnadsfraser.
 let _typeTimer = null;           // typewriter för thought-texten (scribe-loader)
 let _scribeParticleTimer = null; // flygande bläckpixlar
 let _activityTimer = null;       // pollar live-aktivitet (senaste loggentry)
 let _activityShown = null;       // senast visade aktivitetstext
-let _activitySince = 0;          // maskinrums-poller (senaste timestamp — så bara NYA loggposter visas)
+let _activitySince = 0;          // 0 vid start → första pollen visar bufferns senaste post
 
 // Typewriter: skriv text tecken för tecken (CLI-stil)
 function typeThought(text, el) {
@@ -4390,22 +4341,11 @@ function _formatCombatLogEntry(entry) {
   return `${icon} ${who}${entry.text}`;
 }
 
-// Live-aktivitet: rendera senaste maskinrums-loggposten / pipeline-steget
-// Blandar generiska fantasy-termer (THOUGHTS.bg) med riktiga bakgrundsloggar —
-// spelaren ser alltid NÅGOT hända, inte bara en statisk rad.
-let _bgRotateIdx = 0;
-function _nextBgThought() {
-  const pool = THOUGHTS.bg || THOUGHTS.narrate;
-  const t = pool[_bgRotateIdx % pool.length];
-  _bgRotateIdx++;
-  return t;
-}
-async function scribeFeed() {
+// Live-aktivitet: rendera ENDAST senaste posten från maskinrummets logg —
+// ingen fluff-rotation. Inga nya poster → senaste raden ligger kvar.
+async function scribeFeed(first) {
   const target = _feedTarget();
   if (!target) return;
-  // 1) Maskinrummet: senaste pipeline-loggposten (INFO+) — kampanjens egna
-  //    logg (aldrig stridsloggens gamla "combat over"-entry). since=håller
-  //    positionen så bara NYA poster visas.
   try {
     const data = await API.getDebugLogs(_activitySince, 'INFO');
     if (data && data.now) _activitySince = data.now;
@@ -4415,27 +4355,20 @@ async function scribeFeed() {
       const text = last && last.msg ? String(last.msg) : null;
       if (text && text !== _activityShown) {
         _activityShown = text;
-        // Riktig bakgrundspost — visa den (förkortad), med fantasy-prefix
         const clean = text.length > 100 ? text.slice(0, 97) + '…' : text;
-        typeThought('🪶 ' + clean, target);
-        return;
+        typeThought(clean, target);
       }
+    } else if (first && !_activityShown) {
+      typeThought('…', target);
     }
-  } catch (e) { /* tyst — fallback-tanken ligger kvar */ }
-  // 2) Inga nya loggposter → rotera en generisk fantasy-term så raden aldrig står still
-  try {
-    const next = _nextBgThought();
-    if (next !== _activityShown) {
-      _activityShown = next;
-      typeThought(next, target);
-    }
-  } catch (e) { /* tyst */ }
+  } catch (e) { /* tyst — senaste raden ligger kvar */ }
 }
 
 function scribeFeedStart() {
   scribeFeedStop();
   _activityShown = null;
-  scribeFeed();
+  _activitySince = 0; // visa bufferns senaste post direkt när laddaren öppnar
+  scribeFeed(true);
   _activityTimer = setInterval(scribeFeed, 1500);
 }
 function scribeFeedStop() {
@@ -4462,17 +4395,13 @@ function scribeParticles(on) {
 }
 
 function showThoughts(kind = 'narrate') {
-  currentThoughts = THOUGHTS[kind] || THOUGHTS.narrate;
-  thoughtIdx = Math.floor(Math.random() * currentThoughts.length);
   document.getElementById('dm-status').classList.add('show');
   scribeParticles(true);
-  // Live-feed: visa senaste loggentryn; fallback-tanke bara som förstabild
-  typeThought(currentThoughts[thoughtIdx]);
+  // Bara maskinrummet: senaste loggposten direkt, polla sedan vidare.
   scribeFeedStart();
 }
 
 function hideThoughts() {
-  clearInterval(thoughtTimer);
   clearInterval(_typeTimer);
   scribeFeedStop();
   scribeParticles(false);
@@ -7178,8 +7107,8 @@ function cdOpenItem(i) {
     stats += `<div class="cd-item-row"><span class="cd-k">🏷 Klass</span><span class="cd-v">${catLabel}</span></div>`;
   }
   if (item.usage) {
-    const usageLabel = ({wielded:'Bärs/hålls', consumable:'Förbrukas', activated:'Aktiveras', trinket:'Passiv'})[item.usage] || item.usage;
-    stats += `<div class="cd-item-row"><span class="cd-k">🎯 Användning</span><span class="cd-v">${usageLabel}</span></div>`;
+    const usageLabel = ({wielded:'Wielded/carried', consumable:'Consumed', activated:'Activated', trinket:'Passive'})[item.usage] || item.usage;
+    stats += `<div class="cd-item-row"><span class="cd-k">🎯 Usage</span><span class="cd-v">${usageLabel}</span></div>`;
   }
   if (dmg) stats += `<div class="cd-item-row"><span class="cd-k">⚔ Damage</span><span class="cd-v">${cdEsc(dmg)}</span></div>`;
   if (item.ac_bonus != null && item.ac_bonus !== undefined) stats += `<div class="cd-item-row"><span class="cd-k">🛡 AC bonus</span><span class="cd-v">${item.ac_bonus}</span></div>`;
@@ -7484,28 +7413,41 @@ document.addEventListener('keydown', e => {
     padding: 1rem; background: rgba(4,2,8,.85); backdrop-filter: blur(4px);
     opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility .25s; }
   .cp-overlay.show{ opacity: 1; visibility: visible; }
-  .cp-box{ width: min(520px, 100%); max-height: 86vh; overflow-y: auto;
+  .cp-box{ width: min(680px, 100%); max-height: 90vh; overflow-y: auto;
     background: linear-gradient(165deg, var(--stone-2), var(--stone) 55%, #120c1c);
     border: 1px solid rgba(201,162,39,.28); border-radius: 16px;
-    padding: 1.5rem 1.5rem 1.6rem;
+    padding: 1.8rem 1.8rem 1.9rem;
     box-shadow: 0 30px 80px -20px rgba(0,0,0,.9), 0 0 40px rgba(201,162,39,.14);
     animation: mi-rise .35s cubic-bezier(.22,1,.36,1); }
   .cp-close{ position: absolute; top: .6rem; right: .8rem; background: none; border: 0;
     color: var(--bone-dim); font-size: 1.2rem; cursor: pointer; padding: .3rem; border-radius: 6px; }
   .cp-close:hover{ color: var(--bone-bright); }
-  .cp-head{ display: flex; align-items: center; gap: 1.1rem; margin-bottom: 1.1rem; position: relative; }
-  .cp-avatar{ width: 112px; height: 112px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+  .cp-head{ display: flex; align-items: center; gap: 1.4rem; margin-bottom: 1.2rem; position: relative; }
+  /* Avatar-blocken (2026-08-07): större box — porträttet ska synas tydligt,
+     med pilar för att rotera mellan kontots sparade porträtt (1/N). */
+  .cp-avatar-wrap{ flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: .45rem; }
+  .cp-avatar{ width: 200px; height: 200px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
     border: 2px solid rgba(201,162,39,.5); background: var(--stone-3);
     display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
-    font-size: 2.6rem;
-    box-shadow: 0 0 22px -6px rgba(201,162,39,.55);
+    font-size: 4rem;
+    box-shadow: 0 0 32px -6px rgba(201,162,39,.55);
     transition: transform .25s, box-shadow .25s, border-color .25s; }
-  .cp-avatar:hover{ transform: scale(1.04); border-color: var(--gold-bright); box-shadow: 0 0 30px -4px rgba(232,198,90,.7); }
+  .cp-avatar:hover{ transform: scale(1.03); border-color: var(--gold-bright); box-shadow: 0 0 42px -4px rgba(232,198,90,.7); }
   .cp-avatar img{ width: 100%; height: 100%; object-fit: cover; }
-  .cp-name{ font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.25rem; color: var(--bone-bright); }
-  .cp-tier{ display: inline-block; margin-top: .25rem; font-size: .78rem; letter-spacing: .12em;
+  .cp-rot{ display: flex; align-items: center; gap: .5rem; }
+  .cp-rot-btn{ width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--edge-hi);
+    background: var(--stone-3); color: var(--gold-bright); cursor: pointer; font-size: .8rem;
+    display: inline-flex; align-items: center; justify-content: center; transition: all .2s; padding: 0; }
+  .cp-rot-btn:hover{ border-color: var(--gold); box-shadow: 0 0 12px -2px rgba(232,198,90,.5); transform: scale(1.08); }
+  .cp-rot-btn:disabled{ opacity: .3; cursor: default; }
+  .cp-rot-count{ font-family: 'Cinzel', serif; font-size: .72rem; letter-spacing: .18em; color: var(--bone-dim); min-width: 3.2rem; text-align: center; }
+  .cp-rot-del{ background: none; border: 0; color: var(--bone-dim); font-size: .68rem; cursor: pointer;
+    text-decoration: underline dotted; padding: 0 .2rem; }
+  .cp-rot-del:hover{ color: var(--blood-bright); }
+  .cp-name{ font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.4rem; color: var(--bone-bright); }
+  .cp-tier{ display: inline-block; margin-top: .3rem; font-size: .8rem; letter-spacing: .12em;
     text-transform: uppercase; color: var(--gold-bright); border: 1px solid var(--edge-hi);
-    border-radius: 999px; padding: .16rem .55rem; }
+    border-radius: 999px; padding: .18rem .6rem; }
   .cp-grid{ display: grid; grid-template-columns: 1fr 1fr; gap: .7rem 1rem; }
   .cp-cell{ background: linear-gradient(180deg, color-mix(in srgb, var(--stone-3) 72%, transparent), color-mix(in srgb, var(--stone) 72%, transparent));
     border: 1px solid rgba(201,162,39,.16); border-radius: 10px; padding: .65rem .85rem;

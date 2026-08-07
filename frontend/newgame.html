@@ -162,7 +162,7 @@
   .insp-full .pv-go:disabled{opacity:.55;cursor:wait}
   @media(max-width:640px){.vault-grid{grid-template-columns:1fr}.insp-full .pv-stats{grid-template-columns:repeat(3,1fr)}.insp-full .pv-actions{flex-direction:column;align-items:stretch}.insp-full .pv-go{width:100%;min-height:50px}.insp-modal{padding:1.4rem 1rem}}
 </style>
-<link rel="stylesheet" href="snes.css?v=30">
+<link rel="stylesheet" href="snes.css?v=32">
 <script src="sprites.js?v=20260806b"></script>
 <script src="fonts.js?v=20260806b"></script>
 <script src="themes.js?v=20260806b"></script>
@@ -259,6 +259,10 @@
       <div class="w-reasoning-foot" id="w-reasoning-foot" hidden></div>
     </div>
     <div class="w-warn" id="w-warn">⚠ Do NOT refresh this page — the summoning is in progress.</div>
+    <div class="w-retry" id="w-retry" style="display:none;margin-top:1rem;text-align:center">
+      <div style="font-size:.85rem;color:var(--bone);margin-bottom:.7rem" id="w-retry-msg">The weaving broke. You can try again — each attempt costs one turn. If it keeps failing, contact the game creator for a top-up.</div>
+      <button onclick="retrySummon()" style="font-family:var(--font-display,'Cinzel',serif);font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;padding:.7rem 1.6rem;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);cursor:pointer;border-radius:4px">🔄 Try again</button>
+    </div>
   </div>
 
   <!-- ═══════════ 3. FÖRHANDSVISNING ═══════════ -->
@@ -736,12 +740,25 @@ function _finishRitual(res) {
   }
 }
 
+async function retrySummon() {
+  // Genereringsgaranti (2026-08-07): nytt försök efter brutet vävande.
+  // Turnen återbetalades redan av backend — retry kostar inget extra.
+  document.getElementById('w-retry').style.display = 'none';
+  await summon();
+}
+
 async function summon() {
   if (summoning) return;
   const prompt = document.getElementById('prompt').value.trim();
   if (!prompt) { toast('⚠ Write a description first'); return; }
   summoning = true;
   lastPrompt = prompt;
+  const retryBox = document.getElementById('w-retry');
+  if (retryBox) retryBox.style.display = 'none';
+  const statusEl = document.getElementById('w-status');
+  if (statusEl) statusEl.style.display = '';
+  const warnEl = document.getElementById('w-warn');
+  if (warnEl) warnEl.style.display = '';
   document.getElementById('summon').disabled = true;
   document.getElementById('preview').classList.remove('show');
 
@@ -818,9 +835,24 @@ async function summon() {
     autoAvatar(); // 🎨 Generera AI-avatar från character sheet (automatiskt, ingen prompt)
   } catch (e) {
     _stopRitual();
-    weaving.classList.remove('show');
     SFX.error();
-    toast('⚠ Could not weave the character: ' + (e.message || 'unknown error'));
+    // Genereringsgaranti (2026-08-07): spelaren kan alltid försöka igen så
+    // att karaktären faktiskt blir klar. OBS (business decision): retries
+    // räknas som turns — ingen individuell återbetalning. Top-ups hanteras
+    // direkt av spel-skaparen (rostad).
+    const retryBox = document.getElementById('w-retry');
+    const statusEl = document.getElementById('w-status');
+    const warnEl = document.getElementById('w-warn');
+    if (statusEl) statusEl.style.display = 'none';
+    if (warnEl) warnEl.style.display = 'none';
+    if (retryBox) {
+      const en = isEn();
+      document.getElementById('w-retry-msg').textContent = en
+        ? 'The weaving broke. You can try again — each attempt costs one turn. If it keeps failing, contact the game creator for a top-up.'
+        : 'Vävningen brast. Du kan försöka igen — varje försök kostar en turn. Om det fortsätter att strula, kontakta spel-skaparen för extra turns.';
+      retryBox.style.display = '';
+    }
+    toast('⚠ ' + (isEn() ? 'The weaving broke — try again.' : 'Vävningen brast — försök igen.'));
   } finally {
     document.getElementById('summon').disabled = false;
     summoning = false;

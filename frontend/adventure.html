@@ -312,7 +312,7 @@
     .gm-row{min-height:46px;font-size:.78rem}
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=30">
+<link rel="stylesheet" href="snes.css?v=32">
 <style>
 /* ═══════════ Login-känslan — mjuka knappar (override snes.css DOS-flatten) ═══════════
    snes.css laddas efter inline-blocket och tvingar platta knappar med !important.
@@ -482,8 +482,17 @@ html{font-size:17px}
       border:1px solid var(--edge);padding:1.9rem 1.7rem 1.7rem;
       box-shadow:0 30px 80px -20px rgba(0,0,0,.9)}
     .pf-close{position:absolute;top:.6rem;right:.8rem;background:none;border:0;
-      color:var(--bone-dim);font-size:1.2rem;cursor:pointer;padding:.3rem}
+      color:var(--bone-dim);font-size:1.2rem;cursor:pointer;padding:.3rem;z-index:2}
     .pf-close:hover{color:var(--bone-bright)}
+    /* Stor, ren profil-avatar — INGA overlays/scrim/text över bilden (2026-08-06) */
+    .pf-portrait{width:min(230px,58vw);margin:0 auto 1rem;text-align:center}
+    .pf-portrait-img{width:100%;aspect-ratio:1;border-radius:10px;overflow:hidden;
+      border:1px solid var(--edge-hi);background:var(--stone-3);cursor:pointer;
+      display:flex;align-items:center;justify-content:center;font-size:3.6rem;
+      transition:border-color .2s,box-shadow .2s}
+    .pf-portrait-img:hover{border-color:var(--gold);box-shadow:0 0 26px -8px rgba(232,198,90,.55)}
+    .pf-portrait-img img{width:100%;height:100%;object-fit:cover}
+    .pf-portrait-hint{font-size:.72rem;color:var(--bone-dim);font-style:italic;margin-top:.45rem}
     .pf-head{display:flex;align-items:center;gap:.8rem;margin-bottom:1.2rem}
     .pf-ico{font-size:1.9rem}
     .pf-name{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:1.4rem;color:var(--bone-bright)}
@@ -502,6 +511,10 @@ html{font-size:17px}
   <div class="pf-overlay" id="pf-overlay" onclick="if(event.target===this)closeProfileModal()">
     <div class="pf-box">
       <button class="pf-close" onclick="closeProfileModal()" title="Close">✕</button>
+      <div class="pf-portrait">
+        <div class="pf-portrait-img" id="pf-avatar" onclick="openProfilePortraitModal()" title="Paint your portrait">👤</div>
+        <div class="pf-portrait-hint" id="pf-avatar-hint">Click the portrait to paint your own</div>
+      </div>
       <div class="pf-head">
         <span class="pf-ico">🪞</span>
         <div>
@@ -554,6 +567,33 @@ html{font-size:17px}
         <button class="av-btn primary" id="adv-paint-free-btn" onclick="advPaintFreePrompt()">🖌️ Free prompt</button>
       </div>
       <div id="adv-paint-status" style="font-size:.75rem;color:var(--bone-dim);text-align:center;margin-top:.8rem;min-height:1rem"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ 🖼 Profile portrait-modal (konto-avatar, fri prompt) ═══════════════ -->
+  <div class="mi-overlay" id="pf-paint-overlay" onclick="if(event.target===this)closeProfilePortraitModal()">
+    <div class="mi-modal" style="max-width:420px">
+      <div class="mi-head">
+        <span>🖼 Your portrait</span>
+        <button class="mi-close" onclick="closeProfilePortraitModal()" title="Close">✕</button>
+      </div>
+      <div id="pf-paint-preview" style="width:150px;height:150px;margin:0 auto .8rem;border-radius:10px;overflow:hidden;border:1px solid var(--edge-hi);background:var(--stone-3);display:flex;align-items:center;justify-content:center;font-size:3rem">👤</div>
+      <div class="mi-intro" style="font-size:.82rem;line-height:1.55">Paint the face you bring to the table — <b>your</b> portrait, separate from your adventurer. Describe it below, or leave empty and let the Cauldron imagine you. Engine: StepFun (Support 3€) or Wan 2.7 Pro (Patron 10€).</div>
+      <div style="margin-top:.7rem">
+        <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">🖌️ Describe yourself (optional)</div>
+        <textarea id="pf-paint-prompt" placeholder="e.g. 'hooded figure, lantern light, old leather' — or leave empty" style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:6px;resize:vertical"></textarea>
+      </div>
+      <div style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
+        <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
+        <select id="pf-paint-provider" class="tts-select" style="flex:1;min-width:0;font-size:.8rem;padding:.35rem .5rem;border-radius:6px;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright)" onchange="pfPaintProviderChanged(this)" title="Image provider for painting">
+          <option value="stepfun">StepFun — Support</option>
+          <option value="wan">Wan 2.7 Pro — Patron 🔒</option>
+        </select>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
+        <button class="av-btn primary" id="pf-paint-btn" onclick="profilePortraitGenerate()">✨ Paint portrait</button>
+      </div>
+      <div id="pf-paint-status" style="font-size:.75rem;color:var(--bone-dim);text-align:center;margin-top:.8rem;min-height:1rem"></div>
     </div>
   </div>
 
@@ -2066,12 +2106,33 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ── 🪞 Profil-modal: spelaren ser BARA sina egna stats (exkl. ip/land) ──
+let _pfHasAvatar = false;   // konto-avatar finns? (från /api/me)
+function _pfRenderAvatar() {
+  const av = document.getElementById('pf-avatar');
+  if (!av) return;
+  if (_pfHasAvatar) {
+    av.innerHTML = `<img src="${API.accountAvatarUrl()}?t=${Date.now()}" alt="">`;
+    const hint = document.getElementById('pf-avatar-hint');
+    if (hint) hint.textContent = 'Click the portrait to repaint';
+  } else {
+    av.innerHTML = '👤';
+    const hint = document.getElementById('pf-avatar-hint');
+    if (hint) hint.textContent = 'Click the portrait to paint your own';
+  }
+}
 async function openProfileModal() {
   const ovl = document.getElementById('pf-overlay');
   if (!ovl) return;
   document.getElementById('pf-grid').innerHTML = '<div class="pf-cell full" style="color:var(--bone-dim);text-align:center">The mirror is clouding&hellip;</div>';
   ovl.classList.add('show');
   if (typeof SFX !== 'undefined') SFX.click();
+  // Konto-avatar + tier — fire-and-forget, BLOCKERAR ALDRIG stats-hämtningen
+  // (/api/me kan vara långsam: den skannar transkript).
+  API.me().then(me => {
+    _pfHasAvatar = !!(me && me.has_avatar);
+    if (advPaintTier === null && me) advPaintTier = (me.subscription_status === 'premium') ? 'tier2' : (me.subscription_status || 'free');
+    _pfRenderAvatar();
+  }).catch(() => {});
   try {
     const res = await fetch('/api/me/stats', { credentials: 'include' });
     if (!res.ok) {
@@ -2088,6 +2149,84 @@ async function openProfileModal() {
 function closeProfileModal() {
   const ovl = document.getElementById('pf-overlay');
   if (ovl) ovl.classList.remove('show');
+}
+
+// ── 🖼 Profil-porträtt: popup för att generera konto-avataren (2026-08-06) ──
+// Återanvänder advPaintTier/advPaintGate-logiken (StepFun = Support 3€,
+// Wan 2.7 Pro = Patron 10€). Fri prompt — tom prompt tillåten här
+// (backend bygger en default-prompt), till skillnad från äventyraren.
+function openProfilePortraitModal() {
+  const ov = document.getElementById('pf-paint-overlay');
+  if (!ov) return;
+  // Tier kan vara null om målning aldrig öppnats — hämta snabbt
+  (async () => {
+    if (advPaintTier === null) {
+      try { const me = await API.me(); advPaintTier = (me && me.subscription_status === 'premium') ? 'tier2' : ((me && me.subscription_status) || 'free'); } catch (_) { advPaintTier = 'free'; }
+    }
+    pfPaintUpdateLock();
+  })();
+  const prev = document.getElementById('pf-paint-preview');
+  if (prev) prev.innerHTML = _pfHasAvatar
+    ? `<img src="${API.accountAvatarUrl()}?t=${Date.now()}" alt="" style="width:100%;height:100%;object-fit:cover">`
+    : '👤';
+  const inp = document.getElementById('pf-paint-prompt');
+  if (inp) inp.value = '';
+  document.getElementById('pf-paint-status').textContent = '';
+  ov.classList.add('show');
+  if (typeof SFX !== 'undefined') SFX.click();
+}
+function closeProfilePortraitModal() {
+  const ov = document.getElementById('pf-paint-overlay');
+  if (ov) ov.classList.remove('show');
+}
+function pfPaintProviderChanged(sel) {
+  if (sel && sel.value === 'wan' && advPaintTier !== 'tier2' && advPaintTier !== 'lifetime') {
+    sel.value = 'stepfun';
+    toast('🔒 Wan 2.7 Pro is a Patron feature (10€) — upgrade to paint with Wan.');
+  }
+}
+function pfPaintUpdateLock() {
+  const sel = document.getElementById('pf-paint-provider');
+  if (!sel) return;
+  const wanOpt = sel.querySelector('option[value="wan"]');
+  const stepOpt = sel.querySelector('option[value="stepfun"]');
+  const canPaint = advPaintTier && advPaintTier !== 'free';
+  const wanUnlocked = advPaintTier === 'tier2' || advPaintTier === 'lifetime';
+  if (stepOpt) { stepOpt.disabled = !canPaint; stepOpt.textContent = canPaint ? 'StepFun — Support' : 'StepFun — Support 🔒'; }
+  if (wanOpt) { wanOpt.disabled = !wanUnlocked; wanOpt.textContent = wanUnlocked ? 'Wan 2.7 Pro — Patron' : 'Wan 2.7 Pro — Patron 🔒'; }
+  if (sel.value === 'wan' && !wanUnlocked) sel.value = 'stepfun';
+  if (sel.value === 'stepfun' && !canPaint) sel.value = '';
+  const btn = document.getElementById('pf-paint-btn');
+  if (btn) btn.disabled = !canPaint;
+}
+async function profilePortraitGenerate() {
+  const prov = (document.getElementById('pf-paint-provider') || {}).value || 'stepfun';
+  if (!advPaintGate(prov)) return;
+  const status = document.getElementById('pf-paint-status');
+  const btn = document.getElementById('pf-paint-btn');
+  const prompt = ((document.getElementById('pf-paint-prompt') || {}).value || '').trim();
+  status.textContent = (prov === 'wan' ? '🖼️ Painting with Wan 2.7 Pro… (15–40 s)' : '🎨 Painting with StepFun… (10–30 s)');
+  if (btn) btn.disabled = true;
+  try {
+    const res = await API.generateAccountAvatar(prompt, Date.now() % 1000000, prov);
+    if (res && res.ok) {
+      _pfHasAvatar = true;
+      _pfRenderAvatar();
+      const prev = document.getElementById('pf-paint-preview');
+      if (prev) prev.innerHTML = `<img src="${API.accountAvatarUrl()}?t=${Date.now()}" alt="" style="width:100%;height:100%;object-fit:cover">`;
+      status.textContent = '✨ Portrait painted — ' + (prov === 'wan' ? 'Wan 2.7 Pro' : 'StepFun');
+      if (typeof SFX !== 'undefined') SFX.levelup();
+    } else {
+      status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Generation failed');
+      if (typeof SFX !== 'undefined') SFX.error();
+    }
+  } catch (e) {
+    status.textContent = '⚠ ' + (e.message || 'Generation failed');
+    if (typeof SFX !== 'undefined') SFX.error();
+  } finally {
+    if (btn) btn.disabled = false;
+    pfPaintUpdateLock();
+  }
 }
 function renderProfile(s) {
   if (!s) return;

@@ -96,7 +96,7 @@
   }
   @media(max-width:400px){.pv-stats{grid-template-columns:repeat(2,1fr)}}
 </style>
-<link rel="stylesheet" href="snes.css?v=30">
+<link rel="stylesheet" href="snes.css?v=32">
 <script src="sprites.js?v=20260806b"></script>
 <script src="fonts.js?v=20260806b"></script>
 <script src="themes.js?v=20260806b"></script>
@@ -434,6 +434,10 @@ async function openInspect(charId) {
   const spellsHtml = spells.length
     ? `<div class="section-label" style="margin-top:1.2rem">Spells</div><div class="spells-list">${spells.map(s => `<div>✦ <span class="sp-name">${esc(s.name)}</span> <span style="color:var(--bone-dim)">(L${s.level||0}${s.school ? ', '+esc(s.school) : ''})</span>${s.description ? ' — <i>'+esc(s.description)+'</i>' : ''}</div>`).join('')}</div>`
     : '';
+  const storyText = ch.story || ch.background || '';
+  const storyHtml = storyText
+    ? `<div class="section-label" style="margin-top:1.2rem">Backstory</div><div class="pv-story">${esc(storyText).replace(/\n/g,'<br>')}</div>`
+    : '';
   const avatar = entry.avatar
     ? `<div class="pv-portrait" id="insp-avatar"><img src="${API.vaultAvatarUrl(charId)}?t=${Date.now()}" alt=""></div>`
     : `<div class="pv-portrait" id="insp-avatar">🎭</div>`;
@@ -449,10 +453,10 @@ async function openInspect(charId) {
     <div class="pv-stats">${stats}</div>
     <div class="pv-vitals">${vitals}</div>
     <div class="pv-traits">${traits.map(t=>`<span class="pv-trait">✦ ${esc(t)}</span>`).join('')}</div>
-    <div class="pv-story">${esc(ch.story||ch.background||'')}</div>
     ${ch.gear ? `<div class="pv-gear">🎒 ${esc(ch.gear)}</div>` : ''}
     ${invHtml}
     ${spellsHtml}
+    ${storyHtml}
     <div style="margin-top:1rem">
       <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">🎨 YOUR OWN WORDS (optional)</div>
       <textarea id="insp-prompt-input" placeholder="Optional: describe exactly what you want painted… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)" style="width:100%;min-height:52px;padding:.5rem .6rem;font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>

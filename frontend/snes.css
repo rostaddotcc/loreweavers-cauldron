@@ -571,11 +571,11 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
     opacity: 0;
     pointer-events: none;
     transition: opacity .3s ease;
-  }/* Stridslogg-knappen: inline i TTS-raden även på mobil */.battle-drawer-toggle{
+  }/* Stridslogg-knappen: diskret i TTS-bar-radens högra ände (mobil) */.battle-drawer-toggle{
     bottom: auto;
     right: auto;
-    padding: .3rem .55rem;
-  }.battle-drawer-toggle .bdt-label{ display: none; }.battle-drawer-toggle .bdt-icon{ font-size: 1.05rem; }/* Maskinrums-tab: inline i TTS-raden även på mobil */.console-tab{
+    padding: .3rem .5rem;
+  }.battle-drawer-toggle .bdt-label{ display: none; }.battle-drawer-toggle .bdt-icon{ font-size: .9rem; }/* Maskinrums-tab: inline i TTS-raden även på mobil */.console-tab{
     bottom: auto;
     right: auto;
     width: 32px; height: 30px;
@@ -1319,24 +1319,28 @@ body.cli-chat .scribe-mini .scribe-inkline{ height: 8px; }
 }
 .bl-body .combat-round{ width: fit-content; margin: .3rem auto; padding: .3rem 1rem; }
 .bl-body .initiative-reveal{ margin: .4rem 0; }
-/* ── Stridslogg-toggle (alltid synlig — öppna/minimera högerkolumnen) ── */
+/* ── Stridslogg-toggle — diskret, i TTS-barens högra ände (2026-08-06).
+      !important krävs: snes §5s `button`-flatregel har !important. ── */
 .battle-drawer-toggle{
   display: inline-flex;
-  align-items: center; justify-content: center; gap: .4rem;
-  padding: .3rem .55rem;
+  align-items: center; justify-content: center; gap: .35rem;
+  margin-left: auto;            /* trycker knappen till högra kanten av TTS-raden */
+  padding: .3rem .5rem !important;
   font-family: var(--font-display);
   font-size: .62rem; letter-spacing: .16em; text-transform: uppercase;
-  color: var(--bone-bright);
-  background: linear-gradient(160deg, rgba(139,26,42,.5), rgba(139,26,42,.28));
-  border: 1px solid rgba(139,26,42,.55);
-  border-radius: 3px;
+  color: var(--bone-dim) !important;
+  background: transparent !important;
+  border: 1px solid color-mix(in srgb, var(--blood) 45%, transparent) !important;
+  border-radius: 3px !important;
+  box-shadow: none !important;
   cursor: pointer;
-  transition: background .2s, color .2s, transform .2s, box-shadow .2s;
+  transition: color .2s, border-color .2s;
 }
-.battle-drawer-toggle .bdt-icon{ font-size: 1rem; line-height: 1; }
-.battle-drawer-toggle .bdt-caret{ transition: transform .3s cubic-bezier(.22,1,.36,1); font-size: .6rem; }
-.battle-drawer-toggle:hover{ background: linear-gradient(160deg, rgba(139,26,42,.7), rgba(139,26,42,.4)); color: var(--bone-bright); transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.6); }
-.battle-drawer-toggle:active{ background: var(--blood); color: var(--ink); transform: translateY(0); }
+.battle-drawer-toggle .bdt-icon{ font-size: .8rem; line-height: 1; }
+.battle-drawer-toggle .bdt-caret{ transition: transform .3s cubic-bezier(.22,1,.36,1); font-size: .55rem; }
+.battle-drawer-toggle:hover{ color: var(--bone-bright) !important; border-color: var(--blood-bright) !important; transform: none !important; }
+.battle-drawer-toggle:active{ color: var(--blood-bright) !important; background: transparent !important; }
+body.battle-drawer-open .battle-drawer-toggle{ color: var(--blood-bright) !important; border-color: var(--blood-bright) !important; }
 body.battle-drawer-open .battle-drawer-toggle .bdt-caret{ transform: rotate(180deg); }
 
 /* ── Tärnings-badges: spelare = guld, fiende = blodröd ── */
@@ -1590,6 +1594,24 @@ body.cli-chat .bubble{
   box-shadow: none !important;
   border-radius: 0 !important;
   padding: .1rem 0 .15rem !important;
+  max-width: none !important;
+}
+/* ── Full-width terminal wrap (2026-08-07): message containers must NOT cap
+   the column width. chat.html inline <style> sets .msg{max-width:760px} and
+   .amb{max-width:760px} (760px ~ 60% of a 1280px viewport = the reported
+   wrap point). .bubble is already max-width:none above; these lift the
+   PARENT containers so DM/player/NPC narration flows edge-to-edge like a
+   real terminal. Also cascades past the 520px caps on .msg.system/
+   .msg.cmd/.msg.guardian (higher specificity + !important). !important is
+   required: snes.css §1 typography rules use !important and would beat
+   non-!important overrides. Deliberate short elements (dice boxes, scene
+   cards, resume cards) are unaffected: content-sized or already flattened
+   full-width by Track B. Chat-scroll padding-right:4.5rem (rail clearance,
+   §36 polish pass) is untouched so text never runs under the rail. */
+body.cli-chat .msg{
+  max-width: none !important;
+}
+body.cli-chat .amb{
   max-width: none !important;
 }
 body.cli-chat .bubble::before,
@@ -2334,8 +2356,12 @@ body.cli-chat .msg.npc .bubble .who::after{
 }
 
 /* ── DM-narrationen rensar alltid den högerställda [♪ play]-chippen ── */
+/* 2026-08-07: padding-right: 5.5rem var ONÖDIG — [♪ play]-chippen är
+   absolut positionerad (right:0, top:.05rem) i höjd med .who-raden, som är
+   kort. Den reserverade 88px som gjorde DM-texten smalare än spelarens.
+   Nollställ så DM-narrationen går hela vägen som spelarens. */
 body.cli-chat .msg.dm .bubble{
-  padding-right: 5.5rem !important;
+  padding-right: 0 !important;
 }
 
 /* ══════════════════════════════════════════
@@ -2374,11 +2400,7 @@ body.cli-chat .msg.dm .bubble{
     padding: .45rem .6rem !important;
   }
   body.cli-chat .battle-drawer-toggle{
-    font-size: .78rem !important;
-  }
-  /* Combat toggle keeps its blood-red identity */
-  .battle-drawer-toggle{
-    border: 1px solid rgba(139,26,42,.7) !important;
+    font-size: .72rem !important;
   }
   /* composer: textarea ≥2 visible lines, Act button thumb-sized */
   .input-area textarea{
@@ -2557,4 +2579,24 @@ body.cli-chat .tts-player .ttp-toggle{
 body.cli-chat .tts-player .ttp-toggle:hover{
   border-color: var(--gold);
   color: var(--gold-bright);
+}
+
+/* ═══════════ §36 v36 — sista bubbel-/gradient-läckorna (2026-08-06) ═══════════
+   RUNDA-4 i chat.html sätter gradient-bakgrund på .msg.{dm,npc,player} .bubble
+   med specificitet (0,3,0) + !important och VINNER över body.cli-chat .bubble
+   (0,2,1). Kör över med body.cli-chat .msg.X .bubble = (0,4,1). */
+body.cli-chat .msg.dm .bubble,
+body.cli-chat .msg.npc .bubble,
+body.cli-chat .msg.player .bubble{
+  background: transparent !important;
+}
+/* Topbaren: platt terminal-rad — ingen gradient, inget glow */
+body.cli-chat .topbar{
+  background: var(--ink) !important;
+  box-shadow: none !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--edge) 60%, transparent) !important;
+}
+/* Body-bakgrunden: terminalen är slätt svart — inga radial-vinjetter */
+body.cli-chat{
+  background: var(--ink) !important;
 }

@@ -2076,7 +2076,7 @@ function renderDetail(container, data) {
   // Exakt förbrukning per anrop: per-åtgärd idag/totalt + senaste posterna.
   const tlToday = data.turn_ledger_today || {};
   const tlRecent = data.turn_ledger_recent || [];
-  const TL_LABELS = { dm: '🧙 DM', guardian_pre: '🛡️ Guardian pre', guardian_post: '🛡️ Guardian post', extraction: '📚 Lorekeeper (fakta)', image: '🎨 Bild', char_gen: '👤 Karaktär', search: '🔍 [SÖK:]', repair: '🔧 Repair', summary: '📖 Sammanfattning', day_entry: '📆 Dag-entry', battle_ai: '⚔️ Battle AI' };
+  const TL_LABELS = { dm: '🧙 DM', guardian_pre: '🛡️ Guardian pre', guardian_post: '🛡️ Guardian post', extraction: '📚 Lorekeeper (fakta)', image: '🎨 Bild', char_gen: '👤 Karaktär', search: '🔍 [SÖK:]', repair: '🔧 Repair', summary: '📖 Sammanfattning', day_entry: '📆 Dag-entry', battle_ai: '⚔️ Battle AI', tts: '🔊 TTS' };
   if (Object.keys(tlToday).length > 0 || tlRecent.length > 0) {
     html += '<div class="turn-ledger-block" style="margin-top:.9rem;padding-top:.7rem;border-top:1px solid rgba(42,42,58,.4)">';
     html += '<div style="font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:.5rem">⚡ Turn-ledger — exakt förbrukning per anrop (idag)</div>';

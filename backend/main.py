@@ -3575,6 +3575,12 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
         _record_tts_usage(username, len(text), _mp3_duration_seconds(cached), api_call=False, provider=provider)
         return StreamingResponse(io.BytesIO(cached), media_type="audio/mpeg")
 
+    # 2026-08-08 (strikt per-anrops-modell): varje NY TTS-syntes = 1 turn.
+    # Cache-träffar är gratis (inget externt anrop). Misslyckade synteser
+    # RÄKNAS också (business rule 2026-08-07 — ingen turn-återbetalning).
+    _gate_turn_quota(username)
+    _consume_turn(username, action="tts", model=_tts_model_label(provider))
+
     logger.info("🔊 TTS synth: provider=%s model=%s, voice=%s, %d chars, %d segments", provider, _tts_model_label(provider), voice, len(text), len(segments))
     synth = _synth_qwen_tts_retry if provider == "qwen" else _synth_stepfun_tts
     _t0 = time.time()

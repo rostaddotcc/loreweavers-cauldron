@@ -398,7 +398,7 @@ def test_subscription_validation_404_403(client):
 def test_admin_stats_has_billing_fields(client, ledger_file):
     _seed_admin()
     _seed_player("alice", subscription_status="tier2", subscription_until=_in_days(30),
-                 turn_cap=50, turn_bonus=4, turns_used=2)
+                 turn_cap=50, turn_bonus=4, turns_used=2, reset_date=_in_days(1))  # reset i morgon → perioden inte rullad
     main._ledger_append({"user": "alice", "amount_sek": 105, "type": "invoice.paid"})
     r = client.get("/api/admin/stats", cookies={"morkrets_token": _atok()})
     assert r.status_code == 200

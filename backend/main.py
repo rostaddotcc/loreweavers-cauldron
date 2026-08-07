@@ -127,6 +127,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from auth import (
+    KEEP_LOGGED_IN_DAYS,
     create_token,
     hash_password,
     load_users,
@@ -168,6 +169,56 @@ from state_manager import CAMPAIGNS_DIR, VAULTS_DIR, CampaignStore, CharacterVau
 
 def _user_avatar_path(username: str) -> Path:
     return (CAMPAIGNS_DIR.parent / "user_avatars") / f"{username}.png"
+
+
+# ── Profilavatarens galleri (2026-08-07): kontots porträtt sparas som upp
+#    till 5 bilder i user_avatars/{username}.json + bildfiler. Legacy: en
+#    ensam {username}.png migreras automatiskt till ett 1-bildsgalleri. ──
+def _user_gallery_path(username: str) -> Path:
+    return (CAMPAIGNS_DIR.parent / "user_avatars") / f"{username}.json"
+
+
+def _load_user_avatar_gallery(username: str) -> dict:
+    """Läs kontots porträtt-galleri. Saknas JSON men finns legacy-png →
+    migrera till ett 1-bildsgalleri (filen refereras, ej flyttad)."""
+    gp = _user_gallery_path(username)
+    if gp.exists():
+        try:
+            data = json.loads(gp.read_text())
+            if isinstance(data.get("gallery"), list):
+                return data
+        except (json.JSONDecodeError, OSError):
+            pass
+    # Legacy-migrering
+    legacy = _user_avatar_path(username)
+    if legacy.exists():
+        return {
+            "gallery": [{
+                "disk_name": legacy.name,
+                "ext": ".png",
+                "size": legacy.stat().st_size,
+                "ai_generated": True,
+                "uploaded": datetime.now(timezone.utc).isoformat(),
+            }],
+            "gallery_index": 0,
+        }
+    return {"gallery": [], "gallery_index": 0}
+
+
+def _save_user_avatar_gallery(username: str, data: dict) -> None:
+    gp = _user_gallery_path(username)
+    gp.parent.mkdir(parents=True, exist_ok=True)
+    gp.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+
+
+def _user_avatar_gallery_active(username: str) -> dict | None:
+    """Aktiv bild i kontots galleri (eller None)."""
+    data = _load_user_avatar_gallery(username)
+    gal = data.get("gallery") or []
+    if not gal:
+        return None
+    idx = int(data.get("gallery_index") or 0) % len(gal)
+    return gal[idx]
 
 
 import rag
@@ -1581,6 +1632,7 @@ def _extraction_model_for(state: dict) -> str:
 class LoginRequest(BaseModel):
     username: str
     password: str
+    remember: bool = False  # "Keep me logged in" → 30 dagars session
 
 
 class ChatRequest(BaseModel):
@@ -2169,8 +2221,9 @@ class RegisterRequest(BaseModel):
     email: str | None = None
 
 
-def _set_auth_cookie(response: Response, token: str) -> None:
-    # 2h-session: cookie och JWT-expiry matchar (JWT_EXPIRY_HOURS=2 i auth.py).
+def _set_auth_cookie(response: Response, token: str, max_age: int = 86400) -> None:
+    # Sessionslängd (2026-08-07): default 24h; "Keep me logged in" → 30 dagar.
+    # Cookie-max_age matchar JWT-expiry (auth.create_token).
     # secure (2026-08-04, security audit P1): sätts via COOKIE_SECURE=1 i
     # docker-compose (prod körs enbart bakom HTTPS). Default av — TestClient
     # och lokal http-dev vägrar annars spara Secure-cookies.
@@ -2179,7 +2232,7 @@ def _set_auth_cookie(response: Response, token: str) -> None:
         value=token,
         httponly=True,
         secure=_COOKIE_SECURE,
-        max_age=7200,
+        max_age=max_age,
         samesite="lax",
         path="/",
     )
@@ -2326,8 +2379,10 @@ async def login(req: LoginRequest, response: Response):
         user.setdefault("turn_cap", 0)
         save_users(users)
 
-    token = create_token(username, user["role"])
-    _set_auth_cookie(response, token)
+    token = create_token(username, user["role"], keep_logged_in=bool(req.remember))
+    # "Keep me logged in" → cookie + JWT i 30 dagar (matchar auth.py).
+    _max_age = KEEP_LOGGED_IN_DAYS * 86400 if req.remember else 86400
+    _set_auth_cookie(response, token, max_age=_max_age)
     return {"ok": True, "username": username, "role": user["role"]}
 
 
@@ -2501,7 +2556,7 @@ async def me(morkrets_token: str | None = Cookie(None)):
         # (admin-vyn ser hela via /api/admin/stats).
         "has_email": bool((udata.get("email") or "").strip()),
         # Spelarprofilens avatar (konto — separat från äventyraren)
-        "has_avatar": bool(_user_avatar_path(username).exists()),
+        "has_avatar": bool(_load_user_avatar_gallery(username).get("gallery")),
     }
 
 
@@ -7089,13 +7144,91 @@ def _safe_avatar_key(kind: str) -> str:
     raise HTTPException(400, f"Ogiltig avatar-typ: {kind}")
 
 
+# ── Avatar-gallerier (2026-08-07): varje karaktär (player/dm/npc:X) sparar
+#    upp till 5 bilder. Ny generering/uppladdning LÄGGS TILL i galleriet
+#    (äldsta bilden utanför active faller bort vid >5). Spelaren roterar
+#    1/N med pilar — bilderna är strikt separerade per karaktär.
+#    Bakåtkompatibel: entry utan 'gallery' (gammal enskild bild) normaliseras
+#    till ett 1-bildsgalleri. Top-level-fälten (disk_name m.fl.) speglar
+#    ALLTID den AKTIVA bilden så äldre kod/exports fortsätter fungera. ──
+MAX_AVATAR_GALLERY = 5
+_AVATAR_ITEM_FIELDS = ("disk_name", "ext", "size", "uploaded", "seed", "ai_generated")
+
+
+def _avatar_gallery(entry: dict) -> list:
+    """Returnera (och normalisera) entryns gallery-lista."""
+    gal = entry.get("gallery")
+    if not isinstance(gal, list):
+        item = {k: entry[k] for k in _AVATAR_ITEM_FIELDS if k in entry}
+        gal = [item] if item.get("disk_name") else []
+        entry["gallery"] = gal
+        entry["gallery_index"] = 0
+    return gal
+
+
+def _avatar_set_active(entry: dict, idx: int) -> int:
+    """Sätt aktiv bild i galleriet; spegla fälten på top-level. Returnerar idx."""
+    gal = _avatar_gallery(entry)
+    if not gal:
+        raise HTTPException(404, "Avataren hittades inte")
+    idx = idx % len(gal)
+    entry["gallery_index"] = idx
+    active = gal[idx]
+    for k in _AVATAR_ITEM_FIELDS:
+        if k in active:
+            entry[k] = active[k]
+        else:
+            entry.pop(k, None)
+    return idx
+
+
+def _avatar_gallery_add(entry: dict, item: dict) -> dict | None:
+    """Lägg till ny bild i galleriet + gör den aktiv. Returnerar den post som
+    eventuellt föll bort (cap MAX_AVATAR_GALLERY) så anroparen kan radera filen."""
+    gal = _avatar_gallery(entry)
+    gal.append(item)
+    dropped = None
+    if len(gal) > MAX_AVATAR_GALLERY:
+        dropped = gal.pop(0)
+    _avatar_set_active(entry, len(gal) - 1)
+    return dropped
+
+
+def _avatar_gallery_remove(entry: dict, idx: int) -> dict | None:
+    """Ta bort bild idx ur galleriet. Aktiv bild blir den närmast intill.
+    Returnerar den borttagna posten (för filradering) eller None."""
+    gal = _avatar_gallery(entry)
+    if not gal:
+        return None
+    idx = idx % len(gal)
+    removed = gal.pop(idx)
+    if not gal:
+        entry["gallery_index"] = 0
+        for k in _AVATAR_ITEM_FIELDS:
+            entry.pop(k, None)
+        return removed
+    cur = int(entry.get("gallery_index") or 0)
+    if idx < cur:
+        cur -= 1
+    elif idx == cur:
+        cur = min(cur, len(gal) - 1)
+    _avatar_set_active(entry, cur)
+    return removed
+
+
+def _new_avatar_disk_name(avatar_key: str, ext: str) -> str:
+    """Unikt filnamn per bild i galleriet (krockar aldrig vid flera bilder)."""
+    return f"{avatar_key.replace(':', '_')}__{secrets.token_hex(4)}{ext}"
+
+
 @app.post("/api/campaign/avatar")
 async def upload_avatar(
     kind: str = Form(...),
     file: UploadFile = File(...),
     morkrets_token: str | None = Cookie(None),
 ):
-    """Ladda upp en avatar för spelaren, DM eller en NPC."""
+    """Ladda upp en avatar för spelaren, DM eller en NPC. Uppladdningen LÄGGS
+    TILL i karaktärens galleri (upp till 5 bilder) och blir den aktiva bilden."""
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
     # TIERS: avatar-uppladdning är tier1+ (samma gate som AI-generering —
@@ -7120,24 +7253,33 @@ async def upload_avatar(
     av_dir = CAMPAIGNS_DIR / username / cid / "avatars"
     av_dir.mkdir(parents=True, exist_ok=True)
 
-    disk_name = avatar_key.replace(":", "_") + ext
+    disk_name = _new_avatar_disk_name(avatar_key, ext)
     (av_dir / disk_name).write_bytes(content)
 
     avatars = state.setdefault("avatars", {})
-    avatars[avatar_key] = {
+    entry = avatars.setdefault(avatar_key, {})
+    item = {
         "disk_name": disk_name,
         "ext": ext,
         "size": len(content),
         "uploaded": datetime.now(timezone.utc).isoformat(),
     }
+    dropped = _avatar_gallery_add(entry, item)
+    if dropped and dropped.get("disk_name"):
+        try:
+            (av_dir / dropped["disk_name"]).unlink(missing_ok=True)
+        except OSError:
+            pass
     store.save(state)
 
-    return {"ok": True, "kind": avatar_key, "url": f"/api/campaign/avatar/{avatar_key}"}
+    return {"ok": True, "kind": avatar_key, "url": f"/api/campaign/avatar/{avatar_key}",
+            "gallery_count": len(_avatar_gallery(entry)), "gallery_index": int(entry.get("gallery_index") or 0)}
 
 
 @app.get("/api/campaign/avatar/{kind:path}")
-async def get_avatar(kind: str, morkrets_token: str | None = Cookie(None)):
-    """Hämta en avatar-bild."""
+async def get_avatar(kind: str, idx: int | None = None, morkrets_token: str | None = Cookie(None)):
+    """Hämta en avatar-bild. ?idx=N hämtar bild N ur galleriet; utan idx → den
+    aktiva bilden."""
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
     state = store.get(username)
@@ -7149,21 +7291,87 @@ async def get_avatar(kind: str, morkrets_token: str | None = Cookie(None)):
     if not entry:
         raise HTTPException(404, "Avataren hittades inte")
 
+    gal = _avatar_gallery(entry)
+    if gal:
+        item = gal[(idx if idx is not None else int(entry.get("gallery_index") or 0)) % len(gal)]
+    else:
+        item = entry
+
     cid = state["meta"]["campaign_id"]
-    path = CAMPAIGNS_DIR / username / cid / "avatars" / entry["disk_name"]
-    if not path.exists():
+    path = CAMPAIGNS_DIR / username / cid / "avatars" / item.get("disk_name", "")
+    if not item.get("disk_name") or not path.exists():
         raise HTTPException(404, "Bild saknas på disk")
 
     return FileResponse(
         path,
-        media_type=AVATAR_MEDIA.get(entry["ext"], "image/png"),
+        media_type=AVATAR_MEDIA.get(item.get("ext"), "image/png"),
         headers={"Cache-Control": "no-cache"},
     )
 
 
+@app.patch("/api/campaign/avatar/gallery/{kind:path}")
+async def rotate_avatar(kind: str, body: dict, morkrets_token: str | None = Cookie(None)):
+    """Rotera aktiv bild i karaktärens galleri: {'index': N} (eller 'delta': ±1)."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    avatar_key = _safe_avatar_key(kind)
+    entry = state.get("avatars", {}).get(avatar_key)
+    if not entry:
+        raise HTTPException(404, "Avataren hittades inte")
+    gal = _avatar_gallery(entry)
+    if not gal:
+        raise HTTPException(404, "Avataren hittades inte")
+
+    cur = int(entry.get("gallery_index") or 0)
+    delta = (body or {}).get("delta")
+    if isinstance(delta, int):
+        idx = cur + delta
+    else:
+        idx = (body or {}).get("index")
+        if not isinstance(idx, int):
+            raise HTTPException(400, "Ange index eller delta")
+    new_idx = _avatar_set_active(entry, idx)
+    store.save(state)
+    return {"ok": True, "kind": avatar_key, "gallery_index": new_idx, "gallery_count": len(gal)}
+
+
+@app.delete("/api/campaign/avatar/gallery/{kind:path}/{idx:int}")
+async def delete_avatar_image(kind: str, idx: int, morkrets_token: str | None = Cookie(None)):
+    """Ta bort EN bild ur galleriet (den visade bilden i modalen)."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+
+    avatar_key = _safe_avatar_key(kind)
+    avatars = state.get("avatars", {})
+    entry = avatars.get(avatar_key)
+    if not entry or not _avatar_gallery(entry):
+        raise HTTPException(404, "Avataren hittades inte")
+
+    removed = _avatar_gallery_remove(entry, idx)
+    cid = state["meta"]["campaign_id"]
+    av_dir = CAMPAIGNS_DIR / username / cid / "avatars"
+    if removed and removed.get("disk_name"):
+        try:
+            (av_dir / removed["disk_name"]).unlink(missing_ok=True)
+        except OSError:
+            pass
+    # Galleriet tomt → ta bort hela posten
+    if avatar_key in avatars and not _avatar_gallery(avatars[avatar_key]):
+        avatars.pop(avatar_key, None)
+    store.save(state)
+    return {"ok": True, "gallery_count": len(_avatar_gallery(avatars[avatar_key])) if avatar_key in avatars else 0}
+
+
 @app.delete("/api/campaign/avatar/{kind:path}")
 async def delete_avatar(kind: str, morkrets_token: str | None = Cookie(None)):
-    """Ta bort en avatar (återgår till standard-sprite)."""
+    """Ta bort alla bilder för en karaktär (återgår till standard-sprite)."""
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
     state = store.get(username)
@@ -7177,9 +7385,15 @@ async def delete_avatar(kind: str, morkrets_token: str | None = Cookie(None)):
         raise HTTPException(404, "Avataren hittades inte")
 
     cid = state["meta"]["campaign_id"]
-    path = CAMPAIGNS_DIR / username / cid / "avatars" / entry["disk_name"]
-    if path.exists():
-        path.unlink()
+    av_dir = CAMPAIGNS_DIR / username / cid / "avatars"
+    # Radera ALLA bilder i galleriet (inkl. legacy enskild bild)
+    for item in list(_avatar_gallery(entry)):
+        p = av_dir / item.get("disk_name", "")
+        if item.get("disk_name") and p.exists():
+            try:
+                p.unlink()
+            except OSError:
+                pass
 
     del avatars[avatar_key]
     store.save(state)
@@ -7195,14 +7409,91 @@ async def delete_avatar(kind: str, morkrets_token: str | None = Cookie(None)):
 
 
 @app.get("/api/me/avatar")
-async def me_avatar(morkrets_token: str | None = Cookie(None)):
-    """Spelarprofilens avatar-bild (konto)."""
+async def me_avatar(idx: int | None = None, morkrets_token: str | None = Cookie(None)):
+    """Spelarprofilens avatar-bild (konto). ?idx=N → bild N ur galleriet;
+    utan idx → den aktiva bilden."""
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
-    path = _user_avatar_path(username)
-    if not path.exists():
+    data = _load_user_avatar_gallery(username)
+    gal = data.get("gallery") or []
+    if not gal:
         raise HTTPException(404, "Ingen profilavatar")
-    return FileResponse(path, media_type="image/png", headers={"Cache-Control": "no-cache"})
+    item = gal[(idx if idx is not None else int(data.get("gallery_index") or 0)) % len(gal)]
+    path = _user_avatar_path(username).parent / item.get("disk_name", "")
+    if not path.exists():
+        raise HTTPException(404, "Bild saknas på disk")
+    return FileResponse(path, media_type=AVATAR_MEDIA.get(item.get("ext"), "image/png"),
+                        headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/api/me/avatar/gallery")
+async def me_avatar_gallery(morkrets_token: str | None = Cookie(None)):
+    """Kontots porträtt-galleri: antal bilder + aktivt index."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    data = _load_user_avatar_gallery(username)
+    gal = data.get("gallery") or []
+    return {"ok": True, "gallery_count": len(gal),
+            "gallery_index": (int(data.get("gallery_index") or 0) % len(gal)) if gal else 0}
+
+
+@app.patch("/api/me/avatar/gallery")
+async def me_avatar_gallery_rotate(body: dict, morkrets_token: str | None = Cookie(None)):
+    """Rotera kontots aktiva porträtt: {'index': N} eller {'delta': ±1}."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    data = _load_user_avatar_gallery(username)
+    gal = data.get("gallery") or []
+    if not gal:
+        raise HTTPException(404, "Ingen profilavatar")
+    cur = int(data.get("gallery_index") or 0)
+    delta = (body or {}).get("delta")
+    if isinstance(delta, int):
+        idx = cur + delta
+    else:
+        idx = (body or {}).get("index")
+        if not isinstance(idx, int):
+            raise HTTPException(400, "Ange index eller delta")
+    data["gallery_index"] = idx % len(gal)
+    _save_user_avatar_gallery(username, data)
+    return {"ok": True, "gallery_index": data["gallery_index"], "gallery_count": len(gal)}
+
+
+@app.delete("/api/me/avatar/gallery/{idx:int}")
+async def me_avatar_gallery_delete_one(idx: int, morkrets_token: str | None = Cookie(None)):
+    """Ta bort EN bild ur kontots porträtt-galleri."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    data = _load_user_avatar_gallery(username)
+    gal = data.get("gallery") or []
+    if not gal:
+        raise HTTPException(404, "Ingen profilavatar")
+    idx = idx % len(gal)
+    removed = gal.pop(idx)
+    if not gal:
+        data["gallery_index"] = 0
+    else:
+        cur = int(data.get("gallery_index") or 0)
+        if idx < cur:
+            cur -= 1
+        elif idx == cur:
+            cur = min(cur, len(gal) - 1)
+        data["gallery_index"] = cur
+    data["gallery"] = gal
+    _save_user_avatar_gallery(username, data)
+    av_dir = _user_avatar_path(username).parent
+    if removed.get("disk_name"):
+        try:
+            (av_dir / removed["disk_name"]).unlink(missing_ok=True)
+        except OSError:
+            pass
+    # Galleriet tomt → rensa avatar-flaggan på kontot
+    if not gal:
+        users = load_users()
+        if isinstance(users.get(username), dict):
+            users[username].pop("avatar", None)
+            save_users(users)
+    return {"ok": True, "gallery_count": len(gal)}
 
 
 @app.post("/api/me/avatar/generate")
@@ -7300,25 +7591,64 @@ async def me_avatar_generate(body: dict | None = None, morkrets_token: str | Non
 
     USER_AVATARS_DIR = _user_avatar_path(username).parent
     USER_AVATARS_DIR.mkdir(parents=True, exist_ok=True)
-    path = _user_avatar_path(username)
-    path.write_bytes(content)
+    # Galleri (2026-08-07): varje målning LÄGGS TILL (max 5 bilder, äldsta
+    # faller bort) — spelaren roterar 1/N med pilar i profil-popupen.
+    data = _load_user_avatar_gallery(username)
+    gal = data.get("gallery") or []
+    disk_name = f"{username}__{secrets.token_hex(4)}.png"
+    (USER_AVATARS_DIR / disk_name).write_bytes(content)
+    gal.append({
+        "disk_name": disk_name,
+        "ext": ".png",
+        "size": len(content),
+        "ai_generated": True,
+        "seed": seed,
+        "uploaded": datetime.now(timezone.utc).isoformat(),
+    })
+    dropped = None
+    if len(gal) > MAX_AVATAR_GALLERY:
+        dropped = gal.pop(0)
+    data["gallery"] = gal
+    data["gallery_index"] = len(gal) - 1
+    _save_user_avatar_gallery(username, data)
+    if dropped and dropped.get("disk_name"):
+        try:
+            (USER_AVATARS_DIR / dropped["disk_name"]).unlink(missing_ok=True)
+        except OSError:
+            pass
 
     users = load_users()
     if isinstance(users.get(username), dict):
         users[username]["avatar"] = True
         save_users(users)
 
-    return {"ok": True, "url": "/api/me/avatar", "seed": seed, "provider": provider}
+    return {"ok": True, "url": "/api/me/avatar", "seed": seed, "provider": provider,
+            "gallery_count": len(gal), "gallery_index": data["gallery_index"]}
 
 
 @app.delete("/api/me/avatar")
 async def me_avatar_delete(morkrets_token: str | None = Cookie(None)):
-    """Ta bort profilavataren (återgår till standard-ikon)."""
+    """Ta bort alla kontots porträtt (återgår till standard-ikon)."""
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
-    path = _user_avatar_path(username)
-    if path.exists():
-        path.unlink()
+    data = _load_user_avatar_gallery(username)
+    gal = data.get("gallery") or []
+    av_dir = _user_avatar_path(username).parent
+    for item in gal:
+        if item.get("disk_name"):
+            try:
+                (av_dir / item["disk_name"]).unlink(missing_ok=True)
+            except OSError:
+                pass
+    gp = _user_gallery_path(username)
+    if gp.exists():
+        try:
+            gp.unlink()
+        except OSError:
+            pass
+    legacy = _user_avatar_path(username)
+    if legacy.exists():
+        legacy.unlink()
     users = load_users()
     if isinstance(users.get(username), dict):
         users[username].pop("avatar", None)
@@ -7818,24 +8148,34 @@ async def generate_avatar(
             raise HTTPException(502, "StepFun returnerade ingen bild")
 
     av_dir.mkdir(parents=True, exist_ok=True)
-    disk_name = avatar_key.replace(":", "_") + ".png"
+    # Galleri (2026-08-07): varje målning LÄGGS TILL i karaktärens galleri
+    # (max 5 bilder, äldsta faller bort) — spelaren roterar 1/N med pilar.
+    disk_name = _new_avatar_disk_name(avatar_key, ".png")
     (av_dir / disk_name).write_bytes(content)
 
     avatars = state.setdefault("avatars", {})
-    avatars[avatar_key] = {
+    entry = avatars.setdefault(avatar_key, {})
+    item = {
         "disk_name": disk_name,
         "ext": ".png",
         "size": len(content),
         "ai_generated": True,
         "seed": seed,
-        "edit_mode": bool(existing_path and mode == "edit"),
         "uploaded": datetime.now(timezone.utc).isoformat(),
     }
+    dropped = _avatar_gallery_add(entry, item)
+    if dropped and dropped.get("disk_name"):
+        try:
+            (av_dir / dropped["disk_name"]).unlink(missing_ok=True)
+        except OSError:
+            pass
     store.save(state)
     # Bokför en AI-bildgenerering (iteration), livstid
     _add_image_gen(username, wan_model if provider == "wan" else STEP_IMAGE_EDIT_2)
 
-    return {"ok": True, "kind": avatar_key, "url": f"/api/campaign/avatar/{avatar_key}", "seed": seed, "edit_mode": bool(existing_path and mode == "edit")}
+    return {"ok": True, "kind": avatar_key, "url": f"/api/campaign/avatar/{avatar_key}", "seed": seed,
+            "edit_mode": bool(existing_path and mode == "edit"),
+            "gallery_count": len(_avatar_gallery(entry)), "gallery_index": int(entry.get("gallery_index") or 0)}
 
 
 # ═══════════════════════════════════════
@@ -8931,6 +9271,13 @@ def _user_stat_row(username: str, geo: dict | None = None, ledger_per_user: dict
     tier = _tier_for(username)
     fresh = load_users().get(username)
     fresh = fresh if isinstance(fresh, dict) else {}
+    # 2026-08-07: admin-vyn visade STALE turns_used — period-rollover kördes
+    # bara i _user_free_info (/api/me) vid spelarens eget anrop. En spelare
+    # som inte loggat in på dagar såg ut att "ha använt turns" i admin-vyn
+    # fast perioden redan rullat. Kör samma lazy rollover här så att
+    # period_turns_used alltid är korrekt.
+    if tier != "lifetime":
+        fresh = _maybe_rollover(username, fresh)
     tts = scan.get("tts_usage", {})
     tts_sec = tts.get("seconds", 0) or 0
     ledger = ledger_per_user if ledger_per_user is not None else _ledger_per_user()
@@ -9969,13 +10316,24 @@ async def me_delete_account(morkrets_token: str | None = Cookie(None)):
     vault_dir = VAULTS_DIR / username
     if vault_dir.exists():
         shutil.rmtree(vault_dir)
-    # Profilporträtt (konto-avatar)
-    av_path = _user_avatar_path(username)
-    if av_path.exists():
-        try:
-            av_path.unlink()
-        except OSError:
-            pass
+    # Profilporträtt (konto-avatar: galleri-JSON + alla bildfiler)
+    av_dir = _user_avatar_path(username).parent
+    try:
+        ugallery = _load_user_avatar_gallery(username)
+        for item in ugallery.get("gallery") or []:
+            if item.get("disk_name"):
+                try:
+                    (av_dir / item["disk_name"]).unlink(missing_ok=True)
+                except OSError:
+                    pass
+    except Exception:
+        pass
+    for leftover in (_user_gallery_path(username), _user_avatar_path(username)):
+        if leftover.exists():
+            try:
+                leftover.unlink()
+            except OSError:
+                pass
     # Ledger-rader (privacy: ingen spårbar historik kvar)
     try:
         with _LEDGER_LOCK:

@@ -47,6 +47,15 @@ def users_file(tmp_path, monkeypatch):
     return f
 
 
+@pytest.fixture(autouse=True)
+def turn_ledgers_dir(tmp_path, monkeypatch):
+    """Peka turn-ledgern mot tmp (strikt per-anrops-modell 2026-08-08) —
+    annars skriver chat-testerna riktiga ledger-filer i backend/data."""
+    d = tmp_path / "turn_ledgers"
+    monkeypatch.setattr(main, "_TURN_LEDGERS_DIR", d)
+    return d
+
+
 @pytest.fixture
 def campaigns_dir(tmp_path, monkeypatch):
     """Peka kampanj-data mot tmp-mapp (state_manager + main)."""

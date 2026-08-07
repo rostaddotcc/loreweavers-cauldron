@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="en" data-default-theme="blood">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Lore Weaver's Cauldron — Character Sheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>:root{
+    --ink: #0b0812;
+    --stone: #161020;
+    --stone-2: #1d1529;
+    --stone-3: #241a33;
+    --edge: #3d2f52;
+    --edge-warm: #5a4433;
+    --bone: #d9c9a6;
+    --bone-bright: #efe2c0;
+    --bone-dim: #8a7a5e;
+    --gold: #c9a227;
+    --gold-bright: #e8c65a;
+    --blood: #a32433;
+    --blood-bright: #d43a4d;
+    --ember: #d4691e;
+    --arcane: #8b5fd4; --arcane-bright: #c9a6ff; --arcane-deep: #3a1f66;
+    --poison: #7aa35e;
+    --hp-glow: rgba(212, 58, 77, 0.55);
+  }*{ margin: 0; padding: 0; box-sizing: border-box; }html{ scroll-behavior: smooth; }body{
+    font-family: 'Spectral', Georgia, serif;
+    color: var(--bone);
+    min-height: 100vh;
+    background:
+      radial-gradient(1100px 520px at 50% 112%, rgba(212,105,30,0.13), transparent 62%),
+      radial-gradient(820px 460px at 12% -8%, color-mix(in srgb, var(--arcane) 10%, transparent), transparent 58%),
+      radial-gradient(640px 380px at 88% -4%, rgba(163,36,51,0.09), transparent 56%),
+      var(--ink);
+    background-attachment: fixed;
+    overflow-x: hidden;
+  }/* ── Stenkorn / noise ── */.grain{
+    position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  }/* ── Drivande dimma ── */.fog{ position: fixed; inset: -20%; z-index: 0; pointer-events: none; }.fog::before, .fog::after{
+    content: ''; position: absolute; width: 70vw; height: 70vw; border-radius: 50%;
+    filter: blur(90px); opacity: 0.5;
+  }.fog::before{
+    left: -10%; top: 20%;
+    background: radial-gradient(circle, color-mix(in srgb, var(--arcane) 7%, transparent), transparent 65%);
+    animation: drift-a 70s ease-in-out infinite alternate;
+  }.fog::after{
+    right: -15%; bottom: 5%;
+    background: radial-gradient(circle, rgba(212,105,30,0.06), transparent 65%);
+    animation: drift-b 90s ease-in-out infinite alternate;
+  }
+  @keyframes drift-a { from { transform: translate(0,0) scale(1); } to { transform: translate(14vw, -8vh) scale(1.25); } }
+  @keyframes drift-b { from { transform: translate(0,0) scale(1.15); } to { transform: translate(-12vw, 6vh) scale(0.9); } }/* ── Glöd ── */#embers{ position: fixed; inset: 0; z-index: 1; pointer-events: none; }/* ── Vinjett ── */.vignette{
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    box-shadow: inset 0 0 180px 60px rgba(4,2,8,0.85);
+  }.app{ position: relative; z-index: 2; max-width: 940px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }/* ═══════════ Header ═══════════ */.masthead{ text-align: center; margin-bottom: 2.2rem; }.masthead .over{
+    font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.45em;
+    text-transform: uppercase; color: var(--bone-dim); margin-bottom: 0.6rem;
+  }.masthead h1{
+    font-family: 'Cinzel', serif; font-weight: 900; font-size: clamp(1.9rem, 5.5vw, 3rem);
+    color: var(--bone-bright); letter-spacing: 0.06em;
+    text-shadow: 0 0 22px rgba(232,198,90,0.28), 0 2px 0 #000;
+    animation: candle 5s ease-in-out infinite;
+  }
+  @keyframes candle {
+    0%, 100% { text-shadow: 0 0 22px rgba(232,198,90,0.28), 0 2px 0 #000; }
+    42% { text-shadow: 0 0 30px rgba(232,198,90,0.42), 0 2px 0 #000; }
+    47% { text-shadow: 0 0 16px rgba(232,198,90,0.2), 0 2px 0 #000; }
+    76% { text-shadow: 0 0 26px rgba(212,105,30,0.36), 0 2px 0 #000; }
+  }.rune-divider{ display: flex; align-items: center; gap: 0.9rem; margin: 0.9rem auto 0; max-width: 420px; }.rune-divider::before, .rune-divider::after{
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    opacity: 0.55;
+  }.rune-divider span{ color: var(--gold); font-size: 0.9rem; text-shadow: 0 0 8px rgba(201,162,39,0.6); }/* ═══════════ Tabs — stentavlor ═══════════ */.tabs{ display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0; }.tab{
+    font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.82rem; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--bone-dim);
+    background: linear-gradient(180deg, var(--stone-2), var(--stone));
+    border: 1px solid var(--edge); border-bottom: none;
+    border-radius: 6px 6px 0 0; padding: 0.75rem 1.4rem 0.65rem;
+    cursor: pointer; user-select: none; position: relative; top: 1px;
+    transition: color 0.25s, background 0.25s, transform 0.15s;
+  }.tab:hover{ color: var(--bone-bright); transform: translateY(-2px); }.tab.active{
+    color: var(--gold-bright);
+    background: linear-gradient(180deg, var(--stone-3), var(--stone-2));
+    border-color: var(--gold);
+    box-shadow: 0 -6px 18px -8px rgba(232,198,90,0.35);
+    text-shadow: 0 0 10px rgba(232,198,90,0.5);
+  }/* ═══════════ Paneler — stenplattor med hörnornament ═══════════ */.panel{
+    display: none; position: relative;
+    background: linear-gradient(165deg, var(--stone-2) 0%, var(--stone) 55%, var(--ink) 100%);
+    border: 1px solid var(--edge);
+    box-shadow: 0 24px 60px -24px rgba(0,0,0,0.9), inset 0 1px 0 rgba(239,226,192,0.05);
+    padding: 2rem 1.75rem;
+    animation: panel-in 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }.panel.active{ display: block; }
+  @keyframes panel-in {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }.corner{ position: absolute; width: 18px; height: 18px; border-color: var(--gold); border-style: solid; opacity: 0.75; }.corner.tl{ top: 6px; left: 6px; border-width: 2px 0 0 2px; }.corner.tr{ top: 6px; right: 6px; border-width: 2px 2px 0 0; }.corner.bl{ bottom: 6px; left: 6px; border-width: 0 0 2px 2px; }.corner.br{ bottom: 6px; right: 6px; border-width: 0 2px 2px 0; }.section-title{
+    font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.78rem;
+    letter-spacing: 0.3em; text-transform: uppercase; color: var(--gold);
+    display: flex; align-items: center; gap: 0.9rem; margin: 1.8rem 0 1rem;
+  }.section-title:first-child{ margin-top: 0; }.section-title::after{
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(90deg, rgba(201,162,39,0.5), transparent);
+  }/* ═══════════ Karaktärshuvud ═══════════ */.char-header{ display: flex; gap: 1.9rem; align-items: center; margin-bottom: 1.6rem; }.portrait-frame{
+    position: relative; width: 150px; height: 150px; flex-shrink: 0; cursor: pointer;
+    background: var(--stone-3); border: 2px solid var(--edge-warm);
+    box-shadow: 0 0 0 4px var(--stone), 0 0 0 5px var(--edge), 0 10px 30px -8px rgba(0,0,0,0.8);
+    transform: rotate(-1.5deg); transition: transform 0.3s, box-shadow 0.3s;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }.portrait-frame:hover{
+    transform: rotate(0deg) scale(1.04);
+    box-shadow: 0 0 0 4px var(--stone), 0 0 0 5px var(--gold), 0 0 26px -4px rgba(232,198,90,0.4);
+  }.portrait-frame .emoji{ font-size: 3.6rem; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6)); }.portrait-frame img{ width: 100%; height: 100%; object-fit: cover; }.portrait-frame .hint{
+    position: absolute; inset: auto 0 0 0; padding: 5px 0; text-align: center;
+    font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase;
+    background: color-mix(in srgb, var(--ink) 82%, transparent); color: var(--gold-bright);
+    transform: translateY(100%); transition: transform 0.25s;
+  }.portrait-frame:hover .hint{ transform: translateY(0); }.portrait-frame input{ display: none; }.char-identity{ flex: 1; min-width: 0; }.char-name{
+    font-family: 'Cinzel', serif; font-weight: 900; font-size: clamp(1.5rem, 4vw, 2.1rem);
+    color: var(--bone-bright); letter-spacing: 0.03em; line-height: 1.1;
+    text-shadow: 0 2px 0 #000, 0 0 24px color-mix(in srgb, var(--blood) 25%, transparent);
+  }.char-class{
+    font-family: 'Spectral', serif; font-style: italic; font-weight: 400;
+    color: var(--arcane); font-size: 1.13rem; margin: 0.3rem 0 0.7rem;
+    text-shadow: 0 0 12px color-mix(in srgb, var(--arcane) 40%, transparent);
+  }.char-meta{ display: flex; gap: 0.5rem 1.1rem; flex-wrap: wrap; font-size: 0.95rem; color: var(--bone-dim); }.char-meta b{ color: var(--bone-bright); font-weight: 600; }.char-meta .stat{ display: flex; gap: 0.35rem; align-items: baseline; }.char-meta .stat i{ font-style: normal; color: var(--gold); font-size: 0.85rem; letter-spacing: 0.08em; }/* ═══════════ Export till The Forge ═══════════ */.forge-row{ display: flex; justify-content: flex-end; gap: 0.6rem; margin: 0.2rem 0 0.9rem; }.forge-export-btn{
+    font-family: 'Cinzel', serif; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
+    background: linear-gradient(180deg, var(--stone-3), var(--stone));
+    border: 1px solid var(--gold); color: var(--gold-bright);
+    padding: 0.6rem 1.2rem; cursor: pointer; border-radius: 8px; transition: all 0.2s;
+    display: inline-flex; align-items: center; gap: 0.45rem; min-height: 42px;
+  }.forge-export-btn:hover{ filter: brightness(1.15); box-shadow: 0 0 14px -4px rgba(232,198,90,0.5); }
+  .forge-export-btn:disabled{ opacity: 0.5; cursor: default; box-shadow: none; }/* ═══════════ Mätare ═══════════ */.vitals{ display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem 1.5rem; }.vital{ grid-column: span 1; }.vital.wide{ grid-column: 1 / -1; }.vital-head{
+    display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.4rem;
+    font-family: 'Cinzel', serif; font-size: 0.7rem; letter-spacing: 0.22em; text-transform: uppercase;
+  }.vital-head .label{ color: var(--bone-dim); }.vital-head .nums{ font-family: 'Spectral', serif; font-size: 1.08rem; letter-spacing: 0; color: var(--bone-bright); font-weight: 600; }.vital-head .nums small{ color: var(--bone-dim); font-weight: 400; }.trough{
+    position: relative; height: 16px; background: var(--ink);
+    border: 1px solid var(--edge); box-shadow: inset 0 3px 8px rgba(0,0,0,0.8);
+    overflow: hidden;
+  }.fill{ position: absolute; inset: 0 auto 0 0; transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }.fill::after{
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.22) 50%, transparent 70%);
+    background-size: 220% 100%; animation: sheen 3.4s linear infinite;
+  }
+  @keyframes sheen { from { background-position: 200% 0; } to { background-position: -60% 0; } }.fill.hp{ background: linear-gradient(180deg, var(--blood-bright), color-mix(in srgb, var(--blood-bright) 35%, var(--ink)) 85%); box-shadow: 0 0 14px var(--hp-glow); }.fill.xp{ background: linear-gradient(180deg, var(--gold-bright), color-mix(in srgb, var(--gold-bright) 35%, var(--ink)) 85%); box-shadow: 0 0 12px rgba(232,198,90,0.4); }.trough.low .fill.hp{ animation: hp-alarm 1s ease-in-out infinite; }
+  @keyframes hp-alarm { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.6); } }.mini-btn{
+    font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 0.1em;
+    background: var(--stone-3); color: var(--bone-dim); border: 1px solid var(--edge);
+    padding: 0.28rem 0.7rem; cursor: pointer; transition: all 0.18s;
+  }.mini-btn:hover{ color: var(--bone-bright); border-color: var(--gold); box-shadow: 0 0 10px -2px rgba(232,198,90,0.4); }.mini-btn.hurt:hover{ border-color: var(--blood-bright); color: var(--blood-bright); box-shadow: 0 0 10px -2px rgba(212,58,77,0.5); }.empty-hint{ font-size: 0.85rem; font-style: italic; color: var(--bone-dim); margin-left: 0.4rem; }/* ═══════════ Förmågor — sköldar ═══════════ */.abilities{ display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.7rem; }.ability{
+    position: relative; text-align: center; padding: 0.9rem 0.3rem 0.75rem;
+    background: linear-gradient(180deg, var(--stone-3), var(--stone));
+    border: 1px solid var(--edge);
+    clip-path: polygon(50% 0, 100% 12%, 100% 88%, 50% 100%, 0 88%, 0 12%);
+    transition: transform 0.2s, filter 0.2s; cursor: default;
+  }.ability:hover{ transform: translateY(-4px); filter: brightness(1.25) drop-shadow(0 6px 12px rgba(0,0,0,0.6)); }.ability .abbr{ font-family: 'Cinzel', serif; font-size: 0.73rem; letter-spacing: 0.25em; color: var(--gold); }.ability .score{ font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.55rem; color: var(--bone-bright); line-height: 1.15; text-shadow: 0 2px 0 #000; }.ability .mod{ font-size: 0.91rem; color: var(--arcane); font-weight: 600; }/* ═══════════ Egenskaper — runchips ═══════════ */.traits{ display: flex; flex-wrap: wrap; gap: 0.5rem; }.trait{
+    font-size: 0.93rem; padding: 0.32rem 0.85rem; border: 1px solid var(--edge);
+    background: var(--stone); color: var(--bone); border-radius: 8px;
+    transition: all 0.2s; cursor: default;
+  }.trait:hover{ transform: translateY(-2px); border-color: var(--bone-dim); }.trait.magic{
+    border-color: color-mix(in srgb, var(--arcane) 55%, transparent); color: var(--arcane-bright);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--arcane) 14%, transparent), color-mix(in srgb, var(--arcane) 4%, transparent));
+    box-shadow: 0 0 10px -3px color-mix(in srgb, var(--arcane) 50%, transparent);
+  }.trait.magic:hover{ border-color: var(--arcane); box-shadow: 0 0 16px -3px color-mix(in srgb, var(--arcane) 80%, transparent); }.trait.prof{ border-color: rgba(201,162,39,0.45); color: var(--gold-bright); }/* ═══════════ Utrustning — kortlayout ═══════════ */.inv-grid{
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.7rem; padding: 0.2rem 0;
+  }.inv-card{
+    background: linear-gradient(180deg, var(--stone-3), var(--stone));
+    border: 1px solid var(--edge); padding: 0.9rem 1rem; cursor: pointer;
+    transition: all 0.22s; position: relative; overflow: hidden;
+  }.inv-card:hover{
+    transform: translateY(-3px); border-color: var(--bone-dim);
+    box-shadow: 0 8px 20px -8px rgba(0,0,0,0.7);
+  }.inv-card.equipped{ border-color: rgba(122,163,94,0.5); }.inv-card.equipped::before{
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--poison), transparent);
+  }/* Rarity: magic */.inv-card.r-magic{ border-color: color-mix(in srgb, var(--arcane) 45%, transparent); }.inv-card.r-magic:hover{ box-shadow: 0 8px 24px -8px color-mix(in srgb, var(--arcane) 40%, transparent); }/* Rarity: rare */.inv-card.r-rare{ border-color: rgba(232,198,90,0.45); }.inv-card.r-rare:hover{ box-shadow: 0 8px 24px -8px rgba(232,198,90,0.4); }/* Rarity: legendary */.inv-card.r-legendary{
+    border-color: rgba(232,198,90,0.7);
+    background: linear-gradient(180deg, rgba(232,198,90,0.08), var(--stone-3) 40%, var(--stone));
+  }.inv-card.r-legendary:hover{ box-shadow: 0 8px 28px -8px rgba(232,198,90,0.6); }.inv-card.r-legendary .inv-card-name{ animation: candle 4s ease-in-out infinite; }.inv-card-row{ display: flex; align-items: flex-start; gap: 0.6rem; }.inv-card-icon{
+    font-size: 1.5rem; line-height: 1; flex-shrink: 0; margin-top: 0.1rem;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  }.inv-card-info{ flex: 1; min-width: 0; }.inv-card-name{
+    font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.82rem;
+    color: var(--bone-bright); line-height: 1.25;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }.inv-card-name.r-magic{ color: var(--arcane-bright); text-shadow: 0 0 8px color-mix(in srgb, var(--arcane) 45%, transparent); }.inv-card-name.r-rare{ color: var(--gold-bright); text-shadow: 0 0 8px rgba(232,198,90,0.35); }.inv-card-name.r-legendary{ color: var(--gold-bright); text-shadow: 0 0 12px rgba(232,198,90,0.6); }.inv-card-type{
+    font-size: 0.83rem; color: var(--bone-dim); font-style: italic; margin-top: 0.15rem;
+  }.inv-card-stats{
+    display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.5rem;
+  }.inv-badge{
+    font-family: 'Cinzel', serif; font-size: 0.71rem; letter-spacing: 0.08em;
+    padding: 0.18rem 0.5rem; border: 1px solid var(--edge); background: var(--stone);
+    color: var(--bone); white-space: nowrap; border-radius: 2px;
+  }.inv-badge.dmg{ border-color: rgba(163,36,51,0.5); color: var(--blood-bright); }.inv-badge.ac{ border-color: rgba(122,163,94,0.5); color: var(--poison); }.inv-badge.charges{ border-color: color-mix(in srgb, var(--arcane) 50%, transparent); color: var(--arcane); }.inv-badge.magic-bonus{ border-color: rgba(232,198,90,0.5); color: var(--gold-bright); }.inv-badge.range{ color: var(--bone-dim); }.inv-badge.qty{ color: var(--bone-dim); }.inv-card-footer{
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 0.55rem; padding-top: 0.45rem;
+    border-top: 1px solid color-mix(in srgb, var(--edge) 40%, transparent);
+  }.inv-card-equip{
+    font-family: 'Cinzel', serif; font-size: 0.65rem; letter-spacing: 0.12em;
+    text-transform: uppercase; padding: 0.2rem 0.55rem; border: 1px solid;
+    cursor: pointer; background: transparent; transition: all 0.2s; white-space: nowrap;
+  }.inv-card-equip.is-equipped{
+    color: var(--poison); border-color: rgba(122,163,94,0.6);
+    box-shadow: 0 0 6px -2px rgba(122,163,94,0.4);
+  }.inv-card-equip.not-equipped{ color: var(--bone-dim); border-color: var(--edge); }.inv-card-equip:hover{ transform: translateY(-1px); filter: brightness(1.3); }.inv-card-weight{ font-size: 0.81rem; color: var(--bone-dim); font-style: italic; }/* ── Detaljmodal ── */.item-modal-overlay{
+    position: fixed; inset: 0; z-index: 40;
+    background: rgba(4,2,8,0.82); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    animation: modal-fade-in 0.2s ease;
+  }
+  @keyframes modal-fade-in { from { opacity: 0; } to { opacity: 1; } }.item-modal{
+    background: linear-gradient(180deg, var(--stone-3), var(--stone));
+    border: 1px solid var(--gold); padding: 2rem 2.2rem;
+    max-width: 480px; width: 92vw; max-height: 85vh; overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8), 0 0 30px -8px rgba(232,198,90,0.3);
+    animation: modal-slide-up 0.25s ease;
+  }
+  @keyframes modal-slide-up { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }.item-modal-close{
+    position: absolute; top: 0.8rem; right: 1rem; background: none; border: none;
+    color: var(--bone-dim); font-size: 1.2rem; cursor: pointer; transition: color 0.2s;
+  }.item-modal-close:hover{ color: var(--blood-bright); }.item-modal-header{
+    font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.15rem;
+    color: var(--bone-bright); margin-bottom: 0.3rem;
+    text-shadow: 0 2px 0 #000;
+  }.item-modal-header.r-magic{ color: var(--arcane-bright); text-shadow: 0 0 12px color-mix(in srgb, var(--arcane) 50%, transparent); }.item-modal-header.r-rare{ color: var(--gold-bright); text-shadow: 0 0 12px rgba(232,198,90,0.4); }.item-modal-header.r-legendary{ color: var(--gold-bright); text-shadow: 0 0 16px rgba(232,198,90,0.7); }.item-modal-sub{
+    font-size: 0.91rem; color: var(--bone-dim); font-style: italic;
+    margin-bottom: 1.1rem; padding-bottom: 0.8rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--edge) 50%, transparent);
+  }.item-modal-stat-row{
+    display: flex; justify-content: space-between; padding: 0.35rem 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--edge) 25%, transparent); font-size: 0.98rem;
+  }.item-modal-stat-label{
+    color: var(--bone-dim); font-size: 0.88rem; letter-spacing: 0.04em;
+    font-family: 'Cinzel', serif; text-transform: uppercase;
+  }.item-modal-stat-val{ color: var(--bone-bright); font-weight: 500; }.item-modal-desc{
+    margin-top: 1rem; padding: 0.8rem; font-size: 0.98rem;
+    color: var(--bone); font-style: italic; line-height: 1.6;
+    background: rgba(13,8,23,0.4); border-left: 2px solid var(--edge);
+  }.item-modal-lore{
+    margin-top: 1rem; padding: 0.8rem; font-size: 0.91rem;
+    color: var(--gold); font-style: italic; line-height: 1.55;
+    background: rgba(23,17,33,0.5); border-left: 2px solid rgba(201,162,39,.4);
+    letter-spacing: 0.01em;
+  }.item-modal-props{
+    display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem;
+  }.item-modal-prop-tag{
+    font-size: 0.81rem; padding: 0.15rem 0.5rem;
+    border: 1px solid var(--edge); color: var(--bone-dim);
+    background: var(--stone); border-radius: 2px;
+  }.inv-summary{
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;
+    margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid color-mix(in srgb, var(--edge) 50%, transparent);
+    font-size: 0.93rem; color: var(--bone-dim);
+  }.inv-summary b{ color: var(--bone-bright); }.overloaded{ color: var(--blood-bright) !important; animation: hp-alarm 1.2s infinite; }.inv-empty{
+    text-align: center; color: var(--bone-dim); font-style: italic;
+    padding: 2.5rem 1rem; font-size: 1.03rem;
+  }/* ═══════════ Besvärjelser — spell-kort ═══════════ */.spell-slots{
+    display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--arcane) 9%, transparent), color-mix(in srgb, var(--arcane) 2%, transparent));
+    border: 1px solid color-mix(in srgb, var(--arcane) 30%, transparent);
+    padding: 0.7rem 0.9rem; margin-bottom: 0.9rem;
+  }.ss-label{ font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-dim); }.ss-pips{
+    display: flex; gap: 0.3rem; flex-wrap: wrap;
+  }.ss-pip{
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--arcane) 60%, transparent);
+    background: var(--stone-3); display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.62rem; color: var(--arcane-bright); transition: all 0.2s;
+  }.ss-pip.used{ border-color: var(--gold); color: var(--gold-bright); box-shadow: 0 0 10px rgba(232,198,90,0.25); background: color-mix(in srgb, var(--gold) 12%, transparent); }
+  .ss-pip.available{ opacity: 0.45; border-style: dashed; }.ss-count{
+    font-size: 0.95rem; color: var(--bone-bright); font-variant-numeric: tabular-nums;
+  }.ss-count b{ color: var(--gold-bright); }.ss-note{ font-size: 0.72rem; color: var(--bone-dim); font-style: italic; flex-basis: 100%; margin-top: 0.15rem; }
+  .spells-grid{
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.7rem; padding: 0.2rem 0;
+  }.spell-card{
+    background: linear-gradient(180deg, color-mix(in srgb, var(--arcane) 10%, transparent), color-mix(in srgb, var(--arcane) 3%, transparent));
+    border: 1px solid color-mix(in srgb, var(--arcane) 35%, transparent); padding: 0.85rem 1rem;
+    transition: all 0.22s; position: relative; overflow: hidden;
+  }.spell-card:hover{
+    transform: translateY(-3px); border-color: color-mix(in srgb, var(--arcane) 70%, transparent);
+    box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--arcane) 45%, transparent);
+  }.spell-card.cantrip{ border-color: rgba(122,163,94,0.4); background: linear-gradient(180deg, rgba(122,163,94,0.08), rgba(122,163,94,0.02)); }.spell-card.cantrip:hover{ border-color: rgba(122,163,94,0.65); box-shadow: 0 8px 20px -8px rgba(122,163,94,0.4); }.spell-card-head{
+    display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem;
+  }.spell-name{
+    font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.82rem;
+    color: var(--arcane-bright); line-height: 1.25; text-shadow: 0 0 8px color-mix(in srgb, var(--arcane) 35%, transparent);
+  }.spell-card.cantrip .spell-name{ color: var(--poison-bright, #9ec58a); text-shadow: 0 0 8px rgba(122,163,94,0.35); }.spell-level{
+    font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--bone-dim); border: 1px solid var(--edge); padding: 0.1rem 0.4rem; flex-shrink: 0;
+  }.spell-card-sub{
+    font-size: 0.78rem; color: var(--bone-dim); font-style: italic; margin-top: 0.35rem;
+  }.spell-card-desc{
+    font-size: 0.83rem; color: var(--bone); margin-top: 0.5rem; line-height: 1.45;
+    border-top: 1px dashed color-mix(in srgb, var(--arcane) 20%, transparent); padding-top: 0.45rem;
+  }.add-form{ display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1.2rem; }.add-form input, .add-form select{
+    font-family: 'Spectral', serif; font-size: 0.98rem; color: var(--bone-bright);
+    background: #0d0817; border: 1px solid var(--edge); padding: 0.55rem 0.8rem;
+    outline: none; transition: border-color 0.2s, box-shadow 0.2s; border-radius: 2px;
+  }.add-form input:focus, .add-form select:focus{
+    border-color: var(--gold); box-shadow: 0 0 12px -3px rgba(232,198,90,0.45);
+  }.add-form input::placeholder{ color: var(--bone-dim); font-style: italic; }.add-form input{ flex: 1; min-width: 150px; }.add-form select{ flex: 0 1 auto; min-width: 100px; }.rune-btn{
+    font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.85rem; letter-spacing: 0.16em;
+    text-transform: uppercase; color: #1a1206; cursor: pointer;
+    background: linear-gradient(180deg, var(--gold-bright), var(--gold) 60%, #8a6d14);
+    border: 1px solid #6e5510; padding: 0.55rem 1.3rem; border-radius: 2px;
+    box-shadow: 0 4px 14px -4px rgba(232,198,90,0.5), inset 0 1px 0 rgba(255,255,255,0.4);
+    transition: all 0.18s;
+  }.rune-btn:hover{ filter: brightness(1.12); transform: translateY(-2px); box-shadow: 0 8px 20px -4px rgba(232,198,90,0.6), inset 0 1px 0 rgba(255,255,255,0.4); }.rune-btn:active{ transform: translateY(0); }/* ── Anteckningar + Bilagor ── */.notes-layout{ display: grid; grid-template-columns: 1fr 300px; gap: 1.6rem; align-items: start; }.notes-hint{ font-size: 0.85rem; color: var(--bone-dim); font-style: italic; text-transform: none; letter-spacing: 0; font-weight: 400; }#notes-editor{
+    width: 100%; min-height: 380px; resize: vertical;
+    font-family: 'Spectral', Georgia, serif; font-size: 1.05rem; line-height: 1.7;
+    color: var(--bone-bright); background: var(--stone-2);
+    border: 1px solid var(--edge); padding: 1rem 1.1rem; outline: none; border-radius: 2px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }#notes-editor:focus{ border-color: var(--gold); box-shadow: 0 0 16px -5px rgba(232,198,90,0.35); }#notes-editor::placeholder{ color: rgba(138,122,94,0.45); font-style: italic; }.notes-actions{ display: flex; align-items: center; gap: 1rem; margin-top: 0.9rem; }.notes-status{ font-size: 0.88rem; font-style: italic; color: var(--poison); min-height: 1em; }.notes-status.err{ color: var(--blood-bright); }/* ── Character Growth (Lorekeeper character_updates) — read-only kort ── */.growth-wrap{ margin-top: 2.2rem; padding-top: 1.6rem; border-top: 1px solid var(--edge); }.growth-list{ display: flex; flex-direction: column; gap: 0.7rem; margin-top: 0.9rem; }.growth-item{
+    position: relative; padding: 0.8rem 1rem 0.8rem 1.1rem;
+    background: linear-gradient(160deg, color-mix(in srgb, var(--arcane) 10%, transparent), color-mix(in srgb, var(--arcane) 3%, transparent));
+    border: 1px solid color-mix(in srgb, var(--arcane) 35%, transparent); border-left: 3px solid var(--arcane);
+    transition: border-color .2s, transform .2s, box-shadow .2s;
+  }.growth-item:hover{ border-color: color-mix(in srgb, var(--arcane) 60%, transparent); transform: translateX(3px); box-shadow: 0 0 14px -6px color-mix(in srgb, var(--arcane) 50%, transparent); }.growth-field{
+    font-family: 'Cinzel', serif; font-size: 0.69rem; font-weight: 700;
+    letter-spacing: 0.22em; text-transform: uppercase; color: var(--arcane);
+    display: inline-block; margin-bottom: 0.35rem;
+  }.growth-text{ font-size: 1.01rem; color: var(--bone-bright); line-height: 1.55; font-style: italic; }.growth-turn{ font-size: 0.75rem; color: var(--bone-dim); margin-top: 0.4rem; font-family: 'Silkscreen', monospace; letter-spacing: 0.08em; }.growth-empty{ font-size: 0.93rem; font-style: italic; color: var(--bone-dim); }.att-dropzone{
+    position: relative; border: 2px dashed var(--edge); padding: 1.4rem 1rem; text-align: center;
+    cursor: pointer; transition: all 0.2s; border-radius: 2px; margin-bottom: 1rem;
+  }.att-dropzone:hover, .att-dropzone.dragover{ border-color: var(--gold); background: rgba(201,162,39,0.05); }.att-dropzone .att-icon{ font-size: 1.6rem; display: block; margin-bottom: 0.4rem; }.att-dropzone .att-text{ font-size: 0.93rem; color: var(--bone-dim); display: block; }.att-dropzone .att-text b{ color: var(--gold-bright); }.att-dropzone .att-formats{ font-size: 0.81rem; color: var(--bone-dim); display: block; margin-top: 0.3rem; opacity: 0.7; }.att-dropzone input{ display: none; }.att-list{ display: flex; flex-direction: column; gap: 0.5rem; }.att-item{
+    display: flex; align-items: center; gap: 0.6rem;
+    background: var(--stone-2); border: 1px solid var(--edge); padding: 0.55rem 0.7rem;
+    border-radius: 2px; transition: border-color 0.2s;
+  }.att-item:hover{ border-color: var(--gold); }.att-item .att-fi{ font-size: 1.1rem; flex-shrink: 0; }.att-item a{
+    flex: 1; color: var(--bone-bright); text-decoration: none; font-size: 0.95rem;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }.att-item a:hover{ color: var(--gold-bright); text-decoration: underline; }.att-item .att-size{ font-size: 0.78rem; color: var(--bone-dim); flex-shrink: 0; }.att-item .att-del{
+    background: none; border: none; color: var(--bone-dim); cursor: pointer;
+    font-size: 0.98rem; padding: 0 0.2rem; transition: color 0.2s; flex-shrink: 0;
+  }.att-item .att-del:hover{ color: var(--blood-bright); }.att-empty{ font-size: 0.88rem; font-style: italic; color: var(--bone-dim); text-align: center; padding: 0.5rem; }
+
+  @media (max-width: 760px) {.notes-layout{ grid-template-columns: 1fr; }
+  }/* ═══════════ Valuta — mynt ═══════════ */.currency-grid{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.9rem; }.coin{
+    text-align: center; padding: 1.1rem 0.5rem 0.9rem; position: relative;
+    background: linear-gradient(180deg, var(--stone-3), var(--stone));
+    border: 1px solid var(--edge); transition: transform 0.2s, box-shadow 0.2s;
+  }.coin:hover{ transform: translateY(-4px); box-shadow: 0 12px 24px -10px rgba(0,0,0,0.8); }.coin-disc{
+    width: 52px; height: 52px; border-radius: 50%; margin: 0 auto 0.6rem;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Cinzel', serif; font-weight: 900; font-size: 0.95rem;
+    box-shadow: inset 0 -4px 8px rgba(0,0,0,0.45), inset 0 3px 6px rgba(255,255,255,0.35), 0 4px 10px rgba(0,0,0,0.6);
+    transition: transform 0.3s;
+  }.coin:hover .coin-disc{ transform: rotateY(20deg) rotateZ(-6deg); }
+  @keyframes coin-flip { 0% { transform: rotateY(0); } 50% { transform: rotateY(180deg) scale(1.12); } 100% { transform: rotateY(360deg); } }.c-pp .coin-disc{ background: radial-gradient(circle at 35% 30%, #f4f6fb, #b9c6dd 55%, #6d7d9c); color: #2c3548; }.c-gp .coin-disc{ background: radial-gradient(circle at 35% 30%, #ffe9a3, var(--gold) 55%, #7a5c10); color: #3d2e05; }.c-sp .coin-disc{ background: radial-gradient(circle at 35% 30%, #e8e8e8, #a6a6a6 55%, #5c5c5c); color: #2e2e2e; }.c-cp .coin-disc{ background: radial-gradient(circle at 35% 30%, #e0a878, #a05f2a 55%, #57300f); color: #2e1805; }.coin-name{ font-family: 'Cinzel', serif; font-size: 0.73rem; letter-spacing: 0.24em; text-transform: uppercase; color: var(--bone-dim); margin-bottom: 0.25rem; }.coin-amount{ font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.5rem; color: var(--bone-bright); text-shadow: 0 2px 0 #000; position: relative; }.coin-btn{
+    width: 30px; height: 30px; font-family: 'Cinzel', serif; font-size: 0.93rem;
+    background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
+    cursor: pointer; transition: all 0.15s; border-radius: 2px;
+  }.coin-btn:hover{ color: var(--gold-bright); border-color: var(--gold); box-shadow: 0 0 10px -2px rgba(232,198,90,0.5); }.coin-btn:active{ transform: scale(0.88); }
+  @keyframes float-up { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -26px); } }.hoard{
+    margin-top: 1.4rem; padding: 1.2rem; text-align: center; position: relative;
+    border: 1px solid var(--edge-warm);
+    background: radial-gradient(ellipse at 50% 0%, rgba(201,162,39,0.1), transparent 70%), var(--stone);
+  }.hoard .label{ font-family: 'Cinzel', serif; font-size: 0.75rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--bone-dim); }.hoard .value{
+    font-family: 'Cinzel', serif; font-weight: 900; font-size: 2rem; color: var(--gold-bright);
+    text-shadow: 0 0 20px rgba(232,198,90,0.45), 0 2px 0 #000; margin: 0.2rem 0;
+  }.hoard .sub{ font-size: 0.95rem; font-style: italic; color: var(--bone-dim); }.tx{
+    display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+    padding: 0.6rem 0.2rem; border-bottom: 1px solid color-mix(in srgb, var(--edge) 40%, transparent); font-size: 0.98rem;
+    transition: background 0.2s;
+  }.tx:hover{ background: rgba(201,162,39,0.04); }.tx-desc{ color: var(--bone); }.tx-date{ font-size: 0.85rem; font-style: italic; color: var(--bone-dim); margin-top: 0.1rem; }.tx-amount{ font-family: 'Cinzel', serif; font-weight: 700; white-space: nowrap; }.tx-amount.pos{ color: var(--poison); }.tx-amount.neg{ color: var(--blood-bright); }/* ═══════════ Toast ═══════════ */.toast{
+    position: fixed; bottom: 1.5rem; left: 50%; transform: translate(-50%, 80px);
+    z-index: 50; font-family: 'Cinzel', serif; font-size: 0.88rem; letter-spacing: 0.12em;
+    background: linear-gradient(180deg, var(--stone-3), var(--stone));
+    border: 1px solid var(--gold); color: var(--gold-bright);
+    padding: 0.7rem 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.7), 0 0 20px -6px rgba(232,198,90,0.5);
+    opacity: 0; transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1); pointer-events: none;
+  }.toast.show{ transform: translate(-50%, 0); opacity: 1; }/* ═══════════ Laddar / tom kampanj ═══════════ */.loading{
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 1.1rem; padding: 5rem 1rem; text-align: center;
+  }.loading .rune{ font-size: 2.6rem; animation: candle 3s ease-in-out infinite; }.loading p{ font-style: italic; color: var(--bone-dim); letter-spacing: 0.05em; }.no-campaign{ text-align: center; padding: 4.5rem 1.5rem; }.no-campaign .rune{ font-size: 3.2rem; margin-bottom: 1rem; animation: candle 4s ease-in-out infinite; }.no-campaign h2{
+    font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.35rem;
+    color: var(--bone-bright); letter-spacing: 0.05em; margin-bottom: 0.5rem;
+  }.no-campaign p{ font-style: italic; color: var(--bone-dim); margin-bottom: 1.6rem; }.no-campaign .rune-btn{ display: inline-block; text-decoration: none; }/* ═══════════ Responsivt ═══════════ */
+  @media (max-width: 720px){.abilities{ grid-template-columns: repeat(3, 1fr); }.currency-grid{ grid-template-columns: repeat(2, 1fr); }.vitals{ grid-template-columns: 1fr; }.char-header{ flex-direction: column; text-align: center; }.char-meta{ justify-content: center; }.panel{ padding: 1.5rem 1rem; }.inv-grid{ grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  }/* ═══════════ Mobil — pekskärm & trånga gränder ═══════════ */
+  @media (max-width: 900px){html{ -webkit-tap-highlight-color: transparent; }/* Topnav: radbryt + 44px träffytor (inline-stilar kräver !important) */body > header{ flex-wrap: wrap !important; gap: .4rem .5rem !important; padding: .6rem .75rem !important; }body > header .top-btn{
+      min-height: 44px !important; display: inline-flex !important; align-items: center !important;
+      padding: .4rem .65rem !important; font-size: .68rem !important; white-space: nowrap;
+    }.app{ padding: 1.25rem .75rem 3rem; }
+  }
+  @media (max-width: 640px) {/* Flikar: 2×2 stentavlor med full träffhöjd */.tabs{ display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; }.tab{ min-height: 44px; display: flex; align-items: center; justify-content: center;
+      padding: .55rem .35rem; font-size: .77rem; border-bottom: 1px solid var(--edge); }.panel{ padding: 1.2rem .8rem; }/* Förmågor: 2 kolumner, större siffror */.abilities{ grid-template-columns: repeat(2, 1fr); gap: .55rem; }.ability .score{ font-size: 1.35rem; }/* HP/XP-mätare: högre balkar som syns */.trough{ height: 22px; }/* Utrustningstabell: horisontell scroll */.inv-grid{ grid-template-columns: 1fr; gap: 0.5rem; }/* Lägg-till-formulär: staplat, 16px mot iOS-zoom */.add-form input, .add-form select{ font-size: 18px; min-height: 44px; }.add-form input{ flex: 1 1 100%; }.add-form select{ flex: 1 1 42%; }.add-form .rune-btn{ flex: 1 1 100%; min-height: 44px; }/* Skattkammare */.currency-grid{ grid-template-columns: repeat(2, 1fr); gap: .6rem; }.coin-btn{ width: 44px; height: 44px; }.tx{ flex-wrap: wrap; gap: .3rem; }/* Anteckningar */.notes-layout{ grid-template-columns: 1fr; }#notes-editor{ font-size: 18px; min-height: 280px; }.rune-btn{ min-height: 44px; }.att-item .att-del{ padding: .5rem .45rem; font-size: 1.13rem; }.att-item a{ font-size: .93rem; }
+  }
+  @media (max-width: 400px) {.app{ padding: 1rem .5rem 3rem; }.panel{ padding: 1rem .6rem; }.abilities{ gap: .4rem; }.ability{ padding: .7rem .15rem .6rem; }.ability .abbr{ font-size: .63rem; letter-spacing: .15em; }.ability .score{ font-size: 1.15rem; }.coin{ padding: .85rem .3rem .7rem; }.coin-amount{ font-size: 1.25rem; }.coin-disc{ width: 44px; height: 44px; }.masthead h1{ letter-spacing: .02em; }.char-name{ font-size: 1.35rem; }
+  }
+  /* ═══════════ Avatar-modal (AI-generera / uppdatera / ladda upp) ═══════════ */
+  .mi-overlay{ position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(4,2,8,.85); opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility .25s; }
+  .mi-overlay.show{ opacity: 1; visibility: visible; }
+  .mi-modal{ width: min(420px, 100%); max-height: 86vh; overflow-y: auto; background: linear-gradient(165deg, var(--stone-2), var(--stone)); border: 1px solid var(--gold); box-shadow: 0 0 40px rgba(201,162,39,.22), 0 24px 60px rgba(0,0,0,.7); padding: 1.3rem 1.4rem 1.5rem; }
+  .mi-head{ display: flex; align-items: center; justify-content: space-between; font-family: 'Cinzel', serif; font-size: .75rem; letter-spacing: .12em; color: var(--gold-bright); text-transform: uppercase; padding-bottom: .8rem; border-bottom: 1px solid var(--edge); margin-bottom: .9rem; }
+  .mi-close{ background: none; border: 1px solid var(--edge); color: var(--bone-dim); font-size: .85rem; padding: .3rem .55rem; cursor: pointer; }
+  .mi-close:hover{ border-color: var(--gold); color: var(--gold-bright); }
+  .mi-intro{ font-size: .85rem; color: var(--bone); line-height: 1.6; margin-bottom: .4rem; }
+  .av-btn{ display: flex; align-items: center; justify-content: center; gap: .5rem; width: 100%; padding: .8rem 1rem; font-family: 'Cinzel', serif; font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; background: linear-gradient(180deg, var(--stone-3), var(--stone)); border: 1px solid var(--edge); color: var(--bone-bright); cursor: pointer; transition: all .2s; }
+  .av-btn:hover{ border-color: var(--gold); color: var(--gold-bright); }
+  .av-btn.primary{ background: linear-gradient(180deg, var(--gold-bright), var(--gold) 55%, #8a6d14); color: #1a1206; border-color: #6e5510; }
+  .av-btn.primary:hover{ filter: brightness(1.1); }
+  .av-btn.danger{ color: var(--blood-bright); border-color: rgba(212,58,77,.4); }
+  .av-btn.danger:hover{ border-color: var(--blood-bright); }
+  .av-btn:disabled{ opacity: .5; cursor: wait; }
+  .av-lightbox{ position: fixed; inset: 0; z-index: 11000; display: flex; align-items: center; justify-content: center; background: rgba(2,1,5,.92); opacity: 0; visibility: hidden; transition: opacity .22s ease, visibility .22s; }
+  .av-lightbox.show{ opacity: 1; visibility: visible; }
+  .av-lightbox img{ max-width: min(90vw, 720px); max-height: 85vh; border: 2px solid var(--gold); box-shadow: 0 0 60px rgba(201,162,39,.25), 0 24px 60px rgba(0,0,0,.8); }
+  .av-lightbox .av-lb-close{ position: fixed; top: 1.2rem; right: 1.4rem; font-family: 'Cinzel', serif; font-size: .8rem; color: var(--gold-bright); background: none; border: 1px solid var(--edge); padding: .5rem .7rem; cursor: pointer; }
+  .av-lightbox .av-lb-title{ position: fixed; bottom: 1.2rem; left: 50%; transform: translateX(-50%); font-family: 'Cinzel', serif; font-size: .7rem; letter-spacing: .18em; text-transform: uppercase; color: var(--bone-dim); white-space: nowrap; }
+/* ═══════════ Inuti Codex (iframe): dölj slogan + sub-tabbar — Codex-headern styr ═══════════ */
+  .in-codex .masthead{ display: none; }
+  .in-codex .tabs{ display: none; }
+/* ═══════════ Stor avatar-bakgrund i karaktärsvyn (hero) ═══════════ */
+  #panel-character .char-header{
+    position: relative; display: flex; flex-direction: column; align-items: flex-start;
+    justify-content: flex-end; text-align: left; gap: 0.9rem; min-height: 300px;
+    margin-bottom: 0.9rem;
+  }
+  #panel-character .char-header::after{
+    content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--ink) 90%, transparent) 0%, color-mix(in srgb, var(--ink) 60%, transparent) 45%, color-mix(in srgb, var(--ink) 15%, transparent) 72%, transparent 85%),
+                linear-gradient(180deg, transparent 42%, color-mix(in srgb, var(--ink) 50%, transparent) 100%);
+  }
+  #panel-character .portrait-frame{
+    position: absolute; top: 0; right: 0; width: 100%; height: 100%;
+    z-index: 0; transform: none;
+    background: transparent; border: 0; box-shadow: none;
+    display: block;
+  }
+  #panel-character .portrait-frame .emoji{ font-size: 8rem; opacity: .92; }
+  #panel-character .char-identity{ position: relative; z-index: 2; padding-right: 120px; }
+  /* 2026-08-06: textlagret får inte äta klick — hela porträttet ska öppna
+     avatar-modalen (som NPC-dossién). Endast text/siffror här, inga knappar. */
+  #panel-character .char-identity, #panel-character .vitals{ pointer-events: none; }
+  #panel-character .char-class, #panel-character .char-meta{ text-shadow: 0 1px 3px #000, 0 0 14px rgba(0,0,0,.85); }
+  #panel-character .vitals{ position: relative; z-index: 2; width: 100%; margin: 0.4rem 0 0; padding-right: 10px; }
+  #panel-character .vitals .label, #panel-character .vitals .nums{ text-shadow: 0 1px 3px #000, 0 0 12px rgba(0,0,0,.95); }
+/* ═══════════ MJUKA UPP — Codex-knappar (2026-08-05) ═══════════ */
+.av-btn, .rune-btn, .forge-export-btn, .top-btn{ border-radius: 8px !important; }
+.av-btn:hover, .rune-btn:hover, .forge-export-btn:hover{ transform: translateY(-1px) !important; box-shadow: 0 4px 16px -6px rgba(0,0,0,.55) !important; }
+
+</style>
+<link rel="stylesheet" href="snes.css?v=23">
+<style>
+/* ═══════════ MJUKA UPP — Codex karaktärsblad (2026-08-05) — EFTER snes.css ═══════════ */
+.top-btn{ border-radius: 8px !important; box-shadow: 0 2px 12px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; }
+.top-btn:hover{ transform: translateY(-1px) !important; }
+.tab{ border-radius: 8px !important; transition: all .2s !important; }
+.panel{ border-radius: 10px !important; }
+.ability{ border-radius: 8px !important; }
+.trait{ border-radius: 8px !important; }
+.inv-card-row{ border-radius: 8px !important; }
+.forge-row{ border-radius: 8px !important; }
+.coin-btn{ border-radius: 8px !important; }
+.stat{ border-radius: 8px !important; }
+.att-item{ border-radius: 8px !important; }
+.growth-item{ border-radius: 8px !important; }
+.tx{ border-radius: 8px !important; }
+.rune-btn{ border-radius: 8px !important; }
+.av-btn{ border-radius: 8px !important; }
+.add-form input, .add-form select{ border-radius: 6px !important; }
+</style>
+<script src="sprites.js?v=20260806a"></script>
+<script src="fonts.js?v=20260806c"></script>
+<script src="themes.js?v=20260806b"></script>
+</head>
+<body>
+
+<div class="grain"></div>
+<div class="fog"></div>
+<canvas id="embers"></canvas>
+<div class="vignette"></div>
+
+<header class="topbar" style="position:relative;z-index:5;display:flex;align-items:center;gap:1rem;padding:.7rem 1.2rem;background:linear-gradient(180deg,var(--stone-2),color-mix(in srgb, var(--stone) 95%, transparent));border-bottom:1px solid var(--edge);box-shadow:0 4px 20px rgba(0,0,0,.5)">
+  <span style="font-family:Cinzel,serif;font-weight:900;font-size:1.05rem;color:var(--gold-bright);letter-spacing:.06em;text-shadow:0 0 14px rgba(232,198,90,.3)">The Lore Weaver's Cauldron</span>
+  <span style="font-size:.91rem;font-style:italic;color:var(--bone-dim);border-left:1px solid var(--edge);padding-left:1rem">Character Sheet</span>
+  <span style="flex:1"></span>
+  <a class="top-btn" href="chat.html" style="font-family:Cinzel,serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:8px;text-decoration:none">⚔ To the Table</a>
+  <a class="top-btn" href="loggbok.html" style="font-family:Cinzel,serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:8px;text-decoration:none">📜 Logbook</a>
+  <a class="top-btn" href="platser.html" style="font-family:Cinzel,serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:8px;text-decoration:none">🗺️ The Map</a>
+  <a class="top-btn" href="npcs.html" style="font-family:Cinzel,serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:8px;text-decoration:none">📖 NPCs</a>
+  <button class="top-btn danger" onclick="doLogout()" style="font-family:Cinzel,serif;font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:8px">🚪 Leave</button>
+</header>
+<div class="app">
+
+  <header class="masthead">
+    <h1>The Lore Weaver's Cauldron</h1>
+    <div class="rune-divider"><span>✦</span></div>
+  </header>
+
+  <div id="loading" class="loading">
+    <div class="rune">🕯️</div>
+    <p>Loading the campaign's state…</p>
+  </div>
+
+  <nav class="tabs">
+    <div class="tab active" data-tab="character">⚔ Character</div>
+    <div class="tab" data-tab="spells">✨ Spells</div>
+    <div class="tab" data-tab="inventory">🎒 Equipment</div>
+    <div class="tab" data-tab="currency">🪙 Treasury</div>
+    <div class="tab" data-tab="notes">📜 Notes</div>
+  </nav>
+
+  <!-- ═══════════ KARAKTÄR ═══════════ -->
+  <section class="panel active" id="panel-character">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+
+    <div class="char-header">
+      <div class="portrait-frame" id="portrait" title="Upload a portrait — Qwen can analyze it">
+        <span class="emoji" id="portrait-emoji">🧙‍♀️</span>
+        <span class="hint">📷 Add image</span>
+        <input type="file" id="portrait-input" accept="image/*">
+      </div>
+      <div class="char-identity">
+        <div class="char-name" id="char-name">Thalindra Mörkeld</div>
+        <div class="char-class" id="char-class">Halvälva · Eldbesvärjare · Nivå 7</div>
+        <div class="char-meta">
+          <span class="stat"><i>AC</i><b>14</b></span>
+          <span class="stat"><i>INIT</i><b>+3</b></span>
+          <span class="stat"><i>PERC</i><b>+2</b></span>
+          <span class="stat"><i>FART</i><b>30 ft</b></span>
+          <span class="stat"><i>PROF</i><b>+3</b></span>
+        </div>
+      </div>
+      <div class="vitals">
+        <div class="vital">
+          <div class="vital-head">
+            <span class="label">❤ Hit Points</span>
+            <span class="nums"><span id="hp-cur">38</span><small> / <span id="hp-max">52</span></small></span>
+          </div>
+          <div class="trough" id="hp-trough"><div class="fill hp" id="hp-bar" style="width:73%"></div></div>
+        </div>
+
+        <div class="vital wide">
+          <div class="vital-head">
+            <span class="label">⭐ Experience</span>
+            <span class="nums"><span id="xp-cur">0</span><small> / <span id="xp-next">—</span></small></span>
+          </div>
+          <div class="trough"><div class="fill xp" id="xp-bar" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="forge-row">
+      <button class="forge-export-btn" id="forge-paint-btn" onclick="openAvatarModal()" title="Paint your adventurer's portrait — StepFun (Support 3€) or Wan 2.7 Pro (Patron 10€)">🎨 Paint your adventurer</button>
+      <button class="forge-export-btn" id="forge-export-btn" onclick="exportToForge()" title="Save this adventurer to The Forge — start a new campaign with them later">⚒ Export to Forge</button>
+    </div>
+
+    <div class="section-title">Abilities</div>
+    <div class="abilities" id="abilities"></div>
+
+    <div class="section-title">Traits</div>
+    <div class="traits" id="traits"></div>
+
+    <div class="section-title">Saving Throws</div>
+    <div class="traits" id="saves"></div>
+  </section>
+
+  <!-- ═══════════ UTRUSTNING ═══════════ -->
+  <section class="panel" id="panel-inventory">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+
+    <div class="section-title">Gear & Weapons</div>
+    <div class="inv-grid" id="inv-grid"></div>
+    <div class="inv-summary">
+      <span>Total weight: <b id="inv-weight">0</b> / 120 lbs <span id="inv-warn"></span></span>
+      <span>Items: <b id="inv-count">0</b></span>
+    </div>
+    <div class="inv-managed-hint" style="margin-top:0.6rem;font-size:.83rem;color:var(--bone-dim);text-align:center">Inventory is managed by the DM &amp; Lorekeeper — items appear here as you find, use, or equip them.</div>
+    <div id="item-modal-container"></div>
+  </section>
+
+  <!-- ═══════════ BESVÄRJELSER ═══════════ -->
+  <section class="panel" id="panel-spells">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+
+    <div class="section-title">✨ Spells</div>
+    <div class="spell-slots" id="spell-slots"></div>
+    <div class="spells-grid" id="spells-grid"></div>
+    <div class="spells-hint" style="margin-top:0.6rem;font-size:.83rem;color:var(--bone-dim);text-align:center">Cantrips (level 0) are always ready and cost no slots. Each leveled spell you cast spends one spell slot — when a slot is spent it stays spent until a long rest restores it. The Lorekeeper assigns new spells as you learn them, and long rests refill your slots automatically.</div>
+  </section>
+
+  <!-- ═══════════ SKATTKAMMARE ═══════════ -->
+  <section class="panel" id="panel-currency">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+
+    <div class="section-title">Coins & Gems</div>
+    <div class="currency-grid" id="currency-grid"></div>
+
+    <div class="hoard">
+      <div class="label">The Hoard's Total Value</div>
+      <div class="value" id="total-gold">0 gp</div>
+      <div class="sub" id="total-sub"></div>
+    </div>
+
+    <div class="section-title">Ledger</div>
+    <div id="tx-log"></div>
+  </section>
+
+  <!-- ═══════════ ANTECKNINGAR ═══════════ -->
+  <section class="panel" id="panel-notes">
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+
+    <div class="notes-layout">
+      <div class="notes-main">
+        <div class="section-title">Free Notes <span class="notes-hint">— write freely about your character, the world, your goals…</span></div>
+        <textarea id="notes-editor" spellcheck="false" placeholder="# My Character
+
+Write freely here — backstory, goals, relationships, theories about the world…
+
+Markdown is not rendered, but the structure is yours."></textarea>
+        <div class="notes-actions">
+          <button class="rune-btn" onclick="saveNotes()">💾 Save Notes</button>
+          <span class="notes-status" id="notes-status"></span>
+        </div>
+      </div>
+
+      <div class="notes-side">
+        <div class="section-title">Attachments</div>
+        <div class="att-dropzone" id="att-dropzone">
+          <span class="att-icon">📎</span>
+          <span class="att-text">Drag files here or <b>click</b></span>
+          <span class="att-formats">.pdf · .md · .txt</span>
+          <input type="file" id="att-input" multiple accept=".pdf,.md,.txt">
+        </div>
+        <div class="att-list" id="att-list"></div>
+      </div>
+    </div>
+
+    <!-- ── KARAKTÄRSUTVECKLING (Lorekeeper character_updates) — read-only ──
+         Lorekeeper lägger till backstory/traits/förmågor här allt eftersom
+         spelet utvecklas. Separat från dina egna anteckningar (ovan) så att
+         inget skrivs över. -->
+    <div class="growth-wrap">
+      <div class="section-title">🛡️ Character Growth <span class="notes-hint">— things the Lorekeeper has learned about you</span></div>
+      <div class="growth-list" id="growth-list"></div>
+    </div>
+  </section>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="sfx.js?v=20260806a"></script>
+<script src="api.js?v=20260806c"></script>
+<script src="i18n.js?v=20260806b"></script>
+<script>
+// Auth-guard — omdirigera till porten om ej inloggad
+if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
+</script>
+<script>
+// ═══════════════════════════════════════
+// GAME STATE — laddas från backend via API.getCampaign()
+// ═══════════════════════════════════════
+const state = {
+  character: {},
+  inventory: [],
+  currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 },
+  transactions: [],
+  world: {},
+  attachments: [],
+};
+
+// ═══════════════════════════════════════
+// INIT — hämta kampanjens tillstånd från backend
+// ═══════════════════════════════════════
+(async function init() {
+  try {
+    const { campaign } = await API.getCampaign();
+    if (!campaign) { showNoCampaign(); return; }
+    // Initialize i18n with campaign language
+    const lang = (campaign._raw && campaign._raw.meta && campaign._raw.meta.language) || 'en';
+    I18N.init(lang);
+    const raw = campaign._raw || {};
+    state.character    = raw.character || {};
+    state.inventory    = Array.isArray(raw.inventory) ? raw.inventory : [];
+    state.currency     = Object.assign({ pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 }, raw.currency);
+    state.transactions = Array.isArray(raw.transactions) ? raw.transactions : [];
+    state.world        = raw.world || {};
+    state.attachments  = Array.isArray(raw.attachments) ? raw.attachments : [];
+    state.avatars      = raw.avatars || {};
+    renderAll();
+    document.getElementById('loading').style.display = 'none';
+  } catch (e) {
+    showNoCampaign(I18N.t('Kampanjen kunde inte laddas — kontrollera anslutningen och försök igen.'));
+  }
+})();
+
+function showNoCampaign(msg) {
+  document.getElementById('loading').style.display = 'none';
+  document.querySelector('.tabs').style.display = 'none';
+  document.querySelectorAll('.panel').forEach(p => p.style.display = 'none');
+  const box = document.createElement('section');
+  box.className = 'panel no-campaign';
+  box.style.display = 'block';
+  box.innerHTML = `
+    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="rune">🗺️</div>
+    <h2>${I18N.t('Ingen aktiv kampanj — skapa ett äventyr först')}</h2>
+    <p>${msg || I18N.t('Karaktärsarket fylls på när spelledaren väckt världen till liv.')}</p>
+    <a class="rune-btn" href="adventure.html">${I18N.t('✦ Skapa äventyr')}</a>`;
+  document.querySelector('.app').appendChild(box);
+}
+
+function renderAll() {
+  renderHeader();
+  renderHp();
+  renderXp();
+  renderAbilities();
+  renderTraits();
+  renderSaves();
+  renderInventory();
+  renderSpells();
+  renderCurrency();
+  renderTransactions();
+  renderNotes();
+  renderAttachments();
+  renderGrowth();
+}
+
+// ═══════════════════════════════════════
+// KARAKTÄRSHUVUD — namn, klass, AC, INIT m.m.
+// ═══════════════════════════════════════
+function fmtMod(m) { return m >= 0 ? '+' + m : '' + m; }
+
+function renderHeader() {
+  const c = state.character;
+  const name = c.name || I18N.t('Namnlös äventyrare');
+  document.getElementById('char-name').textContent = name;
+  document.getElementById('char-class').textContent =
+    [c.race, c.class].filter(Boolean).join(' · ') + (c.level ? ' · ' + I18N.t('Nivå') + ' ' + c.level : '');
+  document.title = name + ' — ' + I18N.t('The Lore Weaver\'s Cauldron');
+  // Porträtt: nytt avatar-system (state.avatars / AI-genererad eller uppladdad)
+  // först — fallback till gammal base64-portrait i character.portrait.
+  const avatarEntry = state.avatars && state.avatars.player;
+  if (avatarEntry) {
+    const frame = document.getElementById('portrait');
+    document.getElementById('portrait-emoji').style.display = 'none';
+    let img = frame.querySelector('img');
+    if (!img) { img = document.createElement('img'); frame.insertBefore(img, frame.querySelector('.hint')); }
+    img.src = API.avatarUrl('player') + '?t=' + (avatarEntry.uploaded || Date.now());
+  } else if (c.portrait) {
+    const frame = document.getElementById('portrait');
+    document.getElementById('portrait-emoji').style.display = 'none';
+    let img = frame.querySelector('img');
+    if (!img) { img = document.createElement('img'); frame.insertBefore(img, frame.querySelector('.hint')); }
+    img.src = c.portrait;
+  }
+  const dex  = c.abilities?.DEX?.mod ?? 0;
+  const wis  = c.abilities?.WIS?.mod ?? 0;
+  const meta = [
+    ['AC',   c.ac ?? '—'],
+    ['INIT', fmtMod(c.initiative ?? dex)],
+    ['PERC', fmtMod(c.perception ?? wis)],
+    [I18N.getLang() === 'en' ? 'SPD' : 'FART', c.speed || '30 ft'],
+    ['PROF', '+' + (c.proficiency ?? 2)],
+  ];
+  document.querySelector('.char-meta').innerHTML = meta
+    .map(([k, v]) => `<span class="stat"><i>${k}</i><b>${v}</b></span>`).join('');
+}
+
+// ═══════════════════════════════════════
+// XP
+// ═══════════════════════════════════════
+function renderXp() {
+  const xp = state.character.xp || {};
+  const cur  = xp.current ?? 0;
+  const next = xp.next_level ?? xp.next ?? 0;
+  document.getElementById('xp-cur').textContent = cur.toLocaleString(I18N.getLang() === 'sv' ? 'sv-SE' : 'en-US');
+  document.getElementById('xp-next').textContent = next ? next.toLocaleString(I18N.getLang() === 'sv' ? 'sv-SE' : 'en-US') + I18N.t(' till nästa nivå') : '—';
+  document.getElementById('xp-bar').style.width = (next > 0 ? Math.min(100, (cur / next) * 100) : 0) + '%';
+}
+
+// ═══════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    SFX.click();
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ═══════════════════════════════════════
+// KODEX-IFRAME — sub-vyerna (Spells/Equipment/Treasury/Notes) styrs av
+// rad 2 i Codex-headern (chat.html) när sidan ligger i Codex-iframe.
+// ═══════════════════════════════════════
+function codexNotifyTab() {
+  const active = document.querySelector('.tab.active');
+  const t = active ? active.dataset.tab : null;
+  if (!t) return;
+  try { window.parent.postMessage({ type: 'codex-subtab-changed', tab: t }, '*'); } catch (_) {}
+}
+if (window.self !== window.top) {
+  document.documentElement.classList.add('in-codex');
+  window.addEventListener('message', (e) => {
+    const d = e.data || {};
+    if (d.type === 'codex-subtab' && typeof d.tab === 'string') {
+      const tab = document.querySelector('.tab[data-tab="' + d.tab + '"]');
+      if (tab && !tab.classList.contains('active')) tab.click();
+    }
+  });
+  codexNotifyTab();
+}
+
+// ═══════════════════════════════════════
+// ANTECKNINGAR — fria noteringar om karaktären
+// ═══════════════════════════════════════
+let notesDirty = false;
+const notesEditor = document.getElementById('notes-editor');
+const notesStatus = document.getElementById('notes-status');
+
+notesEditor.addEventListener('input', () => { notesDirty = true; notesStatus.textContent = ''; });
+
+function renderNotes() {
+  notesEditor.value = state.character.notes || '';
+  notesDirty = false;
+}
+
+async function saveNotes() {
+  SFX.click();
+  try {
+    await API.updateCharacter({ notes: notesEditor.value });
+    state.character.notes = notesEditor.value;
+    notesDirty = false;
+    notesStatus.classList.remove('err');
+    notesStatus.textContent = I18N.t('✓ Sparat');
+    setTimeout(() => { if (!notesDirty) notesStatus.textContent = ''; }, 2000);
+  } catch (e) {
+    notesStatus.classList.add('err');
+    notesStatus.textContent = I18N.t('⚠ Kunde inte spara: ') + (e.message || I18N.t('okänt fel'));
+  }
+}
+
+// ═══════════════════════════════════════
+// EXPORT TILL THE FORGE — spara den levda hjälten i valvet
+// ═══════════════════════════════════════
+let _exporting = false;
+async function exportToForge() {
+  if (_exporting) return;
+  const name = (state.character && state.character.name) || '';
+  if (!name) { toast('⚠ No adventurer to export yet'); return; }
+  _exporting = true;
+  const btn = document.getElementById('forge-export-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⚒ Saving…'; }
+  try {
+    // Hämta valvet för duplikat-koll — fråga innan en befintlig hjälte skrivs över
+    let overwrite_id = null;
+    const { characters } = await API.vaultList();
+    const dup = (characters || []).find(c => (c.name || '').toLowerCase() === name.toLowerCase());
+    if (dup) {
+      const ok = confirm('Do you wish to overwrite "' + dup.name + '" with "' + name + '" from campaign?');
+      if (ok) overwrite_id = dup.id;
+    }
+    const res = await API.vaultSave({ from_campaign: true, overwrite_id });
+    toast(res.overwritten
+      ? '💾 ' + name + ' overwritten in The Forge'
+      : '💾 ' + name + ' saved to The Forge');
+    SFX.gate();
+  } catch (e) {
+    toast('⚠ ' + (e.message || 'Could not export to The Forge'));
+  } finally {
+    _exporting = false;
+    if (btn) { btn.disabled = false; btn.textContent = '⚒ Export to Forge'; }
+  }
+}
+
+// ═══════════════════════════════════════
+// KARAKTÄRSUTVECKLING — Lorekeeper:s character_updates (read-only)
+// ═══════════════════════════════════════
+function _esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function renderGrowth() {
+  const list = document.getElementById('growth-list');
+  if (!list) return;
+  const updates = state.character.updates || [];
+  if (!updates.length) {
+    list.innerHTML = `<div class="growth-empty">${I18N.t('Inget ännu — Lorekeeper lägger till backstory, drag och förmågor här allt eftersom äventyret utvecklar din karaktär.')}</div>`;
+    return;
+  }
+  // Nyaste först
+  const items = updates.slice().reverse();
+  list.innerHTML = items.map(u => {
+    const field = _esc(u.field || 'note');
+    const text = _esc(u.text || '');
+    const turn = u.turn != null ? ` · ${I18N.t('tur')} ${u.turn}` : '';
+    return `<div class="growth-item">
+      <span class="growth-field">${field}</span>
+      <div class="growth-text">${text}</div>
+      <div class="growth-turn">🦉 Lorekeeper${turn}</div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// BILAGOR — pdf/md/txt som klickbara länkar
+// ═══════════════════════════════════════
+const ATT_ICONS = { '.pdf': '📕', '.md': '📄', '.txt': '📄' };
+
+function fmtSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function renderAttachments() {
+  const list = document.getElementById('att-list');
+  const atts = state.attachments || [];
+  if (atts.length === 0) {
+    list.innerHTML = `<div class="att-empty">${I18N.t('Inga bilagor ännu.')}</div>`;
+    return;
+  }
+  list.innerHTML = atts.map(a => `
+    <div class="att-item">
+      <span class="att-fi">${ATT_ICONS[a.ext] || '📄'}</span>
+      <a href="${API.attachmentUrl(a.id)}" target="_blank" rel="noopener" title="${I18N.t('Öppna')} ${a.name}">${a.name}</a>
+      <span class="att-size">${fmtSize(a.size)}</span>
+      <button class="att-del" onclick="deleteAttachment('${a.id}')" title="${I18N.t('Ta bort')}">✕</button>
+    </div>`).join('');
+}
+
+async function deleteAttachment(attId) {
+  SFX.click();
+  try {
+    await API.deleteAttachment(attId);
+    state.attachments = (state.attachments || []).filter(a => a.id !== attId);
+    renderAttachments();
+    toast(I18N.t('🗑️ Bilaga borttagen'));
+  } catch (e) {
+    toast('⚠ ' + (e.message || I18N.t('Kunde inte ta bort bilagan')));
+  }
+}
+
+// Dropzone-hantering
+const attDropzone = document.getElementById('att-dropzone');
+const attInput = document.getElementById('att-input');
+
+attDropzone.addEventListener('click', () => attInput.click());
+['dragenter', 'dragover'].forEach(ev => attDropzone.addEventListener(ev, e => { e.preventDefault(); attDropzone.classList.add('dragover'); }));
+['dragleave', 'drop'].forEach(ev => attDropzone.addEventListener(ev, e => { e.preventDefault(); attDropzone.classList.remove('dragover'); }));
+attDropzone.addEventListener('drop', e => { uploadFiles(e.dataTransfer.files); });
+attInput.addEventListener('change', e => { uploadFiles(e.target.files); attInput.value = ''; });
+
+async function uploadFiles(fileList) {
+  const ALLOWED = ['.pdf', '.md', '.txt'];
+  for (const f of fileList) {
+    const ext = '.' + f.name.split('.').pop().toLowerCase();
+    if (!ALLOWED.includes(ext)) {
+      toast('⚠ ' + f.name + I18N.t(' — endast .pdf, .md och .txt tillåts'));
+      continue;
+    }
+    try {
+      const { attachment } = await API.uploadAttachment(f);
+      if (!state.attachments) state.attachments = [];
+      state.attachments.push(attachment);
+      renderAttachments();
+      toast('📎 ' + f.name + I18N.t(' uppladdad'));
+    } catch (e) {
+      toast(I18N.t('⚠ Kunde inte ladda upp ') + f.name + ': ' + (e.message || I18N.t('okänt fel')));
+    }
+  }
+}
+
+// ═══════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════
+async function doLogout() {
+  try { await API.logout(); } catch(_) {}
+  sessionStorage.removeItem('dnd_user');
+  location.href = 'login.html';
+}
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ═══════════════════════════════════════
+// PORTRAIT — uppladdning synkas via samma avatar-system som chatten
+// ═══════════════════════════════════════
+const portrait = document.getElementById('portrait');
+const portraitInput = document.getElementById('portrait-input');
+portrait.addEventListener('click', () => openAvatarModal());
+portraitInput.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    await API.uploadAvatar('player', file);
+    state.avatars = state.avatars || {};
+    state.avatars.player = { uploaded: new Date().toISOString() };
+    renderHeader();
+    toast(I18N.t('🖼 Porträtt sparat'));
+  } catch (err) {
+    toast('⚠ ' + (err.message || I18N.t('Kunde inte spara porträttet')));
+  }
+  portraitInput.value = '';
+});
+
+// ═══════════════════════════════════════
+// HP — visas från backend-state, ändras via DM/Lorekeeper
+// ═══════════════════════════════════════
+function renderHp() {
+  const hp = state.character.hp || { current: 0, max: 0 };
+  const pct = hp.max > 0 ? (hp.current / hp.max) * 100 : 0;
+  document.getElementById('hp-cur').textContent = hp.current ?? 0;
+  document.getElementById('hp-max').textContent = hp.max ?? 0;
+  document.getElementById('hp-bar').style.width = pct + '%';
+  document.getElementById('hp-trough').classList.toggle('low', hp.max > 0 && pct < 25);
+}
+
+// ═══════════════════════════════════════
+// ABILITIES / TRAITS / SAVES
+// ═══════════════════════════════════════
+function abilityNames() {
+  return I18N.getLang() === 'en'
+    ? { STR: 'STR', DEX: 'DEX', CON: 'CON', INT: 'INT', WIS: 'WIS', CHA: 'CHA' }
+    : { STR: 'STY', DEX: 'SMI', CON: 'TÅL', INT: 'INT', WIS: 'VIS', CHA: 'KAR' };
+}
+const abilityOrder = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
+
+function renderAbilities() {
+  const abilities = state.character.abilities || {};
+  document.getElementById('abilities').innerHTML = abilityOrder.map(key => {
+    const v = abilities[key] || {};
+    const score = v.score ?? 10;
+    const mod = v.mod ?? Math.floor((score - 10) / 2);
+    return `<div class="ability" title="${key}">
+      <div class="abbr">${abilityNames()[key]}</div>
+      <div class="score">${score}</div>
+      <div class="mod">${mod >= 0 ? '+' + mod : mod}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderTraits() {
+  const traits = state.character.traits || [];
+  document.getElementById('traits').innerHTML = traits.length
+    ? traits.map(t => {
+        // Backend kan skicka antingen strängar eller {name, magic}-objekt
+        if (typeof t === 'string') return `<span class="trait">${t}</span>`;
+        return `<span class="trait ${t.magic ? 'magic' : ''}">${t.magic ? '✦ ' : ''}${t.name}</span>`;
+      }).join('')
+    : `<span class="empty-hint">${I18N.t('Inga egenskaper noterade ännu…')}</span>`;
+}
+
+function renderSaves() {
+  const saves = state.character.saves || [];
+  document.getElementById('saves').innerHTML = saves.length
+    ? saves.map(s => {
+        if (typeof s === 'string') return `<span class="trait">${s}</span>`;
+        return `<span class="trait ${s.prof ? 'prof' : ''}">${s.prof ? '●' : '○'} ${s.name}</span>`;
+      }).join('')
+    : `<span class="empty-hint">${I18N.t('Inga sparade sparningskast ännu…')}</span>`;
+}
+
+// ═══════════════════════════════════════
+// INVENTORY — kortlayout + detaljmodal
+// ═══════════════════════════════════════
+
+// Typ-ikoner
+const TYPE_ICONS = { Vapen: '⚔️', Rustning: '🛡️', Dryck: '🧪', Magisk: '✦', Verktyg: '🔧', Annat: '📦', Weapon: '⚔️', Armor: '🛡️', Potion: '🧪', Magic: '✦', Tool: '🔧', Other: '📦' };
+
+// Hjälp: bygg badge-HTML för ett item
+function _invBadges(item) {
+  let badges = '';
+  // Skada
+  const dmg = item.damage || (item.damage_dice ? item.damage_dice + (item.damage_type ? ' ' + item.damage_type : '') : null);
+  if (dmg) badges += `<span class="inv-badge dmg">⚔ ${dmg}</span>`;
+  // AC
+  if (item.ac_bonus != null && item.ac_bonus !== undefined) badges += `<span class="inv-badge ac">🛡 ${item.ac_bonus}</span>`;
+  // Magisk bonus
+  if (item.magic_bonus > 0) badges += `<span class="inv-badge magic-bonus">+${item.magic_bonus}</span>`;
+  // Laddningar
+  if (item.charges != null || item.max_charges != null) {
+    const c = item.charges != null ? item.charges : '?';
+    const m = item.max_charges != null ? item.max_charges : '?';
+    badges += `<span class="inv-badge charges">⚡ ${c}/${m}</span>`;
+  }
+  // Räckvidd
+  if (item.range) badges += `<span class="inv-badge range">◎ ${item.range}</span>`;
+  return badges;
+}
+
+function renderInventory() {
+  const grid = document.getElementById('inv-grid');
+  grid.innerHTML = '';
+  if (!state.inventory.length) {
+    grid.innerHTML = `<div class="inv-empty">Your pack is empty — the world will provide…</div>`;
+  }
+  let totalWeight = 0;
+  state.inventory.forEach((item, i) => {
+    const w = (item.weight || 0) * (item.qty || 1);
+    totalWeight += w;
+    const rarityCls = item.rarity ? 'r-' + item.rarity : '';
+    const icon = TYPE_ICONS[item.type] || TYPE_ICONS.Annat;
+    const card = document.createElement('div');
+    card.className = 'inv-card' + (item.equipped ? ' equipped' : '') + (rarityCls ? ' ' + rarityCls : '');
+    card.innerHTML = `
+      <div class="inv-card-row" onclick="openItemModal(${i})">
+        <span class="inv-card-icon">${icon}</span>
+        <div class="inv-card-info">
+          <div class="inv-card-name ${rarityCls}">${item.rarity === 'magic' || item.rarity === 'legendary' ? '✦ ' : ''}${item.name}</div>
+          <div class="inv-card-type">${item.type || 'Other'}</div>
+          <div class="inv-card-stats">${_invBadges(item)}${item.qty > 1 ? `<span class="inv-badge qty">×${item.qty}</span>` : ''}</div>
+        </div>
+      </div>
+      <div class="inv-card-footer">
+        <span class="inv-card-equip ${item.equipped ? 'is-equipped' : 'not-equipped'}">${item.equipped ? I18N.t('⚔ Buren') : I18N.t('🎒 I väska')}</span>
+        <span class="inv-card-weight">${w.toFixed(1)} lbs</span>
+      </div>`;
+    grid.appendChild(card);
+  });
+  document.getElementById('inv-weight').textContent = totalWeight.toFixed(1);
+  document.getElementById('inv-count').textContent = state.inventory.length;
+  const warn = document.getElementById('inv-warn');
+  const weightEl = document.getElementById('inv-weight');
+  if (totalWeight > 120) { warn.textContent = I18N.t('⚠ ÖVERBELASTAD'); weightEl.classList.add('overloaded'); }
+  else { warn.textContent = ''; weightEl.classList.remove('overloaded'); }
+}
+
+// ── Besvärjelser (v28) ──
+function _esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderSpells() {
+  const grid = document.getElementById('spells-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  // Spell slots — tydlig vy: used (guld, fast) vs available (dashed).
+  // OBS: state.spell_slots.current = TILLGÄNGLIGA slots nu (minskar vid kast,
+  // återställs till max vid long rest). used = max - current (fix 2026-08-05:
+  // logiken var inverterad → visade '2/2 used' när allt var fullt).
+  const slotsBox = document.getElementById('spell-slots');
+  const ss = (state.character && state.character.spell_slots) || {};
+  const maxSlots = parseInt(ss.max, 10) || 0;
+  const availSlots = Math.min(parseInt(ss.current, 10) || 0, maxSlots);
+  const usedSlots = Math.max(0, maxSlots - availSlots);
+  if (slotsBox) {
+    if (maxSlots > 0) {
+      let pips = '';
+      for (let i = 0; i < maxSlots; i++) {
+        const used = i < usedSlots;
+        pips += `<span class="ss-pip ${used ? 'used' : 'available'}" title="${used ? 'Used (spent)' : 'Available'}">${used ? '✷' : ''}</span>`;
+      }
+      slotsBox.innerHTML = `
+        <span class="ss-label">Spell Slots</span>
+        <span class="ss-pips">${pips}</span>
+        <span class="ss-count"><b>${availSlots}</b> / ${maxSlots} available · <b style="color:var(--gold)">${usedSlots} used</b></span>
+        <span class="ss-note">Cantrips (level 0) cost nothing — they are always ready. Casting a leveled spell spends one slot. A long rest restores all spent slots.</span>`;
+    } else {
+      slotsBox.innerHTML = '';
+    }
+  }
+  const spells = Array.isArray(state.character && state.character.spells) ? state.character.spells : [];
+  if (!spells.length) {
+    grid.innerHTML = `<div class="inv-empty">No spells yet — your studies will bear fruit…</div>`;
+    return;
+  }
+  [...spells].sort((a, b) => (a.level || 0) - (b.level || 0)).forEach(sp => {
+    const lvl = sp.level || 0;
+    const lvlLabel = lvl === 0 ? 'Cantrip' : 'Lvl ' + lvl;
+    const card = document.createElement('div');
+    card.className = 'spell-card' + (lvl === 0 ? ' cantrip' : '');
+    const sub = [sp.school, sp.casting_time, sp.damage_dice ? '🎲 ' + sp.damage_dice : ''].filter(Boolean).join(' · ');
+    card.innerHTML = `
+      <div class="spell-card-head">
+        <span class="spell-name">✦ ${_esc(sp.name)}</span>
+        <span class="spell-level">${lvlLabel}</span>
+      </div>
+      ${sub ? `<div class="spell-card-sub">${_esc(sub)}</div>` : ''}
+      ${sp.description ? `<div class="spell-card-desc">${_esc(sp.description)}</div>` : ''}`;
+    grid.appendChild(card);
+  });
+}
+
+// ── Detaljmodal ──
+function openItemModal(i) {
+  const item = state.inventory[i];
+  if (!item) return;
+  const container = document.getElementById('item-modal-container');
+  const rarityCls = item.rarity ? 'r-' + item.rarity : '';
+  const icon = TYPE_ICONS[item.type] || TYPE_ICONS.Annat;
+
+  // Bygg stat-rader
+  let statsHtml = '';
+  const dmg = item.damage || (item.damage_dice ? item.damage_dice + (item.damage_type ? ' ' + item.damage_type : '') : null);
+  if (item.category) {
+    const catLabel = ({weapon:'⚔ Vapen', armor:'🛡 Rustning', potion:'🧪 Dryck', magic:'✦ Magisk', tool:'🔧 Verktyg', trinket:'🎒 Föremål'})[item.category] || item.category;
+    statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">🏷 ${I18N.t('Klass')}</span><span class="item-modal-stat-val">${catLabel}</span></div>`;
+  }
+  if (item.usage) {
+    const usageLabel = ({wielded:'Bärs/hålls', consumable:'Förbrukas', activated:'Aktiveras', trinket:'Passiv'})[item.usage] || item.usage;
+    statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">🎯 ${I18N.t('Användning')}</span><span class="item-modal-stat-val">${usageLabel}</span></div>`;
+  }
+  if (dmg) statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">⚔ ${I18N.t('Skada')}</span><span class="item-modal-stat-val">${dmg}</span></div>`;
+  if (item.ac_bonus != null && item.ac_bonus !== undefined) statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">🛡 ${I18N.t('AC-bonus')}</span><span class="item-modal-stat-val">${item.ac_bonus}</span></div>`;
+  if (item.range) statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">◎ ${I18N.t('Räckvidd')}</span><span class="item-modal-stat-val">${item.range}</span></div>`;
+  if (item.magic_bonus > 0) statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">✦ ${I18N.t('Magisk bonus')}</span><span class="item-modal-stat-val">+${item.magic_bonus}</span></div>`;
+  if (item.charges != null || item.max_charges != null) {
+    const c = item.charges != null ? item.charges : '?';
+    const m = item.max_charges != null ? item.max_charges : '?';
+    statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">⚡ ${I18N.t('Laddningar')}</span><span class="item-modal-stat-val">${c} / ${m}</span></div>`;
+  }
+  if (item.roll) statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">🎲 ${I18N.t('Tärning')}</span><span class="item-modal-stat-val">${item.roll}</span></div>`;
+  statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">⚖ ${I18N.t('Vikt')}</span><span class="item-modal-stat-val">${(item.weight || 0).toFixed(1)} lbs × ${item.qty || 1} = ${((item.weight || 0) * (item.qty || 1)).toFixed(1)} lbs</span></div>`;
+  statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">📊 ${I18N.t('Sällsynthet')}</span><span class="item-modal-stat-val">${item.rarity === 'magic' ? '✦ ' : ''}${item.rarity || 'normal'}</span></div>`;
+  statsHtml += `<div class="item-modal-stat-row"><span class="item-modal-stat-label">📦 ${I18N.t('Status')}</span><span class="item-modal-stat-val">${item.equipped ? I18N.t('⚔ Buren') : I18N.t('🎒 I väska')}</span></div>`;
+
+  // Properties-taggar
+  let propsHtml = '';
+  const props = item.properties || [];
+  if (props.length) {
+    propsHtml = `<div class="item-modal-props">${props.map(p => `<span class="item-modal-prop-tag">${p}</span>`).join('')}</div>`;
+  }
+
+  // Beskrivning / effekter
+  let descHtml = '';
+  if (item.description) descHtml += `<div class="item-modal-desc">${item.description}</div>`;
+  if (item.effects) descHtml += `<div class="item-modal-desc" style="border-left-color:var(--arcane)">${item.effects}</div>`;
+  if (item.lore) descHtml += `<div class="item-modal-lore">"${item.lore}"</div>`;
+
+  container.innerHTML = `
+    <div class="item-modal-overlay" onclick="closeItemModal(event)">
+      <div class="item-modal" onclick="event.stopPropagation()" style="position:relative">
+        <button class="item-modal-close" onclick="closeItemModal(event, true)">✕</button>
+        <div class="item-modal-header ${rarityCls}">${icon} ${item.name}</div>
+        <div class="item-modal-sub">${item.type || 'Other'}${item.rarity && item.rarity !== 'normal' ? ' · ' + item.rarity : ''}</div>
+        ${statsHtml}
+        ${propsHtml}
+        ${descHtml}
+      </div>
+    </div>`;
+}
+
+function closeItemModal(e, force) {
+  if (force || (e && e.target && e.target.classList.contains('item-modal-overlay'))) {
+    document.getElementById('item-modal-container').innerHTML = '';
+  }
+}
+
+// Stäng modal med Escape
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeItemModal(null, true); });
+
+// ── D&D-egenskaper toggle (borttagen — inventory hanteras av DM/Lorekeeper) ──
+
+// ═══════════════════════════════════════
+// CURRENCY
+// ═══════════════════════════════════════
+const coinMeta = {
+  pp: { name: 'Platina', disc: 'PP', cls: 'c-pp', rate: 10 },
+  gp: { name: 'Guld',    disc: 'GP', cls: 'c-gp', rate: 1 },
+  sp: { name: 'Silver',  disc: 'SP', cls: 'c-sp', rate: 0.1 },
+  cp: { name: 'Koppar',  disc: 'CP', cls: 'c-cp', rate: 0.01 },
+};
+function renderCurrency() {
+  const grid = document.getElementById('currency-grid');
+  grid.innerHTML = '';
+  for (const [key, m] of Object.entries(coinMeta)) {
+    grid.innerHTML += `
+      <div class="coin ${m.cls}" id="coin-${key}">
+        <div class="coin-disc">${m.disc}</div>
+        <div class="coin-name">${I18N.t(m.name)}</div>
+        <div class="coin-amount">${state.currency[key] || 0}</div>
+      </div>`;
+  }
+  updateHoard();
+}
+function updateHoard() {
+  let total = 0, totalCoins = 0;
+  for (const [key, m] of Object.entries(coinMeta)) {
+    total += (state.currency[key] || 0) * m.rate;
+    totalCoins += (state.currency[key] || 0);
+  }
+  document.getElementById('total-gold').textContent = total.toFixed(1) + ' gp';
+  const gp = Math.floor(total), sp = Math.round((total - gp) * 10);
+  const weight = (totalCoins / 50).toFixed(2);
+  document.getElementById('total-sub').textContent = `= ${gp}${I18N.t(' guldmynt & ')}${sp}${I18N.t(' silvermynt · ')}${totalCoins}${I18N.t(' mynt · ')}${weight} lb`;
+}
+
+// ═══════════════════════════════════════
+// TRANSACTIONS — kontobok från backend
+// ═══════════════════════════════════════
+function renderTransactions() {
+  const txs = state.transactions || [];
+  document.getElementById('tx-log').innerHTML = txs.length
+    ? txs.map(tx => `
+      <div class="tx">
+        <div><div class="tx-desc">${tx.desc || tx.description || '—'}</div><div class="tx-date">${tx.date || ''}</div></div>
+        <div class="tx-amount ${tx.amount >= 0 ? 'pos' : 'neg'}">${tx.amount >= 0 ? '+' : ''}${tx.amount} ${tx.unit || 'gp'}</div>
+      </div>`).join('')
+    : `<div style="text-align:center;color:var(--bone-dim);font-style:italic;padding:1.4rem 0;font-size:.85rem">${I18N.t('Inga transaktioner ännu — horden växer med äventyret.')}</div>`;
+}
+
+// ═══════════════════════════════════════
+// GLÖD — ember-partiklar
+// ═══════════════════════════════════════
+const canvas = document.getElementById('embers');
+const ctx = canvas.getContext('2d');
+let W, H, embers = [];
+function resize() { W = canvas.width = innerWidth; H = canvas.height = innerHeight; }
+resize(); addEventListener('resize', resize);
+
+function spawnEmber(init) {
+  return {
+    x: Math.random() * W,
+    y: init ? Math.random() * H : H + 10,
+    r: 0.8 + Math.random() * 1.8,
+    vy: 0.25 + Math.random() * 0.7,
+    vx: (Math.random() - 0.5) * 0.35,
+    life: 0, maxLife: 400 + Math.random() * 500,
+    hue: Math.random() < 0.82 ? 22 + Math.random() * 18 : 268 + Math.random() * 20, // glöd eller arkan
+  };
+}
+for (let i = 0; i < 46; i++) embers.push(spawnEmber(true));
+
+function tick() {
+  ctx.clearRect(0, 0, W, H);
+  for (let i = 0; i < embers.length; i++) {
+    const e = embers[i];
+    e.life++; e.y -= e.vy; e.x += e.vx + Math.sin(e.life * 0.02) * 0.15;
+    const fade = Math.min(1, e.life / 60) * Math.max(0, 1 - e.life / e.maxLife);
+    const flicker = 0.55 + Math.sin(e.life * 0.15 + i) * 0.35;
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(${e.hue}, 90%, 60%, ${0.5 * fade * flicker})`;
+    ctx.shadowColor = `hsla(${e.hue}, 90%, 55%, ${0.8 * fade})`;
+    ctx.shadowBlur = 8;
+    ctx.fill();
+    if (e.life > e.maxLife || e.y < -12) embers[i] = spawnEmber(false);
+  }
+  requestAnimationFrame(tick);
+}
+tick();
+
+// ═══════════════════════════════════════
+// AVATAR-MODAL (AI-generera / uppdatera / ladda upp / ta bort)
+// ═══════════════════════════════════════
+function currentAvatar() {
+  return (state.avatars && state.avatars.player) ? API.avatarUrl('player') + '?t=' + (state.avatars.player.uploaded || Date.now()) : null;
+}
+
+function openAvatarModal() {
+  const has = !!currentAvatar();
+  const preview = document.getElementById('avatar-modal-img');
+  preview.innerHTML = has
+    ? `<img src="${currentAvatar()}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+    : SPR.html('🎭');
+  preview.style.cursor = has ? 'pointer' : 'default';
+  document.getElementById('avatar-del-btn').style.display = has ? '' : 'none';
+  document.getElementById('avatar-update-btn').style.display = has ? '' : 'none';
+  const freeBtn = document.getElementById('avatar-free-btn');
+  if (freeBtn) freeBtn.disabled = false;
+  document.getElementById('avatar-update-btn').disabled = false;
+  document.getElementById('avatar-ai-status').textContent = '';
+  updateAvatarProviderLock();
+  document.getElementById('avatar-overlay').classList.add('show');
+  try { SFX.click(); } catch (_) {}
+}
+function closeAvatarModal() {
+  document.getElementById('avatar-overlay').classList.remove('show');
+}
+
+// ── Bildleverantör (StepFun — Support 3€ · Wan 2.7 — Patron 10€) ──
+let _charTier = null;  // free | tier1 | tier2 | lifetime (från /api/me)
+function avatarProvider() {
+  const sel = document.getElementById('avatar-provider-select');
+  return (sel && sel.value) || 'stepfun';
+}
+function avatarGenGate(provider) {
+  if (_charTier === 'free') {
+    toast('🔒 AI painting is a Support feature (3€) — support the Cauldron to paint your adventurer, the DM and every NPC with StepFun.');
+    try { SFX.error(); } catch (_) {}
+    return false;
+  }
+  if (provider === 'wan' && _charTier !== 'tier2' && _charTier !== 'lifetime') {
+    toast('🔒 Wan 2.7 is a Patron feature (10€) — upgrade to paint with Wan.');
+    try { SFX.error(); } catch (_) {}
+    return false;
+  }
+  return true;
+}
+function avatarProviderChanged(sel) {
+  if (sel && sel.value === 'wan' && _charTier !== 'tier2' && _charTier !== 'lifetime') {
+    sel.value = 'stepfun';
+    toast('🔒 Wan 2.7 is a Patron feature (10€) — upgrade to paint with Wan.');
+  }
+}
+function updateAvatarProviderLock() {
+  const sel = document.getElementById('avatar-provider-select');
+  if (!sel) return;
+  const wanOpt = sel.querySelector('option[value="wan"]');
+  const stepOpt = sel.querySelector('option[value="stepfun"]');
+  if (_charTier === null) {
+    try {
+      fetch('/api/me').then(r => r.ok ? r.json() : null).then(me => {
+        _charTier = (me && me.subscription_status) || 'free';
+        if (_charTier === 'premium') _charTier = 'tier2';
+        updateAvatarProviderLock();
+      }).catch(() => { _charTier = 'free'; updateAvatarProviderLock(); });
+    } catch (_) { _charTier = 'free'; }
+    return;
+  }
+  const canPaint = _charTier !== 'free';          // Support+ (3€)
+  const wanUnlocked = _charTier === 'tier2' || _charTier === 'lifetime';  // Patron (10€)
+  if (stepOpt) {
+    stepOpt.disabled = !canPaint;
+    stepOpt.textContent = canPaint ? 'StepFun — Support' : 'StepFun — Support 🔒';
+  }
+  if (wanOpt) {
+    wanOpt.disabled = !wanUnlocked;
+    wanOpt.textContent = wanUnlocked ? 'Wan 2.7 — Patron' : 'Wan 2.7 — Patron 🔒';
+  }
+  if (sel.value === 'wan' && !wanUnlocked) sel.value = 'stepfun';
+  if (sel.value === 'stepfun' && !canPaint) sel.value = '';
+}
+
+async function _runAvatarGen(mode, statusText, btnId) {
+  const status = document.getElementById('avatar-ai-status');
+  const btn = document.getElementById(btnId);
+  if (!avatarGenGate(avatarProvider())) return;
+  let freePrompt = (document.getElementById('avatar-prompt-input') || {}).value || '';
+  // 🖌️ Free prompt: BARA spelarens ord — tom text är ett fel (ingen auto-prompt).
+  if (mode === 'free') {
+    if (!freePrompt.trim()) {
+      toast('✍️ Write what you want painted first — free prompt paints ONLY your words.');
+      try { SFX.error(); } catch (_) {}
+      return;
+    }
+  }
+  status.textContent = statusText;
+  btn.disabled = true;
+  try {
+    const usedWords = !!freePrompt.trim();
+    const res = await API.generateAvatar('player', Date.now() % 1000000, mode, freePrompt, avatarProvider());
+    if (res && res.ok) {
+      state.avatars = state.avatars || {};
+      state.avatars.player = { disk_name: 'player.png', uploaded: new Date().toISOString(), ai_generated: true, seed: res.seed };
+      renderHeader();
+      openAvatarModal();
+      status.textContent = (mode === 'edit' ? '✨ Avatar updated — ' : '✨ New avatar painted — ') + (usedWords ? 'used your words' : 'used your character sheet');
+      try { SFX.levelup(); } catch (_) {}
+    } else {
+      status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Failed');
+      try { SFX.error(); } catch (_) {}
+    }
+  } catch (e) {
+    status.textContent = '⚠ ' + (e.message || 'Failed');
+    try { SFX.error(); } catch (_) {}
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function freePromptAction() {
+  await _runAvatarGen('free', '🎨 Painting ONLY your words… (10–30 s)', 'avatar-free-btn');
+}
+async function updateAvatarAction() {
+  await _runAvatarGen('edit', '🔄 Updating from your sheet… (10–30 s)', 'avatar-update-btn');
+}
+
+async function deleteAvatarAction() {
+  try {
+    await API.deleteAvatar('player');
+    if (state.avatars) delete state.avatars.player;
+    renderHeader();
+    closeAvatarModal();
+    toast('🗑 Avatar removed');
+  } catch (e) {
+    toast('⚠ ' + (e.message || 'Kunde inte ta bort avataren'));
+  }
+}
+
+// Större förhandsvisning (lightbox)
+function openAvatarLightbox() {
+  const src = currentAvatar();
+  if (!src) return;
+  document.getElementById('avatar-lightbox-img').src = src;
+  document.getElementById('avatar-lightbox-title').textContent = I18N.t('The Adventurer');
+  document.getElementById('avatar-lightbox').classList.add('show');
+  try { SFX.click(); } catch (_) {}
+}
+function closeAvatarLightbox() {
+  document.getElementById('avatar-lightbox').classList.remove('show');
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeAvatarModal(); closeAvatarLightbox(); }
+});
+
+// State-export för backend
+function exportState() { return JSON.stringify(state, null, 2); }
+window.getState = exportState;
+</script>
+<script src="embed.js?v=20260806a"></script>
+
+<!-- 🎨 Avatar-modal (AI-generera / uppdatera / ladda upp / ta bort) -->
+<div class="mi-overlay" id="avatar-overlay" onclick="if(event.target===this)closeAvatarModal()">
+  <div class="mi-modal">
+    <div class="mi-head">
+      <span>🎨 Avatar — The Adventurer</span>
+      <button class="mi-close" onclick="closeAvatarModal()">✕</button>
+    </div>
+    <div style="text-align:center;margin:0 0 1rem">
+      <div id="avatar-modal-img" onclick="openAvatarLightbox()" style="width:112px;height:112px;border-radius:50%;margin:0 auto;border:2px solid var(--gold);overflow:hidden;background:var(--stone-3);display:flex;align-items:center;justify-content:center;font-size:2.4rem;box-shadow:0 0 22px -4px rgba(201,162,39,.45);cursor:pointer" title="Click for larger view"></div>
+      <div style="font-size:.62rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem">click to enlarge</div>
+    </div>
+    <div class="mi-intro">Paint your adventurer with your own words — <b>🖌️ Free prompt</b> paints ONLY what you describe. Engine: StepFun (Support 3€) or Wan 2.7 Pro (Patron 10€). Or upload your own image.</div>
+    <div style="margin-top:.7rem">
+      <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">✍️ YOUR OWN WORDS</div>
+      <textarea id="avatar-prompt-input" placeholder="Free prompt: describe exactly what you want painted — e.g. 'hooded figure, lantern light, rain'." style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:'Cinzel',serif;font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>
+      <div style="font-size:.72rem;color:var(--bone-dim);margin-top:.35rem">Free prompt paints ONLY your words.</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
+      <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
+      <select id="avatar-provider-select" class="tts-select" style="flex:1;min-width:0" onchange="avatarProviderChanged(this)" title="Image provider for painting">
+        <option value="stepfun">StepFun — Support</option>
+        <option value="wan">Wan 2.7 — Patron 🔒</option>
+      </select>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
+      <button class="av-btn primary" id="avatar-free-btn" onclick="freePromptAction()">🖌️ Free prompt</button>
+      <button class="av-btn" id="avatar-update-btn" onclick="updateAvatarAction()" style="display:none">🔄 Update from sheet</button>
+      <button class="av-btn" onclick="portraitInput.click()">📁 Upload image…</button>
+      <button class="av-btn danger" id="avatar-del-btn" onclick="deleteAvatarAction()" style="display:none">🗑 Remove avatar</button>
+    </div>
+    <div id="avatar-ai-status" style="font-size:.75rem;color:var(--bone-dim);text-align:center;margin-top:.8rem;min-height:1rem"></div>
+  </div>
+</div>
+
+<!-- 🔍 Avatar-lightbox — större förhandsvisning -->
+<div class="av-lightbox" id="avatar-lightbox" onclick="if(event.target===this)closeAvatarLightbox()">
+  <img id="avatar-lightbox-img" alt="Avatar">
+  <button class="av-lb-close" onclick="closeAvatarLightbox()">✕</button>
+  <div class="av-lb-title" id="avatar-lightbox-title"></div>
+</div>
+</body>
+</html>

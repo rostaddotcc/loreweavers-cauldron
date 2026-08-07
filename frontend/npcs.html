@@ -508,7 +508,7 @@ function closeAvatarModal() {
   document.getElementById('avatar-overlay').classList.remove('show');
 }
 
-// ── Bildleverantör (StepFun — Support 3€ · Wan 2.7 — Patron 10€) ──
+// ── Bildleverantör (StepFun — Support 3€ · Wan 2.7 — Patron 30€) ──
 // Samma mönster som character.html: _npcTier laddas från /api/me och
 // låser Wan-optionen för free/tier1. (2026-08-05)
 let _npcTier = null;  // free | tier1 | tier2 | lifetime (från /api/me)
@@ -523,7 +523,7 @@ function avatarGenGate(provider) {
     return false;
   }
   if (provider === 'wan' && _npcTier !== 'tier2' && _npcTier !== 'lifetime') {
-    toast('🔒 Wan 2.7 is a Patron feature (10€) — upgrade to paint with Wan.');
+    toast('🔒 Wan 2.7 is a Patron feature (30€) — upgrade to paint with Wan.');
     try { SFX.error(); } catch (_) {}
     return false;
   }
@@ -532,7 +532,7 @@ function avatarGenGate(provider) {
 function avatarProviderChanged(sel) {
   if (sel && sel.value === 'wan' && _npcTier !== 'tier2' && _npcTier !== 'lifetime') {
     sel.value = 'stepfun';
-    toast('🔒 Wan 2.7 is a Patron feature (10€) — upgrade to paint with Wan.');
+    toast('🔒 Wan 2.7 is a Patron feature (30€) — upgrade to paint with Wan.');
     try { SFX.error(); } catch (_) {}
   }
 }
@@ -552,7 +552,7 @@ function updateAvatarProviderLock() {
     return;
   }
   const canPaint = _npcTier !== 'free';          // Support+ (3€)
-  const wanUnlocked = _npcTier === 'tier2' || _npcTier === 'lifetime';  // Patron (10€)
+  const wanUnlocked = _npcTier === 'tier2' || _npcTier === 'lifetime';  // Patron (30€)
   if (stepOpt) {
     stepOpt.disabled = !canPaint;
     stepOpt.textContent = canPaint ? 'StepFun — Support' : 'StepFun — Support 🔒';

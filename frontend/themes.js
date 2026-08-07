@@ -10,10 +10,12 @@
  *   gold = sacred/UI · blood = HP/danger · arcane = magic/player
  *   ember = warmth/quests · poison = success/equipped
  *
- * v30: Server-persistence — theme (+ font) is also stored on the user
- * account (PUT /api/me/appearance) so it survives across devices and
- * origins (LAN IP vs dnd.rostad.cc vs mobile). On load, if localStorage
- * has no saved choice, the server value hydrates it.
+ * v30: Server-persistence — the theme is also stored on the user account
+ * (PUT /api/me/appearance) so it survives across devices and origins
+ * (LAN IP vs dnd.rostad.cc vs mobile). On load, if localStorage has no
+ * saved choice, the server value hydrates it.
+ * v32: Font persistence REMOVED (2026-08) — the typeface hierarchy is
+ * fixed in snes.css; no font value is sent to or read from the server.
  *
  * v31: Swatch popover — the theme button now opens a small palette menu
  * (5 swatches) instead of cycling on every click. Empty-button click
@@ -207,13 +209,13 @@ const THEMES = (() => {
   }
 
   // ── Server-persistens (v30) ──
-  // Spara tema + typsnitt på kontot så valet följer med mellan enheter/origins.
+  // Spara temat på kontot så valet följer med mellan enheter/origins.
   // Skickar DET APPLICERADE temat — inte current() — så det funkar även när
   // localStorage är blockerad (då faller current() tillbaka till default).
+  // Font skickas INTE längre — hierarkin är fixerad i snes.css (2026-08) — tom sträng.
   function syncToServer() {
     try {
-      const body = { theme: applied().id };
-      if (typeof FONTS !== 'undefined') body.font = FONTS.applied().id;
+      const body = { theme: applied().id, font: '' };
       fetch('/api/me/appearance', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -223,22 +225,18 @@ const THEMES = (() => {
   }
 
   // Hydrata: om localStorage saknar tema (ny enhet/webbläsare) — hämta kontots
-  // sparade tema + typsnitt från servern och applicera. Körs async i init.
+  // sparade tema från servern och applicera. Körs async i init.
+  // Typsnitt hydreras INTE längre — hierarkin är fixerad i snes.css (2026-08).
   async function hydrateFromServer() {
     const hadLocalTheme = !!store.get(KEY);
-    const hadLocalFont = !!store.get('dnd_font');
-    if (hadLocalTheme && hadLocalFont) return; // lokalt val vinner
+    if (hadLocalTheme) return; // lokalt val vinner
     try {
       const res = await fetch('/api/me');
       if (!res.ok) return;
       const me = await res.json();
-      if (!hadLocalTheme && me.theme) {
+      if (me.theme) {
         const p = PALETTES.find(x => x.id === me.theme);
         if (p) { store.set(KEY, p.id); apply(p); }
-      }
-      if (!hadLocalFont && me.font && typeof FONTS !== 'undefined') {
-        const f = FONTS.THEMES.find(x => x.id === me.font);
-        if (f) { store.set('dnd_font', f.id); FONTS.apply(f); }
       }
     } catch (_) { /* ej inloggad — hoppa över */ }
   }

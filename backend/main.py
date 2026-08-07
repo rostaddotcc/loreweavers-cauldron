@@ -7838,6 +7838,75 @@ STEP_PORTRAIT_STYLE = (
     "realistic materials and textures, atmospheric depth and mood. No text, no watermark."
 )
 
+# NPC-prompt: rader med fysiska drag (utseende) lyfts fram före handlingslogg,
+# så porträttet visar PERSONEN — inte vad den senast gjorde ('stood by the
+# notice board' fick dominera och gav samma scen varje gång, 2026-08-07).
+_NPC_APPEARANCE_RE = re.compile(
+    r"(hair|scar|eye|wear|clad|tall|build|aged?|young|old|beard|skin|freckle|voice|"
+    r"cloak|armor|robe|scarred|silver|tattoo|stature|complexion)",
+    re.I,
+)
+# Maskin/varelse-ord i lore → behåll 'depict AS THAT'-direktivet (drönare ska
+# förbli drönare). Saknas orden får NPC:n ett mänskligt porträttdirektiv i
+# stället — annars tolkar StepFun 'machine' i stiltexten som cyborg.
+_NPC_MACHINE_RE = re.compile(
+    r"(machine|drone|construct|robot|mechanical|clockwork|automaton|golem|"
+    r"energy being|spirit|undead|skeleton|animated)", re.I,
+)
+_NPC_META_PREFIX_RE = re.compile(r"^(identitet avslöjad|identity revealed)\s*[:–-]\s*", re.I)
+
+
+def _npc_avatar_prompt(state: dict, npc_name: str) -> str:
+    """Bygg NPC-avatar-prompt från kampanjlore.
+
+    Samma namn kan finnas i FLERA poster — Guardian skapar ibland en ny post
+    vid identitetsavslöjande ('Mysterious informant' visar sig vara en fen-
+    scout). Alla posters notes slås ihop så identitet/utseende från avslöjandet
+    inte går förlorat, och fysiska beskrivningar får företräde i prompten.
+    """
+    matches = [
+        n for n in state.get("npcs", [])
+        if str(n.get("name", "")).lower() == npc_name.lower()
+    ]
+    if not matches:
+        return (
+            f"{npc_name}, a mysterious figure in the world of this story. "
+            "Depict them exactly as described — they may be humanoid, machine, creature, "
+            "energy being, object or abstract form, never forced into a person. "
+            + STEP_IMAGE_STYLE
+        )
+    matches.sort(key=lambda n: len(str(n.get("notes") or "")), reverse=True)
+    role = next(
+        (str(n.get("role") or "").strip() for n in matches if (n.get("role") or "").strip()),
+        "",
+    )
+    notes_all = " ".join(str(n.get("notes") or "").strip() for n in matches).strip()
+    app_lines, rest_lines = [], []
+    for line in notes_all.split("•"):
+        # strip FÖRE prefix-regexen — raden har ledande mellanslag efter
+        # bullet-spliten och ^-ankaret kräver start-på-rad (2026-08-07).
+        line = _NPC_META_PREFIX_RE.sub("", line.strip()).strip()
+        if not line:
+            continue
+        (app_lines if _NPC_APPEARANCE_RE.search(line) else rest_lines).append(line)
+    desc_parts = [role] if role else []
+    if app_lines:
+        desc_parts.append(" ".join(app_lines[:3]))
+    if rest_lines:
+        desc_parts.append(" ".join(rest_lines)[:180])
+    desc = " ".join(desc_parts).strip()
+    if _NPC_MACHINE_RE.search(notes_all + " " + role):
+        directive = (
+            "Depict the character EXACTLY as described — if they are a machine, drone, "
+            "creature, energy being or abstract entity, depict them AS THAT, never as a human."
+        )
+    else:
+        directive = (
+            "Depict the character exactly as described in the lore — a human with their "
+            "described features unless the lore says otherwise, never a robot or cyborg."
+        )
+    return f"{npc_name}, {desc}. {directive} {STEP_PORTRAIT_STYLE}"
+
 
 def _build_avatar_prompt(state: dict, avatar_key: str, seed: int = 0) -> str:
     """Bygg bildprompten AUTOMATISKT från kampanjdata (character sheet, items,
@@ -7845,36 +7914,7 @@ def _build_avatar_prompt(state: dict, avatar_key: str, seed: int = 0) -> str:
     if avatar_key == "dm":
         return _build_dm_avatar_prompt(seed, state)
     if avatar_key.startswith("npc:"):
-        npc_name = avatar_key[4:]
-        npc = next(
-            (n for n in state.get("npcs", []) if str(n.get("name", "")).lower() == npc_name.lower()),
-            None,
-        )
-        if npc:
-            role = (npc.get("role") or "").strip()
-            notes = (npc.get("notes") or "").strip()
-            if role and notes and notes.lower() != role.lower():
-                desc = f"{role}; {notes[:160]}"
-            elif role:
-                desc = role
-            elif notes:
-                desc = notes[:180]
-            else:
-                desc = "a mysterious figure"
-            # Form-direktiv: NPC:er kan vara maskiner, varelser, energiväsen —
-            # tvinga ALDRIG humanoid form (Meredith-drönaren blev en skallig gubbe).
-            return (
-                f"{npc.get('name')}, {desc}. "
-                "Depict the character EXACTLY as described — if they are a machine, drone, "
-                "creature, energy being or abstract entity, depict them AS THAT, never as a human. "
-                + STEP_IMAGE_STYLE
-            )
-        return (
-            f"{npc_name}, a mysterious figure in the world of this story. "
-            "Depict them exactly as described — they may be humanoid, machine, creature, "
-            "energy being, object or abstract form, never forced into a person. "
-            + STEP_IMAGE_STYLE
-        )
+        return _npc_avatar_prompt(state, avatar_key[4:])
 
     # Player / standard — bygg från character sheet + inventory + lore
     ch = state.get("character", {}) or {}
@@ -8015,7 +8055,8 @@ async def generate_avatar(
         prompt = _trim_prompt(user_prompt)
     else:
         prompt = _trim_prompt(_build_avatar_prompt(state, avatar_key, seed))
-    logger.info("🎨 AI avatar: %s (mode=%s, seed %d)", avatar_key, mode, seed)
+    logger.info("🎨 AI avatar: %s (mode=%s, seed %d, provider=%s)", avatar_key, mode, seed, provider)
+    logger.info("🎨 Avatar prompt (%s): %.280s", avatar_key, prompt)
 
     api_key = os.getenv("STEPFUN_API_KEY")
     base_url = os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.ai/step_plan/v1")
@@ -8825,9 +8866,9 @@ def _require_avatar_tier(payload: dict, username: str):
 PREMIUM_PRICE_SEK = 49  # legacy (fas D) — ersatt av TIER_PRICES_SEK
 
 # TIERS: priser i SEK (EUR → SEK ≈ 11.7; avrundat för admin-översikt).
-# support300 = 3€ engång · patron500 = 10€ engång · lifetime = 100€ engång.
+# support300 = 3€ engång · patron500 = 30€ engång · lifetime = 100€ engång.
 # tier1/tier2 = legacy-prenumeranter (MRR-bas tills de löper ut).
-TIER_PRICES_SEK = {"support300": 35, "patron500": 117, "lifetime": 1170,
+TIER_PRICES_SEK = {"support300": 35, "patron500": 351, "lifetime": 1170,
                    "tier1": 35, "tier2": 105}  # legacy: 3€/9€ ≈ 35/105 kr
 
 _LEDGER_FILE = Path(__file__).resolve().parent / "data" / "_billing_ledger.json"
@@ -9430,7 +9471,7 @@ STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 # One-time-priser (engångsbetalningar, inga abonnemang):
 #   support300 — 3€: +300 turns (permanenta), export+StepFun i 30 dagar (stackbart)
-#   patron500  — 10€: +500 turns (permanenta), premiummodeller+Qwen TTS+Wan 2.7 Pro i 30 dagar (stackbart)
+#   patron500  — 30€: +500 turns (permanenta), premiummodeller+Qwen TTS+Wan 2.7 Pro i 30 dagar (stackbart)
 #   donation   — valfri summa: rensupport, inga förmåner
 STRIPE_PRICES = {
     "support300": os.getenv("STRIPE_PRICE_SUPPORT300", ""),

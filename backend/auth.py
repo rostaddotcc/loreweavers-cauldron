@@ -15,7 +15,10 @@ import jwt
 
 JWT_SECRET = os.getenv("JWT_SECRET", "byt-mig-till-nagot-langt-och-slumpmassigt")
 JWT_ALGORITHM = "HS256"
-JWT_EXPIRY_HOURS = int(os.getenv("JWT_EXPIRY_HOURS", "2"))
+# 2026-08-07: default höjd 2h → 24h (spelare ska slippa logga in varje kväll).
+# "Keep me logged in" på login-sidan ger KEEP_LOGGED_IN_DAYS (30) dagar.
+JWT_EXPIRY_HOURS = int(os.getenv("JWT_EXPIRY_HOURS", "24"))
+KEEP_LOGGED_IN_DAYS = int(os.getenv("KEEP_LOGGED_IN_DAYS", "30"))
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
 USERS_FILE = DATA_DIR / "users.json"
@@ -73,12 +76,16 @@ def hash_password(plain: str) -> str:
     return bcrypt.hashpw(plain.encode(), bcrypt.gensalt()).decode()
 
 
-def create_token(username: str, role: str) -> str:
-    """Skapa JWT med 24h livslängd."""
+def create_token(username: str, role: str, keep_logged_in: bool = False) -> str:
+    """Skapa JWT. Default JWT_EXPIRY_HOURS; keep_logged_in=True → KEEP_LOGGED_IN_DAYS."""
+    if keep_logged_in:
+        exp = datetime.now(timezone.utc) + timedelta(days=KEEP_LOGGED_IN_DAYS)
+    else:
+        exp = datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRY_HOURS)
     payload = {
         "sub": username,
         "role": role,
-        "exp": datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRY_HOURS),
+        "exp": exp,
         "iat": datetime.now(timezone.utc),
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)

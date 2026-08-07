@@ -769,37 +769,53 @@ async function resetTurns(username) {
   } catch(e) { toast('Error: ' + e.message); }
 }
 
-// TIERS: sätt tier (free/tier1/tier2/lifetime) med automatisk until.
-// tier1/tier2 → +N månader (default 1); lifetime → oändlig (until null, ∞).
-// months === 0 ("∞" i längdväljaren) → alltid lifetime, oavsett tier-val.
-async function setTier(username, tier, months) {
+// TIERS: sätt tier (free/tier1/tier2/lifetime) med längd.
+// tier1/tier2 → /grant med DAGAR (7/30/90/180/365) — samma som ett riktigt
+// Stripe-köp: features (export/wan1080/all_models) + features_until.
+// lifetime/free → /subscription (∞ turn_cap 0 resp. standard).
+// duration === '0' → lifetime, oavsett tier-val.
+async function setTier(username, tier, duration) {
   let status = tier || 'free';
-  const m = months && !isNaN(months) ? parseInt(months, 10) : 1;
-  let until = null;
-  if (status === 'lifetime' || m === 0) {
-    status = 'lifetime';
-    until = null; // riktig lifetime — ingen utgång
-  } else if (status !== 'free') {
-    const clamped = Math.max(1, Math.min(120, m));
-    const d = new Date();
-    d.setDate(d.getDate() + clamped * 30);
-    until = d.toISOString().slice(0, 10);
-  }
+  const d = String(duration == null ? '' : duration);
+  if (status === 'lifetime' || d === '0') status = 'lifetime';
+  let msg = '';
   try {
-    const res = await fetch('/api/admin/user/' + encodeURIComponent(username) + '/subscription', {
-      method: 'PUT', credentials: 'include',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ status, until })
-    });
-    const data = await res.json();
-    if (!res.ok) { toast(data.detail || 'Could not change subscription'); return; }
-    const names = { free: 'Free', tier1: 'Support', tier2: 'Patron', lifetime: 'Lifetime' };
-    toast(status === 'free'
-      ? '⭱ ' + username + ' is now Free'
-      : '👑 ' + (names[status] || status) + ' granted to ' + username + (status === 'lifetime' ? ' (∞ forever)' : (until ? ' (until ' + until + ')' : '')));
-    if (typeof loadedUsers !== 'undefined') loadedUsers[username] = null; // refresh cached detail
-    loadStats();
-  } catch(e) { toast('Error: ' + e.message); }
+    if (status === 'free') {
+      const res = await fetch('/api/admin/user/' + encodeURIComponent(username) + '/subscription', {
+        method: 'PUT', credentials: 'include',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ status: 'free', until: null })
+      });
+      const data = await res.json();
+      if (!res.ok) { toast(data.detail || 'Could not change subscription'); return; }
+      msg = '⭱ ' + username + ' is now Free';
+    } else if (status === 'lifetime') {
+      const res = await fetch('/api/admin/user/' + encodeURIComponent(username) + '/subscription', {
+        method: 'PUT', credentials: 'include',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ status: 'lifetime', until: null })
+      });
+      const data = await res.json();
+      if (!res.ok) { toast(data.detail || 'Could not change subscription'); return; }
+      msg = '👑 Lifetime granted to ' + username + ' (∞ forever)';
+    } else {
+      // tier1/tier2 → /grant med dagar (riktiga features, Stripe-mirror)
+      const days = Math.max(1, Math.min(365, parseInt(d, 10) || 30));
+      const apiTier = status === 'tier2' ? 'patron' : 'support';
+      const label = status === 'tier2' ? 'Patron' : 'Support';
+      const res = await fetch('/api/admin/user/' + encodeURIComponent(username) + '/grant', {
+        method: 'PUT', credentials: 'include',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ tier: apiTier, days: days })
+      });
+      const data = await res.json();
+      if (!res.ok) { toast(data.detail || 'Could not grant ' + label); return; }
+      msg = '👑 ' + label + ' (' + days + 'd) granted to ' + username + ' — features until ' + data.features_until;
+    }
+  } catch(e) { toast('Error: ' + e.message); return; }
+  toast(msg);
+  if (typeof loadedUsers !== 'undefined') loadedUsers[username] = null; // refresh cached detail
+  loadStats();
 }
 
 // När ♾/Lifetime väljs i tier-selecten → inaktivera längdväljaren (oändlig har ingen längd).
@@ -1650,7 +1666,7 @@ function tableRows(users) {
     html += `<td class="cap-cell">${capFrag}<input type="number" min="0" step="1" value="${capVal}" id="cap-${i}" class="cap-input"><button onclick="event.stopPropagation();setCap('${u.username}', ${i})" class="cap-btn">Set</button><span class="cap-hint">0 = ∞</span></td>`;
     html += `<td class="membership-cell">${memBadge}${isPremium
       ? `<span class="prem-grant"><button onclick="event.stopPropagation();setTier('${u.username}', 'free')" class="pg-btn revoke" title="Revoke to Free">⭱ Free</button></span>`
-      : `<span class="prem-grant"><select id="pg-tier-${esc(u.username)}" onclick="event.stopPropagation()" onchange="syncTierDuration('${esc(u.username)}')" title="Tier"><option value="tier1" selected>🔹 Support · 3€</option><option value="tier2">⚔ Patron · 10€</option><option value="lifetime">♾ Lifetime · 100€</option></select><select id="pg-months-${esc(u.username)}" onclick="event.stopPropagation()" title="Duration"><option value="1">1 mo</option><option value="3">3 mo</option><option value="6">6 mo</option><option value="12">12 mo</option><option value="0">∞</option></select><button onclick="event.stopPropagation();grantPremiumFromRow('${esc(u.username)}')" class="pg-btn" title="Grant the chosen tier">👑 Grant</button></span>`}</td>`;
+      : `<span class="prem-grant"><select id="pg-tier-${esc(u.username)}" onclick="event.stopPropagation()" onchange="syncTierDuration('${esc(u.username)}')" title="Tier"><option value="tier1" selected>🔹 Support · 3€</option><option value="tier2">⚔ Patron · 30€</option><option value="lifetime">♾ Lifetime · 100€</option></select><select id="pg-months-${esc(u.username)}" onclick="event.stopPropagation()" title="Duration"><option value="7" selected>7 d</option><option value="30">1 mo</option><option value="90">3 mo</option><option value="180">6 mo</option><option value="365">12 mo</option><option value="0">∞</option></select><button onclick="event.stopPropagation();grantPremiumFromRow('${esc(u.username)}')" class="pg-btn" title="Grant the chosen tier">👑 Grant</button></span>`}</td>`;
     html += `<td class="rev-num">${u.revenue ? fmtSek(u.revenue) : '—'}</td>`;
     html += `<td class="actions-cell">${rowActions(u)}</td>`;
     html += `<td><button onclick="event.stopPropagation();deleteUser('${u.username}')" class="del-btn">✕ Delete</button></td>`;
@@ -1690,8 +1706,8 @@ function mobRows(users) {
     html += `<button onclick="event.stopPropagation();topUp('${u.username}')" class="bc-btn">➕ Top up</button>`;
     html += `<button onclick="event.stopPropagation();resetTurns('${u.username}')" class="bc-btn">🔄 Reset</button>`;
     if (!isPremium) {
-      html += `<select id="pg-m-tier-${u.username}" onclick="event.stopPropagation()" onchange="syncTierDuration('${esc(u.username)}')" style="background:var(--ink);border:1px solid var(--edge);color:var(--bone);font-size:.6rem;padding:.2rem;border-radius:2px;max-width:80px"><option value="tier1" selected>Support 3€</option><option value="tier2">Patron 10€</option><option value="lifetime">♾ 100€</option></select>`;
-      html += `<select id="pg-m-months-${u.username}" onclick="event.stopPropagation()" style="background:var(--ink);border:1px solid var(--edge);color:var(--bone);font-size:.6rem;padding:.2rem;border-radius:2px;max-width:52px"><option value="1">1mo</option><option value="3">3mo</option><option value="6">6mo</option><option value="12">1y</option><option value="0">∞</option></select>`;
+      html += `<select id="pg-m-tier-${u.username}" onclick="event.stopPropagation()" onchange="syncTierDuration('${esc(u.username)}')" style="background:var(--ink);border:1px solid var(--edge);color:var(--bone);font-size:.6rem;padding:.2rem;border-radius:2px;max-width:80px"><option value="tier1" selected>Support 3€</option><option value="tier2">Patron 30€</option><option value="lifetime">♾ 100€</option></select>`;
+      html += `<select id="pg-m-months-${u.username}" onclick="event.stopPropagation()" style="background:var(--ink);border:1px solid var(--edge);color:var(--bone);font-size:.6rem;padding:.2rem;border-radius:2px;max-width:52px"><option value="7" selected>7d</option><option value="30">1mo</option><option value="90">3mo</option><option value="180">6mo</option><option value="365">1y</option><option value="0">∞</option></select>`;
     }
     html += `<button onclick="event.stopPropagation();${isPremium ? "setTier('" + u.username + "', 'free')" : "grantPremiumFromRow('" + u.username + "')"}" class="bc-btn${isPremium ? '' : ' gold'}">${isPremium ? '⭱ Free' : '👑 Grant'}</button>`;
     html += '</div>';
@@ -1782,8 +1798,8 @@ function renderDetail(container, data) {
   if (isPremium) {
     html += '<button onclick="setTier(\'' + data.username + '\', \'free\')" class="bc-btn">⭱ Revert to Free</button>';
   } else {
-    html += '<select id="dt-tier-' + data.username + '" onchange="syncTierDuration(\'' + data.username + '\')" class="cap-input" style="width:auto;background:var(--ink);color:var(--bone);border:1px solid var(--edge)"><option value="tier1" selected>Support · 3€</option><option value="tier2">Patron · 10€</option><option value="lifetime">Lifetime · 100€</option></select>';
-    html += '<select id="dt-months-' + data.username + '" class="cap-input" style="width:auto;background:var(--ink);color:var(--bone);border:1px solid var(--edge)"><option value="1">1 mo</option><option value="3">3 mo</option><option value="6">6 mo</option><option value="12">12 mo</option><option value="0">∞ forever</option></select>';
+    html += '<select id="dt-tier-' + data.username + '" onchange="syncTierDuration(\'' + data.username + '\')" class="cap-input" style="width:auto;background:var(--ink);color:var(--bone);border:1px solid var(--edge)"><option value="tier1" selected>Support · 3€</option><option value="tier2">Patron · 30€</option><option value="lifetime">Lifetime · 100€</option></select>';
+    html += '<select id="dt-months-' + data.username + '" class="cap-input" style="width:auto;background:var(--ink);color:var(--bone);border:1px solid var(--edge)"><option value="7" selected>7 d</option><option value="30">1 mo</option><option value="90">3 mo</option><option value="180">6 mo</option><option value="365">12 mo</option><option value="0">∞ forever</option></select>';
     html += '<button onclick="setTier(\'' + data.username + '\', document.getElementById(\'dt-tier-' + data.username + '\').value, document.getElementById(\'dt-months-' + data.username + '\').value)" class="bc-btn gold">👑 Grant</button>';
   }
   html += '</div>';

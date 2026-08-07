@@ -217,20 +217,20 @@ API.me().then(u => {
     const sel = document.getElementById('forge-model');
     sel.innerHTML = PLAYER_CHAR_MODELS.map(m => {
       const dis = locked && PREMIUM_CHAR_MODELS.includes(m);
-      return `<option value="${m}"${dis ? ' disabled' : ''}>${dis ? '🔒 ' + m + ' — Patron (10€)' : m}</option>`;
+      return `<option value="${m}"${dis ? ' disabled' : ''}>${dis ? '🔒 ' + m + ' — Patron (30€)' : m}</option>`;
     }).join('');
     sel.value = 'step-3.7-flash';
   }
 }).catch(() => {});
 // TIERS: bildgenerering är gated (2026-08-05). Free = ingen målning;
-// StepFun = Support (3€); Wan = Patron (10€). Returnerar false + informerar.
+// StepFun = Support (3€); Wan = Patron (30€). Returnerar false + informerar.
 function forgeAvatarGenGate(provider) {
   if (_forgeTier === 'free') {
     toast('🔒 AI painting is a Support feature (3€) — support the Cauldron to paint your adventurer, the DM and every NPC with StepFun.');
     return false;
   }
   if (provider === 'wan' && _forgeTier !== 'tier2' && _forgeTier !== 'lifetime') {
-    toast('🔒 Wan 2.7 is a Patron feature (10€) — upgrade to paint with Wan.');
+    toast('🔒 Wan 2.7 is a Patron feature (30€) — upgrade to paint with Wan.');
     return false;
   }
   return true;

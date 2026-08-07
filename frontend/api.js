@@ -142,7 +142,8 @@ const API = (() => {
     get mockMode() { return MOCK; },
 
     // ── Auth ──
-    async login(username, password) {
+    // remember=true → "Keep me logged in": 30 dagars session (annars 24h).
+    async login(username, password, remember = false) {
       if (MOCK) {
         const USERS = { admin: 'rostad2026', rostad: 'drake2026', hastis: 'enhorn2026' };
         if (USERS[username] === password) {
@@ -151,7 +152,7 @@ const API = (() => {
         }
         throw new Error('Invalid username or password');
       }
-      return req('/api/login', { method: 'POST', body: JSON.stringify({ username, password }) });
+      return req('/api/login', { method: 'POST', body: JSON.stringify({ username, password, remember: !!remember }) });
     },
 
     async register(username, password, email) {
@@ -367,10 +368,25 @@ const API = (() => {
       return req('/api/campaign/avatar/' + encodeURIComponent(kind), { method: 'DELETE' });
     },
 
+    // ── Avatar-galleri (2026-08-07): varje karaktär har upp till 5 bilder ──
+    // Rotera aktiv bild: delta ±1 (eller absolut index)
+    async rotateAvatar(kind, delta) {
+      if (MOCK) throw new Error('Not available in mock mode');
+      return req('/api/campaign/avatar/gallery/' + encodeURIComponent(kind), {
+        method: 'PATCH',
+        body: JSON.stringify({ delta }),
+      });
+    },
+    // Ta bort EN bild ur galleriet
+    async deleteAvatarImage(kind, idx) {
+      if (MOCK) throw new Error('Not available in mock mode');
+      return req('/api/campaign/avatar/gallery/' + encodeURIComponent(kind) + '/' + idx, { method: 'DELETE' });
+    },
+
     // ── AI-avatar (StepFun step-image-edit-2 — prompt byggs automatiskt i backend) ──
     // mode: "new" = full generation (ny bild), "edit" = image-edit på befintlig
     // prompt: valfri fri text från användaren — väger tyngst, auto-prompten blir kontext.
-    // ── AI-avatar (StepFun = Support 3€ · Wan 2.7 = Patron 10€, provider i body) ──
+    // ── AI-avatar (StepFun = Support 3€ · Wan 2.7 = Patron 30€, provider i body) ──
     async generateAvatar(kind, seed, mode, prompt, provider = 'stepfun') {
       if (MOCK) throw new Error('Not available in mock mode');
       return req('/api/campaign/avatar/generate', {
@@ -392,6 +408,19 @@ const API = (() => {
     },
     async deleteAccountAvatar() {
       return req('/api/me/avatar', { method: 'DELETE' });
+    },
+    // Galleri för kontots porträtt (2026-08-07)
+    async accountAvatarGallery() {
+      if (MOCK) return { gallery_count: 0, gallery_index: 0 };
+      return req('/api/me/avatar/gallery');
+    },
+    async rotateAccountAvatar(delta) {
+      if (MOCK) throw new Error('Not available in mock mode');
+      return req('/api/me/avatar/gallery', { method: 'PATCH', body: JSON.stringify({ delta }) });
+    },
+    async deleteAccountAvatarImage(idx) {
+      if (MOCK) throw new Error('Not available in mock mode');
+      return req('/api/me/avatar/gallery/' + idx, { method: 'DELETE' });
     },
 
     // ── Transcript (latest messages) ──

@@ -101,6 +101,11 @@ const SFX = (() => {
       [440, 523, 659, 880].forEach((f, i) =>       // rising shimmer
         note(f, 0.15 + i * 0.09, 0.3, 'triangle', 0.12));
     },
+    // Page turn — soft filtered paper swish (flip-books)
+    pageTurn() {
+      noise(0, 0.2, 0.1, 900);
+      noise(0.05, 0.16, 0.07, 1800);
+    },
 
     // ═══════════ COINS ═══════════
     // Classic coin ping (B5 → E6)

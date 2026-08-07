@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Loreweaver's Book of Souls — v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#08080d; --stone:#0e0e14; --stone-2:#12121a; --stone-3:#181822;
+  --edge:#2a2a3a; --edge-hi:#3a3a50;
+  --bone:#b8b8c8; --bone-bright:#e0e0ec; --bone-dim:#6a6a80;
+  --gold:#c9a227; --gold-bright:#e8c65a;
+  --blood:#8b1a2a; --blood-bright:#d43a4d;
+  --ember:#d4691e; --arcane:#7b4fd4; --poison:#5a9a4e; --teal:#4e8a93;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 100%, rgba(212,105,30,.10), transparent 70%),
+    radial-gradient(ellipse 40% 35% at 12% 0%, rgba(123,79,212,.08), transparent 70%),
+    radial-gradient(ellipse 40% 35% at 88% 0%, rgba(139,26,42,.07), transparent 70%),
+    var(--ink);
+  background-attachment:fixed;color:var(--bone);font-family:'Spectral',serif;min-height:100vh;overflow-x:hidden;
+}
+.grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.04;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(4,2,8,.85)}
+.wrap{position:relative;z-index:2;max-width:1560px;margin:0 auto;padding:6rem 1.6rem 6rem}
+
+/* ===== section head ===== */
+.sec-head{text-align:center;margin-bottom:3rem}
+.eyebrow{font-family:'Cinzel',serif;font-weight:700;font-size:.72rem;letter-spacing:.42em;text-transform:uppercase;color:var(--gold);margin-bottom:1.1rem;text-shadow:0 0 18px rgba(201,162,39,.35)}
+.sec-head h2{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(1.8rem,4vw,2.7rem);color:var(--bone-bright);animation:flicker 7s infinite}
+.sec-head .sub{margin-top:.9rem;font-style:italic;font-weight:300;color:var(--bone-dim);font-size:1.02rem}
+.sec-head .disclosure{margin-top:.55rem;font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;color:var(--bone-dim);opacity:.75}
+.sec-head .updated{font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:.22em;text-transform:uppercase;color:var(--bone-dim);margin-top:.8rem}
+@keyframes flicker{
+  0%,100%{text-shadow:0 0 12px rgba(232,198,90,.28),0 0 34px rgba(232,198,90,.10)}
+  42%{text-shadow:0 0 16px rgba(232,198,90,.42),0 0 42px rgba(232,198,90,.16)}
+  47%{text-shadow:0 0 8px rgba(232,198,90,.18)}
+  52%{text-shadow:0 0 20px rgba(232,198,90,.5),0 0 50px rgba(232,198,90,.2)}
+  76%{text-shadow:0 0 12px rgba(232,198,90,.28),0 0 34px rgba(232,198,90,.10)}
+}
+
+/* ===== books row (stacked — each book gets the full width) ===== */
+.books{display:grid;grid-template-columns:1fr;gap:4.5rem;max-width:1500px;margin:0 auto}
+.book-col{min-width:0}
+.book-col .bk-title{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:1.1rem;padding:0 .3rem}
+.book-col .bk-name{font-family:'Cinzel',serif;font-weight:700;font-size:1.15rem;color:var(--bone-bright);letter-spacing:.05em}
+.book-col .bk-count{font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.18em;color:var(--bone-dim)}
+
+/* ============ 3D BOOK (soft) ============ */
+.stage{perspective:2400px;width:100%}
+.book{
+  position:relative;width:100%;aspect-ratio:16/11;margin:0 auto;
+  transform-style:preserve-3d;transform:rotateX(6deg);
+  background:linear-gradient(135deg,#191421,#0f0c15 60%,#0b0912);
+  border:1px solid var(--edge-hi);border-radius:14px;
+  box-shadow:0 30px 80px rgba(0,0,0,.7),0 10px 34px rgba(0,0,0,.45),inset 0 0 60px rgba(0,0,0,.5);
+}
+.book::before{content:'';position:absolute;top:0;bottom:0;left:0;width:22px;background:linear-gradient(90deg,rgba(0,0,0,.45),transparent);z-index:5;border-radius:14px 0 0 14px}
+.book::after{content:'';position:absolute;top:0;bottom:0;right:0;width:22px;background:linear-gradient(-90deg,rgba(0,0,0,.45),transparent);z-index:5;border-radius:0 14px 14px 0}
+.spine{position:absolute;top:0;bottom:0;left:50%;width:15px;transform:translateX(-50%);z-index:60;pointer-events:none;
+  background:linear-gradient(90deg,rgba(0,0,0,.26),rgba(201,162,39,.13) 45%,rgba(0,0,0,.32))}
+.spine::before,.spine::after{content:'';position:absolute;left:50%;width:1px;height:100%;background:rgba(201,162,39,.28)}
+.spine::before{transform:translateX(-2px)}.spine::after{transform:translateX(2px)}
+.foreedge{position:absolute;top:2px;bottom:2px;right:2px;width:14px;z-index:55;pointer-events:none;
+  background:repeating-linear-gradient(90deg,#cfc39a 0 1px,#8f825f 1px 2px);
+  box-shadow:inset 0 0 6px rgba(0,0,0,.6);border-radius:0 12px 12px 0;opacity:.8}
+
+/* pages — NO overflow/border-radius here (breaks backface-visibility in Chrome) */
+.pg{
+  position:absolute;top:0;bottom:0;left:50%;width:50%;
+  transform-origin:left center;transform-style:preserve-3d;
+  transition:transform 1.1s cubic-bezier(.45,.05,.3,1);
+  cursor:grab;touch-action:pan-y;
+}
+.pg.dragging{cursor:grabbing;transition:none;user-select:none}
+.pg .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;will-change:transform}
+.pg .face.back{transform:rotateY(180deg)}
+/* JS opacity switch at 90° — safety net if backface culling is broken */
+.pg .face{transition:opacity .18s ease}
+.pg[data-side="front"] .face.back{opacity:0}
+.pg[data-side="back"] .face.front{opacity:0}
+.pg::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:0;z-index:5;
+  background:linear-gradient(100deg, transparent 25%, rgba(0,0,0,.55) 48%, rgba(232,198,90,.14) 52%, rgba(0,0,0,.5) 58%, transparent 78%);
+  transform:translateX(-60%);}
+.pg.flipping::after{animation:curlsweep 1s ease forwards}
+@keyframes curlsweep{
+  0%{opacity:0;transform:translateX(-60%)}
+  25%{opacity:1}
+  60%{opacity:1;transform:translateX(20%)}
+  100%{opacity:0;transform:translateX(60%)}
+}
+.pg.rest-right{transform:rotateY(0)}
+.pg.rest-left{transform:rotateY(-180deg)}
+
+/* inner page cards own the overflow/radius */
+.pg-card,.equip,.npc-card{position:relative;width:100%;height:100%;overflow:hidden;border-radius:0 14px 14px 0}
+
+/* title page */
+.title-pg{position:absolute;top:0;bottom:0;left:0;width:50%;z-index:2;background:
+  radial-gradient(ellipse 120% 90% at 30% 20%, rgba(201,162,39,.10), transparent 60%),
+  linear-gradient(160deg,#161119,#0d0a13 80%);border-right:1px solid rgba(201,162,39,.16);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem}
+.title-pg .sigil{font-size:2.4rem;margin-bottom:1rem;filter:drop-shadow(0 0 14px rgba(201,162,39,.5))}
+.title-pg .tt{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(1.1rem,2vw,1.5rem);color:var(--gold-bright);letter-spacing:.06em}
+.title-pg .sub2{font-style:italic;font-weight:300;color:var(--bone-dim);font-size:.8rem;margin-top:.7rem;max-width:230px;line-height:1.5}
+.title-pg .rule{width:90px;height:1px;margin:1rem auto 0;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+
+/* ===== adventurer page ===== */
+.pg-card .art{position:absolute;inset:0;background-size:cover;background-position:center 18%}
+.pg-card .scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,8,18,0) 18%,rgba(11,8,18,.62) 50%,rgba(11,8,18,.95) 100%)}
+.pg-card .corner{position:absolute;width:22px;height:22px;border:2px solid var(--gold);z-index:3;opacity:.9}
+.pg-card .corner.tl{top:12px;left:12px;border-right:none;border-bottom:none}
+.pg-card .corner.tr{top:12px;right:12px;border-left:none;border-bottom:none}
+.pg-card .corner.bl{bottom:12px;left:12px;border-right:none;border-top:none}
+.pg-card .corner.br{bottom:12px;right:12px;border-left:none;border-top:none}
+.pg-card .lvl{position:absolute;top:17px;left:17px;z-index:3;font-family:'Cinzel',serif;font-weight:700;font-size:.85rem;letter-spacing:.16em;color:var(--gold-bright);background:rgba(8,8,13,.82);border:1px solid rgba(201,162,39,.5);padding:.42rem .85rem;border-radius:9px;text-shadow:0 0 8px rgba(232,198,90,.5)}
+.pg-card .align{position:absolute;top:17px;right:17px;z-index:3;font-family:'Cinzel',serif;font-weight:400;font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone);background:rgba(8,8,13,.68);border:1px solid var(--edge);padding:.4rem .75rem;border-radius:9px}
+.pg-card .body{position:absolute;inset:auto 0 0 0;padding:1.8rem 1.9rem 1.6rem;z-index:4}
+.pg-card .body .nm{font-family:'Cinzel',serif;font-weight:900;font-size:2rem;color:var(--gold-bright);text-shadow:0 2px 8px rgba(0,0,0,.95);letter-spacing:.02em}
+.pg-card .body .meta{font-size:1.15rem;color:var(--bone);margin-top:.24rem;font-style:italic;text-shadow:0 1px 4px rgba(0,0,0,.9)}
+.pg-card .body .meta b{color:var(--bone-bright);font-weight:600;font-style:normal}
+.pg-card .body .xp{margin-top:.9rem}
+.pg-card .body .xp .lbl{display:flex;justify-content:space-between;font-family:'Cinzel',serif;font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone);margin-bottom:.36rem;text-shadow:0 1px 4px rgba(0,0,0,.9)}
+.pg-card .body .xp .lbl b{color:var(--gold-bright);font-weight:600}
+.pg-card .body .xp .bar{height:8px;background:rgba(8,8,13,.8);border:1px solid rgba(201,162,39,.35);border-radius:6px;overflow:hidden}
+.pg-card .body .xp .fill{height:100%;background:linear-gradient(90deg,#b8860b,#ffd700);width:0%;box-shadow:0 0 10px rgba(255,215,0,.55)}
+.abl{display:flex;gap:.6rem;margin-top:.9rem;flex-wrap:wrap}
+.abl span{font-family:'Cinzel',serif;font-size:.82rem;letter-spacing:.08em;color:var(--bone-bright);background:rgba(8,8,13,.78);border:1px solid var(--edge-hi);border-radius:8px;padding:.38rem .7rem;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.abl span b{font-weight:700}
+.abl span.hi{border-color:rgba(201,162,39,.6);color:var(--gold-bright)}
+.extra{display:flex;gap:1.7rem;margin-top:.85rem;font-family:'Cinzel',serif;font-size:.88rem;letter-spacing:.13em;color:var(--bone-dim);text-transform:uppercase;text-shadow:0 1px 4px rgba(0,0,0,.9)}
+.extra span b{color:var(--bone-bright);font-weight:600}
+.extra .hp b{color:var(--blood-bright)}
+.loc-line{margin-top:.9rem;display:flex;align-items:center;gap:.6rem;font-size:1.08rem;color:var(--bone);font-style:italic;text-shadow:0 1px 4px rgba(0,0,0,.9);flex-wrap:wrap}
+.loc-line .pin{color:var(--ember);font-style:normal;font-size:1.25rem}
+.loc-line .now{font-family:'Cinzel',serif;font-size:.76rem;letter-spacing:.18em;text-transform:uppercase;color:var(--ember)}
+.loc-line b{color:var(--bone-bright);font-style:normal;font-weight:600}
+.forged{margin-top:.65rem;font-size:.95rem;color:var(--bone-dim);font-style:italic}
+.forged b{color:var(--teal);font-weight:500;font-style:normal}
+
+/* equipment back */
+.equip{display:flex;flex-direction:column;padding:1.8rem 1.9rem;overflow-y:auto;
+  background:radial-gradient(ellipse 120% 80% at 30% 10%, rgba(201,162,39,.08), transparent 55%),linear-gradient(160deg,#161119,#0c0912 85%);
+  border-left:1px solid rgba(201,162,39,.14)}
+.equip::-webkit-scrollbar{width:5px}
+.equip::-webkit-scrollbar-thumb{background:rgba(201,162,39,.3);border-radius:4px}
+.equip .eq-head{display:flex;align-items:baseline;justify-content:space-between;padding-bottom:.9rem;border-bottom:1px solid var(--edge);margin-bottom:.95rem;flex:0 0 auto}
+.equip .eq-head .eq-t{font-family:'Cinzel',serif;font-weight:700;font-size:1.15rem;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-bright)}
+.equip .eq-head .eq-owner{font-size:.95rem;color:var(--bone-dim);font-style:italic}
+.equip .eq-subhead{font-family:'Cinzel',serif;font-weight:700;font-size:.78rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin:1rem 0 .55rem;flex:0 0 auto}
+.equip ul{list-style:none;display:flex;flex-direction:column;gap:.5rem}
+.equip .eq-list{flex:0 0 auto}
+.equip li{display:flex;align-items:baseline;gap:.65rem;font-size:1.02rem;color:var(--bone);line-height:1.3}
+.equip li .ic{flex:0 0 auto;font-size:1.15rem;filter:drop-shadow(0 0 5px rgba(201,162,39,.25))}
+.equip li .eq-nm{font-weight:600;color:var(--bone-bright)}
+.equip li .eq-ty{font-size:.82rem;color:var(--bone-dim);text-transform:uppercase;letter-spacing:.08em}
+.equip li.eq-on{color:var(--gold-bright)}
+.equip li.eq-on .eq-nm{color:var(--gold)}
+.equip li.eq-on::before{content:'✦';color:var(--gold);font-size:.82rem}
+.equip .eq-journal{margin-top:1rem;font-size:.88rem;color:var(--bone);line-height:1.45;font-style:italic;border-left:2px solid rgba(201,162,39,.35);padding-left:.7rem;flex:0 0 auto}
+.equip .eq-journal .k-t,.equip .know .k-t{display:block;font-family:'Cinzel',serif;font-style:normal;font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:.25rem}
+.equip .know{margin-top:1rem;font-size:.88rem;color:var(--bone);line-height:1.45;font-style:italic;border-left:2px solid rgba(201,162,39,.35);padding-left:.7rem;flex:0 0 auto}
+.equip .eq-note{margin-top:auto;padding-top:.85rem;font-size:.9rem;color:var(--bone-dim);font-style:italic;border-top:1px solid var(--edge);flex:0 0 auto}
+
+/* ===== NPC page ===== */
+.npc-card .art{position:absolute;inset:0;background-size:cover;background-position:center 20%}
+.npc-card .scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,8,18,.12) 0%,rgba(11,8,18,.5) 52%,rgba(11,8,18,.96) 100%)}
+.npc-card .body{position:absolute;inset:auto 0 0 0;padding:1.7rem 1.9rem 1.5rem;z-index:4}
+.npc-card .body .nm{font-family:'Cinzel',serif;font-weight:900;font-size:1.85rem;color:var(--gold-bright);text-shadow:0 2px 8px rgba(0,0,0,.95)}
+.npc-card .body .role{font-size:1.08rem;color:var(--bone);margin-top:.22rem;font-style:italic;text-shadow:0 1px 4px rgba(0,0,0,.9)}
+.npc-card .body .know{margin-top:.85rem;font-size:.95rem;color:var(--bone);line-height:1.5;max-height:11.5em;overflow:hidden;
+  display:-webkit-box;-webkit-line-clamp:7;-webkit-box-orient:vertical;text-shadow:0 1px 4px rgba(0,0,0,.95);
+  border-left:2px solid rgba(201,162,39,.4);padding-left:.8rem;font-style:italic}
+.npc-card .body .know .k-t{display:block;font-family:'Cinzel',serif;font-style:normal;font-size:.8rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:.3rem}
+.npc-card .dot{position:absolute;top:16px;left:16px;z-index:3;width:12px;height:12px;border-radius:50%;box-shadow:0 0 9px currentColor}
+.npc-card .meet{position:absolute;top:16px;right:16px;z-index:3;font-family:'Cinzel',serif;font-size:.8rem;letter-spacing:.16em;text-transform:uppercase;color:var(--bone);background:rgba(8,8,13,.68);border:1px solid var(--edge);padding:.4rem .75rem;border-radius:8px}
+
+.book-hint{text-align:center;font-style:italic;font-size:.74rem;color:var(--bone-dim);margin-top:1.1rem}
+
+.rv{opacity:0;transform:translateY(28px);transition:opacity .8s ease,transform .8s ease}
+.rv.in{opacity:1;transform:none}
+
+@media(max-width:1080px){.books{grid-template-columns:1fr}}
+@media(max-width:640px){
+  .book{aspect-ratio:4/5;transform:rotateX(10deg)}
+  .pg-card .body{padding:1.1rem 1.1rem .9rem}
+  .pg-card .body .nm{font-size:1.25rem}
+  .pg-card .body .meta{font-size:.78rem;line-height:1.3}
+  .pg-card .body .xp{margin-top:.5rem}
+  .pg-card .body .xp .lbl{font-size:.6rem}
+  .pg-card .body .xp .bar{height:5px}
+  .pg-card .body .abl{margin-top:.55rem;gap:.35rem}
+  .pg-card .body .abl span{font-size:.56rem;padding:.22rem .4rem}
+  .pg-card .body .extra{margin-top:.5rem;gap:.9rem;font-size:.62rem}
+  .pg-card .body .loc-line{margin-top:.55rem;font-size:.72rem;gap:.35rem}
+  .pg-card .body .loc-line .now{font-size:.5rem}
+  .pg-card .body .forged{margin-top:.4rem;font-size:.68rem}
+  .lvl{font-size:.62rem;padding:.3rem .55rem;top:11px;left:11px}
+  .align{font-size:.58rem;padding:.28rem .5rem;top:11px;right:11px}
+  .equip{padding:1.1rem 1.1rem .9rem}
+  .equip .eq-head .eq-t{font-size:.85rem}
+  .equip .eq-head .eq-owner{font-size:.72rem}
+  .equip li{font-size:.76rem;gap:.45rem}
+  .equip li .eq-ty{font-size:.62rem}
+  .equip .eq-subhead{font-size:.62rem;margin:.8rem 0 .4rem}
+  .equip .eq-journal{font-size:.72rem;margin-top:.8rem;padding-left:.55rem}
+  .equip .eq-journal .k-t{font-size:.56rem}
+  .equip .eq-note{font-size:.7rem}
+  .npc-card .body{padding:1.1rem 1.1rem .9rem}
+  .npc-card .body .nm{font-size:1.15rem}
+  .npc-card .body .role{font-size:.74rem}
+  .npc-card .body .know{font-size:.68rem;margin-top:.5rem}
+  .npc-card .body .know .k-t{font-size:.58rem}
+  .npc-card .meet{font-size:.62rem;padding:.3rem .55rem}
+}
+</style>
+</head>
+<body>
+<div class="grain"></div><div class="vignette"></div>
+
+<div class="wrap">
+      <div class="sec-head rv in">
+        <div class="eyebrow">✦ The Loreweaver's Book of Souls ✦</div>
+        <h2>Summoned in the Cauldron</h2>
+        <p class="sub">Every face in this realm was summoned by a player. Turn the pages — equipment, spells and all.</p>
+        <p class="disclosure">Only adventurers and NPCs painted by the Loreweaver appear in these pages.</p>
+      </div>
+
+  <div class="books">
+    <!-- ═══════════ ADVENTURERS BOOK ═══════════ -->
+    <div class="book-col rv in">
+      <div class="bk-title">
+        <div class="bk-name">The Adventurers</div>
+        <div class="bk-count" id="adv-cnt">Tale 1 of 0</div>
+      </div>
+      <div class="stage">
+        <div class="book" id="book-adv">
+          <div class="title-pg">
+            <div class="sigil">🜂</div>
+            <div class="tt">Book of Souls</div>
+            <div class="sub2">Turn a page to reveal equipment on the left, and the adventurer who carries it.</div>
+            <div class="rule"></div>
+          </div>
+          <div class="spine"></div><div class="foreedge"></div>
+        </div>
+      </div>
+      <div class="book-hint">click the left page to turn back · right page to advance · or drag a page</div>
+    </div>
+
+    <!-- ═══════════ NPC BOOK ═══════════ -->
+    <div class="book-col rv in">
+      <div class="bk-title">
+        <div class="bk-name">Those They Met</div>
+        <div class="bk-count" id="npc-cnt">Encounter 1 of 0</div>
+      </div>
+      <div class="stage">
+        <div class="book" id="book-npc">
+          <div class="title-pg">
+            <div class="sigil">🜲</div>
+            <div class="tt">Book of Encounters</div>
+            <div class="sub2">NPCs our adventurers have met — their faces and what the realm now knows of them.</div>
+            <div class="rule"></div>
+          </div>
+          <div class="spine"></div><div class="foreedge"></div>
+        </div>
+      </div>
+      <div class="book-hint">click the left page to turn back · right page to advance · or drag a page</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════ render from gallery.json ═══════════════ */
+const TYPE_ICON = {Weapon:'⚔️',Armor:'🛡️',Tool:'🔧',Potion:'🧪','Magic Item':'🗝️',Magic:'🔮',Key:'🗝️',Ammunition:'🏹',Other:'📦'};
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+function adventurerPage(a){
+  const ab = a.abilities||{};
+  const order = ['STR','DEX','CON','INT','WIS','CHA'];
+  const maxScore = Math.max(...order.map(k=>ab[k]||0), 1);
+  const chips = order.map(k=>`<span class="${(ab[k]||0)>=14?'hi':''}">${k} <b>${ab[k]||'–'}</b></span>`).join('');
+  const xpPct = a.xp_next>0 ? Math.min(100, Math.round((a.xp_current||0)/a.xp_next*100)) : 0;
+  const eq = (a.equipment||[]).slice(0,6);
+  const eqLis = eq.map(i=>`<li class="${i.equipped?'eq-on':''}"><span class="ic">${TYPE_ICON[i.type]||'📦'}</span><span class="eq-nm">${esc(i.name)}</span><span class="eq-ty">${esc(i.type)}</span></li>`).join('');
+  const eqN = eq.filter(i=>i.equipped).length;
+  // spells
+  const spells = (a.spells||[]).slice(0,4);
+  const spellLis = spells.map(sp=>{
+    const lvl = sp.level===0?'cantrip':'L'+sp.level;
+    return `<li class="${sp.level===0?'':'eq-on'}"><span class="ic">${sp.level===0?'✦':'🜍'}</span><span class="eq-nm">${esc(sp.name)}</span><span class="eq-ty">${esc(lvl)} · ${esc(sp.school)}</span></li>`;
+  }).join('');
+  // journal + lore
+  const journal = a.journal ? `<div class="eq-journal"><span class="k-t">From the Journal</span>${esc(a.journal)}</div>` : '';
+  const lore = a.lore ? `<div class="eq-journal"><span class="k-t">The Realm Remembers</span>${esc(a.lore)}</div>` : '';
+  return { front: `
+    <div class="pg-card">
+      <div class="art" style="background-image:url('${a.img}')"></div>
+      <div class="scrim"></div>
+      <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+      <span class="lvl">LV ${a.level||'?'}</span><span class="align">${esc(a.alignment)}</span>
+      <div class="body">
+        <div class="nm">${esc(a.name)}</div>
+        <div class="meta"><b>${esc(a.race)}</b> · ${esc(a.class)}</div>
+        <div class="xp"><div class="lbl"><span>Experience</span><span><b>${a.xp_current||0}</b> / ${a.xp_next||300}</span></div><div class="bar"><div class="fill" style="width:${xpPct}%"></div></div></div>
+        <div class="abl">${chips}</div>
+        <div class="extra"><span class="hp">HP <b>${a.hp||'?'}/${a.hp_max||'?'}</b></span><span>AC <b>${a.ac||'?'}</b></span><span>SPD <b>${a.speed||'?'}</b></span></div>
+        <div class="loc-line"><span class="pin">⚲</span><span class="now">Now in</span> <b>${esc(a.location)}</b>${a.time?` <span>— ${esc(a.time)}</span>`:''}</div>
+        <div class="forged">embarked on adventure on <b>${a.embarked||'—'}</b> · forged by <b>${esc(a.forged_by)}</b></div>
+      </div>
+    </div>`,
+    back: `
+    <div class="equip">
+      <div class="eq-head"><span class="eq-t">Equipment</span><span class="eq-owner">${esc(a.name)}</span></div>
+      <ul class="eq-list">${eqLis}</ul>
+      ${spellLis?`<div class="eq-subhead">Spells</div><ul class="eq-list">${spellLis}</ul>`:''}
+      ${journal}
+      ${lore}
+      <div class="eq-note">${eqN?`Carrying ${eqN} piece${eqN>1?'s':''} of equipped gear into the dark.`:'Travels light — what little they carry tells the tale.'}</div>
+    </div>` };
+}
+
+function npcPage(n){
+  const desc = n.desc ? `<div class="know"><span class="k-t">First seen</span>${esc(n.desc)}</div>` : '';
+  const met = n.met_at ? `<div class="know met-at"><span class="k-t">Where they were met</span>${esc(n.met_at)}</div>` : '';
+  const metDate = n.first_met_date ? `<div class="know met-at"><span class="k-t">First met</span>${esc(n.first_met_date)}</div>` : '';
+  return { front: `
+    <div class="npc-card">
+      <div class="art" style="background-image:url('${n.img}')"></div>
+      <div class="scrim"></div>
+      <span class="dot" style="background:${n.color};color:${n.color}"></span>
+      <span class="meet">Met by ${esc(n.met_by)}</span>
+      <div class="body">
+        <div class="nm">${esc(n.name)}</div>
+        <div class="role">${esc(n.role)}</div>
+        ${n.note?`<div class="know"><span class="k-t">What you know</span>${esc(n.note)}</div>`:''}
+      </div>
+    </div>`,
+    back: `
+    <div class="equip">
+      <div class="eq-head"><span class="eq-t">Encounters</span><span class="eq-owner">${esc(n.name)}</span></div>
+      <ul class="eq-list"><li class="eq-on"><span class="ic">🜲</span><span class="eq-nm">${esc(n.relation||'Known')}</span><span class="eq-ty">Met in play</span></li></ul>
+      ${metDate}
+      ${desc}
+      ${met}
+    </div>` };
+}
+
+function endPage(msg){
+  return `
+    <div class="equip" style="align-items:center;justify-content:center;text-align:center;gap:1rem">
+      <div style="font-size:2rem;filter:drop-shadow(0 0 14px rgba(201,162,39,.5))">🜂</div>
+      <div class="eq-t" style="font-family:'Cinzel',serif;font-weight:700;font-size:.8rem;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-bright)">The Book Ends</div>
+      <div class="eq-note" style="max-width:220px">${esc(msg)}</div>
+    </div>` ;
+}
+function buildBook(bookEl, pages, isNpc){
+  pages.forEach((p,i)=>{
+    const pg = document.createElement('div');
+    pg.className = 'pg rest-right';
+    pg.dataset.i = i;
+    pg.dataset.side = 'front';
+    pg.innerHTML = `<div class="face">${p.front}</div><div class="face back">${p.back}</div>`;
+    bookEl.appendChild(pg);
+  });
+}
+
+/* ═══════════════ flip engine (no buttons — click/drag/keyboard only) ═══════════════ */
+const BOOKS = {};
+function makeBook(key, el, total, label){
+  BOOKS[key] = { key, el, pages: [...el.querySelectorAll('.pg')], left: [], busy: false, total, label };
+}
+function zReset(B){
+  const ids = B.pages.map(p=>+p.dataset.i);
+  B.pages.forEach((p,idx)=>{
+    const id = +p.dataset.i;
+    const onLeft = B.left.includes(id);
+    if(onLeft) p.style.zIndex = 20 + B.left.indexOf(id);
+    else {
+      const rightIds = ids.filter(i=>!B.left.includes(i));
+      p.style.zIndex = 45 - rightIds.indexOf(id);
+    }
+    p.classList.toggle('rest-right', !onLeft);
+    p.classList.toggle('rest-left', onLeft);
+    p.dataset.side = onLeft ? 'back' : 'front';
+  });
+}
+function curPage(B){ return B.pages.filter(p=>!B.left.includes(+p.dataset.i))[0]; }
+function updateCnt(B){
+  const shown = B.left.length + 1;
+  document.getElementById(B.label).textContent =
+    (B.key==='adv' ? 'Tale ' : 'Encounter ') + shown + ' of ' + B.total;
+}
+function settle(pg, dir, B, onDone){
+  pg.classList.remove('rest-right','rest-left','dragging');
+  pg.classList.add('flipping');
+  pg.style.zIndex = 90;
+  const target = dir>0 ? 'rotateY(-180deg)' : 'rotateY(0deg)';
+  pg.style.transform = target;
+  // switch visible side near 90° (safety net for broken backface culling)
+  const toLeft = dir>0;
+  setTimeout(()=>{ pg.dataset.side = toLeft ? 'back' : 'front'; }, 480);
+  let finished = false;
+  const finish = ()=>{
+    if(finished) return;
+    finished = true;
+    pg.classList.remove('flipping');
+    pg.style.transform = '';
+    onDone();
+  };
+  pg.addEventListener('transitionend', finish, {once:true});
+  setTimeout(finish, 1300);
+}
+function turnBook(dir, key){
+  const B = BOOKS[key];
+  if(B.busy) return;
+  const cur = curPage(B);
+  if(dir>0){
+    if(!cur || B.left.length>=B.total-1) return;
+    B.busy = true;
+    const i = +cur.dataset.i;
+    settle(cur, 1, B, ()=>{ B.left.push(i); zReset(B); updateCnt(B); B.busy=false; });
+  } else {
+    if(B.left.length===0) return;
+    const i = B.left.pop();
+    const pg = B.pages.find(p=>+p.dataset.i===i);
+    B.busy = true;
+    settle(pg, -1, B, ()=>{ zReset(B); updateCnt(B); B.busy=false; });
+  }
+}
+
+/* ═══ drag + click zones per book ═══ */
+const drags = {};
+function attachInteractions(key){
+  const B = BOOKS[key];
+  drags[key] = null;
+  const el = B.el;
+  function pgFromEvent(e){
+    const t = e.target.closest('.pg');
+    if(!t) return null;
+    const id = +t.dataset.i;
+    if(B.left.includes(id)) return B.left[B.left.length-1] === id ? t : null;
+    return t;
+  }
+  el.addEventListener('pointerdown', e=>{
+    if(B.busy) return;
+    const pg = pgFromEvent(e);
+    if(!pg) return;
+    const rect = el.getBoundingClientRect();
+    drags[key] = { pg, startX: e.clientX, startY: e.clientY, w: rect.width/2, active:false,
+                   fromLeft: B.left.includes(+pg.dataset.i) };
+    try{ el.setPointerCapture(e.pointerId); }catch(_){}
+  });
+  el.addEventListener('pointermove', e=>{
+    const d = drags[key];
+    if(!d) return;
+    const dx = e.clientX - d.startX, dy = e.clientY - d.startY;
+    if(!d.active){
+      if(Math.hypot(dx,dy) < 6) return;
+      // vertical scroll dominates → let the browser scroll, cancel the drag
+      if(Math.abs(dy) > Math.abs(dx) * 1.5){ drags[key] = null; return; }
+      d.active = true;
+    }
+    d.pg.classList.add('dragging');
+    const p = Math.max(-1, Math.min(1, dx / d.w));
+    const deg = d.fromLeft ? -180 + (1-p)*180 : p*180;
+    d.pg.style.transform = `rotateY(${deg}deg)`;
+    d.pg.dataset.side = Math.abs(deg) >= 90 ? 'back' : 'front';
+  });
+  el.addEventListener('pointerup', e=>endDrag(key,e,'up'));
+  el.addEventListener('pointercancel', e=>{
+    // browser stole the gesture (touch scroll) — restore the page, never a click
+    const d = drags[key];
+    if(!d) return;
+    drags[key] = null;
+    if(d.active){
+      d.pg.classList.remove('dragging');
+      d.pg.style.transform = '';
+      d.pg.dataset.side = B.left.includes(+d.pg.dataset.i) ? 'back' : 'front';
+      zReset(B);
+    }
+  });
+}
+function endDrag(key, e, mode){
+  const B = BOOKS[key];
+  const d = drags[key];
+  if(!d) return;
+  drags[key] = null;
+  const {pg, active, fromLeft} = d;
+  if(!active){
+    // === click (real pointerup only): left half = back, right half = forward ===
+    pg.classList.remove('dragging');
+    if(mode !== 'up') return;                    // pointercancel is never a click
+    const rect = B.el.getBoundingClientRect();
+    turnBook(e.clientX < rect.left + rect.width/2 ? -1 : 1, key);
+    return;
+  }
+  const rect = B.el.getBoundingClientRect();
+  const p = (e.clientX - (rect.left + rect.width/2)) / (rect.width/2);
+  pg.classList.remove('dragging');
+  B.busy = true;
+  if(fromLeft){
+    if(p > 0.45) settle(pg, -1, B, ()=>{ B.left.pop(); zReset(B); updateCnt(B); B.busy=false; });
+    else settle(pg, 1, B, ()=>{ zReset(B); updateCnt(B); B.busy=false; });
+  } else {
+    if(p < -0.45){ const i=+pg.dataset.i; settle(pg, 1, B, ()=>{ B.left.push(i); zReset(B); updateCnt(B); B.busy=false; }); }
+    else settle(pg, -1, B, ()=>{ zReset(B); updateCnt(B); B.busy=false; });
+  }
+}
+
+/* ═══ keyboard (adventurers book) ═══ */
+document.addEventListener('keydown', e=>{
+  if(e.key==='ArrowRight') turnBook(1,'adv');
+  if(e.key==='ArrowLeft') turnBook(-1,'adv');
+});
+
+/* ═══ boot ═══ */
+(async function(){
+  let g = {adventurers:[], npcs:[]};
+  try{
+    const r = await fetch('gallery.json?v=' + Date.now());
+    g = await r.json();
+  }catch(err){
+    document.querySelectorAll('.book-hint').forEach(h=>h.textContent='Book of Souls awaiting its first summoned souls…');
+  }
+  const advEl = document.getElementById('book-adv');
+  const npcEl = document.getElementById('book-npc');
+  // The static left title page becomes the FIRST hero's back (equipment+spells)
+  // so Tale 1 already shows a full spread: gear left, hero right.
+  if(g.adventurers.length){
+    const t0 = advEl.querySelector('.title-pg');
+    if(t0) t0.innerHTML = adventurerPage(g.adventurers[0]).back;
+  }
+  if(g.npcs.length){
+    const t0n = npcEl.querySelector('.title-pg');
+    if(t0n) t0n.innerHTML = npcPage(g.npcs[0]).back;
+  }
+  // Adventurer pages: page i front = adventurer i, page i BACK = adventurer i+1's
+  // equipment — so after turning, the left page shows the SAME hero as the right.
+  const advPages = g.adventurers.map((a,i)=>{
+    const p = adventurerPage(a);
+    const nxt = g.adventurers[i+1];
+    p.back = nxt ? adventurerPage(nxt).back : endPage('The book ends here — new souls are summoned as players forge them.');
+    return p;
+  });
+  if(advPages.length) buildBook(advEl, advPages, false);
+  if(g.npcs.length) buildBook(npcEl, g.npcs.map(npcPage), true);
+  makeBook('adv', advEl, g.adventurers.length, 'adv-cnt');
+  makeBook('npc', npcEl, g.npcs.length, 'npc-cnt');
+  attachInteractions('adv');
+  attachInteractions('npc');
+  Object.values(BOOKS).forEach(B=>{ zReset(B); updateCnt(B); });
+})();
+</script>
+</body>
+</html>

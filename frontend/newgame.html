@@ -329,7 +329,7 @@ API.me().then(u => {
     if (sel) {
       sel.innerHTML = PLAYER_CHAR_MODELS.map(m => {
         const dis = locked && m !== 'step-3.7-flash';
-        return `<option value="${m}"${dis ? ' disabled' : ''}>${dis ? '🔒 ' + (PLAYER_CHAR_LABELS[m] || m) + ' — Patron (10€)' : (PLAYER_CHAR_LABELS[m] || m)}</option>`;
+        return `<option value="${m}"${dis ? ' disabled' : ''}>${dis ? '🔒 ' + (PLAYER_CHAR_LABELS[m] || m) + ' — Patron (30€)' : (PLAYER_CHAR_LABELS[m] || m)}</option>`;
       }).join('');
       sel.value = 'step-3.7-flash';
     }

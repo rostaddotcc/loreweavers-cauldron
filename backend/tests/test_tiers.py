@@ -402,7 +402,8 @@ def test_me_avatar_generate_support_ok(client, monkeypatch):
     r = client.post("/api/me/avatar/generate", json={"prompt": "a hooded mage"},
                     cookies={"morkrets_token": _tok()})
     assert r.status_code == 200, r.text
-    assert main._user_avatar_path("alice").exists()
+    # Galleri (2026-08-07): målningen hamnar i galleriet, inte legacy alice.png
+    assert len((main._load_user_avatar_gallery("alice").get("gallery") or [])) == 1
     me = client.get("/api/me", cookies={"morkrets_token": _tok()}).json()
     assert me["has_avatar"] is True
     av = client.get("/api/me/avatar", cookies={"morkrets_token": _tok()})

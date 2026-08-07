@@ -209,7 +209,7 @@ def test_me_avatar_stepfun_tier1_ok(client, monkeypatch):
     r = client.post("/api/me/avatar/generate", json={"prompt": "a hooded mage", "provider": "stepfun"})
     assert r.status_code == 200, r.text
     assert r.json()["provider"] == "stepfun"
-    assert main._user_avatar_path("alice").exists()
+    assert len((main._load_user_avatar_gallery("alice").get("gallery") or [])) == 1
 
 
 def test_me_avatar_wan_tier1_403(client, monkeypatch):
@@ -239,7 +239,7 @@ def test_me_avatar_wan_tier2_ok(client, monkeypatch):
     r = client.post("/api/me/avatar/generate", json={"prompt": "a hero", "provider": "wan"})
     assert r.status_code == 200, r.text
     assert r.json()["provider"] == "wan"
-    assert main._user_avatar_path("alice").exists()
+    assert len((main._load_user_avatar_gallery("alice").get("gallery") or [])) == 1
     # Patron med features.wan1080 → Wan 2.7 Pro 2048² (samma mönster som vault)
     assert seen["json"]["model"] == "wan2.7-image-pro"
     assert seen["json"]["parameters"]["size"] == "2048*2048"

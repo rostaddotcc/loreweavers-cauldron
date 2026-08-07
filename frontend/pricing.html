@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Pricing — Free AI Dungeon Master, One-Time Top-Ups | The Lore Weaver's Cauldron</title>
-<meta name="description" content="Free AI Dungeon Master with 300 turns on signup, then 50 fresh daily. No subscription — one-time Support (3€) and Patron (10€) top-ups, donations add turns. Play D&D online free — no credit card needed.">
+<meta name="description" content="Free AI Dungeon Master with 300 turns on signup, then 50 fresh daily. No subscription — one-time Support (3€) and Patron (30€) top-ups, donations add turns. Play D&D online free — no credit card needed.">
 <link rel="icon" href="/assets/logo-cauldron.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -106,6 +106,8 @@
   .tier li b{color:var(--bone-bright);font-weight:600}
   .tier li.dim{color:var(--bone-dim)}
   .tier li.dim::before{color:var(--edge-hi)}
+  .tier-fine{color:var(--bone-dim);font-size:.8rem;line-height:1.6;font-style:italic;
+    letter-spacing:.02em;margin:-1rem 0 1.2rem}
   .tier-btn{display:block;text-align:center;font-family:var(--font-display);font-size:.74rem;
     letter-spacing:.22em;text-transform:uppercase;text-decoration:none;padding:.85rem 1rem;border-radius:2px;
     transition:transform .2s,box-shadow .2s}
@@ -150,6 +152,10 @@
     font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);
     text-decoration:none}
   .back:hover{color:var(--gold-bright);text-shadow:0 0 12px rgba(232,198,90,.5)}
+  .creator-link{margin-top:1.6rem;text-align:center;font-size:.74rem;color:var(--bone-dim);opacity:.75}
+  .creator-link a{color:var(--bone-dim);text-decoration:none;border-bottom:1px dotted rgba(119,119,140,.4);
+    padding-bottom:.1rem;transition:color .2s,border-color .2s}
+  .creator-link a:hover{color:var(--gold);border-color:var(--gold)}
 
   /* ═══════════════ plan detail modal ═══════════════ */
   .plan-overlay{position:fixed;inset:0;z-index:90;display:none;align-items:center;justify-content:center;
@@ -292,13 +298,13 @@
       <a class="tier-btn go" href="#" data-tier="support300" onclick="openPlan(event,'support300')">Support the Cauldron</a>
     </div>
 
-    <!-- Patron 10€ -->
+    <!-- Patron 30€ -->
     <div class="tier hot">
       <span class="corner tl"></span><span class="corner tr"></span>
       <span class="corner bl"></span><span class="corner br"></span>
       <div class="tier-flag">Best value</div>
       <div class="tier-name">Patron</div>
-      <div class="tier-price"><span class="cur-price" data-eur="10" data-sek="117">10€</span><small> once</small></div>
+      <div class="tier-price"><span class="cur-price" data-eur="30" data-sek="351">30€</span><small> once</small></div>
       <div class="tier-desc">The full mind of the Cauldron — when you need it most.</div>
       <ul>
         <li>How it is meant to be played — massive storylines, quests without breaking immersion with the full reasoning power of <b>Qwen and DeepSeek</b>, along with premium text-to-speech Dungeon Master narration with <b>Qwen 3.0 TTS</b>.</li>
@@ -312,6 +318,7 @@
         <li>One-time — <b>30 days</b> of Patron benefits. Your <b>+500 turns are yours forever</b></li>
         <li>Buy again anytime — <b>packs stack</b> (+30 days, +500 more turns)</li>
       </ul>
+      <p class="tier-fine">Premium models are served as they can be financed. consider a donation as well to keep the adventure growing.</p>
       <a class="tier-btn go" href="#" data-tier="patron500" onclick="openPlan(event,'patron500')">Become a Patron</a>
     </div>
 
@@ -340,6 +347,7 @@
     Payments are processed securely by Stripe.
   </p>
   <a class="back" href="adventure.html">← Return to the realm</a>
+  <p class="creator-link"><a href="login.html?about=1">About the game creator — vibed, self-funded, running on one small mini-PC in Stockholm</a></p>
 </section>
 
 <!-- ═══════════════ plan detail modal ═══════════════ -->
@@ -413,7 +421,7 @@
     },
     patron500: {
       name: 'Patron',
-      price: { eur: 10, sek: 117, per: ' once' },
+      price: { eur: 30, sek: 351, per: ' once' },
       desc: 'The full mind of the Cauldron — when you need it most.',
       promo: 'How it is meant to be played — massive storylines, quests without breaking immersion with the full reasoning power of Qwen and DeepSeek, along with premium text-to-speech Dungeon Master narration with Qwen 3.0 TTS.',
       features: [

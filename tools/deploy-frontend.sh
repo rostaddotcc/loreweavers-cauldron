@@ -12,6 +12,9 @@ if ! docker ps --format '{{.Names}}' | grep -qx "$C"; then
   exit 1
 fi
 docker cp frontend/sprites.js "$C":/app/frontend/sprites.js
+# api.js kopieras också — den missades förut och deploy-skriptet ska
+# synca ALLA frontend-filer, inte bara .html (prisändringar m.m. bor där).
+docker cp frontend/api.js "$C":/app/frontend/api.js
 for f in frontend/*.html; do
   docker cp "$f" "$C":/app/"$f"
 done

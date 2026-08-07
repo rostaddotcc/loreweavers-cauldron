@@ -188,6 +188,7 @@ async def visits_summary() -> dict:
     unique_total = 0
     unique_today = 0
     unique_7d = 0
+    unique_14d = 0
     for rec in _visit_store["by_ip"].values():
         if not isinstance(rec, dict):
             continue
@@ -197,6 +198,8 @@ async def visits_summary() -> dict:
             unique_today += 1
         if last >= now - 7 * 86400:
             unique_7d += 1
+        if last >= now - 14 * 86400:
+            unique_14d += 1
     by_country: dict[str, int] = {}
     for ip, n in _visit_store["by_ip"].items():
         cnt = n.get("count", 1) if isinstance(n, dict) else int(n or 1)
@@ -219,6 +222,7 @@ async def visits_summary() -> dict:
         "unique_total": unique_total,
         "unique_today": unique_today,
         "unique_7d": unique_7d,
+        "unique_14d": unique_14d,
         "by_day": by_day,
         "by_country": by_country,
     }

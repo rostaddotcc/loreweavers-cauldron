@@ -277,7 +277,7 @@ def roll_initiative(state: dict, player_roll: int | None = None) -> dict:
         return combat or {}
 
     char = state.get("character", {})
-    pname = char.get("name", "Spelaren")
+    pname = char.get("name", "Player")
     init_mod = int(char.get("initiative", 0))
 
     if player_roll is None:
@@ -447,8 +447,8 @@ def _tick_all_statuses(state: dict, combat: dict):
             if fx["type"] == "status_dmg":
                 combat.setdefault("log", []).append({
                     "round": combat.get("round", 1), "actor": "system",
-                    "name": char.get("name", "Spelaren"),
-                    "text": f"tar {fx['amount']} {fx['status']}-skada",
+                    "name": char.get("name", "Player"),
+                    "text": f"takes {fx['amount']} {fx['status']} damage → **{char.get('name', 'Player')} {player_entity['hp']}/{char.get('hp', {}).get('max', '?')} HP**",
                 })
 
     # Fiender
@@ -461,7 +461,7 @@ def _tick_all_statuses(state: dict, combat: dict):
                 combat.setdefault("log", []).append({
                     "round": combat.get("round", 1), "actor": "system",
                     "name": enemy["name"],
-                    "text": f"tar {f['amount']} {f['status']}-skada",
+                    "text": f"takes {f['amount']} {f['status']} damage → **{enemy['name']} {enemy['hp']}/{enemy.get('max_hp', '?')} HP**",
                 })
             elif f["type"] == "status_end":
                 combat.setdefault("log", []).append({
@@ -473,7 +473,7 @@ def _tick_all_statuses(state: dict, combat: dict):
             enemy["alive"] = False
             combat.setdefault("log", []).append({
                 "round": combat.get("round", 1), "actor": "system",
-                "name": enemy["name"], "text": "faller",
+                "name": enemy["name"], "text": "falls",
             })
 
     # Allierade
@@ -486,7 +486,7 @@ def _tick_all_statuses(state: dict, combat: dict):
                 combat.setdefault("log", []).append({
                     "round": combat.get("round", 1), "actor": "system",
                     "name": ally["name"],
-                    "text": f"tar {f['amount']} {f['status']}-skada",
+                    "text": f"takes {f['amount']} {f['status']} damage → **{ally['name']} {ally['hp']}/{ally.get('max_hp', '?')} HP**",
                 })
             elif f["type"] == "status_end":
                 combat.setdefault("log", []).append({
@@ -498,7 +498,7 @@ def _tick_all_statuses(state: dict, combat: dict):
             ally["alive"] = False
             combat.setdefault("log", []).append({
                 "round": combat.get("round", 1), "actor": "system",
-                "name": ally["name"], "text": "faller",
+                "name": ally["name"], "text": "falls",
             })
 
 
@@ -561,8 +561,8 @@ def player_attack(state: dict, target_id: int, attack_roll: int, damage_notation
 
         combat.setdefault("log", []).append({
             "round": combat.get("round", 1), "actor": "player",
-            "name": state.get("character", {}).get("name", "Spelaren"),
-            "text": f"träffar {enemy['name']} — {dmg} skada (AC {ac}, slag {attack_roll})",
+            "name": state.get("character", {}).get("name", "Player"),
+            "text": f"hits {enemy['name']} — {dmg} damage (AC {ac}, roll {attack_roll}) → **{enemy['name']} {enemy['hp']}/{enemy.get('max_hp', '?')} HP**",
         })
 
         if enemy["hp"] <= 0:
@@ -570,14 +570,14 @@ def player_attack(state: dict, target_id: int, attack_roll: int, damage_notation
             result["killed"] = True
             combat.setdefault("log", []).append({
                 "round": combat.get("round", 1), "actor": "system",
-                "name": enemy["name"], "text": "faller",
+                "name": enemy["name"], "text": "falls",
             })
             logger.info("💀 %s defeated", enemy["name"])
     else:
         combat.setdefault("log", []).append({
             "round": combat.get("round", 1), "actor": "player",
-            "name": state.get("character", {}).get("name", "Spelaren"),
-            "text": f"missar {enemy['name']} (slag {attack_roll} mot AC {ac})",
+            "name": state.get("character", {}).get("name", "Player"),
+            "text": f"misses {enemy['name']} (roll {attack_roll} vs AC {ac})",
         })
 
     # Förbruka action
@@ -637,8 +637,8 @@ def player_cast_spell(state: dict, target_id: int | None, spell_name: str,
 
     combat.setdefault("log", []).append({
         "round": combat.get("round", 1), "actor": "player",
-        "name": char.get("name", "Spelaren"),
-        "text": f"kastar {spell_name}",
+        "name": char.get("name", "Player"),
+        "text": f"casts {spell_name}",
     })
 
     _check_combat_end(state, combat)
@@ -657,7 +657,7 @@ def player_use_bonus_action(state: dict, action_name: str) -> dict:
     combat["player_actions"] = pa
     combat.setdefault("log", []).append({
         "round": combat.get("round", 1), "actor": "player",
-        "name": state.get("character", {}).get("name", "Spelaren"),
+        "name": state.get("character", {}).get("name", "Player"),
         "text": f"bonus action: {action_name}",
     })
     return {"success": True, "action": action_name}
@@ -678,14 +678,14 @@ def enemy_turn(state: dict, enemy: dict) -> dict:
 
     char = state.get("character", {})
     player_ac = int(char.get("ac", 10))
-    player_name = char.get("name", "Spelaren")
+    player_name = char.get("name", "Player")
     results = []
 
     # Stun-check: hoppa över tur
     if is_stunned(enemy):
         combat.setdefault("log", []).append({
             "round": combat.get("round", 1), "actor": "enemy",
-            "name": enemy["name"], "text": "är bedövad och kan inte agera",
+            "name": enemy["name"], "text": "is stunned and cannot act",
         })
         return {"actions": [], "stunned": True}
 
@@ -720,7 +720,7 @@ def enemy_turn(state: dict, enemy: dict) -> dict:
             combat.setdefault("log", []).append({
                 "round": combat.get("round", 1), "actor": "enemy",
                 "name": enemy["name"],
-                "text": f"missar {player_name} (nat 1!)",
+                "text": f"misses {player_name} (natural 1!)",
             })
         elif hit:
             dmg_notation = enemy.get("damage_dice", "1d6+1")
@@ -743,14 +743,14 @@ def enemy_turn(state: dict, enemy: dict) -> dict:
             combat.setdefault("log", []).append({
                 "round": combat.get("round", 1), "actor": "enemy",
                 "name": enemy["name"],
-                "text": f"träffar {player_name} — {dmg} skada{' (KRITISK!)' if crit else ''} (slag {total} mot AC {player_ac})",
+                "text": f"hits {player_name} — {dmg} damage{' (CRITICAL!)' if crit else ''} (roll {total} vs AC {player_ac}) → **{player_name} {hp['current']}/{hp['max']} HP**",
             })
             logger.info("⚔️ %s → %s: %d damage (AC %d)", enemy["name"], player_name, dmg, player_ac)
         else:
             combat.setdefault("log", []).append({
                 "round": combat.get("round", 1), "actor": "enemy",
                 "name": enemy["name"],
-                "text": f"missar {player_name} (slag {total} mot AC {player_ac})",
+                "text": f"misses {player_name} (roll {total} vs AC {player_ac})",
             })
 
         results.append(action_result)
@@ -780,7 +780,7 @@ def ally_turn(state: dict, ally: dict) -> dict:
     if is_stunned(ally):
         combat.setdefault("log", []).append({
             "round": combat.get("round", 1), "actor": "ally",
-            "name": ally["name"], "text": "är bedövad och kan inte agera",
+            "name": ally["name"], "text": "is stunned and cannot act",
         })
         return {"actions": [], "stunned": True}
 
@@ -818,7 +818,7 @@ def ally_turn(state: dict, ally: dict) -> dict:
             combat.setdefault("log", []).append({
                 "round": combat.get("round", 1), "actor": "ally",
                 "name": ally["name"],
-                "text": f"missar {target['name']} (nat 1!)",
+                "text": f"misses {target['name']} (natural 1!)",
             })
         elif hit:
             dmg_notation = ally.get("damage_dice", "1d6+1")
@@ -834,20 +834,20 @@ def ally_turn(state: dict, ally: dict) -> dict:
             combat.setdefault("log", []).append({
                 "round": combat.get("round", 1), "actor": "ally",
                 "name": ally["name"],
-                "text": f"träffar {target['name']} — {dmg} skada{' (KRITISK!)' if crit else ''} (slag {total} mot AC {ac})",
+                "text": f"hits {target['name']} — {dmg} damage{' (CRITICAL!)' if crit else ''} (roll {total} vs AC {ac}) → **{target['name']} {target['hp']}/{target.get('max_hp', '?')} HP**",
             })
             logger.info("🤝 %s → %s: %d damage (AC %d)", ally["name"], target["name"], dmg, ac)
             if target["hp"] <= 0:
                 target["alive"] = False
                 combat.setdefault("log", []).append({
                     "round": combat.get("round", 1), "actor": "system",
-                    "name": target["name"], "text": "faller",
+                    "name": target["name"], "text": "falls",
                 })
         else:
             combat.setdefault("log", []).append({
                 "round": combat.get("round", 1), "actor": "ally",
                 "name": ally["name"],
-                "text": f"missar {target['name']} (slag {total} mot AC {ac})",
+                "text": f"misses {target['name']} (roll {total} vs AC {ac})",
             })
 
         results.append(action_result)
@@ -902,7 +902,7 @@ def attempt_flee(state: dict, dex_check: int) -> dict:
     else:
         combat.setdefault("log", []).append({
             "round": combat.get("round", 1), "actor": "player",
-            "name": state.get("character", {}).get("name", "Spelaren"),
+            "name": state.get("character", {}).get("name", "Player"),
             "text": f"försöker fly men misslyckas (slag {dex_check} mot DC {dc})",
         })
         # Fienderna får en extra attack (opportunity)
@@ -942,7 +942,7 @@ def _check_combat_end(state: dict, combat: dict):
         return
     enemies = combat.get("enemies", [])
     if enemies and all(not e.get("alive", True) for e in enemies):
-        end_combat(state, "alla fiender besegrade")
+        end_combat(state, "all enemies defeated")
 
 
 # ═══════════════════════════════════════

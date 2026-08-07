@@ -70,7 +70,7 @@ def llm_mocks(monkeypatch):
         return None
 
     async def no_memory(*a, **k):
-        return ""
+        return {"text": "", "facts_sent": 0, "rag_sent": 0, "timing_s": 0.0}
 
     monkeypatch.setattr(main, "_call_llm_with_reasoning", fake_dm)
     monkeypatch.setattr(main, "guardian_check_roll", noop)

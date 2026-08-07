@@ -570,7 +570,7 @@
   }
 
 </style>
-<link rel="stylesheet" href="snes.css?v=32">
+<link rel="stylesheet" href="snes.css?v=34">
 <style>
 /* ═══════════ MJUKA UPP — Admin (2026-08-05) — EFTER snes.css ═══════════ */
 .top-btn, .back-btn, .cu-btn, .del-btn, .cap-btn, .bc-btn{ border-radius: 8px !important; box-shadow: 0 2px 12px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; }
@@ -616,7 +616,7 @@
 
 <script src="sfx.js?v=20260802a"></script>
 <script src="api.js?v=20260804c"></script>
-<script src="i18n.js?v=20260802b"></script>
+<script src="i18n.js?v=20260807a"></script>
 <script>
 // Auth guard
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -782,7 +782,7 @@ function rowActions(u) {
     <span class="act-group">
       <button class="act-btn gold" data-u="${u.username}" onclick="grantTier('${u.username}', 'support')" title="Grant Support (30 days)">🔹 Support</button>
       <button class="act-btn gold" data-u="${u.username}" onclick="grantTier('${u.username}', 'patron')" title="Grant Patron (30 days)">⚔ Patron</button>
-      <button class="act-btn ${isAdmin ? 'danger' : ''}" data-u="${u.username}" onclick="setRole('${u.username}', '${isAdmin ? 'player' : 'admin'}')">${isAdmin ? '⬇ Demote' : '👑 Promote'}</button>
+      <button class="act-btn ${isAdmin ? 'danger' : ''}" data-u="${u.username}" onclick="setRole('${u.username}', '${isAdmin ? 'player' : 'admin'}')" title="${isAdmin ? 'Remove admin role' : 'Grant admin role (all models, no turn cap)'}">${isAdmin ? '⬇ Demote' : '👑 Admin'}</button>
     </span>
   </span>`;
 }
@@ -1955,7 +1955,12 @@ function renderDetail(container, data) {
   const tierNames = { tier1: '🔹 Support', tier2: '⚔ Patron', lifetime: '♾️ Lifetime' };
   html += '<span>💳 Membership: <b style="color:' + (isPremium ? 'var(--gold-bright);font-weight:700' : 'var(--bone);font-weight:400') + '">' + (isPremium ? (tierNames[tier] || '👑 ' + tier) + (data.subscription_until ? ' until ' + fmtDate(data.subscription_until) : '') : 'Free') + '</b></span>';
   html += '<span>Turn bonus: <b style="color:var(--term-amber);font-weight:400">' + (data.turn_bonus || 0) + '</b></span>';
-  html += '<span>Promo (signup): <b style="color:var(--term-green);font-weight:400">' + (data.promo_bonus || 0) + '</b></span>';
+  const promo = data.promo_bonus || 0;
+  if (promo > 0) {
+    html += '<span style="background:rgba(46,204,113,.14);border:1px solid rgba(46,204,113,.5);border-radius:5px;padding:.15rem .6rem;color:var(--term-green);font-weight:600">🎁 Signup promo: <b style="font-weight:800">' + promo + '</b> turns</span>';
+  } else {
+    html += '<span>Promo (signup): <b style="color:var(--term-green);font-weight:400">' + promo + '</b></span>';
+  }
   html += '<span>💰 Revenue: <b style="color:var(--gold-bright);font-weight:400">' + fmtSek(data.revenue) + '</b></span>';
   const at = data.tts_usage || {};
   if (at.calls) {

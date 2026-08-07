@@ -95,6 +95,15 @@ MODELS: dict[str, ModelConfig] = {
         api_key_env="STEPFUN_API_KEY",
         supports_vision=True,
     ),
+    "step-3.5-flash-2603": ModelConfig(
+        model_id="step-3.5-flash-2603",
+        display_name="Step 3.5 Flash 2603 (öppen, snabb)",
+        provider="stepfun",
+        api_model="step-3.5-flash-2603",
+        base_url=os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.ai/step_plan/v1"),
+        api_key_env="STEPFUN_API_KEY",
+        supports_vision=True,
+    ),
 
     # ── MiMo (Xiaomi) ──
     "mimo-v2.5": ModelConfig(

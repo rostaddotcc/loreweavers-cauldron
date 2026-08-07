@@ -238,7 +238,9 @@ def test_webhook_checkout_patron500_grants_access(client):
                     headers={"stripe-signature": _sign(body)})
     assert r.status_code == 200
     u = main.load_users()["alice"]
-    assert u["turn_bonus"] == 500  # +500 turns
+    assert u["turn_bonus"] == 0  # Patron ger INGEN permanent +500 längre
+    assert u["turn_cap"] == 100  # 100 turns/dag (Patron-cap)
+    assert u["cap_until"]  # 30-dagars cap-fönster satt
     assert u["features"]["export"] is True
     assert u["features"]["wan1080"] is True
     assert u["features"]["all_models"] is True
@@ -249,7 +251,7 @@ def test_webhook_checkout_patron500_grants_access(client):
     expected = (datetime.now(timezone.utc).date() + timedelta(days=30)).isoformat()
     assert u["features_until"] == expected
     assert u["stripe_customer_id"] == "cus_123"
-    assert u["turn_cap"] == 50  # 50/dag — INTE oändligt
+    assert u["turn_cap"] == 100  # 100/dag — Patron-cap (inte oändligt, inte 50)
     # Ledger-rad + chattlogg
     ledger = json.loads(main._LEDGER_FILE.read_text())
     assert any(e["type"] == "stripe:patron500" and e["user"] == "alice" for e in ledger)

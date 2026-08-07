@@ -7,10 +7,10 @@
 
 /* ── PALETT ── */
 :root{
-  --ink: #0b0812;
-  --stone: #161020;
-  --stone-2: #1d1529;
-  --stone-3: #241a33;
+  --ink: #1a1426;
+  --stone: #271d33;
+  --stone-2: #322541;
+  --stone-3: #3d2e4f;
   --edge: #463a60;
   --edge-hi: #5a4a7a;
   --bone: #d9c9a6;
@@ -89,18 +89,15 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
   background: var(--ink) !important;
 }/* Ta bort alla radial-gradient bakgrunder */body[style], .app, .gate, .layout{
   background-image: none !important;
-}/* ── 3. SCANLINES + CRT ── */body::before{
+}/* Subtila CRT-scanlines (2026-08-07) — 0.06-opacity, bara textur, mörknar knappt */body::before{
   content: ''; position: fixed; inset: 0; z-index: 999; pointer-events: none;
   background: repeating-linear-gradient(
     0deg,
-    rgba(0,0,0,.18) 0px,
-    rgba(0,0,0,.18) 1px,
+    rgba(0,0,0,.06) 0px,
+    rgba(0,0,0,.06) 1px,
     transparent 1px,
     transparent 3px
   );
-}body::after{
-  content: ''; position: fixed; inset: 0; z-index: 998; pointer-events: none;
-  background: radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,.5) 100%);
 }/* ── 4. PANELER — terminal-fönster ── */.panel, .panel-box, .scroll-box, .gate-frame, .hoard, .modal-box,
 .continue-panel, .path, .arch, .roll-request{
   background: var(--stone) !important;
@@ -320,7 +317,7 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
 }#dm-status.show #thought-text{
   animation: blink-cursor 1.2s steps(1) infinite;
 }
-@keyframes blink-cursor { 0%,49% { opacity: 1; } 50%,100% { opacity: .3; } }/* ── 22. FOG / VIGNETTE / EMBERS ── */.fog{ display: none !important; }.vignette{ box-shadow: inset 0 0 120px 40px rgba(0,0,0,.7) !important; }#embers{ opacity: .4; }/* ── 23. DROPZONE / FILER ── */.dropzone{
+@keyframes blink-cursor { 0%,49% { opacity: 1; } 50%,100% { opacity: .3; } }/* ── 22. FOG / VIGNETTE / EMBERS ── */.fog{ display: none !important; }.vignette{ box-shadow: inset 0 0 120px 40px rgba(0,0,0,.25) !important; }#embers{ opacity: .4; }/* ── 23. DROPZONE / FILER ── */.dropzone{
   border: 1px dashed var(--edge) !important;
   box-shadow: none !important;
   transition: none !important;
@@ -2599,4 +2596,38 @@ body.cli-chat .topbar{
 /* Body-bakgrunden: terminalen är slätt svart — inga radial-vinjetter */
 body.cli-chat{
   background: var(--ink) !important;
+}
+
+/* ═══════════ §36 v37 — CLI-BUSY: laddningen FLYTTAS IN I INPUT-RADEN (2026-08-07) ═══════════
+   Medan DM/Lorekeeper jobbar (body.cli-chat-busy, satt av _cliSetBusy i
+   chat.html) blir själva input-raden statusraden: .cli-prompt byts mot
+   scribe-loadern (🪶 ❯ <logg> ▌ + progressbar) och textarean låses/döljs.
+   Status-boxarna .dm-status/.guardian-status döljs — MEN bara i CLI-läge:
+   varje regel kräver body.cli-chat så bubble-läget är 100% orört. */
+body.cli-chat.cli-chat-busy .dm-status,
+body.cli-chat.cli-chat-busy .guardian-status{
+  display: none !important;
+}
+/* Raden blir laddningsraden: textarea + egna blinkande ▌ göms, loadern
+   (inuti .cli-prompt) tar över hela bredden. */
+body.cli-chat.cli-chat-busy .input-row .cli-cursor,
+body.cli-chat.cli-chat-busy .input-row textarea{
+  display: none !important;
+}
+body.cli-chat.cli-chat-busy .input-row{
+  align-items: center;
+}
+body.cli-chat.cli-chat-busy .input-row .cli-prompt{
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: stretch;
+  white-space: normal;
+  margin-top: 0;
+}
+body.cli-chat.cli-chat-busy .input-row .scribe-loader{
+  flex: 1;
+  max-width: none;
+  padding: .15rem 0 .35rem;
+  gap: .35rem;
 }

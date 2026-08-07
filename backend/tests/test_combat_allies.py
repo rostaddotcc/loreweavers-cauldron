@@ -173,7 +173,7 @@ def test_ally_turn_deals_damage_and_logs(monkeypatch):
     ally_log = [e for e in state["world"]["combat"]["log"] if e["actor"] == "ally"]
     assert ally_log, "ally-attack ska loggas med actor 'ally'"
     assert "Goblin" in ally_log[-1]["text"]
-    assert "6 skada" in ally_log[-1]["text"]
+    assert "6 damage" in ally_log[-1]["text"]
     assert ally_log[-1]["name"] == "Mimmrick"
 
 
@@ -189,7 +189,7 @@ def test_ally_turn_miss_logs_ally_entry(monkeypatch):
 
     assert result["actions"][0]["hit"] is False
     ally_log = [e for e in state["world"]["combat"]["log"] if e["actor"] == "ally"]
-    assert ally_log and "missar" in ally_log[-1]["text"]
+    assert ally_log and "misses" in ally_log[-1]["text"]
 
 
 def test_ally_turn_no_enemies_no_crash():
@@ -275,7 +275,7 @@ def test_apply_mechanics_ally_attacks_reduces_enemy_hp_and_logs():
     assert ally_log, "ally-attack ska loggas med actor 'ally'"
     entry = ally_log[-1]
     assert entry["name"] == "Mimmrick"
-    assert "Goblin" in entry["text"] and "5 skada" in entry["text"]
+    assert "Goblin" in entry["text"] and "5 damage" in entry["text"]
     assert any(e["type"] == "combat_dmg" and e["value"] == "Goblin" for e in effects)
 
 
@@ -294,7 +294,7 @@ def test_apply_mechanics_ally_attack_miss_logs():
 
     assert enemy["hp"] == hp_before  # ingen skada på miss
     ally_log = [e for e in c["log"] if e["actor"] == "ally"]
-    assert ally_log and "missar" in ally_log[-1]["text"]
+    assert ally_log and "misses" in ally_log[-1]["text"]
 
 
 def test_apply_mechanics_ally_attacks_ignored_without_enemy_match():
@@ -330,7 +330,7 @@ def test_apply_mechanics_ally_death_sets_alive_false():
     assert ally["alive"] is False
     assert any(e["type"] == "ally_död" and e["value"] == "Mimmrick" for e in effects)
     # Döden ska synas i stridsloggen
-    assert any(e["actor"] == "system" and "Mimmrick" in e["text"] and "faller" in e["text"] for e in c["log"])
+    assert any(e["actor"] == "system" and "Mimmrick" in e["text"] and "falls" in e["text"] for e in c["log"])
 
 
 def test_apply_mechanics_ally_damage_reduces_hp():
@@ -418,3 +418,60 @@ def test_combat_tag_includes_allies():
     assert tag.startswith("[COMBAT:")
     assert "allies" in tag
     assert "Mimmrick" in tag
+
+
+# ── En [COMBAT:]-tagg per meddelande (dedupe-säkring) ──────────────────
+
+def test_guardian_message_single_combat_tag_at_end():
+    r"""Duplicerad [COMBAT:]-tagg (guardian-format + dirty-fallback) → EXAKT
+    en tagg, allra sist (frontend-regexen /\[COMBAT:[^\]]*\]\s*$/ strippar
+    bara den sista — den första läcker annars ut i chatten)."""
+    import main  # noqa: PLC0415
+
+    cdata = {
+        "active": True, "round": 1, "phase": "awaiting_initiative",
+        "enemies": [{"id": 0, "name": "Goblin", "hp": 7}],
+        "log": [], "started_turn": 8, "ended_turn": None,
+        "player_hp": {"current": 6, "max": 12},  # guardian-formatet
+    }
+    tag_guardian = guardian._combat_tag(cdata)
+    tag_fallback = combat.combat_tag({k: v for k, v in cdata.items() if k != "player_hp"})
+
+    # Exakt den duplicering som syntes i duncan-transkriptet (session-001 rad 24):
+    # guardian-taggen (med player_hp) + dirty-fallbacket (utan) efter varandra.
+    msg = (
+        "🦉 **Lorekeeper** · Turn 8\n"
+        "💔 **Goblin** takes 3 damage\n"
+        + tag_guardian + "\n" + tag_fallback
+    )
+    assert msg.count("[COMBAT:") == 2  # dupliceringen reproducerad
+
+    out = main._ensure_single_combat_tag(msg)
+    assert out.count("[COMBAT:") == 1, "Exakt EN [COMBAT:]-tagg ska finnas kvar"
+    assert out.endswith("]"), "Taggen ska vara allra sist i meddelandet"
+    assert "player_hp" in out, "Den rikare payloaden (med player_hp) ska behållas"
+    # Textinnehållet finns kvar — bara taggen är normaliserad
+    assert "Lorekeeper" in out and "takes 3 damage" in out
+
+
+def test_combat_tag_moved_to_end_when_mid_message():
+    """En [COMBAT:]-tagg mitt i meddelandet flyttas till slutet (inte dubblas)."""
+    import main  # noqa: PLC0415
+
+    cdata = {"active": True, "round": 1, "enemies": [{"name": "Goblin", "hp": 7}]}
+    tag = combat.combat_tag(cdata)
+
+    msg = "🦉 **Lorekeeper**\n" + tag + "\nMer text efter taggen"
+    out = main._ensure_single_combat_tag(msg)
+    assert out.count("[COMBAT:") == 1
+    assert out.endswith("]")
+    body, _, _ = out.rpartition("[COMBAT:")
+    assert "Mer text efter taggen" in body
+
+
+def test_no_combat_tag_message_unchanged():
+    """Meddelanden utan [COMBAT:]-tagg påverkas inte av dedupe-säkringen."""
+    import main  # noqa: PLC0415
+
+    msg = "🦉 **Lorekeeper**\nGoblin faller!"
+    assert main._ensure_single_combat_tag(msg) == msg

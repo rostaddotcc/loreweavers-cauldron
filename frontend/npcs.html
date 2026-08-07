@@ -71,7 +71,7 @@
 .av-btn:hover, .talk-btn:hover{ transform: translateY(-1px) !important; box-shadow: 0 4px 16px -6px rgba(0,0,0,.55) !important; }
 
 </style>
-<link rel="stylesheet" href="snes.css?v=32">
+<link rel="stylesheet" href="snes.css?v=34">
 <style>
 /* ═══════════ MJUKA UPP — Codex NPC-hall (2026-08-05) — måste ligga EFTER snes.css ═══════════ */
 .top-btn{ border-radius: 8px !important; box-shadow: 0 2px 12px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; }
@@ -127,14 +127,13 @@
       <p>Choose a person from the Hall of Memories…</p>
     </div>
   </main>
-  <button class="d-back" id="d-back" onclick="closeDossierMobile()" aria-label="Back to hall">← Hall</button>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script src="sfx.js?v=20260806a"></script>
 <script src="api.js?v=20260806c"></script>
-<script src="i18n.js?v=20260806b"></script>
+<script src="i18n.js?v=20260807a"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -243,6 +242,19 @@ window.addEventListener('hashchange', () => {
   const wanted = h.startsWith('npc:') ? h.slice(4).toLowerCase() : '';
   const idx = wanted ? NPCS.findIndex(n => (n.name || '').toLowerCase() === wanted) : -1;
   if (idx >= 0) selectNpc(idx);
+});
+
+// Codex-förälder (chat.html): NPC-fliken klickad IGEN utan hash-öppning →
+// stäng dossiern och visa listan. Ersätter den gamla "← Hall"-knappen.
+window.addEventListener('message', (e) => {
+  if (e && e.data && e.data.type === 'codex-npc-reset') {
+    closeDossierMobile();
+    selectedId = null;
+    renderList();
+    // Scrolla listan till toppen så man "landar" i hallen, inte i kanten
+    const listEl = document.getElementById('npc-list');
+    if (listEl) listEl.scrollTop = 0;
+  }
 });
 
 function showNoCampaign(msg){

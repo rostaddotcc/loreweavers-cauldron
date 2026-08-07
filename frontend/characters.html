@@ -96,7 +96,7 @@
   }
   @media(max-width:400px){.pv-stats{grid-template-columns:repeat(2,1fr)}}
 </style>
-<link rel="stylesheet" href="snes.css?v=32">
+<link rel="stylesheet" href="snes.css?v=34">
 <script src="sprites.js?v=20260806b"></script>
 <script src="fonts.js?v=20260806b"></script>
 <script src="themes.js?v=20260806b"></script>
@@ -129,6 +129,7 @@
         <option value="qwen3.6-flash">qwen3.6-flash</option>
         <option value="deepseek-v4-flash-0731">deepseek-v4-flash-0731</option>
         <option value="step-3.7-flash" selected>step-3.7-flash</option>
+        <option value="step-3.5-flash-2603">step-3.5-flash-2603</option>
         <option value="ollama:heretic">ollama:heretic</option>
       </select>
       <span style="font-size:.78rem;color:var(--bone-dim)">🌐</span>
@@ -199,7 +200,7 @@ if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 </script>
 <script src="api.js?v=20260804c"></script>
 <script src="modal.js?v=20260802a"></script>
-<script src="i18n.js?v=20260806a"></script>
+<script src="i18n.js?v=20260807a"></script>
 <script>
 // ═══════════════════════════════════════
 // THE FORGE — fristående karaktärsgenerering + valv
@@ -207,7 +208,7 @@ if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 
 // Modellväljare: icke-admin begränsas till spelarmodeller; free/tier1 låses
 // till step-3.7-flash (premium-modeller gråas ut + 🔒 — backend klämmer ändå).
-const PLAYER_CHAR_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-3.7-flash', 'ollama:heretic'];
+const PLAYER_CHAR_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-3.7-flash', 'step-3.5-flash-2603', 'ollama:heretic'];
 const PREMIUM_CHAR_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'ollama:heretic'];
 let _forgeTier = 'free';  // free | tier1 | tier2 | lifetime
 API.me().then(u => {

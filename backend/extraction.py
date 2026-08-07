@@ -112,6 +112,13 @@ class Fact(BaseModel):
         description="Aktuell relevans — sänks av kompakteringspasset för "
                     "irrelevanta/glömda fakta (0.0–1.0)",
     )
+    archived: bool = Field(
+        default=False,
+        description="Arkiverad — osynlig för get_relevant_facts och ranking, "
+                    "men ligger kvar i facts.json (raderas ALDRIG). Sätts av "
+                    "archive_old() för gamla lågkonfidensfakta; återomnämnande "
+                    "väcker faktat igen (add_facts).",
+    )
 
     @field_validator("category", mode="before")
     @classmethod
@@ -670,6 +677,13 @@ class FactRegister:
                 matched_existing.mentions += 1
                 if new_fact.source_turn > matched_existing.last_seen_turn:
                     matched_existing.last_seen_turn = new_fact.source_turn
+                if matched_existing.archived:
+                    # Återomnämnd arkiverad fakta → väck den (fortfarande relevant)
+                    matched_existing.archived = False
+                    logger.info(
+                        "🗄️ Revived archived fact (re-mentioned): '%s'",
+                        matched_existing.text[:60],
+                    )
                 logger.debug(
                     "Faktum omnämnt igen (mentions=%d): '%s'",
                     matched_existing.mentions,
@@ -697,8 +711,11 @@ class FactRegister:
     # ── Frågor ──────────────────────────
 
     def _active_facts(self) -> list[Fact]:
-        """Alla fakta som inte är ersatta."""
-        return [f for f in self._facts if f.superseded_by is None]
+        """Alla fakta som varken är ersatta eller arkiverade."""
+        return [
+            f for f in self._facts
+            if f.superseded_by is None and not f.archived
+        ]
 
     def get_relevant_facts(self, query: str, limit: int = 10) -> list[Fact]:
         """
@@ -774,7 +791,7 @@ class FactRegister:
         """
         changed = 0
         for f in self._facts:
-            if f.superseded_by is not None:
+            if f.superseded_by is not None or f.archived:
                 continue
             if f.id in low_relevance_ids and f.relevance > 0.2:
                 f.relevance = 0.2
@@ -783,6 +800,50 @@ class FactRegister:
         if changed:
             self.save()
         return changed
+
+    def archive_old(
+        self,
+        max_age_turns: int = 40,
+        min_confidence: float = 0.7,
+        min_turn: int | None = None,
+    ) -> int:
+        """
+        Arkiveringspass: gör gamla lågkonfidensfakta osynliga för ranking.
+
+        Fakta som är ÄLDRE än max_age_turns turns (räknat bakåt från
+        min_turn — default: senaste kända source_turn i registret) OCH har
+        låg konfidens (< min_confidence) — eller redan nedrankats av
+        kompakteringspasset (relevance ≤ 0.2) — markeras archived=True.
+
+        Arkiverade fakta slutar konkurrera i keyword-scoring och returneras
+        aldrig av get_relevant_facts, men raderas ALDRIG: allt ligger kvar i
+        facts.json (audit trail). Superseded-fakta är redan osynliga och rörs
+        inte här. Ett återomnämnande väcker en arkiverad fakta (se add_facts).
+
+        Billigt: ingen LLM — bara en O(n)-iteration + save() om något ändrats.
+        Anropas varje turn från _post_turn_tasks_locked (main.py).
+
+        Returns:
+            Antal arkiverade fakta.
+        """
+        if min_turn is None:
+            min_turn = max((f.source_turn for f in self._facts), default=0)
+        threshold = min_turn - max_age_turns
+        archived = 0
+        for f in self._facts:
+            if f.archived or f.superseded_by is not None:
+                continue
+            low_relevance = f.confidence < min_confidence or f.relevance <= 0.2
+            if f.source_turn < threshold and low_relevance:
+                f.archived = True
+                archived += 1
+                logger.info(
+                    "🗄️ Archived fact (turn %d, conf %.2f, rel %.2f): '%s'",
+                    f.source_turn, f.confidence, f.relevance, f.text[:60],
+                )
+        if archived:
+            self.save()
+        return archived
 
     def get_facts_by_category(self, category: str) -> list[Fact]:
         """Hämta alla aktiva fakta i en given kategori."""
@@ -800,14 +861,15 @@ class FactRegister:
         return format_facts_block(facts)
 
     def stats(self) -> dict:
-        """Antal fakta per kategori (aktiva + totalt)."""
+        """Antal fakta per kategori (aktiva + totalt) samt arkiverade/ersatta."""
         active = self._active_facts()
         active_counts: Counter[str] = Counter(f.category for f in active)
         total_counts: Counter[str] = Counter(f.category for f in self._facts)
         return {
             "total": len(self._facts),
             "active": len(active),
-            "superseded": len(self._facts) - len(active),
+            "superseded": sum(1 for f in self._facts if f.superseded_by is not None),
+            "archived": sum(1 for f in self._facts if f.archived),
             "by_category_active": dict(active_counts),
             "by_category_total": dict(total_counts),
         }

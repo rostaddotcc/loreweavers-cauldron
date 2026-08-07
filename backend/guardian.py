@@ -1000,7 +1000,7 @@ def _normalize_item(raw: dict, lang: str = "sv") -> dict:
 def _init_turn_order(combat: dict, state: dict) -> None:
     """Bygg turn_order från enemies + allierade + spelaren. Anropas vid combat_start."""
     ch = state.get("character", {})
-    player_name = ch.get("name", "Spelaren")
+    player_name = ch.get("name", "Player")
     turn_order = [{"key": "player", "name": player_name, "initiative": 0, "acted": False}]
     for e in combat.get("enemies", []):
         if e.get("alive", True):
@@ -1074,11 +1074,60 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
     effects: list[dict] = []
     ch = state.setdefault("character", {})
 
+    # ── Chat-first strid: kodens tärningsrullning är auktoritativ ──
+    # När enemy_attacks finns och attackeraren matchar en levande fiende i
+    # striden rullar KODEN utfallet (d20 + attack_bonus mot AC + skade-tärning).
+    # DM-närrerade skadesiffror för samma attacker — både [SKADA:]-taggar
+    # (redan applicerade av main.py) och Guardian-extraherad "damage" — får
+    # INTE appliceras UTÖVER kodens skada (dubbel-skada, turn 140-buggen:
+    # 4+5 tagg/extraction + 2+4 kod = 15 istället för 6).
+    combat = state.get("world", {}).get("combat")
+    code_rolled_attacks = bool(
+        combat and combat.get("active")
+        and any(
+            isinstance(atk, dict)
+            and str(atk.get("attacker", "")).strip()
+            and any(
+                str(e.get("name", "")).lower() == str(atk.get("attacker", "")).strip().lower()
+                and e.get("alive", True)
+                for e in combat.get("enemies", [])
+            )
+            for atk in mech.get("enemy_attacks", [])
+        )
+    )
+    if code_rolled_attacks:
+        # [SKADA:]-taggarna applicerades redan i main.py — återställ dem:
+        # kodens rullning ERSÄTTER (adderar inte till) den narrerade skadan.
+        _refund = 0
+        for _t, _v in list(_skip_keys):
+            if _t == "skada":
+                try:
+                    _refund += int(_v)
+                except (TypeError, ValueError):
+                    pass
+        if _refund > 0:
+            _hp = ch.setdefault("hp", {"current": 1, "max": 1, "temp": 0})
+            _hp["current"] = min(_hp.get("max", 1), _hp.get("current", 1) + _refund)
+            logger.warning(
+                "🛡️ Code-rolled enemy attacks → refunding %d [SKADA:]-tag damage (code rolls are authoritative)",
+                _refund,
+            )
+        # Tag-beloppen får inte längre dämpa kodens skade-rullar (exakt-match)
+        _skip_keys = {k for k in _skip_keys if k[0] != "skada"}
+
     # ── Skada ──
     for dmg in mech.get("damage", []):
         target = dmg.get("target", "player")
         amount = max(0, int(dmg.get("amount", 0)))
         if amount <= 0:
+            continue
+        # Chat-first strid: DM-närrerad spelarskada som koden redan rullar
+        # (enemy_attacks) → hoppa över; kodens skada är auktoritativ.
+        if code_rolled_attacks and target == "player":
+            logger.info(
+                "🛡️ Guardian: skipping extracted player damage %s — code-rolled enemy attacks are authoritative this turn",
+                dmg.get("amount", 0),
+            )
             continue
         # P0-dedup: [SKADA:]-taggen applicerade redan samma skada
         if ("skada", str(dmg.get("amount", 0))) in _skip_keys:
@@ -1109,8 +1158,8 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 combat.setdefault("log", []).append({
                     "round": combat.get("round", 1),
                     "actor": "player",
-                    "name": ch.get("name", "Spelaren"),
-                    "text": f"träffar {enemy['name']} — {amount} skada ({dmg.get('type', 'okänd')})",
+                    "name": ch.get("name", "Player"),
+                    "text": f"hits {enemy['name']} — {amount} damage ({dmg.get('type', 'unknown')})",
                 })
                 effects.append({"type": "combat_dmg", "value": enemy["name"], "amount": amount})
                 logger.info("⚔️ Guardian: %s takes %d damage → %d/%d", enemy["name"], amount, enemy["hp"], enemy.get("max_hp", 0))
@@ -1119,7 +1168,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                     effects.append({"type": "enemy_död", "value": enemy["name"]})
                     logger.info("💀 %s has fallen in battle", enemy["name"])
             else:
-                _add_npc_note(state, target, f"Tog {amount} skada ({dmg.get('type', 'okänd')})")
+                _add_npc_note(state, target, f"Took {amount} damage ({dmg.get('type', 'unknown')})")
 
     # ── Läkning ──
     for heal in mech.get("healing", []):
@@ -1183,9 +1232,9 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             combat["ended_turn"] = state.get("meta", {}).get("turn_count", 0)
             combat.setdefault("log", []).append({
                 "round": combat.get("round", 1), "actor": "system", "name": "",
-                "text": "Alla fiender besegrade — striden är över",
+                "text": "All enemies defeated — the battle is over",
             })
-            effects.append({"type": "combat_end", "value": "alla besegrade"})
+            effects.append({"type": "combat_end", "value": "all defeated"})
             logger.info("🏁 Combat over — all enemies defeated")
 
     # ── XP ──
@@ -1829,16 +1878,16 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 if dmg > 0:
                     enemy["hp"] = max(0, enemy.get("hp", 0) - dmg)
                     crit_str = " 💥 KRITISK!" if atk.get("crit") else ""
-                    combat_log.append({"round": current_round, "actor": "player", "name": ch.get("name", "Spelaren"), "text": f"träffar {enemy['name']} — {dmg} skada ({atk.get('damage_type', 'okänd')}){crit_str}"})
+                    combat_log.append({"round": current_round, "actor": "player", "name": ch.get("name", "Player"), "text": f"hits {enemy['name']} — {dmg} damage ({atk.get('damage_type', 'unknown')}){crit_str} → **{enemy['name']} {enemy['hp']}/{enemy.get('max_hp', '?')} HP**"})
                     effects.append({"type": "combat_dmg", "value": enemy["name"], "amount": dmg})
                     logger.info("⚔️ Player attack: %s → %s, %d damage → HP %d/%d", ch.get("name"), enemy["name"], dmg, enemy["hp"], enemy.get("max_hp", 0))
                     if enemy["hp"] <= 0:
                         enemy["alive"] = False
-                        combat_log.append({"round": current_round, "actor": "system", "name": "", "text": f"{enemy['name']} faller!"})
+                        combat_log.append({"round": current_round, "actor": "system", "name": "", "text": f"{enemy['name']} falls!"})
                         effects.append({"type": "enemy_död", "value": enemy["name"]})
                         logger.info("💀 %s has fallen", enemy["name"])
             else:
-                combat_log.append({"round": current_round, "actor": "player", "name": ch.get("name", "Spelaren"), "text": f"missar {enemy['name']}"})
+                combat_log.append({"round": current_round, "actor": "player", "name": ch.get("name", "Player"), "text": f"misses {enemy['name']}"})
 
         # Allierades attacker → minska fiende-HP (samma mönster som spelarens;
         # allierade = vänliga NPC:er som DM lagt till via [ALLIERAD:]-taggen)
@@ -1856,17 +1905,17 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                     enemy["hp"] = max(0, enemy.get("hp", 0) - dmg)
                     crit_str = " 💥 KRITISK!" if atk.get("crit") else ""
                     roll_str = f" (slag {atk.get('roll', '?')})" if atk.get("roll") else ""
-                    combat_log.append({"round": current_round, "actor": "ally", "name": ally_name, "text": f"träffar {enemy['name']} — {dmg} skada ({atk.get('damage_type', 'okänd')}){crit_str}{roll_str}"})
+                    combat_log.append({"round": current_round, "actor": "ally", "name": ally_name, "text": f"hits {enemy['name']} — {dmg} damage ({atk.get('damage_type', 'unknown')}){crit_str}{roll_str} → **{enemy['name']} {enemy['hp']}/{enemy.get('max_hp', '?')} HP**"})
                     effects.append({"type": "combat_dmg", "value": enemy["name"], "amount": dmg})
                     logger.info("🤝 Ally attack: %s → %s, %d damage → HP %d/%d", ally_name, enemy["name"], dmg, enemy["hp"], enemy.get("max_hp", 0))
                     if enemy["hp"] <= 0:
                         enemy["alive"] = False
-                        combat_log.append({"round": current_round, "actor": "system", "name": "", "text": f"{enemy['name']} faller!"})
+                        combat_log.append({"round": current_round, "actor": "system", "name": "", "text": f"{enemy['name']} falls!"})
                         effects.append({"type": "enemy_död", "value": enemy["name"]})
                         logger.info("💀 %s has fallen", enemy["name"])
             else:
                 roll_str = f" (slag {atk.get('roll', '?')})" if atk.get("roll") else ""
-                combat_log.append({"round": current_round, "actor": "ally", "name": ally_name, "text": f"missar {enemy['name']}{roll_str}"})
+                combat_log.append({"round": current_round, "actor": "ally", "name": ally_name, "text": f"misses {enemy['name']}{roll_str}"})
 
         # Allierade tar skada → minska ally-HP; dödlig skada → alive=false
         for atk in mech.get("ally_damage", []):
@@ -1880,13 +1929,13 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             if amount <= 0:
                 continue
             ally["hp"] = max(0, ally.get("hp", 0) - amount)
-            attacker = str(atk.get("attacker", "")).strip() or "fienden"
-            combat_log.append({"round": current_round, "actor": "enemy", "name": attacker, "text": f"träffar {ally['name']} — {amount} skada ({atk.get('damage_type', 'okänd')})"})
+            attacker = str(atk.get("attacker", "")).strip() or "the enemy"
+            combat_log.append({"round": current_round, "actor": "enemy", "name": attacker, "text": f"hits {ally['name']} — {amount} damage ({atk.get('damage_type', 'unknown')}) → **{ally['name']} {ally['hp']}/{ally.get('max_hp', '?')} HP**"})
             effects.append({"type": "ally_dmg", "value": ally["name"], "amount": amount})
             logger.info("🤝 Ally damage: %s takes %d damage → HP %d/%d", ally["name"], amount, ally["hp"], ally.get("max_hp", 0))
             if ally["hp"] <= 0:
                 ally["alive"] = False
-                combat_log.append({"round": current_round, "actor": "system", "name": "", "text": f"{ally['name']} faller!"})
+                combat_log.append({"round": current_round, "actor": "system", "name": "", "text": f"{ally['name']} falls!"})
                 effects.append({"type": "ally_död", "value": ally["name"]})
                 logger.info("💀 %s has fallen", ally["name"])
 
@@ -1914,11 +1963,11 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 crit = d20 == 20
                 fumble = d20 == 1
                 if fumble:
-                    combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"missar dig (nat 1!)"})
+                    combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"misses you (natural 1!)"})
                     effects.append({"type": "enemy_miss", "value": attacker_name, "roll": total, "d20": d20, "bonus": attack_bonus})
                     continue
                 if total < player_ac and not crit:
-                    combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"missar dig (🎲 d20={d20}+{attack_bonus}={total} mot AC {player_ac})"})
+                    combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"misses you (🎲 d20={d20}+{attack_bonus}={total} vs AC {player_ac})"})
                     effects.append({"type": "enemy_miss", "value": attacker_name, "roll": total, "d20": d20, "bonus": attack_bonus})
                     continue
                 # Träff → rulla skadan (fiendens damage_dice, fallback 1d6+1)
@@ -1942,7 +1991,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 dmg_type = atk.get("damage_type") or enemy.get("damage_type", "okänd")
                 combat_log.append({
                     "round": current_round, "actor": "enemy", "name": attacker_name,
-                    "text": f"träffar dig — {dmg} skada ({dmg_type}){crit_str} (🎲 d20={d20}+{attack_bonus}={total} · {dmg_notation}: [{', '.join(str(x) for x in rolls)}]={dmg})",
+                    "text": f"hits you — {dmg} damage ({dmg_type}){crit_str} (🎲 d20={d20}+{attack_bonus}={total} · {dmg_notation}: [{', '.join(str(x) for x in rolls)}]={dmg}) → **{ch.get('name', 'Player')} {hp['current']}/{hp['max']} HP**",
                 })
                 effects.append({
                     "type": "enemy_hit", "value": attacker_name, "damage": dmg, "crit": crit,
@@ -1965,12 +2014,12 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                             dmg -= absorbed
                         hp["current"] = max(0, hp.get("current", 1) - dmg)
                         roll_str = f" (slag {atk.get('roll', '?')})" if atk.get("roll") else ""
-                        combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"träffar dig — {dmg} skada ({atk.get('damage_type', 'okänd')}){roll_str}"})
+                        combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"hits you — {dmg} damage ({atk.get('damage_type', 'unknown')}){roll_str} → **{ch.get('name', 'Player')} {hp['current']}/{hp['max']} HP**"})
                         effects.append({"type": "skada", "value": dmg})
                         logger.info("⚔️ Enemy attack (narrative): %s → the player, %d damage → HP %d/%d", attacker_name, dmg, hp["current"], hp["max"])
                 else:
                     roll_str = f" (slag {atk.get('roll', '?')})" if atk.get("roll") else ""
-                    combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"missar dig{roll_str}"})
+                    combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"misses you{roll_str}"})
 
         # Combat events → logga
         for event in mech.get("combat_events", []):
@@ -2005,8 +2054,8 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
         if all(not e.get("alive", True) for e in combat.get("enemies", [])) and combat.get("enemies"):
             combat["active"] = False
             combat["ended_turn"] = state.get("meta", {}).get("turn_count", 0)
-            combat_log.append({"round": current_round, "actor": "system", "name": "", "text": "Alla fiender besegrade — striden är över"})
-            effects.append({"type": "combat_end", "value": "alla besegrade"})
+            combat_log.append({"round": current_round, "actor": "system", "name": "", "text": "All enemies defeated — the battle is over"})
+            effects.append({"type": "combat_end", "value": "all defeated"})
             logger.info("🏁 Combat over — all enemies defeated")
         else:
             # State-snapshot efter turen: ALLA deltagare inkl. spelaren med
@@ -2016,14 +2065,14 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             ph = ch.get("hp", {})
             snapshot_parts.append(f"{ch.get('name', 'Spelaren')} {ph.get('current', '?')}/{ph.get('max', '?')} HP")
             for e in combat.get("enemies", []):
-                alive_mark = "" if e.get("alive", True) else " (död)"
+                alive_mark = "" if e.get("alive", True) else " (dead)"
                 snapshot_parts.append(f"{e.get('name', '?')} {e.get('hp', '?')}/{e.get('max_hp', '?')} HP{alive_mark}")
             for a in combat.get("allies", []):
-                alive_mark = "" if a.get("alive", True) else " (död)"
+                alive_mark = "" if a.get("alive", True) else " (dead)"
                 snapshot_parts.append(f"{a.get('name', '?')} {a.get('hp', '?')}/{a.get('max_hp', '?')} HP{alive_mark}")
             combat_log.append({
                 "round": current_round, "actor": "system", "name": "",
-                "text": "Efter turen: " + ", ".join(snapshot_parts),
+                "text": "After the turn: " + ", ".join(snapshot_parts),
                 "snapshot": True,
             })
 
@@ -2437,7 +2486,7 @@ def apply_enemy_actions(state: dict, actions: list[dict]) -> list[dict]:
                 combat.setdefault("log", []).append({
                     "round": combat.get("round", 1), "actor": "enemy",
                     "name": enemy["name"],
-                    "text": f"missar {player_name} (nat 1!)",
+                    "text": f"misses {player_name} (natural 1!)",
                 })
                 effects.append({"type": "enemy_miss", "value": enemy["name"], "roll": total, "d20": d20, "bonus": attack_bonus})
             elif hit:
@@ -2458,11 +2507,12 @@ def apply_enemy_actions(state: dict, actions: list[dict]) -> list[dict]:
                 hp["current"] = max(0, hp.get("current", 1) - dmg)
 
                 desc = action.get("description", "")
-                log_text = f"träffar {player_name} — {dmg} skada"
+                log_text = f"hits {player_name} — {dmg} damage"
                 if crit:
-                    log_text += " (KRITISK!)"
+                    log_text += " (CRITICAL!)"
                 if desc:
                     log_text += f" ({desc})"
+                log_text += f" → **{player_name} {hp['current']}/{hp['max']} HP**"
                 combat.setdefault("log", []).append({
                     "round": combat.get("round", 1), "actor": "enemy",
                     "name": enemy["name"], "text": log_text,
@@ -2478,15 +2528,15 @@ def apply_enemy_actions(state: dict, actions: list[dict]) -> list[dict]:
                 combat.setdefault("log", []).append({
                     "round": combat.get("round", 1), "actor": "enemy",
                     "name": enemy["name"],
-                    "text": f"missar {player_name} (slag {total} mot AC {player_ac})",
+                    "text": f"misses {player_name} (roll {total} vs AC {player_ac})",
                 })
                 effects.append({"type": "enemy_miss", "value": enemy["name"], "roll": total, "d20": d20, "bonus": attack_bonus})
 
     # Auto-avsluta om alla fiender döda/flydde
     if all(not e.get("alive", True) for e in combat.get("enemies", [])):
         from combat import end_combat
-        end_combat(state, "alla fiender besegrade eller flydde")
-        effects.append({"type": "combat_end", "value": "alla besegrade"})
+        end_combat(state, "all enemies defeated or fled")
+        effects.append({"type": "combat_end", "value": "all defeated"})
     else:
         # State-snapshot efter Battle AI-turen: ALLA deltagare inkl. spelaren
         # med nuvarande HP — så nästa tur kan Guardian jämföra och justera
@@ -2495,11 +2545,11 @@ def apply_enemy_actions(state: dict, actions: list[dict]) -> list[dict]:
         ph = char.get("hp", {})
         snapshot_parts.append(f"{player_name} {ph.get('current', '?')}/{ph.get('max', '?')} HP")
         for e in combat.get("enemies", []):
-            alive_mark = "" if e.get("alive", True) else " (död)"
+            alive_mark = "" if e.get("alive", True) else " (dead)"
             snapshot_parts.append(f"{e.get('name', '?')} {e.get('hp', '?')}/{e.get('max_hp', '?')} HP{alive_mark}")
         combat.setdefault("log", []).append({
             "round": combat.get("round", 1), "actor": "system", "name": "",
-            "text": "Efter turen: " + ", ".join(snapshot_parts),
+            "text": "After the turn: " + ", ".join(snapshot_parts),
             "snapshot": True,
         })
 
@@ -2551,7 +2601,7 @@ def format_guardian_summary(
             if en:
                 lines.append(f"💔 **{v} damage** → HP {hp.get('current', '?')}/{hp.get('max', '?')}")
             else:
-                lines.append(f"💔 **{v} skada** → HP {hp.get('current', '?')}/{hp.get('max', '?')}")
+                lines.append(f"💔 **{v} damage** → HP {hp.get('current', '?')}/{hp.get('max', '?')}")
         elif t == "hela":
             label = "Healing" if en else "Läkning"
             lines.append(f"💚 **{label}** → HP {hp.get('current', '?')}/{hp.get('max', '?')}")
@@ -2684,17 +2734,32 @@ def format_guardian_summary(
             dmg = e.get("damage", "?")
             crit = e.get("crit", False)
             roll = e.get("roll", "?")
+            d20 = e.get("d20")
+            bonus = e.get("bonus", 0)
+            dnot = e.get("damage_dice", "")
+            drolls = e.get("damage_rolls", [])
             crit_str = f" {'💥 CRIT!' if crit else ''}"
-            if en:
-                lines.append(f"🗡️ **{v}** hits you — **{dmg} damage**{crit_str} (roll {roll})")
+            if d20 is not None:
+                dice_str = f"(🎲 d20={d20}+{bonus}={roll}"
+                if drolls:
+                    dice_str += f" · {dnot}: [{', '.join(str(x) for x in drolls)}]={dmg})"
+                else:
+                    dice_str += ")"
             else:
-                lines.append(f"🗡️ **{v}** träffar dig — **{dmg} skada**{crit_str} (slag {roll})")
+                dice_str = f"(roll {roll})"
+            if en:
+                lines.append(f"🗡️ **{v}** hits you — **{dmg} damage**{crit_str} {dice_str}")
+            else:
+                lines.append(f"🗡️ **{v}** träffar dig — **{dmg} skada**{crit_str} {dice_str}")
         elif t == "enemy_miss":
             roll = e.get("roll", "?")
+            d20 = e.get("d20")
+            bonus = e.get("bonus", 0)
+            dice_str = f"(🎲 d20={d20}+{bonus}={roll})" if d20 is not None else f"(roll {roll})"
             if en:
-                lines.append(f"🛡️ **{v}** misses you (roll {roll})")
+                lines.append(f"🛡️ **{v}** misses you {dice_str}")
             else:
-                lines.append(f"🛡️ **{v}** missar dig (slag {roll})")
+                lines.append(f"🛡️ **{v}** missar dig {dice_str}")
         elif t == "enemy_fled":
             if en:
                 lines.append(f"🏃 **{v}** flees the battle!")

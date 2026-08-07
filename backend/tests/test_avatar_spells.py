@@ -40,10 +40,11 @@ def test_dm_avatar_prompt_has_no_skull_or_horns():
         assert "döskalle" not in p.lower()
 
 
-def test_dm_avatar_prompt_has_style_and_runes():
+def test_dm_avatar_prompt_has_style():
     p = main._build_dm_avatar_prompt(7)
-    assert main.STEP_IMAGE_STYLE.split(".")[0].strip() in p
-    assert "arcane runes" in p
+    # Fotorealistisk stil + anti-animation måste finnas med i prompten
+    assert "Photorealistic" in p
+    assert "never animated" in p
 
 
 def test_build_avatar_prompt_dm_uses_seeded_variation():
@@ -213,12 +214,54 @@ def test_apply_mechanics_npcs_near_ignores_unknown_names():
 
 # ── AI-avatar-prompter: realistiska, öppna, lore-aligned ──
 
-def test_avatar_style_is_realistic_and_open():
-    style = main.STEP_IMAGE_STYLE.lower()
-    assert "photorealistic" in style or "realistic" in style
-    assert "anime" not in style and "cartoon" not in style and "manga" not in style
-    # Får inte tvinga humanoid komposition
-    assert "head-and-shoulders" not in style
+def test_avatar_styles_are_realistic_and_never_animated():
+    """(2026-08-07) BÅDA stilsträngarna ska vara fotorealistiska och
+    explicit förbjuda animerad/illustrerad stil."""
+    for style in (main.STEP_PORTRAIT_STYLE, main.STEP_OPEN_STYLE):
+        low = style.lower()
+        assert "photorealistic" in low
+        assert "never animated" in low
+        assert "anime" not in low and "cartoon" not in low and "manga" not in low
+    # Porträttstilen kräver detaljerat ansikte + gear + bakgrund
+    assert "lifelike face" in main.STEP_PORTRAIT_STYLE.lower()
+    assert "gear" in main.STEP_PORTRAIT_STYLE.lower()
+    assert "background" in main.STEP_PORTRAIT_STYLE.lower()
+
+
+def test_player_avatar_prompt_uses_character_data_not_dm_lore():
+    """(2026-08-07) Spelaravataren byggs på backstory + equipment + senaste
+    loggpost — DM-lore (state['lore']) ska INTE vara med."""
+    state = {
+        "character": {
+            "name": "Kael", "race": "human", "class": "ranger",
+            "story": "Raised by outcasts on the cold northern roads.",
+        },
+        "inventory": [{"name": "Longbow"}, {"name": "Traveling cloak"}],
+        "lore": ["The obsidian talisman pulses with void-energy near the Lantern Court."],
+        "npcs": [],
+        "world": {"logbook": [
+            {"day": 1, "turn": 3, "text": "Kael tracked the wolves to their den."},
+            {"day": 2, "turn": 7, "text": "Kael crossed the river at dusk and lit a campfire."},
+        ]},
+    }
+    p = main._build_avatar_prompt(state, "player")
+    assert "Kael" in p
+    assert "Backstory:" in p and "Raised by outcasts" in p
+    assert "Equipment:" in p and "Longbow" in p
+    assert "Recent journal entry:" in p and "campfire" in p  # SENASTE posten
+    assert "talisman" not in p and "Lantern Court" not in p  # ingen DM-lore
+    assert "Photorealistic" in p and "never animated" in p
+
+
+def test_sheet_update_prompt_has_photorealistic_style():
+    """(2026-08-07) 'Update from sheet' föll tidigare på anime-default för
+    att prompten saknade stil — nu ska stilen alltid vara med."""
+    state = {
+        "character": {"name": "Kael", "race": "human", "class": "ranger"},
+        "inventory": [{"name": "Longbow"}],
+    }
+    p = main._build_sheet_update_prompt(state)
+    assert "Photorealistic" in p and "never animated" in p
 
 
 def test_build_avatar_prompt_npc_uses_role_and_notes():
@@ -240,13 +283,15 @@ def test_build_avatar_prompt_npc_fallback_is_neutral():
     assert "dark fantasy" not in p  # inte hårdkodat till fantasy-genre
 
 
-def test_dm_avatar_prompt_aligns_with_lore():
+def test_dm_avatar_prompt_ignores_campaign_lore():
+    """(2026-08-07) DM-avataren byggs ENDAST på arketyp/mood/palett —
+    kampanj-lore ska inte läcka in i avatar-prompten."""
     state = {"character": {}, "npcs": [], "lore": ["A signal pulses from the obsidian talisman near Veyl's Lantern Court."]}
     p = main._build_dm_avatar_prompt(7, state)
-    assert ("signal" in p or "talisman" in p or "Lantern" in p)  # lore-fragment med
     assert "Dungeon Master" in p
+    assert "talisman" not in p and "Lantern" not in p and "signal" not in p
     # Form-direktiv: arketypen får ALDRIG tvingas till human
-    assert "never force it into a human" in p
+    assert "never forced into a human" in p
 
 
 def test_npc_avatar_prompt_has_form_directive():

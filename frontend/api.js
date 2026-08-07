@@ -217,6 +217,12 @@ const API = (() => {
       return req('/api/models');
     },
 
+    // 🆓 OpenRouter free experiment-models (DM-gate "Experiment"-sektion)
+    async freeOpenRouter() {
+      if (MOCK) return [];
+      return req('/api/models/free-openrouter');
+    },
+
     // ── Campaign (multiple per user) ──
     async getCampaign() {
       if (MOCK) {

@@ -131,7 +131,8 @@ def test_patron_gives_30_day_window_with_qwen_tts(client):
     r = _webhook(client, "patron500", event_id="evt_p1")
     assert r.status_code == 200
     u = main.load_users()["alice"]
-    assert u["turn_bonus"] == 500
+    assert u["turn_cap"] == 100  # 100 turns/dag i 30 dagar (cap_until)
+    assert u["cap_until"] == _in_days(30)
     assert u["features_until"] == _in_days(30)
     assert main._tier_for("alice") == "tier2"
     # Patron → Qwen TTS tillgängligt (30 dagar)
@@ -152,8 +153,9 @@ def test_stack_patron_on_top_of_support(client):
     _webhook(client, "support300", event_id="evt_a")
     _webhook(client, "patron500", event_id="evt_b")
     u = main.load_users()["alice"]
-    assert u["turn_bonus"] == 800
-    assert u["features_until"] == _in_days(60)  # fönstret förlängs från nuvarande
+    assert u["turn_bonus"] == 300  # +300 (support, oförändrat)
+    assert u["turn_cap"] == 100  # Patron ger 100/dag; support rör inte cap:et
+    assert u["cap_until"] == _in_days(60)  # Patron-cap-fönstret förlängs
     assert main._tier_for("alice") == "tier2"  # Patron-förmånerna gäller
 
 

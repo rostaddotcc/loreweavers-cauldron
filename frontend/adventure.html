@@ -209,7 +209,7 @@
   .weaving-ad{display:none;text-align:center;padding:1.6rem 0 .4rem;position:relative}
   .weaving-ad.show{display:block;animation:rise .4s ease}
   .weaving-ad .wa-status{font-style:italic;color:var(--gold);font-size:1.02rem;margin-bottom:.7rem;text-shadow:0 0 12px rgba(232,198,90,.35);animation:w-blink 2s ease-in-out infinite}
-  .weaving-ad .wa-reasoning{max-height:200px;overflow-y:auto;text-align:left;background:linear-gradient(175deg,#1b1426,#110c1c 70%);border:1px solid rgba(201,162,39,.22);border-radius:18px;padding:.95rem 1.15rem 1.05rem;font-family:ui-monospace,'Cascadia Code','JetBrains Mono',Menlo,Consolas,monospace;font-size:.95rem;color:var(--bone);line-height:1.7;margin:.6rem auto 0;max-width:560px;box-shadow:0 10px 28px -14px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.05),0 0 26px -12px rgba(212,169,44,.28);transition:border-color .3s,box-shadow .3s;scrollbar-width:thin;scrollbar-color:rgba(201,162,39,.35) transparent}
+  .weaving-ad .wa-reasoning{max-height:440px;overflow-y:auto;text-align:left;background:linear-gradient(175deg,#1b1426,#110c1c 70%);border:1px solid rgba(201,162,39,.22);border-radius:18px;padding:1.05rem 1.3rem 1.15rem;font-family:ui-monospace,'Cascadia Code','JetBrains Mono',Menlo,Consolas,monospace;font-size:.95rem;color:var(--bone);line-height:1.7;margin:.6rem auto 0;max-width:880px;width:92%;box-shadow:0 10px 28px -14px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.05),0 0 26px -12px rgba(212,169,44,.28);transition:border-color .3s,box-shadow .3s;scrollbar-width:thin;scrollbar-color:rgba(201,162,39,.35) transparent}
   .weaving-ad .wa-reasoning::before{content:'[mind] ';color:var(--gold);font-size:.8rem;letter-spacing:.08em;opacity:.9}
   .weaving-ad .wa-reasoning.streaming{border-color:rgba(201,162,39,.45);box-shadow:0 10px 28px -14px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.05),0 0 30px -8px rgba(212,169,44,.4)}
   .weaving-ad .wa-reasoning.streaming::after{content:'▌';color:var(--gold);margin-left:2px;animation:w-caret 1.06s steps(1) infinite}
@@ -313,7 +313,7 @@
     .gm-row{min-height:46px;font-size:.78rem}
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=32">
+<link rel="stylesheet" href="snes.css?v=34">
 <style>
 /* ═══════════ Login-känslan — mjuka knappar (override snes.css DOS-flatten) ═══════════
    snes.css laddas efter inline-blocket och tvingar platta knappar med !important.
@@ -849,7 +849,12 @@ html{font-size:17px}
       </select>
       <span class="ask-wrap"><span class="ask-ico">?</span><span class="ask-tip" data-ask="tts">Which provider whispers the spoken word when the DM speaks aloud. <b>Ask the Dungeon Master if unsure.</b></span></span>
     </div>
-    <div class="dm-model-note">Which provider whispers the spoken word when the DM speaks aloud.</div>
+    <div class="dm-model-row" id="row-free-or" style="display:none">
+      <label class="dm-model-label" for="adventure-free-or">🆓 Experiment (OpenRouter free)</label>
+      <select class="dm-model-select" id="adventure-free-or"></select>
+      <span class="ask-wrap"><span class="ask-ico">?</span><span class="ask-tip" data-ask="freeor">Free community models served at no cost. Experimental — shared rate limits, may be slow. Pick one as your Dungeon Master voice.</span></span>
+    </div>
+    <div class="dm-model-note">These free models come from the OpenRouter community — fun to compare, but they share one key's quota, so they can be slower than the house voices.</div>
     <div class="dm-model-note">🔄 <b>Can be changed at any time in the campaign</b> — from the settings inside the chat, if the mood shifts.</div>
     <div class="dm-model-note" id="model-gate-upgrade-note" style="display:none">🔒 <b>Qwen 3.8, DeepSeek &amp; the full mind of the Cauldron unlock with the one-time Patron top-up (30€)</b> — <a href="pricing.html" style="color:var(--gold);font-weight:600">View the paths →</a></div>
     <div class="step-actions">
@@ -930,7 +935,7 @@ if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 </script>
 <script src="api.js?v=20260806a"></script>
 <script src="modal.js?v=20260803a"></script>
-<script src="i18n.js?v=20260803a"></script>
+<script src="i18n.js?v=20260807a"></script>
 <script src="archetypes.js?v=20260804a"></script>
 <script>
 // ═══════════════════════════════════════
@@ -995,7 +1000,7 @@ async function activateAndContinue(campaignId) {
   SFX.click();
   try {
     await API.activateCampaign(campaignId);
-    location.href = 'chat.html?v=20260807b';
+    location.href = 'chat.html?v=20260807h';
   } catch (e) {
     toast('⚠ ' + I18N.t('Kunde inte aktivera kampanj: ') + (e.message || I18N.t('okänt fel')));
   }
@@ -1838,6 +1843,19 @@ const TTS_PROVIDERS = [
   const extSel = document.getElementById('adventure-extraction-model');
   const charSel = document.getElementById('adv-char-model');
   const ttsSel = document.getElementById('adventure-tts');
+  const freeOrSel = document.getElementById('adventure-free-or');
+  const freeOrRow = document.getElementById('row-free-or');
+  // 🆓 Experiment-sektion: hämta OpenRouter free-modeller (alla tiers kan välja)
+  const fillFreeOR = () => {
+    if (!freeOrSel || !freeOrRow) return;
+    API.freeOpenRouter().then(list => {
+      list = list || [];
+      if (!list.length) { freeOrRow.style.display = 'none'; return; }
+      freeOrRow.style.display = '';
+      freeOrSel.innerHTML = '<option value="">— house voice —</option>' +
+        list.map(m => `<option value="${m.id}">${m.display}</option>`).join('');
+    }).catch(() => { freeOrRow.style.display = 'none'; });
+  };
   // Modeller som kräver Patron (30€)+ (backend klämmer redan free/tier1 → step-3.7-flash;
   // här låses de i UI:t så spelaren inte kan välja något som tyst ignoreras).
   const PREMIUM_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4-flash', 'deepseek-v4-flash-0731', 'ollama:heretic'];
@@ -1904,6 +1922,7 @@ const TTS_PROVIDERS = [
     } else {
       fill(PLAYER_DM_MODELS, locked);
     }
+    fillFreeOR();
     const note = document.getElementById('model-gate-upgrade-note');
     if (note) note.style.display = locked ? '' : 'none';
   }).catch(() => {
@@ -1938,6 +1957,9 @@ async function startAdventure() {
   const extractionModel = document.getElementById('adventure-extraction-model').value;
   const ttsSel = document.getElementById('adventure-tts');
   const ttsVal = ttsSel ? ttsSel.value : null;
+  // 🆓 Experiment: om spelaren valt en OpenRouter-free-modell som DM, använd den
+  const freeOrVal = (document.getElementById('adventure-free-or') || {}).value || '';
+  const chosenDm = freeOrVal || dmModel;
   const btn = document.getElementById('adventure-start');
   btn.disabled = true;
   btn.textContent = '⚔️ Opening the table…';
@@ -1945,7 +1967,7 @@ async function startAdventure() {
     // 1) Kampanj + språk
     await API.createCampaign(name, lang);
     // 2) Spara alla modeller (en misslyckad modell ska aldrig blockera starten)
-    try { await API.setDmModel(dmModel); } catch (e) { console.warn('setDmModel', e); }
+    try { await API.setDmModel(chosenDm); } catch (e) { console.warn('setDmModel', e); }
     try { await API.setGuardianModel(guardianModel); } catch (e) { console.warn('setGuardianModel', e); }
     try { await API.setExtractionModel(extractionModel); } catch (e) { console.warn('setExtractionModel', e); }
     if (ttsVal) {
@@ -1955,7 +1977,7 @@ async function startAdventure() {
     // 3) Lyft in hjälten (genererad → sparad i Forge; eller färdig Forge-hjälte)
     await API.vaultUse(advAdventurerId);
     sessionStorage.setItem('dnd_vault_character', advAdventurerId);
-    location.href = 'chat.html?v=20260807b';
+    location.href = 'chat.html?v=20260807h';
   } catch (e) {
     try { SFX.error(); } catch (_) {}
     toast('⚠ ' + (e.message || 'Could not start'));

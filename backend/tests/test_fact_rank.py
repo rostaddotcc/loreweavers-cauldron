@@ -111,3 +111,129 @@ def test_compacted_fact_falls_out_of_window(tmp_path):
     texts = [f.text for f in relevant]
     assert any("Drottningen" in t for t in texts)
     assert not any("främling" in t for t in texts), "Kompakterat faktum ska glida ut ur fönstret"
+
+
+# ── Arkivering (archive_old) ──────────────────────────────────────────
+
+def test_archive_old_hides_old_low_confidence_facts(tmp_path):
+    """Arkiveringspasset: gamla + lågkonfidensfakta arkiveras och slutar
+    returneras — men raderas aldrig (finns kvar i filen)."""
+    reg = _reg(tmp_path)
+    old_low = _fact(
+        "Ett gammalt rykte från första turen", category="event",
+        turn=2, confidence=0.5, fid="oldlow",
+    )
+    young_low = _fact(
+        "Färskt rykte i byn", category="event",
+        turn=45, confidence=0.5, fid="younglow",
+    )
+    old_high = _fact(
+        "Gammal men säker sanning om draken", category="world",
+        turn=3, confidence=0.9, fid="oldhigh",
+    )
+    reg.add_facts([old_low, young_low, old_high])
+
+    n = reg.archive_old(max_age_turns=40, min_turn=50)  # tröskel: turn < 10
+    assert n == 1
+    assert old_low.archived is True
+    assert not young_low.archived, "Ny fakta arkiveras inte trots låg konfidens"
+    assert not old_high.archived, "Gammal men högtillförlitlig fakta arkiveras inte"
+
+    # Arkiverad fakta är osynlig för get_relevant_facts ...
+    relevant = reg.get_relevant_facts("gammalt rykte", limit=10)
+    texts = [f.text for f in relevant]
+    assert not any("gammalt rykte" in t for t in texts)
+    # ... men ligger kvar i registret (aldrig raderad)
+    assert len(reg._facts) == 3
+    assert reg.stats()["archived"] == 1
+
+    # Återomnämnande väcker en arkiverad fakta
+    reg.add_facts([_fact("Ett gammalt rykte från första turen", category="event", turn=50)])
+    assert old_low.archived is False, "Återomnämnd arkiverad fakta ska väckas"
+
+
+def test_superseded_facts_never_returned(tmp_path):
+    """Ersatta fakta (superseded_by) returneras aldrig — bara den nya versionen."""
+    reg = _reg(tmp_path)
+    old = _fact("Borgmästare Hilda litar inte på äventyrare alls", category="npc", turn=3, fid="hilda1")
+    new = _fact("Borgmästare Hilda litar nu på äventyrare efter hjälpen", category="npc", turn=10, fid="hilda2")
+    reg.add_facts([old])
+    reg.add_facts([new])
+
+    assert old.superseded_by == new.id
+    assert reg.stats()["superseded"] == 1
+
+    relevant = reg.get_relevant_facts("Borgmästare Hilda", limit=10)
+    texts = [f.text for f in relevant]
+    assert any("litar nu" in t for t in texts), "Nya versionen ska returneras"
+    assert not any("litar inte" in t for t in texts), "Ersatt fakta ska aldrig returneras"
+
+
+def test_recency_boost_still_works(tmp_path):
+    """Nyare fakta rankas före äldre vid samma nyckelordsträff (efter arkivering)."""
+    reg = _reg(tmp_path)
+    older = _fact("Vasska kräver 200 silver för inträde varje gång", category="promise", turn=5, fid="oldv")
+    newer = _fact("Vasska kräver 200 silver för inträde i gillestugan", category="world", turn=40, fid="newv")
+    reg.add_facts([older, newer])
+    # Olika kategorier + tokenöverlapp 5/6 ≈ 0.83 (≤0.90) → ingen dedup/superseding
+    assert older.superseded_by is None and newer.superseded_by is None
+
+    relevant = reg.get_relevant_facts("Vasska silver", limit=5)
+    ids = [f.id for f in relevant]
+    assert "newv" in ids and "oldv" in ids
+    assert ids.index("newv") < ids.index("oldv"), "Nyare fakta ska rankas högre (recency-boost)"
+
+
+def test_archival_runs_in_post_turn_hook(tmp_path, monkeypatch):
+    """Arkiveringspasset körs i post-turn-hooken (gratis, ingen LLM) och arkiverar."""
+    import main  # noqa: PLC0415
+
+    reg = _reg(tmp_path)
+    old_low = _fact(
+        "Gammal skvaller från krogen i turn ett", category="event",
+        turn=1, confidence=0.5, fid="hookold",
+    )
+    reg.add_facts([old_low])
+
+    class _FakeStore:
+        """Minimal store: ingen LLM (maybe_summarize/chapter/arc → False)."""
+
+        def __init__(self):
+            self.state = {"meta": {"turn_count": 43}}
+
+        def get(self, username, campaign_id=None):
+            return self.state
+
+        def save(self, state):
+            self.state = state
+
+        def maybe_summarize(self, state):
+            return False
+
+        def maybe_chapter(self, state):
+            return False
+
+        def maybe_arc(self, state):
+            return False
+
+    monkeypatch.setattr(main, "store", _FakeStore())
+    monkeypatch.setattr(main, "FactRegister", lambda u, c="": reg)
+
+    # turn 43: udda (ingen faktextraktion), inte %5 (ingen RAG), inte %50
+    # (ingen kompaktering) — men arkiveringspasset (1e) körs varje turn.
+    # Självhanterad loop (inte pytest-asyncio): teardown-återställning annars
+    # sätter set_event_loop(None) och bryter senare sync-tester (spell_slots).
+    import asyncio
+
+    _loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(_loop)
+    try:
+        _loop.run_until_complete(
+            main._post_turn_tasks_locked("u", "c", "DM-svar", "spelarens drag", 43, "m")
+        )
+    finally:
+        _loop.close()
+        asyncio.set_event_loop(asyncio.new_event_loop())  # restore for later tests
+
+    assert old_low.archived is True, "Arkiveringspasset ska ha kört i hooken"
+    assert reg.stats()["archived"] == 1

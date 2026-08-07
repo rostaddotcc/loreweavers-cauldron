@@ -122,7 +122,7 @@ logger.addHandler(_stream)
 import httpx
 from fastapi import Cookie, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, PlainTextResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -1052,6 +1052,10 @@ _USER_LOCK = threading.Lock()
 
 # Default turn-tak för NYA konton (0 = oändligt). Admin höjer via admin-vyn.
 DEFAULT_TURN_CAP = 50
+# Patron (one-time, 2026-08-07): daglig cap höjs till 100 (istället för +500
+# permanenta turns). Gäller i 30 dagar från köpet (cap_until), sedan tillbaka
+# till DEFAULT_TURN_CAP (lazy-återställning i _turn_cap_for / _maybe_rollover).
+PATRON_DAILY_CAP = 100
 # STARTBONUS: nya konton (och befintliga free-konton vid migrering) får
 # 300 turns direkt (turn_bonus förbrukas före de dagliga 50).
 START_BONUS_TURNS = 300
@@ -1081,17 +1085,33 @@ def _register_allowed() -> bool:
     return True
 
 
+def _cap_until_expired(udata: dict) -> bool:
+    """True om kontots Patron-dagliga cap-fönster (cap_until) har passerat."""
+    cu = udata.get("cap_until") if isinstance(udata, dict) else None
+    if not cu:
+        return False
+    try:
+        return datetime.fromisoformat(str(cu)).date() < _today_date()
+    except ValueError:
+        return False
+
+
 def _turn_cap_for(username: str) -> int:
     """Kontots turn-tak (0 = oändligt). Läser users.json — snabbt och litet.
 
     FAS A: backfilla nya free-tier-fält (setdefault) så gamla konton inte
-    kraschar när de nya fälten saknas."""
+    kraschar när de nya fälten saknas.
+    Patron (one-time, 2026-08-07): turn_cap höjs till PATRON_DAILY_CAP (100)
+    i 30 dagar (cap_until) — därefter tillbaka till DEFAULT_TURN_CAP."""
     try:
         udata = load_users().get(username, {})
         if not isinstance(udata, dict):
             return 0
         udata = _ensure_user_fields(username, udata)
-        return int(udata.get("turn_cap", 0) or 0)
+        cap = int(udata.get("turn_cap", 0) or 0)
+        if _cap_until_expired(udata) and cap == PATRON_DAILY_CAP:
+            cap = DEFAULT_TURN_CAP
+        return cap
     except Exception:
         return 0
 
@@ -1196,7 +1216,7 @@ def _grant_start_bonus_if_needed(username: str, udata: dict) -> dict:
 # ═══════════════════════════════════════
 # free      — 300 startturns, sedan 50 turns/dag; bara step-3.7-flash; StepFun TTS
 # tier1     — 3€ Support: +300 turns (permanenta), export+forge+StepFun i 30 dagar
-# tier2     — 10€ Patron: +500 turns (permanenta), alla modeller+Qwen TTS+Wan 2.7 Pro i 30 dagar
+# tier2     — 10€ Patron: 100 turns/dag (cap_until, 30 dagar) istället för +500 permanenta; alla modeller+Qwen TTS+Wan 2.7 Pro i 30 dagar
 # lifetime  — ∞ turns (turn_cap 0), allt (befintliga 100€-köpare)
 # Legacy "premium" → tier2 (bakåtkompatibilitet).
 TIER_ORDER = ("free", "tier1", "tier2", "lifetime")
@@ -1376,6 +1396,10 @@ def _maybe_rollover(username: str, udata: dict) -> dict:
         users = load_users()
         u = users.get(username)
         if isinstance(u, dict):
+            # Patron-cap (100/dag) löper ut med cap_until → återställ till 50/dag.
+            if _cap_until_expired(u) and int(u.get("turn_cap", 0) or 0) == PATRON_DAILY_CAP:
+                u["turn_cap"] = DEFAULT_TURN_CAP
+                u.pop("cap_until", None)
             u["turns_used"] = 0
             if hours >= 24:
                 u["reset_date"] = new_reset
@@ -1592,16 +1616,21 @@ GUARDIAN_MODEL = os.getenv("GUARDIAN_MODEL", "step-3.7-flash")
 DEFAULT_PLAYER_MODEL = "step-3.7-flash"
 # Modeller som icke-admin-spelare får välja mellan
 # (admin ser alla — inkl. MiMo + DeepSeek-egen-API)
-PLAYER_MODELS = ("qwen3.8-max", "qwen3.6-flash", "deepseek-v4-flash", "deepseek-v4-flash-0731", "step-3.7-flash", "ollama:heretic")
+PLAYER_MODELS = ("qwen3.8-max", "qwen3.6-flash", "deepseek-v4-flash", "deepseek-v4-flash-0731", "step-3.7-flash", "step-3.5-flash-2603", "ollama:heretic")
+
+# Gratisväljaren: free/tier1 får välja mellan StepFun-stegen (båda funkar på
+# Step Plan-nyckeln). 3.7 är default, men spelaren kan byta till 3.5-flash-2603 (öppen MoE).
+FREE_PLAYER_MODELS = ("step-3.7-flash", "step-3.5-flash-2603")
 
 
 def _clamp_player_model(model_id: str, tier: str | None = None) -> str:
     """Icke-admin: tillåt bara PLAYER_MODELS, annars default.
 
-    TIERS: free/tier1 → ALLTID step-3.7-flash (oavsett vald modell).
+    TIERS: free/tier1 → steg inom FREE_PLAYER_MODELS (StepFun 3.7/3.5),
+           default 3.7 men spelaren får välja 3.5.
     tier2/lifetime (eller tier=None, t.ex. interna anrop) → befintlig logik."""
     if tier in ("free", "tier1"):
-        return DEFAULT_PLAYER_MODEL
+        return model_id if model_id in FREE_PLAYER_MODELS else DEFAULT_PLAYER_MODEL
     return model_id if model_id in PLAYER_MODELS else DEFAULT_PLAYER_MODEL
 
 
@@ -1888,6 +1917,12 @@ async def _call_llm(
 
     usage_out: valfri dict — fylls med {"prompt_tokens", "completion_tokens",
     "total_tokens"} från API-svaret. Används för att spåra Guardian-tokens."""
+    # 🆓 OpenRouter free models: route to or_free.chat_free() BEFORE the
+    # MODELS-registry lookup (orfree:* ids are not in MODELS).
+    if model_id.startswith("orfree:"):
+        from or_free import chat_free
+        return (await chat_free(model_id, messages, max_tokens=max_tokens,
+                                 temperature=temperature, timeout=timeout))[0]
     config = get_model(model_id)
     api_key = get_api_key(config)
 
@@ -1918,7 +1953,7 @@ async def _call_llm(
     # budget kan tänkandet äta allt → finish=length → JSON trunkeras
     # (intermittent fail i karaktärsgenerering). 32768 ger marginal — och är
     # gratis eftersom StepFun debiterar per prompt, inte per token.
-    if config.api_model == "step-3.7-flash":
+    if config.api_model in ("step-3.7-flash", "step-3.5-flash-2603"):
         body["reasoning_effort"] = reasoning_effort or "high"
         body["max_tokens"] = max(body.get("max_tokens", 1024), 32768)
 
@@ -1986,6 +2021,12 @@ async def _call_llm_with_reasoning(
     """Som _call_llm men fångar även reasoning-modellens inre monolog
     (reasoning_content). Returnerar (content, reasoning, usage). Används för
     huvud-DM-anropet så spelaren kan se hur DM:n resonerar."""
+    # 🆓 OpenRouter free models: route to or_free.chat_free() (returns the
+    # (content, reasoning, usage) tuple this function promises).
+    if model_id.startswith("orfree:"):
+        from or_free import chat_free
+        return await chat_free(model_id, messages, max_tokens=max_tokens,
+                                temperature=temperature, timeout=timeout)
     config = get_model(model_id)
     api_key = get_api_key(config)
 
@@ -2108,7 +2149,7 @@ async def _stream_llm(
     # OBS: StepFun räknar reasoning-tokens MOT max_tokens. Vid liten budget kan
     # tänkandet äta allt → finish=length → JSON trunkeras (intermittent fail i
     # karaktärsgenerering). 32768 ger marginal — gratis (debiterar per prompt).
-    if config.api_model == "step-3.7-flash":
+    if config.api_model in ("step-3.7-flash", "step-3.5-flash-2603"):
         body["reasoning_effort"] = reasoning_effort or "high"
         body["max_tokens"] = max(body.get("max_tokens", 1024), 32768)
 
@@ -2534,7 +2575,7 @@ async def me(morkrets_token: str | None = Cookie(None)):
         "role": payload.get("role", "player"),
         "created_at": udata.get("created_at"),
         "last_login": udata.get("last_login"),
-        "turn_cap": int(udata.get("turn_cap", 0) or 0),
+        "turn_cap": _turn_cap_for(username),
         # FAS A: periodbaserad turn-räkning + tier
         "turns_used": free_info["turns_used"],
         "turn_bonus": free_info["turn_bonus"],
@@ -2613,6 +2654,23 @@ async def save_email(req: EmailRequest, morkrets_token: str | None = Cookie(None
 async def models(morkrets_token: str | None = Cookie(None)):
     _get_current_user(morkrets_token)
     return list_models_for_frontend()
+
+
+@app.get("/api/models/free-openrouter")
+async def free_openrouter_models(morkrets_token: str | None = Cookie(None)):
+    """🆓 Returnera curated + live-verified OpenRouter free text-models.
+
+    Används av DM-gate:n för att visa en 'Experiment'-sektion. Kräver inloggad
+    spelare (så vi inte exponerar nyckeln-existens öppet). Listan innehåller
+    EJ nyckeln — bara modell-id + displaynamn.
+    """
+    _get_current_user(morkrets_token)
+    try:
+        from or_free import get_free_models
+        return await get_free_models()
+    except Exception as e:
+        logger.error("🆓 free-openrouter list failed: %s", e)
+        return []
 
 
 # ═══════════════════════════════════════
@@ -3860,7 +3918,7 @@ async def get_facts(category: str | None = None, morkrets_token: str | None = Co
         if category:
             facts = register.get_facts_by_category(category)
         else:
-            facts = [f for f in register._facts if not f.superseded_by]
+            facts = [f for f in register._facts if not f.superseded_by and not f.archived]
         # Rank-poäng per faktum (rörligt fönster) — frontend visar
         # nedrankade entries tydligare än bara superseded.
         facts_out = []
@@ -4309,21 +4367,34 @@ def _build_system_prompt(
 
 async def _retrieve_relevant_memory(
     username: str, campaign_id: str, query: str, state: dict
-) -> str:
-    """Hämta relevant långtidsminne via RAG + faktaregister.
-    Returnerar en textblock som injiceras i systemprompten."""
-    sections = []
+) -> dict:
+    """Retrieve relevant long-term memory via RAG + fact register.
 
-    # 1. Faktaregister — keyword-baserat, alltid tillgängligt (ingen Qdrant krävs)
+    Returns a dict: {
+        "text":        str  — the block injected into the system prompt,
+        "facts_sent":  int  — number of facts actually injected (max 8),
+        "rag_sent":    int  — number of RAG chunks actually injected (max 4),
+        "timing_s":    float — retrieval latency,
+    }
+    NOTE: the stored fact archive can be hundreds of entries; this only
+    reports what was *sent to the DM* this turn, not the whole archive."""
+    import time as _t
+    _start = _t.time()
+    sections = []
+    facts_sent = 0
+    rag_sent = 0
+
+    # 1. Fact register — keyword-based, always available (no Qdrant needed)
     try:
         register = FactRegister(username, campaign_id)
         relevant = register.get_relevant_facts(query, limit=8)
         if relevant:
             sections.append(format_facts_block(relevant))
+            facts_sent = len(relevant)
     except Exception as e:
         logger.debug("Fact register unavailable: %s", e)
 
-    # 2. RAG — semantisk sökning i Qdrant (transkript, lore, sammanfattningar)
+    # 2. RAG — semantic search in Qdrant (transcript, lore, summaries)
     try:
         if await rag.qdrant_healthy():
             chunks = await rag.retrieve(query, username, top_k=4, campaign_id=campaign_id)
@@ -4333,15 +4404,35 @@ async def _retrieve_relevant_memory(
                     label = {"transcript": "📜", "lore": "📖", "summary": "📋", "fact": "📌"}.get(
                         c.get("chunk_type", ""), "•"
                     )
-                    rag_lines.append(f"{label} (tur {c.get('turn', '?')}, relevans {c.get('score', 0):.0%}): {c['text'][:200]}")
+                    rag_lines.append(f"{label} (turn {c.get('turn', '?')}, relevance {c.get('score', 0):.0%}): {c['text'][:200]}")
                 sections.append(
-                    "## RELEVANT HISTORIK (semantiskt minne)\n"
+                    "## RELEVANT HISTORY (semantic memory)\n"
                     + "\n".join(rag_lines)
                 )
+                rag_sent = len(chunks)
     except Exception as e:
         logger.debug("RAG unavailable: %s", e)
 
-    return "\n\n".join(sections)
+    text = "\n\n".join(sections)
+    timing_s = _t.time() - _start
+
+    # Tydlig engelsk logg: vad som faktiskt skickades vs vad som lagras
+    try:
+        reg = FactRegister(username, campaign_id)
+        s = reg.stats()
+        logger.info(
+            "🧠 Memory retrieved for DM: %d facts + %d RAG chunks sent "
+            "(archive stored: total=%d active=%d archived=%d superseded=%d, %.1fs)",
+            facts_sent, rag_sent, s["total"], s["active"], s["archived"],
+            s["superseded"], timing_s,
+        )
+    except Exception:
+        logger.info(
+            "🧠 Memory retrieved for DM: %d facts + %d RAG chunks sent (%.1fs)",
+            facts_sent, rag_sent, timing_s,
+        )
+
+    return {"text": text, "facts_sent": facts_sent, "rag_sent": rag_sent, "timing_s": timing_s}
 
 
 # ── Bakgrund: generera dag-entry för loggboken ──
@@ -4732,6 +4823,31 @@ async def _guardian_manual_correction(
     return f"{header}\n{body}"
 
 
+def _ensure_single_combat_tag(message: str) -> str:
+    r"""Garantin: EXAKT EN [COMBAT:...]-tagg, allra sist i meddelandet.
+
+    Flera kodvägar kan lägga till [COMBAT:]-taggar i samma Guardian-meddelande
+    — format_guardian_summary (guardian.py, payload inkl. player_hp) och
+    combat_tag_dirty-fallbacket nedan (utan player_hp). Eftersom payloaderna
+    skiljer sig missar en ren strängjämförelse dupliceringen, och frontend-
+    regexen (/\[COMBAT:[^\]]*\]\s*$/) strippar bara DEN SISTA taggen — den
+    första läcker då ut i chatten.
+
+    Hjälparen tar bort alla [COMBAT:]-taggar utom en (föredrar den med
+    player_hp — rikast payload för Krigsrådet/statusbaren) och flyttar den
+    till allra slutet av meddelandet.
+    """
+    if not message:
+        return message
+    tags = re.findall(r"\[COMBAT:[^\]]*\]", message)
+    if not tags:
+        return message
+    body = re.sub(r"\[COMBAT:[^\]]*\]", "", message).rstrip()
+    # Föredra taggen med player_hp (guardian-formatet); annars den sista.
+    best = next((t for t in reversed(tags) if "player_hp" in t), tags[-1])
+    return (body + "\n" + best) if body else best
+
+
 async def _guardian_post_dm(
     username: str, campaign_id: str, reply: str, player_msg: str,
     effective_turn: int, dm_npcs: list[dict],
@@ -4827,10 +4943,14 @@ async def _guardian_post_dm_locked(
         # Om striden ändrades via tagg-parsning (initiativ/dödsräddning via
         # [Resultat:]) men Guardian inte hittade egna effekter → skicka ändå
         # [COMBAT:]-taggen så frontendens Krigsråd uppdateras direkt.
+        # (Endast om Guardian INTE redan skickat en tagg — payloaderna kan
+        # skilja sig, t.ex. player_hp, så jämför på taggens existens, inte
+        # hela strängen. Duplicering → frontend-regexen strippar bara den
+        # sista och den första läcker ut i chatten.)
         combat = state.get("world", {}).get("combat")
         if combat and meta.get("combat_tag_dirty"):
             _tag = _combat_tag(combat)
-            if _tag and _tag not in (guardian_summary or ""):
+            if _tag and "[COMBAT:" not in (guardian_summary or ""):
                 guardian_summary = (guardian_summary + "\n" + _tag) if guardian_summary else _tag
             meta.pop("combat_tag_dirty", None)
         else:
@@ -4842,6 +4962,10 @@ async def _guardian_post_dm_locked(
             guardian_summary = "🛡️ **Guardian**\n" + guardian_summary
 
         if guardian_summary:
+            # Dedupe-säkring: EXAKT en [COMBAT:]-tagg, alltid sist (oavsett
+            # vilken kodväg som emitterade den — guardian-formatet och/eller
+            # combat_tag_dirty-fallbacket ovan).
+            guardian_summary = _ensure_single_combat_tag(guardian_summary)
             _gmeta = {"turn": effective_turn}
             if _guardian_usage.get("total_tokens"):
                 _gmeta["tokens"] = _guardian_usage
@@ -4893,6 +5017,12 @@ async def _post_turn_tasks_locked(
     turn_count: int, model_id: str,
 ) -> None:
     """Hjärtat av post-turn-uppgifterna — körs under per-kampanj-låset."""
+    import time as _ptt
+    _ptt_start = _ptt.time()
+    logger.info(
+        "⚙️ Post-turn pipeline START (turn %d, user=%s, camp=%s)",
+        turn_count, username, campaign_id or "<none>",
+    )
     # 1. Extrahera fakta + inventory-ändringar ur DM-svaret (billig modell)
     # Varannan tur (turn_count % 2 == 0): faktextraktion är ett LLM-anrop
     # (kostnad + latens). [FÖREMÅL:]-taggar + Guardian täcker redan inventory,
@@ -4994,6 +5124,7 @@ async def _post_turn_tasks_locked(
                     bumped = True
             if bumped:
                 store.save(st)
+                logger.debug("🗣️ NPC mentions bumped for turn %d", turn_count)
     except Exception as e:
         logger.debug("NPC rank update skipped: %s", e)
 
@@ -5005,7 +5136,7 @@ async def _post_turn_tasks_locked(
             st = store.get(username, campaign_id)
             if st:
                 register = FactRegister(username, campaign_id)
-                active = [f for f in register._facts if not f.superseded_by]
+                active = [f for f in register._facts if not f.superseded_by and not f.archived]
                 if active:
                     _compact_usage = {}
                     fact_lines = "\n".join(
@@ -5054,6 +5185,22 @@ async def _post_turn_tasks_locked(
                     store.save(st)
         except Exception as e:
             logger.debug("Compaction pass skipped: %s", e)
+    else:
+        logger.debug("🧹 Compaction not due (turn %d, runs every 50th)", turn_count)
+
+    # 1e. Arkiveringspass (varje turn, gratis — ingen LLM) — gamla
+    #     lågkonfidensfakta (eller LLM-nedrankade av kompakteringspasset)
+    #     markeras archived så de slutar konkurrera i keyword-scoring.
+    #     Data raderas ALDRIG — allt ligger kvar i facts.json, osynligt.
+    try:
+        register = FactRegister(username, campaign_id)
+        n_archived = register.archive_old(min_turn=turn_count)
+        if n_archived:
+            logger.info("🗄️ Archival pass (turn %d): %d facts archived", turn_count, n_archived)
+        else:
+            logger.debug("🗄️ Archival pass (turn %d): 0 facts archived (none stale)", turn_count)
+    except Exception as e:
+        logger.debug("Archival pass skipped: %s", e)
 
     # 2. Indexera senaste transkriptet i Qdrant (var 5:e tur)
     if turn_count % 5 == 0 and turn_count > 0:
@@ -5069,9 +5216,15 @@ async def _post_turn_tasks_locked(
                     ]
                     if msgs_for_rag:
                         await rag.index_transcript(msgs_for_rag, username, campaign_id)
-                        logger.info("RAG indexed %d messages (turn %d)", len(msgs_for_rag), turn_count)
+                        logger.info("🔎 RAG indexed %d messages (turn %d)", len(msgs_for_rag), turn_count)
+                    else:
+                        logger.debug("🔎 RAG index skipped — no new messages (turn %d)", turn_count)
+            else:
+                logger.warning("🔎 RAG index skipped — Qdrant unhealthy (turn %d)", turn_count)
         except Exception as e:
             logger.debug("RAG indexing skipped: %s", e)
+    else:
+        logger.debug("🔎 RAG index not due (turn %d, runs every 5th)", turn_count)
 
     # 3. Sammanfattning (om det är dags)
     _summary_usage = {}
@@ -5085,12 +5238,15 @@ async def _post_turn_tasks_locked(
                 "Fokusera på viktiga händelser, beslut, NPC-möten och konsekvenser. "
                 "Max 200 ord.\n\n" + t_text
             )
+            logger.info("📋 Scene summary due (turn %d) — generating from %d messages", turn_count, len(full_transcript))
             summary = await _call_llm(
                 _extraction_model_for(st), [{"role": "user", "content": sum_prompt}],
                 temperature=0.3, max_tokens=512, thinking="disabled", usage_out=_summary_usage,
             )
             store.save_summary(st, summary)
-            logger.info("Summary saved (turn %d)", turn_count)
+            logger.info("📋 Scene summary saved (turn %d, %d tkn)", turn_count, _summary_usage.get("total_tokens", 0))
+        else:
+            logger.debug("📋 Scene summary not due (turn %d)", turn_count)
     except Exception as e:
         logger.debug("Summary skipped: %s", e)
 
@@ -5109,12 +5265,15 @@ async def _post_turn_tasks_locked(
                 "Fokusera på övergripande händelsebåge, viktiga beslut, NPC-utveckling "
                 "och konsekvenser. Max 300 ord.\n\n" + s_text
             )
+            logger.info("📖 Chapter summary due (turn %d) — generating from %d scenes", turn_count, len(scenes))
             chapter_text = await _call_llm(
                 _extraction_model_for(st), [{"role": "user", "content": ch_prompt}],
                 temperature=0.3, max_tokens=512, timeout=30, thinking="disabled", usage_out=_chapter_usage,
             )
             store.save_chapter_summary(st, chapter_text)
-            logger.info("Chapter summary saved (turn %d)", turn_count)
+            logger.info("📖 Chapter summary saved (turn %d, %d tkn)", turn_count, _chapter_usage.get("total_tokens", 0))
+        else:
+            logger.debug("📖 Chapter summary not due (turn %d)", turn_count)
     except Exception as e:
         logger.debug("Chapter summary skipped: %s", e)
 
@@ -5133,18 +5292,25 @@ async def _post_turn_tasks_locked(
                 "Fokusera på den stora berättelsen, huvudkonflikter, allianser och "
                 "hur världen förändrats. Max 400 ord.\n\n" + c_text
             )
+            logger.info("📜 Campaign arc due (turn %d) — generating from %d chapters", turn_count, len(chapters))
             arc_text = await _call_llm(
                 _extraction_model_for(st), [{"role": "user", "content": arc_prompt}],
                 temperature=0.3, max_tokens=640, timeout=30, thinking="disabled", usage_out=_arc_usage,
             )
             store.save_campaign_arc(st, arc_text)
-            logger.info("Campaign arc saved (turn %d)", turn_count)
+            logger.info("📜 Campaign arc saved (turn %d, %d tkn)", turn_count, _arc_usage.get("total_tokens", 0))
+        else:
+            logger.debug("📜 Campaign arc not due (turn %d)", turn_count)
     except Exception as e:
         logger.debug("Campaign arc skipped: %s", e)
 
     # Sammanfattnings-/kapitel-/båge-anrop är LLM-förbrukning — spara i
     # meta["unguarded_tokens"] så admin-stats räknar ALL förbrukning.
     _bg_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+    logger.info(
+        "⚙️ Post-turn pipeline DONE (turn %d, %.1fs)",
+        turn_count, _ptt.time() - _ptt_start,
+    )
     for _u in (_summary_usage, _chapter_usage, _arc_usage):
         _bg_usage["prompt_tokens"] += _u.get("prompt_tokens", 0) or 0
         _bg_usage["completion_tokens"] += _u.get("completion_tokens", 0) or 0
@@ -5337,12 +5503,19 @@ async def _chat_locked(
         campaign_id = state["meta"].get("campaign_id", "")
         try:
             _tm = time.time()
-            memory_block = await _retrieve_relevant_memory(
+            memory = await _retrieve_relevant_memory(
                 username, campaign_id, req.message, state
             )
+            memory_block = memory.get("text", "")
             if memory_block:
                 messages[0]["content"] += "\n\n" + memory_block
-                logger.info("🧠 Memory injected (+%d tkn, %.1fs)", len(memory_block), time.time() - _tm)
+                logger.info(
+                    "🧠 Memory injected into system prompt: %d facts + %d RAG chunks "
+                    "(+%d chars, retrieve %.1fs, total inject %.1fs)",
+                    memory.get("facts_sent", 0), memory.get("rag_sent", 0),
+                    len(memory_block), memory.get("timing_s", 0.0),
+                    time.time() - _tm,
+                )
             else:
                 logger.debug("🧠 No relevant memory found (%.1fs)", time.time() - _tm)
         except Exception as e:
@@ -6687,12 +6860,6 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
         raise HTTPException(500, "STEPFUN_API_KEY missing on the server")
 
     av_dir = vault.avatars_dir(username)
-    existing = entry.get("avatar") or {}
-    existing_path = None
-    if existing.get("disk_name"):
-        p = av_dir / existing["disk_name"]
-        if p.exists():
-            existing_path = p
 
     content: bytes = b""
     try:
@@ -6707,20 +6874,13 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
             )
             if not wan_api_key:
                 raise HTTPException(500, "DASHSCOPE_API_KEY missing on the server (Wan needs the Token Plan key)")
-            wan_prompt = prompt
-            if existing_path and body.get("mode") == "edit":
-                wan_prompt = _trim_prompt(
-                    "Reimagine this character freely from their current story and appearance — "
-                    + prompt
-                    + " You may change anything: face, species, form, clothes and art style. Do not preserve the old face."
-                )
             async with httpx.AsyncClient(timeout=150) as client:
                 resp = await client.post(
                     wan_base,
                     headers={"Content-Type": "application/json", "Authorization": f"Bearer {wan_api_key}"},
                     json={
                         "model": wan_model,
-                        "input": {"messages": [{"role": "user", "content": [{"text": wan_prompt}]}]},
+                        "input": {"messages": [{"role": "user", "content": [{"text": prompt}]}]},
                         "parameters": {"size": wan_size, "n": 1, "watermark": False, "thinking_mode": False, "seed": seed},
                     },
                 )
@@ -6736,23 +6896,6 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
                 dl_resp = await dl.get(img_url)
                 dl_resp.raise_for_status()
                 content = dl_resp.content
-        elif existing_path and body.get("mode") == "edit":
-            edit_prompt = _trim_prompt(
-                "Reimagine this character freely from their current story and appearance — "
-                + prompt
-                + " You may change anything: face, species, form, clothes and art style. Do not preserve the old face."
-            )
-            async with httpx.AsyncClient(timeout=150) as client:
-                with open(existing_path, "rb") as f:
-                    # Fix httpx #1482: unicode i data= med files= → fel Content-Length.
-                    # Pre-encoda till UTF-8-bytes. (2026-08-05)
-                    resp = await client.post(
-                        f"{base_url.rstrip('/')}/images/edits",
-                        headers={"Authorization": f"Bearer {api_key}"},
-                        data={"model": STEP_IMAGE_EDIT_2, "prompt": edit_prompt.encode("utf-8"),
-                              "response_format": "b64_json", "steps": str(8), "seed": str(seed)},
-                        files={"image": (existing_path.name, f, "image/png")},
-                    )
         else:
             async with httpx.AsyncClient(timeout=150) as client:
                 resp = await client.post(
@@ -6781,7 +6924,6 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
     entry["avatar"] = {
         "disk_name": disk_name, "ext": ".png", "size": len(content),
         "ai_generated": True, "seed": seed,
-        "edit_mode": bool(existing_path and body.get("mode") == "edit"),
         "uploaded": datetime.now(timezone.utc).isoformat(),
     }
     vault.update(username, entry)
@@ -7515,11 +7657,10 @@ async def me_avatar_generate(body: dict | None = None, morkrets_token: str | Non
     seed = (body or {}).get("seed")
     if not isinstance(seed, int):
         seed = random.randint(0, 999999)
-    default = "A moody dark-fantasy portrait of the player, painterly oil painting style, dramatic chiaroscuro lighting, brooding atmosphere."
     # FREE-PROMPT-läge (2026-08-05): om spelaren skriver egna ord används BARA
     # dem — ingen default-suffix, ingen auto-prompt (samma mönster som vault-
-    # generate). Tom prompt → standardporträtt-prompten + stil-suffixet.
-    prompt = _trim_prompt(user_prompt) if user_prompt else _trim_prompt(default + STEP_IMAGE_STYLE)
+    # generate). Tom prompt → standardporträtt + fotorealistisk stil (2026-08-07).
+    prompt = _trim_prompt(user_prompt) if user_prompt else _trim_prompt(_PROFILE_AVATAR_DEFAULT + " " + STEP_PORTRAIT_STYLE)
 
     content: bytes = b""
     try:
@@ -7661,12 +7802,26 @@ async def me_avatar_delete(morkrets_token: str | None = Cookie(None)):
 # ═══════════════════════════════════════
 
 STEP_IMAGE_EDIT_2 = "step-image-edit-2"
-STEP_IMAGE_STYLE = (
-    "Photorealistic cinematic image, film-grade dramatic lighting, ultra-detailed realistic "
-    "materials and textures, atmospheric depth and mood. Imaginative and open to interpretation — "
-    "the subject is exactly as described: it may be humanoid, creature, machine, energy being, "
-    "object or abstract form, never forced into a person or a portrait. "
-    "Open composition, no text, no watermark."
+# Stilsträngar (2026-08-07): ALLTID fotorealistiskt, aldrig animerat/illustrerat.
+# Anti-animations-direktivet ligger i FÖRSTA meningen så det överlever
+# _trim_prompt(490) även när prompten klipps bakifrån.
+STEP_PORTRAIT_STYLE = (
+    "Photorealistic cinematic portrait, never animated or illustrated — beautifully "
+    "detailed lifelike face, richly detailed gear and clothing, evocative in-world "
+    "background, film-grade dramatic lighting, real photographic textures. "
+    "No text, no watermark."
+)
+# Öppen komposition för icke-porträtt (DM, maskiner, varelser) — kompakt variant
+# som får plats i prompt-budgeten tillsammans med arketyp/direktiv/lore-flourish.
+STEP_OPEN_STYLE = (
+    "Photorealistic cinematic image, never animated or illustrated — film-grade "
+    "dramatic lighting, ultra-detailed realistic materials and textures, "
+    "atmospheric depth. No text, no watermark."
+)
+# Default för spelarprofilens avatar (fri prompt lämnas alltid ren).
+_PROFILE_AVATAR_DEFAULT = (
+    "A moody dark-fantasy portrait of the player, beautifully detailed lifelike "
+    "face, dramatic chiaroscuro lighting, brooding atmosphere."
 )
 
 
@@ -7730,30 +7885,21 @@ _DM_AVATAR_PALETTES = [
 ]
 
 
-def _dm_avatar_flourish(rng: random.Random, state: dict | None = None) -> str:
-    """Lore-aligned detalj: plockar en bit ur kampanjens värld så DM-avataren
-    speglar spelets ton (space opera, mörk fantasy, …). Utan lore: klassisk runa."""
-    lore = (state or {}).get("lore") or []
-    frags = [str(x).strip() for x in lore if isinstance(x, str) and x.strip()]
-    if frags:
-        f = rng.choice(frags)[:140]
-        return f"echoes of their world around them: {f}"
-    return "arcane runes drifting faintly around"
-
-
 def _build_dm_avatar_prompt(seed: int, state: dict | None = None) -> str:
-    """Öppen, slumpad tolkning av DM:n — aldrig samma motiv (seed-styrd)."""
+    """Öppen, slumpad tolkning av DM:n — aldrig samma motiv (seed-styrd).
+    Bygger ENDAST på arketyp/mood/palett — ingen kampanjdata/DM-lore läcker
+    in i avatar-prompten (2026-08-07). Ordning: stil + form-direktiv FÖRE
+    scene så de överlever _trim_prompt(490)."""
     rng = random.Random(seed or 0)
     archetype = rng.choice(_DM_AVATAR_ARCHETYPES)
     mood = rng.choice(_DM_AVATAR_MOODS)
     palette = rng.choice(_DM_AVATAR_PALETTES)
-    flourish = _dm_avatar_flourish(rng, state)
     return (
-        f"A mysterious presence — the Dungeon Master of this tale — imagined as: {archetype}, "
-        f"{mood}, color palette of {palette}, {flourish}. "
-        "Depict the presence EXACTLY as described: it may be a person, machine, swarm, "
-        "nebula, energy being, object or abstract form — never force it into a human. "
-        + STEP_IMAGE_STYLE
+        f"The Dungeon Master of this tale, imagined as: {archetype}. "
+        + STEP_OPEN_STYLE + " "
+        "Depict this presence EXACTLY as described — it may be a person, machine, "
+        "swarm, nebula or abstract form, never forced into a human. "
+        f"Scene: {mood}, color palette of {palette}."
     )
 
 
@@ -7831,13 +7977,6 @@ def _class_visual_cues(cls: str | None) -> str:
     return ""
 
 
-# Kompakt porträttstil för spelarkaraktärer (full STEP_IMAGE_STYLE är för lång
-# för att få plats tillsammans med klass-ledtrådar inom StepFuns 512-tecken).
-STEP_PORTRAIT_STYLE = (
-    "Photorealistic cinematic portrait, film-grade dramatic lighting, ultra-detailed "
-    "realistic materials and textures, atmospheric depth and mood. No text, no watermark."
-)
-
 # NPC-prompt: rader med fysiska drag (utseende) lyfts fram före handlingslogg,
 # så porträttet visar PERSONEN — inte vad den senast gjorde ('stood by the
 # notice board' fick dominera och gav samma scen varje gång, 2026-08-07).
@@ -7873,7 +8012,7 @@ def _npc_avatar_prompt(state: dict, npc_name: str) -> str:
             f"{npc_name}, a mysterious figure in the world of this story. "
             "Depict them exactly as described — they may be humanoid, machine, creature, "
             "energy being, object or abstract form, never forced into a person. "
-            + STEP_IMAGE_STYLE
+            + STEP_OPEN_STYLE
         )
     matches.sort(key=lambda n: len(str(n.get("notes") or "")), reverse=True)
     role = next(
@@ -7895,65 +8034,66 @@ def _npc_avatar_prompt(state: dict, npc_name: str) -> str:
     if rest_lines:
         desc_parts.append(" ".join(rest_lines)[:180])
     desc = " ".join(desc_parts).strip()
+    # Stil + direktiv FÖRE desc så de överlever _trim_prompt(490) även när
+    # notes är långa. Maskiner/varelser får öppen komposition (inget
+    # "lifelike face"-krav), människor får porträttstil. (2026-08-07)
     if _NPC_MACHINE_RE.search(notes_all + " " + role):
         directive = (
             "Depict the character EXACTLY as described — if they are a machine, drone, "
             "creature, energy being or abstract entity, depict them AS THAT, never as a human."
         )
+        style = STEP_OPEN_STYLE
     else:
         directive = (
             "Depict the character exactly as described in the lore — a human with their "
             "described features unless the lore says otherwise, never a robot or cyborg."
         )
-    return f"{npc_name}, {desc}. {directive} {STEP_PORTRAIT_STYLE}"
+        style = STEP_PORTRAIT_STYLE
+    return f"{npc_name}. {directive} {style} Their lore: {desc}."
 
 
 def _build_avatar_prompt(state: dict, avatar_key: str, seed: int = 0) -> str:
-    """Bygg bildprompten AUTOMATISKT från kampanjdata (character sheet, items,
-    lore, NPC-data) — användaren promptar aldrig själv."""
+    """Bygg bildprompten AUTOMATISKT från karaktärens egna data — användaren
+    promptar aldrig själv. (2026-08-07) Innehåll: identitet + klass-ledtråd +
+    fotorealistisk stil + backstory + equipment + senaste loggpost. DM-lore
+    och "Recent events" är BORTTAGNA — avatar-prompten ska inte läcka in
+    DM-världen, bara beskriva KARAKTÄREN."""
     if avatar_key == "dm":
         return _build_dm_avatar_prompt(seed, state)
     if avatar_key.startswith("npc:"):
         return _npc_avatar_prompt(state, avatar_key[4:])
 
-    # Player / standard — bygg från character sheet + inventory + lore
+    # Player / standard — bygg från character sheet + inventory + loggbok
     ch = state.get("character", {}) or {}
     name = ch.get("name") or "The Adventurer"
     race = ch.get("race") or "human"
     cls = ch.get("class") or "adventurer"
-    background = str(ch.get("background") or "").strip()[:220]
-    traits = ch.get("traits") or []
-    if traits and isinstance(traits[0], dict):
-        traits = [t.get("name", "") for t in traits]
-    traits_s = ", ".join(str(t) for t in traits[:6])
     gear_s = str(ch.get("gear") or "").strip()[:220]
     inv_names = [it.get("name", "") for it in (state.get("inventory") or []) if isinstance(it, dict)][:8]
     inv_s = ", ".join(n for n in inv_names if n) or gear_s
-    story = str(ch.get("story") or "").strip()[:260]
-    lore = state.get("lore") or []
-    lore_s = " ".join(str(x) for x in lore[:3])[:220] if lore else ""
+    story = str(ch.get("story") or "").strip()[:220]
+    # Senaste loggpost (världsaktiviteten just nu) — ger bakgrunden liv.
+    lb = (state.get("world", {}) or {}).get("logbook") or []
+    last_entry = ""
+    if isinstance(lb, list) and lb:
+        last_text = str(lb[-1].get("text") or "").strip() if isinstance(lb[-1], dict) else str(lb[-1]).strip()
+        last_entry = last_text[:140]
 
-    # Ordning spelar roll: _trim_prompt klipper BAKIFRÅN (490 tecken). Därför
-    # läggs det som definierar bilden FÖRST — identitet, klass-ledtråd och stil —
-    # så de aldrig klipps bort. Bakgrund/utrustning/story (det som kan tummas
-    # på) kommer sist och klipps före något viktigt. Gamla STEP_IMAGE_STYLE
-    # ("never forced into a person or a portrait") var sist + motsade ett
-    # porträtt → StepFun föll tillbaka på generisk västerländsk fantasy-rogue.
+    # Ordning spelar roll: _trim_prompt klipper BAKIFRÅN (490 tecken). Det som
+    # definierar bilden ligger FÖRST — identitet, klass-ledtråd och stil — så
+    # de aldrig klipps bort. Backstory/equipment/loggpost (det som kan tummas
+    # på) kommer sist och klipps före något viktigt.
     parts = [f"{name}, a {race} {cls}."]
     cue = _class_visual_cues(cls)
     if cue:
         parts.append(f"They are {cue}.")
     parts.append(STEP_PORTRAIT_STYLE)
-    if background:
-        parts.append(f"Background: {background}.")
-    if traits_s:
-        parts.append(f"Traits: {traits_s}.")
+    if story:
+        parts.append(f"Backstory: {story}.")
     if inv_s:
         parts.append(f"Equipment: {inv_s}.")
-    if story:
-        parts.append(f"Story: {story}.")
-    if lore_s:
-        parts.append(f"Recent events: {lore_s}.")
+    if last_entry:
+        parts.append(f"Recent journal entry: {last_entry}.")
     return " ".join(parts)
 
 
@@ -7993,6 +8133,10 @@ def _build_sheet_update_prompt(state: dict) -> str:
     world = state.get("world") or {}
     loc = (world.get("current_location") or state.get("current_location") or "").strip()
     parts = [f"{name}, a {race} {cls}."]
+    # Stilen direkt efter identiteten — _trim_prompt klipper BAKIFRÅN, så
+    # fotorealism-direktivet måste ligga FÖRE state-detaljerna (HP/inv/loc)
+    # som får tummas på. Utan stilen föll StepFun på anime-default (2026-08-07).
+    parts.append(STEP_PORTRAIT_STYLE)
     if hp_s:
         parts.append(f"Current health: {hp_s}.")
     parts.append(f"Carrying: {inv_s}.")
@@ -8010,8 +8154,10 @@ async def generate_avatar(
     morkrets_token: str | None = Cookie(None),
 ):
     """Generera en AI-avatar med StepFun step-image-edit-2 baserat på kampanjdata.
-    Prompten byggs automatiskt från character sheet / NPC-data / lore — ingen
-    användarprompt krävs. 'seed' styr slumpen (samma seed = samma bild)."""
+    Prompten byggs automatiskt från character sheet / NPC-data — ingen
+    användarprompt krävs. 'seed' styr slumpen (samma seed = samma bild).
+    (2026-08-07) Varje anrop målar en HELT NY bild från text — ingen
+    image-to-image-iteration på föregående avatar."""
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
 
@@ -8033,8 +8179,9 @@ async def generate_avatar(
     seed = (body or {}).get("seed")
     if not isinstance(seed, int):
         seed = random.randint(0, 999999)
-    # mode: "new" = full generation (ny bild), "edit" = image-edit på befintlig
-    # avatar (uppdaterar enligt aktuellt sheet men behåller ansikte/stil).
+    # mode: "new" = auto-prompt från sheet/dossier, "edit" = state-snapshot
+    # (HP/inventory/plats). BÅDA målar en helt ny bild — ingen iteration på
+    # föregående avatar (2026-08-07).
     mode = (body or {}).get("mode", "new")
     if mode not in ("new", "edit"):
         mode = "new"
@@ -8065,15 +8212,6 @@ async def generate_avatar(
 
     cid = state["meta"]["campaign_id"]
     av_dir = CAMPAIGNS_DIR / username / cid / "avatars"
-    existing = (state.get("avatars") or {}).get(avatar_key)
-
-    # ── Edit-läge: avataren finns redan → uppdatera den enligt aktuellt
-    #    character sheet / story (behåll ansikte, stil och komposition).
-    existing_path = None
-    if existing:
-        existing_path = av_dir / existing.get("disk_name", "")
-        if not existing_path.exists():
-            existing_path = None
 
     content: bytes = b""
     try:
@@ -8090,13 +8228,6 @@ async def generate_avatar(
             )
             if not wan_api_key:
                 raise HTTPException(500, "DASHSCOPE_API_KEY saknas på servern (Wan behöver Token Plan-nyckeln)")
-            wan_prompt = prompt
-            if existing_path and mode == "edit":
-                wan_prompt = _trim_prompt(
-                    "Reimagine this character freely from their current story and appearance — "
-                    + prompt
-                    + " You may change anything: face, species, form, clothes and art style. Do not preserve the old face."
-                )
             async with httpx.AsyncClient(timeout=150) as client:
                 resp = await client.post(
                     wan_base,
@@ -8105,7 +8236,7 @@ async def generate_avatar(
                         "model": wan_model,
                         "input": {
                             "messages": [
-                                {"role": "user", "content": [{"text": wan_prompt}]}
+                                {"role": "user", "content": [{"text": prompt}]}
                             ]
                         },
                         "parameters": {
@@ -8130,30 +8261,6 @@ async def generate_avatar(
                 dl_resp = await dl.get(img_url)
                 dl_resp.raise_for_status()
                 content = dl_resp.content
-        elif existing_path and mode == "edit":
-            edit_prompt = _trim_prompt(
-                "Reimagine this character freely from their current story and appearance — "
-                + prompt
-                + " You may change anything: face, species, form, clothes and art style. Do not preserve the old face."
-            )
-            async with httpx.AsyncClient(timeout=150) as client:
-                with open(existing_path, "rb") as f:
-                    # Fix httpx #1482: unicode-strängar i data= med files= ger fel
-                    # Content-Length (len(str) istället för len(bytes)) →
-                    # "Too much data for declared Content-Length". Pre-encoda till
-                    # UTF-8-bytes så multipart-längden stämmer. (2026-08-05)
-                    resp = await client.post(
-                        f"{base_url.rstrip('/')}/images/edits",
-                        headers={"Authorization": f"Bearer {api_key}"},
-                        data={
-                            "model": STEP_IMAGE_EDIT_2,
-                            "prompt": edit_prompt.encode("utf-8"),
-                            "response_format": "b64_json",
-                            "steps": str(8),
-                            "seed": str(seed),
-                        },
-                        files={"image": (existing_path.name, f, "image/png")},
-                    )
         else:
             async with httpx.AsyncClient(timeout=150) as client:
                 resp = await client.post(
@@ -8215,7 +8322,7 @@ async def generate_avatar(
     _add_image_gen(username, wan_model if provider == "wan" else STEP_IMAGE_EDIT_2)
 
     return {"ok": True, "kind": avatar_key, "url": f"/api/campaign/avatar/{avatar_key}", "seed": seed,
-            "edit_mode": bool(existing_path and mode == "edit"),
+            "edit_mode": mode == "edit",
             "gallery_count": len(_avatar_gallery(entry)), "gallery_index": int(entry.get("gallery_index") or 0)}
 
 
@@ -8866,7 +8973,7 @@ def _require_avatar_tier(payload: dict, username: str):
 PREMIUM_PRICE_SEK = 49  # legacy (fas D) — ersatt av TIER_PRICES_SEK
 
 # TIERS: priser i SEK (EUR → SEK ≈ 11.7; avrundat för admin-översikt).
-# support300 = 3€ engång · patron500 = 30€ engång · lifetime = 100€ engång.
+# support300 = 3€ engång · patron500 = 30€ engång (100 turns/dag i 30d) · lifetime = 100€ engång.
 # tier1/tier2 = legacy-prenumeranter (MRR-bas tills de löper ut).
 TIER_PRICES_SEK = {"support300": 35, "patron500": 351, "lifetime": 1170,
                    "tier1": 35, "tier2": 105}  # legacy: 3€/9€ ≈ 35/105 kr
@@ -9291,7 +9398,7 @@ def _account_meta(username: str, udata: dict, campaigns: list) -> dict:
     return {
         "created_at": created_at,
         "last_login": udata.get("last_login"),
-        "turn_cap": int(udata.get("turn_cap", 0) or 0),
+        "turn_cap": _turn_cap_for(username),
         "turns_used": store.total_turns(username),
     }
 
@@ -9471,7 +9578,7 @@ STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 # One-time-priser (engångsbetalningar, inga abonnemang):
 #   support300 — 3€: +300 turns (permanenta), export+StepFun i 30 dagar (stackbart)
-#   patron500  — 30€: +500 turns (permanenta), premiummodeller+Qwen TTS+Wan 2.7 Pro i 30 dagar (stackbart)
+#   patron500  — 30€: 100 turns/dag i 30 dagar (cap_until), premiummodeller+Qwen TTS+Wan 2.7 Pro i 30 dagar (stackbart)
 #   donation   — valfri summa: rensupport, inga förmåner
 STRIPE_PRICES = {
     "support300": os.getenv("STRIPE_PRICE_SUPPORT300", ""),
@@ -9677,14 +9784,19 @@ async def stripe_webhook(request: Request):
                 u["features_until"] = _stack_benefits_until(u)
                 u.pop("models_until", None)  # enhetligt fönster framåt
             elif tier == "patron500":
-                # 10€ — +500 turns (BEHÅLLS alltid), premiummodeller + Qwen TTS
-                # + Wan 2.7 Pro i 30 dagar. Stackbart (se support300).
-                u["turn_bonus"] = int(u.get("turn_bonus", 0) or 0) + 500
+                # 10€ — 100 turns/dag i 30 dagar (cap_until) istället för +500
+                # permanenta turns (2026-08-07). Premiummodeller + Qwen TTS +
+                # Wan 2.7 Pro i 30 dagar (stackbart, se support300). Samma
+                # fönster (features_until == cap_until) → cap löper ut med
+                # förmånerna. Lazy-återställning till 50/dag via _turn_cap_for.
+                cap_until = _stack_benefits_until(u)
+                u["turn_cap"] = PATRON_DAILY_CAP
+                u["cap_until"] = cap_until
                 features["export"] = True
                 features["wan1080"] = True
                 features["all_models"] = True
                 u["features"] = features
-                u["features_until"] = _stack_benefits_until(u)
+                u["features_until"] = cap_until
                 u.pop("models_until", None)
                 u["subscription_status"] = "tier2"
             elif tier == "donation":
@@ -9919,6 +10031,7 @@ async def admin_user_detail(username: str, morkrets_token: str | None = Cookie(N
         "subscription_status": tier,
         "subscription_until": fresh.get("subscription_until"),
         "turn_bonus": int(fresh.get("turn_bonus", 0) or 0),
+        "promo_bonus": int(fresh.get("promo_bonus", 0) or 0),
         "period_turns_used": int(fresh.get("turns_used", 0) or 0),
         "revenue": _ledger_per_user().get(username, 0),
         "ip": g.get("ip", ""),
@@ -10144,6 +10257,13 @@ def _append_tier_log(username: str, status: str, until: str | None) -> None:
         text = "ℹ️ Your account was reverted to **Free**."
     elif status == "lifetime":
         text = "🎉 Your account have been upgraded as a token of appreciation — new tier: **Lifetime** (∞ turns, all features)."
+    elif status in ("support", "patron"):
+        suffix = f" — valid until **{until}**" if until else ""
+        if status == "patron":
+            text = (f"🎉 Your account have been upgraded as a token of appreciation — new tier: **Patron**{suffix}. "
+                    f"You now get **100 turns per day** (up from 50) plus all premium Dungeon Masters and tools.")
+        else:
+            text = f"🎉 Your account have been upgraded as a token of appreciation — new tier: **Support**{suffix}."
     else:
         suffix = f" — valid until **{until}**" if until else ""
         text = f"🎉 Your account have been upgraded as a token of appreciation — new tier: **{label}**{suffix}."
@@ -10246,15 +10366,25 @@ async def admin_grant_tier(username: str, req: AdminGrant, morkrets_token: str |
         features = udata.get("features")
         if not isinstance(features, dict):
             features = {}
-        # Exakt samma features som webhooken (support300 / patron500):
+        # Exakt samma features som webhooken (support300 / patron500).
+        # Patron (2026-08-07): 100 turns/dag (cap_until) istället för +500
+        # permanenta turns — speglar Stripe-webhooken exakt.
         if tier == "support":
             features["export"] = True
+            # Stöd ger INGEN daglig cap-boost — rensa eventuellt kvarvarande
+            # Patron-cap (och återställ till standard, utom lifetime=0).
+            if int(udata.get("turn_cap", 0) or 0) == PATRON_DAILY_CAP:
+                udata["turn_cap"] = DEFAULT_TURN_CAP
+            udata.pop("cap_until", None)
         else:  # patron
             features["export"] = True
             features["wan1080"] = True
             features["all_models"] = True
+            udata["turn_cap"] = PATRON_DAILY_CAP
         udata["features"] = features
         udata["features_until"] = _stack_benefits_until(udata, days=days)
+        if tier == "patron":
+            udata["cap_until"] = udata["features_until"]
         udata.pop("models_until", None)  # enhetligt fönster framåt
         udata["subscription_status"] = tier
         udata["subscription_until"] = (datetime.now(timezone.utc).date() + timedelta(days=days)).isoformat()
@@ -10474,6 +10604,22 @@ async def seo_llms_txt():
         "> Keep out: /admin.html, /api/ — internal.\n"
     )
     return PlainTextResponse(body, media_type="text/plain; charset=utf-8")
+
+@app.get("/admin.html", include_in_schema=False)
+async def admin_page_guard(morkrets_token: str | None = Cookie(None)):
+    """Hard-lock admin.html: bara admins får ladda sidan.
+
+    Icke-admin (eller ej inloggad) redirectas till spelbordet.
+    Skyddar även mot direktlänkning — filen serveras INTE statiskt för
+    obehöriga (denna route matchar före StaticFiles-mounten)."""
+    # Använd verify_token direkt (returnerar None vid ogiltig token,
+    # kastar inte 401) så vi kan redirecta istället för att 401:a.
+    payload = verify_token(morkrets_token) if morkrets_token else None
+    if not payload or payload.get("role") != "admin":
+        return RedirectResponse(url="/chat.html", status_code=302)
+    # Admin: servera filen direkt från frontend-katalogen
+    return FileResponse(str(FRONTEND_DIR / "admin.html"))
+
 
 if FRONTEND_DIR.exists():
     app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")

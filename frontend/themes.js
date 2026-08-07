@@ -27,7 +27,7 @@ const THEMES = (() => {
     {
       id: 'terminal', name: 'Terminal',
       colors: {
-        '--ink': '#0b0812', '--stone': '#161020', '--stone-2': '#1d1529', '--stone-3': '#241a33',
+        '--ink': '#1a1426', '--stone': '#271d33', '--stone-2': '#322541', '--stone-3': '#3d2e4f',
         '--edge': '#463a60', '--edge-hi': '#5a4a7a',
         '--bone': '#d9c9a6', '--bone-bright': '#f2e6c8', '--bone-dim': '#9d8a6a',
         '--gold': '#d4a92c', '--gold-bright': '#f0d675',

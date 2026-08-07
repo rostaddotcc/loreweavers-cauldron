@@ -121,7 +121,7 @@ eval(html.slice(startB, endB));
 
 // _formatCombatLogEntry (activity feed) — egen liten slice
 const startF = html.indexOf('function _formatCombatLogEntry');
-const endF = html.indexOf('// Live-aktivitet: rendera senaste maskinrums-loggposten');
+const endF = html.indexOf('// Live-aktivitet: rendera ENDAST senaste posten från maskinrummets logg');
 if (startF < 0 || endF < 0) { console.error('MARKERS F NOT FOUND'); process.exit(1); }
 eval(html.slice(startF, endF));
 

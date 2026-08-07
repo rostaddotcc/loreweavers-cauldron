@@ -1466,7 +1466,7 @@ def _gate_turn_quota(username: str) -> None:
         )
 
 
-def _consume_turn(username: str) -> None:
+def _consume_turn(username: str, action: str = "turn", model: str | None = None, tokens: int = 0) -> None:
     """Bokför en förbrukad turn (efter ev. period-rollover). Spara under _USER_LOCK.
 
     Spenderingsordning (2026-08-05 v3): promo (signup-300) → daglig cap →
@@ -1474,6 +1474,12 @@ def _consume_turn(username: str) -> None:
 
     PITFALL (deadlock 2026-08-05): _tier_for → _ensure_user_fields tar
     _USER_LOCK (non-reentrant) — beräkna tier INNAN låset, aldrig innanför.
+
+    2026-08-08 (strikt per-anrops-modell): `action` beskriver VAD som förbrukade
+    turnen (dm|guardian_pre|guardian_post|extraction|image|char_gen|search|
+    repair|summary|day_entry|battle_ai|turn). Varje förbrukning loggas också i
+    per-användar-ledgern (backend/data/turn_ledgers/<user>.jsonl) så admin kan
+    se exakt förbrukning per turn/anrop.
     """
     # Tier/period beräknas UTOM låset — _tier_for kan skriva users.json
     # (ensure-fields, demote) och får inte köra innanför _USER_LOCK.
@@ -1533,6 +1539,127 @@ def _consume_turn(username: str) -> None:
                 if purchased > 0:
                     u["turn_bonus"] = purchased - 1
         save_users(users)
+    # Per-användar-ledger: varje förbrukad turn bokförs med åtgärd/modell/tokens
+    _append_turn_ledger(username, action, model, tokens)
+
+
+# ═══════════════════════════════════════
+# TURN-LEDGER (2026-08-08) — per-anrops-bokföring
+# ═══════════════════════════════════════
+# Append-only JSONL per användare: backend/data/turn_ledgers/<user>.jsonl
+# Rad: {"ts", "action", "model", "tokens"}. Prune vid skrivning (>3000 rader
+# → behåll sista 2000) så filen aldrig växer utan gräns.
+_TURN_LEDGERS_DIR = Path(__file__).resolve().parent / "data" / "turn_ledgers"
+_TURN_LEDGER_MAX = 3000
+_TURN_LEDGER_KEEP = 2000
+_TURN_LEDGER_LOCK = threading.Lock()
+
+
+def _append_turn_ledger(username: str, action: str, model: str | None = None, tokens: int = 0) -> None:
+    """Bokför EN förbrukad turn i användarens turn-ledger. Får aldrig kasta —
+    en ledger-skrivning ska inte kunna sänka ett spelaranrop."""
+    try:
+        _TURN_LEDGERS_DIR.mkdir(parents=True, exist_ok=True)
+        p = _TURN_LEDGERS_DIR / f"{username}.jsonl"
+        rec = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "action": action,
+            "model": model,
+            "tokens": int(tokens or 0),
+        }
+        with _TURN_LEDGER_LOCK:
+            with open(p, "a", encoding="utf-8") as f:
+                f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+            try:
+                if p.stat().st_size > 1_500_000:  # ~1.5 MB säkerhetsventil
+                    lines = p.read_text(encoding="utf-8").splitlines()
+                    if len(lines) > _TURN_LEDGER_MAX:
+                        p.write_text("\n".join(lines[-_TURN_LEDGER_KEEP:]) + "\n", encoding="utf-8")
+            except OSError:
+                pass
+    except Exception:
+        logger.warning("turn ledger append failed for %s", username, exc_info=True)
+
+
+def _read_turn_ledger(username: str, limit: int = 200) -> list[dict]:
+    """Senaste N ledger-posterna för en användare (nyaste sist)."""
+    try:
+        p = _TURN_LEDGERS_DIR / f"{username}.jsonl"
+        if not p.exists():
+            return []
+        lines = p.read_text(encoding="utf-8").splitlines()
+        out: list[dict] = []
+        for ln in lines[-limit:]:
+            try:
+                out.append(json.loads(ln))
+            except ValueError:
+                continue
+        return out
+    except Exception:
+        return []
+
+
+def _turn_ledger_breakdown(username: str, since: str | None = None) -> dict:
+    """Per-åtgärd-aggregation av ledgern: {action: {"turns": N, "tokens": N}}.
+    `since` = ISO-datumsträng (YYYY-MM-DD) — bara poster från och med den dagen."""
+    out: dict = {}
+    for rec in _read_turn_ledger(username, limit=_TURN_LEDGER_KEEP):
+        if since and not str(rec.get("ts", "")).startswith(since):
+            continue
+        a = rec.get("action") or "turn"
+        agg = out.setdefault(a, {"turns": 0, "tokens": 0})
+        agg["turns"] += 1
+        agg["tokens"] += int(rec.get("tokens") or 0)
+    return out
+
+
+def _reserve_chat_pipeline(username: str, model_id: str, is_awakening: bool, msg: str, effective_turn: int) -> None:
+    """Strikt per-anrops-modell (2026-08-08): reservera HELA pipeline-kostnaden
+    upp-front innan något LLM-anrop görs, så bakgrundsanropen (Guardian
+    pre/post-DM, faktaextraktion) ALDRIG dör mitt i en turn för att saldot tog
+    slut. 403 om kontot inte räcker till hela pipelinen.
+
+    Kostnad per meddelande: DM(1) + Guardian pre-DM(1, om den körs — skippas
+    för awakening och [Resultat:] svar) + Guardian post-DM(1) + faktaextraktion
+    (1, varannan turn: effective_turn % 2 == 0).
+    """
+    actions = ["dm"]
+    if not is_awakening and not msg.startswith("[Resultat:"):
+        actions.append("guardian_pre")
+    actions.append("guardian_post")
+    if effective_turn % 2 == 0:
+        actions.append("extraction")
+    total = len(actions)
+    turns_left = _turns_available(username)
+    if turns_left < total:
+        _udata = load_users().get(username, {})
+        _reset = _udata.get("reset_date") if isinstance(_udata, dict) else None
+        _reset = _reset or _today_str()
+        logger.info("⛔ Turn cap reached (chat pipeline needs %d turns): %s", total, username)
+        raise HTTPException(
+            403,
+            detail={
+                "cap_reached": True,
+                "reset_date": _reset,
+                "message": f"This action costs {total} turns (DM + Guardian + lorekeeper) — you have {turns_left} left. New turns on {_reset} — or upgrade for unlimited.",
+            },
+        )
+    for a in actions:
+        _consume_turn(username, action=a, model=model_id)
+
+
+def _consume_turn_if_available(username: str, action: str, model: str | None = None) -> bool:
+    """Konsumera EN turn OM saldot räcker (för bakgrunds-LLM-anrop som
+    summaries/day-entries/battle-AI). Returnerar True om turnen togs — annars
+    False och anroparen SKIPPAR anropet tyst (bakgrundsanrop får aldrig kasta)."""
+    try:
+        if _turns_available(username) >= 1:
+            _consume_turn(username, action=action, model=model)
+            return True
+        logger.info("⛔ %s skipped — turn cap reached (%s)", action, username)
+        return False
+    except Exception:
+        return False
 
 
 def _wan_model_and_size(username: str) -> tuple[str, str]:
@@ -1564,7 +1691,7 @@ def _consume_wan_quota(username: str) -> None:
         save_users(users)
     # Bilden räknas som en turn — kvot + turn-saldo måste räcka
     _gate_turn_quota(username)
-    _consume_turn(username)
+    _consume_turn(username, action="image", model="wan")
 
 
 def _user_free_info(username: str) -> dict:
@@ -1602,6 +1729,8 @@ def _user_free_info(username: str) -> dict:
             "wan1080": bool((udata.get("features") or {}).get("wan1080")) or _tier_for(username) == "lifetime",
             "wan_used_today": int(udata.get("wan_used_today", 0) or 0),
             "wan_daily_limit": WAN_DAILY_LIMIT,
+            "cap_until": udata.get("cap_until"),
+            "wan_reset_date": udata.get("wan_reset_date"),
         },
     }
 
@@ -4580,30 +4709,30 @@ async def _generate_day_entry_locked(username: str, campaign_id: str, prev_day: 
             "Max 3 events, max 2 NPCs. Svara ENDAST med JSON.\n\n"
             + t_text
         )
-        raw = await _call_llm(
-            _extraction_model_for(st),
-            [{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=300,
-            timeout=30,
-            thinking="disabled",
-            usage_out=_day_entry_usage,
-        )
-        entry = _extract_json(raw)
-        entry['day'] = prev_day  # säkerställ korrekt dagnummer
-        # Skriv till world.logbook_llm (endpointens cache-shape {title, days})
-        # — world.logbook ägs av Guardian (lista av {day, turn, text}) och får
-        # ALDRIG blandas ihop (shape-kollision kraschade Guardian-appliceringen).
-        llm_lb = world.setdefault("logbook_llm", {})
-        llm_lb.setdefault("days", []).append(entry)
-        llm_lb.setdefault("title", st.get("meta", {}).get("campaign_name", "The Lore Weaver's Cauldron"))
-        world['last_day_turn'] = len(transcript)
-        world.pop('_pending_day_entry', None)
-        # Dag-entry är ett LLM-anrop — spara förbrukningen i
-        # meta["unguarded_tokens"] så admin-stats räknar ALL förbrukning.
-        _track_unguarded(st, _extraction_model_for(st), _day_entry_usage)
-        store.save(st)
-        logger.info("📖 Day entry generated for day %d", prev_day)
+        if _consume_turn_if_available(username, "day_entry", _extraction_model_for(st)):
+            raw = await _call_llm(
+                _extraction_model_for(st),
+                [{"role": "user", "content": prompt}],
+                temperature=0.3,
+                max_tokens=300,
+                timeout=30,
+                thinking="disabled",
+                usage_out=_day_entry_usage,
+            )
+            entry = _extract_json(raw)
+            entry['day'] = prev_day  # säkerställ korrekt dagnummer
+            # Skriv till world.logbook_llm (endpointens cache-shape {title, days})
+            # — world.logbook ägs av Guardian (lista av {day, turn, text}) och får
+            # ALDRIG blandas ihop (shape-kollision kraschade Guardian-appliceringen).
+            llm_lb = world.setdefault("logbook_llm", {})
+            llm_lb.setdefault("days", []).append(entry)
+            llm_lb.setdefault("title", st.get("meta", {}).get("campaign_name", "The Lore Weaver's Cauldron"))
+            world['last_day_turn'] = len(transcript)
+            world.pop('_pending_day_entry', None)
+            # Dag-entry är ett LLM-anrop — spara förbrukningen i meta.unguarded_tokens
+            _track_unguarded(st, _extraction_model_for(st), _day_entry_usage)
+            store.save(st)
+            logger.info("📖 Day entry generated for day %d", prev_day)
     except Exception as e:
         logger.warning("📖 Day entry failed: %s", e)
 
@@ -5381,12 +5510,13 @@ async def _post_turn_tasks_locked(
                 "Max 200 ord.\n\n" + t_text
             )
             logger.info("📋 Scene summary due (turn %d) — generating from %d messages", turn_count, len(full_transcript))
-            summary = await _call_llm(
-                _extraction_model_for(st), [{"role": "user", "content": sum_prompt}],
-                temperature=0.3, max_tokens=512, thinking="disabled", usage_out=_summary_usage,
-            )
-            store.save_summary(st, summary)
-            logger.info("📋 Scene summary saved (turn %d, %d tkn)", turn_count, _summary_usage.get("total_tokens", 0))
+            if _consume_turn_if_available(username, "summary", _extraction_model_for(st)):
+                summary = await _call_llm(
+                    _extraction_model_for(st), [{"role": "user", "content": sum_prompt}],
+                    temperature=0.3, max_tokens=512, thinking="disabled", usage_out=_summary_usage,
+                )
+                store.save_summary(st, summary)
+                logger.info("📋 Scene summary saved (turn %d, %d tkn)", turn_count, _summary_usage.get("total_tokens", 0))
         else:
             logger.debug("📋 Scene summary not due (turn %d)", turn_count)
     except Exception as e:
@@ -5408,12 +5538,13 @@ async def _post_turn_tasks_locked(
                 "och konsekvenser. Max 300 ord.\n\n" + s_text
             )
             logger.info("📖 Chapter summary due (turn %d) — generating from %d scenes", turn_count, len(scenes))
-            chapter_text = await _call_llm(
-                _extraction_model_for(st), [{"role": "user", "content": ch_prompt}],
-                temperature=0.3, max_tokens=512, timeout=30, thinking="disabled", usage_out=_chapter_usage,
-            )
-            store.save_chapter_summary(st, chapter_text)
-            logger.info("📖 Chapter summary saved (turn %d, %d tkn)", turn_count, _chapter_usage.get("total_tokens", 0))
+            if _consume_turn_if_available(username, "summary", _extraction_model_for(st)):
+                chapter_text = await _call_llm(
+                    _extraction_model_for(st), [{"role": "user", "content": ch_prompt}],
+                    temperature=0.3, max_tokens=512, timeout=30, thinking="disabled", usage_out=_chapter_usage,
+                )
+                store.save_chapter_summary(st, chapter_text)
+                logger.info("📖 Chapter summary saved (turn %d, %d tkn)", turn_count, _chapter_usage.get("total_tokens", 0))
         else:
             logger.debug("📖 Chapter summary not due (turn %d)", turn_count)
     except Exception as e:
@@ -5435,12 +5566,13 @@ async def _post_turn_tasks_locked(
                 "hur världen förändrats. Max 400 ord.\n\n" + c_text
             )
             logger.info("📜 Campaign arc due (turn %d) — generating from %d chapters", turn_count, len(chapters))
-            arc_text = await _call_llm(
-                _extraction_model_for(st), [{"role": "user", "content": arc_prompt}],
-                temperature=0.3, max_tokens=640, timeout=30, thinking="disabled", usage_out=_arc_usage,
-            )
-            store.save_campaign_arc(st, arc_text)
-            logger.info("📜 Campaign arc saved (turn %d, %d tkn)", turn_count, _arc_usage.get("total_tokens", 0))
+            if _consume_turn_if_available(username, "summary", _extraction_model_for(st)):
+                arc_text = await _call_llm(
+                    _extraction_model_for(st), [{"role": "user", "content": arc_prompt}],
+                    temperature=0.3, max_tokens=640, timeout=30, thinking="disabled", usage_out=_arc_usage,
+                )
+                store.save_campaign_arc(st, arc_text)
+                logger.info("📜 Campaign arc saved (turn %d, %d tkn)", turn_count, _arc_usage.get("total_tokens", 0))
         else:
             logger.debug("📜 Campaign arc not due (turn %d)", turn_count)
     except Exception as e:
@@ -5727,9 +5859,10 @@ async def _chat_locked(
     if _is_long_form:
         logger.info("📖 Long-form request — max_tokens raised to %d", _dm_max_tokens)
 
-    # FAS A: förbruka en turn först när turen faktiskt skickas — alla 403-checks
-    # är passerade och LLM-anropet är nästa steg (/guardian returnerar tidigare).
-    _consume_turn(username)
+    # FAS A: strikt per-anrops-modell (2026-08-08) — reservera HELA pipeline-
+    # kostnaden (DM + Guardian pre/post + extraction) upp-front så bakgrunds-
+    # anropen aldrig dör mitt i en turn. 403 om saldot inte räcker.
+    _reserve_chat_pipeline(username, req.model_id, is_awakening, req.message, effective_turn)
 
     _log_activity(username, "🧙 DM weaving the tale…")
     try:
@@ -5764,30 +5897,37 @@ async def _chat_locked(
             _mem_text = (_mem or {}).get("text", "")
             _base = reply.replace(_search_m.group(0), "").strip()
             if _mem_text:
-                _cont_prompt = (
-                    "The player is waiting for your reply. You asked for more context — "
-                    "here it is:\n\n" + _mem_text +
-                    "\n\nFinish your reply to the player now, weaving in anything from "
-                    "this memory that matters. Output ONLY the final narration (no [SÖK:] tag)."
-                )
-                _cont_messages = [
-                    {"role": "system", "content": messages[0]["content"]},
-                    {"role": "assistant", "content": _base},
-                    {"role": "user", "content": _cont_prompt},
-                ]
-                _reply2, _reasoning2, _usage2 = await _call_llm_with_reasoning(
-                    req.model_id, _cont_messages, max_tokens=_dm_max_tokens,
-                )
-                if _reply2 and len(_reply2.strip()) > 10:
-                    reply = _reply2
-                    if _reasoning2:
-                        reasoning = reasoning or _reasoning2
-                    if _usage2 and _usage2.get("total_tokens"):
-                        usage = usage or _usage2
-                    logger.info("🔍 DM search continuation (%d tkn)", len(_reply2))
-                else:
+                # Extra anrop = extra turn (strikt per-anrops-modell). Om saldot
+                # tagit slut skippas sökningen tyst — original-svaret behålls.
+                if _turns_available(username) < 1:
                     reply = _base
-                    logger.warning("🔍 DM search continuation empty → kept original reply")
+                    logger.info("🔍 DM search skipped — turn cap reached")
+                else:
+                    _consume_turn(username, action="search", model=req.model_id)
+                    _cont_prompt = (
+                        "The player is waiting for your reply. You asked for more context — "
+                        "here it is:\n\n" + _mem_text +
+                        "\n\nFinish your reply to the player now, weaving in anything from "
+                        "this memory that matters. Output ONLY the final narration (no [SÖK:] tag)."
+                    )
+                    _cont_messages = [
+                        {"role": "system", "content": messages[0]["content"]},
+                        {"role": "assistant", "content": _base},
+                        {"role": "user", "content": _cont_prompt},
+                    ]
+                    _reply2, _reasoning2, _usage2 = await _call_llm_with_reasoning(
+                        req.model_id, _cont_messages, max_tokens=_dm_max_tokens,
+                    )
+                    if _reply2 and len(_reply2.strip()) > 10:
+                        reply = _reply2
+                        if _reasoning2:
+                            reasoning = reasoning or _reasoning2
+                        if _usage2 and _usage2.get("total_tokens"):
+                            usage = usage or _usage2
+                        logger.info("🔍 DM search continuation (%d tkn)", len(_reply2))
+                    else:
+                        reply = _base
+                        logger.warning("🔍 DM search continuation empty → kept original reply")
             else:
                 reply = _base
                 logger.info("🔍 DM search found no memory → kept original reply")
@@ -5862,6 +6002,12 @@ async def _chat_locked(
         last_errors = errors
         if attempt < 1:
             # Ogiltigt — be LLM:n reparera de mekaniska taggarna
+            # Strikt per-anrops-modell: varje repair = 1 turn. Utan saldo → acceptera
+            # svaret som det är (reparation är en extra chans, inte en rättighet).
+            if _turns_available(username) < 1:
+                logger.info("⛔ Validation repair skipped — turn cap reached")
+                break
+            _consume_turn(username, action="repair", model=req.model_id)
             repair_prompt = (
                 "Ditt förra svar hade dessa fel: "
                 + "; ".join(errors)
@@ -6177,16 +6323,21 @@ async def combat_end_turn(morkrets_token: str | None = Cookie(None)):
 
         lang = _get_lang(state)
 
-        # 1. Battle AI bestämmer fiendernas handlingar
+        # 1. Battle AI bestämmer fiendernas handlingar (legacy combat motor)
+        # Strikt per-anrops-modell: battle-AI = 1 turn; utan saldo → inga
+        # fiendeaktioner den här omgången (bakgrundsanrop skippas tyst).
         _battle_usage = {}
-        try:
-            enemy_actions = await battle_ai_decide(
-                state,
-                lambda msgs: _call_llm(_guardian_model_for(state), msgs, temperature=0.3, max_tokens=2048, usage_out=_battle_usage),
-                language=lang,
-            )
-        except Exception as e:
-            logger.warning("⚔️ Battle AI skipped: %s", e)
+        if _consume_turn_if_available(username, "battle_ai", _guardian_model_for(state)):
+            try:
+                enemy_actions = await battle_ai_decide(
+                    state,
+                    lambda msgs: _call_llm(_guardian_model_for(state), msgs, temperature=0.3, max_tokens=2048, usage_out=_battle_usage),
+                    language=lang,
+                )
+            except Exception as e:
+                logger.warning("⚔️ Battle AI skipped: %s", e)
+                enemy_actions = []
+        else:
             enemy_actions = []
 
         # 2. Applicera fiendeaktioner mekaniskt
@@ -6476,7 +6627,7 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
         {"role": "user", "content": user_msg},
     ]
 
-    _consume_turn(username)
+    _consume_turn(username, action="char_gen", model=req.model_id)
     try:
         usage_out: dict = {}
         raw = await _call_llm(
@@ -6667,7 +6818,7 @@ async def generate_character_stream(req: CharacterRequest, morkrets_token: str |
         {"role": "user", "content": user_msg},
     ]
 
-    _consume_turn(username)
+    _consume_turn(username, action="char_gen", model=req.model_id)
 
     async def event_stream():
         buf = ""
@@ -7013,6 +7164,10 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
     _require_image_gen_tier(username, provider, payload)
     if provider == "wan":
         _consume_wan_quota(username)  # 10 bilder/dag; varje bild = 1 turn
+    else:
+        # 2026-08-08: every image costs 1 turn — StepFun included (was free)
+        _gate_turn_quota(username)
+        _consume_turn(username, action="image", model="stepfun")
 
     entry = vault.get(username, char_id)
     if not entry:
@@ -7910,6 +8065,10 @@ async def me_avatar_generate(body: dict | None = None, morkrets_token: str | Non
     _require_image_gen_tier(username, provider, payload)
     if provider == "wan":
         _consume_wan_quota(username)  # 10 bilder/dag; varje bild = 1 turn
+    else:
+        # 2026-08-08: every image costs 1 turn — StepFun included (was free)
+        _gate_turn_quota(username)
+        _consume_turn(username, action="image", model="stepfun")
 
     user_prompt = ((body or {}).get("prompt") or "").strip()[:450]
     seed = (body or {}).get("seed")
@@ -8427,6 +8586,10 @@ async def generate_avatar(
     _require_image_gen_tier(username, provider, payload)
     if provider == "wan":
         _consume_wan_quota(username)  # 10 bilder/dag; varje bild = 1 turn
+    else:
+        # 2026-08-08: every image costs 1 turn — StepFun included (was free)
+        _gate_turn_quota(username)
+        _consume_turn(username, action="image", model="stepfun")
 
     state = store.get(username)
     if not state:
@@ -9706,6 +9869,9 @@ def _user_stat_row(username: str, geo: dict | None = None, ledger_per_user: dict
         "turn_bonus": int(fresh.get("turn_bonus", 0) or 0),
         "promo_bonus": int(fresh.get("promo_bonus", 0) or 0),
         "period_turns_used": int(fresh.get("turns_used", 0) or 0),
+        "turns_available": _turns_available(username),
+        "features_until": _benefits_until(username, fresh),
+        "cap_until": fresh.get("cap_until"),
         "revenue": ledger.get(username, 0),
         "tts_calls": tts.get("calls", 0) or 0,
         "tts_api_calls": tts.get("api_calls", 0) or 0,
@@ -10300,7 +10466,34 @@ async def admin_user_detail(username: str, morkrets_token: str | None = Cookie(N
         "character_creation": scan.get("character_creation", {}),
         "image_gen": scan.get("image_gen", {}),
         "deleted_campaigns": scan.get("deleted_campaigns", {}),
+        # Turn-ledger (2026-08-08, strikt per-anrops-modell): exakt förbrukning
+        # per anrop — per-åtgärd idag + totalt, och senaste 50 posterna.
+        "turn_ledger": _turn_ledger_breakdown(username),
+        "turn_ledger_today": _turn_ledger_breakdown(username, since=_today_str()),
+        "turn_ledger_recent": _read_turn_ledger(username, limit=50),
         "campaigns": enriched,
+    }
+
+
+@app.get("/api/admin/user/{username}/ledger")
+async def admin_user_ledger(username: str, limit: int = 100, morkrets_token: str | None = Cookie(None)):
+    """Admin-only: turn-ledgern (per-anrops-bokföring) för en användare.
+
+    Varje rad = EN förbrukad turn: {ts, action, model, tokens}. `action`:
+    dm|guardian_pre|guardian_post|extraction|image|char_gen|search|repair|
+    summary|day_entry|battle_ai. `?limit=N` styr antalet poster (max 500)."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+    users = load_users()
+    if username not in users:
+        raise HTTPException(404, f"Användare '{username}' finns inte")
+    limit = max(1, min(int(limit or 100), 500))
+    return {
+        "ok": True,
+        "username": username,
+        "entries": _read_turn_ledger(username, limit=limit),
+        "breakdown_all": _turn_ledger_breakdown(username),
+        "breakdown_today": _turn_ledger_breakdown(username, since=_today_str()),
     }
 
 

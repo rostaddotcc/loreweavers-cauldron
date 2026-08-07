@@ -2071,6 +2071,34 @@ function renderDetail(container, data) {
     }
     html += '</div>';
   });
+
+  // ── ⚡ Turn-ledger (2026-08-08, strikt per-anrops-modell) ──
+  // Exakt förbrukning per anrop: per-åtgärd idag/totalt + senaste posterna.
+  const tlToday = data.turn_ledger_today || {};
+  const tlRecent = data.turn_ledger_recent || [];
+  const TL_LABELS = { dm: '🧙 DM', guardian_pre: '🛡️ Guardian pre', guardian_post: '🛡️ Guardian post', extraction: '📚 Lorekeeper (fakta)', image: '🎨 Bild', char_gen: '👤 Karaktär', search: '🔍 [SÖK:]', repair: '🔧 Repair', summary: '📖 Sammanfattning', day_entry: '📆 Dag-entry', battle_ai: '⚔️ Battle AI' };
+  if (Object.keys(tlToday).length > 0 || tlRecent.length > 0) {
+    html += '<div class="turn-ledger-block" style="margin-top:.9rem;padding-top:.7rem;border-top:1px solid rgba(42,42,58,.4)">';
+    html += '<div style="font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:.5rem">⚡ Turn-ledger — exakt förbrukning per anrop (idag)</div>';
+    html += '<div class="role-split" style="flex-wrap:wrap">';
+    Object.keys(tlToday).sort().forEach(a => {
+      const t = tlToday[a] || {};
+      html += '<span style="background:rgba(201,162,39,.08);border:1px solid rgba(201,162,39,.35);border-radius:5px;padding:.15rem .55rem;color:var(--bone-bright)">' + (TL_LABELS[a] || a) + ': <b style="color:var(--gold-bright)">' + (t.turns || 0) + '</b> turns' + ((t.tokens || 0) ? ' · ' + fmtTokens(t.tokens) + ' tkn' : '') + '</span>';
+    });
+    if (!Object.keys(tlToday).length) html += '<span style="color:var(--bone-dim)">Inga förbrukade turns idag ännu</span>';
+    html += '</div>';
+    if (tlRecent.length) {
+      html += '<div style="font-size:.72rem;color:var(--bone-dim);margin:.5rem 0 .3rem">Senaste ' + tlRecent.length + ' anrop (nyaste sist):</div>';
+      html += '<div style="max-height:220px;overflow-y:auto;border:1px solid var(--edge);border-radius:4px">';
+      tlRecent.forEach(e => {
+        const ts = (e.ts || '');
+        const label = TL_LABELS[e.action] || e.action;
+        html += '<div style="display:flex;gap:.6rem;align-items:center;padding:.22rem .5rem;border-bottom:1px solid rgba(42,42,58,.35);font-size:.74rem;color:var(--bone)"><span style="color:var(--bone-dim);flex:none">' + ts.slice(0, 10) + ' ' + ts.slice(11, 19) + '</span><span style="flex:none">' + label + '</span><span style="color:var(--bone-dim);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (e.model || '—') + '</span><span style="flex:none;color:var(--bone-dim)">' + fmtTokens(e.tokens || 0) + ' tkn</span></div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  }
   container.innerHTML = html;
 }
 

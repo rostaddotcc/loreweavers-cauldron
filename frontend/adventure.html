@@ -458,6 +458,17 @@ html{font-size:17px}
   <!-- ═══════════ TOPPRAD ═══════════ -->
   <div class="topbar">
     <button class="top-btn" onclick="openProfileModal()" title="Profile">🪞 Profile</button>
+    <!-- ⚡ Turn-quota-piller (2026-08-08): turns kvar + nedräkning till återställning -->
+    <div class="qwrap">
+      <button class="quota-pill" id="quota-pill" onclick="openProfileModal()" title="Turns left">
+        <span class="quota-turns" id="quota-turns">⚡ …</span>
+        <span class="quota-cd" id="quota-cd"></span>
+      </button>
+      <button class="quota-q" id="quota-q" onclick="toggleQuotaTip(event)" title="What is a turn?" aria-label="What is a turn?">?</button>
+      <button class="quota-chip" id="quota-promo" style="display:none" onclick="openProfileModal()" title="Promo turns left">🎁 0</button>
+      <button class="quota-chip" id="quota-benefits" style="display:none" onclick="location.href='pricing.html'" title="Support/Patron benefits expire in">👑 0d</button>
+      <div class="quota-tip" id="quota-tip" onclick="this.classList.remove('show')"></div>
+    </div>
     <div class="gear-wrap">
       <button class="top-btn gear-btn" onclick="toggleGearMenu(event)" title="Menu" aria-haspopup="true" aria-expanded="false">⚙️</button>
       <div class="gear-menu" id="gear-menu">
@@ -474,27 +485,101 @@ html{font-size:17px}
     </div>
   </div>
 
+  <style>
+    /* ═══ Quota pill + profil-ljuslåda (2026-08-08) ═══ */
+    .qwrap{display:flex;align-items:center;gap:.4rem;position:relative}
+    .quota-pill{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+      min-width:78px;padding:.28rem .7rem;font-family:var(--font-display,'Cinzel',serif);
+      background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);
+      border-radius:8px;cursor:pointer;box-shadow:0 2px 12px -6px rgba(0,0,0,.6);
+      transition:border-color .2s,box-shadow .2s}
+    .quota-pill:hover{border-color:var(--gold);box-shadow:0 0 14px -4px rgba(201,162,39,.4)}
+    .quota-turns{font-size:.8rem;letter-spacing:.08em;font-weight:700;color:var(--gold-bright);
+      line-height:1.1;white-space:nowrap}
+    .quota-cd{font-size:.6rem;letter-spacing:.06em;color:var(--bone-dim);line-height:1.1;white-space:nowrap}
+    .quota-q{width:24px;height:24px;flex:none;border-radius:50%;background:var(--stone-3);
+      border:1px solid var(--edge);color:var(--bone-dim);font-size:.72rem;font-weight:900;
+      cursor:pointer;display:flex;align-items:center;justify-content:center;
+      font-family:var(--font-display,'Cinzel',serif);transition:color .2s,border-color .2s}
+    .quota-q:hover{color:var(--gold-bright);border-color:var(--gold)}
+    .quota-chip{display:inline-flex;align-items:center;gap:.22rem;padding:.3rem .5rem;font-size:.68rem;
+      letter-spacing:.05em;font-family:var(--font-display,'Cinzel',serif);color:var(--bone);
+      background:var(--stone-3);border:1px solid var(--edge);border-radius:999px;cursor:pointer;
+      white-space:nowrap;transition:color .2s,border-color .2s}
+    .quota-chip:hover{border-color:var(--gold);color:var(--gold-bright)}
+    .quota-tip{position:absolute;top:calc(100% + 8px);right:0;z-index:950;width:min(300px,80vw);
+      background:var(--stone-2);border:1px solid var(--edge);border-radius:6px;padding:.7rem .85rem;
+      font-size:.76rem;line-height:1.55;color:var(--bone);text-align:left;
+      box-shadow:0 18px 50px -12px rgba(0,0,0,.85);display:none}
+    .quota-tip.show{display:block}
+    @media(max-width:900px){
+      /* overflow:hidden på .topbar klipper absoluta dropdowns → position:fixed på mobil */
+      .quota-tip{position:fixed;top:auto;right:.75rem;bottom:calc(env(safe-area-inset-bottom,0px) + 4.5rem);
+        left:.75rem;width:auto;min-width:0}
+      .quota-pill{min-width:0;padding:.28rem .5rem}
+      .quota-q{width:30px;height:30px}
+      .quota-chip{padding:.3rem .4rem;font-size:.64rem}
+    }
+    @media(max-width:400px){
+      .qwrap{gap:.25rem}
+      .quota-chip{padding:.3rem .32rem;font-size:.6rem}
+      .quota-turns{font-size:.72rem}
+    }
+  </style>
+
   <!-- ═══════════════ 🪞 Profil-modal (spelarens egna stats) ═══════════════ -->
   <style>
     .pf-overlay{position:fixed;inset:0;z-index:110;display:none;align-items:center;justify-content:center;
       background:rgba(4,2,8,.85);backdrop-filter:blur(4px);padding:1rem}
     .pf-overlay.show{display:flex}
-    .pf-box{position:relative;width:min(620px,100%);max-height:88vh;overflow-y:auto;
+    .pf-box{position:relative;width:min(620px,100%);overflow:hidden;
       background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,#120c1c);
-      border:1px solid var(--edge);padding:1.9rem 1.7rem 1.7rem;
+      border:1px solid var(--edge);
       box-shadow:0 30px 80px -20px rgba(0,0,0,.9)}
+    .pf-scroll{position:relative;z-index:1;max-height:88vh;overflow-y:auto;padding:1.9rem 1.7rem 1.7rem}
+    /* Konto-avatar som dämpad bakgrund BAKOM statsen (2026-08-08) */
+    .pf-bg{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+    .pf-bg-img{position:absolute;inset:-12%;background-size:cover;background-position:center 22%;
+      background-repeat:no-repeat;opacity:.15}
+    .pf-bg::after{content:'';position:absolute;inset:0;
+      background:linear-gradient(170deg,rgba(13,9,20,.30),rgba(13,9,20,.72))}
     .pf-close{position:absolute;top:.6rem;right:.8rem;background:none;border:0;
       color:var(--bone-dim);font-size:1.2rem;cursor:pointer;padding:.3rem;z-index:2}
     .pf-close:hover{color:var(--bone-bright)}
-    /* Stor, ren profil-avatar — INGA overlays/scrim/text över bilden (2026-08-06) */
-    .pf-portrait{width:min(230px,58vw);margin:0 auto 1rem;text-align:center}
-    .pf-portrait-img{width:100%;aspect-ratio:1;border-radius:10px;overflow:hidden;
-      border:1px solid var(--edge-hi);background:var(--stone-3);cursor:pointer;
-      display:flex;align-items:center;justify-content:center;font-size:3.6rem;
+    /* Liten klickbar profil-thumb i huvudet — öppnar ljuslådan med galleriet (2026-08-08) */
+    .pf-thumb{position:relative;width:64px;height:64px;flex:none;cursor:pointer}
+    .pf-thumb-img{width:64px;height:64px;border-radius:10px;overflow:hidden;
+      border:1px solid var(--edge-hi);background:var(--stone-3);
+      display:flex;align-items:center;justify-content:center;font-size:1.9rem;
       transition:border-color .2s,box-shadow .2s}
-    .pf-portrait-img:hover{border-color:var(--gold);box-shadow:0 0 26px -8px rgba(232,198,90,.55)}
-    .pf-portrait-img img{width:100%;height:100%;object-fit:cover}
-    .pf-portrait-hint{font-size:.72rem;color:var(--bone-dim);font-style:italic;margin-top:.45rem}
+    .pf-thumb-img:hover{border-color:var(--gold);box-shadow:0 0 18px -6px rgba(232,198,90,.5)}
+    .pf-thumb-img img{width:100%;height:100%;object-fit:cover;display:block}
+    .pf-paint-mini{position:absolute;right:-7px;bottom:-7px;width:26px;height:26px;border-radius:50%;
+      background:var(--stone-2);border:1px solid var(--gold);color:var(--gold-bright);font-size:.72rem;
+      cursor:pointer;display:flex;align-items:center;justify-content:center;
+      box-shadow:0 4px 12px -4px rgba(0,0,0,.8);transition:color .2s,background .2s}
+    .pf-paint-mini:hover{background:var(--stone-3);color:var(--gold)}
+    /* 🖼 Ljuslåda för profilporträttet — full storlek + galleri-bladring (2026-08-08) */
+    .pf-lb-overlay{position:fixed;inset:0;z-index:130;display:none;align-items:center;justify-content:center;
+      background:rgba(4,2,8,.92);backdrop-filter:blur(5px);padding:1rem}
+    .pf-lb-overlay.show{display:flex}
+    .pf-lb-box{position:relative;width:min(720px,100%);text-align:center}
+    .pf-lb-close{position:absolute;top:.5rem;right:.5rem;background:none;border:0;
+      color:var(--bone-dim);font-size:1.2rem;cursor:pointer;padding:.3rem;z-index:2}
+    .pf-lb-close:hover{color:var(--bone-bright)}
+    .pf-lb-frame{max-height:76vh;display:flex;align-items:center;justify-content:center;overflow:hidden;
+      border:1px solid var(--edge);border-radius:10px;background:var(--stone);
+      box-shadow:0 30px 80px -20px rgba(0,0,0,.9)}
+    .pf-lb-frame img{max-width:100%;max-height:76vh;object-fit:contain;display:block}
+    .pf-lb-bar{display:flex;align-items:center;justify-content:center;gap:1.1rem;margin-top:.8rem}
+    .pf-lb-nav{width:44px;height:44px;border-radius:50%;background:var(--stone-3);border:1px solid var(--edge);
+      color:var(--gold-bright);font-size:1.35rem;cursor:pointer;display:flex;align-items:center;justify-content:center;
+      transition:border-color .2s,color .2s}
+    .pf-lb-nav:hover:not(:disabled){border-color:var(--gold);color:var(--gold)}
+    .pf-lb-nav:disabled{opacity:.3;cursor:default}
+    .pf-lb-count{font-family:var(--font-display,'Cinzel',serif);font-size:.85rem;letter-spacing:.16em;color:var(--bone)}
+    .pf-lb-hint{font-size:.72rem;color:var(--bone-dim);font-style:italic;margin-top:.6rem}
+    @media(max-width:520px){.pf-lb-nav{width:52px;height:52px}.pf-lb-frame{max-height:62vh}.pf-lb-frame img{max-height:62vh}}
     .pf-head{display:flex;align-items:center;gap:.8rem;margin-bottom:1.2rem}
     .pf-ico{font-size:1.9rem}
     .pf-name{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:1.4rem;color:var(--bone-bright)}
@@ -508,23 +593,46 @@ html{font-size:17px}
     .pf-cell .v{font-size:1.05rem;color:var(--bone-bright);word-break:break-word}
     .pf-bar{height:6px;background:var(--stone-3);border-radius:3px;margin-top:.4rem;overflow:hidden}
     .pf-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-bright))}
-    @media(max-width:520px){.pf-grid{grid-template-columns:1fr}}
+    @media(max-width:520px){.pf-grid{grid-template-columns:1fr}
+      /* Starkare scrim på mobil så bakgrundsbilden inte stör läsbarheten */
+      .pf-bg::after{background:linear-gradient(170deg,rgba(13,9,20,.55),rgba(13,9,20,.88))}
+      .pf-thumb{width:56px;height:56px}.pf-thumb-img{width:56px;height:56px;font-size:1.6rem}
+    }
   </style>
   <div class="pf-overlay" id="pf-overlay" onclick="if(event.target===this)closeProfileModal()">
     <div class="pf-box">
+      <div class="pf-bg" id="pf-bg"><div class="pf-bg-img" id="pf-bg-img"></div></div>
       <button class="pf-close" onclick="closeProfileModal()" title="Close">✕</button>
-      <div class="pf-portrait">
-        <div class="pf-portrait-img" id="pf-avatar" onclick="openProfilePortraitModal()" title="Paint your portrait">👤</div>
-        <div class="pf-portrait-hint" id="pf-avatar-hint">Click the portrait to paint your own</div>
-      </div>
-      <div class="pf-head">
-        <span class="pf-ico">🪞</span>
-        <div>
-          <div class="pf-name" id="pf-name">Adventurer</div>
-          <span class="pf-tier" id="pf-tier">Free</span>
+      <div class="pf-scroll">
+        <div class="pf-head">
+          <div class="pf-thumb" id="pf-thumb" onclick="openPfLightbox()" title="Open full portrait" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openPfLightbox()}">
+            <div class="pf-thumb-img" id="pf-thumb-img">👤</div>
+            <button class="pf-paint-mini" onclick="event.stopPropagation();openProfilePortraitModal()" title="Paint your portrait" aria-label="Paint your portrait">🎨</button>
+          </div>
+          <div>
+            <div class="pf-name" id="pf-name">Adventurer</div>
+            <span class="pf-tier" id="pf-tier">Free</span>
+          </div>
         </div>
+        <div class="pf-grid" id="pf-grid"><div class="pf-cell full" style="color:var(--bone-dim);text-align:center">The mirror is clouding&hellip;</div></div>
       </div>
-      <div class="pf-grid" id="pf-grid"><div class="pf-cell full" style="color:var(--bone-dim);text-align:center">The mirror is clouding&hellip;</div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ 🖼 Profilporträtt — ljuslåda med galleri-bladring (2026-08-08) ═══════════════ -->
+  <div class="pf-lb-overlay" id="pf-lb-overlay" onclick="if(event.target===this)closePfLightbox()">
+    <div class="pf-lb-box">
+      <button class="pf-lb-close" onclick="closePfLightbox()" title="Close">✕</button>
+      <div class="pf-lb-frame" id="pf-lb-frame">
+        <img id="pf-lb-img" src="" alt="Portrait" style="display:none">
+        <div id="pf-lb-empty" style="font-size:4rem;line-height:1;color:var(--bone-dim)">👤</div>
+      </div>
+      <div class="pf-lb-bar">
+        <button class="pf-lb-nav" id="pf-lb-prev" onclick="pfLightboxRotate(-1)" title="Previous" aria-label="Previous">‹</button>
+        <span class="pf-lb-count" id="pf-lb-count">—</span>
+        <button class="pf-lb-nav" id="pf-lb-next" onclick="pfLightboxRotate(1)" title="Next" aria-label="Next">›</button>
+      </div>
+      <div class="pf-lb-hint" id="pf-lb-hint">Click 🎨 to repaint · ‹ › browse your gallery</div>
     </div>
   </div>
 
@@ -539,7 +647,6 @@ html{font-size:17px}
       <div class="pp-name" id="adv-portrait-name"></div>
       <div class="pp-actions">
         <button class="av-btn primary" id="adv-portrait-reroll" onclick="rerollPortrait()">🎲 Re-roll portrait</button>
-        <button class="av-btn" onclick="closeAdvPortraitPreview();openAdvPaintModal()">🎨 Paint portrait</button>
         <button class="av-btn" onclick="closeAdvPortraitPreview()">✕ Close</button>
       </div>
       <div class="pp-status" id="adv-portrait-status"></div>
@@ -553,7 +660,14 @@ html{font-size:17px}
         <span>🎨 Paint your adventurer</span>
         <button class="mi-close" onclick="closeAdvPaintModal()">✕</button>
       </div>
-      <div class="mi-intro" id="adv-paint-desc" style="font-size:.82rem;line-height:1.55">Paint with your own words — <b>🖌️ Free prompt</b> paints ONLY what you describe. Engine: StepFun (Support 3€) or Wan 2.7 Pro (Patron 30€).</div>
+      <!-- Nuvarande porträtt (om det finns) — klick öppnar förstoring/re-roll (2026-08-08) -->
+      <div id="adv-paint-cur" style="display:none;margin:.2rem auto .9rem;text-align:center">
+        <div id="adv-paint-cur-img" onclick="openAdvPortraitPreview()" role="button" tabindex="0"
+             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAdvPortraitPreview()}"
+             title="🔍 Enlarge portrait" style="width:72px;height:72px;border-radius:50%;overflow:hidden;border:2px solid var(--gold);background:var(--stone-3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.6rem;margin:0 auto">🎭</div>
+        <div style="font-size:.68rem;color:var(--bone-dim);font-style:italic;margin-top:.4rem">Current portrait — click to enlarge &amp; re-roll</div>
+      </div>
+      <div class="mi-intro" id="adv-paint-desc" style="font-size:.82rem;line-height:1.55">Paint your adventurer two ways — <b>🖌️ Free prompt</b> paints ONLY your words, <b>📜 From dossier</b> weaves the portrait from your character's own story. Engine: StepFun (Support 3€) or Wan 2.7 Pro (Patron 30€).</div>
       <div style="margin-top:.7rem">
         <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">🖌️ YOUR OWN WORDS (free prompt)</div>
         <textarea id="adv-paint-prompt" placeholder="Describe exactly what you want painted — e.g. 'hooded figure, lantern light, rain'. Paints ONLY your words." style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:6px;resize:vertical"></textarea>
@@ -567,6 +681,7 @@ html{font-size:17px}
       </div>
       <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
         <button class="av-btn primary" id="adv-paint-free-btn" onclick="advPaintFreePrompt()">🖌️ Free prompt</button>
+        <button class="av-btn" id="adv-paint-dossier-btn" onclick="advPaintFromDossier()" title="Weave the portrait from your character's dossier (name, class, backstory, gear)">📜 From dossier</button>
       </div>
       <div id="adv-paint-status" style="font-size:.75rem;color:var(--bone-dim);text-align:center;margin-top:.8rem;min-height:1rem"></div>
     </div>
@@ -778,7 +893,7 @@ html{font-size:17px}
       <!-- Förhandsvisning av den vävda hjälten -->
       <div class="preview" id="adv-preview">
         <div class="pv-head">
-          <div class="pv-portrait" id="adv-pv-portrait" onclick="openAdvPortraitPreview()" title="🔍 Enlarge portrait" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAdvPortraitPreview()}">🎭</div>
+          <div class="pv-portrait" id="adv-pv-portrait" onclick="openAdvPaintModal()" title="Paint your adventurer" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAdvPaintModal()}">🎭</div>
           <div>
             <div class="pv-name" id="adv-pv-name"></div>
             <div class="pv-class" id="adv-pv-class"></div>
@@ -790,7 +905,7 @@ html{font-size:17px}
         <div class="pv-gear" id="adv-pv-gear"></div>
         <div class="pv-story" id="adv-pv-story"></div>
         <div class="pv-actions">
-          <button class="pv-reroll" id="adv-paint-btn" onclick="openAdvPaintModal()" title="Paint your adventurer's portrait — StepFun (Support 3€) or Wan 2.7 Pro (Patron 30€)">🎨 Paint portrait</button>
+          <!-- adv-paint-btn borttagen 2026-08-08 — klicka på porträttet (adv-pv-portrait) för att måla -->
           <button class="pv-reroll" id="adv-reroll" onclick="rerollAdventurer()">🎲 Reroll</button>
           <button class="pv-go" id="adv-continue" onclick="continueAdventurer()">Continue →</button>
         </div>
@@ -1042,8 +1157,116 @@ API.me().then(u => {
       if (ico) ico.textContent = prem ? '👑' : '💳';
       if (txt) txt.textContent = prem ? 'Membership' : 'Upgrade';
     }
+    window._advMe = u;        // ⚡ quota-pillen återanvänder detta /api/me-svar
+    renderQuotaPill(u);
   }
 }).catch(() => {});
+
+// ── ⚡ Turn-quota-piller i topbaren (2026-08-08) ──
+// Visar turns kvar + nedräkning till nästa återställning. Data hämtas EN gång
+// från /api/me (den är långsam — skannar transkript); tickar lokalt därefter.
+let _quotaMe = null;      // senaste /api/me-svaret
+let _quotaNextTs = null;  // nästa återställning (epoch ms) — null = ingen (∞)
+let _quotaTimer = null;   // 1s-tick som uppdaterar nedräkningen lokalt
+function quotaNextReset(me) {
+  if (!me) return null;
+  if (me.subscription_status === 'lifetime' || me.turn_cap === 0) return null;
+  if (me.subscription_status === 'tier1' || me.subscription_status === 'tier2') {
+    if (me.reset_ts) { const t = new Date(me.reset_ts).getTime(); return isNaN(t) ? null : t; }
+    return null;
+  }
+  // free-tier: reset_date = datumet då återställningen SKER (00:00 UTC).
+  // Är datumet <= idag har dagens återställning redan skett → nästa är i morgon.
+  if (me.reset_date) {
+    const d = new Date(me.reset_date + 'T00:00:00Z');
+    if (!isNaN(d.getTime())) {
+      if (d.getTime() <= Date.now()) d.setUTCDate(d.getUTCDate() + 1);
+      return d.getTime();
+    }
+  }
+  const n = new Date(); n.setUTCHours(24, 0, 0, 0); return n.getTime();
+}
+function quotaFmt(ms) {
+  if (ms === null || ms === undefined || isNaN(ms)) return '';
+  if (ms <= 0) return '🕯 0m';
+  const s = Math.floor(ms / 1000);
+  const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+  if (d > 0) return '🕯 ' + d + 'd ' + h + 'h';
+  if (h > 0) return '🕯 ' + h + 'h ' + m + 'm';
+  return '🕯 ' + Math.max(1, m) + 'm';
+}
+function quotaBenefitsFmt(untilIso) {
+  if (!untilIso) return '';
+  const ms = new Date(untilIso).getTime() - Date.now();
+  if (isNaN(ms) || ms <= 0) return '';
+  const s = Math.floor(ms / 1000);
+  const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600);
+  return (d > 0) ? '👑 ' + d + 'd ' + h + 'h' : '👑 ' + Math.max(1, h) + 'h';
+}
+function quotaTick() {
+  const cdEl = document.getElementById('quota-cd');
+  if (!cdEl) return;
+  if (_quotaNextTs === null || _quotaNextTs === undefined) { cdEl.textContent = ''; return; }
+  const left = _quotaNextTs - Date.now();
+  if (left <= 0) {
+    cdEl.textContent = '🕯 0m';
+    _quotaNextTs = null; // hämta fräscha turns EN gång när återställningen passerat
+    API.me().then(u => { if (u) { window._advMe = u; renderQuotaPill(u); } }).catch(() => {});
+    return;
+  }
+  cdEl.textContent = quotaFmt(left);
+}
+function renderQuotaPill(me) {
+  if (me) { _quotaMe = me; window._advMe = me; }
+  me = _quotaMe;
+  const turnsEl = document.getElementById('quota-turns');
+  if (!me || !turnsEl) return;
+  const cap = me.turn_cap;
+  const inf = (cap === 0 || me.subscription_status === 'lifetime');
+  turnsEl.textContent = inf ? '⚡ ∞' : ('⚡ ' + Math.max(0, Math.floor(Number(me.turns_available) || 0)));
+  const cdEl = document.getElementById('quota-cd');
+  _quotaNextTs = inf ? null : quotaNextReset(me);
+  if (cdEl) quotaTick();
+  if (!_quotaTimer) _quotaTimer = setInterval(quotaTick, 1000);
+  // 🎁 Signup-bonus kvar
+  const promo = document.getElementById('quota-promo');
+  if (promo) {
+    const n = Number(me.promo_bonus) || 0;
+    if (n > 0) { promo.style.display = ''; promo.textContent = '🎁 ' + n; }
+    else promo.style.display = 'none';
+  }
+  // 👑 Support/Patron-förmåner — nedräkning till de går ut
+  const ben = document.getElementById('quota-benefits');
+  if (ben) {
+    const f = me.features || {};
+    if (f.benefits_active && f.features_until) {
+      const t = quotaBenefitsFmt(f.features_until);
+      if (t) { ben.style.display = ''; ben.textContent = t; }
+      else ben.style.display = 'none';
+    } else ben.style.display = 'none';
+  }
+  // '?'-tooltip — tvåspråkig via isEn() (I18N saknar nyckel; etablerad fallback)
+  const tip = document.getElementById('quota-tip');
+  if (tip && !tip.dataset.set) {
+    tip.dataset.set = '1';
+    tip.textContent = isEn()
+      ? 'Every external call costs a turn — chatting, painting, re-rolls, lorekeeper facts, character creation.'
+      : 'Alla externa anrop kostar en turn — chatt, bildmålning, rerolls, lorekeeper-fakta, karaktärsskapande.';
+  }
+}
+function toggleQuotaTip(e) {
+  if (e) e.stopPropagation();
+  const tip = document.getElementById('quota-tip');
+  if (!tip) return;
+  const show = !tip.classList.contains('show');
+  document.querySelectorAll('.quota-tip.show').forEach(t => t.classList.remove('show'));
+  if (show) tip.classList.add('show');
+}
+document.addEventListener('click', e => {
+  if (e.target && e.target.closest && !e.target.closest('.qwrap')) {
+    document.querySelectorAll('.quota-tip.show').forEach(t => t.classList.remove('show'));
+  }
+});
 
 // Lämna porten (logga ut)
 async function leaveGate() {
@@ -1658,6 +1881,8 @@ function advPaintUpdateLock() {
   if (sel.value === 'stepfun' && !canPaint) sel.value = '';
   const freeBtn = document.getElementById('adv-paint-free-btn');
   if (freeBtn) freeBtn.disabled = !canPaint;
+  const dossierBtn = document.getElementById('adv-paint-dossier-btn');
+  if (dossierBtn) dossierBtn.disabled = !canPaint;
 }
 async function openAdvPaintModal() {
   if (advPaintTier === null) {
@@ -1691,21 +1916,39 @@ async function openAdvPaintModal() {
   document.getElementById('adv-paint-status').textContent = '';
   advPaintUpdateLock();
   document.getElementById('adv-paint-overlay').classList.add('show');
+  // Visa nuvarande porträtt överst (om det finns) — förstoring/re-roll förblir nåbar
+  const curWrap = document.getElementById('adv-paint-cur');
+  const curBox = document.getElementById('adv-paint-cur-img');
+  if (curWrap && curBox) {
+    const small = document.getElementById('adv-pv-portrait');
+    const im = small ? small.querySelector('img') : null;
+    if (im && im.src) {
+      curBox.innerHTML = '<img src="' + im.src + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
+      curWrap.style.display = '';
+    } else {
+      curBox.innerHTML = '🎭';
+      curWrap.style.display = 'none';
+    }
+  }
   try { SFX.click(); } catch (_) {}
 }
 function closeAdvPaintModal() {
   const ov = document.getElementById('adv-paint-overlay');
   if (ov) ov.classList.remove('show');
 }
-async function advPaintRun(prompt) {
+async function advPaintRun(prompt, fromDossier) {
   if (!advPaintGate(advPaintProvider())) return;
   const status = document.getElementById('adv-paint-status');
   const freeBtn = document.getElementById('adv-paint-free-btn');
+  const dossierBtn = document.getElementById('adv-paint-dossier-btn');
   const prov = advPaintProvider();
   advPaintLastPrompt = prompt;
   advPaintLastProvider = prov;
-  status.textContent = (prov === 'wan' ? '🖼️ Painting with Wan 2.7 Pro… (15–40 s)' : '🎨 Painting with StepFun… (10–30 s)');
-  freeBtn.disabled = true;
+  status.textContent = fromDossier
+    ? '📜 Weaving your portrait from the dossier…'
+    : (prov === 'wan' ? '🖼️ Painting with Wan 2.7 Pro… (15–40 s)' : '🎨 Painting with StepFun… (10–30 s)');
+  if (freeBtn) freeBtn.disabled = true;
+  if (dossierBtn) dossierBtn.disabled = true;
   try {
     const res = await API.vaultGenerateAvatar(advAdventurerId, Date.now() % 1000000, 'new', prompt, prov);
     if (res && res.ok) {
@@ -1716,7 +1959,14 @@ async function advPaintRun(prompt) {
         const ib = document.getElementById('adv-portrait-img');
         if (ib) { ib.innerHTML = ''; const ni = document.createElement('img'); ni.src = API.vaultAvatarUrl(advAdventurerId) + '?t=' + Date.now(); ni.alt = ''; ib.appendChild(ni); }
       }
-      status.textContent = (prov === 'wan' ? '✨ Portrait painted — Wan 2.7 Pro, used your words' : '✨ Portrait painted — StepFun, used your words');
+      // Håll miniatyren i paint-modalen i synk med det nya porträttet
+      const curWrap = document.getElementById('adv-paint-cur');
+      const curBox = document.getElementById('adv-paint-cur-img');
+      if (curBox) curBox.innerHTML = '<img src="' + API.vaultAvatarUrl(advAdventurerId) + '?t=' + Date.now() + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
+      if (curWrap) curWrap.style.display = '';
+      status.textContent = fromDossier
+        ? '✨ Portrait painted from your dossier'
+        : (prov === 'wan' ? '✨ Portrait painted — Wan 2.7 Pro, used your words' : '✨ Portrait painted — StepFun, used your words');
       try { SFX.levelup(); } catch (_) {}
     } else {
       status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Generation failed');
@@ -1726,7 +1976,7 @@ async function advPaintRun(prompt) {
     status.textContent = '⚠ ' + (e.message || 'Generation failed');
     try { SFX.error(); } catch (_) {}
   } finally {
-    freeBtn.disabled = false;
+    if (freeBtn) freeBtn.disabled = false;
     advPaintUpdateLock();
   }
 }
@@ -1739,6 +1989,12 @@ async function advPaintFreePrompt() {
     return;
   }
   await advPaintRun(text);
+}
+async function advPaintFromDossier() {
+  // Tom prompt → backend väver porträttet från karaktärens dossier
+  // (namn/klass/bakgrund/utrustning — INGA stats som HP/AC: siffror renderas
+  //  som glyfer på bilden, därför exkluderar backend dem medvetet).
+  await advPaintRun('', true);
 }
 
 // ── 🔍 Portrait preview-modal: klicka på porträttet → förstora, re-roll eller måla ──
@@ -2133,16 +2389,16 @@ document.addEventListener('keydown', (e) => {
 // ── 🪞 Profil-modal: spelaren ser BARA sina egna stats (exkl. ip/land) ──
 let _pfHasAvatar = false;   // konto-avatar finns? (från /api/me)
 function _pfRenderAvatar() {
-  const av = document.getElementById('pf-avatar');
-  if (!av) return;
+  // Thumb i profilen + dämpad bakgrundsbild bakom statsen (2026-08-08)
+  const thumb = document.getElementById('pf-thumb-img');
+  const bg = document.getElementById('pf-bg-img');
   if (_pfHasAvatar) {
-    av.innerHTML = `<img src="${API.accountAvatarUrl()}?t=${Date.now()}" alt="">`;
-    const hint = document.getElementById('pf-avatar-hint');
-    if (hint) hint.textContent = 'Click the portrait to repaint';
+    const src = API.accountAvatarUrl() + '?t=' + Date.now();
+    if (thumb) thumb.innerHTML = '<img src="' + src + '" alt="">';
+    if (bg) bg.style.backgroundImage = 'url("' + API.accountAvatarUrl() + '")';
   } else {
-    av.innerHTML = '👤';
-    const hint = document.getElementById('pf-avatar-hint');
-    if (hint) hint.textContent = 'Click the portrait to paint your own';
+    if (thumb) thumb.innerHTML = '👤';
+    if (bg) bg.style.backgroundImage = 'none';
   }
 }
 async function openProfileModal() {
@@ -2156,6 +2412,7 @@ async function openProfileModal() {
   API.me().then(me => {
     _pfHasAvatar = !!(me && me.has_avatar);
     if (advPaintTier === null && me) advPaintTier = (me.subscription_status === 'premium') ? 'tier2' : (me.subscription_status || 'free');
+    if (me) renderQuotaPill(me);
     _pfRenderAvatar();
   }).catch(() => {});
   try {
@@ -2174,6 +2431,55 @@ async function openProfileModal() {
 function closeProfileModal() {
   const ovl = document.getElementById('pf-overlay');
   if (ovl) ovl.classList.remove('show');
+}
+
+// ── 🖼 Profilporträtt: ljuslåda + galleri-bladring (2026-08-08) ──
+let _pfGallery = { gallery_count: 0, gallery_index: 0 };
+async function openPfLightbox() {
+  const ov = document.getElementById('pf-lb-overlay');
+  if (!ov) return;
+  try { _pfGallery = await API.accountAvatarGallery(); } catch (_) {}
+  _pfRenderLightbox();
+  ov.classList.add('show');
+  try { SFX.click(); } catch (_) {}
+}
+function closePfLightbox() {
+  const ov = document.getElementById('pf-lb-overlay');
+  if (ov) ov.classList.remove('show');
+}
+function _pfLightboxSrc() {
+  return API.accountAvatarUrl() + '?idx=' + (_pfGallery.gallery_index || 0) + '&t=' + Date.now();
+}
+function _pfRenderLightbox() {
+  const img = document.getElementById('pf-lb-img');
+  const empty = document.getElementById('pf-lb-empty');
+  const count = document.getElementById('pf-lb-count');
+  const prev = document.getElementById('pf-lb-prev');
+  const next = document.getElementById('pf-lb-next');
+  const n = _pfGallery.gallery_count || 0;
+  const i = _pfGallery.gallery_index || 0;
+  const has = n > 0 && _pfHasAvatar;
+  if (img) img.style.display = has ? '' : 'none';
+  if (empty) empty.style.display = has ? 'none' : '';
+  if (has && img) img.src = _pfLightboxSrc();
+  if (count) count.textContent = has ? ((i + 1) + ' / ' + n) : '—';
+  if (prev) prev.disabled = !has || n <= 1;
+  if (next) next.disabled = !has || n <= 1;
+}
+async function pfLightboxRotate(delta) {
+  const prev = document.getElementById('pf-lb-prev');
+  const next = document.getElementById('pf-lb-next');
+  if (prev) prev.disabled = true;
+  if (next) next.disabled = true;
+  try {
+    const res = await API.rotateAccountAvatar(delta);
+    _pfGallery = { gallery_count: res.gallery_count, gallery_index: res.gallery_index };
+    _pfRenderLightbox();
+    _pfRenderAvatar(); // håll thumb + bakgrund i synk med den aktiva bilden
+  } catch (e) {
+    toast('⚠ ' + (e.message || 'Could not browse the gallery'));
+    _pfRenderLightbox();
+  }
 }
 
 // ── 🖼 Profil-porträtt: popup för att generera konto-avataren (2026-08-06) ──

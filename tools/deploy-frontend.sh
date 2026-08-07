@@ -11,10 +11,11 @@ if ! docker ps --format '{{.Names}}' | grep -qx "$C"; then
   echo "Fel: containern '$C' körs inte. Starta först: docker compose up -d" >&2
   exit 1
 fi
-docker cp frontend/sprites.js "$C":/app/frontend/sprites.js
-# api.js kopieras också — den missades förut och deploy-skriptet ska
-# synca ALLA frontend-filer, inte bara .html (prisändringar m.m. bor där).
-docker cp frontend/api.js "$C":/app/frontend/api.js
+# ALLA frontend/*.js kopieras — sprites/api missades förut och archetypes.js
+# missades 2026-08-07 (stelnad i containern). Deploy ska synca ALLT, inte bara .html.
+for f in frontend/*.js; do
+  docker cp "$f" "$C":/app/"$f"
+done
 for f in frontend/*.html; do
   docker cp "$f" "$C":/app/"$f"
 done

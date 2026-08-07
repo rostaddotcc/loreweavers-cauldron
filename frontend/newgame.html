@@ -43,11 +43,23 @@
     background:var(--ac,var(--gold));color:#1a1206;padding:.25rem 2.2rem;
     opacity:0;transition:opacity .3s;
   }.arch.selected{border-color:var(--ac,var(--gold));transform:rotate(0) translateY(-6px);
-    box-shadow:0 0 0 1px var(--ac,var(--gold)),0 16px 34px -12px var(--ac-glow,rgba(201,162,39,.5))}.arch.selected .ribbon{opacity:1}.arch.selected::before{border-color:var(--ac,var(--gold))}/* ═══════════ Dark Paths dropdown ═══════════ */.dark-drop{
-    margin-top:1.4rem;padding:1rem 1.1rem;
-    background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#0f0a14);
-    border:1px solid var(--edge);border-left:3px solid #a32433;
-  }.dark-drop-label{display:flex;align-items:baseline;gap:.5rem;flex-wrap:wrap;margin-bottom:.6rem}.dark-drop-label .dd-icon{font-size:1rem}.dark-drop-label .dd-name{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--blood-bright)}.dark-drop-label .dd-sub{font-size:.75rem;font-style:italic;color:var(--bone-dim)}.dark-select{
+    box-shadow:0 0 0 1px var(--ac,var(--gold)),0 16px 34px -12px var(--ac-glow,rgba(201,162,39,.5))}.arch.selected .ribbon{opacity:1}.arch.selected::before{border-color:var(--ac,var(--gold))}/* ═══════════ Arketyp-kategorier — fyra hopfällbara sektioner ═══════════ */.arch-cat{
+    margin-top:1.4rem;border:1px solid var(--edge);
+    background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);
+  }.arch-cat .cat-head{
+    width:100%;display:flex;align-items:center;gap:.85rem;padding:.9rem 1.1rem;text-align:left;
+    background:transparent;border:0;cursor:pointer;font:inherit;color:inherit;
+    border-bottom:1px solid rgba(201,162,39,.16);transition:background .2s;
+  }.arch-cat .cat-head:hover{background:rgba(212,169,44,.07)}.arch-cat .cat-head:active{background:rgba(212,169,44,.12)!important;color:inherit!important}.arch-cat .cat-icon{font-size:1.15rem;flex-shrink:0}.arch-cat .cat-titles{flex:1;min-width:0;display:flex;flex-direction:column;gap:.12rem}.arch-cat .cat-title{
+    font-family:var(--font-display,'Cinzel',serif)!important;font-weight:700;font-size:.76rem;
+    letter-spacing:.24em!important;text-transform:uppercase;color:var(--gold-bright)!important;
+  }.arch-cat .cat-sub{font-size:.76rem;font-style:italic;color:var(--bone-dim)}.arch-cat .cat-count{
+    flex-shrink:0;min-width:1.7rem;text-align:center;
+    font-family:var(--font-display,'Cinzel',serif)!important;font-size:.66rem;letter-spacing:.1em;
+    color:var(--gold);border:1px solid var(--edge);padding:.22rem .45rem;border-radius:2px;
+  }.arch-cat .cat-chevron{flex-shrink:0;color:var(--bone-dim);font-size:.85rem;transition:transform .25s}.arch-cat .cat-chevron::before{content:'▾'}.arch-cat:not(.open) .cat-chevron::before{content:'▸'}.arch-cat .cat-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .4s cubic-bezier(.22,1,.36,1)}.arch-cat.open .cat-body{grid-template-rows:1fr}.arch-cat .cat-inner{overflow:hidden;min-height:0}.arch-cat.open .cat-inner .spread{padding:1.1rem 1.1rem 1.35rem}.arch-cat .cat-empty{padding:1rem 1.1rem 1.35rem;font-style:italic;color:var(--bone-dim);font-size:.9rem}/* Den Mörka Vägen — blodröd accent, hotfull header */.arch-cat.dark{
+    border-left:3px solid #a32433;background:linear-gradient(170deg,#1d1529,#161020 60%,#0f0a14);
+  }.arch-cat.dark .cat-head{border-bottom-color:rgba(163,36,51,.28)}.arch-cat.dark .cat-title{color:var(--blood-bright)!important}.arch-cat.dark .cat-count{color:var(--blood-bright);border-color:rgba(163,36,51,.45)}.dark-select{
     width:100%;font-family:var(--font-body,'Spectral',serif);font-size:.98rem;color:var(--bone-bright);
     background:#0d0817;border:1px solid var(--edge);padding:.6rem .8rem;cursor:pointer;outline:none;
   }.dark-select:hover,.dark-select:focus{border-color:var(--blood)}.dark-select option{background:var(--stone-2);color:var(--bone-bright)}/* Kampanjspråk-dropdown — medvetet ej förvalt, tydlig platshållare */.lang-dropdown{max-width:340px;margin:0 auto;text-align:center;font-family:var(--font-display,'Cinzel',serif);letter-spacing:.08em;font-size:.85rem}.lang-dropdown:invalid{color:var(--bone-dim);font-style:italic}.lang-dropdown option{font-family:var(--font-body,'Spectral',serif);letter-spacing:0}/* ═══════════ Prompt scroll ═══════════ */.scroll-box{position:relative;background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,#120c1c);border:1px solid var(--edge);padding:1.6rem 1.5rem;box-shadow:0 20px 50px -20px rgba(0,0,0,.9)}.scroll-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.6rem}.scroll-head .mode{font-family:var(--font-display,'Cinzel',serif);font-size:.85rem;letter-spacing:.2em;text-transform:uppercase;color:var(--arcane)}.scroll-head .mode b{color:var(--bone-bright)}.blank-btn{font-family:var(--font-display,'Cinzel',serif);font-size:.73rem;letter-spacing:.14em;text-transform:uppercase;background:transparent;border:1px solid var(--edge);color:var(--bone-dim);padding:.4rem .8rem;cursor:pointer;transition:all .2s;border-radius:2px}.blank-btn:hover{color:var(--bone-bright);border-color:var(--bone-dim)}#prompt{
@@ -107,7 +119,7 @@
   @media(max-width:900px){.spread{grid-template-columns:repeat(2,1fr)}.pv-stats{grid-template-columns:repeat(3,1fr)}.arch:active{transform:rotate(0) translateY(2px);border-color:var(--ac,var(--gold));
       box-shadow:0 4px 14px -8px rgba(0,0,0,.8)}.arch:active .glow{opacity:1}.arch:active .icon{transform:scale(1.08)}
   }
-  @media(max-width:640px){.app{padding:1.4rem .75rem 4rem}.forge-head{margin-bottom:1.6rem}.forge-head .brand{font-size:.9rem}.forge-head .back{min-height:44px;display:inline-flex;align-items:center}.destiny-sub{font-size:.98rem;margin-bottom:1.6rem}.section-label{margin:2rem 0 1rem;letter-spacing:.22em}/* Språkval — två stora pills i full bredd */.lang-row{flex-direction:column;gap:.7rem;margin:-1rem 0 1.8rem}.lang-hint{text-align:center}/* Arketyper */.arch .lore{min-height:0}.arch h3{font-size:.88rem}/* Pergament + modeller */.scroll-box{padding:1.3rem 1rem}#prompt{min-height:120px;font-size:18px}.legend-preview{min-height:140px;font-size:18px}.lp-clear{min-height:44px}.blank-btn{min-height:44px;display:inline-flex;align-items:center}.scroll-actions{flex-direction:column;align-items:stretch;gap:.7rem}.summon-btn{width:100%;min-height:56px;font-size:.98rem}.summon-btn:active:not(:disabled){transform:translateY(2px);filter:brightness(.94);
+  @media(max-width:640px){.app{padding:1.4rem .75rem 4rem}.forge-head{margin-bottom:1.6rem}.forge-head .brand{font-size:.9rem}.forge-head .back{min-height:44px;display:inline-flex;align-items:center}.destiny-sub{font-size:.98rem;margin-bottom:1.6rem}.section-label{margin:2rem 0 1rem;letter-spacing:.22em}/* Språkval — två stora pills i full bredd */.lang-row{flex-direction:column;gap:.7rem;margin:-1rem 0 1.8rem}.lang-hint{text-align:center}/* Arketyper */.arch .lore{min-height:0}.arch h3{font-size:.88rem}.arch-cat .cat-head{min-height:44px;padding:.75rem .8rem;gap:.6rem}.arch-cat .cat-title{font-size:.68rem;letter-spacing:.16em!important}.arch-cat .cat-sub{font-size:.72rem}.arch-cat .cat-count{display:none}/* Pergament + modeller */.scroll-box{padding:1.3rem 1rem}#prompt{min-height:120px;font-size:18px}.legend-preview{min-height:140px;font-size:18px}.lp-clear{min-height:44px}.blank-btn{min-height:44px;display:inline-flex;align-items:center}.scroll-actions{flex-direction:column;align-items:stretch;gap:.7rem}.summon-btn{width:100%;min-height:56px;font-size:.98rem}.summon-btn:active:not(:disabled){transform:translateY(2px);filter:brightness(.94);
       box-shadow:0 2px 8px -4px rgba(232,198,90,.4),inset 0 1px 0 rgba(255,255,255,.2)}.scroll-actions>span{margin-top:.3rem;text-align:left;opacity:.85}.scroll-actions select{width:100%;min-height:48px;font-size:18px;padding:.6rem .7rem;background:var(--stone-2)}.vault-chip{flex:0 0 auto}.vault-chip:active{border-color:var(--gold);transform:translateY(1px)}/* Förhandsvisning */.preview{margin-top:1.8rem}.pv-head{gap:1rem}.pv-portrait{width:68px;height:68px;font-size:1.8rem}.pv-name{font-size:1.25rem}.pv-class{font-size:.98rem}.pv-stats{grid-template-columns:repeat(3,1fr)}.pv-vitals{gap:.9rem;font-size:.93rem}.pv-story{font-size:1.01rem}.pv-actions{flex-direction:column;align-items:stretch}.pv-go{width:100%;min-height:56px}.pv-go:active{transform:translateY(2px);filter:brightness(.94)}.pv-reroll{width:100%;min-height:48px}.pv-reroll:active{transform:translateY(2px);color:var(--bone-bright);border-color:var(--arcane)}.toast{max-width:92%;text-align:center}
   }
   @media(max-width:480px){.spread{grid-template-columns:1fr}.arch{transform:none!important}.arch.selected{transform:none!important}
@@ -202,17 +214,9 @@
     <div class="vault-note" id="vault-note" style="display:none">Choose a saved adventurer to step straight into this campaign — or summon a fresh one below.</div>
   </div>
 
-  <!-- ═══════════ 1. ARKETYPER ═══════════ -->
+  <!-- ═══════════ 1. ARKETYPER — fyra hopfällbara kategorier ═══════════ -->
   <div class="section-label"><span class="num">I.</span> Archetypes</div>
-  <div class="spread" id="spread"></div>
-
-  <!-- ═══════════ MÖRKA ARKETYPER (dropdown) ═══════════ -->
-  <div class="dark-drop" id="dark-drop">
-    <div class="dark-drop-label"><span class="dd-icon">🖤</span> <span class="dd-name" id="dd-name">Dark Paths</span> <span class="dd-sub" id="dd-sub">mature archetypes</span></div>
-    <select id="dark-select" class="dark-select" onchange="selectDarkArch(this.value)">
-      <option value="">— choose a darker path —</option>
-    </select>
-  </div>
+  <div id="archetype-cats"></div>
 
   <!-- ═══════════ 2. PROMPT-MALL ═══════════ -->
   <div class="section-label"><span class="num">II.</span> The Fateweave</div>
@@ -304,7 +308,7 @@
 <script src="sfx.js?v=20260802a"></script>
 <script src="api.js?v=20260804c"></script>
 <script src="i18n.js?v=20260806a"></script>
-<script src="archetypes.js?v=20260803a"></script>
+<script src="archetypes.js?v=20260807a"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -379,9 +383,8 @@ Generate:
 Return as JSON per the state schema.`;
 
 // ═══════════════════════════════════════
-// RENDER ARKETYPER (language-aware)
+// RENDER ARKETYPER — fyra hopfällbara kategorier (language-aware)
 // ═══════════════════════════════════════
-const spread = document.getElementById('spread');
 
 function isEn() { return typeof I18N !== 'undefined' && I18N.getLang() === 'en'; }
 
@@ -389,10 +392,48 @@ function archField(a, field) {
   return (isEn() && a.en && a.en[field]) ? a.en[field] : a[field];
 }
 
-function renderArchetypes() {
-  spread.innerHTML = Object.entries(ARCHETYPES)
-    .filter(([, a]) => !a.dark) // Mörka arketyper visas bara i dropdownen
-    .map(([key, a]) => `
+// Kategoriordning + texter (SV/EN). catId matchar a.cat i archetypes.js;
+// saknas cat fallback: a.dark ? 'dark' : 'other'.
+const CATEGORIES = [
+  { id: 'classic', icon: '⚔️', titleEn: 'Classic Archetypes', titleSv: 'Klassiska Arketyper', subEn: '', subSv: '', defaultOpen: true },
+  { id: 'weird', icon: '🌌', titleEn: 'Something Else Entirely', titleSv: 'Något Helt Annat',
+    subEn: 'Backstories beyond high fantasy — present day, far future, deep space…',
+    subSv: 'Bakgrundshistorier bortom high fantasy — nutid, framtid, rymden…', defaultOpen: true },
+  { id: 'other', icon: '🎭', titleEn: 'Others', titleSv: 'Andra', subEn: '', subSv: '', defaultOpen: true },
+  { id: 'dark', icon: '🖤', titleEn: 'The Dark Path', titleSv: 'Den Mörka Vägen',
+    subEn: 'mature archetypes · 18+', subSv: 'mogna arketyper · 18+', defaultOpen: false, dark: true },
+];
+
+function catOf(a) { return (a && a.cat) || (a && a.dark ? 'dark' : 'other'); }
+
+function catOpenState(id) {
+  try {
+    const stored = JSON.parse(localStorage.getItem('newgame_cats') || '{}');
+    if (typeof stored[id] === 'boolean') return stored[id];
+  } catch (e) {}
+  const cat = CATEGORIES.find(c => c.id === id);
+  return cat ? cat.defaultOpen : true;
+}
+
+function saveCatState(id, open) {
+  try {
+    const stored = JSON.parse(localStorage.getItem('newgame_cats') || '{}');
+    stored[id] = open;
+    localStorage.setItem('newgame_cats', JSON.stringify(stored));
+  } catch (e) {}
+}
+
+function toggleCat(id) {
+  const sec = document.getElementById('cat-' + id);
+  if (!sec) return;
+  const open = sec.classList.toggle('open');
+  const head = sec.querySelector('.cat-head');
+  if (head) head.setAttribute('aria-expanded', open ? 'true' : 'false');
+  saveCatState(id, open);
+}
+
+function archCard(key, a) {
+  return `
   <div class="arch" data-key="${key}" style="--ac:${a.color};--ac-glow:${a.glow}" onclick="selectArch('${key}')">
     <div class="glow"></div>
     <div class="ribbon">${isEn() ? 'Chosen' : 'Vald'}</div>
@@ -400,7 +441,35 @@ function renderArchetypes() {
     <h3>${archField(a, 'name')}</h3>
     <p class="lore">${archField(a, 'lore')}</p>
     <div class="tags">${archField(a, 'tags').map(t=>`<span class="tag">${t}</span>`).join('')}</div>
-  </div>`).join('');
+  </div>`;
+}
+
+function renderCategories() {
+  const host = document.getElementById('archetype-cats');
+  if (!host) return;
+  host.innerHTML = CATEGORIES.map(cat => {
+    const entries = Object.entries(ARCHETYPES).filter(([, a]) => catOf(a) === cat.id);
+    const open = catOpenState(cat.id);
+    const title = isEn() ? cat.titleEn : cat.titleSv;
+    const sub = isEn() ? cat.subEn : cat.subSv;
+    const body = entries.length
+      ? `<div class="spread">${entries.map(([key, a]) => archCard(key, a)).join('')}</div>`
+      : `<p class="cat-empty">${isEn() ? 'No templates here yet…' : 'Inga mallar här ännu…'}</p>`;
+    return `<section class="arch-cat${cat.dark ? ' dark' : ''}${open ? ' open' : ''}" id="cat-${cat.id}" data-cat="${cat.id}">
+      <button type="button" class="cat-head" onclick="toggleCat('${cat.id}')" aria-expanded="${open ? 'true' : 'false'}">
+        <span class="cat-icon">${cat.icon}</span>
+        <span class="cat-titles">
+          <span class="cat-title">${title}</span>
+          ${sub ? `<span class="cat-sub">${sub}</span>` : ''}
+        </span>
+        <span class="cat-count">${entries.length}</span>
+        <span class="cat-chevron" aria-hidden="true"></span>
+      </button>
+      <div class="cat-body">
+        <div class="cat-inner">${body}</div>
+      </div>
+    </section>`;
+  }).join('');
   // Re-apply selected state after re-render
   if (selectedKey) {
     document.querySelectorAll('.arch').forEach(el => el.classList.toggle('selected', el.dataset.key === selectedKey));
@@ -408,37 +477,7 @@ function renderArchetypes() {
 }
 
 let selectedKey = null;
-renderArchetypes();
-
-// ── Dark Paths dropdown — mörka arketyper (SV/EN per språk) ──
-const DARK_ARCH_KEYS = Object.entries(ARCHETYPES).filter(([,a]) => a.dark).map(([k]) => k);
-
-function renderDarkSelect() {
-  const sel = document.getElementById('dark-select');
-  const nameEl = document.getElementById('dd-name');
-  const subEl = document.getElementById('dd-sub');
-  if (!sel) return;
-  if (nameEl) nameEl.textContent = isEn() ? 'Dark Paths' : 'Mörka Vägar';
-  if (subEl) subEl.textContent = isEn() ? 'mature archetypes' : 'mogna arketyper';
-  sel.innerHTML = '<option value="">' + (isEn() ? '— choose a darker path —' : '— välj en mörkare väg —') + '</option>' +
-    DARK_ARCH_KEYS.map(k => {
-      const a = ARCHETYPES[k];
-      return `<option value="${k}">${a.icon} ${archField(a, 'name')}</option>`;
-    }).join('');
-  // Håll dropdownen synkad med vald mörk arketyp
-  if (selectedKey && ARCHETYPES[selectedKey] && ARCHETYPES[selectedKey].dark) {
-    sel.value = selectedKey;
-  } else {
-    sel.value = '';
-  }
-}
-
-function selectDarkArch(key) {
-  if (!key) return;
-  selectArch(key);
-}
-
-renderDarkSelect();
+renderCategories();
 
 // ── Campaign language selector (live preview) ──
 function onLangChange(lang) {
@@ -453,8 +492,7 @@ function onLangChange(lang) {
   // Live preview: translate the whole page + re-render templates
   if (typeof I18N !== 'undefined') {
     I18N.init(lang);
-    renderArchetypes();
-    renderDarkSelect();
+    renderCategories();
     // Byt mall bara om spelaren inte skrivit egen text (orört = samma som senast sattes)
     const promptEl = document.getElementById('prompt');
     const untouched = promptEl.value === lastSetValue;
@@ -487,9 +525,6 @@ function selectArch(key) {
   document.getElementById('mode-label').innerHTML = isEn()
     ? `📜 Archetype: <b>${archField(a, 'name')}</b>`
     : `📜 Arketyp: <b>${archField(a, 'name')}</b>`;
-  // Synka dark dropdownen — väljs en kort-arketyp nollställs den
-  const darkSel = document.getElementById('dark-select');
-  if (darkSel) darkSel.value = a.dark ? key : '';
   toast(isEn()
     ? `${a.icon} ${archField(a, 'name')} chosen — prompt template loaded`
     : `${a.icon} ${archField(a, 'name')} vald — prompt-mall laddad`);

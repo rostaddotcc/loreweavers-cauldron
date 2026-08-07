@@ -32,6 +32,7 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: var(--font-body,'Spectral',Georgia,serif);
+    font-size: 15px; line-height: 1.5;
     color: var(--bone);
     min-height: 100vh;
     background: var(--ink);
@@ -48,22 +49,46 @@
   .app { position: relative; z-index: 2; max-width: 1700px; margin: 0 auto; padding: 1.5rem 1.25rem 5rem; }
 
   /* ── Header ── */
-  .masthead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; }
+  .masthead { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem; }
   .masthead h1 {
-    font-family: var(--font-display,'Cinzel',serif); font-weight: 900; font-size: 1.35rem;
+    font-family: var(--font-display,'Cinzel',serif); font-weight: 900; font-size: 1.6rem;
     color: var(--gold-bright); letter-spacing: 0.06em;
   }
   .masthead h1::before { content: '┌─ '; color: var(--edge); }
   .masthead h1::after { content: ' ─┐'; color: var(--edge); }
   .back-btn {
-    font-family: var(--font-display,'Cinzel',serif); font-size: 0.72rem; letter-spacing: 0.14em;
+    font-family: var(--font-display,'Cinzel',serif); font-size: 0.85rem; letter-spacing: 0.12em;
     text-transform: uppercase; background: var(--stone-3); border: 1px solid var(--edge);
-    color: var(--bone-dim); padding: 0.55rem 1.1rem; cursor: pointer;
-    text-decoration: none; border-radius: 0; transition: all 0.2s;
+    color: var(--bone-dim); padding: 0.6rem 1.1rem; cursor: pointer;
+    text-decoration: none; border-radius: 0; transition: all 0.2s; min-height: 40px;
   }
   .back-btn:hover { color: var(--gold-bright); border-color: var(--gold); }
-  .masthead-actions { display: flex; gap: 0.6rem; }
+  .masthead-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
   .back-btn.leave:hover { color: var(--blood-bright); border-color: var(--blood-bright); }
+
+  /* ── Collapsible sections ── */
+  .sec { margin-bottom: 1.8rem; }
+  .sec-head {
+    display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap;
+    padding: 0.75rem 0.95rem; margin-bottom: 1.1rem; cursor: pointer; user-select: none;
+    background: var(--stone); border: 1px solid var(--edge); position: relative;
+  }
+  .sec-head::before { content: ''; position: absolute; inset: 3px; border: 1px solid var(--edge); opacity: 0.22; pointer-events: none; }
+  .sec-head .chev { font-size: 1rem; color: var(--term-green); width: 1.1rem; flex: 0 0 auto; }
+  .sec-head .sec-title {
+    font-family: var(--font-display,'Cinzel',serif); font-size: 0.95rem; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--gold); white-space: nowrap;
+  }
+  .sec-head:hover .sec-title { color: var(--gold-bright); }
+  .sec-head .sec-summary { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 0.75rem; color: var(--bone-dim); }
+  .sec-head .refresh {
+    margin-left: auto; font-size: 0.75rem; background: var(--stone-3);
+    border: 1px solid var(--edge); color: var(--bone-dim); padding: 0.42rem 0.85rem;
+    cursor: pointer; letter-spacing: 0.1em; border-radius: 0; font-family: inherit; min-height: 36px;
+  }
+  .sec-head .refresh:hover { color: var(--gold-bright); border-color: var(--gold); }
+  .sec.collapsed .sec-body { display: none; }
+  .sec.collapsed .chev { color: var(--bone-dim); }
 
   /* ── Stat cards ── */
   .stats-grid {
@@ -74,29 +99,27 @@
   .realm-grid {
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.4rem;
   }
-  .realm-grid .stat-card {
-    padding: 1.1rem 1.2rem; border-color: rgba(212,169,44,.35);
-  }
+  .realm-grid .stat-card { padding: 1.1rem 1.2rem; border-color: rgba(212,169,44,.35); }
   .realm-grid .stat-num { color: var(--gold-bright); }
   .realm-grid .stat-label { letter-spacing: .06em; }
 
   /* ── Row action buttons (top-up / grant / role) ── */
-  .row-actions { display: flex; flex-direction: column; gap: .45rem; align-items: flex-start; }
-  .act-group { display: flex; align-items: center; gap: .3rem; flex-wrap: wrap; }
+  .row-actions { display: flex; flex-direction: column; gap: .55rem; align-items: flex-start; }
+  .act-group { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
   .act-chip {
     background: transparent; border: 1px solid var(--edge); color: var(--bone-dim);
-    padding: .18rem .45rem; font-size: .6rem; cursor: pointer; letter-spacing: .04em;
-    border-radius: 6px; font-family: inherit;
+    padding: .32rem .6rem; font-size: .78rem; cursor: pointer; letter-spacing: .04em;
+    border-radius: 6px; font-family: inherit; min-height: 34px;
   }
   .act-chip:hover { color: var(--term-green); border-color: var(--term-green); }
   .act-input {
-    width: 4.2rem; background: var(--ink); border: 1px solid var(--edge); color: var(--bone-bright);
-    padding: .2rem .35rem; font-size: .62rem; border-radius: 6px; font-family: inherit;
+    width: 5rem; background: var(--ink); border: 1px solid var(--edge); color: var(--bone-bright);
+    padding: .32rem .45rem; font-size: .82rem; border-radius: 6px; font-family: inherit;
   }
   .act-btn {
     background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
-    padding: .22rem .5rem; font-size: .6rem; cursor: pointer; letter-spacing: .04em;
-    border-radius: 6px; font-family: inherit; white-space: nowrap;
+    padding: .34rem .6rem; font-size: .78rem; cursor: pointer; letter-spacing: .04em;
+    border-radius: 6px; font-family: inherit; white-space: nowrap; min-height: 34px;
   }
   .act-btn:hover { color: var(--gold-bright); border-color: var(--gold); }
   .act-btn.gold { background: rgba(212,169,44,.12); border-color: rgba(212,169,44,.4); color: var(--gold-bright); }
@@ -105,21 +128,26 @@
   .act-btn:disabled, .act-chip:disabled { opacity: .45; cursor: not-allowed; }
   .actions-cell { min-width: 19rem; }
   .stat-card {
-    background: var(--stone); border: 1px solid var(--edge); padding: 1.5rem 1.2rem;
+    background: var(--stone); border: 1px solid var(--edge); padding: 1.4rem 1.2rem 1.2rem;
     position: relative; text-align: center;
   }
   .stat-card::before {
-    content: ''; position: absolute; inset: 3px;
+    content: ''; position: absolute; inset: 4px;
     border: 1px solid var(--edge); opacity: 0.3; pointer-events: none;
   }
   .stat-num {
-    font-family: var(--font-accent,'Press Start 2P',monospace); font-size: 1.8rem;
+    font-family: var(--font-accent,'Press Start 2P',monospace); font-size: 2rem;
     color: var(--term-green); text-shadow: 0 0 6px rgba(51,204,51,0.3);
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.5rem; font-variant-numeric: tabular-nums; line-height: 1.15;
+    overflow-wrap: break-word;
   }
   .stat-label {
-    font-family: var(--font-display,'Cinzel',serif); font-size: 0.62rem; letter-spacing: 0.16em;
+    font-family: var(--font-display,'Cinzel',serif); font-size: 0.8rem; letter-spacing: 0.12em;
     text-transform: uppercase; color: var(--bone-dim);
+  }
+  .stat-sub {
+    font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 0.7rem;
+    color: var(--bone-dim); margin-top: 0.4rem; opacity: .9; font-variant-numeric: tabular-nums;
   }
 
   /* ── Dashboard charts ── */
@@ -135,42 +163,43 @@
     border: 1px solid var(--edge); opacity: 0.22; pointer-events: none;
   }
   .chart-card.span-5 { grid-column: span 5; }
+  .chart-card.span-6 { grid-column: span 6; }
   .chart-card.span-7 { grid-column: span 7; }
   .chart-card.span-12 { grid-column: span 12; }
   .chart-head {
-    font-family: var(--font-display,'Cinzel',serif); font-size: 0.7rem; letter-spacing: 0.16em;
+    font-family: var(--font-display,'Cinzel',serif); font-size: 0.85rem; letter-spacing: 0.14em;
     text-transform: uppercase; color: var(--gold); margin-bottom: 1rem;
   }
   .chart-body { display: flex; gap: 1.1rem; align-items: center; flex-wrap: wrap; }
   .donut {
-    width: 185px; height: 185px; display: block; flex: 0 0 auto;
+    width: 190px; height: 190px; display: block; flex: 0 0 auto;
     filter: drop-shadow(0 0 7px rgba(154,111,224,0.28));
   }
   .donut-slice { transition: opacity 0.15s; }
   .donut-slice:hover { opacity: 0.78; }
-  .donut-center-num { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 18px; fill: var(--bone-bright); }
-  .donut-center-sub { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 9px; fill: var(--bone-dim); letter-spacing: 0.14em; text-transform: uppercase; }
-  .legend { flex: 1 1 170px; min-width: 160px; display: flex; flex-direction: column; gap: 0.35rem; }
-  .legend-item { display: flex; align-items: center; gap: 0.45rem; font-size: 0.78rem; color: var(--bone); }
-  .legend-dot { width: 10px; height: 10px; flex: 0 0 auto; }
+  .donut-center-num { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 21px; fill: var(--bone-bright); }
+  .donut-center-sub { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 11px; fill: var(--bone-dim); letter-spacing: 0.14em; text-transform: uppercase; }
+  .legend { flex: 1 1 190px; min-width: 170px; display: flex; flex-direction: column; gap: 0.45rem; }
+  .legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--bone); }
+  .legend-dot { width: 11px; height: 11px; flex: 0 0 auto; }
   .legend-label { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .legend-val { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); color: var(--bone-bright); font-variant-numeric: tabular-nums; }
-  .legend-pct { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); color: var(--bone-dim); width: 46px; text-align: right; font-variant-numeric: tabular-nums; }
-  .chart-empty { color: var(--bone-dim); font-size: 0.8rem; font-style: italic; padding: 0.6rem 0; }
+  .legend-pct { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); color: var(--bone-dim); width: 50px; text-align: right; font-variant-numeric: tabular-nums; }
+  .chart-empty { color: var(--bone-dim); font-size: 0.85rem; font-style: italic; padding: 0.6rem 0; }
 
   /* ── Bar list (TTS per player) ── */
-  .bar-list { display: flex; flex-direction: column; gap: 0.6rem; }
-  .bar-row { display: grid; grid-template-columns: 170px 1fr 100px; gap: 0.6rem; align-items: center; font-size: 0.78rem; }
+  .bar-list { display: flex; flex-direction: column; gap: 0.7rem; }
+  .bar-row { display: grid; grid-template-columns: 190px 1fr 110px; gap: 0.7rem; align-items: center; font-size: 0.85rem; }
   .bar-label { color: var(--bone); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .bar-track { height: 12px; background: var(--ink); border: 1px solid var(--edge); }
+  .bar-track { height: 14px; background: var(--ink); border: 1px solid var(--edge); }
   .bar-fill { height: 100%; opacity: 0.85; box-shadow: 0 0 6px rgba(94,154,163,0.35); transition: opacity .15s; }
   .bar-fill:hover { opacity: 1; }
   .bar-val { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); color: var(--bone-bright); text-align: right; font-variant-numeric: tabular-nums; }
 
   /* ── Vertical bar chart (new users per day) ── */
-  .vchart { display: flex; align-items: flex-end; gap: 4px; height: 185px; padding: 0 0.2rem 0; }
+  .vchart { display: flex; align-items: flex-end; gap: 4px; height: 200px; padding: 0 0.2rem 0; }
   .vcol { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; position: relative; }
-  .vbar-track { width: 100%; max-width: 40px; height: 145px; display: flex; align-items: flex-end; border-bottom: 1px solid var(--edge); }
+  .vbar-track { width: 100%; max-width: 44px; height: 155px; display: flex; align-items: flex-end; border-bottom: 1px solid var(--edge); }
   .vbar-fill {
     width: 100%; min-height: 2px;
     background: linear-gradient(180deg, var(--gold-bright), var(--gold));
@@ -179,59 +208,58 @@
   }
   .vcol:hover .vbar-fill { opacity: 0.8; }
   .vbar-fill.zero { background: var(--edge); box-shadow: none; opacity: 0.45; }
-  .vbar-num { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 0.68rem; color: var(--bone-bright); line-height: 1; margin-top: 4px; font-variant-numeric: tabular-nums; }
-  .vbar-label { font-size: 0.62rem; color: var(--bone-dim); margin-top: 4px; white-space: nowrap; }
+  .vbar-num { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 0.78rem; color: var(--bone-bright); line-height: 1; margin-top: 5px; font-variant-numeric: tabular-nums; }
+  .vbar-label { font-size: 0.72rem; color: var(--bone-dim); margin-top: 5px; white-space: nowrap; }
   .vbar-label.today { color: var(--gold); }
-  .vchart-empty { color: var(--bone-dim); font-size: 0.8rem; font-style: italic; padding: 0.6rem 0; }
+  .vchart-empty { color: var(--bone-dim); font-size: 0.85rem; font-style: italic; padding: 0.6rem 0; }
 
-  /* ── Visits (2026-08-05: total/today/7d + per land + dag-strip) ──
-        2026-08-06: full-width KPI grid, centered, flag emojis ── */
-  .visits-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: .8rem; margin-bottom: 1.2rem; }
+  /* ── Visits (2026-08-05: total/today/7d + per land + dag-strip) ── */
+  .visits-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: .8rem; margin-bottom: 1.2rem; }
   .v-kpi {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     background: var(--stone-2); border: 1px solid var(--edge); border-radius: 10px;
-    padding: .75rem .6rem; text-align: center; min-width: 0;
+    padding: .85rem .7rem; text-align: center; min-width: 0;
     transition: border-color .2s ease, transform .2s ease;
   }
   .v-kpi:hover { border-color: rgba(201,162,39,.45); transform: translateY(-2px); }
-  .v-kpi-n { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 1.35rem; color: var(--gold-bright); font-variant-numeric: tabular-nums; line-height: 1.1; }
-  .v-kpi-l { font-family: var(--font-display,'Cinzel',serif); font-size: .54rem; letter-spacing: .14em; text-transform: uppercase; color: var(--bone-dim); margin-top: .3rem; }
-  .visits-sub { font-family: var(--font-display,'Cinzel',serif); font-size: .62rem; letter-spacing: .16em; text-transform: uppercase; color: var(--gold); opacity: .85; margin-bottom: .6rem; }
+  .v-kpi-n { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 1.55rem; color: var(--gold-bright); font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .v-kpi-l { font-family: var(--font-display,'Cinzel',serif); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--bone-dim); margin-top: .35rem; }
+  .visits-sub { font-family: var(--font-display,'Cinzel',serif); font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); opacity: .85; margin-bottom: .7rem; }
   .visits-strip { margin-bottom: 1.3rem; }
-  .visits-strip .vchart { height: 190px; }
-  .visits-countries { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; align-items: start; }
+  .visits-strip .vchart { height: 200px; }
+  .visits-countries { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; align-items: start; }
   .visits-countries .chart-body { flex-direction: column; align-items: stretch; gap: .6rem; }
 
   /* ── Top cards: unique visitors + recently active players (2026-08-06) ── */
-  .active-list { display: flex; flex-direction: column; gap: .55rem; }
+  .active-list { display: flex; flex-direction: column; gap: .6rem; }
   .active-row {
     display: flex; align-items: center; justify-content: space-between; gap: .8rem;
     background: var(--stone-2); border: 1px solid var(--edge); border-radius: 10px;
-    padding: .6rem .75rem; transition: border-color .2s ease, transform .2s ease;
+    padding: .7rem .85rem; transition: border-color .2s ease, transform .2s ease;
   }
   .active-row:hover { border-color: rgba(201,162,39,.45); transform: translateY(-2px); }
-  .active-name { font-family: var(--font-display,'Cinzel',serif); font-weight: 700; color: var(--bone-bright); font-size: .85rem; }
-  .active-time { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: .68rem; color: var(--gold); white-space: nowrap; }
-  .active-meta { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: .6rem; color: var(--bone-dim); display: block; margin-top: .15rem; }
+  .active-name { font-family: var(--font-display,'Cinzel',serif); font-weight: 700; color: var(--bone-bright); font-size: 0.95rem; }
+  .active-time { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 0.78rem; color: var(--gold); white-space: nowrap; }
+  .active-meta { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 0.72rem; color: var(--bone-dim); display: block; margin-top: .2rem; }
 
   /* ── Revenue bar chart (MRR/ARR + day/week/month) ── */
   .rev-chart-head { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
-  .rev-totals { display: flex; gap: 1.4rem; flex-wrap: wrap; font-size: 0.78rem; }
-  .rev-totals b { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); color: var(--gold-bright); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
-  .rev-toggle { display: flex; gap: 0.3rem; }
+  .rev-totals { display: flex; gap: 1.5rem; flex-wrap: wrap; font-size: 0.85rem; }
+  .rev-totals b { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); color: var(--gold-bright); font-size: 1rem; font-variant-numeric: tabular-nums; }
+  .rev-toggle { display: flex; gap: 0.4rem; }
   .rev-toggle button {
-    font-family: var(--font-display,'Cinzel',serif); font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase;
+    font-family: var(--font-display,'Cinzel',serif); font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase;
     background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
-    padding: 0.3rem 0.7rem; cursor: pointer; transition: all 0.15s;
+    padding: 0.42rem 0.9rem; cursor: pointer; transition: all 0.15s; min-height: 36px;
   }
   .rev-toggle button.active { color: var(--gold-bright); border-color: var(--gold); background: rgba(212,169,44,0.12); }
   .rev-toggle button:hover { color: var(--gold-bright); border-color: var(--gold); }
 
   /* ── Filters row ── */
   .filters-row {
-    display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;
+    display: flex; gap: 0.7rem; align-items: center; flex-wrap: wrap;
     background: var(--stone); border: 1px solid var(--edge);
-    padding: 0.65rem 0.7rem; margin-bottom: 1rem; position: relative;
+    padding: 0.8rem 0.85rem; margin-bottom: 1rem; position: relative;
   }
   .filters-row::before {
     content: ''; position: absolute; inset: 3px;
@@ -239,39 +267,39 @@
   }
   .filter-input, .filter-select {
     background: var(--stone-2); border: 1px solid var(--edge); color: var(--bone);
-    padding: 0.42rem 0.6rem; font-size: 0.72rem; font-family: inherit; border-radius: 0;
+    padding: 0.55rem 0.7rem; font-size: 0.85rem; font-family: inherit; border-radius: 0; min-height: 40px;
   }
-  .filter-input { width: 230px; }
+  .filter-input { width: 260px; }
   .filter-input:focus, .filter-select:focus { outline: none; border-color: var(--gold); }
   .filter-select { cursor: pointer; }
   .filter-clear {
     background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
-    padding: 0.42rem 0.7rem; font-size: 0.62rem; cursor: pointer; letter-spacing: 0.08em; font-family: inherit;
+    padding: 0.55rem 0.85rem; font-size: 0.8rem; cursor: pointer; letter-spacing: 0.08em; font-family: inherit; min-height: 40px;
   }
   .filter-clear:hover { color: var(--blood-bright); border-color: var(--blood-bright); }
-  .filter-count { margin-left: auto; font-size: 0.62rem; color: var(--bone-dim); font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); }
+  .filter-count { margin-left: auto; font-size: 0.78rem; color: var(--bone-dim); font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); }
 
   /* ── Create user form ── */
   .create-user-form {
-    display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.2rem;
+    display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.2rem;
   }
   .create-user-form input, .create-user-form select {
     background: var(--stone-2); border: 1px solid var(--edge); color: var(--bone);
-    padding: 0.42rem 0.6rem; font-size: 0.74rem; font-family: inherit; border-radius: 0;
+    padding: 0.55rem 0.7rem; font-size: 0.85rem; font-family: inherit; border-radius: 0; min-height: 40px;
   }
   .create-user-form input:focus, .create-user-form select:focus { outline: none; border-color: var(--gold); }
-  .create-user-form .cu-user { width: 150px; }
-  .create-user-form .cu-pass { width: 130px; }
+  .create-user-form .cu-user { width: 170px; }
+  .create-user-form .cu-pass { width: 150px; }
   .create-user-form .cu-btn {
-    background: var(--gold); color: var(--ink); border: none; padding: 0.44rem 0.9rem;
-    font-size: 0.68rem; cursor: pointer; font-weight: bold; font-family: var(--font-display,'Cinzel',serif); letter-spacing: 0.08em;
+    background: var(--gold); color: var(--ink); border: none; padding: 0.55rem 1rem;
+    font-size: 0.85rem; cursor: pointer; font-weight: bold; font-family: var(--font-display,'Cinzel',serif); letter-spacing: 0.08em; min-height: 40px;
   }
   .create-user-form .cu-btn:hover { background: var(--gold-bright); }
 
   /* ── Role badges ── */
   .role-badge {
-    display: inline-block; font-size: 0.45rem; letter-spacing: 0.12em; text-transform: uppercase;
-    padding: 2px 6px; font-weight: 700; font-family: var(--font-display,'Cinzel',serif); vertical-align: middle;
+    display: inline-block; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 3px 8px; font-weight: 700; font-family: var(--font-display,'Cinzel',serif); vertical-align: middle; white-space: nowrap;
   }
   .role-badge.role-admin { background: var(--gold); color: var(--ink); box-shadow: 0 0 8px rgba(212,169,44,0.35); }
   .role-badge.role-player { background: transparent; border: 1px solid var(--arcane); color: var(--arcane); }
@@ -283,36 +311,22 @@
   .email-cell a:hover { color: var(--gold-bright); text-decoration: underline; }
   .del-btn {
     background: none; border: 1px solid var(--blood); color: var(--blood-bright);
-    padding: 0.22rem 0.5rem; font-size: 0.6rem; cursor: pointer; white-space: nowrap;
+    padding: 0.34rem 0.6rem; font-size: 0.78rem; cursor: pointer; white-space: nowrap; min-height: 34px;
   }
   .del-btn:hover { background: rgba(163,36,51,0.15); border-color: var(--blood-bright); }
-  .no-rows { text-align: center; color: var(--bone-dim); font-size: 0.72rem; padding: 2rem 0 !important; }
-
-  /* ── Section title ── */
-  .section-title {
-    font-family: var(--font-display,'Cinzel',serif); font-size: 0.7rem; letter-spacing: 0.2em;
-    text-transform: uppercase; color: var(--gold); margin-bottom: 1rem;
-    display: flex; align-items: center; gap: 0.6rem;
-  }
-  .section-title::before { content: '>'; color: var(--term-green); }
-  .section-title .refresh {
-    margin-left: auto; font-size: 0.55rem; background: var(--stone-3);
-    border: 1px solid var(--edge); color: var(--bone-dim); padding: 0.3rem 0.7rem;
-    cursor: pointer; letter-spacing: 0.1em; border-radius: 0;
-  }
-  .section-title .refresh:hover { color: var(--gold-bright); border-color: var(--gold); }
+  .no-rows { text-align: center; color: var(--bone-dim); font-size: 0.85rem; padding: 2rem 0 !important; }
 
   /* ── Feedback inbox ── */
-  .feedback-inbox { display: flex; flex-direction: column; gap: 0.7rem; margin-bottom: 2rem; }
+  .feedback-inbox { display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 2rem; }
   .fb-item {
     background: var(--stone-2); border: 1px solid var(--edge); border-left: 3px solid var(--gold);
-    padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.4rem;
+    padding: 0.95rem 1.1rem; display: flex; flex-direction: column; gap: 0.45rem;
   }
-  .fb-item-head { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; }
-  .fb-item-ts { font-family: var(--font-mono,monospace); font-size: 0.62rem; color: var(--bone-dim); }
-  .fb-item-email { font-size: 0.62rem; color: var(--arcane); font-style: italic; }
-  .fb-item-msg { font-size: 0.82rem; color: var(--bone-bright); line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
-  .fb-empty { color: var(--bone-dim); font-size: 0.8rem; font-style: italic; padding: 1rem 0; }
+  .fb-item-head { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
+  .fb-item-ts { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 0.75rem; color: var(--bone-dim); }
+  .fb-item-email { font-size: 0.78rem; color: var(--arcane); font-style: italic; }
+  .fb-item-msg { font-size: 0.92rem; color: var(--bone-bright); line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+  .fb-empty { color: var(--bone-dim); font-size: 0.85rem; font-style: italic; padding: 1rem 0; }
 
   /* ── Player table ── */
   .table-scroll { position: relative; }
@@ -330,55 +344,68 @@
   .table-wrap.has-overflow ~ .table-fade { opacity: 1; }
   .table-wrap.at-end ~ .table-fade { opacity: 0; }
   .table-scroll-hint {
-    position: absolute; right: 0.35rem; top: -1.9rem; z-index: 1;
-    font-family: var(--font-display,'Cinzel',serif); font-size: 0.5rem; letter-spacing: 0.14em;
+    position: absolute; right: 0.35rem; top: -2rem; z-index: 1;
+    font-family: var(--font-display,'Cinzel',serif); font-size: 0.62rem; letter-spacing: 0.14em;
     text-transform: uppercase; color: var(--gold-bright);
     background: var(--ink); border: 1px solid var(--gold);
-    padding: 0.25rem 0.5rem; pointer-events: none; white-space: nowrap;
+    padding: 0.3rem 0.55rem; pointer-events: none; white-space: nowrap;
     opacity: 0; transition: opacity .2s;
   }
   .table-wrap.has-overflow ~ .table-scroll-hint { opacity: 1; }
   .table-wrap.at-end ~ .table-scroll-hint { opacity: 0; }
   .player-table { width: 100%; min-width: 1560px; border-collapse: collapse; }
   .player-table th {
-    font-family: var(--font-display,'Cinzel',serif); font-size: 0.56rem; letter-spacing: 0.12em;
+    font-family: var(--font-display,'Cinzel',serif); font-size: 0.78rem; letter-spacing: 0.1em;
     text-transform: uppercase; color: var(--bone-dim); text-align: left;
-    padding: 0.6rem 0.45rem; border-bottom: 1px solid var(--edge);
+    padding: 0.75rem 0.55rem; border-bottom: 1px solid var(--edge);
   }
   .player-table td {
-    padding: 0.65rem 0.45rem; border-bottom: 1px solid rgba(42,42,58,0.4);
-    font-size: 0.8rem; color: var(--bone-bright);
+    padding: 0.75rem 0.55rem; border-bottom: 1px solid rgba(42,42,58,0.4);
+    font-size: 0.9rem; color: var(--bone-bright);
   }
   .player-row { cursor: pointer; transition: background 0.15s; }
   .player-row:hover { background: var(--stone-2); }
   .player-row.expanded { background: var(--stone-2); }
-  .token-num { color: var(--term-green); font-family: var(--font-mono,monospace); }
-  .turn-num { color: var(--term-amber); font-family: var(--font-mono,monospace); }
-  .tts-num { color: var(--arcane); font-family: var(--font-mono,monospace); white-space: nowrap; }
-  .last-active { color: var(--bone-dim); font-size: 0.68rem; }
+  .token-num { color: var(--term-green); font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); }
+  .turn-num { color: var(--term-amber); font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); }
+  .tts-num { color: var(--arcane); font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); white-space: nowrap; }
+  .last-active { color: var(--bone-dim); font-size: 0.78rem; }
   .player-table th.sortable { cursor: pointer; user-select: none; white-space: nowrap; transition: color .15s; }
   .player-table th.sortable:hover { color: var(--gold-bright); }
-  .player-table th.sortable .sort-arrow { display: inline-block; margin-left: .25rem; font-size: .6rem; opacity: .18; transition: opacity .15s, color .15s; }
+  .player-table th.sortable .sort-arrow { display: inline-block; margin-left: .3rem; font-size: .7rem; opacity: .18; transition: opacity .15s, color .15s; }
   .player-table th.sortable.active { color: var(--gold); }
   .player-table th.sortable.active .sort-arrow { opacity: 1; }
+
+  /* ── Pagination ── */
+  .pager { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; margin: 1rem 0 0.5rem; }
+  .pager button {
+    font-family: var(--font-display,'Cinzel',serif); font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase;
+    background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
+    padding: 0.45rem 0.8rem; cursor: pointer; transition: all 0.15s; min-height: 38px;
+  }
+  .pager button:hover:not(:disabled) { color: var(--gold-bright); border-color: var(--gold); }
+  .pager button.active { color: var(--gold-bright); border-color: var(--gold); background: rgba(212,169,44,0.12); }
+  .pager button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .pager .pg-dots { color: var(--bone-dim); padding: 0 0.15rem; font-size: 0.85rem; }
+  .pager .pg-count { margin-left: auto; font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 0.78rem; color: var(--bone-dim); white-space: nowrap; }
 
   /* ── Turn cap editor ── */
   .cap-cell { white-space: nowrap; }
   .cap-input {
-    width: 70px; background: var(--stone-2); border: 1px solid var(--edge);
-    color: var(--bone); padding: .3rem .4rem; font-size: .72rem;
+    width: 76px; background: var(--stone-2); border: 1px solid var(--edge);
+    color: var(--bone); padding: .38rem .45rem; font-size: .82rem; min-height: 34px;
   }
   .cap-btn {
     background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
-    padding: .3rem .5rem; font-size: .6rem; cursor: pointer; letter-spacing: .05em;
+    padding: .38rem .6rem; font-size: .78rem; cursor: pointer; letter-spacing: .05em; min-height: 34px;
   }
   .cap-btn:hover { color: var(--gold-bright); border-color: var(--gold); }
-  .cap-hint { font-size: .55rem; color: var(--bone-dim); margin-left: .3rem; }
+  .cap-hint { font-size: .68rem; color: var(--bone-dim); margin-left: .35rem; }
 
   /* ── FAS D: membership + billing ── */
   .membership-badge {
-    display: inline-block; font-size: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase;
-    padding: 2px 7px; font-weight: 700; font-family: var(--font-display,'Cinzel',serif); white-space: nowrap;
+    display: inline-block; font-size: 0.64rem; letter-spacing: 0.09em; text-transform: uppercase;
+    padding: 3px 8px; font-weight: 700; font-family: var(--font-display,'Cinzel',serif); white-space: nowrap;
   }
   .membership-badge.m-premium {
     background: linear-gradient(135deg, rgba(212,169,44,0.22), rgba(240,214,117,0.08));
@@ -386,44 +413,40 @@
     box-shadow: 0 0 10px rgba(212,169,44,0.35);
   }
   .membership-badge.m-free { background: transparent; border: 1px solid var(--edge); color: var(--bone-dim); }
-  /* Premium-rad → guldglow */
   .player-table tr.premium-row { box-shadow: 0 0 14px rgba(212,169,44,0.22); }
   .player-table tr.premium-row td { background: linear-gradient(90deg, rgba(212,169,44,0.12), rgba(212,169,44,0.02) 55%, transparent); }
   .player-table tr.premium-row td:first-child { border-left: 3px solid var(--gold); }
-  .rev-num { color: var(--gold-bright); font-family: var(--font-mono,monospace); white-space: nowrap; }
-  /* Mini progress-bar för period-turns */
-  .cap-progress { display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.3rem; }
-  .cap-track { width: 88px; height: 7px; background: var(--ink); border: 1px solid var(--edge); flex: 0 0 auto; }
+  .rev-num { color: var(--gold-bright); font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); white-space: nowrap; }
+  .cap-progress { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; }
+  .cap-track { width: 96px; height: 8px; background: var(--ink); border: 1px solid var(--edge); flex: 0 0 auto; }
   .cap-fill { height: 100%; background: var(--term-green); box-shadow: 0 0 5px rgba(51,204,51,0.5); transition: width .2s; }
   .cap-fill.warn { background: var(--term-amber); box-shadow: 0 0 5px rgba(204,170,51,0.5); }
   .cap-fill.danger { background: var(--blood-bright); box-shadow: 0 0 6px rgba(224,72,90,0.7); }
   .cap-fill.premium { background: var(--gold); box-shadow: 0 0 6px rgba(212,169,44,0.6); }
-  .cap-used { font-family: var(--font-mono,monospace); font-size: 0.66rem; color: var(--bone); white-space: nowrap; }
-  /* Billing controls (detaljvy + mobil) */
+  .cap-used { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 0.75rem; color: var(--bone); white-space: nowrap; }
   .billing-controls {
-    display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;
-    padding: 0.7rem 0 0.9rem; margin-bottom: 0.9rem;
+    display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;
+    padding: 0.8rem 0 1rem; margin-bottom: 1rem;
     border-bottom: 1px solid rgba(42,42,58,.4);
   }
-  .billing-controls .bc-label { font-size: 0.62rem; color: var(--bone-dim); }
+  .billing-controls .bc-label { font-size: 0.75rem; color: var(--bone-dim); }
   .bc-btn {
     background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
-    padding: .32rem .6rem; font-size: .62rem; cursor: pointer; letter-spacing: .05em; font-family: inherit;
+    padding: .4rem .7rem; font-size: .78rem; cursor: pointer; letter-spacing: .05em; font-family: inherit; min-height: 36px;
   }
   .bc-btn:hover { color: var(--gold-bright); border-color: var(--gold); }
   .bc-btn.danger:hover { color: var(--blood-bright); border-color: var(--blood-bright); }
   .bc-btn.gold { background: rgba(212,169,44,0.14); border-color: var(--gold); color: var(--gold-bright); }
-  /* Premium-grant: kompakt längdselect + knapp i tabellraden */
-  .prem-grant { display: inline-flex; align-items: center; gap: .25rem; margin-left: .35rem; vertical-align: middle; }
+  .prem-grant { display: inline-flex; align-items: center; gap: .3rem; margin-left: .35rem; vertical-align: middle; flex-wrap: wrap; }
   .prem-grant select {
     background: var(--ink); border: 1px solid var(--edge); color: var(--bone);
-    font-size: .6rem; padding: .18rem .2rem; border-radius: 2px; cursor: pointer;
-    max-width: 74px; font-family: inherit;
+    font-size: .75rem; padding: .3rem .3rem; border-radius: 2px; cursor: pointer;
+    max-width: 110px; font-family: inherit; min-height: 32px;
   }
   .prem-grant select:focus { border-color: var(--gold); outline: none; }
   .prem-grant .pg-btn {
     background: rgba(212,169,44,0.14); border: 1px solid var(--gold); color: var(--gold-bright);
-    padding: .22rem .45rem; font-size: .6rem; cursor: pointer; letter-spacing: .05em; font-family: inherit; white-space: nowrap;
+    padding: .32rem .55rem; font-size: .75rem; cursor: pointer; letter-spacing: .05em; font-family: inherit; white-space: nowrap; min-height: 32px;
   }
   .prem-grant .pg-btn:hover { background: var(--gold); color: var(--ink); }
   .prem-grant .pg-btn.revoke { background: var(--stone-3); border-color: var(--edge); color: var(--bone-dim); }
@@ -436,56 +459,57 @@
   .campaign-detail td { padding: 0; border-bottom: 1px solid var(--edge); }
   .campaign-inner { padding: 1rem 1.5rem !important; }
   .campaign-card {
-    background: var(--stone-2); border: 1px solid var(--edge); padding: 1rem;
-    margin-bottom: 0.6rem;
+    background: var(--stone-2); border: 1px solid var(--edge); padding: 1.1rem;
+    margin-bottom: 0.7rem;
   }
-  .campaign-card .cc-head { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem; }
-  .campaign-card .cc-name { font-family: var(--font-display,'Cinzel',serif); font-weight: 700; font-size: 0.82rem; color: var(--bone-bright); }
-  .campaign-card .cc-char { font-size: 0.7rem; color: var(--bone-dim); }
-  .campaign-card .cc-meta { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.65rem; color: var(--bone-dim); }
+  .campaign-card .cc-head { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.7rem; flex-wrap: wrap; }
+  .campaign-card .cc-name { font-family: var(--font-display,'Cinzel',serif); font-weight: 700; font-size: 0.95rem; color: var(--bone-bright); }
+  .campaign-card .cc-char { font-size: 0.8rem; color: var(--bone-dim); }
+  .campaign-card .cc-meta { display: flex; gap: 1.2rem; flex-wrap: wrap; font-size: 0.78rem; color: var(--bone-dim); }
   .campaign-card .cc-meta span { color: var(--bone); }
 
-  /* Token bar */
   .token-bar {
-    height: 8px; background: var(--ink); border: 1px solid var(--edge);
-    display: flex; margin: 0.5rem 0; overflow: hidden;
+    height: 9px; background: var(--ink); border: 1px solid var(--edge);
+    display: flex; margin: 0.55rem 0; overflow: hidden;
   }
   .token-bar .bar-prompt { background: var(--arcane); height: 100%; }
   .token-bar .bar-completion { background: var(--term-green); height: 100%; }
-  .token-legend { display: flex; gap: 1rem; font-size: 0.55rem; color: var(--bone-dim); }
-  .token-legend .dot { display: inline-block; width: 8px; height: 8px; margin-right: 4px; vertical-align: middle; }
+  .token-legend { display: flex; gap: 1.2rem; font-size: 0.7rem; color: var(--bone-dim); flex-wrap: wrap; }
+  .token-legend .dot { display: inline-block; width: 9px; height: 9px; margin-right: 4px; vertical-align: middle; }
   .token-legend .dot.prompt { background: var(--arcane); }
   .token-legend .dot.completion { background: var(--term-green); }
-  .role-split { display: flex; gap: 1rem; flex-wrap: wrap; font-size: 0.62rem; color: var(--bone-dim); margin-top: 0.3rem; }
+  .role-split { display: flex; gap: 1.1rem; flex-wrap: wrap; font-size: 0.75rem; color: var(--bone-dim); margin-top: 0.35rem; }
   .role-split b { color: var(--bone-bright); font-weight: 600; font-variant-numeric: tabular-nums; }
-  /* 2026-08-06: modell-listan visar ALLA anropade modeller — scrollbar om många */
-  .model-all{ max-height: 150px; overflow-y: auto; align-content: flex-start; }
+  .model-all{ max-height: 150px; overflow-y: auto; align-content: flex-start; padding-right: .5rem; scrollbar-width: thin; scrollbar-color: var(--edge-hi) var(--ink); }
+  .model-all::-webkit-scrollbar{ width: 8px; }
+  .model-all::-webkit-scrollbar-track{ background: var(--ink); }
+  .model-all::-webkit-scrollbar-thumb{ background: var(--edge-hi); border-radius: 4px; }
+  .model-all::-webkit-scrollbar-thumb:hover{ background: var(--gold); }
   .model-all .mc-media b{ color: var(--teal); }
   .model-all .mc-media{ font-style: italic; }
-  .model-split { display: flex; gap: 0.8rem 1.2rem; flex-wrap: wrap; font-size: 0.6rem; color: var(--bone-dim); margin-top: 0.35rem; padding-top: 0.35rem; border-top: 1px dashed rgba(139,95,212,0.25); }
+  .model-split { display: flex; gap: 0.8rem 1.2rem; flex-wrap: wrap; font-size: 0.72rem; color: var(--bone-dim); margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px dashed rgba(139,95,212,0.25); }
   .model-split b { color: var(--arcane); font-weight: 600; font-variant-numeric: tabular-nums; }
 
-  /* Sessions */
-  .session-list { margin-top: 0.5rem; }
+  .session-list { margin-top: 0.6rem; }
   .session-item {
     display: flex; justify-content: space-between; align-items: center;
-    font-size: 0.6rem; color: var(--bone-dim); padding: 0.25rem 0;
+    font-size: 0.72rem; color: var(--bone-dim); padding: 0.32rem 0;
     border-bottom: 1px dashed rgba(42,42,58,0.3);
   }
-  .session-item .s-tokens { color: var(--term-green); font-family: var(--font-mono,monospace); }
+  .session-item .s-tokens { color: var(--term-green); font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); }
 
   /* ── Error state ── */
   .error-state {
     text-align: center; padding: 4rem 2rem; color: var(--bone-dim);
   }
-  .error-state h2 { font-family: var(--font-display,'Cinzel',serif); font-size: 1rem; color: var(--blood-bright); margin-bottom: 1rem; }
+  .error-state h2 { font-family: var(--font-display,'Cinzel',serif); font-size: 1.2rem; color: var(--blood-bright); margin-bottom: 1rem; }
   .error-state a { color: var(--gold-bright); text-decoration: none; }
   .error-state a:hover { text-shadow: 0 0 8px rgba(232,198,90,0.4); }
 
   /* ── Loading ── */
   .loading {
     text-align: center; padding: 3rem; color: var(--bone-dim);
-    font-family: var(--font-mono,monospace); font-size: 0.8rem;
+    font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 0.9rem;
   }
   .loading::after { content: ' █'; animation: blink 1s steps(1) infinite; }
   @keyframes blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
@@ -493,9 +517,9 @@
   /* ── Toast ── */
   .toast {
     position: fixed; bottom: 1.5rem; left: 50%; transform: translate(-50%, 80px);
-    z-index: 50; font-family: var(--font-display,'Cinzel',serif); font-size: 0.75rem;
+    z-index: 50; font-family: var(--font-display,'Cinzel',serif); font-size: 0.85rem;
     background: var(--stone); border: 1px solid var(--gold);
-    color: var(--gold-bright); padding: 0.7rem 1.5rem; opacity: 0;
+    color: var(--gold-bright); padding: 0.8rem 1.6rem; opacity: 0;
     transition: all 0.35s cubic-bezier(0.22,1,0.36,1); pointer-events: none;
   }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
@@ -510,8 +534,9 @@
     .chart-card.span-5, .chart-card.span-7, .chart-card.span-12 { grid-column: span 1; }
     .player-table { display: none; }
     .mobile-cards { display: flex; flex-direction: column; gap: 0.8rem; }
+    .pager-mob { display: flex; }
     .m-card {
-      background: var(--stone); border: 1px solid var(--edge); padding: 0.8rem;
+      background: var(--stone); border: 1px solid var(--edge); padding: 0.9rem;
       cursor: pointer; position: relative;
     }
     .m-card::before {
@@ -519,27 +544,31 @@
       border: 1px solid var(--edge); opacity: 0.25; pointer-events: none;
     }
     .m-card:active { background: var(--stone-2); }
-    .m-card .mc-head { display: flex; justify-content: space-between; align-items: center; }
-    .m-card .mc-user { font-size: 0.85rem; color: var(--bone-bright); }
-    .m-card .mc-tokens { font-size: 0.7rem; color: var(--term-green); font-family: var(--font-mono,monospace); }
-    .m-card .mc-meta { display: flex; gap: 1rem; margin-top: 0.4rem; font-size: 0.6rem; color: var(--bone-dim); flex-wrap: wrap; }
+    .m-card .mc-head { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+    .m-card .mc-user { font-size: 0.95rem; color: var(--bone-bright); }
+    .m-card .mc-tokens { font-size: 0.8rem; color: var(--term-green); font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); white-space: nowrap; }
+    .m-card .mc-meta { display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.78rem; color: var(--bone-dim); flex-wrap: wrap; }
     .bar-row { grid-template-columns: 110px 1fr 74px; }
   }
   @media (min-width: 901px) {
     .mobile-cards { display: none; }
+    .pager-mob { display: none; }
   }
   @media (max-width: 640px) {
     .stats-grid { grid-template-columns: 1fr 1fr; gap: 0.6rem; }
     .realm-grid { grid-template-columns: 1fr; gap: 0.6rem; }
-    .stat-card { padding: 0.8rem 0.5rem; }
-    .stat-num { font-size: 1rem; }
-    .masthead h1 { font-size: 0.85rem; }
+    .stat-card { padding: 0.9rem 0.6rem; }
+    .stat-num { font-size: 1.35rem; }
+    .masthead h1 { font-size: 1rem; }
     .back-btn { min-height: 44px; display: inline-flex; align-items: center; }
     .filter-input { width: 100%; }
     .filter-count { width: 100%; margin-left: 0; }
-    .donut { width: 128px; height: 128px; }
+    .donut { width: 136px; height: 136px; }
     .chart-body { justify-content: center; }
+    .pager button { min-height: 44px; min-width: 44px; }
+    .act-chip, .act-btn, .cap-btn, .bc-btn, .pg-btn, .del-btn, .filter-clear, .cu-btn, .rev-toggle button, .sec-head .refresh { min-height: 44px; }
   }
+
 </style>
 <link rel="stylesheet" href="snes.css?v=32">
 <style>
@@ -571,6 +600,8 @@
   <header class="masthead">
     <h1>Admin · The Lore Weaver's Cauldron</h1>
     <div class="masthead-actions">
+      <button class="back-btn" onclick="expandAllSecs()" title="Expand all sections">▾ Expand all</button>
+      <button class="back-btn" onclick="collapseAllSecs()" title="Collapse all sections">▸ Collapse all</button>
       <a href="adventure.html" class="back-btn leave">🚪 Leave</a>
       <a href="chat.html" class="back-btn">⚔ To the Table</a>
     </div>
@@ -602,8 +633,9 @@ function fmtTokens(n) {
 function fmtTTS(u) {
   const s = u.tts_seconds || 0;
   if (!s) return '—';
-  const min = Math.floor(s / 60);
-  const sec = Math.round(s % 60);
+  const totalSec = Math.round(s);
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
   return (min > 0 ? min + 'm ' : '') + sec + 's';
 }
 
@@ -974,55 +1006,187 @@ function renderStats(data) {
   const users = data.users || [];
 
   let html = `
-    <div class="section-title">Realm Statistics</div>
-    <div class="realm-grid" id="realm-cards"></div>
-    <div class="stats-grid" id="stat-cards"></div>
+    <section class="sec" data-sec="realm">
+      <header class="sec-head" onclick="toggleSec('realm')">
+        <span class="chev">▾</span>
+        <span class="sec-title">Realm Statistics</span>
+        <span class="sec-summary" id="sum-realm"></span>
+        <button class="refresh" onclick="event.stopPropagation();loadStats()" title="Refresh stats">↻ Refresh</button>
+      </header>
+      <div class="sec-body" id="body-realm">
+        <div class="realm-grid" id="realm-cards"></div>
+        <div class="stats-grid" id="stat-cards"></div>
+      </div>
+    </section>
 
-    <div class="section-title">Dashboard <button class="refresh" onclick="loadStats()">↻ Refresh</button></div>
-    <div class="charts-grid" id="charts-grid"></div>
+    <section class="sec" data-sec="dash">
+      <header class="sec-head" onclick="toggleSec('dash')">
+        <span class="chev">▾</span>
+        <span class="sec-title">Dashboard</span>
+        <span class="sec-summary" id="sum-dash"></span>
+        <button class="refresh" onclick="event.stopPropagation();loadStats()" title="Refresh charts">↻ Refresh</button>
+      </header>
+      <div class="sec-body" id="body-dash">
+        <div class="charts-grid" id="charts-grid"></div>
+      </div>
+    </section>
 
-    <div class="section-title">Player Accounts</div>
-    <div class="filters-row">
-      <input id="filter-q" class="filter-input" type="search" placeholder="Search username or email…" oninput="applyFilters()" autocomplete="off">
-      <select id="filter-role" class="filter-select" onchange="applyFilters()">
-        <option value="all">All roles</option>
-        <option value="player">Players</option>
-        <option value="admin">Admins</option>
-      </select>
-      <select id="filter-country" class="filter-select" onchange="applyFilters()">${countryOptions(users)}</select>
-      <button class="filter-clear" onclick="clearFilters()">✕ Clear</button>
-      <span class="filter-count" id="filter-count"></span>
-    </div>
-    <div class="create-user-form">
-      <input id="new-user" class="cu-user" placeholder="Username" autocomplete="off">
-      <input id="new-pass" class="cu-pass" placeholder="Password" type="password" autocomplete="new-password">
-      <select id="new-role">
-        <option value="player">Player</option>
-        <option value="admin">Admin</option>
-      </select>
-      <button class="cu-btn" onclick="createUser()">+ Create</button>
-    </div>
-
-    <div class="section-title">Feedback Inbox <button class="refresh" onclick="loadFeedback()">↻ Refresh</button></div>
-    <div id="feedback-inbox" class="feedback-inbox"><div class="loading">Loading feedback…</div></div>
-  `;
-
-  // Desktop table
-  html += '<div class="table-scroll">';
-  html += '<div class="table-wrap" id="table-wrap"><table class="player-table"><thead><tr>';
+    <section class="sec" data-sec="players">
+      <header class="sec-head" onclick="toggleSec('players')">
+        <span class="chev">▾</span>
+        <span class="sec-title">Player Accounts</span>
+        <span class="sec-summary" id="sum-players"></span>
+        <button class="refresh" onclick="event.stopPropagation();loadStats()" title="Refresh players">↻ Refresh</button>
+      </header>
+      <div class="sec-body" id="body-players">
+        <div class="filters-row">
+          <input id="filter-q" class="filter-input" type="search" placeholder="Search username or email…" oninput="applyFilters()" autocomplete="off">
+          <select id="filter-role" class="filter-select" onchange="applyFilters()">
+            <option value="all">All roles</option>
+            <option value="player">Players</option>
+            <option value="admin">Admins</option>
+          </select>
+          <select id="filter-country" class="filter-select" onchange="applyFilters()">${countryOptions(users)}</select>
+          <button class="filter-clear" onclick="clearFilters()">✕ Clear</button>
+          <span class="filter-count" id="filter-count"></span>
+        </div>
+        <div class="create-user-form">
+          <input id="new-user" class="cu-user" placeholder="Username" autocomplete="off">
+          <input id="new-pass" class="cu-pass" placeholder="Password" type="password" autocomplete="new-password">
+          <select id="new-role">
+            <option value="player">Player</option>
+            <option value="admin">Admin</option>
+          </select>
+          <button class="cu-btn" onclick="createUser()">+ Create</button>
+        </div>
+        <div class="table-scroll">
+          <div class="table-wrap" id="table-wrap"><table class="player-table"><thead><tr>`;
   html += thSort('User', 'username') + thSort('Role', 'role') + thSort('Email', 'email') + thSort('Country', 'country') + thSort('Campaigns', 'campaigns') + thSort('Tokens', 'tokens') + thSort('Turns', 'turns') + thSort('🔊 TTS', 'tts_seconds') + thSort('🎭 Char', 'char_creation_tokens') + thSort('🖼️ Img', 'image_gen_calls') + thSort('Last Active', 'last_active') + thSort('Created', 'created') + thSort('Last Login', 'last_login') + thSort('Turn Cap', 'turn_cap') + thSort('💳 Medlemskap', 'subscription_status') + thSort('💰 Rev', 'revenue') + '<th>Actions</th>' + '<th></th>';
   html += '</tr></thead><tbody id="players-tbody"></tbody></table></div>';
   html += '<div class="table-fade"></div><div class="table-scroll-hint">→ scroll for more</div>';
   html += '</div>';
-
-  // Mobile cards
+  html += '<div class="pager" id="pager-desk"></div>';
   html += '<div class="mobile-cards" id="mobile-cards"></div>';
+  html += '<div class="pager pager-mob" id="pager-mob"></div>';
+  html += '</div></section>';
+
+  html += `
+    <section class="sec" data-sec="feedback">
+      <header class="sec-head" onclick="toggleSec('feedback')">
+        <span class="chev">▾</span>
+        <span class="sec-title">Feedback Inbox</span>
+        <span class="sec-summary" id="sum-feedback"></span>
+        <button class="refresh" onclick="event.stopPropagation();loadFeedback()" title="Refresh feedback">↻ Refresh</button>
+      </header>
+      <div class="sec-body" id="body-feedback">
+        <div id="feedback-inbox" class="feedback-inbox"><div class="loading">Loading feedback…</div></div>
+      </div>
+    </section>
+  `;
 
   content.innerHTML = html;
+  initSecs();
   applyFilters();
   loadFeedback();
 }
 
+// ═══════════════════════════════════════
+// COLLAPSIBLE SECTIONS (localStorage 'admin_sections')
+// ═══════════════════════════════════════
+function toggleSec(name) {
+  const sec = document.querySelector('.sec[data-sec="' + name + '"]');
+  if (!sec) return;
+  const collapsed = sec.classList.toggle('collapsed');
+  const chev = sec.querySelector('.chev');
+  if (chev) chev.textContent = collapsed ? '▸' : '▾';
+  const state = JSON.parse(localStorage.getItem('admin_sections') || '{}');
+  state[name] = collapsed;
+  localStorage.setItem('admin_sections', JSON.stringify(state));
+}
+
+function initSecs() {
+  let state = {};
+  try { state = JSON.parse(localStorage.getItem('admin_sections') || '{}'); } catch (e) { state = {}; }
+  document.querySelectorAll('.sec').forEach(sec => {
+    const name = sec.dataset.sec;
+    if (state[name]) {
+      sec.classList.add('collapsed');
+      const chev = sec.querySelector('.chev');
+      if (chev) chev.textContent = '▸';
+    }
+  });
+}
+
+function setAllSecs(collapsed) {
+  const state = {};
+  document.querySelectorAll('.sec').forEach(sec => {
+    sec.classList.toggle('collapsed', collapsed);
+    const chev = sec.querySelector('.chev');
+    if (chev) chev.textContent = collapsed ? '▸' : '▾';
+    state[sec.dataset.sec] = collapsed;
+  });
+  localStorage.setItem('admin_sections', JSON.stringify(state));
+}
+
+function expandAllSecs() { setAllSecs(false); }
+function collapseAllSecs() { setAllSecs(true); }
+
+function setSecSummary(name, text) {
+  const el = document.getElementById('sum-' + name);
+  if (el) el.textContent = text || '';
+}
+
+// ═══════════════════════════════════════
+// PAGINATION — 10 players per page (filter → sort → page)
+// ═══════════════════════════════════════
+const PAGE_SIZE = 10;
+let page = 1;
+let pageFiltered = [];
+
+function pagerNumbers(cur, total) {
+  const out = [];
+  if (total <= 7) { for (let i = 1; i <= total; i++) out.push(i); return out; }
+  out.push(1);
+  const start = Math.max(2, cur - 1);
+  const end = Math.min(total - 1, cur + 1);
+  if (start > 2) out.push('…');
+  for (let i = start; i <= end; i++) out.push(i);
+  if (end < total - 1) out.push('…');
+  out.push(total);
+  return out;
+}
+
+function renderPager() {
+  const totalPages = Math.max(1, Math.ceil(pageFiltered.length / PAGE_SIZE));
+  if (page > totalPages) page = totalPages;
+  const build = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    let h = '<button class="pg-prev" onclick="gotoPage(' + (page - 1) + ')"' + (page <= 1 ? ' disabled' : '') + '>◀ Prev</button>';
+    pagerNumbers(page, totalPages).forEach(p => {
+      h += p === '…'
+        ? '<span class="pg-dots">…</span>'
+        : '<button class="pg-num' + (p === page ? ' active' : '') + '" onclick="gotoPage(' + p + ')">' + p + '</button>';
+    });
+    h += '<button class="pg-next" onclick="gotoPage(' + (page + 1) + ')"' + (page >= totalPages ? ' disabled' : '') + '>Next ▶</button>';
+    h += '<span class="pg-count">Page ' + page + ' of ' + totalPages + ' · ' + pageFiltered.length + ' players</span>';
+    el.innerHTML = h;
+  };
+  build('pager-desk');
+  build('pager-mob');
+}
+
+function gotoPage(n) {
+  const totalPages = Math.max(1, Math.ceil(pageFiltered.length / PAGE_SIZE));
+  page = Math.max(1, Math.min(n, totalPages));
+  const tbody = document.getElementById('players-tbody');
+  const mob = document.getElementById('mobile-cards');
+  const slice = pageFiltered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  if (tbody) tbody.innerHTML = tableRows(slice);
+  if (mob) mob.innerHTML = mobRows(slice);
+  renderPager();
+  syncTableScrollHint();
+}
 // ═══════════════════════════════════════
 // FEEDBACK INBOX
 // ═══════════════════════════════════════
@@ -1035,6 +1199,7 @@ async function loadFeedback() {
     if (!res.ok) throw new Error('API error: ' + res.status);
     const data = await res.json();
     const items = data.items || [];
+    setSecSummary('feedback', items.length + (items.length === 1 ? ' message' : ' messages'));
     if (!items.length) {
       box.innerHTML = '<div class="fb-empty">🕊 No feedback yet — the inbox is quiet.</div>';
       return;
@@ -1048,6 +1213,7 @@ async function loadFeedback() {
     }).join('');
   } catch (e) {
     box.innerHTML = '<div class="fb-empty">⚠ Could not load feedback: ' + esc(e.message) + '</div>';
+    setSecSummary('feedback', 'unavailable');
   }
 }
 
@@ -1519,6 +1685,7 @@ function applyFilters() {
   filterQ = (qEl ? qEl.value : '').trim().toLowerCase();
   filterRole = rEl ? rEl.value : 'all';
   filterCountry = cEl ? cEl.value : 'all';
+  page = 1; // any filter change resets to page 1
   const all = statsData ? (statsData.users || []) : [];
   const filtered = all.filter(u => {
     if (filterQ && !(u.username || '').toLowerCase().includes(filterQ) && !(u.email || '').toLowerCase().includes(filterQ)) return false;
@@ -1558,15 +1725,25 @@ function renderFiltered(filtered, totalCount) {
   const txs = billingData ? (billingData.transactions || 0) : 0;
   const rev = billingData ? (billingData.total || 0) : 0;
   const cards = document.getElementById('stat-cards');
-  if (cards) cards.innerHTML = `
-    <div class="stat-card"><div class="stat-num">${usersNum}</div><div class="stat-label">Users</div></div>
-    <div class="stat-card"><div class="stat-num">${campaignsNum}</div><div class="stat-label">Campaigns</div></div>
-    <div class="stat-card"><div class="stat-num">${fmtTokens(tokensNum)}</div><div class="stat-label">Tokens</div></div>
-    <div class="stat-card"><div class="stat-num">${turnsNum}</div><div class="stat-label">Turns</div></div>
-    <div class="stat-card"><div class="stat-num">${ttsMin}</div><div class="stat-label">TTS Minutes</div></div>
-    <div class="stat-card"><div class="stat-num">${fmtSek(mrr)}</div><div class="stat-label">💰 MRR</div></div>
-    <div class="stat-card"><div class="stat-num">${txs}</div><div class="stat-label">🧾 Transactions</div></div>
-    <div class="stat-card"><div class="stat-num">${fmtSek(rev)}</div><div class="stat-label">💰 Total Revenue</div></div>`;
+  if (cards) {
+    const sub = (t) => t ? '<div class="stat-sub">' + t + '</div>' : '';
+    const srcUsers = noFilter ? ((statsData && statsData.users) || []) : filtered;
+    const nowT = Date.now();
+    const newToday = srcUsers.filter(u => {
+      const t = u.created_at ? new Date(u.created_at).getTime() : NaN;
+      return !isNaN(t) && (nowT - t) <= 86400000;
+    }).length;
+    const n = filtered.length || 1;
+    cards.innerHTML = `
+      <div class="stat-card"><div class="stat-num">${usersNum}</div><div class="stat-label">Users</div>${sub('▲ ' + newToday + ' new today')}</div>
+      <div class="stat-card"><div class="stat-num">${campaignsNum}</div><div class="stat-label">Campaigns</div>${sub('avg ' + (campaignsNum / n).toFixed(1) + ' / account')}</div>
+      <div class="stat-card"><div class="stat-num">${fmtTokens(tokensNum)}</div><div class="stat-label">Tokens</div>${sub('avg ' + fmtTokens(Math.round(tokensNum / n)) + ' / account')}</div>
+      <div class="stat-card"><div class="stat-num">${turnsNum}</div><div class="stat-label">Turns</div>${sub('avg ' + Math.round(turnsNum / n) + ' / account')}</div>
+      <div class="stat-card"><div class="stat-num">${ttsMin}</div><div class="stat-label">TTS Minutes</div>${sub('≈ ' + (ttsMin / n).toFixed(1) + ' min / account')}</div>
+      <div class="stat-card"><div class="stat-num">${fmtSek(mrr)}</div><div class="stat-label">💰 MRR</div>${sub('ARR ' + fmtSek(mrr * 12))}</div>
+      <div class="stat-card"><div class="stat-num">${txs}</div><div class="stat-label">🧾 Transactions</div>${sub('all time')}</div>
+      <div class="stat-card"><div class="stat-num">${fmtSek(rev)}</div><div class="stat-label">💰 Total Revenue</div>${sub('since launch')}</div>`;
+  }
 
   // Realm-statistik (globalt, ej filterberoende): inloggade senaste 24h/7d/30d
   const realm = document.getElementById('realm-cards');
@@ -1577,25 +1754,34 @@ function renderFiltered(filtered, totalCount) {
       const t = u.last_login ? new Date(u.last_login).getTime() : NaN;
       return !isNaN(t) && t <= now && (now - t) <= ms;
     }).length;
+    const acctSub = '<div class="stat-sub">of ' + all.length + ' accounts</div>';
     realm.innerHTML = `
-      <div class="stat-card"><div class="stat-num">${cnt(86400000)}</div><div class="stat-label">Logged in · last 24 h</div></div>
-      <div class="stat-card"><div class="stat-num">${cnt(604800000)}</div><div class="stat-label">Logged in · last 7 days</div></div>
-      <div class="stat-card"><div class="stat-num">${cnt(2592000000)}</div><div class="stat-label">Logged in · last 30 days</div></div>`;
+      <div class="stat-card"><div class="stat-num">${cnt(86400000)}</div><div class="stat-label">Logged in · last 24 h</div>${acctSub}</div>
+      <div class="stat-card"><div class="stat-num">${cnt(604800000)}</div><div class="stat-label">Logged in · last 7 days</div>${acctSub}</div>
+      <div class="stat-card"><div class="stat-num">${cnt(2592000000)}</div><div class="stat-label">Logged in · last 30 days</div>${acctSub}</div>`;
+    setSecSummary('realm', all.length + ' accounts');
   }
 
   // Charts reflect the filtered subset
   renderCharts(filtered);
+  setSecSummary('dash', filtered.length + ' player' + (filtered.length === 1 ? '' : 's') + ' in charts');
 
   // Count line
   const cnt = document.getElementById('filter-count');
   if (cnt) cnt.textContent = filtered.length === totalCount ? totalCount + ' players' : filtered.length + ' of ' + totalCount + ' players';
+  setSecSummary('players', filtered.length === totalCount ? totalCount + ' players' : filtered.length + ' of ' + totalCount + ' players');
 
-  // Table + mobile cards
+  // Table + mobile cards — filter → sort → page (10 per page)
   const tbody = document.getElementById('players-tbody');
   const mob = document.getElementById('mobile-cards');
   const sorted = sortUsers(filtered);
-  if (tbody) tbody.innerHTML = tableRows(sorted);
-  if (mob) mob.innerHTML = mobRows(sorted);
+  pageFiltered = sorted;
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  if (page > totalPages) page = totalPages;
+  const slice = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  if (tbody) tbody.innerHTML = tableRows(slice);
+  if (mob) mob.innerHTML = mobRows(slice);
+  renderPager();
   syncTableScrollHint();
 }
 
@@ -1706,8 +1892,8 @@ function mobRows(users) {
     html += `<button onclick="event.stopPropagation();topUp('${u.username}')" class="bc-btn">➕ Top up</button>`;
     html += `<button onclick="event.stopPropagation();resetTurns('${u.username}')" class="bc-btn">🔄 Reset</button>`;
     if (!isPremium) {
-      html += `<select id="pg-m-tier-${u.username}" onclick="event.stopPropagation()" onchange="syncTierDuration('${esc(u.username)}')" style="background:var(--ink);border:1px solid var(--edge);color:var(--bone);font-size:.6rem;padding:.2rem;border-radius:2px;max-width:80px"><option value="tier1" selected>Support 3€</option><option value="tier2">Patron 30€</option><option value="lifetime">♾ 100€</option></select>`;
-      html += `<select id="pg-m-months-${u.username}" onclick="event.stopPropagation()" style="background:var(--ink);border:1px solid var(--edge);color:var(--bone);font-size:.6rem;padding:.2rem;border-radius:2px;max-width:52px"><option value="7" selected>7d</option><option value="30">1mo</option><option value="90">3mo</option><option value="180">6mo</option><option value="365">1y</option><option value="0">∞</option></select>`;
+      html += `<select id="pg-m-tier-${u.username}" onclick="event.stopPropagation()" onchange="syncTierDuration('${esc(u.username)}')" style="background:var(--ink);border:1px solid var(--edge);color:var(--bone);font-size:.78rem;padding:.2rem;border-radius:2px;max-width:80px"><option value="tier1" selected>Support 3€</option><option value="tier2">Patron 30€</option><option value="lifetime">♾ 100€</option></select>`;
+      html += `<select id="pg-m-months-${u.username}" onclick="event.stopPropagation()" style="background:var(--ink);border:1px solid var(--edge);color:var(--bone);font-size:.78rem;padding:.2rem;border-radius:2px;max-width:52px"><option value="7" selected>7d</option><option value="30">1mo</option><option value="90">3mo</option><option value="180">6mo</option><option value="365">1y</option><option value="0">∞</option></select>`;
     }
     html += `<button onclick="event.stopPropagation();${isPremium ? "setTier('" + u.username + "', 'free')" : "grantPremiumFromRow('" + u.username + "')"}" class="bc-btn${isPremium ? '' : ' gold'}">${isPremium ? '⭱ Free' : '👑 Grant'}</button>`;
     html += '</div>';
@@ -1759,7 +1945,7 @@ async function toggleDetail(idx, username) {
 
 function renderDetail(container, data) {
   const campaigns = data.campaigns || [];
-  let html = '<div class="account-meta" style="display:flex;gap:1.2rem;flex-wrap:wrap;font-size:.65rem;color:var(--bone-dim);margin-bottom:.9rem;padding-bottom:.6rem;border-bottom:1px solid rgba(42,42,58,.4)">';
+  let html = '<div class="account-meta" style="display:flex;gap:1.2rem;flex-wrap:wrap;font-size:.8rem;color:var(--bone-dim);margin-bottom:.9rem;padding-bottom:.6rem;border-bottom:1px solid rgba(42,42,58,.4)">';
   html += '<span>Created: <b style="color:var(--bone);font-weight:400">' + fmtDate(data.created_at) + '</b></span>';
   html += '<span>Last login: <b style="color:var(--bone);font-weight:400">' + fmtDate(data.last_login) + '</b></span>';
   html += '<span>Turn cap: <b style="color:var(--gold-bright);font-weight:700">' + (data.turn_cap === 0 ? '∞ Lifetime' : data.turn_cap + ' / day') + '</b></span>';
@@ -1804,7 +1990,7 @@ function renderDetail(container, data) {
   }
   html += '</div>';
   if (campaigns.length === 0) {
-    container.innerHTML = html + '<p style="color:var(--bone-dim);font-size:0.7rem;padding:0.5rem 0">No campaigns found.</p>';
+    container.innerHTML = html + '<p style="color:var(--bone-dim);font-size:0.85rem;padding:0.5rem 0">No campaigns found.</p>';
     return;
   }
 

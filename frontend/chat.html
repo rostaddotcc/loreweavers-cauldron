@@ -118,6 +118,36 @@
   .av-btn.danger{ color: var(--blood-bright); border-color: rgba(212,58,77,.4); }
   .av-btn.danger:hover{ border-color: var(--blood-bright); }
   .av-btn:disabled{ opacity: .5; cursor: wait; }
+  /* Avatar-galleri: bläddra bland tidigare porträtt (2026-08-08) */
+  .av-gal-row{ display: flex; align-items: center; justify-content: center; gap: .55rem; }
+  .av-gal-arrow{ flex-shrink: 0; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; font-family: 'Cinzel', serif; font-size: 1.5rem; line-height: 1; color: var(--gold-bright); background: linear-gradient(180deg, var(--stone-3), var(--stone)); border: 1px solid var(--edge); border-radius: 50%; cursor: pointer; transition: all .18s; padding: 0 0 .18em; }
+  .av-gal-arrow:hover:not(:disabled){ border-color: var(--gold); color: var(--bone-bright); box-shadow: 0 0 14px -3px rgba(232,198,90,.55); transform: scale(1.08); }
+  .av-gal-arrow:disabled{ opacity: 0; pointer-events: none; }
+  .av-gal-count{ font-family: 'Cinzel', serif; font-size: .66rem; letter-spacing: .16em; text-transform: uppercase; color: var(--bone-dim); margin-top: .5rem; min-height: .9rem; }
+  .av-gal-count b{ color: var(--gold-bright); font-weight: 700; }
+  /* Mobil: större träffyta för tummen */
+  @media (max-width: 640px){ .av-gal-arrow{ width: 44px; height: 44px; font-size: 1.7rem; } }
+  /* ── /help som kort i chattloggen (2026-08-08) ──
+     Ligger i ett .msg.system som är centrerat och maxad till 520px —
+     help-kortet bryter ur båda: vänsterställd text och bredare kolumn. */
+  .msg.system:has(.help-card){ max-width: 760px; }
+  .msg.system:has(.help-card) .box{ display: block; text-align: left; padding: 1.1rem 1.3rem; border-style: solid; border-color: var(--gold); background: linear-gradient(170deg, var(--stone-2), var(--stone)); box-shadow: 0 0 30px rgba(201,162,39,.10); }
+  .help-card{ font-size: .86rem; line-height: 1.62; color: var(--bone); }
+  .help-card .hc-title{ font-family: 'Press Start 2P', monospace; font-size: .68rem; line-height: 1.7; color: var(--gold-bright); text-align: center; margin-bottom: 1rem; padding-bottom: .7rem; border-bottom: 1px solid var(--edge); text-shadow: 0 0 12px rgba(232,198,90,.35); }
+  .help-card .hc-row{ display: flex; gap: .8rem; align-items: baseline; padding: .17rem 0; }
+  .help-card .hc-cmd{ flex: 0 0 9.4rem; font-family: 'Courier New', monospace; font-size: .84rem; color: var(--term-green, #33cc33); }
+  .help-card .hc-desc{ flex: 1; color: var(--bone-dim); font-size: .83rem; }
+  .help-card .hc-sec{ font-family: 'Cinzel', serif; font-size: .74rem; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--gold); margin: 1.25rem 0 .5rem; padding-top: .85rem; border-top: 1px dashed var(--edge); }
+  .help-card .hc-body{ color: var(--bone); }
+  .help-card .hc-ex{ font-family: 'Courier New', monospace; font-size: .8rem; color: var(--term-green, #33cc33); background: color-mix(in srgb, var(--ink) 45%, transparent); border-left: 2px solid var(--gold); padding: .3rem .6rem; margin: .38rem 0; word-break: break-word; }
+  .help-card .hc-note{ margin-top: .55rem; font-size: .81rem; font-style: italic; color: var(--bone-dim); }
+  .help-card .hc-foot{ margin-top: 1.2rem; padding-top: .8rem; border-top: 1px solid var(--edge); text-align: center; font-size: .8rem; font-style: italic; color: var(--bone-dim); }
+  @media (max-width: 640px){
+    .help-card{ font-size: .84rem; }
+    .help-card .hc-title{ font-size: .55rem; }
+    .help-card .hc-row{ flex-direction: column; gap: 0; padding: .3rem 0; }
+    .help-card .hc-cmd{ flex: none; }
+  }
   /* Avatar-lightbox — större förhandsvisning */
   .av-lightbox{ position: fixed; inset: 0; z-index: 11000; display: flex; align-items: center; justify-content: center; background: rgba(2,1,5,.92); opacity: 0; visibility: hidden; transition: opacity .22s ease, visibility .22s; }
   .av-lightbox.show{ opacity: 1; visibility: visible; }
@@ -474,18 +504,7 @@
     display: inline-block; font-size: 0.82rem; color: var(--bone-dim);
     font-style: italic; border: 1px solid rgba(184,184,200,0.22); padding: 0.4rem 1.1rem;
     border-radius: 2px; background: color-mix(in srgb, var(--ink) 5%, transparent);
-  }/* DOS-help-overlay */.help-overlay{
-    display: none; position: fixed; inset: 0; z-index: 9999;
-    background: rgba(0,0,0,0.85); align-items: center; justify-content: center;
-  }.help-overlay.show{ display: flex; }.help-screen{
-    font-family: 'Courier New', monospace; color: var(--bone); background: linear-gradient(165deg, var(--stone-2), var(--stone));
-    border: 1px solid var(--gold); padding: 1.5rem 2rem; max-width: 560px; width: 90%;
-    font-size: 0.85rem; line-height: 1.7; box-shadow: 0 0 30px rgba(201,162,39,0.12);
-    position: relative;
-  }.help-screen .help-title{ text-align: center; color: var(--gold-bright); font-weight: bold; margin-bottom: 0.8rem; font-size: 1.13rem; text-shadow: 0 0 12px rgba(232,198,90,0.4); }.help-screen .help-cmd{ color: var(--gold-bright); }.help-screen .help-desc{ color: var(--bone-dim); }.help-screen .help-close{
-    position: absolute; top: 0.5rem; right: 0.8rem; color: #ff4444; cursor: pointer;
-    font-size: 1.1rem; background: none; border: none; font-family: inherit;
-  }.help-screen .help-close:hover{ color: #ff8888; }/* 📊 Usage-modal */.usage-overlay{
+  }/* 📊 Usage-modal */.usage-overlay{
     display: none; position: fixed; inset: 0; z-index: 10000;
     background: rgba(0,0,0,0.82); align-items: center; justify-content: center;
   }.usage-overlay.open{ display: flex; }.usage-modal{
@@ -1310,7 +1329,7 @@
 </style>
 <script src="sprites.js?v=20260806b"></script>
 <script src="fonts.js?v=20260806b"></script>
-<script src="themes.js?v=20260807a"></script>
+<script src="themes.js?v=20260808a"></script>
 </head>
 <body>
 <!-- <marker> -->
@@ -1648,26 +1667,6 @@
 </div>
 
 
-<!-- DOS-help-overlay för /help -->
-<div class="help-overlay" id="help-overlay" onclick="if(event.target===this)this.classList.remove('show')">
-  <div class="help-screen">
-    <button class="help-close" onclick="document.getElementById('help-overlay').classList.remove('show')">✕</button>
-    <div class="help-title">╔══════════════════════════════════════════╗<br>║ THE LORE WEAVER'S CAULDRON — COMMANDS ║<br>╚══════════════════════════════════════════╝</div>
-    <span class="help-cmd">/guardian [text]</span> <span class="help-desc">— Ask the Lorekeeper to fix state</span><br>
-    <span class="help-cmd">/pin [fact]</span> &nbsp;&nbsp;<span class="help-desc">— Pin a permanent truth</span><br>
-    <span class="help-cmd">/unpin [fact]</span> <span class="help-desc">— Remove a pinned truth</span><br>
-    <span class="help-cmd">/facts</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="help-desc">— Show all pinned truths</span><br>
-    <span class="help-cmd">/lore [text]</span> &nbsp;<span class="help-desc">— Add a lore entry</span><br>
-    <span class="help-cmd">/chapter [title]</span> <span class="help-desc">— End chapter (summary)</span><br>
-    <span class="help-cmd">/save [text]</span> &nbsp;<span class="help-desc">— Save the campaign (checkpoint)</span><br>
-    <span class="help-cmd">/help</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="help-desc">— Show this help</span><br>
-    <br>
-    <span style="color:#888">──────────────────────────────────</span><br>
-    <span style="color:#888">Just write naturally — the DM understands intent.</span><br>
-    <span style="color:#888">Dice rolls are requested by the DM in the chat.</span>
-  </div>
-</div>
-
 <!-- 📊 USAGE — modell- och token-statistik -->
 <div class="usage-overlay" id="usage-overlay" onclick="if(event.target===this)closeUsageModal()">
   <div class="usage-modal">
@@ -1683,7 +1682,7 @@
 
 <script src="sfx.js?v=20260802a"></script>
 <script src="api.js?v=20260806a"></script>
-<script src="i18n.js?v=20260807a"></script>
+<script src="i18n.js?v=20260808a"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -2081,19 +2080,31 @@ renderNpcSidebar();
 // ═══════════════════════════════════════
 // Spårar vilka avatarer som finns uppladdade: { 'player': url, 'dm': url, 'npc:xxx': url }
 const AVATARS = {};
+// Galleri-metadata per karaktär: { 'player': {count, index}, … } (2026-08-08).
+// Varje karaktär håller upp till 5 porträtt som spelaren bläddrar mellan med
+// pilarna i avatar-modalen — så man kan gå tillbaka till en gammal bild.
+const AVATAR_GAL = {};
 
 // Fyll AVATARS från kampanjstate
 function ingestAvatars(avatarMap) {
   Object.keys(AVATARS).forEach(k => delete AVATARS[k]);
+  Object.keys(AVATAR_GAL).forEach(k => delete AVATAR_GAL[k]);
   Object.keys(avatarMap || {}).forEach(kind => {
     AVATARS[kind] = API.avatarUrl(kind);
+    const entry = avatarMap[kind] || {};
+    const gal = Array.isArray(entry.gallery) ? entry.gallery : (entry.disk_name ? [entry] : []);
+    const meta = { count: gal.length, index: entry.gallery_index || 0 };
+    AVATAR_GAL[kind] = meta;
     // NPC-nycklar kan ligga som 'npc:Keeper of Paths' (visningsnamn) i staten
     // medan chatten slår upp 'npc:keeper_of_paths' (normaliserad) — alisa båda
     // formerna till samma URL så porträttet hittas oavsett källa. (2026-08-05)
     if (kind.startsWith('npc:')) {
       const display = kind.slice(4);
       const norm = display.toLowerCase().replace(/\s+/g, '_');
-      if (norm !== display) AVATARS['npc:' + norm] = API.avatarUrl(kind);
+      if (norm !== display) {
+        AVATARS['npc:' + norm] = API.avatarUrl(kind);
+        AVATAR_GAL['npc:' + norm] = meta;
+      }
     }
   });
 }
@@ -2108,11 +2119,143 @@ function avatarHtml(kind, fallbackEmoji) {
   return `<span class="msg-avatar" onclick="pickAvatar('${kind}')" title="${I18N.t('Klicka för att byta bild')}">${inner}</span>`;
 }
 
+// ── 🖼 Avatar-galleri: bläddra bland tidigare porträtt (2026-08-08) ──
+// Varje karaktär (äventyraren, DM:n, varje NPC) håller upp till 5 bilder.
+// Nya målningar läggs till och blir aktiva — pilarna låter spelaren gå
+// tillbaka till en gammal bild. Den bild man står på blir den aktiva
+// avataren överallt (chatt, sidebar, kort).
+let _galBusy = false;
+
+function _galMeta() {
+  if (_avatarProfileMode) return _accountGal;
+  return AVATAR_GAL[AVATAR_KIND] || { count: AVATARS[AVATAR_KIND] ? 1 : 0, index: 0 };
+}
+
+// Rita pilarna + "Portrait 2 / 5"-raden efter modalens nuvarande läge
+function renderAvatarGallery() {
+  const prev = document.getElementById('avatar-gal-prev');
+  const next = document.getElementById('avatar-gal-next');
+  const label = document.getElementById('avatar-gal-count');
+  if (!prev || !next || !label) return;
+  const meta = _galMeta() || { count: 0, index: 0 };
+  const count = meta.count || 0;
+  // En enda bild (eller ingen) → inga pilar, ingen räknare.
+  const show = count > 1;
+  prev.disabled = !show || _galBusy;
+  next.disabled = !show || _galBusy;
+  label.innerHTML = show
+    ? `Portrait <b>${(meta.index || 0) + 1}</b> / ${count}`
+    : '';
+  // "Remove this portrait" är bara meningsfullt när det FINNS flera bilder —
+  // med bara en är den identisk med "Remove avatar" och skulle förvirra.
+  const delOne = document.getElementById('avatar-del-one-btn');
+  if (delOne) delOne.style.display = show ? '' : 'none';
+}
+
+// Bläddra ±1 steg. Backend roterar galleriet och sätter den nya bilden som
+// aktiv, så vi speglar bara resultatet i UI:t.
+async function rotateAvatarImage(delta) {
+  if (_galBusy) return;
+  const meta = _galMeta();
+  if (!meta || (meta.count || 0) < 2) return;
+  _galBusy = true;
+  renderAvatarGallery();
+  try {
+    if (_avatarProfileMode) {
+      const res = await API.rotateAccountAvatar(delta);
+      _accountGal = { count: res.gallery_count, index: res.gallery_index };
+      const preview = document.getElementById('avatar-modal-img');
+      const url = API.accountAvatarUrl() + '?t=' + Date.now();
+      if (preview) preview.innerHTML = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">`;
+      refreshAvatars();
+    } else {
+      const kind = AVATAR_KIND;
+      const res = await API.rotateAvatar(kind, delta);
+      AVATAR_GAL[kind] = { count: res.gallery_count, index: res.gallery_index };
+      // Cache-buster: samma URL, ny aktiv bild bakom den.
+      const url = API.avatarUrl(kind) + '?t=' + Date.now();
+      AVATARS[kind] = url;
+      // NPC-aliaset (normaliserat namn) pekar på samma bild
+      if (kind.startsWith('npc:')) {
+        const norm = 'npc:' + kind.slice(4).toLowerCase().replace(/\s+/g, '_');
+        if (norm !== kind && AVATARS[norm]) {
+          AVATARS[norm] = url;
+          AVATAR_GAL[norm] = AVATAR_GAL[kind];
+        }
+      }
+      const preview = document.getElementById('avatar-modal-img');
+      if (preview) preview.innerHTML = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">`;
+      refreshAvatars();
+      rerenderChatAvatars(kind, url);
+    }
+    try { SFX.click(); } catch (_) {}
+  } catch (e) {
+    toast('⚠ ' + (e.message || 'Could not switch portrait'));
+    try { SFX.error(); } catch (_) {}
+  } finally {
+    _galBusy = false;
+    renderAvatarGallery();
+  }
+}
+
+// Byt ut redan renderade bubbel-avatarer i chattloggen mot den nya bilden
+// (utan att rita om hela loggen).
+function rerenderChatAvatars(kind, url) {
+  document.querySelectorAll('.msg-avatar').forEach(el => {
+    const oc = el.getAttribute('onclick') || '';
+    if (oc.indexOf("'" + kind + "'") === -1) return;
+    const img = el.querySelector('img');
+    if (img) img.src = url;
+  });
+}
+
+// Ta bort BARA den bild man står på (resten av galleriet är kvar)
+async function deleteCurrentAvatarImage() {
+  const meta = _galMeta();
+  if (!meta || !meta.count) return;
+  const idx = meta.index || 0;
+  const many = meta.count > 1;
+  if (!confirm(many
+    ? `Remove this portrait (${idx + 1} of ${meta.count})? The others are kept.`
+    : 'Remove this portrait? It is the only one for this character.')) return;
+  try {
+    if (_avatarProfileMode) {
+      const res = await API.deleteAccountAvatarImage(idx);
+      _accountGal = { count: res.gallery_count || 0, index: res.gallery_index || 0 };
+      _hasAccountAvatar = (res.gallery_count || 0) > 0;
+      refreshAvatars();
+      if (_hasAccountAvatar) { openProfileAvatarModal(); }
+      else { closeAvatarModal(); }
+    } else {
+      const kind = AVATAR_KIND;
+      const res = await API.deleteAvatarImage(kind, idx);
+      const count = res.gallery_count || 0;
+      if (count > 0) {
+        AVATAR_GAL[kind] = { count, index: res.gallery_index || 0 };
+        AVATARS[kind] = API.avatarUrl(kind) + '?t=' + Date.now();
+        refreshAvatars();
+        rerenderChatAvatars(kind, AVATARS[kind]);
+        pickAvatar(kind);
+      } else {
+        delete AVATARS[kind];
+        delete AVATAR_GAL[kind];
+        refreshAvatars();
+        closeAvatarModal();
+      }
+    }
+    toast('🗑 Portrait removed');
+  } catch (e) {
+    toast('⚠ ' + (e.message || 'Could not remove portrait'));
+  }
+}
+
 // Öppna avatar-modalen (AI-generera / ladda upp / ta bort)
 let AVATAR_KIND = 'player';
 // Spelarprofilens avatar (konto) är SEPARAT från äventyrarens kort.
 let _hasAccountAvatar = false;
 let _avatarProfileMode = false;
+// Kontots porträttgalleri (count/index) — fylls från /api/me/avatar/gallery
+let _accountGal = { count: 0, index: 0 };
 function pickAvatar(kind) {
   AVATAR_KIND = kind;
   _avatarProfileMode = false;
@@ -2150,6 +2293,7 @@ function pickAvatar(kind) {
   if (promptInp) promptInp.placeholder = "Optional: describe exactly what you want painted… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)";
   document.getElementById('avatar-ai-status').textContent = '';
   updateAvatarProviderLock();
+  renderAvatarGallery();
   if (ov) ov.classList.add('show');
   try { SFX.click(); } catch (_) {}
 }
@@ -2187,6 +2331,16 @@ function openProfileAvatarModal() {
   if (promptInp) promptInp.placeholder = 'Describe yourself — e.g. \'hooded figure, lantern light, old leather\' (or leave empty)';
   document.getElementById('avatar-ai-status').textContent = '';
   updateAvatarProviderLock();
+  // Kontots galleri ligger inte i kampanjstaten — hämta count/index så
+  // pilarna vet hur många porträtt som finns.
+  _accountGal = { count: _hasAccountAvatar ? 1 : 0, index: 0 };
+  renderAvatarGallery();
+  if (_hasAccountAvatar) {
+    API.accountAvatarGallery().then(g => {
+      _accountGal = { count: g.gallery_count || 0, index: g.gallery_index || 0 };
+      renderAvatarGallery();
+    }).catch(() => {});
+  }
   if (ov) ov.classList.add('show');
   try { SFX.click(); } catch (_) {}
 }
@@ -2350,6 +2504,9 @@ async function generateAvatarAction(provider) {
     const res = await API.generateAvatar(kind, Date.now() % 1000000, 'new', freePrompt, prov);
     if (res && res.ok) {
       AVATARS[kind] = API.avatarUrl(kind) + '?t=' + Date.now();
+      // Nya målningen LÄGGS TILL i galleriet — uppdatera count/index så
+      // bläddra-pilarna dyker upp direkt (2026-08-08).
+      if (res.gallery_count) AVATAR_GAL[kind] = { count: res.gallery_count, index: res.gallery_index || 0 };
       refreshAvatars();
       pickAvatar(kind); // uppdatera förhandsvisningen i modalen
       status.textContent = usedWords ? '✨ New avatar painted — used your words' : '✨ New avatar painted — used your character sheet';
@@ -2381,6 +2538,7 @@ async function updateAvatarAction() {
     const res = await API.generateAvatar(kind, Date.now() % 1000000, 'edit', freePrompt, avatarProvider());
     if (res && res.ok) {
       AVATARS[kind] = API.avatarUrl(kind) + '?t=' + Date.now();
+      if (res.gallery_count) AVATAR_GAL[kind] = { count: res.gallery_count, index: res.gallery_index || 0 };
       refreshAvatars();
       pickAvatar(kind);
       status.textContent = usedWords ? '✨ Avatar updated — used your words' : '✨ Avatar updated — used your character sheet';
@@ -2408,9 +2566,11 @@ function uploadAvatarAction() {
     const file = input.files && input.files[0];
     if (!file) return;
     try {
-      await API.uploadAvatar(kind, file);
+      const res = await API.uploadAvatar(kind, file);
       AVATARS[kind] = API.avatarUrl(kind) + '?t=' + Date.now();
+      if (res && res.gallery_count) AVATAR_GAL[kind] = { count: res.gallery_count, index: res.gallery_index || 0 };
       refreshAvatars();
+      rerenderChatAvatars(kind, AVATARS[kind]);
       toast(I18N.t('🖼 Bild uppdaterad'));
     } catch (e) {
       toast('⚠ ' + I18N.t('Kunde inte ladda upp: ') + (e.message || I18N.t('okänt fel')));
@@ -2437,6 +2597,7 @@ async function deleteAvatarAction() {
   try {
     await API.deleteAvatar(kind);
     delete AVATARS[kind];
+    delete AVATAR_GAL[kind];
     refreshAvatars();
     closeAvatarModal();
     toast('🗑 Avatar removed');
@@ -4899,13 +5060,79 @@ function addCmdMessage(text) {
   chat.scrollTop = chat.scrollHeight;
 }
 
+// ═══════════════════════════════════════
+// /help — hjälpkort i chattloggen (2026-08-08)
+// ═══════════════════════════════════════
+// Ersätter den gamla DOS-popupen: hjälpen renderas som ett vanligt
+// system-meddelande så den ligger kvar i loggen och går att scrolla
+// tillbaka till mitt i spelet.
+function helpCardHtml() {
+  const cmd = (c, d) => `<div class="hc-row"><span class="hc-cmd">${c}</span><span class="hc-desc">${d}</span></div>`;
+  return `
+<div class="help-card">
+  <div class="hc-title">⌨ The Lore Weaver's Cauldron — Commands</div>
+
+  ${cmd('/guardian [text]', 'Ask the Lorekeeper to inspect &amp; fix the record')}
+  ${cmd('/pin [fact]', 'Pin a permanent truth')}
+  ${cmd('/unpin [fact]', 'Remove a pinned truth')}
+  ${cmd('/facts', 'Show all pinned truths')}
+  ${cmd('/lore [text]', 'Add a lore entry')}
+  ${cmd('/chapter [title]', 'End the chapter (writes a summary)')}
+  ${cmd('/save [text]', 'Save the campaign (checkpoint)')}
+  ${cmd('/roll [dice]', 'Roll dice yourself — e.g. <i>/roll 2d6+3</i>')}
+  ${cmd('/help', 'Show this help')}
+
+  <div class="hc-sec">🔍 SEARCH — the DM's memory</div>
+  <div class="hc-body">
+    The Cauldron remembers far more than fits in one conversation. When the DM
+    senses a gap — an old promise, a name not spoken in fifty turns, a thread
+    left dangling — it <b>searches its own memory</b> before answering, pulling
+    the relevant facts and scenes back out of the archive.
+    <div class="hc-note">This happens on its own; there is nothing to type.
+    You'll simply notice the DM recalling things you thought were long forgotten.
+    If it ever <i>does</i> forget, just say so in plain words —
+    "you're forgetting the oath I swore to Vela" — and it will go looking.</div>
+  </div>
+
+  <div class="hc-sec">🛡️ THE GUARDIAN — keeper of absolute truth</div>
+  <div class="hc-body">
+    The Lorekeeper watches every turn and keeps the ledger honest: your
+    inventory, gold, HP, XP, spell slots, quests and who is alive or dead.
+    If something looks wrong — an item that never landed in your pack, damage
+    counted twice, XP that vanished — <b>tag the Guardian</b> and it will audit
+    the record and correct it.
+    <div class="hc-ex">/guardian I never received the silver key from the merchant</div>
+    <div class="hc-ex">/guardian my longbow is listed twice</div>
+    <div class="hc-ex">/guardian clean up the NPC list — there are duplicates</div>
+    <div class="hc-note">The Guardian rules over <b>numbers and records</b>, never
+    over story. It will not rewrite what happened — only what was mis-counted.</div>
+  </div>
+
+  <div class="hc-sec">🎭 TALKING TO THE DM</div>
+  <div class="hc-body">
+    Write naturally — the DM reads intent, not syntax. It also knows there is a
+    <b>player</b> behind the character, so you may step
+    <b>out of character</b> and argue, ask, or push back:
+    <div class="hc-ex">OOC: would my character realistically know this place?</div>
+    <div class="hc-ex">Hold on — I said I was hiding before the guard turned around.</div>
+    <div class="hc-note">But remember: within the Cauldron the
+    <b>DM's word is the absolute truth</b>. The Guardian may correct the ledger;
+    only the DM decides what the world <i>is</i>. Argue your case — then live
+    with the verdict.</div>
+  </div>
+
+  <div class="hc-foot">🎲 The DM calls for dice when fate is uncertain — or roll your own with /roll.</div>
+</div>`;
+}
+
 async function handleSlashCommand(text) {
   const lower = text.toLowerCase();
 
-  // /help — visa overlay
-  if (lower === '/help') {
-    addCmdMessage('⌨ <i>Showing command help…</i>');
-    document.getElementById('help-overlay').classList.add('show');
+  // /help — rendera hjälpen som ett kort i chattloggen (2026-08-08).
+  // Popupen är borttagen: hjälpen ska ligga kvar i loggen så man kan
+  // scrolla tillbaka till den mitt i spelet.
+  if (lower === '/help' || lower === '/hjälp' || lower === '/hjalp') {
+    addMessage('system', null, helpCardHtml());
     return;
   }
 
@@ -7643,8 +7870,8 @@ function cdMentionNpc(name) {
 
 // ═══════════════ 📖 CODEX MODAL (D1.3) — lazy iframes ═══════════════
 const CODEX_PAGES = {
-  character: { label: '🧙 Character', src: 'character.html?v=20260807b' },
-  npcs:      { label: '🧝 NPCs',      src: 'npcs.html?v=20260807c' },
+  character: { label: '🧙 Character', src: 'character.html?v=20260808b' },
+  npcs:      { label: '🧝 NPCs',      src: 'npcs.html?v=20260808x' },
   map:       { label: '🗺 Map',       src: 'platser.html?v=20260806a' },
   journal:   { label: '📖 Journal',   src: 'loggbok.html?v=20260806a' },
   facts:     { label: '📌 Facts',     src: 'facts.html?v=20260806a' },
@@ -7950,7 +8177,12 @@ document.addEventListener('keydown', e => {
       <button class="mi-close" onclick="closeAvatarModal()">✕</button>
     </div>
     <div style="text-align:center;margin:0 0 1rem">
-      <div id="avatar-modal-img" onclick="openAvatarLightbox()" style="width:104px;height:104px;border-radius:50%;margin:0 auto;border:2px solid var(--gold);overflow:hidden;background:var(--stone-3);display:flex;align-items:center;justify-content:center;font-size:2.2rem;box-shadow:0 0 22px -4px rgba(201,162,39,.45);cursor:pointer" title="Click for larger view"></div>
+      <div class="av-gal-row">
+        <button class="av-gal-arrow" id="avatar-gal-prev" onclick="rotateAvatarImage(-1)" title="Previous portrait" aria-label="Previous portrait">‹</button>
+        <div id="avatar-modal-img" onclick="openAvatarLightbox()" style="width:104px;height:104px;border-radius:50%;margin:0 auto;border:2px solid var(--gold);overflow:hidden;background:var(--stone-3);display:flex;align-items:center;justify-content:center;font-size:2.2rem;box-shadow:0 0 22px -4px rgba(201,162,39,.45);cursor:pointer" title="Click for larger view"></div>
+        <button class="av-gal-arrow" id="avatar-gal-next" onclick="rotateAvatarImage(1)" title="Next portrait" aria-label="Next portrait">›</button>
+      </div>
+      <div class="av-gal-count" id="avatar-gal-count"></div>
       <div style="font-size:.62rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem">click to enlarge</div>
     </div>
     <div class="mi-intro" id="avatar-modal-desc" style="font-size:.82rem;line-height:1.55">Paint a new avatar from your character sheet — items, traits and lore included. Or upload your own image.</div>
@@ -7970,6 +8202,7 @@ document.addEventListener('keydown', e => {
       <button class="av-btn primary" id="avatar-ai-btn" onclick="generateAvatarAction()">✨ Paint new from my words</button>
       <button class="av-btn" id="avatar-update-btn" onclick="updateAvatarAction()" style="display:none">🔄 Update from sheet</button>
       <button class="av-btn" onclick="uploadAvatarAction()">📁 Upload image…</button>
+      <button class="av-btn danger" id="avatar-del-one-btn" onclick="deleteCurrentAvatarImage()" style="display:none">🗑 Remove this portrait</button>
       <button class="av-btn danger" id="avatar-del-btn" onclick="deleteAvatarAction()" style="display:none">🗑 Remove avatar</button>
     </div>
     <div id="avatar-ai-status" style="font-size:.75rem;color:var(--bone-dim);text-align:center;margin-top:.8rem;min-height:1rem"></div>

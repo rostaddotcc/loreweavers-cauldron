@@ -6,6 +6,7 @@ LLM-driven D&D Dungeon Master. Alla endpoints under /api/.
 
 import asyncio
 import contextvars
+from contextlib import asynccontextmanager
 import copy
 import io
 import json
@@ -139,6 +140,7 @@ from auth import (
     verify_token,
 )
 from dice import roll as dice_roll
+import avatar_purge
 from models import (
     AWAKENING_ASK,
     AWAKENING_ASK_EN,
@@ -7730,6 +7732,72 @@ async def delete_avatar(kind: str, morkrets_token: str | None = Cookie(None)):
     del avatars[avatar_key]
     store.save(state)
     return {"ok": True, "message": "Avataren borttagen"}
+
+
+# ── 🧹 Diskstädning: gamla porträtt som inte är aktiva avatarer (2026-08-08) ──
+# Varje karaktär håller upp till MAX_AVATAR_GALLERY bilder som spelaren kan
+# bläddra tillbaka till. Bilder som varken är den AKTIVA avataren eller har
+# rörts på 30 dagar raderas — plus föräldralösa filer som inte refereras av
+# någon state. Körs dagligen i bakgrunden + manuellt via admin-endpointen.
+AVATAR_PURGE_INTERVAL_S = 24 * 3600
+
+
+@app.post("/api/admin/avatars/purge")
+async def admin_purge_avatars(
+    body: dict | None = None, morkrets_token: str | None = Cookie(None)
+):
+    """Städa bort porträtt som inte är satta som aktiva avatarer.
+
+    Body: {"days": 30, "dry_run": false}. dry_run=true rapporterar utan att
+    radera något — kör alltid det först om du är osäker.
+    """
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+    body = body or {}
+    days = body.get("days", avatar_purge.PURGE_AFTER_DAYS)
+    days = int(days) if isinstance(days, (int, float, str)) and str(days).isdigit() else avatar_purge.PURGE_AFTER_DAYS
+    dry_run = bool(body.get("dry_run"))
+    stats = await asyncio.to_thread(
+        avatar_purge.purge_all,
+        CAMPAIGNS_DIR,
+        _user_avatar_path("x").parent,
+        older_than_days=max(1, days),
+        dry_run=dry_run,
+    )
+    return {"ok": True, **stats}
+
+
+async def _avatar_purge_loop():
+    """Daglig diskstädning av inaktiva porträtt (30 dagar)."""
+    # Vänta lite vid uppstart så att första requesten inte konkurrerar med
+    # en full katalogskanning.
+    await asyncio.sleep(300)
+    while True:
+        try:
+            await asyncio.to_thread(
+                avatar_purge.purge_all,
+                CAMPAIGNS_DIR,
+                _user_avatar_path("x").parent,
+                older_than_days=avatar_purge.PURGE_AFTER_DAYS,
+            )
+        except Exception as e:
+            logger.warning("🧹 Avatar purge misslyckades: %s", e)
+        await asyncio.sleep(AVATAR_PURGE_INTERVAL_S)
+
+
+@asynccontextmanager
+async def _lifespan(app_: FastAPI):
+    """Starta bakgrundsuppgifter vid uppstart, städa vid nedstängning."""
+    task = asyncio.create_task(_avatar_purge_loop())
+    _BACKGROUND_TASKS.add(task)
+    task.add_done_callback(_BACKGROUND_TASKS.discard)
+    try:
+        yield
+    finally:
+        task.cancel()
+
+
+app.router.lifespan_context = _lifespan
 
 
 # ═══════════════════════════════════════

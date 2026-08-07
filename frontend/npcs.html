@@ -61,6 +61,14 @@
   .av-btn.danger{ color: var(--blood-bright); border-color: rgba(212,58,77,.4); }
   .av-btn.danger:hover{ border-color: var(--blood-bright); }
   .av-btn:disabled{ opacity: .5; cursor: wait; }
+  /* Avatar-galleri: bläddra bland tidigare porträtt (2026-08-08) */
+  .av-gal-row{ display: flex; align-items: center; justify-content: center; gap: .55rem; }
+  .av-gal-arrow{ flex-shrink: 0; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; font-family: var(--font-display,'Cinzel',serif); font-size: 1.5rem; line-height: 1; color: var(--gold-bright); background: linear-gradient(180deg, var(--stone-3), var(--stone)); border: 1px solid var(--edge); border-radius: 50%; cursor: pointer; transition: all .18s; padding: 0 0 .18em; }
+  .av-gal-arrow:hover:not(:disabled){ border-color: var(--gold); color: var(--bone-bright); box-shadow: 0 0 14px -3px rgba(232,198,90,.55); transform: scale(1.08); }
+  .av-gal-arrow:disabled{ opacity: 0; pointer-events: none; }
+  .av-gal-count{ font-family: var(--font-display,'Cinzel',serif); font-size: .66rem; letter-spacing: .16em; text-transform: uppercase; color: var(--bone-dim); margin-top: .5rem; min-height: .9rem; }
+  .av-gal-count b{ color: var(--gold-bright); font-weight: 700; }
+  @media (max-width: 640px){ .av-gal-arrow{ width: 44px; height: 44px; font-size: 1.7rem; } }
   .av-lightbox{ position: fixed; inset: 0; z-index: 11000; display: flex; align-items: center; justify-content: center; background: rgba(2,1,5,.92); opacity: 0; visibility: hidden; transition: opacity .22s ease, visibility .22s; }
   .av-lightbox.show{ opacity: 1; visibility: visible; }
   .av-lightbox img{ max-width: min(90vw, 720px); max-height: 85vh; border: 2px solid var(--gold); box-shadow: 0 0 60px rgba(201,162,39,.25), 0 24px 60px rgba(0,0,0,.8); }
@@ -133,7 +141,7 @@
 
 <script src="sfx.js?v=20260806a"></script>
 <script src="api.js?v=20260806c"></script>
-<script src="i18n.js?v=20260807a"></script>
+<script src="i18n.js?v=20260808a"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -513,8 +521,56 @@ function openAvatarModal(i) {
   if (freeBtn) freeBtn.disabled = false;
   document.getElementById('avatar-ai-status').textContent = '';
   updateAvatarProviderLock();
+  renderAvatarGallery();
   document.getElementById('avatar-overlay').classList.add('show');
   try { SFX.click(); } catch (_) {}
+}
+
+// ── 🖼 Avatar-galleri: bläddra bland NPC:ns tidigare porträtt (2026-08-08) ──
+// Varje NPC håller upp till 5 bilder. Pilarna roterar den aktiva via backend.
+let _galBusy = false;
+
+function _npcGal() {
+  const key = npcAvatarKey();
+  const e = (key && AVATARS[key]) || {};
+  const gal = Array.isArray(e.gallery) ? e.gallery : (e.disk_name ? [e] : []);
+  return { count: gal.length, index: e.gallery_index || 0 };
+}
+
+function renderAvatarGallery() {
+  const prev = document.getElementById('avatar-gal-prev');
+  const next = document.getElementById('avatar-gal-next');
+  const label = document.getElementById('avatar-gal-count');
+  if (!prev || !next || !label) return;
+  const meta = _npcGal();
+  const show = meta.count > 1;
+  prev.disabled = !show || _galBusy;
+  next.disabled = !show || _galBusy;
+  label.innerHTML = show ? `Portrait <b>${meta.index + 1}</b> / ${meta.count}` : '';
+}
+
+async function rotateAvatarImage(delta) {
+  if (_galBusy) return;
+  const key = npcAvatarKey();
+  if (!key || _npcGal().count < 2) return;
+  _galBusy = true;
+  renderAvatarGallery();
+  try {
+    const res = await API.rotateAvatar(key, delta);
+    AVATARS[key] = Object.assign({}, AVATARS[key], {
+      gallery_index: res.gallery_index,
+      uploaded: new Date().toISOString(),  // cache-buster
+    });
+    const preview = document.getElementById('avatar-modal-img');
+    if (preview) preview.innerHTML = `<img src="${npcAvatarUrl()}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    renderDossier(NPCS[CURRENT_NPC]);
+    try { SFX.click(); } catch (_) {}
+  } catch (e) {
+    toast('⚠ ' + (e.message || 'Could not switch portrait'));
+  } finally {
+    _galBusy = false;
+    renderAvatarGallery();
+  }
 }
 function closeAvatarModal() {
   document.getElementById('avatar-overlay').classList.remove('show');
@@ -598,7 +654,10 @@ async function _runAvatarGen(mode, statusText, btnId) {
     const usedWords = !!freePrompt.trim();
     const res = await API.generateAvatar(key, Date.now() % 1000000, mode, freePrompt, avatarProvider());
     if (res && res.ok) {
-      AVATARS[key] = { disk_name: 'avatar.png', uploaded: new Date().toISOString(), ai_generated: true, seed: res.seed };
+      // Nya målningen LÄGGS TILL i NPC:ns galleri — behåll count/index så
+      // bläddra-pilarna dyker upp direkt (2026-08-08).
+      AVATARS[key] = { disk_name: 'avatar.png', uploaded: new Date().toISOString(), ai_generated: true, seed: res.seed,
+        gallery: new Array(res.gallery_count || 1).fill({ disk_name: 'x' }), gallery_index: res.gallery_index || 0 };
       renderDossier(NPCS[CURRENT_NPC]);
       openAvatarModal(CURRENT_NPC);
       status.textContent = (mode === 'edit' ? '✨ Avatar updated — ' : '✨ New avatar painted — ') + (usedWords ? 'used your words' : 'used your character sheet');
@@ -672,7 +731,12 @@ tick();
       <button class="mi-close" onclick="closeAvatarModal()">✕</button>
     </div>
     <div style="text-align:center;margin:0 0 1rem">
-      <div id="avatar-modal-img" onclick="openAvatarLightbox()" style="width:112px;height:112px;border-radius:50%;margin:0 auto;border:2px solid var(--gold);overflow:hidden;background:var(--stone-3);display:flex;align-items:center;justify-content:center;font-size:2.4rem;box-shadow:0 0 22px -4px rgba(201,162,39,.45);cursor:pointer" title="Click for larger view"></div>
+      <div class="av-gal-row">
+        <button class="av-gal-arrow" id="avatar-gal-prev" onclick="rotateAvatarImage(-1)" title="Previous portrait" aria-label="Previous portrait">&lsaquo;</button>
+        <div id="avatar-modal-img" onclick="openAvatarLightbox()" style="width:112px;height:112px;border-radius:50%;margin:0 auto;border:2px solid var(--gold);overflow:hidden;background:var(--stone-3);display:flex;align-items:center;justify-content:center;font-size:2.4rem;box-shadow:0 0 22px -4px rgba(201,162,39,.45);cursor:pointer" title="Click for larger view"></div>
+        <button class="av-gal-arrow" id="avatar-gal-next" onclick="rotateAvatarImage(1)" title="Next portrait" aria-label="Next portrait">&rsaquo;</button>
+      </div>
+      <div class="av-gal-count" id="avatar-gal-count"></div>
       <div style="font-size:.62rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem">click to enlarge</div>
     </div>
     <div class="mi-intro" id="avatar-modal-desc">Paint a new avatar from the NPC's role and notes — or upload your own image.</div>
@@ -713,7 +777,8 @@ document.getElementById('npc-avatar-input').addEventListener('change', async e =
   try {
     const res = await API.uploadAvatar(key, file);
     if (res && res.ok) {
-      AVATARS[key] = { disk_name: 'avatar.png', uploaded: new Date().toISOString(), ai_generated: false };
+      AVATARS[key] = { disk_name: 'avatar.png', uploaded: new Date().toISOString(), ai_generated: false,
+        gallery: new Array(res.gallery_count || 1).fill({ disk_name: 'x' }), gallery_index: res.gallery_index || 0 };
       renderDossier(NPCS[CURRENT_NPC]);
       openAvatarModal(CURRENT_NPC);
       toast('🖼 Avatar saved');

@@ -1510,6 +1510,18 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
         # Tag-beloppen får inte längre dämpa kodens skade-rullar (exakt-match)
         _skip_keys = {k for k in _skip_keys if k[0] != "skada"}
 
+    # ── Spelar-attack-dedup (2026-08-08, "svensk del 1"-incidenten) ──
+    # Guardian extraherar KONSEKVENT BÅDE damage:[{target: fiende}] OCH
+    # player_attacks/ally_attacks för SAMMA narrerade attack → båda grenarna
+    # applicerade → dubbelskada på fienden (Kaelen 8→0 på 4 dmg).
+    # Attack-vägen (player_attacks/ally_attacks med hit) är AUKTORITATIV för
+    # fiende-HP; damage-arrayens entry mot samma fiende skippas.
+    _attacked_enemies = {
+        str(a.get("target", "")).strip().lower()
+        for a in list(mech.get("player_attacks", []) or []) + list(mech.get("ally_attacks", []) or [])
+        if isinstance(a, dict) and a.get("hit") and int(a.get("damage", 0) or 0) > 0
+    }
+
     # ── Skada ──
     from combat import damage_multiplier
     for dmg in mech.get("damage", []):
@@ -1540,6 +1552,12 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             })
             logger.info("🛡️ Damage type %s on %s → ×%s (%d → %d)", _dtype or "?", target, _mult, _orig, amount)
         if amount <= 0:
+            continue
+        # Spelar-attack-dedup (2026-08-08): fienden träffades redan av
+        # player_attacks/ally_attacks denna tur → attack-vägen är auktoritativ,
+        # skippa damage-arrayens entry (dubbelskada på fiende, "svensk del 1").
+        if target != "player" and str(target).strip().lower() in _attacked_enemies:
+            logger.info("🛡️ Guardian: skipping extracted damage to %s — player/ally attack already applied", target)
             continue
         # Chat-first strid: DM-närrerad spelarskada som koden redan rullar
         # (enemy_attacks) → hoppa över; kodens skada är auktoritativ.

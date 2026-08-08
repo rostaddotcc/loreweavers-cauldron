@@ -217,3 +217,52 @@ def test_same_amount_tag_and_code_roll_applies_once(monkeypatch):
     assert work_state["character"]["hp"]["current"] == 10  # 14 - 4: en gång
     hits = [e for e in effects if e["type"] == "enemy_hit"]
     assert len(hits) == 1 and hits[0]["damage"] == 4
+
+
+# ── Spelar-attack + extraherad damage → bara en gång (2026-08-08, "svensk del 1") ──
+
+def test_player_attacks_plus_extracted_damage_apply_once():
+    """Guardian extraherar BÅDE damage:[{target: fiende}] OCH player_attacks
+    för samma narrerade attack → fienden får skadan EN gång, inte dubbel.
+
+    Incident: 'svensk del 1' — Kaelen 8→0 på 4 dmg (4+4), Torvin 8→2 på 3 (3+3).
+    """
+    state = _make_state(hp=14)
+    combat = _start_combat(state)  # Solke Guard + Security Drone, 7 HP var
+    enemy = combat["enemies"][0]
+
+    mech = _mech(
+        damage=[{"target": "Solke Guard", "amount": 4, "type": "bludgeoning"}],
+        player_attacks=[{"target": "Solke Guard", "hit": True, "damage": 4, "damage_type": "bludgeoning"}],
+    )
+    guardian.apply_mechanics(state, mech, skip_effects=[])
+
+    assert enemy["hp"] == 3, f"Förväntade 7-4=3, fick {enemy['hp']} (dubbelskada?)"
+
+
+def test_ally_attacks_plus_extracted_damage_apply_once():
+    """Samma dedup för ally_attacks — allierad attack + damage mot samma fiende."""
+    state = _make_state(hp=14)
+    combat = _start_combat(state)
+    enemy = combat["enemies"][1]
+
+    mech = _mech(
+        damage=[{"target": "Security Drone", "amount": 3, "type": "fire"}],
+        ally_attacks=[{"ally": "Borin", "target": "Security Drone", "hit": True, "damage": 3}],
+    )
+    guardian.apply_mechanics(state, mech, skip_effects=[])
+
+    assert enemy["hp"] == 4, f"Förväntade 7-3=4, fick {enemy['hp']} (dubbelskada?)"
+
+
+def test_extracted_damage_to_enemy_without_attack_still_applies():
+    """Utan player/ally_attacks appliceras damage-arrayen mot fienden normalt
+    (miljöskada, fallgropar etc. — ingen attack-väg som äger skadan)."""
+    state = _make_state(hp=14)
+    combat = _start_combat(state)
+    enemy = combat["enemies"][0]
+
+    mech = _mech(damage=[{"target": "Solke Guard", "amount": 5, "type": "fire"}])
+    guardian.apply_mechanics(state, mech, skip_effects=[])
+
+    assert enemy["hp"] == 2  # 7 - 5

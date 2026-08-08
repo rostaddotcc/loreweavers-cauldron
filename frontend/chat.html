@@ -3747,6 +3747,22 @@ function rollDice(notation) {
   return { rolls, total, count, sides, mod, notation };
 }
 
+// Server-authoritative roll: POST /api/dice (Python secrets) → klientens roll-shape.
+// Fallback: client-side rollDice() om servern inte svarar (offline/äldre backend).
+async function serverRoll(notation) {
+  try {
+    const d = await API.dice(notation);
+    if (!d || !Array.isArray(d.rolls) || typeof d.total !== 'number') throw new Error('bad dice response');
+    // kartlägg till klientens roll-shape:
+    const roll = { rolls: d.rolls, total: d.total, count: d.rolls.length, sides: parseInt((notation.match(/d(\d+)/) || [])[1] || 20, 10), mod: d.modifier || 0, notation };
+    roll.crit = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 20;
+    roll.fail = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 1;
+    return roll;
+  } catch (e) {
+    return rollDice(notation);  // fallback client-side
+  }
+}
+
 
 // ═══════════════════════════════════════
 // XP-BAR + LEVEL-UP + PARTIKLAR
@@ -4584,8 +4600,16 @@ async function answerRollRequest(id, notation, label) {
   let roll;
   if (advMode && /1d20/i.test(notation)) {
     const base = rollDice(notation) || { mod: 0 };
-    const r1 = 1 + Math.floor(Math.random() * 20);
-    const r2 = 1 + Math.floor(Math.random() * 20);
+    // Servern rullar 2d20 (Python secrets) → klienten väljer best/worst + lägger mod.
+    const d = await serverRoll('2d20');
+    let r1, r2;
+    if (d && Array.isArray(d.rolls) && d.rolls.length >= 2) {
+      [r1, r2] = d.rolls;
+    } else {
+      // Fallback: servern svarade inte med 2 rolls → gamla client-rullen för adv
+      r1 = 1 + Math.floor(Math.random() * 20);
+      r2 = 1 + Math.floor(Math.random() * 20);
+    }
     const chosen = advMode === 'adv' ? Math.max(r1, r2) : Math.min(r1, r2);
     const other = chosen === r1 ? r2 : r1;
     roll = {
@@ -4594,7 +4618,7 @@ async function answerRollRequest(id, notation, label) {
       mod: base.mod || 0, notation, advantage: true, advMode,
     };
   } else {
-    roll = rollDice(notation);
+    roll = await serverRoll(notation);
   }
   const isCrit = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 20;
   const isFail = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 1;
@@ -5165,12 +5189,16 @@ function sendPlayer() {
   // /roll (or /rulla) command
   const rollMatch = text.match(/^\/(?:roll|rulla)\s+(.+)$/i);
   if (rollMatch) {
-    const roll = rollDice(rollMatch[1]);
-    if (roll) {
-      addMessage('player', null, `<i>Rolling ${roll.notation}</i>`);
-      addMessage('system', null, diceMessage(roll));
-      return;
-    }
+    serverRoll(rollMatch[1]).then(roll => {
+      if (roll) {
+        addMessage('player', null, `<i>Rolling ${roll.notation}</i>`);
+        addMessage('system', null, diceMessage(roll));
+      } else {
+        // Oparsbar notation → gamla beteendet: slash-hanteraren visar "Unknown command"
+        handleSlashCommand(text);
+      }
+    });
+    return;
   }
 
   // ── Slash-kommandon (körs direkt, utan DM) ──
@@ -7806,15 +7834,15 @@ function renderCharDrawer() {
   body.innerHTML = html;
 }
 
-// Resurs-tärningsknapp: rollDice + chat-meddelanden + ljud (samma mönster som /roll)
-function cdRollResource(notation, label) {
+// Resurs-tärningsknapp: serverRoll + chat-meddelanden + ljud (samma mönster som /roll)
+async function cdRollResource(notation, label) {
   // Tärningslås (2026-08-06): resurs-tärningar (karaktärsdragaren) får inte
   // rulla medan Lorekeeper jobbar — samma race-skydd som chat-tärningen.
   if (_guardianBusy) {
     toast(I18N.t('🛡️ Vänta — Lorekeeper uppdaterar…'));
     return;
   }
-  const roll = rollDice(notation);
+  const roll = await serverRoll(notation);
   if (!roll) { toast('⚠ Could not parse ' + notation); return; }
   closeCharDrawer();
   addMessage('player', null, `<i>${label} — rolling ${notation}</i>`);

@@ -476,6 +476,13 @@ const API = (() => {
       return req('/api/chat', { method: 'POST', body: JSON.stringify({ message, model_id: modelId }) });
     },
 
+    // ── Dice — server-authoritative rolls (Python secrets; the LLM never rolls) ──
+    // POST /api/dice {notation} → {notation, rolls, modifier, total, crit, fail}
+    async dice(notation) {
+      if (MOCK) throw new Error('Not available in mock mode');
+      return req('/api/dice', { method: 'POST', body: JSON.stringify({ notation }) });
+    },
+
     // ── Character generation ──
     async generateCharacter(prompt, modelId) {
       if (MOCK) {

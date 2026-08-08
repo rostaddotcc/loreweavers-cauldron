@@ -91,6 +91,7 @@ rättfärdigar ett slag. Om handlingen är rutin eller redan besluten → inget 
    - FÖRDEL (rulla 2d20, ta bästa): hjälp från allierad, dold/smygande, mål som är prone/blindad/fast, högre position.
    - NACKDEL (rulla 2d20, ta sämsta): mörker/dåliga förhållanden, Dodge, mål dolt, distraktion, stress.
    Format: label slutar med "FÖRDEL" eller "NACKDEL" (t.ex. "SMIDIGHET (DC 14) FÖRDEL").
+8. När handlingen matchar en skill karaktären är skicklig i (proficient), inkludera proficiency-bonusen i notationen och använd skill-namnet som label (STEALTH, PERCEPTION, ATHLETICS…).
 
 ## Kontext — Viktigt!
 Du får se vad DM (Dungeon Master) nyss berättade. Använd detta för att förstå \
@@ -145,6 +146,7 @@ justify a roll. If the action is routine or already decided → no roll.
    - ADVANTAGE (roll 2d20, take best): help from an ally, hidden/sneaking, target is prone/blinded/restrained, higher ground.
    - DISADVANTAGE (roll 2d20, take worst): darkness/bad conditions, Dodge, target hidden, distraction, stress.
    Format: label ends with "ADVANTAGE" or "DISADVANTAGE" (e.g. "DEXTERITY (DC 14) ADVANTAGE").
+8. When the action matches a skill the character is proficient in, include the proficiency bonus in the notation and use the skill name as the label (STEALTH, PERCEPTION, ATHLETICS…).
 
 ## Context — Important!
 You will see what the DM (Dungeon Master) just narrated. Use this to understand \
@@ -204,6 +206,60 @@ _ABIL_LABELS_EN = {
     "INT": "INTELLIGENCE", "WIS": "WISDOM", "CHA": "CHARISMA",
 }
 
+# De 18 standard-5e-skillsen (P0-1) — {name, ability}. Proficient-fylls av
+# _ensure_skills. Engelska namn (UI är alltid engelsk för skills).
+_STANDARD_SKILLS = [
+    {"name": "Athletics", "ability": "STR"},
+    {"name": "Acrobatics", "ability": "DEX"},
+    {"name": "Sleight of Hand", "ability": "DEX"},
+    {"name": "Stealth", "ability": "DEX"},
+    {"name": "Arcana", "ability": "INT"},
+    {"name": "History", "ability": "INT"},
+    {"name": "Investigation", "ability": "INT"},
+    {"name": "Nature", "ability": "INT"},
+    {"name": "Religion", "ability": "INT"},
+    {"name": "Animal Handling", "ability": "WIS"},
+    {"name": "Insight", "ability": "WIS"},
+    {"name": "Medicine", "ability": "WIS"},
+    {"name": "Perception", "ability": "WIS"},
+    {"name": "Survival", "ability": "WIS"},
+    {"name": "Deception", "ability": "CHA"},
+    {"name": "Intimidation", "ability": "CHA"},
+    {"name": "Performance", "ability": "CHA"},
+    {"name": "Persuasion", "ability": "CHA"},
+]
+
+
+def _ensure_skills(ch: dict) -> list[dict]:
+    """Fyll character.skills med de 18 standard-5e-skillsen om de saknas/tomma.
+
+    Befintliga skills behålls (med sina proficient-flaggor); saknade
+    standard-skills läggs till med proficient: False. Returnerar listan.
+    """
+    skills = ch.setdefault("skills", [])
+    if not isinstance(skills, list):
+        skills = []
+        ch["skills"] = skills
+    existing = {s.get("name", "").lower() for s in skills if isinstance(s, dict)}
+    for std in _STANDARD_SKILLS:
+        if std["name"].lower() not in existing:
+            skills.append({
+                "name": std["name"],
+                "ability": std["ability"],
+                "proficient": False,
+            })
+            existing.add(std["name"].lower())
+    return skills
+
+
+def _skill_bonus(ch: dict, skill: dict) -> int:
+    """5e-skill-bonus = ability-mod + proficiency om skicklig (proficient)."""
+    ability = skill.get("ability", "")
+    abil_mod = _ability_mod(ch, ability) if ability else 0
+    if skill.get("proficient"):
+        abil_mod += int(ch.get("proficiency", 2) or 0)
+    return abil_mod
+
 
 def _format_char_context(state: dict, language: str = "sv") -> str:
     """Build compact character context for Guardian (language-aware)."""
@@ -245,6 +301,18 @@ def _format_char_context(state: dict, language: str = "sv") -> str:
     if world.get("current_location"):
         label = "Location" if language == "en" else "Plats"
         parts.append(f"{label}: {world['current_location']}")
+
+    # Skills (5e, P0-1): bonus = ability-mod + proficiency om proficient (●)
+    skills = _ensure_skills(ch)
+    if skills:
+        skill_parts = []
+        for s in skills:
+            bonus = _skill_bonus(ch, s)
+            mark = " ●" if s.get("proficient") else ""
+            skill_parts.append(
+                f"{s.get('name', '?')} {bonus:+d} ({s.get('ability', '?')}){mark}"
+            )
+        parts.append("Skills: " + ", ".join(skill_parts))
 
     return "\n".join(parts)
 
@@ -374,6 +442,7 @@ Extrahera ALLA mekaniska effekter och uppdateringar.
 
 ### Besvärjelser (spells)
 - spells_add: Besvärjelser karaktären LÄR SIG (via level-up, scroll, undervisning eller DM-belöning). Ange: [{\"name\": \"Eldklot\", \"level\": 3, \"school\": \"evocation\", \"casting_time\": \"1 action\", \"damage_dice\": \"8d6\", \"description\": \"...\"}]. Cantrips = level 0. Lägg ENDAST till spells som faktiskt tilldelas i narrationen. Om karaktären är en kasterklass (wizard, sorcerer, cleric, druid, bard, warlock) och SAKNAR spells helt, extrahera passande klassbesvärjelser (minst 2 cantrips + 2 nivå-1) så karaktärsbladet aldrig är tomt.
+- spell_slots_spend: När spelaren kastar en besvärjelse på nivå 1+ (INTE cantrip). Ange name + level: [{\"name\": \"Eldklot\", \"level\": 2}]. KODEN minskar spell_slots.current — fyll INTE i remaining själv.
 
 ### Uppdrag
 - quests_new: Nya uppdrag. Ange name, description, reward (kort text), \
@@ -402,6 +471,7 @@ Extrahera ALLA mekaniska effekter och uppdateringar.
 - character_updates: Om spelarens karaktär lär sig något nytt, upptäcker en förmåga, \
   eller om bakgrundshistorien utvecklas. Ange field (t.ex. "trait", "backstory", "ability") \
   och text (beskrivning av vad som ändrades).
+- Features: character_updates kan lägga till features vid level-up; features ska vara {name, level, description}.
 
 ### Värld & Tid
 - locations_new: Nya platser som nämns eller upptäcks. Ange objekt: {"name": "...", "description": "kort beskrivning av platsen", "lore": "1-2 meningar stämningsfull historia om platsen — varför den finns, vad som hänt där", "terrain": "skog|stad|berg|hav|grotta|öken|ruin|träsk|slätt|flod"}.
@@ -437,6 +507,10 @@ Extrahera ALLA mekaniska effekter och uppdateringar.
 - LÄKEDRYCK / HEALING POTION (KRITISKT): Om DM:n narrerar att spelaren DRICKER en läkedryck/healing potion \
   (t.ex. "du dricker läkedrycken", "hon tömmer flaskan") → ge roll_grant {"notation": "2d4+2", "label": "LÄKNING (läkedryck)", "reason": "läkedryck dracks"}. \
   Sätt INTE ett fast healing-belopp — spelaren ska rulla 2d4+2 själv. (5e: healing potion = 2d4+2 HP.)
+
+### Inspiration (5e)
+- inspiration_gain: Sätt true när DM belönar heroiska/smarta/rollspelstarka handlingar — karaktären får inspiration (en gång åt gången).
+- inspiration_spend: Sätt true när spelaren spenderar sin inspiration för ADVANTAGE på ett kast. Används bara om karaktären faktiskt har inspiration.
 
 ### Loggbok
 - logbook: En kort sammanfattning av vad som hände denna tur (max 2 meningar). \
@@ -537,6 +611,9 @@ Skriv i dåtid, tredje person. T.ex. "Faelyndra smög förbi vakten och tog sig 
   "enemy_attacks": [],
   "combat_events": [],
   "roll_grants": [],
+  "spell_slots_spend": [],
+  "inspiration_gain": false,
+  "inspiration_spend": false,
   "corrections": []
 }
 
@@ -570,6 +647,15 @@ def _format_state_for_guardian(state: dict, language: str = "sv") -> str:
     parts.append(f"HP: {hp.get('current', '?')}/{hp.get('max', '?')}")
     lvl_word = "level" if language == "en" else "nivå"
     parts.append(f"XP: {xp.get('current', 0)}/{xp.get('next_level', '?')} ({lvl_word} {ch.get('level', 1)})")
+
+    # Skills (5e, P0-1) — kompakt rad: alla listade skills, proficient markerade
+    skills = _ensure_skills(ch)
+    if skills:
+        skill_str = ", ".join(
+            f"{s.get('name', '?')}{' ●' if s.get('proficient') else ''}"
+            for s in skills
+        )
+        parts.append(f"Skills: {skill_str}")
 
     # Inventory
     if inv:
@@ -760,6 +846,7 @@ async def guardian_extract_mechanics(
         "initiative_entries": [], "combat_end": None,
         "player_attacks": [], "ally_attacks": [], "ally_damage": [], "enemy_attacks": [], "combat_events": [],
         "enemy_actions": [], "status_apply": [], "roll_grants": [], "corrections": [],
+        "spell_slots_spend": [], "inspiration_gain": False, "inspiration_spend": False,
     }
 
     for attempt in range(2):
@@ -826,6 +913,195 @@ _HD_BY_CLASS = {
     "bard": 8, "cleric": 8, "druid": 8, "monk": 8, "rogue": 8,
     "warlock": 8, "sorcerer": 6, "wizard": 6,
 }
+
+# Klass-alias (SV/EN-varianter) → kanonisk nyckel. Fallback: direkt nyckel.
+_CLASS_ALIASES = {
+    "barbarian": "barbarian", "barbar": "barbarian",
+    "bard": "bard", "skald": "bard",
+    "cleric": "cleric", "präst": "cleric", "prast": "cleric", "klerk": "cleric",
+    "druid": "druid",
+    "fighter": "fighter", "krigare": "fighter", "stridare": "fighter",
+    "monk": "monk", "munk": "monk",
+    "paladin": "paladin", "riddare": "paladin",
+    "ranger": "ranger", "jägare": "ranger", "jagare": "ranger", "vandrare": "ranger",
+    "rogue": "rogue", "tjuv": "rogue", "lönnmördare": "rogue",
+    "sorcerer": "sorcerer", "sorceress": "sorcerer",
+    "warlock": "warlock", "häxmästare": "warlock", "haxmastare": "warlock",
+    "wizard": "wizard", "magiker": "wizard", "trollkarl": "wizard",
+}
+
+# Klassfeatures vid level-up (D&D 5e, 2026-08-08) — kompakt tabell:
+# klass → nivå → [(namn, beskrivning)]. Bara ikoniska features; Guardian kan
+# komplettera fritt via character_updates. Nivå 1-5 för alla, 6-10 för vanligaste.
+_CLASS_FEATURES = {
+    "barbarian": {
+        1: [("Rage", "Enter a rage: advantage on STR checks/saves, +2 melee damage, resistance to bludgeoning/piercing/slashing.")],
+        2: [("Reckless Attack", "Attack with advantage — but enemies attack you with advantage until your next turn.")],
+        3: [("Primal Path", "Choose a primal path (Berserker/Totem Warrior) and gain its signature ability.")],
+        4: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1.")],
+        5: [("Extra Attack", "Attack twice when you take the Attack action.")],
+        6: [("Path Feature", "Gain a new ability from your primal path.")],
+        7: [("Feral Instinct", "Advantage on initiative; cannot be surprised while conscious.")],
+        8: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1.")],
+        9: [("Brutal Critical", "Roll one additional damage die on a critical hit.")],
+        10: [("Path Feature", "Gain a new ability from your primal path.")],
+    },
+    "bard": {
+        1: [("Bardic Inspiration", "Grant an ally a d6 to add to one d20 roll.")],
+        2: [("Jack of All Trades", "Add half your proficiency bonus to ability checks you're not proficient in."), ("Song of Rest", "Allies regain an extra 1d6 HP on a short rest.")],
+        3: [("Bard College", "Choose a college (Lore/Valor) granting expertise and signature features.")],
+        4: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1.")],
+        5: [("Font of Inspiration", "Bardic Inspiration returns after a short rest.")],
+        6: [("Countercharm", "Grant allies advantage against being charmed or frightened.")],
+        7: [("College Feature", "Gain a new ability from your bard college.")],
+        8: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1.")],
+        9: [("Song of Rest", "Song of Rest dice improves to 1d8.")],
+        10: [("Expertise", "Double proficiency bonus in two more skills."), ("Magical Secrets", "Learn spells from any class.")],
+    },
+    "cleric": {
+        1: [("Spellcasting", "Cast cleric spells using your holy symbol."), ("Divine Domain", "Choose a domain granting domain spells and features.")],
+        2: [("Channel Divinity", "Use your domain's divine ability once per short rest.")],
+        3: [("Domain Feature", "Gain a new ability from your divine domain.")],
+        4: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1.")],
+        5: [("Destroy Undead", "Undead of CR 1/2 or lower are destroyed when you channel divinity.")],
+        6: [("Channel Divinity", "Channel Divinity now recharges on a short rest.")],
+        7: [("Domain Feature", "Gain a new ability from your divine domain.")],
+        8: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1."), ("Destroy Undead", "Destroy Undead now affects CR 1 undead.")],
+        9: [("Domain Feature", "Gain a new ability from your divine domain.")],
+        10: [("Divine Intervention", "Call upon your deity for a miracle — the DM decides.")],
+    },
+    "druid": {
+        1: [("Druidic", "Speak the secret druidic language."), ("Wild Shape", "Transform into a beast you've seen (CR 1/4 or lower, no flying/swimming).")],
+        2: [("Wild Shape", "Wild Shape now allows CR 1/2 beasts and swimming.")],
+        3: [("Druid Circle", "Choose a circle (Land/Moon) granting circle features.")],
+        4: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1."), ("Wild Shape", "Wild Shape now allows CR 1 beasts.")],
+        5: [("Wild Shape", "Wild Shape now allows flying beasts.")],
+        6: [("Circle Feature", "Gain a new ability from your druid circle.")],
+        7: [("Wild Shape", "Wild Shape now allows CR 2 beasts.")],
+        8: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1.")],
+        9: [("Wild Shape", "Wild Shape now allows CR 3 beasts.")],
+        10: [("Circle Feature", "Gain a new ability from your druid circle.")],
+    },
+    "fighter": {
+        1: [("Fighting Style", "Choose a fighting style (Archery, Defense, Dueling, Great Weapon Fighting, Two-Weapon Fighting)."), ("Second Wind", "Regain 1d10 + fighter level HP once per short rest.")],
+        2: [("Action Surge", "Take one additional action on your turn once per short rest.")],
+        3: [("Martial Archetype", "Choose an archetype (Champion/Battle Master/Eldritch Knight).")],
+        4: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1.")],
+        5: [("Extra Attack", "Attack twice when you take the Attack action.")],
+        6: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1.")],
+        7: [("Archetype Feature", "Gain a new ability from your martial archetype.")],
+        8: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1.")],
+        9: [("Indomitable", "Reroll a failed saving throw once per long rest.")],
+        10: [("Archetype Feature", "Gain a new ability from your martial archetype.")],
+    },
+    "monk": {
+        1: [("Unarmored Defense", "AC = 10 + DEX + WIS when unarmored."), ("Martial Arts", "Use DEX for unarmed strikes; bonus unarmed attack.")],
+        2: [("Ki", "Use ki points for special abilities (Flurry of Blows, Patient Defense, Step of the Wind).")],
+        3: [("Monastic Tradition", "Choose a tradition and gain its features."), ("Deflect Missiles", "Deflect ranged weapon attacks; spend 1 ki to throw back.")],
+        4: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1."), ("Slow Fall", "Reduce falling damage using your reaction.")],
+        5: [("Extra Attack", "Attack twice when you take the Attack action."), ("Stunning Strike", "Spend 1 ki to attempt to stun a creature you hit.")],
+        6: [("Ki-Empowered Strikes", "Unarmed strikes count as magical."), ("Tradition Feature", "Gain a new ability from your monastic tradition.")],
+        7: [("Evasion", "Take no damage on successful DEX saves, half on failure.")],
+        8: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1.")],
+        9: [("Unarmored Movement", "Movement speed increases by 10 ft.")],
+        10: [("Purity of Body", "Immune to disease and poison.")],
+    },
+    "paladin": {
+        1: [("Lay on Hands", "Heal allies for a pool of HP equal to 5 × paladin level."), ("Divine Sense", "Sense celestials, fiends, and undead within 60 ft.")],
+        2: [("Divine Smite", "Spend a spell slot to add radiant damage on a hit."), ("Fighting Style", "Choose a fighting style.")],
+        3: [("Sacred Oath", "Swear an oath and gain oath features + oath spells.")],
+        4: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1.")],
+        5: [("Extra Attack", "Attack twice when you take the Attack action.")],
+        6: [("Aura of Protection", "You and allies within 10 ft add your CHA modifier to saving throws.")],
+        7: [("Oath Feature", "Gain a new ability from your sacred oath.")],
+        8: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1.")],
+        9: [("Oath Feature", "Gain a new ability from your sacred oath.")],
+        10: [("Aura of Courage", "You and allies within 10 ft cannot be frightened.")],
+    },
+    "ranger": {
+        1: [("Favored Enemy", "Choose a favored enemy type: advantage on tracking and recalling lore."), ("Natural Explorer", "Move stealthily while traveling and never get lost in your favored terrain.")],
+        2: [("Fighting Style", "Choose a fighting style."), ("Spellcasting", "Cast ranger spells using your wisdom.")],
+        3: [("Ranger Conclave", "Choose a conclave and gain its features.")],
+        4: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1.")],
+        5: [("Extra Attack", "Attack twice when you take the Attack action.")],
+        6: [("Favored Enemy", "Choose a second favored enemy; gain a new language.")],
+        7: [("Conclave Feature", "Gain a new ability from your ranger conclave.")],
+        8: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1.")],
+        9: [("Conclave Feature", "Gain a new ability from your ranger conclave.")],
+        10: [("Hide in Plain Sight", "Hide even when only lightly obscured.")],
+    },
+    "rogue": {
+        1: [("Sneak Attack", "Add 1d6 sneak attack damage when you attack with advantage or an ally is adjacent."), ("Thieves' Cant", "Speak a secret thieves' language.")],
+        2: [("Cunning Action", "Dash, Disengage, or Hide as a bonus action.")],
+        3: [("Roguish Archetype", "Choose an archetype (Thief/Assassin/Arcane Trickster).")],
+        4: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1.")],
+        5: [("Uncanny Dodge", "Use your reaction to halve damage from a visible attacker.")],
+        6: [("Expertise", "Double your proficiency bonus in two skills.")],
+        7: [("Evasion", "Take no damage on successful DEX saves, half on failure.")],
+        8: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1.")],
+        9: [("Archetype Feature", "Gain a new ability from your roguish archetype.")],
+        10: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1.")],
+    },
+    "sorcerer": {
+        1: [("Spellcasting", "Cast sorcerer spells from your innate magic."), ("Sorcerous Origin", "Choose a bloodline granting origin features.")],
+        2: [("Font of Magic", "Convert sorcery points to spell slots and back.")],
+        3: [("Metamagic", "Choose two metamagic options (e.g. Twinned Spell, Quickened Spell, Careful Spell).")],
+        4: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1.")],
+        5: [("Origin Feature", "Gain a new ability from your sorcerous origin.")],
+        6: [("Origin Feature", "Gain a new ability from your sorcerous origin.")],
+        7: [("Metamagic", "Choose a third metamagic option.")],
+        8: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1.")],
+        9: [("Origin Feature", "Gain a new ability from your sorcerous origin.")],
+        10: [("Metamagic", "Choose a fourth metamagic option.")],
+    },
+    "warlock": {
+        1: [("Pact Magic", "Cast spells using Pact Magic spell slots that recharge on a short rest."), ("Otherworldly Patron", "Choose a patron granting patron features.")],
+        2: [("Eldritch Invocations", "Choose eldritch invocations granting special abilities.")],
+        3: [("Pact Boon", "Choose a pact boon (Pact of the Blade/Chain/Tome).")],
+        4: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1.")],
+        5: [("Patron Feature", "Gain a new ability from your patron.")],
+        6: [("Patron Feature", "Gain a new ability from your patron.")],
+        7: [("Eldritch Invocations", "Choose additional eldritch invocations.")],
+        8: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1.")],
+        9: [("Patron Feature", "Gain a new ability from your patron.")],
+        10: [("Eldritch Invocations", "Choose additional eldritch invocations.")],
+    },
+    "wizard": {
+        1: [("Spellcasting", "Cast wizard spells from your spellbook."), ("Arcane Recovery", "Regain spell slots equal to half your wizard level after a short rest (once per day).")],
+        2: [("Arcane Tradition", "Choose a school of magic and gain its features.")],
+        3: [("Tradition Feature", "Gain a new ability from your arcane tradition.")],
+        4: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1.")],
+        5: [("Tradition Feature", "Gain a new ability from your arcane tradition.")],
+        6: [("Tradition Feature", "Gain a new ability from your arcane tradition.")],
+        7: [("Tradition Feature", "Gain a new ability from your arcane tradition.")],
+        8: [("Ability Score Improvement", "Increase one ability score by 2, or two scores by 1.")],
+        9: [("Tradition Feature", "Gain a new ability from your arcane tradition.")],
+        10: [("Tradition Feature", "Gain a new ability from your arcane tradition.")],
+    },
+}
+
+
+def _grant_class_features(ch: dict, new_level: int, effects: list) -> None:
+    """Lägg till klassfeatures vid level-up från _CLASS_FEATURES-tabellen (dedup)."""
+    cls = str(ch.get("class", "")).lower().strip()
+    ckey = _CLASS_ALIASES.get(cls, cls)
+    feats = _CLASS_FEATURES.get(ckey, {}).get(new_level, [])
+    if not feats:
+        return
+    features = ch.setdefault("features", [])
+    if not isinstance(features, list):
+        features = []
+        ch["features"] = features
+    existing = {str(f.get("name", "")).lower() for f in features if isinstance(f, dict)}
+    added = []
+    for fname, fdesc in feats:
+        if fname.lower() not in existing:
+            features.append({"name": fname, "level": new_level, "description": fdesc})
+            existing.add(fname.lower())
+            added.append(fname)
+    if added:
+        effects.append({"type": "features_added", "value": ", ".join(added)})
+        logger.info("🛡️ Class features granted at level %d: %s", new_level, ", ".join(added))
 
 
 def _combat_tag(combat: dict) -> str:
@@ -1260,6 +1536,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 hp_gain = max(1, _hd // 2 + con_mod)
                 hp["max"] = hp.get("max", 1) + hp_gain
                 hp["current"] = hp["max"]  # Full HP vid level-up
+                _grant_class_features(ch, ch["level"], effects)
                 effects.append({"type": "level_up", "value": ch["level"]})
                 logger.info("🛡️ Guardian: LEVEL UP → level %d! HP max %d (HD %d)", ch["level"], hp["max"], _hd)
 
@@ -1478,6 +1755,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                     hp_gain = max(1, _hd // 2 + con_mod)
                     hp["max"] = hp.get("max", 1) + hp_gain
                     hp["current"] = hp["max"]
+                    _grant_class_features(ch, ch["level"], effects)
                     effects.append({"type": "level_up", "value": ch["level"]})
                     logger.info("🛡️ Guardian: LEVEL UP (quest) → level %d!", ch["level"])
 
@@ -1829,8 +2107,12 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             combat.setdefault("log", []).append({
                 "round": new_round, "actor": "system", "name": "", "text": f"Runda {new_round} börjar",
             })
+            # Conditions tick (5e, 2026-08-08): status-skada + status-utgång vid
+            # rundstart — samma motor som advance_turn (test-only tidigare).
+            from combat import _tick_all_statuses
+            _tick_all_statuses(state, combat)
             effects.append({"type": "combat_round", "value": new_round})
-            logger.info("⚔️ Guardian: new round %d", new_round)
+            logger.info("⚔️ Guardian: new round %d (statuses ticked)", new_round)
 
     if combat and combat.get("active"):
         for ent in mech.get("initiative_entries", []) or []:
@@ -1954,9 +2236,13 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             )
             # Fiendens stats från combat (fallback: attackeraren finns inte i listan → använd DM:s angivna hit/damage om de finns)
             if enemy is not None:
-                from combat import roll_d20, roll_dice as _roll_dice
+                from combat import roll_d20, roll_dice as _roll_dice, has_disadvantage
 
                 d20 = roll_d20()
+                # Disadvantage (5e, 2026-08-08): status med attack_disadvantage
+                # (blind/prone/frighten/stun/restrain) → 2d20, ta SÄMST.
+                if has_disadvantage(enemy):
+                    d20 = min(d20, roll_d20())
                 attack_bonus = int(enemy.get("attack_bonus", 3))
                 total = d20 + attack_bonus
                 crit = d20 == 20
@@ -2116,6 +2402,41 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             lr.append({"notation": notation, "label": lr_label})
         logger.info("🛡️ Guardian: roll_grant %s (%s)", notation, label)
 
+    # ── Spell slots (5e, 2026-08-08) — koden förbrukar slots ──
+    # Guardian anger {name, level} när spelaren kastar en besvärjelse på nivå 1+.
+    # Cantrips (level 0) är gratis. Insufficient → narration vinner, blockeras.
+    for cast in mech.get("spell_slots_spend", []):
+        if not isinstance(cast, dict):
+            continue
+        name = str(cast.get("name", "")).strip() or "?"
+        try:
+            level = int(cast.get("level", 0) or 0)
+        except (TypeError, ValueError):
+            level = 0
+        if level <= 0:
+            continue
+        slots = ch.setdefault("spell_slots", {"current": 0, "max": 0})
+        if isinstance(slots, dict) and slots.get("current", 0) >= level:
+            slots["current"] = int(slots.get("current", 0)) - level
+            effects.append({"type": "spell_slots_spend", "name": name, "level": level, "remaining": slots["current"]})
+            logger.info("🪄 Spell slot spent: %s (lvl %d) → %d/%d remaining", name, level, slots["current"], slots.get("max", 0))
+        else:
+            effects.append({"type": "spell_slots_blocked", "name": name, "level": level})
+            logger.info("⛔ Spell slots insufficient for %s (lvl %d) — narration only", name, level)
+
+    # ── Inspiration (5e meta-currency, 2026-08-08) ──
+    if mech.get("inspiration_gain"):
+        ch["inspiration"] = True
+        effects.append({"type": "inspiration_gain"})
+        logger.info("✨ Inspiration awarded to %s", ch.get("name", "player"))
+    if mech.get("inspiration_spend"):
+        if ch.get("inspiration"):
+            ch["inspiration"] = False
+            effects.append({"type": "inspiration_spend"})
+            logger.info("✨ Inspiration spent — next roll may claim advantage")
+        else:
+            logger.info("⛔ Inspiration spend ignored — character has no inspiration")
+
     # ── Korrigeringar ──
     for corr in mech.get("corrections", []):
         field = corr.get("field", "")
@@ -2227,9 +2548,15 @@ def _sanitize_mechanics(mech: dict) -> dict:
                 "npcs_new", "npc_relations", "npcs_near", "npc_notes", "locations_new",
                 "world_lore", "roll_grants", "corrections",
                 "initiative_entries", "enemy_actions", "status_apply",
-                "player_attacks", "ally_attacks", "ally_damage", "enemy_attacks", "combat_events"):
+                "player_attacks", "ally_attacks", "ally_damage", "enemy_attacks", "combat_events",
+                "spell_slots_spend"):
         if not isinstance(mech.get(key), list):
             mech[key] = []
+
+    # Inspiration-fälten ska vara bool (sanera LLM-skriblerier som strängar)
+    for _ik in ("inspiration_gain", "inspiration_spend"):
+        if not isinstance(mech.get(_ik), bool):
+            mech[_ik] = bool(mech.get(_ik))
 
     # XP ska vara int
     try:

@@ -4199,6 +4199,37 @@ def compact_state(state: dict, language: str = "sv") -> str:
     if isinstance(slots, dict) and (slots.get("max") or 0) > 0:
         lines.append(f"Spell slots: {slots.get('current', 0)}/{slots.get('max', 0)}")
 
+    # Färdigheter (skills) — kompakt: bara proficient + alla med bonus.
+    skills = char.get("skills", []) or []
+    if skills:
+        prof_bonus = int(char.get("proficiency", 2) or 2)
+        sk_parts = []
+        for s in skills[:25]:
+            if not isinstance(s, dict):
+                continue
+            ab = s.get("ability", "")
+            amod = 0
+            if ab and isinstance(char.get("abilities", {}).get(ab), dict):
+                amod = int(char.get("abilities", {}).get(ab, {}).get("mod", 0) or 0)
+            bonus = amod + (prof_bonus if s.get("proficient") else 0)
+            mark = "●" if s.get("proficient") else "○"
+            sk_parts.append(f"{s.get('name', '?')} {bonus:+d}{mark}")
+        lines.append("Skills: " + ", ".join(sk_parts))
+
+    # Klassförmågor (features)
+    features = char.get("features", []) or []
+    if features:
+        ft_str = ", ".join(
+            f"{f.get('name', '?')}{' (L' + str(f.get('level', '?')) + ')' if f.get('level') else ''}"
+            for f in features[:20] if isinstance(f, dict)
+        )
+        lines.append(f"Klassförmågor: {ft_str}")
+
+    # Inspiration (5e)
+    insp = char.get("inspiration", False)
+    lines.append("Inspiration: ja — spelaren kan spendera för fördel på ett kast" if insp
+                 else "Inspiration: nej")
+
     # Plats, tid, dag
     world = state.get("world", {})
     loc = world.get("current_location", "Okänd")
@@ -6152,6 +6183,9 @@ Svara ENDAST med giltig JSON (ingen markdown) med detta schema:
   },
   "traits": ["string — 3-4 förmågor/egenskaper"],
   "saves": [{"name": "STR", "prof": true}],  // klassens save-proficiencies!
+  "skills": [{"name": "string — standard-5e-skill (Athletics, Acrobatics, Stealth, Perception, Arcana, Persuasion…)", "ability": "STR|DEX|INT|WIS|CHA", "proficient": true}],  // ALLA 18 skills; proficient=true ENDAST på 2-4 klass-/bakgrundsrelevanta. Bonuses beräknas av systemet (ability-mod + proficiency).
+  "features": [{"name": "string", "level": 1, "description": "string — kort beskrivning av klass-/rasförmågan"}],  // klassens start-förmågor (t.ex. Rage, Sneak Attack, Spellcasting, Fighting Style, Second Wind) + ras-förmågor
+  "inspiration": false,
   "gear": "string — startutrustning, 5-8 föremål separerade med ' · '",
   "story": "string — bakgrundshistoria, max 100 ord, mörk och stämningsfull",
   "inventory": [
@@ -6214,6 +6248,9 @@ Respond ONLY with valid JSON (no markdown) using this schema:
   },
   "traits": ["string — 3-4 abilities/traits"],
   "saves": [{"name": "STR", "prof": true}],  // class save proficiencies!
+  "skills": [{"name": "string — standard 5e skill (Athletics, Acrobatics, Stealth, Perception, Arcana, Persuasion…)", "ability": "STR|DEX|INT|WIS|CHA", "proficient": true}],  // ALL 18 skills; proficient=true ONLY on 2-4 class/background-relevant ones. Bonuses are computed by the system (ability mod + proficiency).
+  "features": [{"name": "string", "level": 1, "description": "string — brief description of the class/race ability"}],  // class starting features (e.g. Rage, Sneak Attack, Spellcasting, Fighting Style, Second Wind) + race features
+  "inspiration": false,
   "gear": "string — starting equipment, 5-8 items separated by ' · '",
   "story": "string — backstory, max 100 words, dark and atmospheric",
   "inventory": [
@@ -6347,6 +6384,46 @@ def _finalize_character_data(char_data: dict, lang: str) -> tuple[dict, list, bo
             if cls in klass:
                 char_data["saves"] = [{"name": p, "prof": True} for p in profs]
                 break
+
+    # ── Skills (2026-08-08): säkerställ att alla 18 standard-5e-skills finns.
+    # LLM:n kan glömma dem — fyll ut (proficient=False) så bladet alltid är
+    # komplett; befintliga/valda skills behålls och valideras.
+    SKILL_ABILITIES = [
+        ("Athletics", "STR"),
+        ("Acrobatics", "DEX"), ("Sleight of Hand", "DEX"), ("Stealth", "DEX"),
+        ("Arcana", "INT"), ("History", "INT"), ("Investigation", "INT"),
+        ("Nature", "INT"), ("Religion", "INT"),
+        ("Animal Handling", "WIS"), ("Insight", "WIS"), ("Medicine", "WIS"),
+        ("Perception", "WIS"), ("Survival", "WIS"),
+        ("Deception", "CHA"), ("Intimidation", "CHA"), ("Performance", "CHA"),
+        ("Persuasion", "CHA"),
+    ]
+    _skills_in = char_data.get("skills")
+    _SKILL_ABIL_BY_NAME = {n.lower(): ab for n, ab in SKILL_ABILITIES}
+    clean_skills = []
+    if isinstance(_skills_in, list):
+        for s in _skills_in:
+            if not isinstance(s, dict) or not s.get("name"):
+                continue
+            sname = str(s.get("name", "")).strip()[:60]
+            sab = str(s.get("ability", "")).strip().upper()[:3]
+            if not sab or sab not in ("STR", "DEX", "INT", "WIS", "CHA"):
+                sab = _SKILL_ABIL_BY_NAME.get(sname.lower(), "STR")
+            clean_skills.append({
+                "name": sname,
+                "ability": sab,
+                "proficient": bool(s.get("proficient")),
+            })
+    existing_names = {s["name"].lower() for s in clean_skills}
+    for sk_name, sk_ab in SKILL_ABILITIES:
+        if sk_name.lower() not in existing_names:
+            clean_skills.append({"name": sk_name, "ability": sk_ab, "proficient": False})
+    char_data["skills"] = clean_skills
+
+    # ── Features + inspiration (2026-08-08): safe defaults.
+    if not isinstance(char_data.get("features"), list):
+        char_data["features"] = []
+    char_data.setdefault("inspiration", False)
 
     # ── Besvärjelser (v28): säkerställ att 'spells' alltid är en lista med
     # namngivna spells — LLM:n kan glömma den eller skicka skräp.

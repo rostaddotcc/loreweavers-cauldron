@@ -383,7 +383,7 @@
     font-family: var(--font-display,'Cinzel',serif); font-weight: 900; font-size: 1.35rem;
     color: var(--bone-bright); letter-spacing: 0.05em; margin-bottom: 0.5rem;
   }.no-campaign p{ font-style: italic; color: var(--bone-dim); margin-bottom: 1.6rem; }.no-campaign .rune-btn{ display: inline-block; text-decoration: none; }/* ═══════════ Responsivt ═══════════ */
-  @media (max-width: 720px){.abilities{ grid-template-columns: repeat(3, 1fr); }.currency-grid{ grid-template-columns: repeat(2, 1fr); }.vitals{ grid-template-columns: 1fr; }.char-header{ flex-direction: column; text-align: center; }.char-meta{ justify-content: center; }.panel{ padding: 1.5rem 1rem; }.inv-grid{ grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  @media (max-width: 720px){.abilities{ grid-template-columns: repeat(3, 1fr); }.currency-grid{ grid-template-columns: repeat(2, 1fr); }.vitals{ grid-template-columns: 1fr; }.char-header{ flex-direction: column; text-align: center; }.char-meta{ justify-content: center; }.panel{ padding: 1.5rem 1rem; }.inv-grid{ grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }.sk-grid{ grid-template-columns: 1fr; }
   }/* ═══════════ Mobil — pekskärm & trånga gränder ═══════════ */
   @media (max-width: 900px){html{ -webkit-tap-highlight-color: transparent; }/* Topnav: radbryt + 44px träffytor (inline-stilar kräver !important) */body > header{ flex-wrap: wrap !important; gap: .4rem .5rem !important; padding: .6rem .75rem !important; }body > header .top-btn{
       min-height: 44px !important; display: inline-flex !important; align-items: center !important;
@@ -454,6 +454,56 @@
 /* ═══════════ MJUKA UPP — Codex-knappar (2026-08-05) ═══════════ */
 .av-btn, .rune-btn, .forge-export-btn, .top-btn{ border-radius: 8px !important; }
 .av-btn:hover, .rune-btn:hover, .forge-export-btn:hover{ transform: translateY(-1px) !important; box-shadow: 0 4px 16px -6px rgba(0,0,0,.55) !important; }
+/* ═══════════ 5e-mekanik — Skills / Features / Inspiration (2026-08-08) ═══════════ */
+.insp-row{ margin: 0.2rem 0 0.6rem; }
+.insp-badge{
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  font-family: var(--font-display,'Cinzel',serif); font-size: 0.76rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--bone-dim); background: var(--stone);
+  border: 1px solid var(--edge); border-radius: 8px; padding: 0.5rem 1.1rem;
+  box-shadow: inset 0 1px 0 rgba(239,226,192,0.05); transition: all 0.25s;
+}
+.insp-badge b{ font-weight: 700; }
+.insp-badge.off{ opacity: 0.62; }
+.insp-badge.on{
+  color: var(--gold-bright); border-color: rgba(232,198,90,0.6);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--gold) 16%, transparent), color-mix(in srgb, var(--gold) 4%, transparent));
+  text-shadow: 0 0 10px rgba(232,198,90,0.45);
+  box-shadow: 0 0 18px -4px rgba(232,198,90,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+  animation: candle 4s ease-in-out infinite;
+}
+.sk-grid{ display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem 1.5rem; padding: 0.2rem 0 0.4rem; }
+.sk-row{
+  display: flex; align-items: baseline; gap: 0.5rem;
+  font-size: 0.95rem; padding: 0.3rem 0.55rem; border-radius: 6px;
+  border-bottom: 1px dashed color-mix(in srgb, var(--edge) 40%, transparent);
+  transition: background 0.15s;
+}
+.sk-row:hover{ background: rgba(201,162,39,0.05); }
+.sk-prof{ color: var(--gold); font-size: 0.82rem; width: 1em; text-align: center; flex-shrink: 0; text-shadow: 0 0 8px rgba(232,198,90,0.5); }
+.sk-name{ color: var(--bone-bright); font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sk-abil{ font-family: var(--font-display,'Cinzel',serif); font-size: 0.72rem; letter-spacing: 0.1em; color: var(--bone-dim); flex-shrink: 0; }
+.sk-bonus{ font-family: var(--font-display,'Cinzel',serif); font-weight: 700; font-size: 0.95rem; color: var(--gold-bright); font-variant-numeric: tabular-nums; flex-shrink: 0; text-shadow: 0 0 8px rgba(232,198,90,0.25); }
+.ft-list{ display: flex; flex-direction: column; gap: 0.7rem; padding: 0.2rem 0 0.4rem; }
+.ft-item{
+  position: relative; padding: 0.75rem 1rem 0.75rem 1.1rem;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--gold) 8%, transparent), color-mix(in srgb, var(--gold) 2%, transparent));
+  border: 1px solid color-mix(in srgb, var(--gold) 30%, transparent);
+  border-left: 3px solid var(--gold); border-radius: 8px;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.ft-item:hover{ border-color: color-mix(in srgb, var(--gold) 60%, transparent); transform: translateX(3px); box-shadow: 0 0 14px -6px rgba(232,198,90,0.4); }
+.ft-lvl{
+  display: inline-block; font-family: var(--font-display,'Cinzel',serif); font-size: 0.64rem; font-weight: 700;
+  letter-spacing: 0.12em; color: var(--gold-bright); position: relative; top: -1px;
+  border: 1px solid color-mix(in srgb, var(--gold) 45%, transparent);
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
+  padding: 0.12rem 0.45rem; border-radius: 4px; margin-right: 0.55rem;
+  text-shadow: 0 0 8px rgba(232,198,90,0.4);
+}
+.ft-name{ font-family: var(--font-display,'Cinzel',serif); font-weight: 700; font-size: 0.88rem; color: var(--bone-bright); letter-spacing: 0.02em; }
+.ft-desc{ font-size: 0.87rem; font-style: italic; color: var(--bone-dim); margin-top: 0.4rem; line-height: 1.5; }
+#features-section .section-title{ margin-top: 1.8rem; }
 
 </style>
 <link rel="stylesheet" href="snes.css?v=34">
@@ -562,6 +612,10 @@
       <button class="forge-export-btn" id="forge-export-btn" onclick="exportToForge()" title="Save this adventurer to The Forge — start a new campaign with them later">⚒ Export to Forge</button>
     </div>
 
+    <div class="insp-row">
+      <span class="insp-badge off" id="insp-badge">✨ Inspiration — <b>Not available</b></span>
+    </div>
+
     <div class="section-title">Abilities</div>
     <div class="abilities" id="abilities"></div>
 
@@ -570,6 +624,14 @@
 
     <div class="section-title">Saving Throws</div>
     <div class="traits" id="saves"></div>
+
+    <div class="section-title">Skills</div>
+    <div class="sk-grid" id="skills"></div>
+
+    <div id="features-section" style="display:none">
+      <div class="section-title">Features</div>
+      <div class="ft-list" id="features"></div>
+    </div>
 
     <!-- ── BACKSTORY — genererad vid karaktärsskapande (read-only) ── -->
     <div class="backstory-wrap">
@@ -731,6 +793,9 @@ function renderAll() {
   renderAbilities();
   renderTraits();
   renderSaves();
+  renderInspiration();
+  renderSkills();
+  renderFeatures();
   renderInventory();
   renderSpells();
   renderCurrency();
@@ -1100,6 +1165,67 @@ function renderSaves() {
         return `<span class="trait ${s.prof ? 'prof' : ''}">${s.prof ? '●' : '○'} ${s.name}</span>`;
       }).join('')
     : `<span class="empty-hint">${I18N.t('Inga sparade sparningskast ännu…')}</span>`;
+}
+
+// ═══════════════════════════════════════
+// 5E-MEKANIK — Inspiration / Skills / Features (2026-08-08)
+// ═══════════════════════════════════════
+function renderInspiration() {
+  const el = document.getElementById('insp-badge');
+  if (!el) return;
+  const on = !!(state.character && state.character.inspiration);
+  el.classList.toggle('on', on);
+  el.classList.toggle('off', !on);
+  el.innerHTML = '✨ Inspiration — <b>' + (on ? 'Available' : 'Not available') + '</b>';
+}
+
+function renderSkills() {
+  const el = document.getElementById('skills');
+  if (!el) return;
+  const c = state.character || {};
+  const skills = Array.isArray(c.skills) ? c.skills : [];
+  const abilities = c.abilities || {};
+  const proficiency = parseInt(c.proficiency, 10) || 2;
+  if (!skills.length) {
+    el.innerHTML = `<span class="empty-hint">No skills recorded yet…</span>`;
+    return;
+  }
+  el.innerHTML = skills.map(s => {
+    const name = _esc(s && s.name);
+    const abil = String((s && s.ability) || '').toUpperCase();
+    const a = abilities[abil] || {};
+    let mod = a.mod;
+    if (mod == null && a.score != null) mod = Math.floor((a.score - 10) / 2);
+    if (mod == null) mod = 0;
+    const proficient = !!(s && s.proficient);
+    const bonus = mod + (proficient ? proficiency : 0);
+    const abbr = abilityNames()[abil] || abil || '—';
+    return `<div class="sk-row">
+      <span class="sk-prof" title="${proficient ? 'Proficient' : 'Not proficient'}">${proficient ? '●' : '○'}</span>
+      <b class="sk-name">${name}</b>
+      <span class="sk-abil">(${abbr})</span>
+      <span class="sk-bonus">${bonus >= 0 ? '+' : ''}${bonus}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderFeatures() {
+  const section = document.getElementById('features-section');
+  const el = document.getElementById('features');
+  if (!section || !el) return;
+  const features = Array.isArray(state.character && state.character.features) ? state.character.features : [];
+  if (!features.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  const items = features.slice().sort((a, b) => ((a && a.level) || 0) - ((b && b.level) || 0));
+  el.innerHTML = items.map(f => {
+    const lvl = f && f.level != null ? f.level : '';
+    const name = _esc(f && f.name);
+    const desc = f && f.description ? `<div class="ft-desc">${_esc(f.description)}</div>` : '';
+    return `<div class="ft-item">
+      ${lvl !== '' ? `<span class="ft-lvl">L${lvl}</span>` : ''}
+      <b class="ft-name">${name}</b>${desc}
+    </div>`;
+  }).join('');
 }
 
 // ═══════════════════════════════════════

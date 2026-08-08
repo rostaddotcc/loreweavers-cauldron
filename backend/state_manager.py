@@ -41,8 +41,13 @@ def _default_state(campaign_id: str, user: str) -> dict:
             "session_count": 1,
         },
         # character fylls i vid karaktärsskapande; max_weight_lbs (= STR × 15)
-        # sätts då — inte vid kampanjskapelse.
-        "character": {},
+        # sätts då — inte vid kampanjskapelse. 5e-fälten nedan fylls av
+        # _ensure_skills/char-gen; safe defaults för gamla kampanjer.
+        "character": {
+            "skills": [],
+            "features": [],
+            "inspiration": False,
+        },
         "inventory": [],
         "currency": {"pp": 0, "gp": 0, "sp": 0, "cp": 0},
         "npcs": [],

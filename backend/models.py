@@ -318,6 +318,7 @@ If you write that the player hits/misses, succeeds/fails WITHOUT having requeste
 - **Attack**: hit if total ≥ enemy AC. Damage is handled by Guardian.
 - **Saving throw**: when danger/ability threatens the character (trap, poison, spell) — ask for a save with the appropriate ability, DC per the scale.
 - **Concentration**: if the player is hit while concentrating → [KAST: 1d20+CON | CONCENTRATION (DC 10)].
+- **Inspiration (5e)**: award it for heroic/clever/roleplay-excellent moments (once at a time, state '✨ Inspiration' in narration). The player may spend it to gain ADVANTAGE on one roll — when they do, request [KAST: ... ADVANTAGE].
 - **Rest**: short 1h (spend 1 hit die), long 8h (full HP + everything back).
 
 Optional tags (faster updates if you use them):

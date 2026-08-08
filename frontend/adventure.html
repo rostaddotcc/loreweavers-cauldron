@@ -465,7 +465,6 @@ html{font-size:17px}
         <span class="quota-cd" id="quota-cd"></span>
       </button>
       <button class="quota-q" id="quota-q" onclick="toggleQuotaTip(event)" title="What is a turn?" aria-label="What is a turn?">?</button>
-      <button class="quota-chip" id="quota-promo" style="display:none" onclick="openProfileModal()" title="Promo turns left">🎁 0</button>
       <button class="quota-chip" id="quota-benefits" style="display:none" onclick="location.href='pricing.html'" title="Support/Patron benefits expire in">👑 0d</button>
       <div class="quota-tip" id="quota-tip" onclick="this.classList.remove('show')"></div>
     </div>
@@ -496,7 +495,9 @@ html{font-size:17px}
     .quota-pill:hover{border-color:var(--gold);box-shadow:0 0 14px -4px rgba(201,162,39,.4)}
     .quota-turns{font-size:.8rem;letter-spacing:.08em;font-weight:700;color:var(--gold-bright);
       line-height:1.1;white-space:nowrap}
-    .quota-cd{font-size:.6rem;letter-spacing:.06em;color:var(--bone-dim);line-height:1.1;white-space:nowrap}
+    .quota-cd{font-size:.74rem;letter-spacing:.05em;font-weight:700;color:var(--bone-bright);
+      line-height:1.15;white-space:nowrap;font-variant-numeric:tabular-nums;
+      text-shadow:0 0 10px rgba(232,198,90,.18)}
     .quota-q{width:24px;height:24px;flex:none;border-radius:50%;background:var(--stone-3);
       border:1px solid var(--edge);color:var(--bone-dim);font-size:.72rem;font-weight:900;
       cursor:pointer;display:flex;align-items:center;justify-content:center;
@@ -507,11 +508,15 @@ html{font-size:17px}
       background:var(--stone-3);border:1px solid var(--edge);border-radius:999px;cursor:pointer;
       white-space:nowrap;transition:color .2s,border-color .2s}
     .quota-chip:hover{border-color:var(--gold);color:var(--gold-bright)}
-    .quota-tip{position:absolute;top:calc(100% + 8px);right:0;z-index:950;width:min(300px,80vw);
-      background:var(--stone-2);border:1px solid var(--edge);border-radius:6px;padding:.7rem .85rem;
-      font-size:.76rem;line-height:1.55;color:var(--bone);text-align:left;
-      box-shadow:0 18px 50px -12px rgba(0,0,0,.85);display:none}
+    /* Mjuk tooltip — samma anda som ask-tip (pil + kursiv + rundad) (2026-08-08) */
+    .quota-tip{position:absolute;top:calc(100% + 9px);right:-4px;z-index:950;width:min(300px,80vw);
+      background:var(--stone-3);border:1px solid var(--edge-hi);border-radius:6px;padding:.6rem .75rem;
+      font-size:.74rem;font-style:italic;line-height:1.55;color:var(--bone);text-align:left;
+      box-shadow:0 12px 30px -10px rgba(0,0,0,.85);display:none}
+    .quota-tip::before{content:'';position:absolute;top:-6px;right:16px;
+      border:6px solid transparent;border-bottom-color:var(--edge-hi)}
     .quota-tip.show{display:block}
+    .quota-q:hover ~ .quota-tip{display:block}
     @media(max-width:900px){
       /* overflow:hidden på .topbar klipper absoluta dropdowns → position:fixed på mobil */
       .quota-tip{position:fixed;top:auto;right:.75rem;bottom:calc(env(safe-area-inset-bottom,0px) + 4.5rem);
@@ -1223,18 +1228,14 @@ function renderQuotaPill(me) {
   if (!me || !turnsEl) return;
   const cap = me.turn_cap;
   const inf = (cap === 0 || me.subscription_status === 'lifetime');
-  turnsEl.textContent = inf ? '⚡ ∞' : ('⚡ ' + Math.max(0, Math.floor(Number(me.turns_available) || 0)));
+  // Bara totalen: available / (cap + turn_bonus + promo_bonus). Promo syns i profilen.
+  const avail = Math.max(0, Math.floor(Number(me.turns_available) || 0));
+  const total = (parseInt(cap, 10) || 0) + (parseInt(me.turn_bonus, 10) || 0) + (parseInt(me.promo_bonus, 10) || 0);
+  turnsEl.textContent = inf ? '⚡ ∞' : ('⚡ ' + avail + '/' + total);
   const cdEl = document.getElementById('quota-cd');
   _quotaNextTs = inf ? null : quotaNextReset(me);
   if (cdEl) quotaTick();
   if (!_quotaTimer) _quotaTimer = setInterval(quotaTick, 1000);
-  // 🎁 Signup-bonus kvar
-  const promo = document.getElementById('quota-promo');
-  if (promo) {
-    const n = Number(me.promo_bonus) || 0;
-    if (n > 0) { promo.style.display = ''; promo.textContent = '🎁 ' + n; }
-    else promo.style.display = 'none';
-  }
   // 👑 Support/Patron-förmåner — nedräkning till de går ut
   const ben = document.getElementById('quota-benefits');
   if (ben) {
@@ -1245,13 +1246,11 @@ function renderQuotaPill(me) {
       else ben.style.display = 'none';
     } else ben.style.display = 'none';
   }
-  // '?'-tooltip — tvåspråkig via isEn() (I18N saknar nyckel; etablerad fallback)
+  // '?'-tooltip — engelska (2026-08-08)
   const tip = document.getElementById('quota-tip');
   if (tip && !tip.dataset.set) {
     tip.dataset.set = '1';
-    tip.textContent = isEn()
-      ? 'Every external call costs a turn — chatting, painting, re-rolls, lorekeeper facts, TTS narration, character creation.'
-      : 'Alla externa anrop kostar en turn — chatt, bildmålning, rerolls, lorekeeper-fakta, TTS-uppläsning, karaktärsskapande.';
+    tip.textContent = 'Each DM, TTS, Image-gen and background llm-calls counts towards the turns quota';
   }
 }
 function toggleQuotaTip(e) {

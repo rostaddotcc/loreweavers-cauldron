@@ -1356,7 +1356,14 @@
   <span class="brand">The Lore Weaver's Cauldron</span>
   <span class="campaign" id="campaign-tag">Campaign: —</span>
   <span class="header-turns-info" id="header-turns-info"></span>
-  <span class="user-tag" id="user-tag" onclick="openChatProfileModal()" title="Your profile — stats, tier and portrait" style="cursor:pointer;display:inline-flex;align-items:center;gap:.5rem;color:var(--bone);font-size:.85rem;padding:.22rem .65rem .22rem .3rem;border:1px solid rgba(201,162,39,.30);border-radius:999px;background:rgba(201,162,39,.07);text-shadow:0 0 10px rgba(201,162,39,.25);transition:all .2s"><span class="ut-avatar" id="user-tag-avatar" style="width:28px;height:28px;border-radius:50%;overflow:hidden;border:1px solid rgba(201,162,39,.45);background:var(--stone-3);display:inline-flex;align-items:center;justify-content:center;font-size:1.05rem;flex-shrink:0;box-shadow:0 0 12px -2px rgba(201,162,39,.35)">👤</span><span id="user-tag-name">—</span></span>
+  <span class="user-tag" id="user-tag" onclick="openChatProfileModal()" title="Your profile — stats, tier, turns and subscription" role="button" tabindex="0" aria-label="Your profile — stats, tier, turns and subscription">
+    <span class="ut-line">
+      <span class="ut-avatar" id="user-tag-avatar">👤</span>
+      <span class="ut-name" id="user-tag-name">—</span>
+    </span>
+    <span class="ut-turns" id="ut-turns">⚡ …</span>
+    <span class="ut-cd" id="ut-cd">left until refresh …</span>
+  </span>
   <span class="spacer"></span>
 
   <button class="top-btn" onclick="openCodex()">📖 Codex</button>
@@ -1397,6 +1404,32 @@
     </div>
   </div>
 </header>
+<style>
+  /* ═══ Avatar-box: konto + turns + nedräkning (2026-08-08) ═══
+     Kör EFTER soft-up-blocken (~rad 1123) så !important här vinner. */
+  #user-tag{ margin-left:.45rem !important; display:flex !important; flex-direction:column !important;
+    align-items:stretch !important; gap:2px !important; padding:.34rem .6rem .3rem !important;
+    border:1px solid rgba(201,162,39,.30) !important; border-radius:10px !important;
+    background:rgba(201,162,39,.07) !important; cursor:pointer; line-height:1.2;
+    text-align:center; flex-shrink:0; transition:border-color .2s, box-shadow .2s; }
+  .ut-line{ display:flex; align-items:center; gap:.45rem; }
+  .ut-avatar{ width:28px; height:28px; border-radius:50%; overflow:hidden; flex:none;
+    border:1px solid rgba(201,162,39,.45); background:var(--stone-3);
+    display:inline-flex; align-items:center; justify-content:center; font-size:1.05rem;
+    box-shadow:0 0 12px -2px rgba(201,162,39,.35); }
+  .ut-avatar img{ width:100%; height:100%; object-fit:cover; image-rendering:pixelated; display:block; }
+  .ut-name{ font-size:.85rem; color:var(--bone); font-weight:600; white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis; }
+  .ut-turns{ font-size:.8rem; letter-spacing:.08em; font-weight:700; color:var(--gold-bright);
+    font-variant-numeric:tabular-nums; white-space:nowrap; line-height:1.15; }
+  .ut-cd{ font-size:.68rem; font-weight:600; color:var(--bone-bright); letter-spacing:.04em;
+    font-variant-numeric:tabular-nums; white-space:nowrap; line-height:1.15; }
+  @media (max-width:900px){
+    .ut-name{ max-width:14vw; }
+    .ut-turns{ font-size:.74rem; }
+    .ut-cd{ font-size:.62rem; }
+  }
+</style>
 <div class="mobile-hp-line" id="mobile-hp-line"><i style="width:100%"></i></div>
 <div class="drawer-backdrop" id="drawer-backdrop" onclick="toggleMobileSidebar()"></div>
 
@@ -1933,20 +1966,49 @@ function turnInfoText() {
 }
 
 // Uppdatera header-info: desktop (.topbar) + mobil (☰-menyns topp).
-// Desktop-headern är trång — där tas "Day N" + "reset in …" bort så
-// kampanjnamnet alltid får plats; mobilmenyn visar hela strängen. (2026-08-05)
-function compactTurnInfo(text) {
-  if (!text) return '';
-  return text
-    .replace(/\s*·?\s*Day\s+\d+\s*/i, '')
-    .replace(/\s*·?\s*reset (in|om).*$/i, '');
+// Desktop-headern visar BARA Turn/Dag — turns + nedräkning bor nu i
+// avatar-boxen (#user-tag); mobilmenyn behåller hela strängen. (2026-08-08)
+function turnDayText() {
+  const en = (typeof I18N !== 'undefined' && I18N.getLang && I18N.getLang() === 'en');
+  const tLabel = en ? 'Turn' : 'Tur';
+  const dLabel = en ? 'Day' : 'Dag';
+  const parts = [];
+  const turn = currentTurnNum();
+  if (turn != null) parts.push(tLabel + ' ' + turn);
+  const day = currentDayNum();
+  if (day != null) parts.push(dLabel + ' ' + day);
+  return parts.join(' · ');
+}
+
+// ═══ Avatar-box: "⚡ 12/50" + "left until refresh HH:MM:SS" (2026-08-08) ═══
+// Bara totalen (cap + turn_bonus + promo_bonus) — promo syns i profilen.
+// Data från _meData; tickar live via den befintliga 1s-loopen i updateHeaderInfo.
+function renderAvatarBox() {
+  const turnsEl = document.getElementById('ut-turns');
+  const cdEl = document.getElementById('ut-cd');
+  if (!turnsEl || !cdEl) return;
+  const me = _meData || {};
+  const tier = _tier();
+  if (tier === 'lifetime' || (parseInt(me.turn_cap, 10) || 0) === 0) {
+    turnsEl.textContent = '♾️ ∞';
+    cdEl.textContent = '';
+    return;
+  }
+  const avail = Math.max(0, parseInt(me.turns_available, 10) || 0);
+  const total = (parseInt(me.turn_cap, 10) || 0) + (parseInt(me.turn_bonus, 10) || 0) + (parseInt(me.promo_bonus, 10) || 0);
+  turnsEl.textContent = '⚡ ' + avail + '/' + total;
+  const cd = (tier === 'tier1' || tier === 'tier2')
+    ? resetCountdown(me.reset_ts, true)
+    : resetCountdown(me.reset_date, false);
+  cdEl.textContent = cd ? ('left until refresh ' + cd) : '';
 }
 function updateHeaderInfo() {
-  const text = turnInfoText();
+  const text = turnDayText();
   const el = document.getElementById('header-turns-info');
-  if (el) el.textContent = compactTurnInfo(text) ? ' · ' + compactTurnInfo(text) : '';
+  if (el) el.textContent = text ? ' · ' + text : '';
   const mel = document.getElementById('mobile-menu-turns');
-  if (mel) mel.textContent = text || '';
+  if (mel) mel.textContent = turnInfoText() || '';
+  renderAvatarBox();
 }
 
 // api.js inbäddar JSON.stringify(detail) i e.message ("HTTP 403: {...}").
@@ -2396,19 +2458,69 @@ function renderChatProfile(s, me) {
   const grid = document.getElementById('cp-grid');
   if (!grid) return;
   const fmt = n => (n === null || n === undefined || isNaN(n)) ? '—' : Number(n).toLocaleString('en-US');
+  const bar = (used, cap) => (cap && cap > 0)
+    ? '<div class="cp-bar"><i style="width:' + Math.min(100, Math.round(used / cap * 100)) + '%"></i></div>'
+    : '';
   const cell = (k, v, full) => '<div class="cp-cell' + (full ? ' full' : '') + '"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>';
+  const dt = (t) => t ? String(t).slice(0, 16).replace('T', ' ') : '—';
   const role = (s.role || me.role || 'player') === 'admin' ? '👑 Admin' : '⚔️ Player';
+  const st = s.subscription_status || me.subscription_status || 'free';
   const tokens = (s.total_tokens != null ? s.total_tokens : (me.total_tokens != null ? me.total_tokens : 0)) || 0;
   const tokenStr = tokens >= 1000000 ? (tokens / 1000000).toFixed(1) + 'M' : tokens >= 1000 ? (tokens / 1000).toFixed(1) + 'K' : tokens;
   const since = s.created_at || me.created_at || null;
+  // Turncap beskrivs med perioden så man inte tror att "50" är veckans total.
+  const periodLabel = (st === 'tier1' || st === 'tier2') ? ' per 6h' : ' per day';
+  const cap = parseInt(s.turn_cap, 10) || 0;
+  const capLabel = cap === 0 ? '∞ (lifetime)' : fmt(cap) + periodLabel;
+  const used = s.period_turns_used != null ? s.period_turns_used : (me.period_turns_used != null ? me.period_turns_used : 0);
   let h = '';
+  h += cell('Adventurer', escapeHtml(s.username || me.username || 'Adventurer'));
   h += cell('Role', role);
-  h += cell('Tier', tierBadge(s.subscription_status || me.subscription_status));
+  h += cell('Tier', tierBadge(st));
+  h += cell('Turns', fmt(used) + ' / ' + capLabel + bar(used, cap), true);
+  if ((parseInt(s.promo_bonus, 10) || 0) > 0) h += cell('Signup promo', fmt(s.promo_bonus) + ' left', true);
+  h += cell('Total turns', fmt(s.total_turns != null ? s.total_turns : me.turns_used));
   h += cell('Campaigns', fmt(s.total_campaigns != null ? s.total_campaigns : me.total_campaigns));
-  h += cell('Turns', fmt(s.total_turns != null ? s.total_turns : me.turns_used));
   h += cell('Tokens', tokenStr);
-  if (since) h += cell('Since', String(since).slice(0, 10));
+  h += cell('TTS seconds', fmt(s.tts_seconds));
+  h += cell('TTS calls', fmt(s.tts_calls));
+  h += cell('Avatar generations', fmt(s.image_gen_calls));
+  h += cell('Characters forged', fmt(s.char_creation_calls));
+  if (s.email) h += cell('Email', escapeHtml(s.email));
+  if (since) h += cell('Member since', escapeHtml(dt(since)));
+  if (s.last_active) h += cell('Last active', escapeHtml(dt(s.last_active)));
+  if (st === 'tier1' || st === 'tier2') {
+    const until = s.subscription_until || me.subscription_until;
+    h += cell('Renews on', escapeHtml(until ? String(until).slice(0, 10) : '—'), true);
+  } else if (st === 'lifetime') {
+    h += cell('Renews on', 'Forever — never expires', true);
+  }
+  if ((parseInt(s.revenue, 10) || 0) > 0) h += cell('Contributions (SEK)', fmt(s.revenue));
+  if ((parseInt(s.turn_bonus, 10) || 0) > 0) h += cell('Turn bonus', fmt(s.turn_bonus));
+  // 💳 Subscription-hantering — samma CTA som adventure.html-profilen
+  if (st === 'free' || st === 'tier1') {
+    h += '<div class="cp-cell full"><a href="pricing.html" style="display:block;text-align:center;font-family:var(--font-display,Cinzel,serif);font-size:.82rem;letter-spacing:.18em;text-transform:uppercase;color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));padding:.9rem 1rem;border-radius:8px;text-decoration:none">💳 Upgrade your path</a></div>';
+  } else {
+    h += '<div class="cp-cell full" style="text-align:center;font-size:.9rem"><a href="#" onclick="openBillingPortal(event)" style="color:var(--gold);text-decoration:none">👑 Manage subscription →</a></div>';
+  }
   grid.innerHTML = h;
+}
+
+// 💳 Stripe Customer Portal — säg upp / hantera prenumeration (2026-08-04,
+// portad till chat.html 2026-08-08 så profilmodalen hanterar allt).
+async function openBillingPortal(e) {
+  if (e) e.preventDefault();
+  try {
+    const res = await fetch('/api/billing/portal', { method: 'POST', credentials: 'include' });
+    const data = await res.json();
+    if (!res.ok) {
+      const msg = (data && data.detail && data.detail.message) || (data && data.detail) || ('HTTP ' + res.status);
+      throw new Error(msg);
+    }
+    if (data && data.url) window.location.href = data.url;
+  } catch (err) {
+    toast('⚠ ' + (err.message || 'Could not open the billing portal.'));
+  }
 }
 
 // ── Bildleverantör (StepFun — Support 3€ · Wan 2.7 Pro — Patron 30€) ──
@@ -8111,6 +8223,8 @@ document.addEventListener('keydown', e => {
   .cp-cell.full{ grid-column: 1/-1; }
   .cp-cell .k{ font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--bone-dim); margin-bottom: .18rem; }
   .cp-cell .v{ font-size: 1rem; color: var(--bone-bright); word-break: break-word; }
+  .cp-bar{ height: 6px; background: var(--stone-3); border-radius: 3px; margin-top: .4rem; overflow: hidden; }
+  .cp-bar i{ display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); }
   .cp-sec{ margin-top: 1.1rem; padding-top: .9rem; border-top: 1px solid rgba(201,162,39,.15); }
   .cp-sec-title{ font-family: 'Cinzel', serif; font-size: .68rem; letter-spacing: .18em; text-transform: uppercase;
     color: var(--teal); margin-bottom: .6rem; }

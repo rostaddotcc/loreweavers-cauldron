@@ -5988,8 +5988,10 @@ function renderCombatInline(combat, reason, container, storyTarget) {
     _allyCardEls = {};
     _lastPlayerHp = null;
     _lastInitShown = null;
-    _enemyDiceSeen.clear(); // fiende-tärningsceremonier: nollställ vid stridsslut
-    _dmRollSeen.clear();    // DM-rullar i chatten: nollställ vid stridsslut
+    // OBS (2026-08-08): _enemyDiceSeen/_dmRollSeen NÖLLSTÄLLS INTE här längre —
+    // content-baserade nycklar (round|actor|text) krockar inte mellan strider,
+    // och en clear här triggade om-rendering av döda fienders kast när
+    // endKey ändrades (loggen växte) eller efter page-reload.
     return;
   }
 
@@ -6424,21 +6426,47 @@ function enemyDiceMini(row, rowIndex, badgeText, cleanText) {
 // ── DM-tärning i chatten (live): ny fiende/allierad-rulle → mini-ceremoni i
 // berättelseflödet, så man SER kastet när DM:n "kastar tärningarna" (2026-08-08).
 // Stridsloggen visar bara statiska badges — den här animerar kastet i chatten.
-let _dmRollSeen = new Set();  // dedupe: samma DM-rulle animeras bara EN gång
+// Dedupe nyckel = round|actor|text (content-baserad → krockar inte mellan
+// strider). Sättet är sessionStorage-persisterat så page-reload (t.ex. när man
+// testar en ny build) inte återanimerar gamla kast. Döda/flydda fienders kast
+// animeras ALDRIG (bara nu-levande kombattanters).
+let _dmRollSeen = (function () {
+  try {
+    const arr = JSON.parse(sessionStorage.getItem('dnd_dm_rolls_seen') || '[]');
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch (e) { return new Set(); }
+})();
+function _dmRollRemember(key) {
+  _dmRollSeen.add(key);
+  try {
+    const arr = [..._dmRollSeen];
+    if (arr.length > 400) _dmRollSeen = new Set(arr.slice(-400));  // håll set:et begränsat (prune, ALDRIG full clear)
+    sessionStorage.setItem('dnd_dm_rolls_seen', JSON.stringify([..._dmRollSeen]));
+  } catch (e) { /* sessionStorage otillgänglig → session-only dedupe */ }
+}
 function dmRollInChat(combat, storyTarget) {
   if (!combat || !storyTarget || !Array.isArray(combat.log) || !combat.log.length) return;
+  // Levande kombattanter — döda/flydda fienders kast är historia, animeras ej.
+  const aliveEnemies = new Set((combat.enemies || [])
+    .filter(e => e.alive !== false && e.hp !== 0)
+    .map(e => String(e.name || '').trim().toLowerCase()));
+  const aliveAllies = new Set((combat.allies || [])
+    .filter(a => a.alive !== false && a.hp !== 0)
+    .map(a => String(a.name || '').trim().toLowerCase()));
   combat.log.forEach(entry => {
     const t = String(entry.text || '');
     if (!t.includes('🎲')) return;
+    const nm = String(entry.name || '').trim();
+    if (entry.actor === 'enemy' && (!nm || !aliveEnemies.has(nm.toLowerCase()))) return;
+    if (entry.actor === 'ally' && (!nm || !aliveAllies.has(nm.toLowerCase()))) return;
     const dice = extractDiceFromText(t);
     if (!dice.badges.length) return;
     const badge = dice.badges[0];
     const key = 'dmr_' + (entry.round || 0) + '_' + String(entry.actor || '') + '_' + t;
     if (_dmRollSeen.has(key)) return;  // samma combat-state levereras många gånger
-    if (_dmRollSeen.size > 500) _dmRollSeen.clear();
-    _dmRollSeen.add(key);
+    _dmRollRemember(key);
     // Aktör = loggens name (fiende/allierad) eller 'DM'
-    const label = String(entry.name || '').trim() || 'DM';
+    const label = nm || 'DM';
     const wrap = document.createElement('div');
     wrap.className = 'msg system';
     const box = document.createElement('div');

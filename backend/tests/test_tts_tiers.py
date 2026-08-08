@@ -177,6 +177,40 @@ def test_tts_qwen_tier1_403(client, monkeypatch):
     assert "Patron" in r.json()["detail"]
 
 
+def test_tts_consumes_turn_cache_hit_free(client, monkeypatch):
+    """2026-08-08 (strikt per-anrops-modell): varje NY TTS-syntes = 1 turn;
+    cache-träff (samma text igen) är gratis — inget externt anrop."""
+    _seed("alice", tier="tier1")
+    _login(client)
+    monkeypatch.setattr(main, "_synth_stepfun_tts", lambda voice, text, style="": b"RIFFwavfake")
+    # Första anropet — cache miss → 1 turn + ledger-post action=tts
+    r1 = client.post("/api/tts", json={"text": "Turn kostar", "voice": "male", "provider": "stepfun"})
+    assert r1.status_code == 200, r1.text
+    assert main.load_users()["alice"]["turns_used"] == 1
+    led = main._read_turn_ledger("alice")
+    assert led and led[-1]["action"] == "tts"
+    assert led[-1]["model"]  # tts-modellen bokförs
+    # Andra anropet — samma text → cache hit → ingen ny turn
+    r2 = client.post("/api/tts", json={"text": "Turn kostar", "voice": "male", "provider": "stepfun"})
+    assert r2.status_code == 200, r2.text
+    assert main.load_users()["alice"]["turns_used"] == 1
+
+
+def test_tts_403_when_turns_exhausted(client, monkeypatch):
+    """TTS med 0 turns kvar → 403 cap_reached (innan något syntes-anrop)."""
+    _seed("alice", tier="tier1", turn_cap=1)
+    users = main.load_users()
+    users["alice"]["turns_used"] = 1  # cap 1, förbrukad → 0 kvar
+    users["alice"]["reset_date"] = _in_days(1)  # imorgon — ingen rollover mitt i testet
+    main.save_users(users)
+    _login(client)
+    monkeypatch.setattr(main, "_synth_stepfun_tts", lambda voice, text, style="": b"RIFFwavfake")
+    r = client.post("/api/tts", json={"text": "Inga turns kvar", "voice": "male", "provider": "stepfun"})
+    assert r.status_code == 403
+    detail = r.json()["detail"]
+    assert detail.get("cap_reached") is True
+
+
 def test_tts_qwen_tier2_ok(client, monkeypatch):
     """Patron (tier2) + qwen → 200 (premium-röst)."""
     _seed("alice", tier="tier2")

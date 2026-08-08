@@ -7430,8 +7430,15 @@ function initSettingsModelPickers() {
   // optgroup i alla tre väljarna. Gratis för ALLA tiers (delad community-nyckel).
   API.freeOpenRouter().then(list => {
     if (!list || !list.length) return;
-    const og = `<optgroup label="🆓 OpenRouter free">${list.map(m => `<option value="${m.id}">${m.display}</option>`).join('')}</optgroup>`;
-    [dmSel, gSel, eSel].forEach(sel => { if (sel) sel.insertAdjacentHTML('beforeend', og); });
+    const og = `<optgroup class="orfree-og" label="🆓 OpenRouter free">${list.map(m => `<option value="${m.id}">${m.display}</option>`).join('')}</optgroup>`;
+    [dmSel, gSel, eSel].forEach(sel => {
+      if (!sel) return;
+      // initSettingsModelPickers körs flera gånger per session (me-fetch,
+      // settings-öppning, loadCampaign, TTS-init) — ta bort gamla 🆓-optgroups
+      // först så free-modellerna aldrig dupliceras i dropdownen.
+      sel.querySelectorAll('.orfree-og').forEach(ogEl => ogEl.remove());
+      sel.insertAdjacentHTML('beforeend', og);
+    });
     // Om nuvarande val redan är en orfree:-modell (t.ex. sparat i kampanj-metat)
     if (String(currentModel).startsWith('orfree:')) dmSel.value = currentModel;
     if (gm && String(gm).startsWith('orfree:')) gSel.value = gm;

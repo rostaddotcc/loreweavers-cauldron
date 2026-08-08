@@ -338,6 +338,15 @@ API.me().then(u => {
       sel.value = 'step-3.7-flash';
     }
   }
+  // 🆓 OpenRouter free-modeller — även för karaktärsskapande (backend streamar
+  // orfree: i _stream_llm). Samma lista som DM-gaten; gratis för ALLA tiers.
+  API.freeOpenRouter().then(list => {
+    if (!list || !list.length) return;
+    const sel = document.getElementById('char-model');
+    if (!sel) return;
+    sel.querySelectorAll('.orfree-og').forEach(og => og.remove());
+    sel.insertAdjacentHTML('beforeend', `<optgroup class="orfree-og" label="🆓 OpenRouter free">${list.map(m => `<option value="${m.id}">${m.display}</option>`).join('')}</optgroup>`);
+  }).catch(() => {});
 }).catch(() => {});
 </script>
 <script>

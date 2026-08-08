@@ -2248,6 +2248,18 @@ async def _stream_llm(
     om providern rapporterar det (stream_options.include_usage). Samma
     provider-routing som _call_llm: qwen3-modeller tänker som standard
     (enable_thinking kan stängas av explicit)."""
+    # 🆓 OpenRouter free-modeller (orfree:*) finns inte i MODELS-registret —
+    # delegera till or_free.chat_free_stream (streaming, reasoning=low tvingat).
+    if model_id.startswith("orfree:"):
+        from or_free import chat_free_stream
+        async for r_delta, c_delta, u in chat_free_stream(
+            model_id, messages,
+            max_tokens=max(max_tokens, 2048),
+            temperature=temperature,
+            timeout=timeout,
+        ):
+            yield r_delta, c_delta, u
+        return
     config = get_model(model_id)
     api_key = get_api_key(config)
 

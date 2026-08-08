@@ -30,6 +30,7 @@ import asyncio
 import logging
 import os
 import time
+from typing import AsyncGenerator
 
 import httpx
 
@@ -233,3 +234,75 @@ async def chat_free(
         "completion_tokens": usage.get("completion_tokens", 0),
         "total_tokens": usage.get("total_tokens", 0),
     }
+
+
+async def chat_free_stream(
+    model_id: str,
+    messages: list[dict],
+    max_tokens: int = _REASONING_MAX_TOKENS,
+    temperature: float = 0.8,
+    timeout: float = 300,
+) -> AsyncGenerator[tuple[str, str, dict | None], None]:
+    """Strömmande variant av chat_free — för karaktärsskapande (SSE).
+
+    Yieldar (reasoning_delta, content_delta, usage_or_none) allt eftersom
+    OpenRouter genererar — samma kontrakt som main._stream_llm. Sista yielden
+    bär usage (tokens) om providern rapporterade det
+    (stream_options.include_usage). Reasoning-modeller får
+    `reasoning: {"effort": "low"}` tvingat (annars bränner de budgeten på
+    dolt tänkande och returnerar tom content — se chat_free).
+    """
+    import json
+
+    key = _key()
+    if not key:
+        raise RuntimeError("OPENROUTER_FREE_KEY not configured")
+    or_id = _strip_prefix(model_id)
+    body = {
+        "model": or_id,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stream": True,
+        "stream_options": {"include_usage": True},
+        "reasoning": {"effort": "low"},
+    }
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {key}",
+    }
+    t0 = time.time()
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        async with client.stream(
+            "POST", f"{OR_BASE_URL}/chat/completions", headers=headers, json=body
+        ) as resp:
+            if resp.status_code != 200:
+                err_body = (await resp.aread()).decode(errors="replace")
+                raise RuntimeError(
+                    f"OpenRouter free error {resp.status_code}: {err_body[:300]}"
+                )
+            usage: dict | None = None
+            async for line in resp.aiter_lines():
+                if not line.startswith("data: "):
+                    continue
+                payload = line[6:].strip()
+                if payload == "[DONE]":
+                    break
+                try:
+                    d = json.loads(payload)
+                except json.JSONDecodeError:
+                    continue
+                if d.get("usage"):
+                    usage = d["usage"]
+                ch = (d.get("choices") or [{}])[0]
+                delta = ch.get("delta") or {}
+                r = delta.get("reasoning") or delta.get("reasoning_content") or ""
+                c = delta.get("content") or ""
+                if r or c:
+                    yield r, c, None
+    elapsed = round(time.time() - t0, 1)
+    logger.info(
+        "🆓 free stream %s → done (%.1fs, usage=%s)",
+        or_id, elapsed, bool(usage),
+    )
+    yield "", "", usage

@@ -2088,8 +2088,9 @@ const TTS_PROVIDERS = [
       sel.value = models.includes('step-3.7-flash') ? 'step-3.7-flash' : (models[0] || '');
     });
     if (charSel) {
-      // Karaktärsskapande håller sig till house-modellerna (inga orfree:)
-      charSel.innerHTML = houseOpts;
+      // 🆓 OpenRouter free-modeller funkar även för karaktärsskapande (backend
+      // streamar orfree: i _stream_llm) — samma optgroup som DM/Guardian/Extraction.
+      charSel.innerHTML = opts;
       charSel.value = models.includes('step-3.7-flash') ? 'step-3.7-flash' : (models[0] || '');
     }
   };

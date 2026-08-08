@@ -6,10 +6,12 @@ Täcker:
   - PATCH /api/campaign/dm-model (och guardian/extraction) accepterar orfree:
   - create_campaign sparar extraction_model=orfree:...
   - _extraction_model_for returnerar orfree: oförändrad (ingen get_model-validering)
+  - _stream_llm delegerar orfree: till or_free.chat_free_stream (karaktärsskapande)
 
 autouse-fixtures: ALLA tester pekar users.json + kampanjer + ledger mot tmp —
 ALDRIG riktig data.
 """
+import asyncio
 import sys
 from pathlib import Path
 
@@ -169,3 +171,66 @@ def test_create_campaign_saves_orfree_extraction(client):
     assert st["meta"]["extraction_model"] == KNOWN
     # och _extraction_model_for returnerar den oförändrad (ingen get_model-validering)
     assert main._extraction_model_for(st) == KNOWN
+
+
+# ── _stream_llm-routing (karaktärsskapande med orfree:) ─────────────────
+
+def test_stream_llm_routes_orfree_to_chat_free_stream(monkeypatch):
+    """_stream_llm måste delegera orfree: till or_free.chat_free_stream —
+    get_model() skulle krascha (orfree: finns inte i MODELS-registret)."""
+    import or_free
+
+    seen = {}
+
+    async def fake_stream(model_id, messages, **kw):
+        seen["model_id"] = model_id
+        seen["kw"] = kw
+        yield ("thinking…", "", None)
+        yield ("", '{"name":"Testy"}', None)
+        yield ("", "", {"total_tokens": 7})
+
+    monkeypatch.setattr(or_free, "chat_free_stream", fake_stream)
+
+    async def run():
+        out = []
+        async for r, c, u in main._stream_llm(KNOWN, [{"role": "user", "content": "hi"}]):
+            out.append((r, c, u))
+        return out
+
+    out = asyncio.run(run())
+    assert seen["model_id"] == KNOWN
+    assert out == [
+        ("thinking…", "", None),
+        ("", '{"name":"Testy"}', None),
+        ("", "", {"total_tokens": 7}),
+    ]
+
+
+def test_vault_generate_stream_accepts_orfree_for_free_player(client, monkeypatch):
+    """Free-tier-spelare ska kunna generera karaktär med orfree: — hela vägen
+    via _stream_llm → or_free.chat_free_stream (ingen get_model-krasch)."""
+    import or_free
+
+    CHAR_JSON = (
+        '{"name":"Ashen","race":"Human","class":"Rogue","level":1,'
+        '"hp":{"current":10,"max":10},'
+        '"abilities":{"STR":{"score":10,"mod":0},"DEX":{"score":14,"mod":2},'
+        '"CON":{"score":12,"mod":1},"INT":{"score":10,"mod":0},'
+        '"WIS":{"score":10,"mod":0},"CHA":{"score":12,"mod":1}},'
+        '"ac":14,"story":"A quiet shadow.","traits":["Stealthy"]}'
+    )
+
+    async def fake_stream(model_id, messages, **kw):
+        yield ("", CHAR_JSON, None)
+        yield ("", "", {"total_tokens": 10})
+
+    monkeypatch.setattr(or_free, "chat_free_stream", fake_stream)
+
+    tok = _seed_player(status="free")
+    r = client.post("/api/vault/generate/stream",
+                    json={"prompt": "A rogue", "model_id": KNOWN, "lang": "en"},
+                    cookies={"morkrets_token": tok})
+    assert r.status_code == 200, r.text
+    assert '"ok":true' in r.text or '"ok": true' in r.text, r.text
+    assert '"name":"Ashen"' in r.text or '"name": "Ashen"' in r.text, r.text
+    assert '"reasoning_len":0' in r.text or '"reasoning_len": 0' in r.text, r.text

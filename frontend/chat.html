@@ -1356,14 +1356,16 @@
   <span class="brand">The Lore Weaver's Cauldron</span>
   <span class="campaign" id="campaign-tag">Campaign: —</span>
   <span class="header-turns-info" id="header-turns-info"></span>
-  <span class="user-tag" id="user-tag" onclick="openChatProfileModal()" title="Your profile — stats, tier, turns and subscription" role="button" tabindex="0" aria-label="Your profile — stats, tier, turns and subscription">
+  <span class="user-tag" id="user-tag" onclick="openChatProfileModal()" role="button" tabindex="0" aria-label="Your profile — stats, tier, turns and subscription">
     <span class="ut-avatar" id="user-tag-avatar">👤</span>
     <span class="ut-name" id="user-tag-name">—</span>
-    <span class="ut-sep">·</span>
-    <span class="ut-turns" id="ut-turns">⚡ …</span>
-    <span class="ut-sep">·</span>
-    <span class="ut-cd" id="ut-cd">refreshes in: …</span>
-    <span class="ut-tip" id="ut-tip">Each DM, TTS, Image-gen and background llm-calls counts towards the turns quota</span>
+    <span class="ut-quota" id="ut-quota">
+      <span class="ut-sep">·</span>
+      <span class="ut-turns" id="ut-turns">⚡ …</span>
+      <span class="ut-sep">·</span>
+      <span class="ut-cd" id="ut-cd">refreshes in: …</span>
+      <span class="ut-tip" id="ut-tip">Each DM, TTS, Image-gen and background llm-calls counts towards the turns quota</span>
+    </span>
   </span>
   <span class="spacer"></span>
 
@@ -1426,7 +1428,10 @@
   .ut-cd{ font-size:.7rem; font-weight:600; color:var(--bone-bright); letter-spacing:.02em;
     font-variant-numeric:tabular-nums; }
   .ut-sep{ color:var(--bone-dim); font-size:.68rem; }
-  /* Hover-tooltip direkt på profil/turn-kortet (2026-08-08) */
+  /* Turn-delen grupperar siffrorna; tooltip = ENDAST quota-disclaimern.
+     Profil + stats nås via klick på kortet. (2026-08-08) */
+  .ut-quota{ position:relative; display:inline-flex; align-items:center; gap:.4rem; }
+  /* Hover-tooltip med quota-disclaimern (2026-08-08) */
   .ut-tip{ position:absolute; top:calc(100% + 8px); right:0; z-index:950; width:min(290px,80vw);
     background:var(--stone-3); border:1px solid var(--edge-hi); border-radius:6px; padding:.55rem .7rem;
     font-size:.72rem; font-style:italic; line-height:1.5; color:var(--bone); text-align:left;

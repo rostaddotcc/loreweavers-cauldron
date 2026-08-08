@@ -1907,7 +1907,6 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
 function adventurerPage(a){
   const ab = a.abilities||{};
   const order = ['STR','DEX','CON','INT','WIS','CHA'];
-  const maxScore = Math.max(...order.map(k=>ab[k]||0), 1);
   const chips = order.map(k=>`<span class="${(ab[k]||0)>=14?'hi':''}">${k} <b>${ab[k]||'–'}</b></span>`).join('');
   const xpPct = a.xp_next>0 ? Math.min(100, Math.round((a.xp_current||0)/a.xp_next*100)) : 0;
   const eq = (a.equipment||[]).slice(0,6);

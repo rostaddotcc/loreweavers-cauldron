@@ -16,8 +16,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 SCRIPT = BACKEND_DIR.parent / "frontend" / "book-souls" / "gen_gallery.py"
 

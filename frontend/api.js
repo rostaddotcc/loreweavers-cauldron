@@ -175,13 +175,6 @@ const API = (() => {
       return req('/api/auth/reset-with-token', { method: 'POST', body: JSON.stringify({ token, password }) });
     },
 
-    async setTurnCap(username, turnCap) {
-      if (MOCK) return { ok: true };
-      return req('/api/admin/user/' + encodeURIComponent(username) + '/turn-cap', {
-        method: 'PUT', body: JSON.stringify({ turn_cap: turnCap }),
-      });
-    },
-
     async logout() {
       sessionStorage.removeItem('dnd_user');
       sessionStorage.removeItem('dnd_token');
@@ -631,16 +624,6 @@ const API = (() => {
       return req('/api/campaign/save', { method: 'POST', body: JSON.stringify({ description }) });
     },
 
-    async listSaves() {
-      if (MOCK) return { saves: [] };
-      return req('/api/campaign/saves');
-    },
-
-    async loadSave(saveId) {
-      if (MOCK) throw new Error('Not available in mock mode');
-      return req('/api/campaign/load', { method: 'POST', body: JSON.stringify({ save_id: saveId }) });
-    },
-
     async pinFact(fact) {
       if (MOCK) return { ok: true, pinned_facts: [fact] };
       return req('/api/campaign/pin', { method: 'POST', body: JSON.stringify({ fact }) });
@@ -672,12 +655,6 @@ const API = (() => {
       return req('/api/tts/voices');
     },
 
-    // Live-pipeline-aktivitet (senaste loggentry för loading-animationen)
-    async activity() {
-      if (MOCK) return { entries: [] };
-      return req('/api/campaign/activity');
-    },
-
     async tts(text, voice, provider, style) {
       const res = await fetch(BASE + '/api/tts', {
         method: 'POST',
@@ -700,34 +677,6 @@ const API = (() => {
         method: 'POST',
         body: JSON.stringify({ provider, ...extra }),
       });
-    },
-
-    // ── Combat (v25 — stridsmotorn) ──
-    async combatAttack(targetId, attackRoll, damageNotation = '1d8') {
-      return req('/api/combat/attack', {
-        method: 'POST',
-        body: JSON.stringify({ target_id: targetId, attack_roll: attackRoll, damage_notation: damageNotation }),
-      });
-    },
-
-    async combatCast(opts) {
-      return req('/api/combat/cast', { method: 'POST', body: JSON.stringify(opts) });
-    },
-
-    async combatBonus(action) {
-      return req('/api/combat/bonus', { method: 'POST', body: JSON.stringify({ action }) });
-    },
-
-    async combatFlee(dexCheck) {
-      return req('/api/combat/flee', { method: 'POST', body: JSON.stringify({ dex_check: dexCheck }) });
-    },
-
-    async combatEndTurn() {
-      return req('/api/combat/end-turn', { method: 'POST' });
-    },
-
-    async combatState() {
-      return req('/api/combat/state');
     },
 
     // ── Auth guard for pages ──

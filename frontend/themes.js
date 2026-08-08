@@ -306,24 +306,8 @@ const THEMES = (() => {
 })();
 
 // ── Global theme button (topbar, bredvid font-knappen) ──
-function themeToggleBtn() {
-  const btn = document.querySelector('.theme-btn');
-  if (btn) {
-    THEMES.openPopover(btn);
-    return;
-  }
-  // Fallback (ingen knapp i DOM): cykla
-  const next = THEMES.cycle();
-  if (typeof toast === 'function') toast('🎨 Theme: ' + next.name);
-  if (typeof SFX !== 'undefined') SFX.click();
-}
 
 // Rapid cycle (used by compact mobile menu items — no popover, just switch).
-function themeCycle() {
-  const next = THEMES.cycle();
-  if (typeof toast === 'function') toast('🎨 Theme: ' + next.name);
-  if (typeof SFX !== 'undefined') SFX.click();
-}
 
 document.addEventListener('DOMContentLoaded', () => {
   const cur = THEMES.applied() || THEMES.current();

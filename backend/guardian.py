@@ -1397,7 +1397,6 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
 
     def _find_quest(name_or_id: str, require_active: bool = True):
         """Hitta quest med ID-match (prioritet) eller normaliserad namnmatchning."""
-        import uuid
         target = str(name_or_id).strip()
         active_set = ("aktiv", "active")
         
@@ -1963,7 +1962,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 crit = d20 == 20
                 fumble = d20 == 1
                 if fumble:
-                    combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"misses you (natural 1!)"})
+                    combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": "misses you (natural 1!)"})
                     effects.append({"type": "enemy_miss", "value": attacker_name, "roll": total, "d20": d20, "bonus": attack_bonus})
                     continue
                 if total < player_ac and not crit:
@@ -2437,7 +2436,7 @@ def apply_enemy_actions(state: dict, actions: list[dict]) -> list[dict]:
 
     Returnerar effects-lista för frontend.
     """
-    from combat import roll_dice, roll_d20, add_status, has_disadvantage
+    from combat import roll_dice, roll_d20, has_disadvantage
 
     combat = state.get("world", {}).get("combat")
     if not combat or not combat.get("active"):
@@ -2783,7 +2782,6 @@ def format_guardian_summary(
             lines.append(f"💀 **{label}:** {v}")
         elif t == "korrigering":
             label = "Correction:" if en else "Korrigering:"
-            reason = e.get("reason", "")
             lines.append(f"🔧 **{label}** {v}")
 
     # ── Icke-effekt-data från mech (loggbok, tid, vila) ──

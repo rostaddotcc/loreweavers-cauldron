@@ -1,5 +1,4 @@
 """Tester för DM-avatar-promptvariation (v28) + spells (char-gen + Guardian spells_add)."""
-import random
 import sys
 from pathlib import Path
 
@@ -141,7 +140,7 @@ def test_apply_mechanics_spells_add_appends():
 def test_apply_mechanics_spells_add_dedup():
     state = _state_with_character()
     state["character"]["spells"] = [{"name": "Eldklot", "level": 0}]
-    effects = guardian.apply_mechanics(state, {
+    guardian.apply_mechanics(state, {
         "spells_add": [
             {"name": "Eldklot", "level": 0},
             {"name": "eldklot", "level": 0},  # case-insensitiv dedup

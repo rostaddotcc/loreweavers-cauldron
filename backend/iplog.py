@@ -119,7 +119,7 @@ def get_user_ip(username: str) -> str:
 
 
 def _visits_load() -> None:
-    global _visits_loaded, _visit_store
+    global _visits_loaded
     if _visits_loaded:
         return
     _visits_loaded = True

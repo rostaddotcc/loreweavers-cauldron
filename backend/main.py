@@ -122,7 +122,7 @@ _stream.setLevel(logging.INFO)
 logger.addHandler(_stream)
 
 import httpx
-from fastapi import Cookie, FastAPI, File, Form, HTTPException, Request, Response, UploadFile
+from fastapi import Cookie, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -157,11 +157,9 @@ from models import (
     list_models_for_frontend,
 )
 from atmosphere import (
-    detect_environments,
-    get_fallback_art,
     should_generate_art,
 )
-from locations import get_locations_with_travel, place_location, clean_location_name, find_location, locations_match
+from locations import get_locations_with_travel, place_location, clean_location_name, find_location
 from logbook import build_log_prompt
 from state_manager import CAMPAIGNS_DIR, VAULTS_DIR, CampaignStore, CharacterVault
 
@@ -231,8 +229,6 @@ from guardian import (
     _normalize_item,
     _XP_THRESHOLDS as XP_THRESHOLDS,  # D&D 5e XP-trösklar (definieras i guardian.py)
     apply_mechanics,
-    apply_enemy_actions,
-    battle_ai_decide,
     format_guardian_summary,
     guardian_check_roll,
     guardian_extract_mechanics,
@@ -240,17 +236,8 @@ from guardian import (
 from combat import (
     start_combat as combat_start,
     roll_initiative as combat_roll_initiative,
-    advance_turn as combat_advance_turn,
-    player_attack as combat_player_attack,
-    player_cast_spell as combat_player_cast,
-    player_use_bonus_action as combat_bonus_action,
-    attempt_flee as combat_flee,
-    end_combat as combat_end,
     add_allies as combat_add_allies,
     build_combat_context,
-    combat_tag as combat_tag_fn,
-    is_player_turn,
-    get_current_actor,
 )
 import iplog
 
@@ -1841,10 +1828,6 @@ class ChapterRequest(BaseModel):
     title: str
 
 
-class LoadRequest(BaseModel):
-    save_id: str
-
-
 # ═══════════════════════════════════════
 # DM-svarsvalidering (Pydantic) + regelinjicering
 # ═══════════════════════════════════════
@@ -3115,7 +3098,7 @@ def _mp3_duration_seconds(data: bytes) -> float:
         if data[i] != 0xFF or (data[i + 1] & 0xE0) != 0xE0:
             i += 1
             continue
-        b1, b2, b3 = data[i + 1], data[i + 2], data[i + 3]
+        b1, b2 = data[i + 1], data[i + 2]
         ver = (b1 >> 3) & 0x3
         layer = (b1 >> 1) & 0x3
         if ver == 1 or layer != 1:          # reserverad version / ej Layer III
@@ -3707,7 +3690,7 @@ async def create_campaign(body: CampaignCreateRequest | None = None, morkrets_to
 # ── Live-aktivitet: pipeline-status för loading-animationen ──
 # In-memory ring-buffer per användare med de senaste stegen i DM/Lorekeeper-
 # pipelinen (pre-DM, DM, mekanik, post-DM, stridslogg, dagar). Frontenden
-# pollar /api/campaign/activity medan DM/Lorekeeper-statusen visas och
+# pollar /api/debug/logs medan DM/Lorekeeper-statusen visas och
 # renderar den senaste entryn — "se vad som arbetar i bakgrunden".
 _ACTIVITY: dict[str, list] = {}
 _ACTIVITY_MAX = 25
@@ -3720,14 +3703,6 @@ def _log_activity(username: str, text: str) -> None:
         del entries[:-_ACTIVITY_MAX]
     except Exception:
         pass
-
-
-@app.get("/api/campaign/activity")
-async def campaign_activity(morkrets_token: str | None = Cookie(None)):
-    """Senaste pipeline-aktivitet (senaste entryn först)."""
-    payload = _get_current_user(morkrets_token)
-    entries = _ACTIVITY.get(payload["sub"], [])
-    return {"entries": list(reversed(entries))}
 
 
 @app.get("/api/campaign")
@@ -3957,72 +3932,6 @@ async def save_checkpoint(body: SaveRequest, morkrets_token: str | None = Cookie
         json.dump(snapshot, f, ensure_ascii=False, indent=2)
 
     return {"ok": True, "save_id": save_id, "description": snapshot["description"], "turn_count": snapshot["turn_count"]}
-
-
-@app.get("/api/campaign/saves")
-async def list_saves(morkrets_token: str | None = Cookie(None)):
-    """Lista alla sparade checkpoints för kampanjen."""
-    payload = _get_current_user(morkrets_token)
-    state = store.get(payload["sub"])
-    if not state:
-        raise HTTPException(404, "Ingen aktiv kampanj")
-
-    saves_dir = store._saves_dir(state["meta"]["user"], state["meta"]["campaign_id"])
-    saves = []
-    if saves_dir.exists():
-        for sf in sorted(saves_dir.glob("save-*.json"), reverse=True):
-            try:
-                with open(sf) as f:
-                    data = json.load(f)
-                saves.append({
-                    "save_id": data.get("save_id", sf.stem),
-                    "description": data.get("description", ""),
-                    "created": data.get("created", ""),
-                    "turn_count": data.get("turn_count", 0),
-                })
-            except (json.JSONDecodeError, OSError):
-                continue
-    return {"saves": saves}
-
-
-@app.post("/api/campaign/load")
-async def load_save(body: LoadRequest, morkrets_token: str | None = Cookie(None)):
-    """Återställ kampanjtillstånd från en sparad checkpoint."""
-    payload = _get_current_user(morkrets_token)
-    username = payload["sub"]
-    state = store.get(username)
-    if not state:
-        raise HTTPException(404, "Ingen aktiv kampanj")
-    campaign_id = state["meta"].get("campaign_id", "")
-    lock = _state_lock(username, campaign_id)
-    async with lock:
-        fresh = store.get(username, campaign_id)
-        if fresh:
-            state = fresh
-        saves_dir = store._saves_dir(state["meta"]["user"], state["meta"]["campaign_id"])
-        save_id = (body.save_id or "").strip()
-        # Security (2026-08-04, P0): endast server-genererade save-id:n
-        # (save-YYYYMMDD-HHMMSS). Utan denna check kunde save_id innehålla
-        # ../.. → läsa andra användares kampanjtillstånd / godtyckliga
-        # JSON-filer (path traversal, verifierad i audit).
-        if not re.fullmatch(r"save-\d{8}-\d{6}", save_id):
-            raise HTTPException(400, "Invalid save id.")
-        save_path = (saves_dir / f"{save_id}.json").resolve()
-        if save_path.parent != saves_dir.resolve() or not save_path.exists():
-            raise HTTPException(404, f"Sparfil '{body.save_id}' hittades inte")
-
-        with open(save_path) as f:
-            snapshot = json.load(f)
-
-        # Återställ fält från snapshot
-        for key in ("character", "inventory", "currency", "npcs", "quests", "world", "lore", "pinned_facts"):
-            if key in snapshot:
-                state[key] = snapshot[key]
-        if "turn_count" in snapshot:
-            state["meta"]["turn_count"] = snapshot["turn_count"]
-
-        store.save(state)
-        return {"ok": True, "restored_from": body.save_id, "state": state}
 
 
 @app.post("/api/campaign/pin")
@@ -4786,7 +4695,6 @@ async def _generate_day_entry_locked(username: str, campaign_id: str, prev_day: 
         logger.warning("📖 Day entry failed: %s", e)
 
 
-
 # ── Guardian POST-DM: kör i bakgrunden, blockerar ALDRIG HTTP-svaret ──
 # ═══════════════════════════════════════
 # GUARDIAN MANUELL KORRIGERING (/guardian)
@@ -4879,7 +4787,7 @@ async def _guardian_manual_correction(
     language: str = "sv",
 ) -> str:
     """Run a manual Guardian correction. Returns the formatted report string."""
-    from guardian import _format_state_for_guardian, apply_mechanics
+    from guardian import _format_state_for_guardian
 
     state_ctx = _format_state_for_guardian(state, language)
 
@@ -6024,10 +5932,8 @@ async def _chat_locked(
     # repair-prompt + nytt LLM-anrop (upp till 2 försök totalt). Efter 2
     # misslyckade försök behålls narrationen men trasig mekanik förkastas.
     effects: list = []
-    dm_valid = True
     base_state = copy.deepcopy(state)  # utgångsläge innan mekanisk parsning
     current_reply = reply
-    last_errors: list[str] = []
 
     for attempt in range(2):
         work_state = copy.deepcopy(base_state)
@@ -6042,11 +5948,8 @@ async def _chat_locked(
             state = work_state
             reply = parsed_reply
             effects = parsed_effects
-            dm_valid = True
-            last_errors = []
             break
 
-        last_errors = errors
         if attempt < 1:
             # Ogiltigt — be LLM:n reparera de mekaniska taggarna
             # Strikt per-anrops-modell: varje repair = 1 turn. Utan saldo → acceptera
@@ -6085,7 +5988,6 @@ async def _chat_locked(
             )
             reply = _strip_mechanical_tags(current_reply)
             effects = []
-            dm_valid = False
 
     # Logga dag-byte till aktivitetsflödet (loading-animationen)
     if any(e.get("type") == "ny_dag" for e in effects):
@@ -6119,7 +6021,6 @@ async def _chat_locked(
     # Fallback-banken används om Guardian inte genererade art.
     ascii_art = None
     art_type = None
-    event_art_type = None
     turn_count = meta.get("turn_count", 0)
 
     # Rensa intern struktur innan transkriptsparning
@@ -6209,308 +6110,6 @@ async def _chat_locked(
             "weather": state.get("world", {}).get("weather", ""),
             "day": state.get("world", {}).get("day", 0),
         },
-    }
-
-
-# ═══════════════════════════════════════
-# COMBAT ENDPOINTS — stridsmotorn (v25)
-# ═══════════════════════════════════════
-
-
-class CombatAttackRequest(BaseModel):
-    target_id: int
-    attack_roll: int  # 1d20 + mod (total)
-    damage_notation: str = "1d8"  # skadetärning
-
-
-class CombatCastRequest(BaseModel):
-    target_id: int | None = None
-    spell_name: str = "Besvärjelse"
-    attack_roll: int | None = None
-    save_dc: int | None = None
-    damage_notation: str | None = None
-    slot_level: int = 1
-
-
-class CombatFleeRequest(BaseModel):
-    dex_check: int  # 1d20 + DEX-mod (total)
-
-
-@app.post("/api/combat/attack")
-async def combat_attack(req: CombatAttackRequest, morkrets_token: str | None = Cookie(None)):
-    """Spelaren attackerar en fiende i pågående strid."""
-    payload = _get_current_user(morkrets_token)
-    username = payload["sub"]
-    state = store.get(username)
-    if not state:
-        raise HTTPException(404, "Ingen aktiv kampanj")
-    campaign_id = state["meta"].get("campaign_id", "")
-    lock = _state_lock(username, campaign_id)
-    async with lock:
-        fresh = store.get(username, campaign_id)
-        if fresh:
-            state = fresh
-
-        result = combat_player_attack(state, req.target_id, req.attack_roll, req.damage_notation)
-        if result.get("error"):
-            raise HTTPException(400, result["error"])
-
-        # Spara combat-state
-        store.save(state)
-
-        # Generera [COMBAT:]-tagg för frontend
-        combat = state.get("world", {}).get("combat")
-        tag = combat_tag_fn(combat) if combat else ""
-
-        return {
-            "ok": True,
-            "result": result,
-            "combat_tag": tag,
-            "combat": combat,
-        }
-
-
-@app.post("/api/combat/cast")
-async def combat_cast(req: CombatCastRequest, morkrets_token: str | None = Cookie(None)):
-    """Spelaren kastar en besvärjelse."""
-    payload = _get_current_user(morkrets_token)
-    username = payload["sub"]
-    state = store.get(username)
-    if not state:
-        raise HTTPException(404, "Ingen aktiv kampanj")
-    campaign_id = state["meta"].get("campaign_id", "")
-    lock = _state_lock(username, campaign_id)
-    async with lock:
-        fresh = store.get(username, campaign_id)
-        if fresh:
-            state = fresh
-
-        result = combat_player_cast(
-            state, req.target_id, req.spell_name,
-            req.attack_roll, req.save_dc, req.damage_notation, req.slot_level,
-        )
-        if not result.get("success"):
-            raise HTTPException(400, result.get("error", "Kast misslyckades"))
-
-        store.save(state)
-        combat = state.get("world", {}).get("combat")
-        return {"ok": True, "result": result, "combat": combat}
-
-
-@app.post("/api/combat/bonus")
-async def combat_bonus(req: dict, morkrets_token: str | None = Cookie(None)):
-    """Spelaren använder sin bonus action."""
-    payload = _get_current_user(morkrets_token)
-    username = payload["sub"]
-    state = store.get(username)
-    if not state:
-        raise HTTPException(404, "Ingen aktiv kampanj")
-    campaign_id = state["meta"].get("campaign_id", "")
-    lock = _state_lock(username, campaign_id)
-    async with lock:
-        fresh = store.get(username, campaign_id)
-        if fresh:
-            state = fresh
-
-        action_name = req.get("action", "Bonus action")
-        result = combat_bonus_action(state, action_name)
-        if not result.get("success"):
-            raise HTTPException(400, result.get("error", "Bonus action misslyckades"))
-
-        store.save(state)
-        combat = state.get("world", {}).get("combat")
-        return {"ok": True, "result": result, "combat": combat}
-
-
-@app.post("/api/combat/flee")
-async def combat_flee_endpoint(req: CombatFleeRequest, morkrets_token: str | None = Cookie(None)):
-    """Spelaren försöker fly från striden."""
-    payload = _get_current_user(morkrets_token)
-    username = payload["sub"]
-    state = store.get(username)
-    if not state:
-        raise HTTPException(404, "Ingen aktiv kampanj")
-    campaign_id = state["meta"].get("campaign_id", "")
-    lock = _state_lock(username, campaign_id)
-    async with lock:
-        fresh = store.get(username, campaign_id)
-        if fresh:
-            state = fresh
-
-        result = combat_flee(state, req.dex_check)
-        store.save(state)
-
-        combat = state.get("world", {}).get("combat")
-        return {"ok": True, "result": result, "combat": combat}
-
-
-@app.post("/api/combat/end-turn")
-async def combat_end_turn(morkrets_token: str | None = Cookie(None)):
-    """Spelaren avslutar sin tur → Battle AI kör alla fienders turer.
-
-    Detta är den centrala endpointen: efter att spelaren agerat (attack/cast/bonus)
-    anropas denna för att gå vidare i turordningen. Battle AI bestämmer fiendernas
-    handlingar och applicerar dem mekaniskt (attack mot AC, skada, status).
-    """
-    payload = _get_current_user(morkrets_token)
-    username = payload["sub"]
-    state = store.get(username)
-    if not state:
-        raise HTTPException(404, "Ingen aktiv kampanj")
-    campaign_id = state["meta"].get("campaign_id", "")
-    lock = _state_lock(username, campaign_id)
-    async with lock:
-        fresh = store.get(username, campaign_id)
-        if fresh:
-            state = fresh
-
-        combat = state.get("world", {}).get("combat")
-        if not combat or not combat.get("active"):
-            raise HTTPException(400, "Ingen aktiv strid")
-
-        lang = _get_lang(state)
-
-        # 1. Battle AI bestämmer fiendernas handlingar (legacy combat motor)
-        # Battle-AI är en intern bakgrundsuppgift (Guardian) — ingår i promptens turn (2026-08-08)
-        _battle_usage = {}
-        try:
-            enemy_actions = await battle_ai_decide(
-                state,
-                lambda msgs: _call_llm(_guardian_model_for(state), msgs, temperature=0.3, max_tokens=2048, usage_out=_battle_usage),
-                language=lang,
-            )
-        except Exception as e:
-            logger.warning("⚔️ Battle AI skipped: %s", e)
-            enemy_actions = []
-
-        # 2. Applicera fiendeaktioner mekaniskt
-        enemy_effects = apply_enemy_actions(state, enemy_actions)
-
-        # 3. Hoppa till nästa runda (alla fiender har agerat via Battle AI)
-        #    advance_turn stegar ett i taget — loopa tills det är spelarens tur igen
-        for _ in range(len(combat.get("turn_order", [])) + 1):
-            combat = combat_advance_turn(state)
-            if not combat.get("active"):
-                break
-            if is_player_turn(combat):
-                break
-
-        # 4. Spara
-        store.save(state)
-
-        # 5. Bygg Guardian-rapport för chatten
-        guardian_lines = []
-        en = lang == "en"
-        for fx in enemy_effects:
-            t = fx.get("type", "")
-            v = fx.get("value", "")
-            if t == "enemy_hit":
-                dmg = fx.get("damage", "?")
-                crit = fx.get("crit", False)
-                roll = fx.get("roll", "?")
-                d20 = fx.get("d20")
-                bonus = fx.get("bonus", 0)
-                drolls = fx.get("damage_rolls", [])
-                dnot = fx.get("damage_dice", "")
-                crit_str = " 💥 KRITISK!" if crit else ""
-                # Transparens: visa d20-slaget + skade-tärningarna så spelaren
-                # ser att fienden rullade riktiga tärningar (inte DM-fusk)
-                if d20 is not None:
-                    d20_str = f"🎲 d20={d20}+{bonus}={roll}"
-                else:
-                    d20_str = f"🎲 {roll}"
-                dmg_str = ""
-                if drolls:
-                    dmg_str = f" ({dnot}: [{', '.join(str(x) for x in drolls)}]={dmg})"
-                if en:
-                    guardian_lines.append(f"🗡️ **{v}** hits you — **{dmg} damage**{crit_str} — {d20_str}{dmg_str}")
-                else:
-                    guardian_lines.append(f"🗡️ **{v}** träffar dig — **{dmg} skada**{crit_str} — {d20_str}{dmg_str}")
-            elif t == "enemy_miss":
-                roll = fx.get("roll", "?")
-                d20 = fx.get("d20")
-                bonus = fx.get("bonus", 0)
-                if d20 is not None:
-                    roll_str = f"🎲 d20={d20}+{bonus}={roll}"
-                else:
-                    roll_str = f"🎲 {roll}"
-                if en:
-                    guardian_lines.append(f"🛡️ **{v}** misses you ({roll_str})")
-                else:
-                    guardian_lines.append(f"🛡️ **{v}** missar dig ({roll_str})")
-            elif t == "enemy_fled":
-                if en:
-                    guardian_lines.append(f"🏃 **{v}** flees!")
-                else:
-                    guardian_lines.append(f"🏃 **{v}** flyr!")
-            elif t == "combat_end":
-                if en:
-                    guardian_lines.append(f"🏁 **Combat over — {v}**")
-                else:
-                    guardian_lines.append(f"🏁 **Striden är över — {v}**")
-
-        # Lägg till combat-loggen (rundans händelser)
-        combat_log = combat.get("log", [])
-        recent_log = [l for l in combat_log if l.get("round") == combat.get("round", 1)][-6:]
-        for entry in recent_log:
-            actor = entry.get("actor", "")
-            name = entry.get("name", "")
-            text = entry.get("text", "")
-            if actor == "system":
-                guardian_lines.append(f"⚙️ {text}")
-            elif actor == "enemy":
-                guardian_lines.append(f"👹 **{name}** {text}")
-
-        # Bygg rapport
-        tag = combat_tag_fn(combat) if combat else ""
-        if guardian_lines:
-            header = "🛡️ **Guardian** · ⚔️ " + ("Enemy Turn" if en else "Fiendernas tur")
-            report = header + "\n" + "\n".join(guardian_lines)
-            if tag:
-                report += "\n" + tag
-        else:
-            report = tag or ""
-
-        # Spara i transkriptet
-        if report:
-            _battle_meta = {
-                "turn": state.get("meta", {}).get("turn_count", 0),
-                "combat_turn": True,
-            }
-            # Battle AI är en Guardian-modell — spara dess förbrukning så
-            # admin-stats räknar ALL Guardian-tokens (inte bara post-DM).
-            if _battle_usage.get("total_tokens"):
-                _battle_meta["tokens"] = _battle_usage
-            state = store.append_message(state, "guardian", report, meta=_battle_meta)
-            store.save(state)
-
-        return {
-            "ok": True,
-            "enemy_actions": enemy_actions,
-            "effects": enemy_effects,
-            "combat": combat,
-            "guardian_report": report,
-            "player_hp": state.get("character", {}).get("hp", {}),
-        }
-
-
-@app.get("/api/combat/state")
-async def combat_state(morkrets_token: str | None = Cookie(None)):
-    """Hämta aktuell stridsstate (för polling/refresh)."""
-    payload = _get_current_user(morkrets_token)
-    state = store.get(payload["sub"])
-    if not state:
-        raise HTTPException(404, "Ingen aktiv kampanj")
-
-    combat = state.get("world", {}).get("combat")
-    char = state.get("character", {})
-    return {
-        "combat": combat,
-        "player_hp": char.get("hp", {}),
-        "player_ac": char.get("ac", 10),
-        "spell_slots": char.get("spell_slots", {}),
-        "is_player_turn": is_player_turn(combat) if combat else False,
-        "current_actor": get_current_actor(combat) if combat else None,
     }
 
 
@@ -7577,7 +7176,6 @@ async def upload_attachment(
 
     att_id = uuid.uuid4().hex[:12]
     # Spara med säkert filnamn men behåll originalnamnet i metadata
-    safe_name = re.sub(r"[^\w.\-]", "_", fname)
     disk_name = f"{att_id}{ext}"
     (att_dir / disk_name).write_bytes(content)
 
@@ -8830,7 +8428,7 @@ async def export_campaign(morkrets_token: str | None = Cookie(None)):
         else:
             readme += "_Ingen karaktär skapad ännu._\n"
 
-        readme += f"\n## Värld\n"
+        readme += "\n## Värld\n"
         world = state.get("world", {})
         readme += f"- **Plats:** {world.get('current_location', 'Okänd')}\n"
         readme += f"- **Tid:** {world.get('time', 'Okänd')}\n"
@@ -9218,7 +8816,6 @@ async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
 
         # Seeda quest-chips: tilldela varje quest till den dag vars intervall
         # innehåller questens created_turn (eller completed_turn om slutförd)
-        active_set = ("aktiv", "active")
         done_ok = ("slutförd", "completed")
         for q in state.get("quests", []):
             qname = q.get("name", "?")

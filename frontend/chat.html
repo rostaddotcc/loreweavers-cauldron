@@ -3365,7 +3365,6 @@ function _tier() {
   if (s === 'premium') return 'tier2';
   return s;
 }
-function _tierIs(one, two) { const t = _tier(); return t === one || (two && t === two); }
 function _tierHasModels() { const t = _tier(); return t === 'tier2' || t === 'lifetime'; }
 function _tierHasAvatars() { const t = _tier(); return t !== 'free'; }
 
@@ -3747,7 +3746,6 @@ function rollDice(notation) {
   total += mod;
   return { rolls, total, count, sides, mod, notation };
 }
-
 
 
 // ═══════════════════════════════════════
@@ -4889,12 +4887,6 @@ function _feedTarget() {
 }
 
 // Formatera en stridslogg-entry till en läsbar statusrad
-function _formatCombatLogEntry(entry) {
-  if (!entry || !entry.text) return null;
-  const icon = entry.actor === 'player' ? '🗡️' : entry.actor === 'enemy' ? '⚔️' : entry.actor === 'ally' ? '🛡️' : '📜';
-  const who = entry.name ? entry.name + ': ' : '';
-  return `${icon} ${who}${entry.text}`;
-}
 
 // Live-aktivitet: rendera ENDAST senaste posten från maskinrummets logg —
 // ingen fluff-rotation. Inga nya poster → senaste raden ligger kvar.
@@ -7505,39 +7497,6 @@ function logout() {
 }
 
 // ── Spelarprofil-popup ──
-function toggleProfilePopup() {
-  const existing = document.getElementById('profile-popup');
-  if (existing) { existing.remove(); return; }
-  const d = profileData || {};
-  const tokens = d.total_tokens || 0;
-  const tokenStr = tokens >= 1000000 ? (tokens/1000000).toFixed(1) + 'M' : tokens >= 1000 ? (tokens/1000).toFixed(1) + 'K' : tokens;
-  const popup = document.createElement('div');
-  popup.id = 'profile-popup';
-  popup.style.cssText = 'position:fixed;top:48px;left:12px;z-index:9998;background:var(--stone-2);border:1px solid rgba(201,162,39,.35);padding:1.2rem 1.4rem;min-width:220px;animation:fadeIn .2s ease;box-shadow:0 8px 32px rgba(0,0,0,.6)';
-  popup.innerHTML = `
-    <div style="font-family:'Cinzel',serif;color:var(--gold-bright);font-size:.9rem;margin-bottom:.8rem;letter-spacing:.1em">👤 ${d.username || '—'}</div>
-    <div style="display:grid;grid-template-columns:auto 1fr;gap:.3rem .8rem;font-size:.75rem;color:var(--bone)">
-      <span style="color:var(--bone-dim)">Role</span><span>${d.role === 'admin' ? '👑 Admin' : '⚔️ Player'}</span>
-      <span style="color:var(--bone-dim)">Tier</span><span>${tierBadge(d.subscription_status)}</span>
-      <span style="color:var(--bone-dim)">Campaigns</span><span>${d.total_campaigns || 0}</span>
-      <span style="color:var(--bone-dim)">Turns</span><span>${d.turns_used || 0}</span>
-      <span style="color:var(--bone-dim)">Tokens</span><span>${tokenStr}</span>
-      ${d.created_at ? '<span style="color:var(--bone-dim)">Since</span><span>' + d.created_at.slice(0,10) + '</span>' : ''}
-    </div>
-    <div style="margin-top:.8rem;padding-top:.6rem;border-top:1px solid rgba(201,162,39,.15)">
-      <button onclick="logout()" style="background:none;border:1px solid rgba(212,58,77,.4);color:var(--blood);padding:.3rem .8rem;font-size:.7rem;cursor:pointer;font-family:'Courier New',monospace">🚪 Log out</button>
-    </div>`;
-  document.body.appendChild(popup);
-  // Stäng vid klick utanför
-  setTimeout(() => {
-    document.addEventListener('click', function closeProfile(e) {
-      if (!popup.contains(e.target) && e.target.id !== 'user-tag') {
-        popup.remove();
-        document.removeEventListener('click', closeProfile);
-      }
-    });
-  }, 10);
-}
 let toastTimer;
 function toast(msg) {
   const el = document.getElementById('toast');
@@ -7577,18 +7536,6 @@ function closeMobileSidebar() {
   const backdrop = document.getElementById('drawer-backdrop');
   if (backdrop) backdrop.classList.remove('open');
   document.body.style.overflow = '';
-}
-
-// Stäng ALLA overlays — anropas från mobile-nav "Chat"-knappen så
-// spelaren alltid kan komma tillbaka till chatten.
-function closeAllOverlays() {
-  closeMobileSidebar();
-  closeCodexIfOpen();
-  closeCharDrawerIfOpen();
-  closeItemModalIfOpen();
-  document.querySelectorAll('.sheet.open').forEach(s => closeSheet(s.id));
-  const chat = document.getElementById('chat');
-  if (chat) chat.scrollTop = chat.scrollHeight;
 }
 
 // Mobile-nav mittknapp: Codex toggle — öppna om stängd, stäng (tillbaka
@@ -7741,22 +7688,6 @@ function cdBadges(item) {
   return b;
 }
 
-function openCharDrawer() {
-  SFX.click();
-  closeMobileSidebar();
-  const drawer = document.getElementById('char-drawer');
-  if (!drawer) return;
-  document.getElementById('cd-title').textContent = '🧙 Character';
-  drawer.classList.add('open');
-  drawer.setAttribute('aria-hidden', 'false');
-  document.getElementById('cd-backdrop').classList.add('open');
-  _lockScroll();
-  renderCharDrawer();
-  // Färsk data från backend — drawer öppnas direkt med cachad state, uppdateras när svaret kommer
-  API.getCampaign().then(({ campaign }) => {
-    if (campaign) { campaignData = campaign; renderCharDrawer(); }
-  }).catch(() => {});
-}
 
 function closeCharDrawer() {
   const drawer = document.getElementById('char-drawer');
@@ -8052,9 +7983,6 @@ function openCodex(tabId, placeHash) {
 }
 
 // Öppna kartan på en specifik plats (klick från sidebarens locations-lista)
-function openMapAt(name) {
-  openCodex('map', '#' + encodeURIComponent(name || ''));
-}
 
 function closeCodex() {
   const overlay = document.getElementById('codex-modal');

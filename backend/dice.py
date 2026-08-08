@@ -4,7 +4,6 @@ The Lore Weaver's Cauldron — Tärningsmotor
 Parserar notation som '1d20+4', '2d6-1', '1d20'.
 """
 
-import random
 import secrets
 import re
 

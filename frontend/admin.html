@@ -858,9 +858,6 @@ function syncTierDuration(username) {
 }
 
 // Bakåtkompatibel wrapper: gamla knappar (premium = tier2)
-async function togglePremium(username, currentlyPremium, months) {
-  setTier(username, currentlyPremium ? 'free' : 'tier2', months);
-}
 
 // Snabb-grant: läser tier + längd ur radens selects (desktop- eller mobil-ID).
 function grantPremiumFromRow(username) {

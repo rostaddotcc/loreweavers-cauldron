@@ -9,7 +9,6 @@ Ingen riktig data rörs: users.json + kampanj-data + ip-store pekas om till tmp.
 """
 
 import sys
-import json
 from pathlib import Path
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -21,7 +20,6 @@ import pytest  # noqa: E402
 import auth  # noqa: E402
 import main  # noqa: E402
 import iplog  # noqa: E402
-from auth import create_token, hash_password  # noqa: E402
 
 
 @pytest.fixture(autouse=True)

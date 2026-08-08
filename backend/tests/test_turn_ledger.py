@@ -13,7 +13,6 @@ autouse-fixtures: ALLA tester pekar users.json + kampanjer + ledger mot tmp —
 ALDRIG riktig data.
 """
 import sys
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest

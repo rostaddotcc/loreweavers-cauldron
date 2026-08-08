@@ -26,7 +26,6 @@ Model id convention in the game: "orfree:<openrouter-id>"  e.g.
 "orfree:" into chat_free().
 """
 
-import asyncio
 import logging
 import os
 import time

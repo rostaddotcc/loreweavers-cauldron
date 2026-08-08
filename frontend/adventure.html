@@ -1280,30 +1280,7 @@ function showPanel(id) {
 // ═══════════════════════════════════════
 // NYTT ÄVENTYR — namnge och starta
 // ═══════════════════════════════════════
-function showNewAdventureForm() {
-  const el = document.getElementById('panel-newadventure');
-  if (activePanel === 'newadventure') { el.classList.remove('show'); activePanel = null; return; }
-  document.querySelectorAll('.expand').forEach(e => e.classList.remove('show'));
-  el.classList.add('show');
-  activePanel = 'newadventure';
-  el.scrollIntoView({ behavior:'smooth', block:'nearest' });
-  setTimeout(() => document.getElementById('adventure-name-input').focus(), 300);
-}
 
-async function startNewAdventure() {
-  SFX.click();
-  const name = document.getElementById('adventure-name-input').value.trim();
-  const lang = 'en'; // English-first default; the campaign language is chosen in newgame.html
-  try {
-    await API.createCampaign(name, lang);
-    sessionStorage.setItem('dnd_adventure_mode', 'freestyle');
-    toast(I18N.t('🎲 Dungeon Master förbereder en öppningsscen…'));
-    setTimeout(() => { location.href = 'newgame.html'; }, 800);
-  } catch (e) {
-    SFX.error();
-    toast('⚠ ' + (e.message || I18N.t('Kunde inte skapa kampanj')));
-  }
-}
 
 // ═══════════════════════════════════════
 // ONBOARDING-STEPPER (login-stil — smooth scroll per steg)
@@ -1610,9 +1587,6 @@ function renderAskHints() {
   });
 }
 
-function blankText() {
-  return (fwPromptText() || '');
-}
 
 function enableGen() {
   const b = document.getElementById('gen-btn');

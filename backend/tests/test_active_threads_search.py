@@ -1,6 +1,4 @@
 """Tester för ACTIVE THREADS + [SÖK:]-mekanismen (2026-08-07)."""
-import pytest
-
 from main import _parse_threads
 
 

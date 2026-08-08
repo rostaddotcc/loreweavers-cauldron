@@ -1,10 +1,11 @@
-"""Turn-ledger (2026-08-08) — strikt per-anrops-modell.
+"""Turn-ledger (2026-08-08) — 1 turn per prompt.
 
 Täcker:
-  - en chat-turn reserverar HELA pipelinen upp-front (dm + guardian_pre +
-    guardian_post; extraction bara på jämna turns) och bokför varje anrop
-    i turn-ledgern (backend/data/turn_ledgers/<user>.jsonl)
-  - ledger-åtgärder: dm/guardian_pre/guardian_post/extraction
+  - en chat-turn kostar EXAKT EN turn (action="dm"); Guardian pre/post,
+    faktaextraktion och alla bakgrundsanrop INGÅR i den turnen och bokförs
+    inte separat i turn-ledgern (backend/data/turn_ledgers/<user>.jsonl)
+  - ledger-åtgärder: dm (chat), image, tts, char_gen, search, repair,
+    chapter, logbook
   - admin-endpointen /api/admin/user/{username}/ledger returnerar posterna
   - bildgenerering bokför action=image
 
@@ -113,24 +114,25 @@ def _admin_token():
     return create_token("the_admin", "admin")
 
 
-def test_chat_reserves_full_pipeline_and_ledgers(client):
+def test_chat_consumes_one_turn_and_ledgers_dm(client):
     _register(client)
     _make_campaign("alice")
-    r = _chat(client)  # turn 1 = udda → ingen extraction
+    r = _chat(client)
     assert r.status_code == 200, r.text
-    assert _user()["promo_bonus"] == main.START_BONUS_TURNS - 3
+    # 1 turn per prompt: första turen äter PROMO (signup-300), inte cap-sloten.
+    assert _user()["promo_bonus"] == main.START_BONUS_TURNS - 1
     entries = main._read_turn_ledger("alice")
     actions = [e["action"] for e in entries]
-    assert actions == ["dm", "guardian_pre", "guardian_post"], actions
+    assert actions == ["dm"], actions
     for e in entries:
         assert e.get("ts") and e.get("model") == "step-3.7-flash"
 
 
-def test_ledger_records_extraction_on_even_turn(client):
+def test_ledger_records_one_dm_turn_even_on_even_turn(client):
     _register(client)
     _make_campaign("alice")
-    # Tvinga turn_count till ett udda nummer (9) så effective_turn (10) är
-    # jämnt → extraction är due i pipeline-reservationen.
+    # Jämn turn (effective_turn 10) — extraction/threads är due i pipelinen
+    # men INGÅR i meddelandets enda turn och bokförs inte separat.
     st = main.store.get("alice")
     assert st is not None
     st["meta"]["turn_count"] = 9
@@ -138,7 +140,7 @@ def test_ledger_records_extraction_on_even_turn(client):
     r = _chat(client)
     assert r.status_code == 200, r.text
     actions = [e["action"] for e in main._read_turn_ledger("alice")]
-    assert actions == ["dm", "guardian_pre", "guardian_post", "extraction"], actions
+    assert actions == ["dm"], actions
 
 
 def test_admin_ledger_endpoint(client):
@@ -149,9 +151,8 @@ def test_admin_ledger_endpoint(client):
     r = client.get("/api/admin/user/alice/ledger", cookies={"morkrets_token": atok})
     assert r.status_code == 200, r.text
     body = r.json()
-    assert len(body["entries"]) == 3
+    assert len(body["entries"]) == 1
     assert body["breakdown_all"]["dm"]["turns"] == 1
-    assert body["breakdown_all"]["guardian_post"]["turns"] == 1
     # Spelaren får ALDRIG se ledgern
     r2 = client.get("/api/admin/user/alice/ledger")
     assert r2.status_code in (401, 403)

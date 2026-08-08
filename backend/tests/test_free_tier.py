@@ -176,25 +176,23 @@ def test_turns_used_increments(client):
     r = _chat(client)
     assert r.status_code == 200, r.text
     # 2026-08-05 v3: första turen äter PROMO (signup-300), inte cap-sloten
-    # 2026-08-08 (strikt per-anrops-modell): ett meddelande = HELA pipelinen
-    # upp-front (dm + guardian_pre + guardian_post; extraction bara på jämna
-    # turns — turn 1 är udda → ingen extraction). = 3 turns.
+    # 2026-08-08 (1 turn per prompt): ett meddelande kostar EXAKT en turn —
+    # Guardian pre/post, extraction och alla bakgrundsanrop ingår i den.
     assert _user()["turns_used"] == 0
-    assert _user()["promo_bonus"] == main.START_BONUS_TURNS - 3
+    assert _user()["promo_bonus"] == main.START_BONUS_TURNS - 1
     # /api/me speglar period-räkningen
     me = client.get("/api/me")
     assert me.status_code == 200
     body = me.json()
-    assert body["promo_bonus"] == main.START_BONUS_TURNS - 3
-    assert body["turns_available"] == main.DEFAULT_TURN_CAP + main.START_BONUS_TURNS - 3
+    assert body["promo_bonus"] == main.START_BONUS_TURNS - 1
+    assert body["turns_available"] == main.DEFAULT_TURN_CAP + main.START_BONUS_TURNS - 1
 
 
 def test_cap_reached_403(client):
     _register(client)
     _make_campaign("alice")
-    # Strikt per-anrops-modell: en chat-turn kostar 3 turns (dm + guardian_pre
-    # + guardian_post). turn_cap=3 → ett meddelande, sedan 403.
-    _patch_user("alice", turn_cap=3, turn_bonus=0, promo_bonus=0)
+    # 1 turn per prompt: turn_cap=1 → ett meddelande, sedan 403.
+    _patch_user("alice", turn_cap=1, turn_bonus=0, promo_bonus=0)
     r1 = _chat(client)
     assert r1.status_code == 200, r1.text
     r2 = _chat(client)

@@ -217,7 +217,8 @@ def test_refresh_today_403_when_zero_turns(client):
 
 # ═══════════════ Active threads (post-turn-pipelinen, var 10:e tur) ═══════════════
 
-def test_threads_update_consumes_one_turn():
+def test_threads_update_is_free_and_saves_threads():
+    """Threads är en intern bakgrundsuppgift — INGÅR i meddelandets turn (gratis)."""
     _seed("alice")
     cid = _seed_campaign("alice")
     _append_transcript("alice", cid)
@@ -232,14 +233,14 @@ def test_threads_update_consumes_one_turn():
     ))
 
     users = auth.load_users()
-    assert users["alice"]["turns_used"] == 1  # threads-uppdateringen drog en turn
-    # Threads sparades i state
+    assert users["alice"]["turns_used"] == 0  # inga separata turns för threads
+    # Threads sparades ändå i state
     st = main.store.get("alice", cid)
     assert st["meta"].get("active_threads", [])[0]["name"] == "Hildas uppdrag"
 
 
-def test_threads_update_skipped_silently_at_zero_turns():
-    """Vid 0 turns skippas threads-uppdateringen tyst — pipelinen kastar aldrig."""
+def test_threads_update_runs_even_at_zero_turns():
+    """Threads är gratis internt — körs även vid 0 turns (kastar aldrig)."""
     _seed("alice", used=50)  # cap 50/50 → 0 kvar
     cid = _seed_campaign("alice")
     _append_transcript("alice", cid)
@@ -253,4 +254,4 @@ def test_threads_update_skipped_silently_at_zero_turns():
     users = auth.load_users()
     assert users["alice"]["turns_used"] == 50  # oförändrad — inget kast, ingen konsumtion
     st = main.store.get("alice", cid)
-    assert not st["meta"].get("active_threads")  # uppdateringen skippades
+    assert st["meta"].get("active_threads", [])[0]["name"] == "Tråd"  # kördes ändå

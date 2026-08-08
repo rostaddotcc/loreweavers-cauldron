@@ -504,6 +504,42 @@
 .ft-name{ font-family: var(--font-display,'Cinzel',serif); font-weight: 700; font-size: 0.88rem; color: var(--bone-bright); letter-spacing: 0.02em; }
 .ft-desc{ font-size: 0.87rem; font-style: italic; color: var(--bone-dim); margin-top: 0.4rem; line-height: 1.5; }
 #features-section .section-title{ margin-top: 1.8rem; }
+/* ═══════════ 5e-mekanik P2 — Resistances / Exhaustion / Training (2026-08-08) ═══════════ */
+.res-grid{ display: flex; flex-wrap: wrap; gap: 0.45rem; padding: 0.2rem 0 0.4rem; }
+.res-chip{
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-family: var(--font-display,'Cinzel',serif); font-size: 0.78rem; letter-spacing: 0.06em;
+  color: var(--bone-bright); background: var(--stone-2);
+  border: 1px solid var(--edge); border-radius: 999px; padding: 0.32rem 0.85rem;
+  box-shadow: inset 0 1px 0 rgba(239,226,192,0.06); transition: border-color 0.2s, box-shadow 0.2s;
+}
+.res-chip em{ font-style: normal; font-size: 0.64rem; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.9; }
+.res-chip.resistances{ border-color: color-mix(in srgb, var(--poison) 55%, transparent); }
+.res-chip.resistances em{ color: var(--poison); }
+.res-chip.immunities{ border-color: color-mix(in srgb, var(--gold) 60%, transparent); color: var(--gold-bright); text-shadow: 0 0 8px rgba(232,198,90,0.35); }
+.res-chip.immunities em{ color: var(--gold-bright); }
+.res-chip.vulnerabilities{ border-color: color-mix(in srgb, var(--blood) 60%, transparent); color: var(--blood-bright); }
+.res-chip.vulnerabilities em{ color: var(--blood-bright); }
+.exh-vital{ flex-wrap: wrap; }
+.exh-pips{ display: inline-flex; gap: 0.28rem; font-family: var(--font-body,'Spectral',serif); font-size: 1.05rem; letter-spacing: 0.05em; line-height: 1; }
+.exh-pip.on{ color: var(--blood-bright); text-shadow: 0 0 10px rgba(212,58,77,0.65); }
+.exh-pip.off{ color: color-mix(in srgb, var(--bone-dim) 45%, transparent); }
+.exh-text{ font-family: var(--font-display,'Cinzel',serif); font-size: 0.78rem; letter-spacing: 0.08em; color: var(--bone-dim); margin-top: 0.35rem; }
+.tr-list{ display: flex; flex-direction: column; gap: 0.7rem; padding: 0.2rem 0 0.4rem; }
+.tr-item{
+  padding: 0.7rem 0.95rem;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--gold) 7%, transparent), color-mix(in srgb, var(--gold) 2%, transparent));
+  border: 1px solid color-mix(in srgb, var(--gold) 28%, transparent); border-radius: 8px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.tr-item:hover{ border-color: color-mix(in srgb, var(--gold) 60%, transparent); transform: translateX(3px); }
+.tr-head{ display: flex; align-items: baseline; justify-content: space-between; gap: 0.8rem; margin-bottom: 0.5rem; }
+.tr-name{ font-family: var(--font-display,'Cinzel',serif); font-weight: 700; font-size: 0.88rem; color: var(--bone-bright); letter-spacing: 0.02em; }
+.tr-days{ font-family: var(--font-display,'Cinzel',serif); font-size: 0.74rem; letter-spacing: 0.1em; color: var(--gold-bright); font-variant-numeric: tabular-nums; text-shadow: 0 0 8px rgba(232,198,90,0.25); }
+.tr-track{ height: 6px; background: color-mix(in srgb, var(--stone-3) 80%, #000); border: 1px solid var(--edge); border-radius: 999px; overflow: hidden; }
+.tr-bar{ display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); border-radius: 999px; box-shadow: 0 0 10px -2px rgba(232,198,90,0.6); transition: width 0.3s; }
+#training-section .section-title{ margin-top: 1.8rem; }
+#resistances-section .section-title{ margin-top: 1.8rem; }
 
 </style>
 <link rel="stylesheet" href="snes.css?v=34">
@@ -604,6 +640,14 @@
           </div>
           <div class="trough"><div class="fill xp" id="xp-bar" style="width:0%"></div></div>
         </div>
+
+        <div class="vital wide exh-vital">
+          <div class="vital-head">
+            <span class="label">😮‍💨 Exhaustion</span>
+            <span class="exh-pips" id="exh-pips"></span>
+          </div>
+          <div class="exh-text" id="exh-text"></div>
+        </div>
       </div>
     </div>
 
@@ -631,6 +675,16 @@
     <div id="features-section" style="display:none">
       <div class="section-title">Features</div>
       <div class="ft-list" id="features"></div>
+    </div>
+
+    <div id="resistances-section" style="display:none">
+      <div class="section-title">Resistances</div>
+      <div class="res-grid" id="res-chips"></div>
+    </div>
+
+    <div id="training-section" style="display:none">
+      <div class="section-title">Training</div>
+      <div class="tr-list" id="training-list"></div>
     </div>
 
     <!-- ── BACKSTORY — genererad vid karaktärsskapande (read-only) ── -->
@@ -796,6 +850,10 @@ function renderAll() {
   renderInspiration();
   renderSkills();
   renderFeatures();
+  renderResistances();
+  renderExhaustion();
+  renderDarkvision();
+  renderTraining();
   renderInventory();
   renderSpells();
   renderCurrency();
@@ -1224,6 +1282,75 @@ function renderFeatures() {
     return `<div class="ft-item">
       ${lvl !== '' ? `<span class="ft-lvl">L${lvl}</span>` : ''}
       <b class="ft-name">${name}</b>${desc}
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// 5E-MEKANIK P2 — Resistances / Exhaustion / Darkvision / Training (2026-08-08)
+// ═══════════════════════════════════════
+const RESISTANCE_EMOJI = { fire:'🔥', cold:'❄️', acid:'🧪', poison:'☠️', lightning:'⚡', thunder:'🌩️', radiant:'☀️', necrotic:'💀', psychic:'🧠', force:'💥', bludgeoning:'🔨', piercing:'🗡️', slashing:'⚔️' };
+const RESISTANCE_SUFFIX = { immunities: 'Immune', resistances: 'Resistant', vulnerabilities: 'Vulnerable' };
+const EXHAUSTION_PENALTIES = ['', 'ability checks', 'speed halved', 'attacks + saves', 'HP max halved', 'speed 0', 'death'];
+
+function renderResistances() {
+  const section = document.getElementById('resistances-section');
+  const el = document.getElementById('res-chips');
+  if (!section || !el) return;
+  const c = state.character || {};
+  const chips = [];
+  ['immunities', 'resistances', 'vulnerabilities'].forEach(key => {
+    const arr = Array.isArray(c[key]) ? c[key] : [];
+    arr.forEach(t => {
+      const type = String(t == null ? '' : t).trim().toLowerCase();
+      if (type) chips.push({ type, key });
+    });
+  });
+  if (!chips.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  el.innerHTML = chips.map(g =>
+    `<span class="res-chip ${g.key}">${RESISTANCE_EMOJI[g.type] || '✦'} ${_esc(g.type)} <em>${RESISTANCE_SUFFIX[g.key]}</em></span>`
+  ).join('');
+}
+
+function renderExhaustion() {
+  const pips = document.getElementById('exh-pips');
+  const text = document.getElementById('exh-text');
+  if (!pips || !text) return;
+  const lvl = Math.max(0, Math.min(6, parseInt(state.character && state.character.exhaustion, 10) || 0));
+  let html = '';
+  for (let i = 0; i < 6; i++) html += `<span class="exh-pip ${i < lvl ? 'on' : 'off'}">${i < lvl ? '●' : '○'}</span>`;
+  pips.innerHTML = html;
+  text.textContent = EXHAUSTION_PENALTIES[lvl] ? 'L' + lvl + ' — ' + EXHAUSTION_PENALTIES[lvl] : '';
+}
+
+function renderDarkvision() {
+  const c = state.character || {};
+  const dv = c.darkvision ? String(c.darkvision).trim() : '';
+  const meta = document.querySelector('.char-meta');
+  if (!meta) return;
+  let stat = meta.querySelector('.dv-stat');
+  if (!stat) { stat = document.createElement('span'); stat.className = 'stat dv-stat'; meta.appendChild(stat); }
+  stat.innerHTML = '<i>DV</i><b>' + _esc(dv || 'None') + '</b>';
+}
+
+function renderTraining() {
+  const section = document.getElementById('training-section');
+  const el = document.getElementById('training-list');
+  if (!section || !el) return;
+  const training = Array.isArray(state.character && state.character.training) ? state.character.training : [];
+  if (!training.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  el.innerHTML = training.map(t => {
+    const spent = Math.max(0, parseInt(t && t.days_spent, 10) || 0);
+    const needed = Math.max(1, parseInt(t && t.days_needed, 10) || 10);
+    const pct = Math.min(100, Math.round((spent / needed) * 100));
+    return `<div class="tr-item">
+      <div class="tr-head">
+        <b class="tr-name">${_esc(t && t.name)}</b>
+        <span class="tr-days">${spent}/${needed} days</span>
+      </div>
+      <div class="tr-track"><div class="tr-bar" style="width:${pct}%"></div></div>
     </div>`;
   }).join('');
 }

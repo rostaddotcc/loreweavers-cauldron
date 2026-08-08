@@ -92,6 +92,7 @@ rättfärdigar ett slag. Om handlingen är rutin eller redan besluten → inget 
    - NACKDEL (rulla 2d20, ta sämsta): mörker/dåliga förhållanden, Dodge, mål dolt, distraktion, stress.
    Format: label slutar med "FÖRDEL" eller "NACKDEL" (t.ex. "SMIDIGHET (DC 14) FÖRDEL").
 8. När handlingen matchar en skill karaktären är skicklig i (proficient), inkludera proficiency-bonusen i notationen och använd skill-namnet som label (STEALTH, PERCEPTION, ATHLETICS…).
+9. Mörker (5e, P2): om scenen är mörk och karaktären SAKNAR darkvision (se kontext) → sätt NACKDEL på perception- och attackrullar. Med darkvision 60 ft → normala rullar i dunkel.
 
 ## Kontext — Viktigt!
 Du får se vad DM (Dungeon Master) nyss berättade. Använd detta för att förstå \
@@ -146,7 +147,8 @@ justify a roll. If the action is routine or already decided → no roll.
    - ADVANTAGE (roll 2d20, take best): help from an ally, hidden/sneaking, target is prone/blinded/restrained, higher ground.
    - DISADVANTAGE (roll 2d20, take worst): darkness/bad conditions, Dodge, target hidden, distraction, stress.
    Format: label ends with "ADVANTAGE" or "DISADVANTAGE" (e.g. "DEXTERITY (DC 14) ADVANTAGE").
-8. When the action matches a skill the character is proficient in, include the proficiency bonus in the notation and use the skill name as the label (STEALTH, PERCEPTION, ATHLETICS…).
+8. When the action maps to a skill the character is proficient in, include the proficiency bonus in the notation and use the skill name as the label (STEALTH, PERCEPTION, ATHLETICS…).
+9. Darkness (5e, P2): if the scene is dark and the character LACKS darkvision (see context) → set DISADVANTAGE on perception and attack rolls. With darkvision 60 ft → normal rolls in dim light.
 
 ## Context — Important!
 You will see what the DM (Dungeon Master) just narrated. Use this to understand \
@@ -313,6 +315,42 @@ def _format_char_context(state: dict, language: str = "sv") -> str:
                 f"{s.get('name', '?')} {bonus:+d} ({s.get('ability', '?')}){mark}"
             )
         parts.append("Skills: " + ", ".join(skill_parts))
+
+    # Resistans/sårbarhet/immunitet (5e, P2)
+    _res = ch.get("resistances") or []
+    _vul = ch.get("vulnerabilities") or []
+    _imm = ch.get("immunities") or []
+    if _res or _vul or _imm:
+        bits = []
+        if _res:
+            bits.append("resistant: " + ", ".join(str(x) for x in _res))
+        if _vul:
+            bits.append("vulnerable: " + ", ".join(str(x) for x in _vul))
+        if _imm:
+            bits.append("immune: " + ", ".join(str(x) for x in _imm))
+        parts.append("Damage: " + "; ".join(bits))
+
+    # Darkvision (5e, P2)
+    _dv = ch.get("darkvision")
+    if _dv:
+        parts.append(f"Darkvision: {_dv}")
+    else:
+        parts.append("Darkvision: none — darkness imposes DISADVANTAGE on perception/attack rolls")
+
+    # Exhaustion (5e, P2) — aktiva straff
+    _exh = int(ch.get("exhaustion", 0) or 0)
+    if _exh > 0:
+        pen = _EXHAUSTION_PENALTIES.get(_exh, "")
+        parts.append(f"⚠ EXHAUSTION level {_exh}: {pen}")
+
+    # Encumbrance (5e, P2) — aktiv belastning
+    _enc = ch.get("_encumb") or _encumbrance_level(ch, 0.0)
+    if _enc == "light":
+        parts.append("⚠ Encumbered (light): speed −10 ft, disadvantage on STR/DEX checks")
+    elif _enc == "heavy":
+        parts.append("⚠ Encumbered (heavy): speed −20 ft, disadvantage on STR/DEX/CON checks and attack rolls")
+    elif _enc == "overload":
+        parts.append("⚠ OVERLOADED: speed 0 — cannot move")
 
     return "\n".join(parts)
 
@@ -512,6 +550,15 @@ Extrahera ALLA mekaniska effekter och uppdateringar.
 - inspiration_gain: Sätt true när DM belönar heroiska/smarta/rollspelstarka handlingar — karaktären får inspiration (en gång åt gången).
 - inspiration_spend: Sätt true när spelaren spenderar sin inspiration för ADVANTAGE på ett kast. Används bara om karaktären faktiskt har inspiration.
 
+### Exhaustion (5e, P2)
+- exhaustion_change: heltal (positivt = öka, negativt = minska). Källa: svält, törst, iskyla, sömnbrist, överansträngning. Nivåer 1-6 (1=disadvantage på ability checks, 2=speed halverad, 3=disadvantage på attacker/saves, 4=HP max halverad, 5=speed 0, 6=död). Lång vila sänker automatiskt med 1 — ange INTE negativt vid vila.
+
+### Cover (5e, P2)
+- cover_set: När spelaren tar skydd — {"target": "player", "cover": "half"|"three_quarters"|"full"|null}. half = +2 AC mot attacker, three_quarters = +5 AC, full = kan inte träffas. KODEN lägger bonusen på fiendens träffchans — fyll INTE i AC själv.
+
+### Träning / Downtime (5e, P2)
+- training_update: lägg till dagar på downtime-träning — [{\"name\": \"Stealth\", \"days\": 2}]. När träningen når sitt mål (10 dagar för skills) ger KODEN proficiency automatiskt.
+
 ### Loggbok
 - logbook: En kort sammanfattning av vad som hände denna tur (max 2 meningar). \
 Skriv i dåtid, tredje person. T.ex. "Faelyndra smög förbi vakten och tog sig in i källaren."
@@ -614,6 +661,9 @@ Skriv i dåtid, tredje person. T.ex. "Faelyndra smög förbi vakten och tog sig 
   "spell_slots_spend": [],
   "inspiration_gain": false,
   "inspiration_spend": false,
+  "exhaustion_change": 0,
+  "cover_set": null,
+  "training_update": [],
   "corrections": []
 }
 
@@ -672,6 +722,25 @@ def _format_state_for_guardian(state: dict, language: str = "sv") -> str:
         parts.append(f"Bärvikt: {grand_total:.1f} / {max_w:.0f} lb ({pct}%)")
     else:
         parts.append(f"Bärvikt: {grand_total:.1f} lb")
+
+    # P2-kontext (5e): resistans, exhaustion, darkvision, träning, cover
+    _res = ch.get("resistances") or []
+    _vul = ch.get("vulnerabilities") or []
+    _imm = ch.get("immunities") or []
+    if _res or _vul or _imm:
+        parts.append(f"Damage: R[{', '.join(str(x) for x in _res)}] V[{', '.join(str(x) for x in _vul)}] I[{', '.join(str(x) for x in _imm)}]")
+    _exh = int(ch.get("exhaustion", 0) or 0)
+    if _exh > 0:
+        parts.append(f"Exhaustion: L{_exh} ({_EXHAUSTION_PENALTIES.get(_exh, '')})")
+    if ch.get("darkvision"):
+        parts.append(f"Darkvision: {ch['darkvision']}")
+    training = ch.get("training") or []
+    if training:
+        parts.append("Training: " + ", ".join(f"{t.get('name','?')} {t.get('days_spent',0)}/{t.get('days_needed',10)}d" for t in training[:5]))
+    _combat2 = state.get("world", {}).get("combat")
+    if _combat2 and _combat2.get("player_cover"):
+        _cv_label = {"half": "+2 AC", "three_quarters": "+5 AC", "full": "untargetable"}.get(_combat2["player_cover"], _combat2["player_cover"])
+        parts.append(f"Cover: {_combat2['player_cover']} ({_cv_label})")
 
     # Currency
     if any(cur.get(d, 0) for d in ("pp", "gp", "sp", "cp")):
@@ -847,6 +916,7 @@ async def guardian_extract_mechanics(
         "player_attacks": [], "ally_attacks": [], "ally_damage": [], "enemy_attacks": [], "combat_events": [],
         "enemy_actions": [], "status_apply": [], "roll_grants": [], "corrections": [],
         "spell_slots_spend": [], "inspiration_gain": False, "inspiration_spend": False,
+        "exhaustion_change": 0, "cover_set": None, "training_update": [],
     }
 
     for attempt in range(2):
@@ -1079,6 +1149,55 @@ _CLASS_FEATURES = {
         10: [("Tradition Feature", "Gain a new ability from your arcane tradition.")],
     },
 }
+
+
+# Exhaustion-straff per nivå (5e) — för _format_char_context/_apply_exhaustion_effects
+_EXHAUSTION_PENALTIES = {
+    1: "disadvantage on ability checks",
+    2: "speed halved",
+    3: "disadvantage on attack rolls and saving throws",
+    4: "hit point maximum halved",
+    5: "speed 0",
+    6: "death",
+}
+
+
+def _apply_exhaustion_effects(ch: dict, level: int, effects: list) -> None:
+    """5e exhaustion L4+: halvera hp.max (spara max_full), återställ vid <L4."""
+    hp = ch.setdefault("hp", {"current": 1, "max": 1, "temp": 0})
+    if level >= 4:
+        if not hp.get("max_full"):
+            hp["max_full"] = int(hp.get("max", 1) or 1)
+            hp["max"] = max(1, hp["max_full"] // 2)
+            hp["current"] = min(hp.get("current", 0), hp["max"])
+            effects.append({"type": "exhaustion_hp_halved", "max": hp["max"]})
+            logger.info("🥀 Exhaustion L%d: HP max halved → %d", level, hp["max"])
+    elif hp.get("max_full"):
+        hp["max"] = int(hp["max_full"])
+        hp.pop("max_full", None)
+        effects.append({"type": "exhaustion_recovered", "max": hp["max"]})
+        logger.info("🍃 Exhaustion below L4: HP max restored → %d", hp["max"])
+
+
+def _grant_skill_proficiency(ch: dict, skill_name: str) -> None:
+    """Sätt proficient=true på en standard-skill (downtime-träning klar)."""
+    for s in _ensure_skills(ch):
+        if str(s.get("name", "")).lower() == skill_name.lower():
+            s["proficient"] = True
+            ch.setdefault("skills", _ensure_skills(ch))
+            return
+
+
+def _encumbrance_level(ch: dict, total_weight: float) -> str:
+    """5e variant-encumbrance: none/light/heavy/overload mot 5×/10×/15× STR."""
+    str_score = int((ch.get("abilities", {}).get("STR") or {}).get("score", 10) or 10)
+    if total_weight > str_score * 15:
+        return "overload"
+    if total_weight > str_score * 10:
+        return "heavy"
+    if total_weight > str_score * 5:
+        return "light"
+    return "none"
 
 
 def _grant_class_features(ch: dict, new_level: int, effects: list) -> None:
@@ -1392,9 +1511,34 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
         _skip_keys = {k for k in _skip_keys if k[0] != "skada"}
 
     # ── Skada ──
+    from combat import damage_multiplier
     for dmg in mech.get("damage", []):
         target = dmg.get("target", "player")
         amount = max(0, int(dmg.get("amount", 0)))
+        if amount <= 0:
+            continue
+        # 5e resistans/sårbarhet/immunitet (P2): applicera på rätt entity.
+        _dtype = str(dmg.get("type", "") or "")
+        if target == "player":
+            _mult = damage_multiplier(_dtype, ch)
+        else:
+            combat = state.get("world", {}).get("combat")
+            _enemy = None
+            if combat and combat.get("active"):
+                _enemy = next(
+                    (e for e in combat.get("enemies", [])
+                     if e.get("name", "").lower() == str(target).lower() and e.get("alive", True)),
+                    None,
+                )
+            _mult = damage_multiplier(_dtype, _enemy) if _enemy is not None else 1.0
+        if _mult != 1.0:
+            _orig = amount
+            amount = int(amount * _mult)
+            effects.append({
+                "type": "damage_type_mod", "target": target, "damage_type": _dtype or "unknown",
+                "mult": _mult, "original": _orig, "amount": amount,
+            })
+            logger.info("🛡️ Damage type %s on %s → ×%s (%d → %d)", _dtype or "?", target, _mult, _orig, amount)
         if amount <= 0:
             continue
         # Chat-first strid: DM-närrerad spelarskada som koden redan rullar
@@ -1535,6 +1679,8 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 _hd = _HD_BY_CLASS.get(_cls, 8)
                 hp_gain = max(1, _hd // 2 + con_mod)
                 hp["max"] = hp.get("max", 1) + hp_gain
+                if hp.get("max_full"):
+                    hp["max_full"] = hp["max_full"] + hp_gain
                 hp["current"] = hp["max"]  # Full HP vid level-up
                 _grant_class_features(ch, ch["level"], effects)
                 effects.append({"type": "level_up", "value": ch["level"]})
@@ -1661,6 +1807,18 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             effects.append({"type": "guld", "value": amount, "denom": denom})
             logger.info("🛡️ Guardian: %+d %s → %d", amount, denom, cur[denom])
 
+    # ── Encumbrance (5e, P2) — variantregel: 5×/10×/15× STR ──
+    _inv_w = sum(float(it.get("weight", 0) or 0) * int(it.get("qty", 1) or 1) for it in state.get("inventory", []))
+    _coin_total = sum(int(cur.get(k, 0) or 0) for k in ("pp", "gp", "sp", "cp"))
+    _total_w = _inv_w + _coin_total / 50.0  # 5e: 50 mynt = 1 lb
+    _enc_level = _encumbrance_level(ch, _total_w)
+    _old_enc = ch.setdefault("_encumb", "none")
+    if _enc_level != _old_enc:
+        ch["_encumb"] = _enc_level
+        effects.append({"type": "encumbrance", "level": _enc_level, "weight": round(_total_w, 1)})
+        if _enc_level != "none":
+            logger.info("🛡️ Encumbrance: %s (%.1f lb)", _enc_level, _total_w)
+
     # ── Quests ──
     quests = state.setdefault("quests", [])
 
@@ -1754,6 +1912,8 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                     _hd = _HD_BY_CLASS.get(_cls, 8)
                     hp_gain = max(1, _hd // 2 + con_mod)
                     hp["max"] = hp.get("max", 1) + hp_gain
+                    if hp.get("max_full"):
+                        hp["max_full"] = hp["max_full"] + hp_gain
                     hp["current"] = hp["max"]
                     _grant_class_features(ch, ch["level"], effects)
                     effects.append({"type": "level_up", "value": ch["level"]})
@@ -2001,6 +2161,13 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             ss = ch.setdefault("spell_slots", {"current": 0, "max": 0})
             ss["current"] = ss.get("max", 0)
             hd["remaining"] = hd.get("total", 1)
+            # Exhaustion (5e, P2): lång vila sänker 1 nivå
+            _exh = int(ch.get("exhaustion", 0) or 0)
+            if _exh > 0:
+                ch["exhaustion"] = _exh - 1
+                _apply_exhaustion_effects(ch, _exh - 1, effects)
+                effects.append({"type": "exhaustion", "level": _exh - 1, "source": "long_rest"})
+                logger.info("🍃 LONG REST → exhaustion %d → %d", _exh, _exh - 1)
             effects.append({"type": "hela", "value": hp.get("current", 0)})
             logger.info("🛡️ Guardian: LONG REST → full HP + spell slots + hit dice restored")
         else:
@@ -2091,6 +2258,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 world["combat"] = {
                     "active": True, "round": 1, "initiative": [],
                     "enemies": enemies, "log": [],
+                    "player_cover": None,
                     "started_turn": state.get("meta", {}).get("turn_count", 0),
                     "ended_turn": None,
                 }
@@ -2133,6 +2301,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
         reason = (ce.get("reason") or "striden avslutades") if isinstance(ce, dict) else str(ce)
         combat["active"] = False
         combat["ended_turn"] = state.get("meta", {}).get("turn_count", 0)
+        combat["player_cover"] = None  # cover upphör när striden slutar
         combat.setdefault("log", []).append({
             "round": combat.get("round", 1), "actor": "system", "name": "", "text": f"Striden avslutades — {reason}",
         })
@@ -2236,7 +2405,15 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             )
             # Fiendens stats från combat (fallback: attackeraren finns inte i listan → använd DM:s angivna hit/damage om de finns)
             if enemy is not None:
-                from combat import roll_d20, roll_dice as _roll_dice, has_disadvantage
+                from combat import roll_d20, roll_dice as _roll_dice, has_disadvantage, damage_multiplier
+
+                # Cover (5e, P2): combat.player_cover → AC-bonus mot fiendeträffar
+                _player_cover = combat.get("player_cover")
+                cover_bonus = 2 if _player_cover == "half" else 5 if _player_cover == "three_quarters" else 0
+                if _player_cover == "full":
+                    combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": "cannot hit you — behind full cover"})
+                    effects.append({"type": "enemy_miss", "value": attacker_name, "roll": 0, "d20": 0, "bonus": 0, "reason": "full_cover"})
+                    continue
 
                 d20 = roll_d20()
                 # Disadvantage (5e, 2026-08-08): status med attack_disadvantage
@@ -2251,8 +2428,8 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                     combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": "misses you (natural 1!)"})
                     effects.append({"type": "enemy_miss", "value": attacker_name, "roll": total, "d20": d20, "bonus": attack_bonus})
                     continue
-                if total < player_ac and not crit:
-                    combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"misses you (🎲 d20={d20}+{attack_bonus}={total} vs AC {player_ac})"})
+                if total < player_ac + cover_bonus and not crit:
+                    combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"misses you (🎲 d20={d20}+{attack_bonus}={total} vs AC {player_ac}{'+' + str(cover_bonus) if cover_bonus else ''})"})
                     effects.append({"type": "enemy_miss", "value": attacker_name, "roll": total, "d20": d20, "bonus": attack_bonus})
                     continue
                 # Träff → rulla skadan (fiendens damage_dice, fallback 1d6+1)
@@ -2263,6 +2440,18 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                     dmg += dmg2
                     rolls += rolls2
                 dmg = max(1, dmg)
+                # 5e resistans/sårbarhet (P2): spelarens damage-type-modifierare
+                dmg_type = str(atk.get("damage_type") or enemy.get("damage_type") or "")
+                if dmg_type:
+                    _dmult = damage_multiplier(dmg_type, ch)
+                    if _dmult != 1.0:
+                        dmg = int(dmg * _dmult)
+                        effects.append({"type": "damage_type_mod", "target": "player", "damage_type": dmg_type, "mult": _dmult, "amount": dmg})
+                        logger.info("🛡️ Player %s-resistance vs %s → ×%s → %d dmg", dmg_type, attacker_name, _dmult, dmg)
+                if dmg <= 0:
+                    combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"hits you — but you are immune to {dmg_type} damage"})
+                    effects.append({"type": "enemy_hit", "value": attacker_name, "damage": 0, "crit": crit, "roll": total, "d20": d20, "bonus": attack_bonus, "immune": dmg_type})
+                    continue
                 # P0-dedup: [SKADA:]-taggen applicerade redan samma skada
                 if ("skada", str(dmg)) in _skip_keys:
                     continue
@@ -2273,10 +2462,9 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                     dmg -= absorbed
                 hp["current"] = max(0, hp.get("current", 1) - dmg)
                 crit_str = " 💥 KRITISK!" if crit else ""
-                dmg_type = atk.get("damage_type") or enemy.get("damage_type", "okänd")
                 combat_log.append({
                     "round": current_round, "actor": "enemy", "name": attacker_name,
-                    "text": f"hits you — {dmg} damage ({dmg_type}){crit_str} (🎲 d20={d20}+{attack_bonus}={total} · {dmg_notation}: [{', '.join(str(x) for x in rolls)}]={dmg}) → **{ch.get('name', 'Player')} {hp['current']}/{hp['max']} HP**",
+                    "text": f"hits you — {dmg} damage ({dmg_type or 'unknown'}){crit_str} (🎲 d20={d20}+{attack_bonus}={total} · {dmg_notation}: [{', '.join(str(x) for x in rolls)}]={dmg}) → **{ch.get('name', 'Player')} {hp['current']}/{hp['max']} HP**",
                 })
                 effects.append({
                     "type": "enemy_hit", "value": attacker_name, "damage": dmg, "crit": crit,
@@ -2437,6 +2625,68 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
         else:
             logger.info("⛔ Inspiration spend ignored — character has no inspiration")
 
+    # ── Exhaustion (5e, P2) ──
+    _exh_change = int(mech.get("exhaustion_change", 0) or 0)
+    if _exh_change:
+        old_exh = int(ch.get("exhaustion", 0) or 0)
+        new_exh = max(0, min(6, old_exh + _exh_change))
+        if new_exh != old_exh:
+            ch["exhaustion"] = new_exh
+            effects.append({"type": "exhaustion", "level": new_exh})
+            logger.info("🥀 Exhaustion %d → %d (%+d)", old_exh, new_exh, _exh_change)
+            _apply_exhaustion_effects(ch, new_exh, effects)
+            if new_exh >= 6:
+                hp = ch.setdefault("hp", {"current": 0, "max": 1, "temp": 0})
+                hp["current"] = 0
+                effects.append({"type": "death", "value": "exhaustion"})
+                logger.warning("💀 Character died of exhaustion (level 6)")
+
+    # ── Cover (5e, P2) — bara spelaren (fiendens cover är narrativ/prompt-styrt) ──
+    _cs = mech.get("cover_set")
+    if _cs is not None and isinstance(_cs, dict):
+        _cov = _cs.get("cover")
+        _target = str(_cs.get("target", "player") or "player")
+        if _target == "player":
+            combat_state = state.get("world", {}).get("combat")
+            if combat_state is not None:
+                if _cov in ("half", "three_quarters", "full", None):
+                    combat_state["player_cover"] = _cov
+                    effects.append({"type": "cover_set", "cover": _cov})
+                    logger.info("🛡️ Cover set for player: %s", _cov or "none")
+
+    # ── Träning / Downtime (5e, P2) ──
+    for tr in mech.get("training_update", []):
+        if not isinstance(tr, dict):
+            continue
+        tname = str(tr.get("name", "")).strip()
+        try:
+            tdays = max(0, int(tr.get("days", 0) or 0))
+        except (TypeError, ValueError):
+            tdays = 0
+        if not tname or tdays <= 0:
+            continue
+        training = ch.setdefault("training", [])
+        if not isinstance(training, list):
+            training = []
+            ch["training"] = training
+        entry = next((e for e in training if str(e.get("name", "")).lower() == tname.lower()), None)
+        if entry is None:
+            # Ny träning — bara för standard-skills (koden ger proficiency)
+            if any(str(s.get("name", "")).lower() == tname.lower() for s in _ensure_skills(ch)):
+                entry = {"name": tname, "days_spent": 0, "days_needed": 10, "skill": tname}
+                training.append(entry)
+            else:
+                logger.info("🎓 Training ignored (not a standard skill): %s", tname)
+                continue
+        entry["days_spent"] = int(entry.get("days_spent", 0) or 0) + tdays
+        logger.info("🎓 Training %s: %d/%d days", tname, entry["days_spent"], entry.get("days_needed", 10))
+        effects.append({"type": "training_progress", "name": tname, "days": entry["days_spent"]})
+        if entry["days_spent"] >= int(entry.get("days_needed", 10) or 10):
+            _grant_skill_proficiency(ch, tname)
+            effects.append({"type": "training_complete", "skill": tname})
+            logger.info("🎓 Training COMPLETE — %s now proficient", tname)
+            training.remove(entry)
+
     # ── Korrigeringar ──
     for corr in mech.get("corrections", []):
         field = corr.get("field", "")
@@ -2549,7 +2799,7 @@ def _sanitize_mechanics(mech: dict) -> dict:
                 "world_lore", "roll_grants", "corrections",
                 "initiative_entries", "enemy_actions", "status_apply",
                 "player_attacks", "ally_attacks", "ally_damage", "enemy_attacks", "combat_events",
-                "spell_slots_spend"):
+                "spell_slots_spend", "training_update"):
         if not isinstance(mech.get(key), list):
             mech[key] = []
 
@@ -2557,6 +2807,21 @@ def _sanitize_mechanics(mech: dict) -> dict:
     for _ik in ("inspiration_gain", "inspiration_spend"):
         if not isinstance(mech.get(_ik), bool):
             mech[_ik] = bool(mech.get(_ik))
+
+    # exhaustion_change ska vara int (clamp 0-6-växling hanteras i apply_mechanics)
+    try:
+        mech["exhaustion_change"] = int(mech.get("exhaustion_change", 0))
+    except (TypeError, ValueError):
+        mech["exhaustion_change"] = 0
+
+    # cover_set ska vara dict {"target","cover"} eller null
+    _cs = mech.get("cover_set")
+    if _cs is not None and not isinstance(_cs, dict):
+        mech["cover_set"] = None
+    elif isinstance(_cs, dict):
+        _cov = _cs.get("cover")
+        if _cov not in ("half", "three_quarters", "full", None):
+            mech["cover_set"] = None
 
     # XP ska vara int
     try:
@@ -2763,7 +3028,7 @@ def apply_enemy_actions(state: dict, actions: list[dict]) -> list[dict]:
 
     Returnerar effects-lista för frontend.
     """
-    from combat import roll_dice, roll_d20, has_disadvantage
+    from combat import roll_dice, roll_d20, has_disadvantage, damage_multiplier
 
     combat = state.get("world", {}).get("combat")
     if not combat or not combat.get("active"):
@@ -2772,6 +3037,9 @@ def apply_enemy_actions(state: dict, actions: list[dict]) -> list[dict]:
     char = state.get("character", {})
     player_ac = int(char.get("ac", 10))
     player_name = char.get("name", "Spelaren")
+    # Cover (5e, P2): combat.player_cover → AC-bonus
+    _player_cover = combat.get("player_cover")
+    cover_bonus = 2 if _player_cover == "half" else 5 if _player_cover == "three_quarters" else 0
     effects: list[dict] = []
 
     for action in actions:
@@ -2796,6 +3064,14 @@ def apply_enemy_actions(state: dict, actions: list[dict]) -> list[dict]:
             continue
 
         if action_type in ("attack", "spell", "ability"):
+            # Full cover → kan inte träffas
+            if _player_cover == "full":
+                combat.setdefault("log", []).append({
+                    "round": combat.get("round", 1), "actor": "enemy",
+                    "name": enemy["name"], "text": "cannot hit — player behind full cover",
+                })
+                effects.append({"type": "enemy_miss", "value": enemy["name"], "roll": 0, "d20": 0, "bonus": 0, "reason": "full_cover"})
+                continue
             # Rulla attack mot spelarens AC
             d20 = roll_d20()
             disadv = has_disadvantage(enemy)
@@ -2804,7 +3080,7 @@ def apply_enemy_actions(state: dict, actions: list[dict]) -> list[dict]:
 
             attack_bonus = int(action.get("attack_bonus", enemy.get("attack_bonus", 3)))
             total = d20 + attack_bonus
-            hit = total >= player_ac or d20 == 20
+            hit = total >= player_ac + cover_bonus or d20 == 20
             crit = d20 == 20
             fumble = d20 == 1
 

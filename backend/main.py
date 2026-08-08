@@ -239,6 +239,14 @@ from combat import (
     add_allies as combat_add_allies,
     build_combat_context,
 )
+
+# P2: combat.damage_multiplier(type, entity) applies resistances/vulnerabilities/
+# immunities. Added by the engine workstream — import defensively so main.py
+# works both before and after it lands (None → multiplier skipped = 1.0).
+try:
+    from combat import damage_multiplier as combat_damage_multiplier
+except ImportError:
+    combat_damage_multiplier = None
 import iplog
 
 app = FastAPI(title="The Lore Weaver's Cauldron", version="1.0.0")
@@ -500,7 +508,7 @@ def _parse_roll_requests(text: str) -> tuple[str, list[dict]]:
 
 # Regex-mönster för mekaniska taggar
 _MECH_PATTERNS = {
-    'SKADA':           re.compile(r'\[SKADA:(\d+)\]'),
+    'SKADA':           re.compile(r'\[SKADA:(\d+)(?::([a-z]+))?\]'),
     'HELA':            re.compile(r'\[HELA:(\d+)\]'),
     'XP':              re.compile(r'\[XP:(\d+)\]'),
     'GULD':            re.compile(r'\[GULD:(-?\d+)\]'),
@@ -611,10 +619,16 @@ def _parse_mechanical_tags(text: str, state: dict) -> tuple[str, dict, list[dict
     """
     effects: list[dict] = []
 
-    # SKADA — minska HP
+    # SKADA — minska HP. P2: [SKADA:12:fire] respekterar resistanser/
+    # sårbarheter via combat.damage_multiplier (typ-lowercase). Ingen typ →
+    # oförändrad skada (mult 1.0). effect 'skada' behåller value=amount
+    # efter modifiering.
     for m in _MECH_PATTERNS['SKADA'].finditer(text):
         amount = int(m.group(1))
+        dmg_type = (m.group(2) or '').strip().lower() or None
         char = state.setdefault('character', {})
+        if dmg_type and combat_damage_multiplier is not None:
+            amount = int(amount * combat_damage_multiplier(dmg_type, char))
         hp = char.setdefault('hp', {'current': 10, 'max': 10, 'temp': 0})
         hp['current'] = max(0, hp.get('current', 0) - amount)
         effects.append({'type': 'skada', 'value': amount})
@@ -4142,6 +4156,40 @@ def compact_state(state: dict, language: str = "sv") -> str:
 
     lines = [f"{name}, {klass} niv {level}. HP {hp_cur}/{hp_max}. AC {ac}. Plånbok: {wallet}. Myntvikt: {coin_wt} lb."]
 
+    # Darkvision (P2) — egen rad: "Darkvision: 60 ft" / "Darkvision: Ingen".
+    _dv = char.get("darkvision")
+    lines.append(f"Darkvision: {_dv}" if _dv else ("Darkvision: Ingen" if language != "en" else "Darkvision: None"))
+
+    # Resistanser/sårbarheter (P2) — bara om icke-tomma.
+    res = [r for r in (char.get("resistances", []) or []) if r]
+    if res:
+        lines.append(("Resistanser: " if language != "en" else "Resistances: ") + ", ".join(res))
+
+    # Exhaustion (P2) — "Exhaustion: L2 — speed halverad" vid nivå > 0.
+    exh = int(char.get("exhaustion", 0) or 0)
+    if exh > 0:
+        _EXH_PEN = (
+            {1: "disadvantage ability checks", 2: "speed halved", 3: "disadvantage attacks/saves",
+             4: "HP max halved", 5: "speed 0", 6: "death"}
+            if language == "en" else
+            {1: "ability checks med nackdel", 2: "speed halverad", 3: "attacks/saves med nackdel",
+             4: "HP max halverad", 5: "speed 0", 6: "död"}
+        )
+        lines.append(f"Exhaustion: L{exh} — {_EXH_PEN.get(exh, '')}")
+    else:
+        lines.append("Exhaustion: 0")
+
+    # Träning (P2) — "Träning: Stealth 4/10 dagar" om pågående.
+    training = char.get("training", []) or []
+    if training:
+        tr_parts = []
+        for t in training[:10]:
+            if isinstance(t, dict) and t.get("name"):
+                _dn = t.get("days_needed", 10) or 10
+                tr_parts.append(f"{t.get('name')} {t.get('days_spent', 0) or 0}/{_dn}{' dagar' if language != 'en' else ' days'}")
+        if tr_parts:
+            lines.append(("Träning: " if language != "en" else "Training: ") + ", ".join(tr_parts))
+
     # Bakgrund / backstory
     background = char.get("background", "")
     if background:
@@ -4269,6 +4317,12 @@ def compact_state(state: dict, language: str = "sv") -> str:
                 lines.append(f"  Tillgängliga: {', '.join(avail)}")
             if spent:
                 lines.append(f"  Förbrukade: {', '.join(spent)}")
+        # Cover (P2) — combat.player_cover: half / three_quarters / full.
+        pcover = combat.get("player_cover")
+        if pcover:
+            _CB = {"half": "+2 AC", "three_quarters": "+5 AC", "full": "cannot be hit"}
+            _cb = _CB.get(pcover, "")
+            lines.append(f"  Cover: {pcover}{f' ({_cb})' if _cb else ''}")
 
     # Aktiva uppdrag
     active_quests = [q.get("name", "?") for q in state.get("quests", []) if q.get("status") == "aktiv"]
@@ -5063,7 +5117,8 @@ async def _guardian_post_dm(
     förlita sig på store.get(username) (aktiv kampanj kan ha bytts).
 
     skip_effects: effekter som REDAN applicerats denna tur via DM-taggar
-    (t.ex. [SKADA:12]) — Guardian ska inte applicera dem en andra gång.
+    (t.ex. [SKADA:12] eller [SKADA:12:fire]) — Guardian ska inte applicera
+    dem en andra gång.
     (P0-dedup: se combat-spec B2.)
     """
     key = (username, campaign_id)
@@ -6186,6 +6241,12 @@ Svara ENDAST med giltig JSON (ingen markdown) med detta schema:
   "skills": [{"name": "string — standard-5e-skill (Athletics, Acrobatics, Stealth, Perception, Arcana, Persuasion…)", "ability": "STR|DEX|INT|WIS|CHA", "proficient": true}],  // ALLA 18 skills; proficient=true ENDAST på 2-4 klass-/bakgrundsrelevanta. Bonuses beräknas av systemet (ability-mod + proficiency).
   "features": [{"name": "string", "level": 1, "description": "string — kort beskrivning av klass-/rasförmågan"}],  // klassens start-förmågor (t.ex. Rage, Sneak Attack, Spellcasting, Fighting Style, Second Wind) + ras-förmågor
   "inspiration": false,
+  "resistances": ["fire"],           // ras-/klassbaserat — tom lista om inga
+  "vulnerabilities": [],             // ras-/blodslinjebaserat — tom lista om inga
+  "immunities": [],                  // tom lista om inga
+  "darkvision": "60 ft|null",        // rasbaserat: elf/drow 60 ft, dvärg 0 (null)
+  "exhaustion": 0,                   // 0-6 (5e-utmattning)
+  "training": [],                    // [{name, days_spent, days_needed, skill}] — tom om ingen
   "gear": "string — startutrustning, 5-8 föremål separerade med ' · '",
   "story": "string — bakgrundshistoria, max 100 ord, mörk och stämningsfull",
   "inventory": [
@@ -6197,6 +6258,8 @@ Svara ENDAST med giltig JSON (ingen markdown) med detta schema:
 - ac = 10 + DEX-mod (+ rustning om utrustad) — beräkna från abilities
 - initiative = DEX-mod
 - perception = 10 + WIS-mod
+- resistances/vulnerabilities/immunities = ras-/klassbaserat: dvärg = poison-resistans, tiefling = fire-resistans, elf/drow = darkvision 60 ft, undead/blodslinje = sårbarheter. Tomma arrayer om inga.
+- darkvision = rasbaserat: elf/drow "60 ft", övriga null. Exhaustion = 0, training = [] (frisk karaktär utan pågående träning).
 - saves = klassens save-proficiencies: Krigare/Paladin/Barbarian = STR+CON, Wizard = INT+WIS, Rogue/Monk = DEX+INT, Cleric/Druid/Sorcerer/Bard/Warlock/Ranger = WIS+CHA
 
 ## STARTUTRUSTNING (inventory) — KRITISKT
@@ -6251,6 +6314,12 @@ Respond ONLY with valid JSON (no markdown) using this schema:
   "skills": [{"name": "string — standard 5e skill (Athletics, Acrobatics, Stealth, Perception, Arcana, Persuasion…)", "ability": "STR|DEX|INT|WIS|CHA", "proficient": true}],  // ALL 18 skills; proficient=true ONLY on 2-4 class/background-relevant ones. Bonuses are computed by the system (ability mod + proficiency).
   "features": [{"name": "string", "level": 1, "description": "string — brief description of the class/race ability"}],  // class starting features (e.g. Rage, Sneak Attack, Spellcasting, Fighting Style, Second Wind) + race features
   "inspiration": false,
+  "resistances": ["fire"],           // race/class-based — empty array if none
+  "vulnerabilities": [],             // race/bloodline-based — empty array if none
+  "immunities": [],                  // empty array if none
+  "darkvision": "60 ft|null",        // race-based: elf/drow 60 ft, others null
+  "exhaustion": 0,                   // 0-6 (5e exhaustion)
+  "training": [],                    // [{name, days_spent, days_needed, skill}] — empty if none
   "gear": "string — starting equipment, 5-8 items separated by ' · '",
   "story": "string — backstory, max 100 words, dark and atmospheric",
   "inventory": [
@@ -6262,6 +6331,8 @@ Respond ONLY with valid JSON (no markdown) using this schema:
 - ac = 10 + DEX-mod (+ armor if equipped) — compute from abilities
 - initiative = DEX-mod
 - perception = 10 + WIS-mod
+- resistances/vulnerabilities/immunities = race/class-based: dwarf = poison resistance, tiefling = fire resistance, elf/drow = darkvision 60 ft, undead/bloodline = vulnerabilities. Empty arrays if none.
+- darkvision = race-based: elf/drow "60 ft", others null. Exhaustion = 0, training = [] (healthy character with no ongoing training).
 - saves = class save proficiencies: Fighter/Paladin/Barbarian = STR+CON, Wizard = INT+WIS, Rogue/Monk = DEX+INT, Cleric/Druid/Sorcerer/Bard/Warlock/Ranger = WIS+CHA
 
 ## STARTING EQUIPMENT (inventory) — CRITICAL
@@ -6424,6 +6495,50 @@ def _finalize_character_data(char_data: dict, lang: str) -> tuple[dict, list, bo
     if not isinstance(char_data.get("features"), list):
         char_data["features"] = []
     char_data.setdefault("inspiration", False)
+
+    # ── Resistanser/sårbarheter/immuniteter (P2): safe defaults.
+    # Rensa till lowercase-strängar; enstaka sträng ("fire") → lista.
+    for _f in ("resistances", "vulnerabilities", "immunities"):
+        _raw = char_data.get(_f)
+        _clean = []
+        if isinstance(_raw, list):
+            _clean = [
+                str(x).strip().lower()
+                for x in _raw
+                if isinstance(x, str) and x.strip()
+            ]
+        elif isinstance(_raw, str) and _raw.strip():
+            _clean = [x.strip().lower() for x in re.split(r"[,;]", _raw) if x.strip()]
+        char_data[_f] = _clean
+
+    # ── Darkvision (P2): str ("60 ft") eller null.
+    _dv = char_data.get("darkvision")
+    char_data["darkvision"] = _dv.strip() if isinstance(_dv, str) and _dv.strip() else None
+
+    # ── Exhaustion (P2): int 0-6 (clamp).
+    try:
+        _ex = int(char_data.get("exhaustion", 0) or 0)
+    except (TypeError, ValueError):
+        _ex = 0
+    char_data["exhaustion"] = max(0, min(6, _ex))
+
+    # ── Training (P2): lista {name, days_spent, days_needed, skill}.
+    _tr = char_data.get("training")
+    if not isinstance(_tr, list):
+        char_data["training"] = []
+    else:
+        _clean_tr = []
+        for _t in _tr:
+            if not isinstance(_t, dict) or not _t.get("name"):
+                continue
+            _tname = str(_t.get("name", "")).strip()[:60]
+            _clean_tr.append({
+                "name": _tname,
+                "days_spent": int(_t.get("days_spent", 0) or 0),
+                "days_needed": int(_t.get("days_needed", 10) or 10),
+                "skill": str(_t.get("skill", _tname)).strip()[:60],
+            })
+        char_data["training"] = _clean_tr
 
     # ── Besvärjelser (v28): säkerställ att 'spells' alltid är en lista med
     # namngivna spells — LLM:n kan glömma den eller skicka skräp.

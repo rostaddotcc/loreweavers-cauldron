@@ -101,6 +101,44 @@ def add_status(entity: dict, name: str, duration: int = 2, dmg_override: int | N
     return True
 
 
+# 5e-damage-typer (normaliserade, lowercase)
+DAMAGE_TYPES = (
+    "bludgeoning", "piercing", "slashing", "fire", "cold", "acid", "poison",
+    "lightning", "thunder", "radiant", "necrotic", "psychic", "force",
+)
+
+
+def damage_multiplier(damage_type: str, entity: dict) -> float:
+    """5e resistans/sårbarhet/immunitet → skademultiplikator.
+
+    entity kan vara character (har resistances/vulnerabilities/immunities) eller
+    en fiende/ally (samma fält). Okänd/olista typ → 1.0 (ingen modifiering).
+    """
+    if not damage_type or not isinstance(damage_type, str):
+        return 1.0
+    t = damage_type.strip().lower()
+    if t not in DAMAGE_TYPES:
+        return 1.0
+    imm = entity.get("immunities") or []
+    if any(str(i).strip().lower() == t for i in imm):
+        return 0.0
+    res = entity.get("resistances") or []
+    if any(str(r).strip().lower() == t for r in res):
+        return 0.5
+    vul = entity.get("vulnerabilities") or []
+    if any(str(v).strip().lower() == t for v in vul):
+        return 2.0
+    return 1.0
+
+
+# Status → 5e-damagetyp (för resistans i tick_statuses)
+_STATUS_DAMAGE_TYPES = {
+    "poison": "poison",
+    "burn": "fire",
+    "bleed": "slashing",
+}
+
+
 def tick_statuses(entity: dict) -> list[dict]:
     """Applicera status-skada och minska duration. Returnerar effekter."""
     effects = []
@@ -109,9 +147,16 @@ def tick_statuses(entity: dict) -> list[dict]:
     for s in statuses:
         dmg = s.get("dmg_per_turn", 0)
         if dmg > 0:
-            hp = entity.get("hp", 0)
-            entity["hp"] = max(0, hp - dmg)
-            effects.append({"type": "status_dmg", "status": s["name"], "amount": dmg})
+            # Resistans/sårbarhet (5e, P2): poison→poison, burn→fire, bleed→slashing
+            dmg_type = _STATUS_DAMAGE_TYPES.get(s.get("name", ""), "")
+            mult = damage_multiplier(dmg_type, entity)
+            dmg = int(dmg * mult)
+            if dmg > 0:
+                hp = entity.get("hp", 0)
+                entity["hp"] = max(0, hp - dmg)
+                effects.append({"type": "status_dmg", "status": s["name"], "amount": dmg})
+            else:
+                effects.append({"type": "status_resisted", "status": s["name"], "damage_type": dmg_type or "unknown"})
         s["duration"] = s.get("duration", 1) - 1
         if s["duration"] > 0:
             remaining.append(s)

@@ -1477,7 +1477,8 @@ def _consume_turn(username: str, action: str = "turn", model: str | None = None,
 
     2026-08-08 (strikt per-anrops-modell): `action` beskriver VAD som förbrukade
     turnen (dm|guardian_pre|guardian_post|extraction|image|char_gen|search|
-    repair|summary|day_entry|battle_ai|turn). Varje förbrukning loggas också i
+    repair|summary|day_entry|battle_ai|threads|chapter|logbook|turn). Varje
+    förbrukning loggas också i
     per-användar-ledgern (backend/data/turn_ledgers/<user>.jsonl) så admin kan
     se exakt förbrukning per turn/anrop.
     """
@@ -4147,6 +4148,10 @@ async def trigger_chapter(body: ChapterRequest, morkrets_token: str | None = Coo
             f"Använd rubriken '{body.title}'. Beskriv vad som hände och vad som väntar."
         )
 
+        # Kapitalsammanfattning är ett LLM-anrop — räknas som en turn (2026-08-08)
+        _gate_turn_quota(username)
+        _consume_turn(username, action="chapter", model=ATMOSPHERE_MODEL)
+
         try:
             summary = await _call_llm(
                 ATMOSPHERE_MODEL,
@@ -5464,18 +5469,21 @@ async def _post_turn_tasks_locked(
                         "Ingen markdown, ingen förklaring.\n\n"
                         "Senaste scen-sammanfattning:\n" + s_text + "\n\nSenaste händelser:\n" + t_text
                     )
-                raw = await _call_llm(
-                    _extraction_model_for(st), [{"role": "user", "content": prompt}],
-                    temperature=0.3, max_tokens=600, timeout=45, thinking="disabled",
-                    usage_out=_threads_usage,
-                )
-                threads = _parse_threads(raw, turn_count)
-                if threads:
-                    st["meta"]["active_threads"] = threads
-                    store.save(st)
-                    logger.info("🧵 Active threads updated (turn %d): %d threads", turn_count, len(threads))
+                if _consume_turn_if_available(username, "threads", _extraction_model_for(st)):
+                    raw = await _call_llm(
+                        _extraction_model_for(st), [{"role": "user", "content": prompt}],
+                        temperature=0.3, max_tokens=600, timeout=45, thinking="disabled",
+                        usage_out=_threads_usage,
+                    )
+                    threads = _parse_threads(raw, turn_count)
+                    if threads:
+                        st["meta"]["active_threads"] = threads
+                        store.save(st)
+                        logger.info("🧵 Active threads updated (turn %d): %d threads", turn_count, len(threads))
+                    else:
+                        logger.debug("🧵 Active threads parse failed (turn %d): %.120s", turn_count, (raw or "")[:120])
                 else:
-                    logger.debug("🧵 Active threads parse failed (turn %d): %.120s", turn_count, (raw or "")[:120])
+                    logger.info("🧵 Active threads skipped — turn cap reached (%s)", username)
         except Exception as e:
             logger.debug("Active threads update skipped: %s", e)
 
@@ -9239,6 +9247,11 @@ async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
     campaign_name = state.get("meta", {}).get("campaign_name", "The Lore Weaver's Cauldron")
     prompt = build_log_prompt(t_text, s_text, campaign_name)
 
+    # Loggboksgenerering är ett LLM-anrop — räknas som en turn (endast första
+    # besöket; cachen + guardian-snabbvägen ovan är gratis) (2026-08-08)
+    _gate_turn_quota(username)
+    _consume_turn(username, action="logbook", model=ATMOSPHERE_MODEL)
+
     try:
         raw = await _call_llm(
             ATMOSPHERE_MODEL,
@@ -9320,6 +9333,10 @@ async def campaign_logbook_refresh_today(morkrets_token: str | None = Cookie(Non
         "Max 3 events, max 2 NPCs. Svara ENDAST med JSON.\n\n"
         + t_text
     )
+
+    # Dag-entry-uppdatering är ett LLM-anrop — räknas som en turn (2026-08-08)
+    _gate_turn_quota(username)
+    _consume_turn(username, action="logbook", model=_extraction_model_for(state))
 
     try:
         raw = await _call_llm(

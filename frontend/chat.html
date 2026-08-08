@@ -1863,7 +1863,8 @@ const roleReady = API.me().then(u => {
     }
   } else {
     // Icke-admin: välj bland de 4 spelarmodellerna (samma som backend PLAYER_MODELS)
-    if (!PLAYER_MODEL_IDS.includes(currentModel)) {
+    // — OpenRouter free-modeller (orfree:*) är undantagna, de är gratis för alla.
+    if (!PLAYER_MODEL_IDS.includes(currentModel) && !String(currentModel).startsWith('orfree:')) {
       currentModel = 'step-3.7-flash';
       localStorage.setItem('dnd_model', currentModel);
     }
@@ -7413,10 +7414,20 @@ function initSettingsModelPickers() {
   gSel.innerHTML = allowed.map(m => modelOption(m, m === gm)).join('');
 
   // Nuvarande extraction-modell från kampanj-metat (fallback: global step-3.7-flash)
-  if (eSel) {
-    const em = (campaignData && campaignData._raw && campaignData._raw.meta && campaignData._raw.meta.extraction_model) || 'step-3.7-flash';
-    eSel.innerHTML = allowed.map(m => modelOption(m, m === em)).join('');
-  }
+  const em = (campaignData && campaignData._raw && campaignData._raw.meta && campaignData._raw.meta.extraction_model) || 'step-3.7-flash';
+  if (eSel) eSel.innerHTML = allowed.map(m => modelOption(m, m === em)).join('');
+
+  // 🆓 OpenRouter free-modeller (orfree:*) — samma lista som DM-gaten, som en
+  // optgroup i alla tre väljarna. Gratis för ALLA tiers (delad community-nyckel).
+  API.freeOpenRouter().then(list => {
+    if (!list || !list.length) return;
+    const og = `<optgroup label="🆓 OpenRouter free">${list.map(m => `<option value="${m.id}">${m.display}</option>`).join('')}</optgroup>`;
+    [dmSel, gSel, eSel].forEach(sel => { if (sel) sel.insertAdjacentHTML('beforeend', og); });
+    // Om nuvarande val redan är en orfree:-modell (t.ex. sparat i kampanj-metat)
+    if (String(currentModel).startsWith('orfree:')) dmSel.value = currentModel;
+    if (gm && String(gm).startsWith('orfree:')) gSel.value = gm;
+    if (em && String(em).startsWith('orfree:')) eSel.value = em;
+  }).catch(() => {});
 }
 
 function settingsChangeExtraction(model) {

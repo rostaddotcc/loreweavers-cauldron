@@ -1732,14 +1732,31 @@ FREE_PLAYER_MODELS = ("step-3.7-flash", "step-3.5-flash-2603")
 
 
 def _clamp_player_model(model_id: str, tier: str | None = None) -> str:
-    """Icke-admin: tillåt bara PLAYER_MODELS, annars default.
+    """Icke-admin: tillåt bara PLAYER_MODELS (eller kända orfree:), annars default.
 
+    🆓 OpenRouter free-modeller (orfree:*) är gratis för ALLA tiers — de är
+    community-modeller på en delad nyckel och låses aldrig.
     TIERS: free/tier1 → steg inom FREE_PLAYER_MODELS (StepFun 3.7/3.5),
            default 3.7 men spelaren får välja 3.5.
     tier2/lifetime (eller tier=None, t.ex. interna anrop) → befintlig logik."""
+    if model_id.startswith("orfree:"):
+        from or_free import is_known_free
+        return model_id if is_known_free(model_id) else DEFAULT_PLAYER_MODEL
     if tier in ("free", "tier1"):
         return model_id if model_id in FREE_PLAYER_MODELS else DEFAULT_PLAYER_MODEL
     return model_id if model_id in PLAYER_MODELS else DEFAULT_PLAYER_MODEL
+
+
+def _validate_model_id(model_id: str) -> bool:
+    """True om modellen finns i registret ELLER är en känd OpenRouter-free-modell."""
+    if model_id.startswith("orfree:"):
+        from or_free import is_known_free
+        return is_known_free(model_id)
+    try:
+        get_model(model_id)
+        return True
+    except ValueError:
+        return False
 
 
 def _guardian_model_for(state: dict) -> str:
@@ -1754,6 +1771,8 @@ def _extraction_model_for(state: dict) -> str:
     borttagen modell aldrig kraschar bakgrundsstacken.
     """
     m = state.get("meta", {}).get("extraction_model") or EXTRACTION_MODEL
+    if m.startswith("orfree:"):
+        return m  # 🆓 OpenRouter free — inte i MODELS-registret, routas direkt i _call_llm
     try:
         get_model(m)
     except ValueError:
@@ -3660,12 +3679,8 @@ async def create_campaign(body: CampaignCreateRequest | None = None, morkrets_to
         state["meta"]["guardian_model"] = guardian_model
     # Extraction-modell (bakgrund: fakta, dagbok, summaries) — alla kan välja
     extraction_model = (body.extraction_model if body else "") or ""
-    if extraction_model:
-        try:
-            get_model(extraction_model)
-            state["meta"]["extraction_model"] = extraction_model
-        except ValueError:
-            pass  # ogiltigt val → fallback till global EXTRACTION_MODEL
+    if extraction_model and _validate_model_id(extraction_model):
+        state["meta"]["extraction_model"] = extraction_model
     # Slumpa en äventyrsöppning (språkmedveten)
     styles = OPENING_STYLES_EN if language == "en" else OPENING_STYLES
     style_key, style_desc = random.choice(styles)
@@ -7368,10 +7383,8 @@ async def update_guardian_model(req: dict, morkrets_token: str | None = Cookie(N
         if model_id:
             if payload.get("role") != "admin":
                 model_id = _clamp_player_model(model_id, tier=_tier_for(username))
-            # Validera att modellen finns i registret
-            try:
-                get_model(model_id)
-            except ValueError:
+            # Validera att modellen finns i registret (eller är en känd orfree:)
+            if not _validate_model_id(model_id):
                 raise HTTPException(400, f"Okänd modell: {model_id}")
             state.setdefault("meta", {})["guardian_model"] = model_id
         else:
@@ -7403,10 +7416,8 @@ async def update_extraction_model(req: dict, morkrets_token: str | None = Cookie
         if model_id:
             if payload.get("role") != "admin":
                 model_id = _clamp_player_model(model_id, tier=_tier_for(username))
-            # Validera att modellen finns i registret
-            try:
-                get_model(model_id)
-            except ValueError:
+            # Validera att modellen finns i registret (eller är en känd orfree:)
+            if not _validate_model_id(model_id):
                 raise HTTPException(400, f"Okänd modell: {model_id}")
             state.setdefault("meta", {})["extraction_model"] = model_id
         else:
@@ -7441,9 +7452,8 @@ async def update_dm_model(req: dict, morkrets_token: str | None = Cookie(None)):
         if model_id:
             if payload.get("role") != "admin":
                 model_id = _clamp_player_model(model_id, tier=_tier_for(username))
-            try:
-                get_model(model_id)
-            except ValueError:
+            # Validera att modellen finns i registret (eller är en känd orfree:)
+            if not _validate_model_id(model_id):
                 raise HTTPException(400, f"Okänd modell: {model_id}")
             state.setdefault("meta", {})["dm_model"] = model_id
         else:

@@ -170,6 +170,15 @@ async def get_free_models(force: bool = False) -> list[dict]:
     return _CACHE
 
 
+def is_known_free(model_id: str) -> bool:
+    """Sync allow-list för 'orfree:'-id:n (används av main.py clamping/validering).
+
+    Tillåter bara kända OpenRouter-free-modeller (CURATED_FREE + DISPLAY_NAMES)
+    så en spelare aldrig kan injicera godtyckliga OpenRouter-id:n.
+    """
+    return _strip_prefix(model_id) in DISPLAY_NAMES
+
+
 async def chat_free(
     model_id: str,
     messages: list[dict],

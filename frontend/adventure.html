@@ -958,11 +958,6 @@ html{font-size:17px}
       </select>
       <span class="ask-wrap"><span class="ask-ico">?</span><span class="ask-tip" data-ask="tts">Which provider whispers the spoken word when the DM speaks aloud. <b>Ask the Dungeon Master if unsure.</b></span></span>
     </div>
-    <div class="dm-model-row" id="row-free-or" style="display:none">
-      <label class="dm-model-label" for="adventure-free-or">🆓 Experiment (OpenRouter free)</label>
-      <select class="dm-model-select" id="adventure-free-or"></select>
-      <span class="ask-wrap"><span class="ask-ico">?</span><span class="ask-tip" data-ask="freeor">Free community models served at no cost. Experimental — shared rate limits, may be slow. Pick one as your Dungeon Master voice.</span></span>
-    </div>
     <div class="dm-model-note">These free models come from the OpenRouter community — fun to compare, but they share one key's quota, so they can be slower than the house voices.</div>
     <div class="dm-model-note">🔄 <b>Can be changed at any time in the campaign</b> — from the settings inside the chat, if the mood shifts.</div>
     <div class="dm-model-note" id="model-gate-upgrade-note" style="display:none">🔒 <b>Qwen 3.8, DeepSeek &amp; the full mind of the Cauldron unlock with the one-time Patron top-up (30€)</b> — <a href="pricing.html" style="color:var(--gold);font-weight:600">View the paths →</a></div>
@@ -2068,19 +2063,13 @@ const TTS_PROVIDERS = [
   const extSel = document.getElementById('adventure-extraction-model');
   const charSel = document.getElementById('adv-char-model');
   const ttsSel = document.getElementById('adventure-tts');
-  const freeOrSel = document.getElementById('adventure-free-or');
-  const freeOrRow = document.getElementById('row-free-or');
-  // 🆓 Experiment-sektion: hämta OpenRouter free-modeller (alla tiers kan välja)
-  const fillFreeOR = () => {
-    if (!freeOrSel || !freeOrRow) return;
-    API.freeOpenRouter().then(list => {
-      list = list || [];
-      if (!list.length) { freeOrRow.style.display = 'none'; return; }
-      freeOrRow.style.display = '';
-      freeOrSel.innerHTML = '<option value="">— house voice —</option>' +
-        list.map(m => `<option value="${m.id}">${m.display}</option>`).join('');
-    }).catch(() => { freeOrRow.style.display = 'none'; });
-  };
+  // 🆓 OpenRouter free-modeller (orfree:*) — läggs in i de ORDINARIE
+  // DM/Guardian/Extraction-väljarna som en optgroup. Gratis för ALLA tiers
+  // (delad community-nyckel, kan vara långsammare än house-rösterna).
+  const OR_GROUP_LABEL = '🆓 OpenRouter free';
+  const freeOptsHtml = (list) => (list && list.length)
+    ? `<optgroup label="${OR_GROUP_LABEL}">${list.map(m => `<option value="${m.id}">${m.display}</option>`).join('')}</optgroup>`
+    : '';
   // Modeller som kräver Patron (30€)+ (backend klämmer redan free/tier1 → step-3.7-flash;
   // här låses de i UI:t så spelaren inte kan välja något som tyst ignoreras).
   const PREMIUM_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4-flash', 'deepseek-v4-flash-0731', 'ollama:heretic'];
@@ -2089,8 +2078,9 @@ const TTS_PROVIDERS = [
     const dis = locked && prem;
     return `<option value="${m}"${dis ? ' disabled' : ''}>${dis ? '🔒 ' + m + ' — Patron (30€)' : m}</option>`;
   };
-  const fill = (models, locked) => {
-    const opts = models.map(m => optionHtml(m, locked)).join('');
+  const fill = (models, locked, freeList) => {
+    const houseOpts = models.map(m => optionHtml(m, locked)).join('');
+    const opts = houseOpts + freeOptsHtml(freeList);
     [dmSel, guardSel, extSel].forEach(sel => {
       if (!sel) return;
       sel.innerHTML = opts;
@@ -2098,7 +2088,8 @@ const TTS_PROVIDERS = [
       sel.value = models.includes('step-3.7-flash') ? 'step-3.7-flash' : (models[0] || '');
     });
     if (charSel) {
-      charSel.innerHTML = opts;
+      // Karaktärsskapande håller sig till house-modellerna (inga orfree:)
+      charSel.innerHTML = houseOpts;
       charSel.value = models.includes('step-3.7-flash') ? 'step-3.7-flash' : (models[0] || '');
     }
   };
@@ -2142,18 +2133,19 @@ const TTS_PROVIDERS = [
     const tier = isAdmin ? 'tier2' : ((u && u.subscription_status) || 'free');
     const locked = !isAdmin && (tier === 'free' || tier === 'tier1');
     fillTTS(tier);
-    if (isAdmin) {
-      API.models().then(list => fill((list || []).map(m => m.id || m), false)).catch(() => fill(PLAYER_DM_MODELS, false));
-    } else {
-      fill(PLAYER_DM_MODELS, locked);
-    }
-    fillFreeOR();
+    const modelsP = isAdmin
+      ? API.models().then(list => (list || []).map(m => m.id || m)).catch(() => PLAYER_DM_MODELS)
+      : Promise.resolve(PLAYER_DM_MODELS);
+    const freeP = API.freeOpenRouter().catch(() => []);
+    Promise.all([modelsP, freeP]).then(([models, freeList]) => {
+      fill(models, locked, freeList || []);
+    });
     const note = document.getElementById('model-gate-upgrade-note');
     if (note) note.style.display = locked ? '' : 'none';
   }).catch(() => {
     // /api/me svarade inte → lås inte (backend klämmer ändå på 403)
     fillTTS('tier2');
-    fill(PLAYER_DM_MODELS, false);
+    fill(PLAYER_DM_MODELS, false, []);
   });
 })();
 
@@ -2182,9 +2174,6 @@ async function startAdventure() {
   const extractionModel = document.getElementById('adventure-extraction-model').value;
   const ttsSel = document.getElementById('adventure-tts');
   const ttsVal = ttsSel ? ttsSel.value : null;
-  // 🆓 Experiment: om spelaren valt en OpenRouter-free-modell som DM, använd den
-  const freeOrVal = (document.getElementById('adventure-free-or') || {}).value || '';
-  const chosenDm = freeOrVal || dmModel;
   const btn = document.getElementById('adventure-start');
   btn.disabled = true;
   btn.textContent = '⚔️ Opening the table…';
@@ -2192,7 +2181,7 @@ async function startAdventure() {
     // 1) Kampanj + språk
     await API.createCampaign(name, lang);
     // 2) Spara alla modeller (en misslyckad modell ska aldrig blockera starten)
-    try { await API.setDmModel(chosenDm); } catch (e) { console.warn('setDmModel', e); }
+    try { await API.setDmModel(dmModel); } catch (e) { console.warn('setDmModel', e); }
     try { await API.setGuardianModel(guardianModel); } catch (e) { console.warn('setGuardianModel', e); }
     try { await API.setExtractionModel(extractionModel); } catch (e) { console.warn('setExtractionModel', e); }
     if (ttsVal) {

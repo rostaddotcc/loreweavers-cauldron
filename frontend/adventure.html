@@ -463,10 +463,9 @@ html{font-size:17px}
       <button class="quota-pill" id="quota-pill" onclick="openProfileModal()" title="Turns left">
         <span class="quota-turns" id="quota-turns">⚡ …</span>
         <span class="quota-cd" id="quota-cd"></span>
+        <span class="quota-tip" id="quota-tip">Each DM, TTS, Image-gen and background llm-calls counts towards the turns quota</span>
       </button>
-      <button class="quota-q" id="quota-q" onclick="toggleQuotaTip(event)" title="What is a turn?" aria-label="What is a turn?">?</button>
       <button class="quota-chip" id="quota-benefits" style="display:none" onclick="location.href='pricing.html'" title="Support/Patron benefits expire in">👑 0d</button>
-      <div class="quota-tip" id="quota-tip" onclick="this.classList.remove('show')"></div>
     </div>
     <div class="gear-wrap">
       <button class="top-btn gear-btn" onclick="toggleGearMenu(event)" title="Menu" aria-haspopup="true" aria-expanded="false">⚙️</button>
@@ -491,38 +490,28 @@ html{font-size:17px}
       min-width:78px;padding:.28rem .7rem;font-family:var(--font-display,'Cinzel',serif);
       background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);
       border-radius:8px;cursor:pointer;box-shadow:0 2px 12px -6px rgba(0,0,0,.6);
-      transition:border-color .2s,box-shadow .2s}
+      position:relative;transition:border-color .2s,box-shadow .2s}
     .quota-pill:hover{border-color:var(--gold);box-shadow:0 0 14px -4px rgba(201,162,39,.4)}
     .quota-turns{font-size:.8rem;letter-spacing:.08em;font-weight:700;color:var(--gold-bright);
       line-height:1.1;white-space:nowrap}
     .quota-cd{font-size:.74rem;letter-spacing:.05em;font-weight:700;color:var(--bone-bright);
       line-height:1.15;white-space:nowrap;font-variant-numeric:tabular-nums;
       text-shadow:0 0 10px rgba(232,198,90,.18)}
-    .quota-q{width:24px;height:24px;flex:none;border-radius:50%;background:var(--stone-3);
-      border:1px solid var(--edge);color:var(--bone-dim);font-size:.72rem;font-weight:900;
-      cursor:pointer;display:flex;align-items:center;justify-content:center;
-      font-family:var(--font-display,'Cinzel',serif);transition:color .2s,border-color .2s}
-    .quota-q:hover{color:var(--gold-bright);border-color:var(--gold)}
     .quota-chip{display:inline-flex;align-items:center;gap:.22rem;padding:.3rem .5rem;font-size:.68rem;
       letter-spacing:.05em;font-family:var(--font-display,'Cinzel',serif);color:var(--bone);
       background:var(--stone-3);border:1px solid var(--edge);border-radius:999px;cursor:pointer;
       white-space:nowrap;transition:color .2s,border-color .2s}
     .quota-chip:hover{border-color:var(--gold);color:var(--gold-bright)}
-    /* Mjuk tooltip — samma anda som ask-tip (pil + kursiv + rundad) (2026-08-08) */
-    .quota-tip{position:absolute;top:calc(100% + 9px);right:-4px;z-index:950;width:min(300px,80vw);
+    /* Mjuk hover-tooltip direkt på turn-pillen (2026-08-08) */
+    .quota-tip{position:absolute;top:calc(100% + 9px);left:0;z-index:950;width:min(300px,80vw);
       background:var(--stone-3);border:1px solid var(--edge-hi);border-radius:6px;padding:.6rem .75rem;
       font-size:.74rem;font-style:italic;line-height:1.55;color:var(--bone);text-align:left;
       box-shadow:0 12px 30px -10px rgba(0,0,0,.85);display:none}
-    .quota-tip::before{content:'';position:absolute;top:-6px;right:16px;
+    .quota-tip::before{content:'';position:absolute;top:-6px;left:30px;
       border:6px solid transparent;border-bottom-color:var(--edge-hi)}
-    .quota-tip.show{display:block}
-    .quota-q:hover ~ .quota-tip{display:block}
+    .quota-pill:hover .quota-tip{display:block}
     @media(max-width:900px){
-      /* overflow:hidden på .topbar klipper absoluta dropdowns → position:fixed på mobil */
-      .quota-tip{position:fixed;top:auto;right:.75rem;bottom:calc(env(safe-area-inset-bottom,0px) + 4.5rem);
-        left:.75rem;width:auto;min-width:0}
       .quota-pill{min-width:0;padding:.28rem .5rem}
-      .quota-q{width:30px;height:30px}
       .quota-chip{padding:.3rem .4rem;font-size:.64rem}
     }
     @media(max-width:400px){
@@ -1246,26 +1235,7 @@ function renderQuotaPill(me) {
       else ben.style.display = 'none';
     } else ben.style.display = 'none';
   }
-  // '?'-tooltip — engelska (2026-08-08)
-  const tip = document.getElementById('quota-tip');
-  if (tip && !tip.dataset.set) {
-    tip.dataset.set = '1';
-    tip.textContent = 'Each DM, TTS, Image-gen and background llm-calls counts towards the turns quota';
-  }
 }
-function toggleQuotaTip(e) {
-  if (e) e.stopPropagation();
-  const tip = document.getElementById('quota-tip');
-  if (!tip) return;
-  const show = !tip.classList.contains('show');
-  document.querySelectorAll('.quota-tip.show').forEach(t => t.classList.remove('show'));
-  if (show) tip.classList.add('show');
-}
-document.addEventListener('click', e => {
-  if (e.target && e.target.closest && !e.target.closest('.qwrap')) {
-    document.querySelectorAll('.quota-tip.show').forEach(t => t.classList.remove('show'));
-  }
-});
 
 // Lämna porten (logga ut)
 async function leaveGate() {

@@ -1357,17 +1357,18 @@
   <span class="campaign" id="campaign-tag">Campaign: —</span>
   <span class="header-turns-info" id="header-turns-info"></span>
   <span class="user-tag" id="user-tag" onclick="openChatProfileModal()" title="Your profile — stats, tier, turns and subscription" role="button" tabindex="0" aria-label="Your profile — stats, tier, turns and subscription">
-    <span class="ut-line">
-      <span class="ut-avatar" id="user-tag-avatar">👤</span>
-      <span class="ut-name" id="user-tag-name">—</span>
-    </span>
+    <span class="ut-avatar" id="user-tag-avatar">👤</span>
+    <span class="ut-name" id="user-tag-name">—</span>
+    <span class="ut-sep">·</span>
     <span class="ut-turns" id="ut-turns">⚡ …</span>
-    <span class="ut-cd" id="ut-cd">left until refresh …</span>
+    <span class="ut-sep">·</span>
+    <span class="ut-cd" id="ut-cd">refreshes in: …</span>
+    <span class="ut-tip" id="ut-tip">Each DM, TTS, Image-gen and background llm-calls counts towards the turns quota</span>
   </span>
   <span class="spacer"></span>
 
-  <button class="top-btn" onclick="openCodex()">📖 Codex</button>
-  <button class="top-btn admin-btn" id="admin-btn" style="display:none" onclick="location.href='admin.html'">👑 Admin</button>
+  <button class="top-btn compact" onclick="openCodex()">📖 Codex</button>
+  <button class="top-btn admin-btn compact" id="admin-btn" style="display:none" onclick="location.href='admin.html'">👑 Admin</button>
 
   <span class="top-divider"></span>
   <button class="top-btn icon-btn sfx-btn" onclick="sfxToggleBtn()" title="Sound on/off">🔊</button>
@@ -1405,29 +1406,43 @@
   </div>
 </header>
 <style>
-  /* ═══ Avatar-box: konto + turns + nedräkning (2026-08-08) ═══
-     Kör EFTER soft-up-blocken (~rad 1123) så !important här vinner. */
-  #user-tag{ margin-left:.45rem !important; display:flex !important; flex-direction:column !important;
-    align-items:stretch !important; gap:2px !important; padding:.34rem .6rem .3rem !important;
-    border:1px solid rgba(201,162,39,.30) !important; border-radius:10px !important;
-    background:rgba(201,162,39,.07) !important; cursor:pointer; line-height:1.2;
-    text-align:center; flex-shrink:0; transition:border-color .2s, box-shadow .2s; }
-  .ut-line{ display:flex; align-items:center; gap:.45rem; }
-  .ut-avatar{ width:28px; height:28px; border-radius:50%; overflow:hidden; flex:none;
+  /* ═══ Profil/turn-kort: en rad med all text + hover-tooltip (2026-08-08) ═══
+     Kör EFTER soft-up-blocken (~rad 1123) så !important här vinner.
+     Höjd 34px = samma som inställningsknapparna (.top-btn.icon-btn). */
+  #user-tag{ margin-left:.45rem !important; position:relative !important;
+    display:inline-flex !important; align-items:center !important; gap:.4rem !important;
+    height:34px !important; padding:0 .7rem !important;
+    border:1px solid rgba(201,162,39,.30) !important; border-radius:8px !important;
+    background:rgba(201,162,39,.07) !important; cursor:pointer; white-space:nowrap;
+    flex-shrink:0; transition:border-color .2s, box-shadow .2s; }
+  .ut-avatar{ width:24px; height:24px; border-radius:50%; overflow:hidden; flex:none;
     border:1px solid rgba(201,162,39,.45); background:var(--stone-3);
-    display:inline-flex; align-items:center; justify-content:center; font-size:1.05rem;
+    display:inline-flex; align-items:center; justify-content:center; font-size:.95rem;
     box-shadow:0 0 12px -2px rgba(201,162,39,.35); }
   .ut-avatar img{ width:100%; height:100%; object-fit:cover; image-rendering:pixelated; display:block; }
-  .ut-name{ font-size:.85rem; color:var(--bone); font-weight:600; white-space:nowrap;
-    overflow:hidden; text-overflow:ellipsis; }
-  .ut-turns{ font-size:.8rem; letter-spacing:.08em; font-weight:700; color:var(--gold-bright);
-    font-variant-numeric:tabular-nums; white-space:nowrap; line-height:1.15; }
-  .ut-cd{ font-size:.68rem; font-weight:600; color:var(--bone-bright); letter-spacing:.04em;
-    font-variant-numeric:tabular-nums; white-space:nowrap; line-height:1.15; }
+  .ut-name{ font-size:.8rem; color:var(--bone); font-weight:600; overflow:hidden; text-overflow:ellipsis; }
+  .ut-turns{ font-size:.78rem; letter-spacing:.06em; font-weight:700; color:var(--gold-bright);
+    font-variant-numeric:tabular-nums; }
+  .ut-cd{ font-size:.7rem; font-weight:600; color:var(--bone-bright); letter-spacing:.02em;
+    font-variant-numeric:tabular-nums; }
+  .ut-sep{ color:var(--bone-dim); font-size:.68rem; }
+  /* Hover-tooltip direkt på profil/turn-kortet (2026-08-08) */
+  .ut-tip{ position:absolute; top:calc(100% + 8px); right:0; z-index:950; width:min(290px,80vw);
+    background:var(--stone-3); border:1px solid var(--edge-hi); border-radius:6px; padding:.55rem .7rem;
+    font-size:.72rem; font-style:italic; line-height:1.5; color:var(--bone); text-align:left;
+    box-shadow:0 12px 30px -10px rgba(0,0,0,.85);
+    opacity:0; visibility:hidden; pointer-events:none;
+    transition:opacity .16s ease, visibility .16s ease; }
+  .ut-tip::before{ content:''; position:absolute; top:-6px; right:26px;
+    border:6px solid transparent; border-bottom-color:var(--edge-hi); }
+  #user-tag:hover .ut-tip{ opacity:1; visibility:visible; }
+  /* CODEX/Admin: kompakt — samma höjd som ikonknapparna */
+  .top-btn.compact{ height:34px !important; padding:.3rem .7rem !important; font-size:.72rem !important;
+    display:inline-flex; align-items:center; letter-spacing:.12em !important; }
   @media (max-width:900px){
-    .ut-name{ max-width:14vw; }
-    .ut-turns{ font-size:.74rem; }
-    .ut-cd{ font-size:.62rem; }
+    .ut-name{ max-width:16vw; }
+    .ut-turns{ font-size:.72rem; }
+    .ut-cd{ font-size:.64rem; }
   }
 </style>
 <div class="mobile-hp-line" id="mobile-hp-line"><i style="width:100%"></i></div>
@@ -1980,7 +1995,7 @@ function turnDayText() {
   return parts.join(' · ');
 }
 
-// ═══ Avatar-box: "⚡ 12/50" + "left until refresh HH:MM:SS" (2026-08-08) ═══
+// ═══ Profil/turn-kort: "⚡ 12/50" + "refreshes in: HH:MM:SS" (2026-08-08) ═══
 // Bara totalen (cap + turn_bonus + promo_bonus) — promo syns i profilen.
 // Data från _meData; tickar live via den befintliga 1s-loopen i updateHeaderInfo.
 function renderAvatarBox() {
@@ -2000,7 +2015,7 @@ function renderAvatarBox() {
   const cd = (tier === 'tier1' || tier === 'tier2')
     ? resetCountdown(me.reset_ts, true)
     : resetCountdown(me.reset_date, false);
-  cdEl.textContent = cd ? ('left until refresh ' + cd) : '';
+  cdEl.textContent = cd ? ('refreshes in: ' + cd) : '';
 }
 function updateHeaderInfo() {
   const text = turnDayText();

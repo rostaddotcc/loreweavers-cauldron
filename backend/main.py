@@ -15,6 +15,7 @@ import os
 import random
 import re
 import secrets
+import sys
 import threading
 import time
 import uuid
@@ -3841,6 +3842,33 @@ async def list_campaigns(morkrets_token: str | None = Cookie(None)):
     return {"campaigns": campaigns}
 
 
+def _refresh_book_of_souls() -> None:
+    """Kör gen_gallery.py i containern (env-överstyrda sökvägar) så att
+    gallery.json + avatarkopior speglar nuvarande kampanjdata DIREKT.
+
+    Anropas vid kampanjradering: raderad kampanjs showcase/galleribilder
+    försvinner på en gång. Host-cronen (book-souls-refresh, 24h) gör samma
+    sak på disken + docker cp — den här håller containern färsk däremellan.
+    """
+    import subprocess
+    try:
+        script = os.path.join(os.path.dirname(__file__), "..", "frontend", "book-souls", "gen_gallery.py")
+        script = os.path.abspath(script)
+        if not os.path.isfile(script):
+            logger.debug("Book of Souls: gen_gallery.py saknas (%s)", script)
+            return
+        env = dict(os.environ)
+        env["DND_GALLERY_DATA_DIR"] = os.path.join(os.path.dirname(__file__), "data", "campaigns")
+        env["DND_GALLERY_OUT_DIR"] = os.path.dirname(script)
+        r = subprocess.run(
+            [sys.executable, script], env=env,
+            capture_output=True, text=True, timeout=120,
+        )
+        logger.info("Book of Souls refresh: rc=%d %s", r.returncode, (r.stdout or "").strip().splitlines()[-1:] )
+    except Exception as e:
+        logger.debug("Book of Souls refresh misslyckades: %s", e)
+
+
 @app.delete("/api/campaign")
 async def delete_campaign(
     morkrets_token: str | None = Cookie(None),
@@ -3864,6 +3892,13 @@ async def delete_campaign(
         await rag.purge_user(username)
     except Exception as e:
         logger.debug("Qdrant cleanup on campaign deletion: %s", e)
+    # Book of Souls: regenerera showcase-galleriet i containern direkt så
+    # raderad kampanjs kort + bilder försvinner på en gång (host-cronen 24h
+    # synkar disken + docker cp i bakgrunden).
+    try:
+        await asyncio.to_thread(_refresh_book_of_souls)
+    except Exception as e:
+        logger.debug("Book of Souls refresh on delete: %s", e)
     return {"ok": True, "message": "Kampanjen har avslutats och raderats"}
 
 

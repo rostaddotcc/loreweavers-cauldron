@@ -8,9 +8,11 @@ Run every 24h via cron to keep the Book of Souls fresh.
 import json, os, re, shutil, sys
 from datetime import datetime, timedelta
 
-ROOT = "/home/rostads/dnd-llm"
-DATA_DIR = os.path.join(ROOT, "backend/data/campaigns")
-OUT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.environ.get("DND_GALLERY_ROOT", "/home/rostads/dnd-llm")
+# Sökvägar kan överstyras med env (containern kör samma skript vid
+# kampanjradering med DND_GALLERY_DATA_DIR=/app/backend/data/campaigns).
+DATA_DIR = os.environ.get("DND_GALLERY_DATA_DIR") or os.path.join(ROOT, "backend/data/campaigns")
+OUT_DIR = os.environ.get("DND_GALLERY_OUT_DIR") or os.path.dirname(os.path.abspath(__file__))
 AV_DIR = os.path.join(OUT_DIR, "avatars")
 MAX_ADVENTURERS = 8
 MAX_NPCS = 8
@@ -25,6 +27,16 @@ NAME_EXCLUDES = set()
 EXCLUDE_NPCS = set()
 
 os.makedirs(AV_DIR, exist_ok=True)
+
+# Reroll-variant-suffix: backend döper ombilder till npc_<Namn>__<8 hex>.
+# Dessa är GAMLA reroll-kopior av samma NPC — bara den stat-registrerade
+# (aktuellt valda) avataren ska bli ett kort i boken.
+_REROLL_SUFFIX = re.compile(r"__[0-9a-f]{8}$")
+
+
+def base_npc_name(nm: str) -> str:
+    """'Kaelithra the Unbroken__cd525828' → 'Kaelithra the Unbroken'."""
+    return _REROLL_SUFFIX.sub("", nm or "").strip()
 
 
 def first_bullets(notes, max_n=3):
@@ -208,28 +220,30 @@ def main():
             meta = s.get("meta") or {}
 
             def add_npc(nm, role="", relation="", color=None, notes=""):
-                if not nm or nm in EXCLUDE_NPCS or nm in seen_npcs:
+                base = base_npc_name(nm)
+                if not base or base in EXCLUDE_NPCS or base in seen_npcs:
                     return
                 npc_disk = (s.get("avatars") or {}).get(f"npc:{nm}") or {}
                 npc_img = npc_disk.get("disk_name")
-                # fallback: any npc_<name>.png file on disk
+                # fallback: any npc_<basnamn>* file on disk (inkl. reroll-hash-variants)
                 if not npc_img:
-                    cand = os.path.join(avatars_dir, f"npc_{nm}.png")
-                    if os.path.isfile(cand):
-                        npc_img = f"npc_{nm}.png"
+                    for cand in sorted(os.listdir(avatars_dir)):
+                        if cand.startswith(f"npc_{base}") and cand.endswith(".png"):
+                            npc_img = cand
+                            break
                 npc_src = os.path.join(avatars_dir, npc_img) if npc_img else None
                 if not npc_src or not os.path.isfile(npc_src):
                     return
-                rel = copy_avatar(npc_src, f"{user}_{cid}_npc_{re.sub(r'[^a-zA-Z0-9]+','_',nm)}.png")
+                rel = copy_avatar(npc_src, f"{user}_{cid}_npc_{re.sub(r'[^a-zA-Z0-9]+','_',base)}.png")
                 if not rel:
                     return
                 note = first_bullets(notes, MAX_NPC_NOTES)
                 desc = first_desc(notes)
-                met_at = last_logbook_mention(world.get("logbook") or [], nm)
-                first_day = first_logbook_day(world.get("logbook") or [], nm)
+                met_at = last_logbook_mention(world.get("logbook") or [], base)
+                first_day = first_logbook_day(world.get("logbook") or [], base)
                 first_met_date = campaign_date(meta.get("created") or "", first_day) if first_day else ""
                 gallery["npcs"].append({
-                    "name": nm,
+                    "name": base,
                     "img": rel,
                     "role": role or "",
                     "color": color or "#c9a227",
@@ -240,7 +254,7 @@ def main():
                     "first_met_date": first_met_date,
                     "met_by": user,
                 })
-                seen_npcs[nm] = True
+                seen_npcs[base] = True
 
             # 1) NPCs registered in state
             for n in npcs:
@@ -249,13 +263,15 @@ def main():
                         color=n.get("color"), notes=n.get("notes") or "")
 
             # 2) painted faces on disk that state never registered (user may have
-            #    generated a portrait directly) — their name comes from the file
+            #    generated a portrait directly) — their name comes from the file.
+            #    Reroll-hash-variants (npc_X__<hash>) av en redan sedd NPC hoppas —
+            #    bara det stat-valda kortet ska synas.
             for fname in sorted(os.listdir(avatars_dir)):
                 if not fname.startswith("npc_") or not fname.endswith(".png"):
                     continue
-                nm = fname[4:-4].strip()
-                if nm and nm not in seen_npcs and nm not in EXCLUDE_NPCS:
-                    add_npc(nm)
+                base = base_npc_name(fname[4:-4].strip())
+                if base and base not in seen_npcs and base not in EXCLUDE_NPCS:
+                    add_npc(base)
 
     gallery["generated_at"] = __import__("datetime").datetime.now().isoformat(timespec="minutes")
     # Most-played first: level desc, then XP asc (closer to next level = more played)
@@ -263,6 +279,19 @@ def main():
     out = os.path.join(OUT_DIR, "gallery.json")
     with open(out, "w", encoding="utf-8") as f:
         json.dump(gallery, f, ensure_ascii=False, indent=1)
+    # Rensa föräldralösa avatarkopior: gamla rerolls, raderade kampanjers
+    # showcase/galleribilder — allt som inte refereras av det färska galleriet.
+    referenced = {os.path.basename(e["img"]) for e in gallery["adventurers"] + gallery["npcs"]}
+    purged = 0
+    for fname in sorted(os.listdir(AV_DIR)):
+        if fname not in referenced:
+            try:
+                os.remove(os.path.join(AV_DIR, fname))
+                purged += 1
+            except OSError:
+                pass
+    if purged:
+        print(f"purged {purged} orphan avatar(s) from {AV_DIR}")
     print(f"OK: {len(gallery['adventurers'])} adventurers, {len(gallery['npcs'])} npcs -> {out}")
 
 

@@ -6322,9 +6322,12 @@ function decorateCombatDice(root) {
 
 // ── Mini-tärningsceremoni (delas av stridsloggen + DM-chatten) ──
 // Skapar elementet, tumlar ~1.3s, landar på det FAKTISKA värdet (d20=X ur
-// badge-texten), crit-guld (d20=20) / fumble-blod+skak (d20=1). Non-blocking,
-// raderas efter avslöjandet. insertAfter=true → efter ankaret, annars i ankaret.
-function spawnDiceMini(label, badgeText, anchor, insertAfter) {
+// badge-texten), crit-guld (d20=20) / fumble-blod+skak (d20=1). Non-blocking.
+// insertAfter=true → efter ankaret, annars i ankaret. persist=true → elementet
+// LÄMNAS KVAR med resultatet synligt (chatten, permanent post — samma som
+// spelarens inlineDiceCeremony); persist=false → tonas ut och raderas efter
+// avslöjandet (loggraden, där badge-chippet är den permanenta posten).
+function spawnDiceMini(label, badgeText, anchor, insertAfter, persist) {
   const d20m = String(badgeText || '').match(/d20\s*=\s*(\d+)/);
   const d20Val = d20m ? parseInt(d20m[1], 10) : null;
   const isCrit = d20Val === 20;
@@ -6376,7 +6379,9 @@ function spawnDiceMini(label, badgeText, anchor, insertAfter) {
       if (isCrit && typeof spawnPixelBurst === 'function') spawnPixelBurst(cx, cy, 18, ['#ffd700', '#fff8dc', '#e8c65a', '#4dd8f0'], 4);
       else if (isFail && typeof spawnPixelSmoke === 'function') spawnPixelSmoke(cx, cy, 8, ['#5a0f18', '#8b1a2b', '#e8dcc8'], 6);
     }
-    // Låt resultatet synas en stund, tona sedan ut och radera
+    // Låt resultatet synas en stund, tona sedan ut och radera — MEN bara om
+    // inte persist (chatten: permanent post, inga tomma placeholderboxar).
+    if (persist) return;
     setTimeout(() => {
       if (!mini.classList) return;
       mini.classList.add('fade-out');
@@ -6438,7 +6443,9 @@ function dmRollInChat(combat, storyTarget) {
     wrap.className = 'msg system';
     const box = document.createElement('div');
     box.className = 'box combat-inline combat-dm-roll';
-    box.appendChild(spawnDiceMini(label, badge, box, false));
+    // persist=true → tärningen LÄMNAS KVAR med resultatet (permanent post,
+    // samma som spelarens kast; inga tomma placeholderboxar kvar i chatten).
+    box.appendChild(spawnDiceMini(label, badge, box, false, true));
     wrap.appendChild(box);
     storyTarget.appendChild(wrap);
   });

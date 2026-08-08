@@ -2372,7 +2372,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 if dmg > 0:
                     enemy["hp"] = max(0, enemy.get("hp", 0) - dmg)
                     crit_str = " 💥 KRITISK!" if atk.get("crit") else ""
-                    roll_str = f" (slag {atk.get('roll', '?')})" if atk.get("roll") else ""
+                    roll_str = f" (🎲 d20={atk.get('roll', '?')})" if atk.get("roll") else ""
                     combat_log.append({"round": current_round, "actor": "ally", "name": ally_name, "text": f"hits {enemy['name']} — {dmg} damage ({atk.get('damage_type', 'unknown')}){crit_str}{roll_str} → **{enemy['name']} {enemy['hp']}/{enemy.get('max_hp', '?')} HP**"})
                     effects.append({"type": "combat_dmg", "value": enemy["name"], "amount": dmg})
                     logger.info("🤝 Ally attack: %s → %s, %d damage → HP %d/%d", ally_name, enemy["name"], dmg, enemy["hp"], enemy.get("max_hp", 0))
@@ -2382,7 +2382,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                         effects.append({"type": "enemy_död", "value": enemy["name"]})
                         logger.info("💀 %s has fallen", enemy["name"])
             else:
-                roll_str = f" (slag {atk.get('roll', '?')})" if atk.get("roll") else ""
+                roll_str = f" (🎲 d20={atk.get('roll', '?')})" if atk.get("roll") else ""
                 combat_log.append({"round": current_round, "actor": "ally", "name": ally_name, "text": f"misses {enemy['name']}{roll_str}"})
 
         # Allierade tar skada → minska ally-HP; dödlig skada → alive=false
@@ -2504,12 +2504,12 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                             hp["temp"] = temp - absorbed
                             dmg -= absorbed
                         hp["current"] = max(0, hp.get("current", 1) - dmg)
-                        roll_str = f" (slag {atk.get('roll', '?')})" if atk.get("roll") else ""
+                        roll_str = f" (🎲 d20={atk.get('roll', '?')})" if atk.get("roll") else ""
                         combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"hits you — {dmg} damage ({atk.get('damage_type', 'unknown')}){roll_str} → **{ch.get('name', 'Player')} {hp['current']}/{hp['max']} HP**"})
                         effects.append({"type": "skada", "value": dmg})
                         logger.info("⚔️ Enemy attack (narrative): %s → the player, %d damage → HP %d/%d", attacker_name, dmg, hp["current"], hp["max"])
                 else:
-                    roll_str = f" (slag {atk.get('roll', '?')})" if atk.get("roll") else ""
+                    roll_str = f" (🎲 d20={atk.get('roll', '?')})" if atk.get("roll") else ""
                     combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"misses you{roll_str}"})
 
         # Combat events → logga

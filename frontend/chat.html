@@ -557,7 +557,7 @@
     font-size: .82rem; color: var(--bone); border: none;
     background: transparent; padding: .45rem .8rem .55rem;
     border-radius: 0; line-height: 1.6; text-align: left;
-  }.msg.guardian .guardian-box strong{ color: #8cc4cc; }/* Chat-first combat v26 — inline stridsmeddelanden */.combat-inline{ font-size: .78rem; padding: .4rem .7rem; }.combat-round{
+  }.msg.guardian .guardian-box strong{ color: #8cc4cc; }/* Chat-first combat v26 — inline stridsmeddelanden */.combat-inline{ font-size: .78rem; padding: .4rem .7rem; }.combat-dm-roll{ display: flex; justify-content: center; padding: .15rem .5rem !important; }.combat-dm-roll .enemy-dice-mini{ padding: .3rem .7rem .4rem !important; }.combat-round{
     font-family: 'Press Start 2P', monospace; font-size: .6rem; letter-spacing: .1em;
     color: var(--gold-bright); text-align: center; border-color: rgba(201,162,39,.4);
     background: rgba(201,162,39,.06);
@@ -5880,6 +5880,10 @@ function applyCombatTag(el, text, container) {
   // Chat-first combat: rendera inline meddelanden (segerraden hamnar alltid i berättelsen)
   renderCombatInline(combat, reason, combatTarget, live ? chat : null);
 
+  // DM-tärning i chatten (live): nya fiende/allierad-rullar → mini-ceremoni i
+  // berättelseflödet, så man SER kastet när DM:n "kastar tärningarna" (2026-08-08).
+  if (live && combat.active !== false) dmRollInChat(combat, chat);
+
   // Status bar — header i stridspanelen (gömmer sig själv vid stridsslut)
   updateCombatStatusBar(combat);
 
@@ -5985,6 +5989,7 @@ function renderCombatInline(combat, reason, container, storyTarget) {
     _lastPlayerHp = null;
     _lastInitShown = null;
     _enemyDiceSeen.clear(); // fiende-tärningsceremonier: nollställ vid stridsslut
+    _dmRollSeen.clear();    // DM-rullar i chatten: nollställ vid stridsslut
     return;
   }
 
@@ -6315,50 +6320,25 @@ function decorateCombatDice(root) {
   });
 }
 
-// ── Fiende-tärning (mini-ceremoni): DM rullar MOT spelaren ──
-// Backend rullar riktiga tärningar (combat.py enemy_turn / guardian.py
-// enemy_attacks) — resultatet kommer in som 🎲-text i stridsloggen. Den här
-// funktionen visar SJÄLVA kastet: en kompakt inline-d20 som tumlar ~1.3s och
-// landar på det FAKTISKA värdet (d20=X ur 🎲-texten), med crit-guld (d20=20)
-// / fumble-blod+skak (d20=1) färgning — samma klasser som .inline-dice.
-// Non-blocking: spelas parallellt med att loggraden dyker upp, ingen
-// input-låsning, elementet raderas efter avslöjandet (badge-chippet i
-// loggraden är den permanenta posten).
-let _enemyDiceSeen = new Set();  // dedupe: samma roll får bara animeras EN gång
-function enemyDiceKey(rowIndex, badgeText) {
-  return 'edm_' + (rowIndex || 0) + '_' + String(badgeText || '');
-}
-function enemyDiceMini(row, rowIndex, badgeText, cleanText) {
-  if (!row || !row.parentNode || !badgeText) return;
-  // Batch/replay-render (t.ex. transcript-laddning): raden är inte synlig än
-  // → hoppa. Samma mönster som diceBadgeFx skippar osynliga rader.
-  if (!row.getBoundingClientRect) return;
-  const rr = row.getBoundingClientRect();
-  if (!rr.width) return;
-  // CLI-läge → tärningen finns redan som text i loggraden; ingen SVG-animation.
-  if (typeof document !== 'undefined' && document.body && document.body.classList &&
-      document.body.classList.contains('cli-chat')) return;
-  const key = enemyDiceKey(rowIndex, badgeText);
-  if (_enemyDiceSeen.has(key)) return;  // samma combat-state levereras många gånger
-  if (_enemyDiceSeen.size > 400) _enemyDiceSeen.clear();  // håll set:et begränsat
-  _enemyDiceSeen.add(key);
-
-  const d20m = String(badgeText).match(/d20\s*=\s*(\d+)/);
+// ── Mini-tärningsceremoni (delas av stridsloggen + DM-chatten) ──
+// Skapar elementet, tumlar ~1.3s, landar på det FAKTISKA värdet (d20=X ur
+// badge-texten), crit-guld (d20=20) / fumble-blod+skak (d20=1). Non-blocking,
+// raderas efter avslöjandet. insertAfter=true → efter ankaret, annars i ankaret.
+function spawnDiceMini(label, badgeText, anchor, insertAfter) {
+  const d20m = String(badgeText || '').match(/d20\s*=\s*(\d+)/);
   const d20Val = d20m ? parseInt(d20m[1], 10) : null;
   const isCrit = d20Val === 20;
   const isFail = d20Val === 1;
-  // Aktörsnamn ur loggraden ('Goblin: träffar dig …' → 'Goblin')
-  const nm = String(cleanText || '').match(/^([^:：]+)[:：]/);
-  const label = nm ? nm[1].trim() : 'DM';
 
   const mini = document.createElement('div');
   mini.className = 'inline-dice enemy-dice-mini rolling';
   mini.innerHTML =
-    '<div class="id-label">🎲 ' + escapeHtml(label) + '</div>' +
+    '<div class="id-label">🎲 ' + escapeHtml(label || 'DM') + '</div>' +
     '<div class="id-die">' + d20Svg() + '</div>' +
     '<div class="id-tension">' + (typeof I18N !== 'undefined' && I18N.t ? I18N.t('Tärningen rullar…') : 'Tärningen rullar…') + '</div>' +
     '<div class="id-result"></div>';
-  row.parentNode.insertBefore(mini, row.nextSibling);
+  if (insertAfter && anchor && anchor.parentNode) anchor.parentNode.insertBefore(mini, anchor.nextSibling);
+  else if (anchor && anchor.appendChild) anchor.appendChild(mini);
 
   if (typeof SFX !== 'undefined' && SFX.dice) SFX.dice();
 
@@ -6405,6 +6385,63 @@ function enemyDiceMini(row, rowIndex, badgeText, cleanText) {
       }, 260);
     }, 850);
   }
+  return mini;
+}
+
+// ── Fiende-tärning i stridsloggen (mini-ceremoni): DM rullar MOT spelaren ──
+// Backend rullar riktiga tärningar (guardian.py enemy_attacks) — resultatet
+// kommer in som 🎲-text i stridsloggen. Den här funktionen visar SJÄLVA kastet
+// i loggraden. (Chatt-ceremonin: dmRollInChat — samma mini, i berättelseflödet.)
+let _enemyDiceSeen = new Set();  // dedupe: samma roll får bara animeras EN gång
+function enemyDiceKey(rowIndex, badgeText) {
+  return 'edm_' + (rowIndex || 0) + '_' + String(badgeText || '');
+}
+function enemyDiceMini(row, rowIndex, badgeText, cleanText) {
+  if (!row || !row.parentNode || !badgeText) return;
+  // Batch/replay-render (t.ex. transcript-laddning): raden är inte synlig än
+  // → hoppa. Samma mönster som diceBadgeFx skippar osynliga rader.
+  if (!row.getBoundingClientRect) return;
+  const rr = row.getBoundingClientRect();
+  if (!rr.width) return;
+  // CLI-läge → tärningen finns redan som text i loggraden; ingen SVG-animation.
+  if (typeof document !== 'undefined' && document.body && document.body.classList &&
+      document.body.classList.contains('cli-chat')) return;
+  const key = enemyDiceKey(rowIndex, badgeText);
+  if (_enemyDiceSeen.has(key)) return;  // samma combat-state levereras många gånger
+  if (_enemyDiceSeen.size > 400) _enemyDiceSeen.clear();  // håll set:et begränsat
+  _enemyDiceSeen.add(key);
+  // Aktörsnamn ur loggraden ('Goblin: träffar dig …' → 'Goblin')
+  const nm = String(cleanText || '').match(/^([^:：]+)[:：]/);
+  const label = nm ? nm[1].trim() : 'DM';
+  spawnDiceMini(label, badgeText, row, true);
+}
+
+// ── DM-tärning i chatten (live): ny fiende/allierad-rulle → mini-ceremoni i
+// berättelseflödet, så man SER kastet när DM:n "kastar tärningarna" (2026-08-08).
+// Stridsloggen visar bara statiska badges — den här animerar kastet i chatten.
+let _dmRollSeen = new Set();  // dedupe: samma DM-rulle animeras bara EN gång
+function dmRollInChat(combat, storyTarget) {
+  if (!combat || !storyTarget || !Array.isArray(combat.log) || !combat.log.length) return;
+  combat.log.forEach(entry => {
+    const t = String(entry.text || '');
+    if (!t.includes('🎲')) return;
+    const dice = extractDiceFromText(t);
+    if (!dice.badges.length) return;
+    const badge = dice.badges[0];
+    const key = 'dmr_' + (entry.round || 0) + '_' + String(entry.actor || '') + '_' + t;
+    if (_dmRollSeen.has(key)) return;  // samma combat-state levereras många gånger
+    if (_dmRollSeen.size > 500) _dmRollSeen.clear();
+    _dmRollSeen.add(key);
+    // Aktör = loggens name (fiende/allierad) eller 'DM'
+    const label = String(entry.name || '').trim() || 'DM';
+    const wrap = document.createElement('div');
+    wrap.className = 'msg system';
+    const box = document.createElement('div');
+    box.className = 'box combat-inline combat-dm-roll';
+    box.appendChild(spawnDiceMini(label, badge, box, false));
+    wrap.appendChild(box);
+    storyTarget.appendChild(wrap);
+  });
 }
 
 // C2 — Krigsrådet v2 (battle rail with action economy)

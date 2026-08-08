@@ -11003,6 +11003,7 @@ SEO_PAGES = [
     ("mechanics.html", "0.8"),
     ("help.html", "0.8"),
     ("pricing.html", "0.8"),
+    ("models.html", "0.6"),
     ("releases.html", "0.6"),
     ("screenshots.html", "0.5"),
 ]
@@ -11050,8 +11051,10 @@ async def seo_llms_txt():
     body = (
         "# The Lore Weaver's Cauldron\n"
         "\n"
-        "> An AI Dungeon Master that runs real D&D 5e rules in a persistent, text-based world. "
-        "Play free in your browser in English or Swedish — no email, no card, no subscription. "
+        "> The best free AI D&D roleplaying game: an AI Dungeon Master that runs real D&D 5e "
+        "rules in a persistent, text-based world — and remembers it. Play free in your browser "
+        "in English or Swedish — no email, no card, no subscription. 300 turns on signup, then "
+        "50 fresh every day: more daily free turns than any other AI Dungeon Master. "
         "The DM narrates, the Lorekeeper engine tracks initiative, action economy, HP, XP, "
         "quests and NPCs. AI-painted portraits for your adventurer and every NPC, optional "
         "TTS narrator, transparent token usage.\n"

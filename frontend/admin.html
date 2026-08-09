@@ -213,7 +213,7 @@
   .vbar-label.today { color: var(--gold); }
   .vchart-empty { color: var(--bone-dim); font-size: 0.85rem; font-style: italic; padding: 0.6rem 0; }
 
-  /* ── Visits (2026-08-05: total/today/7d + per land + dag-strip) ── */
+  /* ── Visits (2026-08-05: total/today/7d + unika per land + dag-strip) ── */
   .visits-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: .8rem; margin-bottom: 1.2rem; }
   .v-kpi {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -227,8 +227,41 @@
   .visits-sub { font-family: var(--font-display,'Cinzel',serif); font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); opacity: .85; margin-bottom: .7rem; }
   .visits-strip { margin-bottom: 1.3rem; }
   .visits-strip .vchart { height: 200px; }
-  .visits-countries { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; align-items: start; }
-  .visits-countries .chart-body { flex-direction: column; align-items: stretch; gap: .6rem; }
+
+  /* ── Horisontella stapelgrafer: unika besökare per land + referrers (2026-08-09) ── */
+  .visits-countries { display: flex; flex-direction: column; gap: .5rem; }
+  .cbar-list { display: flex; flex-direction: column; gap: .45rem; }
+  .cbar-row {
+    display: grid; grid-template-columns: 150px 1fr 56px 46px; gap: .7rem; align-items: center;
+    min-width: 0; font-size: 0.85rem;
+  }
+  .cbar-name {
+    font-family: var(--font-display,'Cinzel',serif); font-size: 0.78rem; letter-spacing: 0.06em;
+    color: var(--bone); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    display: inline-flex; align-items: center; gap: .45em; min-width: 0;
+  }
+  .cbar-track { height: 15px; background: var(--ink); border: 1px solid var(--edge); border-radius: 3px; overflow: hidden; }
+  .cbar-fill {
+    height: 100%; border-radius: 2px;
+    background: linear-gradient(90deg, var(--gold), var(--arcane));
+    box-shadow: 0 0 8px rgba(201,162,39,.3);
+    transition: width .4s ease;
+  }
+  .cbar-fill.alt {
+    background: linear-gradient(90deg, var(--teal), var(--arcane));
+    box-shadow: 0 0 8px rgba(94,154,163,.35);
+  }
+  .cbar-val { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); color: var(--gold-bright); text-align: right; font-variant-numeric: tabular-nums; font-size: .85rem; }
+  .cbar-pct { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); color: var(--bone-dim); text-align: right; font-size: .75rem; font-variant-numeric: tabular-nums; }
+  .cbar-row.hidden { display: none; }
+  .cbar-list.show-all .cbar-row.hidden { display: grid; }
+  .cbar-more {
+    margin-top: .8rem; width: 100%; min-height: 40px; cursor: pointer;
+    background: var(--stone-2); border: 1px dashed var(--edge); color: var(--gold);
+    font-family: var(--font-display,'Cinzel',serif); font-size: .78rem; letter-spacing: .12em; text-transform: uppercase;
+    transition: border-color .2s ease, background .2s ease, color .2s ease;
+  }
+  .cbar-more:hover { border-color: var(--gold); background: rgba(201,162,39,.08); color: var(--gold-bright); }
 
   /* ── Top cards: unique visitors + recently active players (2026-08-06) ── */
   .active-list { display: flex; flex-direction: column; gap: .6rem; }
@@ -549,6 +582,8 @@
     .m-card .mc-tokens { font-size: 0.8rem; color: var(--term-green); font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); white-space: nowrap; }
     .m-card .mc-meta { display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.78rem; color: var(--bone-dim); flex-wrap: wrap; }
     .bar-row { grid-template-columns: 110px 1fr 74px; }
+    .cbar-row { grid-template-columns: 96px 1fr 48px; }
+    .cbar-pct { display: none; }
   }
   @media (min-width: 901px) {
     .mobile-cards { display: none; }
@@ -1566,16 +1601,53 @@ function renderCharts(users) {
       return String.fromCodePoint(...[...cc.toUpperCase()].map(c => c.charCodeAt(0) + base));
     };
     const ccLabel = (cc) => cc === 'LOCAL' ? '🏠 Local' : (cc === '??' ? '❓ Unknown' : `${flagEmoji(cc)} ${cc}`);
+    // 2026-08-09: unika besökare per land — horisontella staplar, top 20 + click more
     const cntries = (vis.by_country && Object.keys(vis.by_country).length)
       ? Object.entries(vis.by_country).map(([cc, n]) => ({
           label: ccLabel(cc),
           value: n,
-          color: COL[Math.abs((cc.charCodeAt(0) || 0) + (cc.charCodeAt(1) || 0)) % COL.length]
-        }))
+        })).sort((a, b) => b.value - a.value)
       : [];
+    const cMax = Math.max(...cntries.map(c => c.value), 1);
+    const cTotal = cntries.reduce((a, c) => a + c.value, 0);
+    const cbarRow = (c, extra) => `
+      <div class="cbar-row${extra || ''}" title="${esc(c.label)} — ${fmtNum(c.value)} unique visitor${c.value === 1 ? '' : 's'}">
+        <span class="cbar-name">${esc(c.label)}</span>
+        <div class="cbar-track"><div class="cbar-fill" style="width:${(c.value / cMax * 100).toFixed(1)}%"></div></div>
+        <span class="cbar-val">${fmtNum(c.value)}</span>
+        <span class="cbar-pct">${cTotal ? (c.value / cTotal * 100).toFixed(0) : 0}%</span>
+      </div>`;
+    const MAX_COUNTRIES = 20;
     const cntHtml = cntries.length
-      ? `<div class="visits-countries"><div class="visits-sub">By country</div><div class="chart-body">${barListHtml(cntries, fmtNum)}</div></div>`
+      ? `<div class="visits-countries">
+          <div class="visits-sub">Unique visitors by country</div>
+          <div class="cbar-list" id="cbar-list">${cntries.map((c, i) => cbarRow(c, i >= MAX_COUNTRIES ? ' hidden' : '')).join('')}</div>
+          ${cntries.length > MAX_COUNTRIES
+            ? `<button class="cbar-more" id="cbar-more" type="button" data-n="${cntries.length - MAX_COUNTRIES}">Click more · ${cntries.length - MAX_COUNTRIES} more</button>`
+            : ''}
+        </div>`
       : '';
+    // Top referrers — varifrån besökarna klickade in (2026-08-09, rostad)
+    let bRef = '<div class="chart-empty">No referrer data yet — tracking starts now</div>';
+    if (vis.by_referrer && Object.keys(vis.by_referrer).length) {
+      const refs = Object.entries(vis.by_referrer)
+        .map(([name, n]) => ({ label: name, value: n }))
+        .sort((a, b) => b.value - a.value);
+      const rMax = Math.max(...refs.map(r => r.value), 1);
+      const rTotal = refs.reduce((a, r) => a + r.value, 0);
+      const refRow = (label, v, extra) => `
+        <div class="cbar-row${extra || ''}" title="${esc(label)} — ${fmtNum(v)} visit${v === 1 ? '' : 's'}">
+          <span class="cbar-name">${esc(label)}</span>
+          <div class="cbar-track"><div class="cbar-fill alt" style="width:${(v / rMax * 100).toFixed(1)}%"></div></div>
+          <span class="cbar-val">${fmtNum(v)}</span>
+          <span class="cbar-pct">${rTotal ? (v / rTotal * 100).toFixed(0) : 0}%</span>
+        </div>`;
+      const rest = refs.slice(8).reduce((a, r) => a + r.value, 0);
+      bRef = `<div class="cbar-list">
+        ${refs.slice(0, 8).map(r => refRow(r.label, r.value)).join('')}
+        ${rest > 0 ? refRow(`Other (${refs.length - 8} more)`, rest) : ''}
+      </div>`;
+    }
     const todayD = new Date();
     const arrV = [];
     for (let i = 13; i >= 0; i--) {
@@ -1655,10 +1727,20 @@ function renderCharts(users) {
     chartCard(7, '◉ Token Share by Provider', bProv) +
     chartCard(5, '⧉ Calls by Provider', bCalls) +
     chartCard(12, '⧉ Visits', bVis) +
+    chartCard(12, '⇣ Top Referrers', bRef) +
     chartCard(12, '✛ New Users by Day', b6) +
     revenueChartCard() +
     chartCard(12, '♪ TTS Seconds by Player', b5);
   renderRevenueChart();
+  // Country chart: "Click more" — visa alla länder (2026-08-09)
+  const cbtn = document.getElementById('cbar-more');
+  if (cbtn) {
+    cbtn.addEventListener('click', () => {
+      const list = document.getElementById('cbar-list');
+      const open = list ? list.classList.toggle('show-all') : false;
+      cbtn.textContent = open ? 'Show less' : `Click more · ${cbtn.dataset.n} more`;
+    });
+  }
 }
 
 // ── Filters ──

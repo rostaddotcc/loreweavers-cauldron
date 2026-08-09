@@ -2,7 +2,9 @@
 
 Rostad: "Antal besök, besök per land och så?" — middleware räknar sidvisningar
 (HTML-sidor, ej API) → iplog.record_visit → data/visits.json. Admin-stats
-exponerar `visits`: {total, today, last_7, by_day, by_country}.
+exponerar `visits`: {total, today, last_7, by_day, by_country, by_referrer}.
+by_country = unika besökare per land (2026-08-09); by_referrer = varifrån
+besökarna klickade in (Google/Reddit/Direct …).
 
 Ingen riktig data rörs: users.json, ip_geo.json och visits.json pekas om till
 tmp; geo-cachen seedas så inget nätverksanrop görs.
@@ -45,7 +47,7 @@ def visits_file(tmp_path, monkeypatch):
     f = tmp_path / "visits.json"
     monkeypatch.setattr(iplog, "VISITS_FILE", f)
     monkeypatch.setattr(iplog, "_visits_loaded", False)
-    monkeypatch.setattr(iplog, "_visit_store", {"total": 0, "by_day": {}, "by_ip": {}})
+    monkeypatch.setattr(iplog, "_visit_store", {"total": 0, "by_day": {}, "by_ip": {}, "by_referrer": {}})
     return f
 
 
@@ -103,7 +105,7 @@ def test_by_day_pruned_to_32_days(visits_file):
 @pytest.mark.asyncio
 async def test_visits_summary_country_aggregation(visits_file):
     iplog.record_visit("1.2.3.4")   # SE
-    iplog.record_visit("1.2.3.4")   # SE
+    iplog.record_visit("1.2.3.4")   # SE (samma IP — fortfarande 1 unik)
     iplog.record_visit("9.9.9.9")   # DE
     iplog.record_visit("192.168.1.5")  # LOCAL
     # Seed geo-cache så ingen nätverksuppslagning sker
@@ -112,7 +114,8 @@ async def test_visits_summary_country_aggregation(visits_file):
     iplog._geo_cache["9.9.9.9"] = {"country": "Germany", "countryCode": "DE", "ts": now}
     s = await iplog.visits_summary()
     assert s["total"] == 4
-    assert s["by_country"]["SE"] == 2
+    # 2026-08-09: unika besökare per land (varje IP räknas en gång)
+    assert s["by_country"]["SE"] == 1
     assert s["by_country"]["DE"] == 1
     assert s["by_country"]["LOCAL"] == 1
     assert s["last_7"] >= 4
@@ -121,6 +124,32 @@ async def test_visits_summary_country_aggregation(visits_file):
     assert s["unique_total"] == 3
     assert s["unique_today"] == 3
     assert s["unique_7d"] == 3
+
+
+# ── Referrer-spårning (2026-08-09, rostad) ───────────────────────────────
+
+def test_referrer_classification():
+    assert iplog._referrer_source("") == "Direct"
+    assert iplog._referrer_source("https://www.google.com/search?q=dnd") == "Google"
+    assert iplog._referrer_source("https://google.se/") == "Google"
+    assert iplog._referrer_source("https://www.reddit.com/r/rpg/") == "Reddit"
+    assert iplog._referrer_source("https://t.me/rostad") == "Telegram"
+    assert iplog._referrer_source("https://example.com/") == "example.com"
+    # Intern navigering (egen domän) → Direct
+    assert iplog._referrer_source("https://morkretsrike.se/chat.html", "morkretsrike.se") == "Direct"
+    assert iplog._referrer_source("https://morkretsrike.se:8000/login.html", "morkretsrike.se:8000") == "Direct"
+    # Relativ URL (samma sida) → Direct
+    assert iplog._referrer_source("/login.html", "morkretsrike.se") == "Direct"
+
+
+def test_record_visit_counts_referrers(visits_file):
+    iplog.record_visit("1.2.3.4", "https://www.google.com/", "morkretsrike.se")
+    iplog.record_visit("1.2.3.4", "https://www.reddit.com/", "morkretsrike.se")
+    iplog.record_visit("1.2.3.4", "https://morkretsrike.se/login.html", "morkretsrike.se")  # intern
+    iplog.record_visit("1.2.3.4", "", "morkretsrike.se")  # direct
+    assert iplog._visit_store["by_referrer"] == {
+        "Google": 1, "Reddit": 1, "Direct": 2,
+    }
 
 
 # ── Admin-stats ──────────────────────────────────────────────────────────
@@ -138,7 +167,7 @@ def test_admin_stats_includes_visits(client, visits_file):
     assert r.status_code == 200, r.text
     visits = r.json()["visits"]
     assert visits["total"] == 2
-    assert visits["by_country"]["SE"] == 2
+    assert visits["by_country"]["SE"] == 1  # unika: 1 IP trots 2 sidvisningar
     assert visits["today"] >= 2
     assert visits["unique_total"] == 1
 

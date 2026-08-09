@@ -288,7 +288,13 @@ async def ip_tracking_middleware(request, call_next):
         if request.method == "GET" and not path.startswith("/api") and (
             path.endswith(".html") or path in ("/", "/index.html")
         ):
-            iplog.record_visit(iplog.client_ip(request))
+            # Referer-headern → varifrån besökaren klickade in (Google, Reddit…).
+            # self_host filtrerar bort intern navigering (egna sidor = Direct).
+            iplog.record_visit(
+                iplog.client_ip(request),
+                request.headers.get("referer", ""),
+                request.headers.get("host", ""),
+            )
     except Exception:
         pass
     response.headers["Strict-Transport-Security"] = "max-age=31536000"

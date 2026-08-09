@@ -27,9 +27,11 @@ GEO_CACHE_TTL = 86400 * 7  # 7 dygn innan vi slår upp samma IP igen
 _geo_cache: dict[str, dict] = {}
 # Per-användare senast sedda IP:er (skrivs till disk vid ändring)
 _ip_store: dict[str, dict] = {}
-# Besöksräkning (2026-08-05, rostad): {total, by_day, by_ip}. by_ip används
-# för att aggregera "besök per land" vid admin-stats (geokodas via cache).
-_visit_store: dict = {"total": 0, "by_day": {}, "by_ip": {}}
+# Besöksräkning (2026-08-05, rostad): {total, by_day, by_ip, by_referrer}.
+# by_ip används för att aggregera "unika besökare per land" vid admin-stats
+# (varje IP = 1 unik besökare, geokodas via cache). by_referrer = varifrån
+# besökaren klickade in (Google, Reddit, Direct …) — 2026-08-09, rostad.
+_visit_store: dict = {"total": 0, "by_day": {}, "by_ip": {}, "by_referrer": {}}
 _visits_loaded = False
 _loaded = False
 
@@ -129,6 +131,7 @@ def _visits_load() -> None:
             _visit_store["total"] = int(data.get("total", 0) or 0)
             _visit_store["by_day"] = data.get("by_day", {}) or {}
             _visit_store["by_ip"] = data.get("by_ip", {}) or {}
+            _visit_store["by_referrer"] = data.get("by_referrer", {}) or {}
     except (OSError, json.JSONDecodeError):
         pass
 
@@ -141,12 +144,63 @@ def _visits_save() -> None:
         pass
 
 
-def record_visit(ip: str) -> None:
+# Kända sökmotorer + sajter → läsbara etiketter för referrer-spårning
+_SEARCH_ENGINES = {
+    "google": "Google", "bing": "Bing", "duckduckgo": "DuckDuckGo",
+    "yahoo": "Yahoo", "yandex": "Yandex", "ecosia": "Ecosia",
+    "startpage": "Startpage", "qwant": "Qwant", "brave": "Brave",
+}
+_KNOWN_SITES = {
+    "reddit.com": "Reddit", "discord.com": "Discord", "t.me": "Telegram",
+    "facebook.com": "Facebook", "x.com": "X", "twitter.com": "X",
+    "instagram.com": "Instagram", "youtube.com": "YouTube",
+    "tiktok.com": "TikTok", "twitch.tv": "Twitch", "linkedin.com": "LinkedIn",
+    "steamcommunity.com": "Steam", "rollspel.nu": "rollspel.nu",
+}
+
+
+def _referrer_source(referrer: str, self_host: str = "") -> str:
+    """Klassificera en HTTP Referer → läsbar källa (Google, Reddit, Direct …).
+
+    - Tom/relativ referrer → "Direct" (skrivit URL själv, bokmärke, app).
+    - Egen domän (self_host) → "Direct" — intern navigering räknas inte som
+      "klick inifrån".
+    - Känd sökmotor/sajt → läsbar etikett, annars domänen som den är.
+    """
+    if not referrer:
+        return "Direct"
+    try:
+        from urllib.parse import urlparse
+        host = (urlparse(referrer).netloc or "").lower()
+    except Exception:
+        return "Direct"
+    if host.startswith("www."):
+        host = host[4:]
+    if not host:
+        return "Direct"
+    # Strippa port (host:port) — IPv6 (med [ ]) lämnas orörd
+    if not host.startswith("["):
+        host = host.split(":")[0]
+    sh = (self_host or "").lower().split(":")[0]
+    if sh and (host == sh or host == "www." + sh):
+        return "Direct"
+    for key, label in _SEARCH_ENGINES.items():
+        if host == key or host.startswith(key + "."):
+            return label
+    if host in _KNOWN_SITES:
+        return _KNOWN_SITES[host]
+    return host
+
+
+def record_visit(ip: str, referrer: str = "", self_host: str = "") -> None:
     """Räkna en sidvisning (anropas från middleware för HTML-sidor).
 
     by_day sparas i ~32 dagar; by_ip = {count, last_seen} per IP för
     unique-besök (antal distinkta besökare) i admin-stats. Geokodning sker
-    lat i visits_summary via _geo_cache — inget nätverksanrop här."""
+    lat i visits_summary via _geo_cache — inget nätverksanrop här.
+    by_referrer = varifrån besökaren kom (Google/Reddit/Direct …), räknat
+    från HTTP Referer-headern (2026-08-09, rostad).
+    """
     _visits_load()
     now = time.time()
     today = time.strftime("%Y-%m-%d", time.localtime(now))
@@ -160,6 +214,10 @@ def record_visit(ip: str) -> None:
         else:
             # Migrera legacy-format (int) → {count, last_seen}
             _visit_store["by_ip"][ip] = {"count": int(cur or 0) + 1, "last_seen": now}
+    # Referrer-källa (egna sidor → Direct, så vi mäter bara utifrån-in-klick)
+    src = _referrer_source(referrer, self_host)
+    _visit_store.setdefault("by_referrer", {})
+    _visit_store["by_referrer"][src] = int(_visit_store["by_referrer"].get(src, 0) or 0) + 1
     # Trimma by_day till ~32 dagar
     days = sorted(_visit_store["by_day"].keys())
     if len(days) > 32:
@@ -169,10 +227,11 @@ def record_visit(ip: str) -> None:
 
 
 async def visits_summary() -> dict:
-    """Admin-sammanfattning: total, idag, 7 dagar, per dag (14) + per land.
+    """Admin-sammanfattning: total, idag, 7 dagar, per dag (14) + unika per land.
 
-    Per-land aggregeras från by_ip via geo-cachen; okända IP:er slås upp
-    lat (geo_for_ip, cachad) — samma mekanism som admin-landskollen."""
+    Per-land aggregeras från by_ip via geo-cachen (varje IP = 1 unik besökare,
+    2026-08-09); okända IP:er slås upp lat (geo_for_ip, cachad). by_referrer
+    = varifrån besökarna klickade in (Google/Reddit/Direct …)."""
     _visits_load()
     now = time.time()
     today = time.strftime("%Y-%m-%d", time.localtime(now))
@@ -201,8 +260,9 @@ async def visits_summary() -> dict:
         if last >= now - 14 * 86400:
             unique_14d += 1
     by_country: dict[str, int] = {}
-    for ip, n in _visit_store["by_ip"].items():
-        cnt = n.get("count", 1) if isinstance(n, dict) else int(n or 1)
+    for ip in _visit_store["by_ip"]:
+        # Unika besökare per land: varje distinkt IP räknas EN gång,
+        # oavsett antal sidvisningar (2026-08-09, rostad: "unique visitors by country").
         cc = "??"
         if ip and not is_private(ip):
             cached = _geo_cache.get(ip)
@@ -213,8 +273,12 @@ async def visits_summary() -> dict:
                 cc = info.get("countryCode") or "??"
         else:
             cc = "LOCAL" if (ip and is_private(ip)) else "??"
-        by_country[cc] = by_country.get(cc, 0) + cnt
+        by_country[cc] = by_country.get(cc, 0) + 1
     by_country = dict(sorted(by_country.items(), key=lambda kv: kv[1], reverse=True))
+    by_referrer = dict(sorted(
+        {k: int(v or 0) for k, v in _visit_store.get("by_referrer", {}).items()}.items(),
+        key=lambda kv: kv[1], reverse=True,
+    ))
     return {
         "total": _visit_store["total"],
         "today": int(_visit_store["by_day"].get(today, 0) or 0),
@@ -225,6 +289,7 @@ async def visits_summary() -> dict:
         "unique_14d": unique_14d,
         "by_day": by_day,
         "by_country": by_country,
+        "by_referrer": by_referrer,
     }
 
 

@@ -47,7 +47,7 @@ def visits_file(tmp_path, monkeypatch):
     f = tmp_path / "visits.json"
     monkeypatch.setattr(iplog, "VISITS_FILE", f)
     monkeypatch.setattr(iplog, "_visits_loaded", False)
-    monkeypatch.setattr(iplog, "_visit_store", {"total": 0, "by_day": {}, "by_ip": {}, "by_referrer": {}})
+    monkeypatch.setattr(iplog, "_visit_store", {"total": 0, "by_day": {}, "by_ip": {}, "by_referrer": {}, "by_day_unique": {}})
     return f
 
 
@@ -142,14 +142,40 @@ def test_referrer_classification():
     assert iplog._referrer_source("/login.html", "morkretsrike.se") == "Direct"
 
 
-def test_record_visit_counts_referrers(visits_file):
+def test_record_visit_counts_unique_referrers(visits_file):
+    """2026-08-09: by_referrer = unika besökare per källa (distinkta IP:er)."""
     iplog.record_visit("1.2.3.4", "https://www.google.com/", "morkretsrike.se")
+    iplog.record_visit("1.2.3.4", "https://www.google.com/", "morkretsrike.se")  # samma IP → 1 unik
+    iplog.record_visit("5.6.7.8", "https://www.google.com/", "morkretsrike.se")  # ny IP → 2 unika
     iplog.record_visit("1.2.3.4", "https://www.reddit.com/", "morkretsrike.se")
-    iplog.record_visit("1.2.3.4", "https://morkretsrike.se/login.html", "morkretsrike.se")  # intern
+    iplog.record_visit("1.2.3.4", "https://morkretsrike.se/login.html", "morkretsrike.se")  # intern → Direct
     iplog.record_visit("1.2.3.4", "", "morkretsrike.se")  # direct
-    assert iplog._visit_store["by_referrer"] == {
-        "Google": 1, "Reddit": 1, "Direct": 2,
-    }
+    assert set(iplog._visit_store["by_referrer"]["Google"]) == {"1.2.3.4", "5.6.7.8"}  # 2 unika IP:er
+    assert len(iplog._visit_store["by_referrer"]["Google"]) == 2
+    assert len(iplog._visit_store["by_referrer"]["Reddit"]) == 1
+    assert len(iplog._visit_store["by_referrer"]["Direct"]) == 1  # intern + tom referrer, samma IP
+
+
+def test_by_day_unique_counts_distinct_ips(visits_file):
+    iplog.record_visit("1.2.3.4")
+    iplog.record_visit("1.2.3.4")   # samma IP → fortfarande 1 unik idag
+    iplog.record_visit("9.9.9.9")
+    today = time.strftime("%Y-%m-%d")
+    assert set(iplog._visit_store["by_day_unique"][today]) == {"1.2.3.4", "9.9.9.9"}
+    assert len(iplog._visit_store["by_day_unique"][today]) == 2
+
+
+@pytest.mark.asyncio
+async def test_visits_summary_returns_unique_daily_and_referrers(visits_file):
+    iplog.record_visit("1.2.3.4", "https://www.google.com/", "morkretsrike.se")
+    iplog.record_visit("1.2.3.4", "https://www.google.com/", "morkretsrike.se")  # samma IP + källa
+    iplog.record_visit("9.9.9.9", "https://www.reddit.com/", "morkretsrike.se")
+    today = time.strftime("%Y-%m-%d")
+    s = await iplog.visits_summary()
+    assert s["by_day_unique"][today] == 2       # 2 distinkta IP:er idag
+    assert s["by_referrer"]["Google"] == 1      # 1 unik IP från Google
+    assert s["by_referrer"]["Reddit"] == 1
+    assert s["unique_today"] == 2
 
 
 # ── Admin-stats ──────────────────────────────────────────────────────────

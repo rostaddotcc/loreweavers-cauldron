@@ -27,11 +27,13 @@ GEO_CACHE_TTL = 86400 * 7  # 7 dygn innan vi slår upp samma IP igen
 _geo_cache: dict[str, dict] = {}
 # Per-användare senast sedda IP:er (skrivs till disk vid ändring)
 _ip_store: dict[str, dict] = {}
-# Besöksräkning (2026-08-05, rostad): {total, by_day, by_ip, by_referrer}.
+# Besöksräkning (2026-08-05, rostad): {total, by_day, by_ip, by_referrer, by_day_unique}.
 # by_ip används för att aggregera "unika besökare per land" vid admin-stats
 # (varje IP = 1 unik besökare, geokodas via cache). by_referrer = varifrån
-# besökaren klickade in (Google, Reddit, Direct …) — 2026-08-09, rostad.
-_visit_store: dict = {"total": 0, "by_day": {}, "by_ip": {}, "by_referrer": {}}
+# besökaren klickade in (Google, Reddit, Direct …) som {källa: {ip: last_seen}}
+# → unika besökare per källa (2026-08-09). by_day_unique = {dag: {ip: last_seen}}
+# → unika besökare per dag för dagsgrafen i admin.
+_visit_store: dict = {"total": 0, "by_day": {}, "by_ip": {}, "by_referrer": {}, "by_day_unique": {}}
 _visits_loaded = False
 _loaded = False
 
@@ -132,6 +134,7 @@ def _visits_load() -> None:
             _visit_store["by_day"] = data.get("by_day", {}) or {}
             _visit_store["by_ip"] = data.get("by_ip", {}) or {}
             _visit_store["by_referrer"] = data.get("by_referrer", {}) or {}
+            _visit_store["by_day_unique"] = data.get("by_day_unique", {}) or {}
     except (OSError, json.JSONDecodeError):
         pass
 
@@ -198,14 +201,16 @@ def record_visit(ip: str, referrer: str = "", self_host: str = "") -> None:
     by_day sparas i ~32 dagar; by_ip = {count, last_seen} per IP för
     unique-besök (antal distinkta besökare) i admin-stats. Geokodning sker
     lat i visits_summary via _geo_cache — inget nätverksanrop här.
-    by_referrer = varifrån besökaren kom (Google/Reddit/Direct …), räknat
-    från HTTP Referer-headern (2026-08-09, rostad).
+    by_referrer = varifrån besökaren kom (Google/Reddit/Direct …) som
+    {källa: {ip: last_seen}} → unika besökare per källa. by_day_unique =
+    {dag: {ip: last_seen}} → unika besökare per dag (2026-08-09, rostad).
     """
     _visits_load()
     now = time.time()
     today = time.strftime("%Y-%m-%d", time.localtime(now))
     _visit_store["total"] += 1
     _visit_store["by_day"][today] = int(_visit_store["by_day"].get(today, 0) or 0) + 1
+    key = ip or "__noip__"
     if ip:
         cur = _visit_store["by_ip"].get(ip)
         if isinstance(cur, dict):
@@ -214,15 +219,24 @@ def record_visit(ip: str, referrer: str = "", self_host: str = "") -> None:
         else:
             # Migrera legacy-format (int) → {count, last_seen}
             _visit_store["by_ip"][ip] = {"count": int(cur or 0) + 1, "last_seen": now}
-    # Referrer-källa (egna sidor → Direct, så vi mäter bara utifrån-in-klick)
+    # Referrer-källa (egna sidor → Direct, så vi mäter bara utifrån-in-klick).
+    # Format {källa: {ip: last_seen}} → unika besökare per källa. Legacy-int
+    # (total) ersätts med en färsk dict vid nästa besök från källan.
     src = _referrer_source(referrer, self_host)
-    _visit_store.setdefault("by_referrer", {})
-    _visit_store["by_referrer"][src] = int(_visit_store["by_referrer"].get(src, 0) or 0) + 1
-    # Trimma by_day till ~32 dagar
+    refs = _visit_store.setdefault("by_referrer", {})
+    if not isinstance(refs.get(src), dict):
+        refs[src] = {}
+    refs[src][key] = now
+    # Unika besökare per dag (distinkta IP:er i dagens set)
+    du = _visit_store.setdefault("by_day_unique", {})
+    today_set = du.setdefault(today, {})
+    today_set[key] = now
+    # Trimma by_day + by_day_unique till ~32 dagar
     days = sorted(_visit_store["by_day"].keys())
     if len(days) > 32:
         for d in days[: len(days) - 32]:
             _visit_store["by_day"].pop(d, None)
+            du.pop(d, None)
     _visits_save()
 
 
@@ -231,7 +245,8 @@ async def visits_summary() -> dict:
 
     Per-land aggregeras från by_ip via geo-cachen (varje IP = 1 unik besökare,
     2026-08-09); okända IP:er slås upp lat (geo_for_ip, cachad). by_referrer
-    = varifrån besökarna klickade in (Google/Reddit/Direct …)."""
+    = unika besökare per källa (Google/Reddit/Direct …). by_day_unique = unika
+    besökare per dag (distinkta IP:er)."""
     _visits_load()
     now = time.time()
     today = time.strftime("%Y-%m-%d", time.localtime(now))
@@ -241,6 +256,10 @@ async def visits_summary() -> dict:
         last_7 += int(_visit_store["by_day"].get(d, 0) or 0)
     days = sorted(_visit_store["by_day"].keys())[-14:]
     by_day = {d: int(_visit_store["by_day"].get(d, 0) or 0) for d in days}
+    # Unika besökare per dag (distinkta IP:er per dag) — dagsgrafen i admin
+    du = _visit_store.get("by_day_unique", {}) or {}
+    du_days = sorted(du.keys())[-14:]
+    by_day_unique = {d: len(du[d]) for d in du_days if isinstance(du.get(d), dict)}
     # Unique-besök (distinkta IP:er): total, idag, senaste 7 dygn
     now = time.time()
     day_start = time.mktime(time.strptime(today, "%Y-%m-%d"))
@@ -275,10 +294,17 @@ async def visits_summary() -> dict:
             cc = "LOCAL" if (ip and is_private(ip)) else "??"
         by_country[cc] = by_country.get(cc, 0) + 1
     by_country = dict(sorted(by_country.items(), key=lambda kv: kv[1], reverse=True))
-    by_referrer = dict(sorted(
-        {k: int(v or 0) for k, v in _visit_store.get("by_referrer", {}).items()}.items(),
-        key=lambda kv: kv[1], reverse=True,
-    ))
+    # Unika besökare per referrer-källa: {källa: {ip: last_seen}} → len(ips).
+    # Legacy-int (total) behålls som count tills källan får nya besök.
+    by_referrer: dict[str, int] = {}
+    for src, v in (_visit_store.get("by_referrer", {}) or {}).items():
+        if isinstance(v, dict):
+            by_referrer[src] = len(v)
+        elif isinstance(v, int):
+            by_referrer[src] = v
+        else:
+            by_referrer[src] = 1
+    by_referrer = dict(sorted(by_referrer.items(), key=lambda kv: kv[1], reverse=True))
     return {
         "total": _visit_store["total"],
         "today": int(_visit_store["by_day"].get(today, 0) or 0),
@@ -288,6 +314,7 @@ async def visits_summary() -> dict:
         "unique_7d": unique_7d,
         "unique_14d": unique_14d,
         "by_day": by_day,
+        "by_day_unique": by_day_unique,
         "by_country": by_country,
         "by_referrer": by_referrer,
     }

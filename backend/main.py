@@ -9820,6 +9820,20 @@ async def admin_stats(morkrets_token: str | None = Cookie(None)):
     }
 
 
+@app.get("/api/admin/visits_country")
+async def admin_visits_country(
+    window: str = "all", morkrets_token: str | None = Cookie(None)
+):
+    """Admin-only: unika besökare per land i ett tidsfönster.
+
+    window = 1h | 12h | 24h | 7d | 30d | all (default). Används av
+    land-grafens filter i adminvyn (2026-08-09, rostad)."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+    visits = await iplog.visits_summary(country_range=window)
+    return {"by_country": visits["by_country"]}
+
+
 @app.get("/api/me/stats")
 async def me_stats(morkrets_token: str | None = Cookie(None)):
     """Inloggad spelare ser BARA sina egna stats (exkl. ip/land).

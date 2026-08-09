@@ -178,6 +178,32 @@ async def test_visits_summary_returns_unique_daily_and_referrers(visits_file):
     assert s["unique_today"] == 2
 
 
+@pytest.mark.asyncio
+async def test_visits_summary_country_range_filter(visits_file):
+    """2026-08-09: land-grafens tidsfilter (1h/12h/24h/7d/30d) på last_seen."""
+    now = time.time()
+    iplog._visit_store["by_ip"] = {
+        "1.2.3.4": {"count": 1, "last_seen": now},              # aktiv nu
+        "5.6.7.8": {"count": 1, "last_seen": now - 2 * 3600},   # 2 h sedan
+        "9.9.9.9": {"count": 1, "last_seen": now - 10 * 86400},  # 10 dagar sedan
+    }
+    iplog._geo_cache["1.2.3.4"] = {"country": "Sweden", "countryCode": "SE", "ts": now}
+    iplog._geo_cache["5.6.7.8"] = {"country": "Germany", "countryCode": "DE", "ts": now}
+    iplog._geo_cache["9.9.9.9"] = {"country": "France", "countryCode": "FR", "ts": now}
+    s1h = await iplog.visits_summary(country_range="1h")
+    assert s1h["by_country"] == {"SE": 1}
+    s12h = await iplog.visits_summary(country_range="12h")
+    assert s12h["by_country"] == {"SE": 1, "DE": 1}
+    s24h = await iplog.visits_summary(country_range="24h")
+    assert s24h["by_country"] == {"SE": 1, "DE": 1}
+    s7d = await iplog.visits_summary(country_range="7d")
+    assert s7d["by_country"] == {"SE": 1, "DE": 1}
+    s30d = await iplog.visits_summary(country_range="30d")
+    assert s30d["by_country"] == {"SE": 1, "DE": 1, "FR": 1}
+    sall = await iplog.visits_summary()
+    assert sall["by_country"] == {"SE": 1, "DE": 1, "FR": 1}
+
+
 # ── Admin-stats ──────────────────────────────────────────────────────────
 
 def test_admin_stats_includes_visits(client, visits_file):
@@ -196,6 +222,34 @@ def test_admin_stats_includes_visits(client, visits_file):
     assert visits["by_country"]["SE"] == 1  # unika: 1 IP trots 2 sidvisningar
     assert visits["today"] >= 2
     assert visits["unique_total"] == 1
+
+
+def test_admin_visits_country_endpoint(client, visits_file):
+    """2026-08-09: /api/admin/visits_country?window=… → filtrerad by_country."""
+    main.save_users({
+        "the_admin": {"password_hash": hash_password("pw123456"), "role": "admin", "turn_cap": 0},
+    })
+    now = time.time()
+    iplog._visit_store["by_ip"] = {
+        "1.2.3.4": {"count": 1, "last_seen": now},
+        "5.6.7.8": {"count": 1, "last_seen": now - 2 * 3600},
+    }
+    iplog._geo_cache["1.2.3.4"] = {"country": "Sweden", "countryCode": "SE", "ts": now}
+    iplog._geo_cache["5.6.7.8"] = {"country": "Germany", "countryCode": "DE", "ts": now}
+    atok = create_token("the_admin", "admin")
+    r1h = client.get("/api/admin/visits_country?window=1h", cookies={"morkrets_token": atok})
+    assert r1h.status_code == 200, r1h.text
+    assert r1h.json()["by_country"] == {"SE": 1}
+    rall = client.get("/api/admin/visits_country", cookies={"morkrets_token": atok})
+    assert rall.status_code == 200
+    assert rall.json()["by_country"] == {"SE": 1, "DE": 1}
+    # Icke-admin → 403
+    main.save_users({
+        "p1": {"password_hash": hash_password("pw123456"), "role": "player", "turn_cap": 0},
+    })
+    ptok = create_token("p1", "player")
+    r403 = client.get("/api/admin/visits_country?window=1h", cookies={"morkrets_token": ptok})
+    assert r403.status_code == 403
 
 
 def test_middleware_counts_page_views(client, visits_file):

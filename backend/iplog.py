@@ -240,13 +240,14 @@ def record_visit(ip: str, referrer: str = "", self_host: str = "") -> None:
     _visits_save()
 
 
-async def visits_summary() -> dict:
+async def visits_summary(country_range: str = "all") -> dict:
     """Admin-sammanfattning: total, idag, 7 dagar, per dag (14) + unika per land.
 
     Per-land aggregeras från by_ip via geo-cachen (varje IP = 1 unik besökare,
     2026-08-09); okända IP:er slås upp lat (geo_for_ip, cachad). by_referrer
     = unika besökare per källa (Google/Reddit/Direct …). by_day_unique = unika
-    besökare per dag (distinkta IP:er)."""
+    besökare per dag (distinkta IP:er). country_range filtrerar land-grafen på
+    IP:ernas senaste aktivitet: 1h/12h/24h/7d/30d (default "all")."""
     _visits_load()
     now = time.time()
     today = time.strftime("%Y-%m-%d", time.localtime(now))
@@ -278,8 +279,25 @@ async def visits_summary() -> dict:
             unique_7d += 1
         if last >= now - 14 * 86400:
             unique_14d += 1
+    # Land-grafens tidsfönster (2026-08-09, rostad): filtrera på IP:ernas
+    # senaste aktivitet → "unika besökare de senaste 1h/12h/24h/7d/30d".
+    cutoff = 0  # all time
+    if country_range == "1h":
+        cutoff = now - 3600
+    elif country_range == "12h":
+        cutoff = now - 12 * 3600
+    elif country_range == "24h":
+        cutoff = now - 24 * 3600
+    elif country_range == "7d":
+        cutoff = now - 7 * 86400
+    elif country_range == "30d":
+        cutoff = now - 30 * 86400
     by_country: dict[str, int] = {}
-    for ip in _visit_store["by_ip"]:
+    for ip, rec in _visit_store["by_ip"].items():
+        if cutoff:
+            last = rec.get("last_seen", 0) if isinstance(rec, dict) else 0
+            if not last or last < cutoff:
+                continue
         # Unika besökare per land: varje distinkt IP räknas EN gång,
         # oavsett antal sidvisningar (2026-08-09, rostad: "unique visitors by country").
         cc = "??"

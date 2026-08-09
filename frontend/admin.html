@@ -263,6 +263,20 @@
   }
   .cbar-more:hover { border-color: var(--gold); background: rgba(201,162,39,.08); color: var(--gold-bright); }
 
+  /* ── Tidsfilter för land-grafen (2026-08-09): 1h/12h/24h/7d/30d/all ── */
+  .visits-sub-row { display: flex; align-items: center; justify-content: space-between; gap: .8rem; flex-wrap: wrap; }
+  .visits-sub-row .visits-sub { margin-bottom: 0; }
+  .range-pills { display: flex; gap: .35rem; flex-wrap: wrap; }
+  .pill {
+    background: var(--stone-2); border: 1px solid var(--edge); color: var(--bone-dim);
+    font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: .72rem;
+    padding: .32rem .62rem; cursor: pointer; min-height: 30px;
+    text-transform: uppercase; letter-spacing: .05em;
+    transition: border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  .pill:hover { border-color: var(--gold); color: var(--gold-bright); }
+  .pill.active { border-color: var(--gold); color: var(--gold-bright); background: rgba(201,162,39,.12); }
+
   /* ── Top cards: unique visitors + recently active players (2026-08-06) ── */
   .active-list { display: flex; flex-direction: column; gap: .6rem; }
   .active-row {
@@ -1359,6 +1373,72 @@ function chartCard(span, title, body) {
   return `<div class="chart-card span-${span}"><div class="chart-head">${title}</div>${body}</div>`;
 }
 
+// ── Land-graf + tidsfilter (2026-08-09, rostad): 1h/12h/24h/7d/30d/all ──
+// fmtNum/flagEmoji/ccLabel ligger på modulnivå så countryChartHtml +
+// setCountryRange kan återanvända dem (renderCharts bygger om sektionen).
+const fmtNum = v => (v || 0).toLocaleString('en-US');
+const flagEmoji = (cc) => {
+  if (!cc || cc.length !== 2 || !/^[A-Za-z]{2}$/.test(cc)) return '🌍';
+  const base = 127397; // regional indicator A = U+1F1E6
+  return String.fromCodePoint(...[...cc.toUpperCase()].map(c => c.charCodeAt(0) + base));
+};
+const ccLabel = (cc) => cc === 'LOCAL' ? '🏠 Local' : (cc === '??' ? '❓ Unknown' : `${flagEmoji(cc)} ${cc}`);
+let countryRange = 'all';
+
+function countryChartHtml(cntries, active) {
+  const cMax = Math.max(...cntries.map(c => c.value), 1);
+  const cTotal = cntries.reduce((a, c) => a + c.value, 0);
+  const cbarRow = (c, extra) => `
+    <div class="cbar-row${extra || ''}" title="${esc(c.label)} — ${fmtNum(c.value)} unique visitor${c.value === 1 ? '' : 's'}">
+      <span class="cbar-name">${esc(c.label)}</span>
+      <div class="cbar-track"><div class="cbar-fill" style="width:${(c.value / cMax * 100).toFixed(1)}%"></div></div>
+      <span class="cbar-val">${fmtNum(c.value)}</span>
+      <span class="cbar-pct">${cTotal ? (c.value / cTotal * 100).toFixed(0) : 0}%</span>
+    </div>`;
+  const MAX_COUNTRIES = 20;
+  const pills = ['all', '1h', '12h', '24h', '7d', '30d'].map(r =>
+    `<button class="pill${r === active ? ' active' : ''}" type="button" onclick="setCountryRange('${r}')">${r === 'all' ? 'All' : r}</button>`
+  ).join('');
+  const body = cntries.length
+    ? `<div class="cbar-list" id="cbar-list">${cntries.map((c, i) => cbarRow(c, i >= MAX_COUNTRIES ? ' hidden' : '')).join('')}</div>
+       ${cntries.length > MAX_COUNTRIES
+         ? `<button class="cbar-more" id="cbar-more" type="button" onclick="toggleCountryMore(this)" data-n="${cntries.length - MAX_COUNTRIES}">Click more · ${cntries.length - MAX_COUNTRIES} more</button>`
+         : ''}`
+    : '<div class="chart-empty">No unique visitors in this window</div>';
+  return `<div class="visits-countries" id="country-section">
+    <div class="visits-sub-row">
+      <div class="visits-sub">Unique visitors by country</div>
+      <div class="range-pills">${pills}</div>
+    </div>
+    ${body}
+  </div>`;
+}
+
+function toggleCountryMore(btn) {
+  const list = document.getElementById('cbar-list');
+  const open = list ? list.classList.toggle('show-all') : false;
+  btn.textContent = open ? 'Show less' : `Click more · ${btn.dataset.n} more`;
+}
+
+async function setCountryRange(r) {
+  if (r === countryRange) return;
+  const prev = countryRange;
+  countryRange = r;
+  try {
+    const res = await fetch('/api/admin/visits_country?window=' + encodeURIComponent(r), { credentials: 'include' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const cntries = Object.entries(data.by_country || {})
+      .map(([cc, n]) => ({ label: ccLabel(cc), value: n }))
+      .sort((a, b) => b.value - a.value);
+    const sec = document.getElementById('country-section');
+    if (sec) sec.outerHTML = countryChartHtml(cntries, r);
+  } catch (e) {
+    countryRange = prev;
+    toast('Could not load country data: ' + e.message);
+  }
+}
+
 // ── Revenue bar chart: MRR/ARR totals + revenue per day/week/month ──
 let revMode = 'day'; // day | week | month
 
@@ -1552,7 +1632,6 @@ function renderCharts(users) {
     : '<div class="chart-empty">No data yet</div>';
 
   // 4c) Calls by provider + top models (global statsData — not filter-bound)
-  const fmtNum = v => (v || 0).toLocaleString('en-US');
   const callKeys = Object.keys(provs)
     .filter(k => (provs[k].calls || 0) > 0)
     .sort((a, b) => (provs[b].calls || 0) - (provs[a].calls || 0));
@@ -1596,38 +1675,15 @@ function renderCharts(users) {
   let bVis = '<div class="chart-empty">No visits yet</div>';
   let bRef = '<div class="chart-empty">No referrer data yet — tracking starts now</div>';
   if (vis) {
-    const flagEmoji = (cc) => {
-      if (!cc || cc.length !== 2 || !/^[A-Za-z]{2}$/.test(cc)) return '🌍';
-      const base = 127397; // regional indicator A = U+1F1E6
-      return String.fromCodePoint(...[...cc.toUpperCase()].map(c => c.charCodeAt(0) + base));
-    };
-    const ccLabel = (cc) => cc === 'LOCAL' ? '🏠 Local' : (cc === '??' ? '❓ Unknown' : `${flagEmoji(cc)} ${cc}`);
-    // 2026-08-09: unika besökare per land — horisontella staplar, top 20 + click more
+    // 2026-08-09: unika besökare per land — top 20 + click more, tidsfilter
+    // 1h/12h/24h/7d/30d/all via countryChartHtml/setCountryRange (modulnivå)
     const cntries = (vis.by_country && Object.keys(vis.by_country).length)
       ? Object.entries(vis.by_country).map(([cc, n]) => ({
           label: ccLabel(cc),
           value: n,
         })).sort((a, b) => b.value - a.value)
       : [];
-    const cMax = Math.max(...cntries.map(c => c.value), 1);
-    const cTotal = cntries.reduce((a, c) => a + c.value, 0);
-    const cbarRow = (c, extra) => `
-      <div class="cbar-row${extra || ''}" title="${esc(c.label)} — ${fmtNum(c.value)} unique visitor${c.value === 1 ? '' : 's'}">
-        <span class="cbar-name">${esc(c.label)}</span>
-        <div class="cbar-track"><div class="cbar-fill" style="width:${(c.value / cMax * 100).toFixed(1)}%"></div></div>
-        <span class="cbar-val">${fmtNum(c.value)}</span>
-        <span class="cbar-pct">${cTotal ? (c.value / cTotal * 100).toFixed(0) : 0}%</span>
-      </div>`;
-    const MAX_COUNTRIES = 20;
-    const cntHtml = cntries.length
-      ? `<div class="visits-countries">
-          <div class="visits-sub">Unique visitors by country</div>
-          <div class="cbar-list" id="cbar-list">${cntries.map((c, i) => cbarRow(c, i >= MAX_COUNTRIES ? ' hidden' : '')).join('')}</div>
-          ${cntries.length > MAX_COUNTRIES
-            ? `<button class="cbar-more" id="cbar-more" type="button" data-n="${cntries.length - MAX_COUNTRIES}">Click more · ${cntries.length - MAX_COUNTRIES} more</button>`
-            : ''}
-        </div>`
-      : '';
+    const cntHtml = countryChartHtml(cntries, countryRange);
     // Top referrers — varifrån besökarna klickade in (2026-08-09, rostad)
     bRef = '<div class="chart-empty">No referrer data yet — tracking starts now</div>';
     if (vis.by_referrer && Object.keys(vis.by_referrer).length) {
@@ -1734,15 +1790,6 @@ function renderCharts(users) {
     revenueChartCard() +
     chartCard(12, '♪ TTS Seconds by Player', b5);
   renderRevenueChart();
-  // Country chart: "Click more" — visa alla länder (2026-08-09)
-  const cbtn = document.getElementById('cbar-more');
-  if (cbtn) {
-    cbtn.addEventListener('click', () => {
-      const list = document.getElementById('cbar-list');
-      const open = list ? list.classList.toggle('show-all') : false;
-      cbtn.textContent = open ? 'Show less' : `Click more · ${cbtn.dataset.n} more`;
-    });
-  }
 }
 
 // ── Filters ──

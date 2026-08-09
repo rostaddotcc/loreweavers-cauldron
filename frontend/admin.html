@@ -1594,6 +1594,7 @@ function renderCharts(users) {
   //    2026-08-06: full-width, centered, flag emojis, extra KPIs
   const vis = (statsData && statsData.visits) || null;
   let bVis = '<div class="chart-empty">No visits yet</div>';
+  let bRef = '<div class="chart-empty">No referrer data yet — tracking starts now</div>';
   if (vis) {
     const flagEmoji = (cc) => {
       if (!cc || cc.length !== 2 || !/^[A-Za-z]{2}$/.test(cc)) return '🌍';
@@ -1628,7 +1629,7 @@ function renderCharts(users) {
         </div>`
       : '';
     // Top referrers — varifrån besökarna klickade in (2026-08-09, rostad)
-    let bRef = '<div class="chart-empty">No referrer data yet — tracking starts now</div>';
+    bRef = '<div class="chart-empty">No referrer data yet — tracking starts now</div>';
     if (vis.by_referrer && Object.keys(vis.by_referrer).length) {
       const refs = Object.entries(vis.by_referrer)
         .map(([name, n]) => ({ label: name, value: n }))

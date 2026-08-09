@@ -1159,12 +1159,41 @@
 .tts-auto-btn:hover, .tts-speed-btn:hover{ transform: translateY(-1px) !important; }
 /* Mobil: TTS-raden ska ALLTID vara 3 knappar på EN rad — voice-knappen
    trunkeras istället för att hastigheten (⏩ 1×) bryter till egen rad.
-   Ligger här (efter wrap-regeln + med !important) så den vinner över allt. */
+   Ligger här (efter wrap-regeln + med !important) så den vinner över allt.
+   (2026-08-09): även min-height nollställs — snes §TYPING tvingar annars
+   44px-boxar; player + combat-knapp görs minimala. */
 @media(hover:none), (max-width:640px){
-  .tts-voice-picker{ flex-wrap: nowrap !important; }
+  .tts-voice-picker{ flex-wrap: nowrap !important; gap: 0.18rem 0.28rem !important; row-gap: 0.18rem !important; }
   .tts-voice-btn{ flex: 0 1 auto !important; min-width: 0 !important; }
-  .tts-voice-btn #tts-voice-btn-label{ display: inline-block !important; max-width: 76px !important; overflow: hidden !important; text-overflow: ellipsis !important; vertical-align: bottom !important; }
-  .tts-auto-btn, .tts-speed-btn{ font-size: 0.58rem !important; padding: 0.16rem 0.4rem !important; letter-spacing: 0 !important; flex-shrink: 0 !important; }
+  .tts-voice-btn #tts-voice-btn-label{ display: inline-block !important; max-width: 64px !important; overflow: hidden !important; text-overflow: ellipsis !important; vertical-align: bottom !important; }
+  .tts-auto-btn, .tts-speed-btn{
+    font-size: 0.52rem !important;
+    padding: 0.1rem 0.3rem !important;
+    letter-spacing: 0 !important;
+    flex-shrink: 0 !important;
+    min-height: 0 !important;
+    height: 26px !important;
+    line-height: 1 !important;
+    border-radius: 6px !important;
+  }
+  /* Combat-loggen-knappen: bara ikon i minimal box (radikalt mindre) */
+  .battle-drawer-toggle{
+    min-height: 0 !important;
+    height: 26px !important;
+    padding: 0 0.4rem !important;
+    font-size: 0.55rem !important;
+    letter-spacing: 0.1em !important;
+    border-radius: 6px !important;
+    gap: 0.2rem !important;
+  }
+  .battle-drawer-toggle .bdt-icon{ font-size: 0.68rem !important; line-height: 1 !important; }
+  .battle-drawer-toggle .bdt-caret{ font-size: 0.45rem !important; line-height: 1 !important; }
+  /* Latest-narration-spelaren: minimal pill */
+  .tts-player{ padding: 0.12rem 0.4rem !important; margin-bottom: 0.22rem !important; gap: 0.35rem !important; }
+  .ttp-toggle{ width: 20px !important; height: 20px !important; font-size: 0.6rem !important; }
+  .ttp-idle, .ttp-synth{ font-size: 0.6rem !important; }
+  .ttp-time{ font-size: 0.56rem !important; }
+  .ttp-track{ height: 3px !important; }
 }
 .send-btn{ border-radius: 8px !important; box-shadow: 0 4px 16px -6px rgba(201,162,39,.45), 0 2px 10px -5px rgba(0,0,0,.6) !important; transition: all .2s !important; }
 .send-btn:hover{ transform: translateY(-1px) !important; filter: brightness(1.06) !important; box-shadow: 0 6px 22px -6px rgba(201,162,39,.6) !important; }

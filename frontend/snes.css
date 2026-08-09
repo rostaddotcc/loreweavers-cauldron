@@ -495,12 +495,12 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
   }.drawer-backdrop.open{
     opacity: 1;
     pointer-events: auto;
-  }/* ── 30d. BOTTOM NAV ── */.mobile-nav{
+  }/* ── 30d. BOTTOM NAV — flödesbaserad (2026-08-09): position:fixed
+     döljer navet i Firefox Android (fixed trackar layout-viewporten och
+     hamnar bakom URL-fältet). Navet är body:s sista flex-barn → alltid
+     synligt oavsett browser; .main:s padding-bottom-kompensation togs bort
+     eftersom navet nu tar riktig plats. ── */.mobile-nav{
     display: flex !important;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
     /* Firefox-resiliens (2026-08-06): env() inuti calc() har varit buggigt
        i FF — height-fallback så navet aldrig kan kollapsa till 0. */
     height: 56px;
@@ -647,8 +647,7 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
     height: 100vh;
     height: 100dvh;
   }.main{
-    padding-bottom: 56px !important;
-    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: 0 !important; /* navet är flödesbaserat nu (2026-08-09) */
   }.input-area{
     padding: .4rem !important;
     margin-bottom: 0;

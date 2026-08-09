@@ -5553,11 +5553,18 @@ async def _post_turn_tasks_locked(
         if st and store.maybe_summarize(st):
             full_transcript = store.load_transcript(st, last_n=60)
             t_text = "\n".join(f"{e['role']}: {e['content']}" for e in full_transcript)
-            sum_prompt = (
-                "Sammanfatta följande D&D-session på svenska. "
-                "Fokusera på viktiga händelser, beslut, NPC-möten och konsekvenser. "
-                "Max 200 ord.\n\n" + t_text
-            )
+            if _get_lang(st) == "sv":
+                sum_prompt = (
+                    "Sammanfatta följande D&D-session på svenska. "
+                    "Fokusera på viktiga händelser, beslut, NPC-möten och konsekvenser. "
+                    "Max 200 ord.\n\n" + t_text
+                )
+            else:
+                sum_prompt = (
+                    "Summarize the following D&D session in English. "
+                    "Focus on important events, decisions, NPC meetings and consequences. "
+                    "Max 200 words.\n\n" + t_text
+                )
             logger.info("📋 Scene summary due (turn %d) — generating from %d messages", turn_count, len(full_transcript))
             # Sammanfattningar är interna bakgrundsuppgifter — ingår i meddelandets turn (2026-08-08)
             summary = await _call_llm(
@@ -5578,14 +5585,21 @@ async def _post_turn_tasks_locked(
         if st and store.maybe_chapter(st):
             scenes = store.load_summaries(st, last_n=5)
             s_text = "\n\n".join(
-                f"Scen {i + 1}: {s.get('text', '')}"
+                f"{'Scen' if _get_lang(st) == 'sv' else 'Scene'} {i + 1}: {s.get('text', '')}"
                 for i, s in enumerate(scenes)
             )
-            ch_prompt = (
-                "Sammanfatta följande fem scener till ETT kapitel på svenska. "
-                "Fokusera på övergripande händelsebåge, viktiga beslut, NPC-utveckling "
-                "och konsekvenser. Max 300 ord.\n\n" + s_text
-            )
+            if _get_lang(st) == "sv":
+                ch_prompt = (
+                    "Sammanfatta följande fem scener till ETT kapitel på svenska. "
+                    "Fokusera på övergripande händelsebåge, viktiga beslut, NPC-utveckling "
+                    "och konsekvenser. Max 300 ord.\n\n" + s_text
+                )
+            else:
+                ch_prompt = (
+                    "Summarize the following five scenes into ONE chapter in English. "
+                    "Focus on the overall story arc, important decisions, NPC development "
+                    "and consequences. Max 300 words.\n\n" + s_text
+                )
             logger.info("📖 Chapter summary due (turn %d) — generating from %d scenes", turn_count, len(scenes))
             chapter_text = await _call_llm(
                 _extraction_model_for(st), [{"role": "user", "content": ch_prompt}],
@@ -5605,14 +5619,21 @@ async def _post_turn_tasks_locked(
         if st and store.maybe_arc(st):
             chapters = store.load_chapters(st, last_n=3)
             c_text = "\n\n".join(
-                f"Kapitel {i + 1}: {c.get('text', '')}"
+                f"{'Kapitel' if _get_lang(st) == 'sv' else 'Chapter'} {i + 1}: {c.get('text', '')}"
                 for i, c in enumerate(chapters)
             )
-            arc_prompt = (
-                "Sammanfatta följande tre kapitel till EN kampanjbåge på svenska. "
-                "Fokusera på den stora berättelsen, huvudkonflikter, allianser och "
-                "hur världen förändrats. Max 400 ord.\n\n" + c_text
-            )
+            if _get_lang(st) == "sv":
+                arc_prompt = (
+                    "Sammanfatta följande tre kapitel till EN kampanjbåge på svenska. "
+                    "Fokusera på den stora berättelsen, huvudkonflikter, allianser och "
+                    "hur världen förändrats. Max 400 ord.\n\n" + c_text
+                )
+            else:
+                arc_prompt = (
+                    "Summarize the following three chapters into ONE campaign arc in English. "
+                    "Focus on the grand narrative, main conflicts, alliances and "
+                    "how the world has changed. Max 400 words.\n\n" + c_text
+                )
             logger.info("📜 Campaign arc due (turn %d) — generating from %d chapters", turn_count, len(chapters))
             arc_text = await _call_llm(
                 _extraction_model_for(st), [{"role": "user", "content": arc_prompt}],

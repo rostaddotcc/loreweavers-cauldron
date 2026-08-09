@@ -4100,20 +4100,31 @@ async def trigger_chapter(body: ChapterRequest, morkrets_token: str | None = Coo
         # Bygg kontext från transkript + state
         transcript = store.load_transcript(state, last_n=30)
         t_text = "\n".join(f"{e['role']}: {e['content']}" for e in transcript[-20:])
-        char_name = state.get("character", {}).get("name", "Äventyraren")
-        location = state.get("world", {}).get("current_location", "Okänd plats")
+        char_name = state.get("character", {}).get("name", "Äventyraren" if _get_lang(state) == "sv" else "The Adventurer")
+        location = state.get("world", {}).get("current_location", "Okänd plats" if _get_lang(state) == "sv" else "Unknown place")
         npcs = ", ".join(n.get("name", "?") for n in state.get("npcs", [])[:8])
         quests = ", ".join(q.get("name", "?") for q in state.get("quests", []) if q.get("status") in ("aktiv", "active"))
 
-        prompt = (
-            f"Du är en krönikör som sammanfattar ett kapitel i ett D&D-äventyr.\n"
-            f"Kapitelrubrik: {body.title}\n"
-            f"Karaktär: {char_name}, Plats: {location}\n"
-            f"NPCs: {npcs}\nAktiva uppdrag: {quests}\n\n"
-            f"Senaste händelser:\n{t_text}\n\n"
-            f"Skriv en stämningsfull kapitalsammanfattning (3-5 meningar) på svenska. "
-            f"Använd rubriken '{body.title}'. Beskriv vad som hände och vad som väntar."
-        )
+        if _get_lang(state) == "sv":
+            prompt = (
+                f"Du är en krönikör som sammanfattar ett kapitel i ett D&D-äventyr.\n"
+                f"Kapitelrubrik: {body.title}\n"
+                f"Karaktär: {char_name}, Plats: {location}\n"
+                f"NPCs: {npcs}\nAktiva uppdrag: {quests}\n\n"
+                f"Senaste händelser:\n{t_text}\n\n"
+                f"Skriv en stämningsfull kapitalsammanfattning (3-5 meningar) på svenska. "
+                f"Använd rubriken '{body.title}'. Beskriv vad som hände och vad som väntar."
+            )
+        else:
+            prompt = (
+                f"You are a chronicler summarizing a chapter of a D&D adventure.\n"
+                f"Chapter title: {body.title}\n"
+                f"Character: {char_name}, Location: {location}\n"
+                f"NPCs: {npcs}\nActive quests: {quests}\n\n"
+                f"Recent events:\n{t_text}\n\n"
+                f"Write an evocative chapter summary (3-5 sentences) in English. "
+                f"Use the title '{body.title}'. Describe what happened and what lies ahead."
+            )
 
         # Kapitalsammanfattning är ett LLM-anrop — räknas som en turn (2026-08-08)
         _gate_turn_quota(username)
@@ -7483,7 +7494,10 @@ def _safe_avatar_key(kind: str) -> str:
         return kind
     if kind.startswith("npc:"):
         key = kind[4:].strip()
-        if key and re.fullmatch(r"[\w\s\-]+", key):
+        # Svartlista istället för allowlist: NPC-namn kan innehålla apostrofer
+        # ("Glazier's"), parenteser ("Guard (cellar)"), citattecken m.m. Enda
+        # förbjudna är path-separatorer (filnamnssäkerhet) och kontrolltecken.
+        if key and not re.search(r"[/\\\x00-\x1f]", key):
             return "npc:" + key
     raise HTTPException(400, f"Ogiltig avatar-typ: {kind}")
 

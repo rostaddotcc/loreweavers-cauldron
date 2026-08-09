@@ -1312,7 +1312,7 @@
   z-index: 2;
 }
 .input-area{
-  padding: 0.35rem 1.6rem 0.5rem !important;
+  padding: 0.35rem 0.55rem 0.5rem !important; /* fältet spänner hela UI:t (2026-08-09) */
 }
 /* Mobil (≤768px): kompakt 1-rads-fält; native scrollbar döljs — dess
    ▲/▼-pilar klipps annars vid kanterna ("scrollpilar utanför sidan") —
@@ -1320,6 +1320,7 @@
 @media (max-width: 768px){
   .input-row textarea{ min-height: 40px !important; padding: 0.36rem 4.5rem 0.36rem 1.8rem !important; }
   .send-btn{ right: 0.3rem !important; padding: 0.24rem 0.45rem !important; font-size: 0.58rem !important; }
+  .input-area{ padding: 0.3rem 0.4rem 0.45rem !important; }
   .quick-scroll{ right: 10px !important; gap: 0.4rem !important; }
   .qs-btn{ width: 34px !important; height: 34px !important; font-size: 0.7rem !important; }
   .chat-scroll{ scrollbar-width: none !important; }

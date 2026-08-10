@@ -3120,8 +3120,15 @@ function addMessage(type, npcKey, text, meta) {
   if (type === 'dm' || type === 'npc') {
     el.classList.add('tw-pending');
     el._twDone = new Promise(resolve => { el._twResolve = resolve; });
-    // Safety net: om typewritern aldrig startar/avslutas, häng inte för evigt
-    const _safety = setTimeout(() => { if (el._twResolve) { el._twResolve(); el._twResolve = null; } }, 90000);
+    // Safety net: om typewritern aldrig startar/avslutas, häng inte för evigt.
+    // VIKTIGT (fix 2026-08-10): måste också rensa _twActive — annars fastnar
+    // typewriter-gaten i pollForGuardian och Lorekeeper-rapporten renderas
+    // aldrig live (bara vid hard refresh).
+    const _safety = setTimeout(() => {
+      if (el._twResolve) { el._twResolve(); el._twResolve = null; }
+      _twActive.delete(el);
+      el.classList.remove('tw-pending');
+    }, 90000);
     el._twSafety = _safety;
     setTimeout(() => startTypewriter(el, type), 80);
   } else {
@@ -4622,10 +4629,11 @@ function _unlockChat() {
 function addRollRequest(notation, label) {
   // En begäran per tur — rensa gamla obesvarade knappar så de inte ackumuleras
   // i chatten (P2-fix från playthrough: såg 4 st samtidigt).
+  // (fix 2026-08-10) En NY begäran ersätter ALLTID gamla föråldrade kort —
+  // även disabled (Guardian-låsta) — annars ligger den gamla tärningen kvar
+  // och spelaren måste hard-refresh för att se den nya.
   document.querySelectorAll('.roll-request').forEach(el => {
-    if (el.querySelector('.roll-result-inline')) return;   // redan besvarad
-    const oldBtn = el.querySelector('.rr-btn');
-    if (oldBtn && oldBtn.disabled) return;                 // rullning pågår
+    if (el.querySelector('.roll-result-inline')) return;   // redan besvarad → historik
     el.closest('.msg.system')?.remove();
   });
   const el = document.createElement('div');
@@ -4798,8 +4806,16 @@ async function answerRollRequest(id, notation, label) {
     }
   } finally {
     isResponding = false;
-    _pendingRollId = null;
-    _unlockChat();
+    // fix 2026-08-10: nollställ bara dice-låset om det väntande kortet redan
+    // besvarats (result-inline) eller försvunnit. Om DM:n bad om ett NYTT kast
+    // i svaret har addRollRequest satt _pendingRollId till det nya kortet —
+    // då ska låset bestå så spelaren inte kan skriva fritt förbi en väntande
+    // tärning (combat: initiativ → attack → skada).
+    const pendEl = _pendingRollId ? document.getElementById(_pendingRollId) : null;
+    if (!pendEl || pendEl.querySelector('.roll-result-inline')) {
+      _pendingRollId = null;
+      _unlockChat();
+    }
     document.querySelector('.send-btn')?.removeAttribute('disabled');
   }
 }
@@ -5895,6 +5911,7 @@ async function dmRespond(playerText) {
 // GUARDIAN POLLING — hämtar rapporten ur transkriptet
 // ═══════════════════════════════════════
 let _guardianPollTimer = null;
+let _twGateSince = null; // när typewriter-gaten senast öppnades (fix 2026-08-10)
 const _renderedGuardianKeys = new Set(); // kanoniska nycklar → aldrig dubbel-rendering
 
 // Kanonisk nyckel för ett transkriptmeddelande: exakt det textContent
@@ -5957,8 +5974,17 @@ function pollForGuardian(turnCount) {
 
   _guardianPollTimer = setInterval(async () => {
     attempts++;
-    // Typewriter-gate: rendera inte combat/effekter mitt i DM:ns skrivanimation
-    if (_twActive.size > 0) return;
+    // Typewriter-gate: rendera inte combat/effekter mitt i DM:ns skrivanimation.
+    // (fix 2026-08-10) Får ALDRIG blockera för evigt: om en typewriter fastnat
+    // (safety-timern löser _twDone men själva elementet kan ligga kvar i _twActive)
+    // skulle Lorekeeper-rapporten aldrig renderas live. Vänta max 6s, sedan kör.
+    if (_twActive.size > 0) {
+      if (!_twGateSince) _twGateSince = Date.now();
+      if (Date.now() - _twGateSince < 6000) return;
+      _twGateSince = null; // öppna gaten — rendera ändå
+    } else {
+      _twGateSince = null;
+    }
     try {
       const data = await API.getTranscript();
       const messages = data.messages || [];

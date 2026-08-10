@@ -5443,8 +5443,12 @@ async def _post_turn_tasks(
 ) -> None:
     """Körs i bakgrunden EFTER att HTTP-svaret skickats till klienten.
     Faktextraktion, RAG-indexering och sammanfattning — inget av detta
-    får någonsin fördröja spelarens upplevelse. Alla fel sväljs tyst."""
-    key = (username, campaign_id)
+    får någonsin fördröja spelarens upplevelse. Alla fel sväljs tyst.
+    (fix 2026-08-10) Egen nyckel i _RUNNING_BG: post-turn-tasks ska INTE
+    hålla guardian_running=true (tärningslåset) medan RAG-indexering körs —
+    annars låses tärningen i minuter efter att Lorekeeper-rapporten redan
+    renderats."""
+    key = (username, campaign_id, "post")
     _RUNNING_BG.add(key)
     try:
         lock = _state_lock(username, campaign_id)

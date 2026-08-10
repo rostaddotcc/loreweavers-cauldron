@@ -1299,7 +1299,7 @@
   box-shadow: 0 0 16px -4px rgba(232,198,90,0.35), inset 0 1px 0 rgba(255,255,255,.05) !important;
 }
 .input-row textarea{
-  padding: 0.3rem 5.1rem 0.34rem 1.7rem !important;
+  padding: 0.3rem 7.6rem 0.34rem 1.7rem !important;
   /* 2-radig placeholder får aldrig klippas: 3.6rem (root 18px → 64.8px)
      = 2×1.45-rad + padding. Mobil behåller 40px+ i media-frågan nedan. */
   min-height: 3.6rem !important;
@@ -1316,6 +1316,38 @@
   box-shadow: 0 2px 8px -2px rgba(0,0,0,.55) !important;
   z-index: 2;
 }
+.mic-btn{
+  position: absolute !important;
+  right: 5.4rem !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 36px !important;
+  height: 36px !important;
+  font-size: 1rem !important;
+  line-height: 1 !important;
+  background: transparent !important;
+  border: 1px solid var(--edge) !important;
+  border-radius: 8px !important;
+  color: var(--bone) !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 2;
+  touch-action: manipulation;
+  transition: border-color .2s, box-shadow .2s, transform .1s;
+}
+.mic-btn:active{ transform: translateY(-50%) scale(.92) !important; }
+.mic-btn.recording{
+  border-color: #d4453a !important;
+  color: #fff !important;
+  background: rgba(212,69,58,.16) !important;
+  animation: mic-pulse 1.1s ease-in-out infinite;
+}
+@keyframes mic-pulse{
+  0%,100%{ box-shadow: 0 0 10px -2px rgba(212,69,58,.5); }
+  50%{ box-shadow: 0 0 18px 0 rgba(212,69,58,.9); }
+}
 .input-area{
   padding: 0.35rem 0.55rem 0.5rem !important; /* fältet spänner hela UI:t (2026-08-09) */
 }
@@ -1323,8 +1355,9 @@
    ▲/▼-pilar klipps annars vid kanterna ("scrollpilar utanför sidan") —
    quick-scroll ▲▼ (mindre, insides) tar över. (2026-08-09) */
 @media (max-width: 768px){
-  .input-row textarea{ min-height: 40px !important; padding: 0.36rem 4.5rem 0.36rem 1.8rem !important; }
+  .input-row textarea{ min-height: 40px !important; padding: 0.36rem 6.4rem 0.36rem 1.8rem !important; }
   .send-btn{ right: 0.3rem !important; padding: 0.24rem 0.45rem !important; font-size: 0.58rem !important; }
+  .mic-btn{ right: 4.1rem !important; width: 34px !important; height: 34px !important; font-size: 0.92rem !important; }
   .input-area{ padding: 0.3rem 0.4rem 0.45rem !important; }
   .quick-scroll{ right: 10px !important; gap: 0.4rem !important; }
   .qs-btn{ width: 34px !important; height: 34px !important; font-size: 0.7rem !important; }
@@ -1665,11 +1698,12 @@
         <div class="input-row">
           <span class="cli-prompt" id="cli-prompt" aria-hidden="true"><span class="cp-user"></span><span class="cp-at">@</span><span class="cp-host"></span> <span class="cp-path">~</span> <span class="cp-pct">%</span></span><span class="cli-cursor" id="cli-cursor">▌</span>
           <textarea id="player-input" rows="1" enterkeyhint="send" placeholder="What do you do? Write freely — fight, sneak, talk, cast a spell…"></textarea>
+          <button class="mic-btn" id="mic-btn" onclick="toggleMic()" title="Speak — English voice input (StepFun ASR)" aria-label="Voice input">🎤</button>
           <button class="send-btn" onclick="sendPlayer()">⚔ Act</button>
         </div>
       </div>
       <div class="input-hint">
-        <kbd>Enter</kbd> send · <kbd>Shift+Enter</kbd> new line · <kbd>/help</kbd> commands · <kbd>/guardian</kbd> corrections
+        <kbd>Enter</kbd> send · <kbd>Shift+Enter</kbd> new line · <kbd>/help</kbd> commands · <kbd>/guardian</kbd> corrections · <kbd>🎤</kbd> speak (EN)
       </div>
     </div>
   </main>
@@ -5152,6 +5186,112 @@ input.addEventListener('input', () => {
   updateAtChatChip();
   syncCliCursor();
 });
+
+// ═══════════════════════════════════════
+// 🎤 VOICE INPUT (StepFun ASR — EN) — 2026-08-10
+// ═══════════════════════════════════════
+// Tryck på 🎤 → spela in (tap igen för att stoppa) → backend /api/voice
+// transkriberar (stepaudio-2.5-asr, engelska) → transkriptet fyller
+// chat-input så spelaren kan redigera innan ⚔ Act. Ingen turn-kostnad.
+const MIC_DEFAULT_PLACEHOLDER = input.placeholder;
+let micRecorder = null;
+let micChunks = [];
+let micStream = null;
+let micRecording = false;
+
+function micSupported() {
+  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+}
+
+async function toggleMic() {
+  const btn = document.getElementById('mic-btn');
+  if (micRecording) {
+    stopMic();
+    return;
+  }
+  if (!micSupported()) {
+    toast('🎤 Voice input needs a browser with microphone support');
+    return;
+  }
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (e) {
+    toast('🎤 Microphone blocked — allow mic access in the browser settings');
+    return;
+  }
+  micChunks = [];
+  const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : '';
+  try {
+    micRecorder = new MediaRecorder(micStream, mime ? { mimeType: mime } : undefined);
+  } catch (e) {
+    toast('🎤 Recording not supported in this browser');
+    stopMicStream();
+    return;
+  }
+  micRecorder.ondataavailable = e => { if (e.data && e.data.size) micChunks.push(e.data); };
+  micRecorder.onstop = () => {
+    const blob = new Blob(micChunks, { type: mime || 'audio/webm' });
+    stopMicStream();
+    sendMicAudio(blob);
+  };
+  micRecording = true;
+  micRecorder.start();
+  btn.classList.add('recording');
+  btn.title = 'Stop & transcribe';
+  input.placeholder = '🎤 Listening… tap 🎤 again to send';
+}
+
+function stopMic() {
+  const btn = document.getElementById('mic-btn');
+  btn.classList.remove('recording');
+  btn.title = 'Speak — English voice input (StepFun ASR)';
+  input.placeholder = MIC_DEFAULT_PLACEHOLDER;
+  if (!micRecorder || micRecorder.state === 'inactive') {
+    micRecording = false;
+    stopMicStream();
+    return;
+  }
+  micRecording = false;
+  micRecorder.stop();
+}
+
+function stopMicStream() {
+  if (micStream) {
+    micStream.getTracks().forEach(t => t.stop());
+    micStream = null;
+  }
+}
+
+async function sendMicAudio(blob) {
+  if (!blob.size) {
+    toast('🎤 Empty recording — try again');
+    return;
+  }
+  toast('🎤 Transcribing…');
+  const fd = new FormData();
+  fd.append('file', blob, 'voice.webm');
+  try {
+    const res = await fetch('/api/voice', { method: 'POST', body: fd, credentials: 'include' });
+    if (!res.ok) {
+      let msg = 'HTTP ' + res.status;
+      try { msg = (await res.json()).detail || msg; } catch (_) {}
+      toast('🎤 ' + msg);
+      return;
+    }
+    const data = await res.json();
+    if (data.text) {
+      input.value = data.text;
+      input.dispatchEvent(new Event('input'));
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+      toast('🎤 Heard: ' + data.text.slice(0, 60) + (data.text.length > 60 ? '…' : ''));
+    } else {
+      toast('🎤 Nothing heard — try again');
+    }
+  } catch (e) {
+    toast('🎤 Transcribing failed — check connection');
+  }
+}
 
 // @NPC autocomplete
 let atPopup = null;

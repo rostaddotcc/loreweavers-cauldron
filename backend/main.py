@@ -3633,6 +3633,175 @@ def _tts_model_label(provider: str) -> str:
     return "qwen-audio-3.0-tts-plus" if provider == "qwen" else "stepaudio-2.5-tts"
 
 
+# ═══════════════════════════════════════
+# ASR — röstinmatning (StepFun stepaudio-2.5-asr via Step Plan)
+# ═══════════════════════════════════════
+# Spelaren trycker på 🎤 i chatten, pratar (EN — modellen stödjer bara
+# kinesiska + engelska, verifierat 2026-08-10), och transkriptet fyller
+# chat-input så hen kan redigera innan ⚔ Act. Kostar INGEN turn (ren
+# UI-hjälp) men bokförs i state.meta.asr_usage för transparens.
+# Endpoint verifierad live 2026-08-10: POST {base}/audio/asr/sse med
+# base64-audio → SSE delta-events → transcript.text.done med `text`.
+
+ASR_MODEL = "stepaudio-2.5-asr"
+ASR_MAX_AUDIO_BYTES = 10 * 1024 * 1024
+ASR_MAX_SECONDS = 60
+
+
+def _to_wav_16k(data: bytes) -> bytes:
+    """Konvertera valfritt ljud (webm/opus från MediaRecorder) → WAV 16 kHz mono.
+
+    StepFun ASR stödjer PCM/OGG/MP3/WAV — INTE webm/opus. ffmpeg finns på
+    servern (/usr/bin/ffmpeg). Returnerar b"" vid avkodningsfel.
+    """
+    import subprocess
+    import tempfile
+    import os as _os
+
+    with tempfile.NamedTemporaryFile(suffix=".in", delete=False) as f:
+        f.write(data)
+        inp = f.name
+    out = inp + ".wav"
+    try:
+        proc = subprocess.run(
+            ["ffmpeg", "-y", "-loglevel", "error", "-i", inp,
+             "-ar", "16000", "-ac", "1", "-f", "wav", out],
+            capture_output=True, timeout=30,
+        )
+        if proc.returncode != 0 or not _os.path.exists(out):
+            return b""
+        with open(out, "rb") as f:
+            return f.read()
+    finally:
+        for p in (inp, out):
+            try:
+                _os.unlink(p)
+            except OSError:
+                pass
+
+
+def _asr_stepfun(wav_bytes: bytes) -> str:
+    """Transkribera WAV via StepFun Step Plan (one-shot SSE).
+
+    POST {base}/audio/asr/sse → server streamar transcript.text.delta
+    och avslutar med transcript.text.done som bär färdig `text`.
+    """
+    import urllib.request as _ur
+    import urllib.error as _uer
+
+    api_key = os.getenv("STEPFUN_API_KEY")
+    if not api_key:
+        raise RuntimeError("StepFun-nyckel saknas (STEPFUN_API_KEY)")
+    base = os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.ai/step_plan/v1")
+    body = {
+        "audio": {
+            "data": base64.b64encode(wav_bytes).decode(),
+            "input": {
+                "transcription": {"model": ASR_MODEL, "language": "en", "enable_itn": True},
+                "format": {"type": "wav"},
+            },
+        }
+    }
+    req = _ur.Request(
+        base.rstrip("/") + "/audio/asr/sse",
+        data=json.dumps(body).encode(),
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json",
+                 "Accept": "text/event-stream"},
+        method="POST",
+    )
+    try:
+        with _ur.urlopen(req, timeout=120) as r:
+            raw = r.read()
+    except _uer.HTTPError as e:
+        msg = e.read().decode("utf-8", "replace")[:300]
+        if e.code == 429:
+            raise RuntimeError("StepFun ASR kvot slut just nu — försök igen om en stund")
+        raise RuntimeError(f"StepFun ASR HTTP {e.code}: {msg}")
+    except Exception as e:
+        raise RuntimeError(f"StepFun ASR fel: {e}")
+
+    # SSE: hitta transcript.text.done → {"text": "..."}
+    for chunk in raw.split(b"\n\n"):
+        if b"transcript.text.done" in chunk:
+            for line in chunk.split(b"\n"):
+                if line.startswith(b"data:"):
+                    try:
+                        obj = json.loads(line[5:].strip())
+                        return (obj.get("text") or "").strip()
+                    except (json.JSONDecodeError, AttributeError):
+                        pass
+    # Fallback: inget done-event → samla delta-paketen (t.ex. avbruten ström)
+    parts = []
+    for chunk in raw.split(b"\n\n"):
+        if b"transcript.text.delta" in chunk:
+            for line in chunk.split(b"\n"):
+                if line.startswith(b"data:"):
+                    try:
+                        obj = json.loads(line[5:].strip())
+                        parts.append(obj.get("delta") or "")
+                    except (json.JSONDecodeError, AttributeError):
+                        pass
+    return "".join(parts).strip()
+
+
+def _record_asr_usage(username: str, seconds: float) -> None:
+    """Bokför ASR-förbrukning i state.meta.asr_usage (rullas upp i usage-vyn)."""
+    try:
+        state = store.get(username)
+        if not state:
+            return
+        meta = state.setdefault("meta", {})
+        asr = meta.setdefault("asr_usage", {"calls": 0, "api_calls": 0, "seconds": 0.0})
+        asr["calls"] = (asr.get("calls", 0) or 0) + 1
+        asr["api_calls"] = (asr.get("api_calls", 0) or 0) + 1
+        asr["seconds"] = (asr.get("seconds", 0) or 0) + seconds
+        store.save(state)
+    except Exception:
+        logger.exception("🎤 Kunde inte bokföra ASR-usage")
+
+
+@app.post("/api/voice")
+async def voice_asr(file: UploadFile = File(...), morkrets_token: str | None = Cookie(None)):
+    """Transkribera spelarens röst (EN) via StepFun stepaudio-2.5-asr.
+
+    Ingen turn-förbrukning — transkriptet fyller bara chat-input (redigerbart).
+    Tier-gate: samma som StepFun TTS (Support 3€+), free → 403.
+    """
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+
+    tier = _tier_for(username)
+    if tier == "free":
+        raise HTTPException(403, "Voice input is a Support feature (3€) — support the Cauldron to speak to your DM.")
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(400, "Inget ljud mottaget")
+    if len(content) > ASR_MAX_AUDIO_BYTES:
+        raise HTTPException(400, "Ljudet är för stort (max 10 MB)")
+
+    wav = await asyncio.to_thread(_to_wav_16k, content)
+    if not wav:
+        raise HTTPException(400, "Kunde inte avkoda ljudet — försök igen (annan webbläsare?)")
+    seconds = len(wav) / 32000.0  # 16 kHz mono 16-bit = 32 000 B/s
+    if seconds > ASR_MAX_SECONDS:
+        raise HTTPException(400, "Inspelningen är för lång (max 60 sekunder)")
+
+    try:
+        text = await asyncio.to_thread(_asr_stepfun, wav)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("🎤 ASR error: user=%s — %s", username, e, exc_info=True)
+        raise HTTPException(502, f"Kunde inte transkribera — {e}")
+
+    if not text:
+        raise HTTPException(422, "Ingen transkription — tala tydligare och försök igen?")
+    _record_asr_usage(username, seconds)
+    logger.info("🎤 ASR ok: user=%s, %.1fs → %d chars", username, seconds, len(text))
+    return {"text": text}
+
+
 @app.post("/api/campaign/tts-settings")
 async def set_tts_settings(req: dict, morkrets_token: str | None = Cookie(None)):
     """Spara TTS-inställningar per kampanj (state.meta.tts_*) — provider,
@@ -3814,6 +3983,7 @@ async def get_campaign_usage(morkrets_token: str | None = Cookie(None)):
             "models": _finalize(campaign_models),
             "background_tokens": bg_campaign,
             "tts": state.get("meta", {}).get("tts_usage", {}),
+            "asr": state.get("meta", {}).get("asr_usage", {}),
         },
         "account_total": {
             "models": _finalize(totals),

@@ -953,10 +953,23 @@
     background: var(--stone-3); border: 1px solid var(--gold); color: var(--gold-bright);
     padding: 0.4rem 0.6rem; cursor: pointer; white-space: nowrap;
   }.cd-res-roll:active{ background: var(--gold); color: var(--ink); }.cd-slots{ display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center; }.cd-slot{
-    width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
-    border: 1px solid var(--edge); background: var(--ink);
-    font-family: 'Cinzel', serif; font-size: 0.65rem; color: transparent;
-  }.cd-slot.lit{ background: radial-gradient(circle at 35% 30%, var(--arcane-bright), var(--arcane) 55%, var(--arcane-deep)); border-color: var(--arcane-bright); color: rgba(255,255,255,0.85); }.cd-slots-hint{ font-size: 0.83rem; font-style: italic; color: var(--bone-dim); }.cd-ds{ display: flex; align-items: center; gap: 0.5rem; font-size: 0.93rem; color: var(--blood-bright); }.cd-ds .cd-pips{ display: inline-flex; gap: 0.2rem; font-family: 'Press Start 2P', monospace; font-size: 0.73rem; }.cd-ds .cd-pips b{ color: var(--term-green); font-weight: 400; }.cd-ds .cd-pips i{ color: var(--blood-bright); font-style: normal; }.cd-ds .cd-pips span{ color: var(--bone-dim); }/* Inventory cards (item-card pattern from character.html, drawer-adapted) */.cd-item-card{
+    width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
+    clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+    background: var(--stone-3);
+    font-family: 'Cinzel', serif; font-size: 0.55rem; color: transparent;
+    transition: all 0.25s;
+  }.cd-slot.lit{
+    /* Laddad slot = guld-manakristall (fix 2026-08-10) */
+    background: linear-gradient(160deg, var(--gold-bright), var(--gold) 55%, #7a5d15);
+    color: rgba(11,8,18,0.9);
+    filter: drop-shadow(0 0 6px rgba(232,198,90,0.5));
+  }
+  /* Alla slots fulla → pulserande guldglöd */
+  .cd-slots.charged .cd-slot.lit{ animation: cdGemPulse 2.2s ease-in-out infinite; }
+  .cd-slots.charged .cd-slot.lit:nth-child(2){ animation-delay: .25s; }
+  .cd-slots.charged .cd-slot.lit:nth-child(3){ animation-delay: .5s; }
+  .cd-slots.charged .cd-slot.lit:nth-child(4){ animation-delay: .75s; }
+  @keyframes cdGemPulse { 0%,100% { filter: drop-shadow(0 0 4px rgba(232,198,90,0.35)); } 50% { filter: drop-shadow(0 0 12px rgba(232,198,90,0.85)); } }.cd-slots-hint{ font-size: 0.83rem; font-style: italic; color: var(--bone-dim); }.cd-ds{ display: flex; align-items: center; gap: 0.5rem; font-size: 0.93rem; color: var(--blood-bright); }.cd-ds .cd-pips{ display: inline-flex; gap: 0.2rem; font-family: 'Press Start 2P', monospace; font-size: 0.73rem; }.cd-ds .cd-pips b{ color: var(--term-green); font-weight: 400; }.cd-ds .cd-pips i{ color: var(--blood-bright); font-style: normal; }.cd-ds .cd-pips span{ color: var(--bone-dim); }/* Inventory cards (item-card pattern from character.html, drawer-adapted) */.cd-item-card{
     display: flex; gap: 0.6rem; align-items: flex-start;
     background: var(--stone-2); border: 1px solid var(--edge);
     padding: 0.55rem 0.6rem; margin-bottom: 0.4rem; cursor: pointer;
@@ -1086,7 +1099,7 @@
     font-family: var(--cli-mono, ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace) !important;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=37">
+<link rel="stylesheet" href="snes.css?v=38">
 <style>
 /* ═══════════ CODEX 2-RAD-TABBAR — override snes.css (måste ligga EFTER linken) ═══════════ */
 .cx-tabs{ display: flex !important; flex-direction: column !important; gap: 0.34rem !important; padding: 0.55rem 0.6rem 0.6rem !important; overflow-x: hidden !important; }
@@ -8076,8 +8089,10 @@ function renderCharDrawer() {
 
   html += `<div class="cd-section-title">🔮 Spell Slots</div>`;
   if (slots.max > 0) {
-    html += `<div class="cd-slots">`;
-    for (let i = 0; i < slots.max; i++) html += `<div class="cd-slot${i < (slots.current || 0) ? ' lit' : ''}">✦</div>`;
+    const lit = Math.min(slots.current || 0, slots.max);
+    const charged = lit >= slots.max ? ' charged' : '';
+    html += `<div class="cd-slots${charged}">`;
+    for (let i = 0; i < slots.max; i++) html += `<div class="cd-slot${i < lit ? ' lit' : ''}">${i < lit ? '✦' : ''}</div>`;
     html += `</div>`;
     html += `<div class="cd-xp-label" style="text-align:left;margin-top:.35rem"><b>${slots.current || 0}</b> / ${slots.max} available</div>`;
   } else {

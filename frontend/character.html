@@ -265,14 +265,30 @@
     border: 1px solid color-mix(in srgb, var(--arcane) 30%, transparent);
     padding: 0.7rem 0.9rem; margin-bottom: 0.9rem;
   }.ss-label{ font-family: var(--font-display,'Cinzel',serif); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-dim); }.ss-pips{
-    display: flex; gap: 0.3rem; flex-wrap: wrap;
+    display: flex; gap: 0.32rem; flex-wrap: wrap; align-items: center;
   }.ss-pip{
-    width: 22px; height: 22px; border-radius: 50%;
-    border: 1px solid color-mix(in srgb, var(--arcane) 60%, transparent);
-    background: var(--stone-3); display: inline-flex; align-items: center; justify-content: center;
-    font-size: 0.62rem; color: var(--arcane-bright); transition: all 0.2s;
-  }.ss-pip.used{ border-color: var(--gold); color: var(--gold-bright); box-shadow: 0 0 10px rgba(232,198,90,0.25); background: color-mix(in srgb, var(--gold) 12%, transparent); }
-  .ss-pip.available{ opacity: 0.45; border-style: dashed; }.ss-count{
+    width: 20px; height: 20px;
+    clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+    background: var(--stone-3);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.55rem; color: transparent;
+    transition: all 0.25s;
+  }.ss-pip.available{
+    /* Laddad slot = guld-manakristall (fix 2026-08-10: guld-fyllning när slots är fyllda) */
+    background: linear-gradient(160deg, var(--gold-bright), var(--gold) 55%, #7a5d15);
+    color: rgba(11,8,18,0.9);
+    filter: drop-shadow(0 0 6px rgba(232,198,90,0.5));
+  }.ss-pip.used{
+    /* Förbrukad slot = tom krypta */
+    opacity: 0.42;
+    background: color-mix(in srgb, var(--stone-3) 75%, #000);
+  }
+  /* Alla slots fulla → pulserande guldglöd som "fully charged"-clue */
+  .ss-pips.charged .ss-pip.available{ animation: ssGemPulse 2.2s ease-in-out infinite; }
+  .ss-pips.charged .ss-pip.available:nth-child(2){ animation-delay: .25s; }
+  .ss-pips.charged .ss-pip.available:nth-child(3){ animation-delay: .5s; }
+  .ss-pips.charged .ss-pip.available:nth-child(4){ animation-delay: .75s; }
+  @keyframes ssGemPulse { 0%,100% { filter: drop-shadow(0 0 4px rgba(232,198,90,0.35)); } 50% { filter: drop-shadow(0 0 12px rgba(232,198,90,0.85)); } }.ss-count{
     font-size: 0.95rem; color: var(--bone-bright); font-variant-numeric: tabular-nums;
   }.ss-count b{ color: var(--gold-bright); }.ss-note{ font-size: 0.72rem; color: var(--bone-dim); font-style: italic; flex-basis: 100%; margin-top: 0.15rem; }
   .spells-grid{
@@ -542,7 +558,7 @@
 #resistances-section .section-title{ margin-top: 1.8rem; }
 
 </style>
-<link rel="stylesheet" href="snes.css?v=34">
+<link rel="stylesheet" href="snes.css?v=35">
 <style>
 /* ═══════════ MJUKA UPP — Codex karaktärsblad (2026-08-05) — EFTER snes.css ═══════════ */
 .top-btn{ border-radius: 8px !important; box-shadow: 0 2px 12px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; }
@@ -1442,12 +1458,16 @@ function renderSpells() {
     if (maxSlots > 0) {
       let pips = '';
       for (let i = 0; i < maxSlots; i++) {
-        const used = i < usedSlots;
-        pips += `<span class="ss-pip ${used ? 'used' : 'available'}" title="${used ? 'Used (spent)' : 'Available'}">${used ? '✷' : ''}</span>`;
+        // available (laddade) = guld-kristall, used (förbrukade) = tom krypta.
+        // fix 2026-08-10: guld-fyllning när slots är fyllda (tidigare var guld
+        // på förbrukade — tvärtemot vad spelaren ville känna igen).
+        const avail = i >= usedSlots;
+        pips += `<span class="ss-pip ${avail ? 'available' : 'used'}" title="${avail ? 'Available' : 'Used (spent)'}">${avail ? '✦' : ''}</span>`;
       }
+      const charged = availSlots >= maxSlots ? ' charged' : '';
       slotsBox.innerHTML = `
         <span class="ss-label">Spell Slots</span>
-        <span class="ss-pips">${pips}</span>
+        <span class="ss-pips${charged}">${pips}</span>
         <span class="ss-count"><b>${availSlots}</b> / ${maxSlots} available · <b style="color:var(--gold)">${usedSlots} used</b></span>
         <span class="ss-note">Cantrips (level 0) cost nothing — they are always ready. Casting a leveled spell spends one slot. A long rest restores all spent slots.</span>`;
     } else {

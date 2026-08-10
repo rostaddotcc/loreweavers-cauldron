@@ -5,9 +5,10 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# System deps (PyMuPDF behöver libmupdf)
+# System deps (PyMuPDF behöver libmupdf; ffmpeg för /api/voice webm→wav)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libmupdf-dev \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Python deps

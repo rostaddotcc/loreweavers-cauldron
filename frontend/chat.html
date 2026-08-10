@@ -1086,7 +1086,7 @@
     font-family: var(--cli-mono, ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace) !important;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=36">
+<link rel="stylesheet" href="snes.css?v=37">
 <style>
 /* ═══════════ CODEX 2-RAD-TABBAR — override snes.css (måste ligga EFTER linken) ═══════════ */
 .cx-tabs{ display: flex !important; flex-direction: column !important; gap: 0.34rem !important; padding: 0.55rem 0.6rem 0.6rem !important; overflow-x: hidden !important; }
@@ -1702,7 +1702,7 @@
         <div class="input-row">
           <span class="cli-prompt" id="cli-prompt" aria-hidden="true"><span class="cp-user"></span><span class="cp-at">@</span><span class="cp-host"></span> <span class="cp-path">~</span> <span class="cp-pct">%</span></span><span class="cli-cursor" id="cli-cursor">▌</span>
           <textarea id="player-input" rows="1" enterkeyhint="send" placeholder="What do you do? Write freely — fight, sneak, talk, cast a spell…"></textarea>
-          <button class="mic-btn" id="mic-btn" onclick="toggleMic()" title="Speak — English voice input (StepFun ASR)" aria-label="Voice input">🎤</button>
+          <button class="mic-btn" id="mic-btn" onclick="toggleMic()" title="Speak — English voice input (StepFun ASR)" aria-label="Voice input"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg></button>
           <button class="send-btn" onclick="sendPlayer()">⚔ Act</button>
         </div>
       </div>

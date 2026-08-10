@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>The Lore Weaver's Cauldron — Release Notes</title>
-<meta name="description" content="Release notes for The Lore Weaver's Cauldron — an AI dungeon master with a memory. v1.0 — the complete 5e table: every mechanic in play, server-authoritative dice, a memory that holds, and a turn ledger you can trust.">
+<meta name="description" content="Release notes for The Lore Weaver's Cauldron — an AI dungeon master with a memory. v1.0 — the complete 5e table: every mechanic in play, server-authoritative dice, a memory that holds, full voice in English, and a turn ledger you can trust.">
 <link rel="icon" href="/assets/logo-cauldron.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -212,13 +212,15 @@
 <section class="ledger">
   <p class="eyebrow rv">The Ledger of the Realm</p>
   <h1 class="rv">Release Notes</h1>
-  <p class="ledger-sub rv">Every update written in the ledger, so the realm's history stays legible. This entry — the whole 5e table in play, dice the realm can trust, a memory that holds, and a turn ledger that spends honestly.<br><b>v0.10 → v1.0</b> · 2026-08-10</p>
+  <p class="ledger-sub rv">Every update written in the ledger, so the realm's history stays legible. This entry — the whole 5e table in play, dice the realm can trust, a memory that holds, a voice that speaks, and a turn ledger that spends honestly.<br><b>v0.10 → v1.0</b> · 2026-08-10</p>
 
   <div class="current-box rv">
     <span class="ver-chip"><span class="ver-name">v1.0</span><span class="ver-note">The Complete Table</span></span>
     <span class="ver-tag">Full 5e mechanics</span>
     <span class="ver-tag">Server dice</span>
     <span class="ver-tag">Fact memory</span>
+    <span class="ver-tag">Full voice</span>
+    <span class="ver-tag">Qwen 3.8 Max</span>
     <span class="ver-tag">Honest turns</span>
   </div>
 
@@ -228,6 +230,33 @@
       <span class="sec-num">1.0</span>
       <h2>The Complete Table</h2>
       <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tablet-h">
+        <span class="chip snd">VOICE</span>
+        <span class="tablet-title">Speak to the realm</span>
+      </div>
+      <p class="tablet-lead">Voice now runs the whole way around the table — speak your action, hear the realm answer. English, end to end.</p>
+      <ul class="feat">
+        <li><span class="tag snd">SND</span><b>Player voice input</b> — tap the microphone, speak your action in English, and StepFun speech-to-text (stepaudio-2.5-asr) turns it into a transcript you can edit before sending. No typing for the urgent parts.</li>
+        <li><span class="tag snd">SND</span><b>StepFun narrators</b> — the DM, characters and NPCs answer aloud with stepaudio-2.5-tts: natural language instructions instead of canned voice labels, with long replies split into seamless clips.</li>
+        <li><span class="tag snd">SND</span><b>Qwen narrators</b> — the premium storytellers (Patron tier) give the realm a different grain of voice — pick StepFun or Qwen for your campaign.</li>
+        <li><span class="tag ux">UX</span><b>Free to speak</b> — voice input costs no turn: the transcript is yours to edit before it counts. Speech and narration follow the tier gates (Support for StepFun, Patron for Qwen).</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tablet-h">
+        <span class="chip ai">MODELS</span>
+        <span class="tablet-title">Heavier minds at the table</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ai">AI</span><b>Qwen 3.8 Max as Dungeon Master</b> — Alibaba's flagship: deep reasoning and a million-token memory, so the realm keeps the whole campaign in mind, not just the last hour.</li>
+        <li><span class="tag ai">AI</span><b>DeepSeek V4 line</b> — V4 Pro and V4 Flash sit alongside the Qwen line in every picker, so each tier gets a mind that matches the table's budget.</li>
+      </ul>
     </div>
     <div class="tablet">
       <span class="corner tl"></span><span class="corner tr"></span>

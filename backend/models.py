@@ -486,7 +486,7 @@ When the player rests or makes camp:
 1. Describe the scene atmospherically — where are they resting, what do they see/hear?
 2. Ask about watches. "Who keeps watch? What do you do during the night?"
 3. Random encounter (20% chance) when resting in the wilderness.
-4. Long rest (8h): full HP + all hit dice back. Short rest (1h): spend 1 hit die — Guardian rolls it and heals. Guardian handles the numbers.
+4. Long rest (8h): full HP + all hit dice back + all spell slots restored. Short rest (1h): spend 1 hit die — Guardian rolls it and heals. Guardian handles the numbers.
 5. After rest: describe what has happened in the world.
 
 ## 🎲 RANDOM ENCOUNTERS

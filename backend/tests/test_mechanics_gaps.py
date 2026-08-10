@@ -123,6 +123,95 @@ def test_spell_slots_missing_slots_dict_safe():
     assert any(e["type"] == "spell_slots_blocked" for e in effects)
 
 
+# ── Long rest restore (fix 2026-08-10: Guardian satte time_passed istället för
+#    rest → spell slots återställdes aldrig mekaniskt. Nu fallback på 8h+/hint.) ──
+
+def _caster_state(level=3, slots_current=1, slots_max=2):
+    state = _make_state()
+    state["character"]["class"] = "Wizard (School of Knowledge)"
+    state["character"]["level"] = level
+    state["character"]["spell_slots"] = {"current": slots_current, "max": slots_max}
+    state["character"]["hp"] = {"current": 5, "max": 14, "temp": 2}
+    return state
+
+
+def test_long_rest_restores_spell_slots_and_hp():
+    """Explicit rest:{kind:'long'} ska fylla slots + HP + hit dice."""
+    state = _caster_state()
+    effects = guardian.apply_mechanics(
+        state, _mech(rest={"kind": "long"}), skip_effects=[]
+    )
+    assert state["character"]["spell_slots"]["current"] == 2
+    assert state["character"]["hp"]["current"] == 14
+    assert state["character"]["hp"]["temp"] == 0
+    assert any(e["type"] == "hela" for e in effects)
+
+
+def test_long_rest_fallback_from_time_passed_hours():
+    """Guardian satte time_passed 8h+ men glömde rest → ska tolkas som lång vila."""
+    state = _caster_state()
+    effects = guardian.apply_mechanics(
+        state, _mech(time_passed={"hours": 8, "description": "Overnight long rest from night until dawn"}), skip_effects=[]
+    )
+    assert state["character"]["spell_slots"]["current"] == 2
+    assert state["character"]["hp"]["current"] == 14
+    assert any(e["type"] == "hela" for e in effects)
+
+
+def test_long_rest_fallback_from_description_hint():
+    """time_passed med 'long rest' i beskrivningen men 0h → ändå lång vila."""
+    state = _caster_state()
+    guardian.apply_mechanics(
+        state, _mech(time_passed={"hours": 0, "description": "Long rest and recovery"}), skip_effects=[]
+    )
+    assert state["character"]["spell_slots"]["current"] == 2
+
+
+def test_short_rest_does_not_restore_spell_slots():
+    """Kort vila ska INTE fylla spell slots — bara HP via hit die."""
+    state = _caster_state(slots_current=1)
+    guardian.apply_mechanics(
+        state, _mech(rest={"kind": "short"}), skip_effects=[]
+    )
+    assert state["character"]["spell_slots"]["current"] == 1
+
+
+def test_time_passed_short_does_not_trigger_long_rest_fallback():
+    """time_passed 2h utan vil-hint → ingen mekanisk återställning."""
+    state = _caster_state(slots_current=1)
+    guardian.apply_mechanics(
+        state, _mech(time_passed={"hours": 2, "description": "Travel through the desert"}), skip_effects=[]
+    )
+    assert state["character"]["spell_slots"]["current"] == 1
+
+
+# ── Level-up spell slots + hit dice (fix 2026-08-10) ──
+
+def test_level_up_grows_spell_slots_max_and_hit_dice():
+    """Level-up ska öka spell_slots.max enligt 5e-tabellen + hit dice = level."""
+    state = _caster_state(level=2, slots_current=3, slots_max=3)
+    state["character"]["xp"] = {"current": 900, "next_level": 2700}
+    state["character"]["hit_dice"] = {"dice": "1d6", "total": 2, "remaining": 2}
+    effects = guardian.apply_mechanics(state, _mech(xp=900), skip_effects=[])
+    assert state["character"]["level"] == 3
+    assert state["character"]["spell_slots"]["max"] == 4
+    assert state["character"]["spell_slots"]["current"] == 4
+    assert state["character"]["hit_dice"]["total"] == 3
+    assert any(e["type"] == "spell_slots_up" for e in effects)
+
+
+def test_level_up_non_caster_keeps_no_slots():
+    """Icke-kaster ska inte få spell slots vid level-up."""
+    state = _make_state()
+    state["character"]["class"] = "Fighter"
+    state["character"]["level"] = 2
+    state["character"]["xp"] = {"current": 900, "next_level": 2700}
+    state["character"].pop("spell_slots", None)
+    guardian.apply_mechanics(state, _mech(xp=900), skip_effects=[])
+    assert state["character"]["level"] == 3
+    assert "spell_slots" not in state["character"] or state["character"]["spell_slots"]["max"] == 0
+
+
 # ── P1-5 Inspiration ───────────────────────────────────────────────────
 
 def test_inspiration_gain_sets_flag():

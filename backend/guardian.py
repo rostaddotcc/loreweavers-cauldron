@@ -521,6 +521,11 @@ Extrahera ALLA mekaniska effekter och uppdateringar.
   ENDAST saker som faktiskt hänt och som världen minns — inte stämning, inte löften. Om inget → tom array.
 - time_passed: Tid som förflyter. Ange hours och description.
 - rest: Om spelaren vilar. Ange kind ("short" eller "long").
+  KRITISKT: när spelaren vilar (säger "long rest", "lång vila", "sleep", "sova",
+  "camp", "till imorgon", "recharge my spells"…) MÅSTE du sätta rest — annars
+  återställs inget mekaniskt! En lång vila (8h) återställer automatiskt full HP,
+  alla spell slots och hit dice. Sätt INTE bara time_passed/new_day för vila —
+  vila kräver rest-fältet (time_passed är för tid som förflyter, t.ex. resor).
 - new_day: Om en ny dag börjar. Ange description.
 
 ### Strid (chat-first combat)
@@ -984,6 +989,19 @@ _HD_BY_CLASS = {
     "warlock": 8, "sorcerer": 6, "wizard": 6,
 }
 
+# Spell slots per nivå (D&D 5e) — enkel modell: ETT slot-pool {current, max}.
+# Full-casters får 1:a-nivå slots enligt 5e-tabellen (2/3/4/4/4...). Warlock
+# (Pact Magic): 1/2/2/2/2... Icke-kasterklasser får inga (0). (fix 2026-08-10:
+# level-up uppdaterade ALDRIG spell_slots.max → level 3 wizard fastnade på 2 slots.)
+_SPELL_SLOTS_BY_LEVEL = {
+    "bard": {1: 2, 2: 3, 3: 4, 4: 4, 5: 4, 6: 4, 7: 4, 8: 4, 9: 4, 10: 4, 11: 4, 12: 4, 13: 4, 14: 4, 15: 4, 16: 4, 17: 4, 18: 4, 19: 4, 20: 4},
+    "cleric": {1: 2, 2: 3, 3: 4, 4: 4, 5: 4, 6: 4, 7: 4, 8: 4, 9: 4, 10: 4, 11: 4, 12: 4, 13: 4, 14: 4, 15: 4, 16: 4, 17: 4, 18: 4, 19: 4, 20: 4},
+    "druid": {1: 2, 2: 3, 3: 4, 4: 4, 5: 4, 6: 4, 7: 4, 8: 4, 9: 4, 10: 4, 11: 4, 12: 4, 13: 4, 14: 4, 15: 4, 16: 4, 17: 4, 18: 4, 19: 4, 20: 4},
+    "sorcerer": {1: 2, 2: 3, 3: 4, 4: 4, 5: 4, 6: 4, 7: 4, 8: 4, 9: 4, 10: 4, 11: 4, 12: 4, 13: 4, 14: 4, 15: 4, 16: 4, 17: 4, 18: 4, 19: 4, 20: 4},
+    "wizard": {1: 2, 2: 3, 3: 4, 4: 4, 5: 4, 6: 4, 7: 4, 8: 4, 9: 4, 10: 4, 11: 4, 12: 4, 13: 4, 14: 4, 15: 4, 16: 4, 17: 4, 18: 4, 19: 4, 20: 4},
+    "warlock": {1: 1, 2: 2, 3: 2, 4: 2, 5: 2, 6: 2, 7: 2, 8: 2, 9: 2, 10: 2, 11: 3, 12: 3, 13: 3, 14: 3, 15: 3, 16: 3, 17: 4, 18: 4, 19: 4, 20: 4},
+}
+
 # Klass-alias (SV/EN-varianter) → kanonisk nyckel. Fallback: direkt nyckel.
 _CLASS_ALIASES = {
     "barbarian": "barbarian", "barbar": "barbarian",
@@ -1198,6 +1216,43 @@ def _encumbrance_level(ch: dict, total_weight: float) -> str:
     if total_weight > str_score * 5:
         return "light"
     return "none"
+
+
+def _apply_level_up_bonuses(ch: dict, effects: list) -> None:
+    """Tillämpa level-up-bonusar: max HP (HD-baserat), spell slots (5e-tabell),
+    hit dice total = level, klassfeatures. Delas av XP- och quest-patharna.
+    (fix 2026-08-10: spell slots + hit dice uppdaterades aldrig vid level-up.)"""
+    # Max HP ökar — HD-baserat (medelvärde per nivå = hd//2 + CON-mod)
+    hp = ch.setdefault("hp", {"current": 1, "max": 1, "temp": 0})
+    con_mod = ch.get("abilities", {}).get("CON", {}).get("mod", 0)
+    _cls = str(ch.get("class", "")).lower()
+    _hd = _HD_BY_CLASS.get(_cls, 8)
+    hp_gain = max(1, _hd // 2 + con_mod)
+    hp["max"] = hp.get("max", 1) + hp_gain
+    if hp.get("max_full"):
+        hp["max_full"] = hp["max_full"] + hp_gain
+    hp["current"] = hp["max"]  # Full HP vid level-up
+    _grant_class_features(ch, ch["level"], effects)
+    effects.append({"type": "level_up", "value": ch["level"]})
+    # Spell slots max ökar per klassens 5e-tabell
+    _cls_lu = str(ch.get("class", "")).lower().strip()
+    slot_table = next(
+        (t for key, t in _SPELL_SLOTS_BY_LEVEL.items() if key in _cls_lu),
+        None,
+    )
+    if slot_table:
+        new_max = slot_table.get(ch["level"], slot_table.get(20, 0))
+        ss = ch.setdefault("spell_slots", {"current": 0, "max": 0})
+        if new_max > ss.get("max", 0):
+            ss["max"] = new_max
+            ss["current"] = new_max  # level-up ger fulla slots
+            effects.append({"type": "spell_slots_up", "value": new_max})
+    # Hit Dice total = level (5e)
+    hd_up = _ensure_hit_dice(ch)
+    if ch["level"] > hd_up.get("total", 0):
+        hd_up["total"] = ch["level"]
+        hd_up["remaining"] = hd_up.get("total", ch["level"])
+    logger.info("🛡️ Guardian: LEVEL UP → level %d! HP max %d (HD %d)", ch["level"], hp["max"], _hd)
 
 
 def _grant_class_features(ch: dict, new_level: int, effects: list) -> None:
@@ -1690,19 +1745,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             if level < len(_XP_THRESHOLDS) and xp["current"] >= _XP_THRESHOLDS[level]:
                 ch["level"] = level + 1
                 xp["next_level"] = _XP_THRESHOLDS[level + 1] if level + 1 < len(_XP_THRESHOLDS) else None
-                # Max HP ökar — HD-baserat (medelvärde per nivå = hd//2 + CON-mod)
-                hp = ch.setdefault("hp", {"current": 1, "max": 1, "temp": 0})
-                con_mod = ch.get("abilities", {}).get("CON", {}).get("mod", 0)
-                _cls = str(ch.get("class", "")).lower()
-                _hd = _HD_BY_CLASS.get(_cls, 8)
-                hp_gain = max(1, _hd // 2 + con_mod)
-                hp["max"] = hp.get("max", 1) + hp_gain
-                if hp.get("max_full"):
-                    hp["max_full"] = hp["max_full"] + hp_gain
-                hp["current"] = hp["max"]  # Full HP vid level-up
-                _grant_class_features(ch, ch["level"], effects)
-                effects.append({"type": "level_up", "value": ch["level"]})
-                logger.info("🛡️ Guardian: LEVEL UP → level %d! HP max %d (HD %d)", ch["level"], hp["max"], _hd)
+                _apply_level_up_bonuses(ch, effects)
 
     # ── Föremål ──
     inv = state.setdefault("inventory", [])
@@ -1924,17 +1967,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 if level < len(_XP_THRESHOLDS) and xp["current"] >= _XP_THRESHOLDS[level]:
                     ch["level"] = level + 1
                     xp["next_level"] = _XP_THRESHOLDS[level + 1] if level + 1 < len(_XP_THRESHOLDS) else None
-                    hp = ch.setdefault("hp", {"current": 1, "max": 1, "temp": 0})
-                    con_mod = ch.get("abilities", {}).get("CON", {}).get("mod", 0)
-                    _cls = str(ch.get("class", "")).lower()
-                    _hd = _HD_BY_CLASS.get(_cls, 8)
-                    hp_gain = max(1, _hd // 2 + con_mod)
-                    hp["max"] = hp.get("max", 1) + hp_gain
-                    if hp.get("max_full"):
-                        hp["max_full"] = hp["max_full"] + hp_gain
-                    hp["current"] = hp["max"]
-                    _grant_class_features(ch, ch["level"], effects)
-                    effects.append({"type": "level_up", "value": ch["level"]})
+                    _apply_level_up_bonuses(ch, effects)
                     logger.info("🛡️ Guardian: LEVEL UP (quest) → level %d!", ch["level"])
 
             # Guld-reward
@@ -2169,6 +2202,23 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
 
     # ── Vila (5e: Hit Dice) ──
     rest = mech.get("rest")
+    # Fallback (fix 2026-08-10): Guardian LLM:n satte time_passed/new_day men
+    # INTE rest — lång vila gick aldrig igenom mekaniskt, spell slots återställdes
+    # inte (testadventure turn 64-65). Om 8h+ passerat utan explicit rest,
+    # tolka det som lång vila så att HP/slots/hit dice faktiskt återställs.
+    if not (rest and isinstance(rest, dict)):
+        tp_fb = mech.get("time_passed")
+        if isinstance(tp_fb, dict):
+            try:
+                tp_hours = int(tp_fb.get("hours", 0) or 0)
+            except (TypeError, ValueError):
+                tp_hours = 0
+            tp_desc = str(tp_fb.get("description", "") or "").lower()
+            rest_hint = any(k in tp_desc for k in ("long rest", "lång vila", "overnight", "övernattning", "sover", "sleep"))
+            if tp_hours >= 8 or rest_hint:
+                rest = {"kind": "long"}
+                logger.info("🛡️ Guardian: LONG REST fallback (time_passed %sh: %s) → mekanisk återställning",
+                            tp_hours, tp_fb.get("description", ""))
     if rest and isinstance(rest, dict):
         kind = rest.get("kind", "short")
         hp = ch.setdefault("hp", {"current": 1, "max": 1, "temp": 0})
@@ -3233,6 +3283,9 @@ def format_guardian_summary(
                 lines.append(f"🎉 **LEVEL UP → {v}!**")
             else:
                 lines.append(f"🎉 **NIVÅ UPP → {v}!**")
+        elif t == "spell_slots_up":
+            label = "Spell slots now:" if en else "Spell slots nu:"
+            lines.append(f"🔮 **{label}** {v}")
         elif t == "föremål":
             qty = e.get("qty", 1)
             qty_str = f" ×{qty}" if qty > 1 else ""

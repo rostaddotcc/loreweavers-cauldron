@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>The Lore Weaver's Cauldron — Release Notes</title>
-<meta name="description" content="Release notes for The Lore Weaver's Cauldron — an AI dungeon master with a memory. v0.9 — the full reasoning power of DeepSeek and Qwen, Wan 2.7, 30-day stackable packs and a cleaner table.">
+<meta name="description" content="Release notes for The Lore Weaver's Cauldron — an AI dungeon master with a memory. v1.0 — the complete 5e table: every mechanic in play, server-authoritative dice, a memory that holds, and a turn ledger you can trust.">
 <link rel="icon" href="/assets/logo-cauldron.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -212,14 +212,128 @@
 <section class="ledger">
   <p class="eyebrow rv">The Ledger of the Realm</p>
   <h1 class="rv">Release Notes</h1>
-  <p class="ledger-sub rv">Every update written in the ledger, so the realm's history stays legible. This entry — softer edges, a voice you can steer, and faces you can look in the eye.<br><b>v0.9 → v0.10</b> · 2026-08-06</p>
+  <p class="ledger-sub rv">Every update written in the ledger, so the realm's history stays legible. This entry — the whole 5e table in play, dice the realm can trust, a memory that holds, and a turn ledger that spends honestly.<br><b>v0.10 → v1.0</b> · 2026-08-10</p>
 
   <div class="current-box rv">
-    <span class="ver-chip"><span class="ver-name">v0.10</span><span class="ver-note">The Soft Table</span></span>
-    <span class="ver-tag">Portrait previews</span>
-    <span class="ver-tag">TTS player</span>
-    <span class="ver-tag">Donation turns</span>
-    <span class="ver-tag">Softer edges</span>
+    <span class="ver-chip"><span class="ver-name">v1.0</span><span class="ver-note">The Complete Table</span></span>
+    <span class="ver-tag">Full 5e mechanics</span>
+    <span class="ver-tag">Server dice</span>
+    <span class="ver-tag">Fact memory</span>
+    <span class="ver-tag">Honest turns</span>
+  </div>
+
+  <!-- ═══════════════ 1.0 headline ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">1.0</span>
+      <h2>The Complete Table</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tablet-h">
+        <span class="chip feat">MECHANICS</span>
+        <span class="tablet-title">The whole 5e table, in play</span>
+      </div>
+      <p class="tablet-lead">The rules are no longer a suggestion the Dungeon Master reads from memory — they are a contract the realm enforces. Every major mechanic a table needs now lives in the game, verified by tests, and applied by the Lorekeeper after every turn.</p>
+      <ul class="feat">
+        <li><span class="tag feat">FEAT</span><b>Skills and proficiency</b> — the right tool for the right task: skill checks carry proficiency and ability modifiers, and the DM knows when the party is pushing its luck.</li>
+        <li><span class="tag feat">FEAT</span><b>Spell slots spend</b> — casting a spell consumes the slot, and the spellbook tracks what is left. No more infinite fireballs.</li>
+        <li><span class="tag feat">FEAT</span><b>Inspiration and class features</b> — the spark of a nat-20 is banked as inspiration, and class features arrive as real rules instead of flavor text.</li>
+        <li><span class="tag feat">FEAT</span><b>Conditions that tick</b> — blinded, grappled, restrained and the rest apply their effects and expire on schedule.</li>
+        <li><span class="tag feat">FEAT</span><b>Resistance and vulnerability</b> — fireball into a creature that shrugs fire halves the pain; a vampire still fears the sun's light twice as much.</li>
+        <li><span class="tag feat">FEAT</span><b>Encumbrance, exhaustion, cover, darkvision</b> — carry too much and movement suffers; push too hard and exhaustion stacks; half cover means half the hits land; darkvision decides what you see in the dark.</li>
+        <li><span class="tag feat">FEAT</span><b>Grapple, shove, movement, downtime training</b> — the physical tools of the table: lock a foe in a grapple, shove them off a ledge, move with the terrain, and spend downtime learning a tool or language.</li>
+        <li><span class="tag ai">AI</span><b>Battle AI for enemies</b> — when enemies are alive, the Guardian decides their moves and the code rolls the dice — no enemy ever hits or misses by LLM fiat.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tablet-h">
+        <span class="chip fix">DICE</span>
+        <span class="tablet-title">Dice the realm can trust</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag fix">FIX</span><b>Server-authoritative dice</b> — every player roll now travels to the realm's own dice engine (secrets, not a client-side random) before the result lands in the chat. Advantage rolls two d20s server-side, then picks the best.</li>
+        <li><span class="tag feat">FEAT</span><b>The DM dice ceremony</b> — when the Dungeon Master rolls for an enemy or an ally, the dice tumble visibly in the chat: a flicker, a roll, and the result — no more placeholder boxes.</li>
+        <li><span class="tag fix">FIX</span><b>No double damage</b> — a player or ally attack that already dealt its damage can no longer strike the same enemy twice through the mechanics layer.</li>
+        <li><span class="tag fix">FIX</span><b>Dead enemies stay dead</b> — a slain creature's last rolls no longer re-render on every new reply.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tablet-h">
+        <span class="chip ai">MEMORY</span>
+        <span class="tablet-title">A memory that holds</span>
+      </div>
+      <p class="tablet-lead">The realm's memory was rebuilt from the inside: a moving window of facts, ranked fresh before every single turn, backed by a semantic index that is actually reachable from the cauldron.</p>
+      <ul class="feat">
+        <li><span class="tag feat">FEAT</span><b>Fact register — the moving window</b> — every turn's events are distilled into durable facts (people, places, promises, grudges). Before each reply, the top <b>8 facts</b> are scored against your message — keyword overlap, recency, mentions, confidence — and only the winners enter the prompt.</li>
+        <li><span class="tag ai">AI</span><b>Semantic recall, fixed</b> — the Qdrant index (transcript, lore, summaries) was unreachable from inside the container; the connection now works, and the <b>top 4 semantic chunks</b> join the fact window every turn. RAG is no longer a checkbox — it fires on every DM call.</li>
+        <li><span class="tag feat">FEAT</span><b>Nothing is deleted, everything competes</b> — facts fall out of the window but never out of the register: compaction every 50 turns marks stale facts, superseded facts are retired, and player-pinned facts (the <b>/pin</b> command) can never be evicted.</li>
+        <li><span class="tag fix">FIX</span><b>Transparent recall</b> — the Engine Room now shows exactly what the DM saw: <b>8 facts + 4 RAG chunks</b> per call, so you can watch the realm remember.</li>
+        <li><span class="tag fix">FIX</span><b>Campaign language held</b> — scene, chapter and arc summaries now follow the campaign's language instead of hardcoded Swedish; NPC keys survive apostrophes and parentheses.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tablet-h">
+        <span class="chip ux">TURNS</span>
+        <span class="tablet-title">A turn ledger that spends honestly</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">FEAT</span><b>One turn per message, nothing hidden</b> — your chat message costs exactly 1 turn. The guardian, threads, summaries, day-entries and battle AI run free inside it — the internal machinery is never billed against you.</li>
+        <li><span class="tag feat">FEAT</span><b>TTS counts once, cache hits free</b> — a synthesized voice costs 1 turn the first time; replaying a cached clip costs nothing.</li>
+        <li><span class="tag feat">FEAT</span><b>Image turns</b> — painted portraits charge a single turn, with the price shown before you paint.</li>
+        <li><span class="tag ux">UX</span><b>Quota you can read</b> — hover the turn pill for the honest breakdown, see the big refresh timer, and open the full profile modal from the top bar: turns, tier, and subscription in one place.</li>
+        <li><span class="tag ux">UX</span><b>Free models, everywhere</b> — OpenRouter free models now sit in the regular DM, Guardian and Extraction pickers (and character creation) — no separate experiment row — with backend validation for every tier.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tablet-h">
+        <span class="chip snd">MOBILE</span>
+        <span class="tablet-title">The table fits in your hand</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ux">UX</span><b>Composer trimmed ~50%</b> — the Act button lives inside the field, the input is a compact single row, and the quick-scroll controls shrank — more story, less chrome on a phone.</li>
+        <li><span class="tag ux">UX</span><b>TTS controls as chips</b> — the voice boxes became chip-sized (26px), the media player a minimal pill, and the combat button is icon-only in the bar — the whole stack is radically shorter.</li>
+        <li><span class="tag fix">FIX</span><b>Bottom nav that stays put</b> — the nav is now flow-based instead of fixed-position, so Firefox Android no longer hides it behind the URL bar.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tablet-h">
+        <span class="chip feat">FACES</span>
+        <span class="tablet-title">Faces worth seeing</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ux">UX</span><b>Chat avatars ~3× larger</b> — the DM and player portraits now stand at 120px (84px on mobile), stacked above their messages instead of squeezed beside them.</li>
+        <li><span class="tag fix">FIX</span><b>Player avatar above the bubble</b> — the portrait sits above your message, matching the DM's side.</li>
+        <li><span class="tag fix">FIX</span><b>Soft rounded frames</b> — avatar frames follow the table's soft design language (10–12px radius) instead of sharp corners.</li>
+        <li><span class="tag fix">FIX</span><b>Refresh actually refreshes</b> — painting a new DM or player portrait now updates the chat in place; wrong selectors no longer keep the old face.</li>
+        <li><span class="tag feat">FEAT</span><b>Avatar gallery arrows</b> — flip through your painted faces with arrows, and inactive portraits are purged after 30 days.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tablet-h">
+        <span class="chip fix">CLEANING</span>
+        <span class="tablet-title">A lighter engine room</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag fix">FIX</span><b>Dead code pass</b> — the legacy REST combat path and unused code are gone; the engine room is smaller and the turn path shorter.</li>
+        <li><span class="tag feat">FEAT</span><b>Unique visitors per country</b> — the admin ledger now counts real people (deduplicated) by country with time filters (1h/12h/24h/7d/30d), plus top referrers and unique daily visitors.</li>
+        <li><span class="tag fix">FIX</span><b>Book of Souls cleans after itself</b> — only existing campaigns and the currently selected card appear; deleted cards leave no showcase ghosts behind.</li>
+      </ul>
+    </div>
   </div>
 
   <!-- ═══════════════ 0.10 headline ═══════════════ -->
@@ -433,10 +547,8 @@
         <span class="tablet-title">What we are still working on</span>
       </div>
       <ul class="feat">
-        <li><span class="tag fix">KNOWN</span><b>Language leakage</b> — the game is being translated from Swedish to English from the ground up. While the translation work is in progress, an English campaign can occasionally still receive a Swedish response.</li>
-        <li><span class="tag fix">KNOWN</span><b>Unfinished translations in the Codex</b> — a few Codex panels still show Swedish labels; the sweep is ongoing and will land before 1.0.</li>
-        <li><span class="tag feat">NEXT</span><b>Multiplayer campaigns — coming in 1.0</b> — play with your friends at the same table, in the same world.</li>
-        <li><span class="tag feat">NEXT</span><b>More languages — coming in 1.0</b> — German, French, Spanish and more.</li>
+        <li><span class="tag feat">NEXT</span><b>Multiplayer campaigns — after 1.0</b> — play with your friends at the same table, in the same world. The next milestone after the complete table.</li>
+        <li><span class="tag feat">NEXT</span><b>More languages — after 1.0</b> — German, French, Spanish and more.</li>
       </ul>
     </div>
   </div>
@@ -709,7 +821,7 @@
   <div class="footer rv">
     <b>The Lore Weaver's Cauldron</b> — an AI dungeon master with a memory.<br>
     <a href="pricing.html">Choose your path</a> &middot; <a href="adventure.html">Return to the realm</a><br>
-    <span>v0.6 → v0.7 · 2026-08-04 · Questions? <a href="mailto:web@rostad.cc">web@rostad.cc</a></span>
+    <span>v1.0 · 2026-08-10 · Questions? <a href="mailto:web@rostad.cc">web@rostad.cc</a></span>
   </div>
 </section>
 

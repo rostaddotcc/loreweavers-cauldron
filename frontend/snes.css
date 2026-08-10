@@ -2085,6 +2085,25 @@ body.cli-chat .send-btn:hover{
 body.cli-chat .send-btn:disabled{
   opacity: .4 !important;
 }
+body.cli-chat .mic-btn{
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: var(--gold) !important;
+}
+body.cli-chat .mic-btn:hover{
+  background: transparent !important;
+  color: var(--gold-bright) !important;
+  filter: none !important;
+  box-shadow: none !important;
+}
+body.cli-chat .mic-btn.recording{
+  color: #d4453a !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: 0 0 14px -2px rgba(212,69,58,.7) !important;
+  animation: mic-pulse 1.1s ease-in-out infinite;
+}
 body.cli-chat .input-hint{
   font-family: var(--cli-mono) !important;
   font-size: .66rem;

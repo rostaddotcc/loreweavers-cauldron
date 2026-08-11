@@ -5,6 +5,8 @@
    ═══════════════════════════════════════════════════ */
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400;500;600&family=Silkscreen:wght@400;700&display=swap');
 
+/* Z-INDEX LADDER (2026-08-11 audit) — bottom-nav 280 < drawer-backdrop 290 < drawer 300 < sheet 310 < oracle/console 320 < scanlines(body::before) 999 < page overlays 10000+ (backdrop 9990) < lightbox 11000 < feedback 12000 < theme-pop 30000. Do not invent new rungs. */
+
 /* ── PALETT ── */
 :root{
   --ink: #1a1426;

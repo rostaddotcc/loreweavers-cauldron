@@ -585,7 +585,6 @@
 <body>
 
 <div class="grain"></div>
-<div class="fog"></div>
 <canvas id="embers"></canvas>
 <div class="vignette"></div>
 
@@ -621,7 +620,6 @@
 
   <!-- ═══════════ KARAKTÄR ═══════════ -->
   <section class="panel active" id="panel-character">
-    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
 
     <div class="char-header">
       <div class="portrait-frame" id="portrait" title="Upload a portrait — Qwen can analyze it">
@@ -712,7 +710,6 @@
 
   <!-- ═══════════ UTRUSTNING ═══════════ -->
   <section class="panel" id="panel-inventory">
-    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
 
     <div class="section-title">Gear & Weapons</div>
     <div class="inv-grid" id="inv-grid"></div>
@@ -726,7 +723,6 @@
 
   <!-- ═══════════ BESVÄRJELSER ═══════════ -->
   <section class="panel" id="panel-spells">
-    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
 
     <div class="section-title">✨ Spells</div>
     <div class="spell-slots" id="spell-slots"></div>
@@ -736,7 +732,6 @@
 
   <!-- ═══════════ SKATTKAMMARE ═══════════ -->
   <section class="panel" id="panel-currency">
-    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
 
     <div class="section-title">Coins & Gems</div>
     <div class="currency-grid" id="currency-grid"></div>
@@ -753,7 +748,6 @@
 
   <!-- ═══════════ ANTECKNINGAR ═══════════ -->
   <section class="panel" id="panel-notes">
-    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
 
     <div class="notes-layout">
       <div class="notes-main">
@@ -848,7 +842,6 @@ function showNoCampaign(msg) {
   box.className = 'panel no-campaign';
   box.style.display = 'block';
   box.innerHTML = `
-    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
     <div class="rune">🗺️</div>
     <h2>${I18N.t('Ingen aktiv kampanj — skapa ett äventyr först')}</h2>
     <p>${msg || I18N.t('Karaktärsarket fylls på när spelledaren väckt världen till liv.')}</p>

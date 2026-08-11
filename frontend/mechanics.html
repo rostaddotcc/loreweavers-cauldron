@@ -11,14 +11,15 @@
    Dark fantasy × terminal. No external assets.
    ══════════════════════════════════════════════════════════════ */
 :root{
-  --ink:#08080d; --stone:#0e0e14; --stone-2:#12121a; --stone-3:#181822;
-  --edge:#2a2a3a; --edge-hi:#3a3a50;
-  --bone:#b8b8c8; --bone-bright:#e0e0ec; --bone-dim:#6a6a80;
-  --gold:#c9a227; --gold-bright:#e8c65a;
-  --blood:#8b1a2a; --blood-bright:#d43a4d;
-  --ember:#d4691e; --arcane:#7b4fd4; --arcane-bright:#a885f0;
-  --poison:#5a9a4e; --teal:#4e8a93;
-  --term-green:#33cc33; --term-amber:#ccaa33; --term-red:#ff5566;
+  /* Palette aligned to snes.css :root (2026-08-11 audit) */
+  --ink:#1a1426; --stone:#271d33; --stone-2:#322541; --stone-3:#3d2e4f;
+  --edge:#463a60; --edge-hi:#5a4a7a;
+  --bone:#d9c9a6; --bone-bright:#f2e6c8; --bone-dim:#9d8a6a;
+  --gold:#d4a92c; --gold-bright:#f0d675;
+  --blood:#a32433; --blood-bright:#e0485a;
+  --ember:#d4691e; --arcane:#9a6fe0; --arcane-bright:#a885f0;
+  --poison:#7aa35e; --teal:#4e8a93;
+  --term-green:#33cc33; --term-amber:#ccaa33; --term-red:#ff5566; /* --term-red: page-local (finns ej i snes.css) */
   --font-display:"Cinzel","Trajan Pro","Palatino Linotype","Book Antiqua",Palatino,Georgia,"Times New Roman",serif;
   --font-body:"Spectral","Palatino Linotype","Book Antiqua",Palatino,Georgia,serif;
   --font-mono:ui-monospace,"Cascadia Code","JetBrains Mono","IBM Plex Mono",Menlo,Consolas,monospace;
@@ -53,7 +54,8 @@ code,kbd,.mono{font-family:var(--font-mono);font-size:.9em}
 .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(4,2,8,.85)}
 
 /* ── Boot overlay ───────────────────────────────────────────── */
-#boot{position:fixed;inset:0;z-index:9999;background:#020206;display:flex;align-items:center;justify-content:center;cursor:pointer}
+/* Z-ladder (2026-08-11): content 2 < #prog 8000 < .toast 9000 < overlays 10000+ — app-ladder 280<290<300<310<320<999<10000+(backdrop 9990)<30000 */
+#boot{position:fixed;inset:0;z-index:10000;background:#020206;display:flex;align-items:center;justify-content:center;cursor:pointer}
 #boot.done{opacity:0;pointer-events:none;transition:opacity .6s}
 .boot-term{width:min(680px,92vw);background:rgba(2,2,6,.97);border:1px solid var(--edge);
   box-shadow:0 0 80px rgba(123,79,212,.12),inset 0 0 40px rgba(0,0,0,.8);position:relative}

@@ -84,6 +84,17 @@
   .spells-list .sp-name{color:var(--arcane);font-weight:600}
   .toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:600;font-family:var(--font-display,'Cinzel',serif);font-size:.88rem;letter-spacing:.1em;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);padding:.7rem 1.5rem;box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none;max-width:92%;text-align:center}.toast.show{transform:translate(-50%,0);opacity:1}
   html{-webkit-tap-highlight-color:transparent}
+  @media(max-width:900px){
+    .app{padding:1.6rem 1rem 4rem}
+    .pv-stats,.insp-full .pv-stats{grid-template-columns:repeat(3,1fr)}
+    .vault-grid{grid-template-columns:1fr}
+    .forge-actions{flex-direction:column;align-items:stretch}
+    .summon-btn{width:100%;min-height:48px}
+    .forge-actions select{width:100%;min-height:44px}
+    .pv-actions{flex-direction:column;align-items:stretch}
+    .pv-go,.pv-reroll{width:100%;min-height:48px}
+    .insp-close{width:44px;height:44px}
+  }
   @media(max-width:640px){
     .app{padding:1.4rem .75rem 4rem}
     .forge-actions{flex-direction:column;align-items:stretch}

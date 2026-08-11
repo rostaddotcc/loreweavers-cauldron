@@ -221,6 +221,14 @@
   .donate-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,162,39,.14)}
   .donate-row .tier-btn{margin-top:0;flex-shrink:0}
 
+  @media(max-width:900px){
+    .tiers{grid-template-columns:1fr;gap:1.2rem}
+    .tier{padding:1.9rem 1.4rem 1.5rem}
+    .donate-row{flex-direction:column;align-items:stretch}
+    .donate-row .donate-input{width:100%}
+    .tier-btn,.plan-cta{min-height:48px;display:flex;align-items:center;justify-content:center}
+    .currency-toggle{min-height:48px}
+  }
   @media(max-width:640px){
     .nav-links .nav-link{display:none}
     .pricing{padding-top:calc(var(--nav-h) + 3rem)}

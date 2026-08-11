@@ -42,14 +42,15 @@ OR_FREE_KEY_ENV = "OPENROUTER_FREE_KEY"
 # Hand-picked as the most interesting free voices. Verify + refresh via the live
 # /api/v1/models fetch (see _refresh()).  Change these to taste.
 CURATED_FREE = [
+    "nvidia/nemotron-3.5-lightning:free",   # NEW 2026-08-11 — 1M ctx, snabb
     "openai/gpt-oss-20b:free",          # open-weights, strong reasoning
     "nvidia/nemotron-3-ultra-550b-a55b:free",  # 1M ctx, huge MoE
     "nvidia/nemotron-3-super-120b-a12b:free",  # balanced big MoE
     "poolside/laguna-s-2.1:free",       # coding-flavoured storytelling
-    "cohere/north-mini-code:free",      # compact, fast
 ]
 
 DISPLAY_NAMES = {
+    "nvidia/nemotron-3.5-lightning:free": "NVIDIA Nemotron 3.5 Lightning (free)",
     "openai/gpt-oss-20b:free": "OpenAI gpt-oss-20b (free)",
     "nvidia/nemotron-3-ultra-550b-a55b:free": "NVIDIA Nemotron 3 Ultra 550B (free)",
     "nvidia/nemotron-3-super-120b-a12b:free": "NVIDIA Nemotron 3 Super 120B (free)",

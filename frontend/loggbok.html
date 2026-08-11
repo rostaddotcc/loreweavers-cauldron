@@ -9,6 +9,36 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="snes.css?v=39">
 <style>
+/* ═══════════ RITE-RAIL — THE ARCHIVE dropdown (2026-08-11) ═══════════ */
+.rite-rail{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:48px;background:linear-gradient(180deg,var(--stone-2),var(--stone));border:1px solid var(--edge);border-top:1px solid var(--edge-hi);padding:0 .8rem;gap:1rem;position:relative}
+.rite-rail::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,rgba(201,162,39,.55) 30%,rgba(201,162,39,.55) 70%,transparent)}
+.rr-brand{display:flex;align-items:center;gap:.55rem;min-width:0;justify-self:start}
+.rr-sigil{width:22px;height:22px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;color:var(--gold-bright);font-size:.8rem;flex-shrink:0;box-shadow:0 0 8px rgba(201,162,39,.35) inset}
+.rr-name{font-family:var(--font-display);font-size:.82rem;letter-spacing:.14em;color:var(--bone-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rr-tag{font-family:var(--font-accent);font-size:.52rem;letter-spacing:.2em;color:var(--gold);border:1px solid rgba(201,162,39,.4);padding:.15rem .4rem;white-space:nowrap}
+.rr-actions{display:flex;align-items:center;gap:.4rem;justify-self:end}
+.rr-menu{font-family:var(--font-display);font-size:.68rem;letter-spacing:.15em;color:var(--bone);border:1px solid var(--edge);background:var(--stone-2);padding:0 .9rem;height:34px;display:flex;align-items:center;gap:.5rem;cursor:pointer;position:relative}
+.rr-menu:hover{border-color:var(--gold);color:var(--gold-bright)}
+.rr-drop{position:absolute;top:calc(100% + .5rem);right:0;min-width:220px;background:var(--stone);border:1px solid var(--gold);box-shadow:0 8px 30px rgba(0,0,0,.6);display:none;z-index:10000;flex-direction:column}
+.rr-drop.open{display:flex}
+.rr-drop a{display:flex;align-items:center;gap:.6rem;padding:.7rem .9rem;color:var(--bone);text-decoration:none;font-family:var(--font-display);font-size:.72rem;letter-spacing:.12em;border-bottom:1px solid var(--edge)}
+.rr-drop a:hover{background:rgba(201,162,39,.08);color:var(--gold-bright);transform:translateX(3px)}
+.rr-drop a.cur{color:var(--gold);border-left:2px solid var(--gold)}
+/* snes.css-kompat: .topbar !important-regler får inte äta railen */
+.topbar.rite-rail{display:grid!important;align-items:center!important;background:linear-gradient(180deg,var(--stone-2),var(--stone))!important;border:1px solid var(--edge)!important;border-top:1px solid var(--edge-hi)!important;box-shadow:none!important;min-height:48px;padding:0 .8rem!important}
+.topbar.rite-rail .rr-btn{height:34px;min-height:34px;width:auto;padding:0 .6rem;justify-content:center}
+@media(max-width:900px){
+  .topbar.rite-rail{flex-wrap:nowrap;gap:1rem!important;padding:0 .8rem!important;overflow:visible!important;min-height:48px!important}
+  .topbar.rite-rail .rr-btn{min-height:34px!important;width:auto!important}
+  .rr-drop{position:fixed;top:48px;right:.5rem;left:.5rem;min-width:0;max-height:calc(100dvh - 64px);overflow-y:auto}
+}
+@media(max-width:640px){
+  .rr-name{display:none}
+  .rr-tag{font-size:.46rem;padding:.12rem .3rem}
+  .topbar.rite-rail .rr-btn{min-height:44px!important}
+  .rr-menu{height:38px}
+}
+</style>
 /* ═══════════ MJUKA UPP — Codex loggbok (2026-08-05) — EFTER snes.css ═══════════ */
 .top-btn{ border-radius: 8px !important; box-shadow: 0 2px 12px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; }
 .top-btn:hover{ transform: translateY(-1px) !important; }
@@ -43,16 +73,46 @@
 <body>
 <div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
 
-<header class="topbar">
-  <span class="brand">The Lore Weaver's Cauldron</span>
-  <span class="page-tag">📜 Logbook — Adventure Journal</span>
-  <span class="spacer"></span>
-  <a class="top-btn" href="chat.html">⚔ To the Table</a>
-  <a class="top-btn" href="character.html">🧙 Character</a>
-  <a class="top-btn" href="npcs.html">📖 NPCs</a>
-  <a class="top-btn" href="platser.html">🗺️ The Map</a>
-  <button class="top-btn danger" onclick="doLogout()">🚪 Leave</button>
+<header class="topbar rite-rail">
+  <div class="rr-brand">
+    <span class="rr-sigil">⚗</span>
+    <span class="rr-name">The Lore Weaver's Cauldron</span>
+    <span class="rr-tag">JOURNAL</span>
+  </div>
+  <span class="rr-mid" aria-hidden="true"></span>
+  <div class="rr-actions">
+    <button type="button" class="rr-btn theme-btn" onclick="THEMES.openPopover(this)" title="Theme">🎨</button>
+    <div class="rr-menu" id="archive-menu" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false">☰ THE ARCHIVE ▾
+      <div class="rr-drop" id="archive-drop">
+        <a href="chat.html">⚔ To the Table</a>
+        <a href="npcs.html">👥 NPCs</a>
+        <a href="platser.html">🗺 The Map</a>
+        <a href="loggbok.html" class="cur">📜 Logbook</a>
+        <a href="character.html">🧙 Character</a>
+        <a href="login.html" onclick="doLogout();return false">🚪 Leave</a>
+      </div>
+    </div>
+  </div>
 </header>
+<script>
+/* ═══════════ RITE-RAIL — THE ARCHIVE dropdown (2026-08-11) ═══════════ */
+(function(){
+  var menu=document.getElementById('archive-menu');
+  var drop=document.getElementById('archive-drop');
+  if(!menu||!drop)return;
+  function setOpen(open){
+    drop.classList.toggle('open',open);
+    menu.setAttribute('aria-expanded',open?'true':'false');
+  }
+  menu.addEventListener('click',function(e){e.stopPropagation();setOpen(!drop.classList.contains('open'));});
+  menu.addEventListener('keydown',function(e){
+    if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setOpen(!drop.classList.contains('open'));}
+    else if(e.key==='Escape'){setOpen(false);menu.focus();}
+  });
+  document.addEventListener('click',function(e){if(!menu.contains(e.target))setOpen(false);});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')setOpen(false);});
+})();
+</script>
 
 <div class="layout">
   <div class="log-head">
@@ -299,7 +359,8 @@ resize();addEventListener('resize',resize);
 function spawn(init){return{x:Math.random()*W,y:init?Math.random()*H:H+10,r:.7+Math.random()*1.5,vy:.2+Math.random()*.55,vx:(Math.random()-.5)*.3,life:0,max:400+Math.random()*500,hue:Math.random()<.82?22+Math.random()*18:268+Math.random()*20};}
 for(let i=0;i<30;i++)embers.push(spawn(true));
 const GLOW={};function glowSprite(hue){const key=Math.round(hue/10)*10;if(GLOW[key])return GLOW[key];const c=document.createElement('canvas');c.width=c.height=48;const g=c.getContext('2d');const rg=g.createRadialGradient(24,24,0,24,24,24);rg.addColorStop(0,'hsla('+key+',90%,65%,1)');rg.addColorStop(.4,'hsla('+key+',85%,55%,.55)');rg.addColorStop(1,'hsla('+key+',80%,50%,0)');g.fillStyle=rg;g.fillRect(0,0,48,48);GLOW[key]=c;return c;}
-function tick(){ctx.clearRect(0,0,W,H);for(let i=0;i<embers.length;i++){const e=embers[i];e.life++;e.y-=e.vy;e.x+=e.vx+Math.sin(e.life*.02)*.12;const fade=Math.min(1,e.life/60)*Math.max(0,1-e.life/e.max);const fl=.5+Math.sin(e.life*.15+i)*.35;ctx.globalAlpha=.4*fade*fl;ctx.drawImage(glowSprite(e.hue),e.x-e.r*2,e.y-e.r*2,e.r*4,e.r*4);if(e.life>e.max||e.y<-12)embers[i]=spawn(false);}ctx.globalAlpha=1;requestAnimationFrame(tick);}
+function tick(){
+if (document.hidden) { requestAnimationFrame(tick); return; }ctx.clearRect(0,0,W,H);for(let i=0;i<embers.length;i++){const e=embers[i];e.life++;e.y-=e.vy;e.x+=e.vx+Math.sin(e.life*.02)*.12;const fade=Math.min(1,e.life/60)*Math.max(0,1-e.life/e.max);const fl=.5+Math.sin(e.life*.15+i)*.35;ctx.globalAlpha=.4*fade*fl;ctx.drawImage(glowSprite(e.hue),e.x-e.r*2,e.y-e.r*2,e.r*4,e.r*4);if(e.life>e.max||e.y<-12)embers[i]=spawn(false);}ctx.globalAlpha=1;requestAnimationFrame(tick);}
 tick();
 </script>
 <script src="embed.js?v=20260806a"></script>

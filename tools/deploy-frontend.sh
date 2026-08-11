@@ -13,10 +13,14 @@ if ! docker ps --format '{{.Names}}' | grep -qx "$C"; then
 fi
 # ALLA frontend/*.js kopieras — sprites/api missades förut och archetypes.js
 # missades 2026-08-07 (stelnad i containern). Deploy ska synca ALLT, inte bara .html.
+# 2026-08-11: *.css tillagd — snes.css missades vid wave2-deploy (manuell docker cp).
 for f in frontend/*.js; do
   docker cp "$f" "$C":/app/"$f"
 done
 for f in frontend/*.html; do
+  docker cp "$f" "$C":/app/"$f"
+done
+for f in frontend/*.css; do
   docker cp "$f" "$C":/app/"$f"
 done
 echo "✓ Frontend kopierat till $C"

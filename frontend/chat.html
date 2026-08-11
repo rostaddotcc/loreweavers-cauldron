@@ -1438,6 +1438,41 @@
 .rr-btn{ padding: .3rem .7rem !important; font-size: .66rem !important; }
 /* Väntetext under nedlåst tärningsknapp (2026-08-06) */
 .rr-wait{ font-size: .7rem; color: var(--bone-dim); font-style: italic; margin-top: .35rem; }
+/* ═══════════ CODEX GRIMOIRE — vertikal spine-tabbar (våg 3, 2026-08-11) ═══════════
+   Ersätter den gamla 2-rads mikro-tabben (.cx-tabs/.cx-tab): 52px bokrygg på
+   panelens vänsterkant; aktiv tabbe = guld-vänsterregel + glow. Scoped under
+   .cx-spine/.cx-sp så snes.css button-overrides inte krockar. */
+.codex-panel .cx-wrap{ display: flex; flex: 1; min-height: 0; }
+.cx-spine{
+  width: 52px; background: #120d1e; border-right: 1px solid var(--edge);
+  display: flex; flex-direction: column; padding-top: .4rem; flex-shrink: 0;
+  overflow-y: auto; overflow-x: hidden;
+  scrollbar-width: thin; scrollbar-color: rgba(201,162,39,.4) transparent;
+}
+.cx-sp{
+  height: 56px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: .25rem;
+  color: var(--bone-dim) !important; cursor: pointer;
+  border: none !important; border-left: 2px solid transparent !important;
+  position: relative; font-size: 1rem;
+  background: transparent !important; box-shadow: none !important;
+  transition: all .15s !important; text-shadow: none !important; filter: none !important;
+  padding: 0 !important; width: 100%; flex-shrink: 0;
+}
+.cx-sp i{ font-family: var(--font-accent); font-style: normal; font-size: .55rem; letter-spacing: .1em; }
+.cx-sp:hover{
+  color: var(--bone-bright) !important;
+  background: rgba(217,201,166,.04) !important;
+  border-left-color: transparent !important;
+}
+.cx-sp.active{
+  color: var(--gold-bright) !important;
+  border-left-color: var(--gold) !important;
+  background: linear-gradient(90deg, rgba(201,162,39,.14), transparent) !important;
+}
+.cx-sp.active i{ text-shadow: none; color: var(--gold) !important; }
+.cx-sp.active::after{ content: ''; position: absolute; right: -1px; top: 8px; bottom: 8px; width: 1px; background: var(--gold); }
+.cx-sp .n{ position: absolute; top: 4px; right: 5px; font-family: var(--font-mono); font-size: .5rem; color: var(--teal); }
 </style>
 <script src="sprites.js?v=20260806b"></script>
 <script src="fonts.js?v=20260806b"></script>
@@ -1448,8 +1483,9 @@
 <div class="grain"></div>
 <canvas id="embers"></canvas>
 
-<!-- ═══════════ TOP BAR ═══════════ -->
-<header class="topbar">
+<!-- ═══════════ THE RITE-RAIL (våg 3) — 48px grid-rail: brand | turn-tally | actions ═══════════ -->
+<header class="rite-rail">
+  <div class="rr-brand">
   <div style="position:relative">
     <button class="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Open menu">☰</button>
     <div class="mobile-menu" id="mobile-menu">
@@ -1465,34 +1501,30 @@
       <button class="drop-item" style="color:var(--blood-bright)" onclick="location.href='adventure.html'"><span class="di-icon">🚪</span><span class="di-body"><span class="di-name">Leave</span><span class="di-hint">return to adventure select</span></span></button>
     </div>
   </div>
-  <span class="brand">The Lore Weaver's Cauldron</span>
-  <span class="campaign" id="campaign-tag">Campaign: —</span>
-  <span class="header-turns-info" id="header-turns-info"></span>
-  <span class="user-tag" id="user-tag" onclick="openChatProfileModal()" role="button" tabindex="0" aria-label="Your profile — stats, tier, turns and subscription">
-    <span class="ut-avatar" id="user-tag-avatar">👤</span>
-    <span class="ut-name" id="user-tag-name">—</span>
-    <span class="ut-quota" id="ut-quota">
-      <span class="ut-sep">·</span>
-      <span class="ut-turns" id="ut-turns">⚡ …</span>
-      <span class="ut-sep">·</span>
-      <span class="ut-cd" id="ut-cd">refreshes in: …</span>
-      <span class="ut-tip" id="ut-tip">Each DM, TTS, Image-gen and background llm-calls counts towards the turns quota</span>
-    </span>
-  </span>
-  <span class="spacer"></span>
+    <span class="rr-sigil" onclick="openChatProfileModal()" role="button" tabindex="0" aria-label="Your profile — stats, tier, turns and subscription" title="Profile — stats, tier, turns">⚗</span>
+    <span class="rr-name campaign" id="campaign-tag">The Lore Weaver's Cauldron</span>
+    <span class="rr-tag">AT THE TABLE</span>
+  </div>
 
-  <button class="top-btn compact" onclick="openCodex()">📖 Codex</button>
-  <button class="top-btn admin-btn compact" id="admin-btn" style="display:none" onclick="location.href='admin.html'">👑 Admin</button>
+  <!-- Turn-Tally — mono-strip: TURN · TURNS · RESET (uppdateras av renderTurnTally) -->
+  <div class="rr-tally" id="rr-tally" title="Each DM, TTS, Image-gen and background llm-calls counts towards the turns quota">
+    <span>TURN <span class="tv" id="rr-turn">—</span></span><span class="sep">·</span>
+    <span>TURNS <span class="tv" id="rr-quota">—</span></span><span class="sep">·</span>
+    <span>RESET <span class="tv" id="rr-reset">—</span></span>
+  </div>
 
-  <span class="top-divider"></span>
-  <button class="top-btn icon-btn sfx-btn" onclick="sfxToggleBtn()" title="Sound on/off">🔊</button>
+  <div class="rr-actions">
+  <button class="rr-btn" onclick="openCodex()" title="Codex" aria-label="Codex">📖</button>
+  <button class="rr-btn admin-btn" id="admin-btn" style="display:none" onclick="location.href='admin.html'" title="Admin" aria-label="Admin">👑</button>
 
-  <!-- ═══ Engine Room (debug) — vänster om kugghjulet; klick = visa/dölj ═══ -->
-  <button class="top-btn icon-btn" id="console-tab" onclick="toggleConsole()" title="Open Engine Room" aria-label="Open Engine Room" style="font-size:1rem">🛠️</button>
+  <button class="rr-btn sfx-btn" onclick="sfxToggleBtn()" title="Sound on/off" aria-label="Sound on/off">🔊</button>
 
-  <!-- ═══ Settings — gear icon (längst till höger, bredvid typsnittsvalen) ═══ -->
+  <!-- ═══ Engine Room (debug) ═══ -->
+  <button class="rr-btn" id="console-tab" onclick="toggleConsole()" title="Open Engine Room" aria-label="Open Engine Room">🛠️</button>
+
+  <!-- ═══ Settings — gear icon (längst till höger) ═══ -->
   <div style="position:relative">
-    <button class="top-btn icon-btn" onclick="toggleSettingsMenu()" title="Settings" style="font-size:1rem">⚙️</button>
+    <button class="rr-btn" onclick="toggleSettingsMenu()" title="Settings" aria-label="Settings">⚙️</button>
     <div class="settings-menu" id="settings-menu">
       <button class="drop-item" onclick="openUsageModal();closeSettingsMenu()"><span class="di-icon">📊</span><span class="di-body"><span class="di-name">Usage</span><span class="di-hint">model & token stats</span></span></button>
       <button class="drop-item" id="settings-menu-theme" onclick="THEMES.openPopover(this);closeSettingsMenu()"><span class="di-icon">🎨</span><span class="di-body"><span class="di-name">Theme</span><span class="di-hint" id="settings-theme-hint">choose palette</span></span></button>
@@ -1518,48 +1550,99 @@
       <button class="drop-item" style="color:var(--blood-bright)" onclick="location.href='adventure.html'"><span class="di-icon">🚪</span><span class="di-body"><span class="di-name">Leave</span><span class="di-hint">return to adventure select</span></span></button>
     </div>
   </div>
+  </div>
 </header>
 <style>
-  /* ═══ Profil/turn-kort: en rad med all text + hover-tooltip (2026-08-08) ═══
-     Kör EFTER soft-up-blocken (~rad 1123) så !important här vinner.
-     Höjd 34px = samma som inställningsknapparna (.top-btn.icon-btn). */
-  #user-tag{ margin-left:.45rem !important; position:relative !important;
-    display:inline-flex !important; align-items:center !important; gap:.4rem !important;
-    height:34px !important; padding:0 .7rem !important;
-    border:1px solid rgba(201,162,39,.30) !important; border-radius:8px !important;
-    background:rgba(201,162,39,.07) !important; cursor:pointer; white-space:nowrap;
-    flex-shrink:0; transition:border-color .2s, box-shadow .2s; }
-  .ut-avatar{ width:24px; height:24px; border-radius:50%; overflow:hidden; flex:none;
-    border:1px solid rgba(201,162,39,.45); background:var(--stone-3);
-    display:inline-flex; align-items:center; justify-content:center; font-size:.95rem;
-    box-shadow:0 0 12px -2px rgba(201,162,39,.35); }
-  .ut-avatar img{ width:100%; height:100%; object-fit:cover; image-rendering:pixelated; display:block; }
-  .ut-name{ font-size:.8rem; color:var(--bone); font-weight:600; overflow:hidden; text-overflow:ellipsis; }
-  .ut-turns{ font-size:.78rem; letter-spacing:.06em; font-weight:700; color:var(--gold-bright);
-    font-variant-numeric:tabular-nums; }
-  .ut-cd{ font-size:.7rem; font-weight:600; color:var(--bone-bright); letter-spacing:.02em;
-    font-variant-numeric:tabular-nums; }
-  .ut-sep{ color:var(--bone-dim); font-size:.68rem; }
-  /* Turn-delen grupperar siffrorna; tooltip = ENDAST quota-disclaimern.
-     Profil + stats nås via klick på kortet. (2026-08-08) */
-  .ut-quota{ position:relative; display:inline-flex; align-items:center; gap:.4rem; }
-  /* Hover-tooltip med quota-disclaimern (2026-08-08) */
-  .ut-tip{ position:absolute; top:calc(100% + 8px); right:0; z-index:950; width:min(290px,80vw);
-    background:var(--stone-3); border:1px solid var(--edge-hi); border-radius:6px; padding:.55rem .7rem;
-    font-size:.72rem; font-style:italic; line-height:1.5; color:var(--bone); text-align:left;
-    box-shadow:0 12px 30px -10px rgba(0,0,0,.85);
-    opacity:0; visibility:hidden; pointer-events:none;
-    transition:opacity .16s ease, visibility .16s ease; }
-  .ut-tip::before{ content:''; position:absolute; top:-6px; right:26px;
-    border:6px solid transparent; border-bottom-color:var(--edge-hi); }
-  #user-tag:hover .ut-tip{ opacity:1; visibility:visible; }
-  /* CODEX/Admin: kompakt — samma höjd som ikonknapparna */
-  .top-btn.compact{ height:34px !important; padding:.3rem .7rem !important; font-size:.72rem !important;
-    display:inline-flex; align-items:center; letter-spacing:.12em !important; }
-  @media (max-width:900px){
-    .ut-name{ max-width:16vw; }
-    .ut-turns{ font-size:.72rem; }
-    .ut-cd{ font-size:.64rem; }
+  /* ═══════════ THE RITE-RAIL (våg 3, 2026-08-11) — ersätter topbaren ═══════════
+     Unika rr-*/rite-rail-klasser: snes.css !important-overrides når inte hit.
+     Körs EFTER snes.css (link ovan) — !important på rail-knapparna vinner över
+     snes button-regler som annars målar stone-3/edge på alla <button>. */
+  .rite-rail{
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+    height: 48px;
+    background: linear-gradient(180deg, var(--stone-2), var(--stone));
+    border: 1px solid var(--edge); border-top: 1px solid var(--edge-hi);
+    padding: 0 .8rem; gap: 1rem; position: relative; z-index: 5;
+  }
+  .rite-rail::after{
+    content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(201,162,39,.55) 30%, rgba(201,162,39,.55) 70%, transparent);
+  }
+  .rr-brand{ display: flex; align-items: center; gap: .55rem; min-width: 0; justify-self: start; }
+  .rr-sigil{
+    width: 22px; height: 22px; border: 1px solid var(--gold);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--gold-bright); font-size: .8rem; flex-shrink: 0;
+    box-shadow: 0 0 8px rgba(201,162,39,.35) inset; cursor: pointer;
+    transition: border-color .15s, color .15s, box-shadow .15s;
+  }
+  .rr-sigil:hover{ border-color: var(--gold-bright); color: var(--bone-bright);
+    box-shadow: 0 0 8px rgba(201,162,39,.35) inset, 0 0 10px rgba(201,162,39,.35); }
+  .rr-name{
+    font-family: var(--font-display); font-size: .82rem; letter-spacing: .14em;
+    color: var(--bone-bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .rr-tag{
+    font-family: var(--font-accent); font-size: .52rem; letter-spacing: .2em;
+    color: var(--gold); border: 1px solid rgba(201,162,39,.4);
+    padding: .15rem .4rem; white-space: nowrap;
+  }
+  /* ── Turn-Tally — mono-strip i railens mittcell (grid 1fr auto 1fr låser sann mitt) ── */
+  .rr-tally{
+    justify-self: center; display: flex; align-items: baseline; gap: .7rem;
+    font-family: var(--font-mono); font-size: .72rem; color: var(--bone-dim);
+    white-space: nowrap; min-width: 0;
+  }
+  .rr-tally .tv{ color: var(--gold-bright); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .rr-tally .sep{ color: var(--edge-hi); }
+  .rr-tally .warn{ color: var(--blood-bright); }
+  /* ── Fasta action-knappar 44×34 — scoped under .rite-rail så de inte krockar
+     med roll-request-knapparnas .rr-btn (snes §5 + kompakt-override) ── */
+  .rr-actions{ display: flex; align-items: center; gap: .4rem; justify-self: end; }
+  .rite-rail .rr-btn{
+    width: 44px; height: 34px;
+    border: 1px solid var(--edge) !important;
+    background: var(--stone) !important;
+    color: var(--bone-dim) !important;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all .15s !important;
+    font-size: .85rem !important; padding: 0 !important;
+    box-shadow: none !important; text-shadow: none !important; filter: none !important;
+    flex-shrink: 0;
+  }
+  .rite-rail .rr-btn:hover{
+    border-color: var(--gold) !important; color: var(--gold-bright) !important;
+    background: var(--stone) !important;
+    box-shadow: 0 0 10px rgba(201,162,39,.25) !important;
+  }
+  .rite-rail .rr-btn.on{ border-color: var(--gold) !important; color: var(--gold-bright) !important; }
+  .rite-rail .rr-btn.admin-btn{ border-color: rgba(232,198,90,.45) !important; color: var(--gold) !important; }
+  .rite-rail .rr-btn.admin-btn:hover{ color: #fff8dc !important; border-color: var(--gold-bright) !important; }
+  /* Mobil: hamburgaren får samma 44px-target som rail-knapparna */
+  .rite-rail .mobile-menu-btn{
+    width: 44px; height: 34px; margin-right: 0 !important;
+    border-radius: 0 !important; box-shadow: none !important;
+    background: var(--stone) !important; border-color: var(--edge) !important;
+    color: var(--bone-dim) !important;
+  }
+  .rite-rail .mobile-menu-btn:hover{ border-color: var(--gold) !important; color: var(--gold-bright) !important; }
+  @media (max-width: 900px){
+    /* Railen: mindre luft; namnet göms (sigill + tag kvar) */
+    .rite-rail{ gap: .5rem; padding: 0 .5rem; }
+    .rr-name{ display: none; }
+    .rr-tally{ font-size: .62rem; gap: .45rem; }
+    /* Debug-knappen (🛠️) var dold på mobil även förr (snes §30a) */
+    .rite-rail #console-tab{ display: none; }
+  }
+  @media (max-width: 640px){
+    .rr-tag{ display: none; }
+    .rr-tally{ font-size: .55rem; gap: .35rem; }
+    .rr-actions{ gap: .25rem; }
+  }
+  @media (max-width: 480px){
+    /* RESET-segmentet får ge vika på riktigt smala skärmar — TURN+TURNS räcker */
+    .rr-tally > span:nth-child(4),
+    .rr-tally > span:nth-child(5){ display: none; }
   }
 </style>
 <div class="mobile-hp-line" id="mobile-hp-line"><i style="width:0%"></i></div>
@@ -1731,23 +1814,21 @@
       <span class="cx-title">📖 Codex</span>
       <button class="cx-close" onclick="closeCodex()" aria-label="Close">✕</button>
     </div>
-    <div class="cx-tabs" id="cx-tabs">
-      <div class="cx-row" id="cx-row-main">
-        <button class="cx-tab active" data-tab="character" onclick="openCodexCharacter()">🧙 Character</button>
-        <button class="cx-tab" data-tab="npcs" onclick="activateCodexTab('npcs')">🧝 NPCs</button>
-        <button class="cx-tab" data-tab="map" onclick="activateCodexTab('map')">🗺 Map</button>
-        <button class="cx-tab" data-tab="journal" onclick="activateCodexTab('journal')">📖 Journal</button>
-        <button class="cx-tab" data-tab="facts" onclick="activateCodexTab('facts')">📌 Facts</button>
+    <div class="cx-wrap">
+      <nav class="cx-spine" id="cx-spine" aria-label="Codex sections">
+        <button class="cx-sp active" data-tab="character" onclick="openCodexCharacter()" title="Character">🧙<i>CHAR</i></button>
+        <button class="cx-sp" data-tab="npcs" onclick="activateCodexTab('npcs')" title="NPCs">👥<i>NPCS</i><span class="n" id="cx-npc-count">0</span></button>
+        <button class="cx-sp" data-tab="map" onclick="activateCodexTab('map')" title="Map">🗺<i>MAP</i></button>
+        <button class="cx-sp" data-tab="journal" onclick="activateCodexTab('journal')" title="Journal">📜<i>JRNL</i></button>
+        <button class="cx-sp" data-tab="facts" onclick="activateCodexTab('facts')" title="Facts">✦<i>FACTS</i></button>
+        <button class="cx-sp" data-subtab="spells" onclick="activateCodexSubTab('spells')" title="Spells">⚡<i>SPELLS</i></button>
+        <button class="cx-sp" data-subtab="inventory" onclick="activateCodexSubTab('inventory')" title="Equipment">⚔<i>GEAR</i></button>
+        <button class="cx-sp" data-subtab="currency" onclick="activateCodexSubTab('currency')" title="Treasury">🪙<i>TREAS</i></button>
+        <button class="cx-sp" data-subtab="notes" onclick="activateCodexSubTab('notes')" title="Notes">📝<i>NOTES</i></button>
+      </nav>
+      <div class="cx-frame" id="cx-frame">
+        <div class="cx-placeholder" id="cx-placeholder">📜 Opening the tome…</div>
       </div>
-      <div class="cx-row cx-subrow" id="cx-row-sub">
-        <button class="cx-tab cx-subtab" data-subtab="spells" onclick="activateCodexSubTab('spells')">✨ Spells</button>
-        <button class="cx-tab cx-subtab" data-subtab="inventory" onclick="activateCodexSubTab('inventory')">🎒 Equipment</button>
-        <button class="cx-tab cx-subtab" data-subtab="currency" onclick="activateCodexSubTab('currency')">🪙 Treasury</button>
-        <button class="cx-tab cx-subtab" data-subtab="notes" onclick="activateCodexSubTab('notes')">📜 Notes</button>
-      </div>
-    </div>
-    <div class="cx-frame" id="cx-frame">
-      <div class="cx-placeholder" id="cx-placeholder">📜 Opening the tome…</div>
     </div>
   </aside>
 
@@ -1926,7 +2007,7 @@ async function loadCampaign() {
       // Uppdatera topbar — kampanjnamn + FAS A/B header-info (Turn/Dag/🆓/reset).
       // Headern visar bara namnet (kompakt) — "Kampanj:"-prefixet finns i
       // mobilmenyn och på äventyrsväljaren. (2026-08-05)
-      const tag = document.querySelector('.topbar .campaign');
+      const tag = document.querySelector('.rite-rail .campaign, .topbar .campaign');
       if (tag) tag.textContent = campaign.name;
       updateHeaderInfo();
       updateCliPrompt();
@@ -2136,6 +2217,45 @@ function renderAvatarBox() {
     : resetCountdown(me.reset_date, false);
   cdEl.textContent = cd ? ('refreshes in: ' + cd) : '';
 }
+
+// ═══ Turn-Tally (våg 3) — railens mittcell: TURN · TURNS · RESET ═══
+// Samma data som det gamla #user-tag-kortet (renderAvatarBox), men i mono-strip
+// på railen. Tickar live via den befintliga 1s-loopen i updateHeaderInfo.
+// States: normal (guld) / låg quota ≤5 → .warn på quota+reset / patron+lifetime
+// → "∞ PATRON" i stället för siffror. Tooltip = tier + quota-disclaimern.
+function renderTurnTally() {
+  const turnEl = document.getElementById('rr-turn');
+  const quotaEl = document.getElementById('rr-quota');
+  const resetEl = document.getElementById('rr-reset');
+  if (!turnEl || !quotaEl || !resetEl) return;
+  const me = _meData || {};
+  const tier = _tier();
+  const turn = currentTurnNum();
+  turnEl.textContent = (turn != null) ? String(turn) : '—';
+  if (tier === 'lifetime' || (parseInt(me.turn_cap, 10) || 0) === 0) {
+    quotaEl.textContent = '∞ PATRON';
+    quotaEl.classList.remove('warn');
+    resetEl.textContent = '—';
+    resetEl.classList.remove('warn');
+  } else {
+    const avail = Math.max(0, parseInt(me.turns_available, 10) || 0);
+    const total = (parseInt(me.turn_cap, 10) || 0) + (parseInt(me.turn_bonus, 10) || 0) + (parseInt(me.promo_bonus, 10) || 0);
+    quotaEl.textContent = avail + '/' + total;
+    const cd = (tier === 'tier1' || tier === 'tier2')
+      ? resetCountdown(me.reset_ts, true)
+      : resetCountdown(me.reset_date, false);
+    resetEl.textContent = cd || '—';
+    // Låg quota (≤5 turns kvar): varning på quota + reset
+    const low = avail <= 5;
+    quotaEl.classList.toggle('warn', low);
+    resetEl.classList.toggle('warn', low);
+  }
+  const tallyEl = document.getElementById('rr-tally');
+  if (tallyEl) {
+    const tierName = tier === 'lifetime' ? 'Lifetime' : (tier === 'tier2' ? 'Patron' : (tier === 'tier1' ? 'Support' : 'Free'));
+    tallyEl.title = 'Tier: ' + tierName + ' — Each DM, TTS, Image-gen and background llm-calls counts towards the turns quota';
+  }
+}
 function updateHeaderInfo() {
   const text = turnDayText();
   const el = document.getElementById('header-turns-info');
@@ -2143,6 +2263,7 @@ function updateHeaderInfo() {
   const mel = document.getElementById('mobile-menu-turns');
   if (mel) mel.textContent = turnInfoText() || '';
   renderAvatarBox();
+  renderTurnTally();
 }
 
 // api.js inbäddar JSON.stringify(detail) i e.message ("HTTP 403: {...}").
@@ -2262,10 +2383,13 @@ function ingestNpcs(npcList) {
 
 // Uppdatera NPC-fliketiketten i Codex med antal mötta gestalter
 // (alla nycklar i NPCS minus dm-roten). Körs efter varje ingestNpcs().
+// Våg 3: badge (.n) i spine-tabben i stället för text i mikro-tabben.
 function updateNpcTabCount() {
   const n = Math.max(0, Object.keys(NPCS).length - 1);  // -1 = exkl. dm-roten
-  const tab = document.querySelector('#cx-tabs .cx-tab[data-tab="npcs"]');
-  if (tab) tab.textContent = `🧝 NPCs · ${n}`;
+  const badge = document.querySelector('#cx-spine .cx-sp[data-tab="npcs"] .n');
+  if (badge) badge.textContent = n;
+  const legacy = document.querySelector('#cx-tabs .cx-tab[data-tab="npcs"]');
+  if (legacy) legacy.textContent = `🧝 NPCs · ${n}`;
 }
 
 // Render NPC list (tom från start — fylls på när kampanjen laddas)
@@ -7218,6 +7342,7 @@ function addSceneCard(art, cssClass, label) {
   });
 
   function tick() {
+if (document.hidden) { requestAnimationFrame(tick); return; }
     if (done) return;
     const batch = Math.min(3, chars.length - idx);
     idx += batch;
@@ -8401,7 +8526,7 @@ function activateCodexTab(id, placeHash) {
   const page = CODEX_PAGES[id];
   if (!page) return;
   _codexLastTab = id;
-  document.querySelectorAll('#cx-tabs .cx-tab:not(.cx-subtab)').forEach(t => t.classList.toggle('active', t.dataset.tab === id));
+  document.querySelectorAll('#cx-spine .cx-sp[data-tab]').forEach(t => t.classList.toggle('active', t.dataset.tab === id));
   const frame = document.getElementById('cx-frame');
   const placeholder = document.getElementById('cx-placeholder');
   let ifr = _codexIframes[id];
@@ -8430,14 +8555,12 @@ function activateCodexTab(id, placeHash) {
   }
   document.querySelectorAll('#cx-frame iframe').forEach(f => f.classList.toggle('active', f === ifr));
   if (placeholder) placeholder.style.display = 'none';
-  // Rad 2 (Spells/Equipment/Treasury/Notes): visas + aktiveras bara när Character är aktiv
-  const subRow = document.getElementById('cx-row-sub');
-  if (subRow) subRow.classList.toggle('show', id === 'character');
+  // Spine-underflikarna (Spells/Equipment/Treasury/Notes): aktiva bara med Character
   if (id === 'character') {
-    document.querySelectorAll('#cx-tabs .cx-subtab').forEach(b => b.classList.toggle('active', b.dataset.subtab === _codexSubTab));
+    document.querySelectorAll('#cx-spine .cx-sp[data-subtab]').forEach(b => b.classList.toggle('active', b.dataset.subtab === _codexSubTab));
     postSubTabToChar();
   } else {
-    document.querySelectorAll('#cx-tabs .cx-subtab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#cx-spine .cx-sp[data-subtab]').forEach(b => b.classList.remove('active'));
   }
 }
 
@@ -8445,10 +8568,7 @@ function activateCodexTab(id, placeHash) {
 function openCodexCharacter() {
   activateCodexTab('character');
   _codexSubTab = 'character';
-  document.querySelectorAll('#cx-tabs .cx-subtab').forEach(b => b.classList.remove('active'));
-  // Rad 2 visas bara med Character-tabben
-  const subRow = document.getElementById('cx-row-sub');
-  if (subRow) subRow.classList.add('show');
+  document.querySelectorAll('#cx-spine .cx-sp[data-subtab]').forEach(b => b.classList.remove('active'));
   postSubTabToChar();
 }
 
@@ -8482,7 +8602,7 @@ window.addEventListener('message', (e) => {
   if (d && d.type === 'codex-subtab-changed' && typeof d.tab === 'string') {
     _codexSubTab = d.tab;
     if (_codexLastTab === 'character') {
-      document.querySelectorAll('#cx-tabs .cx-subtab').forEach(b => b.classList.toggle('active', b.dataset.subtab === d.tab));
+      document.querySelectorAll('#cx-spine .cx-sp[data-subtab]').forEach(b => b.classList.toggle('active', b.dataset.subtab === d.tab));
     }
   }
 });

@@ -1369,6 +1369,7 @@
   function _fmt(n) { return String(n).padStart(2, '0'); }
   let timer = null;
   function tick() {
+if (document.hidden) { requestAnimationFrame(tick); return; }
     const diff = DEADLINE - Date.now();
     if (diff <= 0) {
       const banner = document.getElementById('promo-banner');

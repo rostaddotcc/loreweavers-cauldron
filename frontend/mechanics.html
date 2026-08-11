@@ -1176,6 +1176,7 @@ function spawnEmber(init){
 }
 var GLOW={};function glowSprite(hue){var key=Math.round(hue/10)*10;if(GLOW[key])return GLOW[key];var c=document.createElement("canvas");c.width=c.height=48;var g=c.getContext("2d");var rg=g.createRadialGradient(24,24,0,24,24,24);rg.addColorStop(0,"hsla("+key+",90%,65%,1)");rg.addColorStop(.4,"hsla("+key+",85%,55%,.55)");rg.addColorStop(1,"hsla("+key+",80%,50%,0)");g.fillStyle=rg;g.fillRect(0,0,48,48);GLOW[key]=c;return c;}
 function tickEmbers(){
+if (document.hidden) { requestAnimationFrame(tickEmbers); return; }
   var ctx = embersCanvas ? embersCanvas.getContext("2d") : null;
   if(!ctx) return;
   ctx.clearRect(0, 0, E_W, E_H);

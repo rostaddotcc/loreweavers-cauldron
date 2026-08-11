@@ -455,69 +455,139 @@ html{font-size:17px}
 <div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
 
 <div class="app">
-  <!-- ═══════════ TOPPRAD ═══════════ -->
-  <div class="topbar">
-    <button class="top-btn" onclick="openProfileModal()" title="Profile">🪞 Profile</button>
-    <!-- ⚡ Turn-quota-piller (2026-08-08): turns kvar + nedräkning till återställning -->
-    <div class="qwrap">
-      <button class="quota-pill" id="quota-pill" onclick="openProfileModal()">
-        <span class="quota-turns" id="quota-turns">⚡ …</span>
-        <span class="quota-cd" id="quota-cd"></span>
-        <span class="quota-tip" id="quota-tip">Each DM, TTS, Image-gen and background llm-calls counts towards the turns quota</span>
-      </button>
-      <button class="quota-chip" id="quota-benefits" style="display:none" onclick="location.href='pricing.html'" title="Support/Patron benefits expire in">👑 0d</button>
+  <!-- ═══════════ TOPPRAD — RITE-RAIL (2026-08-11) ═══════════ -->
+  <div class="topbar rite-rail">
+    <div class="rr-brand">
+      <span class="rr-sigil">✦</span>
+      <span class="rr-name">THE LORE WEAVER'S CAULDRON</span>
+      <span class="rr-tag">CHOOSE YOUR PATH</span>
     </div>
-    <div class="gear-wrap">
-      <button class="top-btn gear-btn" onclick="toggleGearMenu(event)" title="Menu" aria-haspopup="true" aria-expanded="false">⚙️</button>
-      <div class="gear-menu" id="gear-menu">
-        <button type="button" class="gm-row gm-sound-btn" onclick="toggleGearSound(this)"><span class="gm-ico" id="gear-sound-ico">🔊</span><span class="gm-txt">Sound</span></button>
-        <button type="button" class="gm-row theme-btn" id="gear-theme-btn" onclick="THEMES.openPopover(this)"></button>
-        <button type="button" class="gm-row" onclick="location.href='releases.html'"><span class="gm-ico">📜</span><span class="gm-txt">Release Notes</span></button>
-        <button type="button" class="gm-row" onclick="openProfileModal()"><span class="gm-ico">🪞</span><span class="gm-txt">Profile</span></button>
-        <button type="button" class="gm-row" id="upgrade-gate-btn" onclick="location.href='pricing.html'"><span class="gm-ico">💳</span><span class="gm-txt">Upgrade</span></button>
-        <button type="button" class="gm-row" onclick="location.href='characters.html'"><span class="gm-ico">⚒</span><span class="gm-txt">The Forge</span></button>
-        <button type="button" class="gm-row" id="admin-gate-btn" style="display:none" onclick="location.href='admin.html'"><span class="gm-ico">👑</span><span class="gm-txt">Admin</span></button>
-        <div class="gm-sep"></div>
-        <button type="button" class="gm-row danger" onclick="leaveGate()"><span class="gm-ico">🚪</span><span class="gm-txt">Log Out</span></button>
+
+    <!-- ⚡ Turn-Tally (2026-08-11): adventure-screen visar kvotan — TURNS x/y · RESET hh:mm.
+         ID:n quota-turns/quota-cd/quota-tip/quota-benefits behålls (renderQuotaPill/quotaTick). -->
+    <div class="rr-tally" id="quota-pill" onclick="openProfileModal()" role="button" tabindex="0"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openProfileModal()}"
+         title="Turns quota — click for profile">
+      <span class="tlabel">TURNS</span>
+      <span class="tv" id="quota-turns">⚡ …</span>
+      <span class="sep">·</span>
+      <span class="tlabel">RESET</span>
+      <span class="tv" id="quota-cd"></span>
+      <span class="quota-tip" id="quota-tip">Each DM, TTS, Image-gen and background llm-calls counts towards the turns quota</span>
+    </div>
+
+    <div class="rr-actions">
+      <button class="quota-chip" id="quota-benefits" style="display:none" onclick="location.href='pricing.html'" title="Support/Patron benefits expire in">👑 0d</button>
+      <button type="button" class="rr-menu" onclick="openProfileModal()" title="Profile">🪞 Profile</button>
+      <button type="button" class="rr-btn" id="gear-sound-ico" onclick="toggleGearSound(this)" title="Sound">🔊</button>
+      <button type="button" class="rr-btn wide theme-btn" id="gear-theme-btn" onclick="THEMES.openPopover(this)" title="Theme"></button>
+      <div class="gear-wrap">
+        <button class="rr-btn gear-btn" onclick="toggleGearMenu(event)" title="Menu" aria-haspopup="true" aria-expanded="false">⚙️</button>
+        <div class="gear-menu" id="gear-menu">
+          <button type="button" class="gm-row" onclick="location.href='releases.html'"><span class="gm-ico">📜</span><span class="gm-txt">Release Notes</span></button>
+          <button type="button" class="gm-row" onclick="openProfileModal()"><span class="gm-ico">🪞</span><span class="gm-txt">Profile</span></button>
+          <button type="button" class="gm-row" id="upgrade-gate-btn" onclick="location.href='pricing.html'"><span class="gm-ico">💳</span><span class="gm-txt">Upgrade</span></button>
+          <button type="button" class="gm-row" onclick="location.href='characters.html'"><span class="gm-ico">⚒</span><span class="gm-txt">The Forge</span></button>
+          <button type="button" class="gm-row" id="admin-gate-btn" style="display:none" onclick="location.href='admin.html'"><span class="gm-ico">👑</span><span class="gm-txt">Admin</span></button>
+          <div class="gm-sep"></div>
+          <button type="button" class="gm-row danger" onclick="leaveGate()"><span class="gm-ico">🚪</span><span class="gm-txt">Log Out</span></button>
+        </div>
       </div>
     </div>
   </div>
 
   <style>
-    /* ═══ Quota pill + profil-ljuslåda (2026-08-08) ═══ */
-    .qwrap{display:flex;align-items:center;gap:.4rem;position:relative}
-    .quota-pill{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-      min-width:78px;padding:.28rem .7rem;font-family:var(--font-display,'Cinzel',serif);
-      background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);
-      border-radius:8px;cursor:pointer;box-shadow:0 2px 12px -6px rgba(0,0,0,.6);
-      position:relative;transition:border-color .2s,box-shadow .2s}
-    .quota-pill:hover{border-color:var(--gold);box-shadow:0 0 14px -4px rgba(201,162,39,.4)}
-    .quota-turns{font-size:.8rem;letter-spacing:.08em;font-weight:700;color:var(--gold-bright);
-      line-height:1.1;white-space:nowrap}
-    .quota-cd{font-size:.74rem;letter-spacing:.05em;font-weight:700;color:var(--bone-bright);
-      line-height:1.15;white-space:nowrap;font-variant-numeric:tabular-nums;
-      text-shadow:0 0 10px rgba(232,198,90,.18)}
-    .quota-chip{display:inline-flex;align-items:center;gap:.22rem;padding:.3rem .5rem;font-size:.68rem;
-      letter-spacing:.05em;font-family:var(--font-display,'Cinzel',serif);color:var(--bone);
-      background:var(--stone-3);border:1px solid var(--edge);border-radius:999px;cursor:pointer;
-      white-space:nowrap;transition:color .2s,border-color .2s}
-    .quota-chip:hover{border-color:var(--gold);color:var(--gold-bright)}
-    /* Mjuk hover-tooltip direkt på turn-pillen (2026-08-08) */
+    /* ═══════════ RITE-RAIL — topbar + Turn-Tally (2026-08-11) ═══════════
+       Designkontrakt (verbatim från mockup): */
+    .rite-rail{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:48px;background:linear-gradient(180deg,var(--stone-2),var(--stone));border:1px solid var(--edge);border-top:1px solid var(--edge-hi);padding:0 .8rem;gap:1rem;position:relative}
+    .rite-rail::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,rgba(201,162,39,.55) 30%,rgba(201,162,39,.55) 70%,transparent)}
+    .rr-brand{display:flex;align-items:center;gap:.55rem;min-width:0;justify-self:start}
+    .rr-sigil{width:22px;height:22px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;color:var(--gold-bright);font-size:.8rem;flex-shrink:0;box-shadow:0 0 8px rgba(201,162,39,.35) inset}
+    .rr-name{font-family:var(--font-display);font-size:.82rem;letter-spacing:.14em;color:var(--bone-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .rr-tag{font-family:var(--font-accent);font-size:.52rem;letter-spacing:.2em;color:var(--gold);border:1px solid rgba(201,162,39,.4);padding:.15rem .4rem;white-space:nowrap}
+    .rr-tally{justify-self:center;display:flex;align-items:baseline;gap:.7rem;font-family:var(--font-mono);font-size:.72rem;color:var(--bone-dim);white-space:nowrap}
+    .rr-tally .tv{color:var(--gold-bright);font-weight:500}
+    .rr-tally .sep{color:var(--edge-hi)}
+    .rr-tally .warn{color:var(--blood-bright)}
+    .rr-actions{display:flex;align-items:center;gap:.4rem;justify-self:end}
+    .rr-btn{width:44px;height:34px;border:1px solid var(--edge);background:var(--stone);color:var(--bone-dim);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;font-size:.85rem}
+    .rr-btn:hover{border-color:var(--gold);color:var(--gold-bright);box-shadow:0 0 10px rgba(201,162,39,.25)}
+    .rr-btn.on{border-color:var(--gold);color:var(--gold-bright)}
+    .rr-menu{font-family:var(--font-display);font-size:.68rem;letter-spacing:.15em;color:var(--bone);border:1px solid var(--edge);background:var(--stone-2);padding:0 .9rem;height:34px;display:flex;align-items:center;gap:.5rem;cursor:pointer}
+    .rr-menu:hover{border-color:var(--gold);color:var(--gold-bright)}
+
+    /* ── Tillägg utöver kontraktet (nödvändiga) ── */
+    /* Tema-knappen får textetiketten '🎨 <namn>' från themes.js — behöver bredd */
+    .rr-btn.wide{width:auto;padding:0 .8rem;font-size:.72rem;letter-spacing:.06em}
+    /* .rr-name är nowrap + ellipsis i kontraktet — flex-item måste få krympa
+       (min-width:auto) annars svämmar brand över sin 1fr-kolumn och kolliderar
+       med den centrerade tallyn. Taggen hålls intakt. */
+    .rr-name{min-width:0}
+    .rr-tag{flex-shrink:0}
+    /* justify-self:start (kontraktet) ger brand sin content-bredd och låter den
+       svämma över kolumnen → kollision med tallyn. stretch = samma innehålls-
+       layout (flex-start), men boxen hålls i kolumnen så .rr-name-ellipsen funkar. */
+    .rr-brand{justify-self:stretch}
+    /* Quota-tally: klick → profil; hover-tooltip behålls från quota-pillen */
+    #quota-pill{position:relative;cursor:pointer}
+    #quota-pill:hover .quota-tip{display:block}
     .quota-tip{position:absolute;top:calc(100% + 9px);left:0;z-index:950;width:min(300px,80vw);
       background:var(--stone-3);border:1px solid var(--edge-hi);border-radius:6px;padding:.6rem .75rem;
       font-size:.74rem;font-style:italic;line-height:1.55;color:var(--bone);text-align:left;
       box-shadow:0 12px 30px -10px rgba(0,0,0,.85);display:none}
     .quota-tip::before{content:'';position:absolute;top:-6px;left:30px;
       border:6px solid transparent;border-bottom-color:var(--edge-hi)}
-    .quota-pill:hover .quota-tip{display:block}
-    @media(max-width:900px){
-      .quota-pill{min-width:0;padding:.28rem .5rem}
+    .quota-chip{display:inline-flex;align-items:center;gap:.22rem;padding:.3rem .5rem;font-size:.68rem;
+      letter-spacing:.05em;font-family:var(--font-display,'Cinzel',serif);color:var(--bone);
+      background:var(--stone-3);border:1px solid var(--edge);border-radius:999px;cursor:pointer;
+      white-space:nowrap;transition:color .2s,border-color .2s}
+    .quota-chip:hover{border-color:var(--gold);color:var(--gold-bright)}
+
+    /* ── snes.css-resist: snes.css tvingar platta DOS-knappar med !important
+       (button/.rr-btn/.rr-menu + font-body på ALLT) och har EGNA .rr-btn/.rr-actions-
+       regler (roll-request-kort i chatten: width:100%, min-height:48px, gul ram).
+       Dessa !important-regler körs EFTER snes.css och återställer rite-rail-
+       kontraktet (samma mönster som blocket längst upp i <head>). */
+    .rr-btn{background:var(--stone)!important;color:var(--bone-dim)!important;transition:all .15s!important;width:44px!important;min-height:34px!important;border-color:var(--edge)!important}
+    .rr-btn:hover{background:var(--stone)!important;border-color:var(--gold)!important;color:var(--gold-bright)!important;box-shadow:0 0 10px rgba(201,162,39,.25)!important;transform:none!important}
+    .rr-btn:active{background:var(--stone)!important;color:var(--bone-dim)!important}
+    .rr-btn.on{border-color:var(--gold)!important;color:var(--gold-bright)!important}
+    .rr-btn.wide{width:auto!important}
+    .rr-actions{width:auto!important;align-items:center!important}
+    .rr-menu{font-family:var(--font-display)!important;letter-spacing:.15em!important;color:var(--bone)!important;background:var(--stone-2)!important;transition:all .15s!important}
+    .rr-menu:hover{background:var(--stone-2)!important;border-color:var(--gold)!important;color:var(--gold-bright)!important;transform:none!important}
+    .rr-menu:active{background:var(--stone-2)!important;color:var(--bone)!important}
+    .rr-name{font-family:var(--font-display)!important;letter-spacing:.14em!important;color:var(--bone-bright)!important}
+    .rr-tag{font-family:var(--font-accent)!important;letter-spacing:.2em!important;color:var(--gold)!important}
+    .rr-tally{font-family:var(--font-mono)!important;font-size:.72rem!important;color:var(--bone-dim)!important}
+    .rr-tally .tv{color:var(--gold-bright)!important}
+    .rr-tally .sep{color:var(--edge-hi)!important}
+    .rr-tally .warn{color:var(--blood-bright)!important}
+
+    /* ── Mobil ── snes.css tvingar gap:0/padding/overflow på .topbar ≤900px → återställ.
+       ≤940px: rail staplas i 3 rader (brand | tally | actions) — 3-kolumnsgriden
+       rymmer inte brand+tally+actions under ~940px (actions ~350px, brand ~450px)
+       och skulle kollidera/trunkeras. overflow:visible så gear-menyn (absolut
+       positionerad) inte klipps av snes.css overflow:hidden. ≤640px: dölj
+       .rr-name (kontraktet). */
+    @media(max-width:940px){
+      .topbar{gap:1rem!important;padding:0 .8rem!important}
       .quota-chip{padding:.3rem .4rem;font-size:.64rem}
     }
+    @media(max-width:940px){
+      .topbar{grid-template-columns:1fr;grid-template-rows:auto auto auto;height:auto;padding:.5rem .4rem!important;gap:.45rem!important;overflow:visible!important}
+      .rr-brand{grid-column:1;grid-row:1;justify-self:start}
+      .rr-tally{grid-column:1;grid-row:2;justify-self:center;gap:.5rem}
+      .rr-actions{grid-column:1;grid-row:3;justify-self:center;flex-wrap:wrap;gap:.3rem}
+    }
+    @media(max-width:640px){
+      .rr-name{display:none}
+      .rr-tally{font-size:.62rem!important}
+      .rr-tag{font-size:.5rem;letter-spacing:.16em}
+    }
     @media(max-width:400px){
-      .qwrap{gap:.25rem}
       .quota-chip{padding:.3rem .32rem;font-size:.6rem}
-      .quota-turns{font-size:.72rem}
+      .rr-tally{gap:.4rem}
     }
   </style>
 
@@ -2614,7 +2684,8 @@ resize();addEventListener('resize',resize);
 function spawn(init){return{x:Math.random()*W,y:init?Math.random()*H:H+10,r:.7+Math.random()*1.6,vy:.2+Math.random()*.6,vx:(Math.random()-.5)*.3,life:0,max:400+Math.random()*500,hue:Math.random()<.82?22+Math.random()*18:268+Math.random()*20};}
 for(let i=0;i<38;i++)embers.push(spawn(true));
 const GLOW={};function glowSprite(hue){const key=Math.round(hue/10)*10;if(GLOW[key])return GLOW[key];const c=document.createElement('canvas');c.width=c.height=48;const g=c.getContext('2d');const rg=g.createRadialGradient(24,24,0,24,24,24);rg.addColorStop(0,'hsla('+key+',90%,65%,1)');rg.addColorStop(.4,'hsla('+key+',85%,55%,.55)');rg.addColorStop(1,'hsla('+key+',80%,50%,0)');g.fillStyle=rg;g.fillRect(0,0,48,48);GLOW[key]=c;return c;}
-function tick(){ctx.clearRect(0,0,W,H);for(let i=0;i<embers.length;i++){const e=embers[i];e.life++;e.y-=e.vy;e.x+=e.vx+Math.sin(e.life*.02)*.12;const fade=Math.min(1,e.life/60)*Math.max(0,1-e.life/e.max);const fl=.5+Math.sin(e.life*.15+i)*.35;ctx.globalAlpha=.45*fade*fl;ctx.drawImage(glowSprite(e.hue),e.x-e.r*2,e.y-e.r*2,e.r*4,e.r*4);if(e.life>e.max||e.y<-12)embers[i]=spawn(false);}ctx.globalAlpha=1;requestAnimationFrame(tick);}
+function tick(){
+if (document.hidden) { requestAnimationFrame(tick); return; }ctx.clearRect(0,0,W,H);for(let i=0;i<embers.length;i++){const e=embers[i];e.life++;e.y-=e.vy;e.x+=e.vx+Math.sin(e.life*.02)*.12;const fade=Math.min(1,e.life/60)*Math.max(0,1-e.life/e.max);const fl=.5+Math.sin(e.life*.15+i)*.35;ctx.globalAlpha=.45*fade*fl;ctx.drawImage(glowSprite(e.hue),e.x-e.r*2,e.y-e.r*2,e.r*4,e.r*4);if(e.life>e.max||e.y<-12)embers[i]=spawn(false);}ctx.globalAlpha=1;requestAnimationFrame(tick);}
 tick();
 </script>
 </body>

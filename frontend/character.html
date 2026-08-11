@@ -1631,6 +1631,7 @@ for (let i = 0; i < 46; i++) embers.push(spawnEmber(true));
 
 const GLOW={};function glowSprite(hue){const key=Math.round(hue/10)*10;if(GLOW[key])return GLOW[key];const c=document.createElement('canvas');c.width=c.height=48;const g=c.getContext('2d');const rg=g.createRadialGradient(24,24,0,24,24,24);rg.addColorStop(0,'hsla('+key+',90%,65%,1)');rg.addColorStop(.4,'hsla('+key+',85%,55%,.55)');rg.addColorStop(1,'hsla('+key+',80%,50%,0)');g.fillStyle=rg;g.fillRect(0,0,48,48);GLOW[key]=c;return c;}
 function tick() {
+if (document.hidden) { requestAnimationFrame(tick); return; }
   ctx.clearRect(0, 0, W, H);
   for (let i = 0; i < embers.length; i++) {
     const e = embers[i];

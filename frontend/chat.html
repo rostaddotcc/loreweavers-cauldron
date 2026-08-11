@@ -3467,6 +3467,11 @@ function buildMessage(type, npcKey, text, meta) {
     const { clean } = parseCombatTag(text);
     const gTitle = (typeof I18N !== 'undefined' && I18N.getLang() === 'en') ? '🦉 Lorekeeper Report' : '🦉 Lorekeeper-rapport';
     el.innerHTML = `<div class="guardian-title">${gTitle}</div><div class="box guardian-box">${mdToHtml(escapeHtml(clean))}</div>`;
+    // Poll-dedup-nyckel (fix 2026-08-11): msgDomKey strippar [COMBAT:]-taggen,
+    // men applyCombatTag kan byta ut box-innehållet mot stridslogg-html → texten
+    // i DOM matchar aldrig. Sätt data-key = msgDomKey så shown-checken i
+    // pollForGuardian alltid hittar redan renderade rapporter (även combat).
+    el.setAttribute('data-key', msgDomKey('guardian', text));
   }
   return el;
 }
@@ -6165,8 +6170,12 @@ function pollForGuardian(turnCount) {
         const key = msgDomKey('guardian', m.content);
         if (_renderedGuardianKeys.has(key)) return;
         // Redan renderad av loadTranscript/annan poll → markera bara
-        const shown = [...chat.querySelectorAll('.msg.guardian .guardian-box')]
-          .some(el => domElKey(el) === key);
+        // (fix 2026-08-11: queryn måste ge .msg.guardian-elementen, INTE
+        // .guardian-box — domElKey() kollar classList.contains('guardian')
+        // på själva meddelandet, annars returnerar den null för varje box
+        // och ALLT renderas om på varje poll → dubbla rapporter i DOM.)
+        const shown = [...chat.querySelectorAll('.msg.guardian')]
+          .some(el => el.dataset.key === key || domElKey(el) === key);
         if (shown) { _renderedGuardianKeys.add(key); return; }
 
         // Parsa och ta bort [ROLL_GRANT:notation|label]-taggar → tärningsknappar

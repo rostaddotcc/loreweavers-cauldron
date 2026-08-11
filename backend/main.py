@@ -1772,6 +1772,30 @@ def _guardian_model_for(state: dict) -> str:
     return state.get("meta", {}).get("guardian_model") or GUARDIAN_MODEL
 
 
+async def _guardian_call(state: dict, messages: list, usage_out: dict,
+                         temperature: float = 0.2, max_tokens: int = 4096,
+                         **kw) -> str:
+    """Anropa Guardian-modellen med JSON-fallback.
+
+    Vissa valbara modeller (t.ex. 🆓 OpenRouter free reasoning-modeller som
+    Nemotron 3.5 Lightning) pratar istället för att returnera JSON — de skriver
+    "Let me analyze this turn carefully…" som content och Guardian post-DM
+    misslyckas. Om svaret inte innehåller JSON-tecken { } alls, gör vi om
+    anropet med husets JSON-säkra GUARDIAN_MODEL.
+    """
+    model = _guardian_model_for(state)
+    raw = await _call_llm(model, messages, temperature=temperature,
+                          max_tokens=max_tokens, usage_out=usage_out, **kw)
+    if "{" in raw and "}" in raw:
+        return raw
+    if model != GUARDIAN_MODEL:
+        logger.warning("🛡️ Guardian %s gav ingen JSON → fallback till %s",
+                       model, GUARDIAN_MODEL)
+        raw = await _call_llm(GUARDIAN_MODEL, messages, temperature=temperature,
+                              max_tokens=max_tokens, usage_out=usage_out, **kw)
+    return raw
+
+
 def _extraction_model_for(state: dict) -> str:
     """Per-kampanj extraction-modell (bakgrundsanrop: fakta, dagbok, summaries).
 
@@ -1786,6 +1810,25 @@ def _extraction_model_for(state: dict) -> str:
     except ValueError:
         m = EXTRACTION_MODEL
     return m
+
+
+async def _extraction_call(state: dict, messages: list, usage_out: dict,
+                           temperature: float = 0.3, max_tokens: int = 300,
+                           **kw) -> str:
+    """Anropa extraction-modellen med JSON-fallback (samma mönster som
+    _guardian_call). Vissa valbara modeller (t.ex. Nemotron 3.5 Lightning)
+    pratar istället för att returnera JSON — då görs om med EXTRACTION_MODEL."""
+    model = _extraction_model_for(state)
+    raw = await _call_llm(model, messages, temperature=temperature,
+                          max_tokens=max_tokens, usage_out=usage_out, **kw)
+    if "{" in raw and "}" in raw:
+        return raw
+    if model != EXTRACTION_MODEL:
+        logger.warning("🧠 Extraction %s gav ingen JSON → fallback till %s",
+                       model, EXTRACTION_MODEL)
+        raw = await _call_llm(EXTRACTION_MODEL, messages, temperature=temperature,
+                              max_tokens=max_tokens, usage_out=usage_out, **kw)
+    return raw
 
 
 # ═══════════════════════════════════════
@@ -4940,14 +4983,14 @@ async def _generate_day_entry_locked(username: str, campaign_id: str, prev_day: 
             + t_text
         )
         # Dag-entry är en intern bakgrundsuppgift — ingår i meddelandets turn (2026-08-08)
-        raw = await _call_llm(
-            _extraction_model_for(st),
+        raw = await _extraction_call(
+            st,
             [{"role": "user", "content": prompt}],
+            _day_entry_usage,
             temperature=0.3,
             max_tokens=300,
             timeout=30,
             thinking="disabled",
-            usage_out=_day_entry_usage,
         )
         entry = _extract_json(raw)
         entry['day'] = prev_day  # säkerställ korrekt dagnummer
@@ -5342,7 +5385,7 @@ async def _guardian_post_dm_locked(
         _guardian_usage = {}
         mech = await guardian_extract_mechanics(
             reply, player_msg, state, effective_turn,
-            lambda msgs: _call_llm(_guardian_model_for(state), msgs, temperature=0.2, max_tokens=4096, reasoning_effort="low", usage_out=_guardian_usage),
+            lambda msgs: _guardian_call(state, msgs, _guardian_usage),
             language=_get_lang(state),
             conversation_history=_guardian_transcript,
         )
@@ -5483,8 +5526,9 @@ async def _post_turn_tasks_locked(
             st = store.get(username, campaign_id)
 
             async def _extraction_llm(messages: list[dict]) -> str:
-                _m = _extraction_model_for(st) if st else EXTRACTION_MODEL
-                return await _call_llm(_m, messages, temperature=0.2, max_tokens=800, thinking="disabled", usage_out=_extract_usage)
+                if not st:
+                    return await _call_llm(EXTRACTION_MODEL, messages, temperature=0.2, max_tokens=800, thinking="disabled", usage_out=_extract_usage)
+                return await _extraction_call(st, messages, _extract_usage, temperature=0.2, max_tokens=800, thinking="disabled")
 
             # Bygg inventory-lista för kontext (så LLM:n inte lägger till duplikat)
             inv_names = []
@@ -5603,11 +5647,12 @@ async def _post_turn_tasks_locked(
                         "Ingen markdown, ingen förklaring. Om inget ska markeras: []\n\n"
                         + fact_lines
                     )
-                    raw = await _call_llm(
-                        _extraction_model_for(st),
+                    raw = await _extraction_call(
+                        st,
                         [{"role": "user", "content": compact_prompt}],
+                        _compact_usage,
                         temperature=0.1, max_tokens=600, thinking="disabled",
-                        timeout=45, usage_out=_compact_usage,
+                        timeout=45,
                     )
                     low_ids: set[str] = set()
                     raw_s = raw or "" if isinstance(raw, str) else ""
@@ -5692,10 +5737,9 @@ async def _post_turn_tasks_locked(
                         "Ingen markdown, ingen förklaring.\n\n"
                         "Senaste scen-sammanfattning:\n" + s_text + "\n\nSenaste händelser:\n" + t_text
                     )
-                raw = await _call_llm(
-                    _extraction_model_for(st), [{"role": "user", "content": prompt}],
+                raw = await _extraction_call(
+                    st, [{"role": "user", "content": prompt}], _threads_usage,
                     temperature=0.3, max_tokens=600, timeout=45, thinking="disabled",
-                    usage_out=_threads_usage,
                 )
                 threads = _parse_threads(raw, turn_count)
                 if threads:
@@ -5956,7 +6000,7 @@ async def _chat_locked(
             # state är redan färskt (hämtat under låset i chat()).
             guardian_report = await _guardian_manual_correction(
                 instruction, state, username,
-                lambda msgs: _call_llm(_guardian_model_for(state), msgs, temperature=0.1, max_tokens=4096, thinking="disabled", usage_out=_manual_usage),
+                lambda msgs: _guardian_call(state, msgs, _manual_usage, temperature=0.1, thinking="disabled"),
                 language=_get_lang(state),
             )
             logger.info("🛡️ Guardian manual correction (%.1fs): %s", time.time() - _tg, guardian_report[:100])
@@ -6004,7 +6048,7 @@ async def _chat_locked(
             _log_activity(username, "🦉 Lorekeeper reviewing the action…")
             guardian_roll = await guardian_check_roll(
                 req.message, state,
-                lambda msgs: _call_llm(_guardian_model_for(state), msgs, temperature=0.1, max_tokens=1024, usage_out=_guardian_roll_usage),
+                lambda msgs: _guardian_call(state, msgs, _guardian_roll_usage, temperature=0.1, max_tokens=1024),
                 language=_get_lang(state),
                 dm_context=_dm_context,
             )
@@ -9367,14 +9411,14 @@ async def campaign_logbook_refresh_today(morkrets_token: str | None = Cookie(Non
     _consume_turn(username, action="logbook", model=_extraction_model_for(state))
 
     try:
-        raw = await _call_llm(
-            _extraction_model_for(state),
+        raw = await _extraction_call(
+            state,
             [{"role": "user", "content": prompt}],
+            _day_update_usage,
             temperature=0.3,
             max_tokens=300,
             timeout=30,
             thinking="disabled",
-            usage_out=_day_update_usage,
         )
         new_entry = _extract_json(raw)
         new_entry["day"] = target_day

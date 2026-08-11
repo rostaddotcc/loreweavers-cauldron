@@ -321,7 +321,7 @@
     font-family: 'Cinzel', serif; font-size: 0.82rem; letter-spacing: 0.14em;
     color: var(--gold-bright); text-shadow: 0 0 10px rgba(232,198,90,0.25);
     transition: background 0.2s, border-color 0.2s;
-  }.day-head:hover{ background: rgba(212,160,30,0.14); border-color: rgba(212,160,30,0.7); }.day-head .dh-caret{ font-size: 0.6rem; opacity: 0.75; transition: transform 0.25s; }.day-group.collapsed .day-head .dh-caret{ transform: rotate(-90deg); }.day-group.collapsed .day-head{ opacity: 0.65; }.msg{ margin-bottom: 1.1rem; animation: msg-in 0.4s cubic-bezier(0.22,1,0.36,1); max-width: 760px; }
+  }.day-head:hover{ background: rgba(212,160,30,0.14); border-color: rgba(212,160,30,0.7); }.day-head .dh-caret{ font-size: 0.6rem; opacity: 0.75; transition: transform 0.25s; }.day-group.collapsed .day-head .dh-caret{ transform: rotate(-90deg); }.day-group.collapsed .day-head{ opacity: 0.65; }.msg{ margin-bottom: 1.1rem; animation: msg-in 0.4s cubic-bezier(0.22,1,0.36,1); max-width: 760px; }.msg.no-anim{ animation: none !important; }
   /* ── Atmosphere A — state-baserad ambiensrad (plats · tid · väder) ── */
   .amb{ display: flex; align-items: center; gap: 10px; margin: 0.2rem 0 1rem; opacity: 0.9; max-width: 760px; }
   .amb .amb-line{ flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--arcane), transparent); }
@@ -1562,7 +1562,7 @@
     .ut-cd{ font-size:.64rem; }
   }
 </style>
-<div class="mobile-hp-line" id="mobile-hp-line"><i style="width:100%"></i></div>
+<div class="mobile-hp-line" id="mobile-hp-line"><i style="width:0%"></i></div>
 <div class="drawer-backdrop" id="drawer-backdrop" onclick="toggleMobileSidebar()"></div>
 
 <div class="layout">
@@ -1580,7 +1580,7 @@
             <div style="flex:1;min-width:0">
               <div class="pc-name" id="pc-name">—</div>
               <div class="pc-sub" id="pc-sub">—</div>
-              <div class="pc-hp" id="pc-hp-bar"><i id="pc-hp-fill" style="width:100%"></i></div>
+              <div class="pc-hp" id="pc-hp-bar"><i id="pc-hp-fill" style="width:0%"></i></div>
             </div>
           </div>
           <div class="pc-xp" id="pc-xp-bar"><i id="pc-xp-fill" style="width:0%"></i></div>
@@ -1904,6 +1904,9 @@ async function loadCampaign() {
         const hp = ch.hp || {};
         if (hp.max) {
           document.getElementById('pc-hp-fill').style.width = Math.round(100 * (hp.current || 0) / hp.max) + '%';
+        } else {
+          // Ingen max-HP (ny kampanj / odefinierad) → aldrig full stapel
+          document.getElementById('pc-hp-fill').style.width = '0%';
         }
         // Krigsrådet behöver spelarens HP + dödsräddningar
         _playerHp = { current: hp.current || 0, max: hp.max || 0 };
@@ -4032,6 +4035,47 @@ function spawnParticles(x, y, count, colors) {
 
 // ── PIXELPARTIKLAR (gnorp-stil) ──
 // Fyrkantiga pixlar som spricker ut ur meddelanden. Används för DM, Lorekeeper, spelare.
+// ALLA pixelpartiklar (burst + rök) animeras i EN delad rAF-loop via
+// registret _pxLive. Tidigare startades en requestAnimationFrame-loop PER
+// partikel (36/meddelande → hundratals samtidiga rAF-beroenden + upprepade
+// parseFloat(p.style.left)-avläsningar varje frame). Fysiken är oförändrad;
+// varje partikel bär sin numeriska state på elementet (el._px).
+const _pxLive = new Set();
+let _pxRafId = null;
+
+function _pxTick() {
+  for (const p of _pxLive) {
+    const s = p._px;
+    if (!s) { _pxLive.delete(p); continue; }
+    if (s.kind === 'smoke') {
+      s.life -= 0.016;
+      if (s.life <= 0) { p.remove(); _pxLive.delete(p); continue; }
+      s.x += s.drift + Math.sin(s.life * 6 + s.seed) * 0.45; // vobbel
+      s.y += s.rise * (1.5 - s.life);                        // saktar när den åldras
+      s.rot += s.vr;
+      const scale = 1 + (1 - s.life) * s.grow;
+      p.style.transform = `translate(${s.x}px, ${s.y}px) scale(${scale}) rotate(${s.rot}deg)`;
+      p.style.opacity = s.life * 0.85;
+    } else {
+      s.life -= 0.022;
+      if (s.life <= 0) { p.remove(); _pxLive.delete(p); continue; }
+      s.x += s.vx;
+      s.y += s.vy + (1 - s.life) * 2.5; // gravitation
+      s.rot += s.vr;
+      p.style.transform = `translate(${s.x}px, ${s.y}px) rotate(${s.rot}deg)`;
+      p.style.opacity = s.life;
+    }
+  }
+  if (_pxLive.size) _pxRafId = requestAnimationFrame(_pxTick);
+  else _pxRafId = null;
+}
+
+function _pxSpawn(p, state) {
+  p._px = state;
+  _pxLive.add(p);
+  if (!_pxRafId) _pxRafId = requestAnimationFrame(_pxTick);
+}
+
 function spawnPixelBurst(x, y, count, colors, size = 4) {
   for (let i = 0; i < count; i++) {
     const p = document.createElement('div');
@@ -4045,21 +4089,16 @@ function spawnPixelBurst(x, y, count, colors, size = 4) {
     document.body.appendChild(p);
     const angle = Math.random() * Math.PI * 2;
     const speed = 1.5 + Math.random() * 4;
-    const vx = Math.cos(angle) * speed;
-    const vy = Math.sin(angle) * speed - 1.5;
-    const rot = (Math.random() - 0.5) * 12;
-    let life = 1;
-    let cx = parseFloat(p.style.left), cy = parseFloat(p.style.top), r = 0;
-    (function anim() {
-      life -= 0.022;
-      if (life <= 0) { p.remove(); return; }
-      cx += vx;
-      cy += vy + (1 - life) * 2.5; // gravitation
-      r += rot;
-      p.style.transform = `translate(${cx - parseFloat(p.style.left)}px, ${cy - parseFloat(p.style.top)}px) rotate(${r}deg)`;
-      p.style.opacity = life;
-      requestAnimationFrame(anim);
-    })();
+    _pxSpawn(p, {
+      kind: 'burst',
+      x: 0, y: 0,                                  // ackumulerad offset (motsvarar cx/cy − start)
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 1.5,
+      vr: (Math.random() - 0.5) * 12,
+      rot: 0,
+      life: 1,
+      seed: i
+    });
   }
 }
 
@@ -4076,23 +4115,17 @@ function spawnPixelSmoke(x, y, count, colors, size = 6) {
     p.style.top = (y + (Math.random() - 0.5) * 14) + 'px';
     p.style.background = colors[i % colors.length];
     document.body.appendChild(p);
-    const drift = (Math.random() - 0.5) * 1.7;   // långsam sidorörelse
-    const rise = -(0.5 + Math.random() * 1.0);   // stiger uppåt
-    const grow = 1.4 + Math.random() * 1.7;      // expanderar med åldern
-    const rot = (Math.random() - 0.5) * 10;
-    let life = 1;
-    let cx = parseFloat(p.style.left), cy = parseFloat(p.style.top), r = 0;
-    (function anim() {
-      life -= 0.016;
-      if (life <= 0) { p.remove(); return; }
-      cx += drift + Math.sin(life * 6 + i) * 0.45;   // vobbel
-      cy += rise * (1.5 - life);                      // saktar när den åldras
-      r += rot;
-      const scale = 1 + (1 - life) * grow;
-      p.style.transform = `translate(${cx - parseFloat(p.style.left)}px, ${cy - parseFloat(p.style.top)}px) scale(${scale}) rotate(${r}deg)`;
-      p.style.opacity = life * 0.85;
-      requestAnimationFrame(anim);
-    })();
+    _pxSpawn(p, {
+      kind: 'smoke',
+      x: 0, y: 0,
+      drift: (Math.random() - 0.5) * 1.7,  // långsam sidorörelse
+      rise: -(0.5 + Math.random() * 1.0),  // stiger uppåt
+      grow: 1.4 + Math.random() * 1.7,     // expanderar med åldern
+      vr: (Math.random() - 0.5) * 10,
+      rot: 0,
+      life: 1,
+      seed: i                              // vobbel-fas (ersätter loop-index i)
+    });
   }
 }
 
@@ -4256,7 +4289,10 @@ function startTypewriter(msgEl, type) {
         else SFX.type(pitchDm++);
       }
       // Always keep the chat pinned to the bottom while text is being typed
-      chat.scrollTop = chat.scrollHeight;
+      // Scroll to bottom ONLY when the user is already near the bottom — never
+      // force a full-column layout write every tick while the user reads above.
+      const nearBottom = chat.scrollTop + chat.clientHeight >= chat.scrollHeight - 40;
+      if (nearBottom) chat.scrollTop = chat.scrollHeight;
       if (global >= grand) { finish(false); return; }
     }
     setTimeout(tick, interval);
@@ -4920,6 +4956,7 @@ async function loadTranscript() {
       };
       const appendToFrag = (el) => {
         if (!curBody) startDayGroup(I18N.getLang() === 'en' ? 'Day 1' : 'Dag 1');
+        el.classList.add('no-anim'); // replay: hoppa msg-in-entrén (undviker 200+ samtidiga animationer vid load)
         curBody.appendChild(el);
       };
 
@@ -5970,7 +6007,7 @@ function pollForGuardian(turnCount) {
   if (_guardianPollTimer) { clearInterval(_guardianPollTimer); _guardianPollTimer = null; }
 
   let attempts = 0;
-  const maxAttempts = 600; // 600 × 1s = 10 min per cykel — nollställs om Lorekeeper är busy
+  const maxAttempts = 600; // 600 × 2s = 20 min per cykel — nollställs om Lorekeeper är busy
 
   _guardianPollTimer = setInterval(async () => {
     attempts++;
@@ -6067,7 +6104,7 @@ function pollForGuardian(turnCount) {
         hideGuardianStatus();
       }
     }
-  }, 1000);
+  }, 2000);
 }
 
 // ═══════════════════════════════════════
@@ -7039,6 +7076,11 @@ async function refreshCharacter() {
       if (fill) fill.style.width = Math.round(100 * (hp.current || 0) / hp.max) + '%';
       const txt = document.getElementById('pc-hp-text');
       if (txt) txt.textContent = `${hp.current || 0}/${hp.max}`;
+    } else {
+      const fill = document.getElementById('pc-hp-fill');
+      if (fill) fill.style.width = '0%';
+      const txt = document.getElementById('pc-hp-text');
+      if (txt) { txt.textContent = '—'; txt.style.opacity = '0.45'; }
     }
     // Krigsrådet: håll spelarens HP + dödsräddningar fräscha
     _playerHp = { current: hp.current || 0, max: hp.max || 0 };
@@ -7087,6 +7129,8 @@ async function refreshSidebar() {
       const hp = ch.hp || {};
       if (hp.max) {
         document.getElementById('pc-hp-fill').style.width = Math.round(100 * (hp.current || 0) / hp.max) + '%';
+      } else {
+        document.getElementById('pc-hp-fill').style.width = '0%';
       }
       _playerHp = { current: hp.current || 0, max: hp.max || 0 };
       _playerDeathSaves = (raw.character && raw.character.death_saves) || { successes: 0, failures: 0 };

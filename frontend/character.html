@@ -1636,6 +1636,7 @@ function spawnEmber(init) {
 }
 for (let i = 0; i < 46; i++) embers.push(spawnEmber(true));
 
+const GLOW={};function glowSprite(hue){const key=Math.round(hue/10)*10;if(GLOW[key])return GLOW[key];const c=document.createElement('canvas');c.width=c.height=48;const g=c.getContext('2d');const rg=g.createRadialGradient(24,24,0,24,24,24);rg.addColorStop(0,'hsla('+key+',90%,65%,1)');rg.addColorStop(.4,'hsla('+key+',85%,55%,.55)');rg.addColorStop(1,'hsla('+key+',80%,50%,0)');g.fillStyle=rg;g.fillRect(0,0,48,48);GLOW[key]=c;return c;}
 function tick() {
   ctx.clearRect(0, 0, W, H);
   for (let i = 0; i < embers.length; i++) {
@@ -1643,14 +1644,11 @@ function tick() {
     e.life++; e.y -= e.vy; e.x += e.vx + Math.sin(e.life * 0.02) * 0.15;
     const fade = Math.min(1, e.life / 60) * Math.max(0, 1 - e.life / e.maxLife);
     const flicker = 0.55 + Math.sin(e.life * 0.15 + i) * 0.35;
-    ctx.beginPath();
-    ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2);
-    ctx.fillStyle = `hsla(${e.hue}, 90%, 60%, ${0.5 * fade * flicker})`;
-    ctx.shadowColor = `hsla(${e.hue}, 90%, 55%, ${0.8 * fade})`;
-    ctx.shadowBlur = 8;
-    ctx.fill();
+    ctx.globalAlpha = 0.5 * fade * flicker;
+    ctx.drawImage(glowSprite(e.hue), e.x - e.r * 2, e.y - e.r * 2, e.r * 4, e.r * 4);
     if (e.life > e.maxLife || e.y < -12) embers[i] = spawnEmber(false);
   }
+  ctx.globalAlpha = 1;
   requestAnimationFrame(tick);
 }
 tick();

@@ -11039,6 +11039,12 @@ async def me_delete_account(morkrets_token: str | None = Cookie(None)):
 
 app.add_middleware(NoCacheStaticMiddleware)
 
+# 2026-08-11 (perf-audit): gzip på statik + JSON. chat.html 479→~110 KB.
+# Starlette 1.6 GZipMiddleware exkluderar text/event-stream by default →
+# SSE-strömmar (DM-svar, TTS) påverkas ej. minimum_size=500 (default).
+from starlette.middleware.gzip import GZipMiddleware
+app.add_middleware(GZipMiddleware, compresslevel=6)
+
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 # Säkerställ rätt content-type för musikfiler (Python mimetypes saknar .ogg på många system)
 import mimetypes

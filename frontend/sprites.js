@@ -1891,12 +1891,19 @@ const SPR = (() => {
     return cache[name];
   }
 
+  // 2026-08-11 (perf-audit): cache <template> per namn och klona — en
+  // innerHTML-parse per emoji per meddelande var onödig (36+ noder/medd).
+  const _tplCache = {};
   function svgEl(name) {
-    const html = svgFor(name);
-    if (!html) return null;
-    const tpl = document.createElement('template');
-    tpl.innerHTML = html;
-    return tpl.content.firstChild;
+    let tpl = _tplCache[name];
+    if (!tpl) {
+      const html = svgFor(name);
+      if (!html) return null;
+      tpl = document.createElement('template');
+      tpl.innerHTML = html;
+      _tplCache[name] = tpl;
+    }
+    return tpl.content.firstChild ? tpl.content.firstChild.cloneNode(true) : null;
   }
 
   function baseOf(token) {
@@ -1941,6 +1948,8 @@ const SPR = (() => {
 
   function spritize(root) {
     if (!root) return;
+    // 2026-08-11 (perf-audit): tidig exit för subtrees utan text
+    if (root.nodeType === 1 && !root.textContent) return;
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
     const nodes = [];
     let n;
@@ -1951,13 +1960,29 @@ const SPR = (() => {
   function init() {
     if (!document.body) return;
     spritize(document.body);
+    // 2026-08-11 (perf-audit): batchade rAF-flushes + snabbskip av
+    // partikel-divs (.px-particle/.px-smoke) och text-lösa subtrees.
+    // Partikelstormar (36 divs/meddelande) triggar inte längre spritize.
+    let _pend = [];
+    let _raf = 0;
+    const _flush = () => {
+      _raf = 0;
+      const nodes = _pend; _pend = [];
+      nodes.forEach(spritize);
+    };
     const obs = new MutationObserver(muts => {
       muts.forEach(m => {
         m.addedNodes.forEach(nd => {
           if (nd.nodeType === 3) spritizeTextNode(nd);
-          else if (nd.nodeType === 1) spritize(nd);
+          else if (nd.nodeType === 1) {
+            const cls = nd.className;
+            if (typeof cls === 'string' && (cls.indexOf('px-particle') >= 0 || cls.indexOf('px-smoke') >= 0)) return;
+            if (!nd.textContent) return;
+            _pend.push(nd);
+          }
         });
       });
+      if (_pend.length && !_raf) _raf = requestAnimationFrame(_flush);
     });
     obs.observe(document.body, { childList: true, subtree: true });
   }

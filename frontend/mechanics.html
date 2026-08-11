@@ -1172,6 +1172,7 @@ function spawnEmber(init){
     life: 0, max: 400 + Math.random()*500,
     hue: Math.random() < .82 ? 22 + Math.random()*18 : 268 + Math.random()*20 };
 }
+var GLOW={};function glowSprite(hue){var key=Math.round(hue/10)*10;if(GLOW[key])return GLOW[key];var c=document.createElement("canvas");c.width=c.height=48;var g=c.getContext("2d");var rg=g.createRadialGradient(24,24,0,24,24,24);rg.addColorStop(0,"hsla("+key+",90%,65%,1)");rg.addColorStop(.4,"hsla("+key+",85%,55%,.55)");rg.addColorStop(1,"hsla("+key+",80%,50%,0)");g.fillStyle=rg;g.fillRect(0,0,48,48);GLOW[key]=c;return c;}
 function tickEmbers(){
   var ctx = embersCanvas ? embersCanvas.getContext("2d") : null;
   if(!ctx) return;
@@ -1181,12 +1182,11 @@ function tickEmbers(){
     e.life++; e.y -= e.vy; e.x += e.vx + Math.sin(e.life*.02)*.12;
     var fade = Math.min(1, e.life/60) * Math.max(0, 1 - e.life/e.max);
     var fl = .5 + Math.sin(e.life*.15 + i)*.35;
-    ctx.beginPath(); ctx.arc(e.x, e.y, e.r, 0, Math.PI*2);
-    ctx.fillStyle = "hsla(" + e.hue + ",90%,60%," + (.45*fade*fl) + ")";
-    ctx.shadowColor = "hsla(" + e.hue + ",90%,55%," + (.7*fade) + ")";
-    ctx.shadowBlur = 7; ctx.fill();
+    ctx.globalAlpha = .45*fade*fl;
+    ctx.drawImage(glowSprite(e.hue), e.x - e.r*2, e.y - e.r*2, e.r*4, e.r*4);
     if(e.life > e.max || e.y < -12) embers[i] = spawnEmber(false);
   }
+  ctx.globalAlpha = 1;
   requestAnimationFrame(tickEmbers);
 }
 function initEmbers(){

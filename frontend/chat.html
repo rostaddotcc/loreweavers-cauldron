@@ -1558,11 +1558,11 @@
      Körs EFTER snes.css (link ovan) — !important på rail-knapparna vinner över
      snes button-regler som annars målar stone-3/edge på alla <button>. */
   .rite-rail{
-    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
-    height: 48px;
-    background: linear-gradient(180deg, var(--stone-2), var(--stone));
-    border: 1px solid var(--edge); border-top: 1px solid var(--edge-hi);
-    padding: 0 .8rem; gap: 1rem; position: relative; z-index: 5;
+    display: grid !important; grid-template-columns: 1fr auto 1fr !important; align-items: center;
+    height: 48px !important;
+    background: linear-gradient(180deg, var(--stone-2), var(--stone)) !important;
+    border: 1px solid var(--edge) !important; border-top: 1px solid var(--edge-hi) !important;
+    padding: 0 .8rem !important; gap: 1rem; position: relative; z-index: 5;
   }
   .rite-rail::after{
     content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
@@ -1628,9 +1628,9 @@
   .rite-rail .mobile-menu-btn:hover{ border-color: var(--gold) !important; color: var(--gold-bright) !important; }
   @media (max-width: 900px){
     /* Railen: mindre luft; namnet göms (sigill + tag kvar) */
-    .rite-rail{ gap: .5rem; padding: 0 .5rem; }
+    .rite-rail{ gap: .5rem !important; padding: 0 .5rem !important; }
     .rr-name{ display: none; }
-    .rr-tally{ font-size: .62rem; gap: .45rem; }
+    .rr-tally{ font-size: .62rem !important; gap: .45rem; }
     /* Debug-knappen (🛠️) var dold på mobil även förr (snes §30a) */
     .rite-rail #console-tab{ display: none; }
   }

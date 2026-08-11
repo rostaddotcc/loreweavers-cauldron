@@ -1786,7 +1786,11 @@ async def _guardian_call(state: dict, messages: list, usage_out: dict,
     model = _guardian_model_for(state)
     raw = await _call_llm(model, messages, temperature=temperature,
                           max_tokens=max_tokens, usage_out=usage_out, **kw)
-    if "{" in raw and "}" in raw:
+    # JSON-look: svaret måste BÖRJA med { (eller markdown-fence). Räcker inte
+    # att det "innehåller" { } — Lightning citerar promptens JSON-exempel i
+    # sitt prat, vilket ger falskt positiv.
+    stripped = raw.lstrip()
+    if stripped.startswith("{") or stripped.startswith("```"):
         return raw
     if model != GUARDIAN_MODEL:
         logger.warning("🛡️ Guardian %s gav ingen JSON → fallback till %s",
@@ -1821,7 +1825,10 @@ async def _extraction_call(state: dict, messages: list, usage_out: dict,
     model = _extraction_model_for(state)
     raw = await _call_llm(model, messages, temperature=temperature,
                           max_tokens=max_tokens, usage_out=usage_out, **kw)
-    if "{" in raw and "}" in raw:
+    # JSON-look: svaret måste BÖRJA med { (eller markdown-fence). Se
+    # _guardian_call — Lightning citerar promptens JSON-exempel i sitt prat.
+    stripped = raw.lstrip()
+    if stripped.startswith("{") or stripped.startswith("```"):
         return raw
     if model != EXTRACTION_MODEL:
         logger.warning("🧠 Extraction %s gav ingen JSON → fallback till %s",

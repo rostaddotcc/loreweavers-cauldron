@@ -1385,6 +1385,7 @@
   .codex-panel{ border-radius: 0 !important; }
   /* Mobil: Codex-flikarna som bottenmeny — tabs längst ned i stället för topp */
   .codex-panel .cx-head{ order: 1 !important; }
+  .codex-panel .cx-wrap{ order: 2 !important; }
   .codex-panel .cx-frame{ order: 2 !important; flex: 1 !important; }
   .codex-panel .cx-tabs{
     order: 3 !important;
@@ -1598,7 +1599,7 @@
   .rr-tally .warn{ color: var(--blood-bright); }
   /* ── Fasta action-knappar 44×34 — scoped under .rite-rail så de inte krockar
      med roll-request-knapparnas .rr-btn (snes §5 + kompakt-override) ── */
-  .rr-actions{ display: flex; align-items: center; gap: .4rem; justify-self: end; }
+  .rr-actions{ display: flex; align-items: center; gap: .4rem; justify-self: end; flex-wrap: nowrap !important; }
   .rite-rail .rr-btn{
     width: 44px; height: 34px;
     border: 1px solid var(--edge) !important;
@@ -1628,7 +1629,7 @@
   .rite-rail .mobile-menu-btn:hover{ border-color: var(--gold) !important; color: var(--gold-bright) !important; }
   @media (max-width: 900px){
     /* Railen: mindre luft; namnet göms (sigill + tag kvar) */
-    .rite-rail{ gap: .5rem !important; padding: 0 .5rem !important; }
+    .rite-rail{ gap: .5rem !important; padding: 0 .5rem !important; grid-template-columns: auto 1fr auto !important; }
     .rr-name{ display: none; }
     .rr-tally{ font-size: .62rem !important; gap: .45rem; }
     /* Debug-knappen (🛠️) var dold på mobil även förr (snes §30a) */
@@ -1637,7 +1638,12 @@
   @media (max-width: 640px){
     .rr-tag{ display: none; }
     .rr-tally{ font-size: .55rem; gap: .35rem; }
-    .rr-actions{ gap: .25rem; }
+    .rr-actions{ gap: .2rem !important; }
+    .rite-rail .rr-btn{ width: 38px !important; height: 32px !important; }
+    .rr-sigil{ width: 20px; height: 20px; font-size: .72rem; }
+    .rr-brand{ gap: .35rem; }
+    /* Admin-knappen är ändå bara för admin; spara plats på mobil */
+    .rite-rail .admin-btn{ display: none !important; }
   }
   @media (max-width: 480px){
     /* RESET-segmentet får ge vika på riktigt smala skärmar — TURN+TURNS räcker */

@@ -565,25 +565,23 @@ html{font-size:17px}
     .rr-tally .warn{color:var(--blood-bright)!important}
 
     /* ── Mobil ── snes.css tvingar gap:0/padding/overflow på .topbar ≤900px → återställ.
-       ≤940px: rail staplas i 3 rader (brand | tally | actions) — 3-kolumnsgriden
-       rymmer inte brand+tally+actions under ~940px (actions ~350px, brand ~450px)
-       och skulle kollidera/trunkeras. overflow:visible så gear-menyn (absolut
-       positionerad) inte klipps av snes.css overflow:hidden. ≤640px: dölj
-       .rr-name (kontraktet). */
+       Railen hålls HORISONTELL (1fr auto 1fr) på alla bredder — knappar/tally
+       kompakteras i stället för att staplas. overflow:visible så gear-menyn
+       (absolut positionerad) inte klipps av snes.css overflow:hidden. ≤640px:
+       dölj .rr-name (kontraktet). */
     @media(max-width:940px){
       .topbar{gap:1rem!important;padding:0 .8rem!important}
       .quota-chip{padding:.3rem .4rem;font-size:.64rem}
     }
     @media(max-width:940px){
-      .topbar{grid-template-columns:1fr;grid-template-rows:auto auto auto;height:auto;padding:.5rem .4rem!important;gap:.45rem!important;overflow:visible!important}
-      .rr-brand{grid-column:1;grid-row:1;justify-self:start}
-      .rr-tally{grid-column:1;grid-row:2;justify-self:center;gap:.5rem}
-      .rr-actions{grid-column:1;grid-row:3;justify-self:center;flex-wrap:wrap;gap:.3rem}
+      .topbar{grid-template-columns:auto 1fr auto!important;grid-template-rows:none;height:48px!important;overflow:visible!important}
     }
     @media(max-width:640px){
       .rr-name{display:none}
       .rr-tally{font-size:.62rem!important}
       .rr-tag{font-size:.5rem;letter-spacing:.16em}
+      .rr-btn{width:38px!important;height:32px!important}
+      .rr-actions{gap:.2rem!important}
     }
     @media(max-width:400px){
       .quota-chip{padding:.3rem .32rem;font-size:.6rem}

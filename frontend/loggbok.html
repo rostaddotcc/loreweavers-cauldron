@@ -28,7 +28,7 @@
 .topbar.rite-rail{display:grid!important;align-items:center!important;background:linear-gradient(180deg,var(--stone-2),var(--stone))!important;border:1px solid var(--edge)!important;border-top:1px solid var(--edge-hi)!important;box-shadow:none!important;min-height:48px;padding:0 .8rem!important}
 .topbar.rite-rail .rr-btn{height:34px;min-height:34px;width:auto;padding:0 .6rem;justify-content:center}
 @media(max-width:900px){
-  .topbar.rite-rail{flex-wrap:nowrap;gap:1rem!important;padding:0 .8rem!important;overflow:visible!important;min-height:48px!important}
+  .topbar.rite-rail{flex-wrap:nowrap;gap:1rem!important;padding:0 .8rem!important;overflow:visible!important;min-height:48px!important;grid-template-columns:auto 1fr auto!important}
   .topbar.rite-rail .rr-btn{min-height:34px!important;width:auto!important}
   .rr-drop{position:fixed;top:48px;right:.5rem;left:.5rem;min-width:0;max-height:calc(100dvh - 64px);overflow-y:auto}
 }
@@ -39,6 +39,7 @@
   .rr-menu{height:38px}
 }
 </style>
+<style>
 /* ═══════════ MJUKA UPP — Codex loggbok (2026-08-05) — EFTER snes.css ═══════════ */
 .top-btn{ border-radius: 8px !important; box-shadow: 0 2px 12px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; }
 .top-btn:hover{ transform: translateY(-1px) !important; }

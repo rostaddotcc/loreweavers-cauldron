@@ -21,12 +21,17 @@ TERRAIN = {
     'slätt': 0.6,     # Öppen mark
     'is': 1.4,        # Fruset, halt
     'hav': 0.4,       # Båt — snabbt
+    'stad': 0.6,      # Gator — snabbt (fix 2026-08-15)
+    'grotta': 1.5,    # Trångt, långsamt (fix 2026-08-15)
+    'öken': 1.4,      # Ödsligt, hårt (fix 2026-08-15)
+    'ruin': 1.0,      # Svårframkomligt men rakt (fix 2026-08-15)
+    'flod': 0.6,      # Medströms/flodfärd — snabbt (fix 2026-08-15)
     'okänd': 1.0,     # Default
 }
 
 # Terräng-typer som kan tilldelas nya platser (viktad lista)
 TERRAIN_POOL = ['skog', 'skog', 'skog', 'slätt', 'slätt', 'väg', 'stig',
-                'berg', 'träsk', 'is', 'hav']
+                'berg', 'träsk', 'is', 'hav', 'stad', 'ruin']
 
 
 def place_location(name: str, campaign_id: str = "") -> dict:
@@ -162,21 +167,33 @@ def calculate_travel_days(from_loc: dict, to_loc: dict) -> float:
     return max(0.5, round(days, 1))  # Minst en halv dag
 
 
-def format_travel_time(days: float) -> str:
-    """Formatera restid som läsbar text."""
-    if days < 0.5:
-        return 'Här är du'
-    elif days < 1:
-        return 'Mindre än en dag'
-    elif days == 1:
-        return '1 dags resa'
-    elif days < 2:
-        return f'{days:.1f} dagars resa'
+def format_travel_time(days: float, lang: str = "en") -> str:
+    """Formatera restid som läsbar text (kampanjens språk)."""
+    if lang == "sv":
+        if days < 0.5:
+            return 'Här är du'
+        elif days < 1:
+            return 'Mindre än en dag'
+        elif days == 1:
+            return '1 dags resa'
+        elif days < 2:
+            return f'{days:.1f} dagars resa'
+        else:
+            return f'{days:.0f} dagars resa'
     else:
-        return f'{days:.0f} dagars resa'
+        if days < 0.5:
+            return 'You are here'
+        elif days < 1:
+            return 'Less than a day'
+        elif days == 1:
+            return "1 day's travel"
+        elif days < 2:
+            return f"{days:.1f} days' travel"
+        else:
+            return f"{days:.0f} days' travel"
 
 
-def get_locations_with_travel(state: dict) -> list[dict]:
+def get_locations_with_travel(state: dict, lang: str = "en") -> list[dict]:
     """
     Returnera alla kända platser med restid från nuvarande plats.
     Används av /api/campaign/locations endpointen.
@@ -227,7 +244,7 @@ def get_locations_with_travel(state: dict) -> list[dict]:
     for name, loc in all_locations.items():
         travel_days = calculate_travel_days(current_loc, loc)
         loc['travel_days'] = travel_days
-        loc['travel_text'] = format_travel_time(travel_days) if not loc['current'] else 'Du är här'
+        loc['travel_text'] = format_travel_time(travel_days, lang) if not loc['current'] else ('Du är här' if lang == 'sv' else 'You are here')
         result.append(loc)
 
     # Sortera: nuvarande först, sedan efter restid

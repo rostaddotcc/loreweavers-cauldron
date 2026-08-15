@@ -4778,7 +4778,7 @@ def _build_system_prompt(
     locations = state.get("locations", [])
     if locations:
         try:
-            with_travel = get_locations_with_travel(state)
+            with_travel = get_locations_with_travel(state, lang=lang)
         except Exception:
             with_travel = []
         if with_travel:
@@ -9202,7 +9202,7 @@ async def campaign_locations(morkrets_token: str | None = Cookie(None)):
     state = store.get(payload["sub"])
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
-    locations = get_locations_with_travel(state)
+    locations = get_locations_with_travel(state, lang=_get_lang(state))
     travel_log = state.get('world', {}).get('travel_log', [])
     return {"locations": locations, "travel_log": travel_log}
 
@@ -9224,7 +9224,13 @@ async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
     # LLM-genererad logbook sparas som ett objekt {title, days, summary} i world["logbook_llm"]
     # Kontrollera båda formaten
     logbook_llm = world.get("logbook_llm", {})
-    cached_days = logbook_llm.get("days", [])
+    # Cache är språkberoende — genererad för ett annat språk än kampanjens
+    # nuvarande → räkna som miss så den återskapas på rätt språk. (fix 2026-08-15)
+    cached_days = (
+        logbook_llm.get("days", [])
+        if logbook_llm.get("language", _get_lang(state)) == _get_lang(state)
+        else []
+    )
     if cached_days:
         campaign_name = state.get("meta", {}).get("campaign_name", "The Lore Weaver's Cauldron")
         return {
@@ -9299,7 +9305,10 @@ async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
 
         # Om vi har Guardian-entries, returnera dem direkt (snabbt, inget LLM)
         if days and days[0]["events"]:
-            summary_text = f"Äventyret har {len(days)} dag(ar) med {len(guardian_log)} händelser."
+            if _get_lang(state) == "sv":
+                summary_text = f"Äventyret har {len(days)} dag(ar) med {len(guardian_log)} händelser."
+            else:
+                summary_text = f"The adventure spans {len(days)} day(s) with {len(guardian_log)} events."
             return {
                 "title": campaign_name,
                 "days": days,
@@ -9318,10 +9327,11 @@ async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
     )
 
     if not t_text and not s_text:
-        return {"title": "The Lore Weaver's Cauldron", "days": [], "summary": "Äventyret har inte börjat ännu."}
+        empty_summary = "Äventyret har inte börjat ännu." if _get_lang(state) == "sv" else "The adventure has not begun yet."
+        return {"title": "The Lore Weaver's Cauldron", "days": [], "summary": empty_summary}
 
     campaign_name = state.get("meta", {}).get("campaign_name", "The Lore Weaver's Cauldron")
-    prompt = build_log_prompt(t_text, s_text, campaign_name)
+    prompt = build_log_prompt(t_text, s_text, campaign_name, language=_get_lang(state))
 
     # Loggboksgenerering är ett LLM-anrop — räknas som en turn (endast första
     # besöket; cachen + guardian-snabbvägen ovan är gratis) (2026-08-08)
@@ -9340,14 +9350,15 @@ async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
         )
         log_data = _extract_json(raw)
     except Exception:
+        lang = _get_lang(state)
         log_data = {
             "title": campaign_name,
             "days": [{
                 "day": 1,
-                "title": "Äventyret börjar",
-                "mood": "Förväntansfull",
-                "events": ["Kampanjen skapades"],
-                "location": world.get("current_location", "Okänd"),
+                "title": "Äventyret börjar" if lang == "sv" else "The adventure begins",
+                "mood": "Förväntansfull" if lang == "sv" else "Anticipatory",
+                "events": ["Kampanjen skapades" if lang == "sv" else "The campaign was created"],
+                "location": world.get("current_location", "Okänd" if lang == "sv" else "Unknown"),
                 "npcs_met": [n.get("name", "?") for n in state.get("npcs", [])[:5]],
                 "quests": [
                     ("✅ " if q.get("status") in ("slutförd", "completed")
@@ -9356,7 +9367,7 @@ async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
                     for q in state.get("quests", [])[:6]
                 ],
             }],
-            "summary": "Äventyret har just börjat. Mörkret väntar.",
+            "summary": "Äventyret har just börjat. Mörkret väntar." if lang == "sv" else "The adventure has just begun. The darkness waits.",
         }
 
     # Cacha i world['logbook_llm'] — skiljt från Guardian's world['logbook']
@@ -9366,6 +9377,7 @@ async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
         "days": log_data.get("days", []),
         "summary": log_data.get("summary", ""),
         "generated_at": datetime.now(timezone.utc).isoformat(),
+        "language": _get_lang(state),
     }
     store.save(state)
 
@@ -9399,19 +9411,31 @@ async def campaign_logbook_refresh_today(morkrets_token: str | None = Cookie(Non
     t_text = "\n".join(f"{e['role']}: {e['content']}" for e in recent) if recent else ""
 
     if not t_text:
-        return {"ok": False, "error": "Inget transkript tillgängligt"}
+        return {"ok": False, "error": "Inget transkript tillgängligt" if _get_lang(state) == "sv" else "No transcript available"}
 
     _day_update_usage = {}
-    prompt = (
-        "Här är transkriptet sedan förra dagsskiftet. "
-        "Skriv en kort dag-entry (JSON): "
-        '{"day": N, "title": "...", "mood": "...", '
-        '"events": ["...", "..."], "location": "...", '
-        '"npcs_met": [...], "quests": [...]}. '
-        f"Dagnumret är {target_day}. "
-        "Max 3 events, max 2 NPCs. Svara ENDAST med JSON.\n\n"
-        + t_text
-    )
+    if _get_lang(state) == "sv":
+        prompt = (
+            "Här är transkriptet sedan förra dagsskiftet. "
+            "Skriv en kort dag-entry (JSON): "
+            '{"day": N, "title": "...", "mood": "...", '
+            '"events": ["...", "..."], "location": "...", '
+            '"npcs_met": [...], "quests": [...]}. '
+            f"Dagnumret är {target_day}. "
+            "Max 3 events, max 2 NPCs. Svara ENDAST med JSON.\n\n"
+            + t_text
+        )
+    else:
+        prompt = (
+            "Here is the transcript since the last day boundary. "
+            "Write a short day entry (JSON): "
+            '{"day": N, "title": "...", "mood": "...", '
+            '"events": ["...", "..."], "location": "...", '
+            '"npcs_met": [...], "quests": [...]}. '
+            f"The day number is {target_day}. "
+            "Max 3 events, max 2 NPCs. Reply with JSON ONLY.\n\n"
+            + t_text
+        )
 
     # Dag-entry-uppdatering är ett LLM-anrop — räknas som en turn (2026-08-08)
     _gate_turn_quota(username)

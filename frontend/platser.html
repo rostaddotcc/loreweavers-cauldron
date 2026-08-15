@@ -310,7 +310,7 @@
 <div class="map-tooltip" id="map-tooltip"></div>
 <div class="toast" id="toast"></div>
 
-<script src="sfx.js?v=20260806a"></script>
+<script src="sfx.js?v=20260811a"></script>
 <script src="api.js?v=20260806c"></script>
 <script src="i18n.js?v=20260807a"></script>
 <script>
@@ -319,7 +319,15 @@ if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 
 const TERRAIN_ICONS = {
   'väg': '🛤️', 'stig': '🥾', 'skog': '🌲', 'berg': '⛰️',
-  'träsk': '🌫️', 'slätt': '🌾', 'is': '❄️', 'hav': '🌊', 'okänd': '❓'
+  'träsk': '🌫️', 'slätt': '🌾', 'is': '❄️', 'hav': '🌊', 'okänd': '❓',
+  'stad': '🏰', 'grotta': '🕳️', 'öken': '🏜️', 'ruin': '🏛️', 'flod': '🏞️'
+};
+
+// Terrängnamn — visas på engelska (UI-språk) (fix 2026-08-15)
+const TERRAIN_NAMES = {
+  'väg': 'Road', 'stig': 'Trail', 'skog': 'Forest', 'berg': 'Mountains',
+  'träsk': 'Swamp', 'slätt': 'Plains', 'is': 'Ice', 'hav': 'Sea', 'okänd': 'Unknown',
+  'stad': 'City', 'grotta': 'Cave', 'öken': 'Desert', 'ruin': 'Ruins', 'flod': 'River'
 };
 
 // ── Seeded PRNG (mulberry32) — deterministisk karta per kampanj ──
@@ -482,7 +490,7 @@ function showTooltip(loc, x, y) {
   const questTag = questLocations.has(loc.name) ? '<div class="tt-quest">⚑ Active quest here</div>' : '';
   tooltip.innerHTML = `
     <div class="tt-name">${icon} ${loc.name}</div>
-    <div class="tt-terrain">${loc.terrain || 'unknown terrain'} · ${loc.travel_text}</div>
+    <div class="tt-terrain">${TERRAIN_NAMES[loc.terrain] || loc.terrain || 'Unknown'} · ${loc.travel_text}</div>
     <div>${loc.description || I18N.t('En plats i mörkret.')}</div>
     ${questTag}`;
   // Positionera nära klicket, håll inom viewport
@@ -592,7 +600,7 @@ function renderPlaces(locations) {
           <div class="pc-icon">${icon}</div>
           <div>
             <div class="pc-name">${loc.name}${questBadge}</div>
-            <div class="pc-terrain">${loc.terrain || 'unknown terrain'}</div>
+            <div class="pc-terrain">${TERRAIN_NAMES[loc.terrain] || loc.terrain || 'Unknown'}</div>
           </div>
         </div>
         <div class="pc-desc">${loc.description || I18N.t('En plats i mörkret.')}</div>

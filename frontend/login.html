@@ -107,6 +107,11 @@
   h2{font-size:clamp(1.5rem,3.4vw,2.2rem);letter-spacing:.02em}
   .lede{font-size:clamp(1rem,1.6vw,1.1rem);font-weight:300;color:var(--bone);line-height:1.7;max-width:60ch;margin-top:1rem}
   .lede b{color:var(--gold-bright);font-weight:600}
+  /* Centrerade sektionshuvuden (2026-08-15) — features/pricing/FAQ */
+  #features .wrap > .eyebrow, #features .wrap > h2, #features .wrap > .lede,
+  #pricing .wrap > .eyebrow, #pricing .wrap > h2, #pricing .wrap > .lede,
+  #faq .wrap > .eyebrow, #faq .wrap > h2{text-align:center}
+  #features .wrap > .lede, #pricing .wrap > .lede{margin-left:auto;margin-right:auto}
 
   /* ── knappar (platta) ── */
   .btn{display:inline-block;font-family:var(--font-display);font-size:.72rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;padding:.7em 1.5em;border:1px solid var(--edge);background:var(--stone-3);color:var(--bone);text-decoration:none;cursor:pointer;text-align:center}
@@ -461,7 +466,8 @@
         <div class="d-card">
           <h3>Purely Text-Based</h3>
           <p>No combat maps, no miniatures, no busywork &mdash; the entire game is played in words.
-            You write what you do, the DM narrates what happens, and your imagination renders the graphics.
+            You write what you do, the DM narrates what happens, and your imagination renders the graphics
+            &mdash; with full TTS &amp; STT support for a touchless experience.
             <em>The oldest kind of role-playing, powered by the newest kind of mind.</em></p>
           <p class="tablet-more"><a href="screenshots.html">See the game &#8594;</a></p>
         </div>
@@ -554,7 +560,8 @@
           <h3>Purely Text-Based</h3>
           <p>No combat maps, no miniatures, no busywork &mdash; the entire game is played
             in words. You write what you do, the DM narrates what happens, and your
-            imagination renders the graphics. <em>The oldest kind of role-playing,
+            imagination renders the graphics &mdash; with full TTS &amp; STT support for a
+            touchless experience. <em>The oldest kind of role-playing,
             powered by the newest kind of mind.</em></p>
           <p class="tablet-more"><a href="screenshots.html">See the game &#8594;</a></p>
         </div>
@@ -723,7 +730,7 @@
             <h3>Continue your journey</h3>
             <p>Welcome back, <b class="gc-name">adventurer</b> &mdash; the fire is still burning.</p>
           </div>
-          <a class="btn gold wide" href="adventure.html?v=20260808a" style="display:block;text-align:center;margin-top:.4rem">Continue to the realm &rarr;</a>
+          <a class="btn gold wide" href="adventure.html?v=20260815a" style="display:block;text-align:center;margin-top:.4rem">Continue to the realm &rarr;</a>
           <div class="gate-toggle" style="font-size:.75rem" onclick="doLogout()">Not you? <b>Sign out</b></div>
         </div>
       </div>
@@ -840,7 +847,7 @@
     <div class="mname" id="prof-name"></div>
     <div class="mtier" id="prof-tier"></div>
     <div class="mactions" id="prof-actions">
-      <a class="btn gold" href="adventure.html?v=20260808a">Return to the realm →</a>
+      <a class="btn gold" href="adventure.html?v=20260815a">Return to the realm →</a>
       <a class="btn ghost" href="pricing.html">Membership &amp; billing</a>
       <button class="btn danger-btn" onclick="doLogout()">Log out</button>
       <button class="btn danger-btn" id="prof-delete-btn" onclick="askDeleteAccount()">Delete account</button>
@@ -1020,7 +1027,7 @@ function authSuccess(username) {
   sfx('gate');
   sessionStorage.setItem('dnd_user', username);
   let next = new URLSearchParams(location.search).get('next');
-  if (!next || !/^(?:[a-zA-Z0-9_-]+\.html)(?:[?#].*)?$/.test(next)) next = 'adventure.html?v=20260808a';
+  if (!next || !/^(?:[a-zA-Z0-9_-]+\.html)(?:[?#].*)?$/.test(next)) next = 'adventure.html?v=20260815a';
   setTimeout(() => { window.location.href = next; }, 900);
 }
 
@@ -1301,7 +1308,12 @@ document.addEventListener('keydown', e => {
     'assets/adventurers/webp/adventurer-rogue.webp',
     'assets/adventurers/webp/adventurer-dragonborn-paladin.webp',
     'assets/adventurers/webp/adventurer-halfling-bard.webp',
-    'assets/adventurers/webp/adventurer-gnome-wizard.webp'
+    'assets/adventurers/webp/adventurer-gnome-wizard.webp',
+    'assets/adventurers/webp/adventurer-barbarian.webp',
+    'assets/adventurers/webp/adventurer-monk.webp',
+    'assets/adventurers/webp/adventurer-druid.webp',
+    'assets/adventurers/webp/adventurer-sorcerer.webp',
+    'assets/adventurers/webp/adventurer-artificer.webp'
   ];
   var bg = document.getElementById('hero-bg');
   if (!bg) return;

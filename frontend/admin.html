@@ -663,7 +663,7 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="sfx.js?v=20260802a"></script>
+<script src="sfx.js?v=20260811a"></script>
 <script src="api.js?v=20260804c"></script>
 <script src="i18n.js?v=20260807a"></script>
 <script>
@@ -829,7 +829,6 @@ function rowActions(u) {
       <button class="act-btn" data-u="${u.username}" onclick="topUp('${u.username}', 'row-topup-${u.username}')">Top up</button>
     </span>
     <span class="act-group">
-      <button class="act-btn gold" data-u="${u.username}" onclick="grantTier('${u.username}', 'support')" title="Grant Support (30 days)">🔹 Support</button>
       <button class="act-btn gold" data-u="${u.username}" onclick="grantTier('${u.username}', 'patron')" title="Grant Patron (30 days)">⚔ Patron</button>
       <button class="act-btn ${isAdmin ? 'danger' : ''}" data-u="${u.username}" onclick="setRole('${u.username}', '${isAdmin ? 'player' : 'admin'}')" title="${isAdmin ? 'Remove admin role' : 'Grant admin role (all models, no turn cap)'}">${isAdmin ? '⬇ Demote' : '👑 Admin'}</button>
     </span>
@@ -1420,6 +1419,12 @@ function toggleCountryMore(btn) {
   btn.textContent = open ? 'Show less' : `Click more · ${btn.dataset.n} more`;
 }
 
+function toggleRefMore(btn) {
+  const list = document.getElementById('ref-list');
+  const open = list ? list.classList.toggle('show-all') : false;
+  btn.textContent = open ? 'Show less' : `Click more · ${btn.dataset.n} more`;
+}
+
 async function setCountryRange(r) {
   if (r === countryRange) return;
   const prev = countryRange;
@@ -1685,6 +1690,7 @@ function renderCharts(users) {
       : [];
     const cntHtml = countryChartHtml(cntries, countryRange);
     // Top referrers — varifrån besökarna klickade in (2026-08-09, rostad)
+    // 2026-08-14: expanderbar — top 8 + "Click more" som visar ALLA (sista 2 osv.)
     bRef = '<div class="chart-empty">No referrer data yet — tracking starts now</div>';
     if (vis.by_referrer && Object.keys(vis.by_referrer).length) {
       const refs = Object.entries(vis.by_referrer)
@@ -1699,11 +1705,13 @@ function renderCharts(users) {
           <span class="cbar-val">${fmtNum(v)}</span>
           <span class="cbar-pct">${rTotal ? (v / rTotal * 100).toFixed(0) : 0}%</span>
         </div>`;
-      const rest = refs.slice(8).reduce((a, r) => a + r.value, 0);
-      bRef = `<div class="cbar-list">
-        ${refs.slice(0, 8).map(r => refRow(r.label, r.value)).join('')}
-        ${rest > 0 ? refRow(`Other (${refs.length - 8} more)`, rest) : ''}
-      </div>`;
+      const MAX_REFS = 8;
+      bRef = `<div class="cbar-list" id="ref-list">
+        ${refs.map((r, i) => refRow(r.label, r.value, i >= MAX_REFS ? ' hidden' : '')).join('')}
+      </div>
+      ${refs.length > MAX_REFS
+        ? `<button class="cbar-more" id="ref-more" type="button" onclick="toggleRefMore(this)" data-n="${refs.length - MAX_REFS}">Click more · ${refs.length - MAX_REFS} more</button>`
+        : ''}`;
     }
     const todayD = new Date();
     const daySrc = vis.by_day_unique || vis.by_day || {};
@@ -1980,7 +1988,7 @@ function tableRows(users) {
     html += `<td class="cap-cell">${capFrag}<input type="number" min="0" step="1" value="${capVal}" id="cap-${i}" class="cap-input"><button onclick="event.stopPropagation();setCap('${u.username}', ${i})" class="cap-btn">Set</button><span class="cap-hint">0 = ∞</span></td>`;
     html += `<td class="membership-cell">${memBadge}${isPremium
       ? `<span class="prem-grant"><button onclick="event.stopPropagation();setTier('${u.username}', 'free')" class="pg-btn revoke" title="Revoke to Free">⭱ Free</button></span>`
-      : `<span class="prem-grant"><select id="pg-tier-${esc(u.username)}" onclick="event.stopPropagation()" onchange="syncTierDuration('${esc(u.username)}')" title="Tier"><option value="tier1" selected>🔹 Support · 3€</option><option value="tier2">⚔ Patron · 30€</option><option value="lifetime">♾ Lifetime · 100€</option></select><select id="pg-months-${esc(u.username)}" onclick="event.stopPropagation()" title="Duration"><option value="7" selected>7 d</option><option value="30">1 mo</option><option value="90">3 mo</option><option value="180">6 mo</option><option value="365">12 mo</option><option value="0">∞</option></select><button onclick="event.stopPropagation();grantPremiumFromRow('${esc(u.username)}')" class="pg-btn" title="Grant the chosen tier">👑 Grant</button></span>`}</td>`;
+      : `<span class="prem-grant"><select id="pg-tier-${esc(u.username)}" onclick="event.stopPropagation()" onchange="syncTierDuration('${esc(u.username)}')" title="Tier"><option value="tier2">⚔ Patron · 30€</option><option value="lifetime">♾ Lifetime · 100€</option></select><select id="pg-months-${esc(u.username)}" onclick="event.stopPropagation()" title="Duration"><option value="7" selected>7 d</option><option value="30">1 mo</option><option value="90">3 mo</option><option value="180">6 mo</option><option value="365">12 mo</option><option value="0">∞</option></select><button onclick="event.stopPropagation();grantPremiumFromRow('${esc(u.username)}')" class="pg-btn" title="Grant the chosen tier">👑 Grant</button></span>`}</td>`;
     html += `<td class="rev-num">${u.revenue ? fmtSek(u.revenue) : '—'}</td>`;
     html += `<td class="actions-cell">${rowActions(u)}</td>`;
     html += `<td><button onclick="event.stopPropagation();deleteUser('${u.username}')" class="del-btn">✕ Delete</button></td>`;
@@ -2020,7 +2028,7 @@ function mobRows(users) {
     html += `<button onclick="event.stopPropagation();topUp('${u.username}')" class="bc-btn">➕ Top up</button>`;
     html += `<button onclick="event.stopPropagation();resetTurns('${u.username}')" class="bc-btn">🔄 Reset</button>`;
     if (!isPremium) {
-      html += `<select id="pg-m-tier-${u.username}" onclick="event.stopPropagation()" onchange="syncTierDuration('${esc(u.username)}')" style="background:var(--ink);border:1px solid var(--edge);color:var(--bone);font-size:.78rem;padding:.2rem;border-radius:2px;max-width:80px"><option value="tier1" selected>Support 3€</option><option value="tier2">Patron 30€</option><option value="lifetime">♾ 100€</option></select>`;
+      html += `<select id="pg-m-tier-${u.username}" onclick="event.stopPropagation()" onchange="syncTierDuration('${esc(u.username)}')" style="background:var(--ink);border:1px solid var(--edge);color:var(--bone);font-size:.78rem;padding:.2rem;border-radius:2px;max-width:80px"><option value="tier2">Patron 30€</option><option value="lifetime">♾ 100€</option></select>`;
       html += `<select id="pg-m-months-${u.username}" onclick="event.stopPropagation()" style="background:var(--ink);border:1px solid var(--edge);color:var(--bone);font-size:.78rem;padding:.2rem;border-radius:2px;max-width:52px"><option value="7" selected>7d</option><option value="30">1mo</option><option value="90">3mo</option><option value="180">6mo</option><option value="365">1y</option><option value="0">∞</option></select>`;
     }
     html += `<button onclick="event.stopPropagation();${isPremium ? "setTier('" + u.username + "', 'free')" : "grantPremiumFromRow('" + u.username + "')"}" class="bc-btn${isPremium ? '' : ' gold'}">${isPremium ? '⭱ Free' : '👑 Grant'}</button>`;
@@ -2117,7 +2125,7 @@ function renderDetail(container, data) {
   if (isPremium) {
     html += '<button onclick="setTier(\'' + data.username + '\', \'free\')" class="bc-btn">⭱ Revert to Free</button>';
   } else {
-    html += '<select id="dt-tier-' + data.username + '" onchange="syncTierDuration(\'' + data.username + '\')" class="cap-input" style="width:auto;background:var(--ink);color:var(--bone);border:1px solid var(--edge)"><option value="tier1" selected>Support · 3€</option><option value="tier2">Patron · 30€</option><option value="lifetime">Lifetime · 100€</option></select>';
+    html += '<select id="dt-tier-' + data.username + '" onchange="syncTierDuration(\'' + data.username + '\')" class="cap-input" style="width:auto;background:var(--ink);color:var(--bone);border:1px solid var(--edge)"><option value="tier2">Patron · 30€</option><option value="lifetime">Lifetime · 100€</option></select>';
     html += '<select id="dt-months-' + data.username + '" class="cap-input" style="width:auto;background:var(--ink);color:var(--bone);border:1px solid var(--edge)"><option value="7" selected>7 d</option><option value="30">1 mo</option><option value="90">3 mo</option><option value="180">6 mo</option><option value="365">12 mo</option><option value="0">∞ forever</option></select>';
     html += '<button onclick="setTier(\'' + data.username + '\', document.getElementById(\'dt-tier-' + data.username + '\').value, document.getElementById(\'dt-months-' + data.username + '\').value)" class="bc-btn gold">👑 Grant</button>';
   }

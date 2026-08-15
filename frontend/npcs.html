@@ -200,7 +200,7 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="sfx.js?v=20260806a"></script>
+<script src="sfx.js?v=20260811a"></script>
 <script src="api.js?v=20260806c"></script>
 <script src="i18n.js?v=20260808a"></script>
 <script>
@@ -636,31 +636,26 @@ function closeAvatarModal() {
   document.getElementById('avatar-overlay').classList.remove('show');
 }
 
-// ── Bildleverantör (StepFun — Support 3€ · Wan 2.7 — Patron 30€) ──
+// ── Bildleverantör (StepFun — gratis · Wan 2.7 / Qwen Image 3 Pro — Patron 30€) ──
 // Samma mönster som character.html: _npcTier laddas från /api/me och
-// låser Wan-optionen för free/tier1. (2026-08-05)
+// låser Wan/Qwen-optionen för free/tier1. (2026-08-15)
 let _npcTier = null;  // free | tier1 | tier2 | lifetime (från /api/me)
 function avatarProvider() {
   const sel = document.getElementById('avatar-provider-select');
   return (sel && sel.value) || 'stepfun';
 }
 function avatarGenGate(provider) {
-  if (_npcTier === 'free') {
-    toast('🔒 AI painting is a Support feature (3€) — support the Cauldron to paint your adventurer, the DM and every NPC with StepFun.');
+  if ((provider === 'wan' || provider === 'qwen') && _npcTier !== 'tier2' && _npcTier !== 'lifetime') {
+    toast('🔒 Wan 2.7 / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to paint with the premium engines.');
     try { SFX.error(); } catch (_) {}
     return false;
   }
-  if (provider === 'wan' && _npcTier !== 'tier2' && _npcTier !== 'lifetime') {
-    toast('🔒 Wan 2.7 is a Patron feature (30€) — upgrade to paint with Wan.');
-    try { SFX.error(); } catch (_) {}
-    return false;
-  }
-  return true;
+  return true; // StepFun = gratis sedan 2026-08-15
 }
 function avatarProviderChanged(sel) {
-  if (sel && sel.value === 'wan' && _npcTier !== 'tier2' && _npcTier !== 'lifetime') {
+  if ((sel && (sel.value === 'wan' || sel.value === 'qwen')) && _npcTier !== 'tier2' && _npcTier !== 'lifetime') {
     sel.value = 'stepfun';
-    toast('🔒 Wan 2.7 is a Patron feature (30€) — upgrade to paint with Wan.');
+    toast('🔒 Wan 2.7 / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to paint with the premium engines.');
     try { SFX.error(); } catch (_) {}
   }
 }
@@ -668,6 +663,7 @@ function updateAvatarProviderLock() {
   const sel = document.getElementById('avatar-provider-select');
   if (!sel) return;
   const wanOpt = sel.querySelector('option[value="wan"]');
+  const qwenOpt = sel.querySelector('option[value="qwen"]');
   const stepOpt = sel.querySelector('option[value="stepfun"]');
   if (_npcTier === null) {
     try {
@@ -679,18 +675,20 @@ function updateAvatarProviderLock() {
     } catch (_) { _npcTier = 'free'; }
     return;
   }
-  const canPaint = _npcTier !== 'free';          // Support+ (3€)
   const wanUnlocked = _npcTier === 'tier2' || _npcTier === 'lifetime';  // Patron (30€)
   if (stepOpt) {
-    stepOpt.disabled = !canPaint;
-    stepOpt.textContent = canPaint ? 'StepFun — Support' : 'StepFun — Support 🔒';
+    stepOpt.disabled = false;
+    stepOpt.textContent = 'StepFun — Free';
   }
   if (wanOpt) {
     wanOpt.disabled = !wanUnlocked;
     wanOpt.textContent = wanUnlocked ? 'Wan 2.7 — Patron' : 'Wan 2.7 — Patron 🔒';
   }
-  if (sel.value === 'wan' && !wanUnlocked) sel.value = 'stepfun';
-  if (sel.value === 'stepfun' && !canPaint) sel.value = '';
+  if (qwenOpt) {
+    qwenOpt.disabled = !wanUnlocked;
+    qwenOpt.textContent = wanUnlocked ? 'Qwen Image 3 Pro — Patron' : 'Qwen Image 3 Pro — Patron 🔒';
+  }
+  if ((sel.value === 'wan' || sel.value === 'qwen') && !wanUnlocked) sel.value = 'stepfun';
 }
 
 async function _runAvatarGen(mode, statusText, btnId) {
@@ -810,8 +808,9 @@ tick();
     <div style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
       <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
       <select id="avatar-provider-select" class="tts-select" style="flex:1;min-width:0" onchange="avatarProviderChanged(this)" title="Image provider for painting">
-        <option value="stepfun">StepFun — Support</option>
+        <option value="stepfun">StepFun — Free</option>
         <option value="wan">Wan 2.7 — Patron 🔒</option>
+        <option value="qwen">Qwen Image 3 Pro — Patron 🔒</option>
       </select>
     </div>
     <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">

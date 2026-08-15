@@ -423,7 +423,7 @@
     opacity: 0.45; cursor: not-allowed; filter: grayscale(0.6);
   }
   .tts-select:disabled:hover{ border-color: var(--edge); color: var(--bone-dim); }.msg.dm .bubble:hover{ border-color: rgba(232,198,90,0.6); }.msg.dm .bubble .who{ color: var(--gold-bright); letter-spacing: .06em; text-shadow: 0 0 10px rgba(232,198,90,.35); }.msg.dm .bubble .text{ font-style: italic; color: var(--bone); line-height: 1.7; font-size: 1.18rem; }/* ── DM:ns inre monolog (reasoning) — eterisk, hopfällbar tankebubbla ── */.reasoning{
-    max-width: 600px; margin-left: 60px;  /* indragen — viskar under DM:s röst */
+    max-width: 600px; margin-left: 0;  /* inuti .msg.dm (kolumn-stack) — ligger under avataren, ovanför bubblan */
     border: 1px solid color-mix(in srgb, var(--arcane) 28%, transparent);
     border-left: 2px solid color-mix(in srgb, var(--arcane) 65%, transparent);
     background: linear-gradient(160deg, color-mix(in srgb, var(--arcane) 9%, transparent), rgba(90,120,220,0.03));
@@ -1099,7 +1099,7 @@
     font-family: var(--cli-mono, ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace) !important;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=39">
+<link rel="stylesheet" href="snes.css?v=40">
 <style>
 /* ═══════════ CODEX 2-RAD-TABBAR — override snes.css (måste ligga EFTER linken) ═══════════ */
 .cx-tabs{ display: flex !important; flex-direction: column !important; gap: 0.34rem !important; padding: 0.55rem 0.6rem 0.6rem !important; overflow-x: hidden !important; }
@@ -1507,18 +1507,18 @@
     <span class="rr-tag">AT THE TABLE</span>
   </div>
 
-  <!-- Turn-Tally — mono-strip: TURN · TURNS · RESET (uppdateras av renderTurnTally) -->
-  <div class="rr-tally" id="rr-tally" title="Each DM, TTS, Image-gen and background llm-calls counts towards the turns quota">
-    <span>TURN <span class="tv" id="rr-turn">—</span></span><span class="sep">·</span>
+  <!-- Turn-Tally — mono-strip: TURNS · TURN · DAY (uppdateras av renderTurnTally) -->
+  <div class="rr-tally" id="rr-tally" title="Turns quota — one chat message costs 1 turn; TTS, image-gen and background calls count too (the DM's internal calls are free)">
     <span>TURNS <span class="tv" id="rr-quota">—</span></span><span class="sep">·</span>
-    <span>RESET <span class="tv" id="rr-reset">—</span></span>
+    <span>TURN <span class="tv" id="rr-turn">—</span></span><span class="sep">·</span>
+    <span>DAY <span class="tv" id="rr-day">—</span></span>
   </div>
 
   <div class="rr-actions">
   <button class="rr-btn" onclick="openCodex()" title="Codex" aria-label="Codex">📖</button>
   <button class="rr-btn admin-btn" id="admin-btn" style="display:none" onclick="location.href='admin.html'" title="Admin" aria-label="Admin">👑</button>
 
-  <button class="rr-btn sfx-btn" onclick="sfxToggleBtn()" title="Sound on/off" aria-label="Sound on/off">🔊</button>
+  <button class="rr-btn sfx-btn" onclick="sfxToggleBtn()" title="Sound on/off" aria-label="Sound on/off">🎵</button>
 
   <!-- ═══ Engine Room (debug) ═══ -->
   <button class="rr-btn" id="console-tab" onclick="toggleConsole()" title="Open Engine Room" aria-label="Open Engine Room">🛠️</button>
@@ -1599,7 +1599,7 @@
   .rr-tally .warn{ color: var(--blood-bright); }
   /* ── Fasta action-knappar 44×34 — scoped under .rite-rail så de inte krockar
      med roll-request-knapparnas .rr-btn (snes §5 + kompakt-override) ── */
-  .rr-actions{ display: flex; align-items: center; gap: .4rem; justify-self: end; flex-wrap: nowrap !important; }
+  .rr-actions{ display: flex; align-items: center; gap: .4rem; justify-self: end; justify-content: flex-end; flex-wrap: nowrap !important; }
   .rite-rail .rr-btn{
     width: 50px; height: 40px;
     border: 1px solid var(--edge) !important;
@@ -1823,12 +1823,12 @@
     <div class="cx-wrap">
       <nav class="cx-spine" id="cx-spine" aria-label="Codex sections">
         <button class="cx-sp active" data-tab="character" onclick="openCodexCharacter()" title="Character">🧙<i>CHAR</i></button>
-        <button class="cx-sp" data-tab="npcs" onclick="activateCodexTab('npcs')" title="NPCs">👥<i>NPCS</i><span class="n" id="cx-npc-count">0</span></button>
+        <button class="cx-sp" data-subtab="inventory" onclick="activateCodexSubTab('inventory')" title="Equipment">⚔<i>GEAR</i></button>
+        <button class="cx-sp" data-subtab="spells" onclick="activateCodexSubTab('spells')" title="Spells">⚡<i>SPELLS</i></button>
         <button class="cx-sp" data-tab="map" onclick="activateCodexTab('map')" title="Map">🗺<i>MAP</i></button>
+        <button class="cx-sp" data-tab="npcs" onclick="activateCodexTab('npcs')" title="NPCs">👥<i>NPCS</i><span class="n" id="cx-npc-count">0</span></button>
         <button class="cx-sp" data-tab="journal" onclick="activateCodexTab('journal')" title="Journal">📜<i>JRNL</i></button>
         <button class="cx-sp" data-tab="facts" onclick="activateCodexTab('facts')" title="Facts">✦<i>FACTS</i></button>
-        <button class="cx-sp" data-subtab="spells" onclick="activateCodexSubTab('spells')" title="Spells">⚡<i>SPELLS</i></button>
-        <button class="cx-sp" data-subtab="inventory" onclick="activateCodexSubTab('inventory')" title="Equipment">⚔<i>GEAR</i></button>
         <button class="cx-sp" data-subtab="currency" onclick="activateCodexSubTab('currency')" title="Treasury">🪙<i>TREAS</i></button>
         <button class="cx-sp" data-subtab="notes" onclick="activateCodexSubTab('notes')" title="Notes">📝<i>NOTES</i></button>
       </nav>
@@ -1933,7 +1933,7 @@
   </div>
 </div>
 
-<script src="sfx.js?v=20260802a"></script>
+<script src="sfx.js?v=20260811a"></script>
 <script src="api.js?v=20260806a"></script>
 <script src="i18n.js?v=20260808a"></script>
 <script>
@@ -2224,42 +2224,46 @@ function renderAvatarBox() {
   cdEl.textContent = cd ? ('refreshes in: ' + cd) : '';
 }
 
-// ═══ Turn-Tally (våg 3) — railens mittcell: TURN · TURNS · RESET ═══
+// ═══ Turn-Tally (våg 3) — railens mittcell: TURNS · TURN · DAY ═══
 // Samma data som det gamla #user-tag-kortet (renderAvatarBox), men i mono-strip
 // på railen. Tickar live via den befintliga 1s-loopen i updateHeaderInfo.
-// States: normal (guld) / låg quota ≤5 → .warn på quota+reset / patron+lifetime
-// → "∞ PATRON" i stället för siffror. Tooltip = tier + quota-disclaimern.
+// States: normal (guld) / låg quota ≤5 → .warn på quota / patron+lifetime
+// → "∞ PATRON" i stället för siffror. Tooltip = tier + quota + reset + turn-modellen.
 function renderTurnTally() {
   const turnEl = document.getElementById('rr-turn');
   const quotaEl = document.getElementById('rr-quota');
-  const resetEl = document.getElementById('rr-reset');
-  if (!turnEl || !quotaEl || !resetEl) return;
+  const dayEl = document.getElementById('rr-day');
+  if (!turnEl || !quotaEl || !dayEl) return;
   const me = _meData || {};
   const tier = _tier();
   const turn = currentTurnNum();
   turnEl.textContent = (turn != null) ? String(turn) : '—';
+  const day = currentDayNum();
+  dayEl.textContent = (day != null) ? String(day) : '—';
+  let quotaText = '—';
+  let resetText = '—';
   if (tier === 'lifetime' || (parseInt(me.turn_cap, 10) || 0) === 0) {
-    quotaEl.textContent = '∞ PATRON';
+    quotaText = '∞ PATRON';
     quotaEl.classList.remove('warn');
-    resetEl.textContent = '—';
-    resetEl.classList.remove('warn');
   } else {
     const avail = Math.max(0, parseInt(me.turns_available, 10) || 0);
     const total = (parseInt(me.turn_cap, 10) || 0) + (parseInt(me.turn_bonus, 10) || 0) + (parseInt(me.promo_bonus, 10) || 0);
-    quotaEl.textContent = avail + '/' + total;
+    quotaText = avail + '/' + total;
     const cd = (tier === 'tier1' || tier === 'tier2')
       ? resetCountdown(me.reset_ts, true)
       : resetCountdown(me.reset_date, false);
-    resetEl.textContent = cd || '—';
-    // Låg quota (≤5 turns kvar): varning på quota + reset
+    resetText = cd || '—';
+    // Låg quota (≤5 turns kvar): varning på quota
     const low = avail <= 5;
     quotaEl.classList.toggle('warn', low);
-    resetEl.classList.toggle('warn', low);
   }
+  quotaEl.textContent = quotaText;
   const tallyEl = document.getElementById('rr-tally');
   if (tallyEl) {
     const tierName = tier === 'lifetime' ? 'Lifetime' : (tier === 'tier2' ? 'Patron' : (tier === 'tier1' ? 'Support' : 'Free'));
-    tallyEl.title = 'Tier: ' + tierName + ' — Each DM, TTS, Image-gen and background llm-calls counts towards the turns quota';
+    tallyEl.title = 'Tier: ' + tierName + ' · ' + quotaText + ' turns left' +
+      (resetText !== '—' ? ' · resets ' + resetText : '') +
+      ' — one chat message costs 1 turn; TTS, image-gen and background calls count too (the DM\u2019s internal calls are free)';
   }
 }
 function updateHeaderInfo() {
@@ -2597,8 +2601,8 @@ function pickAvatar(kind) {
     : 'The Adventurer';
   title.textContent = '🎨 Avatar — ' + label;
   desc.textContent = kind === 'player'
-    ? 'Paint a new avatar from your character sheet — items, traits and lore included. Support feature (3€). Or upload your own image.'
-    : 'Paint a new avatar of ' + (kind === 'dm' ? 'the Dungeon Master' : 'this NPC') + '. Support feature (3€). Or upload your own image.';
+    ? 'Paint a new avatar from your character sheet — items, traits and lore included. StepFun painting is free — Wan 2.7 Pro / Qwen Image 3 Pro need Patron. Or upload your own image.'
+    : 'Paint a new avatar of ' + (kind === 'dm' ? 'the Dungeon Master' : 'this NPC') + '. StepFun painting is free — Wan 2.7 Pro / Qwen Image 3 Pro need Patron. Or upload your own image.';
   preview.innerHTML = AVATARS[kind]
     ? `<img src="${AVATARS[kind]}" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">`
     : SPR.html('🎭');
@@ -2626,9 +2630,9 @@ function pickAvatar(kind) {
 
 // ── Spelarprofilens avatar (konto — SEPARAT från äventyraren) ──
 // Öppnar avatar-modalen i PROFILE-läge: TVÅ målningsknappar — StepFun
-// (step-image-edit-2, Support 3€) och Wan 2.7 Pro (Patron 30€) — med
-// tier-lås (free → båda 🔒, tier1 → Wan 🔒, tier2/lifetime → båda öppna).
-// Headerns porträtt hör hit.
+// (step-image-edit-2, gratis sedan 2026-08-15) och Wan 2.7 Pro / Qwen Image
+// 3 Pro (Patron 30€) — med tier-lås (free → StepFun öppen, Wan/Qwen 🔒,
+// tier2/lifetime → alla öppna). Headerns porträtt hör hit.
 function openProfileAvatarModal() {
   _avatarProfileMode = true;
   AVATAR_KIND = 'player';
@@ -2643,7 +2647,7 @@ function openProfileAvatarModal() {
   const provRow = document.getElementById('avatar-provider-row');
   const promptInp = document.getElementById('avatar-prompt-input');
   title.textContent = '🎨 Your profile portrait';
-  desc.textContent = 'Paint YOUR profile portrait — the face at your table, separate from your adventurer. Pick an engine below: StepFun (Support 3€) or Wan 2.7 Pro (Patron 30€).';
+  desc.textContent = 'Paint YOUR profile portrait — the face at your table, separate from your adventurer. Pick an engine below: StepFun (free) or Wan 2.7 Pro / Qwen Image 3 Pro (Patron 30€).';
   const url = _hasAccountAvatar ? API.accountAvatarUrl() + '?t=' + Date.now() : null;
   preview.innerHTML = url
     ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">`
@@ -2787,30 +2791,25 @@ async function openBillingPortal(e) {
   }
 }
 
-// ── Bildleverantör (StepFun — Support 3€ · Wan 2.7 Pro — Patron 30€) ──
+// ── Bildleverantör (StepFun — gratis · Wan 2.7 Pro / Qwen Image 3 Pro — Patron 30€) ──
 function avatarProvider() {
   const sel = document.getElementById('avatar-provider-select');
   return (sel && sel.value) || 'stepfun';
 }
-// TIERS: bildgenerering är gated (2026-08-05). Free = ingen målning;
-// StepFun = Support (3€); Wan = Patron (30€). Returnerar false + informerar.
+// TIERS: bildgenerering är gated (2026-08-15). StepFun = gratis för alla;
+// Wan / Qwen Image 3 Pro = Patron (30€). Returnerar false + informerar.
 function avatarGenGate(provider) {
-  if (!_tierHasAvatars()) {
-    toast('🔒 AI painting is a Support feature (3€) — support the Cauldron to paint your adventurer, the DM and every NPC with StepFun.');
-    try { SFX.error(); } catch (_) {}
-    return false;
-  }
-  if (provider === 'wan' && !_tierHasModels()) {
-    toast('🔒 Wan 2.7 Pro is a Patron feature (30€) — upgrade to paint with Wan.');
+  if ((provider === 'wan' || provider === 'qwen') && !_tierHasModels()) {
+    toast('🔒 Wan 2.7 Pro / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to paint with the premium engines.');
     try { SFX.error(); } catch (_) {}
     return false;
   }
   return true;
 }
 function avatarProviderChanged(sel) {
-  if (sel && sel.value === 'wan' && !_tierHasModels()) {
+  if ((sel && (sel.value === 'wan' || sel.value === 'qwen')) && !_tierHasModels()) {
     sel.value = 'stepfun';
-    toast('🔒 Wan 2.7 Pro is a Patron feature (30€) — upgrade to paint with Wan.');
+    toast('🔒 Wan 2.7 Pro / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to paint with the premium engines.');
     try { SFX.error(); } catch (_) {}
   }
 }
@@ -2818,29 +2817,32 @@ function updateAvatarProviderLock() {
   const sel = document.getElementById('avatar-provider-select');
   if (!sel) return;
   const wanOpt = sel.querySelector('option[value="wan"]');
+  const qwenOpt = sel.querySelector('option[value="qwen"]');
   const stepOpt = sel.querySelector('option[value="stepfun"]');
-  const canPaint = _tierHasAvatars();     // Support+ (3€)
   const wanUnlocked = _tierHasModels();   // Patron (30€)
   if (stepOpt) {
-    stepOpt.disabled = !canPaint;
-    stepOpt.textContent = canPaint ? 'StepFun — Support' : 'StepFun — Support 🔒';
+    stepOpt.disabled = false;
+    stepOpt.textContent = 'StepFun — Free';
   }
   if (wanOpt) {
     wanOpt.disabled = !wanUnlocked;
     wanOpt.textContent = wanUnlocked ? 'Wan 2.7 Pro — Patron' : 'Wan 2.7 Pro — Patron 🔒';
   }
-  if (sel.value === 'wan' && !wanUnlocked) sel.value = 'stepfun';
-  if (sel.value === 'stepfun' && !canPaint) sel.value = '';
+  if (qwenOpt) {
+    qwenOpt.disabled = !wanUnlocked;
+    qwenOpt.textContent = wanUnlocked ? 'Qwen Image 3 Pro — Patron' : 'Qwen Image 3 Pro — Patron 🔒';
+  }
+  if ((sel.value === 'wan' || sel.value === 'qwen') && !wanUnlocked) sel.value = 'stepfun';
 }
 
 // Generera AI-avatar (prompt byggs i backend från karaktär/NPC-data)
-// provider: 'stepfun' | 'wan' — i profil-läget väljer knappen; annars
+// provider: 'stepfun' | 'wan' | 'qwen' — i profil-läget väljer knappen; annars
 // avatarProvider() (Engine-väljaren).
 async function generateAvatarAction(provider) {
   const status = document.getElementById('avatar-ai-status');
   // TIERS: bildgenerering är gated — informera innan API-anropet.
   if (_avatarProfileMode) {
-    const prov = provider === 'wan' || provider === 'stepfun' ? provider : avatarProvider();
+    const prov = (provider === 'wan' || provider === 'qwen' || provider === 'stepfun') ? provider : avatarProvider();
     if (!avatarGenGate(prov)) return;
     const btn = document.getElementById('avatar-ai-btn');
     status.textContent = '🎨 Painting your profile portrait… (10–30 s)';
@@ -2853,7 +2855,7 @@ async function generateAvatarAction(provider) {
         _hasAccountAvatar = true;
         refreshAvatars();
         openProfileAvatarModal();
-        status.textContent = '✨ Profile portrait painted — ' + (prov === 'wan' ? 'Wan 2.7' : 'StepFun');
+        status.textContent = '✨ Profile portrait painted — ' + (prov === 'wan' ? 'Wan 2.7' : prov === 'qwen' ? 'Qwen Image 3 Pro' : 'StepFun');
         try { SFX.levelup(); } catch (_) {}
       } else {
         status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Generation failed');
@@ -2868,7 +2870,7 @@ async function generateAvatarAction(provider) {
     return;
   }
   const kind = AVATAR_KIND;
-  const prov = (provider === 'wan' || provider === 'stepfun') ? provider : avatarProvider();
+  const prov = (provider === 'wan' || provider === 'qwen' || provider === 'stepfun') ? provider : avatarProvider();
   const btn = document.getElementById('avatar-ai-btn');
   if (!avatarGenGate(prov)) return;
   status.textContent = '🎨 The artist is painting… (10–30 s)';
@@ -3477,8 +3479,11 @@ function buildMessage(type, npcKey, text, meta) {
 }
 
 // ── DM:ns inre monolog (reasoning) — hopfällbar tankebubbla ──
-function addReasoning(text) {
-  if (!text || !text.trim()) return null;
+// 2026-08-14: elementet sätts INUTI DM-meddelandet (före .bubble) så det
+// ligger precis ovanför svaret — inte ovanför avataren (kolumn-stacken).
+// Används av live-flödet (res.reasoning) OCH transcript-replay (m.meta.reasoning).
+function attachReasoning(hostMsg, text) {
+  if (!text || !text.trim() || !hostMsg) return null;
   const el = document.createElement('div');
   el.className = 'reasoning';
   const words = text.trim().split(/\s+/).length;
@@ -3492,8 +3497,9 @@ function addReasoning(text) {
     <div class="reasoning-body">
       <div class="inner">${mdToHtml(escapeHtml(text))}</div>
     </div>`;
-  appendToChat(el);
-  chat.scrollTop = chat.scrollHeight;
+  const bubble = hostMsg.querySelector('.bubble');
+  if (bubble) hostMsg.insertBefore(el, bubble);
+  else hostMsg.appendChild(el);
   return el;
 }
 
@@ -3628,7 +3634,8 @@ function _tier() {
   return s;
 }
 function _tierHasModels() { const t = _tier(); return t === 'tier2' || t === 'lifetime'; }
-function _tierHasAvatars() { const t = _tier(); return t !== 'free'; }
+// StepFun-målning + StepFun TTS är GRATIS sedan 2026-08-15 → alltid tillåtet.
+function _tierHasAvatars() { return true; }
 
 // Tier-badge för profilkortet: free (dim) / tier1 (Support) / tier2 (Patron) / lifetime (lila).
 function tierBadge(s) {
@@ -3646,8 +3653,8 @@ function tierBadge(s) {
 // (Stilväljaren togs bort 2026-08-06 — namnet lever kvar av historiska skäl.)
 function updateTTSStyleLock() {
   const hasStyle = _tierHasModels();
-  // TTS-providers: StepFun = Support (3€)+, Qwen = Patron (30€)+ (2026-08-05)
-  const hasTTS = _tierHasAvatars(); // Support+ (3€) → StepFun tillåten
+  // TTS-providers: StepFun = gratis sedan 2026-08-15, Qwen = Patron (30€)+
+  const hasTTS = _tierHasAvatars(); // StepFun → alltid tillåten
   // Fallback: om nuvarande val är låst → första tillåtna provider
   // (stepfun om tillåten, annars qwen, annars tom) + uppdatera localStorage.
   const cur = ttsProvider();
@@ -3688,10 +3695,10 @@ function ttsProvider() {
 }
 
 // Tier-gate för TTS-providers (backend klämmer ändå med 403):
-// StepFun = Support (3€)+, Qwen = Patron (30€)+.
+// StepFun = GRATIS sedan 2026-08-15, Qwen = Patron (30€)+.
 function ttsProviderAllowed(p) {
   const t = _tier();
-  if (p === 'stepfun') return t !== 'free';
+  if (p === 'stepfun') return true;
   if (p === 'qwen') return t === 'tier2' || t === 'lifetime';
   return false;
 }
@@ -3731,12 +3738,12 @@ function renderTTSVoicePopover() {
   const provHost = document.getElementById('tts-pop-provider');
   const voiceHost = document.getElementById('tts-pop-voice');
   if (!provHost || !voiceHost) return;
-  const hasTTS = _tierHasAvatars();   // Support+ → StepFun
+  const hasTTS = _tierHasAvatars();   // StepFun TTS = gratis sedan 2026-08-15
   const hasStyle = _tierHasModels();   // Patron+ → Qwen
   const curP = ttsProvider();
   const curV = ttsVoice();
   const provOpts = [
-    { key: 'stepfun', name: 'StepFun', allowed: hasTTS, lock: '🔒 Support 3€' },
+    { key: 'stepfun', name: 'StepFun', allowed: hasTTS, lock: '' },
     { key: 'qwen', name: 'Qwen', allowed: hasStyle, lock: '🔒 Patron 30€' },
   ];
   provHost.innerHTML = provOpts.map(o => {
@@ -3940,10 +3947,10 @@ async function playTTS(btn, explicitText) {
   }
   if (!text) return;
 
-  // Tier-guard: TTS är låst för free (StepFun = Support 3€+, Qwen = Patron 30€+).
+  // Tier-guard: TTS är låst för free (StepFun = gratis sedan 2026-08-15, Qwen = Patron 30€+).
   const provider = ttsProvider();
   if (!ttsProviderAllowed(provider)) {
-    toast('🔒 TTS is a Support feature (3€) — support the Cauldron to give your story a voice.');
+    toast('🔒 Qwen TTS is a Patron feature (30€) — upgrade to unlock the premium narrators.');
     try { SFX.error(); } catch (_) {}
     return;
   }
@@ -4946,6 +4953,8 @@ async function answerRollRequest(id, notation, label) {
     updateHeaderInfo();
     refreshMeData();
     const dmEl = res.reply ? addMessage('dm', null, res.reply) : null;
+    // DM:ns inre monolog (reasoning) — precis ovanför svaret (2026-08-14)
+    if (dmEl && res.reasoning) attachReasoning(dmEl, res.reasoning);
     // Autoplay TTS — trigga DIREKT när svaret finns (parallellt med typewritern)
     maybeAutoplayTTS(dmEl, dmReplyToTTS(res.reply));
     // Atmosphere A — ambiensrad vid scenbyte (plats · tid · väder)
@@ -5129,7 +5138,12 @@ async function loadTranscript() {
             .replace(/\[ROLL_GRANT:[^\]|]*\]/g, '')
             .trim();
           const el = buildMessage('dm', null, dmContent, m.meta);
-          if (el) appendToFrag(el);
+          if (el) {
+            // DM:ns inre monolog från transkriptet (2026-08-14) — samma
+            // position som live: inuti meddelandet, precis ovanför svaret.
+            if (m.meta && m.meta.reasoning) attachReasoning(el, m.meta.reasoning);
+            appendToFrag(el);
+          }
         }
       });
 
@@ -5187,6 +5201,7 @@ let _scribeParticleTimer = null; // flygande bläckpixlar
 let _activityTimer = null;       // pollar live-aktivitet (senaste loggentry)
 let _activityShown = null;       // senast visade aktivitetstext
 let _activitySince = 0;          // 0 vid start → första pollen visar bufferns senaste post
+let _lastFeedTs = 0;             // senaste gången en NY loggrad visades (idle-andning)
 
 // Typewriter: skriv text tecken för tecken (CLI-stil)
 function typeThought(text, el) {
@@ -5231,11 +5246,20 @@ async function scribeFeed(first) {
       const text = last && last.msg ? String(last.msg) : null;
       if (text && text !== _activityShown) {
         _activityShown = text;
+        _lastFeedTs = Date.now();
+        const loader = target.closest('.scribe-loader');
+        if (loader) loader.classList.remove('idle');
         const clean = text.length > 100 ? text.slice(0, 97) + '…' : text;
         typeThought(clean, target);
       }
     } else if (first && !_activityShown) {
       typeThought('…', target);
+    }
+    // Ingen ny rad på ett tag → mjuk andning så det inte ser fruset ut
+    // (långa LLM-calls loggar bara när de ÄR klara).
+    if (_lastFeedTs && Date.now() - _lastFeedTs > 5000) {
+      const loader = target.closest('.scribe-loader');
+      if (loader) loader.classList.add('idle');
     }
   } catch (e) { /* tyst — senaste raden ligger kvar */ }
 }
@@ -5244,6 +5268,7 @@ function scribeFeedStart() {
   scribeFeedStop();
   _activityShown = null;
   _activitySince = 0; // visa bufferns senaste post direkt när laddaren öppnar
+  _lastFeedTs = Date.now();
   scribeFeed(true);
   _activityTimer = setInterval(scribeFeed, 1500);
 }
@@ -5972,7 +5997,9 @@ async function restoreFromTranscript(fallbackErrorMsg, rawErrMsg) {
         }
       }
       if (!alreadyShown) {
-        addMessage('dm', null, lastAssistant.content);
+        const dmEl = addMessage('dm', null, lastAssistant.content);
+        // DM:ns inre monolog (reasoning) — precis ovanför svaret (2026-08-14)
+        if (dmEl && lastAssistant.meta && lastAssistant.meta.reasoning) attachReasoning(dmEl, lastAssistant.meta.reasoning);
         // Återställ effekter (föremål, guld, XP…) som tappades vid timeout
         if (data.last_effects && data.last_effects.length) {
           renderEffects(data.last_effects);
@@ -6012,20 +6039,21 @@ async function dmRespond(playerText) {
     // Parsa svaret — DM kan inkludera NPC-dialog
     const reply = res.reply || '…';
 
-    // DM:ns inre monolog (reasoning) — visas före svaret, hopfällbar.
+    // Visa svaret som DM-narration
+    const dmEl = addMessage('dm', null, reply, { model: res.model_id, tokens: res.tokens, time: res.response_time });
+
+    // DM:ns inre monolog (reasoning) — precis ovanför svaret, hopfällbar.
     // rostad VILL ha kvar denna (önskad funktion, ej en bugg) — rättat
-    // 2026-07-31 efter att QA-fixen tog bort den.
+    // 2026-07-31 efter att QA-fixen tog bort den. (2026-08-14: attachas
+    // INUTI dmEl före .bubble — hamnar under avataren, ovanför svaret.)
     if (res.reasoning) {
-      addReasoning(res.reasoning);
+      attachReasoning(dmEl, res.reasoning);
     }
 
     // Lägg till nya NPCs i registret (från DM:s svar)
     if (res.new_npcs && res.new_npcs.length) {
       ingestNpcs(res.new_npcs);
     }
-
-    // Visa svaret som DM-narration
-    const dmEl = addMessage('dm', null, reply, { model: res.model_id, tokens: res.tokens, time: res.response_time });
 
     // Autoplay TTS — trigga DIREKT när svaret finns (parallellt med typewritern):
     // syntesen buffrar medan texten skrivs, så ljudet är redo utan extra väntan.
@@ -8504,7 +8532,7 @@ const CODEX_PAGES = {
   npcs:      { label: '🧝 NPCs',      src: 'npcs.html?v=20260808x' },
   map:       { label: '🗺 Map',       src: 'platser.html?v=20260806a' },
   journal:   { label: '📖 Journal',   src: 'loggbok.html?v=20260806a' },
-  facts:     { label: '📌 Facts',     src: 'facts.html?v=20260806a' },
+  facts:     { label: '📌 Facts',     src: 'facts.html?v=20260811a' },
 };
 const _codexIframes = {};
 let _codexLastTab = 'character';
@@ -8818,8 +8846,9 @@ document.addEventListener('keydown', e => {
     <div id="avatar-provider-row" style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
       <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
       <select id="avatar-provider-select" class="tts-select" style="flex:1;min-width:0" onchange="avatarProviderChanged(this)" title="Image provider for painting">
-        <option value="stepfun" selected>StepFun — Support</option>
+        <option value="stepfun" selected>StepFun — Free</option>
         <option value="wan">Wan 2.7 Pro — Patron 🔒</option>
+        <option value="qwen">Qwen Image 3 Pro — Patron 🔒</option>
       </select>
     </div>
     <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">

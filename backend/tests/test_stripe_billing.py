@@ -144,21 +144,21 @@ def test_checkout_tier2_returns_stripe_url(client, monkeypatch):
     assert main.load_users()["alice"]["subscription_status"] == "free"
 
 
-def test_checkout_support300_payment_mode(client, monkeypatch):
+def test_checkout_support300_blocked(client, monkeypatch):
+    """support300 (3€) togs bort 2026-08-15 — nya köp blockeras med 400."""
     _seed()
     captured = {}
 
     async def fake_post(path, data):
-        captured["mode"] = data["mode"]
-        captured["price"] = data.get("line_items[0][price]")
+        captured["called"] = True
         return {"url": "https://checkout.stripe.com/c/pay/x"}
 
     monkeypatch.setattr(main, "_stripe_post", fake_post)
     r = client.post("/api/billing/checkout", json={"tier": "support300"},
                     cookies={"morkrets_token": _tok()})
-    assert r.status_code == 200
-    assert captured["mode"] == "payment"
-    assert captured["price"] == "price_sup300"
+    assert r.status_code == 400
+    assert "retired" in r.json()["detail"]
+    assert "called" not in captured  # Stripe anropas aldrig
 
 
 def test_checkout_donation_custom_amount(client, monkeypatch):

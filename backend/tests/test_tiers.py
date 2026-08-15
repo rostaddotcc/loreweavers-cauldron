@@ -1,8 +1,9 @@
-"""TIERS 2026-08-05: one-time-förmåner — free < tier1 (Support 3€) < tier2 (Patron 10€) < lifetime.
+"""TIERS 2026-08-15: one-time-förmåner — free < tier1 (legacy Support) < tier2 (Patron 30€) < lifetime.
 
 Täcker:
-  - avatar-generering (StepFun): GRATIS för alla tier; upload tier1+
-  - Wan 2.7: Patron+ (10€) — free/tier1 → 403
+  - avatar-generering (StepFun): GRATIS sedan 2026-08-15 — free → 200
+  - Wan 2.7 / Qwen Image 3 Pro: Patron+ (30€) — free/tier1 → 403
+  - avatar-uppladdning: Patron+ (legacy tier1 hedras tills förmånen löper ut)
   - alla (utom lifetime) får 50 turns/dag (24h-period)
   - legacy "premium" i users.json → tier2
 
@@ -166,23 +167,33 @@ def test_lifetime_never_rolls_over(client):
     assert main._turns_available("alice") == 999999
 
 
-# ── Avatar-generering är tier-gated (2026-08-05) ─────────────────────────
-# StepFun = Support (3€); Wan 2.7 = Patron (10€). Free tier målar INTE.
-# Upload är också tier1+ (Support).
+# ── Avatar-generering är tier-gated (2026-08-15) ─────────────────────────
+# StepFun = GRATIS (sedan 2026-08-15); Wan 2.7 / Qwen Image 3 Pro = Patron (30€).
+# Upload är Patron+ (30€; legacy tier1 hedras).
 
-def test_campaign_avatar_generate_free_403(client, monkeypatch):
-    """Free-tier får INTE AI-generera avatar — 403 med Support-hänvisning."""
+def test_campaign_avatar_generate_free_ok(client, monkeypatch):
+    """Free-tier målar med StepFun → 200 (gratis sedan 2026-08-15)."""
     monkeypatch.setenv("STEPFUN_API_KEY", "test-key")
     _seed("alice")
     _seed_campaign("alice")
     monkeypatch.setattr(main.httpx, "AsyncClient", _FakePost)
     r = client.post("/api/campaign/avatar/generate", json={"kind": "player", "prompt": "a hooded hero"},
                     cookies={"morkrets_token": _tok()})
+    assert r.status_code == 200, r.text
+
+
+def test_campaign_avatar_qwen_gate_free_403(client):
+    """Free-tier: Qwen Image 3 Pro är låst — 403 med uppgraderingshänvisning."""
+    _seed("alice")
+    _seed_campaign("alice")
+    r = client.post("/api/campaign/avatar/generate",
+                    json={"kind": "player", "prompt": "a hero", "provider": "qwen"},
+                    cookies={"morkrets_token": _tok()})
     assert r.status_code == 403
-    assert "Support" in r.json()["detail"]
+    assert "Patron" in r.json()["detail"]
 
 
-# ── Wan 2.7 = Patron+ (10€, premium-bildmotor) ──────────────────────────
+# ── Wan 2.7 / Qwen Image 3 Pro = Patron+ (30€, premium-bildmotorer) ────────
 
 def test_campaign_avatar_wan_gate_free_403(client):
     """Free-tier: Wan 2.7 är låst — 403 med uppgraderingshänvisning."""
@@ -196,7 +207,7 @@ def test_campaign_avatar_wan_gate_free_403(client):
 
 
 def test_campaign_avatar_wan_gate_tier1_403(client):
-    """Support (tier1, 3€): Wan fortfarande låst."""
+    """Support (tier1, legacy): Wan fortfarande låst."""
     _seed("alice", tier="tier1", until=_in_days(30), features={"export": True})
     _seed_campaign("alice")
     r = client.post("/api/campaign/avatar/generate",
@@ -206,12 +217,23 @@ def test_campaign_avatar_wan_gate_tier1_403(client):
 
 
 def test_campaign_avatar_wan_tier2_ok(client, monkeypatch):
-    """Patron (tier2, 10€): Wan 2.7 målar — 200."""
+    """Patron (tier2, 30€): Wan 2.7 målar — 200."""
     _seed("alice", tier="tier2", until=_in_days(30), features={"export": True, "wan1080": True, "all_models": True}, models_until=_in_days(30))
     _seed_campaign("alice")
     monkeypatch.setattr(main.httpx, "AsyncClient", _WanClient)
     r = client.post("/api/campaign/avatar/generate",
                     json={"kind": "player", "prompt": "a hero", "provider": "wan"},
+                    cookies={"morkrets_token": _tok()})
+    assert r.status_code == 200, r.text
+
+
+def test_campaign_avatar_qwen_tier2_ok(client, monkeypatch):
+    """Patron (tier2, 30€): Qwen Image 3 Pro målar — 200."""
+    _seed("alice", tier="tier2", until=_in_days(30), features={"export": True, "wan1080": True, "all_models": True}, models_until=_in_days(30))
+    _seed_campaign("alice")
+    monkeypatch.setattr(main.httpx, "AsyncClient", _WanClient)
+    r = client.post("/api/campaign/avatar/generate",
+                    json={"kind": "player", "prompt": "a hero", "provider": "qwen"},
                     cookies={"morkrets_token": _tok()})
     assert r.status_code == 200, r.text
 
@@ -251,10 +273,10 @@ def test_campaign_avatar_gate_admin_ok(client, monkeypatch):
     assert r.status_code == 200, r.text
 
 
-# ── Avatar-UPPladdning är tier1+ (Support 3€) ──────────────────────────
+# ── Avatar-UPPladdning är Patron+ (30€; legacy tier1 hedras) ────────────
 
 def test_campaign_avatar_upload_gate_free_403(client, monkeypatch):
-    """Upload-avataren ligger bakom paywall — free → 403."""
+    """Upload-avataren ligger bakom paywall — free → 403 med Patron-hänvisning."""
     _seed("alice")
     _seed_campaign("alice")
     r = client.post("/api/campaign/avatar",
@@ -262,11 +284,11 @@ def test_campaign_avatar_upload_gate_free_403(client, monkeypatch):
                     files={"file": ("avatar.png", b"fake-image-bytes", "image/png")},
                     cookies={"morkrets_token": _tok()})
     assert r.status_code == 403
-    assert "Support" in r.json()["detail"]
+    assert "Patron" in r.json()["detail"]
 
 
 def test_campaign_avatar_upload_gate_tier1_ok(client, monkeypatch):
-    """Support (3€) får ladda upp."""
+    """Legacy Support (tier1) får fortfarande ladda upp tills förmånen löper ut."""
     _seed("alice", tier="tier1", until=_in_days(30), features={"export": True})
     _seed_campaign("alice")
     r = client.post("/api/campaign/avatar",
@@ -277,8 +299,8 @@ def test_campaign_avatar_upload_gate_tier1_ok(client, monkeypatch):
     assert r.json()["ok"] is True
 
 
-def test_vault_avatar_generate_free_403(client, monkeypatch):
-    """Valvet: free-tier får INTE generera med StepFun — 403 Support-hänvisning."""
+def test_vault_avatar_generate_free_ok(client, monkeypatch):
+    """Valvet: free-tier genererar med StepFun → 200 (gratis sedan 2026-08-15)."""
     monkeypatch.setenv("STEPFUN_API_KEY", "test-key")
     _seed("alice")
     vault = sm.CharacterVault()
@@ -287,8 +309,7 @@ def test_vault_avatar_generate_free_403(client, monkeypatch):
     monkeypatch.setattr(main.httpx, "AsyncClient", _FakePost)
     r = client.post(f"/api/vault/characters/{entry['id']}/avatar/generate", json={},
                     cookies={"morkrets_token": _tok()})
-    assert r.status_code == 403
-    assert "Support" in r.json()["detail"]
+    assert r.status_code == 200, r.text
 
 
 def test_vault_avatar_generate_tier1_ok(client, monkeypatch):
@@ -343,14 +364,14 @@ def test_vault_avatar_wan_tier2_ok(client, monkeypatch):
     assert r.status_code == 200, r.text
 
 
-# ── Export / Forge-gating (3€ Support) ──────────────────────────────────
+# ── Export / Forge-gating (Patron 30€; legacy tier1 hedras) ──────────────
 
 def test_campaign_export_free_403(client):
     _seed("alice")
     _seed_campaign("alice")
     r = client.get("/api/campaign/export", cookies={"morkrets_token": _tok()})
     assert r.status_code == 403
-    assert "Support" in r.json()["detail"]
+    assert "Patron" in r.json()["detail"]
 
 
 def test_campaign_export_support_ok(client):
@@ -364,7 +385,7 @@ def test_vault_export_free_403(client):
     _seed("alice")
     r = client.get("/api/vault/export", cookies={"morkrets_token": _tok()})
     assert r.status_code == 403
-    assert "Support" in r.json()["detail"]
+    assert "Patron" in r.json()["detail"]
 
 
 def test_vault_export_support_ok(client):
@@ -381,17 +402,16 @@ def test_vault_export_support_ok(client):
     assert "characters" in data
 
 
-# ── Spelarprofilens avatar (konto — StepFun, Support-feature 3€, SEPARAT) ──
+# ── Spelarprofilens avatar (konto — StepFun gratis, Wan/Qwen Patron) ──────
 
-def test_me_avatar_generate_free_403(client, monkeypatch):
-    """Free-tier får INTE måla sin PROFILavatar — 403 med Support-hänvisning."""
+def test_me_avatar_generate_free_ok(client, monkeypatch):
+    """Free-tier målar sin PROFILavatar med StepFun → 200 (gratis sedan 2026-08-15)."""
     monkeypatch.setenv("STEPFUN_API_KEY", "test-key")
     _seed("alice")
     monkeypatch.setattr(main.httpx, "AsyncClient", _FakePost)
     r = client.post("/api/me/avatar/generate", json={"prompt": "a hooded mage"},
                     cookies={"morkrets_token": _tok()})
-    assert r.status_code == 403
-    assert "Support" in r.json()["detail"]
+    assert r.status_code == 200, r.text
 
 
 def test_me_avatar_generate_support_ok(client, monkeypatch):

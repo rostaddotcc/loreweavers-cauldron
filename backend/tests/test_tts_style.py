@@ -102,15 +102,14 @@ def test_style_ignored_for_tier1(client, monkeypatch):
     assert seen.get("style", "?") == ""
 
 
-def test_stepfun_403_for_free(client, monkeypatch):
-    """TIERS 2026-08-05: StepFun TTS är Support (3€)+ — free får 403,
-    inte längre 'always free'."""
+def test_stepfun_free_ok(client, monkeypatch):
+    """TIERS 2026-08-15: StepFun TTS är GRATIS — free → 200 (förr 403)."""
     _seed("alice", premium=False)
     _login(client)
     monkeypatch.setattr(main, "_synth_stepfun_tts", lambda voice, text, style="": b"ID3fake")
     r = client.post("/api/tts", json={"text": "Hej", "voice": "male", "provider": "stepfun"})
-    assert r.status_code == 403
-    assert "Support feature" in r.json()["detail"]
+    assert r.status_code == 200, r.text
+    assert r.content == b"ID3fake"
 
 
 def test_qwen_403_for_free(client, monkeypatch):

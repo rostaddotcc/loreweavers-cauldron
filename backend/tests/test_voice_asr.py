@@ -2,8 +2,7 @@
 
 - Transkriptet fyller bara chat-input → INGEN turn-förbrukning, men bokförs
   i state.meta.asr_usage för transparens.
-- Tier-gate: free → 403 (Support 3€+), samma som StepFun TTS — free anrop
-  kör ALDRIG StepFun (403 innan något ASR-anrop).
+- GRATIS sedan 2026-08-15 (följer StepFun TTS) — free tier får tala fritt.
 - ffmpeg-konvertering mockas (riktig ffmpeg testas inte här).
 
 autouse-fixtures: users.json + kampanjdata pekas mot tmp — skyddar riktig data
@@ -82,17 +81,19 @@ def _post_voice(client, data: bytes = b"webm-bytes"):
 
 # ── Tier-gate ─────────────────────────────────────────────────────────────
 
-def test_voice_free_403_no_stepfun_call(client, monkeypatch):
-    """free → 403 med Support-hänvisning; StepFun anropas ALDRIG."""
+def test_voice_free_ok(client, monkeypatch):
+    """free → 200 (röstinmatning är gratis sedan 2026-08-15); ingen turn."""
     _seed("alice", tier="free")
+    main.store.create("alice", "Testkampanj", "en")
     _login(client)
-    called = []
-    monkeypatch.setattr(main, "_to_wav_16k", lambda d: (called.append("conv") or b"RIFFwav"))
-    monkeypatch.setattr(main, "_asr_stepfun", lambda w: (called.append("asr") or "I open the door"))
+    monkeypatch.setattr(main, "_to_wav_16k", lambda d: b"RIFF" + b"\x00" * 32000)
+    monkeypatch.setattr(main, "_asr_stepfun", lambda w: "I open the door")
     r = _post_voice(client)
-    assert r.status_code == 403
-    assert "Voice input is a Support feature (3€)" in r.json()["detail"]
-    assert called == []
+    assert r.status_code == 200, r.text
+    assert r.json()["text"] == "I open the door"
+    assert main.load_users()["alice"]["turns_used"] == 0
+    state = main.store.get("alice")
+    assert state["meta"]["asr_usage"]["calls"] == 1
 
 
 # ── Happy path ────────────────────────────────────────────────────────────

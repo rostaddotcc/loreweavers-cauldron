@@ -241,64 +241,49 @@
   .sec-head{text-align:center;margin-bottom:2.6rem}
   .sec-head .sub{margin-top:.8rem;font-style:italic;font-weight:300;color:var(--bone-dim);font-size:1rem}
   .sec-head .disclosure{margin-top:.5rem;font-family:var(--font-accent);font-size:.55rem;letter-spacing:.16em;text-transform:uppercase;color:var(--bone-dim)}
-  .books{display:grid;grid-template-columns:1fr;gap:2.4rem;max-width:980px;margin:0 auto}
-  .sb-book{position:relative;background:var(--stone);border:1px solid var(--edge);padding:1.3rem 1.3rem 1.1rem}
-  .sb-book::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.3}
   .sb-head{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;margin-bottom:1rem;padding-bottom:.8rem;border-bottom:1px solid var(--edge)}
   .sb-name{font-family:var(--font-display);font-weight:700;font-size:1.05rem;color:var(--gold-bright);letter-spacing:.05em}
   .sb-name::before{content:'> ';color:var(--term-green)}
   .sb-count{font-family:var(--font-accent);font-size:.56rem;letter-spacing:.16em;color:var(--bone-dim);white-space:nowrap}
-  .sb-body{min-height:200px}
   .sb-empty{padding:2rem 1rem;text-align:center;font-style:italic;color:var(--bone-dim)}
-  .spread{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
-  .spread .face{background:var(--stone-2);border:1px solid var(--edge);min-width:0}
-  .spread .portrait .art{position:relative;height:240px;background-size:cover;background-position:center 18%}
-  .spread .portrait .lvl,.spread .portrait .align,.spread .portrait .dot,.spread .portrait .meet{position:absolute;z-index:3;font-family:var(--font-accent);font-size:.55rem;letter-spacing:.12em;text-transform:uppercase;background:rgba(8,8,13,.85);border:1px solid var(--edge);padding:.28rem .55rem;color:var(--bone)}
-  .spread .portrait .lvl{top:10px;left:10px;color:var(--gold-bright);border-color:var(--gold)}
-  .spread .portrait .align{top:10px;right:10px}
-  .spread .portrait .dot{top:10px;left:10px;width:10px;height:10px;padding:0;border-radius:0;border:1px solid var(--edge)}
-  .spread .portrait .meet{top:10px;right:10px}
-  .spread .portrait .body{padding:1.05rem 1.1rem}
-  .spread .portrait .nm{font-family:var(--font-display);font-weight:900;font-size:1.35rem;color:var(--gold-bright);line-height:1.2}
-  .spread .portrait .meta{font-size:.95rem;color:var(--bone);margin-top:.2rem;font-style:italic}
-  .spread .portrait .meta b{color:var(--bone-bright);font-weight:600;font-style:normal}
-  .spread .portrait .xp{margin-top:.75rem}
-  .spread .portrait .lbl{display:flex;justify-content:space-between;font-family:var(--font-accent);font-size:.55rem;letter-spacing:.1em;text-transform:uppercase;color:var(--bone);margin-bottom:.3rem}
-  .spread .portrait .lbl b{color:var(--gold-bright);font-weight:600}
-  .spread .bar{height:8px;background:var(--ink);border:1px solid var(--edge);overflow:hidden}
-  .spread .bar i{display:block;height:100%;background:var(--gold);width:0}
-  .abls{display:flex;gap:.4rem;margin-top:.7rem;flex-wrap:wrap}
-  .abls span{font-family:var(--font-accent);font-size:.56rem;letter-spacing:.06em;color:var(--bone-bright);background:var(--ink);border:1px solid var(--edge);padding:.3rem .5rem}
-  .abls span.hi{border-color:var(--gold);color:var(--gold-bright)}
-  .stats{display:flex;gap:1.2rem;margin-top:.7rem;font-family:var(--font-accent);font-size:.56rem;letter-spacing:.1em;color:var(--bone-dim);text-transform:uppercase}
-  .stats b{color:var(--bone-bright);font-weight:600}
-  .stats .hp b{color:var(--blood-bright)}
-  .loc{margin-top:.7rem;display:flex;align-items:center;gap:.5rem;font-size:.92rem;color:var(--bone);font-style:italic;flex-wrap:wrap}
-  .loc .now{font-family:var(--font-accent);font-size:.52rem;letter-spacing:.14em;text-transform:uppercase;color:var(--term-amber);font-style:normal}
-  .loc b{color:var(--bone-bright);font-style:normal;font-weight:600}
-  .forged{margin-top:.5rem;font-size:.85rem;color:var(--bone-dim);font-style:italic}
-  .forged b{color:var(--teal);font-weight:500;font-style:normal}
-  .spread .sheet{padding:1.1rem 1.2rem;overflow:hidden}
-  .sheet .eq-head{display:flex;align-items:baseline;justify-content:space-between;padding-bottom:.7rem;border-bottom:1px solid var(--edge);margin-bottom:.8rem}
-  .sheet .eq-head span:first-child{font-family:var(--font-display);font-weight:700;font-size:.85rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-bright)}
-  .sheet .eq-head .owner{font-size:.85rem;color:var(--bone-dim);font-style:italic}
-  .sheet ul{list-style:none;display:flex;flex-direction:column;gap:.4rem}
-  .sheet li{display:flex;align-items:baseline;gap:.6rem;font-size:.92rem;color:var(--bone);line-height:1.35}
-  .sheet li .ic{flex:0 0 auto;color:var(--gold)}
-  .sheet li .nm{font-weight:600;color:var(--bone-bright)}
-  .sheet li .ty{font-size:.74rem;color:var(--bone-dim);text-transform:uppercase;letter-spacing:.06em}
-  .sheet li.on{color:var(--gold-bright)}
-  .sheet li.on .nm{color:var(--gold)}
-  .sheet li.empty{font-style:italic;color:var(--bone-dim)}
-  .sheet .subhead{font-family:var(--font-display);font-weight:700;font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin:1rem 0 .5rem}
-  .sheet .j{margin-top:.9rem;font-size:.88rem;color:var(--bone);line-height:1.5;font-style:italic;border-left:2px solid var(--gold);padding-left:.7rem}
-  .sheet .j .jt{display:block;font-family:var(--font-accent);font-style:normal;font-size:.52rem;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin-bottom:.25rem}
-  .sb-nav{display:flex;align-items:center;justify-content:center;gap:1rem;margin-top:1rem}
-  .sb-nav .nav-btn{font-family:var(--font-display);font-size:.62rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;border:1px solid var(--edge);background:var(--stone-3);color:var(--bone);padding:.5em 1.1em;cursor:pointer;min-width:84px}
-  .sb-nav .nav-btn:hover{border-color:var(--gold);color:var(--gold-bright)}
-  .sb-nav .nav-btn:disabled{opacity:.35;cursor:default}
-  .sb-nav .nav-btn:disabled:hover{border-color:var(--edge);color:var(--bone)}
-  .sb-hint{text-align:center;font-style:italic;font-size:.72rem;color:var(--bone-dim);margin-top:.7rem}
+  .sb-hint{text-align:center;font-style:italic;font-size:.82rem;color:var(--bone-dim);margin-top:.8rem}
+  .deck .sb-count{font-size:.7rem;color:var(--bone)}
+
+  /* ═══════════════ Kortlek (deck) — flytande högar, stats direkt på kortet 2026-08-14 ═══════════════ */
+  .decks{display:flex;flex-direction:column;gap:3rem;max-width:980px;margin:0 auto}
+  .deck-stage{position:relative;display:flex;align-items:center;justify-content:center;min-height:700px}
+  .deck-pile{position:relative;width:min(480px,100%);height:660px}
+  .pile-under{position:absolute;inset:0;border:1px solid var(--edge);background:linear-gradient(165deg,var(--stone-3),var(--stone-2));box-shadow:0 10px 24px -10px rgba(0,0,0,.55)}
+  .pile-under.u1{transform:translate(12px,10px) rotate(.8deg);opacity:.55}
+  .pile-under.u2{transform:translate(24px,20px) rotate(1.6deg);opacity:.38}
+  .pile-under.u3{transform:translate(36px,30px) rotate(2.4deg);opacity:.2}
+  .deck-card{position:absolute;inset:0;cursor:pointer;background:var(--stone-2);border:1px solid var(--edge);overflow:hidden;box-shadow:0 22px 40px -14px rgba(0,0,0,.7);display:flex;flex-direction:column}
+  .deck-card:hover{border-color:var(--gold)}
+  .deck-portrait{position:relative;flex:0 0 40%;background-size:cover;background-position:center 18%}
+  .deck-portrait::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 42%,rgba(8,8,13,.92))}
+  .deck-portrait .plate{position:absolute;left:0;right:0;bottom:0;padding:.8rem 1.1rem .95rem;z-index:2}
+  .deck-portrait .plate .nm{font-family:var(--font-display);font-weight:900;font-size:1.45rem;color:var(--gold-bright);line-height:1.12;text-shadow:0 2px 8px rgba(0,0,0,.9)}
+  .deck-portrait .plate .meta{font-size:.92rem;color:var(--bone);font-style:italic;text-shadow:0 1px 5px rgba(0,0,0,.95)}
+  .deck-portrait .corner{position:absolute;top:12px;left:12px;z-index:2;font-family:var(--font-accent);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;background:rgba(8,8,13,.85);border:1px solid var(--gold);color:var(--gold-bright);padding:.34rem .68rem}
+  .deck-info{flex:1;display:flex;flex-direction:column;padding:1.1rem 1.25rem 1.15rem;overflow-y:auto;min-height:0}
+  .deck-abls{display:flex;flex-wrap:wrap;gap:.35rem}
+  .deck-abls span{font-family:var(--font-accent);font-size:.74rem;color:var(--bone-bright);background:var(--ink);border:1px solid var(--edge);padding:.26rem .48rem}
+  .deck-abls span.hi{border-color:var(--gold);color:var(--gold-bright)}
+  .deck-stats{display:flex;gap:.85rem;font-family:var(--font-accent);font-size:.72rem;letter-spacing:.08em;color:var(--bone-dim);text-transform:uppercase;margin-top:.65rem}
+  .deck-stats b{color:var(--bone-bright);font-weight:600}
+  .deck-stats .hp b{color:var(--blood-bright)}
+  .deck-info .bloc{font-size:.92rem;color:var(--bone);font-style:italic;margin-top:.7rem;line-height:1.5}
+  .deck-info .bsec{font-family:var(--font-accent);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin:.7rem 0 .35rem}
+  .deck-info .blist{list-style:none;display:flex;flex-direction:column;gap:.3rem}
+  .deck-info .blist li{display:flex;align-items:baseline;gap:.55rem;font-size:.92rem;color:var(--bone);line-height:1.35}
+  .deck-info .blist li .ic{flex:0 0 auto;color:var(--gold)}
+  .deck-info .blist li .nm{font-weight:600;color:var(--bone-bright);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .deck-info .blist li .ty{font-size:.8rem;color:var(--bone-dim);text-transform:uppercase;letter-spacing:.06em;flex:0 0 auto}
+  .deck-info .bnote{font-size:.9rem;color:var(--bone);line-height:1.5;font-style:italic;margin-top:.35rem;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  @media(max-width:640px){
+    .deck-stage{min-height:560px}
+    .deck-pile{width:min(360px,94%);height:530px}
+  }
 
   /* ═══════════════ ledger ═══════════════ */
   .ver-chip{display:inline-block;font-family:var(--font-accent);font-size:.56rem;letter-spacing:.18em;color:var(--ink);background:var(--gold);padding:.35em .8em;margin-bottom:1.5rem}
@@ -446,7 +431,7 @@
           50 fresh every day. No card, no hourglass, no metered fate.</li>
         <li><b>Your identity stays yours.</b> We don&rsquo;t log who you are at the table &mdash;
           no names to the ledger, no tracking of players.</li>
-        <li><b>No subscription, ever.</b> Top up with a one-time Support or Patron purchase when it
+        <li><b>No subscription, ever.</b> One-time Patron top-up when it
           feels right &mdash; or donate whatever the realm is worth to you.</li>
       </ul>
       <p class="pitch-note" style="display:block">No rules to memorize before you start. The DM teaches you as you play &mdash;
@@ -475,8 +460,8 @@
           <h3>Create Your Own Avatars</h3>
           <p>Give every face at the table a portrait. Your adventurer, the NPCs you meet, even the DM &mdash;
             each avatar is painted by AI from the character&rsquo;s own story, and can be rerolled until it feels right.
-            <em>StepFun painting unlocks with the one-time Support top-up (3€)</em> &mdash; and <b>Patron</b>
-            (one-time 30€) unlocks <b>Wan 2.7 Pro</b>, the premium image engine.</p>
+            <em>StepFun painting is free for everyone</em> &mdash; and <b>Patron</b>
+            (one-time 30€) unlocks <b>Wan 2.7 Pro</b> and <b>Qwen Image 3 Pro</b>, the premium image engines.</p>
         </div>
         <div class="d-card">
           <h3>Strict D&amp;D 5e Ruleset</h3>
@@ -489,7 +474,7 @@
           <p>Save and export almost every piece of your adventures &mdash; NPCs, avatars,
             characters and all dialogue &mdash; as a single <b>.zip</b>. The story is yours;
             it leaves the cauldron with you, faces and all.
-            <em>Export unlocks with the one-time Support top-up (3€).</em></p>
+            <em>Export unlocks with the one-time Patron top-up (30€).</em></p>
         </div>
         <div class="d-card">
           <h3>The Forge &mdash; Carry Your Legend</h3>
@@ -501,7 +486,7 @@
           <h3>Powered by Qwen, DeepSeek, StepFun &amp; Wan</h3>
           <p>Choose the mind behind the mask &mdash; frontier models for narration, extraction and image craft,
             with transparent token usage and reasoning you can watch as it happens.
-            <em>Wan 2.7 Pro painting unlocks with the one-time Patron top-up.</em></p>
+            <em>Wan 2.7 Pro &amp; Qwen Image 3 Pro painting unlock with the one-time Patron top-up.</em></p>
           <p class="tablet-more"><a href="models.html">Read more about the minds &#8594;</a></p>
         </div>
       </div>
@@ -565,9 +550,9 @@
           <h3>Create Your Own Avatars</h3>
           <p>Give every face at the table a portrait. Your adventurer, the NPCs you meet,
             even the DM &mdash; each avatar is painted by AI from the character&rsquo;s own
-            story, and can be rerolled until it feels right. <em>StepFun painting unlocks
-            with the one-time Support top-up (3€)</em> &mdash; and <b>Patron</b> (one-time 30€) unlocks <b>Wan 2.7 Pro</b>,
-            the premium image engine.</p>
+            story, and can be rerolled until it feels right. <em>StepFun painting is free
+            for everyone</em> &mdash; and <b>Patron</b> (one-time 30€) unlocks <b>Wan 2.7 Pro</b> &amp; <b>Qwen Image 3 Pro</b>,
+            the premium image engines.</p>
         </div>
         <div class="tablet rv d2">
           <h3>Strict D&amp;D 5e Ruleset</h3>
@@ -580,13 +565,13 @@
           <p>Save and export almost every piece of your adventures &mdash; NPCs, avatars,
             characters and all dialogue &mdash; as a single <b>.zip</b>. The story is yours;
             it leaves the cauldron with you, faces and all.
-            <em>Export unlocks with the one-time Support top-up (3€).</em></p>
+            <em>Export unlocks with the one-time Patron top-up (30€).</em></p>
         </div>
         <div class="tablet rv d2">
           <h3>Powered by Qwen, DeepSeek, StepFun &amp; Wan</h3>
           <p>Choose the mind behind the mask &mdash; frontier models for narration,
             extraction and image craft, with transparent token usage and reasoning you can
-            watch as it happens. <em>Wan 2.7 Pro painting unlocks with the one-time Patron top-up.</em></p>
+            watch as it happens. <em>Wan 2.7 Pro &amp; Qwen Image 3 Pro painting unlock with the one-time Patron top-up.</em></p>
           <p class="tablet-more"><a href="models.html">Read more about the minds &#8594;</a></p>
         </div>
         <div class="tablet wide rv d1">
@@ -618,7 +603,7 @@
           <span class="go-hint">Begin your adventure →</span>
         </div>
       </div>
-      <p class="pt-more rv d3"><a href="pricing.html">Support &amp; Patron — one-time top-ups &#8594;</a></p>
+      <p class="pt-more rv d3"><a href="pricing.html">Patron — one-time top-up &#8594;</a></p>
     </div>
   </section>
 
@@ -661,8 +646,8 @@
              no metered fate.</li>
             <li class="rv d2"><b>Your identity stays yours.</b> We don&rsquo;t log who
               you are at the table &mdash; no names to the ledger, no tracking of players.</li>
-            <li class="rv d3"><b>No subscription, ever.</b> Top up with a one-time
-              Support or Patron purchase when it feels right &mdash; or donate whatever
+            <li class="rv d3"><b>No subscription, ever.</b> One-time
+              Patron purchase when it feels right &mdash; or donate whatever
               the realm is worth to you.</li>
           </ul>
           <p class="pitch-note rv d3">No rules to memorize before you start.
@@ -731,35 +716,31 @@
       <div class="sec-head rv">
         <div class="eyebrow">✦ The Loreweaver's Book of Souls ✦</div>
         <h2>Summoned in the Cauldron</h2>
-        <p class="sub">Every face in this realm was summoned by a player. Turn the pages — equipment, spells and all.</p>
-        <p class="disclosure">Only adventurers and NPCs painted by the Loreweaver appear in these pages.</p>
+        <p class="sub">Every face in this realm was summoned by a player. Shuffle the deck — equipment, spells and all.</p>
+        <p class="disclosure">Only adventurers and NPCs painted by the Loreweaver appear in this deck.</p>
       </div>
-      <div class="books">
-        <!-- ADVENTURERS -->
-        <div class="sb-book rv">
+      <div class="decks">
+        <!-- ADVENTURERS DECK (hög) -->
+        <div class="deck rv">
           <div class="sb-head">
             <span class="sb-name">The Adventurers</span>
-            <span class="sb-count" id="adv-cnt">Tale 1 of 0</span>
+            <span class="sb-count" id="adv-cnt">0 / 0</span>
           </div>
-          <div class="sb-body" id="adv-body"></div>
-          <div class="sb-nav">
-            <button class="nav-btn" id="adv-prev" onclick="bookNav('adv',-1)">&#9664; Prev</button>
-            <button class="nav-btn" id="adv-next" onclick="bookNav('adv',1)">Next &#9654;</button>
+          <div class="deck-stage">
+            <div class="deck-pile" id="adv-pile"></div>
           </div>
-          <div class="sb-hint">click the left page to turn back · right page to advance</div>
+          <div class="sb-hint">tap to draw the next card · tap the far left edge to go back</div>
         </div>
-        <!-- NPCS -->
-        <div class="sb-book rv">
+        <!-- NPCS DECK (hög) -->
+        <div class="deck rv">
           <div class="sb-head">
             <span class="sb-name">Those They Met</span>
-            <span class="sb-count" id="npc-cnt">Encounter 1 of 0</span>
+            <span class="sb-count" id="npc-cnt">0 / 0</span>
           </div>
-          <div class="sb-body" id="npc-body"></div>
-          <div class="sb-nav">
-            <button class="nav-btn" id="npc-prev" onclick="bookNav('npc',-1)">&#9664; Prev</button>
-            <button class="nav-btn" id="npc-next" onclick="bookNav('npc',1)">Next &#9654;</button>
+          <div class="deck-stage">
+            <div class="deck-pile" id="npc-pile"></div>
           </div>
-          <div class="sb-hint">click the left page to turn back · right page to advance</div>
+          <div class="sb-hint">tap to draw the next card · tap the far left edge to go back</div>
         </div>
       </div>
     </div>
@@ -770,39 +751,32 @@
     <div class="wrap">
       <p class="eyebrow rv">From the Ledger</p>
       <h2 class="rv">What&rsquo;s new in the realm</h2>
-      <span class="ver-chip rv d1">v1.0 &mdash; The Complete Table</span>
+      <span class="ver-chip rv d1">v1.1 &mdash; The Open Road</span>
       <ul class="ledger-list">
-        <li class="hot rv d1"><b>Speak to the realm <span class="tag">New</span></b>
-          &mdash; full voice, end to end: speak your action in English and the Cauldron
-          hears it, transcribed by StepFun speech-to-text; the DM, characters and NPCs
-          answer aloud in a narrator's voice &mdash; StepFun or the Qwen narrators, your pick.</li>
-        <li class="rv d1"><b>Heavier minds at the table <span class="tag">New</span></b>
+        <li class="hot rv d1"><b>Five free minds, always at the table <span class="tag">New</span></b>
+          &mdash; the newest free OpenRouter DMs sit in every picker &mdash; Dungeon Master,
+          Guardian, Extraction and character creation &mdash; for every path, no upgrade needed.
+          StepFun 3.7 Flash stays the steadfast default; the free minds are the open road beside it.</li>
+        <li class="rv d1"><b>StepFun voice is free for everyone <span class="tag">New</span></b>
+          &mdash; the DM, characters and NPCs answer aloud, and you can speak your action and have
+          it transcribed &mdash; on the free road, no top-up needed.</li>
+        <li class="rv d1"><b>StepFun painting is free for everyone <span class="tag">New</span></b>
+          &mdash; paint your adventurer, the Dungeon Master and every NPC you meet, free-prompt or
+          from the sheet.</li>
+        <li class="rv d1"><b>One path to everything <span class="tag">New</span></b>
+          &mdash; the 3&euro; Support pack is retired; the one-time Patron top-up (30&euro;) now
+          carries every benefit &mdash; premium DMs, Qwen narrators, export, uploads and the premium brushes.</li>
+        <li class="rv d1"><b>Qwen Image 3 Pro <span class="tag">New</span></b>
+          &mdash; a new premium brush joins Wan 2.7 Pro in the Patron palette, up to
+          10 premium paintings a day between them.</li>
+        <li class="rv d2"><b>Heavier minds at the table</b>
           &mdash; Qwen 3.8 Max, with its million-token memory, joins the DeepSeek V4 line;
           the realm thinks deeper when the story asks for it.</li>
-        <li class="rv d1"><b>The complete 5e table <span class="tag">1.0</span></b>
-          &mdash; skills and proficiency, spell slots that spend, inspiration, class features,
-          conditions that tick, resistance and vulnerability, encumbrance, exhaustion, cover,
-          darkvision, grapple, shove, movement and downtime training. The rules are a contract
-          the realm enforces &mdash; not flavor text.</li>
-        <li class="rv d1"><b>Dice the realm can trust <span class="tag">New</span></b>
-          &mdash; every roll now travels to the server's own dice engine before the result lands;
-          advantage rolls two d20s server-side, and the DM's enemy and ally rolls tumble visibly in the chat.</li>
-        <li class="rv d1"><b>A memory that holds <span class="tag">New</span></b>
-          &mdash; the fact register ranks the top 8 facts before every reply, joined by the top 4
-          semantic chunks from the Qdrant index. RAG fires on every DM call, and the Engine Room
-          shows you exactly what the DM remembered.</li>
         <li class="rv d2"><b>An honest turn ledger</b>
           &mdash; your chat message costs exactly 1 turn; guardian, threads, summaries and battle AI
           run free inside it. TTS counts once, cache hits are free, and the quota reads clearly.</li>
-        <li class="rv d2"><b>The table fits in your hand</b>
-          &mdash; a ~50% slimmer composer, chip-sized TTS controls, and a bottom nav that stays put
-          on Firefox Android.</li>
-        <li class="rv d2"><b>Faces worth seeing</b> &mdash; chat avatars ~3&times; larger,
-          stacked above the message with soft rounded frames; repainting a portrait updates the chat in place.</li>
-        <li class="rv d3"><b>One turn per message</b> &mdash; the guardian, threads, summaries and battle AI
-          run free inside your turn, so nothing is hidden from the ledger.</li>
-        <li class="rv d3"><b>Free models, everywhere</b> &mdash; OpenRouter free models sit in the DM,
-          Guardian and Extraction pickers, and character creation &mdash; with backend validation for every tier.</li>
+        <li class="rv d3"><b>Dice the realm can trust</b> &mdash; every roll travels to the
+          server's own dice engine; advantage rolls two d20s server-side, and the DM's rolls tumble visibly in the chat.</li>
       </ul>
       <p class="ledger-more rv d3"><a href="releases.html">Read the full ledger &#8594;</a></p>
     </div>
@@ -1196,110 +1170,91 @@ document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape' && drawerEl && drawerEl.classList.contains('open')) closeDrawer();
 });
 
-/* ═══════════════ Book of Souls — flat browseable book ═══════════════ */
-const TYPE_ICON = {Weapon:'⚔️',Armor:'🛡️',Tool:'🔧',Potion:'🧪','Magic Item':'🗝️',Magic:'🔮',Key:'🗝️',Ammunition:'🏹',Other:'📦'};
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 
-function adventurerSpread(a){
-  const ab = a.abilities||{};
-  const order = ['STR','DEX','CON','INT','WIS','CHA'];
-  const chips = order.map(k=>`<span class="${(ab[k]||0)>=14?'hi':''}">${k} <b>${ab[k]||'–'}</b></span>`).join('');
-  const xpPct = a.xp_next>0 ? Math.min(100, Math.round((a.xp_current||0)/a.xp_next*100)) : 0;
-  const eq = (a.equipment||[]).slice(0,6);
-  const eqLis = eq.map(i=>`<li class="${i.equipped?'on':''}"><span class="ic">${TYPE_ICON[i.type]||'·'}</span><span class="nm">${esc(i.name)}</span><span class="ty">${esc(i.type)}</span></li>`).join('');
-  const spells = (a.spells||[]).slice(0,4);
-  const spellLis = spells.map(sp=>{
-    const lvl = sp.level===0?'cantrip':'L'+sp.level;
-    return `<li class="${sp.level===0?'':'on'}"><span class="ic">${sp.level===0?'✦':'🜍'}</span><span class="nm">${esc(sp.name)}</span><span class="ty">${esc(lvl)} · ${esc(sp.school)}</span></li>`;
-  }).join('');
-  const journal = a.journal ? `<div class="j"><span class="jt">From the Journal</span><p>${esc(a.journal)}</p></div>` : '';
-  const lore = a.lore ? `<div class="j"><span class="jt">The Realm Remembers</span><p>${esc(a.lore)}</p></div>` : '';
+// ═══ KORTLEK (deck) — flytande högar, stats direkt på kortet 2026-08-14 ═══
+const DECK = { adv: {i:0, data:[]}, npc: {i:0, data:[]} };
+
+function deckCardHtml(key, d) {
+  if (key === 'adv') {
+    const order = ['STR','DEX','CON','INT','WIS','CHA'];
+    const ab = d.abilities || {};
+    const chips = order.map(k => `<span class="${(ab[k]||0)>=14?'hi':''}">${k} ${ab[k]||'–'}</span>`).join('');
+    const eq = (d.equipment||[]).slice(0,3);
+    const eqLis = eq.map(i => `<li><span class="ic">${i.equipped?'✔':'·'}</span><span class="nm">${esc(i.name)}</span><span class="ty">${esc(i.type)}</span></li>`).join('');
+    const spells = (d.spells||[]).slice(0,3);
+    const spellLis = spells.map(sp => `<li><span class="ic">${sp.level===0?'✦':'🜍'}</span><span class="nm">${esc(sp.name)}</span><span class="ty">${sp.level===0?'cantrip':'L'+sp.level}</span></li>`).join('');
+    return `
+      <div class="deck-portrait" style="background-image:url('/book-souls/${d.img}')">
+        <span class="corner">LV ${d.level||'?'}</span>
+        <div class="plate"><div class="nm">${esc(d.name)}</div><div class="meta">${esc(d.race)} · ${esc(d.class)} · LV ${d.level||'?'}</div></div>
+      </div>
+      <div class="deck-info">
+        <div class="deck-abls">${chips}</div>
+        <div class="deck-stats"><span>Turns <b>${d.turns_played||0}</b></span><span class="hp">HP <b>${d.hp||'?'}/${d.hp_max||'?'}</b></span><span>AC <b>${d.ac||'?'}</b></span><span>SPD <b>${d.speed||'?'}</b></span></div>
+        ${d.location?`<div class="bloc">⚲ ${esc(d.location)}${d.time?` — ${esc(d.time)}`:''}</div>`:''}
+        ${eqLis?`<div class="bsec">Equipment</div><ul class="blist">${eqLis}</ul>`:''}
+        ${spellLis?`<div class="bsec">Spells</div><ul class="blist">${spellLis}</ul>`:''}
+        ${d.lore?`<div class="bnote">${esc(d.lore)}</div>`:''}
+      </div>`;
+  }
+  const know = d.note ? `<div class="bnote">${esc(d.note)}</div>` : '';
   return `
-    <div class="spread">
-      <div class="face portrait">
-        <div class="art" style="background-image:url('/book-souls/${a.img}')">
-          <span class="lvl">LV ${a.level||'?'}</span>
-          <span class="align">${esc(a.alignment)}</span>
-        </div>
-        <div class="body">
-          <div class="nm">${esc(a.name)}</div>
-          <div class="meta"><b>${esc(a.race)}</b> · ${esc(a.class)}</div>
-          <div class="xp"><div class="lbl"><span>Experience</span><span><b>${a.xp_current||0}</b> / ${a.xp_next||300}</span></div><div class="bar"><i style="width:${xpPct}%"></i></div></div>
-          <div class="abls">${chips}</div>
-          <div class="stats"><span class="hp">HP <b>${a.hp||'?'}/${a.hp_max||'?'}</b></span><span>AC <b>${a.ac||'?'}</b></span><span>SPD <b>${a.speed||'?'}</b></span></div>
-          <div class="loc">⚲ <span class="now">Now in</span> <b>${esc(a.location)}</b>${a.time?` <span>— ${esc(a.time)}</span>`:''}</div>
-          <div class="forged">embarked on adventure on <b>${a.embarked||'—'}</b> · forged by <b>${esc(a.forged_by)}</b></div>
-        </div>
-      </div>
-      <div class="face sheet">
-        <div class="eq-head"><span>Equipment</span><span class="owner">${esc(a.name)}</span></div>
-        <ul>${eqLis||'<li class="empty">Travels light.</li>'}</ul>
-        ${spellLis?`<div class="subhead">Spells</div><ul>${spellLis}</ul>`:''}
-        ${journal}${lore}
-      </div>
+    <div class="deck-portrait" style="background-image:url('/book-souls/${d.img}')">
+      <span class="corner" style="border-color:${esc(d.color||'#c9a227')};color:${esc(d.color||'#c9a227')}">${esc(d.relation||'Known')}</span>
+      <div class="plate"><div class="nm">${esc(d.name)}</div><div class="meta">${esc(d.role)}</div></div>
+    </div>
+    <div class="deck-info">
+      ${know}
+      ${d.desc?`<div class="bsec">First seen</div><div class="bnote">${esc(d.desc)}</div>`:''}
+      ${d.met_at?`<div class="bsec">Where they were met</div><div class="bnote">${esc(d.met_at)}</div>`:''}
+      ${d.first_met_date?`<div class="bsec">First met</div><div class="bnote">${esc(d.first_met_date)}</div>`:''}
     </div>`;
 }
 
-function npcSpread(n){
-  const know = n.note ? `<div class="j"><span class="jt">What you know</span><p>${esc(n.note)}</p></div>` : '';
-  return `
-    <div class="spread">
-      <div class="face portrait">
-        <div class="art" style="background-image:url('/book-souls/${n.img}')">
-          <span class="dot" style="background:${n.color};color:${n.color}"></span>
-          <span class="meet">Met by ${esc(n.met_by)}</span>
-        </div>
-        <div class="body">
-          <div class="nm">${esc(n.name)}</div>
-          <div class="meta">${esc(n.role)}</div>
-          ${know}
-        </div>
-      </div>
-      <div class="face sheet">
-        <div class="eq-head"><span>Encounters</span><span class="owner">${esc(n.name)}</span></div>
-        <ul><li class="on"><span class="ic">🜲</span><span class="nm">${esc(n.relation||'Known')}</span><span class="ty">Met in play</span></li></ul>
-        ${n.first_met_date?`<div class="j"><span class="jt">First met</span><p>${esc(n.first_met_date)}</p></div>`:''}
-        ${n.desc?`<div class="j"><span class="jt">First seen</span><p>${esc(n.desc)}</p></div>`:''}
-        ${n.met_at?`<div class="j"><span class="jt">Where they were met</span><p>${esc(n.met_at)}</p></div>`:''}
-      </div>
-    </div>`;
-}
-
-const BOOK = { adv: {i:0, data:[]}, npc: {i:0, data:[]} };
-function renderBook(key) {
-  const st = BOOK[key];
-  const body = document.getElementById(key + '-body');
+function renderDeck(key) {
+  const st = DECK[key];
+  const pile = document.getElementById(key + '-pile');
   const cnt = document.getElementById(key + '-cnt');
-  const label = key === 'adv' ? 'Tale' : 'Encounter';
   if (!st.data.length) {
-    body.innerHTML = '<p class="sb-empty">No souls summoned yet — new faces appear as players forge them.</p>';
-    cnt.textContent = label + ' 0 of 0';
+    pile.innerHTML = '<p class="sb-empty" style="padding:2rem 0;text-align:center;color:var(--bone-dim);font-style:italic">No souls summoned yet — new faces appear as players forge them.</p>';
+    cnt.textContent = '0 / 0';
     return;
   }
-  body.innerHTML = key === 'adv' ? adventurerSpread(st.data[st.i]) : npcSpread(st.data[st.i]);
-  cnt.textContent = label + ' ' + (st.i + 1) + ' of ' + st.data.length;
-  document.getElementById(key + '-prev').disabled = (st.data.length <= 1);
-  document.getElementById(key + '-next').disabled = (st.data.length <= 1);
+  const d = st.data[st.i];
+  pile.innerHTML = `
+    <div class="pile-under u1"></div>
+    <div class="pile-under u2"></div>
+    <div class="pile-under u3"></div>
+    <div class="deck-card" onclick="deckClick('${key}',event)">${deckCardHtml(key, d)}</div>`;
+  cnt.textContent = (st.i + 1) + ' / ' + st.data.length;
 }
-function bookNav(key, dir) {
-  const st = BOOK[key];
-  if (st.data.length <= 1) return;
+
+function deckNav(key, dir) {
+  const st = DECK[key];
+  if (!st.data.length) return;
   st.i = (st.i + dir + st.data.length) % st.data.length;
-  renderBook(key);
+  renderDeck(key);
   try { sfx('pageTurn'); } catch (_) {}
 }
-// click left/right halves to turn
-['adv','npc'].forEach(key => {
-  const body = document.getElementById(key + '-body');
-  body.addEventListener('click', e => {
-    const rect = body.getBoundingClientRect();
-    bookNav(key, e.clientX < rect.left + rect.width / 2 ? -1 : 1);
-  });
-});
-// keyboard arrows → adventurers book
+
+function deckClick(key, e) {
+  const st = DECK[key];
+  if (!st.data.length) return;
+  // Click = dra nästa kort ur högen. Längst till vänster = ett steg bakåt.
+  if (e && e.currentTarget) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const zone = (e.clientX - rect.left) / rect.width;
+    if (zone < 0.22) { deckNav(key, -1); return; }
+  }
+  deckNav(key, 1);
+  try { sfx('click'); } catch (_) {}
+}
+
+// keyboard arrows → adventurers deck
 document.addEventListener('keydown', e => {
-  if (e.key === 'ArrowRight') bookNav('adv', 1);
-  if (e.key === 'ArrowLeft') bookNav('adv', -1);
+  if (e.key === 'ArrowRight') deckNav('adv', 1);
+  if (e.key === 'ArrowLeft') deckNav('adv', -1);
 });
 
 (async function () {
@@ -1310,10 +1265,10 @@ document.addEventListener('keydown', e => {
   } catch (err) {
     document.querySelectorAll('.sb-hint').forEach(h => h.textContent = 'Book of Souls awaiting its first summoned souls…');
   }
-  BOOK.adv.data = g.adventurers || [];
-  BOOK.npc.data = g.npcs || [];
-  renderBook('adv');
-  renderBook('npc');
+  DECK.adv.data = g.adventurers || [];
+  DECK.npc.data = g.npcs || [];
+  renderDeck('adv');
+  renderDeck('npc');
 })();
 </script>
 

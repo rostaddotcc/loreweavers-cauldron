@@ -1069,9 +1069,9 @@ PATRON_DAILY_CAP = 100
 # STARTBONUS: nya konton (och befintliga free-konton vid migrering) får
 # 300 turns direkt (turn_bonus förbrukas före de dagliga 50).
 START_BONUS_TURNS = 300
-# Patron (10€): premiummodell-access gäller i 30 dagar från köpet.
+# Patron (30€): premiummodell-access gäller i 30 dagar från köpet.
 PATRON_MODEL_DAYS = 30
-# Patron (10€): Wan-bilder max 10/dag; varje bild drar en turn.
+# Patron (30€): Wan/Qwen-bilder max 10/dag; varje bild drar en turn.
 WAN_DAILY_LIMIT = 10
 
 # Globalt tak för nya registreringar (skript-skydd; per-IP funkar inte bakom proxy).
@@ -1142,10 +1142,10 @@ _FREE_FIELD_DEFAULTS = {
     "subscription_until": None,
     # One-time-förmåner (2026-08-05): features = dict med flaggor.
     #   export:     3€ — kampanjexport + forge-karaktärs-export
-    #   wan1080:   10€ — Wan 2.7 Pro (2048²) avatarer
-    #   all_models:10€ — premiummodeller + Qwen TTS
+    #   wan1080:   30€ — Wan 2.7 Pro (2048²) avatarer
+    #   all_models:30€ — premiummodeller + Qwen TTS
     #   features_until: ISO-datum för när ALLA features-förmåner går ut.
-    #   (2026-08-05 v2: 3€/10€ = en MÅNAD förmåner, stackbart. Köpta turns
+    #   (2026-08-05 v2 → 2026-08-15: Support 3€ borttagen, Patron 30€ = en MÅNAD förmåner, stackbart. Köpta turns
     #   behålls alltid — turn_bonus rörs inte av features_until.)
     "features": {},
     "features_until": None,  # legacy-fält: models_until hedras som fallback
@@ -1217,16 +1217,16 @@ def _grant_start_bonus_if_needed(username: str, udata: dict) -> dict:
 
 
 # ═══════════════════════════════════════
-# TIERS — free < tier1 < tier2 < lifetime
+# TIERS — free < tier1(legacy) < tier2 < lifetime
 # ═══════════════════════════════════════
-# free      — 50 turns/dag (midnatt), bara step-3.7-flash, StepFun TTS (Qwen 🔒 Tier 2),
-#             inga avatarer (varken AI-genererade eller uppladdade)
-# ═══════════════════════════════════════
-# TIERS — one-time-förmåner (2026-08-05, ersätter subskriptionsmodellen)
-# ═══════════════════════════════════════
-# free      — 300 startturns, sedan 50 turns/dag; bara step-3.7-flash; StepFun TTS
-# tier1     — 3€ Support: +300 turns (permanenta), export+forge+StepFun i 30 dagar
-# tier2     — 10€ Patron: 100 turns/dag (cap_until, 30 dagar) istället för +500 permanenta; alla modeller+Qwen TTS+Wan 2.7 Pro i 30 dagar
+# free      — 300 startturns, sedan 50 turns/dag; step-3.7-flash + step-3.5 +
+#             OpenRouter 🆓 free-modeller (orfree:); StepFun TTS + StepFun
+#             målning + röstinmatning GRATIS (sedan 2026-08-15).
+# tier1     — 3€ Support: LEGACY (togs bort 2026-08-15). Befintliga köpare
+#             behåller sina förmåner tills features_until löper ut.
+# tier2     — 30€ Patron: 100 turns/dag (cap_until, 30 dagar), allt i Free +
+#             alla modeller (Qwen/DeepSeek) + Qwen TTS + Wan 2.7 (+Pro 2048²)
+#             + Qwen Image 3 Pro + export/forge/uppladdning, i 30 dagar.
 # lifetime  — ∞ turns (turn_cap 0), allt (befintliga 100€-köpare)
 # Legacy "premium" → tier2 (bakåtkompatibilitet).
 TIER_ORDER = ("free", "tier1", "tier2", "lifetime")
@@ -1261,7 +1261,7 @@ def _features_for(username: str) -> dict:
 def _benefits_until(username: str, udata: dict | None = None) -> str | None:
     """Kontots features-förmåner går ut detta datum (ISO YYYY-MM-DD) eller None.
 
-    Enhetligt fönster för ALLA features (Support 3€ och Patron 10€ = 30 dagar,
+    Enhetligt fönster för ALLA features (Patron 30€ = 30 dagar; legacy Support 3€ hedras,
     stackbart — 2026-08-05 v2). Legacy: `models_until` hedras som fallback så
     gamla patron-köp (och testseeds) fortsätter fungera utan features_until.
     """
@@ -1648,12 +1648,54 @@ def _reserve_chat_pipeline(username: str, model_id: str, is_awakening: bool, msg
 
 
 def _wan_model_and_size(username: str) -> tuple[str, str]:
-    """Patron (10€, features.wan1080) → Wan 2.7 Pro 2048²; lifetime → Pro.
+    """Patron (30€, features.wan1080) → Wan 2.7 Pro 2048²; lifetime → Pro.
     Annars standard wan2.7-image 1024² (nås endast via Patron-gaten)."""
     f = _features_for(username)
     if f.get("wan1080") or _tier_for(username) == "lifetime":
         return "wan2.7-image-pro", "2048*2048"
     return "wan2.7-image", "1024*1024"
+
+
+def _qwen_image_model_and_size() -> tuple[str, str]:
+    """Qwen Image 3 Pro (Token Plan) — Patron-premium (2026-08-15)."""
+    return "qwen-image-3.0-pro", "1024*1024"
+
+
+async def _token_plan_image(model: str, prompt: str, size: str, seed: int) -> bytes:
+    """Måla via Alibaba Token Plan (wan2.7-image(-pro) / qwen-image-3.0-pro).
+
+    Samma DashScope-native endpoint för båda modellerna; svaret har bild-URL
+    på output.choices[0].message.content[0].image (wan2.7 har "type"-nyckel,
+    qwen-image-3.0-pro har inte — vi läser bara "image")."""
+    api_key = os.getenv("DASHSCOPE_API_KEY") or os.getenv("ALIBABA_TOKEN_PLAN_API_KEY")
+    base = os.getenv(
+        "WAN_BASE_URL",
+        "https://token-plan.ap-southeast-1.maas.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
+    )
+    if not api_key:
+        raise HTTPException(500, "DASHSCOPE_API_KEY missing on the server (Token Plan image models need it)")
+    async with httpx.AsyncClient(timeout=150) as client:
+        resp = await client.post(
+            base,
+            headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
+            json={
+                "model": model,
+                "input": {"messages": [{"role": "user", "content": [{"text": prompt}]}]},
+                "parameters": {"size": size, "n": 1, "watermark": False, "thinking_mode": False, "seed": seed},
+            },
+        )
+    if resp.status_code != 200:
+        logger.error("🎨 Token Plan %s error: HTTP %d %s", model, resp.status_code, resp.text[:400])
+        raise HTTPException(502, f"{model} error ({resp.status_code})")
+    wdata = resp.json()
+    try:
+        img_url = wdata["output"]["choices"][0]["message"]["content"][0]["image"]
+    except (KeyError, IndexError, TypeError):
+        raise HTTPException(502, f"{model} returned no image")
+    async with httpx.AsyncClient(timeout=60) as dl:
+        dl_resp = await dl.get(img_url)
+        dl_resp.raise_for_status()
+        return dl_resp.content
 
 
 def _consume_wan_quota(username: str) -> None:
@@ -3580,7 +3622,7 @@ async def tts_voices(morkrets_token: str | None = Cookie(None)):
 async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
     """Generera tal från text via vald TTS-leverantör (qwen eller stepfun).
 
-    TIERS (2026-08-05): StepFun = Support (3€)+, Qwen = Patron (10€)+.
+    TIERS (2026-08-15): StepFun = GRATIS, Qwen = Patron (30€)+.
     Free tier får 403 — ingen tyst fallback till billigare röst.
     """
     payload = _get_current_user(morkrets_token)
@@ -3596,16 +3638,14 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
     if provider not in TTS_PROVIDERS:
         raise HTTPException(400, f"Okänd TTS-leverantör: {provider}")
 
-    # ── TIERS (2026-08-05): TTS är tier-gated — INGEN tyst fallback längre.
-    # StepFun = Support (3€): free tier får 403 (förr "always free").
-    # Qwen = Patron (10€): tier1 räcker inte — 403 istället för att smyg-köra
-    # stepfun, så free/tier1 aldrig byts till en billigare röst i smyg.
-    # Lifetime = allt. (rostad 2026-08-04 → skärpt 2026-08-05)
+    # ── TIERS (2026-08-15): TTS är tier-gated — INGEN tyst fallback.
+    # StepFun = GRATIS (sedan 2026-08-15): free tier får StepFun-rösterna.
+    # Qwen = Patron (30€): free/tier1 räcker inte — 403 istället för att
+    # smyg-köra stepfun, så free/tier1 aldrig byts till en billigare röst.
+    # Lifetime = allt. (rostad 2026-08-04 → skärpt 2026-08-05 → StepFun fri 2026-08-15)
     tier = _tier_for(username)
     if provider == "qwen" and tier not in ("tier2", "lifetime"):
-        raise HTTPException(403, "Qwen TTS is a Patron feature (10€) — upgrade to unlock the premium narrators.")
-    if provider == "stepfun" and tier == "free":
-        raise HTTPException(403, "StepFun TTS is a Support feature (3€) — support the Cauldron to give your DM, characters and NPCs a voice.")
+        raise HTTPException(403, "Qwen TTS is a Patron feature (30€) — upgrade to unlock the premium narrators.")
     pvoices = TTS_PROVIDERS[provider]["voices"]
 
     # ── Röst: kön ('male'/'female') → första rösten med könet; annars voice-id ──
@@ -3815,14 +3855,10 @@ async def voice_asr(file: UploadFile = File(...), morkrets_token: str | None = C
     """Transkribera spelarens röst (EN) via StepFun stepaudio-2.5-asr.
 
     Ingen turn-förbrukning — transkriptet fyller bara chat-input (redigerbart).
-    Tier-gate: samma som StepFun TTS (Support 3€+), free → 403.
+    GRATIS sedan 2026-08-15 (följer StepFun TTS — free tier får tala fritt).
     """
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
-
-    tier = _tier_for(username)
-    if tier == "free":
-        raise HTTPException(403, "Voice input is a Support feature (3€) — support the Cauldron to speak to your DM.")
 
     content = await file.read()
     if not content:
@@ -3936,10 +3972,28 @@ _ACTIVITY_MAX = 25
 
 
 def _log_activity(username: str, text: str) -> None:
+    """Pipeline-status → aktivitetsbuffert + live-debuglogg.
+
+    Skriver samma fas till DEBUG_LOGS (INFO) så loading-animationen —
+    som pollar /api/debug/logs — visar DM/Lorekeeper-faserna live.
+    Utan detta sitter loadern på den senaste tekniska loggen
+    ("◀ TURN done") medan Lorekeeper fortfarande jobbar i bakgrunden.
+    """
     try:
+        ts = time.time()
         entries = _ACTIVITY.setdefault(username, [])
-        entries.append({"ts": time.time(), "text": text})
+        entries.append({"ts": ts, "text": text})
         del entries[:-_ACTIVITY_MAX]
+        ctx = _LOG_CTX.get()
+        DEBUG_LOGS.append({
+            "ts": ts,
+            "time": datetime.fromtimestamp(ts).strftime("%H:%M:%S"),
+            "level": "INFO",
+            "name": "lw.activity",
+            "msg": text,
+            "user": ctx.get("user") or username,
+            "campaign": ctx.get("campaign"),
+        })
     except Exception:
         pass
 
@@ -4294,12 +4348,27 @@ async def get_facts(category: str | None = None, morkrets_token: str | None = Co
             d = f.model_dump()
             d["rank_score"] = register.rank_score(f)
             facts_out.append(d)
+        # Superseded-fakta (ersatta av nyare sanning) — frontend visar dem
+        # i en popup/filter så spelaren kan se VILKA som ersatts och varför.
+        by_id = {f.id: f for f in register._facts}
+        superseded_out = []
+        for f in register._facts:
+            if f.superseded_by is None:
+                continue
+            d = f.model_dump()
+            d["rank_score"] = register.rank_score(f)
+            repl = by_id.get(f.superseded_by)
+            d["replaced_by_text"] = repl.text if repl else None
+            d["replaced_by_turn"] = repl.source_turn if repl else None
+            superseded_out.append(d)
+        superseded_out.sort(key=lambda x: x.get("source_turn", 0), reverse=True)
         return {
             "facts": facts_out,
+            "superseded": superseded_out,
             "stats": register.stats(),
         }
     except Exception:
-        return {"facts": [], "stats": {}}
+        return {"facts": [], "superseded": [], "stats": {}}
 
 
 @app.post("/api/campaign/chapter")
@@ -4347,12 +4416,16 @@ async def trigger_chapter(body: ChapterRequest, morkrets_token: str | None = Coo
             )
 
         # Kapitalsammanfattning är ett LLM-anrop — räknas som en turn (2026-08-08)
+        # 2026-08-14: använder kampanjens extraction-modell (state.meta.extraction_model
+        # → EXTRACTION_MODEL) i stället för den hårdkodade ATMOSPHERE_MODEL (qwen3.8-max)
+        # — bakgrundsgenerering ska följa spelarens modellval, inte en dold env-variabel.
         _gate_turn_quota(username)
-        _consume_turn(username, action="chapter", model=ATMOSPHERE_MODEL)
+        _chapter_model = _extraction_model_for(state)
+        _consume_turn(username, action="chapter", model=_chapter_model)
 
         try:
             summary = await _call_llm(
-                ATMOSPHERE_MODEL,
+                _chapter_model,
                 [{"role": "user", "content": prompt}],
                 temperature=0.5,
                 max_tokens=512,
@@ -6392,6 +6465,10 @@ async def _chat_locked(
         "tokens": usage,
         "time": _llm_time,
     }
+    # DM:ns inre monolog sparas i transkriptet (2026-08-14) så den överlever
+    # reload — frontend renderar den i loadTranscript via m.meta.reasoning.
+    if reasoning:
+        _dm_meta["reasoning"] = reasoning[:3000]
     # Pre-DM Guardian-roll-detection förbrukning (körs varje tur) — fästs på
     # DM-posten så admin-stats räknar ALL Guardian-förbrukning.
     if _guardian_roll_usage.get("total_tokens"):
@@ -7079,7 +7156,7 @@ async def vault_export(morkrets_token: str | None = Cookie(None)):
     if payload.get("role") != "admin" and _tier_for(username) not in ("tier1", "tier2", "lifetime"):
         raise HTTPException(
             403,
-            "Forge export is a Support feature (3€) — support the Cauldron to export your adventurers.",
+            "Forge export is a Patron feature (30€) — upgrade to export your adventurers.",
         )
     entries = vault.list(username)
     data = {
@@ -7253,14 +7330,15 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
 
-    # TIERS: AI-bildgenerering är tier-gated (2026-08-05):
-    # StepFun = Support (3€); Wan 2.7 = Patron (10€). Free tier målar inte.
+    # TIERS: AI-bildgenerering är tier-gated (2026-08-15):
+    # StepFun = GRATIS; Wan 2.7 / Qwen Image 3 Pro = Patron (30€).
     provider = str((body or {}).get("provider", "") or "").strip().lower()
-    if provider not in ("stepfun", "wan"):
+    if provider not in ("stepfun", "wan", "qwen"):
         provider = "stepfun"
     _require_image_gen_tier(username, provider, payload)
-    if provider == "wan":
-        _consume_wan_quota(username)  # 10 bilder/dag; varje bild = 1 turn
+    if provider in ("wan", "qwen"):
+        # 10 premiumbilder/dag (Wan 2.7 + Qwen Image 3 Pro); varje bild = 1 turn
+        _consume_wan_quota(username)
     else:
         # 2026-08-08: every image costs 1 turn — StepFun included (was free)
         _gate_turn_quota(username)
@@ -7311,35 +7389,11 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
             # Wan 2.7 (Token Plan) — text-to-image. Patron får Wan 2.7 Pro
             # (2048², features.wan1080), övriga standard 1024².
             wan_model, wan_size = _wan_model_and_size(username)
-            wan_api_key = os.getenv("DASHSCOPE_API_KEY") or os.getenv("ALIBABA_TOKEN_PLAN_API_KEY")
-            wan_base = os.getenv(
-                "WAN_BASE_URL",
-                "https://token-plan.ap-southeast-1.maas.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
-            )
-            if not wan_api_key:
-                raise HTTPException(500, "DASHSCOPE_API_KEY missing on the server (Wan needs the Token Plan key)")
-            async with httpx.AsyncClient(timeout=150) as client:
-                resp = await client.post(
-                    wan_base,
-                    headers={"Content-Type": "application/json", "Authorization": f"Bearer {wan_api_key}"},
-                    json={
-                        "model": wan_model,
-                        "input": {"messages": [{"role": "user", "content": [{"text": prompt}]}]},
-                        "parameters": {"size": wan_size, "n": 1, "watermark": False, "thinking_mode": False, "seed": seed},
-                    },
-                )
-            if resp.status_code != 200:
-                logger.error("🎨 Vault-Wan error: HTTP %d %s", resp.status_code, resp.text[:400])
-                raise HTTPException(502, f"Wan error ({resp.status_code})")
-            wdata = resp.json()
-            try:
-                img_url = wdata["output"]["choices"][0]["message"]["content"][0]["image"]
-            except (KeyError, IndexError, TypeError):
-                raise HTTPException(502, "Wan returned no image")
-            async with httpx.AsyncClient(timeout=60) as dl:
-                dl_resp = await dl.get(img_url)
-                dl_resp.raise_for_status()
-                content = dl_resp.content
+            content = await _token_plan_image(wan_model, prompt, wan_size, seed)
+        elif provider == "qwen":
+            # Qwen Image 3 Pro (Token Plan) — ny Patron-premium (2026-08-15).
+            qwen_model, qwen_size = _qwen_image_model_and_size()
+            content = await _token_plan_image(qwen_model, prompt, qwen_size, seed)
         else:
             async with httpx.AsyncClient(timeout=150) as client:
                 resp = await client.post(
@@ -7349,19 +7403,18 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
                           "response_format": "b64_json", "steps": 8, "seed": seed,
                           "text_mode": True},
                 )
+            if resp.status_code != 200:
+                raise HTTPException(502, f"StepFun error ({resp.status_code})")
+            data = resp.json()
+            try:
+                content = base64.b64decode(data["data"][0]["b64_json"])
+            except (KeyError, IndexError, ValueError):
+                raise HTTPException(502, "StepFun returned no image")
     except HTTPException:
         raise
     except Exception as e:
         logger.error("🎨 Vault avatar (provider=%s) failed: %s", provider, e)
         raise HTTPException(502, f"Could not reach {provider}: {e}")
-    if provider != "wan":
-        if resp.status_code != 200:
-            raise HTTPException(502, f"StepFun error ({resp.status_code})")
-        data = resp.json()
-        try:
-            content = base64.b64decode(data["data"][0]["b64_json"])
-        except (KeyError, IndexError, ValueError):
-            raise HTTPException(502, "StepFun returned no image")
 
     disk_name = f"vault_{char_id}.png"
     (av_dir / disk_name).write_bytes(content)
@@ -7372,7 +7425,10 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
     }
     vault.update(username, entry)
     # Bokför en AI-bildgenerering (iteration), livstid
-    _add_image_gen(username, wan_model if provider == "wan" else STEP_IMAGE_EDIT_2)
+    img_model = ("wan2.7-image" if provider == "wan"
+                 else "qwen-image-3.0-pro" if provider == "qwen"
+                 else STEP_IMAGE_EDIT_2)
+    _add_image_gen(username, img_model)
     return {"ok": True, "seed": seed, "url": f"/api/vault/characters/{char_id}/avatar"}
 
 
@@ -8053,8 +8109,8 @@ app.router.lifespan_context = _lifespan
 # SPELARPROFILENS AVATAR (konto — SEPARAT från äventyraren)
 # ═══════════════════════════════════════
 # Profilavataren hör till KONTOT (headerns porträtt) — inte till kampanjens
-# äventyrare/NPC/DM-kort. Målas med StepFun step-image-edit-2 (Support 3€)
-# eller Wan 2.7 (Patron 10€) via provider-fältet. (2026-08-05)
+# äventyrare/NPC/DM-kort. Målas med StepFun step-image-edit-2 (gratis sedan
+# 2026-08-15) eller Wan 2.7 / Qwen Image 3 Pro (Patron 30€) via provider-fältet.
 
 
 @app.get("/api/me/avatar")
@@ -8147,18 +8203,19 @@ async def me_avatar_gallery_delete_one(idx: int, morkrets_token: str | None = Co
 
 @app.post("/api/me/avatar/generate")
 async def me_avatar_generate(body: dict | None = None, morkrets_token: str | None = Cookie(None)):
-    """Måla profilavataren — StepFun step-image-edit-2 (Support 3€) eller
-    Wan 2.7 (Patron 10€) via provider-fältet ('stepfun'|'wan', default
-    stepfun; okänt → stepfun). Spelarens egna ord (fri prompt) eller en
-    standardporträtt-prompt om ingen text ges. (2026-08-05)"""
+    """Måla profilavataren — StepFun step-image-edit-2 (gratis sedan 2026-08-15)
+    eller Wan 2.7 / Qwen Image 3 Pro (Patron 30€) via provider-fältet
+    ('stepfun'|'wan'|'qwen', default stepfun; okänt → stepfun). Spelarens egna
+    ord (fri prompt) eller en standardporträtt-prompt om ingen text ges."""
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
     provider = str((body or {}).get("provider", "") or "").strip().lower()
-    if provider not in ("stepfun", "wan"):
+    if provider not in ("stepfun", "wan", "qwen"):
         provider = "stepfun"
     _require_image_gen_tier(username, provider, payload)
-    if provider == "wan":
-        _consume_wan_quota(username)  # 10 bilder/dag; varje bild = 1 turn
+    if provider in ("wan", "qwen"):
+        # 10 premiumbilder/dag (Wan 2.7 + Qwen Image 3 Pro); varje bild = 1 turn
+        _consume_wan_quota(username)
     else:
         # 2026-08-08: every image costs 1 turn — StepFun included (was free)
         _gate_turn_quota(username)
@@ -8180,35 +8237,11 @@ async def me_avatar_generate(body: dict | None = None, morkrets_token: str | Non
             # (2048², features.wan1080), övriga standard 1024². Samma mönster
             # som vault/campaign wan-grenen (wan2.7-image(-pro), size, seed).
             wan_model, wan_size = _wan_model_and_size(username)
-            wan_api_key = os.getenv("DASHSCOPE_API_KEY") or os.getenv("ALIBABA_TOKEN_PLAN_API_KEY")
-            wan_base = os.getenv(
-                "WAN_BASE_URL",
-                "https://token-plan.ap-southeast-1.maas.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
-            )
-            if not wan_api_key:
-                raise HTTPException(500, "DASHSCOPE_API_KEY missing on the server (Wan needs the Token Plan key)")
-            async with httpx.AsyncClient(timeout=150) as client:
-                resp = await client.post(
-                    wan_base,
-                    headers={"Content-Type": "application/json", "Authorization": f"Bearer {wan_api_key}"},
-                    json={
-                        "model": wan_model,
-                        "input": {"messages": [{"role": "user", "content": [{"text": prompt}]}]},
-                        "parameters": {"size": wan_size, "n": 1, "watermark": False, "thinking_mode": False, "seed": seed},
-                    },
-                )
-            if resp.status_code != 200:
-                logger.error("🎨 Profile avatar Wan error: HTTP %d %s", resp.status_code, resp.text[:400])
-                raise HTTPException(502, f"Wan error ({resp.status_code})")
-            wdata = resp.json()
-            try:
-                img_url = wdata["output"]["choices"][0]["message"]["content"][0]["image"]
-            except (KeyError, IndexError, TypeError):
-                raise HTTPException(502, "Wan returned no image")
-            async with httpx.AsyncClient(timeout=60) as dl:
-                dl_resp = await dl.get(img_url)
-                dl_resp.raise_for_status()
-                content = dl_resp.content
+            content = await _token_plan_image(wan_model, prompt, wan_size, seed)
+        elif provider == "qwen":
+            # Qwen Image 3 Pro (Token Plan) — ny Patron-premium (2026-08-15).
+            qwen_model, qwen_size = _qwen_image_model_and_size()
+            content = await _token_plan_image(qwen_model, prompt, qwen_size, seed)
         else:
             api_key = os.getenv("STEPFUN_API_KEY")
             base_url = os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.ai/step_plan/v1")
@@ -8672,14 +8705,15 @@ async def generate_avatar(
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
 
-    # TIERS (2026-08-05): AI-bildgenerering är tier-gated.
-    # StepFun = Support (3€); Wan 2.7 = Patron (10€). Free tier målar inte.
+    # TIERS (2026-08-15): AI-bildgenerering är tier-gated.
+    # StepFun = GRATIS; Wan 2.7 / Qwen Image 3 Pro = Patron (30€).
     provider = str((body or {}).get("provider", "") or "").strip().lower()
-    if provider not in ("stepfun", "wan"):
+    if provider not in ("stepfun", "wan", "qwen"):
         provider = "stepfun"
     _require_image_gen_tier(username, provider, payload)
-    if provider == "wan":
-        _consume_wan_quota(username)  # 10 bilder/dag; varje bild = 1 turn
+    if provider in ("wan", "qwen"):
+        # 10 premiumbilder/dag (Wan 2.7 + Qwen Image 3 Pro); varje bild = 1 turn
+        _consume_wan_quota(username)
     else:
         # 2026-08-08: every image costs 1 turn — StepFun included (was free)
         _gate_turn_quota(username)
@@ -8722,7 +8756,7 @@ async def generate_avatar(
 
     api_key = os.getenv("STEPFUN_API_KEY")
     base_url = os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.ai/step_plan/v1")
-    if provider != "wan" and not api_key:
+    if provider not in ("wan", "qwen") and not api_key:
         raise HTTPException(500, "STEPFUN_API_KEY saknas på servern")
 
     cid = state["meta"]["campaign_id"]
@@ -8731,51 +8765,17 @@ async def generate_avatar(
     content: bytes = b""
     try:
         if provider == "wan":
-            # ── Wan 2.7 (DashScope Token Plan) — text-to-image. Patron (10€)
+            # ── Wan 2.7 (DashScope Token Plan) — text-to-image. Patron (30€)
             #    får Wan 2.7 Pro 2048² (features.wan1080); övriga 1024².
             #    n=1, watermark=false, thinking_mode=false. Seed för
             #    reproducerbarhet. Edit-läge = färsk målning från sheet-data.
             wan_model, wan_size = _wan_model_and_size(username)
-            wan_api_key = os.getenv("DASHSCOPE_API_KEY") or os.getenv("ALIBABA_TOKEN_PLAN_API_KEY")
-            wan_base = os.getenv(
-                "WAN_BASE_URL",
-                "https://token-plan.ap-southeast-1.maas.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
-            )
-            if not wan_api_key:
-                raise HTTPException(500, "DASHSCOPE_API_KEY saknas på servern (Wan behöver Token Plan-nyckeln)")
-            async with httpx.AsyncClient(timeout=150) as client:
-                resp = await client.post(
-                    wan_base,
-                    headers={"Content-Type": "application/json", "Authorization": f"Bearer {wan_api_key}"},
-                    json={
-                        "model": wan_model,
-                        "input": {
-                            "messages": [
-                                {"role": "user", "content": [{"text": prompt}]}
-                            ]
-                        },
-                        "parameters": {
-                            "size": wan_size,
-                            "n": 1,
-                            "watermark": False,
-                            "thinking_mode": False,
-                            "seed": seed,
-                        },
-                    },
-                )
-            if resp.status_code != 200:
-                logger.error("🎨 Wan error: HTTP %d %s", resp.status_code, resp.text[:400])
-                raise HTTPException(502, f"Wan-fel ({resp.status_code})")
-            wdata = resp.json()
-            try:
-                img_url = wdata["output"]["choices"][0]["message"]["content"][0]["image"]
-            except (KeyError, IndexError, TypeError):
-                raise HTTPException(502, "Wan returnerade ingen bild")
-            # Ladda ner bilden och spara lokalt (URL:er från DashScope går ut efter 24 h)
-            async with httpx.AsyncClient(timeout=60) as dl:
-                dl_resp = await dl.get(img_url)
-                dl_resp.raise_for_status()
-                content = dl_resp.content
+            content = await _token_plan_image(wan_model, prompt, wan_size, seed)
+        elif provider == "qwen":
+            # ── Qwen Image 3 Pro (DashScope Token Plan) — ny Patron-premium
+            #    (2026-08-15). Samma endpoint/payload som Wan 2.7.
+            qwen_model, qwen_size = _qwen_image_model_and_size()
+            content = await _token_plan_image(qwen_model, prompt, qwen_size, seed)
         else:
             async with httpx.AsyncClient(timeout=150) as client:
                 resp = await client.post(
@@ -8790,25 +8790,19 @@ async def generate_avatar(
                         "text_mode": True,
                     },
                 )
+            if resp.status_code != 200:
+                logger.error("🎨 StepFun error: HTTP %d %s", resp.status_code, resp.text[:300])
+                raise HTTPException(502, f"StepFun-fel ({resp.status_code})")
+            data = resp.json()
+            try:
+                content = base64.b64decode(data["data"][0]["b64_json"])
+            except (KeyError, IndexError, ValueError):
+                raise HTTPException(502, "StepFun returnerade ingen bild")
     except HTTPException:
         raise
     except Exception as e:
         logger.error("🎨 AI avatar (provider=%s) failed: %s", provider, e)
         raise HTTPException(502, f"Kunde inte nå {provider}: {e}")
-    if provider != "wan":
-        if resp.status_code != 200:
-            logger.error("🎨 StepFun error: HTTP %d %s", resp.status_code, resp.text[:300])
-            raise HTTPException(502, f"StepFun-fel ({resp.status_code})")
-
-    if provider == "wan":
-        b64 = None  # content redan nerladdad
-    else:
-        data = resp.json()
-        try:
-            b64 = data["data"][0]["b64_json"]
-            content = base64.b64decode(b64)
-        except (KeyError, IndexError, ValueError):
-            raise HTTPException(502, "StepFun returnerade ingen bild")
 
     av_dir.mkdir(parents=True, exist_ok=True)
     # Galleri (2026-08-07): varje målning LÄGGS TILL i karaktärens galleri
@@ -8834,7 +8828,10 @@ async def generate_avatar(
             pass
     store.save(state)
     # Bokför en AI-bildgenerering (iteration), livstid
-    _add_image_gen(username, wan_model if provider == "wan" else STEP_IMAGE_EDIT_2)
+    img_model = ("wan2.7-image" if provider == "wan"
+                 else "qwen-image-3.0-pro" if provider == "qwen"
+                 else STEP_IMAGE_EDIT_2)
+    _add_image_gen(username, img_model)
 
     return {"ok": True, "kind": avatar_key, "url": f"/api/campaign/avatar/{avatar_key}", "seed": seed,
             "edit_mode": mode == "edit",
@@ -8856,7 +8853,7 @@ async def export_campaign(morkrets_token: str | None = Cookie(None)):
     if payload.get("role") != "admin" and _tier_for(username) not in ("tier1", "tier2", "lifetime"):
         raise HTTPException(
             403,
-            "Campaign export is a Support feature (3€) — support the Cauldron to export your story.",
+            "Campaign export is a Patron feature (30€) — upgrade to export your story.",
         )
 
     state = store.get(username)
@@ -9328,12 +9325,15 @@ async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
 
     # Loggboksgenerering är ett LLM-anrop — räknas som en turn (endast första
     # besöket; cachen + guardian-snabbvägen ovan är gratis) (2026-08-08)
+    # 2026-08-14: använder kampanjens extraction-modell i stället för den
+    # hårdkodade ATMOSPHERE_MODEL (qwen3.8-max) — samma som dag-entry-genereringen.
     _gate_turn_quota(username)
-    _consume_turn(username, action="logbook", model=ATMOSPHERE_MODEL)
+    _logbook_model = _extraction_model_for(state)
+    _consume_turn(username, action="logbook", model=_logbook_model)
 
     try:
         raw = await _call_llm(
-            ATMOSPHERE_MODEL,
+            _logbook_model,
             [{"role": "user", "content": prompt}],
             temperature=0.3,
             max_tokens=2048,
@@ -9452,10 +9452,11 @@ def _require_admin(payload: dict):
 
 
 def _require_image_gen_tier(username: str, provider: str, payload: dict | None = None) -> None:
-    """TIERS (2026-08-05): AI-bildgenerering är tier-gated.
+    """TIERS (2026-08-15): AI-bildgenerering är tier-gated.
 
-    - StepFun = Support (3€) — free tier kan inte måla alls längre.
-    - Wan 2.7 = Patron (10€) — dyrare, snyggare premium-leverantör.
+    - StepFun = GRATIS (sedan 2026-08-15) — alla tiers får måla med StepFun.
+    - Wan 2.7 = Patron (30€) — dyrare, snyggare premium-leverantör.
+    - Qwen Image 3 Pro = Patron (30€) — ny premium-leverantör (Token Plan).
     Admin har alltid tillgång. Lifetime = allt.
     """
     if payload and payload.get("role") == "admin":
@@ -9463,28 +9464,24 @@ def _require_image_gen_tier(username: str, provider: str, payload: dict | None =
     tier = _tier_for(username)
     if tier == "lifetime":
         return
-    if provider == "wan":
+    if provider in ("wan", "qwen"):
         if tier != "tier2":
             raise HTTPException(
                 403,
-                "Wan 2.7 painting is a Patron feature (10€) — upgrade to paint with Wan.",
-            )
-    else:
-        if tier == "free":
-            raise HTTPException(
-                403,
-                "AI painting is a Support feature (3€) — support the Cauldron to paint your adventurer, the DM and every NPC with StepFun.",
+                "Wan 2.7 / Qwen Image 3 Pro painting is a Patron feature (30€) — upgrade to paint with the premium engines.",
             )
 
 
 def _require_avatar_tier(payload: dict, username: str):
-    """TIERS (one-time 2026-08-05): avatar-UPPLADDNING kräver tier1+ (Support).
-    AI-generering är gated via _require_image_gen_tier (StepFun = Support 3€,
-    Wan 2.7 = Patron 10€). Admin har alltid tillgång."""
+    """TIERS (2026-08-15): avatar-UPPLADDNING kräver Patron (tier2+).
+    Support-tieren togs bort 2026-08-15 — legacy tier1-konton med aktiva
+    förmåner passerar tills de löper ut. AI-generering är gated via
+    _require_image_gen_tier (StepFun = gratis, Wan/Qwen Image 3 Pro = Patron).
+    Admin har alltid tillgång."""
     if payload.get("role") == "admin":
         return
     if _tier_for(username) == "free":
-        raise HTTPException(403, "Avatar uploads are a Support feature (3€) — support the Cauldron to add your own images.")
+        raise HTTPException(403, "Avatar uploads are a Patron feature (30€) — upgrade to add your own images.")
 
 
 # ═══════════════════════════════════════
@@ -9496,7 +9493,7 @@ def _require_avatar_tier(payload: dict, username: str):
 PREMIUM_PRICE_SEK = 49  # legacy (fas D) — ersatt av TIER_PRICES_SEK
 
 # TIERS: priser i SEK (EUR → SEK ≈ 11.7; avrundat för admin-översikt).
-# support300 = 3€ engång · patron500 = 30€ engång (100 turns/dag i 30d) · lifetime = 100€ engång.
+# support300 = 3€ LEGACY (stängt 2026-08-15) · patron500 = 30€ engång (100 turns/dag i 30d) · lifetime = 100€ engång.
 # tier1/tier2 = legacy-prenumeranter (MRR-bas tills de löper ut).
 TIER_PRICES_SEK = {"support300": 35, "patron500": 351, "lifetime": 1170,
                    "tier1": 35, "tier2": 105}  # legacy: 3€/9€ ≈ 35/105 kr
@@ -10117,8 +10114,11 @@ async def me_stats(morkrets_token: str | None = Cookie(None)):
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 # One-time-priser (engångsbetalningar, inga abonnemang):
-#   support300 — 3€: +300 turns (permanenta), export+StepFun i 30 dagar (stackbart)
-#   patron500  — 30€: 100 turns/dag i 30 dagar (cap_until), premiummodeller+Qwen TTS+Wan 2.7 Pro i 30 dagar (stackbart)
+#   support300 — 3€: LEGACY (togs bort 2026-08-15) — nya köp blockeras i
+#                checkout; befintliga webhooks hedras (idempotenta).
+#   patron500  — 30€: 100 turns/dag i 30 dagar (cap_until), allt i Free +
+#                premiummodeller + Qwen TTS + Wan 2.7 Pro + Qwen Image 3 Pro
+#                + export/uppladdning i 30 dagar (stackbart)
 #   donation   — valfri summa: rensupport, inga förmåner
 STRIPE_PRICES = {
     "support300": os.getenv("STRIPE_PRICE_SUPPORT300", ""),
@@ -10173,19 +10173,23 @@ def _stripe_verify_signature(payload: bytes, header: str) -> bool:
 
 @app.post("/api/billing/checkout")
 async def billing_checkout(req: BillingCheckoutRequest, morkrets_token: str | None = Cookie(None)):
-    """Skapa Stripe Checkout Session (hosted) — one-time purchases (2026-08-05).
+    """Skapa Stripe Checkout Session (hosted) — one-time purchases.
 
-    support300 (3€) / patron500 (10€) / donation (valfri summa) / lifetime (legacy).
+    patron500 (30€) / donation (valfri summa) / lifetime (legacy).
+    support300 (3€) togs BORT 2026-08-15 — nya köp blockeras (gamla
+    köp/webhooks hedras fortfarande).
     Åtkomst ges ALDRIG här — bara via webhook (checkout.session.completed).
     """
     payload = _get_current_user(morkrets_token)
     username = payload.get("sub")
     tier = (req.tier or "").strip().lower()
+    if tier == "support300":
+        raise HTTPException(400, "The 3€ Support pack has been retired — the Patron path now carries every benefit.")
     if tier == "donation":
         # Valfri summa — använder custom amount, inget Stripe Price-ID behövs
         pass
     elif tier not in STRIPE_PRICES or not STRIPE_PRICES[tier]:
-        raise HTTPException(400, "Tier must be support300, patron500, donation or lifetime")
+        raise HTTPException(400, "Tier must be patron500, donation or lifetime")
     if not STRIPE_SECRET_KEY:
         raise HTTPException(503, "Payments are not configured yet")
     # ── E-post krävs innan köp (rostad 2026-08-04): kontot måste ha en
@@ -10324,7 +10328,7 @@ async def stripe_webhook(request: Request):
                 u["features_until"] = _stack_benefits_until(u)
                 u.pop("models_until", None)  # enhetligt fönster framåt
             elif tier == "patron500":
-                # 10€ — 100 turns/dag i 30 dagar (cap_until) istället för +500
+                # 30€ — 100 turns/dag i 30 dagar (cap_until) istället för +500
                 # permanenta turns (2026-08-07). Premiummodeller + Qwen TTS +
                 # Wan 2.7 Pro i 30 dagar (stackbart, se support300). Samma
                 # fönster (features_until == cap_until) → cap löper ut med

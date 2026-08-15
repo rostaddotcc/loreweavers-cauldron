@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>The Lore Weaver's Cauldron — The Minds Behind the Mask</title>
-<meta name="description" content="The minds behind the mask — StepFun 3.7 Flash, Qwen 3.6 Flash, Qwen 3.8 Max and DeepSeek V4 Flash 0731. Context windows, parameters, tokens per second, and what each model does at your table.">
+<title>The Lore Weaver's Cauldron — The Minds, Voices &amp; Brushes</title>
+<meta name="description" content="The minds, voices and brushes behind the mask — DM minds (StepFun 3.7 Flash, Qwen 3.6 Flash, Qwen 3.8 Max, DeepSeek V4 Flash 0731), TTS narrators (StepFun TTS, Qwen TTS) and image painters (StepFun image edit 2, Wan 2.7 Pro). Context windows, parameters, speeds and what each one does at your table.">
 <link rel="icon" href="/assets/logo-cauldron.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -99,6 +99,7 @@
   .m-logo.qwen{background:linear-gradient(160deg,#e8c65a,#b8860b)}
   .m-logo.stepfun{background:linear-gradient(160deg,#7fd4c0,#2f8f7a)}
   .m-logo.deepseek{background:linear-gradient(160deg,#6aa9ff,#2f5fd4)}
+  .m-logo.wan{background:linear-gradient(160deg,#d4691e,#8a3d10)}
   .m-title{font-family:var(--font-display);font-weight:700;font-size:.95rem;letter-spacing:.14em;
     text-transform:uppercase;color:var(--bone-bright)}
   .m-maker{font-family:var(--font-body);font-size:.78rem;color:var(--bone-dim);letter-spacing:.02em;
@@ -142,6 +143,9 @@
   .cmp td .dim{color:var(--bone-dim)}
   .cmp .mname{font-family:var(--font-display);font-weight:700;font-size:.8rem;letter-spacing:.1em;
     text-transform:uppercase;color:var(--bone-bright);white-space:nowrap}
+  .cmp .cmp-group td{font-family:var(--font-display);font-size:.58rem;letter-spacing:.24em;
+    text-transform:uppercase;color:var(--gold);background:var(--stone-2);
+    padding:.5rem 1rem;border-bottom:1px solid var(--edge-hi);white-space:nowrap}
 
   .note{margin-top:1.4rem;font-size:.82rem;color:var(--bone-dim);line-height:1.7}
   .note b{color:var(--bone);font-weight:600}
@@ -192,7 +196,7 @@
 <section class="ledger">
   <p class="eyebrow rv">The Grimoire of Minds</p>
   <h1 class="rv">The Minds Behind the Mask</h1>
-  <p class="ledger-sub rv">Four minds can sit at your table. Each is a different kind of Dungeon Master — a different weight of thought, a different pace of speech. Here is what each one is made of, and what it is best at.<br><b>Powered by Qwen, DeepSeek &amp; StepFun</b></p>
+  <p class="ledger-sub rv">Four minds can sit at your table — and behind them wait the voices and the brushes. Each DM is a different weight of thought, a different pace of speech; the narrators give the realm a voice, and the painters give it faces. Here is what each one is made of, and what it is best at.<br><b>Powered by Qwen, DeepSeek, StepFun &amp; Wan</b></p>
 
   <!-- ═══════════════ hur det funkar ═══════════════ -->
   <div class="sec rv">
@@ -327,6 +331,112 @@
     </div>
   </div>
 
+  <!-- ═══════════════ tts: voices ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">🗣</span>
+      <h2>The Voices — TTS Narrators</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+
+    <!-- StepFun TTS -->
+    <div class="model">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="model-head">
+        <span class="m-logo stepfun">SF</span>
+        <div>
+          <div class="m-title">StepFun TTS</div>
+          <div class="m-maker">StepFun · stepaudio-2.5-tts</div>
+        </div>
+        <span class="m-tag dm">The Everyday Voice</span>
+      </div>
+      <p class="m-desc">The <b>voice that belongs to the table</b> — StepFun TTS reads your DM, characters and NPCs aloud with a brisk, reliable narration. It is the everyday narrator: fast, dependable, and there for every adventure. Free for every path since 2026-08-15.</p>
+      <div class="spec-grid">
+        <div class="spec"><span class="k">Model</span><span class="v">stepaudio-2.5-tts</span></div>
+        <div class="spec"><span class="k">Unlocks</span><span class="v">Free<small>everyone</small></span></div>
+        <div class="spec"><span class="k">Style</span><span class="v">Brisk, reliable</span></div>
+        <div class="spec"><span class="k">Purpose</span><span class="v">Narration on every path</span></div>
+      </div>
+      <div class="m-role"><span class="ico">◆</span><span>The dependable narrator — pick StepFun TTS whenever the realm should speak without fuss.</span></div>
+    </div>
+
+    <!-- Qwen TTS -->
+    <div class="model">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="model-head">
+        <span class="m-logo qwen">Q</span>
+        <div>
+          <div class="m-title">Qwen TTS</div>
+          <div class="m-maker">Alibaba Qwen · qwen-audio-3.0-tts-plus</div>
+        </div>
+        <span class="m-tag flagship">The Rich Voice</span>
+      </div>
+      <p class="m-desc">The <b>richer narrator</b> — Qwen&rsquo;s audio mind reads the scene with more warmth and nuance, offering a male and a female narrator (longanlufeng and longanlingxin) and a softer, more expressive pacing. When the realm should linger on its words, this is the voice. Unlocks with the one-time <b>Patron top-up (30€)</b>.</p>
+      <div class="spec-grid">
+        <div class="spec"><span class="k">Model</span><span class="v">qwen-audio-3.0-tts-plus</span></div>
+        <div class="spec"><span class="k">Unlocks</span><span class="v">Patron<small>30€ one-time</small></span></div>
+        <div class="spec"><span class="k">Voices</span><span class="v">Male + female<small>longanlufeng · longanlingxin</small></span></div>
+        <div class="spec"><span class="k">Style</span><span class="v">Warm, expressive</span></div>
+      </div>
+      <div class="m-role"><span class="ico">◆</span><span>The storyteller&rsquo;s voice — pick Qwen TTS for richer, warmer narration on the Patron path.</span></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ image: brushes ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">🖌</span>
+      <h2>The Brushes — Image Painters</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+
+    <!-- StepFun image edit 2 -->
+    <div class="model">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="model-head">
+        <span class="m-logo stepfun">SF</span>
+        <div>
+          <div class="m-title">StepFun image edit 2</div>
+          <div class="m-maker">StepFun · step-image-edit-2</div>
+        </div>
+        <span class="m-tag dm">The Quick Brush</span>
+      </div>
+      <p class="m-desc">The <b>everyday painter</b> — StepFun image edit 2 paints <b>generic but serviceable avatars</b>: a fast, stylized portrait for every face at your table. It reads your adventurer&rsquo;s dossier and paints a recognizable character quickly. Good when you simply need a face; not the brush for lifelike realism. Free for every path since 2026-08-15.</p>
+      <div class="spec-grid">
+        <div class="spec"><span class="k">Model</span><span class="v">step-image-edit-2</span></div>
+        <div class="spec"><span class="k">Unlocks</span><span class="v">Free<small>everyone</small></span></div>
+        <div class="spec"><span class="k">Style</span><span class="v">Generic, stylized</span></div>
+        <div class="spec"><span class="k">Purpose</span><span class="v">Quick avatars</span></div>
+      </div>
+      <div class="m-role"><span class="ico">◆</span><span>Paint a face fast — StepFun produces a generic avatar when you need a portrait without the wait.</span></div>
+    </div>
+
+    <!-- Wan 2.7 Pro -->
+    <div class="model hot">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="model-head">
+        <span class="m-logo wan">W</span>
+        <div>
+          <div class="m-title">Wan 2.7 Pro</div>
+          <div class="m-maker">Alibaba Wan · wan2.7-image</div>
+        </div>
+        <span class="m-tag flagship">The Master Painter</span>
+      </div>
+      <p class="m-desc">The <b>premium brush</b> — Wan 2.7 Pro renders <b>top-quality, realistic avatars</b>: lifelike faces, believable skin and light, in full <b>1080² resolution</b>, up to <b>10 portraits a day</b>. When a character deserves a portrait worth framing, this is the brush. Unlocks with the one-time <b>Patron top-up (30€)</b>.</p>
+      <div class="spec-grid">
+        <div class="spec"><span class="k">Model</span><span class="v">wan2.7-image</span></div>
+        <div class="spec"><span class="k">Unlocks</span><span class="v">Patron<small>30€ one-time</small></span></div>
+        <div class="spec"><span class="k">Resolution</span><span class="v">1080²</span></div>
+        <div class="spec"><span class="k">Daily</span><span class="v">10 portraits / day</span></div>
+      </div>
+      <div class="m-role"><span class="ico">◆</span><span>Paint a face to keep — Wan produces top-quality, realistic portraits for the characters that matter most.</span></div>
+    </div>
+  </div>
+
   <!-- ═══════════════ compare ═══════════════ -->
   <div class="sec rv">
     <div class="sec-head">
@@ -379,24 +489,58 @@
             <td>~113 tok/s <span class="dim">(output)</span></td>
             <td>Fast reasoning, long sessions</td>
           </tr>
+          <tr class="cmp-group"><td colspan="6">The Voices — TTS Narrators</td></tr>
           <tr>
-            <td class="mname">Wan 2.7 <span class="dim">(image)</span></td>
-            <td>—</td>
+            <td class="mname">StepFun TTS</td>
+            <td class="dim">—</td>
+            <td class="dim">—</td>
+            <td class="dim">—</td>
+            <td class="dim">fast</td>
+            <td>Narration — <b>Free</b></td>
+          </tr>
+          <tr>
+            <td class="mname">Qwen TTS</td>
+            <td class="dim">—</td>
+            <td class="dim">—</td>
+            <td class="dim">—</td>
+            <td class="dim">fast</td>
+            <td>Rich male &amp; female narrators — <b>Patron (30€)</b></td>
+          </tr>
+          <tr class="cmp-group"><td colspan="6">The Brushes — Image Painters</td></tr>
+          <tr>
+            <td class="mname">StepFun image edit 2</td>
+            <td class="dim">—</td>
+            <td class="dim">—</td>
+            <td class="dim">—</td>
+            <td class="dim">fast</td>
+            <td>Generic avatars — <b>Free</b></td>
+          </tr>
+          <tr>
+            <td class="mname">Wan 2.7 Pro <span class="dim">(image)</span></td>
+            <td class="dim">—</td>
             <td class="dim">—</td>
             <td class="dim">—</td>
             <td>~3–5 s <span class="dim">per image</span></td>
-            <td>Painting avatars — <b>Patron tier (30€)</b></td>
+            <td>Realistic 1080² avatars — <b>Patron (30€)</b></td>
+          </tr>
+          <tr>
+            <td class="mname">Qwen Image 3 Pro <span class="dim">(image)</span></td>
+            <td class="dim">—</td>
+            <td class="dim">—</td>
+            <td class="dim">—</td>
+            <td>~5–15 s <span class="dim">per image</span></td>
+            <td>Strong text &amp; detail — <b>Patron (30€)</b></td>
           </tr>
         </tbody>
       </table>
     </div>
-    <p class="note rv"><b>A note on numbers.</b> Context windows and parameter counts come from each model&rsquo;s official release material. Token-per-second figures are independent measurements (Artificial Analysis / Intelligence Index) or the vendor&rsquo;s own prompt-processing figure — real speed at your table varies with load, context length and reasoning level. Free players always travel with StepFun 3.7 Flash; DeepSeek, Qwen and the others unlock with the one-time Patron top-up (30€). <b>Wan 2.7 image painting</b> unlocks at the Patron tier — StepFun painting unlocks with the Support top-up (3€).</p>
+    <p class="note rv"><b>A note on numbers.</b> Context windows and parameter counts come from each model&rsquo;s official release material. Token-per-second figures are independent measurements (Artificial Analysis / Intelligence Index) or the vendor&rsquo;s own prompt-processing figure — real speed at your table varies with load, context length and reasoning level. Free players always travel with StepFun 3.7 Flash and the rotating OpenRouter free DMs; DeepSeek, Qwen and the other DM minds unlock with the one-time Patron top-up (30€). <b>The voices:</b> StepFun TTS narrates for free; Qwen TTS adds richer male and female narrators with Patron (30€). <b>The brushes:</b> StepFun image edit 2 paints <b>generic</b> avatars for free — <b>Wan 2.7 Pro</b> and <b>Qwen Image 3 Pro</b> paint <b>top-quality, realistic</b> portraits at 1080² with Patron (30€).</p>
   </div>
 
   <div class="footer rv">
     <b>The Lore Weaver's Cauldron</b> — an AI dungeon master with a memory.<br>
     <a href="pricing.html">Choose your path</a> &middot; <a href="adventure.html">Return to the realm</a> &middot; <a href="login.html">The Gate</a><br>
-    <span>v0.7 · The Minds Behind the Mask · Questions? <a href="mailto:web@rostad.cc">web@rostad.cc</a></span>
+    <span>v0.8 · The Minds, Voices &amp; Brushes · Questions? <a href="mailto:web@rostad.cc">web@rostad.cc</a></span>
   </div>
 </section>
 

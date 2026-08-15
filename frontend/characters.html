@@ -204,7 +204,7 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="sfx.js?v=20260802a"></script>
+<script src="sfx.js?v=20260811a"></script>
 <script>
 // Auth-guard
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -234,18 +234,14 @@ API.me().then(u => {
     sel.value = 'step-3.7-flash';
   }
 }).catch(() => {});
-// TIERS: bildgenerering är gated (2026-08-05). Free = ingen målning;
-// StepFun = Support (3€); Wan = Patron (30€). Returnerar false + informerar.
+// TIERS: bildgenerering är gated (2026-08-15). StepFun = gratis för alla;
+// Wan / Qwen Image 3 Pro = Patron (30€). Returnerar false + informerar.
 function forgeAvatarGenGate(provider) {
-  if (_forgeTier === 'free') {
-    toast('🔒 AI painting is a Support feature (3€) — support the Cauldron to paint your adventurer, the DM and every NPC with StepFun.');
+  if ((provider === 'wan' || provider === 'qwen') && _forgeTier !== 'tier2' && _forgeTier !== 'lifetime') {
+    toast('🔒 Wan 2.7 / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to paint with the premium engines.');
     return false;
   }
-  if (provider === 'wan' && _forgeTier !== 'tier2' && _forgeTier !== 'lifetime') {
-    toast('🔒 Wan 2.7 is a Patron feature (30€) — upgrade to paint with Wan.');
-    return false;
-  }
-  return true;
+  return true; // StepFun = gratis sedan 2026-08-15
 }
 
 let forging = false;

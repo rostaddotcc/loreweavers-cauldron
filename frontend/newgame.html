@@ -305,7 +305,7 @@
   </div>
 </div>
 
-<script src="sfx.js?v=20260802a"></script>
+<script src="sfx.js?v=20260811a"></script>
 <script src="api.js?v=20260804c"></script>
 <script src="i18n.js?v=20260807a"></script>
 <script src="archetypes.js?v=20260807a"></script>
@@ -928,14 +928,10 @@ function renderPreview(c, ac, glow) {
 
 // 🎨 Generera AI-avatar från character sheet (automatiskt — backend bygger prompten
 // från karaktär, inventory och lore; ingen användarprompt krävs)
-// TIERS: bildgenerering är gated (2026-08-05) — StepFun = Support (3€).
+// TIERS: bildgenerering är gated (2026-08-15) — StepFun = gratis sedan 2026-08-15.
 let _avatarBusy = false;
 function newgameAvatarGenGate() {
-  if (_newgameTier === 'free') {
-    toast('🔒 AI painting is a Support feature (3€) — support the Cauldron to paint your adventurer, the DM and every NPC with StepFun.');
-    return false;
-  }
-  return true;
+  return true; // StepFun = gratis för alla (Wan/Qwen väljs inte här)
 }
 async function autoAvatar() {
   if (_avatarBusy) return;
@@ -949,9 +945,9 @@ async function autoAvatar() {
       if (rerollBtn) rerollBtn.style.display = '';
       toast('🎨 Avatar painted from your sheet!');
     } else {
-      if (res && res.detail && /Support feature/.test(res.detail)) {
+      if (res && res.detail && /Patron feature/.test(res.detail)) {
         if (rerollBtn) rerollBtn.style.display = '';
-        rerollBtn.textContent = '🔒 Paint Avatar — Support';
+        rerollBtn.textContent = '🔒 Paint Avatar — Patron';
       }
       console.warn('Avatar-gen misslyckades:', res);
     }

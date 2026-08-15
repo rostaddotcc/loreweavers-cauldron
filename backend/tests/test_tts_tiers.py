@@ -1,9 +1,9 @@
-"""TIERS 2026-08-05: TTS + profilavatar är tier-gated.
+"""TIERS 2026-08-15: TTS + profilavatar är tier-gated.
 
-- StepFun TTS = Support (3€)+ — free → 403 (förr "always free").
-- Qwen TTS = Patron (10€)+ — free/tier1 → 403 (förr tyst fallback till stepfun).
-- /api/me/avatar/generate: provider 'stepfun'|'wan' (default stepfun).
-  StepFun = Support (3€)+; Wan 2.7 = Patron (10€)+. Svaret bär provider.
+- StepFun TTS = GRATIS (sedan 2026-08-15) — free → 200.
+- Qwen TTS = Patron (30€)+ — free/tier1 → 403 (förr tyst fallback till stepfun).
+- /api/me/avatar/generate: provider 'stepfun'|'wan'|'qwen' (default stepfun).
+  StepFun = gratis; Wan 2.7 / Qwen Image 3 Pro = Patron (30€)+. Svaret bär provider.
 
 autouse-fixtures: users.json + kampanjdata pekas mot tmp — skyddar riktig data
 (users.json-incidenten 2026-08-04). Ingen riktig data rörs.
@@ -134,16 +134,16 @@ class _WanClient:
         return _DL()
 
 
-# ── /api/tts: StepFun = Support (3€)+, Qwen = Patron (10€)+ ───────────────
+# ── /api/tts: StepFun = gratis, Qwen = Patron (30€)+ ──────────────────────
 
-def test_tts_stepfun_free_403(client, monkeypatch):
-    """free + stepfun → 403 med Support-hänvisning (förr alltid gratis)."""
+def test_tts_stepfun_free_ok(client, monkeypatch):
+    """free + stepfun → 200 (StepFun TTS är gratis sedan 2026-08-15)."""
     _seed("alice", tier="free")
     _login(client)
     monkeypatch.setattr(main, "_synth_stepfun_tts", lambda voice, text, style="": b"RIFFwavfake")
     r = client.post("/api/tts", json={"text": "Hej från free", "voice": "male", "provider": "stepfun"})
-    assert r.status_code == 403
-    assert "StepFun TTS is a Support feature (3€)" in r.json()["detail"]
+    assert r.status_code == 200, r.text
+    assert r.content == b"RIFFwavfake"
 
 
 def test_tts_qwen_free_403(client, monkeypatch):
@@ -154,7 +154,7 @@ def test_tts_qwen_free_403(client, monkeypatch):
     monkeypatch.setattr(main, "_synth_qwen_tts_retry", lambda voice, text, style="": b"RIFFqwenfake")
     r = client.post("/api/tts", json={"text": "Hej qwen free", "voice": "male", "provider": "qwen"})
     assert r.status_code == 403
-    assert "Qwen TTS is a Patron feature (10€)" in r.json()["detail"]
+    assert "Qwen TTS is a Patron feature (30€)" in r.json()["detail"]
 
 
 def test_tts_stepfun_tier1_ok(client, monkeypatch):
@@ -221,21 +221,22 @@ def test_tts_qwen_tier2_ok(client, monkeypatch):
     assert r.content == b"RIFFqwenfake"
 
 
-# ── /api/me/avatar/generate: provider stepfun|wan ─────────────────────────
+# ── /api/me/avatar/generate: provider stepfun|wan|qwen ─────────────────────
 
-def test_me_avatar_stepfun_free_403(client, monkeypatch):
-    """free får INTE måla profilavataren med StepFun — 403 + Support."""
+def test_me_avatar_stepfun_free_ok(client, monkeypatch):
+    """free målar profilavataren med StepFun → 200 (gratis sedan 2026-08-15)."""
     monkeypatch.setenv("STEPFUN_API_KEY", "test-key")
     _seed("alice", tier="free")
     _login(client)
     monkeypatch.setattr(main.httpx, "AsyncClient", _FakePost)
     r = client.post("/api/me/avatar/generate", json={"prompt": "a hooded mage", "provider": "stepfun"})
-    assert r.status_code == 403
-    assert "Support" in r.json()["detail"]
+    assert r.status_code == 200, r.text
+    assert r.json()["provider"] == "stepfun"
+    assert len((main._load_user_avatar_gallery("alice").get("gallery") or [])) == 1
 
 
 def test_me_avatar_stepfun_tier1_ok(client, monkeypatch):
-    """Support (tier1) målar profilavataren med StepFun → 200 + provider."""
+    """Support (tier1, legacy) målar profilavataren med StepFun → 200 + provider."""
     monkeypatch.setenv("STEPFUN_API_KEY", "test-key")
     _seed("alice", tier="tier1")
     _login(client)
@@ -255,6 +256,39 @@ def test_me_avatar_wan_tier1_403(client, monkeypatch):
     r = client.post("/api/me/avatar/generate", json={"prompt": "a hero", "provider": "wan"})
     assert r.status_code == 403
     assert "Patron" in r.json()["detail"]
+
+
+def test_me_avatar_qwen_free_403(client, monkeypatch):
+    """free räcker INTE för Qwen Image 3 Pro — 403 med Patron-hänvisning."""
+    _seed("alice", tier="free")
+    _login(client)
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
+    monkeypatch.setattr(main.httpx, "AsyncClient", _WanClient)
+    r = client.post("/api/me/avatar/generate", json={"prompt": "a hero", "provider": "qwen"})
+    assert r.status_code == 403
+    assert "Patron" in r.json()["detail"]
+
+
+def test_me_avatar_qwen_tier2_ok(client, monkeypatch):
+    """Patron (tier2) målar profilavataren med Qwen Image 3 Pro → 200 + model."""
+    _seed("alice", tier="tier2")
+    _login(client)
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
+    seen = {}
+
+    class _CapturingWan(_WanClient):
+        async def post(self, *a, **k):
+            seen["json"] = k.get("json")
+            return _WanResp()
+
+    monkeypatch.setattr(main.httpx, "AsyncClient", _CapturingWan)
+    r = client.post("/api/me/avatar/generate", json={"prompt": "a hero", "provider": "qwen"})
+    assert r.status_code == 200, r.text
+    assert r.json()["provider"] == "qwen"
+    assert len((main._load_user_avatar_gallery("alice").get("gallery") or [])) == 1
+    # Qwen Image 3 Pro → samma Token Plan-endpoint, 1024²
+    assert seen["json"]["model"] == "qwen-image-3.0-pro"
+    assert seen["json"]["parameters"]["size"] == "1024*1024"
 
 
 def test_me_avatar_wan_tier2_ok(client, monkeypatch):

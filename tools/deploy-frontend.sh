@@ -23,6 +23,9 @@ done
 for f in frontend/*.css; do
   docker cp "$f" "$C":/app/"$f"
 done
+# 2026-08-15: assets synkas också — hero-porträtten i assets/adventurers/
+# tappas annars vid compose up (bara backend/data är bind-mountat).
+docker cp frontend/assets/. "$C":/app/frontend/assets/
 echo "✓ Frontend kopierat till $C"
 docker exec "$C" md5sum /app/frontend/sprites.js
 md5sum frontend/sprites.js

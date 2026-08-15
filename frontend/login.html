@@ -157,8 +157,24 @@
   .free-slogan b{color:var(--gold-bright);font-style:normal;font-weight:600}
   .hero-actions{display:flex;align-items:center;gap:1.2rem;margin-top:2.2rem;flex-wrap:wrap}
   .myst-quote{margin-top:2.4rem;font-style:italic;font-size:.9rem;color:var(--bone-dim);min-height:1.6em;transition:opacity 1s ease}
-  .scroll-cue{position:absolute;bottom:1.8rem;left:50%;transform:translateX(-50%);color:var(--bone-dim);font-size:1rem;animation:cue-bob 2.4s ease-in-out infinite}
+  .scroll-cue{position:absolute;bottom:1.8rem;left:50%;transform:translateX(-50%);color:var(--bone-dim);font-size:1rem;animation:cue-bob 2.4s ease-in-out infinite;z-index:1}
   @keyframes cue-bob{0%,100%{transform:translate(-50%,0);opacity:.5}50%{transform:translate(-50%,7px);opacity:1}}
+
+  /* ═══════════════ hero background — roterande äventyrarefaces (Qwen Image 3 Pro) ═══════════════ */
+  .hero{position:relative;overflow:hidden}
+  .hero-bg{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center 18%;transform-origin:center;animation:hero-breathe 36s ease-in-out infinite alternate}
+  .hero-bg::after{content:'';position:absolute;inset:0;background:
+    linear-gradient(90deg, var(--ink) 0%, rgba(26,20,38,.85) 26%, rgba(26,20,38,.42) 52%, rgba(26,20,38,.12) 72%, rgba(26,20,38,.55) 100%),
+    linear-gradient(0deg, var(--ink) 0%, rgba(26,20,38,0) 26%, rgba(26,20,38,0) 72%, rgba(26,20,38,.42) 100%)}
+  @keyframes hero-breathe{from{transform:scale(1)}to{transform:scale(1.07)}}
+  .hero-copy{position:relative;z-index:1}
+  .hero-credit{position:absolute;right:clamp(1.2rem,4vw,3rem);bottom:4.4rem;z-index:2;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;color:var(--bone-dim);opacity:.7;text-shadow:1px 1px 0 #000}
+  @media (max-width:720px){
+    .hero-bg{background-position:center 12%}
+    .hero-bg::after{background:
+      linear-gradient(0deg, var(--ink) 0%, rgba(26,20,38,.62) 34%, rgba(26,20,38,.3) 62%, rgba(26,20,38,.78) 100%)}
+    .hero-credit{display:none}
+  }
 
   /* ═══════════════ features ═══════════════ */
   .feat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin-top:2.6rem;max-width:980px}
@@ -500,6 +516,7 @@
 
   <!-- ═══════════════ hero ═══════════════ -->
   <section class="hero">
+    <div class="hero-bg" id="hero-bg" role="img" aria-label="A painted adventurer"></div>
     <div class="wrap">
       <div class="hero-copy">
         <p class="eyebrow rv in">A Free AI Dungeon Master &middot; Open Beta</p>
@@ -519,6 +536,7 @@
         <p class="myst-quote rv in d3" id="myst-quote"></p>
       </div>
     </div>
+    <p class="hero-credit">Hero portraits &middot; Qwen Image 3 Pro</p>
     <div class="scroll-cue">&#8595;</div>
   </section>
 
@@ -1271,6 +1289,28 @@ document.addEventListener('keydown', e => {
   DECK.npc.data = g.npcs || [];
   renderDeck('adv');
   renderDeck('npc');
+})();
+
+/* ── Hero: roterande äventyrarebilder (Qwen Image 3 Pro) — ny slump vid varje besök ── */
+(function () {
+  var HERO_ART = [
+    'assets/adventurers/webp/adventurer-fighter.webp',
+    'assets/adventurers/webp/adventurer-elf-ranger.webp',
+    'assets/adventurers/webp/adventurer-dwarf-cleric.webp',
+    'assets/adventurers/webp/adventurer-tiefling-warlock.webp',
+    'assets/adventurers/webp/adventurer-rogue.webp',
+    'assets/adventurers/webp/adventurer-dragonborn-paladin.webp',
+    'assets/adventurers/webp/adventurer-halfling-bard.webp',
+    'assets/adventurers/webp/adventurer-gnome-wizard.webp'
+  ];
+  var bg = document.getElementById('hero-bg');
+  if (!bg) return;
+  var last = null;
+  try { last = localStorage.getItem('lwc-hero-last'); } catch (e) {}
+  var pool = HERO_ART.filter(function (a) { return a !== last; });
+  var pick = pool[Math.floor(Math.random() * pool.length)];
+  bg.style.backgroundImage = 'url("' + pick + '")';
+  try { localStorage.setItem('lwc-hero-last', pick); } catch (e) {}
 })();
 </script>
 

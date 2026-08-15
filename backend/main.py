@@ -11105,6 +11105,7 @@ FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 import mimetypes
 mimetypes.add_type("audio/ogg", ".ogg")
 mimetypes.add_type("audio/ogg", ".oga")
+mimetypes.add_type("image/webp", ".webp")  # hero-porträtt (assets/adventurers/webp)
 
 # ═══════════════════════════════════════════════════════════════
 # SEO — gratis trix (2026-08-06): robots.txt, sitemap.xml, llms.txt

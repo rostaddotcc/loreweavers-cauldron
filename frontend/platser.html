@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="snes.css?v=39">
+<link rel="stylesheet" href="snes.css?v=41">
 <style>
 /* ═══════════ RITE-RAIL — THE ARCHIVE dropdown (2026-08-11) ═══════════ */
 .rite-rail{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:48px;background:linear-gradient(180deg,var(--stone-2),var(--stone));border:1px solid var(--edge);border-top:1px solid var(--edge-hi);padding:0 .8rem;gap:1rem;position:relative}
@@ -50,7 +50,6 @@
 .tj-entry{ border-radius: 8px !important; }
 .current-loc{ border-radius: 10px !important; }
 .map-head{ border-radius: 10px !important; }
-.legend-item{ border-radius: 6px !important; }
 </style>
 <script src="sprites.js?v=20260806b"></script>
 <script src="fonts.js?v=20260806b"></script>
@@ -80,17 +79,26 @@
   .current-loc .pin{font-size:1.1rem}
 
   /* ── ASCII-karta ── */
-  /* flex-shrink:0 = KLIPP-BUGG FIXAD: utan detta krossas kartan till ~38px
-     av flexbox (overflow-x:auto ⇒ auto min-height:0) när sidans innehåll
-     växer (nya platser) och overflow-y:hidden döljer allt. */
-  .ascii-map{margin:0 auto 2rem;padding:1.2rem 1.5rem;background:color-mix(in srgb, var(--ink) 95%, transparent);border:2px solid var(--edge);box-shadow:inset 0 0 20px color-mix(in srgb, var(--arcane) 5%, transparent),5px 5px 0 rgba(0,0,0,.7);overflow-x:auto;overflow-y:visible;text-align:center;max-width:100%;flex-shrink:0}
-  /* pre som inline-block (ej block+margin:auto) — annars centreras en
-     för bred karta så att vänsterkanten hamnar utanför scroll-området
-     och inte går att nå (bara mitten syns). Med inline-block + text-align
-     center på behållaren: smal karta centreras, bred karta scrollas från
-     vänsterkant. */
-  .ascii-map pre{font-family:'Courier New',monospace;font-size:.7rem;line-height:1.35;color:var(--arcane);text-shadow:0 0 6px color-mix(in srgb, var(--arcane) 30%, transparent);white-space:pre;display:inline-block;margin:0;text-align:left}
+  /* Zoom/pan-pipeline (2026-08-30): .map-viewport + transform på pre:n.
+     Ersätter fitMapToWidth-fontkrympningen som gjorde kartan oläsbar i
+     Codex-panelen. flex-shrink:0-behovet kvarstår (se gamla kommentaren):
+     .ascii-map måste inte krympas av flexbox-beräkningen. */
+  .ascii-map{position:relative;width:100%;max-width:1000px;margin:0 auto 2rem;padding:1.2rem 1.5rem;background:color-mix(in srgb, var(--ink) 95%, transparent);border:2px solid var(--edge);box-shadow:inset 0 0 20px color-mix(in srgb, var(--arcane) 5%, transparent),5px 5px 0 rgba(0,0,0,.7);overflow:hidden;text-align:center;flex-shrink:0;touch-action:none}
+  /* Pergament-hörnor — cartouch runt världen */
+  .ascii-map::before,.ascii-map::after{content:'✦';position:absolute;color:rgba(201,162,39,.5);font-size:.7rem;line-height:1;pointer-events:none}
+  .ascii-map::before{top:.3rem;left:.45rem}
+  .ascii-map::after{bottom:.3rem;right:.45rem}
+  .map-viewport{position:relative;overflow:hidden;min-height:120px}
+  /* pre i transform-världen:ingen wrap — smal karta centreras via inline
+     left (JS), bred karta pannas från vänsterkant. */
+  .map-viewport pre{font-family:'Courier New',monospace;font-size:.7rem;line-height:1.35;color:var(--arcane);text-shadow:0 0 6px color-mix(in srgb, var(--arcane) 30%, transparent);white-space:pre;position:absolute;top:0;left:0;margin:0;text-align:left;transform-origin:0 0;will-change:transform}
   .ascii-map .map-label{font-family:var(--font-accent,'Silkscreen',monospace);font-size:.55rem;letter-spacing:.2em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.5rem}
+  /* ── Zoom/pan-verktyg ── */
+  .map-tools{position:absolute;top:.5rem;right:.6rem;z-index:10;display:flex;gap:.25rem}
+  .map-tools button{font-family:var(--font-accent,'Silkscreen',monospace);font-size:.62rem;min-width:26px;height:26px;padding:0 .35rem;background:color-mix(in srgb, var(--stone-2) 92%, transparent);border:1px solid var(--edge);color:var(--bone-dim);cursor:pointer;line-height:1;transition:color .15s,border-color .15s}
+  .map-tools button:hover{color:var(--gold-bright);border-color:var(--gold)}
+  @media(max-width:640px){.map-tools button{min-width:36px;height:36px;font-size:.72rem}}
+  @media(max-width:960px){.ascii-map{max-width:100%}}
 
   /* ── Kartans teckenförklaring (legend) ── */
   .map-legend{display:flex;gap:1.1rem;flex-wrap:wrap;justify-content:center;margin:-.8rem auto 1.8rem;max-width:920px;font-family:var(--font-accent,'Silkscreen',monospace);font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-dim)}
@@ -100,8 +108,6 @@
   .map-legend .ml-unv{color:rgba(138,122,94,.55)}
   .map-legend .ml-q{color:var(--ember)}
   .map-legend .ml-route{color:rgba(94,154,163,.55)}
-  @media(max-width:960px){.ascii-map{max-width:100%}.ascii-map pre{font-size:.55rem}}
-  @media(max-width:640px){.ascii-map pre{font-size:.42rem;line-height:1.2}}
 
   /* ── Platskort ── */
   .places-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem;max-width:1000px;margin:0 auto}
@@ -151,9 +157,8 @@
     /* Topnav: 44px träffytor (snes.css har !important → kräver !important) */
     .topbar{flex-wrap:wrap!important;gap:.4rem .5rem!important;padding:.6rem .75rem!important}
     .topbar .top-btn{min-height:44px!important;display:inline-flex!important;align-items:center!important;padding:.4rem .65rem!important;font-size:.68rem!important}
-    /* Karta: full bredd, krympt typ */
+    /* Karta: full bredd — storlek sköts av zoom/pan-systemet (ej fontkrymp) */
     .ascii-map{padding:.8rem .6rem;margin-left:-.25rem;margin-right:-.25rem}
-    .ascii-map pre{font-size:.42rem;line-height:1.2}
     .map-head h1{font-size:1.2rem}
     .current-loc{padding:.45rem .8rem;font-size:.81rem}
     .travel-journal{padding:.55rem .7rem}
@@ -168,7 +173,6 @@
   }
   @media(max-width:400px){
     .layout{padding:.8rem .5rem 2.5rem}
-    .ascii-map pre{font-size:.36rem;line-height:1.18}
     .pc-name{font-size:.82rem}
     .pc-desc{font-size:.91rem}
   }
@@ -181,7 +185,7 @@
      raderna wrap:ade i Codex-panelens smala bredd. Tvinga mono med högre
      specificitet + !important (slår §1). */
   .ascii-map pre .mc{font-family:'Courier New',monospace !important;transition:color .2s,text-shadow .2s}
-  .ascii-map pre .mc.bg{color:color-mix(in srgb, var(--arcane) 18%, transparent);text-shadow:none}
+  .ascii-map pre .mc.bg{color:color-mix(in srgb, var(--arcane) 30%, transparent);text-shadow:none}
   .ascii-map pre .mc.visited{color:var(--teal);text-shadow:0 0 4px rgba(94,154,163,.4)}
   .ascii-map pre .mc.unvisited{color:rgba(138,122,94,.3);text-shadow:none}
   .ascii-map pre .mc.current{color:var(--gold-bright);text-shadow:0 0 8px rgba(232,198,90,.8),0 0 20px rgba(232,198,90,.4);animation:map-glow 2s ease-in-out infinite}
@@ -190,7 +194,7 @@
   /* ── Kartnålar: stora träffytor (500%+ större än glyfen) ──
      Glyfen behåller sin plats i ASCII-gridden (transform påverkar ej layout),
      men en osynlig ::after-zon fångar klick/taps långt utanför tecknet.
-     Zonens storlek är em-baserad så den skalar med fitMapToWidth. */
+     Zonens storlek är em-baserad så den skalar med kartans zoom. */
   .ascii-map pre .mc[data-loc]{position:relative;display:inline-block;cursor:pointer;z-index:2;transform:scale(1.8)}
   .ascii-map pre .mc[data-loc]::after{content:'';position:absolute;inset:-1em -1.2em;z-index:3}
   .ascii-map pre .mc[data-loc]:hover{filter:brightness(1.6)}
@@ -223,10 +227,32 @@
   .quest-panel .qp-label{font-family:var(--font-accent,'Silkscreen',monospace);font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ember);margin-bottom:.4rem}
   .quest-panel .qp-item{font-size:.95rem;color:var(--bone);padding:.2rem 0 .2rem 1rem;position:relative}
   .quest-panel .qp-item::before{content:'⚑';position:absolute;left:0;color:var(--ember)}
-/* ═══════════ MJUKA UPP — Codex-knappar (2026-08-05) ═══════════ */
-.top-btn{ border-radius: 8px !important; }
+.quest-panel .qp-item.clickable{cursor:pointer}
+.quest-panel .qp-item.clickable:hover{color:var(--gold-bright)}
 
-</style>
+/* ── Filter-chips: Alla · Besökta · Quest · Okända (2026-08-30) ── */
+.map-filters{display:flex;gap:.4rem;flex-wrap:wrap;justify-content:center;margin:0 auto 1rem;max-width:920px}
+.mf-chip{font-family:var(--font-accent,'Silkscreen',monospace);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim);background:transparent;border:1px solid var(--edge);padding:.3rem .7rem;cursor:pointer;transition:color .15s,border-color .15s,background .15s;border-radius:8px}
+.mf-chip:hover{color:var(--bone-bright);border-color:var(--bone-dim)}
+.mf-chip.on{color:var(--gold-bright);border-color:var(--gold);background:rgba(201,162,39,.08)}
+.place-card.hide-filter{display:none}
+
+/* ── Tooltip som interaktivt platskort: pointer-events + "Visa plats"-länk ── */
+.map-tooltip{pointer-events:auto}
+.map-tooltip .tt-go{display:inline-block;margin-top:.5rem;font-family:var(--font-accent,'Silkscreen',monospace);font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);border:1px solid rgba(201,162,39,.4);padding:.25rem .55rem;border-radius:6px;cursor:pointer;background:transparent;transition:background .15s,color .15s}
+.map-tooltip .tt-go:hover{background:rgba(201,162,39,.12);color:var(--gold-bright)}
+
+/* ── Levande värld: vatten-dimmer + quest-fackel (2026-08-30) ──
+   Max ~celler med klasserna nedan; rörelsen är långsam och sällsynt så
+   mobilen inte svettas. prefers-reduced-motion stänger av allt. */
+@keyframes mc-shimmer{0%,100%{opacity:.55}50%{opacity:.95}}
+@keyframes mc-torch{0%,100%{text-shadow:0 0 6px rgba(212,105,30,.5)}50%{text-shadow:0 0 14px rgba(232,198,90,.9),0 0 26px rgba(212,105,30,.5)}}
+.ascii-map pre .mc.water{animation:mc-shimmer 4.5s ease-in-out infinite;animation-delay:var(--d,0s)}
+.ascii-map pre .mc.quest:not(.current){animation:mc-torch 2.6s ease-in-out infinite}
+.ascii-map pre .fog{color:rgba(58,31,102,.5);text-shadow:none}
+@media(prefers-reduced-motion:reduce){
+  .ascii-map pre .mc.water,.ascii-map pre .mc.quest:not(.current),.ascii-map pre .mc.current{animation:none}
+}</style>
 </head>
 <body>
 <div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
@@ -281,7 +307,15 @@
 
   <div class="ascii-map" id="ascii-map">
     <div class="map-label">✦ world map ✦</div>
-    <pre id="map-art">Loading map…</pre>
+    <div class="map-tools">
+      <button type="button" id="mt-zin" title="Zoom in" aria-label="Zoom in">＋</button>
+      <button type="button" id="mt-zout" title="Zoom out" aria-label="Zoom out">－</button>
+      <button type="button" id="mt-center" title="Center on my location" aria-label="Center on my location">◎</button>
+      <button type="button" id="mt-fit" title="Show whole map" aria-label="Show whole map">⤢</button>
+    </div>
+    <div class="map-viewport" id="map-viewport">
+      <pre id="map-art">Loading map…</pre>
+    </div>
   </div>
 
   <div class="map-legend" id="map-legend" aria-label="Map legend">
@@ -297,6 +331,13 @@
   <div class="quest-panel" id="quest-panel" style="display:none">
     <div class="qp-label">⚑ Active Quests</div>
     <div id="quest-list"></div>
+  </div>
+
+  <div class="map-filters" id="map-filters" role="tablist" aria-label="Place filters">
+    <button type="button" class="mf-chip on" data-filter="all">All</button>
+    <button type="button" class="mf-chip" data-filter="visited">Visited</button>
+    <button type="button" class="mf-chip" data-filter="quest">Quest</button>
+    <button type="button" class="mf-chip" data-filter="unvisited">Known</button>
   </div>
 
   <div class="places-grid" id="places-grid"></div>
@@ -345,6 +386,22 @@ function hashStr(s) {
   return h;
 }
 
+// ── Klustrad terräng: värdesbrus (bilinjär interpolering av seedat gitter) ──
+// Ersätter den tidigare per-cell-slumpen som gav brus utan landskap. Två
+// oktaver: grov (9×5) formnar kontinenter, fin (24×10) ger textur.
+function makeValueNoise(seed, gw, gh) {
+  const rand = mulberry32(seed + gw * 7919 + gh * 104729);
+  const lat = Array.from({ length: gh + 1 }, () => Array.from({ length: gw + 1 }, rand));
+  const smooth = t => t * t * (3 - 2 * t);
+  return function(x, y, W, H) {
+    const gx = (x / W) * gw, gy = (y / H) * gh;
+    const x0 = Math.min(Math.floor(gx), gw - 1), y0 = Math.min(Math.floor(gy), gh - 1);
+    const tx = smooth(gx - x0), ty = smooth(gy - y0);
+    const a = lat[y0][x0], b = lat[y0][x0 + 1], c = lat[y0 + 1][x0], d = lat[y0 + 1][x0 + 1];
+    return (a * (1 - tx) + b * tx) * (1 - ty) + (c * (1 - tx) + d * tx) * ty;
+  };
+}
+
 // Global state
 let allLocations = [];
 let questLocations = new Set(); // platsnamn med aktiva uppdrag
@@ -360,14 +417,27 @@ function travelClass(days) {
 function renderMap(locations, travelLog) {
   const W = 120, H = 40;
   const rng = mulberry32(campaignSeed);
+  const coarse = makeValueNoise(campaignSeed, 9, 5);
+  const fine = makeValueNoise(campaignSeed ^ 0x9e3779b9, 24, 10);
 
-  // Bygg grid med seeded terräng-bakgrund
+  // Bygg grid med klustrad terräng (värdesbrus): höjd → vatten/slätt/skog/
+  // berg, + en separat fuktighet för träsk. Ger sammanhängande landskap i
+  // stället för brusprickar. Vattenceller får .water (långsam shimmer).
   const grid = Array.from({length: H}, () => Array.from({length: W}, () => ({ch: ' ', cls: 'bg'})));
+  let waterBudget = 90;   // max antal animerade vattenceller (mobil-vänligt)
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
-      const r = rng();
-      if (r < 0.03) grid[y][x] = {ch: '·', cls: 'bg'};
-      else if (r < 0.04) grid[y][x] = {ch: ',', cls: 'bg'};
+      const h = coarse(x, y, W, H) * 0.72 + fine(x, y, W, H) * 0.28;
+      const m = fine(x + 41, y + 17, W, H); // fuktighet (förskuten = dekorrelaterad)
+      let cell;
+      if (h < 0.36) cell = { ch: '≈', cls: 'bg water', w: true };
+      else if (h < 0.42) cell = { ch: '~', cls: 'bg water', w: true };
+      else if (h < 0.58) cell = (m > 0.62) ? { ch: '▒', cls: 'bg' } : (rng() < 0.12 ? { ch: ',', cls: 'bg' } : { ch: ' ', cls: 'bg' });
+      else if (h < 0.72) cell = { ch: rng() < 0.35 ? '"' : (rng() < 0.5 ? '↑' : ','), cls: 'bg' }; // skog
+      else cell = { ch: h > 0.85 ? 'Λ' : '∧', cls: 'bg' }; // berg + toppar
+      // kant-dimmer: varannan vattencelldel får shimmer oavsett budget
+      if (cell.w && waterBudget-- <= 0) cell.cls = 'bg';
+      grid[y][x] = cell;
     }
   }
 
@@ -399,6 +469,11 @@ function renderMap(locations, travelLog) {
       ch = '◆'; cls = 'visited';
     } else {
       ch = '◇'; cls = 'unvisited'; // Fog of war: dimmad
+      // "Här bor drakar": ░-dither runt okända platser (cartograf-känsla)
+      for (let fy = py - 1; fy <= py + 1; fy++)
+        for (let fx = px - 1; fx <= px + 1; fx++)
+          if (fy >= 0 && fy < H && fx >= 0 && fx < W && !grid[fy][fx].loc && grid[fy][fx].ch !== '░' && (fx !== px || fy !== py))
+            if (Math.abs(fx - px) + Math.abs(fy - py) <= 2) grid[fy][fx] = { ch: '░', cls: 'fog' };
     }
     // Quest-markör: ⚑ om platsen har ett aktivt uppdrag
     if (questLocations.has(loc.name)) {
@@ -437,18 +512,21 @@ function renderMap(locations, travelLog) {
   const rows = grid.map(row => {
     const cells = row.map(c => {
       if (c.loc) {
-        return `<span class="mc ${c.cls}" data-loc="${c.loc}">${c.ch}</span>`;
+        return `<span class="mc ${c.cls}" data-loc="${escapeAttr(c.loc)}">${c.ch}</span>`;
       }
+      // shimmer-fas per cell → ingen synchronized swimming
+      if (c.cls === 'bg water') return `<span class="mc bg water" style="--d:${(rng() * 4).toFixed(2)}s">${c.ch}</span>`;
       return `<span class="mc ${c.cls}">${c.ch}</span>`;
     }).join('');
     return '║' + cells + '║';
   });
 
   document.getElementById('map-art').innerHTML = [top, ...rows, bot].join('\n');
-  fitMapToWidth();
+  mapInitView();
 
-  // Klick-hantering för platsceller
+  // Klick-hantering för platsceller (pan-filtret: bara klick utan drag)
   document.getElementById('map-art').addEventListener('click', function(e) {
+    if (_mapDragged) return;
     const span = e.target.closest('[data-loc]');
     if (!span) { hideTooltip(); return; }
     const loc = locMap[span.dataset.loc];
@@ -457,33 +535,171 @@ function renderMap(locations, travelLog) {
   });
 }
 
-// ── Auto-skala: krymp kartans typsnitt så den ALLTID passar behållarens
-// bredd (Codex-panelen är bara 440px, fristående sidan ~1000px). Utan detta
-// klipper kartan eller kräver horisontell scroll. ──
-function fitMapToWidth() {
+function escapeAttr(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+// ════════════════════════════════════════════════════════════════
+// ZOOM/PAN — transform på pre:n i stället för fontkrympning
+// (fitMapToWidth efterlämnade en 4.5px-sörja i Codex-panelen).
+// Basstorleken är ALLTID läsbar; viewport + ＋－◎⤢ + drag + pinch.
+// ════════════════════════════════════════════════════════════════
+const _mz = { s: 1, x: 0, y: 0, fit: 1 };  // skala, pan, fit-skala
+function _mzApply(anim) {
   const pre = document.getElementById('map-art');
-  const box = document.getElementById('ascii-map');
-  if (!pre || !box) return;
-  pre.style.fontSize = '';                       // återställ till CSS-basstorlek
-  const base = parseFloat(getComputedStyle(pre).fontSize);
-  const cs = getComputedStyle(box);
-  const avail = box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 4;
-  if (avail <= 0) return;                        // iframe ej synlig ännu (display:none)
-  const natural = pre.offsetWidth;
-  if (natural > avail && natural > 0) {
-    const fitted = Math.max(base * (avail / natural), 4.5);  // aldrig under 4.5px
-    pre.style.fontSize = fitted.toFixed(2) + 'px';
+  const vp = document.getElementById('map-viewport');
+  if (!pre || !vp) return;
+  const nat = _mapNatural();
+  // viewport-höjd följer kartan (men cap:ad — annars sväller Codex-iframe:n
+  // till 800px vid 3× zoom); clamp:en körs EFTER höjdsättningen så den ser
+  // rätt vh — annars feedback-loop mellan clamp och height.
+  vp.style.height = Math.min(560, Math.max(140, nat.h * _mz.s + _mz.y)) + 'px';
+  _mzClamp();
+  pre.style.transform = `translate(${_mz.x}px, ${_mz.y}px) scale(${_mz.s})`;
+  pre.style.transition = anim ? 'transform .25s cubic-bezier(.22,1,.36,1)' : 'none';
+}
+function _mapNatural() {
+  const pre = document.getElementById('map-art');
+  // offsetWidth/Height ignorerar transform → nativ storlek
+  return { w: pre.offsetWidth, h: pre.offsetHeight };
+}
+function _mzClamp() {
+  const vp = document.getElementById('map-viewport');
+  const nat = _mapNatural();
+  const vw = vp.clientWidth, vh = vp.clientHeight || 120;
+  const cw = nat.w * _mz.s, chh = nat.h * _mz.s;
+  _mz.x = cw <= vw ? (vw - cw) / 2 : Math.min(0, Math.max(vw - cw, _mz.x));
+  _mz.y = Math.min(0, Math.max(Math.min(vh, chh) - chh, _mz.y));
+}
+function mapInitView() {
+  const vp = document.getElementById('map-viewport');
+  const pre = document.getElementById('map-art');
+  if (!vp || !pre) return;
+  const nat = _mapNatural();
+  _mz.fit = Math.min(1, (vp.clientWidth - 2) / Math.max(nat.w, 1));
+  _mz.fit = Math.max(_mz.fit, 0.35);           // ⤢ får aldrig bli oläsbar
+  // Smal vy (Codex 440px, mobil): hel-kartan blir stämpelstor — starta
+  // i stället 1:1 centrerat på spelaren (Google Maps-mönster), ⤢ visar allt.
+  if (_mz.fit < 0.6) {
+    const cur = allLocations.find(l => l.current);
+    _mz.s = 1;
+    if (!(cur && mapCenterOnPlace(cur.name))) mapFit();
+  } else {
+    mapFit();
   }
 }
-// ResizeObserver triggar även när iframe:n går display:none→block (Codex-flik
-// aktiveras) — window.resize täcker inte det fallet.
-if (typeof ResizeObserver !== 'undefined') {
-  const _mapBox = document.getElementById('ascii-map');
-  if (_mapBox) new ResizeObserver(fitMapToWidth).observe(_mapBox);
+function mapFit() {
+  _mz.s = _mz.fit;
+  const vp = document.getElementById('map-viewport');
+  const nat = _mapNatural();
+  _mz.x = (vp.clientWidth - nat.w * _mz.s) / 2;
+  _mz.y = 0;
+  _mzClamp();
+  _mzApply(true);
 }
-window.addEventListener('resize', fitMapToWidth);
+function mapZoom(factor, cx, cy) {
+  const vp = document.getElementById('map-viewport');
+  const old = _mz.s;
+  const s = Math.min(3, Math.max(_mz.fit * 0.5, old * factor));
+  if (s === old) return;
+  // zooma kring punkten (viewport-coords), annars mitten
+  const px = cx ?? vp.clientWidth / 2, py = cy ?? vp.clientHeight / 2;
+  _mz.x = px - (px - _mz.x) * (s / old);
+  _mz.y = py - (py - _mz.y) * (s / old);
+  _mz.s = s;
+  _mzClamp();
+  _mzApply(true);
+}
+function mapCenterOnPlace(name) {
+  const el = document.querySelector(`.mc[data-loc="${CSS.escape(name)}"]`);
+  const vp = document.getElementById('map-viewport');
+  if (!el || !vp) return false;
+  if (_mz.s < _mz.fit * 1.6) { _mz.s = Math.max(1, _mz.fit); }
+  const pre = document.getElementById('map-art');
+  // cellens position i prens obeskalerade koordinater
+  const preRect = pre.getBoundingClientRect(), elRect = el.getBoundingClientRect();
+  const k = _mz.s || 1;
+  const ex = (elRect.left - preRect.left) / k + elRect.width / (2 * k);
+  const ey = (elRect.top - preRect.top) / k + elRect.height / (2 * k);
+  _mz.x = vp.clientWidth / 2 - ex * _mz.s;
+  _mz.y = vp.clientHeight / 2 - ey * _mz.s;
+  _mzClamp();
+  _mzApply(true);
+  return true;
+}
+// Verktygsknappar
+document.getElementById('mt-zin').addEventListener('click', () => { SFX.click(); mapZoom(1.35); });
+document.getElementById('mt-zout').addEventListener('click', () => { SFX.click(); mapZoom(1 / 1.35); });
+document.getElementById('mt-fit').addEventListener('click', () => { SFX.click(); mapFit(); });
+document.getElementById('mt-center').addEventListener('click', () => {
+  const cur = allLocations.find(l => l.current);
+  if (cur) { SFX.click(); scrollToPlace(cur.name); }
+  else toast(I18N.t('📍 Ingen känd nuvarande plats'));
+});
+// Pan: pointer-drag (mus + touch), hjul = zoom
+let _mapDragged = false;
+(function() {
+  const vp = document.getElementById('map-viewport');
+  if (!vp) return;
+  let drag = null;
+  vp.addEventListener('pointerdown', e => {
+    if (e.target.closest('.map-tools')) return;
+    drag = { x: e.clientX, y: e.clientY, ox: _mz.x, oy: _mz.y, moved: false };
+    _mapDragged = false;
+    vp.setPointerCapture(e.pointerId);
+  });
+  vp.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 6) return;
+    drag.moved = true; _mapDragged = true;
+    _mz.x = drag.ox + dx; _mz.y = drag.oy + dy;
+    _mzClamp(); _mzApply(false);
+  });
+  const end = () => { if (drag && drag.moved) setTimeout(() => { _mapDragged = false; }, 0); drag = null; };
+  vp.addEventListener('pointerup', end);
+  vp.addEventListener('pointercancel', end);
+  vp.addEventListener('wheel', e => {
+    e.preventDefault();
+    const r = vp.getBoundingClientRect();
+    mapZoom(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX - r.left, e.clientY - r.top);
+  }, { passive: false });
+  // Pinch (touch): två fingrar → skala
+  let pinch = null;
+  vp.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      const [a, b] = e.touches;
+      pinch = { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY), s: _mz.s };
+    }
+  }, { passive: true });
+  vp.addEventListener('touchmove', e => {
+    if (pinch && e.touches.length === 2) {
+      e.preventDefault();
+      const [a, b] = e.touches;
+      const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      const r = vp.getBoundingClientRect();
+      const mid = { x: (a.clientX + b.clientX) / 2 - r.left, y: (a.clientY + b.clientY) / 2 - r.top };
+      const target = Math.min(3, Math.max(_mz.fit * 0.5, pinch.s * (d / pinch.d)));
+      mapZoom(target / _mz.s, mid.x, mid.y);
+    }
+  }, { passive: false });
+  vp.addEventListener('touchend', () => { pinch = null; }, { passive: true });
+})();
+// Resize (även Codex-iframe none→block): omberäkna fit utan att störa zoomen
+if (typeof ResizeObserver !== 'undefined') {
+  const _vp = document.getElementById('map-viewport');
+  if (_vp) new ResizeObserver(() => {
+    const nat = _mapNatural();
+    if (!nat.w) return;
+    _mz.fit = Math.min(1, (_vp.clientWidth - 2) / nat.w);
+    _mz.fit = Math.max(_mz.fit, 0.35);
+    if (Math.abs(_mz.s - _mz.fit * 1.0) < 0.001 || _mz.s < _mz.fit * 0.55) mapFit();
+    else { _mzClamp(); _mzApply(false); }
+  }).observe(_vp);
+}
 
-// ── Tooltip: visa platsbeskrivning vid klick ──
+// ── Tooltip: interaktivt platskort vid klick (2026-08-30: "Visa plats"
+// hoppar till kortet i stället för att bara visa text) ──
 const tooltip = document.getElementById('map-tooltip');
 function showTooltip(loc, x, y) {
   const icon = TERRAIN_ICONS[loc.terrain] || '❓';
@@ -492,9 +708,10 @@ function showTooltip(loc, x, y) {
     <div class="tt-name">${icon} ${loc.name}</div>
     <div class="tt-terrain">${TERRAIN_NAMES[loc.terrain] || loc.terrain || 'Unknown'} · ${loc.travel_text}</div>
     <div>${loc.description || I18N.t('En plats i mörkret.')}</div>
-    ${questTag}`;
+    ${questTag}
+    <button type="button" class="tt-go" data-place="${escapeAttr(loc.name)}">▾ Show place</button>`;
   // Positionera nära klicket, håll inom viewport
-  const tw = 280, th = 120;
+  const tw = 280, th = 160;
   const left = Math.min(x + 12, innerWidth - tw - 10);
   const topPos = Math.min(y + 12, innerHeight - th - 10);
   tooltip.style.left = left + 'px';
@@ -502,6 +719,10 @@ function showTooltip(loc, x, y) {
   tooltip.classList.add('show');
   SFX.click();
 }
+tooltip.addEventListener('click', function(e) {
+  const go = e.target.closest('.tt-go');
+  if (go) { hideTooltip(); scrollToPlace(go.dataset.place); }
+});
 function hideTooltip() { tooltip.classList.remove('show'); }
 document.addEventListener('click', function(e) {
   if (!e.target.closest('[data-loc]') && !e.target.closest('.map-tooltip')) hideTooltip();
@@ -513,8 +734,26 @@ function renderQuestPanel(quests) {
   const active = (quests || []).filter(q => q.status === 'aktiv');
   if (!active.length) { panel.style.display = 'none'; return; }
   panel.style.display = 'block';
-  list.innerHTML = active.map(q => `<div class="qp-item">${q.name}${q.description ? ' — ' + q.description : ''}</div>`).join('');
+  // Klickbar quest → hitta målet (q.location eller plats nämnd i texten),
+  // panora kartan dit + flasha kortet. (2026-08-30)
+  const questTarget = q => {
+    if (q.location && allLocations.some(l => l.name === q.location)) return q.location;
+    const text = ((q.name || '') + ' ' + (q.description || '')).toLowerCase();
+    const hit = allLocations.find(l => text.includes(l.name.toLowerCase()));
+    return hit ? hit.name : null;
+  };
+  list.innerHTML = active.map(q => {
+    const t = questTarget(q);
+    return `<div class="qp-item${t ? ' clickable' : ''}"${t ? ` data-place="${escapeAttr(t)}" title="Show on map"` : ''}>${q.name}${q.description ? ' — ' + q.description : ''}</div>`;
+  }).join('');
 }
+document.getElementById('quest-list').addEventListener('click', function(e) {
+  const item = e.target.closest('.qp-item.clickable');
+  if (!item) return;
+  SFX.click();
+  mapCenterOnPlace(item.dataset.place);
+  scrollToPlace(item.dataset.place);
+});
 
 // ── Resejournal: horisontell rem med klickbara etapper ──
 function placeId(name) {
@@ -522,13 +761,45 @@ function placeId(name) {
 }
 function scrollToPlace(name) {
   const card = document.getElementById(placeId(name));
-  if (!card) { toast(I18N.t('🗺️ Platsen finns inte på kartan ännu')); return; }
+  if (!card) {
+    // Kort saknas (filtret doler det, eller namn-deviation) → panora i alla fall
+    if (!mapCenterOnPlace(name)) toast(I18N.t('🗺️ Platsen finns inte på kartan ännu'));
+    return;
+  }
+  if (card.classList.contains('hide-filter')) {
+    // dold av filter-chip → visa den innan scroll så hoppen aldrig blir tom
+    card.classList.remove('hide-filter');
+  }
   card.scrollIntoView({ behavior: 'smooth', block: 'center' });
   card.classList.remove('flash');
   void card.offsetWidth; // starta om animationen
   card.classList.add('flash');
+  mapCenterOnPlace(name);
   if (typeof SFX !== 'undefined') SFX.click();
 }
+
+// ── Filter-chips: Alla / Besökta / Quest / Kända-dimme (2026-08-30) ──
+let _placeFilter = 'all';
+function applyPlaceFilter() {
+  document.querySelectorAll('.place-card').forEach(card => {
+    const isCur = card.classList.contains('current');
+    const isVisited = card.classList.contains('visited');
+    const isQuest = card.classList.contains('quest');
+    let show = true;
+    if (_placeFilter === 'visited') show = isVisited || isCur;
+    else if (_placeFilter === 'unvisited') show = !isVisited && !isCur;
+    else if (_placeFilter === 'quest') show = isQuest;
+    card.classList.toggle('hide-filter', !show);
+  });
+}
+document.getElementById('map-filters').addEventListener('click', function(e) {
+  const chip = e.target.closest('.mf-chip');
+  if (!chip) return;
+  SFX.click();
+  _placeFilter = chip.dataset.filter;
+  this.querySelectorAll('.mf-chip').forEach(c => c.classList.toggle('on', c === chip));
+  applyPlaceFilter();
+});
 function renderTravelJournal(travelLog) {
   const strip = document.getElementById('travel-journal');
   if (!travelLog || !travelLog.length) { strip.style.display = 'none'; return; }
@@ -582,7 +853,8 @@ function renderPlaces(locations) {
     const tc = travelClass(loc.travel_days);
     const statusClass = loc.current ? 'current' : loc.visited ? 'visited' : 'unknown';
     const statusText = loc.current ? '📍 You are here' : loc.visited ? '✓ Visited' : '◇ Known';
-    const cardClass = loc.current ? 'current' : loc.visited ? 'visited' : 'unvisited';
+    const cardClass = (loc.current ? 'current' : loc.visited ? 'visited' : 'unvisited')
+      + (questLocations.has(loc.name) ? ' quest' : '');
     const questBadge = questLocations.has(loc.name) ? '<span style="color:var(--ember);font-size:.7rem;margin-left:.4rem">⚑</span>' : '';
 
     let landmarks = '';
@@ -660,6 +932,7 @@ async function loadLocations() {
     renderQuestPanel(activeQuests);
     renderPlaces(locations);
     renderTravelJournal(travelLog);
+    applyPlaceFilter();  // korten är omrenderade → filtret måste tillämpas igen
   } catch (e) {
     document.getElementById('current-name').textContent = 'No active campaign';
     document.getElementById('ascii-map').style.display = 'none';

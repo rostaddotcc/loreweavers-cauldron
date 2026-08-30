@@ -1099,7 +1099,7 @@
     font-family: var(--cli-mono, ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace) !important;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=40">
+<link rel="stylesheet" href="snes.css?v=41">
 <style>
 /* ═══════════ CODEX 2-RAD-TABBAR — override snes.css (måste ligga EFTER linken) ═══════════ */
 .cx-tabs{ display: flex !important; flex-direction: column !important; gap: 0.34rem !important; padding: 0.55rem 0.6rem 0.6rem !important; overflow-x: hidden !important; }
@@ -4800,8 +4800,13 @@ function _unlockChat() {
   if (_pendingRollId) { _lockChatForDice(); return; }
   const ta = document.getElementById('player-input');
   const btn = document.querySelector('.send-btn');
-  if (ta) { ta.disabled = false; ta.placeholder = ta.dataset.ph || 'What do you do? Write freely — fight, sneak, talk, cast a spell…'; }
-  if (btn && !isResponding) btn.removeAttribute('disabled');
+  if (ta) {
+    ta.disabled = false;
+    // Återställ korrekt språk-/mobil-anpassad placeholder (satt av
+    // setInputPlaceholder) — den hårkodade engelska slopade bort "Vad gör X?"
+    setInputPlaceholder();
+  }
+  if (btn && !isResponding && !_guardianBusy) btn.removeAttribute('disabled');
 }
 
 function addRollRequest(notation, label) {
@@ -4834,7 +4839,7 @@ function addRollRequest(notation, label) {
           <span class="rr-ico-glyph">🎲</span>
           <span class="rr-ico-label">${I18N.t('Slå')} ${notation}</span>
         </button>
-        <button class="rr-ico rr-ico-pen" onclick="declineRollRequest('${id}')" aria-label="${I18N.t('Skriv istället')}"${busy ? ' disabled' : ''}>
+        <button class="rr-ico rr-ico-pen" onclick="declineRollRequest('${id}')" aria-label="${I18N.t('Skriv istället')}">
           <span class="rr-ico-glyph">🖊️</span>
           <span class="rr-ico-label">${I18N.t('Skriv istället')}</span>
         </button>
@@ -4859,12 +4864,10 @@ function addRollRequest(notation, label) {
 
 // Spelaren avböjer kastet och vill agera fritt istället
 function declineRollRequest(id) {
-  // Tärningslås (2026-08-06): inte heller "skriv istället" får låsa upp
-  // chatten medan Lorekeeper jobbar — då kunde man chatta/rolla i race.
-  if (_guardianBusy) {
-    toast(I18N.t('🛡️ Vänta — Lorekeeper uppdaterar…'));
-    return;
-  }
+  // (fix 2026-08-30) "Skriv istället" är ALDRIG blockerad av Lorekeeper-låset:
+  // avböjningen är ren frontend-state (ta bort kort + lås) och race:ar inte
+  // mot Guardian — bara själva KASTET (answerRollRequest) behöver vänta.
+  // Gamla guarden låste in spelaren totalt under 45–100 s Guardian-varv i strid.
   const box = document.getElementById(id);
   if (box) {
     box.innerHTML = `<div class="roll-result-inline declined"><span>🖊️ ${I18N.t('Kastet avböjt — spelaren agerar fritt')}</span></div>`;
@@ -4996,7 +4999,7 @@ async function answerRollRequest(id, notation, label) {
       _pendingRollId = null;
       _unlockChat();
     }
-    document.querySelector('.send-btn')?.removeAttribute('disabled');
+    if (!_guardianBusy && !_pendingRollId) document.querySelector('.send-btn')?.removeAttribute('disabled');
   }
 }
 
@@ -5117,6 +5120,11 @@ async function loadTranscript() {
           gContent = gContent.replace(gRe, '').trim();
           const el = buildMessage('guardian', null, gContent);
           if (el) {
+            // (fix 2026-08-30) kanonisk nyckel på DOM-noden → pollForGuardians
+            // shown-koll träffar även combat-rapporter (vars box-text bytts av
+            // applyCombatTag) och dubbelrendering efter refresh upprepas ej.
+            el.dataset.key = msgDomKey('guardian', m.content);
+            _renderedGuardianKeys.add(el.dataset.key);
             // Ny dag (🌅) → rapporten (🌅 + dagsammanfattning) startar ny grupp
             if (hasDayMarker && gContent.includes('🌅')) {
               startDayGroup(dayLabelWithTitle(gContent));
@@ -5324,19 +5332,36 @@ function showGuardianStatus() {
   if (el) el.classList.add('show');
   _guardianBusy = true;
   _lockChatForGuardian();
-  _cliSetBusy(true);   // CLI: samma input-rad → loader även för Lorekeeper
   scribeParticles(true);
   scribeFeedStart();
+  // (fix 2026-08-30) CLI: input-raden FÅR INTE bli laddningsrad under
+  // Lorekeeper-vindet — då försvinner textfältet (display:none i snes.css)
+  // och spelaren har ingenstans att skriva i 45–100 s per stridstur.
+  // Istället: behåll raden, visa guardian-stripen ovanför (klass + CSS).
+  document.body.classList.add('guardian-busy');
+  _applyCliInputLock();
 }
 function hideGuardianStatus() {
   const el = document.getElementById('guardian-status');
   if (el) el.classList.remove('show');
+  document.body.classList.remove('guardian-busy');
+  const ta0 = document.getElementById('player-input');
+  const hadDraft = !!(ta0 && (ta0.value || '').trim());
   _guardianBusy = false;
   _enablePendingRollButtons();
   _unlockChat();
-  _cliSetBusy(false);  // CLI: prompten återställs, input låses upp (om dice ej väntar)
-  // Stäng inte av feeden/pixlarna om DM-statusen fortfarande visas
+  // CLI-busy nollställs bara om DM-statusen inte längre körs — annars
+  // råkar Lorekeeper-fasen svara ärendet medan DM fortfarande skriver.
   const dm = document.getElementById('dm-status');
+  if (!dm || !dm.classList.contains('show')) _cliSetBusy(false);
+  else _applyCliInputLock();
+  // Draft redo: texten är kvar i fältet — säg ifrån så spelaren vet att
+  // hon bara behöver trycka Skicka (auto-skicka vore överraskande).
+  if (hadDraft) {
+    const ta = document.getElementById('player-input');
+    if (ta) { ta.focus(); toast(I18N.t('🦉 Lorekeeper klar — din draft är redo att skickas')); }
+  }
+  // Stäng inte av feeden/pixlarna om DM-statusen fortfarande visas
   if (!dm || !dm.classList.contains('show')) {
     scribeFeedStop();
     scribeParticles(false);
@@ -5349,10 +5374,14 @@ function _enablePendingRollButtons() {
   document.querySelectorAll('.roll-request .rr-ico[disabled]').forEach(b => b.removeAttribute('disabled'));
   document.querySelectorAll('.roll-request .rr-wait').forEach(el => el.remove());
 }
+// (fix 2026-08-30) Lorekeeper-låset är nu en REN SEND-spärr: textfältet får
+// vara tomt → spelaren kan skriva sin nästa åtgärd medan guardian jobbar och
+// skicka när låget släpper (draft bevaras). Tidigare disablades+gömdes
+// fältet i 45–100 s per tur → "combat-loggen låser chatten"-upplevelsen.
 function _lockChatForGuardian() {
   const ta = document.getElementById('player-input');
   const btn = document.querySelector('.send-btn');
-  if (ta) { ta.disabled = true; ta.placeholder = '🦉 Lorekeeper updating character sheet…'; }
+  if (ta && !ta.value) ta.placeholder = I18N.t('🦉 Lorekeeper jobbar — du kan skriva klart, skicka när den är klar…');
   if (btn) btn.setAttribute('disabled', '');
 }
 
@@ -5373,10 +5402,13 @@ const _CLI_LOADER_HTML =
   '<span class="scribe-cursor" aria-hidden="true">▌</span>' +
   '</span><span class="scribe-inkline" aria-hidden="true"><i></i></span></span>';
 
-// Effektivt input-lås i CLI: busy (DM/Lorekeeper) ELLER dice-lås (pendingRoll)
+// Effektivt input-lås i CLI: busy (DM jobbar → raden ÄR loadern) ELLER
+// dice-lås (pendingRoll). Lorekeeper-låset är INTE med (fix 2026-08-30):
+// under guardian-fönstret får spelaren skriva en draft — send-knappen är
+// disabled och sendPlayer() spärrar, men textfältet förblir aktivt.
 function _applyCliInputLock() {
   const ta = document.getElementById('player-input');
-  if (ta) ta.disabled = !!(_cliBusy || _guardianBusy || _pendingRollId);
+  if (ta) ta.disabled = !!(_cliBusy || _pendingRollId);
 }
 
 function _cliSetBusy(busy) {
@@ -5618,6 +5650,9 @@ function sendPlayer() {
   if (!text || isResponding) return;
   // Dice-lås: spelaren måste slå eller avböja innan hen kan chatta
   if (_pendingRollId || _guardianBusy) {
+    // (fix 2026-08-30) Draft-spärr: under Lorekeeper kan spelaren skriva
+    // fritt men inte skicka — ge återkoppling så Enter inte känns död.
+    if (_guardianBusy && !_pendingRollId) toast(I18N.t('🦉 Lorekeeper jobbar — draft sparad, skicka strax efter'));
     const ta = document.getElementById('player-input');
     if (ta) { ta.style.animation = 'none'; ta.offsetHeight; ta.style.animation = ''; }
     return;
@@ -6103,7 +6138,7 @@ async function dmRespond(playerText) {
     await restoreFromTranscript(dmErrorMsg(e, 'The DM could not reply'), e && e.message);
   } finally {
     isResponding = false;
-    document.querySelector('.send-btn')?.removeAttribute('disabled');
+    if (!_guardianBusy && !_pendingRollId) document.querySelector('.send-btn')?.removeAttribute('disabled');
   }
 }
 
@@ -6171,6 +6206,7 @@ function pollForGuardian(turnCount) {
 
   let attempts = 0;
   const maxAttempts = 600; // 600 × 2s = 20 min per cykel — nollställs om Lorekeeper är busy
+  const _pollStarted = Date.now();
 
   _guardianPollTimer = setInterval(async () => {
     attempts++;
@@ -6217,6 +6253,12 @@ function pollForGuardian(turnCount) {
 
         const el = buildMessage('guardian', null, content);
         if (!el) { _renderedGuardianKeys.add(key); return; }
+        // (fix 2026-08-30) dataset.key = kanonisk transkript-nyckel.
+        // applyCombatTag byr .guardian-boxens text mot stridsloggs-HTML →
+        // domElKey() matching slutar fungera för combat-rapporter. Utan
+        // denna sätter olderPending-shown-kollen aldrig — rapporten
+        // dubbelrenderas och poll-loopen kan aldrig avsluta (→ input-lås).
+        el.dataset.key = key;
         // Ny dag (🌅) → fäll föregående dag och låt rapporten starta ny grupp
         if (content.includes('🌅')) markNewDay(content);
         insertGuardianInOrder(el, gi, messages);
@@ -6262,13 +6304,19 @@ function pollForGuardian(turnCount) {
     //    ta flera minuter. Så länge Lorekeeper fortfarande jobbar (_guardianBusy)
     //    nollställs räknaren och pollen fortsätter; stopp sker bara via steg 2
     //    (rapporten klar) eller när Lorekeeper är ledig.
-    if (attempts >= maxAttempts) {
-      if (_guardianBusy) {
+    //    WATCHDOG (fix 2026-08-30): men ALDRIG i det oändliga — en trasig
+    //    olderPending-dedup (combat-rapporter matchar aldrig domElKey) kunde
+    //    hålla _guardianBusy sann för alltid → evigt låst input. Hård cap 4 min:
+    //    lås upp chatten + toast, rapporten dyker upp vid nästa refresh i värsta fall.
+    const wall = Date.now() - _pollStarted;
+    if (attempts >= maxAttempts || wall > 240000) {
+      if (wall <= 240000 && _guardianBusy) {
         attempts = 0;
       } else {
         clearInterval(_guardianPollTimer);
         _guardianPollTimer = null;
         hideGuardianStatus();
+        if (wall > 240000) toast(I18N.t('⏳ Lorekeeper tog för lång tid — chatten upplåst (rapporten kommer vid nästa laddning)'));
       }
     }
   }, 2000);

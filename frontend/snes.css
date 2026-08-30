@@ -1220,6 +1220,15 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
 .scribe-mini .scribe-quill{ font-size: .85rem; }
 .scribe-mini .scribe-cursor{ font-size: .72rem; }
 .scribe-mini .scribe-inkline{ height: 2px; }
+/* Idle-andning (2026-08-11): ingen ny loggrad på ett tag → texten
+   andas mjukt så loadern aldrig ser frusen ut under långa LLM-calls. */
+.scribe-loader.idle .thought{
+  animation: thought-breathe 2.6s ease-in-out infinite !important;
+}
+@keyframes thought-breathe{
+  0%,100%{ opacity: .8; }
+  50%{ opacity: 1; }
+}
 /* ═══════════════════════════════════════════
    CLI-TERMINAL LOADER (2026-08-06) — cli-chat får EGEN laddning:
    ingen fjäderpenna, inget bläck — en riktig terminalstatus:
@@ -2659,4 +2668,24 @@ body.cli-chat.cli-chat-busy .input-row .scribe-loader{
   max-width: none;
   padding: .15rem 0 .35rem;
   gap: .35rem;
+}
+/* ── GUARDIAN-BUSY i CLI-läge (fix 2026-08-30) ──
+   Lorekeeper-vindget gör INTE input-raden till loader — spelaren ska kunna
+   skriva sin nästa draft. .guardian-status (dold av cli-chat-busy ovan när
+   DM jobbar; annars display:none i chat.html) visas som en smal inline-
+   strip UNDER loadern så stridsflödet aldrig ser fruset ut. */
+body.cli-chat.guardian-busy .guardian-status.show{
+  display: flex;
+  padding: .15rem .2rem .3rem;
+  gap: .4rem;
+  opacity: .85;
+}
+body.cli-chat.cli-chat-busy.guardian-busy .guardian-status.show{
+  display: none; /* DM-loader:n i input-raden räcker — dubbla spinnare undviks */
+}
+body.cli-chat .guardian-status .scribe-mini .thought,
+body.cli-chat .guardian-status #guardian-thought-text{
+  font-family: var(--cli-mono);
+  font-size: .78rem;
+  letter-spacing: 0;
 }

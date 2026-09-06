@@ -9,17 +9,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
-<script src="themes.js?v=20260806b"></script>
+<script src="themes.js?v=20260906a"></script>
 <style>
   /* ═══════════════ tokens ═══════════════ */
   :root{
-    --ink:#07070c;
-    --stone:#0e0e14; --stone-2:#12121a; --stone-3:#181822;
-    --edge:#2a2a3a; --edge-hi:#3a3a50;
-    --bone:#b8b8c8; --bone-bright:#e6e2d4; --bone-dim:#77778c;
-    --gold:#c9a227; --gold-bright:#e8c65a;
-    --blood:#8b1a2a; --blood-bright:#d43a4d;
-    --ember:#d4691e; --arcane:#7b4fd4; --poison:#5a9a4e;
+    --ink:#1a1426;
+    --stone:#271d33; --stone-2:#322541; --stone-3:#3d2e4f;
+    --edge:#463a60; --edge-hi:#5a4a7a;
+    --bone:#d9c9a6; --bone-bright:#f2e6c8; --bone-dim:#9d8a6a;
+    --gold:#d4a92c; --gold-bright:#f0d675;
+    --blood:#a32433; --blood-bright:#e0485a;
+    --ember:#d4691e; --arcane:#9a6fe0; --poison:#7aa35e;
     --font-display:'Cinzel',serif;
     --font-body:'Spectral',Georgia,serif;
     --nav-h:64px;
@@ -65,7 +65,7 @@
     text-transform:uppercase;color:var(--gold);text-align:center;margin-bottom:1rem}
   .pricing h1{font-family:var(--font-display);font-weight:900;font-size:clamp(1.9rem,4.6vw,3rem);
     text-align:center;color:var(--bone-bright);letter-spacing:.08em;text-transform:uppercase;
-    margin-bottom:1rem;text-shadow:0 0 42px rgba(201,162,39,.28),0 2px 0 #000}
+    margin-bottom:1rem;text-shadow:0 0 42px rgba(212,169,44,.28),0 2px 0 #000}
   .pricing-sub{max-width:600px;margin:0 auto 3rem;text-align:center;color:var(--bone-dim);
     font-size:1.02rem;line-height:1.65}
   .pricing-sub b{color:var(--bone);font-weight:600}
@@ -76,9 +76,9 @@
     border:1px solid var(--edge);border-radius:2px;padding:2.2rem 1.8rem 1.8rem;
     display:flex;flex-direction:column;transition:border-color .25s,transform .25s}
   .tier:hover{border-color:var(--edge-hi);transform:translateY(-3px)}
-  .tier.hot{border-color:rgba(201,162,39,.55);
+  .tier.hot{border-color:rgba(212,169,44,.55);
     background:linear-gradient(165deg,var(--stone-3),var(--stone-2) 60%,var(--stone));
-    box-shadow:0 0 42px rgba(201,162,39,.10),inset 0 0 60px rgba(201,162,39,.04)}
+    box-shadow:0 0 42px rgba(212,169,44,.10),inset 0 0 60px rgba(212,169,44,.04)}
   .corner{position:absolute;width:14px;height:14px;border:2px solid var(--gold);opacity:.85}
   .corner.tl{top:6px;left:6px;border-right:none;border-bottom:none}
   .corner.tr{top:6px;right:6px;border-left:none;border-bottom:none}
@@ -89,10 +89,10 @@
   .tier-flag{position:absolute;top:-12px;right:14px;font-family:var(--font-display);
     font-size:.6rem;letter-spacing:.24em;text-transform:uppercase;color:var(--ink);
     background:linear-gradient(160deg,var(--gold-bright),var(--gold));
-    padding:.28rem .7rem;border-radius:2px;box-shadow:0 2px 12px rgba(201,162,39,.4)}
-  .tier-flag.promo-flag{background:linear-gradient(160deg,#ffd76a,#c9a227);
+    padding:.28rem .7rem;border-radius:2px;box-shadow:0 2px 12px rgba(212,169,44,.4)}
+  .tier-flag.promo-flag{background:linear-gradient(160deg,#ffd76a,var(--gold));
     animation:promo-pulse 2.2s ease-in-out infinite}
-  @keyframes promo-pulse{0%,100%{box-shadow:0 2px 12px rgba(201,162,39,.4)}50%{box-shadow:0 2px 22px rgba(232,198,90,.85)}}
+  @keyframes promo-pulse{0%,100%{box-shadow:0 2px 12px rgba(212,169,44,.4)}50%{box-shadow:0 2px 22px rgba(232,198,90,.85)}}
   .tier-price .strike{font-size:1.05rem;font-weight:400;color:var(--bone-dim);
     text-decoration:line-through;text-decoration-thickness:2px;margin-left:.35rem;letter-spacing:.04em;vertical-align:.35em}
   .tier-price{font-family:var(--font-display);font-weight:900;font-size:2.1rem;color:var(--gold-bright);
@@ -101,7 +101,7 @@
   .tier-desc{color:var(--bone-dim);font-size:.92rem;line-height:1.6;margin-bottom:1.4rem;min-height:2.6em}
   .tier ul{list-style:none;margin-bottom:1.8rem;flex:1}
   .tier li{padding:.5rem 0 .5rem 1.5rem;position:relative;color:var(--bone);font-size:.95rem;line-height:1.5}
-.tier li .tier-includes{color:var(--gold-bright);font-size:.9rem;letter-spacing:.04em;text-shadow:0 0 12px rgba(201,162,39,.25)}
+.tier li .tier-includes{color:var(--gold-bright);font-size:.9rem;letter-spacing:.04em;text-shadow:0 0 12px rgba(212,169,44,.25)}
   .tier li::before{content:'◆';position:absolute;left:0;top:.5rem;color:var(--gold);font-size:.6rem}
   .tier li b{color:var(--bone-bright);font-weight:600}
   .tier li.dim{color:var(--bone-dim)}
@@ -121,8 +121,8 @@
   .tier-btn.busy{opacity:.55;pointer-events:none;cursor:wait}
   .tier-btn.busy::after{animation:none}
   .tier-btn.current{color:var(--bone-bright);background:linear-gradient(160deg,var(--stone-3),var(--stone-2));
-    border:1px solid rgba(201,162,39,.5);cursor:default;pointer-events:none;
-    box-shadow:inset 0 0 18px rgba(201,162,39,.12)}
+    border:1px solid rgba(212,169,44,.5);cursor:default;pointer-events:none;
+    box-shadow:inset 0 0 18px rgba(212,169,44,.12)}
   .tier-btn.current::after{animation:none}
   .tier-btn.soon{color:var(--bone-dim);background:var(--stone-3);border:1px solid var(--edge);
     cursor:not-allowed}
@@ -163,7 +163,7 @@
   .plan-overlay.show{display:flex}
   .plan-modal{position:relative;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;
     background:linear-gradient(165deg,var(--stone-3),var(--stone) 60%,#120c1c);
-    border:1px solid rgba(201,162,39,.4);box-shadow:0 30px 80px -20px rgba(0,0,0,.95),0 0 60px rgba(201,162,39,.08);
+    border:1px solid rgba(212,169,44,.4);box-shadow:0 30px 80px -20px rgba(0,0,0,.95),0 0 60px rgba(212,169,44,.08);
     padding:2rem 1.8rem 1.7rem;animation:plan-in .28s cubic-bezier(.22,1,.36,1)}
   @keyframes plan-in{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
   .plan-close{position:absolute;top:.7rem;right:.9rem;background:none;border:none;color:var(--bone-dim);
@@ -178,7 +178,7 @@
   .plan-price .strike{font-size:1.1rem;font-weight:400;color:var(--bone-dim);text-decoration:line-through;
     text-decoration-thickness:2px;margin-left:.4rem;vertical-align:.3em}
   .plan-promo{display:inline-block;font-family:var(--font-display);font-size:.58rem;letter-spacing:.2em;
-    text-transform:uppercase;color:var(--ink);background:linear-gradient(160deg,#ffd76a,#c9a227);
+    text-transform:uppercase;color:var(--ink);background:linear-gradient(160deg,#ffd76a,var(--gold));
     padding:.26rem .55rem;margin-bottom:.9rem;box-shadow:0 0 14px rgba(232,198,90,.5)}
   .plan-desc{color:var(--bone-dim);font-style:italic;font-size:.95rem;line-height:1.6;margin-bottom:1.2rem}
   .plan-list{list-style:none;margin-bottom:1.6rem}
@@ -196,7 +196,7 @@
   .plan-cta.ghost:hover{color:var(--gold-bright);border-color:var(--gold)}
   .plan-cta.busy{opacity:.55;pointer-events:none;cursor:wait}
   .plan-login-hint{margin-top:.8rem;text-align:center;font-size:.82rem;color:var(--bone-dim);line-height:1.5}
-  .plan-login-hint a{color:var(--gold-bright);text-decoration:none;border-bottom:1px solid rgba(201,162,39,.4)}
+  .plan-login-hint a{color:var(--gold-bright);text-decoration:none;border-bottom:1px solid rgba(212,169,44,.4)}
   .plan-login-hint a:hover{color:var(--gold)}
   .plan-grant{margin-top:.9rem;text-align:center;font-size:.82rem;color:var(--bone-dim);line-height:1.5}
   .plan-grant b{color:var(--gold-bright);font-weight:700;letter-spacing:.04em}
@@ -208,7 +208,7 @@
     background:var(--stone);border:1px solid var(--edge);padding:.85rem 1rem;outline:none;border-radius:3px;
     transition:border-color .2s, box-shadow .2s}
   .plan-email .pe-row input::placeholder{color:var(--bone-dim);opacity:.75}
-  .plan-email .pe-row input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,162,39,.14)}
+  .plan-email .pe-row input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,169,44,.14)}
   .plan-email .pe-row .plan-cta{margin-top:0;padding:.85rem 1rem;white-space:nowrap;font-size:.8rem}
   .plan-email .pe-err{margin-top:.6rem;font-size:.8rem;color:var(--blood-bright);font-style:italic;min-height:1em}
   .plan-note{margin-top:.9rem;text-align:center;font-size:.78rem;color:var(--bone-dim);line-height:1.55}
@@ -218,7 +218,7 @@
   .donate-input{flex:1;min-width:0;font-family:var(--font-body);font-size:16px;color:var(--bone-bright);
     background:var(--stone);border:1px solid var(--edge);padding:.7rem .8rem;outline:none;border-radius:3px;
     transition:border-color .2s, box-shadow .2s}
-  .donate-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,162,39,.14)}
+  .donate-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,169,44,.14)}
   .donate-row .tier-btn{margin-top:0;flex-shrink:0}
 
   @media(max-width:900px){

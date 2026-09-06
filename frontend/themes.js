@@ -165,7 +165,7 @@ const THEMES = (() => {
     root.setAttribute('data-theme', palette.id);
     // Uppdatera knappetiketter om de finns
     document.querySelectorAll('.theme-btn').forEach(b => {
-      b.textContent = '🎨 ' + palette.name;
+      b.innerHTML = '🎨<span class="tt-name"> ' + palette.name + '</span>';
       b.title = 'Theme: ' + palette.name + ' (click to switch)';
     });
     // Kugghjulets Theme-rad: uppdatera hint med aktuellt tema (2026-08-05)
@@ -328,7 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Uppdatera befintliga theme-buttons
   document.querySelectorAll('.theme-btn').forEach(b => {
-    b.textContent = '🎨 ' + cur.name;
+    b.innerHTML = '🎨<span class="tt-name"> ' + cur.name + '</span>';
     b.title = 'Theme: ' + cur.name + ' (click to switch)';
   });
 

@@ -216,6 +216,6 @@ const SFX = (() => {
 function sfxToggleBtn() {
   const on = SFX.toggle();
   const btns = document.querySelectorAll('.sfx-btn');
-  btns.forEach(b => b.textContent = on ? '🔊' : '🔇');
+  btns.forEach(b => b.textContent = on ? '🎵' : '🔇');
   return on;
 }

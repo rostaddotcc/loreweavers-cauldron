@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>:root{
-    --ink:#0b0812; --stone:#161020; --stone-2:#1d1529; --stone-3:#241a33;
+    --ink:#1a1426; --stone:#271d33; --stone-2:#322541; --stone-3:#3d2e4f;
     --edge:#463a60; --edge-hi:#5a4a7a;
     --bone:#d9c9a6; --bone-bright:#f2e6c8; --bone-dim:#9d8a6a;
     --gold:#d4a92c; --gold-bright:#f0d675;
@@ -26,8 +26,8 @@
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}#embers{position:fixed;inset:0;z-index:1;pointer-events:none}.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(4,2,8,.85)}.app{position:relative;z-index:2;max-width:1080px;margin:0 auto;padding:2rem 1.25rem 5rem}
   /* ── Head ── */
   .forge-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:2.4rem;flex-wrap:wrap;gap:.8rem}.forge-head .brand{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:1.1rem;color:var(--gold-bright);letter-spacing:.06em;text-shadow:0 0 14px rgba(232,198,90,.3)}.forge-head .back{font-family:var(--font-display,'Cinzel',serif);font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .9rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none}.forge-head .back:hover{color:var(--gold-bright);border-color:var(--gold)}
-  .destiny-title{text-align:center;margin-bottom:.4rem}.destiny-title .over{font-family:var(--font-display,'Cinzel',serif);font-size:.66rem;letter-spacing:.42em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.55rem}.destiny-title h1{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:clamp(1.8rem,5vw,2.7rem);color:var(--bone-bright);letter-spacing:.05em}.destiny-sub{text-align:center;font-style:italic;color:var(--bone-dim);font-size:1.05rem;margin-bottom:2.2rem}.rune-divider{display:flex;align-items:center;gap:.9rem;margin:0 auto 2.4rem;max-width:380px}.rune-divider::before,.rune-divider::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.5}.rune-divider span{color:var(--gold);text-shadow:0 0 8px rgba(201,162,39,.6)}
-  .section-label{font-family:var(--font-display,'Cinzel',serif);font-size:.8rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin:2.4rem 0 1rem;display:flex;align-items:center;gap:.8rem}.section-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(201,162,39,.4),transparent)}
+  .destiny-title{text-align:center;margin-bottom:.4rem}.destiny-title .over{font-family:var(--font-display,'Cinzel',serif);font-size:.66rem;letter-spacing:.42em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.55rem}.destiny-title h1{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:clamp(1.8rem,5vw,2.7rem);color:var(--bone-bright);letter-spacing:.05em}.destiny-sub{text-align:center;font-style:italic;color:var(--bone-dim);font-size:1.05rem;margin-bottom:2.2rem}.rune-divider{display:flex;align-items:center;gap:.9rem;margin:0 auto 2.4rem;max-width:380px}.rune-divider::before,.rune-divider::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.5}.rune-divider span{color:var(--gold);text-shadow:0 0 8px rgba(212,169,44,.6)}
+  .section-label{font-family:var(--font-display,'Cinzel',serif);font-size:.8rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin:2.4rem 0 1rem;display:flex;align-items:center;gap:.8rem}.section-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(212,169,44,.4),transparent)}
   /* ── Forge box (prompt) ── */
   .scroll-box{position:relative;background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,#120c1c);border:1px solid var(--edge);padding:1.6rem 1.5rem;box-shadow:0 20px 50px -20px rgba(0,0,0,.9)}
   #forge-prompt{width:100%;min-height:150px;resize:vertical;font-family:var(--font-body,'Spectral',serif);font-size:1.03rem;line-height:1.65;color:var(--bone-bright);background:#0d0817;border:1px solid var(--edge);padding:1rem 1.1rem;outline:none;border-radius:2px;transition:border-color .25s,box-shadow .25s}#forge-prompt:focus{border-color:var(--arcane);box-shadow:0 0 18px -5px rgba(139,95,212,.4)}#forge-prompt::placeholder{color:rgba(138,122,94,.5);font-style:italic}
@@ -59,7 +59,7 @@
   /* ── Vault grid ── */
   .vault-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.2rem}
   .vcard{position:relative;background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);border:1px solid var(--edge);padding:1.4rem 1.2rem 1.2rem;cursor:pointer;transition:transform .3s,box-shadow .3s,border-color .3s;overflow:hidden}
-  .vcard::before{content:'';position:absolute;inset:6px;border:1px solid rgba(201,162,39,.15);pointer-events:none}
+  .vcard::before{content:'';position:absolute;inset:6px;border:1px solid rgba(212,169,44,.15);pointer-events:none}
   .vcard:hover{transform:translateY(-5px);box-shadow:0 16px 34px -12px rgba(0,0,0,.85);border-color:var(--gold)}
   .vcard-head{display:flex;gap:1rem;align-items:center;margin-bottom:.8rem}
   .vcard-dl{position:absolute;right:.4rem;top:.4rem;background:var(--stone-3);border:1px solid var(--edge-hi);color:var(--gold-bright);width:26px;height:26px;border-radius:3px;cursor:pointer;font-size:.8rem;line-height:1;display:flex;align-items:center;justify-content:center;z-index:2}
@@ -75,7 +75,7 @@
   /* ── Inspect overlay ── */
   .insp-overlay{display:none;position:fixed;inset:0;z-index:500;background:rgba(4,2,8,.88);backdrop-filter:blur(4px);padding:2rem 1rem;overflow-y:auto}
   .insp-overlay.show{display:flex;align-items:flex-start;justify-content:center}
-  .insp-modal{width:min(680px,100%);background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,#120c1c);border:1px solid var(--gold);box-shadow:0 0 60px rgba(201,162,39,.15),0 24px 60px rgba(0,0,0,.8);padding:1.8rem 1.7rem;position:relative;animation:msg-in .35s cubic-bezier(.22,1,.36,1)}
+  .insp-modal{width:min(680px,100%);background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,#120c1c);border:1px solid var(--gold);box-shadow:0 0 60px rgba(212,169,44,.15),0 24px 60px rgba(0,0,0,.8);padding:1.8rem 1.7rem;position:relative;animation:msg-in .35s cubic-bezier(.22,1,.36,1)}
   .insp-close{position:absolute;top:.8rem;right:.8rem;background:none;border:1px solid var(--edge);color:var(--bone-dim);width:36px;height:36px;cursor:pointer;font-size:.95rem;transition:all .2s}.insp-close:hover{color:var(--blood-bright);border-color:var(--blood-bright)}
   .insp-full .pv-stats{grid-template-columns:repeat(6,1fr)}
   .inv-list{font-size:.85rem;color:var(--bone);line-height:1.8}
@@ -107,10 +107,10 @@
   }
   @media(max-width:400px){.pv-stats{grid-template-columns:repeat(2,1fr)}}
 </style>
-<link rel="stylesheet" href="snes.css?v=39">
+<link rel="stylesheet" href="snes.css?v=41">
 <script src="sprites.js?v=20260806b"></script>
 <script src="fonts.js?v=20260806b"></script>
-<script src="themes.js?v=20260806b"></script>
+<script src="themes.js?v=20260906a"></script>
 </head>
 <body>
 <div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
@@ -210,8 +210,8 @@
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 </script>
 <script src="api.js?v=20260804c"></script>
-<script src="modal.js?v=20260802a"></script>
-<script src="i18n.js?v=20260807a"></script>
+<script src="modal.js?v=20260906a"></script>
+<script src="i18n.js?v=20260906a"></script>
 <script>
 // ═══════════════════════════════════════
 // THE FORGE — fristående karaktärsgenerering + valv

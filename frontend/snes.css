@@ -3,6 +3,18 @@
    Castlevania × DOS × Linux terminal
    Länkas EFTER inline-stilar så att detta vinner.
    ═══════════════════════════════════════════════════ */
+
+/* ═══ @LAYER-BYGGFLAGGA (W3-P1, 2026-09-06) — WRAP ÄNNU EJ AKTIVERAD ═══
+   Plan: @layer snes.base { …hela filen utom :root… } → olagrade sidstilar
+   vinner över lagrad snes-normaldeklaration (cascade layers). BLOCKERAT för
+   wave 3: sidorna ägs av syskonuppgifter och kan inte visuellregressions-
+   testas denna våg. Två vågräta fallgropar dokumenterade i tmp/w3-p1-layer-prep.md:
+   (1) !important INVERTERAR i lager — lagrad !important slår olagrad
+       !important, så sidornas 381 mot-!important (chat) skulle FORTFARANDE
+       förlora mot snes 971 → kriget löses inte av wrap alone;
+   (2) sidors style-block FÖRE snes-länken som idag förlorar på källordning
+       skulle börja vinna → 5 konkreta riskselektorer listade i prep-filen.
+   Wave-4: wrap + page-edits samtidigt, med computed-style-diff per sida. */
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400;500;600&family=Silkscreen:wght@400;700&display=swap');
 
 /* Z-INDEX LADDER (2026-08-11 audit) — bottom-nav 280 < drawer-backdrop 290 < drawer 300 < sheet 310 < oracle/console 320 < scanlines(body::before) 999 < page overlays 10000+ (backdrop 9990) < lightbox 11000 < feedback 12000 < theme-pop 30000. Do not invent new rungs. */
@@ -30,6 +42,37 @@
   --teal: #5e9aa3;
   --term-green: #33cc33;
   --term-amber: #ccaa33;
+  /* ── W3-P1 (2026-09-06): STRUKTURELLA TOKENS ──
+     Z-SKALA: token-stege för wave-4-migration. DEN BEFINTLIGA LADDERN (kommentar
+     rad 8: 280<290<300<310<320<999<10000<11000<12000<30000) GÄLLER FORTFARANDE —
+     byt inte befintliga z-index mot dessa tokens förrän sidorna migrerar också
+     (theme-pop 30000 måste t.ex. ligga över sidornas 12000-feedback-lager). */
+  --z-1: 1;
+  --z-nav: 100;
+  --z-drawer: 500;
+  --z-modal: 1000;
+  --z-toast: 2000;
+  --z-max: 3000;
+  /* Radie-skala — dominanta värden ur filen (2px x3, 3px x4, 4px, 6px, 50%).
+     OBS: *{border-radius:0!important} (§0) plattar det mesta; dessa gäller där
+     en regel med högre specificitet + !important återinför radie (t.ex. :1341). */
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-full: 50%;
+  /* RGB-tripletter för alpha-färger: rgba(var(--gold-rgb), .12).
+     VÄRDE-EXAKTA ersättare för de råa rgba-literalerna nedan. themes.js themar
+     INTE tripletterna ännu → alpha-glöd följer terminal-paletten oavsett tema —
+     EXAKT samma beteende som literalerna de ersatte (de var också frysta).
+     Wave-4: themes.js bör publicera --*-rgb per palett. Tripletterna är
+     härledda ur kanon-paletten och bryter inte :root==terminal-synken (de är
+     samma färger i annan notation). */
+  --gold-rgb: 212,169,44;
+  --gold-bright-rgb: 240,214,117;
+  --blood-rgb: 163,36,51;
+  --blood-bright-rgb: 224,72,90;
+  --teal-rgb: 94,154,163;
   /* Typsnitt — fast 4-rolls-hierarki (font-switchern borttagen 2026-08):
      display = rubriker/sektionsetiketter/knappar · body = berättelse/chat
      mono = siffror/systemrader/teknisk krom · accent = chips/tabs/mikro-etiketter */
@@ -113,7 +156,7 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
   inset: 3px;
   border: 1px solid var(--edge);
   pointer-events: none;
-  z-index: 1;
+  z-index: var(--z-1);
   opacity: .5;
 }/* Hörn-markörer (DOS box-drawing feel) */.corner{ display: none !important; }/* ── 5. KNAPPAR — DOS-style, platta ── */button, .go-btn, .summon-btn, .pv-go, .gate-btn, .rr-btn,
 .modal-btn, .rune-btn, .send-btn, .top-btn, .back, .blank-btn,
@@ -196,7 +239,7 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
   caret-color: var(--gold);
 }.input-row textarea:focus, #prompt:focus, .world-prompt:focus, .field input:focus{
   border-color: var(--gold) !important;
-  box-shadow: 0 0 0 1px rgba(201,162,39,.25) !important;
+  box-shadow: 0 0 0 1px rgba(var(--gold-rgb),.25) !important;
 }/* Prompt-prefix känsla — blinkande terminal-markör */.input-row{ position: relative; }.input-row::before{
   content: '❯';
   position: absolute;
@@ -270,12 +313,14 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
   border-color: var(--gold) !important;
   background: var(--stone-2) !important;
   box-shadow: none !important;
-}.tab.active::before{ content: '> '; color: var(--gold); }/* ── 13. TOAST ── */.toast{
+}.tab.active::before{ content: '> '; color: var(--gold); }/* ── 13. TOAST — GLOBAL bas. cli-chat-override: body.cli-chat .toast (rad ~2360, §35-regionen).
+   EJ dubbletter: §13 gäller alla sidor (box-shadow:none härifrån gäller ÄVEN i cli-läge);
+   cli-blocket höjer specificiteten (0,2,0) och vinner border/background/color där. ── */.toast{
   background: var(--stone) !important;
   border: 1px solid var(--gold) !important;
   box-shadow: none !important;
   color: var(--gold-bright) !important;
-}/* ── 14. SCROLLBARS ── */::-webkit-scrollbar{ width: 8px; height: 8px; }::-webkit-scrollbar-track{ background: var(--ink); }::-webkit-scrollbar-thumb{ background: var(--edge); border: 1px solid var(--ink); }::-webkit-scrollbar-thumb:hover{ background: var(--edge-hi); }::selection{ background: rgba(201,162,39,.3); color: #fff; }/* ── 15. LOGIN ── */.gate-frame{ background: var(--stone) !important; }.gate-title{ font-size: .9rem !important; color: var(--bone-bright) !important; }.gate-sub, .gate-footer{ font-style: normal !important; color: var(--bone-dim) !important; }.gate-frame.shake{ animation: shake-px .3s steps(3) !important; }
+}/* ── 14. SCROLLBARS ── */::-webkit-scrollbar{ width: 8px; height: 8px; }::-webkit-scrollbar-track{ background: var(--ink); }::-webkit-scrollbar-thumb{ background: var(--edge); border: 1px solid var(--ink); }::-webkit-scrollbar-thumb:hover{ background: var(--edge-hi); }::selection{ background: rgba(var(--gold-rgb),.3); color: #fff; }/* ── 15. LOGIN ── */.gate-frame{ background: var(--stone) !important; }.gate-title{ font-size: .9rem !important; color: var(--bone-bright) !important; }.gate-sub, .gate-footer{ font-style: normal !important; color: var(--bone-dim) !important; }.gate-frame.shake{ animation: shake-px .3s steps(3) !important; }
 @keyframes shake-px {
   0%,100% { transform: translateX(0); }
   33% { transform: translateX(-5px); }
@@ -305,8 +350,8 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
   background: var(--ink) !important;
 }.ascii-art pre{
   font-family: 'Courier New', monospace !important;
-  color: rgba(232,198,90,.92) !important;
-  text-shadow: 0 0 6px rgba(232,198,90,.35), 0 0 15px rgba(201,162,39,.12) !important;
+  color: rgba(var(--gold-bright-rgb),.92) !important;
+  text-shadow: 0 0 6px rgba(var(--gold-bright-rgb),.35), 0 0 15px rgba(var(--gold-rgb),.12) !important;
   line-height: 1.2 !important;
   font-size: .7rem !important;
 }/* Event-specifika ASCII-art-färger (överskriver den gröna defaulten) *//* ── 20. ROLL REQUEST ── */.roll-request{
@@ -334,7 +379,7 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
   min-width: 168px;
   background: var(--stone-2);
   border: 1px solid var(--edge);
-  border-radius: 6px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 12px 40px rgba(0,0,0,.7);
   padding: .35rem;
   animation: theme-pop-in .16s cubic-bezier(.22,1,.36,1);
@@ -343,15 +388,15 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
 .theme-row{
   display: flex; align-items: center; gap: .6rem; width: 100%;
   padding: .45rem .6rem; margin: 0; border: none; background: transparent;
-  cursor: pointer; border-radius: 4px; text-align: left;
+  cursor: pointer; border-radius: var(--radius-md); text-align: left;
   transition: background .15s;
 }
 .theme-row:hover{ background: var(--stone-3); }
 .theme-row.active .theme-name{ color: var(--gold-bright); }
 .theme-swatches{ display: inline-flex; gap: 3px; flex-shrink: 0; }
-.theme-swatches i{ width: 14px; height: 14px; display: block; border-radius: 50%; border: 1px solid rgba(255,255,255,.15); }
+.theme-swatches i{ width: 14px; height: 14px; display: block; border-radius: var(--radius-full); border: 1px solid rgba(255,255,255,.15); }
 .theme-name{ font-family: var(--font-display); font-size: .72rem; letter-spacing: .06em; color: var(--bone); text-transform: uppercase; }
-::selection{ background: rgba(201,162,39,.35); color: var(--bone-bright); }/* Scrollbars — thin, dark */*{ scrollbar-width: thin; scrollbar-color: var(--edge) transparent; }*::-webkit-scrollbar{ width: 5px; height: 5px; }*::-webkit-scrollbar-track{ background: transparent; }*::-webkit-scrollbar-thumb{ background: var(--edge); }/* ── 29. MOBILE ELEMENTS (hidden on desktop) ── */.mobile-hp-line,
+::selection{ background: rgba(var(--gold-rgb),.35); color: var(--bone-bright); }/* Scrollbars — thin, dark */*{ scrollbar-width: thin; scrollbar-color: var(--edge) transparent; }*::-webkit-scrollbar{ width: 5px; height: 5px; }*::-webkit-scrollbar-track{ background: transparent; }*::-webkit-scrollbar-thumb{ background: var(--edge); }/* ── 29. MOBILE ELEMENTS (hidden on desktop) ── */.mobile-hp-line,
 .mobile-menu-btn,
 .drawer-close-btn,
 .drawer-backdrop,
@@ -637,7 +682,7 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
     cursor: pointer;
     min-height: 48px;
     touch-action: manipulation;
-  }.sheet-row:last-child{ border-bottom: none; }.sheet-row:active{ background: rgba(201,162,39,.08); }.sheet-row .sr-icon{ font-size: 1rem; flex-shrink: 0; }.sheet-row .sr-body{ display: flex; flex-direction: column; gap: .1rem; min-width: 0; }.sheet-row .sr-name{ color: var(--bone-bright); font-size: .81rem; }.sheet-row .sr-hint{ color: var(--bone-dim); font-size: .68rem; }button.sheet-row{
+  }.sheet-row:last-child{ border-bottom: none; }.sheet-row:active{ background: rgba(var(--gold-rgb),.08); }.sheet-row .sr-icon{ font-size: 1rem; flex-shrink: 0; }.sheet-row .sr-body{ display: flex; flex-direction: column; gap: .1rem; min-width: 0; }.sheet-row .sr-name{ color: var(--bone-bright); font-size: .81rem; }.sheet-row .sr-hint{ color: var(--bone-dim); font-size: .68rem; }button.sheet-row{
     background: none;
     border: none;
     width: 100%;
@@ -993,7 +1038,7 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
   font-family: var(--font-display) !important;
   letter-spacing: .08em !important;
   text-transform: uppercase !important;
-}.cd-drawer{ background: var(--stone) !important; }.cd-head{ border-bottom: 1px solid var(--edge) !important; }.cd-title{ color: var(--gold-bright) !important; letter-spacing: .22em !important; }.cd-name{ color: var(--bone-bright) !important; font-size: .8rem !important; }.cd-class{ color: var(--arcane) !important; font-style: normal !important; }.cd-section-title{ color: var(--gold) !important; letter-spacing: .26em !important; font-size: .6rem !important; }.cd-section-title::after{ background: var(--edge) !important; }.cd-hp-label{ color: var(--bone-dim) !important; }.cd-hp-label b{ color: var(--blood-bright) !important; }.cd-trough, .cd-xp{ background: var(--ink) !important; border: 1px solid var(--edge) !important; box-shadow: none !important; }.cd-xp{ border-color: rgba(201,162,39,.35) !important; }.cd-xp-label b{ color: var(--gold-bright) !important; }.cd-stat, .cd-ability, .cd-res-row{
+}.cd-drawer{ background: var(--stone) !important; }.cd-head{ border-bottom: 1px solid var(--edge) !important; }.cd-title{ color: var(--gold-bright) !important; letter-spacing: .22em !important; }.cd-name{ color: var(--bone-bright) !important; font-size: .8rem !important; }.cd-class{ color: var(--arcane) !important; font-style: normal !important; }.cd-section-title{ color: var(--gold) !important; letter-spacing: .26em !important; font-size: .6rem !important; }.cd-section-title::after{ background: var(--edge) !important; }.cd-hp-label{ color: var(--bone-dim) !important; }.cd-hp-label b{ color: var(--blood-bright) !important; }.cd-trough, .cd-xp{ background: var(--ink) !important; border: 1px solid var(--edge) !important; box-shadow: none !important; }.cd-xp{ border-color: rgba(var(--gold-rgb),.35) !important; }.cd-xp-label b{ color: var(--gold-bright) !important; }.cd-stat, .cd-ability, .cd-res-row{
   background: var(--stone-2) !important;
   border: 1px solid var(--edge) !important;
   box-shadow: none !important;
@@ -1006,7 +1051,7 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
   background: var(--stone-2) !important;
   border: 1px solid var(--edge) !important;
   box-shadow: none !important;
-}.cd-item-card:hover{ border-color: var(--bone-dim) !important; }.cd-item-card:active{ background: rgba(201,162,39,.12) !important; border-color: var(--gold) !important; }.cd-item-name{ color: var(--bone-bright) !important; }.cd-item-name.r-magic{ color: var(--arcane-bright) !important; }.cd-item-name.r-rare, .cd-item-name.r-legendary{ color: var(--gold-bright) !important; }.cd-item-type{ color: var(--bone-dim) !important; font-style: normal !important; }.cd-badge{ background: var(--stone) !important; border: 1px solid var(--edge) !important; color: var(--bone) !important; }.cd-badge.dmg{ border-color: rgba(139,26,42,.55) !important; color: var(--blood-bright) !important; }.cd-badge.ac{ border-color: rgba(90,154,78,.55) !important; color: var(--poison) !important; }.cd-badge.charges{ border-color: color-mix(in srgb, var(--arcane) 55%, transparent) !important; color: var(--arcane) !important; }.cd-badge.magic-bonus{ border-color: rgba(232,198,90,.55) !important; color: var(--gold-bright) !important; }.cd-badge.qty, .cd-badge.range{ color: var(--bone-dim) !important; }.cd-npc-avatar{ background: var(--stone-2) !important; border: 1px solid var(--edge) !important; box-shadow: none !important; }.cd-role{ color: var(--bone-dim) !important; font-style: normal !important; }.cd-rel-badge{ background: var(--stone-2) !important; border: 1px solid var(--edge) !important; color: var(--bone-dim) !important; }.cd-alive{ color: var(--poison) !important; }.cd-alive.dead{ color: var(--blood-bright) !important; }.cd-notes p{ color: var(--bone) !important; }.cd-mention{
+}.cd-item-card:hover{ border-color: var(--bone-dim) !important; }.cd-item-card:active{ background: rgba(var(--gold-rgb),.12) !important; border-color: var(--gold) !important; }.cd-item-name{ color: var(--bone-bright) !important; }.cd-item-name.r-magic{ color: var(--arcane-bright) !important; }.cd-item-name.r-rare, .cd-item-name.r-legendary{ color: var(--gold-bright) !important; }.cd-item-type{ color: var(--bone-dim) !important; font-style: normal !important; }.cd-badge{ background: var(--stone) !important; border: 1px solid var(--edge) !important; color: var(--bone) !important; }.cd-badge.dmg{ border-color: rgba(139,26,42,.55) !important; color: var(--blood-bright) !important; }.cd-badge.ac{ border-color: rgba(90,154,78,.55) !important; color: var(--poison) !important; }.cd-badge.charges{ border-color: color-mix(in srgb, var(--arcane) 55%, transparent) !important; color: var(--arcane) !important; }.cd-badge.magic-bonus{ border-color: rgba(var(--gold-bright-rgb),.55) !important; color: var(--gold-bright) !important; }.cd-badge.qty, .cd-badge.range{ color: var(--bone-dim) !important; }.cd-npc-avatar{ background: var(--stone-2) !important; border: 1px solid var(--edge) !important; box-shadow: none !important; }.cd-role{ color: var(--bone-dim) !important; font-style: normal !important; }.cd-rel-badge{ background: var(--stone-2) !important; border: 1px solid var(--edge) !important; color: var(--bone-dim) !important; }.cd-alive{ color: var(--poison) !important; }.cd-alive.dead{ color: var(--blood-bright) !important; }.cd-notes p{ color: var(--bone) !important; }.cd-mention{
   background: var(--stone-3) !important;
   border: 1px solid var(--arcane) !important;
   color: var(--arcane-bright) !important;
@@ -1103,7 +1148,7 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
   color: var(--bone-bright);
   font-size: .62rem; line-height: 1;
   padding: .22rem .4rem;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background .2s, color .2s;
 }
@@ -1123,14 +1168,14 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
   font-family: var(--font-display);
   font-size: .58rem; letter-spacing: .22em; text-transform: uppercase;
   color: var(--blood-bright);
-  text-shadow: 0 0 8px rgba(224,72,90,.35);
+  text-shadow: 0 0 8px rgba(var(--blood-bright-rgb),.35);
 }
 .bl-round{
   font-family: var(--font-display);
   font-size: .55rem; letter-spacing: .1em;
   color: var(--gold-bright);
-  border: 1px solid rgba(201,162,39,.4);
-  background: rgba(201,162,39,.08);
+  border: 1px solid rgba(var(--gold-rgb),.4);
+  background: rgba(var(--gold-rgb),.08);
   padding: 2px 7px;
   animation: bl-in .3s ease;
 }
@@ -1138,21 +1183,21 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
 .bl-turn{
   font-family: var(--font-mono);
   font-size: .52rem; letter-spacing: .05em;
-  padding: 2px 7px; border: 1px solid; border-radius: 3px;
+  padding: 2px 7px; border: 1px solid; border-radius: var(--radius-sm);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   max-width: 150px;
 }
 .bl-turn.turn-player{
   color: var(--gold-bright);
-  border-color: rgba(201,162,39,.45);
-  background: rgba(201,162,39,.08);
-  text-shadow: 0 0 6px rgba(240,214,117,.3);
+  border-color: rgba(var(--gold-rgb),.45);
+  background: rgba(var(--gold-rgb),.08);
+  text-shadow: 0 0 6px rgba(var(--gold-bright-rgb),.3);
 }
 .bl-turn.turn-enemy{
   color: var(--blood-bright);
-  border-color: rgba(224,72,90,.5);
-  background: rgba(163,36,51,.14);
-  text-shadow: 0 0 6px rgba(224,72,90,.3);
+  border-color: rgba(var(--blood-bright-rgb),.5);
+  background: rgba(var(--blood-rgb),.14);
+  text-shadow: 0 0 6px rgba(var(--blood-bright-rgb),.3);
 }
 .bl-head .bl-title{ margin-right: auto; }
 /* Dag-dropdowns (v27.2): rubrik med beskrivning, ellipsis vid lång titel */
@@ -1187,7 +1232,7 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
   0%,100%{ transform: rotate(-7deg) translateY(0); }
   50%{ transform: rotate(6deg) translateY(-2px); }
 }
-.scribe-prompt{ color: #c9a227; font-weight: 700; }
+.scribe-prompt{ color: var(--gold); font-weight: 700; }
 .scribe-loader .thought{
   font-style: normal !important;
   color: #e8dcbc !important;
@@ -1201,8 +1246,8 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
   animation: blink-cursor 1.1s steps(1) infinite;
 }
 .scribe-inkline{
-  height: 2px; border-radius: 2px; overflow: hidden;
-  background: rgba(201,162,39,.18);
+  height: 2px; border-radius: var(--radius-xs); overflow: hidden;
+  background: rgba(var(--gold-rgb),.18);
 }
 .scribe-inkline i{
   display: block; height: 100%; width: 100%;
@@ -1320,7 +1365,7 @@ body.cli-chat .scribe-mini .scribe-inkline{ height: 8px; }
 .bl-body .combat-inline{ font-size: .72rem; }
 .bl-body .combat-enemy-card{ transition: border-color .2s, background .2s, transform .2s; }
 .bl-body .combat-enemy-card:hover{
-  border-color: rgba(224,72,90,.65);
+  border-color: rgba(var(--blood-bright-rgb),.65);
   background: rgba(139,26,42,.10);
   transform: translateX(-2px);
 }
@@ -1338,7 +1383,7 @@ body.cli-chat .scribe-mini .scribe-inkline{ height: 8px; }
   color: var(--bone-dim) !important;
   background: transparent !important;
   border: 1px solid color-mix(in srgb, var(--blood) 45%, transparent) !important;
-  border-radius: 3px !important;
+  border-radius: var(--radius-sm) !important;
   box-shadow: none !important;
   cursor: pointer;
   transition: color .2s, border-color .2s;
@@ -1363,18 +1408,18 @@ body.battle-drawer-open .battle-drawer-toggle .bdt-caret{ transform: rotate(180d
 .dice-badge:hover{ transform: translateY(-1px); }
 .enemy-dice-badge{
   color: var(--blood-bright);
-  border-color: rgba(224,72,90,.55);
-  background: rgba(163,36,51,.14);
-  text-shadow: 0 0 6px rgba(224,72,90,.4);
+  border-color: rgba(var(--blood-bright-rgb),.55);
+  background: rgba(var(--blood-rgb),.14);
+  text-shadow: 0 0 6px rgba(var(--blood-bright-rgb),.4);
 }
-.enemy-dice-badge:hover{ box-shadow: 0 0 10px rgba(224,72,90,.35); }
+.enemy-dice-badge:hover{ box-shadow: 0 0 10px rgba(var(--blood-bright-rgb),.35); }
 .player-dice-badge{
   color: var(--gold-bright);
-  border-color: rgba(240,214,117,.5);
-  background: rgba(201,162,39,.12);
-  text-shadow: 0 0 6px rgba(240,214,117,.4);
+  border-color: rgba(var(--gold-bright-rgb),.5);
+  background: rgba(var(--gold-rgb),.12);
+  text-shadow: 0 0 6px rgba(var(--gold-bright-rgb),.4);
 }
-.player-dice-badge:hover{ box-shadow: 0 0 10px rgba(240,214,117,.3); }
+.player-dice-badge:hover{ box-shadow: 0 0 10px rgba(var(--gold-bright-rgb),.3); }
 .crs-line .dice-badge{ margin-left: .4rem; }
 
 /* ── Tärnings-badges ENHANCED (v28): pixelrök + gnistor + pop-in ── */
@@ -1384,7 +1429,7 @@ body.battle-drawer-open .battle-drawer-toggle .bdt-caret{ transform: rotate(180d
 }
 .dice-badge{
   animation: dice-badge-pop .3s cubic-bezier(.34,1.56,.64,1) both;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }
 @keyframes dice-badge-pop{
   0%{ transform: scale(.4) translateY(5px); opacity: 0; }
@@ -1394,7 +1439,7 @@ body.battle-drawer-open .battle-drawer-toggle .bdt-caret{ transform: rotate(180d
 /* Kritisk — guldglöd som pulserar efter pop-in */
 .enemy-dice-badge.crit{
   border-color: rgba(255,215,0,.9); color: var(--gold-bright);
-  background: rgba(201,162,39,.22); text-shadow: 0 0 8px rgba(255,215,0,.6);
+  background: rgba(var(--gold-rgb),.22); text-shadow: 0 0 8px rgba(255,215,0,.6);
   animation: dice-badge-pop .3s cubic-bezier(.34,1.56,.64,1) both, badge-crit-glow 1.1s ease-in-out .3s infinite;
 }
 .player-dice-badge.crit,
@@ -1422,7 +1467,7 @@ body.battle-drawer-open .battle-drawer-toggle .bdt-caret{ transform: rotate(180d
 .rr-title{
   font-family: var(--font-display); font-weight: 700; font-size: .8rem;
   letter-spacing: .22em; text-transform: uppercase;
-  color: var(--gold-bright); text-shadow: 0 0 10px rgba(232,198,90,.45);
+  color: var(--gold-bright); text-shadow: 0 0 10px rgba(var(--gold-bright-rgb),.45);
   animation: rr-title-in .35s cubic-bezier(.34,1.56,.64,1) both;
 }
 @keyframes rr-title-in{ 0%{ transform: translateY(-6px); opacity: 0; } 100%{ transform: translateY(0); opacity: 1; } }
@@ -1437,7 +1482,7 @@ body.battle-drawer-open .battle-drawer-toggle .bdt-caret{ transform: rotate(180d
   display: inline-flex; align-items: center; gap: .38rem;
   font-family: var(--font-display); font-weight: 700;
   font-size: .66rem; letter-spacing: .07em; text-transform: uppercase;
-  cursor: pointer; padding: .25rem .55rem; border-radius: 3px;
+  cursor: pointer; padding: .25rem .55rem; border-radius: var(--radius-sm);
   transition: all .18s; min-height: 28px;
 }
 .rr-ico-glyph{ font-size: .9rem; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
@@ -1447,7 +1492,7 @@ body.battle-drawer-open .battle-drawer-toggle .bdt-caret{ transform: rotate(180d
   color: #1a1206;
   background: linear-gradient(180deg, var(--gold-bright), var(--gold) 55%, #8a6d14);
   border: 1px solid #6e5510;
-  box-shadow: 0 3px 8px -3px rgba(232,198,90,.5);
+  box-shadow: 0 3px 8px -3px rgba(var(--gold-bright-rgb),.5);
   animation: rr-pulse 2s ease-in-out infinite;
 }
 .rr-ico-dice .rr-ico-glyph{ animation: rr-dice-bob 1.6s ease-in-out infinite; }
@@ -1497,13 +1542,13 @@ body.battle-drawer-open .battle-drawer-toggle .bdt-caret{ transform: rotate(180d
    Arcane (purple) tint to contrast enemy blood-red / player gold.
    ═══════════════════════════════════════════ */
 .bl-body .combat-ally-card{
-  border-color: rgba(94,154,163,.45);
-  background: rgba(94,154,163,.06);
+  border-color: rgba(var(--teal-rgb),.45);
+  background: rgba(var(--teal-rgb),.06);
   transition: border-color .2s, background .2s, transform .2s, opacity .3s;
 }
 .bl-body .combat-ally-card:hover{
-  border-color: rgba(94,154,163,.7);
-  background: rgba(94,154,163,.12);
+  border-color: rgba(var(--teal-rgb),.7);
+  background: rgba(var(--teal-rgb),.12);
   transform: translateX(-2px);
 }
 .combat-ally-card .cie-hpbar i{ background: var(--arcane); }
@@ -1527,17 +1572,17 @@ body.battle-drawer-open .battle-drawer-toggle .bdt-caret{ transform: rotate(180d
 /* Tärnings-badges: allierad = arcane */
 .ally-dice-badge{
   color: var(--arcane);
-  border-color: rgba(94,154,163,.5);
-  background: rgba(94,154,163,.12);
-  text-shadow: 0 0 6px rgba(94,154,163,.4);
+  border-color: rgba(var(--teal-rgb),.5);
+  background: rgba(var(--teal-rgb),.12);
+  text-shadow: 0 0 6px rgba(var(--teal-rgb),.4);
 }
-.ally-dice-badge:hover{ box-shadow: 0 0 10px rgba(94,154,163,.3); }
+.ally-dice-badge:hover{ box-shadow: 0 0 10px rgba(var(--teal-rgb),.3); }
 /* Vems-tur-chip: allierad = arcane/guld */
 .bl-turn.turn-ally{
   color: var(--gold-bright);
-  border-color: rgba(94,154,163,.5);
-  background: rgba(94,154,163,.12);
-  text-shadow: 0 0 6px rgba(94,154,163,.35);
+  border-color: rgba(var(--teal-rgb),.5);
+  background: rgba(var(--teal-rgb),.12);
+  text-shadow: 0 0 6px rgba(var(--teal-rgb),.35);
 }
 /* Statusrad: allierade */
 .csb-ally{ color: var(--arcane); }
@@ -1554,9 +1599,9 @@ body.battle-drawer-open .battle-drawer-toggle .bdt-caret{ transform: rotate(180d
   letter-spacing: .08em;
   text-transform: uppercase;
   color: var(--gold);
-  background: rgba(201,162,39,.08);
-  border: 1px solid rgba(201,162,39,.35);
-  border-radius: 2px;
+  background: rgba(var(--gold-rgb),.08);
+  border: 1px solid rgba(var(--gold-rgb),.35);
+  border-radius: var(--radius-xs);
   padding: .22rem .55rem;
   margin: 0 0 .35rem .1rem;
   width: fit-content;
@@ -2240,7 +2285,7 @@ body.cli-chat .tts-btn.playing{
 }
 @keyframes cli-tts-pulse{
   0%, 100%{ color: var(--gold); text-shadow: none; }
-  50%{ color: var(--gold-bright); text-shadow: 0 0 8px rgba(232,198,90,.75); }
+  50%{ color: var(--gold-bright); text-shadow: 0 0 8px rgba(var(--gold-bright-rgb),.75); }
 }
 
 /* ═══════════════════════════════════════
@@ -2330,7 +2375,9 @@ body.cli-chat .msg.guardian .guardian-box{
   padding: 0;
 }
 
-/* ── Toasts = terminal status line ── */
+/* ── Toasts = terminal status line ──
+   cli-chat-OVERRIDE av §13 .toast (rad ~273) — högre specificitet, vinner border/
+   background/color; §13s box-shadow:none!important gäller fortfarande här. ── */
 body.cli-chat .toast{
   font-family: var(--cli-mono) !important;
   font-size: .78rem;
@@ -2514,7 +2561,7 @@ body.cli-chat .msg.dm .bubble{
   }
   /* tap feedback on bottom-nav tabs */
   .mobile-nav .nav-tab:active{
-    background: rgba(232,198,90,.16) !important;
+    background: rgba(var(--gold-bright-rgb),.16) !important;
   }
   .mobile-nav .nav-tab:active .nav-icon{
     transform: scale(.9);

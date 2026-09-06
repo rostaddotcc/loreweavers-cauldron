@@ -9,10 +9,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
 <style>
   :root {
-    --ink: #0b0812;
-    --stone: #161020;
-    --stone-2: #1d1529;
-    --stone-3: #241a33;
+    --ink: #1a1426;
+    --stone: #271d33;
+    --stone-2: #322541;
+    --stone-3: #3d2e4f;
     --edge: #463a60;
     --edge-hi: #5a4a7a;
     --bone: #d9c9a6;
@@ -221,7 +221,7 @@
     padding: .85rem .7rem; text-align: center; min-width: 0;
     transition: border-color .2s ease, transform .2s ease;
   }
-  .v-kpi:hover { border-color: rgba(201,162,39,.45); transform: translateY(-2px); }
+  .v-kpi:hover { border-color: rgba(212,169,44,.45); transform: translateY(-2px); }
   .v-kpi-n { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 1.55rem; color: var(--gold-bright); font-variant-numeric: tabular-nums; line-height: 1.1; }
   .v-kpi-l { font-family: var(--font-display,'Cinzel',serif); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--bone-dim); margin-top: .35rem; }
   .visits-sub { font-family: var(--font-display,'Cinzel',serif); font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); opacity: .85; margin-bottom: .7rem; }
@@ -244,7 +244,7 @@
   .cbar-fill {
     height: 100%; border-radius: 2px;
     background: linear-gradient(90deg, var(--gold), var(--arcane));
-    box-shadow: 0 0 8px rgba(201,162,39,.3);
+    box-shadow: 0 0 8px rgba(212,169,44,.3);
     transition: width .4s ease;
   }
   .cbar-fill.alt {
@@ -261,7 +261,7 @@
     font-family: var(--font-display,'Cinzel',serif); font-size: .78rem; letter-spacing: .12em; text-transform: uppercase;
     transition: border-color .2s ease, background .2s ease, color .2s ease;
   }
-  .cbar-more:hover { border-color: var(--gold); background: rgba(201,162,39,.08); color: var(--gold-bright); }
+  .cbar-more:hover { border-color: var(--gold); background: rgba(212,169,44,.08); color: var(--gold-bright); }
 
   /* ── Tidsfilter för land-grafen (2026-08-09): 1h/12h/24h/7d/30d/all ── */
   .visits-sub-row { display: flex; align-items: center; justify-content: space-between; gap: .8rem; flex-wrap: wrap; }
@@ -275,7 +275,7 @@
     transition: border-color .15s ease, color .15s ease, background .15s ease;
   }
   .pill:hover { border-color: var(--gold); color: var(--gold-bright); }
-  .pill.active { border-color: var(--gold); color: var(--gold-bright); background: rgba(201,162,39,.12); }
+  .pill.active { border-color: var(--gold); color: var(--gold-bright); background: rgba(212,169,44,.12); }
 
   /* ── Top cards: unique visitors + recently active players (2026-08-06) ── */
   .active-list { display: flex; flex-direction: column; gap: .6rem; }
@@ -284,7 +284,7 @@
     background: var(--stone-2); border: 1px solid var(--edge); border-radius: 10px;
     padding: .7rem .85rem; transition: border-color .2s ease, transform .2s ease;
   }
-  .active-row:hover { border-color: rgba(201,162,39,.45); transform: translateY(-2px); }
+  .active-row:hover { border-color: rgba(212,169,44,.45); transform: translateY(-2px); }
   .active-name { font-family: var(--font-display,'Cinzel',serif); font-weight: 700; color: var(--bone-bright); font-size: 0.95rem; }
   .active-time { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 0.78rem; color: var(--gold); white-space: nowrap; }
   .active-meta { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 0.72rem; color: var(--bone-dim); display: block; margin-top: .2rem; }
@@ -619,7 +619,7 @@
   }
 
 </style>
-<link rel="stylesheet" href="snes.css?v=39">
+<link rel="stylesheet" href="snes.css?v=41">
 <style>
 /* ═══════════ MJUKA UPP — Admin (2026-08-05) — EFTER snes.css ═══════════ */
 .top-btn, .back-btn, .cu-btn, .del-btn, .cap-btn, .bc-btn{ border-radius: 8px !important; box-shadow: 0 2px 12px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; }
@@ -638,7 +638,7 @@
 </style>
 <script src="sprites.js?v=20260806b"></script>
 <script src="fonts.js?v=20260806b"></script>
-<script src="themes.js?v=20260806b"></script>
+<script src="themes.js?v=20260906a"></script>
 </head>
 <body>
 <div class="grain"></div>
@@ -665,7 +665,7 @@
 
 <script src="sfx.js?v=20260811a"></script>
 <script src="api.js?v=20260804c"></script>
-<script src="i18n.js?v=20260807a"></script>
+<script src="i18n.js?v=20260906a"></script>
 <script>
 // Auth guard
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -2219,7 +2219,7 @@ function renderDetail(container, data) {
     html += '<div class="role-split" style="flex-wrap:wrap">';
     Object.keys(tlToday).sort().forEach(a => {
       const t = tlToday[a] || {};
-      html += '<span style="background:rgba(201,162,39,.08);border:1px solid rgba(201,162,39,.35);border-radius:5px;padding:.15rem .55rem;color:var(--bone-bright)">' + (TL_LABELS[a] || a) + ': <b style="color:var(--gold-bright)">' + (t.turns || 0) + '</b> turns' + ((t.tokens || 0) ? ' · ' + fmtTokens(t.tokens) + ' tkn' : '') + '</span>';
+      html += '<span style="background:rgba(212,169,44,.08);border:1px solid rgba(212,169,44,.35);border-radius:5px;padding:.15rem .55rem;color:var(--bone-bright)">' + (TL_LABELS[a] || a) + ': <b style="color:var(--gold-bright)">' + (t.turns || 0) + '</b> turns' + ((t.tokens || 0) ? ' · ' + fmtTokens(t.tokens) + ' tkn' : '') + '</span>';
     });
     if (!Object.keys(tlToday).length) html += '<span style="color:var(--bone-dim)">Inga förbrukade turns idag ännu</span>';
     html += '</div>';

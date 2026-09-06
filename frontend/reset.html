@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400;500;600&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
-<script src="themes.js?v=20260806b"></script>
+<script src="themes.js?v=20260906a"></script>
 <style>
   :root{
     /* 2026-08-11: aligned to snes.css palette (two-skin audit) */
@@ -24,7 +24,7 @@
   body{font-family:var(--font-body);color:var(--bone);background:var(--ink);
     min-height:100vh;display:flex;align-items:center;justify-content:center;
     padding:1.2rem;-webkit-tap-highlight-color:transparent;
-    background-image:radial-gradient(ellipse 80% 60% at 50% -10%, rgba(201,162,39,.08), transparent 60%),
+    background-image:radial-gradient(ellipse 80% 60% at 50% -10%, rgba(212,169,44,.08), transparent 60%),
                      radial-gradient(ellipse 60% 50% at 90% 110%, rgba(123,79,212,.08), transparent 60%)}
   .grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.05;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
@@ -41,12 +41,12 @@
   .field input{width:100%;font-family:var(--font-body);font-size:16px;color:var(--bone-bright);
     background:var(--ink);border:1px solid var(--edge);border-radius:8px;padding:.72rem .9rem;outline:none;
     transition:border-color .2s,box-shadow .2s}
-  .field input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,162,39,.14)}
+  .field input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,169,44,.14)}
   .btn{width:100%;margin-top:.5rem;border:0;cursor:pointer;font-family:var(--font-display);
     font-weight:700;font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;
     color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));
     border-radius:8px;padding:.85rem 1rem;transition:transform .2s,box-shadow .2s}
-  .btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(201,162,39,.25)}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(212,169,44,.25)}
   .btn:disabled{opacity:.55;transform:none;cursor:default}
   .err{min-height:1.4rem;margin-top:.8rem;font-size:.82rem;color:var(--blood-bright);line-height:1.5}
   .err.ok{color:#8fd48a}

@@ -8,7 +8,7 @@
 <link rel="icon" href="/assets/logo-cauldron.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,700;1,400;1,700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root {
     --ink:#0b0812; --stone:#161020; --stone-2:#1d1529; --stone-3:#241a33;
@@ -22,8 +22,8 @@
     background:var(--ink);line-height:1.8;
   }
   .app{max-width:800px;margin:0 auto;padding:2rem 1.5rem 4rem}
-  h1{font-family:var(--font-accent,'Press Start 2P',monospace);font-size:1rem;color:var(--gold);margin-bottom:.5rem;text-shadow:2px 2px 0 #000}
-  h2{font-family:var(--font-accent,'Press Start 2P',monospace);font-size:.7rem;color:var(--term-green);margin:2rem 0 .8rem;text-transform:uppercase;letter-spacing:.1em}
+  h1{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:1.5rem;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;text-shadow:2px 2px 0 #000}
+  h2{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:.85rem;color:var(--term-green);margin:2rem 0 .8rem;text-transform:uppercase;letter-spacing:.14em}
   h2::before{content:'> ';color:var(--edge)}
   p,li{font-size:.91rem;color:var(--bone);margin-bottom:.6rem}
   ul{padding-left:1.2rem;list-style:none}
@@ -53,8 +53,8 @@
   .ledger-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0}
   .ledger-cell{background:var(--stone);border:1px solid var(--edge);padding:1rem 1.1rem;position:relative}
   .ledger-cell::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.35}
-  .ledger-cell .lc-tag{font-family:var(--font-accent,'Press Start 2P',monospace);font-size:.52rem;letter-spacing:.12em;color:var(--term-green);text-transform:uppercase;display:block;margin-bottom:.5rem}
-  .ledger-cell .lc-title{font-family:var(--font-accent,'Press Start 2P',monospace);font-size:.58rem;color:var(--gold);margin-bottom:.4rem}
+  .ledger-cell .lc-tag{font-family:var(--font-accent,'Silkscreen',monospace);font-size:.62rem;letter-spacing:.12em;color:var(--term-green);text-transform:uppercase;display:block;margin-bottom:.5rem}
+  .ledger-cell .lc-title{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:.78rem;color:var(--gold);margin-bottom:.4rem}
   .ledger-cell p, .ledger-cell li{font-size:.86rem}
   .ledger-cell .lc-ex{display:block;margin-top:.5rem;font-family:var(--font-accent,'Silkscreen',monospace);font-size:.78rem;color:var(--bone-dim);border-left:2px solid var(--gold);padding-left:.6rem}
   .truth{color:var(--term-green)}
@@ -89,7 +89,7 @@
     .key { font-size: .75rem; }
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=39">
+<link rel="stylesheet" href="snes.css?v=41">
 <style>
 /* ═══════════ RITE-RAIL — THE ARCHIVE dropdown (2026-08-11) ═══════════ */
 .rite-rail{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:48px;background:linear-gradient(180deg,var(--stone-2),var(--stone));border:1px solid var(--edge);border-top:1px solid var(--edge-hi);padding:0 .8rem;gap:1rem;position:relative}
@@ -124,7 +124,7 @@
 </style>
 <script src="sprites.js?v=20260806b"></script>
 <script src="fonts.js?v=20260806b"></script>
-<script src="themes.js?v=20260806b"></script>
+<script src="themes.js?v=20260906a"></script>
 </head>
 <body>
 <div class="app">
@@ -340,7 +340,7 @@
     Powered by Qwen, DeepSeek &amp; StepFun · Your adventures are saved in the Cauldron · <a href="login.html">Back to the Gate</a>
   </p>
 </div>
-<script src="i18n.js?v=20260807a"></script>
+<script src="i18n.js?v=20260906a"></script>
 <script>
 /* ═══════════ Scroll reveal — samma mekanism som login/features ═══════════ */
 (function () {

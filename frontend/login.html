@@ -71,10 +71,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400;500;600&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
-<script src="themes.js?v=20260806b"></script>
+<script src="themes.js?v=20260906a"></script>
 <style>
   /* ═══════════════ Terminal Gothic — flat, DOS/terminal, aligned med spelet ═══════════════
-     login.html rebuild 2026-08-12: samma content, flat & enklare. snes.css?v=40 laddas
+     login.html rebuild 2026-08-12: samma content, flat & enklare. snes.css?v=41 laddas
      EFTER detta block och tvingar scanlines/sprites/knappar med !important. */
   :root{
     --ink:#1a1426; --stone:#271d33; --stone-2:#322541; --stone-3:#3d2e4f;
@@ -395,7 +395,7 @@
     .scroll-cue{animation:none}
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=40">
+<link rel="stylesheet" href="snes.css?v=41">
 </head>
 <body>
 
@@ -848,7 +848,7 @@
 
 <script src="sfx.js?v=20260811a"></script>
 <script src="api.js?v=20260805c"></script>
-<script src="i18n.js?v=20260807a"></script>
+<script src="i18n.js?v=20260906a"></script>
 <script src="sprites.js?v=20260806b"></script>
 
 <script>
@@ -1190,7 +1190,7 @@ function deckCardHtml(key, d) {
   const know = d.note ? `<div class="bnote">${esc(d.note)}</div>` : '';
   return `
     <div class="deck-portrait" style="background-image:url('/book-souls/${d.img}')">
-      <span class="corner" style="border-color:${esc(d.color||'#c9a227')};color:${esc(d.color||'#c9a227')}">${esc(d.relation||'Known')}</span>
+      <span class="corner" style="border-color:${esc(d.color||'var(--gold)')};color:${esc(d.color||'var(--gold)')}">${esc(d.relation||'Known')}</span>
       <div class="plate"><div class="nm">${esc(d.name)}</div><div class="meta">${esc(d.role)}</div></div>
     </div>
     <div class="deck-info">

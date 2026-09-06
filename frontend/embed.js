@@ -14,7 +14,10 @@
 
   var hide = function () {
     document.querySelectorAll('header.topbar').forEach(function (el) {
-      el.style.display = 'none';
+      // !important krävs: lore-sidorna har .topbar.rite-rail{display:grid!important}
+      // (rite-rail-CSS) som annars vinner över inline display:none → headern med
+      // "THE ARCHIVE" + Theme-knappen syns inne i Codex trots body.embedded.
+      el.style.setProperty('display', 'none', 'important');
     });
     document.body.classList.add('embedded');
   };

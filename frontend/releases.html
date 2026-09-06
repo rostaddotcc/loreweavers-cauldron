@@ -9,17 +9,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
-<script src="themes.js?v=20260806b"></script>
+<script src="themes.js?v=20260906a"></script>
 <style>
   /* ═══════════════ tokens ═══════════════ */
   :root{
-    --ink:#07070c;
-    --stone:#0e0e14; --stone-2:#12121a; --stone-3:#181822;
-    --edge:#2a2a3a; --edge-hi:#3a3a50;
-    --bone:#b8b8c8; --bone-bright:#e6e2d4; --bone-dim:#77778c;
-    --gold:#c9a227; --gold-bright:#e8c65a;
-    --blood:#8b1a2a; --blood-bright:#d43a4d;
-    --ember:#d4691e; --arcane:#7b4fd4; --poison:#5a9a4e; --teal:#4e8a93;
+    --ink:#1a1426;
+    --stone:#271d33; --stone-2:#322541; --stone-3:#3d2e4f;
+    --edge:#463a60; --edge-hi:#5a4a7a;
+    --bone:#d9c9a6; --bone-bright:#f2e6c8; --bone-dim:#9d8a6a;
+    --gold:#d4a92c; --gold-bright:#f0d675;
+    --blood:#a32433; --blood-bright:#e0485a;
+    --ember:#d4691e; --arcane:#9a6fe0; --poison:#7aa35e; --teal:#5e9aa3;
     --font-display:'Cinzel',serif;
     --font-body:'Spectral',Georgia,serif;
     --nav-h:64px;
@@ -65,7 +65,7 @@
     text-transform:uppercase;color:var(--gold);text-align:center;margin-bottom:1rem}
   .ledger h1{font-family:var(--font-display);font-weight:900;font-size:clamp(1.9rem,4.6vw,3rem);
     text-align:center;color:var(--bone-bright);letter-spacing:.08em;text-transform:uppercase;
-    margin-bottom:1rem;text-shadow:0 0 42px rgba(201,162,39,.28),0 2px 0 #000}
+    margin-bottom:1rem;text-shadow:0 0 42px rgba(212,169,44,.28),0 2px 0 #000}
   .ledger-sub{max-width:620px;margin:0 auto 2.6rem;text-align:center;color:var(--bone-dim);
     font-size:1.02rem;line-height:1.65}
   .ledger-sub b{color:var(--bone);font-weight:600}
@@ -76,7 +76,7 @@
   .ver-chip{display:inline-flex;align-items:center;gap:.55rem;
     font-family:var(--font-display);font-size:.72rem;letter-spacing:.26em;text-transform:uppercase;
     color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));
-    padding:.55rem 1.1rem;border-radius:2px;box-shadow:0 2px 14px rgba(201,162,39,.35)}
+    padding:.55rem 1.1rem;border-radius:2px;box-shadow:0 2px 14px rgba(212,169,44,.35)}
   .ver-chip .ver-name{font-weight:900}
   .ver-chip .ver-note{color:rgba(7,7,12,.72);letter-spacing:.14em;font-size:.62rem}
   .ver-tag{font-family:var(--font-display);font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;
@@ -105,7 +105,7 @@
   .chip{font-family:var(--font-display);font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;
     color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));
     padding:.26rem .6rem;border-radius:2px}
-  .chip.pay{background:linear-gradient(160deg,#e8c65a,#c9a227)}
+  .chip.pay{background:linear-gradient(160deg,var(--gold-bright),var(--gold))}
   .tablet-title{font-family:var(--font-display);font-weight:700;font-size:.86rem;letter-spacing:.14em;
     text-transform:uppercase;color:var(--bone-bright)}
   .tablet-lead{color:var(--bone-dim);font-size:.95rem;line-height:1.6;margin-bottom:1.1rem}
@@ -125,7 +125,7 @@
   .tag.feat{color:var(--poison);border:1px solid rgba(90,154,78,.5)}
   .tag.fix{color:var(--blood-bright);border:1px solid rgba(212,58,77,.45)}
   .tag.ux{color:var(--arcane);border:1px solid rgba(123,79,212,.5)}
-  .tag.ai{color:var(--gold);border:1px solid rgba(201,162,39,.5)}
+  .tag.ai{color:var(--gold);border:1px solid rgba(212,169,44,.5)}
   .tag.snd{color:var(--ember);border:1px solid rgba(212,105,30,.5)}
   .tag.pay{color:var(--teal);border:1px solid rgba(78,138,147,.5)}
 
@@ -136,7 +136,7 @@
   /* tier mini-card */
   .tier{background:linear-gradient(165deg,var(--stone-3),var(--stone-2) 60%,var(--stone));
     border:1px solid var(--edge);border-radius:2px;padding:1.6rem 1.5rem}
-  .tier.hot{border-color:rgba(201,162,39,.5);box-shadow:0 0 34px rgba(201,162,39,.08)}
+  .tier.hot{border-color:rgba(212,169,44,.5);box-shadow:0 0 34px rgba(212,169,44,.08)}
   .tier-name{font-family:var(--font-display);font-weight:700;font-size:.78rem;letter-spacing:.24em;
     text-transform:uppercase;color:var(--bone-bright);margin-bottom:.3rem}
   .tier-flag{font-family:var(--font-display);font-size:.56rem;letter-spacing:.2em;text-transform:uppercase;

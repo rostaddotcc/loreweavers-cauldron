@@ -233,6 +233,9 @@ from guardian import (
     guardian_check_roll,
     guardian_extract_mechanics,
 )
+# W3-M2 (audit-mechanics §2): EN beräkning av bärvikt — weight_utils är single
+# source of truth (fyra divergerande vägar fanns; DM truth block migreras här).
+from weight_utils import compute_carry_weight
 from combat import (
     start_combat as combat_start,
     roll_initiative as combat_roll_initiative,
@@ -1575,7 +1578,7 @@ def _consume_turn(username: str, action: str = "turn", model: str | None = None,
 
 
 # ═══════════════════════════════════════
-# TURN-LEDGER (2026-08-08) — per-anrops-bokföring
+# TURN-LEDGER — bokföring per förbrukad turn (sedan 2026-08-08)
 # ═══════════════════════════════════════
 # Append-only JSONL per användare: backend/data/turn_ledgers/<user>.jsonl
 # Rad: {"ts", "action", "model", "tokens"}. Prune vid skrivning (>3000 rader
@@ -1720,8 +1723,12 @@ async def _token_plan_image(model: str, prompt: str, size: str, seed: int) -> by
 
 def _consume_wan_quota(username: str) -> None:
     """Wan-bildkvot: max 10 bilder/dag (wan_used_today rollover vid datumbyte).
-    Varje Wan-bild drar dessutom EN turn (bilder räknas som turns). 403 om
-    kvoten eller turn-saldot är slut. Körs strax innan själva genereringen."""
+
+    DUBBELGRIND (medvetet behållen, W3-M2 2026-09-06): varje Wan-bild kostar
+    BÅDE 1 premiumbild/dag OCH 1 turn ur turn-saldot. 403 om kvoten eller
+    turn-saldot är slut — dagskvot-403:n säger därför uttryckligen "daily
+    painting cap" så spelaren inte tror att turnerna är slut (ärlig text,
+    oförändrat beteende). Körs strax innan själva genereringen."""
     with _USER_LOCK:
         users = load_users()
         u = users.get(username)
@@ -1733,7 +1740,11 @@ def _consume_wan_quota(username: str) -> None:
             u["wan_reset_date"] = today
         used = int(u.get("wan_used_today", 0) or 0)
         if used >= WAN_DAILY_LIMIT:
-            raise HTTPException(403, f"Wan daily limit reached ({WAN_DAILY_LIMIT} images/day). Try again tomorrow.")
+            raise HTTPException(403, (
+                f"Daily painting cap reached: {WAN_DAILY_LIMIT} premium images/day. "
+                "This is the daily painting limit — not your turn balance. "
+                "Painting quota resets tomorrow (UTC)."
+            ))
         u["wan_used_today"] = used + 1
         save_users(users)
     # Bilden räknas som en turn — kvot + turn-saldo måste räcka
@@ -1758,6 +1769,9 @@ def _user_free_info(username: str) -> dict:
         "turns_used": int(udata.get("turns_used", 0) or 0),
         "turn_bonus": int(udata.get("turn_bonus", 0) or 0),
         "promo_bonus": int(udata.get("promo_bonus", 0) or 0),
+        # W3-M2: legacy-flagga för frontend-utfasning — promo-turns delas inte
+        # ut längre (borttagna 2026-09-06) men grandfatherade konton har kvar dem.
+        "promo_bonus_legacy": int(udata.get("promo_bonus", 0) or 0) > 0,
         "reset_date": udata.get("reset_date"),
         "reset_ts": udata.get("reset_ts"),
         "subscription_status": tier,
@@ -2877,6 +2891,7 @@ async def me(morkrets_token: str | None = Cookie(None)):
         "turns_used": free_info["turns_used"],
         "turn_bonus": free_info["turn_bonus"],
         "promo_bonus": free_info["promo_bonus"],
+        "promo_bonus_legacy": free_info["promo_bonus_legacy"],
         "reset_date": free_info["reset_date"],
         "subscription_status": free_info["subscription_status"],
         "subscription_until": free_info["subscription_until"],
@@ -3696,7 +3711,8 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
         _record_tts_usage(username, len(text), _mp3_duration_seconds(cached), api_call=False, provider=provider)
         return StreamingResponse(io.BytesIO(cached), media_type="audio/mpeg")
 
-    # 2026-08-08 (strikt per-anrops-modell): varje NY TTS-syntes = 1 turn.
+    # TTS-kostnad (1 turn per prompt sedan revert eded88a): chatten kostar
+    # 1 turn/meddelande, men varje NY TTS-syntes kostar en EGEN turn.
     # Cache-träffar är gratis (inget externt anrop). Misslyckade synteser
     # RÄKNAS också (business rule 2026-08-07 — ingen turn-återbetalning).
     _gate_turn_quota(username)
@@ -4551,13 +4567,14 @@ def compact_state(state: dict, language: str = "sv") -> str:
     else:
         lines.append("Inventory: tomt" if language != "en" else "Inventory: empty")
 
-    # Bärvikt (D&D 5e: max = STR × 15). coin_wt beräknas redan ovan (rad 1812).
-    total_w = sum(float(it.get("weight", 0) or 0) * int(it.get("qty", 1) or 1) for it in inv)
-    max_w = float(char.get("max_weight_lbs", 0) or 0)
-    grand_total = total_w + coin_wt
+    # Bärvikt (D&D 5e: max = STR × 15). W3-M2: migrerad till
+    # weight_utils.compute_carry_weight() (single source of truth —
+    # audit-mechanics §2). DM-synligt outputformat oförändrat.
+    carry = compute_carry_weight(state)
+    grand_total = carry["total"]
+    max_w = carry["max"]
     if max_w > 0:
-        pct = round(grand_total / max_w * 100)
-        lines.append(f"Bärvikt: {grand_total:.1f} / {max_w:.0f} lb ({pct}%)")
+        lines.append(f"Bärvikt: {grand_total:.1f} / {max_w:.0f} lb ({carry['pct']}%)")
     else:
         lines.append(f"Bärvikt: {grand_total:.1f} lb")
 
@@ -6332,7 +6349,7 @@ async def _chat_locked(
             _mem_text = (_mem or {}).get("text", "")
             _base = reply.replace(_search_m.group(0), "").strip()
             if _mem_text:
-                # Extra anrop = extra turn (strikt per-anrops-modell). Om saldot
+                # Extra LLM-anrop ([SÖK:]) = extra turn. Om saldot
                 # tagit slut skippas sökningen tyst — original-svaret behålls.
                 if _turns_available(username) < 1:
                     reply = _base
@@ -6797,6 +6814,21 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
     return _finalize_character(char_data, state, lang)
 
 
+def _keep_unknown_item_keys(norm: dict, raw: dict) -> dict:
+    """W3-M2 (audit-economy §1.2): behåll okända nycklar från LLM:ns item-JSON.
+
+    _normalize_item (guardian.py) bygger en fast ITEM_SCHEMA-dict och tappar
+    allt den inte känner — bl.a. price_gp som prompt-sidan (M1) numera ber
+    DM:n om. Lägger tillbaka okända icke-tomma nycklar; skriver ALDRIG över
+    normaliserade fält. Anropas på char-gen- och PATCH-inventory-vägarna.
+    """
+    if isinstance(raw, dict):
+        for k, v in raw.items():
+            if k not in norm and v not in (None, ""):
+                norm[k] = v
+    return norm
+
+
 def _finalize_character_data(char_data: dict, lang: str) -> tuple[dict, list, bool]:
     """Normalisera LLM:ns karaktärs-JSON → färdig karaktär + inventory.
 
@@ -6973,6 +7005,7 @@ def _finalize_character_data(char_data: dict, lang: str) -> tuple[dict, list, bo
             if not isinstance(it, dict) or not it.get("name"):
                 continue
             norm = _normalize_item(it, lang=lang)
+            _keep_unknown_item_keys(norm, it)  # W3-M2: price_gp m.fl. överlever
             clean.append(norm)
 
     # ── Säkerhetsnät (fix 2026-07-31): gear-strängen kan innehålla startitems
@@ -7713,6 +7746,7 @@ async def update_inventory(req: dict, morkrets_token: str | None = Cookie(None))
             if not isinstance(it, dict) or not it.get("name"):
                 continue
             norm = _normalize_item(it)
+            _keep_unknown_item_keys(norm, it)  # W3-M2: price_gp m.fl. överlever
             norm.setdefault("id", f"item-{len(clean)}")
             clean.append(norm)
         state["inventory"] = clean
@@ -10670,8 +10704,8 @@ async def admin_user_detail(username: str, morkrets_token: str | None = Cookie(N
         "character_creation": scan.get("character_creation", {}),
         "image_gen": scan.get("image_gen", {}),
         "deleted_campaigns": scan.get("deleted_campaigns", {}),
-        # Turn-ledger (2026-08-08, strikt per-anrops-modell): exakt förbrukning
-        # per anrop — per-åtgärd idag + totalt, och senaste 50 posterna.
+        # Turn-ledger: exakt förbrukning per förbrukad turn (bokföring sedan
+        # 2026-08-08) — per-åtgärd idag + totalt, och senaste 50 posterna.
         "turn_ledger": _turn_ledger_breakdown(username),
         "turn_ledger_today": _turn_ledger_breakdown(username, since=_today_str()),
         "turn_ledger_recent": _read_turn_ledger(username, limit=50),
@@ -10681,7 +10715,7 @@ async def admin_user_detail(username: str, morkrets_token: str | None = Cookie(N
 
 @app.get("/api/admin/user/{username}/ledger")
 async def admin_user_ledger(username: str, limit: int = 100, morkrets_token: str | None = Cookie(None)):
-    """Admin-only: turn-ledgern (per-anrops-bokföring) för en användare.
+    """Admin-only: turn-ledgern (bokföring per förbrukad turn) för en användare.
 
     Varje rad = EN förbrukad turn: {ts, action, model, tokens}. `action`:
     dm|guardian_pre|guardian_post|extraction|image|char_gen|search|repair|

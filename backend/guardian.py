@@ -24,8 +24,8 @@ from __future__ import annotations
 
 import json
 import logging
-import random
 import re
+import secrets
 from typing import Callable, Coroutine
 from urllib.parse import quote
 
@@ -535,6 +535,7 @@ Extrahera ALLA mekaniska effekter och uppdateringar.
 - ally_attacks: Allierades attacker (vänliga NPC:er som kämpar VID SPELARENS SIDA — se "Allierade" i stridstillståndet). Ange: [{"ally": "Mimmrick", "target": "goblin", "hit": true/false, "damage": N, "roll": N, "damage_type": "slashing", "crit": false}]. Extrahera ENDAST om DM beskriver den allierades attack med slag och skada. Minska fiendens HP.
 - ally_damage: Skada som allierade TAR från fiender. Ange: [{"ally": "Mimmrick", "amount": N, "attacker": "goblin", "damage_type": "piercing"}]. Vid dödlig skada dör den allierade.
 - enemy_attacks: Fiendernas attacker i denna tur. Ange ENDAST attackeraren (+ valfri damage_type om DM nämner vapen): [{"attacker": "goblin", "damage_type": "piercing"}]. KODEN rullar tärningen (d20 + attack_bonus mot spelarens AC) och skadan — fyll INTE i hit/damage/roll själv. Om DM:narrationen säger att fienden träffar/missar, ignorera det — koden bestämmer utfallet.
+- status_apply: När narrationen entydigt ger en status/villkor: [{"name": "prone|restrain|stun|blind|poison|burn|bleed|frighten|charm", "target": "spelarnamn|fiendens namn|allierades namn", "duration": 2}]. "target": "player" = spelaren. KODEN applicerar mekaniken (prone/restrain/blind ger nackdel på attackerarens egna slag och fördel på motståndarens; stun hoppar över tur; poison/burn/bleed gör skada per runda). Ange ENDAST om DM:n beskriver tillståndet uttryckligen ("faller omkull", "bunden i rankor", "förgiftad").
 - combat_events: Övriga stridshändelser (flykt, status, förstärkningar, rundsammanfattning). Ange: ["Goblin flyr", "Runda 2 börjar"]. Skriv korta, informativa rader som fungerar som en stridslogg — spelaren ser dem i chatten.
 - combat_end: Om striden SLUTAR (alla fiender döda/flydde eller spelaren flydde). Ange {"reason": "..."}.
 
@@ -661,6 +662,7 @@ Skriv i dåtid, tredje person. T.ex. "Faelyndra smög förbi vakten och tog sig 
   "ally_attacks": [],
   "ally_damage": [],
   "enemy_attacks": [],
+  "status_apply": [],
   "combat_events": [],
   "roll_grants": [],
   "spell_slots_spend": [],
@@ -1234,6 +1236,8 @@ def _apply_level_up_bonuses(ch: dict, effects: list) -> None:
     hp["current"] = hp["max"]  # Full HP vid level-up
     _grant_class_features(ch, ch["level"], effects)
     effects.append({"type": "level_up", "value": ch["level"]})
+    # v1.2: proficiency skalar med nivån (5e: +2→+6). Tidigare fryst på +2.
+    ch["proficiency"] = 2 + (int(ch.get("level", 1) or 1) - 1) // 4
     # Spell slots max ökar per klassens 5e-tabell
     _cls_lu = str(ch.get("class", "")).lower().strip()
     slot_table = next(
@@ -1301,6 +1305,40 @@ def _unequip_same_type(inv: list, item_type: str, keep_name: str) -> None:
     for it in inv:
         if it.get("type") == item_type and it.get("name", "").lower() != keep_name.lower():
             it["equipped"] = False
+
+
+def _recompute_ac_from_armor(state: dict, armor_item: dict | None) -> None:
+    """v1.2 (audit-mekanik P1): AC var fryst från karaktärsskapandet —
+    rustningsbyte ändrade aldrig character.ac. Räknas nu om från utrustad
+    rustning: bas (ac_bonus) + DEX-mod med klass-tak (lätt=fullt, medium=+2,
+    tungt=0). Klass bedöms på basvärdet: ≤11 lätt, 12–13 medium, ≥14 tungt.
+    Guardian character_updates 'ac' vinner fortfarande (senare i flödet)."""
+    try:
+        ch = state.get("character")
+        if not isinstance(ch, dict) or not isinstance(armor_item, dict):
+            return
+        cat = str(armor_item.get("category", "") or "").lower()
+        typ = str(armor_item.get("type", "") or "").lower()
+        if cat != "armor" and typ not in ("rustning", "armor"):
+            return
+        base = _safe_int(armor_item.get("ac_bonus"), 0)
+        if base <= 0:
+            return
+        dex = _ability_mod(ch, "DEX")
+        if base >= 14:
+            dex_cap = 0
+        elif base >= 12:
+            dex_cap = 2
+        else:
+            dex_cap = 99
+        new_ac = max(1, base + min(dex, dex_cap) + _safe_int(armor_item.get("magic_bonus"), 0))
+        old_ac = _safe_int(ch.get("ac"), 0)
+        ch["ac"] = new_ac
+        ch["ac_source"] = f"equipped:{armor_item.get('name', '?')}"
+        if new_ac != old_ac:
+            logger.info("🛡️ AC omräknad: %d → %d (%s)", old_ac, new_ac, ch["ac_source"])
+    except Exception:
+        logger.exception("AC-omräkning misslyckades (tyst ignorerad)")
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -1441,6 +1479,12 @@ def _normalize_item(raw: dict, lang: str = "sv") -> dict:
         "effects": raw.get("effects", None),
         "roll": raw.get("roll", ITEM_ROLL_FALLBACK.get(category)),
     }
+    # v1.2: price_gp överlever inlagringen (köp/sink-framtid, audit-ekonomi).
+    if raw.get("price_gp") is not None:
+        try:
+            item["price_gp"] = float(raw["price_gp"])
+        except (TypeError, ValueError):
+            pass
     # Behåll befintligt id om det finns (Guardian genererar annars)
     if raw.get("id"):
         item["id"] = str(raw["id"])
@@ -1788,6 +1832,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             if norm.get("equipped"):
                 _unequip_same_type(inv, norm["type"], name)
                 existing["equipped"] = True
+                _recompute_ac_from_armor(state, existing)  # v1.2: AC följer rustning
             logger.info("🛡️ Guardian dedup: '%s' → qty=%d", name, existing["qty"])
         else:
             new_item = dict(norm)
@@ -1795,6 +1840,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             inv.append(new_item)
             if norm.get("equipped"):
                 _unequip_same_type(inv, norm["type"], name)
+                _recompute_ac_from_armor(state, new_item)  # v1.2: AC följer rustning
             logger.info("🛡️ Guardian: added '%s'", name)
         current_weight += added_weight
         effects.append({"type": "föremål", "value": name, "qty": qty})
@@ -1862,7 +1908,17 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             # P0-dedup: [GULD:]-taggen applicerade redan samma ändring
             if ("guld", str(c.get("amount", 0))) in _skip_keys:
                 continue
-            cur[denom] = max(0, cur.get(denom, 0) + amount)
+            # v1.2: saldakontroll i cp — vägra istället för max(0)-clamp som
+            # förintade mynt tyst (−10 gp med 5 gp gav 0 gp, 5 gp borta).
+            _CP = {"pp": 1000, "gp": 100, "sp": 10, "cp": 1}
+            if amount < 0:
+                _have_cp = sum(int(cur.get(k, 0) or 0) * _CP[k] for k in _CP)
+                if abs(amount) * _CP[denom] > _have_cp:
+                    effects.append({"type": "guld_fail", "value": abs(amount), "denom": denom})
+                    logger.warning("🛡️ Guardian: vägrar −%d %s, saldot räcker inte (%d cp)",
+                                   abs(amount), denom, _have_cp)
+                    continue
+            cur[denom] = int(cur.get(denom, 0) or 0) + amount
             effects.append({"type": "guld", "value": amount, "denom": denom})
             logger.info("🛡️ Guardian: %+d %s → %d", amount, denom, cur[denom])
 
@@ -1965,7 +2021,8 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
 
             # Guld-reward
             gold_r = int(q.get("gold_reward", 0) or 0)
-            if gold_r > 0:
+            # v1.2 belt-braces: hoppa över om [GULD:]-taggen/QUEST-path redan betalat
+            if gold_r > 0 and ("guld", str(gold_r)) not in _skip_keys:
                 cur = state.setdefault("currency", {"pp": 0, "gp": 0, "sp": 0, "cp": 0})
                 cur["gp"] = cur.get("gp", 0) + gold_r
                 effects.append({"type": "guld", "value": gold_r, "denom": "gp", "source": "quest"})
@@ -2221,7 +2278,9 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             hp["temp"] = 0
             ss = ch.setdefault("spell_slots", {"current": 0, "max": 0})
             ss["current"] = ss.get("max", 0)
-            hd["remaining"] = hd.get("total", 1)
+            # v1.2 5e: lång vila återställer HALVA hit dice (min 1), ej alla.
+            _hd_total = int(hd.get("total", 1) or 1)
+            hd["remaining"] = min(_hd_total, int(hd.get("remaining", 0) or 0) + max(1, _hd_total // 2))
             # Exhaustion (5e, P2): lång vila sänker 1 nivå
             _exh = int(ch.get("exhaustion", 0) or 0)
             if _exh > 0:
@@ -2237,7 +2296,8 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 die = hd.get("dice", "1d8")
                 sides = int(re.sub(r"[^0-9]", "", die) or 8)
                 con_mod = _ability_mod(ch, "CON")
-                rolled = random.randint(1, sides)
+                # v1.2: cryptographically secure — samma källa som övriga kast.
+                rolled = secrets.randbelow(sides) + 1
                 heal = max(1, rolled + con_mod)
                 hp["current"] = min(hp.get("max", 1), hp.get("current", 0) + heal)
                 hd["remaining"] = int(hd.get("remaining", 1)) - 1
@@ -2350,10 +2410,21 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 continue
             value = _safe_int(ent.get("value"), 0)
             initiative = combat.setdefault("initiative", [])
-            # Ersätt befintlig fiende-entry med samma namn, behåll ordning
-            initiative[:] = [e for e in initiative if not (e.get("key") != "player" and e.get("name", "").lower() == name.lower())]
-            eid = next((i for i, e in enumerate(combat.get("enemies", [])) if e.get("name", "").lower() == name.lower()), 0)
-            initiative.append({"key": f"enemy:{eid}", "name": name, "value": value})
+            # Ersätt befintlig entry med samma namn (spelare eller fiende),
+            # behåll rätt KEY — v1.2-fix: spelarnamn fick tidigare 'enemy:0'.
+            def _pl_name(ch):
+                return str((state.get("character") or {}).get("name", "") or "").lower()
+            _is_player = name.lower() == _pl_name(ch) or name.lower() in ("player", "spelaren")
+            _old = next((e for e in initiative if e.get("name", "").lower() == name.lower()), None)
+            if _is_player:
+                new_key = "player"
+            elif _old is not None:
+                new_key = _old.get("key")  # bevara befintlig identitet
+            else:
+                eid = next((i for i, e in enumerate(combat.get("enemies", [])) if e.get("name", "").lower() == name.lower()), None)
+                new_key = f"enemy:{eid}" if eid is not None else f"npc:{name.lower()[:20]}"
+            initiative[:] = [e for e in initiative if e.get("name", "").lower() != name.lower()]
+            initiative.append({"key": new_key, "name": name, "value": value})
             effects.append({"type": "initiativ", "value": f"{name}: {value}"})
             logger.info("🎲 Guardian initiative: %s → %d", name, value)
 
@@ -2385,11 +2456,37 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             if not enemy:
                 continue
             if atk.get("hit"):
-                dmg = max(0, _safe_int(atk.get("damage"), 0))
+                # v1.2 "The Honest Dice": motorrullad spelarskada — vapnets
+                # damage_dice ur inventory, ej DM-narrerat heltal (kontrakt v28).
+                dmg = 0
+                roll_note = ""
+                try:
+                    from combat import roll_dice as _roll_dice_pl
+                    wname = str(atk.get("weapon", "") or "").strip().lower()
+                    weapons = [it for it in state.get("inventory", [])
+                               if (it.get("damage_dice") or "").strip()
+                               and (it.get("equipped") or it.get("usage") == "wielded")]
+                    weapon = next((w for w in weapons if wname and wname in str(w.get("name", "")).lower()),
+                                  weapons[0] if weapons else None)
+                    if weapon:
+                        notation = str(weapon["damage_dice"]).strip()
+                        mb = _safe_int(weapon.get("magic_bonus"), 0)
+                        if mb:
+                            notation = notation + ("+%d" % mb if mb > 0 else "%d" % mb)
+                        dmg, _rolls = _roll_dice_pl(notation)
+                        if atk.get("crit"):
+                            dmg2, _rolls2 = _roll_dice_pl(notation)
+                            dmg += dmg2
+                        roll_note = f" (🎲 {notation}={'×2 ' if atk.get('crit') else ''}{dmg})"
+                except Exception:
+                    roll_note = ""
+                if dmg <= 0:
+                    # inget vapen med dice (ostadie/natural) → LLM-värde som förut
+                    dmg = max(0, _safe_int(atk.get("damage"), 0))
                 if dmg > 0:
                     enemy["hp"] = max(0, enemy.get("hp", 0) - dmg)
                     crit_str = " 💥 KRITISK!" if atk.get("crit") else ""
-                    combat_log.append({"round": current_round, "actor": "player", "name": ch.get("name", "Player"), "text": f"hits {enemy['name']} — {dmg} damage ({atk.get('damage_type', 'unknown')}){crit_str} → **{enemy['name']} {enemy['hp']}/{enemy.get('max_hp', '?')} HP**"})
+                    combat_log.append({"round": current_round, "actor": "player", "name": ch.get("name", "Player"), "text": f"hits {enemy['name']} — {dmg} damage ({atk.get('damage_type', 'unknown')}){crit_str}{roll_note} → **{enemy['name']} {enemy['hp']}/{enemy.get('max_hp', '?')} HP**"})
                     effects.append({"type": "combat_dmg", "value": enemy["name"], "amount": dmg})
                     logger.info("⚔️ Player attack: %s → %s, %d damage → HP %d/%d", ch.get("name"), enemy["name"], dmg, enemy["hp"], enemy.get("max_hp", 0))
                     if enemy["hp"] <= 0:
@@ -2399,6 +2496,36 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                         logger.info("💀 %s has fallen", enemy["name"])
             else:
                 combat_log.append({"round": current_round, "actor": "player", "name": ch.get("name", "Player"), "text": f"misses {enemy['name']}"})
+
+        # ── status_apply (v1.2): villkormotorn LEVANDE — tidigare konsumera-
+        # des aldrig (DM-prompten lovade grapple→restrained som aldrig hände).
+        for st in mech.get("status_apply", []):
+            if not isinstance(st, dict):
+                continue
+            sname = str(st.get("name", "")).strip().lower()
+            if not sname:
+                continue
+            stgt = str(st.get("target", "player")).strip().lower()
+            sdu = max(1, _safe_int(st.get("duration"), 2))
+            try:
+                from combat import add_status as _add_st
+                entity = None
+                if stgt in ("player", "spelaren", ch.get("name", "").lower()):
+                    entity = ch
+                else:
+                    entity = next((e for e in combat.get("enemies", [])
+                                  if e.get("name", "").lower() == stgt and e.get("alive", True)), None) \
+                        or next((a for a in combat.get("allies", [])
+                                 if a.get("name", "").lower() == stgt and a.get("alive", True)), None)
+                if entity is None:
+                    continue
+                _add_st(entity, sname, sdu)
+                combat_log.append({"round": current_round, "actor": "system", "name": "",
+                                   "text": f"{entity.get('name', '?')} drabbas av {sname} ({sdu} runder)"})
+                effects.append({"type": "status", "value": f"{entity.get('name', '?')}: {sname}", "amount": sdu})
+                logger.info("⚔️ Status: %s → %s (%d rundor)", entity.get("name"), sname, sdu)
+            except Exception:
+                logger.exception("status_apply misslyckades (tyst ignorerad)")
 
         # Allierades attacker → minska fiende-HP (samma mönster som spelarens;
         # allierade = vänliga NPC:er som DM lagt till via [ALLIERAD:]-taggen)
@@ -3096,6 +3223,17 @@ def format_guardian_summary(
             denom = e.get("denom", "gp")
             sign = "+" if int(v) >= 0 else ""
             lines.append(f"🪙 **{sign}{v} {denom}**")
+        elif t == "guld_fail":
+            denom = e.get("denom", "gp")
+            if en:
+                lines.append(f"🚫 **Not enough {denom}** — the {v} {denom} purchase is refused; your coins stay.")
+            else:
+                lines.append(f"🚫 **Inte tillräckligt med {denom}** — {v} {denom} vägras; dina mynt finns kvar.")
+        elif t == "status":
+            if en:
+                lines.append(f"🌀 **Condition:** {v}")
+            else:
+                lines.append(f"🌀 **Tillstånd:** {v}")
         elif t == "quest":
             label = "New quest:" if en else "Nytt uppdrag:"
             lines.append(f"📜 **{label}** {v}")

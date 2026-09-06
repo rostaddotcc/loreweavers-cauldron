@@ -142,6 +142,13 @@
   /* ═══════════════ banners ═══════════════ */
   #deleted-banner{position:sticky;top:var(--nav-h);z-index:40;display:none;justify-content:center;align-items:center;gap:.5rem;padding:.55rem 1rem;font-size:.8rem;color:var(--gold);background:var(--stone-3);border-bottom:1px solid var(--gold);text-align:center}
   #deleted-banner.show{display:flex}
+  #update-banner{position:sticky;top:var(--nav-h);z-index:40;display:none;justify-content:center;align-items:center;gap:.6rem;padding:.6rem 1rem;font-size:.82rem;color:var(--bone-bright);background:linear-gradient(160deg,rgba(58,31,102,.55),var(--stone-3));border-bottom:1px solid var(--gold);text-align:center}
+  #update-banner.show{display:flex;animation:upd-glow 2.6s ease-in-out infinite}
+  @keyframes upd-glow{0%,100%{box-shadow:0 1px 0 rgba(212,169,44,.25) inset}50%{box-shadow:0 14px 34px rgba(212,169,44,.16) inset,0 0 18px rgba(212,169,44,.12)}}
+  #update-banner a{color:var(--gold-bright);font-family:var(--font-display);letter-spacing:.08em;text-decoration:none;border-bottom:1px solid rgba(212,169,44,.4)}
+  #update-banner a:hover{color:var(--gold);text-shadow:0 0 10px rgba(232,198,90,.5)}
+  #update-banner .upd-x{background:none;border:none;color:var(--bone-dim);font-size:1rem;line-height:1;cursor:pointer;padding:.1rem .35rem;font-family:var(--font-display)}
+  #update-banner .upd-x:hover{color:var(--bone-bright)}
 
   /* ═══════════════ layout ═══════════════ */
   .content{position:relative;z-index:5}
@@ -400,6 +407,8 @@
 <body>
 
 <div id="deleted-banner">🕊️ Your account has been deleted. The Cauldron will remember your stories.</div>
+
+<div id="update-banner" role="status">✦ <b>The Honest Dice&nbsp;v1.2</b> — weapon damage is rolled by the engine, conditions bind, level-ups level up. <a href="releases.html#s12" onclick="try{localStorage.setItem('rn_12_seen','1')}catch(e){}">Read the chronicle →</a><button class="upd-x" aria-label="Dismiss" onclick="try{localStorage.setItem('rn_12_seen','1')}catch(e){}document.getElementById('update-banner').classList.remove('show')">×</button></div>
 
 <!-- ═══════════════ topbar ═══════════════ -->
 <header class="topbar" id="nav">
@@ -767,32 +776,30 @@
     <div class="wrap">
       <p class="eyebrow rv">From the Ledger</p>
       <h2 class="rv">What&rsquo;s new in the realm</h2>
-      <span class="ver-chip rv d1">v1.1 &mdash; The Open Road</span>
+      <span class="ver-chip rv d1">v1.2 &mdash; The Honest Dice</span>
       <ul class="ledger-list">
-        <li class="hot rv d1"><b>Five free minds, always at the table <span class="tag">New</span></b>
-          &mdash; the newest free OpenRouter DMs sit in every picker &mdash; Dungeon Master,
-          Guardian, Extraction and character creation &mdash; for every path, no upgrade needed.
-          StepFun 3.7 Flash stays the steadfast default; the free minds are the open road beside it.</li>
-        <li class="rv d1"><b>StepFun voice is free for everyone <span class="tag">New</span></b>
-          &mdash; the DM, characters and NPCs answer aloud, and you can speak your action and have
-          it transcribed &mdash; on the free road, no top-up needed.</li>
-        <li class="rv d1"><b>StepFun painting is free for everyone <span class="tag">New</span></b>
-          &mdash; paint your adventurer, the Dungeon Master and every NPC you meet, free-prompt or
-          from the sheet.</li>
-        <li class="rv d1"><b>One path to everything <span class="tag">New</span></b>
-          &mdash; the 3&euro; Support pack is retired; the one-time Patron top-up (30&euro;) now
-          carries every benefit &mdash; premium DMs, Qwen narrators, export, uploads and the premium brushes.</li>
-        <li class="rv d1"><b>Qwen Image 3 Pro <span class="tag">New</span></b>
-          &mdash; a new premium brush joins Wan 2.7 Pro in the Patron palette, up to
-          10 premium paintings a day between them.</li>
-        <li class="rv d2"><b>Heavier minds at the table</b>
-          &mdash; Qwen 3.8 Max, with its million-token memory, joins the DeepSeek V4 line;
-          the realm thinks deeper when the story asks for it.</li>
-        <li class="rv d2"><b>An honest turn ledger</b>
-          &mdash; your chat message costs exactly 1 turn; guardian, threads, summaries and battle AI
-          run free inside it. TTS counts once, cache hits are free, and the quota reads clearly.</li>
-        <li class="rv d3"><b>Dice the realm can trust</b> &mdash; every roll travels to the
-          server's own dice engine; advantage rolls two d20s server-side, and the DM's rolls tumble visibly in the chat.</li>
+        <li class="hot rv d1"><b>Your blade rolls, the DM does not <span class="tag">New</span></b>
+          &mdash; weapon damage now tumbles through the server's dice engine on every hit, doubled
+          on a critical; enemy blows have always worked that way. The story decides what it feels
+          like, the dice decide what it costs.</li>
+        <li class="rv d1"><b>Conditions that actually bind <span class="tag">New</span></b>
+          &mdash; prone, restrained, stunned and poisoned now change rolls, turns and HP between
+          rounds. A knocked-down goblin is easier to hit, and it hits worse.</li>
+        <li class="rv d1"><b>Level-ups that level up <span class="tag">New</span></b>
+          &mdash; reaching a new tier grants hit-dice health, class features, spell slots and a
+          proficiency bonus that finally scales with who you have become.</li>
+        <li class="rv d2"><b>A rulebook that matches the machine</b>
+          &mdash; the mechanics page was audited line by line against the code and rewritten where
+          it promised more than it delivered; spell slots and rests are documented at last.</li>
+        <li class="rv d2"><b>Truer day-to-day play</b>
+          &mdash; armour now moves your AC, long rests hand back half your hit dice, quests pay
+          what they promise, and a purse can no longer be quietly rounded to zero.</li>
+        <li class="rv d2"><b>One gold across the realm</b>
+          &mdash; the palette was consolidated into shared tokens, HP bars update on every combat
+          turn, and offline rolls announce themselves honestly.</li>
+        <li class="rv d3"><b>Returning heroes skip the tutorial</b>
+          &mdash; the onboarding steps fold away once you have an adventure, and the realm
+          speaks your language through the whole quota ledger.</li>
       </ul>
       <p class="ledger-more rv d3"><a href="releases.html">Read the full ledger &#8594;</a></p>
     </div>
@@ -852,6 +859,14 @@
 <script src="sprites.js?v=20260806b"></script>
 
 <script>
+/* ═══════════════ update banner — v1.2, en gång per läsare ═══════════════ */
+(function () {
+  try {
+    var seen = localStorage.getItem('rn_12_seen');
+    if (!seen) document.getElementById('update-banner').classList.add('show');
+  } catch (e) {}
+})();
+
 /* ═══════════════ deleted-account banner ═══════════════ */
 (function () {
   if (!location.search.includes('deleted=1')) return;

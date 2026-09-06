@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>The Lore Weaver's Cauldron — Release Notes</title>
-<meta name="description" content="Release notes for The Lore Weaver's Cauldron — an AI dungeon master with a memory. v1.1 — the open road: OpenRouter's newest free DMs always at the table, StepFun voice and painting free for everyone, one Patron path to everything, and Qwen Image 3 Pro as a new premium brush.">
+<meta name="description" content="Release notes for The Lore Weaver's Cauldron — an AI dungeon master with a memory. v1.2 — the honest dice: weapon damage rolled by the engine, living conditions, a rulebook rewritten to match the machine, and one gold across the realm.">
 <link rel="icon" href="/assets/logo-cauldron.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -218,15 +218,83 @@
 <section class="ledger">
   <p class="eyebrow rv">The Ledger of the Realm</p>
   <h1 class="rv">Release Notes</h1>
-  <p class="ledger-sub rv">Every update written in the ledger, so the realm's history stays legible. This entry — the free road widens: five fresh minds always at the table, StepFun voice and painting for everyone, and one Patron path that leads to everything.<br><b>v1.0 → v1.1</b> · 2026-08-15</p>
+  <p class="ledger-sub rv">Every update written in the ledger, so the realm's history stays legible. This entry — the honest table: every blade now rolls through the engine, the rulebook matches the machine, and the fallen fall for real.<br><b>v1.1 → v1.2</b> · 2026-09-06</p>
 
   <div class="current-box rv">
-    <span class="ver-chip"><span class="ver-name">v1.1</span><span class="ver-note">The Open Road</span></span>
-    <span class="ver-tag">OpenRouter free DMs</span>
-    <span class="ver-tag">StepFun for all</span>
-    <span class="ver-tag">One Patron path</span>
-    <span class="ver-tag">Qwen Image 3 Pro</span>
+    <span class="ver-chip"><span class="ver-name">v1.2</span><span class="ver-note">The Honest Dice</span></span>
+    <span class="ver-tag">Engine-rolled damage</span>
+    <span class="ver-tag">Live conditions</span>
+    <span class="ver-tag">True rulebook</span>
+    <span class="ver-tag">Bilingual ledger</span>
   </div>
+
+  <!-- ═══════════════ 1.2 headline ═══════════════ -->
+  <div class="sec rv" id="s12">
+    <div class="sec-head">
+      <span class="sec-num">1.2</span>
+      <h2>The Honest Dice</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tablet-h">
+        <span class="chip ai">COMBAT</span>
+        <span class="tablet-title">The engine rolls every blade</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">New</span> <b>Your weapon damage is now rolled, not narrated</b> — a hit tumbles your wielded weapon's damage dice through the server's own dice engine; a critical hit doubles them. No story number decides your damage any more.</li>
+        <li><span class="tag fix">Fixed</span> <b>The war council wakes up</b> — enemy attacks rolled by code now update HP bars, initiative and the combat log every turn; they used to go silent between rounds.</li>
+        <li><span class="tag fix">Fixed</span> <b>One law per combatant</b> — the Dungeon Master now narrates intent and impression only; the engine reports the outcome, and the story weaves it in next turn. Prose and numbers can no longer disagree.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tablet-h">
+        <span class="chip feat">RULES</span>
+        <span class="tablet-title">Conditions live, rests true, levels real</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">New</span> <b>Prone, restrained, stunned, poisoned — they bite now</b> — a knocked-down foe is easier to hit and its own blows falter; stunned combatants lose their turn; venom burns between rounds.</li>
+        <li><span class="tag feat">New</span> <b>Level-ups grant everything you are owed</b> — hit-dice health, class features, spell slots and a rising proficiency bonus, whichever road the experience arrives by. A fifth-level character finally rolls +3.</li>
+        <li><span class="tag fix">Fixed</span> <b>Armour changes your armour class</b> — swapping into the chain you picked up moves your AC; it used to freeze at whatever the forge wrote on day one.</li>
+        <li><span class="tag fix">Fixed</span> <b>Long rests give back half your hit dice</b>, as the table intends, and every rest refills spell slots and dulls exhaustion.</li>
+        <li><span class="tag fix">Fixed</span> <b>Quests pay what they promise</b> — completion grants its stored XP and gold on every path, once, never twice.</li>
+        <li><span class="tag fix">Fixed</span> <b>Your purse can no longer be quietly destroyed</b> — spending more than you carry is refused, not rounded to zero; the coins stay.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tablet-h">
+        <span class="chip pay">TRUTH</span>
+        <span class="tablet-title">A rulebook that matches the machine</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ux">Improved</span> <b>The mechanics page was audited line by line against the code</b> and rewritten where it lied — spell slots, rests and the dice contract are documented at last, and nothing on the page promises an engine that does not run.</li>
+        <li><span class="tag fix">Fixed</span> <b>Rolls you take while offline are marked honest</b> — if the server cannot be reached, the dice fall locally and the chat says so.</li>
+        <li><span class="tag fix">Fixed</span> <b>Dying reads as dying</b> — at 0 HP the chronicle shows the death-save tracker, and the Dungeon Master knows you are down instead of asking you to stroll.</li>
+        <li><span class="tag fix">Fixed</span> <b>Signup promises retired cleanly</b> — the old welcome-turns text is gone from every page and search snippet; the free road is 50 fresh turns daily, one turn per message.</li>
+        <li><span class="tag ux">Improved</span> <b>The realm speaks one tongue per toggle</b> — quota warnings, the day-cap modal and idle whispers are now translated both ways, and the legacy welcome-bonus line in your profile says exactly what it is.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <span class="corner tl"></span><span class="corner tr"></span>
+      <span class="corner bl"></span><span class="corner br"></span>
+      <div class="tablet-h">
+        <span class="chip snd">CRAFT</span>
+        <span class="tablet-title">One gold, one ledger, less noise</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ux">Improved</span> <b>A single palette across the realm</b> — three competing golds became one; every page now draws from the same tokens so the torchlight finally matches.</li>
+        <li><span class="tag ux">Improved</span> <b>Carried weight counts your coins</b> — the sheet, the Dungeon Master and the Guardian now agree on how heavy your pack is.</li>
+        <li><span class="tag fix">Fixed</span> <b>Returning heroes skip the tutorial</b> — the onboarding steps fold away once you have an adventure; one line invites a new one.</li>
+        <li><span class="tag fix">Fixed</span> <b>A silent-turn plague cured</b> — malformed numbers from the story-tellers no longer drop a whole turn's XP, gold and items on the floor; they are repaired or refused.</li>
+      </ul>
+    </div>
+  </div>
+
 
   <!-- ═══════════════ 1.1 headline ═══════════════ -->
   <div class="sec rv">

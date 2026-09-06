@@ -1066,9 +1066,6 @@ DEFAULT_TURN_CAP = 50
 # permanenta turns). Gäller i 30 dagar från köpet (cap_until), sedan tillbaka
 # till DEFAULT_TURN_CAP (lazy-återställning i _turn_cap_for / _maybe_rollover).
 PATRON_DAILY_CAP = 100
-# STARTBONUS: nya konton (och befintliga free-konton vid migrering) får
-# 300 turns direkt (turn_bonus förbrukas före de dagliga 50).
-START_BONUS_TURNS = 300
 # Patron (30€): premiummodell-access gäller i 30 dagar från köpet.
 PATRON_MODEL_DAYS = 30
 # Patron (30€): Wan/Qwen-bilder max 10/dag; varje bild drar en turn.
@@ -1149,9 +1146,9 @@ _FREE_FIELD_DEFAULTS = {
     #   behålls alltid — turn_bonus rörs inte av features_until.)
     "features": {},
     "features_until": None,  # legacy-fält: models_until hedras som fallback
-    "start_bonus_granted": False,  # har kontot fått sina 300 startturns?
-    # 2026-08-05 v3 (turn-ordning): promo_bonus = signup-300 (spenderas FÖRST,
-    # före 50/day-cappen). turn_bonus = KÖPTA turns (Support/Patron, spenderas
+    # 2026-08-05 v3 (turn-ordning): promo_bonus var signup-300 (intro-promo,
+    # BORTTAGEN 2026-09-06 — finns kvar som LEGACY-fält som spenderas av de
+    # konton som hade kvar). turn_bonus = KÖPTA turns (Support/Patron, spenderas
     # SIST). Daglig cap (turns_used) ligger i mitten: promo → cap → köpta.
     "promo_bonus": 0,
     # Wan-bildkvot (10/dag): wan_used_today + wan_reset_date
@@ -1191,35 +1188,13 @@ def _ensure_user_fields(username: str, udata: dict) -> dict:
         return udata
 
 
-def _grant_start_bonus_if_needed(username: str, udata: dict) -> dict:
-    """Ge kontot 300 startturns EN gång (nya konton får dem vid registrering;
-    befintliga konton migreras lazy här). Lifetime (turn_cap 0) skippas —
-    de har ∞ ändå. Körs innanför eget lås; anroparens udata uppdateras ej —
-    returnera färsk rad om den ändrades."""
-    try:
-        if udata.get("start_bonus_granted"):
-            return udata
-        if int(udata.get("turn_cap", 0) or 0) <= 0:
-            return udata
-        with _USER_LOCK:
-            users = load_users()
-            u = users.get(username)
-            if isinstance(u, dict) and not u.get("start_bonus_granted") and int(u.get("turn_cap", 0) or 0) > 0:
-                u["start_bonus_granted"] = True
-                # 2026-08-05 v3: signup-300 går till promo_bonus (spenderas
-                # FÖRE 50/day-cappen) — inte turn_bonus (köpta = spenderas sist).
-                u["promo_bonus"] = int(u.get("promo_bonus", 0) or 0) + START_BONUS_TURNS
-                save_users(users)
-                return u
-        return udata
-    except Exception:
-        return udata
+
 
 
 # ═══════════════════════════════════════
 # TIERS — free < tier1(legacy) < tier2 < lifetime
 # ═══════════════════════════════════════
-# free      — 300 startturns, sedan 50 turns/dag; step-3.7-flash + step-3.5 +
+# free      — 50 turns/dag; step-3.7-flash + step-3.5 +
 #             OpenRouter 🆓 free-modeller (orfree:); StepFun TTS + StepFun
 #             målning + röstinmatning GRATIS (sedan 2026-08-15).
 # tier1     — 3€ Support: LEGACY (togs bort 2026-08-15). Befintliga köpare
@@ -1428,15 +1403,14 @@ def _maybe_rollover(username: str, udata: dict) -> dict:
 def _turns_available(username: str) -> int:
     """Antal turns kvar denna period.
 
-    Spenderingsordning (2026-08-05 v3, rostad): promo (signup-300) → daglig
-    cap (50/dag) → köpta turns (turn_bonus). Available = promo_left +
+    Spenderingsordning (2026-08-05 v3, rostad): promo (legacy-kvarvarande) →
+    daglig cap (50/dag) → köpta turns (turn_bonus). Available = promo_left +
     cap_left + purchased_left. Lifetime (turn_cap 0) eller ∞: 999999."""
     try:
         udata = load_users().get(username, {})
         if not isinstance(udata, dict):
             udata = {}
         udata = _ensure_user_fields(username, udata)
-        udata = _grant_start_bonus_if_needed(username, udata)
         if _tier_for(username) == "lifetime":
             return 999999
         udata = _maybe_rollover(username, udata)
@@ -1477,7 +1451,7 @@ def _gate_turn_quota(username: str) -> None:
 def _consume_turn(username: str, action: str = "turn", model: str | None = None, tokens: int = 0) -> None:
     """Bokför en förbrukad turn (efter ev. period-rollover). Spara under _USER_LOCK.
 
-    Spenderingsordning (2026-08-05 v3): promo (signup-300) → daglig cap →
+    Spenderingsordning (2026-08-05 v3): promo (legacy) → daglig cap →
     köpta turns. Anropas bara när en turn faktiskt skickas (403-checks klara).
 
     PITFALL (deadlock 2026-08-05): _tier_for → _ensure_user_fields tar
@@ -1534,9 +1508,9 @@ def _consume_turn(username: str, action: str = "turn", model: str | None = None,
                 if due:
                     u["turns_used"] = 0
                     u["reset_ts"] = (now + timedelta(hours=hours)).isoformat()
-        # Spenderingsordning (2026-08-05 v3): promo (signup-300) → daglig cap
-        # → köpta turns. Promo-300 förbrukas FÖRE 50/day-cappen så de som vill
-        # maxa kan göra det i en kort burst; köpta turns sparas till sist.
+        # Spenderingsordning (2026-08-05 v3): promo (legacy-kvarvarande) →
+        # daglig cap → köpta turns. Promo förbrukas FÖRE 50/day-cappen;
+        # köpta turns sparas till sist.
         promo = int(u.get("promo_bonus", 0) or 0)
         if promo > 0:
             u["promo_bonus"] = promo - 1
@@ -1727,7 +1701,6 @@ def _user_free_info(username: str) -> dict:
     if not isinstance(udata, dict):
         udata = {}
     udata = _ensure_user_fields(username, udata)
-    udata = _grant_start_bonus_if_needed(username, udata)
     tier = _tier_for(username)
     if tier != "lifetime":
         udata = _maybe_rollover(username, udata)
@@ -2593,15 +2566,15 @@ async def register(req: RegisterRequest, response: Response, request: Request):
             "turn_cap": DEFAULT_TURN_CAP,
             # FAS A: periodbaserad turn-räkning (30 dagar från reset_date)
             "turns_used": 0,
-            # 2026-08-05 v3: signup-300 = promo_bonus (spenderas före cappen).
-            # Köpta turns (Support/Patron) hamnar i turn_bonus och spenderas sist.
-            "promo_bonus": START_BONUS_TURNS,  # 300 startturns (promotion)
+            # Intro-promon borttagen 2026-09-06: nya konton får 0 promo.
+            # promo_bonus finns kvar som LEGACY-fält — befintliga konton som
+            # har oprövade intro-turns kvar spenderar dem (promo → cap → köpta).
+            "promo_bonus": 0,
             "turn_bonus": 0,
             "reset_date": _today_str(),
             "subscription_status": "free",
             "subscription_until": None,
             "features": {},
-            "start_bonus_granted": True,  # nya konton får bonusen direkt
             "wan_used_today": 0,
             "wan_reset_date": None,
         }
@@ -10714,14 +10687,12 @@ async def admin_create_user(req: AdminCreateUser, morkrets_token: str | None = C
             "turn_cap": DEFAULT_TURN_CAP,
             # FAS A: periodbaserad turn-räkning (30 dagar från reset_date)
             "turns_used": 0,
-            # 2026-08-05 v3: signup-300 = promo_bonus (spenderas före cappen)
-            "promo_bonus": START_BONUS_TURNS,
+            "promo_bonus": 0,  # intro-promon borttagen 2026-09-06
             "turn_bonus": 0,
             "reset_date": _today_str(),
             "subscription_status": "free",
             "subscription_until": None,
             "features": {},
-            "start_bonus_granted": True,  # nya konton får bonusen direkt
             "wan_used_today": 0,
             "wan_reset_date": None,
         }

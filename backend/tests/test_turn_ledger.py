@@ -118,8 +118,10 @@ def test_chat_consumes_one_turn_and_ledgers_dm(client):
     _make_campaign("alice")
     r = _chat(client)
     assert r.status_code == 200, r.text
-    # 1 turn per prompt: första turen äter PROMO (signup-300), inte cap-sloten.
-    assert _user()["promo_bonus"] == main.START_BONUS_TURNS - 1
+    # 1 turn per prompt: ingen startbonus mer (borttagen 2026-09-06) —
+    # första turen äter cap-sloten direkt.
+    assert _user()["promo_bonus"] == 0
+    assert _user()["turns_used"] == 1
     entries = main._read_turn_ledger("alice")
     actions = [e["action"] for e in entries]
     assert actions == ["dm"], actions

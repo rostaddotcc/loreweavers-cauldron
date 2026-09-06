@@ -138,14 +138,12 @@ def test_register_creates_free_fields(client):
     u = _user()
     assert u["turn_cap"] == main.DEFAULT_TURN_CAP
     assert u["turns_used"] == 0
-    # 2026-08-05 v3: signup-300 = promo_bonus (spenderas före cappen);
-    # turn_bonus = köpta turns (Support/Patron) börjar på 0.
-    assert u["promo_bonus"] == main.START_BONUS_TURNS  # 300 startturns (promotion)
+    # Intro-promon borttagen 2026-09-06: nya konton får 0 promo + 0 köpta.
+    assert u["promo_bonus"] == 0
     assert u["turn_bonus"] == 0
     assert u["reset_date"] == _today()
     assert u["subscription_status"] == "free"
     assert u["subscription_until"] is None
-    assert u["start_bonus_granted"] is True
 
 
 def test_admin_create_adds_free_fields(client):
@@ -161,7 +159,7 @@ def test_admin_create_adds_free_fields(client):
     assert r.status_code == 200, r.text
     u = _user("charlie")
     assert u["turns_used"] == 0
-    assert u["promo_bonus"] == main.START_BONUS_TURNS  # 300 startturns (promotion)
+    assert u["promo_bonus"] == 0  # ingen startbonus längre
     assert u["turn_bonus"] == 0
     assert u["reset_date"] == _today()
     assert u["subscription_status"] == "free"
@@ -175,17 +173,17 @@ def test_turns_used_increments(client):
     _make_campaign("alice")
     r = _chat(client)
     assert r.status_code == 200, r.text
-    # 2026-08-05 v3: första turen äter PROMO (signup-300), inte cap-sloten
+    # 2026-09-06: ingen startbonus — första turen äter cap-sloten direkt.
     # 2026-08-08 (1 turn per prompt): ett meddelande kostar EXAKT en turn —
     # Guardian pre/post, extraction och alla bakgrundsanrop ingår i den.
-    assert _user()["turns_used"] == 0
-    assert _user()["promo_bonus"] == main.START_BONUS_TURNS - 1
+    assert _user()["turns_used"] == 1
+    assert _user()["promo_bonus"] == 0
     # /api/me speglar period-räkningen
     me = client.get("/api/me")
     assert me.status_code == 200
     body = me.json()
-    assert body["promo_bonus"] == main.START_BONUS_TURNS - 1
-    assert body["turns_available"] == main.DEFAULT_TURN_CAP + main.START_BONUS_TURNS - 1
+    assert body["promo_bonus"] == 0
+    assert body["turns_available"] == main.DEFAULT_TURN_CAP - 1
 
 
 def test_cap_reached_403(client):
@@ -260,19 +258,19 @@ def test_cap_consumed_before_purchased_turns(client):
 
 
 def test_promo_consumed_before_cap(client):
-    """2026-08-05 v3-ordning: signup-300 (promo) spenderas FÖRE 50/day-cappen."""
-    _register(client)  # promo 300, cap 50
-    u = _user()
-    assert u["promo_bonus"] == main.START_BONUS_TURNS
-    assert u["turn_bonus"] == 0
-    # Snäva cap så ordningen syns: cap = 1
-    _patch_user("alice", turn_cap=1, turns_used=0)
+    """Spenderingsordning promo → cap → köpta gäller LEGACY-promo (intro-promon
+    borttagen 2026-09-06 — konton med kvarvarande promo ska ändå spendera den
+    först)."""
+    _register(client)
+    assert _user()["promo_bonus"] == 0  # nya konton får ingen promo mer
+    # Simulera ett äldre konto med kvarvarande legacy-promo
+    _patch_user("alice", turn_cap=1, turns_used=0, promo_bonus=3)
     # Första turen äter PROMO, inte cap-sloten
     main._consume_turn("alice")
     u = _user()
-    assert u["promo_bonus"] == main.START_BONUS_TURNS - 1
+    assert u["promo_bonus"] == 2
     assert u["turns_used"] == 0  # cap orörd — promo först
-    assert main._turns_available("alice") == (main.START_BONUS_TURNS - 1) + 1
+    assert main._turns_available("alice") == 2 + 1
     # När promon är slut förbrukas cap-sloten
     _patch_user("alice", promo_bonus=0)
     main._consume_turn("alice")
@@ -378,17 +376,17 @@ def test_expired_premium_demoted(client):
 # ── Bakåtkompatibilitet ──────────────────────────────────────────────────
 
 def test_legacy_account_backfilled(client):
-    """Konto utan FAS A-fält → setdefault fyller i utan krasch + får startbonus."""
+    """Konto utan FAS A-fält → setdefault fyller i utan krasch.
+    (Intro-promon borttagen 2026-09-06 — migrering ger ingen bonus mer.)"""
     main.save_users({
         "old_timer": {"password_hash": hash_password("secret123"), "role": "player", "turn_cap": 50},
     })
-    assert main._turns_available("old_timer") == main.DEFAULT_TURN_CAP + main.START_BONUS_TURNS
+    assert main._turns_available("old_timer") == main.DEFAULT_TURN_CAP
     u = _user("old_timer")
     assert u["turns_used"] == 0
-    assert u["promo_bonus"] == main.START_BONUS_TURNS  # migrerad startbonus (spenderas först)
+    assert u["promo_bonus"] == 0  # ingen migrerad startbonus
     # Backfill sätter reset_date=today; första kollen rullar direkt till +1
     # (idag >= reset_date) — utan att förlora några turns.
     assert u["reset_date"] == _in_days(1)
     assert u["subscription_status"] == "free"
     assert u["subscription_until"] is None
-    assert u["start_bonus_granted"] is True

@@ -99,7 +99,9 @@
     transform:translateY(-2px);
   }/* ── Vägar dolda medan äventyr pågår ── *//* Paneler som öppnas EXPLICIT (t.ex. New Adventure-knappen i listan)
      måste få visa sig även när paths är dolda — annars kan man inte
-     starta en andra kampanj när man redan har en. */.paths-hidden .paths{display:none!important}.paths-hidden .expand{display:none!important}.paths-hidden .expand.show{display:block!important}.paths-hidden .head .sub::after{content:' · your adventure awaits below';color:var(--gold);font-style:italic}/* ═══════════ How to play — onepager ═══════════ */.htp{margin-bottom:2.4rem;animation:rise .6s cubic-bezier(.22,1,.36,1)}.htp-toggle{
+     starta en andra kampanj när man redan har en. */.paths-hidden .paths{display:none!important}.paths-hidden .expand{display:none!important}.paths-hidden .expand.show{display:block!important}.paths-hidden .head .sub::after{content:' · your adventure awaits below';color:var(--gold);font-style:italic}/* ── Stepper-kollaps för återvändare (2026-09-06): ≥1 kampanj → onboarding-stegen
+     kollapsas till EN rad ("New adventure?") — toggle-knappen styr, steg 2-4 är ändå
+     display:none tills steg 1 väljs. (audit-ux §top findings) ── */.stepper-collapsed #step-lang,.stepper-collapsed #step-name,.stepper-collapsed #step-arch,.stepper-collapsed #step-model,.stepper-collapsed .prepare-link{display:none!important}.stepper-toggle{display:none;width:100%;margin:0 0 1.6rem;cursor:pointer;font-family:var(--font-display,'Cinzel',serif);font-size:.82rem;letter-spacing:.22em;text-transform:uppercase;color:var(--bone-dim);background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,#100b18);border:1px solid var(--edge);border-radius:14px;padding:.95rem 1.1rem;text-align:center;transition:color .25s,border-color .25s}.stepper-toggle:hover{color:var(--gold-bright);border-color:var(--gold)}.stepper-collapsed .stepper-toggle{display:block}/* ═══════════ How to play — onepager ═══════════ */.htp{margin-bottom:2.4rem;animation:rise .6s cubic-bezier(.22,1,.36,1)}.htp-toggle{
     display:flex;align-items:center;justify-content:center;gap:.7rem;width:100%;cursor:pointer;
     font-family:var(--font-display,'Cinzel',serif);font-size:.81rem;letter-spacing:.28em;text-transform:uppercase;
     color:var(--bone-dim);background:none;border:none;padding:.6rem 0;transition:color .25s;
@@ -882,6 +884,7 @@ html{font-size:17px}
   </div>
 
   <!-- ═══════════ ONBOARDING — STEG 1: KAMPANJSPRÅK ═══════════ -->
+  <button type="button" class="stepper-toggle" id="stepper-toggle" onclick="toggleStepperCollapse()">🎲 <span id="stepper-toggle-label">Nytt äventyr?</span></button>
   <div class="step" id="step-lang">
     <div class="step-head">
       <div class="step-num">↓</div>
@@ -1192,12 +1195,24 @@ function showCampaignList(campaigns) {
   const cw = document.getElementById('continue-wrap');
   requestAnimationFrame(() => cw.classList.add('reveal'));
   document.querySelector('.app').classList.add('paths-hidden');
+  // Återvändare (≥1 kampanj): kollapsa onboarding-steppern till en rad —
+  // "Nytt äventyr?"-toggen expanderar den (audit-ux: 518px stepper i onödan).
+  document.querySelector('.app').classList.add('stepper-collapsed');
+}
+
+function toggleStepperCollapse() {
+  const app = document.querySelector('.app');
+  app.classList.remove('stepper-collapsed');
+  const st = document.getElementById('step-lang');
+  if (st) st.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  try { SFX.click(); } catch (_) {}
 }
 
 function showPaths() {
   hasActiveCampaign = false;
   document.getElementById('continue-wrap').classList.remove('show');
   document.querySelector('.app').classList.remove('paths-hidden');
+  document.querySelector('.app').classList.remove('stepper-collapsed');
 }
 
 async function activateAndContinue(campaignId) {
@@ -2602,7 +2617,7 @@ function renderProfile(s) {
   const periodLabel = (st === 'tier1' || st === 'tier2') ? ' per 6h' : ' per day';
   const capLabel = s.turn_cap === 0 ? '∞ (lifetime)' : fmt(s.turn_cap) + periodLabel;
   h += cell('Turns', fmt(s.period_turns_used) + ' / ' + capLabel + bar(s.period_turns_used, s.turn_cap), true);
-  if (s.promo_bonus > 0) h += cell('Signup promo', fmt(s.promo_bonus) + ' left', true);
+  if (s.promo_bonus > 0) h += cell('Signup bonus (legacy)', fmt(s.promo_bonus) + ' left', true);
   h += cell('Total turns', fmt(s.total_turns));
   h += cell('Campaigns', fmt(s.total_campaigns));
   h += cell('Total tokens', fmt(s.total_tokens));

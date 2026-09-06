@@ -796,6 +796,16 @@ const I18N = (() => {
     'Okänd äventyrare': 'Unknown adventurer',
     'Importera äventyr': 'Import adventure',
     'Nytt äventyr': 'New adventure',
+    // ── Cap-modal (chat.html) + stepper-toggle (adventure.html) — 2026-09-06 ──
+    '⏳ Inga gratisrundor kvar': '⏳ No free turns left',
+    'Inga gratisrundor kvar': 'No free turns left',
+    '⚔ Patronperioden är slut': '⚔ Patron period ended',
+    'Fyll på': 'Top up',
+    '⚡ Fyll på': '⚡ Top up',
+    'Nytt äventyr?': 'New adventure?',
+    // cap-msg statisk HTML har <b> mitt i → fragment-nycklar (walker byter substringer)
+    'Dina rundor är slut. Nya gratisrundor kommer om': 'Your turns are spent. New free turns arrive in',
+    '— eller fyll på en gång för att fortsätta spela.': '— or top up once to keep playing.',
     'Förbered äventyr': 'Prepare adventure',
     'Välj ditt öde': 'Choose Your Fate',
     'Steg ett av tre': 'Step one of three',

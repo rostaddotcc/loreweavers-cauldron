@@ -302,7 +302,7 @@
   <div class="map-head">
     <h1>🗺️ The Map</h1>
     <p class="sub">Places you have visited and roads you can walk</p>
-    <div class="current-loc" id="current-loc"><span class="pin">📍</span> <span id="current-name">Loading…</span></div>
+    <div class="current-loc" id="current-loc"><span class="pin">📍</span> <span id="current-name">Laddar…</span></div>
   </div>
 
   <div class="ascii-map" id="ascii-map">
@@ -314,7 +314,7 @@
       <button type="button" id="mt-fit" title="Show whole map" aria-label="Show whole map">⤢</button>
     </div>
     <div class="map-viewport" id="map-viewport">
-      <pre id="map-art">Loading map…</pre>
+      <pre id="map-art">Laddar karta…</pre>
     </div>
   </div>
 
@@ -905,6 +905,14 @@ async function loadLocations() {
       const camp = await campRes.json();
       // Initialize i18n with campaign language
       I18N.init((camp.meta && camp.meta.language) || 'en');
+      // Laddningstexter tvåspråkiga (2026-09-06, audit-design-system §8.9):
+      // statiskt SV i HTML:n — byt till EN om kampanjen är engelsk.
+      if (I18N.getLang() === 'en') {
+        const cn = document.getElementById('current-name');
+        if (cn && cn.textContent.trim() === 'Laddar…') cn.textContent = 'Loading…';
+        const ma = document.getElementById('map-art');
+        if (ma && ma.textContent.trim() === 'Laddar karta…') ma.textContent = 'Loading map…';
+      }
       campaignSeed = hashStr(camp.meta?.campaign_id || 'loreweavers-cauldron');
       quests = camp.quests || [];
     } else {

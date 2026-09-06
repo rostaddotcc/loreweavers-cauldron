@@ -55,6 +55,21 @@
   .back:hover{color:var(--gold-bright)}
   .badge{display:inline-block;margin-bottom:1rem;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;
     color:var(--gold-bright);border:1px solid var(--edge-hi);border-radius:999px;padding:.28rem .7rem}
+  /* ── Mobilpass (2026-09-06, audit-design-system §8.7): reset.html var enda
+     riktiga sidan utan breakpoints — speglar login.html:s småskärmsmönster. ── */
+  @media (max-width:600px){
+    body{padding:.8rem;align-items:flex-start;padding-top:2.2rem}
+    .card{width:100%;padding:1.6rem 1.2rem;border-radius:12px}
+    h1{font-size:1.05rem;letter-spacing:.12em}
+    .sub{font-size:.82rem;margin-bottom:1.2rem}
+    .field input{padding:.8rem .85rem}
+    .btn{padding:.95rem 1rem;font-size:.75rem}
+    .badge{font-size:.62rem;padding:.24rem .6rem}
+  }
+  @media (max-width:360px){
+    .card{padding:1.3rem .95rem}
+    h1{font-size:.95rem}
+  }
 </style>
 </head>
 <body>

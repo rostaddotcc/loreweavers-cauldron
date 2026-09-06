@@ -232,7 +232,13 @@
   @keyframes hp-green {
     0%,100% { box-shadow: none; }
     30% { box-shadow: 0 0 14px 3px rgba(122,163,94,0.9); }
-  }.pc-xp.xp-flash{ animation: xp-glow 0.9s ease; }
+  }/* ── Dying/Dead-visibilitet (2026-09-06): hp<=0 → pulserande varning, death_saves.dead → DÖD-badge ── */
+  .pc-vitals{ display: none; margin-top: .3rem; font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; line-height: 1.3; }
+  .pc-vitals.dying{ display: block; color: var(--blood-bright); animation: vitals-pulse 1.1s ease-in-out infinite; }
+  .pc-vitals.dead{ display: block; color: #fff; background: var(--blood); border: 1px solid var(--blood-bright); border-radius: 3px; padding: .15rem .4rem; text-align: center; letter-spacing: .14em; }
+  @keyframes vitals-pulse{ 0%,100%{ opacity: 1; text-shadow: 0 0 8px rgba(212,58,77,.8); } 50%{ opacity: .5; text-shadow: none; } }
+  .cd-dead-badge{ margin: .3rem 0 .5rem; padding: .45rem .6rem; text-align: center; font-family: var(--font-display); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; font-size: .8rem; color: #fff; background: var(--blood); border: 1px solid var(--blood-bright); border-radius: 4px; }
+  .pc-xp.xp-flash{ animation: xp-glow 0.9s ease; }
   @keyframes xp-glow {
     0%,100% { box-shadow: 0 0 0 rgba(232,198,90,0); }
     30% { box-shadow: 0 0 16px 4px rgba(232,198,90,0.85); }
@@ -521,7 +527,7 @@
     display: flex; justify-content: space-between; gap: 0.6rem; align-items: baseline;
     font-size: 0.78rem; color: var(--bone); padding: 0.32rem 0.1rem;
     border-bottom: 1px dashed color-mix(in srgb, var(--edge) 5%, transparent);
-  }.usage-row:last-child{ border-bottom: none; }.usage-row .u-model{ color: var(--arcane); font-weight: 600; }.usage-row .u-val{ font-variant-numeric: tabular-nums; color: var(--bone-bright); }.usage-row .u-sub{ font-size: 0.62rem; color: var(--bone-dim); }.usage-total{ font-size: 0.85rem; color: var(--gold-bright); font-weight: 700; }.usage-err{ color: var(--blood-bright); font-size: 0.8rem; padding: 0.8rem 0; }.msg.system .box .dice{ font-size: 1.23rem; vertical-align: -2px; }.msg.system .box .crit{ color: var(--gold-bright); text-shadow: 0 0 10px rgba(232,198,90,0.7); font-weight: 700; }.msg.system .box .fail{ color: var(--blood-bright); text-shadow: 0 0 10px rgba(212,58,77,0.6); font-weight: 700; }/* ── Mekaniska effekter — Event Log Cards ── */.event-batch{
+  }.usage-row:last-child{ border-bottom: none; }.usage-row .u-model{ color: var(--arcane); font-weight: 600; }.usage-row .u-val{ font-variant-numeric: tabular-nums; color: var(--bone-bright); }.usage-row .u-sub{ font-size: 0.62rem; color: var(--bone-dim); }.usage-total{ font-size: 0.85rem; color: var(--gold-bright); font-weight: 700; }.usage-err{ color: var(--blood-bright); font-size: 0.8rem; padding: 0.8rem 0; }.msg.system .box .dice{ font-size: 1.23rem; vertical-align: -2px; }.msg.system .box .crit{ color: var(--gold-bright); text-shadow: 0 0 10px rgba(232,198,90,0.7); font-weight: 700; }.msg.system .box .fail{ color: var(--blood-bright); text-shadow: 0 0 10px rgba(212,58,77,0.6); font-weight: 700; }.offline-roll{ font-size: 0.68rem; color: var(--bone-dim); font-style: italic; opacity: 0.85; white-space: nowrap; }/* ── Mekaniska effekter — Event Log Cards ── */.event-batch{
     max-width: 560px; margin: .35rem auto; padding: .3rem .5rem .45rem;
     border: 1px solid var(--edge); border-radius: 4px;
     background: color-mix(in srgb, var(--ink) 5%, transparent);
@@ -1670,6 +1676,7 @@
               <div class="pc-name" id="pc-name">—</div>
               <div class="pc-sub" id="pc-sub">—</div>
               <div class="pc-hp" id="pc-hp-bar"><i id="pc-hp-fill" style="width:0%"></i></div>
+              <div class="pc-vitals" id="pc-vitals" aria-live="polite"></div>
             </div>
           </div>
           <div class="pc-xp" id="pc-xp-bar"><i id="pc-xp-fill" style="width:0%"></i></div>
@@ -1867,15 +1874,15 @@
 <div class="fb-backdrop" id="cap-backdrop" onclick="closeCapModal()"></div>
 <div class="fb-modal" id="cap-modal" role="dialog" aria-modal="true" aria-labelledby="cap-title">
   <div class="fb-head">
-    <span class="fb-title" id="cap-title">⏳ No free turns left</span>
+    <span class="fb-title" id="cap-title">⏳ Inga gratisrundor kvar</span>
     <button class="fb-close" onclick="closeCapModal()" aria-label="Close">✕</button>
   </div>
   <div class="fb-body">
-    <p class="fb-sub" id="cap-msg" style="font-style:normal;line-height:1.6">Your turns are spent. New free turns arrive in <b>…</b> — or top up once to keep playing.</p>
+    <p class="fb-sub" id="cap-msg" style="font-style:normal;line-height:1.6">Dina rundor är slut. Nya gratisrundor kommer om <b>…</b> — eller fyll på en gång för att fortsätta spela.</p>
   </div>
   <div class="fb-foot">
-    <button class="fb-btn fb-cancel" onclick="closeCapModal()">Close</button>
-    <a class="fb-btn fb-send" id="cap-upgrade-btn" href="pricing.html" style="display:inline-flex;align-items:center;text-decoration:none">⚡ Top up</a>
+    <button class="fb-btn fb-cancel" onclick="closeCapModal()">Stäng</button>
+    <a class="fb-btn fb-send" id="cap-upgrade-btn" href="pricing.html" style="display:inline-flex;align-items:center;text-decoration:none">⚡ Fyll på</a>
   </div>
 </div>
 
@@ -1998,6 +2005,7 @@ async function loadCampaign() {
         // Krigsrådet behöver spelarens HP + dödsräddningar
         _playerHp = { current: hp.current || 0, max: hp.max || 0 };
         _playerDeathSaves = (campaign._raw && campaign._raw.character && campaign._raw.character.death_saves) || { successes: 0, failures: 0 };
+        updateVitalsBadge(hp, _playerDeathSaves);
         updateXpBar(ch.xp);
         updateCurrency(campaign._raw?.currency ?? {});
       }
@@ -2316,20 +2324,37 @@ function openCapModal(info) {
   const title = document.getElementById('cap-title');
   const msg = document.getElementById('cap-msg');
   const upgrade = document.getElementById('cap-upgrade-btn');
+  // Tvåspråkig cap-modal (2026-09-06): getLang()-branch som turnInfoText —
+  // delade i18n.js-ordlistan är svenskt nycklad och dessa EN-defaults saknar nycklar.
+  const en = !(typeof I18N !== 'undefined' && I18N.getLang && I18N.getLang() === 'sv');
+  const w = escapeHtml(whenStr);
   if (info.premium_expired) {
-    if (title) title.textContent = '⚔ Patron period ended';
-    if (msg) msg.innerHTML = 'Your Patron model access has ended, so your free turns are back. ' +
-      'New free turns arrive in <b>' + escapeHtml(whenStr) + '</b> — or top up once for more.' +
-      ' Your Support perks (export, uploads) stay forever.';
-    if (upgrade) upgrade.textContent = '⚡ Top up';
+    if (title) title.textContent = en ? '⚔ Patron period ended' : '⚔ Patronperioden är slut';
+    if (msg) msg.innerHTML = en
+      ? 'Your Patron model access has ended, so your free turns are back. ' +
+        'New free turns arrive in <b>' + w + '</b> — or top up once for more.' +
+        ' Your Support perks (export, uploads) stay forever.'
+      : 'Din Patron-modellåtkomst har upphört, så dina gratisrundor är tillbaka. ' +
+        'Nya gratisrundor kommer om <b>' + w + '</b> — eller fyll på en gång för mer.' +
+        ' Dina Support-förmåner (export, uppladdningar) består för alltid.';
+    if (upgrade) upgrade.textContent = en ? '⚡ Top up' : '⚡ Fyll på';
   } else {
-    if (title) title.textContent = '⏳ No free turns left';
-    if (msg) msg.innerHTML = 'Your turns are spent. New free turns arrive in <b>' + escapeHtml(whenStr) +
-      '</b> — or top up once to keep playing. No subscription, ever.';
-    if (upgrade) upgrade.textContent = '⚡ Top up';
+    if (title) title.textContent = en ? '⏳ No free turns left' : '⏳ Inga gratisrundor kvar';
+    if (msg) msg.innerHTML = en
+      ? 'Your turns are spent. New free turns arrive in <b>' + w +
+        '</b> — or top up once to keep playing. No subscription, ever.'
+      : 'Dina rundor är slut. Nya gratisrundor kommer om <b>' + w +
+        '</b> — eller fyll på en gång för att fortsätta spela. Ingen prenumeration, någonsin.';
+    if (upgrade) upgrade.textContent = en ? '⚡ Top up' : '⚡ Fyll på';
   }
   const backdrop = document.getElementById('cap-backdrop');
   const modal = document.getElementById('cap-modal');
+  // Statiska HTML-strängar i modalen (SV-original) → EN via I18N.t så båda
+  // språk täcks även om openCapModal inte hinner köra.
+  const cBtn = modal && modal.querySelector('.fb-cancel');
+  if (cBtn) cBtn.textContent = I18N.t('Stäng');
+  const cClose = modal && modal.querySelector('.fb-close');
+  if (cClose && cClose.getAttribute('aria-label') === 'Close') cClose.setAttribute('aria-label', en ? 'Close' : 'Stäng');
   if (backdrop) backdrop.style.display = 'block';
   if (modal) modal.classList.add('open');
   // api.js visar en toast med rå HTTP-feltexten — dölj den, modalen räcker
@@ -2746,7 +2771,7 @@ function renderChatProfile(s, me) {
   h += cell('Role', role);
   h += cell('Tier', tierBadge(st));
   h += cell('Turns', fmt(used) + ' / ' + capLabel + bar(used, cap), true);
-  if ((parseInt(s.promo_bonus, 10) || 0) > 0) h += cell('Signup promo', fmt(s.promo_bonus) + ' left', true);
+  if ((parseInt(s.promo_bonus, 10) || 0) > 0) h += cell('Signup bonus (legacy)', fmt(s.promo_bonus) + ' left', true);
   h += cell('Total turns', fmt(s.total_turns != null ? s.total_turns : me.turns_used));
   h += cell('Campaigns', fmt(s.total_campaigns != null ? s.total_campaigns : me.total_campaigns));
   h += cell('Tokens', tokenStr);
@@ -4028,10 +4053,45 @@ async function serverRoll(notation) {
     roll.fail = roll.count === 1 && roll.sides === 20 && roll.rolls[0] === 1;
     return roll;
   } catch (e) {
-    return rollDice(notation);  // fallback client-side
+    const r = rollDice(notation);  // fallback client-side — offline-spel fortsätter fungera
+    if (r) r.offline = true;       // ärlighetsmarkör → offlineRollHint() i roll-bubblan
+    return r;
   }
 }
 
+// Offline-roll-hint: när serverRoll faller tillbaka på klientens rollDice()
+// markeras resultatet i chatten som ej serververifierat. Tvåspråkig via
+// getLang() (samma mönster som turnInfoText) — delade i18n.js-ordlistan är
+// svenskt nycklad och får inte växa här.
+function offlineRollHint(roll) {
+  if (!roll || !roll.offline) return '';
+  const en = (typeof I18N !== 'undefined' && I18N.getLang && I18N.getLang() === 'en');
+  const txt = en ? 'offline roll — not server-verified' : 'offlinekast — ej serververifierat';
+  return ` <span class="offline-roll">⚠ ${txt}</span>`;
+}
+
+
+// Dying/dead-visibilitet (2026-09-06): hp.current<=0 → pulserande DÖENDE-varning
+// i sidebaren; death_saves.dead → DÖD-badge. Data ur befintlig /api/campaign-payload
+// (character.hp + character.death_saves {successes, failures, dead} — backend/main.py:1030).
+function updateVitalsBadge(hp, ds) {
+  const el = document.getElementById('pc-vitals');
+  if (!el) return;
+  const en = (typeof I18N !== 'undefined' && I18N.getLang && I18N.getLang() === 'en');
+  el.classList.remove('dying', 'dead');
+  const cur = hp && typeof hp.current === 'number' ? hp.current : null;
+  if (cur !== null && cur <= 0 && hp && (hp.max || 0) > 0) {
+    if (ds && ds.dead) {
+      el.textContent = en ? '💀 DEAD' : '💀 DÖD';
+      el.classList.add('dead');
+    } else {
+      el.textContent = en ? '☠ DYING — make your death save' : '☠ DÖENDE — slå din dödsräddning';
+      el.classList.add('dying');
+    }
+  } else {
+    el.textContent = '';
+  }
+}
 
 // ═══════════════════════════════════════
 // XP-BAR + LEVEL-UP + PARTIKLAR
@@ -4602,7 +4662,7 @@ async function inlineDiceCeremonyCli(notation, label, roll) {
     : isFail ? ' <span class="cli-exit fail">[CATASTROPHIC]</span>'
     : missedDc ? ' <span class="cli-exit fail">[FAIL]</span>'
     : ' <span class="cli-exit ok">[OK]</span>';
-  resultEl.innerHTML = resultText + exitChip + (verdict ? ` <b>${verdict}</b>` : '');
+  resultEl.innerHTML = resultText + exitChip + (verdict ? ` <b>${verdict}</b>` : '') + offlineRollHint(roll);
   if (isCrit) resultEl.classList.add('crit');
   if (isFailLike) resultEl.classList.add('fail');
 
@@ -4756,6 +4816,7 @@ async function inlineDiceCeremony(notation, label, roll) {
   } else {
     resultEl.textContent = `${roll.rolls.join(', ')}${modStr} = ${roll.total} ${verdict}`.trim();
   }
+  if (roll.offline) resultEl.insertAdjacentHTML('beforeend', offlineRollHint(roll));
 
   // Partiklar + effekter
   const dieRect = el.querySelector('.id-die').getBoundingClientRect();
@@ -4940,7 +5001,7 @@ async function answerRollRequest(id, notation, label) {
   box.innerHTML = `
     <div class="roll-result-inline">
       <span class="rr-dice">🎲</span>
-      <span>${label}: [${shownRolls}]${modStr} = <b class="${cls}">${roll.total}</b>${isCrit ? ' ' + I18N.t('✦ KRITISKT!') : ''}${isFail ? ' ' + I18N.t('✦ PATETISKT!') : ''}</span>
+      <span>${label}: [${shownRolls}]${modStr} = <b class="${cls}">${roll.total}</b>${isCrit ? ' ' + I18N.t('✦ KRITISKT!') : ''}${isFail ? ' ' + I18N.t('✦ PATETISKT!') : ''}${offlineRollHint(roll)}</span>
     </div>`;
 
   // Skicka resultatet till DM (backend) — DM ger utfallet direkt
@@ -5010,7 +5071,7 @@ function diceMessage(roll, label) {
   if (isCrit) cls = 'crit';
   if (isFail) cls = 'fail';
   const modStr = roll.mod !== 0 ? (roll.mod > 0 ? '+' + roll.mod : roll.mod) : '';
-  return `<span class="dice">🎲</span> ${label || roll.notation}: [${roll.rolls.join(', ')}]${modStr} = <b class="${cls}">${roll.total}</b>${isCrit ? ' ' + I18N.t('✦ KRITISKT!') : ''}${isFail ? ' ' + I18N.t('✦ PATETISKT!') : ''}`;
+  return `<span class="dice">🎲</span> ${label || roll.notation}: [${roll.rolls.join(', ')}]${modStr} = <b class="${cls}">${roll.total}</b>${isCrit ? ' ' + I18N.t('✦ KRITISKT!') : ''}${isFail ? ' ' + I18N.t('✦ PATETISKT!') : ''}${offlineRollHint(roll)}`;
 }
 
 // ═══════════════════════════════════════
@@ -7300,6 +7361,7 @@ async function refreshCharacter() {
     // Krigsrådet: håll spelarens HP + dödsräddningar fräscha
     _playerHp = { current: hp.current || 0, max: hp.max || 0 };
     _playerDeathSaves = (campaign._raw && campaign._raw.character && campaign._raw.character.death_saves) || { successes: 0, failures: 0 };
+    updateVitalsBadge(hp, _playerDeathSaves);
     updateXpBar(ch.xp);
     const w = campaign._raw?.world || {};
     if (w.current_location) {
@@ -7349,6 +7411,7 @@ async function refreshSidebar() {
       }
       _playerHp = { current: hp.current || 0, max: hp.max || 0 };
       _playerDeathSaves = (raw.character && raw.character.death_saves) || { successes: 0, failures: 0 };
+      updateVitalsBadge(hp, _playerDeathSaves);
       updateXpBar(ch.xp);
     }
     // Plats + tid
@@ -8348,6 +8411,7 @@ function renderCharDrawer() {
 
   html += `<div class="cd-section-title">❤ Vitality</div>`;
   html += `<div class="cd-hp-label"><b>${numOrZero(hp.current)} / ${numOrZero(hp.max)} HP</b>${temp ? `<span class="cd-temp">+${temp} temp</span>` : ''}</div>`;
+  if (ds && ds.dead) html += `<div class="cd-dead-badge">💀 ${(typeof I18N !== 'undefined' && I18N.getLang && I18N.getLang() === 'en') ? 'DEAD' : 'DÖD'}</div>`;
   html += `<div class="cd-trough${hp.max > 0 && pct < 25 ? ' low' : ''}"><i style="width:${pct}%"></i></div>`;
   html += `<div class="cd-xp" style="margin-top:.5rem"><i style="width:${xpPct}%"></i></div>`;
   html += `<div class="cd-xp-label"><b>${xpCur}</b> / ${xpNext} XP</div>`;
@@ -8396,13 +8460,17 @@ function renderCharDrawer() {
     });
   }
 
-  // Carry weight bar
-  const totalWt = items.reduce((s, it) => s + (parseFloat(it.weight) || 0) * (parseInt(it.qty) || 1), 0);
+  // Carry weight bar — myntvikt inkluderas som i backend-sanningen (main.py
+  // currency_weight: 50 mynt = 1 lb oavsett valör, pp+gp+sp+cp / 50).
+  const itemsWt = items.reduce((s, it) => s + (parseFloat(it.weight) || 0) * (parseInt(it.qty) || 1), 0);
+  const cur = raw.currency || {};
+  const coinWt = Math.round((['pp', 'gp', 'sp', 'cp'].reduce((s, d) => s + (parseFloat(cur[d]) || 0), 0) / 50) * 100) / 100;
+  const totalWt = itemsWt + coinWt;
   const maxWt = parseFloat(ch.max_weight_lbs) || 0;
   const wtPct = maxWt > 0 ? Math.min(100, Math.round(100 * totalWt / maxWt)) : 0;
   html += `<div class="cd-section-title">🎒 Belongings</div>`;
   if (maxWt > 0) {
-    html += `<div class="cd-carry"><div class="cd-carry-bar${wtPct > 90 ? ' over' : wtPct > 70 ? ' warn' : ''}"><i style="width:${wtPct}%"></i></div><div class="cd-carry-label">⚖ ${totalWt.toFixed(1)} / ${maxWt} lb (${wtPct}%)</div></div>`;
+    html += `<div class="cd-carry"><div class="cd-carry-bar${wtPct > 90 ? ' over' : wtPct > 70 ? ' warn' : ''}"><i style="width:${wtPct}%"></i></div><div class="cd-carry-label">⚖ ${totalWt.toFixed(1)} / ${maxWt} lb (${wtPct}%)${coinWt > 0 ? ` · 🪙 ${coinWt.toFixed(2)} lb` : ''}</div></div>`;
   }
   if (items.length) {
     items.forEach((item, i) => {

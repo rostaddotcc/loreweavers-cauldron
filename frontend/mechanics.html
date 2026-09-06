@@ -7,7 +7,7 @@
 <meta name="description" content="How the AI Dungeon Master runs real D&D 5e mechanics: initiative, action economy, advantage, saving throws, HP — tracked by the Lorekeeper engine behind every text-based campaign. The LLM harness behind dnd.rostad.cc.">
 <style>
 /* ══════════════════════════════════════════════════════════════
-   THE LORE WEAVER'S CAULDRON — ENGINE MECHANICS v27 (standalone, offline-safe)
+   THE LORE WEAVER'S CAULDRON — ENGINE MECHANICS v28 (standalone, offline-safe)
    Dark fantasy × terminal. No external assets.
    ══════════════════════════════════════════════════════════════ */
 :root{
@@ -392,7 +392,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
 <!-- ═══════════ BOOT OVERLAY ═══════════ -->
 <div id="boot" onclick="bootSkip()" role="button" aria-label="Skip boot sequence" title="Click to skip">
   <div class="boot-term">
-    <div class="boot-bar"><i></i><i></i><i></i><span>engine_boot · loreweavers-cauldron · v27</span></div>
+    <div class="boot-bar"><i></i><i></i><i></i><span>engine_boot · loreweavers-cauldron · v28</span></div>
     <div class="boot-lines" id="boot-lines"></div>
     <div class="boot-hint">CLICK TO SKIP — ENTER TO BEGIN</div>
   </div>
@@ -402,10 +402,10 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
 <header class="hero">
   <div class="eyebrow">The Lore Weaver's Cauldron — under the table</div>
   <h1>The Mechanics of the Cauldron</h1>
-  <p class="sub">How the engine runs beneath the game: a <b>Dungeon Master</b> that writes stories, a <b>Guardian</b> that turns prose into state, dice that only the player may roll, a <b>voice cache</b> that never speaks the same line twice, and one JSON file that remembers everything.</p>
+  <p class="sub">How the engine runs beneath the game: a <b>Dungeon Master</b> that writes stories, a <b>Guardian</b> that turns prose into state, dice that only the engine may roll, a <b>voice cache</b> that never speaks the same line twice, and one JSON file that remembers everything.</p>
   <div class="chips">
-    <span class="chip g">DM prompt v27</span>
-    <span class="chip p">Guardian 38-field contract</span>
+    <span class="chip g">DM prompt v28</span>
+    <span class="chip p">Guardian 44-field contract</span>
     <span class="chip">Two-phase dice</span>
     <span class="chip t">TTS cache · 64 slots · 600s TTL</span>
     <span class="chip e">SSE character weaving</span>
@@ -423,10 +423,11 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     <li data-ix="s3"><a href="#s3"><span class="ix-num">§3</span>Prompt Injection<span class="ix-tag">what the DM sees</span></a></li>
     <li data-ix="s4"><a href="#s4"><span class="ix-num">§4</span>Fact Memory<span class="ix-tag">the moving window</span></a></li>
     <li data-ix="s5"><a href="#s5"><span class="ix-num">§5</span>Guardian Contract<span class="ix-tag">prose → JSON</span></a></li>
-    <li data-ix="s6"><a href="#s6"><span class="ix-num">§6</span>Dice Engine<span class="ix-tag">the player rolls</span></a></li>
-    <li data-ix="s7"><a href="#s7"><span class="ix-num">§7</span>Voice &amp; TTS Cache<span class="ix-tag">speak once, reuse</span></a></li>
-    <li data-ix="s8"><a href="#s8"><span class="ix-num">§8</span>Character Weaving<span class="ix-tag">SSE adventurer creation</span></a></li>
-    <li data-ix="s9"><a href="#s9"><span class="ix-num">§9</span>State Model<span class="ix-tag">the one truth</span></a></li>
+    <li data-ix="s6"><a href="#s6"><span class="ix-num">§6</span>Dice Engine<span class="ix-tag">the engine rolls</span></a></li>
+    <li data-ix="s10"><a href="#s10"><span class="ix-num">§7</span>Spell Slots &amp; Rests<span class="ix-tag">the level-as-cost pool</span></a></li>
+    <li data-ix="s7"><a href="#s7"><span class="ix-num">§8</span>Voice &amp; TTS Cache<span class="ix-tag">speak once, reuse</span></a></li>
+    <li data-ix="s8"><a href="#s8"><span class="ix-num">§9</span>Character Weaving<span class="ix-tag">SSE adventurer creation</span></a></li>
+    <li data-ix="s9"><a href="#s9"><span class="ix-num">§10</span>State Model<span class="ix-tag">the one truth</span></a></li>
   </ol>
 </nav>
 
@@ -439,22 +440,22 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     <h2 class="sec-title"><span class="sec-mark">◆</span>The Dual Mind</h2>
     <div class="sec-rule"></div>
   </div>
-  <p class="sec-lede">Every turn is resolved by two minds that never write to the same place. One is an artist, the other an accountant — and they only meet through a contract of square brackets and JSON.</p>
+  <p class="sec-lede">Every turn is resolved by two minds with separate authority. One is an artist, the other an accountant — the DM's prose may carry server-applied tags, the Guardian answers in strict JSON, and the engine decides which numbers become real.</p>
 
   <div class="grid2">
     <div class="panel rv">
       <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
       <h3><span class="dot">✦</span> The Dungeon Master</h3>
-      <p>A free, creative LLM storyteller. Its identity, craft rules and world-consistency laws live in <code>DM_CORE_PROMPT</code>, versioned as <span class="stat"><b class="v">v27</b></span> — bumping the version forces a cache miss so the model can never serve a stale persona.</p>
+      <p>A free, creative LLM storyteller. Its identity, craft rules and world-consistency laws live in <code>DM_CORE_PROMPT</code>, versioned as <span class="stat"><b class="v">v28</b></span> — bumping the version forces a cache miss so the model can never serve a stale persona.</p>
       <p>It is told: <em>"The story is NOT pre-written: it is shaped by the player's choices, in the moment."</em> It chooses theme, tone and atmosphere. It may say no. Death is real.</p>
       <div class="stat"><b>Role split:</b> Narrator · NPC actor · Rules arbiter · World builder · Challenger</div>
     </div>
     <div class="panel rv">
       <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
       <h3><span class="dot">✦</span> The Guardian</h3>
-      <p>A second LLM pass that reads the DM's narration and extracts <b>every mechanical effect</b> into a strict <span class="stat"><b class="v">38-field JSON contract</b></span>: damage, healing, XP, items, currency, quests, NPC changes, combat, rest, world lore.</p>
-      <p>It works in <b>two phases</b>: <span class="stat"><b>PRE</b></span> (before the DM writes — decides <em>if</em> a roll is needed) and <span class="stat"><b>POST</b></span> (after — turns prose into state). It never writes a sentence; the DM never writes a number.</p>
-      <div class="stat"><b>Fallback:</b> a legacy regex tag pipeline (<span class="v">[SKADA:] [GULD:]</span>…) still exists but is nearly dead since v27 told the DM "you do NOT need mechanical tags".</div>
+      <p>A second LLM pass that reads the DM's narration and extracts <b>every mechanical effect</b> into a strict <span class="stat"><b class="v">44-field JSON contract</b></span>: damage, healing, XP, items, currency, quests, NPC changes, combat, spell-slot spending, rest, world lore.</p>
+      <p>It works in <b>two phases</b>: <span class="stat"><b>PRE</b></span> (before the DM writes — decides <em>if</em> a roll is needed) and <span class="stat"><b>POST</b></span> (after — turns prose into state). It never writes a sentence. For combat it never writes numbers either — it names <em>who</em> attacks, and the server engine rolls the dice.</p>
+      <div class="stat"><b>Fallback:</b> a legacy regex tag pipeline (<span class="v">[SKADA:] [GULD:]</span>…) still lives for out-of-combat and environmental effects on living creatures — every combat number is engine-rolled instead.</div>
     </div>
   </div>
 
@@ -468,7 +469,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
       <!-- Row 1 -->
       <g class="fn bone"><rect x="30" y="58" width="118" height="44" rx="2" fill="url(#gPur)" stroke="rgba(123,79,212,.6)"/><text class="f-label" x="89" y="76" text-anchor="middle">PLAYER</text><text class="f-sub" x="89" y="90" text-anchor="middle">action · SSE</text></g>
       <g class="fn pur"><rect class="f-pulse" x="196" y="58" width="118" height="44" rx="2" fill="url(#gPur)" stroke="rgba(123,79,212,.55)"/><text class="f-label" x="255" y="76" text-anchor="middle">GUARDIAN PRE</text><text class="f-sub" x="255" y="90" text-anchor="middle">roll? → [KAST:] hint</text></g>
-      <g class="fn gold"><rect x="362" y="58" width="118" height="44" rx="2" fill="url(#gGold)" stroke="rgba(201,162,39,.55)"/><text class="f-label" x="421" y="76" text-anchor="middle">DUNGEON MASTER</text><text class="f-sub" x="421" y="90" text-anchor="middle">system prompt v27</text></g>
+      <g class="fn gold"><rect x="362" y="58" width="118" height="44" rx="2" fill="url(#gGold)" stroke="rgba(201,162,39,.55)"/><text class="f-label" x="421" y="76" text-anchor="middle">DUNGEON MASTER</text><text class="f-sub" x="421" y="90" text-anchor="middle">system prompt v28</text></g>
       <g class="fn bone"><rect x="528" y="58" width="118" height="44" rx="2" fill="#12121a" stroke="#2a2a3a"/><text class="f-label" x="587" y="76" text-anchor="middle">CHAT STREAM</text><text class="f-sub" x="587" y="90" text-anchor="middle">reasoning + content</text></g>
       <g class="fn ember"><rect x="694" y="58" width="118" height="44" rx="2" fill="#14100a" stroke="rgba(212,105,30,.5)"/><text class="f-label" x="753" y="76" text-anchor="middle">VALIDATE</text><text class="f-sub" x="753" y="90" text-anchor="middle">strip · parse rolls</text></g>
       <!-- Row 2 -->
@@ -608,7 +609,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     <div class="exp-body" id="exp-layer1-body"><div class="exp-inner">
       <p>The very first line of the system prompt pins the output language and overrides any Swedish internal notes. The game can be played in Swedish while the UI stays English — language is a per-campaign setting, not a code constant.</p>
 <pre class="prompt lang"><span class="pt">[LANGUAGE: ENGLISH]</span> You MUST write ALL narration, dialogue, NPC speech, descriptions, and every single word of your response in English. This overrides any Swedish text in the instructions below — those are internal system notes, NOT the output language.</pre>
-      <p>Then the version stamp — <span class="stat"><b class="v">[DM-prompt v27]</b></span> — which forces a provider cache miss on every prompt change, so a deployed update is instantly live.</p>
+      <p>Then the version stamp — <span class="stat"><b class="v">[DM-prompt v28]</b></span> — which forces a provider cache miss on every prompt change, so a deployed update is instantly live.</p>
     </div></div>
   </div>
 
@@ -679,7 +680,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     </button>
     <div class="exp-body" id="exp-layer4-body"><div class="exp-inner">
       <p>Every turn the engine scans <code>state.npcs</code> for living enemies (<span class="stat"><b>relation == "fiende"</b></span> and <span class="stat"><b>alive</b></span>). Enemies present → <code>DM_COMBAT_PROMPT</code> (chat-first combat law, turn order, death saves); otherwise → <code>DM_NARRATIVE_PROMPT</code>. Combat rules only weigh on the context when combat is real.</p>
-      <p>Combat is <b>chat-first</b>: no battle arena. The DM opens it with the <span class="stat"><b>[STRID:name|HP|AC, name2|HP|AC]</b></span> tag; the Guardian tracks damage, rounds and turn order from narration. Death saves follow D&D 5e exactly: nat 1 = two failures, nat 20 = wake at 1 HP, three of three decides.</p>
+      <p>Combat is <b>chat-first</b>: no battle arena. The DM opens it with the <span class="stat"><b>[STRID:name|HP|AC, name2|HP|AC]</b></span> tag; the engine owns the numbers — enemy attacks are code-rolled (see §5), and the Guardian tracks rounds and turn order from narration. Death saves follow D&D 5e exactly: nat 1 = two failures, nat 20 = wake at 1 HP, three of three decides.</p>
       <p>NPCs are tagged on introduction — <span class="stat"><b>[NPC:Morvaine|Enigmatic wizard|unknown]</b></span> — and a player can write <span class="stat"><b>@Name</b></span> to make that NPC answer in their own voice, with the DM allowed only brief interjections.</p>
     </div></div>
   </div>
@@ -723,7 +724,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
   <div class="panel rv">
     <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
     <h3><span class="dot">✦</span> The assembly order</h3>
-    <div class="stat"><b>1</b> Language directive → <b>2</b> Core prompt v27 → <b>3</b> Combat <i>or</i> Narrative → <b>4</b> TRUTH block + pinned facts → <b>5</b> Scene ×2, Chapter ×2, Arc ×1 → <b>6</b> Last turn's effects → <b>7</b> World &amp; locations &amp; travel rule → <b>8</b> Lore → <b>9</b> NPCs → <b>10</b> Quests → <b>11</b> Inventory &amp; character → <b>12</b> Fact memory &amp; RAG — top 8 facts · top 4 chunks (<a href="#s4" style="color:var(--gold-bright)">§4</a>)</div>
+    <div class="stat"><b>1</b> Language directive → <b>2</b> Core prompt v28 → <b>3</b> Combat <i>or</i> Narrative → <b>4</b> TRUTH block + pinned facts → <b>5</b> Scene ×2, Chapter ×2, Arc ×1 → <b>6</b> Last turn's effects → <b>7</b> World &amp; locations &amp; travel rule → <b>8</b> Lore → <b>9</b> NPCs → <b>10</b> Quests → <b>11</b> Inventory &amp; character → <b>12</b> Fact memory &amp; RAG — top 8 facts · top 4 chunks (<a href="#s4" style="color:var(--gold-bright)">§4</a>)</div>
   </div>
 </section>
 
@@ -787,11 +788,11 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     <h2 class="sec-title"><span class="sec-mark">◆</span>The Guardian Contract</h2>
     <div class="sec-rule"></div>
   </div>
-  <p class="sec-lede">After the DM speaks, the Guardian must answer with exactly one thing: a JSON object with all 38 fields present. Never an explanation, never a missing key. Watch the extraction happen.</p>
+  <p class="sec-lede">After the DM speaks, the Guardian must answer with exactly one thing: a JSON object with all 44 fields present. Never an explanation, never a missing key. Watch the extraction happen.</p>
 
   <div class="json-box rv">
     <div class="jb-head">
-      <span class="jb-title">guardian_extract_mechanics → JSON (38-field contract)</span>
+      <span class="jb-title">guardian_extract_mechanics → JSON (44-field contract)</span>
       <button class="jb-btn" id="json-replay" onclick="replayJson()">↻ replay extraction</button>
     </div>
     <pre id="json-demo" aria-live="polite"></pre>
@@ -808,37 +809,38 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
       <p><span class="stat"><b>XP:</b></span> only kills, quests, milestones, complex puzzles — <b>never</b> walking, resting, trading or small talk. Most turns pay zero XP. Quests pay their stored reward automatically, never double-paid.</p>
       <p><span class="stat"><b>Items:</b></span> every item needs D&amp;D stats, a <b>weight</b>, and a <b>lore line</b> from the campaign's own world. The player never equips themselves — the DM decides what is worn.</p>
       <p><span class="stat"><b>NPCs:</b></span> updates are aggressive — implicit relation shifts (helping → allied, threatening → enemy), name reveals, secrets. <span class="stat"><b>Corrections:</b></span> retract anything the DM implied that shouldn't have happened.</p>
-      <p><span class="stat"><b>Enemy attacks:</b></span> the Guardian names the attacker only — <em>"the CODE rolls the dice and the damage"</em> (d20 + attack bonus vs the player's AC). The LLM is never allowed to decide whether an enemy hits.</p>
+      <p><span class="stat"><b>Enemy attacks:</b></span> the Guardian names the attacker only — the <b>server engine</b> rolls d20 + attack bonus vs your AC (cover, crit, your resistances included) and rolls the damage from the enemy's <code>damage_dice</code>. The DM narrates the attack but never its outcome; the LLM never decides whether an enemy hits.</p>
     </div>
   </div>
 
   <div class="exp rv">
     <button class="exp-toggle" id="exp-g1-toggle" onclick="toggleExp('g1')" aria-expanded="false">
-      <span class="caret">▸</span><span><span class="et-t">Contract groups at a glance</span><span class="et-d">the 38 fields, grouped by what they mutate</span></span>
+      <span class="caret">▸</span><span><span class="et-t">Contract groups at a glance</span><span class="et-d">the 44 fields, grouped by what they mutate</span></span>
     </button>
     <div class="exp-body" id="exp-g1-body"><div class="exp-inner">
       <div class="grid2">
         <div class="stat"><b class="v">Health &amp; combat</b><br>damage · healing · death · combat_start · combat_round · combat_end · player_attacks · ally_attacks · ally_damage · enemy_attacks · combat_events · initiative_entries</div>
-        <div class="stat"><b class="v">Progression</b><br>xp · level_up · spells_add · character_updates</div>
+        <div class="stat"><b class="v">Progression</b><br>xp · spells_add · character_updates — level-ups pay out automatically from the one XP table</div>
         <div class="stat"><b class="v">Possessions</b><br>items_add · items_remove · currency (pp/gp/sp/cp)</div>
         <div class="stat"><b class="v">Quests</b><br>quests_new · quests_completed · quests_failed</div>
         <div class="stat"><b class="v">People</b><br>npcs_new · npc_relations · npcs_near · npc_notes · npc_name_reveals</div>
         <div class="stat"><b class="v">World &amp; time</b><br>locations_new · current_location · world_lore · time_passed · rest · new_day · day_summary · logbook</div>
+        <div class="stat"><b class="v">Conditions &amp; resources</b><br>spell_slots_spend · inspiration_gain · inspiration_spend · exhaustion_change · cover_set · training_update · enemy_actions · status_apply</div>
         <div class="stat"><b class="v">Grants &amp; fixes</b><br>roll_grants (Bardic Inspiration → 1d6 button) · corrections (retract &amp; explain)</div>
       </div>
-      <p style="margin-top:.8rem">One field is famously dead: <span class="stat"><b>status_apply</b></span> still rides in the empty contract but is never consumed — a relic of an unwired status engine. <span class="stat"><b>enemy_actions</b></span>, by contrast, was <b>resurrected by the Battle AI</b>: when enemies are alive, the Guardian decides their moves and the <b>code rolls the dice</b> — no enemy ever hits or misses by LLM fiat. The audit that found the dead field also found (and fixed) the shape-conflict landmine where a day-entry dict could crash the logbook append inside a swallowed background task, silently eating a turn's effects.</p>
+      <p style="margin-top:.8rem">Combat never runs on LLM fiat. The live pipeline is <span class="stat"><b>enemy_attacks</b></span>: the Guardian extracts the <b>attacker's name only</b> (plus a damage type when the DM mentions the weapon) — then the code rolls d20 + attack bonus vs your AC, applies cover bonuses, disadvantage from conditions, crits on a natural 20, and rolls the damage from the enemy's <code>damage_dice</code> against your resistances. The full arithmetic lands in the combat log. Condition statuses are wired the same way: a grapple that becomes <b>restrained</b> applies real effects (disadvantage on attacks) and is ticked each round by the engine, not by prose. The legacy <span class="stat"><b>status_apply</b></span> and <span class="stat"><b>enemy_actions</b></span> fields still ride in the contract, but the deterministic combat code is what acts. The audit that shaped this page also found (and fixed) the shape-conflict landmine where a day-entry dict could crash the logbook append inside a swallowed background task, silently eating a turn's effects.</p>
     </div></div>
   </div>
 </section>
 
-<!-- ═══════════ §5 DICE ENGINE ═══════════ -->
+<!-- ═══════════ §6 DICE ENGINE ═══════════ -->
 <section class="sec rv" id="s6" data-sec="s6">
   <div class="sec-head">
     <span class="sec-num">§6</span>
     <h2 class="sec-title"><span class="sec-mark">◆</span>The Dice Engine</h2>
     <div class="sec-rule"></div>
   </div>
-  <p class="sec-lede">The single most sacred rule: <b>the LLM never rolls.</b> The DM requests, the Guardian judges, the player rolls — and the result is the only number that ever enters state. Try it below; this roller runs the same notation parser as the backend.</p>
+  <p class="sec-lede">The single most sacred rule: <b>in your fights, the model never decides the numbers.</b> The DM requests rolls, the Guardian judges them, and the engine rolls — on the server for enemy attacks and your weapon damage, through your dice button for your own checks. Try it below; this roller runs the same notation parser as the backend.</p>
 
   <div class="roller rv">
     <div class="r-label">✦ dice console — /api/dice · dice_roll(notation)</div>
@@ -861,8 +863,9 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
 
   <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
     <h3><span class="dot">✦</span> Fair in both directions</h3>
-    <p>Both directions are rolled by code, never by the model. When <b>you</b> roll, the DM's <span class="stat"><b>[KAST:]</b></span> request spawns a real dice button — the roll is resolved by <span class="stat"><b>POST /api/dice</b></span> on the server (Python <span class="stat"><b>secrets</b></span>), the result animates in the chat, and the number is sent back as the only number that enters state. When an enemy attacks, the Guardian asks the engine to roll — and the code rolls. The LLM never produces a number, and it never decides whether an enemy hits.</p>
-    <p>The algorithm is server-side Python's <span class="stat"><b>secrets</b></span> module — cryptographically secure randomness (<span class="stat"><b>secrets.randbelow(sides) + 1</b></span>), identical for player and enemy dice. Notation like <span class="stat"><b>1d20+3</b></span> is parsed and validated — <span class="stat"><b>1–100 dice, 2–1000 sides</b></span> — before anything is rolled. The demo roller above is a JavaScript copy of the same notation parser — a local preview only; every real roll goes through the server.</p>
+    <p>Your combat numbers — your attacks and every enemy attack — are rolled by code, never by the model. When <b>you</b> act, the DM's <span class="stat"><b>[KAST:]</b></span> request spawns a real dice button — the roll is resolved by <span class="stat"><b>POST /api/dice</b></span> on the server (Python <span class="stat"><b>secrets</b></span>), animates in the chat, and returns as <span class="stat"><b>[Resultat:]</b></span>. When your attack <b>hits</b>, the server engine rolls the damage from the weapon's <code>damage_dice</code> — not the DM. When an <b>enemy attacks</b>, the Guardian extracts the attacker's name only, and the engine rolls d20 + attack bonus vs your AC plus the damage dice, with crits, cover and resistances applied. The DM narrates <em>that</em> the blow comes — never the roll, never the damage number.</p>
+    <p>Outside the attack economy, a player-declared action may resolve through the DM's narration with server-applied tags — <span class="stat"><b>[SKADA:]</b></span> on living creatures applies <b>only outside combat or from the environment</b>. Every number between you and an enemy, in both directions, is engine-rolled.</p>
+    <p>The algorithm is server-side Python's <span class="stat"><b>secrets</b></span> module — cryptographically secure randomness (<span class="stat"><b>secrets.randbelow(sides) + 1</b></span>), identical for player and enemy dice. Notation like <span class="stat"><b>1d20+3</b></span> is parsed and validated — <span class="stat"><b>1–100 dice, 2–1000 sides</b></span> — before anything is rolled. The demo roller above is a JavaScript copy of the same notation parser — a local preview only. One honest caveat: if <code>/api/dice</code> cannot be reached, the client falls back to a local roll — and that fallback is <b>marked in the chat message</b>, so you always know which numbers came from the server.</p>
     <p>Because the model never sees the outcome before it is committed, the tale can lie — but the dice cannot.</p>
   </div>
 
@@ -874,16 +877,43 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     </div>
     <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
       <h3><span class="dot">✦</span> Edge rules encoded</h3>
-      <p><span class="stat"><b>Nat 20</b></span> = critical triumph · <span class="stat"><b>nat 1</b></span> = catastrophe. <span class="stat"><b>Death saves:</b></span> 3 successes vs 3 failures; nat 1 counts as two failures, nat 20 wakes the character at 1 HP. <span class="stat"><b>Healing potions</b></span> are always rolled (2d4+2) by the player — the DM may never narrate a fixed heal. <span class="stat"><b>Concentration:</b></span> hit while concentrating → CON save DC 10.</p>
+      <p><span class="stat"><b>Nat 20</b></span> = critical triumph · <span class="stat"><b>nat 1</b></span> = catastrophe. <span class="stat"><b>Death saves:</b></span> 3 successes vs 3 failures; nat 1 counts as two failures, nat 20 wakes the character at 1 HP. <span class="stat"><b>Healing potions</b></span> are always rolled (2d4+2) by the player — the DM may never narrate a fixed heal.</p>
       <p>Spell-slot dice and buffs (Bless, Guidance, Heroism) arrive through <span class="stat"><b>roll_grants</b></span> — Guardian reads the narration and creates the button automatically.</p>
     </div>
   </div>
 </section>
 
-<!-- ═══════════ §6 TTS CACHE ═══════════ -->
-<section class="sec rv" id="s7" data-sec="s7">
+<!-- ═══════════ §7 SPELL SLOTS & RESTS ═══════════ -->
+<section class="sec rv" id="s10" data-sec="s10">
   <div class="sec-head">
     <span class="sec-num">§7</span>
+    <h2 class="sec-title"><span class="sec-mark">◆</span>Spell Slots &amp; Rests</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <p class="sec-lede">Magic is a resource, and rest is how you get it back. Spell slots live on your sheet as one pool — <span class="stat"><b>spell_slots {current · max}</b></span> — and every rest rule below is applied by the engine, never by prose.</p>
+
+  <div class="grid2">
+    <div class="panel rv">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3><span class="dot">✦</span> Spell slots — level as cost</h3>
+      <p>Casters carry <b>one pool</b>, sized from the class's 5e slot table (full casters 2 → 3 → 4…, warlock pact magic 1 → 2 → 2…), granted at character creation and refilled to the new max at every level-up.</p>
+      <p>Casting a spell <b>spends its level from the pool</b>: a level-3 casting costs 3, a level-1 costs 1, cantrips are free. When the Guardian extracts a <span class="stat"><b>spell_slots_spend</b></span> entry, the <b>code</b> decrements the pool — the model names the spell and level, never the arithmetic.</p>
+      <p>Pool empty? The cast is <b>blocked — and you see it</b>: the Guardian's summary reports the blocked attempt in the chat, so a dry well is never silent. Watch your pool live on the character sheet under <span class="stat"><b>spell_slots</b></span>.</p>
+    </div>
+    <div class="panel rv">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <h3><span class="dot">✦</span> Rests — long &amp; short</h3>
+      <p><span class="stat"><b>Long rest (8 h):</b></span> HP to maximum, <b>all spell slots</b> restored, <b>half your hit dice</b> recovered (minimum one), and <b>exhaustion drops by 1</b>. The engine applies all of it — and if eight hours pass in the narration, the rest lands mechanically even if the DM forgets the tag.</p>
+      <p><span class="stat"><b>Short rest:</b></span> spend <b>one hit die</b> — the <b>server dice</b> roll it (1d6–1d12 by class) plus your CON modifier, and the heal is applied to your HP. The Guardian's summary shows the roll and how many dice remain.</p>
+      <p>Exhaustion follows the 5e ladder (level 1: disadvantage on ability checks … level 6: death) — and only rest, not narration, moves it.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ §8 TTS CACHE ═══════════ -->
+<section class="sec rv" id="s7" data-sec="s7">
+  <div class="sec-head">
+    <span class="sec-num">§8</span>
     <h2 class="sec-title"><span class="sec-mark">◆</span>Voice &amp; the TTS Cache</h2>
     <div class="sec-rule"></div>
   </div>
@@ -948,10 +978,10 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
   </div>
 </section>
 
-<!-- ═══════════ §7 CHARACTER WEAVING ═══════════ -->
+<!-- ═══════════ §9 CHARACTER WEAVING ═══════════ -->
 <section class="sec rv" id="s8" data-sec="s8">
   <div class="sec-head">
-    <span class="sec-num">§8</span>
+    <span class="sec-num">§9</span>
     <h2 class="sec-title"><span class="sec-mark">◆</span>Character Weaving</h2>
     <div class="sec-rule"></div>
   </div>
@@ -1015,10 +1045,10 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
   </div>
 </section>
 
-<!-- ═══════════ §8 STATE MODEL ═══════════ -->
+<!-- ═══════════ §10 STATE MODEL ═══════════ -->
 <section class="sec rv" id="s9" data-sec="s9">
   <div class="sec-head">
-    <span class="sec-num">§9</span>
+    <span class="sec-num">§10</span>
     <h2 class="sec-title"><span class="sec-mark">◆</span>The State Model</h2>
     <div class="sec-rule"></div>
   </div>
@@ -1099,7 +1129,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
 
 <footer>
   <div class="f-title">✦ the lore weaver's cauldron — engine mechanics ✦</div>
-  <p>Compiled from the engine itself: backend/main.py · backend/guardian.py · backend/extraction.py (FactRegister) · backend/models.py · DM prompt v27 · Guardian 38-field contract<br>
+  <p>Compiled from the engine itself: backend/main.py · backend/guardian.py · backend/extraction.py (FactRegister) · backend/models.py · DM prompt v28 · Guardian 44-field contract<br>
   dnd.rostad.cc — The Lore Weaver's Cauldron</p>
 </footer>
 
@@ -1115,8 +1145,8 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
 /* ── Boot sequence ─────────────────────────────────────────── */
 var bootLines = [
   ["THE LORE WEAVER'S CAULDRON — ENGINE DIAGNOSTIC", "b-gold"],
-  ["> mounting DM_CORE_PROMPT .......... ", "b-dim"], ["OK (v27)", "b-ok"],
-  ["> mounting GUARDIAN_POST_SYSTEM .... ", "b-dim"], ["OK (38-field contract)", "b-ok"],
+  ["> mounting DM_CORE_PROMPT .......... ", "b-dim"], ["OK (v28)", "b-ok"],
+  ["> mounting GUARDIAN_POST_SYSTEM .... ", "b-dim"], ["OK (44-field contract)", "b-ok"],
   ["> truth_block ...................... ", "b-dim"], ["OK (authoritative)", "b-ok"],
   ["> dice_roll(notation) .............. ", "b-dim"], ["OK (player rolls)", "b-ok"],
   ["> priming TTS cache ................ ", "b-dim"], ["OK (64 slots / 600s TTL)", "b-ok"],

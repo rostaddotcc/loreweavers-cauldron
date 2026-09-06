@@ -273,7 +273,7 @@ def _format_char_context(state: dict, language: str = "sv") -> str:
     )
     prof = ch.get("proficiency", 2)
     level = ch.get("level", 1)
-    hp = ch.get("hp", {})
+    hp = ch.get("hp") or {}
     cls = ch.get("class", "Unknown" if language == "en" else "Okänd")
 
     if language == "en":
@@ -688,7 +688,7 @@ _LANG_INSTRUCTION_EN = "\n\n[IMPORTANT: Write all user-facing text (logbook, npc
 def _format_state_for_guardian(state: dict, language: str = "sv") -> str:
     """Build compact state summary for Guardian post-DM (language-aware)."""
     ch = state.get("character", {})
-    hp = ch.get("hp", {})
+    hp = ch.get("hp") or {}
     xp = ch.get("xp", {})
     inv = state.get("inventory", [])
     cur = state.get("currency", {})
@@ -801,7 +801,7 @@ def _format_state_for_guardian(state: dict, language: str = "sv") -> str:
             parts.append(f"⚔ STRID: Runda {combat.get('round', 1)}")
         # Spelaren FÖRST — Guardian måste se sin egen HP/AC/status
         ch = state.get("character", {})
-        hp = ch.get("hp", {})
+        hp = ch.get("hp") or {}
         p_status = ch.get("statuses", [])
         p_status_str = f" [{', '.join(s.get('name', str(s)) for s in p_status)}]" if p_status else ""
         if language == "en":
@@ -1182,7 +1182,7 @@ _EXHAUSTION_PENALTIES = {
 
 def _apply_exhaustion_effects(ch: dict, level: int, effects: list) -> None:
     """5e exhaustion L4+: halvera hp.max (spara max_full), återställ vid <L4."""
-    hp = ch.setdefault("hp", {"current": 1, "max": 1, "temp": 0})
+    hp = _ensure_hp(ch)
     if level >= 4:
         if not hp.get("max_full"):
             hp["max_full"] = int(hp.get("max", 1) or 1)
@@ -1223,7 +1223,7 @@ def _apply_level_up_bonuses(ch: dict, effects: list) -> None:
     hit dice total = level, klassfeatures. Delas av XP- och quest-patharna.
     (fix 2026-08-10: spell slots + hit dice uppdaterades aldrig vid level-up.)"""
     # Max HP ökar — HD-baserat (medelvärde per nivå = hd//2 + CON-mod)
-    hp = ch.setdefault("hp", {"current": 1, "max": 1, "temp": 0})
+    hp = _ensure_hp(ch)
     con_mod = ch.get("abilities", {}).get("CON", {}).get("mod", 0)
     _cls = str(ch.get("class", "")).lower()
     _hd = _HD_BY_CLASS.get(_cls, 8)
@@ -1556,7 +1556,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 except (TypeError, ValueError):
                     pass
         if _refund > 0:
-            _hp = ch.setdefault("hp", {"current": 1, "max": 1, "temp": 0})
+            _hp = _ensure_hp(ch)
             _hp["current"] = min(_hp.get("max", 1), _hp.get("current", 1) + _refund)
             logger.warning(
                 "🛡️ Code-rolled enemy attacks → refunding %d [SKADA:]-tag damage (code rolls are authoritative)",
@@ -1574,14 +1574,14 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
     _attacked_enemies = {
         str(a.get("target", "")).strip().lower()
         for a in list(mech.get("player_attacks", []) or []) + list(mech.get("ally_attacks", []) or [])
-        if isinstance(a, dict) and a.get("hit") and int(a.get("damage", 0) or 0) > 0
+        if isinstance(a, dict) and a.get("hit") and _safe_int(a.get("damage"), 0) > 0
     }
 
     # ── Skada ──
     from combat import damage_multiplier
     for dmg in mech.get("damage", []):
         target = dmg.get("target", "player")
-        amount = max(0, int(dmg.get("amount", 0)))
+        amount = max(0, _safe_int(dmg.get("amount"), 0))
         if amount <= 0:
             continue
         # 5e resistans/sårbarhet/immunitet (P2): applicera på rätt entity.
@@ -1626,7 +1626,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
         if ("skada", str(dmg.get("amount", 0))) in _skip_keys:
             continue
         if target == "player":
-            hp = ch.setdefault("hp", {"current": 1, "max": 1, "temp": 0})
+            hp = _ensure_hp(ch)
             # Temp HP absorberar först
             temp = hp.get("temp", 0)
             if temp > 0:
@@ -1666,7 +1666,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
     # ── Läkning ──
     for heal in mech.get("healing", []):
         target = heal.get("target", "player")
-        amount = max(0, int(heal.get("amount", 0)))
+        amount = max(0, _safe_int(heal.get("amount"), 0))
         heal_type = str(heal.get("type", "")).lower()
         # LÄKEDRYCK-säkerhetsnät: om Guardian satte ett fast belopp för en
         # läkedryck/potion, konvertera till roll_grant (2d4+2) istället.
@@ -1688,7 +1688,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
         if ("hela", str(heal.get("amount", 0))) in _skip_keys:
             continue
         if target == "player":
-            hp = ch.setdefault("hp", {"current": 1, "max": 1, "temp": 0})
+            hp = _ensure_hp(ch)
             hp["current"] = min(hp.get("max", 1), hp.get("current", 0) + amount)
             effects.append({"type": "hela", "value": amount})
             logger.info("🛡️ Guardian: %d healing → HP %d/%d", amount, hp["current"], hp["max"])
@@ -1731,21 +1731,19 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             logger.info("🏁 Combat over — all enemies defeated")
 
     # ── XP ──
-    xp_gain = max(0, int(mech.get("xp", 0)))
+    xp_gain = max(0, _safe_int(mech.get("xp"), 0))
     if xp_gain > 0:
         # P0-dedup: [XP:]-taggen applicerade redan samma XP
         if ("xp", str(mech.get("xp", 0))) not in _skip_keys:
-            xp = ch.setdefault("xp", {"current": 0, "next_level": 900})
-            xp["current"] = xp.get("current", 0) + xp_gain
+            xp = _ensure_xp(ch)
+            xp["current"] = _safe_int(xp.get("current"), 0) + xp_gain
             effects.append({"type": "xp", "value": xp_gain})
             logger.info("🛡️ Guardian: +%d XP → %d", xp_gain, xp["current"])
 
-            # Level-up check
-            level = ch.get("level", 1)
-            if level < len(_XP_THRESHOLDS) and xp["current"] >= _XP_THRESHOLDS[level]:
-                ch["level"] = level + 1
-                xp["next_level"] = _XP_THRESHOLDS[level + 1] if level + 1 < len(_XP_THRESHOLDS) else None
-                _apply_level_up_bonuses(ch, effects)
+    # Level-up check (audit 2026-09-06 §5): körs ALLTID — även när xp_gain == 0
+    # (XP kan ha kommit via [XP:]-taggen eller quest-reward-vägen, eller så sitter
+    # karaktären redan över tröskeln). WHILE-loop → multi-level per tur möjligt.
+    _check_level_ups(ch, effects)
 
     # ── Föremål ──
     inv = state.setdefault("inventory", [])
@@ -1813,20 +1811,20 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             continue  # redan känd — dedup
         spells.append({
             "name": sname,
-            "level": int(sp.get("level", 0) or 0),
+            "level": _safe_int(sp.get("level"), 0),
             "school": str(sp.get("school", "")).strip()[:40] or "Okänd",
             "casting_time": str(sp.get("casting_time", "")).strip()[:40] or "",
             "damage_dice": str(sp.get("damage_dice", "")).strip()[:40] or None,
             "description": str(sp.get("description", "")).strip()[:300] or "",
         })
-        effects.append({"type": "spell_add", "value": sname, "level": int(sp.get("level", 0) or 0)})
+        effects.append({"type": "spell_add", "value": sname, "level": _safe_int(sp.get("level"), 0)})
         logger.info("✨ Guardian: spell added '%s' (lvl %s)", sname, sp.get("level", 0))
 
     for item in mech.get("items_remove", []):
         # Robust mot både dict- och sträng-form (samma klass av bugg som death)
         if isinstance(item, dict):
             name = str(item.get("name", "")).strip()
-            qty = max(1, int(item.get("qty", 1)))
+            qty = max(1, _safe_int(item.get("qty"), 1))
         elif isinstance(item, str):
             name = item.strip()
             qty = 1
@@ -1859,7 +1857,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
     cur = state.setdefault("currency", {"pp": 0, "gp": 0, "sp": 0, "cp": 0})
     for c in mech.get("currency", []):
         denom = c.get("denom", "gp").lower()
-        amount = int(c.get("amount", 0))
+        amount = _safe_int(c.get("amount"), 0)
         if denom in cur:
             # P0-dedup: [GULD:]-taggen applicerade redan samma ändring
             if ("guld", str(c.get("amount", 0))) in _skip_keys:
@@ -1934,8 +1932,8 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 "name": name,
                 "description": str(q.get("description", "")),
                 "reward": str(q.get("reward", "")),
-                "xp_reward": int(q.get("xp_reward", 100)),  # Default 100 XP
-                "gold_reward": int(q.get("gold_reward", 0)),
+                "xp_reward": _safe_int(q.get("xp_reward"), 100),  # Default 100 XP
+                "gold_reward": _safe_int(q.get("gold_reward"), 0),
                 "status": "aktiv",
                 "created_turn": state.get("meta", {}).get("turn_count", 0),
             })
@@ -1955,20 +1953,15 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             # ── Automatisk reward-utbetalning ──
             # XP-reward: hoppa över om LLM redan skickade samma XP via xp-fältet
             # (xp-sektionen ovan har redan applicerat det) eller om DM-tagg dedup
-            xp_r = int(q.get("xp_reward", 0) or 0)
-            llm_xp = int(mech.get("xp", 0) or 0)
+            xp_r = _safe_int(q.get("xp_reward"), 0)
+            llm_xp = _safe_int(mech.get("xp"), 0)
             if xp_r > 0 and ("xp", str(xp_r)) not in _skip_keys and llm_xp != xp_r:
-                xp = ch.setdefault("xp", {"current": 0, "next_level": 900})
-                xp["current"] = xp.get("current", 0) + xp_r
+                xp = _ensure_xp(ch)
+                xp["current"] = _safe_int(xp.get("current"), 0) + xp_r
                 effects.append({"type": "xp", "value": xp_r, "source": "quest"})
                 logger.info("🛡️ Guardian: +%d XP (quest-reward '%s') → %d", xp_r, q["name"], xp["current"])
-                # Level-up check (samma logik som xp-sektionen)
-                level = ch.get("level", 1)
-                if level < len(_XP_THRESHOLDS) and xp["current"] >= _XP_THRESHOLDS[level]:
-                    ch["level"] = level + 1
-                    xp["next_level"] = _XP_THRESHOLDS[level + 1] if level + 1 < len(_XP_THRESHOLDS) else None
-                    _apply_level_up_bonuses(ch, effects)
-                    logger.info("🛡️ Guardian: LEVEL UP (quest) → level %d!", ch["level"])
+                # Level-up check: WHILE-motor (multi-level), delad med xp-sektionen
+                _check_level_ups(ch, effects)
 
             # Guld-reward
             gold_r = int(q.get("gold_reward", 0) or 0)
@@ -2193,7 +2186,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
     # ── Tid ──
     tp = mech.get("time_passed")
     if tp and isinstance(tp, dict):
-        hours = int(tp.get("hours", 0))
+        hours = _safe_int(tp.get("hours"), 0)
         desc = tp.get("description", "")
         if hours > 0:
             world["time"] = desc or world.get("time", "")
@@ -2221,7 +2214,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                             tp_hours, tp_fb.get("description", ""))
     if rest and isinstance(rest, dict):
         kind = rest.get("kind", "short")
-        hp = ch.setdefault("hp", {"current": 1, "max": 1, "temp": 0})
+        hp = _ensure_hp(ch)
         hd = _ensure_hit_dice(ch)
         if kind == "long":
             hp["current"] = hp.get("max", 1)
@@ -2392,7 +2385,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             if not enemy:
                 continue
             if atk.get("hit"):
-                dmg = max(0, int(atk.get("damage", 0)))
+                dmg = max(0, _safe_int(atk.get("damage"), 0))
                 if dmg > 0:
                     enemy["hp"] = max(0, enemy.get("hp", 0) - dmg)
                     crit_str = " 💥 KRITISK!" if atk.get("crit") else ""
@@ -2418,7 +2411,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             if not enemy:
                 continue
             if atk.get("hit"):
-                dmg = max(0, int(atk.get("damage", 0)))
+                dmg = max(0, _safe_int(atk.get("damage"), 0))
                 if dmg > 0:
                     enemy["hp"] = max(0, enemy.get("hp", 0) - dmg)
                     crit_str = " 💥 KRITISK!" if atk.get("crit") else ""
@@ -2443,7 +2436,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             ally = next((a for a in combat.get("allies", []) if a.get("name", "").lower() == ally_name.lower() and a.get("alive", True)), None)
             if not ally:
                 continue
-            amount = max(0, int(atk.get("amount", 0)))
+            amount = max(0, _safe_int(atk.get("amount"), 0))
             if amount <= 0:
                 continue
             ally["hp"] = max(0, ally.get("hp", 0) - amount)
@@ -2460,8 +2453,8 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
         # Fiendernas attacker → KODEN rullar tärningarna (transparens — inte DM-fusk)
         # Guardian extraherar bara attackeraren; d20 + attack_bonus mot spelarens
         # AC och skade-tärningarna rullas här, precis som spelarens egna kast.
-        hp = ch.setdefault("hp", {"current": 1, "max": 1, "temp": 0})
-        player_ac = int(ch.get("ac", 10))
+        hp = _ensure_hp(ch)
+        player_ac = _safe_int(ch.get("ac"), 10)
         for atk in mech.get("enemy_attacks", []):
             attacker_name = str(atk.get("attacker", "")).strip()
             if not attacker_name:
@@ -2488,7 +2481,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 # (blind/prone/frighten/stun/restrain) → 2d20, ta SÄMST.
                 if has_disadvantage(enemy):
                     d20 = min(d20, roll_d20())
-                attack_bonus = int(enemy.get("attack_bonus", 3))
+                attack_bonus = _safe_int(enemy.get("attack_bonus"), 3)
                 total = d20 + attack_bonus
                 crit = d20 == 20
                 fumble = d20 == 1
@@ -2544,7 +2537,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 # Fienden finns inte i combat-listan (t.ex. narrativ attack utanför strid) —
                 # fallback till DM:s angivna utfall (gamla beteendet)
                 if atk.get("hit"):
-                    dmg = max(0, int(atk.get("damage", 0)))
+                    dmg = max(0, _safe_int(atk.get("damage"), 0))
                     if dmg > 0:
                         if ("skada", str(dmg)) in _skip_keys:
                             continue
@@ -2603,7 +2596,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             # nuvarande HP — så nästa turs Guardian kan jämföra och justera
             # HP/status på samtliga (krav: battle logg listar alla).
             snapshot_parts = []
-            ph = ch.get("hp", {})
+            ph = ch.get("hp") or {}
             snapshot_parts.append(f"{ch.get('name', 'Spelaren')} {ph.get('current', '?')}/{ph.get('max', '?')} HP")
             for e in combat.get("enemies", []):
                 alive_mark = "" if e.get("alive", True) else " (dead)"
@@ -2704,7 +2697,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             logger.info("🥀 Exhaustion %d → %d (%+d)", old_exh, new_exh, _exh_change)
             _apply_exhaustion_effects(ch, new_exh, effects)
             if new_exh >= 6:
-                hp = ch.setdefault("hp", {"current": 0, "max": 1, "temp": 0})
+                hp = _ensure_hp(ch)
                 hp["current"] = 0
                 effects.append({"type": "death", "value": "exhaustion"})
                 logger.warning("💀 Character died of exhaustion (level 6)")
@@ -2830,6 +2823,94 @@ def _safe_int(value, default: int = 0) -> int:
         return default
 
 
+def _ensure_hp(ch: dict) -> dict:
+    """hp-dict som aldrig är None (audit 2026-09-06 bug 7: `hp: null` i state
+    → ch.setdefault ersätter inte null → AttributeError kraschar hela turen)."""
+    hp = ch.get("hp")
+    if not isinstance(hp, dict):
+        hp = {"current": 1, "max": 1, "temp": 0}
+        ch["hp"] = hp
+    hp.setdefault("current", 1)
+    hp.setdefault("max", 1)
+    hp.setdefault("temp", 0)
+    return hp
+
+
+def _ensure_xp(ch: dict) -> dict:
+    """xp-dict som aldrig är None; next_level från _XP_THRESHOLDS (inte 900)."""
+    xp = ch.get("xp")
+    if not isinstance(xp, dict):
+        xp = {}
+        ch["xp"] = xp
+    xp.setdefault("current", 0)
+    if not xp.get("next_level"):
+        level = _safe_int(ch.get("level"), 1)
+        xp["next_level"] = _XP_THRESHOLDS[level] if level < len(_XP_THRESHOLDS) else None
+    return xp
+
+
+def _check_level_ups(ch: dict, effects: list) -> int:
+    """Level-up-motor (audit 2026-09-06 §5, konsoliderad): WHILE-loop →
+    multi-level per tur; next_level alltid från _XP_THRESHOLDS. Anropas
+    ovillkorligt (även xp_gain == 0) så att en karaktär som passerat
+    tröskeln via tagg-/quest-vägen aldrig sitter fast. Returnerar antalet
+    level-ups. _apply_level_up_bonuses är oförändrad (main.py importerar den)."""
+    xp = _ensure_xp(ch)
+    gained = 0
+    while True:
+        level = _safe_int(ch.get("level"), 1)
+        if level >= len(_XP_THRESHOLDS):
+            xp["next_level"] = None
+            break
+        if _safe_int(xp.get("current"), 0) < _XP_THRESHOLDS[level]:
+            xp["next_level"] = _XP_THRESHOLDS[level]
+            break
+        ch["level"] = level + 1
+        xp["next_level"] = _XP_THRESHOLDS[level + 1] if level + 1 < len(_XP_THRESHOLDS) else None
+        _apply_level_up_bonuses(ch, effects)
+        gained += 1
+        logger.info("🛡️ Guardian: LEVEL UP → level %d!", ch["level"])
+    return gained
+
+
+def _repair_truncated_json(text: str) -> str | None:
+    """Reparera kapad JSON från reasoning-modeller (portad från main.py,
+    audit 2026-09-06 §4 — fanns bara i manuella /guardian-vägen förut).
+
+    Stänger oavslutade citat och lägger till saknade } ] så att fälten
+    (items_add, spells_add …) ändå appliceras. Returnerar reparerad text,
+    eller None om reparationen inte hjälper.
+    """
+    s = text.strip()
+    if not s:
+        return None
+    # Redan giltig — returnera som den är
+    try:
+        json.loads(s)
+        return s
+    except json.JSONDecodeError:
+        pass
+    # Om udda antal oescapede citattecken → oavslutad sträng: stäng den
+    quote_count = len(re.findall(r'(?<!\\)"', s))
+    if quote_count % 2 == 1:
+        s += '"'
+    # Balansera { [ mot } ] — stäng i omvänd ordning
+    stack = []
+    for _c in s:
+        if _c in "{[":
+            stack.append(_c)
+        elif _c in "}]":
+            if stack:
+                stack.pop()
+    for _c in reversed(stack):
+        s += "]" if _c == "[" else "}"
+    try:
+        json.loads(s)
+        return s
+    except json.JSONDecodeError:
+        return None
+
+
 def _parse_json(raw: str) -> dict | None:
     """Parsa JSON-objekt ur LLM-svar. Hanterar markdown och text runt JSON."""
     # Strip markdown code fences
@@ -2854,6 +2935,20 @@ def _parse_json(raw: str) -> dict | None:
                 return data
         except json.JSONDecodeError:
             pass
+
+    # Trunkerings-reparation (audit 2026-09-06 §4): reasoning-modeller med låg
+    # max_tokens kapar mitt i en sträng → stäng citat/klammer så att mekaniken
+    # inte tappas tyst. Fanns tidigare BARA i manuella /guardian-vägen (main.py)
+    # — samma logik nu i live post-DM-vägen (_parse_json).
+    if start != -1:
+        repaired = _repair_truncated_json(cleaned[start:])
+        if repaired is not None:
+            try:
+                data = json.loads(repaired)
+                if isinstance(data, dict):
+                    return data
+            except json.JSONDecodeError:
+                pass
 
     return None
 
@@ -2928,305 +3023,6 @@ def _sanitize_mechanics(mech: dict) -> dict:
 
 
 # ═══════════════════════════════════════
-# 5. BATTLE AI — Fiendernas stridshjärna
-# ═══════════════════════════════════════
-
-BATTLE_AI_SYSTEM = """\
-Du är Battle AI — fiendernas stridshjärna i ett D&D 5e-rollspel.
-Du bestämmer vad varje fiende gör under sin tur baserat på situationen.
-
-## Regler
-1. Varje fiende får: 1 action + 1 bonus action (valfritt) + rörelse.
-2. Fiender prioriterar: attackera spelaren > använda förmåga > röra sig.
-3. Låga HP (<30%) → fienden kan försöka fly eller använda desperat förmåga.
-4. Flera fiender samordnar: om en kan ge fördel åt en annan, gör det.
-5. Bossar (HP > 20) kan ha multiattack (2 attacker).
-6. Returnera ENDAST JSON.
-
-## Format
-{
-  "actions": [
-    {
-      "enemy": "fiendens namn",
-      "type": "attack" | "spell" | "flee" | "ability" | "move",
-      "target": "player" | "fiendens namn" | null,
-      "attack_bonus": N,
-      "damage_dice": "1d6+2",
-      "description": "kort beskrivning av handlingen"
-    }
-  ]
-}
-
-## Exempel
-Fiender: Goblin A (5/7 HP), Goblin B (7/7 HP). Spelaren: 12/20 HP, AC 13.
-→ {"actions": [
-  {"enemy": "Goblin A", "type": "attack", "target": "player", "attack_bonus": 4, "damage_dice": "1d6+2", "description": "Hugger med sin dolk"},
-  {"enemy": "Goblin B", "type": "attack", "target": "player", "attack_bonus": 4, "damage_dice": "1d6+2", "description": "Skjuter med sin kortbåge"}
-]}
-"""
-
-BATTLE_AI_SYSTEM_EN = """\
-You are Battle AI — the enemy combat brain in a D&D 5e RPG.
-You decide what each enemy does on their turn based on the situation.
-
-## Rules
-1. Each enemy gets: 1 action + 1 bonus action (optional) + movement.
-2. Enemies prioritize: attack player > use ability > move.
-3. Low HP (<30%) → enemy may flee or use desperate ability.
-4. Multiple enemies coordinate: if one can give advantage to another, do it.
-5. Bosses (HP > 20) may have multiattack (2 attacks).
-6. Return ONLY JSON.
-
-## Format
-{
-  "actions": [
-    {
-      "enemy": "enemy name",
-      "type": "attack" | "spell" | "flee" | "ability" | "move",
-      "target": "player" | "enemy name" | null,
-      "attack_bonus": N,
-      "damage_dice": "1d6+2",
-      "description": "short description of the action"
-    }
-  ]
-}
-"""
-
-
-async def battle_ai_decide(
-    state: dict,
-    model_call_fn: ModelCallFn,
-    language: str = "sv",
-) -> list[dict]:
-    """Battle AI: Bestäm alla fienders handlingar för denna runda.
-
-    Returnerar lista av action-dicts:
-    [{"enemy": "Goblin", "type": "attack", "target": "player",
-      "attack_bonus": 4, "damage_dice": "1d6+2", "description": "..."}]
-    """
-    combat = state.get("world", {}).get("combat")
-    if not combat or not combat.get("active"):
-        return []
-
-    char = state.get("character", {})
-    hp = char.get("hp", {})
-    player_ac = char.get("ac", 10)
-    player_name = char.get("name", "Spelaren")
-
-    enemies = [e for e in combat.get("enemies", []) if e.get("alive", True)]
-    if not enemies:
-        return []
-
-    # Bygg kontext
-    enemy_lines = []
-    for e in enemies:
-        status_str = ""
-        if e.get("statuses"):
-            status_str = " [" + ", ".join(s["name"] for s in e["statuses"]) + "]"
-        enemy_lines.append(
-            f"- {e['name']}: {e['hp']}/{e['max_hp']} HP, AC {e['ac']}, "
-            f"attack +{e.get('attack_bonus', 3)}, damage {e.get('damage_dice', '1d6+1')}{status_str}"
-        )
-
-    if language == "en":
-        system = BATTLE_AI_SYSTEM_EN
-        user_msg = (
-            f"## Player\n{player_name}: {hp.get('current', '?')}/{hp.get('max', '?')} HP, AC {player_ac}\n\n"
-            f"## Enemies\n" + "\n".join(enemy_lines) + "\n\n"
-            f"## Round {combat.get('round', 1)}\n"
-            "Decide what each enemy does this round:"
-        )
-    else:
-        system = BATTLE_AI_SYSTEM
-        user_msg = (
-            f"## Spelaren\n{player_name}: {hp.get('current', '?')}/{hp.get('max', '?')} HP, AC {player_ac}\n\n"
-            f"## Fiender\n" + "\n".join(enemy_lines) + "\n\n"
-            f"## Runda {combat.get('round', 1)}\n"
-            "Bestäm vad varje fiende gör denna runda:"
-        )
-
-    messages = [
-        {"role": "system", "content": system},
-        {"role": "user", "content": user_msg},
-    ]
-
-    try:
-        raw = await model_call_fn(messages)
-    except Exception as e:
-        logger.warning("⚔️ Battle AI failed: %s", e)
-        return _fallback_enemy_actions(enemies)
-
-    result = _parse_json(raw)
-    if not result or not isinstance(result.get("actions"), list):
-        logger.warning("⚔️ Battle AI: invalid JSON → fallback")
-        return _fallback_enemy_actions(enemies)
-
-    actions = result["actions"]
-    # Validera: bara levande fiender
-    alive_names = {e["name"].lower() for e in enemies}
-    valid = [a for a in actions if isinstance(a, dict) and a.get("enemy", "").lower() in alive_names]
-
-    if not valid:
-        return _fallback_enemy_actions(enemies)
-
-    logger.info("⚔️ Battle AI: %d enemy actions", len(valid))
-    return valid
-
-
-def _fallback_enemy_actions(enemies: list[dict]) -> list[dict]:
-    """Fallback om Battle AI misslyckas: alla fiender attackerar."""
-    return [
-        {
-            "enemy": e["name"],
-            "type": "attack",
-            "target": "player",
-            "attack_bonus": e.get("attack_bonus", 3),
-            "damage_dice": e.get("damage_dice", "1d6+1"),
-            "description": "Attackerar spelaren",
-        }
-        for e in enemies if e.get("alive", True)
-    ]
-
-
-def apply_enemy_actions(state: dict, actions: list[dict]) -> list[dict]:
-    """Applicera Battle AI:s fiendeaktioner på state.
-
-    Varje action: {"enemy": str, "type": str, "target": str,
-                   "attack_bonus": int, "damage_dice": str, "description": str}
-
-    Returnerar effects-lista för frontend.
-    """
-    from combat import roll_dice, roll_d20, has_disadvantage, damage_multiplier
-
-    combat = state.get("world", {}).get("combat")
-    if not combat or not combat.get("active"):
-        return []
-
-    char = state.get("character", {})
-    player_ac = int(char.get("ac", 10))
-    player_name = char.get("name", "Spelaren")
-    # Cover (5e, P2): combat.player_cover → AC-bonus
-    _player_cover = combat.get("player_cover")
-    cover_bonus = 2 if _player_cover == "half" else 5 if _player_cover == "three_quarters" else 0
-    effects: list[dict] = []
-
-    for action in actions:
-        enemy_name = action.get("enemy", "")
-        action_type = action.get("type", "attack")
-        enemy = next(
-            (e for e in combat.get("enemies", [])
-             if e.get("name", "").lower() == enemy_name.lower() and e.get("alive", True)),
-            None,
-        )
-        if not enemy:
-            continue
-
-        if action_type == "flee":
-            enemy["alive"] = False  # flyr = lämnar striden
-            combat.setdefault("log", []).append({
-                "round": combat.get("round", 1), "actor": "enemy",
-                "name": enemy["name"], "text": "flyr från striden",
-            })
-            effects.append({"type": "enemy_fled", "value": enemy["name"]})
-            logger.info("🏃 %s flees from combat", enemy["name"])
-            continue
-
-        if action_type in ("attack", "spell", "ability"):
-            # Full cover → kan inte träffas
-            if _player_cover == "full":
-                combat.setdefault("log", []).append({
-                    "round": combat.get("round", 1), "actor": "enemy",
-                    "name": enemy["name"], "text": "cannot hit — player behind full cover",
-                })
-                effects.append({"type": "enemy_miss", "value": enemy["name"], "roll": 0, "d20": 0, "bonus": 0, "reason": "full_cover"})
-                continue
-            # Rulla attack mot spelarens AC
-            d20 = roll_d20()
-            disadv = has_disadvantage(enemy)
-            if disadv:
-                d20 = min(d20, roll_d20())
-
-            attack_bonus = int(action.get("attack_bonus", enemy.get("attack_bonus", 3)))
-            total = d20 + attack_bonus
-            hit = total >= player_ac + cover_bonus or d20 == 20
-            crit = d20 == 20
-            fumble = d20 == 1
-
-            if fumble:
-                combat.setdefault("log", []).append({
-                    "round": combat.get("round", 1), "actor": "enemy",
-                    "name": enemy["name"],
-                    "text": f"misses {player_name} (natural 1!)",
-                })
-                effects.append({"type": "enemy_miss", "value": enemy["name"], "roll": total, "d20": d20, "bonus": attack_bonus})
-            elif hit:
-                dmg_notation = action.get("damage_dice", enemy.get("damage_dice", "1d6+1"))
-                dmg, rolls = roll_dice(dmg_notation)
-                if crit:
-                    dmg2, rolls2 = roll_dice(dmg_notation)
-                    dmg += dmg2
-                    rolls += rolls2
-                dmg = max(1, dmg)
-
-                hp = char.setdefault("hp", {"current": 1, "max": 1, "temp": 0})
-                temp = hp.get("temp", 0)
-                if temp > 0:
-                    absorbed = min(temp, dmg)
-                    hp["temp"] = temp - absorbed
-                    dmg -= absorbed
-                hp["current"] = max(0, hp.get("current", 1) - dmg)
-
-                desc = action.get("description", "")
-                log_text = f"hits {player_name} — {dmg} damage"
-                if crit:
-                    log_text += " (CRITICAL!)"
-                if desc:
-                    log_text += f" ({desc})"
-                log_text += f" → **{player_name} {hp['current']}/{hp['max']} HP**"
-                combat.setdefault("log", []).append({
-                    "round": combat.get("round", 1), "actor": "enemy",
-                    "name": enemy["name"], "text": log_text,
-                })
-                effects.append({
-                    "type": "enemy_hit", "value": enemy["name"],
-                    "damage": dmg, "crit": crit, "roll": total,
-                    "d20": d20, "bonus": attack_bonus,
-                    "damage_dice": dmg_notation, "damage_rolls": rolls,
-                })
-                logger.info("⚔️ %s → %s: %d damage (AC %d)", enemy["name"], player_name, dmg, player_ac)
-            else:
-                combat.setdefault("log", []).append({
-                    "round": combat.get("round", 1), "actor": "enemy",
-                    "name": enemy["name"],
-                    "text": f"misses {player_name} (roll {total} vs AC {player_ac})",
-                })
-                effects.append({"type": "enemy_miss", "value": enemy["name"], "roll": total, "d20": d20, "bonus": attack_bonus})
-
-    # Auto-avsluta om alla fiender döda/flydde
-    if all(not e.get("alive", True) for e in combat.get("enemies", [])):
-        from combat import end_combat
-        end_combat(state, "all enemies defeated or fled")
-        effects.append({"type": "combat_end", "value": "all defeated"})
-    else:
-        # State-snapshot efter Battle AI-turen: ALLA deltagare inkl. spelaren
-        # med nuvarande HP — så nästa tur kan Guardian jämföra och justera
-        # HP/status på samtliga (krav: battle logg listar alla).
-        snapshot_parts = []
-        ph = char.get("hp", {})
-        snapshot_parts.append(f"{player_name} {ph.get('current', '?')}/{ph.get('max', '?')} HP")
-        for e in combat.get("enemies", []):
-            alive_mark = "" if e.get("alive", True) else " (dead)"
-            snapshot_parts.append(f"{e.get('name', '?')} {e.get('hp', '?')}/{e.get('max_hp', '?')} HP{alive_mark}")
-        combat.setdefault("log", []).append({
-            "round": combat.get("round", 1), "actor": "system", "name": "",
-            "text": "After the turn: " + ", ".join(snapshot_parts),
-            "snapshot": True,
-        })
-
-    return effects
-
-
-# ═══════════════════════════════════════
 # 4. FORMATERING — läsbar Guardian-rapport
 # ═══════════════════════════════════════
 
@@ -3246,7 +3042,7 @@ def format_guardian_summary(
     en = language == "en"
     lines: list[str] = []
     ch = state.get("character", {})
-    hp = ch.get("hp", {})
+    hp = ch.get("hp") or {}
     mech = mech or {}
 
     # ── DM-taggar: NPCs som DM introducerade direkt ──
@@ -3457,6 +3253,82 @@ def format_guardian_summary(
         elif t == "korrigering":
             label = "Correction:" if en else "Korrigering:"
             lines.append(f"🔧 **{label}** {v}")
+        elif t == "spell_slots_spend":
+            sname = e.get("name", "?")
+            slvl = e.get("level", "?")
+            rem = e.get("remaining", "?")
+            smax = (ch.get("spell_slots") or {}).get("max", "?")
+            if en:
+                lines.append(f"🪄 **{sname}** (level {slvl}) cast — spell slots {rem}/{smax} left")
+            else:
+                lines.append(f"🪄 **{sname}** (nivå {slvl}) kastad — spell slots {rem}/{smax} kvar")
+        elif t == "spell_slots_blocked":
+            sname = e.get("name", "?")
+            slvl = e.get("level", "?")
+            ss = ch.get("spell_slots") or {}
+            if en:
+                lines.append(f"⛔ **{sname}** (level {slvl}) — not enough spell slots ({ss.get('current', 0)}/{ss.get('max', 0)})")
+            else:
+                lines.append(f"⛔ **{sname}** (nivå {slvl}) — otillräckliga spell slots ({ss.get('current', 0)}/{ss.get('max', 0)})")
+        elif t == "inspiration_gain":
+            lines.append("✨ **Inspiration gained!**" if en else "✨ **Inspiration erhållen!**")
+        elif t == "inspiration_spend":
+            if en:
+                lines.append("✨ **Inspiration spent** — advantage on your next roll")
+            else:
+                lines.append("✨ **Inspiration spenderad** — fördel på nästa kast")
+        elif t == "exhaustion":
+            lvl = e.get("level", "?")
+            extra = f" ({'long rest' if en else 'lång vila'})" if e.get("source") == "long_rest" else ""
+            label = "Exhaustion" if en else "Utmattning"
+            lines.append(f"🥀 **{label} {lvl}/6**{extra}")
+        elif t == "exhaustion_hp_halved":
+            if en:
+                lines.append(f"🥀 **Exhaustion L4:** HP max halved → {e.get('max', '?')}")
+            else:
+                lines.append(f"🥀 **Utmattning N4:** HP-max halverat → {e.get('max', '?')}")
+        elif t == "exhaustion_recovered":
+            if en:
+                lines.append(f"🍃 **HP max restored:** {e.get('max', '?')}")
+            else:
+                lines.append(f"🍃 **HP-max återställt:** {e.get('max', '?')}")
+        elif t == "spell_add":
+            slvl = e.get("level", 0)
+            if en:
+                lines.append(f"📜 **Spell learned:** {v} (level {slvl})")
+            else:
+                lines.append(f"📜 **Ny besvärjelse:** {v} (nivå {slvl})")
+        elif t == "vila" and not mech.get("rest"):
+            # Kort-vila-effekten — renderas bara här om mech.rest-blocket nedan
+            # inte redan täckt den (undvik dubbla "Kort vila"-rader)
+            detail = e.get("detail", "")
+            if en:
+                lines.append(f"⛺ **Short rest:** {detail}" if detail else "⛺ **Short rest**")
+            else:
+                lines.append(f"⛺ **Kort vila:** {detail}" if detail else "⛺ **Kort vila**")
+        elif t == "training_progress":
+            tname = e.get("name", "?")
+            days = e.get("days", "?")
+            if en:
+                lines.append(f"🎓 **Training ({tname}):** {days} days completed")
+            else:
+                lines.append(f"🎓 **Träning ({tname}):** {days} dagar avklarade")
+        elif t == "training_complete":
+            skill = e.get("skill", "?")
+            if en:
+                lines.append(f"🎓 **Training complete:** {skill} — you are now proficient")
+            else:
+                lines.append(f"🎓 **Träning klar:** {skill} — du är nu proficient")
+        elif t == "cover_set":
+            cov = e.get("cover")
+            _cov_sv = {"half": "halv täckning (+2 AC)", "three_quarters": "tre fjärdedels täckning (+5 AC)", "full": "full täckning — kan inte träffas", None: "ingen täckning"}
+            _cov_en = {"half": "half cover (+2 AC)", "three_quarters": "three-quarters cover (+5 AC)", "full": "full cover — cannot be targeted", None: "no cover"}
+            if en:
+                lines.append(f"🧱 **Cover:** {_cov_en.get(cov, cov)}")
+            else:
+                lines.append(f"🧱 **Täckning:** {_cov_sv.get(cov, cov)}")
+        elif t == "npc_near":
+            lines.append(f"👥 **{v}**")
 
     # ── Icke-effekt-data från mech (loggbok, tid, vila) ──
     logbook = mech.get("logbook", "")
@@ -3510,13 +3382,17 @@ def format_guardian_summary(
     if combat:
         _changed = bool(
             {e.get("type") for e in effects}
-            & {"combat_start", "combat_dmg", "combat_round", "enemy_död", "initiativ", "combat_end", "skada", "hela", "ally_add", "ally_dmg", "ally_död"}
-        ) or any(mech.get(k) for k in ("combat_start", "combat_round", "initiative_entries", "combat_end"))
+            & {"combat_start", "combat_dmg", "combat_round", "enemy_död", "initiativ", "combat_end", "skada", "hela", "ally_add", "ally_dmg", "ally_död",
+               # audit 2026-09-06 bug 4: kod-rullade fiendeattacker ger enemy_hit/
+               # enemy_miss (inte "skada") → taggen måste firea för dem också
+               "enemy_hit", "enemy_miss", "enemy_fled", "status_dmg", "status_end"}
+        ) or any(mech.get(k) for k in ("combat_start", "combat_round", "initiative_entries", "combat_end",
+                                        "player_attacks", "enemy_attacks", "ally_attacks", "ally_damage", "combat_events"))
         _just_ended = combat.get("active") is False and combat.get("ended_turn") == state.get("meta", {}).get("turn_count", 0)
         if _changed or _just_ended:
             # Include player HP so the frontend status bar + inline messages can show it
             ch = state.get("character", {})
-            php = ch.get("hp", {})
+            php = ch.get("hp") or {}
             combat_for_tag = dict(combat)
             combat_for_tag["player_hp"] = {"current": php.get("current", 0), "max": php.get("max", 0)}
             _ct = _combat_tag(combat_for_tag)

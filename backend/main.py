@@ -618,6 +618,33 @@ def apply_currency(state: dict, denom: str, amount: int) -> tuple[bool, str]:
         return True, f"-{abs(amount)} {COIN_NAMES[denom]}"
 
 
+def _grant_xp_tag_path(char: dict, amount: int, effects: list[dict]) -> None:
+    """XP-tillägg + level-up-check för DM-tagg-vägarna ([XP:] och quest-rewards).
+
+    (fix w2c) Level-up via tagg-vägen ger nu även max HP/spell slots/klass-
+    features — tidigare anropade bara Guardian-vägen _apply_level_up_bonuses,
+    så tagg-level-ups gav "level 5 på pappret" med level-1-HP.
+    Guardian importeras defensivt inne i funktionen (cirkulär-säkerhet).
+    """
+    xp = char.setdefault('xp', {'current': 0, 'next_level': 300})
+    xp['current'] = xp.get('current', 0) + amount
+    effects.append({'type': 'xp', 'value': amount})
+    # Level-up check
+    level = char.get('level', 1)
+    while level < len(XP_THRESHOLDS) and xp['current'] >= XP_THRESHOLDS[level]:
+        level += 1
+        char['level'] = level
+        if level < len(XP_THRESHOLDS):
+            xp['next_level'] = XP_THRESHOLDS[level]
+        try:
+            import guardian as _g
+            # Appendar själv {'type': 'level_up'} + HP/slots/features
+            _g._apply_level_up_bonuses(char, effects)
+        except Exception as _e:
+            logger.warning("Level-up bonuses unavailable via tag path: %s", _e)
+            effects.append({'type': 'level_up', 'value': level})
+
+
 def _parse_mechanical_tags(text: str, state: dict) -> tuple[str, dict, list[dict]]:
     """
     Hitta och ta bort alla mekaniska taggar ur DM-svaret.
@@ -647,21 +674,11 @@ def _parse_mechanical_tags(text: str, state: dict) -> tuple[str, dict, list[dict
         hp['current'] = min(hp.get('max', 10), hp.get('current', 0) + amount)
         effects.append({'type': 'hela', 'value': amount})
 
-    # XP — ge erfarenhet + level-up
+    # XP — ge erfarenhet + level-up (delad helper: bonusar via guardian, w2c)
     for m in _MECH_PATTERNS['XP'].finditer(text):
         amount = int(m.group(1))
         char = state.setdefault('character', {})
-        xp = char.setdefault('xp', {'current': 0, 'next_level': 300})
-        xp['current'] = xp.get('current', 0) + amount
-        effects.append({'type': 'xp', 'value': amount})
-        # Level-up check
-        level = char.get('level', 1)
-        while level < len(XP_THRESHOLDS) and xp['current'] >= XP_THRESHOLDS[level]:
-            level += 1
-            char['level'] = level
-            if level < len(XP_THRESHOLDS):
-                xp['next_level'] = XP_THRESHOLDS[level]
-            effects.append({'type': 'level_up', 'value': level})
+        _grant_xp_tag_path(char, amount, effects)
 
     # VALUTA — guld, silver, koppar, platina
     _CURRENCY_TAGS = [
@@ -721,12 +738,41 @@ def _parse_mechanical_tags(text: str, state: dict) -> tuple[str, dict, list[dict
             effects.append({'type': 'quest', 'value': name})
 
     # QUEST_SLUTFÖRD (matcha bara aktiva quests)
+    # (fix w2c) Tagg-vägen BETALAR rewarden — tidigare betalade bara Guardians
+    # quests_completed-väg, så tagg-slutförda quests gav aldrig xp/gold.
+    # Dedup: ('xp', n)/('guld', n)-effekterna följer med meta['last_effects'] →
+    # skip_effects → Guardians quest-betalning (guardian.py:1955-1979) skippar
+    # redan utbetalda belopp (dess _skip_keys-match på (type, str(value))).
+    # Status-flippen till 'slutförd' gör dessutom att Guardians
+    # _find_quest(require_active=True) missar questen samma tur (post-DM).
     for m in _MECH_PATTERNS['QUEST_SLUTFÖRD'].finditer(text):
         name = m.group(1).strip()
         for q in state.get('quests', []):
             if q.get('name', '').lower() == name.lower() and q.get('status') in ('aktiv', 'active'):
                 q['status'] = 'slutförd'
+                q['completed_turn'] = state.get('meta', {}).get('turn_count', 0)
                 effects.append({'type': 'quest_slutförd', 'value': name})
+                _paid_keys = {(e.get('type'), str(e.get('value'))) for e in effects}
+                # XP-reward (gamla quests utan fältet → default 100, som vid skapande)
+                _xp_raw = q.get('xp_reward')
+                try:
+                    xp_r = int(_xp_raw) if _xp_raw is not None else 100
+                except (TypeError, ValueError):
+                    xp_r = 100
+                if xp_r > 0 and ('xp', str(xp_r)) not in _paid_keys:
+                    char = state.setdefault('character', {})
+                    _grant_xp_tag_path(char, xp_r, effects)
+                # Guld-reward (gamla quests utan fältet → default 0)
+                _g_raw = q.get('gold_reward')
+                try:
+                    gold_r = int(_g_raw) if _g_raw is not None else 0
+                except (TypeError, ValueError):
+                    gold_r = 0
+                if gold_r > 0 and ('guld', str(gold_r)) not in _paid_keys:
+                    ok, msg = apply_currency(state, 'gp', gold_r)
+                    if ok:
+                        effects.append({'type': 'guld', 'value': gold_r, 'denom': 'gp',
+                                        'msg': msg, 'source': 'quest'})
                 break
 
     # QUEST_MISSLYCKAD (matcha bara aktiva quests)
@@ -4628,6 +4674,32 @@ def truth_block(state: dict, language: str = "sv") -> str:
     """Auktoritär sanning — LLM:n får ALDRIG motsäga detta."""
     parts = ["## SANNING (auktoritär — motsäg ALDRIG detta)\n", compact_state(state, language)]
 
+    # (fix w2c) Döds-medvetenhet: vid 0 HP eller död måste DM:n veta det
+    # AUKTORITATIVT — audit §5: code-rolled fiendeskada landar asynkront
+    # EFTER DM-svaret, så DM:n kan ha missat att spelaren är nere. `dead`-
+    # flaggan (main.py _parse_result_tag) läses här — tidigare write-only.
+    _char = state.get("character", {}) or {}
+    _hp = _char.get("hp", {}) or {}
+    _ds = _char.get("death_saves", {}) or {}
+    _is_dead = bool(_ds.get("dead"))
+    _is_dying = (not _is_dead) and int(_hp.get("current", 0) or 0) <= 0
+    if _is_dead:
+        parts.insert(1, (
+            "**🩸 KARAKTÄREN ÄR DÖD — 3 misslyckade dödsräddningar. Spela inte vidare som "
+            "levande; hantera döden explicit (sörjande, arv, ny karaktär).**\n"
+            if language != "en" else
+            "**🩸 THE CHARACTER IS DEAD — 3 failed death saves. Do not continue as alive; "
+            "handle death explicitly (mourning, legacy, new character).**\n"
+        ))
+    elif _is_dying:
+        parts.insert(1, (
+            "**🩸 KARAKTÄREN ÄR DÖENDE (0 HP) — kräv DÖDSRÄDDNINGAR varje tur; "
+            "fortsätt ej normalt spel.**\n"
+            if language != "en" else
+            "**🩸 THE CHARACTER IS DYING (0 HP) — require DEATH SAVES every turn; "
+            "do not continue normal play.**\n"
+        ))
+
     pinned = state.get("pinned_facts", [])
     if pinned:
         parts.append("\nPinmade fakta:")
@@ -5489,7 +5561,17 @@ async def _guardian_post_dm_locked(
         # sista och den första läcker ut i chatten.)
         combat = state.get("world", {}).get("combat")
         if combat and meta.get("combat_tag_dirty"):
-            _tag = _combat_tag(combat)
+            # (fix w2c) Fallback-taggen får samma player_hp-payload som
+            # Guardian-vägen (guardian.py format_guardian_summary) — annars
+            # tappar frontendens statusbar spelar-HP när bara tagg-vägen
+            # ändrade striden (t.ex. [Resultat:] initiativ/dödsräddning).
+            _php = (state.get("character", {}) or {}).get("hp", {}) or {}
+            combat_for_tag = dict(combat)
+            combat_for_tag["player_hp"] = {
+                "current": _php.get("current", 0),
+                "max": _php.get("max", 0),
+            }
+            _tag = _combat_tag(combat_for_tag)
             if _tag and "[COMBAT:" not in (guardian_summary or ""):
                 guardian_summary = (guardian_summary + "\n" + _tag) if guardian_summary else _tag
             meta.pop("combat_tag_dirty", None)
@@ -6209,9 +6291,12 @@ async def _chat_locked(
     if _is_long_form:
         logger.info("📖 Long-form request — max_tokens raised to %d", _dm_max_tokens)
 
-    # FAS A: strikt per-anrops-modell (2026-08-08) — reservera HELA pipeline-
-    # kostnaden (DM + Guardian pre/post + extraction) upp-front så bakgrunds-
-    # anropen aldrig dör mitt i en turn. 403 om saldot inte räcker.
+    # FAS A: pipeline-reservationen = EXAKT 1 turn per spelarmeddelande
+    # (eded88a — revert av per-anrops-modellen; se _reserve_chat_pipeline-
+    # docstringen). DM, Guardian pre/post och extraction ingår i den turnen.
+    # Egna turns kostar: bilder, TTS, karaktärsskapande, [SÖK:] och
+    # validerings-repair (se _consume_turn-anropsplatserna). 403 om saldot
+    # inte räcker.
     _reserve_chat_pipeline(username, req.model_id, is_awakening, req.message, effective_turn)
 
     _log_activity(username, "🧙 DM weaving the tale…")
@@ -6347,8 +6432,10 @@ async def _chat_locked(
 
         if attempt < 1:
             # Ogiltigt — be LLM:n reparera de mekaniska taggarna
-            # Strikt per-anrops-modell: varje repair = 1 turn. Utan saldo → acceptera
-            # svaret som det är (reparation är en extra chans, inte en rättighet).
+            # Repair kostar en EGEN turn (+1) — pipeline-reservationen (1 turn
+            # per meddelande, eded88a) inkluderar inte validerings-repair.
+            # Utan saldo → acceptera svaret som det är (reparation är en extra
+            # chans, inte en rättighet).
             if _turns_available(username) < 1:
                 logger.info("⛔ Validation repair skipped — turn cap reached")
                 break
@@ -11163,14 +11250,14 @@ async def seo_llms_txt():
         "\n"
         "> The best free AI D&D roleplaying game: an AI Dungeon Master that runs real D&D 5e "
         "rules in a persistent, text-based world — and remembers it. Play free in your browser "
-        "in English or Swedish — no email, no card, no subscription. 300 turns on signup, then "
-        "50 fresh every day: more daily free turns than any other AI Dungeon Master. "
+        "in English or Swedish — no email, no card, no subscription. 50 fresh turns every day: "
+        "more daily free turns than any other AI Dungeon Master. "
         "The DM narrates, the Lorekeeper engine tracks initiative, action economy, HP, XP, "
         "quests and NPCs. AI-painted portraits for your adventurer and every NPC, optional "
         "TTS narrator, transparent token usage.\n"
         "\n"
         "## Key pages\n"
-        "- [Play now](https://dnd.rostad.cc/): free account, 300 turns on signup promo, 50 fresh daily\n"
+        "- [Play now](https://dnd.rostad.cc/): free account, 50 fresh turns every day\n"
         "- [How to play & mechanics](https://dnd.rostad.cc/mechanics.html): D&D 5e rules engine, dice ceremony, LLM harness\n"
         "- [Help](https://dnd.rostad.cc/help.html)\n"
         "- [Pricing](https://dnd.rostad.cc/pricing.html): free forever, one-time Support/Patron top-ups, donations add turns\n"

@@ -51,9 +51,15 @@ def users_file(tmp_path, monkeypatch):
 
 @pytest.fixture(autouse=True)
 def ledger_file(tmp_path, monkeypatch):
-    """Peka billing-ledgern mot tmp-fil (main._LEDGER_FILE)."""
+    """Peka billing-ledgern mot tmp-fil (main._LEDGER_FILE).
+
+    (fix w2c) Även churn-ackumulatorn (main._CHURN_FILE) pekas om — utan
+    det läckte riktiga data/_churn.json (churn-event 2026-09-04) in i
+    test_billing_empty_ledgers förväntade tomma svar.
+    """
     f = tmp_path / "_billing_ledger.json"
     monkeypatch.setattr(main, "_LEDGER_FILE", f)
+    monkeypatch.setattr(main, "_CHURN_FILE", tmp_path / "_churn.json")
     return f
 
 

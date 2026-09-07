@@ -377,6 +377,10 @@
 .continue-panel{ border-radius: 10px !important; }
 .cc-card, .campaign-card{ border-radius: 10px !important; }
 .world-prompt, .field input, .field select, .field textarea{ border-radius: 8px !important; }
+  .world-target{ margin:.9rem 0 .2rem; display:flex; flex-direction:column; gap:.4rem; }
+  .wt-label{ font-size:.85rem; opacity:.8; letter-spacing:.02em; }
+  .wt-select{ background:rgba(0,0,0,.35); color:inherit; border:1px solid rgba(232,198,90,.35); padding:.5rem .6rem; font:inherit; }
+  .wt-hint{ font-size:.78rem; opacity:.65; font-style:italic; }
 .start-btn{ border-radius: 8px !important; }
 .pv-go{ border-radius: 8px !important; }
 .gen-btn{ border-radius: 8px !important; }
@@ -1112,6 +1116,17 @@ The more you give, the richer the world becomes. But the Dungeon Master fills in
         </div>
       </div>
 
+      <!-- Fix 2026-09-07 (feedback "The game keeps using an old world"):
+           tidigare lades allt tyst in i den AKTIVA kampanjen → gamla världar
+          'fastnade'. Välj explicit: ny fresh world eller merge i en befintlig.
+          Dropdown fylls via prepareWorldTargets() när panelen öppnas. -->
+      <div class="world-target" id="world-target-wrap">
+        <label class="wt-label" for="world-target">Build this world into…</label>
+        <select class="wt-select" id="world-target" onchange="onWorldTargetChange()">
+          <option value="new">✦ A brand-new world (fresh start)</option>
+        </select>
+        <span class="wt-hint" id="wt-hint"></span>
+      </div>
       <div class="actions" id="actions-prepare">
         <button class="go-btn" onclick="startPrepare()">🔮 Build the World</button>
         <span class="hint">Prompt + files are sent to <b>Qwen</b> which structures everything</span>
@@ -1134,7 +1149,7 @@ The more you give, the richer the world becomes. But the Dungeon Master fills in
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 </script>
-<script src="api.js?v=20260806a"></script>
+<script src="api.js?v=20260907a"></script>
 <script src="modal.js?v=20260906a"></script>
 <script src="i18n.js?v=20260906a"></script>
 <script src="archetypes.js?v=20260804a"></script>
@@ -1389,6 +1404,7 @@ function showPanel(id) {
   el.classList.add('show');
   activePanel = id;
   el.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  if (id === 'prepare') prepareWorldTargets();  // fyll "Build this world into…"
 }
 
 // ═══════════════════════════════════════
@@ -2324,6 +2340,54 @@ function renderFiles(key) {
 // ═══════════════════════════════════════
 // PREPARE — bygg världen (prompt + filer)
 // ═══════════════════════════════════════
+// Fix 2026-09-07 (feedback "The game keeps using an old world"):
+// world/build mergear ALLTID in i den aktiva kampanjen. Tidigare betydde det
+// att en "ny" värld fastnade i gamla kampanjer — nu väljer spelaren explicit:
+// 'new' = ny fräsch kampanj, eller ett befintligt kampanj-id = merge dit.
+let prepCampaigns = [];
+async function prepareWorldTargets() {
+  const sel = document.getElementById('world-target');
+  if (!sel) return;
+  try {
+    const { campaigns } = await API.listCampaigns();
+    prepCampaigns = campaigns || [];
+  } catch (e) { prepCampaigns = []; }
+  const keep = sel.value;
+  sel.innerHTML = '<option value="new">✦ ' + (isEn() ? 'A brand-new world (fresh start)' : 'En helt ny värld (ny början)') + '</option>';
+  for (const c of prepCampaigns) {
+    const cid = c.id || c.campaign_id;   // /api/campaigns ger 'campaign_id'
+    if (!cid) continue;
+    const turns = c.turn_count || 0;
+    const name = c.name || cid;
+    const lang = c.language === 'sv' ? 'SV' : c.language === 'en' ? 'EN' : '';
+    const opt = document.createElement('option');
+    opt.value = cid;
+    opt.textContent = '↳ ' + name + ' (' + turns + (isEn() ? ' turns' : ' turer') + (lang ? ', ' + lang : '') + ')' + (turns ? ' ⚠' : '');
+    sel.appendChild(opt);
+  }
+  if (keep && [...sel.options].some(o => o.value === keep)) sel.value = keep;
+  onWorldTargetChange();
+}
+function onWorldTargetChange() {
+  const sel = document.getElementById('world-target');
+  const hint = document.getElementById('wt-hint');
+  if (!sel || !hint) return;
+  if (sel.value === 'new') {
+    hint.textContent = isEn()
+      ? 'Your existing campaigns stay untouched — this world starts fresh.'
+      : 'Dina befintliga kampanjer lämnas orörda — den här världen börjar på nytt.';
+  } else {
+    const c = prepCampaigns.find(x => (x.id || x.campaign_id) === sel.value);
+    const turns = (c && c.turn_count) || 0;
+    hint.textContent = isEn()
+      ? '⚠ The world is merged INTO this campaign — its old places, NPCs and quests remain (' + turns + ' turns played).'
+      : '⚠ Världen läggs TILL i den här kampanjen — gamla platser, NPC:er och uppdrag finns kvar (' + turns + ' turer spelade).';
+  }
+}
+function worldTargetValue() {
+  const sel = document.getElementById('world-target');
+  return sel ? sel.value : 'new';
+}
 async function startPrepare() {
   const prompt = document.getElementById('world-prompt').value.trim();
   if (!prompt && files.prepare.length === 0) {
@@ -2336,13 +2400,34 @@ async function startPrepare() {
   fill.style.width = '10%';
 
   try {
-    // Se till att kampanj finns
-    const { campaign } = await API.getCampaign();
-    if (!campaign) await API.createCampaign('Prepared Adventure', 'en');
+    // FIX 2026-09-07 (spelarfeedback): tidigare återanvändes den AKTIVA
+    // kampanjen tyst — en "ny" värld byggdes ovanpå en gammal ("The game keeps
+    // using an old world"). Nu bygger vi i det spelaren valt: ny kampanj
+    // (fresh) eller en befintlig (medveten merge).
+    const lang = advLang || 'en';
+    let targetId = worldTargetValue();
+    if (targetId === 'new') {
+      const created = await API.createCampaign(isEn() ? 'Prepared Adventure' : 'Förberett äventyr', lang);
+      targetId = (created && (created.campaign_id || (created.state && created.state.meta && created.state.meta.campaign_id))) || '';
+    } else {
+      await API.activateCampaign(targetId);
+      try { await API.updateCampaignLanguage(lang); } catch (e) { /* bevara kampanjens språk vid fel */ }
+    }
+    // Nästa "Build" i samma session ska lägga till I den här världen —
+    // inte skapa en till tom kampanj bakom ryggen på spelaren.
+    const sel = document.getElementById('world-target');
+    if (targetId === 'new' && sel) {
+      const opt = document.createElement('option');
+      opt.value = targetId;
+      opt.textContent = '↳ ' + (isEn() ? 'the world just built' : 'världen nyss byggd');
+      sel.appendChild(opt);
+      sel.value = opt.value;
+      onWorldTargetChange();
+    }
     fill.style.width = '20%';
 
-    // Bygg världen via backend (prompt + filer i ett anrop)
-    const res = await API.buildWorld(prompt, files.prepare);
+    // Bygg världen via backend (prompt + filer i ett anrop) — på kampanjens språk
+    const res = await API.buildWorld(prompt, files.prepare, 'step-3.7-flash', lang);
     fill.style.width = '90%';
 
     // Visa riktiga resultat

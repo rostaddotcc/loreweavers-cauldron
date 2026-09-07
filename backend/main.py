@@ -3975,8 +3975,9 @@ async def set_tts_settings(req: dict, morkrets_token: str | None = Cookie(None))
 async def create_campaign(body: CampaignCreateRequest | None = None, morkrets_token: str | None = Cookie(None)):
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
-    name = (body.name if body else "") or "Ett namnlöst äventyr"
     language = (body.language if body else "en") or "en"
+    # Fix 2026-09-07 (feedback): default-namn följde kampanjspråket
+    name = (body.name if body else "") or ("An Untitled Adventure" if language == "en" else "Ett namnlöst äventyr")
 
     state = store.create(username, name=name, language=language)
     # Admin kan välja Guardian-modell per kampanj
@@ -5246,6 +5247,25 @@ async def _guardian_manual_correction(
     """Run a manual Guardian correction. Returns the formatted report string."""
     from guardian import _format_state_for_guardian
 
+    # Fix 2026-09-07 (spelarfeedback): Lorekeeper-rapporten var EN-hårdkodad —
+    # svenska spelare fick engelska korrigeringsrapporter (och tvärtom).
+    # Quest-status är kodnivå-token ("slutförd" etc. jämförs i kod) — rapporten
+    # översätter bara ETIKETTERNA, aldrig token-värdena.
+    en = language == "en"
+    L = {
+        "manual_correction": "Manual Correction" if en else "Manuell korrigering",
+        "parse_fail": "Could not parse response. Raw:" if en else "Kunde inte tolka svaret. Rådata:",
+        "npc_removed": "NPC removed:" if en else "NPC borttagen:",
+        "npc_added": "NPC added:" if en else "NPC tillagd:",
+        "item_removed": "Item removed:" if en else "Föremål borttaget:",
+        "item_added": "Item added:" if en else "Föremål tillagt:",
+        "quest_updated": "Quest updated:" if en else "Uppdrag uppdaterat:",
+        "hp_set": "HP set to:" if en else "HP satt till:",
+        "spell_slots": "Spell slots set to:" if en else "Spell slots satt till:",
+        "day_advanced": "Day advanced:" if en else "Dag avancerad:",
+        "no_changes": "No changes were needed." if en else "Inga ändringar behövdes.",
+    }
+
     state_ctx = _format_state_for_guardian(state, language)
 
     # Recent transcript for context
@@ -5264,7 +5284,13 @@ async def _guardian_manual_correction(
         f"## Current State\n{state_ctx}\n\n"
         f"## Recent Conversation\n{history_block}\n\n"
         f"## Player's Correction Instruction\n{instruction}\n\n"
-        "Apply the corrections:"
+        # Fix 2026-09-07 (feedback): rapporten ska vara på kampanjens språk —
+        # annars svarar Lorekeeper ofta svenska i EN-kampanjer (stat ctx är SV).
+        # quest_updates.new_status är kodnivå-token — ALDRIG översätta dem.
+        + ("IMPORTANT: write the \"report\" field in ENGLISH. quest_updates.new_status values (aktiv/slutförd/misslyckad) are code tokens — copy them exactly, never translate.\n"
+           if language == "en" else
+           "VIKTIGT: skriv \"report\"-fältet på SVENSKA. quest_updates.new_status-värdena (aktiv/slutförd/misslyckad) är kodnivå-token — skriv dem exakt, översätt aldrig.\n")
+        + "Apply the corrections:"
     )
 
     messages = [
@@ -5305,13 +5331,13 @@ async def _guardian_manual_correction(
                     # appliceras (fix 2026-08-02).
                     repaired = _repair_truncated_json(cleaned)
                     if repaired is None:
-                        return f"🛡️ **Guardian** · Manual Correction\n⚠️ Could not parse response. Raw:\n{raw[:500]}"
+                        return f"🛡️ **Guardian** · {L['manual_correction']}\n⚠️ {L['parse_fail']}\n{raw[:500]}"
                     try:
                         data = json.loads(repaired)
                     except json.JSONDecodeError:
-                        return f"🛡️ **Guardian** · Manual Correction\n⚠️ Could not parse response. Raw:\n{raw[:500]}"
+                        return f"🛡️ **Guardian** · {L['manual_correction']}\n⚠️ {L['parse_fail']}\n{raw[:500]}"
     if data is None:
-        return f"🛡️ **Guardian** · Manual Correction\n⚠️ Could not parse response. Raw:\n{raw[:500]}"
+        return f"🛡️ **Guardian** · {L['manual_correction']}\n⚠️ {L['parse_fail']}\n{raw[:500]}"
 
     # Build a mechanics dict that apply_mechanics understands
     effects = []
@@ -5324,8 +5350,8 @@ async def _guardian_manual_correction(
         for i, npc in enumerate(npcs):
             if npc.get("name", "").lower() == rname_lower:
                 removed = npcs.pop(i)
-                effects.append({"type": "korrigering", "value": f"NPC removed: {removed.get('name', '?')}"})
-                report_lines.append(f"🗑️ **NPC removed:** {removed.get('name', '?')}")
+                effects.append({"type": "korrigering", "value": f"NPC removed: {removed.get('name', '?')}"})  # kodnivå — DM läser detta
+                report_lines.append(f"🗑️ **{L['npc_removed']}** {removed.get('name', '?')}")
                 break
 
     # NPC additions
@@ -5335,12 +5361,12 @@ async def _guardian_manual_correction(
             if npc["name"].lower() not in existing:
                 npcs.append({
                     "name": npc["name"],
-                    "role": npc.get("role", "unknown"),
+                    "role": npc.get("role", "unknown" if en else "okänd"),
                     "relation": npc.get("relation", "neutral"),
                     "notes": npc.get("notes", ""),
                     "alive": npc.get("alive", True),
                 })
-                report_lines.append(f"🧙 **NPC added:** {npc['name']} ({npc.get('role', '?')})")
+                report_lines.append(f"🧙 **{L['npc_added']}** {npc['name']} ({npc.get('role', '?')})")
 
     # NPC relation changes
     for rel in data.get("npc_relations", []):
@@ -5350,7 +5376,7 @@ async def _guardian_manual_correction(
             if npc.get("name", "").lower() == rname.lower():
                 old_rel = npc.get("relation", "?")
                 npc["relation"] = new_rel
-                report_lines.append(f"🤝 **{rname}:** {old_rel} → {new_rel}")
+                report_lines.append(f"🤝 **{rname}:** {old_rel} → {new_rel}")  # relations-token är kodnivå
                 break
 
     # Item removals
@@ -5360,7 +5386,7 @@ async def _guardian_manual_correction(
         for i, it in enumerate(inv):
             if it.get("name", "").lower() == item_lower:
                 removed = inv.pop(i)
-                report_lines.append(f"🗑️ **Item removed:** {removed.get('name', '?')}")
+                report_lines.append(f"🗑️ **{L['item_removed']}** {removed.get('name', '?')}")
                 break
 
     # Item additions
@@ -5376,7 +5402,7 @@ async def _guardian_manual_correction(
                 "rarity": "normal",
                 "description": item.get("description", ""),
             })
-            report_lines.append(f"📦 **Item added:** {item['name']}")
+            report_lines.append(f"📦 **{L['item_added']}** {item['name']}")
 
     # Quest status updates
     for qu in data.get("quest_updates", []):
@@ -5385,7 +5411,7 @@ async def _guardian_manual_correction(
         for quest in state.get("quests", []):
             if quest.get("name", "").lower() == qname.lower():
                 quest["status"] = new_status
-                report_lines.append(f"📜 **Quest updated:** {qname} → {new_status}")
+                report_lines.append(f"📜 **{L['quest_updated']}** {qname} → {new_status}")
                 break
 
     # HP override
@@ -5394,7 +5420,7 @@ async def _guardian_manual_correction(
         ch = state.get("character", {})
         hp = ch.setdefault("hp", {})
         hp["current"] = int(hp_set)
-        report_lines.append(f"💚 **HP set to:** {hp_set}/{hp.get('max', '?')}")
+        report_lines.append(f"💚 **{L['hp_set']}** {hp_set}/{hp.get('max', '?')}")
 
     # Spell slots override (fix 2026-08-05 — Guardian kunde inte återställa
     # slots via manual correction: påstod det i text men applicerade inget,
@@ -5407,7 +5433,7 @@ async def _guardian_manual_correction(
             ss["max"] = int(ss_set["max"])
         if "current" in ss_set:
             ss["current"] = int(ss_set["current"])
-        report_lines.append(f"🔮 **Spell slots set to:** {ss.get('current', 0)}/{ss.get('max', 0)}")
+        report_lines.append(f"🔮 **{L['spell_slots']}** {ss.get('current', 0)}/{ss.get('max', 0)}")
 
     # Dag-avancering (set_day) — uppdaterar world.day + day_log + journal-entry
     set_day = data.get("set_day")
@@ -5424,7 +5450,7 @@ async def _guardian_manual_correction(
             world.setdefault("day_log", []).append({"day": new_day, "description": desc})
             world["_pending_day_entry"] = True
             effects.append({"type": "ny_dag", "value": f"Dag {new_day}: {desc}"})
-            report_lines.append(f"🌅 **Day advanced:** {old_day} → {new_day}")
+            report_lines.append(f"🌅 **{L['day_advanced']}** {old_day} → {new_day}")
             # Spola logbook-cachen så journalen byggs om med den nya dagen
             world.pop("logbook_llm", None)
 
@@ -5433,13 +5459,13 @@ async def _guardian_manual_correction(
 
     # Build report
     report_text = data.get("report", "")
-    header = "🛡️ **Guardian** · Manual Correction"
+    header = f"🛡️ **Guardian** · {L['manual_correction']}"
     if report_lines:
         body = "\n".join(report_lines)
         if report_text:
             body += f"\n\n💬 {report_text}"
     else:
-        body = report_text or "No changes were needed."
+        body = report_text or L['no_changes']
 
     # Store last_effects so DM sees the changes next turn
     if effects:
@@ -9075,6 +9101,24 @@ Svara ENDAST med giltig JSON (ingen markdown):
 
 Om en kategori saknas i texten, returnera tom array. Extrahera bara det som faktiskt finns."""
 
+IMPORT_PROMPT_EN = """You are a data extractor for D&D campaigns. Analyze the text and extract structured data.
+
+ALL user-facing output values (names, descriptions, notes, lore) MUST be written in ENGLISH — regardless of the source text's language.
+
+Reply ONLY with valid JSON (no markdown):
+{
+  "characters": [{"name": "", "race": "", "class": "", "description": ""}],
+  "npcs": [{"name": "", "role": "", "relation": "neutral", "notes": "", "alive": true}],
+  "locations": [{"name": "", "description": ""}],
+  "lore": ["string — important world details, history, myths"],
+  "quests": [{"name": "", "description": "", "status": "aktiv"}],
+  "items": [{"name": "", "type": "Other", "description": "", "rarity": "normal"}]
+}
+
+ENUM VALUES ARE CODE TOKENS — write them EXACTLY as shown, never translate them:
+relation: allierad | neutral | fiende | okänd   ·   quest status: aktiv.
+If a category is missing in the text, return an empty array. Extract only what is actually there."""
+
 
 # ═══════════════════════════════════════
 # WORLD BUILDING (prompt + optional files)
@@ -9094,11 +9138,31 @@ Svara ENDAST med giltig JSON (ingen markdown):
 
 Om en kategori saknas i beskrivningen, returnera tom array. Extrahera bara det som faktiskt finns."""
 
+WORLD_BUILD_PROMPT_EN = """You are a world-extractor for D&D campaigns. Analyze the player's description and extract structured world data.
+
+IMPORTANT: The world is an INVENTED fantasy world. If the player mentions real place names (cities, countries, known landmarks), translate them into evocative fantasy names. NEVER use real place names in the output.
+
+ALL user-facing output values (names, descriptions, notes, lore text, quest titles) MUST be written in ENGLISH — regardless of the language of the player's description. JSON field names stay as specified.
+
+Reply ONLY with valid JSON (no markdown):
+{
+  "locations": [{"name": "", "description": ""}],
+  "npcs": [{"name": "", "role": "", "relation": "neutral", "notes": "", "alive": true}],
+  "lore": ["string — important world details, history, myths, mood"],
+  "quests": [{"name": "", "description": "", "status": "aktiv"}]
+}
+
+ENUM VALUES ARE CODE TOKENS — write them EXACTLY as shown, never translate them:
+relation: allierad | neutral | fiende | okänd   ·   quest status: aktiv.
+(JSON field names likewise stay English. Everything else you write goes in English.)
+If a category is missing from the description, return an empty array. Extract only what is actually there."""
+
 
 @app.post("/api/world/build")
 async def world_build(
     prompt: str = Form(""),
     model_id: str = Form("step-3.7-flash"),
+    language: str = Form(""),
     files: list[UploadFile] = File(default=[]),
     morkrets_token: str | None = Cookie(None),
 ):
@@ -9112,13 +9176,20 @@ async def world_build(
     if not prompt.strip() and not files:
         raise HTTPException(400, "Ange en beskrivning eller ladda upp filer")
 
+    # Fix 2026-09-07 (spelarfeedback): värld-bygget använde hårkodade
+    # SVENSKA prompts oavsett kampanjspråk → engelska kampanjer fick svenska
+    # quests/NPC-roller/lore. Välj prompt + instruktionsanvisning per språk;
+    # fallback till kampanjens språk om clienten inte skickar language.
+    lang = language if language in ("en", "sv") else _get_lang(state)
+
     merged = {"locations": 0, "npcs": 0, "lore": 0, "quests": 0, "characters": 0, "items": 0}
 
     # ── 1. Prompt → LLM extraktion ──
     if prompt.strip():
         messages = [
-            {"role": "system", "content": WORLD_BUILD_PROMPT},
-            {"role": "user", "content": f"Bygg världen utifrån denna beskrivning:\n\n{prompt.strip()}"},
+            {"role": "system", "content": WORLD_BUILD_PROMPT_EN if lang == "en" else WORLD_BUILD_PROMPT},
+            {"role": "user", "content": (f"Build the world from this description:\n\n{prompt.strip()}" if lang == "en"
+                                         else f"Bygg världen utifrån denna beskrivning:\n\n{prompt.strip()}")},
         ]
         try:
             raw = await _call_llm(model_id, messages, temperature=0.4, max_tokens=2048, thinking="disabled")
@@ -9128,7 +9199,7 @@ async def world_build(
         except RuntimeError as e:
             raise HTTPException(500, str(e))
 
-        _merge_world_data(state, extracted, merged)
+        _merge_world_data(state, extracted, merged, lang=lang)
 
     # ── 2. Filer → textextraktion → LLM ──
     for f in files:
@@ -9155,8 +9226,9 @@ async def world_build(
             text = text[:50000] + "\n\n[... trunkerad ...]"
 
         messages = [
-            {"role": "system", "content": IMPORT_PROMPT},
-            {"role": "user", "content": f"Extrahera data från denna text:\n\n{text}"},
+            {"role": "system", "content": IMPORT_PROMPT_EN if lang == "en" else IMPORT_PROMPT},
+            {"role": "user", "content": (f"Extract data from this text:\n\n{text}" if lang == "en"
+                                         else f"Extrahera data från denna text:\n\n{text}")},
         ]
         try:
             raw = await _call_llm(model_id, messages, temperature=0.2, max_tokens=2048, thinking="disabled")
@@ -9164,7 +9236,7 @@ async def world_build(
         except (ValueError, RuntimeError):
             continue  # Hoppa över filer som inte kan tolkas
 
-        _merge_world_data(state, extracted, merged)
+        _merge_world_data(state, extracted, merged, lang=lang)
 
     store.save(state)
 
@@ -9178,8 +9250,14 @@ async def world_build(
     }
 
 
-def _merge_world_data(state: dict, extracted: dict, merged: dict):
-    """Merge extraherad data in i kampanjstate (dedup by name)."""
+def _merge_world_data(state: dict, extracted: dict, merged: dict, lang: str = "sv"):
+    """Merge extraherad data in i kampanjstate (dedup by name).
+
+    lang styr svenska default-värden (roll 'okänd') — EN-kampanjer ska inte få
+    svenska smyge-värden för fritt textinnehåll. Quest-status är kodnivå-token
+    ("aktiv"/"active" matchas båda av sökaren) — default förblir "aktiv".
+    """
+    _default_role = "unknown" if lang == "en" else "okänd"
     # Locations
     for loc in extracted.get("locations", []):
         if isinstance(loc, dict) and loc.get("name"):
@@ -9197,7 +9275,7 @@ def _merge_world_data(state: dict, extracted: dict, merged: dict):
             if npc["name"].lower() not in existing:
                 state.setdefault("npcs", []).append({
                     "name": npc["name"],
-                    "role": npc.get("role", "okänd"),
+                    "role": npc.get("role", _default_role),
                     "relation": npc.get("relation", "neutral"),
                     "notes": npc.get("notes", ""),
                     "alive": npc.get("alive", True),
@@ -9218,7 +9296,7 @@ def _merge_world_data(state: dict, extracted: dict, merged: dict):
                 state.setdefault("quests", []).append({
                     "name": q["name"],
                     "description": q.get("description", ""),
-                    "status": q.get("status", "aktiv"),
+                    "status": q.get("status") or "aktiv",
                 })
                 merged["quests"] += 1
 
@@ -9228,13 +9306,13 @@ def _merge_world_data(state: dict, extracted: dict, merged: dict):
             norm = _normalize_item({
                 "id": f"import-{len(state.get('inventory', []))}",
                 "name": item["name"],
-                "type": item.get("type", "Annat"),
+                "type": item.get("type", ""),
                 "qty": 1,
                 "weight": 0,
                 "equipped": False,
                 "rarity": item.get("rarity", "normal"),
                 "description": item.get("description", ""),
-            })
+            }, lang=lang)
             state.setdefault("inventory", []).append(norm)
             merged["items"] += 1
 

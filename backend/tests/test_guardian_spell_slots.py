@@ -42,7 +42,7 @@ def _make_state(spell_slots=None):
     }
 
 
-def _correction(instruction, state, reply_json):
+def _correction(instruction, state, reply_json, language="sv"):
     """Kör _guardian_manual_correction med en mockad model_call_fn."""
     import json as _json
 
@@ -50,7 +50,7 @@ def _correction(instruction, state, reply_json):
         return _json.dumps(reply_json)
 
     return _run(main._guardian_manual_correction(
-        instruction, state, "tester", fake_model_call, language="sv",
+        instruction, state, "tester", fake_model_call, language=language,
     ))
 
 
@@ -67,8 +67,22 @@ def test_spell_slots_set_restores_slots_after_long_rest():
         },
     )
     assert state["character"]["spell_slots"] == {"current": 2, "max": 2}
+    # Fix 2026-09-07: rapport-etiketter följer kampanjspråket (tidigare EN-hårdkodat)
+    assert "Spell slots satt till:** 2/2" in report
+    assert "HP satt till:** 14/14" in report
+
+
+def test_spell_slots_report_follows_campaign_language_en():
+    """EN-kampanj ska få engelska Lorekeeper-etiketter (spelarfeedback 2026-08)."""
+    state = _make_state(spell_slots={"current": 0, "max": 2})
+    report = _correction(
+        "Long rest completed, restore spell slots.",
+        state,
+        {"spell_slots_set": {"current": 2, "max": 2}, "report": "Rest done."},
+        language="en",
+    )
     assert "Spell slots set to:** 2/2" in report
-    assert "HP set to:** 14/14" in report
+    assert "Manual Correction" in report
 
 def test_spell_slots_set_can_change_max_and_current():
     """Level-up: max ökar och current följer med."""

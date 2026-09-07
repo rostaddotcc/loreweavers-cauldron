@@ -446,7 +446,7 @@ const API = (() => {
     },
 
     // ── World building (prompt + optional files → structured world data) ──
-    async buildWorld(prompt, fileList = [], modelId = 'step-3.7-flash') {
+    async buildWorld(prompt, fileList = [], modelId = 'step-3.7-flash', language = '') {
       if (MOCK) {
         await new Promise(r => setTimeout(r, 1800));
         return {
@@ -457,6 +457,7 @@ const API = (() => {
       const fd = new FormData();
       fd.append('prompt', prompt || '');
       fd.append('model_id', modelId);
+      if (language) fd.append('language', language);
       for (const f of fileList) fd.append('files', f);
       return req('/api/world/build', { method: 'POST', body: fd });
     },

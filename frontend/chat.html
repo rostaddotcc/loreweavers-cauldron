@@ -1318,7 +1318,7 @@
   box-shadow: 0 0 16px -4px rgba(232,198,90,0.35), inset 0 1px 0 rgba(255,255,255,.05) !important;
 }
 #player-input{
-  padding: 0.3rem 6.6rem 0.34rem 1.7rem !important;
+  padding: 0.3rem 8.6rem 0.34rem 1.7rem !important;
   /* 2-radig placeholder får aldrig klippas: 3.6rem (root 18px → 64.8px)
      = 2×1.45-rad + padding. Mobil behåller 40px+ i media-frågan nedan.
      ID-selektor: snes.css body.cli-chat .input-row textarea (padding .5rem
@@ -1371,6 +1371,31 @@
   0%,100%{ box-shadow: 0 0 10px -2px rgba(212,69,58,.5); }
   50%{ box-shadow: 0 0 18px 0 rgba(212,69,58,.9); }
 }
+/* Undo-knappen (v1.3): absolut som .mic-btn/.send-btn — annars knuffar
+   textarean (flex:1, min-width:auto) ut den utanför composern. */
+.undo-btn{
+  position: absolute !important;
+  right: 6.7rem !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 36px !important;
+  height: 36px !important;
+  display: none;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--gold) !important;
+  background: var(--stone-3) !important;
+  color: var(--gold-bright) !important;
+  font-size: 1.05rem !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  z-index: 2;
+}
+.undo-btn.show{ display: inline-flex !important; }
+.undo-btn:hover{ background: var(--edge) !important; border-color: var(--gold-bright) !important; }
+.undo-btn:active{ transform: translateY(-50%) scale(.92) !important; }
 .input-area{
   padding: 0.35rem 0.55rem 0.5rem !important; /* fältet spänner hela UI:t (2026-08-09) */
 }
@@ -1378,9 +1403,10 @@
    ▲/▼-pilar klipps annars vid kanterna ("scrollpilar utanför sidan") —
    quick-scroll ▲▼ (mindre, insides) tar över. (2026-08-09) */
 @media (max-width: 768px){
-  #player-input{ min-height: 40px !important; padding: 0.36rem 6.7rem 0.36rem 1.8rem !important; }
+  #player-input{ min-height: 40px !important; padding: 0.36rem 9.5rem 0.36rem 1.8rem !important; }
   .send-btn{ right: 0.3rem !important; padding: 0.24rem 0.45rem !important; font-size: 0.58rem !important; }
   .mic-btn{ right: 4.5rem !important; width: 34px !important; height: 34px !important; font-size: 0.92rem !important; }
+  .undo-btn{ right: 7.0rem !important; width: 34px !important; height: 34px !important; font-size: 0.92rem !important; }
   .input-area{ padding: 0.3rem 0.4rem 0.45rem !important; }
   .quick-scroll{ right: 10px !important; gap: 0.4rem !important; }
   .qs-btn{ width: 34px !important; height: 34px !important; font-size: 0.7rem !important; }
@@ -1812,7 +1838,7 @@
           <span class="cli-prompt" id="cli-prompt" aria-hidden="true"><span class="cp-user"></span><span class="cp-at">@</span><span class="cp-host"></span> <span class="cp-path">~</span> <span class="cp-pct">%</span></span><span class="cli-cursor" id="cli-cursor">▌</span>
           <textarea id="player-input" rows="1" enterkeyhint="send" placeholder="What do you do? Write freely — fight, sneak, talk, cast a spell…"></textarea>
           <button class="mic-btn" id="mic-btn" onclick="toggleMic()" title="Speak — English voice input (StepFun ASR)" aria-label="Voice input"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg></button>
-          <button class="undo-btn" id="undo-btn" onclick="doUndo()" title="Undo last turn (costs 1 turn)" hidden style="display:none;align-items:center;justify-content:center;width:2.1rem;height:2.1rem;border-radius:8px;border:1px solid var(--gold-dim,#8a6d1f);background:rgba(212,169,44,.08);color:var(--gold,#d4a92c);font-size:1.05rem;cursor:pointer;flex:0 0 auto;">↶</button>
+          <button class="undo-btn" id="undo-btn" onclick="doUndo()" title="Undo last turn (costs 1 turn)" aria-label="Undo last turn">↶</button>
           <button class="send-btn" onclick="sendPlayer()">⚔ Act</button>
         </div>
       </div>
@@ -5834,8 +5860,7 @@ function helpCardHtml() {
 function setUndoButton(on) {
   const b = document.getElementById('undo-btn');
   if (!b) return;
-  b.hidden = !on;
-  b.style.display = on ? 'flex' : 'none';
+  b.classList.toggle('show', !!on);
 }
 
 async function doUndo() {

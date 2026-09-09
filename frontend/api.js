@@ -199,6 +199,7 @@ const API = (() => {
       if (MOCK) {
         return [
           { id: 'qwen3.8-max', name: 'Qwen 3.8 Max', provider: 'dashscope', vision: true, local: false },
+          { id: 'qwen3.8-flash', name: 'Qwen 3.8 Flash', provider: 'dashscope', vision: true, local: false },
           { id: 'qwen3.7-plus', name: 'Qwen 3.7 Plus', provider: 'dashscope', vision: true, local: false },
           { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro', provider: 'deepseek', vision: false, local: false },
           { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', provider: 'deepseek', vision: false, local: false },
@@ -630,6 +631,11 @@ const API = (() => {
     async saveCheckpoint(description = '') {
       if (MOCK) return { ok: true, save_id: 'mock-save', description };
       return req('/api/campaign/save', { method: 'POST', body: JSON.stringify({ description }) });
+    },
+
+    async undoTurn() {
+      if (MOCK) return { ok: true, turn_count: 0, removed_messages: 2, removed_summaries: 0 };
+      return req('/api/campaign/undo', { method: 'POST', body: '{}' });
     },
 
     async pinFact(fact) {

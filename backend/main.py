@@ -93,6 +93,23 @@ async def _with_locked_state(
         return await fn(state)
 
 
+def _epoch_ok(username: str, campaign_id: str, epoch: int | None) -> bool:
+    """True om turen fortfarande är aktuell (ingen undo har skett sedan start).
+
+    Bakgrundsuppgifter (Guardian, faktextraktion, dag-entry) fångar kampanjens
+    epoch när turen startar. Ångrar spelaren turen bumpas epoch → uppgiften
+    avbryter innan den sparar, så ingen zombiedata skrivs ovanpå det
+    återställda läget. epoch=None → ingen kontroll (övriga anrop).
+    """
+    if epoch is None:
+        return True
+    try:
+        st = store.get(username, campaign_id)
+        return st is not None and int(st.get("meta", {}).get("epoch", 0) or 0) == int(epoch)
+    except Exception:
+        return True
+
+
 class _RingBufferHandler(logging.Handler):
     """Kopierar varje loggpost till ringbuffern (för live-konsolen)."""
     def emit(self, record: logging.LogRecord) -> None:
@@ -1807,11 +1824,13 @@ GUARDIAN_MODEL = os.getenv("GUARDIAN_MODEL", "step-3.7-flash")
 DEFAULT_PLAYER_MODEL = "step-3.7-flash"
 # Modeller som icke-admin-spelare får välja mellan
 # (admin ser alla — inkl. MiMo + DeepSeek-egen-API)
-PLAYER_MODELS = ("qwen3.8-max", "qwen3.6-flash", "deepseek-v4-flash", "deepseek-v4-flash-0731", "step-3.7-flash", "step-3.5-flash-2603", "ollama:heretic")
+PLAYER_MODELS = ("qwen3.8-max", "qwen3.8-flash", "qwen3.6-flash", "deepseek-v4-flash", "deepseek-v4-flash-0731", "step-3.7-flash", "step-3.5-flash-2603", "ollama:heretic")
 
-# Gratisväljaren: free/tier1 får välja mellan StepFun-stegen (båda funkar på
-# Step Plan-nyckeln). 3.7 är default, men spelaren kan byta till 3.5-flash-2603 (öppen MoE).
-FREE_PLAYER_MODELS = ("step-3.7-flash", "step-3.5-flash-2603")
+# Gratisväljaren: free/tier1 får välja mellan StepFun-stegen + Qwen 3.8 Flash
+# (2026-09-09: Qwen 3.8 Flash live för free tier — verifierad mot Token Plan).
+# 3.7 är default, men spelaren kan byta till 3.5-flash-2603 (öppen MoE) eller
+# qwen3.8-flash (snabb med vision).
+FREE_PLAYER_MODELS = ("qwen3.8-flash", "step-3.7-flash", "step-3.5-flash-2603")
 
 
 def _clamp_player_model(model_id: str, tier: str | None = None) -> str:
@@ -4060,6 +4079,7 @@ async def get_transcript(morkrets_token: str | None = Cookie(None)):
         "messages": entries,
         "last_effects": meta.get("last_effects", []),
         "last_roll_requests": meta.get("last_roll_requests", []),
+        "undo_available": store.undo_available(state),
         # Tärningslås (2026-08-06): true medan Lorekeeper-jobben (guardian
         # post-DM + faktextraktion) fortfarande körs i bakgrunden. Frontend
         # håller tärningen låst tills detta är false OCH rapporten renderats.
@@ -4262,6 +4282,94 @@ async def save_checkpoint(body: SaveRequest, morkrets_token: str | None = Cookie
         json.dump(snapshot, f, ensure_ascii=False, indent=2)
 
     return {"ok": True, "save_id": save_id, "description": snapshot["description"], "turn_count": snapshot["turn_count"]}
+
+
+async def _reindex_after_undo(username: str, campaign_id: str) -> None:
+    """Efter undo: rensa kampanjens vektorer och indexera om senaste raderna.
+
+    Vektor-ID = uuid5(text+user+campaign) → re-indexering är idempotent och
+    läker de chunkar som pekade på den ångrade turen.
+    """
+    try:
+        if not await rag.qdrant_healthy():
+            return
+        await rag.purge_campaign(username, campaign_id)
+        st = store.get(username, campaign_id)
+        if not st:
+            return
+        recent = store.load_transcript(st, last_n=20)
+        msgs = [
+            {"role": e["role"], "content": e["content"], "turn": st["meta"].get("turn_count", 0)}
+            for e in recent if e.get("content") != "__VAKNA_DM__"
+        ]
+        if msgs:
+            await rag.index_transcript(msgs, username, campaign_id)
+        lore = st.get("lore", []) or []
+        for i, text in enumerate(lore):
+            try:
+                await rag.index_lore(f"Lore #{i + 1}", text, username, campaign_id)
+            except Exception:
+                pass
+        logger.info("↶ Re-indexed %d messages + %d lore after undo", len(msgs), len(lore))
+    except Exception as e:
+        logger.debug("Re-index after undo skipped: %s", e)
+
+
+@app.post("/api/campaign/undo")
+async def undo_last_turn(morkrets_token: str | None = Cookie(None)):
+    """Ångra senaste turen: spelarens prompt, DM-svaret och allt som
+    Guardian/faktextraktionen skrev från den.
+
+    Single-level (bara senaste turen) och kostar 1 turn (action="undo").
+    """
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+    campaign_id = state["meta"].get("campaign_id", "")
+
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        fresh = store.get(username, campaign_id)
+        if fresh:
+            state = fresh
+        if not store.undo_available(state):
+            raise HTTPException(409, "Nothing to undo — no previous turn found.")
+        # Kostar en turn, som alla tunga actions. Samma 403-shape som chatten
+        # så frontendens cap-modal fungerar.
+        _gate_turn_quota(username)
+        info = store.restore_turn(username, campaign_id)
+        if not info:
+            raise HTTPException(409, "Nothing to undo — no previous turn found.")
+        restored = store.get(username, campaign_id)
+        if not restored:
+            raise HTTPException(500, "The restore failed — the campaign file is gone")
+
+        # Ny epoch → bakgrundsuppgifter från den ångrade turen avbryter
+        # innan de sparar (annars skriver de zombiedata ovanpå läget).
+        restored["meta"]["epoch"] = int(restored["meta"].get("epoch", 0) or 0) + 1
+        # Token-statistiken läses ur transkriptet — bevara verklig förbrukning
+        # för de borttagna raderna så admin-siffrorna inte underskattar.
+        _voided = (info.get("removed") or {}).get("tokens") or {}
+        if _voided.get("total_tokens"):
+            _track_unguarded(restored, "undo-voided", _voided)
+        store.save(restored)
+        _consume_turn(username, action="undo")
+        _log_activity(username, "↶ Undoing the last turn…")
+
+    task = asyncio.create_task(_reindex_after_undo(username, campaign_id))
+    _BACKGROUND_TASKS.add(task)
+    task.add_done_callback(_BACKGROUND_TASKS.discard)
+
+    return {
+        "ok": True,
+        "turn_count": restored["meta"].get("turn_count", 0),
+        "removed_messages": info["removed"]["messages"],
+        "removed_summaries": info["removed"]["summaries"],
+        "undo_prompt": info["meta"].get("prompt", ""),
+        "turns_left": _turns_available(username),
+    }
 
 
 @app.post("/api/campaign/pin")
@@ -5066,12 +5174,13 @@ async def _retrieve_relevant_memory(
 
 
 # ── Bakgrund: generera dag-entry för loggboken ──
-async def _generate_day_entry(username: str, campaign_id: str, prev_day: int) -> None:
+async def _generate_day_entry(username: str, campaign_id: str, prev_day: int,
+                              epoch: int | None = None) -> None:
     """Generera en dag-entry för föregående dag via snabb LLM.
     Körs i bakgrunden efter NY_DAG — blockerar aldrig HTTP-svaret."""
     lock = _state_lock(username, campaign_id)
     async with lock:
-        await _generate_day_entry_locked(username, campaign_id, prev_day)
+        await _generate_day_entry_locked(username, campaign_id, prev_day, epoch=epoch)
 
 
 def _track_unguarded(state: dict, model: str, usage: dict) -> None:
@@ -5098,12 +5207,13 @@ def _track_unguarded(state: dict, model: str, usage: dict) -> None:
     bm["calls"] += 1
 
 
-async def _generate_day_entry_locked(username: str, campaign_id: str, prev_day: int) -> None:
+async def _generate_day_entry_locked(username: str, campaign_id: str, prev_day: int,
+                                     epoch: int | None = None) -> None:
     """Hjärtat av dag-entry-genereringen — körs under per-kampanj-låset."""
     _day_entry_usage = {}
     try:
         st = store.get(username, campaign_id)
-        if not st:
+        if not st or not _epoch_ok(username, campaign_id, epoch):
             return
         world = st.setdefault('world', {})
         transcript = store.load_transcript(st, last_n=200)
@@ -5506,6 +5616,7 @@ async def _guardian_post_dm(
     username: str, campaign_id: str, reply: str, player_msg: str,
     effective_turn: int, dm_npcs: list[dict],
     skip_effects: list | None = None,
+    epoch: int | None = None,
 ) -> None:
     """Extraherar mekanik ur DM-svaret i bakgrunden.
     Uppdaterar state, sparar Guardian-rapporten i transkriptet.
@@ -5526,7 +5637,7 @@ async def _guardian_post_dm(
         async with lock:
             await _guardian_post_dm_locked(
                 username, campaign_id, reply, player_msg,
-                effective_turn, dm_npcs, skip_effects,
+                effective_turn, dm_npcs, skip_effects, epoch=epoch,
             )
     except Exception as e:
         logger.warning("🛡️ Guardian background skipped: %s", e, exc_info=True)
@@ -5538,11 +5649,12 @@ async def _guardian_post_dm_locked(
     username: str, campaign_id: str, reply: str, player_msg: str,
     effective_turn: int, dm_npcs: list[dict],
     skip_effects: list | None = None,
+    epoch: int | None = None,
 ) -> None:
     """Hjärtat av Guardian post-DM — körs under per-kampanj-låset."""
     try:
         state = store.get(username, campaign_id)
-        if not state:
+        if not state or not _epoch_ok(username, campaign_id, epoch):
             return
         meta = state.setdefault("meta", {})
         turn_count = meta.get("turn_count", 0)
@@ -5652,6 +5764,9 @@ async def _guardian_post_dm_locked(
             else:
                 logger.info("🛡️ Guardian background (%.1fs): no changes", time.time() - _tg)
 
+        if not _epoch_ok(username, campaign_id, epoch):
+            logger.info("🛡️ Guardian discarded — the turn was undone (epoch changed)")
+            return
         store.save(state)
     except Exception as e:
         logger.warning("🛡️ Guardian background skipped: %s", e, exc_info=True)
@@ -5661,6 +5776,7 @@ async def _guardian_post_dm_locked(
 async def _post_turn_tasks(
     username: str, campaign_id: str, reply: str, player_msg: str,
     turn_count: int, model_id: str,
+    epoch: int | None = None,
 ) -> None:
     """Körs i bakgrunden EFTER att HTTP-svaret skickats till klienten.
     Faktextraktion, RAG-indexering och sammanfattning — inget av detta
@@ -5676,6 +5792,7 @@ async def _post_turn_tasks(
         async with lock:
             await _post_turn_tasks_locked(
                 username, campaign_id, reply, player_msg, turn_count, model_id,
+                epoch=epoch,
             )
     finally:
         _RUNNING_BG.discard(key)
@@ -5684,6 +5801,7 @@ async def _post_turn_tasks(
 async def _post_turn_tasks_locked(
     username: str, campaign_id: str, reply: str, player_msg: str,
     turn_count: int, model_id: str,
+    epoch: int | None = None,
 ) -> None:
     """Hjärtat av post-turn-uppgifterna — körs under per-kampanj-låset."""
     import time as _ptt
@@ -5693,6 +5811,13 @@ async def _post_turn_tasks_locked(
         "⚙️ Post-turn pipeline START (turn %d, user=%s, camp=%s)",
         turn_count, username, campaign_id or "<none>",
     )
+
+    def _ok() -> bool:
+        return _epoch_ok(username, campaign_id, epoch)
+
+    if not _ok():
+        logger.info("⚙️ Post-turn pipeline discarded — the turn was undone (epoch changed)")
+        return
     # 1. Extrahera fakta + inventory-ändringar ur DM-svaret (billig modell)
     # Varannan tur (turn_count % 2 == 0): faktextraktion är ett LLM-anrop
     # (kostnad + latens). [FÖREMÅL:]-taggar + Guardian täcker redan inventory,
@@ -5720,7 +5845,7 @@ async def _post_turn_tasks_locked(
                 inventory_list=inv_list_str,
                 language=_get_lang(st) if st else "en",
             )
-            if facts:
+            if facts and _ok():
                 register = FactRegister(username, campaign_id)
                 register.add_facts(facts)
                 logger.info("Extracted %d facts (turn %d)", len(facts), turn_count)
@@ -5778,6 +5903,8 @@ async def _post_turn_tasks_locked(
     #     spelarmeddelande (gratis strängmatchning, inget LLM-anrop).
     #     NPC:er som nämns ofta stiger i rank; de som aldrig nämns glider
     #     ut ur fönstret (rörligt faktafönster, 2026-08-04).
+    if not _ok():
+        return
     try:
         st = store.get(username, campaign_id)
         if st and st.get("npcs"):
@@ -5802,6 +5929,8 @@ async def _post_turn_tasks_locked(
     # 1d. Kompakteringspass (var 50:e turn) — extraction-modellen bedömer
     #     vilka aktiva fakta som inte längre är relevanta och de sänks i
     #     rank (relevance → 0.2) så det rörliga faktafönstret hålls rent.
+    if not _ok():
+        return
     if turn_count % 50 == 0 and turn_count > 0:
         try:
             st = store.get(username, campaign_id)
@@ -5930,6 +6059,8 @@ async def _post_turn_tasks_locked(
             logger.debug("Active threads update skipped: %s", e)
 
     # 2. Indexera senaste transkriptet i Qdrant (var 5:e tur)
+    if not _ok():
+        return
     if turn_count % 5 == 0 and turn_count > 0:
         try:
             if await rag.qdrant_healthy():
@@ -5954,6 +6085,8 @@ async def _post_turn_tasks_locked(
         logger.debug("🔎 RAG index not due (turn %d, runs every 5th)", turn_count)
 
     # 3. Sammanfattning (om det är dags)
+    if not _ok():
+        return
     _summary_usage = {}
     try:
         st = store.get(username, campaign_id)
@@ -5986,6 +6119,8 @@ async def _post_turn_tasks_locked(
         logger.debug("Summary skipped: %s", e)
 
     # 4. Kapitel-sammanfattning (var 5:e scen-sammanfattning, Nivå 2)
+    if not _ok():
+        return
     _chapter_usage = {}
     try:
         st = store.get(username, campaign_id)
@@ -6020,6 +6155,8 @@ async def _post_turn_tasks_locked(
         logger.debug("Chapter summary skipped: %s", e)
 
     # 5. Kampanjbåge (var 3:e kapitel, Nivå 3)
+    if not _ok():
+        return
     _arc_usage = {}
     try:
         st = store.get(username, campaign_id)
@@ -6121,7 +6258,27 @@ async def chat(req: ChatRequest, morkrets_token: str | None = Cookie(None)):
         fresh_state = store.get(username, campaign_id)
         if fresh_state:
             state = fresh_state
-        return await _chat_locked(req, payload, username, campaign_id, state)
+        # Undo: spara läget FÖRE turen (single-level). /guardian är ett
+        # korrigeringsverktyg, inte en story-tur → ingen snapshot.
+        _is_guardian_cmd = (req.message or "").strip().lower().startswith("/guardian")
+        _snap_taken = False
+        if not _is_guardian_cmd:
+            try:
+                store.snapshot_turn(state, prompt=req.message)
+                _snap_taken = True
+            except Exception as e:
+                logger.warning("Undo snapshot failed: %s", e)
+        try:
+            return await _chat_locked(req, payload, username, campaign_id, state)
+        except Exception:
+            # Turen kraschade före commit (LLM-fel, turn-tak) → snapshotet
+            # beskriver ett läge som aldrig skrevs. Släng det.
+            if _snap_taken:
+                try:
+                    store.discard_snapshot(username, campaign_id)
+                except Exception:
+                    pass
+            raise
 
 
 async def _chat_locked(
@@ -6133,6 +6290,11 @@ async def _chat_locked(
     # återvänder till kampanjen (frontend återställer den vid load).
     if state.setdefault("meta", {}).get("dm_model") != req.model_id:
         state["meta"]["dm_model"] = req.model_id
+
+    # Undo-guard: kampanjens epoch vid turstart. Bakgrundsuppgifterna
+    # (Guardian, faktextraktion, dag-entry) får bara spara om epoken är kvar —
+    # annars skriver de zombiedata ovanpå ett ångrat läge.
+    turn_epoch = int(state.setdefault("meta", {}).get("epoch", 0) or 0)
 
     # Spelaren svarade på ett tärningskast → rensa väntande kast-begäran.
     # last_roll_requests fungerar då som "obesvarade kast": de finns kvar
@@ -6591,7 +6753,7 @@ async def _chat_locked(
     # Guardian ska inte applicera [SKADA:]-taggen en andra gång.
     guardian_task = asyncio.create_task(_guardian_post_dm(
         username, campaign_id, reply, req.message, effective_turn, list(new_npcs),
-        skip_effects=meta.get("last_effects") or [],
+        skip_effects=meta.get("last_effects") or [], epoch=turn_epoch,
     ))
     _BACKGROUND_TASKS.add(guardian_task)
     guardian_task.add_done_callback(_BACKGROUND_TASKS.discard)
@@ -6603,6 +6765,7 @@ async def _chat_locked(
     turn_count = state["meta"].get("turn_count", 0)
     task = asyncio.create_task(_post_turn_tasks(
         username, campaign_id, reply, req.message, turn_count, req.model_id,
+        epoch=turn_epoch,
     ))
     _BACKGROUND_TASKS.add(task)
     task.add_done_callback(_BACKGROUND_TASKS.discard)
@@ -6610,7 +6773,7 @@ async def _chat_locked(
     # Dag-entry: om NY_DAG trigga, generera loggbok-entry i bakgrunden
     if state.get('world', {}).pop('_pending_day_entry', False):
         prev_day = state['world']['day'] - 1
-        day_task = asyncio.create_task(_generate_day_entry(username, campaign_id, prev_day))
+        day_task = asyncio.create_task(_generate_day_entry(username, campaign_id, prev_day, epoch=turn_epoch))
         _BACKGROUND_TASKS.add(day_task)
         day_task.add_done_callback(_BACKGROUND_TASKS.discard)
 

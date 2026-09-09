@@ -75,6 +75,15 @@ MODELS: dict[str, ModelConfig] = {
         supports_vision=False,
     ),
 
+    "qwen3.8-flash": ModelConfig(
+        model_id="qwen3.8-flash",
+        display_name="Qwen 3.8 Flash (snabb)",
+        provider="dashscope",
+        api_model="qwen3.8-flash",
+        base_url=os.getenv("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
+        api_key_env="DASHSCOPE_API_KEY",
+        supports_vision=True,
+    ),
     "qwen3.6-flash": ModelConfig(
         model_id="qwen3.6-flash",
         display_name="Qwen 3.6 Flash (snabb)",

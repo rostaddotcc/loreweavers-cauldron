@@ -835,8 +835,11 @@ html{font-size:17px}
     </button>
     <div class="rn-body" id="rn-body">
       <div class="rn-inner">
-        <span class="rn-ver">v1.2 — The Honest Dice</span>
+        <span class="rn-ver">v1.3 — The Rewoven Thread</span>
         <ul class="rn-list">
+          <li><b>Undo your last turn</b> — a mistyped line or a decision made too fast can be rewound: the message, the DM's reply and everything the Lorekeeper recorded from it. Inventory, gold, HP, quests and memory return to where they stood. It costs one turn, and only the most recent turn can be rewound.</li>
+          <li><b>Qwen 3.8 Flash joins the free table</b> — a fast mind with real reasoning, free for every account. Pick it in Settings or when you start a new adventure.</li>
+          <li><b>The party portrait blends again</b> — the character card had gone opaque; the portrait now sits behind the name, class and health bars the way it used to.</li>
           <li><b>Your blade rolls, the DM does not</b> — weapon damage now tumbles through the server's dice engine on every hit, doubled on a critical. The story decides what it feels like; the dice decide what it costs.</li>
           <li><b>Conditions that actually bind</b> — prone, restrained, stunned and poisoned change rolls, turns and HP between rounds. A knocked-down goblin is easier to hit, and it hits worse.</li>
           <li><b>Level-ups that level up</b> — new tiers grant hit-dice health, class features, spell slots and a proficiency bonus that finally scales. Armour moves your AC; long rests hand back half your hit dice.</li>
@@ -2146,7 +2149,7 @@ function advPrompt() {
 }
 
 // ── Modellgate (DM/Guardian/Extraction + Character-sheet modell — kan ändras när som helst i kampanjen) ──
-const PLAYER_DM_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-3.7-flash', 'ollama:heretic'];
+const PLAYER_DM_MODELS = ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-3.7-flash', 'ollama:heretic'];
 const TTS_PROVIDERS = [
   { id: 'qwen', name: 'Qwen (Token Plan) ⭐', recommended: true },
   { id: 'stepfun', name: 'StepFun (Step Plan)' },

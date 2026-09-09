@@ -239,6 +239,7 @@
       <span style="font-size:.73rem;color:var(--bone-dim);opacity:.7">🧙 Character:</span>
       <select id="char-model" style="background:var(--stone-2);border:1px solid var(--edge);color:var(--bone);padding:.4rem .6rem;font-size:.83rem;cursor:pointer">
         <option value="qwen3.8-max">qwen3.8-max</option>
+        <option value="qwen3.8-flash">qwen3.8-flash</option>
         <option value="qwen3.6-flash">qwen3.6-flash</option>
         <option value="deepseek-v4-flash-0731">deepseek-v4-flash-0731</option>
         <option value="step-3.7-flash" selected>step-3.7-flash</option>
@@ -317,7 +318,7 @@ if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 // ── Rollbaserat modellval: icke-admin får välja mellan de tillåtna modellerna ──
 let newgameIsAdmin = false;
 let _newgameTier = 'free';  // free | tier1 | tier2 | lifetime
-const PLAYER_CHAR_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-3.7-flash', 'ollama:heretic'];
+const PLAYER_CHAR_MODELS = ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-3.7-flash', 'ollama:heretic'];
 // Råa ID:n visas direkt — man vet exakt vilken modell man får (inget "snabb"/"fast"-förskönande)
 const PLAYER_CHAR_LABELS = {};
 PLAYER_CHAR_MODELS.forEach(m => { PLAYER_CHAR_LABELS[m] = m; });

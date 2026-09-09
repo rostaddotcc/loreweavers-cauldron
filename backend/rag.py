@@ -420,6 +420,34 @@ async def purge_user(username: str) -> int:
         return 0
 
 
+async def purge_campaign(username: str, campaign_id: str) -> int:
+    """Radera alla vektorer för EN kampanj (används av undo/rollback).
+
+    purge_user är per-användare (raderar ALLA kampanjer) — undo behöver bara
+    den aktiva kampanjens chunkar. Returnerar antal raderade punkter (0 vid fel).
+    """
+    try:
+        client = _qdrant_client()
+        flt = Filter(must=[
+            FieldCondition(key="username", match=MatchValue(value=username)),
+            FieldCondition(key="campaign_id", match=MatchValue(value=campaign_id)),
+        ])
+        points, _next = await client.scroll(
+            collection_name=COLLECTION, scroll_filter=flt, limit=1000,
+            with_payload=False, with_vectors=False,
+        )
+        await client.delete(
+            collection_name=COLLECTION,
+            points_selector=FilterSelector(filter=flt),
+        )
+        await client.close()
+        logger.info("Cleared Qdrant vectors for %s/%s (%d points)", username, campaign_id, len(points))
+        return len(points)
+    except Exception as exc:
+        logger.warning("Qdrant campaign cleanup failed for %s/%s: %s", username, campaign_id, exc)
+        return 0
+
+
 async def qdrant_healthy() -> bool:
     """
     Kontrollera att Qdrant är nåbar och svarar.

@@ -269,7 +269,13 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
   background: var(--stone-2) !important;
   border: 1px solid var(--edge) !important;
   box-shadow: none !important;
-}.pc-card:hover{ border-color: var(--gold) !important; transform: none !important; }.pc-name{
+}.pc-card:hover{ border-color: var(--gold) !important; transform: none !important; }
+/* 2026-09-09: profilporträttet bakom kortet (.pc-avatar-bg + .pc-wrap.has-bg)
+   försvann när sidebar-skinen gav .pc-card en opak bakgrund med !important.
+   Låt has-bg vinna och ge porträttet mer närvaro (var "pyttelitet"). */
+.pc-wrap.has-bg .pc-card{ background: transparent !important; }
+.pc-wrap.has-bg .pc-avatar-bg{ border-radius: 8px !important; }
+.pc-wrap .pc-avatar{ width: 54px !important; height: 54px !important; border-radius: 8px !important; }.pc-name{
   font-family: var(--font-accent) !important;
   font-size: .6rem !important;
   color: var(--bone-bright) !important;

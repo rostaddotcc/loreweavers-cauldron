@@ -293,6 +293,24 @@ def test_free_model_clamp(client, llm_mocks):
     assert main._clamp_player_model("qwen3.8-max", tier=main._tier_for("alice")) == "step-3.7-flash"
 
 
+def test_qwen38_flash_is_free_for_everyone(client, llm_mocks):
+    """2026-09-09: qwen3.8-flash live för free tier (verifierad mot Token Plan)."""
+    _register(client)
+    _make_campaign("alice")
+    assert "qwen3.8-flash" in main.FREE_PLAYER_MODELS
+    assert "qwen3.8-flash" in main.PLAYER_MODELS
+    assert main._clamp_player_model("qwen3.8-flash", tier="free") == "qwen3.8-flash"
+    assert main._clamp_player_model("qwen3.8-flash", tier="tier1") == "qwen3.8-flash"
+    assert main._clamp_player_model("qwen3.8-flash", tier="tier2") == "qwen3.8-flash"
+    r = _chat(client, model="qwen3.8-flash")
+    assert r.status_code == 200, r.text
+    assert llm_mocks["models"] == ["qwen3.8-flash"]
+    # Registret måste ha provider/nyckel — annars faller anropet i prod
+    from models import get_model
+    cfg = get_model("qwen3.8-flash")
+    assert cfg.api_key_env == "DASHSCOPE_API_KEY" and cfg.api_model == "qwen3.8-flash"
+
+
 def test_premium_model_ok(client, llm_mocks):
     _register(client)
     _make_campaign("alice")

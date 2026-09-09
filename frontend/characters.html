@@ -137,6 +137,7 @@
       <span style="font-size:.78rem;color:var(--bone-dim)">🧙 Model:</span>
       <select id="forge-model">
         <option value="qwen3.8-max">qwen3.8-max</option>
+        <option value="qwen3.8-flash">qwen3.8-flash</option>
         <option value="qwen3.6-flash">qwen3.6-flash</option>
         <option value="deepseek-v4-flash-0731">deepseek-v4-flash-0731</option>
         <option value="step-3.7-flash" selected>step-3.7-flash</option>
@@ -219,7 +220,7 @@ if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 
 // Modellväljare: icke-admin begränsas till spelarmodeller; free/tier1 låses
 // till step-3.7-flash (premium-modeller gråas ut + 🔒 — backend klämmer ändå).
-const PLAYER_CHAR_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-3.7-flash', 'step-3.5-flash-2603', 'ollama:heretic'];
+const PLAYER_CHAR_MODELS = ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-3.7-flash', 'step-3.5-flash-2603', 'ollama:heretic'];
 const PREMIUM_CHAR_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'ollama:heretic'];
 let _forgeTier = 'free';  // free | tier1 | tier2 | lifetime
 API.me().then(u => {

@@ -1812,11 +1812,12 @@
           <span class="cli-prompt" id="cli-prompt" aria-hidden="true"><span class="cp-user"></span><span class="cp-at">@</span><span class="cp-host"></span> <span class="cp-path">~</span> <span class="cp-pct">%</span></span><span class="cli-cursor" id="cli-cursor">▌</span>
           <textarea id="player-input" rows="1" enterkeyhint="send" placeholder="What do you do? Write freely — fight, sneak, talk, cast a spell…"></textarea>
           <button class="mic-btn" id="mic-btn" onclick="toggleMic()" title="Speak — English voice input (StepFun ASR)" aria-label="Voice input"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg></button>
+          <button class="undo-btn" id="undo-btn" onclick="doUndo()" title="Undo last turn (costs 1 turn)" hidden style="display:none;align-items:center;justify-content:center;width:2.1rem;height:2.1rem;border-radius:8px;border:1px solid var(--gold-dim,#8a6d1f);background:rgba(212,169,44,.08);color:var(--gold,#d4a92c);font-size:1.05rem;cursor:pointer;flex:0 0 auto;">↶</button>
           <button class="send-btn" onclick="sendPlayer()">⚔ Act</button>
         </div>
       </div>
       <div class="input-hint">
-        <kbd>Enter</kbd> send · <kbd>Shift+Enter</kbd> new line · <kbd>/help</kbd> commands · <kbd>/guardian</kbd> corrections · <kbd>🎤</kbd> speak (EN)
+        <kbd>Enter</kbd> send · <kbd>Shift+Enter</kbd> new line · <kbd>/help</kbd> commands · <kbd>/guardian</kbd> corrections · <kbd>/undo</kbd> undo · <kbd>🎤</kbd> speak (EN)
       </div>
     </div>
   </main>
@@ -5016,6 +5017,7 @@ async function answerRollRequest(id, notation, label) {
     if (res.turn_count && campaignData) campaignData.turn_count = res.turn_count;
     updateHeaderInfo();
     refreshMeData();
+    setUndoButton(true);  // turen är ångringsbara nu
     const dmEl = res.reply ? addMessage('dm', null, res.reply) : null;
     // DM:ns inre monolog (reasoning) — precis ovanför svaret (2026-08-14)
     if (dmEl && res.reasoning) attachReasoning(dmEl, res.reasoning);
@@ -5086,7 +5088,9 @@ const AWAKENING_TRIGGER = '__VAKNA_DM__';
 // Här vaknar DM bara automatiskt med de sparade modellerna. In-game-bytet sker
 // via settings-menyn (⚙️ → Modeller).
 // Spelarmodeller (icke-admin): samma lista som backend PLAYER_MODELS
-const PLAYER_MODEL_IDS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-3.7-flash', 'step-3.5-flash-2603', 'ollama:heretic'];
+const PLAYER_MODEL_IDS = ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-3.7-flash', 'step-3.5-flash-2603', 'ollama:heretic'];
+// Free-tier-modeller (speglar backend FREE_PLAYER_MODELS) — allt annat låses 🔒.
+const FREE_MODEL_IDS = ['qwen3.8-flash', 'step-3.7-flash', 'step-3.5-flash-2603'];
 
 function autoAwakenDM() {
   roleReady.then(() => {
@@ -5139,6 +5143,7 @@ async function loadTranscript() {
     return;
   }
 
+  setUndoButton(!!data.undo_available);
   const messages = data.messages || [];
   const visible = messages.filter(m => m.content !== AWAKENING_TRIGGER);
   if (visible.length > 0) {
@@ -5778,6 +5783,7 @@ function helpCardHtml() {
   ${cmd('/lore [text]', 'Add a lore entry')}
   ${cmd('/chapter [title]', 'End the chapter (writes a summary)')}
   ${cmd('/save [text]', 'Save the campaign (checkpoint)')}
+  ${cmd('/undo', 'Undo your last message, the DM reply and everything it changed (costs 1 turn)')}
   ${cmd('/roll [dice]', 'Roll dice yourself — e.g. <i>/roll 2d6+3</i>')}
   ${cmd('/help', 'Show this help')}
 
@@ -5822,6 +5828,39 @@ function helpCardHtml() {
 
   <div class="hc-foot">🎲 The DM calls for dice when fate is uncertain — or roll your own with /roll.</div>
 </div>`;
+}
+
+// ── Undo: ångra senaste turen (prompt + DM-svar + Guardian-uppdateringar) ──
+function setUndoButton(on) {
+  const b = document.getElementById('undo-btn');
+  if (!b) return;
+  b.hidden = !on;
+  b.style.display = on ? 'flex' : 'none';
+}
+
+async function doUndo() {
+  const ok = window.confirm(
+    'Undo your last message?\n\n' +
+    'The DM reply and everything the Lorekeeper recorded from it are removed. ' +
+    'This costs 1 turn.'
+  );
+  if (!ok) { addCmdMessage('↶ <i>Undo cancelled.</i>'); return; }
+  setUndoButton(false);
+  addCmdMessage('↶ <i>Undoing the last turn…</i>');
+  try {
+    const res = await API.undoTurn();
+    await loadCampaign();
+    await loadTranscript();
+    updateHeaderInfo();
+    refreshMeData();
+    toast('↶ Last turn undone');
+    addMessage('system', null,
+      `↶ <b>Last turn undone.</b> ${res.removed_messages || 0} message(s) removed — the story is back where it was.`);
+  } catch (e) {
+    if (await handleCapError(e)) return;
+    setUndoButton(true);
+    addMessage('system', null, '⚠ Could not undo: ' + escapeHtml(e.message || String(e)));
+  }
 }
 
 async function handleSlashCommand(text) {
@@ -5932,6 +5971,12 @@ async function handleSlashCommand(text) {
   if (lower.startsWith('/guardian')) {
     addMessage('player', null, escapeHtml(text));
     dmRespond(text);
+    return;
+  }
+
+  // /undo — ångra senaste turen (prompt + svar + Guardian-uppdateringar)
+  if (lower === '/undo' || lower === '/ångra' || lower === '/angra') {
+    await doUndo();
     return;
   }
 
@@ -6191,6 +6236,7 @@ async function dmRespond(playerText) {
     if (res.turn_count && campaignData) campaignData.turn_count = res.turn_count;
     updateHeaderInfo();
     refreshMeData();
+    setUndoButton(true);  // turen är ångringsbara nu
   } catch (e) {
     hideThoughts();
     hideGuardianStatus();
@@ -8029,6 +8075,7 @@ let currentModel = localStorage.getItem('dnd_model') || 'step-3.7-flash';
 const modelNames = {
   'step-3.7-flash': 'Step 3.7 Flash',
   'qwen3.8-max': 'Qwen 3.8 Max',
+  'qwen3.8-flash': 'Qwen 3.8 Flash',
   'qwen3.6-flash': 'Qwen 3.6 Flash (snabb)',
   'qwen3.7-plus': 'Qwen 3.7 Plus',
   'deepseek-v4-pro': 'DeepSeek V4 Pro',
@@ -8055,10 +8102,10 @@ function initSettingsModelPickers() {
   const eSel = document.getElementById('settings-extraction-model');
   if (!dmSel || !gSel) return;
 
-  // free/tier1-konton: ENDAST step-3.7-flash valbar. Premium-modeller visas
-  // gråade med 🔒 så spelaren inte tror att valet funkar (backend gate-ar ändå).
+  // free/tier1-konton: FREE_MODEL_IDS valbara (spegeln av backend
+  // FREE_PLAYER_MODELS). Övriga modeller gråas med 🔒 (backend gate-ar ändå).
   const isFree = !isAdmin && !_tierHasModels();
-  const lockedIds = isFree ? allowed.filter(m => m !== 'step-3.7-flash') : [];
+  const lockedIds = isFree ? allowed.filter(m => !FREE_MODEL_IDS.includes(m)) : [];
   const lockEl = document.getElementById('model-picker-lock');
   const hintEl = document.getElementById('model-picker-premium-hint');
   if (lockEl) lockEl.style.display = isFree ? '' : 'none';
@@ -8175,11 +8222,21 @@ function logout() {
 
 // ── Spelarprofil-popup ──
 let toastTimer;
-function toast(msg) {
+function toast(msg, ms = 2600) {
   const el = document.getElementById('toast');
   el.textContent = msg; el.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+  toastTimer = setTimeout(() => el.classList.remove('show'), ms);
+}
+
+// ── Release-toast: en gång per version (localStorage) ──
+const RELEASE_TOAST_VERSION = 'v1.3';
+function maybeShowReleaseToast() {
+  try {
+    if (localStorage.getItem('dnd_release_toast') === RELEASE_TOAST_VERSION) return;
+    localStorage.setItem('dnd_release_toast', RELEASE_TOAST_VERSION);
+  } catch (_) { /* private mode — visa ändå */ }
+  setTimeout(() => toast('✦ v1.3: Qwen 3.8 Flash is now free for everyone — and you can undo your last turn.', 9000), 1400);
 }
 
 // ═══════════════════════════════════════
@@ -8774,6 +8831,7 @@ loadCampaign().then(ok => {
   if (ok !== false) {
     loadTranscript();
     initSettingsModelPickers();
+    maybeShowReleaseToast();
   }
 });
 
@@ -8814,6 +8872,7 @@ document.addEventListener('keydown', e => {
       Settings ⚙️ (the DM choice also appears when you start a new adventure).
     </div>
     <div class="mi-row"><div class="mi-id">qwen3.8-max</div><div class="mi-desc">The flagship. Deep reasoning, rich narration, fewest mistakes — but it thinks long and hard before every reply.<span class="mi-speed">⏱ slowest · best quality · thinks a lot</span></div></div>
+    <div class="mi-row"><div class="mi-id">qwen3.8-flash</div><div class="mi-desc">The new free pick. Fast narration with solid reasoning, and it can read images — free for every account.<span class="mi-speed">⏱ fast · free tier · light thinking</span></div></div>
     <div class="mi-row"><div class="mi-id">qwen3.6-flash</div><div class="mi-desc">The balanced storyteller. Visible reasoning, solid quality, noticeably faster.<span class="mi-speed">⏱ medium · good quality · thinks</span></div></div>
     <div class="mi-row"><div class="mi-id">deepseek-v4-flash</div><div class="mi-desc">The quick hand. Fast, economical replies with light reasoning — great for casual scenes.<span class="mi-speed">⏱ fast · economical · light thinking</span></div></div>
     <div class="mi-row"><div class="mi-id">step-3.7-flash</div><div class="mi-desc">Another fast option. Snappy narration; occasionally needs a retry on complex character generation.<span class="mi-speed">⏱ fast · light thinking</span></div></div>

@@ -71,6 +71,37 @@ def _default_state(campaign_id: str, user: str) -> dict:
     }
 
 
+def _jsonl_entries(lines) -> list[dict]:
+    """Parsa JSONL-rader tolerant (hoppar trasiga rader)."""
+    out = []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            out.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    return out
+
+
+def _transcript_tokens(entries: list[dict]) -> dict:
+    """Summera token-förbrukning ur transkriptposter (DM + Guardian pre-DM)."""
+    acc = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+    for e in entries:
+        m = e.get("meta", {}) or {}
+        t = m.get("tokens", {}) or {}
+        p = int(t.get("prompt_tokens", 0) or 0)
+        c = int(t.get("completion_tokens", 0) or 0)
+        gpd = m.get("guardian_pre_dm_tokens", {}) or {}
+        p += int(gpd.get("prompt_tokens", 0) or 0)
+        c += int(gpd.get("completion_tokens", 0) or 0)
+        acc["prompt_tokens"] += p
+        acc["completion_tokens"] += c
+        acc["total_tokens"] += p + c
+    return acc
+
+
 class CampaignStore:
     """Hanterar en användares kampanjer på disk."""
 
@@ -98,6 +129,9 @@ class CampaignStore:
 
     def _saves_dir(self, user: str, campaign_id: str) -> Path:
         return self._campaign_dir(user, campaign_id) / "saves"
+
+    def _undo_dir(self, user: str, campaign_id: str) -> Path:
+        return self._campaign_dir(user, campaign_id) / "undo"
 
     # ── CRUD ──
 
@@ -468,6 +502,153 @@ class CampaignStore:
         user = state["meta"]["user"]
         cid = state["meta"]["campaign_id"]
         return self._summaries_dir(user, cid)
+
+    # ── Undo (ångra senaste turen) ──────────────────────────────────
+
+    def snapshot_turn(self, state: dict, prompt: str = "") -> dict:
+        """Spara en FULL snapshot av läget FÖRE en tur (single-level).
+
+        Skriver state-before.json + facts-before.json (faktaregistret ligger
+        utanför state.json) + meta.json med transkript-offsets, summariefiler
+        och bilagor. En tidigare snapshot skrivs över — bara senaste turen
+        går att ångra.
+        """
+        user = state["meta"]["user"]
+        cid = state["meta"]["campaign_id"]
+        udir = self._undo_dir(user, cid)
+        udir.mkdir(parents=True, exist_ok=True)
+
+        (udir / "state-before.json").write_text(
+            json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+
+        facts_src = self._campaign_dir(user, cid) / "facts.json"
+        facts_bak = udir / "facts-before.json"
+        if facts_src.exists():
+            facts_bak.write_bytes(facts_src.read_bytes())
+        elif facts_bak.exists():
+            facts_bak.unlink()
+
+        tdir = self._transcripts_dir(user, cid)
+        offsets: dict[str, int] = {}
+        if tdir.exists():
+            for f in sorted(tdir.glob("session-*.jsonl")):
+                offsets[f.name] = len(f.read_text(encoding="utf-8").splitlines())
+
+        sdir = self._summaries_dir(user, cid)
+        summaries = sorted(p.name for p in sdir.glob("*.json")) if sdir.exists() else []
+        attachments = [
+            a.get("disk_name") for a in state.get("attachments", [])
+            if isinstance(a, dict) and a.get("disk_name")
+        ]
+
+        meta = {
+            "created": _now(),
+            "turn_count": state["meta"].get("turn_count", 0),
+            "epoch": int(state["meta"].get("epoch", 0) or 0),
+            "prompt": (prompt or "")[:500],
+            "session_offsets": offsets,
+            "summaries": summaries,
+            "attachments": attachments,
+        }
+        (udir / "meta.json").write_text(
+            json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        return meta
+
+    def discard_snapshot(self, user: str, campaign_id: str) -> None:
+        """Släng snapshotet utan att återställa (tur som kraschade före commit)."""
+        import shutil
+        shutil.rmtree(self._undo_dir(user, campaign_id), ignore_errors=True)
+
+    def undo_available(self, state: dict) -> bool:
+        """True om det finns en snapshot att ångra till."""
+        user = state.get("meta", {}).get("user", "")
+        cid = state.get("meta", {}).get("campaign_id", "")
+        if not _CAMPAIGN_ID_RE.match(cid or ""):
+            return False
+        return (self._undo_dir(user, cid) / "state-before.json").exists()
+
+    def restore_turn(self, user: str, campaign_id: str) -> dict | None:
+        """Återställ state/facts/transkript/summaries till senaste snapshotet.
+
+        Returnerar {"meta": ..., "removed": {...}} — eller None om inget
+        snapshot finns. Snapshotet konsumeras (single-level undo).
+        """
+        import shutil
+        if not _CAMPAIGN_ID_RE.match(campaign_id or ""):
+            return None
+        udir = self._undo_dir(user, campaign_id)
+        state_bak = udir / "state-before.json"
+        if not state_bak.exists():
+            return None
+        try:
+            meta = json.loads((udir / "meta.json").read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            meta = {}
+
+        removed = {
+            "messages": 0, "summaries": 0, "attachments": 0,
+            "tokens": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+        }
+
+        # 1. State — allt Guardian/extraktionen skrev ligger i state.json
+        shutil.copy2(state_bak, self._state_path(user, campaign_id))
+
+        # 2. Faktaregistret (eget register utanför state.json)
+        facts_src = self._campaign_dir(user, campaign_id) / "facts.json"
+        facts_bak = udir / "facts-before.json"
+        if facts_bak.exists():
+            shutil.copy2(facts_bak, facts_src)
+        elif facts_src.exists():
+            facts_src.unlink()
+
+        # 3. Transkript: trunkera till sparade radantal, radera nya filer.
+        #    Token-summor för borttagna rader returneras så anroparen kan
+        #    bevara verklig förbrukning i statistik (tokens är redan brända).
+        offsets = meta.get("session_offsets", {}) or {}
+        tdir = self._transcripts_dir(user, campaign_id)
+        if tdir.exists():
+            for f in sorted(tdir.glob("session-*.jsonl")):
+                keep = offsets.get(f.name)
+                if keep is None:
+                    entries = _jsonl_entries(f.read_text(encoding="utf-8").splitlines())
+                    t = _transcript_tokens(entries)
+                    for k in removed["tokens"]:
+                        removed["tokens"][k] += t[k]
+                    removed["messages"] += len(entries)
+                    f.unlink()
+                    continue
+                lines = f.read_text(encoding="utf-8").splitlines(keepends=True)
+                if len(lines) > keep:
+                    dropped = lines[keep:]
+                    t = _transcript_tokens(_jsonl_entries(dropped))
+                    for k in removed["tokens"]:
+                        removed["tokens"][k] += t[k]
+                    removed["messages"] += len(dropped)
+                    f.write_text("".join(lines[:keep]), encoding="utf-8")
+
+        # 4. Sammanfattningar skapade under turen
+        sdir = self._summaries_dir(user, campaign_id)
+        keep_sum = set(meta.get("summaries", []) or [])
+        if sdir.exists():
+            for p in sorted(sdir.glob("*.json")):
+                if p.name not in keep_sum:
+                    p.unlink()
+                    removed["summaries"] += 1
+
+        # 5. Bilagefiler skapade under turen
+        adir = self._campaign_dir(user, campaign_id) / "attachments"
+        keep_att = set(meta.get("attachments", []) or [])
+        if adir.exists():
+            for p in sorted(adir.iterdir()):
+                if p.is_file() and p.name not in keep_att:
+                    p.unlink()
+                    removed["attachments"] += 1
+
+        # 6. Snapshotet är förbrukat
+        shutil.rmtree(udir, ignore_errors=True)
+        return {"meta": meta, "removed": removed}
 
 
 class CharacterVault:

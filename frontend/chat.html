@@ -1204,31 +1204,6 @@
   position: relative !important;
   padding: 0.18rem 0.35rem 0.18rem 0.15rem !important;
 }
-@keyframes mic-pulse{
-  0%,100%{ box-shadow: 0 0 10px -2px rgba(212,69,58,.5); }
-  50%{ box-shadow: 0 0 18px 0 rgba(212,69,58,.9); }
-}
-/* Undo-knappen (v1.3): absolut som .mic-btn/.send-btn — annars knuffar
-   textarean (flex:1, min-width:auto) ut den utanför composern. */
-.undo-btn{
-  position: absolute !important;
-  right: 6.7rem !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
-  width: 36px !important;
-  height: 36px !important;
-  display: none;
-  align-items: center !important;
-  justify-content: center !important;
-  padding: 0 !important;
-  border: 1px solid var(--gold) !important;
-  background: var(--stone-3) !important;
-  color: var(--gold-bright) !important;
-  font-size: 1.05rem !important;
-  line-height: 1 !important;
-  cursor: pointer !important;
-  z-index: 2;
-}
 /* Mobil (≤768px): kompakt 1-rads-fält; native scrollbar döljs — dess
    ▲/▼-pilar klipps annars vid kanterna ("scrollpilar utanför sidan") —
    quick-scroll ▲▼ (mindre, insides) tar över. (2026-08-09) */

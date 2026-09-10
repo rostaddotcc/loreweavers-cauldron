@@ -175,7 +175,7 @@
     padding: 0.55rem 0.7rem; border: none; border-radius: 2px;
     background: transparent; cursor: pointer; text-align: left;
     text-decoration: none; transition: background 0.15s, transform 0.15s;
-  }.drop-item:hover{ background: rgba(var(--gold-bright-rgb),0.1); transform: translateX(3px); }.di-icon{ font-size: 1.05rem; flex-shrink: 0; filter: drop-shadow(0 0 4px rgba(var(--gold-bright-rgb),0.3)); }.di-body{ display: flex; flex-direction: column; min-width: 0; }.di-name{ font-family: var(--font-display); font-size: 0.96rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-bright); }.drop-item:hover .di-name{ color: var(--gold-bright); }.di-hint{ font-size: 0.86rem; font-style: italic; color: var(--bone-dim); }/* Settings-menyn (⚙️): hint-rad → hover-tooltip (desktop). Menyn är högerjusterad → tooltip pekar vänsterut */.settings-menu .drop-item{ position: relative; }.settings-menu .di-hint{ position: absolute; top: 50%; right: calc(100% + 10px); transform: translateY(-50%); white-space: nowrap; font-size: 0.84rem; font-style: italic; color: var(--bone-dim); background: var(--stone-3); border: 1px solid var(--edge); border-radius: 3px; padding: 0.32rem 0.6rem; box-shadow: 0 10px 28px -10px rgba(0,0,0,0.8); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.16s ease, visibility 0.16s ease; z-index: 70; }.settings-menu .drop-item:hover .di-hint{ opacity: 1; visibility: visible; }.settings-menu .drop-item:hover .di-name{ color: var(--gold-bright); }@media(hover:none), (max-width:640px){ .settings-menu .di-hint{ position: static; transform: none; opacity: 1; visibility: visible; background: none; border: none; box-shadow: none; padding: 0; } /* TTS-raden: kompaktare så Combat/Engine Room aldrig klipps bort */ .tts-voice-picker{ gap: 0.2rem 0.3rem; margin-bottom: 0.25rem; }.tts-voice-label{ display: none; }.tts-select{ font-size: 0.58rem; padding: 0.14rem 0.28rem; max-width: 96px; flex-shrink: 1; min-width: 0; letter-spacing: 0; border-radius: 5px; }.tts-auto-btn{ font-size: 0.58rem; padding: 0.16rem 0.4rem; letter-spacing: 0; border-radius: 5px; }.tts-player{ padding: 0.18rem 0.5rem; margin-bottom: 0.3rem; }.tts-player .ttp-idle, .tts-player .ttp-synth{ font-size: 0.62rem; } }.drop-sep{ height: 1px; background: var(--edge); margin: 0.4rem 0.3rem; }/* ═══════════ Layout ═══════════ */.layout{ position: relative; z-index: auto; flex: 1; display: flex; min-height: 0; }/* ── Sidebar: party ── */.sidebar{
+  }.drop-item:hover{ background: rgba(var(--gold-bright-rgb),0.1); transform: translateX(3px); }.di-icon{ font-size: 1.05rem; flex-shrink: 0; filter: drop-shadow(0 0 4px rgba(var(--gold-bright-rgb),0.3)); }.di-body{ display: flex; flex-direction: column; min-width: 0; }.di-name{ font-family: var(--font-display); font-size: 0.96rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-bright); }.drop-item:hover .di-name{ color: var(--gold-bright); }.di-hint{ font-size: 0.86rem; font-style: italic; color: var(--bone-dim); }/* Settings-menyn (⚙️): hint-rad → hover-tooltip (desktop). Menyn är högerjusterad → tooltip pekar vänsterut */.settings-menu .drop-item{ position: relative; }.settings-menu .di-hint{ position: absolute; top: 50%; right: calc(100% + 10px); transform: translateY(-50%); white-space: nowrap; font-size: 0.84rem; font-style: italic; color: var(--bone-dim); background: var(--stone-3); border: 1px solid var(--edge); border-radius: 3px; padding: 0.32rem 0.6rem; box-shadow: 0 10px 28px -10px rgba(0,0,0,0.8); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.16s ease, visibility 0.16s ease; z-index: 70; }.settings-menu .drop-item:hover .di-hint{ opacity: 1; visibility: visible; }.settings-menu .drop-item:hover .di-name{ color: var(--gold-bright); }@media (hover:none), (max-width:640px){ .settings-menu .di-hint{ position: static; transform: none; opacity: 1; visibility: visible; background: none; border: none; box-shadow: none; padding: 0; } /* TTS-raden: kompaktare så Combat/Engine Room aldrig klipps bort */ .tts-voice-picker{ gap: 0.2rem 0.3rem; margin-bottom: 0.25rem; }.tts-voice-label{ display: none; }.tts-select{ font-size: 0.58rem; padding: 0.14rem 0.28rem; max-width: 96px; flex-shrink: 1; min-width: 0; letter-spacing: 0; border-radius: 5px; }.tts-auto-btn{ font-size: 0.58rem; padding: 0.16rem 0.4rem; letter-spacing: 0; border-radius: 5px; }.tts-player{ padding: 0.18rem 0.5rem; margin-bottom: 0.3rem; }.tts-player .ttp-idle, .tts-player .ttp-synth{ font-size: 0.62rem; } }.drop-sep{ height: 1px; background: var(--edge); margin: 0.4rem 0.3rem; }/* ═══════════ Layout ═══════════ */.layout{ position: relative; z-index: auto; flex: 1; display: flex; min-height: 0; }/* ── Sidebar: party ── */.sidebar{
     width: 250px; flex-shrink: 0;
     background: linear-gradient(180deg, var(--stone), var(--ink));
     border-right: 1px solid var(--edge);
@@ -782,26 +782,12 @@
     animation: guardian-dot 1.8s ease-in-out infinite;
   }
   @keyframes guardian-ring { 0%,100% { transform: scale(1); opacity: 0.7; } 50% { transform: scale(1.3); opacity: 0.3; } }
-  @keyframes guardian-dot { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }/* ── Composer (input) — panel-aligned med resten av UI ── */.input-area{
-    padding: 0.45rem 1.6rem 0.65rem;
-    background: linear-gradient(180deg, rgba(var(--ink-rgb),0.9), var(--stone));
-    border-top: 1px solid var(--edge);
-  }.composer{
-    display: flex; gap: 0.5rem; align-items: flex-end;
-    background: var(--stone-2); border: 1px solid var(--edge);
-    padding: 0.3rem 0.4rem 0.3rem 0.15rem;
-    transition: border-color 0.25s, box-shadow 0.25s;
-  }.composer:focus-within{ border-color: var(--gold); box-shadow: 0 0 16px -4px rgba(var(--gold-bright-rgb),0.35); }.input-row{ display: flex; gap: 0.6rem; align-items: flex-end; flex: 1; min-width: 0; }.input-row textarea{
+  @keyframes guardian-dot { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }.input-row{ display: flex; gap: 0.6rem; align-items: flex-end; flex: 1; min-width: 0; }.input-row textarea{
     flex: 1; font-family: var(--font-body); font-size: 1rem; color: var(--bone-bright);
     background: transparent; border: none; padding: 0.5rem 0.9rem 0.5rem 1.7rem;
     outline: none; resize: none; min-height: 40px; max-height: 120px;
     line-height: 1.45;
-  }.input-row textarea::placeholder{ color: rgba(184,184,200,0.42); font-style: italic; }.cli-prompt,.cli-cursor{ display: none; }.send-btn{
-    font-family: var(--font-display); font-weight: 700; font-size: 0.78rem; letter-spacing: 0.16em;
-    text-transform: uppercase; color: var(--ink); cursor: pointer;
-    background: var(--gold); border: 1px solid var(--gold-bright);
-    padding: 0.7rem 1.15rem; white-space: nowrap;
-  }.send-btn:disabled{ opacity: 0.4; cursor: not-allowed; }.input-hint{ font-size: 0.74rem; color: var(--bone-dim); font-style: italic; margin-top: 0.4rem; }.input-hint kbd{
+  }.input-row textarea::placeholder{ color: rgba(184,184,200,0.42); font-style: italic; }.cli-prompt,.cli-cursor{ display: none; }.send-btn:disabled{ opacity: 0.4; cursor: not-allowed; }.input-hint{ font-size: 0.74rem; color: var(--bone-dim); font-style: italic; margin-top: 0.4rem; }.input-hint kbd{
     font-family: var(--font-display); font-size: 0.58rem; background: var(--stone-3);
     border: 1px solid var(--edge); padding: 0.1rem 0.4rem; border-radius: 2px; color: var(--bone);
   }/* ═══════════ 🛠️ MASKINRUMMET — flat debug-panel (api.js #debug-panel style) ═══════════ */.console-tab{
@@ -1105,7 +1091,7 @@
     font-family: var(--cli-mono, ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace) !important;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=42">
+<link rel="stylesheet" href="snes.css?v=43">
 <style>
 /* ═══════════ CODEX 2-RAD-TABBAR — override snes.css (måste ligga EFTER linken) ═══════════ */
 .cx-tabs{ display: flex !important; flex-direction: column !important; gap: 0.34rem !important; padding: 0.55rem 0.6rem 0.6rem !important; overflow-x: hidden !important; }
@@ -1176,7 +1162,7 @@
    Ligger här (efter wrap-regeln + med !important) så den vinner över allt.
    (2026-08-09): även min-height nollställs — snes §TYPING tvingar annars
    44px-boxar; player + combat-knapp görs minimala. */
-@media(hover:none), (max-width:640px){
+@media (hover:none), (max-width:640px){
   .tts-voice-picker{ flex-wrap: nowrap !important; gap: 0.18rem 0.28rem !important; row-gap: 0.18rem !important; }
   .tts-voice-btn{ flex: 0 1 auto !important; min-width: 0 !important; }
   .tts-voice-btn #tts-voice-btn-label{ display: inline-block !important; max-width: 64px !important; overflow: hidden !important; text-overflow: ellipsis !important; vertical-align: bottom !important; }
@@ -1218,52 +1204,6 @@
   position: relative !important;
   padding: 0.18rem 0.35rem 0.18rem 0.15rem !important;
 }
-.composer:focus-within{ border-color: var(--gold) !important; }
-#player-input{
-  padding: 0.3rem 8.6rem 0.34rem 1.7rem !important;
-  /* 2-radig placeholder får aldrig klippas: 3.6rem (root 18px → 64.8px)
-     = 2×1.45-rad + padding. Mobil behåller 40px+ i media-frågan nedan.
-     ID-selektor: snes.css body.cli-chat .input-row textarea (padding .5rem
-     !important) vinner annars över klass-selektorn. */
-  min-height: 3.6rem !important;
-}
-.send-btn{
-  position: absolute !important;
-  right: 0.4rem !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
-  min-height: 0 !important;
-  padding: 0.32rem 0.6rem !important;
-  font-size: 0.66rem !important;
-  z-index: 2;
-}
-.mic-btn{
-  position: absolute !important;
-  right: 4.1rem !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
-  width: 36px !important;
-  height: 36px !important;
-  font-size: 0.95rem !important;
-  line-height: 1 !important;
-  color: var(--ink) !important;
-  cursor: pointer !important;
-  background: var(--gold) !important;
-  border: 1px solid var(--gold-bright) !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  z-index: 2;
-  touch-action: manipulation;
-  }
-.mic-btn:hover{ transform: translateY(calc(-50% - 1px)) !important; filter: brightness(1.06) !important; }
-.mic-btn:active{ transform: translateY(-50%) scale(.92) !important; }
-.mic-btn.recording{
-  border-color: #d4453a !important;
-  color: #fff !important;
-  background: rgba(212,69,58,.85) !important;
-  animation: mic-pulse 1.1s ease-in-out infinite;
-}
 @keyframes mic-pulse{
   0%,100%{ box-shadow: 0 0 10px -2px rgba(212,69,58,.5); }
   50%{ box-shadow: 0 0 18px 0 rgba(212,69,58,.9); }
@@ -1289,21 +1229,10 @@
   cursor: pointer !important;
   z-index: 2;
 }
-.undo-btn.show{ display: inline-flex !important; }
-.undo-btn:hover{ background: var(--edge) !important; border-color: var(--gold-bright) !important; }
-.undo-btn:active{ transform: translateY(-50%) scale(.92) !important; }
-.input-area{
-  padding: 0.35rem 0.55rem 0.5rem !important; /* fältet spänner hela UI:t (2026-08-09) */
-}
 /* Mobil (≤768px): kompakt 1-rads-fält; native scrollbar döljs — dess
    ▲/▼-pilar klipps annars vid kanterna ("scrollpilar utanför sidan") —
    quick-scroll ▲▼ (mindre, insides) tar över. (2026-08-09) */
 @media (max-width: 768px){
-  #player-input{ min-height: 40px !important; padding: 0.36rem 9.5rem 0.36rem 1.8rem !important; }
-  .send-btn{ right: 0.3rem !important; padding: 0.24rem 0.45rem !important; font-size: 0.58rem !important; }
-  .mic-btn{ right: 4.5rem !important; width: 34px !important; height: 34px !important; font-size: 0.92rem !important; }
-  .undo-btn{ right: 7.0rem !important; width: 34px !important; height: 34px !important; font-size: 0.92rem !important; }
-  .input-area{ padding: 0.3rem 0.4rem 0.45rem !important; }
   .quick-scroll{ right: 10px !important; gap: 0.4rem !important; }
   .qs-btn{ width: 34px !important; height: 34px !important; font-size: 0.7rem !important; }
   .chat-scroll{ scrollbar-width: none !important; }
@@ -1733,7 +1662,6 @@
           <span class="cli-prompt" id="cli-prompt" aria-hidden="true"><span class="cp-user"></span><span class="cp-at">@</span><span class="cp-host"></span> <span class="cp-path">~</span> <span class="cp-pct">%</span></span><span class="cli-cursor" id="cli-cursor">▌</span>
           <textarea id="player-input" rows="1" enterkeyhint="send" placeholder="What do you do? Write freely — fight, sneak, talk, cast a spell…"></textarea>
           <button class="mic-btn" id="mic-btn" onclick="toggleMic()" title="Speak — English voice input (StepFun ASR)" aria-label="Voice input"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg></button>
-          <button class="undo-btn" id="undo-btn" onclick="doUndo()" title="Undo last turn (costs 1 turn)" aria-label="Undo last turn">↶</button>
           <button class="send-btn" onclick="sendPlayer()">⚔ Act</button>
         </div>
       </div>
@@ -5761,11 +5689,41 @@ function helpCardHtml() {
 }
 
 // ── Undo: ångra senaste turen (prompt + DM-svar + Guardian-uppdateringar) ──
-function setUndoButton(on) {
-  const b = document.getElementById('undo-btn');
-  if (!b) return;
-  b.classList.toggle('show', !!on);
+// Knappen bor sedan 2026-09-10 vid SENASTE meddelandet i loggen (inte i composern).
+// En observer håller .undo-inline som sista barn i #chat, så den följer med både
+// när loadTranscript() bygger om loggen och när ett nytt svar läggs till.
+let _undoAvailable = false;
+function _renderUndoAffordance() {
+  const chat = document.getElementById('chat');
+  if (!chat) return;
+  let el = chat.querySelector(':scope > .undo-inline');
+  if (!_undoAvailable) { if (el) el.remove(); return; }
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'undo-inline';
+    el.innerHTML = '<button type="button" onclick="doUndo()" title="Undo last turn (costs 1 turn)">'
+      + '↶ Undo last turn <span class="ui-cost">· costs 1 turn</span></button>';
+    chat.appendChild(el);
+  }
+  if (chat.lastElementChild !== el) chat.appendChild(el);
 }
+function setUndoButton(on) {
+  _undoAvailable = !!on;
+  _renderUndoAffordance();
+}
+(function _watchUndoAffordance() {
+  const attach = () => {
+    const chat = document.getElementById('chat');
+    if (!chat) { setTimeout(attach, 400); return; }
+    new MutationObserver(() => {
+      if (!_undoAvailable) return;
+      const el = chat.querySelector(':scope > .undo-inline');
+      if (!el || chat.lastElementChild !== el) requestAnimationFrame(_renderUndoAffordance);
+    }).observe(chat, { childList: true });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', attach);
+  else attach();
+})();
 
 async function doUndo() {
   const ok = window.confirm(
@@ -8878,7 +8836,7 @@ document.addEventListener('keydown', e => {
     color: var(--bone-bright); cursor: pointer; border-radius: 8px; transition: all .2s; }
   .cp-paint-btn:hover{ border-color: var(--gold); color: var(--gold-bright); transform: translateY(-1px); box-shadow: 0 4px 14px -6px rgba(var(--gold-bright-rgb),.25); }
   .av-suggest{ outline: 2px solid var(--gold); outline-offset: 1px; }
-  @media(max-width:520px){ .cp-grid{ grid-template-columns: 1fr; } .cp-box{ padding: 1.2rem 1rem 1.3rem; } }
+  @media (max-width:520px){ .cp-grid{ grid-template-columns: 1fr; } .cp-box{ padding: 1.2rem 1rem 1.3rem; } }
   /* TTS-player-bar: alltid synlig — viloläge = smal terminalrad, spelande = fill+time */
   .tts-player{ display: flex; align-items: center; gap: .55rem; margin-bottom: .45rem;
     padding: .28rem .6rem; background: rgba(8,5,14,.6); border: 1px solid var(--edge);

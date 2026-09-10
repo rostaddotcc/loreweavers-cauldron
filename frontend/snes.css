@@ -2818,3 +2818,134 @@ body:not(.cli-chat) .msg.dm, body:not(.cli-chat) .msg.npc{ border-left: none !im
    Ett värde, ett ställe. Nya radievärden (6/8/10/12/14/20px) är inte tillåtna. */
 .soft{ border-radius: var(--radius-lg) !important; }
 .soft-full{ border-radius: var(--radius-full) !important; }
+/* ═══════════════════════════════════════════════════════════════════
+   COMPOSER v5 (2026-09-10) — en kontrollklunga, ETT hover
+   Ersätter tre absolut-positionerade knappar + 8.6rem padding-right på
+   textarean (som åt mer än halva fältet) och tre olika hover-beteenden.
+   ⚠️ Knapp-stilen är scopad till `body:not(.cli-chat)` — annars kolliderar
+   `.send-btn{background:--gold}` med `body.cli-chat .send-btn{transparent}`
+   och utfallet hänger på specificitets-tur. CLI-läget äger sina egna knappar.
+   ═══════════════════════════════════════════════════════════════════ */
+.input-area{
+  padding: .6rem .9rem .7rem !important;
+  background: var(--ink) !important;
+  border-top: 1px solid var(--edge) !important;
+}
+.composer{
+  display: flex !important; gap: .5rem !important; align-items: flex-end !important;
+  background: var(--stone-2) !important; border: 1px solid var(--edge) !important;
+  padding: .28rem .35rem !important;
+}
+.composer:focus-within{ border-color: var(--gold) !important; }
+.input-row{
+  display: flex !important; gap: .35rem !important; align-items: flex-end !important;
+  flex: 1 1 auto !important; min-width: 0 !important;
+}
+#player-input{
+  flex: 1 1 auto !important; min-width: 0 !important;
+  font-size: 1rem !important; line-height: 1.5 !important;
+  min-height: 3.2rem !important; max-height: 9rem !important;
+  padding: .45rem .55rem .45rem 1.5rem !important;   /* ← var 8.6rem */
+  background: transparent !important; border: none !important;
+  color: var(--bone-bright) !important; resize: none !important;
+}
+/* Kontrollklungan (bubble-läget): samma box, samma storlek, ETT hover */
+body:not(.cli-chat) .mic-btn,
+body:not(.cli-chat) .undo-btn,
+body:not(.cli-chat) .send-btn{
+  position: static !important; transform: none !important; top: auto !important; right: auto !important;
+  height: 34px !important; min-height: 34px !important; width: auto !important;
+  display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  gap: .3em !important; flex: 0 0 auto !important; padding: 0 .55rem !important;
+  font-size: .72rem !important; line-height: 1 !important;
+  background: var(--stone-3) !important; border: 1px solid var(--edge) !important;
+  color: var(--bone) !important; box-shadow: none !important; cursor: pointer !important;
+  transition: background .15s ease, border-color .15s ease, color .15s ease !important;
+}
+body:not(.cli-chat) .mic-btn,
+body:not(.cli-chat) .undo-btn{ width: 34px !important; padding: 0 !important; }
+body:not(.cli-chat) .mic-btn:hover,
+body:not(.cli-chat) .undo-btn:hover,
+body:not(.cli-chat) .send-btn:hover{
+  background: var(--stone-2) !important; border-color: var(--gold) !important;
+  color: var(--gold-bright) !important; transform: none !important; filter: none !important;
+  box-shadow: none !important;
+}
+body:not(.cli-chat) .mic-btn:active,
+body:not(.cli-chat) .undo-btn:active,
+body:not(.cli-chat) .send-btn:active{ transform: scale(.95) !important; }
+body:not(.cli-chat) .send-btn{
+  background: var(--gold) !important; border-color: var(--gold-bright) !important; color: var(--ink) !important;
+  font-family: var(--font-display) !important; font-weight: 700 !important;
+  letter-spacing: .12em !important; text-transform: uppercase !important;
+}
+body:not(.cli-chat) .send-btn:hover{ background: var(--gold-bright) !important; color: var(--ink) !important; }
+body:not(.cli-chat) .send-btn:disabled{ opacity: .4 !important; cursor: not-allowed !important; }
+body:not(.cli-chat) .mic-btn.recording{
+  background: var(--blood) !important; border-color: var(--blood-bright) !important;
+  color: #fff !important; animation: mic-pulse 1.1s ease-in-out infinite;
+}
+@keyframes mic-pulse{
+  0%,100%{ box-shadow: 0 0 10px -2px rgba(var(--blood-bright-rgb),.5); }
+  50%{ box-shadow: 0 0 18px 0 rgba(var(--blood-bright-rgb),.9); }
+}
+
+/* ── UNDO vid SENASTE meddelandet (2026-09-10) — flyttad ur composern ──
+   JS håller .undo-inline som sista barn i #chat, så den följer med nya svar. */
+.undo-inline{ display: flex; justify-content: flex-start; padding: .1rem 0 .6rem; }
+.undo-inline button{
+  display: inline-flex; align-items: center; gap: .45em;
+  font-family: var(--font-mono) !important; font-size: .72rem !important; letter-spacing: .04em;
+  color: var(--gold) !important; background: transparent !important;
+  border: 1px dashed color-mix(in srgb, var(--gold) 45%, transparent) !important;
+  padding: .3rem .65rem !important; cursor: pointer !important;
+  transition: background .15s ease, color .15s ease, border-color .15s ease !important;
+}
+.undo-inline button:hover{
+  background: color-mix(in srgb, var(--gold) 12%, transparent) !important;
+  color: var(--gold-bright) !important; border-color: var(--gold) !important;
+}
+.undo-inline .ui-cost{ color: var(--bone-dim); font-size: .66rem; }
+
+/* ═══ CLI = RIKTIG TERMINAL (2026-09-10): input och svar i SAMMA ström ═══
+   Ingen separator, ingen box, ingen hint-rad — prompten är helt enkelt nästa
+   rad i loggen, med samma sidmarginal (1.6rem) och samma yta som #chat. */
+body.cli-chat .input-area{
+  background: transparent !important; border-top: none !important;
+  padding: .1rem 1.6rem .8rem !important;
+}
+body.cli-chat .composer{ background: transparent !important; border: none !important; padding: 0 !important; }
+body.cli-chat .composer:focus-within{ border: none !important; }
+body.cli-chat .input-row{ align-items: center !important; gap: .4rem !important; }
+body.cli-chat #player-input{
+  font-family: var(--cli-mono) !important; font-size: .95rem !important;
+  min-height: 2.4rem !important; padding: .25rem .4rem .25rem .5rem !important;
+  color: var(--bone-bright) !important;
+}
+body.cli-chat .mic-btn,
+body.cli-chat .send-btn,
+body.cli-chat .undo-btn{
+  position: static !important; height: auto !important; min-height: 0 !important; width: auto !important;
+  background: transparent !important; border: none !important; color: var(--gold) !important;
+  font-family: var(--cli-mono) !important; font-size: .8rem !important;
+  letter-spacing: .04em !important; text-transform: none !important; font-weight: 400 !important;
+  padding: .3rem .25rem !important; box-shadow: none !important;
+}
+body.cli-chat .mic-btn:hover,
+body.cli-chat .send-btn:hover{
+  background: transparent !important; color: var(--gold-bright) !important; border: none !important;
+}
+body.cli-chat .input-hint{ display: none !important; }
+body.cli-chat .undo-inline{ padding: 0 0 .5rem; }
+body.cli-chat .undo-inline button{ border-style: none !important; padding: .15rem 0 !important; }
+
+/* Mobil (≤768px): kompositören hålls i 2 synliga rader; knapparna thumb-vänliga
+   men smalare än desktop. ID-selektorn vinner över snes.css .input-area textarea. */
+@media (max-width: 768px){
+  .input-area{ padding: .5rem .6rem .6rem !important; }
+  #player-input{ min-height: 3.4rem !important; padding: .4rem .45rem .4rem 1.4rem !important; }
+  body:not(.cli-chat) .mic-btn,
+  body:not(.cli-chat) .undo-btn{ width: 32px !important; height: 32px !important; min-height: 32px !important; }
+  body:not(.cli-chat) .send-btn{ height: 32px !important; min-height: 32px !important; }
+  body.cli-chat #player-input{ min-height: 2.4rem !important; padding: .25rem .4rem .25rem .5rem !important; }
+}

@@ -4,20 +4,27 @@
    Länkas EFTER inline-stilar så att detta vinner.
    ═══════════════════════════════════════════════════ */
 
-/* ═══ @LAYER-BYGGFLAGGA (W3-P1, 2026-09-06) — WRAP ÄNNU EJ AKTIVERAD ═══
-   Plan: @layer snes.base { …hela filen utom :root… } → olagrade sidstilar
-   vinner över lagrad snes-normaldeklaration (cascade layers). BLOCKERAT för
-   wave 3: sidorna ägs av syskonuppgifter och kan inte visuellregressions-
-   testas denna våg. Två vågräta fallgropar dokumenterade i tmp/w3-p1-layer-prep.md:
-   (1) !important INVERTERAR i lager — lagrad !important slår olagrad
-       !important, så sidornas 381 mot-!important (chat) skulle FORTFARANDE
-       förlora mot snes 971 → kriget löses inte av wrap alone;
-   (2) sidors style-block FÖRE snes-länken som idag förlorar på källordning
-       skulle börja vinna → 5 konkreta riskselektorer listade i prep-filen.
-   Wave-4: wrap + page-edits samtidigt, med computed-style-diff per sida. */
+/* ═══ @LAYER-BYGGFLAGGA (W3-P1 2026-09-06 → VÅG 4-BESLUT 2026-09-10) ═══
+   BESLUT: WRAPPEN SKJUTS UPP IGEN — inte för att den är svår, utan för att den är
+   BEVISAT SKADLIG utan en fullständig sidmigrering i samma commit:
+
+   !important INVERTERAR i cascade layers: en LAGRAD !important slår en OLAGRAD
+   !important. snes.css har idag 1020 !important. Wrappas filen i @layer snes.base
+   vinner ALLA dessa över sidornas kvarvarande mot-!important (chat ~275, adventure
+   ~156) — dvs precis de FUNKTIONELLA reglerna (composer-positionering, TTS-raden på
+   mobil, codex-spine, overlay-z) som sidorna behöver för att layouten ska hålla.
+   Att lägga sidorna i en egen, senare lager löser det INTE: för normala deklarationer
+   vinner senare lager, men för !important vinner TIDIGARE lager. Man kan alltså inte
+   få "sidan vinner" i båda fallen utan att först plocka bort !important på ena sidan.
+
+   RÄTT ORDNING (den som faktiskt fungerar): migrera EN sida i taget —
+   (a) deklarera @layer snes.base, page; (b) wrappa snes; (c) strippa sidans egna
+   !important mot vad wrappen nu ger; (d) computed-style-diff FÖRE/EFTER per sida;
+   (e) först när sidan är ren, gå vidare. login.html är referensmallen (migrerad 2026-08-12).
+   Tills dess: rör inte wrappen. Z-index-konstitutionen (rad 20) gäller oförändrat. */
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400;500;600&family=Silkscreen:wght@400;700&display=swap');
 
-/* Z-INDEX LADDER (2026-08-11 audit) — bottom-nav 280 < drawer-backdrop 290 < drawer 300 < sheet 310 < oracle/console 320 < scanlines(body::before) 999 < page overlays 10000+ (backdrop 9990) < lightbox 11000 < feedback 12000 < theme-pop 30000. Do not invent new rungs. */
+/* Z-INDEX LADDER (2026-08-11 audit) — bottom-nav 280 < drawer-backdrop 290 < drawer 300 < sheet 310 < oracle/console 320 < scanlines(body::before) 999 < page overlays 10000+ (backdrop 9990) < lightbox 11000 < feedback 12000. Do not invent new rungs. */
 
 /* ── PALETT ── */
 :root{
@@ -46,7 +53,7 @@
      Z-SKALA: token-stege för wave-4-migration. DEN BEFINTLIGA LADDERN (kommentar
      rad 8: 280<290<300<310<320<999<10000<11000<12000<30000) GÄLLER FORTFARANDE —
      byt inte befintliga z-index mot dessa tokens förrän sidorna migrerar också
-     (theme-pop 30000 måste t.ex. ligga över sidornas 12000-feedback-lager). */
+     (feedback-lagret 12000 ligger överst). */
   --z-1: 1;
   --z-nav: 100;
   --z-drawer: 500;
@@ -62,17 +69,25 @@
   --radius-lg: 6px;
   --radius-full: 50%;
   /* RGB-tripletter för alpha-färger: rgba(var(--gold-rgb), .12).
-     VÄRDE-EXAKTA ersättare för de råa rgba-literalerna nedan. themes.js themar
-     INTE tripletterna ännu → alpha-glöd följer terminal-paletten oavsett tema —
-     EXAKT samma beteende som literalerna de ersatte (de var också frysta).
-     Wave-4: themes.js bör publicera --*-rgb per palett. Tripletterna är
-     härledda ur kanon-paletten och bryter inte :root==terminal-synken (de är
-     samma färger i annan notation). */
+     ENDA paletten är snes.css :root (Tema-väljaren borttagen 2026-09) — dessa
+     är alltså inte "frysta": de ÄR palettens värden i annan notation och ska
+     användas i nya regler istället för råa rgba-litteraler. */
   --gold-rgb: 212,169,44;
   --gold-bright-rgb: 240,214,117;
   --blood-rgb: 163,36,51;
   --blood-bright-rgb: 224,72,90;
   --teal-rgb: 94,154,163;
+  --ink-rgb: 26,20,38;
+  --bone-rgb: 217,201,166;
+  --arcane-deep-rgb: 58,31,102;
+  --ember-rgb: 212,105,30;
+  --poison-rgb: 122,163,94;
+  --edge-rgb: 70,58,96;
+  --edge-hi-rgb: 90,74,122;
+  --stone-3-rgb: 61,46,79;
+  --bone-dim-rgb: 157,138,106;
+  --blood-deep-rgb: 139,26,42;
+  --gold-deep-rgb: 212,160,30;
   /* Typsnitt — fast 4-rolls-hierarki (font-switchern borttagen 2026-08):
      display = rubriker/sektionsetiketter/knappar · body = berättelse/chat
      mono = siffror/systemrader/teknisk krom · accent = chips/tabs/mikro-etiketter */
@@ -380,29 +395,7 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
   box-shadow: none !important;
 }.vault-chip:hover{ border-color: var(--gold) !important; transform: none !important; }/* ── 26. RUBRIK-SKALA ── */.gate-title{ font-size: .85rem !important; }.destiny-title h1{ font-size: 1.1rem !important; }.masthead h1, .head h1{ font-size: .9rem !important; }.topbar .brand, .forge-head .brand{ font-size: .6rem !important; }.char-name, .pv-name, .d-name{ font-size: .9rem !important; }.hall-title{ font-size: .7rem !important; }.cp-name{ font-size: .9rem !important; }/* ── 28. GLOBAL MOBILE POLISH ── */html{ -webkit-tap-highlight-color: transparent; }body{ overscroll-behavior-y: none; }button, a, .top-btn, .send-btn, .drop-item, .rr-btn, .sheet-close{
   touch-action: manipulation;
-}/* ── 27b. THEME POPOVER (v31) ── */.theme-pop{
-  position: fixed; z-index: 30000;
-  min-width: 168px;
-  background: var(--stone-2);
-  border: 1px solid var(--edge);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 12px 40px rgba(0,0,0,.7);
-  padding: .35rem;
-  animation: theme-pop-in .16s cubic-bezier(.22,1,.36,1);
-}
-@keyframes theme-pop-in { from { opacity: 0; transform: translateY(-6px) scale(.97); } to { opacity: 1; transform: none; } }
-.theme-row{
-  display: flex; align-items: center; gap: .6rem; width: 100%;
-  padding: .45rem .6rem; margin: 0; border: none; background: transparent;
-  cursor: pointer; border-radius: var(--radius-md); text-align: left;
-  transition: background .15s;
-}
-.theme-row:hover{ background: var(--stone-3); }
-.theme-row.active .theme-name{ color: var(--gold-bright); }
-.theme-swatches{ display: inline-flex; gap: 3px; flex-shrink: 0; }
-.theme-swatches i{ width: 14px; height: 14px; display: block; border-radius: var(--radius-full); border: 1px solid rgba(255,255,255,.15); }
-.theme-name{ font-family: var(--font-display); font-size: .72rem; letter-spacing: .06em; color: var(--bone); text-transform: uppercase; }
-::selection{ background: rgba(var(--gold-rgb),.35); color: var(--bone-bright); }/* Scrollbars — thin, dark */*{ scrollbar-width: thin; scrollbar-color: var(--edge) transparent; }*::-webkit-scrollbar{ width: 5px; height: 5px; }*::-webkit-scrollbar-track{ background: transparent; }*::-webkit-scrollbar-thumb{ background: var(--edge); }/* ── 29. MOBILE ELEMENTS (hidden on desktop) ── */.mobile-hp-line,
+}::selection{ background: rgba(var(--gold-rgb),.35); color: var(--bone-bright); }/* Scrollbars — thin, dark */*{ scrollbar-width: thin; scrollbar-color: var(--edge) transparent; }*::-webkit-scrollbar{ width: 5px; height: 5px; }*::-webkit-scrollbar-track{ background: transparent; }*::-webkit-scrollbar-thumb{ background: var(--edge); }/* ── 29. MOBILE ELEMENTS (hidden on desktop) ── */.mobile-hp-line,
 .mobile-menu-btn,
 .drawer-close-btn,
 .drawer-backdrop,
@@ -2742,3 +2735,86 @@ body.cli-chat .guardian-status #guardian-thought-text{
   font-size: .78rem;
   letter-spacing: 0;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   CHAT SKIN v4 (2026-09-10) — EN platt gothic-HUD
+   Bubble-läget är basen; CLI-läget (§36, body.cli-chat) ritar SAMMA DOM
+   som en shell. Inga gradienter, inga mjuka radier, ingen hover-lyft:
+   hairline + accent-regel + hörnbeslag. Flyttat hit från chat.html:s
+   post-snes-override-block så att EN fil äger chat-utseendet.
+   ═══════════════════════════════════════════════════════════════ */
+.msg{ max-width: 760px !important; }
+.msg.dm  .bubble{ --b-acc: var(--gold); }
+.msg.npc .bubble{ --b-acc: var(--npc-color, var(--bone-dim)); }
+.msg.player .bubble{ --b-acc: var(--arcane); }
+.bubble{
+  position: relative !important;
+  border: 1px solid color-mix(in srgb, var(--b-acc, var(--gold)) 40%, var(--edge)) !important;
+  background: color-mix(in srgb, var(--b-acc, var(--gold)) 5%, var(--ink)) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: .5rem .8rem !important;
+  transition: border-color .18s ease !important;
+}
+.bubble:hover{
+  transform: none !important;
+  border-color: color-mix(in srgb, var(--b-acc, var(--gold)) 55%, var(--edge)) !important;
+  box-shadow: none !important;
+}
+/* Hörnbeslag (Castlevania-HUD): 10px L-streck i accenten — glimtar, skär inte. */
+.bubble::before, .bubble::after{
+  content: '' !important; position: absolute !important;
+  width: 10px !important; height: 10px !important;
+  border: 0 solid color-mix(in srgb, var(--b-acc, var(--gold)) 75%, transparent) !important;
+  border-radius: 0 !important; opacity: .85 !important;
+}
+.bubble::before{ top: -1px !important; left: -1px !important; border-top-width: 1px !important; border-left-width: 1px !important; }
+.bubble::after{ bottom: -1px !important; right: -1px !important; border-bottom-width: 1px !important; border-right-width: 1px !important; }
+/* NPC-citat inuti DM-svar + inre monolog + systemrutor: samma platta språk */
+.npc-quote{
+  border-radius: 0 !important;
+  border-left: 3px solid var(--npc-color, var(--bone-dim)) !important;
+  background: color-mix(in srgb, var(--npc-color, var(--bone-dim)) 4%, transparent) !important;
+}
+.reasoning, .msg.system .box, .box{ border-radius: 0 !important; box-shadow: none !important; }
+.reasoning-body .inner p{ font-size: 1rem !important; line-height: 1.7 !important; }
+/* ── THE WARD (signatur 2026-09-10) ─────────────────────────────
+   1px guld-hairline + 4 hörn-tickar runt chattens primära yta. Ligger på
+   main.main (icke-scrollande panel) så ramen står stilla. Pulserar när ett
+   mekaniskt event landar (renderEffects → wardPulse()). */
+main.main{ position: relative; }
+.ward-frame{
+  position: absolute; inset: 6px; pointer-events: none; z-index: 4;
+  border: 1px solid color-mix(in srgb, var(--gold) 26%, transparent);
+  background-image:
+    linear-gradient(var(--gold), var(--gold)), linear-gradient(var(--gold), var(--gold)),
+    linear-gradient(var(--gold), var(--gold)), linear-gradient(var(--gold), var(--gold)),
+    linear-gradient(var(--gold), var(--gold)), linear-gradient(var(--gold), var(--gold)),
+    linear-gradient(var(--gold), var(--gold)), linear-gradient(var(--gold), var(--gold));
+  background-repeat: no-repeat;
+  background-size: 9px 1px, 1px 9px, 9px 1px, 1px 9px, 9px 1px, 1px 9px, 9px 1px, 1px 9px;
+  background-position: 0 0, 0 0, 100% 0, 100% 0, 0 100%, 0 100%, 100% 100%, 100% 100%;
+  opacity: .8; transition: opacity .3s ease;
+}
+main.main.ward-pulse .ward-frame{ animation: ward-pulse 950ms ease-out; }
+@keyframes ward-pulse{
+  0%   { opacity: .8; box-shadow: inset 0 0 0 0 transparent; }
+  20%  { opacity: 1;  box-shadow: inset 0 0 30px -6px color-mix(in srgb, var(--gold) 60%, transparent); }
+  100% { opacity: .8; box-shadow: inset 0 0 0 0 transparent; }
+}
+@media (prefers-reduced-motion: reduce){ main.main.ward-pulse .ward-frame{ animation: none; } }
+
+/* Bubble-läget: bubblans egen ram är enda ramen — radens vänsterregel (§6) blir
+   då en dubbel box. CLI-läget (body.cli-chat) behåller regeln. */
+body:not(.cli-chat) .msg.dm, body:not(.cli-chat) .msg.npc{ border-left: none !important; padding-left: 0 !important; }
+.reasoning-body .inner, .reasoning-body .inner p{
+  color: color-mix(in srgb, var(--bone) 62%, var(--bone-dim)) !important;
+}
+
+/* ── .soft — SANKTIONERAD opt-in för radie (2026-09-10) ──────────
+   Global-regeln `*{border-radius:0 !important}` (§0) är avsiktlig: platt är språket.
+   De få ytor som legitimt vill ha mjuk form (avatar-ringar, pills) får INTE återinföra
+   radie med egna !important-regler huller om buller — sätt .soft på elementet.
+   Ett värde, ett ställe. Nya radievärden (6/8/10/12/14/20px) är inte tillåtna. */
+.soft{ border-radius: var(--radius-lg) !important; }
+.soft-full{ border-radius: var(--radius-full) !important; }

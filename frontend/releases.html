@@ -9,44 +9,37 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
-<script src="themes.js?v=20260906a"></script>
 <style>
   /* ═══════════════ tokens ═══════════════ */
   :root{
+    /* Kanonisk palett = snes.css :root (Terminal Gothic, 2026-09-10) */
     --ink:#1a1426;
     --stone:#271d33; --stone-2:#322541; --stone-3:#3d2e4f;
     --edge:#463a60; --edge-hi:#5a4a7a;
     --bone:#d9c9a6; --bone-bright:#f2e6c8; --bone-dim:#9d8a6a;
     --gold:#d4a92c; --gold-bright:#f0d675;
     --blood:#a32433; --blood-bright:#e0485a;
-    --ember:#d4691e; --arcane:#9a6fe0; --poison:#7aa35e; --teal:#5e9aa3;
+    --ember:#d4691e; --arcane:#9a6fe0; --arcane-bright:#c9a6ff;
+    --poison:#7aa35e; --teal:#5e9aa3;
+    --term-green:#33cc33; --term-amber:#ccaa33;
     --font-display:'Cinzel',serif;
     --font-body:'Spectral',Georgia,serif;
+    --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+    --font-accent:'Silkscreen',monospace;
     --nav-h:64px;
   }
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{font-family:var(--font-body);color:var(--bone);background:var(--ink);
-    overflow-x:hidden;-webkit-tap-highlight-color:transparent;
-    background-image:
-      radial-gradient(900px 520px at 50% 110%, rgba(212,105,30,.07), transparent 70%),
-      radial-gradient(700px 460px at 8% -6%, rgba(123,79,212,.06), transparent 70%),
-      radial-gradient(700px 460px at 96% -8%, rgba(139,26,42,.07), transparent 70%);
-    background-attachment:fixed}
-  .grain{position:fixed;inset:0;z-index:3;pointer-events:none;opacity:.05;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
-  .vignette{position:fixed;inset:0;z-index:3;pointer-events:none;
-    box-shadow:inset 0 0 190px 60px rgba(3,2,7,.85)}
+    overflow-x:hidden;-webkit-tap-highlight-color:transparent}
 
   /* ═══════════════ nav ═══════════════ */
   .nav{position:fixed;top:0;left:0;right:0;z-index:50;height:var(--nav-h);
     display:flex;align-items:center;justify-content:space-between;padding:0 clamp(1rem,4vw,2.5rem);
-    border-bottom:1px solid rgba(58,58,80,.5);
-    background:linear-gradient(to bottom, rgba(7,7,12,.92), rgba(7,7,12,.55) 78%, transparent);
-    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+    border-bottom:1px solid var(--edge);
+    background:var(--stone)}
   .nav-brand{display:flex;align-items:center;gap:.65rem;text-decoration:none}
-  .nav-brand img{width:34px;height:34px;mix-blend-mode:screen;animation:float-logo 7s ease-in-out infinite}
-  @keyframes float-logo{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  .nav-brand img{width:34px;height:34px;mix-blend-mode:screen}
   .nav-brand span{font-family:var(--font-display);font-weight:700;font-size:.86rem;
     letter-spacing:.22em;text-transform:uppercase;color:var(--bone-bright)}
   .nav-links{display:flex;gap:1.4rem;align-items:center}
@@ -54,10 +47,9 @@
     text-transform:uppercase;color:var(--bone-dim);text-decoration:none;transition:color .2s}
   .nav-link:hover{color:var(--gold-bright)}
   .nav-cta{font-family:var(--font-display);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;
-    color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));
-    padding:.5rem 1rem;text-decoration:none;border-radius:2px;
-    transition:transform .2s,box-shadow .2s}
-  .nav-cta:hover{transform:translateY(-2px);box-shadow:0 4px 18px rgba(232,198,90,.25)}
+    color:var(--ink);background:var(--gold);border:1px solid var(--gold-bright);
+    padding:.5rem 1rem;text-decoration:none}
+  .nav-cta:hover{background:var(--gold-bright);color:var(--ink)}
 
   /* ═══════════════ hero ═══════════════ */
   .ledger{max-width:900px;margin:0 auto;padding:calc(var(--nav-h) + 4rem) 1.25rem 6rem}
@@ -65,7 +57,7 @@
     text-transform:uppercase;color:var(--gold);text-align:center;margin-bottom:1rem}
   .ledger h1{font-family:var(--font-display);font-weight:900;font-size:clamp(1.9rem,4.6vw,3rem);
     text-align:center;color:var(--bone-bright);letter-spacing:.08em;text-transform:uppercase;
-    margin-bottom:1rem;text-shadow:0 0 42px rgba(212,169,44,.28),0 2px 0 #000}
+    margin-bottom:1rem;text-shadow:2px 2px 0 #000}
   .ledger-sub{max-width:620px;margin:0 auto 2.6rem;text-align:center;color:var(--bone-dim);
     font-size:1.02rem;line-height:1.65}
   .ledger-sub b{color:var(--bone);font-weight:600}
@@ -75,12 +67,12 @@
     margin-bottom:3rem}
   .ver-chip{display:inline-flex;align-items:center;gap:.55rem;
     font-family:var(--font-display);font-size:.72rem;letter-spacing:.26em;text-transform:uppercase;
-    color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));
-    padding:.55rem 1.1rem;border-radius:2px;box-shadow:0 2px 14px rgba(212,169,44,.35)}
+    color:var(--ink);background:var(--gold);border:1px solid var(--gold-bright);
+    padding:.55rem 1.1rem}
   .ver-chip .ver-name{font-weight:900}
   .ver-chip .ver-note{color:rgba(7,7,12,.72);letter-spacing:.14em;font-size:.62rem}
   .ver-tag{font-family:var(--font-display);font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;
-    color:var(--bone-dim);border:1px solid var(--edge);padding:.4rem .8rem;border-radius:2px}
+    color:var(--bone-dim);border:1px solid var(--edge);padding:.4rem .8rem}
 
   /* ═══════════════ sections ═══════════════ */
   .sec{margin-bottom:3.4rem}
@@ -89,23 +81,17 @@
   .sec-num{font-family:var(--font-display);font-weight:900;font-size:.9rem;color:var(--gold);opacity:.8}
   .sec-head h2{font-family:var(--font-display);font-weight:700;font-size:1.05rem;
     letter-spacing:.16em;text-transform:uppercase;color:var(--bone-bright)}
-  .sec-head .rule{height:1px;flex:1;background:linear-gradient(to right,var(--edge-hi),transparent);
-    align-self:center}
+  .sec-head .rule{height:1px;flex:1;background:var(--edge);align-self:center}
   .sec-head .ruler{height:3px;width:44px;background:var(--gold);align-self:center;flex:none}
 
   /* stone tablet */
-  .tablet{position:relative;background:linear-gradient(160deg,var(--stone-2),var(--stone));
-    border:1px solid var(--edge);border-radius:2px;padding:1.9rem 1.8rem 1.5rem;margin-bottom:1.6rem}
-  .corner{position:absolute;width:14px;height:14px;border:2px solid var(--gold);opacity:.8}
-  .corner.tl{top:6px;left:6px;border-right:none;border-bottom:none}
-  .corner.tr{top:6px;right:6px;border-left:none;border-bottom:none}
-  .corner.bl{bottom:6px;left:6px;border-right:none;border-top:none}
-  .corner.br{bottom:6px;right:6px;border-left:none;border-top:none}
+  .tablet{position:relative;background:var(--stone);
+    border:1px solid var(--edge);padding:1.9rem 1.8rem 1.5rem;margin-bottom:1.6rem}
+  .tablet::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.3}
   .tablet-h{display:flex;align-items:center;gap:.8rem;margin-bottom:.9rem;flex-wrap:wrap}
   .chip{font-family:var(--font-display);font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;
-    color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));
-    padding:.26rem .6rem;border-radius:2px}
-  .chip.pay{background:linear-gradient(160deg,var(--gold-bright),var(--gold))}
+    color:var(--ink);background:var(--gold);border:1px solid var(--gold-bright);
+    padding:.26rem .6rem}
   .tablet-title{font-family:var(--font-display);font-weight:700;font-size:.86rem;letter-spacing:.14em;
     text-transform:uppercase;color:var(--bone-bright)}
   .tablet-lead{color:var(--bone-dim);font-size:.95rem;line-height:1.6;margin-bottom:1.1rem}
@@ -121,12 +107,12 @@
 
   /* inline tags */
   .tag{display:inline-block;font-family:var(--font-display);font-size:.56rem;letter-spacing:.16em;
-    text-transform:uppercase;padding:.14rem .5rem;border-radius:2px;margin-right:.35rem;vertical-align:middle}
+    text-transform:uppercase;padding:.14rem .5rem;margin-right:.35rem;vertical-align:middle}
   .tag.feat{color:var(--poison);border:1px solid rgba(90,154,78,.5)}
   .tag.fix{color:var(--blood-bright);border:1px solid rgba(212,58,77,.45)}
   .tag.ux{color:var(--arcane);border:1px solid rgba(123,79,212,.5)}
-  .tag.ai{color:var(--gold);border:1px solid rgba(212,169,44,.5)}
-  .tag.snd{color:var(--ember);border:1px solid rgba(212,105,30,.5)}
+  .tag.ai{color:var(--gold);border:1px solid rgba(var(--gold-rgb),.5)}
+  .tag.snd{color:var(--ember);border:1px solid rgba(var(--ember-rgb),.5)}
   .tag.pay{color:var(--teal);border:1px solid rgba(78,138,147,.5)}
 
   /* two-column for tier grid */
@@ -134,9 +120,9 @@
   @media(max-width:720px){.duo{grid-template-columns:1fr}}
 
   /* tier mini-card */
-  .tier{background:linear-gradient(165deg,var(--stone-3),var(--stone-2) 60%,var(--stone));
-    border:1px solid var(--edge);border-radius:2px;padding:1.6rem 1.5rem}
-  .tier.hot{border-color:rgba(212,169,44,.5);box-shadow:0 0 34px rgba(212,169,44,.08)}
+  .tier{background:var(--stone);
+    border:1px solid var(--edge);padding:1.6rem 1.5rem}
+  .tier.hot{border-color:var(--gold)}
   .tier-name{font-family:var(--font-display);font-weight:700;font-size:.78rem;letter-spacing:.24em;
     text-transform:uppercase;color:var(--bone-bright);margin-bottom:.3rem}
   .tier-flag{font-family:var(--font-display);font-size:.56rem;letter-spacing:.2em;text-transform:uppercase;
@@ -151,9 +137,7 @@
   /* historical versions */
   .hist-toggle{display:flex;align-items:center;justify-content:center;gap:.6rem;width:100%;
     font-family:var(--font-display);font-size:.7rem;letter-spacing:.24em;text-transform:uppercase;
-    color:var(--bone-dim);background:var(--stone);border:1px solid var(--edge);border-radius:2px;
-    padding:.85rem 1rem;cursor:pointer;transition:color .2s,border-color .2s;-webkit-tap-highlight-color:transparent}
-  .hist-toggle:hover{color:var(--gold-bright);border-color:var(--gold)}
+    padding:.85rem 1rem;cursor:pointer;-webkit-tap-highlight-color:transparent}
   .hist-toggle .caret{color:var(--gold);transition:transform .25s;display:inline-block}
   .hist-toggle.open .caret{transform:rotate(90deg)}
   .hist-body{max-height:0;overflow:hidden;transition:max-height .5s ease}
@@ -175,13 +159,12 @@
     border-top:1px solid var(--edge);padding-top:2rem}
   .footer b{color:var(--bone)}
   .footer a{color:var(--gold);text-decoration:none}
-  .footer a:hover{color:var(--gold-bright);text-shadow:0 0 12px rgba(232,198,90,.5)}
+  .footer a:hover{color:var(--gold-bright)}
 
   /* reveal */
   .rv{opacity:0;transform:translateY(22px);transition:opacity .6s ease,transform .6s ease}
   .rv.in{opacity:1;transform:none}
   @media(prefers-reduced-motion:reduce){
-    .nav-brand img{animation:none}
     .rv{opacity:1;transform:none;transition:none}
   }
   @media(max-width:900px){
@@ -197,11 +180,10 @@
     .sec-head h2{font-size:.92rem}
   }
 </style>
+<link rel="stylesheet" href="snes.css?v=42">
 <noscript><style>.rv{opacity:1;transform:none}</style></noscript>
 </head>
 <body>
-<div class="grain"></div>
-<div class="vignette"></div>
 
 <nav class="nav">
   <a class="nav-brand" href="adventure.html">
@@ -235,8 +217,6 @@
       <span class="ruler"></span><span class="rule"></span>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip ux">TABLE</span>
         <span class="tablet-title">Take back the last word</span>
@@ -257,8 +237,6 @@
       <span class="ruler"></span><span class="rule"></span>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip ai">COMBAT</span>
         <span class="tablet-title">The engine rolls every blade</span>
@@ -270,8 +248,6 @@
       </ul>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip feat">RULES</span>
         <span class="tablet-title">Conditions live, rests true, levels real</span>
@@ -286,8 +262,6 @@
       </ul>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip pay">TRUTH</span>
         <span class="tablet-title">A rulebook that matches the machine</span>
@@ -301,8 +275,6 @@
       </ul>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip snd">CRAFT</span>
         <span class="tablet-title">One gold, one ledger, less noise</span>
@@ -325,8 +297,6 @@
       <span class="ruler"></span><span class="rule"></span>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip ai">MODELS</span>
         <span class="tablet-title">Five free minds, always at the table</span>
@@ -336,8 +306,6 @@
       </ul>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip snd">VOICE</span>
         <span class="tablet-title">The realm speaks to everyone</span>
@@ -348,8 +316,6 @@
       </ul>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip feat">FACES</span>
         <span class="tablet-title">Painting for everyone</span>
@@ -360,8 +326,6 @@
       </ul>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip pay">PATHS</span>
         <span class="tablet-title">One path to everything</span>
@@ -381,8 +345,6 @@
       <span class="ruler"></span><span class="rule"></span>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip snd">VOICE</span>
         <span class="tablet-title">Speak to the realm</span>
@@ -396,8 +358,6 @@
       </ul>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip ai">MODELS</span>
         <span class="tablet-title">Heavier minds at the table</span>
@@ -408,8 +368,6 @@
       </ul>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip feat">MECHANICS</span>
         <span class="tablet-title">The whole 5e table, in play</span>
@@ -427,8 +385,6 @@
       </ul>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip fix">DICE</span>
         <span class="tablet-title">Dice the realm can trust</span>
@@ -441,8 +397,6 @@
       </ul>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip ai">MEMORY</span>
         <span class="tablet-title">A memory that holds</span>
@@ -457,8 +411,6 @@
       </ul>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip ux">TURNS</span>
         <span class="tablet-title">A turn ledger that spends honestly</span>
@@ -472,8 +424,6 @@
       </ul>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip snd">MOBILE</span>
         <span class="tablet-title">The table fits in your hand</span>
@@ -485,8 +435,6 @@
       </ul>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip feat">FACES</span>
         <span class="tablet-title">Faces worth seeing</span>
@@ -500,8 +448,6 @@
       </ul>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip fix">CLEANING</span>
         <span class="tablet-title">A lighter engine room</span>
@@ -522,8 +468,6 @@
       <span class="ruler"></span><span class="rule"></span>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip feat">FACES</span>
         <span class="tablet-title">Faces you can look in the eye</span>
@@ -535,8 +479,6 @@
       </ul>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip snd">VOICE</span>
         <span class="tablet-title">A voice you can steer</span>
@@ -548,8 +490,6 @@
       </ul>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip ux">TABLE</span>
         <span class="tablet-title">A table that reads true</span>
@@ -563,8 +503,6 @@
       </ul>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip fix">KEEPING</span>
         <span class="tablet-title">The realm answers plainly</span>
@@ -577,8 +515,6 @@
       </ul>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip feat">NEXT</span>
         <span class="tablet-title">What we are still working on</span>
@@ -598,8 +534,6 @@
       <span class="ruler"></span><span class="rule"></span>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip ai">DEEPSEEK &amp; QWEN</span>
         <span class="tablet-title">The Dungeon Masters arrive in full force</span>
@@ -611,8 +545,6 @@
       </ul>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip pay">PATHS</span>
         <span class="tablet-title">A month of fire — one-time, stackable</span>
@@ -624,8 +556,6 @@
       </ul>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip fix">CLEARING</span>
         <span class="tablet-title">The table reads better</span>
@@ -638,8 +568,6 @@
       </ul>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip ux">FORGE</span>
         <span class="tablet-title">Faces you keep</span>
@@ -650,8 +578,6 @@
       </ul>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip feat">NEXT</span>
         <span class="tablet-title">What we are still working on</span>
@@ -670,8 +596,6 @@
       <span class="ruler"></span><span class="rule"></span>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip ai">WAN 2.7</span>
         <span class="tablet-title">The premium painter arrives</span>
@@ -683,8 +607,6 @@
       </ul>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip ux">PROFILE</span>
         <span class="tablet-title">Your face, your adventurer</span>
@@ -695,8 +617,6 @@
       </ul>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip fix">SMALL FIXES</span>
         <span class="tablet-title">The table sits right</span>
@@ -718,8 +638,6 @@
       <span class="ruler"></span><span class="rule"></span>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip fix">KNOWN</span>
         <span class="tablet-title">What we are still working on</span>
@@ -739,8 +657,6 @@
       <span class="ruler"></span><span class="rule"></span>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip pay">PAY</span>
         <span class="tablet-title">The Cauldron takes a payment</span>
@@ -816,8 +732,6 @@
       <span class="ruler"></span><span class="rule"></span>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip">FREE</span>
         <span class="tablet-title">A fair ration, honestly counted</span>
@@ -839,8 +753,6 @@
       <span class="ruler"></span><span class="rule"></span>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip snd">SOUND</span>
         <span class="tablet-title">A narrator you can give a mood</span>
@@ -863,8 +775,6 @@
       <span class="ruler"></span><span class="rule"></span>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip">FORGE</span>
         <span class="tablet-title">Faces you can actually shape</span>
@@ -885,8 +795,6 @@
       <span class="ruler"></span><span class="rule"></span>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip ux">UX</span>
         <span class="tablet-title">A calmer table</span>
@@ -908,8 +816,6 @@
       <span class="ruler"></span><span class="rule"></span>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip ai">AI</span>
         <span class="tablet-title">Sharper instincts, cleaner room</span>
@@ -931,8 +837,6 @@
       <span class="ruler"></span><span class="rule"></span>
     </div>
     <div class="tablet">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tablet-h">
         <span class="chip fix">FIX</span>
         <span class="tablet-title">The ledger stays straight</span>
@@ -1012,6 +916,7 @@
       entries.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
     }, {threshold:0.12});
     els.forEach(function(e){ io.observe(e); });
+    setTimeout(function(){ els.forEach(function(e){ e.classList.add('in'); }); }, 2500);
   })();
 
   // historical toggle
@@ -1022,5 +927,7 @@
     body.classList.toggle('open', open);
   };
 </script>
+<script src="i18n.js?v=20260906a"></script>
+<script src="sprites.js?v=20260806b"></script>
 </body>
 </html>

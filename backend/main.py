@@ -2920,37 +2920,12 @@ async def me(morkrets_token: str | None = Cookie(None)):
         "features": free_info.get("features", {}),
         "total_tokens": total_tokens,
         "total_campaigns": total_campaigns,
-        # Utseende (tema + typsnitt) — persistas per konto så det följer med
-        # mellan enheter/webbläsare. Frontend hydratar localStorage härifrån.
-        "theme": udata.get("theme") or "",
-        "font": udata.get("font") or "",
         # E-post — krävs innan köp (rostad 2026-08-04). Maskerad i /api/me
         # (admin-vyn ser hela via /api/admin/stats).
         "has_email": bool((udata.get("email") or "").strip()),
         # Spelarprofilens avatar (konto — separat från äventyraren)
         "has_avatar": bool(_load_user_avatar_gallery(username).get("gallery")),
     }
-
-
-@app.put("/api/me/appearance")
-async def save_appearance(body: dict, morkrets_token: str | None = Cookie(None)):
-    """Spara valt tema/typsnitt på kontot (persistens mellan enheter)."""
-    payload = _get_current_user(morkrets_token)
-    username = payload["sub"]
-    theme = str((body or {}).get("theme") or "").strip()[:32]
-    font = str((body or {}).get("font") or "").strip()[:32]
-    with _USER_LOCK:
-        users = load_users()
-        u = users.get(username)
-        if not isinstance(u, dict):
-            raise HTTPException(404, "User not found")
-        if theme:
-            u["theme"] = theme
-        if font:
-            u["font"] = font
-        users[username] = u
-        save_users(users)
-    return {"ok": True, "theme": theme or None, "font": font or None}
 
 
 class EmailRequest(BaseModel):

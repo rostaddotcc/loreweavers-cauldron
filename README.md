@@ -157,7 +157,7 @@ loreweavers-cauldron/
 │   ├── mechanics.html             # Engine diagnostics, tag list, travel table
 │   ├── models.html · pricing.html · admin.html · releases.html · help.html
 │   ├── api.js                     # Frontend ↔ backend bridge (+ standalone MOCK mode)
-│   ├── archetypes.js · i18n.js · themes.js · fonts.js · sprites.js
+│   ├── archetypes.js · i18n.js · fonts.js · sprites.js
 │   ├── sfx.js · modal.js · embed.js · snes.css
 │   └── assets/ · vendor/          # Logo/cauldron art · legacy three.js
 ├── docs/                          # Architecture (arkitektur.html, kodex.html) + specs

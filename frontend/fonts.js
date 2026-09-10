@@ -24,7 +24,7 @@ const FONTS = (() => {
   };
 
   // Legacy API — kept as harmless no-ops so nothing that still calls these
-  // (themes.js, old inline handlers) breaks. The typeface is FIXED now.
+  // (old inline handlers) breaks. The typeface is FIXED now.
   const fixed = { id: 'fixed', name: 'Fixed' };
   function apply() { /* no-op — hierarkin är fixerad i CSS */ }
   function cycle() { return fixed; }

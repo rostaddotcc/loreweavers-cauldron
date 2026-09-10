@@ -2,7 +2,7 @@
 """bump_versions.py — central cache-busting versioner for frontend/*.html.
 
 Usage:
-  python3 bump_versions.py snes.css=41 themes.js=20260906a i18n.js=20260906a [modal.js=20260906a]
+  python3 bump_versions.py snes.css=42 i18n.js=20260906a [modal.js=20260906a]
 
 Rewrites every `FILE?v=XXX` occurrence (link/script tags AND prose/comments)
 across all *.html in this directory to the given value, so all pages ship one

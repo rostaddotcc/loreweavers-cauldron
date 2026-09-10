@@ -11,7 +11,7 @@
    Dark fantasy × terminal. No external assets.
    ══════════════════════════════════════════════════════════════ */
 :root{
-  /* Palette aligned to snes.css :root (2026-08-11 audit) */
+  /* Canonical palette = snes.css :root (Terminal Gothic). --term-red: page-local. */
   --ink:#1a1426; --stone:#271d33; --stone-2:#322541; --stone-3:#3d2e4f;
   --edge:#463a60; --edge-hi:#5a4a7a;
   --bone:#d9c9a6; --bone-bright:#f2e6c8; --bone-dim:#9d8a6a;
@@ -20,49 +20,33 @@
   --ember:#d4691e; --arcane:#9a6fe0; --arcane-bright:#c9a6ff;
   --poison:#7aa35e; --teal:#5e9aa3;
   --term-green:#33cc33; --term-amber:#ccaa33; --term-red:#ff5566; /* --term-red: page-local (finns ej i snes.css) */
-  --font-display:"Cinzel","Trajan Pro","Palatino Linotype","Book Antiqua",Palatino,Georgia,"Times New Roman",serif;
-  --font-body:"Spectral","Palatino Linotype","Book Antiqua",Palatino,Georgia,serif;
-  --font-mono:ui-monospace,"Cascadia Code","JetBrains Mono","IBM Plex Mono",Menlo,Consolas,monospace;
+  --font-display:'Cinzel',serif;
+  --font-body:'Spectral',Georgia,serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+  --font-accent:'Silkscreen',monospace;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{
   font-family:var(--font-body);color:var(--bone);font-size:16.5px;line-height:1.65;
-  background:
-    radial-gradient(1100px 520px at 50% 112%,rgba(212,105,30,.13),transparent 62%),
-    radial-gradient(820px 460px at 12% -8%,rgba(139,95,212,.10),transparent 58%),
-    radial-gradient(640px 380px at 88% -4%,rgba(163,36,51,.09),transparent 56%),
-    var(--ink);
-  background-attachment:fixed;
+  background:var(--ink);
   overflow-x:hidden;
 }
-::selection{background:rgba(212,169,44,.32);color:#fff}
+::selection{background:rgba(var(--gold-rgb),.32);color:#fff}
 a{color:var(--gold-bright);text-decoration:none}
-a:hover{text-shadow:0 0 10px rgba(232,198,90,.6)}
+a:hover{color:var(--gold)}
 code,kbd,.mono{font-family:var(--font-mono);font-size:.9em}
 
-/* ── Ambient layers ─────────────────────────────────────────── */
-.grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.045;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
-.fog{position:fixed;inset:-20%;z-index:0;pointer-events:none}
-.fog::before,.fog::after{content:'';position:absolute;width:70vw;height:70vw;border-radius:50%;filter:blur(90px);opacity:.5}
-.fog::before{left:-10%;top:20%;background:radial-gradient(circle,rgba(123,79,212,.08),transparent 60%);animation:drift-a 70s ease-in-out infinite alternate}
-.fog::after{right:-15%;bottom:5%;background:radial-gradient(circle,rgba(212,105,30,.06),transparent 60%);animation:drift-b 90s ease-in-out infinite alternate}
-@keyframes drift-a{from{transform:translate(0,0) scale(1)}to{transform:translate(14vw,-8vh) scale(1.25)}}
-@keyframes drift-b{from{transform:translate(0,0) scale(1.15)}to{transform:translate(-12vw,6vh) scale(.9)}}
-#embers{position:fixed;inset:0;z-index:1;pointer-events:none}
-.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(4,2,8,.85)}
 
 /* ── Boot overlay ───────────────────────────────────────────── */
 /* Z-ladder (2026-08-11): content 2 < #prog 8000 < .toast 9000 < overlays 10000+ — app-ladder 280<290<300<310<320<999<10000+(backdrop 9990)<30000 */
 #boot{position:fixed;inset:0;z-index:10000;background:#020206;display:flex;align-items:center;justify-content:center;cursor:pointer}
 #boot.done{opacity:0;pointer-events:none;transition:opacity .6s}
-.boot-term{width:min(680px,92vw);background:rgba(2,2,6,.97);border:1px solid var(--edge);
-  box-shadow:0 0 80px rgba(123,79,212,.12),inset 0 0 40px rgba(0,0,0,.8);position:relative}
+.boot-term{width:min(680px,92vw);background:var(--ink);border:1px solid var(--edge);position:relative}
 .boot-term::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:2;
   background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 2px,transparent 2px 4px)}
-.boot-bar{display:flex;gap:.45rem;align-items:center;padding:.5rem .8rem;border-bottom:1px solid var(--edge);background:#0b0b12}
-.boot-bar i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.boot-bar{display:flex;gap:.45rem;align-items:center;padding:.5rem .8rem;border-bottom:1px solid var(--edge);background:var(--stone)}
+.boot-bar i{width:10px;height:10px;display:inline-block}
 .boot-bar i:nth-child(1){background:#8b1a2a}.boot-bar i:nth-child(2){background:#8a6d14}.boot-bar i:nth-child(3){background:#2a6e3a}
 .boot-bar span{margin-left:.5rem;font-family:var(--font-mono);font-size:.68rem;letter-spacing:.22em;color:var(--bone-dim);text-transform:uppercase}
 .boot-lines{padding:1.2rem 1.4rem 1.4rem;font-family:var(--font-mono);font-size:.82rem;line-height:1.85;color:var(--term-green);min-height:230px;white-space:pre-wrap;word-break:break-word}
@@ -74,7 +58,7 @@ code,kbd,.mono{font-family:var(--font-mono);font-size:.9em}
 .boot-hint{position:absolute;bottom:.6rem;right:.9rem;font-family:var(--font-mono);font-size:.62rem;letter-spacing:.2em;color:var(--bone-dim)}
 
 /* ── Scroll progress ────────────────────────────────────────── */
-#prog{position:fixed;top:0;left:0;height:2px;width:0;z-index:8000;background:linear-gradient(90deg,var(--gold),var(--gold-bright));box-shadow:0 0 8px rgba(232,198,90,.7)}
+#prog{position:fixed;top:0;left:0;height:2px;width:0;z-index:270;background:var(--gold)}
 
 /* ── Layout ─────────────────────────────────────────────────── */
 .wrap{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:0 1.4rem}
@@ -85,17 +69,16 @@ main{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1.4
 .hero{position:relative;z-index:2;padding:5.5rem 1.4rem 3rem;text-align:center;max-width:900px;margin:0 auto}
 .eyebrow{font-family:var(--font-display);font-size:.68rem;letter-spacing:.42em;text-transform:uppercase;color:var(--gold);margin-bottom:1.1rem}
 .hero h1{font-family:var(--font-display);font-weight:900;font-size:clamp(2rem,5.6vw,3.4rem);color:var(--bone-bright);line-height:1.12;
-  animation:candle 6s ease-in-out infinite;text-shadow:0 2px 0 #000,0 0 26px rgba(232,198,90,.28)}
-@keyframes candle{0%,100%{text-shadow:0 2px 0 #000,0 0 24px rgba(232,198,90,.25)}42%{text-shadow:0 2px 0 #000,0 0 34px rgba(232,198,90,.42)}76%{text-shadow:0 2px 0 #000,0 0 27px rgba(212,105,30,.36)}}
+  text-shadow:2px 2px 0 #000}
 .hero .sub{margin:1.2rem auto 0;max-width:640px;color:var(--bone);font-style:italic;font-size:1.02rem}
 .hero .sub b{color:var(--gold-bright);font-style:normal}
 .chips{display:flex;flex-wrap:wrap;justify-content:center;gap:.55rem;margin-top:1.6rem}
 .chip{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone);
-  border:1px solid var(--edge);background:rgba(14,14,20,.72);padding:.32rem .7rem}
-.chip.g{color:var(--gold-bright);border-color:rgba(212,169,44,.4)}
+  border:1px solid var(--edge);background:var(--stone-3);padding:.32rem .7rem}
+.chip.g{color:var(--gold-bright);border-color:rgba(var(--gold-rgb),.4)}
 .chip.p{color:var(--arcane-bright);border-color:rgba(123,79,212,.4)}
 .chip.t{color:var(--teal);border-color:rgba(78,138,147,.4)}
-.chip.e{color:var(--ember);border-color:rgba(212,105,30,.4)}
+.chip.e{color:var(--ember);border-color:rgba(var(--ember-rgb),.4)}
 .scroll-hint{margin-top:2.4rem;font-family:var(--font-mono);font-size:.66rem;letter-spacing:.3em;color:var(--bone-dim);text-transform:uppercase;animation:bob 2.4s ease-in-out infinite}
 @keyframes bob{0%,100%{transform:translateY(0);opacity:.55}50%{transform:translateY(6px);opacity:1}}
 
@@ -104,10 +87,10 @@ main{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1.4
 .index h2{font-family:var(--font-display);font-size:.66rem;letter-spacing:.34em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.9rem}
 .index ol{list-style:none;border-left:1px solid var(--edge)}
 .index li{border-left:2px solid transparent;transition:all .25s}
-.index a{display:block;padding:.42rem .9rem;color:var(--bone-dim);letter-spacing:.06em;transition:color .2s;border-left:1px solid transparent;margin-left:-1px}
+.index a{display:block;padding:.42rem .9rem;color:var(--bone-dim);letter-spacing:.06em;border-left:1px solid transparent;margin-left:-1px}
 .index a:hover{color:var(--gold-bright)}
 .index li.active{border-left-color:var(--gold)}
-.index li.active a{color:var(--gold-bright);text-shadow:0 0 10px rgba(232,198,90,.35)}
+.index li.active a{color:var(--gold-bright)}
 .index .ix-num{color:var(--gold);opacity:.7;margin-right:.55rem;font-size:.68rem}
 .index .ix-tag{display:block;font-size:.58rem;letter-spacing:.14em;color:var(--bone-dim);text-transform:uppercase;margin-top:.05rem}
 
@@ -116,19 +99,14 @@ main{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1.4
 .sec-head{display:flex;align-items:baseline;gap:1rem;margin-bottom:1.1rem}
 .sec-num{font-family:var(--font-display);font-weight:900;font-size:clamp(1.6rem,3vw,2.2rem);color:var(--gold);opacity:.9;line-height:1}
 .sec-title{font-family:var(--font-display);font-weight:700;font-size:clamp(1.15rem,2.6vw,1.55rem);letter-spacing:.1em;text-transform:uppercase;color:var(--bone-bright)}
-.sec-rule{flex:1;height:1px;background:linear-gradient(90deg,rgba(212,169,44,.55),transparent);margin-top:.6rem}
+.sec-rule{flex:1;height:1px;background:var(--gold);opacity:.4;margin-top:.6rem}
 .sec-mark{color:var(--gold);font-size:.8rem;margin-right:.4rem}
 .sec-lede{color:var(--bone-dim);font-style:italic;margin:-.2rem 0 1.6rem;max-width:70ch}
 
 /* ── Panels / tablets ───────────────────────────────────────── */
-.panel{position:relative;background:linear-gradient(165deg,var(--stone-2) 0%,var(--stone) 55%,#120c1c 100%);
-  border:1px solid var(--edge);padding:1.6rem 1.5rem;margin-bottom:1.4rem;
-  box-shadow:0 24px 60px -24px rgba(0,0,0,.9),inset 0 1px 0 rgba(239,226,192,.05)}
-.corner{position:absolute;width:16px;height:16px;border-color:var(--gold);border-style:solid;opacity:.7}
-.corner.tl{top:5px;left:5px;border-width:2px 0 0 2px}
-.corner.tr{top:5px;right:5px;border-width:2px 2px 0 0}
-.corner.bl{bottom:5px;left:5px;border-width:0 0 2px 2px}
-.corner.br{bottom:5px;right:5px;border-width:0 2px 2px 0}
+.panel{position:relative;background:var(--stone);
+  border:1px solid var(--edge);padding:1.6rem 1.5rem;margin-bottom:1.4rem}
+.panel::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.3}
 .panel h3{font-family:var(--font-display);font-size:.82rem;letter-spacing:.26em;text-transform:uppercase;color:var(--gold-bright);margin-bottom:.8rem}
 .panel h3 .dot{color:var(--gold)}
 .panel p{margin-bottom:.8rem}
@@ -140,38 +118,34 @@ main{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1.4
 .stat .v{color:var(--gold-bright)}
 .tag-row{display:flex;flex-wrap:wrap;gap:.45rem;margin:.6rem 0 .9rem}
 .tg{font-family:var(--font-mono);font-size:.68rem;padding:.22rem .5rem;border:1px solid var(--edge);color:var(--bone)}
-.tg.g{color:var(--gold-bright);border-color:rgba(212,169,44,.45)}
+.tg.g{color:var(--gold-bright);border-color:rgba(var(--gold-rgb),.45)}
 .tg.p{color:var(--arcane-bright);border-color:rgba(123,79,212,.45)}
 .tg.t{color:var(--teal);border-color:rgba(78,138,147,.45)}
-.tg.e{color:var(--ember);border-color:rgba(212,105,30,.45)}
+.tg.e{color:var(--ember);border-color:rgba(var(--ember-rgb),.45)}
 .tg.dead{color:var(--bone-dim);border-style:dashed;text-decoration:line-through;text-decoration-color:rgba(212,58,77,.6)}
 
 /* ── Terminal windows ───────────────────────────────────────── */
-.term{background:rgba(2,2,6,.97);border:1px solid var(--edge);margin:1.2rem 0;position:relative;
-  box-shadow:inset 0 0 40px rgba(0,0,0,.8)}
+.term{background:var(--ink);border:1px solid var(--edge);margin:1.2rem 0;position:relative}
 .term::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:2;
   background:repeating-linear-gradient(0deg,rgba(0,0,0,.2) 0 2px,transparent 2px 4px)}
-.term::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:3;
-  animation:crt 4s ease-in-out infinite;opacity:.5}
-@keyframes crt{0%,100%{background:rgba(255,255,255,.012)}50%{background:rgba(255,255,255,.028)}}
-.term-bar{display:flex;gap:.45rem;align-items:center;padding:.45rem .8rem;border-bottom:1px solid var(--edge);background:#0b0b12}
-.term-bar i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.term-bar{display:flex;gap:.45rem;align-items:center;padding:.45rem .8rem;border-bottom:1px solid var(--edge);background:var(--stone)}
+.term-bar i{width:9px;height:9px;display:inline-block}
 .term-bar i:nth-child(1){background:#8b1a2a}.term-bar i:nth-child(2){background:#8a6d14}.term-bar i:nth-child(3){background:#2a6e3a}
 .term-bar span{margin-left:.5rem;font-family:var(--font-mono);font-size:.64rem;letter-spacing:.2em;color:var(--bone-dim);text-transform:uppercase}
-.term-body{padding:1rem 1.1rem;font-family:var(--font-mono);font-size:.78rem;line-height:1.8;color:var(--term-green);text-shadow:0 0 6px rgba(80,220,120,.28);overflow-x:auto}
+.term-body{padding:1rem 1.1rem;font-family:var(--font-mono);font-size:.78rem;line-height:1.8;color:var(--term-green);overflow-x:auto}
 .term-body .c-dim{color:var(--bone-dim)}.term-body .c-gold{color:var(--gold-bright)}
 .term-body .c-p{color:var(--arcane-bright)}.term-body .c-red{color:var(--term-red)}
 .term-body .c-amb{color:var(--term-amber)}.term-body .c-teal{color:var(--teal)}
-.term.dm .term-body{color:var(--gold-bright);text-shadow:0 0 6px rgba(232,198,90,.25)}
+.term.dm .term-body{color:var(--gold-bright)}
 .term.dm .term-body .c-dim{color:var(--bone-dim);text-shadow:none}
 
 /* ── Flow diagrams (SVG) ────────────────────────────────────── */
-.flowbox{background:linear-gradient(170deg,var(--stone-2),var(--stone) 70%,#0d0d14);border:1px solid var(--edge);padding:1rem;margin:1.2rem 0;overflow-x:auto}
+.flowbox{background:var(--stone);border:1px solid var(--edge);padding:1rem;margin:1.2rem 0;overflow-x:auto}
 .flowbox svg{display:block;width:100%;height:auto;min-width:560px}
-.fn rect{fill:#12121a;stroke:var(--edge);stroke-width:1}
+.fn rect{fill:var(--stone-2);stroke:var(--edge);stroke-width:1}
 .fn .f-label{font-family:var(--font-mono);font-size:10.5px;fill:var(--bone);letter-spacing:.04em}
 .fn .f-sub{font-family:var(--font-mono);font-size:8px;fill:var(--bone-dim);letter-spacing:.06em}
-.fn.gold rect{stroke:rgba(212,169,44,.55);fill:linear-gradient(#181410,#14100a)}
+.fn.gold rect{stroke:var(--gold);fill:#181410}
 .fn.gold .f-label{fill:var(--gold-bright)}
 .fn.pur rect{stroke:rgba(123,79,212,.55)}
 .fn.pur .f-label{fill:var(--arcane-bright)}
@@ -179,18 +153,18 @@ main{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1.4
 .fn.poison .f-label{fill:var(--poison)}
 .fn.teal rect{stroke:rgba(78,138,147,.55)}
 .fn.teal .f-label{fill:var(--teal)}
-.fn.ember rect{stroke:rgba(212,105,30,.5)}
+.fn.ember rect{stroke:rgba(var(--ember-rgb),.5)}
 .fn.ember .f-label{fill:var(--ember)}
 .fn.bone .f-label{fill:var(--bone-bright)}
 .fn .f-pulse{animation:node-pulse 3.2s ease-in-out infinite}
 @keyframes node-pulse{0%,100%{opacity:.25}50%{opacity:.85}}
 .flowline{stroke:var(--edge-hi);stroke-width:1.2;fill:none}
 .flowline.anim{stroke-dasharray:5 5;animation:flow-dash 1.1s linear infinite}
-.flowline.anim.gold{stroke:rgba(212,169,44,.75)}
+.flowline.anim.gold{stroke:rgba(var(--gold-rgb),.75)}
 .flowline.anim.pur{stroke:rgba(123,79,212,.7)}
 .flowline.anim.poison{stroke:rgba(90,154,78,.65)}
 .flowline.anim.teal{stroke:rgba(78,138,147,.7)}
-.flowline.anim.ember{stroke:rgba(212,105,30,.65)}
+.flowline.anim.ember{stroke:rgba(var(--ember-rgb),.65)}
 @keyframes flow-dash{to{stroke-dashoffset:-10}}
 .dot{fill:var(--gold-bright)}
 .dot.pur{fill:var(--arcane-bright)}.dot.poison{fill:var(--poison)}.dot.teal{fill:var(--teal)}
@@ -199,7 +173,7 @@ main{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1.4
 .legend i{display:inline-block;width:9px;height:9px;margin-right:.35rem;vertical-align:-1px}
 
 /* ── Expanders ──────────────────────────────────────────────── */
-.exp{border:1px solid var(--edge);background:rgba(14,14,20,.6);margin-bottom:.8rem}
+.exp{border:1px solid var(--edge);background:var(--stone);margin-bottom:.8rem}
 .exp-toggle{display:flex;align-items:center;gap:.7rem;width:100%;cursor:pointer;text-align:left;background:none;border:none;
   padding:.85rem 1rem;color:var(--bone);transition:color .2s;font-family:var(--font-body);font-size:.95rem}
 .exp-toggle:hover{color:var(--gold-bright)}
@@ -214,7 +188,7 @@ main{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1.4
 .exp-inner p:last-child{margin-bottom:0}
 
 /* ── Prompt excerpts ────────────────────────────────────────── */
-pre.prompt{background:#05050a;border:1px solid var(--edge);border-left:2px solid var(--gold);
+pre.prompt{background:var(--ink);border:1px solid var(--edge);border-left:2px solid var(--gold);
   padding:.9rem 1rem;overflow-x:auto;font-family:var(--font-mono);font-size:.72rem;line-height:1.75;color:var(--bone);margin:.6rem 0 1rem}
 pre.prompt .pt{color:var(--gold-bright);font-weight:700}
 pre.prompt .pk{color:var(--arcane-bright)}
@@ -234,39 +208,34 @@ table.dc tr:last-child td{border-bottom:none}
 table.dc td.mono{font-family:var(--font-mono);font-size:.76rem;color:var(--gold-bright)}
 
 /* ── Dice roller ────────────────────────────────────────────── */
-.roller{border:1px solid var(--edge);background:linear-gradient(170deg,var(--stone-2),var(--stone) 70%,#0d0d14);padding:1.4rem;margin:1.2rem 0}
+.roller{border:1px solid var(--edge);background:var(--stone);padding:1.4rem;margin:1.2rem 0}
 .roller .r-label{font-family:var(--font-display);font-size:.7rem;letter-spacing:.28em;text-transform:uppercase;color:var(--gold-bright);margin-bottom:.9rem}
 .r-row{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
-.r-expr{flex:1 1 220px;background:#05050a;border:1px solid var(--edge);color:var(--term-green);
+.r-expr{flex:1 1 220px;background:var(--ink);border:1px solid var(--edge);color:var(--term-green);
   font-family:var(--font-mono);font-size:1rem;padding:.6rem .8rem;min-width:0}
-.r-expr:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),0 0 14px rgba(212,169,44,.25)}
+.r-expr:focus{outline:none;border-color:var(--gold)}
 .r-btn{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;
-  color:var(--bone);background:#0b0b12;border:1px solid var(--edge);padding:.55rem .85rem;transition:all .15s}
-.r-btn:hover{color:var(--gold-bright);border-color:var(--gold);transform:translateY(-1px)}
-.r-btn:active{transform:translateY(1px)}
-.r-btn.primary{color:#1a1206;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 60%,#8a6d14);border-color:#6e5510;font-weight:700}
-.r-btn.primary:hover{filter:brightness(1.12);color:#1a1206}
+  padding:.55rem .85rem}
 .r-adv{display:flex;align-items:center;gap:.5rem;font-family:var(--font-mono);font-size:.7rem;color:var(--bone-dim);letter-spacing:.08em;cursor:pointer;user-select:none}
 .r-adv input{accent-color:var(--arcane)}
 .dice-stage{display:flex;flex-wrap:wrap;gap:.7rem;min-height:74px;align-items:center;margin:.9rem 0 .4rem}
 .die-face{width:58px;height:58px;display:flex;align-items:center;justify-content:center;position:relative;
   font-family:var(--font-display);font-weight:900;font-size:1.35rem;color:var(--bone-bright);
-  background:radial-gradient(circle at 35% 30%,#23233a,#0c0c14 70%);border:1px solid var(--edge-hi);
-  box-shadow:0 8px 22px -6px rgba(0,0,0,.9),inset 0 2px 6px rgba(255,255,255,.06);
+  background:var(--stone-3);border:1px solid var(--edge-hi);
   animation:die-pop .45s cubic-bezier(.22,1,.36,1) both}
 @keyframes die-pop{from{opacity:0;transform:scale(.3) rotate(-160deg)}to{opacity:1;transform:scale(1) rotate(0)}}
 .die-face.d20{clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
-.die-face.d6{border-radius:8px}
+
 .die-face.d4{clip-path:polygon(50% 0,100% 100%,0 100%)}
-.die-face.crit{border-color:var(--gold);color:var(--gold-bright);box-shadow:0 0 22px rgba(232,198,90,.55),inset 0 2px 6px rgba(255,255,255,.08);animation:die-pop .45s cubic-bezier(.22,1,.36,1) both,crit-glow 1.2s ease-in-out infinite}
-.die-face.fail{border-color:var(--blood-bright);color:var(--blood-bright);box-shadow:0 0 22px rgba(212,58,77,.5)}
-.die-face.adv-best{border-color:var(--poison);box-shadow:0 0 18px rgba(90,154,78,.5)}
+.die-face.crit{border-color:var(--gold);color:var(--gold-bright);animation:die-pop .45s cubic-bezier(.22,1,.36,1) both,crit-glow 1.2s ease-in-out infinite}
+.die-face.fail{border-color:var(--blood-bright);color:var(--blood-bright)}
+.die-face.adv-best{border-color:var(--poison)}
 @keyframes crit-glow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.5)}}
 .r-result{font-family:var(--font-mono);font-size:.9rem;color:var(--term-green);min-height:1.6em;word-break:break-word}
 .r-result .plus{color:var(--bone-dim)}
 .r-crit{font-family:var(--font-display);font-size:.78rem;letter-spacing:.24em;text-transform:uppercase;margin-top:.3rem;min-height:1.2em}
-.r-crit.good{color:var(--gold-bright);text-shadow:0 0 12px rgba(232,198,90,.6);animation:crit-flash 1s ease-in-out infinite}
-.r-crit.bad{color:var(--blood-bright);text-shadow:0 0 12px rgba(212,58,77,.6)}
+.r-crit.good{color:var(--gold-bright);animation:crit-flash 1s ease-in-out infinite}
+.r-crit.bad{color:var(--blood-bright)}
 @keyframes crit-flash{0%,100%{opacity:1}50%{opacity:.55}}
 .r-history{margin-top:.9rem;border-top:1px dashed var(--edge);padding-top:.7rem;font-family:var(--font-mono);font-size:.72rem;color:var(--bone-dim);max-height:150px;overflow-y:auto}
 .r-history .h-line{padding:.18rem 0;border-bottom:1px solid rgba(42,42,58,.4)}
@@ -274,7 +243,7 @@ table.dc td.mono{font-family:var(--font-mono);font-size:.76rem;color:var(--gold-
 .r-history .h-t{color:var(--gold);opacity:.6;margin-right:.5rem}
 
 /* ── JSON typewriter ────────────────────────────────────────── */
-.json-box{background:#05050a;border:1px solid var(--edge);border-left:2px solid var(--arcane);padding:1rem 1.1rem;margin:1rem 0;position:relative}
+.json-box{background:var(--ink);border:1px solid var(--edge);border-left:2px solid var(--arcane);padding:1rem 1.1rem;margin:1rem 0;position:relative}
 .json-box .jb-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;flex-wrap:wrap;gap:.5rem}
 .json-box .jb-title{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--bone-dim)}
 .json-box pre{font-family:var(--font-mono);font-size:.72rem;line-height:1.7;color:var(--bone);white-space:pre-wrap;word-break:break-word;min-height:220px}
@@ -282,12 +251,11 @@ table.dc td.mono{font-family:var(--font-mono);font-size:.76rem;color:var(--gold-
 .j-kw{color:var(--poison)}.j-null{color:var(--bone-dim);font-style:italic}.j-punct{color:var(--edge-hi)}
 .j-cursor{display:inline-block;width:.55em;height:1em;background:var(--arcane-bright);vertical-align:-.15em;animation:blink 1s steps(1) infinite}
 .jb-btn{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;
-  color:var(--arcane-bright);background:none;border:1px solid rgba(123,79,212,.5);padding:.4rem .8rem;transition:all .2s}
-.jb-btn:hover{background:rgba(123,79,212,.15);color:#fff}
+  padding:.4rem .8rem}
 .jb-btn:disabled{opacity:.35;cursor:default}
 
 /* ── State tree ─────────────────────────────────────────────── */
-.tree{background:#05050a;border:1px solid var(--edge);padding:1rem 1.1rem;margin:1rem 0;font-family:var(--font-mono);font-size:.76rem;line-height:1.8}
+.tree{background:var(--ink);border:1px solid var(--edge);padding:1rem 1.1rem;margin:1rem 0;font-family:var(--font-mono);font-size:.76rem;line-height:1.8}
 .tree .t-line{white-space:pre-wrap;word-break:break-word}
 .tree .k{color:var(--bone-bright)}
 .tree .kg{color:var(--gold-bright)}
@@ -306,12 +274,12 @@ table.dc td.mono{font-family:var(--font-mono);font-size:.76rem;color:var(--gold-
 
 /* ── XP ladder ──────────────────────────────────────────────── */
 .xp-ladder{margin:1rem 0}
-.xp-bar{display:flex;height:26px;border:1px solid var(--edge);background:#0a0612;overflow:hidden}
-.xp-step{flex:1;border-right:1px solid rgba(42,42,58,.7);position:relative;transition:background .6s}
+.xp-bar{display:flex;height:26px;border:1px solid var(--edge);background:var(--ink);overflow:hidden}
+.xp-step{flex:1;border-right:1px solid var(--edge);position:relative;transition:background .6s}
 .xp-step:last-child{border-right:none}
-.xp-step.l1{background:linear-gradient(180deg,#2c2110,#14100a)}
-.xp-step.mid{background:linear-gradient(180deg,#3a2a12,#181206)}
-.xp-step.late{background:linear-gradient(180deg,#4a3414,#1c1408)}
+.xp-step.l1{background:#2c2110}
+.xp-step.mid{background:#3a2a12}
+.xp-step.late{background:#4a3414}
 .xp-step .lvl{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);font-family:var(--font-mono);font-size:.56rem;color:var(--gold-bright);opacity:.85}
 .xp-cap{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:.62rem;color:var(--bone-dim);margin-top:.35rem}
 .xp-table{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:.3rem .8rem;margin-top:.7rem;font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim)}
@@ -320,7 +288,7 @@ table.dc td.mono{font-family:var(--font-mono);font-size:.76rem;color:var(--gold-
 /* ── TTS sim ────────────────────────────────────────────────── */
 .tts-sim{margin-top:1rem}
 .tts-cache{display:flex;flex-wrap:wrap;gap:.5rem;min-height:34px;margin:.7rem 0}
-.tts-key{font-family:var(--font-mono);font-size:.66rem;color:var(--bone);border:1px solid var(--edge);background:#0b0b12;
+.tts-key{font-family:var(--font-mono);font-size:.66rem;color:var(--bone);border:1px solid var(--edge);background:var(--stone-3);
   padding:.28rem .55rem;animation:die-pop .4s cubic-bezier(.22,1,.36,1) both;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tts-key.hit{border-color:var(--poison);color:var(--poison)}
 .tts-key.miss{border-color:var(--term-amber);color:var(--term-amber)}
@@ -334,9 +302,9 @@ footer .f-title{font-family:var(--font-display);font-size:.68rem;letter-spacing:
 footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);line-height:1.9}
 
 /* ── Toast ──────────────────────────────────────────────────── */
-.toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);opacity:0;z-index:9000;
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);opacity:0;z-index:1200;
   font-family:var(--font-display);font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;
-  background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);
+  background:var(--stone);border:1px solid var(--gold);
   color:var(--gold-bright);padding:.7rem 1.5rem;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}
 .toast.show{transform:translate(-50%,0);opacity:1}
 
@@ -352,7 +320,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
   .index ol{display:contents}
   .index li{border:none;display:inline-block}
   .index li.active{border-left:none}
-  .index a{border:1px solid var(--edge);background:rgba(14,14,20,.6);padding:.34rem .6rem;font-size:.66rem;margin:0}
+  .index a{border:1px solid var(--edge);background:var(--stone-3);padding:.34rem .6rem;font-size:.66rem;margin:0}
   .index .ix-num{display:none}
   .index .ix-tag{display:none}
 }
@@ -370,23 +338,14 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
 /* ── Reduced motion ─────────────────────────────────────────── */
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
-  .fog{display:none}
   html{scroll-behavior:auto}
 }
 </style>
-<noscript><style>.rv{opacity:1;transform:none}#boot{display:none}.boot-lines{min-height:0}/* ═══════════ MJUKA UPP — Codex-knappar (2026-08-05) ═══════════ */
-.jb-btn, .r-btn{ border-radius: 6px !important; }
-.jb-btn:hover, .r-btn:hover{ transform: translateY(-1px) !important; }
-
-</style></noscript>
+<link rel="stylesheet" href="snes.css?v=42">
+<noscript><style>.rv{opacity:1;transform:none}#boot{display:none}.boot-lines{min-height:0}</style></noscript>
 </head>
 <body>
 
-<!-- Ambient layers -->
-<div class="grain"></div>
-<div class="fog"></div>
-<canvas id="embers"></canvas>
-<div class="vignette"></div>
 <div id="prog"></div>
 
 <!-- ═══════════ BOOT OVERLAY ═══════════ -->
@@ -444,14 +403,12 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
 
   <div class="grid2">
     <div class="panel rv">
-      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
       <h3><span class="dot">✦</span> The Dungeon Master</h3>
       <p>A free, creative LLM storyteller. Its identity, craft rules and world-consistency laws live in <code>DM_CORE_PROMPT</code>, versioned as <span class="stat"><b class="v">v28</b></span> — bumping the version forces a cache miss so the model can never serve a stale persona.</p>
       <p>It is told: <em>"The story is NOT pre-written: it is shaped by the player's choices, in the moment."</em> It chooses theme, tone and atmosphere. It may say no. Death is real.</p>
       <div class="stat"><b>Role split:</b> Narrator · NPC actor · Rules arbiter · World builder · Challenger</div>
     </div>
     <div class="panel rv">
-      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
       <h3><span class="dot">✦</span> The Guardian</h3>
       <p>A second LLM pass that reads the DM's narration and extracts <b>every mechanical effect</b> into a strict <span class="stat"><b class="v">44-field JSON contract</b></span>: damage, healing, XP, items, currency, quests, NPC changes, combat, spell-slot spending, rest, world lore.</p>
       <p>It works in <b>two phases</b>: <span class="stat"><b>PRE</b></span> (before the DM writes — decides <em>if</em> a roll is needed) and <span class="stat"><b>POST</b></span> (after — turns prose into state). It never writes a sentence. For combat it never writes numbers either — it names <em>who</em> attacks, and the server engine rolls the dice.</p>
@@ -461,21 +418,16 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
 
   <div class="flowbox rv">
     <svg viewBox="0 0 900 352" role="img" aria-label="Turn flow: player to guardian pre, DM, chat, validation, guardian post, apply, state">
-      <defs>
-        <linearGradient id="gGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#181410"/><stop offset="1" stop-color="#120f0a"/></linearGradient>
-        <linearGradient id="gPur" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#181226"/><stop offset="1" stop-color="#120d1c"/></linearGradient>
-        <linearGradient id="gSt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#10161a"/><stop offset="1" stop-color="#0c1014"/></linearGradient>
-      </defs>
       <!-- Row 1 -->
-      <g class="fn bone"><rect x="30" y="58" width="118" height="44" rx="2" fill="url(#gPur)" stroke="rgba(123,79,212,.6)"/><text class="f-label" x="89" y="76" text-anchor="middle">PLAYER</text><text class="f-sub" x="89" y="90" text-anchor="middle">action · SSE</text></g>
-      <g class="fn pur"><rect class="f-pulse" x="196" y="58" width="118" height="44" rx="2" fill="url(#gPur)" stroke="rgba(123,79,212,.55)"/><text class="f-label" x="255" y="76" text-anchor="middle">GUARDIAN PRE</text><text class="f-sub" x="255" y="90" text-anchor="middle">roll? → [KAST:] hint</text></g>
-      <g class="fn gold"><rect x="362" y="58" width="118" height="44" rx="2" fill="url(#gGold)" stroke="rgba(212,169,44,.55)"/><text class="f-label" x="421" y="76" text-anchor="middle">DUNGEON MASTER</text><text class="f-sub" x="421" y="90" text-anchor="middle">system prompt v28</text></g>
+      <g class="fn bone"><rect x="30" y="58" width="118" height="44" rx="2" fill="#181226" stroke="rgba(123,79,212,.6)"/><text class="f-label" x="89" y="76" text-anchor="middle">PLAYER</text><text class="f-sub" x="89" y="90" text-anchor="middle">action · SSE</text></g>
+      <g class="fn pur"><rect class="f-pulse" x="196" y="58" width="118" height="44" rx="2" fill="#181226" stroke="rgba(123,79,212,.55)"/><text class="f-label" x="255" y="76" text-anchor="middle">GUARDIAN PRE</text><text class="f-sub" x="255" y="90" text-anchor="middle">roll? → [KAST:] hint</text></g>
+      <g class="fn gold"><rect x="362" y="58" width="118" height="44" rx="2" fill="#181410" stroke="rgba(212,169,44,.55)"/><text class="f-label" x="421" y="76" text-anchor="middle">DUNGEON MASTER</text><text class="f-sub" x="421" y="90" text-anchor="middle">system prompt v28</text></g>
       <g class="fn bone"><rect x="528" y="58" width="118" height="44" rx="2" fill="#12121a" stroke="#2a2a3a"/><text class="f-label" x="587" y="76" text-anchor="middle">CHAT STREAM</text><text class="f-sub" x="587" y="90" text-anchor="middle">reasoning + content</text></g>
       <g class="fn ember"><rect x="694" y="58" width="118" height="44" rx="2" fill="#14100a" stroke="rgba(212,105,30,.5)"/><text class="f-label" x="753" y="76" text-anchor="middle">VALIDATE</text><text class="f-sub" x="753" y="90" text-anchor="middle">strip · parse rolls</text></g>
       <!-- Row 2 -->
-      <g class="fn pur"><rect x="196" y="210" width="118" height="44" rx="2" fill="url(#gPur)" stroke="rgba(123,79,212,.55)"/><text class="f-label" x="255" y="228" text-anchor="middle">GUARDIAN POST</text><text class="f-sub" x="255" y="242" text-anchor="middle">prose → JSON contract</text></g>
+      <g class="fn pur"><rect x="196" y="210" width="118" height="44" rx="2" fill="#181226" stroke="rgba(123,79,212,.55)"/><text class="f-label" x="255" y="228" text-anchor="middle">GUARDIAN POST</text><text class="f-sub" x="255" y="242" text-anchor="middle">prose → JSON contract</text></g>
       <g class="fn poison"><rect x="362" y="210" width="118" height="44" rx="2" fill="#101408" stroke="rgba(90,154,78,.5)"/><text class="f-label" x="421" y="228" text-anchor="middle">APPLY MECHANICS</text><text class="f-sub" x="421" y="242" text-anchor="middle">mutate state · dedup</text></g>
-      <g class="fn teal"><rect x="528" y="210" width="118" height="44" rx="2" fill="url(#gSt)" stroke="rgba(78,138,147,.55)"/><text class="f-label" x="587" y="228" text-anchor="middle">STATE.JSON</text><text class="f-sub" x="587" y="242" text-anchor="middle">the one truth</text></g>
+      <g class="fn teal"><rect x="528" y="210" width="118" height="44" rx="2" fill="#10161a" stroke="rgba(78,138,147,.55)"/><text class="f-label" x="587" y="228" text-anchor="middle">STATE.JSON</text><text class="f-sub" x="587" y="242" text-anchor="middle">the one truth</text></g>
       <!-- connectors row1 -->
       <path class="flowline anim pur" id="p1a" d="M148 80 H196"/>
       <circle class="dot pur" r="3"><animateMotion dur="1.6s" repeatCount="indefinite"><mpath href="#p1a"/></animateMotion></circle>
@@ -520,7 +472,6 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
   </div>
 
   <div class="panel rv">
-    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
     <h3><span class="dot">✦</span> Four knobs, one clamp</h3>
     <p>Each campaign carries <b>four model choices</b>, saved in <code>meta</code> and swappable from the in-game settings: the <span class="stat"><b>DM model</b></span> (storyteller), the <span class="stat"><b>Guardian model</b></span> (roll judge), the <span class="stat"><b>Extraction model</b></span> (POST parser) and the <span class="stat"><b>TTS provider</b></span> (StepFun "Step Plan" or Qwen "Token Plan").</p>
     <p>Non-admin players are clamped to a whitelist server-side — the picker in onboarding is only a UX affordance; <code>_clamp_player_model</code> is the real gate.</p>
@@ -540,27 +491,27 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
   <p class="sec-lede">One player message triggers eight serialized stages. The DM stream is the only thing the player watches; everything after it happens in the dark.</p>
 
   <div class="grid3">
-    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="panel rv">
       <h3><span class="dot">1</span> Action in</h3>
       <p>The player's message arrives via SSE. A per-campaign <span class="stat"><b>asyncio lock</b></span> is taken — every state write is serialized, no two turns may race.</p>
     </div>
-    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="panel rv">
       <h3><span class="dot">2</span> Guardian PRE</h3>
       <p><code>guardian_check_roll</code> reads the action + compact state and decides if the outcome is uncertain. If so it hands the DM the exact <span class="stat"><b>[KAST: 1d20+MOD | LABEL (DC X)]</b></span> tag to use.</p>
     </div>
-    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="panel rv">
       <h3><span class="dot">3</span> DM writes</h3>
       <p><code>_build_system_prompt</code> assembles the layered prompt (see §3). The DM streams tokens — reasoning shown as a thought bubble, then narration — into the chat.</p>
     </div>
-    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="panel rv">
       <h3><span class="dot">4</span> Validate &amp; strip</h3>
       <p><code>validate_dm_response</code> checks the shape; mechanical tags are stripped from display text. <span class="stat"><b>[KAST:]</b></span> is parsed into a real dice button the player must press.</p>
     </div>
-    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="panel rv">
       <h3><span class="dot">5</span> Guardian POST</h3>
       <p>In the background, <code>guardian_extract_mechanics</code> sends the reply + last 6 transcript entries + compact state to the extraction model. Invalid JSON triggers a <span class="stat"><b>2-attempt repair loop</b></span>; total failure returns an empty dict — the turn survives.</p>
     </div>
-    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="panel rv">
       <h3><span class="dot">6</span> Apply &amp; save</h3>
       <p><code>apply_mechanics</code> mutates state with dedup (<code>skip_effects</code>) against anything the legacy tag pipeline already applied. <code>state.json</code> is written, <code>last_effects</code> recorded — and the loop feeds §1.</p>
     </div>
@@ -722,7 +673,6 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
   </div>
 
   <div class="panel rv">
-    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
     <h3><span class="dot">✦</span> The assembly order</h3>
     <div class="stat"><b>1</b> Language directive → <b>2</b> Core prompt v28 → <b>3</b> Combat <i>or</i> Narrative → <b>4</b> TRUTH block + pinned facts → <b>5</b> Scene ×2, Chapter ×2, Arc ×1 → <b>6</b> Last turn's effects → <b>7</b> World &amp; locations &amp; travel rule → <b>8</b> Lore → <b>9</b> NPCs → <b>10</b> Quests → <b>11</b> Inventory &amp; character → <b>12</b> Fact memory &amp; RAG — top 8 facts · top 4 chunks (<a href="#s4" style="color:var(--gold-bright)">§4</a>)</div>
   </div>
@@ -738,12 +688,12 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
   <p class="sec-lede">Facts are extracted after every turn, ranked before every DM reply — and only the top eight make it into the prompt. Nothing is deleted; everything competes.</p>
 
   <div class="grid2">
-    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="panel rv">
       <h3><span class="dot">✦</span> The register</h3>
       <p>The extraction model reads every Guardian POST and stores durable facts in a per-campaign <span class="stat"><b>FactRegister</b></span> (facts.json): people, places, promises, grudges, discoveries. Each entry carries its <span class="stat"><b>category</b></span>, <span class="stat"><b>source turn</b></span>, <span class="stat"><b>mentions</b></span>, <span class="stat"><b>confidence</b></span>, and a <span class="stat"><b>relevance</b></span> score between 0.2 and 1.0.</p>
       <p>Facts never collide blindly: a new fact that replaces an old one sets <span class="stat"><b>superseded_by</b></span> on its predecessor — replaced facts are excluded from the active set forever.</p>
     </div>
-    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="panel rv">
       <h3><span class="dot">✦</span> The ranking</h3>
       <p>Before each DM turn, every active fact is scored against the player's message:</p>
       <p class="stat" style="font-size:.9rem">score = (keyword-overlap + recency + mentions) × relevance-weight × confidence-weight</p>
@@ -763,7 +713,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
   </div>
 
   <div class="grid2">
-    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="panel rv">
       <h3><span class="dot">✦</span> When facts fall out</h3>
       <p><span class="stat"><b>Superseded</b></span> — replaced by a newer, truer fact; never injected again.</p>
       <p><span class="stat"><b>Not hot enough</b></span> — a turn with no keyword overlap and few mentions filters the fact out for that turn (the moving window).</p>
@@ -771,7 +721,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
       <p><span class="stat"><b>Compaction (every 50 turns)</b></span> — an archivist LLM reads up to 80 active facts and marks the stale ones; their relevance drops to <span class="stat"><b>0.2</b></span> — a permanent −50% unless the story re-mentions them hard.</p>
       <p><span class="stat"><b>Pinned facts</b></span> are the exception: player-pinned truth (the <span class="stat"><b>/pin</b></span> command) is injected uncapped in every TRUTH block and never falls out.</p>
     </div>
-    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="panel rv">
       <h3><span class="dot">✦</span> Nothing is deleted</h3>
       <p>The register keeps every fact forever — eviction is only ever <em>ranking</em>. A fact that loses the window today can win it back tomorrow if the story returns to it; that is what makes a 200-turn campaign remember turn 3 <em>when it matters</em>.</p>
       <div class="tag-row">
@@ -799,12 +749,12 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
   </div>
 
   <div class="grid2">
-    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="panel rv">
       <h3><span class="dot">✦</span> The reading</h3>
       <p>The Guardian receives the DM reply, the player's action, the last <b>6 transcript entries</b> and a compact state snapshot. It is a paranoid reader: implicit damage ("the cold bites", "your breath catches") must be caught; a potion drunk is a <span class="stat"><b>roll grant</b></span> (2d4+2), never a fixed number; a "you see a book" is <b>not</b> an item — only "you take the book" is.</p>
       <p>If the reply contains invalid JSON, the engine appends a correction — <em>"Returnera ENDAST JSON-objektet, inget annat."</em> — and retries once. Two failures return the empty contract and the turn continues untouched.</p>
     </div>
-    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="panel rv">
       <h3><span class="dot">✦</span> The rules it obeys</h3>
       <p><span class="stat"><b>XP:</b></span> only kills, quests, milestones, complex puzzles — <b>never</b> walking, resting, trading or small talk. Most turns pay zero XP. Quests pay their stored reward automatically, never double-paid.</p>
       <p><span class="stat"><b>Items:</b></span> every item needs D&amp;D stats, a <b>weight</b>, and a <b>lore line</b> from the campaign's own world. The player never equips themselves — the DM decides what is worn.</p>
@@ -853,7 +803,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
       <button class="r-btn" onclick="quickDice('1d12')">d12</button>
       <button class="r-btn" onclick="quickDice('1d8')">d8</button>
       <label class="r-adv" title="Roll two d20, keep the best — D&D advantage"><input type="checkbox" id="dice-adv" onchange="toggleAdv()"> ADVANTAGE (2d20)</label>
-      <button class="r-btn primary" onclick="rollNow()">⚄ Roll</button>
+      <button class="r-btn go-btn" onclick="rollNow()">⚄ Roll</button>
     </div>
     <div class="dice-stage" id="dice-stage" aria-live="polite"></div>
     <div class="r-result" id="dice-result"></div>
@@ -861,7 +811,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     <div class="r-history" id="dice-history" aria-label="Roll history"></div>
   </div>
 
-  <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+  <div class="panel rv">
     <h3><span class="dot">✦</span> Fair in both directions</h3>
     <p>Your combat numbers — your attacks and every enemy attack — are rolled by code, never by the model. When <b>you</b> act, the DM's <span class="stat"><b>[KAST:]</b></span> request spawns a real dice button — the roll is resolved by <span class="stat"><b>POST /api/dice</b></span> on the server (Python <span class="stat"><b>secrets</b></span>), animates in the chat, and returns as <span class="stat"><b>[Resultat:]</b></span>. When your attack <b>hits</b>, the server engine rolls the damage from the weapon's <code>damage_dice</code> — not the DM. When an <b>enemy attacks</b>, the Guardian extracts the attacker's name only, and the engine rolls d20 + attack bonus vs your AC plus the damage dice, with crits, cover and resistances applied. The DM narrates <em>that</em> the blow comes — never the roll, never the damage number.</p>
     <p>Outside the attack economy, a player-declared action may resolve through the DM's narration with server-applied tags — <span class="stat"><b>[SKADA:]</b></span> on living creatures applies <b>only outside combat or from the environment</b>. Every number between you and an enemy, in both directions, is engine-rolled.</p>
@@ -870,12 +820,12 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
   </div>
 
   <div class="grid2">
-    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="panel rv">
       <h3><span class="dot">✦</span> The two-phase flow</h3>
       <p><span class="stat"><b>1 ·</b></span> Guardian PRE reads the action and decides the outcome is uncertain. <span class="stat"><b>2 ·</b></span> The DM writes the <span class="stat"><b>[KAST: 1d20+MOD | LABEL (DC X)]</b></span> tag — the only syntax that can spawn a die. <span class="stat"><b>3 ·</b></span> The frontend renders a dice button; the click sends the result back as <span class="stat"><b>[Resultat: …]</b></span>. <span class="stat"><b>4 ·</b></span> The DM must narrate the outcome immediately — never "what do you do?" before resolving.</p>
       <p>Advantage/disadvantage is declared in the tag itself (<span class="stat"><b>ADVANTAGE</b></span>/<span class="stat"><b>FÖRDEL</b></span>): two d20, keep best/worst.</p>
     </div>
-    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="panel rv">
       <h3><span class="dot">✦</span> Edge rules encoded</h3>
       <p><span class="stat"><b>Nat 20</b></span> = critical triumph · <span class="stat"><b>nat 1</b></span> = catastrophe. <span class="stat"><b>Death saves:</b></span> 3 successes vs 3 failures; nat 1 counts as two failures, nat 20 wakes the character at 1 HP. <span class="stat"><b>Healing potions</b></span> are always rolled (2d4+2) by the player — the DM may never narrate a fixed heal.</p>
       <p>Spell-slot dice and buffs (Bless, Guidance, Heroism) arrive through <span class="stat"><b>roll_grants</b></span> — Guardian reads the narration and creates the button automatically.</p>
@@ -894,14 +844,12 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
 
   <div class="grid2">
     <div class="panel rv">
-      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
       <h3><span class="dot">✦</span> Spell slots — level as cost</h3>
       <p>Casters carry <b>one pool</b>, sized from the class's 5e slot table (full casters 2 → 3 → 4…, warlock pact magic 1 → 2 → 2…), granted at character creation and refilled to the new max at every level-up.</p>
       <p>Casting a spell <b>spends its level from the pool</b>: a level-3 casting costs 3, a level-1 costs 1, cantrips are free. When the Guardian extracts a <span class="stat"><b>spell_slots_spend</b></span> entry, the <b>code</b> decrements the pool — the model names the spell and level, never the arithmetic.</p>
       <p>Pool empty? The cast is <b>blocked — and you see it</b>: the Guardian's summary reports the blocked attempt in the chat, so a dry well is never silent. Watch your pool live on the character sheet under <span class="stat"><b>spell_slots</b></span>.</p>
     </div>
     <div class="panel rv">
-      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
       <h3><span class="dot">✦</span> Rests — long &amp; short</h3>
       <p><span class="stat"><b>Long rest (8 h):</b></span> HP to maximum, <b>all spell slots</b> restored, <b>half your hit dice</b> recovered (minimum one), and <b>exhaustion drops by 1</b>. The engine applies all of it — and if eight hours pass in the narration, the rest lands mechanically even if the DM forgets the tag.</p>
       <p><span class="stat"><b>Short rest:</b></span> spend <b>one hit die</b> — the <b>server dice</b> roll it (1d6–1d12 by class) plus your CON modifier, and the heal is applied to your HP. The Guardian's summary shows the roll and how many dice remain.</p>
@@ -921,13 +869,10 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
 
   <div class="flowbox rv">
     <svg viewBox="0 0 880 190" role="img" aria-label="TTS pipeline: text to segments to synthesis to cache to speaker">
-      <defs>
-        <linearGradient id="gTts" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#14121a"/><stop offset="1" stop-color="#0e0c14"/></linearGradient>
-      </defs>
-      <g class="fn gold"><rect x="20" y="70" width="130" height="44" rx="2" fill="url(#gTts)" stroke="rgba(212,169,44,.5)"/><text class="f-label" x="85" y="88" text-anchor="middle">DM TEXT</text><text class="f-sub" x="85" y="102" text-anchor="middle">"the wind howls…"</text></g>
+      <g class="fn gold"><rect x="20" y="70" width="130" height="44" rx="2" fill="#14121a" stroke="rgba(212,169,44,.5)"/><text class="f-label" x="85" y="88" text-anchor="middle">DM TEXT</text><text class="f-sub" x="85" y="102" text-anchor="middle">"the wind howls…"</text></g>
       <g class="fn bone"><rect x="200" y="70" width="130" height="44" rx="2" fill="#12121a" stroke="#2a2a3a"/><text class="f-label" x="265" y="88" text-anchor="middle">SEGMENTER</text><text class="f-sub" x="265" y="102" text-anchor="middle">≤900 chars / sentence</text></g>
-      <g class="fn pur"><rect x="380" y="70" width="130" height="44" rx="2" fill="url(#gTts)" stroke="rgba(123,79,212,.55)"/><text class="f-label" x="445" y="88" text-anchor="middle">SYNTHESIZER</text><text class="f-sub" x="445" y="102" text-anchor="middle">StepFun / Qwen · 1.1×</text></g>
-      <g class="fn teal"><rect x="560" y="70" width="130" height="44" rx="2" fill="url(#gTts)" stroke="rgba(78,138,147,.55)"/><text class="f-label" x="625" y="88" text-anchor="middle">CACHE</text><text class="f-sub" x="625" y="102" text-anchor="middle">64 slots · TTL 600s</text></g>
+      <g class="fn pur"><rect x="380" y="70" width="130" height="44" rx="2" fill="#14121a" stroke="rgba(123,79,212,.55)"/><text class="f-label" x="445" y="88" text-anchor="middle">SYNTHESIZER</text><text class="f-sub" x="445" y="102" text-anchor="middle">StepFun / Qwen · 1.1×</text></g>
+      <g class="fn teal"><rect x="560" y="70" width="130" height="44" rx="2" fill="#14121a" stroke="rgba(78,138,147,.55)"/><text class="f-label" x="625" y="88" text-anchor="middle">CACHE</text><text class="f-sub" x="625" y="102" text-anchor="middle">64 slots · TTL 600s</text></g>
       <g class="fn ember"><rect x="740" y="70" width="120" height="44" rx="2" fill="#14100a" stroke="rgba(212,105,30,.5)"/><text class="f-label" x="800" y="88" text-anchor="middle">SPEAKER</text><text class="f-sub" x="800" y="102" text-anchor="middle">MP3 in browser</text></g>
       <path class="flowline anim gold" id="t1" d="M150 92 H200"/>
       <circle class="dot" r="3"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#t1"/></animateMotion></circle>
@@ -953,12 +898,12 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
   </div>
 
   <div class="grid2">
-    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="panel rv">
       <h3><span class="dot">✦</span> How a line becomes voice</h3>
       <p>Long DM messages (2000+ chars) are split at sentence boundaries into segments of at most <span class="stat"><b>900 characters</b></span> — Qwen's synthesis chokes on long texts, so each segment is synthesized separately and the MP3 frames are stitched back into one file. Truncation at 1000 chars falls back to the last sentence boundary, never mid-word.</p>
       <p>Providers: <span class="stat"><b>StepFun</b></span> (Step Plan) and <span class="stat"><b>Qwen</b></span> (Token Plan), both rendered ~10% faster (1.1× speed) so narration never drags.</p>
     </div>
-    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="panel rv">
       <h3><span class="dot">✦</span> The cache contract</h3>
       <p><span class="stat"><b>Key</b></span> = provider + voice + normalized text hash. <span class="stat"><b>TTL</b></span> = 600 seconds — a stale entry is a miss and is evicted. <span class="stat"><b>Capacity</b></span> = 64 entries; at the cap the oldest (insertion order) is evicted. <span class="stat"><b>Usage</b></span> is still booked on every request — chars, estimated tokens (~4 chars/token), and true MP3 duration computed by parsing the audio frames (no ffmpeg needed) into each user's ledger.</p>
       <p>Try the simulation below: request the same line twice and watch the second one hit.</p>
@@ -969,7 +914,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     <div class="term-bar"><i></i><i></i><i></i><span>tts_cache_sim · _TTS_CACHE · max 64 · ttl 600s</span></div>
     <div class="term-body">
       <div class="tts-sim">
-        <button class="r-btn primary" onclick="simTts('repeat')" style="margin-right:.5rem">🗣 Request "the wind howls…" again</button>
+        <button class="r-btn go-btn" onclick="simTts('repeat')" style="margin-right:.5rem">🗣 Request "the wind howls…" again</button>
         <button class="r-btn" onclick="simTts('new')">🗣 Request a new line</button>
         <div class="tts-cache" id="tts-cache"></div>
         <div class="tts-log" id="tts-log">$ <span class="d">cache empty — first request will miss</span></div>
@@ -989,14 +934,11 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
 
   <div class="flowbox rv">
     <svg viewBox="0 0 880 190" role="img" aria-label="Character generation stream: prompt to SSE to LLM to JSON to preview">
-      <defs>
-        <linearGradient id="gW" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#14121a"/><stop offset="1" stop-color="#0e0c14"/></linearGradient>
-      </defs>
-      <g class="fn pur"><rect x="20" y="70" width="130" height="44" rx="2" fill="url(#gW)" stroke="rgba(123,79,212,.55)"/><text class="f-label" x="85" y="88" text-anchor="middle">PLAYER DREAM</text><text class="f-sub" x="85" y="102" text-anchor="middle">"a scarred ranger…"</text></g>
-      <g class="fn gold"><rect x="200" y="70" width="150" height="44" rx="2" fill="url(#gW)" stroke="rgba(212,169,44,.5)"/><text class="f-label" x="275" y="88" text-anchor="middle">/vault/generate/stream</text><text class="f-sub" x="275" y="102" text-anchor="middle">SSE · temp 0.95 · max tokens + high reasoning</text></g>
+      <g class="fn pur"><rect x="20" y="70" width="130" height="44" rx="2" fill="#14121a" stroke="rgba(123,79,212,.55)"/><text class="f-label" x="85" y="88" text-anchor="middle">PLAYER DREAM</text><text class="f-sub" x="85" y="102" text-anchor="middle">"a scarred ranger…"</text></g>
+      <g class="fn gold"><rect x="200" y="70" width="150" height="44" rx="2" fill="#14121a" stroke="rgba(212,169,44,.5)"/><text class="f-label" x="275" y="88" text-anchor="middle">/vault/generate/stream</text><text class="f-sub" x="275" y="102" text-anchor="middle">SSE · temp 0.95 · max tokens + high reasoning</text></g>
       <g class="fn bone"><rect x="400" y="70" width="130" height="44" rx="2" fill="#12121a" stroke="#2a2a3a"/><text class="f-label" x="465" y="88" text-anchor="middle">LLM WEAVES</text><text class="f-sub" x="465" y="102" text-anchor="middle">reasoning + content deltas</text></g>
       <g class="fn ember"><rect x="580" y="70" width="130" height="44" rx="2" fill="#14100a" stroke="rgba(212,105,30,.5)"/><text class="f-label" x="645" y="88" text-anchor="middle">EXTRACT + FINALIZE</text><text class="f-sub" x="645" y="102" text-anchor="middle">_extract_json → inventory</text></g>
-      <g class="fn teal"><rect x="760" y="70" width="100" height="44" rx="2" fill="url(#gW)" stroke="rgba(78,138,147,.55)"/><text class="f-label" x="810" y="88" text-anchor="middle">PREVIEW</text><text class="f-sub" x="810" y="102" text-anchor="middle">Save / Reroll</text></g>
+      <g class="fn teal"><rect x="760" y="70" width="100" height="44" rx="2" fill="#14121a" stroke="rgba(78,138,147,.55)"/><text class="f-label" x="810" y="88" text-anchor="middle">PREVIEW</text><text class="f-sub" x="810" y="102" text-anchor="middle">Save / Reroll</text></g>
       <path class="flowline anim pur" id="w1" d="M150 92 H200"/>
       <circle class="dot pur" r="3"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#w1"/></animateMotion></circle>
       <path class="flowline anim gold" id="w2" d="M350 92 H400"/>
@@ -1012,13 +954,13 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
   </div>
 
   <div class="grid2">
-    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="panel rv">
       <h3><span class="dot">✦</span> The weave</h3>
       <p>The most creative step in any adventure is the adventurer — the human at the table. The engine's job is to be a worthy partner: every DM turn, every character, every face is generated by <span class="stat"><b>FULL-SIZE models</b></span> at maximum token budget and high reasoning — <span class="stat"><b>Qwen 3.8 Max</b></span> with thinking always on (<span class="stat"><b>1M context</b></span>), <span class="stat"><b>DeepSeek V4</b></span> at high reasoning, <span class="stat"><b>StepFun 3.7 Flash</b></span> at high reasoning with a full <span class="stat"><b>32k budget</b></span>. No quantized small models, no context-window truncation, no artificial rate limits on reasoning, no token-capped thinking. The price is latency — a few extra seconds while the DM thinks before it speaks. That wait is the product: a world that reasons, not one that guesses.</p>
       <p>The request is a single line — <em>"Skapa en karaktär: {prompt}"</em> — against <code>CHARACTER_PROMPT</code> at <span class="stat"><b>temperature 0.95</b></span> (the most creative setting in the whole engine) with a <span class="stat"><b>maximum token budget and high reasoning</b></span> — the same full-mind policy as the Dungeon Master, because the adventurer is the most creative step of all. The stream pushes two kinds of frames: <span class="stat"><b>reasoning</b></span> (the invisible thoughts) and <span class="stat"><b>content</b></span> (the growing character JSON), then a <span class="stat"><b>done</b></span> frame with tokens used, seconds elapsed and reasoning length.</p>
       <p>The raw text is passed through <code>_extract_json</code>, then <code>_finalize_character_data</code> fills hit dice, ability modifiers, starting equipment and inventory. Token usage is booked to a lifetime ledger that survives even character deletion.</p>
     </div>
-    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="panel rv">
       <h3><span class="dot">✦</span> The vault</h3>
       <p>Saved adventurers live in a <span class="stat"><b>vault</b></span> — one per account, not per campaign — so an adventurer survives a campaign's end. Each entry keeps the full sheet, inventory, story and painted avatar. Summoning into a campaign copies the adventurer into that campaign's state; rerolling spawns a fresh stream.</p>
       <p>Avatars are painted separately by an image model — either from the player's <b>own words</b> or from an auto-built sheet prompt — and the status line always tells you which source won.</p>
@@ -1100,12 +1042,12 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
   </div>
 
   <div class="grid2">
-    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="panel rv">
       <h3><span class="dot">✦</span> Concurrency &amp; durability</h3>
       <p>Every read-modify-write runs under a per-campaign <span class="stat"><b>asyncio lock</b></span> — two turns can never interleave. Writes are journaled as JSONL transcripts (one file per session) plus periodic chapter and scene summaries, so the hierarchy in §3 can be rebuilt even after a crash.</p>
       <p>The audit that shaped this page found the classic trap: a background writer appending a <b>list</b> to a field another path had written as a <b>dict</b> — an AttributeError inside a swallowed try/except that silently erased a turn's mechanics. The logbook shape is now guarded on both sides.</p>
     </div>
-    <div class="panel rv"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+    <div class="panel rv">
       <h3><span class="dot">✦</span> One XP table, two consumers</h3>
       <p>D&amp;D 5e level thresholds live in exactly one place — <code>_XP_THRESHOLDS</code> — and both the legacy tag pipeline and the Guardian's level-up check import it. Guardian pays XP only for kills, quests, milestones and puzzles; quest completion pays its stored reward automatically.</p>
       <div class="xp-ladder">
@@ -1118,7 +1060,6 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
   </div>
 
   <div class="panel rv">
-    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
     <h3><span class="dot">✦</span> The invariant</h3>
     <p class="stat" style="font-size:.9rem">Everything the player sees — the sheet, the dossier, the map, the logbook, the next DM line — is derived from <b class="v">state.json</b>. The DM may never invent what it holds; the Guardian may never forget to update it. That asymmetry is the whole game.</p>
   </div>
@@ -1189,47 +1130,6 @@ document.addEventListener("keydown", function(e){
 });
 bootStep2();
 
-/* ── Embers ────────────────────────────────────────────────── */
-var embersCanvas = document.getElementById("embers");
-var embers = [];
-var E_W = 0, E_H = 0;
-function resizeEmbers(){
-  if(!embersCanvas) return;
-  E_W = embersCanvas.width = window.innerWidth;
-  E_H = embersCanvas.height = window.innerHeight;
-}
-function spawnEmber(init){
-  return { x: Math.random()*E_W, y: init ? Math.random()*E_H : E_H + 10,
-    r: .7 + Math.random()*1.6, vy: .2 + Math.random()*.6, vx: (Math.random()-.5)*.3,
-    life: 0, max: 400 + Math.random()*500,
-    hue: Math.random() < .82 ? 22 + Math.random()*18 : 268 + Math.random()*20 };
-}
-var GLOW={};function glowSprite(hue){var key=Math.round(hue/10)*10;if(GLOW[key])return GLOW[key];var c=document.createElement("canvas");c.width=c.height=48;var g=c.getContext("2d");var rg=g.createRadialGradient(24,24,0,24,24,24);rg.addColorStop(0,"hsla("+key+",90%,65%,1)");rg.addColorStop(.4,"hsla("+key+",85%,55%,.55)");rg.addColorStop(1,"hsla("+key+",80%,50%,0)");g.fillStyle=rg;g.fillRect(0,0,48,48);GLOW[key]=c;return c;}
-function tickEmbers(){
-if (document.hidden) { requestAnimationFrame(tickEmbers); return; }
-  var ctx = embersCanvas ? embersCanvas.getContext("2d") : null;
-  if(!ctx) return;
-  ctx.clearRect(0, 0, E_W, E_H);
-  for(var i = 0; i < embers.length; i++){
-    var e = embers[i];
-    e.life++; e.y -= e.vy; e.x += e.vx + Math.sin(e.life*.02)*.12;
-    var fade = Math.min(1, e.life/60) * Math.max(0, 1 - e.life/e.max);
-    var fl = .5 + Math.sin(e.life*.15 + i)*.35;
-    ctx.globalAlpha = .45*fade*fl;
-    ctx.drawImage(glowSprite(e.hue), e.x - e.r*2, e.y - e.r*2, e.r*4, e.r*4);
-    if(e.life > e.max || e.y < -12) embers[i] = spawnEmber(false);
-  }
-  ctx.globalAlpha = 1;
-  requestAnimationFrame(tickEmbers);
-}
-function initEmbers(){
-  if(!embersCanvas) return;
-  resizeEmbers();
-  window.addEventListener("resize", resizeEmbers);
-  for(var i = 0; i < 40; i++) embers.push(spawnEmber(true));
-  tickEmbers();
-}
-
 /* ── Scroll reveal + progress + spy ────────────────────────── */
 var revealEls = document.querySelectorAll(".rv");
 function initReveal(){
@@ -1243,6 +1143,7 @@ function initReveal(){
     });
   }, { threshold: .08, rootMargin: "0px 0px -40px 0px" });
   revealEls.forEach(function(el){ io.observe(el); });
+  setTimeout(function(){ revealEls.forEach(function(el){ el.classList.add("in"); }); }, 2500);
 }
 var progEl = document.getElementById("prog");
 var secEls = Array.prototype.slice.call(document.querySelectorAll("[data-sec]"));
@@ -1502,7 +1403,6 @@ function simTts(mode){
 }
 
 /* ── Init ──────────────────────────────────────────────────── */
-initEmbers();
 initReveal();
 initSpy();
 setTimeout(typeJsonDemo, 1400);
@@ -1518,5 +1418,7 @@ window.simTts = simTts;
 
 })();
 </script>
+<script src="i18n.js?v=20260906a"></script>
+<script src="sprites.js?v=20260806b"></script>
 </body>
 </html>

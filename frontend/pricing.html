@@ -9,44 +9,37 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
-<script src="themes.js?v=20260906a"></script>
 <style>
   /* ═══════════════ tokens ═══════════════ */
   :root{
+    /* Kanonisk palett = snes.css :root (Terminal Gothic, 2026-09-10) */
     --ink:#1a1426;
     --stone:#271d33; --stone-2:#322541; --stone-3:#3d2e4f;
     --edge:#463a60; --edge-hi:#5a4a7a;
     --bone:#d9c9a6; --bone-bright:#f2e6c8; --bone-dim:#9d8a6a;
     --gold:#d4a92c; --gold-bright:#f0d675;
     --blood:#a32433; --blood-bright:#e0485a;
-    --ember:#d4691e; --arcane:#9a6fe0; --poison:#7aa35e;
+    --ember:#d4691e; --arcane:#9a6fe0; --arcane-bright:#c9a6ff;
+    --poison:#7aa35e; --teal:#5e9aa3;
+    --term-green:#33cc33; --term-amber:#ccaa33;
     --font-display:'Cinzel',serif;
     --font-body:'Spectral',Georgia,serif;
+    --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+    --font-accent:'Silkscreen',monospace;
     --nav-h:64px;
   }
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{font-family:var(--font-body);color:var(--bone);background:var(--ink);
-    overflow-x:hidden;-webkit-tap-highlight-color:transparent;
-    background-image:
-      radial-gradient(900px 520px at 50% 110%, rgba(212,105,30,.07), transparent 70%),
-      radial-gradient(700px 460px at 8% -6%, rgba(123,79,212,.06), transparent 70%),
-      radial-gradient(700px 460px at 96% -8%, rgba(139,26,42,.07), transparent 70%);
-    background-attachment:fixed}
-  .grain{position:fixed;inset:0;z-index:3;pointer-events:none;opacity:.05;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
-  .vignette{position:fixed;inset:0;z-index:3;pointer-events:none;
-    box-shadow:inset 0 0 190px 60px rgba(3,2,7,.85)}
+    overflow-x:hidden;-webkit-tap-highlight-color:transparent}
 
   /* ═══════════════ nav ═══════════════ */
   .nav{position:fixed;top:0;left:0;right:0;z-index:50;height:var(--nav-h);
     display:flex;align-items:center;justify-content:space-between;padding:0 clamp(1rem,4vw,2.5rem);
-    border-bottom:1px solid rgba(58,58,80,.5);
-    background:linear-gradient(to bottom, rgba(7,7,12,.92), rgba(7,7,12,.55) 78%, transparent);
-    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+    border-bottom:1px solid var(--edge);
+    background:var(--stone)}
   .nav-brand{display:flex;align-items:center;gap:.65rem;text-decoration:none}
-  .nav-brand img{width:34px;height:34px;mix-blend-mode:screen;animation:float-logo 7s ease-in-out infinite}
-  @keyframes float-logo{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+  .nav-brand img{width:34px;height:34px;mix-blend-mode:screen}
   .nav-brand span{font-family:var(--font-display);font-weight:700;font-size:.86rem;
     letter-spacing:.22em;text-transform:uppercase;color:var(--bone-bright)}
   .nav-links{display:flex;gap:1.4rem;align-items:center}
@@ -54,10 +47,9 @@
     text-transform:uppercase;color:var(--bone-dim);text-decoration:none;transition:color .2s}
   .nav-link:hover{color:var(--gold-bright)}
   .nav-cta{font-family:var(--font-display);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;
-    color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));
-    padding:.5rem 1rem;text-decoration:none;border-radius:2px;
-    transition:transform .2s,box-shadow .2s}
-  .nav-cta:hover{transform:translateY(-2px);box-shadow:0 4px 18px rgba(232,198,90,.25)}
+    color:var(--ink);background:var(--gold);border:1px solid var(--gold-bright);
+    padding:.5rem 1rem;text-decoration:none}
+  .nav-cta:hover{background:var(--gold-bright);color:var(--ink)}
 
   /* ═══════════════ pricing hero ═══════════════ */
   .pricing{max-width:1080px;margin:0 auto;padding:calc(var(--nav-h) + 4.5rem) 1.25rem 5rem}
@@ -65,34 +57,25 @@
     text-transform:uppercase;color:var(--gold);text-align:center;margin-bottom:1rem}
   .pricing h1{font-family:var(--font-display);font-weight:900;font-size:clamp(1.9rem,4.6vw,3rem);
     text-align:center;color:var(--bone-bright);letter-spacing:.08em;text-transform:uppercase;
-    margin-bottom:1rem;text-shadow:0 0 42px rgba(212,169,44,.28),0 2px 0 #000}
+    margin-bottom:1rem;text-shadow:2px 2px 0 #000}
   .pricing-sub{max-width:600px;margin:0 auto 3rem;text-align:center;color:var(--bone-dim);
     font-size:1.02rem;line-height:1.65}
   .pricing-sub b{color:var(--bone);font-weight:600}
 
   /* ═══════════════ tier cards ═══════════════ */
   .tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.4rem;align-items:stretch}
-  .tier{position:relative;background:linear-gradient(160deg,var(--stone-2),var(--stone));
-    border:1px solid var(--edge);border-radius:2px;padding:2.2rem 1.8rem 1.8rem;
-    display:flex;flex-direction:column;transition:border-color .25s,transform .25s}
-  .tier:hover{border-color:var(--edge-hi);transform:translateY(-3px)}
-  .tier.hot{border-color:rgba(212,169,44,.55);
-    background:linear-gradient(165deg,var(--stone-3),var(--stone-2) 60%,var(--stone));
-    box-shadow:0 0 42px rgba(212,169,44,.10),inset 0 0 60px rgba(212,169,44,.04)}
-  .corner{position:absolute;width:14px;height:14px;border:2px solid var(--gold);opacity:.85}
-  .corner.tl{top:6px;left:6px;border-right:none;border-bottom:none}
-  .corner.tr{top:6px;right:6px;border-left:none;border-bottom:none}
-  .corner.bl{bottom:6px;left:6px;border-right:none;border-top:none}
-  .corner.br{bottom:6px;right:6px;border-left:none;border-top:none}
+  .tier{position:relative;background:var(--stone);
+    border:1px solid var(--edge);padding:2.2rem 1.8rem 1.8rem;
+    display:flex;flex-direction:column}
+  .tier::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.3}
+  .tier:hover{border-color:var(--edge-hi)}
+  .tier.hot{border-color:var(--gold)}
   .tier-name{font-family:var(--font-display);font-weight:700;font-size:.82rem;letter-spacing:.3em;
     text-transform:uppercase;color:var(--bone-bright);margin-bottom:.4rem}
   .tier-flag{position:absolute;top:-12px;right:14px;font-family:var(--font-display);
     font-size:.6rem;letter-spacing:.24em;text-transform:uppercase;color:var(--ink);
-    background:linear-gradient(160deg,var(--gold-bright),var(--gold));
-    padding:.28rem .7rem;border-radius:2px;box-shadow:0 2px 12px rgba(212,169,44,.4)}
-  .tier-flag.promo-flag{background:linear-gradient(160deg,#ffd76a,var(--gold));
-    animation:promo-pulse 2.2s ease-in-out infinite}
-  @keyframes promo-pulse{0%,100%{box-shadow:0 2px 12px rgba(212,169,44,.4)}50%{box-shadow:0 2px 22px rgba(232,198,90,.85)}}
+    background:var(--gold);border:1px solid var(--gold-bright);
+    padding:.28rem .7rem}
   .tier-price .strike{font-size:1.05rem;font-weight:400;color:var(--bone-dim);
     text-decoration:line-through;text-decoration-thickness:2px;margin-left:.35rem;letter-spacing:.04em;vertical-align:.35em}
   .tier-price{font-family:var(--font-display);font-weight:900;font-size:2.1rem;color:var(--gold-bright);
@@ -101,7 +84,6 @@
   .tier-desc{color:var(--bone-dim);font-size:.92rem;line-height:1.6;margin-bottom:1.4rem;min-height:2.6em}
   .tier ul{list-style:none;margin-bottom:1.8rem;flex:1}
   .tier li{padding:.5rem 0 .5rem 1.5rem;position:relative;color:var(--bone);font-size:.95rem;line-height:1.5}
-.tier li .tier-includes{color:var(--gold-bright);font-size:.9rem;letter-spacing:.04em;text-shadow:0 0 12px rgba(212,169,44,.25)}
   .tier li::before{content:'◆';position:absolute;left:0;top:.5rem;color:var(--gold);font-size:.6rem}
   .tier li b{color:var(--bone-bright);font-weight:600}
   .tier li.dim{color:var(--bone-dim)}
@@ -109,25 +91,12 @@
   .tier-fine{color:var(--bone-dim);font-size:.8rem;line-height:1.6;font-style:italic;
     letter-spacing:.02em;margin:-1rem 0 1.2rem}
   .tier-btn{display:block;text-align:center;font-family:var(--font-display);font-size:.74rem;
-    letter-spacing:.22em;text-transform:uppercase;text-decoration:none;padding:.85rem 1rem;border-radius:2px;
-    transition:transform .2s,box-shadow .2s}
-  .tier-btn.go{color:var(--ink);background:linear-gradient(160deg,var(--gold-bright),var(--gold));
-    position:relative;overflow:hidden}
-  .tier-btn.go::after{content:'';position:absolute;top:0;left:-80%;width:50%;height:100%;
-    background:linear-gradient(105deg,transparent,rgba(255,255,255,.35),transparent);
-    transform:skewX(-20deg);animation:sheen 3.4s ease-in-out infinite}
-  @keyframes sheen{0%,55%{left:-80%}85%,100%{left:130%}}
-  .tier-btn.go:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(232,198,90,.3)}
-  .tier-btn.busy{opacity:.55;pointer-events:none;cursor:wait}
-  .tier-btn.busy::after{animation:none}
-  .tier-btn.current{color:var(--bone-bright);background:linear-gradient(160deg,var(--stone-3),var(--stone-2));
-    border:1px solid rgba(212,169,44,.5);cursor:default;pointer-events:none;
-    box-shadow:inset 0 0 18px rgba(212,169,44,.12)}
-  .tier-btn.current::after{animation:none}
-  .tier-btn.soon{color:var(--bone-dim);background:var(--stone-3);border:1px solid var(--edge);
-    cursor:not-allowed}
-  .tier-btn.soon span{display:inline-block;animation:soon-pulse 2.6s ease-in-out infinite}
-  @keyframes soon-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+    letter-spacing:.22em;text-transform:uppercase;text-decoration:none;padding:.85rem 1rem;
+    border:1px solid var(--edge)}
+  .tier-btn.go{color:var(--ink);background:var(--gold);border-color:var(--gold-bright)}
+  .tier-btn.go:hover{background:var(--gold-bright);color:var(--ink)}
+  .tier-btn.current{color:var(--bone-bright);background:var(--stone-3);
+    border:1px solid var(--gold);cursor:default;pointer-events:none}
 
   /* ═══════════════ EUR/SEK-konvertering ═══════════════ */
   .currency-toggle{
@@ -135,9 +104,8 @@
     margin:0 auto 1.8rem;width:fit-content;cursor:pointer;
     font-family:var(--font-display);font-size:.68rem;letter-spacing:.18em;
     text-transform:uppercase;color:var(--bone-dim);
-    border:1px solid var(--edge);border-radius:2px;padding:.5rem 1rem;
-    background:linear-gradient(160deg,var(--stone-2),var(--stone));
-    transition:border-color .2s,color .2s;
+    border:1px solid var(--edge);padding:.5rem 1rem;
+    background:var(--stone);
     -webkit-tap-highlight-color:transparent;user-select:none}
   .currency-toggle:hover{border-color:var(--gold);color:var(--bone)}
   .currency-toggle b{color:var(--gold-bright);font-weight:700}
@@ -151,7 +119,7 @@
   .back{display:block;margin-top:2.2rem;text-align:center;font-family:var(--font-display);
     font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);
     text-decoration:none}
-  .back:hover{color:var(--gold-bright);text-shadow:0 0 12px rgba(232,198,90,.5)}
+  .back:hover{color:var(--gold-bright)}
   .creator-link{margin-top:1.6rem;text-align:center;font-size:.74rem;color:var(--bone-dim);opacity:.75}
   .creator-link a{color:var(--bone-dim);text-decoration:none;border-bottom:1px dotted rgba(119,119,140,.4);
     padding-bottom:.1rem;transition:color .2s,border-color .2s}
@@ -159,12 +127,13 @@
 
   /* ═══════════════ plan detail modal ═══════════════ */
   .plan-overlay{position:fixed;inset:0;z-index:90;display:none;align-items:center;justify-content:center;
-    padding:1.25rem;background:rgba(3,2,7,.78);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
+    padding:1.25rem;background:rgba(3,2,7,.78)}
   .plan-overlay.show{display:flex}
   .plan-modal{position:relative;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;
-    background:linear-gradient(165deg,var(--stone-3),var(--stone) 60%,#120c1c);
-    border:1px solid rgba(212,169,44,.4);box-shadow:0 30px 80px -20px rgba(0,0,0,.95),0 0 60px rgba(212,169,44,.08);
+    background:var(--stone);
+    border:1px solid var(--gold);
     padding:2rem 1.8rem 1.7rem;animation:plan-in .28s cubic-bezier(.22,1,.36,1)}
+  .plan-modal::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.3}
   @keyframes plan-in{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
   .plan-close{position:absolute;top:.7rem;right:.9rem;background:none;border:none;color:var(--bone-dim);
     font-size:1.15rem;cursor:pointer;line-height:1;padding:.3rem;transition:color .2s}
@@ -178,8 +147,8 @@
   .plan-price .strike{font-size:1.1rem;font-weight:400;color:var(--bone-dim);text-decoration:line-through;
     text-decoration-thickness:2px;margin-left:.4rem;vertical-align:.3em}
   .plan-promo{display:inline-block;font-family:var(--font-display);font-size:.58rem;letter-spacing:.2em;
-    text-transform:uppercase;color:var(--ink);background:linear-gradient(160deg,#ffd76a,var(--gold));
-    padding:.26rem .55rem;margin-bottom:.9rem;box-shadow:0 0 14px rgba(232,198,90,.5)}
+    text-transform:uppercase;color:var(--ink);background:var(--gold);border:1px solid var(--gold-bright);
+    padding:.26rem .55rem;margin-bottom:.9rem}
   .plan-desc{color:var(--bone-dim);font-style:italic;font-size:.95rem;line-height:1.6;margin-bottom:1.2rem}
   .plan-list{list-style:none;margin-bottom:1.6rem}
   .plan-list li{padding:.5rem 0 .5rem 1.5rem;position:relative;color:var(--bone);font-size:.96rem;line-height:1.5}
@@ -188,27 +157,21 @@
   .plan-list li.dim{color:var(--bone-dim)}
   .plan-list li.dim::before{color:var(--edge-hi)}
   .plan-cta{display:block;text-align:center;font-family:var(--font-display);font-size:.74rem;
-    letter-spacing:.22em;text-transform:uppercase;text-decoration:none;color:var(--ink);
-    background:linear-gradient(160deg,var(--gold-bright),var(--gold));padding:.9rem 1rem;border-radius:2px;
-    transition:transform .2s,box-shadow .2s;position:relative;overflow:hidden;border:none;cursor:pointer;width:100%}
-  .plan-cta:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(232,198,90,.3)}
-  .plan-cta.ghost{color:var(--bone-bright);background:var(--stone-3);border:1px solid var(--edge-hi)}
-  .plan-cta.ghost:hover{color:var(--gold-bright);border-color:var(--gold)}
+    letter-spacing:.22em;text-transform:uppercase;padding:.9rem 1rem;cursor:pointer;width:100%}
   .plan-cta.busy{opacity:.55;pointer-events:none;cursor:wait}
   .plan-login-hint{margin-top:.8rem;text-align:center;font-size:.82rem;color:var(--bone-dim);line-height:1.5}
-  .plan-login-hint a{color:var(--gold-bright);text-decoration:none;border-bottom:1px solid rgba(212,169,44,.4)}
+  .plan-login-hint a{color:var(--gold-bright);text-decoration:none;border-bottom:1px solid rgba(var(--gold-rgb),.4)}
   .plan-login-hint a:hover{color:var(--gold)}
   .plan-grant{margin-top:.9rem;text-align:center;font-size:.82rem;color:var(--bone-dim);line-height:1.5}
   .plan-grant b{color:var(--gold-bright);font-weight:700;letter-spacing:.04em}
-  .plan-email{margin-top:1rem;padding:1.1rem;border:1px solid var(--edge-hi);background:var(--stone-3);text-align:left;border-radius:3px}
+  .plan-email{margin-top:1rem;padding:1.1rem;border:1px solid var(--edge-hi);background:var(--stone-3);text-align:left}
   .plan-email .pe-title{font-family:var(--font-display);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-bright);margin-bottom:.35rem}
   .plan-email .pe-label{font-size:.88rem;color:var(--bone);line-height:1.55;margin-bottom:.9rem}
   .plan-email .pe-row{display:flex;flex-direction:column;gap:.65rem}
   .plan-email .pe-row input{width:100%;font-family:var(--font-body);font-size:16px;color:var(--bone-bright);
-    background:var(--stone);border:1px solid var(--edge);padding:.85rem 1rem;outline:none;border-radius:3px;
-    transition:border-color .2s, box-shadow .2s}
+    background:var(--stone);border:1px solid var(--edge);padding:.85rem 1rem;outline:none}
   .plan-email .pe-row input::placeholder{color:var(--bone-dim);opacity:.75}
-  .plan-email .pe-row input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,169,44,.14)}
+  .plan-email .pe-row input:focus{border-color:var(--gold)}
   .plan-email .pe-row .plan-cta{margin-top:0;padding:.85rem 1rem;white-space:nowrap;font-size:.8rem}
   .plan-email .pe-err{margin-top:.6rem;font-size:.8rem;color:var(--blood-bright);font-style:italic;min-height:1em}
   .plan-note{margin-top:.9rem;text-align:center;font-size:.78rem;color:var(--bone-dim);line-height:1.55}
@@ -216,9 +179,8 @@
   /* Donationsraden på kortet */
   .donate-row{display:flex;gap:.5rem;margin-top:1.1rem}
   .donate-input{flex:1;min-width:0;font-family:var(--font-body);font-size:16px;color:var(--bone-bright);
-    background:var(--stone);border:1px solid var(--edge);padding:.7rem .8rem;outline:none;border-radius:3px;
-    transition:border-color .2s, box-shadow .2s}
-  .donate-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(212,169,44,.14)}
+    background:var(--stone);border:1px solid var(--edge);padding:.7rem .8rem;outline:none}
+  .donate-input:focus{border-color:var(--gold)}
   .donate-row .tier-btn{margin-top:0;flex-shrink:0}
 
   @media(max-width:900px){
@@ -232,16 +194,11 @@
   @media(max-width:640px){
     .nav-links .nav-link{display:none}
     .pricing{padding-top:calc(var(--nav-h) + 3rem)}
-    .tier:hover{transform:none}
-  }
-  @media(prefers-reduced-motion:reduce){
-    .nav-brand img,.tier-btn.go::after,.tier-btn.soon span{animation:none}
   }
 </style>
+<link rel="stylesheet" href="snes.css?v=42">
 </head>
 <body>
-<div class="grain"></div>
-<div class="vignette"></div>
 
 <nav class="nav">
   <a class="nav-brand" href="adventure.html">
@@ -269,8 +226,6 @@
   <div class="tiers">
     <!-- Free -->
     <div class="tier">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tier-name">Free</div>
       <div class="tier-price">0€</div>
       <div class="tier-desc">The realm, at your own pace — no card, no email needed.</div>
@@ -287,8 +242,6 @@
 
     <!-- Patron 30€ -->
     <div class="tier hot">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tier-flag">Best value</div>
       <div class="tier-name">Patron</div>
       <div class="tier-price"><span class="cur-price" data-eur="30" data-sek="351">30€</span><small> once</small></div>
@@ -308,8 +261,6 @@
 
     <!-- Donation -->
     <div class="tier" id="tier-donation">
-      <span class="corner tl"></span><span class="corner tr"></span>
-      <span class="corner bl"></span><span class="corner br"></span>
       <div class="tier-name">Donation</div>
       <div class="tier-price"><span id="donation-price">Your pick</span></div>
       <div class="tier-desc">Keep the cauldron burning — every € adds 100 turns to your cauldron.</div>
@@ -344,7 +295,7 @@
     <div class="plan-promo" id="plan-promo" style="display:none"></div>
     <div class="plan-desc" id="plan-desc"></div>
     <ul class="plan-list" id="plan-list"></ul>
-    <button class="plan-cta" id="plan-cta" onclick="planCta()">Continue to checkout</button>
+    <button class="plan-cta go-btn" id="plan-cta" onclick="planCta()">Continue to checkout</button>
     <div class="plan-login-hint" id="plan-login-hint" style="display:none">Not signed in — <a href="login.html?next=pricing.html">sign in to continue</a></div>
     <div class="plan-grant" id="plan-grant" style="display:none">✦ Purchase will be applied to <b id="plan-grant-user">you</b></div>
     <div class="plan-email" id="plan-email" style="display:none">
@@ -352,7 +303,7 @@
       <div class="pe-label">Your account has no email yet — we need one to send receipts and reset links before you purchase.</div>
       <div class="pe-row">
         <input type="email" id="plan-email-input" placeholder="you@example.com" autocomplete="email" />
-        <button type="button" class="plan-cta" id="plan-email-btn" onclick="planSaveEmail()">Save email &amp; continue</button>
+        <button type="button" class="plan-cta go-btn" id="plan-email-btn" onclick="planSaveEmail()">Save email &amp; continue</button>
       </div>
       <div class="pe-err" id="plan-email-err"></div>
     </div>
@@ -474,12 +425,14 @@
       var cta = document.getElementById('plan-cta');
       cta.textContent = 'Continue to checkout';
       cta.classList.remove('ghost');
+      cta.classList.add('go-btn');
     } else {
       hint.style.display = '';
       if (grant) grant.style.display = 'none';
       var cta = document.getElementById('plan-cta');
       cta.textContent = 'Sign in to continue';
       cta.classList.add('ghost');
+      cta.classList.remove('go-btn');
     }
   }
 
@@ -596,5 +549,7 @@
     btn.href = '#';
   }).catch(function () {});
 </script>
+<script src="i18n.js?v=20260906a"></script>
+<script src="sprites.js?v=20260806b"></script>
 </body>
 </html>

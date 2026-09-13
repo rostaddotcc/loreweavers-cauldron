@@ -79,7 +79,7 @@
 .av-btn:hover, .talk-btn:hover{ transform: translateY(-1px) !important; box-shadow: 0 4px 16px -6px rgba(0,0,0,.55) !important; }
 
 </style>
-<link rel="stylesheet" href="snes.css?v=45">
+<link rel="stylesheet" href="snes.css?v=46">
 <style>
 /* ═══════════ RITE-RAIL — THE ARCHIVE dropdown (2026-08-11) ═══════════ */
 .rite-rail{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:48px;background:linear-gradient(180deg,var(--stone-2),var(--stone));border:1px solid var(--edge);border-top:1px solid var(--edge-hi);padding:0 .8rem;gap:1rem;position:relative}
@@ -551,13 +551,13 @@ function npcAvatarUrl() {
   const key = npcAvatarKey();
   const meta = key && AVATARS[key];
   if (!meta) return null;
-  return API.avatarUrl(key) + '?t=' + (meta.uploaded || Date.now());
+  return API.avatarUrl(key) + '?w=256&t=' + (meta.uploaded || Date.now());
 }
 function avatarHtmlFor(n) {
   const key = 'npc:' + n.name;
   const has = !!AVATARS[key];
   return has
-    ? `<img src="${API.avatarUrl(key)}?t=${AVATARS[key].uploaded || Date.now()}" alt="">`
+    ? `<img src="${API.avatarUrl(key)}?w=128&t=${AVATARS[key].uploaded || Date.now()}" alt="">`
     : `<span class="d-ph-emoji">${n.icon}</span>`;
 }
 

@@ -174,7 +174,7 @@
   .insp-full .pv-go:disabled{opacity:.55;cursor:wait}
   @media(max-width:640px){.vault-grid{grid-template-columns:1fr}.insp-full .pv-stats{grid-template-columns:repeat(3,1fr)}.insp-full .pv-actions{flex-direction:column;align-items:stretch}.insp-full .pv-go{width:100%;min-height:50px}.insp-modal{padding:1.4rem 1rem}}
 </style>
-<link rel="stylesheet" href="snes.css?v=45">
+<link rel="stylesheet" href="snes.css?v=46">
 <script src="sprites.js?v=20260806b"></script>
 <script src="fonts.js?v=20260806b"></script>
 </head>
@@ -985,7 +985,7 @@ function showAvatarPreview() {
   const el = document.getElementById('pv-icon');
   if (!el) return;
   const url = API.avatarUrl('player') + '?t=' + Date.now();
-  el.innerHTML = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated;border-radius:50%">`;
+  el.innerHTML = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
   el.style.background = '#000';
 }
 

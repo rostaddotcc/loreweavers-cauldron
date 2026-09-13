@@ -99,7 +99,11 @@
 }/* ── 0. GLOBAL RESET ── */*, *::before, *::after{
   border-radius: 0 !important;
   box-sizing: border-box;
-}canvas, img{ image-rendering: pixelated; }/* ── PIXEL SPRITES (ersätter emojis) ── */.pxs{
+}/* canvas förblir pixelad (pixelpartiklar/effekter); AI-porträtt ska INTE pixeleras —
+   global img{pixelated} krossade alla 1024px-foton i 52px-thumbnails (playtest 2026-09-13).
+   Pixel-art-img:er markeras med klassen .px-img i stället. */
+canvas{ image-rendering: pixelated; }
+.px-img{ image-rendering: pixelated; }/* ── PIXEL SPRITES (ersätter emojis) ── */.pxs{
   display: inline-block;
   width: 1em;
   height: 1em;

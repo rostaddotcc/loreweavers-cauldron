@@ -341,7 +341,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
   html{scroll-behavior:auto}
 }
 </style>
-<link rel="stylesheet" href="snes.css?v=45">
+<link rel="stylesheet" href="snes.css?v=46">
 <noscript><style>.rv{opacity:1;transform:none}#boot{display:none}.boot-lines{min-height:0}</style></noscript>
 </head>
 <body>
@@ -387,6 +387,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     <li data-ix="s7"><a href="#s7"><span class="ix-num">§8</span>Voice &amp; TTS Cache<span class="ix-tag">speak once, reuse</span></a></li>
     <li data-ix="s8"><a href="#s8"><span class="ix-num">§9</span>Character Weaving<span class="ix-tag">SSE adventurer creation</span></a></li>
     <li data-ix="s9"><a href="#s9"><span class="ix-num">§10</span>State Model<span class="ix-tag">the one truth</span></a></li>
+    <li data-ix="s11"><a href="#s11"><span class="ix-num">§11</span>Undoing a Turn<span class="ix-tag">one rewind, one turn</span></a></li>
   </ol>
 </nav>
 
@@ -1062,6 +1063,29 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
   <div class="panel rv">
     <h3><span class="dot">✦</span> The invariant</h3>
     <p class="stat" style="font-size:.9rem">Everything the player sees — the sheet, the dossier, the map, the logbook, the next DM line — is derived from <b class="v">state.json</b>. The DM may never invent what it holds; the Guardian may never forget to update it. That asymmetry is the whole game.</p>
+  </div>
+</section>
+
+<!-- ═══════════ §11 UNDO ═══════════ -->
+<section class="sec rv" id="s11" data-sec="s11">
+  <div class="sec-head">
+    <span class="sec-num">§11</span>
+    <h2 class="sec-title"><span class="sec-mark">◆</span>Undoing a Turn</h2>
+    <div class="sec-rule"></div>
+  </div>
+  <p class="sec-lede">Every turn is snapshotted before it is written. When a reply lands, the engine knows exactly what the world looked like one message earlier — and offers the rewind.</p>
+
+  <div class="grid2">
+    <div class="panel rv">
+      <h3><span class="dot">✦</span> What the rewind takes back</h3>
+      <p>The affordance appears under the <b>last DM reply</b>: the transcript carries <span class="stat"><b>undo_available</b></span> — true while a snapshot of the previous turn exists. Pressing it rewinds the most recent turn as a whole: your message, the DM's reply, and <b>everything the Guardian recorded from it</b> — state mutations (HP, loot, quests, NPCs, combat, logbook), the fact register, the transcript lines, and any scene or chapter summaries minted during the turn.</p>
+      <p>Background writers from the undone turn are disarmed by a bumped <span class="stat"><b>epoch</b></span>: late Guardian or extraction jobs check it before saving and drop their writes, so no zombie data lands on top of the restored state. The vector index is purged and re-indexed from the restored transcript.</p>
+    </div>
+    <div class="panel rv">
+      <h3><span class="dot">✦</span> Cost and depth</h3>
+      <p>An undo <b>costs one turn</b> — the same quota as any other action, with the same cap gate, and <b>no refund</b> for the turn it removes. Rewinding the past is not free; the ledger records it as <span class="stat"><b>action=undo</b></span>.</p>
+      <p>Single-level only: each turn's snapshot <b>overwrites</b> the previous one, and a restore <b>consumes</b> it. Only the newest turn can be undone, once — the turn before that is already gone from the rewind's reach.</p>
+    </div>
   </div>
 </section>
 

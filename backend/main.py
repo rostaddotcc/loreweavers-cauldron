@@ -1925,7 +1925,16 @@ async def _extraction_call(state: dict, messages: list, usage_out: dict,
     if stripped.startswith("{") or stripped.startswith("```"):
         return raw
     if model != EXTRACTION_MODEL:
-        logger.warning("🧠 Extraction %s gav ingen JSON → fallback till %s",
+        # Steg 1: retry EN gång på samma modell med sänkt temperatur (0.1) —
+        # pratiga reasoning-modeller ger oftast JSON när kreativiteten tas bort.
+        logger.warning("🧠 Extraction %s gav ingen JSON → retry temperature=0.1", model)
+        raw = await _call_llm(model, messages, temperature=0.1,
+                              max_tokens=max_tokens, usage_out=usage_out, **kw)
+        stripped = raw.lstrip()
+        if stripped.startswith("{") or stripped.startswith("```"):
+            return raw
+        # Steg 2: sista utvägen — husets extraction-modell.
+        logger.warning("🧠 Extraction %s gav ingen JSON även efter retry → fallback till %s",
                        model, EXTRACTION_MODEL)
         raw = await _call_llm(EXTRACTION_MODEL, messages, temperature=temperature,
                               max_tokens=max_tokens, usage_out=usage_out, **kw)
@@ -3635,12 +3644,21 @@ def _parse_tts_error(msg: str):
 
 @app.get("/api/tts/voices")
 async def tts_voices(morkrets_token: str | None = Cookie(None)):
-    """Tillgängliga TTS-leverantörer + röster (qwen + stepfun)."""
-    _get_current_user(morkrets_token)
+    """Tillgängliga TTS-leverantörer + röster (qwen + stepfun).
+
+    Samma tier-gate som /api/tts (playtest 2026-09): gratis/tier1 ser INTE
+    Qwen-rösterna i pickern — annars krockar valet med 403:et i anropet
+    (eller 'Okänd röst för stepfun' när en qwen-id skickas till stepfun).
+    Admin + Patron (tier2/lifetime) ser allt.
+    """
+    payload = _get_current_user(morkrets_token)
+    tier = _tier_for(payload["sub"])
+    patron = payload.get("role") == "admin" or tier in ("tier2", "lifetime")
     return {
         "providers": [
             {"id": pid, "name": p["name"], "voices": p["voices"]}
             for pid, p in TTS_PROVIDERS.items()
+            if pid != "qwen" or patron
         ],
         "default_provider": TTS_DEFAULT_PROVIDER,
     }
@@ -8026,6 +8044,109 @@ AVATAR_MEDIA = {
 }
 
 
+# ── Server thumbnails (2026-9-13) ───────────────────────────────────────
+# UI:et behöver 52–96px-porträtt i kartongen — originalen är 1024px-PNG
+# (0,5–1,5 MB) och tolv sådana per sida är ren mobilstrypning. GET-routerna
+# får därför ?w=64|128|256|512 som servern skalat till en diskcachad PNG.
+#
+# VAL AV BIBLIOTEK: PyMuPDF (fitz) — redan i requirements.txt (används för
+# PDF-inläsning ~:9352) och klarar fri skalning utan ny dep:
+#   pix = fitz.Pixmap(bytes) → fitz.Pixmap(pix, w, h) → tobytes("png").
+# Pillow vore det andra valet men adds aldrig — zero-new-deps-rule.
+# VARNING: fitz bygger utan WebP-dekodning här → webp-original klarar INTE
+# av att skalas och serveras som original (fallback nedan), inte 500.
+#
+# CACHEN: thumbs/ SIBLING med originalfilen (kampanj: avatars/thumbs/,
+# konto: user_avatars/thumbs/) uppkallad efter src-stem + bredd + originalets
+# mtime&storlek → byts originalet genereras tumnageln om automatiskt (gamla
+# filen rensas). Underkatalogen är SÄKER mot avatar-purgeln — den sveper
+# bara f.is_file() (avatar_purge.py), aldrig kataloger.
+#
+# Utan ?w = existerande beteende (original + no-cache) — backkompat för
+# lightbox/galleri som visar hela bilden.
+
+AVATAR_THUMB_WIDTHS = {64, 128, 256, 512}
+AVATAR_THUMB_CACHE_CONTROL = "public, max-age=604800"  # 7 dagar — tumnageln
+# är innehållskeyad (mtime+size i filnamnet) så den är aldrig "för gammal".
+
+
+def _avatar_thumb_dir(src: Path) -> Path:
+    return src.parent / "thumbs"
+
+
+def _avatar_thumb_path(src: Path, width: int) -> Path:
+    """Cache-sökväg för tumnagel. Innehåller src mtime+size i namnet — ett
+    ändrat original ger automatiskt ny nyckel (stale thumb blir onåbar och
+    raderas vid nästa generering)."""
+    st = src.stat()
+    return _avatar_thumb_dir(src) / f"{src.stem}__w{width}__{int(st.st_mtime)}_{st.st_size}.png"
+
+
+def _scale_avatar_to_png(src: Path, width: int) -> bytes | None:
+    """Skala src till max `width` px bred PNG. Returnerar None om bilden inte
+    kan avkodas/skalas (t.ex. webp i denna build, trasig fil) → anroparen
+    faller tillbaka till originalet i stället för att 50:a. Körs i tråd."""
+    import fitz  # local import — samma mönster som PDF-läsningen ~:9352
+    try:
+        pix = fitz.Pixmap(src.read_bytes())
+        if pix.n - pix.alpha > 3:  # CMYK m.m. → RGB om (annars kan PNG-spara faila)
+            pix = fitz.Pixmap(fitz.csRGB, pix)
+        tw = min(width, pix.width)  # skala ALDRIG upp
+        th = max(1, int(pix.height * tw / pix.width + 0.5))
+        thumb = fitz.Pixmap(pix, tw, th)
+        return thumb.tobytes("png")
+    except Exception:
+        return None
+
+
+def _drop_stale_avatar_thumbs(src: Path, width: int, keep: Path) -> None:
+    """Ta bort tumnaglar för samma original men annan cache-nyckel."""
+    d = _avatar_thumb_dir(src)
+    if not d.is_dir():
+        return
+    prefix = f"{src.stem}__w{width}__"
+    for f in d.iterdir():
+        if f.name.startswith(prefix) and f != keep:
+            try:
+                f.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+
+async def _avatar_file_response(path: Path, ext: str, w: int | None) -> FileResponse:
+    """Ett svar för BÅDA avatar-GET-routerna: original utan w, diskcachad
+    tumnagel med w. Auth/404-beteende lämnas orört till anroparen."""
+    media = AVATAR_MEDIA.get(ext, "image/png")
+    if w is None:
+        return FileResponse(path, media_type=media,
+                            headers={"Cache-Control": "no-cache"})
+    if w not in AVATAR_THUMB_WIDTHS:
+        raise HTTPException(400, f"Ogiltig bredd: {w} (tillåtna: {sorted(AVATAR_THUMB_WIDTHS)})")
+    dst = _avatar_thumb_path(path, w)
+    if not dst.exists():
+        data = await asyncio.to_thread(_scale_avatar_to_png, path, w)
+        if data is not None:
+            # Atomic write: unikt tmp + os.replace → aldrig halvskriven thumb
+            # även om två spelare träffar samma bild samtidigt.
+            _avatar_thumb_dir(path).mkdir(parents=True, exist_ok=True)
+            tmp = dst.with_name(f".{dst.stem}.tmp{secrets.token_hex(4)}")
+            try:
+                tmp.write_bytes(data)
+                os.replace(tmp, dst)
+                _drop_stale_avatar_thumbs(path, w, dst)
+            except OSError:
+                try:
+                    tmp.unlink(missing_ok=True)
+                except OSError:
+                    pass
+    if dst.exists():
+        return FileResponse(dst, media_type="image/png",
+                            headers={"Cache-Control": AVATAR_THUMB_CACHE_CONTROL})
+    # Skalning misslyckades (webp/trasig fil) eller disk fel → originalet.
+    return FileResponse(path, media_type=media,
+                        headers={"Cache-Control": "no-cache"})
+
+
 def _safe_avatar_key(kind: str) -> str:
     """Normalisera avatar-nyckel: 'player', 'dm' eller 'npc:<nyckel>'."""
     kind = (kind or "").strip()
@@ -8174,9 +8295,11 @@ async def upload_avatar(
 
 
 @app.get("/api/campaign/avatar/{kind:path}")
-async def get_avatar(kind: str, idx: int | None = None, morkrets_token: str | None = Cookie(None)):
+async def get_avatar(kind: str, idx: int | None = None, w: int | None = None,
+                     morkrets_token: str | None = Cookie(None)):
     """Hämta en avatar-bild. ?idx=N hämtar bild N ur galleriet; utan idx → den
-    aktiva bilden."""
+    aktiva bilden. ?w=64|128|256|512 → server-genererad tumnagel (diskcachad
+    PNG, lång Cache-Control); utan w → original (backkompat)."""
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
     state = store.get(username)
@@ -8199,11 +8322,7 @@ async def get_avatar(kind: str, idx: int | None = None, morkrets_token: str | No
     if not item.get("disk_name") or not path.exists():
         raise HTTPException(404, "Bild saknas på disk")
 
-    return FileResponse(
-        path,
-        media_type=AVATAR_MEDIA.get(item.get("ext"), "image/png"),
-        headers={"Cache-Control": "no-cache"},
-    )
+    return await _avatar_file_response(path, item.get("ext"), w)
 
 
 @app.patch("/api/campaign/avatar/gallery/{kind:path}")
@@ -8372,9 +8491,11 @@ app.router.lifespan_context = _lifespan
 
 
 @app.get("/api/me/avatar")
-async def me_avatar(idx: int | None = None, morkrets_token: str | None = Cookie(None)):
+async def me_avatar(idx: int | None = None, w: int | None = None,
+                    morkrets_token: str | None = Cookie(None)):
     """Spelarprofilens avatar-bild (konto). ?idx=N → bild N ur galleriet;
-    utan idx → den aktiva bilden."""
+    utan idx → den aktiva bilden. ?w=64|128|256|512 → server-genererad
+    tumnagel (diskcachad PNG); utan w → original (backkompat)."""
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
     data = _load_user_avatar_gallery(username)
@@ -8385,8 +8506,7 @@ async def me_avatar(idx: int | None = None, morkrets_token: str | None = Cookie(
     path = _user_avatar_path(username).parent / item.get("disk_name", "")
     if not path.exists():
         raise HTTPException(404, "Bild saknas på disk")
-    return FileResponse(path, media_type=AVATAR_MEDIA.get(item.get("ext"), "image/png"),
-                        headers={"Cache-Control": "no-cache"})
+    return await _avatar_file_response(path, item.get("ext"), w)
 
 
 @app.get("/api/me/avatar/gallery")
@@ -9708,7 +9828,9 @@ async def campaign_logbook_refresh_today(morkrets_token: str | None = Cookie(Non
     logbook = world.setdefault("logbook_llm", {})
     days = logbook.get("days", [])
     if not days:
-        raise HTTPException(400, "Inga dag-entries att uppdatera")
+        # Ny kampanj utan dag-entrys är inget fel — playtest 2026-09:
+        # frontenden flaggade en röd 400. Inget att uppdatera → 200, refreshed 0.
+        return {"ok": True, "refreshed": 0}
 
     current_day = world.get("day", 1)
     last_entry = days[-1]

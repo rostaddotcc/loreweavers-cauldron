@@ -558,7 +558,7 @@
 #resistances-section .section-title{ margin-top: 1.8rem; }
 
 </style>
-<link rel="stylesheet" href="snes.css?v=45">
+<link rel="stylesheet" href="snes.css?v=46">
 <style>
 /* ═══════════ MJUKA UPP — Codex karaktärsblad (2026-08-05) — EFTER snes.css ═══════════ */
 .top-btn{ border-radius: 8px !important; box-shadow: 0 2px 12px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; }
@@ -892,7 +892,7 @@ function renderHeader() {
     document.getElementById('portrait-emoji').style.display = 'none';
     let img = frame.querySelector('img');
     if (!img) { img = document.createElement('img'); frame.insertBefore(img, frame.querySelector('.hint')); }
-    img.src = API.avatarUrl('player') + '?t=' + (avatarEntry.uploaded || Date.now());
+    img.src = API.avatarUrl('player') + '?w=512&t=' + (avatarEntry.uploaded || Date.now());
   } else if (c.portrait) {
     const frame = document.getElementById('portrait');
     document.getElementById('portrait-emoji').style.display = 'none';

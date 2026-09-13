@@ -1546,6 +1546,116 @@ def _advance_turn(combat: dict, state: dict) -> None:
         combat["phase"] = "player" if current["key"] == "player" else ("enemies" if ":" in current["key"] else "allies")
 
 
+def _enemy_key(e: dict, idx: int) -> str:
+    """Unik bokföringsnyckel per fiende — NAMN + index. Enbart namn räcker
+    inte: tre 'Archival Sentinel' (verifierat i playtest 2026-09-13) delade då
+    EN flagga och runden kunde avancera efter att bara en attackerat."""
+    return f"{e.get('name', '?')}#{e.get('id', idx)}"
+
+
+def _sync_round_flags(combat: dict) -> dict:
+    """round_acted-bokföring: {player: bool, enemies: {nyckel: bool}}.
+
+    Tolererar äldre kampanjer utan nyckeln — byggs upp ur turordning/alive
+    så en mitt-i-strid-uppdatering inte tappar vad som redan hänt.
+    Bakåtkompat: äldre namn-nycklar (utan #) vägs in för alla fiender med
+    det namnet (tron på att en namn-aktad = den fienden var ensam)."""
+    ra = combat.get("round_acted")
+    if not isinstance(ra, dict) or not isinstance(ra.get("enemies"), dict):
+        ra = {"player": False, "enemies": {}}
+        for t in combat.get("turn_order") or []:
+            if t.get("acted", False) and t.get("key") == "player":
+                ra["player"] = True
+        combat["round_acted"] = ra
+    legacy = {k: v for k, v in ra["enemies"].items() if "#" not in str(k)}
+    for i, e in enumerate(combat.get("enemies", [])):
+        key = _enemy_key(e, i)
+        acted = legacy.get(str(e.get("name", "?")), not e.get("alive", True))
+        ra["enemies"][key] = ra["enemies"].get(key, acted)
+    # rena bort namn-nycklar som inte längre motsvarar en fiende
+    known = {str(e.get("name", "?")) for e in combat.get("enemies", [])}
+    for k in [k for k, v in ra["enemies"].items() if "#" not in str(k)]:
+        if k not in known:
+            del ra["enemies"][k]
+    return ra
+
+
+def _reset_round_bookkeeping(combat: dict) -> None:
+    """Ny runda: spelaren får fulla handlingar igen, allt 'acted'-bokförande
+    (round_acted + turn_order) töms — även vid LLM-driven combat_round."""
+    for _t in combat.get("turn_order", []) or []:
+        _t["acted"] = False
+    combat["current_index"] = 0
+    combat["player_actions"] = {"action": True, "bonus": True, "reaction": True}
+    combat["round_acted"] = {"player": False, "enemies": {}}
+
+
+def _auto_advance_round(combat: dict, state: dict, effects: list[dict]) -> None:
+    """Server-side rund advancement (playtest 2026-09-13: 14 turer, runda 1).
+
+    DM:en sänder i praktiken aldrig combat_round-siffror — koden räknar
+    istället: har spelaren slagit/skjutit OCH varje LEVANDE fiende attackerat
+    denna runda → round+1, logg rad, statusar tickas, handlingar resetas."""
+    ra = combat.get("round_acted")
+    if not isinstance(ra, dict) or not ra.get("player"):
+        return
+    alive_keys = [_enemy_key(e, i) for i, e in enumerate(combat.get("enemies", [])) if e.get("alive", True)]
+    if not alive_keys or not all(ra["enemies"].get(k) for k in alive_keys):
+        return
+    combat["round"] = combat.get("round", 1) + 1
+    new_round = combat["round"]
+    combat.setdefault("log", []).append({
+        "actor": "system", "name": "", "text": f"── ROUND {new_round} ──", "round": new_round,
+    })
+    # Statusar tickas vid varje auto-avancerad runda — samma motor som den
+    # (nästan aldrig avlossade) LLM-signalen combat_round.
+    from combat import _tick_all_statuses
+    _tick_all_statuses(state, combat)
+    _reset_round_bookkeeping(combat)
+    combat["phase"] = "active"  # striden är igång — fasaden är ärlig
+    effects.append({"type": "combat_round", "value": new_round})
+    logger.info("⚔️ Guardian: round advanced to %d (player + all alive enemies acted)", new_round)
+
+
+def _snapshot_entry(combat: dict, ch: dict, round_num: int) -> dict | None:
+    """Bygg 'After the turn:'-snapshot med AUTENTISKA slut-HP: spelaren först,
+    sedan fiender, sedan allierade. Taggas med den runda som just spelades
+    (current_round) — även om rundan avancerade under anropet."""
+    def _fmt(e: dict) -> str:
+        mark = "" if e.get("alive", True) else " (dead)"
+        return f"{e.get('name', '?')} {e.get('hp', '?')}/{e.get('max_hp', '?')} HP{mark}"
+
+    def _hpf(entity: dict) -> str:
+        _h = entity.get("hp") or {}
+        if not isinstance(_h, dict):
+            _h = {}
+        return f"{entity.get('name', '?')} {_h.get('current', '?')}/{_h.get('max', '?')} HP"
+
+    parts = [_hpf(ch)]
+    parts += [_fmt(e) for e in combat.get("enemies", [])]
+    parts += [_fmt(a) for a in combat.get("allies", [])]
+    return {"round": round_num, "actor": "system", "name": "",
+            "text": "After the turn: " + ", ".join(parts), "snapshot": True}
+
+
+def _append_turn_snapshot(combat: dict, ch: dict, log: list, round_num: int) -> None:
+    """Exakt EN snapshot per apply_mechanics-anrop, med korrekt (slutlig) HP.
+
+    Samma runda + samma text → ersätt den befintliga posten in-place (ingen
+    kö av identiska 'After the turn'-rader som i playtestet); annan runda
+    eller annan text → append sist."""
+    entry = _snapshot_entry(combat, ch, round_num)
+    if entry is None:
+        return
+    for _i in range(len(log) - 1, -1, -1):
+        _e = log[_i]
+        if (isinstance(_e, dict) and _e.get("snapshot")
+                and _e.get("round") == entry["round"] and _e.get("text") == entry["text"]):
+            log[_i] = entry
+            return
+    log.append(entry)
+
+
 def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -> list[dict]:
     """
     Applicera Guardian-extraherade mekaniska ändringar på state.
@@ -2385,6 +2495,9 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 }
                 combat = world["combat"]
                 _init_turn_order(combat, state)
+                # Ärlig fas: striden är igång så fort fienderna finns —
+                # 'awaiting_initiative' låste UI:t i playtestet (2026-09-13).
+                combat["phase"] = "active"
                 effects.append({"type": "combat_start", "value": ", ".join(names)})
                 logger.info("⚔️ Guardian combat_start: %s", ", ".join(names))
 
@@ -2434,6 +2547,34 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
         combat["active"] = False
         combat["ended_turn"] = state.get("meta", {}).get("turn_count", 0)
         combat["player_cover"] = None  # cover upphör när striden slutar
+        # Strids-slut-städ (playtest 2026-09-13: Rust-Husk 'defeated' vid
+        # 10/22 HP, alive=true — narrativt dött men mekaniskt levande).
+        # mech['defeated'] (explicit lista) vinner; annars fiender vars
+        # senaste egen loggpost i denna strid är en 'falls!'-rad nollas.
+        _defeated = {str(d).strip().lower() for d in (mech.get("defeated") or []) if str(d).strip()}
+        if isinstance(ce, dict):
+            _defeated |= {str(d).strip().lower() for d in (ce.get("defeated") or []) if str(d).strip()}
+        _standing = 0
+        for e in combat.get("enemies", []):
+            if not e.get("alive", True):
+                continue
+            ename = str(e.get("name", "?"))
+            _last_own = None
+            for _ent in combat.get("log", []):
+                _txt = str(_ent.get("text", ""))
+                if str(_ent.get("name", "")).lower() == ename.lower() or f"{ename.lower()} falls" in _txt.lower():
+                    _last_own = _txt.lower()
+            if ename.lower() in _defeated or (_last_own and "falls" in _last_own):
+                e["hp"] = 0
+                e["alive"] = False
+                logger.info("💀 Guardian combat_end: %s nollad vid stridsslut (narrativt död)", ename)
+            else:
+                _standing += 1
+        if _standing:
+            combat.setdefault("log", []).append({
+                "round": combat.get("round", 1), "actor": "system", "name": "",
+                "text": f"combat ended — {_standing} enemies still standing",
+            })
         combat.setdefault("log", []).append({
             "round": combat.get("round", 1), "actor": "system", "name": "", "text": f"Striden avslutades — {reason}",
         })
@@ -2444,8 +2585,16 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
     combat = state.get("world", {}).get("combat")
     if combat and combat.get("active"):
         combat_log = combat.setdefault("log", [])
-        combat_log_len_before = len(combat_log)  # för deterministisk turn-avancering
         current_round = combat.get("round", 1)
+        _ra = _sync_round_flags(combat)  # rund-bokföring (tolerar äldre state)
+        # Ärlig fas: '[STRID:]'-öppnade strider fastnar på 'awaiting_initiative'
+        # i chat-first-flödet (ingen initiativsväg skriver om den) — så fort
+        # någon faktiskt slårss är striden aktiv.
+        if combat.get("phase") == "awaiting_initiative" and (
+            mech.get("player_attacks") or mech.get("enemy_attacks")
+            or mech.get("ally_attacks") or mech.get("ally_damage")
+        ):
+            combat["phase"] = "active"
 
         # Spelarens attacker → minska fiende-HP
         for atk in mech.get("player_attacks", []):
@@ -2455,6 +2604,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             enemy = next((e for e in combat.get("enemies", []) if e.get("name", "").lower() == target_name.lower() and e.get("alive", True)), None)
             if not enemy:
                 continue
+            _ra["player"] = True  # spelaren har agerat denna runda (även miss)
             if atk.get("hit"):
                 # v1.2 "The Honest Dice": motorrullad spelarskada — vapnets
                 # damage_dice ur inventory, ej DM-narrerat heltal (kontrakt v28).
@@ -2537,6 +2687,8 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             enemy = next((e for e in combat.get("enemies", []) if e.get("name", "").lower() == target_name.lower() and e.get("alive", True)), None)
             if not enemy:
                 continue
+            # Allierade räknas som spelarsidan i rund-bokföringen (samma grind)
+            _ra["player"] = True
             if atk.get("hit"):
                 dmg = max(0, _safe_int(atk.get("damage"), 0))
                 if dmg > 0:
@@ -2586,13 +2738,21 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             attacker_name = str(atk.get("attacker", "")).strip()
             if not attacker_name:
                 continue
+            # Dublettnamn (3x "Sentinel"): varje attackerande namn roteras till
+            # nästa LEVANDE fiende med det namnet som ännu inte agerat — annars
+            # markeras samma fiende N gånger och rundan låser sig ( regression
+            # 2026-09-13: tre Archival Sentinels, round_acted fastnade på 1/3).
+            _alive = [e for e in combat.get("enemies", [])
+                      if e.get("name", "").lower() == attacker_name.lower() and e.get("alive", True)]
             enemy = next(
-                (e for e in combat.get("enemies", [])
-                 if e.get("name", "").lower() == attacker_name.lower() and e.get("alive", True)),
-                None,
+                (e for e in _alive
+                 if not _ra["enemies"].get(_enemy_key(e, combat["enemies"].index(e)))),
+                _alive[0] if _alive else None,
             )
             # Fiendens stats från combat (fallback: attackeraren finns inte i listan → använd DM:s angivna hit/damage om de finns)
             if enemy is not None:
+                _i = next((i for i, e in enumerate(combat.get("enemies", [])) if e is enemy), 0)
+                _ra["enemies"][_enemy_key(enemy, _i)] = True  # JUSTE denna fiende har agerat (träff/miss oavsett)
                 from combat import roll_d20, roll_dice as _roll_dice, has_disadvantage, damage_multiplier
 
                 # Cover (5e, P2): combat.player_cover → AC-bonus mot fiendeträffar
@@ -2688,28 +2848,19 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             if event_str:
                 combat_log.append({"round": current_round, "actor": "system", "name": "", "text": event_str})
 
-        # ── Turordning (chat-first): hybrid-avancering ──
-        # LLM får driva när den kan (attacker/events/combat_round), men vi har
-        # ett DETERMINISTISKT skyddsnät: om något mekaniskt hände denna tur
-        # (stridsloggen växte eller combat-effekter applicerades) avancerar vi
-        # ändå. Utan detta fastnar rundan på 1 när Guardian inte skickar
-        # player_attacks/enemy_attacks (marielle 2026-08-02: 13 turer, runda 1).
-        llm_attacks = bool(
-            mech.get("player_attacks") or mech.get("enemy_attacks") or mech.get("combat_events")
-            or mech.get("ally_attacks") or mech.get("ally_damage")
-        )
-        mechanical_this_turn = len(combat_log) > combat_log_len_before or any(
-            e.get("type") in ("skada", "hela", "combat_dmg", "npc_död", "enemy_död", "combat_end")
-            for e in effects
-        )
+        # ── Turordning (chat-first): server-driven rund-avancering ──
+        # Playtest 2026-09-13 (051130a1a73d): 14 turer, runda 1 — DM sänder
+        # aldrig combat_round-siffror och turn_order är tom i chat-first-flödet
+        # (combat.start_combat lämnar den []). Koden räknar nu rundorna själva:
+        # round_acted bokförs i attacker-looparna ovan; när spelaren OCH alla
+        # levande fiender agerat → ny runda (banner + status-tick + reset).
         if mech.get("combat_round"):
-            # LLM avancerade rundan explicit → starta den färskt
-            for _t in combat.get("turn_order", []):
-                _t["acted"] = False
-            combat["current_index"] = 0
-            combat["player_actions"] = {"action": True, "bonus": True, "reaction": True}
-        elif llm_attacks or mechanical_this_turn:
-            _advance_turn(combat, state)
+            # LLM-signalen är auktoritativ för HöGRE rundenummer (redan
+            # tillämpad uppe i cr-handläggaren) — starta runda + bokföring
+            # freskt så inte auto-avanceringen dubbelräknar.
+            _reset_round_bookkeeping(combat)
+        else:
+            _auto_advance_round(combat, state, effects)
 
         # Auto-avsluta strid om alla fiender döda
         if all(not e.get("alive", True) for e in combat.get("enemies", [])) and combat.get("enemies"):
@@ -2719,23 +2870,10 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             effects.append({"type": "combat_end", "value": "all defeated"})
             logger.info("🏁 Combat over — all enemies defeated")
         else:
-            # State-snapshot efter turen: ALLA deltagare inkl. spelaren med
-            # nuvarande HP — så nästa turs Guardian kan jämföra och justera
-            # HP/status på samtliga (krav: battle logg listar alla).
-            snapshot_parts = []
-            ph = ch.get("hp") or {}
-            snapshot_parts.append(f"{ch.get('name', 'Spelaren')} {ph.get('current', '?')}/{ph.get('max', '?')} HP")
-            for e in combat.get("enemies", []):
-                alive_mark = "" if e.get("alive", True) else " (dead)"
-                snapshot_parts.append(f"{e.get('name', '?')} {e.get('hp', '?')}/{e.get('max_hp', '?')} HP{alive_mark}")
-            for a in combat.get("allies", []):
-                alive_mark = "" if a.get("alive", True) else " (dead)"
-                snapshot_parts.append(f"{a.get('name', '?')} {a.get('hp', '?')}/{a.get('max_hp', '?')} HP{alive_mark}")
-            combat_log.append({
-                "round": current_round, "actor": "system", "name": "",
-                "text": "After the turn: " + ", ".join(snapshot_parts),
-                "snapshot": True,
-            })
+            # State-snapshot EFTER alla handlers — exakt EN per anrop med
+            # korrekt HP (den gamla mitten-i-strömmen-versionen fastnade på
+            # '22/22' efter -6-6 och dubblerades 6x per runda).
+            _append_turn_snapshot(combat, ch, combat_log, current_round)
 
     # ── Loggbok ──
     logbook = mech.get("logbook", "")

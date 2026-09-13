@@ -22,13 +22,16 @@ The game speaks **Svenska and English** (campaign-aware, chosen when you start a
 ### 🗣️ Conversational Dungeon Master
 - Full LLM-driven DM that narrates scenes, plays NPCs with colored names, and reacts to free-form input
 - **`@NPC` direct chat** — address any known NPC by name and the DM role-plays them with their own context (personality, relation, memories)
-- **Oracle rule-lookups** — ask rules questions in a sidebar without breaking the scene
 - **Streamed narration** — tokens appear as the DM "speaks"
+- **Undo the last turn** — rewind the newest turn: your message, the DM's reply and everything the Lorekeeper recorded from it (HP, gold, items, quests, journal) returns to where it stood; costs one turn, single-level
+- **Admin-only diagnostics** — model/token/latency footers and the DM's raw reasoning monologue render exclusively for admin accounts; players never see engine internals or prompt text
 
 ### 🎲 Dice & Combat
-- Full **dice engine** (`NdX±M` notation) with a dramatic d20 animation — gold flash on a natural 20, blood on a natural 1
-- **Turn-based combat engine** with initiative order, action economy (action / bonus action / reaction), status effects with durations, enemy AI that rolls against your AC, allies (`ALLIERAD:`), and flee attempts
-- Combat actions: **attack · cast · bonus · flee · end-turn** — the engine owns the math, the DM owns the narration
+- **Server-authoritative dice** (`NdX±M` notation, Python `secrets`): every check, attack and weapon damage rolls on the server — a client-side fallback is always visibly marked as an *offline roll*, never passed off as trusted
+- **Advantage/disadvantage done honestly**: the server rolls 2d20 and the UI shows both dice, the chosen one highlighted gold, the dropped one dimmed — no faked duplicate rolls
+- **Chat-first combat (v26+)**: the DM narrates every swing; the Guardian extracts mechanics and runs the round bookkeeping — a round auto-advances once the player and *every living enemy* have acted (per-enemy index keys, so identically named enemies can't share an action flag), conditions tick between rounds, and each turn ends with exactly one true-HP snapshot instead of duplicated stale lines
+- Dramatic d20 ceremony in chat — gold flash on a natural 20, blood on a natural 1; initiative order, action economy (action / bonus action / reaction), allies, and flee attempts
+- Combat end zeroes defeated enemies (`falls!` trail or explicit defeat list) and records how many were still standing when the fight closed
 
 ### 🧙 Character Creation
 - Pick from a roster of **hand-crafted archetypes** (the Fallen Knight, the Ash Witch, the Hunter, the Void Scribe…) or write your own prompt
@@ -56,6 +59,15 @@ The game speaks **Svenska and English** (campaign-aware, chosen when you start a
 - **Multi-provider model router**: Qwen (DashScope / Alibaba Token Plan), DeepSeek, MiMo (Xiaomi), StepFun, and local **Ollama** models — switch the DM's brain per campaign, mid-game
 - **TTS narration**: StepFun voices (always free) or Qwen TTS — male/female narrator voices, per-campaign settings, style phrases
 - Keys never leave the server — the frontend only ever sees model IDs
+
+### 🖼️ Avatars & Portrait Art
+- **AI-painted portraits** for your adventurer, the DM and every NPC — built from the live character sheet/NPC lore, with a gallery per subject (up to 5 paintings, arrow-key rotation)
+- **Server-side thumbnails** (`?w=64/128/256/512`, PyMuPDF scaling, disk-cached and auto-regenerated) so a 52 px sidebar tile never ships a 1.2 MB original
+- **Photoreal portraits render smooth** — the retro `image-rendering: pixelated` treatment is reserved for pixel sprites, not painted faces
+- The DM gets its own d20 sigil until you paint it a portrait — it never borrows the player's face
+
+### 🧭 Player-facing rules
+- `mechanics.html` is the honest rulebook: engine behaviors (dice, spell slots & rests, TTS cache, undo) documented section by section and audited against the code, not against wishes
 
 ### 💳 Billing & Admin
 - **Stripe subscriptions**: free tier (50 turns/day, step-3.7-flash only), tier1 (3 €/mo — 50 turns per 6 h + AI avatars), tier2 (9 €/mo — all player models + Qwen TTS), **lifetime** (100 €, uncapped); StepFun TTS is always free
@@ -108,15 +120,16 @@ The core idea: **the DM tells the story, the Guardian owns the mechanics, and th
 │  → Qdrant collection "loreweavers_cauldron"   │     via local Ollama
 └───────────────────────────────────────────────┘
 
-  Combat runs alongside: combat.py owns initiative, action economy,
-  status effects and enemy AI; the Guardian extracts, the DM narrates.
+  Combat runs alongside: chat-first — the DM narrates, the Guardian
+  extracts attacks and runs the round bookkeeping; combat.py owns
+  the server dice, status ticking and initiative helpers.
 ```
 
 | Module | Role |
 |---|---|
 | `backend/main.py` | FastAPI app — all routes, auth & tiers, DM prompt construction, streaming |
-| `backend/guardian.py` | Mechanics authority — pre-DM roll checks + post-DM extraction of damage, XP, items, currency, quests, time, rest, places, logbook entries |
-| `backend/combat.py` | Combat engine — turn order, action economy, status effects, enemy AI, allies, fleeing |
+| `backend/guardian.py` | Mechanics authority — pre-DM roll checks + post-DM extraction of damage, XP, items, currency, quests, time, rest, places, logbook entries; also runs chat-first combat bookkeeping (round advancement, per-enemy action tracking, status ticks) |
+| `backend/combat.py` | Dice + combat helpers — server-secure rolls, status-effect ticking, initiative utilities (the REST combat motor is gone; fights run tag-driven through the chat pipeline) |
 | `backend/extraction.py` | `FactRegister` — structured, deduplicated, versioned lore/facts |
 | `backend/rag.py` | Qdrant + Ollama — transcript/lore indexing and semantic retrieval |
 | `backend/state_manager.py` | JSON persistence — campaigns, saves, vaults, rolling summaries (scene → chapter → arc) |
@@ -247,14 +260,14 @@ All endpoints live under `/api` and are served by FastAPI (interactive docs at `
 
 | Group | Endpoints | Purpose |
 |---|---|---|
-| **Auth** | `POST /api/register` · `/api/login` · `/api/logout` · `/api/auth/request-reset` · `/api/auth/reset-with-token` · `GET /api/me` · `PUT /api/me/appearance` · `PUT /api/me/email` | Accounts, JWT cookie sessions, password reset, profile |
+| **Auth** | `POST /api/register` · `/api/login` · `/api/logout` · `/api/auth/request-reset` · `/api/auth/reset-with-token` · `GET /api/me` · `PUT /api/me/email` | Accounts, JWT cookie sessions, password reset, profile |
 | **Campaign** | `POST/GET /api/campaign` · `GET /api/campaigns` · `POST /api/campaign/activate` · `DELETE /api/campaign` · `PATCH /api/campaign/{dm-model,guardian-model,extraction-model,language,character,inventory}` · `POST /api/campaign/save` · `POST /api/campaign/undo` | Create, switch, configure, persist — and undo the last turn |
-| **Gameplay** | `POST /api/chat` (streamed) · `POST /api/oracle` · `POST /api/dice` · `POST /api/campaign/pin` · `POST /api/campaign/lore` · `POST /api/campaign/chapter` · `POST /api/campaign/consume-resource` · `GET /api/facts` | Play: chat, rule lookups, dice, notes, lore, facts |
+| **Gameplay** | `POST /api/chat` (streamed) · `POST /api/dice` · `POST /api/campaign/pin` · `POST /api/campaign/lore` · `POST /api/campaign/chapter` · `POST /api/campaign/consume-resource` · `GET /api/facts` | Play: chat, server dice, notes, lore, facts |
 | **Combat** | `POST /api/chat` with `[STRID:]`/`[COMBAT:]` tags · engine in `combat.py` + Guardian | Tag-driven combat — the DM opens/advances fights through the chat pipeline |
 | **Character & Vault** | `POST /api/character/generate` (+ `/stream`) · `GET/POST/DELETE /api/vault/characters…` · `…/use` · `…/avatar/generate` | Character creation and vault |
 | **World** | `POST /api/world/build` · `GET /api/campaign/locations` · `GET /api/campaign/logbook` · `POST /api/campaign/logbook/refresh-today` | Import `.md/.pdf/images`, map, journal |
-| **Attachments & Avatars** | `POST/GET/DELETE /api/campaign/attachments…` · `POST /api/campaign/avatar…` · `POST /api/campaign/avatar/generate` | Uploaded world material and hero/NPC art |
-| **TTS** | `GET /api/tts/voices` · `POST /api/tts` · `POST /api/campaign/tts-settings` | Voice selection and narration audio |
+| **Attachments & Avatars** | `POST/GET/DELETE /api/campaign/attachments…` · `POST /api/campaign/avatar…` · `POST /api/campaign/avatar/generate` · `GET …/avatar/{kind}?w=64…512` | Uploaded world material and hero/NPC art — with lazily generated, disk-cached server thumbnails |
+| **TTS** | `GET /api/tts/voices` · `POST /api/tts` · `POST /api/campaign/tts-settings` | Voice selection and narration audio (the voices list is tier-filtered server-side — premium narrators only appear for entitled accounts) |
 | **Billing** | `POST /api/billing/checkout` · `/api/billing/portal` · `POST /api/stripe/webhook` · `GET /api/promo` | Subscriptions and lifecycle |
 | **Admin** | `GET /api/admin/stats` · `/api/admin/billing` · `/api/admin/feedback` · `GET/PUT/DELETE /api/admin/user…` | Dashboard, ledger, user controls |
 | **System** | `GET /api/health` · `GET /api/debug/logs` · `GET /api/models` | Health check, debug log ring buffer, model list |
@@ -269,7 +282,7 @@ source .venv/bin/activate
 python -m pytest tests/ -v
 ```
 
-**15 pytest suites** cover the mechanics that matter: tier logic and free-tier caps, Stripe billing + billing admin, security hardening, NPC chat, password reset, TTS style & survival across deletions, combat allies, vault export overwrite, avatar spells, feedback inbox, `/api/me` stats, and the travel/system-prompt rules.
+**44 pytest suites / ~550 tests** cover the mechanics that matter: tier logic and free-tier caps, chat-first combat (round advancement, snapshot dedup, status ticks, combat-end cleanup), Stripe billing + billing admin, security hardening, NPC chat, password reset, TTS tiers/style/survival across deletions, avatar thumbnails + purge, vault export overwrite, undo, feedback inbox, `/api/me` stats, and the travel/system-prompt rules.
 
 DOM-level frontend tests live in `scripts/` (`test-combat-split-dom.js`, `test-enemy-dice-render.js`) for combat UI behavior.
 

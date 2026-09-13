@@ -151,7 +151,7 @@
   /* Avatar-lightbox — större förhandsvisning */
   .av-lightbox{ position: fixed; inset: 0; z-index: 11000; display: flex; align-items: center; justify-content: center; background: rgba(var(--ink-rgb),.92); opacity: 0; visibility: hidden; transition: opacity .22s ease, visibility .22s; }
   .av-lightbox.show{ opacity: 1; visibility: visible; }
-  .av-lightbox img{ max-width: min(90vw, 720px); max-height: 85vh; border: 2px solid var(--gold); box-shadow: 0 0 60px rgba(var(--gold-rgb),.25), 0 24px 60px rgba(0,0,0,.8); image-rendering: pixelated; }
+  .av-lightbox img{ max-width: min(90vw, 720px); max-height: 85vh; border: 2px solid var(--gold); box-shadow: 0 0 60px rgba(var(--gold-rgb),.25), 0 24px 60px rgba(0,0,0,.8); }/* PORTRAIT CRUNCH: pixelated bort — photoreal-porträtt ska tecknas mjukt */
   .av-lightbox .av-lb-close{ position: fixed; top: 1.2rem; right: 1.4rem; font-family: var(--font-accent); font-size: .8rem; color: var(--gold-bright); background: none; border: 1px solid var(--edge); padding: .5rem .7rem; cursor: pointer; }
   .av-lightbox .av-lb-close:hover{ border-color: var(--gold); color: var(--bone-bright); }
   .av-lightbox .av-lb-title{ position: fixed; bottom: 1.2rem; left: 50%; transform: translateX(-50%); font-family: var(--font-display); font-size: .7rem; letter-spacing: .18em; text-transform: uppercase; color: var(--bone-dim); }
@@ -344,7 +344,7 @@
     background: var(--stone-2);
     border: 2px solid var(--edge); border-radius: 10px;
     transition: border-color .2s, transform .2s, box-shadow .2s;
-  }.msg-avatar:hover{ transform: scale(1.12); }.msg-avatar img{ width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; display: block; }.msg-avatar .pxs{ width: 68%; height: 68%; }/* Ram + glöd per roll */.msg.dm .msg-avatar{ border-color: rgba(var(--gold-rgb),0.65); box-shadow: 0 0 10px -2px rgba(var(--gold-bright-rgb),0.4); }.msg.dm .msg-avatar:hover{ border-color: var(--gold-bright); box-shadow: 0 0 16px -2px rgba(var(--gold-bright-rgb),0.7); }.msg.npc .msg-avatar{ border-color: color-mix(in srgb, var(--npc-color, #a8b2c0) 65%, transparent); box-shadow: 0 0 10px -2px color-mix(in srgb, var(--npc-color, #a8b2c0) 45%, transparent); }.msg.npc .msg-avatar:hover{ border-color: var(--npc-color, #a8b2c0); box-shadow: 0 0 16px -2px color-mix(in srgb, var(--npc-color, #a8b2c0) 70%, transparent); }.msg.player .msg-avatar{ border-color: color-mix(in srgb, var(--arcane) 65%, transparent); box-shadow: 0 0 10px -2px color-mix(in srgb, var(--arcane) 4%, transparent); }.msg.player .msg-avatar:hover{ border-color: var(--arcane); box-shadow: 0 0 16px -2px color-mix(in srgb, var(--arcane) 7%, transparent); }/* DM + spelare: stor avatar (≈5×), mjuk ram (12px rundning, mjukare kant), NPC behåller standardstorlek */.msg.dm .msg-avatar, .msg.player .msg-avatar{ width: 240px; height: 240px; border-radius: 12px; border-width: 1px; }@media (max-width: 640px){ .msg.dm .msg-avatar, .msg.player .msg-avatar{ width: 168px; height: 168px; } }/* ── Chattbubblor: avatar + bubbla med gotiska hörnbeslag ── */
+  }.msg-avatar:hover{ transform: scale(1.12); }.msg-avatar img{ width: 100%; height: 100%; object-fit: cover; display: block; }/* PORTRAIT CRUNCH: ingen pixelated på fotoreal-porträtt (.pxs SVG-sprites har sin egen regel) */.msg-avatar .pxs{ width: 68%; height: 68%; }/* Ram + glöd per roll */.msg.dm .msg-avatar{ border-color: rgba(var(--gold-rgb),0.65); box-shadow: 0 0 10px -2px rgba(var(--gold-bright-rgb),0.4); }.msg.dm .msg-avatar:hover{ border-color: var(--gold-bright); box-shadow: 0 0 16px -2px rgba(var(--gold-bright-rgb),0.7); }.msg.npc .msg-avatar{ border-color: color-mix(in srgb, var(--npc-color, #a8b2c0) 65%, transparent); box-shadow: 0 0 10px -2px color-mix(in srgb, var(--npc-color, #a8b2c0) 45%, transparent); }.msg.npc .msg-avatar:hover{ border-color: var(--npc-color, #a8b2c0); box-shadow: 0 0 16px -2px color-mix(in srgb, var(--npc-color, #a8b2c0) 70%, transparent); }.msg.player .msg-avatar{ border-color: color-mix(in srgb, var(--arcane) 65%, transparent); box-shadow: 0 0 10px -2px color-mix(in srgb, var(--arcane) 4%, transparent); }.msg.player .msg-avatar:hover{ border-color: var(--arcane); box-shadow: 0 0 16px -2px color-mix(in srgb, var(--arcane) 7%, transparent); }/* DM + spelare: stor avatar (≈5×), mjuk ram (12px rundning, mjukare kant), NPC behåller standardstorlek */.msg.dm .msg-avatar, .msg.player .msg-avatar{ width: 240px; height: 240px; border-radius: 12px; border-width: 1px; }@media (max-width: 640px){ .msg.dm .msg-avatar, .msg.player .msg-avatar{ width: 168px; height: 168px; } }/* ── Chattbubblor: avatar + bubbla med gotiska hörnbeslag ── */
 /* DM + spelare (2026-08-10): avatar STOR ovanpå, chattraden direkt UNDER
    avataren (kolumn-stack). NPC behåller rad-layout (avatar bredvid). */
 .msg.npc{ display: flex; gap: 0.8rem; align-items: flex-start; }
@@ -568,7 +568,18 @@
     font-size: .82rem; color: var(--bone); border: none;
     background: transparent; padding: .45rem .8rem .55rem;
     border-radius: 0; line-height: 1.6; text-align: left;
-  }.msg.guardian .guardian-box strong{ color: var(--teal); }/* Chat-first combat v26 — inline stridsmeddelanden */.combat-inline{ font-size: .78rem; padding: .4rem .7rem; }.combat-dm-roll{ display: flex; justify-content: center; padding: .15rem .5rem !important; }.combat-dm-roll .enemy-dice-mini{ padding: .3rem .7rem .4rem !important; }.combat-round{
+  }.msg.guardian .guardian-box strong{ color: var(--teal); }/* Chat-first combat v26 — inline stridsmeddelanden */.combat-inline{ font-size: .78rem; padding: .4rem .7rem; }
+/* ── Playtest-fixar 2026-09-13 (chat.html-ansvar) ──
+   ZOMBIE ROLL CARDS: besvarade kort dödas visuellt + tappar knappar. */
+.roll-request.answered{ opacity: .45; pointer-events: none; }
+.roll-request.answered .rr-actions, .roll-request.answered .rr-wait{ display: none !important; }
+/* UNDO UX: arming-läge + on-track-state */
+.undo-inline button.armed{ border-color: var(--blood-bright) !important; color: var(--bone-bright) !important; }
+.undo-inline button[disabled]{ opacity: .55; cursor: wait; }
+/* COMBAT TOGGLE: aktiv-state klass (sätts av setCombatSplit, rensas av clearCombatUi) */
+.battle-drawer-toggle.combat-active{ border-color: var(--gold) !important; color: var(--gold-bright) !important; box-shadow: 0 0 10px -4px rgba(var(--gold-bright-rgb),.6); }
+/* DM SIGIL: pixeltärning-runa för DM-bubblor utan eget porträtt (.pxs-stil) */
+.msg-avatar .dm-sigil{ width: 68%; height: 68%; }.combat-dm-roll{ display: flex; justify-content: center; padding: .15rem .5rem !important; }.combat-dm-roll .enemy-dice-mini{ padding: .3rem .7rem .4rem !important; }.combat-round{
     font-family: var(--font-accent); font-size: .6rem; letter-spacing: .1em;
     color: var(--gold-bright); text-align: center; border-color: rgba(var(--gold-rgb),.4);
     background: rgba(var(--gold-rgb),.06);
@@ -981,7 +992,7 @@
     width: 46px; height: 46px; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
     background: var(--stone-2); border: 1px solid var(--edge);
-  }.cd-npc-avatar img{ width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }.cd-role{ font-size: 0.88rem; color: var(--bone-dim); font-style: italic; margin-top: 0.1rem; }.cd-rel-badge{
+  }.cd-npc-avatar img{ width: 100%; height: 100%; object-fit: cover; }.cd-role{ font-size: 0.88rem; color: var(--bone-dim); font-style: italic; margin-top: 0.1rem; }.cd-rel-badge{
     display: inline-block; font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase;
     padding: 0.18rem 0.5rem; margin-top: 0.4rem;
     border: 1px solid var(--edge); color: var(--bone-dim); background: var(--stone-2);
@@ -1091,7 +1102,7 @@
     font-family: var(--cli-mono, ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace) !important;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=45">
+<link rel="stylesheet" href="snes.css?v=46">
 <style>
 /* ═══════════ CODEX 2-RAD-TABBAR — override snes.css (måste ligga EFTER linken) ═══════════ */
 .cx-tabs{ display: flex !important; flex-direction: column !important; gap: 0.34rem !important; padding: 0.55rem 0.6rem 0.6rem !important; overflow-x: hidden !important; }
@@ -1848,6 +1859,13 @@ async function loadCampaign() {
         document.getElementById('loc-sub').textContent = world.time;
       }
       setInputPlaceholder();
+      // GHOST-COMBAT-FIX (playtest 2026-09-13): strids-vyn återställs ur
+      // server-sanningen vid laddning — aktiv strid öppnar split, avslutad/ingen
+      // strid stänger den (annars kan COMBAT-toggle + panel hänga kvar som spök-UI).
+      try {
+        const _cw = (campaign._raw && campaign._raw.world && campaign._raw.world.combat) || null;
+        setCombatSplit(!!(_cw && _cw.active !== false));
+      } catch (e) { /* ännu ej i DOM — applyCombatTag tar över vid första poll */ }
       // Uppdatera topbar — kampanjnamn + FAS A/B header-info (Turn/Dag/🆓/reset).
       // Headern visar bara namnet (kompakt) — "Kampanj:"-prefixet finns i
       // mobilmenyn och på äventyrsväljaren. (2026-08-05)
@@ -2295,12 +2313,52 @@ function ingestAvatars(avatarMap) {
 }
 
 // Returnerar HTML för en avatar: uppladdad bild, eller sprite-emoji som fallback.
-// kind: 'player' | 'dm' | 'npc:<key>' — fallbackEmoji visas om ingen bild finns.
+// kind: 'player' | 'dm' | 'narrator' | 'npc:<key>' — fallbackEmoji visas om ingen bild finns.
+// ── DM-sigil (playtest-fix B 2026-09-13) ──
+// DM-bubblor får ALDRIG falla tillbaka på spelarens porträtt: 🧙‍♂️ och 🧙‍♀️
+// mappas av sprites.js baseOf() till SAMMA mage-sprite → DM visade spelarens
+// ansikte. Utan målat dm-porträtt renderas en egen d20-runa (16×16 px, .pxs-stil).
+const DM_SIGIL_ROWS = [
+  "................",
+  ".......gg.......",
+  "......gGGg......",
+  ".....gG..Gg.....",
+  "....gG....Gg....",
+  "...gG......Gg...",
+  "..gG........Gg..",
+  ".gG....GG....Gg.",
+  ".gG....GG....Gg.",
+  "..gG........Gg..",
+  "...gG......Gg...",
+  "....gG....Gg....",
+  ".....gG..Gg.....",
+  "......gGGg......",
+  ".......gg.......",
+  "................",
+];
+let _dmSigilCache = null;
+function dmSigilHtml() {
+  if (!_dmSigilCache) {
+    const C = { g: '#c9a227', G: '#e8c65a' };
+    let rects = '';
+    DM_SIGIL_ROWS.forEach((row, y) => {
+      for (let x = 0; x < 16; x++) {
+        const col = C[row[x]];
+        if (col) rects += `<rect x="${x}" y="${y}" width="1" height="1" fill="${col}"/>`;
+      }
+    });
+    _dmSigilCache = '<svg class="pxs dm-sigil" viewBox="0 0 16 16" shape-rendering="crispEdges" role="img" aria-label="Dungeon Master">' + rects + '</svg>';
+  }
+  return _dmSigilCache;
+}
+function _isDmKind(kind) { return kind === 'dm' || kind === 'narrator'; }
 function avatarHtml(kind, fallbackEmoji) {
-  const url = AVATARS[kind];
+  // Fix B: DM/narrator resolution är EXPLICIT — bara AVATARS['dm'] (satt när
+  // backend har ettverkligt dm-porträtt), annars sigil. Aldrig spelar-porträtt.
+  const url = _isDmKind(kind) ? (AVATARS['dm'] || null) : AVATARS[kind];
   const inner = url
-    ? `<img src="${url}" alt="" loading="lazy">`
-    : SPR.html(fallbackEmoji);
+    ? `<img src="${_avW(url, 512)}" alt="" loading="lazy">`
+    : (_isDmKind(kind) ? dmSigilHtml() : SPR.html(fallbackEmoji));
   return `<span class="msg-avatar" onclick="pickAvatar('${kind}')" title="${I18N.t('Klicka för att byta bild')}">${inner}</span>`;
 }
 
@@ -2351,7 +2409,7 @@ async function rotateAvatarImage(delta) {
       _accountGal = { count: res.gallery_count, index: res.gallery_index };
       const preview = document.getElementById('avatar-modal-img');
       const url = API.accountAvatarUrl() + '?t=' + Date.now();
-      if (preview) preview.innerHTML = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">`;
+      if (preview) preview.innerHTML = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover">`;
       refreshAvatars();
     } else {
       const kind = AVATAR_KIND;
@@ -2369,7 +2427,7 @@ async function rotateAvatarImage(delta) {
         }
       }
       const preview = document.getElementById('avatar-modal-img');
-      if (preview) preview.innerHTML = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">`;
+      if (preview) preview.innerHTML = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover">`;
       refreshAvatars();
       rerenderChatAvatars(kind, url);
     }
@@ -2386,11 +2444,17 @@ async function rotateAvatarImage(delta) {
 // Byt ut redan renderade bubbel-avatarer i chattloggen mot den nya bilden
 // (utan att rita om hela loggen).
 function rerenderChatAvatars(kind, url) {
+  const dm = _isDmKind(kind);
   document.querySelectorAll('.msg-avatar').forEach(el => {
     const oc = el.getAttribute('onclick') || '';
-    if (oc.indexOf("'" + kind + "'") === -1) return;
+    // DM-noder renderas med kind 'dm' eller 'narrator' i onclick — båda räknas
+    // som DM-avatarer (fix B: de delar aldrig spelarens porträtt).
+    const isDmEl = oc.indexOf("'dm'") !== -1 || oc.indexOf("'narrator'") !== -1;
+    if (dm ? !isDmEl : oc.indexOf("'" + kind + "'") === -1) return;
     const img = el.querySelector('img');
-    if (img) img.src = url;
+    if (!url) { if (dm) el.innerHTML = dmSigilHtml(); return; }  // porträtt borttaget → sigil tillbaka
+    if (img) img.src = _avW(url, img.closest('.msg') ? 512 : 128);
+    else if (dm) el.innerHTML = `<img src="${url}" alt="">`;     // sigil → nyss målat porträtt
   });
 }
 
@@ -2459,7 +2523,7 @@ function pickAvatar(kind) {
     ? 'Paint a new avatar from your character sheet — items, traits and lore included. StepFun painting is free — Wan 2.7 Pro / Qwen Image 3 Pro need Patron. Or upload your own image.'
     : 'Paint a new avatar of ' + (kind === 'dm' ? 'the Dungeon Master' : 'this NPC') + '. StepFun painting is free — Wan 2.7 Pro / Qwen Image 3 Pro need Patron. Or upload your own image.';
   preview.innerHTML = AVATARS[kind]
-    ? `<img src="${AVATARS[kind]}" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">`
+    ? `<img src="${AVATARS[kind]}" alt="" style="width:100%;height:100%;object-fit:cover">`
     : SPR.html('🎭');
   delBtn.style.display = AVATARS[kind] ? '' : 'none';
   // "Update from sheet" är bara meningsfullt för äventyraren (som har ett sheet) —
@@ -2505,7 +2569,7 @@ function openProfileAvatarModal() {
   desc.textContent = 'Paint YOUR profile portrait — the face at your table, separate from your adventurer. Pick an engine below: StepFun (free) or Wan 2.7 Pro / Qwen Image 3 Pro (Patron 30€).';
   const url = _hasAccountAvatar ? API.accountAvatarUrl() + '?t=' + Date.now() : null;
   preview.innerHTML = url
-    ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">`
+    ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover">`
     : SPR.html('👤');
   delBtn.style.display = _hasAccountAvatar ? '' : 'none';
   updBtn.style.display = 'none';
@@ -2552,7 +2616,7 @@ async function openChatProfileModal() {
   const av = document.getElementById('cp-avatar');
   if (av) {
     av.innerHTML = _hasAccountAvatar
-      ? `<img src="${API.accountAvatarUrl()}?t=${Date.now()}" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">`
+      ? `<img src="${_avW(API.accountAvatarUrl(), 128)}&t=${Date.now()}" alt="" style="width:100%;height:100%;object-fit:cover">`
       : '👤';
   }
   const nm = document.getElementById('cp-name');
@@ -2840,23 +2904,38 @@ async function deleteAvatarAction() {
 }
 
 // Större förhandsvisning — klick på preview-bilden i modalen öppnar lightbox
+// Fix C 2026-09-13: <img> skapas Lazily i #avatar-lightbox-img-slot — ett tomt
+// src-attribut i DOM:en renderar trasig-bild-glyfen i webbläsaren.
+function _lbSetImg(src) {
+  if (!src) return false;
+  const slot = document.getElementById('avatar-lightbox-img-slot');
+  if (!slot) return false;
+  let img = slot.querySelector('img');
+  if (!img) {
+    img = document.createElement('img');
+    img.id = 'avatar-lightbox-img';
+    img.alt = 'Avatar';
+    slot.appendChild(img);
+  }
+  img.src = src;
+  return true;
+}
 function openAvatarLightbox() {
   if (_avatarProfileMode) {
     const url = _hasAccountAvatar ? API.accountAvatarUrl() : null;
     if (!url) return;
     const lb = document.getElementById('avatar-lightbox');
-    document.getElementById('avatar-lightbox-img').src = url;
+    if (!_lbSetImg(url)) return;
     document.getElementById('avatar-lightbox-title').textContent =
       document.getElementById('avatar-modal-title').textContent;
     if (lb) lb.classList.add('show');
     return;
   }
   const kind = AVATAR_KIND;
-  const src = AVATARS[kind];
+  const src = _isDmKind(kind) ? AVATARS['dm'] : AVATARS[kind];
   if (!src) return;
   const lb = document.getElementById('avatar-lightbox');
-  const img = document.getElementById('avatar-lightbox-img');
-  img.src = src;
+  if (!_lbSetImg(src)) return;
   document.getElementById('avatar-lightbox-title').textContent =
     document.getElementById('avatar-modal-title').textContent;
   if (lb) lb.classList.add('show');
@@ -2871,7 +2950,7 @@ function closeAvatarLightbox() {
 function openCpAvatarLightbox() {
   const url = _hasAccountAvatar ? API.accountAvatarUrl() : null;
   if (!url) { openProfileAvatarModal(); return; }
-  document.getElementById('avatar-lightbox-img').src = url;
+  if (!_lbSetImg(url)) return;
   document.getElementById('avatar-lightbox-title').textContent = '🪞 Your profile portrait';
   const lb = document.getElementById('avatar-lightbox');
   if (lb) lb.classList.add('show');
@@ -2884,14 +2963,14 @@ function refreshAvatars() {
   const utAv = document.getElementById('user-tag-avatar');
   if (utAv) {
     utAv.innerHTML = _hasAccountAvatar
-      ? `<img src="${API.accountAvatarUrl()}?t=${Date.now()}" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">`
+      ? `<img src="${_avW(API.accountAvatarUrl(), 64)}&t=${Date.now()}" alt="" style="width:100%;height:100%;object-fit:cover">`
       : '👤';
   }
   // Spelarens kort i sidebaren
   const pcAv = document.getElementById('pc-avatar');
   if (pcAv) {
     pcAv.innerHTML = AVATARS['player']
-      ? `<img src="${AVATARS['player']}" alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated">`
+      ? `<img src="${_avW(AVATARS['player'], 128)}" alt="" style="width:100%;height:100%;object-fit:cover">`
       : SPR.html('🎭');
   }
   // Profilavatar som bakgrund "bakom" namn/klass/HP/XP
@@ -2899,7 +2978,7 @@ function refreshAvatars() {
   const pcBg = document.getElementById('pc-avatar-bg');
   if (pcWrap && pcBg) {
     if (AVATARS['player']) {
-      pcBg.style.backgroundImage = `url('${AVATARS['player']}')`;
+      pcBg.style.backgroundImage = `url('${_avW(AVATARS['player'], 256)}')`;
       pcWrap.classList.add('has-bg');
     } else {
       pcBg.style.backgroundImage = '';
@@ -2912,15 +2991,17 @@ function refreshAvatars() {
   // (2026-08-10) gamla selectorerna `.msg.dm .who .msg-avatar` matchade aldrig
   // → DM/player/NPC-avatarer uppdaterades inte i chatten efter generering.
   document.querySelectorAll('.msg.dm > .msg-avatar').forEach(el => {
-    el.innerHTML = AVATARS['dm'] ? `<img src="${AVATARS['dm']}" alt="">` : SPR.html('🧙‍♂️');
+    // Fix B: DM-bubblor visar ALDRIG spelarens porträtt — eget dm-porträtt
+    // eller d20-sigil (samma resolution som avatarHtml('dm')).
+    el.innerHTML = AVATARS['dm'] ? `<img src="${_avW(AVATARS['dm'], 512)}" alt="">` : dmSigilHtml();
   });
   document.querySelectorAll('.msg.player > .msg-avatar').forEach(el => {
-    el.innerHTML = AVATARS['player'] ? `<img src="${AVATARS['player']}" alt="">` : SPR.html('🧙‍♀️');
+    el.innerHTML = AVATARS['player'] ? `<img src="${_avW(AVATARS['player'], 512)}" alt="">` : SPR.html('🧙‍♀️');
   });
   document.querySelectorAll('.msg.npc > .msg-avatar').forEach(el => {
     const key = el.dataset.npcKey;
     const n = NPCS[key] || {};
-    el.innerHTML = AVATARS['npc:' + key] ? `<img src="${AVATARS['npc:' + key]}" alt="">` : SPR.html(n.icon || '🎭');
+    el.innerHTML = AVATARS['npc:' + key] ? `<img src="${_avW(AVATARS['npc:' + key], 128)}" alt="">` : SPR.html(n.icon || '🎭');
   });
 }
 
@@ -3280,7 +3361,11 @@ function buildMessage(type, npcKey, text, meta) {
 
   if (type === 'dm') {
     let footer = '';
-    if (meta && (meta.model || meta.tokens || meta.time)) {
+    // DEBUG LEAK-fix (playtest 2026-09-13): modell/tokens/tid är admin-diagnostik
+    // — ritas ALDRIG för icke-admin (läckte "qwen3.6-flash · 7882 tkn · 25.9s" i
+    // varje DM-bubbla). Admin-UX är oförändrad. roleReady är awaitad i
+    // loadTranscript och live-svaren kommer sekunder senare → isAdmin är satt.
+    if (isAdmin && meta && (meta.model || meta.tokens || meta.time)) {
       const mn = meta.model || '?';
       const tok = meta.tokens ? `${meta.tokens.total_tokens || '?'} tkn` : '';
       const spd = meta.time ? `${meta.time}s` : '';
@@ -3309,7 +3394,7 @@ function buildMessage(type, npcKey, text, meta) {
     el.style.setProperty('--npc-color', n.color);
     el.setAttribute('data-npc', npcKey || '');
     el.innerHTML = `
-      <span class="msg-avatar" data-npc-key="${attrEscape(npcKey || '')}" onclick="pickAvatar('npc:${jsStr(npcKey || '')}')" title="${I18N.t('Klicka för att byta bild')}">${AVATARS['npc:' + npcKey] ? `<img src="${AVATARS['npc:' + npcKey]}" alt="">` : SPR.html(n.icon || '🎭')}</span>
+      <span class="msg-avatar" data-npc-key="${attrEscape(npcKey || '')}" onclick="pickAvatar('npc:${jsStr(npcKey || '')}')" title="${I18N.t('Klicka för att byta bild')}">${AVATARS['npc:' + npcKey] ? `<img src="${_avW(AVATARS['npc:' + npcKey], 128)}" alt="">` : SPR.html(n.icon || '🎭')}</span>
       <div class="bubble">
         <div class="who" onclick="openNpcDrawer(this.closest('.msg').dataset.npc)" title="Open dossier" style="cursor:pointer"><span class="dot"></span>${n.name}</div>
         <div class="text">${highlightTerms(mdToHtml(escapeHtml(text)))}</div>
@@ -3338,6 +3423,11 @@ function buildMessage(type, npcKey, text, meta) {
 // ligger precis ovanför svaret — inte ovanför avataren (kolumn-stacken).
 // Används av live-flödet (res.reasoning) OCH transcript-replay (m.meta.reasoning).
 function attachReasoning(hostMsg, text) {
+  // DEBUG LEAK-fix (playtest 2026-09-13): DM:ns råa LLM-resonemang innehåller
+  // systemprompt-regler — ENDAST admin får expanderaren. Tidiga anrop (innan
+  // /api/me svarat) tappas med flit: spelet kan inte ha producerat ett DM-svar
+  // före det första awaitet, och transcript-replay awaitar roleReady.
+  if (!isAdmin) return null;
   if (!text || !text.trim() || !hostMsg) return null;
   const el = document.createElement('div');
   el.className = 'reasoning';
@@ -3888,6 +3978,10 @@ async function serverRoll(notation) {
     return r;
   }
 }
+
+// _avW(url, w): lägg server-thumbnail-bredd på en avatar-URL (backend ?w=,
+// playtest-fix 2026-09-13 — 52px-rutor hämtar inte längre 1.2MB originals).
+function _avW(url, w) { return url ? url + (url.includes('?') ? '&' : '?') + 'w=' + w : url; }
 
 // Offline-roll-hint: när serverRoll faller tillbaka på klientens rollDice()
 // markeras resultatet i chatten som ej serververifierat. Tvåspråkig via
@@ -4770,6 +4864,7 @@ function declineRollRequest(id) {
   // Gamla guarden låste in spelaren totalt under 45–100 s Guardian-varv i strid.
   const box = document.getElementById(id);
   if (box) {
+    box.classList.add('answered');
     box.innerHTML = `<div class="roll-result-inline declined"><span>🖊️ ${I18N.t('Kastet avböjt — spelaren agerar fritt')}</span></div>`;
     // Bläck-rök vid pennan — liten effekt i chatten
     requestAnimationFrame(() => {
@@ -4808,20 +4903,22 @@ async function answerRollRequest(id, notation, label) {
     const base = rollDice(notation) || { mod: 0 };
     // Servern rullar 2d20 (Python secrets) → klienten väljer best/worst + lägger mod.
     const d = await serverRoll('2d20');
-    let r1, r2;
+    let r1, r2, advOffline = false;
     if (d && Array.isArray(d.rolls) && d.rolls.length >= 2) {
       [r1, r2] = d.rolls;
     } else {
-      // Fallback: servern svarade inte med 2 rolls → gamla client-rullen för adv
+      // Ärlighetsfix (playtest 2026-09-13): servern svarade inte → EN klienttärning
+      // märkt offlinekast, ALDRIG två identiska "advantage"-dice (såg fuskaktigt ut:
+      // '16 (16, 16) FÖRDEL'). Fördel utan server = ärligt 1d20 + varning.
       r1 = 1 + Math.floor(Math.random() * 20);
-      r2 = 1 + Math.floor(Math.random() * 20);
+      r2 = null; advOffline = true;
     }
-    const chosen = advMode === 'adv' ? Math.max(r1, r2) : Math.min(r1, r2);
-    const other = chosen === r1 ? r2 : r1;
+    const chosen = (r2 == null) ? r1 : (advMode === 'adv' ? Math.max(r1, r2) : Math.min(r1, r2));
+    const other = (r2 == null) ? null : (chosen === r1 ? r2 : r1);
     roll = {
-      rolls: [chosen, other], raw: [r1, r2], chosen,
+      rolls: other == null ? [chosen] : [chosen, other], raw: other == null ? [r1] : [r1, r2], chosen,
       total: chosen + (base.mod || 0), count: 1, sides: 20,
-      mod: base.mod || 0, notation, advantage: true, advMode,
+      mod: base.mod || 0, notation, advantage: r2 != null, advMode, offline: advOffline,
     };
   } else {
     roll = await serverRoll(notation);
@@ -4837,6 +4934,7 @@ async function answerRollRequest(id, notation, label) {
   const modStr = mod !== 0 ? (mod > 0 ? '+' + mod : mod) : '';
   const cls = isCrit ? 'crit' : isFail ? 'fail' : '';
   const shownRolls = roll.advantage ? roll.raw.join(', ') + ' → ' + roll.chosen : roll.rolls.join(', ');
+  box.classList.add('answered');
   box.innerHTML = `
     <div class="roll-result-inline">
       <span class="rr-dice">🎲</span>
@@ -4941,6 +5039,9 @@ function autoAwakenDM() {
 }
 
 async function loadTranscript() {
+  // DEBUG LEAK-fix (2026-09-13): vänta in rollen innan replay — annars hinner
+  // DM-bubblorna byggas innan isAdmin satts och admin förlorar foten/monologen.
+  try { await roleReady; } catch (e) { /* roll okänd → icke-admin-UX (säkrast) */ }
   // Rensa chatten INNAN rendering — förhindrar stale DOM från bfcache,
   // kampanjbyte eller tidigare session. Utan detta läcker gamla meddelanden in.
   chat.innerHTML = '';
@@ -4950,6 +5051,7 @@ async function loadTranscript() {
   // Återställ combat-dedup + stridspanelen innan replay → alla strider
   // renderas fullt i högerkolumnen (v27: battle log = enda platsen för combat).
   _lastCombatRound = 0;
+  _lastRoundSummaryEl = null;
   _lastCombatEnemyHp = {};
   _lastCombatAllyHp = {};
   _allyCardEls = {};
@@ -5704,7 +5806,9 @@ function setUndoButton(on) {
   else attach();
 })();
 
+let _undoInFlight = false;
 async function doUndo() {
+  if (_undoInFlight) return;  // dubbelklick-skydd (confirm kan köa två anrop)
   const ok = window.confirm(
     'Undo your last message?\n\n' +
     'The DM reply and everything the Lorekeeper recorded from it are removed. ' +
@@ -5712,6 +5816,7 @@ async function doUndo() {
   );
   if (!ok) { addCmdMessage('↶ <i>Undo cancelled.</i>'); return; }
   setUndoButton(false);
+  _undoInFlight = true;
   addCmdMessage('↶ <i>Undoing the last turn…</i>');
   try {
     const res = await API.undoTurn();
@@ -5726,6 +5831,8 @@ async function doUndo() {
     if (await handleCapError(e)) return;
     setUndoButton(true);
     addMessage('system', null, '⚠ Could not undo: ' + escapeHtml(e.message || String(e)));
+  } finally {
+    _undoInFlight = false;
   }
 }
 
@@ -6302,6 +6409,8 @@ function pollForGuardian(turnCount) {
 // (decodeURIComponent + JSON.parse). Taggen tas bort ur synlig text.
 
 let _lastCombat = null;        // dedup-nyckel: senast renderade combat-JSON
+let _lastCombatStartedTurnSeen = 0;  // spårar senaste stridsstart (runada-bubblor)
+// (ny strid: _lastRoundSummaryEl nollställs via combat_start-effekten i applyCombatTag)
 let _lastInitShown = null;     // initiativ-ceremoni-dedup (per session)
 let _combatEndTimer = null;
 let _playerHp = { current: 0, max: 0 };
@@ -6357,6 +6466,10 @@ function applyCombatTag(el, text, container) {
   const combatTarget = bl || target;
 
   // Chat-first combat: rendera inline meddelanden (segerraden hamnar alltid i berättelsen)
+  if (combat.active === true && combat.round === 1 && (combat.started_turn || 0) > (_lastCombatStartedTurnSeen || 0)) {
+    _lastRoundSummaryEl = null;  // ny strid → ERSTAR inte gamla stridens bubblor
+    _lastCombatStartedTurnSeen = combat.started_turn || 0;
+  }
   renderCombatInline(combat, reason, combatTarget, live ? chat : null);
 
   // DM-tärning i chatten (live): nya fiende/allierad-rullar → mini-ceremoni i
@@ -6387,6 +6500,7 @@ function applyCombatTag(el, text, container) {
 
 // ── Chat-first combat v26: inline stridsmeddelanden ──
 let _lastCombatRound = 0;
+let _lastRoundSummaryEl = null;   // senaste RUNDA-bubblan (ersätts inom samma runda)
 let _combatEndSeen = new Set();  // dedupe: "Striden är över"-bubblan ska bara visas EN gång per stridsslut
 let _lastCombatEnemyHp = {};  // {name: hp} för att detektera HP-ändringar
 let _lastCombatAllyHp = {};   // {name: hp|'dead'} — allierad-HP-dedup (v28)
@@ -6400,6 +6514,7 @@ function setCombatSplit(on) {
   const pane = document.getElementById('battle-log');
   const tog = document.getElementById('battle-drawer-toggle');
   if (!main || !pane) return;
+  if (tog) tog.classList.toggle('combat-active', !!on);  // CSS: gul glöd vid aktiv strid
   if (on) {
     main.classList.add('combat-split');
     pane.setAttribute('aria-hidden', 'false');
@@ -6690,35 +6805,56 @@ function renderPlayerHpChange(combat, container) {
 }
 
 // ── Round summary ──
-function renderRoundSummary(combat, container) {
-  if (!combat || !combat.log || !combat.log.length) return;
-  const en = (typeof I18N !== 'undefined' && I18N.getLang() === 'en');
-  const round = combat.round || 1;
-  
-  // Get log entries for this round
-  const roundLog = combat.log.filter(e => e.round === round);
-  if (!roundLog.length) return;
-  
-  const el = document.createElement('div');
-  el.className = 'msg system';
-  let html = `<div class="box combat-inline combat-round-summary">`;
-  html += `<div class="crs-title">── ${en ? 'ROUND' : 'RUNDA'} ${round} ──</div>`;
+function _roundSummaryBoxHtml(round, roundLog, en) {
+  // En ENDAST-html-producent — både append- och replace-vägen måste identifiera
+  // bubble-innehållet exakt lika (rskey matchar annars aldrig).
+  let html = '';
   roundLog.forEach(entry => {
     const actor = entry.actor || 'system';
     const cls = actor === 'player' ? 'player' : actor === 'enemy' ? 'enemy' : actor === 'ally' ? 'ally' : 'system';
     const icon = actor === 'player' ? '🗡️' : actor === 'enemy' ? '🐺' : actor === 'ally' ? '🛡️' : '⚙️';
     // Split-view v27: bryt ut tärningsnotationen ur texten → egna badges
-    // (fiende = blodröd .enemy-dice-badge · spelare = guld .player-dice-badge
-    //  · allierad = arcane .ally-dice-badge — v28)
     const dice = extractDiceFromText(entry.text || '');
     const diceHtml = dice.badges.length ? ' ' + dice.badges.map(b =>
       `<span class="dice-badge ${actor === 'enemy' ? 'enemy-dice-badge' : actor === 'ally' ? 'ally-dice-badge' : 'player-dice-badge'}" title="${escapeHtml(b)}">🎲 ${escapeHtml(b)}</span>`
     ).join('') : '';
     html += `<div class="crs-line ${cls}">${icon} ${mdToHtml(escapeHtml(dice.clean))}${diceHtml}</div>`;
   });
-  html += `</div>`;
-  el.innerHTML = html;
+  return html;
+}
+
+function renderRoundSummary(combat, container) {
+  if (!combat || !combat.log || !combat.log.length) return;
+  const en = (typeof I18N !== 'undefined' && I18N.getLang() === 'en');
+  const round = combat.round || 1;
+
+  // Get log entries for this round
+  const roundLog = combat.log.filter(e => e.round === round);
+  if (!roundLog.length) return;
+
+  // DEDUP (playtest-fix 2026-09-13): varje guardian-rapport skickar HELA
+  // stridsloggen → tidigare låg 3-5 RUNDA-bubblor i rad med halvfärdinnehåll.
+  // Samma runda: den nya sammanfattningen ERSTAR den tidigare bubblan
+  // (loggen växer bara — innehållet är en supersamling). Ny runda → ny bubbla.
+  const _rsKey = 'r' + round + '_' + roundLog.length + '_' + roundLog.map(e => (e.text||'').slice(0,40)).join('|');
+  if (_lastRoundSummaryEl && _lastRoundSummaryEl.isConnected &&
+      _lastRoundSummaryEl.parentElement === container &&
+      _lastRoundSummaryEl.dataset.round === String(round)) {
+    if (_lastRoundSummaryEl.dataset.rskey === _rsKey) return;   // identiskt → ingen-op
+    const box = document.createElement('div');
+    box.className = 'box combat-inline combat-round-summary';
+    box.dataset.round = String(round);
+    box.dataset.rskey = _rsKey;
+    box.innerHTML = `<div class="crs-title">── ${en ? 'ROUND' : 'RUNDA'} ${round} ──</div>` + _roundSummaryBoxHtml(round, roundLog, en);
+    _lastRoundSummaryEl.replaceWith(box);
+    _lastRoundSummaryEl = box;
+    return;
+  }
+  const el = document.createElement('div');
+  el.className = 'msg system';
+  el.innerHTML = `<div class="box combat-inline combat-round-summary" data-round="${round}" data-rskey="${_rsKey}"><div class="crs-title">── ${en ? 'ROUND' : 'RUNDA'} ${round} ──</div>` + _roundSummaryBoxHtml(round, roundLog, en) + `</div>`;
   container.appendChild(el);
+  _lastRoundSummaryEl = el.firstElementChild;
 }
 
 // ── Tärningsnotation → badges (split-view v27) ──
@@ -7433,7 +7569,7 @@ function renderNpcSidebar() {
   const row = ([k, n]) => {
     const av = AVATARS['npc:' + k];
     const icon = av
-      ? `<img class="npc-av-thumb" src="${av}" alt="" loading="lazy">`
+      ? `<img class="npc-av-thumb" src="${_avW(av, 64)}" alt="" loading="lazy">`
       : SPR.html(n.icon || '🎭');
     const safeName = String(n.name || k || '').replace(/'/g, "\\'");
     // 2026-08-05: har NPC:n ett porträtt → renderas som äventyrarens kort:
@@ -7441,7 +7577,7 @@ function renderNpcSidebar() {
     const avClass = av ? ' has-av' : '';
     return `
       <div class="npc-row${n.alive === false ? ' dead' : ''}${avClass}" data-npc="${k}" onclick="openNpcCodex('${safeName}')" title="Open dossier in Codex" style="cursor:pointer">
-        ${av ? `<img class="npc-bg" src="${av}" alt="" loading="lazy">` : `<span class="npc-dot" style="color:${n.color};background:${n.color}"></span>`}
+        ${av ? `<img class="npc-bg" src="${_avW(av, 128)}" alt="" loading="lazy">` : `<span class="npc-dot" style="color:${n.color};background:${n.color}"></span>`}
         ${av ? icon : ''}
         <span class="npc-info">
           <div class="npc-name">${n.alive === false ? SPR.html('💀') : ''} ${av ? '' : icon} ${n.name}</div>
@@ -8539,7 +8675,7 @@ function renderNpcDrawer(key) {
   const relCls = relation === 'allierad' ? 'ally' : relation === 'fiende' ? 'foe' : 'neutral';
   const alive = n.alive !== false;
   const avatar = AVATARS['npc:' + key]
-    ? `<img src="${AVATARS['npc:' + key]}" alt="">`
+    ? `<img src="${_avW(AVATARS['npc:' + key], 256)}" alt="">`
     : (typeof SPR !== 'undefined' ? SPR.html(n.icon || '🎭') : (n.icon || '🎭'));
   const notesRaw = extra.notes || n.notes || '';
   const notes = Array.isArray(notesRaw) ? notesRaw : String(notesRaw).split('\n').filter(x => x.trim());
@@ -8573,11 +8709,11 @@ function cdMentionNpc(name) {
 
 // ═══════════════ 📖 CODEX MODAL (D1.3) — lazy iframes ═══════════════
 const CODEX_PAGES = {
-  character: { label: '🧙 Character', src: 'character.html?v=20260808c' },
-  npcs:      { label: '🧝 NPCs',      src: 'npcs.html?v=20260830a' },
-  map:       { label: '🗺 Map',       src: 'platser.html?v=20260830a' },
-  journal:   { label: '📖 Journal',   src: 'loggbok.html?v=20260806a' },
-  facts:     { label: '📌 Facts',     src: 'facts.html?v=20260811a' },
+  character: { label: '🧙 Character', src: 'character.html?v=20260913a' },
+  npcs:      { label: '🧝 NPCs',      src: 'npcs.html?v=20260913a' },
+  map:       { label: '🗺 Map',       src: 'platser.html?v=20260913a' },
+  journal:   { label: '📖 Journal',   src: 'loggbok.html?v=20260913a' },
+  facts:     { label: '📌 Facts',     src: 'facts.html?v=20260913a' },
 };
 const _codexIframes = {};
 let _codexLastTab = 'character';
@@ -8988,7 +9124,9 @@ document.addEventListener('keydown', e => {
 
 <!-- 🔍 Avatar-lightbox — större förhandsvisning -->
 <div class="av-lightbox" id="avatar-lightbox" onclick="if(event.target===this)closeAvatarLightbox()">
-  <img id="avatar-lightbox-img" alt="Avatar">
+  <!-- Fix C 2026-09-13: tomt <img> i DOM gav trasig-bild-glyf — bilden skapas
+       Lazily först när lightboxen öppnas med en verklig src. -->
+  <div id="avatar-lightbox-img-slot"></div>
   <button class="av-lb-close" onclick="closeAvatarLightbox()">✕</button>
   <div class="av-lb-title" id="avatar-lightbox-title"></div>
 </div>

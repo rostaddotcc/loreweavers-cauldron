@@ -211,6 +211,7 @@ def main():
                     "forged_by": user,
                     "campaign": meta.get("campaign_name") or "",
                     "embarked": format_date(meta.get("created") or ""),
+                    "turns_played": meta.get("turn_count", 0),
                 })
                 seen_players[name] = True
 

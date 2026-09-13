@@ -2315,10 +2315,6 @@ body.cli-chat .input-row .cli-prompt{
   margin-top: .35rem;
 }
 body.cli-chat .cp-user{ color: var(--arcane); }
-body.cli-chat .cp-at,
-body.cli-chat .cp-path,
-body.cli-chat .cp-pct{ color: var(--bone-dim); }
-body.cli-chat .cp-host{ color: var(--gold); }
 body.cli-chat .cp-pct{ color: var(--term-green); font-weight: 700; }
 
 /* ── Blinking waiting cursor: visible only when input is empty ── */
@@ -2536,10 +2532,6 @@ body.cli-chat .msg.dm .bubble{
   body.cli-chat .input-row .cli-prompt{
     font-size: .8rem;
     max-width: 34vw;
-  }
-  /* drop the host part — the longest segment (user@~% stays) */
-  body.cli-chat .cli-prompt .cp-host{
-    display: none;
   }
 }
 

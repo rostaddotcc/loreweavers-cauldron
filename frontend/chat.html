@@ -1091,7 +1091,7 @@
     font-family: var(--cli-mono, ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace) !important;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=43">
+<link rel="stylesheet" href="snes.css?v=44">
 <style>
 /* ═══════════ CODEX 2-RAD-TABBAR — override snes.css (måste ligga EFTER linken) ═══════════ */
 .cx-tabs{ display: flex !important; flex-direction: column !important; gap: 0.34rem !important; padding: 0.55rem 0.6rem 0.6rem !important; overflow-x: hidden !important; }
@@ -1609,6 +1609,11 @@
         <div class="scribe-inkline" aria-hidden="true"><i></i></div>
       </div>
     </div>
+
+    <!-- ═══ COMPOSER-SPLITTER (2026-09-13): draghandtag mellan DM-loggen och
+         kompositören. Dra = ändra textareans höjd (--composer-h på .main),
+         dubbelklick = återställ default. JS: se "COMPOSER-SPLITTER" nedan. ═══ -->
+    <div class="composer-splitter" id="composer-splitter" role="separator" aria-orientation="horizontal" tabindex="0" aria-label="Resize composer — drag or use arrow keys" title="Drag to resize the composer · double-click to reset"><span class="cs-grip" aria-hidden="true"></span></div>
 
     <div class="input-area">
       <!-- TTS-player-bar: smal progressrad — visas när ljud spelas (play/pause + tid) -->
@@ -5339,8 +5344,9 @@ input.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendPlayer(); }
 });
 input.addEventListener('input', () => {
-  input.style.height = 'auto';
-  input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+  // (2026-09-13) COMPOSER-SPLITTER: ingen autosize-kap (140px) längre — höjden
+  // ägs av CSS via --composer-h (draghandtaget). Lång text rullar inuti rutan.
+  input.style.height = '';
   // @-autocomplete
   checkAtMention();
   // @-NPC-chatt-indikator
@@ -5557,7 +5563,7 @@ function sendPlayer() {
     return;
   }
   input.value = '';
-  input.style.height = 'auto';
+  input.style.height = '';   // (2026-09-13) COMPOSER-SPLITTER: CSS äger höjden — rensa inline bara
   updateAtChatChip();
   syncCliCursor();
 
@@ -7785,6 +7791,15 @@ function syncCliCursor() {
 }
 function applyCliChat() {
   document.body.classList.toggle('cli-chat', cliChatOn());
+  // (2026-09-13) COMPOSER-SPLITTER: utan sparad höjd nollställs inline-värdet så
+  // CSS-default per läge gäller (bubble max(15vh,90px) / CLI max(15vh,114px)).
+  const _csMain = document.querySelector('.main');
+  if (_csMain) {
+    let _csSaved = null;
+    try { _csSaved = parseInt(localStorage.getItem('composer-h-v1'), 10); } catch (_) {}
+    if (_csSaved && isFinite(_csSaved)) _csMain.style.setProperty('--composer-h', _csSaved + 'px');
+    else _csMain.style.removeProperty('--composer-h');
+  }
   updateCliPrompt();
   syncCliCursor();
   // Re-synka prompten om läget byts mitt under ett busy-fönster:
@@ -8556,8 +8571,7 @@ function cdMentionNpc(name) {
   const prefix = input.value.trimEnd();
   input.value = (prefix ? prefix + ' ' : '') + '@' + name + ' ';
   input.focus();
-  input.style.height = 'auto';
-  input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+  input.style.height = '';   // (2026-09-13) COMPOSER-SPLITTER: CSS äger höjden (--composer-h) — ingen 140px-kap
   hideAtPopup();
   closeCharDrawer();
 }
@@ -8719,6 +8733,83 @@ function closeModelInfo() {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { closeModelInfo(); closeAvatarModal(); closeAvatarLightbox(); closeCapModal(); }
 });
+
+// ═══════════════════════════════════════
+// ↔ COMPOSER-SPLITTER (2026-09-13) — dragbart split mellan DM-loggen och kompositören
+// Höjden läggs som inline --composer-h på .main (CSS:en i snes.css clampar den).
+// Drag upp = mindre composer, drag ner = större. Dubbelklick = default.
+// Persist i localStorage 'composer-h-v1'; pilupp/pilner via tangentbord (role=separator).
+// ═══════════════════════════════════════
+(() => {
+  const SPLIT_KEY = 'composer-h-v1';
+  const MIN_H = 44;                                   // ~1 CLI-rad
+  const maxH = () => Math.round(window.innerHeight * 0.75);
+  const main = document.querySelector('.main');
+  const handle = document.getElementById('composer-splitter');
+  const chat = document.getElementById('chat');
+  if (!main || !handle) return;
+
+  const clampH = h => Math.max(MIN_H, Math.min(Math.round(h) || MIN_H, maxH()));
+
+  function applyH(h, persist) {
+    h = clampH(h);
+    main.style.setProperty('--composer-h', h + 'px');
+    handle.setAttribute('aria-valuenow', String(h));
+    if (persist) { try { localStorage.setItem(SPLIT_KEY, String(h)); } catch (_) {} }
+  }
+
+  // Återställ sparad höjd (gardera mot skräpvärden utanför clampen)
+  let saved = null;
+  try { saved = parseInt(localStorage.getItem(SPLIT_KEY), 10); } catch (_) {}
+  if (saved && isFinite(saved)) applyH(saved, false);
+
+  let dragging = false, startY = 0, startH = 0;
+  handle.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    dragging = true;
+    startY = e.clientY;
+    // Läs aktuell --composer-h (inline px eller CSS-token → NaN); fallback = mätt texthöjd
+    startH = parseInt(getComputedStyle(main).getPropertyValue('--composer-h'), 10);
+    if (!isFinite(startH) || !startH) startH = document.getElementById('player-input').getBoundingClientRect().height || MIN_H;
+    handle.setPointerCapture(e.pointerId);
+    handle.classList.add('dragging');
+    document.body.classList.add('composer-resizing');
+  });
+  handle.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    applyH(startH + (startY - e.clientY), false);     // dra uppåt (negativ deltaY) = högre composer
+  });
+  const endDrag = e => {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove('dragging');
+    document.body.classList.remove('composer-resizing');
+    try { handle.releasePointerCapture(e.pointerId); } catch (_) {}
+    const cur = parseInt(getComputedStyle(main).getPropertyValue('--composer-h'), 10);
+    if (isFinite(cur) && cur) applyH(cur, true);      // persista slutvärdet
+    if (chat) chat.scrollTop = chat.scrollHeight;     // håll loggen klistrad i botten
+  };
+  handle.addEventListener('pointerup', endDrag);
+  handle.addEventListener('pointercancel', endDrag);
+  handle.addEventListener('dblclick', () => {
+    main.style.removeProperty('--composer-h');        // tillbaka till CSS-default (per läge)
+    try { localStorage.removeItem(SPLIT_KEY); } catch (_) {}
+  });
+  handle.addEventListener('keydown', e => {
+    const step = e.shiftKey ? 40 : 12;
+    let cur = parseInt(getComputedStyle(main).getPropertyValue('--composer-h'), 10);
+    if (!isFinite(cur) || !cur) cur = document.getElementById('player-input').getBoundingClientRect().height || MIN_H;
+    if (e.key === 'ArrowUp')   { e.preventDefault(); applyH(cur + step, true); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); applyH(cur - step, true); }
+    if (e.key === 'Home')      { e.preventDefault(); applyH(MIN_H, true); }
+  });
+  // Vyport ändras → håll värdet inom clamp (75vh kan krympa)
+  window.addEventListener('resize', () => {
+    if (dragging) return;
+    const cur = parseInt(getComputedStyle(main).getPropertyValue('--composer-h'), 10);
+    if (isFinite(cur) && cur && cur > maxH()) applyH(cur, true);
+  });
+})();
 </script>
 
 <!-- ℹ️ Model-info-modal -->

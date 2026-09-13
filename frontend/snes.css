@@ -2302,6 +2302,12 @@ body.cli-chat .input-row .cli-prompt{
   display: inline-flex;
   align-items: baseline;
   gap: .1ch;
+  /* (2026-09-13) BUGFIX: prompten får krympa — annars pressar nowrap-texten
+     textarean till en 16px-smula på breda vyportar (min-width:auto i flex). */
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-family: var(--cli-mono) !important;
   font-size: .95rem;
   white-space: nowrap;
@@ -2842,13 +2848,59 @@ body:not(.cli-chat) .msg.dm, body:not(.cli-chat) .msg.npc{ border-left: none !im
   flex: 1 1 auto !important; min-width: 0 !important;
 }
 #player-input{
-  flex: 1 1 auto !important; min-width: 0 !important;
+  flex: 1 1 auto !important;
+  /* (2026-09-13) BUGFIX: riktig minimibredd — textarean får aldrig bli en
+     16px-smula igen (prompten krymper först, se .cli-prompt ovan). */
+  min-width: min(180px, 46vw) !important;
   font-size: 1rem !important; line-height: 1.5 !important;
-  min-height: 3.2rem !important; max-height: 9rem !important;
-  padding: .45rem .55rem .45rem 1.5rem !important;   /* ← var 8.6rem */
+  /* (2026-09-13) COMPOSER-SPLITTER: höjden styrs av --composer-h (drag i
+     handtaget ovanför). !important vinner över gamla inline-style.height från
+     autosize-eran. Grow-to-fill: lång text rullar inuti rutan. */
+  height: clamp(2.75rem, var(--composer-h), 75vh) !important;
+  /* chat.html inline hade max-height:120px på .input-row textarea — ID+!important vinner */
+  max-height: 75vh !important;
+  padding: .45rem .55rem .45rem 1.8rem !important;   /* ≥1.7rem så ❯-markören aldrig krockar med texten (§7) */
   background: transparent !important; border: none !important;
   color: var(--bone-bright) !important; resize: none !important;
 }
+/* ═══ COMPOSER-SPLITTER (2026-09-13) — draghandtag mellan DM-loggen och
+   kompositören. --composer-h sätts som inline-style på .main av JS:et i
+   chat.html (nyckel 'composer-h-v1'); nedan bara CSS-defaults. Z: i flödet,
+   z-index 3 håller greppet över chat-ytan men långt under drawers (280+)
+   och topbar (300+) enligt z-laddan (kommentar rad 53). ═══ */
+.main{ --composer-h: max(15vh, 90px); }
+body.cli-chat .main{ --composer-h: max(15vh, 114px); }  /* ~5 CLI-rader */
+.composer-splitter{
+  position: relative; flex: 0 0 auto;
+  height: 8px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: row-resize;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;              /* så pointermove fungerar på touch */
+  background: transparent;
+  z-index: 3;
+}
+.composer-splitter::before{        /* tunn guld-streckad linje över hela bredden */
+  content: ''; position: absolute; left: 0; right: 0; top: 50%;
+  border-top: 1px dashed color-mix(in srgb, var(--gold) 30%, transparent);
+}
+.composer-splitter::after{         /* osynlig utvidgning uppåt = större träffyta (touch) */
+  content: ''; position: absolute; left: 0; right: 0; top: -4px; bottom: 0;
+}
+.composer-splitter .cs-grip{       /* litet centrerat grepp */
+  position: relative; width: 46px; height: 3px;
+  background: var(--gold); opacity: .5;
+  transition: opacity .15s ease, background .15s ease, box-shadow .15s ease;
+}
+.composer-splitter:hover .cs-grip,
+.composer-splitter.dragging .cs-grip{
+  opacity: 1; background: var(--gold-bright);
+  box-shadow: 0 0 6px rgba(var(--gold-rgb),.55);   /* samma guld-glow som .composer:focus-within */
+}
+.composer-splitter:focus-visible{ outline: 1px solid var(--gold); outline-offset: -1px; }
+body.composer-resizing,
+body.composer-resizing *{ cursor: row-resize !important; user-select: none !important; }
 /* Kontrollklungan (bubble-läget): samma box, samma storlek, ETT hover */
 body:not(.cli-chat) .mic-btn,
 body:not(.cli-chat) .undo-btn,
@@ -2943,7 +2995,7 @@ body.cli-chat .undo-inline button{ border-style: none !important; padding: .15re
    men smalare än desktop. ID-selektorn vinner över snes.css .input-area textarea. */
 @media (max-width: 768px){
   .input-area{ padding: .5rem .6rem .6rem !important; }
-  #player-input{ min-height: 3.4rem !important; padding: .4rem .45rem .4rem 1.4rem !important; }
+  #player-input{ height: clamp(3.4rem, var(--composer-h), 75vh) !important; min-height: 3.4rem !important; padding: .4rem .45rem .4rem 1.4rem !important; }
   body:not(.cli-chat) .mic-btn,
   body:not(.cli-chat) .undo-btn{ width: 32px !important; height: 32px !important; min-height: 32px !important; }
   body:not(.cli-chat) .send-btn{ height: 32px !important; min-height: 32px !important; }

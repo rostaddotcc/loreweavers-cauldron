@@ -1,0 +1,5 @@
+- 2026-09-13 adventure.html L477: inline CSS after snes.css — .world-prompt min-height clamp(300px,45vh,720px)!important + resize:vertical!important; #fw-prompt clamp(240px,40vh,640px)!important, font-size 1.05rem, Spectral, line-height 1.65; .prompt-size-hint (.68rem, var(--bone-dim))
+- 2026-09-13 adventure.html L988: markup — hint 'Dra i hörnet för att göra rutan större' under #fw-editor
+- 2026-09-13 adventure.html L1107: markup — samma hint under #world-prompt (prepare-panelen)
+- 2026-09-13 adventure.html L1731: updateSizeHints() — bilingual hint-text, anropas från renderAskHints()
+- 2026-09-13 adventure.html L2889: nytt slutskript — autosize på input/focus (scrollHeight, ingen cap), pointerdown/up detekterar hörndrag → userSized-flagga stoppar autosize, höjd sparas i localStorage 'world-prompt-h'/'fw-prompt-h' och återställs klampad [200px, 85vh]; wrappers på showPanel/enterFwEdit kör autosize när boxarna blir synliga

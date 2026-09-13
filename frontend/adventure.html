@@ -313,7 +313,7 @@
     .gm-row{min-height:46px;font-size:.78rem}
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=42">
+<link rel="stylesheet" href="snes.css?v=44">
 <style>
 /* ═══════════ Login-känslan — mjuka knappar (override snes.css DOS-flatten) ═══════════
    snes.css laddas efter inline-blocket och tvingar platta knappar med !important.
@@ -474,6 +474,25 @@ html{font-size:17px}
 @media(max-width:640px){
   .dark-select, .dm-model-select{ min-height: 44px !important; font-size: 16px !important; }
 }
+/* ═══════════ Stora skrivboxar (2026-09-13) — generösa mått + dra-i-hörnet ═══════════
+   Blocket ligger EFTER snes.css → !important på min-height/resize slår §7-inputreglerna
+   och mobila mediaqueryn (min-height:150px). Exakt höjd sätts av JS: autosize på input,
+   användarens dragning i hörnet vinner och sparas i localStorage. */
+.world-prompt{
+  min-height: clamp(300px, 45vh, 720px) !important;
+  resize: vertical !important;
+  line-height: 1.6 !important;
+}
+.lp-single #fw-prompt{
+  min-height: clamp(240px, 40vh, 640px) !important;
+  resize: vertical !important;
+  font-family: var(--font-body,'Spectral',serif) !important;
+  font-size: 1.05rem !important;
+  line-height: 1.65 !important;
+  color: var(--bone-bright);
+}
+.prompt-size-hint{ font-size:.68rem; color:var(--bone-dim); font-style:italic; margin:-.55rem 0 1rem; }
+#fw-editor + .prompt-size-hint{ margin:.4rem 0 .7rem; }
 </style>
 <script src="sprites.js?v=20260806b"></script>
 <script src="fonts.js?v=20260806b"></script>
@@ -966,6 +985,7 @@ html{font-size:17px}
           <textarea id="fw-prompt" spellcheck="false" oninput="renderFwPreview()" onblur="onFwBlur(event)"></textarea>
           <div class="legend-preview" id="fw-preview" onclick="enterFwEdit()"></div>
         </div>
+        <div class="prompt-size-hint" id="fw-size-hint">Dra i hörnet för att göra rutan större</div>
         <div class="blank-note">Tweak the template before the weaver gets it — your own name, a pet, a pouch of coins, a crown…</div>
       </div>
       <div class="step-actions" id="gen-row">
@@ -1084,6 +1104,7 @@ Examples:
 - A curse spreading through dreams
 
 The more you give, the richer the world becomes. But the Dungeon Master fills in the gaps — nothing needs to be complete."></textarea>
+      <div class="prompt-size-hint" id="wp-size-hint">Dra i hörnet för att göra rutan större</div>
 
       <div class="dropzone" id="dz-prepare" onclick="document.getElementById('file-prepare').click()">
         <span class="dz-icon">📂</span>
@@ -1706,12 +1727,22 @@ const ASK_HINTS = {
   tts: ['Which provider whispers the spoken word when the DM speaks aloud. <b>Ask the Dungeon Master if unsure.</b>',
         'Vilken leverantör viskar orden när DM talar högt. <b>Fråga Dungeon Mastern om du är osäker.</b>'],
 };
+/* Dra-i-hörnet-ledtråd under de stora skrivboxarna — bilingual (2026-09-13) */
+function updateSizeHints() {
+  const en = isEn();
+  const texts = ['Drag the corner to make the box bigger', 'Dra i hörnet för att göra rutan större'];
+  ['wp-size-hint', 'fw-size-hint'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = en ? texts[0] : texts[1];
+  });
+}
 function renderAskHints() {
   const en = isEn();
   document.querySelectorAll('.ask-tip[data-ask]').forEach(tip => {
     const pair = ASK_HINTS[tip.dataset.ask];
     if (pair) tip.innerHTML = en ? pair[0] : pair[1];
   });
+  updateSizeHints();
 }
 
 
@@ -2852,6 +2883,84 @@ tick();
   } else {
     startWith(null);
   }
+})();
+</script>
+<script>
+/* ═══════════ Skrivboxar med gott om plats (2026-09-13) ═══════════
+   #world-prompt & #fw-prompt: växer automatiskt med innehållet, men
+   användarens dragning i hörnet vinner — då stannar autosize och den
+   manuella höjden sparas i localStorage ('world-prompt-h' / 'fw-prompt-h'). */
+(function () {
+  function clampPx(v, min, max) { return Math.min(max, Math.max(min, v)); }
+
+  function setupPromptBox(id, storeKey) {
+    const ta = document.getElementById(id);
+    if (!ta) return null;
+    let userSized = false;
+
+    // Återställ sparad höjd, klampad till [200px, 85vh]
+    try {
+      const saved = parseInt(localStorage.getItem(storeKey) || '', 10);
+      if (saved > 0) {
+        const max = Math.max(200, Math.round(window.innerHeight * 0.85));
+        ta.style.height = clampPx(saved, 200, max) + 'px';
+        userSized = true; // sparad höjd = användaren har valt storlek själv
+      }
+    } catch (_) {}
+
+    function minPx() {
+      const m = parseFloat(getComputedStyle(ta).minHeight);
+      return isFinite(m) && m > 0 ? m : 200;
+    }
+    function autosize() {
+      if (userSized) return;          // bråka inte med manuellt vald höjd
+      if (!ta.offsetParent) return;   // dold (preview-läge / panel ej uppslagen)
+      ta.style.height = 'auto';
+      ta.style.height = Math.max(ta.scrollHeight, minPx()) + 'px';
+    }
+    ta.addEventListener('input', autosize);
+    ta.addEventListener('focus', autosize);
+
+    // Upptäck dragning i resize-hörnet: observera höjden utan att störa musen
+    let startH = null;
+    ta.addEventListener('pointerdown', () => { startH = ta.getBoundingClientRect().height; });
+    window.addEventListener('pointerup', () => {
+      if (startH === null) return;
+      const prev = startH;
+      startH = null;
+      const h = Math.round(ta.getBoundingClientRect().height);
+      if (Math.abs(h - prev) > 3) {
+        userSized = true;
+        try { localStorage.setItem(storeKey, String(h)); } catch (_) {}
+      }
+    });
+
+    return { autosize: autosize };
+  }
+
+  const wpBox = setupPromptBox('world-prompt', 'world-prompt-h');
+  const fwBox = setupPromptBox('fw-prompt', 'fw-prompt-h');
+
+  // När prepare-panelen slås upp blir #world-prompt synlig → autosize då
+  const _showPanel = window.showPanel;
+  if (typeof _showPanel === 'function') {
+    window.showPanel = function () {
+      const r = _showPanel.apply(this, arguments);
+      if (wpBox) requestAnimationFrame(wpBox.autosize);
+      return r;
+    };
+  }
+  // Preview → edit för #fw-prompt: textrutan blir synlig först då
+  const _enterFwEdit = window.enterFwEdit;
+  if (typeof _enterFwEdit === 'function') {
+    window.enterFwEdit = function () {
+      const r = _enterFwEdit.apply(this, arguments);
+      if (fwBox) requestAnimationFrame(fwBox.autosize);
+      return r;
+    };
+  }
+
+  if (wpBox) requestAnimationFrame(wpBox.autosize);
 })();
 </script>
 </body>

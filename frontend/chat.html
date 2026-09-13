@@ -8239,13 +8239,13 @@ function toast(msg, ms = 2600) {
 }
 
 // ── Release-toast: en gång per version (localStorage) ──
-const RELEASE_TOAST_VERSION = 'v1.3';
+const RELEASE_TOAST_VERSION = 'v1.3-20260913';
 function maybeShowReleaseToast() {
   try {
     if (localStorage.getItem('dnd_release_toast') === RELEASE_TOAST_VERSION) return;
     localStorage.setItem('dnd_release_toast', RELEASE_TOAST_VERSION);
   } catch (_) { /* private mode — visa ändå */ }
-  setTimeout(() => toast('✦ v1.3: Qwen 3.8 Flash is now free for everyone — and you can undo your last turn.', 9000), 1400);
+  setTimeout(() => toast('✦ New: Qwen 3.8 Flash — the fast, free DM mind. Set it in Settings. Plus resizable composer and self-keeping combat rounds.', 9000), 1400);
 }
 
 // ═══════════════════════════════════════

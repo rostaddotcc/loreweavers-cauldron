@@ -923,7 +923,7 @@ function renderPreview(c, ac, glow) {
 
   document.getElementById('pv-traits').innerHTML = c.traits.map(t=>`<span class="pv-trait">✦ ${t}</span>`).join('');
   document.getElementById('pv-gear').innerHTML = '🎒 ' + c.gear;
-  document.getElementById('pv-story').textContent = c.story;
+  document.getElementById('pv-story').textContent = _vPlain(c.story);
 }
 
 // 🎨 Generera AI-avatar från character sheet (automatiskt — backend bygger prompten
@@ -1032,6 +1032,17 @@ async function loadVaultHeroes() {
 
 function _vEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function _vMod(score) { const m = Math.floor(((score||10)-10)/2); return m >= 0 ? '+'+m : ''+m; }
+// Rå-markdown ur LLM-texter (äventyrsbiosar) → ren löpande text.
+function _vPlain(s) { return String(s||'').replace(/\*\*(.+?)\*\*/g,'$1').replace(/\*([^*]+)\*/g,'$1'); }
+// Platshållar-sigill för omålade karaktärer — emoji-fonten 🎭 saknas i
+// headless/många Linux-webbläsare och renderades som trasig bildruta.
+// Inline-SVG med spelets guld-palett renderar överallt.
+const _vaultPlaceholderSigil = '<svg viewBox="0 0 48 48" width="60%" height="60%" aria-hidden="true">' +
+  '<path d="M24 6 C16 6 11 12 11 20 C11 25 12.5 29.5 15.5 34 C17.5 37 17 40 19.5 42 C21 43 23 42.5 24 41.5 C25 42.5 27 43 28.5 42 C31 40 30.5 37 32.5 34 C35.5 29.5 37 25 37 20 C37 12 32 6 24 6 Z" fill="none" stroke="var(--gold,#c9a227)" stroke-width="2.4"/>' +
+  '<path d="M18.5 21.5 Q20.5 19 22.5 21.5 M25.5 21.5 Q27.5 19 29.5 21.5" fill="none" stroke="var(--gold,#c9a227)" stroke-width="2.2" stroke-linecap="round"/>' +
+  '<path d="M17.5 28.5 Q24 33 30.5 28.5" fill="none" stroke="var(--gold,#c9a227)" stroke-width="2.2" stroke-linecap="round"/>' +
+  '<circle cx="15" cy="15" r="1.6" fill="var(--gold,#c9a227)"/><circle cx="33" cy="15" r="1.6" fill="var(--gold,#c9a227)"/>' +
+  '</svg>';
 
 function renderVaultHeroes() {
   const grid = document.getElementById('vault-grid');
@@ -1044,7 +1055,7 @@ function renderVaultHeroes() {
     const cls = [c.race, c.class].filter(Boolean).join(' · ');
     const avatar = c.has_avatar
       ? `<img src="${API.vaultAvatarUrl(c.id)}?t=${Date.now()}" alt="">`
-      : '🎭';
+      : _vaultPlaceholderSigil;
     return `<div class="vcard">
       <div class="vcard-head">
         <div class="vcard-avatar">${avatar}</div>
@@ -1053,7 +1064,7 @@ function renderVaultHeroes() {
           <div class="vcard-cls">${_vEsc(cls)} · L${c.level||1}</div>
         </div>
       </div>
-      <div class="vcard-story">${_vEsc(c.story||'')}</div>
+      <div class="vcard-story">${_vEsc(_vPlain(c.story||''))}</div>
       <div class="vcard-actions">
         <button class="vcard-use" id="vuse-${_vEsc(c.id)}" onclick="useVaultHero('${_vEsc(c.id)}', this)">⚔️ Take This Adventurer</button>
         <button class="vcard-inspect" onclick="openVaultInspect('${_vEsc(c.id)}')">Inspect</button>
@@ -1114,7 +1125,7 @@ async function openVaultInspect(charId) {
     : '';
   const avatar = entry.avatar
     ? `<div class="pv-portrait"><img src="${API.vaultAvatarUrl(charId)}?t=${Date.now()}" alt=""></div>`
-    : `<div class="pv-portrait">🎭</div>`;
+    : `<div class="pv-portrait">${_vaultPlaceholderSigil}</div>`;
 
   document.getElementById('vault-insp-content').innerHTML = `
     <div class="pv-head">
@@ -1132,7 +1143,7 @@ async function openVaultInspect(charId) {
       <span>🎯 Prof <b>+${ch.proficiency||2}</b></span>
     </div>
     <div class="pv-traits">${traits.map(t=>`<span class="pv-trait">✦ ${_vEsc(t)}</span>`).join('')}</div>
-    <div class="pv-story">${_vEsc(ch.story||ch.background||'')}</div>
+    <div class="pv-story">${_vEsc(_vPlain(ch.story||ch.background||''))}</div>
     ${invHtml}
     <div class="pv-actions">
       <button class="pv-go" onclick="closeVaultInspect();useVaultHero('${_vEsc(charId)}')">⚔️ Take This Adventurer</button>

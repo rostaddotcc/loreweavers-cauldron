@@ -7383,6 +7383,28 @@ async def vault_generate_stream(req: VaultGenRequest, morkrets_token: str | None
     )
 
 
+def _vault_story_snippet(story, limit: int = 220) -> str:
+    """Klipp berättelsen VID ORDGÄNSET — aldrig mitt i ett ord.
+
+    Rå `story[:220]` kapade biosar mitt i ordet ("...not to save her, bu")
+    utan elliptis, vilket såg ut som en bugg på vault-korten. Klipp vid
+    senaste mellanslag + ' …' om text fortsätter.
+    LLM-biosar innehåller också rå markdown (`*The Viper's Kiss*`) —
+    betoningen tas bort innan klippen tas.
+    """
+    s = " ".join(str(story or "").split())
+    s = re.sub(r"\*\*(.+?)\*\*", r"\1", s)  # **bold**
+    s = re.sub(r"\*([^*]+)\*", r"\1", s)    # *emfas*
+    s = s.strip()
+    if len(s) <= limit:
+        return s
+    cut = s[:limit]
+    sp = cut.rfind(" ")
+    if sp > limit // 2:
+        cut = cut[:sp]
+    return cut.rstrip(",;:. ") + " …"
+
+
 def _vault_summary(entry: dict) -> dict:
     """Kompakt vault-post för listningar (frontend-kort)."""
     ch = entry.get("character") or {}
@@ -7398,7 +7420,7 @@ def _vault_summary(entry: dict) -> dict:
         "background": ch.get("background") or "",
         "hp_max": hp.get("max") if isinstance(hp, dict) else hp,
         "ac": ch.get("ac"),
-        "story": (ch.get("story") or "")[:220],
+        "story": _vault_story_snippet(ch.get("story")),
         "saved_at": entry.get("saved_at"),
         "campaign_name": entry.get("campaign_name") or "",
         "has_avatar": bool((entry.get("avatar") or {}).get("disk_name")),

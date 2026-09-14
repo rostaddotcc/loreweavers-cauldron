@@ -336,7 +336,7 @@ function charSheetHtml(ch) {
 
 function renderPreview(ch) {
   const { stats, vitals, traits } = charSheetHtml(ch);
-  document.getElementById('pv-icon').textContent = '🎭';
+  document.getElementById('pv-icon').innerHTML = _vaultPlaceholderSigil;
   document.getElementById('pv-name').textContent = ch.name || 'Nameless';
   document.getElementById('pv-class').textContent = [ch.race, ch.class].filter(Boolean).join(' · ') + (ch.level ? ' · Level ' + ch.level : '');
   document.getElementById('pv-stats').innerHTML = stats;
@@ -379,7 +379,18 @@ async function saveForged() {
 // ═══════════════════════════════════════
 // VAULT — lista / inspektera / radera
 // ═══════════════════════════════════════
+// Platshållar-sigill för omålade karaktärer (emoji 🎭 saknas i många
+// Linux/headless-fonts → trasig bildruta). Inline-SVG i guld-palett.
+const _vaultPlaceholderSigil = '<svg viewBox="0 0 48 48" width="60%" height="60%" aria-hidden="true">' +
+  '<path d="M24 6 C16 6 11 12 11 20 C11 25 12.5 29.5 15.5 34 C17.5 37 17 40 19.5 42 C21 43 23 42.5 24 41.5 C25 42.5 27 43 28.5 42 C31 40 30.5 37 32.5 34 C35.5 29.5 37 25 37 20 C37 12 32 6 24 6 Z" fill="none" stroke="var(--gold,#c9a227)" stroke-width="2.4"/>' +
+  '<path d="M18.5 21.5 Q20.5 19 22.5 21.5 M25.5 21.5 Q27.5 19 29.5 21.5" fill="none" stroke="var(--gold,#c9a227)" stroke-width="2.2" stroke-linecap="round"/>' +
+  '<path d="M17.5 28.5 Q24 33 30.5 28.5" fill="none" stroke="var(--gold,#c9a227)" stroke-width="2.2" stroke-linecap="round"/>' +
+  '<circle cx="15" cy="15" r="1.6" fill="var(--gold,#c9a227)"/><circle cx="33" cy="15" r="1.6" fill="var(--gold,#c9a227)"/>' +
+  '</svg>';
 let vaultChars = [];
+
+// Rå-markdown ur LLM-biosar → ren löpande text.
+function _vPlain(s) { return String(s||'').replace(/\*\*(.+?)\*\*/g,'$1').replace(/\*([^*]+)\*/g,'$1'); }
 
 async function loadVault() {
   try {
@@ -400,7 +411,7 @@ function renderVault() {
     const date = c.saved_at ? new Date(c.saved_at).toLocaleDateString('en-US', {month:'short',day:'numeric'}) : '';
     const avatar = c.has_avatar
       ? `<img src="${API.vaultAvatarUrl(c.id)}?t=${Date.now()}" alt="">`
-      : '🎭';
+      : _vaultPlaceholderSigil;
     return `<div class="vcard" onclick="openInspect('${esc(c.id)}')">
       <div class="vcard-head">
         <div class="vcard-avatar">${avatar}</div>
@@ -413,7 +424,7 @@ function renderVault() {
       <div class="vcard-meta">
         <span>❤️ ${c.hp_max||'?'}</span><span>🛡️ ${c.ac||'?'}</span><span>🎒 ${c.item_count} items</span>
       </div>
-      <div class="vcard-story">${esc(c.story||'')}</div>
+      <div class="vcard-story">${esc(_vPlain(c.story||''))}</div>
       <div class="vcard-foot">
         <span>${c.campaign_name ? '⚔ ' + esc(c.campaign_name) : '⚒ Forged free'}</span>
         <span class="saved-tag">${date}</span>
@@ -444,11 +455,11 @@ async function openInspect(charId) {
     : '';
   const storyText = ch.story || ch.background || '';
   const storyHtml = storyText
-    ? `<div class="section-label" style="margin-top:1.2rem">Backstory</div><div class="pv-story">${esc(storyText).replace(/\n/g,'<br>')}</div>`
+    ? `<div class="section-label" style="margin-top:1.2rem">Backstory</div><div class="pv-story">${esc(_vPlain(storyText)).replace(/\n/g,'<br>')}</div>`
     : '';
   const avatar = entry.avatar
     ? `<div class="pv-portrait" id="insp-avatar"><img src="${API.vaultAvatarUrl(charId)}?t=${Date.now()}" alt=""></div>`
-    : `<div class="pv-portrait" id="insp-avatar">🎭</div>`;
+    : `<div class="pv-portrait" id="insp-avatar">${_vaultPlaceholderSigil}</div>`;
 
   document.getElementById('insp-content').innerHTML = `
     <div class="pv-head">

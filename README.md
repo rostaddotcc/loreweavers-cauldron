@@ -17,6 +17,30 @@ The game speaks **Svenska and English** (campaign-aware, chosen when you start a
 
 ---
 
+## 📸 At the table
+
+The cauldron gate — every hero portrait on the site is painted in-game by Qwen Image 3 Pro:
+
+![The Lore Weaver's Cauldron — login](docs/screenshots/hero-login.jpg)
+
+The game table: DM narration on the left, live character sheet in the Codex drawer, party/quest/NPC state in the sidebar:
+
+![At the table](docs/screenshots/at-the-table.jpg)
+
+Rolls are resolved server-side and shown inline — skill, DC, total and dice breakdown, failures included:
+
+![Server-authoritative dice in the transcript](docs/screenshots/dice-and-narration.jpg)
+
+The Book of Souls — a gallery of adventurers and NPCs, painted and tracked from the live campaign state:
+
+![Book of Souls](docs/screenshots/book-of-souls.jpg)
+
+Built for the phone too — full table, terminal composer and voice input in a portrait layout:
+
+![Mobile play](docs/screenshots/mobile-table.jpg)
+
+---
+
 ## ✨ Features
 
 ### 🗣️ Conversational Dungeon Master

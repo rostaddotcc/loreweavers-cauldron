@@ -636,6 +636,74 @@
 .cap-input{ border-radius: 6px !important; }
 .table-wrap{ border-radius: 10px !important; }
 </style>
+<style>
+/* ══════════ REALM OVERVIEW — tight exec dashboard (2026-09-14) ══════════ */
+.kpi-band{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.8rem; margin-bottom:.8rem; }
+.kpi{ position:relative; background:linear-gradient(155deg,var(--stone-2) 0%,var(--stone) 72%); border:1px solid var(--edge);
+  border-radius:12px !important; padding:.8rem 1rem .85rem 1.15rem; min-width:0;
+  transition:border-color .18s ease, transform .18s ease, box-shadow .18s ease; }
+.kpi::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--gold); border-radius:12px 0 0 12px !important; }
+.kpi:hover{ border-color:rgba(var(--gold-rgb),.45); transform:translateY(-2px); box-shadow:0 8px 22px -14px rgba(0,0,0,.95); }
+.kpi.arcane::before{ background:var(--arcane); } .kpi.teal::before{ background:var(--teal); }
+.kpi.term::before{ background:var(--term-green); } .kpi.poison::before{ background:var(--poison); }
+.kpi.ember::before{ background:var(--ember); } .kpi.blood::before{ background:var(--blood-bright); }
+.kpi-l{ font-family:var(--font-display) !important; font-size:.62rem; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--bone-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.kpi-n{ font-family:var(--font-mono) !important; font-size:1.95rem; line-height:1.02; margin:.3rem 0 .26rem;
+  color:var(--bone-bright); font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
+.kpi.hi .kpi-n{ color:var(--gold-bright); text-shadow:0 0 16px rgba(var(--gold-rgb),.35); }
+.kpi-sub{ font-family:var(--font-mono) !important; font-size:.665rem; color:var(--bone-dim); line-height:1.45; }
+.kpi-sub b{ color:var(--term-green); font-weight:400; }
+/* ── Most Used Models ── */
+.mchart{ display:flex; flex-direction:column; gap:.42rem; }
+.mrow{ display:grid; grid-template-columns:1.5rem minmax(0,1.35fr) minmax(50px,2fr) 4.6rem 2.9rem; gap:.6rem; align-items:center; }
+.mrow.m-extra{ display:none; }
+.mchart.show-all .mrow.m-extra{ display:grid; }
+.mrank{ font-family:var(--font-mono) !important; font-size:.7rem; color:var(--bone-dim); text-align:right; }
+.mname{ display:flex; align-items:center; gap:.4rem; min-width:0; }
+.m-label{ font-family:var(--font-mono) !important; font-size:.79rem; color:var(--bone-bright);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mrow.media .m-label{ color:var(--teal); }
+.mtrack{ height:15px; background:var(--ink); border:1px solid var(--edge); border-radius:4px !important; overflow:hidden; }
+.mfill{ height:100%; border-radius:3px !important; opacity:.92; transition:width .5s cubic-bezier(.22,1,.36,1); }
+.mval{ font-family:var(--font-mono) !important; font-size:.78rem; color:var(--bone-bright); text-align:right; font-variant-numeric:tabular-nums; }
+.mpct{ font-family:var(--font-mono) !important; font-size:.7rem; color:var(--bone-dim); text-align:right; font-variant-numeric:tabular-nums; }
+.pchip{ font-family:var(--font-accent) !important; font-size:.53rem; letter-spacing:.06em; text-transform:uppercase;
+  padding:.1rem .3rem; border:1px solid currentColor; border-radius:4px !important; flex:0 0 auto; opacity:.85; }
+/* ── kort-huvud med höger-slot ── */
+.chart-head{ display:flex; align-items:center; justify-content:space-between; gap:.7rem; flex-wrap:wrap; }
+.chart-head .ch-right{ display:flex; align-items:center; gap:.55rem; font-family:var(--font-mono) !important;
+  font-size:.69rem; letter-spacing:.02em; text-transform:none; color:var(--bone-dim); }
+.seg{ display:inline-flex; border:1px solid var(--edge); border-radius:8px !important; overflow:hidden; }
+.seg button{ background:var(--stone-2) !important; border:0 !important; border-radius:0 !important; color:var(--bone-dim) !important;
+  font-family:var(--font-mono) !important; font-size:.65rem; letter-spacing:.06em; text-transform:uppercase;
+  padding:.3rem .62rem !important; cursor:pointer; min-height:auto; }
+.seg button:hover{ background:var(--stone-3) !important; color:var(--gold-bright) !important; }
+.seg button.active{ background:rgba(var(--gold-rgb),.18) !important; color:var(--gold-bright) !important; }
+/* ─ inline stat-rad (ersätter kort-tunga KPI-block) ── */
+.inline-stats{ display:flex; flex-wrap:wrap; gap:.35rem 1.15rem; font-family:var(--font-mono) !important;
+  font-size:.72rem; color:var(--bone-dim); align-items:baseline; }
+.inline-stats b{ color:var(--gold-bright); font-weight:400; font-variant-numeric:tabular-nums; }
+/* ─ filter-totaler (Player Accounts) ── */
+.ftot{ display:flex; flex-wrap:wrap; gap:.4rem 1.2rem; align-items:baseline; background:var(--stone);
+  border:1px solid var(--edge); border-left:3px solid var(--gold); border-radius:10px !important;
+  padding:.6rem .9rem; margin-bottom:1rem; font-family:var(--font-mono) !important; font-size:.73rem; color:var(--bone-dim); }
+.ftot b{ color:var(--gold-bright); font-weight:400; font-variant-numeric:tabular-nums; }
+.ftot .ftot-scope{ font-family:var(--font-display) !important; font-size:.62rem; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--bone-dim); }
+.overview .charts-grid{ gap:.8rem; }
+.overview .chart-card{ padding:1rem 1.05rem 1.1rem; }
+@media (max-width:1180px){
+  .kpi-n{ font-size:1.7rem; }
+  .mrow{ grid-template-columns:1.3rem minmax(0,1.4fr) minmax(40px,1.4fr) 4.2rem 2.6rem; }
+}
+@media (max-width:900px){
+  .kpi-band{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .mrow{ grid-template-columns:1.2rem minmax(0,1fr) 4rem; }
+  .mrow .mtrack{ display:none; } .mpct{ display:none; }
+}
+@media (max-width:640px){ .kpi-n{ font-size:1.5rem; } .kpi-band{ gap:.55rem; } }
+</style>
 <script src="sprites.js?v=20260806b"></script>
 <script src="fonts.js?v=20260806b"></script>
 </head>
@@ -1050,27 +1118,16 @@ function renderStats(data) {
   const users = data.users || [];
 
   let html = `
-    <section class="sec" data-sec="realm">
-      <header class="sec-head" onclick="toggleSec('realm')">
+    <section class="sec overview" data-sec="overview">
+      <header class="sec-head" onclick="toggleSec('overview')">
         <span class="chev">▾</span>
-        <span class="sec-title">Realm Statistics</span>
-        <span class="sec-summary" id="sum-realm"></span>
-        <button class="refresh" onclick="event.stopPropagation();loadStats()" title="Refresh stats">↻ Refresh</button>
+        <span class="sec-title">Realm Overview</span>
+        <span class="sec-summary" id="sum-overview"></span>
+        <button class="refresh" onclick="event.stopPropagation();loadStats()" title="Refresh dashboard">↻ Refresh</button>
       </header>
-      <div class="sec-body" id="body-realm">
-        <div class="realm-grid" id="realm-cards"></div>
-        <div class="stats-grid" id="stat-cards"></div>
-      </div>
-    </section>
-
-    <section class="sec" data-sec="dash">
-      <header class="sec-head" onclick="toggleSec('dash')">
-        <span class="chev">▾</span>
-        <span class="sec-title">Dashboard</span>
-        <span class="sec-summary" id="sum-dash"></span>
-        <button class="refresh" onclick="event.stopPropagation();loadStats()" title="Refresh charts">↻ Refresh</button>
-      </header>
-      <div class="sec-body" id="body-dash">
+      <div class="sec-body" id="body-overview">
+        <div class="kpi-band" id="kpi-band"></div>
+        <div class="kpi-band" id="kpi-band-2"></div>
         <div class="charts-grid" id="charts-grid"></div>
       </div>
     </section>
@@ -1103,6 +1160,7 @@ function renderStats(data) {
           </select>
           <button class="cu-btn" onclick="createUser()">+ Create</button>
         </div>
+        <div class="ftot" id="ftot"></div>
         <div class="table-scroll">
           <div class="table-wrap" id="table-wrap"><table class="player-table"><thead><tr>`;
   html += thSort('User', 'username') + thSort('Role', 'role') + thSort('Email', 'email') + thSort('Country', 'country') + thSort('Campaigns', 'campaigns') + thSort('Tokens', 'tokens') + thSort('Turns', 'turns') + thSort('🔊 TTS', 'tts_seconds') + thSort('🎭 Char', 'char_creation_tokens') + thSort('🖼️ Img', 'image_gen_calls') + thSort('Last Active', 'last_active') + thSort('Created', 'created') + thSort('Last Login', 'last_login') + thSort('Turn Cap', 'turn_cap') + thSort('💳 Medlemskap', 'subscription_status') + thSort('💰 Rev', 'revenue') + '<th>Actions</th>' + '<th></th>';
@@ -1130,6 +1188,7 @@ function renderStats(data) {
 
   content.innerHTML = html;
   initSecs();
+  renderOverview();
   applyFilters();
   loadFeedback();
 }
@@ -1367,8 +1426,8 @@ function barChartDayHtml(users, days = 14) {
   }).join('') + '</div>';
 }
 
-function chartCard(span, title, body) {
-  return `<div class="chart-card span-${span}"><div class="chart-head">${title}</div>${body}</div>`;
+function chartCard(span, title, body, headRight) {
+  return `<div class="chart-card span-${span}"><div class="chart-head"><span>${title}</span>${headRight || ''}</div>${body}</div>`;
 }
 
 // ── Land-graf + tidsfilter (2026-08-09, rostad): 1h/12h/24h/7d/30d/all ──
@@ -1550,29 +1609,165 @@ function revenueChartCard() {
   return `<div class="chart-card span-12"><div class="chart-head">💰 Revenue</div>${head}<div id="rev-chart-body"><div class="vchart-empty">Loading…</div></div></div>`;
 }
 
-function renderCharts(users) {
+// ══════════════════════════════════════
+// REALM OVERVIEW (2026-09-14) — tight exec dashboard
+// ══════════════════════════════════════
+let modelMetric = 'calls';            // calls | tokens  (Most Used Models-toggle)
+const MODEL_SKIP = { 'undo-voided': 1 };
+
+function isMediaModel(n) { return /tts|audio|wan\d|image/i.test(n); }
+function modelDisplayName(n) { return String(n).replace(/^orfree:/, '').replace(/:free$/, ''); }
+
+const PROV_LABEL = {
+  dashscope: '🌊 Qwen / DashScope', deepseek: '🧠 DeepSeek', stepfun: '⚗️ StepFun',
+  mimo: '📱 MiMo', ollama: '🖥️ Local', openrouter: '🌐 OpenRouter · free', unknown: '❓ Other · free'
+};
+const PROV_COLOR = {
+  dashscope: 'var(--teal)', stepfun: 'var(--gold)', deepseek: 'var(--arcane)',
+  mimo: 'var(--ember)', openrouter: 'var(--poison)', ollama: 'var(--poison)'
+};
+function providerColor(p) { return PROV_COLOR[p] || 'var(--edge-hi)'; }
+
+// Normalisera provider-namn för modeller backend lämnar som "unknown"
+// (orfree:* = OpenRouter-free, qwen-image-* = DashScope osv).
+function normalizeProvider(name, provider) {
+  if (/^orfree:/.test(name)) return 'openrouter';
+  if (provider && provider !== 'unknown') return provider;
+  if (/^(qwen|wan)/.test(name)) return 'dashscope';
+  if (/^step/.test(name)) return 'stepfun';
+  if (/^deepseek/.test(name)) return 'deepseek';
+  if (/^mimo/.test(name)) return 'mimo';
+  return provider || 'unknown';
+}
+
+function _within(iso, ms) {
+  const t = iso ? Date.parse(iso) : NaN;
+  return !isNaN(t) && (Date.now() - t) <= ms;
+}
+
+function kpiTile(cls, label, num, sub) {
+  return `<div class="kpi${cls ? ' ' + cls : ''}"><div class="kpi-l">${label}</div>` +
+    `<div class="kpi-n">${num}</div><div class="kpi-sub">${sub || ''}</div></div>`;
+}
+
+// ── KPI-band: nyckelsiffrorna högst upp (8 brickor, 4 + 4) ──
+function renderKpiBand(users) {
+  const band = document.getElementById('kpi-band');
+  const band2 = document.getElementById('kpi-band-2');
+  if (!band || !band2) return;
+  const vis = (statsData && statsData.visits) || {};
+  const provs = (statsData && statsData.providers) || {};
+  const models = (statsData && statsData.models) || {};
+  const calls = Object.values(provs).reduce((a, p) => a + (p.calls || 0), 0);
+  const nModels = Object.keys(models).filter(m => !MODEL_SKIP[m]).length;
+  const admins = users.filter(u => (u.role || 'player') === 'admin').length;
+  const players = users.length - admins;
+  const newToday = users.filter(u => _within(u.created_at, 864e5)).length;
+  const new7 = users.filter(u => _within(u.created_at, 6048e5)).length;
+  const live24 = users.filter(u => _within(u.last_login, 864e5)).length;
+  const live7 = users.filter(u => _within(u.last_login, 6048e5)).length;
+  const campaigns = (statsData && statsData.total_campaigns) || 0;
+  const tokens = (statsData && statsData.total_tokens) || 0;
+  const turns = (statsData && statsData.total_turns) || 0;
+  const perTurn = turns ? Math.round(tokens / turns) : 0;
+  const ttsMin = Math.round(sumUsers(users, 'tts_minutes'));
+  const ttsChars = sumUsers(users, 'tts_chars');
+  const imgs = sumUsers(users, 'image_gen_calls');
+  const mrr = billingData ? (billingData.mrr || 0) : 0;
+  const rev = billingData ? (billingData.total || 0) : 0;
+  const txs = billingData ? (billingData.transactions || 0) : 0;
+  const topProv = Object.entries(provs)
+    .sort((a, b) => (b[1].calls || 0) - (a[1].calls || 0)).slice(0, 2)
+    .map(([k, v]) => (PROV_LABEL[k] || k).replace(/^\S+\s/, '') + ' ' + fmtNum(v.calls || 0)).join(' · ');
+  const topModel = Object.entries(models).filter(([m]) => !MODEL_SKIP[m])
+    .sort((a, b) => (b[1].tokens || 0) - (a[1].tokens || 0))[0];
+
+  band.innerHTML =
+    kpiTile('hi', 'Players', fmtNum(users.length),
+      `<b>+${newToday}</b> today · +${new7} this week · ${players} players / ${admins} admin`) +
+    kpiTile('ember', 'Turns played', fmtNum(turns),
+      `avg ${(turns / (users.length || 1)).toFixed(1)} per player · ≈${fmtTokens(perTurn)} tokens / turn`) +
+    kpiTile('arcane', 'Tokens processed', fmtTokens(tokens),
+      `${fmtNum(tokens)} raw · ${nModels} models called${topModel ? ' · top ' + esc(modelDisplayName(topModel[0])) : ''}`) +
+    kpiTile('teal', 'AI calls', fmtNum(calls),
+      `${Object.keys(provs).length} providers · ${topProv}`);
+
+  band2.innerHTML =
+    kpiTile('poison', 'Campaigns', fmtNum(campaigns),
+      `${(campaigns / (users.length || 1)).toFixed(1)} per player · ${fmtNum(imgs)} AI images painted`) +
+    kpiTile('ember', 'Narrator minutes', fmtNum(ttsMin),
+      `${fmtNum(sumUsers(users, 'tts_calls'))} readouts · ${fmtTokens(ttsChars)} chars narrated`) +
+    kpiTile('term', 'Live players', fmtNum(live24),
+      `in the last 24 h · ${fmtNum(live7)} this week · ${fmtNum(vis.today || 0)} visits today`) +
+    kpiTile('', 'Revenue', fmtSek(mrr),
+      `MRR · ${fmtSek(rev)} lifetime · ${fmtNum(txs)} transactions`);
+}
+
+// ── Most Used Models — tydlig horisontell stapel-chart (calls | tokens) ──
+function renderModelChart() {
+  const el = document.getElementById('model-chart-body');
+  if (!el) return;
+  const models = (statsData && statsData.models) || {};
+  const key = modelMetric === 'tokens' ? 'tokens' : 'calls';
+  const list = Object.entries(models)
+    .map(([name, m]) => ({
+      name, label: modelDisplayName(name),
+      provider: normalizeProvider(name, m.provider),
+      calls: m.calls || 0, tokens: m.tokens || 0,
+      media: isMediaModel(name)
+    }))
+    .filter(m => !MODEL_SKIP[m.name] && m[key] > 0)
+    .sort((a, b) => b[key] - a[key]);
+  const total = list.reduce((a, m) => a + m[key], 0) || 1;
+  const max = Math.max(...list.map(m => m[key]), 1);
+  const MAX = 10;
+  const rows = list.map((m, i) => `
+    <div class="mrow${m.media ? ' media' : ''}${i >= MAX ? ' m-extra' : ''}" title="${esc(m.name)} · ${esc(m.provider)} — ${fmtNum(m.calls)} calls · ${fmtNum(m.tokens)} tokens">
+      <span class="mrank">${i + 1}</span>
+      <span class="mname"><span class="m-label">${esc(m.label)}</span><span class="pchip" style="color:${providerColor(m.provider)}">${esc(m.provider)}</span></span>
+      <div class="mtrack"><div class="mfill" style="width:${(m[key] / max * 100).toFixed(1)}%;background:${providerColor(m.provider)}"></div></div>
+      <span class="mval">${key === 'calls' ? fmtNum(m.calls) : fmtTokens(m.tokens)}</span>
+      <span class="mpct">${(m[key] / total * 100).toFixed(1)}%</span>
+    </div>`).join('');
+  el.innerHTML = list.length
+    ? `<div class="mchart">${rows}</div>` +
+      (list.length > MAX ? `<button class="cbar-more" id="model-more" type="button" onclick="toggleModelMore(this)" data-n="${list.length - MAX}">Click more · ${list.length - MAX} more</button>` : '')
+    : '<div class="chart-empty">No model calls recorded yet</div>';
+  const totEl = document.getElementById('model-total');
+  if (totEl) totEl.textContent = (key === 'calls' ? fmtNum(total) + ' calls' : fmtTokens(total) + ' tokens') + ' · ' + list.length + ' models';
+  document.querySelectorAll('.seg-model button').forEach(b => b.classList.toggle('active', b.dataset.metric === modelMetric));
+}
+function setModelMetric(m) { modelMetric = m; renderModelChart(); }
+function toggleModelMore(btn) {
+  const c = document.querySelector('.mchart');
+  const open = c ? c.classList.toggle('show-all') : false;
+  btn.textContent = open ? 'Show less' : `Click more · ${btn.dataset.n} more`;
+}
+
+function renderOverview() {
   const grid = document.getElementById('charts-grid');
   if (!grid) return;
+  const users = (statsData && statsData.users) || [];
+  const vis = (statsData && statsData.visits) || null;
+  const provs = (statsData && statsData.providers) || {};
   const COL = chartColors();
   const DIM = cssVar('--edge-hi', '#5a4a7a');
-  const emptyMsg = users.length ? 'No data yet' : 'No players match the current filters';
 
-  // 1) Token share per player (top 8 + rest)
-  const byTok = users.slice().sort((a, b) => (b.total_tokens || 0) - (a.total_tokens || 0));
-  let s1 = byTok.slice(0, 8).map((u, i) => ({ label: u.username, value: u.total_tokens || 0, color: COL[i % COL.length] }));
-  const rest1 = byTok.slice(8).reduce((a, u) => a + (u.total_tokens || 0), 0);
-  if (rest1 > 0) s1.push({ label: 'Rest', value: rest1, color: DIM });
-  s1 = s1.filter(s => s.value > 0);
-  const tot1 = s1.reduce((a, s) => a + s.value, 0);
-  const b1 = s1.length
-    ? `<div class="chart-body"><div class="donut-wrap">${donutSVG(s1, fmtTokens(tot1), 'tokens')}</div>${legendHtml(s1, fmtTokens)}</div>`
-    : `<div class="chart-empty">${emptyMsg}</div>`;
+  // 1) Token-share per provider
+  const provKeys = Object.keys(provs).filter(k => (provs[k].tokens || 0) > 0);
+  const sProv = provKeys.map((k, i) => ({
+    label: PROV_LABEL[k] || k, value: provs[k].tokens || 0,
+    color: (k === 'unknown') ? DIM : COL[i % COL.length]
+  }));
+  const totProv = sProv.reduce((a, s) => a + s.value, 0);
+  const bProv = sProv.length
+    ? `<div class="chart-body"><div class="donut-wrap">${donutSVG(sProv, fmtTokens(totProv), 'tokens')}</div>${legendHtml(sProv, fmtTokens)}</div>`
+    : '<div class="chart-empty">No data yet</div>';
 
-  // 2) Token split: prompt / completion / TTS / char-gen / other
+  // 2) Token-split: prompt / completion / TTS / char-gen
   const pT = sumUsers(users, 'prompt_tokens'), cT = sumUsers(users, 'completion_tokens');
   const tT = sumUsers(users, 'tts_tokens'), ccT = sumUsers(users, 'char_creation_tokens');
-  const totTk = sumUsers(users, 'total_tokens');
-  const oT = Math.max(0, totTk - pT - cT - tT - ccT);
+  const oT = Math.max(0, sumUsers(users, 'total_tokens') - pT - cT - tT - ccT);
   let s2 = [
     { label: 'Prompt', value: pT, color: COL[1] },
     { label: 'Completion', value: cT, color: COL[6] },
@@ -1584,184 +1779,74 @@ function renderCharts(users) {
   const tot2 = s2.reduce((a, s) => a + s.value, 0);
   const b2 = s2.length
     ? `<div class="chart-body"><div class="donut-wrap">${donutSVG(s2, fmtTokens(tot2), 'tokens')}</div>${legendHtml(s2, fmtTokens)}</div>`
-    : `<div class="chart-empty">${emptyMsg}</div>`;
-
-  // 3) Usage by country (top 8 + rest)
-  const byC = {};
-  users.forEach(u => {
-    const key = u.country_code || '__none__';
-    if (!byC[key]) byC[key] = { label: (u.country_flag || '❓') + ' ' + (u.country || 'Unknown'), value: 0 };
-    byC[key].value += u.total_tokens || 0;
-  });
-  const cArr = Object.values(byC).sort((a, b) => b.value - a.value);
-  let s3 = cArr.slice(0, 8).map((c, i) => ({ label: c.label, value: c.value, color: COL[i % COL.length] }));
-  const rest3 = cArr.slice(8).reduce((a, c) => a + c.value, 0);
-  if (rest3 > 0) s3.push({ label: 'Rest', value: rest3, color: DIM });
-  s3 = s3.filter(s => s.value > 0);
-  const tot3 = s3.reduce((a, s) => a + s.value, 0);
-  const b3 = s3.length
-    ? `<div class="chart-body"><div class="donut-wrap">${donutSVG(s3, fmtTokens(tot3), 'tokens')}</div>${legendHtml(s3, fmtTokens)}</div>`
-    : `<div class="chart-empty">${emptyMsg}</div>`;
-
-  // 4) Role split (by user count)
-  const admins = users.filter(u => (u.role || 'player') === 'admin').length;
-  const players = users.length - admins;
-  let s4 = [
-    { label: 'Admins', value: admins, color: COL[0] },
-    { label: 'Players', value: players, color: COL[1] }
-  ].filter(s => s.value > 0);
-  const b4 = s4.length
-    ? `<div class="chart-body"><div class="donut-wrap">${donutSVG(s4, String(users.length), 'players')}</div>${legendHtml(s4, null)}</div>`
-    : `<div class="chart-empty">${emptyMsg}</div>`;
-
-  // 4b) Token share by provider (global statsData — not filter-bound)
-  const PROV_LABEL = {
-    dashscope: '🌊 Qwen / DashScope',
-    deepseek: '🧠 DeepSeek',
-    stepfun: '⚗️ StepFun',
-    mimo: '📱 MiMo',
-    ollama: '🖥️ Local',
-    unknown: '❓ Unknown'
-  };
-  const provs = (statsData && statsData.providers) || {};
-  const provKeys = Object.keys(provs).filter(k => (provs[k].tokens || 0) > 0);
-  const sProv = provKeys.map((k, i) => ({
-    label: PROV_LABEL[k] || k,
-    value: provs[k].tokens || 0,
-    color: k === 'unknown' ? DIM : COL[i % COL.length]
-  }));
-  const totProv = sProv.reduce((a, s) => a + s.value, 0);
-  const bProv = sProv.length
-    ? `<div class="chart-body"><div class="donut-wrap">${donutSVG(sProv, fmtTokens(totProv), 'tokens')}</div>${legendHtml(sProv, fmtTokens)}</div>`
     : '<div class="chart-empty">No data yet</div>';
 
-  // 4c) Calls by provider + top models (global statsData — not filter-bound)
-  const callKeys = Object.keys(provs)
-    .filter(k => (provs[k].calls || 0) > 0)
-    .sort((a, b) => (provs[b].calls || 0) - (provs[a].calls || 0));
-  const itemsCalls = callKeys.map((k, i) => ({
-    label: PROV_LABEL[k] || k,
-    value: provs[k].calls || 0,
-    color: k === 'unknown' ? DIM : COL[i % COL.length]
-  }));
-  const totCalls = itemsCalls.reduce((a, s) => a + s.value, 0);
-  const models = (statsData && statsData.models) || {};
-  // 2026-08-06: ALLA anropade modeller listas (tidigare bara top 5) —
-  // inkl. TTS- och bildmodeller som backend nu bokför i models/.
-  const allModels = Object.keys(models)
-    .filter(m => (models[m].calls || 0) > 0)
-    .sort((a, b) => (models[b].calls || 0) - (models[a].calls || 0))
-    .map(m => ({ name: m, provider: models[m].provider || 'unknown', calls: models[m].calls || 0 }));
-  const modelLine = allModels.length
-    ? '<div class="role-split model-all">' + allModels.map(m => {
-        const pct = totCalls ? Math.round(m.calls / totCalls * 100) : 0;
-        const isMedia = /tts|audio|wan|image|step-image/.test(m.name);
-        return `<span class="${isMedia ? 'mc-media' : ''}"><b>${esc(m.name)}</b> (${esc(m.provider)}) — ${fmtNum(m.calls)} calls · ${pct}%</span>`;
-      }).join('') + '</div>'
-    : '';
-  const bCalls = itemsCalls.length
-    ? `<div class="chart-body">${barListHtml(itemsCalls, fmtNum)}${modelLine}</div>`
-    : '<div class="chart-empty">No data yet</div>';
+  // 3) Topp-spelare per tokens
+  const byTok = users.slice().sort((a, b) => (b.total_tokens || 0) - (a.total_tokens || 0)).filter(u => (u.total_tokens || 0) > 0);
+  const MAXP = 10;
+  let itemsP = byTok.slice(0, MAXP).map((u, i) => ({ label: u.username, value: u.total_tokens || 0, color: COL[i % COL.length] }));
+  const restP = byTok.slice(MAXP).reduce((a, u) => a + (u.total_tokens || 0), 0);
+  if (restP > 0) itemsP.push({ label: `Rest · ${byTok.length - MAXP} players`, value: restP, color: DIM });
+  const bPlayers = itemsP.length ? barListHtml(itemsP, fmtTokens) : '<div class="chart-empty">No player tokens yet</div>';
 
-  // 5) TTS seconds per player (top 8 + rest)
-  const byTts = users.slice().sort((a, b) => (b.tts_seconds || 0) - (a.tts_seconds || 0)).filter(u => (u.tts_seconds || 0) > 0);
-  let items5 = byTts.slice(0, 8).map((u, i) => ({ label: u.username, value: u.tts_seconds || 0, color: COL[i % COL.length] }));
-  const rest5 = byTts.slice(8).reduce((a, u) => a + (u.tts_seconds || 0), 0);
-  if (rest5 > 0) items5.push({ label: 'Rest', value: rest5, color: DIM });
-  const b5 = items5.length ? barListHtml(items5, fmtSecs) : `<div class="chart-empty">${emptyMsg}</div>`;
-
-  // 6) New users per day (last 14 days)
-  const b6 = barChartDayHtml(users, 14);
-
-  // 7) Visits (2026-08-05): total/today/7d + by-country + dag-strip (14 dgr)
-  //    2026-08-06: full-width, centered, flag emojis, extra KPIs
-  const vis = (statsData && statsData.visits) || null;
-  let bVis = '<div class="chart-empty">No visits yet</div>';
-  let bRef = '<div class="chart-empty">No referrer data yet — tracking starts now</div>';
+  // 4) Trafik: unika besökare 14 dagar + inline-siffror
+  let bTraffic = '<div class="chart-empty">No visits yet</div>';
   if (vis) {
-    // 2026-08-09: unika besökare per land — top 20 + click more, tidsfilter
-    // 1h/12h/24h/7d/30d/all via countryChartHtml/setCountryRange (modulnivå)
-    const cntries = (vis.by_country && Object.keys(vis.by_country).length)
-      ? Object.entries(vis.by_country).map(([cc, n]) => ({
-          label: ccLabel(cc),
-          value: n,
-        })).sort((a, b) => b.value - a.value)
-      : [];
-    const cntHtml = countryChartHtml(cntries, countryRange);
-    // Top referrers — varifrån besökarna klickade in (2026-08-09, rostad)
-    // 2026-08-14: expanderbar — top 8 + "Click more" som visar ALLA (sista 2 osv.)
-    bRef = '<div class="chart-empty">No referrer data yet — tracking starts now</div>';
-    if (vis.by_referrer && Object.keys(vis.by_referrer).length) {
-      const refs = Object.entries(vis.by_referrer)
-        .map(([name, n]) => ({ label: name, value: n }))
-        .sort((a, b) => b.value - a.value);
-      const rMax = Math.max(...refs.map(r => r.value), 1);
-      const rTotal = refs.reduce((a, r) => a + r.value, 0);
-      const refRow = (label, v, extra) => `
-        <div class="cbar-row${extra || ''}" title="${esc(label)} — ${fmtNum(v)} unique visitor${v === 1 ? '' : 's'}">
-          <span class="cbar-name">${esc(label)}</span>
-          <div class="cbar-track"><div class="cbar-fill alt" style="width:${(v / rMax * 100).toFixed(1)}%"></div></div>
-          <span class="cbar-val">${fmtNum(v)}</span>
-          <span class="cbar-pct">${rTotal ? (v / rTotal * 100).toFixed(0) : 0}%</span>
-        </div>`;
-      const MAX_REFS = 8;
-      bRef = `<div class="cbar-list" id="ref-list">
-        ${refs.map((r, i) => refRow(r.label, r.value, i >= MAX_REFS ? ' hidden' : '')).join('')}
-      </div>
-      ${refs.length > MAX_REFS
-        ? `<button class="cbar-more" id="ref-more" type="button" onclick="toggleRefMore(this)" data-n="${refs.length - MAX_REFS}">Click more · ${refs.length - MAX_REFS} more</button>`
-        : ''}`;
-    }
-    const todayD = new Date();
     const daySrc = vis.by_day_unique || vis.by_day || {};
     const arrV = [];
+    const _t = new Date();
     for (let i = 13; i >= 0; i--) {
-      const d = new Date(todayD.getFullYear(), todayD.getMonth(), todayD.getDate() - i);
+      const d = new Date(_t.getFullYear(), _t.getMonth(), _t.getDate() - i);
       const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
       arrV.push({ key, label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), value: daySrc[key] || 0, isToday: i === 0 });
     }
     const maxV = Math.max(...arrV.map(a => a.value), 1);
-    const hasV = arrV.some(a => a.value > 0);
-    const stripV = hasV
-      ? '<div class="vchart" role="img" aria-label="Unique visitors per day">' + arrV.map(a => {
-          const h = Math.max(2, Math.round(a.value / maxV * 100));
-          const cls = a.value === 0 ? 'vbar-fill zero' : 'vbar-fill';
-          return `<div class="vcol" title="${a.key} — ${a.value} unique visitor${a.value === 1 ? '' : 's'}"><div class="vbar-track"><div class="${cls}" style="height:${h}px"></div></div><div class="vbar-label${a.isToday ? ' today' : ''}">${esc(a.label)}</div></div>`;
-        }).join('') + '</div>'
-      : '';
-    // extra KPIs from available data (2026-08-09: dagliga siffror = unika)
-    const avg7 = vis.unique_7d > 0 ? (vis.unique_7d / 7) : 0;
-    const topDay = arrV.length ? arrV.reduce((a, b) => (b.value > a.value ? b : a), arrV[0]) : null;
-    const perVisitor = vis.unique_total > 0 ? (vis.total / vis.unique_total) : 0;
-    const kpis = `<div class="visits-kpis">
-      <div class="v-kpi"><span class="v-kpi-n">${fmtNum(vis.total)}</span><span class="v-kpi-l">visits all time</span></div>
-      <div class="v-kpi"><span class="v-kpi-n">${fmtNum(vis.unique_total)}</span><span class="v-kpi-l">unique visitors</span></div>
-      <div class="v-kpi"><span class="v-kpi-n">${fmtNum(vis.today)}</span><span class="v-kpi-l">visits today</span></div>
-      <div class="v-kpi"><span class="v-kpi-n">${fmtNum(vis.unique_today || 0)}</span><span class="v-kpi-l">unique today</span></div>
-      <div class="v-kpi"><span class="v-kpi-n">${fmtNum(vis.last_7)}</span><span class="v-kpi-l">visits · 7 days</span></div>
-      <div class="v-kpi"><span class="v-kpi-n">${fmtNum(vis.unique_7d)}</span><span class="v-kpi-l">unique · 7 days</span></div>
-      <div class="v-kpi"><span class="v-kpi-n">${avg7.toFixed(1)}</span><span class="v-kpi-l">avg unique / day</span></div>
-      <div class="v-kpi"><span class="v-kpi-n">${perVisitor.toFixed(1)}</span><span class="v-kpi-l">sessions / visitor</span></div>
-      ${topDay && topDay.value > 0 ? `<div class="v-kpi"><span class="v-kpi-n">${fmtNum(topDay.value)}</span><span class="v-kpi-l">peak day · ${esc(topDay.label)}</span></div>` : ''}
-    </div>`;
-    bVis = `${kpis}${stripV ? `<div class="visits-strip"><div class="visits-sub">Unique visitors · last 14 days</div>${stripV}</div>` : ''}${cntHtml}`;
+    const strip = '<div class="vchart" role="img" aria-label="Unique visitors per day">' + arrV.map(a => {
+      const h = Math.max(2, Math.round(a.value / maxV * 100));
+      const cls = a.value === 0 ? 'vbar-fill zero' : 'vbar-fill';
+      return `<div class="vcol" title="${a.key} — ${a.value} unique visitor${a.value === 1 ? '' : 's'}"><div class="vbar-track"><div class="${cls}" style="height:${h}px"></div></div><div class="vbar-label${a.isToday ? ' today' : ''}">${esc(a.label)}</div></div>`;
+    }).join('') + '</div>';
+    bTraffic = `<div class="inline-stats" style="margin-bottom:.75rem">
+        <span>Visits <b>${fmtNum(vis.total)}</b></span>
+        <span>Unique <b>${fmtNum(vis.unique_total)}</b></span>
+        <span>Today <b>${fmtNum(vis.today)}</b></span>
+        <span>Unique today <b>${fmtNum(vis.unique_today || 0)}</b></span>
+        <span>Unique · 7 d <b>${fmtNum(vis.unique_7d || 0)}</b></span>
+        <span>Unique · 14 d <b>${fmtNum(vis.unique_14d || 0)}</b></span>
+      </div>${strip}`;
   }
 
-  // 0a) Unique visitors — last 14 days + all time (2026-08-06)
-  let bUniq = '<div class="chart-empty">No visits yet</div>';
-  if (vis && vis.unique_14d != null) {
-    bUniq = `<div class="visits-kpis">
-      <div class="v-kpi"><span class="v-kpi-n">${fmtNum(vis.unique_14d)}</span><span class="v-kpi-l">unique · last 14 days</span></div>
-      <div class="v-kpi"><span class="v-kpi-n">${fmtNum(vis.unique_total)}</span><span class="v-kpi-l">unique · all time</span></div>
-      <div class="v-kpi"><span class="v-kpi-n">${fmtNum(vis.unique_today || 0)}</span><span class="v-kpi-l">unique today</span></div>
-    </div>`;
+  // 5) Länder (unika besökare, tidsfilter)
+  let bCountry = '<div class="chart-empty">No unique visitors in this window</div>';
+  if (vis && vis.by_country && Object.keys(vis.by_country).length) {
+    const cntries = Object.entries(vis.by_country).map(([cc, n]) => ({ label: ccLabel(cc), value: n }))
+      .sort((a, b) => b.value - a.value);
+    bCountry = countryChartHtml(cntries, countryRange);
   }
 
-  // 0b) 3 senast aktiva spelarkonton (2026-08-06)
+  // 6) Referrers
+  let bRef = '<div class="chart-empty">No referrer data yet — tracking starts now</div>';
+  if (vis && vis.by_referrer && Object.keys(vis.by_referrer).length) {
+    const refs = Object.entries(vis.by_referrer).map(([name, n]) => ({ label: name, value: n }))
+      .sort((a, b) => b.value - a.value);
+    const rMax = Math.max(...refs.map(r => r.value), 1);
+    const rTotal = refs.reduce((a, r) => a + r.value, 0);
+    const refRow = (label, v, extra) => `
+      <div class="cbar-row${extra || ''}" title="${esc(label)} — ${fmtNum(v)} unique visitor${v === 1 ? '' : 's'}">
+        <span class="cbar-name">${esc(label)}</span>
+        <div class="cbar-track"><div class="cbar-fill alt" style="width:${(v / rMax * 100).toFixed(1)}%"></div></div>
+        <span class="cbar-val">${fmtNum(v)}</span>
+        <span class="cbar-pct">${rTotal ? (v / rTotal * 100).toFixed(0) : 0}%</span>
+      </div>`;
+    const MAX_REFS = 8;
+    bRef = `<div class="cbar-list" id="ref-list">${refs.map((r, i) => refRow(r.label, r.value, i >= MAX_REFS ? ' hidden' : '')).join('')}</div>` +
+      (refs.length > MAX_REFS ? `<button class="cbar-more" id="ref-more" type="button" onclick="toggleRefMore(this)" data-n="${refs.length - MAX_REFS}">Click more · ${refs.length - MAX_REFS} more</button>` : '');
+  }
+
+  // 7) Senast aktiva spelare
   const timeAgo = (iso) => {
     if (!iso) return '—';
-    const d = new Date(iso);
-    if (isNaN(d)) return '—';
+    const d = new Date(iso); if (isNaN(d)) return '—';
     const s = Math.max(1, Math.round((Date.now() - d.getTime()) / 1000));
     if (s < 60) return s + 's ago';
     const m = Math.round(s / 60); if (m < 60) return m + 'm ago';
@@ -1769,34 +1854,46 @@ function renderCharts(users) {
     const days = Math.round(h / 24); if (days < 30) return days + 'd ago';
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
-  const actRows = users
-    .filter(u => (u.role || 'player') !== 'admin')
+  const actRows = users.filter(u => (u.role || 'player') !== 'admin')
     .map(u => ({ u, t: u.last_login || u.last_active || '' }))
-    .filter(x => x.t)
-    .sort((a, b) => new Date(b.t) - new Date(a.t))
-    .slice(0, 3);
-  let bAct = '<div class="chart-empty">No players yet</div>';
-  if (actRows.length) {
-    bAct = '<div class="active-list">' + actRows.map(({ u, t }) =>
-      `<div class="active-row"><span class="active-name">${esc(u.username)}</span><span class="active-meta">${fmtDate(t)}</span><span class="active-time">${timeAgo(t)}</span></div>`
-    ).join('') + '</div>';
-  }
+    .filter(x => x.t).sort((a, b) => new Date(b.t) - new Date(a.t)).slice(0, 5);
+  const bAct = actRows.length
+    ? '<div class="active-list">' + actRows.map(({ u, t }) =>
+        `<div class="active-row"><span class="active-name">${u.country_flag || ''} ${esc(u.username)}</span>` +
+        `<span class="active-meta">${u.total_turns || 0} turns · ${fmtTokens(u.total_tokens || 0)} tokens</span>` +
+        `<span class="active-time">${timeAgo(t)}</span></div>`).join('') + '</div>'
+    : '<div class="chart-empty">No players yet</div>';
+
+  // 8) Narrator-tid per spelare
+  const byTts = users.slice().sort((a, b) => (b.tts_seconds || 0) - (a.tts_seconds || 0)).filter(u => (u.tts_seconds || 0) > 0);
+  let items5 = byTts.slice(0, 8).map((u, i) => ({ label: u.username, value: u.tts_seconds || 0, color: COL[i % COL.length] }));
+  const rest5 = byTts.slice(8).reduce((a, u) => a + (u.tts_seconds || 0), 0);
+  if (rest5 > 0) items5.push({ label: 'Rest', value: rest5, color: DIM });
+  const b5 = items5.length ? barListHtml(items5, fmtSecs) : '<div class="chart-empty">No narration yet</div>';
+
+  const mHead = `<div class="ch-right"><span id="model-total"></span>` +
+    `<span class="seg seg-model"><button type="button" data-metric="calls" onclick="setModelMetric('calls')">Calls</button>` +
+    `<button type="button" data-metric="tokens" onclick="setModelMetric('tokens')">Tokens</button></span></div>`;
 
   grid.innerHTML =
-    chartCard(6, '👁 Unique Visitors', bUniq) +
-    chartCard(6, '🎮 Recently Active Players', bAct) +
-    chartCard(7, '◉ Token Share by Player', b1) +
+    chartCard(7, '⧉ Most Used Models', '<div id="model-chart-body"><div class="chart-empty">Loading…</div></div>', mHead) +
+    chartCard(5, '◉ Token Share by Provider', bProv) +
+    chartCard(7, ' Traffic · Unique Visitors', bTraffic) +
+    chartCard(5, ' Visitors by Country', bCountry) +
+    chartCard(7, '◉ Top Players by Tokens', bPlayers) +
     chartCard(5, '◈ Token Split', b2) +
-    chartCard(7, '⌖ Usage by Country', b3) +
-    chartCard(5, '⚖ Role Split', b4) +
-    chartCard(7, '◉ Token Share by Provider', bProv) +
-    chartCard(5, '⧉ Calls by Provider', bCalls) +
-    chartCard(12, '⧉ Visits', bVis) +
-    chartCard(12, '⇣ Top Referrers · unique', bRef) +
-    chartCard(12, '✛ New Users by Day', b6) +
+    chartCard(5, '⇣ Top Referrers · unique', bRef) +
+    chartCard(7, '🎮 Recently Active Players', bAct) +
     revenueChartCard() +
-    chartCard(12, '♪ TTS Seconds by Player', b5);
+    chartCard(6, '✛ New Players by Day · 14 d', barChartDayHtml(users, 14)) +
+    chartCard(6, '♪ Narrator Time by Player', b5);
+
+  renderKpiBand(users);
+  renderModelChart();
   renderRevenueChart();
+  const calls = Object.values(provs).reduce((a, p) => a + (p.calls || 0), 0);
+  setSecSummary('overview', `${users.length} players · ${fmtNum((statsData && statsData.total_turns) || 0)} turns · ` +
+    `${fmtTokens((statsData && statsData.total_tokens) || 0)} tokens · ${fmtNum(calls)} AI calls`);
 }
 
 // ── Filters ──
@@ -1841,7 +1938,7 @@ function clearFilters() {
 function renderFiltered(filtered, totalCount) {
   const noFilter = !filterQ && filterRole === 'all' && filterCountry === 'all';
 
-  // Stat cards — backend totals when unfiltered, filtered sums otherwise
+  // Totaler för aktuellt filter (realm-totaler när inget filter är satt)
   let usersNum, campaignsNum, tokensNum, turnsNum;
   if (noFilter && statsData) {
     usersNum = statsData.total_users;
@@ -1855,51 +1952,22 @@ function renderFiltered(filtered, totalCount) {
     turnsNum = sumUsers(filtered, 'total_turns');
   }
   const ttsMin = Math.round(sumUsers(filtered, 'tts_minutes') * 10) / 10;
-  // FAS D: intäktskort — alltid globala (från GET /api/admin/billing)
+  const imgs = sumUsers(filtered, 'image_gen_calls');
   const mrr = billingData ? (billingData.mrr || 0) : 0;
-  const txs = billingData ? (billingData.transactions || 0) : 0;
   const rev = billingData ? (billingData.total || 0) : 0;
-  const cards = document.getElementById('stat-cards');
-  if (cards) {
-    const sub = (t) => t ? '<div class="stat-sub">' + t + '</div>' : '';
-    const srcUsers = noFilter ? ((statsData && statsData.users) || []) : filtered;
-    const nowT = Date.now();
-    const newToday = srcUsers.filter(u => {
-      const t = u.created_at ? new Date(u.created_at).getTime() : NaN;
-      return !isNaN(t) && (nowT - t) <= 86400000;
-    }).length;
-    const n = filtered.length || 1;
-    cards.innerHTML = `
-      <div class="stat-card"><div class="stat-num">${usersNum}</div><div class="stat-label">Users</div>${sub('▲ ' + newToday + ' new today')}</div>
-      <div class="stat-card"><div class="stat-num">${campaignsNum}</div><div class="stat-label">Campaigns</div>${sub('avg ' + (campaignsNum / n).toFixed(1) + ' / account')}</div>
-      <div class="stat-card"><div class="stat-num">${fmtTokens(tokensNum)}</div><div class="stat-label">Tokens</div>${sub('avg ' + fmtTokens(Math.round(tokensNum / n)) + ' / account')}</div>
-      <div class="stat-card"><div class="stat-num">${turnsNum}</div><div class="stat-label">Turns</div>${sub('avg ' + Math.round(turnsNum / n) + ' / account')}</div>
-      <div class="stat-card"><div class="stat-num">${ttsMin}</div><div class="stat-label">TTS Minutes</div>${sub('≈ ' + (ttsMin / n).toFixed(1) + ' min / account')}</div>
-      <div class="stat-card"><div class="stat-num">${fmtSek(mrr)}</div><div class="stat-label">💰 MRR</div>${sub('ARR ' + fmtSek(mrr * 12))}</div>
-      <div class="stat-card"><div class="stat-num">${txs}</div><div class="stat-label">🧾 Transactions</div>${sub('all time')}</div>
-      <div class="stat-card"><div class="stat-num">${fmtSek(rev)}</div><div class="stat-label">💰 Total Revenue</div>${sub('since launch')}</div>`;
+  const ftot = document.getElementById('ftot');
+  if (ftot) {
+    ftot.innerHTML =
+      `<span class="ftot-scope">${noFilter ? 'Realm totals' : 'Filter · ' + filtered.length + ' of ' + totalCount}</span>` +
+      `<span>Accounts <b>${fmtNum(usersNum)}</b></span>` +
+      `<span>Campaigns <b>${fmtNum(campaignsNum)}</b></span>` +
+      `<span>Tokens <b>${fmtTokens(tokensNum)}</b></span>` +
+      `<span>Turns <b>${fmtNum(turnsNum)}</b></span>` +
+      `<span>TTS <b>${ttsMin} min</b></span>` +
+      `<span>AI images <b>${fmtNum(imgs)}</b></span>` +
+      `<span>MRR <b>${fmtSek(mrr)}</b></span>` +
+      `<span>Revenue <b>${fmtSek(rev)}</b></span>`;
   }
-
-  // Realm-statistik (globalt, ej filterberoende): inloggade senaste 24h/7d/30d
-  const realm = document.getElementById('realm-cards');
-  if (realm) {
-    const all = (statsData && statsData.users) || [];
-    const now = Date.now();
-    const cnt = (ms) => all.filter(u => {
-      const t = u.last_login ? new Date(u.last_login).getTime() : NaN;
-      return !isNaN(t) && t <= now && (now - t) <= ms;
-    }).length;
-    const acctSub = '<div class="stat-sub">of ' + all.length + ' accounts</div>';
-    realm.innerHTML = `
-      <div class="stat-card"><div class="stat-num">${cnt(86400000)}</div><div class="stat-label">Logged in · last 24 h</div>${acctSub}</div>
-      <div class="stat-card"><div class="stat-num">${cnt(604800000)}</div><div class="stat-label">Logged in · last 7 days</div>${acctSub}</div>
-      <div class="stat-card"><div class="stat-num">${cnt(2592000000)}</div><div class="stat-label">Logged in · last 30 days</div>${acctSub}</div>`;
-    setSecSummary('realm', all.length + ' accounts');
-  }
-
-  // Charts reflect the filtered subset
-  renderCharts(filtered);
-  setSecSummary('dash', filtered.length + ' player' + (filtered.length === 1 ? '' : 's') + ' in charts');
 
   // Count line
   const cnt = document.getElementById('filter-count');

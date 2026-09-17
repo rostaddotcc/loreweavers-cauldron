@@ -73,7 +73,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400;500;600&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
 <style>
   /* ═══════════════ Terminal Gothic — flat, DOS/terminal, aligned med spelet ═══════════════
-     login.html rebuild 2026-08-12: samma content, flat & enklare. snes.css?v=46 laddas
+     login.html rebuild 2026-08-12: samma content, flat & enklare. snes.css?v=47 laddas
      EFTER detta block och tvingar scanlines/sprites/knappar med !important. */
   :root{
     --ink:#1a1426; --stone:#271d33; --stone-2:#322541; --stone-3:#3d2e4f;
@@ -248,10 +248,15 @@
   .field .icon{position:absolute;left:.72rem;bottom:.58rem;color:var(--term-green);font-family:var(--font-mono);font-weight:600;opacity:.6;transition:opacity .25s}
   .field input:focus ~ .icon{opacity:1}
   .field label .opt{font-family:var(--font-body);font-style:italic;font-weight:300;letter-spacing:.02em;text-transform:none;color:var(--bone-dim);font-size:.95em}
-  .keep-logged-in{display:flex;align-items:center;gap:.5rem;margin:.2rem 0 .8rem;cursor:pointer;font-size:.78rem;color:var(--bone-dim);user-select:none}
+  .keep-logged-in{display:flex;align-items:center;gap:.5rem;cursor:pointer;font-size:.78rem;color:var(--bone-dim);user-select:none}
   .keep-logged-in input[type=checkbox]{width:15px;height:15px;accent-color:var(--gold);cursor:pointer;flex-shrink:0}
   .keep-logged-in span em{font-style:normal;opacity:.65;font-size:.72rem}
   .keep-logged-in:hover{color:var(--bone)}
+  /* Kompakt rad: keep-logged-in vänster + reset-länk höger (audit §1.1).
+     .gate-opt-row-prefix ger högre specificitet än .gate-toggle som definieras nedan. */
+  .gate-opt-row{display:flex;justify-content:space-between;align-items:center;gap:.6rem;margin:.2rem 0 .8rem}
+  .gate-opt-row .gate-reset-link{width:auto;display:inline;margin:0;font-size:.74rem;text-align:right;color:var(--bone-dim)}
+  .gate-opt-row .gate-reset-link:hover{color:var(--bone)}
   .gate-toggle{text-align:center;margin-top:.75rem;font-size:.82rem;color:var(--bone-dim);font-style:italic;cursor:pointer;background:none;border:none;display:block;width:100%;font-family:var(--font-body)}
   .gate-toggle b{color:var(--gold-bright);font-style:normal;font-weight:600}
   .gate-toggle:hover b{color:var(--gold)}
@@ -398,16 +403,19 @@
   @media (prefers-reduced-motion:reduce){
     html{scroll-behavior:auto}
     .rv{opacity:1;transform:none;transition:none}
-    .scroll-cue{animation:none}
+    .scroll-cue,.head-logo,.hero-bg{animation:none}
+    #update-banner.show{animation:none}
+    .gate-card.shake{animation:none}
+    .myst-quote{transition:none}
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=46">
+<link rel="stylesheet" href="snes.css?v=47">
 </head>
 <body>
 
 <div id="deleted-banner">🕊️ Your account has been deleted. The Cauldron will remember your stories.</div>
 
-<div id="update-banner" role="status">✦ <b>The Honest Dice&nbsp;v1.2</b> — weapon damage is rolled by the engine, conditions bind, level-ups level up. <a href="releases.html#s12" onclick="try{localStorage.setItem('rn_12_seen','1')}catch(e){}">Read the chronicle →</a><button class="upd-x" aria-label="Dismiss" onclick="try{localStorage.setItem('rn_12_seen','1')}catch(e){}document.getElementById('update-banner').classList.remove('show')">×</button></div>
+<div id="update-banner" role="status">✦ <b>Qwen 3.8 Flash</b> — now in the free tier. A fast Dungeon Master mind, free for every account. <a href="releases.html" onclick="try{localStorage.setItem('qwen_flash_seen','1')}catch(e){}">Read the chronicle →</a><button class="upd-x" aria-label="Dismiss" onclick="try{localStorage.setItem('qwen_flash_seen','1')}catch(e){}document.getElementById('update-banner').classList.remove('show')">×</button></div>
 
 <!-- ═══════════════ topbar ═══════════════ -->
 <header class="topbar" id="nav">
@@ -534,7 +542,7 @@
           More daily free turns than any other AI Dungeon Master.
           No card. No email. No subscription.</p>
         <div class="hero-actions rv in d3">
-          <a class="btn gold" href="#pricing" id="hero-begin">Begin Your Journey</a>
+          <a class="btn gold" href="#gate" id="hero-begin">Begin Your Journey</a>
           <a class="btn ghost" href="#features" onclick="if(window.matchMedia('(max-width:900px)').matches){openDrawer();return false;}">Learn more &#8595;</a>
         </div>
         <p class="myst-quote rv in d3" id="myst-quote"></p>
@@ -666,10 +674,10 @@
           <h2 class="rv">Swear yourself in.</h2>
           <ul class="pitch-list">
             <li class="rv d1"><b>Free, forever.</b> 50 fresh turns every day.
-             No card, no hourglass,
+             No card, no countdown,
              no metered fate.</li>
-            <li class="rv d2"><b>Your identity stays yours.</b> We don&rsquo;t log who
-              you are at the table &mdash; no names to the ledger, no tracking of players.</li>
+            <li class="rv d2"><b>Your identity stays yours.</b> No player tracking,
+              no analytics profiles &mdash; just a name and a secret word.</li>
             <li class="rv d3"><b>No subscription, ever.</b> One-time
               Patron purchase when it feels right &mdash; or donate whatever
               the realm is worth to you.</li>
@@ -681,7 +689,7 @@
         <div class="gate-card rv d2" id="gate-card">
           <div class="gate-head">
             <h3 id="gate-title">Return to the Cauldron</h3>
-            <p id="gate-sub">The fire has been kept burning.</p>
+            <p id="gate-sub">The fire has been kept burning — what will the Cauldron foretell?</p>
           </div>
           <form id="auth-form">
             <div class="field">
@@ -696,10 +704,13 @@
                      autocomplete="current-password" required>
               <span class="icon">&gt;</span>
             </div>
-            <label class="keep-logged-in" id="keep-logged-in-row" for="keep-logged-in">
-              <input type="checkbox" id="keep-logged-in" checked>
-              <span>Keep me logged in <em>(30 days)</em></span>
-            </label>
+            <div class="gate-opt-row" id="gate-opt-row">
+              <label class="keep-logged-in" id="keep-logged-in-row" for="keep-logged-in">
+                <input type="checkbox" id="keep-logged-in" checked>
+                <span>Keep me logged in <em>(30 days)</em></span>
+              </label>
+              <div class="gate-toggle gate-reset-link" id="gate-reset">Lost your password?</div>
+            </div>
             <div class="field" id="confirm-field" style="display:none">
               <label for="confirm">Confirm Password</label>
               <input type="password" id="confirm" placeholder="Speak it once more&hellip;"
@@ -712,13 +723,12 @@
                      autocomplete="email">
               <span class="icon">&gt;</span>
             </div>
-            <button type="submit" class="gate-btn btn wide" id="auth-btn">What will the Cauldron Foretell?</button>
+            <button type="submit" class="gate-btn btn wide" id="auth-btn">Enter the Realm</button>
             <div class="gate-toggle" id="gate-toggle">New here? <b>Forge your name</b></div>
-            <div class="gate-toggle" id="gate-reset" style="font-size:.75rem">Lost your name? <b>Re-forge it</b></div>
             <button type="button" class="gate-toggle" id="reset-link-btn" style="display:none;font-size:.75rem">📧 Send me a reset link</button>
             <div class="gate-error" id="gate-error"></div>
           </form>
-          <div class="gate-foot">Powered by Qwen, DeepSeek &amp; StepFun &middot; self-registration, no email required &mdash; an email is added to your account before your first purchase</div>
+          <div class="gate-foot">No email needed to play.<br>Powered by Qwen, DeepSeek &amp; StepFun</div>
         </div>
 
         <!-- Redan inloggad: "Continue your journey" istället för formuläret -->
@@ -727,7 +737,7 @@
             <h3>Continue your journey</h3>
             <p>Welcome back, <b class="gc-name">adventurer</b> &mdash; the fire is still burning.</p>
           </div>
-          <a class="btn gold wide" href="adventure.html?v=20260815a" style="display:block;text-align:center;margin-top:.4rem">Continue to the realm &rarr;</a>
+          <a class="btn gold wide" href="adventure.html?v=20260917a" style="display:block;text-align:center;margin-top:.4rem">Continue to the realm &rarr;</a>
           <div class="gate-toggle" style="font-size:.75rem" onclick="doLogout()">Not you? <b>Sign out</b></div>
         </div>
       </div>
@@ -865,7 +875,7 @@
     <div class="mname" id="prof-name"></div>
     <div class="mtier" id="prof-tier"></div>
     <div class="mactions" id="prof-actions">
-      <a class="btn gold" href="adventure.html?v=20260815a">Return to the realm →</a>
+      <a class="btn gold" href="adventure.html?v=20260917a">Return to the realm →</a>
       <a class="btn ghost" href="pricing.html">Membership &amp; billing</a>
       <button class="btn danger-btn" onclick="doLogout()">Log out</button>
       <button class="btn danger-btn" id="prof-delete-btn" onclick="askDeleteAccount()">Delete account</button>
@@ -881,10 +891,10 @@
 <script src="sprites.js?v=20260806b"></script>
 
 <script>
-/* ═══════════════ update banner — v1.2, en gång per läsare ═══════════════ */
+/* ═══════════════ update banner — Qwen 3.8 Flash free tier, en gång per läsare ═══════════════ */
 (function () {
   try {
-    var seen = localStorage.getItem('rn_12_seen');
+    var seen = localStorage.getItem('qwen_flash_seen');
     if (!seen) document.getElementById('update-banner').classList.add('show');
   } catch (e) {}
 })();
@@ -931,9 +941,11 @@ setTimeout(() => {
     'The dragons remember your name. Do you remember theirs?'
   ];
   const el = document.getElementById('myst-quote');
+  const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let idx = 0;
   el.textContent = quotes[0];
   setInterval(() => {
+    if (RM) { idx = (idx + 1) % quotes.length; el.textContent = quotes[idx]; return; }
     el.style.opacity = '0';
     setTimeout(() => { idx = (idx + 1) % quotes.length; el.textContent = quotes[idx]; el.style.opacity = '1'; }, 1000);
   }, 7000);
@@ -948,8 +960,8 @@ function setAuthBusy(busy) {
   const btn = document.getElementById('auth-btn');
   btn.disabled = busy;
   btn.textContent = busy
-    ? (authMode === 'register' ? 'Forging your name\u2026' : authMode === 'reset' ? 'Re-forging your name\u2026' : 'The Cauldron is stirring\u2026')
-    : (authMode === 'register' ? 'Forge Your Name' : authMode === 'reset' ? 'Re-forge My Name' : 'What will the Cauldron Foretell?');
+    ? (authMode === 'register' ? 'Forging your name\u2026' : authMode === 'reset' ? 'Re-forging your password\u2026' : 'Opening the gate\u2026')
+    : (authMode === 'register' ? 'Forge Your Name' : authMode === 'reset' ? 'Set a New Password' : 'Enter the Realm');
 }
 
 function applyAuthMode() {
@@ -961,13 +973,13 @@ function applyAuthMode() {
   document.getElementById('lbl-username').textContent = isReg ? 'New Adventurer' : 'Adventurer';
   document.getElementById('lbl-password').textContent = isReg ? 'Create a Password' : (isReset ? 'New Password' : 'Password');
   document.getElementById('password').autocomplete = (isReg || isReset) ? 'new-password' : 'current-password';
-  document.getElementById('auth-btn').textContent = isReg ? 'Forge Your Name' : (isReset ? 'Re-forge My Name' : 'What will the Cauldron Foretell?');
-  document.getElementById('gate-title').textContent = isReg ? 'Forge Your Name' : (isReset ? 'Re-forge Your Name' : 'Return to the Cauldron');
+  document.getElementById('auth-btn').textContent = isReg ? 'Forge Your Name' : (isReset ? 'Set a New Password' : 'Enter the Realm');
+  document.getElementById('gate-title').textContent = isReg ? 'Forge Your Name' : (isReset ? 'Lost Your Password?' : 'Return to the Cauldron');
   document.getElementById('gate-sub').textContent = isReg
     ? 'The Cauldron has been waiting for someone like you.'
     : (isReset
-      ? 'Speak your name and a new secret word — the pot remembers the rest.'
-      : 'The fire has been kept burning.');
+      ? 'Speak your name and choose a new secret word. The pot remembers the rest.'
+      : 'The fire has been kept burning — what will the Cauldron foretell?');
   document.getElementById('gate-toggle').innerHTML = isReg
     ? 'Already sworn in? <b>Return to the cauldron</b>'
     : (isReset
@@ -977,6 +989,8 @@ function applyAuthMode() {
   document.getElementById('reset-link-btn').style.display = isReset ? '' : 'none';
   const keepRow = document.getElementById('keep-logged-in-row');
   if (keepRow) keepRow.style.display = (authMode === 'login') ? '' : 'none';
+  const optRow = document.getElementById('gate-opt-row');
+  if (optRow) optRow.style.display = (authMode === 'login') ? '' : 'none';
   document.getElementById('gate-error').textContent = '';
 }
 
@@ -1026,7 +1040,7 @@ function authSuccess(username) {
   sfx('gate');
   sessionStorage.setItem('dnd_user', username);
   let next = new URLSearchParams(location.search).get('next');
-  if (!next || !/^(?:[a-zA-Z0-9_-]+\.html)(?:[?#].*)?$/.test(next)) next = 'adventure.html?v=20260815a';
+  if (!next || !/^(?:[a-zA-Z0-9_-]+\.html)(?:[?#].*)?$/.test(next)) next = 'adventure.html?v=20260917a';
   setTimeout(() => { window.location.href = next; }, 900);
 }
 

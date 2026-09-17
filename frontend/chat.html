@@ -77,6 +77,7 @@
      v30: RADIKALT krympt — liten kompakt meny som inte täcker spelvyn. */.settings-menu{
     position: absolute; top: calc(100% + 0.5rem); right: 0; z-index: 60;
     min-width: 200px; max-width: 300px; padding: 0.35rem;
+    max-height: calc(100dvh - 70px); overflow-y: auto;
     background: linear-gradient(180deg, var(--stone-2), var(--ink));
     border: 1px solid var(--gold); border-radius: 3px;
     box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 20px -6px rgba(var(--gold-bright-rgb),0.25);
@@ -155,6 +156,12 @@
   .av-lightbox .av-lb-close{ position: fixed; top: 1.2rem; right: 1.4rem; font-family: var(--font-accent); font-size: .8rem; color: var(--gold-bright); background: none; border: 1px solid var(--edge); padding: .5rem .7rem; cursor: pointer; }
   .av-lightbox .av-lb-close:hover{ border-color: var(--gold); color: var(--bone-bright); }
   .av-lightbox .av-lb-title{ position: fixed; bottom: 1.2rem; left: 50%; transform: translateX(-50%); font-family: var(--font-display); font-size: .7rem; letter-spacing: .18em; text-transform: uppercase; color: var(--bone-dim); }
+  .av-lightbox .av-lb-bar{ position: fixed; bottom: 3.2rem; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: .8rem; z-index: 11001; }
+  .av-lightbox .av-lb-nav{ font-family: var(--font-accent); font-size: 1rem; color: var(--gold-bright); background: rgba(6,3,10,.85); border: 1px solid var(--edge); padding: .35rem .8rem; cursor: pointer; line-height: 1; }
+  .av-lightbox .av-lb-nav:hover{ border-color: var(--gold); color: var(--bone-bright); }
+  .av-lightbox .av-lb-count{ font-family: var(--font-accent); font-size: .6rem; letter-spacing: .14em; color: var(--bone-dim); white-space: nowrap; }
+  .av-lightbox .av-lb-act{ position: fixed; bottom: 5.6rem; left: 50%; transform: translateX(-50%); font-family: var(--font-display); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-bright); background: rgba(6,3,10,.85); border: 1px solid var(--gold); padding: .5rem .9rem; cursor: pointer; z-index: 11001; white-space: nowrap; }
+  .av-lightbox .av-lb-act:hover{ background: rgba(var(--gold-rgb),.14); color: var(--bone-bright); }
   .mi-modal{ width: min(520px, 100%); max-height: 84vh; overflow-y: auto; background: linear-gradient(165deg, var(--stone-2), var(--stone)); border: 1px solid var(--gold); box-shadow: 0 0 40px rgba(var(--gold-rgb),.22), 0 24px 60px rgba(0,0,0,.7); padding: 1.3rem 1.4rem 1.5rem; animation: mi-rise .35s cubic-bezier(.22,1,.36,1); }
   @keyframes mi-rise{ from { opacity: 0; transform: translateY(18px) scale(.98); } to { opacity: 1; transform: none; } }
   .mi-head{ display: flex; align-items: center; justify-content: space-between; font-family: var(--font-accent); font-size: .6rem; letter-spacing: .06em; color: var(--gold-bright); text-transform: uppercase; padding-bottom: .8rem; border-bottom: 1px solid var(--edge); margin-bottom: .9rem; }
@@ -175,7 +182,7 @@
     padding: 0.55rem 0.7rem; border: none; border-radius: 2px;
     background: transparent; cursor: pointer; text-align: left;
     text-decoration: none; transition: background 0.15s, transform 0.15s;
-  }.drop-item:hover{ background: rgba(var(--gold-bright-rgb),0.1); transform: translateX(3px); }.di-icon{ font-size: 1.05rem; flex-shrink: 0; filter: drop-shadow(0 0 4px rgba(var(--gold-bright-rgb),0.3)); }.di-body{ display: flex; flex-direction: column; min-width: 0; }.di-name{ font-family: var(--font-display); font-size: 0.96rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-bright); }.drop-item:hover .di-name{ color: var(--gold-bright); }.di-hint{ font-size: 0.86rem; font-style: italic; color: var(--bone-dim); }/* Settings-menyn (⚙️): hint-rad → hover-tooltip (desktop). Menyn är högerjusterad → tooltip pekar vänsterut */.settings-menu .drop-item{ position: relative; }.settings-menu .di-hint{ position: absolute; top: 50%; right: calc(100% + 10px); transform: translateY(-50%); white-space: nowrap; font-size: 0.84rem; font-style: italic; color: var(--bone-dim); background: var(--stone-3); border: 1px solid var(--edge); border-radius: 3px; padding: 0.32rem 0.6rem; box-shadow: 0 10px 28px -10px rgba(0,0,0,0.8); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.16s ease, visibility 0.16s ease; z-index: 70; }.settings-menu .drop-item:hover .di-hint{ opacity: 1; visibility: visible; }.settings-menu .drop-item:hover .di-name{ color: var(--gold-bright); }@media (hover:none), (max-width:640px){ .settings-menu .di-hint{ position: static; transform: none; opacity: 1; visibility: visible; background: none; border: none; box-shadow: none; padding: 0; } /* TTS-raden: kompaktare så Combat/Engine Room aldrig klipps bort */ .tts-voice-picker{ gap: 0.2rem 0.3rem; margin-bottom: 0.25rem; }.tts-voice-label{ display: none; }.tts-select{ font-size: 0.58rem; padding: 0.14rem 0.28rem; max-width: 96px; flex-shrink: 1; min-width: 0; letter-spacing: 0; border-radius: 5px; }.tts-auto-btn{ font-size: 0.58rem; padding: 0.16rem 0.4rem; letter-spacing: 0; border-radius: 5px; }.tts-player{ padding: 0.18rem 0.5rem; margin-bottom: 0.3rem; }.tts-player .ttp-idle, .tts-player .ttp-synth{ font-size: 0.62rem; } }.drop-sep{ height: 1px; background: var(--edge); margin: 0.4rem 0.3rem; }/* ═══════════ Layout ═══════════ */.layout{ position: relative; z-index: auto; flex: 1; display: flex; min-height: 0; }/* ── Sidebar: party ── */.sidebar{
+  }.drop-item:hover{ background: rgba(var(--gold-bright-rgb),0.1); transform: translateX(3px); }.di-icon{ font-size: 1.05rem; flex-shrink: 0; filter: drop-shadow(0 0 4px rgba(var(--gold-bright-rgb),0.3)); }.di-body{ display: flex; flex-direction: column; min-width: 0; }.di-name{ font-family: var(--font-display); font-size: 0.96rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-bright); }.drop-item:hover .di-name{ color: var(--gold-bright); }.di-hint{ font-size: 0.86rem; font-style: italic; color: var(--bone-dim); }/* Settings-menyn (⚙️): hint-rad → hover-tooltip (desktop). Menyn är högerjusterad → tooltip pekar vänsterut */.settings-menu .drop-item{ position: relative; }.settings-menu .di-hint{ position: absolute; top: 50%; right: calc(100% + 10px); transform: translateY(-50%); white-space: nowrap; font-size: 0.84rem; font-style: italic; color: var(--bone-dim); background: var(--stone-3); border: 1px solid var(--edge); border-radius: 3px; padding: 0.32rem 0.6rem; box-shadow: 0 10px 28px -10px rgba(0,0,0,0.8); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.16s ease, visibility 0.16s ease; z-index: 70; }.settings-menu .drop-item:hover .di-hint{ opacity: 1; visibility: visible; }.settings-menu .drop-item:hover .di-name{ color: var(--gold-bright); }@media (hover:none), (max-width:640px){ .settings-menu .di-hint{ position: static; transform: none; opacity: 1; visibility: visible; background: none; border: none; box-shadow: none; padding: 0; } /* TTS-raden: kompaktare så Combat/Engine Room aldrig klipps bort */ .tts-voice-picker{ gap: 0.2rem 0.3rem; margin-bottom: 0.25rem; }.tts-voice-label{ display: none; }.tts-select{ font-size: 0.58rem; padding: 0.14rem 0.28rem; max-width: 96px; flex-shrink: 1; min-width: 0; letter-spacing: 0; border-radius: 5px; }.tts-auto-btn{ font-size: 0.58rem; padding: 0.16rem 0.4rem; letter-spacing: 0; border-radius: 5px; }.tts-player{ padding: 0.18rem 0.5rem; margin-bottom: 0.3rem; }.tts-player .ttp-idle, .tts-player .ttp-synth{ font-size: 0.62rem; } }.drop-sep{ height: 1px; background: var(--edge); margin: 0.4rem 0.3rem; }.drop-head{ font-family: var(--font-accent); font-size: .55rem; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); opacity: .75; padding: .5rem .7rem .2rem; user-select: none; }.drop-head:first-child{ padding-top: .25rem; }/* ═══════════ Layout ═══════════ */.layout{ position: relative; z-index: auto; flex: 1; display: flex; min-height: 0; }/* ── Sidebar: party ── */.sidebar{
     width: 250px; flex-shrink: 0;
     background: linear-gradient(180deg, var(--stone), var(--ink));
     border-right: 1px solid var(--edge);
@@ -1102,7 +1109,7 @@
     font-family: var(--cli-mono, ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace) !important;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=46">
+<link rel="stylesheet" href="snes.css?v=47">
 <style>
 /* ═══════════ CODEX 2-RAD-TABBAR — override snes.css (måste ligga EFTER linken) ═══════════ */
 .cx-tabs{ display: flex !important; flex-direction: column !important; gap: 0.34rem !important; padding: 0.55rem 0.6rem 0.6rem !important; overflow-x: hidden !important; }
@@ -1333,15 +1340,23 @@
     <button class="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Open menu">☰</button>
     <div class="mobile-menu" id="mobile-menu">
       <div class="mobile-menu-turns" id="mobile-menu-turns"></div>
+      <div class="drop-head">Navigate</div>
       <button class="drop-item" onclick="openCodex();closeMobileMenu()"><span class="di-icon">📖</span><span class="di-body"><span class="di-name">Codex</span><span class="di-hint">lore · map · character</span></span></button>
-      <button class="drop-item" id="mobile-menu-admin" style="display:none" onclick="location.href='admin.html'"><span class="di-icon">👑</span><span class="di-body"><span class="di-name">Admin</span><span class="di-hint">player overview & tokens</span></span></button>
       <div class="drop-sep"></div>
-      <button class="drop-item" onclick="openUsageModal();closeMobileMenu()"><span class="di-icon">📊</span><span class="di-body"><span class="di-name">Usage</span><span class="di-hint">model & token stats</span></span></button>
-      <a class="drop-item" href="help.html"><span class="di-icon">❓</span><span class="di-body"><span class="di-name">How to Play?</span><span class="di-hint">commands & tips</span></span></a>
-      <button class="drop-item" data-cli-label onclick="toggleCliChat();closeMobileMenu()"><span class="di-icon">🖥️</span><span class="di-body"><span class="di-name">Chat UI: CLI</span><span class="di-hint">terminal style — toggle to bubbles</span></span></button>
+      <div class="drop-head">Your game</div>
+      <a class="drop-item" href="help.html"><span class="di-icon">❓</span><span class="di-body"><span class="di-name">How to Play</span><span class="di-hint">commands & tips</span></span></a>
       <button class="drop-item" onclick="openFeedbackModal();closeMobileMenu()"><span class="di-icon">💬</span><span class="di-body"><span class="di-name">Feedback</span><span class="di-hint">suggestions or bug reports</span></span></button>
       <div class="drop-sep"></div>
-      <button class="drop-item" style="color:var(--blood-bright)" onclick="location.href='adventure.html'"><span class="di-icon">🚪</span><span class="di-body"><span class="di-name">Leave</span><span class="di-hint">return to adventure select</span></span></button>
+      <div class="drop-head">Settings</div>
+      <button class="drop-item" data-cli-label onclick="toggleCliChat();closeMobileMenu()"><span class="di-icon">🖥️</span><span class="di-body"><span class="di-name">Chat style: Terminal</span><span class="di-hint">click to switch to bubbles</span></span></button>
+      <div class="drop-sep"></div>
+      <div class="drop-head">Account</div>
+      <button class="drop-item" onclick="openUsageModal();closeMobileMenu()"><span class="di-icon">📊</span><span class="di-body"><span class="di-name">Usage</span><span class="di-hint">model & token stats</span></span></button>
+      <button class="drop-item" onclick="exportCampaign();closeMobileMenu()"><span class="di-icon">📦</span><span class="di-body"><span class="di-name">Export campaign</span><span class="di-hint">download as .zip</span></span></button>
+      <button class="drop-item" id="mobile-menu-admin" style="display:none" onclick="location.href='admin.html'"><span class="di-icon">👑</span><span class="di-body"><span class="di-name">Admin</span><span class="di-hint">player overview & tokens</span></span></button>
+      <div class="drop-sep"></div>
+      <div class="drop-head">Leave</div>
+      <button class="drop-item" style="color:var(--blood-bright)" onclick="location.href='adventure.html'"><span class="di-icon">🚪</span><span class="di-body"><span class="di-name">Leave the table</span><span class="di-hint">return to adventure select</span></span></button>
     </div>
   </div>
     <span class="rr-sigil" onclick="openChatProfileModal()" role="button" tabindex="0" aria-label="Your profile — stats, tier, turns and subscription" title="Profile — stats, tier, turns">⚗</span>
@@ -1350,7 +1365,7 @@
   </div>
 
   <!-- Turn-Tally — mono-strip: TURNS · TURN · DAY (uppdateras av renderTurnTally) -->
-  <div class="rr-tally" id="rr-tally" title="Turns quota — one chat message costs 1 turn; TTS, image-gen and background calls count too (the DM's internal calls are free)">
+  <div class="rr-tally" id="rr-tally" title="Turns left · current turn · day number">
     <span>TURNS <span class="tv" id="rr-quota">—</span></span><span class="sep">·</span>
     <span>TURN <span class="tv" id="rr-turn">—</span></span><span class="sep">·</span>
     <span>DAY <span class="tv" id="rr-day">—</span></span>
@@ -1369,11 +1384,11 @@
   <div style="position:relative">
     <button class="rr-btn" onclick="toggleSettingsMenu()" title="Settings" aria-label="Settings">⚙️</button>
     <div class="settings-menu" id="settings-menu">
-      <button class="drop-item" onclick="openUsageModal();closeSettingsMenu()"><span class="di-icon">📊</span><span class="di-body"><span class="di-name">Usage</span><span class="di-hint">model & token stats</span></span></button>
-      <a class="drop-item" href="help.html"><span class="di-icon">❓</span><span class="di-body"><span class="di-name">How to Play?</span><span class="di-hint">commands & tips</span></span></a>
-      <div class="drop-sep"></div>
-      <button class="drop-item" data-cli-label onclick="toggleCliChat();closeSettingsMenu()"><span class="di-icon">🖥️</span><span class="di-body"><span class="di-name">Chat UI: CLI</span><span class="di-hint">terminal style — toggle to bubbles</span></span></button>
+      <div class="drop-head">Your game</div>
+      <a class="drop-item" href="help.html"><span class="di-icon">❓</span><span class="di-body"><span class="di-name">How to Play</span><span class="di-hint">commands & tips</span></span></a>
       <button class="drop-item" onclick="openFeedbackModal();closeSettingsMenu()"><span class="di-icon">💬</span><span class="di-body"><span class="di-name">Feedback</span><span class="di-hint">suggestions or bug reports</span></span></button>
+      <div class="drop-sep"></div>
+      <div class="drop-head">Settings</div>
       <div class="model-picker-card">
         <div class="mpc-title">🧠 Models <span id="model-picker-lock" style="display:none;color:var(--gold);font-size:.68rem">🔒 Patron</span></div>
         <label class="mpc-label">Dungeon Master</label>
@@ -1385,11 +1400,15 @@
         <div class="mpc-hint" id="settings-guardian-hint"></div>
         <div class="mpc-hint" id="model-picker-premium-hint" style="display:none;color:var(--gold)">🔒 Premium models locked — one-time Patron unlocks all DMs for 30 days.</div>
       </div>
+      <button class="drop-item" data-cli-label onclick="toggleCliChat();closeSettingsMenu()"><span class="di-icon">🖥️</span><span class="di-body"><span class="di-name">Chat style: Terminal</span><span class="di-hint">click to switch to bubbles</span></span></button>
       <button class="drop-item" onclick="openModelInfo();closeSettingsMenu()"><span class="di-icon">ℹ️</span><span class="di-body"><span class="di-name">About the Models</span><span class="di-hint">what each DM model does · why thinking takes time</span></span></button>
       <div class="drop-sep"></div>
-      <button class="drop-item" onclick="exportCampaign();closeSettingsMenu()"><span class="di-icon">📦</span><span class="di-body"><span class="di-name">Export</span><span class="di-hint">campaign as zip</span></span></button>
+      <div class="drop-head">Account</div>
+      <button class="drop-item" onclick="openUsageModal();closeSettingsMenu()"><span class="di-icon">📊</span><span class="di-body"><span class="di-name">Usage</span><span class="di-hint">model & token stats</span></span></button>
+      <button class="drop-item" onclick="exportCampaign();closeSettingsMenu()"><span class="di-icon">📦</span><span class="di-body"><span class="di-name">Export campaign</span><span class="di-hint">download as .zip</span></span></button>
       <div class="drop-sep"></div>
-      <button class="drop-item" style="color:var(--blood-bright)" onclick="location.href='adventure.html'"><span class="di-icon">🚪</span><span class="di-body"><span class="di-name">Leave</span><span class="di-hint">return to adventure select</span></span></button>
+      <div class="drop-head">Leave</div>
+      <button class="drop-item" style="color:var(--blood-bright)" onclick="location.href='adventure.html'"><span class="di-icon">🚪</span><span class="di-body"><span class="di-name">Leave the table</span><span class="di-hint">return to adventure select</span></span></button>
     </div>
   </div>
   </div>
@@ -1491,6 +1510,16 @@
     .rr-tally > span:nth-child(4),
     .rr-tally > span:nth-child(5){ display: none; }
   }
+  /* ── Sidebar portrait hover badges (single-layer avatar, §3.3) ── */
+  .pc-card{ position: relative; }
+  .pc-badge{ position:absolute; z-index:3; width:24px; height:24px; border-radius:50%;
+    border:1px solid var(--gold); background:rgba(6,3,10,.85); color:var(--gold-bright);
+    font-size:.7rem; display:flex; align-items:center; justify-content:center; cursor:pointer;
+    opacity:0; transition:opacity .2s; padding:0; }
+  .pc-wrap:hover .pc-badge, .pc-badge:focus-visible{ opacity:1; }
+  @media (hover:none){ .pc-badge{ opacity:.85; } }        /* touch: always visible */
+  .pc-badge-zoom{ right:8px; bottom:8px; }
+  .pc-badge-paint{ right:36px; bottom:8px; }
 </style>
 <div class="mobile-hp-line" id="mobile-hp-line"><i style="width:0%"></i></div>
 <div class="drawer-backdrop" id="drawer-backdrop" onclick="toggleMobileSidebar()"></div>
@@ -1506,7 +1535,8 @@
         <div class="pc-wrap" id="pc-wrap">
           <div class="pc-avatar-bg" id="pc-avatar-bg"></div>
           <div class="pc-card active" onclick="openCodex('character')" title="Open character sheet in Codex">
-            <div class="pc-avatar" id="pc-avatar" onclick="event.stopPropagation();pickAvatar('player')" title="Click to change image">🎭</div>
+            <button class="pc-badge pc-badge-zoom" onclick="event.stopPropagation();openPcLightbox()" title="Enlarge portrait" aria-label="Enlarge portrait">🔍</button>
+            <button class="pc-badge pc-badge-paint" onclick="event.stopPropagation();pickAvatar('player')" title="Paint a new portrait" aria-label="Paint a new portrait">🎨</button>
             <div style="flex:1;min-width:0">
               <div class="pc-name" id="pc-name">—</div>
               <div class="pc-sub" id="pc-sub">—</div>
@@ -1527,13 +1557,13 @@
       <div class="side-label side-toggle" onclick="toggleSideSection('quests')">⚑ Quests <span class="side-caret">▾</span></div>
       <div class="side-body">
         <div class="quest-list" id="quest-list">
-          <div class="quest-empty">No quests yet…</div>
+          <div class="quest-empty">No quests yet — the DM will post one when the story hooks you.</div>
         </div>
       </div>
     </div>
 
     <div class="side-section" id="sec-journey">
-      <div class="side-label side-toggle" onclick="toggleSideSection('journey')">📖 Journey <span class="side-caret">▾</span></div>
+      <div class="side-label side-toggle" onclick="toggleSideSection('journey')">📜 Journey <span class="side-caret">▾</span></div>
       <div class="side-body">
         <div class="journey-entry" id="journey-entry" onclick="openCodex('journal')" title="Open journal in Codex" style="cursor:pointer">
           <div class="je-head">—</div>
@@ -1564,10 +1594,11 @@
 
     <!-- Mobile-only drawer extras -->
     <div class="drawer-extras">
-      <button class="drawer-logout" onclick="openCodex('character')">🧙 Character</button>
-      <button class="drawer-logout" onclick="toggleConsole()">🛠️ Engine Room</button>
-      <button class="drawer-logout" id="admin-drawer-btn" style="display:none" onclick="location.href='admin.html'">👑 Admin</button>
-      <button class="drawer-logout" onclick="location.href='adventure.html'">🚪 Leave</button>
+      <button class="drawer-btn" onclick="openCodex('character')">🧙 Character</button>
+      <button class="drawer-btn" onclick="toggleConsole()">🛠️ Engine Room</button>
+      <button class="drawer-btn" id="admin-drawer-btn" style="display:none" onclick="location.href='admin.html'">👑 Admin</button>
+      <div class="drawer-sep"></div>
+      <button class="drawer-logout" onclick="location.href='adventure.html'">🚪 Leave the table</button>
     </div>
   </aside>
 
@@ -2114,13 +2145,6 @@ function renderTurnTally() {
     quotaEl.classList.toggle('warn', low);
   }
   quotaEl.textContent = quotaText;
-  const tallyEl = document.getElementById('rr-tally');
-  if (tallyEl) {
-    const tierName = tier === 'lifetime' ? 'Lifetime' : (tier === 'tier2' ? 'Patron' : (tier === 'tier1' ? 'Support' : 'Free'));
-    tallyEl.title = 'Tier: ' + tierName + ' · ' + quotaText + ' turns left' +
-      (resetText !== '—' ? ' · resets ' + resetText : '') +
-      ' — one chat message costs 1 turn; TTS, image-gen and background calls count too (the DM\u2019s internal calls are free)';
-  }
 }
 function updateHeaderInfo() {
   const text = turnDayText();
@@ -2359,7 +2383,7 @@ function avatarHtml(kind, fallbackEmoji) {
   const inner = url
     ? `<img src="${_avW(url, 512)}" alt="" loading="lazy">`
     : (_isDmKind(kind) ? dmSigilHtml() : SPR.html(fallbackEmoji));
-  return `<span class="msg-avatar" onclick="pickAvatar('${kind}')" title="${I18N.t('Klicka för att byta bild')}">${inner}</span>`;
+  return `<span class="msg-avatar" onclick="openMsgAvatarLightbox('${kind}')" title="${I18N.t('Click to enlarge')}">${inner}</span>`;
 }
 
 // ── 🖼 Avatar-galleri: bläddra bland tidigare porträtt (2026-08-08) ──
@@ -2941,9 +2965,97 @@ function openAvatarLightbox() {
   if (lb) lb.classList.add('show');
   try { SFX.click(); } catch (_) {}
 }
+// ── §4.3 Shared lightbox: kind state, gallery bar + paint action ──
+let _lbKind = null;   // kind shown in the lightbox ('player'|'dm'|'npc:<key>'|…)
+let _lbBusy = false;
+function _lbUpdateBar() {
+  const bar = document.getElementById('avatar-lightbox-bar');
+  const cnt = document.getElementById('avatar-lightbox-count');
+  if (!bar || !cnt) return;
+  const meta = _lbKind ? (AVATAR_GAL[_lbKind] || null) : null;
+  const count = meta ? (meta.count || 0) : 0;
+  if (count > 1) {
+    bar.hidden = false;
+    cnt.textContent = ((meta.index || 0) + 1) + ' / ' + count;
+  } else {
+    bar.hidden = true;
+  }
+}
 function closeAvatarLightbox() {
   const lb = document.getElementById('avatar-lightbox');
   if (lb) lb.classList.remove('show');
+  const bar = document.getElementById('avatar-lightbox-bar');
+  if (bar) bar.hidden = true;
+  const paint = document.getElementById('avatar-lightbox-paint');
+  if (paint) paint.hidden = true;
+  _lbKind = null;
+}
+// Bläddra ±1 steg i galleriet direkt från lightboxen (samma backend som
+// rotateAvatarImage, men fristående från avatar-modalens state).
+async function lbRotate(delta) {
+  if (!_lbKind || _lbBusy) return;
+  const meta = AVATAR_GAL[_lbKind];
+  if (!meta || (meta.count || 0) < 2) return;
+  _lbBusy = true;
+  try {
+    const kind = _lbKind;
+    const res = await API.rotateAvatar(kind, delta);
+    AVATAR_GAL[kind] = { count: res.gallery_count, index: res.gallery_index };
+    const url = API.avatarUrl(kind) + '?t=' + Date.now();
+    AVATARS[kind] = url;
+    if (kind.startsWith('npc:')) {
+      const norm = 'npc:' + kind.slice(4).toLowerCase().replace(/\s+/g, '_');
+      if (norm !== kind && AVATARS[norm]) { AVATARS[norm] = url; AVATAR_GAL[norm] = AVATAR_GAL[kind]; }
+    }
+    _lbSetImg(_avW(url, 512));
+    _lbUpdateBar();
+    refreshAvatars();
+    rerenderChatAvatars(kind, url);
+  } catch (e) {
+    toast('⚠ Could not change portrait');
+  }
+  _lbBusy = false;
+}
+function _lbOpenForKind(kind, title, src) {
+  _lbKind = kind;
+  if (!_lbSetImg(src)) return;
+  document.getElementById('avatar-lightbox-title').textContent = title;
+  const paint = document.getElementById('avatar-lightbox-paint');
+  if (paint) paint.hidden = false;
+  _lbUpdateBar();
+  const lb = document.getElementById('avatar-lightbox');
+  if (lb) lb.classList.add('show');
+  try { SFX.click(); } catch (_) {}
+}
+// Lightbox-first click on any chat/sidebar portrait (§4.2): enlarge + gallery
+// + paint one click deeper. No painted portrait → straight to pickAvatar.
+function openMsgAvatarLightbox(kind) {
+  const src = _isDmKind(kind) ? AVATARS['dm'] : AVATARS[kind];
+  if (!src) { pickAvatar(kind); return; }
+  let title = '🔍 Portrait';
+  if (_isDmKind(kind)) {
+    title = '🧙 Dungeon Master';
+  } else if (kind === 'player') {
+    const nm = (typeof CHAR_NAME !== 'undefined' && CHAR_NAME)
+      || (document.getElementById('pc-name') || {}).textContent || '';
+    title = nm && nm !== '—' ? nm : '🧙 Your adventurer';
+  } else if (kind.startsWith('npc:')) {
+    const nk = kind.slice(4);
+    const n = NPCS[nk];
+    title = (n && n.name) ? n.name : nk.replace(/_/g, ' ');
+  }
+  _lbOpenForKind(kind, title, _avW(src, 512));
+}
+// Sidebar 🔍 badge (§3.3) — player portrait, or paint fallback.
+function openPcLightbox() {
+  openMsgAvatarLightbox('player');
+}
+// 🎨 action inside the lightbox: close it, then open the paint modal for the
+// kind currently on display.
+function lbPaint() {
+  const kind = _lbKind;
+  closeAvatarLightbox();
+  pickAvatar(kind || 'player');
 }
 // Konto-avataren i profil-modalen: klick → full-size preview (eller måla om
 // om det ännu inte finns något porträtt).
@@ -2966,13 +3078,7 @@ function refreshAvatars() {
       ? `<img src="${_avW(API.accountAvatarUrl(), 64)}&t=${Date.now()}" alt="" style="width:100%;height:100%;object-fit:cover">`
       : '👤';
   }
-  // Spelarens kort i sidebaren
-  const pcAv = document.getElementById('pc-avatar');
-  if (pcAv) {
-    pcAv.innerHTML = AVATARS['player']
-      ? `<img src="${_avW(AVATARS['player'], 128)}" alt="" style="width:100%;height:100%;object-fit:cover">`
-      : SPR.html('🎭');
-  }
+  // Spelarens porträtt visas som bakgrund i .pc-wrap (single-layer, §3.3)
   // Profilavatar som bakgrund "bakom" namn/klass/HP/XP
   const pcWrap = document.getElementById('pc-wrap');
   const pcBg = document.getElementById('pc-avatar-bg');
@@ -3394,7 +3500,7 @@ function buildMessage(type, npcKey, text, meta) {
     el.style.setProperty('--npc-color', n.color);
     el.setAttribute('data-npc', npcKey || '');
     el.innerHTML = `
-      <span class="msg-avatar" data-npc-key="${attrEscape(npcKey || '')}" onclick="pickAvatar('npc:${jsStr(npcKey || '')}')" title="${I18N.t('Klicka för att byta bild')}">${AVATARS['npc:' + npcKey] ? `<img src="${_avW(AVATARS['npc:' + npcKey], 128)}" alt="">` : SPR.html(n.icon || '🎭')}</span>
+      <span class="msg-avatar" data-npc-key="${attrEscape(npcKey || '')}" onclick="openMsgAvatarLightbox('npc:${jsStr(npcKey || '')}')" title="${I18N.t('Click to enlarge')}">${AVATARS['npc:' + npcKey] ? `<img src="${_avW(AVATARS['npc:' + npcKey], 128)}" alt="">` : SPR.html(n.icon || '🎭')}</span>
       <div class="bubble">
         <div class="who" onclick="openNpcDrawer(this.closest('.msg').dataset.npc)" title="Open dossier" style="cursor:pointer"><span class="dot"></span>${n.name}</div>
         <div class="text">${highlightTerms(mdToHtml(escapeHtml(text)))}</div>
@@ -5929,11 +6035,11 @@ async function handleSlashCommand(text) {
   const chapterMatch = text.match(/^\/chapter\s+(.+)$/i);
   if (chapterMatch) {
     const title = chapterMatch[1].trim();
-    addCmdMessage(`📖 <i>Ending chapter: ${escapeHtml(title)}…</i>`);
+    addCmdMessage(`📜 <i>Ending chapter: ${escapeHtml(title)}…</i>`);
     try {
       const res = await API.triggerChapter(title);
-      toast(`📖 Chapter ended: ${title}`);
-      addMessage('system', null, `📖 <b>Chapter ${res.chapter_count}: ${escapeHtml(title)}</b><br><br>${mdToHtml(escapeHtml(res.summary))}`);
+      toast(`📜 Chapter ended: ${title}`);
+      addMessage('system', null, `📜 <b>Chapter ${res.chapter_count}: ${escapeHtml(title)}</b><br><br>${mdToHtml(escapeHtml(res.summary))}`);
     } catch (e) {
       addMessage('system', null, '⚠ Could not end chapter: ' + escapeHtml(e.message));
     }
@@ -7239,7 +7345,7 @@ const EFFECT_META = {
   npc_new:        { icon: '🧙',  sfx: 'click' },
   npc_note:       { icon: '📝',  sfx: 'click' },
   npc_reveal:     { icon: '🎭',  sfx: 'gate' },
-  character_update:{ icon: '📖',  sfx: 'click' },
+  character_update:{ icon: '🧙',  sfx: 'click' },
   plats:          { icon: '📍',  sfx: 'click' },
   flytt:          { icon: '🧭',  sfx: 'click' },
   tid:            { icon: '⏰',  sfx: 'click' },
@@ -7568,17 +7674,14 @@ function renderNpcSidebar() {
   if (!list) return;
   const row = ([k, n]) => {
     const av = AVATARS['npc:' + k];
-    const icon = av
-      ? `<img class="npc-av-thumb" src="${_avW(av, 64)}" alt="" loading="lazy">`
-      : SPR.html(n.icon || '🎭');
+    const icon = SPR.html(n.icon || '🎭');
     const safeName = String(n.name || k || '').replace(/'/g, "\\'");
-    // 2026-08-05: har NPC:n ett porträtt → renderas som äventyrarens kort:
-    // stor cirkel-thumb + porträtt i bakgrunden. Utan porträtt: dot + ikon.
+    // 2026-09-17 (§3.3): single-layer — med porträtt visas bara .npc-bg,
+    // ingen tumme ovanpå. Utan porträtt: dot + ikon.
     const avClass = av ? ' has-av' : '';
     return `
       <div class="npc-row${n.alive === false ? ' dead' : ''}${avClass}" data-npc="${k}" onclick="openNpcCodex('${safeName}')" title="Open dossier in Codex" style="cursor:pointer">
         ${av ? `<img class="npc-bg" src="${_avW(av, 128)}" alt="" loading="lazy">` : `<span class="npc-dot" style="color:${n.color};background:${n.color}"></span>`}
-        ${av ? icon : ''}
         <span class="npc-info">
           <div class="npc-name">${n.alive === false ? SPR.html('💀') : ''} ${av ? '' : icon} ${n.name}</div>
           ${n.role ? `<div class="npc-role">${n.role}</div>` : ''}
@@ -7638,7 +7741,7 @@ function renderQuests(quests) {
   if (!list) return;
   const qs = quests || [];
   if (!qs.length) {
-    list.innerHTML = `<div class="quest-empty">${I18N.t('Inga uppdrag ännu…')}</div>`;
+    list.innerHTML = `<div class="quest-empty">No quests yet — the DM will post one when the story hooks you.</div>`;
     return;
   }
   // Aktiva först, därefter slutförda/misslyckade
@@ -7950,8 +8053,8 @@ function syncCliChatLabels() {
   document.querySelectorAll('[data-cli-label]').forEach(el => {
     const name = el.querySelector('.di-name');
     const hint = el.querySelector('.di-hint');
-    if (name) name.textContent = on ? 'Chat UI: CLI' : 'Chat UI: Bubbles';
-    if (hint) hint.textContent = on ? 'terminal style — toggle to bubbles' : 'bubbles — toggle to CLI terminal';
+    if (name) name.textContent = on ? 'Chat style: Terminal' : 'Chat style: Bubbles';
+    if (hint) hint.textContent = on ? 'click to switch to bubbles' : 'click to switch to terminal';
   });
 }
 applyCliChat();
@@ -8239,13 +8342,13 @@ function toast(msg, ms = 2600) {
 }
 
 // ── Release-toast: en gång per version (localStorage) ──
-const RELEASE_TOAST_VERSION = 'v1.3-20260913';
+const RELEASE_TOAST_VERSION = 'v1.4-20260917';
 function maybeShowReleaseToast() {
   try {
     if (localStorage.getItem('dnd_release_toast') === RELEASE_TOAST_VERSION) return;
     localStorage.setItem('dnd_release_toast', RELEASE_TOAST_VERSION);
   } catch (_) { /* private mode — visa ändå */ }
-  setTimeout(() => toast('✦ New: Qwen 3.8 Flash — the fast, free DM mind. Set it in Settings. Plus resizable composer and self-keeping combat rounds.', 9000), 1400);
+  setTimeout(() => toast('✦ New: Qwen 3.8 Flash — now in the free tier. A fast DM mind, free for every account. Pick it in Settings.', 9000), 1400);
 }
 
 // ═══════════════════════════════════════
@@ -8290,26 +8393,6 @@ function toggleCodexNav() {
   openCodex();
 }
 
-function openSheet(id) {
-  const sheet = document.getElementById(id);
-  const backdrop = document.getElementById(id + '-backdrop');
-  if (!sheet) return;
-  SFX.click();
-  closeMobileSidebar();
-  sheet.classList.add('open');
-  if (backdrop) backdrop.classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-
-function closeSheet(id) {
-  const sheet = document.getElementById(id);
-  const backdrop = document.getElementById(id + '-backdrop');
-  if (!sheet) return;
-  sheet.classList.remove('open');
-  if (backdrop) backdrop.classList.remove('open');
-  document.body.style.overflow = '';
-}
-
 // Close drawers/sheets on Escape
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
@@ -8319,7 +8402,6 @@ document.addEventListener('keydown', (e) => {
     if (closeCodexIfOpen()) return;
     if (closeItemModalIfOpen()) return;
     if (closeCharDrawerIfOpen()) return;
-    document.querySelectorAll('.sheet.open').forEach(s => closeSheet(s.id));
   }
 });
 
@@ -8343,6 +8425,8 @@ if (hpFill) {
 const canvas = document.getElementById('embers');
 const ctx = canvas.getContext('2d');
 let W, H, embers = [];
+// Reduced motion (§5): hoppa över den permanent animerade canvasen helt.
+const EMBERS_RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 function resize() { W = canvas.width = innerWidth; H = canvas.height = innerHeight; }
 resize(); addEventListener('resize', resize);
 function spawn(init) {
@@ -8350,7 +8434,7 @@ function spawn(init) {
     vy: 0.2+Math.random()*0.55, vx: (Math.random()-0.5)*0.3, life: 0,
     max: 400+Math.random()*500, hue: Math.random()<0.82 ? 22+Math.random()*18 : 268+Math.random()*20 };
 }
-for (let i=0;i<32;i++) embers.push(spawn(true));
+if (!EMBERS_RM) for (let i=0;i<32;i++) embers.push(spawn(true));
 function tick() {
   ctx.clearRect(0,0,W,H);
   for (let i=0;i<embers.length;i++) {
@@ -8364,7 +8448,7 @@ function tick() {
   }
   requestAnimationFrame(tick);
 }
-tick();
+if (!EMBERS_RM) tick(); else canvas.style.display = 'none';
 </script>
 
 <!-- ═══════════ MOBILE BOTTOM NAV — Party | Codex (center) | Tools ═══════════ -->
@@ -8377,24 +8461,11 @@ tick();
     <span class="nav-icon">📖</span>
     <span class="nav-label">Codex</span>
   </button>
-  <button class="nav-tab" onclick="openSheet('sheet-tools');SFX.click()">
+  <button class="nav-tab" onclick="toggleMobileMenu();SFX.click()">
     <span class="nav-icon">⚙️</span>
     <span class="nav-label">Tools</span>
   </button>
 </nav>
-
-<!-- ═══════════ MOBILE SHEET: VERKTYG ═══════════ -->
-<div class="sheet-backdrop" id="sheet-tools-backdrop" onclick="closeSheet('sheet-tools')"></div>
-<div class="sheet" id="sheet-tools">
-  <div class="sheet-head">
-    <span class="sheet-title">⚙️ Tools</span>
-    <button class="sheet-close" onclick="closeSheet('sheet-tools')">✕</button>
-  </div>
-  <div class="sheet-body">
-    <a class="sheet-row" href="help.html"><span class="sr-icon">❓</span><span class="sr-body"><span class="sr-name">How to Play?</span><span class="sr-hint">commands &amp; tips</span></span></a>
-    <button class="sheet-row" onclick="closeSheet('sheet-tools');exportCampaign()"><span class="sr-icon">📦</span><span class="sr-body"><span class="sr-name">Export</span><span class="sr-hint">campaign as zip</span></span></button>
-  </div>
-</div>
 
 <script>
 // ═══════════════════════════════════════
@@ -8709,11 +8780,11 @@ function cdMentionNpc(name) {
 
 // ═══════════════ 📖 CODEX MODAL (D1.3) — lazy iframes ═══════════════
 const CODEX_PAGES = {
-  character: { label: '🧙 Character', src: 'character.html?v=20260913a' },
-  npcs:      { label: '🧝 NPCs',      src: 'npcs.html?v=20260913a' },
-  map:       { label: '🗺 Map',       src: 'platser.html?v=20260913a' },
-  journal:   { label: '📖 Journal',   src: 'loggbok.html?v=20260913a' },
-  facts:     { label: '📌 Facts',     src: 'facts.html?v=20260913a' },
+  character: { label: '🧙 Character', src: 'character.html?v=20260917a' },
+  npcs:      { label: '🧝 NPCs',      src: 'npcs.html?v=20260917a' },
+  map:       { label: '🗺 Map',       src: 'platser.html?v=20260917a' },
+  journal:   { label: '📜 Journal',   src: 'loggbok.html?v=20260917a' },
+  facts:     { label: '📌 Facts',     src: 'facts.html?v=20260917a' },
 };
 const _codexIframes = {};
 let _codexLastTab = 'character';
@@ -9123,10 +9194,16 @@ document.addEventListener('keydown', e => {
 </div>
 
 <!-- 🔍 Avatar-lightbox — större förhandsvisning -->
-<div class="av-lightbox" id="avatar-lightbox" onclick="if(event.target===this)closeAvatarLightbox()">
+<div class="av-lightbox" id="avatar-lightbox" onclick="if(event.target===this)closeAvatarLightbox()" role="dialog" aria-modal="true" aria-label="Portrait preview">
   <!-- Fix C 2026-09-13: tomt <img> i DOM gav trasig-bild-glyf — bilden skapas
        Lazily först när lightboxen öppnas med en verklig src. -->
   <div id="avatar-lightbox-img-slot"></div>
+  <div class="av-lb-bar" id="avatar-lightbox-bar" hidden>
+    <button class="av-lb-nav" onclick="lbRotate(-1)" aria-label="Previous portrait">‹</button>
+    <span class="av-lb-count" id="avatar-lightbox-count"></span>
+    <button class="av-lb-nav" onclick="lbRotate(1)" aria-label="Next portrait">›</button>
+  </div>
+  <button class="av-lb-act" id="avatar-lightbox-paint" hidden onclick="lbPaint()">🎨 Paint a new portrait</button>
   <button class="av-lb-close" onclick="closeAvatarLightbox()">✕</button>
   <div class="av-lb-title" id="avatar-lightbox-title"></div>
 </div>

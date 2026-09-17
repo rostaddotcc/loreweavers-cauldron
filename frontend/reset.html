@@ -70,7 +70,7 @@
     h1{font-size:.95rem}
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=46">
+<link rel="stylesheet" href="snes.css?v=47">
 </head>
 <body>
 <div class="card">
@@ -129,7 +129,7 @@
     if (pass !== confirm) { fail('The new words do not match.'); return; }
     if (pass.length < 6) { fail('The new word needs at least 6 characters.'); return; }
     btn.disabled = true;
-    btn.textContent = 'Re-forging&hellip;';
+    btn.textContent = 'Re-forging…';
     try {
       const res = await API.resetWithToken(token, pass);
       sessionStorage.setItem('dnd_user', res.username);

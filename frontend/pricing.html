@@ -46,6 +46,7 @@
   .nav-link{font-family:var(--font-display);font-size:.7rem;letter-spacing:.2em;
     text-transform:uppercase;color:var(--bone-dim);text-decoration:none;transition:color .2s}
   .nav-link:hover{color:var(--gold-bright)}
+  .nav-link.active{color:var(--gold)}
   .nav-cta{font-family:var(--font-display);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;
     color:var(--ink);background:var(--gold);border:1px solid var(--gold-bright);
     padding:.5rem 1rem;text-decoration:none}
@@ -195,8 +196,10 @@
     .nav-links .nav-link{display:none}
     .pricing{padding-top:calc(var(--nav-h) + 3rem)}
   }
+  /* Reduced motion — smooth scroll off (global animation block lives in snes.css) */
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
 </style>
-<link rel="stylesheet" href="snes.css?v=46">
+<link rel="stylesheet" href="snes.css?v=47">
 </head>
 <body>
 
@@ -206,8 +209,11 @@
     <span>The Cauldron</span>
   </a>
   <div class="nav-links">
-    <a class="nav-link" href="adventure.html">Return to the realm</a>
-    <a class="nav-cta" href="login.html#gate">Enter</a>
+    <a class="nav-link active" href="pricing.html" title="Pricing & subscriptions">Paths</a>
+    <a class="nav-link" href="models.html" title="The AI models behind the game">The Minds</a>
+    <a class="nav-link" href="releases.html" title="Release notes / changelog">Ledger</a>
+    <a class="nav-link" href="help.html" title="How to Play guide">Guide</a>
+    <a class="nav-cta" href="login.html#gate" title="Sign in or create your adventurer">Enter</a>
   </div>
 </nav>
 
@@ -255,7 +261,7 @@
         <li><b>Export &amp; uploaded avatars</b> — your story as a zip, your own images</li>
         <li><b>Priority API</b> — first in line, even when the cauldron is busy</li>
       </ul>
-      <p class="tier-fine">Premium models are served as they can be financed. consider a donation as well to keep the adventure growing.</p>
+      <p class="tier-fine">Premium models run as long as they can be financed — a donation keeps the cauldron burning.</p>
       <a class="tier-btn go" href="#" data-tier="patron500" onclick="openPlan(event,'patron500')">Become a Patron</a>
     </div>
 

@@ -90,8 +90,10 @@
     padding:.95rem 2.2rem}
   .btn-gold:hover{background:var(--gold-bright);color:var(--ink)}
   .cta .small{margin-top:1.1rem;font-size:.82rem;font-style:italic;color:var(--bone-dim)}
+  /* Reduced motion — smooth scroll off (global animation block lives in snes.css) */
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
 </style>
-<link rel="stylesheet" href="snes.css?v=46">
+<link rel="stylesheet" href="snes.css?v=47">
 </head>
 <body>
 <nav class="nav">
@@ -100,9 +102,11 @@
     <span>Lore Weaver's Cauldron</span>
   </a>
   <div class="nav-links">
-    <a href="help.html">How to Play &amp; Underlying Mechanics</a>
-    <a href="pricing.html">Pricing</a>
-    <a class="nav-cta" href="login.html">Enter</a>
+    <a href="pricing.html" title="Pricing & subscriptions">Paths</a>
+    <a href="models.html" title="The AI models behind the game">The Minds</a>
+    <a href="releases.html" title="Release notes / changelog">Ledger</a>
+    <a href="help.html" title="How to Play guide">Guide</a>
+    <a class="nav-cta" href="login.html#gate" title="Sign in or create your adventurer">Enter</a>
   </div>
 </nav>
 
@@ -118,47 +122,34 @@
   <div class="wrap">
     <div class="gallery" id="gallery">
 
-      <!-- 🖼️ SCREENSHOT SLOT — replace the .shot-img contents with your image:
-           <img src="assets/screens/gate.png" alt="The Gate — sign in"> -->
       <div class="shot">
-        <div class="shot-img">Screenshot coming soon</div>
+        <div class="shot-img"><img src="assets/screens/hero-login.jpg" alt="The Gate — the login screen: a dark stone hall with the Cauldron's brand, the sign-in card and the pitch 'a free AI Dungeon Master with a memory'" loading="lazy"></div>
         <h3>The Gate</h3>
         <p>Where every adventurer swears in — free, no card, no email.</p>
       </div>
 
-      <!-- 🖼️ SCREENSHOT SLOT -->
       <div class="shot">
-        <div class="shot-img">Screenshot coming soon</div>
-        <h3>The Table</h3>
+        <div class="shot-img"><img src="assets/screens/at-the-table.jpg" alt="At the Table — the chat view: the DM's narration above the rite-rail, the composer below, dice results and the party sidebar" loading="lazy"></div>
+        <h3>At the Table</h3>
         <p>The DM narrates, you answer in plain words — and the world writes itself into the books.</p>
       </div>
 
-      <!-- 🖼️ SCREENSHOT SLOT -->
       <div class="shot">
-        <div class="shot-img">Screenshot coming soon</div>
-        <h3>The Dice</h3>
+        <div class="shot-img"><img src="assets/screens/dice-and-narration.jpg" alt="Honest Dice — a rolled check inline with the narration: the die result, the modifier and the DM's consequence, all real code" loading="lazy"></div>
+        <h3>Honest Dice</h3>
         <p>A natural 20 still feels like lightning — rolled by real code, never invented.</p>
       </div>
 
-      <!-- 🖼️ SCREENSHOT SLOT -->
       <div class="shot">
-        <div class="shot-img">Screenshot coming soon</div>
-        <h3>The Codex</h3>
-        <p>Character, NPCs, map, journal and facts — the whole campaign in one tabbed hall.</p>
+        <div class="shot-img"><img src="assets/screens/book-of-souls.jpg" alt="Book of Souls — the public gallery of summoned adventurers and NPCs as page-turning books with painted portraits" loading="lazy"></div>
+        <h3>Book of Souls</h3>
+        <p>Every summoned soul in a page-turning book — painted portraits, names and tales, open to the world.</p>
       </div>
 
-      <!-- 🖼️ SCREENSHOT SLOT -->
       <div class="shot">
-        <div class="shot-img">Screenshot coming soon</div>
-        <h3>The Forge</h3>
-        <p>Every adventurer you summon is saved — full sheet, level, gear and story — ready to walk back in.</p>
-      </div>
-
-      <!-- 🖼️ SCREENSHOT SLOT -->
-      <div class="shot">
-        <div class="shot-img">Screenshot coming soon</div>
-        <h3>The Portraits</h3>
-        <p>Your adventurer, the NPCs, even the DM — every face painted by AI, rerolled until it feels right.</p>
+        <div class="shot-img"><img src="assets/screens/mobile-table.jpg" alt="Mobile Play — the same table on a phone: compact chat, bottom navigation and the mobile drawer" loading="lazy"></div>
+        <h3>Mobile Play</h3>
+        <p>The whole table fits in a pocket — dice, narration and your party, anywhere the road goes.</p>
       </div>
 
     </div>

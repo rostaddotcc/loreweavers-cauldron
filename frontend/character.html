@@ -558,9 +558,21 @@
 #resistances-section .section-title{ margin-top: 1.8rem; }
 
 </style>
-<link rel="stylesheet" href="snes.css?v=46">
+<link rel="stylesheet" href="snes.css?v=47">
 <style>
 /* ═══════════ MJUKA UPP — Codex karaktärsblad (2026-08-05) — EFTER snes.css ═══════════ */
+/* Topbar — layout extracted from former inline styles (audit A2 §1.7) */
+.topbar{ position:relative; z-index:5; display:flex; align-items:center; gap:1rem; padding:.7rem 1.2rem;
+  background:linear-gradient(180deg,var(--stone-2),color-mix(in srgb, var(--stone) 95%, transparent));
+  border-bottom:1px solid var(--edge); box-shadow:0 4px 20px rgba(0,0,0,.5) }
+.topbar-brand{ font-family:var(--font-display,'Cinzel',serif); font-weight:900; font-size:1.05rem;
+  color:var(--gold-bright); letter-spacing:.06em; white-space:nowrap; text-shadow:0 0 14px rgba(var(--gold-bright-rgb),.3) }
+.topbar-sub{ font-size:.91rem; font-style:italic; color:var(--bone-dim); border-left:1px solid var(--edge); padding-left:1rem }
+.top-btn{ font-family:var(--font-display,'Cinzel',serif); font-size:.75rem; letter-spacing:.14em;
+  text-transform:uppercase; padding:.45rem .85rem; cursor:pointer; white-space:nowrap; text-decoration:none }
+.top-btn.danger{ border-color:var(--blood) !important; color:var(--blood-bright) !important }
+.top-btn.danger:hover{ background:var(--blood) !important; color:#fff !important }
+@media (max-width:900px){ .topbar-sub{ display:none } }
 .top-btn{ border-radius: 8px !important; box-shadow: 0 2px 12px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; }
 .top-btn:hover{ transform: translateY(-1px) !important; }
 .tab{ border-radius: 8px !important; transition: all .2s !important; }
@@ -587,15 +599,15 @@
 <canvas id="embers"></canvas>
 <div class="vignette"></div>
 
-<header class="topbar" style="position:relative;z-index:5;display:flex;align-items:center;gap:1rem;padding:.7rem 1.2rem;background:linear-gradient(180deg,var(--stone-2),color-mix(in srgb, var(--stone) 95%, transparent));border-bottom:1px solid var(--edge);box-shadow:0 4px 20px rgba(0,0,0,.5)">
-  <span style="font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:1.05rem;color:var(--gold-bright);letter-spacing:.06em;text-shadow:0 0 14px rgba(var(--gold-bright-rgb),.3)">The Lore Weaver's Cauldron</span>
-  <span style="font-size:.91rem;font-style:italic;color:var(--bone-dim);border-left:1px solid var(--edge);padding-left:1rem">Character Sheet</span>
+<header class="topbar">
+  <span class="topbar-brand">The Lore Weaver's Cauldron</span>
+  <span class="topbar-sub">Character Sheet</span>
   <span style="flex:1"></span>
-  <a class="top-btn" href="chat.html" style="font-family:var(--font-display,'Cinzel',serif);font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:8px;text-decoration:none">⚔ To the Table</a>
-  <a class="top-btn" href="loggbok.html" style="font-family:var(--font-display,'Cinzel',serif);font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:8px;text-decoration:none">📜 Logbook</a>
-  <a class="top-btn" href="platser.html" style="font-family:var(--font-display,'Cinzel',serif);font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:8px;text-decoration:none">🗺️ The Map</a>
-  <a class="top-btn" href="npcs.html" style="font-family:var(--font-display,'Cinzel',serif);font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:8px;text-decoration:none">📖 NPCs</a>
-  <button class="top-btn danger" onclick="doLogout()" style="font-family:var(--font-display,'Cinzel',serif);font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:8px">🚪 Leave</button>
+  <a class="top-btn" href="chat.html">⚔ To the Table</a>
+  <a class="top-btn" href="loggbok.html">📜 Logbook</a>
+  <a class="top-btn" href="platser.html">🗺️ The Map</a>
+  <a class="top-btn" href="npcs.html">👥 NPCs</a>
+  <button class="top-btn danger" onclick="doLogout()">🔒 Log out</button>
 </header>
 <div class="app">
 

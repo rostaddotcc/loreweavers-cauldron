@@ -183,6 +183,28 @@ body{
 
 .book-hint{text-align:center;font-style:italic;font-size:.74rem;color:var(--bone-dim);margin-top:1.1rem}
 
+/* ===== header nav ===== */
+.bos-nav{position:relative;z-index:3;max-width:1560px;margin:0 auto;padding:1.1rem 1.6rem 0;
+  display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.bos-nav .brand{font-family:'Cinzel',serif;font-weight:900;font-size:.82rem;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--gold-bright);text-shadow:0 0 14px rgba(201,162,39,.35)}
+.bos-nav .back{font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--bone-dim);border:1px solid var(--edge);background:rgba(14,14,20,.7);padding:.5rem .9rem;
+  text-decoration:none;transition:color .2s,border-color .2s}
+.bos-nav .back:hover{color:var(--gold-bright);border-color:var(--gold)}
+
+/* ===== portrait lightbox (shared pattern, audit A2 §4.3) ===== */
+.bos-lightbox{position:fixed;inset:0;z-index:11000;display:flex;align-items:center;justify-content:center;
+  background:rgba(4,2,8,.94);opacity:0;visibility:hidden;transition:opacity .22s ease,visibility .22s}
+.bos-lightbox.show{opacity:1;visibility:visible}
+.bos-lightbox img{max-width:min(92vw,760px);max-height:88vh;border:2px solid var(--gold);
+  box-shadow:0 0 60px rgba(201,162,39,.25),0 24px 60px rgba(0,0,0,.8)}
+.bos-lightbox .lb-close{position:fixed;top:1.2rem;right:1.4rem;font-size:.8rem;color:var(--gold-bright);
+  background:none;border:1px solid var(--edge);padding:.5rem .7rem;cursor:pointer}
+.bos-lightbox .lb-close:hover{border-color:var(--gold);color:var(--bone-bright)}
+.bos-lightbox .lb-title{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);
+  font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim)}
+
 .rv{opacity:0;transform:translateY(28px);transition:opacity .8s ease,transform .8s ease}
 .rv.in{opacity:1;transform:none}
 
@@ -219,10 +241,23 @@ body{
   .npc-card .body .know .k-t{font-size:.58rem}
   .npc-card .meet{font-size:.62rem;padding:.3rem .55rem}
 }
+/* Reduced motion — page flip degrades to instant, flicker off */
+@media (prefers-reduced-motion: reduce){
+  .pg{transition:none}
+  .pg::after{animation:none;opacity:0}
+  .pg .face{transition:none}
+  .sec-head h2{animation:none}
+  .rv{opacity:1;transform:none;transition:none}
+}
 </style>
 </head>
 <body>
 <div class="grain"></div><div class="vignette"></div>
+
+<nav class="bos-nav">
+  <span class="brand">The Lore Weaver's Cauldron</span>
+  <a class="back" href="../login.html">← Back to the Gate</a>
+</nav>
 
 <div class="wrap">
       <div class="sec-head rv in">
@@ -237,7 +272,7 @@ body{
     <div class="book-col rv in">
       <div class="bk-title">
         <div class="bk-name">The Adventurers</div>
-        <div class="bk-count" id="adv-cnt">Tale 1 of 0</div>
+        <div class="bk-count" id="adv-cnt">No souls summoned yet</div>
       </div>
       <div class="stage">
         <div class="book" id="book-adv">
@@ -257,7 +292,7 @@ body{
     <div class="book-col rv in">
       <div class="bk-title">
         <div class="bk-name">Those They Met</div>
-        <div class="bk-count" id="npc-cnt">Encounter 1 of 0</div>
+        <div class="bk-count" id="npc-cnt">No souls summoned yet</div>
       </div>
       <div class="stage">
         <div class="book" id="book-npc">
@@ -273,6 +308,13 @@ body{
       <div class="book-hint">click the left page to turn back · right page to advance · or drag a page</div>
     </div>
   </div>
+</div>
+
+<!-- 🔍 Portrait lightbox — shared pattern (audit A2 §4.3) -->
+<div class="bos-lightbox" id="bos-lightbox" onclick="if(event.target===this)closeArtLightbox()" role="dialog" aria-modal="true" aria-label="Portrait preview">
+  <div id="bos-lightbox-img-slot"></div>
+  <button class="lb-close" onclick="closeArtLightbox()" aria-label="Close">✕</button>
+  <div class="lb-title" id="bos-lightbox-title"></div>
 </div>
 
 <script>
@@ -392,9 +434,10 @@ function zReset(B){
 }
 function curPage(B){ return B.pages.filter(p=>!B.left.includes(+p.dataset.i))[0]; }
 function updateCnt(B){
-  const shown = B.left.length + 1;
-  document.getElementById(B.label).textContent =
-    (B.key==='adv' ? 'Tale ' : 'Encounter ') + shown + ' of ' + B.total;
+  const el = document.getElementById(B.label);
+  el.textContent = B.total
+    ? (B.key==='adv' ? 'Tale ' : 'Encounter ') + (B.left.length + 1) + ' of ' + B.total
+    : 'No souls summoned yet';
 }
 function settle(pg, dir, B, onDone){
   pg.classList.remove('rest-right','rest-left','dragging');
@@ -496,6 +539,11 @@ function endDrag(key, e, mode){
     // === click (real pointerup only): left half = back, right half = forward ===
     pg.classList.remove('dragging');
     if(mode !== 'up') return;                    // pointercancel is never a click
+    // Portrait area click → enlarge instead of turning
+    if(e.target.closest('.art, .scrim') && !e.target.closest('.body')){
+      openArtLightbox(pg);
+      return;
+    }
     const rect = B.el.getBoundingClientRect();
     turnBook(e.clientX < rect.left + rect.width/2 ? -1 : 1, key);
     return;
@@ -556,6 +604,32 @@ document.addEventListener('keydown', e=>{
   attachInteractions('npc');
   Object.values(BOOKS).forEach(B=>{ zReset(B); updateCnt(B); });
 })();
+
+/* ═══ click-to-enlarge on .art faces — shared lightbox pattern (audit A2 §4.3) ═══
+   Clicking the painted portrait area (art/scrim, above the .body text block)
+   opens the lightbox; clicking elsewhere still turns the page. */
+function openArtLightbox(pg){
+  const art = pg.querySelector('.pg-card .art, .npc-card .art');
+  const nameEl = pg.querySelector('.pg-card .nm, .npc-card .nm');
+  if(!art) return;
+  const m = art.style.backgroundImage.match(/url\((['"]?)(.*?)\1\)/);
+  if(!m) return;
+  const lb = document.getElementById('bos-lightbox');
+  const slot = document.getElementById('bos-lightbox-img-slot');
+  slot.innerHTML = '';
+  const img = document.createElement('img');
+  img.src = m[2];
+  img.alt = nameEl ? 'Portrait of ' + nameEl.textContent : 'Portrait';
+  img.loading = 'lazy';
+  slot.appendChild(img);
+  document.getElementById('bos-lightbox-title').textContent = nameEl ? nameEl.textContent : '';
+  lb.classList.add('show');
+}
+function closeArtLightbox(){
+  const lb = document.getElementById('bos-lightbox');
+  if(lb) lb.classList.remove('show');
+}
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeArtLightbox(); });
 </script>
 </body>
 </html>

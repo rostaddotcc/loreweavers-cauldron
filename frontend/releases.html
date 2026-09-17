@@ -46,6 +46,13 @@
   .nav-link{font-family:var(--font-display);font-size:.7rem;letter-spacing:.2em;
     text-transform:uppercase;color:var(--bone-dim);text-decoration:none;transition:color .2s}
   .nav-link:hover{color:var(--gold-bright)}
+  .nav-link.active{color:var(--gold)}
+  /* version chip-row — jump index (audit A2 §5 releases) */
+  .ver-chiprow{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;margin:1.4rem 0 .4rem}
+  .ver-chiprow a{font-family:var(--font-display);font-size:.64rem;letter-spacing:.12em;
+    color:var(--bone-dim);border:1px solid var(--edge);background:var(--stone);padding:.42rem .8rem;text-decoration:none;transition:all .2s}
+  .ver-chiprow a:hover{color:var(--gold-bright);border-color:var(--gold)}
+
   .nav-cta{font-family:var(--font-display);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;
     color:var(--ink);background:var(--gold);border:1px solid var(--gold-bright);
     padding:.5rem 1rem;text-decoration:none}
@@ -180,7 +187,7 @@
     .sec-head h2{font-size:.92rem}
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=46">
+<link rel="stylesheet" href="snes.css?v=47">
 <noscript><style>.rv{opacity:1;transform:none}</style></noscript>
 </head>
 <body>
@@ -191,9 +198,11 @@
     <span>The Cauldron</span>
   </a>
   <div class="nav-links">
-    <a class="nav-link" href="pricing.html">Paths</a>
-    <a class="nav-link" href="adventure.html">The Crossroads</a>
-    <a class="nav-cta" href="login.html#gate">Enter</a>
+    <a class="nav-link" href="pricing.html" title="Pricing & subscriptions">Paths</a>
+    <a class="nav-link" href="models.html" title="The AI models behind the game">The Minds</a>
+    <a class="nav-link active" href="releases.html" title="Release notes / changelog">Ledger</a>
+    <a class="nav-link" href="help.html" title="How to Play guide">Guide</a>
+    <a class="nav-cta" href="login.html#gate" title="Sign in or create your adventurer">Enter</a>
   </div>
 </nav>
 
@@ -208,6 +217,16 @@
     <span class="ver-tag">Undo the last turn</span>
     <span class="ver-tag">Combat rounds, 2026-09-13</span>
     <span class="ver-tag">Resizable composer</span>
+  </div>
+
+  <div class="ver-chiprow rv" aria-label="Jump to a version">
+    <a href="#s13">v1.3</a>
+    <a href="#s12">v1.2</a>
+    <a href="#s11">v1.1</a>
+    <a href="#s10">v1.0</a>
+    <a href="#s010">v0.10</a>
+    <a href="#s09">v0.9</a>
+    <a href="#s08">v0.8</a>
   </div>
 
   <!-- ═══════════════ 1.3 headline ═══════════════ -->
@@ -303,7 +322,7 @@
 
 
   <!-- ═══════════════ 1.1 headline ═══════════════ -->
-  <div class="sec rv">
+  <div class="sec rv" id="s11">
     <div class="sec-head">
       <span class="sec-num">1.1</span>
       <h2>The Open Road</h2>
@@ -351,7 +370,7 @@
   </div>
 
   <!-- ═══════════════ 1.0 headline ═══════════════ -->
-  <div class="sec rv">
+  <div class="sec rv" id="s10">
     <div class="sec-head">
       <span class="sec-num">1.0</span>
       <h2>The Complete Table</h2>
@@ -474,7 +493,7 @@
   </div>
 
   <!-- ═══════════════ 0.10 headline ═══════════════ -->
-  <div class="sec rv">
+  <div class="sec rv" id="s010">
     <div class="sec-head">
       <span class="sec-num">0.10</span>
       <h2>The Soft Table</h2>
@@ -540,7 +559,7 @@
   </div>
 
   <!-- ═══════════════ 0.9 headline ═══════════════ -->
-  <div class="sec rv">
+  <div class="sec rv" id="s09">
     <div class="sec-head">
       <span class="sec-num">0.9</span>
       <h2>The Full Mind</h2>
@@ -602,7 +621,7 @@
   </div>
 
   <!-- ═══════════════ 0.8 headline ═══════════════ -->
-  <div class="sec rv">
+  <div class="sec rv" id="s08">
     <div class="sec-head">
       <span class="sec-num">0.8</span>
       <h2>The Portrait, the Path</h2>

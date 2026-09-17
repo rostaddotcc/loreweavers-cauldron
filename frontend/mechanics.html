@@ -341,7 +341,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
   html{scroll-behavior:auto}
 }
 </style>
-<link rel="stylesheet" href="snes.css?v=46">
+<link rel="stylesheet" href="snes.css?v=47">
 <noscript><style>.rv{opacity:1;transform:none}#boot{display:none}.boot-lines{min-height:0}</style></noscript>
 </head>
 <body>
@@ -1094,6 +1094,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
 
 <footer>
   <div class="f-title">✦ the lore weaver's cauldron — engine mechanics ✦</div>
+  <p style="margin-bottom:.9rem"><a href="help.html" style="font-family:var(--font-display);font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-bright);text-decoration:none;border:1px solid var(--edge);padding:.55rem 1.1rem">← Back to the Guide</a></p>
   <p>Compiled from the engine itself: backend/main.py · backend/guardian.py · backend/extraction.py (FactRegister) · backend/models.py · DM prompt v28 · Guardian 44-field contract<br>
   dnd.rostad.cc — The Lore Weaver's Cauldron</p>
 </footer>
@@ -1142,6 +1143,7 @@ function bootStep2(){
 function bootDone(){
   if(!bootEl || bootEl.classList.contains("done")) return;
   clearTimeout(bootTimer);
+  try{ sessionStorage.setItem("mech_boot_seen", "1"); }catch(_){}
   bootEl.classList.add("done");
   setTimeout(function(){ if(bootEl && bootEl.parentNode) bootEl.parentNode.removeChild(bootEl); }, 700);
 }
@@ -1152,7 +1154,11 @@ window.bootSkip = function(){
 document.addEventListener("keydown", function(e){
   if(e.key === "Escape" || e.key === "Enter"){ window.bootSkip(); }
 });
-bootStep2();
+// Persist the skip: repeat readers of a docs page don't want ceremony (audit A2 §5)
+try{
+  if(sessionStorage.getItem("mech_boot_seen")){ bootSkip(); }
+  else { bootStep2(); }
+}catch(_){ bootStep2(); }
 
 /* ── Scroll reveal + progress + spy ────────────────────────── */
 var revealEls = document.querySelectorAll(".rv");

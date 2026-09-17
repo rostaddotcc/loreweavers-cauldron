@@ -106,8 +106,22 @@
     .insp-modal{padding:1.4rem 1rem}
   }
   @media(max-width:400px){.pv-stats{grid-template-columns:repeat(2,1fr)}}
+  /* Keyboard access for vault cards (audit A1 §4.2) */
+  .vcard:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .vcard-avatar:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  #pv-icon:focus-visible,#insp-avatar:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+  /* ═══════════ Portrait lightbox (shared pattern, audit A2 §4.3) ═══════════ */
+  .av-lightbox{position:fixed;inset:0;z-index:11000;display:flex;align-items:center;justify-content:center;background:rgba(10,6,16,.92);opacity:0;visibility:hidden;transition:opacity .22s ease,visibility .22s}
+  .av-lightbox.show{opacity:1;visibility:visible}
+  .av-lightbox img{max-width:min(90vw,720px);max-height:85vh;border:2px solid var(--gold);box-shadow:0 0 60px rgba(var(--gold-rgb),.25),0 24px 60px rgba(0,0,0,.8);border-radius:2px}
+  .av-lightbox .av-lb-sigil{width:min(70vw,320px);aspect-ratio:1;border:2px solid var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--stone-3)}
+  .av-lightbox .av-lb-close{position:fixed;top:1.2rem;right:1.4rem;font-size:.8rem;color:var(--gold-bright);background:none;border:1px solid var(--edge);padding:.5rem .7rem;cursor:pointer}
+  .av-lightbox .av-lb-close:hover{border-color:var(--gold);color:var(--bone-bright)}
+  .av-lightbox .av-lb-title{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);font-family:var(--font-display,'Cinzel',serif);font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim)}
+  /* Reduced motion — page-level extras (global block lives in snes.css) */
+  @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
 </style>
-<link rel="stylesheet" href="snes.css?v=46">
+<link rel="stylesheet" href="snes.css?v=47">
 <script src="sprites.js?v=20260806b"></script>
 <script src="fonts.js?v=20260806b"></script>
 </head>
@@ -130,7 +144,7 @@
   <!-- ═══════════ FORGE (skapa karaktär) ═══════════ -->
   <div class="section-label">I. Forge an Adventurer</div>
   <div class="scroll-box">
-    <textarea id="forge-prompt" spellcheck="false" placeholder="Describe your adventurer — race, class, personality, a wound from their past, the thing they want most in the world…&#10;&#10;Example: A tiefling warlock who sold her shadow to a candle-maker, and now collects other people's secrets like moths."></textarea>
+    <textarea id="forge-prompt" aria-label="Describe your adventurer" spellcheck="false" placeholder="Describe your adventurer — race, class, personality, a wound from their past, the thing they want most in the world…&#10;&#10;Example: A tiefling warlock who sold her shadow to a candle-maker, and now collects other people's secrets like moths."></textarea>
     <div class="forge-actions">
       <button class="summon-btn" id="forge-btn" onclick="forgeSummon()">🔮 Forge Character</button>
       <span style="font-size:.78rem;color:var(--bone-dim)">🧙 Model:</span>
@@ -145,8 +159,8 @@
       </select>
       <span style="font-size:.78rem;color:var(--bone-dim)">🌐</span>
       <select id="forge-lang">
-        <option value="en" selected>English sheet</option>
-        <option value="sv">Svenskt ark</option>
+        <option value="en" selected>English</option>
+        <option value="sv">Svenska</option>
       </select>
     </div>
   </div>
@@ -168,7 +182,7 @@
     <div class="section-label">II. The Forged Adventurer</div>
     <div class="scroll-box">
       <div class="pv-head">
-        <div class="pv-portrait" id="pv-icon">🎭</div>
+        <div class="pv-portrait" id="pv-icon" role="button" tabindex="0" title="Click to see full-size" onclick="openPvLightbox()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openPvLightbox()}">🎭</div>
         <div>
           <div class="pv-name" id="pv-name"></div>
           <div class="pv-class" id="pv-class"></div>
@@ -187,7 +201,7 @@
   </div>
 
   <!-- ═══════════ VAULT ═══════════ -->
-  <div class="section-label">III. The Vault <span id="vault-count" style="font-size:.75rem;letter-spacing:.1em;color:var(--bone-dim)"></span></div>
+  <div class="section-label">The Vault <span id="vault-count" style="font-size:.75rem;letter-spacing:.1em;color:var(--bone-dim)"></span></div>
   <div id="vault-wrap">
     <div class="vault-empty" id="vault-empty">The vault is empty. Forge an adventurer above — or save one from an adventure.</div>
     <div class="vault-grid" id="vault-grid"></div>
@@ -203,6 +217,13 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- 🔍 Portrait lightbox — shared pattern (audit A2 §4.3) -->
+<div class="av-lightbox" id="vault-lightbox" onclick="if(event.target===this)closeVaultLightbox()" role="dialog" aria-modal="true" aria-label="Portrait preview">
+  <div id="vault-lightbox-img-slot"></div>
+  <button class="av-lb-close" onclick="closeVaultLightbox()" aria-label="Close">✕</button>
+  <div class="av-lb-title" id="vault-lightbox-title"></div>
+</div>
 
 <script src="sfx.js?v=20260811a"></script>
 <script>
@@ -358,7 +379,12 @@ async function saveForged() {
     const dup = vaultChars.find(c =>
       (c.character && c.character.name || '').toLowerCase() === forgedChar.name.toLowerCase());
     if (dup) {
-      const ok = confirm('"' + forgedChar.name + '" already exists in your Vault. Save a twin anyway?');
+      const ok = await Modal.confirm({
+        title: 'Save a twin?',
+        body: '"' + forgedChar.name + '" already rests in your Vault. Save this one anyway?',
+        confirmText: 'Save anyway',
+        cancelText: 'Cancel',
+      });
       if (!ok) { toast('Save cancelled'); return; }
     }
     const res = await API.vaultSave({ character: forgedChar, inventory: forgedInv });
@@ -412,9 +438,9 @@ function renderVault() {
     const avatar = c.has_avatar
       ? `<img src="${API.vaultAvatarUrl(c.id)}?t=${Date.now()}" alt="">`
       : _vaultPlaceholderSigil;
-    return `<div class="vcard" onclick="openInspect('${esc(c.id)}')">
+    return `<div class="vcard" role="button" tabindex="0" aria-label="Open ${esc(c.name)}" onclick="openInspect('${esc(c.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openInspect('${esc(c.id)}')}">
       <div class="vcard-head">
-        <div class="vcard-avatar">${avatar}</div>
+        <div class="vcard-avatar" onclick="event.stopPropagation();openVaultLightbox('${esc(c.id)}','${esc(c.name)}')" role="button" tabindex="0" title="Click to see full-size" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();openVaultLightbox('${esc(c.id)}','${esc(c.name)}')}">${avatar}</div>
         <div>
           <div class="vcard-name">${esc(c.name)}</div>
           <div class="vcard-cls">${esc(cls)} · L${c.level||1}</div>
@@ -458,7 +484,7 @@ async function openInspect(charId) {
     ? `<div class="section-label" style="margin-top:1.2rem">Backstory</div><div class="pv-story">${esc(_vPlain(storyText)).replace(/\n/g,'<br>')}</div>`
     : '';
   const avatar = entry.avatar
-    ? `<div class="pv-portrait" id="insp-avatar"><img src="${API.vaultAvatarUrl(charId)}?t=${Date.now()}" alt=""></div>`
+    ? `<div class="pv-portrait" id="insp-avatar" role="button" tabindex="0" title="Click to see full-size" onclick="openVaultLightbox('${esc(charId)}','${esc(ch.name||'')}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openVaultLightbox('${esc(charId)}','${esc(ch.name||'')}')}"><img src="${API.vaultAvatarUrl(charId)}?t=${Date.now()}" alt=""></div>`
     : `<div class="pv-portrait" id="insp-avatar">${_vaultPlaceholderSigil}</div>`;
 
   document.getElementById('insp-content').innerHTML = `
@@ -478,7 +504,7 @@ async function openInspect(charId) {
     ${storyHtml}
     <div style="margin-top:1rem">
       <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">🎨 YOUR OWN WORDS (optional)</div>
-      <textarea id="insp-prompt-input" placeholder="Optional: describe exactly what you want painted… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)" style="width:100%;min-height:52px;padding:.5rem .6rem;font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>
+      <textarea id="insp-prompt-input" aria-label="Optional: describe exactly what you want painted" placeholder="Optional: describe exactly what you want painted… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)" style="width:100%;min-height:52px;padding:.5rem .6rem;font-family:var(--font-body,'Spectral',serif);font-size:.85rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>
       <div style="font-size:.72rem;color:var(--bone-dim);margin-top:.35rem">Overrides the auto-built prompt from your sheet — describe exactly what you want painted.</div>
     </div>
     <div class="pv-actions" style="margin-top:1.4rem">
@@ -556,6 +582,47 @@ async function genAvatar(charId) {
   }
 }
 
+// 🔍 Portrait lightbox — shared pattern (audit A2 §4.3): Esc + backdrop close, gold frame, lazy img
+function openVaultLightbox(charId, name) {
+  const lb = document.getElementById('vault-lightbox');
+  const slot = document.getElementById('vault-lightbox-img-slot');
+  if (!lb || !slot) return;
+  slot.innerHTML = '';
+  const img = document.createElement('img');
+  img.src = API.vaultAvatarUrl(charId) + '?t=' + Date.now();
+  img.alt = name ? 'Portrait of ' + name : 'Portrait';
+  img.onerror = () => { slot.innerHTML = ''; const d = document.createElement('div'); d.className = 'av-lb-sigil'; d.innerHTML = _vaultPlaceholderSigil; slot.appendChild(d); };
+  slot.appendChild(img);
+  document.getElementById('vault-lightbox-title').textContent = name || '';
+  lb.classList.add('show');
+  try { SFX.click(); } catch (_) {}
+}
+// Forge preview portrait: not saved yet — show whatever the sigil/portrait is at full size
+function openPvLightbox() {
+  const lb = document.getElementById('vault-lightbox');
+  const slot = document.getElementById('vault-lightbox-img-slot');
+  if (!lb || !slot) return;
+  slot.innerHTML = '';
+  const src = document.getElementById('pv-icon').querySelector('img');
+  if (src && src.src) {
+    const img = document.createElement('img');
+    img.src = src.src; img.alt = '';
+    slot.appendChild(img);
+  } else {
+    const d = document.createElement('div');
+    d.className = 'av-lb-sigil';
+    d.innerHTML = document.getElementById('pv-icon').innerHTML || _vaultPlaceholderSigil;
+    slot.appendChild(d);
+  }
+  document.getElementById('vault-lightbox-title').textContent = document.getElementById('pv-name').textContent || '';
+  lb.classList.add('show');
+}
+function closeVaultLightbox() {
+  const lb = document.getElementById('vault-lightbox');
+  if (lb) lb.classList.remove('show');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeVaultLightbox(); });
+
 // ═══════════════════════════════════════
 // TOAST + EMBERS (samma som newgame.html)
 // ═══════════════════════════════════════
@@ -563,15 +630,17 @@ let toastTimer;
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2600);}
 
 const canvas=document.getElementById('embers'),ctx=canvas.getContext('2d');
+// Reduced motion: don't run the permanently-animating embers canvas (audit A1 §4.1)
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let W,H,embers=[];
 function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight;}
-resize();addEventListener('resize',resize);
+if(!RM){resize();addEventListener('resize',resize);}
 function spawn(init){return{x:Math.random()*W,y:init?Math.random()*H:H+10,r:.7+Math.random()*1.6,vy:.2+Math.random()*.6,vx:(Math.random()-.5)*.3,life:0,max:400+Math.random()*500,hue:Math.random()<.82?22+Math.random()*18:268+Math.random()*20};}
 for(let i=0;i<40;i++)embers.push(spawn(true));
 const GLOW={};function glowSprite(hue){const key=Math.round(hue/10)*10;if(GLOW[key])return GLOW[key];const c=document.createElement('canvas');c.width=c.height=48;const g=c.getContext('2d');const rg=g.createRadialGradient(24,24,0,24,24,24);rg.addColorStop(0,'hsla('+key+',90%,65%,1)');rg.addColorStop(.4,'hsla('+key+',85%,55%,.55)');rg.addColorStop(1,'hsla('+key+',80%,50%,0)');g.fillStyle=rg;g.fillRect(0,0,48,48);GLOW[key]=c;return c;}
 function tick(){
 if (document.hidden) { requestAnimationFrame(tick); return; }ctx.clearRect(0,0,W,H);for(let i=0;i<embers.length;i++){const e=embers[i];e.life++;e.y-=e.vy;e.x+=e.vx+Math.sin(e.life*.02)*.12;const fade=Math.min(1,e.life/60)*Math.max(0,1-e.life/e.max);const fl=.5+Math.sin(e.life*.15+i)*.35;ctx.globalAlpha=.45*fade*fl;ctx.drawImage(glowSprite(e.hue),e.x-e.r*2,e.y-e.r*2,e.r*4,e.r*4);if(e.life>e.max||e.y<-12)embers[i]=spawn(false);}ctx.globalAlpha=1;requestAnimationFrame(tick);}
-tick();
+if(!RM)tick();
 
 loadVault();
 </script>

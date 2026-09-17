@@ -101,7 +101,7 @@
      måste få visa sig även när paths är dolda — annars kan man inte
      starta en andra kampanj när man redan har en. */.paths-hidden .paths{display:none!important}.paths-hidden .expand{display:none!important}.paths-hidden .expand.show{display:block!important}.paths-hidden .head .sub::after{content:' · your adventure awaits below';color:var(--gold);font-style:italic}/* ── Stepper-kollaps för återvändare (2026-09-06): ≥1 kampanj → onboarding-stegen
      kollapsas till EN rad ("New adventure?") — toggle-knappen styr, steg 2-4 är ändå
-     display:none tills steg 1 väljs. (audit-ux §top findings) ── */.stepper-collapsed #step-lang,.stepper-collapsed #step-name,.stepper-collapsed #step-arch,.stepper-collapsed #step-model,.stepper-collapsed .prepare-link{display:none!important}.stepper-toggle{display:none;width:100%;margin:0 0 1.6rem;cursor:pointer;font-family:var(--font-display,'Cinzel',serif);font-size:.82rem;letter-spacing:.22em;text-transform:uppercase;color:var(--bone-dim);background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,var(--ink));border:1px solid var(--edge);border-radius:14px;padding:.95rem 1.1rem;text-align:center;transition:color .25s,border-color .25s}.stepper-toggle:hover{color:var(--gold-bright);border-color:var(--gold)}.stepper-collapsed .stepper-toggle{display:block}/* ═══════════ How to play — onepager ═══════════ */.htp{margin-bottom:2.4rem;animation:rise .6s cubic-bezier(.22,1,.36,1)}.htp-toggle{
+     display:none tills steg 1 väljs. (audit-ux §top findings) ── */.stepper-collapsed #step-lang,.stepper-collapsed #step-name,.stepper-collapsed #step-arch,.stepper-collapsed #step-model,.stepper-collapsed #step-rail,.stepper-collapsed .prepare-link{display:none!important}.stepper-toggle{display:none;width:100%;margin:0 0 1.6rem;cursor:pointer;font-family:var(--font-display,'Cinzel',serif);font-size:.82rem;letter-spacing:.22em;text-transform:uppercase;color:var(--bone-dim);background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,var(--ink));border:1px solid var(--edge);border-radius:14px;padding:.95rem 1.1rem;text-align:center;transition:color .25s,border-color .25s}.stepper-toggle:hover{color:var(--gold-bright);border-color:var(--gold)}.stepper-collapsed .stepper-toggle{display:block}/* ═══════════ How to play — onepager ═══════════ */.htp{margin-bottom:2.4rem;animation:rise .6s cubic-bezier(.22,1,.36,1)}.htp-toggle{
     display:flex;align-items:center;justify-content:center;gap:.7rem;width:100%;cursor:pointer;
     font-family:var(--font-display,'Cinzel',serif);font-size:.81rem;letter-spacing:.28em;text-transform:uppercase;
     color:var(--bone-dim);background:none;border:none;padding:.6rem 0;transition:color .25s;
@@ -313,7 +313,7 @@
     .gm-row{min-height:46px;font-size:.78rem}
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=46">
+<link rel="stylesheet" href="snes.css?v=47">
 <style>
 /* ═══════════ Login-känslan — mjuka knappar (override snes.css DOS-flatten) ═══════════
    snes.css laddas efter inline-blocket och tvingar platta knappar med !important.
@@ -493,6 +493,54 @@ html{font-size:17px}
 }
 .prompt-size-hint{ font-size:.68rem; color:var(--bone-dim); font-style:italic; margin:-.55rem 0 1rem; }
 #fw-editor + .prompt-size-hint{ margin:.4rem 0 .7rem; }
+/* ═══════════ Wave 2 (audit A1 §2.1/§2.2/§2.4, 2026-09-17) — nya klassnamn,
+   blocket ligger EFTER snes.css → vinner cascaden. ═══════════ */
+/* Progress-rail: 4 stop ovanför steppern */
+.step-rail{display:flex;justify-content:center;align-items:center;gap:clamp(.6rem,2.4vw,1.6rem);flex-wrap:wrap;margin:0 0 1.4rem;font-family:var(--font-display,'Cinzel',serif);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-dim)}
+.sr-stop{display:inline-flex;align-items:center;gap:.4rem;cursor:default;opacity:.75}
+.sr-stop i{font-style:normal;display:inline-flex;align-items:center;justify-content:center;width:1.35rem;height:1.35rem;border:1px solid var(--edge);border-radius:50%;font-size:.62rem;color:var(--bone-dim);background:var(--stone-3)}
+.sr-stop.on{color:var(--gold-bright);opacity:1}
+.sr-stop.on i{border-color:var(--gold);color:var(--ink);background:linear-gradient(180deg,var(--gold-bright),var(--gold));box-shadow:0 0 10px rgba(var(--gold-rgb),.4)}
+.sr-stop.done{color:var(--bone-bright);opacity:1;cursor:pointer}
+.sr-stop.done i{border-color:var(--gold);color:var(--gold)}
+.sr-stop.done i::before{content:'✓'}
+.sr-stop.done i{font-size:0}
+.sr-stop.done i::before{font-size:.62rem}
+/* Steg-räknare (1 / 4) — mono, guld-glöd, behåller step-float */
+.step-num{font-family:var(--font-mono,ui-monospace,'Cascadia Code','JetBrains Mono',Menlo,Consolas,monospace);font-size:1.05rem!important;letter-spacing:.12em}
+/* Välkommen-tillbaka-rad (localStorage-minne, audit §2.3) */
+.lang-welcome{text-align:center;font-size:.88rem;font-style:italic;color:var(--bone-dim);margin:0 0 1rem}
+.lang-welcome b{color:var(--gold-bright);font-style:normal}
+/* <details>-komponenten för advanced-val (audit §5.2) */
+.adv-details{margin-top:1rem;border:1px solid var(--edge);border-radius:10px;background:color-mix(in srgb, var(--stone-3) 45%, transparent);padding:0}
+.adv-details summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim);padding:.7rem .9rem;transition:color .2s}
+.adv-details summary::-webkit-details-marker{display:none}
+.adv-details summary:hover{color:var(--gold-bright)}
+.adv-details[open] summary{color:var(--gold);border-bottom:1px solid var(--edge)}
+.adv-details .adv-sum-hint{font-family:var(--font-body,'Spectral',serif);text-transform:none;letter-spacing:.02em;font-style:italic;font-size:.8rem;color:var(--bone-dim);opacity:.8}
+.adv-details > div,.adv-details .dm-model-note{margin-left:.9rem;margin-right:.9rem}
+.adv-details .dm-model-note:last-child{margin-bottom:.9rem}
+/* Gear-meny: små grupprubriker (app-wide vocab: Account · Realm) */
+.drop-head{font-family:var(--font-display,'Cinzel',serif);font-size:.54rem;letter-spacing:.24em;text-transform:uppercase;color:var(--bone-dim);opacity:.75;padding:.5rem .65rem .2rem;margin-top:.25rem;border-top:1px solid color-mix(in srgb, var(--edge) 60%, transparent)}
+.drop-head:first-child{border-top:none;margin-top:0}
+/* Reveal-ögonblicket (audit §2.4): porträttet är hjälten */
+.preview.show .pv-portrait{width:132px;height:132px;font-size:3.1rem}
+.preview.show .pv-head{justify-content:center;text-align:center}
+.preview.show .pv-name{font-size:1.8rem!important}
+@media(max-width:640px){
+  .preview.show .pv-portrait{width:104px;height:104px;font-size:2.5rem}
+  .preview.show .pv-name{font-size:1.4rem!important}
+  .step-rail{gap:.7rem;font-size:.56rem}
+}
+/* Reduced motion — page level (audit §2.7/§5.1; global täckning läggs i snes.css av S2) */
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  .step,.continue-wrap,.prepare-link,.htp{opacity:1;transform:none;transition:none}
+  .step-num,.head-logo{animation:none}
+  .hero-bg .hb.on{animation:none}
+  .w-status,.weaving-ad .wa-status{animation:none}
+  .news-banner{animation:none}
+}
 </style>
 <script src="sprites.js?v=20260806b"></script>
 <script src="fonts.js?v=20260806b"></script>
@@ -516,7 +564,7 @@ html{font-size:17px}
       <span class="sep">·</span>
       <span class="tlabel">RESET</span>
       <span class="tv" id="quota-cd"></span>
-      <span class="quota-tip" id="quota-tip">Each DM, TTS, Image-gen and background llm-calls counts towards the turns quota</span>
+      <span class="quota-tip" id="quota-tip">Your turn quota — and when it refills. Click for your profile.</span>
     </div>
 
     <div class="rr-actions">
@@ -526,13 +574,15 @@ html{font-size:17px}
       <div class="gear-wrap">
         <button class="crr-btn gear-btn" onclick="toggleGearMenu(event)" title="Menu" aria-haspopup="true" aria-expanded="false">⚙️</button>
         <div class="gear-menu" id="gear-menu">
-          <button type="button" class="gm-row" onclick="location.href='releases.html'"><span class="gm-ico">📜</span><span class="gm-txt">Release Notes</span></button>
+          <div class="drop-head">Account</div>
           <button type="button" class="gm-row" onclick="openProfileModal()"><span class="gm-ico">🪞</span><span class="gm-txt">Profile</span></button>
           <button type="button" class="gm-row" id="upgrade-gate-btn" onclick="location.href='pricing.html'"><span class="gm-ico">💳</span><span class="gm-txt">Upgrade</span></button>
+          <div class="drop-head">Realm</div>
+          <button type="button" class="gm-row" onclick="location.href='releases.html'"><span class="gm-ico">✒</span><span class="gm-txt">Release Notes</span></button>
           <button type="button" class="gm-row" onclick="location.href='characters.html'"><span class="gm-ico">⚒</span><span class="gm-txt">The Forge</span></button>
           <button type="button" class="gm-row" id="admin-gate-btn" style="display:none" onclick="location.href='admin.html'"><span class="gm-ico">👑</span><span class="gm-txt">Admin</span></button>
           <div class="gm-sep"></div>
-          <button type="button" class="gm-row danger" onclick="leaveGate()"><span class="gm-ico">🚪</span><span class="gm-txt">Log Out</span></button>
+          <button type="button" class="gm-row danger" onclick="leaveGate()"><span class="gm-ico">🔒</span><span class="gm-txt">Log Out</span></button>
         </div>
       </div>
     </div>
@@ -831,12 +881,12 @@ html{font-size:17px}
     <div class="rune-divider"><span>✦</span></div>
   </div>
 
-  <!-- ═══════════ NYHET: QWEN 3.8 MAX ═══════════ -->
+  <!-- ═══════════ NYHET: QWEN 3.8 FLASH — FREE TIER (2026-09) ═══════════ -->
   <div class="news-banner" id="news-qwen38" onclick="newsQwenToast(event)" style="display:none">
-    <span class="nb-icon">🔥</span>
+    <span class="nb-icon">✦</span>
     <div class="nb-body">
-      <div class="nb-title">New — Qwen 3.8 Max (full release)</div>
-      <div class="nb-text">Alibaba's flagship model, released Aug&nbsp;3, 2026, is now available as a <b>Dungeon Master</b> choice: 2.4T parameters (95B active per request), 1M context, deep reasoning. Select it at the model gate.</div>
+      <div class="nb-title">New — Qwen 3.8 Flash in the free tier</div>
+      <div class="nb-text">Fast answers, light thinking, free for every account — set it as your <b>Dungeon Master</b> at the model gate or in Settings.</div>
     </div>
     <button class="nb-close" onclick="newsQwenDismiss(event)" title="Dismiss">✕</button>
   </div>
@@ -905,15 +955,22 @@ html{font-size:17px}
   </div>
 
   <!-- ═══════════ ONBOARDING — STEG 1: KAMPANJSPRÅK ═══════════ -->
-  <button type="button" class="stepper-toggle" id="stepper-toggle" onclick="toggleStepperCollapse()">🎲 <span id="stepper-toggle-label">Nytt äventyr?</span></button>
+  <button type="button" class="stepper-toggle" id="stepper-toggle" onclick="toggleStepperCollapse()">🎲 <span id="stepper-toggle-label">New adventure?</span></button>
+  <div class="step-rail" id="step-rail" role="list" aria-label="Adventure setup progress">
+    <span class="sr-stop on" data-for="step-lang" role="listitem" onclick="railGo(this)"><i>1</i> Language</span>
+    <span class="sr-stop" data-for="step-name" role="listitem" onclick="railGo(this)"><i>2</i> Name</span>
+    <span class="sr-stop" data-for="step-arch" role="listitem" onclick="railGo(this)"><i>3</i> Adventurer</span>
+    <span class="sr-stop" data-for="step-model" role="listitem" onclick="railGo(this)"><i>4</i> Dungeon Master</span>
+  </div>
   <div class="step" id="step-lang">
     <div class="step-head">
-      <div class="step-num">↓</div>
+      <div class="step-num">1 / 4</div>
       <div>
         <div class="step-title">Choose Campaign Language</div>
         <div class="step-sub">The Dungeon Master speaks this language — in every scene, every NPC, every whisper.</div>
       </div>
     </div>
+    <p class="lang-welcome" id="lang-welcome-back" style="display:none"></p>
     <div class="lang-cards">
       <div class="lang-card" id="lang-en" onclick="pickLang('en')">
         <span class="lc-check">✓</span>
@@ -933,7 +990,7 @@ html{font-size:17px}
   <!-- ═══════════ STEG 2: NAMN ═══════════ -->
   <div class="step" id="step-name" style="display:none">
     <div class="step-head">
-      <div class="step-num">↓</div>
+      <div class="step-num">2 / 4</div>
       <div>
         <div class="step-title">Name Your Adventure</div>
         <div class="step-sub">A name the bards will remember — or leave it unnamed and begin right away.</div>
@@ -949,7 +1006,7 @@ html{font-size:17px}
   <!-- ═══════════ STEG 3: VÄLJ HJÄLTE (arketyper + Forge) ═══════════ -->
   <div class="step" id="step-arch" style="display:none">
     <div class="step-head">
-      <div class="step-num">↓</div>
+      <div class="step-num">3 / 4</div>
       <div>
         <div class="step-title">Choose Your Adventurer</div>
         <div class="step-sub">Summon a fresh adventurer from a fate already woven — or step in with one from The Forge.</div>
@@ -987,17 +1044,24 @@ html{font-size:17px}
           <textarea id="fw-prompt" spellcheck="false" oninput="renderFwPreview()" onblur="onFwBlur(event)"></textarea>
           <div class="legend-preview" id="fw-preview" onclick="enterFwEdit()"></div>
         </div>
-        <div class="prompt-size-hint" id="fw-size-hint">Dra i hörnet för att göra rutan större</div>
+        <div class="prompt-size-hint" id="fw-size-hint">Drag the corner to make the box bigger</div>
         <div class="blank-note">Tweak the template before the weaver gets it — your own name, a pet, a pouch of coins, a crown…</div>
       </div>
       <div class="step-actions" id="gen-row">
-        <label class="dm-model-label" for="adv-char-model">🧠 Character model
-          <select id="adv-char-model" class="dm-model-select"></select>
-        </label>
-        <span class="ask-wrap"><span class="ask-ico">?</span><span class="ask-tip" data-ask="char">Which mind weaves your adventurer — faster models are snappier, deeper models think longer. <b>Ask the Dungeon Master if unsure.</b></span></span>
         <button class="gen-btn" id="gen-btn" onclick="generateAdventurer()" disabled>🔮 Summon Adventurer</button>
         <span class="hint" id="gen-hint">Pick an archetype first — or take the blank parchment</span>
       </div>
+      <!-- Audit §2.4: karaktärsmodell-väljaren flyttad hit (ur gen-row) — reveal-momentet
+           ska vara porträtt + namn + Reroll/Continue. ID:n oförändrade (JS läser dem). -->
+      <details class="adv-details" id="adv-char-model-advanced">
+        <summary>⚙ Which mind weaves your adventurer <span class="adv-sum-hint">default is fine</span></summary>
+        <div class="dm-model-row" style="margin-top:.6rem">
+          <label class="dm-model-label" for="adv-char-model">🧠 Character model
+            <select id="adv-char-model" class="dm-model-select"></select>
+          </label>
+          <span class="ask-wrap"><span class="ask-ico">?</span><span class="ask-tip" data-ask="char">Which mind weaves your adventurer — faster models are snappier, deeper models think longer. <b>Unsure? The default is safe — you can ask the DM once the tale begins.</b></span></span>
+        </div>
+      </details>
       <!-- Vävning (summoning-ritual) -->
       <div class="weaving-ad" id="weaving-gen">
         <div class="wa-status" id="wa-gen-status">📡 Sending request to the Dungeon Master…</div>
@@ -1046,7 +1110,7 @@ html{font-size:17px}
   <!-- ═══════════ STEG 4: DM-MODELL ═══════════ -->
   <div class="step" id="step-model" style="display:none">
     <div class="step-head">
-      <div class="step-num">↓</div>
+      <div class="step-num">4 / 4</div>
       <div>
         <div class="step-title">Choose Your Dungeon Master</div>
         <div class="step-sub">The minds behind the veil — pick the models that tell your story.</div>
@@ -1055,32 +1119,35 @@ html{font-size:17px}
     <div class="dm-model-row">
       <label class="dm-model-label" for="adventure-dm-model">🧠 Dungeon Master</label>
       <select class="dm-model-select" id="adventure-dm-model"></select>
-      <span class="ask-wrap"><span class="ask-ico">?</span><span class="ask-tip" data-ask="dm">The storyteller — every scene, every NPC, every whisper. <b>Ask the Dungeon Master if unsure.</b></span></span>
     </div>
-    <div class="dm-model-note">Narrates the world — every scene, every NPC, every whisper.</div>
-    <div class="dm-model-row">
-      <label class="dm-model-label" for="adventure-guardian-model">🦉 Lorekeeper / Guardian</label>
-      <select class="dm-model-select" id="adventure-guardian-model"></select>
-      <span class="ask-wrap"><span class="ask-ico">?</span><span class="ask-tip" data-ask="guardian">The quiet scribe that keeps the books — HP, gold, items, XP, quests. <b>Ask the Dungeon Master if unsure.</b></span></span>
-    </div>
-    <div class="dm-model-note">The quiet scribe that keeps the books — HP, gold, items, XP, quests.</div>
-    <div class="dm-model-row">
-      <label class="dm-model-label" for="adventure-extraction-model">📜 Extraction</label>
-      <select class="dm-model-select" id="adventure-extraction-model"></select>
-      <span class="ask-wrap"><span class="ask-ico">?</span><span class="ask-tip" data-ask="extraction">Reads your world files and structures the lore before the tale begins. <b>Ask the Dungeon Master if unsure.</b></span></span>
-    </div>
-    <div class="dm-model-note">Reads your world files and structures the lore before the tale begins.</div>
-    <div class="dm-model-row">
-      <label class="dm-model-label" for="adventure-tts">🗣️ Voice (TTS)</label>
-      <select class="dm-model-select" id="adventure-tts" onchange="advTTSChanged(this)">
-        <option value="stepfun">StepFun (Step Plan)</option>
-        <option value="qwen">Qwen (Token Plan) ⭐ — recommended</option>
-      </select>
-      <span class="ask-wrap"><span class="ask-ico">?</span><span class="ask-tip" data-ask="tts">Which provider whispers the spoken word when the DM speaks aloud. <b>Ask the Dungeon Master if unsure.</b></span></span>
-    </div>
-    <div class="dm-model-note">These free models come from the OpenRouter community — fun to compare, but they share one key's quota, so they can be slower than the house voices.</div>
-    <div class="dm-model-note">🔄 <b>Can be changed at any time in the campaign</b> — from the settings inside the chat, if the mood shifts.</div>
-    <div class="dm-model-note" id="model-gate-upgrade-note" style="display:none">🔒 <b>Qwen 3.8, DeepSeek &amp; the full mind of the Cauldron unlock with the one-time Patron top-up (30€)</b> — <a href="pricing.html" style="color:var(--gold);font-weight:600">View the paths →</a></div>
+    <div class="dm-model-note">The storyteller — every scene, every NPC, every whisper. Unsure? The default is safe — you can ask the DM once the tale begins.</div>
+    <div class="dm-model-note" id="model-gate-upgrade-note" style="display:none">🔒 Patron (one-time 30€) unlocks the premium minds — <a href="pricing.html" style="color:var(--gold);font-weight:600">view the paths →</a></div>
+    <!-- Audit §2.2: Guardian/Extraction/TTS är infrastruktur-beslut med vettiga
+         defaults — kollapsade bakom <details>. ALLA id:n oförändrade
+         (populateModelGate/advTTSChanged/startAdventure läser dem). -->
+    <details class="adv-details" id="adv-model-advanced">
+      <summary>⚙ Advanced — Lorekeeper, Extraction &amp; Voice <span class="adv-sum-hint">sensible defaults are set</span></summary>
+      <div class="dm-model-row" style="margin-top:.8rem">
+        <label class="dm-model-label" for="adventure-guardian-model">🦉 Lorekeeper / Guardian</label>
+        <select class="dm-model-select" id="adventure-guardian-model"></select>
+        <span class="ask-wrap"><span class="ask-ico">?</span><span class="ask-tip" data-ask="guardian">The quiet scribe that keeps the books — HP, gold, items, XP, quests. <b>Unsure? The default is safe.</b></span></span>
+      </div>
+      <div class="dm-model-row" style="margin-top:.8rem">
+        <label class="dm-model-label" for="adventure-extraction-model">📜 Extraction</label>
+        <select class="dm-model-select" id="adventure-extraction-model"></select>
+        <span class="ask-wrap"><span class="ask-ico">?</span><span class="ask-tip" data-ask="extraction">Reads your world files and structures the lore before the tale begins. <b>Unsure? The default is safe.</b></span></span>
+      </div>
+      <div class="dm-model-row" style="margin-top:.8rem">
+        <label class="dm-model-label" for="adventure-tts">🗣️ Voice (TTS)</label>
+        <select class="dm-model-select" id="adventure-tts" onchange="advTTSChanged(this)">
+          <option value="stepfun">StepFun (Step Plan)</option>
+          <option value="qwen">Qwen (Token Plan) ⭐ — recommended</option>
+        </select>
+        <span class="ask-wrap"><span class="ask-ico">?</span><span class="ask-tip" data-ask="tts">Which provider whispers the spoken word when the DM speaks aloud. <b>Unsure? The default is safe.</b></span></span>
+      </div>
+      <div class="dm-model-note">These free models come from the OpenRouter community — fun to compare, but they share one key's quota, so they can be slower than the house voices.</div>
+    </details>
+    <div class="dm-model-note">🔄 <b>Every choice here can be changed mid-campaign</b>, from Settings inside the chat.</div>
     <div class="step-actions">
       <button class="top-btn" onclick="goStep('step-arch')">← Back</button>
       <button class="start-btn" id="adventure-start" onclick="startAdventure()">⚔️ Start — Awaken the Dungeon Master</button>
@@ -1106,7 +1173,7 @@ Examples:
 - A curse spreading through dreams
 
 The more you give, the richer the world becomes. But the Dungeon Master fills in the gaps — nothing needs to be complete."></textarea>
-      <div class="prompt-size-hint" id="wp-size-hint">Dra i hörnet för att göra rutan större</div>
+      <div class="prompt-size-hint" id="wp-size-hint">Drag the corner to make the box bigger</div>
 
       <div class="dropzone" id="dz-prepare" onclick="document.getElementById('file-prepare').click()">
         <span class="dz-icon">📂</span>
@@ -1253,7 +1320,7 @@ async function activateAndContinue(campaignId) {
   SFX.click();
   try {
     await API.activateCampaign(campaignId);
-    location.href = 'chat.html?v=20260807h';
+    location.href = 'chat.html?v=20260917a';
   } catch (e) {
     toast('⚠ ' + I18N.t('Kunde inte aktivera kampanj: ') + (e.message || I18N.t('okänt fel')));
   }
@@ -1451,7 +1518,8 @@ function revealStep(id) {
   if (!el) return;
   el.style.display = '';
   requestAnimationFrame(() => el.classList.add('reveal'));
-  setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  updateStepRail(id);
+  rmScroll(el, 'start');
 }
 
 // Gå till ett godtyckligt steg i onboardingen (framåt ELLER bakåt) —
@@ -1465,8 +1533,16 @@ function goStep(id) {
   });
   target.style.display = '';
   requestAnimationFrame(() => target.classList.add('reveal'));
-  setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  updateStepRail(id);
+  rmScroll(target, 'start');
   try { SFX.click(); } catch (_) {}
+}
+
+// prefers-reduced-motion (audit §2.7): smooth scroll → auto
+function rmScroll(el, block) {
+  if (!el) return;
+  const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  setTimeout(() => el.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: block || 'start' }), 60);
 }
 
 function resetStepper() {
@@ -1480,10 +1556,11 @@ function resetStepper() {
   if (st) st.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function pickLang(lang) {
+function pickLang(lang, noAdvance) {
   advLang = lang;
+  try { localStorage.setItem('dnd_onb_lang', lang); } catch (_) {}   // audit §2.3
   document.querySelectorAll('.lang-card').forEach(c => c.classList.toggle('selected', c.id === 'lang-' + lang));
-  try { SFX.click(); } catch (_) {}
+  if (!noAdvance) { try { SFX.click(); } catch (_) {} }
   try { if (typeof I18N !== 'undefined') I18N.init(lang); } catch (_) {}
   renderArchetypes();
   renderDarkSelect();
@@ -1498,11 +1575,32 @@ function pickLang(lang) {
     : 'Välj en arketyp nedan — och justera mallen som du vill: eget namn, ett husdjur, en pung med mynt, en krona. Enklast att börja.';
   const gb = document.getElementById('gen-btn');
   if (gb) gb.innerHTML = (lang === 'en') ? '🔮 Summon Adventurer' : '🔮 Frammana Äventyrare';
+  const wb = document.getElementById('lang-welcome-back');
+  if (wb) wb.style.display = 'none';
+  if (noAdvance) return;   // återvändar-läge (audit §2.3): välj förval utan att gå vidare
   revealStep('step-name');
   setTimeout(() => { const i = document.getElementById('adventure-name-input'); if (i) i.focus(); }, 420);
 }
 
 function continueFromName() { revealStep('step-arch'); }
+
+// ── Progress-rail (audit §2.1): markera steg före det aktiva som done, aktivt som on ──
+function updateStepRail(activeId) {
+  const rail = document.getElementById('step-rail');
+  if (!rail) return;
+  const order = ['step-lang', 'step-name', 'step-arch', 'step-model'];
+  const ai = order.indexOf(activeId);
+  rail.querySelectorAll('.sr-stop').forEach(stop => {
+    const si = order.indexOf(stop.dataset.for);
+    stop.classList.toggle('on', si === ai);
+    stop.classList.toggle('done', ai > -1 && si < ai);
+  });
+}
+// Klick på ett avklarat/aktivt stop → gå dit (back-nav är gratis, fram-nav bara till redan nådda steg)
+function railGo(el) {
+  if (!el) return;
+  if (el.classList.contains('done') || el.classList.contains('on')) goStep(el.dataset.for);
+}
 
 // ── Arketyper (delas med newgame.html via archetypes.js) ──
 function isEn() { return advLang === 'en'; }
@@ -1717,17 +1815,18 @@ function renderFwPreview() {
 }
 
 // Ask-the-DM hover-hints — översätts efter valt kampanjspråk
+// Audit §2.2.7: under onboarding finns ingen DM ännu → "the default is safe"-copy.
 const ASK_HINTS = {
-  char: ['Which mind weaves your adventurer — faster models are snappier, deeper models think longer. <b>Ask the Dungeon Master if unsure.</b>',
-         'Vilken hjärna väver din äventyrare — snabbare modeller är rappare, djupare modeller tänker längre. <b>Fråga Dungeon Mastern om du är osäker.</b>'],
-  dm: ['The storyteller — every scene, every NPC, every whisper. <b>Ask the Dungeon Master if unsure.</b>',
-       'Berättaren — varje scen, varje NPC, varje viskning. <b>Fråga Dungeon Mastern om du är osäker.</b>'],
-  guardian: ['The quiet scribe that keeps the books — HP, gold, items, XP, quests. <b>Ask the Dungeon Master if unsure.</b>',
-             'Den tysta skrivaren som bokför — HP, guld, föremål, XP, uppdrag. <b>Fråga Dungeon Mastern om du är osäker.</b>'],
-  extraction: ['Reads your world files and structures the lore before the tale begins. <b>Ask the Dungeon Master if unsure.</b>',
-               'Läser dina världsfiler och strukturerar historien innan berättelsen börjar. <b>Fråga Dungeon Mastern om du är osäker.</b>'],
-  tts: ['Which provider whispers the spoken word when the DM speaks aloud. <b>Ask the Dungeon Master if unsure.</b>',
-        'Vilken leverantör viskar orden när DM talar högt. <b>Fråga Dungeon Mastern om du är osäker.</b>'],
+  char: ['Which mind weaves your adventurer — faster models are snappier, deeper models think longer. <b>Unsure? The default is safe — you can ask the DM once the tale begins.</b>',
+         'Vilken hjärna väver din äventyrare — snabbare modeller är rappare, djupare modeller tänker längre. <b>Osäker? Standardvalet är tryggt — fråga DM:n när sagan börjat.</b>'],
+  dm: ['The storyteller — every scene, every NPC, every whisper. <b>Unsure? The default is safe — you can ask the DM once the tale begins.</b>',
+       'Berättaren — varje scen, varje NPC, varje viskning. <b>Osäker? Standardvalet är tryggt — fråga DM:n när sagan börjat.</b>'],
+  guardian: ['The quiet scribe that keeps the books — HP, gold, items, XP, quests. <b>Unsure? The default is safe.</b>',
+             'Den tysta skrivaren som bokför — HP, guld, föremål, XP, uppdrag. <b>Osäker? Standardvalet är tryggt.</b>'],
+  extraction: ['Reads your world files and structures the lore before the tale begins. <b>Unsure? The default is safe.</b>',
+               'Läser dina världsfiler och strukturerar historien innan berättelsen börjar. <b>Osäker? Standardvalet är tryggt.</b>'],
+  tts: ['Which provider whispers the spoken word when the DM speaks aloud. <b>Unsure? The default is safe.</b>',
+        'Vilken leverantör viskar orden när DM talar högt. <b>Osäker? Standardvalet är tryggt.</b>'],
 };
 /* Dra-i-hörnet-ledtråd under de stora skrivboxarna — bilingual (2026-09-13) */
 function updateSizeHints() {
@@ -1746,6 +1845,23 @@ function renderAskHints() {
   });
   updateSizeHints();
 }
+
+// ── Återvändar-minne (audit §2.3): förvald språkkort utan auto-advance ──
+// Placerad EFTER DARK_ARCH_KEYS/ASK_HINTS (TDZ-säkert) — alla anropade
+// funktioner är deklarerade ovanför eller hoistade.
+(function restoreOnboardingLang() {
+  let saved = null;
+  try { saved = localStorage.getItem('dnd_onb_lang'); } catch (_) {}
+  if (saved !== 'en' && saved !== 'sv') return;
+  pickLang(saved, true);   // markera kort + baksides-effekter, men avslöja INTE step-name
+  const wb = document.getElementById('lang-welcome-back');
+  if (wb) {
+    wb.style.display = '';
+    wb.innerHTML = (saved === 'en')
+      ? 'Welcome back — still <b>English</b>? Pick to continue, or switch.'
+      : 'Välkommen tillbaka — fortfarande <b>svenska</b>? Välj för att fortsätta, eller byt.';
+  }
+})();
 
 
 function enableGen() {
@@ -2200,22 +2316,45 @@ const TTS_PROVIDERS = [
   const optionHtml = (m, locked) => {
     const prem = PREMIUM_MODELS.includes(m);
     const dis = locked && prem;
-    return `<option value="${m}"${dis ? ' disabled' : ''}>${dis ? '🔒 ' + m + ' — Patron (30€)' : m}</option>`;
+    // ⭐ markera free-tier-snabbmodellen (audit §2.2.6 — Ledger-rekommendationen synlig vid valet)
+    const star = m === 'qwen3.8-flash' ? ' ⭐ — free & fast' : '';
+    return `<option value="${m}"${dis ? ' disabled' : ''}>${dis ? '🔒 ' + m + ' — Patron (30€)' : m + star}</option>`;
   };
+  // Onboarding-standard (rostads beslut 2026-09-17): qwen3.8-flash om den finns,
+  // annars step-3.7-flash, annars första modellen.
+  const defaultModel = (models) => models.includes('qwen3.8-flash') ? 'qwen3.8-flash'
+    : (models.includes('step-3.7-flash') ? 'step-3.7-flash' : (models[0] || ''));
   const fill = (models, locked, freeList) => {
     const houseOpts = models.map(m => optionHtml(m, locked)).join('');
     const opts = houseOpts + freeOptsHtml(freeList);
+    // Sparat DM-val från tidigare onboarding (audit §2.3) — används om det
+    // fortfarande finns bland de valbara alternativen.
+    let savedDm = null;
+    try { savedDm = localStorage.getItem('dnd_onb_dm_model'); } catch (e) {}
+    const allowedIds = [...models, ...(freeList || []).map(m => m.id)];
     [dmSel, guardSel, extSel].forEach(sel => {
       if (!sel) return;
       sel.innerHTML = opts;
-      // Default: step-3.7-flash (användarens beslut 2026-08-03) om tillgänglig
-      sel.value = models.includes('step-3.7-flash') ? 'step-3.7-flash' : (models[0] || '');
+      sel.value = defaultModel(models);
     });
+    if (dmSel && savedDm && allowedIds.includes(savedDm)) {
+      // Sätt sparad DM även om alternativet ligger i en låst optgroup-gren? Nej —
+      // bara om det faktiskt gick att sätta (disabled-alternativ kan fortfarande
+      // väljas via .value, så dubbelkolla mot enabled-alternativen).
+      const opt = dmSel.querySelector(`option[value="${CSS.escape(savedDm)}"]`);
+      if (opt && !opt.disabled) dmSel.value = savedDm;
+    }
+    if (dmSel) {
+      // Kom ihåg spelarens DM-val inför nästa äventyr (change + start).
+      dmSel.addEventListener('change', () => {
+        try { if (dmSel.value) localStorage.setItem('dnd_onb_dm_model', dmSel.value); } catch (e) {}
+      });
+    }
     if (charSel) {
       // 🆓 OpenRouter free-modeller funkar även för karaktärsskapande (backend
       // streamar orfree: i _stream_llm) — samma optgroup som DM/Guardian/Extraction.
       charSel.innerHTML = opts;
-      charSel.value = models.includes('step-3.7-flash') ? 'step-3.7-flash' : (models[0] || '');
+      charSel.value = defaultModel(models);
     }
   };
   const fillTTS = (tier) => {
@@ -2295,6 +2434,7 @@ async function startAdventure() {
   const name = document.getElementById('adventure-name-input').value.trim();
   const lang = advLang || 'en';
   const dmModel = document.getElementById('adventure-dm-model').value;
+  try { if (dmModel) localStorage.setItem('dnd_onb_dm_model', dmModel); } catch (e) {}  // audit §2.3
   const guardianModel = document.getElementById('adventure-guardian-model').value;
   const extractionModel = document.getElementById('adventure-extraction-model').value;
   const ttsSel = document.getElementById('adventure-tts');
@@ -2316,7 +2456,7 @@ async function startAdventure() {
     // 3) Lyft in hjälten (genererad → sparad i Forge; eller färdig Forge-hjälte)
     await API.vaultUse(advAdventurerId);
     sessionStorage.setItem('dnd_vault_character', advAdventurerId);
-    location.href = 'chat.html?v=20260807h';
+    location.href = 'chat.html?v=20260917a';
   } catch (e) {
     try { SFX.error(); } catch (_) {}
     toast('⚠ ' + (e.message || 'Could not start'));
@@ -2534,6 +2674,9 @@ document.addEventListener('keydown', (e) => {
       const btn = document.querySelector('.gear-btn');
       if (btn) btn.setAttribute('aria-expanded', 'false');
     }
+    // Audit A2 §4.3: Esc stänger ljuslådan + porträtt-preview (var de öppna)
+    if (document.getElementById('pf-lb-overlay')?.classList.contains('show')) return closePfLightbox();
+    if (document.getElementById('adv-portrait-overlay')?.classList.contains('show')) return closeAdvPortraitPreview();
     if (document.getElementById('pf-overlay')?.classList.contains('show')) closeProfileModal();
   }
 });
@@ -2782,33 +2925,23 @@ async function openBillingPortal(e) {
   }
 }
 
-// ── Nyhet: Qwen 3.8 Max full release (2026-08-03) ──
+// ── Nyhet: Qwen 3.8 Flash i free tier (2026-09) ──
 // Banner visas tills besökaren klickar bort den (localStorage-minne).
-// Free/tier1 ser en Patron-version (de senaste hjärnorna låses upp där).
-let newsQwenLocked = false;
+// Flash ÄR gratis för alla — ingen Patron-/lås-variant (audit wave 2: den gamla
+// newsQwenLocked-grenen var felaktig och är borttagen). NYCKEL: news_qwen_flash_dismissed
+// (gammal nyckel news_qwen38_dismissed lämnas orörd — alla ser korrigerade bannern en gång).
 function newsQwenInit() {
-  try { if (localStorage.getItem('news_qwen38_dismissed') === '1') return; } catch (e) {}
+  try { if (localStorage.getItem('news_qwen_flash_dismissed') === '1') return; } catch (e) {}
   const el = document.getElementById('news-qwen38');
   if (!el) return;
-  API.me().then(u => {
-    newsQwenLocked = !u || (u.role !== 'admin' && (u.subscription_status === 'free' || u.subscription_status === 'tier1'));
-    if (newsQwenLocked) {
-      const t = el.querySelector('.nb-title');
-      const x = el.querySelector('.nb-text');
-      if (t) t.textContent = 'New — Qwen 3.8 Max & DeepSeek V4 (Patron 30€)';
-      if (x) x.innerHTML = "Alibaba's flagship and DeepSeek V4 are here — <b>unlock them with the one-time Patron top-up (30€)</b> and choose them at the model gate: 2.4T parameters (95B active per request), 1M context, deep reasoning. <a href='pricing.html' style='color:var(--gold);font-weight:600'>View the paths →</a>";
-    }
-    el.style.display = '';
-  }).catch(() => { el.style.display = ''; });
+  el.style.display = '';
 }
 function newsQwenToast(e) {
-  toast(newsQwenLocked
-    ? '🔥 Qwen 3.8 Max & DeepSeek V4 låses upp på Tier 2 — se pricing.html'
-    : '🔥 Qwen 3.8 Max — välj den vid modell-valet när du startar ett äventyr');
+  toast('✦ Qwen 3.8 Flash — free for every account. Pick it at the model gate or in Settings.');
 }
 function newsQwenDismiss(e) {
   e.stopPropagation();
-  try { localStorage.setItem('news_qwen38_dismissed', '1'); } catch (err) {}
+  try { localStorage.setItem('news_qwen_flash_dismissed', '1'); } catch (err) {}
   const el = document.getElementById('news-qwen38');
   if (el) el.style.display = 'none';
 }
@@ -2826,6 +2959,9 @@ function newsQwenDismiss(e) {
 })();
 
 const canvas=document.getElementById('embers'),ctx=canvas.getContext('2d');
+// prefers-reduced-motion (audit §2.7): starta inte ember-animationen alls
+const ADV_RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+if (!ADV_RM) {
 let W,H,embers=[];
 function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight;}
 resize();addEventListener('resize',resize);
@@ -2835,6 +2971,7 @@ const GLOW={};function glowSprite(hue){const key=Math.round(hue/10)*10;if(GLOW[k
 function tick(){
 if (document.hidden) { requestAnimationFrame(tick); return; }ctx.clearRect(0,0,W,H);for(let i=0;i<embers.length;i++){const e=embers[i];e.life++;e.y-=e.vy;e.x+=e.vx+Math.sin(e.life*.02)*.12;const fade=Math.min(1,e.life/60)*Math.max(0,1-e.life/e.max);const fl=.5+Math.sin(e.life*.15+i)*.35;ctx.globalAlpha=.45*fade*fl;ctx.drawImage(glowSprite(e.hue),e.x-e.r*2,e.y-e.r*2,e.r*4,e.r*4);if(e.life>e.max||e.y<-12)embers[i]=spawn(false);}ctx.globalAlpha=1;requestAnimationFrame(tick);}
 tick();
+}
 </script>
 <script>
 /* ── Hero-bakgrund: egna valv-avatarer om de finns, annars standard-headshots (2026-08-15) ── */
@@ -2965,5 +3102,6 @@ tick();
   if (wpBox) requestAnimationFrame(wpBox.autosize);
 })();
 </script>
+<noscript><style>.step,.continue-wrap,.prepare-link,.htp{opacity:1;transform:none}</style></noscript>
 </body>
 </html>

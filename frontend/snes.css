@@ -520,19 +520,28 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
     display: flex;
     flex-direction: column;
     gap: .5rem;
-  }.drawer-extras .drawer-logout{
+  }.drawer-extras .drawer-btn,.drawer-extras .drawer-logout{
     display: flex !important;
     align-items: center;
     justify-content: center;
     gap: .4em;
     background: var(--stone-3);
-    border: 1px solid var(--blood);
-    color: var(--blood-bright);
     font-family: var(--font-body);
     font-size: .73rem;
     padding: .45rem;
     cursor: pointer;
     width: 100%;
+  }.drawer-extras .drawer-btn{
+    border: 1px solid var(--edge);
+    color: var(--bone);
+  }.drawer-extras .drawer-logout{
+    border: 1px solid var(--blood);
+    color: var(--blood-bright);
+  }.drawer-extras .drawer-sep{
+    display: block;
+    height: 1px;
+    background: var(--edge);
+    margin: .1rem 0;
   }/* Drawer backdrop */.drawer-backdrop{
     display: block !important;
     position: fixed;
@@ -2996,4 +3005,17 @@ body.cli-chat .undo-inline button{ border-style: none !important; padding: .15re
   body:not(.cli-chat) .undo-btn{ width: 32px !important; height: 32px !important; min-height: 32px !important; }
   body:not(.cli-chat) .send-btn{ height: 32px !important; min-height: 32px !important; }
   body.cli-chat #player-input{ min-height: 2.4rem !important; padding: .25rem .4rem .25rem .5rem !important; }
+}
+
+/* ═══════════ Reduced motion — global (§5, audit 2026-09-17) ═══════════
+   Covers every page that lacks its own prefers-reduced-motion block
+   (chat, character, npcs, loggbok, facts, pricing, screenshots,
+   book-souls, reset, admin). */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;
+  }
+  html{ scroll-behavior:auto; }
 }

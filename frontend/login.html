@@ -415,7 +415,7 @@
 
 <div id="deleted-banner">🕊️ Your account has been deleted. The Cauldron will remember your stories.</div>
 
-<div id="update-banner" role="status">✦ <b>Step 5 Preview</b> — the new flagship mind, now in the free tier. A reasoning Dungeon Master from StepFun, free for every account — pick it at the model gate or in Settings. <a href="releases.html" onclick="try{localStorage.setItem('step5_flash_seen','1')}catch(e){}">Read the chronicle →</a><button class="upd-x" aria-label="Dismiss" onclick="try{localStorage.setItem('step5_flash_seen','1')}catch(e){}document.getElementById('update-banner').classList.remove('show')">×</button></div>
+<div id="update-banner" role="status">✦ <b>Two free minds at your table</b> — <b>Step 5 Preview</b> (the flagship that reasons) and <b>Qwen 3.8 Flash</b> (the quick one) are both free for every account. Pick either as your Dungeon Master at the model gate or in Settings. <a href="releases.html" onclick="try{localStorage.setItem('free_minds_seen','1')}catch(e){}">Read the chronicle →</a><button class="upd-x" aria-label="Dismiss" onclick="try{localStorage.setItem('free_minds_seen','1')}catch(e){}document.getElementById('update-banner').classList.remove('show')">×</button></div>
 
 <!-- ═══════════════ topbar ═══════════════ -->
 <header class="topbar" id="nav">
@@ -896,10 +896,10 @@
 <script src="sprites.js?v=20260806b"></script>
 
 <script>
-/* ═══════════════ update banner — Step 5 Preview free tier, en gång per läsare ═══════════════ */
+/* ═══════════════ update banner — Step 5 Preview + Qwen 3.8 Flash free tier, en gång per läsare ═══════════════ */
 (function () {
   try {
-    var seen = localStorage.getItem('step5_flash_seen');
+    var seen = localStorage.getItem('free_minds_seen');
     if (!seen) document.getElementById('update-banner').classList.add('show');
   } catch (e) {}
 })();

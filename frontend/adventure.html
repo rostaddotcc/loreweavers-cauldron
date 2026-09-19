@@ -885,8 +885,8 @@ html{font-size:17px}
   <div class="news-banner" id="news-qwen38" onclick="newsQwenToast(event)" style="display:none">
     <span class="nb-icon">✦</span>
     <div class="nb-body">
-      <div class="nb-title">New — Step 5 Preview in the free tier</div>
-      <div class="nb-text">StepFun's flagship reasoning mind, free for every account — set it as your <b>Dungeon Master</b> at the model gate or in Settings.</div>
+      <div class="nb-title">New — two free minds at your table</div>
+      <div class="nb-text"><b>Step 5 Preview</b> (the flagship that reasons) and <b>Qwen 3.8 Flash</b> (the quick one) are both free for every account — set either as your <b>Dungeon Master</b> at the model gate or in Settings.</div>
     </div>
     <button class="nb-close" onclick="newsQwenDismiss(event)" title="Dismiss">✕</button>
   </div>
@@ -2926,23 +2926,23 @@ async function openBillingPortal(e) {
   }
 }
 
-// ── Nyhet: Step 5 Preview i free tier (2026-09-20) ──
+// ── Nyhet: Step 5 Preview + Qwen 3.8 Flash i free tier (2026-09-20) ──
 // Banner visas tills besökaren klickar bort den (localStorage-minne).
 // Flash ÄR gratis för alla — ingen Patron-/lås-variant (audit wave 2: den gamla
-// newsQwenLocked-grenen var felaktig och är borttagen). NYCKEL: step5_preview_dismissed
+// newsQwenLocked-grenen var felaktig och är borttagen). NYCKEL: free_minds_dismissed
 // (gammal nyckel news_qwen_flash_dismissed lämnas orörd — alla ser korrigerade bannern en gång).
 function newsQwenInit() {
-  try { if (localStorage.getItem('step5_preview_dismissed') === '1') return; } catch (e) {}
+  try { if (localStorage.getItem('free_minds_dismissed') === '1') return; } catch (e) {}
   const el = document.getElementById('news-qwen38');
   if (!el) return;
   el.style.display = '';
 }
 function newsQwenToast(e) {
-  toast('✦ Step 5 Preview — free for every account. Pick it at the model gate or in Settings.');
+  toast('✦ Step 5 Preview and Qwen 3.8 Flash — both free for every account. Pick either at the model gate or in Settings.');
 }
 function newsQwenDismiss(e) {
   e.stopPropagation();
-  try { localStorage.setItem('step5_preview_dismissed', '1'); } catch (err) {}
+  try { localStorage.setItem('free_minds_dismissed', '1'); } catch (err) {}
   const el = document.getElementById('news-qwen38');
   if (el) el.style.display = 'none';
 }

@@ -463,19 +463,3 @@ async def qdrant_healthy() -> bool:
         return False
 
 
-async def ollama_healthy() -> bool:
-    """
-    Kontrollera att Ollama är nåbar och har nomic-embed-text tillgänglig.
-
-    Returnerar True om modellen finns, False annars.
-    """
-    try:
-        async with httpx.AsyncClient(timeout=5) as client:
-            resp = await client.get(f"{OLLAMA_URL}/api/tags")
-            if resp.status_code != 200:
-                return False
-            models = resp.json().get("models", [])
-            return any(EMBED_MODEL in m.get("name", "") for m in models)
-    except Exception as exc:
-        logger.warning("Ollama health check failed: %s", exc)
-        return False

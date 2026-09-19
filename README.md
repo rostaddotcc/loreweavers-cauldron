@@ -196,7 +196,7 @@ loreweavers-cauldron/
 │   ├── api.js                     # Frontend ↔ backend bridge (+ standalone MOCK mode)
 │   ├── archetypes.js · i18n.js · fonts.js · sprites.js
 │   ├── sfx.js · modal.js · embed.js · snes.css
-│   └── assets/ · vendor/          # Logo/cauldron art · legacy three.js
+│   └── assets/                    # Logo/cauldron art
 ├── docs/                          # Architecture (arkitektur.html, kodex.html) + specs
 │                                  #   (combat, design polish, monetization, Stripe, audit…)
 ├── scripts/                       # DOM-level test scripts (combat split, dice render)

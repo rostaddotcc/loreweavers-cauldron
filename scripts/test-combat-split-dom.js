@@ -117,13 +117,13 @@ global._lastCombatEnemyHp = {};
 global._lastCombatAllyHp = {};
 global._allyCardEls = {};
 global._lastInitShown = null;
+global._lastRoundSummaryEl = null;
+global.numOrZero = n => (n === null || n === undefined || !Number.isFinite(Number(n))) ? 0 : Number(n);
 eval(html.slice(startB, endB));
 
-// _formatCombatLogEntry (activity feed) — egen liten slice
-const startF = html.indexOf('function _formatCombatLogEntry');
-const endF = html.indexOf('// Live-aktivitet: rendera ENDAST senaste posten från maskinrummets logg');
-if (startF < 0 || endF < 0) { console.error('MARKERS F NOT FOUND'); process.exit(1); }
-eval(html.slice(startF, endF));
+// _formatCombatLogEntry (activity feed) — borttagen ur chat.html i
+// dead-code-passet 2026-08-08 (a6d93fb); testerna för den är borta med den.
+
 
 const blTurn = new El('span'); reg('bl-turn', blTurn);
 
@@ -167,14 +167,6 @@ const rsMsg = battle3.children[0];
 assert('round summary renders ally entry with .ally class', !!rsMsg && rsMsg.innerHTML.includes('crs-line ally'));
 assert('round summary uses 🛡️ icon for ally', !!rsMsg && rsMsg.innerHTML.includes('🛡️'));
 assert('ally dice badge gets .ally-dice-badge', !!rsMsg && rsMsg.innerHTML.includes('ally-dice-badge'));
-
-// ── Activity feed: _formatCombatLogEntry ──
-const feed = _formatCombatLogEntry({ round: 4, actor: 'ally', name: 'Mimmrick', text: 'träffar goblinen — 5 skada (hugg)' });
-assert('activity feed: ally entry gets 🛡️ icon', feed === '🛡️ Mimmrick: träffar goblinen — 5 skada (hugg)');
-assert('activity feed: player/enemy/system unchanged',
-  _formatCombatLogEntry({ actor: 'player', name: 'Du', text: 'x' }) === '🗡️ Du: x' &&
-  _formatCombatLogEntry({ actor: 'enemy', name: 'Goblin', text: 'y' }) === '⚔️ Goblin: y' &&
-  _formatCombatLogEntry({ actor: 'system', text: 'z' }) === '📜 z');
 
 // ── Turn chip: ally-{id} i turn_order ──
 updateCombatStatusBar({

@@ -488,11 +488,6 @@ class CampaignStore:
 
     # ── Export helpers ──
 
-    def get_campaign_dir(self, state: dict) -> Path:
-        user = state["meta"]["user"]
-        cid = state["meta"]["campaign_id"]
-        return self._campaign_dir(user, cid)
-
     def get_transcripts_dir(self, state: dict) -> Path:
         user = state["meta"]["user"]
         cid = state["meta"]["campaign_id"]

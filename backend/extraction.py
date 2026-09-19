@@ -853,13 +853,6 @@ class FactRegister:
             if f.category == category
         ]
 
-    def format_for_prompt(self, facts: list[Fact]) -> str:
-        """
-        Formatera en lista fakta som kompakt text för DM-systemprompten.
-        Använder format_facts_block() under huven.
-        """
-        return format_facts_block(facts)
-
     def stats(self) -> dict:
         """Antal fakta per kategori (aktiva + totalt) samt arkiverade/ersatta."""
         active = self._active_facts()

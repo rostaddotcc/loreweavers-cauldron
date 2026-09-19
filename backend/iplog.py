@@ -337,23 +337,6 @@ async def visits_summary(country_range: str = "all") -> dict:
         "by_referrer": by_referrer,
     }
 
-
-def find_username_for_ip(ip: str) -> str | None:
-    """Returnera en befintlig användare med samma PUBLIKA IP, annars None.
-
-    Används av register för 1-konto-per-IP (2026-08-05). Privata IP:er
-    (LAN/localhost) hoppas över — blockering är meningslös bakom NAT och
-    skulle bryta lokal utveckling. _ip_store uppdateras av record_ip() på
-    varje autentiserad request, så befintliga användares IP:er finns där."""
-    if not ip or is_private(ip):
-        return None
-    _load()
-    for uname, rec in _ip_store.items():
-        if rec and rec.get("ip") == ip:
-            return uname
-    return None
-
-
 def country_flag(country_code: str) -> str:
     """Landskod 'SE' → flagg-emoji 🇸🇪. 'LOCAL' → 🏠, tom → ❓."""
     if not country_code:

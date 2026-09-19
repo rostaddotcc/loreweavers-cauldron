@@ -89,6 +89,13 @@ const ctx = vm.createContext({
 // `_combatEndSeen`/`_lastCombatRound` (se enemy-dice-render-2026-08): deklarera
 // set:et själva i kontexten och stryk filens egen deklaration ur laddningen.
 let source = html.replace(/let _enemyDiceSeen = new Set\(\);.*\n/, '');
+// Partiklarna (block 1, efter embers-canvasen) deklareras efter kastpunkten →
+// TDZ på `_pxLive`/`_pxBurst` när _pxSpawn anropas. Samma pitfall-mönster:
+// deklarera registret i kontexten och stryk filens egen deklaration.
+source = source.replace(/const _pxLive = new Set\(\);.*\n/, '');
+source = source.replace(/let _pxBurst = \[\];.*\n/, '');
+source = source.replace(/let _pxRafId = null;.*\n/, '');
+vm.runInContext('let _pxLive = new Set(); let _pxBurst = []; let _pxRafId = null;', ctx);
 // Ladda BARA block 0 + 1: block 3 är app-boot-kod (loadCampaign().then(...) på
 // toppnivå) som aldrig kan fungera i en sandlåda — dess asynkrona fortsättning
 // kastar utanför try/catch (mikrotask-kön) och kraschar processen. Alla

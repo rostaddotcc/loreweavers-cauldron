@@ -77,22 +77,6 @@ def _state_lock(username: str, campaign_id: str) -> asyncio.Lock:
         return lock
 
 
-async def _with_locked_state(
-    username: str, campaign_id: str, fn,
-):
-    """Kör fn(state) under per-kampanj-låset med färskt state.
-
-    Skyddar alla read-modify-write-endpoints (combat, character, patches)
-    mot att skriva över bakgrundsuppgifternas ändringar.
-    """
-    lock = _state_lock(username, campaign_id)
-    async with lock:
-        state = store.get(username, campaign_id)
-        if not state:
-            raise HTTPException(404, "Ingen aktiv kampanj")
-        return await fn(state)
-
-
 def _epoch_ok(username: str, campaign_id: str, epoch: int | None) -> bool:
     """True om turen fortfarande är aktuell (ingen undo har skett sedan start).
 
@@ -227,16 +211,6 @@ def _save_user_avatar_gallery(username: str, data: dict) -> None:
     gp = _user_gallery_path(username)
     gp.parent.mkdir(parents=True, exist_ok=True)
     gp.write_text(json.dumps(data, ensure_ascii=False, indent=2))
-
-
-def _user_avatar_gallery_active(username: str) -> dict | None:
-    """Aktiv bild i kontots galleri (eller None)."""
-    data = _load_user_avatar_gallery(username)
-    gal = data.get("gallery") or []
-    if not gal:
-        return None
-    idx = int(data.get("gallery_index") or 0) % len(gal)
-    return gal[idx]
 
 
 import rag
@@ -1273,12 +1247,8 @@ def _ensure_user_fields(username: str, udata: dict) -> dict:
 TIER_ORDER = ("free", "tier1", "tier2", "lifetime")
 
 # Grundarerbjudande försvann 2026-08-05 med subskriptionsmodellen.
+# PROMO_UNTIL_DATE lever kvar — /api/promo (README-dokumenterad) läser den.
 PROMO_UNTIL_DATE = date(2026, 8, 11)  # legacy — används inte längre av checkout
-PROMO_MONTHS = {"tier1": 3, "tier2": 1}  # legacy — används inte längre av checkout
-
-
-def _promo_months_for(tier: str) -> int:
-    return PROMO_MONTHS.get(tier, 1)
 
 
 # Turn-period (timmar): ALLA får 50/dag (24h) — tier1/tier2 ger inga extra

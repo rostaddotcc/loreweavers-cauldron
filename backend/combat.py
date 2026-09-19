@@ -165,10 +165,6 @@ def tick_statuses(entity: dict) -> list[dict]:
     return effects
 
 
-def has_status(entity: dict, name: str) -> bool:
-    return any(s.get("name") == name for s in entity.get("statuses", []))
-
-
 def has_disadvantage(entity: dict) -> bool:
     """Har entityn någon status som ger nackdel på attacker?"""
     for s in entity.get("statuses", []):
@@ -176,10 +172,6 @@ def has_disadvantage(entity: dict) -> bool:
         if defn.get("attack_disadvantage"):
             return True
     return False
-
-
-def is_stunned(entity: dict) -> bool:
-    return has_status(entity, "stun")
 
 
 # ═══════════════════════════════════════
@@ -462,28 +454,9 @@ def _tick_all_statuses(state: dict, combat: dict):
 
 
 # ═══════════════════════════════════════
-# STRIDSSLUT
+# STRIDSSLUT — hanteras av guardian._apply_mechanics (combat_end), sedan
+# dead-code-passet 2026-08-08. Historik: git log -S end_combat.
 # ═══════════════════════════════════════
-
-def end_combat(state: dict, reason: str = "striden avslutades") -> dict:
-    """Avsluta striden. Rensar combat-state."""
-    combat = state.get("world", {}).get("combat")
-    if not combat:
-        return {}
-
-    combat["active"] = False
-    combat["ended_turn"] = state.get("meta", {}).get("turn_count", 0)
-    combat.setdefault("log", []).append({
-        "round": combat.get("round", 1), "actor": "system", "name": "",
-        "text": f"Striden är över — {reason}",
-    })
-
-    # Rensa spelarens status-effekter
-    char = state.get("character", {})
-    char.pop("statuses", None)
-
-    logger.info("🏁 Combat over: %s", reason)
-    return combat
 
 
 # ═══════════════════════════════════════

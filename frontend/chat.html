@@ -958,11 +958,7 @@
     display: flex; align-items: center; gap: 0.5rem;
     padding: 0.5rem 0.55rem; margin-bottom: 0.35rem;
     background: var(--stone-2); border: 1px solid var(--edge);
-  }.cd-res-info{ flex: 1; min-width: 0; }.cd-res-label{ font-size: 0.91rem; color: var(--bone-bright); }.cd-res-note{ font-size: 0.75rem; color: var(--bone-dim); font-style: italic; }.cd-res-roll{
-    font-family: var(--font-display); font-size: 0.56rem; letter-spacing: 0.1em; text-transform: uppercase;
-    background: var(--stone-3); border: 1px solid var(--gold); color: var(--gold-bright);
-    padding: 0.4rem 0.6rem; cursor: pointer; white-space: nowrap;
-  }.cd-res-roll:active{ background: var(--gold); color: var(--ink); }.cd-slots{ display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center; }.cd-slot{
+  }.cd-res-info{ flex: 1; min-width: 0; }.cd-res-label{ font-size: 0.91rem; color: var(--bone-bright); }.cd-res-note{ font-size: 0.75rem; color: var(--bone-dim); font-style: italic; }.cd-slots{ display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center; }.cd-slot{
     width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
     clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
     background: var(--stone-3);
@@ -978,21 +974,7 @@
   .cd-slots.charged .cd-slot.lit{ animation: cdGemPulse 2.2s ease-in-out infinite; }
   .cd-slots.charged .cd-slot.lit:nth-child(2){ animation-delay: .25s; }
   .cd-slots.charged .cd-slot.lit:nth-child(3){ animation-delay: .5s; }
-  .cd-slots.charged .cd-slot.lit:nth-child(4){ animation-delay: .75s; }
-  @keyframes cdGemPulse { 0%,100% { filter: drop-shadow(0 0 4px rgba(var(--gold-bright-rgb),0.35)); } 50% { filter: drop-shadow(0 0 12px rgba(var(--gold-bright-rgb),0.85)); } }.cd-slots-hint{ font-size: 0.83rem; font-style: italic; color: var(--bone-dim); }.cd-ds{ display: flex; align-items: center; gap: 0.5rem; font-size: 0.93rem; color: var(--blood-bright); }.cd-ds .cd-pips{ display: inline-flex; gap: 0.2rem; font-family: var(--font-accent); font-size: 0.73rem; }.cd-ds .cd-pips b{ color: var(--term-green); font-weight: 400; }.cd-ds .cd-pips i{ color: var(--blood-bright); font-style: normal; }.cd-ds .cd-pips span{ color: var(--bone-dim); }/* Inventory cards (item-card pattern from character.html, drawer-adapted) */.cd-item-card{
-    display: flex; gap: 0.6rem; align-items: flex-start;
-    background: var(--stone-2); border: 1px solid var(--edge);
-    padding: 0.55rem 0.6rem; margin-bottom: 0.4rem; cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
-  }.cd-item-card:hover{ border-color: var(--bone-dim); background: var(--stone-3); }.cd-item-card:active{ background: rgba(var(--gold-rgb),0.12); border-color: var(--gold); }.cd-item-card.equipped{ border-color: rgba(var(--poison-rgb),0.55); }.cd-item-card.r-magic{ border-color: color-mix(in srgb, var(--arcane) 5%, transparent); }.cd-item-card.r-rare{ border-color: rgba(var(--gold-bright-rgb),0.5); }.cd-item-card.r-legendary{ border-color: rgba(var(--gold-bright-rgb),0.75); }.cd-item-icon{ font-size: 1.2rem; line-height: 1; flex-shrink: 0; }.cd-item-info{ flex: 1; min-width: 0; }.cd-item-name{ font-family: var(--font-display); font-size: 0.87rem; font-weight: 700; color: var(--bone-bright); }.cd-item-name.r-magic{ color: var(--arcane-bright); }.cd-item-name.r-rare, .cd-item-name.r-legendary{ color: var(--gold-bright); }.cd-item-type{ font-size: 0.75rem; color: var(--bone-dim); font-style: italic; margin-top: 0.1rem; }.cd-item-stats{ display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.4rem; }.cd-badge{
-    font-family: var(--font-display); font-size: 0.54rem; letter-spacing: 0.06em;
-    padding: 0.14rem 0.4rem; border: 1px solid var(--edge); background: var(--stone); color: var(--bone);
-  }.cd-badge.dmg{ border-color: rgba(var(--blood-deep-rgb),0.55); color: var(--blood-bright); }.cd-badge.ac{ border-color: rgba(var(--poison-rgb),0.55); color: var(--poison); }.cd-badge.charges{ border-color: color-mix(in srgb, var(--arcane) 55%, transparent); color: var(--arcane); }.cd-badge.magic-bonus{ border-color: rgba(var(--gold-bright-rgb),0.55); color: var(--gold-bright); }.cd-badge.qty, .cd-badge.range{ color: var(--bone-dim); }.cd-badge.wt{ border-color: rgba(160,140,100,0.5); color: #b8a878; }.cd-item-lore{
-    margin-top: 0.7rem; padding: 0.6rem 0.8rem;
-    font-style: italic; font-size: 0.76rem; line-height: 1.55;
-    color: #c9a86a; border-left: 2px solid rgba(201,168,106,0.4);
-    background: rgba(201,168,106,0.05);
-  }.cd-carry{ margin-bottom: 0.6rem; }.cd-carry-bar{
+  .cd-slots.charged .cd-slot.lit:nth-child(4){ animation-delay: .75s; }.cd-slots-hint{ font-size: 0.83rem; font-style: italic; color: var(--bone-dim); }.cd-ds{ display: flex; align-items: center; gap: 0.5rem; font-size: 0.93rem; color: var(--blood-bright); }.cd-ds .cd-pips{ display: inline-flex; gap: 0.2rem; font-family: var(--font-accent); font-size: 0.73rem; }.cd-ds .cd-pips b{ color: var(--term-green); font-weight: 400; }.cd-ds .cd-pips i{ color: var(--blood-bright); font-style: normal; }.cd-ds .cd-pips span{ color: var(--bone-dim); }/* Inventory cards (item-card pattern from character.html, drawer-adapted) */.cd-carry{ margin-bottom: 0.6rem; }.cd-carry-bar{
     height: 6px; background: var(--ink); border: 1px solid var(--edge);
     overflow: hidden; margin-bottom: 0.25rem;
   }.cd-carry-bar i{ display: block; height: 100%; background: var(--gold); transition: width 0.3s; }.cd-carry-bar.warn i{ background: #d4943a; }.cd-carry-bar.over i{ background: var(--blood-bright); }.cd-carry-label{ font-size: 0.75rem; color: var(--bone-dim); letter-spacing: 0.04em; }.cd-inv-empty{ text-align: center; color: var(--bone-dim); font-style: italic; padding: 1.2rem 0.5rem; font-size: 0.91rem; }/* NPC card in drawer */.cd-npc-top{ display: flex; gap: 0.7rem; align-items: center; }.cd-npc-avatar{
@@ -1008,18 +990,7 @@
     font-family: var(--font-display); font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase;
     background: var(--stone-3); border: 1px solid var(--arcane); color: var(--arcane);
     padding: 0.55rem 0.6rem; margin-top: 0.8rem; cursor: pointer;
-  }.cd-mention:active{ background: var(--arcane); color: var(--ink); }/* Item detail modal */.cd-item-overlay{
-    position: fixed; inset: 0; z-index: 11000;
-    background: rgba(var(--ink-rgb),0.82);
-    display: none; align-items: center; justify-content: center;
-  }.cd-item-overlay.open{ display: flex; }.cd-item-modal{
-    position: relative; width: 92vw; max-width: 440px; max-height: 82vh; overflow-y: auto;
-    background: var(--stone); border: 1px solid var(--gold); padding: 1.6rem 1.6rem 1.4rem;
-  }.cd-item-close{
-    position: absolute; top: 0.55rem; right: 0.75rem;
-    background: transparent; border: none; color: var(--bone-dim);
-    font-size: 1.1rem; cursor: pointer;
-  }.cd-item-close:hover{ color: var(--blood-bright); }.cd-item-h{ font-family: var(--font-display); font-weight: 900; font-size: 1.13rem; color: var(--bone-bright); margin-bottom: 0.2rem; }.cd-item-h.r-magic{ color: var(--arcane-bright); }.cd-item-h.r-rare, .cd-item-h.r-legendary{ color: var(--gold-bright); }.cd-item-sub{ font-size: 0.72rem; color: var(--bone-dim); font-style: italic; margin-bottom: 0.8rem; padding-bottom: 0.6rem; border-bottom: 1px solid color-mix(in srgb, var(--edge) 6%, transparent); }.cd-item-row{ display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px solid color-mix(in srgb, var(--edge) 35%, transparent); font-size: 0.78rem; }.cd-item-row .cd-k{ color: var(--bone-dim); font-size: 0.68rem; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.06em; }.cd-item-row .cd-v{ color: var(--bone-bright); text-align: right; }.cd-roll-btn{ font-family: var(--font-display); font-size: 0.6rem; color: var(--ink); background: var(--gold); border: 1px solid var(--gold-bright); border-radius: 2px; padding: 0.15rem 0.45rem; margin-left: 0.4rem; cursor: pointer; text-transform: uppercase; letter-spacing: 0.06em; }.cd-roll-btn:hover{ background: var(--gold-bright); }.cd-item-desc{ margin-top: 0.8rem; padding: 0.7rem; font-size: 0.78rem; color: var(--bone); font-style: italic; line-height: 1.55; background: rgba(8,8,13,0.5); border-left: 2px solid var(--edge); }.cd-item-desc.magic{ border-left-color: var(--arcane); }.cd-item-props{ display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem; }.cd-item-prop{ font-size: 0.62rem; padding: 0.12rem 0.45rem; border: 1px solid var(--edge); color: var(--bone-dim); background: var(--stone-2); }.cd-nav-btn{
+  }.cd-mention:active{ background: var(--arcane); color: var(--ink); }/* Item detail modal */.cd-nav-btn{
     display: block; width: 100%; text-align: center;
     font-family: var(--font-display); font-size: 0.6rem; letter-spacing: 0.18em; text-transform: uppercase;
     background: var(--stone-3); border: 1px solid var(--gold); color: var(--gold-bright);
@@ -1789,15 +1760,6 @@
     <div class="cd-empty">Opening the ledger…</div>
   </div>
 </aside>
-
-<!-- Item detail modal (drawer) -->
-<div class="cd-item-overlay" id="cd-item-overlay" onclick="cdCloseItem(event)">
-  <div class="cd-item-modal" onclick="event.stopPropagation()">
-    <button class="cd-item-close" onclick="cdCloseItem(event, true)">✕</button>
-    <div id="cd-item-content"></div>
-  </div>
-</div>
-
 
 <!-- 📊 USAGE — modell- och token-statistik -->
 <div class="usage-overlay" id="usage-overlay" onclick="if(event.target===this)closeUsageModal()">
@@ -4099,7 +4061,6 @@ function offlineRollHint(roll) {
   const txt = en ? 'offline roll — not server-verified' : 'offlinekast — ej serververifierat';
   return ` <span class="offline-roll">⚠ ${txt}</span>`;
 }
-
 
 // Dying/dead-visibilitet (2026-09-06): hp.current<=0 → pulserande DÖENDE-varning
 // i sidebaren; death_saves.dead → DÖD-badge. Data ur befintlig /api/campaign-payload
@@ -7222,7 +7183,6 @@ function runeFor(status) {
   return '✚';
 }
 
-
 // C3 — Lorekeeper-rapporten som DOS-stridslogg (fallback: plain guardian-box)
 function combatLineClass(line) {
   const t = line.replace(/\*\*/g, '').trim();
@@ -8400,7 +8360,6 @@ document.addEventListener('keydown', (e) => {
     const sidebar = document.querySelector('.sidebar.mobile-open');
     if (sidebar) { toggleMobileSidebar(); return; }
     if (closeCodexIfOpen()) return;
-    if (closeItemModalIfOpen()) return;
     if (closeCharDrawerIfOpen()) return;
   }
 });
@@ -8481,231 +8440,6 @@ function cdEsc(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 function cdFmtMod(m) { return m >= 0 ? '+' + m : '' + m; }
-
-// ═══════════════ CHAR DRAWER (D1.1) ═══════════════
-const CD_ABILITY_ORDER = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
-const CD_TYPE_ICONS = { Vapen: '⚔️', Rustning: '🛡️', Dryck: '🧪', Magisk: '✦', Verktyg: '🔧', Annat: '📦', Weapon: '⚔️', Armor: '🛡️', Potion: '🧪', Magic: '✦', Tool: '🔧', Other: '📦' };
-let _drawerItems = [];
-
-function cdBadges(item) {
-  let b = '';
-  const dmg = item.damage || (item.damage_dice ? item.damage_dice + (item.damage_type ? ' ' + item.damage_type : '') : null);
-  if (dmg) b += `<span class="cd-badge dmg">⚔ ${cdEsc(dmg)}</span>`;
-  if (item.ac_bonus != null && item.ac_bonus !== undefined && Number.isFinite(Number(item.ac_bonus))) b += `<span class="cd-badge ac">🛡 ${item.ac_bonus}</span>`;
-  if (item.magic_bonus > 0) b += `<span class="cd-badge magic-bonus">+${item.magic_bonus}</span>`;
-  if (item.charges != null || item.max_charges != null) {
-    const c = (item.charges != null && Number.isFinite(Number(item.charges))) ? item.charges : '?';
-    const m = (item.max_charges != null && Number.isFinite(Number(item.max_charges))) ? item.max_charges : '?';
-    b += `<span class="cd-badge charges">⚡ ${c}/${m}</span>`;
-  }
-  if (item.range) b += `<span class="cd-badge range">◎ ${cdEsc(item.range)}</span>`;
-  return b;
-}
-
-
-function closeCharDrawer() {
-  const drawer = document.getElementById('char-drawer');
-  if (drawer) { drawer.classList.remove('open'); drawer.setAttribute('aria-hidden', 'true'); }
-  const backdrop = document.getElementById('cd-backdrop');
-  if (backdrop) backdrop.classList.remove('open');
-  _unlockScroll();
-}
-
-function closeCharDrawerIfOpen() {
-  const drawer = document.getElementById('char-drawer');
-  if (drawer && drawer.classList.contains('open')) { closeCharDrawer(); return true; }
-  return false;
-}
-
-function renderCharDrawer() {
-  const body = document.getElementById('cd-body');
-  if (!body) return;
-  const raw = (campaignData && campaignData._raw) || {};
-  const ch = raw.character || {};
-  const name = cdEsc(ch.name || CHAR_NAME || 'The Adventurer');
-  const klass = [ch.race, ch.class].filter(Boolean).join(' · ') + (ch.level ? ' · Level ' + ch.level : '');
-  const hp = ch.hp || { current: 0, max: 0 };
-  const pct = hp.max > 0 ? Math.round(100 * (hp.current || 0) / hp.max) : 0;
-  const temp = hp.temp || ch.temp_hp || 0;
-  const xp = ch.xp || {};
-  const xpCur = xp.current || 0;
-  const xpNext = xp.next_level || xp.next || 300;
-  const dex = (ch.abilities && ch.abilities.DEX && ch.abilities.DEX.mod != null && Number.isFinite(Number(ch.abilities.DEX.mod))) ? ch.abilities.DEX.mod : 0;
-  const wis = (ch.abilities && ch.abilities.WIS && ch.abilities.WIS.mod != null && Number.isFinite(Number(ch.abilities.WIS.mod))) ? ch.abilities.WIS.mod : 0;
-  const ac = (ch.ac != null && Number.isFinite(Number(ch.ac))) ? ch.ac : '—';
-  const init = (ch.initiative != null && Number.isFinite(Number(ch.initiative))) ? ch.initiative : dex;
-  const perc = (ch.perception != null && Number.isFinite(Number(ch.perception))) ? ch.perception : wis;
-  const abilities = ch.abilities || {};
-  const slots = ch.spell_slots || ch.spellSlots || { current: 0, max: 0 };
-  const ds = (hp.current || 0) <= 0 ? (raw.character && raw.character.death_saves) || { successes: 0, failures: 0 } : null;
-  const resources = Array.isArray(raw.resources) ? raw.resources : [];
-  const items = _drawerItems = Array.isArray(raw.inventory) ? raw.inventory : [];
-  const xpPct = xpNext > 0 ? Math.min(100, Math.round(100 * xpCur / xpNext)) : 0;
-
-  let html = '';
-  html += `<div class="cd-name">${name}</div>`;
-  if (klass) html += `<div class="cd-class">${cdEsc(klass)}</div>`;
-
-  html += `<div class="cd-section-title">❤ Vitality</div>`;
-  html += `<div class="cd-hp-label"><b>${numOrZero(hp.current)} / ${numOrZero(hp.max)} HP</b>${temp ? `<span class="cd-temp">+${temp} temp</span>` : ''}</div>`;
-  if (ds && ds.dead) html += `<div class="cd-dead-badge">💀 ${(typeof I18N !== 'undefined' && I18N.getLang && I18N.getLang() === 'en') ? 'DEAD' : 'DÖD'}</div>`;
-  html += `<div class="cd-trough${hp.max > 0 && pct < 25 ? ' low' : ''}"><i style="width:${pct}%"></i></div>`;
-  html += `<div class="cd-xp" style="margin-top:.5rem"><i style="width:${xpPct}%"></i></div>`;
-  html += `<div class="cd-xp-label"><b>${xpCur}</b> / ${xpNext} XP</div>`;
-  html += `<div class="cd-stats">`;
-  html += `<div class="cd-stat"><div class="cd-stat-k">AC</div><div class="cd-stat-v">${ac}</div></div>`;
-  html += `<div class="cd-stat"><div class="cd-stat-k">INIT</div><div class="cd-stat-v">${cdFmtMod(init)}</div></div>`;
-  html += `<div class="cd-stat"><div class="cd-stat-k">PERC</div><div class="cd-stat-v">${cdFmtMod(perc)}</div></div>`;
-  html += `</div>`;
-
-  html += `<div class="cd-section-title">⚔ Abilities</div>`;
-  html += `<div class="cd-abilities">` + CD_ABILITY_ORDER.map(key => {
-    const v = abilities[key] || {};
-    const score = (v.score != null && Number.isFinite(Number(v.score))) ? v.score : 10;
-    const mod = (v.mod != null && Number.isFinite(Number(v.mod))) ? v.mod : Math.floor((score - 10) / 2);
-    return `<div class="cd-ability"><div class="cd-abbr">${key}</div><div class="cd-score">${score}</div><div class="cd-mod">${cdFmtMod(mod)}</div></div>`;
-  }).join('') + `</div>`;
-
-  if (ds) {
-    const s = Math.min(3, ds.successes || 0);
-    const f = Math.min(3, ds.failures || 0);
-    html += `<div class="cd-section-title">💀 Death Saves</div>`;
-    html += `<div class="cd-ds"><span class="cd-pips">${'<b>●</b>'.repeat(s)}${'<span>○</span>'.repeat(3 - s)} <i>saves</i></span>`;
-    html += `<span class="cd-pips">${'<i>●</i>'.repeat(f)}${'<span>○</span>'.repeat(3 - f)} <i>fails</i></span></div>`;
-  }
-
-  html += `<div class="cd-section-title">🔮 Spell Slots</div>`;
-  if (slots.max > 0) {
-    const lit = Math.min(slots.current || 0, slots.max);
-    const charged = lit >= slots.max ? ' charged' : '';
-    html += `<div class="cd-slots${charged}">`;
-    for (let i = 0; i < slots.max; i++) html += `<div class="cd-slot${i < lit ? ' lit' : ''}">${i < lit ? '✦' : ''}</div>`;
-    html += `</div>`;
-    html += `<div class="cd-xp-label" style="text-align:left;margin-top:.35rem"><b>${slots.current || 0}</b> / ${slots.max} available</div>`;
-  } else {
-    html += `<div class="cd-slots-hint">No spell slots — this character casts no spells.</div>`;
-  }
-
-  if (resources.length) {
-    html += `<div class="cd-section-title">🎲 Active Resources</div>`;
-    resources.forEach(r => {
-      const label = cdEsc(r.label || r.notation || 'Roll');
-      const note = r.reason ? ' — ' + cdEsc(r.reason) : '';
-      const notation = cdEsc(r.notation || '1d20');
-      html += `<div class="cd-res-row"><div class="cd-res-info"><div class="cd-res-label">${label}</div><div class="cd-res-note">${notation}${note}</div></div>`;
-      html += `<button class="cd-res-roll" onclick="cdRollResource('${String(r.notation || '1d20').replace(/'/g, "\\'")}','${String(label).replace(/'/g, "\\'")}')">Roll 🎲</button></div>`;
-    });
-  }
-
-  // Carry weight bar — myntvikt inkluderas som i backend-sanningen (main.py
-  // currency_weight: 50 mynt = 1 lb oavsett valör, pp+gp+sp+cp / 50).
-  const itemsWt = items.reduce((s, it) => s + (parseFloat(it.weight) || 0) * (parseInt(it.qty) || 1), 0);
-  const cur = raw.currency || {};
-  const coinWt = Math.round((['pp', 'gp', 'sp', 'cp'].reduce((s, d) => s + (parseFloat(cur[d]) || 0), 0) / 50) * 100) / 100;
-  const totalWt = itemsWt + coinWt;
-  const maxWt = parseFloat(ch.max_weight_lbs) || 0;
-  const wtPct = maxWt > 0 ? Math.min(100, Math.round(100 * totalWt / maxWt)) : 0;
-  html += `<div class="cd-section-title">🎒 Belongings</div>`;
-  if (maxWt > 0) {
-    html += `<div class="cd-carry"><div class="cd-carry-bar${wtPct > 90 ? ' over' : wtPct > 70 ? ' warn' : ''}"><i style="width:${wtPct}%"></i></div><div class="cd-carry-label">⚖ ${totalWt.toFixed(1)} / ${maxWt} lb (${wtPct}%)${coinWt > 0 ? ` · 🪙 ${coinWt.toFixed(2)} lb` : ''}</div></div>`;
-  }
-  if (items.length) {
-    items.forEach((item, i) => {
-      const rarityCls = item.rarity ? 'r-' + item.rarity : '';
-      const icon = CD_TYPE_ICONS[item.type] || CD_TYPE_ICONS.Annat;
-      html += `<div class="cd-item-card${item.equipped ? ' equipped' : ''}${rarityCls ? ' ' + rarityCls : ''}" onclick="cdOpenItem(${i})">`;
-      html += `<div class="cd-item-icon">${icon}</div>`;
-      html += `<div class="cd-item-info"><div class="cd-item-name ${rarityCls}">${item.rarity === 'magic' || item.rarity === 'legendary' ? '✦ ' : ''}${cdEsc(item.name || 'Unnamed item')}</div>`;
-      html += `<div class="cd-item-type">${cdEsc(item.type || 'Other')}</div>`;
-      const wtBadge = (item.weight > 0) ? `<span class="cd-badge wt">⚖ ${(item.weight * (item.qty || 1)).toFixed(1)} lb</span>` : '';
-      html += `<div class="cd-item-stats">${cdBadges(item)}${item.qty > 1 ? `<span class="cd-badge qty">×${item.qty}</span>` : ''}${wtBadge}</div></div></div>`;
-    });
-  } else {
-    html += `<div class="cd-inv-empty">No belongings yet — the world will provide…</div>`;
-  }
-
-  body.innerHTML = html;
-}
-
-// Resurs-tärningsknapp: serverRoll + chat-meddelanden + ljud (samma mönster som /roll)
-async function cdRollResource(notation, label) {
-  // Tärningslås (2026-08-06): resurs-tärningar (karaktärsdragaren) får inte
-  // rulla medan Lorekeeper jobbar — samma race-skydd som chat-tärningen.
-  if (_guardianBusy) {
-    toast(I18N.t('🛡️ Vänta — Lorekeeper uppdaterar…'));
-    return;
-  }
-  const roll = await serverRoll(notation);
-  if (!roll) { toast('⚠ Could not parse ' + notation); return; }
-  closeCharDrawer();
-  addMessage('player', null, `<i>${label} — rolling ${notation}</i>`);
-  addMessage('system', null, diceMessage(roll, label));
-  if (typeof SFX !== 'undefined') SFX.dice();
-  // Resursen är FÖRBRUKAD — konsumera den i backend så den inte ligger kvar
-  // och triggar nya roll-requests i framtida turer (showstopper 2026-08-01).
-  try { API.consumeResource(label).catch(() => {}); } catch (e) { /* tyst */ }
-}
-
-// ═══════════════ ITEM DETAIL MODAL (D1.1) ═══════════════
-function cdOpenItem(i) {
-  const item = _drawerItems[i];
-  if (!item) return;
-  closeMobileSidebar();
-  const rarityCls = item.rarity ? 'r-' + item.rarity : '';
-  const icon = CD_TYPE_ICONS[item.type] || CD_TYPE_ICONS.Annat;
-  const dmg = item.damage || (item.damage_dice ? item.damage_dice + (item.damage_type ? ' ' + item.damage_type : '') : null);
-  let stats = '';
-  if (item.category) {
-    const catLabel = I18N.t(({weapon:'⚔ Vapen', armor:'🛡 Rustning', potion:'🧪 Dryck', magic:'✦ Magisk', tool:'🔧 Verktyg', trinket:'🎒 Föremål'})[item.category] || item.category);
-    stats += `<div class="cd-item-row"><span class="cd-k">${I18N.t('🏷 Klass')}</span><span class="cd-v">${catLabel}</span></div>`;
-  }
-  if (item.usage) {
-    const usageLabel = ({wielded:'Wielded/carried', consumable:'Consumed', activated:'Activated', trinket:'Passive'})[item.usage] || item.usage;
-    stats += `<div class="cd-item-row"><span class="cd-k">🎯 Usage</span><span class="cd-v">${usageLabel}</span></div>`;
-  }
-  if (dmg) stats += `<div class="cd-item-row"><span class="cd-k">⚔ Damage</span><span class="cd-v">${cdEsc(dmg)}</span></div>`;
-  if (item.ac_bonus != null && item.ac_bonus !== undefined && Number.isFinite(Number(item.ac_bonus))) stats += `<div class="cd-item-row"><span class="cd-k">🛡 AC bonus</span><span class="cd-v">${item.ac_bonus}</span></div>`;
-  if (item.range) stats += `<div class="cd-item-row"><span class="cd-k">◎ Range</span><span class="cd-v">${cdEsc(item.range)}</span></div>`;
-  if (item.magic_bonus > 0) stats += `<div class="cd-item-row"><span class="cd-k">✦ Magic bonus</span><span class="cd-v">+${item.magic_bonus}</span></div>`;
-  if (item.charges != null || item.max_charges != null) {
-    const c = (item.charges != null && Number.isFinite(Number(item.charges))) ? item.charges : '?';
-    const m = (item.max_charges != null && Number.isFinite(Number(item.max_charges))) ? item.max_charges : '?';
-    stats += `<div class="cd-item-row"><span class="cd-k">⚡ Charges</span><span class="cd-v">${c} / ${m}</span></div>`;
-  }
-  if (item.roll) {
-    stats += `<div class="cd-item-row"><span class="cd-k">🎲 Roll</span><span class="cd-v">${cdEsc(item.roll)} <button class="cd-roll-btn" onclick="cdRollResource('${cdEsc(item.roll).replace(/'/g, "\\'")}','${cdEsc(item.name || 'item').replace(/'/g, "\\'")}')">Slå</button></span></div>`;
-  }
-  stats += `<div class="cd-item-row"><span class="cd-k">⚖ Weight</span><span class="cd-v">${((item.weight || 0) * (item.qty || 1)).toFixed(1)} lbs${item.qty > 1 ? ' × ' + item.qty : ''}</span></div>`;
-  stats += `<div class="cd-item-row"><span class="cd-k">📊 Rarity</span><span class="cd-v">${item.rarity === 'magic' ? '✦ ' : ''}${cdEsc(item.rarity || 'normal')}</span></div>`;
-  stats += `<div class="cd-item-row"><span class="cd-k">📦 Status</span><span class="cd-v">${item.equipped ? '⚔ Equipped' : '🎒 In pack'}</span></div>`;
-  let props = '';
-  if (Array.isArray(item.properties) && item.properties.length) {
-    props = `<div class="cd-item-props">${item.properties.map(p => `<span class="cd-item-prop">${cdEsc(p)}</span>`).join('')}</div>`;
-  }
-  let desc = '';
-  if (item.description) desc += `<div class="cd-item-desc">${cdEsc(item.description)}</div>`;
-  if (item.effects) desc += `<div class="cd-item-desc magic">${cdEsc(item.effects)}</div>`;
-  if (item.lore) desc += `<div class="cd-item-lore">"${cdEsc(item.lore)}"</div>`;
-  document.getElementById('cd-item-content').innerHTML = `
-    <div class="cd-item-h ${rarityCls}">${icon} ${cdEsc(item.name || 'Unnamed item')}</div>
-    <div class="cd-item-sub">${cdEsc(item.type || 'Other')}${item.rarity && item.rarity !== 'normal' ? ' · ' + cdEsc(item.rarity) : ''}</div>
-    ${stats}${props}${desc}`;
-  document.getElementById('cd-item-overlay').classList.add('open');
-  _lockScroll();
-}
-
-function cdCloseItem(e, force) {
-  if (!force && (!e || !e.target || !e.target.classList.contains('cd-item-overlay'))) return;
-  const ov = document.getElementById('cd-item-overlay');
-  if (ov) ov.classList.remove('open');
-  _unlockScroll();
-}
-
-function closeItemModalIfOpen() {
-  const ov = document.getElementById('cd-item-overlay');
-  if (ov && ov.classList.contains('open')) { cdCloseItem(null, true); return true; }
-  return false;
-}
 
 // ═══════════════ NPC DRAWER (D1.2) ═══════════════
 const CD_REL_LABEL = { allierad: 'Ally', neutral: 'Neutral', fiende: 'Foe', 'okänd': 'Unknown' };

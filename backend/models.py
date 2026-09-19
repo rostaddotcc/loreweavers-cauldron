@@ -95,6 +95,15 @@ MODELS: dict[str, ModelConfig] = {
     ),
 
     # ── StepFun (Step Plan) ──
+    "step-5-preview": ModelConfig(
+        model_id="step-5-preview",
+        display_name="Step 5 Preview (flagship)",
+        provider="stepfun",
+        api_model="step-5-preview",
+        base_url=os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.ai/step_plan/v1"),
+        api_key_env="STEPFUN_API_KEY",
+        supports_vision=True,
+    ),
     "step-3.7-flash": ModelConfig(
         model_id="step-3.7-flash",
         display_name="Step 3.7 Flash (snabb)",

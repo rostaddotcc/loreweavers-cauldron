@@ -266,6 +266,7 @@
           <option value="qwen3.8-flash">qwen3.8-flash</option>
           <option value="qwen3.6-flash">qwen3.6-flash</option>
           <option value="deepseek-v4-flash-0731">deepseek-v4-flash-0731</option>
+          <option value="step-5-preview">step-5-preview</option>
           <option value="step-3.7-flash" selected>step-3.7-flash</option>
           <option value="deepseek-v4-flash">deepseek-v4-flash</option>
           <option value="mimo-v2.5">mimo-v2.5</option>
@@ -350,7 +351,7 @@ if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 // ── Rollbaserat modellval: icke-admin får välja mellan de tillåtna modellerna ──
 let newgameIsAdmin = false;
 let _newgameTier = 'free';  // free | tier1 | tier2 | lifetime
-const PLAYER_CHAR_MODELS = ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-3.7-flash', 'ollama:heretic'];
+const PLAYER_CHAR_MODELS = ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-5-preview', 'step-3.7-flash', 'ollama:heretic'];
 // Råa ID:n visas direkt — man vet exakt vilken modell man får (inget "snabb"/"fast"-förskönande)
 const PLAYER_CHAR_LABELS = {};
 PLAYER_CHAR_MODELS.forEach(m => { PLAYER_CHAR_LABELS[m] = m; });
@@ -365,10 +366,10 @@ API.me().then(u => {
     const sel = document.getElementById('char-model');
     if (sel) {
       sel.innerHTML = PLAYER_CHAR_MODELS.map(m => {
-        const dis = locked && m !== 'step-3.7-flash';
+        const dis = locked && m !== 'step-3.7-flash' && m !== 'step-5-preview' && m !== 'qwen3.8-flash';
         return `<option value="${m}"${dis ? ' disabled' : ''}>${dis ? '🔒 ' + (PLAYER_CHAR_LABELS[m] || m) + ' — Patron (30€)' : (PLAYER_CHAR_LABELS[m] || m)}</option>`;
       }).join('');
-      sel.value = 'step-3.7-flash';
+      sel.value = (locked && PLAYER_CHAR_MODELS.includes('qwen3.8-flash')) ? 'qwen3.8-flash' : 'step-3.7-flash';
     }
   }
   // 🆓 OpenRouter free-modeller — även för karaktärsskapande (backend streamar

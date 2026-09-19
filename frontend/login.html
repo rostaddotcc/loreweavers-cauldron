@@ -415,7 +415,7 @@
 
 <div id="deleted-banner">🕊️ Your account has been deleted. The Cauldron will remember your stories.</div>
 
-<div id="update-banner" role="status">✦ <b>Qwen 3.8 Flash</b> — now in the free tier. A fast Dungeon Master mind, free for every account. <a href="releases.html" onclick="try{localStorage.setItem('qwen_flash_seen','1')}catch(e){}">Read the chronicle →</a><button class="upd-x" aria-label="Dismiss" onclick="try{localStorage.setItem('qwen_flash_seen','1')}catch(e){}document.getElementById('update-banner').classList.remove('show')">×</button></div>
+<div id="update-banner" role="status">✦ <b>Step 5 Preview</b> — the new flagship mind, now in the free tier. A reasoning Dungeon Master from StepFun, free for every account — pick it at the model gate or in Settings. <a href="releases.html" onclick="try{localStorage.setItem('step5_flash_seen','1')}catch(e){}">Read the chronicle →</a><button class="upd-x" aria-label="Dismiss" onclick="try{localStorage.setItem('step5_flash_seen','1')}catch(e){}document.getElementById('update-banner').classList.remove('show')">×</button></div>
 
 <!-- ═══════════════ topbar ═══════════════ -->
 <header class="topbar" id="nav">
@@ -785,10 +785,15 @@
     <div class="wrap">
       <p class="eyebrow rv">From the Ledger</p>
       <h2 class="rv">What&rsquo;s new in the realm</h2>
-      <span class="ver-chip rv d1">v1.3 &mdash; The Rewoven Thread &middot; updated 2026-09-13</span>
+      <span class="ver-chip rv d1">v1.3 &mdash; The Rewoven Thread &middot; updated 2026-09-20</span>
       <ul class="ledger-list">
-        <li class="hot rv d1"><b>Meet Qwen 3.8 Flash &mdash; the free mind that thinks <span class="tag">Try it</span> <span class="tag">2026-09-13</span></b>
-          &mdash; our recommendation for the table tonight. It answers quickly without stopping to
+        <li class="hot rv d1"><b>Meet Step 5 Preview &mdash; the flagship mind, free for everyone <span class="tag">Try it</span> <span class="tag">2026-09-20</span></b>
+          &mdash; StepFun&rsquo;s newest and deepest Dungeon Master joins the free tier. It reasons
+          before it speaks and holds a whole campaign in mind at once, and every account can
+          set it as their DM &mdash; no Patron coin required. Pick it at the model gate when you
+          start an adventure, or switch to it in Settings.</li>
+        <li class="rv d1"><b>Qwen 3.8 Flash &mdash; the free mind that thinks <span class="tag">2026-09-13</span></b>
+          &mdash; our recommendation for a fast table. It answers quickly without stopping to
           reason aloud, so the scene keeps its pace between turns, and it is free for every
           account &mdash; no Patron coin required. Set it as your Dungeon Master in Settings and
           spend your turns adventuring, not waiting. New here? Start a fresh adventure and pick
@@ -891,10 +896,10 @@
 <script src="sprites.js?v=20260806b"></script>
 
 <script>
-/* ═══════════════ update banner — Qwen 3.8 Flash free tier, en gång per läsare ═══════════════ */
+/* ═══════════════ update banner — Step 5 Preview free tier, en gång per läsare ═══════════════ */
 (function () {
   try {
-    var seen = localStorage.getItem('qwen_flash_seen');
+    var seen = localStorage.getItem('step5_flash_seen');
     if (!seen) document.getElementById('update-banner').classList.add('show');
   } catch (e) {}
 })();

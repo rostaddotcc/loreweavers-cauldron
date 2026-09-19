@@ -1794,13 +1794,16 @@ GUARDIAN_MODEL = os.getenv("GUARDIAN_MODEL", "step-3.7-flash")
 DEFAULT_PLAYER_MODEL = "step-3.7-flash"
 # Modeller som icke-admin-spelare får välja mellan
 # (admin ser alla — inkl. MiMo + DeepSeek-egen-API)
-PLAYER_MODELS = ("qwen3.8-max", "qwen3.8-flash", "qwen3.6-flash", "deepseek-v4-flash", "deepseek-v4-flash-0731", "step-3.7-flash", "step-3.5-flash-2603", "ollama:heretic")
+PLAYER_MODELS = ("qwen3.8-max", "qwen3.8-flash", "qwen3.6-flash", "deepseek-v4-flash", "deepseek-v4-flash-0731", "step-5-preview", "step-3.7-flash", "step-3.5-flash-2603", "ollama:heretic")
 
 # Gratisväljaren: free/tier1 får välja mellan StepFun-stegen + Qwen 3.8 Flash
 # (2026-09-09: Qwen 3.8 Flash live för free tier — verifierad mot Token Plan).
 # 3.7 är default, men spelaren kan byta till 3.5-flash-2603 (öppen MoE) eller
 # qwen3.8-flash (snabb med vision).
-FREE_PLAYER_MODELS = ("qwen3.8-flash", "step-3.7-flash", "step-3.5-flash-2603")
+# (2026-09-20: Step 5 Preview — StepFun nya flagships-förhandsvisning — öppnad
+# för free tier. Verifierad live mot /step_plan/v1 (200 OK, reasoning + content
+# streamas, JSON-mode fungerar). Pris: $1.00 in / $2.70 ut per 1M tokens.)
+FREE_PLAYER_MODELS = ("qwen3.8-flash", "step-5-preview", "step-3.7-flash", "step-3.5-flash-2603")
 
 
 def _clamp_player_model(model_id: str, tier: str | None = None) -> str:
@@ -2181,7 +2184,7 @@ async def _call_llm(
     api_key = get_api_key(config)
 
     # Reasoning-modeller behöver mer utrymme (thinking + content)
-    if config.api_model in ("deepseek-v4-flash", "deepseek-v4-flash-0731", "mimo-v2.5", "mimo-v2.5-pro", "step-3.7-flash"):
+    if config.api_model in ("deepseek-v4-flash", "deepseek-v4-flash-0731", "mimo-v2.5", "mimo-v2.5-pro", "step-3.7-flash", "step-5-preview"):
         max_tokens = max(max_tokens, 2048)
 
     headers = {"Content-Type": "application/json"}
@@ -2207,9 +2210,16 @@ async def _call_llm(
     # budget kan tänkandet äta allt → finish=length → JSON trunkeras
     # (intermittent fail i karaktärsgenerering). 32768 ger marginal — och är
     # gratis eftersom StepFun debiterar per prompt, inte per token.
+    # Step 5 Preview är TOKENDEBITERAT ($1.00/$2.70 per 1M) — 32768 var en
+    # gratishetsrabatt för 3.7. Håll budgeten generös men rimlig: 16392 täcker
+    # tanke + svar för både DM-narration och JSON-extraktion (verifierat live:
+    # reasoning ~2.5k + content ~0.5k på en DM-prompt).
     if config.api_model in ("step-3.7-flash", "step-3.5-flash-2603"):
         body["reasoning_effort"] = reasoning_effort or "high"
         body["max_tokens"] = max(body.get("max_tokens", 1024), 32768)
+    elif config.api_model == "step-5-preview":
+        body["reasoning_effort"] = reasoning_effort or "high"
+        body["max_tokens"] = max(body.get("max_tokens", 1024), 16392)
 
     # DeepSeek V4: skicka reasoning_effort om anroparen vill styra (low/high/max).
     # Guardian kör t.ex. reasoning_effort="low" för snabbare JSON-extraktion.
@@ -2295,6 +2305,11 @@ async def _call_llm_with_reasoning(
     elif config.api_model == "step-3.7-flash":
         # StepFun debiterar per prompt, inte per token → fri maximal budget
         max_tokens = max(max_tokens, 32768)
+        reasoning_effort_override = "high"
+    elif config.api_model == "step-5-preview":
+        # Step 5 Preview är tokendebitterat ($1.00/$2.70 per 1M) — 16392 räcker
+        # för tanke + svar på en DM-narration (verifierat live: ~2.5k + ~0.5k).
+        max_tokens = max(max_tokens, 16392)
         reasoning_effort_override = "high"
     elif config.provider == "deepseek":
         max_tokens = max(max_tokens, 8192)
@@ -2391,7 +2406,7 @@ async def _stream_llm(
     api_key = get_api_key(config)
 
     # Reasoning-modeller behöver mer utrymme (thinking + content)
-    if config.api_model in ("deepseek-v4-flash", "deepseek-v4-flash-0731", "mimo-v2.5", "mimo-v2.5-pro", "step-3.7-flash"):
+    if config.api_model in ("deepseek-v4-flash", "deepseek-v4-flash-0731", "mimo-v2.5", "mimo-v2.5-pro", "step-3.7-flash", "step-5-preview"):
         max_tokens = max(max_tokens, 2048)
 
     headers = {"Content-Type": "application/json"}
@@ -2418,6 +2433,10 @@ async def _stream_llm(
     if config.api_model in ("step-3.7-flash", "step-3.5-flash-2603"):
         body["reasoning_effort"] = reasoning_effort or "high"
         body["max_tokens"] = max(body.get("max_tokens", 1024), 32768)
+    elif config.api_model == "step-5-preview":
+        # Tokendebiterat — 16392 räcker (reasoning ~2.5k + svar på en DM-prompt).
+        body["reasoning_effort"] = reasoning_effort or "high"
+        body["max_tokens"] = max(body.get("max_tokens", 1024), 16392)
 
     # DeepSeek V4: reasoning_effort om anroparen vill styra
     if config.provider == "deepseek" and reasoning_effort:

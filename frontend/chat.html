@@ -5091,9 +5091,9 @@ const AWAKENING_TRIGGER = '__VAKNA_DM__';
 // Här vaknar DM bara automatiskt med de sparade modellerna. In-game-bytet sker
 // via settings-menyn (⚙️ → Modeller).
 // Spelarmodeller (icke-admin): samma lista som backend PLAYER_MODELS
-const PLAYER_MODEL_IDS = ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-3.7-flash', 'step-3.5-flash-2603', 'ollama:heretic'];
+const PLAYER_MODEL_IDS = ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-5-preview', 'step-3.7-flash', 'step-3.5-flash-2603', 'ollama:heretic'];
 // Free-tier-modeller (speglar backend FREE_PLAYER_MODELS) — allt annat låses 🔒.
-const FREE_MODEL_IDS = ['qwen3.8-flash', 'step-3.7-flash', 'step-3.5-flash-2603'];
+const FREE_MODEL_IDS = ['qwen3.8-flash', 'step-5-preview', 'step-3.7-flash', 'step-3.5-flash-2603'];
 
 function autoAwakenDM() {
   roleReady.then(() => {
@@ -8145,6 +8145,7 @@ function exportCampaign() {
 // ═══════════════════════════════════════
 let currentModel = localStorage.getItem('dnd_model') || 'step-3.7-flash';
 const modelNames = {
+  'step-5-preview': 'Step 5 Preview',
   'step-3.7-flash': 'Step 3.7 Flash',
   'qwen3.8-max': 'Qwen 3.8 Max',
   'qwen3.8-flash': 'Qwen 3.8 Flash',
@@ -8302,13 +8303,13 @@ function toast(msg, ms = 2600) {
 }
 
 // ── Release-toast: en gång per version (localStorage) ──
-const RELEASE_TOAST_VERSION = 'v1.4-20260917';
+const RELEASE_TOAST_VERSION = 'v1.3-20260920';
 function maybeShowReleaseToast() {
   try {
     if (localStorage.getItem('dnd_release_toast') === RELEASE_TOAST_VERSION) return;
     localStorage.setItem('dnd_release_toast', RELEASE_TOAST_VERSION);
   } catch (_) { /* private mode — visa ändå */ }
-  setTimeout(() => toast('✦ New: Qwen 3.8 Flash — now in the free tier. A fast DM mind, free for every account. Pick it in Settings.', 9000), 1400);
+  setTimeout(() => toast('✦ New: Step 5 Preview — StepFun\'s flagship reasoning mind, now in the free tier. Pick it in Settings.', 9000), 1400);
 }
 
 // ═══════════════════════════════════════

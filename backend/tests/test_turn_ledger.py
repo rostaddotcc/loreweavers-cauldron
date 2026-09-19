@@ -13,6 +13,7 @@ autouse-fixtures: ALLA tester pekar users.json + kampanjer + ledger mot tmp —
 ALDRIG riktig data.
 """
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -82,9 +83,21 @@ def client(users_file, campaigns_dir, turn_ledgers_dir, ledger_file, llm_mocks):
 
 
 def _register(client, username="alice", password="secret123"):
-    r = client.post("/api/register", json={"username": username, "password": password})
-    assert r.status_code == 200, r.text
-    return r
+    """Seeda användaren DIREKT i users.json — /api/register är rate-limitad
+    process-globalt (_REGISTER_TIMES, 30/timme) och ger 429 i helsviten när
+    test_free_tier redan bränt fönstret (test-isolation-pitfall, samma
+    workaround som test_undo_turn/test_orfree_models)."""
+    users = main.load_users()
+    users[username] = {
+        "password_hash": hash_password(password), "role": "player",
+        "turn_cap": 50, "turns_used": 0, "turn_bonus": 0, "promo_bonus": 0,
+        "reset_date": datetime.now(timezone.utc).date().isoformat(),
+        "subscription_status": "free", "start_bonus_granted": True,
+    }
+    main.save_users(users)
+    tok = create_token(username, "player")
+    client.cookies.set("morkrets_token", tok)  # registreringen satte cookien förut
+    return tok
 
 
 def _user(username="alice") -> dict:

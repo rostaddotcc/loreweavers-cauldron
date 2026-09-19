@@ -311,6 +311,26 @@ def test_qwen38_flash_is_free_for_everyone(client, llm_mocks):
     assert cfg.api_key_env == "DASHSCOPE_API_KEY" and cfg.api_model == "qwen3.8-flash"
 
 
+def test_step5_preview_is_free_for_everyone(client, llm_mocks):
+    """2026-09-20: step-5-preview (StepFun nya flagships-förhandsvisning) är
+    live för free tier — verifierad mot /step_plan/v1 (200 OK, reasoning +
+    content streamas, JSON-mode fungerar)."""
+    _register(client)
+    _make_campaign("alice")
+    assert "step-5-preview" in main.FREE_PLAYER_MODELS
+    assert "step-5-preview" in main.PLAYER_MODELS
+    assert main._clamp_player_model("step-5-preview", tier="free") == "step-5-preview"
+    assert main._clamp_player_model("step-5-preview", tier="tier1") == "step-5-preview"
+    assert main._clamp_player_model("step-5-preview", tier="tier2") == "step-5-preview"
+    r = _chat(client, model="step-5-preview")
+    assert r.status_code == 200, r.text
+    assert llm_mocks["models"] == ["step-5-preview"]
+    # Registret måste ha provider/nyckel — annars faller anropet i prod
+    from models import get_model
+    cfg = get_model("step-5-preview")
+    assert cfg.api_key_env == "STEPFUN_API_KEY" and cfg.api_model == "step-5-preview"
+
+
 def test_premium_model_ok(client, llm_mocks):
     _register(client)
     _make_campaign("alice")

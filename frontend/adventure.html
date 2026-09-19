@@ -885,8 +885,8 @@ html{font-size:17px}
   <div class="news-banner" id="news-qwen38" onclick="newsQwenToast(event)" style="display:none">
     <span class="nb-icon">✦</span>
     <div class="nb-body">
-      <div class="nb-title">New — Qwen 3.8 Flash in the free tier</div>
-      <div class="nb-text">Fast answers, light thinking, free for every account — set it as your <b>Dungeon Master</b> at the model gate or in Settings.</div>
+      <div class="nb-title">New — Step 5 Preview in the free tier</div>
+      <div class="nb-text">StepFun's flagship reasoning mind, free for every account — set it as your <b>Dungeon Master</b> at the model gate or in Settings.</div>
     </div>
     <button class="nb-close" onclick="newsQwenDismiss(event)" title="Dismiss">✕</button>
   </div>
@@ -898,9 +898,10 @@ html{font-size:17px}
     </button>
     <div class="rn-body" id="rn-body">
       <div class="rn-inner">
-        <span class="rn-ver">v1.3 — The Rewoven Thread · 2026-09-13</span>
+        <span class="rn-ver">v1.3 — The Rewoven Thread · 2026-09-20</span>
         <ul class="rn-list">
-          <li><b>Meet Qwen 3.8 Flash — the free mind that thinks</b> — our recommendation for the table tonight: it answers quickly without stopping to reason aloud, and it is free for every account. Set it as your Dungeon Master in Settings.</li>
+          <li><b>Meet Step 5 Preview — the flagship mind, free for everyone</b> — StepFun's newest and deepest Dungeon Master joins the free tier. It reasons before it speaks and holds a whole campaign in mind at once. Pick it at the model gate when you start an adventure, or switch to it in Settings.</li>
+          <li><b>Qwen 3.8 Flash — the free mind that thinks</b> — our recommendation for a fast table: it answers quickly without stopping to reason aloud, and it is free for every account. Set it as your Dungeon Master in Settings.</li>
           <li><b>Give your composer room (2026-09-13)</b> — the divider between the DM's log and your own words drags to resize, and the text box is generous on desktop and mobile.</li>
           <li><b>Combat that keeps its own count (2026-09-13)</b> — rounds turn over by themselves once everyone has acted, and each round closes with a single honest health snapshot.</li>
           <li><b>Undo your last turn</b> — a mistyped line or a decision made too fast can be rewound: the message, the DM's reply and everything the Lorekeeper recorded from it. Inventory, gold, HP, quests and memory return to where they stood. It costs one turn, and only the most recent turn can be rewound.</li>
@@ -2292,7 +2293,7 @@ function advPrompt() {
 }
 
 // ── Modellgate (DM/Guardian/Extraction + Character-sheet modell — kan ändras när som helst i kampanjen) ──
-const PLAYER_DM_MODELS = ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-3.7-flash', 'ollama:heretic'];
+const PLAYER_DM_MODELS = ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-5-preview', 'step-3.7-flash', 'ollama:heretic'];
 const TTS_PROVIDERS = [
   { id: 'qwen', name: 'Qwen (Token Plan) ⭐', recommended: true },
   { id: 'stepfun', name: 'StepFun (Step Plan)' },
@@ -2317,7 +2318,7 @@ const TTS_PROVIDERS = [
     const prem = PREMIUM_MODELS.includes(m);
     const dis = locked && prem;
     // ⭐ markera free-tier-snabbmodellen (audit §2.2.6 — Ledger-rekommendationen synlig vid valet)
-    const star = m === 'qwen3.8-flash' ? ' ⭐ — free & fast' : '';
+    const star = m === 'qwen3.8-flash' ? ' ⭐ — free & fast' : (m === 'step-5-preview' ? ' ⭐ — new flagship' : '');
     return `<option value="${m}"${dis ? ' disabled' : ''}>${dis ? '🔒 ' + m + ' — Patron (30€)' : m + star}</option>`;
   };
   // Onboarding-standard (rostads beslut 2026-09-17): qwen3.8-flash om den finns,
@@ -2925,23 +2926,23 @@ async function openBillingPortal(e) {
   }
 }
 
-// ── Nyhet: Qwen 3.8 Flash i free tier (2026-09) ──
+// ── Nyhet: Step 5 Preview i free tier (2026-09-20) ──
 // Banner visas tills besökaren klickar bort den (localStorage-minne).
 // Flash ÄR gratis för alla — ingen Patron-/lås-variant (audit wave 2: den gamla
-// newsQwenLocked-grenen var felaktig och är borttagen). NYCKEL: news_qwen_flash_dismissed
-// (gammal nyckel news_qwen38_dismissed lämnas orörd — alla ser korrigerade bannern en gång).
+// newsQwenLocked-grenen var felaktig och är borttagen). NYCKEL: step5_preview_dismissed
+// (gammal nyckel news_qwen_flash_dismissed lämnas orörd — alla ser korrigerade bannern en gång).
 function newsQwenInit() {
-  try { if (localStorage.getItem('news_qwen_flash_dismissed') === '1') return; } catch (e) {}
+  try { if (localStorage.getItem('step5_preview_dismissed') === '1') return; } catch (e) {}
   const el = document.getElementById('news-qwen38');
   if (!el) return;
   el.style.display = '';
 }
 function newsQwenToast(e) {
-  toast('✦ Qwen 3.8 Flash — free for every account. Pick it at the model gate or in Settings.');
+  toast('✦ Step 5 Preview — free for every account. Pick it at the model gate or in Settings.');
 }
 function newsQwenDismiss(e) {
   e.stopPropagation();
-  try { localStorage.setItem('news_qwen_flash_dismissed', '1'); } catch (err) {}
+  try { localStorage.setItem('step5_preview_dismissed', '1'); } catch (err) {}
   const el = document.getElementById('news-qwen38');
   if (el) el.style.display = 'none';
 }

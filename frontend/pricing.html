@@ -372,7 +372,7 @@
 
   // ── Modal: visa planen (mer detaljerad) ──
   function openPlan(ev, tier) {
-    ev.preventDefault();
+    if (ev && ev.preventDefault) ev.preventDefault();
     PLAN_OPEN = tier;
     if (tier === 'donation') {
       var amt = (document.getElementById('donate-amount') || {}).value;
@@ -448,7 +448,7 @@
   // Donation skickar med beloppet (amount i EUR).
   function planCta() {
     if (!LOGGED_IN || !PLAN_OPEN) {
-      location.href = 'login.html?next=pricing.html';
+      location.href = 'login.html?next=' + encodeURIComponent('pricing.html' + location.search);
       return;
     }
     var btn = document.getElementById('plan-cta');
@@ -465,7 +465,7 @@
       body: JSON.stringify(body)
     }).then(function (res) {
       if (res.status === 401) {
-        location.href = 'login.html?next=pricing.html';
+        location.href = 'login.html?next=' + encodeURIComponent('pricing.html' + location.search);
         return null;
       }
       return res.json().then(function (data) {
@@ -553,7 +553,23 @@
     btn.classList.add('current');
     btn.removeAttribute('onclick');
     btn.href = '#';
-  }).catch(function () {});
+  }).catch(function () {}).then(function () {
+    // Nivå 1 (2026-09-20): deep-link ?donate=N från cap-modalens quick top-up
+    // chips (chat.html) — fyll beloppet, scrolla till donationskortet och
+    // öppna köp-modalen direkt. Körs EFTER /api/me så LOGGED_IN/renderPlan
+    // visar rätt CTA (checkout vs sign in).
+    var m = /[?&]donate=(\d+(?:[.,]\d+)?)/.exec(location.search);
+    if (!m) return;
+    var eur = parseFloat(m[1].replace(',', '.'));
+    if (!(eur >= 1 && eur <= 1000)) return;
+    var inp = document.getElementById('donate-amount');
+    if (inp) inp.value = eur;
+    var card = document.getElementById('tier-donation');
+    if (card && card.scrollIntoView) {
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    openPlan(null, 'donation');
+  });
 </script>
 <script src="i18n.js?v=20260906a"></script>
 <script src="sprites.js?v=20260806b"></script>

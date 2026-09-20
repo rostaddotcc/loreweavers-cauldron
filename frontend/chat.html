@@ -838,6 +838,13 @@
   .fb-send{ background: var(--gold); border: 1px solid var(--gold-bright); color: var(--ink); font-weight: 700; }
   .fb-send:hover{ box-shadow: 0 0 14px -3px rgba(var(--gold-bright-rgb),.6); }
   .fb-send:disabled{ opacity: .6; cursor: wait; }
+  /* ── ⚡ Cap-modal quick top-up chips (Nivå 1, 2026-09-20) — deep-link till pricing.html?donate=N ── */
+  .cap-chips{ display: flex; gap: .5rem; margin-top: .45rem; }
+  .cap-chip{ flex: 1; text-align: center; text-decoration: none; background: var(--ink); border: 1px solid var(--edge); border-radius: 4px; padding: .55rem .3rem; color: var(--bone-dim); font-size: .72rem; line-height: 1.25; transition: border-color .15s, color .15s, box-shadow .15s; }
+  .cap-chip b{ display: block; font-family: var(--font-display); color: var(--gold); font-size: .92rem; letter-spacing: .04em; margin-bottom: .18rem; }
+  .cap-chip:hover{ border-color: var(--gold); color: var(--bone); box-shadow: 0 0 12px -4px rgba(var(--gold-bright-rgb),.5); }
+  .cap-chip-note{ font-size: .68rem; color: var(--bone-dim); font-style: italic; margin: .45rem 0 0; text-align: center; }
+  @media (max-width: 420px){ .cap-chip{ font-size: .64rem; padding: .5rem .2rem; } .cap-chip b{ font-size: .82rem; } }
   .console{
     position: fixed; bottom: 0; right: 0; z-index: 10000;
     width: 420px; max-width: 94vw; max-height: 45vh;
@@ -1722,6 +1729,12 @@
   </div>
   <div class="fb-body">
     <p class="fb-sub" id="cap-msg" style="font-style:normal;line-height:1.6">Dina rundor är slut. Nya gratisrundor kommer om <b>…</b> — eller fyll på en gång för att fortsätta spela.</p>
+    <div class="cap-chips" id="cap-chips">
+      <a class="cap-chip" id="cap-chip-1" href="pricing.html?donate=1"><b>1€</b> <span>+100 turns</span></a>
+      <a class="cap-chip" id="cap-chip-3" href="pricing.html?donate=3"><b>3€</b> <span>+300 turns</span></a>
+      <a class="cap-chip" id="cap-chip-5" href="pricing.html?donate=5"><b>5€</b> <span>+500 turns</span></a>
+    </div>
+    <p class="cap-chip-note" id="cap-chip-note">Turns never expire. Stripe keeps ~27¢ of each 1€ — the rest fuels the fire.</p>
   </div>
   <div class="fb-foot">
     <button class="fb-btn fb-cancel" onclick="closeCapModal()">Stäng</button>
@@ -2189,6 +2202,19 @@ function openCapModal(info) {
   if (cBtn) cBtn.textContent = I18N.t('Stäng');
   const cClose = modal && modal.querySelector('.fb-close');
   if (cClose && cClose.getAttribute('aria-label') === 'Close') cClose.setAttribute('aria-label', en ? 'Close' : 'Stäng');
+  // Nivå 1 (2026-09-20): quick top-up chips — deep-link pricing.html?donate=N, tvåspråkiga
+  const chipTurns = en ? ['+100 turns', '+300 turns', '+500 turns'] : ['+100 rundor', '+300 rundor', '+500 rundor'];
+  ['1', '3', '5'].forEach((amt, i) => {
+    const chip = document.getElementById('cap-chip-' + amt);
+    if (!chip) return;
+    const sp = chip.querySelector('span');
+    if (sp) sp.textContent = chipTurns[i];
+    chip.href = 'pricing.html?donate=' + amt;
+  });
+  const chipNote = document.getElementById('cap-chip-note');
+  if (chipNote) chipNote.textContent = en
+    ? 'Turns never expire. Stripe keeps ~27¢ of each 1€ — the rest fuels the fire.'
+    : 'Rundorna förfaller aldrig. Stripe tar ~2,70 kr av varje 1€ — resten håller elden igång.';
   if (backdrop) backdrop.style.display = 'block';
   if (modal) modal.classList.add('open');
   // api.js visar en toast med rå HTTP-feltexten — dölj den, modalen räcker

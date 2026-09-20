@@ -7,8 +7,8 @@
 <meta name="description" content="How the AI Dungeon Master runs real D&D 5e mechanics: initiative, action economy, advantage, saving throws, HP — tracked by the Lorekeeper engine behind every text-based campaign. The LLM harness behind dnd.rostad.cc.">
 <style>
 /* ══════════════════════════════════════════════════════════════
-   THE LORE WEAVER'S CAULDRON — ENGINE MECHANICS v28 (standalone, offline-safe)
-   Dark fantasy × terminal. No external assets.
+   THE LORE WEAVER'S CAULDRON — ENGINE MECHANICS v28 (standalone)
+   Dark fantasy × terminal. Diagrams first, prose second.
    ══════════════════════════════════════════════════════════════ */
 :root{
   /* Canonical palette = snes.css :root (Terminal Gothic). --term-red: page-local. */
@@ -19,7 +19,7 @@
   --blood:#a32433; --blood-bright:#e0485a;
   --ember:#d4691e; --arcane:#9a6fe0; --arcane-bright:#c9a6ff;
   --poison:#7aa35e; --teal:#5e9aa3;
-  --term-green:#33cc33; --term-amber:#ccaa33; --term-red:#ff5566; /* --term-red: page-local (finns ej i snes.css) */
+  --term-green:#33cc33; --term-amber:#ccaa33; --term-red:#ff5566;
   --font-display:'Cinzel',serif;
   --font-body:'Spectral',Georgia,serif;
   --font-mono:'IBM Plex Mono',ui-monospace,monospace;
@@ -37,9 +37,11 @@ a{color:var(--gold-bright);text-decoration:none}
 a:hover{color:var(--gold)}
 code,kbd,.mono{font-family:var(--font-mono);font-size:.9em}
 
+/* ── Ambient: embers + vignette ─────────────────────────────── */
+#embers{position:fixed;inset:0;z-index:1;pointer-events:none}
+#vig{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(10,6,18,.75)}
 
 /* ── Boot overlay ───────────────────────────────────────────── */
-/* Z-ladder (2026-08-11): content 2 < #prog 8000 < .toast 9000 < overlays 10000+ — app-ladder 280<290<300<310<320<999<10000+(backdrop 9990)<30000 */
 #boot{position:fixed;inset:0;z-index:10000;background:#020206;display:flex;align-items:center;justify-content:center;cursor:pointer}
 #boot.done{opacity:0;pointer-events:none;transition:opacity .6s}
 .boot-term{width:min(680px,92vw);background:var(--ink);border:1px solid var(--edge);position:relative}
@@ -49,38 +51,58 @@ code,kbd,.mono{font-family:var(--font-mono);font-size:.9em}
 .boot-bar i{width:10px;height:10px;display:inline-block}
 .boot-bar i:nth-child(1){background:#8b1a2a}.boot-bar i:nth-child(2){background:#8a6d14}.boot-bar i:nth-child(3){background:#2a6e3a}
 .boot-bar span{margin-left:.5rem;font-family:var(--font-mono);font-size:.68rem;letter-spacing:.22em;color:var(--bone-dim);text-transform:uppercase}
-.boot-lines{padding:1.2rem 1.4rem 1.4rem;font-family:var(--font-mono);font-size:.82rem;line-height:1.85;color:var(--term-green);min-height:230px;white-space:pre-wrap;word-break:break-word}
+.boot-lines{padding:1.2rem 1.4rem 1.4rem;font-family:var(--font-mono);font-size:.82rem;line-height:1.85;color:var(--term-green);min-height:250px;white-space:pre-wrap;word-break:break-word}
 .boot-lines .b-ok{color:var(--term-green)}
 .boot-lines .b-dim{color:var(--bone-dim)}
 .boot-lines .b-gold{color:var(--gold-bright)}
-.boot-cursor{display:inline-block;width:.55em;height:1em;background:var(--term-green);vertical-align:-.15em;animation:blink 1s steps(1) infinite}
-@keyframes blink{50%{opacity:0}}
 .boot-hint{position:absolute;bottom:.6rem;right:.9rem;font-family:var(--font-mono);font-size:.62rem;letter-spacing:.2em;color:var(--bone-dim)}
 
 /* ── Scroll progress ────────────────────────────────────────── */
 #prog{position:fixed;top:0;left:0;height:2px;width:0;z-index:270;background:var(--gold)}
 
 /* ── Layout ─────────────────────────────────────────────────── */
-.wrap{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:0 1.4rem}
 main{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1.4rem 4rem;display:grid;grid-template-columns:230px minmax(0,1fr);gap:2.6rem}
 .content{min-width:0}
 
 /* ── Hero ───────────────────────────────────────────────────── */
-.hero{position:relative;z-index:2;padding:5.5rem 1.4rem 3rem;text-align:center;max-width:900px;margin:0 auto}
+.hero{position:relative;z-index:2;padding:5rem 1.4rem 2rem;text-align:center;max-width:900px;margin:0 auto}
 .eyebrow{font-family:var(--font-display);font-size:.68rem;letter-spacing:.42em;text-transform:uppercase;color:var(--gold);margin-bottom:1.1rem}
 .hero h1{font-family:var(--font-display);font-weight:900;font-size:clamp(2rem,5.6vw,3.4rem);color:var(--bone-bright);line-height:1.12;
-  text-shadow:2px 2px 0 #000}
-.hero .sub{margin:1.2rem auto 0;max-width:640px;color:var(--bone);font-style:italic;font-size:1.02rem}
+  text-shadow:2px 2px 0 #000;animation:flicker 7s infinite}
+@keyframes flicker{0%,93%,95%,97%,100%{opacity:1}94%{opacity:.82}96%{opacity:.9}}
+.hero .sub{margin:1.1rem auto 0;max-width:560px;color:var(--bone);font-style:italic;font-size:1.05rem}
 .hero .sub b{color:var(--gold-bright);font-style:normal}
-.chips{display:flex;flex-wrap:wrap;justify-content:center;gap:.55rem;margin-top:1.6rem}
+.chips{display:flex;flex-wrap:wrap;justify-content:center;gap:.55rem;margin-top:1.5rem}
 .chip{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone);
   border:1px solid var(--edge);background:var(--stone-3);padding:.32rem .7rem}
 .chip.g{color:var(--gold-bright);border-color:rgba(var(--gold-rgb),.4)}
-.chip.p{color:var(--arcane-bright);border-color:rgba(123,79,212,.4)}
-.chip.t{color:var(--teal);border-color:rgba(78,138,147,.4)}
+.chip.p{color:var(--arcane-bright);border-color:rgba(154,111,224,.4)}
+.chip.t{color:var(--teal);border-color:rgba(var(--teal-rgb),.4)}
 .chip.e{color:var(--ember);border-color:rgba(var(--ember-rgb),.4)}
-.scroll-hint{margin-top:2.4rem;font-family:var(--font-mono);font-size:.66rem;letter-spacing:.3em;color:var(--bone-dim);text-transform:uppercase;animation:bob 2.4s ease-in-out infinite}
+.chip.b{color:var(--blood-bright);border-color:rgba(var(--blood-rgb),.45)}
+.scroll-hint{margin-top:1.6rem;font-family:var(--font-mono);font-size:.66rem;letter-spacing:.3em;color:var(--bone-dim);text-transform:uppercase;animation:bob 2.4s ease-in-out infinite}
 @keyframes bob{0%,100%{transform:translateY(0);opacity:.55}50%{transform:translateY(6px);opacity:1}}
+
+/* ── Hero sigil (the whole engine in one diagram) ───────────── */
+.sigil{max-width:780px;margin:2.2rem auto 0}
+.sigil svg{width:100%;height:auto;display:block}
+.sg rect{fill:var(--stone-2);stroke:var(--edge);stroke-width:1}
+.sg text{font-family:var(--font-mono);letter-spacing:.05em}
+.sg .t-name{font-size:12px;font-weight:600}
+.sg .t-sub{font-size:8.5px;fill:var(--bone-dim);letter-spacing:.1em}
+.sg.gold rect{stroke:var(--gold)} .sg.gold .t-name{fill:var(--gold-bright)}
+.sg.pur rect{stroke:var(--arcane)} .sg.pur .t-name{fill:var(--arcane-bright)}
+.sg.bone .t-name{fill:var(--bone-bright)}
+.sg.dim rect{stroke:var(--edge);fill:var(--stone)} .sg.dim .t-name{fill:var(--bone)}
+.sg .node{animation:sg-breathe 5s ease-in-out infinite}
+.sg .node.d1{animation-delay:1.2s}.sg .node.d2{animation-delay:2.4s}.sg .node.d3{animation-delay:3.6s}
+@keyframes sg-breathe{0%,100%{filter:drop-shadow(0 0 0 transparent)}50%{filter:drop-shadow(0 0 7px rgba(212,169,44,.25))}}
+.sg .wire{stroke:var(--edge-hi);stroke-width:1.2;fill:none;stroke-dasharray:5 5;animation:flow-dash 1.1s linear infinite}
+.sg .wire.gold{stroke:rgba(var(--gold-rgb),.7)}
+.sg .wire.pur{stroke:rgba(154,111,224,.65)}
+.sg .wire.slow{animation-duration:2.2s}
+.sg .w-label{font-size:8px;fill:var(--bone-dim);letter-spacing:.12em}
+.sg marker path{fill:var(--edge-hi)}
 
 /* ── Index / scroll-spy ─────────────────────────────────────── */
 .index{position:sticky;top:1.4rem;align-self:start;font-family:var(--font-mono);font-size:.74rem}
@@ -95,7 +117,7 @@ main{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1.4
 .index .ix-tag{display:block;font-size:.58rem;letter-spacing:.14em;color:var(--bone-dim);text-transform:uppercase;margin-top:.05rem}
 
 /* ── Section headers ────────────────────────────────────────── */
-.sec{margin-bottom:4.6rem;scroll-margin-top:2.2rem}
+.sec{margin-bottom:5rem;scroll-margin-top:2.2rem}
 .sec-head{display:flex;align-items:baseline;gap:1rem;margin-bottom:1.1rem}
 .sec-num{font-family:var(--font-display);font-weight:900;font-size:clamp(1.6rem,3vw,2.2rem);color:var(--gold);opacity:.9;line-height:1}
 .sec-title{font-family:var(--font-display);font-weight:700;font-size:clamp(1.15rem,2.6vw,1.55rem);letter-spacing:.1em;text-transform:uppercase;color:var(--bone-bright)}
@@ -105,11 +127,11 @@ main{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1.4
 
 /* ── Panels / tablets ───────────────────────────────────────── */
 .panel{position:relative;background:var(--stone);
-  border:1px solid var(--edge);padding:1.6rem 1.5rem;margin-bottom:1.4rem}
+  border:1px solid var(--edge);padding:1.4rem 1.4rem;margin-bottom:1.4rem}
 .panel::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.3}
-.panel h3{font-family:var(--font-display);font-size:.82rem;letter-spacing:.26em;text-transform:uppercase;color:var(--gold-bright);margin-bottom:.8rem}
+.panel h3{font-family:var(--font-display);font-size:.8rem;letter-spacing:.26em;text-transform:uppercase;color:var(--gold-bright);margin-bottom:.7rem}
 .panel h3 .dot{color:var(--gold)}
-.panel p{margin-bottom:.8rem}
+.panel p{margin-bottom:.7rem}
 .panel p:last-child{margin-bottom:0}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4rem}
@@ -119,10 +141,11 @@ main{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1.4
 .tag-row{display:flex;flex-wrap:wrap;gap:.45rem;margin:.6rem 0 .9rem}
 .tg{font-family:var(--font-mono);font-size:.68rem;padding:.22rem .5rem;border:1px solid var(--edge);color:var(--bone)}
 .tg.g{color:var(--gold-bright);border-color:rgba(var(--gold-rgb),.45)}
-.tg.p{color:var(--arcane-bright);border-color:rgba(123,79,212,.45)}
-.tg.t{color:var(--teal);border-color:rgba(78,138,147,.45)}
+.tg.p{color:var(--arcane-bright);border-color:rgba(154,111,224,.45)}
+.tg.t{color:var(--teal);border-color:rgba(var(--teal-rgb),.45)}
 .tg.e{color:var(--ember);border-color:rgba(var(--ember-rgb),.45)}
-.tg.dead{color:var(--bone-dim);border-style:dashed;text-decoration:line-through;text-decoration-color:rgba(212,58,77,.6)}
+.tg.r{color:var(--blood-bright);border-color:rgba(var(--blood-rgb),.5)}
+.tg.n{color:var(--poison);border-color:rgba(122,163,94,.5)}
 
 /* ── Terminal windows ───────────────────────────────────────── */
 .term{background:var(--ink);border:1px solid var(--edge);margin:1.2rem 0;position:relative}
@@ -136,56 +159,97 @@ main{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1.4
 .term-body .c-dim{color:var(--bone-dim)}.term-body .c-gold{color:var(--gold-bright)}
 .term-body .c-p{color:var(--arcane-bright)}.term-body .c-red{color:var(--term-red)}
 .term-body .c-amb{color:var(--term-amber)}.term-body .c-teal{color:var(--teal)}
+.term-body .c-ok{color:var(--poison)}
 .term.dm .term-body{color:var(--gold-bright)}
-.term.dm .term-body .c-dim{color:var(--bone-dim);text-shadow:none}
+.term-line{opacity:0;transform:translateY(4px);transition:opacity .3s,transform .3s}
+.term-line.shown{opacity:1;transform:none}
 
-/* ── Flow diagrams (SVG) ────────────────────────────────────── */
+/* ── Flow diagrams (generic SVG frame) ──────────────────────── */
 .flowbox{background:var(--stone);border:1px solid var(--edge);padding:1rem;margin:1.2rem 0;overflow-x:auto}
-.flowbox svg{display:block;width:100%;height:auto;min-width:560px}
-.fn rect{fill:var(--stone-2);stroke:var(--edge);stroke-width:1}
-.fn .f-label{font-family:var(--font-mono);font-size:10.5px;fill:var(--bone);letter-spacing:.04em}
-.fn .f-sub{font-family:var(--font-mono);font-size:8px;fill:var(--bone-dim);letter-spacing:.06em}
-.fn.gold rect{stroke:var(--gold);fill:#181410}
-.fn.gold .f-label{fill:var(--gold-bright)}
-.fn.pur rect{stroke:rgba(123,79,212,.55)}
-.fn.pur .f-label{fill:var(--arcane-bright)}
-.fn.poison rect{stroke:rgba(90,154,78,.5)}
-.fn.poison .f-label{fill:var(--poison)}
-.fn.teal rect{stroke:rgba(78,138,147,.55)}
-.fn.teal .f-label{fill:var(--teal)}
-.fn.ember rect{stroke:rgba(var(--ember-rgb),.5)}
-.fn.ember .f-label{fill:var(--ember)}
-.fn.bone .f-label{fill:var(--bone-bright)}
-.fn .f-pulse{animation:node-pulse 3.2s ease-in-out infinite}
-@keyframes node-pulse{0%,100%{opacity:.25}50%{opacity:.85}}
-.flowline{stroke:var(--edge-hi);stroke-width:1.2;fill:none}
-.flowline.anim{stroke-dasharray:5 5;animation:flow-dash 1.1s linear infinite}
-.flowline.anim.gold{stroke:rgba(var(--gold-rgb),.75)}
-.flowline.anim.pur{stroke:rgba(123,79,212,.7)}
-.flowline.anim.poison{stroke:rgba(90,154,78,.65)}
-.flowline.anim.teal{stroke:rgba(78,138,147,.7)}
-.flowline.anim.ember{stroke:rgba(var(--ember-rgb),.65)}
+.flowbox svg{display:block;width:100%;height:auto;min-width:640px}
 @keyframes flow-dash{to{stroke-dashoffset:-10}}
-.dot{fill:var(--gold-bright)}
-.dot.pur{fill:var(--arcane-bright)}.dot.poison{fill:var(--poison)}.dot.teal{fill:var(--teal)}
-.flow-label{font-family:var(--font-mono);font-size:8.2px;fill:var(--bone-dim);letter-spacing:.08em}
+@keyframes blink{50%{opacity:0}}
 .legend{display:flex;flex-wrap:wrap;gap:1rem;margin-top:.7rem;font-family:var(--font-mono);font-size:.64rem;letter-spacing:.1em;color:var(--bone-dim);text-transform:uppercase}
 .legend i{display:inline-block;width:9px;height:9px;margin-right:.35rem;vertical-align:-1px}
 
-/* ── Expanders ──────────────────────────────────────────────── */
-.exp{border:1px solid var(--edge);background:var(--stone);margin-bottom:.8rem}
-.exp-toggle{display:flex;align-items:center;gap:.7rem;width:100%;cursor:pointer;text-align:left;background:none;border:none;
-  padding:.85rem 1rem;color:var(--bone);transition:color .2s;font-family:var(--font-body);font-size:.95rem}
-.exp-toggle:hover{color:var(--gold-bright)}
-.exp-toggle .caret{transition:transform .3s;font-size:.6rem;color:var(--gold);flex:none}
-.exp-toggle.open .caret{transform:rotate(90deg)}
-.exp-toggle .et-t{font-family:var(--font-display);font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-bright)}
-.exp-toggle .et-d{display:block;font-family:var(--font-mono);font-size:.66rem;letter-spacing:.04em;color:var(--bone-dim);text-transform:none;margin-top:.15rem}
-.exp-body{max-height:0;overflow:hidden;opacity:0;transition:max-height .55s cubic-bezier(.22,1,.36,1),opacity .4s}
-.exp-body.open{max-height:2400px;opacity:1}
-.exp-inner{padding:0 1rem 1.1rem}
-.exp-inner p{color:var(--bone);font-size:.9rem;margin-bottom:.7rem}
-.exp-inner p:last-child{margin-bottom:0}
+/* ── §2 Conveyor (turn pipeline) ────────────────────────────── */
+.cv rect.cv-box{fill:var(--stone-2);stroke:var(--edge);stroke-width:1}
+.cv .cv-node rect{animation:cv-pulse 9s ease-out infinite}
+@keyframes cv-pulse{0%{stroke:var(--edge)}3%{stroke:var(--gold-bright);stroke-width:2}14%{stroke:var(--edge);stroke-width:1}100%{stroke:var(--edge)}}
+.cv .cv-num{font-family:var(--font-mono);font-size:9px;fill:var(--gold);letter-spacing:.1em}
+.cv .cv-title{font-family:var(--font-mono);font-size:10.5px;fill:var(--bone-bright);font-weight:600;letter-spacing:.04em}
+.cv .cv-sub{font-family:var(--font-mono);font-size:8px;fill:var(--bone-dim);letter-spacing:.05em}
+.cv .cv-wire{stroke:var(--edge-hi);stroke-width:1.2;fill:none}
+.cv .cv-wire.back{stroke-dasharray:4 6;animation:flow-dash 1.6s linear infinite;stroke:rgba(var(--gold-rgb),.4)}
+.cv .packet{fill:var(--gold-bright);filter:drop-shadow(0 0 5px rgba(240,214,117,.8))}
+
+/* ── §3 Strata (prompt layers) ──────────────────────────────── */
+.strata{margin:1.2rem 0}
+.str-row{display:grid;grid-template-columns:34px minmax(150px,220px) 1fr;gap:.8rem;align-items:baseline;
+  border:1px solid var(--edge);border-left:2px solid var(--edge);background:var(--stone);
+  padding:.5rem .9rem;margin-bottom:.35rem;font-family:var(--font-mono);font-size:.76rem;
+  opacity:.45;transform:translateX(-6px);transition:all .45s cubic-bezier(.22,1,.36,1)}
+.str-row .sn{color:var(--gold);font-size:.68rem}
+.str-row .st{color:var(--bone-bright);letter-spacing:.04em;font-weight:600}
+.str-row .sd{color:var(--bone-dim);font-size:.7rem}
+.str-row.lit{opacity:1;transform:none;border-left-color:var(--gold);background:var(--stone-2);box-shadow:0 0 14px -6px rgba(212,169,44,.35)}
+.str-row.lit .sd{color:var(--bone)}
+.str-row.cond{border-left-style:dashed}
+.str-row.cond.lit{border-left-color:var(--arcane);box-shadow:0 0 14px -6px rgba(154,111,224,.35)}
+.str-row.final.lit{border-left-color:var(--blood-bright)}
+@media(max-width:640px){.str-row{grid-template-columns:26px 1fr;}.str-row .sd{grid-column:2}}
+
+/* ── §4 Fact window ─────────────────────────────────────────── */
+.fwin{margin:1.2rem 0;border:1px solid var(--edge);background:var(--ink)}
+.fwin-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem;padding:.5rem .9rem;border-bottom:1px solid var(--edge);background:var(--stone);flex-wrap:wrap}
+.fwin-head span{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim)}
+.fact{display:grid;grid-template-columns:44px 1fr 90px 74px;gap:.7rem;align-items:center;
+  padding:.42rem .9rem;border-bottom:1px solid rgba(var(--edge-rgb),.5);font-family:var(--font-mono);font-size:.72rem;
+  transition:all .5s}
+.fact:last-child{border-bottom:none}
+.fact .fs{color:var(--teal)}
+.fact .ft{color:var(--bone);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fact .ft em{color:var(--gold-bright);font-style:normal}
+.fact .fb{height:6px;background:var(--stone-3);position:relative;overflow:hidden}
+.fact .fb i{position:absolute;inset:0 auto 0 0;width:0;background:var(--teal);transition:width .9s cubic-bezier(.22,1,.36,1)}
+.fact .fv{font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim);text-align:right}
+.fact.ship{background:rgba(var(--gold-rgb),.06)}
+.fact.ship .fb i{background:var(--gold)}
+.fact.ship .fv{color:var(--gold-bright)}
+.fact.out{opacity:.34}
+.fact.out .ft{text-decoration:line-through;text-decoration-color:rgba(var(--blood-rgb),.7)}
+.fact.out .fv{color:var(--blood-bright);opacity:.7}
+.fact.dead{opacity:.2}
+.cut-line{display:flex;align-items:center;gap:.7rem;padding:.3rem .9rem;font-family:var(--font-mono);font-size:.62rem;letter-spacing:.2em;color:var(--gold);text-transform:uppercase}
+.cut-line::before,.cut-line::after{content:'';flex:1;height:1px;background:repeating-linear-gradient(90deg,rgba(var(--gold-rgb),.5) 0 4px,transparent 4px 8px)}
+@media(max-width:640px){.fact{grid-template-columns:38px 1fr 60px;}.fact .fb{display:none}}
+
+/* ── §5 Guardian 44 grid ────────────────────────────────────── */
+.g44{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:.5rem;margin:1.2rem 0}
+.g44-group{border:1px solid var(--edge);background:var(--stone);padding:.6rem .7rem}
+.g44-group h4{font-family:var(--font-mono);font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;margin-bottom:.45rem;color:var(--bone-dim)}
+.g44-group .gf{display:flex;flex-wrap:wrap;gap:.25rem}
+.gf b{font-family:var(--font-mono);font-size:.62rem;font-weight:500;padding:.14rem .38rem;border:1px solid;letter-spacing:.02em;transition:transform .15s}
+.gf b:hover{transform:translateY(-2px)}
+.g44-group.c-combat h4{color:var(--blood-bright)} .g44-group.c-combat .gf b{color:var(--blood-bright);border-color:rgba(var(--blood-rgb),.4)}
+.g44-group.c-cond h4{color:var(--ember)} .g44-group.c-cond .gf b{color:var(--ember);border-color:rgba(var(--ember-rgb),.4)}
+.g44-group.c-prog h4{color:var(--gold-bright)} .g44-group.c-prog .gf b{color:var(--gold-bright);border-color:rgba(var(--gold-rgb),.4)}
+.g44-group.c-item h4{color:var(--teal)} .g44-group.c-item .gf b{color:var(--teal);border-color:rgba(var(--teal-rgb),.4)}
+.g44-group.c-quest h4{color:var(--poison)} .g44-group.c-quest .gf b{color:var(--poison);border-color:rgba(122,163,94,.4)}
+.g44-group.c-npc h4{color:var(--arcane-bright)} .g44-group.c-npc .gf b{color:var(--arcane-bright);border-color:rgba(154,111,224,.4)}
+.g44-group.c-world h4{color:var(--bone-bright)} .g44-group.c-world .gf b{color:var(--bone);border-color:var(--edge)}
+.g44-group.c-fix h4{color:var(--term-amber)} .g44-group.c-fix .gf b{color:var(--term-amber);border-color:rgba(204,170,51,.4)}
+
+/* ── JSON typewriter ────────────────────────────────────────── */
+.json-box{background:var(--ink);border:1px solid var(--edge);border-left:2px solid var(--arcane);padding:1rem 1.1rem;margin:1rem 0;position:relative}
+.json-box .jb-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;flex-wrap:wrap;gap:.5rem}
+.json-box .jb-title{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--bone-dim)}
+.json-box pre{font-family:var(--font-mono);font-size:.72rem;line-height:1.7;color:var(--bone);white-space:pre-wrap;word-break:break-word;min-height:180px}
+.j-key{color:var(--gold-bright)}.j-str{color:var(--bone-bright)}.j-num{color:var(--teal)}
+.j-kw{color:var(--poison)}
+.j-cursor{display:inline-block;width:.55em;height:1em;background:var(--arcane-bright);vertical-align:-.15em;animation:blink 1s steps(1) infinite}
+.jb-btn{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;padding:.4rem .8rem}
+.jb-btn:disabled{opacity:.35;cursor:default}
 
 /* ── Prompt excerpts ────────────────────────────────────────── */
 pre.prompt{background:var(--ink);border:1px solid var(--edge);border-left:2px solid var(--gold);
@@ -193,19 +257,17 @@ pre.prompt{background:var(--ink);border:1px solid var(--edge);border-left:2px so
 pre.prompt .pt{color:var(--gold-bright);font-weight:700}
 pre.prompt .pk{color:var(--arcane-bright)}
 pre.prompt .pd{color:var(--bone-dim)}
-pre.prompt .pe{color:var(--ember)}
 pre.prompt .pneg{color:var(--term-red)}
 pre.prompt .pok{color:var(--term-green)}
-pre.prompt.lang{border-left-color:var(--arcane)}
 pre.prompt.truth{border-left-color:var(--blood)}
 
 /* ── Tables ─────────────────────────────────────────────────── */
-table.dc{width:100%;border-collapse:collapse;font-size:.86rem;margin:.6rem 0 .9rem}
-table.dc th{font-family:var(--font-display);font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold-bright);
-  text-align:left;padding:.45rem .7rem;border-bottom:1px solid var(--gold);font-weight:700}
-table.dc td{padding:.42rem .7rem;border-bottom:1px solid var(--edge);color:var(--bone)}
+table.dc{width:100%;border-collapse:collapse;font-size:.84rem;margin:.6rem 0 .9rem}
+table.dc th{font-family:var(--font-display);font-size:.64rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold-bright);
+  text-align:left;padding:.4rem .7rem;border-bottom:1px solid var(--gold);font-weight:700}
+table.dc td{padding:.36rem .7rem;border-bottom:1px solid var(--edge);color:var(--bone)}
 table.dc tr:last-child td{border-bottom:none}
-table.dc td.mono{font-family:var(--font-mono);font-size:.76rem;color:var(--gold-bright)}
+table.dc td.mono{font-family:var(--font-mono);font-size:.74rem;color:var(--gold-bright)}
 
 /* ── Dice roller ────────────────────────────────────────────── */
 .roller{border:1px solid var(--edge);background:var(--stone);padding:1.4rem;margin:1.2rem 0}
@@ -214,8 +276,7 @@ table.dc td.mono{font-family:var(--font-mono);font-size:.76rem;color:var(--gold-
 .r-expr{flex:1 1 220px;background:var(--ink);border:1px solid var(--edge);color:var(--term-green);
   font-family:var(--font-mono);font-size:1rem;padding:.6rem .8rem;min-width:0}
 .r-expr:focus{outline:none;border-color:var(--gold)}
-.r-btn{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;
-  padding:.55rem .85rem}
+.r-btn{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;padding:.55rem .85rem}
 .r-adv{display:flex;align-items:center;gap:.5rem;font-family:var(--font-mono);font-size:.7rem;color:var(--bone-dim);letter-spacing:.08em;cursor:pointer;user-select:none}
 .r-adv input{accent-color:var(--arcane)}
 .dice-stage{display:flex;flex-wrap:wrap;gap:.7rem;min-height:74px;align-items:center;margin:.9rem 0 .4rem}
@@ -225,14 +286,12 @@ table.dc td.mono{font-family:var(--font-mono);font-size:.76rem;color:var(--gold-
   animation:die-pop .45s cubic-bezier(.22,1,.36,1) both}
 @keyframes die-pop{from{opacity:0;transform:scale(.3) rotate(-160deg)}to{opacity:1;transform:scale(1) rotate(0)}}
 .die-face.d20{clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
-
 .die-face.d4{clip-path:polygon(50% 0,100% 100%,0 100%)}
 .die-face.crit{border-color:var(--gold);color:var(--gold-bright);animation:die-pop .45s cubic-bezier(.22,1,.36,1) both,crit-glow 1.2s ease-in-out infinite}
 .die-face.fail{border-color:var(--blood-bright);color:var(--blood-bright)}
 .die-face.adv-best{border-color:var(--poison)}
 @keyframes crit-glow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.5)}}
 .r-result{font-family:var(--font-mono);font-size:.9rem;color:var(--term-green);min-height:1.6em;word-break:break-word}
-.r-result .plus{color:var(--bone-dim)}
 .r-crit{font-family:var(--font-display);font-size:.78rem;letter-spacing:.24em;text-transform:uppercase;margin-top:.3rem;min-height:1.2em}
 .r-crit.good{color:var(--gold-bright);animation:crit-flash 1s ease-in-out infinite}
 .r-crit.bad{color:var(--blood-bright)}
@@ -242,73 +301,101 @@ table.dc td.mono{font-family:var(--font-mono);font-size:.76rem;color:var(--gold-
 .r-history .h-line:last-child{border-bottom:none}
 .r-history .h-t{color:var(--gold);opacity:.6;margin-right:.5rem}
 
-/* ── JSON typewriter ────────────────────────────────────────── */
-.json-box{background:var(--ink);border:1px solid var(--edge);border-left:2px solid var(--arcane);padding:1rem 1.1rem;margin:1rem 0;position:relative}
-.json-box .jb-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem;flex-wrap:wrap;gap:.5rem}
-.json-box .jb-title{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--bone-dim)}
-.json-box pre{font-family:var(--font-mono);font-size:.72rem;line-height:1.7;color:var(--bone);white-space:pre-wrap;word-break:break-word;min-height:220px}
-.j-key{color:var(--gold-bright)}.j-str{color:var(--bone-bright)}.j-num{color:var(--teal)}
-.j-kw{color:var(--poison)}.j-null{color:var(--bone-dim);font-style:italic}.j-punct{color:var(--edge-hi)}
-.j-cursor{display:inline-block;width:.55em;height:1em;background:var(--arcane-bright);vertical-align:-.15em;animation:blink 1s steps(1) infinite}
-.jb-btn{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;
-  padding:.4rem .8rem}
-.jb-btn:disabled{opacity:.35;cursor:default}
+/* ── §7 Spell slots ─────────────────────────────────────────── */
+.slotbox{border:1px solid var(--edge);background:var(--stone);padding:1.4rem;margin:1.2rem 0}
+.slot-pool{display:flex;gap:.8rem;flex-wrap:wrap;margin:.6rem 0 1.1rem;min-height:46px;align-items:center}
+.ss-pip{width:26px;height:26px;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);
+  background:linear-gradient(160deg,var(--gold-bright),var(--gold) 55%,#7a5d15);
+  filter:drop-shadow(0 0 6px rgba(240,214,117,.5));transition:all .4s;position:relative}
+.ss-pip.spent{background:var(--stone-3);filter:none;opacity:.42}
+.ss-pip.refill{animation:pip-refill .6s cubic-bezier(.22,1,.36,1) both}
+@keyframes pip-refill{from{transform:scale(.2);filter:none}to{transform:scale(1);filter:drop-shadow(0 0 6px rgba(240,214,117,.5))}}
+.ss-pip.burn{animation:pip-burn .5s ease-out both}
+@keyframes pip-burn{0%{transform:scale(1)}40%{transform:scale(1.35);filter:drop-shadow(0 0 12px rgba(240,214,117,.9))}100%{transform:scale(1)}}
+.slot-status{font-family:var(--font-mono);font-size:.74rem;color:var(--bone-dim);min-height:1.5em;margin-bottom:.8rem}
+.slot-status b{color:var(--gold-bright)}
+.slot-status.blocked{color:var(--blood-bright);animation:crit-flash .8s ease-in-out 2}
+.slot-btns{display:flex;flex-wrap:wrap;gap:.5rem}
 
-/* ── State tree ─────────────────────────────────────────────── */
+/* ── §8 TTS sim ─────────────────────────────────────────────── */
+.tts-cache{display:flex;flex-wrap:wrap;gap:.5rem;min-height:34px;margin:.7rem 0}
+.tts-key{font-family:var(--font-mono);font-size:.66rem;color:var(--bone);border:1px solid var(--edge);background:var(--stone-3);
+  padding:.28rem .55rem;animation:die-pop .4s cubic-bezier(.22,1,.36,1) both;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tts-log{font-family:var(--font-mono);font-size:.74rem;color:var(--term-green);min-height:1.5em;word-break:break-word}
+.tts-log .m{color:var(--term-amber)}.tts-log .h{color:var(--poison)}
+
+/* ── §10 State tree + fan ───────────────────────────────────── */
 .tree{background:var(--ink);border:1px solid var(--edge);padding:1rem 1.1rem;margin:1rem 0;font-family:var(--font-mono);font-size:.76rem;line-height:1.8}
-.tree .t-line{white-space:pre-wrap;word-break:break-word}
 .tree .k{color:var(--bone-bright)}
 .tree .kg{color:var(--gold-bright)}
 .tree .d{color:var(--bone-dim)}
 .tree .p{color:var(--arcane-bright)}
 .tree .t{color:var(--teal)}
-.tree .e{color:var(--ember)}
-.tree .g{color:var(--poison)}
 .tree details{margin-left:1.1rem;border-left:1px dashed var(--edge);padding-left:.7rem}
 .tree summary{cursor:pointer;color:var(--bone);list-style:none;display:flex;align-items:center;gap:.5rem}
 .tree summary::-webkit-details-marker{display:none}
 .tree summary::before{content:'▸';color:var(--gold);font-size:.6rem;transition:transform .25s;flex:none}
 .tree details[open] summary::before{transform:rotate(90deg)}
 .tree summary:hover{color:var(--gold-bright)}
-.tree .sz{font-size:.62rem;color:var(--bone-dim);letter-spacing:.08em;margin-left:.4rem}
+.fan rect{fill:var(--stone-2);stroke:var(--edge)}
+.fan text{font-family:var(--font-mono);font-size:9.5px;fill:var(--bone);letter-spacing:.08em}
+.fan .core rect{stroke:var(--gold);fill:#181410}
+.fan .core text{fill:var(--gold-bright);font-size:11px;font-weight:600}
+.fan .beam{stroke-width:1.2;fill:none;stroke-dasharray:4 5;animation:flow-dash 1.4s linear infinite}
+.fan .beam.read{stroke:rgba(var(--gold-rgb),.55)}
+.fan .beam.write{stroke:rgba(154,111,224,.6);animation-direction:reverse}
+.fan .pulse{animation:sg-breathe 4s ease-in-out infinite}
 
 /* ── XP ladder ──────────────────────────────────────────────── */
 .xp-ladder{margin:1rem 0}
 .xp-bar{display:flex;height:26px;border:1px solid var(--edge);background:var(--ink);overflow:hidden}
-.xp-step{flex:1;border-right:1px solid var(--edge);position:relative;transition:background .6s}
+.xp-step{flex:1;border-right:1px solid var(--edge);position:relative}
 .xp-step:last-child{border-right:none}
 .xp-step.l1{background:#2c2110}
 .xp-step.mid{background:#3a2a12}
 .xp-step.late{background:#4a3414}
 .xp-step .lvl{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);font-family:var(--font-mono);font-size:.56rem;color:var(--gold-bright);opacity:.85}
-.xp-cap{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:.62rem;color:var(--bone-dim);margin-top:.35rem}
-.xp-table{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:.3rem .8rem;margin-top:.7rem;font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim)}
-.xp-table b{color:var(--gold-bright);font-weight:600}
+.xp-cap{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:.62rem;color:var(--bone-dim);margin-top:.35rem;flex-wrap:wrap;gap:.3rem}
 
-/* ── TTS sim ────────────────────────────────────────────────── */
-.tts-sim{margin-top:1rem}
-.tts-cache{display:flex;flex-wrap:wrap;gap:.5rem;min-height:34px;margin:.7rem 0}
-.tts-key{font-family:var(--font-mono);font-size:.66rem;color:var(--bone);border:1px solid var(--edge);background:var(--stone-3);
-  padding:.28rem .55rem;animation:die-pop .4s cubic-bezier(.22,1,.36,1) both;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tts-key.hit{border-color:var(--poison);color:var(--poison)}
-.tts-key.miss{border-color:var(--term-amber);color:var(--term-amber)}
-.tts-log{font-family:var(--font-mono);font-size:.74rem;color:var(--term-green);min-height:1.5em;word-break:break-word}
-.tts-log .m{color:var(--term-amber)}.tts-log .h{color:var(--poison)}.tts-log .d{color:var(--bone-dim)}
+/* ── §11 Rewind ─────────────────────────────────────────────── */
+.rw-stage{display:flex;gap:1rem;align-items:stretch;margin:1.2rem 0;flex-wrap:wrap}
+.rw-card{flex:1;min-width:180px;border:1px solid var(--edge);background:var(--stone);padding:1rem;position:relative;transition:all .5s}
+.rw-card h4{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.5rem}
+.rw-card .rw-body{font-family:var(--font-mono);font-size:.74rem;color:var(--bone);line-height:1.7}
+.rw-card.now{border-color:var(--gold);box-shadow:0 0 18px -8px rgba(212,169,44,.5)}
+.rw-card.gone{opacity:.25;transform:translateX(-10px)}
+.rw-card.restored{border-color:var(--poison);box-shadow:0 0 18px -8px rgba(122,163,94,.5)}
+.rw-ghost{position:absolute;right:.7rem;top:.7rem;font-family:var(--font-mono);font-size:.6rem;letter-spacing:.1em;
+  color:var(--arcane-bright);border:1px dashed rgba(154,111,224,.6);padding:.2rem .5rem;opacity:0;transition:opacity .4s}
+.rw-ghost.show{opacity:1}
+.rw-ghost.drop{text-decoration:line-through;text-decoration-color:var(--blood-bright);color:var(--blood-bright);border-color:rgba(var(--blood-rgb),.6);opacity:.6}
+.rw-epoch{font-family:var(--font-mono);font-size:.7rem;color:var(--bone-dim);text-align:center;margin-top:.4rem;min-height:1.4em}
+.rw-epoch b{color:var(--gold-bright)}
 
-/* ── Footer ─────────────────────────────────────────────────── */
-footer{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1.4rem 3.5rem;text-align:center;
-  border-top:1px solid var(--edge)}
+/* ── Expanders ──────────────────────────────────────────────── */
+.exp{border:1px solid var(--edge);background:var(--stone);margin-bottom:.8rem}
+.exp-toggle{display:flex;align-items:center;gap:.7rem;width:100%;cursor:pointer;text-align:left;background:none;border:none;
+  padding:.8rem 1rem;color:var(--bone);transition:color .2s;font-family:var(--font-body);font-size:.92rem}
+.exp-toggle:hover{color:var(--gold-bright)}
+.exp-toggle .caret{transition:transform .3s;font-size:.6rem;color:var(--gold);flex:none}
+.exp-toggle.open .caret{transform:rotate(90deg)}
+.exp-toggle .et-t{font-family:var(--font-display);font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-bright)}
+.exp-toggle .et-d{display:block;font-family:var(--font-mono);font-size:.66rem;letter-spacing:.04em;color:var(--bone-dim);text-transform:none;margin-top:.15rem}
+.exp-body{max-height:0;overflow:hidden;opacity:0;transition:max-height .55s cubic-bezier(.22,1,.36,1),opacity .4s}
+.exp-body.open{max-height:2000px;opacity:1}
+.exp-inner{padding:0 1rem 1.1rem}
+.exp-inner p{color:var(--bone);font-size:.9rem;margin-bottom:.7rem}
+.exp-inner p:last-child{margin-bottom:0}
+
+/* ── Footer / toast / reveal ────────────────────────────────── */
+footer{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1.4rem 3.5rem;text-align:center;border-top:1px solid var(--edge)}
 footer .f-title{font-family:var(--font-display);font-size:.68rem;letter-spacing:.34em;text-transform:uppercase;color:var(--gold);margin-bottom:.6rem}
 footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);line-height:1.9}
-
-/* ── Toast ──────────────────────────────────────────────────── */
 .toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);opacity:0;z-index:1200;
   font-family:var(--font-display);font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;
   background:var(--stone);border:1px solid var(--gold);
   color:var(--gold-bright);padding:.7rem 1.5rem;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}
 .toast.show{transform:translate(-50%,0);opacity:1}
-
-/* ── Scroll reveal ──────────────────────────────────────────── */
 .rv{opacity:0;transform:translateY(24px);transition:opacity .7s cubic-bezier(.22,1,.36,1),transform .7s cubic-bezier(.22,1,.36,1)}
 .rv.in{opacity:1;transform:none}
 
@@ -320,6 +407,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
   .index ol{display:contents}
   .index li{border:none;display:inline-block}
   .index li.active{border-left:none}
+  .index li.active a{color:var(--gold-bright);border-color:var(--gold)}
   .index a{border:1px solid var(--edge);background:var(--stone-3);padding:.34rem .6rem;font-size:.66rem;margin:0}
   .index .ix-num{display:none}
   .index .ix-tag{display:none}
@@ -327,26 +415,27 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
 @media(max-width:760px){
   body{font-size:15.5px}
   .grid2,.grid3{grid-template-columns:1fr}
-  .hero{padding-top:3.6rem}
-  .flowbox svg{min-width:520px}
+  .hero{padding-top:3.4rem}
+  .flowbox svg{min-width:560px}
+  .rw-stage{flex-direction:column}
 }
 @media(max-width:480px){
   .sec-head{flex-wrap:wrap;gap:.4rem}
   .r-row .r-expr{flex-basis:100%}
 }
-
-/* ── Reduced motion ─────────────────────────────────────────── */
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
   html{scroll-behavior:auto}
 }
 </style>
 <link rel="stylesheet" href="snes.css?v=47">
-<noscript><style>.rv{opacity:1;transform:none}#boot{display:none}.boot-lines{min-height:0}</style></noscript>
+<noscript><style>.rv{opacity:1;transform:none}#boot{display:none}.boot-lines{min-height:0}.term-line{opacity:1;transform:none}.str-row{opacity:1;transform:none}</style></noscript>
 </head>
 <body>
 
 <div id="prog"></div>
+<canvas id="embers" aria-hidden="true"></canvas>
+<div id="vig" aria-hidden="true"></div>
 
 <!-- ═══════════ BOOT OVERLAY ═══════════ -->
 <div id="boot" onclick="bootSkip()" role="button" aria-label="Skip boot sequence" title="Click to skip">
@@ -361,32 +450,79 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
 <header class="hero">
   <div class="eyebrow">The Lore Weaver's Cauldron — under the table</div>
   <h1>The Mechanics of the Cauldron</h1>
-  <p class="sub">How the engine runs beneath the game: a <b>Dungeon Master</b> that writes stories, a <b>Guardian</b> that turns prose into state, dice that only the engine may roll, a <b>voice cache</b> that never speaks the same line twice, and one JSON file that remembers everything.</p>
+  <p class="sub">Two minds, one die cup, one JSON file. Everything else is a projection.</p>
+
+  <!-- The whole engine in one diagram -->
+  <div class="sigil rv" aria-label="Engine overview diagram">
+    <svg viewBox="0 0 760 310" role="img">
+      <defs>
+        <marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" fill="#5a4a7a"/>
+        </marker>
+        <marker id="arrg" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" fill="#d4a92c"/>
+        </marker>
+      </defs>
+      <!-- player -->
+      <g class="sg dim"><rect x="290" y="8" width="180" height="42" rx="0"/>
+        <text class="t-name" x="380" y="26" text-anchor="middle">PLAYER</text>
+        <text class="t-sub" x="380" y="40" text-anchor="middle">ONE MESSAGE = ONE TURN</text></g>
+      <!-- DM -->
+      <g class="sg gold node"><rect x="40" y="112" width="250" height="72"/>
+        <text class="t-name" x="165" y="138" text-anchor="middle">DUNGEON MASTER</text>
+        <text class="t-sub" x="165" y="154" text-anchor="middle">DM_CORE_PROMPT v28 · THE ARTIST</text>
+        <text class="t-sub" x="165" y="168" text-anchor="middle">WRITES THE STORY · MAY SAY NO</text></g>
+      <!-- Guardian -->
+      <g class="sg pur node d1"><rect x="470" y="112" width="250" height="72"/>
+        <text class="t-name" x="595" y="138" text-anchor="middle">GUARDIAN</text>
+        <text class="t-sub" x="595" y="154" text-anchor="middle">44-FIELD CONTRACT · THE ACCOUNTANT</text>
+        <text class="t-sub" x="595" y="168" text-anchor="middle">PROSE → JSON · NEVER A SENTENCE</text></g>
+      <!-- Engine -->
+      <g class="sg bone node d2"><rect x="235" y="242" width="290" height="58"/>
+        <text class="t-name" x="380" y="264" text-anchor="middle">THE ENGINE — CODE, NOT PROSE</text>
+        <text class="t-sub" x="380" y="280" text-anchor="middle">SECRETS DICE · ASYNCIO LOCK · STATE.JSON</text>
+        <text class="t-sub" x="380" y="292" text-anchor="middle">CONDITIONS TICK · XP TABLE · COMBAT ROLLS</text></g>
+      <!-- wires -->
+      <path class="wire slow" d="M330,50 C280,70 200,80 168,108" marker-end="url(#arr)"/>
+      <text class="w-label" x="212" y="72">action</text>
+      <path class="wire gold" d="M290,148 H466" marker-end="url(#arrg)"/>
+      <text class="w-label" x="336" y="140">narration</text>
+      <path class="wire pur slow" d="M595,184 C595,215 560,232 528,244" marker-end="url(#arr)"/>
+      <text class="w-label" x="586" y="216">44 fields</text>
+      <path class="wire gold" d="M235,262 C150,255 120,225 122,188" marker-end="url(#arrg)"/>
+      <text class="w-label" x="118" y="232">TRUTH block</text>
+      <path class="wire pur" d="M470,130 C420,105 400,92 388,54" marker-end="url(#arr)" style="animation-direction:reverse"/>
+      <text class="w-label" x="428" y="86">PRE: roll?</text>
+      <path class="wire slow" d="M420,50 C480,66 520,74 560,108" marker-end="url(#arr)"/>
+    </svg>
+  </div>
+
   <div class="chips">
     <span class="chip g">DM prompt v28</span>
-    <span class="chip p">Guardian 44-field contract</span>
-    <span class="chip">Two-phase dice</span>
-    <span class="chip t">TTS cache · 64 slots · 600s TTL</span>
+    <span class="chip p">Guardian · 44 fields</span>
+    <span class="chip">Server-rolled dice</span>
+    <span class="chip t">TTS cache · 64 × 600s</span>
     <span class="chip e">SSE character weaving</span>
+    <span class="chip b">Undo · costs 1 turn</span>
   </div>
   <div class="scroll-hint">▼ scroll to open the hatch ▼</div>
 </header>
 
-<!-- ═══════════ INDEX (sticky left rail — first child of main's grid) ═══════════ -->
+<!-- ═══════════ INDEX ═══════════ -->
 <main>
 <nav class="index rv" id="index" aria-label="Section index">
   <h2>Index</h2>
   <ol>
-    <li data-ix="s1"><a href="#s1"><span class="ix-num">§1</span>The Dual Mind<span class="ix-tag">DM + Guardian</span></a></li>
-    <li data-ix="s2"><a href="#s2"><span class="ix-num">§2</span>Turn Pipeline<span class="ix-tag">one round, eight steps</span></a></li>
-    <li data-ix="s3"><a href="#s3"><span class="ix-num">§3</span>Prompt Injection<span class="ix-tag">what the DM sees</span></a></li>
+    <li data-ix="s1"><a href="#s1"><span class="ix-num">§1</span>The Dual Mind<span class="ix-tag">DM + Guardian + engine</span></a></li>
+    <li data-ix="s2"><a href="#s2"><span class="ix-num">§2</span>Turn Pipeline<span class="ix-tag">one round, six stages</span></a></li>
+    <li data-ix="s3"><a href="#s3"><span class="ix-num">§3</span>Prompt Injection<span class="ix-tag">twelve layers</span></a></li>
     <li data-ix="s4"><a href="#s4"><span class="ix-num">§4</span>Fact Memory<span class="ix-tag">the moving window</span></a></li>
     <li data-ix="s5"><a href="#s5"><span class="ix-num">§5</span>Guardian Contract<span class="ix-tag">prose → JSON</span></a></li>
     <li data-ix="s6"><a href="#s6"><span class="ix-num">§6</span>Dice Engine<span class="ix-tag">the engine rolls</span></a></li>
-    <li data-ix="s10"><a href="#s10"><span class="ix-num">§7</span>Spell Slots &amp; Rests<span class="ix-tag">the level-as-cost pool</span></a></li>
-    <li data-ix="s7"><a href="#s7"><span class="ix-num">§8</span>Voice &amp; TTS Cache<span class="ix-tag">speak once, reuse</span></a></li>
-    <li data-ix="s8"><a href="#s8"><span class="ix-num">§9</span>Character Weaving<span class="ix-tag">SSE adventurer creation</span></a></li>
-    <li data-ix="s9"><a href="#s9"><span class="ix-num">§10</span>State Model<span class="ix-tag">the one truth</span></a></li>
+    <li data-ix="s7"><a href="#s7"><span class="ix-num">§7</span>Spell Slots &amp; Rests<span class="ix-tag">the level-as-cost pool</span></a></li>
+    <li data-ix="s8"><a href="#s8"><span class="ix-num">§8</span>Voice &amp; TTS Cache<span class="ix-tag">speak once, reuse</span></a></li>
+    <li data-ix="s9"><a href="#s9"><span class="ix-num">§9</span>Character Weaving<span class="ix-tag">SSE adventurer creation</span></a></li>
+    <li data-ix="s10"><a href="#s10"><span class="ix-num">§10</span>State Model<span class="ix-tag">the one truth</span></a></li>
     <li data-ix="s11"><a href="#s11"><span class="ix-num">§11</span>Undoing a Turn<span class="ix-tag">one rewind, one turn</span></a></li>
   </ol>
 </nav>
@@ -400,84 +536,40 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     <h2 class="sec-title"><span class="sec-mark">◆</span>The Dual Mind</h2>
     <div class="sec-rule"></div>
   </div>
-  <p class="sec-lede">Every turn is resolved by two minds with separate authority. One is an artist, the other an accountant — the DM's prose may carry server-applied tags, the Guardian answers in strict JSON, and the engine decides which numbers become real.</p>
+  <p class="sec-lede">One artist, one accountant, and a third party neither of them may overrule: the engine.</p>
 
-  <div class="grid2">
+  <div class="grid3">
     <div class="panel rv">
       <h3><span class="dot">✦</span> The Dungeon Master</h3>
-      <p>A free, creative LLM storyteller. Its identity, craft rules and world-consistency laws live in <code>DM_CORE_PROMPT</code>, versioned as <span class="stat"><b class="v">v28</b></span> — bumping the version forces a cache miss so the model can never serve a stale persona.</p>
-      <p>It is told: <em>"The story is NOT pre-written: it is shaped by the player's choices, in the moment."</em> It chooses theme, tone and atmosphere. It may say no. Death is real.</p>
-      <div class="stat"><b>Role split:</b> Narrator · NPC actor · Rules arbiter · World builder · Challenger</div>
+      <p>A free, creative storyteller. Identity and craft laws live in <code>DM_CORE_PROMPT</code>, versioned <b>v28</b> — a version bump forces a provider cache miss, so a stale persona can never be served.</p>
+      <div class="tag-row">
+        <span class="tg g">narrator</span><span class="tg g">NPC actor</span><span class="tg g">rules arbiter</span><span class="tg g">challenger</span>
+      </div>
+      <p class="stat">"The story is NOT pre-written — it is shaped by the player's choices, in the moment." <b>Death is real.</b></p>
     </div>
     <div class="panel rv">
       <h3><span class="dot">✦</span> The Guardian</h3>
-      <p>A second LLM pass that reads the DM's narration and extracts <b>every mechanical effect</b> into a strict <span class="stat"><b class="v">44-field JSON contract</b></span>: damage, healing, XP, items, currency, quests, NPC changes, combat, spell-slot spending, rest, world lore.</p>
-      <p>It works in <b>two phases</b>: <span class="stat"><b>PRE</b></span> (before the DM writes — decides <em>if</em> a roll is needed) and <span class="stat"><b>POST</b></span> (after — turns prose into state). It never writes a sentence. For combat it never writes numbers either — it names <em>who</em> attacks, and the server engine rolls the dice.</p>
-      <div class="stat"><b>Fallback:</b> a legacy regex tag pipeline (<span class="v">[SKADA:] [GULD:]</span>…) still lives for out-of-combat and environmental effects on living creatures — every combat number is engine-rolled instead.</div>
+      <p>A second LLM pass that reads the narration and extracts <b>every mechanical effect</b> into a strict 44-field JSON contract. It never writes a sentence — and in combat, never a number.</p>
+      <div class="tag-row">
+        <span class="tg p">PRE — is a roll needed?</span><span class="tg p">POST — prose → state</span>
+      </div>
+      <p class="stat">Fallback: a legacy regex pipeline ([SKADA:] [GULD:]…) for out-of-combat effects. Every combat number is engine-rolled.</p>
     </div>
-  </div>
-
-  <div class="flowbox rv">
-    <svg viewBox="0 0 900 352" role="img" aria-label="Turn flow: player to guardian pre, DM, chat, validation, guardian post, apply, state">
-      <!-- Row 1 -->
-      <g class="fn bone"><rect x="30" y="58" width="118" height="44" rx="2" fill="#181226" stroke="rgba(123,79,212,.6)"/><text class="f-label" x="89" y="76" text-anchor="middle">PLAYER</text><text class="f-sub" x="89" y="90" text-anchor="middle">action · SSE</text></g>
-      <g class="fn pur"><rect class="f-pulse" x="196" y="58" width="118" height="44" rx="2" fill="#181226" stroke="rgba(123,79,212,.55)"/><text class="f-label" x="255" y="76" text-anchor="middle">GUARDIAN PRE</text><text class="f-sub" x="255" y="90" text-anchor="middle">roll? → [KAST:] hint</text></g>
-      <g class="fn gold"><rect x="362" y="58" width="118" height="44" rx="2" fill="#181410" stroke="rgba(212,169,44,.55)"/><text class="f-label" x="421" y="76" text-anchor="middle">DUNGEON MASTER</text><text class="f-sub" x="421" y="90" text-anchor="middle">system prompt v28</text></g>
-      <g class="fn bone"><rect x="528" y="58" width="118" height="44" rx="2" fill="#12121a" stroke="#2a2a3a"/><text class="f-label" x="587" y="76" text-anchor="middle">CHAT STREAM</text><text class="f-sub" x="587" y="90" text-anchor="middle">reasoning + content</text></g>
-      <g class="fn ember"><rect x="694" y="58" width="118" height="44" rx="2" fill="#14100a" stroke="rgba(212,105,30,.5)"/><text class="f-label" x="753" y="76" text-anchor="middle">VALIDATE</text><text class="f-sub" x="753" y="90" text-anchor="middle">strip · parse rolls</text></g>
-      <!-- Row 2 -->
-      <g class="fn pur"><rect x="196" y="210" width="118" height="44" rx="2" fill="#181226" stroke="rgba(123,79,212,.55)"/><text class="f-label" x="255" y="228" text-anchor="middle">GUARDIAN POST</text><text class="f-sub" x="255" y="242" text-anchor="middle">prose → JSON contract</text></g>
-      <g class="fn poison"><rect x="362" y="210" width="118" height="44" rx="2" fill="#101408" stroke="rgba(90,154,78,.5)"/><text class="f-label" x="421" y="228" text-anchor="middle">APPLY MECHANICS</text><text class="f-sub" x="421" y="242" text-anchor="middle">mutate state · dedup</text></g>
-      <g class="fn teal"><rect x="528" y="210" width="118" height="44" rx="2" fill="#10161a" stroke="rgba(78,138,147,.55)"/><text class="f-label" x="587" y="228" text-anchor="middle">STATE.JSON</text><text class="f-sub" x="587" y="242" text-anchor="middle">the one truth</text></g>
-      <!-- connectors row1 -->
-      <path class="flowline anim pur" id="p1a" d="M148 80 H196"/>
-      <circle class="dot pur" r="3"><animateMotion dur="1.6s" repeatCount="indefinite"><mpath href="#p1a"/></animateMotion></circle>
-      <path class="flowline anim gold" id="p1b" d="M314 80 H362"/>
-      <circle class="dot" r="3"><animateMotion dur="1.6s" repeatCount="indefinite"><mpath href="#p1b"/></animateMotion></circle>
-      <path class="flowline anim" id="p1c" d="M480 80 H528"/>
-      <circle class="dot" r="3" fill="#e0e0ec"><animateMotion dur="1.6s" repeatCount="indefinite"><mpath href="#p1c"/></animateMotion></circle>
-      <path class="flowline anim ember" id="p1d" d="M646 80 H694"/>
-      <circle class="dot" r="3" fill="#d4691e"><animateMotion dur="1.6s" repeatCount="indefinite"><mpath href="#p1d"/></animateMotion></circle>
-      <!-- row1 → row2 -->
-      <path class="flowline" d="M753 102 V210 H716"/>
-      <path class="flowline anim ember" id="p1e" d="M753 102 V210 H716"/>
-      <circle class="dot" r="3" fill="#d4691e"><animateMotion dur="1.8s" repeatCount="indefinite"><mpath href="#p1e"/></animateMotion></circle>
-      <!-- row2 connectors -->
-      <path class="flowline anim pur" id="p1f" d="M148 232 H196"/>
-      <circle class="dot pur" r="3"><animateMotion dur="1.6s" repeatCount="indefinite"><mpath href="#p1f"/></animateMotion></circle>
-      <path class="flowline anim poison" id="p1g" d="M314 232 H362"/>
-      <circle class="dot poison" r="3"><animateMotion dur="1.6s" repeatCount="indefinite"><mpath href="#p1g"/></animateMotion></circle>
-      <path class="flowline anim teal" id="p1h" d="M480 232 H528"/>
-      <circle class="dot teal" r="3"><animateMotion dur="1.6s" repeatCount="indefinite"><mpath href="#p1h"/></animateMotion></circle>
-      <!-- state → player feedback loop -->
-      <path class="flowline anim teal" id="p1loop" d="M587 254 V312 H89 V102"/>
-      <circle class="dot teal" r="3"><animateMotion dur="3.4s" repeatCount="indefinite"><mpath href="#p1loop"/></animateMotion></circle>
-      <text class="flow-label" x="250" y="326" text-anchor="middle">TRUTH BLOCK + SUMMARIES feed the next system prompt</text>
-      <!-- player → guardian pre note -->
-      <text class="flow-label" x="89" y="50" text-anchor="middle">1. action</text>
-      <text class="flow-label" x="255" y="50" text-anchor="middle">2. need a roll?</text>
-      <text class="flow-label" x="421" y="50" text-anchor="middle">3. narrate + [KAST:]</text>
-      <text class="flow-label" x="587" y="50" text-anchor="middle">4. stream to chat</text>
-      <text class="flow-label" x="753" y="50" text-anchor="middle">5. clean</text>
-      <text class="flow-label" x="255" y="202" text-anchor="middle">6. extract JSON</text>
-      <text class="flow-label" x="421" y="202" text-anchor="middle">7. write state</text>
-      <text class="flow-label" x="587" y="202" text-anchor="middle">8. save + lock</text>
-    </svg>
-    <div class="legend">
-      <span><i style="background:var(--gold)"></i>DM path</span>
-      <span><i style="background:var(--arcane)"></i>Guardian</span>
-      <span><i style="background:var(--poison)"></i>state writes</span>
-      <span><i style="background:var(--teal)"></i>persistence</span>
-      <span><i style="background:var(--ember)"></i>validation</span>
+    <div class="panel rv">
+      <h3><span class="dot">✦</span> The Engine</h3>
+      <p>Plain server code. It rolls the dice (Python <code>secrets</code>), decrements pools, ticks conditions, pays XP from one table, and writes <b>state.json</b> under a per-campaign asyncio lock.</p>
+      <div class="tag-row">
+        <span class="tg">dice</span><span class="tg">spell slots</span><span class="tg">conditions</span><span class="tg">travel time</span><span class="tg">level-ups</span>
+      </div>
+      <p class="stat">The tale may lie — <b>the code cannot</b>.</p>
     </div>
   </div>
 
   <div class="panel rv">
     <h3><span class="dot">✦</span> Four knobs, one clamp</h3>
-    <p>Each campaign carries <b>four model choices</b>, saved in <code>meta</code> and swappable from the in-game settings: the <span class="stat"><b>DM model</b></span> (storyteller), the <span class="stat"><b>Guardian model</b></span> (roll judge), the <span class="stat"><b>Extraction model</b></span> (POST parser) and the <span class="stat"><b>TTS provider</b></span> (StepFun "Step Plan" or Qwen "Token Plan").</p>
-    <p>Non-admin players are clamped to a whitelist server-side — the picker in onboarding is only a UX affordance; <code>_clamp_player_model</code> is the real gate.</p>
+    <p>Each campaign carries four model choices in <code>meta</code>: the <b>DM</b> (storyteller), the <b>Guardian</b> (roll judge), the <b>Extraction</b> model (POST parser) and the <b>TTS provider</b> (StepFun or Qwen). Non-admin players are clamped to a whitelist server-side — <code>_clamp_player_model</code> is the real gate, the picker is only UX.</p>
     <div class="tag-row">
-      <span class="tg g">step-3.7-flash</span><span class="tg g">step-5-preview</span><span class="tg g">qwen3.8-flash</span><span class="tg">deepseek-v4-flash</span><span class="tg">qwen3.6-flash</span><span class="tg">qwen3.8-max</span><span class="tg p">ollama:heretic (local)</span>
+      <span class="tg g">step-3.7-flash</span><span class="tg g">step-5-preview</span><span class="tg g">qwen3.8-flash</span><span class="tg g">qwen3.6-flash</span><span class="tg p">deepseek-v4-flash</span><span class="tg p">qwen3.8-max</span><span class="tg t">ollama:heretic (local)</span>
     </div>
   </div>
 </section>
@@ -489,58 +581,74 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     <h2 class="sec-title"><span class="sec-mark">◆</span>The Turn Pipeline</h2>
     <div class="sec-rule"></div>
   </div>
-  <p class="sec-lede">One player message triggers eight serialized stages. The DM stream is the only thing the player watches; everything after it happens in the dark.</p>
+  <p class="sec-lede">One message, six serialized stages. The DM stream is the only thing you watch — the rest happens in the dark.</p>
 
-  <div class="grid3">
-    <div class="panel rv">
-      <h3><span class="dot">1</span> Action in</h3>
-      <p>The player's message arrives via SSE. A per-campaign <span class="stat"><b>asyncio lock</b></span> is taken — every state write is serialized, no two turns may race.</p>
-    </div>
-    <div class="panel rv">
-      <h3><span class="dot">2</span> Guardian PRE</h3>
-      <p><code>guardian_check_roll</code> reads the action + compact state and decides if the outcome is uncertain. If so it hands the DM the exact <span class="stat"><b>[KAST: 1d20+MOD | LABEL (DC X)]</b></span> tag to use.</p>
-    </div>
-    <div class="panel rv">
-      <h3><span class="dot">3</span> DM writes</h3>
-      <p><code>_build_system_prompt</code> assembles the layered prompt (see §3). The DM streams tokens — reasoning shown as a thought bubble, then narration — into the chat.</p>
-    </div>
-    <div class="panel rv">
-      <h3><span class="dot">4</span> Validate &amp; strip</h3>
-      <p><code>validate_dm_response</code> checks the shape; mechanical tags are stripped from display text. <span class="stat"><b>[KAST:]</b></span> is parsed into a real dice button the player must press.</p>
-    </div>
-    <div class="panel rv">
-      <h3><span class="dot">5</span> Guardian POST</h3>
-      <p>In the background, <code>guardian_extract_mechanics</code> sends the reply + last 6 transcript entries + compact state to the extraction model. Invalid JSON triggers a <span class="stat"><b>2-attempt repair loop</b></span>; total failure returns an empty dict — the turn survives.</p>
-    </div>
-    <div class="panel rv">
-      <h3><span class="dot">6</span> Apply &amp; save</h3>
-      <p><code>apply_mechanics</code> mutates state with dedup (<code>skip_effects</code>) against anything the legacy tag pipeline already applied. <code>state.json</code> is written, <code>last_effects</code> recorded — and the loop feeds §1.</p>
+  <!-- Animated conveyor: one packet loops the six stages forever -->
+  <div class="flowbox rv">
+    <svg class="cv" viewBox="0 0 880 260" role="img" aria-label="Turn pipeline conveyor">
+      <defs>
+        <marker id="cvarr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" fill="#5a4a7a"/>
+        </marker>
+        <path id="cvpath" d="M60,62 H820 M820,62 V124 M820,124 H60 M60,124 V186 M60,186 H440" fill="none"/>
+      </defs>
+      <!-- stage boxes row 1 -->
+      <g class="cv-node" style="animation-delay:0s"><rect class="cv-box" x="30" y="30" width="230" height="64"/>
+        <text class="cv-num" x="46" y="50">01</text><text class="cv-title" x="70" y="50">ACTION IN</text>
+        <text class="cv-sub" x="46" y="68">SSE · per-campaign asyncio</text><text class="cv-sub" x="46" y="80">lock — no two turns race</text></g>
+      <g class="cv-node" style="animation-delay:1.5s"><rect class="cv-box" x="305" y="30" width="230" height="64"/>
+        <text class="cv-num" x="321" y="50">02</text><text class="cv-title" x="345" y="50">GUARDIAN PRE</text>
+        <text class="cv-sub" x="321" y="68">guardian_check_roll —</text><text class="cv-sub" x="321" y="80">uncertain? hand DM a [KAST:]</text></g>
+      <g class="cv-node" style="animation-delay:3s"><rect class="cv-box" x="580" y="30" width="230" height="64"/>
+        <text class="cv-num" x="596" y="50">03</text><text class="cv-title" x="620" y="50">DM WRITES</text>
+        <text class="cv-sub" x="596" y="68">layered prompt (§3) · tokens</text><text class="cv-sub" x="596" y="80">stream: thought → narration</text></g>
+      <!-- stage boxes row 2 -->
+      <g class="cv-node" style="animation-delay:4.5s"><rect class="cv-box" x="580" y="154" width="230" height="64"/>
+        <text class="cv-num" x="596" y="174">04</text><text class="cv-title" x="620" y="174">VALIDATE &amp; STRIP</text>
+        <text class="cv-sub" x="596" y="192">tags stripped from display ·</text><text class="cv-sub" x="596" y="204">[KAST:] → dice button</text></g>
+      <g class="cv-node" style="animation-delay:6s"><rect class="cv-box" x="305" y="154" width="230" height="64"/>
+        <text class="cv-num" x="321" y="174">05</text><text class="cv-title" x="345" y="174">GUARDIAN POST</text>
+        <text class="cv-sub" x="321" y="192">reply + last 6 entries → JSON</text><text class="cv-sub" x="321" y="204">2-attempt repair · never fatal</text></g>
+      <g class="cv-node" style="animation-delay:7.5s"><rect class="cv-box" x="30" y="154" width="230" height="64"/>
+        <text class="cv-num" x="46" y="174">06</text><text class="cv-title" x="70" y="174">APPLY &amp; SAVE</text>
+        <text class="cv-sub" x="46" y="192">apply_mechanics + dedup →</text><text class="cv-sub" x="46" y="204">state.json · last_effects</text></g>
+      <!-- wires -->
+      <path class="cv-wire" d="M260,62 H300" marker-end="url(#cvarr)"/>
+      <path class="cv-wire" d="M535,62 H575" marker-end="url(#cvarr)"/>
+      <path class="cv-wire" d="M695,94 V150" marker-end="url(#cvarr)"/>
+      <path class="cv-wire" d="M580,186 H540" marker-end="url(#cvarr)"/>
+      <path class="cv-wire" d="M305,186 H265" marker-end="url(#cvarr)"/>
+      <path class="cv-wire back" d="M145,154 C145,130 145,120 145,98" marker-end="url(#cvarr)"/>
+      <text class="cv-sub" x="158" y="130">loop feeds turn N+1</text>
+      <!-- the packet -->
+      <circle class="packet" r="4">
+        <animateMotion dur="9s" repeatCount="indefinite" keyPoints="0;1" keyTimes="0;1" calcMode="linear">
+          <mpath href="#cvpath"/>
+        </animateMotion>
+      </circle>
+    </svg>
+    <div class="legend">
+      <span><i style="background:var(--gold-bright)"></i>the turn packet</span>
+      <span><i style="background:var(--edge-hi)"></i>serialized path</span>
+      <span><i style="background:var(--gold);opacity:.4"></i>state loop-back</span>
     </div>
   </div>
 
   <div class="term dm rv">
     <div class="term-bar"><i></i><i></i><i></i><span>transcript.snapshot · turn 42</span></div>
-    <div class="term-body">
-      <div><span class="c-dim"># player action (SSE)</span></div>
-      <div><span class="c-p">❯ you:</span> I edge toward the door, dagger ready, and try to slip past the guard. <span class="c-dim">[sneak]</span></div>
-      <div>&nbsp;</div>
-      <div><span class="c-dim"># guardian_pre · qwen3.6-flash · 0.9s</span></div>
-      <div><span class="c-teal">🛡 pre:</span> uncertain → recommend <span class="c-gold">[KAST: 1d20+3 | DEXTERITY to sneak (DC 14)]</span></div>
-      <div>&nbsp;</div>
-      <div><span class="c-dim"># dm stream · step-3.7-flash · 6.2s · 412 tokens</span></div>
-      <div><span class="c-gold">DM:</span> You press your back to the damp stone, torchlight crawling across the floor… <span class="c-gold">[KAST: 1d20+3 | DEXTERITY to sneak (DC 14)]</span></div>
-      <div>&nbsp;</div>
-      <div><span class="c-dim"># validate · strip tags · parse_roll_requests</span></div>
-      <div><span class="c-amb">⚙ parsed:</span> 1 roll request → dice button spawned in chat</div>
-      <div>&nbsp;</div>
-      <div><span class="c-dim"># player roll (the only number in this turn)</span></div>
-      <div><span class="c-p">❯ you:</span> <span class="c-gold">[Resultat: 1d20+3 → 17]</span> <span class="c-dim">(button click, auto-sent)</span></div>
-      <div>&nbsp;</div>
-      <div><span class="c-dim"># guardian_post · extraction model · 2.1s · 3 changes</span></div>
-      <div><span class="c-teal">🛡 post:</span> <span class="c-dim">xp:0 · logbook:"Faelyndra smög förbi vakten…" · npcs_near:[Kip] · time_passed:1h</span></div>
-      <div>&nbsp;</div>
-      <div><span class="c-dim"># apply_mechanics → state.json · lock released</span></div>
-      <div><span class="c-gold">✍ saved:</span> turn 42 · <span class="c-dim">hp 21/26 · gp 15 · 2 quests active</span></div>
+    <div class="term-body" id="pipe-term">
+      <div class="term-line"><span class="c-dim">❯ you:</span> I edge toward the door, dagger ready, and try to slip past the guard. <span class="c-dim">[sneak]</span></div>
+      <div class="term-line"><span class="c-dim"># guardian_pre · qwen3.6-flash · 0.9s</span></div>
+      <div class="term-line"><span class="c-p">🛡 pre:</span> uncertain → recommend <span class="c-gold">[KAST: 1d20+3 | DEXTERITY to sneak (DC 14)]</span></div>
+      <div class="term-line"><span class="c-dim"># dm stream · step-3.7-flash · 6.2s · 412 tokens</span></div>
+      <div class="term-line">DM: You press your back to the damp stone, torchlight crawling across the floor… <span class="c-gold">[KAST: 1d20+3 | DEXTERITY to sneak (DC 14)]</span></div>
+      <div class="term-line"><span class="c-dim"># validate · strip tags · parse_roll_requests</span></div>
+      <div class="term-line"><span class="c-amb">⚙ parsed:</span> 1 roll request → dice button spawned in chat</div>
+      <div class="term-line"><span class="c-dim">❯ you:</span> [Resultat: 1d20+3 → <span class="c-gold">17</span>] <span class="c-dim">(button click, auto-sent)</span></div>
+      <div class="term-line"><span class="c-dim"># guardian_post · extraction model · 2.1s · 3 changes</span></div>
+      <div class="term-line"><span class="c-p">🛡 post:</span> xp:0 · logbook:"Faelyndra smög förbi vakten…" · npcs_near:[Kip] · time_passed:1h</div>
+      <div class="term-line"><span class="c-dim"># apply_mechanics → state.json · lock released</span></div>
+      <div class="term-line"><span class="c-ok">✍ saved:</span> turn 42 · hp 21/26 · gp 15 · 2 quests active</div>
     </div>
   </div>
 </section>
@@ -552,68 +660,32 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     <h2 class="sec-title"><span class="sec-mark">◆</span>Prompt Injection</h2>
     <div class="sec-rule"></div>
   </div>
-  <p class="sec-lede">The DM never sees raw JSON. Every turn the engine welds a stack of layers into one system prompt — language first, truth forever, memory in tiers. Expand each layer.</p>
+  <p class="sec-lede">The DM never sees raw JSON. Every turn the engine welds twelve layers into one system prompt — language first, truth forever, memory in tiers. Watch the stack assemble.</p>
 
-  <div class="exp rv">
-    <button class="exp-toggle" id="exp-layer1-toggle" onclick="toggleExp('layer1')" aria-expanded="false">
-      <span class="caret">▸</span><span><span class="et-t">Layer 1 — Language directive</span><span class="et-d">[LANGUAGE: ENGLISH] / [SPRÅK: SVENSKA] — must come before everything else</span></span>
-    </button>
-    <div class="exp-body" id="exp-layer1-body"><div class="exp-inner">
-      <p>The very first line of the system prompt pins the output language and overrides any Swedish internal notes. The game can be played in Swedish while the UI stays English — language is a per-campaign setting, not a code constant.</p>
-<pre class="prompt lang"><span class="pt">[LANGUAGE: ENGLISH]</span> You MUST write ALL narration, dialogue, NPC speech, descriptions, and every single word of your response in English. This overrides any Swedish text in the instructions below — those are internal system notes, NOT the output language.</pre>
-      <p>Then the version stamp — <span class="stat"><b class="v">[DM-prompt v28]</b></span> — which forces a provider cache miss on every prompt change, so a deployed update is instantly live.</p>
-    </div></div>
+  <div class="strata rv" id="strata" aria-label="Prompt layer stack">
+    <div class="str-row"><span class="sn">01</span><span class="st">LANGUAGE</span><span class="sd">[LANGUAGE: ENGLISH] / [SPRÅK: SVENSKA] — first line, overrides all Swedish internal notes</span></div>
+    <div class="str-row"><span class="sn">02</span><span class="st">CORE IDENTITY</span><span class="sd">DM_CORE_PROMPT [v28] — storyteller, world-keeper, rules arbiter · version = cache-buster</span></div>
+    <div class="str-row"><span class="sn">03</span><span class="st">ANTI-HALLUCINATION</span><span class="sd">the DM triad: say yes · say no · or roll dice — player-invented advantages are refused</span></div>
+    <div class="str-row cond"><span class="sn">04</span><span class="st">COMBAT <i>or</i> NARRATIVE</span><span class="sd">living enemies in state.npcs? → DM_COMBAT_PROMPT · else DM_NARRATIVE_PROMPT — weight only what's real</span></div>
+    <div class="str-row final"><span class="sn">05</span><span class="st">TRUTH BLOCK</span><span class="sd">HP · AC · gold · inventory · quests · pinned facts — "authoritative, never contradict this"</span></div>
+    <div class="str-row"><span class="sn">06</span><span class="st">MEMORY TIERS</span><span class="sd">2 scene summaries · 2 chapters · 1 campaign arc — each stamped with its turn number</span></div>
+    <div class="str-row"><span class="sn">07</span><span class="st">ACTIVE THREADS</span><span class="sd">3–5 ongoing storylines, re-woven every 10 turns — the map that's always on the table</span></div>
+    <div class="str-row"><span class="sn">08</span><span class="st">LAST EFFECTS</span><span class="sd">meta.last_effects — "Skada: 12 · Föremål: Torch · Tid: 2h" — react to what you caused</span></div>
+    <div class="str-row"><span class="sn">09</span><span class="st">WORLD &amp; TRAVEL</span><span class="sd">location · time · weather · known places · travel = distance ÷ 10 × terrain (road 0.5 … mountains 1.8)</span></div>
+    <div class="str-row"><span class="sn">10</span><span class="st">LORE · NPCs · QUESTS</span><span class="sd">world lore, NPC dossiers with relations, active quests</span></div>
+    <div class="str-row"><span class="sn">11</span><span class="st">SHEET &amp; MEMORY</span><span class="sd">inventory + character · top 8 facts · top 4 semantic chunks (§4)</span></div>
+    <div class="str-row final"><span class="sn">12</span><span class="st">LANGUAGE REMINDER</span><span class="sd">the directive repeated last — models drift, so it bookends the prompt · Guardian PRE advice rides here too</span></div>
   </div>
 
-  <div class="exp rv">
-    <button class="exp-toggle" id="exp-layer2-toggle" onclick="toggleExp('layer2')" aria-expanded="false">
-      <span class="caret">▸</span><span><span class="et-t">Layer 2 — Core identity (DM_CORE_PROMPT)</span><span class="et-d">the persona: storyteller, world-keeper, rules arbiter</span></span>
-    </button>
-    <div class="exp-body" id="exp-layer2-body"><div class="exp-inner">
-      <p>The personality charter. The key covenants the model is sworn to:</p>
-<pre class="prompt"><span class="pk">## Identity and tone</span>
-- You are an engaged, atmospheric storyteller. Adapt the mood to the scene — threatening in combat, warm by the campfire, tense in mysteries.
-- ALWAYS respond in the language specified in the [LANGUAGE] or [SPRÅK] directive at the top.
-- ALWAYS end with an opening — the last sentence should invite the player to act.
-- Do NOT be afraid to say no. Consequences must be felt. <span class="pe">Death is real.</span>
-
-<span class="pk">## 🖋️ STORYTELLING CRAFT</span>
-- <span class="pe">SHOW, DON'T TELL</span>: "The innkeeper's hands tremble as she fills your tankard" instead of "she is afraid".
-- ENGAGE THE SENSES: aim for at least two senses per scene.
-- <span class="pe">IMPLICATION IS STRONGER THAN DESCRIPTION</span>: a sound in the dark, the empty chair, the door left ajar.
-- EVERY SCENE IS A PROMISE: spark curiosity — a mystery, a threat, an opportunity.
-
-<span class="pk">## 🗺️ WORLD CONSISTENCY (CRITICAL)</span>
-- The world is a FICTIONAL fantasy world. <span class="pneg">NEVER use real place names.</span>
-- Every NPC gets a UNIQUE, UNEXPECTED name — never reuse a name style from an earlier NPC.
-- Keep the world consistent: the same place has the same name, the same NPC has the same personality.</pre>
-      <p>Mechanics are explicitly delegated: <em>"A separate system (Guardian) automatically extracts mechanical effects from your narration… You do NOT need mechanical tags — just write what happens."</em> The exception that stays alive: the <span class="stat"><b>[KAST:]</b></span> roll tag.</p>
-    </div></div>
-  </div>
-
-  <div class="exp rv">
-    <button class="exp-toggle" id="exp-layer3-toggle" onclick="toggleExp('layer3')" aria-expanded="false">
-      <span class="caret">▸</span><span><span class="et-t">Layer 3 — Anti-hallucination &amp; the DM triad</span><span class="et-d">say yes · say no · or roll dice — never invent what the TRUTH block doesn't own</span></span>
-    </button>
-    <div class="exp-body" id="exp-layer3-body"><div class="exp-inner">
-      <p>The player must never win an item, spell or resource by simply claiming it. The DM is sworn to contradict them, kindly but firmly, offering an alternative path:</p>
-<pre class="prompt"><span class="pk">## ⚠️ ANTI-HALLUCINATION (CRITICAL)</span>
-- If the player says "I take my lamp" but the lamp is NOT in the inventory → SAY NO:
-  <span class="pe">"You have no lamp. Your hands search the dark but find only cold stone."</span>
-- If the player says "I cast my spell" but it is not on the character sheet → SAY NO.
-- You NEVER accept player-invented details that give mechanical advantage.
-  The WORLD and INVENTORY are authoritative.
-
-<span class="pk">## ⚖️ THE DM TRIAD — each action is resolved by exactly ONE of three responses</span>
-1. <span class="pok">SAY YES</span> — creative, reasonable, cinematic (Rule of Cool).
-2. <span class="pneg">SAY NO</span> — breaks the world or the sheet; always offer an alternative.
-3. <span class="pe">ROLL DICE</span> — outcome uncertain + consequences matter → [KAST:].
-
-<span class="pk">## 🚨 [KAST:] BEFORE OUTCOME — ABSOLUTE RULE (CRITICAL)</span>
-❌ WRONG: "You slash at the goblin — the sword hits! 8 damage."
-✅ RIGHT: "You slash at the goblin! <span class="pt">[KAST: 1d20+5 | ATTACK vs AC 13]</span>"
-- If you write that the player hits/misses WITHOUT having requested [KAST:] first, it is a SERIOUS ERROR.
-- The player must ALWAYS roll the die themselves. NEVER narrate the outcome before the tag.</pre>
+  <div class="grid2">
+    <div class="panel rv">
+      <h3><span class="dot">✦</span> The [KAST:] absolute rule</h3>
+      <pre class="prompt"><span class="pneg">❌ WRONG:</span> <span class="pd">"You slash at the goblin — the sword hits! 8 damage."</span>
+<span class="pok">✅ RIGHT:</span> <span class="pt">"You slash at the goblin! [KAST: 1d20+5 | ATTACK vs AC 13]"</span></pre>
+      <p class="stat">The player <b>always</b> rolls. The DM narrates <b>only after</b> the result returns as [Resultat:]. Advantage/disadvantage is declared in the tag itself.</p>
+    </div>
+    <div class="panel rv">
+      <h3><span class="dot">✦</span> The DC scale</h3>
       <table class="dc">
         <tr><th>Difficulty</th><th>DC</th></tr>
         <tr><td>Easy</td><td class="mono">8–10</td></tr>
@@ -622,60 +694,8 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
         <tr><td>Very hard</td><td class="mono">20–22</td></tr>
         <tr><td>Nearly impossible</td><td class="mono">25+</td></tr>
       </table>
-      <p>Mechanical advantages (Bardic Inspiration, Bless, Guidance…) must be <b>mentioned with their die</b> in the narration — <em>"A warm melody fills you — you gain Bardic Inspiration (1d6)"</em> — so the Guardian can create the dice button. Active resources must be reminded when appropriate.</p>
-    </div></div>
-  </div>
-
-  <div class="exp rv">
-    <button class="exp-toggle" id="exp-layer4-toggle" onclick="toggleExp('layer4')" aria-expanded="false">
-      <span class="caret">▸</span><span><span class="et-t">Layer 4 — Conditional injection: combat vs narrative</span><span class="et-d">only the prompt the turn needs</span></span>
-    </button>
-    <div class="exp-body" id="exp-layer4-body"><div class="exp-inner">
-      <p>Every turn the engine scans <code>state.npcs</code> for living enemies (<span class="stat"><b>relation == "fiende"</b></span> and <span class="stat"><b>alive</b></span>). Enemies present → <code>DM_COMBAT_PROMPT</code> (chat-first combat law, turn order, death saves); otherwise → <code>DM_NARRATIVE_PROMPT</code>. Combat rules only weigh on the context when combat is real.</p>
-      <p>Combat is <b>chat-first</b>: no battle arena. The DM opens it with the <span class="stat"><b>[STRID:name|HP|AC, name2|HP|AC]</b></span> tag; the engine owns the numbers — enemy attacks are code-rolled (see §5), and the Guardian tracks rounds and turn order from narration. Death saves follow D&D 5e exactly: nat 1 = two failures, nat 20 = wake at 1 HP, three of three decides.</p>
-      <p>NPCs are tagged on introduction — <span class="stat"><b>[NPC:Morvaine|Enigmatic wizard|unknown]</b></span> — and a player can write <span class="stat"><b>@Name</b></span> to make that NPC answer in their own voice, with the DM allowed only brief interjections.</p>
-    </div></div>
-  </div>
-
-  <div class="exp rv">
-    <button class="exp-toggle" id="exp-layer5-toggle" onclick="toggleExp('layer5')" aria-expanded="false">
-      <span class="caret">▸</span><span><span class="et-t">Layer 5 — The TRUTH block</span><span class="et-d">authoritative state, compacted — the DM may never contradict it</span></span>
-    </button>
-    <div class="exp-body" id="exp-layer5-body"><div class="exp-inner">
-      <p><code>truth_block(state)</code> compacts the whole campaign state into a readable digest (HP, inventory, currency, known NPCs, quests, location, pinned facts) and ships it under a threat:</p>
-<pre class="prompt truth"><span class="pt">## SANNING (auktoritär — motsäg ALDRIG detta)</span> <span class="pd">/ TRUTH (authoritative — never contradict this)</span>
-<span class="pd">HP 21/26 · AC 15 · gold 15gp 4sp · longsword (equipped) · 2 quests active</span>
-<span class="pd">Pinmade fakta: "The Gray Gate has been sealed since the Sundering."</span></pre>
-      <p>Pinned facts are player-controlled truth — the only part of the world the model is forbidden to forget or revise.</p>
-    </div></div>
-  </div>
-
-  <div class="exp rv">
-    <button class="exp-toggle" id="exp-layer6-toggle" onclick="toggleExp('layer6')" aria-expanded="false">
-      <span class="caret">▸</span><span><span class="et-t">Layer 6 — Hierarchical memory + last turn's effects</span><span class="et-d">2 scenes · 2 chapters · 1 campaign arc — then yesterday's ledger</span></span>
-    </button>
-    <div class="exp-body" id="exp-layer6-body"><div class="exp-inner">
-      <p>Raw transcripts would drown the context, so memory is distilled into tiers and injected newest-first: the two most recent <b>scene summaries</b>, the two most recent <b>chapter summaries</b>, and the single <b>campaign arc</b> summary. Each is tagged with its turn or chapter number so the DM can reason about chronology.</p>
-      <p>Then the engine reports what <em>just happened mechanically</em>, from <code>meta.last_effects</code> — "Skada: 12 · Föremål: Torch · Tid: 2h" — so the DM can react to consequences it already caused. Finally: world (location, time, weather), known locations with travel times, lore, NPC list, quests and the character sheet.</p>
-      <p>Travel time is a formula the DM is handed verbatim: <span class="stat"><b>distance ÷ 10 × terrain modifier</b></span> — road 0.5, plains 0.6, forest 1.2, mountains 1.8, swamp 1.5, minimum half a day per journey.</p>
-    </div></div>
-  </div>
-
-  <div class="exp rv">
-    <button class="exp-toggle" id="exp-layer7-toggle" onclick="toggleExp('layer7')" aria-expanded="false">
-      <span class="caret">▸</span><span><span class="et-t">Layer 7 — Fact memory &amp; RAG</span><span class="et-d">the moving window: top 8 facts + top 4 semantic chunks, re-scored every turn</span></span>
-    </button>
-    <div class="exp-body" id="exp-layer7-body"><div class="exp-inner">
-      <p>After the prompt is assembled, the engine asks the fact register which stored facts are relevant <em>to this turn's message</em> and appends the winners as a small authoritative block the DM may never contradict — joined by the four best semantic chunks from the Qdrant index. Full mechanics in <a href="#s4" style="color:var(--gold-bright)">§4 — Fact Memory</a>.</p>
-<pre class="prompt facts"><span class="pt">## FACT REGISTER (authoritative — never contradict)</span>
-<span class="pd">- [NPC] Kaelen Voss bears the party no ill will (turn 12)</span>
-<span class="pd">- [PLATS] The Hollow Forge hides a second entrance behind the smithy (turn 8)</span></pre>
-    </div></div>
-  </div>
-
-  <div class="panel rv">
-    <h3><span class="dot">✦</span> The assembly order</h3>
-    <div class="stat"><b>1</b> Language directive → <b>2</b> Core prompt v28 → <b>3</b> Combat <i>or</i> Narrative → <b>4</b> TRUTH block + pinned facts → <b>5</b> Scene ×2, Chapter ×2, Arc ×1 → <b>6</b> Last turn's effects → <b>7</b> World &amp; locations &amp; travel rule → <b>8</b> Lore → <b>9</b> NPCs → <b>10</b> Quests → <b>11</b> Inventory &amp; character → <b>12</b> Fact memory &amp; RAG — top 8 facts · top 4 chunks (<a href="#s4" style="color:var(--gold-bright)">§4</a>)</div>
+      <p class="stat">Routine = auto-success. Pressure raises DC, preparation lowers it.</p>
+    </div>
   </div>
 </section>
 
@@ -686,48 +706,34 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     <h2 class="sec-title"><span class="sec-mark">◆</span>Fact Memory</h2>
     <div class="sec-rule"></div>
   </div>
-  <p class="sec-lede">Facts are extracted after every turn, ranked before every DM reply — and only the top eight make it into the prompt. Nothing is deleted; everything competes.</p>
+  <p class="sec-lede">Facts are extracted after every turn and ranked before every reply — only the top eight ship. Nothing is deleted; everything competes.</p>
+
+  <!-- Live ranking window: press next-turn and watch the set re-shuffle -->
+  <div class="fwin rv">
+    <div class="fwin-head">
+      <span>get_relevant_facts · limit 8 · + top 4 RAG chunks</span>
+      <button class="jb-btn" id="fact-next" onclick="factNext()">next turn ▸</button>
+    </div>
+    <div id="fact-list"></div>
+    <div class="cut-line">top 8 ship · the rest stay in the register</div>
+  </div>
 
   <div class="grid2">
-    <div class="panel rv">
-      <h3><span class="dot">✦</span> The register</h3>
-      <p>The extraction model reads every Guardian POST and stores durable facts in a per-campaign <span class="stat"><b>FactRegister</b></span> (facts.json): people, places, promises, grudges, discoveries. Each entry carries its <span class="stat"><b>category</b></span>, <span class="stat"><b>source turn</b></span>, <span class="stat"><b>mentions</b></span>, <span class="stat"><b>confidence</b></span>, and a <span class="stat"><b>relevance</b></span> score between 0.2 and 1.0.</p>
-      <p>Facts never collide blindly: a new fact that replaces an old one sets <span class="stat"><b>superseded_by</b></span> on its predecessor — replaced facts are excluded from the active set forever.</p>
-    </div>
     <div class="panel rv">
       <h3><span class="dot">✦</span> The ranking</h3>
-      <p>Before each DM turn, every active fact is scored against the player's message:</p>
-      <p class="stat" style="font-size:.9rem">score = (keyword-overlap + recency + mentions) × relevance-weight × confidence-weight</p>
-      <p><span class="stat"><b>Recency</b></span> adds up to +30% for newer facts · <span class="stat"><b>mentions</b></span> add up to +25% for facts the story keeps returning to · a compacted fact's <span class="stat"><b>relevance</b></span> cuts its score by up to −50%. The <span class="stat"><b>top 8</b></span> are injected as an authoritative block, joined by <span class="stat"><b>4 semantic chunks</b></span> from the Qdrant index (transcript · lore · summaries).</p>
-    </div>
-  </div>
-
-  <div class="term dm rv">
-    <div class="term-bar"><i></i><i></i><i></i><span>get_relevant_facts · limit 8 · scores</span></div>
-    <div class="term-body">
-      <div><span class="c-dim"># player message: "I ask Kaelen about the Hollow Forge…"</span></div>
-      <div><span class="c-gold">0.81</span> <span class="c-teal">[NPC]</span> Kaelen Voss bears the party no ill will (turn 12)</div>
-      <div><span class="c-gold">0.74</span> <span class="c-teal">[PLATS]</span> The Hollow Forge hides a second entrance behind the smithy (turn 8)</div>
-      <div><span class="c-gold">0.31</span> <span class="c-amb">[HÄNDELSE]</span> The north gate guard lost his purse to a pickpocket (turn 3)</div>
-      <div><span class="c-dim">…more compete — only the top 8 ship. The 0.31 fact loses the window this turn.</span></div>
-    </div>
-  </div>
-
-  <div class="grid2">
-    <div class="panel rv">
-      <h3><span class="dot">✦</span> When facts fall out</h3>
-      <p><span class="stat"><b>Superseded</b></span> — replaced by a newer, truer fact; never injected again.</p>
-      <p><span class="stat"><b>Not hot enough</b></span> — a turn with no keyword overlap and few mentions filters the fact out for that turn (the moving window).</p>
-      <p><span class="stat"><b>Recency decay</b></span> — as the campaign grows, old turns score less; old facts sink below the top-8 cut.</p>
-      <p><span class="stat"><b>Compaction (every 50 turns)</b></span> — an archivist LLM reads up to 80 active facts and marks the stale ones; their relevance drops to <span class="stat"><b>0.2</b></span> — a permanent −50% unless the story re-mentions them hard.</p>
-      <p><span class="stat"><b>Pinned facts</b></span> are the exception: player-pinned truth (the <span class="stat"><b>/pin</b></span> command) is injected uncapped in every TRUTH block and never falls out.</p>
+      <pre class="prompt"><span class="pd">score = (keyword-overlap + recency + mentions)</span>
+        <span class="pd">×</span> <span class="pk">relevance-weight</span> <span class="pd">×</span> <span class="pk">confidence-weight</span></pre>
+      <p class="stat">Recency <b>+30%</b> · mentions <b>+25%</b> · compacted relevance <b>−50%</b>. Superseded facts never ship again.</p>
     </div>
     <div class="panel rv">
-      <h3><span class="dot">✦</span> Nothing is deleted</h3>
-      <p>The register keeps every fact forever — eviction is only ever <em>ranking</em>. A fact that loses the window today can win it back tomorrow if the story returns to it; that is what makes a 200-turn campaign remember turn 3 <em>when it matters</em>.</p>
-      <div class="tag-row">
-        <span class="tg g">limit 8</span><span class="tg">top_k 4 RAG</span><span class="tg">compact every 50 turns</span><span class="tg p">pinned = never evicted</span>
-      </div>
+      <h3><span class="dot">✦</span> The background rhythm</h3>
+      <p class="stat">
+        every <b>2</b> turns — fact extraction<br>
+        every <b>5</b> turns — Qdrant re-index<br>
+        every <b>10</b> turns — active threads re-woven<br>
+        every <b>50</b> turns — compaction: an archivist LLM drops stale facts to relevance <b>0.2</b>
+      </p>
+      <p class="stat">Pinned facts (<b>/pin</b>) never fall out — injected uncapped, forever.</p>
     </div>
   </div>
 </section>
@@ -739,48 +745,46 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     <h2 class="sec-title"><span class="sec-mark">◆</span>The Guardian Contract</h2>
     <div class="sec-rule"></div>
   </div>
-  <p class="sec-lede">After the DM speaks, the Guardian must answer with exactly one thing: a JSON object with all 44 fields present. Never an explanation, never a missing key. Watch the extraction happen.</p>
+  <p class="sec-lede">After the DM speaks, the Guardian answers with exactly one thing: a JSON object, all 44 fields present, never an explanation.</p>
+
+  <div class="g44 rv">
+    <div class="g44-group c-combat"><h4>⚔ Health &amp; combat — 12</h4><div class="gf">
+      <b>damage</b><b>healing</b><b>death</b><b>combat_start</b><b>combat_round</b><b>combat_end</b><b>player_attacks</b><b>ally_attacks</b><b>ally_damage</b><b>enemy_attacks</b><b>combat_events</b><b>initiative_entries</b></div></div>
+    <div class="g44-group c-cond"><h4>🔥 Conditions &amp; resources — 8</h4><div class="gf">
+      <b>spell_slots_spend</b><b>inspiration_gain</b><b>inspiration_spend</b><b>exhaustion_change</b><b>cover_set</b><b>training_update</b><b>enemy_actions</b><b>status_apply</b></div></div>
+    <div class="g44-group c-prog"><h4>⭐ Progression — 3</h4><div class="gf">
+      <b>xp</b><b>spells_add</b><b>character_updates</b></div></div>
+    <div class="g44-group c-item"><h4>🪙 Possessions — 3</h4><div class="gf">
+      <b>items_add</b><b>items_remove</b><b>currency</b></div></div>
+    <div class="g44-group c-quest"><h4>⚑ Quests — 3</h4><div class="gf">
+      <b>quests_new</b><b>quests_completed</b><b>quests_failed</b></div></div>
+    <div class="g44-group c-npc"><h4>👥 People — 5</h4><div class="gf">
+      <b>npcs_new</b><b>npc_relations</b><b>npcs_near</b><b>npc_notes</b><b>npc_name_reveals</b></div></div>
+    <div class="g44-group c-world"><h4>🗺 World &amp; time — 8</h4><div class="gf">
+      <b>locations_new</b><b>current_location</b><b>world_lore</b><b>time_passed</b><b>rest</b><b>new_day</b><b>day_summary</b><b>logbook</b></div></div>
+    <div class="g44-group c-fix"><h4>✎ Grants &amp; fixes — 2</h4><div class="gf">
+      <b>roll_grants</b><b>corrections</b></div></div>
+  </div>
 
   <div class="json-box rv">
     <div class="jb-head">
-      <span class="jb-title">guardian_extract_mechanics → JSON (44-field contract)</span>
+      <span class="jb-title">guardian_extract_mechanics → JSON</span>
       <button class="jb-btn" id="json-replay" onclick="replayJson()">↻ replay extraction</button>
     </div>
-    <pre id="json-demo" aria-live="polite"></pre>
+    <pre id="json-demo"></pre>
   </div>
 
   <div class="grid2">
     <div class="panel rv">
-      <h3><span class="dot">✦</span> The reading</h3>
-      <p>The Guardian receives the DM reply, the player's action, the last <b>6 transcript entries</b> and a compact state snapshot. It is a paranoid reader: implicit damage ("the cold bites", "your breath catches") must be caught; a potion drunk is a <span class="stat"><b>roll grant</b></span> (2d4+2), never a fixed number; a "you see a book" is <b>not</b> an item — only "you take the book" is.</p>
-      <p>If the reply contains invalid JSON, the engine appends a correction — <em>"Returnera ENDAST JSON-objektet, inget annat."</em> — and retries once. Two failures return the empty contract and the turn continues untouched.</p>
+      <h3><span class="dot">✦</span> Paranoid reading</h3>
+      <p>It gets the reply, the action, the last <b>6 transcript entries</b> and a compact state snapshot. Implicit damage ("the cold bites") must be caught; a potion drunk is a <b>roll grant</b> (2d4+2), never a fixed number; "you see a book" is not an item — only "you take the book" is.</p>
+      <p class="stat">Invalid JSON → one repair retry. Two failures → the empty contract. <b>The turn always survives.</b></p>
     </div>
     <div class="panel rv">
-      <h3><span class="dot">✦</span> The rules it obeys</h3>
-      <p><span class="stat"><b>XP:</b></span> only kills, quests, milestones, complex puzzles — <b>never</b> walking, resting, trading or small talk. Most turns pay zero XP. Quests pay their stored reward automatically, never double-paid.</p>
-      <p><span class="stat"><b>Items:</b></span> every item needs D&amp;D stats, a <b>weight</b>, and a <b>lore line</b> from the campaign's own world. The player never equips themselves — the DM decides what is worn.</p>
-      <p><span class="stat"><b>NPCs:</b></span> updates are aggressive — implicit relation shifts (helping → allied, threatening → enemy), name reveals, secrets. <span class="stat"><b>Corrections:</b></span> retract anything the DM implied that shouldn't have happened.</p>
-      <p><span class="stat"><b>Enemy attacks:</b></span> the Guardian names the attacker only — the <b>server engine</b> rolls d20 + attack bonus vs your AC (cover, crit, your resistances included) and rolls the damage from the enemy's <code>damage_dice</code>. The DM narrates the attack but never its outcome; the LLM never decides whether an enemy hits.</p>
+      <h3><span class="dot">✦</span> Combat never runs on LLM fiat</h3>
+      <p><b>enemy_attacks</b> names the attacker only. The engine rolls d20 + attack bonus vs your AC — cover, crits, disadvantage from conditions, resistances — then rolls damage from the enemy's <code>damage_dice</code>. Conditions apply real effects and tick each round in code.</p>
+      <p class="stat">XP: only kills, quests, milestones, puzzles — never walking or small talk. Most turns pay <b>zero</b>.</p>
     </div>
-  </div>
-
-  <div class="exp rv">
-    <button class="exp-toggle" id="exp-g1-toggle" onclick="toggleExp('g1')" aria-expanded="false">
-      <span class="caret">▸</span><span><span class="et-t">Contract groups at a glance</span><span class="et-d">the 44 fields, grouped by what they mutate</span></span>
-    </button>
-    <div class="exp-body" id="exp-g1-body"><div class="exp-inner">
-      <div class="grid2">
-        <div class="stat"><b class="v">Health &amp; combat</b><br>damage · healing · death · combat_start · combat_round · combat_end · player_attacks · ally_attacks · ally_damage · enemy_attacks · combat_events · initiative_entries</div>
-        <div class="stat"><b class="v">Progression</b><br>xp · spells_add · character_updates — level-ups pay out automatically from the one XP table</div>
-        <div class="stat"><b class="v">Possessions</b><br>items_add · items_remove · currency (pp/gp/sp/cp)</div>
-        <div class="stat"><b class="v">Quests</b><br>quests_new · quests_completed · quests_failed</div>
-        <div class="stat"><b class="v">People</b><br>npcs_new · npc_relations · npcs_near · npc_notes · npc_name_reveals</div>
-        <div class="stat"><b class="v">World &amp; time</b><br>locations_new · current_location · world_lore · time_passed · rest · new_day · day_summary · logbook</div>
-        <div class="stat"><b class="v">Conditions &amp; resources</b><br>spell_slots_spend · inspiration_gain · inspiration_spend · exhaustion_change · cover_set · training_update · enemy_actions · status_apply</div>
-        <div class="stat"><b class="v">Grants &amp; fixes</b><br>roll_grants (Bardic Inspiration → 1d6 button) · corrections (retract &amp; explain)</div>
-      </div>
-      <p style="margin-top:.8rem">Combat never runs on LLM fiat. The live pipeline is <span class="stat"><b>enemy_attacks</b></span>: the Guardian extracts the <b>attacker's name only</b> (plus a damage type when the DM mentions the weapon) — then the code rolls d20 + attack bonus vs your AC, applies cover bonuses, disadvantage from conditions, crits on a natural 20, and rolls the damage from the enemy's <code>damage_dice</code> against your resistances. The full arithmetic lands in the combat log. Condition statuses are wired the same way: a grapple that becomes <b>restrained</b> applies real effects (disadvantage on attacks) and is ticked each round by the engine, not by prose. The legacy <span class="stat"><b>status_apply</b></span> and <span class="stat"><b>enemy_actions</b></span> fields still ride in the contract, but the deterministic combat code is what acts. The audit that shaped this page also found (and fixed) the shape-conflict landmine where a day-entry dict could crash the logbook append inside a swallowed background task, silently eating a turn's effects.</p>
-    </div></div>
   </div>
 </section>
 
@@ -791,278 +795,227 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     <h2 class="sec-title"><span class="sec-mark">◆</span>The Dice Engine</h2>
     <div class="sec-rule"></div>
   </div>
-  <p class="sec-lede">The single most sacred rule: <b>in your fights, the model never decides the numbers.</b> The DM requests rolls, the Guardian judges them, and the engine rolls — on the server for enemy attacks and your weapon damage, through your dice button for your own checks. Try it below; this roller runs the same notation parser as the backend.</p>
+  <p class="sec-lede">The most sacred rule: in your fights, the model never decides the numbers. The DM requests rolls, the Guardian judges them, the engine rolls.</p>
 
   <div class="roller rv">
-    <div class="r-label">✦ dice console — /api/dice · dice_roll(notation)</div>
+    <div class="r-label">✦ dice console — same notation parser as the backend</div>
     <div class="r-row">
-      <input class="r-expr" id="dice-expr" value="1d20+3" spellcheck="false" aria-label="Dice expression" onkeydown="if(event.key==='Enter'){rollNow()}">
-      <button class="r-btn" onclick="quickDice('1d20')">d20</button>
-      <button class="r-btn" onclick="quickDice('1d20+5')">d20+5</button>
-      <button class="r-btn" onclick="quickDice('2d6')">2d6</button>
+      <input class="r-expr" id="dice-expr" value="1d20+3" aria-label="Dice notation" spellcheck="false"
+             onkeydown="if(event.key==='Enter')rollNow()">
+      <button class="r-btn" onclick="rollNow()">⚄ Roll</button>
+      <label class="r-adv"><input type="checkbox" id="dice-adv" onchange="toggleAdv()"> ADVANTAGE (2d20)</label>
+      <button class="r-btn" onclick="quickDice('d20')">d20</button>
       <button class="r-btn" onclick="quickDice('2d6+2')">2d6+2</button>
       <button class="r-btn" onclick="quickDice('1d12')">d12</button>
       <button class="r-btn" onclick="quickDice('1d8')">d8</button>
-      <label class="r-adv" title="Roll two d20, keep the best — D&D advantage"><input type="checkbox" id="dice-adv" onchange="toggleAdv()"> ADVANTAGE (2d20)</label>
-      <button class="r-btn go-btn" onclick="rollNow()">⚄ Roll</button>
     </div>
-    <div class="dice-stage" id="dice-stage" aria-live="polite"></div>
+    <div class="dice-stage" id="dice-stage"></div>
     <div class="r-result" id="dice-result"></div>
     <div class="r-crit" id="dice-crit"></div>
-    <div class="r-history" id="dice-history" aria-label="Roll history"></div>
-  </div>
-
-  <div class="panel rv">
-    <h3><span class="dot">✦</span> Fair in both directions</h3>
-    <p>Your combat numbers — your attacks and every enemy attack — are rolled by code, never by the model. When <b>you</b> act, the DM's <span class="stat"><b>[KAST:]</b></span> request spawns a real dice button — the roll is resolved by <span class="stat"><b>POST /api/dice</b></span> on the server (Python <span class="stat"><b>secrets</b></span>), animates in the chat, and returns as <span class="stat"><b>[Resultat:]</b></span>. When your attack <b>hits</b>, the server engine rolls the damage from the weapon's <code>damage_dice</code> — not the DM. When an <b>enemy attacks</b>, the Guardian extracts the attacker's name only, and the engine rolls d20 + attack bonus vs your AC plus the damage dice, with crits, cover and resistances applied. The DM narrates <em>that</em> the blow comes — never the roll, never the damage number.</p>
-    <p>Outside the attack economy, a player-declared action may resolve through the DM's narration with server-applied tags — <span class="stat"><b>[SKADA:]</b></span> on living creatures applies <b>only outside combat or from the environment</b>. Every number between you and an enemy, in both directions, is engine-rolled.</p>
-    <p>The algorithm is server-side Python's <span class="stat"><b>secrets</b></span> module — cryptographically secure randomness (<span class="stat"><b>secrets.randbelow(sides) + 1</b></span>), identical for player and enemy dice. Notation like <span class="stat"><b>1d20+3</b></span> is parsed and validated — <span class="stat"><b>1–100 dice, 2–1000 sides</b></span> — before anything is rolled. The demo roller above is a JavaScript copy of the same notation parser — a local preview only. One honest caveat: if <code>/api/dice</code> cannot be reached, the client falls back to a local roll — and that fallback is <b>marked in the chat message</b>, so you always know which numbers came from the server.</p>
-    <p>Because the model never sees the outcome before it is committed, the tale can lie — but the dice cannot.</p>
+    <div class="r-history" id="dice-history"></div>
   </div>
 
   <div class="grid2">
     <div class="panel rv">
-      <h3><span class="dot">✦</span> The two-phase flow</h3>
-      <p><span class="stat"><b>1 ·</b></span> Guardian PRE reads the action and decides the outcome is uncertain. <span class="stat"><b>2 ·</b></span> The DM writes the <span class="stat"><b>[KAST: 1d20+MOD | LABEL (DC X)]</b></span> tag — the only syntax that can spawn a die. <span class="stat"><b>3 ·</b></span> The frontend renders a dice button; the click sends the result back as <span class="stat"><b>[Resultat: …]</b></span>. <span class="stat"><b>4 ·</b></span> The DM must narrate the outcome immediately — never "what do you do?" before resolving.</p>
-      <p>Advantage/disadvantage is declared in the tag itself (<span class="stat"><b>ADVANTAGE</b></span>/<span class="stat"><b>FÖRDEL</b></span>): two d20, keep best/worst.</p>
+      <h3><span class="dot">✦</span> Two-phase flow</h3>
+      <p class="stat"><b>1</b> Guardian PRE spots uncertainty · <b>2</b> DM writes [KAST: 1d20+MOD | LABEL (DC X)] — the only syntax that spawns a die · <b>3</b> your click resolves via <b>POST /api/dice</b> (Python <code>secrets</code>, 1–100 dice, 2–1000 sides) and returns as [Resultat:] · <b>4</b> the DM narrates the outcome — never before.</p>
+      <p class="stat">Honest caveat: if /api/dice is unreachable the client rolls locally — and that fallback is <b>marked in the chat</b>. You always know which numbers came from the server.</p>
     </div>
     <div class="panel rv">
       <h3><span class="dot">✦</span> Edge rules encoded</h3>
-      <p><span class="stat"><b>Nat 20</b></span> = critical triumph · <span class="stat"><b>nat 1</b></span> = catastrophe. <span class="stat"><b>Death saves:</b></span> 3 successes vs 3 failures; nat 1 counts as two failures, nat 20 wakes the character at 1 HP. <span class="stat"><b>Healing potions</b></span> are always rolled (2d4+2) by the player — the DM may never narrate a fixed heal.</p>
-      <p>Spell-slot dice and buffs (Bless, Guidance, Heroism) arrive through <span class="stat"><b>roll_grants</b></span> — Guardian reads the narration and creates the button automatically.</p>
+      <p class="stat"><b>Nat 20</b> critical · <b>nat 1</b> catastrophe. Death saves: 3 vs 3 — nat 1 counts double, nat 20 wakes you at 1 HP. Potions are always rolled (2d4+2). Buffs arrive through <b>roll_grants</b> — Guardian reads the narration and creates the button.</p>
+      <p class="stat">Because the model never sees the outcome before it is committed — <b>the tale can lie, the dice cannot</b>.</p>
     </div>
   </div>
 </section>
 
 <!-- ═══════════ §7 SPELL SLOTS & RESTS ═══════════ -->
-<section class="sec rv" id="s10" data-sec="s10">
+<section class="sec rv" id="s7" data-sec="s7">
   <div class="sec-head">
     <span class="sec-num">§7</span>
     <h2 class="sec-title"><span class="sec-mark">◆</span>Spell Slots &amp; Rests</h2>
     <div class="sec-rule"></div>
   </div>
-  <p class="sec-lede">Magic is a resource, and rest is how you get it back. Spell slots live on your sheet as one pool — <span class="stat"><b>spell_slots {current · max}</b></span> — and every rest rule below is applied by the engine, never by prose.</p>
+  <p class="sec-lede">Magic is a resource, and rest is how you get it back. One pool, level-as-cost — every rest rule applied by the engine, never by prose.</p>
+
+  <div class="slotbox rv">
+    <div class="r-label" style="font-family:var(--font-display);font-size:.7rem;letter-spacing:.28em;text-transform:uppercase;color:var(--gold-bright);margin-bottom:.9rem">✦ spell_slots {current · max} — live pool</div>
+    <div class="slot-pool" id="slot-pool" aria-label="Spell slot pool"></div>
+    <div class="slot-status" id="slot-status"><b>4/4</b> — the well is full</div>
+    <div class="slot-btns">
+      <button class="jb-btn" onclick="castSpell(1)">cast level 1</button>
+      <button class="jb-btn" onclick="castSpell(3)">cast level 3</button>
+      <button class="jb-btn" onclick="castSpell(0)">cantrip (free)</button>
+      <button class="jb-btn" onclick="longRest()">long rest (8h)</button>
+      <button class="jb-btn" onclick="shortRest()">short rest (1 hit die)</button>
+    </div>
+  </div>
 
   <div class="grid2">
     <div class="panel rv">
-      <h3><span class="dot">✦</span> Spell slots — level as cost</h3>
-      <p>Casters carry <b>one pool</b>, sized from the class's 5e slot table (full casters 2 → 3 → 4…, warlock pact magic 1 → 2 → 2…), granted at character creation and refilled to the new max at every level-up.</p>
-      <p>Casting a spell <b>spends its level from the pool</b>: a level-3 casting costs 3, a level-1 costs 1, cantrips are free. When the Guardian extracts a <span class="stat"><b>spell_slots_spend</b></span> entry, the <b>code</b> decrements the pool — the model names the spell and level, never the arithmetic.</p>
-      <p>Pool empty? The cast is <b>blocked — and you see it</b>: the Guardian's summary reports the blocked attempt in the chat, so a dry well is never silent. Watch your pool live on the character sheet under <span class="stat"><b>spell_slots</b></span>.</p>
+      <h3><span class="dot">✦</span> Level as cost</h3>
+      <p>Casting spends <b>the spell's level</b> from the pool — a level-3 casting costs 3, cantrips are free. The Guardian extracts <code>spell_slots_spend {name, level}</code>; the code decrements. Pool empty → the cast is <b>blocked, and the chat says so</b>. A dry well is never silent.</p>
     </div>
     <div class="panel rv">
-      <h3><span class="dot">✦</span> Rests — long &amp; short</h3>
-      <p><span class="stat"><b>Long rest (8 h):</b></span> HP to maximum, <b>all spell slots</b> restored, <b>half your hit dice</b> recovered (minimum one), and <b>exhaustion drops by 1</b>. The engine applies all of it — and if eight hours pass in the narration, the rest lands mechanically even if the DM forgets the tag.</p>
-      <p><span class="stat"><b>Short rest:</b></span> spend <b>one hit die</b> — the <b>server dice</b> roll it (1d6–1d12 by class) plus your CON modifier, and the heal is applied to your HP. The Guardian's summary shows the roll and how many dice remain.</p>
-      <p>Exhaustion follows the 5e ladder (level 1: disadvantage on ability checks … level 6: death) — and only rest, not narration, moves it.</p>
+      <h3><span class="dot">✦</span> Rests</h3>
+      <p><b>Long rest (8h):</b> HP to max, all slots back, half your hit dice (min 1), exhaustion −1. If eight hours pass in narration, the rest lands even if the DM forgets the tag.<br>
+      <b>Short rest:</b> spend one hit die — server dice roll it (1d6–1d12 by class) + CON. Exhaustion follows the 5e ladder; only rest moves it.</p>
     </div>
   </div>
 </section>
 
-<!-- ═══════════ §8 TTS CACHE ═══════════ -->
-<section class="sec rv" id="s7" data-sec="s7">
+<!-- ═══════════ §8 VOICE & TTS ═══════════ -->
+<section class="sec rv" id="s8" data-sec="s8">
   <div class="sec-head">
     <span class="sec-num">§8</span>
     <h2 class="sec-title"><span class="sec-mark">◆</span>Voice &amp; the TTS Cache</h2>
     <div class="sec-rule"></div>
   </div>
-  <p class="sec-lede">Every DM line can be spoken aloud — but synthesis is billed per character. So the engine never speaks the same line twice: a small in-memory cache with a ten-minute memory and a hard cap of 64 voices.</p>
+  <p class="sec-lede">Synthesis is billed per character — so the engine never speaks the same line twice. 64 slots, ten-minute memory.</p>
 
-  <div class="flowbox rv">
-    <svg viewBox="0 0 880 190" role="img" aria-label="TTS pipeline: text to segments to synthesis to cache to speaker">
-      <g class="fn gold"><rect x="20" y="70" width="130" height="44" rx="2" fill="#14121a" stroke="rgba(212,169,44,.5)"/><text class="f-label" x="85" y="88" text-anchor="middle">DM TEXT</text><text class="f-sub" x="85" y="102" text-anchor="middle">"the wind howls…"</text></g>
-      <g class="fn bone"><rect x="200" y="70" width="130" height="44" rx="2" fill="#12121a" stroke="#2a2a3a"/><text class="f-label" x="265" y="88" text-anchor="middle">SEGMENTER</text><text class="f-sub" x="265" y="102" text-anchor="middle">≤900 chars / sentence</text></g>
-      <g class="fn pur"><rect x="380" y="70" width="130" height="44" rx="2" fill="#14121a" stroke="rgba(123,79,212,.55)"/><text class="f-label" x="445" y="88" text-anchor="middle">SYNTHESIZER</text><text class="f-sub" x="445" y="102" text-anchor="middle">StepFun / Qwen · 1.1×</text></g>
-      <g class="fn teal"><rect x="560" y="70" width="130" height="44" rx="2" fill="#14121a" stroke="rgba(78,138,147,.55)"/><text class="f-label" x="625" y="88" text-anchor="middle">CACHE</text><text class="f-sub" x="625" y="102" text-anchor="middle">64 slots · TTL 600s</text></g>
-      <g class="fn ember"><rect x="740" y="70" width="120" height="44" rx="2" fill="#14100a" stroke="rgba(212,105,30,.5)"/><text class="f-label" x="800" y="88" text-anchor="middle">SPEAKER</text><text class="f-sub" x="800" y="102" text-anchor="middle">MP3 in browser</text></g>
-      <path class="flowline anim gold" id="t1" d="M150 92 H200"/>
-      <circle class="dot" r="3"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#t1"/></animateMotion></circle>
-      <path class="flowline anim" id="t2" d="M330 92 H380"/>
-      <circle class="dot" r="3" fill="#e0e0ec"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#t2"/></animateMotion></circle>
-      <path class="flowline anim pur" id="t3" d="M510 92 H560"/>
-      <circle class="dot pur" r="3"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#t3"/></animateMotion></circle>
-      <path class="flowline anim teal" id="t4" d="M690 92 H740"/>
-      <circle class="dot teal" r="3"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#t4"/></animateMotion></circle>
-      <!-- cache hit shortcut -->
-      <path class="flowline anim ember" id="t5" d="M625 114 V140 H800 V114"/>
-      <circle class="dot" r="3" fill="#d4691e"><animateMotion dur="2.2s" repeatCount="indefinite"><mpath href="#t5"/></animateMotion></circle>
-      <text class="flow-label" x="660" y="156" text-anchor="middle">HIT → skip synthesis, serve MP3</text>
-      <text class="flow-label" x="265" y="60" text-anchor="middle">split at sentence ends</text>
-      <text class="flow-label" x="625" y="60" text-anchor="middle">miss → synth → store</text>
-    </svg>
-    <div class="legend">
-      <span><i style="background:var(--gold)"></i>text</span>
-      <span><i style="background:var(--arcane)"></i>provider call</span>
-      <span><i style="background:var(--teal)"></i>cache</span>
-      <span><i style="background:var(--ember)"></i>hit path</span>
-    </div>
-  </div>
-
-  <div class="grid2">
-    <div class="panel rv">
-      <h3><span class="dot">✦</span> How a line becomes voice</h3>
-      <p>Long DM messages (2000+ chars) are split at sentence boundaries into segments of at most <span class="stat"><b>900 characters</b></span> — Qwen's synthesis chokes on long texts, so each segment is synthesized separately and the MP3 frames are stitched back into one file. Truncation at 1000 chars falls back to the last sentence boundary, never mid-word.</p>
-      <p>Providers: <span class="stat"><b>StepFun</b></span> (Step Plan) and <span class="stat"><b>Qwen</b></span> (Token Plan), both rendered ~10% faster (1.1× speed) so narration never drags.</p>
-    </div>
-    <div class="panel rv">
-      <h3><span class="dot">✦</span> The cache contract</h3>
-      <p><span class="stat"><b>Key</b></span> = provider + voice + normalized text hash. <span class="stat"><b>TTL</b></span> = 600 seconds — a stale entry is a miss and is evicted. <span class="stat"><b>Capacity</b></span> = 64 entries; at the cap the oldest (insertion order) is evicted. <span class="stat"><b>Usage</b></span> is still booked on every request — chars, estimated tokens (~4 chars/token), and true MP3 duration computed by parsing the audio frames (no ffmpeg needed) into each user's ledger.</p>
-      <p>Try the simulation below: request the same line twice and watch the second one hit.</p>
-    </div>
+  <div class="panel rv">
+    <h3><span class="dot">✦</span> How a line becomes voice</h3>
+    <p class="stat">Long messages split at sentence boundaries into ≤<b>900-char</b> segments → each synthesized (StepFun or Qwen, ~1.1× speed) → MP3 frames stitched into one file. <b>Key</b> = provider + voice + style + text · <b>TTL</b> 600s · <b>cap</b> 64, oldest evicted. Usage (chars, tokens, true MP3 duration) is booked to your ledger on every request — cache hits included, minus the API call.</p>
   </div>
 
   <div class="term rv">
     <div class="term-bar"><i></i><i></i><i></i><span>tts_cache_sim · _TTS_CACHE · max 64 · ttl 600s</span></div>
     <div class="term-body">
-      <div class="tts-sim">
-        <button class="r-btn go-btn" onclick="simTts('repeat')" style="margin-right:.5rem">🗣 Request "the wind howls…" again</button>
-        <button class="r-btn" onclick="simTts('new')">🗣 Request a new line</button>
-        <div class="tts-cache" id="tts-cache"></div>
-        <div class="tts-log" id="tts-log">$ <span class="d">cache empty — first request will miss</span></div>
+      <div style="margin-bottom:.6rem;display:flex;gap:.5rem;flex-wrap:wrap">
+        <button class="jb-btn" onclick="simTts('repeat')">🗣 request the same line again</button>
+        <button class="jb-btn" onclick="simTts('new')">🗣 request a new line</button>
       </div>
+      <div class="tts-cache" id="tts-cache"></div>
+      <div class="tts-log" id="tts-log">$ cache empty — first request will miss</div>
     </div>
   </div>
 </section>
 
 <!-- ═══════════ §9 CHARACTER WEAVING ═══════════ -->
-<section class="sec rv" id="s8" data-sec="s8">
+<section class="sec rv" id="s9" data-sec="s9">
   <div class="sec-head">
     <span class="sec-num">§9</span>
     <h2 class="sec-title"><span class="sec-mark">◆</span>Character Weaving</h2>
     <div class="sec-rule"></div>
   </div>
-  <p class="sec-lede">An adventurer is not generated — it is woven, live, on an SSE stream, from a free-text dream into a finished D&amp;D sheet with inventory, story and stats, ready to preview, save or unravel and re-roll.</p>
-
-  <div class="flowbox rv">
-    <svg viewBox="0 0 880 190" role="img" aria-label="Character generation stream: prompt to SSE to LLM to JSON to preview">
-      <g class="fn pur"><rect x="20" y="70" width="130" height="44" rx="2" fill="#14121a" stroke="rgba(123,79,212,.55)"/><text class="f-label" x="85" y="88" text-anchor="middle">PLAYER DREAM</text><text class="f-sub" x="85" y="102" text-anchor="middle">"a scarred ranger…"</text></g>
-      <g class="fn gold"><rect x="200" y="70" width="150" height="44" rx="2" fill="#14121a" stroke="rgba(212,169,44,.5)"/><text class="f-label" x="275" y="88" text-anchor="middle">/vault/generate/stream</text><text class="f-sub" x="275" y="102" text-anchor="middle">SSE · temp 0.95 · max tokens + high reasoning</text></g>
-      <g class="fn bone"><rect x="400" y="70" width="130" height="44" rx="2" fill="#12121a" stroke="#2a2a3a"/><text class="f-label" x="465" y="88" text-anchor="middle">LLM WEAVES</text><text class="f-sub" x="465" y="102" text-anchor="middle">reasoning + content deltas</text></g>
-      <g class="fn ember"><rect x="580" y="70" width="130" height="44" rx="2" fill="#14100a" stroke="rgba(212,105,30,.5)"/><text class="f-label" x="645" y="88" text-anchor="middle">EXTRACT + FINALIZE</text><text class="f-sub" x="645" y="102" text-anchor="middle">_extract_json → inventory</text></g>
-      <g class="fn teal"><rect x="760" y="70" width="100" height="44" rx="2" fill="#14121a" stroke="rgba(78,138,147,.55)"/><text class="f-label" x="810" y="88" text-anchor="middle">PREVIEW</text><text class="f-sub" x="810" y="102" text-anchor="middle">Save / Reroll</text></g>
-      <path class="flowline anim pur" id="w1" d="M150 92 H200"/>
-      <circle class="dot pur" r="3"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#w1"/></animateMotion></circle>
-      <path class="flowline anim gold" id="w2" d="M350 92 H400"/>
-      <circle class="dot" r="3"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#w2"/></animateMotion></circle>
-      <path class="flowline anim" id="w3" d="M530 92 H580"/>
-      <circle class="dot" r="3" fill="#e0e0ec"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#w3"/></animateMotion></circle>
-      <path class="flowline anim ember" id="w4" d="M710 92 H760"/>
-      <circle class="dot" r="3" fill="#d4691e"><animateMotion dur="1.5s" repeatCount="indefinite"><mpath href="#w4"/></animateMotion></circle>
-      <path class="flowline anim teal" id="w5" d="M810 114 V140 H85 V114"/>
-      <circle class="dot teal" r="3"><animateMotion dur="2.6s" repeatCount="indefinite"><mpath href="#w5"/></animateMotion></circle>
-      <text class="flow-label" x="470" y="160" text-anchor="middle">reroll → new stream · save → vault (survives campaign deletion)</text>
-    </svg>
-  </div>
+  <p class="sec-lede">An adventurer is not generated — it is woven, live, on an SSE stream: a free-text dream in, a finished D&amp;D sheet out.</p>
 
   <div class="grid2">
     <div class="panel rv">
       <h3><span class="dot">✦</span> The weave</h3>
-      <p>The most creative step in any adventure is the adventurer — the human at the table. The engine's job is to be a worthy partner: every DM turn, every character, every face is generated by <span class="stat"><b>FULL-SIZE models</b></span> at maximum token budget and high reasoning — <span class="stat"><b>Qwen 3.8 Max</b></span> with thinking always on (<span class="stat"><b>1M context</b></span>), <span class="stat"><b>DeepSeek V4</b></span> at high reasoning, <span class="stat"><b>StepFun 3.7 Flash</b></span> at high reasoning with a full <span class="stat"><b>32k budget</b></span>. No quantized small models, no context-window truncation, no artificial rate limits on reasoning, no token-capped thinking. The price is latency — a few extra seconds while the DM thinks before it speaks. That wait is the product: a world that reasons, not one that guesses.</p>
-      <p>The request is a single line — <em>"Skapa en karaktär: {prompt}"</em> — against <code>CHARACTER_PROMPT</code> at <span class="stat"><b>temperature 0.95</b></span> (the most creative setting in the whole engine) with a <span class="stat"><b>maximum token budget and high reasoning</b></span> — the same full-mind policy as the Dungeon Master, because the adventurer is the most creative step of all. The stream pushes two kinds of frames: <span class="stat"><b>reasoning</b></span> (the invisible thoughts) and <span class="stat"><b>content</b></span> (the growing character JSON), then a <span class="stat"><b>done</b></span> frame with tokens used, seconds elapsed and reasoning length.</p>
-      <p>The raw text is passed through <code>_extract_json</code>, then <code>_finalize_character_data</code> fills hit dice, ability modifiers, starting equipment and inventory. Token usage is booked to a lifetime ledger that survives even character deletion.</p>
+      <p>One line — <i>"Skapa en karaktär: {prompt}"</i> — against <code>CHARACTER_PROMPT</code> at <b>temperature 0.95</b>, the most creative setting in the engine, with <b>high reasoning</b> on full-size models. The stream pushes <b>reasoning</b> frames (the invisible thoughts), then <b>content</b> frames (the growing JSON), then <b>done</b> with tokens, seconds and reasoning length.</p>
+      <p class="stat">_extract_json → _finalize_character_data fills hit dice, modifiers, starting gear. Tokens book to a lifetime ledger that survives deletion.</p>
     </div>
     <div class="panel rv">
       <h3><span class="dot">✦</span> The vault</h3>
-      <p>Saved adventurers live in a <span class="stat"><b>vault</b></span> — one per account, not per campaign — so an adventurer survives a campaign's end. Each entry keeps the full sheet, inventory, story and painted avatar. Summoning into a campaign copies the adventurer into that campaign's state; rerolling spawns a fresh stream.</p>
-      <p>Avatars are painted separately by an image model — either from the player's <b>own words</b> or from an auto-built sheet prompt — and the status line always tells you which source won.</p>
+      <p>Saved adventurers live in a <b>vault</b> — one per account, not per campaign — so they outlive any adventure. Summoning copies the sheet into a campaign's state; rerolling spawns a fresh stream. Avatars are painted separately, from your words or an auto-built sheet prompt.</p>
     </div>
   </div>
 
   <div class="term rv">
-    <div class="term-bar"><i></i><i></i><i></i><span>sse_frames · vault_generate_stream</span></div>
-    <div class="term-body">
-      <div><span class="c-dim">POST /api/vault/generate/stream</span></div>
-      <div><span class="c-dim">{"prompt":"a scarred ranger who hunts the things that hunt villages","lang":"en"}</span></div>
-      <div>&nbsp;</div>
-      <div><span class="c-amb">data: {"type":"reasoning","text":"The player wants a ranger with a scar, a hunter… I will build…"}</span></div>
-      <div><span class="c-gold">data: {"type":"content","text":"{\"name\":\"Faelyndra\",\"race\":\"Half-elf\","}</span></div>
-      <div><span class="c-gold">data: {"type":"content","text":"\"class\":\"Ranger\",\"level\":1,\"hp\":{\"max\":12},"}</span></div>
-      <div><span class="c-gold">data: {"type":"content","text":"\"abilities\":{\"DEX\":{\"score\":16,\"mod\":3}},"}</span></div>
-      <div><span class="c-gold">data: {"type":"content","text":"\"story\":\"She carries the scar of the hollow…\"}}"}</span></div>
-      <div>&nbsp;</div>
-      <div><span class="c-teal">data: {"type":"done","ok":true,"time_s":31.2,"tokens":{…},</span></div>
-      <div><span class="c-teal">        "character":{…},"inventory":[{…longsword…},{…shortbow…}]}</span></div>
-      <div>&nbsp;</div>
-      <div><span class="c-dim"># frontend → preview card → [Save to Vault] [Unravel &amp; Reroll]</span></div>
+    <div class="term-bar"><i></i><i></i><i></i><span>sse_frames · POST /api/vault/generate/stream</span></div>
+    <div class="term-body" id="sse-term">
+      <div class="term-line"><span class="c-dim">{"prompt":"a scarred ranger who hunts the things that hunt villages","lang":"en"}</span></div>
+      <div class="term-line"><span class="c-p">data:</span> {"type":"reasoning","text":"The player wants a ranger with a scar, a hunter… I will build…"}</div>
+      <div class="term-line"><span class="c-p">data:</span> {"type":"content","text":"{\"name\":\"Faelyndra\",\"race\":\"Half-elf\","}</div>
+      <div class="term-line"><span class="c-p">data:</span> {"type":"content","text":"\"class\":\"Ranger\",\"level\":1,\"hp\":{\"max\":12},"}</div>
+      <div class="term-line"><span class="c-p">data:</span> {"type":"content","text":"\"abilities\":{\"DEX\":{\"score\":16,\"mod\":3}},"}</div>
+      <div class="term-line"><span class="c-p">data:</span> {"type":"content","text":"\"story\":\"She carries the scar of the hollow…\"}"}</div>
+      <div class="term-line"><span class="c-gold">data:</span> {"type":"done","ok":true,"time_s":31.2,"tokens":{…},"character":{…},"inventory":[{…longsword…},{…shortbow…}]}</div>
+      <div class="term-line"><span class="c-dim"># frontend → preview card → [Save to Vault] [Unravel &amp; Reroll]</span></div>
     </div>
   </div>
 </section>
 
 <!-- ═══════════ §10 STATE MODEL ═══════════ -->
-<section class="sec rv" id="s9" data-sec="s9">
+<section class="sec rv" id="s10" data-sec="s10">
   <div class="sec-head">
     <span class="sec-num">§10</span>
     <h2 class="sec-title"><span class="sec-mark">◆</span>The State Model</h2>
     <div class="sec-rule"></div>
   </div>
-  <p class="sec-lede">One JSON file per campaign is the single source of truth. The DM reads a compact digest of it every turn; the Guardian mutates it every turn; everything else — characters page, NPC dossiers, map, logbook — is just a projection of it.</p>
+  <p class="sec-lede">One JSON file per campaign is the single source of truth. Everything you see is a projection of it.</p>
 
-  <div class="tree rv">
-    <div class="t-line"><span class="kg">state.json</span> <span class="d">— one file per campaign · written under an asyncio lock</span></div>
-    <details open>
-      <summary><span class="k">meta</span><span class="sz">— identity &amp; ledger</span></summary>
-      <div class="t-line"><span class="d">campaign_id · campaign_name · language · opening_style · created · last_updated</span></div>
-      <div class="t-line"><span class="p">dm_model</span> · <span class="p">guardian_model</span> · <span class="p">extraction_model</span> · <span class="p">tts_provider</span></div>
-      <div class="t-line"><span class="e">turn_count</span> · <span class="e">session_count</span> · <span class="e">last_effects[]</span> · <span class="e">last_roll_requests[]</span></div>
-      <div class="t-line"><span class="t">unguarded_tokens</span> <span class="d">{prompt · completion · by_model} — usage that survives resets</span></div>
-      <div class="t-line"><span class="t">tts_usage</span> <span class="d">{calls · api_calls · chars · tokens · seconds}</span></div>
-    </details>
-    <details>
-      <summary><span class="k">character</span><span class="sz">— the sheet</span></summary>
-      <div class="t-line"><span class="d">name · race · class · level · alignment · background · ac · initiative · perception · speed · proficiency</span></div>
-      <div class="t-line"><span class="e">hp</span> <span class="d">{current · max · temp}</span> · <span class="e">xp</span> <span class="d">{current · next_level}</span> · <span class="e">spell_slots</span> <span class="d">{current · max}</span></div>
-      <div class="t-line"><span class="p">abilities</span> <span class="d">STR·DEX·CON·INT·WIS·CHA → {score, mod}</span></div>
-      <div class="t-line"><span class="g">hit_dice</span> <span class="d">{dice · total · remaining} — spent on short rests</span> · <span class="g">saves[6]</span></div>
-      <div class="t-line"><span class="t">traits[] · spells[] · updates[]</span> <span class="d">(every Guardian character_update, stamped with turn)</span></div>
-      <div class="t-line"><span class="d">story · gear · notes</span></div>
-    </details>
-    <div class="t-line"><span class="k">inventory[]</span> <span class="d">— name · type · category · usage · qty · weight · lore · equipped · rarity · damage · ac_bonus …</span></div>
-    <div class="t-line"><span class="k">currency</span> <span class="d">{pp · gp · sp · cp} — normalized, weighted, displayed</span></div>
-    <details>
-      <summary><span class="k">npcs[]</span><span class="sz">— dossier</span></summary>
-      <div class="t-line"><span class="d">name · role · relation <span class="e">(allied / neutral / enemy / unknown)</span> · color · icon · notes · alive · near</span></div>
-      <div class="t-line"><span class="d">near is recomputed every turn by Guardian — <span class="e">npcs_near[]</span> — proximity drives the @-mention list</span></div>
-    </details>
-    <div class="t-line"><span class="k">quests[]</span> <span class="d">— id · name · description · reward · xp_reward · gold_reward · status · created_turn</span></div>
-    <details>
-      <summary><span class="k">world</span><span class="sz">— the living world</span></summary>
-      <div class="t-line"><span class="d">current_location · visited_locations[] · time · weather · day · day_description</span></div>
-      <div class="t-line"><span class="t">logbook[{day, turn, text}]</span> · <span class="t">travel_log[{from, to, day}]</span> · <span class="t">day_summaries[{day, title, events, quests, mood}]</span></div>
-      <details>
-        <summary><span class="k">combat</span><span class="sz">— chat-first battle state</span></summary>
-        <div class="t-line"><span class="d">active · round · phase · started_turn · ended_turn</span></div>
-        <div class="t-line"><span class="e">enemies[{id, name, hp, max_hp, ac, alive, statuses}]</span> · <span class="e">initiative[] · turn_order[]</span></div>
-        <div class="t-line"><span class="p">player_actions</span> <span class="d">{action · bonus · reaction} — one each per round</span> · <span class="t">log[]</span></div>
-      </details>
-    </details>
-    <div class="t-line"><span class="k">lore[]</span> <span class="d">— durable world memories, written by Guardian <span class="e">world_lore</span></span></div>
-    <div class="t-line"><span class="k">pinned_facts[]</span> <span class="d">— player-pinned truth, injected into every TRUTH block</span></div>
-    <div class="t-line"><span class="k">locations[]</span> <span class="d">— name · description · terrain · x · y · visited — the map is a projection of this</span></div>
-    <div class="t-line"><span class="k">avatars{}</span> <span class="d">— player · dm · npc:Name → {disk_name, seed, ai_generated, edit_mode}</span></div>
-    <div class="t-line"><span class="k">images[]</span> · <span class="k">resources[]</span></div>
+  <div class="flowbox rv">
+    <svg class="fan" viewBox="0 0 880 210" role="img" aria-label="State fan-out diagram">
+      <defs>
+        <marker id="fanarr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" fill="#5a4a7a"/>
+        </marker>
+      </defs>
+      <!-- core -->
+      <g class="core pulse"><rect x="330" y="78" width="220" height="56"/>
+        <text x="440" y="100" text-anchor="middle">state.json</text>
+        <text x="440" y="118" text-anchor="middle" style="font-size:8px;fill:#9d8a6a">ONE FILE · ASYNCIO LOCK · JOURNALED TRANSCRIPTS</text></g>
+      <!-- projections -->
+      <g><rect x="20" y="12" width="150" height="34"/><text x="95" y="33" text-anchor="middle">CHARACTER SHEET</text></g>
+      <g><rect x="20" y="88" width="150" height="34"/><text x="95" y="109" text-anchor="middle">NPC DOSSIERS</text></g>
+      <g><rect x="20" y="164" width="150" height="34"/><text x="95" y="185" text-anchor="middle">THE MAP</text></g>
+      <g><rect x="710" y="12" width="150" height="34"/><text x="785" y="33" text-anchor="middle">LOGBOOK</text></g>
+      <g><rect x="710" y="88" width="150" height="34"/><text x="785" y="109" text-anchor="middle">NEXT DM LINE</text></g>
+      <g><rect x="710" y="164" width="150" height="34"/><text x="785" y="185" text-anchor="middle">COMBAT RAIL</text></g>
+      <!-- read beams (core → views) -->
+      <path class="beam read" d="M330,92 C260,80 220,50 174,32" marker-end="url(#fanarr)"/>
+      <path class="beam read" d="M330,106 H174" marker-end="url(#fanarr)"/>
+      <path class="beam read" d="M330,120 C260,132 220,160 174,178" marker-end="url(#fanarr)"/>
+      <path class="beam read" d="M550,92 C620,80 660,50 706,32" marker-end="url(#fanarr)"/>
+      <path class="beam read" d="M550,106 H706" marker-end="url(#fanarr)"/>
+      <path class="beam read" d="M550,120 C620,132 660,160 706,178" marker-end="url(#fanarr)"/>
+      <!-- write beams (guardian/dm → core) -->
+      <path class="beam write" d="M440,74 V30" marker-end="url(#fanarr)"/>
+      <text x="452" y="50" style="font-size:8px;fill:#c9a6ff;letter-spacing:.1em">GUARDIAN WRITES</text>
+      <text x="452" y="62" style="font-size:8px;fill:#9d8a6a;letter-spacing:.1em">DM READS A DIGEST · NEVER INVENTS</text>
+    </svg>
+    <div class="legend">
+      <span><i style="background:var(--gold)"></i>read — projection</span>
+      <span><i style="background:var(--arcane)"></i>write — Guardian only</span>
+    </div>
   </div>
 
   <div class="grid2">
     <div class="panel rv">
-      <h3><span class="dot">✦</span> Concurrency &amp; durability</h3>
-      <p>Every read-modify-write runs under a per-campaign <span class="stat"><b>asyncio lock</b></span> — two turns can never interleave. Writes are journaled as JSONL transcripts (one file per session) plus periodic chapter and scene summaries, so the hierarchy in §3 can be rebuilt even after a crash.</p>
-      <p>The audit that shaped this page found the classic trap: a background writer appending a <b>list</b> to a field another path had written as a <b>dict</b> — an AttributeError inside a swallowed try/except that silently erased a turn's mechanics. The logbook shape is now guarded on both sides.</p>
-    </div>
-    <div class="panel rv">
-      <h3><span class="dot">✦</span> One XP table, two consumers</h3>
-      <p>D&amp;D 5e level thresholds live in exactly one place — <code>_XP_THRESHOLDS</code> — and both the legacy tag pipeline and the Guardian's level-up check import it. Guardian pays XP only for kills, quests, milestones and puzzles; quest completion pays its stored reward automatically.</p>
-      <div class="xp-ladder">
-        <div class="xp-bar" id="xp-bar" role="img" aria-label="XP thresholds for levels 1 to 20">
-          <div class="xp-step l1"><span class="lvl">1</span></div><div class="xp-step l1"><span class="lvl">2</span></div><div class="xp-step l1"><span class="lvl">3</span></div><div class="xp-step mid"><span class="lvl">4</span></div><div class="xp-step mid"><span class="lvl">5</span></div><div class="xp-step mid"><span class="lvl">6</span></div><div class="xp-step mid"><span class="lvl">7</span></div><div class="xp-step mid"><span class="lvl">8</span></div><div class="xp-step mid"><span class="lvl">9</span></div><div class="xp-step mid"><span class="lvl">10</span></div><div class="xp-step late"><span class="lvl">11</span></div><div class="xp-step late"><span class="lvl">12</span></div><div class="xp-step late"><span class="lvl">13</span></div><div class="xp-step late"><span class="lvl">14</span></div><div class="xp-step late"><span class="lvl">15</span></div><div class="xp-step late"><span class="lvl">16</span></div><div class="xp-step late"><span class="lvl">17</span></div><div class="xp-step late"><span class="lvl">18</span></div><div class="xp-step late"><span class="lvl">19</span></div><div class="xp-step late"><span class="lvl">20</span></div>
-        </div>
-        <div class="xp-cap"><span>lvl 1 → 2: 300 XP</span><span>lvl 3 → 4: 2,700 XP</span><span>lvl 9 → 10: 64,000 XP</span><span>lvl 19 → 20: 355,000 XP</span></div>
+      <h3><span class="dot">✦</span> The shape</h3>
+      <div class="tree">
+        <div><span class="kg">meta</span> <span class="d">— models · turn_count · last_effects · epoch</span></div>
+        <details><summary><span class="kg">character</span> <span class="d">— the sheet</span></summary>
+          <div><span class="k">hp</span>{current·max·temp} · <span class="k">xp</span> · <span class="k">spell_slots</span>{current·max}</div>
+          <div><span class="k">abilities</span> STR…CHA · <span class="k">hit_dice</span>{dice·total·remaining}</div>
+          <div><span class="k">inventory[]</span> · <span class="k">spells[]</span> · <span class="k">updates[]</span> <span class="d">(Guardian growth log)</span></div></details>
+        <details><summary><span class="kg">world</span> <span class="d">— the living world</span></summary>
+          <div><span class="k">current_location</span> · <span class="k">time</span> · <span class="k">weather</span> · <span class="k">day</span></div>
+          <div><span class="k">logbook[]</span> · <span class="k">travel_log[]</span> · <span class="k">day_summaries[]</span></div>
+          <details><summary><span class="k">combat</span> <span class="d">— chat-first battle state</span></summary>
+            <div><span class="t">enemies[]</span>{hp·ac·alive·statuses} · <span class="t">allies[]</span></div>
+            <div><span class="t">round</span> · <span class="t">initiative[]</span> · <span class="t">turn_order[]</span> · <span class="t">log[]</span></div>
+            <div><span class="t">player_actions</span>{action·bonus·reaction} — one each per round</div></details></details>
+        <details><summary><span class="kg">npcs[] · quests[] · locations[]</span></summary>
+          <div><span class="p">npcs[]</span> name · relation · notes · alive · near <span class="d">(recomputed every turn)</span></div>
+          <div><span class="g">quests[]</span> id · reward · xp_reward · status · completed_turn</div>
+          <div><span class="t">locations[]</span> name · terrain · x · y — <span class="d">the map is a projection of this</span></div></details>
+        <div><span class="kg">lore[] · pinned_facts[] · avatars{} · images[]</span></div>
       </div>
     </div>
-  </div>
-
-  <div class="panel rv">
-    <h3><span class="dot">✦</span> The invariant</h3>
-    <p class="stat" style="font-size:.9rem">Everything the player sees — the sheet, the dossier, the map, the logbook, the next DM line — is derived from <b class="v">state.json</b>. The DM may never invent what it holds; the Guardian may never forget to update it. That asymmetry is the whole game.</p>
+    <div class="panel rv">
+      <h3><span class="dot">✦</span> Concurrency &amp; one XP table</h3>
+      <p>Every read-modify-write runs under a per-campaign <b>asyncio lock</b>; transcripts journal as JSONL plus scene/chapter summaries, so the hierarchy rebuilds after a crash.</p>
+      <p>D&D 5e thresholds live in exactly one place — <code>_XP_THRESHOLDS</code> — imported by both the legacy tag pipeline and the Guardian's level-up check.</p>
+      <div class="xp-ladder">
+        <div class="xp-bar">
+          <div class="xp-step l1"><span class="lvl">1</span></div><div class="xp-step l1"><span class="lvl">2</span></div>
+          <div class="xp-step l1"><span class="lvl">3</span></div><div class="xp-step mid"><span class="lvl">4</span></div>
+          <div class="xp-step mid"><span class="lvl">5</span></div><div class="xp-step mid"><span class="lvl">6</span></div>
+          <div class="xp-step mid"><span class="lvl">7</span></div><div class="xp-step mid"><span class="lvl">8</span></div>
+          <div class="xp-step late"><span class="lvl">9</span></div><div class="xp-step late"><span class="lvl">10</span></div>
+          <div class="xp-step late"><span class="lvl">11</span></div><div class="xp-step late"><span class="lvl">12</span></div>
+          <div class="xp-step late"><span class="lvl">13</span></div><div class="xp-step late"><span class="lvl">14</span></div>
+          <div class="xp-step late"><span class="lvl">15</span></div><div class="xp-step late"><span class="lvl">16</span></div>
+          <div class="xp-step late"><span class="lvl">17</span></div><div class="xp-step late"><span class="lvl">18</span></div>
+          <div class="xp-step late"><span class="lvl">19</span></div><div class="xp-step late"><span class="lvl">20</span></div>
+        </div>
+        <div class="xp-cap"><span>lvl 1→2: 300 XP</span><span>lvl 9→10: 64,000 XP</span><span>lvl 19→20: 355,000 XP</span></div>
+      </div>
+      <p class="stat"><b>The invariant:</b> the DM may never invent what state.json holds; the Guardian may never forget to update it. That asymmetry is the whole game.</p>
+    </div>
   </div>
 </section>
 
@@ -1073,29 +1026,50 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     <h2 class="sec-title"><span class="sec-mark">◆</span>Undoing a Turn</h2>
     <div class="sec-rule"></div>
   </div>
-  <p class="sec-lede">Every turn is snapshotted before it is written. When a reply lands, the engine knows exactly what the world looked like one message earlier — and offers the rewind.</p>
+  <p class="sec-lede">Every turn is snapshotted before it is written. One rewind, one turn, one level deep — press it and watch the world step back.</p>
+
+  <div class="rv">
+    <div style="text-align:center;margin-bottom:.8rem">
+      <button class="jb-btn" id="undo-btn" onclick="undoDemo()" style="letter-spacing:.2em">↶ UNDO LAST TURN</button>
+      <span class="stat" style="margin-left:.8rem">costs <b>1 turn</b> · no refund · ledger records action=undo</span>
+    </div>
+    <div class="rw-stage">
+      <div class="rw-card" id="rw-prev">
+        <h4>turn 41 · snapshot</h4>
+        <div class="rw-body">hp 26/26 · gp 12<br>quests: 2 active<br>facts: 34 · threads: 4</div>
+      </div>
+      <div class="rw-card now" id="rw-now">
+        <h4>turn 42 · written</h4>
+        <div class="rw-body">hp 21/26 · gp 15<br>logbook +1 · npcs_near:[Kip]<br>time_passed: 1h</div>
+        <span class="rw-ghost" id="rw-ghost">🛡 late guardian job…</span>
+      </div>
+      <div class="rw-card" id="rw-next">
+        <h4>after rewind</h4>
+        <div class="rw-body" id="rw-next-body">—</div>
+      </div>
+    </div>
+    <div class="rw-epoch" id="rw-epoch">epoch <b>7</b> — background writers check it before saving</div>
+  </div>
 
   <div class="grid2">
     <div class="panel rv">
       <h3><span class="dot">✦</span> What the rewind takes back</h3>
-      <p>The affordance appears under the <b>last DM reply</b>: the transcript carries <span class="stat"><b>undo_available</b></span> — true while a snapshot of the previous turn exists. Pressing it rewinds the most recent turn as a whole: your message, the DM's reply, and <b>everything the Guardian recorded from it</b> — state mutations (HP, loot, quests, NPCs, combat, logbook), the fact register, the transcript lines, and any scene or chapter summaries minted during the turn.</p>
-      <p>Background writers from the undone turn are disarmed by a bumped <span class="stat"><b>epoch</b></span>: late Guardian or extraction jobs check it before saving and drop their writes, so no zombie data lands on top of the restored state. The vector index is purged and re-indexed from the restored transcript.</p>
+      <p class="stat">Your message, the DM's reply, and <b>everything the Guardian recorded</b> — state mutations, the fact register, transcript lines, scene/chapter summaries. The vector index is purged and re-indexed from the restored transcript.</p>
     </div>
     <div class="panel rv">
-      <h3><span class="dot">✦</span> Cost and depth</h3>
-      <p>An undo <b>costs one turn</b> — the same quota as any other action, with the same cap gate, and <b>no refund</b> for the turn it removes. Rewinding the past is not free; the ledger records it as <span class="stat"><b>action=undo</b></span>.</p>
-      <p>Single-level only: each turn's snapshot <b>overwrites</b> the previous one, and a restore <b>consumes</b> it. Only the newest turn can be undone, once — the turn before that is already gone from the rewind's reach.</p>
+      <h3><span class="dot">✦</span> No zombie data</h3>
+      <p class="stat">Late background jobs from the undone turn are disarmed by a bumped <b>epoch</b>: they check it before saving and drop their writes. Single-level only — each snapshot overwrites the previous one, and a restore consumes it.</p>
     </div>
   </div>
 </section>
 
-</div>
+</div><!-- /content -->
 </main>
 
 <footer>
   <div class="f-title">✦ the lore weaver's cauldron — engine mechanics ✦</div>
-  <p style="margin-bottom:.9rem"><a href="help.html" style="font-family:var(--font-display);font-size:.8rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-bright);text-decoration:none;border:1px solid var(--edge);padding:.55rem 1.1rem">← Back to the Guide</a></p>
-  <p>Compiled from the engine itself: backend/main.py · backend/guardian.py · backend/extraction.py (FactRegister) · backend/models.py · DM prompt v28 · Guardian 44-field contract<br>
+  <p><a href="help.html">← Back to the Guide</a></p>
+  <p>Compiled from the engine itself: backend/main.py · backend/guardian.py · backend/extraction.py (FactRegister) · backend/combat.py · backend/dice.py · backend/models.py · DM prompt v28 · Guardian 44-field contract<br>
   dnd.rostad.cc — The Lore Weaver's Cauldron</p>
 </footer>
 
@@ -1114,16 +1088,17 @@ var bootLines = [
   ["> mounting DM_CORE_PROMPT .......... ", "b-dim"], ["OK (v28)", "b-ok"],
   ["> mounting GUARDIAN_POST_SYSTEM .... ", "b-dim"], ["OK (44-field contract)", "b-ok"],
   ["> truth_block ...................... ", "b-dim"], ["OK (authoritative)", "b-ok"],
-  ["> dice_roll(notation) .............. ", "b-dim"], ["OK (player rolls)", "b-ok"],
+  ["> dice_roll(notation) .............. ", "b-dim"], ["OK (secrets · engine rolls)", "b-ok"],
+  ["> condition engine ................. ", "b-dim"], ["OK (tick per round)", "b-ok"],
   ["> priming TTS cache ................ ", "b-dim"], ["OK (64 slots / 600s TTL)", "b-ok"],
   ["> state lock ....................... ", "b-dim"], ["OK (per campaign)", "b-ok"],
-  ["> mounting FACT REGISTER ............ ", "b-dim"], ["OK (top 8 · moving window)", "b-ok"],
+  ["> mounting FACT REGISTER ........... ", "b-dim"], ["OK (top 8 · moving window)", "b-ok"],
+  ["> undo snapshot .................... ", "b-dim"], ["OK (single level · epoch guard)", "b-ok"],
   ["> embers lit. the table is ready.", "b-gold"]
 ];
 var bootEl = document.getElementById("boot");
 var bootLinesEl = document.getElementById("boot-lines");
-var bootIdx = 0;
-var bootTimer = null;
+var bootIdx = 0, bootTimer = null;
 function bootAppend(text, cls){
   var span = document.createElement("span");
   if(cls) span.className = cls;
@@ -1134,11 +1109,9 @@ function bootStep2(){
   if(bootIdx >= bootLines.length){ bootDone(); return; }
   var label = bootLines[bootIdx], status = bootLines[bootIdx+1];
   bootAppend(label[0], label[1]);
-  if(status){
-    setTimeout(function(){ bootAppend(status[0], status[1]); bootAppend("\n", ""); }, 90);
-  }
+  if(status){ setTimeout(function(){ bootAppend(status[0], status[1]); bootAppend("\n", ""); }, 90); }
   bootIdx += 2;
-  bootTimer = setTimeout(bootStep2, 170);
+  bootTimer = setTimeout(bootStep2, 160);
 }
 function bootDone(){
   if(!bootEl || bootEl.classList.contains("done")) return;
@@ -1147,18 +1120,53 @@ function bootDone(){
   bootEl.classList.add("done");
   setTimeout(function(){ if(bootEl && bootEl.parentNode) bootEl.parentNode.removeChild(bootEl); }, 700);
 }
-window.bootSkip = function(){
-  bootLinesEl.innerHTML = "";
-  bootDone();
-};
+window.bootSkip = function(){ bootLinesEl.innerHTML = ""; bootDone(); };
 document.addEventListener("keydown", function(e){
   if(e.key === "Escape" || e.key === "Enter"){ window.bootSkip(); }
 });
-// Persist the skip: repeat readers of a docs page don't want ceremony (audit A2 §5)
 try{
-  if(sessionStorage.getItem("mech_boot_seen")){ bootSkip(); }
+  if(sessionStorage.getItem("mech_boot_seen")){ window.bootSkip(); }
   else { bootStep2(); }
 }catch(_){ bootStep2(); }
+
+/* ── Embers canvas ─────────────────────────────────────────── */
+(function(){
+  var cv = document.getElementById("embers");
+  if(!cv || !cv.getContext) return;
+  var ctx = null;
+  try{ ctx = cv.getContext("2d"); }catch(_){}
+  if(!ctx) return; // no canvas support — page works fine without embers
+  var ps = [], W = 0, H = 0;
+  var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function size(){ W = cv.width = window.innerWidth; H = cv.height = window.innerHeight; }
+  size(); window.addEventListener("resize", size);
+  function spawn(p){
+    p.x = Math.random()*W; p.y = H + 8;
+    p.vy = 0.25 + Math.random()*0.55;
+    p.r = 0.8 + Math.random()*1.7;
+    p.wob = Math.random()*Math.PI*2;
+    p.hue = Math.random() < 0.82 ? 22 + Math.random()*18 : 268 + Math.random()*20;
+    p.life = 0; p.max = 400 + Math.random()*500;
+  }
+  for(var i=0;i<40;i++){ ps.push({}); spawn(ps[i]); ps[i].y = Math.random()*H; }
+  function frame(){
+    ctx.clearRect(0,0,W,H);
+    for(var i=0;i<ps.length;i++){
+      var p = ps[i];
+      p.life++; p.y -= p.vy; p.wob += 0.02;
+      var x = p.x + Math.sin(p.wob)*14;
+      var a = Math.max(0, 1 - p.life/p.max) * 0.55;
+      if(p.y < -10 || p.life > p.max){ spawn(p); continue; }
+      ctx.beginPath();
+      ctx.fillStyle = "hsla(" + p.hue + ",80%,60%," + a + ")";
+      ctx.shadowBlur = 6; ctx.shadowColor = "hsla(" + p.hue + ",80%,55%," + (a*0.8) + ")";
+      ctx.fillRect(x, p.y, p.r, p.r);
+    }
+    ctx.shadowBlur = 0;
+    if(!reduced) requestAnimationFrame(frame);
+  }
+  frame();
+})();
 
 /* ── Scroll reveal + progress + spy ────────────────────────── */
 var revealEls = document.querySelectorAll(".rv");
@@ -1190,10 +1198,26 @@ function onScroll(){
     li.classList.toggle("active", li.getAttribute("data-ix") === current);
   });
 }
-function initSpy(){
-  window.addEventListener("scroll", onScroll, { passive: true });
-  onScroll();
-}
+window.addEventListener("scroll", onScroll, { passive: true });
+onScroll();
+
+/* ── Terminal line cascade (fires when scrolled into view) ─── */
+(function(){
+  var terms = document.querySelectorAll("#pipe-term, #sse-term");
+  if(!("IntersectionObserver" in window)){
+    terms.forEach(function(t){ t.querySelectorAll(".term-line").forEach(function(l){ l.classList.add("shown"); }); });
+    return;
+  }
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(!en.isIntersecting) return;
+      io.unobserve(en.target);
+      var lines = en.target.querySelectorAll(".term-line");
+      lines.forEach(function(l, i){ setTimeout(function(){ l.classList.add("shown"); }, 140 * i); });
+    });
+  }, { threshold: .15 });
+  terms.forEach(function(t){ io.observe(t); });
+})();
 
 /* ── Toast ─────────────────────────────────────────────────── */
 var toastTimer = null;
@@ -1206,49 +1230,120 @@ function toast(msg){
   toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 2600);
 }
 
-/* ── Expanders ─────────────────────────────────────────────── */
-function toggleExp(id){
-  var btn = document.getElementById("exp-" + id + "-toggle");
-  var body = document.getElementById("exp-" + id + "-body");
-  if(!btn || !body) return;
-  var open = btn.classList.toggle("open");
-  body.classList.toggle("open", open);
-  btn.setAttribute("aria-expanded", open ? "true" : "false");
-}
+/* ── §3 Strata: layers light up in assembly order, on loop ─── */
+(function(){
+  var rows = Array.prototype.slice.call(document.querySelectorAll("#strata .str-row"));
+  if(!rows.length) return;
+  var i = 0, timer = null, started = false;
+  function step(){
+    rows.forEach(function(r){ r.classList.remove("lit"); });
+    if(i < rows.length){
+      rows[i].classList.add("lit");
+      i++;
+      timer = setTimeout(step, 620);
+    } else {
+      i = 0;
+      timer = setTimeout(step, 2600); // pause with full stack lit, then rebuild
+    }
+  }
+  function start(){ if(started) return; started = true; step(); }
+  if("IntersectionObserver" in window){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ if(en.isIntersecting) start(); });
+    }, { threshold: .2 });
+    io.observe(document.getElementById("strata"));
+  } else { start(); }
+})();
 
-/* ── JSON typewriter demo ──────────────────────────────────── */
+/* ── §4 Fact window: a moving top-8 across turns ───────────── */
+var FACTS = [
+  { cat:"NPC",      text:"Kaelen Voss bears the party no ill will", turn:12, mentions:3 },
+  { cat:"PLATS",    text:"The Hollow Forge hides a second entrance behind the smithy", turn:8, mentions:4 },
+  { cat:"HÄNDELSE", text:"The north gate guard lost his purse to a pickpocket", turn:3, mentions:1 },
+  { cat:"NPC",      text:"Mira the innkeeper owes a debt to the Gray Guild", turn:15, mentions:2 },
+  { cat:"LORE",     text:"The Gray Gate has been sealed since the Sundering", turn:2, mentions:5, pinned:true },
+  { cat:"QUEST",    text:"The blacksmith's daughter vanished near the old mill", turn:18, mentions:3 },
+  { cat:"NPC",      text:"Kip fears the bell tower — he flinches when it rings", turn:40, mentions:2 },
+  { cat:"PLATS",    text:"Ravenhall's chapel floor sounds hollow beneath the altar", turn:41, mentions:1 },
+  { cat:"HÄNDELSE", text:"A red cloak watched the party from the market crowd", turn:22, mentions:1 },
+  { cat:"LORE",     text:"Wolves in these woods do not howl — they whisper", turn:9, mentions:2 },
+  { cat:"NPC",      text:"Sister Amara keeps the key to the undercroft", turn:30, mentions:1 },
+  { cat:"HÄNDELSE", text:"The bridge toll was paid in old silver, not coin", turn:26, mentions:1 }
+];
+var factTurn = 42;
+var factQueries = [
+  { kw:["kaelen","forge"], label:"\"I ask Kaelen about the Hollow Forge…\"" },
+  { kw:["kip","bell","tower"], label:"\"I follow Kip toward the bell tower.\"" },
+  { kw:["ravenhall","chapel","altar"], label:"\"I search Ravenhall's chapel.\"" },
+  { kw:["mira","guild","innkeeper"], label:"\"I visit Mira at the inn.\"" },
+  { kw:["mill","daughter","blacksmith"], label:"\"We ride for the old mill.\"" }
+];
+var factQ = 0;
+function factScore(f, q){
+  var words = f.text.toLowerCase().split(/[^a-zåäö]+/);
+  var overlap = q.kw.filter(function(k){ return words.indexOf(k) !== -1; }).length;
+  var base = overlap ? overlap / q.kw.length : 0.05;
+  var recency = 0.3 * (f.turn / factTurn);
+  var mention = 0.25 * (f.mentions / 5);
+  return Math.min(0.99, base + recency + mention);
+}
+function factRender(){
+  var list = document.getElementById("fact-list");
+  if(!list) return;
+  var q = factQueries[factQ % factQueries.length];
+  var scored = FACTS.map(function(f){ return { f: f, s: factScore(f, q) }; });
+  scored.sort(function(a,b){ return b.s - a.s; });
+  var head = document.createElement("div");
+  head.className = "cut-line";
+  head.style.borderBottom = "1px solid var(--edge)";
+  head.textContent = "player message: " + q.label;
+  list.innerHTML = "";
+  list.appendChild(head);
+  scored.forEach(function(item, idx){
+    var row = document.createElement("div");
+    row.className = "fact" + (idx < 8 ? " ship" : " out");
+    row.innerHTML =
+      '<span class="fs">' + item.s.toFixed(2) + '</span>' +
+      '<span class="ft">[' + item.f.cat + '] ' + item.f.text + ' <em>(turn ' + item.f.turn + ')</em></span>' +
+      '<span class="fb"><i></i></span>' +
+      '<span class="fv">' + (idx < 8 ? "ships" : "stays") + '</span>';
+    list.appendChild(row);
+    setTimeout(function(){ row.querySelector(".fb i").style.width = (item.s * 100) + "%"; }, 80 + idx * 60);
+  });
+}
+window.factNext = function(){
+  factQ++; factTurn += 1 + Math.floor(Math.random()*2);
+  factRender();
+};
+factRender();
+
+/* ── §5 JSON typewriter ────────────────────────────────────── */
 var jsonDemoObj = {
   "damage": [{"target": "player", "amount": 6, "type": "piercing"}],
   "healing": [],
-  "death": [],
   "xp": 0,
-  "items_add": [{"name": "Rusty Key", "type": "Trinket", "category": "trinket", "usage": "activated", "qty": 1, "weight": 0.2, "lore": "Cut for a lock that no longer exists in the keep's walls.", "equipped": false}],
+  "items_add": [{"name": "Rusty Key", "category": "trinket", "usage": "activated", "qty": 1, "weight": 0.2, "lore": "Cut for a lock that no longer exists in the keep's walls.", "equipped": false}],
   "currency": [{"denom": "sp", "amount": -2}],
-  "quests_new": [],
   "npcs_near": ["Kip"],
-  "npc_notes": [{"name": "Kip", "note": "Fears the bell tower — flinches when it rings."}],
-  "locations_new": [{"name": "Ravenhall", "description": "A blackened manor above the village", "lore": "The old lords sealed something beneath the chapel — no one remembers what.", "terrain": "ruin"}],
+  "locations_new": [{"name": "Ravenhall", "description": "A blackened manor above the village", "terrain": "ruin"}],
   "current_location": "Ravenhall",
   "world_lore": ["The villagers now whisper that the gate was never meant to open."],
   "time_passed": {"hours": 1, "description": "Crossed the square in the rain"},
-  "rest": null,
-  "new_day": null,
   "logbook": "Faelyndra slipped past the guard and reached Ravenhall's courtyard.",
-  "combat_events": [],
+  "status_apply": [],
   "roll_grants": [],
   "corrections": []
 };
 function hlJson(str){
-  return str.replace(/(\"(?:[^\"\\\\]|\\\\.)*\")(\s*:)?|\b(true|false)\b|\bnull\b|(-?\d+(?:\.\d+)?)/g, function(m, str, colon, kw, num){
-    if(str) return colon ? '<span class="j-key">' + str + '</span>' + colon : '<span class="j-str">' + str + '</span>';
+  return str.replace(/(\"(?:[^\"\\]|\\.)*\")(\s*:)?|\b(true|false)\b|\bnull\b|(-?\d+(?:\.\d+)?)/g, function(m, s, colon, kw, num){
+    if(s) return colon ? '<span class="j-key">' + s + '</span>' + colon : '<span class="j-str">' + s + '</span>';
     if(kw) return '<span class="j-kw">' + kw + '</span>';
     if(num) return '<span class="j-num">' + num + '</span>';
     return m;
   });
 }
 var jsonFull = JSON.stringify(jsonDemoObj, null, 2);
-var jsonTick = null;
-var jsonRunning = false;
+var jsonTick = null, jsonRunning = false;
 function typeJsonDemo(){
   var el = document.getElementById("json-demo");
   if(!el || jsonRunning) return;
@@ -1261,18 +1356,13 @@ function typeJsonDemo(){
     i += 1 + Math.floor(Math.random()*2);
     if(i > jsonFull.length) i = jsonFull.length;
     el.innerHTML = hlJson(jsonFull.slice(0, i)) + (i < jsonFull.length ? '<span class="j-cursor"></span>' : "");
-    if(i < jsonFull.length){ jsonTick = setTimeout(step, 12); }
+    if(i < jsonFull.length){ jsonTick = setTimeout(step, 11); }
     else { jsonRunning = false; if(btn) btn.disabled = false; }
   })();
 }
-function replayJson(){
-  clearTimeout(jsonTick);
-  jsonRunning = false;
-  typeJsonDemo();
-}
+window.replayJson = function(){ clearTimeout(jsonTick); jsonRunning = false; typeJsonDemo(); };
 
-/* ── Dice roller ───────────────────────────────────────────── */
-var diceHistory = [];
+/* ── §6 Dice roller (JS copy of backend/dice.py parser) ────── */
 function parseDice(expr, adv){
   var s = String(expr).trim().toLowerCase();
   var m = s.match(/^(\d*)d(\d+)([+-]\d+)?$/);
@@ -1293,14 +1383,28 @@ function parseDice(expr, adv){
   var total = (adv && sides === 20 && count === 1) ? Math.max.apply(null, rolls) + mod : raw + mod;
   return { count: count, sides: sides, mod: mod, rolls: rolls, total: total, adv: adv };
 }
+function exprNow(){
+  var el = document.getElementById("dice-expr");
+  return el ? el.value.trim() : "1d20";
+}
+function addDiceHistory(expr, res){
+  var h = document.getElementById("dice-history");
+  if(!h) return;
+  var line = document.createElement("div");
+  line.className = "h-line";
+  var t = new Date();
+  var stamp = ("0"+t.getHours()).slice(-2) + ":" + ("0"+t.getMinutes()).slice(-2) + ":" + ("0"+t.getSeconds()).slice(-2);
+  var detail = res.adv ? "[" + res.rolls.join(", ") + "] → keep " + Math.max.apply(null, res.rolls) + (res.mod ? " + " + res.mod : "") : res.rolls.join(" + ") + (res.mod !== 0 ? (res.mod > 0 ? " + " + res.mod : " − " + Math.abs(res.mod)) : "");
+  line.innerHTML = '<span class="h-t">' + stamp + '</span>' + expr + " → " + detail + " = <b style=\"color:var(--gold-bright)\">" + res.total + "</b>";
+  h.insertBefore(line, h.firstChild);
+  while(h.children.length > 8) h.removeChild(h.lastChild);
+}
 function renderDice(res){
   var stage = document.getElementById("dice-stage");
   var resultEl = document.getElementById("dice-result");
   var critEl = document.getElementById("dice-crit");
   if(!stage || !resultEl || !critEl) return;
-  stage.innerHTML = "";
-  resultEl.textContent = "";
-  critEl.textContent = "";
+  stage.innerHTML = ""; resultEl.textContent = ""; critEl.textContent = ""; critEl.className = "r-crit";
   var best = res.adv ? Math.max.apply(null, res.rolls) : null;
   var isD20 = res.sides === 20;
   res.rolls.forEach(function(r, idx){
@@ -1313,62 +1417,91 @@ function renderDice(res){
     if(isD20 && r === 1 && res.count === 1 && !res.adv) face.classList.add("fail");
     stage.appendChild(face);
   });
-  var parts = [];
-  res.rolls.forEach(function(r){ parts.push(r); });
   var modTxt = res.mod !== 0 ? (res.mod > 0 ? " + " + res.mod : " − " + Math.abs(res.mod)) : "";
-  var line = "→ [" + exprNow() + "] " + parts.join(" + ") + modTxt + " = " + res.total;
-  if(res.adv) line = "→ [" + exprNow() + " adv] [" + res.rolls.join(", ") + "] → keep " + best + modTxt + " = " + res.total;
   setTimeout(function(){
-    resultEl.textContent = line;
-    var crit = "";
-    if(isD20 && res.rolls.indexOf(20) !== -1 && res.count === 1 && !res.adv) crit = "✦ CRITICAL SUCCESS";
-    else if(isD20 && res.rolls.indexOf(1) !== -1 && res.count === 1 && !res.adv) crit = "✦ CATASTROPHIC FAILURE";
-    if(crit){
-      critEl.textContent = crit;
-      critEl.className = "r-crit " + (crit.indexOf("CRITICAL") !== -1 ? "good" : "bad");
-    } else { critEl.className = "r-crit"; }
+    if(res.adv){
+      resultEl.textContent = "→ [" + exprNow() + " adv] [" + res.rolls.join(", ") + "] → keep " + best + modTxt + " = " + res.total;
+    } else {
+      resultEl.textContent = "→ [" + exprNow() + "] " + res.rolls.join(" + ") + modTxt + " = " + res.total;
+    }
+    if(isD20 && res.count === 1 && !res.adv){
+      if(res.rolls[0] === 20){ critEl.textContent = "✦ CRITICAL SUCCESS"; critEl.className = "r-crit good"; }
+      else if(res.rolls[0] === 1){ critEl.textContent = "✦ CATASTROPHIC FAILURE"; critEl.className = "r-crit bad"; }
+    }
     addDiceHistory(exprNow(), res);
   }, 560 + res.rolls.length*120);
 }
-function exprNow(){
-  var el = document.getElementById("dice-expr");
-  return el ? el.value.trim() : "1d20";
-}
-function addDiceHistory(expr, res){
-  var h = document.getElementById("dice-history");
-  if(!h) return;
-  var line = document.createElement("div");
-  line.className = "h-line";
-  var t = new Date();
-  var stamp = ("0"+t.getHours()).slice(-2) + ":" + ("0"+t.getMinutes()).slice(-2) + ":" + ("0"+t.getSeconds()).slice(-2);
-  var detail = res.adv ? "[" + res.rolls.join(", ") + "] → " + (res.total - res.mod) + (res.mod ? " + " + res.mod : "") : res.rolls.join(" + ") + (res.mod ? " + " + res.mod : "");
-  line.innerHTML = '<span class="h-t">' + stamp + '</span>' + expr + " → " + detail + " = <b style=\"color:var(--gold-bright)\">" + res.total + "</b>";
-  h.insertBefore(line, h.firstChild);
-  while(h.children.length > 10) h.removeChild(h.lastChild);
-}
-function rollNow(){
+window.rollNow = function(){
   var el = document.getElementById("dice-expr");
   var advEl = document.getElementById("dice-adv");
-  var expr = el ? el.value : "1d20";
-  var adv = !!(advEl && advEl.checked);
-  var res = parseDice(expr, adv);
+  var res = parseDice(el ? el.value : "1d20", !!(advEl && advEl.checked));
   if(!res){ toast("Invalid notation — try 2d6+3 or 1d20"); return; }
   renderDice(res);
-}
-function quickDice(v){
+};
+window.quickDice = function(v){
   var el = document.getElementById("dice-expr");
   if(el) el.value = v;
-  rollNow();
-}
-function toggleAdv(){
+  window.rollNow();
+};
+window.toggleAdv = function(){
   var el = document.getElementById("dice-adv");
   if(el && el.checked) toast("Advantage: two d20, keep the best");
-  rollNow();
-}
+  window.rollNow();
+};
 
-/* ── TTS cache sim ─────────────────────────────────────────── */
-var ttsSimCache = {};
-var ttsSimOrder = [];
+/* ── §7 Spell slot pool ────────────────────────────────────── */
+var SLOTS_MAX = 4, slotsCur = 4, hitDice = { cur: 3, max: 3, die: 8 }, hp = { cur: 14, max: 26 };
+function renderSlots(burnIdx, refill){
+  var pool = document.getElementById("slot-pool");
+  if(!pool) return;
+  pool.innerHTML = "";
+  for(var i = 0; i < SLOTS_MAX; i++){
+    var pip = document.createElement("span");
+    pip.className = "ss-pip" + (i < slotsCur ? "" : " spent");
+    if(refill && i < slotsCur){ pip.classList.add("refill"); pip.style.animationDelay = (i*0.09) + "s"; }
+    if(burnIdx === i){ pip.classList.add("burn"); }
+    pool.appendChild(pip);
+  }
+}
+function slotStatus(msg, blocked){
+  var el = document.getElementById("slot-status");
+  if(!el) return;
+  el.className = "slot-status" + (blocked ? " blocked" : "");
+  el.innerHTML = "<b>" + slotsCur + "/" + SLOTS_MAX + "</b>" + (msg ? " — " + msg : "");
+}
+window.castSpell = function(level){
+  if(level === 0){ slotStatus("cantrip — free, the pool doesn't move"); renderSlots(-1, false); return; }
+  if(slotsCur < level){
+    slotStatus("BLOCKED — level " + level + " needs " + level + ", pool holds " + slotsCur + ". The chat says so.", true);
+    toast("Cast blocked — the well is dry");
+    return;
+  }
+  var burnIdx = slotsCur - level;
+  slotsCur -= level;
+  renderSlots(burnIdx, false);
+  setTimeout(function(){ renderSlots(-1, false); }, 500);
+  slotStatus("spell_slots_spend −" + level + " · code decremented, not prose");
+};
+window.longRest = function(){
+  slotsCur = SLOTS_MAX;
+  hitDice.cur = Math.max(1, Math.floor(hitDice.max / 2));
+  hp.cur = hp.max;
+  renderSlots(-1, true);
+  slotStatus("long rest (8h) — HP max · all slots · half hit dice · exhaustion −1");
+};
+window.shortRest = function(){
+  if(hitDice.cur <= 0){ slotStatus("no hit dice left — you need a long rest", true); return; }
+  hitDice.cur--;
+  var roll = 1 + Math.floor(Math.random() * hitDice.die);
+  var con = 2;
+  hp.cur = Math.min(hp.max, hp.cur + roll + con);
+  slotStatus("short rest — server rolled 1d" + hitDice.die + " → " + roll + " +2 CON · hp " + hp.cur + "/" + hp.max + " · " + hitDice.cur + " hit dice left");
+};
+renderSlots(-1, false);
+slotStatus("the well is full");
+
+/* ── §8 TTS cache sim ──────────────────────────────────────── */
+var ttsSimCache = {}, ttsSimOrder = [], ttsLineIdx = 0, ttsSimLastTick = Date.now() / 1000;
 var ttsLines = [
   "The wind howls through the broken windows.",
   "Kip shifts his weight, watching the door.",
@@ -1376,11 +1509,7 @@ var ttsLines = [
   "The bell in the tower tolls once — then silence.",
   "Cold rain taps against the glass."
 ];
-var ttsLineIdx = 0;
-var ttsSimLastTick = Date.now() / 1000;
-function ttsKeyFor(line){
-  return "qwen::female::" + line.replace(/[^a-z0-9]/gi, "").slice(0, 26).toLowerCase();
-}
+function ttsKeyFor(line){ return "qwen::female::" + line.replace(/[^a-z0-9]/gi, "").slice(0, 26).toLowerCase(); }
 function ttsRenderCache(){
   var box = document.getElementById("tts-cache");
   if(!box) return;
@@ -1392,7 +1521,7 @@ function ttsRenderCache(){
   ttsSimOrder.forEach(function(k){
     var chip = document.createElement("span");
     chip.className = "tts-key";
-    chip.textContent = k.slice(0, 8) + "…" + Math.round(ttsSimCache[k].ttl) + "s";
+    chip.textContent = k.slice(0, 8) + "… " + Math.round(ttsSimCache[k].ttl) + "s";
     box.appendChild(chip);
   });
 }
@@ -1406,45 +1535,74 @@ function ttsAge(){
   ttsSimOrder.forEach(function(k){ ttsSimCache[k].ttl = Math.max(0, ttsSimCache[k].ttl - (now - ttsSimLastTick)); });
   ttsSimLastTick = now;
 }
-function simTts(mode){
+window.simTts = function(mode){
   ttsAge();
   var line;
   if(mode === "repeat" && ttsSimOrder.length > 0){
-    line = ttsSimCache[ttsSimOrder[0]].text;
+    line = ttsSimCache[ttsSimOrder[ttsSimOrder.length-1]].text;
   } else {
     line = ttsLines[ttsLineIdx % ttsLines.length];
     ttsLineIdx++;
   }
   var key = ttsKeyFor(line);
   var shown = line.length > 36 ? line.slice(0, 36) + "…" : line;
-  if(ttsSimCache[key]){
-    ttsSimCache[key].ttl = 600; // TTL refreshed on hit
-    ttsLog('HIT  "' + shown + '" → serving cached MP3 (TTL refreshed to 600s)', "h");
+  if(ttsSimCache[key] && ttsSimCache[key].ttl > 0){
+    ttsLog('HIT  "' + shown + '" → serving cached MP3 · 0 API calls · usage still booked', "h");
   } else {
-    if(ttsSimOrder.length >= 64){
-      var oldest = ttsSimOrder.shift();
-      delete ttsSimCache[oldest];
-    }
+    if(ttsSimOrder.length >= 64){ var oldest = ttsSimOrder.shift(); delete ttsSimCache[oldest]; }
     ttsSimCache[key] = { ttl: 600, text: line };
     ttsSimOrder.push(key);
-    ttsLog('MISS "' + shown + '" → split ≤900 chars → synth (StepFun/Qwen) → store MP3 · 1 API call', "m");
+    ttsLog('MISS "' + shown + '" → split ≤900 chars → synth → stitch MP3 · 1 API call', "m");
   }
   ttsRenderCache();
-}
+};
+
+/* ── §11 Undo demo ─────────────────────────────────────────── */
+var undoPhase = 0;
+window.undoDemo = function(){
+  var prev = document.getElementById("rw-prev");
+  var now = document.getElementById("rw-now");
+  var next = document.getElementById("rw-next");
+  var nextBody = document.getElementById("rw-next-body");
+  var ghost = document.getElementById("rw-ghost");
+  var epoch = document.getElementById("rw-epoch");
+  var btn = document.getElementById("undo-btn");
+  if(!prev || !now || !next) return;
+  btn.disabled = true;
+  if(undoPhase === 0){
+    // phase 1: a late guardian job arrives — dropped by the epoch check
+    ghost.classList.add("show");
+    setTimeout(function(){
+      ghost.classList.add("drop");
+      epoch.innerHTML = 'late guardian write <b style="color:var(--blood-bright)">dropped</b> — epoch mismatch';
+    }, 900);
+    setTimeout(function(){
+      // phase 2: rewind
+      now.classList.remove("now"); now.classList.add("gone");
+      prev.classList.add("restored");
+      nextBody.innerHTML = "hp 26/26 · gp 12<br>logbook −1 · facts: 34<br>vector index purged → re-indexed";
+      next.classList.add("now");
+      epoch.innerHTML = "epoch <b>7 → 8</b> · snapshot consumed · ledger: action=undo · turn spent";
+      ghost.classList.remove("show", "drop");
+      btn.disabled = false;
+      btn.textContent = "↻ RESET DEMO";
+      undoPhase = 1;
+    }, 2100);
+  } else {
+    now.classList.remove("gone"); now.classList.add("now");
+    prev.classList.remove("restored");
+    next.classList.remove("now");
+    nextBody.innerHTML = "—";
+    epoch.innerHTML = "epoch <b>7</b> — background writers check it before saving";
+    btn.textContent = "↶ UNDO LAST TURN";
+    btn.disabled = false;
+    undoPhase = 0;
+  }
+};
 
 /* ── Init ──────────────────────────────────────────────────── */
 initReveal();
-initSpy();
 setTimeout(typeJsonDemo, 1400);
-
-/* ── Expose handlers to inline HTML (onclick / onchange / onkeydown) ── */
-window.bootSkip = bootSkip;
-window.toggleExp = toggleExp;
-window.replayJson = replayJson;
-window.rollNow = rollNow;
-window.quickDice = quickDice;
-window.toggleAdv = toggleAdv;
-window.simTts = simTts;
 
 })();
 </script>

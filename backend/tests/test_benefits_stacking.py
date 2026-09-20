@@ -238,6 +238,9 @@ def test_admin_stats_providers_and_models(client):
 
 def test_provider_for_model_fallback(client):
     assert main._provider_for_model("qwen3.8-max") == "dashscope"
+    assert main._provider_for_model("deepseek-v4.1-flash") == "deepseek"
+    # Historiska transkript kan innehålla borttagna modellnamn — prefix-fallbacken
+    # (admin token-share) måste fortfarande känna igen dem:
     assert main._provider_for_model("deepseek-v4-flash-0731") == "deepseek"
     assert main._provider_for_model("step-3.7-flash") == "stepfun"
     assert main._provider_for_model("mimo-v2.5-pro") == "mimo"

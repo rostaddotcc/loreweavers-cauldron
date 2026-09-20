@@ -12,12 +12,11 @@ from dataclasses import dataclass
 class ModelConfig:
     model_id: str          # Frontend-värde, t.ex. "qwen3.8-max"
     display_name: str      # Visas i UI
-    provider: str          # "dashscope" | "deepseek" | "mimo" | "ollama"
+    provider: str          # "dashscope" | "deepseek" | "stepfun" | "mimo"
     api_model: str         # Faktiskt modellnamn hos providern
     base_url: str          # API-endpoint
     api_key_env: str       # Env-variabelnamn (inte själva nyckeln!)
     supports_vision: bool  # Kan analysera bilder?
-    local: bool = False    # Körs lokalt?
 
 # ═══════════════════════════════════════
 # MODELLREGISTRY
@@ -45,34 +44,17 @@ MODELS: dict[str, ModelConfig] = {
         supports_vision=True,
     ),
 
-    # ── DeepSeek (direkt, egen nyckel) ──
-    "deepseek-v4-pro": ModelConfig(
-        model_id="deepseek-v4-pro",
-        display_name="DeepSeek V4 Pro",
-        provider="deepseek",
-        api_model="deepseek-v4-pro",
-        base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1"),
-        api_key_env="DEEPSEEK_API_KEY",
-        supports_vision=False,
-    ),
-    "deepseek-v4-flash": ModelConfig(
-        model_id="deepseek-v4-flash",
-        display_name="DeepSeek V4 Flash",
-        provider="deepseek",
-        api_model="deepseek-v4-flash",
-        base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1"),
-        api_key_env="DEEPSEEK_API_KEY",
-        supports_vision=False,
-    ),
     # ── DeepSeek via Alibaba Token Plan (spelarval) ──
-    "deepseek-v4-flash-0731": ModelConfig(
-        model_id="deepseek-v4-flash-0731",
-        display_name="DeepSeek V4 Flash (fast)",
+    # 2026-09-21: deepseek-v4-flash-0731 borttagen (rostad) → v4.1-flash ersätter.
+    # Verifierad live mot Token Plan (200 OK, reasoning + content, 2026-09-21).
+    "deepseek-v4.1-flash": ModelConfig(
+        model_id="deepseek-v4.1-flash",
+        display_name="DeepSeek V4.1 Flash",
         provider="deepseek",
-        api_model="deepseek-v4-flash-0731",
+        api_model="deepseek-v4.1-flash",
         base_url=os.getenv("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
         api_key_env="DASHSCOPE_API_KEY",
-        supports_vision=False,
+        supports_vision=True,
     ),
 
     "qwen3.8-flash": ModelConfig(
@@ -123,7 +105,7 @@ MODELS: dict[str, ModelConfig] = {
         supports_vision=True,
     ),
 
-    # ── MiMo (Xiaomi) ──
+    # ── MiMo (Xiaomi) — admin-only ──
     "mimo-v2.5": ModelConfig(
         model_id="mimo-v2.5",
         display_name="MiMo 2.5",
@@ -141,38 +123,6 @@ MODELS: dict[str, ModelConfig] = {
         base_url=os.getenv("MIMO_BASE_URL", "https://api.xiaomimimo.com/v1"),
         api_key_env="MIMO_API_KEY",
         supports_vision=True,
-    ),
-
-    # ── Ollama (lokalt, ingen nyckel) ──
-    "ollama:qwen3:8b": ModelConfig(
-        model_id="ollama:qwen3:8b",
-        display_name="Qwen3 8B (lokal)",
-        provider="ollama",
-        api_model="qwen3:8b",
-        base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1"),
-        api_key_env="",  # Ingen nyckel behövs
-        supports_vision=False,
-        local=True,
-    ),
-    "ollama:deepseek-r1:7b": ModelConfig(
-        model_id="ollama:deepseek-r1:7b",
-        display_name="DeepSeek R1 7B (lokal)",
-        provider="ollama",
-        api_model="deepseek-r1:7b",
-        base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1"),
-        api_key_env="",
-        supports_vision=False,
-        local=True,
-    ),
-    "ollama:heretic": ModelConfig(
-        model_id="ollama:heretic",
-        display_name="Heretic 7B (lokal, NSFW)",
-        provider="ollama",
-        api_model="igorls/gemma-4-e4b-it-heretic-GGUF:q4_k_m",
-        base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1"),
-        api_key_env="",
-        supports_vision=False,
-        local=True,
     ),
 }
 
@@ -206,7 +156,6 @@ def list_models_for_frontend() -> list[dict]:
             "name": m.display_name,
             "provider": m.provider,
             "vision": m.supports_vision,
-            "local": m.local,
         }
         for m in MODELS.values()
     ]

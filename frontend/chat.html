@@ -5117,7 +5117,7 @@ const AWAKENING_TRIGGER = '__VAKNA_DM__';
 // Här vaknar DM bara automatiskt med de sparade modellerna. In-game-bytet sker
 // via settings-menyn (⚙️ → Modeller).
 // Spelarmodeller (icke-admin): samma lista som backend PLAYER_MODELS
-const PLAYER_MODEL_IDS = ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-5-preview', 'step-3.7-flash', 'step-3.5-flash-2603', 'ollama:heretic'];
+const PLAYER_MODEL_IDS = ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4.1-flash', 'step-5-preview', 'step-3.7-flash', 'step-3.5-flash-2603'];
 // Free-tier-modeller (speglar backend FREE_PLAYER_MODELS) — allt annat låses 🔒.
 const FREE_MODEL_IDS = ['qwen3.8-flash', 'step-5-preview', 'step-3.7-flash', 'step-3.5-flash-2603'];
 
@@ -8195,24 +8195,19 @@ let currentModel = localStorage.getItem('dnd_model') || 'step-3.7-flash';
 const modelNames = {
   'step-5-preview': 'Step 5 Preview',
   'step-3.7-flash': 'Step 3.7 Flash',
+  'step-3.5-flash-2603': 'Step 3.5 Flash 2603',
   'qwen3.8-max': 'Qwen 3.8 Max',
   'qwen3.8-flash': 'Qwen 3.8 Flash',
   'qwen3.6-flash': 'Qwen 3.6 Flash (snabb)',
   'qwen3.7-plus': 'Qwen 3.7 Plus',
-  'deepseek-v4-pro': 'DeepSeek V4 Pro',
-  'deepseek-v4-flash': 'DeepSeek V4 Flash',
-  'deepseek-v4-flash-0731': 'DeepSeek V4 Flash (fast)',
+  'deepseek-v4.1-flash': 'DeepSeek V4.1 Flash',
   'mimo-v2.5': 'MiMo 2.5',
   'mimo-v2.5-pro': 'MiMo 2.5 Pro',
-  'ollama:qwen3:8b': 'Qwen3 8B (local)',
-  'ollama:deepseek-r1:7b': 'DeepSeek R1 7B (local)',
-  'ollama:heretic': 'Heretic 7B (local, NSFW)',
 };
 function switchModel(model) {
   currentModel = model;
   localStorage.setItem('dnd_model', model);
-  const local = model.startsWith('ollama:');
-  toast(`🔮 ${I18N.t('Dungeon Master byter röst: ')}${model}${local ? I18N.t(' körs lokalt') : ''}`);
+  toast(`🔮 ${I18N.t('Dungeon Master byter röst: ')}${model}`);
 }
 
 // ── In-game modell-picker (settings ⚙️): byt DM/Lorekeeper/Extraction utan att lämna chatten ──
@@ -8811,11 +8806,12 @@ document.addEventListener('keydown', e => {
       Settings ⚙️ (the DM choice also appears when you start a new adventure).
     </div>
     <div class="mi-row"><div class="mi-id">qwen3.8-max</div><div class="mi-desc">The flagship. Deep reasoning, rich narration, fewest mistakes — but it thinks long and hard before every reply.<span class="mi-speed">⏱ slowest · best quality · thinks a lot</span></div></div>
-    <div class="mi-row"><div class="mi-id">qwen3.8-flash</div><div class="mi-desc">The new free pick. Fast narration with solid reasoning, and it can read images — free for every account.<span class="mi-speed">⏱ fast · free tier · light thinking</span></div></div>
+    <div class="mi-row"><div class="mi-id">qwen3.8-flash</div><div class="mi-desc">The new free pick. Fast narration with solid reasoning — free for every account.<span class="mi-speed">⏱ fast · free tier · light thinking</span></div></div>
     <div class="mi-row"><div class="mi-id">qwen3.6-flash</div><div class="mi-desc">The balanced storyteller. Visible reasoning, solid quality, noticeably faster.<span class="mi-speed">⏱ medium · good quality · thinks</span></div></div>
-    <div class="mi-row"><div class="mi-id">deepseek-v4-flash</div><div class="mi-desc">The quick hand. Fast, economical replies with light reasoning — great for casual scenes.<span class="mi-speed">⏱ fast · economical · light thinking</span></div></div>
-    <div class="mi-row"><div class="mi-id">step-3.7-flash</div><div class="mi-desc">Another fast option. Snappy narration; occasionally needs a retry on complex character generation.<span class="mi-speed">⏱ fast · light thinking</span></div></div>
-    <div class="mi-row"><div class="mi-id">ollama:heretic</div><div class="mi-desc">Your local oracle, running on this server. Free and private — but slow, and answers on CPU time.<span class="mi-speed">⏱ local · free · slowest</span></div></div>
+    <div class="mi-row"><div class="mi-id">deepseek-v4.1-flash</div><div class="mi-desc">The quick thinker. DeepSeek's newest open-weight reasoning model — economical replies with real depth.<span class="mi-speed">⏱ fast · economical · reasons first</span></div></div>
+    <div class="mi-row"><div class="mi-id">step-5-preview</div><div class="mi-desc">StepFun's new flagship — free for every account. Thinks deeply before every reply, so expect a longer pause.<span class="mi-speed">⏱ slow · free · deep thinking</span></div></div>
+    <div class="mi-row"><div class="mi-id">step-3.7-flash</div><div class="mi-desc">The steadfast default. Snappy narration; occasionally needs a retry on complex character generation.<span class="mi-speed">⏱ fast · light thinking</span></div></div>
+    <div class="mi-row"><div class="mi-id">step-3.5-flash-2603</div><div class="mi-desc">The open one. StepFun's open-weight flash model — a fast alternative with the same steady cadence.<span class="mi-speed">⏱ fast · open weights</span></div></div>
     <div class="mi-callout">
       <p><b>Why does a "high reasoning" model take longer?</b> Before answering, the model
       works through the scene — the campaign state, your choices, the rules — and you can

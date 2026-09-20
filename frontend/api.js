@@ -201,11 +201,13 @@ const API = (() => {
           { id: 'qwen3.8-max', name: 'Qwen 3.8 Max', provider: 'dashscope', vision: true, local: false },
           { id: 'qwen3.8-flash', name: 'Qwen 3.8 Flash', provider: 'dashscope', vision: true, local: false },
           { id: 'qwen3.7-plus', name: 'Qwen 3.7 Plus', provider: 'dashscope', vision: true, local: false },
-          { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro', provider: 'deepseek', vision: false, local: false },
-          { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', provider: 'deepseek', vision: false, local: false },
+          { id: 'qwen3.6-flash', name: 'Qwen 3.6 Flash (snabb)', provider: 'dashscope', vision: false, local: false },
+          { id: 'deepseek-v4.1-flash', name: 'DeepSeek V4.1 Flash', provider: 'deepseek', vision: true, local: false },
+          { id: 'step-5-preview', name: 'Step 5 Preview (flagship)', provider: 'stepfun', vision: true, local: false },
+          { id: 'step-3.7-flash', name: 'Step 3.7 Flash (snabb)', provider: 'stepfun', vision: true, local: false },
+          { id: 'step-3.5-flash-2603', name: 'Step 3.5 Flash 2603 (öppen, snabb)', provider: 'stepfun', vision: true, local: false },
           { id: 'mimo-v2.5', name: 'MiMo 2.5', provider: 'mimo', vision: true, local: false },
           { id: 'mimo-v2.5-pro', name: 'MiMo 2.5 Pro', provider: 'mimo', vision: true, local: false },
-          { id: 'ollama:qwen3:8b', name: 'Qwen3 8B (local)', provider: 'ollama', vision: false, local: true },
         ];
       }
       return req('/api/models');

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>The Lore Weaver's Cauldron — The Minds, Voices &amp; Brushes</title>
-<meta name="description" content="The minds, voices and brushes behind the mask — DM minds (StepFun 3.7 Flash, Qwen 3.6 Flash, Qwen 3.8 Max, DeepSeek V4 Flash 0731), TTS narrators (StepFun TTS, Qwen TTS) and image painters (StepFun image edit 2, Wan 2.7 Pro). Context windows, parameters, speeds and what each one does at your table.">
+<meta name="description" content="The minds, voices and brushes behind the mask — DM minds (StepFun Step 5 Preview, StepFun 3.7 Flash, StepFun 3.5 Flash 2603, Qwen 3.8 Flash, Qwen 3.6 Flash, Qwen 3.8 Max, DeepSeek V4.1 Flash), TTS narrators (StepFun TTS, Qwen TTS) and image painters (StepFun image edit 2, Wan 2.7 Pro). Context windows, parameters, speeds and what each one does at your table.">
 <link rel="icon" href="/assets/logo-cauldron.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -180,7 +180,7 @@
 <section class="ledger">
   <p class="eyebrow rv">The Grimoire of Minds</p>
   <h1 class="rv">The Minds Behind the Mask</h1>
-  <p class="ledger-sub rv">Four minds can sit at your table — and behind them wait the voices and the brushes. Each DM is a different weight of thought, a different pace of speech; the narrators give the realm a voice, and the painters give it faces. Here is what each one is made of, and what it is best at.<br><b>Powered by Qwen, DeepSeek, StepFun &amp; Wan</b></p>
+  <p class="ledger-sub rv">Seven minds can sit at your table — and behind them wait the voices and the brushes. Each DM is a different weight of thought, a different pace of speech; the narrators give the realm a voice, and the painters give it faces. Here is what each one is made of, and what it is best at.<br><b>Powered by Qwen, DeepSeek, StepFun &amp; Wan</b></p>
 
   <!-- ═══════════════ hur det funkar ═══════════════ -->
   <div class="sec rv">
@@ -254,6 +254,60 @@
     </div>
   </div>
 
+  <!-- ═══════════════ stepfun 3.5 ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">✦</span>
+      <h2>StepFun 3.5 Flash 2603</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="model">
+      <div class="model-head">
+        <span class="m-logo stepfun">SF</span>
+        <div>
+          <div class="m-title">StepFun 3.5 Flash 2603</div>
+          <div class="m-maker">StepFun · open-weights snapshot, March 2026</div>
+        </div>
+        <span class="m-tag dm">Open DM</span>
+      </div>
+      <p class="m-desc">The <b>open mind</b> — StepFun's open-weight flash model (Apache 2.0, weights public on Hugging Face). A sparse MoE with <b>11B active parameters</b> out of 196B total, it answers with the same brisk cadence as its 3.7 sibling and offers the same <b>three reasoning levels</b> (low, medium, high). The choice for players who like knowing exactly which weights are telling their story.</p>
+      <div class="spec-grid">
+        <div class="spec"><span class="k">Context window</span><span class="v">256K<small>262,144 tokens</small></span></div>
+        <div class="spec"><span class="k">Total parameters</span><span class="v">196B<small>sparse MoE, open weights</small></span></div>
+        <div class="spec"><span class="k">Active per token</span><span class="v">11B</span></div>
+        <div class="spec"><span class="k">Reasoning</span><span class="v">Yes<small>low · medium · high</small></span></div>
+      </div>
+      <div class="m-role"><span class="ico">◆</span><span>Free for every account — an open-weight alternative to Step 3.7 Flash at the model gate and in Settings.</span></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ qwen 3.8 flash ═══════════════ -->
+  <div class="sec rv">
+    <div class="sec-head">
+      <span class="sec-num">✦</span>
+      <h2>Qwen 3.8 Flash</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="model hot">
+      <div class="model-head">
+        <span class="m-logo qwen">Q</span>
+        <div>
+          <div class="m-title">Qwen 3.8 Flash</div>
+          <div class="m-maker">Alibaba Qwen · open weights August 2026 (Flash-Next)</div>
+        </div>
+        <span class="m-tag dm">Swift DM</span>
+      </div>
+      <p class="m-desc">The <b>swift mind</b> — the newest Qwen flash generation, free for every account since September 2026. A sparse MoE that activates only <b>6B parameters</b> per token, built on the hybrid-attention architecture that previews Qwen4: it stays fast on long campaigns while reasoning visibly before it speaks. On the official API it holds a <b>1M-token context window</b>. Measured on our route it writes visible prose at <b>~80–100 tok/s</b> — the quickest hand among the storytellers.</p>
+      <div class="spec-grid">
+        <div class="spec"><span class="k">Context window</span><span class="v">1M<small>official API, by default</small></span></div>
+        <div class="spec"><span class="k">Total parameters</span><span class="v">125B<small>sparse MoE, open weights</small></span></div>
+        <div class="spec"><span class="k">Active per token</span><span class="v">6B</span></div>
+        <div class="spec"><span class="k">Output speed</span><span class="v">~80–100 tok/s<small>measured on our route</small></span></div>
+      </div>
+      <div class="m-role"><span class="ico">◆</span><span>Free for every account — the recommended pick when you want Qwen storytelling without spending a thing. Set it at the model gate or in Settings.</span></div>
+    </div>
+  </div>
+
   <!-- ═══════════════ qwen 3.6 ═══════════════ -->
   <div class="sec rv">
     <div class="sec-head">
@@ -268,9 +322,9 @@
           <div class="m-title">Qwen 3.6 Flash</div>
           <div class="m-maker">Alibaba Qwen · released April 27, 2026</div>
         </div>
-        <span class="m-tag dm">Swift DM</span>
+        <span class="m-tag dm">Balanced DM</span>
       </div>
-      <p class="m-desc">The <b>swift mind</b> — a budget-conscious alternative from the Qwen family. It reads text, images and video, holds a full <b>1M-token context window</b>, and pairs a hybrid linear-attention core with a MoE body so it stays fast on long campaigns. The economical choice when you want Alibaba&rsquo;s storytelling without the heavyweight bill.</p>
+      <p class="m-desc">The <b>balanced mind</b> — the previous Qwen flash generation. It holds a full <b>1M-token context window</b> and pairs a hybrid linear-attention core with a MoE body so it stays fast on long campaigns. Visible reasoning, solid quality, noticeably quicker than the flagship — the dependable middle of the Qwen family.</p>
       <div class="spec-grid">
         <div class="spec"><span class="k">Context window</span><span class="v">1M<small>1,000,000 tokens</small></span></div>
         <div class="spec"><span class="k">Total parameters</span><span class="v">MoE<small>hybrid linear attention</small></span></div>
@@ -297,14 +351,14 @@
         </div>
         <span class="m-tag flagship">The Grand DM</span>
       </div>
-      <p class="m-desc">The <b>grand mind</b> — Alibaba&rsquo;s 2.4-trillion-parameter flagship, a sparse MoE that activates only <b>95 billion parameters</b> per request. A full <b>1M-token context window</b> (roughly 750,000 words — entire books at once), deep reasoning that always thinks, and the richest prose of the four. When your campaign deserves the full ceremony, this is the voice that delivers it.</p>
+      <p class="m-desc">The <b>grand mind</b> — Alibaba&rsquo;s 2.4-trillion-parameter flagship, a sparse MoE that activates only <b>95 billion parameters</b> per request. A full <b>1M-token context window</b> (roughly 750,000 words — entire books at once), deep reasoning that always thinks, and the richest prose of all the minds at the table. When your campaign deserves the full ceremony, this is the voice that delivers it.</p>
       <div class="spec-grid">
         <div class="spec"><span class="k">Context window</span><span class="v">1M<small>~750,000 words</small></span></div>
         <div class="spec"><span class="k">Total parameters</span><span class="v">2.4T<small>sparse MoE</small></span></div>
         <div class="spec"><span class="k">Active per request</span><span class="v">95B</span></div>
         <div class="spec"><span class="k">Output speed</span><span class="v">~46 tok/s<small>Alibaba API, measured</small></span></div>
       </div>
-      <div class="m-role"><span class="ico">◆</span><span>The storyteller&rsquo;s choice — available as a player-chosen Dungeon Master on the Adventurer and Lifetime paths.</span></div>
+      <div class="m-role"><span class="ico">◆</span><span>The storyteller&rsquo;s choice — available as a player-chosen Dungeon Master on the Patron path.</span></div>
     </div>
   </div>
 
@@ -312,24 +366,24 @@
   <div class="sec rv">
     <div class="sec-head">
       <span class="sec-num">✦</span>
-      <h2>DeepSeek V4 Flash 0731</h2>
+      <h2>DeepSeek V4.1 Flash</h2>
       <span class="ruler"></span><span class="rule"></span>
     </div>
     <div class="model">
       <div class="model-head">
         <span class="m-logo deepseek">DS</span>
         <div>
-          <div class="m-title">DeepSeek V4 Flash 0731</div>
-          <div class="m-maker">DeepSeek · fast reasoning model</div>
+          <div class="m-title">DeepSeek V4.1 Flash</div>
+          <div class="m-maker">DeepSeek · open-weights reasoning model (MIT)</div>
         </div>
         <span class="m-tag dm">Swift DM</span>
       </div>
-      <p class="m-desc">The <b>quick-thinking mind</b> — a sparse MoE reasoning model from DeepSeek with <b>13B active parameters</b> out of 284B total. It reasons fast (<b>~113 tokens per second</b> measured) and reads the whole realm in its <b>1M-token context window</b>. The pragmatic pick: strong reasoning at a fraction of the weight.</p>
+      <p class="m-desc">The <b>quick-thinking mind</b> — an open-weight sparse MoE reasoning model from DeepSeek with <b>16B active parameters</b> out of 552B total, released under the permissive MIT license. It reasons before it answers and reads the whole realm in its <b>1M-token context window</b>. The pragmatic pick: strong reasoning at a fraction of the weight, at a budget price.</p>
       <div class="spec-grid">
         <div class="spec"><span class="k">Context window</span><span class="v">1M<small>1,000,000 tokens</small></span></div>
-        <div class="spec"><span class="k">Total parameters</span><span class="v">284B<small>sparse MoE</small></span></div>
-        <div class="spec"><span class="k">Active per token</span><span class="v">13B</span></div>
-        <div class="spec"><span class="k">Output speed</span><span class="v">~113 tok/s<small>measured</small></span></div>
+        <div class="spec"><span class="k">Total parameters</span><span class="v">552B<small>sparse MoE, open weights</small></span></div>
+        <div class="spec"><span class="k">Active per token</span><span class="v">16B</span></div>
+        <div class="spec"><span class="k">Output speed</span><span class="v">~55&ndash;70 tok/s<small>measured on our route</small></span></div>
       </div>
       <div class="m-role"><span class="ico">◆</span><span>Available as a player-chosen Dungeon Master on paid paths — the fast-reasoning alternative that keeps pace with long, rules-heavy sessions.</span></div>
     </div>
@@ -454,12 +508,36 @@
         </thead>
         <tbody>
           <tr>
+            <td class="mname">StepFun Step 5 Preview</td>
+            <td>1M</td>
+            <td>~600B</td>
+            <td>~27B / token</td>
+            <td>~100 tok/s <span class="dim">(output)</span></td>
+            <td>Deep free reasoning — <b>Free</b></td>
+          </tr>
+          <tr>
             <td class="mname">StepFun 3.7 Flash</td>
             <td>256K</td>
             <td>198B</td>
             <td>~11B / token</td>
             <td>~425 tok/s <span class="dim">(prompt)</span></td>
-            <td>Structured play, rules, Guardian</td>
+            <td>Structured play, rules, Guardian — <b>default, Free</b></td>
+          </tr>
+          <tr>
+            <td class="mname">StepFun 3.5 Flash 2603</td>
+            <td>256K</td>
+            <td>196B</td>
+            <td>11B / token</td>
+            <td class="dim">fast</td>
+            <td>Open-weight alternative — <b>Free</b></td>
+          </tr>
+          <tr>
+            <td class="mname">Qwen 3.8 Flash</td>
+            <td>1M</td>
+            <td>125B</td>
+            <td>6B / token</td>
+            <td>~80–100 tok/s <span class="dim">(output)</span></td>
+            <td>Fastest Qwen storytelling — <b>Free</b></td>
           </tr>
           <tr>
             <td class="mname">Qwen 3.6 Flash</td>
@@ -467,7 +545,7 @@
             <td>MoE</td>
             <td class="dim">—</td>
             <td class="dim">fast</td>
-            <td>Budget storytelling, long memory</td>
+            <td>Balanced storytelling, long memory — <b>Patron</b></td>
           </tr>
           <tr>
             <td class="mname">Qwen 3.8 Max</td>
@@ -475,15 +553,15 @@
             <td>2.4T</td>
             <td>95B / request</td>
             <td>~46 tok/s <span class="dim">(output)</span></td>
-            <td>Deepest prose &amp; reasoning</td>
+            <td>Deepest prose &amp; reasoning — <b>Patron</b></td>
           </tr>
           <tr>
-            <td class="mname">DeepSeek V4 Flash 0731</td>
+            <td class="mname">DeepSeek V4.1 Flash</td>
             <td>1M</td>
-            <td>284B</td>
-            <td>13B / token</td>
-            <td>~113 tok/s <span class="dim">(output)</span></td>
-            <td>Fast reasoning, long sessions</td>
+            <td>552B</td>
+            <td>16B / token</td>
+            <td>~55–70 tok/s <span class="dim">(output)</span></td>
+            <td>Fast open-weight reasoning — <b>Patron</b></td>
           </tr>
           <tr class="cmp-group"><td colspan="6">The Voices — TTS Narrators</td></tr>
           <tr>
@@ -530,7 +608,7 @@
         </tbody>
       </table>
     </div>
-    <p class="note rv"><b>A note on numbers.</b> Context windows and parameter counts come from each model&rsquo;s official release material. Token-per-second figures are independent measurements (Artificial Analysis / Intelligence Index) or the vendor&rsquo;s own prompt-processing figure — real speed at your table varies with load, context length and reasoning level. Free players always travel with StepFun 3.7 Flash and the rotating OpenRouter free DMs; DeepSeek, Qwen and the other DM minds unlock with the one-time Patron top-up (30€). <b>The voices:</b> StepFun TTS narrates for free; Qwen TTS adds richer male and female narrators with Patron (30€). <b>The brushes:</b> StepFun image edit 2 paints <b>generic</b> avatars for free — <b>Wan 2.7 Pro</b> and <b>Qwen Image 3 Pro</b> paint <b>top-quality, realistic</b> portraits at 1080² with Patron (30€).</p>
+    <p class="note rv"><b>A note on numbers.</b> Context windows and parameter counts come from each model&rsquo;s official release material. Token-per-second figures are independent measurements (Artificial Analysis / Intelligence Index), the vendor&rsquo;s own prompt-processing figure, or measured on the Cauldron&rsquo;s own route — real speed at your table varies with load, context length and reasoning level. Free players choose among <b>StepFun Step 5 Preview, StepFun 3.7 Flash (default), StepFun 3.5 Flash 2603 and Qwen 3.8 Flash</b>, plus the rotating OpenRouter free DMs; <b>Qwen 3.8 Max, Qwen 3.6 Flash and DeepSeek V4.1 Flash</b> unlock with the one-time Patron top-up (30€, 30 days). <b>The voices:</b> StepFun TTS narrates for free; Qwen TTS adds richer male and female narrators with Patron (30€). <b>The brushes:</b> StepFun image edit 2 paints <b>generic</b> avatars for free — <b>Wan 2.7 Pro</b> and <b>Qwen Image 3 Pro</b> paint <b>top-quality, realistic</b> portraits at 1080² with Patron (30€).</p>
   </div>
 
   <div class="footer rv">

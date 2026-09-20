@@ -1793,8 +1793,9 @@ GUARDIAN_MODEL = os.getenv("GUARDIAN_MODEL", "step-3.7-flash")
 # StepFun 3.7 Flash är default — spelaren måste aktivt välja annan modell.
 DEFAULT_PLAYER_MODEL = "step-3.7-flash"
 # Modeller som icke-admin-spelare får välja mellan
-# (admin ser alla — inkl. MiMo + DeepSeek-egen-API)
-PLAYER_MODELS = ("qwen3.8-max", "qwen3.8-flash", "qwen3.6-flash", "deepseek-v4-flash", "deepseek-v4-flash-0731", "step-5-preview", "step-3.7-flash", "step-3.5-flash-2603", "ollama:heretic")
+# (admin ser allt i registret — inkl. MiMo; DeepSeek-egen-API och lokala
+# ollama-modeller togs bort ur spelet 2026-09-21)
+PLAYER_MODELS = ("qwen3.8-max", "qwen3.8-flash", "qwen3.6-flash", "deepseek-v4.1-flash", "step-5-preview", "step-3.7-flash", "step-3.5-flash-2603")
 
 # Gratisväljaren: free/tier1 får välja mellan StepFun-stegen + Qwen 3.8 Flash
 # (2026-09-09: Qwen 3.8 Flash live för free tier — verifierad mot Token Plan).
@@ -1835,8 +1836,21 @@ def _validate_model_id(model_id: str) -> bool:
 
 
 def _guardian_model_for(state: dict) -> str:
-    """Per-kampanj Guardian-modell (admin kan välja vid kampanjskapande)."""
-    return state.get("meta", {}).get("guardian_model") or GUARDIAN_MODEL
+    """Per-kampanj Guardian-modell (admin kan välja vid kampanjskapande).
+
+    Fallback: global GUARDIAN_MODEL. Valideras mot modellregistret (samma
+    mönster som _extraction_model_for) så en borttagen modell — t.ex.
+    deepseek-v4-flash-0731 eller ollama:* (bortplockade 2026-09-21) — aldrig
+    kraschar Guardian med ValueError i get_model().
+    """
+    m = state.get("meta", {}).get("guardian_model") or GUARDIAN_MODEL
+    if m.startswith("orfree:"):
+        return m  # 🆓 OpenRouter free — inte i MODELS-registret, routas direkt i _call_llm
+    try:
+        get_model(m)
+    except ValueError:
+        m = GUARDIAN_MODEL
+    return m
 
 
 async def _guardian_call(state: dict, messages: list, usage_out: dict,
@@ -2184,7 +2198,7 @@ async def _call_llm(
     api_key = get_api_key(config)
 
     # Reasoning-modeller behöver mer utrymme (thinking + content)
-    if config.api_model in ("deepseek-v4-flash", "deepseek-v4-flash-0731", "mimo-v2.5", "mimo-v2.5-pro", "step-3.7-flash", "step-5-preview"):
+    if config.api_model in ("deepseek-v4.1-flash", "mimo-v2.5", "mimo-v2.5-pro", "step-3.7-flash", "step-5-preview"):
         max_tokens = max(max_tokens, 2048)
 
     headers = {"Content-Type": "application/json"}
@@ -2406,7 +2420,7 @@ async def _stream_llm(
     api_key = get_api_key(config)
 
     # Reasoning-modeller behöver mer utrymme (thinking + content)
-    if config.api_model in ("deepseek-v4-flash", "deepseek-v4-flash-0731", "mimo-v2.5", "mimo-v2.5-pro", "step-3.7-flash", "step-5-preview"):
+    if config.api_model in ("deepseek-v4.1-flash", "mimo-v2.5", "mimo-v2.5-pro", "step-3.7-flash", "step-5-preview"):
         max_tokens = max(max_tokens, 2048)
 
     headers = {"Content-Type": "application/json"}

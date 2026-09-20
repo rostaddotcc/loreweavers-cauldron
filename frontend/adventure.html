@@ -2293,7 +2293,7 @@ function advPrompt() {
 }
 
 // ── Modellgate (DM/Guardian/Extraction + Character-sheet modell — kan ändras när som helst i kampanjen) ──
-const PLAYER_DM_MODELS = ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-5-preview', 'step-3.7-flash', 'ollama:heretic'];
+const PLAYER_DM_MODELS = ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4.1-flash', 'step-5-preview', 'step-3.7-flash', 'step-3.5-flash-2603'];
 const TTS_PROVIDERS = [
   { id: 'qwen', name: 'Qwen (Token Plan) ⭐', recommended: true },
   { id: 'stepfun', name: 'StepFun (Step Plan)' },
@@ -2313,7 +2313,7 @@ const TTS_PROVIDERS = [
     : '';
   // Modeller som kräver Patron (30€)+ (backend klämmer redan free/tier1 → step-3.7-flash;
   // här låses de i UI:t så spelaren inte kan välja något som tyst ignoreras).
-  const PREMIUM_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4-flash', 'deepseek-v4-flash-0731', 'ollama:heretic'];
+  const PREMIUM_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4.1-flash'];
   const optionHtml = (m, locked) => {
     const prem = PREMIUM_MODELS.includes(m);
     const dis = locked && prem;
@@ -2990,7 +2990,13 @@ tick();
     'assets/adventurers/webp/adventurer-monk.webp',
     'assets/adventurers/webp/adventurer-druid.webp',
     'assets/adventurers/webp/adventurer-sorcerer.webp',
-    'assets/adventurers/webp/adventurer-artificer.webp'
+    'assets/adventurers/webp/adventurer-artificer.webp',
+    'assets/adventurers/webp/adventurer-genasi-pyromancer.webp',
+    'assets/adventurers/webp/adventurer-githyanki-knight.webp',
+    'assets/adventurers/webp/adventurer-drow-priestess.webp',
+    'assets/adventurers/webp/adventurer-warforged-paladin.webp',
+    'assets/adventurers/webp/adventurer-firbolg-druid.webp',
+    'assets/adventurers/webp/adventurer-tabaxi-monk.webp'
   ];
   var bg = document.getElementById('hero-bg');
   if (!bg) return;

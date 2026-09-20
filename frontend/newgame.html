@@ -264,10 +264,11 @@
           <option value="qwen3.8-max">qwen3.8-max</option>
           <option value="qwen3.8-flash">qwen3.8-flash</option>
           <option value="qwen3.6-flash">qwen3.6-flash</option>
-          <option value="deepseek-v4-flash-0731">deepseek-v4-flash-0731</option>
+          <option value="qwen3.7-plus">qwen3.7-plus</option>
+          <option value="deepseek-v4.1-flash">deepseek-v4.1-flash</option>
           <option value="step-5-preview">step-5-preview</option>
           <option value="step-3.7-flash" selected>step-3.7-flash</option>
-          <option value="deepseek-v4-flash">deepseek-v4-flash</option>
+          <option value="step-3.5-flash-2603">step-3.5-flash-2603</option>
           <option value="mimo-v2.5">mimo-v2.5</option>
           <option value="mimo-v2.5-pro">mimo-v2.5-pro</option>
         </select>
@@ -353,7 +354,7 @@ if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 // ── Rollbaserat modellval: icke-admin får välja mellan de tillåtna modellerna ──
 let newgameIsAdmin = false;
 let _newgameTier = 'free';  // free | tier1 | tier2 | lifetime
-const PLAYER_CHAR_MODELS = ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4-flash-0731', 'step-5-preview', 'step-3.7-flash', 'ollama:heretic'];
+const PLAYER_CHAR_MODELS = ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4.1-flash', 'step-5-preview', 'step-3.7-flash', 'step-3.5-flash-2603'];
 // Råa ID:n visas direkt — man vet exakt vilken modell man får (inget "snabb"/"fast"-förskönande)
 const PLAYER_CHAR_LABELS = {};
 PLAYER_CHAR_MODELS.forEach(m => { PLAYER_CHAR_LABELS[m] = m; });

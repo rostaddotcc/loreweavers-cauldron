@@ -279,39 +279,62 @@
   .deck .sb-count{font-size:.7rem;color:var(--bone)}
 
   /* ═══════════════ Kortlek (deck) — flytande högar, stats direkt på kortet 2026-08-14 ═══════════════ */
-  .decks{display:flex;flex-direction:column;gap:3rem;max-width:980px;margin:0 auto}
-  .deck-stage{position:relative;display:flex;align-items:center;justify-content:center;min-height:700px}
-  .deck-pile{position:relative;width:min(480px,100%);height:660px}
+  /* 2026-09-20 kompakt-läge (rostad): båda korten sida vid sida istället för
+     staplade — en sektion istället för två skärmhöjder. Korten blir kortare
+     (420px) och smalare (380px) så de får plats två-i-rad på 1140px-wrap. */
+  .decks{display:grid;grid-template-columns:repeat(2,1fr);gap:clamp(1rem,3vw,2.2rem);max-width:980px;margin:0 auto;align-items:start}
+  /* 2026-09-20: align-items:start (inte center) — kortet ska MOT toppen av sin
+     stage ligga, annars centreras det kortare NPC-kortet 40px nedåt i sin
+     520px-stage och topparna matchar inte (mätt: piles t=162 vs 202). */
+  .deck-stage{position:relative;display:flex;align-items:start;justify-content:center;min-height:520px}
+  .deck-pile{position:relative;width:min(380px,100%);height:440px}
+  /* Äventyrarkort bär egenskaper + utrustning + besvärjelser + plats — de
+     behöver mer höjd än NPC-kort (bara en textrad). Annars låg NPC-kortets
+     nedre halft tomt (synligt i skärmdump 2026-09-20). */
+  .deck-pile.is-adv{height:560px}
   .pile-under{position:absolute;inset:0;border:1px solid var(--edge);background:linear-gradient(165deg,var(--stone-3),var(--stone-2));box-shadow:0 10px 24px -10px rgba(0,0,0,.55)}
   .pile-under.u1{transform:translate(12px,10px) rotate(.8deg);opacity:.55}
   .pile-under.u2{transform:translate(24px,20px) rotate(1.6deg);opacity:.38}
   .pile-under.u3{transform:translate(36px,30px) rotate(2.4deg);opacity:.2}
   .deck-card{position:absolute;inset:0;cursor:pointer;background:var(--stone-2);border:1px solid var(--edge);overflow:hidden;box-shadow:0 22px 40px -14px rgba(0,0,0,.7);display:flex;flex-direction:column}
   .deck-card:hover{border-color:var(--gold)}
-  .deck-portrait{position:relative;flex:0 0 40%;background-size:cover;background-position:center 18%}
-  .deck-portrait::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 42%,color-mix(in srgb, var(--ink) 92%, transparent))}
-  .deck-portrait .plate{position:absolute;left:0;right:0;bottom:0;padding:.8rem 1.1rem .95rem;z-index:2}
-  .deck-portrait .plate .nm{font-family:var(--font-display);font-weight:900;font-size:1.45rem;color:var(--gold-bright);line-height:1.12;text-shadow:0 2px 8px rgba(0,0,0,.9)}
-  .deck-portrait .plate .meta{font-size:.92rem;color:var(--bone);font-style:italic;text-shadow:0 1px 5px rgba(0,0,0,.95)}
-  .deck-portrait .corner{position:absolute;top:12px;left:12px;z-index:2;font-family:var(--font-accent);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;background:color-mix(in srgb, var(--ink) 85%, transparent);border:1px solid var(--gold);color:var(--gold-bright);padding:.34rem .68rem}
-  .deck-info{flex:1;display:flex;flex-direction:column;padding:1.1rem 1.25rem 1.15rem;overflow-y:auto;min-height:0}
-  .deck-abls{display:flex;flex-wrap:wrap;gap:.35rem}
-  .deck-abls span{font-family:var(--font-accent);font-size:.74rem;color:var(--bone-bright);background:var(--ink);border:1px solid var(--edge);padding:.26rem .48rem}
+  /* Kompakt kort (2026-09-20): porträttområdet krymper 40%→34% och texten
+     skalar ner ett steg — kortet är nu 440px högt, inte 660px. */
+  .deck-portrait{position:relative;flex:0 0 34%;background-size:cover;background-position:center 18%}
+  .deck-portrait::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 38%,color-mix(in srgb, var(--ink) 92%, transparent))}
+  .deck-portrait .plate{position:absolute;left:0;right:0;bottom:0;padding:.6rem .9rem .7rem;z-index:2}
+  .deck-portrait .plate .nm{font-family:var(--font-display);font-weight:900;font-size:1.2rem;color:var(--gold-bright);line-height:1.1;text-shadow:0 2px 8px rgba(0,0,0,.9)}
+  .deck-portrait .plate .meta{font-size:.78rem;color:var(--bone);font-style:italic;text-shadow:0 1px 5px rgba(0,0,0,.95)}
+  .deck-portrait .corner{position:absolute;top:10px;left:10px;z-index:2;font-family:var(--font-accent);font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;background:color-mix(in srgb, var(--ink) 85%, transparent);border:1px solid var(--gold);color:var(--gold-bright);padding:.28rem .55rem}
+  .deck-info{flex:1;display:flex;flex-direction:column;padding:.85rem 1rem .9rem;overflow-y:auto;min-height:0}
+  /* 2026-09-20: NPC-kort har ofta bara en rad text → informationsytan låg tom.
+     bnote får en fast max-höjd med fade istället för att svälla. */
+  .deck-info .bnote{font-size:.82rem;color:var(--bone);line-height:1.5;font-style:italic;margin-top:.3rem;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+  .deck-abls{display:flex;flex-wrap:wrap;gap:.3rem}
+  .deck-abls span{font-family:var(--font-accent);font-size:.68rem;color:var(--bone-bright);background:var(--ink);border:1px solid var(--edge);padding:.2rem .4rem}
   .deck-abls span.hi{border-color:var(--gold);color:var(--gold-bright)}
-  .deck-stats{display:flex;gap:.85rem;font-family:var(--font-accent);font-size:.72rem;letter-spacing:.08em;color:var(--bone-dim);text-transform:uppercase;margin-top:.65rem}
+  .deck-stats{display:flex;flex-wrap:wrap;gap:.6rem;font-family:var(--font-accent);font-size:.66rem;letter-spacing:.08em;color:var(--bone-dim);text-transform:uppercase;margin-top:.5rem}
   .deck-stats b{color:var(--bone-bright);font-weight:600}
   .deck-stats .hp b{color:var(--blood-bright)}
-  .deck-info .bloc{font-size:.92rem;color:var(--bone);font-style:italic;margin-top:.7rem;line-height:1.5}
-  .deck-info .bsec{font-family:var(--font-accent);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin:.7rem 0 .35rem}
-  .deck-info .blist{list-style:none;display:flex;flex-direction:column;gap:.3rem}
-  .deck-info .blist li{display:flex;align-items:baseline;gap:.55rem;font-size:.92rem;color:var(--bone);line-height:1.35}
+  .deck-info .bloc{font-size:.82rem;color:var(--bone);font-style:italic;margin-top:.5rem;line-height:1.45}
+  .deck-info .bsec{font-family:var(--font-accent);font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin:.55rem 0 .3rem}
+  .deck-info .blist{list-style:none;display:flex;flex-direction:column;gap:.22rem}
+  .deck-info .blist li{display:flex;align-items:baseline;gap:.5rem;font-size:.82rem;color:var(--bone);line-height:1.3}
   .deck-info .blist li .ic{flex:0 0 auto;color:var(--gold)}
   .deck-info .blist li .nm{font-weight:600;color:var(--bone-bright);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .deck-info .blist li .ty{font-size:.8rem;color:var(--bone-dim);text-transform:uppercase;letter-spacing:.06em;flex:0 0 auto}
-  .deck-info .bnote{font-size:.9rem;color:var(--bone);line-height:1.5;font-style:italic;margin-top:.35rem;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
   @media(max-width:640px){
+    /* Mobil: kortet MÅSTE rymma allt innehåll utan inre scroll (6 egenskapschips
+       + stats + plats + utrustning + besvärjelser). 520px räcker mätt 2026-09-20;
+       deck-info får overflow:visible så inget klipps. */
     .deck-stage{min-height:560px}
-    .deck-pile{width:min(360px,94%);height:530px}
+    .deck-pile,.deck-pile.is-adv{width:min(360px,94%);height:560px}
+    .deck-info{overflow-y:visible}
+  }
+  /* Två-kort-raden är bara för desktop. Under 900px staplas de igen
+     (annars blir varje kort 160px brett och oläsligt). */
+  @media(max-width:900px){
+    .decks{grid-template-columns:1fr;gap:2.4rem;max-width:460px}
   }
 
   /* ═══════════════ ledger ═══════════════ */
@@ -754,18 +777,18 @@
         <p class="disclosure">Only adventurers and NPCs painted by the Loreweaver appear in this deck.</p>
       </div>
       <div class="decks">
-        <!-- ADVENTURERS DECK (hög) -->
+        <!-- ADVENTURERS DECK (vänster) -->
         <div class="deck rv">
           <div class="sb-head">
             <span class="sb-name">The Adventurers</span>
             <span class="sb-count" id="adv-cnt">0 / 0</span>
           </div>
           <div class="deck-stage">
-            <div class="deck-pile" id="adv-pile"></div>
+            <div class="deck-pile is-adv" id="adv-pile"></div>
           </div>
           <div class="sb-hint">tap to draw the next card · tap the far left edge to go back</div>
         </div>
-        <!-- NPCS DECK (hög) -->
+        <!-- NPCS DECK (höger) -->
         <div class="deck rv">
           <div class="sb-head">
             <span class="sb-name">Those They Met</span>

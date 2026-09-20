@@ -12,7 +12,7 @@ from dataclasses import dataclass
 class ModelConfig:
     model_id: str          # Frontend-värde, t.ex. "qwen3.8-max"
     display_name: str      # Visas i UI
-    provider: str          # "dashscope" | "deepseek" | "stepfun" | "mimo"
+    provider: str          # "dashscope" | "deepseek" | "stepfun"
     api_model: str         # Faktiskt modellnamn hos providern
     base_url: str          # API-endpoint
     api_key_env: str       # Env-variabelnamn (inte själva nyckeln!)
@@ -102,26 +102,6 @@ MODELS: dict[str, ModelConfig] = {
         api_model="step-3.5-flash-2603",
         base_url=os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.ai/step_plan/v1"),
         api_key_env="STEPFUN_API_KEY",
-        supports_vision=True,
-    ),
-
-    # ── MiMo (Xiaomi) — admin-only ──
-    "mimo-v2.5": ModelConfig(
-        model_id="mimo-v2.5",
-        display_name="MiMo 2.5",
-        provider="mimo",
-        api_model="mimo-v2.5",
-        base_url=os.getenv("MIMO_BASE_URL", "https://api.xiaomimimo.com/v1"),
-        api_key_env="MIMO_API_KEY",
-        supports_vision=True,
-    ),
-    "mimo-v2.5-pro": ModelConfig(
-        model_id="mimo-v2.5-pro",
-        display_name="MiMo 2.5 Pro",
-        provider="mimo",
-        api_model="mimo-v2.5-pro",
-        base_url=os.getenv("MIMO_BASE_URL", "https://api.xiaomimimo.com/v1"),
-        api_key_env="MIMO_API_KEY",
         supports_vision=True,
     ),
 }

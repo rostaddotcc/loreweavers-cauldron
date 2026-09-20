@@ -206,8 +206,6 @@ const API = (() => {
           { id: 'step-5-preview', name: 'Step 5 Preview (flagship)', provider: 'stepfun', vision: true, local: false },
           { id: 'step-3.7-flash', name: 'Step 3.7 Flash (snabb)', provider: 'stepfun', vision: true, local: false },
           { id: 'step-3.5-flash-2603', name: 'Step 3.5 Flash 2603 (öppen, snabb)', provider: 'stepfun', vision: true, local: false },
-          { id: 'mimo-v2.5', name: 'MiMo 2.5', provider: 'mimo', vision: true, local: false },
-          { id: 'mimo-v2.5-pro', name: 'MiMo 2.5 Pro', provider: 'mimo', vision: true, local: false },
         ];
       }
       return req('/api/models');

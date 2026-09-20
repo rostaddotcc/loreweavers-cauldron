@@ -1620,6 +1620,8 @@ function modelDisplayName(n) { return String(n).replace(/^orfree:/, '').replace(
 
 const PROV_LABEL = {
   dashscope: '🌊 Qwen / DashScope', deepseek: '🧠 DeepSeek', stepfun: '⚗️ StepFun',
+  // mimo + ollama = HISTORISKA providers (modellerna borttagna 2026-09-21) —
+  // behålls så gamla transkript fortfarande får rätt etikett/färg i diagrammen.
   mimo: '📱 MiMo', ollama: '🖥️ Local', openrouter: '🌐 OpenRouter · free', unknown: '❓ Other · free'
 };
 const PROV_COLOR = {

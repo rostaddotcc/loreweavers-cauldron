@@ -243,6 +243,8 @@ def test_provider_for_model_fallback(client):
     # (admin token-share) måste fortfarande känna igen dem:
     assert main._provider_for_model("deepseek-v4-flash-0731") == "deepseek"
     assert main._provider_for_model("step-3.7-flash") == "stepfun"
+    # mimo/ollama är borttagna ur registret (2026-09-21) men prefix-fallbacken
+    # lever kvar för historiska transkript i admin-dashboarden:
     assert main._provider_for_model("mimo-v2.5-pro") == "mimo"
     assert main._provider_for_model("igorls/gemma-4-e4b-it-heretic-GGUF:q4_k_m") == "ollama"
     assert main._provider_for_model("totally-unknown-model") == "unknown"

@@ -1781,8 +1781,9 @@ def _user_free_info(username: str) -> dict:
         },
     }
 
-# Atmosfär-subagent: snabb modell för ASCII-art
-ATMOSPHERE_MODEL = os.getenv("ATMOSPHERE_MODEL", "mimo-v2.5")
+# Atmosfär-subagent: snabb modell för ASCII-art (feature avstängd;
+# default ändrad från borttagna mimo-v2.5 → step-3.7-flash, 2026-09-21)
+ATMOSPHERE_MODEL = os.getenv("ATMOSPHERE_MODEL", "step-3.7-flash")
 ATMOSPHERE_ENABLED = os.getenv("ATMOSPHERE_ENABLED", "0") == "1"
 EXTRACTION_MODEL = os.getenv("EXTRACTION_MODEL", "step-3.7-flash")
 # Guardian: smartare modell för kontextmedveten mekanisk extraktion
@@ -1793,8 +1794,8 @@ GUARDIAN_MODEL = os.getenv("GUARDIAN_MODEL", "step-3.7-flash")
 # StepFun 3.7 Flash är default — spelaren måste aktivt välja annan modell.
 DEFAULT_PLAYER_MODEL = "step-3.7-flash"
 # Modeller som icke-admin-spelare får välja mellan
-# (admin ser allt i registret — inkl. MiMo; DeepSeek-egen-API och lokala
-# ollama-modeller togs bort ur spelet 2026-09-21)
+# (admin ser allt i registret. Borttagna ur spelet 2026-09-21: DeepSeek-egen-API,
+# lokala ollama-modeller och MiMo — registret = de 7 spelar-DM:erna + qwen3.7-plus)
 PLAYER_MODELS = ("qwen3.8-max", "qwen3.8-flash", "qwen3.6-flash", "deepseek-v4.1-flash", "step-5-preview", "step-3.7-flash", "step-3.5-flash-2603")
 
 # Gratisväljaren: free/tier1 får välja mellan StepFun-stegen + Qwen 3.8 Flash
@@ -2182,9 +2183,9 @@ async def _call_llm(
     anrop (t.ex. ASCII-art) så de aldrig blockerar spelupplevelsen.
 
     thinking="disabled" stänger av resonemang för modeller som stöder det
-    (MiMo: {"thinking":{"type":"disabled"}}). KRITISKT för strukturerade
-    JSON-anrop — annars bränner MiMo hela tokenbudgeten på reasoning och
-    lämnar content tomt → _extract_json hittar ingen JSON → 502.
+    (DeepSeek: {"thinking":{"type":"disabled"}}). KRITISKT för strukturerade
+    JSON-anrop — annars bränner reasoning-modellen hela tokenbudgeten på
+    reasoning och lämnar content tomt → _extract_json hittar ingen JSON → 502.
 
     usage_out: valfri dict — fylls med {"prompt_tokens", "completion_tokens",
     "total_tokens"} från API-svaret. Används för att spåra Guardian-tokens."""
@@ -2198,7 +2199,7 @@ async def _call_llm(
     api_key = get_api_key(config)
 
     # Reasoning-modeller behöver mer utrymme (thinking + content)
-    if config.api_model in ("deepseek-v4.1-flash", "mimo-v2.5", "mimo-v2.5-pro", "step-3.7-flash", "step-5-preview"):
+    if config.api_model in ("deepseek-v4.1-flash", "step-3.7-flash", "step-5-preview"):
         max_tokens = max(max_tokens, 2048)
 
     headers = {"Content-Type": "application/json"}
@@ -2212,10 +2213,10 @@ async def _call_llm(
         "max_tokens": max_tokens,
     }
 
-    # MiMo/DeepSeek: stäng av thinking för strukturerade anrop (JSON-extraktion etc.)
+    # DeepSeek: stäng av thinking för strukturerade anrop (JSON-extraktion etc.)
     # — annars hamnar allt i reasoning_content och content blir tomt/trunkerat.
     # DeepSeek V4-docs: {"thinking": {"type": "enabled/disabled"}} (OpenAI-format).
-    if thinking == "disabled" and config.provider in ("mimo", "deepseek"):
+    if thinking == "disabled" and config.provider == "deepseek":
         body["thinking"] = {"type": "disabled"}
 
     # StepFun 3.7 Flash: debiterar per prompt, inte per token → high överallt.
@@ -2420,7 +2421,7 @@ async def _stream_llm(
     api_key = get_api_key(config)
 
     # Reasoning-modeller behöver mer utrymme (thinking + content)
-    if config.api_model in ("deepseek-v4.1-flash", "mimo-v2.5", "mimo-v2.5-pro", "step-3.7-flash", "step-5-preview"):
+    if config.api_model in ("deepseek-v4.1-flash", "step-3.7-flash", "step-5-preview"):
         max_tokens = max(max_tokens, 2048)
 
     headers = {"Content-Type": "application/json"}
@@ -2436,8 +2437,8 @@ async def _stream_llm(
         "stream_options": {"include_usage": True},
     }
 
-    # MiMo/DeepSeek: stäng av thinking för strukturerade anrop
-    if thinking == "disabled" and config.provider in ("mimo", "deepseek"):
+    # DeepSeek: stäng av thinking för strukturerade anrop
+    if thinking == "disabled" and config.provider == "deepseek":
         body["thinking"] = {"type": "disabled"}
 
     # StepFun 3.7 Flash: debiterar per prompt → high överallt.
@@ -10189,7 +10190,10 @@ def _provider_for_model(model_name: str) -> str:
     Transkripten sparar config.api_model (t.ex. 'qwen3.8-max', 'step-3.7-flash',
     'igorls/gemma-4-…'). Slå upp i MODELS-registret (model_id + api_model),
     fallback på prefix, annars 'unknown'. Används för admin-dashboardens
-    token-share-per-provider (2026-08-05 v2)."""
+    token-share-per-provider (2026-08-05 v2).
+
+    OBS: mimo/ollama-prefixen är HISTORISKA — modellerna togs bort ur registret
+    2026-09-21 men gamla transkript måste fortfarande attribueras rätt i admin."""
     if not model_name:
         return "unknown"
     name = str(model_name)

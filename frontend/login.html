@@ -333,15 +333,13 @@
      staplade — en sektion istället för två skärmhöjder. Korten blir kortare
      (420px) och smalare (380px) så de får plats två-i-rad på 1140px-wrap. */
   .decks{display:grid;grid-template-columns:repeat(2,1fr);gap:clamp(1rem,3vw,2.2rem);max-width:980px;margin:0 auto;align-items:start}
-  /* 2026-09-20: align-items:start (inte center) — kortet ska MOT toppen av sin
-     stage ligga, annars centreras det kortare NPC-kortet 40px nedåt i sin
-     520px-stage och topparna matchar inte (mätt: piles t=162 vs 202). */
+  /* 2026-09-20: align-items:start (inte center) — korten ska ligga MOT toppen
+     av sin stage så radens toppar alltid matchar. */
   .deck-stage{position:relative;display:flex;align-items:start;justify-content:center;min-height:520px}
-  .deck-pile{position:relative;width:min(380px,100%);height:440px}
-  /* Äventyrarkort bär egenskaper + utrustning + besvärjelser + plats — de
-     behöver mer höjd än NPC-kort (bara en textrad). Annars låg NPC-kortets
-     nedre halft tomt (synligt i skärmdump 2026-09-20). */
-  .deck-pile.is-adv{height:560px}
+  .deck-pile{position:relative;width:min(380px,100%);height:560px}
+  /* 2026-09-20 (rostad): NPC-kortet ska vara EXAKT samma storlek som
+     äventyrarkortet — båda 560px höga, samma bredd. (Tidigare var NPC 440px
+     eftersom innehållet är kortare; lika kortlek-känsla vägde tyngre.) */
   .pile-under{position:absolute;inset:0;border:1px solid var(--edge);background:linear-gradient(165deg,var(--stone-3),var(--stone-2));box-shadow:0 10px 24px -10px rgba(0,0,0,.55)}
   .pile-under.u1{transform:translate(12px,10px) rotate(.8deg);opacity:.55}
   .pile-under.u2{transform:translate(24px,20px) rotate(1.6deg);opacity:.38}

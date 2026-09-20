@@ -2,15 +2,26 @@
 IP-spårning + geo-uppslag för The Lore Weaver's Cauldron.
 
 Middlewares i main.py anropar `record_ip()` för varje autentiserad request.
-Admin-vyn hämtar `geo_for_users()` som batch-slår upp okända IP:er via
-ip-api.com (gratis, ingen nyckel, 45 req/min) och cachar resultatet i
-data/ip_geo.json så vi inte slår API:t i onödan.
+
+GEO-STRATEGI (2026-09-20, rostad: "sluta pinga hela dagarna"):
+- Uppslag sker ENDAST i bakgrunden (fire-and-forget) när en NY eller ÄNDRAD
+  publik IP dyker upp: vid registrering, vid login (IP-byte) och när en
+  ny besöks-IP räknas in i record_visit.
+- Admin-vyn (`geo_for_users`, `visits_summary`) är REN CACHE-LÄSNING —
+  aldrig nätverksanrop i requesten. Okänd IP → "??" tills bakgrunds-
+  uppslaget landat; gammal cache visas hellre än inget (land ändras sällan).
+- Budget: max LOOKUP_DAILY_BUDGET uppslag/dygn (ipwho.is = 10k req/månad).
+  Incident 2026-09-20: en 7-dagars TTL + sekventiella uppslag INNE i
+  admin-requesten brände ~1300 anrop på en dag när cachen revertades.
+- Misslyckade uppslag negativ-cachas i GEO_FAIL_TTL (24 h) — tidigare
+  retriedes de i evighet vid varje dashboard-laddning.
 
 Flagg-emoji genereras från landskod (regional indicators), t.ex. "SE" → 🇸🇪.
 Privata/lokala IP:er (LAN, Docker-brygga, localhost) markeras 🏠 Lokal
-och skickas ALDRIG till ip-api.com.
+och skickas ALDRIG till något geo-API.
 """
 
+import asyncio
 import json
 import re
 import time
@@ -21,7 +32,10 @@ import httpx
 DATA_DIR = Path(__file__).resolve().parent / "data"
 IP_GEO_FILE = DATA_DIR / "ip_geo.json"
 VISITS_FILE = DATA_DIR / "visits.json"
-GEO_CACHE_TTL = 86400 * 7  # 7 dygn innan vi slår upp samma IP igen
+GEO_REFRESH_AGE = 86400 * 30  # bakgrunds-refresh tidigast efter 30 dygn (display: stale-OK)
+GEO_FAIL_TTL = 86400          # negativ cache: 24 h innan misslyckad IP provas igen
+LOOKUP_DAILY_BUDGET = 150     # max externa geo-anrop per dygn (10k/mån → gott om marginal)
+_GEO_MAX_CONCURRENT = 4       # samtidiga bakgrundsuppslag
 
 # In-memory cache: {"ip": {"country": ..., "countryCode": ..., "ts": ...}}
 _geo_cache: dict[str, dict] = {}
@@ -100,7 +114,10 @@ def is_private(ip: str) -> bool:
 
 
 def record_ip(username: str, ip: str) -> None:
-    """Spara senast sedda IP för en användare. Skriver bara till disk när IP ändrats."""
+    """Spara senast sedda IP för en användare. Skriver bara till disk när IP ändrats.
+
+    Ny/ändrad publik IP → köa ETT bakgrunds-geo-uppslag (2026-09-20).
+    """
     if not username or not ip:
         return
     _load()
@@ -115,6 +132,98 @@ def record_ip(username: str, ip: str) -> None:
         "last_seen": now,
     }
     _save()
+    queue_geo_lookup(ip)
+
+
+# ── Bakgrunds-geo (2026-09-20) ──────────────────────────────────────────
+# Admin-ytor läser BARA cachen; uppslag köas hit och körs av en worker med
+# daglig budget + negativ cache. Aldrig nätverk i en request-path.
+_geo_queue: set[str] = set()
+_geo_inflight: set[str] = set()
+_geo_worker = None
+_budget_day: str = ""
+_budget_used: int = 0
+_GEO_QUEUE_MAX = 500  # minnestak; överflödet köas om vid nästa besök/login
+
+
+def _budget_ok() -> bool:
+    """Rullande dygnsbudget för externa geo-anrop (reset vid datumbyte)."""
+    global _budget_day, _budget_used
+    today = time.strftime("%Y-%m-%d")
+    if today != _budget_day:
+        _budget_day, _budget_used = today, 0
+    return _budget_used < LOOKUP_DAILY_BUDGET
+
+
+def _needs_lookup(ip: str) -> bool:
+    """True om IP saknar användbar cache eller cachen är tillräckligt gammal."""
+    cached = _geo_cache.get(ip)
+    now = time.time()
+    if not cached:
+        return True
+    if cached.get("fail"):
+        # misslyckat uppslag — provas igen först efter GEO_FAIL_TTL
+        return (now - cached.get("ts", 0)) >= GEO_FAIL_TTL
+    if not cached.get("countryCode"):
+        return True
+    return (now - cached.get("ts", 0)) >= GEO_REFRESH_AGE
+
+
+def queue_geo_lookup(ip: str) -> None:
+    """Köa ett bakgrundsuppslag (dedup, budget-check, privat-skydd).
+
+    Anropas SYNKRONT från record_ip/record_visit/admin-läsningar — själva
+    nätverket sker i _geo_worker_loop. Ingen loop (t.ex. tester/sync-kontext)
+    → köa bara; nästa async-anrop drar igång workern.
+    """
+    if not ip or is_private(ip):
+        return
+    _load()
+    if not _needs_lookup(ip):
+        return
+    if ip in _geo_queue or ip in _geo_inflight:
+        return
+    if len(_geo_queue) >= _GEO_QUEUE_MAX:
+        return
+    _geo_queue.add(ip)
+    _ensure_geo_worker()
+
+
+def _ensure_geo_worker() -> None:
+    global _geo_worker
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return
+    if _geo_worker is None or _geo_worker.done():
+        _geo_worker = loop.create_task(_geo_worker_loop())
+
+
+async def _geo_worker_loop() -> None:
+    """Dränerar kön: max _GEO_MAX_CONCURRENT samtidiga, 0.5s paus per batch.
+
+    Budgeten bokförs HÄR per dispatch (inte i _geo_fetch) — en dispatch kan
+    bli upp till 2 HTTP-anrop (provider-fallback), så räkna worst-case 2×
+    mot providerns kvot. Budget slut → resten ligger kvar i kön till nästa dygn.
+    """
+    global _budget_used
+    sem = asyncio.Semaphore(_GEO_MAX_CONCURRENT)
+    while _geo_queue:
+        if not _budget_ok():
+            return
+        cap = min(_GEO_MAX_CONCURRENT, LOOKUP_DAILY_BUDGET - _budget_used)
+        if cap <= 0:
+            return
+        batch = set()
+        while _geo_queue and len(batch) < cap:
+            batch.add(_geo_queue.pop())
+        _budget_used += len(batch)
+        _geo_inflight.update(batch)
+        try:
+            await asyncio.gather(*[_geo_fetch(ip, sem) for ip in batch])
+        finally:
+            _geo_inflight.difference_update(batch)
+        await asyncio.sleep(0.5)
 
 
 def get_user_ip(username: str) -> str:
@@ -238,6 +347,10 @@ def record_visit(ip: str, referrer: str = "", self_host: str = "") -> None:
             _visit_store["by_day"].pop(d, None)
             du.pop(d, None)
     _visits_save()
+    # Ny besöks-IP → köa bakgrunds-geo (2026-09-20). Dedup+budget i queue_geo_lookup:
+    # återbesök från känd/färsk IP kostar inget (ingen kö, inget anrop).
+    if ip and not is_private(ip) and ip not in _geo_cache:
+        queue_geo_lookup(ip)
 
 
 async def visits_summary(country_range: str = "all") -> dict:
@@ -300,14 +413,15 @@ async def visits_summary(country_range: str = "all") -> dict:
                 continue
         # Unika besökare per land: varje distinkt IP räknas EN gång,
         # oavsett antal sidvisningar (2026-08-09, rostad: "unique visitors by country").
+        # 2026-09-20: REN CACHE-LÄSNING — aldrig nätverk i admin-requesten.
+        # Okänd/stale IP köas till bakgrundsworkern (queue_geo_lookup);
+        # gammal cache visas hellre än "??" (länder ändras sällan).
         cc = "??"
         if ip and not is_private(ip):
             cached = _geo_cache.get(ip)
-            if cached and time.time() - cached.get("ts", 0) < GEO_CACHE_TTL:
+            if cached:
                 cc = cached.get("countryCode") or "??"
-            else:
-                info = await geo_for_ip(ip)
-                cc = info.get("countryCode") or "??"
+            queue_geo_lookup(ip)  # no-op om cachen är färsk; budget+tak skyddar
         else:
             cc = "LOCAL" if (ip and is_private(ip)) else "??"
         by_country[cc] = by_country.get(cc, 0) + 1
@@ -349,46 +463,77 @@ def country_flag(country_code: str) -> str:
     return chr(0x1F1E6 + ord(cc[0]) - ord("A")) + chr(0x1F1E6 + ord(cc[1]) - ord("A"))
 
 
-async def geo_for_ip(ip: str) -> dict:
-    """Slå upp en enskild IP → {country, countryCode}. Cachad + privat-skydd.
+async def _geo_fetch(ip: str, sem: asyncio.Semaphore) -> dict:
+    """BAKGRUNDS-uppslag (körs bara av _geo_worker_loop — budget bokförs där).
 
-    Providers i fallback-ordning (ip-api.com är blockerad från servern):
+    Misslyckade anrop negativ-cachas (fail=True, GEO_FAIL_TTL) så de inte
+    retries vid varje dashboard-laddning. Providers i fallback-ordning
+    (ip-api.com är blockerad från servern):
       1. ipwho.is  — gratis, ingen nyckel, 10k req/månad
       2. ipinfo.io — gratis, ingen nyckel, 50k req/månad (country bara)
     """
     if not ip or is_private(ip):
         return {"country": "Lokal", "countryCode": "LOCAL"}
     _load()
-    cached = _geo_cache.get(ip)
-    if cached and time.time() - cached.get("ts", 0) < GEO_CACHE_TTL:
-        return {"country": cached.get("country", ""), "countryCode": cached.get("countryCode", "")}
-    providers = [
-        ("https://ipwho.is/{ip}", {"country": "country", "countryCode": "country_code"}),
-        ("https://ipinfo.io/{ip}/json", {"country": "country", "countryCode": "country"}),
-    ]
-    for url_tpl, mapping in providers:
-        try:
-            async with httpx.AsyncClient(timeout=6, follow_redirects=True) as client:
-                r = await client.get(url_tpl.format(ip=ip))
-                if r.status_code != 200:
-                    continue
-                data = r.json()
-            country = data.get(mapping["country"], "") or ""
-            code = data.get(mapping["countryCode"], "") or ""
-            if code:
-                _geo_cache[ip] = {"country": country, "countryCode": code, "ts": time.time()}
-                _save()
-                return {"country": country, "countryCode": code}
-        except Exception:
-            continue
-    return {"country": "", "countryCode": ""}
+    async with sem:
+        providers = [
+            ("https://ipwho.is/{ip}", {"country": "country", "countryCode": "country_code"}),
+            ("https://ipinfo.io/{ip}/json", {"country": "country", "countryCode": "country"}),
+        ]
+        for url_tpl, mapping in providers:
+            try:
+                async with httpx.AsyncClient(timeout=6, follow_redirects=True) as client:
+                    r = await client.get(url_tpl.format(ip=ip))
+                    if r.status_code != 200:
+                        continue
+                    data = r.json()
+                country = data.get(mapping["country"], "") or ""
+                code = data.get(mapping["countryCode"], "") or ""
+                if code:
+                    _geo_cache[ip] = {"country": country, "countryCode": code, "ts": time.time()}
+                    _save()
+                    return {"country": country, "countryCode": code}
+            except Exception:
+                continue
+        # Båda providrarna misslyckades → negativ cache (24 h)
+        _geo_cache[ip] = {"country": "", "countryCode": "", "ts": time.time(), "fail": True}
+        _save()
+        return {"country": "", "countryCode": ""}
+
+
+def geo_cached(ip: str) -> dict:
+    """Cachen exakt som den är — ingen nätverksanrop, ingen TTL-gate.
+
+    Stale-värde visas hellre än tomt: en IP:s land flyttar i princip aldrig.
+    """
+    if not ip or is_private(ip):
+        return {"country": "Lokal", "countryCode": "LOCAL"}
+    cached = _geo_cache.get(ip) or {}
+    return {"country": cached.get("country", ""), "countryCode": cached.get("countryCode", "")}
+
+
+async def geo_for_ip(ip: str) -> dict:
+    """Cache-först, bakgrund-refresh. ALDRIG ett blockande nätverksanrop.
+
+    Historik: förr slog denna funktion upp synkront i requesten med 7-dagars
+    TTL → admin-dashboarden kunde trigga tusentals sekventiella anrop
+    (incident 2026-09-20). Nu: läs cachen, köa bakgrundsuppslag vid behov.
+    """
+    if not ip or is_private(ip):
+        return {"country": "Lokal", "countryCode": "LOCAL"}
+    _load()
+    if _needs_lookup(ip):
+        queue_geo_lookup(ip)
+    return geo_cached(ip)
 
 
 async def geo_for_users(users: dict[str, dict]) -> dict[str, dict]:
-    """Batch-uppslag för alla användare. Returnerar {username: {country, countryCode, ip}}.
+    """Batch-läsning för alla användare. Returnerar {username: {country, countryCode, ip}}.
 
-    Slår upp varje IP som saknar färsk cache (sekventiellt — få användare,
-    ipwho.is har 10k req/månad). Privata IP:er hoppas över direkt."""
+    2026-09-20: REN CACHE — okända/stale IP:er köas till bakgrundsworkern
+    (max LOOKUP_DAILY_BUDGET/dygn, _GEO_MAX_CONCURRENT samtidiga) och syns
+    som "??" tills uppslaget landat. Privata IP:er = 🏠 Lokal direkt.
+    """
     _load()
     result: dict[str, dict] = {}
     for username in users:
@@ -399,14 +544,8 @@ async def geo_for_users(users: dict[str, dict]) -> dict[str, dict]:
         if is_private(ip):
             result[username] = {"ip": ip, "country": "Lokal", "countryCode": "LOCAL"}
             continue
-        cached = _geo_cache.get(ip)
-        if cached and time.time() - cached.get("ts", 0) < GEO_CACHE_TTL:
-            result[username] = {
-                "ip": ip,
-                "country": cached.get("country", ""),
-                "countryCode": cached.get("countryCode", ""),
-            }
-        else:
-            info = await geo_for_ip(ip)
-            result[username] = {"ip": ip, **info}
+        if _needs_lookup(ip):
+            queue_geo_lookup(ip)
+        result[username] = {"ip": ip, **geo_cached(ip)}
+    _ensure_geo_worker()  # starta dränering om kön växte utanför en loop-kontext
     return result

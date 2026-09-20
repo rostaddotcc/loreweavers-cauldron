@@ -254,9 +254,8 @@
       <textarea id="prompt" spellcheck="false" oninput="renderLegendPreview()" onblur="onPromptBlur(event)"></textarea>
       <div class="legend-preview" id="legend-preview" aria-live="polite" onclick="enterEditMode()"></div>
     </div>
-    <div class="scroll-actions">
-      <button class="summon-btn" id="summon" onclick="summon()">🔮 Summon Character</button>
-    </div>
+    <!-- Fix 2026-09-20 (rostad, samma rapport som adventure.html §2.4): modellvalet
+         FÖRE Summon-knappen — inställning → handling, ingen skrollning uppåt. ID:n oförändrade. -->
     <details class="adv-details" id="ng-char-model-advanced">
       <summary>⚙ Advanced — character model <span class="adv-sum-hint">· sensible default is set</span></summary>
       <div class="adv-body">
@@ -274,6 +273,9 @@
         </select>
       </div>
     </details>
+    <div class="scroll-actions">
+      <button class="summon-btn" id="summon" onclick="summon()">🔮 Summon Character</button>
+    </div>
   </div>
 
   <!-- ═══════════ VÄVNING (summoning-ritual v4) ═══════════ -->

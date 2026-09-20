@@ -148,13 +148,12 @@
   .ask-tip b{color:var(--gold);font-style:normal}
   .ask-tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:var(--edge)}
   .ask-wrap:hover .ask-tip{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
-  @media(hover:none),(max-width:640px){.ask-tip{position:static;transform:none;width:100%;max-width:100%;margin-top:.4rem;opacity:1;visibility:visible;background:none;border:none;box-shadow:none;padding:0;text-align:left}.ask-tip::after{display:none}.ask-wrap{display:flex;flex-direction:column;align-items:flex-start}#gen-row .ask-tip{display:none}}
+  @media(hover:none),(max-width:640px){.ask-tip{position:static;transform:none;width:100%;max-width:100%;margin-top:.4rem;opacity:1;visibility:visible;background:none;border:none;box-shadow:none;padding:0;text-align:left}.ask-tip::after{display:none}.ask-wrap{display:flex;flex-direction:column;align-items:flex-start}}
 
   .dm-model-label{font-family:var(--font-display,'Cinzel',serif);font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim);min-width:200px;display:flex;flex-direction:column;gap:.3rem}
-  /* gen-row: centrerad kolumn — modell på toppen, tooltip under, Summon-knappen sist */
+  /* gen-row: centrerad kolumn — Summon-knappen + hint (modellvalet ligger i
+     <details> ovanför, fix 2026-09-20) */
   #gen-row{display:flex;flex-direction:column;align-items:center;gap:.8rem;max-width:420px;margin:1.2rem auto 0}
-  #gen-row .dm-model-label{flex-direction:column;align-items:center;gap:.5rem;min-width:0;width:100%}
-  #gen-row .dm-model-select{max-width:300px;width:100%;min-width:0}
   #gen-row .gen-btn{white-space:nowrap}
   #gen-row .hint{text-align:center;margin-top:.1rem}
   @media(max-width:700px){#gen-row{max-width:100%}}
@@ -1048,12 +1047,9 @@ html{font-size:17px}
         <div class="prompt-size-hint" id="fw-size-hint">Drag the corner to make the box bigger</div>
         <div class="blank-note">Tweak the template before the weaver gets it — your own name, a pet, a pouch of coins, a crown…</div>
       </div>
-      <div class="step-actions" id="gen-row">
-        <button class="gen-btn" id="gen-btn" onclick="generateAdventurer()" disabled>🔮 Summon Adventurer</button>
-        <span class="hint" id="gen-hint">Pick an archetype first — or take the blank parchment</span>
-      </div>
-      <!-- Audit §2.4: karaktärsmodell-väljaren flyttad hit (ur gen-row) — reveal-momentet
-           ska vara porträtt + namn + Reroll/Continue. ID:n oförändrade (JS läser dem). -->
+      <!-- Audit §2.4 + fix 2026-09-20 (rostad: "väljer advanced sen måste man gå upp igen"):
+           modellvalet ligger FÖRE Summon-knappen — inställning → handling, reveal-momentet
+           (porträtt + namn + Reroll/Continue) förblir rent. ID:n oförändrade (JS läser dem). -->
       <details class="adv-details" id="adv-char-model-advanced">
         <summary>⚙ Which mind weaves your adventurer <span class="adv-sum-hint">default is fine</span></summary>
         <div class="dm-model-row" style="margin-top:.6rem">
@@ -1063,6 +1059,10 @@ html{font-size:17px}
           <span class="ask-wrap"><span class="ask-ico">?</span><span class="ask-tip" data-ask="char">Which mind weaves your adventurer — faster models are snappier, deeper models think longer. <b>Unsure? The default is safe — you can ask the DM once the tale begins.</b></span></span>
         </div>
       </details>
+      <div class="step-actions" id="gen-row">
+        <button class="gen-btn" id="gen-btn" onclick="generateAdventurer()" disabled>🔮 Summon Adventurer</button>
+        <span class="hint" id="gen-hint">Pick an archetype first — or take the blank parchment</span>
+      </div>
       <!-- Vävning (summoning-ritual) -->
       <div class="weaving-ad" id="weaving-gen">
         <div class="wa-status" id="wa-gen-status">📡 Sending request to the Dungeon Master…</div>

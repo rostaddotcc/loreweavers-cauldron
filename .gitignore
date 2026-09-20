@@ -18,12 +18,13 @@ Thumbs.db
 .idea/
 .vscode/
 
-# ── Campaign data (runtime) ──
-backend/data/campaigns/
+# ── Runtime data (LIVE PROD via bind-mount — git får ALDRIG röra detta) ──
+# Incident 2026-09-20: `git stash` revertade users.json/feedback.jsonl till
+# augusti-läget (125→57 konton, tom feedback-inbox). Hela backend/data/ är
+# runtime: konton, kampanjer, vaults, billing, visits, ip_geo, feedback,
+# avatarer, TTS-röster. Backups görs via server-backups (Proton), inte git.
+backend/data/
 *.zip
-
-# users.json innehåller bara bcrypt-hasher — OK att committa
-!backend/data/users.json
 
 # Env-backuper ska aldrig spåras
 *.env.bak

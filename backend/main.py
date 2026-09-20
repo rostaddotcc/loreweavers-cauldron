@@ -5007,31 +5007,55 @@ def _build_system_prompt(
     # ── 💀 DÖDSRÄDDNING — spelaren är nere (v23) ──
     # Vid 0 HP MÅSTE DM:n begära dödsräddning varje runda; Guardian/main
     # spårar framgångar/misslyckanden i character.death_saves.
+    # Språkmedvetet: etiketten i [KAST:]-taggen blir synlig i spelarens chatt
+    # (roll-request-kortet), så EN-kampanjer får aldrig svenska "DÖDSRÄDDNING".
     char = state.get("character", {})
     hp = char.get("hp", {})
     if hp.get("current", 0) == 0:
         ds = char.get("death_saves", {}) or {}
-        parts.append(
-            "\n## 💀 DÖDSRÄDDNING\n"
-            "Spelaren är på 0 HP. Du MÅSTE begära [KAST: 1d20 | DÖDSRÄDDNING] varje runda "
-            "tills stabiliserad/död. "
-            f"Framgångar: {ds.get('successes', 0)}, Misslyckanden: {ds.get('failures', 0)}. "
-            "3 framgångar = stabil, 3 misslyckanden = död. Nat 20 = vaknar med 1 HP."
-        )
+        if lang == "en":
+            _death_block = (
+                "\n## 💀 DEATH SAVES\n"
+                "The player is at 0 HP. You MUST request [KAST: 1d20 | DEATH SAVE] every round "
+                "until stabilised/dead. "
+                f"Successes: {ds.get('successes', 0)}, Failures: {ds.get('failures', 0)}. "
+                "3 successes = stable, 3 failures = dead. Nat 20 = wake with 1 HP."
+            )
+        else:
+            _death_block = (
+                "\n## 💀 DÖDSRÄDDNING\n"
+                "Spelaren är på 0 HP. Du MÅSTE begära [KAST: 1d20 | DÖDSRÄDDNING] varje runda "
+                "tills stabiliserad/död. "
+                f"Framgångar: {ds.get('successes', 0)}, Misslyckanden: {ds.get('failures', 0)}. "
+                "3 framgångar = stabil, 3 misslyckanden = död. Nat 20 = vaknar med 1 HP."
+            )
+        parts.append(_death_block)
 
     # ── Enforcement borttaget (v19) ──
     # tag_streak, missing_roll_streak, turns_since_roll: Guardian pre-DM
     # detekterar kast och post-DM extraherar mekanik. DM behöver inte påminnas.
 
     # Resultat-påminnelse: spelaren har skickat ett tärningsresultat.
+    # Språkmedvetet (rostad 2026-09-20): "[Resultat:]" är protokolltaggen och
+    # förblir svensk på båda språk, men själva instruktionen som DM:n läser
+    # ska vara på kampanjens språk.
     if player_input.strip().startswith("[Resultat:"):
-        parts.append(
-            "\n## 🎲 TÄRNINGSRESULTAT MOTTAGET\n"
-            "Spelaren har slagit en tärning. Ge utfallet direkt:\n"
-            "1. Jämför mot DC/AC → LYCKADES eller MISSLYCKADES.\n"
-            "2. Berätta utfallet narrativt.\n"
-            "3. ALDRIG fråga 'vad gör du?' utan att FÖRST ge utfallet."
-        )
+        if lang == "en":
+            parts.append(
+                "\n## 🎲 DICE RESULT RECEIVED\n"
+                "The player has rolled a die. Give the outcome directly:\n"
+                "1. Compare against DC/AC → SUCCEEDED or FAILED.\n"
+                "2. Narrate the outcome.\n"
+                "3. NEVER ask 'what do you do?' without FIRST giving the outcome."
+            )
+        else:
+            parts.append(
+                "\n## 🎲 TÄRNINGSRESULTAT MOTTAGET\n"
+                "Spelaren har slagit en tärning. Ge utfallet direkt:\n"
+                "1. Jämför mot DC/AC → LYCKADES eller MISSLYCKADES.\n"
+                "2. Berätta utfallet narrativt.\n"
+                "3. ALDRIG fråga 'vad gör du?' utan att FÖRST ge utfallet."
+            )
 
     # ── VAKNANDEPROTOKOLLET ──
     # Aktiveras BARA för nya kampanjer (turn 1-2). awakening-flaggan
@@ -6576,8 +6600,10 @@ async def _chat_locked(
     # Om DM skrev "Rulla tärningen" i prosa men glömde taggen spawnas ingen
     # klickbar tärning och spelaren fastnar. Auto-spawna en 1d20 så spelet
     # aldrig stannar. (Taggade kast har redan rensats ur reply av _parse_roll_requests.)
+    # Etiketten blir synlig i spelarens roll-request-kort → språkmedveten.
+    _prose_roll_label = _err("Tärningsslag", "Dice roll", _get_lang(state))
     if not roll_requests and PROSE_ROLL_PATTERN.search(reply):
-        roll_requests = [{"notation": "1d20", "label": "Tärningsslag"}]
+        roll_requests = [{"notation": "1d20", "label": _prose_roll_label}]
         logger.warning("🎲 Prose roll detected (no [KAST:] tag) → auto-spawning 1d20")
 
     # ── Guardian-fallback: DM glömde [KAST:] men Guardian rekommenderade kast ──
@@ -6699,7 +6725,7 @@ async def _chat_locked(
     reply = re.sub(r'<think>.*?</think>', '', reply, flags=re.DOTALL | re.IGNORECASE).strip()
     # Prosa-kast som säkerhetsnätet missade (t.ex. "Kast:" som rubrik)
     if not roll_requests and re.search(r'^\s*-?\s*Kast\s*:', reply, re.MULTILINE | re.IGNORECASE):
-        roll_requests = [{"notation": "1d20", "label": "Tärningsslag"}]
+        roll_requests = [{"notation": "1d20", "label": _prose_roll_label}]
         reply = re.sub(r'^\s*-?\s*Kast\s*:.*$', '', reply, flags=re.MULTILINE | re.IGNORECASE).strip()
         logger.warning("🎲 Prose roll 'Kast:' detected → auto-spawning 1d20")
         # Uppdatera last_roll_requests (sattes tidigare, men prose-fallbacken

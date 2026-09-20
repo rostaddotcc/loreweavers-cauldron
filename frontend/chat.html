@@ -5207,8 +5207,30 @@ async function loadTranscript() {
             applyCombatTag(el, gContent, curBody || frag);
           }
         } else if (m.role === 'user') {
-          const el = buildMessage('player', null, escapeHtml(m.content));
-          if (el) appendToFrag(el);
+          // [Resultat: …] är backend-protokoll, inte spelarens ord. Den råa
+          // strängen (med svenska taggen!) syntes som en spelarbubbla vid
+          // transkript-replay. Visa en lokaliserad kortrad istället.
+          const rm = String(m.content || '').match(/^\[Resultat: (.*?) → (\d+) \(([^)]*)\)\]$/);
+          if (rm) {
+            const en = I18N.getLang() === 'en';
+            // rolls-strängen har tre former:
+            //   "7+2"            — kast + modifier (vanligast)
+            //   "15, 11+4"       — advantage/disadvantage (vald tärning först)
+            //   "2d6+5: [4, 5]"  — multi-dice med notation + individuella tärningar
+            // Behåll notationen som den är; formattera bara advantage-fallet
+            // (komma utanför hakparenteser) — annars syns råa protokollsträngen.
+            const rollStr = rm[3];
+            const expr = /^[^,\[]+, /.test(rollStr)
+              ? rollStr.replace(/^([^,\[]+), /, '$1 → ')
+              : rollStr;
+            const el = buildMessage('system', null,
+              `<span class="dice">🎲</span> <b>${escapeHtml(rm[1])}</b> — `
+              + `${en ? 'rolled' : 'rullade'} ${escapeHtml(expr)} = <b>${rm[2]}</b>`);
+            if (el) appendToFrag(el);
+          } else {
+            const el = buildMessage('player', null, escapeHtml(m.content));
+            if (el) appendToFrag(el);
+          }
         } else {
           // Replay: DM-meddelanden kan innehålla [ROLL_GRANT:notation|label]-taggar
           // (t.ex. när DM:n själv citerar ett kast) — rensa taggen ur den VISADE

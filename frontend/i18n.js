@@ -392,7 +392,7 @@ const I18N = (() => {
     ' (ladda upp filer), eller ': ' (upload files), or ',
     'Nytt': 'New',
     ' (freestyle)': ' (freestyle)',
-    'Skapa din karaktär: välj arketyp eller skriv fritt, välj modell (DeepSeek V4 Flash / Qwen 3.8 Max)': 'Create your character: choose an archetype or write freely, choose a model (DeepSeek V4 Flash / Qwen 3.8 Max)',
+    'Skapa din karaktär: välj arketyp eller skriv fritt, välj modell (DeepSeek V4.1 Flash / Qwen 3.8 Max)': 'Create your character: choose an archetype or write freely, choose a model (DeepSeek V4.1 Flash / Qwen 3.8 Max)',
     'Klicka "Frammana karaktär" — AI:n genererar ett fullt karaktärsark': 'Click "Summon Character" — the AI generates a full character sheet',
     'Klicka "Till bordet" — DM vaknar och ställer sina frågor': 'Click "To the Table" — the DM awakens and asks its questions',
     'Skriv ': 'Type ',

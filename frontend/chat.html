@@ -8346,13 +8346,13 @@ function toast(msg, ms = 2600) {
 }
 
 // ── Release-toast: en gång per version (localStorage) ──
-const RELEASE_TOAST_VERSION = 'v1.3-20260920';
+const RELEASE_TOAST_VERSION = 'v1.3-20260921';
 function maybeShowReleaseToast() {
   try {
     if (localStorage.getItem('dnd_release_toast') === RELEASE_TOAST_VERSION) return;
     localStorage.setItem('dnd_release_toast', RELEASE_TOAST_VERSION);
   } catch (_) { /* private mode — visa ändå */ }
-  setTimeout(() => toast('✦ Two free minds: Step 5 Preview and Qwen 3.8 Flash — both free for every account. Pick either in Settings.', 9000), 1400);
+  setTimeout(() => toast('✦ DeepSeek V4.1 Flash joins the Patron path — and Step 5 Preview + Qwen 3.8 Flash stay free for every account.', 9000), 1400);
 }
 
 // ═══════════════════════════════════════

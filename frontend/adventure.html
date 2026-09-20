@@ -882,12 +882,12 @@ html{font-size:17px}
 
   <!-- ═══════════ NYHET: QWEN 3.8 FLASH — FREE TIER (2026-09) ═══════════ -->
   <div class="news-banner" id="news-qwen38" onclick="newsQwenToast(event)" style="display:none">
-    <span class="nb-icon">✦</span>
-    <div class="nb-body">
-      <div class="nb-title">New — two free minds at your table</div>
-      <div class="nb-text"><b>Step 5 Preview</b> and <b>Qwen 3.8 Flash</b> are both free for every account — set either as your <b>Dungeon Master</b> at the model gate or in Settings.</div>
-    </div>
-    <button class="nb-close" onclick="newsQwenDismiss(event)" title="Dismiss">✕</button>
+  <span class="nb-icon">✦</span>
+  <div class="nb-body">
+  <div class="nb-title" id="nb-title">New — DeepSeek V4.1 Flash joins the Patron path</div>
+  <div class="nb-text" id="nb-text"><b>DeepSeek V4.1 Flash</b> is a new Patron-tier Dungeon Master — and <b>Step 5 Preview</b> + <b>Qwen 3.8 Flash</b> are free for every account. Set your mind at the model gate or in Settings.</div>
+  </div>
+  <button class="nb-close" onclick="newsQwenDismiss(event)" title="Dismiss">✕</button>
   </div>
 
   <!-- ═══════════ RELEASE NOTES ═══════════ -->
@@ -897,8 +897,9 @@ html{font-size:17px}
     </button>
     <div class="rn-body" id="rn-body">
       <div class="rn-inner">
-        <span class="rn-ver">v1.3 — The Rewoven Thread · 2026-09-20</span>
+        <span class="rn-ver">v1.3 — The Rewoven Thread · updated 2026-09-21</span>
         <ul class="rn-list">
+          <li><b>DeepSeek V4.1 Flash — new on the Patron path (2026-09-21)</b> — DeepSeek's open-weights reasoning model (552B, 16B active, 1M-token context) joins the Patron tier, replacing V4 Flash 0731.</li>
           <li><b>Meet Step 5 Preview — new in the free tier</b> — StepFun's Step 5 Preview joins the free tier, free for every account. Pick it at the model gate when you start an adventure, or switch to it in Settings.</li>
           <li><b>Qwen 3.8 Flash — in the free tier</b> — free for every account. Set it as your Dungeon Master in Settings.</li>
           <li><b>Give your composer room (2026-09-13)</b> — the divider between the DM's log and your own words drags to resize, and the text box is generous on desktop and mobile.</li>
@@ -2926,23 +2927,23 @@ async function openBillingPortal(e) {
   }
 }
 
-// ── Nyhet: Step 5 Preview + Qwen 3.8 Flash i free tier (2026-09-20) ──
+// ── Nyhet: DeepSeek V4.1 Flash (Patron) + fria sinnen (2026-09-21) ──
 // Banner visas tills besökaren klickar bort den (localStorage-minne).
-// Flash ÄR gratis för alla — ingen Patron-/lås-variant (audit wave 2: den gamla
-// newsQwenLocked-grenen var felaktig och är borttagen). NYCKEL: free_minds_dismissed
-// (gammal nyckel news_qwen_flash_dismissed lämnas orörd — alla ser korrigerade bannern en gång).
+// Ingen tier-variant (audit wave 2: lås-varianten var felaktig och togs bort;
+// newsQwenInit körs FÖRE API.me() resolve:r → tier är okänd vid init).
+// Texten är sann för alla tiers. NYCKEL: minds_0921_dismissed
 function newsQwenInit() {
-  try { if (localStorage.getItem('free_minds_dismissed') === '1') return; } catch (e) {}
+  try { if (localStorage.getItem('minds_0921_dismissed') === '1') return; } catch (e) {}
   const el = document.getElementById('news-qwen38');
   if (!el) return;
   el.style.display = '';
 }
 function newsQwenToast(e) {
-  toast('✦ Step 5 Preview and Qwen 3.8 Flash — both free for every account. Pick either at the model gate or in Settings.');
+  toast('✦ DeepSeek V4.1 Flash joins the Patron path — and Step 5 Preview + Qwen 3.8 Flash are free for every account. Pick your mind at the model gate or in Settings.');
 }
 function newsQwenDismiss(e) {
   e.stopPropagation();
-  try { localStorage.setItem('free_minds_dismissed', '1'); } catch (err) {}
+  try { localStorage.setItem('minds_0921_dismissed', '1'); } catch (err) {}
   const el = document.getElementById('news-qwen38');
   if (el) el.style.display = 'none';
 }

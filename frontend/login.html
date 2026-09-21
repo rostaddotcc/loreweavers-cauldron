@@ -471,10 +471,12 @@
   .dfeat .d-card .tablet-more{font-size:.76rem;margin-top:.5rem}
   .dfeat .d-card .tablet-more a{color:var(--gold);text-decoration:none}
 
-  /* ═══════════════ the trail — hybrid horizontal rail (2026-09-20) ═══════════════
-     Hero+gate är vertikala; därefter vänder sidan SIDLED: wheel/trackpad glider
-     (lerp-smooth) genom fyra rum — Brews → Souls → Paths → Ledger. Run-indikator
-     i botten. Mobil ≤900px: railen faller tillbaka till vertikal stack. */
+  /* ═══════════════ the trail — hybrid horizontal rail (v3 2026-09-21) ═══════════════
+     Hero+gate är vertikala; därefter fyra rum i sidled — Brews → Souls → Paths →
+     Ledger. NAVIGATION: höger/vänsterpilar + dots + autoplay-timer (14s/rum,
+     guldprogress i botten; pausar vid hover/fokus/utanför-viewport/flik-dold).
+     Ingen wheel-hijack — vertikal scroll tillhör alltid sidan.
+     Mobil ≤900px: vertikal stack, pilar/progress/dots dolda. */
   .rail-outer{position:relative;height:calc(100svh - var(--nav-h));min-height:640px;scroll-margin-top:var(--nav-h);overflow:hidden;border-top:1px solid color-mix(in srgb,var(--edge) 55%,transparent);background:linear-gradient(180deg,color-mix(in srgb,var(--stone) 40%,transparent),transparent 34%)}
   /* 2026-09-20 v2: transform-bana istället för native scrollLeft — float-precision,
      GPU-kompositerat, ingen pixel-avrundningshackighet. Wheel/trackpad/dots
@@ -492,6 +494,18 @@
   .rdot.on{color:var(--bone-bright)}
   .rdot.on .rd-n{opacity:1}
   .rdot:hover{color:var(--gold-bright)}
+  /* v3: pilknappar vid kanterna + autoplay-progress */
+  .rail-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:7;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--ink) 78%,transparent);border:1px solid var(--edge);color:var(--bone);cursor:pointer;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);transition:border-color .25s,color .25s,background .25s,transform .25s}
+  .rail-arrow svg{width:20px;height:20px}
+  .rail-arrow:hover{border-color:var(--gold);color:var(--gold-bright);background:color-mix(in srgb,var(--stone) 82%,transparent)}
+  .rail-arrow:active{transform:translateY(-50%) scale(.94)}
+  .rail-arrow.prev{left:clamp(.7rem,1.8vw,1.5rem)}
+  .rail-arrow.next{right:clamp(.7rem,1.8vw,1.5rem)}
+  .rdot-pause{display:inline-flex;align-items:center;justify-content:center;background:none;border:none;border-left:1px solid var(--edge);margin-left:.35rem;padding:.2rem .5rem;cursor:pointer;color:var(--bone-dim);transition:color .25s}
+  .rdot-pause svg{width:11px;height:11px}
+  .rdot-pause:hover{color:var(--gold-bright)}
+  .rail-progress{position:absolute;left:0;right:0;bottom:0;height:2px;z-index:6;background:color-mix(in srgb,var(--edge) 45%,transparent)}
+  .rail-progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--gold-bright));box-shadow:0 0 8px rgba(var(--gold-rgb),.5)}
   /* souls i railen: korten skalas mot viewport-höjden (båda lika — krav) */
   .rail-pane .decks{margin-top:1.8rem}
   .rail-pane .deck-stage{min-height:0}
@@ -519,6 +533,7 @@
     .rail{display:block;overflow:visible;transform:none !important}
     .rail-pane{width:auto;height:auto;overflow:visible;padding:clamp(2.6rem,7vw,4rem) 0;display:block;scroll-margin-top:var(--nav-h)}
     .rail-dots{display:none}
+    .rail-arrow,.rail-progress{display:none}
     .rail-pane .deck-pile{width:min(360px,94%);height:560px}
   }
 
@@ -603,6 +618,11 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 .deck-abls span,.deck-portrait .corner,.ver-chip,.pt-flag,.ledger-list li .tag,.pitch-list .tag,.hstat,.fs-badge{border-radius:6px !important}
 .f-icon{border-radius:9px !important}
 .rail-dots{border-radius:99px !important}
+.rail-arrow{border-radius:50% !important;transition:border-color .25s,color .25s,background .25s,transform .25s !important}
+.rail-arrow:hover{background:color-mix(in srgb,var(--stone) 82%,transparent) !important;transform:translateY(-50%) !important}
+.rail-arrow:active{transform:translateY(-50%) scale(.94) !important}
+.rdot-pause{transition:color .25s !important}
+.rdot-pause:hover{background:none !important;color:var(--gold-bright) !important}
 /* knappar & kort: snes dödar transitions/transform — återinför lyftet */
 .btn{transition:transform .24s cubic-bezier(.2,.7,.3,1),border-color .24s,color .24s,box-shadow .24s !important}
 .btn:hover{transform:translateY(-2px) !important}
@@ -1146,11 +1166,19 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
     </div>
 
     </div>
+    <button class="rail-arrow prev" id="trail-prev" type="button" aria-label="Previous room">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4.5L7 12l7.5 7.5"/></svg>
+    </button>
+    <button class="rail-arrow next" id="trail-next" type="button" aria-label="Next room">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 4.5L17 12l-7.5 7.5"/></svg>
+    </button>
+    <div class="rail-progress" aria-hidden="true"><i id="trail-bar"></i></div>
     <nav class="rail-dots" aria-label="Trail navigation">
       <button class="rdot on" data-pane="0" type="button"><span class="rd-n">I</span>Brews</button>
       <button class="rdot" data-pane="1" type="button"><span class="rd-n">II</span>Souls</button>
       <button class="rdot" data-pane="2" type="button"><span class="rd-n">III</span>Paths</button>
       <button class="rdot" data-pane="3" type="button"><span class="rd-n">IV</span>Ledger</button>
+      <button class="rdot-pause" id="trail-pause" type="button" aria-label="Pause auto-advance"></button>
     </nav>
   </div>
 
@@ -1686,23 +1714,29 @@ document.addEventListener('keydown', e => {
   tick();
 })();
 
-/* ═══ THE TRAIL v2 — transform-rail (2026-09-20) ═══
-   GPU-kompositerad translate3d-bana: wheel/trackpad glider kontinuerligt med
-   snap-when-idle, diskret mushjul = ett steg per notch (hysteres-lås), dots/
-   ankare/touch-drag styr samma flyttal. ≤900px: vertikal stack, logik av. */
+/* ═══ THE TRAIL v3 — pilar + autoplay (2026-09-21) ═══
+   GPU transform-bana (translate3d). Navigation: kantpilar, dots, touch-drag,
+   ankare + AUTOPLAY 14s/rum med guldprogress. Ingen wheel-hijack: vertikal
+   scroll tillhör alltid sidan/panelen. Autoplay pausar vid hover, dold flik,
+   utanför viewport och på pause-knappen; reduced-motion → av från start. */
 (function () {
   var rail = document.getElementById('trail-rail');
   var outer = document.getElementById('trail');
   var dots = Array.prototype.slice.call(document.querySelectorAll('.rdot'));
+  var prevB = document.getElementById('trail-prev');
+  var nextB = document.getElementById('trail-next');
+  var pauseB = document.getElementById('trail-pause');
+  var bar = document.getElementById('trail-bar');
   if (!rail || !outer || !dots.length) return;
   var RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
   var panes = Array.prototype.slice.call(rail.querySelectorAll('.rail-pane'));
   var N = panes.length;
   var pos = 0, target = 0, raf = 0, cur = -1;
-  var snapT = null, lockUntil = 0, dragging = null;
+  var dragging = null;
   function mobile() { return matchMedia('(max-width:900px)').matches; }
   function W() { return outer.clientWidth; }
   function clamp(v) { return Math.max(0, Math.min((N - 1) * W(), v)); }
+  function idx() { return Math.round(pos / Math.max(1, W())); }
   function apply() { rail.style.transform = 'translate3d(' + (-pos) + 'px,0,0)'; }
   function setDot(i) {
     if (i === cur) return;
@@ -1713,51 +1747,65 @@ document.addEventListener('keydown', e => {
     raf = 0;
     if (dragging) return;
     var d = target - pos;
-    if (Math.abs(d) < 0.5) { pos = target; apply(); setDot(Math.round(pos / W())); return; }
-    pos += d * (RM ? 1 : 0.14);   // exponential smoothing — mjuk, deterministisk
+    if (Math.abs(d) < 0.5) { pos = target; apply(); setDot(idx()); return; }
+    pos += d * (RM ? 1 : 0.11);   // exponential smoothing — mjuk glid mellan rum
     apply();
-    setDot(Math.round(pos / W()));
+    setDot(idx());
     raf = requestAnimationFrame(loop);
   }
   function ensure() { if (!raf) raf = requestAnimationFrame(loop); }
   function goTo(i, instant) {
-    i = Math.max(0, Math.min(N - 1, i));
+    i = ((i % N) + N) % N;
     if (mobile()) { panes[i].scrollIntoView({ behavior: instant ? 'auto' : 'smooth', block: 'start' }); return; }
     target = clamp(i * W());
     if (instant || RM) { pos = target; apply(); setDot(i); return; }
     ensure();
   }
-  for (var di = 0; di < dots.length; di++) (function (k) {
-    dots[k].addEventListener('click', function () { goTo(k); try { sfx('click'); } catch (_) {} });
-  })(di);
+  function step(d) { goTo(idx() + d); }
 
-  /* wheel: först släpp igenom vertikal scroll i rummet ( FAQ-boxen, ledger ),
-     sedan kontinuerlig glid för trackpad / steg för diskret mushjul */
-  rail.addEventListener('wheel', function (e) {
-    if (mobile()) return;
-    var pane = panes[Math.round(pos / W())];
-    if (pane && pane.scrollHeight > pane.clientHeight + 4) {
-      var atTop = pane.scrollTop <= 0;
-      var atBottom = pane.scrollTop + pane.clientHeight >= pane.scrollHeight - 2;
-      if ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBottom)) return;
-    }
-    e.preventDefault();
-    var dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? W() : 1);
-    if (Math.abs(e.deltaX) > Math.abs(dy)) dy = e.deltaX;
-    var now = performance.now();
-    if (Math.abs(dy) >= 55 && now > lockUntil) {
-      /* diskret hjulnotch → ett rum fram/bak, 700ms lås mot kedjehopp */
-      target = clamp((Math.round(target / W()) + (dy > 0 ? 1 : -1)) * W());
-      lockUntil = now + 700;
-    } else {
-      /* trackpad: 1:1-kontinuerlig glid */
-      target = clamp(target + dy);
-      lockUntil = now + 120;
-    }
-    ensure();
-    clearTimeout(snapT);
-    snapT = setTimeout(function () { target = clamp(Math.round(target / W()) * W()); ensure(); }, 170);
-  }, { passive: false });
+  /* ── autoplay ── */
+  var AUTO_MS = 14000, TICK_MS = 100;
+  var auto = !RM, elapsed = 0, autoTimer = 0, hover = false, inView = true;
+  var PAUSE_IC = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5" y="4" width="4.5" height="16"/><rect x="14.5" y="4" width="4.5" height="16"/></svg>';
+  var PLAY_IC = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 3.5l14 8.5-14 8.5z"/></svg>';
+  function paintPause() {
+    if (!pauseB) return;
+    pauseB.innerHTML = auto ? PAUSE_IC : PLAY_IC;
+    pauseB.setAttribute('aria-label', auto ? 'Pause auto-advance' : 'Resume auto-advance');
+  }
+  function resetAuto() { elapsed = 0; if (bar) bar.style.width = '0%'; }
+  function autoTick() {
+    elapsed += TICK_MS;
+    if (bar) bar.style.width = Math.min(100, elapsed / AUTO_MS * 100) + '%';
+    if (elapsed >= AUTO_MS) { resetAuto(); step(1); }
+  }
+  function syncAuto() {
+    var should = auto && !hover && inView && !document.hidden && !mobile();
+    if (should && !autoTimer) autoTimer = setInterval(autoTick, TICK_MS);
+    else if (!should && autoTimer) { clearInterval(autoTimer); autoTimer = 0; }
+  }
+  if (pauseB) pauseB.addEventListener('click', function () {
+    auto = !auto;
+    paintPause(); resetAuto(); syncAuto();
+    try { sfx('click'); } catch (_) {}
+  });
+  outer.addEventListener('mouseenter', function () { hover = true; syncAuto(); });
+  outer.addEventListener('mouseleave', function () { hover = false; syncAuto(); });
+  document.addEventListener('visibilitychange', syncAuto);
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (es) {
+      inView = es[0].intersectionRatio > 0.3;
+      syncAuto();
+    }, { threshold: [0, 0.3, 1] }).observe(outer);
+  }
+  addEventListener('resize', syncAuto);
+
+  /* ── manuell navigation ── */
+  if (prevB) prevB.addEventListener('click', function () { step(-1); resetAuto(); try { sfx('click'); } catch (_) {} });
+  if (nextB) nextB.addEventListener('click', function () { step(1); resetAuto(); try { sfx('click'); } catch (_) {} });
+  for (var di = 0; di < dots.length; di++) (function (k) {
+    dots[k].addEventListener('click', function () { goTo(k); resetAuto(); try { sfx('click'); } catch (_) {} });
+  })(di);
 
   /* touch-drag (tablet i rail-läge): 1:1 följ finger + flick-snap */
   rail.addEventListener('pointerdown', function (e) {
@@ -1772,22 +1820,22 @@ document.addEventListener('keydown', e => {
     dragging.lastX = e.clientX; dragging.t = now;
     pos = clamp(dragging.pos0 + (dragging.x - e.clientX));
     target = pos;
-    apply(); setDot(Math.round(pos / W()));
+    apply(); setDot(idx());
   });
   function endDrag(e) {
     if (!dragging || (e && e.pointerId !== dragging.id)) return;
     var flick = dragging.v;
     dragging = null;
-    var i = Math.round(pos / W());
+    var i = idx();
     if (Math.abs(flick) > 0.35) i += flick < 0 ? 1 : -1;
-    goTo(i);
+    goTo(i); resetAuto();
   }
   rail.addEventListener('pointerup', endDrag);
   rail.addEventListener('pointercancel', endDrag);
 
   addEventListener('resize', function () {
     if (mobile()) { rail.style.transform = ''; return; }
-    pos = target = clamp(Math.round(pos / Math.max(1, W())) * W());
+    pos = target = clamp(idx() * W());
     apply();
   });
 
@@ -1799,10 +1847,13 @@ document.addEventListener('keydown', e => {
     a.addEventListener('click', function (e) {
       e.preventDefault();
       outer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      resetAuto();
       setTimeout(function () { goTo(map[id]); }, mobile() ? 0 : 480);
     });
   });
   setDot(0);
+  paintPause();
+  syncAuto();
 })();
 
 /* ═══ Ledger-fold — 5 synliga poster, resten bakom "öppna boken" ═══ */

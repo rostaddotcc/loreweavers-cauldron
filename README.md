@@ -80,7 +80,7 @@ Built for the phone too — full table, terminal composer and voice input in a p
 - Deterministic content-hash IDs prevent duplicate indexing
 
 ### 🔮 Models & Voice
-- **Multi-provider model router**: Qwen (DashScope / Alibaba Token Plan), DeepSeek, MiMo (Xiaomi), StepFun, and local **Ollama** models — switch the DM's brain per campaign, mid-game
+- **Multi-provider model router**: Qwen (DashScope / Alibaba Token Plan), DeepSeek and StepFun models — switch the DM's brain per campaign, mid-game
 - **TTS narration**: StepFun voices (always free) or Qwen TTS — male/female narrator voices, per-campaign settings, style phrases
 - Keys never leave the server — the frontend only ever sees model IDs
 
@@ -123,8 +123,8 @@ The core idea: **the DM tells the story, the Guardian owns the mechanics, and th
                     ▼
 ┌───────────────────────────────────────────────┐
 │  DM — LLM narration (streamed)                │  ◀─ RAG memories + relevant
-│  qwen3.8-max · deepseek · mimo · ollama ·     │     facts injected into the
-│  step-3.7-flash                               │     system prompt
+│  qwen3.8-max · deepseek ·                     │     facts injected into the
+│  step-5-preview · step-3.7-flash              │     system prompt
 └──────┬──────────────────────┬─────────────────┘
        │                      │
        ▼                      ▼
@@ -255,11 +255,8 @@ All configuration lives in environment variables (`backend/.env` for the app, `b
 | `QWEN_DEFAULT_MODEL` | | Documented default Qwen DM model (see `.env.example`) |
 | `DEEPSEEK_API_KEY` | | DeepSeek provider key |
 | `DEEPSEEK_BASE_URL` | | DeepSeek API base URL (default provided) |
-| `MIMO_API_KEY` | | MiMo (Xiaomi) provider key |
-| `MIMO_BASE_URL` | | MiMo API base URL (default provided) |
 | `STEPFUN_API_KEY` | | StepFun key — free-tier DM model + always-free TTS |
 | `STEPFUN_BASE_URL` | | StepFun Step Plan base URL (default provided) |
-| `OLLAMA_BASE_URL` | | Local Ollama chat-completions endpoint (`http://localhost:11434/v1`; in Docker: `http://host.docker.internal:11434/v1`) |
 | `OLLAMA_URL` | | Ollama host used for RAG embeddings (`http://localhost:11434`) |
 | `QDRANT_URL` | | Vector database URL for RAG (`http://localhost:6333`; in Docker: `http://qdrant:6333`) |
 | `JWT_SECRET` | ✅ | Signs auth tokens — **change this to something long and random** |

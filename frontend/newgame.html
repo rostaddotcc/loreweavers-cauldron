@@ -141,6 +141,9 @@
   .vcard-use{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold));border:1px solid var(--gold);padding:.5rem .95rem;border-radius:2px;transition:all .2s}
   .vcard-use:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-1px)}
   .vcard-use:disabled{opacity:.55;cursor:wait}
+  .vcard-new{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-bright);cursor:pointer;background:linear-gradient(180deg,var(--arcane),color-mix(in srgb, var(--arcane) 70%, var(--ink)));border:1px solid var(--arcane-bright,var(--arcane));padding:.5rem .95rem;border-radius:2px;transition:all .2s}
+  .vcard-new:hover:not(:disabled){filter:brightness(1.15);transform:translateY(-1px)}
+  .vcard-new:disabled{opacity:.55;cursor:wait}
   .vcard-inspect{font-family:var(--font-display,'Cinzel',serif);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;background:transparent;border:1px solid var(--edge);color:var(--bone-dim);padding:.5rem .8rem;cursor:pointer;border-radius:2px;transition:all .2s}
   .vcard-inspect:hover{color:var(--bone-bright);border-color:var(--arcane)}
   .vault-empty{padding:1.3rem;border:1px dashed var(--edge);color:var(--bone-dim);font-style:italic;text-align:center;font-size:.92rem}
@@ -337,6 +340,26 @@
   <div class="insp-modal">
     <button class="insp-close" onclick="closeVaultInspect()">✕</button>
     <div id="vault-insp-content" class="insp-full"></div>
+  </div>
+</div>
+
+<!-- ═══════════ NEW ADVENTURE OVERLAY (carry a vault hero into a fresh campaign) ═══════════ -->
+<div class="insp-overlay" id="nav-overlay" onclick="if(event.target===this)closeNewAdv()">
+  <div class="insp-modal" style="width:min(440px,100%)">
+    <button class="insp-close" onclick="closeNewAdv()">✕</button>
+    <div style="text-align:center;margin-bottom:1.2rem">
+      <div style="font-size:2rem;margin-bottom:.4rem">🌟</div>
+      <div style="font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:1.15rem;letter-spacing:.06em;color:var(--bone-bright)">A New Adventure</div>
+      <div style="font-style:italic;font-size:.85rem;color:var(--bone-dim);margin-top:.35rem" id="nav-sub"></div>
+    </div>
+    <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem">Name your adventure (optional)</div>
+    <input type="text" id="nav-name-input" maxlength="60" placeholder="An unnamed adventure…" autocomplete="off"
+      style="width:100%;box-sizing:border-box;padding:.7rem .8rem;font-family:var(--font-body,'Spectral',serif);font-size:1rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;margin-bottom:1rem">
+    <div class="pv-actions">
+      <button class="pv-go" id="nav-create-btn" onclick="confirmNewAdventure()" style="flex:1">⚔️ Create New Adventure</button>
+      <button class="pv-reroll" onclick="closeNewAdv()">Cancel</button>
+    </div>
+    <div style="font-size:.72rem;color:var(--bone-dim);font-style:italic;margin-top:.9rem">The hero steps into a brand-new campaign with gear and portrait — your current adventure is left untouched. Language comes from the Campaign language selector above.</div>
   </div>
 </div>
 
@@ -1158,6 +1181,7 @@ function renderVaultHeroes() {
       </div>
       <div class="vcard-story">${_vEsc(_vPlain(c.story||''))}</div>
       <div class="vcard-actions">
+        <button class="vcard-new" id="vnew-${_vEsc(c.id)}" onclick="startNewAdventure('${_vEsc(c.id)}', this)">🌟 New Adventure</button>
         <button class="vcard-use" id="vuse-${_vEsc(c.id)}" onclick="useVaultHero('${_vEsc(c.id)}', this)">⚔️ Take This Adventurer</button>
         <button class="vcard-inspect" onclick="openVaultInspect('${_vEsc(c.id)}')">Inspect</button>
       </div>
@@ -1191,6 +1215,59 @@ async function useVaultHero(charId, btn) {
     SFX.error();
     toast('⚠ ' + (e.message || 'Could not take this adventurer'));
     if (btn) { btn.disabled = false; btn.textContent = '⚔️ Take This Adventurer'; }
+  }
+}
+
+// ── 🌟 Create New Adventure — bära en vald hjälte in i en HELT NY kampanj ──
+// (Samma fix som characters.html 2026-09-21: "Take This Adventurer" skrev
+// hjälten i den AKTIVA kampanjen om en fanns → gamla äventyret. Här: always
+// createCampaign → vaultUse → chat. Språk = sidans valda kampanjspråk.)
+let navCharId = null, navStarting = false;
+
+function startNewAdventure(charId, btn) {
+  const selLang = selectedLang();
+  if (!selLang) { toast('🌐 ' + I18N.t('Välj kampanjspråk först!')); return; }
+  navCharId = charId;
+  navStarting = false;
+  const c = _vaultChars.find(x => x.id === charId);
+  document.getElementById('nav-sub').textContent = c
+    ? `${c.name} · ${[c.race, c.class].filter(Boolean).join(' · ')}`
+    : '';
+  document.getElementById('nav-name-input').value = '';
+  const cb = document.getElementById('nav-create-btn');
+  cb.disabled = false;
+  cb.textContent = '⚔️ Create New Adventure';
+  document.getElementById('nav-overlay').classList.add('show');
+  setTimeout(() => { const i = document.getElementById('nav-name-input'); if (i) i.focus(); }, 250);
+}
+
+function closeNewAdv() {
+  document.getElementById('nav-overlay').classList.remove('show');
+  navCharId = null;
+}
+
+async function confirmNewAdventure() {
+  if (navStarting || !navCharId) return;
+  const selLang = selectedLang();
+  if (!selLang) { toast('🌐 ' + I18N.t('Välj kampanjspråk först!')); return; }
+  navStarting = true;
+  const btn = document.getElementById('nav-create-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Setting the table…';
+  const name = document.getElementById('nav-name-input').value.trim();
+  try {
+    await API.createCampaign(name, selLang);            // ny kampanj → blir aktiv
+    await API.vaultUse(navCharId);                       // hjälten lyfts in i DEN
+    sessionStorage.setItem('dnd_vault_character', navCharId);
+    SFX.gate();
+    toast('🌟 A new chapter begins!');
+    setTimeout(() => { location.href = 'chat.html?v=20260921a'; }, 900);
+  } catch (e) {
+    SFX.error();
+    toast('⚠ ' + (e.message || 'Could not start the adventure'));
+    navStarting = false;
+    btn.disabled = false;
+    btn.textContent = '⚔️ Create New Adventure';
   }
 }
 
@@ -1238,7 +1315,8 @@ async function openVaultInspect(charId) {
     <div class="pv-story">${_vEsc(_vPlain(ch.story||ch.background||''))}</div>
     ${invHtml}
     <div class="pv-actions">
-      <button class="pv-go" onclick="closeVaultInspect();useVaultHero('${_vEsc(charId)}')">⚔️ Take This Adventurer</button>
+      <button class="pv-go" onclick="closeVaultInspect();startNewAdventure('${_vEsc(charId)}')">🌟 Create New Adventure</button>
+      <button class="pv-reroll" onclick="closeVaultInspect();useVaultHero('${_vEsc(charId)}')">⚔️ Take in Current Adventure</button>
     </div>`;
   document.getElementById('vault-insp-overlay').classList.add('show');
 }

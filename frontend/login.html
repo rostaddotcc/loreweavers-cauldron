@@ -167,19 +167,25 @@
   .myst-quote{margin-top:2rem;font-style:italic;font-size:.92rem;color:var(--bone-dim);min-height:1.6em;transition:opacity 1s ease}
   .scroll-cue{position:absolute;bottom:1.5rem;left:50%;transform:translateX(-50%);color:var(--bone-dim);font-family:var(--font-mono);font-size:.58rem;letter-spacing:.26em;text-transform:uppercase;animation:cue-bob 2.6s ease-in-out infinite;z-index:1;display:flex;align-items:center;gap:.5rem}
   @keyframes cue-bob{0%,100%{transform:translate(-50%,0);opacity:.45}50%{transform:translate(-50%,6px);opacity:1}}
-  /* ═══════════════ hero background — roterande äventyrarefaces (Qwen Image 3 Pro) ═══════════════ */
-  .hero{position:relative;overflow:hidden}
+  /* ═══════════════ hero background — roterande äventyrarefaces (Qwen Image 3 Pro) ═══════════════
+     2026-09-21: DELAD SCEN — hero-bg är barn till .hero-gate-wrappern och täcker
+     hero + gate i ett svep; porträtten klipps inte längre vid hero-kanten utan
+     fortsätter bakom loginboxen. Scrim: vänstermörk (hero-copy) + gradvis
+     mörkare nedåt (gate-text), botten tonar mot ink så rail-fogen blir sömlös. */
+  .hero-gate{position:relative;overflow:hidden}
+  .hero-gate > section{position:relative;z-index:1}
+  .hero{position:relative}
   .hero-bg{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center 18%;transform-origin:center;animation:hero-breathe 36s ease-in-out infinite alternate}
   .hero-bg::after{content:'';position:absolute;inset:0;background:
-    linear-gradient(90deg, var(--ink) 0%, color-mix(in srgb, var(--ink) 85%, transparent) 26%, color-mix(in srgb, var(--ink) 42%, transparent) 52%, color-mix(in srgb, var(--ink) 12%, transparent) 72%, color-mix(in srgb, var(--ink) 55%, transparent) 100%),
-    linear-gradient(0deg, var(--ink) 0%, transparent 26%, transparent 72%, color-mix(in srgb, var(--ink) 42%, transparent) 100%)}
+    linear-gradient(90deg, var(--ink) 0%, color-mix(in srgb, var(--ink) 82%, transparent) 24%, color-mix(in srgb, var(--ink) 34%, transparent) 52%, color-mix(in srgb, var(--ink) 10%, transparent) 74%, color-mix(in srgb, var(--ink) 46%, transparent) 100%),
+    linear-gradient(180deg, color-mix(in srgb, var(--ink) 55%, transparent) 0%, transparent 15%, transparent 44%, color-mix(in srgb, var(--ink) 42%, transparent) 62%, color-mix(in srgb, var(--ink) 80%, transparent) 82%, var(--ink) 99%)}
   @keyframes hero-breathe{from{transform:scale(1)}to{transform:scale(1.07)}}
   .hero-copy{position:relative;z-index:1}
   .hero-credit{position:absolute;right:clamp(1.2rem,4vw,3rem);bottom:4.4rem;z-index:2;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;color:var(--bone-dim);opacity:.7;text-shadow:1px 1px 0 #000}
   @media (max-width:720px){
     .hero-bg{background-position:center 12%}
     .hero-bg::after{background:
-      linear-gradient(0deg, var(--ink) 0%, color-mix(in srgb, var(--ink) 62%, transparent) 34%, color-mix(in srgb, var(--ink) 30%, transparent) 62%, color-mix(in srgb, var(--ink) 78%, transparent) 100%)}
+      linear-gradient(180deg, color-mix(in srgb, var(--ink) 72%, transparent) 0%, color-mix(in srgb, var(--ink) 26%, transparent) 20%, transparent 32%, color-mix(in srgb, var(--ink) 42%, transparent) 48%, color-mix(in srgb, var(--ink) 68%, transparent) 60%, color-mix(in srgb, var(--ink) 50%, transparent) 70%, color-mix(in srgb, var(--ink) 88%, transparent) 88%, var(--ink) 100%)}
     .hero-credit{display:none}
   }
 
@@ -766,9 +772,13 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 
 <div class="content" id="top">
 
+  <!-- ═══════════════ hero + gate — delad porträttscen (2026-09-21) ═══════════════
+       Konsten flyter oavbrutet genom båda sektionerna (ingen klipp i mitten);
+       hero-bg ligger på wrappern och når hela vägen bakom loginboxen. -->
+  <div class="hero-gate">
+  <div class="hero-bg" id="hero-bg" role="img" aria-label="A painted adventurer"></div>
   <!-- ═══════════════ hero ═══════════════ -->
   <section class="hero">
-    <div class="hero-bg" id="hero-bg" role="img" aria-label="A painted adventurer"></div>
     <div class="wrap">
       <div class="hero-copy">
         <p class="eyebrow rv in">A Free AI Dungeon Master &middot; Open Beta</p>
@@ -876,6 +886,8 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
       </div>
     </div>
   </section>
+  </div><!-- /hero-gate -->
+
 
 
   <!-- ═══════════════ THE TRAIL — horisontellt spår (2026-09-20) ═══════════════

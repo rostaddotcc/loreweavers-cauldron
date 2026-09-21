@@ -216,6 +216,31 @@
   </div>
 </div>
 
+<!-- ═══════════ NEW ADVENTURE OVERLAY (carry a forged hero into a fresh campaign) ═══════════ -->
+<div class="insp-overlay" id="nav-overlay" onclick="if(event.target===this)closeNewAdv()">
+  <div class="insp-modal" style="width:min(440px,100%)">
+    <button class="insp-close" onclick="closeNewAdv()">✕</button>
+    <div style="text-align:center;margin-bottom:1.2rem">
+      <div style="font-size:2rem;margin-bottom:.4rem">🌟</div>
+      <div style="font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:1.15rem;letter-spacing:.06em;color:var(--bone-bright)" id="nav-title">A New Adventure</div>
+      <div style="font-style:italic;font-size:.85rem;color:var(--bone-dim);margin-top:.35rem" id="nav-sub"></div>
+    </div>
+    <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem">Name your adventure (optional)</div>
+    <input type="text" id="nav-name-input" maxlength="60" placeholder="An unnamed adventure…" autocomplete="off"
+      style="width:100%;box-sizing:border-box;padding:.7rem .8rem;font-family:var(--font-body,'Spectral',serif);font-size:1rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;margin-bottom:1rem">
+    <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem">Campaign language</div>
+    <div style="display:flex;gap:.6rem;margin-bottom:1.4rem">
+      <button class="pv-reroll nav-lang" data-lang="en" style="flex:1" onclick="navPickLang('en',this)">🇬🇧 English</button>
+      <button class="pv-reroll nav-lang" data-lang="sv" style="flex:1" onclick="navPickLang('sv',this)">🇸🇪 Svenska</button>
+    </div>
+    <div class="pv-actions">
+      <button class="pv-go" id="nav-create-btn" onclick="confirmNewAdventure()" style="flex:1">⚔️ Create New Adventure</button>
+      <button class="pv-reroll" onclick="closeNewAdv()">Cancel</button>
+    </div>
+    <div style="font-size:.72rem;color:var(--bone-dim);font-style:italic;margin-top:.9rem">Opens the adventure table — choose your DM model there, then begin. Your hero steps in with their gear and portrait. Your current adventure is left untouched.</div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- 🔍 Portrait lightbox — shared pattern (audit A2 §4.3) -->
@@ -508,7 +533,8 @@ async function openInspect(charId) {
       <div style="font-size:.72rem;color:var(--bone-dim);margin-top:.35rem">Overrides the auto-built prompt from your sheet — describe exactly what you want painted.</div>
     </div>
     <div class="pv-actions" style="margin-top:1.4rem">
-      <button class="pv-go" onclick="useCharacter('${esc(charId)}')">⚔️ Use for New Adventure</button>
+      <button class="pv-go" onclick="startNewAdventure('${esc(charId)}')">🌟 Create New Adventure</button>
+      <button class="pv-reroll" onclick="useCharacter('${esc(charId)}')">⚔️ Use in Current Adventure</button>
       <button class="pv-reroll" id="insp-avatar-btn" onclick="genAvatar('${esc(charId)}')">${entry.avatar ? '🎨 Reroll Portrait' : '🎨 Paint Portrait'}</button>
       ${entry.avatar ? `<button class="pv-reroll" onclick="downloadVaultAvatar('${esc(charId)}')">⬇ Portrait</button>` : ''}
       <button class="pv-reroll" style="color:var(--blood-bright)" onclick="deleteCharacter('${esc(charId)}','${esc(ch.name||'')}')">🗑 Delete</button>
@@ -542,6 +568,75 @@ async function useCharacter(charId) {
     } else {
       toast('⚠ ' + (e.message || 'Could not use character'));
     }
+  }
+}
+
+// ── Create New Adventure — bära en Forge-hjälte in i en HELT NY kampanj ──
+// (Bugfix 2026-09-21: "Use for New Adventure" skrev hjälten i den AKTIVA
+// kampanjen → man hamnade i gamla äventyret. Nytt flöde: döpa + språkval →
+// createCampaign (blir aktiv) → vaultUse → chat.html.)
+let navCharId = null, navLang = null, navStarting = false;
+
+function startNewAdventure(charId) {
+  navCharId = charId;
+  navLang = null;
+  navStarting = false;
+  closeInspect();
+  const ch = vaultChars.find(c => c.id === charId);
+  document.getElementById('nav-sub').textContent = ch
+    ? `${ch.name} · ${[ch.race, ch.class].filter(Boolean).join(' · ')}`
+    : '';
+  document.getElementById('nav-name-input').value = '';
+  document.querySelectorAll('.nav-lang').forEach(b => {
+    b.style.borderColor = 'var(--edge)';
+    b.style.color = 'var(--bone-dim)';
+  });
+  const btn = document.getElementById('nav-create-btn');
+  btn.disabled = false;
+  btn.textContent = '⚔️ Create New Adventure';
+  document.getElementById('nav-overlay').classList.add('show');
+  setTimeout(() => { const i = document.getElementById('nav-name-input'); if (i) i.focus(); }, 250);
+}
+
+function closeNewAdv() {
+  document.getElementById('nav-overlay').classList.remove('show');
+  navCharId = null; navLang = null;
+}
+
+function navPickLang(lang, btn) {
+  navLang = lang;
+  document.querySelectorAll('.nav-lang').forEach(b => {
+    b.style.borderColor = 'var(--edge)';
+    b.style.color = 'var(--bone-dim)';
+  });
+  btn.style.borderColor = 'var(--gold)';
+  btn.style.color = 'var(--gold-bright)';
+  try { SFX.click(); } catch (_) {}
+}
+
+async function confirmNewAdventure() {
+  if (navStarting) return;
+  if (!navCharId) return;
+  if (!navLang) { toast('🌐 Choose the campaign language first.'); return; }
+  navStarting = true;
+  const btn = document.getElementById('nav-create-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Setting the table…';
+  const name = document.getElementById('nav-name-input').value.trim();
+  try {
+    // 1) Ny kampanj — blir automatiskt aktiv (backend sätter pekarfilen)
+    await API.createCampaign(name, navLang);
+    // 2) Lyft in hjälten (karaktär + inventory + porträtt) i den NYA kampanjen
+    await API.vaultUse(navCharId);
+    sessionStorage.setItem('dnd_vault_character', navCharId);
+    try { SFX.gate(); } catch (_) {}
+    toast('🌟 A new chapter begins!');
+    setTimeout(() => { location.href = 'chat.html?v=20260921a'; }, 900);
+  } catch (e) {
+    toast('⚠ ' + (e.message || 'Could not start the adventure'));
+    navStarting = false;
+    btn.disabled = false;
+    btn.textContent = '⚔️ Create New Adventure';
   }
 }
 

@@ -1574,8 +1574,8 @@ function renderRevenueChart() {
         </div>`;
       }).join('') + '</div>';
   el.innerHTML = body;
-  // Markera aktiv toggle
-  document.querySelectorAll('.rev-toggle button').forEach(b => {
+  // Krock-säkring: bara revenue-kortets toggles (api-kortet delar .rev-toggle).
+  document.querySelectorAll('#rev-chart-card .rev-toggle button').forEach(b => {
     b.classList.toggle('active', b.dataset.mode === revMode);
   });
 }
@@ -1606,7 +1606,118 @@ function revenueChartCard() {
       <button data-mode="month" onclick="setRevMode('month')" class="${revMode === 'month' ? 'active' : ''}">Month</button>
     </div>
   </div>`;
-  return `<div class="chart-card span-12"><div class="chart-head">💰 Revenue</div>${head}<div id="rev-chart-body"><div class="vchart-empty">Loading…</div></div></div>`;
+  return `<div class="chart-card span-12" id="rev-chart-card"><div class="chart-head">💰 Revenue</div>${head}<div id="rev-chart-body"><div class="vchart-empty">Loading…</div></div></div>`;
+}
+
+// ── AI API calls per day/week/month (2026-09-21, rostad) ──
+// Data: statsData.api_daily = {YYYY-MM-DD (lokal): {calls, tokens}} från
+// /api/admin/stats — dagbok över transkriptspårbara LLM-anrop.
+let apiMode = 'day';     // day | week | month
+let apiMetric = 'calls'; // calls | tokens
+
+const _pad2 = n => String(n).padStart(2, '0');
+const _ymd = d => d.getFullYear() + '-' + _pad2(d.getMonth() + 1) + '-' + _pad2(d.getDate());
+
+function _apiBucketKey(d, mode) {
+  // Key + label för perioden som dag `d` tillhör (vkey-form matchar _revBuckets).
+  if (mode === 'day')
+    return { key: _ymd(d), label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) };
+  if (mode === 'week') {
+    const dow = (d.getDay() + 6) % 7;
+    const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dow);
+    const key = monday.getFullYear() + '-W' + String(Math.ceil(((monday - new Date(monday.getFullYear(), 0, 1)) / 86400000 + 1) / 7)).padStart(2, '0');
+    return { key, label: monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) };
+  }
+  return {
+    key: d.getFullYear() + '-' + _pad2(d.getMonth() + 1),
+    label: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+  };
+}
+
+function _apiBuckets(daily, mode, metric) {
+  // Aggregera {YYYY-MM-DD: {calls, tokens}} → senaste N perioder inkl. nollor.
+  const counts = {};
+  Object.entries(daily || {}).forEach(([k, v]) => {
+    const p = String(k).split('-').map(Number);
+    if (p.length !== 3 || p.some(isNaN)) return;
+    const d = new Date(p[0], p[1] - 1, p[2]); // lokal dag — nyckeln är redan lokal
+    if (isNaN(d)) return;
+    const { key } = _apiBucketKey(d, mode);
+    counts[key] = (counts[key] || 0) + (Number(v && v[metric]) || 0);
+  });
+  const today = new Date();
+  const N = mode === 'day' ? 14 : (mode === 'week' ? 8 : 6);
+  const arr = [];
+  for (let i = N - 1; i >= 0; i--) {
+    let d;
+    if (mode === 'day') d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+    else if (mode === 'week') d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i * 7);
+    else d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    const { key, label } = _apiBucketKey(d, mode);
+    arr.push({ key, label, value: counts[key] || 0, isCurrent: i === 0 });
+  }
+  return arr;
+}
+
+function _apiWindowSum(daily, metric, days) {
+  // Summa senaste N dagars dagbok (lokala datumsträngar).
+  const d = daily || {};
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - (days - 1));
+  const ck = _ymd(new Date(cutoff.getFullYear(), cutoff.getMonth(), cutoff.getDate()));
+  return Object.entries(d).reduce((a, [k, v]) =>
+    k >= ck ? a + (Number(v && v[metric]) || 0) : a, 0);
+}
+
+function renderApiCallsChart() {
+  const el = document.getElementById('api-chart-body');
+  if (!el) return;
+  const daily = (statsData && statsData.api_daily) || {};
+  const arr = _apiBuckets(daily, apiMode, apiMetric);
+  const max = Math.max(...arr.map(a => a.value), 1);
+  const hasAny = arr.some(a => a.value > 0);
+  const fmt = apiMetric === 'tokens' ? fmtTokens : fmtNum;
+  const body = !hasAny
+    ? '<div class="vchart-empty">No AI calls recorded yet</div>'
+    : '<div class="vchart" role="img" aria-label="AI calls per ' + apiMode + '">' + arr.map(a => {
+        const h = Math.max(2, Math.round(a.value / max * 145));
+        const cls = a.value === 0 ? 'vbar-fill zero' : 'vbar-fill';
+        return `<div class="vcol" title="${esc(a.key)} — ${fmt(a.value)} ${apiMetric}">
+          <div class="vbar-track"><div class="${cls}" style="height:${h}px"></div></div>
+          <div class="vbar-num">${a.value ? fmt(a.value) : ''}</div>
+          <div class="vbar-label${a.isCurrent ? ' today' : ''}">${esc(a.label)}</div>
+        </div>`;
+      }).join('') + '</div>';
+  el.innerHTML = body;
+  document.querySelectorAll('#api-chart-card .rev-toggle button').forEach(b => {
+    b.classList.toggle('active', b.dataset.apimode === apiMode);
+  });
+  document.querySelectorAll('#api-chart-card .seg-api button').forEach(b => {
+    b.classList.toggle('active', b.dataset.apimetric === apiMetric);
+  });
+}
+
+function setApiMode(mode) { apiMode = mode; renderApiCallsChart(); }
+function setApiMetric(m) { apiMetric = m; renderApiCallsChart(); }
+
+function apiCallsChartCard() {
+  const daily = (statsData && statsData.api_daily) || {};
+  const head = `<div class="rev-chart-head">
+    <div class="rev-totals">
+      <span>Today <b>${fmtNum(_apiWindowSum(daily, 'calls', 1))}</b> calls</span>
+      <span>7 d <b>${fmtNum(_apiWindowSum(daily, 'calls', 7))}</b></span>
+      <span>30 d <b>${fmtNum(_apiWindowSum(daily, 'calls', 30))}</b> · ${fmtTokens(_apiWindowSum(daily, 'tokens', 30))} tkn</span>
+    </div>
+    <div style="display:flex;gap:.8rem;align-items:center;flex-wrap:wrap">
+      <span class="seg seg-api"><button type="button" data-apimetric="calls" onclick="setApiMetric('calls')">Calls</button><button type="button" data-apimetric="tokens" onclick="setApiMetric('tokens')">Tokens</button></span>
+      <div class="rev-toggle">
+        <button data-apimode="day" onclick="setApiMode('day')">Day</button>
+        <button data-apimode="week" onclick="setApiMode('week')">Week</button>
+        <button data-apimode="month" onclick="setApiMode('month')">Month</button>
+      </div>
+    </div>
+  </div>`;
+  return `<div class="chart-card span-12" id="api-chart-card"><div class="chart-head">⚡ AI API Calls · per ${apiMode}</div>${head}<div id="api-chart-body"><div class="vchart-empty">Loading…</div></div></div>`;
 }
 
 // ══════════════════════════════════════
@@ -1887,12 +1998,14 @@ function renderOverview() {
     chartCard(5, '⇣ Top Referrers · unique', bRef) +
     chartCard(7, '🎮 Recently Active Players', bAct) +
     revenueChartCard() +
+    apiCallsChartCard() +
     chartCard(6, '✛ New Players by Day · 14 d', barChartDayHtml(users, 14)) +
     chartCard(6, '♪ Narrator Time by Player', b5);
 
   renderKpiBand(users);
   renderModelChart();
   renderRevenueChart();
+  renderApiCallsChart();
   const calls = Object.values(provs).reduce((a, p) => a + (p.calls || 0), 0);
   setSecSummary('overview', `${users.length} players · ${fmtNum((statsData && statsData.total_turns) || 0)} turns · ` +
     `${fmtTokens((statsData && statsData.total_tokens) || 0)} tokens · ${fmtNum(calls)} AI calls`);

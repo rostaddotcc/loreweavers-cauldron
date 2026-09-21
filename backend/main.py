@@ -10217,6 +10217,29 @@ def _provider_for_model(model_name: str) -> str:
     return "unknown"
 
 
+try:
+    from zoneinfo import ZoneInfo
+    _LOCAL_TZ = ZoneInfo("Europe/Stockholm")
+except Exception:  # pragma: no cover — saknad tzdata: fallback UTC+1
+    _LOCAL_TZ = timezone(timedelta(hours=1))
+
+
+def _day_key(ts: str) -> str:
+    """Transkriptets UTC-ISO-tid → lokal (Europe/Stockholm) daglycka YYYY-MM-DD.
+
+    Används av admin-vyns AI-calls-graf (2026-09-21) — dygnsgrensen ska följa
+    rostads klocka, inte UTC. Tobbinsbara strängar faller back på [:10]."""
+    if not ts:
+        return ""
+    try:
+        dt = datetime.fromisoformat(str(ts))
+    except (ValueError, TypeError):
+        return str(ts)[:10]
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(_LOCAL_TZ).date().isoformat()
+
+
 def _scan_user_transcripts(user: str) -> dict:
     """Skanna alla transkript för en användare och returnera token- och tursstatistik."""
     prompt_tokens = 0
@@ -10225,12 +10248,15 @@ def _scan_user_transcripts(user: str) -> dict:
     last_active = ""
     sessions = []
     tts_usage = {"calls": 0, "api_calls": 0, "chars": 0, "tokens": 0, "seconds": 0.0}
+    # {YYYY-MM-DD (lokal): {"calls": n, "tokens": t}} — för admin-vyns
+    # AI-calls-graf per dag/vecka/månad (2026-09-21).
+    daily: dict = {}
 
     user_dir = CAMPAIGNS_DIR / user
     if not user_dir.exists():
         base = _empty_account_usage()
         return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "turns": 0,
-                "last_active": "", "sessions": sessions, "tts_usage": tts_usage,
+                "last_active": "", "sessions": sessions, "tts_usage": tts_usage, "daily": daily,
                 "character_creation": base["character_creation"], "image_gen": base["image_gen"],
                 "deleted_campaigns": base["deleted"]}
 
@@ -10287,6 +10313,16 @@ def _scan_user_transcripts(user: str) -> dict:
                         completion_tokens += c
                         session_prompt += p
                         session_completion += c
+                        # Dagbokslut för AI-calls-grafen: 1 anrop per transkript-
+                        # post som har token-data (DM-anrop med fast pre-DM
+                        # Guardian räknas som 2 — stämmer med verkliga anrop).
+                        _calls_here = (1 if (tokens or meta.get("model")) else 0) + (1 if gpd else 0)
+                        if _calls_here:
+                            _dk = _day_key(entry.get("ts", ""))
+                            if _dk:
+                                _d = daily.setdefault(_dk, {"calls": 0, "tokens": 0})
+                                _d["calls"] += _calls_here
+                                _d["tokens"] += p + c
                         # Per-roll token-uppdelning (för admin: DM vs Guardian).
                         # DM-postens egna tokens bokförs på "assistant"; den
                         # pre-DM Guardian-detectionen bokförs separat på "guardian".
@@ -10320,6 +10356,9 @@ def _scan_user_transcripts(user: str) -> dict:
             # ackumuleras i state.meta.unguarded_tokens — lägg till per kampanj.
             # Nyare state har by_model (vilken LLM som spenderade) — då fördelas
             # tokens på rätt modell i model_tokens istället för en grå klump.
+            # DAGBOKLUTSFRI: dessa har ingen tidstämpel alls (livstidsräknare),
+            # så de kan inte placeras i daily — grafen visar transkript-spårbara
+            # anrop; totalsynen (tokens/calls KPI) inkluderar fortfarande allt.
             try:
                 st_file = campaign_dir / "state.json"
                 if st_file.exists():
@@ -10412,6 +10451,7 @@ def _scan_user_transcripts(user: str) -> dict:
         "sessions": sessions,
         "model_tokens": model_tokens_total,
         "tts_usage": tts_usage,
+        "daily": daily,
         "character_creation": _acc.get("character_creation", {}),
         "image_gen": _acc.get("image_gen", {}),
         "deleted_campaigns": _del,
@@ -10498,6 +10538,7 @@ def _user_stat_row(username: str, geo: dict | None = None, ledger_per_user: dict
         "image_gen_calls": (scan.get("image_gen", {}) or {}).get("calls", 0) or 0,
         "deleted_campaigns": scan.get("deleted_campaigns", {}),
         "model_tokens": scan.get("model_tokens", {}),
+        "daily": scan.get("daily", {}),
     }
     if geo:
         g = geo.get(username, {})
@@ -10573,6 +10614,16 @@ async def admin_stats(morkrets_token: str | None = Cookie(None)):
     providers = dict(sorted(providers.items(), key=lambda kv: kv[1]["tokens"], reverse=True))
     models_list = dict(sorted(models_list.items(), key=lambda kv: kv[1]["tokens"], reverse=True))
 
+    # AI-calls per dag (2026-09-21, rostad: "antal api calls per dag/vecka"):
+    # aggregera alla användares daily-dagböcker till {YYYY-MM-DD: {calls, tokens}}.
+    api_daily: dict = {}
+    for row in user_stats:
+        for dk, dv in (row.get("daily") or {}).items():
+            a = api_daily.setdefault(dk, {"calls": 0, "tokens": 0})
+            a["calls"] += dv.get("calls", 0) or 0
+            a["tokens"] += dv.get("tokens", 0) or 0
+    api_daily = dict(sorted(api_daily.items()))
+
     # Besöksstatistik (2026-08-05, rostad): total, idag, 7 dagar, per dag + per land
     visits = await iplog.visits_summary()
 
@@ -10584,6 +10635,7 @@ async def admin_stats(morkrets_token: str | None = Cookie(None)):
         "users": user_stats,
         "providers": providers,
         "models": models_list,
+        "api_daily": api_daily,
         "visits": visits,
     }
 

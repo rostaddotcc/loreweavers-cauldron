@@ -158,8 +158,10 @@ def test_ally_damage_amount_null_no_crash():
     assert c["allies"][0]["hp"] == 10
 
 
-def test_enemy_attack_narrative_fallback_damage_non_numeric(monkeypatch):
-    """Narrativ fallback (attackör ej i combat-listan) med '1d6+1' → ingen krasch."""
+def test_enemy_attack_off_list_damage_non_numeric_no_crash(monkeypatch):
+    """Off-list attacker med non-numeric claim '1d6+1' → ingen krasch, och P0:
+    skadan RULLAS av servern (heuristiska stats) — DM:ens claim appliceras aldrig
+    (gamla beteendet: claim → _safe_int → 0 skada; stale-test uppdaterat 2026-09-22)."""
     state = _make_state()
     combat.start_combat(state, [{"name": "Goblin", "hp": 7, "ac": 12}])
     _mock_dice(monkeypatch, d20_seq=[], dmg_seq=[])
@@ -167,7 +169,8 @@ def test_enemy_attack_narrative_fallback_damage_non_numeric(monkeypatch):
         state, _mech(enemy_attacks=[{"attacker": "Okänd Strykare", "hit": True, "damage": "1d6+1"}]),
         skip_effects=[],
     )
-    assert state["character"]["hp"]["current"] == 14
+    # Server-rullad skada (mockade tärningar: d20=10 → 13 vs AC 12 → träff, 1 dmg)
+    assert state["character"]["hp"]["current"] == 13
 
 
 def test_player_ac_null_no_crash(monkeypatch):

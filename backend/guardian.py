@@ -2729,11 +2729,46 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 effects.append({"type": "ally_död", "value": ally["name"]})
                 logger.info("💀 %s has fallen", ally["name"])
 
-        # Fiendernas attacker → KODEN rullar tärningarna (transparens — inte DM-fusk)
-        # Guardian extraherar bara attackeraren; d20 + attack_bonus mot spelarens
-        # AC och skade-tärningarna rullas här, precis som spelarens egna kast.
+        # Fiendernas attacker → P0 (2026-09-22): UTFALLEN är server-rullade i
+        # förväg (pre-DM: enemy_rolls.plan_enemy_turn → meta["enemy_attack_rolls"]).
+        # Guardian applicerar det LAGRADA utfallet — DM:narration avgör aldrig,
+        # och extraherade hit/damage-anspråk klampas (stored HIT → lagrad skada,
+        # stored MISS → 0 skada + parry-logg). Saknas lagrat utfall (edge:
+        # fiende anslöt mitt i runda) rullas nu och utfallet honomeras.
         hp = _ensure_hp(ch)
         player_ac = _safe_int(ch.get("ac"), 10)
+        _meta = state.get("meta") or {}
+        _rolls_by_round = _meta.get("enemy_attack_rolls")
+        if not isinstance(_rolls_by_round, dict):
+            _rolls_by_round = {}
+            _meta["enemy_attack_rolls"] = _rolls_by_round
+
+        def _lookup_stored_roll(key: str, name: str) -> dict | None:
+            """Pre-DM-utfall för attackern: nyckel först (Name#id), sedan
+            bar-namn-fallback. Konsumerade utfall hoppas över (en planerad
+            attack = en applicering). Let först i aktuell runda, sedan i
+            övriga rundor (ett utfall som planerades men aldrig narrerades
+            följer med tills det appliceras)."""
+            _n = name.strip().lower()
+            def _match(k, r, want_key=None):
+                if not isinstance(r, dict) or r.get("consumed"):
+                    return False
+                if want_key is not None:
+                    return k == want_key
+                return str(k).split("#")[0].strip().lower() == _n
+            rounds = [_rolls_by_round.get(str(current_round))] + [
+                v for kx, v in _rolls_by_round.items() if str(kx) != str(current_round)
+            ]
+            for _round_map in rounds:
+                if not isinstance(_round_map, dict):
+                    continue
+                r = next((r for k, r in _round_map.items() if _match(k, r, key)), None)
+                if r is None:
+                    r = next((r for k, r in _round_map.items() if _match(k, r)), None)
+                if r is not None:
+                    return r
+            return None
+
         for atk in mech.get("enemy_attacks", []):
             attacker_name = str(atk.get("attacker", "")).strip()
             if not attacker_name:
@@ -2742,18 +2777,27 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             # nästa LEVANDE fiende med det namnet som ännu inte agerat — annars
             # markeras samma fiende N gånger och rundan låser sig ( regression
             # 2026-09-13: tre Archival Sentinels, round_acted fastnade på 1/3).
-            _alive = [e for e in combat.get("enemies", [])
-                      if e.get("name", "").lower() == attacker_name.lower() and e.get("alive", True)]
+            # P0 (2026-09-22): fuzzy namn-matchning (ordinals "the second guard",
+            # svenska bestämda former "vakten"→"Vakt", Name#id) — den exakta
+            # lower-cased matchningen var trigger-buggen bakom "enemies always hit".
+            from enemy_rolls import match_enemy_candidates as _match_enemies
+            _alive = [e for _ci, e in _match_enemies(combat, attacker_name)
+                      if e.get("alive", True)]
             enemy = next(
                 (e for e in _alive
                  if not _ra["enemies"].get(_enemy_key(e, combat["enemies"].index(e)))),
-                _alive[0] if _alive else None,
+                None,
             )
-            # Fiendens stats från combat (fallback: attackeraren finns inte i listan → använd DM:s angivna hit/damage om de finns)
+            # Fiendens stats från combat (fallback: attackeraren finns inte i listan → rulla med heuristiska stats)
             if enemy is not None:
                 _i = next((i for i, e in enumerate(combat.get("enemies", [])) if e is enemy), 0)
-                _ra["enemies"][_enemy_key(enemy, _i)] = True  # JUSTE denna fiende har agerat (träff/miss oavsett)
-                from combat import roll_d20, roll_dice as _roll_dice, has_disadvantage, damage_multiplier
+                _key = _enemy_key(enemy, _i)
+                # P0-invariant: EN attack per levande fiende per runda — redan
+                # agerad (t.ex. dubbel-extraherad attack) → hoppa över.
+                if _ra["enemies"].get(_key):
+                    logger.info("⚔️ Enemy attack skipped: %s already acted this round", _key)
+                    continue
+                _ra["enemies"][_key] = True  # JUSTE denna fiende har agerat (träff/miss oavsett)
 
                 # Cover (5e, P2): combat.player_cover → AC-bonus mot fiendeträffar
                 _player_cover = combat.get("player_cover")
@@ -2763,41 +2807,60 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                     effects.append({"type": "enemy_miss", "value": attacker_name, "roll": 0, "d20": 0, "bonus": 0, "reason": "full_cover"})
                     continue
 
-                d20 = roll_d20()
-                # Disadvantage (5e, 2026-08-08): status med attack_disadvantage
-                # (blind/prone/frighten/stun/restrain) → 2d20, ta SÄMST.
-                if has_disadvantage(enemy):
-                    d20 = min(d20, roll_d20())
-                attack_bonus = _safe_int(enemy.get("attack_bonus"), 3)
-                total = d20 + attack_bonus
-                crit = d20 == 20
-                fumble = d20 == 1
-                if fumble:
-                    combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": "misses you (natural 1!)"})
+                stored_roll = _lookup_stored_roll(_key, attacker_name)
+                if stored_roll is not None:
+                    stored_roll["consumed"] = True  # en applicering per planerat utfall
+                    roll = stored_roll
+                else:
+                    # Edge: fiende anslöt efter planering (eller saknat meta) →
+                    # rulla nu via samma motor och honomera utfallet.
+                    from enemy_rolls import roll_enemy_attack as _roll_enemy_attack
+                    roll = _roll_enemy_attack(
+                        enemy, _key, player_ac,
+                        cover_bonus=cover_bonus,
+                        claimed_damage_type=str(atk.get("damage_type") or ""),
+                    )
+                    roll["consumed"] = True
+                    _rolls_by_round.setdefault(str(current_round), {})[_key] = roll
+                d20 = _safe_int(roll.get("d20"), 0)
+                attack_bonus = _safe_int(roll.get("bonus"), 0)
+                total = _safe_int(roll.get("total"), 0)
+                crit = bool(roll.get("crit"))
+                dmg_notation = str(roll.get("damage_dice") or "1d6+1")
+                rolls = list(roll.get("damage_rolls") or [])
+                dmg_type = str(roll.get("damage_type") or atk.get("damage_type") or "")
+                roll_expr = str(roll.get("roll_expr") or "1d20")
+                _row_ac = _safe_int(roll.get("ac"), player_ac)
+
+                if not roll.get("hit"):
+                    # Lagrad MISS → 0 skada ALLTID. Extraherat träff-anspråk
+                    # (LLM-narration) får aldrig applicera skada — parry-loggas.
+                    _claimed_hit = bool(atk.get("hit")) or _safe_int(atk.get("damage"), 0) > 0
+                    _parry = " (parried — narration claimed a hit)" if _claimed_hit else ""
+                    combat_log.append({
+                        "round": current_round, "actor": "system", "name": "",
+                        "text": f"⚔ {attacker_name} attack: {roll_expr} → {total} vs AC {_row_ac} — MISS · 0 {dmg_type or 'unknown'}{_parry}",
+                    })
                     effects.append({"type": "enemy_miss", "value": attacker_name, "roll": total, "d20": d20, "bonus": attack_bonus})
+                    logger.info("⚔️ Enemy attack (miss): %s %s → %d vs AC %d — 0 damage", attacker_name, roll_expr, total, _row_ac)
                     continue
-                if total < player_ac + cover_bonus and not crit:
-                    combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"misses you (🎲 d20={d20}+{attack_bonus}={total} vs AC {player_ac}{'+' + str(cover_bonus) if cover_bonus else ''})"})
-                    effects.append({"type": "enemy_miss", "value": attacker_name, "roll": total, "d20": d20, "bonus": attack_bonus})
-                    continue
-                # Träff → rulla skadan (fiendens damage_dice, fallback 1d6+1)
-                dmg_notation = enemy.get("damage_dice", "1d6+1")
-                dmg, rolls = _roll_dice(dmg_notation)
-                if crit:
-                    dmg2, rolls2 = _roll_dice(dmg_notation)
-                    dmg += dmg2
-                    rolls += rolls2
-                dmg = max(1, dmg)
+
+                # Träff → applicera det LAGRADA skadevärdet (klampar LLM-
+                # inflation: extraherade damage-anspråk används aldrig).
+                dmg = max(1, _safe_int(roll.get("damage"), 0))
                 # 5e resistans/sårbarhet (P2): spelarens damage-type-modifierare
-                dmg_type = str(atk.get("damage_type") or enemy.get("damage_type") or "")
                 if dmg_type:
+                    from combat import damage_multiplier
                     _dmult = damage_multiplier(dmg_type, ch)
                     if _dmult != 1.0:
                         dmg = int(dmg * _dmult)
                         effects.append({"type": "damage_type_mod", "target": "player", "damage_type": dmg_type, "mult": _dmult, "amount": dmg})
                         logger.info("🛡️ Player %s-resistance vs %s → ×%s → %d dmg", dmg_type, attacker_name, _dmult, dmg)
                 if dmg <= 0:
-                    combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"hits you — but you are immune to {dmg_type} damage"})
+                    combat_log.append({
+                        "round": current_round, "actor": "system", "name": "",
+                        "text": f"⚔ {attacker_name} attack: {roll_expr} → {total} vs AC {_row_ac} — HIT · 0 {dmg_type} (immune)",
+                    })
                     effects.append({"type": "enemy_hit", "value": attacker_name, "damage": 0, "crit": crit, "roll": total, "d20": d20, "bonus": attack_bonus, "immune": dmg_type})
                     continue
                 # P0-dedup: [SKADA:]-taggen applicerade redan samma skada
@@ -2809,10 +2872,10 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                     hp["temp"] = temp - absorbed
                     dmg -= absorbed
                 hp["current"] = max(0, hp.get("current", 1) - dmg)
-                crit_str = " 💥 KRITISK!" if crit else ""
+                crit_str = " (CRIT)" if crit else ""
                 combat_log.append({
-                    "round": current_round, "actor": "enemy", "name": attacker_name,
-                    "text": f"hits you — {dmg} damage ({dmg_type or 'unknown'}){crit_str} (🎲 d20={d20}+{attack_bonus}={total} · {dmg_notation}: [{', '.join(str(x) for x in rolls)}]={dmg}) → **{ch.get('name', 'Player')} {hp['current']}/{hp['max']} HP**",
+                    "round": current_round, "actor": "system", "name": "",
+                    "text": f"⚔ {attacker_name} attack: {roll_expr} → {total} vs AC {_row_ac} — HIT{crit_str} · {dmg} {dmg_type or 'unknown'} → **{ch.get('name', 'Player')} {hp['current']}/{hp['max']} HP**",
                 })
                 effects.append({
                     "type": "enemy_hit", "value": attacker_name, "damage": dmg, "crit": crit,
@@ -2821,26 +2884,52 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                 })
                 logger.info("⚔️ Enemy attack: %s → the player, %d damage (d20=%d) → HP %d/%d", attacker_name, dmg, d20, hp["current"], hp["max"])
             else:
-                # Fienden finns inte i combat-listan (t.ex. narrativ attack utanför strid) —
-                # fallback till DM:s angivna utfall (gamla beteendet)
-                if atk.get("hit"):
-                    dmg = max(0, _safe_int(atk.get("damage"), 0))
-                    if dmg > 0:
-                        if ("skada", str(dmg)) in _skip_keys:
-                            continue
-                        temp = hp.get("temp", 0)
-                        if temp > 0:
-                            absorbed = min(temp, dmg)
-                            hp["temp"] = temp - absorbed
-                            dmg -= absorbed
-                        hp["current"] = max(0, hp.get("current", 1) - dmg)
-                        roll_str = f" (🎲 d20={atk.get('roll', '?')})" if atk.get("roll") else ""
-                        combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"hits you — {dmg} damage ({atk.get('damage_type', 'unknown')}){roll_str} → **{ch.get('name', 'Player')} {hp['current']}/{hp['max']} HP**"})
-                        effects.append({"type": "skada", "value": dmg})
-                        logger.info("⚔️ Enemy attack (narrative): %s → the player, %d damage → HP %d/%d", attacker_name, dmg, hp["current"], hp["max"])
-                else:
-                    roll_str = f" (🎲 d20={atk.get('roll', '?')})" if atk.get("roll") else ""
-                    combat_log.append({"round": current_round, "actor": "enemy", "name": attacker_name, "text": f"misses you{roll_str}"})
+                # Attackeraren finns inte i combat-listan (t.ex. narrativ attack
+                # utanför stridlistan) — P0: rulla ÄNDÅ (heuristiska stats) i
+                # stället för att blint applicera LLM:ens hit/damage-anspråk
+                # ("enemies always hit"-buggen). Utfallet honomeras.
+                from enemy_rolls import roll_enemy_attack as _roll_enemy_attack
+                _pseudo = {
+                    "name": attacker_name,
+                    "attack_bonus": atk.get("attack_bonus"),
+                    "damage_dice": atk.get("damage_dice") or "",
+                }
+                _roll = _roll_enemy_attack(
+                    _pseudo, attacker_name, player_ac,
+                    cover_bonus=(2 if combat.get("player_cover") == "half"
+                                 else 5 if combat.get("player_cover") == "three_quarters" else 0),
+                    claimed_damage_type=str(atk.get("damage_type") or ""),
+                )
+                _row_ac = _safe_int(_roll.get("ac"), player_ac)
+                _expr = str(_roll.get("roll_expr") or "1d20")
+                _dtype = str(_roll.get("damage_type") or "unknown")
+                if not _roll.get("hit"):
+                    combat_log.append({
+                        "round": current_round, "actor": "system", "name": "",
+                        "text": f"⚔ {attacker_name} attack: {_expr} → {_roll.get('total', 0)} vs AC {_row_ac} — MISS · 0 {_dtype}",
+                    })
+                    effects.append({"type": "enemy_miss", "value": attacker_name, "roll": _safe_int(_roll.get("total"), 0), "d20": _safe_int(_roll.get("d20"), 0), "bonus": _safe_int(_roll.get("bonus"), 0)})
+                    continue
+                dmg = max(1, _safe_int(_roll.get("damage"), 0))
+                if ("skada", str(dmg)) in _skip_keys:
+                    continue
+                temp = hp.get("temp", 0)
+                if temp > 0:
+                    absorbed = min(temp, dmg)
+                    hp["temp"] = temp - absorbed
+                    dmg -= absorbed
+                hp["current"] = max(0, hp.get("current", 1) - dmg)
+                combat_log.append({
+                    "round": current_round, "actor": "system", "name": "",
+                    "text": f"⚔ {attacker_name} attack: {_expr} → {_roll.get('total', 0)} vs AC {_row_ac} — HIT · {dmg} {_dtype} → **{ch.get('name', 'Player')} {hp['current']}/{hp['max']} HP**",
+                })
+                effects.append({
+                    "type": "enemy_hit", "value": attacker_name, "damage": dmg,
+                    "crit": bool(_roll.get("crit")), "roll": _safe_int(_roll.get("total"), 0),
+                    "d20": _safe_int(_roll.get("d20"), 0), "bonus": _safe_int(_roll.get("bonus"), 0),
+                })
+                logger.info("⚔️ Enemy attack (off-list attacker): %s → the player, %d damage (d20=%s) → HP %d/%d",
+                            attacker_name, dmg, _roll.get("d20", 0), hp["current"], hp["max"])
 
         # Combat events → logga
         for event in mech.get("combat_events", []):

@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RIKTNING 2 — Bläck &amp; Gift · Ink &amp; Poison · The Lore Weaver's Cauldron</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@400;700&family=Caveat:wght@500;700&family=Alegreya:ital,wght@0,400;0,500;0,700;1,400&family=Rock+Salt&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   RIKTNING 2 — "Bläck & Gift" (Ink & Poison)
+   A scary fairy tale PAINTED BY HAND — gothic watercolor storybook.
+   Not a reskin: the page is a torn-page collage, type is the
+   illustration, cards are ink blots and paint swatches.
+
+   TOKEN-FIRST — every value resolves through :root custom
+   properties (--ip-* = Ink & Poison). The 19-page port is a
+   token swap in snes.css §:root plus these structural patterns.
+   ============================================================ */
+:root {
+  /* ---- Pigments (direction palette, verbatim) ---- */
+  --ip-paper:       #e8e2d4;  /* bone white — watercolor paper */
+  --ip-ink:         #121212;  /* ink black */
+  --ip-poison:      #4d7a3a;  /* poison green */
+  --ip-bruise:      #5b4a6e;  /* bruise purple */
+  --ip-blood:       #a32433;  /* ONE drop of blood red — only hot accent */
+
+  /* ---- Washes & shades: same pigments, more water ---- */
+  --ip-paper-lift:  #f0ebe0;
+  --ip-paper-deep:  #d9cfba;
+  --ip-ink-panel:   #1a1620;  /* spilled-ink puddle (bruise-black) */
+  --ip-ink-soft:    #453d4d;  /* secondary text on paper */
+  --ip-poison-deep: #39582b;
+  --ip-poison-wash: rgba(77, 122, 58, 0.20);
+  --ip-bruise-wash: rgba(91, 74, 110, 0.18);
+  --ip-blood-wash:  rgba(163, 36, 51, 0.15);
+  --ip-blood-glow:  #e05a68;  /* blood one step brighter — on ink panels */
+  --ip-bone:        #e8e2d4;
+  --ip-shadow:      rgba(18, 18, 18, 0.30);
+
+  /* ---- Semantic aliases ---- */
+  --ip-accent:  var(--ip-poison);
+  --ip-danger:  var(--ip-blood);
+  --ip-surface: var(--ip-paper);
+  --ip-text:    var(--ip-ink);
+
+  /* ---- Type voices ---- */
+  --ip-font-display: "Amatic SC", "Caveat", cursive;  /* hand-inked ART type */
+  --ip-font-hand:    "Caveat", cursive;               /* handwriting        */
+  --ip-font-body:    "Alegreya", Georgia, serif;      /* long readable text */
+  --ip-font-scratch: "Rock Salt", cursive;            /* raw scratched marks */
+
+  --ip-fs-hero-a:   clamp(1.8rem, 1.2rem + 2.5vw, 3.2rem);   /* "The" */
+  --ip-fs-hero:     clamp(3.4rem, 1.6rem + 9vw, 8.5rem);     /* title words */
+  --ip-fs-verdict:  clamp(3rem, 2rem + 5vw, 5.5rem);         /* HIT / MISS */
+  --ip-fs-roll:     clamp(2.6rem, 1.8rem + 4vw, 4.2rem);
+  --ip-fs-h2:       clamp(2rem, 1.5rem + 2.4vw, 3.2rem);
+  --ip-fs-body:     1.125rem;   /* 18px */
+  --ip-fs-small:    0.95rem;
+  --ip-fs-label:    0.78rem;
+  --ip-fs-hand:     clamp(1.55rem, 1.3rem + 1.2vw, 2.1rem);
+
+  --ip-lh-body:  1.78;
+  --ip-lh-tight: 1.05;
+
+  /* ---- Space & shape ---- */
+  --ip-sp-1: 0.5rem;
+  --ip-sp-2: 1rem;
+  --ip-sp-3: 1.75rem;
+  --ip-sp-4: 3.25rem;
+  --ip-measure: 42rem;
+  --ip-pad-scrap: clamp(1.4rem, 1rem + 2.4vw, 2.5rem);
+  --ip-wobble: 255px 18px 225px 18px / 18px 225px 18px 255px;
+  --ip-blot-shape: 46% 54% 62% 38% / 56% 44% 60% 40%;
+  --ip-blob-shape: 58% 42% 47% 53% / 44% 58% 42% 56%;
+
+  /* ---- Motion: ink, paint, paper ---- */
+  --ip-ease-bleed: cubic-bezier(0.33, 0.05, 0.2, 1);
+  --ip-ease-bloom: cubic-bezier(0.22, 0.8, 0.3, 1);
+  --ip-t-bleed: 1100ms;
+  --ip-t-bloom: 620ms;
+  --ip-t-flutter: 340ms;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background-color: var(--ip-paper);
+  color: var(--ip-text);
+  font-family: var(--ip-font-body);
+  font-size: var(--ip-fs-body);
+  line-height: var(--ip-lh-body);
+  /* stain blooms: pigment pooled where the paper was wettest */
+  background-image:
+    radial-gradient(40rem 32rem at 4% -6%,   var(--ip-poison-wash), transparent 60%),
+    radial-gradient(34rem 30rem at 106% 12%, var(--ip-bruise-wash), transparent 58%),
+    radial-gradient(20rem 26rem at 96% 52%,  var(--ip-blood-wash),  transparent 46%),
+    radial-gradient(30rem 24rem at 88% 112%, var(--ip-poison-wash), transparent 55%),
+    radial-gradient(16rem 14rem at 6% 64%,   var(--ip-blood-wash),  transparent 44%),
+    radial-gradient(28rem 26rem at 42% 34%,  var(--ip-bruise-wash), transparent 64%);
+  background-attachment: fixed;
+}
+/* paper tooth */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.45;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='t'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23t)' opacity='0.3'/%3E%3C/svg%3E");
+}
+
+/* ============ COLLAGE: torn scraps on a table ============ */
+.collage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 5.5rem;
+  column-gap: clamp(0.5rem, 2vw, 2rem);
+  max-width: 66rem;
+  margin: 0 auto;
+  padding: clamp(1.25rem, 0.5rem + 3vw, 3.5rem) clamp(1rem, 0.4rem + 2.5vw, 2.5rem) 4rem;
+}
+.hero   { grid-column: 1 / -1; }
+.stream { grid-column: 1; max-width: var(--ip-measure); }
+.rail   { grid-column: 2; grid-row: 2; }
+
+/* ---- Side rail: the chapter, scratched up the margin ---- */
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ip-sp-2);
+  padding-top: var(--ip-sp-3);
+}
+.rail .chapter {
+  writing-mode: vertical-rl;
+  font-family: var(--ip-font-body);
+  font-size: var(--ip-fs-label);
+  font-weight: 700;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--ip-poison-deep);
+}
+.rail .runes {
+  writing-mode: vertical-rl;
+  font-family: var(--ip-font-display);
+  font-size: 1.7rem;
+  letter-spacing: 0.45em;
+  color: var(--ip-bruise);
+  opacity: 0.75;
+}
+
+/* ============ TYPE AS ILLUSTRATION: the hero ============ */
+.hero { position: relative; margin: var(--ip-sp-2) 0 var(--ip-sp-4); }
+.word {
+  position: relative;
+  display: block;
+  width: fit-content;
+  font-family: var(--ip-font-display);
+  font-weight: 700;
+  line-height: var(--ip-lh-tight);
+  color: var(--ip-ink);
+  /* ink bleeding into wet paper */
+  animation: ink-bleed var(--ip-t-bleed) var(--ip-ease-bleed) both;
+}
+/* paint splat behind each word — the letters sit in their own wash */
+.word::before {
+  content: "";
+  position: absolute;
+  inset: 8% -7% 2% -7%;
+  z-index: -1;
+  border-radius: var(--ip-blob-shape);
+  filter: blur(10px);
+}
+.word--the       { font-size: var(--ip-fs-hero-a); letter-spacing: 0.35em; margin-left: 0.4rem; animation-delay: 80ms; }
+.word--the::before       { background: var(--ip-bruise-wash); transform: rotate(-3deg); }
+.word--lore      { font-size: var(--ip-fs-hero); margin-top: -0.12em; animation-delay: 240ms; }
+.word--lore::before      { background: var(--ip-poison-wash); border-radius: var(--ip-blot-shape); transform: rotate(1.5deg); }
+.word--cauldron  { font-size: var(--ip-fs-hero); margin-left: clamp(1.5rem, 12%, 7rem); animation-delay: 420ms; }
+.word--cauldron::before  { background: var(--ip-blood-wash); transform: rotate(-2deg); }
+
+/* brushstroke underline, dragged under the title, bleeding in */
+.hero .brush {
+  display: block;
+  width: min(26rem, 82%);
+  height: 1rem;
+  margin: 0.5rem 0 0 clamp(1.5rem, 14%, 8rem);
+  background: no-repeat left center / 0% 100%
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 20' preserveAspectRatio='none'%3E%3Cpath d='M4 12 C60 5, 92 15, 152 9 S 252 4, 316 11 L313 16 C238 10, 168 18, 94 13 S 28 16, 6 17 Z' fill='%23a32433'/%3E%3Cpath d='M12 8 C82 3, 142 12, 232 6' stroke='%23a32433' stroke-width='2' fill='none' stroke-linecap='round' opacity='0.5'/%3E%3C/svg%3E");
+  animation: stroke-drag 900ms var(--ip-ease-bleed) 950ms both;
+}
+/* ink drips off the stroke */
+.hero .drip {
+  display: block;
+  width: 4.5rem;
+  height: 2.2rem;
+  margin: -0.15rem 0 0 clamp(2rem, 22%, 11rem);
+  background: no-repeat center / 100% 100%
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 36'%3E%3Cpath d='M6 2 v14 a4 4 0 1 0 0.01 0 M28 3 v24 a3.4 3.4 0 1 0 0.01 0 M52 2 v9' stroke='%23a32433' stroke-width='3' fill='none' stroke-linecap='round' opacity='0.65'/%3E%3Ccircle cx='52' cy='18' r='3' fill='%23a32433' opacity='0.65'/%3E%3C/svg%3E");
+  animation: ink-bleed 1200ms var(--ip-ease-bleed) 1500ms both;
+}
+
+/* ============ TORN PAPER SCRAPS ============ */
+.scrap {
+  position: relative;
+  padding: var(--ip-pad-scrap);
+  margin: 0 0 var(--ip-sp-4);
+  transform: rotate(var(--tilt, 0deg));
+  transition: transform var(--ip-t-flutter) var(--ip-ease-bloom),
+              filter   var(--ip-t-flutter) var(--ip-ease-bloom);
+  animation: ink-bleed var(--ip-t-bleed) var(--ip-ease-bleed) both;
+}
+/* the torn sheet itself: background layer displaced = ragged deckled edge */
+.scrap::before {
+  content: "";
+  position: absolute;
+  inset: -7px -12px;
+  z-index: -1;
+  background:
+    radial-gradient(60% 50% at 85% 8%,  var(--ip-bruise-wash), transparent 70%),
+    radial-gradient(55% 45% at 8% 92%,  var(--ip-poison-wash), transparent 68%),
+    linear-gradient(175deg, var(--ip-paper-lift), var(--ip-paper) 60%, var(--ip-paper-deep));
+  filter: url(#ip-torn-a) drop-shadow(3px 7px 9px var(--ip-shadow));
+}
+.scrap--b::before { filter: url(#ip-torn-b) drop-shadow(-4px 8px 9px var(--ip-shadow)); }
+.scrap--c::before { filter: url(#ip-torn-c) drop-shadow(2px 8px 10px var(--ip-shadow)); }
+/* watercolor blot bloom on hover: the stain spreads on the sheet */
+.scrap::after {
+  content: "";
+  position: absolute;
+  inset: -6%;
+  z-index: -1;
+  border-radius: var(--ip-blob-shape);
+  background: radial-gradient(closest-side, var(--ip-stain, var(--ip-poison-wash)), transparent 72%);
+  filter: blur(6px);
+  opacity: 0;
+  transform: scale(0.45) rotate(-3deg);
+  transition: opacity var(--ip-t-bloom) var(--ip-ease-bloom),
+              transform var(--ip-t-bloom) var(--ip-ease-bloom);
+}
+.scrap:hover::after, .scrap:focus-within::after { opacity: 1; transform: scale(1.25) rotate(2deg); }
+.scrap:hover { transform: rotate(calc(var(--tilt, 0deg) * 0.3)) translateY(-3px); }
+
+/* small-caps functional labels */
+.label {
+  display: block;
+  font-family: var(--ip-font-body);
+  font-size: var(--ip-fs-label);
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--ip-bruise);
+}
+
+/* ---- DM narration: the big torn page, hand-inked initial ---- */
+.dm { --tilt: -0.5deg; --ip-stain: var(--ip-bruise-wash); }
+.dm p { margin: var(--ip-sp-1) 0 0; max-width: var(--ip-measure); }
+.dm p::first-letter {
+  font-family: var(--ip-font-display);
+  font-weight: 700;
+  font-size: 3.4em;
+  line-height: 0.72;
+  float: left;
+  margin: 0.05em 0.14em 0 0;
+  padding: 0.04em 0.16em 0.14em;
+  color: var(--ip-bone);
+  background: radial-gradient(closest-side, var(--ip-bruise), var(--ip-ink-panel) 82%);
+  border-radius: 42% 58% 55% 45% / 55% 42% 58% 45%;
+  transform: rotate(-3deg);
+}
+
+/* ---- Player: a torn handwritten note, wax-pinned ---- */
+.player {
+  --tilt: 1.4deg;
+  --ip-stain: var(--ip-poison-wash);
+  width: min(24rem, 92%);
+  margin-left: auto;
+  padding-bottom: calc(var(--ip-pad-scrap) + 0.4rem);
+}
+.player .label { color: var(--ip-poison-deep); }
+.player p {
+  margin: 0.25rem 0 0;
+  font-family: var(--ip-font-hand);
+  font-weight: 700;
+  font-size: var(--ip-fs-hand);
+  line-height: 1.25;
+}
+/* wax blot pin */
+.player .pin {
+  position: absolute;
+  top: -12px;
+  left: 42%;
+  width: 34px;
+  height: 34px;
+  transform: rotate(8deg);
+}
+
+/* ============ INK-BLOT COMBAT CARDS ============ */
+.blot {
+  position: relative;
+  padding: calc(var(--ip-pad-scrap) + 0.3rem);
+  margin: 0 0 var(--ip-sp-4);
+  color: var(--ip-bone);
+  transform: rotate(var(--tilt, 0deg));
+  animation: ink-bleed var(--ip-t-bleed) var(--ip-ease-bleed) both;
+  transition: transform var(--ip-t-flutter) var(--ip-ease-bloom);
+}
+/* the spilled ink puddle */
+.blot::before {
+  content: "";
+  position: absolute;
+  inset: -10px -14px;
+  z-index: -1;
+  background: radial-gradient(120% 120% at 30% 20%, #241d2e, var(--ip-ink-panel) 55%, #100d15);
+  border-radius: var(--ip-blot-shape);
+  filter: url(#ip-blot) drop-shadow(2px 8px 10px var(--ip-shadow));
+}
+/* pigment bleeding into the paper around the puddle */
+.blot::after {
+  content: "";
+  position: absolute;
+  inset: -26px -30px;
+  z-index: -2;
+  border-radius: var(--ip-blob-shape);
+  background: radial-gradient(closest-side, var(--ip-stain, var(--ip-bruise-wash)), transparent 70%);
+  filter: blur(14px);
+}
+.blot:hover { transform: rotate(calc(var(--tilt, 0deg) * 0.25)) translateY(-2px); }
+
+.blot .label { color: var(--ip-poison); letter-spacing: 0.26em; }
+.blot .math {
+  margin: 0.45rem 0 0;
+  font-family: var(--ip-font-hand);
+  font-weight: 700;
+  font-size: var(--ip-fs-hand);
+  line-height: 1.3;
+}
+.blot code {
+  font-family: var(--ip-font-hand);
+  font-size: 1em;
+  background: rgba(232, 226, 212, 0.10);
+  border-radius: 0.5em;
+  padding: 0.02em 0.35em;
+}
+/* verdict words are painted, not typeset */
+.verdict {
+  font-family: var(--ip-font-display);
+  font-weight: 700;
+  font-size: var(--ip-fs-verdict);
+  line-height: 0.9;
+  letter-spacing: 0.05em;
+}
+.verdict--hit {
+  color: var(--ip-poison);
+  text-shadow: 0 0 14px rgba(77, 122, 58, 0.55);
+}
+.verdict--miss { color: var(--ip-blood-glow); }
+@supports (-webkit-text-stroke: 2px black) {
+  .verdict--miss {
+    color: transparent;
+    -webkit-text-stroke: 2.5px var(--ip-blood-glow);
+  }
+}
+.hp {
+  color: var(--ip-bone);
+  background: var(--ip-blood);
+  padding: 0.08em 0.45em 0.05em;
+  border-radius: 48% 52% 60% 40% / 55% 45% 58% 42%;
+  display: inline-block;
+  transform: rotate(-1deg);
+}
+/* red rubber stamp */
+.badge-parried {
+  display: inline-block;
+  vertical-align: 0.22em;
+  margin-left: 0.6rem;
+  padding: 0.3em 1em 0.18em;
+  color: var(--ip-blood-glow);
+  border: 3px double var(--ip-blood);
+  border-radius: var(--ip-wobble);
+  font-family: var(--ip-font-display);
+  font-weight: 700;
+  font-size: 1.3rem;
+  letter-spacing: 0.22em;
+  transform: rotate(-7deg);
+}
+.blot .aside {
+  margin: 0.5rem 0 0;
+  font-size: var(--ip-fs-small);
+  font-style: italic;
+  color: rgba(232, 226, 212, 0.75);
+}
+
+/* ============ DEATH CARD: the blood scrap ============ */
+.death {
+  --tilt: -0.8deg;
+  --ip-stain: var(--ip-blood-wash);
+  background: transparent;
+  text-align: center;
+}
+.death::before {
+  inset: -9px -14px;
+  background:
+    radial-gradient(45% 38% at 88% 6%, var(--ip-blood-wash), transparent 68%),
+    linear-gradient(185deg, var(--ip-paper-lift), var(--ip-paper) 55%, var(--ip-paper-deep));
+  filter: url(#ip-torn-c) drop-shadow(3px 8px 10px var(--ip-shadow));
+}
+.death h2 {
+  margin: 0.3rem 0 0;
+  font-family: var(--ip-font-display);
+  font-weight: 700;
+  font-size: var(--ip-fs-h2);
+  line-height: 1.1;
+}
+.death .label { color: var(--ip-blood); }
+
+/* ROLL — a blood paint blot with scratched lettering */
+.btn-roll {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 96px;
+  min-width: min(17rem, 100%);
+  margin-top: var(--ip-sp-3);
+  padding: 1rem 2.6rem;
+  border: none;
+  background: radial-gradient(130% 130% at 32% 22%, #b93344, var(--ip-blood) 55%, #7c1826);
+  border-radius: 52% 48% 58% 42% / 52% 58% 42% 48%;
+  color: var(--ip-bone);
+  font-family: var(--ip-font-scratch);
+  font-size: var(--ip-fs-roll);
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  transform: rotate(-1.2deg);
+  transition: transform var(--ip-t-flutter) var(--ip-ease-bloom);
+  /* paint blooming out of the blot on hover */
+  --ip-stain: var(--ip-blood-wash);
+}
+.btn-roll::after {
+  content: "";
+  position: absolute;
+  inset: -18%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--ip-blood-wash), transparent 70%);
+  filter: blur(8px);
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity var(--ip-t-bloom) var(--ip-ease-bloom),
+              transform var(--ip-t-bloom) var(--ip-ease-bloom);
+}
+.btn-roll:hover::after, .btn-roll:focus-visible::after { opacity: 1; transform: scale(1.35); }
+.btn-roll:hover { transform: rotate(0.8deg) translateY(-2px) scale(1.02); }
+.btn-roll:active  { transform: rotate(0deg) scale(0.98); }
+.btn-roll:disabled { cursor: wait; }
+/* drips under the blot */
+.btn-roll .drips {
+  position: absolute;
+  left: 18%;
+  bottom: -26px;
+  width: 64%;
+  height: 30px;
+  pointer-events: none;
+}
+.roll-result {
+  min-height: 2.4rem;
+  margin: var(--ip-sp-3) 0 0;
+  font-family: var(--ip-font-hand);
+  font-weight: 700;
+  font-size: 1.6rem;
+}
+.roll-result .ok  { color: var(--ip-poison-deep); }
+.roll-result .bad { color: var(--ip-blood); }
+
+/* ============ ACTION SCRAPS: three tiers, three materials ============ */
+.actions { display: grid; gap: var(--ip-sp-3); margin-bottom: var(--ip-sp-4); }
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 56px;
+  padding: 0.8rem 1.8rem 0.65rem;
+  font-family: var(--ip-font-display);
+  font-weight: 700;
+  font-size: 1.75rem;
+  letter-spacing: 0.05em;
+  line-height: 1.1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform var(--ip-t-flutter) var(--ip-ease-bloom);
+}
+.btn .glyph { font-family: var(--ip-font-display); opacity: 0.85; }
+.btn:hover, .btn:focus-visible { transform: rotate(0.6deg) translateY(-2px); }
+/* shared hover bloom */
+.btn::after {
+  content: "";
+  position: absolute;
+  inset: -14%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--ip-stain, var(--ip-poison-wash)), transparent 70%);
+  filter: blur(7px);
+  opacity: 0;
+  transform: scale(0.4);
+  transition: opacity var(--ip-t-bloom) var(--ip-ease-bloom),
+              transform var(--ip-t-bloom) var(--ip-ease-bloom);
+}
+.btn:hover::after, .btn:focus-visible::after { opacity: 1; transform: scale(1.3); }
+
+/* PRIMÄR — a poison paint slab, hand-lettered */
+.btn--primary {
+  --tilt: -0.7deg;
+  width: min(26rem, 100%);
+  justify-content: center;
+  background: linear-gradient(170deg, var(--ip-poison), var(--ip-poison-deep));
+  color: var(--ip-bone);
+  border-radius: 46% 54% 58% 42% / 12% 14% 12% 14%;
+  transform: rotate(var(--tilt));
+}
+.btn--primary::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 2px dashed rgba(232, 226, 212, 0.5);
+  border-radius: inherit;
+  filter: url(#ip-rough);
+  pointer-events: none;
+}
+/* GHOST — a sketched outline that hasn't been filled in yet */
+.btn--ghost {
+  --tilt: 0.8deg;
+  width: min(22rem, 88%);
+  margin-left: clamp(0rem, 8%, 4rem);
+  color: var(--ip-ink);
+  background: var(--ip-paper-lift);
+  border: var(--ip-border-ink, 3px) solid var(--ip-ink);
+  border-radius: var(--ip-wobble);
+}
+.btn--ghost::before {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border: 2px solid var(--ip-bruise);
+  border-radius: var(--ip-wobble);
+  filter: url(#ip-rough);
+  opacity: 0.6;
+  pointer-events: none;
+}
+/* FARA — a blood-torn warning scrap */
+.btn--danger {
+  --tilt: -1.3deg;
+  width: min(20rem, 82%);
+  margin-left: clamp(0rem, 16%, 7rem);
+  color: var(--ip-blood);
+  background:
+    radial-gradient(50% 60% at 8% 20%, var(--ip-blood-wash), transparent 70%),
+    var(--ip-paper-lift);
+  border-top: 3px solid var(--ip-blood);
+  border-bottom: 3px solid var(--ip-blood);
+  border-radius: 44% 56% 52% 48% / 18% 22% 20% 16%;
+  transform: rotate(var(--tilt));
+}
+.btn--danger:hover, .btn--danger:focus-visible { color: var(--ip-blood); }
+
+/* ============ TYPE SPECIMEN: letters as art ============ */
+.specimen { margin-bottom: var(--ip-sp-4); }
+.specimen .sample-hero {
+  font-family: var(--ip-font-display);
+  font-weight: 700;
+  font-size: clamp(2.6rem, 1.8rem + 4vw, 4.8rem);
+  line-height: var(--ip-lh-tight);
+  margin: var(--ip-sp-1) 0 0;
+  width: fit-content;
+  position: relative;
+}
+.specimen .sample-hero::before {
+  content: "";
+  position: absolute;
+  inset: 10% -5% 0 -5%;
+  z-index: -1;
+  background: var(--ip-poison-wash);
+  border-radius: var(--ip-blob-shape);
+  filter: blur(8px);
+}
+.specimen .sample-h2 {
+  font-family: var(--ip-font-display);
+  font-weight: 700;
+  font-size: var(--ip-fs-h2);
+  line-height: 1.1;
+  margin: var(--ip-sp-3) 0 0;
+}
+.specimen .sample-body { max-width: var(--ip-measure); margin: var(--ip-sp-2) 0 0; }
+.specimen .sample-label { margin-top: var(--ip-sp-3); }
+.specimen .brush {
+  display: block;
+  width: min(20rem, 70%);
+  height: 0.9rem;
+  margin-top: 0.4rem;
+  background: no-repeat left center / 100% 100%
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 18' preserveAspectRatio='none'%3E%3Cpath d='M4 11 C72 5, 122 14, 192 8 S 272 5, 316 11 L314 15 C248 10, 162 17, 92 12 S 28 16, 5 15 Z' fill='%235b4a6e'/%3E%3C/svg%3E");
+  animation: stroke-drag 900ms var(--ip-ease-bleed) 200ms both;
+}
+
+/* ============ PALETTE: the painter's test sheet ============ */
+.palette { margin-bottom: var(--ip-sp-4); }
+.swatches {
+  list-style: none;
+  margin: var(--ip-sp-2) 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--ip-sp-3) var(--ip-sp-2);
+}
+.swatch { text-align: center; font-family: var(--ip-font-hand); font-weight: 700; font-size: 1.15rem; line-height: 1.25; }
+.swatch .chip {
+  height: 4.2rem;
+  margin: 0 auto;
+  border-radius: var(--ip-blot-shape);
+  filter: url(#ip-rough);
+}
+.swatch .meta { margin-top: 0.5rem; }
+.swatch code { font-family: var(--ip-font-body); font-size: var(--ip-fs-small); letter-spacing: 0.05em; }
+
+/* ============ EMPTY STATE: almost bare paper ============ */
+.empty {
+  min-height: 11rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  text-align: center;
+  padding-bottom: var(--ip-sp-2);
+  --tilt: 0.4deg;
+  --ip-stain: var(--ip-bruise-wash);
+}
+.empty::before {
+  background:
+    radial-gradient(38% 42% at 72% 22%, var(--ip-bruise-wash), transparent 70%),
+    radial-gradient(30% 34% at 22% 30%, var(--ip-poison-wash), transparent 72%),
+    linear-gradient(180deg, var(--ip-paper-lift), var(--ip-paper));
+  filter: url(#ip-torn-a) drop-shadow(2px 6px 8px var(--ip-shadow));
+}
+.empty p {
+  margin: 0;
+  font-family: var(--ip-font-hand);
+  font-weight: 500;
+  font-size: clamp(1.5rem, 1.2rem + 1.6vw, 2.2rem);
+  color: var(--ip-ink-soft);
+}
+.empty .runemark {
+  font-family: var(--ip-font-display);
+  font-size: 1.8rem;
+  letter-spacing: 0.5em;
+  color: var(--ip-bruise);
+  opacity: 0.6;
+  margin-bottom: var(--ip-sp-1);
+}
+
+footer {
+  grid-column: 1 / -1;
+  margin-top: var(--ip-sp-2);
+  text-align: center;
+}
+footer .label { color: var(--ip-ink-soft); letter-spacing: 0.24em; }
+
+/* ---- ink-splatter ornament clusters ---- */
+.splat {
+  position: absolute;
+  pointer-events: none;
+  animation: splat-drift 14s ease-in-out infinite alternate;
+}
+
+/* ============ MOTION LANGUAGE ============ */
+@keyframes ink-bleed {
+  from { opacity: 0; filter: blur(9px); }
+  60%  { opacity: 1; }
+  to   { opacity: 1; filter: blur(0); }
+}
+@keyframes stroke-drag {
+  from { background-size: 0% 100%; }
+  to   { background-size: 100% 100%; }
+}
+@keyframes splat-drift {
+  from { transform: rotate(-2deg) translateY(0); }
+  to   { transform: rotate(2deg) translateY(4px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+  .hero .brush, .specimen .brush { background-size: 100% 100%; }
+  .scrap:hover, .btn:hover, .btn-roll:hover { transform: none; }
+  .scrap:hover::after, .btn:hover::after, .btn-roll:hover::after { opacity: 0.7; transform: scale(1.1); }
+}
+
+/* ============ RESPONSIVE 360–1440 ============ */
+@media (min-width: 60rem) {
+  .actions {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 60rem) {
+  .collage { grid-template-columns: minmax(0, 1fr); }
+  .hero, .stream, .rail, footer { grid-column: 1; }
+  .rail {
+    grid-row: auto;
+    flex-direction: row;
+    justify-content: center;
+    padding-top: 0;
+    margin-bottom: var(--ip-sp-3);
+  }
+  .rail .chapter, .rail .runes { writing-mode: horizontal-tb; letter-spacing: 0.3em; }
+}
+@media (max-width: 40rem) {
+  .player { width: 100%; margin-left: 0; }
+  .btn--ghost, .btn--danger { width: 100%; margin-left: 0; }
+  .btn--primary { width: 100%; }
+  .btn-roll { min-width: 100%; }
+  .badge-parried { display: block; width: fit-content; margin: 0.6rem 0 0; }
+  .word--cauldron { margin-left: 0.8rem; }
+  .hero .brush { margin-left: 0.8rem; }
+  .hero .drip { margin-left: 2rem; }
+}
+
+/* ============ FOCUS: one loud ink ring ============ */
+:focus-visible {
+  outline: 3px dashed var(--ip-bruise);
+  outline-offset: 4px;
+}
+.blot :focus-visible, .btn-roll:focus-visible { outline-color: var(--ip-bone); }
+.death :focus-visible { outline-color: var(--ip-blood); }
+</style>
+</head>
+<body>
+
+<!-- SVG filter defs: torn paper & ink blots via feTurbulence displacement -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <filter id="ip-torn-a" x="-4%" y="-4%" width="108%" height="108%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.014 0.055" numOctaves="3" seed="3" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="15" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="ip-torn-b" x="-4%" y="-4%" width="108%" height="108%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.010 0.07" numOctaves="3" seed="17" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="18" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="ip-torn-c" x="-4%" y="-4%" width="108%" height="108%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.018 0.045" numOctaves="3" seed="41" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="13" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="ip-blot" x="-6%" y="-8%" width="112%" height="116%">
+      <feTurbulence type="turbulence" baseFrequency="0.028" numOctaves="3" seed="21" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="22" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="ip-rough" x="-8%" y="-14%" width="116%" height="128%">
+      <feTurbulence type="turbulence" baseFrequency="0.05" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+</svg>
+
+<div class="collage">
+
+  <!-- HERO — the title IS the illustration -->
+  <header class="hero">
+    <svg class="splat" style="right:6%; top:-1rem;" width="64" height="48" aria-hidden="true">
+      <circle cx="10" cy="30" r="4.6" fill="var(--ip-ink)" opacity="0.65"/>
+      <circle cx="26" cy="16" r="2.4" fill="var(--ip-bruise)"/>
+      <circle cx="42" cy="32" r="3.2" fill="var(--ip-poison)"/>
+      <circle cx="57" cy="12" r="1.5" fill="var(--ip-ink)" opacity="0.55"/>
+      <circle cx="50" cy="42" r="1.8" fill="var(--ip-blood)" opacity="0.8"/>
+    </svg>
+    <h1>
+      <span class="word word--the">The</span>
+      <span class="word word--lore">Lore Weaver's</span>
+      <span class="word word--cauldron">Cauldron</span>
+    </h1>
+    <span class="brush" aria-hidden="true"></span>
+    <span class="drip" aria-hidden="true"></span>
+  </header>
+
+  <!-- SIDE RAIL: chapter scratched up the margin -->
+  <aside class="rail">
+    <span class="chapter">Chapter VII — The Drowned Archive</span>
+    <span class="runes" aria-hidden="true">ᛝ ᛟ ᛏ</span>
+    <svg width="30" height="44" aria-hidden="true">
+      <circle cx="8" cy="10" r="3" fill="var(--ip-bruise)"/>
+      <circle cx="20" cy="24" r="1.8" fill="var(--ip-poison)"/>
+      <circle cx="11" cy="36" r="2.4" fill="var(--ip-ink)" opacity="0.6"/>
+    </svg>
+  </aside>
+
+  <div class="stream">
+
+    <!-- DM NARRATION -->
+    <section class="scrap dm" style="animation-delay:560ms" aria-label="Dungeon Master narration">
+      <span class="label">The Lore Weaver</span>
+      <p>The water rises to your knees as the second Sentinel lurches from the shelves. Its blade — if you can call the rust-eaten thing a blade — catches the lantern light. Somewhere below, something enormous turns a page.</p>
+    </section>
+
+    <!-- PLAYER NOTE -->
+    <section class="scrap scrap--b player" style="animation-delay:760ms" aria-label="Player action">
+      <svg class="pin" viewBox="0 0 34 34" aria-hidden="true">
+        <circle cx="17" cy="17" r="12" fill="var(--ip-bruise)"/>
+        <circle cx="14" cy="14" r="6.5" fill="var(--ip-ink-panel)" opacity="0.55"/>
+        <circle cx="21" cy="23" r="1.6" fill="var(--ip-paper-lift)" opacity="0.5"/>
+      </svg>
+      <span class="label">Qyrel Voss</span>
+      <p>I raise my shield and hold the stair.</p>
+    </section>
+
+    <!-- COMBAT BLOT — HIT -->
+    <section class="blot" style="--tilt:-1deg; --ip-stain:var(--ip-poison-wash); animation-delay:960ms" aria-label="Combat roll, hit">
+      <svg class="splat" style="right:4%; top:6%;" width="40" height="30" aria-hidden="true">
+        <circle cx="7" cy="18" r="3" fill="var(--ip-poison)"/>
+        <circle cx="20" cy="8" r="1.7" fill="var(--ip-poison)"/>
+        <circle cx="33" cy="20" r="2.2" fill="var(--ip-blood-glow)"/>
+      </svg>
+      <span class="label">⚔ Archival Sentinel attack</span>
+      <p class="math"><code>1d20+3 → 15 vs AC 12</code> — <span class="verdict verdict--hit">HIT</span> · 5 bludgeoning → <strong class="hp">Qyrel Voss 4/9 HP</strong></p>
+    </section>
+
+    <!-- COMBAT BLOT — MISS + PARIED STAMP -->
+    <section class="blot" style="--tilt:0.9deg; --ip-stain:var(--ip-blood-wash); animation-delay:1140ms" aria-label="Combat roll, miss, parried">
+      <svg class="splat" style="left:3%; bottom:8%;" width="36" height="26" aria-hidden="true">
+        <circle cx="6" cy="14" r="2.6" fill="var(--ip-blood-glow)" opacity="0.85"/>
+        <circle cx="18" cy="6" r="1.5" fill="var(--ip-bruise)"/>
+        <circle cx="30" cy="16" r="2" fill="var(--ip-poison)"/>
+      </svg>
+      <span class="label">⚔ Archival Sentinel attack</span>
+      <p class="math"><code>1d20+3 → 10 vs AC 12</code> — <span class="verdict verdict--miss">MISS</span><span class="badge-parried">PARIED</span></p>
+      <p class="aside">0 bludgeoning (parried — narration claimed a hit)</p>
+    </section>
+
+    <!-- DEATH-SAVE CARD -->
+    <section class="scrap death" style="animation-delay:1320ms" aria-label="Death saving throw">
+      <svg class="splat" style="left:6%; top:4%;" width="44" height="34" aria-hidden="true">
+        <circle cx="8" cy="20" r="3.4" fill="var(--ip-blood)" opacity="0.75"/>
+        <circle cx="24" cy="10" r="1.9" fill="var(--ip-blood)" opacity="0.6"/>
+        <circle cx="38" cy="24" r="2.4" fill="var(--ip-ink)" opacity="0.5"/>
+      </svg>
+      <span class="label">Death save</span>
+      <h2>Death saving throw — roll 1d20</h2>
+      <button class="btn-roll" id="roll-btn" type="button">ROLL
+        <svg class="drips" viewBox="0 0 120 30" aria-hidden="true">
+          <path d="M12 0 v14 a4 4 0 1 0 0.01 0" stroke="var(--ip-blood)" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <path d="M52 0 v22 a3.5 3.5 0 1 0 0.01 0" stroke="var(--ip-blood)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+          <path d="M92 0 v8" stroke="var(--ip-blood)" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <circle cx="92" cy="15" r="3.4" fill="var(--ip-blood)"/>
+        </svg>
+      </button>
+      <p class="roll-result" id="roll-result" aria-live="polite"></p>
+    </section>
+
+    <!-- ACTION SCRAPS: three tiers, three materials -->
+    <section class="actions" aria-label="Action buttons">
+      <a class="btn btn--primary" href="#roll-btn"><span class="glyph" aria-hidden="true">ᛝ</span>Cast Eldritch Blast</a>
+      <a class="btn btn--ghost" href="#roll-btn"><span class="glyph" aria-hidden="true">ᛟ</span>Search the archive</a>
+      <a class="btn btn--danger" href="#roll-btn"><span class="glyph" aria-hidden="true">ᛏ</span>Flee into the deep</a>
+    </section>
+
+    <!-- TYPE SPECIMEN -->
+    <section class="specimen" aria-label="Type specimen">
+      <span class="label">Type specimen</span>
+      <p class="sample-hero">The Lore Weaver's Cauldron</p>
+      <span class="brush" aria-hidden="true"></span>
+      <p class="sample-h2">Death saving throw — roll 1d20</p>
+      <p class="sample-body">The water rises to your knees as the second Sentinel lurches from the shelves. Its blade — if you can call the rust-eaten thing a blade — catches the lantern light. Somewhere below, something enormous turns a page.</p>
+      <p class="label sample-label">Chapter VII — The Drowned Archive</p>
+    </section>
+
+    <!-- PALETTE / TOKEN CONTRACT -->
+    <section class="palette" aria-label="Palette tokens">
+      <span class="label">Token contract — :root</span>
+      <ul class="swatches">
+        <li class="swatch"><div class="chip" style="background:var(--ip-paper)"></div><div class="meta">--ip-paper<br><code>#e8e2d4</code></div></li>
+        <li class="swatch"><div class="chip" style="background:var(--ip-ink)"></div><div class="meta">--ip-ink<br><code>#121212</code></div></li>
+        <li class="swatch"><div class="chip" style="background:var(--ip-poison)"></div><div class="meta">--ip-poison<br><code>#4d7a3a</code></div></li>
+        <li class="swatch"><div class="chip" style="background:var(--ip-bruise)"></div><div class="meta">--ip-bruise<br><code>#5b4a6e</code></div></li>
+        <li class="swatch"><div class="chip" style="background:var(--ip-blood)"></div><div class="meta">--ip-blood<br><code>#a32433</code></div></li>
+      </ul>
+    </section>
+
+    <!-- EMPTY STATE -->
+    <section class="scrap scrap--c empty" style="animation-delay:1500ms" aria-label="Empty state">
+      <span class="runemark" aria-hidden="true">ᛝ ᛟ ᛏ</span>
+      <p>The archive is quiet. For now.</p>
+    </section>
+
+    <footer>
+      <span class="label">Riktning 2 · Bläck &amp; Gift — Ink &amp; Poison</span>
+    </footer>
+  </div>
+</div>
+
+<script>
+// Minimal interactivity: the death-save roll. No dependencies.
+(function () {
+  var btn = document.getElementById('roll-btn');
+  var out = document.getElementById('roll-result');
+  if (!btn || !out) return;
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var rolling = false;
+
+  function paint(n) {
+    var fate = n >= 10 ? '<span class="ok">SUCCESS</span>' : '<span class="bad">FAILURE</span>';
+    out.innerHTML = '1d20 &rarr; ' + n + ' &middot; ' + fate;
+  }
+
+  btn.addEventListener('click', function () {
+    if (rolling) return;
+    var final = 1 + Math.floor(Math.random() * 20);
+    if (reduce) { paint(final); return; }
+    rolling = true;
+    btn.disabled = true;
+    var ticks = 0;
+    var timer = setInterval(function () {
+      paint(1 + Math.floor(Math.random() * 20));
+      if (++ticks >= 8) {
+        clearInterval(timer);
+        paint(final);
+        rolling = false;
+        btn.disabled = false;
+      }
+    }, 70);
+  });
+})();
+</script>
+</body>
+</html>

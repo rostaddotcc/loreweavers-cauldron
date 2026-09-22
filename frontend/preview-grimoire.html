@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Lore Weaver's Cauldron — Riktningsprov I · Den Förbjudna Grimsboken</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=MedievalSharp&family=UnifrakturCook:wght@700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================================
+   DEN FÖRBJUDNA GRIMSBOKEN — the game IS the book.
+   Composition: one asymmetric folio. The DM writes in the main column; the
+   PLAYER WRITES IN THE MARGIN in lapis ink; the scribe keeps a combat ledger
+   with wax seals; the dying page is its own black leaf. Everything below is
+   driven by :root tokens — the 19-page port is a token swap + this vocabulary.
+   ============================================================================ */
+:root{
+  /* — core contract (direction-named) — */
+  --ink:            #171310;   /* ink black — deepest strokes                     */
+  --paper:          #d9c9a6;   /* parchment bone — body text                      */
+  --accent:         #c9a227;   /* gold leaf — gilt, seals, primary action         */
+  --danger:         #5a1f24;   /* oxblood — rubrication, wax, peril               */
+  --surface:        #1c1713;   /* charcoal-parchment — the burnt folio            */
+
+  /* — manuscript pigments — */
+  --lapis:          #26406e;   /* lapis lazuli — the player's marginal ink        */
+  --paper-deep:     #bcab86;
+  --paper-faint:    #8d8168;
+  --accent-lit:     #efd98a;   /* gold in candleflame                             */
+  --accent-dim:     #8a6f1c;   /* tarnished gold — rules, vine, quiet ornament    */
+  --danger-lit:     #b0555d;   /* rubric red on the dark page                     */
+  --lapis-lit:      #6d8fc4;   /* player ink in dim light                         */
+  --surface-raised: #241d17;
+  --surface-edge:   #0f0c0a;   /* soot                                            */
+  --dying-leaf:     #100d0b;   /* the death page: a leaf burned darker            */
+  --foxing:         #4a3420;   /* age stains in the parchment                     */
+
+  /* — semantic mapping (what the port consumes) — */
+  --text-body:      var(--paper);
+  --text-strong:    var(--accent-lit);
+  --text-quiet:     var(--paper-faint);
+  --rubric-ink:     var(--danger-lit);
+  --hit-ink:        var(--accent);
+  --miss-ink:       var(--paper-deep);
+  --btn-primary-bg: var(--accent);
+  --btn-primary-fg: var(--ink);
+  --btn-ghost-bg:   transparent;
+  --btn-ghost-fg:   var(--paper);
+  --btn-danger-bg:  var(--danger);
+  --btn-danger-fg:  #e8c9a6;
+
+  /* — typography: display as art, serif for the long read — */
+  --ff-display: "UnifrakturCook", "MedievalSharp", serif;
+  --ff-rubric:  "MedievalSharp", "EB Garamond", serif;
+  --ff-body:    "EB Garamond", Georgia, "Times New Roman", serif;
+
+  --fs-hero:     clamp(3rem, 11vw, 6.5rem);   /* the title is an illumination  */
+  --fs-hero-sm:  clamp(1.3rem, 4vw, 2.2rem);  /* its quiet first line          */
+  --fs-h2:       clamp(1.6rem, 4vw, 2.3rem);
+  --fs-h3:       clamp(1.15rem, 2.6vw, 1.4rem);
+  --fs-body:     1.125rem;                    /* 18px — hero of the game       */
+  --fs-body-sm:  1rem;                        /* 16px floor                    */
+  --fs-label:    0.78rem;
+  --fs-marginal: 0.9rem;
+  --fs-dropcap:  clamp(3.4rem, 9vw, 5rem);    /* historiated initial           */
+  --fs-die:      clamp(3.4rem, 10vw, 5.5rem); /* die numeral as display art    */
+  --fs-roll:     clamp(1.5rem, 4.5vw, 2rem);
+  --fs-verse:    clamp(1.25rem, 3.4vw, 1.7rem);
+
+  --lh-body:     1.75;
+  --lh-tight:    1.08;
+  --tracking-label: 0.24em;
+
+  /* — measure & space — */
+  --measure:      60ch;
+  --gutter-side:  clamp(1rem, 4vw, 4.5rem);
+  --space-1:      0.35rem;
+  --space-2:      0.7rem;
+  --space-3:      1.2rem;
+  --space-4:      2rem;
+  --space-5:      3.4rem;
+  --space-6:      5.5rem;
+  --radius-seal:  50%;
+  --radius-edge:  2px;
+  --rule-gold:    1px solid var(--accent-dim);
+  --touch-min:    48px;
+
+  /* — motion vocabulary (all silenced by prefers-reduced-motion) — */
+  --dur-fast: 180ms;
+  --dur-ink:  480ms;
+  --flicker:  candleflicker 5.5s ease-in-out infinite;
+  --inkbleed: inkbleed var(--dur-ink) ease forwards;
+}
+
+/* ————— the folio: burnt paper, not a div ————— */
+*,*::before,*::after{ box-sizing:border-box; }
+html{ background:var(--surface-edge); }
+body{
+  margin:0;
+  min-height:100vh;
+  font-family:var(--ff-body);
+  font-size:var(--fs-body);
+  line-height:var(--lh-body);
+  color:var(--text-body);
+  background:
+    /* foxing stains */
+    radial-gradient(22% 14% at 12% 30%, rgba(74,52,32,.30), transparent 70%),
+    radial-gradient(18% 12% at 88% 62%, rgba(74,52,32,.26), transparent 70%),
+    radial-gradient(30% 18% at 70% 12%, rgba(74,52,32,.18), transparent 70%),
+    /* candle pool + charred corners */
+    radial-gradient(85% 60% at 50% 30%, #2a221a 0%, var(--surface) 55%, #171009 100%);
+  position:relative;
+}
+/* paper grain */
+body::before{
+  content:"";
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+}
+/* page-turn flicker: a candle-sweep across the leaf when it opens */
+body::after{
+  content:"";
+  position:fixed; inset:0; z-index:2; pointer-events:none;
+  background:linear-gradient(105deg, transparent 38%, rgba(239,217,138,.12) 50%, transparent 62%);
+  background-size:260% 100%;
+  background-position:-80% 0;
+  animation:pageturn 1.4s ease-out .2s forwards;
+}
+@keyframes pageturn{
+  to{ background-position:180% 0; opacity:0; }
+}
+
+/* charred irregular folio edge (displaced by turbulence — real burnt paper) */
+.burnt-edge{
+  position:fixed; inset:0; z-index:1; pointer-events:none;
+  color:var(--surface-edge);
+}
+.burnt-edge svg{ width:100%; height:100%; display:block; }
+
+::selection{ background:var(--danger); color:var(--accent-lit); }
+a{ color:var(--accent); text-decoration-color:var(--accent-dim); text-underline-offset:3px; }
+:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:4px;
+  border-radius:var(--radius-edge);
+}
+
+/* ============================================================================
+   COMPOSITION — asymmetric folio grid: narrow outer margin for the marginalia,
+   the scribe's column off-center, the player's ink in the gutter between.
+   ============================================================================ */
+.folio{
+  position:relative; z-index:1;
+  max-width:1440px;
+  margin:0 auto;
+  padding:var(--space-5) var(--gutter-side) var(--space-6);
+  display:grid;
+  grid-template-columns:minmax(0, var(--measure)) minmax(0, 1fr);
+  column-gap:clamp(1.5rem, 4vw, 5rem);
+}
+@media (min-width:1080px){
+  .folio{
+    grid-template-columns:
+      [outer] minmax(15ch, 1fr)
+      [text] minmax(0, var(--measure))
+      [rest] minmax(0, 0.62fr);
+    justify-content:center;
+  }
+  .folio > *{ grid-column:text; }
+  .folio > .bleed-left{ grid-column:outer / text; }
+  .folio > .bleed-wide{ grid-column:outer / rest; }
+}
+@media (max-width:1079px){
+  .folio{ grid-template-columns:minmax(0,1fr); }
+  .folio > *{ grid-column:1; }
+}
+
+/* running head + catchword down the outer edge — a real folio tells you where you are */
+.running-head{
+  display:none;
+}
+@media (min-width:1280px){
+  .running-head{
+    display:block;
+    position:fixed;
+    top:var(--space-5); right:calc(var(--gutter-side) * .35);
+    writing-mode:vertical-rl;
+    font-family:var(--ff-rubric);
+    font-size:var(--fs-label);
+    letter-spacing:var(--tracking-label);
+    text-transform:uppercase;
+    color:var(--paper-faint);
+    z-index:1;
+  }
+  .running-head .catchword{ color:var(--danger-lit); }
+}
+
+/* quire stitching down the inner edge */
+.stitch{
+  display:none;
+}
+@media (min-width:1080px){
+  .stitch{
+    display:block;
+    position:fixed;
+    top:8vh; bottom:8vh;
+    left:calc(var(--gutter-side) * .5);
+    width:14px;
+    pointer-events:none;
+    z-index:1;
+    background:
+      repeating-linear-gradient(180deg,
+        var(--accent-dim) 0 10px, transparent 10px 34px);
+    width:2px;
+    opacity:.5;
+    mask-image:linear-gradient(180deg, transparent, #000 12%, #000 88%, transparent);
+    -webkit-mask-image:linear-gradient(180deg, transparent, #000 12%, #000 88%, transparent);
+  }
+  .stitch::before,.stitch::after{
+    content:"";
+    position:absolute; left:-4px;
+    width:10px; height:2px;
+    background:var(--paper-faint);
+  }
+  .stitch::before{ top:18%; }
+  .stitch::after{ bottom:18%; }
+}
+
+/* ————— rubrication: red-and-gold chapter voice ————— */
+.rubric{
+  font-family:var(--ff-rubric);
+  font-size:var(--fs-label);
+  letter-spacing:var(--tracking-label);
+  text-transform:uppercase;
+  color:var(--rubric-ink);
+  display:flex; align-items:baseline; gap:var(--space-2);
+  margin:0 0 var(--space-3);
+}
+.rubric::after{
+  content:"";
+  flex:1; height:0; align-self:center;
+  border-top:1px solid var(--danger);
+  background:linear-gradient(90deg, var(--danger), transparent);
+  height:2px; border:none;
+  opacity:.7;
+}
+
+/* ————— HERO — the title is the illumination ————— */
+.hero{
+  grid-column:1 / -1;
+  position:relative;
+  padding:var(--space-6) 0 var(--space-5);
+  margin-bottom:var(--space-5);
+}
+.hero h1{
+  font-family:var(--ff-display);
+  font-weight:700;
+  margin:0;
+  line-height:var(--lh-tight);
+}
+.hero .whisper-line{
+  display:block;
+  font-family:var(--ff-rubric);
+  font-size:var(--fs-hero-sm);
+  letter-spacing:.08em;
+  color:var(--paper-deep);
+  font-weight:400;
+  margin-bottom:var(--space-2);
+}
+.hero .gilt{
+  display:block;
+  font-size:var(--fs-hero);
+  color:var(--accent);
+  margin-left:-.04em;
+}
+@supports ((-webkit-background-clip:text) or (background-clip:text)){
+  .gilt, .dropcap .letter, .die-num, .verse-num{
+    background:linear-gradient(105deg, var(--accent-dim) 0%, var(--accent) 28%, var(--accent-lit) 50%, var(--accent) 72%, var(--accent-dim) 100%);
+    -webkit-background-clip:text; background-clip:text;
+    color:transparent;
+    animation:var(--flicker);
+  }
+}
+.hero-sub{
+  font-family:var(--ff-rubric);
+  font-style:italic;
+  color:var(--text-quiet);
+  font-size:var(--fs-marginal);
+  margin:var(--space-3) 0 0;
+  max-width:44ch;
+}
+.hero-orn{
+  display:block;
+  margin-top:var(--space-4);
+  width:min(340px, 80%);
+  height:auto;
+  color:var(--accent-dim);
+}
+
+/* vine corner tendrils — the ornament vocabulary of this world */
+.corner{
+  position:absolute;
+  width:clamp(64px, 10vw, 128px);
+  height:auto;
+  color:var(--accent-dim);
+  pointer-events:none;
+  animation:var(--flicker);
+}
+.corner--tl{ top:0; left:0; }
+.corner--tr{ top:0; right:0; transform:scaleX(-1); }
+
+/* ————— marginalia ————— */
+.marginalia{
+  font-family:var(--ff-rubric);
+  font-style:italic;
+  font-size:var(--fs-marginal);
+  line-height:1.55;
+  color:var(--text-quiet);
+  border-left:2px solid var(--danger);
+  padding-left:var(--space-2);
+  margin:var(--space-4) 0;
+  max-width:36ch;
+  animation:whisper-in 1.1s ease-out .6s backwards;
+}
+.marginalia .hand{ color:var(--rubric-ink); font-style:normal; letter-spacing:.1em; }
+@media (min-width:1080px){
+  .marginalia{
+    margin:var(--space-2) 0;
+    max-width:15ch;
+    justify-self:end;
+    text-align:right;
+    border-left:none;
+    border-right:2px solid var(--danger);
+    padding-left:0;
+    padding-right:var(--space-2);
+  }
+}
+@keyframes whisper-in{
+  from{ opacity:0; transform:translateY(.4em); }
+}
+
+/* ————— the scribe's column ————— */
+.scene{ position:relative; }
+p.narration{
+  margin:0 0 var(--space-4);
+  font-size:var(--fs-body);
+  line-height:var(--lh-body);
+}
+
+/* historiated initial — a lapis jewel grown over with vine */
+.dropcap{
+  float:left;
+  width:calc(var(--fs-dropcap) + 1.4rem);
+  height:calc(var(--fs-dropcap) + 1.4rem);
+  margin:.3rem 1.1rem .4rem 0;
+  display:flex; align-items:center; justify-content:center;
+  position:relative;
+  background:
+    radial-gradient(130% 130% at 28% 18%, #3a5a93 0%, var(--lapis) 55%, #141f33 100%);
+  box-shadow:
+    0 0 0 1px var(--accent-dim),
+    0 0 0 4px var(--surface),
+    0 6px 22px rgba(0,0,0,.55),
+    inset 0 0 26px rgba(10,8,6,.6);
+  font-family:var(--ff-display);
+  font-size:var(--fs-dropcap);
+  line-height:1;
+}
+.dropcap .letter{ color:var(--accent); }
+.dropcap svg{
+  position:absolute; inset:3px;
+  width:calc(100% - 6px); height:calc(100% - 6px);
+  color:var(--accent-dim);
+  pointer-events:none;
+}
+
+/* ————— the PLAYER WRITES IN THE MARGIN (lapis ink, in the player's hand) ————— */
+.player-ink{
+  font-family:var(--ff-rubric);
+  font-size:calc(var(--fs-body) + .2rem);
+  line-height:1.5;
+  color:#cfd9ea;
+  transform:rotate(-1.4deg);
+  text-shadow:0 0 14px rgba(109,143,196,.25);
+  margin:var(--space-4) 0 var(--space-5);
+  padding-left:var(--space-3);
+  border-left:3px solid var(--lapis-lit);
+  max-width:34ch;
+}
+.player-ink .who{
+  display:block;
+  font-family:var(--ff-rubric);
+  font-size:var(--fs-label);
+  letter-spacing:var(--tracking-label);
+  text-transform:uppercase;
+  color:var(--lapis-lit);
+  margin-bottom:var(--space-1);
+}
+.player-ink p{ margin:0; }
+@media (min-width:1080px){
+  .player-ink{
+    justify-self:end;
+    text-align:right;
+    border-left:none;
+    border-right:3px solid var(--lapis-lit);
+    padding-left:0;
+    padding-right:var(--space-3);
+    transform:rotate(.8deg);
+  }
+}
+
+/* ————— COMBAT LEDGER — entries in the scribe's hand, sealed in wax ————— */
+.ledger{ margin:var(--space-5) 0; }
+.entry{
+  position:relative;
+  padding:var(--space-3) 0 var(--space-3) 5.2rem;
+  border-top:var(--rule-gold);
+}
+.entry:last-child{ border-bottom:var(--rule-gold); }
+/* wax seal: HIT is struck in oxblood wax; MISS is a broken empty ring */
+.seal{
+  position:absolute;
+  left:0; top:var(--space-3);
+  width:3.6rem; height:3.6rem;
+}
+.entry-head{
+  display:flex; flex-wrap:wrap; align-items:baseline; gap:var(--space-2);
+  margin-bottom:var(--space-1);
+}
+.entry-head .blade{ color:var(--accent); font-size:1.2rem; line-height:1; }
+.entry-title{
+  font-family:var(--ff-rubric);
+  letter-spacing:.06em;
+  font-size:var(--fs-body-sm);
+  color:var(--paper);
+}
+.chip{
+  font-family:var(--ff-rubric);
+  font-size:var(--fs-label);
+  letter-spacing:var(--tracking-label);
+  text-transform:uppercase;
+  padding:.3em .8em .24em;
+  line-height:1.4;
+}
+.chip--hit{ color:var(--ink); background:var(--hit-ink); }
+.chip--miss{ color:var(--miss-ink); border:1px solid var(--miss-ink); }
+.chip--parried{
+  color:var(--lapis-lit);
+  border:1px dashed var(--lapis-lit);
+  background:rgba(38,64,110,.25);
+}
+.entry-line{
+  margin:0 0 var(--space-1);
+  font-size:var(--fs-body-sm);
+  color:var(--paper-deep);
+  font-variant-numeric:tabular-nums;
+}
+.entry-line .roll{ color:var(--paper); letter-spacing:.03em; }
+.entry-line .dmg{ color:var(--danger-lit); }
+.entry-line strong{ color:var(--text-strong); font-weight:700; }
+.entry-line .paren{ color:var(--text-quiet); font-style:italic; }
+/* HP as the scribe's tally: nine ink drops, four still wet */
+.hp-tally{
+  display:flex; align-items:center; gap:.4rem;
+  margin-top:var(--space-2);
+}
+.hp-tally .drop{
+  width:.72rem; height:1.1rem;
+  border:1px solid var(--danger);
+  border-radius:50% 50% 50% 50% / 62% 62% 38% 38%;
+  background:transparent;
+}
+.hp-tally .drop.wet{ background:var(--danger); box-shadow:0 0 8px rgba(176,85,93,.5); }
+.hp-tally .tally-note{
+  font-family:var(--ff-rubric);
+  font-size:var(--fs-label);
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--text-quiet);
+  margin-left:var(--space-2);
+}
+/* struck-through ledger line for the miss — the scribe corrects himself */
+.entry--miss .entry-line .roll{ text-decoration:line-through; text-decoration-color:var(--danger-lit); text-decoration-thickness:1px; }
+.parried-note{
+  display:block;
+  font-family:var(--ff-rubric);
+  font-style:italic;
+  font-size:var(--fs-marginal);
+  color:var(--lapis-lit);
+  margin-top:var(--space-1);
+}
+.parried-note::before{ content:"† "; color:var(--danger-lit); }
+
+/* ————— THE DYING PAGE — its own black leaf, full-bleed ————— */
+.dying-leaf{
+  grid-column:1 / -1;
+  margin:var(--space-6) calc(var(--gutter-side) * -1) var(--space-5);
+  padding:var(--space-6) var(--gutter-side);
+  background:
+    radial-gradient(70% 90% at 50% 20%, rgba(90,31,36,.32) 0%, transparent 65%),
+    linear-gradient(180deg, var(--surface-edge), var(--dying-leaf) 30%, var(--surface-edge));
+  border-top:2px solid var(--danger);
+  border-bottom:2px solid var(--danger);
+  text-align:center;
+  position:relative;
+}
+.dying-leaf .rubric{ justify-content:center; }
+.dying-leaf .rubric::after{ display:none; }
+.dying-leaf h2{
+  font-family:var(--ff-rubric);
+  font-size:var(--fs-h2);
+  color:var(--paper);
+  letter-spacing:.05em;
+  margin:0 0 var(--space-1);
+  line-height:var(--lh-tight);
+}
+.dying-leaf .sub{
+  color:var(--text-quiet);
+  font-size:var(--fs-marginal);
+  font-style:italic;
+  margin:0 auto var(--space-4);
+  max-width:44ch;
+}
+.die{
+  font-family:var(--ff-display);
+  font-size:var(--fs-die);
+  line-height:1.15;
+  min-height:calc(var(--fs-die) * 1.3);
+  margin-bottom:var(--space-2);
+}
+.die-num{ color:var(--accent); }
+.die .arrow{ color:var(--paper-faint); font-family:var(--ff-body); font-size:.55em; vertical-align:.18em; padding:0 .3em; }
+.die .fate{
+  display:block;
+  font-family:var(--ff-rubric);
+  font-size:var(--fs-marginal);
+  letter-spacing:var(--tracking-label);
+  text-transform:uppercase;
+  color:var(--text-quiet);
+}
+.die .fate--saved{ color:var(--accent-lit); }
+.die .fate--doom{ color:var(--danger-lit); }
+
+/* the ROLL button: a gold seal you press into wax */
+.btn-roll{
+  min-height:64px;
+  min-width:min(320px, 100%);
+  padding:var(--space-2) var(--space-5);
+  font-family:var(--ff-display);
+  font-size:var(--fs-roll);
+  letter-spacing:.14em;
+  color:var(--btn-primary-fg);
+  background:
+    radial-gradient(120% 160% at 50% -20%, var(--accent-lit) 0%, var(--accent) 45%, var(--accent-dim) 100%);
+  border:none;
+  border-radius:999px;
+  cursor:pointer;
+  box-shadow:
+    0 0 0 2px var(--accent-dim),
+    0 0 0 6px var(--dying-leaf),
+    0 6px 0 #4c3c10,
+    0 14px 30px rgba(0,0,0,.6);
+  transition:transform var(--dur-fast) ease, box-shadow var(--dur-fast) ease, filter var(--dur-fast) ease;
+}
+.btn-roll:hover{ filter:brightness(1.07); transform:translateY(-1px); }
+.btn-roll:active{
+  transform:translateY(4px) scale(.98);
+  box-shadow:0 0 0 2px var(--accent-dim), 0 0 0 6px var(--dying-leaf), 0 2px 0 #4c3c10, 0 6px 14px rgba(0,0,0,.6);
+}
+.btn-roll:disabled{ filter:brightness(.75); cursor:wait; }
+
+/* ————— THREE VERSES OF CHOICE — not buttons; stanzas in the book ————— */
+.verses{
+  margin:var(--space-4) 0 0;
+  display:grid;
+  gap:var(--space-2);
+}
+.verse{
+  display:grid;
+  grid-template-columns:auto 1fr;
+  align-items:baseline;
+  gap:var(--space-3);
+  min-height:var(--touch-min);
+  padding:var(--space-3) var(--space-3);
+  background:transparent;
+  border:none;
+  border-top:var(--rule-gold);
+  text-align:left;
+  cursor:pointer;
+  font-family:var(--ff-rubric);
+  font-size:var(--fs-verse);
+  color:var(--btn-ghost-fg);
+  position:relative;
+  transition:letter-spacing var(--dur-ink) ease, background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+.verse:last-child{ border-bottom:var(--rule-gold); }
+.verse-num{
+  font-family:var(--ff-display);
+  font-size:calc(var(--fs-verse) + .4rem);
+  color:var(--accent);
+  line-height:1;
+}
+.verse .say{ display:block; }
+.verse .aside{
+  display:block;
+  font-family:var(--ff-rubric);
+  font-style:italic;
+  font-size:var(--fs-marginal);
+  color:var(--text-quiet);
+  margin-top:var(--space-1);
+}
+/* ink bleed on hover: the letters drink the light */
+.verse:hover, .verse:focus-visible{
+  letter-spacing:.035em;
+  background:linear-gradient(90deg, rgba(217,201,166,.08), transparent 75%);
+}
+.verse--primary{ color:var(--btn-primary-fg); background:linear-gradient(100deg, var(--accent-dim) 0%, var(--accent) 24%, var(--accent-lit) 50%, var(--accent) 76%, var(--accent-dim) 100%); border-color:transparent; }
+.verse--primary .aside{ color:#3d3113; }
+.verse--primary:hover, .verse--primary:focus-visible{ filter:brightness(1.06); background:linear-gradient(100deg, var(--accent-dim) 0%, var(--accent) 24%, var(--accent-lit) 50%, var(--accent) 76%, var(--accent-dim) 100%); }
+.verse--danger{
+  color:var(--btn-danger-fg);
+  background:linear-gradient(100deg, #3c1216, var(--danger) 45%, #3c1216);
+  border-color:var(--danger-lit);
+}
+.verse--danger .aside{ color:#c79a92; }
+.verse--danger:hover, .verse--danger:focus-visible{
+  background:linear-gradient(100deg, var(--danger), #7a2c33 50%, var(--danger));
+  text-shadow:0 0 12px rgba(176,85,93,.55);
+}
+
+/* ————— TYPE SPECIMEN — display as art ————— */
+.specimen{ margin-top:var(--space-6); }
+.specimen-art{
+  font-family:var(--ff-display);
+  font-size:clamp(5rem, 18vw, 11rem);
+  line-height:.9;
+  color:var(--accent);
+  margin:var(--space-3) 0 var(--space-2);
+  animation:var(--flicker);
+}
+@supports ((-webkit-background-clip:text) or (background-clip:text)){
+  .specimen-art{
+    background:linear-gradient(105deg, var(--accent-dim), var(--accent) 30%, var(--accent-lit) 50%, var(--accent) 70%, var(--accent-dim));
+    -webkit-background-clip:text; background-clip:text;
+    color:transparent;
+  }
+}
+.specimen-art .lapis-glyph{ color:var(--lapis-lit); -webkit-text-fill-color:var(--lapis-lit); }
+.specimen-row{
+  padding:var(--space-3) 0;
+  border-top:1px dotted var(--accent-dim);
+}
+.specimen-row .meta{
+  font-family:var(--ff-rubric);
+  font-size:var(--fs-label);
+  letter-spacing:var(--tracking-label);
+  text-transform:uppercase;
+  color:var(--text-quiet);
+  display:block;
+  margin-bottom:var(--space-1);
+}
+.spec-h1{ font-family:var(--ff-display); font-size:var(--fs-h2); color:var(--accent); margin:0; line-height:var(--lh-tight); }
+.spec-h2{ font-family:var(--ff-rubric); font-size:var(--fs-h3); color:var(--paper); margin:0; letter-spacing:.04em; }
+.spec-body{ font-family:var(--ff-body); font-size:var(--fs-body); color:var(--text-body); margin:0; }
+.spec-label{
+  font-family:var(--ff-rubric);
+  font-size:var(--fs-label);
+  letter-spacing:var(--tracking-label);
+  text-transform:uppercase;
+  color:var(--rubric-ink);
+}
+
+/* ————— EMPTY STATE — the quietest leaf in the book ————— */
+.empty{
+  grid-column:1 / -1;
+  text-align:center;
+  padding:var(--space-6) var(--space-3);
+}
+.empty svg{
+  width:clamp(64px, 12vw, 120px);
+  height:auto;
+  color:var(--accent-dim);
+  margin-bottom:var(--space-3);
+  animation:var(--flicker);
+}
+.empty p{
+  font-family:var(--ff-rubric);
+  font-style:italic;
+  font-size:var(--fs-h3);
+  color:var(--paper-deep);
+  margin:0 auto;
+  max-width:32ch;
+  animation:whisper-in 1.6s ease-out .4s backwards;
+}
+
+/* ————— the binder's contract: token table ————— */
+.tokens{
+  display:grid;
+  gap:var(--space-2);
+  margin-top:var(--space-3);
+}
+.token-row{
+  display:grid;
+  grid-template-columns:2.4rem 1fr auto;
+  align-items:center;
+  gap:var(--space-2);
+  font-family:var(--ff-rubric);
+  font-size:var(--fs-marginal);
+  color:var(--paper-deep);
+  border-bottom:1px dotted var(--accent-dim);
+  padding-bottom:var(--space-1);
+  min-height:36px;
+}
+.token-row .sw{ width:2.4rem; height:1.5rem; border:1px solid var(--accent-dim); }
+.token-row code{
+  font-family:var(--ff-body);
+  color:var(--accent-lit);
+  font-size:var(--fs-marginal);
+  overflow-wrap:anywhere;
+}
+.token-row .val{ color:var(--text-quiet); overflow-wrap:anywhere; text-align:right; }
+
+.colophon{
+  grid-column:1 / -1;
+  margin-top:var(--space-6);
+  padding-top:var(--space-3);
+  border-top:var(--rule-gold);
+  text-align:center;
+  font-family:var(--ff-rubric);
+  font-size:var(--fs-label);
+  letter-spacing:var(--tracking-label);
+  text-transform:uppercase;
+  color:var(--text-quiet);
+}
+
+/* ————— motion vocabulary ————— */
+@keyframes candleflicker{
+  0%,100%{ filter:brightness(1); }
+  37%{ filter:brightness(1.08); }
+  62%{ filter:brightness(.95); }
+  81%{ filter:brightness(1.05); }
+}
+
+/* ————— narrow leaf ————— */
+@media (max-width:520px){
+  :root{ --gutter-side: 1rem; }
+  .hero{ padding-top:var(--space-5); }
+  .entry{ padding-left:3.6rem; }
+  .seal{ width:2.6rem; height:2.6rem; }
+  .btn-roll{ min-width:100%; }
+  .token-row{ grid-template-columns:1.8rem 1fr; }
+  .token-row .val{ grid-column:2; text-align:left; }
+  .verse{ padding:var(--space-2); gap:var(--space-2); }
+}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation:none !important;
+    transition:none !important;
+    scroll-behavior:auto !important;
+  }
+  body::after{ display:none; }
+}
+</style>
+</head>
+<body>
+
+<!-- charred folio edge: turbulence-displaced soot, the paper is burnt -->
+<div class="burnt-edge" aria-hidden="true">
+  <svg preserveAspectRatio="none" viewBox="0 0 1000 700">
+    <defs>
+      <filter id="burn" x="-2%" y="-2%" width="104%" height="104%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.032" numOctaves="3" seed="7" result="t"/>
+        <feDisplacementMap in="SourceGraphic" in2="t" scale="14"/>
+      </filter>
+    </defs>
+    <rect x="6" y="6" width="988" height="688" fill="none"
+          stroke="rgba(15,12,10,.92)" stroke-width="26" filter="url(#burn)"/>
+  </svg>
+</div>
+<div class="stitch" aria-hidden="true"></div>
+<div class="running-head" aria-hidden="true">
+  Fol. XXVII — The Drowned Archive &nbsp;·&nbsp; <span class="catchword">catchword: the water rises</span>
+</div>
+
+<main class="folio">
+
+  <!-- ————— HERO: the illumination ————— -->
+  <header class="hero">
+    <svg class="corner corner--tl" viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+      <path d="M4 116 C 4 48, 48 4, 116 4" stroke-width="2.4"/>
+      <path d="M18 100 C 34 74, 34 50, 26 32 C 46 38, 62 54, 60 74"/>
+      <path d="M34 34 C 52 28, 74 34, 86 48 C 70 50, 54 46, 42 38"/>
+      <path d="M26 32 c -5 -10 -2 -20 5 -25 c 5 10 3 19 -5 25z" fill="currentColor" stroke="none" opacity=".7"/>
+      <path d="M60 74 c 10 -4 15 -13 13 -22 c -10 3 -15 11 -13 22z" fill="currentColor" stroke="none" opacity=".7"/>
+      <path d="M86 48 c 6 -8 5 -17 -1 -22 c -4 9 -3 16 1 22z" fill="currentColor" stroke="none" opacity=".55"/>
+      <circle cx="42" cy="38" r="2.6" fill="currentColor" stroke="none"/>
+      <circle cx="86" cy="48" r="2.2" fill="currentColor" stroke="none"/>
+    </svg>
+    <svg class="corner corner--tr" viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+      <path d="M4 116 C 4 48, 48 4, 116 4" stroke-width="2.4"/>
+      <path d="M18 100 C 34 74, 34 50, 26 32 C 46 38, 62 54, 60 74"/>
+      <path d="M26 32 c -5 -10 -2 -20 5 -25 c 5 10 3 19 -5 25z" fill="currentColor" stroke="none" opacity=".7"/>
+      <path d="M60 74 c 10 -4 15 -13 13 -22 c -10 3 -15 11 -13 22z" fill="currentColor" stroke="none" opacity=".7"/>
+    </svg>
+
+    <p class="rubric"><span>✠&nbsp;Chapter VII — The Drowned Archive&nbsp;✠</span></p>
+    <h1>
+      <span class="whisper-line">The Lore Weaver's</span>
+      <span class="gilt">Cauldron</span>
+    </h1>
+    <p class="hero-sub">a cursed grimoire that runs the game — and whispers between the lines</p>
+    <svg class="hero-orn" viewBox="0 0 340 34" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+      <path d="M6 17 h108"/>
+      <path d="M226 17 h108"/>
+      <path d="M170 5 c -20 0 -34 7 -39 12 c 5 5 19 12 39 12 c 20 0 34 -7 39 -12 c -5 -5 -19 -12 -39 -12z"/>
+      <circle cx="170" cy="17" r="3.4" fill="currentColor" stroke="none"/>
+      <path d="M134 17 c 6 -5 12 -5 15 0 c -3 5 -9 5 -15 0z" fill="currentColor" stroke="none" opacity=".8"/>
+      <path d="M206 17 c -6 -5 -12 -5 -15 0 c 3 5 9 5 15 0z" fill="currentColor" stroke="none" opacity=".8"/>
+      <path d="M120 17 c 3 -7 8 -11 14 -12 c -1 7 -6 11 -14 12z" fill="currentColor" stroke="none" opacity=".55"/>
+      <path d="M220 17 c -3 -7 -8 -11 -14 -12 c 1 7 6 11 14 12z" fill="currentColor" stroke="none" opacity=".55"/>
+    </svg>
+  </header>
+
+  <!-- ————— THE Scribe's COLUMN ————— -->
+  <section class="scene" aria-label="Scene">
+    <p class="rubric">The Scribe Records</p>
+
+    <p class="narration"><span class="dropcap"><span class="letter">T</span><svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+          <path d="M8 34 C 8 15, 22 6, 42 6"/>
+          <path d="M92 66 C 92 85, 78 94, 58 94"/>
+          <path d="M15 68 c 9 2 16 9 17 18 c -9 -2 -16 -8 -17 -18z" fill="currentColor" stroke="none" opacity=".75"/>
+          <path d="M85 32 c -9 -2 -16 -9 -17 -18 c 9 2 16 8 17 18z" fill="currentColor" stroke="none" opacity=".75"/>
+          <circle cx="50" cy="50" r="2" fill="currentColor" stroke="none" opacity=".8"/>
+        </svg></span>he water rises to your knees as the second Sentinel lurches from the shelves. Its blade — if you can call the rust-eaten thing a blade — catches the lantern light. Somewhere below, something enormous turns a page.
+    </p>
+  </section>
+
+  <aside class="marginalia bleed-left">
+    <span class="hand">☞</span> fol. 27r — the scribe's hand trembles here; do not read this page aloud
+  </aside>
+
+  <!-- ————— THE PLAYER WRITES IN THE MARGIN ————— -->
+  <div class="player-ink">
+    <span class="who">Qyrel Voss · hexblade</span>
+    <p>“I raise my shield and hold the stair.”</p>
+  </div>
+
+  <aside class="marginalia bleed-left">
+    <span class="hand">✠</span> a whetted edge remembers every hand that ground it
+  </aside>
+
+  <!-- ————— COMBAT LEDGER ————— -->
+  <section class="ledger" aria-label="Combat ledger">
+    <p class="rubric">The Ledger of Blows</p>
+
+    <!-- HIT: struck in wax -->
+    <div class="entry entry--hit" role="group" aria-label="Combat roll, hit">
+      <svg class="seal" viewBox="0 0 64 64" aria-hidden="true">
+        <path d="M32 3 c 8 0 9 6 15 8 c 6 2 12 -1 14 6 c 2 7 -3 10 -3 15 c 0 5 5 8 3 15 c -2 7 -8 4 -14 6 c -6 2 -7 8 -15 8 c -8 0 -9 -6 -15 -8 c -6 -2 -12 1 -14 -6 c -2 -7 3 -10 3 -15 c 0 -5 -5 -8 -3 -15 c 2 -7 8 -4 14 -6 c 6 -2 7 -8 15 -8z"
+              fill="#5a1f24" stroke="#b0555d" stroke-width="1.5"/>
+        <path d="M32 12 c 5 0 6 4 10 5 c 4 1 8 -1 9 4 c 1 5 -2 7 -2 11 c 0 4 3 6 2 11 c -1 5 -5 3 -9 4 c -4 1 -5 5 -10 5 c -5 0 -6 -4 -10 -5 c -4 -1 -8 1 -9 -4 c -1 -5 2 -7 2 -11 c 0 -4 -3 -6 -2 -11 c 1 -5 5 -3 9 -4 c 4 -1 5 -5 10 -5z"
+              fill="none" stroke="#efd98a" stroke-width="1" opacity=".7"/>
+        <text x="32" y="38" text-anchor="middle" font-family="Georgia, serif" font-size="13" fill="#efd98a" letter-spacing="1">HIT</text>
+      </svg>
+      <div class="entry-head">
+        <span class="blade" aria-hidden="true">⚔</span>
+        <span class="entry-title">Archival Sentinel attack</span>
+        <span class="chip chip--hit">Hit</span>
+      </div>
+      <p class="entry-line"><span class="roll">1d20+3 → 15 vs AC 12</span> — HIT · <span class="dmg">5 bludgeoning</span> → <strong>Qyrel Voss 4/9 HP</strong></p>
+      <div class="hp-tally" aria-hidden="true">
+        <span class="drop wet"></span><span class="drop wet"></span><span class="drop wet"></span><span class="drop wet"></span>
+        <span class="drop"></span><span class="drop"></span><span class="drop"></span><span class="drop"></span><span class="drop"></span>
+        <span class="tally-note">four drops still wet</span>
+      </div>
+    </div>
+
+    <!-- MISS + PARRIED: the scribe strikes the line through -->
+    <div class="entry entry--miss" role="group" aria-label="Combat roll, miss, parried">
+      <svg class="seal" viewBox="0 0 64 64" aria-hidden="true">
+        <path d="M32 4 c 8 0 9 6 15 8 c 6 2 12 -1 14 6 M58 32 c 2 5 5 8 3 15 c -2 7 -8 4 -14 6 c -6 2 -7 8 -15 8 M32 60 c -8 0 -9 -6 -15 -8 c -6 -2 -12 1 -14 -6 M6 32 c -2 -5 -5 -8 -3 -15 c 2 -7 8 -4 14 -6 c 6 -2 7 -8 15 -8"
+              fill="none" stroke="#8d8168" stroke-width="1.6" stroke-dasharray="5 4" opacity=".85"/>
+        <path d="M22 22 L42 42 M42 22 L22 42" stroke="#b0555d" stroke-width="1.6" opacity=".8"/>
+        <text x="32" y="37" text-anchor="middle" font-family="Georgia, serif" font-size="10" fill="#8d8168" letter-spacing="1">MISS</text>
+      </svg>
+      <div class="entry-head">
+        <span class="blade" aria-hidden="true">⚔</span>
+        <span class="entry-title">Archival Sentinel attack</span>
+        <span class="chip chip--miss">Miss</span>
+        <span class="chip chip--parried">Parried</span>
+      </div>
+      <p class="entry-line"><span class="roll">1d20+3 → 10 vs AC 12</span> — MISS · <span class="dmg">0 bludgeoning</span> <span class="paren">(parried — narration claimed a hit)</span></p>
+      <span class="parried-note">the narration claimed otherwise — the margin argues back</span>
+    </div>
+  </section>
+
+  <aside class="marginalia bleed-left">
+    <span class="hand">☞</span> death keeps its own accounts, and the ledger is bound in skin
+  </aside>
+
+  <!-- ————— THE DYING PAGE: full-bleed black leaf ————— -->
+  <section class="dying-leaf" aria-label="Death saving throw">
+    <p class="rubric"><span>✟&nbsp;Between Breath and Binding&nbsp;✟</span></p>
+    <h2>Death saving throw — roll 1d20</h2>
+    <p class="sub">The book holds its breath. Ten or better keeps you among the living.</p>
+    <div class="die" id="roll-result" aria-live="polite"><span class="fate">the die is waiting</span></div>
+    <button class="btn-roll" id="roll-btn" type="button">ROLL</button>
+  </section>
+
+  <!-- ————— THREE VERSES OF CHOICE ————— -->
+  <section aria-label="Choose your action">
+    <p class="rubric">What Do You Do</p>
+    <div class="verses">
+      <button class="verse verse--primary" type="button">
+        <span class="verse-num">I</span>
+        <span>
+          <span class="say">Cast Eldritch Blast</span>
+          <span class="aside">force, in the grammar of the deep</span>
+        </span>
+      </button>
+      <button class="verse verse--ghost" type="button">
+        <span class="verse-num">II</span>
+        <span>
+          <span class="say">Search the archive</span>
+          <span class="aside">every shelf keeps one secret back</span>
+        </span>
+      </button>
+      <button class="verse verse--danger" type="button">
+        <span class="verse-num">III</span>
+        <span>
+          <span class="say">Flee into the deep</span>
+          <span class="aside">below, the pages are still turning</span>
+        </span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ————— TYPE SPECIMEN ————— -->
+  <section class="specimen" aria-label="Type specimen">
+    <p class="rubric">The Scribe's Hands</p>
+    <div class="specimen-art" aria-hidden="true">Aa<span class="lapis-glyph">†Q</span></div>
+    <div class="specimen-row">
+      <span class="meta">Display · UnifrakturCook 700 · --fs-h2</span>
+      <p class="spec-h1">The Drowned Archive</p>
+    </div>
+    <div class="specimen-row">
+      <span class="meta">Rubric &amp; Voice · MedievalSharp · --fs-h3</span>
+      <p class="spec-h2">Archival Sentinel — roll for initiative</p>
+    </div>
+    <div class="specimen-row">
+      <span class="meta">Body · EB Garamond 400 · 18px · --fs-body</span>
+      <p class="spec-body">Long prose is the hero of this game, so the body text is given the whole width of the scribe's measure: warm humanist serif, generous leading, and a bone-ink color that reads like candlelight on vellum without burning the eye at 2 a.m.</p>
+    </div>
+    <div class="specimen-row">
+      <span class="meta">Small label · small caps · --fs-label</span>
+      <span class="spec-label">Chapter VII — The Drowned Archive</span>
+    </div>
+  </section>
+
+  <!-- ————— EMPTY STATE ————— -->
+  <section class="empty" aria-label="Empty state">
+    <svg viewBox="0 0 120 48" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+      <path d="M60 10 C 44 3, 18 5, 10 12 C 17 26, 42 33, 60 29 C 78 33, 103 26, 110 12 C 102 5, 76 3, 60 10z"/>
+      <path d="M60 10 v19"/>
+      <path d="M24 41 c 7 -4 14 -4 19 1 c -6 4 -13 3 -19 -1z" fill="currentColor" stroke="none" opacity=".55"/>
+      <path d="M96 41 c -7 -4 -14 -4 -19 1 c 6 4 13 3 19 -1z" fill="currentColor" stroke="none" opacity=".55"/>
+    </svg>
+    <p>The archive is quiet. For now.</p>
+  </section>
+
+  <!-- ————— TOKEN CONTRACT ————— -->
+  <section aria-label="Token contract">
+    <p class="rubric">The Binder's Contract</p>
+    <p class="marginalia" style="animation:none;">Every color and size on this leaf is a <span class="hand">:root</span> custom property. The 19-page port is a token swap.</p>
+    <div class="tokens">
+      <div class="token-row"><span class="sw" style="background:var(--ink)"></span><code>--ink</code><span class="val">#171310 · ink black</span></div>
+      <div class="token-row"><span class="sw" style="background:var(--paper)"></span><code>--paper</code><span class="val">#d9c9a6 · parchment bone</span></div>
+      <div class="token-row"><span class="sw" style="background:var(--accent)"></span><code>--accent</code><span class="val">#c9a227 · gold leaf</span></div>
+      <div class="token-row"><span class="sw" style="background:var(--danger)"></span><code>--danger</code><span class="val">#5a1f24 · oxblood</span></div>
+      <div class="token-row"><span class="sw" style="background:var(--surface)"></span><code>--surface</code><span class="val">#1c1713 · charcoal parchment</span></div>
+      <div class="token-row"><span class="sw" style="background:var(--lapis)"></span><code>--lapis</code><span class="val">#26406e · lapis lazuli</span></div>
+      <div class="token-row"><span class="sw" style="background:var(--dying-leaf)"></span><code>--dying-leaf</code><span class="val">#100d0b · the death page</span></div>
+      <div class="token-row"><span class="sw" style="background:linear-gradient(90deg,var(--accent-dim),var(--accent-lit))"></span><code>--fs-hero → --fs-label</code><span class="val">clamp() type scale</span></div>
+    </div>
+  </section>
+
+  <p class="colophon">Riktningsprov I · Den Förbjudna Grimsboken · illuminated for the Lore Weaver's Cauldron · MMXXVI</p>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var btn = document.getElementById("roll-btn");
+  var out = document.getElementById("roll-result");
+  if (!btn || !out) { return; }
+
+  var reduced = window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var rolling = false;
+
+  function settle(n) {
+    var saved = n >= 10;
+    var crit = n === 20;
+    var fumble = n === 1;
+    var fate = crit ? "natural 20 — the book flinches"
+      : fumble ? "natural 1 — a page turns against you"
+      : saved ? "success — you are still among the living"
+      : "failure — the ink creeps closer";
+    var cls = (saved || crit) ? "fate fate--saved" : "fate fate--doom";
+    out.innerHTML = '<span class="die-num">d20 → ' + n + '</span>' +
+      '<span class="' + cls + '">' + fate + "</span>";
+    rolling = false;
+    btn.disabled = false;
+    btn.textContent = "ROLL AGAIN";
+  }
+
+  btn.addEventListener("click", function () {
+    if (rolling) { return; }
+    rolling = true;
+    btn.disabled = true;
+    var final = 1 + Math.floor(Math.random() * 20);
+    if (reduced) { settle(final); return; }
+    var ticks = 0;
+    var maxTicks = 14;
+    btn.textContent = "…";
+    var iv = window.setInterval(function () {
+      ticks += 1;
+      out.innerHTML = '<span class="die-num">d20 → ' +
+        (1 + Math.floor(Math.random() * 20)) + '</span>' +
+        '<span class="fate">the die is turning</span>';
+      if (ticks >= maxTicks) {
+        window.clearInterval(iv);
+        settle(final);
+      }
+    }, 70);
+  });
+})();
+</script>
+</body>
+</html>

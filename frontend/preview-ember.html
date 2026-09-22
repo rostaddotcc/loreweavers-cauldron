@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BEN &amp; GLÖD — Bone &amp; Ember · Design Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+   RIKTNING 3 — "BEN & GLÖD" (Bone & Ember)
+   A winter-night rite by the fire. The page is not a UI: it is a stone
+   altar — hewn monoliths, bone implements, chalk sigils, drifting ash.
+   EVERYTHING flows from :root tokens → a 19-page port is a token swap.
+   ===================================================================== */
+:root {
+  /* ---- material: night-stone ---- */
+  --ink:            #161514;   /* the stone itself (contract: --ink)   */
+  --ink-deep:       #0d0c0b;   /* night floor                          */
+  --soot:           #242020;   /* smoke-stained raised stone           */
+  --soot-lit:       #2e2926;
+  --smoke-1:        #211d1b;
+  --smoke-2:        #191614;
+  --edge:           #3a332e;
+  --edge-lit:       #544a41;
+
+  /* ---- ink & paper ---- */
+  --paper:          #e8dfc8;   /* bone white (contract: --paper)       */
+  --paper-dim:      #a99f88;
+  --paper-faint:    #6e6656;
+  --chalk:          #cfc8b8;
+  --chalk-soft:     rgba(207, 200, 184, 0.55);
+
+  /* ---- ember & blood ---- */
+  --accent:         #e07a3e;   /* ember orange (contract: --accent)    */
+  --accent-bright:  #f5a463;
+  --accent-deep:    #b3500f;   /* ember ink ON bone (contrast)         */
+  --danger:         #a32433;   /* blood (contract: --danger)           */
+  --danger-deep:    #6e121e;
+  --ember-glow:     rgba(224, 122, 62, 0.55);
+  --ember-halo:     rgba(224, 122, 62, 0.16);
+  --blood-glow:     rgba(163, 36, 51, 0.5);
+
+  /* ---- bone: the carved implement ---- */
+  --bone-face:      #efe7d2;
+  --bone-body:      #e0d5b8;
+  --bone-deep:      #cfc3a6;
+  --bone-rim:       #8f8468;
+  --bone-shadow:    #6e6349;
+
+  /* ---- typographic voice: hewn rune-stone / neutral grotesk ---- */
+  --font-display:   'Archivo Black', 'Oswald', system-ui, sans-serif;
+  --font-body:      'Space Grotesk', 'Inter', system-ui, sans-serif;
+  --fs-micro:       0.6875rem;
+  --fs-tiny:        0.78125rem;
+  --fs-sm:          0.875rem;
+  --fs-base:        1rem;
+  --fs-chat:        1.0625rem;
+  --fs-npc:         1.0625rem;
+  --fs-narr:        clamp(1.0625rem, 1rem + 0.35vw, 1.1875rem);
+  --fs-h3:          clamp(1.05rem, 1rem + 0.5vw, 1.3rem);
+  --fs-h2:          clamp(1.35rem, 1.2rem + 1.2vw, 1.9rem);
+  --fs-h1:          clamp(2rem, 1.4rem + 3.2vw, 3.25rem);
+  --fs-mega:        clamp(3.2rem, 2rem + 8vw, 7.5rem);
+  --lh-narr:        1.75;
+
+  /* ---- hewn geometry ---- */
+  --chisel:         polygon(0 18px, 18px 0, calc(100% - 34px) 0, 100% 26px,
+                            100% calc(100% - 14px), calc(100% - 14px) 100%,
+                            26px 100%, 0 calc(100% - 24px));
+  --chisel-sm:      polygon(0 8px, 8px 0, calc(100% - 14px) 0, 100% 12px,
+                            100% 100%, 10px 100%, 0 calc(100% - 9px));
+  --tap-min:        48px;
+  --col-max:        760px;
+  --pad-x:          clamp(1.1rem, 4vw, 2.2rem);
+
+  /* ---- stone & bone textures (materials, not flat fills) ---- */
+  --tex-stone:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E"),
+    repeating-linear-gradient(104deg, transparent 0 46px, rgba(255,255,255,0.014) 46px 47px),
+    repeating-linear-gradient(78deg, transparent 0 90px, rgba(0,0,0,0.16) 90px 92px);
+  --tex-bone:
+    repeating-linear-gradient(92deg, rgba(255,255,255,0.16) 0 2px, transparent 2px 7px),
+    repeating-linear-gradient(88deg, rgba(110,99,73,0.10) 0 1px, transparent 1px 13px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='m'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='1'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23m)' opacity='0.35'/%3E%3C/svg%3E");
+}
+
+/* ---------------- base ---------------- */
+* { box-sizing: border-box; }
+html { background: var(--ink-deep); overflow-x: clip; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  color: var(--paper);
+  line-height: 1.6;
+  overflow-wrap: break-word;
+  overflow-x: clip;
+  background:
+    radial-gradient(150% 95% at 50% -14%, var(--smoke-1) 0%, transparent 58%),
+    linear-gradient(180deg, var(--smoke-2) 0%, var(--ink) 30%, var(--ink-deep) 82%);
+  background-attachment: fixed;
+}
+/* night-stone grain over everything */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: var(--tex-stone);
+  background-size: 180px 180px, auto, auto;
+}
+
+/* the fire is off-frame, lower left — its light licks the stones */
+.firelight {
+  position: fixed;
+  z-index: 1;
+  left: -14vw;
+  bottom: -18vh;
+  width: 62vw;
+  height: 62vh;
+  pointer-events: none;
+  background:
+    radial-gradient(50% 55% at 38% 62%, rgba(224,122,62,0.20) 0%, transparent 70%),
+    radial-gradient(32% 38% at 30% 70%, rgba(245,164,99,0.16) 0%, transparent 72%);
+  animation: heat 5.2s ease-in-out infinite alternate;
+}
+@keyframes heat {
+  from { opacity: 0.75; transform: scale(1) translateY(0); }
+  to   { opacity: 1;    transform: scale(1.07) translateY(-1.2%); }
+}
+
+/* drifting ash & embers */
+.ember-field {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+}
+.mote {
+  position: absolute;
+  bottom: -14px;
+  border-radius: 50%;
+  opacity: 0;
+  animation-name: rise;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+.mote--ember { background: var(--accent-bright); box-shadow: 0 0 8px 2px var(--ember-glow); }
+.mote--ash   { background: #4a443f; border-radius: 40%; }
+@keyframes rise {
+  0%   { transform: translate3d(0, 0, 0) scale(0.55); opacity: 0; }
+  12%  { opacity: 0.85; }
+  68%  { opacity: 0.4; }
+  100% { transform: translate3d(var(--drift, 2vw), -110vh, 0) scale(1.05); opacity: 0; }
+}
+
+/* ---------------- carved margin rail (desktop) ---------------- */
+.margin-rail {
+  position: fixed;
+  z-index: 3;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 58px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2.2rem 0;
+  border-right: 1px solid var(--edge);
+  background: linear-gradient(180deg, rgba(13,12,11,0.85), rgba(36,32,32,0.5) 50%, rgba(13,12,11,0.85));
+}
+.margin-rail .rail-word {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  font-family: var(--font-display);
+  font-size: var(--fs-tiny);
+  letter-spacing: 0.55em;
+  text-transform: uppercase;
+  color: var(--paper-faint);
+}
+.margin-rail svg { color: var(--chalk); opacity: 0.55; }
+@media (max-width: 1099px) { .margin-rail { display: none; } }
+@media (min-width: 1100px) { .sheet { margin-left: 58px; } }
+
+/* ---------------- layout ---------------- */
+.sheet {
+  position: relative;
+  z-index: 3;
+  max-width: var(--col-max);
+  margin: 0 auto;
+  padding: clamp(2.2rem, 6vw, 4.5rem) var(--pad-x) 6rem;
+}
+
+/* ---------------- chalk ritual labels ---------------- */
+.rlabel {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 0;
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--paper-dim);
+}
+.rlabel::before, .rlabel::after {
+  content: "";
+  height: 1px;
+  flex: 0 1 44px;
+  background: linear-gradient(90deg, transparent, var(--chalk-soft));
+}
+.rlabel::after { background: linear-gradient(90deg, var(--chalk-soft), transparent); }
+.rlabel--ember { color: var(--accent); }
+
+/* ---------------- HERO: the lintel stone ---------------- */
+.hero {
+  position: relative;
+  text-align: center;
+  padding: clamp(3rem, 8vw, 5.5rem) clamp(1rem, 3vw, 2rem) clamp(2.4rem, 6vw, 4rem);
+  margin-bottom: 4rem;
+}
+.hero-stone {
+  position: absolute;
+  inset: 0;
+  clip-path: var(--chisel);
+  background:
+    linear-gradient(180deg, rgba(46,41,38,0.9) 0%, rgba(22,21,20,0.94) 55%, rgba(13,12,11,0.96) 100%);
+  background-size: auto, auto, auto;
+}
+.hero-stone::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  clip-path: var(--chisel);
+  background-image: var(--tex-stone);
+  background-size: 180px 180px, auto, auto;
+  opacity: 0.7;
+}
+/* hewn top edge catching the firelight */
+.hero-stone::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  clip-path: var(--chisel);
+  background: linear-gradient(178deg, rgba(239,231,210,0.10) 0%, transparent 9%),
+              linear-gradient(0deg, rgba(224,122,62,0.10) 0%, transparent 26%);
+}
+.hero > * { position: relative; }
+
+/* giant chalk sigil bleeding behind the title */
+.hero-sigil {
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  left: 50%;
+  width: min(560px, 108%);
+  transform: translate(-50%, -52%);
+  color: var(--chalk);
+  opacity: 0.34;
+  pointer-events: none;
+}
+
+.hero .eyebrow {
+  display: inline-block;
+  margin: 0 0 1.8rem;
+  padding: 0.45rem 1.1rem;
+  border-top: 1px solid var(--chalk-soft);
+  border-bottom: 1px solid var(--chalk-soft);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--chalk);
+}
+.hero h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-h1);
+  line-height: 1.02;
+  letter-spacing: 0.015em;
+  text-transform: uppercase;
+  color: #d9cfb5;
+  /* carved into the stele: dark groove above, lit lip below */
+  filter:
+    drop-shadow(0 -1px 0 rgba(0, 0, 0, 0.9))
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.10))
+    drop-shadow(0 4px 5px rgba(0, 0, 0, 0.6))
+    drop-shadow(0 16px 38px var(--ember-halo));
+}
+.hero .mega-rune {
+  display: block;
+  margin-top: 1.2rem;
+  font-family: var(--font-display);
+  font-size: var(--fs-mega);
+  line-height: 0.9;
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(207, 200, 184, 0.34);
+  letter-spacing: 0.28em;
+  user-select: none;
+}
+
+/* ---------------- SCENE STELE ---------------- */
+.scene { display: grid; gap: 2.4rem; margin-bottom: 4.5rem; }
+
+.dm-stele {
+  position: relative;
+  padding: clamp(1.5rem, 4vw, 2.4rem) clamp(1.3rem, 3.5vw, 2.2rem) clamp(1.7rem, 4vw, 2.4rem);
+}
+.dm-stele .hewn-fill {
+  position: absolute;
+  inset: 0;
+  clip-path: var(--chisel);
+  background: linear-gradient(185deg, rgba(36,32,32,0.92) 0%, rgba(22,21,20,0.95) 70%, rgba(13,12,11,0.97) 100%);
+}
+.dm-stele .hewn-fill::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  clip-path: var(--chisel);
+  background-image: var(--tex-stone);
+  background-size: 180px 180px, auto, auto;
+  opacity: 0.6;
+}
+/* ember underlight: the fire below the frame */
+.dm-stele .hewn-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  clip-path: var(--chisel);
+  background:
+    radial-gradient(60% 42% at 14% 106%, rgba(224,122,62,0.20) 0%, transparent 68%),
+    linear-gradient(0deg, rgba(224,122,62,0.07) 0%, transparent 34%);
+}
+.dm-stele > * { position: relative; }
+.dm-narr {
+  margin: 1.1rem 0 0;
+  font-size: var(--fs-narr);
+  line-height: var(--lh-narr);
+  color: var(--paper);
+  text-align: justify;
+  text-justify: inter-word;
+  hyphens: auto;
+}
+.dm-narr::first-letter {
+  font-family: var(--font-display);
+  float: left;
+  font-size: 3.35em;
+  line-height: 0.84;
+  padding: 0.05em 0.16em 0 0;
+  color: var(--accent);
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.9), 0 0 22px var(--ember-glow);
+}
+
+/* player plaque — a bone shard pinned to the stone, slightly askew */
+.player-row { display: flex; justify-content: flex-end; padding-right: clamp(0rem, 3vw, 1.5rem); }
+.player-shard {
+  position: relative;
+  max-width: 33rem;
+  padding: 1rem 1.35rem;
+  transform: rotate(-0.7deg);
+  font-size: var(--fs-chat);
+  color: #201c16;
+  font-weight: 500;
+}
+.player-shard .hewn-fill {
+  position: absolute;
+  inset: 0;
+  clip-path: var(--chisel-sm);
+  background: linear-gradient(180deg, var(--bone-face) 0%, var(--bone-body) 55%, var(--bone-deep) 100%);
+}
+.player-shard .hewn-fill::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  clip-path: var(--chisel-sm);
+  background-image: var(--tex-bone);
+  opacity: 0.5;
+}
+.player-shard > span { position: relative; }
+.player-shard::after {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 26px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, var(--accent-bright), var(--accent-deep) 70%);
+  box-shadow: 0 2px 3px rgba(0,0,0,0.6), 0 0 10px var(--ember-glow);
+}
+
+/* ---------------- hewn slab base ---------------- */
+.hewn {
+  filter:
+    drop-shadow(0 6px 0 rgba(0, 0, 0, 0.5))
+    drop-shadow(0 16px 22px rgba(0, 0, 0, 0.45));
+}
+.hewn-fill { position: absolute; inset: 0; clip-path: var(--chisel); }
+
+/* ---------------- COMBAT: rune-tablets of the exchange ---------------- */
+.battle { display: grid; gap: 2.6rem; }
+.tablet-wrap { position: relative; }
+.tablet-wrap--right { justify-self: end; width: min(100%, 40rem); transform: rotate(-0.4deg); }
+.tablet-wrap--left  { justify-self: start;  width: min(100%, 40rem); transform: rotate(0.5deg); }
+.tablet {
+  position: relative;
+  padding: 1.5rem 1.5rem 1.35rem;
+}
+.tablet .hewn-fill {
+  background: linear-gradient(182deg, rgba(46,41,38,0.95) 0%, rgba(24,21,19,0.96) 60%, rgba(13,12,11,0.98) 100%);
+}
+.tablet .hewn-fill::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  clip-path: var(--chisel);
+  background-image: var(--tex-stone);
+  background-size: 180px 180px, auto, auto;
+  opacity: 0.65;
+}
+/* inscription line carved across the top of every tablet */
+.tablet .hewn-fill::after {
+  content: "";
+  position: absolute;
+  left: 8%; right: 22%; top: 12px; height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0,0,0,0.55) 8%, rgba(0,0,0,0.55) 92%, transparent),
+              linear-gradient(90deg, transparent, rgba(255,255,255,0.06) 8%, rgba(255,255,255,0.06) 92%, transparent);
+  background-position: 0 0, 0 1px;
+}
+.tablet > * { position: relative; }
+
+/* ember fissure glowing through the HIT tablet */
+.fissure {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+  color: var(--accent);
+  opacity: 0.85;
+}
+.cc-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.7rem;
+}
+.cc-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--paper);
+}
+.cc-inscr {
+  width: 100%;
+  font-size: var(--fs-chat);
+  letter-spacing: 0.035em;
+  color: var(--paper-dim);
+  font-variant-numeric: tabular-nums;
+}
+.cc-inscr b { color: var(--paper); font-weight: 700; }
+.verdict {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0.1rem 0.65rem;
+  clip-path: polygon(0 5px, 5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%);
+  font-family: var(--font-display);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.2em;
+}
+.verdict--hit {
+  background: linear-gradient(180deg, var(--accent-bright), var(--accent) 60%, var(--accent-deep));
+  color: var(--ink-deep);
+  filter: drop-shadow(0 0 12px var(--ember-glow));
+}
+.verdict--miss {
+  background: transparent;
+  color: var(--paper-dim);
+  box-shadow: inset 0 0 0 1px var(--chalk-soft);
+}
+.badge-parried {
+  position: absolute;
+  top: 1.05rem;
+  right: 1.3rem;
+  transform: rotate(-3deg);
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0.05rem 0.6rem;
+  clip-path: polygon(0 5px, 5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%);
+  box-shadow: inset 0 0 0 1px var(--chalk-soft);
+  font-family: var(--font-display);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.24em;
+  color: var(--chalk);
+}
+.cc-dmg {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: var(--fs-sm);
+  letter-spacing: 0.05em;
+  color: var(--paper-dim);
+}
+.cc-dmg .dmg { color: var(--paper); font-weight: 500; }
+.cc-note {
+  display: block;
+  margin-top: 0.4rem;
+  font-style: italic;
+  font-size: var(--fs-sm);
+  color: var(--paper-faint);
+}
+.hp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+  padding: 0.45rem 0.85rem;
+  clip-path: polygon(0 6px, 6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%);
+  background: rgba(13, 12, 11, 0.8);
+  box-shadow: inset 0 0 0 1px var(--edge);
+  font-weight: 700;
+  color: var(--paper);
+  font-variant-numeric: tabular-nums;
+}
+.hp-pips { display: inline-flex; gap: 3px; }
+.hp-pips i {
+  width: 7px; height: 14px;
+  background: linear-gradient(180deg, var(--accent-bright), var(--accent));
+  box-shadow: 0 0 7px var(--ember-glow);
+}
+.hp-pips i.off { background: var(--edge); box-shadow: none; }
+
+/* ---------------- THE RITE: full-bleed altar recess ---------------- */
+.rite-band {
+  position: relative;
+  margin: 5rem calc(50% - 50vw) 5rem;
+  padding: clamp(3.2rem, 8vw, 5.5rem) var(--pad-x);
+  overflow: hidden;
+  background:
+    radial-gradient(70% 62% at 50% 44%, rgba(36,32,32,0.9) 0%, transparent 72%),
+    linear-gradient(180deg, var(--ink-deep) 0%, #0a0908 50%, var(--ink-deep) 100%);
+  border-top: 1px solid var(--edge);
+  border-bottom: 1px solid var(--edge);
+}
+.rite-band::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--tex-stone);
+  background-size: 180px 180px, auto, auto;
+  opacity: 0.5;
+  pointer-events: none;
+}
+.rite {
+  position: relative;
+  max-width: 560px;
+  margin: 0 auto;
+  display: grid;
+  place-items: center;
+  gap: 1.35rem;
+  padding: clamp(3rem, 7vw, 4.2rem) 1.4rem clamp(2.6rem, 6vw, 3.6rem);
+  text-align: center;
+}
+/* the chalk circle draws itself in */
+.sigil {
+  position: absolute;
+  inset: -6% -2%;
+  width: 104%;
+  height: 112%;
+  pointer-events: none;
+  color: var(--chalk);
+  overflow: visible;
+}
+.sigil .draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: chalk-in 2.4s ease-out forwards;
+}
+.sigil .draw.d2 { animation-delay: 0.55s; }
+.sigil .draw.d3 { animation-delay: 1.05s; }
+.sigil .runes { opacity: 0; animation: rune-in 1.4s ease-out 1.5s forwards; }
+@keyframes chalk-in { to { stroke-dashoffset: 0; } }
+@keyframes rune-in { to { opacity: 0.85; } }
+
+.rite h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-h2);
+  line-height: 1.12;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  color: var(--paper);
+}
+.rite .rr-sub {
+  margin: -0.8rem 0 0.4rem;
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  text-shadow: 0 0 18px var(--ember-glow);
+}
+.rite .roll-out {
+  min-height: 1.7rem;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-h2);
+  letter-spacing: 0.14em;
+  color: var(--accent-bright);
+  text-shadow: 0 0 20px var(--ember-glow);
+}
+
+/* ---------------- BONE IMPLEMENTS (buttons) ---------------- */
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: var(--tap-min);
+  min-width: 44px;
+  padding: 0.9rem 1.6rem;
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  clip-path: var(--chisel-sm);
+  transition: filter 0.12s ease, transform 0.09s ease, text-shadow 0.15s ease;
+}
+
+/* primary: carved bone, ember-glow text */
+.btn-bone {
+  background:
+    linear-gradient(180deg, var(--bone-face) 0%, var(--bone-body) 48%, var(--bone-deep) 100%);
+  background-blend-mode: normal;
+  color: var(--accent-deep);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55), 0 0 12px var(--ember-glow);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.65),
+    inset 0 -4px 0 rgba(110, 99, 73, 0.55),
+    inset 0 0 0 1px var(--bone-rim);
+  filter: drop-shadow(0 5px 0 var(--bone-shadow)) drop-shadow(0 10px 14px rgba(0, 0, 0, 0.5));
+}
+.btn-bone::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  clip-path: var(--chisel-sm);
+  background-image: var(--tex-bone);
+  opacity: 0.4;
+  pointer-events: none;
+}
+.btn-bone > span { position: relative; }
+.btn-bone:hover {
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55), 0 0 20px var(--ember-glow), 0 0 40px var(--ember-halo);
+}
+.btn-bone:active {
+  transform: translateY(3px);
+  filter: drop-shadow(0 2px 0 var(--bone-shadow)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+}
+
+/* ghost: a chalk ward scratched into the stone */
+.btn-ghost {
+  background: rgba(24, 21, 19, 0.72);
+  color: var(--paper);
+  box-shadow: inset 0 0 0 2px var(--chalk-soft);
+}
+.btn-ghost:hover {
+  box-shadow: inset 0 0 0 2px var(--chalk);
+  text-shadow: 0 0 14px var(--ember-glow);
+}
+.btn-ghost:active { transform: translateY(2px); }
+
+/* danger: blood fills the cut (fills only, never blood text) */
+.btn-danger {
+  background: linear-gradient(180deg, var(--danger) 0%, var(--danger-deep) 100%);
+  color: var(--paper);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.42),
+    inset 0 0 0 1px #4a0c15;
+  filter: drop-shadow(0 5px 0 #48090f) drop-shadow(0 10px 14px rgba(0, 0, 0, 0.5));
+}
+.btn-danger:hover { filter: drop-shadow(0 5px 0 #48090f) drop-shadow(0 10px 18px var(--blood-glow)); }
+.btn-danger:active {
+  transform: translateY(3px);
+  filter: drop-shadow(0 2px 0 #48090f) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+}
+
+/* the ROLL: a bone boulder lit from beneath */
+.btn-roll {
+  min-height: 88px;
+  min-width: min(260px, 80vw);
+  font-size: var(--fs-h1);
+  letter-spacing: 0.26em;
+  padding: 1.1rem 2.8rem 1.25rem;
+}
+.btn-roll[disabled] { cursor: wait; }
+
+/* focus stays visible even through clip-path (outline gets clipped) */
+.btn:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 3px var(--accent-bright);
+  text-shadow: 0 0 14px var(--ember-glow);
+  filter: drop-shadow(0 5px 0 var(--bone-shadow)) drop-shadow(0 0 16px var(--ember-glow));
+}
+
+/* ---------------- TRIALS: three ritual choices ---------------- */
+.trials {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.2rem;
+}
+.trial { display: grid; gap: 0.7rem; justify-items: center; }
+.trial .btn { width: 100%; }
+.trial-rune { color: var(--chalk); opacity: 0.7; }
+@media (max-width: 760px) {
+  .trials { grid-template-columns: 1fr; gap: 1.3rem; }
+  .tablet-wrap--right, .tablet-wrap--left { justify-self: stretch; transform: none; width: 100%; }
+  .player-shard { transform: none; }
+}
+
+/* ---------------- INSCRIPTION: type specimen ---------------- */
+.specimen { position: relative; padding: clamp(1.6rem, 4vw, 2.4rem); display: grid; gap: 1.6rem; }
+.specimen .hewn-fill {
+  background: linear-gradient(180deg, rgba(46,41,38,0.95), rgba(13,12,11,0.98));
+}
+.specimen .hewn-fill::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  clip-path: var(--chisel);
+  background-image: var(--tex-stone);
+  background-size: 180px 180px, auto, auto;
+  opacity: 0.6;
+}
+.specimen > * { position: relative; }
+.spec-row { display: grid; gap: 0.35rem; }
+.spec-tag {
+  font-size: var(--fs-micro);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--paper-faint);
+}
+.spec-h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-h1);
+  line-height: 1.03;
+  text-transform: uppercase;
+  color: #d9cfb5;
+  filter: drop-shadow(0 -1px 0 rgba(0,0,0,0.85)) drop-shadow(0 1px 0 rgba(255,255,255,0.09));
+}
+.spec-h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-h2);
+  line-height: 1.14;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+  color: var(--paper);
+}
+.spec-body {
+  margin: 0;
+  font-size: clamp(1rem, 0.96rem + 0.2vw, 1.125rem);
+  line-height: var(--lh-narr);
+  color: var(--paper);
+}
+
+/* ---------------- SILENCE: empty state alcove ---------------- */
+.alcove {
+  position: relative;
+  display: grid;
+  place-items: center;
+  gap: 1rem;
+  padding: 3rem 1.4rem;
+  text-align: center;
+}
+.alcove .hewn-fill {
+  background: radial-gradient(70% 90% at 50% 110%, rgba(36,32,32,0.85) 0%, rgba(13,12,11,0.95) 75%);
+}
+.alcove .hewn-fill::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  clip-path: var(--chisel);
+  background-image: var(--tex-stone);
+  background-size: 180px 180px, auto, auto;
+  opacity: 0.55;
+}
+.alcove > * { position: relative; }
+.dying-ember { color: var(--accent); animation: ember-flicker 3.4s ease-in-out infinite; }
+@keyframes ember-flicker {
+  0%, 100% { opacity: 0.55; filter: drop-shadow(0 0 4px var(--ember-glow)); }
+  47%      { opacity: 1;    filter: drop-shadow(0 0 14px var(--ember-glow)); }
+  62%      { opacity: 0.7; }
+}
+.alcove p {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--paper-dim);
+}
+
+/* ---------------- token ledger ---------------- */
+.tokledger {
+  position: relative;
+  padding: 1.1rem 1rem;
+  overflow-x: auto;
+}
+.tokledger .hewn-fill { background: linear-gradient(180deg, rgba(36,32,32,0.92), rgba(13,12,11,0.96)); }
+.tokledger > * { position: relative; }
+.toktable { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.toktable th {
+  text-align: left;
+  font-family: var(--font-display);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border-bottom: 1px solid var(--edge-lit);
+  padding: 0.55rem 0.6rem;
+}
+.toktable td {
+  padding: 0.55rem 0.6rem;
+  border-bottom: 1px solid var(--edge);
+  color: var(--paper-dim);
+  vertical-align: middle;
+}
+.toktable code { font-family: var(--font-body); color: var(--paper); }
+.sw {
+  display: inline-block;
+  width: 18px; height: 18px;
+  clip-path: polygon(0 4px, 4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%);
+  box-shadow: inset 0 0 0 1px var(--edge-lit);
+  vertical-align: -4px;
+  margin-right: 0.5rem;
+}
+
+/* ---------------- section spacing ---------------- */
+.section { margin-bottom: 4.5rem; }
+.section > .rlabel { margin-bottom: 1.6rem; }
+
+/* ---------------- reduced motion: the fire stands still ---------------- */
+@media (prefers-reduced-motion: reduce) {
+  .ember-field { display: none; }
+  .firelight { animation: none; }
+  .sigil .draw { animation: none; stroke-dashoffset: 0; }
+  .sigil .runes { animation: none; opacity: 0.85; }
+  .dying-ember { animation: none; opacity: 0.8; }
+  .btn { transition: none; }
+  .btn:active { transform: none; }
+}
+
+/* ---------------- 360px hardening ---------------- */
+@media (max-width: 420px) {
+  .btn-roll { min-width: 0; width: 100%; letter-spacing: 0.2em; }
+  .dm-narr { text-align: left; }
+  .cc-inscr { font-size: var(--fs-base); }
+  .badge-parried { position: static; transform: none; margin-bottom: 0.55rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="firelight" aria-hidden="true"></div>
+<div class="ember-field" id="ember-field" aria-hidden="true"></div>
+
+<aside class="margin-rail" aria-hidden="true">
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+    <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.3" stroke-dasharray="30 3 14 2"/>
+    <path d="M10 3 L10 17 M4 7 L16 13" stroke="currentColor" stroke-width="1.2"/>
+  </svg>
+  <span class="rail-word">Ben &amp; Glöd — Riktning III</span>
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+    <path d="M10 2 L17 17 L3 17 Z" stroke="currentColor" stroke-width="1.3"/>
+    <circle cx="10" cy="12" r="1.6" fill="currentColor"/>
+  </svg>
+</aside>
+
+<main class="sheet">
+
+  <!-- 1 · HERO — the lintel stone -->
+  <header class="hero hewn">
+    <div class="hero-stone"></div>
+    <svg class="hero-sigil" viewBox="0 0 480 480" aria-hidden="true" fill="none">
+      <circle cx="240" cy="240" r="216" stroke="currentColor" stroke-width="2.4" stroke-dasharray="300 14 420 10"/>
+      <circle cx="240" cy="240" r="178" stroke="currentColor" stroke-width="1.3" opacity="0.6"/>
+      <path d="M240 30 L240 450 M30 240 L450 240" stroke="currentColor" stroke-width="1" opacity="0.35"/>
+      <path d="M91 91 L389 389 M389 91 L91 389" stroke="currentColor" stroke-width="0.8" opacity="0.22"/>
+    </svg>
+    <p class="eyebrow">CHAPTER VII — THE DROWNED ARCHIVE</p>
+    <h1>The Lore Weaver's Cauldron</h1>
+    <span class="mega-rune" aria-hidden="true">ᛒ&nbsp;·&nbsp;ᚷ</span>
+  </header>
+
+  <!-- 2-3 · SCENE STELE -->
+  <section class="scene" aria-label="Scene">
+    <div class="dm-stele hewn">
+      <div class="hewn-fill"></div>
+      <p class="rlabel rlabel--ember">The Weaver speaks</p>
+      <p class="dm-narr">The water rises to your knees as the second Sentinel lurches from the shelves. Its blade — if you can call the rust-eaten thing a blade — catches the lantern light. Somewhere below, something enormous turns a page.</p>
+    </div>
+    <div class="player-row">
+      <div class="player-shard hewn">
+        <div class="hewn-fill"></div>
+        <span>I raise my shield and hold the stair.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4-5 · COMBAT — rune-tablets of the exchange -->
+  <section class="section battle" aria-label="Combat">
+    <p class="rlabel">The exchange</p>
+
+    <div class="tablet-wrap tablet-wrap--right hewn">
+      <div class="tablet">
+        <div class="hewn-fill"></div>
+        <svg class="fissure" viewBox="0 0 640 200" preserveAspectRatio="none" aria-hidden="true" fill="none">
+          <path d="M4 168 L128 150 L188 118 L286 132 L342 66 L396 84 L470 30 L560 44 L636 8"
+                stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" opacity="0.9"
+                style="filter: drop-shadow(0 0 6px currentColor);"/>
+          <path d="M342 66 L322 108 M470 30 L488 66" stroke="currentColor" stroke-width="1.4" opacity="0.6"/>
+        </svg>
+        <div class="cc-head">
+          <span class="cc-title">⚔ Archival Sentinel attack:</span>
+          <span class="cc-inscr"><b>1d20+3</b> → <b>15</b> vs AC 12 — <span class="verdict verdict--hit">HIT</span> · <span class="dmg">5 bludgeoning</span> → <span class="hp-chip">Qyrel Voss 4/9 HP <span class="hp-pips" aria-hidden="true"><i></i><i></i><i></i><i></i><i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i><i class="off"></i></span></span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tablet-wrap tablet-wrap--left hewn">
+      <div class="tablet">
+        <div class="hewn-fill"></div>
+        <span class="badge-parried">PARRIED</span>
+        <div class="cc-head">
+          <span class="cc-title">⚔ Archival Sentinel attack:</span>
+          <span class="cc-inscr"><b>1d20+3</b> → <b>10</b> vs AC 12 — <span class="verdict verdict--miss">MISS</span> · <span class="dmg">0 bludgeoning</span><span class="cc-note">(parried — narration claimed a hit)</span></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · THE RITE — altar recess with the chalk circle -->
+  <section class="rite-band" aria-label="Death saving throw">
+    <div class="rite">
+      <svg class="sigil" viewBox="0 0 520 520" aria-hidden="true" fill="none">
+        <defs>
+          <filter id="chalk-rough" x="-10%" y="-10%" width="120%" height="120%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="11" result="n"/>
+            <feDisplacementMap in="SourceGraphic" in2="n" scale="4"/>
+          </filter>
+          <g id="rune-a"><path d="M0 -13 L0 13 M-8 -4 L8 -4" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></g>
+          <g id="rune-b"><path d="M0 -13 L9 9 L-9 9 Z" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"/></g>
+          <g id="rune-c"><circle r="4" stroke="currentColor" stroke-width="2.2"/><path d="M0 -13 L0 -8 M0 8 L0 13" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></g>
+        </defs>
+        <g filter="url(#chalk-rough)">
+          <circle class="draw" pathLength="1" cx="260" cy="260" r="232" stroke="currentColor" stroke-width="3" stroke-dasharray="1"/>
+          <circle class="draw d2" pathLength="1" cx="260" cy="260" r="196" stroke="currentColor" stroke-width="1.5" opacity="0.75" stroke-dasharray="1"/>
+          <circle class="draw d3" pathLength="1" cx="260" cy="260" r="158" stroke="currentColor" stroke-width="2.4" stroke-dasharray="1"/>
+          <g class="runes" transform="translate(260 260)">
+            <use href="#rune-a" transform="translate(0 -214)"/>
+            <use href="#rune-b" transform="rotate(30) translate(0 -214)"/>
+            <use href="#rune-c" transform="rotate(60) translate(0 -214)"/>
+            <use href="#rune-a" transform="rotate(90) translate(0 -214)"/>
+            <use href="#rune-b" transform="rotate(120) translate(0 -214)"/>
+            <use href="#rune-c" transform="rotate(150) translate(0 -214)"/>
+            <use href="#rune-a" transform="rotate(180) translate(0 -214)"/>
+            <use href="#rune-b" transform="rotate(210) translate(0 -214)"/>
+            <use href="#rune-c" transform="rotate(240) translate(0 -214)"/>
+            <use href="#rune-a" transform="rotate(270) translate(0 -214)"/>
+            <use href="#rune-b" transform="rotate(300) translate(0 -214)"/>
+            <use href="#rune-c" transform="rotate(330) translate(0 -214)"/>
+            <path d="M-58 0 L58 0 M0 -58 L0 58" stroke="currentColor" stroke-width="1.8" opacity="0.5"/>
+            <path d="M-41 -41 L41 41 M41 -41 L-41 41" stroke="currentColor" stroke-width="1.3" opacity="0.35"/>
+          </g>
+        </g>
+      </svg>
+      <p class="rlabel rlabel--ember" style="position:relative;">The rite</p>
+      <h3>Death saving throw — roll 1d20</h3>
+      <p class="rr-sub" aria-hidden="true">ᚱ · the bone decides</p>
+      <button class="btn btn-bone btn-roll" id="roll-btn" type="button"><span>ROLL</span></button>
+      <p class="roll-out" id="roll-out" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <!-- 7 · TRIALS — three carved choices -->
+  <section class="section" aria-label="Actions">
+    <p class="rlabel">What do you do?</p>
+    <div class="trials">
+      <div class="trial">
+        <svg class="trial-rune" width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+          <path d="M13 2 L13 24 M5 8 L21 8 M8 17 L18 17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <button class="btn btn-bone" type="button"><span>Cast Eldritch Blast</span></button>
+      </div>
+      <div class="trial">
+        <svg class="trial-rune" width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+          <circle cx="13" cy="13" r="10" stroke="currentColor" stroke-width="1.6" stroke-dasharray="40 4 18 3"/>
+          <circle cx="13" cy="13" r="3" stroke="currentColor" stroke-width="1.6"/>
+        </svg>
+        <button class="btn btn-ghost" type="button"><span>Search the archive</span></button>
+      </div>
+      <div class="trial">
+        <svg class="trial-rune" width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+          <path d="M4 22 L13 4 L22 22 Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+          <path d="M8 22 L18 22" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <button class="btn btn-danger" type="button"><span>Flee into the deep</span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · INSCRIPTION — type specimen -->
+  <section class="section" aria-label="Type specimen">
+    <p class="rlabel">Carved &amp; spoken</p>
+    <div class="specimen hewn">
+      <div class="hewn-fill"></div>
+      <div class="spec-row">
+        <span class="spec-tag">H1 · Archivo Black · carved</span>
+        <p class="spec-h1">The Drowned Archive</p>
+      </div>
+      <div class="spec-row">
+        <span class="spec-tag">H2 · Archivo Black</span>
+        <p class="spec-h2">Something Turns a Page</p>
+      </div>
+      <div class="spec-row">
+        <span class="spec-tag">Body · Space Grotesk 16–18px</span>
+        <p class="spec-body">The lantern gutters. Rust weeps down the Sentinel's blade like old tears, and the black water keeps its own ledger of the living.</p>
+      </div>
+      <div class="spec-row">
+        <span class="spec-tag">Label · small caps</span>
+        <p class="rlabel" style="justify-content:flex-start;">Death saving throw</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 · SILENCE — empty state -->
+  <section class="section" aria-label="Empty state">
+    <p class="rlabel">Nothing stirs</p>
+    <div class="alcove hewn">
+      <div class="hewn-fill"></div>
+      <svg class="dying-ember" width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+        <circle cx="18" cy="18" r="14" stroke="currentColor" stroke-width="1.5" stroke-dasharray="56 5 21 3"/>
+        <path d="M18 9 L18 27 M11 13 L25 23 M25 13 L11 23" stroke="currentColor" stroke-width="1.3" opacity="0.7"/>
+      </svg>
+      <p>The archive is quiet. For now.</p>
+    </div>
+  </section>
+
+  <!-- 10 · TOKEN CONTRACT -->
+  <section class="section" aria-label="Token contract">
+    <p class="rlabel rlabel--ember">The mark contract · :root</p>
+    <div class="tokledger hewn">
+      <div class="hewn-fill"></div>
+      <table class="toktable">
+        <thead><tr><th>Token</th><th>Value</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td><code>--ink</code> / <code>--ink-deep</code></td><td><span class="sw" style="background:#161514"></span>#161514 → #0d0c0b</td><td>hewn night-stone, night floor</td></tr>
+          <tr><td><code>--soot</code></td><td><span class="sw" style="background:#242020"></span>#242020</td><td>smoke-stained raised stone</td></tr>
+          <tr><td><code>--paper</code></td><td><span class="sw" style="background:#e8dfc8"></span>#e8dfc8</td><td>bone-white body ink</td></tr>
+          <tr><td><code>--accent</code></td><td><span class="sw" style="background:#e07a3e"></span>#e07a3e</td><td>ember — glow, fissure, rite</td></tr>
+          <tr><td><code>--danger</code></td><td><span class="sw" style="background:#a32433"></span>#a32433</td><td>blood — sparse accent only</td></tr>
+          <tr><td><code>--chalk</code></td><td><span class="sw" style="background:#cfc8b8"></span>#cfc8b8</td><td>ritual sigil lines</td></tr>
+          <tr><td><code>--bone-face</code> … <code>--bone-shadow</code></td><td><span class="sw" style="background:#efe7d2"></span>#efe7d2 → #6e6349</td><td>carved bone implements</td></tr>
+          <tr><td><code>--chisel</code> / <code>--tex-stone</code> / <code>--tex-bone</code></td><td>clip-paths + SVG grain</td><td>the material vocabulary</td></tr>
+          <tr><td><code>--fs-micro … --fs-mega</code></td><td>0.6875rem → clamp(3.2rem…7.5rem)</td><td>type scale (canon names)</td></tr>
+          <tr><td><code>--font-display</code> / <code>--font-body</code></td><td>Archivo Black / Space Grotesk</td><td>hewn rune-stone / neutral grotesk</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* drifting ash & embers — never under reduced motion */
+  if (!reduce) {
+    var field = document.getElementById("ember-field");
+    if (field) {
+      for (var i = 0; i < 24; i++) {
+        var m = document.createElement("span");
+        var ember = i % 3 !== 2;
+        m.className = "mote " + (ember ? "mote--ember" : "mote--ash");
+        var size = ember ? 2 + (i % 3) : 3 + (i % 4);
+        m.style.width = size + "px";
+        m.style.height = size + "px";
+        m.style.left = ((i * 37) % 97) + "%";
+        m.style.animationDuration = (ember ? 9 + (i % 7) : 16 + (i % 9)) + "s";
+        m.style.animationDelay = (i * -1.35) + "s";
+        m.style.setProperty("--drift", ((i % 2 ? 1 : -1) * (1 + (i % 5))) + "vw");
+        field.appendChild(m);
+      }
+    }
+  }
+
+  /* the rite: one throw of the bone */
+  var btn = document.getElementById("roll-btn");
+  var out = document.getElementById("roll-out");
+  if (btn && out) {
+    btn.addEventListener("click", function () {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      var final = 1 + Math.floor(Math.random() * 20);
+      if (reduce) {
+        out.textContent = "\u2192 " + final;
+        btn.disabled = false;
+        return;
+      }
+      var ticks = 0;
+      var shuffle = setInterval(function () {
+        out.textContent = "\u2192 " + (1 + Math.floor(Math.random() * 20));
+        if (++ticks >= 9) {
+          clearInterval(shuffle);
+          out.textContent = "\u2192 " + final;
+          btn.disabled = false;
+        }
+      }, 85);
+    });
+  }
+})();
+</script>
+</body>
+</html>

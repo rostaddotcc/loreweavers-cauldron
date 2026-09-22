@@ -7,7 +7,8 @@ Täcker:
   - enemy_rolls.attack_log_row — bevarade sv/en-format (verbatim-mål från forensik 2026-09-22)
   - guardian.apply_mechanics — lagrad MISS → 0 skada (parry), lagrad HIT → klistrad
     skada (LLM-inflation klotter aldrig igenom), off-list attacker RULLAS (aldrig
-    "lita på DM"), en-attack-per-fiende-per-runda, fuzzy-matchad fiende-matchning.
+    "lita på DM"), multiattack = nytt rull per narrerad attack (turn-140-
+    kontraktet), fuzzy-matchad fiende-matchning.
 """
 
 import sys
@@ -214,16 +215,30 @@ def test_stored_hit_clamps_llm_inflation():
     assert state["character"]["hp"]["current"] == 15          # 20 − 5 (INTE −99)
 
 
-def test_one_attack_per_enemy_per_round():
+def test_same_enemy_twice_is_multiattack_not_claims(monkeypatch):
+    """Samma fiende två gånger i en tur = MULTIATTACK (turn-140-kontraktet):
+    varje entry rullas separat, men skadan är alltid den RULLADE — aldrig
+    LLM:ens anspråk (5+5). Extra attacken rullar nytt men pillar inte på
+    round_acted-markeringen."""
     state = _make_state()
     _start_combat(state)
     state["meta"]["enemy_attack_rolls"] = {"1": {"Goblin#0": _stored_roll()}}
+    d20_iter = iter([17])
+    dmg_iter = iter([(2, [1])])
+    monkeypatch.setattr(combat, "roll_d20", lambda: next(d20_iter, 10))
+    monkeypatch.setattr(combat, "roll_dice", lambda notation="1d6+1": next(dmg_iter, (1, [1])))
     mech = _mech(enemy_attacks=[
         {"attacker": "Goblin", "hit": True, "damage": 5},
         {"attacker": "Goblin", "hit": True, "damage": 5},
     ])
-    guardian.apply_mechanics(state, mech)
-    assert state["character"]["hp"]["current"] == 15          # bara EN attack
+    effects = guardian.apply_mechanics(state, mech)
+    # 1:a = lagrad träff (5 rullat) · 2:a = multiattack-edge: d20=17 → +3 = 20
+    # vs AC 15 → träff, skada 2 (rullat). ALDRIG 5+5=10 från anspråken.
+    assert state["character"]["hp"]["current"] == 13   # 20 − 5 − 2
+    hits = [e for e in effects if e.get("type") == "enemy_hit"]
+    assert len(hits) == 2 and sorted(h["damage"] for h in hits) == [2, 5]
+    c = state["world"]["combat"]
+    assert c.get("round_acted", {}).get("enemies", {}).get("Goblin#0")
 
 
 def test_off_list_attacker_rolls_never_trusts_claims(monkeypatch):

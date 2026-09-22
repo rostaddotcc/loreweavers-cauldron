@@ -175,6 +175,150 @@ def has_disadvantage(entity: dict) -> bool:
 
 
 # ═══════════════════════════════════════
+# MORALE (P1a — Moldvay-skalan 2–12)
+# ═══════════════════════════════════════
+
+# Trigger-tokener (1.2 i mechanics-p1-flee-morale-spec.md) — dessa sparas i
+# morale_checked per fiende och får bara firea EN gång per (fiende, trigger).
+MORALE_TRIGGERS = ("first_casualty", "half_down", "leader_down", "fear_effect")
+MORALE_STATES = ("steady", "wavering", "broken", "routed")
+MORALE_DEFAULT = 8      # genomsnittlig B/X-moral
+MORALE_DC = 10          # flat DC — svårigheten ligger i triggerns hårdhet
+
+
+def ensure_morale(enemy: dict) -> dict:
+    """Initiera/sanera moral-fälten på en fiende- eller allierad-entry.
+
+    Tolererar äldre states där fälten saknas (setdefault-semantik, ingen
+    KeyError): morale 2–12 (default 8), morale_mod = morale − 7 klampat
+    −5..+5, morale_checked = [], morale_state = "steady".
+    Returnerar entryn (muterad in place).
+    """
+    try:
+        morale = int(enemy.get("morale", MORALE_DEFAULT))
+    except (TypeError, ValueError):
+        morale = MORALE_DEFAULT
+    morale = max(2, min(12, morale))
+    enemy["morale"] = morale
+    enemy["morale_mod"] = max(-5, min(5, morale - 7))
+    if not isinstance(enemy.get("morale_checked"), list):
+        enemy["morale_checked"] = []
+    if enemy.get("morale_state") not in MORALE_STATES:
+        enemy["morale_state"] = "steady"
+    return enemy
+
+
+def morale_adjustments(state: dict, combat: dict, enemy: dict, trigger: str = "") -> int:
+    """Kumulativa moral-modifierare (1.3), klampade −4..+4:
+
+    −2 sidan förlorar hårt (≤50 % av styrkan kvar, spelaren >50 % HP)
+    −2 leader_down · −1 fienden under 25 % HP · +1 spelaren synligt sårad (≤50 % HP)
+    """
+    adj = 0
+    enemies = (combat or {}).get("enemies") or []
+    initial = max(1, len(enemies))
+    alive_count = sum(1 for e in enemies if e.get("alive", True))
+    hp = ((state or {}).get("character") or {}).get("hp") or {}
+    php, pmax = hp.get("current", 0), hp.get("max", 0) or 0
+    if pmax > 0:
+        if alive_count * 2 <= initial and php * 2 > pmax:
+            adj -= 2
+        if php * 2 <= pmax:  # spelaren synligt sårad → de kämpar hårdare
+            adj += 1
+    if trigger == "leader_down":
+        adj -= 2
+    ehp, emax = enemy.get("hp", 0), enemy.get("max_hp", 0) or 0
+    if emax > 0 and ehp * 4 <= emax:
+        adj -= 1
+    return max(-4, min(4, adj))
+
+
+def morale_check(enemy: dict, adjustments: int = 0, rng=None) -> dict:
+    """Rent moralprov (P1a) — d20 + morale_mod + adjustments vs DC 10.
+
+    Server-rullad spegel av P0-arkitekturen (enemy_rolls rng-söm): default
+    går via modul-globala roll_d20() (testmonkeypatchar combat.roll_d20);
+    ett explicit rng-objekt med randbelow() kan skickas in för determinism.
+
+    Utfall (DC = 10): total ≥ 15 → fight_on · 10 ≤ total < 15 → waver ·
+    6 ≤ total < 10 → flee · total < 6 → surrender. morale == 12 (fanatiker)
+    kollar aldrig → fight_on, skipped=True. adjustments klampas −4..+4.
+    """
+    try:
+        morale = int(enemy.get("morale", MORALE_DEFAULT))
+    except (TypeError, ValueError):
+        morale = MORALE_DEFAULT
+    morale = max(2, min(12, morale))
+    morale_mod = max(-5, min(5, morale - 7))
+    adj = max(-4, min(4, int(adjustments or 0)))
+    bonus = morale_mod + adj
+    if morale >= 12:
+        return {"d20": 0, "bonus": bonus, "adjustments": adj, "dc": MORALE_DC,
+                "total": 0, "outcome": "fight_on", "skipped": True}
+    if rng is None:
+        d20 = roll_d20()
+    else:
+        d20 = rng.randbelow(20) + 1
+    total = d20 + bonus
+    if total >= MORALE_DC + 5:
+        outcome = "fight_on"
+    elif total >= MORALE_DC:
+        outcome = "waver"
+    elif total >= MORALE_DC - 4:
+        outcome = "flee"
+    else:
+        outcome = "surrender"
+    return {"d20": d20, "bonus": bonus, "adjustments": adj, "dc": MORALE_DC,
+            "total": total, "outcome": outcome, "skipped": False}
+
+
+def _morale_of(e: dict) -> int:
+    """Läst moral med default 8 (äldre states utan fältet, §1.1)."""
+    try:
+        return max(2, min(12, int(e.get("morale", MORALE_DEFAULT))))
+    except (TypeError, ValueError):
+        return MORALE_DEFAULT
+
+
+def morale_triggers_for(state: dict, combat: dict) -> list[dict]:
+    """Kod-detekterade brytpunkter (§1.2) — rena villkor, ingen side-effekt.
+
+    first_casualty: någon stridande (fiende ELLER allierad) dött — död =
+    alive=False utan fled/surrendered (status-skadedöd inkluderat).
+    half_down: grupp → alive*2 <= antal; ensam fiende → ≤50 % HP.
+    leader_down: ledaren (leader-flagga, annars högst morale) död ELLER flydd.
+    fear_effect: ALDRIG automatiskt — bara ansökan via morale_checks/[MORALE:].
+
+    Returnerar [{"target": "all", "trigger": <token>, "note": <str>}, ...].
+    """
+    enemies = (combat or {}).get("enemies") or []
+    if not enemies:
+        return []
+    out: list[dict] = []
+
+    def _dead(x: dict) -> bool:
+        return not x.get("alive", True) and not (x.get("fled") or x.get("surrendered"))
+
+    if any(_dead(x) for x in enemies) or any(_dead(x) for x in ((combat or {}).get("allies") or [])):
+        out.append({"target": "all", "trigger": "first_casualty", "note": "auto: first casualty"})
+    initial = len(enemies)
+    alive_count = sum(1 for e in enemies if e.get("alive", True))
+    if initial > 1:
+        if alive_count * 2 <= initial:
+            out.append({"target": "all", "trigger": "half_down", "note": "auto: half the side is down"})
+    else:
+        e0 = enemies[0]
+        mhp = e0.get("max_hp") or 0
+        if e0.get("alive", True) and mhp > 0 and (e0.get("hp") or 0) * 2 <= mhp:
+            out.append({"target": "all", "trigger": "half_down", "note": "auto: solo enemy below half HP"})
+    flagged = [e for e in enemies if e.get("leader")]
+    leader = flagged[0] if flagged else max(enemies, key=_morale_of)
+    if (not leader.get("alive", True)) or leader.get("fled"):
+        out.append({"target": "all", "trigger": "leader_down", "note": "auto: leader is down"})
+    return out
+
+
+# ═══════════════════════════════════════
 # STRIDSSTART
 # ═══════════════════════════════════════
 
@@ -188,7 +332,7 @@ def start_combat(state: dict, enemies_in: list[dict]) -> dict:
     for i, e in enumerate(enemies_in):
         name = (e.get("name") or f"Fiende {i+1}").strip()
         hp = max(1, int(e.get("hp", 7)))
-        enemies.append({
+        entry = {
             "id": i,
             "name": name,
             "hp": hp,
@@ -199,7 +343,11 @@ def start_combat(state: dict, enemies_in: list[dict]) -> dict:
             "attack_bonus": int(e.get("attack_bonus", 3)),
             "damage_dice": e.get("damage_dice", "1d6+1"),
             "actions_remaining": 1,
-        })
+        }
+        # P1a: moral-fält per fiende (default 8) + valfri leader-flagga (§1.1).
+        entry["morale"] = e.get("morale", MORALE_DEFAULT)
+        entry["leader"] = bool(e.get("leader", False))
+        enemies.append(ensure_morale(entry))
 
     combat = {
         "active": True,
@@ -213,6 +361,11 @@ def start_combat(state: dict, enemies_in: list[dict]) -> dict:
         "log": [],
         "started_turn": state.get("meta", {}).get("turn_count", 0),
         "ended_turn": None,
+        # P1a: auto-triggers (first_casualty/half_down/leader_down) — på när
+        # striden DEKLARERAR moral ('morale'/'leader' i fiende-indata), så
+        # äldre strider/fixtures förblir oförändrade och deterministiska.
+        "morale_auto": any(isinstance(e, dict) and ("morale" in e or e.get("leader"))
+                          for e in enemies_in),
     }
     world["combat"] = combat
     logger.info("⚔️ Combat started: %s", ", ".join(e["name"] for e in enemies))
@@ -241,7 +394,7 @@ def add_allies(state: dict, allies_in: list[dict]) -> dict:
     for i, a in enumerate(allies_in):
         name = (a.get("name") or f"Allierad {i+1}").strip()
         hp = max(1, int(a.get("hp", 7)))
-        allies.append({
+        entry = {
             "id": i,
             "name": name,
             "hp": hp,
@@ -252,7 +405,11 @@ def add_allies(state: dict, allies_in: list[dict]) -> dict:
             "attack_bonus": int(a.get("attack_bonus", 3)),
             "damage_dice": a.get("damage_dice", "1d6+1"),
             "actions_remaining": 1,
-        })
+        }
+        # P1a: samma moral-fält som fiender (symmetri, §1.1).
+        entry["morale"] = a.get("morale", MORALE_DEFAULT)
+        entry["leader"] = bool(a.get("leader", False))
+        allies.append(ensure_morale(entry))
 
     if not allies:
         return combat

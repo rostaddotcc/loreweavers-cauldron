@@ -1656,6 +1656,192 @@ def _append_turn_snapshot(combat: dict, ch: dict, log: list, round_num: int) -> 
     log.append(entry)
 
 
+# ═══════════════════════════════════════
+# P1a — MORALE & GEMENSAMT STRIDSSLUT
+# (mechanics-p1-flee-morale-spec.md §1 — båda appliceringsvägarna delar dessa)
+# ═══════════════════════════════════════
+
+# Sluttexter per combat_end.value (§1.5) — "all defeated"-texten är den
+# historiska (befintliga testspår förutsätter den).
+_END_TEXTS = {
+    "all defeated": "All enemies defeated — the battle is over",
+    "enemies fled": "The enemies rout and flee — the battle is over",
+    "enemies surrendered": "The enemies surrender — the battle is over",
+}
+
+
+def _combat_end_reason(combat: dict) -> str:
+    """combat_end.value enligt §1.5: 'all defeated' | 'enemies fled' | 'enemies surrendered'."""
+    out = [e for e in (combat.get("enemies") or []) if not e.get("alive", True)]
+    if any(not (e.get("fled") or e.get("surrendered")) for e in out):
+        return "all defeated"
+    if out and all(e.get("surrendered") for e in out):
+        return "enemies surrendered"
+    return "enemies fled"
+
+
+def _end_combat(state: dict, reason: str, effects: list[dict], *, log_text=None,
+                defeated=None, falls_cleanup: bool = False, round_num=None) -> bool:
+    """GEMENSAMT stridsslut (§1.5/§2.3) — alla slutvägar går hit.
+
+    Double-end-guard: no-op när striden redan är avslutad — active sätts
+    falsy och ended_turn sätts exakt en gång. falls!-städ (narrativt döda
+    fiender nollas) körs bara när falls_cleanup=True (Guardian
+    combat_end-vägen). Returnerar True om striden faktiskt avslutades här.
+    """
+    combat = (state.get("world") or {}).get("combat")
+    if not (combat and combat.get("active")):
+        return False
+    _rnd = round_num if round_num is not None else combat.get("round", 1)
+    if falls_cleanup:
+        # Strids-slut-städ (playtest 2026-09-13: Rust-Husk 'defeated' vid
+        # 10/22 HP, alive=true — narrativt dött men mekaniskt levande).
+        # explicit 'defeated'-lista vinner; annars fiender vars senaste egna
+        # loggpost i denna strid är en 'falls!'-rad nollas.
+        _def = {str(d).strip().lower() for d in (defeated or set()) if str(d).strip()}
+        _standing = 0
+        for e in combat.get("enemies", []):
+            if not e.get("alive", True):
+                continue
+            ename = str(e.get("name", "?"))
+            _last_own = None
+            for _ent in combat.get("log", []):
+                _txt = str(_ent.get("text", ""))
+                if str(_ent.get("name", "")).lower() == ename.lower() or f"{ename.lower()} falls" in _txt.lower():
+                    _last_own = _txt.lower()
+            if ename.lower() in _def or (_last_own and "falls" in _last_own):
+                e["hp"] = 0
+                e["alive"] = False
+                logger.info("💀 Guardian combat_end: %s zeroed at combat end (narrative death)", ename)
+            else:
+                _standing += 1
+        if _standing:
+            combat.setdefault("log", []).append({
+                "round": _rnd, "actor": "system", "name": "",
+                "text": f"combat ended — {_standing} enemies still standing",
+            })
+    combat["active"] = False
+    combat["ended_turn"] = state.get("meta", {}).get("turn_count", 0)
+    combat["player_cover"] = None  # cover upphör när striden slutar
+    combat.setdefault("log", []).append({
+        "round": _rnd, "actor": "system", "name": "",
+        "text": log_text or f"Striden avslutades — {reason}",
+    })
+    effects.append({"type": "combat_end", "value": reason})
+    logger.info("🏁 Combat over: %s", reason)
+    return True
+
+
+def _apply_morale_checks(state: dict, entries, effects: list[dict]) -> None:
+    """Konsumera morale_checks (Guardian-fältet / [MORALE:]-taggen) — §1.4.
+
+    Validering (enum + clamp, lyfter ALDRIG): tom target eller trigger utanför
+    combat.MORALE_TRIGGERS droppas med logger.warning; max 4 entries per anrop
+    och max 1 per (target, trigger). 'all' = alla levande fiender; annars
+    enemy_rolls.match_enemy_candidates (dublettnamn-säkert — alla matchande
+    drabbas). Trigger redan i morale_checked → no-op (server-side idempotence,
+    §4.3 — därför ingen skip_effects-nyckel behövs). Servern rullar ALLTID
+    (combat.morale_check); LLM:en får aldrig diktera utfallet.
+    """
+    import combat as _cm
+    from enemy_rolls import match_enemy_candidates
+    combat = (state.get("world") or {}).get("combat")
+    if not (combat and combat.get("active")):
+        return
+    seen: set = set()
+    count = 0
+    for raw in (entries or []):
+        if not isinstance(raw, dict):
+            continue
+        target = str(raw.get("target") or "").strip()
+        trigger = str(raw.get("trigger") or "").strip()
+        if not target or trigger not in _cm.MORALE_TRIGGERS:
+            logger.warning("🛡️ morale_checks entry dropped (target=%r trigger=%r)", target, trigger)
+            continue
+        tkey = (target.lower(), trigger)
+        if tkey in seen or count >= 4:
+            continue
+        seen.add(tkey)
+        count += 1
+        if target.lower() in ("all", "alla"):
+            hits = [(i, e) for i, e in enumerate(combat.get("enemies") or []) if e.get("alive", True)]
+        else:
+            hits = match_enemy_candidates(combat, target)
+        for idx, e in hits:
+            e = _cm.ensure_morale(e)
+            if trigger in e["morale_checked"]:
+                continue  # (fiende, trigger) redan checkad — idempotence
+            e["morale_checked"].append(trigger)
+            if e.get("morale_passes", 0) >= 2 and trigger not in ("leader_down", "fear_effect"):
+                continue  # Moldvay §1.2: två klara prov → kämpar tills döden
+            adj = _cm.morale_adjustments(state, combat, e, trigger)
+            roll = _cm.morale_check(e, adjustments=adj)
+            ekey = _enemy_key(e, idx)
+            outcome = roll.get("outcome", "fight_on")
+            if not roll.get("skipped"):
+                _verbs = {"fight_on": "holds!", "waver": "wavers!",
+                          "flee": "flees!", "surrender": "surrenders!"}
+                combat.setdefault("log", []).append({
+                    "round": combat.get("round", 1), "actor": "system",
+                    "name": str(e.get("name", "?")),
+                    "text": (f"morale check (🎲 d20={roll['d20']}{roll['bonus']:+d}={roll['total']}"
+                             f" vs DC {roll['dc']}) — {_verbs.get(outcome, 'holds!')}"),
+                })
+            effects.append({"type": "morale_check", "value": ekey,
+                            "name": str(e.get("name", "?")),
+                            "d20": roll.get("d20", 0), "bonus": roll.get("bonus", 0),
+                            "total": roll.get("total", 0), "dc": roll.get("dc", 10),
+                            "outcome": outcome, "trigger": trigger,
+                            "skipped": bool(roll.get("skipped"))})
+            logger.info("🛡️ Morale check: %s (%s) d20=%d%+d=%d vs DC %d → %s",
+                        ekey, trigger, roll.get("d20", 0), roll.get("bonus", 0),
+                        roll.get("total", 0), roll.get("dc", 10), outcome)
+            if roll.get("skipped"):
+                continue  # morale 12 — fanatiker, kollar aldrig
+            if outcome == "fight_on":
+                e["morale_passes"] = _safe_int(e.get("morale_passes"), 0) + 1
+                if e["morale_passes"] >= 2:
+                    e["morale_state"] = "steady"
+                continue
+            if outcome == "waver":
+                e["morale_state"] = "wavering"
+                continue
+            # §1.3: flykt omöjlig (pågående jakt) → kapitulation i stället
+            if outcome == "flee" and (combat.get("chase") or {}).get("active"):
+                outcome = "surrender"
+                effects[-1]["outcome"] = outcome
+            if outcome == "flee":
+                e["morale_state"] = "routed"
+                e["fled"] = True
+                route_text = "routs and flees!"
+            else:
+                e["morale_state"] = "broken"
+                e["surrendered"] = True
+                route_text = "surrenders!"
+            # Ut ur striden för bokföringen — HP BEVARAS (de lever i fiktionen).
+            # XP-politik §1.5: ingen XP för flydde/kapitulerade.
+            e["alive"] = False
+            _ra = combat.get("round_acted")
+            if isinstance(_ra, dict) and isinstance(_ra.get("enemies"), dict):
+                _ra["enemies"].pop(ekey, None)  # rundor väntar inte på flyktingar
+            combat.setdefault("log", []).append({
+                "round": combat.get("round", 1), "actor": "system",
+                "name": str(e.get("name", "?")), "text": route_text,
+            })
+            if e.get("fled"):
+                effects.append({"type": "enemy_fled", "value": str(e.get("name", "?"))})
+            logger.info("🏃 Morale outcome: %s %s", ekey, route_text.rstrip("!"))
+
+
+def _auto_morale_triggers(state: dict, combat: dict, effects: list[dict]) -> None:
+    """Kod-detekterade brytpunkter (§1.2) — LLM:en bestämmer ALDRIG att ett
+    moralprov händer. fear_effect detekteras aldrig här (bara ansökan via
+    morale_checks/[MORALE:]). Kallas bara när striden deklarerar moral
+    (combat['morale_auto'])."""
+    import combat as _cm
+    _apply_morale_checks(state, _cm.morale_triggers_for(state, combat), effects)
+
+
 def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -> list[dict]:
     """
     Applicera Guardian-extraherade mekaniska ändringar på state.
@@ -1871,18 +2057,22 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                             break
                 break
 
-    # Auto-avsluta strid när alla fiender är döda
+    # ── Moral (P1a §1.2–§1.5) ──
+    # Brytpunkter detekteras av KODEN (morale_triggers_for) och begärs via
+    # morale_checks — servern rullar, LLM:en dikterar aldrig utfallet.
     combat = state.get("world", {}).get("combat")
     if combat and combat.get("active") and combat.get("enemies"):
-        if all(not e.get("alive", True) for e in combat.get("enemies", [])):
-            combat["active"] = False
-            combat["ended_turn"] = state.get("meta", {}).get("turn_count", 0)
-            combat.setdefault("log", []).append({
-                "round": combat.get("round", 1), "actor": "system", "name": "",
-                "text": "All enemies defeated — the battle is over",
-            })
-            effects.append({"type": "combat_end", "value": "all defeated"})
-            logger.info("🏁 Combat over — all enemies defeated")
+        if combat.get("morale_auto"):
+            _auto_morale_triggers(state, combat, effects)
+        _apply_morale_checks(state, mech.get("morale_checks"), effects)
+
+    # Auto-avsluta strid när alla fiender är döda/flydde/kapitulerade (§1.5) —
+    # via gemensam _end_combat (double-end-guard).
+    combat = state.get("world", {}).get("combat")
+    if combat and combat.get("active") and combat.get("enemies") \
+            and all(not e.get("alive", True) for e in combat.get("enemies", [])):
+        _reason = _combat_end_reason(combat)
+        _end_combat(state, _reason, effects, log_text=_END_TEXTS.get(_reason))
 
     # ── XP ──
     xp_gain = max(0, _safe_int(mech.get("xp"), 0))
@@ -2544,42 +2734,13 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
     ce = mech.get("combat_end")
     if ce and combat and combat.get("active"):
         reason = (ce.get("reason") or "striden avslutades") if isinstance(ce, dict) else str(ce)
-        combat["active"] = False
-        combat["ended_turn"] = state.get("meta", {}).get("turn_count", 0)
-        combat["player_cover"] = None  # cover upphör när striden slutar
-        # Strids-slut-städ (playtest 2026-09-13: Rust-Husk 'defeated' vid
-        # 10/22 HP, alive=true — narrativt dött men mekaniskt levande).
-        # mech['defeated'] (explicit lista) vinner; annars fiender vars
-        # senaste egen loggpost i denna strid är en 'falls!'-rad nollas.
+        # Strids-slut-städ (narrativt döda fiender nollas) ligger nu i
+        # _end_combat (falls_cleanup). P1a §2.3: ALLA slutvägar går genom
+        # _end_combat — double-end-guard, ended_turn sätts exakt en gång.
         _defeated = {str(d).strip().lower() for d in (mech.get("defeated") or []) if str(d).strip()}
         if isinstance(ce, dict):
             _defeated |= {str(d).strip().lower() for d in (ce.get("defeated") or []) if str(d).strip()}
-        _standing = 0
-        for e in combat.get("enemies", []):
-            if not e.get("alive", True):
-                continue
-            ename = str(e.get("name", "?"))
-            _last_own = None
-            for _ent in combat.get("log", []):
-                _txt = str(_ent.get("text", ""))
-                if str(_ent.get("name", "")).lower() == ename.lower() or f"{ename.lower()} falls" in _txt.lower():
-                    _last_own = _txt.lower()
-            if ename.lower() in _defeated or (_last_own and "falls" in _last_own):
-                e["hp"] = 0
-                e["alive"] = False
-                logger.info("💀 Guardian combat_end: %s nollad vid stridsslut (narrativt död)", ename)
-            else:
-                _standing += 1
-        if _standing:
-            combat.setdefault("log", []).append({
-                "round": combat.get("round", 1), "actor": "system", "name": "",
-                "text": f"combat ended — {_standing} enemies still standing",
-            })
-        combat.setdefault("log", []).append({
-            "round": combat.get("round", 1), "actor": "system", "name": "", "text": f"Striden avslutades — {reason}",
-        })
-        effects.append({"type": "combat_end", "value": reason})
-        logger.info("🏁 Guardian combat_end: %s", reason)
+        _end_combat(state, reason, effects, defeated=_defeated, falls_cleanup=True)
 
     # ── Chat-first combat: player_attacks, enemy_attacks, combat_events ──
     combat = state.get("world", {}).get("combat")
@@ -2788,13 +2949,21 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
                  if not _ra["enemies"].get(_enemy_key(e, combat["enemies"].index(e)))),
                 None,
             )
+            _repeat = False
+            if enemy is None and _alive:
+                # Alla namnmatchade fiender har redan agerat i år → MULTIATTACK
+                # (turn-140-kontraktet: varje narrerad attack rullas separat, men
+                # skadan är ALDRIG LLM:ens anspråk). Rulla med fiendens stats —
+                # men markera inte round_acted igen (redan markerad).
+                enemy = _alive[0]
+                _repeat = True
             # Fiendens stats från combat (fallback: attackeraren finns inte i listan → rulla med heuristiska stats)
             if enemy is not None:
                 _i = next((i for i, e in enumerate(combat.get("enemies", [])) if e is enemy), 0)
                 _key = _enemy_key(enemy, _i)
-                # P0-invariant: EN attack per levande fiende per runda — redan
-                # agerad (t.ex. dubbel-extraherad attack) → hoppa över.
-                if _ra["enemies"].get(_key):
+                # En markerad fiende = en round_acted-markering (multiattack rullar
+                # flera gånger men markeraar bara första — annars låser sig rundan).
+                if _ra["enemies"].get(_key) and not _repeat:
                     logger.info("⚔️ Enemy attack skipped: %s already acted this round", _key)
                     continue
                 _ra["enemies"][_key] = True  # JUSTE denna fiende har agerat (träff/miss oavsett)
@@ -2951,13 +3120,10 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
         else:
             _auto_advance_round(combat, state, effects)
 
-        # Auto-avsluta strid om alla fiender döda
+        # Auto-avsluta strid om alla fiender är döda/flydde/kapitulerade (P1a §1.5)
         if all(not e.get("alive", True) for e in combat.get("enemies", [])) and combat.get("enemies"):
-            combat["active"] = False
-            combat["ended_turn"] = state.get("meta", {}).get("turn_count", 0)
-            combat_log.append({"round": current_round, "actor": "system", "name": "", "text": "All enemies defeated — the battle is over"})
-            effects.append({"type": "combat_end", "value": "all defeated"})
-            logger.info("🏁 Combat over — all enemies defeated")
+            _reason = _combat_end_reason(combat)
+            _end_combat(state, _reason, effects, log_text=_END_TEXTS.get(_reason), round_num=current_round)
         else:
             # State-snapshot EFTER alla handlers — exakt EN per anrop med
             # korrekt HP (den gamla mitten-i-strömmen-versionen fastnade på
@@ -3599,6 +3765,22 @@ def format_guardian_summary(
                 lines.append(f"🏃 **{v}** flees the battle!")
             else:
                 lines.append(f"🏃 **{v}** flyr från striden!")
+        elif t == "morale_check":
+            # §1.3: en rad per utfall (waver/flee/surrender) — fight_on är
+            # TYST för att inte brusa. SV/EN.
+            _mo = e.get("outcome", "")
+            if _mo != "fight_on":
+                _mn = e.get("name") or v
+                _b = e.get("bonus", 0)
+                _dice = f"(🎲 d20={e.get('d20', '?')}{_b:+d}={e.get('total', '?')} vs DC {e.get('dc', 10)})"
+                if _mo == "waver":
+                    _tail = "wavers and fights toward the exit!" if en else "tvekar och kämpar sig mot utgången!"
+                elif _mo == "surrender":
+                    _tail = "surrenders!" if en else "ger upp!"
+                else:
+                    _tail = "flees!" if en else "flyr!"
+                _verb = "takes a morale check" if en else "tar ett moralprov"
+                lines.append(f"🏳️ **{_mn}** {_verb} {_dice} — {_tail}")
         elif t == "status_dmg":
             status = e.get("status", "?")
             amt = e.get("amount", "?")
@@ -3750,7 +3932,9 @@ def format_guardian_summary(
             & {"combat_start", "combat_dmg", "combat_round", "enemy_död", "initiativ", "combat_end", "skada", "hela", "ally_add", "ally_dmg", "ally_död",
                # audit 2026-09-06 bug 4: kod-rullade fiendeattacker ger enemy_hit/
                # enemy_miss (inte "skada") → taggen måste firea för dem också
-               "enemy_hit", "enemy_miss", "enemy_fled", "status_dmg", "status_end"}
+               "enemy_hit", "enemy_miss", "enemy_fled", "status_dmg", "status_end",
+               # P1a: kod-rullade moralprov → [COMBAT:]-taggen måste firea (§1.4)
+               "morale_check"}
         ) or any(mech.get(k) for k in ("combat_start", "combat_round", "initiative_entries", "combat_end",
                                         "player_attacks", "enemy_attacks", "ally_attacks", "ally_damage", "combat_events"))
         _just_ended = combat.get("active") is False and combat.get("ended_turn") == state.get("meta", {}).get("turn_count", 0)

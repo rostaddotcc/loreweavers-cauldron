@@ -526,6 +526,8 @@ _MECH_PATTERNS = {
     'FÖREMÅL_BORT':    re.compile(r'\[FÖREMÅL_BORT:([^\]]+)\]'),
     'NPC_RELATION':    re.compile(r'\[NPC_RELATION:([^|\]]+)\|([^\]]+)\]'),
     'NY_DAG':          re.compile(r'\[NY_DAG:([^\]]+)\]'),
+    # P1a §4.2: [MORALE:target|trigger] — begär moralprov; servern rullar.
+    'MORALE':          re.compile(r'\[MORALE:([^|\]]+)\|([^\]]+)\]'),
 }
 
 # [STRID:namn|hp|ac, namn2|hp|ac] — DM öppnar strid; Guardian sköter sedan
@@ -855,6 +857,21 @@ def _parse_mechanical_tags(text: str, state: dict) -> tuple[str, dict, list[dict
         # Markera att en dag-entry ska genereras i bakgrunden
         world['_pending_day_entry'] = True
         effects.append({'type': 'ny_dag', 'value': f"Dag {world['day']}: {desc}"})
+
+    # MORALE (P1a §4.2) — [MORALE:target|trigger] begär moralprov. Samma
+    # hjälpfunktion som Guardian-vägen (guardian._apply_morale_checks) →
+    # identisk semantik (validering/roll/utfall/dedup). Servern rullar ALLTID.
+    _morale_entries = [
+        {'target': m.group(1).strip(), 'trigger': m.group(2).strip(), 'note': 'dm-tag'}
+        for m in _MECH_PATTERNS['MORALE'].finditer(text)
+    ]
+    if _morale_entries:
+        try:
+            import guardian as _g  # cirkulär-säkerhet (samma mönster som XP-vägen)
+            _g._apply_morale_checks(state, _morale_entries, effects)
+        except Exception as _e:
+            logger.warning("MORALE tag path unavailable: %s", _e)
+        state.setdefault('meta', {})['combat_tag_dirty'] = True
 
     # Ta bort alla taggar ur texten
     clean = text

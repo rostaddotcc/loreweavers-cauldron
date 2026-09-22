@@ -4849,6 +4849,25 @@ def truth_block(state: dict, language: str = "sv") -> str:
     return "\n".join(parts)
 
 
+def _plan_pre_dm_enemy_rolls(state: dict, rng=None) -> list:
+    """Pre-DM-sömmen (P0): rulla och lagra rundans fiendeattacker INNAN DM:n
+    narrerar. Kallas i chat-turen när world.combat.active. Planerade utfall
+    hamnar i meta["enemy_attack_rolls"][str(round)] (samma form som
+    guardian._lookup_stored_roll konsumerar) och visas i DM-prompten så
+    narrationen blir konsekvent med tärningarna. Idempotent per runda —
+    plan_and_store rullar aldrig om befintliga planerade utfall."""
+    combat = (state.get("world") or {}).get("combat")
+    if not (combat and combat.get("active")):
+        return []
+    ch = state.get("character") or {}
+    try:
+        player_ac = int(ch.get("ac") or 10)
+    except (TypeError, ValueError):
+        player_ac = 10
+    from enemy_rolls import plan_and_store
+    return plan_and_store(combat, player_ac, state.setdefault("meta", {}), rng=rng)
+
+
 def _build_system_prompt(
     state: dict,
     turn_override: int | None = None,
@@ -4884,6 +4903,18 @@ def _build_system_prompt(
 
     # Sanning — kompakt tillstånd istället för rå JSON
     parts.append("\n" + truth_block(state, language=lang))
+
+    # Pre-DM-sömmen (P0): planerade fiendeattacker — visa de REDAN rullade
+    # utfallen så DM:n narrerar konsekvent med tärningarna (aldrig tvärtom).
+    _predm_combat = (state.get("world") or {}).get("combat")
+    if _predm_combat and _predm_combat.get("active"):
+        from enemy_rolls import format_planned_outcomes, unconsumed_planned_rolls
+        _planned_block = format_planned_outcomes(
+            unconsumed_planned_rolls(state.get("meta") or {}, _predm_combat),
+            lang=lang,
+        )
+        if _planned_block:
+            parts.append("\n" + _planned_block)
 
     # Hierarkiska sammanfattningar: 2 scen + 2 kapitel + 1 kampanjbåge
     scene_summaries = store.load_summaries(state, last_n=2)
@@ -6439,6 +6470,15 @@ async def _chat_locked(
                 logger.debug("🛡️ Guardian pre-DM (%.1fs): no roll", time.time() - _tg)
         except Exception as e:
             logger.warning("🛡️ Guardian pre-DM skipped: %s", e)
+
+    # ── Pre-DM-sömmen (P0): servern rullar fiendeattacker INNAN DM:n narrerar ──
+    # Planerade utfall lagras i meta["enemy_attack_rolls"][str(round)] och
+    # visas i DM-prompten (se _build_system_prompt) så att narrationen blir
+    # konsekvent med tärningarna. Idempotent per runda (retry-säkert).
+    try:
+        _plan_pre_dm_enemy_rolls(state)
+    except Exception as e:
+        logger.warning("Pre-DM enemy roll planning skipped: %s", e)
 
     messages = [{"role": "system", "content": _build_system_prompt(
         state, turn_override=effective_turn, awakening_trigger=is_awakening,

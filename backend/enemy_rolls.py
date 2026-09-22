@@ -419,3 +419,112 @@ def attack_log_row(
     if hp and player_name:
         row += f" → **{player_name} {hp.get('current', '?')}/{hp.get('max', '?')} HP**"
     return row
+
+# ═══════════════════════════════════════
+# PRE-DM-SÖMMEN: planering + prompt-block
+# ═══════════════════════════════════════
+
+def plan_and_store(combat: dict | None, player_ac: int, meta: dict, rng=None) -> list[dict]:
+    """Planera och lagra rundans fiendeattacker — pre-DM-sömmen (P0).
+
+    Skriver in planerade utfall i meta["enemy_attack_rolls"][str(round)],
+    nycklat per fiende-nyckel (Name#id) — EXAKT den form som
+    guardian._lookup_stored_roll konsumerar ({key: utfall-dict}).
+
+    Idempotent per runda: finns redan planerade (okonsumerade) utfall för
+    rundan rullas INGET om — säkert vid retry av en misslyckad tur.
+
+    MULTIATTACK (turn-140-kontraktet): planeringen ger EN planerad attack per
+    levande fiende per runda. Extra narrerade attacker för samma fiende rullas
+    av guardian-kanten (edge path: _lookup_stored_roll hittar inget okonsumerat
+    utfall → roll_enemy_attack i apply_mechanics) — två rull för samma fiende i
+    en runda förblir alltså möjliga, och planeringen blockerar dem aldrig.
+    """
+    if not combat or not combat.get("active"):
+        return []
+    meta = meta if isinstance(meta, dict) else {}
+    by_round = meta.get("enemy_attack_rolls")
+    if not isinstance(by_round, dict):
+        by_round = {}
+        meta["enemy_attack_rolls"] = by_round
+    round_key = str(combat.get("round", 1))
+    round_map = by_round.get(round_key)
+    if not isinstance(round_map, dict):
+        round_map = {}
+        by_round[round_key] = round_map
+    existing = [r for r in round_map.values()
+                if isinstance(r, dict) and r.get("roll_expr") and not r.get("consumed")]
+    if existing:
+        return existing  # redan planerad denna runda — rulla aldrig om
+    plan = plan_enemy_turn(combat, player_ac, rng=rng, stored=round_map)
+    for roll in plan:
+        round_map[str(roll.get("key", ""))] = roll
+    if plan:
+        logger.info("📋 Pre-DM plan stored for round %s: %s", round_key,
+                    ", ".join(str(r.get("key", "?")) for r in plan))
+    return plan
+
+
+def unconsumed_planned_rolls(meta: dict, combat: dict | None = None) -> list[dict]:
+    """Planerade, ännu ej applicerade utfall — aktuell runda först (samma
+    sökordning som guardian._lookup_stored_roll). Driver DM-promptblocket."""
+    by_round = (meta or {}).get("enemy_attack_rolls")
+    if not isinstance(by_round, dict):
+        return []
+    round_key = str((combat or {}).get("round", 1))
+    order = ([by_round.get(round_key)] if round_key in by_round else []) + [
+        v for k, v in by_round.items() if str(k) != round_key]
+    out: list[dict] = []
+    for round_map in order:
+        if not isinstance(round_map, dict):
+            continue
+        for r in round_map.values():
+            if isinstance(r, dict) and r.get("roll_expr") and not r.get("consumed"):
+                out.append(r)
+    return out
+
+
+def format_planned_outcomes(rolls: list[dict] | None, lang: str = "sv") -> str:
+    """Kompakt roll-outcome-block för DM-prompten (sv/en) — de planerade
+    utfallen, formaterade så DM:n narrerar KONSEKVENT med tärningarna.
+    Tom sträng om inga utfall. Endast prompt-innehåll — aldrig en loggrad
+    (attack_log_row är fortfarande den enda loggformatägaren)."""
+    rolls = [r for r in (rolls or []) if isinstance(r, dict)]
+    if not rolls:
+        return ""
+    sv = str(lang or "sv").lower().startswith("sv")
+    if sv:
+        head = (
+            "## PLANERADE FIENDEATTACKER (dessa utfall är REDAN avgjorda av serverns tärningar)\n"
+            "Du MÅSTE narrera i exakt linje med nedanstående utfall — motsäg dem ALDRIG, "
+            "ändra aldrig träff/miss eller skadetal. Skriv dramatisk narration som är "
+            "konsekvent med vad tärningarna redan bestämt."
+        )
+    else:
+        head = (
+            "## PLANNED ENEMY ATTACKS (these outcomes are ALREADY decided by the server's dice)\n"
+            "You MUST narrate exactly along the outcomes below — never contradict them, "
+            "never change hit/miss or damage numbers. Write dramatic narration that is "
+            "consistent with what the dice have already decided."
+        )
+    lines = []
+    for r in rolls:
+        key = str(r.get("key") or r.get("name") or "?")
+        expr = str(r.get("roll_expr") or "1d20")
+        try:
+            total = int(r.get("total", 0) or 0)
+        except (TypeError, ValueError):
+            total = 0
+        if r.get("hit"):
+            outcome = ("TRÄFF" if sv else "HIT") + (" (KRITISKT)" if r.get("crit") else "")
+            try:
+                dmg = int(r.get("damage", 0) or 0)
+            except (TypeError, ValueError):
+                dmg = 0
+            dtype = str(r.get("damage_type") or "").strip() or ("okänd" if sv else "unknown")
+            tail = f" · {dmg} {'skada' if sv else 'damage'} ({dtype})"
+        else:
+            outcome = "MISS" + (" (nat 1!)" if int(r.get("d20", 0) or 0) == 1 else "")
+            tail = " · 0 skada" if sv else " · 0 damage"
+        lines.append(f"- {key}: {expr} → {total} vs AC {_ac_str(r)} — {outcome}{tail}")
+    return head + "\n" + "\n".join(lines)

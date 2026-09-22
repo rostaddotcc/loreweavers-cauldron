@@ -538,6 +538,10 @@ Extrahera ALLA mekaniska effekter och uppdateringar.
 - status_apply: När narrationen entydigt ger en status/villkor: [{"name": "prone|restrain|stun|blind|poison|burn|bleed|frighten|charm", "target": "spelarnamn|fiendens namn|allierades namn", "duration": 2}]. "target": "player" = spelaren. KODEN applicerar mekaniken (prone/restrain/blind ger nackdel på attackerarens egna slag och fördel på motståndarens; stun hoppar över tur; poison/burn/bleed gör skada per runda). Ange ENDAST om DM:n beskriver tillståndet uttryckligen ("faller omkull", "bunden i rankor", "förgiftad").
 - combat_events: Övriga stridshändelser (flykt, status, förstärkningar, rundsammanfattning). Ange: ["Goblin flyr", "Runda 2 börjar"]. Skriv korta, informativa rader som fungerar som en stridslogg — spelaren ser dem i chatten.
 - combat_end: Om striden SLUTAR (alla fiender döda/flydde eller spelaren flydde). Ange {"reason": "..."}.
+- morale_checks: När DM:n narrerar att fiender TAPPAR STRIDSVILJA efter förluster — vacklar, rygger, tvekar, kastar vapen, flyr, ger upp, eller är rädda/fruktansfulla. Format: [{"target": "goblin" | "all", "trigger": "first_casualty|half_down|leader_down|fear_effect", "note": "kort orsak"}].
+  target = fiendens namn (samma namn som i stridstillståndet) eller "all" (alla levande fiender). trigger = orsaken: first_casualty (första fienden stupad), half_down (halva fiendestyrkan nere), leader_down (ledaren stupad), fear_effect (rädsle/fruktan från magi eller skrämmande dåd).
+  Max EN post per (target, trigger). Detta är en BEGÄRAN — servern rullar moralprovet (d20 + moral mot DC 10) och avgör utfallet (fight_on/waver/flee/surrender). Ange ALDRIG utfallet själv.
+  Extrahera ENDAST när narrationen faktiskt visar brytpunkten (fienden vacklar/flyr/är rädd) — inte under vanlig kamp utan förluster.
 
 ### Tärningsresurser (roll_grants)
 - roll_grants: Om DM ger spelaren en NY mekanisk fördel som innebär ett framtida tärningskast \
@@ -663,6 +667,7 @@ Skriv i dåtid, tredje person. T.ex. "Faelyndra smög förbi vakten och tog sig 
   "ally_damage": [],
   "enemy_attacks": [],
   "status_apply": [],
+  "morale_checks": [{"target": "goblin", "trigger": "first_casualty", "note": "kamraten faller — de tvekar"}],
   "combat_events": [],
   "roll_grants": [],
   "spell_slots_spend": [],
@@ -3482,7 +3487,7 @@ def _sanitize_mechanics(mech: dict) -> dict:
                 "world_lore", "roll_grants", "corrections",
                 "initiative_entries", "enemy_actions", "status_apply",
                 "player_attacks", "ally_attacks", "ally_damage", "enemy_attacks", "combat_events",
-                "spell_slots_spend", "training_update"):
+                "spell_slots_spend", "training_update", "morale_checks"):
         if not isinstance(mech.get(key), list):
             mech[key] = []
 
@@ -3538,6 +3543,23 @@ def _sanitize_mechanics(mech: dict) -> dict:
     ds = mech.get("day_summary")
     if ds and not isinstance(ds, dict):
         mech["day_summary"] = None
+
+    # morale_checks: [{"target": str (namn eller "all"), "trigger": enum,
+    # "note": str}] — droppa trasiga poster tyst (aldrig raise), behåll
+    # godkända. Trigger-enumen är den enda servern accepterar (§1.4).
+    _mc_clean = []
+    for _mc in mech.get("morale_checks") or []:
+        if not isinstance(_mc, dict):
+            continue
+        _tgt = _mc.get("target")
+        _trg = _mc.get("trigger")
+        if not isinstance(_tgt, str) or not _tgt.strip():
+            continue
+        if _trg not in ("first_casualty", "half_down", "leader_down", "fear_effect"):
+            continue
+        _mc_clean.append({"target": _tgt.strip(), "trigger": _trg,
+                          "note": str(_mc.get("note", ""))})
+    mech["morale_checks"] = _mc_clean
 
     return mech
 

@@ -149,7 +149,10 @@ def list_models_for_frontend() -> list[dict]:
 # v28 (2026-09-06): stridskontrakt — DM narrerar ATT + sanneintryck, ALDRIG utfall;
 # motorn äger alla stridstal (enemy_attacks kod-rullas, spelarens vapenskada från
 # damage_dice vid träff, [SKADA:] endast utom strid/miljö).
-DM_PROMPT_VERSION = "v28"
+# v29 (2026-09-22): moral (P1a) — DM begär moralprov med [MORALE:target|trigger]
+# när fiender bryter; servern rullar, DM dikterar aldrig utfallet (samma princip
+# som [KAST:]).
+DM_PROMPT_VERSION = "v29"
 
 DM_CORE_PROMPT = """You are the Dungeon Master in a D&D 5e adventure. You are a creative, free storyteller — you choose the theme, tone, setting, and atmosphere yourself, based on what the player wants and what the story demands. It can be dark and threatening, bright and adventurous, mysterious, humorous, epic — you decide. The story is NOT pre-written: it is shaped by the player's choices, in the moment.
 
@@ -275,6 +278,7 @@ If you write that the player hits/misses, succeeds/fails WITHOUT having requeste
 Optional tags (faster updates if you use them):
 - [NPC:Name|Role|relation] — new NPC (allied/neutral/enemy/unknown)
 - [KAST: 1d20+MOD | LABEL (DC X)] — dice roll (see below)
+- [MORALE:target|trigger] — request an enemy morale check when enemies break/waver after casualties (see COMBAT prompt)
 
 ## Downtime (mellan äventyr)
 Between adventures, the player can spend time on downtime activities:
@@ -395,6 +399,16 @@ The player sees a LIVE combat status (enemy HP, round number, own HP) in a statu
 ### Fleeing:
 - The player can try to flee at any time. Request [KAST:1d20+DEX|FLEE (DC 10 + number of enemies)].
 - On a successful escape: narrate how they get away. On failure: the enemies get an opportunity attack.
+
+### Enemy morale (CRITICAL — enemies are not automatons):
+When the fight turns against the enemies, they break. Request a morale check by writing the tag IN your narration:
+[MORALE:target|trigger]
+- target = the enemy's name (exactly as in the combat), or "all" for every living enemy.
+- trigger = first_casualty | half_down | leader_down | fear_effect
+  (first_casualty: the first enemy just fell. half_down: half the enemies are down. leader_down: the leader fell. fear_effect: a fear effect / terrifying display hits them.)
+- ONLY when the fiction justifies it — real casualties, a leader's death, or a fear effect. Narrate the break as you go: "The goblins waver as their shaman falls — [MORALE:goblin|leader_down]". NEVER fire it mid-fight with no losses or pressure.
+- The tag is a REQUEST — exactly like [KAST:]: the ENGINE rolls the morale check (d20 + morale vs DC 10) and reports the outcome (fight on / waver / flee / surrender). NEVER decide or narrate the outcome before the engine answers — wait for the result line, then narrate what the enemies do.
+- One tag per (target, trigger) — the engine dedups repeats.
 
 ## 📖 5E QUICK RULES (combat)
 - **Attack**: hit if total ≥ AC. Nat 20 = critical (double dice), nat 1 = automatic miss.

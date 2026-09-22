@@ -6,24 +6,27 @@
 <title>The Lore Weaver's Cauldron — At the Table</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,700;1,400;1,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,700;1,400;1,700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
 <style>:root{
-    --ink: #1a1426;
-    --stone: #271d33;
-    --stone-2: #322541;
-    --stone-3: #3d2e4f;
-    --edge: #463a60;
-    --bone: #d9c9a6;
-    --bone-bright: #f2e6c8;
-    --bone-dim: #9d8a6a;
-    --gold: #d4a92c;
-    --gold-bright: #f0d675;
-    --blood: #a32433;
-    --blood-bright: #e0485a;
-    --ember: #d4691e;
-    --arcane: #9a6fe0;
-    --poison: #7aa35e;
-    --teal: #5e9aa3;
+    /* Den Förbjudna Grimsboken — cursed psalter: burnt parchment, gold leaf,
+       oxblood & lapis. Mirror of snes.css :root (tokens owned there). */
+    --ink: #1c1109;
+    --stone: #271a10;
+    --stone-2: #322318;
+    --stone-3: #3d2c1e;
+    --edge: #56402a;
+    --bone: #e8d9b4;
+    --bone-bright: #f7efd7;
+    --bone-dim: #b29a6f;
+    --gold: #c9a13a;
+    --gold-bright: #ecd07a;
+    --blood: #75202a;
+    --blood-bright: #e0766a;
+    --ember: #c2721f;
+    --arcane: #6e86c9;
+    --poison: #86a05e;
+    --teal: #68a099;
+    --font-marginalia: 'EB Garamond', Georgia, serif;
   }*{ margin: 0; padding: 0; box-sizing: border-box; }html{ font-size: 18px; }html, body{ height: 100%; }body{
     font-family: var(--font-body);
     color: var(--bone);
@@ -79,8 +82,8 @@
     min-width: 200px; max-width: 300px; padding: 0.35rem;
     max-height: calc(100dvh - 70px); overflow-y: auto;
     background: linear-gradient(180deg, var(--stone-2), var(--ink));
-    border: 1px solid var(--gold); border-radius: 3px;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 20px -6px rgba(var(--gold-bright-rgb),0.25);
+    border: 1px solid rgba(var(--gold-rgb),0.65); border-radius: 3px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 20px -6px rgba(var(--gold-bright-rgb),0.25), inset 0 0 0 1px rgba(var(--gold-rgb),0.18);
     opacity: 0; visibility: hidden; transform: translateY(-8px) scale(0.98);
     transform-origin: top right;
     transition: opacity 0.2s, transform 0.22s cubic-bezier(.22,1,.36,1), visibility 0.2s;
@@ -90,8 +93,8 @@
     min-width: 0; max-height: calc(100vh - 60px); max-height: calc(100dvh - 60px); overflow-y: auto;
     padding: 0.28rem;
     background: linear-gradient(180deg, var(--stone-2), var(--ink));
-    border: 1px solid var(--gold); border-radius: 3px;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 20px -6px rgba(var(--gold-bright-rgb),0.25);
+    border: 1px solid rgba(var(--gold-rgb),0.65); border-radius: 3px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 20px -6px rgba(var(--gold-bright-rgb),0.25), inset 0 0 0 1px rgba(var(--gold-rgb),0.18);
     opacity: 0; visibility: hidden; transform: translateY(-8px) scale(0.98);
     transform-origin: top left;
     transition: opacity 0.2s, transform 0.22s cubic-bezier(.22,1,.36,1), visibility 0.2s;
@@ -162,7 +165,7 @@
   .av-lightbox .av-lb-count{ font-family: var(--font-accent); font-size: .6rem; letter-spacing: .14em; color: var(--bone-dim); white-space: nowrap; }
   .av-lightbox .av-lb-act{ position: fixed; bottom: 5.6rem; left: 50%; transform: translateX(-50%); font-family: var(--font-display); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-bright); background: rgba(6,3,10,.85); border: 1px solid var(--gold); padding: .5rem .9rem; cursor: pointer; z-index: 11001; white-space: nowrap; }
   .av-lightbox .av-lb-act:hover{ background: rgba(var(--gold-rgb),.14); color: var(--bone-bright); }
-  .mi-modal{ width: min(520px, 100%); max-height: 84vh; overflow-y: auto; background: linear-gradient(165deg, var(--stone-2), var(--stone)); border: 1px solid var(--gold); box-shadow: 0 0 40px rgba(var(--gold-rgb),.22), 0 24px 60px rgba(0,0,0,.7); padding: 1.3rem 1.4rem 1.5rem; animation: mi-rise .35s cubic-bezier(.22,1,.36,1); }
+  .mi-modal{ width: min(520px, 100%); max-height: 84vh; overflow-y: auto; background: linear-gradient(165deg, var(--stone-2), var(--stone)); border: 1px solid rgba(var(--gold-rgb),.65); box-shadow: 0 0 40px rgba(var(--gold-rgb),.22), 0 24px 60px rgba(0,0,0,.7), inset 0 0 0 1px rgba(var(--gold-rgb),.18); padding: 1.3rem 1.4rem 1.5rem; animation: mi-rise .35s cubic-bezier(.22,1,.36,1); position: relative; }
   @keyframes mi-rise{ from { opacity: 0; transform: translateY(18px) scale(.98); } to { opacity: 1; transform: none; } }
   .mi-head{ display: flex; align-items: center; justify-content: space-between; font-family: var(--font-accent); font-size: .6rem; letter-spacing: .06em; color: var(--gold-bright); text-transform: uppercase; padding-bottom: .8rem; border-bottom: 1px solid var(--edge); margin-bottom: .9rem; }
   .mi-close{ background: none; border: 1px solid var(--edge); color: var(--bone-dim); width: 32px; height: 32px; cursor: pointer; font-size: .85rem; }
@@ -211,7 +214,7 @@
    width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
    display: flex; align-items: center; justify-content: center; font-size: 1.25rem;
    border: 1px solid var(--edge); background: var(--stone-3);
- }.pc-name{ font-weight: 600; font-size: 1.15rem; color: var(--bone-bright); line-height: 1.2; }.pc-sub{ font-size: 1.02rem; color: var(--bone-dim); font-style: italic; }.pc-hp{ height: 4px; background: var(--ink); margin-top: 0.3rem; border-radius: 2px; overflow: hidden; }.pc-hp i{ display: block; height: 100%; background: linear-gradient(90deg, #5e1220, var(--blood-bright)); border-radius: 2px; }.pc-xp{ position: relative; height: 6px; background: var(--ink); margin-top: 0.35rem; border-radius: 2px; overflow: hidden; border: 1px solid rgba(var(--gold-rgb),0.25); }.pc-xp i{ display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); border-radius: 2px; transition: width 0.8s cubic-bezier(0.22,1,0.36,1); box-shadow: 0 0 8px rgba(var(--gold-bright-rgb),0.45); }.pc-xp::after{ content: ''; position: absolute; inset: 0; pointer-events: none;
+ }.pc-name{ font-weight: 600; font-size: 1.15rem; color: var(--bone-bright); line-height: 1.2; }.pc-sub{ font-size: 1.02rem; color: var(--bone-dim); font-style: italic; }.pc-hp{ height: 5px; background: var(--ink); margin-top: 0.3rem; border-radius: 2px; overflow: visible; position: relative; }.pc-hp i{ display: block; height: 100%; position: relative; background: repeating-linear-gradient(90deg, transparent 0 8px, rgba(28,17,9,.6) 8px 9.5px), linear-gradient(90deg, var(--blood), var(--blood-bright)); border-radius: 2px; }.pc-xp{ position: relative; height: 6px; background: var(--ink); margin-top: 0.35rem; border-radius: 2px; overflow: hidden; border: 1px solid rgba(var(--gold-rgb),0.25); }.pc-xp i{ display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-bright)); border-radius: 2px; transition: width 0.8s cubic-bezier(0.22,1,0.36,1); box-shadow: 0 0 8px rgba(var(--gold-bright-rgb),0.45); }.pc-xp::after{ content: ''; position: absolute; inset: 0; pointer-events: none;
     background: repeating-linear-gradient(90deg, transparent 0 6px, color-mix(in srgb, var(--ink) 55%, transparent) 6px 8px); }.pc-xp-label{ font-size: 0.88rem; color: var(--bone-dim); margin-top: 0.2rem; letter-spacing: 0.05em; text-align: right; font-variant-numeric: tabular-nums; }.pc-xp-label b{ color: var(--gold-bright); font-style: normal; }/* ── Guld-räknare ── */.pc-gold{
     display: inline-flex; align-items: center; gap: 0.35rem; margin-top: 0.45rem;
     font-family: var(--font-display); font-size: 0.95rem; font-weight: 700; letter-spacing: 0.06em;
@@ -364,8 +367,9 @@
     box-shadow: 0 2px 10px -6px rgba(0,0,0,.5);
   }.bubble:hover{ transform: translateY(-2px); box-shadow: 0 8px 24px -10px rgba(0,0,0,0.7); }/* Hörnbeslag (terminal-gotik) — accentfärg per roll, mjukare */.bubble::before, .bubble::after{ content: ''; position: absolute; width: 9px; height: 9px; pointer-events: none; opacity: 0.85; border-radius: 1px; }.bubble::before{ top: -1px; left: -1px; border-top: 2px solid var(--accent, var(--gold)); border-left: 2px solid var(--accent, var(--gold)); }.bubble::after{ bottom: -1px; right: -1px; border-bottom: 2px solid var(--accent, var(--gold)); border-right: 2px solid var(--accent, var(--gold)); }/* DM — guld, kursiv berättarröst */.msg.dm .bubble{
     --accent: var(--gold);
-    background: linear-gradient(160deg, rgba(var(--gold-rgb),0.17), rgba(var(--gold-rgb),0.05));
+    background: linear-gradient(160deg, rgba(var(--gold-rgb),0.17), rgba(var(--gold-rgb),0.05)), linear-gradient(180deg, color-mix(in srgb, var(--stone-2) 55%, transparent), color-mix(in srgb, var(--ink) 65%, transparent));
     border-color: rgba(var(--gold-bright-rgb),0.55);
+    box-shadow: inset 0 0 0 1px rgba(var(--gold-rgb),0.16), 0 2px 10px -6px rgba(0,0,0,.5);
   }/* TTS-knapp på DM-bubblor */.tts-btn{
     position: absolute; top: 0.35rem; right: 0.4rem;
     background: none; border: none; cursor: pointer;
@@ -436,7 +440,7 @@
     opacity: 0.45; cursor: not-allowed; filter: grayscale(0.6);
   }
   .tts-select:disabled:hover{ border-color: var(--edge); color: var(--bone-dim); }.msg.dm .bubble:hover{ border-color: rgba(var(--gold-bright-rgb),0.6); }.msg.dm .bubble .who{ color: var(--gold-bright); letter-spacing: .06em; text-shadow: 0 0 10px rgba(var(--gold-bright-rgb),.35); }.msg.dm .bubble .text{ font-style: italic; color: var(--bone); line-height: 1.7; font-size: var(--fs-narr); }
-body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float: left; font-family: var(--font-display); font-style: normal; font-weight: 800; font-size: 2.5em; line-height: .92; padding: .04em .12em 0 0; color: var(--gold); text-shadow: 0 0 10px rgba(var(--gold-rgb),.35); }/* ── DM:ns inre monolog (reasoning) — eterisk, hopfällbar tankebubbla ── */.reasoning{
+body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float: left; font-family: var(--font-display); font-style: normal; font-weight: 900; font-size: 2.9em; line-height: .88; padding: .08em .16em .06em .1em; margin: .04em .16em .04em 0; color: var(--gold-bright); background: linear-gradient(155deg, color-mix(in srgb, var(--blood) 72%, #000), color-mix(in srgb, var(--arcane-deep, #22336b) 60%, #000)); border: 1px solid var(--gold); box-shadow: 0 0 10px rgba(var(--gold-rgb),.3), inset 0 0 8px rgba(0,0,0,.5); text-shadow: 0 1px 2px rgba(0,0,0,.85); }/* ── DM:ns inre monolog (reasoning) — eterisk, hopfällbar tankebubbla ── */.reasoning{
     max-width: 600px; margin-left: 0;  /* inuti .msg.dm (kolumn-stack) — ligger under avataren, ovanför bubblan */
     border: 1px solid color-mix(in srgb, var(--arcane) 28%, transparent);
     border-left: 2px solid color-mix(in srgb, var(--arcane) 65%, transparent);
@@ -458,10 +462,10 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
   }
   @keyframes orb-pulse { 0%,100%{opacity:.45; transform:scale(.8);} 50%{opacity:1; transform:scale(1.2);} }.reasoning-head .rwords{ color: var(--bone-dim); letter-spacing: 0.12em; }.reasoning-head .caret{ margin-left: auto; opacity:.65; transition: transform .25s; }.reasoning.open .reasoning-head .caret{ transform: rotate(90deg); }.reasoning-body{ max-height: 0; overflow: hidden; transition: max-height .4s ease; }.reasoning.open .reasoning-body{ max-height: 520px; overflow-y: auto; }.reasoning-body .inner{
     margin: 0 0.95rem 0.85rem; padding-top: 0.6rem;
-    border-top: 1px dashed color-mix(in srgb, var(--arcane) 28%, transparent);
-    font-family: var(--font-body); font-style: italic;
-    font-size: 1rem; line-height: 1.65;
-    color: var(--bone-dim);
+    border-top: 1px dashed color-mix(in srgb, var(--gold) 35%, transparent);
+    font-family: var(--font-marginalia, 'EB Garamond', Georgia, serif) !important; font-style: italic;
+    font-size: 1.08rem; line-height: 1.6;
+    color: var(--bone);
   }.reasoning-body .inner p{ margin: 0 0 0.45rem; }.reasoning-body .inner p:last-child{ margin-bottom: 0; }/* NPC — egen färg per gestalt */.msg.npc .bubble{
     --accent: var(--npc-color, #a8b2c0);
     background: color-mix(in srgb, var(--npc-color, #a8b2c0) 8%, color-mix(in srgb, var(--ink) 75%, transparent));
@@ -520,10 +524,11 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
     text-transform: uppercase; margin-bottom: 0.45rem;
     display: flex; align-items: center; gap: 0.5rem;
   }.bubble .text p{ margin: 0 0 0.5rem; }.bubble .text p:last-child{ margin-bottom: 0; }/* System / dice */.msg.system{ text-align: center; max-width: 520px; margin-left: auto; margin-right: auto; }.msg.system .box{
-    display: inline-block; font-size: 0.88rem; color: var(--bone-dim);
-    border: 1px dashed var(--edge); padding: 0.55rem 1.3rem; border-radius: 2px;
+    display: inline-block; font-size: 0.95rem; color: var(--bone);
+    border: 1px solid rgba(var(--gold-rgb),0.45); padding: 0.55rem 1.3rem; border-radius: 2px;
     background: color-mix(in srgb, var(--ink) 6%, transparent);
-  }.msg.system .err-hint{ display: block; margin-top: .35rem; font-size: 0.81rem; font-style: italic; color: var(--bone-dim); }.msg.system .box b{ color: var(--gold-bright); font-family: var(--font-display); }/* Slash-kommandon (dim, kursiv) */.msg.cmd{ text-align: center; max-width: 520px; margin-left: auto; margin-right: auto; }.msg.cmd .box{
+    box-shadow: inset 0 0 0 1px rgba(var(--gold-rgb),0.1);
+  }.msg.system .err-hint{ display: block; margin-top: .35rem; font-size: 0.81rem; font-style: italic; color: var(--bone-dim); }.msg.system .box b{ color: var(--blood-bright); font-family: var(--font-display); font-variant: small-caps; letter-spacing: .06em; }/* Slash-kommandon (dim, kursiv) */.msg.cmd{ text-align: center; max-width: 520px; margin-left: auto; margin-right: auto; }.msg.cmd .box{
     display: inline-block; font-size: 0.82rem; color: var(--bone-dim);
     font-style: italic; border: 1px solid rgba(184,184,200,0.22); padding: 0.4rem 1.1rem;
     border-radius: 2px; background: color-mix(in srgb, var(--ink) 5%, transparent);
@@ -533,8 +538,8 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
   }.usage-overlay.open{ display: flex; }.usage-modal{
     position: relative; width: 92vw; max-width: 520px; max-height: 82vh; overflow-y: auto;
     background: linear-gradient(165deg, var(--stone-2), var(--stone));
-    border: 1px solid var(--gold); padding: 1.1rem 1.2rem 1.2rem;
-    box-shadow: 0 0 30px rgba(var(--gold-rgb),0.12);
+    border: 1px solid rgba(var(--gold-rgb),.65); padding: 1.1rem 1.2rem 1.2rem;
+    box-shadow: 0 0 30px rgba(var(--gold-rgb),0.12), inset 0 0 0 1px rgba(var(--gold-rgb),.18);
   }.usage-head{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; }.usage-title{ font-family: var(--font-display); color: var(--gold-bright); font-size: 1.05rem; letter-spacing: 0.05em; }.usage-close{ background: none; border: none; color: var(--blood-bright); font-size: 1.1rem; cursor: pointer; }.usage-close:hover{ color: #ff8888; }.usage-loading{ color: var(--bone-dim); font-size: 0.8rem; padding: 1rem 0; text-align: center; }.usage-sec{ margin-bottom: 1rem; }.usage-sec-title{ font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold-bright); margin-bottom: 0.4rem; }.usage-row{
     display: flex; justify-content: space-between; gap: 0.6rem; align-items: baseline;
     font-size: 0.78rem; color: var(--bone); padding: 0.32rem 0.1rem;
@@ -1092,7 +1097,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
     font-family: var(--cli-mono, ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace) !important;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=50">
+<link rel="stylesheet" href="snes.css?v=51">
 <style>
 /* ═══════════ CODEX 2-RAD-TABBAR — override snes.css (måste ligga EFTER linken) ═══════════ */
 .cx-tabs{ display: flex !important; flex-direction: column !important; gap: 0.34rem !important; padding: 0.55rem 0.6rem 0.6rem !important; overflow-x: hidden !important; }
@@ -1527,7 +1532,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
     border: 1px solid rgba(var(--gold-rgb),.45); border-left: 3px solid var(--gold);
     border-radius: 3px;
     background: linear-gradient(160deg, rgba(var(--gold-rgb),.10), rgba(var(--gold-rgb),.03));
-    font-family: var(--font-mono); font-size: var(--fs-tiny, .78rem); color: var(--bone);
+    font-family: var(--font-body, 'Spectral', Georgia, serif) !important; font-size: max(0.95rem, var(--fs-tiny, .78rem)); color: var(--bone);
     animation: msg-in .4s ease;
   }
   .atk-card .atk-head{ display: flex; align-items: baseline; gap: .5rem; margin-bottom: .25rem; flex-wrap: wrap; min-width: 0; }
@@ -1543,7 +1548,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
   .atk-card .atk-expr{ color: var(--bone-dim); }
   .atk-card .atk-arrow{ color: var(--edge-hi); }
   .atk-card .atk-total{
-    font-family: var(--font-display); font-size: var(--fs-h, 1rem); color: var(--gold-bright);
+    font-family: var(--font-body, 'Spectral', Georgia, serif) !important; font-weight: 700; font-size: var(--fs-h, 1rem); color: var(--gold-bright);
     text-shadow: 0 0 10px rgba(var(--gold-bright-rgb),.45); font-variant-numeric: tabular-nums;
   }
   .atk-card .atk-vs{ color: var(--bone-dim); }
@@ -1645,6 +1650,31 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
     .atk-card .atk-total{ font-size: var(--fs-sm, .9rem); }
     .atk-card .atk-verdict, .atk-card .atk-crit{ font-size: var(--fs-tiny, .78rem); }
     .atk-card .atk-dmg, .atk-card .atk-php{ font-size: var(--fs-tiny, .78rem); }
+  }
+
+  /* ═══════════ DEN FÖRBJUDNA GRIMSBOKEN — gilt tick ornaments, HP ink-drop,
+     candleflicker (prefers-reduced-motion-guarded) ═══════════ */
+  .settings-menu::after, .mobile-menu::after, .mi-modal::after, .usage-modal::after, .cp-box::after{
+    content: ''; position: absolute; left: 7px; right: 7px; top: 3px; height: 3px;
+    pointer-events: none; opacity: .7;
+    background: repeating-linear-gradient(90deg, rgba(var(--gold-rgb),.6) 0 1px, transparent 1px 10px);
+  }
+  /* HP ink-drop tally: oxblood drop at the fill's leading edge */
+  .pc-hp i::after{
+    content: ''; position: absolute; right: -3px; top: -2px; width: 8px; height: 8px;
+    background: radial-gradient(circle at 35% 30%, var(--blood-bright), var(--blood));
+    border-radius: 55% 55% 62% 62% / 72% 72% 44% 44%; transform: rotate(180deg); opacity: .9;
+    pointer-events: none;
+  }
+  @keyframes candleflicker{
+    0%, 100%{ opacity: 1; }
+    42%{ opacity: .84; }
+    58%{ opacity: .95; }
+    72%{ opacity: .88; }
+  }
+  @media (prefers-reduced-motion: no-preference){
+    body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ animation: candleflicker 3.4s ease-in-out infinite; }
+    .rite-rail .rr-sigil{ animation: candleflicker 4.2s ease-in-out infinite; }
   }
 </style>
 <div class="mobile-hp-line" id="mobile-hp-line"><i style="width:0%"></i></div>
@@ -8851,11 +8881,11 @@ function cdMentionNpc(name) {
 
 // ═══════════════ 📖 CODEX MODAL (D1.3) — lazy iframes ═══════════════
 const CODEX_PAGES = {
-  character: { label: '🧙 Character', src: 'character.html?v=20260922b' },
+  character: { label: '🧙 Character', src: 'character.html?v=20260922e' },
   npcs:      { label: '🧝 NPCs',      src: 'npcs.html?v=20260922b' },
   map:       { label: '🗺 Map',       src: 'platser.html?v=20260922b' },
   journal:   { label: '📜 Journal',   src: 'loggbok.html?v=20260922b' },
-  facts:     { label: '📌 Facts',     src: 'facts.html?v=20260922b' },
+  facts:     { label: '📌 Facts',     src: 'facts.html?v=20260922e' },
 };
 const _codexIframes = {};
 let _codexLastTab = 'character';
@@ -9122,11 +9152,11 @@ document.addEventListener('keydown', e => {
     padding: 1rem; background: rgba(var(--ink-rgb),.85); backdrop-filter: blur(4px);
     opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility .25s; }
   .cp-overlay.show{ opacity: 1; visibility: visible; }
-  .cp-box{ width: min(680px, 100%); max-height: 90vh; overflow-y: auto;
-    background: linear-gradient(165deg, var(--stone-2), var(--stone) 55%, #120c1c);
-    border: 1px solid rgba(var(--gold-rgb),.28); border-radius: 16px;
+  .cp-box{ width: min(680px, 100%); max-height: 90vh; overflow-y: auto; position: relative;
+    background: linear-gradient(165deg, var(--stone-2), var(--stone) 55%, #140b06);
+    border: 1px solid rgba(var(--gold-rgb),.6); border-radius: 4px;
     padding: 1.8rem 1.8rem 1.9rem;
-    box-shadow: 0 30px 80px -20px rgba(0,0,0,.9), 0 0 40px rgba(var(--gold-rgb),.14);
+    box-shadow: 0 30px 80px -20px rgba(0,0,0,.9), 0 0 40px rgba(var(--gold-rgb),.14), inset 0 0 0 1px rgba(var(--gold-rgb),.18);
     animation: mi-rise .35s cubic-bezier(.22,1,.36,1); }
   .cp-close{ position: absolute; top: .6rem; right: .8rem; background: none; border: 0;
     color: var(--bone-dim); font-size: 1.2rem; cursor: pointer; padding: .3rem; border-radius: 6px; }

@@ -6,12 +6,12 @@
 <title>The Lore Weaver's Cauldron</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=EB+Garamond:ital,wght@0,400;1,400;1,500&display=swap" rel="stylesheet">
 <style>:root{
-    --ink:#1a1426;--stone:#271d33;--stone-2:#322541;--stone-3:#3d2e4f;
-    --edge:#463a60;--bone:#d9c9a6;--bone-bright:#f2e6c8;--bone-dim:#9d8a6a;
-    --gold:#d4a92c;--gold-bright:#f0d675;--blood:#a32433;--blood-bright:#e0485a;
-    --ember:#d4691e;--arcane:#9a6fe0;--poison:#7aa35e;--teal:#5e9aa3;
+    --ink:#171310;--stone:#1c1713;--stone-2:#241c15;--stone-3:#2c231a;
+    --edge:#4a3b26;--bone:#d9c9a6;--bone-bright:#f2e6c8;--bone-dim:#9d8a6a;
+    --gold:#c9a227;--gold-bright:#f0d675;--blood:#5a1f24;--blood-bright:#d4707a;
+    --ember:#a8621f;--arcane:#7d95c4;--poison:#7aa35e;--teal:#5e9aa3;
   }*{margin:0;padding:0;box-sizing:border-box}html{font-size:18px}body{
     font-family:var(--font-body,'Spectral',Georgia,serif);color:var(--bone);min-height:100vh;
     background:
@@ -20,7 +20,7 @@
       var(--ink);
     background-attachment:fixed;overflow-x:hidden;
   }.grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.05;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}.hero-bg{position:fixed;inset:0;z-index:0;pointer-events:none}.hero-bg .hb{position:absolute;inset:0;background-size:cover;background-position:center 20%;opacity:0;transition:opacity 1.4s ease}.hero-bg .hb.on{opacity:1;animation:hero-breathe 42s ease-in-out infinite alternate}@keyframes hero-breathe{from{transform:scale(1)}to{transform:scale(1.06)}}.hero-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,3,10,.72),rgba(6,3,10,.5) 38%,rgba(6,3,10,.85))}#embers{position:fixed;inset:0;z-index:1;pointer-events:none}.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(4,2,8,.85)}.app{position:relative;z-index:2;max-width:960px;margin:0 auto;padding:0 1.25rem 5rem}.head-logo{width:150px;display:block;margin:.9rem auto 0;filter:drop-shadow(0 0 14px rgba(var(--gold-rgb),.25)) saturate(1.05);animation:head-float 7s ease-in-out infinite}@keyframes head-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}/* ═══════════ Topprad (ljud + lämna) ═══════════ */.topbar{display:flex;justify-content:flex-end;align-items:center;gap:.6rem;padding:1.1rem .1rem 0}.top-btn{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}.hero-bg{position:fixed;inset:0;z-index:0;pointer-events:none}.hero-bg .hb{position:absolute;inset:0;background-size:cover;background-position:center 20%;opacity:0;transition:opacity 1.4s ease}.hero-bg .hb.on{opacity:1;animation:hero-breathe 42s ease-in-out infinite alternate}@keyframes hero-breathe{from{transform:scale(1)}to{transform:scale(1.06)}}.hero-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(16,11,8,.72),rgba(16,11,8,.5) 38%,rgba(16,11,8,.85))}#embers{position:fixed;inset:0;z-index:1;pointer-events:none}.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(14,10,7,.85)}.app{position:relative;z-index:2;max-width:960px;margin:0 auto;padding:0 1.25rem 5rem}.head-logo{width:150px;display:block;margin:.9rem auto 0;filter:drop-shadow(0 0 14px rgba(var(--gold-rgb),.25)) saturate(1.05);animation:head-float 7s ease-in-out infinite}@keyframes head-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}/* ═══════════ Topprad (ljud + lämna) ═══════════ */.topbar{display:flex;justify-content:flex-end;align-items:center;gap:.6rem;padding:1.1rem .1rem 0}.top-btn{
     font-family:var(--font-display,'Cinzel',serif);font-size:var(--fs-tiny);letter-spacing:.14em;text-transform:uppercase;
     background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);
     padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:8px;white-space:nowrap;text-decoration:none;
@@ -89,7 +89,7 @@
     transition:border-color .25s,box-shadow .25s;margin-bottom:.8rem;
   }.name-input:focus{border-color:var(--gold);box-shadow:0 0 16px -4px rgba(var(--gold-bright-rgb),.4)}.name-input::placeholder{color:color-mix(in srgb, var(--bone-dim) 50%, transparent);font-style:italic}/* ── Fara-knapp (blod) ── */.danger-btn{
     font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:var(--fs-sm);letter-spacing:.16em;text-transform:uppercase;
-    color:#f3dfe2;cursor:pointer;padding:.85rem 1.6rem;border-radius:2px;
+    color:#e9d8cd;cursor:pointer;padding:.85rem 1.6rem;border-radius:2px;
     background:linear-gradient(180deg,rgba(var(--blood-bright-rgb),.16),rgba(var(--blood-rgb),.12));
     border:1px solid rgba(var(--blood-bright-rgb),.55);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.06);transition:all .2s;
@@ -147,7 +147,7 @@
   .dm-model-row{display:flex;align-items:center;gap:1rem;flex-wrap:wrap}
   .dm-model-select{flex:1;min-width:240px;font-family:var(--font-body,'Spectral',serif);font-size:16px;color:var(--bone-bright);background:var(--ink);border:1px solid var(--edge);padding:.7rem .9rem;cursor:pointer;outline:none;transition:border-color .25s,box-shadow .25s}
   .dm-model-select:focus{border-color:var(--gold);box-shadow:0 0 16px -4px rgba(var(--gold-bright-rgb),.4)}
-  .dm-model-select option:disabled{color:#5a5a6e;font-style:italic}
+  .dm-model-select option:disabled{color:#6d5f4a;font-style:italic}
   .dm-model-note{font-size:var(--fs-tiny);font-style:italic;color:var(--bone-dim);margin-top:.6rem}
   .dm-model-note b{color:var(--gold);font-style:normal}
   /* Ask-the-DM hover-hints — "hovers" med uppmaning att fråga DM */
@@ -194,7 +194,7 @@
   .blank-row{margin-top:1.2rem;display:flex;justify-content:center}
   .blank-btn{font-family:var(--font-display,'Cinzel',serif);font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim);background:none;border:1px solid var(--edge);padding:.55rem 1.1rem;cursor:pointer;transition:all .25s;border-radius:6px}
   .blank-btn:hover{color:var(--arcane);border-color:var(--arcane);box-shadow:0 0 14px -5px color-mix(in srgb, var(--arcane) 50%, transparent)}
-  .blank-btn.active{color:var(--ink);background:linear-gradient(180deg,var(--arcane-bright),var(--arcane) 55%,var(--arcane-deep));border-color:var(--arcane-deep);box-shadow:0 6px 18px -6px rgba(139,95,212,.55),inset 0 1px 0 rgba(255,255,255,.2)}
+  .blank-btn.active{color:var(--ink);background:linear-gradient(180deg,var(--arcane-bright),var(--arcane) 55%,var(--arcane-deep));border-color:var(--arcane-deep);box-shadow:0 6px 18px -6px rgba(125,149,196,.55),inset 0 1px 0 rgba(255,255,255,.2)}
   /* Fateweave — redigerbar prompt-mall (MD-preview ⇄ edit) */
   .fw-wrap{max-width:680px;margin:1.1rem auto 0;text-align:left;animation:rise .35s ease}
   .fw-head{display:flex;align-items:center;justify-content:space-between;gap:.8rem;flex-wrap:wrap;margin-bottom:.55rem}
@@ -268,7 +268,7 @@
   .pv-go:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-2px);box-shadow:0 0 28px rgba(var(--gold-bright-rgb),.38),0 12px 40px rgba(var(--gold-rgb),.5),inset 0 1px 0 rgba(255,255,255,.22)}
   .pv-go:disabled{opacity:.45;cursor:not-allowed}
   .pv-reroll{font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-dim);background:none;border:1px solid var(--edge);padding:.8rem 1.2rem;cursor:pointer;border-radius:6px;transition:all .2s}
-  .pv-reroll:hover:not(:disabled){color:var(--arcane);border-color:var(--arcane);box-shadow:0 0 14px -5px rgba(139,95,212,.5)}
+  .pv-reroll:hover:not(:disabled){color:var(--arcane);border-color:var(--arcane);box-shadow:0 0 14px -5px rgba(125,149,196,.5)}
   .pv-reroll:disabled{opacity:.45;cursor:wait}
   /* The Forge — välj färdig hjälte */
   .vault-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem}
@@ -322,7 +322,7 @@
     .gm-row{min-height:46px;font-size:var(--fs-tiny)}
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=50">
+<link rel="stylesheet" href="snes.css?v=51">
 <style>
 /* ═══════════ Login-känslan — mjuka knappar (override snes.css DOS-flatten) ═══════════
    snes.css laddas efter inline-blocket och tvingar platta knappar med !important.
@@ -427,7 +427,7 @@ html{font-size:var(--fs-base)}
   .step-actions .go-btn{min-height:44px;display:inline-flex;align-items:center}
 }
 /* ═══════════ Paint portrait-modal (onboarding, 2026-08-05) ═══════════ */
-.mi-overlay{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;background:rgba(4,2,8,.72);backdrop-filter:blur(3px);padding:1rem}
+.mi-overlay{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;background:rgba(14,10,7,.72);backdrop-filter:blur(3px);padding:1rem}
 .mi-overlay.show{display:flex}
 .mi-modal{width:min(420px,100%);max-height:86vh;overflow-y:auto;background:linear-gradient(165deg,var(--stone-2),var(--stone));border:1px solid var(--gold);box-shadow:0 0 40px rgba(var(--gold-rgb),.22),0 24px 60px rgba(0,0,0,.7);padding:1.3rem 1.4rem 1.5rem;border-radius:8px}
 .mi-head{display:flex;align-items:center;justify-content:space-between;gap:.8rem;font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:1rem;letter-spacing:.06em;text-transform:uppercase;color:var(--gold-bright);margin-bottom:1rem}
@@ -451,7 +451,7 @@ html{font-size:var(--fs-base)}
 .pv-portrait:hover{ transform:rotate(-3deg) scale(1.07)!important; box-shadow:0 0 30px -2px var(--pv-glow,rgba(var(--gold-rgb),.8))!important; border-color:var(--gold-bright)!important; }
 .pv-portrait::after{
   content:'🔍';position:absolute;right:0;bottom:0;width:19px;height:19px;font-size:.6rem;
-  display:flex;align-items:center;justify-content:center;background:rgba(4,2,8,.8);
+  display:flex;align-items:center;justify-content:center;background:rgba(14,10,7,.8);
   border:1px solid var(--gold);border-radius:50%;opacity:0;transition:opacity .2s;pointer-events:none;z-index:2;
 }
 .pv-portrait:hover::after,.pv-portrait:focus-visible::after{opacity:1}
@@ -696,7 +696,7 @@ html{font-size:var(--fs-base)}
   <!-- ═══════════════ 🪞 Profil-modal (spelarens egna stats) ═══════════════ -->
   <style>
     .pf-overlay{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;
-      background:rgba(4,2,8,.85);backdrop-filter:blur(4px);padding:1rem}
+      background:rgba(14,10,7,.85);backdrop-filter:blur(4px);padding:1rem}
     .pf-overlay.show{display:flex}
     .pf-box{position:relative;width:min(620px,100%);overflow:hidden;
       background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,var(--ink));
@@ -708,7 +708,7 @@ html{font-size:var(--fs-base)}
     .pf-bg-img{position:absolute;inset:-12%;background-size:cover;background-position:center 22%;
       background-repeat:no-repeat;opacity:.15}
     .pf-bg::after{content:'';position:absolute;inset:0;
-      background:linear-gradient(170deg,rgba(13,9,20,.30),rgba(13,9,20,.72))}
+      background:linear-gradient(170deg,rgba(18,13,10,.30),rgba(18,13,10,.72))}
     .pf-close{position:absolute;top:.6rem;right:.8rem;background:none;border:0;
       color:var(--bone-dim);font-size:var(--fs-narr);cursor:pointer;padding:.3rem;z-index:2}
     .pf-close:hover{color:var(--bone-bright)}
@@ -727,7 +727,7 @@ html{font-size:var(--fs-base)}
     .pf-paint-mini:hover{background:var(--stone-3);color:var(--gold)}
     /* 🖼 Ljuslåda för profilporträttet — full storlek + galleri-bladring (2026-08-08) */
     .pf-lb-overlay{position:fixed;inset:0;z-index:11000;display:none;align-items:center;justify-content:center;
-      background:rgba(4,2,8,.92);backdrop-filter:blur(5px);padding:1rem}
+      background:rgba(14,10,7,.92);backdrop-filter:blur(5px);padding:1rem}
     .pf-lb-overlay.show{display:flex}
     .pf-lb-box{position:relative;width:min(720px,100%);text-align:center}
     .pf-lb-close{position:absolute;top:.5rem;right:.5rem;background:none;border:0;
@@ -761,7 +761,7 @@ html{font-size:var(--fs-base)}
     .pf-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-bright))}
     @media(max-width:520px){.pf-grid{grid-template-columns:1fr}
       /* Starkare scrim på mobil så bakgrundsbilden inte stör läsbarheten */
-      .pf-bg::after{background:linear-gradient(170deg,rgba(13,9,20,.55),rgba(13,9,20,.88))}
+      .pf-bg::after{background:linear-gradient(170deg,rgba(18,13,10,.55),rgba(18,13,10,.88))}
       .pf-thumb{width:56px;height:56px}.pf-thumb-img{width:56px;height:56px;font-size:1.6rem}
     }
   </style>
@@ -1332,7 +1332,7 @@ async function activateAndContinue(campaignId) {
   SFX.click();
   try {
     await API.activateCampaign(campaignId);
-    location.href = 'chat.html?v=20260922d';
+    location.href = 'chat.html?v=20260922e';
   } catch (e) {
     toast('⚠ ' + I18N.t('Kunde inte aktivera kampanj: ') + (e.message || I18N.t('okänt fel')));
   }
@@ -2468,7 +2468,7 @@ async function startAdventure() {
     // 3) Lyft in hjälten (genererad → sparad i Forge; eller färdig Forge-hjälte)
     await API.vaultUse(advAdventurerId);
     sessionStorage.setItem('dnd_vault_character', advAdventurerId);
-    location.href = 'chat.html?v=20260922d';
+    location.href = 'chat.html?v=20260922e';
   } catch (e) {
     try { SFX.error(); } catch (_) {}
     toast('⚠ ' + (e.message || 'Could not start'));
@@ -3121,5 +3121,102 @@ tick();
 })();
 </script>
 <noscript><style>.step,.continue-wrap,.prepare-link,.htp{opacity:1;transform:none}</style></noscript>
+
+<style id="grimoire">
+/* ═══ Den Förbjudna Grimsboken — grimoire-layer (agent11b, 2026-09-22) ═══
+   Burnt parchment · gold leaf · oxblood/lapis · vine marginalia.
+   Ligger SIST i dokumentordningen (därför i slutet av <body>): vinner mot
+   snes.css (syskonägt, orört) och mot äldre body-<style>-block. Tokens pinnas
+   mot seed-paletten så sidan står rätt även innan snes.css uppdateras. */
+:root{
+  --ink:#171310; --stone:#1c1713; --stone-2:#241c15; --stone-3:#2c231a;
+  --edge:#4a3b26; --edge-hi:#6b5636;
+  --bone:#d9c9a6; --bone-bright:#f2e6c8; --bone-dim:#9d8a6a;
+  --gold:#c9a227; --gold-bright:#f0d675;
+  --blood:#5a1f24; --blood-bright:#d4707a;
+  --arcane:#7d95c4; --arcane-bright:#a8bcd8; --arcane-deep:#2b3a55;
+  --poison:#7aa35e; --teal:#5e9aa3; --ember:#a8621f;
+  --ink-rgb:23,19,16; --stone-rgb:28,23,19; --edge-rgb:74,59,38;
+  --gold-rgb:201,162,39; --gold-bright-rgb:240,214,117;
+  --blood-rgb:90,31,36; --blood-bright-rgb:212,112,122;
+  --arcane-rgb:125,149,196;
+  --font-display:'Cinzel',Georgia,serif;
+  --font-body:'Spectral',Georgia,serif;
+  --font-italic:'EB Garamond','Spectral',Georgia,serif;
+}
+/* ── Vinrankor & klängen — hörnramar ── */
+i.corner{position:absolute;width:30px;height:30px;pointer-events:none;z-index:3}
+i.corner::before{content:'';position:absolute;inset:0;border:2px solid rgba(var(--gold-rgb),.55);transition:border-color .3s}
+i.corner::after{content:'';position:absolute;width:12px;height:12px;border:2px solid rgba(var(--gold-rgb),.45);border-radius:50%;border-top-color:transparent;border-right-color:transparent}
+i.corner.tl{top:6px;left:6px} i.corner.tl::before{border-right:0;border-bottom:0} i.corner.tl::after{top:-3px;left:10px;transform:rotate(18deg)}
+i.corner.tr{top:6px;right:6px} i.corner.tr::before{border-left:0;border-bottom:0} i.corner.tr::after{top:-3px;right:10px;transform:rotate(72deg)}
+i.corner.bl{bottom:6px;left:6px} i.corner.bl::before{border-right:0;border-top:0} i.corner.bl::after{bottom:-3px;left:10px;transform:rotate(-72deg)}
+i.corner.br{bottom:6px;right:6px} i.corner.br::before{border-left:0;border-top:0} i.corner.br::after{bottom:-3px;right:10px;transform:rotate(-18deg)}
+/* ── Rubricering — kapitelrubriker i Cinzel smalvers, oxbloodsröd ── */
+.over,.section-label,.panel-title,.step-title,.drop-head,.f-kick{
+  font-family:var(--font-display,'Cinzel',serif)!important;
+  font-variant-caps:small-caps;
+  color:var(--blood-bright)!important;
+  text-shadow:0 1px 0 rgba(0,0,0,.55);
+}
+/* ── Illuminerade initialer på hjälte-rubriker ── */
+.head h1::first-letter{
+  float:left;
+  font-family:var(--font-display,'Cinzel',serif)!important;
+  font-weight:900;font-size:3.05em;line-height:.82;
+  padding:.08em .17em .05em;margin:.03em .16em .04em 0;
+  color:var(--gold-bright)!important;
+  background:linear-gradient(160deg,var(--blood),color-mix(in srgb,var(--blood) 50%,var(--ink)));
+  border:1px solid var(--gold);
+  box-shadow:0 0 20px -6px rgba(var(--gold-bright-rgb),.55),inset 0 0 12px rgba(0,0,0,.5);
+  text-shadow:0 1px 0 rgba(0,0,0,.65);
+  animation:gr-candle 5.2s ease-in-out infinite;
+}
+/* ── Förgyllda hårstreck + tick-ornament ── */
+.rune-divider::before,.rune-divider::after{
+  height:2px;opacity:.85;
+  background:repeating-linear-gradient(90deg,rgba(var(--gold-rgb),.6) 0 1px,transparent 1px 9px);
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent);
+}
+.panel-title::after{
+  height:2px;
+  background:repeating-linear-gradient(90deg,rgba(var(--gold-rgb),.55) 0 1px,transparent 1px 8px);
+  -webkit-mask-image:linear-gradient(90deg,#000 60%,transparent);
+  mask-image:linear-gradient(90deg,#000 60%,transparent);
+}
+/* ── Pergamentblad — varma kanter + skuggor ── */
+.arch,.vcard,.campaign-card,.path,.htp-card,.lang-card,.step,.panel-box,.continue-panel,
+.scroll-box,.ep-card,.rn-inner,.d-card,.gate-card,.t-card,.quote-card,.news-banner,
+.adv-details,.insp-modal,.mi-modal,.pf-box{
+  border-color:var(--edge);
+  box-shadow:0 16px 40px -18px rgba(8,5,3,.95),0 0 0 1px rgba(var(--gold-rgb),.07),inset 0 1px 0 rgba(var(--gold-bright-rgb),.05);
+}
+/* ── EB Garamond-kursiv som smakspråk i brödtext ── */
+em,.destiny-sub,.sub,.hint,.pv-story,.arch .lore,.path p,.htp-card p,.lang-card p,
+.vcard-story,.adv-sum-hint,.cat-sub,.dm-model-note,.vault-empty,.vault-note,.mi-intro{
+  font-family:var(--font-italic,'EB Garamond',serif);
+}
+/* ── Läsbarhet: brödtext ≥17px, knappar ≥44px ── */
+body{font-size:17px}
+.destiny-sub,.sub,.hint,.pv-story,.pv-gear,.arch .lore,.path p,.htp-card p,.lang-card p,
+.rn-list li,.vcard-story,.world-prompt,#prompt,.legend-preview,.lp-single #fw-prompt,
+.dm-model-note,.adv-sum-hint,.vault-empty,.cat-empty,.mi-intro,.pp-status,.pv-vitals,
+.file-item,.dark-select,.dark-select option{
+  font-size:max(17px,1.02rem);
+}
+button{min-height:44px}
+button.quota-chip,button.pf-paint-mini{min-height:26px;min-width:0}
+.insp-close,.mi-close,.pf-close,.pf-lb-close,.av-lb-close,.nb-close{min-width:44px}
+.insp-close,.mi-close,.pf-close,.pf-lb-close,.av-lb-close,.nb-close{min-height:44px}
+select,.adv-details summary,.btn-gold,a.back{min-height:44px}
+.btn-gold,a.back{display:inline-flex;align-items:center;justify-content:center}
+/* ── Ljuslåga — candleflicker (all rörelse reduced-motion-gated) ── */
+@keyframes gr-candle{0%,100%{opacity:1}17%{opacity:.8}33%{opacity:.93}55%{opacity:.74}72%{opacity:.96}87%{opacity:.84}}
+.rune-divider span,.rr-sigil{animation:gr-candle 4.6s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){
+  .rune-divider span,.rr-sigil,.head h1::first-letter{animation:none!important}
+}
+</style>
 </body>
 </html>

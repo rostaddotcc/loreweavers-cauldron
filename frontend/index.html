@@ -2,7 +2,34 @@
 <html><head><meta charset="UTF-8"><meta http-equiv="refresh" content="0;url=login.html"><title>The Best Free AI D&amp;D Roleplaying Game · AI Dungeon Master That Remembers</title>
 <meta name="description" content="The best free AI D&amp;D roleplaying game — an AI Dungeon Master that remembers your world. 50 fresh turns every day. Real D&D 5e rules, no subscription, no credit card.">
 <meta name="keywords" content="best free AI D&D game, free AI D&D roleplaying game, AI dungeon master that remembers, most daily free turns, AI dungeon master, free AI RPG, play D&D online, D&D 5e online free, no subscription, no credit card D&D, text-based RPG">
-<link rel="stylesheet" href="snes.css?v=50"></head>
+<link rel="stylesheet" href="snes.css?v=51">
+<style id="grimoire">
+/* Den Förbjudna Grimsboken — portblad (agent11b) */
+:root{
+  --ink:#171310; --stone:#1c1713; --stone-2:#241c15; --stone-3:#2c231a;
+  --edge:#4a3b26; --edge-hi:#6b5636; --bone:#d9c9a6; --bone-bright:#f2e6c8; --bone-dim:#9d8a6a;
+  --gold:#c9a227; --gold-bright:#f0d675; --blood:#5a1f24; --blood-bright:#d4707a;
+  --arcane:#7d95c4; --ink-rgb:23,19,16; --gold-rgb:201,162,39; --gold-bright-rgb:240,214,117;
+}
+body{background:
+  radial-gradient(700px 380px at 50% 110%, rgba(168,98,31,.10), transparent 62%),
+  var(--ink)!important;font-size:17px}
+p{position:relative;padding:2.4rem 2.6rem;border:1px solid var(--edge);
+  background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,var(--ink));
+  box-shadow:0 18px 44px -18px rgba(8,5,3,.95),0 0 0 1px rgba(var(--gold-rgb),.10),inset 0 0 0 1px rgba(var(--gold-rgb),.06);
+  -webkit-mask-image:linear-gradient(180deg,#000,#000); }
+p::before,p::after{content:'';position:absolute;width:30px;height:30px;border:2px solid rgba(var(--gold-rgb),.55);pointer-events:none}
+p::before{top:6px;left:6px;border-right:0;border-bottom:0}
+p::after{bottom:6px;right:6px;border-left:0;border-top:0}
+.btn-gold{min-height:44px;display:inline-flex;align-items:center;justify-content:center;
+  font-family:'Cinzel',Georgia,serif;letter-spacing:.12em;text-decoration:none;
+  color:var(--ink);background:linear-gradient(180deg,var(--gold-bright),var(--gold));
+  border:1px solid var(--gold);padding:.85rem 1.6rem;
+  box-shadow:0 6px 20px -6px rgba(var(--gold-bright-rgb),.5),inset 0 1px 0 rgba(255,255,255,.35);
+  animation:gr-candle 4.6s ease-in-out infinite}
+@keyframes gr-candle{0%,100%{opacity:1}17%{opacity:.8}33%{opacity:.93}55%{opacity:.74}72%{opacity:.96}87%{opacity:.84}}
+@media (prefers-reduced-motion: reduce){.btn-gold{animation:none!important}}
+</style></head>
 <body style="background:var(--ink);display:flex;align-items:center;justify-content:center;height:100vh;color:var(--bone)">
 <p><a href="login.html" class="btn-gold">What will the Cauldron Foretell?</a></p>
 <script src="i18n.js?v=20260906a"></script>

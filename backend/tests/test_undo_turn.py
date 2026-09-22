@@ -362,3 +362,150 @@ def test_admin_can_see_undo_in_ledger(client):
     r = client.get("/api/admin/user/alice/ledger", cookies={"morkrets_token": atok})
     assert r.status_code == 200, r.text
     assert r.json()["breakdown_all"]["undo"]["turns"] == 1
+
+
+# ── Gap-tests 2026-09-22: exakt en tur, race-guard, kontrakt, Qdrant-purge ──
+
+def test_undo_rewinds_exactly_one_turn(client, monkeypatch):
+    """Transkriptet ska gå tillbaka EXAKT en tur — inte tömmas, inte stanna kvar."""
+    _login(client)
+    _make_campaign("alice")
+    replies = iter(["Scene one unfolds.", "Scene two unfolds."])
+
+    async def fake_dm(model_id, messages, **kw):
+        return (next(replies), "", {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2})
+
+    monkeypatch.setattr(main, "_call_llm_with_reasoning", fake_dm)
+
+    assert _chat(client, "first action").status_code == 200
+    assert _chat(client, "second action").status_code == 200
+    before = [m["content"] for m in main.store.load_transcript(main.store.get("alice"))]
+    assert before[-2:] == ["second action", "Scene two unfolds."]
+    assert "first action" in before
+
+    r = client.post("/api/campaign/undo")
+    assert r.status_code == 200, r.text
+    assert r.json()["turn_count"] == 1  # bara turen innan är kvar
+
+    after = [m["content"] for m in main.store.load_transcript(main.store.get("alice"))]
+    assert after == [c for c in before if c not in ("second action", "Scene two unfolds.")]
+    assert after[-2:] == ["first action", "Scene one unfolds."]
+
+
+def test_second_undo_is_idempotent_and_state_unchanged(client):
+    """Dubbel-undo: 409, läget orört, ingen extra turn debiterad."""
+    _login(client)
+    _make_campaign("alice")
+    assert _chat(client).status_code == 200
+    assert client.post("/api/campaign/undo").status_code == 200
+
+    snap_state = main.store.get("alice")
+    r = client.post("/api/campaign/undo")
+    assert r.status_code == 409
+    assert main.store.get("alice") == snap_state
+    assert _user()["turns_used"] == 2  # chat + undo — inte den nekade undo:n
+
+
+def test_undo_response_contract_for_frontend(client):
+    """Frontend-kontraktet: återställd tur + hp/gold-deltan i JSON-svaret."""
+    _login(client)
+    _make_campaign("alice")
+    st = main.store.get("alice")
+    st["character"]["hp"] = {"current": 20, "max": 20}
+    st["currency"] = {"pp": 0, "gp": 10, "sp": 0, "cp": 0}
+    main.store.save(st)
+    assert _chat(client).status_code == 200
+
+    # Efter turen: Guardian-liknande mutationer (hp 20→3, guld 10→25)
+    st2 = main.store.get("alice")
+    st2["character"]["hp"]["current"] = 3
+    st2["currency"]["gp"] = 25
+    main.store.save(st2)
+
+    r = client.post("/api/campaign/undo")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    for key in ("ok", "turn_count", "restored_turn", "removed_messages",
+                "removed_summaries", "undo_prompt", "turns_left", "deltas"):
+        assert key in body, key
+    assert body["restored_turn"] == body["turn_count"] == 0
+    assert body["deltas"]["hp"] == {"before": 3, "after": 20, "delta": 17}
+    assert body["deltas"]["gold"] == {"before": 25, "after": 10, "delta": -15}
+
+
+def test_undo_waits_for_inflight_background_task(llm_mocks, monkeypatch):
+    """Race-guarden (undo-turn design 2026-09): undo ska VÄNTA in pågående
+    bakgrundsjobb före restore — deras sena zombiedata ska inte överleva.
+
+    Körs helt i en egen loop (asyncio.run + direkt endpoistanrop) så att
+    uppgiften och undo:n lever i SAMMA event loop — asyncio.Lock är bundet
+    till sitt första loop-anrop.
+    """
+    tok = _seed_user("alice")
+    _make_campaign("alice")
+    cid = _cid("alice")
+    st = main.store.get("alice")
+    st["character"]["hp"] = {"current": 20, "max": 20}
+    main.store.save(st)
+    # Snapshot "före turen" (görs normalt i chat() under kampanjlåset)
+    main.store.snapshot_turn(main.store.get("alice"), "do a thing")
+
+    def no_log(*a, **k):
+        return None
+
+    monkeypatch.setattr(main, "_log_activity", no_log)
+
+    async def scenario():
+        finished = []
+
+        async def slow_bg():
+            # "Guardian" som läste state tidigt och skriver sent (zombiedata)
+            await asyncio.sleep(0.3)
+            z = main.store.get("alice", cid)
+            z["character"]["hp"]["current"] = 5
+            main.store.save(z)
+            finished.append(1)
+
+        task = main._register_bg_task("alice", cid, slow_bg())
+        body = await main.undo_last_turn(tok)
+        return task, body, finished
+
+    task, body, finished = asyncio.run(scenario())
+    assert body["ok"] is True
+    assert task.done()       # undo väntade in det långsamma jobbet
+    assert finished == [1]   # jobbet hann faktiskt köra klart före restore
+    st3 = main.store.get("alice")
+    assert st3["character"]["hp"]["current"] == 20  # zombiedata rullad tillbaka
+
+
+def test_reindex_after_undo_purges_qdrant_campaign(monkeypatch):
+    """Qdrant-beslut 2026-09: purge_campaign + re-index av lore efter undo."""
+    _seed_user("alice")
+    _make_campaign("alice")
+    cid = _cid("alice")
+    st = main.store.get("alice")
+    st.setdefault("lore", []).append("The moon is cracked")
+    main.store.save(st)
+
+    calls = {"purge": [], "msgs": 0, "lore": 0}
+
+    async def healthy():
+        return True
+
+    async def purge(u, c):
+        calls["purge"].append((u, c))
+
+    async def index_transcript(msgs, u, c):
+        calls["msgs"] += len(msgs)
+
+    async def index_lore(title, text, u, c):
+        calls["lore"] += 1
+
+    monkeypatch.setattr(main.rag, "qdrant_healthy", healthy)
+    monkeypatch.setattr(main.rag, "purge_campaign", purge)
+    monkeypatch.setattr(main.rag, "index_transcript", index_transcript)
+    monkeypatch.setattr(main.rag, "index_lore", index_lore)
+
+    asyncio.run(main._reindex_after_undo("alice", cid))
+    assert calls["purge"] == [("alice", cid)]
+    assert calls["lore"] == 1

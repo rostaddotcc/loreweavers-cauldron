@@ -542,6 +542,10 @@ Extrahera ALLA mekaniska effekter och uppdateringar.
   target = fiendens namn (samma namn som i stridstillståndet) eller "all" (alla levande fiender). trigger = orsaken: first_casualty (första fienden stupad), half_down (halva fiendestyrkan nere), leader_down (ledaren stupad), fear_effect (rädsle/fruktan från magi eller skrämmande dåd).
   Max EN post per (target, trigger). Detta är en BEGÄRAN — servern rullar moralprovet (d20 + moral mot DC 10) och avgör utfallet (fight_on/waver/flee/surrender). Ange ALDRIG utfallet själv.
   Extrahera ENDAST när narrationen faktiskt visar brytpunkten (fienden vacklar/flyr/är rädd) — inte under vanlig kamp utan förluster.
+- status_apply (tillägg): valfritt "save_dc" (5–25) på status-posten gör att målet gör ett sparrull i slutet av sin tur — fiender/allierade rullar KODEN (d20 vs DC), spelaren får ett sparprov via [KAST:]. Omapplicering FÖRLÄNGER tillståndet (aldrig staplat) — ett högre save_dc lyfter DC:n. Ange save_dc bara när tillståndet uttryckligen går att bryta med ett sparakast.
+- flee_declared: När spelaren eller en fiende FLYR/bryter sig loss ur striden (\"jag flyr\", \"goblinen vänder och springer\"). Ange {"target": "player"} eller {"target": "fiendens namn"} (annars null). Startar jaktklockan (3 framgångar / 3 motgångar). Ange bara när flykten faktiskt påbörjas — inte vid hot, tvekan eller ställningstaganden. Spelaren med 0 HP kan inte flyra.
+- chase_progress: Utfallet av jaktrundan när en jakt pågår: [{"outcome": "escape|caught|stalemate"}]. escape = den flyende vann rundan, caught = förföljaren vann, stalemate = oavgjort. KODEN äger klockan och slutet (3 escape = undkommen, 3 caught = infångad) — ange ALDRIG slutet själv. Max 1 per tur.
+- status_save: När spelarens SPARPROV mot ett tillstånd redan har lösts i DM:ens svar ([Resultat: … SPAR …]): [{"target": "player", "name": "poison|burn|…", "success": true/false}]. KODEN tar bort tillståndet vid framgång. Ange ENDAST SPELARENS eget sparakast — fienders sparrullningar gör koden själv.
 
 ### Tärningsresurser (roll_grants)
 - roll_grants: Om DM ger spelaren en NY mekanisk fördel som innebär ett framtida tärningskast \
@@ -667,6 +671,9 @@ Skriv i dåtid, tredje person. T.ex. "Faelyndra smög förbi vakten och tog sig 
   "ally_damage": [],
   "enemy_attacks": [],
   "status_apply": [],
+  "flee_declared": null,
+  "chase_progress": [],
+  "status_save": [],
   "morale_checks": [{"target": "goblin", "trigger": "first_casualty", "note": "kamraten faller — de tvekar"}],
   "combat_events": [],
   "roll_grants": [],
@@ -926,7 +933,8 @@ async def guardian_extract_mechanics(
         "combat_start": None, "combat_round": None,
         "initiative_entries": [], "combat_end": None,
         "player_attacks": [], "ally_attacks": [], "ally_damage": [], "enemy_attacks": [], "combat_events": [],
-        "enemy_actions": [], "status_apply": [], "roll_grants": [], "corrections": [],
+        "enemy_actions": [], "status_apply": [], "flee_declared": None, "chase_progress": [], "status_save": [],
+        "roll_grants": [], "corrections": [],
         "spell_slots_spend": [], "inspiration_gain": False, "inspiration_spend": False,
         "exhaustion_change": 0, "cover_set": None, "training_update": [],
     }
@@ -1615,7 +1623,7 @@ def _auto_advance_round(combat: dict, state: dict, effects: list[dict]) -> None:
     # Statusar tickas vid varje auto-avancerad runda — samma motor som den
     # (nästan aldrig avlossade) LLM-signalen combat_round.
     from combat import _tick_all_statuses
-    _tick_all_statuses(state, combat)
+    effects.extend(_tick_all_statuses(state, combat) or [])
     _reset_round_bookkeeping(combat)
     combat["phase"] = "active"  # striden är igång — fasaden är ärlig
     effects.append({"type": "combat_round", "value": new_round})
@@ -2070,6 +2078,74 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
         if combat.get("morale_auto"):
             _auto_morale_triggers(state, combat, effects)
         _apply_morale_checks(state, mech.get("morale_checks"), effects)
+
+    # ── FLYKT / JAKT (P1b §2) ──
+    # flee_declared startar jaktklockan (double-start-guard i combat.start_chase);
+    # chase_progress tickar den. Utfallet är redan avgjort ([KAST:]/[Resultat:]-vägen
+    # eller DM:n) — servern äger klockan, fullbordandet och slutet (undkommen →
+    # _end_combat "player fled"/"enemies fled", §2.3).
+    import combat as _cm
+    _fd = mech.get("flee_declared")
+    if isinstance(_fd, dict) and combat and combat.get("active"):
+        _ftgt = str(_fd.get("target") or "").strip()
+        if _ftgt:
+            _ch = combat.get("chase")
+            if isinstance(_ch, dict) and _ch.get("active"):
+                logger.info("🏃 flee_declared ignored — chase already active (%s)", _ch.get("quarry"))
+            elif _ftgt.lower() in ("player", "spelaren") and _safe_int(
+                    ((ch.get("hp") or {}).get("current")), 1) <= 0:
+                # §2.3: 0-HP-spelaren kan inte flyga — dödsräddningarna äger turen
+                logger.info("🏃 flee_declared ignored — 0 HP player (death saves own the turn)")
+            else:
+                _quarry, _qmode = None, "player_flee"
+                if _ftgt.lower() in ("player", "spelaren"):
+                    _quarry, _qmode = "player", "player_flee"
+                else:
+                    from enemy_rolls import match_enemy_candidates
+                    _hits = match_enemy_candidates(combat, _ftgt)
+                    if not _hits:
+                        logger.warning("🏃 flee_declared ignored — unknown target %r", _ftgt)
+                        _quarry = None
+                    else:
+                        _qi, _qe = _hits[0]  # jakten har EN bytet — Name#id-nyckel (§2.2)
+                        _quarry, _qmode = _enemy_key(_qe, _qi), "enemy_flee"
+                if _quarry:
+                    _started = _cm.start_chase(combat, mode=_qmode, quarry=_quarry)
+                    if _started:
+                        effects.append({"type": "chase_start", "value": _quarry, "mode": _qmode})
+                        logger.info("🏃 Chase started: %s (%s)", _quarry, _qmode)
+
+    _cpl = mech.get("chase_progress")
+    for _cp in (list(_cpl)[:1] if isinstance(_cpl, (list, tuple)) else []):
+        _out = str((_cp or {}).get("outcome") or "").strip().lower() if isinstance(_cp, dict) else ""
+        if _out in _cm.CHASE_OUTCOMES:
+            _cm.tick_chase(state, combat, _out, effects)
+
+    # ── status_save (P1b §3.1.4) ──
+    # Spelarens sparprov som DM:n redan löst ([Resultat: … SPAR …]). Dedup mot
+    # tagg-vägen (§4.3 — nyckel ("status_save", "namn:target")); droppas tyst
+    # om statusen inte längre finns. Fienders sparrullningar gör motorn själv.
+    for _sv in (mech.get("status_save") or []):
+        if not isinstance(_sv, dict):
+            continue
+        _svt = str(_sv.get("target") or "").strip()
+        _svn = str(_sv.get("name") or "").strip().lower()
+        _svok = _sv.get("success")
+        if not _svt or not _svn or not isinstance(_svok, bool):
+            continue
+        if ("status_save", f"{_svn}:{_svt.lower()}") in _skip_keys:
+            continue  # [Resultat:]-vägen löste redan provet
+        _is_pl = _svt.lower() in ("player", "spelaren", str(ch.get("name", "")).lower())
+        _ent = ch if _is_pl else next(
+            (e for e in (combat or {}).get("enemies", []) or []
+             if e.get("alive", True) and str(e.get("name", "")).lower() == _svt.lower()), None)
+        if _ent is None or not any(s.get("name") == _svn for s in _ent.get("statuses", [])):
+            continue  # ingen matchande status — droppa (§4.1)
+        if _svok:
+            _cm.remove_status(_ent, _svn)
+            effects.append({"type": "status_end", "status": _svn, "target": _svt, "value": _svn})
+            logger.info("🛡️ Status save: %s — %s breaks free (success)", _svt, _svn)
+        effects.append({"type": "status_save", "value": f"{_svn}:{_svt.lower()}", "success": _svok})
 
     # Auto-avsluta strid när alla fiender är döda/flydde/kapitulerade (§1.5) —
     # via gemensam _end_combat (double-end-guard).
@@ -2707,7 +2783,7 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             # Conditions tick (5e, 2026-08-08): status-skada + status-utgång vid
             # rundstart — samma motor som advance_turn (test-only tidigare).
             from combat import _tick_all_statuses
-            _tick_all_statuses(state, combat)
+            effects.extend(_tick_all_statuses(state, combat) or [])
             effects.append({"type": "combat_round", "value": new_round})
             logger.info("⚔️ Guardian: new round %d (statuses ticked)", new_round)
 
@@ -2813,35 +2889,59 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
             else:
                 combat_log.append({"round": current_round, "actor": "player", "name": ch.get("name", "Player"), "text": f"misses {enemy['name']}"})
 
-        # ── status_apply (v1.2): villkormotorn LEVANDE — tidigare konsumera-
-        # des aldrig (DM-prompten lovade grapple→restrained som aldrig hände).
+        # ── status_apply (P1b §3): villkormotorn LEVANDE med sparmekanik ──
+        # Refresh-not-stack (combat.add_status: duration = max, dmg_per_turn
+        # läggs ALDRIG till igen) + högre save_dc lyfter DC (§3.1.5).
+        # Namn-validering mot STATUS_DEFS, duration 1–10, save_dc 5–25 (§3.1.1)
+        # — trasiga poster droppas tyst, aldrig raise. Dublettnamn-säker:
+        # match_enemy_candidates (alla matchande fiender drabbas, §4.2).
+        # Dedup-nyckel (§4.3): ("status_apply", "namn:target") — [STATUS:]-taggen
+        # kan inte dubbla appliceringen.
         for st in mech.get("status_apply", []):
             if not isinstance(st, dict):
                 continue
             sname = str(st.get("name", "")).strip().lower()
-            if not sname:
+            if not sname or sname not in _cm.STATUS_DEFS:
+                logger.warning("🛡️ status_apply entry dropped (name=%r)", st.get("name"))
                 continue
-            stgt = str(st.get("target", "player")).strip().lower()
-            sdu = max(1, _safe_int(st.get("duration"), 2))
+            stgt = str(st.get("target", "")).strip()
+            if not stgt:
+                continue
+            sdu = max(1, min(10, _safe_int(st.get("duration"), 2)))
+            sdc = None
+            _raw_dc = st.get("save_dc")
+            if _raw_dc not in (None, ""):
+                try:
+                    sdc = max(5, min(25, int(_raw_dc)))
+                except (TypeError, ValueError):
+                    sdc = None
+            if ("status_apply", f"{sname}:{stgt.lower()}") in _skip_keys:
+                continue  # §4.3: [STATUS:]-taggen applicerade redan
             try:
-                from combat import add_status as _add_st
-                entity = None
-                if stgt in ("player", "spelaren", ch.get("name", "").lower()):
-                    entity = ch
+                targets = []
+                if stgt.lower() in ("player", "spelaren", str(ch.get("name", "")).lower()):
+                    targets = [(ch, str(ch.get("name", "Player")))]
                 else:
-                    entity = next((e for e in combat.get("enemies", [])
-                                  if e.get("name", "").lower() == stgt and e.get("alive", True)), None) \
-                        or next((a for a in combat.get("allies", [])
-                                 if a.get("name", "").lower() == stgt and a.get("alive", True)), None)
-                if entity is None:
-                    continue
-                _add_st(entity, sname, sdu)
-                combat_log.append({"round": current_round, "actor": "system", "name": "",
-                                   "text": f"{entity.get('name', '?')} drabbas av {sname} ({sdu} runder)"})
-                effects.append({"type": "status", "value": f"{entity.get('name', '?')}: {sname}", "amount": sdu})
-                logger.info("⚔️ Status: %s → %s (%d rundor)", entity.get("name"), sname, sdu)
+                    from enemy_rolls import match_enemy_candidates
+                    targets = [(e, str(e.get("name", "?")))
+                               for _i, e in match_enemy_candidates(combat, stgt)
+                               if e.get("alive", True)]
+                    if not targets:  # allierade (inte i match_enemy_candidates)
+                        targets = [(a, str(a.get("name", "?")))
+                                   for a in (combat.get("allies") or [])
+                                   if a.get("alive", True)
+                                   and str(a.get("name", "")).lower() == stgt.lower()]
+                for entity, ename in targets:
+                    _cm.add_status(entity, sname, sdu, save_dc=sdc)
+                    combat_log.append({"round": current_round, "actor": "system", "name": "",
+                                       "text": f"{ename} is afflicted by {sname} ({sdu} rounds)"})
+                    effects.append({"type": "status", "value": f"{ename}: {sname}", "amount": sdu,
+                                    "target": ename, "duration": sdu, "save_dc": sdc})
+                    # §4.3 dedup-nyckel — bärare för meta["last_effects"]
+                    effects.append({"type": "status_apply", "value": f"{sname}:{stgt.lower()}", "dedup": True})
+                    logger.info("🛡️ Status: %s → %s (%d rounds, save_dc=%s)", ename, sname, sdu, sdc)
             except Exception:
-                logger.exception("status_apply misslyckades (tyst ignorerad)")
+                logger.exception("status_apply failed (silently ignored)")
 
         # Allierades attacker → minska fiende-HP (samma mönster som spelarens;
         # allierade = vänliga NPC:er som DM lagt till via [ALLIERAD:]-taggen)
@@ -3487,7 +3587,8 @@ def _sanitize_mechanics(mech: dict) -> dict:
                 "world_lore", "roll_grants", "corrections",
                 "initiative_entries", "enemy_actions", "status_apply",
                 "player_attacks", "ally_attacks", "ally_damage", "enemy_attacks", "combat_events",
-                "spell_slots_spend", "training_update", "morale_checks"):
+                "spell_slots_spend", "training_update", "morale_checks",
+                "chase_progress", "status_save"):
         if not isinstance(mech.get(key), list):
             mech[key] = []
 
@@ -3560,6 +3661,63 @@ def _sanitize_mechanics(mech: dict) -> dict:
         _mc_clean.append({"target": _tgt.strip(), "trigger": _trg,
                           "note": str(_mc.get("note", ""))})
     mech["morale_checks"] = _mc_clean
+
+    # flee_declared (P1b §2.1): {"target": "player"|namn} eller null —
+    # samma mönster som combat_start (dict-or-null)
+    _fd = mech.get("flee_declared")
+    if _fd is not None and not isinstance(_fd, dict):
+        mech["flee_declared"] = None
+    elif isinstance(_fd, dict):
+        _fdt = str(_fd.get("target", "") or "").strip()
+        mech["flee_declared"] = {"target": _fdt} if _fdt else None
+
+    # chase_progress (P1b §4.1): enum escape|caught|stalemate, max 1/turn
+    _cp_clean = []
+    for _cp in mech.get("chase_progress") or []:
+        if not isinstance(_cp, dict):
+            continue
+        _o = str(_cp.get("outcome", "") or "").strip().lower()
+        if _o in ("escape", "caught", "stalemate"):
+            _cp_clean.append({"outcome": _o})
+        if len(_cp_clean) >= 1:
+            break
+    mech["chase_progress"] = _cp_clean
+
+    # status_apply (P1b §3.1.1): name ∈ STATUS_DEFS, duration 1–10 (default 2),
+    # save_dc 5–25 eller null — droppa trasiga poster, aldrig raise
+    from combat import STATUS_DEFS as _SDEFS
+    _sa_clean = []
+    for _sa in mech.get("status_apply") or []:
+        if not isinstance(_sa, dict):
+            continue
+        _n = str(_sa.get("name", "") or "").strip().lower()
+        _t = str(_sa.get("target", "") or "").strip()
+        if _n not in _SDEFS or not _t:
+            continue
+        _du = max(1, min(10, _safe_int(_sa.get("duration"), 2)))
+        _dc = None
+        _raw = _sa.get("save_dc")
+        if _raw not in (None, ""):
+            try:
+                _dc = max(5, min(25, int(_raw)))
+            except (TypeError, ValueError):
+                _dc = None
+        _sa_clean.append({"name": _n, "target": _t, "duration": _du, "save_dc": _dc})
+    mech["status_apply"] = _sa_clean
+
+    # status_save (P1b §4.1): [{target, name, success: bool}] — bara spelarens
+    # färdiglösta sparprov; icke-bool success eller tomma fält droppas
+    _ss_clean = []
+    for _ss in mech.get("status_save") or []:
+        if not isinstance(_ss, dict):
+            continue
+        _t = str(_ss.get("target", "") or "").strip()
+        _n = str(_ss.get("name", "") or "").strip().lower()
+        _ok = _ss.get("success")
+        if not _t or not _n or not isinstance(_ok, bool):
+            continue
+        _ss_clean.append({"target": _t, "name": _n, "success": _ok})
+    mech["status_save"] = _ss_clean
 
     return mech
 
@@ -3649,6 +3807,45 @@ def format_guardian_summary(
                 lines.append(f"🌀 **Condition:** {v}")
             else:
                 lines.append(f"🌀 **Tillstånd:** {v}")
+        elif t == "status_save":
+            ok = bool(e.get("success"))
+            if en:
+                lines.append(f"🎲 **Save — {v}:** {'success — the condition breaks!' if ok else 'failed — still afflicted'}")
+            else:
+                lines.append(f"🎲 **Sparprov — {v}:** {'lyckas — tillståndet bryts!' if ok else 'misslyckas — kvar'}")
+        elif t == "status_save_request" and not e.get("dedup"):
+            dc = e.get("dc", "?")
+            if en:
+                lines.append(f"⏳ **{v} — save required (DC {dc})**")
+            else:
+                lines.append(f"⏳ **{v} — sparpkrävs (DC {dc})**")
+        elif t == "chase_start":
+            if en:
+                lines.append(f"🏃 **Flight!** {v} tries to break away — chase clock starts (3 escapes / 3 catches)")
+            else:
+                lines.append(f"🏃 **Flykt!** {v} försöker bryta sig loss — jaktklockan startar (3 undkommer / 3 infångar)")
+        elif t == "chase_tick":
+            r, s_, f_ = e.get("rounds", "?"), e.get("successes", 0), e.get("failures", 0)
+            if en:
+                lines.append(f"🏃 **Chase round {r}:** {e.get('outcome', '?')} — escape {s_}/3 · catch {f_}/3")
+            else:
+                lines.append(f"🏃 **Jaktrunda {r}:** {e.get('outcome', '?')} — undkommer {s_}/3 · infångar {f_}/3")
+        elif t == "chase_end":
+            if e.get("result") == "escaped":
+                if en:
+                    lines.append(f"🏃 **Escaped!** {v} breaks away — the chase is over")
+                else:
+                    lines.append(f"🏃 **Undkommen!** {v} har lyckats fly — jakten är över")
+            else:
+                if en:
+                    lines.append(f"🏃 **Caught!** {v} is run down — the fight continues")
+                else:
+                    lines.append(f"🏃 **Infångad!** {v} har infångats — striden fortsätter")
+        elif t == "chase_escape_cost":
+            if en:
+                lines.append(f"🪙 **Escape cost:** {v} gp dropped in the flight")
+            else:
+                lines.append(f"🪙 **Flyktpris:** {v} gp tappade under flykten")
         elif t == "quest":
             label = "New quest:" if en else "Nytt uppdrag:"
             lines.append(f"📜 **{label}** {v}")
@@ -3956,9 +4153,14 @@ def format_guardian_summary(
                # enemy_miss (inte "skada") → taggen måste firea för dem också
                "enemy_hit", "enemy_miss", "enemy_fled", "status_dmg", "status_end",
                # P1a: kod-rullade moralprov → [COMBAT:]-taggen måste firea (§1.4)
-               "morale_check"}
+               "morale_check",
+               # P1b: status-motor + flykt/jakt (§2–§3) — nya effektyper som
+               # ändrar stridsvyn (statuses/jakt-klocka i [COMBAT:]-payloaden)
+               "status", "status_apply", "status_save", "status_save_request",
+               "chase_start", "chase_tick", "chase_end", "chase_escape_cost"}
         ) or any(mech.get(k) for k in ("combat_start", "combat_round", "initiative_entries", "combat_end",
-                                        "player_attacks", "enemy_attacks", "ally_attacks", "ally_damage", "combat_events"))
+                                        "player_attacks", "enemy_attacks", "ally_attacks", "ally_damage", "combat_events",
+                                        "flee_declared", "chase_progress", "status_apply", "status_save"))
         _just_ended = combat.get("active") is False and combat.get("ended_turn") == state.get("meta", {}).get("turn_count", 0)
         if _changed or _just_ended:
             # Include player HP so the frontend status bar + inline messages can show it

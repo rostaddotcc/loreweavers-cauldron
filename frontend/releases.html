@@ -8,30 +8,30 @@
 <link rel="icon" href="/assets/logo-cauldron.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
 <style>
   /* ═══════════════ tokens ═══════════════ */
   :root{
     /* Kanonisk palett = snes.css :root (Terminal Gothic, 2026-09-10) */
-    --ink:#1a1426;
-    --stone:#271d33; --stone-2:#322541; --stone-3:#3d2e4f;
-    --edge:#463a60; --edge-hi:#5a4a7a;
+    --ink:#171310;
+    --stone:#1c1713; --stone-2:#241c15; --stone-3:#2c231a;
+    --edge:#4a3b26; --edge-hi:#6a5638;
     --bone:#d9c9a6; --bone-bright:#f2e6c8; --bone-dim:#9d8a6a;
-    --gold:#d4a92c; --gold-bright:#f0d675;
-    --blood:#a32433; --blood-bright:#e0485a;
-    --ember:#d4691e; --arcane:#9a6fe0; --arcane-bright:#c9a6ff;
+    --gold:#c9a227; --gold-bright:#f0d675;
+    --blood:#5a1f24; --blood-bright:#c25a63;
+    --ember:#a85f26; --arcane:#7d95c4; --arcane-bright:#a9bfe0;
     --poison:#7aa35e; --teal:#5e9aa3;
-    --term-green:#33cc33; --term-amber:#ccaa33;
+    --term-green:#7aa35e; --term-amber:#c9a227;
     --font-display:'Cinzel',serif;
     --font-body:'Spectral',Georgia,serif;
     --font-mono:'IBM Plex Mono',ui-monospace,monospace;
     --font-accent:'Silkscreen',monospace;
     --nav-h:64px;
-  }
+  --font-flavor:'EB Garamond',Georgia,serif;--rubric:#d4737b;--gilt:rgba(201,162,39,.42);--gilt-hi:rgba(240,214,117,.6);--parch-a:#241c15;--parch-b:#1c1713;}
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{font-family:var(--font-body);color:var(--bone);background:var(--ink);
-    overflow-x:hidden;-webkit-tap-highlight-color:transparent}
+    overflow-x:hidden;-webkit-tap-highlight-color:transparent;font-size:17px;line-height:1.65}
 
   /* ═══════════════ nav ═══════════════ */
   .nav{position:fixed;top:0;left:0;right:0;z-index:50;height:var(--nav-h);
@@ -50,23 +50,23 @@
   /* version chip-row — jump index (audit A2 §5 releases) */
   .ver-chiprow{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;margin:1.4rem 0 .4rem}
   .ver-chiprow a{font-family:var(--font-display);font-size:.64rem;letter-spacing:.12em;
-    color:var(--bone-dim);border:1px solid var(--edge);background:var(--stone);padding:.42rem .8rem;text-decoration:none;transition:all .2s}
+    color:var(--bone-dim);border:1px solid var(--edge);background:var(--stone);padding:.42rem .8rem;text-decoration:none;transition:all .2s;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
   .ver-chiprow a:hover{color:var(--gold-bright);border-color:var(--gold)}
 
   .nav-cta{font-family:var(--font-display);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;
     color:var(--ink);background:var(--gold);border:1px solid var(--gold-bright);
-    padding:.5rem 1rem;text-decoration:none}
+    padding:.5rem 1rem;text-decoration:none;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
   .nav-cta:hover{background:var(--gold-bright);color:var(--ink)}
 
   /* ═══════════════ hero ═══════════════ */
   .ledger{max-width:900px;margin:0 auto;padding:calc(var(--nav-h) + 4rem) 1.25rem 6rem}
   .eyebrow{font-family:var(--font-display);font-size:.68rem;letter-spacing:.44em;
-    text-transform:uppercase;color:var(--gold);text-align:center;margin-bottom:1rem}
+    text-transform:uppercase;color:var(--gold);text-align:center;margin-bottom:1rem;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem;letter-spacing:.34em}
   .ledger h1{font-family:var(--font-display);font-weight:900;font-size:clamp(1.9rem,4.6vw,3rem);
     text-align:center;color:var(--bone-bright);letter-spacing:.08em;text-transform:uppercase;
-    margin-bottom:1rem;text-shadow:2px 2px 0 #000}
+    margin-bottom:1rem;text-shadow:2px 2px 0 #000;animation:gr-flicker 6s ease-in-out infinite}
   .ledger-sub{max-width:620px;margin:0 auto 2.6rem;text-align:center;color:var(--bone-dim);
-    font-size:var(--fs-base);line-height:1.65}
+    font-size:var(--fs-base);line-height:1.65;font-family:var(--font-flavor);font-style:italic;font-size:1.0625rem;line-height:1.65}
   .ledger-sub b{color:var(--bone);font-weight:600}
 
   /* current version chip */
@@ -79,7 +79,7 @@
   .ver-chip .ver-name{font-weight:900}
   .ver-chip .ver-note{color:rgba(7,7,12,.72);letter-spacing:.14em;font-size:.62rem}
   .ver-tag{font-family:var(--font-display);font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;
-    color:var(--bone-dim);border:1px solid var(--edge);padding:.4rem .8rem}
+    color:var(--bone-dim);border:1px solid var(--edge);padding:.4rem .8rem;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem}
 
   /* ═══════════════ sections ═══════════════ */
   .sec{margin-bottom:3.4rem}
@@ -87,21 +87,21 @@
     border-bottom:1px solid var(--edge);padding-bottom:.7rem}
   .sec-num{font-family:var(--font-display);font-weight:900;font-size:var(--fs-sm);color:var(--gold);opacity:.8}
   .sec-head h2{font-family:var(--font-display);font-weight:700;font-size:var(--fs-base);
-    letter-spacing:.16em;text-transform:uppercase;color:var(--bone-bright)}
-  .sec-head .rule{height:1px;flex:1;background:var(--edge);align-self:center}
+    letter-spacing:.16em;text-transform:uppercase;color:var(--bone-bright);font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.95rem}
+  .sec-head .rule{height:1px;flex:1;background:var(--edge);align-self:center;height:5px;opacity:.85;background:repeating-linear-gradient(90deg,rgba(201,162,39,.6) 0 1px,transparent 1px 9px) center/100% 5px no-repeat,linear-gradient(90deg,transparent,rgba(201,162,39,.7) 15%,rgba(201,162,39,.7) 85%,transparent) center/100% 1px no-repeat}
   .sec-head .ruler{height:3px;width:44px;background:var(--gold);align-self:center;flex:none}
 
   /* stone tablet */
   .tablet{position:relative;background:var(--stone);
-    border:1px solid var(--edge);padding:1.9rem 1.8rem 1.5rem;margin-bottom:1.6rem}
-  .tablet::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.3}
+    border:1px solid var(--edge);padding:1.9rem 1.8rem 1.5rem;margin-bottom:1.6rem;position:relative;background:linear-gradient(180deg,rgba(217,201,166,.07),rgba(217,201,166,.015) 55%),linear-gradient(155deg,#241c15,#1c1713 72%);border:1px solid rgba(201,162,39,.34);box-shadow:inset 0 0 0 1px rgba(74,59,38,.5),0 1px 0 rgba(0,0,0,.4)}
+  .tablet::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.3;border-color:rgba(201,162,39,.45);opacity:.45}
   .tablet-h{display:flex;align-items:center;gap:.8rem;margin-bottom:.9rem;flex-wrap:wrap}
   .chip{font-family:var(--font-display);font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;
     color:var(--ink);background:var(--gold);border:1px solid var(--gold-bright);
     padding:.26rem .6rem}
   .tablet-title{font-family:var(--font-display);font-weight:700;font-size:var(--fs-sm);letter-spacing:.14em;
-    text-transform:uppercase;color:var(--bone-bright)}
-  .tablet-lead{color:var(--bone-dim);font-size:var(--fs-sm);line-height:1.6;margin-bottom:1.1rem}
+    text-transform:uppercase;color:var(--bone-bright);font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.85rem}
+  .tablet-lead{color:var(--bone-dim);font-size:var(--fs-sm);line-height:1.6;margin-bottom:1.1rem;font-family:var(--font-flavor);font-style:italic;font-size:1.0625rem;line-height:1.65}
   .tablet-lead b{color:var(--bone);font-weight:600}
 
   /* feature list */
@@ -109,18 +109,18 @@
   .feat li{padding:.55rem 0 .55rem 1.6rem;position:relative;color:var(--bone);font-size:var(--fs-sm);line-height:1.55}
   .feat li::before{content:'◆';position:absolute;left:0;top:.62rem;color:var(--gold);font-size:.6rem}
   .feat li b{color:var(--bone-bright);font-weight:600}
-  .feat li .dim{color:var(--bone-dim)}
-  .feat li + li{border-top:1px dashed rgba(58,58,80,.5)}
+  .feat li .dim{color:var(--bone-dim);font-family:var(--font-flavor);font-style:italic}
+  .feat li + li{border-top:1px dashed rgba(40,32,22,.5)}
 
   /* inline tags */
   .tag{display:inline-block;font-family:var(--font-display);font-size:.56rem;letter-spacing:.16em;
     text-transform:uppercase;padding:.14rem .5rem;margin-right:.35rem;vertical-align:middle}
-  .tag.feat{color:var(--poison);border:1px solid rgba(90,154,78,.5)}
-  .tag.fix{color:var(--blood-bright);border:1px solid rgba(212,58,77,.45)}
+  .tag.feat{color:var(--poison);border:1px solid rgba(122,163,94,.5)}
+  .tag.fix{color:var(--rubric);border:1px solid rgba(212,58,77,.45)}
   .tag.ux{color:var(--arcane);border:1px solid rgba(123,79,212,.5)}
   .tag.ai{color:var(--gold);border:1px solid rgba(var(--gold-rgb),.5)}
-  .tag.snd{color:var(--ember);border:1px solid rgba(var(--ember-rgb),.5)}
-  .tag.pay{color:var(--teal);border:1px solid rgba(78,138,147,.5)}
+  .tag.snd{color:var(--gold);border:1px solid rgba(var(--ember-rgb),.5)}
+  .tag.pay{color:var(--teal);border:1px solid rgba(94,154,163,.5)}
 
   /* two-column for tier grid */
   .duo{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem}
@@ -128,12 +128,12 @@
 
   /* tier mini-card */
   .tier{background:var(--stone);
-    border:1px solid var(--edge);padding:1.6rem 1.5rem}
+    border:1px solid var(--edge);padding:1.6rem 1.5rem;position:relative;background:linear-gradient(180deg,rgba(217,201,166,.07),rgba(217,201,166,.015) 55%),linear-gradient(155deg,#241c15,#1c1713 72%);border:1px solid rgba(201,162,39,.34);box-shadow:inset 0 0 0 1px rgba(74,59,38,.5),0 1px 0 rgba(0,0,0,.4)}
   .tier.hot{border-color:var(--gold)}
   .tier-name{font-family:var(--font-display);font-weight:700;font-size:var(--fs-tiny);letter-spacing:.24em;
-    text-transform:uppercase;color:var(--bone-bright);margin-bottom:.3rem}
+    text-transform:uppercase;color:var(--bone-bright);margin-bottom:.3rem;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem}
   .tier-flag{font-family:var(--font-display);font-size:.56rem;letter-spacing:.2em;text-transform:uppercase;
-    color:var(--gold-bright);margin-bottom:.5rem}
+    color:var(--gold-bright);margin-bottom:.5rem;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem}
   .tier-price{font-family:var(--font-display);font-weight:900;font-size:1.5rem;color:var(--gold-bright);margin-bottom:.5rem}
   .tier-price small{font-size:.72rem;font-weight:400;color:var(--bone-dim);letter-spacing:.05em}
   .tier ul{list-style:none}
@@ -144,14 +144,14 @@
   /* historical versions */
   .hist-toggle{display:flex;align-items:center;justify-content:center;gap:.6rem;width:100%;
     font-family:var(--font-display);font-size:.7rem;letter-spacing:.24em;text-transform:uppercase;
-    padding:.85rem 1rem;cursor:pointer;-webkit-tap-highlight-color:transparent}
+    padding:.85rem 1rem;cursor:pointer;-webkit-tap-highlight-color:transparent;min-height:44px}
   .hist-toggle .caret{color:var(--gold);transition:transform .25s;display:inline-block}
   .hist-toggle.open .caret{transform:rotate(90deg)}
   .hist-body{max-height:0;overflow:hidden;transition:max-height .5s ease}
   .hist-body.open{max-height:4000px}
   .hist-inner{padding-top:1.6rem}
   .hist-ver{display:flex;align-items:baseline;gap:.8rem;margin:1.6rem 0 .7rem;padding-top:1.2rem;
-    border-top:1px dashed rgba(58,58,80,.5)}
+    border-top:1px dashed rgba(40,32,22,.5);border-top:1px dashed rgba(201,162,39,.35)}
   .hist-ver:first-child{margin-top:0;padding-top:0;border-top:none}
   .hist-ver .vchip{font-family:var(--font-display);font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;
     color:var(--gold);flex:none}
@@ -176,21 +176,28 @@
   }
   @media(max-width:900px){
     .duo{grid-template-columns:1fr}
-    .tablet{padding:1.6rem 1.3rem 1.4rem}
-    .hist-ver{flex-wrap:wrap}
-    .hist-toggle{min-height:48px}
+    .tablet{padding:1.6rem 1.3rem 1.4rem;position:relative;background:linear-gradient(180deg,rgba(217,201,166,.07),rgba(217,201,166,.015) 55%),linear-gradient(155deg,#241c15,#1c1713 72%);border:1px solid rgba(201,162,39,.34);box-shadow:inset 0 0 0 1px rgba(74,59,38,.5),0 1px 0 rgba(0,0,0,.4)}
+    .hist-ver{flex-wrap:wrap;border-top:1px dashed rgba(201,162,39,.35)}
+    .hist-toggle{min-height:48px;min-height:44px}
   }
   @media(max-width:640px){
     .nav-links .nav-link{display:none}
     .ledger{padding-top:calc(var(--nav-h) + 3rem)}
-    .tablet{padding:1.5rem 1.2rem 1.3rem}
-    .sec-head h2{font-size:var(--fs-sm)}
+    .tablet{padding:1.5rem 1.2rem 1.3rem;position:relative;background:linear-gradient(180deg,rgba(217,201,166,.07),rgba(217,201,166,.015) 55%),linear-gradient(155deg,#241c15,#1c1713 72%);border:1px solid rgba(201,162,39,.34);box-shadow:inset 0 0 0 1px rgba(74,59,38,.5),0 1px 0 rgba(0,0,0,.4)}
+    .sec-head h2{font-size:var(--fs-sm);font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.95rem}
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=50">
+<link rel="stylesheet" href="snes.css?v=51">
 <noscript><style>.rv{opacity:1;transform:none}/* v5-fresh: mobile touch targets */
-@media(max-width:900px){.ver-chiprow a{min-height:44px;display:inline-flex;align-items:center}.hist-toggle{min-height:44px}}
+@media(max-width:900px){.ver-chiprow a{min-height:44px;display:inline-flex;align-items:center;min-height:44px;display:inline-flex;align-items:center;justify-content:center}.hist-toggle{min-height:44px;min-height:44px}}
 </style></noscript>
+<style id="grimoire-leaf">
+/* Den Forbjudna Grimsboken — illuminerat lövskikt (nya regler; befintliga redigerade in-place) */
+.ledger h1::first-letter{font-family:var(--font-flavor);font-style:italic;font-weight:500;font-size:3.0em;line-height:.82;float:left;margin:.02em .14em -.02em 0;padding:.06em .16em .08em;color:var(--gold-bright);background:linear-gradient(160deg,#5a1f24,#3f1519);border:1px solid rgba(201,162,39,.65);box-shadow:0 0 14px rgba(240,214,117,.25),inset 0 0 8px rgba(0,0,0,.4);text-shadow:0 1px 0 rgba(0,0,0,.6)}
+.tablet::after,.tier::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:1;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M3 30 C3 14 14 3 30 3' fill='none' stroke='%23c9a227' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M3 30 C8 27 10 22 9 17 C4 18 2 24 3 30 Z' fill='%235a1f24' stroke='%23c9a227' stroke-width='.7'/%3E%3Cpath d='M30 3 C27 8 22 10 17 9 C18 4 24 2 30 3 Z' fill='%235a1f24' stroke='%23c9a227' stroke-width='.7'/%3E%3Cpath d='M9 17 C13 15 15 12 15 8' fill='none' stroke='%23c9a227' stroke-width='.8' stroke-linecap='round'/%3E%3Ccircle cx='15' cy='7' r='1.4' fill='%23f0d675'/%3E%3C/svg%3E") left top/24px 24px no-repeat,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cg transform='rotate(180 16 16)'%3E%3Cpath d='M3 30 C3 14 14 3 30 3' fill='none' stroke='%23c9a227' stroke-width='1.2' stroke-linecap='round'/%3E%3Cpath d='M3 30 C8 27 10 22 9 17 C4 18 2 24 3 30 Z' fill='%235a1f24' stroke='%23c9a227' stroke-width='.7'/%3E%3Cpath d='M30 3 C27 8 22 10 17 9 C18 4 24 2 30 3 Z' fill='%235a1f24' stroke='%23c9a227' stroke-width='.7'/%3E%3Cpath d='M9 17 C13 15 15 12 15 8' fill='none' stroke='%23c9a227' stroke-width='.8' stroke-linecap='round'/%3E%3Ccircle cx='15' cy='7' r='1.4' fill='%23f0d675'/%3E%3C/g%3E%3C/svg%3E") right bottom/24px 24px no-repeat;opacity:.9}
+@keyframes gr-flicker{0%,100%{text-shadow:0 0 20px rgba(240,214,117,.28),0 2px 0 #000}43%{text-shadow:0 0 26px rgba(240,214,117,.42),0 2px 0 #000}47%{text-shadow:0 0 12px rgba(240,214,117,.16),0 2px 0 #000}76%{text-shadow:0 0 22px rgba(240,214,117,.3),0 2px 0 #000}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}.ledger h1{animation:none!important;text-shadow:0 2px 0 #000}}
+</style>
 </head>
 <body>
 

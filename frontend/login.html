@@ -70,21 +70,21 @@
 <link rel="icon" href="/assets/logo-cauldron.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Spectral:ital,wght@0,300;0,400;0,500;1,300;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=EB+Garamond:ital,wght@0,400;1,400;1,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   /* ═══════════════ Terminal Gothic — flat, DOS/terminal, aligned med spelet ═══════════════
-     login.html rebuild 2026-08-12: samma content, flat & enklare. snes.css?v=50 laddas
+     login.html rebuild 2026-08-12: samma content, flat & enklare. snes.css?v=51 laddas
      EFTER detta block och tvingar scanlines/sprites/knappar med !important. */
   :root{
-    --ink:#1a1426; --stone:#271d33; --stone-2:#322541; --stone-3:#3d2e4f;
-    --edge:#463a60; --edge-hi:#5a4a7a;
+    --ink:#171310; --stone:#1c1713; --stone-2:#241c15; --stone-3:#2c231a;
+    --edge:#4a3b26; --edge-hi:#6b5636;
     --bone:#d9c9a6; --bone-bright:#f2e6c8; --bone-dim:#9d8a6a;
-    --gold:#d4a92c; --gold-bright:#f0d675;
-    --blood:#a32433; --blood-bright:#e0485a;
-    --ember:#d4691e; --arcane:#9a6fe0;
+    --gold:#c9a227; --gold-bright:#f0d675;
+    --blood:#5a1f24; --blood-bright:#d4707a;
+    --ember:#a8621f; --arcane:#7d95c4;
     --poison:#7aa35e; --teal:#5e9aa3;
     --term-green:#33cc33; --term-amber:#ccaa33;
-    --font-display:'Cormorant Garamond',Georgia,serif;
+    --font-display:'EB Garamond',Georgia,serif;
     --font-body:'Spectral',Georgia,serif;
     --font-mono:'IBM Plex Mono',ui-monospace,monospace;
     --font-accent:'IBM Plex Mono',ui-monospace,monospace; /* Silkscreen pensionerad 2026-09-20 */
@@ -101,7 +101,7 @@
   .panel::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.35}
 
   /* ── typografi (2026-09-20: illuminerat manuskript) ──
-     Signaturen = extrem storlekskontrast: jättestor Cormorant Garamond mot
+     Signaturen = extrem storlekskontrast: jättestor EB Garamond Garamond mot
      mikroskopisk tracked IBM Plex Mono. Vänsterställda sektionshuvuden med
      hårline-linjal under etiketten. Drop cap på ingressen. */
   h1,h2,h3{font-family:var(--font-display);color:var(--bone-bright);line-height:1.08;font-weight:600}
@@ -433,7 +433,7 @@
   footer .foot-small{margin-top:1.3rem;font-size:var(--fs-tiny);font-style:italic}
 
   /* ═══════════════ modals ═══════════════ */
-  .overlay{position:fixed;inset:0;z-index:90;display:none;align-items:center;justify-content:center;padding:1.25rem;background:rgba(3,2,7,.8)}
+  .overlay{position:fixed;inset:0;z-index:90;display:none;align-items:center;justify-content:center;padding:1.25rem;background:rgba(14,10,7,.8)}
   .overlay.show{display:flex}
   .modal{position:relative;width:100%;max-width:460px;max-height:86vh;overflow-y:auto;background:var(--stone);border:1px solid var(--gold);padding:1.9rem 1.7rem 1.6rem;text-align:left}
   .modal::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none}
@@ -453,7 +453,7 @@
   .pc-err{font-size:var(--fs-tiny);color:var(--blood-bright);margin-top:.6rem;text-align:center}
 
   /* ═══════════════ drawer ═══════════════ */
-  .drawer-overlay{position:fixed;inset:0;z-index:80;background:rgba(3,2,7,.72);opacity:0;pointer-events:none;transition:opacity .3s ease}
+  .drawer-overlay{position:fixed;inset:0;z-index:80;background:rgba(14,10,7,.72);opacity:0;pointer-events:none;transition:opacity .3s ease}
   .drawer-overlay.show{opacity:1;pointer-events:auto}
   .drawer{position:fixed;top:0;left:0;bottom:0;z-index:85;width:min(88vw,350px);background:var(--stone);border-right:1px solid var(--gold);transform:translateX(-106%);transition:transform .3s ease;display:flex;flex-direction:column}
   .drawer.open{transform:translateX(0)}
@@ -573,10 +573,10 @@
     .myst-quote{transition:none}
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=50">
+<link rel="stylesheet" href="snes.css?v=51">
 <style>
 /* ═══ Manuscript-override (2026-09-20) — laddas EFTER snes.css och återinför
-   det Terminal Gothic plattar med !important: boktypografi (Cormorant),
+   det Terminal Gothic plattar med !important: boktypografi (EB Garamond),
    mono-etiketter, mjuka radier, deck-hörn. Sidlokal — rör ej andra sidor. ═══ */
 h1,h2,h3,.sb-name,.pt-price,.faq summary,.gate-head h3,.modal .mname,.drawer-h2,.drawer-title{font-family:var(--font-display) !important}
 h1,h2,h3{letter-spacing:0 !important;line-height:1.1 !important}
@@ -880,7 +880,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
             <h3>Continue your journey</h3>
             <p>Welcome back, <b class="gc-name">adventurer</b> &mdash; the fire is still burning.</p>
           </div>
-          <a class="btn gold wide" href="adventure.html?v=20260922c" style="display:block;text-align:center;margin-top:.4rem">Continue to the realm &rarr;</a>
+          <a class="btn gold wide" href="adventure.html?v=20260922e" style="display:block;text-align:center;margin-top:.4rem">Continue to the realm &rarr;</a>
           <div class="gate-toggle" style="font-size:var(--fs-tiny)" onclick="doLogout()">Not you? <b>Sign out</b></div>
         </div>
       </div>
@@ -1232,7 +1232,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
     <div class="mname" id="prof-name"></div>
     <div class="mtier" id="prof-tier"></div>
     <div class="mactions" id="prof-actions">
-      <a class="btn gold" href="adventure.html?v=20260922c">Return to the realm →</a>
+      <a class="btn gold" href="adventure.html?v=20260922e">Return to the realm →</a>
       <a class="btn ghost" href="pricing.html">Membership &amp; billing</a>
       <button class="btn danger-btn btn-ghost" onclick="doLogout()">Log out</button>
       <button class="btn danger-btn btn-blood" id="prof-delete-btn" onclick="askDeleteAccount()">Delete account</button>
@@ -1397,7 +1397,7 @@ function authSuccess(username) {
   sfx('gate');
   sessionStorage.setItem('dnd_user', username);
   let next = new URLSearchParams(location.search).get('next');
-  if (!next || !/^(?:[a-zA-Z0-9_-]+\.html)(?:[?#].*)?$/.test(next)) next = 'adventure.html?v=20260922c';
+  if (!next || !/^(?:[a-zA-Z0-9_-]+\.html)(?:[?#].*)?$/.test(next)) next = 'adventure.html?v=20260922e';
   setTimeout(() => { window.location.href = next; }, 900);
 }
 
@@ -1884,5 +1884,102 @@ function toggleLedger() {
 }
 </script>
 
+
+<style id="grimoire">
+/* ═══ Den Förbjudna Grimsboken — grimoire-layer (agent11b, 2026-09-22) ═══
+   Burnt parchment · gold leaf · oxblood/lapis · vine marginalia.
+   Ligger SIST i dokumentordningen (därför i slutet av <body>): vinner mot
+   snes.css (syskonägt, orört) och mot äldre body-<style>-block. Tokens pinnas
+   mot seed-paletten så sidan står rätt även innan snes.css uppdateras. */
+:root{
+  --ink:#171310; --stone:#1c1713; --stone-2:#241c15; --stone-3:#2c231a;
+  --edge:#4a3b26; --edge-hi:#6b5636;
+  --bone:#d9c9a6; --bone-bright:#f2e6c8; --bone-dim:#9d8a6a;
+  --gold:#c9a227; --gold-bright:#f0d675;
+  --blood:#5a1f24; --blood-bright:#d4707a;
+  --arcane:#7d95c4; --arcane-bright:#a8bcd8; --arcane-deep:#2b3a55;
+  --poison:#7aa35e; --teal:#5e9aa3; --ember:#a8621f;
+  --ink-rgb:23,19,16; --stone-rgb:28,23,19; --edge-rgb:74,59,38;
+  --gold-rgb:201,162,39; --gold-bright-rgb:240,214,117;
+  --blood-rgb:90,31,36; --blood-bright-rgb:212,112,122;
+  --arcane-rgb:125,149,196;
+  --font-display:'Cinzel',Georgia,serif;
+  --font-body:'Spectral',Georgia,serif;
+  --font-italic:'EB Garamond','Spectral',Georgia,serif;
+}
+/* ── Vinrankor & klängen — hörnramar ── */
+i.corner{position:absolute;width:30px;height:30px;pointer-events:none;z-index:3}
+i.corner::before{content:'';position:absolute;inset:0;border:2px solid rgba(var(--gold-rgb),.55);transition:border-color .3s}
+i.corner::after{content:'';position:absolute;width:12px;height:12px;border:2px solid rgba(var(--gold-rgb),.45);border-radius:50%;border-top-color:transparent;border-right-color:transparent}
+i.corner.tl{top:6px;left:6px} i.corner.tl::before{border-right:0;border-bottom:0} i.corner.tl::after{top:-3px;left:10px;transform:rotate(18deg)}
+i.corner.tr{top:6px;right:6px} i.corner.tr::before{border-left:0;border-bottom:0} i.corner.tr::after{top:-3px;right:10px;transform:rotate(72deg)}
+i.corner.bl{bottom:6px;left:6px} i.corner.bl::before{border-right:0;border-top:0} i.corner.bl::after{bottom:-3px;left:10px;transform:rotate(-72deg)}
+i.corner.br{bottom:6px;right:6px} i.corner.br::before{border-left:0;border-top:0} i.corner.br::after{bottom:-3px;right:10px;transform:rotate(-18deg)}
+/* ── Rubricering — kapitelrubriker i Cinzel smalvers, oxbloodsröd ── */
+.over,.section-label,.panel-title,.step-title,.drop-head,.f-kick{
+  font-family:var(--font-display,'Cinzel',serif)!important;
+  font-variant-caps:small-caps;
+  color:var(--blood-bright)!important;
+  text-shadow:0 1px 0 rgba(0,0,0,.55);
+}
+/* ── Illuminerade initialer på hjälte-rubriker ── */
+.hero h1::first-letter, .drawer-h2::first-letter{
+  float:left;
+  font-family:var(--font-display,'Cinzel',serif)!important;
+  font-weight:900;font-size:3.05em;line-height:.82;
+  padding:.08em .17em .05em;margin:.03em .16em .04em 0;
+  color:var(--gold-bright)!important;
+  background:linear-gradient(160deg,var(--blood),color-mix(in srgb,var(--blood) 50%,var(--ink)));
+  border:1px solid var(--gold);
+  box-shadow:0 0 20px -6px rgba(var(--gold-bright-rgb),.55),inset 0 0 12px rgba(0,0,0,.5);
+  text-shadow:0 1px 0 rgba(0,0,0,.65);
+  animation:gr-candle 5.2s ease-in-out infinite;
+}
+/* ── Förgyllda hårstreck + tick-ornament ── */
+.rune-divider::before,.rune-divider::after{
+  height:2px;opacity:.85;
+  background:repeating-linear-gradient(90deg,rgba(var(--gold-rgb),.6) 0 1px,transparent 1px 9px);
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent);
+}
+.panel-title::after{
+  height:2px;
+  background:repeating-linear-gradient(90deg,rgba(var(--gold-rgb),.55) 0 1px,transparent 1px 8px);
+  -webkit-mask-image:linear-gradient(90deg,#000 60%,transparent);
+  mask-image:linear-gradient(90deg,#000 60%,transparent);
+}
+/* ── Pergamentblad — varma kanter + skuggor ── */
+.arch,.vcard,.campaign-card,.path,.htp-card,.lang-card,.step,.panel-box,.continue-panel,
+.scroll-box,.ep-card,.rn-inner,.d-card,.gate-card,.t-card,.quote-card,.news-banner,
+.adv-details,.insp-modal,.mi-modal,.pf-box{
+  border-color:var(--edge);
+  box-shadow:0 16px 40px -18px rgba(8,5,3,.95),0 0 0 1px rgba(var(--gold-rgb),.07),inset 0 1px 0 rgba(var(--gold-bright-rgb),.05);
+}
+/* ── EB Garamond-kursiv som smakspråk i brödtext ── */
+em,.destiny-sub,.sub,.hint,.pv-story,.arch .lore,.path p,.htp-card p,.lang-card p,
+.vcard-story,.adv-sum-hint,.cat-sub,.dm-model-note,.vault-empty,.vault-note,.mi-intro{
+  font-family:var(--font-italic,'EB Garamond',serif);
+}
+/* ── Läsbarhet: brödtext ≥17px, knappar ≥44px ── */
+body{font-size:17px}
+.destiny-sub,.sub,.hint,.pv-story,.pv-gear,.arch .lore,.path p,.htp-card p,.lang-card p,
+.rn-list li,.vcard-story,.world-prompt,#prompt,.legend-preview,.lp-single #fw-prompt,
+.dm-model-note,.adv-sum-hint,.vault-empty,.cat-empty,.mi-intro,.pp-status,.pv-vitals,
+.file-item,.dark-select,.dark-select option{
+  font-size:max(17px,1.02rem);
+}
+button{min-height:44px}
+button.quota-chip,button.pf-paint-mini{min-height:26px;min-width:0}
+.insp-close,.mi-close,.pf-close,.pf-lb-close,.av-lb-close,.nb-close{min-width:44px}
+.insp-close,.mi-close,.pf-close,.pf-lb-close,.av-lb-close,.nb-close{min-height:44px}
+select,.adv-details summary,.btn-gold,a.back{min-height:44px}
+.btn-gold,a.back{display:inline-flex;align-items:center;justify-content:center}
+/* ── Ljuslåga — candleflicker (all rörelse reduced-motion-gated) ── */
+@keyframes gr-candle{0%,100%{opacity:1}17%{opacity:.8}33%{opacity:.93}55%{opacity:.74}72%{opacity:.96}87%{opacity:.84}}
+.rune-divider span,.rr-sigil{animation:gr-candle 4.6s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){
+  .rune-divider span,.rr-sigil,.hero h1::first-letter, .drawer-h2::first-letter{animation:none!important}
+}
+</style>
 </body>
 </html>

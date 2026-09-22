@@ -8,14 +8,15 @@
 <link rel="icon" href="/assets/logo-cauldron.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,700;1,400;1,700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,700;1,400;1,700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    /* design v4 "Illuminated Terminal" (2026-09-22) — speglar snes.css :root */
-    --ink:#161022; --stone:#271d33; --stone-2:#322541; --stone-3:#3d2e4f;
-    --edge:#463a60; --bone:#d9c9a6; --bone-bright:#f2e6c8; --bone-dim:#ab9b80;
-    --gold:#d4a92c; --gold-bright:#f0d675; --blood-bright:#e66977;
-    --arcane:#a47ee3; --term-green:#33cc33; --term-amber:#ccaa33;
+    /* Den Förbjudna Grimsboken (2026-09-22) — speglar snes.css :root */
+    --ink:#1c1109; --stone:#271a10; --stone-2:#322318; --stone-3:#3d2c1e;
+    --edge:#56402a; --bone:#e8d9b4; --bone-bright:#f7efd7; --bone-dim:#b29a6f;
+    --gold:#c9a13a; --gold-bright:#ecd07a; --blood-bright:#e0766a;
+    --arcane:#6e86c9; --term-green:#8cc47a; --term-amber:#d3a83a;
+    --font-marginalia:'EB Garamond', Georgia, serif;
   }
   *{margin:0;padding:0;box-sizing:border-box;border-radius:0}
   body{
@@ -25,12 +26,12 @@
   .app{max-width:800px;margin:0 auto;padding:2rem 1.5rem 4rem}
   h1{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:var(--fs-h1);letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;text-shadow:2px 2px 0 #000}
   h2{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:var(--fs-h3);color:var(--gold);margin:2rem 0 .8rem;text-transform:uppercase;letter-spacing:.14em}
-  h2::before{content:'> ';color:var(--edge)}
+  h2::before{content:'\00A7\00A0';color:var(--blood-bright);font-variant:small-caps}
   p,li{font-size:var(--fs-base);color:var(--bone);margin-bottom:.6rem}
   ul{padding-left:1.2rem;list-style:none}
   li::before{content:'▸ ';color:var(--gold)}
-  .box{background:var(--stone);border:1px solid var(--edge);padding:1.2rem;margin:1rem 0;position:relative}
-  .box::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.4}
+  .box{background:linear-gradient(180deg,var(--stone-2),var(--stone));border:1px solid rgba(var(--gold-rgb),.55);padding:1.2rem;margin:1rem 0;position:relative;box-shadow:inset 0 0 0 1px rgba(var(--gold-rgb),.12)}
+  .box::before{content:'';position:absolute;inset:3px;border:1px solid rgba(var(--gold-rgb),.28);pointer-events:none;opacity:.8}
   .cmd{color:var(--term-green);background:var(--ink);padding:.15rem .4rem;border:1px solid var(--edge);font-size:var(--fs-sm)}
   .key{color:var(--term-amber);border:1px solid var(--edge);padding:.1rem .35rem;font-size:var(--fs-tiny);background:var(--stone-2)}
   .topbar{display:flex;align-items:center;gap:1.2rem;padding:1.15rem 0;border-bottom:1px solid color-mix(in srgb, var(--stone-2) 55%, transparent);margin-bottom:2rem}
@@ -52,12 +53,12 @@
 
   /* Ledger / Guardian-sektioner — lite extra piff */
   .ledger-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0}
-  .ledger-cell{background:var(--stone);border:1px solid var(--edge);padding:1rem 1.1rem;position:relative}
-  .ledger-cell::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.35}
+  .ledger-cell{background:linear-gradient(180deg,var(--stone-2),var(--stone));border:1px solid rgba(var(--gold-rgb),.55);padding:1rem 1.1rem;position:relative;box-shadow:inset 0 0 0 1px rgba(var(--gold-rgb),.12)}
+  .ledger-cell::before{content:'';position:absolute;inset:3px;border:1px solid rgba(var(--gold-rgb),.28);pointer-events:none;opacity:.8}
   .ledger-cell .lc-tag{font-family:var(--font-accent,'Silkscreen',monospace);font-size:var(--fs-micro);letter-spacing:.12em;color:var(--gold);text-transform:uppercase;display:block;margin-bottom:.5rem}
   .ledger-cell .lc-title{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:var(--fs-sm);color:var(--gold);margin-bottom:.4rem}
   .ledger-cell p, .ledger-cell li{font-size:var(--fs-base)}
-  .ledger-cell .lc-ex{display:block;margin-top:.5rem;font-family:var(--font-accent,'Silkscreen',monospace);font-size:var(--fs-tiny);color:var(--bone-dim);border-left:2px solid var(--gold);padding-left:.6rem}
+  .ledger-cell .lc-ex{display:block;margin-top:.5rem;font-family:var(--font-marginalia,'EB Garamond',Georgia,serif);font-style:italic;font-size:var(--fs-sm);color:var(--bone);border-left:2px solid var(--gold);padding-left:.6rem}
   .truth{color:var(--teal)}
   .truth-bad{color:var(--blood-bright)}
   .truth-fix{color:var(--ember)}
@@ -88,7 +89,7 @@
     .box { padding: .75rem .6rem; }
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=50">
+<link rel="stylesheet" href="snes.css?v=51">
 <style>
 /* ═══════════ RITE-RAIL — THE ARCHIVE dropdown (2026-08-11) ═══════════ */
 .rite-rail{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:48px;background:linear-gradient(180deg,var(--stone-2),var(--stone));border:1px solid var(--edge);border-top:1px solid var(--edge-hi);padding:0 .8rem;gap:1rem;position:relative}
@@ -117,6 +118,12 @@
 @media(max-width:640px){
   .rr-name{display:none}
   .rr-tag{padding:.12rem .3rem}
+}
+/* ═══ DEN FÖRBJUDNA GRIMSBOKEN — gilt tick ornaments + candleflicker ═══ */
+.box::after, .ledger-cell::after{content:'';position:absolute;left:8px;right:8px;top:4px;height:3px;pointer-events:none;opacity:.6;background:repeating-linear-gradient(90deg,rgba(var(--gold-rgb),.55) 0 1px,transparent 1px 10px)}
+@keyframes candleflicker{0%,100%{opacity:1}42%{opacity:.84}58%{opacity:.95}72%{opacity:.88}}
+@media (prefers-reduced-motion: no-preference){
+  .rr-sigil{animation:candleflicker 4.2s ease-in-out infinite}
 }
 </style>
 <script src="sprites.js?v=20260806b"></script>

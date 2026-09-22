@@ -123,7 +123,7 @@
 /* v5-fresh: mobile touch targets */
 @media(max-width:900px){.pv-go,.pv-reroll{min-height:44px}.insp-close,.av-lb-close{min-width:44px;min-height:44px}select.dark-select{font-size:16px}}
 </style>
-<link rel="stylesheet" href="snes.css?v=50">
+<link rel="stylesheet" href="snes.css?v=51">
 <script src="sprites.js?v=20260806b"></script>
 <script src="fonts.js?v=20260806b"></script>
 </head>
@@ -635,7 +635,7 @@ async function confirmNewAdventure() {
     sessionStorage.setItem('dnd_vault_character', navCharId);
     try { SFX.gate(); } catch (_) {}
     toast('🌟 A new chapter begins!');
-    setTimeout(() => { location.href = 'chat.html?v=20260922d'; }, 900);
+    setTimeout(() => { location.href = 'chat.html?v=20260922e'; }, 900);
   } catch (e) {
     toast('⚠ ' + (e.message || 'Could not start the adventure'));
     navStarting = false;

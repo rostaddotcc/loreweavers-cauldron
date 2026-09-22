@@ -56,6 +56,63 @@ _BACKGROUND_TASKS: set = set()
 # /api/campaign/transcript → guardian_running (2026-08-06, dice-lock).
 _RUNNING_BG: set = set()
 
+# Per-campaign registry of in-flight post-turn background tasks (Guardian
+# post-DM, fact extraction, day entry). Tasks are registered SYNCHRONOUSLY at
+# creation time via _register_bg_task — registering inside the task body (the
+# _RUNNING_BG pattern) leaves a race window where an undo can miss an
+# in-flight task that later writes zombie data over the restored state.
+# Undo awaits this task group before restoring (undo-turn design 2026-09);
+# the meta.epoch guard covers anything that slips past the wait.
+_CAMPAIGN_TASKS: dict[tuple, set] = {}
+
+
+def _register_bg_task(username: str, campaign_id: str, coro) -> asyncio.Task:
+    """Spawn a per-campaign background task, tracked from THIS call — not from
+    inside the task. Keeps a strong reference (_BACKGROUND_TASKS) and puts the
+    task in the per-campaign group that _wait_for_bg_tasks drains."""
+    task = asyncio.create_task(coro)
+    key = (username, campaign_id)
+    bucket = _CAMPAIGN_TASKS.setdefault(key, set())
+    bucket.add(task)
+    _BACKGROUND_TASKS.add(task)
+
+    def _done(t: asyncio.Task, _key=key) -> None:
+        _BACKGROUND_TASKS.discard(t)
+        b = _CAMPAIGN_TASKS.get(_key)
+        if b is not None:
+            b.discard(t)
+            if not b:
+                _CAMPAIGN_TASKS.pop(_key, None)
+
+    task.add_done_callback(_done)
+    return task
+
+
+async def _wait_for_bg_tasks(username: str, campaign_id: str, timeout: float = 60.0) -> int:
+    """Wait for the campaign's in-flight background tasks, then return.
+
+    MUST be called OUTSIDE the per-campaign state lock — the background tasks
+    themselves acquire that lock, so waiting while holding it deadlocks.
+    On timeout we proceed anyway: the meta.epoch guard makes any straggler
+    abort before it saves. Returns the number of tasks waited out.
+    """
+    key = (username, campaign_id)
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + timeout
+    waited = 0
+    while True:
+        pending = {t for t in _CAMPAIGN_TASKS.get(key, set()) if not t.done()}
+        if not pending:
+            return waited
+        remaining = deadline - loop.time()
+        if remaining <= 0:
+            logger.warning(
+                "↶ Undo: background wait timed out after %.0fs (%d task(s) still running) — "
+                "proceeding; the epoch guard discards stragglers", timeout, len(pending))
+            return waited
+        done, _ = await asyncio.wait(pending, timeout=remaining)
+        waited += len(done)
+
 # Per-kampanj-lås för state read-modify-write.
 # Bakgrundsuppgifterna (_guardian_post_dm, _post_turn_tasks, dag-entry)
 # körs parallellt; var och en gör store.get() → mutera → store.save().
@@ -4329,12 +4386,38 @@ async def _reindex_after_undo(username: str, campaign_id: str) -> None:
         logger.debug("Re-index after undo skipped: %s", e)
 
 
+def _undo_deltas(pre: dict, post: dict) -> dict:
+    """hp/gold-skillnaden som undo:t orsakade (before = läget vid undo-tillfället,
+    after = det återställda läget) — så frontend kan visa vad som rullades tillbaka."""
+    def _hp(st: dict):
+        try:
+            return int((st.get("character") or {}).get("hp", {}).get("current"))
+        except (TypeError, ValueError):
+            return None
+
+    def _gold(st: dict):
+        try:
+            return int((st.get("currency") or {}).get("gp", 0) or 0)
+        except (TypeError, ValueError):
+            return None
+
+    def _pack(before, after):
+        delta = (after - before) if (before is not None and after is not None) else None
+        return {"before": before, "after": after, "delta": delta}
+
+    return {"hp": _pack(_hp(pre), _hp(post)), "gold": _pack(_gold(pre), _gold(post))}
+
+
 @app.post("/api/campaign/undo")
 async def undo_last_turn(morkrets_token: str | None = Cookie(None)):
     """Ångra senaste turen: spelarens prompt, DM-svaret och allt som
     Guardian/faktextraktionen skrev från den.
 
     Single-level (bara senaste turen) och kostar 1 turn (action="undo").
+    Ingen refund — undo är själv en tung action (beslut 2026-09-09).
+    Race-guard: vänta in det pågående bakgrundsjobbs-gruppen FÖRE restore
+    (undo-turn design 2026-09), sedan bumpas meta.epoch så ev. rester
+    avbryter innan de sparar.
     """
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
@@ -4343,6 +4426,11 @@ async def undo_last_turn(morkrets_token: str | None = Cookie(None)):
         raise HTTPException(404, "Ingen aktiv kampanj")
     campaign_id = state["meta"].get("campaign_id", "")
 
+    # Drain in-flight post-turn tasks BEFORE taking the state lock — those
+    # tasks acquire the same lock, so waiting while holding it deadlocks.
+    # Their writes land first and are then rolled back by the restore.
+    await _wait_for_bg_tasks(username, campaign_id)
+
     lock = _state_lock(username, campaign_id)
     async with lock:
         fresh = store.get(username, campaign_id)
@@ -4350,6 +4438,7 @@ async def undo_last_turn(morkrets_token: str | None = Cookie(None)):
             state = fresh
         if not store.undo_available(state):
             raise HTTPException(409, "Nothing to undo — no previous turn found.")
+        pre_state = state
         # Kostar en turn, som alla tunga actions. Samma 403-shape som chatten
         # så frontendens cap-modal fungerar.
         _gate_turn_quota(username)
@@ -4369,20 +4458,24 @@ async def undo_last_turn(morkrets_token: str | None = Cookie(None)):
         if _voided.get("total_tokens"):
             _track_unguarded(restored, "undo-voided", _voided)
         store.save(restored)
+        deltas = _undo_deltas(pre_state, restored)
         _consume_turn(username, action="undo")
         _log_activity(username, "↶ Undoing the last turn…")
 
-    task = asyncio.create_task(_reindex_after_undo(username, campaign_id))
-    _BACKGROUND_TASKS.add(task)
-    task.add_done_callback(_BACKGROUND_TASKS.discard)
+    # Qdrant-purge + re-index (beslut 2026-09): rensa kampanjens vektorer och
+    # indexera om senaste raderna + lore (uuid5-ID → idempotent). Registrerad
+    # i kampanjgruppen så en snabb dubbel-undo även väntar in den.
+    _register_bg_task(username, campaign_id, _reindex_after_undo(username, campaign_id))
 
     return {
         "ok": True,
         "turn_count": restored["meta"].get("turn_count", 0),
+        "restored_turn": restored["meta"].get("turn_count", 0),
         "removed_messages": info["removed"]["messages"],
         "removed_summaries": info["removed"]["summaries"],
         "undo_prompt": info["meta"].get("prompt", ""),
         "turns_left": _turns_available(username),
+        "deltas": deltas,
     }
 
 
@@ -6831,31 +6924,27 @@ async def _chat_locked(
     # ── Guardian POST-DM → BAKGRUND (blockerar ALDRIG HTTP-svaret) ──
     # skip_effects = denna turs redan applicerade tagg-effekter (P0-dedup):
     # Guardian ska inte applicera [SKADA:]-taggen en andra gång.
-    guardian_task = asyncio.create_task(_guardian_post_dm(
+    # Registered synchronously (_register_bg_task) so an undo racing this turn
+    # can always see and await the task (undo-turn design 2026-09 race recipe).
+    guardian_task = _register_bg_task(username, campaign_id, _guardian_post_dm(
         username, campaign_id, reply, req.message, effective_turn, list(new_npcs),
         skip_effects=meta.get("last_effects") or [], epoch=turn_epoch,
     ))
-    _BACKGROUND_TASKS.add(guardian_task)
-    guardian_task.add_done_callback(_BACKGROUND_TASKS.discard)
 
     # ── Fas 3: Faktextraktion + RAG + sammanfattning → BAKGRUND ──
     # Dessa är icke-kritiska och får ALDRIG fördröja HTTP-svaret till klienten.
     # (Tidigare blockerade de svaret i upp till 180s vardera → "fastnar i laddning".)
     campaign_id = state["meta"].get("campaign_id", "")
     turn_count = state["meta"].get("turn_count", 0)
-    task = asyncio.create_task(_post_turn_tasks(
+    task = _register_bg_task(username, campaign_id, _post_turn_tasks(
         username, campaign_id, reply, req.message, turn_count, req.model_id,
         epoch=turn_epoch,
     ))
-    _BACKGROUND_TASKS.add(task)
-    task.add_done_callback(_BACKGROUND_TASKS.discard)
 
     # Dag-entry: om NY_DAG trigga, generera loggbok-entry i bakgrunden
     if state.get('world', {}).pop('_pending_day_entry', False):
         prev_day = state['world']['day'] - 1
-        day_task = asyncio.create_task(_generate_day_entry(username, campaign_id, prev_day, epoch=turn_epoch))
-        _BACKGROUND_TASKS.add(day_task)
-        day_task.add_done_callback(_BACKGROUND_TASKS.discard)
+        day_task = _register_bg_task(username, campaign_id, _generate_day_entry(username, campaign_id, prev_day, epoch=turn_epoch))
 
     logger.info("◀ TURN %d done · total %.1fs", state["meta"]["turn_count"], time.time() - _t0)
 

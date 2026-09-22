@@ -82,21 +82,39 @@ STATUS_DEFS = {
 }
 
 
-def add_status(entity: dict, name: str, duration: int = 2, dmg_override: int | None = None) -> bool:
+def add_status(entity: dict, name: str, duration: int = 2, dmg_override: int | None = None,
+               save_dc: int | None = None) -> bool:
     """Lägg till en status-effekt på en entity (fiende eller spelare).
-    Returnerar True om statusen lades till (inte redan finns)."""
+
+    Refresh-not-stack (P1b §3.1.5): omapplicering FÖRLÄNGER duration (max av
+    gammalt och nytt) och dmg_per_turn läggs ALDRIG till igen — 5e-villkor
+    staplar inte på sig själva. En HÖGRE save_dc lyfter DC:n (värsta-fallets-
+    regeln), en lägre ändrar inget. Duration klampas 1–10 (§3.1.1).
+    Returnerar True om statusen var ny (False = refresh av befintlig)."""
+    duration = max(1, min(10, int(duration)))
     statuses = entity.setdefault("statuses", [])
     existing = next((s for s in statuses if s.get("name") == name), None)
     if existing:
-        # Förläng duration
+        # Förläng duration (refresh — aldrig stack)
         existing["duration"] = max(existing.get("duration", 1), duration)
+        if save_dc is not None:
+            try:
+                existing["save_dc"] = max(int(existing.get("save_dc") or 0), int(save_dc))
+            except (TypeError, ValueError):
+                pass
         return False
     defn = STATUS_DEFS.get(name, {})
-    statuses.append({
+    entry = {
         "name": name,
         "duration": duration,
         "dmg_per_turn": dmg_override if dmg_override is not None else defn.get("dmg_per_turn", 0),
-    })
+    }
+    if save_dc is not None:
+        try:
+            entry["save_dc"] = max(5, min(25, int(save_dc)))
+        except (TypeError, ValueError):
+            pass
+    statuses.append(entry)
     return True
 
 
@@ -172,6 +190,189 @@ def has_disadvantage(entity: dict) -> bool:
         if defn.get("attack_disadvantage"):
             return True
     return False
+
+
+# ═══════════════════════════════════════
+# STATUS-SPARPROV (P1b §3.1.4) — slut-av-tur, server-rullade
+# ═══════════════════════════════════════
+
+def roll_status_saves(entity: dict, *, is_player: bool = False, target: str = "",
+                      rng=None) -> list[dict]:
+    """Sparprov i slutet av drabbad parts tur för statusar med save_dc.
+
+    Fiender/allierade: server-rullat d20 + 0 (proficiency-löst) vs save_dc —
+    rng-sömen enligt enemy_rolls-mönstret (default: modul-globala roll_d20(),
+    monkeypatch-vänlig; injicera ett objekt med randbelow(n) för determinism).
+    Vid lyckat spår tas statusen bort (status_end). Spelaren rullar ALDRIG
+    här — ytorna är status_save_request-effekter som DM:en/frontenden kan
+    förvandla till [KAST: … SPAR DC N] (dice-lock).
+
+    Returnerar effekter (status_save / status_end / status_save_request).
+    """
+    fx: list[dict] = []
+    for s in list(entity.get("statuses", [])):
+        try:
+            dc = int(s.get("save_dc") or 0)
+        except (TypeError, ValueError):
+            continue
+        if dc <= 0:
+            continue
+        name = str(s.get("name", "?"))
+        who = target or ("player" if is_player else str(entity.get("name", "?")))
+        if is_player:
+            fx.append({"type": "status_save_request", "status": name, "target": who, "dc": dc})
+            continue
+        d20 = roll_d20() if rng is None else rng.randbelow(20) + 1
+        success = d20 >= dc
+        fx.append({"type": "status_save", "status": name, "target": who,
+                   "d20": d20, "dc": dc, "success": success})
+        if success:
+            try:
+                entity.get("statuses", []).remove(s)
+            except ValueError:
+                pass
+            fx.append({"type": "status_end", "status": name, "d20": d20, "dc": dc})
+    return fx
+
+
+def remove_status(entity: dict, name: str) -> bool:
+    """Ta bort en status vid namn (sparprovets framgång, §3.1.4).
+    True om en status togs bort."""
+    statuses = entity.get("statuses", [])
+    for s in list(statuses):
+        if s.get("name") == name:
+            statuses.remove(s)
+            return True
+    return False
+
+
+# ═══════════════════════════════════════
+# FLYKT / JAKT (P1b §2) — 3/3-ferdighetsklocka
+# ═══════════════════════════════════════
+
+CHASE_SUCCESSES = 3    # klockans mål: 3 framgångar = undkommen (§2.2)
+CHASE_MAX_ROUNDS = 6   # klockan MÅSTE lösas — max antal jaktrundor
+CHASE_OUTCOMES = ("escape", "caught", "stalemate")
+
+
+def start_chase(combat: dict, mode: str = "player_flee", quarry: str = "player") -> dict | None:
+    """Starta jaktklockan (§2.1–2.2) på combat-dicten.
+
+    Double-start-guard (§4.3 — speglar _end_combat): pågående jakt → no-op.
+    En jakt får bara starta när striden är aktiv (§2.3). Returnerar
+    chase-dicten, eller None när starten ignorerades."""
+    if not (combat and combat.get("active")):
+        return None
+    chase = combat.get("chase")
+    if isinstance(chase, dict) and chase.get("active"):
+        return None
+    if mode not in ("player_flee", "enemy_flee"):
+        mode = "player_flee" if str(quarry).lower() in ("player", "spelaren") else "enemy_flee"
+    chase = {"active": True, "mode": mode,
+             "successes": 0, "failures": 0, "target": CHASE_SUCCESSES,
+             "started_round": combat.get("round", 1),
+             "quarry": quarry, "rounds": 0, "result": None}
+    combat["chase"] = chase
+    combat.setdefault("log", []).append({
+        "round": combat.get("round", 1), "actor": "system", "name": "",
+        "text": (f"chase begins — {quarry} tries to break away "
+                 f"({CHASE_SUCCESSES} escapes / {CHASE_SUCCESSES} catches)"),
+    })
+    return chase
+
+
+def tick_chase(state: dict, combat: dict, outcome: str, effects: list | None = None) -> dict | None:
+    """Ticka jaktklockan ett jaktrunda (§2.2) — chase_progress-utfall:
+
+    "escape" = bytet vann rundans tävling (+1 framgång) · "caught" =
+    förföljaren vann (+1 motgång) · "stalemate" = oavgjort (komplicerad runda,
+    klockan står still).
+
+    Fullbordande: 3 framgångar → undkommen, striden avslutas GENOM
+    guardian._end_combat ("player fled" / "enemies fled" — alla slutvägar går
+    via det gemensamma hjälpet, double-end-guard inbyggd, §2.3). 3 motgångar →
+    infångad: jakten stängs, striden går vidare och combat["caught_side"] sätts
+    som engångsfördel för förföljarens nästa attack. Kapp-lopp: vid
+    CHASE_MAX_ROUNDS rundor avgörs det på kvarstående klocka — oavgjort = bytet
+    undkommer MED kostnad (halva det burna guldet droppas, §2.2).
+
+    Returnerar chase-dicten, eller None vid no-op (ingen aktiv jakt, striden
+    avslutad eller okänt utfall)."""
+    fx = effects if effects is not None else []
+    chase = (combat or {}).get("chase")
+    if not (combat and combat.get("active") and isinstance(chase, dict) and chase.get("active")):
+        return None
+    outcome = str(outcome or "").strip().lower()
+    if outcome not in CHASE_OUTCOMES:
+        logger.warning("🏃 Chase tick dropped (unknown outcome %r)", outcome)
+        return None
+    rnd = combat.get("round", 1)
+    try:
+        chase["rounds"] = int(chase.get("rounds", 0)) + 1
+    except (TypeError, ValueError):
+        chase["rounds"] = 1
+    if outcome == "escape":
+        chase["successes"] = int(chase.get("successes", 0)) + 1
+    elif outcome == "caught":
+        chase["failures"] = int(chase.get("failures", 0)) + 1
+    quarry = str(chase.get("quarry", "player"))
+    succ, fail = int(chase.get("successes", 0)), int(chase.get("failures", 0))
+    target = int(chase.get("target", CHASE_SUCCESSES))
+    combat.setdefault("log", []).append({
+        "round": rnd, "actor": "system", "name": "",
+        "text": (f"chase round {chase['rounds']}: {outcome} "
+                 f"(escape {succ}/{target} · catch {fail}/{target})"),
+    })
+    fx.append({"type": "chase_tick", "value": quarry, "outcome": outcome,
+               "successes": succ, "failures": fail, "rounds": chase["rounds"]})
+    logger.info("🏃 Chase tick: %s → %s (escape %d/%d · catch %d/%d, round %d)",
+                quarry, outcome, succ, target, fail, target, chase["rounds"])
+    escaped = caught = False
+    escape_cost = 0
+    if succ >= target:
+        escaped = True
+    elif fail >= target:
+        caught = True
+    elif chase["rounds"] >= CHASE_MAX_ROUNDS:
+        # Kapp-lopp (§2.2): avgör på kvarstående klocka — oavgjort = dyr flykt
+        if fail > succ:
+            caught = True
+        else:
+            escaped = True
+            if fail == succ:
+                cur = state.setdefault("currency", {}) if isinstance(state, dict) else {}
+                try:
+                    gp = int(cur.get("gp", 0))
+                except (TypeError, ValueError):
+                    gp = 0
+                escape_cost = gp // 2
+                if escape_cost > 0:
+                    cur["gp"] = gp - escape_cost
+                fx.append({"type": "chase_escape_cost", "value": escape_cost, "denom": "gp"})
+                combat.setdefault("log", []).append({
+                    "round": rnd, "actor": "system", "name": "",
+                    "text": (f"chase ends at the {CHASE_MAX_ROUNDS}-round cap — the quarry "
+                             f"escapes but drops {escape_cost} gp"),
+                })
+    if not (escaped or caught):
+        return chase
+    chase["active"] = False
+    if escaped:
+        chase["result"] = "escaped"
+        fx.append({"type": "chase_end", "value": quarry, "result": "escaped"})
+        reason = "player fled" if chase.get("mode") == "player_flee" else "enemies fled"
+        from guardian import _end_combat  # lazy: undvik import-cirkel
+        _end_combat(state, reason, fx,
+                    log_text=f"chase: the quarry breaks away and escapes — {reason}")
+    else:
+        chase["result"] = "caught"
+        combat["caught_side"] = "player" if chase.get("mode") == "player_flee" else "enemy"
+        fx.append({"type": "chase_end", "value": quarry, "result": "caught"})
+        combat.setdefault("log", []).append({
+            "round": rnd, "actor": "system", "name": "",
+            "text": "chase ends — the quarry is caught! (the pursuer's next attack has advantage)",
+        })
+    return chase
 
 
 # ═══════════════════════════════════════
@@ -542,12 +743,29 @@ def get_current_actor(combat: dict) -> dict | None:
     return order[idx]
 
 
-def _tick_all_statuses(state: dict, combat: dict):
-    """Ticka status-effekter på alla combatants vid rundstart."""
+def _tick_all_statuses(state: dict, combat: dict, rng=None) -> list[dict]:
+    """Ticka status-effekter på alla combatants vid rundstart (P1b §3.1.3).
+
+    EN tick per runda — round-scoped guard `_statuses_ticked_round`
+    (mekanik-payloader kan bära både combat_round-signal OCH auto-avancering;
+    samma runda får aldrig ticka två gånger). Ordning per entitet: sparprov
+    först (§3.1.4, slut-av-tur — fiender/allierade rullas server-side via
+    rng-sömen [enemy_rolls-mönstret]; spelaren får status_save_request-
+    effekter som DM:en/frontenden förvandlar till [KAST: … SPAR DC N]),
+    sedan DoT + duration-avdrag (tick_statuses). Returnerar alla effekter.
+    """
+    fx_all: list[dict] = []
+    rnd = combat.get("round", 1)
+    if combat.get("_statuses_ticked_round") == rnd:
+        return fx_all  # redan tickad denna runda — double-tick-guard
+    combat["_statuses_ticked_round"] = rnd
+
     # Spelaren
     char = state.get("character", {})
     player_entity = {"hp": char.get("hp", {}).get("current", 0), "statuses": char.get("statuses", [])}
+    fx_all.extend(roll_status_saves(player_entity, is_player=True, target="player", rng=rng))
     status_fx = tick_statuses(player_entity)
+    fx_all.extend(status_fx)
     if status_fx:
         char.setdefault("hp", {})["current"] = player_entity["hp"]
         char["statuses"] = player_entity["statuses"]
@@ -563,7 +781,18 @@ def _tick_all_statuses(state: dict, combat: dict):
     for enemy in combat.get("enemies", []):
         if not enemy.get("alive", True):
             continue
+        _sfx = roll_status_saves(enemy, target=str(enemy.get("name", "?")), rng=rng)
+        fx_all.extend(_sfx)
+        for f in _sfx:
+            if f["type"] == "status_save":
+                _res = "breaks free!" if f.get("success") else "still afflicted"
+                combat.setdefault("log", []).append({
+                    "round": combat.get("round", 1), "actor": "system",
+                    "name": enemy.get("name", "?"),
+                    "text": f"{f['status']} save vs DC {f['dc']} (🎲 d20={f['d20']}) — {_res}",
+                })
         fx = tick_statuses(enemy)
+        fx_all.extend(fx)
         for f in fx:
             if f["type"] == "status_dmg":
                 combat.setdefault("log", []).append({
@@ -588,7 +817,18 @@ def _tick_all_statuses(state: dict, combat: dict):
     for ally in combat.get("allies", []):
         if not ally.get("alive", True):
             continue
+        _sfx = roll_status_saves(ally, target=str(ally.get("name", "?")), rng=rng)
+        fx_all.extend(_sfx)
+        for f in _sfx:
+            if f["type"] == "status_save":
+                _res = "breaks free!" if f.get("success") else "still afflicted"
+                combat.setdefault("log", []).append({
+                    "round": combat.get("round", 1), "actor": "system",
+                    "name": ally.get("name", "?"),
+                    "text": f"{f['status']} save vs DC {f['dc']} (🎲 d20={f['d20']}) — {_res}",
+                })
         fx = tick_statuses(ally)
+        fx_all.extend(fx)
         for f in fx:
             if f["type"] == "status_dmg":
                 combat.setdefault("log", []).append({
@@ -608,6 +848,8 @@ def _tick_all_statuses(state: dict, combat: dict):
                 "round": combat.get("round", 1), "actor": "system",
                 "name": ally["name"], "text": "falls",
             })
+
+    return fx_all
 
 
 # ═══════════════════════════════════════

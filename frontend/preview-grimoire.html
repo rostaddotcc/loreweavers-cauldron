@@ -6,7 +6,7 @@
 <title>The Lore Weaver's Cauldron — Riktningsprov I · Den Förbjudna Grimsboken</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=MedievalSharp&family=UnifrakturCook:wght@700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=EB+Garamond:ital,wght@1,400;1,700&family=Spectral:ital,wght@0,400;0,500;0,700;1,400;1,700&display=swap" rel="stylesheet">
 <style>
 /* ============================================================================
    DEN FÖRBJUDNA GRIMSBOKEN — the game IS the book.
@@ -26,10 +26,10 @@
   /* — manuscript pigments — */
   --lapis:          #26406e;   /* lapis lazuli — the player's marginal ink        */
   --paper-deep:     #bcab86;
-  --paper-faint:    #8d8168;
+  --paper-faint:    #9d8a6a;   /* tuned 2026-09-22: 4.6:1+ på alla bladytor */
   --accent-lit:     #efd98a;   /* gold in candleflame                             */
   --accent-dim:     #8a6f1c;   /* tarnished gold — rules, vine, quiet ornament    */
-  --danger-lit:     #b0555d;   /* rubric red on the dark page                     */
+  --danger-lit:     #d5737c;   /* rubric red on the dark page (4.8:1+ tuned)      */
   --lapis-lit:      #6d8fc4;   /* player ink in dim light                         */
   --surface-raised: #241d17;
   --surface-edge:   #0f0c0a;   /* soot                                            */
@@ -50,16 +50,18 @@
   --btn-danger-bg:  var(--danger);
   --btn-danger-fg:  #e8c9a6;
 
-  /* — typography: display as art, serif for the long read — */
-  --ff-display: "UnifrakturCook", "MedievalSharp", serif;
-  --ff-rubric:  "MedievalSharp", "EB Garamond", serif;
-  --ff-body:    "EB Garamond", Georgia, "Times New Roman", serif;
+  /* — typography: Cinzel display (NO blackletter anywhere), Spectral body,
+     EB Garamond italic for marginalia/flavor only, sparingly — */
+  --ff-display:  "Cinzel", Georgia, serif;
+  --ff-rubric:   "Cinzel", "Spectral", serif;
+  --ff-body:     "Spectral", Georgia, "Times New Roman", serif;
+  --ff-marginal: "EB Garamond", Georgia, serif;
 
   --fs-hero:     clamp(3rem, 11vw, 6.5rem);   /* the title is an illumination  */
   --fs-hero-sm:  clamp(1.3rem, 4vw, 2.2rem);  /* its quiet first line          */
   --fs-h2:       clamp(1.6rem, 4vw, 2.3rem);
   --fs-h3:       clamp(1.15rem, 2.6vw, 1.4rem);
-  --fs-body:     1.125rem;                    /* 18px — hero of the game       */
+  --fs-body:     1.0625rem;                   /* 17px — hero of the game       */
   --fs-body-sm:  1rem;                        /* 16px floor                    */
   --fs-label:    0.78rem;
   --fs-marginal: 0.9rem;
@@ -68,7 +70,7 @@
   --fs-roll:     clamp(1.5rem, 4.5vw, 2rem);
   --fs-verse:    clamp(1.25rem, 3.4vw, 1.7rem);
 
-  --lh-body:     1.75;
+  --lh-body:     1.65;
   --lh-tight:    1.08;
   --tracking-label: 0.24em;
 
@@ -284,7 +286,7 @@ a{ color:var(--accent); text-decoration-color:var(--accent-dim); text-underline-
   }
 }
 .hero-sub{
-  font-family:var(--ff-rubric);
+  font-family:var(--ff-marginal);
   font-style:italic;
   color:var(--text-quiet);
   font-size:var(--fs-marginal);
@@ -313,7 +315,7 @@ a{ color:var(--accent); text-decoration-color:var(--accent-dim); text-underline-
 
 /* ————— marginalia ————— */
 .marginalia{
-  font-family:var(--ff-rubric);
+  font-family:var(--ff-marginal);
   font-style:italic;
   font-size:var(--fs-marginal);
   line-height:1.55;
@@ -485,7 +487,7 @@ p.narration{
 .entry--miss .entry-line .roll{ text-decoration:line-through; text-decoration-color:var(--danger-lit); text-decoration-thickness:1px; }
 .parried-note{
   display:block;
-  font-family:var(--ff-rubric);
+  font-family:var(--ff-marginal);
   font-style:italic;
   font-size:var(--fs-marginal);
   color:var(--lapis-lit);
@@ -605,7 +607,7 @@ p.narration{
 .verse .say{ display:block; }
 .verse .aside{
   display:block;
-  font-family:var(--ff-rubric);
+  font-family:var(--ff-marginal);
   font-style:italic;
   font-size:var(--fs-marginal);
   color:var(--text-quiet);
@@ -686,7 +688,7 @@ p.narration{
   animation:var(--flicker);
 }
 .empty p{
-  font-family:var(--ff-rubric);
+  font-family:var(--ff-marginal);
   font-style:italic;
   font-size:var(--fs-h3);
   color:var(--paper-deep);
@@ -943,15 +945,15 @@ p.narration{
     <p class="rubric">The Scribe's Hands</p>
     <div class="specimen-art" aria-hidden="true">Aa<span class="lapis-glyph">†Q</span></div>
     <div class="specimen-row">
-      <span class="meta">Display · UnifrakturCook 700 · --fs-h2</span>
+      <span class="meta">Display · Cinzel 700 · --fs-h2</span>
       <p class="spec-h1">The Drowned Archive</p>
     </div>
     <div class="specimen-row">
-      <span class="meta">Rubric &amp; Voice · MedievalSharp · --fs-h3</span>
+      <span class="meta">Rubric &amp; Voice · Cinzel 500 small-caps · --fs-h3</span>
       <p class="spec-h2">Archival Sentinel — roll for initiative</p>
     </div>
     <div class="specimen-row">
-      <span class="meta">Body · EB Garamond 400 · 18px · --fs-body</span>
+      <span class="meta">Body · Spectral 400 · 17px · --fs-body</span>
       <p class="spec-body">Long prose is the hero of this game, so the body text is given the whole width of the scribe's measure: warm humanist serif, generous leading, and a bone-ink color that reads like candlelight on vellum without burning the eye at 2 a.m.</p>
     </div>
     <div class="specimen-row">

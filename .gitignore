@@ -28,3 +28,9 @@ backend/data/
 
 # Env-backuper ska aldrig spåras
 *.env.bak
+
+# env-backupar får ALDRIG in i git (push-protection-flaggat 2026-09-22)
+.env.bak*
+backend/.env.bak*
+*.env.bak
+.env.bak-*

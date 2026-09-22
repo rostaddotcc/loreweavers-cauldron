@@ -40,7 +40,7 @@
     background:var(--stone)}
   .nav-brand{display:flex;align-items:center;gap:.65rem;text-decoration:none}
   .nav-brand img{width:34px;height:34px;mix-blend-mode:screen}
-  .nav-brand span{font-family:var(--font-display);font-weight:700;font-size:.86rem;
+  .nav-brand span{font-family:var(--font-display);font-weight:700;font-size:var(--fs-sm);
     letter-spacing:.22em;text-transform:uppercase;color:var(--bone-bright)}
   .nav-links{display:flex;gap:1.4rem;align-items:center}
   .nav-link{font-family:var(--font-display);font-size:.7rem;letter-spacing:.2em;
@@ -66,7 +66,7 @@
     text-align:center;color:var(--bone-bright);letter-spacing:.08em;text-transform:uppercase;
     margin-bottom:1rem;text-shadow:2px 2px 0 #000}
   .ledger-sub{max-width:620px;margin:0 auto 2.6rem;text-align:center;color:var(--bone-dim);
-    font-size:1.02rem;line-height:1.65}
+    font-size:var(--fs-base);line-height:1.65}
   .ledger-sub b{color:var(--bone);font-weight:600}
 
   /* current version chip */
@@ -85,8 +85,8 @@
   .sec{margin-bottom:3.4rem}
   .sec-head{display:flex;align-items:baseline;gap:.9rem;margin-bottom:1.4rem;
     border-bottom:1px solid var(--edge);padding-bottom:.7rem}
-  .sec-num{font-family:var(--font-display);font-weight:900;font-size:.9rem;color:var(--gold);opacity:.8}
-  .sec-head h2{font-family:var(--font-display);font-weight:700;font-size:1.05rem;
+  .sec-num{font-family:var(--font-display);font-weight:900;font-size:var(--fs-sm);color:var(--gold);opacity:.8}
+  .sec-head h2{font-family:var(--font-display);font-weight:700;font-size:var(--fs-base);
     letter-spacing:.16em;text-transform:uppercase;color:var(--bone-bright)}
   .sec-head .rule{height:1px;flex:1;background:var(--edge);align-self:center}
   .sec-head .ruler{height:3px;width:44px;background:var(--gold);align-self:center;flex:none}
@@ -99,14 +99,14 @@
   .chip{font-family:var(--font-display);font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;
     color:var(--ink);background:var(--gold);border:1px solid var(--gold-bright);
     padding:.26rem .6rem}
-  .tablet-title{font-family:var(--font-display);font-weight:700;font-size:.86rem;letter-spacing:.14em;
+  .tablet-title{font-family:var(--font-display);font-weight:700;font-size:var(--fs-sm);letter-spacing:.14em;
     text-transform:uppercase;color:var(--bone-bright)}
-  .tablet-lead{color:var(--bone-dim);font-size:.95rem;line-height:1.6;margin-bottom:1.1rem}
+  .tablet-lead{color:var(--bone-dim);font-size:var(--fs-sm);line-height:1.6;margin-bottom:1.1rem}
   .tablet-lead b{color:var(--bone);font-weight:600}
 
   /* feature list */
   .feat{list-style:none}
-  .feat li{padding:.55rem 0 .55rem 1.6rem;position:relative;color:var(--bone);font-size:.95rem;line-height:1.55}
+  .feat li{padding:.55rem 0 .55rem 1.6rem;position:relative;color:var(--bone);font-size:var(--fs-sm);line-height:1.55}
   .feat li::before{content:'◆';position:absolute;left:0;top:.62rem;color:var(--gold);font-size:.6rem}
   .feat li b{color:var(--bone-bright);font-weight:600}
   .feat li .dim{color:var(--bone-dim)}
@@ -130,14 +130,14 @@
   .tier{background:var(--stone);
     border:1px solid var(--edge);padding:1.6rem 1.5rem}
   .tier.hot{border-color:var(--gold)}
-  .tier-name{font-family:var(--font-display);font-weight:700;font-size:.78rem;letter-spacing:.24em;
+  .tier-name{font-family:var(--font-display);font-weight:700;font-size:var(--fs-tiny);letter-spacing:.24em;
     text-transform:uppercase;color:var(--bone-bright);margin-bottom:.3rem}
   .tier-flag{font-family:var(--font-display);font-size:.56rem;letter-spacing:.2em;text-transform:uppercase;
     color:var(--gold-bright);margin-bottom:.5rem}
   .tier-price{font-family:var(--font-display);font-weight:900;font-size:1.5rem;color:var(--gold-bright);margin-bottom:.5rem}
   .tier-price small{font-size:.72rem;font-weight:400;color:var(--bone-dim);letter-spacing:.05em}
   .tier ul{list-style:none}
-  .tier li{padding:.3rem 0 .3rem 1.3rem;position:relative;color:var(--bone);font-size:.9rem;line-height:1.5}
+  .tier li{padding:.3rem 0 .3rem 1.3rem;position:relative;color:var(--bone);font-size:var(--fs-sm);line-height:1.5}
   .tier li::before{content:'◆';position:absolute;left:0;top:.38rem;color:var(--gold);font-size:.55rem}
   .tier li b{color:var(--bone-bright);font-weight:600}
 
@@ -155,14 +155,14 @@
   .hist-ver:first-child{margin-top:0;padding-top:0;border-top:none}
   .hist-ver .vchip{font-family:var(--font-display);font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;
     color:var(--gold);flex:none}
-  .hist-ver h3{font-family:var(--font-display);font-weight:700;font-size:.82rem;letter-spacing:.12em;
+  .hist-ver h3{font-family:var(--font-display);font-weight:700;font-size:var(--fs-tiny);letter-spacing:.12em;
     text-transform:uppercase;color:var(--bone-bright)}
-  .hist-ver .muted{font-family:var(--font-body);font-size:.8rem;color:var(--bone-dim);letter-spacing:0;text-transform:none}
+  .hist-ver .muted{font-family:var(--font-body);font-size:var(--fs-tiny);color:var(--bone-dim);letter-spacing:0;text-transform:none}
   .hist-ver ul{list-style:none;margin-top:.4rem}
-  .hist-ver li{padding:.32rem 0 .32rem 1.4rem;position:relative;color:var(--bone);font-size:.9rem;line-height:1.55}
+  .hist-ver li{padding:.32rem 0 .32rem 1.4rem;position:relative;color:var(--bone);font-size:var(--fs-sm);line-height:1.55}
   .hist-ver li::before{content:'▸';position:absolute;left:0;color:var(--gold);font-size:.7rem}
 
-  .footer{margin-top:4rem;text-align:center;color:var(--bone-dim);font-size:.82rem;line-height:1.7;
+  .footer{margin-top:4rem;text-align:center;color:var(--bone-dim);font-size:var(--fs-tiny);line-height:1.7;
     border-top:1px solid var(--edge);padding-top:2rem}
   .footer b{color:var(--bone)}
   .footer a{color:var(--gold);text-decoration:none}
@@ -184,11 +184,13 @@
     .nav-links .nav-link{display:none}
     .ledger{padding-top:calc(var(--nav-h) + 3rem)}
     .tablet{padding:1.5rem 1.2rem 1.3rem}
-    .sec-head h2{font-size:.92rem}
+    .sec-head h2{font-size:var(--fs-sm)}
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=47">
-<noscript><style>.rv{opacity:1;transform:none}</style></noscript>
+<link rel="stylesheet" href="snes.css?v=49">
+<noscript><style>.rv{opacity:1;transform:none}/* v5-fresh: mobile touch targets */
+@media(max-width:900px){.ver-chiprow a{min-height:44px;display:inline-flex;align-items:center}.hist-toggle{min-height:44px}}
+</style></noscript>
 </head>
 <body>
 
@@ -202,16 +204,18 @@
     <a class="nav-link" href="models.html" title="The AI models behind the game">The Minds</a>
     <a class="nav-link active" href="releases.html" title="Release notes / changelog">Ledger</a>
     <a class="nav-link" href="help.html" title="How to Play guide">Guide</a>
-    <a class="nav-cta" href="login.html#gate" title="Sign in or create your adventurer">Enter</a>
+    <a class="nav-cta btn-gold" href="login.html#gate" title="Sign in or create your adventurer">Enter</a>
   </div>
 </nav>
 
 <section class="ledger">
-  <p class="eyebrow rv">The Ledger of the Realm</p>
+<div class="page-eyebrow">THE SCRIBE · WHAT IS NEW</div>
   <h1 class="rv">Release Notes</h1>
+  <div class="page-rule">✦</div>
+   <p class="eyebrow rv">The Ledger of the Realm</p>
   <p class="ledger-sub rv">Every update written in the ledger, so the realm's history stays legible. This entry — the rewoven thread: the last turn can be taken back, new minds join the table (free and Patron), and the playtest's findings were answered on 2026-09-13.<br><b>v1.2 → v1.3</b> · 2026-09-09 · refreshed 2026-09-21</p>
 
-  <div class="current-box rv">
+  <div class="current-box rv fresh-frame">
     <span class="ver-chip"><span class="ver-name">v1.3</span><span class="ver-note">The Rewoven Thread</span></span>
     <span class="ver-tag">DeepSeek V4.1 Flash — Patron</span>
     <span class="ver-tag">Step 5 Preview free</span>
@@ -901,11 +905,11 @@
 
   <!-- ═══════════════ historical ═══════════════ -->
   <div class="sec rv">
-    <button class="hist-toggle" id="hist-toggle" onclick="toggleHist()">
+    <button class="hist-toggle btn-ghost" id="hist-toggle" onclick="toggleHist()">
       <span class="caret">▸</span> Older entries
     </button>
     <div class="hist-body" id="hist-body">
-      <div class="hist-inner">
+      <div class="hist-inner fresh-frame">
 
         <div class="hist-ver">
           <span class="vchip">v0.6.3</span>

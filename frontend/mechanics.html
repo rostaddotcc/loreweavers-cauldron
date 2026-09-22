@@ -51,7 +51,7 @@ code,kbd,.mono{font-family:var(--font-mono);font-size:.9em}
 .boot-bar i{width:10px;height:10px;display:inline-block}
 .boot-bar i:nth-child(1){background:#8b1a2a}.boot-bar i:nth-child(2){background:#8a6d14}.boot-bar i:nth-child(3){background:#2a6e3a}
 .boot-bar span{margin-left:.5rem;font-family:var(--font-mono);font-size:.68rem;letter-spacing:.22em;color:var(--bone-dim);text-transform:uppercase}
-.boot-lines{padding:1.2rem 1.4rem 1.4rem;font-family:var(--font-mono);font-size:.82rem;line-height:1.85;color:var(--term-green);min-height:250px;white-space:pre-wrap;word-break:break-word}
+.boot-lines{padding:1.2rem 1.4rem 1.4rem;font-family:var(--font-mono);font-size:var(--fs-tiny);line-height:1.85;color:var(--term-green);min-height:250px;white-space:pre-wrap;word-break:break-word}
 .boot-lines .b-ok{color:var(--term-green)}
 .boot-lines .b-dim{color:var(--bone-dim)}
 .boot-lines .b-gold{color:var(--gold-bright)}
@@ -70,7 +70,7 @@ main{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1.4
 .hero h1{font-family:var(--font-display);font-weight:900;font-size:clamp(2rem,5.6vw,3.4rem);color:var(--bone-bright);line-height:1.12;
   text-shadow:2px 2px 0 #000;animation:flicker 7s infinite}
 @keyframes flicker{0%,93%,95%,97%,100%{opacity:1}94%{opacity:.82}96%{opacity:.9}}
-.hero .sub{margin:1.1rem auto 0;max-width:560px;color:var(--bone);font-style:italic;font-size:1.05rem}
+.hero .sub{margin:1.1rem auto 0;max-width:560px;color:var(--bone);font-style:italic;font-size:var(--fs-base)}
 .hero .sub b{color:var(--gold-bright);font-style:normal}
 .chips{display:flex;flex-wrap:wrap;justify-content:center;gap:.55rem;margin-top:1.5rem}
 .chip{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone);
@@ -105,7 +105,7 @@ main{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1.4
 .sg marker path{fill:var(--edge-hi)}
 
 /* ── Index / scroll-spy ─────────────────────────────────────── */
-.index{position:sticky;top:1.4rem;align-self:start;font-family:var(--font-mono);font-size:.74rem}
+.index{position:sticky;top:1.4rem;align-self:start;font-family:var(--font-mono);font-size:var(--fs-tiny)}
 .index h2{font-family:var(--font-display);font-size:.66rem;letter-spacing:.34em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.9rem}
 .index ol{list-style:none;border-left:1px solid var(--edge)}
 .index li{border-left:2px solid transparent;transition:all .25s}
@@ -122,20 +122,20 @@ main{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1.4
 .sec-num{font-family:var(--font-display);font-weight:900;font-size:clamp(1.6rem,3vw,2.2rem);color:var(--gold);opacity:.9;line-height:1}
 .sec-title{font-family:var(--font-display);font-weight:700;font-size:clamp(1.15rem,2.6vw,1.55rem);letter-spacing:.1em;text-transform:uppercase;color:var(--bone-bright)}
 .sec-rule{flex:1;height:1px;background:var(--gold);opacity:.4;margin-top:.6rem}
-.sec-mark{color:var(--gold);font-size:.8rem;margin-right:.4rem}
+.sec-mark{color:var(--gold);font-size:var(--fs-tiny);margin-right:.4rem}
 .sec-lede{color:var(--bone-dim);font-style:italic;margin:-.2rem 0 1.6rem;max-width:70ch}
 
 /* ── Panels / tablets ───────────────────────────────────────── */
 .panel{position:relative;background:var(--stone);
   border:1px solid var(--edge);padding:1.4rem 1.4rem;margin-bottom:1.4rem}
 .panel::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.3}
-.panel h3{font-family:var(--font-display);font-size:.8rem;letter-spacing:.26em;text-transform:uppercase;color:var(--gold-bright);margin-bottom:.7rem}
+.panel h3{font-family:var(--font-display);font-size:var(--fs-tiny);letter-spacing:.26em;text-transform:uppercase;color:var(--gold-bright);margin-bottom:.7rem}
 .panel h3 .dot{color:var(--gold)}
 .panel p{margin-bottom:.7rem}
 .panel p:last-child{margin-bottom:0}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4rem}
-.stat{font-family:var(--font-mono);font-size:.78rem;color:var(--bone-dim)}
+.stat{font-family:var(--font-mono);font-size:var(--fs-tiny);color:var(--bone-dim)}
 .stat b{color:var(--bone-bright);font-weight:600}
 .stat .v{color:var(--gold-bright)}
 .tag-row{display:flex;flex-wrap:wrap;gap:.45rem;margin:.6rem 0 .9rem}
@@ -155,7 +155,7 @@ main{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1.4
 .term-bar i{width:9px;height:9px;display:inline-block}
 .term-bar i:nth-child(1){background:#8b1a2a}.term-bar i:nth-child(2){background:#8a6d14}.term-bar i:nth-child(3){background:#2a6e3a}
 .term-bar span{margin-left:.5rem;font-family:var(--font-mono);font-size:.64rem;letter-spacing:.2em;color:var(--bone-dim);text-transform:uppercase}
-.term-body{padding:1rem 1.1rem;font-family:var(--font-mono);font-size:.78rem;line-height:1.8;color:var(--term-green);overflow-x:auto}
+.term-body{padding:1rem 1.1rem;font-family:var(--font-mono);font-size:var(--fs-tiny);line-height:1.8;color:var(--term-green);overflow-x:auto}
 .term-body .c-dim{color:var(--bone-dim)}.term-body .c-gold{color:var(--gold-bright)}
 .term-body .c-p{color:var(--arcane-bright)}.term-body .c-red{color:var(--term-red)}
 .term-body .c-amb{color:var(--term-amber)}.term-body .c-teal{color:var(--teal)}
@@ -187,7 +187,7 @@ main{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1.4
 .strata{margin:1.2rem 0}
 .str-row{display:grid;grid-template-columns:34px minmax(150px,220px) 1fr;gap:.8rem;align-items:baseline;
   border:1px solid var(--edge);border-left:2px solid var(--edge);background:var(--stone);
-  padding:.5rem .9rem;margin-bottom:.35rem;font-family:var(--font-mono);font-size:.76rem;
+  padding:.5rem .9rem;margin-bottom:.35rem;font-family:var(--font-mono);font-size:var(--fs-tiny);
   opacity:.45;transform:translateX(-6px);transition:all .45s cubic-bezier(.22,1,.36,1)}
 .str-row .sn{color:var(--gold);font-size:.68rem}
 .str-row .st{color:var(--bone-bright);letter-spacing:.04em;font-weight:600}
@@ -267,7 +267,7 @@ table.dc th{font-family:var(--font-display);font-size:.64rem;letter-spacing:.2em
   text-align:left;padding:.4rem .7rem;border-bottom:1px solid var(--gold);font-weight:700}
 table.dc td{padding:.36rem .7rem;border-bottom:1px solid var(--edge);color:var(--bone)}
 table.dc tr:last-child td{border-bottom:none}
-table.dc td.mono{font-family:var(--font-mono);font-size:.74rem;color:var(--gold-bright)}
+table.dc td.mono{font-family:var(--font-mono);font-size:var(--fs-tiny);color:var(--gold-bright)}
 
 /* ── Dice roller ────────────────────────────────────────────── */
 .roller{border:1px solid var(--edge);background:var(--stone);padding:1.4rem;margin:1.2rem 0}
@@ -281,7 +281,7 @@ table.dc td.mono{font-family:var(--font-mono);font-size:.74rem;color:var(--gold-
 .r-adv input{accent-color:var(--arcane)}
 .dice-stage{display:flex;flex-wrap:wrap;gap:.7rem;min-height:74px;align-items:center;margin:.9rem 0 .4rem}
 .die-face{width:58px;height:58px;display:flex;align-items:center;justify-content:center;position:relative;
-  font-family:var(--font-display);font-weight:900;font-size:1.35rem;color:var(--bone-bright);
+  font-family:var(--font-display);font-weight:900;font-size:var(--fs-h3);color:var(--bone-bright);
   background:var(--stone-3);border:1px solid var(--edge-hi);
   animation:die-pop .45s cubic-bezier(.22,1,.36,1) both}
 @keyframes die-pop{from{opacity:0;transform:scale(.3) rotate(-160deg)}to{opacity:1;transform:scale(1) rotate(0)}}
@@ -291,8 +291,8 @@ table.dc td.mono{font-family:var(--font-mono);font-size:.74rem;color:var(--gold-
 .die-face.fail{border-color:var(--blood-bright);color:var(--blood-bright)}
 .die-face.adv-best{border-color:var(--poison)}
 @keyframes crit-glow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.5)}}
-.r-result{font-family:var(--font-mono);font-size:.9rem;color:var(--term-green);min-height:1.6em;word-break:break-word}
-.r-crit{font-family:var(--font-display);font-size:.78rem;letter-spacing:.24em;text-transform:uppercase;margin-top:.3rem;min-height:1.2em}
+.r-result{font-family:var(--font-mono);font-size:var(--fs-sm);color:var(--term-green);min-height:1.6em;word-break:break-word}
+.r-crit{font-family:var(--font-display);font-size:var(--fs-tiny);letter-spacing:.24em;text-transform:uppercase;margin-top:.3rem;min-height:1.2em}
 .r-crit.good{color:var(--gold-bright);animation:crit-flash 1s ease-in-out infinite}
 .r-crit.bad{color:var(--blood-bright)}
 @keyframes crit-flash{0%,100%{opacity:1}50%{opacity:.55}}
@@ -312,7 +312,7 @@ table.dc td.mono{font-family:var(--font-mono);font-size:.74rem;color:var(--gold-
 @keyframes pip-refill{from{transform:scale(.2);filter:none}to{transform:scale(1);filter:drop-shadow(0 0 6px rgba(240,214,117,.5))}}
 .ss-pip.burn{animation:pip-burn .5s ease-out both}
 @keyframes pip-burn{0%{transform:scale(1)}40%{transform:scale(1.35);filter:drop-shadow(0 0 12px rgba(240,214,117,.9))}100%{transform:scale(1)}}
-.slot-status{font-family:var(--font-mono);font-size:.74rem;color:var(--bone-dim);min-height:1.5em;margin-bottom:.8rem}
+.slot-status{font-family:var(--font-mono);font-size:var(--fs-tiny);color:var(--bone-dim);min-height:1.5em;margin-bottom:.8rem}
 .slot-status b{color:var(--gold-bright)}
 .slot-status.blocked{color:var(--blood-bright);animation:crit-flash .8s ease-in-out 2}
 .slot-btns{display:flex;flex-wrap:wrap;gap:.5rem}
@@ -321,11 +321,11 @@ table.dc td.mono{font-family:var(--font-mono);font-size:.74rem;color:var(--gold-
 .tts-cache{display:flex;flex-wrap:wrap;gap:.5rem;min-height:34px;margin:.7rem 0}
 .tts-key{font-family:var(--font-mono);font-size:.66rem;color:var(--bone);border:1px solid var(--edge);background:var(--stone-3);
   padding:.28rem .55rem;animation:die-pop .4s cubic-bezier(.22,1,.36,1) both;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tts-log{font-family:var(--font-mono);font-size:.74rem;color:var(--term-green);min-height:1.5em;word-break:break-word}
+.tts-log{font-family:var(--font-mono);font-size:var(--fs-tiny);color:var(--term-green);min-height:1.5em;word-break:break-word}
 .tts-log .m{color:var(--term-amber)}.tts-log .h{color:var(--poison)}
 
 /* ── §10 State tree + fan ───────────────────────────────────── */
-.tree{background:var(--ink);border:1px solid var(--edge);padding:1rem 1.1rem;margin:1rem 0;font-family:var(--font-mono);font-size:.76rem;line-height:1.8}
+.tree{background:var(--ink);border:1px solid var(--edge);padding:1rem 1.1rem;margin:1rem 0;font-family:var(--font-mono);font-size:var(--fs-tiny);line-height:1.8}
 .tree .k{color:var(--bone-bright)}
 .tree .kg{color:var(--gold-bright)}
 .tree .d{color:var(--bone-dim)}
@@ -361,7 +361,7 @@ table.dc td.mono{font-family:var(--font-mono);font-size:.74rem;color:var(--gold-
 .rw-stage{display:flex;gap:1rem;align-items:stretch;margin:1.2rem 0;flex-wrap:wrap}
 .rw-card{flex:1;min-width:180px;border:1px solid var(--edge);background:var(--stone);padding:1rem;position:relative;transition:all .5s}
 .rw-card h4{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.5rem}
-.rw-card .rw-body{font-family:var(--font-mono);font-size:.74rem;color:var(--bone);line-height:1.7}
+.rw-card .rw-body{font-family:var(--font-mono);font-size:var(--fs-tiny);color:var(--bone);line-height:1.7}
 .rw-card.now{border-color:var(--gold);box-shadow:0 0 18px -8px rgba(212,169,44,.5)}
 .rw-card.gone{opacity:.25;transform:translateX(-10px)}
 .rw-card.restored{border-color:var(--poison);box-shadow:0 0 18px -8px rgba(122,163,94,.5)}
@@ -375,7 +375,7 @@ table.dc td.mono{font-family:var(--font-mono);font-size:.74rem;color:var(--gold-
 /* ── Expanders ──────────────────────────────────────────────── */
 .exp{border:1px solid var(--edge);background:var(--stone);margin-bottom:.8rem}
 .exp-toggle{display:flex;align-items:center;gap:.7rem;width:100%;cursor:pointer;text-align:left;background:none;border:none;
-  padding:.8rem 1rem;color:var(--bone);transition:color .2s;font-family:var(--font-body);font-size:.92rem}
+  padding:.8rem 1rem;color:var(--bone);transition:color .2s;font-family:var(--font-body);font-size:var(--fs-sm)}
 .exp-toggle:hover{color:var(--gold-bright)}
 .exp-toggle .caret{transition:transform .3s;font-size:.6rem;color:var(--gold);flex:none}
 .exp-toggle.open .caret{transform:rotate(90deg)}
@@ -384,7 +384,7 @@ table.dc td.mono{font-family:var(--font-mono);font-size:.74rem;color:var(--gold-
 .exp-body{max-height:0;overflow:hidden;opacity:0;transition:max-height .55s cubic-bezier(.22,1,.36,1),opacity .4s}
 .exp-body.open{max-height:2000px;opacity:1}
 .exp-inner{padding:0 1rem 1.1rem}
-.exp-inner p{color:var(--bone);font-size:.9rem;margin-bottom:.7rem}
+.exp-inner p{color:var(--bone);font-size:var(--fs-sm);margin-bottom:.7rem}
 .exp-inner p:last-child{margin-bottom:0}
 
 /* ── Footer / toast / reveal ────────────────────────────────── */
@@ -392,7 +392,7 @@ footer{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1
 footer .f-title{font-family:var(--font-display);font-size:.68rem;letter-spacing:.34em;text-transform:uppercase;color:var(--gold);margin-bottom:.6rem}
 footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);line-height:1.9}
 .toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);opacity:0;z-index:1200;
-  font-family:var(--font-display);font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;
+  font-family:var(--font-display);font-size:var(--fs-tiny);letter-spacing:.12em;text-transform:uppercase;
   background:var(--stone);border:1px solid var(--gold);
   color:var(--gold-bright);padding:.7rem 1.5rem;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}
 .toast.show{transform:translate(-50%,0);opacity:1}
@@ -418,6 +418,9 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
   .hero{padding-top:3.4rem}
   .flowbox svg{min-width:560px}
   .rw-stage{flex-direction:column}
+
+  a.btn-gold, a.btn-ghost, a.btn-blood, .r-btn, .jb-btn { min-height: 44px; }
+  input, select { font-size: 16px; }
 }
 @media(max-width:480px){
   .sec-head{flex-wrap:wrap;gap:.4rem}
@@ -428,7 +431,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
   html{scroll-behavior:auto}
 }
 </style>
-<link rel="stylesheet" href="snes.css?v=47">
+<link rel="stylesheet" href="snes.css?v=49">
 <noscript><style>.rv{opacity:1;transform:none}#boot{display:none}.boot-lines{min-height:0}.term-line{opacity:1;transform:none}.str-row{opacity:1;transform:none}</style></noscript>
 </head>
 <body>
@@ -448,8 +451,10 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
 
 <!-- ═══════════ HERO ═══════════ -->
 <header class="hero">
-  <div class="eyebrow">The Lore Weaver's Cauldron — under the table</div>
+<div class="page-eyebrow">THE RULES · HOW THE WORLD MOVES</div>
   <h1>The Mechanics of the Cauldron</h1>
+  <div class="page-rule">✦</div>
+   <div class="eyebrow">The Lore Weaver's Cauldron — under the table</div>
   <p class="sub">Two minds, one die cup, one JSON file. Everything else is a projection.</p>
 
   <!-- The whole engine in one diagram -->
@@ -539,7 +544,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
   <p class="sec-lede">One artist, one accountant, and a third party neither of them may overrule: the engine.</p>
 
   <div class="grid3">
-    <div class="panel rv">
+    <div class="panel rv fresh-frame">
       <h3><span class="dot">✦</span> The Dungeon Master</h3>
       <p>A free, creative storyteller. Identity and craft laws live in <code>DM_CORE_PROMPT</code>, versioned <b>v28</b> — a version bump forces a provider cache miss, so a stale persona can never be served.</p>
       <div class="tag-row">
@@ -686,7 +691,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     </div>
     <div class="panel rv">
       <h3><span class="dot">✦</span> The DC scale</h3>
-      <table class="dc">
+      <table class="dc fresh-table">
         <tr><th>Difficulty</th><th>DC</th></tr>
         <tr><td>Easy</td><td class="mono">8–10</td></tr>
         <tr><td>Medium</td><td class="mono">12–14</td></tr>
@@ -712,7 +717,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
   <div class="fwin rv">
     <div class="fwin-head">
       <span>get_relevant_facts · limit 8 · + top 4 RAG chunks</span>
-      <button class="jb-btn" id="fact-next" onclick="factNext()">next turn ▸</button>
+      <button class="jb-btn btn-ghost" id="fact-next" onclick="factNext()">next turn ▸</button>
     </div>
     <div id="fact-list"></div>
     <div class="cut-line">top 8 ship · the rest stay in the register</div>
@@ -766,10 +771,10 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
       <b>roll_grants</b><b>corrections</b></div></div>
   </div>
 
-  <div class="json-box rv">
+  <div class="json-box rv fresh-frame">
     <div class="jb-head">
       <span class="jb-title">guardian_extract_mechanics → JSON</span>
-      <button class="jb-btn" id="json-replay" onclick="replayJson()">↻ replay extraction</button>
+      <button class="jb-btn btn-ghost" id="json-replay" onclick="replayJson()">↻ replay extraction</button>
     </div>
     <pre id="json-demo"></pre>
   </div>
@@ -802,12 +807,12 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     <div class="r-row">
       <input class="r-expr" id="dice-expr" value="1d20+3" aria-label="Dice notation" spellcheck="false"
              onkeydown="if(event.key==='Enter')rollNow()">
-      <button class="r-btn" onclick="rollNow()">⚄ Roll</button>
+      <button class="r-btn btn-gold" onclick="rollNow()">⚄ Roll</button>
       <label class="r-adv"><input type="checkbox" id="dice-adv" onchange="toggleAdv()"> ADVANTAGE (2d20)</label>
-      <button class="r-btn" onclick="quickDice('d20')">d20</button>
-      <button class="r-btn" onclick="quickDice('2d6+2')">2d6+2</button>
-      <button class="r-btn" onclick="quickDice('1d12')">d12</button>
-      <button class="r-btn" onclick="quickDice('1d8')">d8</button>
+      <button class="r-btn btn-ghost" onclick="quickDice('d20')">d20</button>
+      <button class="r-btn btn-ghost" onclick="quickDice('2d6+2')">2d6+2</button>
+      <button class="r-btn btn-ghost" onclick="quickDice('1d12')">d12</button>
+      <button class="r-btn btn-ghost" onclick="quickDice('1d8')">d8</button>
     </div>
     <div class="dice-stage" id="dice-stage"></div>
     <div class="r-result" id="dice-result"></div>
@@ -843,11 +848,11 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     <div class="slot-pool" id="slot-pool" aria-label="Spell slot pool"></div>
     <div class="slot-status" id="slot-status"><b>4/4</b> — the well is full</div>
     <div class="slot-btns">
-      <button class="jb-btn" onclick="castSpell(1)">cast level 1</button>
-      <button class="jb-btn" onclick="castSpell(3)">cast level 3</button>
-      <button class="jb-btn" onclick="castSpell(0)">cantrip (free)</button>
-      <button class="jb-btn" onclick="longRest()">long rest (8h)</button>
-      <button class="jb-btn" onclick="shortRest()">short rest (1 hit die)</button>
+      <button class="jb-btn btn-ghost" onclick="castSpell(1)">cast level 1</button>
+      <button class="jb-btn btn-ghost" onclick="castSpell(3)">cast level 3</button>
+      <button class="jb-btn btn-ghost" onclick="castSpell(0)">cantrip (free)</button>
+      <button class="jb-btn btn-ghost" onclick="longRest()">long rest (8h)</button>
+      <button class="jb-btn btn-ghost" onclick="shortRest()">short rest (1 hit die)</button>
     </div>
   </div>
 
@@ -882,8 +887,8 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     <div class="term-bar"><i></i><i></i><i></i><span>tts_cache_sim · _TTS_CACHE · max 64 · ttl 600s</span></div>
     <div class="term-body">
       <div style="margin-bottom:.6rem;display:flex;gap:.5rem;flex-wrap:wrap">
-        <button class="jb-btn" onclick="simTts('repeat')">🗣 request the same line again</button>
-        <button class="jb-btn" onclick="simTts('new')">🗣 request a new line</button>
+        <button class="jb-btn btn-ghost" onclick="simTts('repeat')">🗣 request the same line again</button>
+        <button class="jb-btn btn-ghost" onclick="simTts('new')">🗣 request a new line</button>
       </div>
       <div class="tts-cache" id="tts-cache"></div>
       <div class="tts-log" id="tts-log">$ cache empty — first request will miss</div>
@@ -1030,7 +1035,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
 
   <div class="rv">
     <div style="text-align:center;margin-bottom:.8rem">
-      <button class="jb-btn" id="undo-btn" onclick="undoDemo()" style="letter-spacing:.2em">↶ UNDO LAST TURN</button>
+      <button class="jb-btn btn-gold" id="undo-btn" onclick="undoDemo()" style="letter-spacing:.2em">↶ UNDO LAST TURN</button>
       <span class="stat" style="margin-left:.8rem">costs <b>1 turn</b> · no refund · ledger records action=undo</span>
     </div>
     <div class="rw-stage">
@@ -1068,7 +1073,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
 
 <footer>
   <div class="f-title">✦ the lore weaver's cauldron — engine mechanics ✦</div>
-  <p><a href="help.html">← Back to the Guide</a></p>
+  <p><a class="btn-ghost" href="help.html">← Back to the Guide</a></p>
   <p>Compiled from the engine itself: backend/main.py · backend/guardian.py · backend/extraction.py (FactRegister) · backend/combat.py · backend/dice.py · backend/models.py · DM prompt v28 · Guardian 44-field contract<br>
   dnd.rostad.cc — The Lore Weaver's Cauldron</p>
 </footer>

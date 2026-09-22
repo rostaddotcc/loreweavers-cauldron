@@ -57,7 +57,7 @@
   .masthead h1::before { content: '┌─ '; color: var(--edge); }
   .masthead h1::after { content: ' ─┐'; color: var(--edge); }
   .back-btn {
-    font-family: var(--font-display,'Cinzel',serif); font-size: 0.85rem; letter-spacing: 0.12em;
+    font-family: var(--font-display,'Cinzel',serif); font-size:var(--fs-sm); letter-spacing: 0.12em;
     text-transform: uppercase; background: var(--stone-3); border: 1px solid var(--edge);
     color: var(--bone-dim); padding: 0.6rem 1.1rem; cursor: pointer;
     text-decoration: none; border-radius: 0; transition: all 0.2s; min-height: 40px;
@@ -76,13 +76,13 @@
   .sec-head::before { content: ''; position: absolute; inset: 3px; border: 1px solid var(--edge); opacity: 0.22; pointer-events: none; }
   .sec-head .chev { font-size: 1rem; color: var(--term-green); width: 1.1rem; flex: 0 0 auto; }
   .sec-head .sec-title {
-    font-family: var(--font-display,'Cinzel',serif); font-size: 0.95rem; letter-spacing: 0.18em;
+    font-family: var(--font-display,'Cinzel',serif); font-size:var(--fs-sm); letter-spacing: 0.18em;
     text-transform: uppercase; color: var(--gold); white-space: nowrap;
   }
   .sec-head:hover .sec-title { color: var(--gold-bright); }
-  .sec-head .sec-summary { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 0.75rem; color: var(--bone-dim); }
+  .sec-head .sec-summary { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size:var(--fs-tiny); color: var(--bone-dim); }
   .sec-head .refresh {
-    margin-left: auto; font-size: 0.75rem; background: var(--stone-3);
+    margin-left: auto; font-size:var(--fs-tiny); background: var(--stone-3);
     border: 1px solid var(--edge); color: var(--bone-dim); padding: 0.42rem 0.85rem;
     cursor: pointer; letter-spacing: 0.1em; border-radius: 0; font-family: inherit; min-height: 36px;
   }
@@ -108,17 +108,17 @@
   .act-group { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
   .act-chip {
     background: transparent; border: 1px solid var(--edge); color: var(--bone-dim);
-    padding: .32rem .6rem; font-size: .78rem; cursor: pointer; letter-spacing: .04em;
+    padding: .32rem .6rem; font-size:var(--fs-tiny); cursor: pointer; letter-spacing: .04em;
     border-radius: 6px; font-family: inherit; min-height: 34px;
   }
   .act-chip:hover { color: var(--term-green); border-color: var(--term-green); }
   .act-input {
     width: 5rem; background: var(--ink); border: 1px solid var(--edge); color: var(--bone-bright);
-    padding: .32rem .45rem; font-size: .82rem; border-radius: 6px; font-family: inherit;
+    padding: .32rem .45rem; font-size:var(--fs-tiny); border-radius: 6px; font-family: inherit;
   }
   .act-btn {
     background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
-    padding: .34rem .6rem; font-size: .78rem; cursor: pointer; letter-spacing: .04em;
+    padding: .34rem .6rem; font-size:var(--fs-tiny); cursor: pointer; letter-spacing: .04em;
     border-radius: 6px; font-family: inherit; white-space: nowrap; min-height: 34px;
   }
   .act-btn:hover { color: var(--gold-bright); border-color: var(--gold); }
@@ -142,7 +142,7 @@
     overflow-wrap: break-word;
   }
   .stat-label {
-    font-family: var(--font-display,'Cinzel',serif); font-size: 0.8rem; letter-spacing: 0.12em;
+    font-family: var(--font-display,'Cinzel',serif); font-size:var(--fs-tiny); letter-spacing: 0.12em;
     text-transform: uppercase; color: var(--bone-dim);
   }
   .stat-sub {
@@ -167,7 +167,7 @@
   .chart-card.span-7 { grid-column: span 7; }
   .chart-card.span-12 { grid-column: span 12; }
   .chart-head {
-    font-family: var(--font-display,'Cinzel',serif); font-size: 0.85rem; letter-spacing: 0.14em;
+    font-family: var(--font-display,'Cinzel',serif); font-size:var(--fs-sm); letter-spacing: 0.14em;
     text-transform: uppercase; color: var(--gold); margin-bottom: 1rem;
   }
   .chart-body { display: flex; gap: 1.1rem; align-items: center; flex-wrap: wrap; }
@@ -180,16 +180,16 @@
   .donut-center-num { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 21px; fill: var(--bone-bright); }
   .donut-center-sub { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 11px; fill: var(--bone-dim); letter-spacing: 0.14em; text-transform: uppercase; }
   .legend { flex: 1 1 190px; min-width: 170px; display: flex; flex-direction: column; gap: 0.45rem; }
-  .legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--bone); }
+  .legend-item { display: flex; align-items: center; gap: 0.5rem; font-size:var(--fs-sm); color: var(--bone); }
   .legend-dot { width: 11px; height: 11px; flex: 0 0 auto; }
   .legend-label { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .legend-val { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); color: var(--bone-bright); font-variant-numeric: tabular-nums; }
   .legend-pct { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); color: var(--bone-dim); width: 50px; text-align: right; font-variant-numeric: tabular-nums; }
-  .chart-empty { color: var(--bone-dim); font-size: 0.85rem; font-style: italic; padding: 0.6rem 0; }
+  .chart-empty { color: var(--bone-dim); font-size:var(--fs-sm); font-style: italic; padding: 0.6rem 0; }
 
   /* ── Bar list (TTS per player) ── */
   .bar-list { display: flex; flex-direction: column; gap: 0.7rem; }
-  .bar-row { display: grid; grid-template-columns: 190px 1fr 110px; gap: 0.7rem; align-items: center; font-size: 0.85rem; }
+  .bar-row { display: grid; grid-template-columns: 190px 1fr 110px; gap: 0.7rem; align-items: center; font-size:var(--fs-sm); }
   .bar-label { color: var(--bone); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .bar-track { height: 14px; background: var(--ink); border: 1px solid var(--edge); }
   .bar-fill { height: 100%; opacity: 0.85; box-shadow: 0 0 6px rgba(var(--teal-rgb),0.35); transition: opacity .15s; }
@@ -208,10 +208,10 @@
   }
   .vcol:hover .vbar-fill { opacity: 0.8; }
   .vbar-fill.zero { background: var(--edge); box-shadow: none; opacity: 0.45; }
-  .vbar-num { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 0.78rem; color: var(--bone-bright); line-height: 1; margin-top: 5px; font-variant-numeric: tabular-nums; }
+  .vbar-num { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size:var(--fs-tiny); color: var(--bone-bright); line-height: 1; margin-top: 5px; font-variant-numeric: tabular-nums; }
   .vbar-label { font-size: 0.72rem; color: var(--bone-dim); margin-top: 5px; white-space: nowrap; }
   .vbar-label.today { color: var(--gold); }
-  .vchart-empty { color: var(--bone-dim); font-size: 0.85rem; font-style: italic; padding: 0.6rem 0; }
+  .vchart-empty { color: var(--bone-dim); font-size:var(--fs-sm); font-style: italic; padding: 0.6rem 0; }
 
   /* ── Visits (2026-08-05: total/today/7d + unika per land + dag-strip) ── */
   .visits-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: .8rem; margin-bottom: 1.2rem; }
@@ -224,7 +224,7 @@
   .v-kpi:hover { border-color: rgba(var(--gold-rgb),.45); transform: translateY(-2px); }
   .v-kpi-n { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 1.55rem; color: var(--gold-bright); font-variant-numeric: tabular-nums; line-height: 1.1; }
   .v-kpi-l { font-family: var(--font-display,'Cinzel',serif); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--bone-dim); margin-top: .35rem; }
-  .visits-sub { font-family: var(--font-display,'Cinzel',serif); font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); opacity: .85; margin-bottom: .7rem; }
+  .visits-sub { font-family: var(--font-display,'Cinzel',serif); font-size:var(--fs-tiny); letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); opacity: .85; margin-bottom: .7rem; }
   .visits-strip { margin-bottom: 1.3rem; }
   .visits-strip .vchart { height: 200px; }
 
@@ -233,10 +233,10 @@
   .cbar-list { display: flex; flex-direction: column; gap: .45rem; }
   .cbar-row {
     display: grid; grid-template-columns: 150px 1fr 56px 46px; gap: .7rem; align-items: center;
-    min-width: 0; font-size: 0.85rem;
+    min-width: 0; font-size:var(--fs-sm);
   }
   .cbar-name {
-    font-family: var(--font-display,'Cinzel',serif); font-size: 0.78rem; letter-spacing: 0.06em;
+    font-family: var(--font-display,'Cinzel',serif); font-size:var(--fs-tiny); letter-spacing: 0.06em;
     color: var(--bone); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     display: inline-flex; align-items: center; gap: .45em; min-width: 0;
   }
@@ -251,14 +251,14 @@
     background: linear-gradient(90deg, var(--teal), var(--arcane));
     box-shadow: 0 0 8px rgba(var(--teal-rgb),.35);
   }
-  .cbar-val { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); color: var(--gold-bright); text-align: right; font-variant-numeric: tabular-nums; font-size: .85rem; }
-  .cbar-pct { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); color: var(--bone-dim); text-align: right; font-size: .75rem; font-variant-numeric: tabular-nums; }
+  .cbar-val { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); color: var(--gold-bright); text-align: right; font-variant-numeric: tabular-nums; font-size:var(--fs-sm); }
+  .cbar-pct { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); color: var(--bone-dim); text-align: right; font-size:var(--fs-tiny); font-variant-numeric: tabular-nums; }
   .cbar-row.hidden { display: none; }
   .cbar-list.show-all .cbar-row.hidden { display: grid; }
   .cbar-more {
     margin-top: .8rem; width: 100%; min-height: 40px; cursor: pointer;
     background: var(--stone-2); border: 1px dashed var(--edge); color: var(--gold);
-    font-family: var(--font-display,'Cinzel',serif); font-size: .78rem; letter-spacing: .12em; text-transform: uppercase;
+    font-family: var(--font-display,'Cinzel',serif); font-size:var(--fs-tiny); letter-spacing: .12em; text-transform: uppercase;
     transition: border-color .2s ease, background .2s ease, color .2s ease;
   }
   .cbar-more:hover { border-color: var(--gold); background: rgba(var(--gold-rgb),.08); color: var(--gold-bright); }
@@ -285,17 +285,17 @@
     padding: .7rem .85rem; transition: border-color .2s ease, transform .2s ease;
   }
   .active-row:hover { border-color: rgba(var(--gold-rgb),.45); transform: translateY(-2px); }
-  .active-name { font-family: var(--font-display,'Cinzel',serif); font-weight: 700; color: var(--bone-bright); font-size: 0.95rem; }
-  .active-time { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 0.78rem; color: var(--gold); white-space: nowrap; }
+  .active-name { font-family: var(--font-display,'Cinzel',serif); font-weight: 700; color: var(--bone-bright); font-size:var(--fs-sm); }
+  .active-time { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size:var(--fs-tiny); color: var(--gold); white-space: nowrap; }
   .active-meta { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 0.72rem; color: var(--bone-dim); display: block; margin-top: .2rem; }
 
   /* ── Revenue bar chart (MRR/ARR + day/week/month) ── */
   .rev-chart-head { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
-  .rev-totals { display: flex; gap: 1.5rem; flex-wrap: wrap; font-size: 0.85rem; }
+  .rev-totals { display: flex; gap: 1.5rem; flex-wrap: wrap; font-size:var(--fs-sm); }
   .rev-totals b { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); color: var(--gold-bright); font-size: 1rem; font-variant-numeric: tabular-nums; }
   .rev-toggle { display: flex; gap: 0.4rem; }
   .rev-toggle button {
-    font-family: var(--font-display,'Cinzel',serif); font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase;
+    font-family: var(--font-display,'Cinzel',serif); font-size:var(--fs-tiny); letter-spacing: 0.1em; text-transform: uppercase;
     background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
     padding: 0.42rem 0.9rem; cursor: pointer; transition: all 0.15s; min-height: 36px;
   }
@@ -314,17 +314,17 @@
   }
   .filter-input, .filter-select {
     background: var(--stone-2); border: 1px solid var(--edge); color: var(--bone);
-    padding: 0.55rem 0.7rem; font-size: 0.85rem; font-family: inherit; border-radius: 0; min-height: 40px;
+    padding: 0.55rem 0.7rem; font-size:var(--fs-sm); font-family: inherit; border-radius: 0; min-height: 40px;
   }
   .filter-input { width: 260px; }
   .filter-input:focus, .filter-select:focus { outline: none; border-color: var(--gold); }
   .filter-select { cursor: pointer; }
   .filter-clear {
     background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
-    padding: 0.55rem 0.85rem; font-size: 0.8rem; cursor: pointer; letter-spacing: 0.08em; font-family: inherit; min-height: 40px;
+    padding: 0.55rem 0.85rem; font-size:var(--fs-tiny); cursor: pointer; letter-spacing: 0.08em; font-family: inherit; min-height: 40px;
   }
   .filter-clear:hover { color: var(--blood-bright); border-color: var(--blood-bright); }
-  .filter-count { margin-left: auto; font-size: 0.78rem; color: var(--bone-dim); font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); }
+  .filter-count { margin-left: auto; font-size:var(--fs-tiny); color: var(--bone-dim); font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); }
 
   /* ── Create user form ── */
   .create-user-form {
@@ -332,14 +332,14 @@
   }
   .create-user-form input, .create-user-form select {
     background: var(--stone-2); border: 1px solid var(--edge); color: var(--bone);
-    padding: 0.55rem 0.7rem; font-size: 0.85rem; font-family: inherit; border-radius: 0; min-height: 40px;
+    padding: 0.55rem 0.7rem; font-size:var(--fs-sm); font-family: inherit; border-radius: 0; min-height: 40px;
   }
   .create-user-form input:focus, .create-user-form select:focus { outline: none; border-color: var(--gold); }
   .create-user-form .cu-user { width: 170px; }
   .create-user-form .cu-pass { width: 150px; }
   .create-user-form .cu-btn {
     background: var(--gold); color: var(--ink); border: none; padding: 0.55rem 1rem;
-    font-size: 0.85rem; cursor: pointer; font-weight: bold; font-family: var(--font-display,'Cinzel',serif); letter-spacing: 0.08em; min-height: 40px;
+    font-size:var(--fs-sm); cursor: pointer; font-weight: bold; font-family: var(--font-display,'Cinzel',serif); letter-spacing: 0.08em; min-height: 40px;
   }
   .create-user-form .cu-btn:hover { background: var(--gold-bright); }
 
@@ -358,10 +358,10 @@
   .email-cell a:hover { color: var(--gold-bright); text-decoration: underline; }
   .del-btn {
     background: none; border: 1px solid var(--blood); color: var(--blood-bright);
-    padding: 0.34rem 0.6rem; font-size: 0.78rem; cursor: pointer; white-space: nowrap; min-height: 34px;
+    padding: 0.34rem 0.6rem; font-size:var(--fs-tiny); cursor: pointer; white-space: nowrap; min-height: 34px;
   }
   .del-btn:hover { background: rgba(var(--blood-rgb),0.15); border-color: var(--blood-bright); }
-  .no-rows { text-align: center; color: var(--bone-dim); font-size: 0.85rem; padding: 2rem 0 !important; }
+  .no-rows { text-align: center; color: var(--bone-dim); font-size:var(--fs-sm); padding: 2rem 0 !important; }
 
   /* ── Feedback inbox ── */
   .feedback-inbox { display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 2rem; }
@@ -370,10 +370,10 @@
     padding: 0.95rem 1.1rem; display: flex; flex-direction: column; gap: 0.45rem;
   }
   .fb-item-head { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
-  .fb-item-ts { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 0.75rem; color: var(--bone-dim); }
-  .fb-item-email { font-size: 0.78rem; color: var(--arcane); font-style: italic; }
-  .fb-item-msg { font-size: 0.92rem; color: var(--bone-bright); line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
-  .fb-empty { color: var(--bone-dim); font-size: 0.85rem; font-style: italic; padding: 1rem 0; }
+  .fb-item-ts { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size:var(--fs-tiny); color: var(--bone-dim); }
+  .fb-item-email { font-size:var(--fs-tiny); color: var(--arcane); font-style: italic; }
+  .fb-item-msg { font-size:var(--fs-sm); color: var(--bone-bright); line-height: 1.55; white-space: pre-wrap; word-break: break-word; }
+  .fb-empty { color: var(--bone-dim); font-size:var(--fs-sm); font-style: italic; padding: 1rem 0; }
 
   /* ── Player table ── */
   .table-scroll { position: relative; }
@@ -402,13 +402,13 @@
   .table-wrap.at-end ~ .table-scroll-hint { opacity: 0; }
   .player-table { width: 100%; min-width: 1560px; border-collapse: collapse; }
   .player-table th {
-    font-family: var(--font-display,'Cinzel',serif); font-size: 0.78rem; letter-spacing: 0.1em;
+    font-family: var(--font-display,'Cinzel',serif); font-size:var(--fs-tiny); letter-spacing: 0.1em;
     text-transform: uppercase; color: var(--bone-dim); text-align: left;
     padding: 0.75rem 0.55rem; border-bottom: 1px solid var(--edge);
   }
   .player-table td {
     padding: 0.75rem 0.55rem; border-bottom: 1px solid color-mix(in srgb, var(--stone-2) 40%, transparent);
-    font-size: 0.9rem; color: var(--bone-bright);
+    font-size:var(--fs-sm); color: var(--bone-bright);
   }
   .player-row { cursor: pointer; transition: background 0.15s; }
   .player-row:hover { background: var(--stone-2); }
@@ -416,7 +416,7 @@
   .token-num { color: var(--term-green); font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); }
   .turn-num { color: var(--term-amber); font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); }
   .tts-num { color: var(--arcane); font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); white-space: nowrap; }
-  .last-active { color: var(--bone-dim); font-size: 0.78rem; }
+  .last-active { color: var(--bone-dim); font-size:var(--fs-tiny); }
   .player-table th.sortable { cursor: pointer; user-select: none; white-space: nowrap; transition: color .15s; }
   .player-table th.sortable:hover { color: var(--gold-bright); }
   .player-table th.sortable .sort-arrow { display: inline-block; margin-left: .3rem; font-size: .7rem; opacity: .18; transition: opacity .15s, color .15s; }
@@ -426,25 +426,25 @@
   /* ── Pagination ── */
   .pager { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; margin: 1rem 0 0.5rem; }
   .pager button {
-    font-family: var(--font-display,'Cinzel',serif); font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase;
+    font-family: var(--font-display,'Cinzel',serif); font-size:var(--fs-tiny); letter-spacing: 0.06em; text-transform: uppercase;
     background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
     padding: 0.45rem 0.8rem; cursor: pointer; transition: all 0.15s; min-height: 38px;
   }
   .pager button:hover:not(:disabled) { color: var(--gold-bright); border-color: var(--gold); }
   .pager button.active { color: var(--gold-bright); border-color: var(--gold); background: rgba(var(--gold-rgb),0.12); }
   .pager button:disabled { opacity: 0.4; cursor: not-allowed; }
-  .pager .pg-dots { color: var(--bone-dim); padding: 0 0.15rem; font-size: 0.85rem; }
-  .pager .pg-count { margin-left: auto; font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 0.78rem; color: var(--bone-dim); white-space: nowrap; }
+  .pager .pg-dots { color: var(--bone-dim); padding: 0 0.15rem; font-size:var(--fs-sm); }
+  .pager .pg-count { margin-left: auto; font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size:var(--fs-tiny); color: var(--bone-dim); white-space: nowrap; }
 
   /* ── Turn cap editor ── */
   .cap-cell { white-space: nowrap; }
   .cap-input {
     width: 76px; background: var(--stone-2); border: 1px solid var(--edge);
-    color: var(--bone); padding: .38rem .45rem; font-size: .82rem; min-height: 34px;
+    color: var(--bone); padding: .38rem .45rem; font-size:var(--fs-tiny); min-height: 34px;
   }
   .cap-btn {
     background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
-    padding: .38rem .6rem; font-size: .78rem; cursor: pointer; letter-spacing: .05em; min-height: 34px;
+    padding: .38rem .6rem; font-size:var(--fs-tiny); cursor: pointer; letter-spacing: .05em; min-height: 34px;
   }
   .cap-btn:hover { color: var(--gold-bright); border-color: var(--gold); }
   .cap-hint { font-size: .68rem; color: var(--bone-dim); margin-left: .35rem; }
@@ -461,7 +461,6 @@
   }
   .membership-badge.m-free { background: transparent; border: 1px solid var(--edge); color: var(--bone-dim); }
   .player-table tr.premium-row { box-shadow: 0 0 14px rgba(var(--gold-rgb),0.22); }
-  .player-table tr.premium-row td { background: linear-gradient(90deg, rgba(var(--gold-rgb),0.12), rgba(var(--gold-rgb),0.02) 55%, transparent); }
   .player-table tr.premium-row td:first-child { border-left: 3px solid var(--gold); }
   .rev-num { color: var(--gold-bright); font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); white-space: nowrap; }
   .cap-progress { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; }
@@ -470,16 +469,16 @@
   .cap-fill.warn { background: var(--term-amber); box-shadow: 0 0 5px color-mix(in srgb, var(--term-amber) 50%, transparent); }
   .cap-fill.danger { background: var(--blood-bright); box-shadow: 0 0 6px rgba(var(--blood-bright-rgb),0.7); }
   .cap-fill.premium { background: var(--gold); box-shadow: 0 0 6px rgba(var(--gold-rgb),0.6); }
-  .cap-used { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 0.75rem; color: var(--bone); white-space: nowrap; }
+  .cap-used { font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size:var(--fs-tiny); color: var(--bone); white-space: nowrap; }
   .billing-controls {
     display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;
     padding: 0.8rem 0 1rem; margin-bottom: 1rem;
     border-bottom: 1px solid color-mix(in srgb, var(--stone-2) 40%, transparent);
   }
-  .billing-controls .bc-label { font-size: 0.75rem; color: var(--bone-dim); }
+  .billing-controls .bc-label { font-size:var(--fs-tiny); color: var(--bone-dim); }
   .bc-btn {
     background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
-    padding: .4rem .7rem; font-size: .78rem; cursor: pointer; letter-spacing: .05em; font-family: inherit; min-height: 36px;
+    padding: .4rem .7rem; font-size:var(--fs-tiny); cursor: pointer; letter-spacing: .05em; font-family: inherit; min-height: 36px;
   }
   .bc-btn:hover { color: var(--gold-bright); border-color: var(--gold); }
   .bc-btn.danger:hover { color: var(--blood-bright); border-color: var(--blood-bright); }
@@ -487,13 +486,13 @@
   .prem-grant { display: inline-flex; align-items: center; gap: .3rem; margin-left: .35rem; vertical-align: middle; flex-wrap: wrap; }
   .prem-grant select {
     background: var(--ink); border: 1px solid var(--edge); color: var(--bone);
-    font-size: .75rem; padding: .3rem .3rem; border-radius: 2px; cursor: pointer;
+    font-size:var(--fs-tiny); padding: .3rem .3rem; border-radius: 2px; cursor: pointer;
     max-width: 110px; font-family: inherit; min-height: 32px;
   }
   .prem-grant select:focus { border-color: var(--gold); outline: none; }
   .prem-grant .pg-btn {
     background: rgba(var(--gold-rgb),0.14); border: 1px solid var(--gold); color: var(--gold-bright);
-    padding: .32rem .55rem; font-size: .75rem; cursor: pointer; letter-spacing: .05em; font-family: inherit; white-space: nowrap; min-height: 32px;
+    padding: .32rem .55rem; font-size:var(--fs-tiny); cursor: pointer; letter-spacing: .05em; font-family: inherit; white-space: nowrap; min-height: 32px;
   }
   .prem-grant .pg-btn:hover { background: var(--gold); color: var(--ink); }
   .prem-grant .pg-btn.revoke { background: var(--stone-3); border-color: var(--edge); color: var(--bone-dim); }
@@ -510,9 +509,9 @@
     margin-bottom: 0.7rem;
   }
   .campaign-card .cc-head { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.7rem; flex-wrap: wrap; }
-  .campaign-card .cc-name { font-family: var(--font-display,'Cinzel',serif); font-weight: 700; font-size: 0.95rem; color: var(--bone-bright); }
-  .campaign-card .cc-char { font-size: 0.8rem; color: var(--bone-dim); }
-  .campaign-card .cc-meta { display: flex; gap: 1.2rem; flex-wrap: wrap; font-size: 0.78rem; color: var(--bone-dim); }
+  .campaign-card .cc-name { font-family: var(--font-display,'Cinzel',serif); font-weight: 700; font-size:var(--fs-sm); color: var(--bone-bright); }
+  .campaign-card .cc-char { font-size:var(--fs-tiny); color: var(--bone-dim); }
+  .campaign-card .cc-meta { display: flex; gap: 1.2rem; flex-wrap: wrap; font-size:var(--fs-tiny); color: var(--bone-dim); }
   .campaign-card .cc-meta span { color: var(--bone); }
 
   .token-bar {
@@ -525,7 +524,7 @@
   .token-legend .dot { display: inline-block; width: 9px; height: 9px; margin-right: 4px; vertical-align: middle; }
   .token-legend .dot.prompt { background: var(--arcane); }
   .token-legend .dot.completion { background: var(--term-green); }
-  .role-split { display: flex; gap: 1.1rem; flex-wrap: wrap; font-size: 0.75rem; color: var(--bone-dim); margin-top: 0.35rem; }
+  .role-split { display: flex; gap: 1.1rem; flex-wrap: wrap; font-size:var(--fs-tiny); color: var(--bone-dim); margin-top: 0.35rem; }
   .role-split b { color: var(--bone-bright); font-weight: 600; font-variant-numeric: tabular-nums; }
   .model-all{ max-height: 150px; overflow-y: auto; align-content: flex-start; padding-right: .5rem; scrollbar-width: thin; scrollbar-color: var(--edge-hi) var(--ink); }
   .model-all::-webkit-scrollbar{ width: 8px; }
@@ -549,14 +548,14 @@
   .error-state {
     text-align: center; padding: 4rem 2rem; color: var(--bone-dim);
   }
-  .error-state h2 { font-family: var(--font-display,'Cinzel',serif); font-size: 1.2rem; color: var(--blood-bright); margin-bottom: 1rem; }
+  .error-state h2 { font-family: var(--font-display,'Cinzel',serif); font-size:var(--fs-narr); color: var(--blood-bright); margin-bottom: 1rem; }
   .error-state a { color: var(--gold-bright); text-decoration: none; }
   .error-state a:hover { text-shadow: 0 0 8px rgba(var(--gold-bright-rgb),0.4); }
 
   /* ── Loading ── */
   .loading {
     text-align: center; padding: 3rem; color: var(--bone-dim);
-    font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size: 0.9rem;
+    font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); font-size:var(--fs-sm);
   }
   .loading::after { content: ' █'; animation: blink 1s steps(1) infinite; }
   @keyframes blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
@@ -564,7 +563,7 @@
   /* ── Toast ── */
   .toast {
     position: fixed; bottom: 1.5rem; left: 50%; transform: translate(-50%, 80px);
-    z-index: 50; font-family: var(--font-display,'Cinzel',serif); font-size: 0.85rem;
+    z-index: 50; font-family: var(--font-display,'Cinzel',serif); font-size:var(--fs-sm);
     background: var(--stone); border: 1px solid var(--gold);
     color: var(--gold-bright); padding: 0.8rem 1.6rem; opacity: 0;
     transition: all 0.35s cubic-bezier(0.22,1,0.36,1); pointer-events: none;
@@ -592,13 +591,16 @@
     }
     .m-card:active { background: var(--stone-2); }
     .m-card .mc-head { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
-    .m-card .mc-user { font-size: 0.95rem; color: var(--bone-bright); }
-    .m-card .mc-tokens { font-size: 0.8rem; color: var(--term-green); font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); white-space: nowrap; }
-    .m-card .mc-meta { display: flex; gap: 1rem; margin-top: 0.5rem; font-size: 0.78rem; color: var(--bone-dim); flex-wrap: wrap; }
+    .m-card .mc-user { font-size:var(--fs-sm); color: var(--bone-bright); }
+    .m-card .mc-tokens { font-size:var(--fs-tiny); color: var(--term-green); font-family: var(--font-mono,'IBM Plex Mono',ui-monospace,monospace); white-space: nowrap; }
+    .m-card .mc-meta { display: flex; gap: 1rem; margin-top: 0.5rem; font-size:var(--fs-tiny); color: var(--bone-dim); flex-wrap: wrap; }
     .bar-row { grid-template-columns: 110px 1fr 74px; }
     .cbar-row { grid-template-columns: 96px 1fr 48px; }
     .cbar-pct { display: none; }
-  }
+  
+  a.btn-gold, a.btn-ghost, a.btn-blood, .back-btn, .cu-btn, .refresh, .pill, .cbar-more, .filter-clear, .cap-btn, .bc-btn, .pg-btn, .del-btn { min-height: 44px; }
+  input, select { font-size: 16px; }
+}
   @media (min-width: 901px) {
     .mobile-cards { display: none; }
     .pager-mob { display: none; }
@@ -607,7 +609,7 @@
     .stats-grid { grid-template-columns: 1fr 1fr; gap: 0.6rem; }
     .realm-grid { grid-template-columns: 1fr; gap: 0.6rem; }
     .stat-card { padding: 0.9rem 0.6rem; }
-    .stat-num { font-size: 1.35rem; }
+    .stat-num { font-size:var(--fs-h3); }
     .masthead h1 { font-size: 1rem; }
     .back-btn { min-height: 44px; display: inline-flex; align-items: center; }
     .filter-input { width: 100%; }
@@ -619,7 +621,7 @@
   }
 
 </style>
-<link rel="stylesheet" href="snes.css?v=47">
+<link rel="stylesheet" href="snes.css?v=49">
 <style>
 /* ═══════════ MJUKA UPP — Admin (2026-08-05) — EFTER snes.css ═══════════ */
 .top-btn, .back-btn, .cu-btn, .del-btn, .cap-btn, .bc-btn{ border-radius: 8px !important; box-shadow: 0 2px 12px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; }
@@ -666,7 +668,7 @@
 .mrow.media .m-label{ color:var(--teal); }
 .mtrack{ height:15px; background:var(--ink); border:1px solid var(--edge); border-radius:4px !important; overflow:hidden; }
 .mfill{ height:100%; border-radius:3px !important; opacity:.92; transition:width .5s cubic-bezier(.22,1,.36,1); }
-.mval{ font-family:var(--font-mono) !important; font-size:.78rem; color:var(--bone-bright); text-align:right; font-variant-numeric:tabular-nums; }
+.mval{ font-family:var(--font-mono) !important; font-size:var(--fs-tiny); color:var(--bone-bright); text-align:right; font-variant-numeric:tabular-nums; }
 .mpct{ font-family:var(--font-mono) !important; font-size:.7rem; color:var(--bone-dim); text-align:right; font-variant-numeric:tabular-nums; }
 .pchip{ font-family:var(--font-accent) !important; font-size:.53rem; letter-spacing:.06em; text-transform:uppercase;
   padding:.1rem .3rem; border:1px solid currentColor; border-radius:4px !important; flex:0 0 auto; opacity:.85; }
@@ -694,7 +696,7 @@
 .overview .charts-grid{ gap:.8rem; }
 .overview .chart-card{ padding:1rem 1.05rem 1.1rem; }
 @media (max-width:1180px){
-  .kpi-n{ font-size:1.7rem; }
+  .kpi-n{ font-size:var(--fs-h2); }
   .mrow{ grid-template-columns:1.3rem minmax(0,1.4fr) minmax(40px,1.4fr) 4.2rem 2.6rem; }
 }
 @media (max-width:900px){
@@ -714,7 +716,9 @@
 
 <div class="app">
   <header class="masthead">
+    <div class="page-eyebrow">ENGINE ROOM · THE OVERSEER</div>
     <h1>Admin · The Lore Weaver's Cauldron</h1>
+    <div class="page-rule">✦</div>
     <div class="masthead-actions">
       <button class="back-btn" onclick="expandAllSecs()" title="Expand all sections">▾ Expand all</button>
       <button class="back-btn" onclick="collapseAllSecs()" title="Collapse all sections">▸ Collapse all</button>
@@ -893,11 +897,11 @@ function rowActions(u) {
       <button class="act-chip" data-u="${u.username}" onclick="topUpAmount('${u.username}', 300)">+300</button>
       <button class="act-chip" data-u="${u.username}" onclick="topUpAmount('${u.username}', 500)">+500</button>
       <input type="number" min="1" step="1" value="100" id="row-topup-${u.username}" class="cap-input act-input" onclick="event.stopPropagation()">
-      <button class="act-btn" data-u="${u.username}" onclick="topUp('${u.username}', 'row-topup-${u.username}')">Top up</button>
+      <button class="act-btn btn-gold" data-u="${u.username}" onclick="topUp('${u.username}', 'row-topup-${u.username}')">Top up</button>
     </span>
     <span class="act-group">
-      <button class="act-btn gold" data-u="${u.username}" onclick="grantTier('${u.username}', 'patron')" title="Grant Patron (30 days)">⚔ Patron</button>
-      <button class="act-btn ${isAdmin ? 'danger' : ''}" data-u="${u.username}" onclick="setRole('${u.username}', '${isAdmin ? 'player' : 'admin'}')" title="${isAdmin ? 'Remove admin role' : 'Grant admin role (all models, no turn cap)'}">${isAdmin ? '⬇ Demote' : '👑 Admin'}</button>
+      <button class="act-btn gold btn-gold" data-u="${u.username}" onclick="grantTier('${u.username}', 'patron')" title="Grant Patron (30 days)">⚔ Patron</button>
+      <button class="act-btn ${isAdmin ? 'danger btn-blood' : 'btn-ghost'}" data-u="${u.username}" onclick="setRole('${u.username}', '${isAdmin ? 'player' : 'admin'}')" title="${isAdmin ? 'Remove admin role' : 'Grant admin role (all models, no turn cap)'}">${isAdmin ? '⬇ Demote' : '👑 Admin'}</button>
     </span>
   </span>`;
 }
@@ -1118,12 +1122,12 @@ function renderStats(data) {
   const users = data.users || [];
 
   let html = `
-    <section class="sec overview" data-sec="overview">
+    <section class="sec overview fresh-frame" data-sec="overview">
       <header class="sec-head" onclick="toggleSec('overview')">
         <span class="chev">▾</span>
         <span class="sec-title">Realm Overview</span>
         <span class="sec-summary" id="sum-overview"></span>
-        <button class="refresh" onclick="event.stopPropagation();loadStats()" title="Refresh dashboard">↻ Refresh</button>
+        <button class="refresh btn-ghost" onclick="event.stopPropagation();loadStats()" title="Refresh dashboard">↻ Refresh</button>
       </header>
       <div class="sec-body" id="body-overview">
         <div class="kpi-band" id="kpi-band"></div>
@@ -1132,12 +1136,12 @@ function renderStats(data) {
       </div>
     </section>
 
-    <section class="sec" data-sec="players">
+    <section class="sec fresh-frame" data-sec="players">
       <header class="sec-head" onclick="toggleSec('players')">
         <span class="chev">▾</span>
         <span class="sec-title">Player Accounts</span>
         <span class="sec-summary" id="sum-players"></span>
-        <button class="refresh" onclick="event.stopPropagation();loadStats()" title="Refresh players">↻ Refresh</button>
+        <button class="refresh btn-ghost" onclick="event.stopPropagation();loadStats()" title="Refresh players">↻ Refresh</button>
       </header>
       <div class="sec-body" id="body-players">
         <div class="filters-row">
@@ -1148,7 +1152,7 @@ function renderStats(data) {
             <option value="admin">Admins</option>
           </select>
           <select id="filter-country" class="filter-select" onchange="applyFilters()">${countryOptions(users)}</select>
-          <button class="filter-clear" onclick="clearFilters()">✕ Clear</button>
+          <button class="filter-clear btn-ghost" onclick="clearFilters()">✕ Clear</button>
           <span class="filter-count" id="filter-count"></span>
         </div>
         <div class="create-user-form">
@@ -1158,11 +1162,11 @@ function renderStats(data) {
             <option value="player">Player</option>
             <option value="admin">Admin</option>
           </select>
-          <button class="cu-btn" onclick="createUser()">+ Create</button>
+          <button class="cu-btn btn-gold" onclick="createUser()">+ Create</button>
         </div>
         <div class="ftot" id="ftot"></div>
         <div class="table-scroll">
-          <div class="table-wrap" id="table-wrap"><table class="player-table"><thead><tr>`;
+          <div class="table-wrap" id="table-wrap"><table class="player-table fresh-table"><thead><tr>`;
   html += thSort('User', 'username') + thSort('Role', 'role') + thSort('Email', 'email') + thSort('Country', 'country') + thSort('Campaigns', 'campaigns') + thSort('Tokens', 'tokens') + thSort('Turns', 'turns') + thSort('🔊 TTS', 'tts_seconds') + thSort('🎭 Char', 'char_creation_tokens') + thSort('🖼️ Img', 'image_gen_calls') + thSort('Last Active', 'last_active') + thSort('Created', 'created') + thSort('Last Login', 'last_login') + thSort('Turn Cap', 'turn_cap') + thSort('💳 Medlemskap', 'subscription_status') + thSort('💰 Rev', 'revenue') + '<th>Actions</th>' + '<th></th>';
   html += '</tr></thead><tbody id="players-tbody"></tbody></table></div>';
   html += '<div class="table-fade"></div><div class="table-scroll-hint">→ scroll for more</div>';
@@ -1178,7 +1182,7 @@ function renderStats(data) {
         <span class="chev">▾</span>
         <span class="sec-title">Feedback Inbox</span>
         <span class="sec-summary" id="sum-feedback"></span>
-        <button class="refresh" onclick="event.stopPropagation();loadFeedback()" title="Refresh feedback">↻ Refresh</button>
+        <button class="refresh btn-ghost" onclick="event.stopPropagation();loadFeedback()" title="Refresh feedback">↻ Refresh</button>
       </header>
       <div class="sec-body" id="body-feedback">
         <div id="feedback-inbox" class="feedback-inbox"><div class="loading">Loading feedback…</div></div>
@@ -1304,7 +1308,7 @@ async function loadFeedback() {
     const items = data.items || [];
     setSecSummary('feedback', items.length + (items.length === 1 ? ' message' : ' messages'));
     if (!items.length) {
-      box.innerHTML = '<div class="fb-empty">🕊 No feedback yet — the inbox is quiet.</div>';
+      box.innerHTML = '<div class="fb-empty fresh-empty"><span class="fe-glyph">✦</span>🕊 No feedback yet — the inbox is quiet.</div>';
       return;
     }
     box.innerHTML = items.map(f => {
@@ -1414,7 +1418,7 @@ function barChartDayHtml(users, days = 14) {
   }
   const max = Math.max(...arr.map(a => a.value), 1);
   const hasAny = arr.some(a => a.value > 0);
-  if (!hasAny) return '<div class="vchart-empty">' + (users.length ? 'No data yet' : 'No players match the current filters') + '</div>';
+  if (!hasAny) return '<div class="vchart-empty fresh-empty"><span class="fe-glyph">✦</span>' + (users.length ? 'No data yet' : 'No players match the current filters') + '</div>';
   return '<div class="vchart" role="img" aria-label="New users per day">' + arr.map(a => {
     const h = Math.max(2, Math.round(a.value / max * 145));
     const cls = a.value === 0 ? 'vbar-fill zero' : 'vbar-fill';
@@ -1461,7 +1465,7 @@ function countryChartHtml(cntries, active) {
        ${cntries.length > MAX_COUNTRIES
          ? `<button class="cbar-more" id="cbar-more" type="button" onclick="toggleCountryMore(this)" data-n="${cntries.length - MAX_COUNTRIES}">Click more · ${cntries.length - MAX_COUNTRIES} more</button>`
          : ''}`
-    : '<div class="chart-empty">No unique visitors in this window</div>';
+    : '<div class="chart-empty fresh-empty"><span class="fe-glyph">✦</span>No unique visitors in this window</div>';
   return `<div class="visits-countries" id="country-section">
     <div class="visits-sub-row">
       <div class="visits-sub">Unique visitors by country</div>
@@ -1563,7 +1567,7 @@ function renderRevenueChart() {
   const max = Math.max(...arr.map(a => a.value), 1);
   const hasAny = arr.some(a => a.value > 0);
   const body = !hasAny
-    ? '<div class="vchart-empty">No revenue yet — the ledger is quiet.</div>'
+    ? '<div class="vchart-empty fresh-empty"><span class="fe-glyph">✦</span>No revenue yet — the ledger is quiet.</div>'
     : '<div class="vchart" role="img" aria-label="Revenue per ' + revMode + '">' + arr.map(a => {
         const h = Math.max(2, Math.round(a.value / max * 145));
         const cls = a.value === 0 ? 'vbar-fill zero' : 'vbar-fill';
@@ -1678,7 +1682,7 @@ function renderApiCallsChart() {
   const hasAny = arr.some(a => a.value > 0);
   const fmt = apiMetric === 'tokens' ? fmtTokens : fmtNum;
   const body = !hasAny
-    ? '<div class="vchart-empty">No AI calls recorded yet</div>'
+    ? '<div class="vchart-empty fresh-empty"><span class="fe-glyph">✦</span>No AI calls recorded yet</div>'
     : '<div class="vchart" role="img" aria-label="AI calls per ' + apiMode + '">' + arr.map(a => {
         const h = Math.max(2, Math.round(a.value / max * 145));
         const cls = a.value === 0 ? 'vbar-fill zero' : 'vbar-fill';
@@ -1845,7 +1849,7 @@ function renderModelChart() {
   el.innerHTML = list.length
     ? `<div class="mchart">${rows}</div>` +
       (list.length > MAX ? `<button class="cbar-more" id="model-more" type="button" onclick="toggleModelMore(this)" data-n="${list.length - MAX}">Click more · ${list.length - MAX} more</button>` : '')
-    : '<div class="chart-empty">No model calls recorded yet</div>';
+    : '<div class="chart-empty fresh-empty"><span class="fe-glyph">✦</span>No model calls recorded yet</div>';
   const totEl = document.getElementById('model-total');
   if (totEl) totEl.textContent = (key === 'calls' ? fmtNum(total) + ' calls' : fmtTokens(total) + ' tokens') + ' · ' + list.length + ' models';
   document.querySelectorAll('.seg-model button').forEach(b => b.classList.toggle('active', b.dataset.metric === modelMetric));
@@ -1875,7 +1879,7 @@ function renderOverview() {
   const totProv = sProv.reduce((a, s) => a + s.value, 0);
   const bProv = sProv.length
     ? `<div class="chart-body"><div class="donut-wrap">${donutSVG(sProv, fmtTokens(totProv), 'tokens')}</div>${legendHtml(sProv, fmtTokens)}</div>`
-    : '<div class="chart-empty">No data yet</div>';
+    : '<div class="chart-empty fresh-empty"><span class="fe-glyph">✦</span>No data yet</div>';
 
   // 2) Token-split: prompt / completion / TTS / char-gen
   const pT = sumUsers(users, 'prompt_tokens'), cT = sumUsers(users, 'completion_tokens');
@@ -1892,7 +1896,7 @@ function renderOverview() {
   const tot2 = s2.reduce((a, s) => a + s.value, 0);
   const b2 = s2.length
     ? `<div class="chart-body"><div class="donut-wrap">${donutSVG(s2, fmtTokens(tot2), 'tokens')}</div>${legendHtml(s2, fmtTokens)}</div>`
-    : '<div class="chart-empty">No data yet</div>';
+    : '<div class="chart-empty fresh-empty"><span class="fe-glyph">✦</span>No data yet</div>';
 
   // 3) Topp-spelare per tokens
   const byTok = users.slice().sort((a, b) => (b.total_tokens || 0) - (a.total_tokens || 0)).filter(u => (u.total_tokens || 0) > 0);
@@ -1900,10 +1904,10 @@ function renderOverview() {
   let itemsP = byTok.slice(0, MAXP).map((u, i) => ({ label: u.username, value: u.total_tokens || 0, color: COL[i % COL.length] }));
   const restP = byTok.slice(MAXP).reduce((a, u) => a + (u.total_tokens || 0), 0);
   if (restP > 0) itemsP.push({ label: `Rest · ${byTok.length - MAXP} players`, value: restP, color: DIM });
-  const bPlayers = itemsP.length ? barListHtml(itemsP, fmtTokens) : '<div class="chart-empty">No player tokens yet</div>';
+  const bPlayers = itemsP.length ? barListHtml(itemsP, fmtTokens) : '<div class="chart-empty fresh-empty"><span class="fe-glyph">✦</span>No player tokens yet</div>';
 
   // 4) Trafik: unika besökare 14 dagar + inline-siffror
-  let bTraffic = '<div class="chart-empty">No visits yet</div>';
+  let bTraffic = '<div class="chart-empty fresh-empty"><span class="fe-glyph">✦</span>No visits yet</div>';
   if (vis) {
     const daySrc = vis.by_day_unique || vis.by_day || {};
     const arrV = [];
@@ -1930,7 +1934,7 @@ function renderOverview() {
   }
 
   // 5) Länder (unika besökare, tidsfilter)
-  let bCountry = '<div class="chart-empty">No unique visitors in this window</div>';
+  let bCountry = '<div class="chart-empty fresh-empty"><span class="fe-glyph">✦</span>No unique visitors in this window</div>';
   if (vis && vis.by_country && Object.keys(vis.by_country).length) {
     const cntries = Object.entries(vis.by_country).map(([cc, n]) => ({ label: ccLabel(cc), value: n }))
       .sort((a, b) => b.value - a.value);
@@ -1938,7 +1942,7 @@ function renderOverview() {
   }
 
   // 6) Referrers
-  let bRef = '<div class="chart-empty">No referrer data yet — tracking starts now</div>';
+  let bRef = '<div class="chart-empty fresh-empty"><span class="fe-glyph">✦</span>No referrer data yet — tracking starts now</div>';
   if (vis && vis.by_referrer && Object.keys(vis.by_referrer).length) {
     const refs = Object.entries(vis.by_referrer).map(([name, n]) => ({ label: name, value: n }))
       .sort((a, b) => b.value - a.value);
@@ -1975,14 +1979,14 @@ function renderOverview() {
         `<div class="active-row"><span class="active-name">${u.country_flag || ''} ${esc(u.username)}</span>` +
         `<span class="active-meta">${u.total_turns || 0} turns · ${fmtTokens(u.total_tokens || 0)} tokens</span>` +
         `<span class="active-time">${timeAgo(t)}</span></div>`).join('') + '</div>'
-    : '<div class="chart-empty">No players yet</div>';
+    : '<div class="chart-empty fresh-empty"><span class="fe-glyph">✦</span>No players yet</div>';
 
   // 8) Narrator-tid per spelare
   const byTts = users.slice().sort((a, b) => (b.tts_seconds || 0) - (a.tts_seconds || 0)).filter(u => (u.tts_seconds || 0) > 0);
   let items5 = byTts.slice(0, 8).map((u, i) => ({ label: u.username, value: u.tts_seconds || 0, color: COL[i % COL.length] }));
   const rest5 = byTts.slice(8).reduce((a, u) => a + (u.tts_seconds || 0), 0);
   if (rest5 > 0) items5.push({ label: 'Rest', value: rest5, color: DIM });
-  const b5 = items5.length ? barListHtml(items5, fmtSecs) : '<div class="chart-empty">No narration yet</div>';
+  const b5 = items5.length ? barListHtml(items5, fmtSecs) : '<div class="chart-empty fresh-empty"><span class="fe-glyph">✦</span>No narration yet</div>';
 
   const mHead = `<div class="ch-right"><span id="model-total"></span>` +
     `<span class="seg seg-model"><button type="button" data-metric="calls" onclick="setModelMetric('calls')">Calls</button>` +
@@ -2167,13 +2171,13 @@ function tableRows(users) {
     html += `<td class="last-active">${relTime(u.last_active)}</td>`;
     html += `<td class="last-active">${relTime(u.created_at)}</td>`;
     html += `<td class="last-active">${relTime(u.last_login)}</td>`;
-    html += `<td class="cap-cell">${capFrag}<input type="number" min="0" step="1" value="${capVal}" id="cap-${i}" class="cap-input"><button onclick="event.stopPropagation();setCap('${u.username}', ${i})" class="cap-btn">Set</button><span class="cap-hint">0 = ∞</span></td>`;
+    html += `<td class="cap-cell">${capFrag}<input type="number" min="0" step="1" value="${capVal}" id="cap-${i}" class="cap-input"><button onclick="event.stopPropagation();setCap('${u.username}', ${i})" class="cap-btn btn-ghost">Set</button><span class="cap-hint">0 = ∞</span></td>`;
     html += `<td class="membership-cell">${memBadge}${isPremium
-      ? `<span class="prem-grant"><button onclick="event.stopPropagation();setTier('${u.username}', 'free')" class="pg-btn revoke" title="Revoke to Free">⭱ Free</button></span>`
-      : `<span class="prem-grant"><select id="pg-tier-${esc(u.username)}" onclick="event.stopPropagation()" onchange="syncTierDuration('${esc(u.username)}')" title="Tier"><option value="tier2">⚔ Patron · 30€</option><option value="lifetime">♾ Lifetime · 100€</option></select><select id="pg-months-${esc(u.username)}" onclick="event.stopPropagation()" title="Duration"><option value="7" selected>7 d</option><option value="30">1 mo</option><option value="90">3 mo</option><option value="180">6 mo</option><option value="365">12 mo</option><option value="0">∞</option></select><button onclick="event.stopPropagation();grantPremiumFromRow('${esc(u.username)}')" class="pg-btn" title="Grant the chosen tier">👑 Grant</button></span>`}</td>`;
+      ? `<span class="prem-grant"><button onclick="event.stopPropagation();setTier('${u.username}', 'free')" class="pg-btn revoke btn-ghost" title="Revoke to Free">⭱ Free</button></span>`
+      : `<span class="prem-grant"><select id="pg-tier-${esc(u.username)}" onclick="event.stopPropagation()" onchange="syncTierDuration('${esc(u.username)}')" title="Tier"><option value="tier2">⚔ Patron · 30€</option><option value="lifetime">♾ Lifetime · 100€</option></select><select id="pg-months-${esc(u.username)}" onclick="event.stopPropagation()" title="Duration"><option value="7" selected>7 d</option><option value="30">1 mo</option><option value="90">3 mo</option><option value="180">6 mo</option><option value="365">12 mo</option><option value="0">∞</option></select><button onclick="event.stopPropagation();grantPremiumFromRow('${esc(u.username)}')" class="pg-btn btn-gold" title="Grant the chosen tier">👑 Grant</button></span>`}</td>`;
     html += `<td class="rev-num">${u.revenue ? fmtSek(u.revenue) : '—'}</td>`;
     html += `<td class="actions-cell">${rowActions(u)}</td>`;
-    html += `<td><button onclick="event.stopPropagation();deleteUser('${u.username}')" class="del-btn">✕ Delete</button></td>`;
+    html += `<td><button onclick="event.stopPropagation();deleteUser('${u.username}')" class="del-btn btn-blood">✕ Delete</button></td>`;
     html += '</tr>';
     html += `<tr class="campaign-detail" id="detail-${i}"><td colspan="18"><div class="campaign-inner" id="inner-${i}"></div></td></tr>`;
   });
@@ -2203,17 +2207,17 @@ function mobRows(users) {
     html += `<div class="mc-meta"><span>💳 ${isPremium ? 'Premium' : 'Free'}</span><span>💰 Rev: ${u.revenue ? fmtSek(u.revenue) : '—'}</span><span>🎚️ Cap: ${capVal === 0 ? '∞' : capVal} (used ${u.period_turns_used || 0}${u.turn_bonus ? ' +' + u.turn_bonus + ' bought' : ''}${u.promo_bonus ? ' +' + u.promo_bonus + ' promo' : ''})</span></div>`;
     html += `<div class="mc-cap" style="display:flex;gap:.4rem;align-items:center;margin-top:.5rem;flex-wrap:wrap">`;
     html += `<input type="number" min="0" step="1" value="${capVal}" id="cap-${i}" class="cap-input">`;
-    html += `<button onclick="event.stopPropagation();setCap('${u.username}', ${i})" class="cap-btn">Set cap</button>`;
+    html += `<button onclick="event.stopPropagation();setCap('${u.username}', ${i})" class="cap-btn btn-ghost">Set cap</button>`;
     html += `<span class="cap-hint">0 = unlimited</span></div>`;
     html += `<div class="mc-billing" style="display:flex;gap:.4rem;align-items:center;margin-top:.4rem;flex-wrap:wrap">`;
     html += `<input type="number" min="1" step="1" value="10" id="topup-${u.username}" class="cap-input" style="width:60px">`;
-    html += `<button onclick="event.stopPropagation();topUp('${u.username}')" class="bc-btn">➕ Top up</button>`;
-    html += `<button onclick="event.stopPropagation();resetTurns('${u.username}')" class="bc-btn">🔄 Reset</button>`;
+    html += `<button onclick="event.stopPropagation();topUp('${u.username}')" class="bc-btn btn-gold">➕ Top up</button>`;
+    html += `<button onclick="event.stopPropagation();resetTurns('${u.username}')" class="bc-btn btn-blood">🔄 Reset</button>`;
     if (!isPremium) {
       html += `<select id="pg-m-tier-${u.username}" onclick="event.stopPropagation()" onchange="syncTierDuration('${esc(u.username)}')" style="background:var(--ink);border:1px solid var(--edge);color:var(--bone);font-size:.78rem;padding:.2rem;border-radius:2px;max-width:80px"><option value="tier2">Patron 30€</option><option value="lifetime">♾ 100€</option></select>`;
       html += `<select id="pg-m-months-${u.username}" onclick="event.stopPropagation()" style="background:var(--ink);border:1px solid var(--edge);color:var(--bone);font-size:.78rem;padding:.2rem;border-radius:2px;max-width:52px"><option value="7" selected>7d</option><option value="30">1mo</option><option value="90">3mo</option><option value="180">6mo</option><option value="365">1y</option><option value="0">∞</option></select>`;
     }
-    html += `<button onclick="event.stopPropagation();${isPremium ? "setTier('" + u.username + "', 'free')" : "grantPremiumFromRow('" + u.username + "')"}" class="bc-btn${isPremium ? '' : ' gold'}">${isPremium ? '⭱ Free' : '👑 Grant'}</button>`;
+    html += `<button onclick="event.stopPropagation();${isPremium ? "setTier('" + u.username + "', 'free')" : "grantPremiumFromRow('" + u.username + "')"}" class="bc-btn${isPremium ? ' btn-ghost' : ' gold btn-gold'}">${isPremium ? '⭱ Free' : '👑 Grant'}</button>`;
     html += '</div>';
     html += '</div>';
   });
@@ -2302,14 +2306,14 @@ function renderDetail(container, data) {
   html += '<div class="billing-controls">';
   html += '<span class="bc-label">Turn bonus: <b style="color:var(--term-amber)">' + (data.turn_bonus || 0) + '</b> · promo: <b style="color:var(--term-green)">' + (data.promo_bonus || 0) + '</b> · used: <b style="color:var(--term-amber)">' + (data.period_turns_used || 0) + '</b></span>';
   html += '<input type="number" min="1" step="1" value="10" id="topup-' + data.username + '" class="cap-input" style="width:64px">';
-  html += '<button onclick="topUp(\'' + data.username + '\')" class="bc-btn">➕ Top up</button>';
-  html += '<button onclick="resetTurns(\'' + data.username + '\')" class="bc-btn danger">🔄 Reset turns</button>';
+  html += '<button onclick="topUp(\'' + data.username + '\')" class="bc-btn btn-gold">➕ Top up</button>';
+  html += '<button onclick="resetTurns(\'' + data.username + '\')" class="bc-btn danger btn-blood">🔄 Reset turns</button>';
   if (isPremium) {
-    html += '<button onclick="setTier(\'' + data.username + '\', \'free\')" class="bc-btn">⭱ Revert to Free</button>';
+    html += '<button onclick="setTier(\'' + data.username + '\', \'free\')" class="bc-btn btn-ghost">⭱ Revert to Free</button>';
   } else {
     html += '<select id="dt-tier-' + data.username + '" onchange="syncTierDuration(\'' + data.username + '\')" class="cap-input" style="width:auto;background:var(--ink);color:var(--bone);border:1px solid var(--edge)"><option value="tier2">Patron · 30€</option><option value="lifetime">Lifetime · 100€</option></select>';
     html += '<select id="dt-months-' + data.username + '" class="cap-input" style="width:auto;background:var(--ink);color:var(--bone);border:1px solid var(--edge)"><option value="7" selected>7 d</option><option value="30">1 mo</option><option value="90">3 mo</option><option value="180">6 mo</option><option value="365">12 mo</option><option value="0">∞ forever</option></select>';
-    html += '<button onclick="setTier(\'' + data.username + '\', document.getElementById(\'dt-tier-' + data.username + '\').value, document.getElementById(\'dt-months-' + data.username + '\').value)" class="bc-btn gold">👑 Grant</button>';
+    html += '<button onclick="setTier(\'' + data.username + '\', document.getElementById(\'dt-tier-' + data.username + '\').value, document.getElementById(\'dt-months-' + data.username + '\').value)" class="bc-btn gold btn-gold">👑 Grant</button>';
   }
   html += '</div>';
   if (campaigns.length === 0) {

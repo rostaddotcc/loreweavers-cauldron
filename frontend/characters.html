@@ -25,64 +25,64 @@
   }.grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.05;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}#embers{position:fixed;inset:0;z-index:1;pointer-events:none}.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(4,2,8,.85)}.app{position:relative;z-index:2;max-width:1080px;margin:0 auto;padding:2rem 1.25rem 5rem}
   /* ── Head ── */
-  .forge-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:2.4rem;flex-wrap:wrap;gap:.8rem}.forge-head .brand{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:1.1rem;color:var(--gold-bright);letter-spacing:.06em;text-shadow:0 0 14px rgba(var(--gold-bright-rgb),.3)}.forge-head .back{font-family:var(--font-display,'Cinzel',serif);font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .9rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none}.forge-head .back:hover{color:var(--gold-bright);border-color:var(--gold)}
-  .destiny-title{text-align:center;margin-bottom:.4rem}.destiny-title .over{font-family:var(--font-display,'Cinzel',serif);font-size:.66rem;letter-spacing:.42em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.55rem}.destiny-title h1{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:clamp(1.8rem,5vw,2.7rem);color:var(--bone-bright);letter-spacing:.05em}.destiny-sub{text-align:center;font-style:italic;color:var(--bone-dim);font-size:1.05rem;margin-bottom:2.2rem}.rune-divider{display:flex;align-items:center;gap:.9rem;margin:0 auto 2.4rem;max-width:380px}.rune-divider::before,.rune-divider::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.5}.rune-divider span{color:var(--gold);text-shadow:0 0 8px rgba(var(--gold-rgb),.6)}
-  .section-label{font-family:var(--font-display,'Cinzel',serif);font-size:.8rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin:2.4rem 0 1rem;display:flex;align-items:center;gap:.8rem}.section-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(var(--gold-rgb),.4),transparent)}
+  .forge-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:2.4rem;flex-wrap:wrap;gap:.8rem}.forge-head .brand{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:var(--fs-chat);color:var(--gold-bright);letter-spacing:.06em;text-shadow:0 0 14px rgba(var(--gold-bright-rgb),.3)}.forge-head .back{font-family:var(--font-display,'Cinzel',serif);font-size:var(--fs-tiny);letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .9rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none}.forge-head .back:hover{color:var(--gold-bright);border-color:var(--gold)}
+  .destiny-title{text-align:center;margin-bottom:.4rem}.destiny-title .over{font-family:var(--font-display,'Cinzel',serif);font-size:.66rem;letter-spacing:.42em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.55rem}.destiny-title h1{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:clamp(1.8rem,5vw,2.7rem);color:var(--bone-bright);letter-spacing:.05em}.destiny-sub{text-align:center;font-style:italic;color:var(--bone-dim);font-size:var(--fs-base);margin-bottom:2.2rem}.rune-divider{display:flex;align-items:center;gap:.9rem;margin:0 auto 2.4rem;max-width:380px}.rune-divider::before,.rune-divider::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.5}.rune-divider span{color:var(--gold);text-shadow:0 0 8px rgba(var(--gold-rgb),.6)}
+  .section-label{font-family:var(--font-display,'Cinzel',serif);font-size:var(--fs-tiny);letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin:2.4rem 0 1rem;display:flex;align-items:center;gap:.8rem}.section-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(var(--gold-rgb),.4),transparent)}
   /* ── Forge box (prompt) ── */
   .scroll-box{position:relative;background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,var(--ink));border:1px solid var(--edge);padding:1.6rem 1.5rem;box-shadow:0 20px 50px -20px rgba(0,0,0,.9)}
-  #forge-prompt{width:100%;min-height:150px;resize:vertical;font-family:var(--font-body,'Spectral',serif);font-size:1.03rem;line-height:1.65;color:var(--bone-bright);background:var(--ink);border:1px solid var(--edge);padding:1rem 1.1rem;outline:none;border-radius:2px;transition:border-color .25s,box-shadow .25s}#forge-prompt:focus{border-color:var(--arcane);box-shadow:0 0 18px -5px color-mix(in srgb, var(--arcane) 40%, transparent)}#forge-prompt::placeholder{color:color-mix(in srgb, var(--bone-dim) 50%, transparent);font-style:italic}
+  #forge-prompt{width:100%;min-height:150px;resize:vertical;font-family:var(--font-body,'Spectral',serif);font-size:var(--fs-base);line-height:1.65;color:var(--bone-bright);background:var(--ink);border:1px solid var(--edge);padding:1rem 1.1rem;outline:none;border-radius:2px;transition:border-color .25s,box-shadow .25s}#forge-prompt:focus{border-color:var(--arcane);box-shadow:0 0 18px -5px color-mix(in srgb, var(--arcane) 40%, transparent)}#forge-prompt::placeholder{color:color-mix(in srgb, var(--bone-dim) 50%, transparent);font-style:italic}
   .forge-actions{display:flex;align-items:center;gap:1rem;margin-top:1.2rem;flex-wrap:wrap}
-  .summon-btn{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:.95rem;letter-spacing:.18em;text-transform:uppercase;color:var(--ink);cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,var(--gold));border:1px solid var(--gold);padding:.9rem 1.8rem;border-radius:2px;box-shadow:0 6px 20px -6px rgba(var(--gold-bright-rgb),.5),inset 0 1px 0 rgba(255,255,255,.35);transition:all .2s}.summon-btn:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-2px)}.summon-btn:disabled{opacity:.55;cursor:wait}
-  select.dark-select{font-family:var(--font-body,'Spectral',serif);font-size:.9rem;color:var(--bone-bright);background:var(--ink);border:1px solid var(--edge);padding:.55rem .7rem;cursor:pointer;outline:none;border-radius:2px}
+  .summon-btn{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:var(--fs-sm);letter-spacing:.18em;text-transform:uppercase;color:var(--ink);cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,var(--gold));border:1px solid var(--gold);padding:.9rem 1.8rem;border-radius:2px;box-shadow:0 6px 20px -6px rgba(var(--gold-bright-rgb),.5),inset 0 1px 0 rgba(255,255,255,.35);transition:all .2s}.summon-btn:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-2px)}.summon-btn:disabled{opacity:.55;cursor:wait}
+  select.dark-select{font-family:var(--font-body,'Spectral',serif);font-size:var(--fs-sm);color:var(--bone-bright);background:var(--ink);border:1px solid var(--edge);padding:.55rem .7rem;cursor:pointer;outline:none;border-radius:2px}
   /* ── Weaving status ── */
   .weaving{display:none;text-align:center;padding:2rem 0 .5rem}.weaving.show{display:block}
-  .w-status{font-family:var(--font-display,'Cinzel',serif);font-size:.8rem;letter-spacing:.14em;color:var(--gold);margin-bottom:1rem;animation:w-blink 1.6s steps(2) infinite}
+  .w-status{font-family:var(--font-display,'Cinzel',serif);font-size:var(--fs-tiny);letter-spacing:.14em;color:var(--gold);margin-bottom:1rem;animation:w-blink 1.6s steps(2) infinite}
   @keyframes w-blink{0%,100%{opacity:1}50%{opacity:.35}}
   .w-reasoning{width:100%;margin:0 auto;text-align:left;background:rgba(10,6,16,.85);border:1px solid color-mix(in srgb, var(--arcane) 35%, transparent)}
   .w-reasoning[hidden]{display:none}
   .w-reasoning-head{display:flex;justify-content:space-between;align-items:center;gap:.6rem;font-family:var(--font-display,'Cinzel',serif);font-size:.62rem;letter-spacing:.12em;color:var(--arcane);padding:.45rem .7rem;border-bottom:1px solid color-mix(in srgb, var(--arcane) 25%, transparent);background:color-mix(in srgb, var(--arcane) 8%, transparent)}
   .w-timer{color:var(--bone-bright)}
-  .w-reasoning-body{max-height:110px;overflow-y:auto;padding:.55rem .7rem;font-size:.85rem;line-height:1.5;color:var(--arcane);font-style:italic;white-space:pre-wrap;word-break:break-word}
+  .w-reasoning-body{max-height:110px;overflow-y:auto;padding:.55rem .7rem;font-size:var(--fs-sm);line-height:1.5;color:var(--arcane);font-style:italic;white-space:pre-wrap;word-break:break-word}
   /* ── Preview (generated character) ── */
   .preview{display:none;margin-top:2.4rem}.preview.show{display:block;animation:msg-in .55s cubic-bezier(.22,1,.36,1)}
   @keyframes msg-in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-  .pv-head{display:flex;gap:1.4rem;align-items:center;margin-bottom:1.4rem;flex-wrap:wrap}.pv-portrait{width:84px;height:84px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2.2rem;border:2px solid var(--gold);background:var(--stone-3);overflow:hidden}.pv-portrait img{width:100%;height:100%;object-fit:cover}
-  .pv-name{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:1.5rem;color:var(--bone-bright)}.pv-class{font-style:italic;color:var(--arcane);font-size:1.05rem;margin-top:.15rem}
-  .pv-stats{display:grid;grid-template-columns:repeat(6,1fr);gap:.6rem;margin-bottom:1.3rem}.pv-stat{text-align:center;padding:.7rem .2rem .6rem;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--edge)}.pv-stat .a{font-family:var(--font-display,'Cinzel',serif);font-size:.55rem;letter-spacing:.2em;color:var(--gold)}.pv-stat .s{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:1.3rem;color:var(--bone-bright)}.pv-stat .m{font-size:.85rem;color:var(--arcane)}
-  .pv-vitals{display:flex;gap:1.4rem;flex-wrap:wrap;font-size:.98rem;color:var(--bone-dim);margin-bottom:1.3rem}.pv-vitals b{color:var(--bone-bright);font-size:1.05rem}
-  .pv-traits{display:flex;flex-wrap:wrap;gap:.45rem;margin-bottom:1.3rem}.pv-trait{font-size:.88rem;padding:.3rem .8rem;border:1px solid color-mix(in srgb, var(--arcane) 50%, transparent);color:var(--arcane-bright);background:color-mix(in srgb, var(--arcane) 8%, transparent);border-radius:2px}
-  .pv-story{font-style:italic;color:var(--bone);line-height:1.7;border-left:2px solid var(--gold);padding-left:1rem;margin-bottom:1.2rem;font-size:.95rem}
-  .pv-gear{font-size:.85rem;color:var(--bone);line-height:1.7;margin-bottom:1.4rem}.pv-gear b{color:var(--gold-bright)}
+  .pv-head{display:flex;gap:1.4rem;align-items:center;margin-bottom:1.4rem;flex-wrap:wrap}.pv-portrait{width:84px;height:84px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:var(--fs-h1);border:2px solid var(--gold);background:var(--stone-3);overflow:hidden}.pv-portrait img{width:100%;height:100%;object-fit:cover}
+  .pv-name{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:1.5rem;color:var(--bone-bright)}.pv-class{font-style:italic;color:var(--arcane);font-size:var(--fs-base);margin-top:.15rem}
+  .pv-stats{display:grid;grid-template-columns:repeat(6,1fr);gap:.6rem;margin-bottom:1.3rem}.pv-stat{text-align:center;padding:.7rem .2rem .6rem;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--edge)}.pv-stat .a{font-family:var(--font-display,'Cinzel',serif);font-size:.55rem;letter-spacing:.2em;color:var(--gold)}.pv-stat .s{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:var(--fs-h3);color:var(--bone-bright)}.pv-stat .m{font-size:var(--fs-sm);color:var(--arcane)}
+  .pv-vitals{display:flex;gap:1.4rem;flex-wrap:wrap;font-size:.98rem;color:var(--bone-dim);margin-bottom:1.3rem}.pv-vitals b{color:var(--bone-bright);font-size:var(--fs-base)}
+  .pv-traits{display:flex;flex-wrap:wrap;gap:.45rem;margin-bottom:1.3rem}.pv-trait{font-size:var(--fs-sm);padding:.3rem .8rem;border:1px solid color-mix(in srgb, var(--arcane) 50%, transparent);color:var(--arcane-bright);background:color-mix(in srgb, var(--arcane) 8%, transparent);border-radius:2px}
+  .pv-story{font-style:italic;color:var(--bone);line-height:1.7;border-left:2px solid var(--gold);padding-left:1rem;margin-bottom:1.2rem;font-size:var(--fs-sm)}
+  .pv-gear{font-size:var(--fs-sm);color:var(--bone);line-height:1.7;margin-bottom:1.4rem}.pv-gear b{color:var(--gold-bright)}
   .pv-actions{display:flex;gap:.8rem;flex-wrap:wrap}
-  .pv-go{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:.9rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,var(--gold));border:1px solid var(--gold);padding:.8rem 1.5rem;border-radius:2px;transition:all .2s}.pv-go:hover{filter:brightness(1.12);transform:translateY(-2px)}
-  .pv-reroll{font-family:var(--font-display,'Cinzel',serif);font-size:.82rem;letter-spacing:.12em;text-transform:uppercase;background:transparent;border:1px solid var(--edge);color:var(--bone-dim);padding:.8rem 1.3rem;cursor:pointer;border-radius:2px;transition:all .2s}.pv-reroll:hover{color:var(--bone-bright);border-color:var(--arcane)}
+  .pv-go{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:var(--fs-sm);letter-spacing:.14em;text-transform:uppercase;color:var(--ink);cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold) 55%,var(--gold));border:1px solid var(--gold);padding:.8rem 1.5rem;border-radius:2px;transition:all .2s}.pv-go:hover{filter:brightness(1.12);transform:translateY(-2px)}
+  .pv-reroll{font-family:var(--font-display,'Cinzel',serif);font-size:var(--fs-tiny);letter-spacing:.12em;text-transform:uppercase;background:transparent;border:1px solid var(--edge);color:var(--bone-dim);padding:.8rem 1.3rem;cursor:pointer;border-radius:2px;transition:all .2s}.pv-reroll:hover{color:var(--bone-bright);border-color:var(--arcane)}
   /* ── Vault grid ── */
   .vault-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.2rem}
   .vcard{position:relative;background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,var(--ink));border:1px solid var(--edge);padding:1.4rem 1.2rem 1.2rem;cursor:pointer;transition:transform .3s,box-shadow .3s,border-color .3s;overflow:hidden}
   .vcard::before{content:'';position:absolute;inset:6px;border:1px solid rgba(var(--gold-rgb),.15);pointer-events:none}
   .vcard:hover{transform:translateY(-5px);box-shadow:0 16px 34px -12px rgba(0,0,0,.85);border-color:var(--gold)}
   .vcard-head{display:flex;gap:1rem;align-items:center;margin-bottom:.8rem}
-  .vcard-dl{position:absolute;right:.4rem;top:.4rem;background:var(--stone-3);border:1px solid var(--edge-hi);color:var(--gold-bright);width:26px;height:26px;border-radius:3px;cursor:pointer;font-size:.8rem;line-height:1;display:flex;align-items:center;justify-content:center;z-index:2}
-  .vcard-avatar{width:64px;height:64px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.7rem;border:2px solid var(--edge-hi);background:var(--stone-3);overflow:hidden}
+  .vcard-dl{position:absolute;right:.4rem;top:.4rem;background:var(--stone-3);border:1px solid var(--edge-hi);color:var(--gold-bright);width:26px;height:26px;border-radius:3px;cursor:pointer;font-size:var(--fs-tiny);line-height:1;display:flex;align-items:center;justify-content:center;z-index:2}
+  .vcard-avatar{width:64px;height:64px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:var(--fs-h2);border:2px solid var(--edge-hi);background:var(--stone-3);overflow:hidden}
   .vcard-avatar img{width:100%;height:100%;object-fit:cover}
-  .vcard-name{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:1.02rem;color:var(--bone-bright);line-height:1.3}
-  .vcard-cls{font-style:italic;font-size:.85rem;color:var(--arcane)}
-  .vcard-meta{display:flex;gap:.9rem;flex-wrap:wrap;font-size:.82rem;color:var(--bone-dim);margin:.6rem 0}
-  .vcard-story{font-size:.86rem;color:var(--bone-dim);font-style:italic;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;min-height:3.9em}
-  .vcard-foot{display:flex;justify-content:space-between;align-items:center;margin-top:.9rem;font-size:.75rem;color:var(--bone-dim);font-style:italic}
+  .vcard-name{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:var(--fs-base);color:var(--bone-bright);line-height:1.3}
+  .vcard-cls{font-style:italic;font-size:var(--fs-sm);color:var(--arcane)}
+  .vcard-meta{display:flex;gap:.9rem;flex-wrap:wrap;font-size:var(--fs-tiny);color:var(--bone-dim);margin:.6rem 0}
+  .vcard-story{font-size:var(--fs-sm);color:var(--bone-dim);font-style:italic;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;min-height:3.9em}
+  .vcard-foot{display:flex;justify-content:space-between;align-items:center;margin-top:.9rem;font-size:var(--fs-tiny);color:var(--bone-dim);font-style:italic}
   .vcard-foot .saved-tag{color:var(--gold)}
   .vault-empty{text-align:center;padding:3rem 1rem;color:var(--bone-dim);font-style:italic;border:1px dashed var(--edge)}
   /* ── Inspect overlay ── */
   .insp-overlay{display:none;position:fixed;inset:0;z-index:500;background:rgba(4,2,8,.88);backdrop-filter:blur(4px);padding:2rem 1rem;overflow-y:auto}
   .insp-overlay.show{display:flex;align-items:flex-start;justify-content:center}
   .insp-modal{width:min(680px,100%);background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,var(--ink));border:1px solid var(--gold);box-shadow:0 0 60px rgba(var(--gold-rgb),.15),0 24px 60px rgba(0,0,0,.8);padding:1.8rem 1.7rem;position:relative;animation:msg-in .35s cubic-bezier(.22,1,.36,1)}
-  .insp-close{position:absolute;top:.8rem;right:.8rem;background:none;border:1px solid var(--edge);color:var(--bone-dim);width:36px;height:36px;cursor:pointer;font-size:.95rem;transition:all .2s}.insp-close:hover{color:var(--blood-bright);border-color:var(--blood-bright)}
+  .insp-close{position:absolute;top:.8rem;right:.8rem;background:none;border:1px solid var(--edge);color:var(--bone-dim);width:36px;height:36px;cursor:pointer;font-size:var(--fs-sm);transition:all .2s}.insp-close:hover{color:var(--blood-bright);border-color:var(--blood-bright)}
   .insp-full .pv-stats{grid-template-columns:repeat(6,1fr)}
-  .inv-list{font-size:.85rem;color:var(--bone);line-height:1.8}
+  .inv-list{font-size:var(--fs-sm);color:var(--bone);line-height:1.8}
   .inv-list b{color:var(--gold-bright)}
-  .spells-list{font-size:.85rem;color:var(--bone);line-height:1.7}
+  .spells-list{font-size:var(--fs-sm);color:var(--bone);line-height:1.7}
   .spells-list .sp-name{color:var(--arcane);font-weight:600}
-  .toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:1200;font-family:var(--font-display,'Cinzel',serif);font-size:.88rem;letter-spacing:.1em;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);padding:.7rem 1.5rem;box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none;max-width:92%;text-align:center}.toast.show{transform:translate(-50%,0);opacity:1}
+  .toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:1200;font-family:var(--font-display,'Cinzel',serif);font-size:var(--fs-sm);letter-spacing:.1em;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);padding:.7rem 1.5rem;box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none;max-width:92%;text-align:center}.toast.show{transform:translate(-50%,0);opacity:1}
   html{-webkit-tap-highlight-color:transparent}
   @media(max-width:900px){
     .app{padding:1.6rem 1rem 4rem}
@@ -115,13 +115,15 @@
   .av-lightbox.show{opacity:1;visibility:visible}
   .av-lightbox img{max-width:min(90vw,720px);max-height:85vh;border:2px solid var(--gold);box-shadow:0 0 60px rgba(var(--gold-rgb),.25),0 24px 60px rgba(0,0,0,.8);border-radius:2px}
   .av-lightbox .av-lb-sigil{width:min(70vw,320px);aspect-ratio:1;border:2px solid var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--stone-3)}
-  .av-lightbox .av-lb-close{position:fixed;top:1.2rem;right:1.4rem;font-size:.8rem;color:var(--gold-bright);background:none;border:1px solid var(--edge);padding:.5rem .7rem;cursor:pointer}
+  .av-lightbox .av-lb-close{position:fixed;top:1.2rem;right:1.4rem;font-size:var(--fs-tiny);color:var(--gold-bright);background:none;border:1px solid var(--edge);padding:.5rem .7rem;cursor:pointer}
   .av-lightbox .av-lb-close:hover{border-color:var(--gold);color:var(--bone-bright)}
   .av-lightbox .av-lb-title{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);font-family:var(--font-display,'Cinzel',serif);font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim)}
   /* Reduced motion — page-level extras (global block lives in snes.css) */
   @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+/* v5-fresh: mobile touch targets */
+@media(max-width:900px){.pv-go,.pv-reroll{min-height:44px}.insp-close,.av-lb-close{min-width:44px;min-height:44px}select.dark-select{font-size:16px}}
 </style>
-<link rel="stylesheet" href="snes.css?v=47">
+<link rel="stylesheet" href="snes.css?v=49">
 <script src="sprites.js?v=20260806b"></script>
 <script src="fonts.js?v=20260806b"></script>
 </head>
@@ -131,22 +133,24 @@
 <div class="app">
   <header class="forge-head">
     <span class="brand">The Lore Weaver's Cauldron</span>
-    <a class="back" href="adventure.html">← Back to the Crossroads</a>
+    <a class="back btn-ghost" href="adventure.html">← Back to the Crossroads</a>
   </header>
 
   <div class="destiny-title">
     <div class="over">The Vault of Adventurers</div>
+    <div class="page-eyebrow">THE HALL · YOUR HEROES</div>
     <h1>The Forge</h1>
+    <div class="page-rule">✦</div>
   </div>
   <p class="destiny-sub">Weave adventurers outside of any campaign — save them here, and summon them when a new adventure calls.</p>
   <div class="rune-divider"><span>✦</span></div>
 
   <!-- ═══════════ FORGE (skapa karaktär) ═══════════ -->
   <div class="section-label">I. Forge an Adventurer</div>
-  <div class="scroll-box">
+  <div class="scroll-box fresh-frame">
     <textarea id="forge-prompt" aria-label="Describe your adventurer" spellcheck="false" placeholder="Describe your adventurer — race, class, personality, a wound from their past, the thing they want most in the world…&#10;&#10;Example: A tiefling warlock who sold her shadow to a candle-maker, and now collects other people's secrets like moths."></textarea>
     <div class="forge-actions">
-      <button class="summon-btn" id="forge-btn" onclick="forgeSummon()">🔮 Forge Character</button>
+      <button class="summon-btn btn-gold" id="forge-btn" onclick="forgeSummon()">🔮 Forge Character</button>
       <span style="font-size:.78rem;color:var(--bone-dim)">🧙 Model:</span>
       <select id="forge-model">
         <option value="qwen3.8-max">qwen3.8-max</option>
@@ -178,7 +182,7 @@
   </div>
 
   <!-- Preview -->
-  <div class="preview" id="preview">
+  <div class="preview fresh-frame" id="preview">
     <div class="section-label">II. The Forged Adventurer</div>
     <div class="scroll-box">
       <div class="pv-head">
@@ -194,8 +198,8 @@
       <div class="pv-story" id="pv-story"></div>
       <div class="pv-gear" id="pv-gear"></div>
       <div class="pv-actions">
-        <button class="pv-go" id="pv-save" onclick="saveForged()">💾 Save to the Vault</button>
-        <button class="pv-reroll" onclick="forgeSummon()">🔄 Reforge</button>
+        <button class="pv-go btn-gold" id="pv-save" onclick="saveForged()">💾 Save to the Vault</button>
+        <button class="pv-reroll btn-ghost" onclick="forgeSummon()">🔄 Reforge</button>
       </div>
     </div>
   </div>
@@ -203,7 +207,7 @@
   <!-- ═══════════ VAULT ═══════════ -->
   <div class="section-label">The Vault <span id="vault-count" style="font-size:.75rem;letter-spacing:.1em;color:var(--bone-dim)"></span></div>
   <div id="vault-wrap">
-    <div class="vault-empty" id="vault-empty">The vault is empty. Forge an adventurer above — or save one from an adventure.</div>
+    <div class="vault-empty fresh-empty" id="vault-empty"><span class="fe-glyph">✦</span>The vault is empty. Forge an adventurer above — or save one from an adventure.</div>
     <div class="vault-grid" id="vault-grid"></div>
   </div>
 </div>
@@ -230,12 +234,12 @@
       style="width:100%;box-sizing:border-box;padding:.7rem .8rem;font-family:var(--font-body,'Spectral',serif);font-size:1rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;margin-bottom:1rem">
     <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem">Campaign language</div>
     <div style="display:flex;gap:.6rem;margin-bottom:1.4rem">
-      <button class="pv-reroll nav-lang" data-lang="en" style="flex:1" onclick="navPickLang('en',this)">🇬🇧 English</button>
-      <button class="pv-reroll nav-lang" data-lang="sv" style="flex:1" onclick="navPickLang('sv',this)">🇸🇪 Svenska</button>
+      <button class="pv-reroll nav-lang btn-ghost" data-lang="en" style="flex:1" onclick="navPickLang('en',this)">🇬🇧 English</button>
+      <button class="pv-reroll nav-lang btn-ghost" data-lang="sv" style="flex:1" onclick="navPickLang('sv',this)">🇸🇪 Svenska</button>
     </div>
     <div class="pv-actions">
-      <button class="pv-go" id="nav-create-btn" onclick="confirmNewAdventure()" style="flex:1">⚔️ Create New Adventure</button>
-      <button class="pv-reroll" onclick="closeNewAdv()">Cancel</button>
+      <button class="pv-go btn-gold" id="nav-create-btn" onclick="confirmNewAdventure()" style="flex:1">⚔️ Create New Adventure</button>
+      <button class="pv-reroll btn-ghost" onclick="closeNewAdv()">Cancel</button>
     </div>
     <div style="font-size:.72rem;color:var(--bone-dim);font-style:italic;margin-top:.9rem">Opens the adventure table — choose your DM model there, then begin. Your hero steps in with their gear and portrait. Your current adventure is left untouched.</div>
   </div>
@@ -533,11 +537,11 @@ async function openInspect(charId) {
       <div style="font-size:.72rem;color:var(--bone-dim);margin-top:.35rem">Overrides the auto-built prompt from your sheet — describe exactly what you want painted.</div>
     </div>
     <div class="pv-actions" style="margin-top:1.4rem">
-      <button class="pv-go" onclick="startNewAdventure('${esc(charId)}')">🌟 Create New Adventure</button>
-      <button class="pv-reroll" onclick="useCharacter('${esc(charId)}')">⚔️ Use in Current Adventure</button>
-      <button class="pv-reroll" id="insp-avatar-btn" onclick="genAvatar('${esc(charId)}')">${entry.avatar ? '🎨 Reroll Portrait' : '🎨 Paint Portrait'}</button>
-      ${entry.avatar ? `<button class="pv-reroll" onclick="downloadVaultAvatar('${esc(charId)}')">⬇ Portrait</button>` : ''}
-      <button class="pv-reroll" style="color:var(--blood-bright)" onclick="deleteCharacter('${esc(charId)}','${esc(ch.name||'')}')">🗑 Delete</button>
+      <button class="pv-go btn-gold" onclick="startNewAdventure('${esc(charId)}')">🌟 Create New Adventure</button>
+      <button class="pv-reroll btn-ghost" onclick="useCharacter('${esc(charId)}')">⚔️ Use in Current Adventure</button>
+      <button class="pv-reroll btn-ghost" id="insp-avatar-btn" onclick="genAvatar('${esc(charId)}')">${entry.avatar ? '🎨 Reroll Portrait' : '🎨 Paint Portrait'}</button>
+      ${entry.avatar ? `<button class="pv-reroll btn-ghost" onclick="downloadVaultAvatar('${esc(charId)}')">⬇ Portrait</button>` : ''}
+      <button class="pv-reroll btn-blood" style="color:var(--blood-bright)" onclick="deleteCharacter('${esc(charId)}','${esc(ch.name||'')}')">🗑 Delete</button>
     </div>`;
   document.getElementById('insp-overlay').classList.add('show');
 }
@@ -631,7 +635,7 @@ async function confirmNewAdventure() {
     sessionStorage.setItem('dnd_vault_character', navCharId);
     try { SFX.gate(); } catch (_) {}
     toast('🌟 A new chapter begins!');
-    setTimeout(() => { location.href = 'chat.html?v=20260921a'; }, 900);
+    setTimeout(() => { location.href = 'chat.html?v=20260922a'; }, 900);
   } catch (e) {
     toast('⚠ ' + (e.message || 'Could not start the adventure'));
     navStarting = false;

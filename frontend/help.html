@@ -11,10 +11,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,700;1,400;1,700&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --ink:#1a1426; --stone:#271d33; --stone-2:#322541; --stone-3:#3d2e4f;
-    --edge:#463a60; --bone:#d9c9a6; --bone-bright:#f2e6c8; --bone-dim:#9d8a6a;
-    --gold:#d4a92c; --gold-bright:#f0d675; --blood-bright:#e0485a;
-    --arcane:#9a6fe0; --term-green:#33cc33; --term-amber:#ccaa33;
+    /* design v4 "Illuminated Terminal" (2026-09-22) — speglar snes.css :root */
+    --ink:#161022; --stone:#271d33; --stone-2:#322541; --stone-3:#3d2e4f;
+    --edge:#463a60; --bone:#d9c9a6; --bone-bright:#f2e6c8; --bone-dim:#ab9b80;
+    --gold:#d4a92c; --gold-bright:#f0d675; --blood-bright:#e66977;
+    --arcane:#a47ee3; --term-green:#33cc33; --term-amber:#ccaa33;
   }
   *{margin:0;padding:0;box-sizing:border-box;border-radius:0}
   body{
@@ -22,24 +23,24 @@
     background:var(--ink);line-height:1.8;
   }
   .app{max-width:800px;margin:0 auto;padding:2rem 1.5rem 4rem}
-  h1{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:1.5rem;letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;text-shadow:2px 2px 0 #000}
-  h2{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:.85rem;color:var(--term-green);margin:2rem 0 .8rem;text-transform:uppercase;letter-spacing:.14em}
+  h1{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:var(--fs-h1);letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;text-shadow:2px 2px 0 #000}
+  h2{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:var(--fs-h3);color:var(--gold);margin:2rem 0 .8rem;text-transform:uppercase;letter-spacing:.14em}
   h2::before{content:'> ';color:var(--edge)}
-  p,li{font-size:.91rem;color:var(--bone);margin-bottom:.6rem}
+  p,li{font-size:var(--fs-base);color:var(--bone);margin-bottom:.6rem}
   ul{padding-left:1.2rem;list-style:none}
   li::before{content:'▸ ';color:var(--gold)}
   .box{background:var(--stone);border:1px solid var(--edge);padding:1.2rem;margin:1rem 0;position:relative}
   .box::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.4}
-  .cmd{color:var(--term-green);background:var(--ink);padding:.15rem .4rem;border:1px solid var(--edge);font-size:.85rem}
-  .key{color:var(--term-amber);border:1px solid var(--edge);padding:.1rem .35rem;font-size:.81rem;background:var(--stone-2)}
+  .cmd{color:var(--term-green);background:var(--ink);padding:.15rem .4rem;border:1px solid var(--edge);font-size:var(--fs-sm)}
+  .key{color:var(--term-amber);border:1px solid var(--edge);padding:.1rem .35rem;font-size:var(--fs-tiny);background:var(--stone-2)}
   .topbar{display:flex;align-items:center;gap:1.2rem;padding:1.15rem 0;border-bottom:1px solid color-mix(in srgb, var(--stone-2) 55%, transparent);margin-bottom:2rem}
-  .topbar .brand{display:flex;align-items:center;gap:.6rem;font-family:var(--font-display,'Cinzel',serif);font-size:.74rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-bright)}
-  .topbar .brand img{width:26px;height:26px;border-radius:6px;box-shadow:0 0 10px rgba(var(--gold-rgb),.25)}
-  .topbar a{color:var(--bone-dim);text-decoration:none;font-family:var(--font-display,'Cinzel',serif);font-size:.66rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:.35rem .1rem;border:none;background:none;transition:color .25s}
+  .topbar .brand{display:flex;align-items:center;gap:.6rem;font-family:var(--font-display,'Cinzel',serif);font-size:var(--fs-sm);font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-bright)}
+  .topbar .brand img{width:26px;height:26px;box-shadow:0 0 10px rgba(var(--gold-rgb),.25)}
+  .topbar a{color:var(--bone-dim);text-decoration:none;font-family:var(--font-display,'Cinzel',serif);font-size:var(--fs-micro);font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:.35rem .1rem;border:none;background:none;transition:color .25s}
   .topbar a:hover{color:var(--gold-bright);text-shadow:0 0 12px rgba(var(--gold-bright-rgb),.35)}
   .divider{border:none;border-top:1px dashed var(--edge);margin:1.5rem 0}
-  .loop{display:grid;grid-template-columns:auto 1fr;gap:.4rem .8rem;font-size:.85rem}
-  .loop .step{color:var(--term-green);font-weight:700}
+  .loop{display:grid;grid-template-columns:auto 1fr;gap:.4rem .8rem;font-size:var(--fs-sm)}
+  .loop .step{color:var(--gold);font-weight:700}
   .loop .desc{color:var(--bone)}
   a{color:var(--arcane)}
 
@@ -53,13 +54,13 @@
   .ledger-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0}
   .ledger-cell{background:var(--stone);border:1px solid var(--edge);padding:1rem 1.1rem;position:relative}
   .ledger-cell::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.35}
-  .ledger-cell .lc-tag{font-family:var(--font-accent,'Silkscreen',monospace);font-size:.62rem;letter-spacing:.12em;color:var(--term-green);text-transform:uppercase;display:block;margin-bottom:.5rem}
-  .ledger-cell .lc-title{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:.78rem;color:var(--gold);margin-bottom:.4rem}
-  .ledger-cell p, .ledger-cell li{font-size:.86rem}
-  .ledger-cell .lc-ex{display:block;margin-top:.5rem;font-family:var(--font-accent,'Silkscreen',monospace);font-size:.78rem;color:var(--bone-dim);border-left:2px solid var(--gold);padding-left:.6rem}
-  .truth{color:var(--term-green)}
+  .ledger-cell .lc-tag{font-family:var(--font-accent,'Silkscreen',monospace);font-size:var(--fs-micro);letter-spacing:.12em;color:var(--gold);text-transform:uppercase;display:block;margin-bottom:.5rem}
+  .ledger-cell .lc-title{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:var(--fs-sm);color:var(--gold);margin-bottom:.4rem}
+  .ledger-cell p, .ledger-cell li{font-size:var(--fs-base)}
+  .ledger-cell .lc-ex{display:block;margin-top:.5rem;font-family:var(--font-accent,'Silkscreen',monospace);font-size:var(--fs-tiny);color:var(--bone-dim);border-left:2px solid var(--gold);padding-left:.6rem}
+  .truth{color:var(--teal)}
   .truth-bad{color:var(--blood-bright)}
-  .truth-fix{color:var(--term-amber)}
+  .truth-fix{color:var(--ember)}
 
   /* ═══════════ Mobile — touchscreen ═══════════ */
   @media (max-width: 900px) {
@@ -67,43 +68,41 @@
     .topbar { flex-wrap: wrap; gap: .4rem .9rem; }
     .topbar a {
       min-height: 44px; display: inline-flex; align-items: center;
-      padding: .4rem 0; font-size: .68rem;
+      padding: .4rem 0; font-size: var(--fs-micro);
     }
   }
   @media (max-width: 640px) {
     .app { padding: 1.25rem .75rem 3rem; }
-    h1 { font-size: 1.1rem; line-height: 1.4; }
-    h2 { font-size: .62rem; margin: 1.6rem 0 .7rem; }
-    p, li { font-size: .87rem; line-height: 1.9; }
+    h1 { font-size: var(--fs-h2); line-height: 1.4; }
+    h2 { margin: 1.6rem 0 .7rem; }
+    p, li { line-height: 1.9; }
     .box { padding: .9rem .8rem; }
     .cmd { word-break: break-word; display: inline-block; max-width: 100%; }
     .loop { gap: .5rem .6rem; }
-    .topbar .brand { font-size: .62rem; }
+    .topbar .brand { font-size: var(--fs-tiny); }
     .ledger-grid { grid-template-columns: 1fr; }
   }
   @media (max-width: 400px) {
     .app { padding: 1rem .5rem 2.5rem; }
-    h1 { font-size: .95rem; }
+    h1 { font-size: var(--fs-h3); }
     .box { padding: .75rem .6rem; }
-    .cmd { font-size: .79rem; }
-    .key { font-size: .75rem; }
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=47">
+<link rel="stylesheet" href="snes.css?v=49">
 <style>
 /* ═══════════ RITE-RAIL — THE ARCHIVE dropdown (2026-08-11) ═══════════ */
 .rite-rail{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:48px;background:linear-gradient(180deg,var(--stone-2),var(--stone));border:1px solid var(--edge);border-top:1px solid var(--edge-hi);padding:0 .8rem;gap:1rem;position:relative}
 .rite-rail::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,rgba(var(--gold-rgb),.55) 30%,rgba(var(--gold-rgb),.55) 70%,transparent)}
 .rr-brand{display:flex;align-items:center;gap:.55rem;min-width:0;justify-self:start}
-.rr-sigil{width:22px;height:22px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;color:var(--gold-bright);font-size:.8rem;flex-shrink:0;box-shadow:0 0 8px rgba(var(--gold-rgb),.35) inset}
-.rr-name{font-family:var(--font-display);font-size:.82rem;letter-spacing:.14em;color:var(--bone-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rr-tag{font-family:var(--font-accent);font-size:.52rem;letter-spacing:.2em;color:var(--gold);border:1px solid rgba(var(--gold-rgb),.4);padding:.15rem .4rem;white-space:nowrap}
+.rr-sigil{width:22px;height:22px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;color:var(--gold-bright);font-size:var(--fs-sm);flex-shrink:0;box-shadow:0 0 8px rgba(var(--gold-rgb),.35) inset}
+.rr-name{font-family:var(--font-display);font-size:var(--fs-sm);letter-spacing:.14em;color:var(--bone-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rr-tag{font-family:var(--font-accent);font-size:var(--fs-micro);letter-spacing:.2em;color:var(--gold);border:1px solid rgba(var(--gold-rgb),.4);padding:.15rem .4rem;white-space:nowrap}
 .rr-actions{display:flex;align-items:center;gap:.4rem;justify-self:end}
-.rr-menu{font-family:var(--font-display);font-size:.68rem;letter-spacing:.15em;color:var(--bone);border:1px solid var(--edge);background:var(--stone-2);padding:0 .9rem;height:34px;display:flex;align-items:center;gap:.5rem;cursor:pointer;position:relative}
-.rr-menu:hover{border-color:var(--gold);color:var(--gold-bright)}
+/* .rr-menu = .btn-ghost (snes.css §5b) — behåll ENDAST layout här */
+.rr-menu{position:relative}
 .rr-drop{position:absolute;top:calc(100% + .5rem);right:0;min-width:220px;background:var(--stone);border:1px solid var(--gold);box-shadow:0 8px 30px rgba(0,0,0,.6);display:none;z-index:10000;flex-direction:column}
 .rr-drop.open{display:flex}
-.rr-drop a{display:flex;align-items:center;gap:.6rem;padding:.7rem .9rem;color:var(--bone);text-decoration:none;font-family:var(--font-display);font-size:.72rem;letter-spacing:.12em;border-bottom:1px solid var(--edge)}
+.rr-drop a{display:flex;align-items:center;gap:.6rem;padding:.7rem .9rem;color:var(--bone);text-decoration:none;font-family:var(--font-display);font-size:var(--fs-sm);letter-spacing:.12em;border-bottom:1px solid var(--edge)}
 .rr-drop a:hover{background:rgba(var(--gold-rgb),.08);color:var(--gold-bright);transform:translateX(3px)}
 .rr-drop a.cur{color:var(--gold);border-left:2px solid var(--gold)}
 /* snes.css-kompat: .topbar !important-regler får inte äta railen */
@@ -117,9 +116,7 @@
 }
 @media(max-width:640px){
   .rr-name{display:none}
-  .rr-tag{font-size:.46rem;padding:.12rem .3rem}
-  .topbar.rite-rail .rr-btn{min-height:44px!important}
-  .rr-menu{height:38px}
+  .rr-tag{padding:.12rem .3rem}
 }
 </style>
 <script src="sprites.js?v=20260806b"></script>
@@ -135,7 +132,7 @@
     </div>
     <span class="rr-mid" aria-hidden="true"></span>
     <div class="rr-actions">
-      <div class="rr-menu" id="archive-menu" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false">☰ THE ARCHIVE ▾
+      <div class="rr-menu btn-ghost" id="archive-menu" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false">☰ THE ARCHIVE ▾
         <div class="rr-drop" id="archive-drop">
           <a href="chat.html">⚔ To the Table</a>
           <a href="npcs.html">👥 NPCs</a>
@@ -199,7 +196,7 @@
   </div>
 
   <h2 class="rv">The Ledger — How the World Remembers</h2>
-  <p class="rv d1" style="color:var(--bone-dim);font-size:.86rem">Everything you do is written down twice: once as the story, once as the books. The story is what the DM tells you; the books are what actually happened.</p>
+  <p class="rv d1" style="color:var(--bone-dim);font-size:var(--fs-tiny)">Everything you do is written down twice: once as the story, once as the books. The story is what the DM tells you; the books are what actually happened.</p>
   <div class="ledger-grid rv d2">
     <div class="ledger-cell">
       <span class="lc-tag">Story layer</span>
@@ -222,8 +219,8 @@
   </div>
 
   <h2 class="rv">The Guardian — Keeping the Truth</h2>
-  <p class="rv d1" style="color:var(--bone-dim);font-size:.86rem">The DM is a storyteller, and storytellers make mistakes. The Guardian is the part of the engine that <b>owns the numbers</b> — so a wrong sentence in the tale never becomes a wrong fact in the world.</p>
-  <p class="rv d2" style="color:var(--bone-dim);font-size:.86rem"><span class="truth">The rule of the books:</span> the Guardian corrects the ledger <b>only when the Dungeon Master's own narration states it as truth in the world</b> — it never writes a fact the DM did not speak. Truth flows from the DM's books, mechanics flow from the Guardian. That split is what hardens the realm against AI drift: a wandering sentence can never quietly rewrite the state.</p>
+  <p class="rv d1" style="color:var(--bone-dim);font-size:var(--fs-tiny)">The DM is a storyteller, and storytellers make mistakes. The Guardian is the part of the engine that <b>owns the numbers</b> — so a wrong sentence in the tale never becomes a wrong fact in the world.</p>
+  <p class="rv d2" style="color:var(--bone-dim);font-size:var(--fs-tiny)"><span class="truth">The rule of the books:</span> the Guardian corrects the ledger <b>only when the Dungeon Master's own narration states it as truth in the world</b> — it never writes a fact the DM did not speak. Truth flows from the DM's books, mechanics flow from the Guardian. That split is what hardens the realm against AI drift: a wandering sentence can never quietly rewrite the state.</p>
   <div class="ledger-grid rv d2">
     <div class="ledger-cell">
       <span class="lc-tag">Before the story</span>
@@ -300,7 +297,7 @@
       <li><b>Lorekeeper</b> — the mechanic extracting numbers from the narration</li>
       <li><b>Background (extraction)</b> — used for worldbuilding uploads and avatars</li>
     </ul>
-    <p style="color:var(--bone-dim);font-size:.81rem">Open <b>About the Models</b> in Settings for what each model does and why thinking takes time. Your choices are saved per campaign. If the DM stops responding, switching models is the first thing to try.</p>
+    <p style="color:var(--bone-dim);font-size:var(--fs-tiny)">Open <b>About the Models</b> in Settings for what each model does and why thinking takes time. Your choices are saved per campaign. If the DM stops responding, switching models is the first thing to try.</p>
   </div>
 
   <h2 class="rv">Rules (D&amp;D 5e)</h2>
@@ -335,9 +332,10 @@
   </div>
 
   <hr class="divider">
-  <p style="text-align:center;color:var(--bone-dim);font-size:.78rem">
-    Powered by Qwen, DeepSeek &amp; StepFun · Your adventures are saved in the Cauldron · <a href="login.html">Back to the Gate</a>
+  <p style="text-align:center;color:var(--bone-dim);font-size:var(--fs-tiny)">
+    Powered by Qwen, DeepSeek &amp; StepFun · Your adventures are saved in the Cauldron
   </p>
+  <p style="text-align:center;margin-top:1rem"><a href="login.html" class="btn-gold">Back to the Gate</a></p>
 </div>
 <script src="i18n.js?v=20260906a"></script>
 <script>

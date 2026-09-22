@@ -7,14 +7,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="snes.css?v=47">
+<link rel="stylesheet" href="snes.css?v=49">
 <style>
 /* ═══════════ RITE-RAIL — THE ARCHIVE dropdown (2026-08-11) ═══════════ */
 .rite-rail{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:48px;background:linear-gradient(180deg,var(--stone-2),var(--stone));border:1px solid var(--edge);border-top:1px solid var(--edge-hi);padding:0 .8rem;gap:1rem;position:relative}
 .rite-rail::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,rgba(var(--gold-rgb),.55) 30%,rgba(var(--gold-rgb),.55) 70%,transparent)}
 .rr-brand{display:flex;align-items:center;gap:.55rem;min-width:0;justify-self:start}
-.rr-sigil{width:22px;height:22px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;color:var(--gold-bright);font-size:.8rem;flex-shrink:0;box-shadow:0 0 8px rgba(var(--gold-rgb),.35) inset}
-.rr-name{font-family:var(--font-display);font-size:.82rem;letter-spacing:.14em;color:var(--bone-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rr-sigil{width:22px;height:22px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;color:var(--gold-bright);font-size:var(--fs-tiny);flex-shrink:0;box-shadow:0 0 8px rgba(var(--gold-rgb),.35) inset}
+.rr-name{font-family:var(--font-display);font-size:var(--fs-tiny);letter-spacing:.14em;color:var(--bone-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rr-tag{font-family:var(--font-accent);font-size:.52rem;letter-spacing:.2em;color:var(--gold);border:1px solid rgba(var(--gold-rgb),.4);padding:.15rem .4rem;white-space:nowrap}
 .rr-actions{display:flex;align-items:center;gap:.4rem;justify-self:end}
 .rr-menu{font-family:var(--font-display);font-size:.68rem;letter-spacing:.15em;color:var(--bone);border:1px solid var(--edge);background:var(--stone-2);padding:0 .9rem;height:34px;display:flex;align-items:center;gap:.5rem;cursor:pointer;position:relative}
@@ -63,19 +63,19 @@
   .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 190px 70px rgba(4,2,8,.88)}
 
   .topbar{position:relative;z-index:5;display:flex;align-items:center;gap:1rem;padding:.7rem 1.2rem;background:linear-gradient(180deg,var(--stone-2),color-mix(in srgb, var(--stone) 95%, transparent));border-bottom:1px solid var(--edge);box-shadow:0 4px 20px rgba(0,0,0,.5)}
-  .topbar .brand{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:1.05rem;color:var(--gold-bright);letter-spacing:.06em;white-space:nowrap;text-shadow:0 0 14px rgba(var(--gold-bright-rgb),.3)}
-  .topbar .page-tag{font-size:.91rem;font-style:italic;color:var(--bone-dim);border-left:1px solid var(--edge);padding-left:1rem}
+  .topbar .brand{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:var(--fs-base);color:var(--gold-bright);letter-spacing:.06em;white-space:nowrap;text-shadow:0 0 14px rgba(var(--gold-bright-rgb),.3)}
+  .topbar .page-tag{font-size:var(--fs-sm);font-style:italic;color:var(--bone-dim);border-left:1px solid var(--edge);padding-left:1rem}
   .topbar .spacer{flex:1}
-  .top-btn{font-family:var(--font-display,'Cinzel',serif);font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:8px;white-space:nowrap;text-decoration:none}
+  .top-btn{font-family:var(--font-display,'Cinzel',serif);font-size:var(--fs-tiny);letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:8px;white-space:nowrap;text-decoration:none}
   .top-btn:hover{color:var(--gold-bright);border-color:var(--gold);box-shadow:0 0 12px -3px rgba(var(--gold-bright-rgb),.4)}
 
   .layout{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;min-height:0;overflow-y:auto;padding:1.5rem 2rem 3rem}
 
   .map-head{text-align:center;margin-bottom:1.8rem}
-  .map-head h1{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:1.4rem;color:var(--bone-bright);text-shadow:0 2px 0 #000}
+  .map-head h1{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:var(--fs-h3);color:var(--bone-bright);text-shadow:0 2px 0 #000}
   .map-head .sub{font-style:italic;color:var(--bone-dim);font-size:.98rem;margin-top:.3rem}
-  .current-loc{display:inline-flex;align-items:center;gap:.5rem;margin-top:.7rem;padding:.5rem 1.2rem;background:rgba(var(--gold-rgb),.08);border:2px solid rgba(var(--gold-rgb),.4);font-family:var(--font-display,'Cinzel',serif);font-size:.88rem;letter-spacing:.1em;color:var(--gold-bright)}
-  .current-loc .pin{font-size:1.1rem}
+  .current-loc{display:inline-flex;align-items:center;gap:.5rem;margin-top:.7rem;padding:.5rem 1.2rem;background:rgba(var(--gold-rgb),.08);border:2px solid rgba(var(--gold-rgb),.4);font-family:var(--font-display,'Cinzel',serif);font-size:var(--fs-sm);letter-spacing:.1em;color:var(--gold-bright)}
+  .current-loc .pin{font-size:var(--fs-chat)}
 
   /* ── ASCII-karta ── */
   /* Zoom/pan-pipeline (2026-08-30): .map-viewport + transform på pre:n.
@@ -120,13 +120,13 @@
   @keyframes card-flash{0%{border-color:var(--gold-bright);box-shadow:0 0 0 2px var(--gold-bright),0 0 26px rgba(var(--gold-bright-rgb),.55),5px 5px 0 rgba(0,0,0,.7)}100%{}}
 
   .pc-top{display:flex;align-items:center;gap:.7rem;margin-bottom:.5rem}
-  .pc-icon{width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;border:2px solid var(--edge);background:var(--stone-3);flex-shrink:0}
-  .pc-name{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:.9rem;color:var(--bone-bright)}
-  .pc-terrain{font-size:.81rem;color:var(--bone-dim);font-style:italic}
-  .pc-desc{font-size:.95rem;color:var(--bone);line-height:1.5;margin-bottom:.7rem;font-style:italic}
-  .pc-lore{font-size:.87rem;color:var(--gold);line-height:1.45;margin-bottom:.7rem;font-style:italic;opacity:.85;border-left:2px solid rgba(var(--gold-rgb),.35);padding-left:.55rem}
+  .pc-icon{width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-narr);border:2px solid var(--edge);background:var(--stone-3);flex-shrink:0}
+  .pc-name{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:var(--fs-sm);color:var(--bone-bright)}
+  .pc-terrain{font-size:var(--fs-tiny);color:var(--bone-dim);font-style:italic}
+  .pc-desc{font-size:var(--fs-sm);color:var(--bone);line-height:1.5;margin-bottom:.7rem;font-style:italic}
+  .pc-lore{font-size:var(--fs-sm);color:var(--gold);line-height:1.45;margin-bottom:.7rem;font-style:italic;opacity:.85;border-left:2px solid rgba(var(--gold-rgb),.35);padding-left:.55rem}
   .pc-footer{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap}
-  .pc-travel{font-family:var(--font-accent,'Silkscreen',monospace);font-size:.75rem;letter-spacing:.08em;padding:.3rem .7rem;border:1px solid var(--edge);color:var(--bone-dim)}
+  .pc-travel{font-family:var(--font-accent,'Silkscreen',monospace);font-size:var(--fs-tiny);letter-spacing:.08em;padding:.3rem .7rem;border:1px solid var(--edge);color:var(--bone-dim)}
   .pc-travel.here{color:var(--gold-bright);border-color:rgba(var(--gold-rgb),.5);background:rgba(var(--gold-rgb),.08)}
   .pc-travel.near{color:var(--poison);border-color:color-mix(in srgb, var(--poison) 40%, transparent)}
   .pc-travel.far{color:var(--ember);border-color:color-mix(in srgb, var(--ember) 40%, transparent)}
@@ -139,14 +139,14 @@
   .pc-landmarks{margin-top:.6rem;padding-top:.5rem;border-top:1px solid color-mix(in srgb, var(--edge) 40%, transparent)}
   .pc-landmarks .lm-label{font-family:var(--font-accent,'Silkscreen',monospace);font-size:.52rem;letter-spacing:.15em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.3rem}
   .pc-landmarks ul{list-style:none;padding:0}
-  .pc-landmarks li{font-size:.91rem;color:var(--bone);padding:.15rem 0 .15rem 1rem;position:relative}
+  .pc-landmarks li{font-size:var(--fs-sm);color:var(--bone);padding:.15rem 0 .15rem 1rem;position:relative}
   .pc-landmarks li::before{content:'◆';position:absolute;left:0;color:var(--arcane);font-size:.6rem;top:.25rem}
 
   .empty-state{text-align:center;padding:4rem 2rem;color:var(--bone-dim)}
   .empty-state .icon{font-size:3rem;margin-bottom:1rem;opacity:.4}
-  .empty-state p{font-style:italic;font-size:1.03rem}
+  .empty-state p{font-style:italic;font-size:var(--fs-base)}
 
-  .toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:50;font-family:var(--font-display,'Cinzel',serif);font-size:.88rem;letter-spacing:.12em;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);padding:.7rem 1.5rem;box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}
+  .toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:50;font-family:var(--font-display,'Cinzel',serif);font-size:var(--fs-sm);letter-spacing:.12em;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);padding:.7rem 1.5rem;box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}
   .toast.show{transform:translate(-50%,0);opacity:1}
 
   @media(max-width:640px){
@@ -158,8 +158,8 @@
     .topbar .top-btn{min-height:44px!important;display:inline-flex!important;align-items:center!important;padding:.4rem .65rem!important;font-size:.68rem!important}
     /* Karta: full bredd — storlek sköts av zoom/pan-systemet (ej fontkrymp) */
     .ascii-map{padding:.8rem .6rem;margin-left:-.25rem;margin-right:-.25rem}
-    .map-head h1{font-size:1.2rem}
-    .current-loc{padding:.45rem .8rem;font-size:.81rem}
+    .map-head h1{font-size:var(--fs-narr)}
+    .current-loc{padding:.45rem .8rem;font-size:var(--fs-tiny)}
     .travel-journal{padding:.55rem .7rem}
     .travel-journal .tj-entry{padding:.35rem .3rem}
     .quest-panel{padding:.7rem .8rem}
@@ -172,8 +172,8 @@
   }
   @media(max-width:400px){
     .layout{padding:.8rem .5rem 2.5rem}
-    .pc-name{font-size:.82rem}
-    .pc-desc{font-size:.91rem}
+    .pc-name{font-size:var(--fs-tiny)}
+    .pc-desc{font-size:var(--fs-sm)}
   }
 
   /* ── ASCII-karta: individuella celler ── */
@@ -211,20 +211,20 @@
   .travel-journal .tj-day{color:var(--bone-dim)}
   .travel-journal .tj-entry:hover .tj-day{color:var(--gold)}
   .travel-journal .tj-dot{color:var(--gold);margin:0 .3rem}
-  .travel-journal .tj-sep{color:var(--gold);opacity:.55;margin:0 .45rem;font-size:.73rem}
+  .travel-journal .tj-sep{color:var(--gold);opacity:.55;margin:0 .45rem;font-size:var(--fs-tiny)}
   .travel-journal .tj-flag{color:var(--ember);margin-right:.25rem}
 
   /* ── Karta-tooltip ── */
-  .map-tooltip{position:fixed;z-index:60;max-width:280px;padding:.8rem 1rem;background:linear-gradient(165deg,var(--stone-2),var(--stone));border:1px solid var(--gold);box-shadow:0 8px 30px rgba(0,0,0,.8);font-size:.93rem;line-height:1.5;color:var(--bone);pointer-events:none;opacity:0;transition:opacity .2s}
+  .map-tooltip{position:fixed;z-index:60;max-width:280px;padding:.8rem 1rem;background:linear-gradient(165deg,var(--stone-2),var(--stone));border:1px solid var(--gold);box-shadow:0 8px 30px rgba(0,0,0,.8);font-size:var(--fs-sm);line-height:1.5;color:var(--bone);pointer-events:none;opacity:0;transition:opacity .2s}
   .map-tooltip.show{opacity:1}
   .map-tooltip .tt-name{font-family:var(--font-display,'Cinzel',serif);font-weight:700;color:var(--gold-bright);margin-bottom:.3rem}
-  .map-tooltip .tt-terrain{font-size:.83rem;font-style:italic;color:var(--bone-dim)}
-  .map-tooltip .tt-quest{font-size:.85rem;color:var(--ember);margin-top:.3rem}
+  .map-tooltip .tt-terrain{font-size:var(--fs-tiny);font-style:italic;color:var(--bone-dim)}
+  .map-tooltip .tt-quest{font-size:var(--fs-sm);color:var(--ember);margin-top:.3rem}
 
   /* ── Quest-panel ── */
   .quest-panel{max-width:700px;margin:0 auto 1.5rem;padding:.8rem 1.2rem;background:color-mix(in srgb, var(--ember) 6%, transparent);border:1px solid color-mix(in srgb, var(--ember) 30%, transparent)}
   .quest-panel .qp-label{font-family:var(--font-accent,'Silkscreen',monospace);font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ember);margin-bottom:.4rem}
-  .quest-panel .qp-item{font-size:.95rem;color:var(--bone);padding:.2rem 0 .2rem 1rem;position:relative}
+  .quest-panel .qp-item{font-size:var(--fs-sm);color:var(--bone);padding:.2rem 0 .2rem 1rem;position:relative}
   .quest-panel .qp-item::before{content:'⚑';position:absolute;left:0;color:var(--ember)}
 .quest-panel .qp-item.clickable{cursor:pointer}
 .quest-panel .qp-item.clickable:hover{color:var(--gold-bright)}
@@ -251,7 +251,9 @@
 .ascii-map pre .fog{color:color-mix(in srgb, var(--arcane-deep) 50%, transparent);text-shadow:none}
 @media(prefers-reduced-motion:reduce){
   .ascii-map pre .mc.water,.ascii-map pre .mc.quest:not(.current),.ascii-map pre .mc.current{animation:none}
-}</style>
+}/* v5-fresh: mobile touch targets */
+@media(max-width:900px){.map-tools button{min-width:44px;min-height:44px}.mf-chip{min-height:44px}.tt-go{min-height:44px}}
+</style>
 </head>
 <body>
 <div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
@@ -299,12 +301,14 @@
 
 <div class="layout">
   <div class="map-head">
+    <div class="page-eyebrow">THE MAP · WHERE YOU HAVE BEEN</div>
     <h1>🗺️ The Map</h1>
+    <div class="page-rule">✦</div>
     <p class="sub">Places you have visited and roads you can walk</p>
     <div class="current-loc" id="current-loc"><span class="pin">📍</span> <span id="current-name">Laddar…</span></div>
   </div>
 
-  <div class="ascii-map" id="ascii-map">
+  <div class="ascii-map fresh-frame" id="ascii-map">
     <div class="map-label">✦ world map ✦</div>
     <div class="map-tools">
       <button type="button" id="mt-zin" title="Zoom in" aria-label="Zoom in">＋</button>
@@ -339,9 +343,10 @@
     <button type="button" class="mf-chip" data-filter="unvisited">Known</button>
   </div>
 
-  <div class="places-grid" id="places-grid"></div>
+  <div class="places-grid fresh-frame" id="places-grid"></div>
 
-  <div class="empty-state" id="empty-state" style="display:none">
+  <div class="empty-state fresh-empty" id="empty-state" style="display:none">
+    <span class="fe-glyph">✦</span>
     <div class="icon">🗺️</div>
     <p>You have not visited any places yet.<br>The world waits beyond the horizon…</p>
   </div>
@@ -708,7 +713,7 @@ function showTooltip(loc, x, y) {
     <div class="tt-terrain">${TERRAIN_NAMES[loc.terrain] || loc.terrain || 'Unknown'} · ${loc.travel_text}</div>
     <div>${loc.description || I18N.t('En plats i mörkret.')}</div>
     ${questTag}
-    <button type="button" class="tt-go" data-place="${escapeAttr(loc.name)}">▾ Show place</button>`;
+    <button type="button" class="tt-go btn-gold" data-place="${escapeAttr(loc.name)}">▾ Show place</button>`;
   // Positionera nära klicket, håll inom viewport
   const tw = 280, th = 160;
   const left = Math.min(x + 12, innerWidth - tw - 10);

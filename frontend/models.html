@@ -40,7 +40,7 @@
     background:var(--stone)}
   .nav-brand{display:flex;align-items:center;gap:.65rem;text-decoration:none}
   .nav-brand img{width:34px;height:34px;mix-blend-mode:screen}
-  .nav-brand span{font-family:var(--font-display);font-weight:700;font-size:.86rem;
+  .nav-brand span{font-family:var(--font-display);font-weight:700;var(--fs-sm);
     letter-spacing:.22em;text-transform:uppercase;color:var(--bone-bright)}
   .nav-links{display:flex;gap:1.4rem;align-items:center}
   .nav-link{font-family:var(--font-display);font-size:.7rem;letter-spacing:.2em;
@@ -54,21 +54,21 @@
 
   /* ═══════════════ hero ═══════════════ */
   .ledger{max-width:960px;margin:0 auto;padding:calc(var(--nav-h) + 4rem) 1.25rem 6rem}
-  .eyebrow{font-family:var(--font-display);font-size:.68rem;letter-spacing:.44em;
+  .eyebrow{font-family:var(--font-display);var(--fs-micro);letter-spacing:.44em;
     text-transform:uppercase;color:var(--gold);text-align:center;margin-bottom:1rem}
   .ledger h1{font-family:var(--font-display);font-weight:900;font-size:clamp(1.9rem,4.6vw,3rem);
     text-align:center;color:var(--bone-bright);letter-spacing:.08em;text-transform:uppercase;
     margin-bottom:1rem;text-shadow:2px 2px 0 #000}
   .ledger-sub{max-width:640px;margin:0 auto 2.6rem;text-align:center;color:var(--bone-dim);
-    font-size:1.02rem;line-height:1.65}
+    var(--fs-base);line-height:1.65}
   .ledger-sub b{color:var(--bone);font-weight:600}
 
   /* ═══════════════ sections ═══════════════ */
   .sec{margin-bottom:3rem}
   .sec-head{display:flex;align-items:baseline;gap:.9rem;margin-bottom:1.3rem;
     border-bottom:1px solid var(--edge);padding-bottom:.7rem}
-  .sec-num{font-family:var(--font-display);font-weight:900;font-size:.9rem;color:var(--gold);opacity:.8}
-  .sec-head h2{font-family:var(--font-display);font-weight:700;font-size:1.05rem;
+  .sec-num{font-family:var(--font-display);font-weight:900;var(--fs-sm);color:var(--gold);opacity:.8}
+  .sec-head h2{font-family:var(--font-display);font-weight:700;var(--fs-base);
     letter-spacing:.16em;text-transform:uppercase;color:var(--bone-bright)}
   .sec-head .rule{height:1px;flex:1;background:var(--edge);align-self:center}
   .sec-head .ruler{height:3px;width:44px;background:var(--gold);align-self:center;flex:none}
@@ -80,14 +80,14 @@
   .model.hot{border-color:var(--gold)}
   .model-head{display:flex;align-items:center;gap:.8rem;margin-bottom:.4rem;flex-wrap:wrap}
   .m-logo{width:40px;height:40px;flex:none;display:flex;align-items:center;justify-content:center;
-    font-family:var(--font-display);font-weight:900;font-size:1.05rem;color:var(--ink);
+    font-family:var(--font-display);font-weight:900;var(--fs-base);color:var(--ink);
     background:var(--gold);border:1px solid var(--gold-bright)}
   .m-logo.stepfun{background:#2f8f7a}
   .m-logo.deepseek{background:#2f5fd4}
   .m-logo.wan{background:var(--ember)}
   .m-title{font-family:var(--font-display);font-weight:700;font-size:.95rem;letter-spacing:.14em;
     text-transform:uppercase;color:var(--bone-bright)}
-  .m-maker{font-family:var(--font-body);font-size:.78rem;color:var(--bone-dim);letter-spacing:.02em;
+  .m-maker{font-family:var(--font-body);var(--fs-tiny);color:var(--bone-dim);letter-spacing:.02em;
     text-transform:none;font-style:italic}
   .m-tag{font-family:var(--font-display);font-size:.56rem;letter-spacing:.18em;text-transform:uppercase;
     padding:.22rem .55rem;margin-left:auto}
@@ -110,32 +110,32 @@
   @media(max-width:420px){.spec-grid{grid-template-columns:1fr 1fr;gap:.5rem}.spec{padding:.55rem .6rem}}
 
   /* role line */
-  .m-role{display:flex;gap:.55rem;align-items:flex-start;color:var(--bone-dim);font-size:.88rem;
+  .m-role{display:flex;gap:.55rem;align-items:flex-start;color:var(--bone-dim);var(--fs-sm);
     line-height:1.55;border-top:1px dashed rgba(58,58,80,.5);padding-top:.85rem}
-  .m-role .ico{color:var(--gold);flex:none;font-size:.8rem;margin-top:.12rem}
+  .m-role .ico{color:var(--gold);flex:none;var(--fs-tiny);margin-top:.12rem}
   .m-role b{color:var(--bone);font-weight:600}
 
   /* compare table */
   .cmp-wrap{overflow-x:auto;border:1px solid var(--edge)}
   .cmp{width:100%;border-collapse:collapse;min-width:640px}
-  .cmp th{font-family:var(--font-display);font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;
+  /* fresh-table supersedes: .cmp th{font-family:var(--font-display);var(--fs-micro);letter-spacing:.18em;text-transform:uppercase;
     color:var(--gold);text-align:left;padding:.85rem 1rem;border-bottom:1px solid var(--edge-hi);
-    background:var(--stone-3);white-space:nowrap}
-  .cmp td{font-size:.9rem;color:var(--bone);padding:.75rem 1rem;border-bottom:1px solid rgba(42,42,58,.6);
+    background:var(--stone-3);white-space:nowrap} */
+  .cmp td{var(--fs-sm);color:var(--bone);padding:.75rem 1rem;border-bottom:1px solid rgba(42,42,58,.6);
     vertical-align:top;line-height:1.5}
   .cmp tr:last-child td{border-bottom:none}
   .cmp td b{color:var(--bone-bright);font-weight:600}
   .cmp td .dim{color:var(--bone-dim)}
-  .cmp .mname{font-family:var(--font-display);font-weight:700;font-size:.8rem;letter-spacing:.1em;
+  .cmp .mname{font-family:var(--font-display);font-weight:700;var(--fs-tiny);letter-spacing:.1em;
     text-transform:uppercase;color:var(--bone-bright);white-space:nowrap}
-  .cmp .cmp-group td{font-family:var(--font-display);font-size:.58rem;letter-spacing:.24em;
+  /* fresh-table supersedes: .cmp .cmp-group td{font-family:var(--font-display);font-size:.58rem;letter-spacing:.24em;
     text-transform:uppercase;color:var(--gold);background:var(--stone-2);
-    padding:.5rem 1rem;border-bottom:1px solid var(--edge-hi);white-space:nowrap}
+    padding:.5rem 1rem;border-bottom:1px solid var(--edge-hi);white-space:nowrap} */
 
-  .note{margin-top:1.4rem;font-size:.82rem;color:var(--bone-dim);line-height:1.7}
+  .note{margin-top:1.4rem;var(--fs-tiny);color:var(--bone-dim);line-height:1.7}
   .note b{color:var(--bone);font-weight:600}
 
-  .footer{margin-top:4rem;text-align:center;color:var(--bone-dim);font-size:.82rem;line-height:1.7;
+  .footer{margin-top:4rem;text-align:center;color:var(--bone-dim);var(--fs-tiny);line-height:1.7;
     border-top:1px solid var(--edge);padding-top:2rem}
   .footer b{color:var(--bone)}
   .footer a{color:var(--gold);text-decoration:none}
@@ -155,10 +155,10 @@
     .nav-links .nav-link{display:none}
     .ledger{padding-top:calc(var(--nav-h) + 3rem)}
     .model{padding:1.4rem 1.1rem 1.2rem}
-    .sec-head h2{font-size:.92rem}
+    .sec-head h2{var(--fs-sm)}
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=47">
+<link rel="stylesheet" href="snes.css?v=49">
 <noscript><style>.rv{opacity:1;transform:none}</style></noscript>
 </head>
 <body>
@@ -179,11 +179,13 @@
 
 <section class="ledger">
   <p class="eyebrow rv">The Grimoire of Minds</p>
+  <div class="page-eyebrow">THE MINDS · WHAT THINKS</div>
   <h1 class="rv">The Minds Behind the Mask</h1>
+  <div class="page-rule">✦</div>
   <p class="ledger-sub rv">Seven minds can sit at your table — and behind them wait the voices and the brushes. Each DM is a different weight of thought, a different pace of speech; the narrators give the realm a voice, and the painters give it faces. Here is what each one is made of, and what it is best at.<br><b>Powered by Qwen, DeepSeek, StepFun &amp; Wan</b></p>
 
   <!-- ═══════════════ hur det funkar ═══════════════ -->
-  <div class="sec rv">
+  <div class="sec rv fresh-frame">
     <div class="sec-head">
       <span class="sec-num">⚙</span>
       <h2>How the Table Works</h2>
@@ -488,14 +490,14 @@
   </div>
 
   <!-- ═══════════════ compare ═══════════════ -->
-  <div class="sec rv">
+  <div class="sec rv fresh-frame">
     <div class="sec-head">
       <span class="sec-num">⚖</span>
       <h2>Side by Side</h2>
       <span class="ruler"></span><span class="rule"></span>
     </div>
     <div class="cmp-wrap">
-      <table class="cmp">
+      <table class="cmp fresh-table">
         <thead>
           <tr>
             <th>Mind</th>

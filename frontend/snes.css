@@ -1,5 +1,7 @@
 /* ═══════════════════════════════════════════════════
    🦇 THE LORE WEAVER'S CAULDRON — TERMINAL GOTHIC v3
+   → design v4 "Illuminated Terminal" (2026-09-22): se §5b knapp-tiers,
+     --fs-* typskala i :root och docs/design-v4-illuminated-terminal.md.
    Castlevania × DOS × Linux terminal
    Länkas EFTER inline-stilar så att detta vinner.
    ═══════════════════════════════════════════════════ */
@@ -26,9 +28,15 @@
 
 /* Z-INDEX LADDER (2026-08-11 audit) — bottom-nav 280 < drawer-backdrop 290 < drawer 300 < sheet 310 < oracle/console 320 < scanlines(body::before) 999 < page overlays 10000+ (backdrop 9990) < lightbox 11000 < feedback 12000. Do not invent new rungs. */
 
-/* ── PALETT ── */
+/* ── PALETT — design v4 "Illuminated Terminal" (2026-09-22, kontrastlyft) ──
+   ENDA färgkällan (tema-väljaren borttagen 2026-09). Semantik — varje hue
+   betyder EXAKT en sak: gold=sacred/UI · blood=HP/danger · arcane=magic/player
+   · ember=quests/warmth · poison=success/equipped · teal=info · bone=lästext.
+   Kontrastgolv (WCAG-mätt mot denna palett): bone på ink ≥7:1 · all lästext
+   ≥4.5:1 på ink/stone/stone-2. --blood = fyllningar/staplar/borders, ALDRIG
+   text — text i blodfärg använder --blood-bright (≥4.5:1). */
 :root{
-  --ink: #1a1426;
+  --ink: #161022;
   --stone: #271d33;
   --stone-2: #322541;
   --stone-3: #3d2e4f;
@@ -36,17 +44,17 @@
   --edge-hi: #5a4a7a;
   --bone: #d9c9a6;
   --bone-bright: #f2e6c8;
-  --bone-dim: #9d8a6a;
+  --bone-dim: #ab9b80;
   --gold: #d4a92c;
   --gold-bright: #f0d675;
   --blood: #a32433;
-  --blood-bright: #e0485a;
-  --ember: #d4691e;
-  --arcane: #9a6fe0;
+  --blood-bright: #e66977;
+  --ember: #e07326;
+  --arcane: #a47ee3;
   --arcane-bright: #c9a6ff;
   --arcane-deep: #3a1f66;
   --poison: #7aa35e;
-  --teal: #5e9aa3;
+  --teal: #609ba4;
   --term-green: #33cc33;
   --term-amber: #ccaa33;
   /* ── W3-P1 (2026-09-06): STRUKTURELLA TOKENS ──
@@ -75,17 +83,18 @@
   --gold-rgb: 212,169,44;
   --gold-bright-rgb: 240,214,117;
   --blood-rgb: 163,36,51;
-  --blood-bright-rgb: 224,72,90;
-  --teal-rgb: 94,154,163;
-  --ink-rgb: 26,20,38;
+  --blood-bright-rgb: 230,105,119;
+  --teal-rgb: 96,155,164;
+  --ink-rgb: 22,16,34;
   --bone-rgb: 217,201,166;
   --arcane-deep-rgb: 58,31,102;
-  --ember-rgb: 212,105,30;
+  --arcane-rgb: 164,126,227;
+  --ember-rgb: 224,115,38;
   --poison-rgb: 122,163,94;
   --edge-rgb: 70,58,96;
   --edge-hi-rgb: 90,74,122;
   --stone-3-rgb: 61,46,79;
-  --bone-dim-rgb: 157,138,106;
+  --bone-dim-rgb: 171,155,128;
   --blood-deep-rgb: 139,26,42;
   --gold-deep-rgb: 212,160,30;
   /* Typsnitt — fast 4-rolls-hierarki (font-switchern borttagen 2026-08):
@@ -96,6 +105,19 @@
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
   --font-accent: 'Silkscreen', monospace;
   --cli-mono: ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace;
+  /* ── TYPE SCALE (design v4, --fs-*) — root 16px. Använd dessa ÖVERALLT i
+     stället för nakna rem/storlekar. --fs-base är golvet för läsande text
+     (canon: body ≥1rem). Knappetiketter = Cinzel 700 .8rem (se §5b). ── */
+  --fs-micro: .65rem;   /* Silkscreen-chips/mikro-etiketter ENDAST */
+  --fs-tiny: .78rem;    /* meta/captions (kräver ≥4.5:1 kontrast) */
+  --fs-sm: .9rem;       /* sekundär UI */
+  --fs-base: 1.0625rem; /* standard lästext */
+  --fs-chat: 1.125rem;  /* spelarchat + composer */
+  --fs-narr: 1.2rem;    /* DM-narration */
+  --fs-npc: 1.16rem;    /* NPC-tal */
+  --fs-h3: 1.35rem;
+  --fs-h2: 1.7rem;
+  --fs-h1: 2.2rem;      /* Cinzel 800, tracking .06em · labels uppercase .14em */
 }/* ── 0. GLOBAL RESET ── */*, *::before, *::after{
   border-radius: 0 !important;
   box-sizing: border-box;
@@ -141,9 +163,12 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
 }/* Brödtext i chatten — läsbar body-font, MINST 1rem (hårt krav) */.msg .text, .pv-story, .pv-gear{
   font-family: var(--font-body) !important;
   font-style: normal !important;
-  font-size: 1rem !important;
+  font-size: var(--fs-base) !important;
   line-height: 1.8 !important;
-}/* Input — inte kursiv */input, textarea, select{
+}
+.msg.dm .text{ font-size: var(--fs-narr) !important; }
+.msg.npc .text{ font-size: var(--fs-npc) !important; }
+.msg.player .text{ font-size: var(--fs-chat) !important; }/* Input — inte kursiv */input, textarea, select{
   font-style: normal !important;
 }input::placeholder, textarea::placeholder{
   font-style: normal !important;
@@ -215,7 +240,117 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
 }.danger-btn:hover, .top-btn.danger:hover{
   background: var(--blood) !important;
   color: #fff !important;
-}/* ── 6. CHATT — terminal-log ── */.msg{ border: none !important; box-shadow: none !important; padding: .4rem 0 !important; }.msg.dm{
+}
+/* ── 5b. BUTTON TIERS (design v4 "Illuminated Terminal") — TRE nivåer, definierade
+   HÄR och ingen annanstans (sid-lokal knapp-CSS = bugg). Klasserna vinner över
+   §5s flatregel (!important + senare position + klass-specificitet) och fungerar
+   lika bra på <button> som på <a> (föredra <a> när en clean slate hjälper).
+   Geometri: flat (radie 0 — .soft 6px opt-in), min-height 38px desktop / 44px
+   mobil (se touch-golvet längre ner), min-width 44px (ikonknappar).
+   Etikett: Cinzel 700, .8rem, uppercase, tracking .1em. ── */
+.btn-gold, .btn-ghost, .btn-blood{
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.45em;
+  min-height: 38px !important;
+  min-width: 44px !important;
+  padding: .5rem 1.1rem !important;
+  font-family: var(--font-display) !important;
+  font-weight: 700 !important;
+  font-size: .8rem !important;
+  letter-spacing: .1em !important;
+  text-transform: uppercase !important;
+  text-shadow: none !important;
+  text-decoration: none;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transition: none !important;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+/* Primär/CTA — guld-rubricering: flat stenfyllning, guldram, guld-bright etikett,
+   subtil topp-glanslinje. YTTERLIGARE en enda sheen-sweep (::after) — nothing more. */
+.btn-gold{
+  background: var(--stone-3) !important;
+  border: 1px solid var(--gold) !important;
+  border-top-color: rgba(var(--gold-bright-rgb), .55) !important;
+  color: var(--gold-bright) !important;
+}
+.btn-gold:hover{
+  background: color-mix(in srgb, var(--gold) 8%, var(--stone-3)) !important;
+  border-color: var(--gold-bright) !important;
+  color: var(--gold-bright) !important;
+  box-shadow: 0 0 6px rgba(var(--gold-rgb), .35) !important;
+}
+.btn-gold::after{
+  content: '' !important;
+  display: block !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background: linear-gradient(105deg, transparent 30%, rgba(var(--gold-bright-rgb), .18) 50%, transparent 70%);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+.btn-gold:hover::after{ animation: btn-gold-sheen .9s ease forwards; }
+@keyframes btn-gold-sheen{
+  from{ transform: translateX(-120%); }
+  to{ transform: translateX(120%); }
+}
+/* Sekundär — ghost */
+.btn-ghost{
+  background: transparent !important;
+  border: 1px solid var(--bone-dim) !important;
+  color: var(--bone-dim) !important;
+}
+.btn-ghost:hover{
+  background: rgba(var(--bone-rgb), .06) !important;
+  border-color: var(--bone-bright) !important;
+  color: var(--bone-bright) !important;
+}
+/* Fara/ödeläggelse (delete, leave, reset) — blodram; TEXT = --blood-bright
+   (--blood klarar inte 4.5:1 som text). */
+.btn-blood{
+  background: transparent !important;
+  border: 1px solid var(--blood) !important;
+  color: var(--blood-bright) !important;
+}
+.btn-blood:hover{
+  background: var(--blood) !important;
+  border-color: var(--blood-bright) !important;
+  color: var(--bone-bright) !important;
+}
+/* Aktiv = 1px press-tryck (egna färger per nivå så §5s gold-active inte läcker) */
+.btn-gold:active{
+  transform: translateY(1px) !important;
+  background: color-mix(in srgb, var(--gold) 14%, var(--stone-3)) !important;
+}
+.btn-ghost:active{
+  transform: translateY(1px) !important;
+  background: rgba(var(--bone-rgb), .1) !important;
+  color: var(--bone-bright) !important;
+}
+.btn-blood:active{
+  transform: translateY(1px) !important;
+  background: var(--blood) !important;
+  color: var(--bone-bright) !important;
+}
+/* Disabled = opacity .45 + inga pointer-events */
+.btn-gold:disabled, .btn-ghost:disabled, .btn-blood:disabled,
+.btn-gold[aria-disabled="true"], .btn-ghost[aria-disabled="true"], .btn-blood[aria-disabled="true"]{
+  opacity: .45 !important;
+  pointer-events: none !important;
+}
+/* ── 5c. FOCUS-VISIBLE — 2px guld-outline + 2px offset på ALLT interaktivt ── */
+a:focus-visible, button:focus-visible, [role="button"]:focus-visible,
+input:focus-visible, textarea:focus-visible, select:focus-visible,
+summary:focus-visible, [tabindex]:focus-visible{
+  outline: 2px solid var(--gold) !important;
+  outline-offset: 2px !important;
+}
+/* ── 6. CHATT — terminal-log ── */.msg{ border: none !important; box-shadow: none !important; padding: .4rem 0 !important; }.msg.dm{
   border-left: 2px solid var(--gold) !important;
   padding-left: .8rem !important;
   background: transparent !important;
@@ -712,7 +847,7 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
     margin-bottom: 0;
     flex-shrink: 0;
   }.input-area textarea{
-    font-size: 18px !important; /* CRITICAL: prevents iOS auto-zoom */
+    font-size: var(--fs-chat) !important; /* 1.125rem ≈ 20px ≥16px — prevents iOS auto-zoom */
     min-height: 48px !important;
     max-height: 120px;
     line-height: 1.4;
@@ -736,9 +871,9 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
     max-width: 100% !important;
     padding: .5rem .6rem !important;
   }.msg .text{
-    font-size: 1rem !important;
+    font-size: var(--fs-base) !important;
     line-height: 1.5 !important;
-  }.msg.dm .text{ font-size: 1rem !important; }.msg.effect{ font-size: .85rem !important; }.event-batch{ max-width: 100% !important; }/* Scene cards */.scene-card{ width: 100% !important; max-width: none !important; }.scene-card .ascii-art pre{ font-size: .58rem !important; }/* Roll requests */.roll-request{
+  }.msg.dm .text{ font-size: var(--fs-narr) !important; }.msg.effect{ font-size: .85rem !important; }.event-batch{ max-width: 100% !important; }/* Scene cards */.scene-card{ width: 100% !important; max-width: none !important; }.scene-card .ascii-art pre{ font-size: .58rem !important; }/* Roll requests */.roll-request{
     flex-direction: column !important;
     width: 100% !important;
   }.rr-btn{
@@ -752,11 +887,11 @@ body, input, textarea, select, button, a, span, div, p, h1, h2, h3, h4, li, labe
 @media (max-width: 640px){.topbar .brand{
     max-width: 100px;
     font-size: .5rem !important;
-  }.topbar .campaign{ display: none !important; }.msg .text{ font-size: 1rem !important; }.msg.dm .text{ font-size: 1rem !important; }.msg.effect{ font-size: .81rem !important; }.msg{ padding: .4rem .5rem !important; }
+  }.topbar .campaign{ display: none !important; }.msg .text{ font-size: var(--fs-base) !important; }.msg.dm .text{ font-size: var(--fs-narr) !important; }.msg.effect{ font-size: .81rem !important; }.msg{ padding: .4rem .5rem !important; }
 }/* ══════════════════════════════════════════
    32. MOBILE ≤ 400px (small phone)
    ══════════════════════════════════════════ */
-@media (max-width: 400px){.topbar{ padding: .25rem .35rem !important; }.topbar .brand{ max-width: 70px; font-size: .45rem !important; }.mobile-nav .nav-tab .nav-label{ font-size: .58rem; }.mobile-nav .nav-tab .nav-icon{ font-size: .85rem; }.mobile-nav .nav-tab.nav-center .nav-icon{ font-size: 1.1rem; }.msg .text{ font-size: 1rem !important; }.msg.dm .text{ font-size: 1rem !important; }
+@media (max-width: 400px){.topbar{ padding: .25rem .35rem !important; }.topbar .brand{ max-width: 70px; font-size: .45rem !important; }.mobile-nav .nav-tab .nav-label{ font-size: .58rem; }.mobile-nav .nav-tab .nav-icon{ font-size: .85rem; }.mobile-nav .nav-tab.nav-center .nav-icon{ font-size: 1.1rem; }.msg .text{ font-size: var(--fs-base) !important; }.msg.dm .text{ font-size: var(--fs-narr) !important; }
   /* textarea förblir 16px — 15px triggar iOS auto-zoom */
 }/* ══════════════════════════════════════════
    33. COMBAT TRACKER — Krigsrådet + stridslogg (Spår C)
@@ -3007,10 +3142,54 @@ body.cli-chat .undo-inline button{ border-style: none !important; padding: .15re
   body.cli-chat #player-input{ min-height: 2.4rem !important; padding: .25rem .4rem .25rem .5rem !important; }
 }
 
+/* ═══════════ Touch-golv + focus-re-assert (design v4) ═══════════
+   Touch-golv (WCAG 2.5.8: AA 24px / AAA 44px + Apple HIG 44px): interaktiva
+   chips/knappar ≥44×44 på mobil. Sen position + !important → vinner över §5/§28s
+   äldre knappmått, men förlorar mot MER specifika medvetna undantag (t.ex.
+   Composer v5-knapparna i §36 — 32px, dokumenterat i design-spec:en).
+   Inputs ≥16px = iOS-zoom-golvet (klass/id-regler får sätta högre, t.ex. 18px). */
+@media (max-width: 900px){
+  button, [role="button"], .btn-gold, .btn-ghost, .btn-blood,
+  .fchip, .vault-chip, .mini-btn, .top-btn, .rr-btn{
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+  input, textarea, select{ font-size: 16px; }
+}
+/* Focus-re-assert: §36 CLI-undantagen kväver ALL outline — tangentbordsfokus
+   ska ändå ha 2px guld (design v4). (0,3,1)+ slår förtryckarna på (0,2,1)/(0,3,1). */
+body.cli-chat .input-row textarea:focus-visible,
+body.cli-chat .tts-select:focus-visible{
+  outline: 2px solid var(--gold) !important;
+  outline-offset: 2px !important;
+}
+
 /* ═══════════ Reduced motion — global (§5, audit 2026-09-17) ═══════════
    Covers every page that lacks its own prefers-reduced-motion block
    (chat, character, npcs, loggbok, facts, pricing, screenshots,
    book-souls, reset, admin). */
+/* ── Design-v4: composer touch-target reconciliation (44px floor) ── */
+@media (max-width: 900px){
+  body:not(.cli-chat) .mic-btn, body:not(.cli-chat) .undo-btn, body:not(.cli-chat) .send-btn,
+  body.cli-chat .mic-btn, body.cli-chat .undo-btn, body.cli-chat .send-btn{
+    min-height: 44px !important; height: 44px !important;
+  }
+  .starter-chips .fchip-starter{ min-height: 44px !important; }
+}
+/* ── Design-v5: "fresh impression" shared kit — page headers, corner frames, empty states, tables ── */
+.page-eyebrow{ font-family: var(--font-accent); font-size: var(--fs-micro); letter-spacing: .22em; text-transform: uppercase; color: color-mix(in srgb, var(--gold) 62%, var(--bone-dim)); margin-bottom: .3rem; }
+.page-rule{ display: flex; align-items: center; gap: .6rem; color: var(--gold); font-size: var(--fs-micro); margin: .35rem 0 .9rem; opacity: .85; }
+.page-rule::before, .page-rule::after{ content: ''; flex: 1; height: 1px; background: color-mix(in srgb, var(--gold) 38%, transparent); }
+.fresh-frame{ position: relative; }
+.fresh-frame::before, .fresh-frame::after{ content: ''; position: absolute; width: 10px; height: 10px; opacity: .6; pointer-events: none; }
+.fresh-frame::before{ top: -1px; left: -1px; border-top: 2px solid var(--gold); border-left: 2px solid var(--gold); }
+.fresh-frame::after{ bottom: -1px; right: -1px; border-bottom: 2px solid var(--gold); border-right: 2px solid var(--gold); }
+.fresh-empty{ text-align: center; padding: 1.8rem 1rem; color: var(--bone-dim); font-style: italic; font-size: var(--fs-sm); }
+.fresh-empty .fe-glyph{ display: block; font-size: 2rem; font-style: normal; opacity: .85; margin-bottom: .45rem; }
+.fresh-table{ width: 100%; border-collapse: collapse; }
+.fresh-table th{ font-family: var(--font-display); font-size: var(--fs-tiny); letter-spacing: .12em; text-transform: uppercase; color: var(--gold); border-bottom: 1px solid var(--edge); padding: .5rem .6rem; text-align: left; }
+.fresh-table td{ padding: .45rem .6rem; border-bottom: 1px solid color-mix(in srgb, var(--edge) 45%, transparent); font-size: var(--fs-sm); color: var(--bone); }
+.fresh-table tbody tr:nth-child(even){ background: color-mix(in srgb, var(--stone-2) 55%, transparent); }
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{
     animation-duration:.01ms !important;

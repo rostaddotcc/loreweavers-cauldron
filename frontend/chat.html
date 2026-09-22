@@ -435,7 +435,8 @@
   .tts-select:disabled{
     opacity: 0.45; cursor: not-allowed; filter: grayscale(0.6);
   }
-  .tts-select:disabled:hover{ border-color: var(--edge); color: var(--bone-dim); }.msg.dm .bubble:hover{ border-color: rgba(var(--gold-bright-rgb),0.6); }.msg.dm .bubble .who{ color: var(--gold-bright); letter-spacing: .06em; text-shadow: 0 0 10px rgba(var(--gold-bright-rgb),.35); }.msg.dm .bubble .text{ font-style: italic; color: var(--bone); line-height: 1.7; font-size: 1.18rem; }/* ── DM:ns inre monolog (reasoning) — eterisk, hopfällbar tankebubbla ── */.reasoning{
+  .tts-select:disabled:hover{ border-color: var(--edge); color: var(--bone-dim); }.msg.dm .bubble:hover{ border-color: rgba(var(--gold-bright-rgb),0.6); }.msg.dm .bubble .who{ color: var(--gold-bright); letter-spacing: .06em; text-shadow: 0 0 10px rgba(var(--gold-bright-rgb),.35); }.msg.dm .bubble .text{ font-style: italic; color: var(--bone); line-height: 1.7; font-size: var(--fs-narr); }
+body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float: left; font-family: var(--font-display); font-style: normal; font-weight: 800; font-size: 2.5em; line-height: .92; padding: .04em .12em 0 0; color: var(--gold); text-shadow: 0 0 10px rgba(var(--gold-rgb),.35); }/* ── DM:ns inre monolog (reasoning) — eterisk, hopfällbar tankebubbla ── */.reasoning{
     max-width: 600px; margin-left: 0;  /* inuti .msg.dm (kolumn-stack) — ligger under avataren, ovanför bubblan */
     border: 1px solid color-mix(in srgb, var(--arcane) 28%, transparent);
     border-left: 2px solid color-mix(in srgb, var(--arcane) 65%, transparent);
@@ -468,7 +469,7 @@
   }.msg.npc .bubble:hover{ border-color: color-mix(in srgb, var(--npc-color, #a8b2c0) 60%, transparent); }.msg.npc .bubble .who{
     color: var(--npc-color, #a8b2c0); font-weight: 700; font-size: 0.82rem; letter-spacing: 0.1em;
     text-shadow: 0 0 12px color-mix(in srgb, var(--npc-color, #a8b2c0) 35%, transparent);
-  }.msg.npc .bubble .who .dot{ width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }.msg.npc .bubble .text{ color: var(--bone); line-height: 1.65; font-size: 1.16rem; }.msg.npc .bubble .text em{ color: var(--bone-dim); }/* ── NPC-citat inuti DM-svar — egen färgkodad bubbla ── */.msg.dm .npc-quote{
+  }.msg.npc .bubble .who .dot{ width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }.msg.npc .bubble .text{ color: var(--bone); line-height: 1.65; font-size: var(--fs-npc); }.msg.npc .bubble .text em{ color: var(--bone-dim); }/* ── NPC-citat inuti DM-svar — egen färgkodad bubbla ── */.msg.dm .npc-quote{
     --npc-color: #a8b2c0;
     margin: .55rem 0 .15rem .6rem;
     padding: .5rem .7rem .6rem .85rem;
@@ -510,7 +511,11 @@
     background: linear-gradient(160deg, color-mix(in srgb, var(--arcane) 24%, transparent), color-mix(in srgb, var(--arcane) 8%, transparent));
     border-color: color-mix(in srgb, var(--arcane) 60%, transparent);
     box-shadow: 0 0 18px -8px color-mix(in srgb, var(--arcane) 55%, transparent);
-  }.msg.player .bubble:hover{ border-color: color-mix(in srgb, var(--arcane) 60%, transparent); }.msg.player .bubble .who{ color: var(--arcane-bright); justify-content: flex-end; text-shadow: 0 0 10px color-mix(in srgb, var(--arcane) 45%, transparent); }.msg.player .bubble .text{ color: var(--bone-bright); line-height: 1.65; font-size: 1.16rem; }/* Namnskylt + text i bubblan */.bubble .who{
+  }.msg.player .bubble:hover{ border-color: color-mix(in srgb, var(--arcane) 60%, transparent); }.msg.player .bubble .who{ color: var(--arcane-bright); justify-content: flex-end; text-shadow: 0 0 10px color-mix(in srgb, var(--arcane) 45%, transparent); }.msg.player .bubble .text{ color: var(--bone-bright); line-height: 1.65; font-size: var(--fs-chat); }
+/* ── Starter chips (design-v4) — tappbara startförslag tills spelaren agerar ── */
+.starter-chips{ display: flex; flex-wrap: wrap; gap: .4rem; padding: .25rem .35rem .1rem; }
+.starter-chips[hidden]{ display: none !important; }
+.fchip-starter{ font-family: var(--font-display); font-weight: 700; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; padding: .5rem .85rem; cursor: pointer; }/* Namnskylt + text i bubblan */.bubble .who{
     font-family: var(--font-display); font-size: 0.64rem; letter-spacing: 0.22em;
     text-transform: uppercase; margin-bottom: 0.45rem;
     display: flex; align-items: center; gap: 0.5rem;
@@ -681,13 +686,13 @@
     border-radius: 2px; animation: msg-in .4s ease;
   }.roll-request .rr-label{ font-size: .92rem; color: var(--bone-bright); }.roll-request .rr-label b{ color: var(--gold-bright); font-family: var(--font-display); }.rr-btn{
     font-family: var(--font-display); font-weight: 700; font-size: .72rem; letter-spacing: .12em;
-    text-transform: uppercase; color: #1a1206; cursor: pointer;
-    background: linear-gradient(180deg, var(--gold-bright), var(--gold) 55%, #8a6d14);
-    border: 1px solid #6e5510; padding: .6rem 1.2rem; border-radius: 2px;
+    text-transform: uppercase; color: var(--gold-bright); cursor: pointer;
+    background: var(--stone-3);
+    border: 1px solid var(--gold); padding: .6rem 1.2rem; border-radius: 0;
     box-shadow: 0 4px 12px -4px rgba(var(--gold-bright-rgb),.5); transition: all .18s;
     animation: rr-pulse 2s ease-in-out infinite;
   }
-  @keyframes rr-pulse { 0%,100% { box-shadow: 0 4px 12px -4px rgba(var(--gold-bright-rgb),.4); } 50% { box-shadow: 0 4px 20px -2px rgba(var(--gold-bright-rgb),.8); } }.rr-btn:hover{ filter: brightness(1.12); transform: translateY(-2px); }.rr-btn:disabled{ opacity: .4; cursor: default; animation: none; }.rr-actions{ display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }.rr-btn.rr-alt{
+  @keyframes rr-pulse { 0%,100% { box-shadow: 0 4px 12px -4px rgba(var(--gold-bright-rgb),.4); } 50% { box-shadow: 0 4px 20px -2px rgba(var(--gold-bright-rgb),.8); } }.rr-btn:hover{ filter: brightness(1.15); }.rr-btn:disabled{ opacity: .4; cursor: default; animation: none; }.rr-actions{ display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }.rr-btn.rr-alt{
     background: transparent; color: var(--bone-dim); border: 1px solid var(--edge);
     box-shadow: none; animation: none; font-size: .64rem; padding: .5rem .9rem;
   }.rr-btn.rr-alt:hover{ color: var(--bone-bright); border-color: var(--bone-dim); filter: none; transform: none; }.roll-result-inline.declined{ color: var(--bone-dim); font-style: italic; }#player-input:disabled{ opacity: .45; cursor: not-allowed; }.roll-result-inline{
@@ -1087,7 +1092,7 @@
     font-family: var(--cli-mono, ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace) !important;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=47">
+<link rel="stylesheet" href="snes.css?v=49">
 <style>
 /* ═══════════ CODEX 2-RAD-TABBAR — override snes.css (måste ligga EFTER linken) ═══════════ */
 .cx-tabs{ display: flex !important; flex-direction: column !important; gap: 0.34rem !important; padding: 0.55rem 0.6rem 0.6rem !important; overflow-x: hidden !important; }
@@ -1655,6 +1660,11 @@
           <div class="tts-pop-row"><span class="tts-pop-label">Engine</span><div class="tts-pop-opts" id="tts-pop-provider"></div></div>
           <div class="tts-pop-row"><span class="tts-pop-label">Voice</span><div class="tts-pop-opts" id="tts-pop-voice"></div></div>
         </div>
+      </div>
+      <div class="starter-chips" id="starter-chips" hidden>
+        <button type="button" class="fchip-starter btn-ghost" data-text="I look around and take in my surroundings." onclick="useStarterChip(this)">👁 Look around</button>
+        <button type="button" class="fchip-starter btn-ghost" data-text="I approach the nearest person and try to talk to them." onclick="useStarterChip(this)">🗣 Talk to someone</button>
+        <button type="button" class="fchip-starter btn-ghost" data-text="I check my gear and take stock of what I have." onclick="useStarterChip(this)">🎒 Check my gear</button>
       </div>
       <div class="composer">
         <div class="at-chat-chip" id="at-chat-chip" hidden></div>
@@ -5288,6 +5298,7 @@ async function loadTranscript() {
       // Resume-recap: "Senast i Cauldron…" (.resume-card) — en gång per tab-session, om det finns historik
       const resumeCard = maybeShowResumeCard(visible);
       if (resumeCard) chat.insertBefore(resumeCard, chat.firstChild);
+      maybeStarterChips();
       // Återställ väntande tärningskast (backend rensar dem när spelaren slår,
       // så allt som finns kvar är obesvarat) — annars försvinner knapparna vid refresh
       if (data.last_roll_requests && data.last_roll_requests.length) {
@@ -5768,6 +5779,7 @@ let isResponding = false;
 function sendPlayer() {
   const text = input.value.trim();
   if (!text || isResponding) return;
+  hideStarterChips();
   // Dice-lås: spelaren måste slå eller avböja innan hen kan chatta
   if (_pendingRollId || _guardianBusy) {
     // (fix 2026-08-30) Draft-spärr: under Lorekeeper kan spelaren skriva
@@ -7295,6 +7307,22 @@ const RESUME_FLAG = 'dnd_resume_shown';
 // ═══════════════════════════════════════
 // C5 — Resume-recap
 // ═══════════════════════════════════════
+// ═══════════ Starter chips (design-v4) — tappbara startförslag / quick replies ═══════════
+function useStarterChip(btn){
+  const t = ((btn && btn.getAttribute('data-text')) || '').trim();
+  if (input && t) { input.value = t; input.dispatchEvent(new Event('input')); }
+  sendPlayer();
+}
+function showStarterChips(){ const el = document.getElementById('starter-chips'); if (el) el.hidden = false; }
+function hideStarterChips(){ const el = document.getElementById('starter-chips'); if (el) el.hidden = true; }
+function maybeStarterChips(){
+  try {
+    const hasPlayer = !!document.querySelector('#chat .msg.player');
+    const hasDm = !!document.querySelector('#chat .msg.dm');
+    if (!hasPlayer && hasDm) showStarterChips(); else hideStarterChips();
+  } catch (e) {}
+}
+
 function maybeShowResumeCard(messages) {
   try {
     if (sessionStorage.getItem(RESUME_FLAG)) return null;
@@ -8556,11 +8584,11 @@ function cdMentionNpc(name) {
 
 // ═══════════════ 📖 CODEX MODAL (D1.3) — lazy iframes ═══════════════
 const CODEX_PAGES = {
-  character: { label: '🧙 Character', src: 'character.html?v=20260917a' },
-  npcs:      { label: '🧝 NPCs',      src: 'npcs.html?v=20260917a' },
-  map:       { label: '🗺 Map',       src: 'platser.html?v=20260917a' },
-  journal:   { label: '📜 Journal',   src: 'loggbok.html?v=20260917a' },
-  facts:     { label: '📌 Facts',     src: 'facts.html?v=20260917a' },
+  character: { label: '🧙 Character', src: 'character.html?v=20260922b' },
+  npcs:      { label: '🧝 NPCs',      src: 'npcs.html?v=20260922b' },
+  map:       { label: '🗺 Map',       src: 'platser.html?v=20260922b' },
+  journal:   { label: '📜 Journal',   src: 'loggbok.html?v=20260922b' },
+  facts:     { label: '📌 Facts',     src: 'facts.html?v=20260922b' },
 };
 const _codexIframes = {};
 let _codexLastTab = 'character';

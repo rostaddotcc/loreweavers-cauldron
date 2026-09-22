@@ -119,7 +119,7 @@
   @media(max-width:900px){.vault-chip,.dark-select{min-height:44px}.vault-chip,.dark-select{min-height:44px}.spread{grid-template-columns:repeat(2,1fr)}.pv-stats{grid-template-columns:repeat(3,1fr)}.arch:active{transform:rotate(0) translateY(2px);border-color:var(--ac,var(--gold));
       box-shadow:0 4px 14px -8px rgba(0,0,0,.8)}.arch:active .glow{opacity:1}.arch:active .icon{transform:scale(1.08)}
   }
-  @media(max-width:640px){.app{padding:1.4rem .75rem 4rem}.forge-head{margin-bottom:1.6rem}.forge-head .brand{font-size:var(--fs-sm)}.forge-head .back{min-height:44px;display:inline-flex;align-items:center}.destiny-sub{font-size:.98rem;margin-bottom:1.6rem}.section-label{margin:2rem 0 1rem;letter-spacing:.22em}/* Språkval — två stora pills i full bredd */.lang-row{flex-direction:column;gap:.7rem;margin:-1rem 0 1.8rem}.lang-hint{text-align:center}/* Arketyper */.arch .lore{min-height:0}.arch h3{font-size:var(--fs-sm)}.arch-cat .cat-head{min-height:44px;padding:.75rem .8rem;gap:.6rem}.arch-cat .cat-title{font-size:.68rem;letter-spacing:.16em!important}.arch-cat .cat-sub{font-size:.72rem}.arch-cat .cat-count{display:none}/* Pergament + modeller */.scroll-box{padding:1.3rem 1rem}#prompt{min-height:120px;font-size:18px}.legend-preview{min-height:140px;font-size:18px}.lp-clear{min-height:44px}.blank-btn{min-height:44px;display:inline-flex;align-items:center}.scroll-actions{flex-direction:column;align-items:stretch;gap:.7rem}.summon-btn{width:100%;min-height:56px;font-size:.98rem}.summon-btn:active:not(:disabled){transform:translateY(2px);filter:brightness(.94);
+  @media(max-width:640px){.app{padding:1.4rem .75rem 4rem}.forge-head{margin-bottom:1.6rem}.forge-head .brand{font-size:var(--fs-sm)}.forge-head .back{min-height:44px;display:inline-flex;align-items:center}.destiny-sub{font-size:.98rem;margin-bottom:1.6rem}.section-label{margin:2rem 0 1rem;letter-spacing:.22em}/* Språkval — två stora pills i full bredd */.lang-row{flex-direction:column;gap:.7rem;margin:-1rem 0 1.8rem}.lang-hint{text-align:center}/* Arketyper */.arch .lore{min-height:0}.arch h3{font-size:var(--fs-sm)}.arch-cat .cat-head{min-height:44px;padding:.75rem .8rem;gap:.6rem}.arch-cat .cat-title{font-size:.68rem;letter-spacing:.16em!important}.arch-cat .cat-sub{font-size:.72rem}.arch-cat .cat-count{display:none}/* Pergament + modeller */.scroll-box{padding:1.3rem 1rem}#prompt{min-height:120px;font-size:18px}.legend-preview{min-height:140px;font-size:18px}.lp-clear{min-height:44px}.blank-btn{min-height:44px;display:inline-flex;align-items:center}.scroll-actions{flex-direction:column;align-items:stretch;gap:.7rem}.summon-btn{width:100%;min-height:56px;font-size:var(--fs-base)}.summon-btn:active:not(:disabled){transform:translateY(2px);filter:brightness(.94);
       box-shadow:0 2px 8px -4px rgba(var(--gold-bright-rgb),.4),inset 0 1px 0 rgba(255,255,255,.2)}.scroll-actions>span{margin-top:.3rem;text-align:left;opacity:.85}.scroll-actions select{width:100%;min-height:48px;font-size:18px;padding:.6rem .7rem;background:var(--stone-2)}.vault-chip{flex:0 0 auto}.vault-chip:active{border-color:var(--gold);transform:translateY(1px)}/* Förhandsvisning */.preview{margin-top:1.8rem}.pv-head{gap:1rem}.pv-portrait{width:68px;height:68px;font-size:1.8rem}.pv-name{font-size:1.25rem}.pv-class{font-size:.98rem}.pv-stats{grid-template-columns:repeat(3,1fr)}.pv-vitals{gap:.9rem;font-size:var(--fs-sm)}.pv-story{font-size:1.01rem}.pv-actions{flex-direction:column;align-items:stretch}.pv-go{width:100%;min-height:56px}.pv-go:active{transform:translateY(2px);filter:brightness(.94)}.pv-reroll{width:100%;min-height:48px}.pv-reroll:active{transform:translateY(2px);color:var(--bone-bright);border-color:var(--arcane)}.toast{max-width:92%;text-align:center}
   }
   @media(max-width:480px){.spread{grid-template-columns:1fr}.arch{transform:none!important}.arch.selected{transform:none!important}
@@ -138,13 +138,13 @@
   .vcard-cls{font-style:italic;font-size:var(--fs-tiny);color:var(--arcane)}
   .vcard-story{font-size:var(--fs-tiny);color:var(--bone-dim);font-style:italic;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.4em;margin-bottom:.7rem}
   .vcard-actions{display:flex;gap:.5rem;flex-wrap:wrap}
-  .vcard-use{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold));border:1px solid var(--gold);padding:.5rem .95rem;border-radius:2px;transition:all .2s}
+  .vcard-use{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:var(--fs-btn);letter-spacing:.12em;text-transform:uppercase;color:var(--ink);cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold));border:1px solid var(--gold);padding:.5rem .95rem;min-height:var(--tap-min);box-sizing:border-box;border-radius:2px;transition:all .2s}
   .vcard-use:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-1px)}
   .vcard-use:disabled{opacity:.55;cursor:wait}
-  .vcard-new{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-bright);cursor:pointer;background:linear-gradient(180deg,var(--arcane),color-mix(in srgb, var(--arcane) 70%, var(--ink)));border:1px solid var(--arcane-bright,var(--arcane));padding:.5rem .95rem;border-radius:2px;transition:all .2s}
+  .vcard-new{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:var(--fs-btn);letter-spacing:.12em;text-transform:uppercase;color:var(--bone-bright);cursor:pointer;background:linear-gradient(180deg,var(--arcane),color-mix(in srgb, var(--arcane) 70%, var(--ink)));border:1px solid var(--arcane-bright,var(--arcane));padding:.5rem .95rem;border-radius:2px;transition:all .2s}
   .vcard-new:hover:not(:disabled){filter:brightness(1.15);transform:translateY(-1px)}
   .vcard-new:disabled{opacity:.55;cursor:wait}
-  .vcard-inspect{font-family:var(--font-display,'Cinzel',serif);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;background:transparent;border:1px solid var(--edge);color:var(--bone-dim);padding:.5rem .8rem;cursor:pointer;border-radius:2px;transition:all .2s}
+  .vcard-inspect{font-family:var(--font-display,'Cinzel',serif);font-size:var(--fs-btn);letter-spacing:.1em;text-transform:uppercase;background:transparent;border:1px solid var(--edge);color:var(--bone-dim);padding:.5rem .8rem;min-height:var(--tap-min);box-sizing:border-box;cursor:pointer;border-radius:2px;transition:all .2s}
   .vcard-inspect:hover{color:var(--bone-bright);border-color:var(--arcane)}
   .vault-empty{padding:1.3rem;border:1px dashed var(--edge);color:var(--bone-dim);font-style:italic;text-align:center;font-size:var(--fs-sm)}
   .vault-note{font-size:var(--fs-tiny);font-style:italic;color:var(--bone-dim);margin-top:.8rem}
@@ -199,7 +199,7 @@
   /* Reduced motion — page-level extras (global block lives in snes.css) */
   @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
 </style>
-<link rel="stylesheet" href="snes.css?v=49">
+<link rel="stylesheet" href="snes.css?v=50">
 <script src="sprites.js?v=20260806b"></script>
 <script src="fonts.js?v=20260806b"></script>
 </head>
@@ -1261,7 +1261,7 @@ async function confirmNewAdventure() {
     sessionStorage.setItem('dnd_vault_character', navCharId);
     SFX.gate();
     toast('🌟 A new chapter begins!');
-    setTimeout(() => { location.href = 'chat.html?v=20260922a'; }, 900);
+    setTimeout(() => { location.href = 'chat.html?v=20260922c'; }, 900);
   } catch (e) {
     SFX.error();
     toast('⚠ ' + (e.message || 'Could not start the adventure'));

@@ -99,7 +99,17 @@
     transform:translateY(-2px);
   }/* ── Vägar dolda medan äventyr pågår ── *//* Paneler som öppnas EXPLICIT (t.ex. New Adventure-knappen i listan)
      måste få visa sig även när paths är dolda — annars kan man inte
-     starta en andra kampanj när man redan har en. */.paths-hidden .paths{display:none!important}.paths-hidden .expand{display:none!important}.paths-hidden .expand.show{display:block!important}.paths-hidden .head .sub::after{content:' · your adventure awaits below';color:var(--gold);font-style:italic}/* ── Stepper-kollaps för återvändare (2026-09-06): ≥1 kampanj → onboarding-stegen
+     starta en andra kampanj när man redan har en. */.paths-hidden .paths{display:none!important}.paths-hidden .expand{display:none!important}.paths-hidden .expand.show{display:block!important}.paths-hidden .head .sub::after{content:' · your adventure awaits below';color:var(--gold);font-style:italic}/* ── ONBOARDING-PROGRESS (2026-09-22): hårfin guld-fyllning under stegräknaren
+   ("1 / 4"): synlig position + återstående arbete minskar avhopp i flödestepper
+   (Blinkist/Eleken-mönstret — räknare + subtil progressbar). Ren CSS per steg,
+   ingen struktur- eller copyändring. --gold = klart, --edge = kvarstående. ── */
+.step-num::after{content:'';display:block;width:4.5rem;height:2px;margin:.5rem auto 0;
+  background:linear-gradient(90deg,var(--gold) var(--p,25%),rgba(var(--edge-rgb),.8) 0)}
+#step-lang .step-num{--p:25%}
+#step-name .step-num{--p:50%}
+#step-arch .step-num{--p:75%}
+#step-model .step-num{--p:100%}
+/* ── Stepper-kollaps för återvändare (2026-09-06): ≥1 kampanj → onboarding-stegen
      kollapsas till EN rad ("New adventure?") — toggle-knappen styr, steg 2-4 är ändå
      display:none tills steg 1 väljs. (audit-ux §top findings) ── */.stepper-collapsed #step-lang,.stepper-collapsed #step-name,.stepper-collapsed #step-arch,.stepper-collapsed #step-model,.stepper-collapsed #step-rail,.stepper-collapsed .prepare-link{display:none!important}.stepper-toggle{display:none;width:100%;margin:0 0 1.6rem;cursor:pointer;font-family:var(--font-display,'Cinzel',serif);font-size:var(--fs-tiny);letter-spacing:.22em;text-transform:uppercase;color:var(--bone-dim);background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,var(--ink));border:1px solid var(--edge);border-radius:14px;padding:.95rem 1.1rem;text-align:center;transition:color .25s,border-color .25s}.stepper-toggle:hover{color:var(--gold-bright);border-color:var(--gold)}.stepper-collapsed .stepper-toggle{display:block}/* ═══════════ How to play — onepager ═══════════ */.htp{margin-bottom:2.4rem;animation:rise .6s cubic-bezier(.22,1,.36,1)}.htp-toggle{
     display:flex;align-items:center;justify-content:center;gap:.7rem;width:100%;cursor:pointer;
@@ -225,7 +235,7 @@
   .step.reveal,.continue-wrap.reveal,.prepare-link.reveal,.htp.reveal{opacity:1;transform:translateY(0)}
   /* Tabs — Summon vs Forge */
   .tab-row{display:flex;gap:.6rem;margin-bottom:1.4rem;flex-wrap:wrap}
-  .tab-btn{font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--bone-dim);background:none;border:1px solid var(--edge);padding:.65rem 1.2rem;cursor:pointer;border-radius:6px;transition:all .25s}
+  .tab-btn{font-family:var(--font-display,'Cinzel',serif);font-size:var(--fs-tiny);letter-spacing:.16em;text-transform:uppercase;color:var(--bone-dim);background:none;border:1px solid var(--edge);padding:.65rem 1.2rem;cursor:pointer;border-radius:6px;transition:all .25s}
   .tab-btn:hover{color:var(--bone-bright);border-color:var(--gold);box-shadow:0 0 14px -4px rgba(var(--gold-rgb),.4)}
   .tab-btn.active{color:var(--ink);background:linear-gradient(180deg,var(--gold-bright),var(--gold));border-color:var(--gold);box-shadow:0 0 16px rgba(var(--gold-rgb),.25),0 4px 20px rgba(var(--gold-rgb),.35),inset 0 1px 0 rgba(255,255,255,.2)}
   .tab-panel{display:none}.tab-panel.show{display:block;animation:rise .4s ease}
@@ -312,7 +322,7 @@
     .gm-row{min-height:46px;font-size:var(--fs-tiny)}
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=49">
+<link rel="stylesheet" href="snes.css?v=50">
 <style>
 /* ═══════════ Login-känslan — mjuka knappar (override snes.css DOS-flatten) ═══════════
    snes.css laddas efter inline-blocket och tvingar platta knappar med !important.
@@ -424,7 +434,7 @@ html{font-size:var(--fs-base)}
 .mi-close{background:none;border:1px solid var(--edge);color:var(--bone-dim);width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:.85rem;transition:all .2s}
 .mi-close:hover{color:var(--blood-bright);border-color:var(--blood-bright)}
 .mi-intro{font-size:.85rem;color:var(--bone-dim);line-height:1.5}
-.av-btn{display:block;width:100%;font-family:var(--font-display,'Cinzel',serif);font-size:var(--fs-tiny);letter-spacing:.12em;text-transform:uppercase;padding:.65rem .9rem;cursor:pointer;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:6px;transition:all .2s;text-align:center}
+.av-btn{display:block;width:100%;font-family:var(--font-display,'Cinzel',serif);font-size:var(--fs-tiny);letter-spacing:.12em;text-transform:uppercase;padding:.65rem .9rem;min-height:var(--tap-min);box-sizing:border-box;cursor:pointer;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:6px;transition:all .2s;text-align:center}
 .av-btn:hover:not(:disabled){transform:translateY(-1px);border-color:var(--gold);color:var(--gold-bright);box-shadow:0 4px 14px -6px rgba(0,0,0,.55)}
 .av-btn.primary{background:var(--stone-3);border:1px solid var(--gold);color:var(--gold-bright);font-weight:700;box-shadow:0 2px 12px -6px rgba(0,0,0,.6)}
 .av-btn.primary:hover:not(:disabled){filter:none;box-shadow:0 0 14px -4px rgba(var(--gold-rgb),.4);border-color:var(--gold);color:var(--gold-bright)}
@@ -1322,7 +1332,7 @@ async function activateAndContinue(campaignId) {
   SFX.click();
   try {
     await API.activateCampaign(campaignId);
-    location.href = 'chat.html?v=20260922a';
+    location.href = 'chat.html?v=20260922c';
   } catch (e) {
     toast('⚠ ' + I18N.t('Kunde inte aktivera kampanj: ') + (e.message || I18N.t('okänt fel')));
   }
@@ -2458,7 +2468,7 @@ async function startAdventure() {
     // 3) Lyft in hjälten (genererad → sparad i Forge; eller färdig Forge-hjälte)
     await API.vaultUse(advAdventurerId);
     sessionStorage.setItem('dnd_vault_character', advAdventurerId);
-    location.href = 'chat.html?v=20260922a';
+    location.href = 'chat.html?v=20260922c';
   } catch (e) {
     try { SFX.error(); } catch (_) {}
     toast('⚠ ' + (e.message || 'Could not start'));

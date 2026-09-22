@@ -1092,7 +1092,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
     font-family: var(--cli-mono, ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace) !important;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=49">
+<link rel="stylesheet" href="snes.css?v=50">
 <style>
 /* ═══════════ CODEX 2-RAD-TABBAR — override snes.css (måste ligga EFTER linken) ═══════════ */
 .cx-tabs{ display: flex !important; flex-direction: column !important; gap: 0.34rem !important; padding: 0.55rem 0.6rem 0.6rem !important; overflow-x: hidden !important; }
@@ -1503,6 +1503,117 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
   @media (hover:none){ .pc-badge{ opacity:.85; } }        /* touch: always visible */
   .pc-badge-zoom{ right:8px; bottom:8px; }
   .pc-badge-paint{ right:36px; bottom:8px; }
+
+  /* ═══════════ ATTACK ROLL CARDS + DEATH-SAVE CARD (2026-09-22) ═══════════
+     Nya unika klasser (atk-* / rr-death-*) — inga tidigare regler med samma
+     specificitet → ingen kaskad-krock mot tidigare style-block. Blocket ligger
+     EFTER snes.css (linken ovan) så !important-knappregler kan matchas (samma
+     recept som .rite-rail .rr-btn). Illuminated Terminal: guld/bone för träff,
+     sval desaturation för miss, blod för skada, teal för parry-badge. */
+  .atk-card{
+    display: block; margin: .35rem 0; padding: .5rem .75rem;
+    border: 1px solid rgba(var(--gold-rgb),.45); border-left: 3px solid var(--gold);
+    border-radius: 3px;
+    background: linear-gradient(160deg, rgba(var(--gold-rgb),.10), rgba(var(--gold-rgb),.03));
+    font-family: var(--font-mono); font-size: var(--fs-micro, .68rem); color: var(--bone);
+    animation: msg-in .4s ease;
+  }
+  .atk-card .atk-head{ display: flex; align-items: baseline; gap: .5rem; margin-bottom: .25rem; }
+  .atk-card .atk-name{
+    font-family: var(--font-display); font-size: var(--fs-sm, .74rem); letter-spacing: .12em;
+    text-transform: uppercase; color: var(--bone-bright);
+  }
+  .atk-card .atk-verb{
+    font-family: var(--font-accent); font-size: var(--fs-tiny, .55rem); letter-spacing: .22em;
+    color: var(--gold); opacity: .8;
+  }
+  .atk-card .atk-roll{ display: flex; align-items: baseline; gap: .45rem; flex-wrap: wrap; }
+  .atk-card .atk-expr{ color: var(--bone-dim); }
+  .atk-card .atk-arrow{ color: var(--edge-hi); }
+  .atk-card .atk-total{
+    font-family: var(--font-display); font-size: var(--fs-h, 1rem); color: var(--gold-bright);
+    text-shadow: 0 0 10px rgba(var(--gold-bright-rgb),.45); font-variant-numeric: tabular-nums;
+  }
+  .atk-card .atk-vs{ color: var(--bone-dim); }
+  .atk-card .atk-verdict{
+    font-family: var(--font-display); font-size: var(--fs-tiny, .55rem); letter-spacing: .14em;
+    padding: .1rem .4rem; border: 1px solid rgba(var(--gold-rgb),.5); color: var(--gold-bright);
+  }
+  .atk-card .atk-verdict.atk-verdict-miss{ border-color: var(--edge); color: var(--bone-dim); }
+  .atk-card .atk-crit{
+    color: var(--bone-bright); font-family: var(--font-display); letter-spacing: .12em;
+    text-shadow: 0 0 12px rgba(var(--gold-bright-rgb),.9), 0 0 24px rgba(var(--gold-bright-rgb),.5);
+    animation: pulse-gold 1.4s ease-in-out infinite;
+  }
+  .atk-card .atk-foot{ display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-top: .3rem; }
+  .atk-card .atk-dmg{
+    color: var(--blood-bright); border: 1px solid rgba(var(--blood-bright-rgb),.55);
+    padding: .08rem .4rem; font-variant-numeric: tabular-nums;
+  }
+  .atk-card .atk-dmg i{ font-style: normal; color: var(--bone-dim); }
+  .atk-card .atk-dmg.atk-dmg-0{ color: var(--bone-dim); border-color: var(--edge); }
+  .atk-card .atk-php{ color: var(--bone-dim); font-variant-numeric: tabular-nums; }
+  .atk-card .atk-php b{ color: var(--blood-bright); }
+  .atk-card .atk-parry{
+    color: var(--teal); border: 1px solid color-mix(in srgb, var(--teal) 55%, transparent);
+    padding: .08rem .4rem; font-family: var(--font-display); font-size: var(--fs-tiny, .55rem);
+    letter-spacing: .1em; text-transform: uppercase;
+  }
+  /* MISS = svalt, desaturerat kort (bone/kant i stället för guld) */
+  .atk-card.atk-miss{
+    border-color: var(--edge); border-left-color: var(--bone-dim);
+    background: linear-gradient(160deg, rgba(var(--bone-dim-rgb),.08), rgba(var(--bone-dim-rgb),.02));
+  }
+  .atk-card.atk-miss .atk-total{ color: var(--bone-dim); text-shadow: none; }
+  .atk-card.atk-miss .atk-name{ color: var(--bone-dim); }
+  .atk-card.atk-hit .atk-total{ color: var(--gold-bright); }
+
+  /* ── Dödsräddnings-kort (0 HP) — faro-look, EN stor roll-knapp ── */
+  .roll-request.death{
+    display: flex; flex-wrap: wrap; align-items: center; gap: .7rem;
+    border: 1px solid rgba(var(--blood-bright-rgb),.7); border-left: 4px solid var(--blood-bright);
+    background: linear-gradient(160deg, rgba(var(--blood-rgb),.22), rgba(var(--blood-rgb),.07));
+    animation: msg-in .4s ease, pulse-blood 1.6s ease-in-out infinite;
+  }
+  .roll-request.death .rr-death-badge{
+    font-size: 1.8rem; line-height: 1; flex-shrink: 0;
+    filter: drop-shadow(0 0 8px rgba(var(--blood-bright-rgb),.8));
+    animation: hp-flash 1.1s ease-in-out infinite;
+  }
+  .roll-request.death .rr-death-body{ display: flex; flex-direction: column; gap: .35rem; flex: 1; min-width: 220px; }
+  .roll-request.death .rr-death-title{
+    color: var(--blood-bright); letter-spacing: .22em; font-size: var(--fs-sm, .74rem); animation: none;
+  }
+  .roll-request.death .rr-death-text{ color: var(--bone); font-size: var(--fs-micro, .68rem); max-width: 54ch; }
+  .roll-request.death .rr-death-note{ color: var(--bone-dim); font-size: var(--fs-tiny, .55rem); font-style: italic; }
+  .roll-request.death .rr-wait{ width: 100%; }
+
+  /* ── Knappar som rörs här (rr-ico i roll-request): 44px+ touch targets,
+     tydliga hover/focus-visible-lägen. snes.css §20 äger .rr-ico-basen. ── */
+  .roll-request .rr-ico{ min-height: 44px !important; min-width: 44px !important; }
+  .roll-request .rr-ico:focus-visible{ outline: 2px solid var(--gold-bright); outline-offset: 2px; }
+  .roll-request .rr-ico-pen:focus-visible{ outline-color: var(--bone-bright); }
+  .roll-request .rr-ico.rr-death-btn{
+    min-height: 56px !important; min-width: 232px;
+    display: inline-flex; align-items: center; justify-content: center; gap: .6rem;
+    padding: .7rem 1.2rem !important;
+    border: 1px solid var(--blood-bright) !important;
+    background: linear-gradient(160deg, rgba(var(--blood-rgb),.35), rgba(var(--blood-rgb),.15)) !important;
+    color: var(--bone-bright) !important;
+    font-family: var(--font-display); font-size: var(--fs-btn, .72rem) !important;
+    letter-spacing: .14em; text-transform: uppercase; cursor: pointer;
+    animation: rr-pulse 1.2s ease-in-out infinite;
+  }
+  .roll-request .rr-ico.rr-death-btn:hover{
+    border-color: var(--bone-bright) !important; transform: translateY(-1px);
+    box-shadow: 0 4px 18px -4px rgba(var(--blood-bright-rgb),.7) !important;
+  }
+  .roll-request .rr-ico.rr-death-btn:focus-visible{ outline: 2px solid var(--blood-bright); outline-offset: 3px; }
+  .roll-request .rr-ico.rr-death-btn:disabled{ opacity: .45; animation: none; cursor: default; transform: none; }
+  .roll-request .rr-ico.rr-death-btn .rr-ico-glyph{ animation: rr-dice-bob 1.2s ease-in-out infinite; }
+  @media (max-width: 640px){
+    .roll-request .rr-ico.rr-death-btn{ min-width: 100%; }
+  }
 </style>
 <div class="mobile-hp-line" id="mobile-hp-line"><i style="width:0%"></i></div>
 <div class="drawer-backdrop" id="drawer-backdrop" onclick="toggleMobileSidebar()"></div>
@@ -4927,6 +5038,29 @@ function addRollRequest(notation, label) {
   // (hideGuardianStatus → _enablePendingRollButtons). Klick-skyddet i
   // answerRollRequest finns kvar som dubbelt säkerhetsnät.
   const busy = _guardianBusy;
+  // Death-save-läge (2026-09-22): vid 0 HP är dödsräddningen lätt att missa i
+  // flödet — visa ett omisskännligt farokort med EN stor roll-knapp. Samma
+  // answerRollRequest/decline-flow som vanliga kast (label matchar backend:
+  // 'dödsräddning' | 'death save', se backend/main.py death-save-regeln).
+  const isDeathSave = /dödsräddning|death\s*save/i.test(String(label || ''));
+  if (isDeathSave) {
+  el.innerHTML = `
+    <div class="roll-request death" id="${id}">
+      <div class="rr-death-badge">☠</div>
+      <div class="rr-death-body">
+        <div class="rr-title rr-death-title">${I18N.t(ATK_STR.deathTitle)}</div>
+        <div class="rr-prompt rr-death-text">${I18N.t(ATK_STR.deathText)}</div>
+        <div class="rr-actions">
+          <button class="rr-ico rr-ico-dice rr-death-btn" onclick="answerRollRequest('${id}','${notation}','${label.replace(/'/g, "\\'")}')"" aria-label="${I18N.t(ATK_STR.deathRoll)} (${notation})"${busy ? ' disabled' : ''}>
+            <span class="rr-ico-glyph">🎲</span>
+            <span class="rr-ico-label">${I18N.t(ATK_STR.deathRoll)} · ${escapeHtml(notation)}</span>
+          </button>
+        </div>
+        <div class="rr-death-note">${I18N.t(ATK_STR.deathNote)}</div>
+      </div>
+      ${busy ? `<div class="rr-wait">🦉 ${I18N.t('Lorekeeper uppdaterar världen — tärningen låses upp när jobbet är klart…')}</div>` : ''}
+    </div>`;
+  } else {
   el.innerHTML = `
     <div class="roll-request" id="${id}">
       <div class="rr-title">${en ? '🎲 ROLL OR TYPE?' : '⚔ SLÅ ELLER SKRIV?'}</div>
@@ -4943,6 +5077,7 @@ function addRollRequest(notation, label) {
       </div>
       ${busy ? `<div class="rr-wait">🦉 ${I18N.t('Lorekeeper uppdaterar världen — tärningen låses upp när jobbet är klart…')}</div>` : ''}
     </div>`;
+  }
   appendToChat(el);
   chat.scrollTop = chat.scrollHeight;
   SFX.click();
@@ -5217,6 +5352,17 @@ async function loadTranscript() {
       };
 
       visible.forEach(m => {
+        // Server-rolled attack rows (combat log entries, actor='system') kan
+        // ligga som fristående rader i transkriptet → attack-kort direkt, med
+        // SAMMA renderer som applyCombatTag-vägen (lockstep live/replay).
+        const _atkRow = renderAttackRollCard(m.content);
+        if (_atkRow) {
+          const _atkWrap = document.createElement('div');
+          _atkWrap.className = 'msg system';
+          _atkWrap.innerHTML = '<div class="box">' + _atkRow + '</div>';
+          appendToFrag(_atkWrap);
+          return;
+        }
         if (m.role === 'guardian') {
           // Parsa och ta bort [ROLL_GRANT:notation|label]-taggar ur guardian-meddelanden.
           // OBS: här spawnas INGA tärningsknappar — historiska [ROLL_GRANT:] från
@@ -6937,6 +7083,9 @@ function _roundSummaryBoxHtml(round, roundLog, en) {
   // bubble-innehållet exakt lika (rskey matchar annars aldrig).
   let html = '';
   roundLog.forEach(entry => {
+    // Server-rolled attack rows (actor='system') → attack-roll-card
+    const atkCard = renderAttackRollCard(entry.text || '');
+    if (atkCard) { html += atkCard; return; }
     const actor = entry.actor || 'system';
     const cls = actor === 'player' ? 'player' : actor === 'enemy' ? 'enemy' : actor === 'ally' ? 'ally' : 'system';
     const icon = actor === 'player' ? '🗡️' : actor === 'enemy' ? '🐺' : actor === 'ally' ? '🛡️' : '⚙️';
@@ -7243,6 +7392,89 @@ function runeFor(status) {
   return '✚';
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// ATTACK ROLL CARDS (2026-09-22) — server-rolled enemy attacks
+// Radformat (exakt, från backend):
+//   '⚔ <name> attack: <expr> → <total> vs AC <ac> — HIT[ (CRIT)] · <dmg> <type>[ → **Player x/y HP**]'
+//   '⚔ <name> attack: <expr> → <total> vs AC <ac> — MISS · 0 <type>[ (parried — narration claimed a hit)]'
+// Raderna är combat log entries (actor='system') och måste renderas på BÅDA
+// vägarna (lockstep-pitfallen): live-polls → applyCombatTag → combatLogHtml /
+// renderRoundSummary → _roundSummaryBoxHtml, och transcript-replay →
+// loadTranscript (fristående rader) + samma applyCombatTag-kedja.
+// ═══════════════════════════════════════════════════════════════════════════
+// i18n: nya sv-nycklar registreras i den delade I18N.T-ordlistan (i18n.js) —
+// bara NYCKLAR som saknas läggs till (befintliga överskrivs aldrig).
+const ATK_STR = {
+  deathTitle: '☠ DÖDSRÄDDNING',
+  deathRoll: 'SLÅ DÖDSRÄDDNING',
+  deathText: 'Du är medvetslös vid 0 HP. Slå 1d20 varje tur — 10+ = framgång, under 10 = misslyckande. 3 framgångar = stabiliserad, 3 misslyckanden = död. Naturlig 1 = 2 misslyckanden, naturlig 20 = vakna med 1 HP.',
+  deathNote: 'Spelet väntar på ditt kast — du kan inte agera förrän dödsräddningen är slagen.',
+};
+const ATK_I18N = {};
+ATK_I18N[ATK_STR.deathTitle] = '☠ DEATH SAVE';
+ATK_I18N[ATK_STR.deathRoll] = 'ROLL DEATH SAVE';
+ATK_I18N[ATK_STR.deathText] = 'You are unconscious at 0 HP. Roll 1d20 each turn — 10+ = success, under 10 = failure. 3 successes = stabilized, 3 failures = death. Natural 1 = 2 failures, natural 20 = wake with 1 HP.';
+ATK_I18N[ATK_STR.deathNote] = 'The game is waiting for your roll — you cannot act until the death save is made.';
+ATK_I18N['TRÄFF'] = 'HIT';
+ATK_I18N['MISS'] = 'MISS';
+ATK_I18N['KRIT'] = 'CRIT';
+ATK_I18N['PARERAD — berättelsen ljög!'] = 'PARRIED — the narration lied!';
+ATK_I18N['Spelare'] = 'Player';
+try {
+  if (typeof I18N !== 'undefined' && I18N && I18N.T) {
+    Object.keys(ATK_I18N).forEach(k => { if (I18N.T[k] === undefined) I18N.T[k] = ATK_I18N[k]; });
+  }
+} catch (e) { /* I18N saknas → strängarna visas som de är */ }
+
+// Parsa en attack-roll-rad → strukturerad roll, eller null om raden inte matchar
+// det exakta server-formatet (då renderas raden precis som förut).
+function parseAttackRollRow(text) {
+  const str = String(text == null ? '' : text).trim();
+  const m = str.match(/^⚔\s*(.+?)\s+attack:\s*(.+?)\s*→\s*(\d+)\s+vs\s+AC\s*(\d+)\s+—\s*(HIT|MISS)(?:\s*\(CRIT\))?\s*·\s*(\d+)\s+([^\s(]+)(?:\s*→\s*\*{0,2}(?:Player|Spelare)\s+(\d+)\s*\/\s*(\d+)\s*HP\*{0,2})?(?:\s*\(parried[^)]*\))?\s*$/i);
+  if (!m) return null;
+  return {
+    name: m[1].trim(),
+    expr: m[2].trim(),
+    total: m[3],
+    ac: m[4],
+    hit: /^HIT$/i.test(m[5]),
+    crit: /\(CRIT\)/i.test(str),
+    dmg: m[6],
+    dmgType: m[7].trim(),
+    playerHp: (m[8] && m[9]) ? { cur: m[8], max: m[9] } : null,
+    parried: /\(parried/i.test(str),
+  };
+}
+
+// Attack-roll-raden → kort-html ('' om raden inte är en attack-roll).
+// HIT = varmt guld/bone-kort med damage-chip · MISS = svalt desaturerat kort ·
+// (CRIT) = ljus accent · (parried …) = badge som firar att servern parerade
+// när berättelsen ljög.
+function renderAttackRollCard(text) {
+  const a = parseAttackRollRow(text);
+  if (!a) return '';
+  const verdict = a.hit ? I18N.t('TRÄFF') : I18N.t('MISS');
+  const critChip = a.crit ? ` <span class="atk-crit">✦ ${I18N.t('KRIT')}</span>` : '';
+  const dmgChip = `<span class="atk-dmg${a.hit ? '' : ' atk-dmg-0'}">${escapeHtml(a.dmg)} <i>${escapeHtml(a.dmgType)}</i></span>`;
+  const phpChip = a.playerHp
+    ? `<span class="atk-php">→ ${I18N.t('Spelare')} <b>${escapeHtml(a.playerHp.cur)}/${escapeHtml(a.playerHp.max)}</b> HP</span>`
+    : '';
+  const parryBadge = a.parried
+    ? `<span class="atk-parry">🛡 ${I18N.t('PARERAD — berättelsen ljög!')}</span>`
+    : '';
+  return `<div class="atk-card${a.hit ? ' atk-hit' : ' atk-miss'}${a.crit ? ' atk-crit-row' : ''}${a.parried ? ' atk-parried' : ''}">
+    <div class="atk-head"><span class="atk-name">${escapeHtml(a.name)}</span><span class="atk-verb">⚔ ATTACK</span></div>
+    <div class="atk-roll">
+      <span class="atk-expr">${escapeHtml(a.expr)}</span>
+      <span class="atk-arrow">→</span>
+      <span class="atk-total">${escapeHtml(a.total)}</span>
+      <span class="atk-vs">vs AC ${escapeHtml(a.ac)}</span>
+      <span class="atk-verdict${a.hit ? '' : ' atk-verdict-miss'}">${verdict}</span>${critChip}
+    </div>
+    <div class="atk-foot">${dmgChip}${phpChip}${parryBadge}</div>
+  </div>`;
+}
+
 // C3 — Lorekeeper-rapporten som DOS-stridslogg (fallback: plain guardian-box)
 function combatLineClass(line) {
   const t = line.replace(/\*\*/g, '').trim();
@@ -7265,6 +7497,9 @@ function combatLogHtml(text, combat) {
     html += `<div class="cl-round">⚔ ${en ? 'ROUND' : 'RUNDA'} ${round}</div>`;
   }
   lines.forEach(line => {
+    // Server-rolled attack rows → attack-roll-card (samma renderer som replay)
+    const atkCard = renderAttackRollCard(line);
+    if (atkCard) { html += atkCard; return; }
     const c = combatLineClass(line);
     html += `<div class="cl-row${c.cls}">${c.marker}${mdToHtml(escapeHtml(c.text))}</div>`;
   });

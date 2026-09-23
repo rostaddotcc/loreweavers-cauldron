@@ -113,5 +113,14 @@
 @media (prefers-reduced-motion:no-preference){
   .rr-sigil{ animation:rail-candleflicker 4.2s ease-in-out infinite; }
 }
+/* ── Skip-link (a11y): osynlig tills den får fokus ── */
+.rr-skip{
+  position:absolute; left:.5rem; top:-100px; z-index:10001;
+  padding:.6rem 1rem; background:var(--gold); color:#1c1713;
+  font-family:var(--font-display,'Cinzel',serif); font-size:.72rem; font-weight:700;
+  letter-spacing:.1em; text-transform:uppercase; text-decoration:none;
+  border:1px solid var(--gold-bright); transition:top .15s;
+}
+.rr-skip:focus{ top:.5rem; }
 @keyframes rail-candleflicker{ 0%,100%{opacity:1} 42%{opacity:.84} 58%{opacity:.95} 72%{opacity:.88} }
 @media (prefers-reduced-motion:reduce){ .rr-sigil{ animation:none !important; } }

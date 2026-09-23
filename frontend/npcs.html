@@ -83,7 +83,7 @@
 
 </style>
 <link rel="stylesheet" href="snes.css?v=51">
-<link rel="stylesheet" href="rail.css?v=20260923a">
+<link rel="stylesheet" href="rail.css?v=20260923b">
 
 <style>
 /* ═══════════ MJUKA UPP — Codex NPC-hall (2026-08-05) — måste ligga EFTER snes.css ═══════════ */
@@ -157,7 +157,7 @@
       <div class="hall-sub">Everyone you have met along the way</div>
     </div>
     <div class="hall-search">
-      <input type="text" id="npc-search" placeholder="Search name, role, relation…" oninput="renderList()" autocomplete="off">
+      <input type="text" id="npc-search" placeholder="Search name, role, relation…" oninput="renderList()" autocomplete="off" aria-label="Search NPCs">
     </div>
     <div class="filters" id="filters"></div>
     <div class="npc-list" id="npc-list"></div>
@@ -754,7 +754,7 @@ tick();
 </script>
 <script src="embed.js?v=20260806a"></script>
 
-<input type="file" id="npc-avatar-input" accept="image/*" style="display:none">
+<input type="file" id="npc-avatar-input" accept="image/*" style="display:none" aria-label="Upload NPC avatar image">
 
 <!-- 🎨 Avatar-modal (AI-generera / uppdatera / ladda upp / ta bort) -->
 <div class="mi-overlay" id="avatar-overlay" onclick="if(event.target===this)closeAvatarModal()">
@@ -824,6 +824,6 @@ document.getElementById('npc-avatar-input').addEventListener('change', async e =
   }
 });
 </script>
-<script src="rail.js?v=20260923a"></script>
+<script src="rail.js?v=20260923b"></script>
 </body>
 </html>

@@ -307,7 +307,7 @@
   }
 </style>
 <link rel="stylesheet" href="snes.css?v=51">
-<link rel="stylesheet" href="rail.css?v=20260923a">
+<link rel="stylesheet" href="rail.css?v=20260923b">
 <style>
 /* ═══════════ Login-känslan — mjuka knappar (override snes.css DOS-flatten) ═══════════
    snes.css laddas efter inline-blocket och tvingar platta knappar med !important.
@@ -897,7 +897,7 @@ html{font-size:var(--fs-base)}
         <div class="step-sub">A name the bards will remember — or leave it unnamed and begin right away.</div>
       </div>
     </div>
-    <input type="text" class="name-input" id="adventure-name-input" placeholder="An unnamed adventure…" maxlength="60">
+    <input type="text" class="name-input" id="adventure-name-input" placeholder="An unnamed adventure…" maxlength="60" aria-label="Adventure name">
     <div class="step-actions">
       <button class="top-btn btn-ghost" onclick="goStep('step-lang')">← Back</button>
       <button class="go-btn btn-gold" onclick="continueFromName()">Continue →</button>
@@ -1081,7 +1081,7 @@ The more you give, the richer the world becomes. But the Dungeon Master fills in
         <span class="dz-icon">📂</span>
         <div class="dz-text">Drag files here or <b>click to browse</b></div>
         <div class="dz-formats">.md · .pdf · .jpg · .png — Qwen extracts worldbuilding, characters, locations</div>
-        <input type="file" id="file-prepare" multiple accept=".md,.pdf,.jpg,.jpeg,.png,.webp">
+        <input type="file" id="file-prepare" multiple accept=".md,.pdf,.jpg,.jpeg,.png,.webp" aria-label="Upload world files (Markdown, PDF or images)">
       </div>
       <div class="file-list" id="files-prepare"></div>
 
@@ -3077,6 +3077,6 @@ select,.adv-details summary,.btn-gold,a.back{min-height:44px}
   .rune-divider span,.rr-sigil,.head h1::first-letter{animation:none!important}
 }
 </style>
-<script src="rail.js?v=20260923a"></script>
+<script src="rail.js?v=20260923b"></script>
 </body>
 </html>

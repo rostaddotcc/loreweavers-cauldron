@@ -200,7 +200,7 @@
   @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
 </style>
 <link rel="stylesheet" href="snes.css?v=51">
-<link rel="stylesheet" href="rail.css?v=20260923a">
+<link rel="stylesheet" href="rail.css?v=20260923b">
 <style id="grimoire-leaf">
 /* Den Forbjudna Grimsboken — illuminerat lövskikt (nya regler; befintliga redigerade in-place) */
 .pricing h1::first-letter{font-family:var(--font-flavor);font-style:italic;font-weight:500;font-size:3.0em;line-height:.82;float:left;margin:.02em .14em -.02em 0;padding:.06em .16em .08em;color:var(--gold-bright);background:linear-gradient(160deg,#5a1f24,#3f1519);border:1px solid rgba(201,162,39,.65);box-shadow:0 0 14px rgba(240,214,117,.25),inset 0 0 8px rgba(0,0,0,.4);text-shadow:0 1px 0 rgba(0,0,0,.6)}
@@ -309,7 +309,7 @@
         <li>No feature window — pure support, no subscription, ever</li>
       </ul>
       <div class="donate-row">
-        <input type="number" id="donate-amount" min="1" max="1000" step="1" placeholder="5" class="donate-input" />
+        <input type="number" id="donate-amount" min="1" max="1000" step="1" placeholder="5" class="donate-input" aria-label="Donation amount in euros" />
         <a class="tier-btn go btn-gold" href="#" data-tier="donation" onclick="openPlan(event,'donation')">Donate</a>
       </div>
     </div>
@@ -341,7 +341,7 @@
       <div class="pe-title">✉ Add your email</div>
       <div class="pe-label">Your account has no email yet — we need one to send receipts and reset links before you purchase.</div>
       <div class="pe-row">
-        <input type="email" id="plan-email-input" placeholder="you@example.com" autocomplete="email" />
+        <input type="email" id="plan-email-input" placeholder="you@example.com" autocomplete="email" aria-label="Your email address" />
         <button type="button" class="plan-cta go-btn btn-gold" id="plan-email-btn" onclick="planSaveEmail()">Save email &amp; continue</button>
       </div>
       <div class="pe-err" id="plan-email-err"></div>
@@ -606,6 +606,6 @@
 </script>
 <script src="i18n.js?v=20260906a"></script>
 <script src="sprites.js?v=20260806b"></script>
-<script src="rail.js?v=20260923a"></script>
+<script src="rail.js?v=20260923b"></script>
 </body>
 </html>

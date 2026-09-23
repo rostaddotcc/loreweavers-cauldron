@@ -566,7 +566,7 @@
 
 </style>
 <link rel="stylesheet" href="snes.css?v=51">
-<link rel="stylesheet" href="rail.css?v=20260923a">
+<link rel="stylesheet" href="rail.css?v=20260923b">
 <style>
 /* ═══════════ MJUKA UPP — Codex karaktärsblad (2026-08-05) — EFTER snes.css ═══════════ */
 
@@ -677,7 +677,7 @@
       <div class="portrait-frame" id="portrait" title="Upload a portrait — Qwen can analyze it">
         <span class="emoji" id="portrait-emoji">🧙‍♀️</span>
         <span class="hint">📷 Add image</span>
-        <input type="file" id="portrait-input" accept="image/*">
+        <input type="file" id="portrait-input" accept="image/*" aria-label="Upload portrait image">
       </div>
       <div class="char-identity">
         <div class="char-name" id="char-name">Thalindra Mörkeld</div>
@@ -821,7 +821,7 @@ Markdown is not rendered, but the structure is yours."></textarea>
           <span class="att-icon">📎</span>
           <span class="att-text">Drag files here or <b>click</b></span>
           <span class="att-formats">.pdf · .md · .txt</span>
-          <input type="file" id="att-input" multiple accept=".pdf,.md,.txt">
+          <input type="file" id="att-input" multiple accept=".pdf,.md,.txt" aria-label="Upload attachment (PDF, Markdown or text)">
         </div>
         <div class="att-list" id="att-list"></div>
       </div>
@@ -1961,6 +1961,6 @@ window.getState = exportState;
   <button class="av-lb-close" onclick="closeAvatarLightbox()">✕</button>
   <div class="av-lb-title" id="avatar-lightbox-title"></div>
 </div>
-<script src="rail.js?v=20260923a"></script>
+<script src="rail.js?v=20260923b"></script>
 </body>
 </html>

@@ -1,8 +1,29 @@
 /* ═══════════ RAIL v2 — unified header behavior (2026-09-23) ═══════════
    Menu open/close (click + keyboard + outside + Esc), current-page marking,
    auth-aware #rr-auth link, admin-link auto-detect + window.railSetAdmin(bool).
-   Se docs/rail-v2-spec-2026-09-23.md. */
+   Skip-link (a11y): injiceras före allt innehåll — hoppar till <main> eller
+   första sektionen efter railen. Se docs/rail-v2-spec-2026-09-23.md. */
 (function () {
+  /* ── Skip-link — injicera FÖRE railen så den blir första tab-stopp ── */
+  (function () {
+    if (document.getElementById('rr-skip')) return;
+    var a = document.createElement('a');
+    a.id = 'rr-skip';
+    a.className = 'rr-skip';
+    a.href = '#rr-main';
+    a.textContent = 'Skip to content';
+    var target = document.querySelector('main:not(#rr-main)') ||
+                 document.querySelector('.rite-rail + *') ||
+                 document.querySelector('section, .content, main');
+    if (target) {
+      if (!target.id) target.id = 'rr-main';
+      if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+    } else {
+      a.href = '#top';
+    }
+    document.body.insertBefore(a, document.body.firstChild);
+  })();
+
   var menu = document.querySelector('.rite-rail .rr-menu');
   var drop = document.getElementById('rr-drop');
   if (!menu || !drop) return;

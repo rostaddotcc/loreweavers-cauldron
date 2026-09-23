@@ -226,7 +226,7 @@
 
 </style>
 <link rel="stylesheet" href="snes.css?v=51">
-<link rel="stylesheet" href="rail.css?v=20260923a">
+<link rel="stylesheet" href="rail.css?v=20260923b">
 <style>
 /* ═══════════ MJUKA UPP — Codex fakta (2026-08-05) — EFTER snes.css ═══════════ */
 
@@ -300,7 +300,7 @@
       <button type="button" class="coll-head" onclick="toggleShelf('search')" aria-expanded="true">🔍 Search &amp; filters <span class="coll-caret">▾</span></button>
       <div class="coll-body">
         <div class="search-wrap">
-          <input type="text" id="fact-search" placeholder="Search the archive…" oninput="renderFacts()">
+          <input type="text" id="fact-search" placeholder="Search the archive…" oninput="renderFacts()" aria-label="Search the memory archive">
         </div>
         <div class="filters" id="filters"></div>
       </div>
@@ -610,6 +610,6 @@ async function doLogout() {
 }
 </script>
 <script src="embed.js?v=20260806a"></script>
-<script src="rail.js?v=20260923a"></script>
+<script src="rail.js?v=20260923b"></script>
 </body>
 </html>

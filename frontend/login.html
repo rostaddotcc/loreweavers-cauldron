@@ -73,6 +73,46 @@
 <link rel="icon" href="/assets/logo-cauldron.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<script>
+/* ── Hero-art: välj + förhandsladda I head (LCP 2026-09-23) ────────────────
+   Bilden är LCP-elementet. Valet låg tidigare i ett script på rad ~1700 av
+   1986 → hämtningen började först efter att hela dokumentet parsats. Nu körs
+   det före första render: preload (fetchpriority=high) + CSS-variabel som
+   .hero-bg använder. Beteendet är oförändrat: ny slumpart varje besök,
+   aldrig samma som förra (localStorage lwc-hero-last). */
+(function () {
+  var HERO_ART = [
+    'assets/adventurers/webp/adventurer-fighter.webp',
+    'assets/adventurers/webp/adventurer-elf-ranger.webp',
+    'assets/adventurers/webp/adventurer-dwarf-cleric.webp',
+    'assets/adventurers/webp/adventurer-tiefling-warlock.webp',
+    'assets/adventurers/webp/adventurer-rogue.webp',
+    'assets/adventurers/webp/adventurer-dragonborn-paladin.webp',
+    'assets/adventurers/webp/adventurer-halfling-bard.webp',
+    'assets/adventurers/webp/adventurer-gnome-wizard.webp',
+    'assets/adventurers/webp/adventurer-barbarian.webp',
+    'assets/adventurers/webp/adventurer-monk.webp',
+    'assets/adventurers/webp/adventurer-druid.webp',
+    'assets/adventurers/webp/adventurer-sorcerer.webp',
+    'assets/adventurers/webp/adventurer-artificer.webp',
+    'assets/adventurers/webp/adventurer-genasi-pyromancer.webp',
+    'assets/adventurers/webp/adventurer-githyanki-knight.webp',
+    'assets/adventurers/webp/adventurer-drow-priestess.webp',
+    'assets/adventurers/webp/adventurer-warforged-paladin.webp',
+    'assets/adventurers/webp/adventurer-firbolg-druid.webp',
+    'assets/adventurers/webp/adventurer-tabaxi-monk.webp'
+  ];
+  var last = null;
+  try { last = localStorage.getItem('lwc-hero-last'); } catch (e) {}
+  var pool = HERO_ART.filter(function (a) { return a !== last; });
+  var pick = pool[Math.floor(Math.random() * pool.length)];
+  try { localStorage.setItem('lwc-hero-last', pick); } catch (e) {}
+  document.documentElement.style.setProperty('--hero-art', 'url("' + pick + '")');
+  var pl = document.createElement('link');
+  pl.rel = 'preload'; pl.as = 'image'; pl.href = pick; pl.fetchPriority = 'high';
+  document.head.appendChild(pl);
+})();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=EB+Garamond:ital,wght@0,400;1,400;1,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   /* ═══════════════ Terminal Gothic — flat, DOS/terminal, aligned med spelet ═══════════════
@@ -167,7 +207,7 @@
   .hero-gate{position:relative;overflow:hidden}
   .hero-gate > section{position:relative;z-index:1}
   .hero{position:relative}
-  .hero-bg{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center 18%;transform-origin:center;animation:hero-breathe 36s ease-in-out infinite alternate}
+  .hero-bg{position:absolute;inset:0;z-index:0;background-image:var(--hero-art);background-size:cover;background-position:center 18%;transform-origin:center;animation:hero-breathe 36s ease-in-out infinite alternate}
   .hero-bg::after{content:'';position:absolute;inset:0;background:
     linear-gradient(90deg, var(--ink) 0%, color-mix(in srgb, var(--ink) 82%, transparent) 24%, color-mix(in srgb, var(--ink) 34%, transparent) 52%, color-mix(in srgb, var(--ink) 10%, transparent) 74%, color-mix(in srgb, var(--ink) 46%, transparent) 100%),
     linear-gradient(180deg, color-mix(in srgb, var(--ink) 55%, transparent) 0%, transparent 15%, transparent 44%, color-mix(in srgb, var(--ink) 42%, transparent) 62%, color-mix(in srgb, var(--ink) 80%, transparent) 82%, var(--ink) 99%)}
@@ -559,7 +599,7 @@
   }
 </style>
 <link rel="stylesheet" href="snes.css?v=51">
-<link rel="stylesheet" href="rail.css?v=20260923a">
+<link rel="stylesheet" href="rail.css?v=20260923b">
 <style>
 /* ═══ Manuscript-override (2026-09-20) — laddas EFTER snes.css och återinför
    det Terminal Gothic plattar med !important: boktypografi (EB Garamond),
@@ -1246,7 +1286,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 <script src="api.js?v=20260805c"></script>
 <script src="i18n.js?v=20260906a"></script>
 <script src="sprites.js?v=20260806b"></script>
-<script src="rail.js?v=20260923a"></script>
+<script src="rail.js?v=20260923b"></script>
 
 <script>
 /* ═══════════════ update banner — DeepSeek V4.1 Flash (Patron) + fria sinnen, en gång per läsare ═══════════════ */
@@ -1669,38 +1709,7 @@ document.addEventListener('keydown', e => {
   renderDeck('npc');
 })();
 
-/* ── Hero: roterande äventyrarebilder (Qwen Image 3 Pro) — ny slump vid varje besök ── */
-(function () {
-  var HERO_ART = [
-    'assets/adventurers/webp/adventurer-fighter.webp',
-    'assets/adventurers/webp/adventurer-elf-ranger.webp',
-    'assets/adventurers/webp/adventurer-dwarf-cleric.webp',
-    'assets/adventurers/webp/adventurer-tiefling-warlock.webp',
-    'assets/adventurers/webp/adventurer-rogue.webp',
-    'assets/adventurers/webp/adventurer-dragonborn-paladin.webp',
-    'assets/adventurers/webp/adventurer-halfling-bard.webp',
-    'assets/adventurers/webp/adventurer-gnome-wizard.webp',
-    'assets/adventurers/webp/adventurer-barbarian.webp',
-    'assets/adventurers/webp/adventurer-monk.webp',
-    'assets/adventurers/webp/adventurer-druid.webp',
-    'assets/adventurers/webp/adventurer-sorcerer.webp',
-    'assets/adventurers/webp/adventurer-artificer.webp',
-    'assets/adventurers/webp/adventurer-genasi-pyromancer.webp',
-    'assets/adventurers/webp/adventurer-githyanki-knight.webp',
-    'assets/adventurers/webp/adventurer-drow-priestess.webp',
-    'assets/adventurers/webp/adventurer-warforged-paladin.webp',
-    'assets/adventurers/webp/adventurer-firbolg-druid.webp',
-    'assets/adventurers/webp/adventurer-tabaxi-monk.webp'
-  ];
-  var bg = document.getElementById('hero-bg');
-  if (!bg) return;
-  var last = null;
-  try { last = localStorage.getItem('lwc-hero-last'); } catch (e) {}
-  var pool = HERO_ART.filter(function (a) { return a !== last; });
-  var pick = pool[Math.floor(Math.random() * pool.length)];
-  bg.style.backgroundImage = 'url("' + pick + '")';
-  try { localStorage.setItem('lwc-hero-last', pick); } catch (e) {}
-})();
+
 
 /* ── Ambient embers (2026-09-20) — samma partikelloop som newgame.html.
    Reduced motion: canvasen förblir tom, ingen animation startas. ── */

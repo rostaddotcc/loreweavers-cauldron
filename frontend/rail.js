@@ -24,13 +24,31 @@
   }
   drop.addEventListener('click', function (e) { e.stopPropagation(); if (e.target.closest('a')) setOpen(false); });
   document.addEventListener('click', function (e) { if (!menu.contains(e.target)) setOpen(false); });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setOpen(false); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { if (drop.classList.contains('open') && btn) btn.focus(); setOpen(false); }
+  });
+
+  /* ── Tangentbordsnavigering i menyn: ↑↓ flyttar fokus mellan synliga länkar ── */
+  drop.addEventListener('keydown', function (e) {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Home' && e.key !== 'End') return;
+    var links = Array.prototype.filter.call(drop.querySelectorAll('a'), function (a) {
+      return !a.hidden && a.offsetParent !== null;
+    });
+    if (!links.length) return;
+    e.preventDefault();
+    var i = links.indexOf(document.activeElement);
+    if (e.key === 'Home') { links[0].focus(); return; }
+    if (e.key === 'End') { links[links.length - 1].focus(); return; }
+    if (i === -1) { links[0].focus(); return; }
+    var next = e.key === 'ArrowDown' ? (i + 1) % links.length : (i - 1 + links.length) % links.length;
+    links[next].focus();
+  });
 
   /* ── Markera aktuell sida ── */
   var here = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
   Array.prototype.forEach.call(drop.querySelectorAll('a[href]'), function (a) {
     var t = (a.getAttribute('href') || '').split('#')[0].split('?')[0].split('/').pop().toLowerCase();
-    if (t && t === here) a.classList.add('cur');
+    if (t && t === here) { a.classList.add('cur'); a.setAttribute('aria-current', 'page'); }
   });
 
   /* ── Auth-länk: inloggad → Log out, annars → Enter the Table ── */

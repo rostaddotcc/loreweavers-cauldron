@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lost in the Fog — The Lore Weaver's Cauldron</title>
+<meta name="description" content="This page does not exist. The Lore Weaver's Cauldron — free AI D&D roleplaying with an AI Dungeon Master that remembers your world.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap">
+<link rel="stylesheet" href="/snes.css?v=51">
+<link rel="stylesheet" href="/rail.css?v=20260923a">
+<style>
+  body{background:var(--stone);color:var(--bone);min-height:100dvh;display:flex;flex-direction:column}
+  .lost{flex:1;display:flex;align-items:center;justify-content:center;padding:3rem 1.25rem;text-align:center}
+  .lost-inner{max-width:560px}
+  .lost-code{font-family:var(--font-mono,monospace);font-size:.7rem;letter-spacing:.4em;
+    text-transform:uppercase;color:var(--gold);opacity:.8;margin-bottom:1.4rem}
+  .lost h1{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(2rem,5vw,3.2rem);
+    color:var(--bone-bright);letter-spacing:.04em;margin-bottom:1rem;line-height:1.15}
+  .lost p{font-family:'Spectral',Georgia,serif;font-size:1rem;line-height:1.75;color:var(--bone);
+    max-width:44ch;margin:0 auto 2rem}
+  .lost p b{color:var(--gold-bright)}
+  .lost-actions{display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap}
+  .lost-btn{display:inline-flex;align-items:center;gap:.5rem;padding:.8rem 1.5rem;
+    font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+    text-decoration:none;border:1px solid var(--gold);color:var(--gold-bright);
+    background:transparent;min-height:44px;transition:all .2s}
+  .lost-btn:hover{background:rgba(201,162,39,.1);box-shadow:0 0 16px rgba(201,162,39,.25)}
+  .lost-btn.solid{background:var(--gold);color:var(--stone);font-weight:700}
+  .lost-btn.solid:hover{background:var(--gold-bright)}
+  .lost-glyph{font-size:3rem;opacity:.55;margin-bottom:1.6rem;filter:grayscale(.3)}
+</style>
+</head>
+<body>
+<header class="rite-rail">
+  <div class="rr-brand">
+    <span class="rr-sigil" onclick="location.href='/login.html'" title="The Lore Weaver's Cauldron">⚗</span>
+    <span class="rr-name">The Lore Weaver's Cauldron</span>
+    <span class="rr-tag">LOST PAGE</span>
+  </div>
+  <div class="rr-mid"></div>
+  <div class="rr-actions">
+    <div class="rr-menu">
+      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+      <div class="rr-drop" id="rr-drop">
+        <div class="rr-ghead">At the Table</div>
+        <a href="chat.html">⚔ To the Table</a>
+        <a href="adventure.html">🏰 The Crossroads</a>
+        <a href="newgame.html">✨ New Adventure</a>
+        <a href="characters.html">🔥 The Forge</a>
+        <div class="rr-ghead">The Archive</div>
+        <a href="character.html">🧙 Character</a>
+        <a href="npcs.html">👥 NPCs</a>
+        <a href="platser.html">🗺 The Map</a>
+        <a href="loggbok.html">📜 Logbook</a>
+        <a href="facts.html">✦ Facts</a>
+        <div class="rr-ghead">The Ledger</div>
+        <a href="help.html">❓ How to Play</a>
+        <a href="mechanics.html">📐 Mechanics</a>
+        <a href="models.html">🧠 The Minds</a>
+        <a href="pricing.html">🜲 Paths</a>
+        <a href="releases.html">📓 Release Notes</a>
+        <a href="screenshots.html">🖼 Screens</a>
+        <div class="rr-ghead">Account</div>
+        <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+        <a href="login.html" id="rr-auth">🔒 Log out</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="lost">
+  <div class="lost-inner">
+    <div class="lost-glyph">🕯️</div>
+    <div class="lost-code">Error 404 — page not found</div>
+    <h1>This road ends in fog.</h1>
+    <p>The page you asked for does not exist — the Lore Weaver keeps no record of it.
+      Perhaps a mistyped rune, perhaps a road that was never laid. The table is still
+      open, and <b>50 fresh turns wait every day</b>.</p>
+    <div class="lost-actions">
+      <a class="lost-btn solid" href="/login.html#gate">⚔ Enter the Table</a>
+      <a class="lost-btn" href="/help.html">❓ How to Play</a>
+      <a class="lost-btn" href="/pricing.html">🜲 The Paths</a>
+    </div>
+  </div>
+</main>
+
+<script src="/rail.js?v=20260923a"></script>
+</body>
+</html>

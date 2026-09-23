@@ -11828,6 +11828,7 @@ SEO_PAGES = [
     ("models.html", "0.6"),
     ("releases.html", "0.6"),
     ("screenshots.html", "0.5"),
+    ("book-souls/", "0.4"),
 ]
 
 @app.get("/robots.txt", include_in_schema=False)

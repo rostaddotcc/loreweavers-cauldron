@@ -112,9 +112,27 @@ def cut_at_word(text, limit):
 
 
 def copy_avatar(src, name):
-    dst = os.path.join(AV_DIR, name)
+    """Copy the avatar next to the gallery — downscaled WebP when Pillow is
+    available (2026-09-23: the raw PNGs run up to 8 MB each, 131 MB gallery;
+    WebP ≤1200px q85 shrinks it ~95%). Falls back to a plain copy without PIL."""
+    dst_png = os.path.join(AV_DIR, name)
     try:
-        shutil.copy2(src, dst)
+        from PIL import Image  # container: Pillow via requirements.txt
+        im = Image.open(src)
+        if im.mode not in ("RGB", "RGBA"):
+            im = im.convert("RGB")
+        if max(im.size) > 1200:
+            _LANCZOS = getattr(Image, "Resampling", Image).LANCZOS
+            im.thumbnail((1200, 1200), _LANCZOS)
+        dst = os.path.join(AV_DIR, os.path.splitext(name)[0] + ".webp")
+        im.save(dst, "WEBP", quality=85, method=6)
+        return "avatars/" + os.path.basename(dst)
+    except ImportError:
+        pass
+    except Exception:
+        pass
+    try:
+        shutil.copy2(src, dst_png)
         return "avatars/" + name
     except Exception:
         return None

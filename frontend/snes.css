@@ -86,6 +86,8 @@
      44px = tryggt tvärplattformsgolv — Apple HIG 44pt · WCAG 2.5.5 (AAA) 44×44.
      WCAG 2.5.8 (AA) kräver bara 24×24, men 44px är golvet för funnel-knappar. */
   --tap-min: 44px;
+  /* FORM-ALIGN 2026-09-23: stora primär-CTA (gate-knapp, pricing CTA, start) */
+  --tap-lg: 48px;
   /* RGB-tripletter för alpha-färger: rgba(var(--gold-rgb), .12).
      ENDA paletten är snes.css :root (Tema-väljaren borttagen 2026-09) — dessa
      är alltså inte "frysta": de ÄR palettens värden i annan notation och ska
@@ -457,8 +459,9 @@ summary:focus-visible, [tabindex]:focus-visible{
    försvann när sidebar-skinen gav .pc-card en opak bakgrund med !important.
    Låt has-bg vinna och ge porträttet mer närvaro (var "pyttelitet"). */
 .pc-wrap.has-bg .pc-card{ background: transparent !important; }
-.pc-wrap.has-bg .pc-avatar-bg{ border-radius: 8px !important; }
-.pc-wrap .pc-avatar{ width: 54px !important; height: 54px !important; border-radius: 8px !important; }.pc-name{
+/* FORM-ALIGN 2026-09-23: 8px legacy → --radius-lg (.soft-canon, "ett värde, ett ställe") */
+.pc-wrap.has-bg .pc-avatar-bg{ border-radius: var(--radius-lg) !important; }
+.pc-wrap .pc-avatar{ width: 54px !important; height: 54px !important; border-radius: var(--radius-lg) !important; }.pc-name{
   font-family: var(--font-accent) !important;
   font-size: .6rem !important;
   color: var(--bone-bright) !important;

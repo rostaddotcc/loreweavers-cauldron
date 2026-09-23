@@ -132,7 +132,6 @@
     --font-mono:'IBM Plex Mono',ui-monospace,monospace;
     --font-accent:'IBM Plex Mono',ui-monospace,monospace; /* Silkscreen pensionerad 2026-09-20 */
     --nav-h:56px;
-    --r-card:10px; --r-btn:8px; --r-in:7px;   /* mjuka radier — override-blocket efter snes.css återinför */
   }
   *{margin:0;padding:0;box-sizing:border-box;border-radius:0}
   html{scroll-behavior:smooth}
@@ -157,7 +156,7 @@
   .lede b{color:var(--gold-bright);font-weight:500}
   .lede.drop::first-letter{font-family:var(--font-display);font-weight:700;font-size:3.2em;line-height:.8;float:left;margin:.08em .14em 0 0;color:var(--gold);text-shadow:0 0 22px rgba(var(--gold-rgb),.28)}
   /* ── knappar (2026-09-20: mjuka, med lyft) ── */
-  .btn{display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:var(--fs-btn);font-weight:600;letter-spacing:.17em;text-transform:uppercase;padding:.92em 1.75em;min-height:var(--tap-min);box-sizing:border-box;border:1px solid var(--edge);background:linear-gradient(180deg,var(--stone-3),var(--stone-2));color:var(--bone);text-decoration:none;cursor:pointer;text-align:center;border-radius:var(--r-btn);transition:transform .24s cubic-bezier(.2,.7,.3,1),border-color .24s,color .24s,box-shadow .24s}
+  .btn{display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:var(--fs-btn);font-weight:600;letter-spacing:.17em;text-transform:uppercase;padding:.92em 1.75em;min-height:var(--tap-min);box-sizing:border-box;border:1px solid var(--edge);background:linear-gradient(180deg,var(--stone-3),var(--stone-2));color:var(--bone);text-decoration:none;cursor:pointer;text-align:center;transition:transform .24s cubic-bezier(.2,.7,.3,1),border-color .24s,color .24s,box-shadow .24s}
   .btn:hover{border-color:var(--gold);color:var(--gold-bright);transform:translateY(-2px);box-shadow:0 10px 24px -14px rgba(var(--gold-rgb),.75)}
   .btn:active{transform:translateY(0)}
   .btn.gold{background:linear-gradient(180deg,var(--gold-bright),var(--gold));border-color:var(--gold-bright);color:#241a06;font-weight:600}
@@ -193,7 +192,7 @@
   .hero h1 .of{display:block;font-family:var(--font-mono);font-weight:500;font-size:.135em;letter-spacing:.34em;text-transform:uppercase;color:var(--gold);margin-top:1.5em;text-shadow:none}
   .hero .tagline{font-style:italic;font-weight:300;font-size:clamp(1.06rem,1.75vw,1.3rem);color:var(--bone);margin-top:1.5rem;line-height:1.62;max-width:44ch}
   .free-slogan{margin-top:1.15rem;font-size:var(--fs-sm);font-weight:300;color:var(--bone-dim);line-height:1.6;max-width:52ch}
-  .free-slogan .fs-badge{font-family:var(--font-mono);font-style:normal;font-size:.55rem;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:#241a06;background:linear-gradient(180deg,var(--gold-bright),var(--gold));border:1px solid var(--gold-bright);border-radius:5px;padding:.34em .7em;margin-right:.6rem;vertical-align:middle}
+  .free-slogan .fs-badge{font-family:var(--font-mono);font-style:normal;font-size:.55rem;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:#241a06;background:linear-gradient(180deg,var(--gold-bright),var(--gold));border:1px solid var(--gold-bright);border-radius:var(--radius-xs);padding:.34em .7em;margin-right:.6rem;vertical-align:middle}
   .free-slogan b{color:var(--gold-bright);font-style:normal;font-weight:500}
   .hero-actions{display:flex;align-items:center;gap:.9rem;margin-top:2rem;flex-wrap:wrap}
   .myst-quote{margin-top:2rem;font-style:italic;font-size:var(--fs-sm);color:var(--bone-dim);min-height:1.6em;transition:opacity 1s ease}
@@ -259,13 +258,13 @@
   /* ═══════════════ features — täta info-boxar, 2 kolonner (2026-09-20) ═══════════════
      Sigill (inline-SVG) ersätter emoji-ikonerna. Mjuka radier + lyft på hover. */
   .feat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem;margin-top:1.5rem}
-  .tablet{position:relative;background:linear-gradient(168deg,var(--stone-2),var(--stone));border:1px solid var(--edge);border-radius:var(--r-card);padding:1rem 1.15rem 1.05rem;transition:transform .28s cubic-bezier(.2,.7,.3,1),border-color .28s,box-shadow .28s}
+  .tablet{position:relative;background:linear-gradient(168deg,var(--stone-2),var(--stone));border:1px solid var(--edge);padding:1rem 1.15rem 1.05rem;transition:transform .28s cubic-bezier(.2,.7,.3,1),border-color .28s,box-shadow .28s}
   .tablet::after{content:'';position:absolute;left:16px;right:16px;top:0;height:1px;background:linear-gradient(90deg,transparent,var(--t-accent,var(--gold)),transparent);opacity:.4;transition:opacity .28s;pointer-events:none}
   .tablet:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--t-accent,var(--gold)) 48%,var(--edge));box-shadow:0 20px 40px -26px rgba(0,0,0,.95)}
   .tablet:hover::after{opacity:1}
   .f-num{position:absolute;top:.85rem;right:1rem;font-family:var(--font-mono);font-size:.56rem;font-weight:500;letter-spacing:.14em;color:var(--bone-dim);opacity:.45}
   .f-head{display:flex;align-items:flex-start;gap:.8rem;margin-bottom:.6rem}
-  .f-icon{flex:0 0 auto;width:38px;height:38px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--ink) 72%,transparent);border:1px solid color-mix(in srgb,var(--t-accent,var(--gold)) 42%,var(--edge));border-radius:9px;color:var(--t-accent,var(--gold));transition:box-shadow .28s,border-color .28s,background .28s}
+  .f-icon{flex:0 0 auto;width:38px;height:38px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--ink) 72%,transparent);border:1px solid color-mix(in srgb,var(--t-accent,var(--gold)) 42%,var(--edge));color:var(--t-accent,var(--gold));transition:box-shadow .28s,border-color .28s,background .28s}
   .f-icon .sig{width:20px;height:20px;display:block}
   .tablet:hover .f-icon{border-color:var(--t-accent,var(--gold));background:color-mix(in srgb,var(--t-accent,var(--gold)) 12%,var(--ink));box-shadow:0 0 18px -6px var(--t-accent,var(--gold))}
   .f-kick{display:block;font-family:var(--font-mono);font-size:.54rem;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--t-accent,var(--gold));margin-bottom:.34rem;line-height:1.55;opacity:.9}
@@ -303,7 +302,7 @@
 
   /* ═══════════════ pricing (2026-09-20: vänsterställda tier-boxar) ═══════════════ */
   .pricing-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.9rem;margin-top:1.5rem;max-width:760px}
-  .ptier{position:relative;background:linear-gradient(168deg,var(--stone-2),var(--stone));border:1px solid var(--edge);border-radius:var(--r-card);padding:1.15rem 1.25rem 1.1rem;cursor:pointer;transition:transform .28s cubic-bezier(.2,.7,.3,1),border-color .28s,box-shadow .28s}
+  .ptier{position:relative;background:linear-gradient(168deg,var(--stone-2),var(--stone));border:1px solid var(--edge);padding:1.15rem 1.25rem 1.1rem;cursor:pointer;transition:transform .28s cubic-bezier(.2,.7,.3,1),border-color .28s,box-shadow .28s}
   .ptier:hover{transform:translateY(-3px);border-color:var(--gold);box-shadow:0 20px 40px -26px rgba(0,0,0,.95)}
   .ptier .go-hint{display:block;margin-top:.85rem;font-family:var(--font-mono);font-size:.55rem;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
   .pt-name{font-family:var(--font-mono);font-weight:500;font-size:.6rem;letter-spacing:.26em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.3rem}
@@ -316,7 +315,7 @@
   .pt-price small{font-family:var(--font-mono);font-size:.6rem;font-weight:400;color:var(--bone-dim);letter-spacing:.14em;text-transform:uppercase;margin-left:.35rem}
   .ptier.patron{border-color:color-mix(in srgb,var(--gold) 42%,var(--edge))}
   .ptier.patron:hover{border-color:var(--gold)}
-  .pt-flag{position:absolute;top:-1px;right:14px;font-family:var(--font-mono);font-size:.5rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#241a06;background:linear-gradient(180deg,var(--gold-bright),var(--gold));padding:.34em .7em;border-radius:0 0 5px 5px}
+  .pt-flag{position:absolute;top:-1px;right:14px;font-family:var(--font-mono);font-size:.5rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#241a06;background:linear-gradient(180deg,var(--gold-bright),var(--gold));padding:.34em .7em}
   .pt-fine{max-width:660px;margin:1.1rem 0 0;font-size:var(--fs-tiny);font-style:italic;font-weight:300;color:var(--bone-dim);line-height:1.6}
   .pt-more{margin-top:1rem;font-family:var(--font-mono);font-size:.6rem;font-weight:500;letter-spacing:.2em;text-transform:uppercase}
   .pt-more a{color:var(--gold);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--gold) 35%,transparent);padding-bottom:.15rem}
@@ -324,8 +323,8 @@
   /* ═══════════════ FAQ (2026-09-20: skrollbar frågebox) ═══════════════ */
   .faq{max-width:760px;margin:1.4rem 0 0;max-height:min(46vh,400px);overflow-y:auto;padding-right:.5rem;scrollbar-width:thin;scrollbar-color:var(--edge) transparent}
   .faq::-webkit-scrollbar{width:6px}
-  .faq::-webkit-scrollbar-thumb{background:var(--edge);border-radius:3px}
-  .faq details{background:linear-gradient(168deg,var(--stone-2),var(--stone));border:1px solid var(--edge);border-radius:var(--r-btn);margin-bottom:.5rem;padding:0 1.1rem;transition:border-color .25s}
+  .faq::-webkit-scrollbar-thumb{background:var(--edge);border-radius:var(--radius-sm)}
+  .faq details{background:linear-gradient(168deg,var(--stone-2),var(--stone));border:1px solid var(--edge);margin-bottom:.5rem;padding:0 1.1rem;transition:border-color .25s}
   .faq details[open]{border-color:color-mix(in srgb,var(--gold) 55%,var(--edge))}
   .faq summary{cursor:pointer;font-family:var(--font-display);font-size:1.14rem;font-weight:600;letter-spacing:.005em;color:var(--bone-bright);padding:.8rem 0;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:1rem}
   .faq summary::after{content:'+';color:var(--gold);font-family:var(--font-mono);font-size:1rem;line-height:1;transition:transform .25s}
@@ -523,7 +522,7 @@
   .rail-pane .sec-head{margin-bottom:1.1rem}
   .modal .ico{display:flex;justify-content:center;color:var(--gold)}
   .modal .ico .sig{width:2.1rem;height:2.1rem}
-  .rail-dots{position:absolute;bottom:1rem;left:50%;transform:translateX(-50%);display:flex;gap:.25rem;z-index:6;background:color-mix(in srgb,var(--ink) 72%,transparent);border:1px solid var(--edge);border-radius:99px;padding:.4rem .7rem;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+  .rail-dots{position:absolute;bottom:1rem;left:50%;transform:translateX(-50%);display:flex;gap:.25rem;z-index:6;background:color-mix(in srgb,var(--ink) 72%,transparent);border:1px solid var(--edge);border-radius:999px;padding:.4rem .7rem;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
   .rdot{display:inline-flex;align-items:center;gap:.5rem;background:none;border:none;cursor:pointer;color:var(--bone-dim);padding:.2rem .55rem;font-size:.58rem;font-weight:500;letter-spacing:.2em;text-transform:uppercase;transition:color .25s}
   .rdot .rd-n{font-size:.64rem;color:var(--gold);opacity:.5;transition:opacity .25s}
   .rdot.on{color:var(--bone-bright)}
@@ -552,7 +551,7 @@
   .split h2{font-size:clamp(1.5rem,2.4vw,2rem)}
   /* ledger: vikt lista — 5 synliga, resten bakom "öppna boken" */
   .ledger-list.fold li:nth-child(n+6){display:none}
-  .ledger-fold{display:inline-flex;align-items:center;gap:.6rem;margin-top:1.2rem;background:none;border:1px solid var(--edge);border-radius:99px;padding:.55rem 1.1rem;cursor:pointer;color:var(--gold);font-size:.6rem;font-weight:500;letter-spacing:.2em;text-transform:uppercase;transition:border-color .25s,color .25s}
+  .ledger-fold{display:inline-flex;align-items:center;gap:.6rem;margin-top:1.2rem;background:none;border:1px solid var(--edge);padding:.55rem 1.1rem;cursor:pointer;color:var(--gold);font-size:.6rem;font-weight:500;letter-spacing:.2em;text-transform:uppercase;transition:border-color .25s,color .25s}
   .ledger-fold:hover{border-color:var(--gold);color:var(--gold-bright)}
   .ledger-fold .lf-c{transition:transform .3s;display:inline-block}
   .ledger-list:not(.fold) + .ledger-fold .lf-c{transform:rotate(180deg)}
@@ -585,8 +584,8 @@
     .hero h1{font-size:clamp(1.9rem,9vw,2.6rem)}
     .scroll-cue{display:none}
     .myst-quote{margin-top:1.7rem}
-    .field input{min-height:46px}
-    .gate-btn{min-height:46px}
+    .field input{min-height:var(--tap-min)}
+    .gate-btn{min-height:var(--tap-lg)}
   }
   @media (prefers-reduced-motion:reduce){
     html{scroll-behavior:auto}
@@ -640,13 +639,11 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 .faq summary::after{font-family:var(--font-mono) !important}
 /* deck-kortens LV/relation-hörn: snes gömmer ALLA .corner — återinför här */
 .deck-portrait .corner{display:block !important;font-family:var(--font-mono) !important;letter-spacing:.12em !important}
-/* mjuka radier (snes §0 plattar med * !important) */
-.btn,.gate-btn,.field input,.faq details,.ledger-fold{border-radius:var(--r-btn) !important}
-.tablet,.ptier,.gate-card,.deck-card,.modal,.ledger-list li.hot,.pile-under{border-radius:var(--r-card) !important}
-.deck-abls span,.deck-portrait .corner,.ver-chip,.pt-flag,.ledger-list li .tag,.pitch-list .tag,.hstat,.fs-badge{border-radius:6px !important}
-.f-icon{border-radius:9px !important}
-.rail-dots{border-radius:99px !important}
-.rail-arrow{border-radius:50% !important;transition:border-color .25s,color .25s,background .25s,transform .25s !important}
+/* FORM-C 2026-09-23: mjuka radier raderade — platt är språket (snes §0 global
+   reset, spec §1). Levande radier kvar: rail-dots pill (existerande) och
+   rail-arrow via .soft-full på elementen (snes.css §.soft). */
+.rail-dots{border-radius:999px !important}
+.rail-arrow{transition:border-color .25s,color .25s,background .25s,transform .25s !important}
 .rail-arrow:hover{background:color-mix(in srgb,var(--stone) 82%,transparent) !important;transform:translateY(-50%) !important}
 .rail-arrow:active{transform:translateY(-50%) scale(.94) !important}
 .rdot-pause{transition:color .25s !important}
@@ -1218,10 +1215,10 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
     </div>
 
     </div>
-    <button class="rail-arrow prev" id="trail-prev" type="button" aria-label="Previous room">
+    <button class="rail-arrow prev soft-full" id="trail-prev" type="button" aria-label="Previous room">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4.5L7 12l7.5 7.5"/></svg>
     </button>
-    <button class="rail-arrow next" id="trail-next" type="button" aria-label="Next room">
+    <button class="rail-arrow next soft-full" id="trail-next" type="button" aria-label="Next room">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 4.5L17 12l-7.5 7.5"/></svg>
     </button>
     <div class="rail-progress" aria-hidden="true"><i id="trail-bar"></i></div>

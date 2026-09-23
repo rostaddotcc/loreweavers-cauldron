@@ -26,40 +26,20 @@
     --font-body:'Spectral',Georgia,serif;
     --font-mono:'IBM Plex Mono',ui-monospace,monospace;
     --font-accent:'Silkscreen',monospace;
-    --nav-h:64px;
   --font-flavor:'EB Garamond',Georgia,serif;--rubric:#d4737b;--gilt:rgba(201,162,39,.42);--gilt-hi:rgba(240,214,117,.6);--parch-a:#241c15;--parch-b:#1c1713;}
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{font-family:var(--font-body);color:var(--bone);background:var(--ink);
     overflow-x:hidden;-webkit-tap-highlight-color:transparent;font-size:17px;line-height:1.65}
 
-  /* ═══════════════ nav ═══════════════ */
-  .nav{position:fixed;top:0;left:0;right:0;z-index:50;height:var(--nav-h);
-    display:flex;align-items:center;justify-content:space-between;padding:0 clamp(1rem,4vw,2.5rem);
-    border-bottom:1px solid var(--edge);
-    background:var(--stone)}
-  .nav-brand{display:flex;align-items:center;gap:.65rem;text-decoration:none}
-  .nav-brand img{width:34px;height:34px;mix-blend-mode:screen}
-  .nav-brand span{font-family:var(--font-display);font-weight:700;font-size:var(--fs-sm);
-    letter-spacing:.22em;text-transform:uppercase;color:var(--bone-bright)}
-  .nav-links{display:flex;gap:1.4rem;align-items:center}
-  .nav-link{font-family:var(--font-display);font-size:.7rem;letter-spacing:.2em;
-    text-transform:uppercase;color:var(--bone-dim);text-decoration:none;transition:color .2s}
-  .nav-link:hover{color:var(--gold-bright)}
-  .nav-link.active{color:var(--gold)}
   /* version chip-row — jump index (audit A2 §5 releases) */
   .ver-chiprow{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;margin:1.4rem 0 .4rem}
   .ver-chiprow a{font-family:var(--font-display);font-size:.64rem;letter-spacing:.12em;
     color:var(--bone-dim);border:1px solid var(--edge);background:var(--stone);padding:.42rem .8rem;text-decoration:none;transition:all .2s;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
   .ver-chiprow a:hover{color:var(--gold-bright);border-color:var(--gold)}
 
-  .nav-cta{font-family:var(--font-display);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;
-    color:var(--ink);background:var(--gold);border:1px solid var(--gold-bright);
-    padding:.5rem 1rem;text-decoration:none;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
-  .nav-cta:hover{background:var(--gold-bright);color:var(--ink)}
-
   /* ═══════════════ hero ═══════════════ */
-  .ledger{max-width:900px;margin:0 auto;padding:calc(var(--nav-h) + 4rem) 1.25rem 6rem}
+  .ledger{max-width:900px;margin:0 auto;padding:4rem 1.25rem 6rem}
   .eyebrow{font-family:var(--font-display);font-size:.68rem;letter-spacing:.44em;
     text-transform:uppercase;color:var(--gold);text-align:center;margin-bottom:1rem;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem;letter-spacing:.34em}
   .ledger h1{font-family:var(--font-display);font-weight:900;font-size:clamp(1.9rem,4.6vw,3rem);
@@ -181,13 +161,13 @@
     .hist-toggle{min-height:48px;min-height:44px}
   }
   @media(max-width:640px){
-    .nav-links .nav-link{display:none}
-    .ledger{padding-top:calc(var(--nav-h) + 3rem)}
+    .ledger{padding-top:3rem}
     .tablet{padding:1.5rem 1.2rem 1.3rem;position:relative;background:linear-gradient(180deg,rgba(217,201,166,.07),rgba(217,201,166,.015) 55%),linear-gradient(155deg,#241c15,#1c1713 72%);border:1px solid rgba(201,162,39,.34);box-shadow:inset 0 0 0 1px rgba(74,59,38,.5),0 1px 0 rgba(0,0,0,.4)}
     .sec-head h2{font-size:var(--fs-sm);font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.95rem}
   }
 </style>
 <link rel="stylesheet" href="snes.css?v=51">
+<link rel="stylesheet" href="rail.css?v=20260923a">
 <noscript><style>.rv{opacity:1;transform:none}/* v5-fresh: mobile touch targets */
 @media(max-width:900px){.ver-chiprow a{min-height:44px;display:inline-flex;align-items:center;min-height:44px;display:inline-flex;align-items:center;justify-content:center}.hist-toggle{min-height:44px;min-height:44px}}
 </style></noscript>
@@ -201,19 +181,42 @@
 </head>
 <body>
 
-<nav class="nav">
-  <a class="nav-brand" href="adventure.html">
-    <img src="/assets/logo-cauldron.jpg" alt="">
-    <span>The Cauldron</span>
-  </a>
-  <div class="nav-links">
-    <a class="nav-link" href="pricing.html" title="Pricing & subscriptions">Paths</a>
-    <a class="nav-link" href="models.html" title="The AI models behind the game">The Minds</a>
-    <a class="nav-link active" href="releases.html" title="Release notes / changelog">Ledger</a>
-    <a class="nav-link" href="help.html" title="How to Play guide">Guide</a>
-    <a class="nav-cta btn-gold" href="login.html#gate" title="Sign in or create your adventurer">Enter</a>
+<header class="rite-rail">
+  <div class="rr-brand">
+    <span class="rr-sigil">⚗</span>
+    <span class="rr-name">The Lore Weaver's Cauldron</span>
+    <span class="rr-tag">RELEASE NOTES</span>
   </div>
-</nav>
+  <div class="rr-mid"></div>
+  <div class="rr-actions">
+    <div class="rr-menu">
+      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+      <div class="rr-drop" id="rr-drop">
+        <div class="rr-ghead">At the Table</div>
+        <a href="chat.html">⚔ To the Table</a>
+        <a href="adventure.html">🏰 The Crossroads</a>
+        <a href="newgame.html">✨ New Adventure</a>
+        <a href="characters.html">🔥 The Forge</a>
+        <div class="rr-ghead">The Archive</div>
+        <a href="character.html">🧙 Character</a>
+        <a href="npcs.html">👥 NPCs</a>
+        <a href="platser.html">🗺 The Map</a>
+        <a href="loggbok.html">📜 Logbook</a>
+        <a href="facts.html">✦ Facts</a>
+        <div class="rr-ghead">The Ledger</div>
+        <a href="help.html">❓ How to Play</a>
+        <a href="mechanics.html">📐 Mechanics</a>
+        <a href="models.html">🧠 The Minds</a>
+        <a href="pricing.html">🜲 Paths</a>
+        <a href="releases.html">📓 Release Notes</a>
+        <a href="screenshots.html">🖼 Screens</a>
+        <div class="rr-ghead">Account</div>
+        <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+        <a href="login.html" id="rr-auth">🔒 Log out</a>
+      </div>
+    </div>
+  </div>
+</header>
 
 <section class="ledger">
 <div class="page-eyebrow">THE SCRIBE · WHAT IS NEW</div>
@@ -270,7 +273,7 @@
         <li><span class="tag ai">Try it</span> <b>Qwen 3.8 Flash — free for every account</b> — set it as your Dungeon Master in Settings, or pick it when you start a new adventure.</li>
         <li><span class="tag fix">Fixed</span> <b>Combat that keeps its own count</b> — battle rounds now turn over by themselves once you and every living enemy have acted, enemies that share a name can no longer share one action flag, and each round closes with a single honest health snapshot instead of a stream of stale numbers.</li>
         <li><span class="tag ux">New</span> <b>Give your composer room</b> — the divider between the DM's log and your own words drags to resize (double-click resets it), and the text box is generous on desktop and mobile. The CLI prompt dropped its @location prefix: "user %" is enough.</li>
-        <li><span class="tag fix">Fixed</span> <b>Lighter portraits, honest voices</b> — party and avatar tiles now load server-scaled thumbnails instead of full-size paintings, and free players see only the voices they can actually use in the voice picker.</li>
+        <li><span class="tag fix">Fixed</span> <b>Lighter portraits, honest voices</b> — party and avatar tiles now load server-scaled thumbnails instead of full-size images, and free players see only the voices they can actually use in the voice picker.</li>
       </ul>
     </div>
     <div class="tablet">
@@ -375,11 +378,11 @@
     <div class="tablet">
       <div class="tablet-h">
         <span class="chip feat">FACES</span>
-        <span class="tablet-title">Painting for everyone</span>
+        <span class="tablet-title">Image generation for everyone</span>
       </div>
       <ul class="feat">
-        <li><span class="tag feat">FEAT</span><b>StepFun painting is free</b> — paint your adventurer, the Dungeon Master and every NPC you meet, free-prompt or from the sheet, on the free road.</li>
-        <li><span class="tag feat">FEAT</span><b>Qwen Image 3 Pro joins the premium brushes</b> — the new engine from the Token Plan stands beside Wan 2.7 Pro in the Patron palette, up to <b>10 premium paintings a day</b> between them.</li>
+        <li><span class="tag feat">FEAT</span><b>StepFun image generation is free</b> — generate your adventurer, the Dungeon Master and every NPC you meet, free-prompt or from the sheet, on the free road.</li>
+        <li><span class="tag feat">FEAT</span><b>Qwen Image 3 Pro joins the premium brushes</b> — the new engine from the Token Plan stands beside Wan 2.7 Pro in the Patron palette, up to <b>10 premium image generations a day</b> between them.</li>
       </ul>
     </div>
     <div class="tablet">
@@ -475,7 +478,7 @@
       <ul class="feat">
         <li><span class="tag feat">FEAT</span><b>One turn per message, nothing hidden</b> — your chat message costs exactly 1 turn. The guardian, threads, summaries, day-entries and battle AI run free inside it — the internal machinery is never billed against you.</li>
         <li><span class="tag feat">FEAT</span><b>TTS counts once, cache hits free</b> — a synthesized voice costs 1 turn the first time; replaying a cached clip costs nothing.</li>
-        <li><span class="tag feat">FEAT</span><b>Image turns</b> — painted portraits charge a single turn, with the price shown before you paint.</li>
+        <li><span class="tag feat">FEAT</span><b>Image turns</b> — AI-generated portraits charge a single turn, with the price shown before you generate.</li>
         <li><span class="tag ux">UX</span><b>Quota you can read</b> — hover the turn pill for the honest breakdown, see the big refresh timer, and open the full profile modal from the top bar: turns, tier, and subscription in one place.</li>
         <li><span class="tag ux">UX</span><b>Free models, everywhere</b> — OpenRouter free models now sit in the regular DM, Guardian and Extraction pickers (and character creation) — no separate experiment row — with backend validation for every tier.</li>
       </ul>
@@ -500,8 +503,8 @@
         <li><span class="tag ux">UX</span><b>Chat avatars ~3× larger</b> — the DM and player portraits now stand at 120px (84px on mobile), stacked above their messages instead of squeezed beside them.</li>
         <li><span class="tag fix">FIX</span><b>Player avatar above the bubble</b> — the portrait sits above your message, matching the DM's side.</li>
         <li><span class="tag fix">FIX</span><b>Soft rounded frames</b> — avatar frames follow the table's soft design language (10–12px radius) instead of sharp corners.</li>
-        <li><span class="tag fix">FIX</span><b>Refresh actually refreshes</b> — painting a new DM or player portrait now updates the chat in place; wrong selectors no longer keep the old face.</li>
-        <li><span class="tag feat">FEAT</span><b>Avatar gallery arrows</b> — flip through your painted faces with arrows, and inactive portraits are purged after 30 days.</li>
+        <li><span class="tag fix">FIX</span><b>Refresh actually refreshes</b> — generating a new DM or player portrait now updates the chat in place; wrong selectors no longer keep the old face.</li>
+        <li><span class="tag feat">FEAT</span><b>Avatar gallery arrows</b> — flip through your generated faces with arrows, and inactive portraits are purged after 30 days.</li>
       </ul>
     </div>
     <div class="tablet">
@@ -530,9 +533,9 @@
         <span class="tablet-title">Faces you can look in the eye</span>
       </div>
       <ul class="feat">
-        <li><span class="tag feat">FEAT</span><b>Portrait previews</b> — tap your adventurer's portrait in the summoning circle and it opens large, with <b>Re-roll portrait</b> that paints a fresh face without touching your stats.</li>
-        <li><span class="tag feat">FEAT</span><b>Your account profile</b> — click your portrait in the top bar and the mirror opens: stats, tier, and one <b>Paint your account profile avatar</b> button with the engine dropdown, exactly like your adventurer's card.</li>
-        <li><span class="tag feat">FEAT</span><b>Known faces first</b> — NPCs with painted portraits rise to the top of the Known NPCs list, so the faces you care about are always in view.</li>
+        <li><span class="tag feat">FEAT</span><b>Portrait previews</b> — tap your adventurer's portrait in the summoning circle and it opens large, with <b>Re-roll portrait</b> that generates a fresh face without touching your stats.</li>
+        <li><span class="tag feat">FEAT</span><b>Your account profile</b> — click your portrait in the top bar and the mirror opens: stats, tier, and one <b>Generate your account profile avatar</b> button with the engine dropdown, exactly like your adventurer's card.</li>
+        <li><span class="tag feat">FEAT</span><b>Known faces first</b> — NPCs with AI-generated portraits rise to the top of the Known NPCs list, so the faces you care about are always in view.</li>
       </ul>
     </div>
     <div class="tablet">
@@ -597,7 +600,7 @@
       </div>
       <ul class="feat">
         <li><span class="tag feat">FEAT</span><b>DeepSeek and Qwen take the chair</b> — the premium Dungeon Masters are here. The full reasoning power of <b>Qwen</b> and <b>DeepSeek</b> sits behind your adventure: massive storylines, quests that hold together, and a DM that thinks before it speaks — without breaking immersion.</li>
-        <li><span class="tag feat">FEAT</span><b>Wan 2.7 painting</b> — the premium image engine paints your adventurer, the DM and every face you meet in sharp, high-resolution portraits.</li>
+        <li><span class="tag feat">FEAT</span><b>Wan 2.7 image generation</b> — the premium image engine generates your adventurer, the DM and every face you meet in sharp, high-resolution portraits.</li>
         <li><span class="tag snd">SOUND</span><b>Qwen 3.0 TTS narration</b> — a premium narrator's voice joins the Patron path, reading the Dungeon Master's words aloud in full voice.</li>
       </ul>
     </div>
@@ -630,7 +633,7 @@
         <span class="tablet-title">Faces you keep</span>
       </div>
       <ul class="feat">
-        <li><span class="tag feat">FEAT</span><b>Download your portraits</b> — every painted face in The Forge can be saved to your own keep, even long after the benefits that painted it have passed.</li>
+        <li><span class="tag feat">FEAT</span><b>Download your portraits</b> — every generated face in The Forge can be saved to your own keep, even long after the benefits that generated it have passed.</li>
         <li><span class="tag feat">FEAT</span><b>Export carries the images</b> — campaign exports and Forge exports now bundle every portrait, so your adventure leaves with its faces.</li>
       </ul>
     </div>
@@ -655,12 +658,12 @@
     <div class="tablet">
       <div class="tablet-h">
         <span class="chip ai">WAN 2.7</span>
-        <span class="tablet-title">The premium painter arrives</span>
+        <span class="tablet-title">The premium brush arrives</span>
       </div>
       <ul class="feat">
-        <li><span class="tag feat">FEAT</span><b>Wan 2.7 painting — Patron tier (30€)</b> — the premium image engine now paints your adventurer, the DM and every NPC in sharp high-resolution portraits, in seconds. Gated honestly on every page: login, pricing and the model hall all carry the path.</li>
-        <li><span class="tag ai">AI</span><b>Choose the engine at the easel</b> — a new engine picker sits in the avatar hall: <b>StepFun (Support, 3€)</b> or <b>Wan 2.7 (Patron, 30€)</b>. The same choice follows you into the Vault, so a Patron can paint Wan portraits everywhere a face can be painted.</li>
-        <li><span class="tag feat">FEAT</span><b>StepFun painting unlocks with the Support top-up (3€)</b> — the free-prompt easel costs nothing extra on any paid path, so your adventurer, the DM and the faces you meet can all be painted with StepFun.</li>
+        <li><span class="tag feat">FEAT</span><b>Wan 2.7 image generation — Patron tier (30€)</b> — the premium image engine now generates your adventurer, the DM and every NPC in sharp high-resolution portraits, in seconds. Gated honestly on every page: login, pricing and the model hall all carry the path.</li>
+        <li><span class="tag ai">AI</span><b>Choose the engine</b> — a new engine picker sits in the avatar hall: <b>StepFun (Support, 3€)</b> or <b>Wan 2.7 (Patron, 30€)</b>. The same choice follows you into the Vault, so a Patron can generate Wan portraits everywhere a face can be generated.</li>
+        <li><span class="tag feat">FEAT</span><b>StepFun image generation unlocks with the Support top-up (3€)</b> — the free-prompt option costs nothing extra on any paid path, so your adventurer, the DM and the faces you meet can all be generated with StepFun.</li>
       </ul>
     </div>
     <div class="tablet">
@@ -669,8 +672,8 @@
         <span class="tablet-title">Your face, your adventurer</span>
       </div>
       <ul class="feat">
-        <li><span class="tag feat">FEAT</span><b>Your profile portrait is separate from your adventurer's</b> — the pill in the header is <i>your</i> face at the table (painted with StepFun, Support feature 3€), while the party card and character sheet keep your adventurer's portrait. Paint one without touching the other.</li>
-        <li><span class="tag ux">UX</span><b>Click the portrait to repaint it</b> — the header pill opens the profile easel; any card in the realm opens its own.</li>
+        <li><span class="tag feat">FEAT</span><b>Your profile portrait is separate from your adventurer's</b> — the pill in the header is <i>your</i> face at the table (generated with StepFun, Support feature 3€), while the party card and character sheet keep your adventurer's portrait. Generate one without touching the other.</li>
+        <li><span class="tag ux">UX</span><b>Click the portrait to generate a new one</b> — the header pill opens the profile easel; any card in the realm opens its own.</li>
       </ul>
     </div>
     <div class="tablet">
@@ -986,5 +989,6 @@
 </script>
 <script src="i18n.js?v=20260906a"></script>
 <script src="sprites.js?v=20260806b"></script>
+<script src="rail.js?v=20260923a"></script>
 </body>
 </html>

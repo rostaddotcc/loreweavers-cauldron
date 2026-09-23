@@ -207,7 +207,7 @@ const I18N = (() => {
     '? Skriv fritt — slå, smyg, tala, kasta en besvärjelse…': ' do? Write freely — fight, sneak, talk, cast a spell…',
     '⚔ Utför': '⚔ Act',
     '🕯️ Låter skuggorna tala…': '🕯️ Letting the shadows speak…',
-    '🌫️ Målar dimman över dalen…': '🌫️ Painting the fog over the valley…',
+    '🌫️ Målar dimman över dalen…': '🌫️ Fog drifting over the valley…',
     '📜 Bläddrar i ödets bok…': '📜 Leafing through the book of fate…',
     '🎭 Visar fram nästa scen…': '🎭 Conjuring the next scene…',
     '🕰️ Tittar bakåt i tiden…': '🕰️ Looking back through time…',

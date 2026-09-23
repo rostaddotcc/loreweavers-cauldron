@@ -15,6 +15,8 @@
   --gold:#c9a227; --gold-bright:#e8c65a;
   --blood:#8b1a2a; --blood-bright:#d43a4d;
   --ember:#d4691e; --arcane:#7b4fd4; --poison:#5a9a4e; --teal:#4e8a93;
+  --gold-rgb:201,162,39;
+  --font-display:'Cinzel',serif; --font-accent:'Cinzel',serif;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{
@@ -183,16 +185,6 @@ body{
 
 .book-hint{text-align:center;font-style:italic;font-size:.74rem;color:var(--bone-dim);margin-top:1.1rem}
 
-/* ===== header nav ===== */
-.bos-nav{position:relative;z-index:3;max-width:1560px;margin:0 auto;padding:1.1rem 1.6rem 0;
-  display:flex;align-items:center;justify-content:space-between;gap:1rem}
-.bos-nav .brand{font-family:'Cinzel',serif;font-weight:900;font-size:.82rem;letter-spacing:.18em;
-  text-transform:uppercase;color:var(--gold-bright);text-shadow:0 0 14px rgba(201,162,39,.35)}
-.bos-nav .back{font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;
-  color:var(--bone-dim);border:1px solid var(--edge);background:rgba(14,14,20,.7);padding:.5rem .9rem;
-  text-decoration:none;transition:color .2s,border-color .2s}
-.bos-nav .back:hover{color:var(--gold-bright);border-color:var(--gold)}
-
 /* ===== portrait lightbox (shared pattern, audit A2 §4.3) ===== */
 .bos-lightbox{position:fixed;inset:0;z-index:11000;display:flex;align-items:center;justify-content:center;
   background:rgba(4,2,8,.94);opacity:0;visibility:hidden;transition:opacity .22s ease,visibility .22s}
@@ -250,21 +242,54 @@ body{
   .rv{opacity:1;transform:none;transition:none}
 }
 </style>
+<link rel="stylesheet" href="../rail.css?v=20260923a">
 </head>
 <body>
 <div class="grain"></div><div class="vignette"></div>
 
-<nav class="bos-nav">
-  <span class="brand">The Lore Weaver's Cauldron</span>
-  <a class="back" href="../login.html">← Back to the Gate</a>
-</nav>
+<header class="rite-rail">
+  <div class="rr-brand">
+    <span class="rr-sigil">⚗</span>
+    <span class="rr-name">The Lore Weaver's Cauldron</span>
+    <span class="rr-tag">THE BOOK</span>
+  </div>
+  <div class="rr-mid"></div>
+  <div class="rr-actions">
+    <div class="rr-menu">
+      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+      <div class="rr-drop" id="rr-drop">
+        <div class="rr-ghead">At the Table</div>
+        <a href="../chat.html">⚔ To the Table</a>
+        <a href="../adventure.html">🏰 The Crossroads</a>
+        <a href="../newgame.html">✨ New Adventure</a>
+        <a href="../characters.html">🔥 The Forge</a>
+        <div class="rr-ghead">The Archive</div>
+        <a href="../character.html">🧙 Character</a>
+        <a href="../npcs.html">👥 NPCs</a>
+        <a href="../platser.html">🗺 The Map</a>
+        <a href="../loggbok.html">📜 Logbook</a>
+        <a href="../facts.html">✦ Facts</a>
+        <div class="rr-ghead">The Ledger</div>
+        <a href="../help.html">❓ How to Play</a>
+        <a href="../mechanics.html">📐 Mechanics</a>
+        <a href="../models.html">🧠 The Minds</a>
+        <a href="../pricing.html">🜲 Paths</a>
+        <a href="../releases.html">📓 Release Notes</a>
+        <a href="../screenshots.html">🖼 Screens</a>
+        <div class="rr-ghead">Account</div>
+        <a href="../admin.html" id="rr-admin" hidden>👑 Admin</a>
+        <a href="../login.html" id="rr-auth">🔒 Log out</a>
+      </div>
+    </div>
+  </div>
+</header>
 
 <div class="wrap">
       <div class="sec-head rv in">
         <div class="eyebrow">✦ The Loreweaver's Book of Souls ✦</div>
         <h2>Summoned in the Cauldron</h2>
         <p class="sub">Every face in this realm was summoned by a player. Turn the pages — equipment, spells and all.</p>
-        <p class="disclosure">Only adventurers and NPCs painted by the Loreweaver appear in these pages.</p>
+        <p class="disclosure">Only adventurers and NPCs portrayed by the Loreweaver appear in these pages.</p>
       </div>
 
   <div class="books">
@@ -606,7 +631,7 @@ document.addEventListener('keydown', e=>{
 })();
 
 /* ═══ click-to-enlarge on .art faces — shared lightbox pattern (audit A2 §4.3) ═══
-   Clicking the painted portrait area (art/scrim, above the .body text block)
+   Clicking the generated portrait area (art/scrim, above the .body text block)
    opens the lightbox; clicking elsewhere still turns the page. */
 function openArtLightbox(pg){
   const art = pg.querySelector('.pg-card .art, .npc-card .art');
@@ -631,5 +656,6 @@ function closeArtLightbox(){
 }
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeArtLightbox(); });
 </script>
+<script src="../rail.js?v=20260923a"></script>
 </body>
 </html>

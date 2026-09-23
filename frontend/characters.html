@@ -24,8 +24,8 @@
     background-attachment:fixed;overflow-x:hidden;
   }.grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.05;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}#embers{position:fixed;inset:0;z-index:1;pointer-events:none}.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(4,2,8,.85)}.app{position:relative;z-index:2;max-width:1080px;margin:0 auto;padding:2rem 1.25rem 5rem}
-  /* ── Head ── */
-  .forge-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:2.4rem;flex-wrap:wrap;gap:.8rem}.forge-head .brand{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:var(--fs-chat);color:var(--gold-bright);letter-spacing:.06em;text-shadow:0 0 14px rgba(var(--gold-bright-rgb),.3)}.forge-head .back{font-family:var(--font-display,'Cinzel',serif);font-size:var(--fs-tiny);letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .9rem;cursor:pointer;transition:all .2s;border-radius:2px;text-decoration:none}.forge-head .back:hover{color:var(--gold-bright);border-color:var(--gold)}
+  
+  
   .destiny-title{text-align:center;margin-bottom:.4rem}.destiny-title .over{font-family:var(--font-display,'Cinzel',serif);font-size:.66rem;letter-spacing:.42em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.55rem}.destiny-title h1{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:clamp(1.8rem,5vw,2.7rem);color:var(--bone-bright);letter-spacing:.05em}.destiny-sub{text-align:center;font-style:italic;color:var(--bone-dim);font-size:var(--fs-base);margin-bottom:2.2rem}.rune-divider{display:flex;align-items:center;gap:.9rem;margin:0 auto 2.4rem;max-width:380px}.rune-divider::before,.rune-divider::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.5}.rune-divider span{color:var(--gold);text-shadow:0 0 8px rgba(var(--gold-rgb),.6)}
   .section-label{font-family:var(--font-display,'Cinzel',serif);font-size:var(--fs-tiny);letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin:2.4rem 0 1rem;display:flex;align-items:center;gap:.8rem}.section-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(var(--gold-rgb),.4),transparent)}
   /* ── Forge box (prompt) ── */
@@ -124,6 +124,7 @@
 @media(max-width:900px){.pv-go,.pv-reroll{min-height:44px}.insp-close,.av-lb-close{min-width:44px;min-height:44px}select.dark-select{font-size:16px}}
 </style>
 <link rel="stylesheet" href="snes.css?v=51">
+<link rel="stylesheet" href="rail.css?v=20260923a">
 <script src="sprites.js?v=20260806b"></script>
 <script src="fonts.js?v=20260806b"></script>
 </head>
@@ -131,9 +132,42 @@
 <div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
 
 <div class="app">
-  <header class="forge-head">
-    <span class="brand">The Lore Weaver's Cauldron</span>
-    <a class="back btn-ghost" href="adventure.html">← Back to the Crossroads</a>
+  <header class="rite-rail">
+    <div class="rr-brand">
+      <span class="rr-sigil">⚗</span>
+      <span class="rr-name">The Lore Weaver's Cauldron</span>
+      <span class="rr-tag">THE FORGE</span>
+    </div>
+    <div class="rr-mid"></div>
+    <div class="rr-actions">
+        <a class="rr-btn" href="adventure.html">← Crossroads</a>
+      <div class="rr-menu">
+        <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+        <div class="rr-drop" id="rr-drop">
+          <div class="rr-ghead">At the Table</div>
+          <a href="chat.html">⚔ To the Table</a>
+          <a href="adventure.html">🏰 The Crossroads</a>
+          <a href="newgame.html">✨ New Adventure</a>
+          <a href="characters.html">🔥 The Forge</a>
+          <div class="rr-ghead">The Archive</div>
+          <a href="character.html">🧙 Character</a>
+          <a href="npcs.html">👥 NPCs</a>
+          <a href="platser.html">🗺 The Map</a>
+          <a href="loggbok.html">📜 Logbook</a>
+          <a href="facts.html">✦ Facts</a>
+          <div class="rr-ghead">The Ledger</div>
+          <a href="help.html">❓ How to Play</a>
+          <a href="mechanics.html">📐 Mechanics</a>
+          <a href="models.html">🧠 The Minds</a>
+          <a href="pricing.html">🜲 Paths</a>
+          <a href="releases.html">📓 Release Notes</a>
+          <a href="screenshots.html">🖼 Screens</a>
+          <div class="rr-ghead">Account</div>
+          <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+          <a href="login.html" id="rr-auth">🔒 Log out</a>
+        </div>
+      </div>
+    </div>
   </header>
 
   <div class="destiny-title">
@@ -288,7 +322,7 @@ API.me().then(u => {
 // Wan / Qwen Image 3 Pro = Patron (30€). Returnerar false + informerar.
 function forgeAvatarGenGate(provider) {
   if ((provider === 'wan' || provider === 'qwen') && _forgeTier !== 'tier2' && _forgeTier !== 'lifetime') {
-    toast('🔒 Wan 2.7 / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to paint with the premium engines.');
+    toast('🔒 Wan 2.7 / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to generate with the premium engines.');
     return false;
   }
   return true; // StepFun = gratis sedan 2026-08-15
@@ -533,13 +567,13 @@ async function openInspect(charId) {
     ${storyHtml}
     <div style="margin-top:1rem">
       <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">🎨 YOUR OWN WORDS (optional)</div>
-      <textarea id="insp-prompt-input" aria-label="Optional: describe exactly what you want painted" placeholder="Optional: describe exactly what you want painted… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)" style="width:100%;min-height:52px;padding:.5rem .6rem;font-family:var(--font-body,'Spectral',serif);font-size:.85rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>
-      <div style="font-size:.72rem;color:var(--bone-dim);margin-top:.35rem">Overrides the auto-built prompt from your sheet — describe exactly what you want painted.</div>
+      <textarea id="insp-prompt-input" aria-label="Optional: describe exactly what you want to see" placeholder="Optional: describe exactly what you want to see… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)" style="width:100%;min-height:52px;padding:.5rem .6rem;font-family:var(--font-body,'Spectral',serif);font-size:.85rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>
+      <div style="font-size:.72rem;color:var(--bone-dim);margin-top:.35rem">Overrides the auto-built prompt from your sheet — describe exactly what you want to see.</div>
     </div>
     <div class="pv-actions" style="margin-top:1.4rem">
       <button class="pv-go btn-gold" onclick="startNewAdventure('${esc(charId)}')">🌟 Create New Adventure</button>
       <button class="pv-reroll btn-ghost" onclick="useCharacter('${esc(charId)}')">⚔️ Use in Current Adventure</button>
-      <button class="pv-reroll btn-ghost" id="insp-avatar-btn" onclick="genAvatar('${esc(charId)}')">${entry.avatar ? '🎨 Reroll Portrait' : '🎨 Paint Portrait'}</button>
+      <button class="pv-reroll btn-ghost" id="insp-avatar-btn" onclick="genAvatar('${esc(charId)}')">${entry.avatar ? '🎨 Reroll Portrait' : '🎨 Generate Portrait'}</button>
       ${entry.avatar ? `<button class="pv-reroll btn-ghost" onclick="downloadVaultAvatar('${esc(charId)}')">⬇ Portrait</button>` : ''}
       <button class="pv-reroll btn-blood" style="color:var(--blood-bright)" onclick="deleteCharacter('${esc(charId)}','${esc(ch.name||'')}')">🗑 Delete</button>
     </div>`;
@@ -667,17 +701,17 @@ async function deleteCharacter(charId, name) {
 async function genAvatar(charId) {
   const btn = document.getElementById('insp-avatar-btn');
   if (!forgeAvatarGenGate('stepfun')) return;
-  if (btn) { btn.disabled = true; btn.textContent = '🎨 Painting…'; }
+  if (btn) { btn.disabled = true; btn.textContent = '🎨 Generating…'; }
   try {
     const freePrompt = (document.getElementById('insp-prompt-input') || {}).value || '';
     const usedWords = !!freePrompt.trim();
     const res = await API.vaultGenerateAvatar(charId, Date.now() % 1000000, null, freePrompt);
-    toast(usedWords ? '🎨 Portrait painted — used your words' : '🎨 Portrait painted — used your character sheet');
+    toast(usedWords ? '🎨 Portrait generated — used your words' : '🎨 Portrait generated — used your character sheet');
     openInspect(charId);   // rendera om med ny bild
     loadVault();
   } catch (e) {
-    toast('⚠ ' + (e.message || 'Could not paint portrait'));
-    if (btn) { btn.disabled = false; btn.textContent = '🎨 Paint Portrait'; }
+    toast('⚠ ' + (e.message || 'Could not generate portrait'));
+    if (btn) { btn.disabled = false; btn.textContent = '🎨 Generate Portrait'; }
   }
 }
 
@@ -743,5 +777,6 @@ if(!RM)tick();
 
 loadVault();
 </script>
+<script src="rail.js?v=20260923a"></script>
 </body>
 </html>

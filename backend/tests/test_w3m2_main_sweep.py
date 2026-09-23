@@ -106,9 +106,9 @@ def test_patch_inventory_keeps_price_gp():
     assert norm["category"] == "armor" and norm["weight"] == 1.0
 
 
-# ── Task 3: WAN 403 säger daily painting cap, inte turns ──────────────────
+# ── Task 3: WAN 403 säger daily image cap, inte turns ─────────────────────
 
-def test_wan_quota_403_says_painting_cap(users_file):
+def test_wan_quota_403_says_image_cap(users_file):
     users = {"bob": {"password_hash": "x", "salt": "y", "role": "player",
                      "wan_used_today": main.WAN_DAILY_LIMIT,
                      "wan_reset_date": main._today_str(),
@@ -119,8 +119,8 @@ def test_wan_quota_403_says_painting_cap(users_file):
     assert ei.value.status_code == 403
     detail = ei.value.detail
     msg = detail if isinstance(detail, str) else detail.get("message", "")
-    assert "painting" in msg.lower()
-    assert "daily painting cap" in msg.lower()
+    assert "image" in msg.lower()
+    assert "daily image cap" in msg.lower()
     # ärlig text: särskiljer kvot från turn-saldo
     assert "not your turn balance" in msg.lower()
 

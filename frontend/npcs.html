@@ -22,8 +22,7 @@
       var(--ink);
     display:flex;flex-direction:column;overflow:hidden;
   }.grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.045;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}#embers{position:fixed;inset:0;z-index:0;pointer-events:none}.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 150px 50px rgba(4,2,8,.7)}/* ═══════════ Topbar ═══════════ */.topbar{position:relative;z-index:5;display:flex;align-items:center;gap:1rem;padding:.7rem 1.2rem;
-    background:linear-gradient(180deg,var(--stone-2),color-mix(in srgb, var(--stone) 95%, transparent));border-bottom:1px solid var(--edge);box-shadow:0 4px 20px rgba(0,0,0,.5)}.topbar .brand{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:var(--fs-base);color:var(--gold-bright);letter-spacing:.06em;white-space:nowrap;text-shadow:0 0 14px rgba(var(--gold-bright-rgb),.3)}.topbar .page-tag{font-size:var(--fs-sm);font-style:italic;color:var(--bone-dim);border-left:1px solid var(--edge);padding-left:1rem}.topbar .spacer{flex:1}.top-btn{font-family:var(--font-display,'Cinzel',serif);font-size:var(--fs-tiny);letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:8px;white-space:nowrap;text-decoration:none}.top-btn:hover{color:var(--gold-bright);border-color:var(--gold);box-shadow:0 0 12px -3px rgba(var(--gold-bright-rgb),.4)}.top-btn.danger:hover{color:var(--blood-bright);border-color:var(--blood-bright);box-shadow:0 0 12px -3px rgba(var(--blood-bright-rgb),.4)}/* ═══════════ Layout ═══════════ */.layout{position:relative;z-index:2;flex:1;display:flex;min-height:0}/* ── Vänster: minnets hall ── */.hall{width:320px;flex-shrink:0;display:flex;flex-direction:column;background:linear-gradient(180deg,var(--stone),var(--ink));border-right:1px solid var(--edge)}.hall-head{padding:1.1rem 1rem .8rem;border-bottom:1px solid var(--edge)}.hall-title{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:var(--fs-base);color:var(--bone-bright);letter-spacing:.05em;margin-bottom:.15rem}.hall-sub{font-size:var(--fs-sm);font-style:italic;color:var(--bone-dim)}.hall-search{padding:.8rem 1rem .4rem}.hall-search input{width:100%;font-family:var(--font-body,'Spectral',serif);font-size:1rem;color:var(--bone-bright);background:var(--stone-3);border:1px solid var(--edge);padding:.55rem .8rem;outline:none;border-radius:8px;transition:border-color .2s,box-shadow .2s}.hall-search input::placeholder{color:var(--bone-dim);font-style:italic}.hall-search input:focus{border-color:var(--gold);box-shadow:0 0 14px -4px rgba(var(--gold-bright-rgb),.35)}.filters{display:flex;gap:.35rem;flex-wrap:wrap;padding:.8rem 1rem;border-bottom:1px solid color-mix(in srgb, var(--edge) 50%, transparent)}.fchip{font-family:var(--font-display,'Cinzel',serif);font-size:.69rem;letter-spacing:.12em;text-transform:uppercase;background:transparent;border:1px solid var(--edge);color:var(--bone-dim);padding:.32rem .6rem;cursor:pointer;border-radius:7px;transition:all .2s}.fchip:hover{color:var(--bone-bright);border-color:var(--bone-dim)}.fchip.on{color:var(--ink);background:var(--gold);border-color:var(--gold);box-shadow:0 0 10px -2px rgba(var(--gold-bright-rgb),.5)}.npc-list{flex:1;overflow-y:auto;padding:.8rem .8rem 1rem;scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:var(--edge-hi) transparent}.npc-group{margin-bottom:.2rem}.npc-letter{position:sticky;top:0;z-index:5;font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;color:var(--gold-bright);background:linear-gradient(180deg,var(--stone-2),var(--stone));padding:.55rem .45rem .4rem;margin:0 -.4rem .35rem;border-bottom:1px solid var(--gold);box-shadow:0 4px 12px -4px rgba(0,0,0,.7),0 1px 0 rgba(var(--gold-bright-rgb),.25);text-shadow:0 1px 2px #000;border-radius:2px}.npc-letter::after{content:'';position:absolute;left:.45rem;right:.45rem;bottom:0;height:1px;background:linear-gradient(90deg,transparent,rgba(var(--gold-bright-rgb),.35),transparent)}.npc-list::after{content:'';display:block;height:2rem;position:sticky;bottom:-1rem;background:linear-gradient(180deg,transparent,rgba(0,0,0,.28));pointer-events:none;margin:-2rem -.8rem 0;border-radius:2px}.npc-list::-webkit-scrollbar{width:8px}.npc-list::-webkit-scrollbar-thumb{background:var(--edge);border-radius:4px;border:2px solid var(--stone)}.npc-list::-webkit-scrollbar-thumb:hover{background:var(--edge-hi)}.ncard{position:relative;display:flex;gap:.75rem;align-items:center;padding:.75rem .7rem;margin-bottom:.55rem;cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}#embers{position:fixed;inset:0;z-index:0;pointer-events:none}.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 150px 50px rgba(4,2,8,.7)}/* ═══════════ Topbar ═══════════ */.top-btn{font-family:var(--font-display,'Cinzel',serif);font-size:var(--fs-tiny);letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:8px;white-space:nowrap;text-decoration:none}.top-btn:hover{color:var(--gold-bright);border-color:var(--gold);box-shadow:0 0 12px -3px rgba(var(--gold-bright-rgb),.4)}.top-btn.danger:hover{color:var(--blood-bright);border-color:var(--blood-bright);box-shadow:0 0 12px -3px rgba(var(--blood-bright-rgb),.4)}/* ═══════════ Layout ═══════════ */.layout{position:relative;z-index:2;flex:1;display:flex;min-height:0}/* ── Vänster: minnets hall ── */.hall{width:320px;flex-shrink:0;display:flex;flex-direction:column;background:linear-gradient(180deg,var(--stone),var(--ink));border-right:1px solid var(--edge)}.hall-head{padding:1.1rem 1rem .8rem;border-bottom:1px solid var(--edge)}.hall-title{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:var(--fs-base);color:var(--bone-bright);letter-spacing:.05em;margin-bottom:.15rem}.hall-sub{font-size:var(--fs-sm);font-style:italic;color:var(--bone-dim)}.hall-search{padding:.8rem 1rem .4rem}.hall-search input{width:100%;font-family:var(--font-body,'Spectral',serif);font-size:1rem;color:var(--bone-bright);background:var(--stone-3);border:1px solid var(--edge);padding:.55rem .8rem;outline:none;border-radius:8px;transition:border-color .2s,box-shadow .2s}.hall-search input::placeholder{color:var(--bone-dim);font-style:italic}.hall-search input:focus{border-color:var(--gold);box-shadow:0 0 14px -4px rgba(var(--gold-bright-rgb),.35)}.filters{display:flex;gap:.35rem;flex-wrap:wrap;padding:.8rem 1rem;border-bottom:1px solid color-mix(in srgb, var(--edge) 50%, transparent)}.fchip{font-family:var(--font-display,'Cinzel',serif);font-size:.69rem;letter-spacing:.12em;text-transform:uppercase;background:transparent;border:1px solid var(--edge);color:var(--bone-dim);padding:.32rem .6rem;cursor:pointer;border-radius:7px;transition:all .2s}.fchip:hover{color:var(--bone-bright);border-color:var(--bone-dim)}.fchip.on{color:var(--ink);background:var(--gold);border-color:var(--gold);box-shadow:0 0 10px -2px rgba(var(--gold-bright-rgb),.5)}.npc-list{flex:1;overflow-y:auto;padding:.8rem .8rem 1rem;scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:var(--edge-hi) transparent}.npc-group{margin-bottom:.2rem}.npc-letter{position:sticky;top:0;z-index:5;font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;color:var(--gold-bright);background:linear-gradient(180deg,var(--stone-2),var(--stone));padding:.55rem .45rem .4rem;margin:0 -.4rem .35rem;border-bottom:1px solid var(--gold);box-shadow:0 4px 12px -4px rgba(0,0,0,.7),0 1px 0 rgba(var(--gold-bright-rgb),.25);text-shadow:0 1px 2px #000;border-radius:2px}.npc-letter::after{content:'';position:absolute;left:.45rem;right:.45rem;bottom:0;height:1px;background:linear-gradient(90deg,transparent,rgba(var(--gold-bright-rgb),.35),transparent)}.npc-list::after{content:'';display:block;height:2rem;position:sticky;bottom:-1rem;background:linear-gradient(180deg,transparent,rgba(0,0,0,.28));pointer-events:none;margin:-2rem -.8rem 0;border-radius:2px}.npc-list::-webkit-scrollbar{width:8px}.npc-list::-webkit-scrollbar-thumb{background:var(--edge);border-radius:4px;border:2px solid var(--stone)}.npc-list::-webkit-scrollbar-thumb:hover{background:var(--edge-hi)}.ncard{position:relative;display:flex;gap:.75rem;align-items:center;padding:.75rem .7rem;margin-bottom:.55rem;cursor:pointer;
     background:linear-gradient(160deg,var(--stone-2),var(--stone));border:1px solid var(--edge);border-radius:10px;
     transition:transform .22s cubic-bezier(.22,1,.36,1),border-color .22s,box-shadow .22s;overflow:hidden}.ncard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--nc,var(--edge));opacity:.5;transition:opacity .22s}.ncard:hover{transform:translateX(5px);border-color:var(--nc,var(--gold))}.ncard:hover::before{opacity:1}.ncard.sel{border-color:var(--nc,var(--gold));box-shadow:0 0 18px -6px var(--ng,rgba(var(--gold-rgb),.4));transform:translateX(5px)}.ncard.sel::before{opacity:1}.ncard .sigil{width:56px;height:56px;flex-shrink:0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;overflow:hidden;
     border:1px solid var(--nc,var(--edge));background:var(--stone-3);box-shadow:0 0 12px -3px var(--ng,transparent),inset 0 0 0 1px rgba(var(--gold-rgb),.14),inset 0 0 10px rgba(0,0,0,.14);transition:transform .25s}.ncard .sigil img{width:100%;height:100%;object-fit:cover;border-radius:0}.ncard:hover .sigil{transform:scale(1.1) rotate(-4deg)}.ncard .nm{font-weight:600;font-size:var(--fs-sm);color:var(--bone-bright);line-height:1.2}.ncard .rl{font-size:var(--fs-sm);font-style:italic;color:var(--bone-dim)}.ncard .badges{display:flex;gap:.3rem;margin-top:.25rem}.badge{font-family:var(--font-display,'Cinzel',serif);font-size:.63rem;letter-spacing:.1em;text-transform:uppercase;padding:.14rem .42rem;border:1px solid;border-radius:6px}.b-rel-allierad{color:var(--poison);border-color:color-mix(in srgb, var(--poison) 55%, transparent)}.b-rel-neutral{color:var(--bone-dim);border-color:var(--edge)}.b-quest{color:var(--ember);border-color:color-mix(in srgb, var(--ember) 55%, transparent)}.b-dead{color:var(--bone-dim);border-color:var(--edge);text-decoration:line-through}.b-hot{color:var(--gold-bright);border-color:rgba(var(--gold-bright-rgb),.55);text-shadow:0 0 6px rgba(var(--gold-bright-rgb),.35)}.b-mem{color:var(--arcane-bright);border-color:color-mix(in srgb, var(--arcane) 50%, transparent)}.b-seen{color:var(--teal);border-color:rgba(var(--teal-rgb),.5)}.hall-foot{padding:.7rem 1rem;border-top:1px solid var(--edge);font-size:var(--fs-tiny);font-style:italic;color:var(--bone-dim);text-align:center}/* ── Höger: dossier ── */.dossier{flex:1;overflow-y:auto;padding:1.8rem 2rem 4rem;min-width:0}.dossier::-webkit-scrollbar{width:8px}.dossier::-webkit-scrollbar-thumb{background:var(--edge);border-radius:4px}.empty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;color:var(--bone-dim)}.empty .rune{font-size:3rem;opacity:.4;animation:candle 4s ease-in-out infinite}.empty p{font-style:italic;font-size:var(--fs-base)}.d-head{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;text-align:left;gap:.9rem;min-height:300px;margin-bottom:1.6rem;overflow:hidden;animation:rise .5s cubic-bezier(.22,1,.36,1) both}.d-head::after{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(90deg,color-mix(in srgb, var(--ink) 78%, transparent) 0%,color-mix(in srgb, var(--ink) 48%, transparent) 45%,color-mix(in srgb, var(--ink) 10%, transparent) 72%,transparent 85%),linear-gradient(180deg,transparent 42%,color-mix(in srgb, var(--ink) 40%, transparent) 100%)}.d-portrait{position:absolute;top:0;right:0;width:100%;height:100%;z-index:0;border:0;background:transparent;box-shadow:none;display:block;font-size:7rem;overflow:hidden}.d-portrait img{width:100%;height:100%;object-fit:cover;object-position:center 20%;border-radius:0}.d-portrait .d-ph-emoji{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:7rem;filter:drop-shadow(0 4px 8px rgba(0,0,0,.6))}.d-head > div:not(.d-portrait){position:relative;z-index:2}.d-name,.d-role,.d-chips{text-shadow:0 1px 3px #000,0 0 14px rgba(0,0,0,.85)}.d-ph-hint{position:absolute;inset:auto 0 0 0;padding:3px 0;text-align:center;font-family:var(--font-display,'Cinzel',serif);font-size:.52rem;letter-spacing:.14em;text-transform:uppercase;background:color-mix(in srgb, var(--ink) 82%, transparent);color:var(--gold-bright);transform:translateY(100%);transition:transform .25s;z-index:3}.d-portrait:hover .d-ph-hint{transform:translateY(0)}.d-name{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:clamp(1.4rem,3vw,1.9rem);color:var(--bone-bright);text-shadow:0 2px 0 #000;line-height:1.15}.d-role{font-style:italic;color:var(--dc,var(--arcane));font-size:var(--fs-chat);margin:.2rem 0 .55rem}.d-chips{display:flex;gap:.4rem;flex-wrap:wrap}.d-chips .badge{font-size:.69rem;padding:.22rem .55rem}.d-sec{margin-bottom:1.7rem;animation:rise .5s cubic-bezier(.22,1,.36,1) both}
@@ -34,7 +33,7 @@
     background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);padding:.7rem 1.5rem;
     box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}.toast.show{transform:translate(-50%,0);opacity:1}/* Mobil/drawer: back-knapp — stäng dossiern och återgå till listan */.d-back{display:none;position:absolute;top:.7rem;left:.7rem;z-index:7;font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-bright);background:var(--stone-3);border:1px solid var(--edge);padding:.5rem .8rem;cursor:pointer;border-radius:6px;transition:all .2s}.d-back:hover{border-color:var(--gold);color:var(--gold-bright);box-shadow:0 0 12px -3px rgba(var(--gold-bright-rgb),.4)}
 
-  @media(max-width:900px){html{-webkit-tap-highlight-color:transparent}.hall{width:250px}.dossier{padding:1.3rem 1.1rem 3rem}.topbar .page-tag{display:none}/* Topnav: radbryt + 44px träffytor (snes.css laddas sist → !important) */.topbar{flex-wrap:wrap!important;gap:.4rem .5rem!important;padding:.6rem .75rem!important}.topbar .top-btn{min-height:44px!important;display:inline-flex!important;align-items:center!important;padding:.4rem .65rem!important;font-size:.68rem!important}
+  @media(max-width:900px){html{-webkit-tap-highlight-color:transparent}.hall{width:250px}.dossier{padding:1.3rem 1.1rem 3rem}/* Topnav: radbryt + 44px träffytor (snes.css laddas sist → !important) */
   }
   @media(max-width:640px){.layout{flex-direction:column;position:relative}.hall{width:100%;height:100%;border-right:none;border-bottom:1px solid var(--edge)}.dossier{position:absolute;inset:0;z-index:6;display:none;padding:1.1rem .75rem 3rem}.layout.dossier-open .hall{display:none}.layout.dossier-open .dossier{display:block}.layout.dossier-open .d-back{display:block}/* Filterchips: horisontell rem, ingen radbrytning */.filters{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:.7rem .8rem}.filters::-webkit-scrollbar{display:none}.fchip{flex:0 0 auto;min-height:44px;display:inline-flex;align-items:center}.hall-search input{min-height:48px;font-size:18px;padding:.6rem .9rem}/* NPC-kort: full bredd, generös träffyta */.npc-list{padding:.6rem .7rem}.ncard{padding:.7rem .65rem}.ncard:hover{transform:none}/* Dossier: hero-porträtt + namn staplas, plats för back-knappen */.d-head{min-height:240px;padding-top:2.4rem;gap:.6rem}.d-portrait{width:100%;height:100%;top:0;right:0;font-size:5rem}.trust-row{flex-wrap:wrap}.trust-label{min-width:0;text-align:left;width:100%}.talk-btn{min-height:44px;display:flex;align-items:center;justify-content:center;width:100%;text-align:center}.line{max-width:100%}.panel-box{padding:.9rem .8rem}
   }
@@ -80,37 +79,8 @@
 
 </style>
 <link rel="stylesheet" href="snes.css?v=51">
-<style>
-/* ═══════════ RITE-RAIL — THE ARCHIVE dropdown (2026-08-11) ═══════════ */
-.rite-rail{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:48px;background:linear-gradient(180deg,var(--stone-2),var(--stone));border:1px solid var(--edge);border-top:1px solid var(--edge-hi);padding:0 .8rem;gap:1rem;position:relative}
-.rite-rail::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,rgba(var(--gold-rgb),.55) 30%,rgba(var(--gold-rgb),.55) 70%,transparent)}
-.rr-brand{display:flex;align-items:center;gap:.55rem;min-width:0;justify-self:start}
-.rr-sigil{width:22px;height:22px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;color:var(--gold-bright);font-size:var(--fs-tiny);flex-shrink:0;box-shadow:0 0 8px rgba(var(--gold-rgb),.35) inset}
-.rr-name{font-family:var(--font-display);font-size:var(--fs-tiny);letter-spacing:.14em;color:var(--bone-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rr-tag{font-family:var(--font-accent);font-size:.52rem;letter-spacing:.2em;color:var(--gold);border:1px solid rgba(var(--gold-rgb),.4);padding:.15rem .4rem;white-space:nowrap}
-.rr-actions{display:flex;align-items:center;gap:.4rem;justify-self:end}
-.rr-menu{font-family:var(--font-display);font-size:.68rem;letter-spacing:.15em;color:var(--bone);border:1px solid var(--edge);background:var(--stone-2);padding:0 .9rem;height:34px;display:flex;align-items:center;gap:.5rem;cursor:pointer;position:relative}
-.rr-menu:hover{border-color:var(--gold);color:var(--gold-bright)}
-.rr-drop{position:absolute;top:calc(100% + .5rem);right:0;min-width:220px;background:var(--stone);border:1px solid var(--gold);box-shadow:0 8px 30px rgba(0,0,0,.6);display:none;z-index:10000;flex-direction:column}
-.rr-drop.open{display:flex}
-.rr-drop a{display:flex;align-items:center;gap:.6rem;padding:.7rem .9rem;color:var(--bone);text-decoration:none;font-family:var(--font-display);font-size:.72rem;letter-spacing:.12em;border-bottom:1px solid var(--edge)}
-.rr-drop a:hover{background:rgba(var(--gold-rgb),.08);color:var(--gold-bright);transform:translateX(3px)}
-.rr-drop a.cur{color:var(--gold);border-left:2px solid var(--gold)}
-/* snes.css-kompat: .topbar !important-regler får inte äta railen */
-.topbar.rite-rail{display:grid!important;align-items:center!important;background:linear-gradient(180deg,var(--stone-2),var(--stone))!important;border:1px solid var(--edge)!important;border-top:1px solid var(--edge-hi)!important;box-shadow:none!important;min-height:48px;padding:0 .8rem!important}
-.topbar.rite-rail .crr-btn{height:34px;min-height:34px;width:auto;padding:0 .6rem;justify-content:center}
-@media(max-width:900px){
-  .topbar.rite-rail{flex-wrap:nowrap;gap:1rem!important;padding:0 .8rem!important;overflow:visible!important;min-height:48px!important;grid-template-columns:auto 1fr auto!important}
-  .topbar.rite-rail .crr-btn{min-height:34px!important;width:auto!important}
-  .rr-drop{position:fixed;top:48px;right:.5rem;left:.5rem;min-width:0;max-height:calc(100dvh - 64px);overflow-y:auto}
-}
-@media(max-width:640px){
-  .rr-name{display:none}
-  .rr-tag{font-size:.46rem;padding:.12rem .3rem}
-  .topbar.rite-rail .crr-btn{min-height:44px!important}
-  .rr-menu{height:38px}
-}
-</style>
+<link rel="stylesheet" href="rail.css?v=20260923a">
+
 <style>
 /* ═══════════ MJUKA UPP — Codex NPC-hall (2026-08-05) — måste ligga EFTER snes.css ═══════════ */
 .top-btn{ border-radius: 8px !important; box-shadow: 0 2px 12px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; }
@@ -136,46 +106,43 @@
 <body>
 <div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
 
-<header class="topbar rite-rail">
+<header class="rite-rail">
   <div class="rr-brand">
     <span class="rr-sigil">⚗</span>
     <span class="rr-name">The Lore Weaver's Cauldron</span>
-    <span class="rr-tag">KNOWN SOULS</span>
+    <span class="rr-tag">NPCS</span>
   </div>
-  <span class="rr-mid" aria-hidden="true"></span>
+  <div class="rr-mid"></div>
   <div class="rr-actions">
-    <div class="rr-menu" id="archive-menu" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false">☰ THE ARCHIVE ▾
-      <div class="rr-drop" id="archive-drop">
+    <div class="rr-menu">
+      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+      <div class="rr-drop" id="rr-drop">
+        <div class="rr-ghead">At the Table</div>
         <a href="chat.html">⚔ To the Table</a>
-        <a href="npcs.html" class="cur">👥 NPCs</a>
+        <a href="adventure.html">🏰 The Crossroads</a>
+        <a href="newgame.html">✨ New Adventure</a>
+        <a href="characters.html">🔥 The Forge</a>
+        <div class="rr-ghead">The Archive</div>
+        <a href="character.html">🧙 Character</a>
+        <a href="npcs.html">👥 NPCs</a>
         <a href="platser.html">🗺 The Map</a>
         <a href="loggbok.html">📜 Logbook</a>
-        <a href="character.html">🧙 Character</a>
         <a href="facts.html">✦ Facts</a>
-        <a href="login.html" onclick="doLogout();return false">🔒 Log out</a>
+        <div class="rr-ghead">The Ledger</div>
+        <a href="help.html">❓ How to Play</a>
+        <a href="mechanics.html">📐 Mechanics</a>
+        <a href="models.html">🧠 The Minds</a>
+        <a href="pricing.html">🜲 Paths</a>
+        <a href="releases.html">📓 Release Notes</a>
+        <a href="screenshots.html">🖼 Screens</a>
+        <div class="rr-ghead">Account</div>
+        <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+        <a href="login.html" id="rr-auth">🔒 Log out</a>
       </div>
     </div>
   </div>
 </header>
-<script>
-/* ═══════════ RITE-RAIL — THE ARCHIVE dropdown (2026-08-11) ═══════════ */
-(function(){
-  var menu=document.getElementById('archive-menu');
-  var drop=document.getElementById('archive-drop');
-  if(!menu||!drop)return;
-  function setOpen(open){
-    drop.classList.toggle('open',open);
-    menu.setAttribute('aria-expanded',open?'true':'false');
-  }
-  menu.addEventListener('click',function(e){e.stopPropagation();setOpen(!drop.classList.contains('open'));});
-  menu.addEventListener('keydown',function(e){
-    if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setOpen(!drop.classList.contains('open'));}
-    else if(e.key==='Escape'){setOpen(false);menu.focus();}
-  });
-  document.addEventListener('click',function(e){if(!menu.contains(e.target))setOpen(false);});
-  document.addEventListener('keydown',function(e){if(e.key==='Escape')setOpen(false);});
-})();
-</script>
+
 
 <div class="layout">
   <aside class="hall fresh-frame">
@@ -576,7 +543,7 @@ function openAvatarModal(i) {
     : SPR.html('🎭');
   preview.style.cursor = has ? 'pointer' : 'default';
   document.getElementById('avatar-modal-title').textContent = '🎨 Avatar — ' + n.name;
-  document.getElementById('avatar-modal-desc').textContent = 'Paint a new avatar of ' + n.name + ' from their role and notes — or upload your own image.';
+  document.getElementById('avatar-modal-desc').textContent = 'Generate a new avatar of ' + n.name + ' from their role and notes — or upload your own image.';
   document.getElementById('avatar-del-btn').style.display = has ? '' : 'none';
   document.getElementById('avatar-ai-btn').disabled = false;
   const freeBtn = document.getElementById('avatar-free-btn');
@@ -648,7 +615,7 @@ function avatarProvider() {
 }
 function avatarGenGate(provider) {
   if ((provider === 'wan' || provider === 'qwen') && _npcTier !== 'tier2' && _npcTier !== 'lifetime') {
-    toast('🔒 Wan 2.7 / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to paint with the premium engines.');
+    toast('🔒 Wan 2.7 / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to generate with the premium engines.');
     try { SFX.error(); } catch (_) {}
     return false;
   }
@@ -657,7 +624,7 @@ function avatarGenGate(provider) {
 function avatarProviderChanged(sel) {
   if ((sel && (sel.value === 'wan' || sel.value === 'qwen')) && _npcTier !== 'tier2' && _npcTier !== 'lifetime') {
     sel.value = 'stepfun';
-    toast('🔒 Wan 2.7 / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to paint with the premium engines.');
+    toast('🔒 Wan 2.7 / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to generate with the premium engines.');
     try { SFX.error(); } catch (_) {}
   }
 }
@@ -703,7 +670,7 @@ async function _runAvatarGen(mode, statusText, btnId) {
   // 🖌️ Free prompt: BARA spelarens ord — tom text är ett fel (ingen auto-prompt).
   if (mode === 'free') {
     if (!freePrompt.trim()) {
-      toast('✍️ Write what you want painted first — free prompt paints ONLY your words.');
+      toast('✍️ Write what you want to see first — free prompt uses ONLY your words.');
       try { SFX.error(); } catch (_) {}
       return;
     }
@@ -720,7 +687,7 @@ async function _runAvatarGen(mode, statusText, btnId) {
         gallery: new Array(res.gallery_count || 1).fill({ disk_name: 'x' }), gallery_index: res.gallery_index || 0 };
       renderDossier(NPCS[CURRENT_NPC]);
       openAvatarModal(CURRENT_NPC);
-      status.textContent = (mode === 'edit' ? '✨ Avatar updated — ' : '✨ New avatar painted — ') + (usedWords ? 'used your words' : 'used your character sheet');
+      status.textContent = (mode === 'edit' ? '✨ Avatar updated — ' : '✨ New avatar generated — ') + (usedWords ? 'used your words' : 'used your character sheet');
       try { SFX.levelup(); } catch (_) {}
     } else {
       status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Failed');
@@ -735,10 +702,10 @@ async function _runAvatarGen(mode, statusText, btnId) {
 }
 
 async function generateAvatarAction() {
-  await _runAvatarGen('new', '🎨 The artist is painting from the dossier… (10–30 s)', 'avatar-ai-btn');
+  await _runAvatarGen('new', '🎨 The artist is sketching from the dossier… (10–30 s)', 'avatar-ai-btn');
 }
 async function freePromptAction() {
-  await _runAvatarGen('free', '🎨 Painting ONLY your words… (10–30 s)', 'avatar-free-btn');
+  await _runAvatarGen('free', '🎨 Generating from your words only… (10–30 s)', 'avatar-free-btn');
 }
 
 async function deleteAvatarAction() {
@@ -801,15 +768,15 @@ tick();
       <div class="av-gal-count" id="avatar-gal-count"></div>
       <div style="font-size:.62rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem">click to enlarge</div>
     </div>
-    <div class="mi-intro" id="avatar-modal-desc">Paint a new avatar from the NPC's role and notes — or upload your own image.</div>
+    <div class="mi-intro" id="avatar-modal-desc">Generate a new avatar from the NPC's role and notes — or upload your own image.</div>
     <div style="margin-top:.7rem">
       <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">✍️ YOUR OWN WORDS</div>
-      <textarea id="avatar-prompt-input" placeholder="Free prompt: describe exactly what you want painted — e.g. 'hooded figure, lantern light, rain'. Empty = paint from the dossier." style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>
-      <div style="font-size:.72rem;color:var(--bone-dim);margin-top:.35rem">Free prompt paints ONLY your words — the dossier button ignores this box and paints from the NPC's role &amp; notes.</div>
+      <textarea id="avatar-prompt-input" placeholder="Free prompt: describe exactly what you want to see — e.g. 'hooded figure, lantern light, rain'. Empty = generate from the dossier." style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>
+      <div style="font-size:.72rem;color:var(--bone-dim);margin-top:.35rem">Free prompt uses ONLY your words — the dossier button ignores this box and generates from the NPC's role &amp; notes.</div>
     </div>
     <div style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
       <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
-      <select id="avatar-provider-select" class="tts-select" style="flex:1;min-width:0" onchange="avatarProviderChanged(this)" title="Image provider for painting">
+      <select id="avatar-provider-select" class="tts-select" style="flex:1;min-width:0" onchange="avatarProviderChanged(this)" title="Image provider for image generation">
         <option value="stepfun">StepFun — Free</option>
         <option value="wan">Wan 2.7 — Patron 🔒</option>
         <option value="qwen">Qwen Image 3 Pro — Patron 🔒</option>
@@ -817,7 +784,7 @@ tick();
     </div>
     <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
       <button class="av-btn primary btn-gold" id="avatar-free-btn" onclick="freePromptAction()">🖌️ Free prompt</button>
-      <button class="av-btn btn-ghost" id="avatar-ai-btn" onclick="generateAvatarAction()">🎨 Paint from the dossier</button>
+      <button class="av-btn btn-ghost" id="avatar-ai-btn" onclick="generateAvatarAction()">🎨 Generate from the dossier</button>
       <button class="av-btn btn-ghost" onclick="document.getElementById('npc-avatar-input').click()">📁 Upload image…</button>
       <button class="av-btn danger btn-blood" id="avatar-del-btn" onclick="deleteAvatarAction()" style="display:none">🗑 Remove avatar</button>
     </div>
@@ -853,5 +820,6 @@ document.getElementById('npc-avatar-input').addEventListener('change', async e =
   }
 });
 </script>
+<script src="rail.js?v=20260923a"></script>
 </body>
 </html>

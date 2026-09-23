@@ -58,16 +58,10 @@
     overflow: hidden; text-overflow: ellipsis; max-width: 46vw; min-width: 0; flex-shrink: 1;
     font-variant-numeric: tabular-nums; letter-spacing: 0.02em;
     text-shadow: 0 0 12px rgba(var(--gold-rgb),0.28), 0 1px 2px rgba(0,0,0,0.85);
-  }.mobile-menu-turns{
-    display: none; padding: 0.55rem 0.7rem; margin: 0.1rem 0 0.2rem;
-    font-size: 0.95rem; color: var(--gold-bright); letter-spacing: 0.04em;
-    border-bottom: 1px solid var(--edge); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    text-shadow: 0 0 10px rgba(var(--gold-bright-rgb),0.35);
   }
   /* Mobil (≤900px): topbaren är trång → header-info flyttas till ☰-menyns topp */
   @media (max-width: 900px){
     .topbar .header-turns-info{ display: none !important; }
-    .mobile-menu-turns{ display: block !important; }
   }.topbar .spacer{ flex: 1; }.top-btn{
     font-family: var(--font-display); font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase;
     background: var(--stone-3); border: 1px solid var(--edge); color: var(--bone-dim);
@@ -76,41 +70,52 @@
     width: 38px; height: 34px; padding: 0;
     display: inline-flex; align-items: center; justify-content: center;
     font-size: 0.9rem; line-height: 1;
-  }.top-divider{ width: 1px; height: 20px; background: var(--edge); flex-shrink: 0; }/* ═══════════ Dropdown-meny (Världen / Verktyg) ═══════════ */.dropdown{ position: relative; }/* ── Settings menu (gear icon, standalone) ──
-     v30: RADIKALT krympt — liten kompakt meny som inte täcker spelvyn. */.settings-menu{
-    position: absolute; top: calc(100% + 0.5rem); right: 0; z-index: 60;
-    min-width: 200px; max-width: 300px; padding: 0.35rem;
-    max-height: calc(100dvh - 70px); overflow-y: auto;
-    background: linear-gradient(180deg, var(--stone-2), var(--ink));
-    border: 1px solid rgba(var(--gold-rgb),0.65); border-radius: 3px;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 20px -6px rgba(var(--gold-bright-rgb),0.25), inset 0 0 0 1px rgba(var(--gold-rgb),0.18);
-    opacity: 0; visibility: hidden; transform: translateY(-8px) scale(0.98);
-    transform-origin: top right;
-    transition: opacity 0.2s, transform 0.22s cubic-bezier(.22,1,.36,1), visibility 0.2s;
-  }.settings-menu.open{ opacity: 1; visibility: visible; transform: translateY(0) scale(1); }/* ── Mobile topbar-menu (☰) — mobilens riktiga navigeringsmeny ──
-     Alla topplänkar som göms på mobil (Codex, Admin, Help, …) samlas här. */.mobile-menu{
-    position: fixed; top: 48px; left: 8px; right: 8px; z-index: 520;
-    min-width: 0; max-height: calc(100vh - 60px); max-height: calc(100dvh - 60px); overflow-y: auto;
-    padding: 0.28rem;
-    background: linear-gradient(180deg, var(--stone-2), var(--ink));
-    border: 1px solid rgba(var(--gold-rgb),0.65); border-radius: 3px;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 20px -6px rgba(var(--gold-bright-rgb),0.25), inset 0 0 0 1px rgba(var(--gold-rgb),0.18);
-    opacity: 0; visibility: hidden; transform: translateY(-8px) scale(0.98);
-    transform-origin: top left;
-    transition: opacity 0.2s, transform 0.22s cubic-bezier(.22,1,.36,1), visibility 0.2s;
-  }.mobile-menu.open{ opacity: 1; visibility: visible; transform: translateY(0) scale(1); }.model-picker-card{
-    padding: 0.45rem 0.55rem; margin: 0.1rem 0;
-    background: rgba(0,0,0,0.25); border: 1px solid color-mix(in srgb, var(--arcane) 25%, transparent);
-    border-radius: 2px;
+  }.top-divider{ width: 1px; height: 20px; background: var(--edge); flex-shrink: 0; }/* ═══════════ Dropdown-meny (Världen / Verktyg) ═══════════ */.dropdown{ position: relative; }/* ── Settings menu (⚙️) — grimoire-panel (2026-09-23): kompakt ──
+     Micro Cinzel-grupphuvuden med guld-tracking, labels ~.78rem, hints ~.66rem
+     italic (hover-tooltip på desktop), tunna guld-hairlines, max-height + scroll
+     så panelen aldrig täcker spelvyn. Hooks: .drop-item/.di-name/.di-hint,
+     data-cli-label, #settings-*-model, #settings-guardian-hint,
+     #model-picker-premium-hint, #model-picker-lock, #settings-font-hint (fonts.js). */.settings-menu{
+   position: absolute; top: calc(100% + 0.5rem); right: 0; z-index: 10000;
+   min-width: 232px; max-width: 292px; padding: 0.3rem 0.3rem 0.42rem;
+   max-height: calc(100dvh - 72px); overflow-y: auto; overscroll-behavior: contain;
+   background: linear-gradient(180deg, var(--stone-2), var(--ink));
+   border: 1px solid rgba(var(--gold-rgb),0.5); border-radius: 2px;
+   box-shadow: 0 14px 44px rgba(0,0,0,0.75), 0 0 22px -8px rgba(var(--gold-bright-rgb),0.22), inset 0 0 0 1px rgba(var(--gold-rgb),0.1);
+   opacity: 0; visibility: hidden; transform: translateY(-6px) scale(0.985);
+   transform-origin: top right;
+   transition: opacity 0.2s, transform 0.22s cubic-bezier(.22,1,.36,1), visibility 0.2s;
+   scrollbar-width: thin; scrollbar-color: rgba(var(--gold-rgb),0.35) transparent;
+  }.settings-menu.open{ opacity: 1; visibility: visible; transform: translateY(0) scale(1); }.settings-menu::-webkit-scrollbar{ width: 5px; }.settings-menu::-webkit-scrollbar-thumb{ background: rgba(var(--gold-rgb),0.3); }
+  /* Grupp-huvuden: micro Cinzel versaler med guld-tracking */
+  .settings-menu .drop-head{
+    font-family: var(--font-display) !important; font-size: 0.55rem !important;
+    letter-spacing: 0.26em !important; text-transform: uppercase !important;
+    color: var(--gold) !important; background: none !important; border: none !important;
+    padding: 0.45rem 0.55rem 0.15rem !important; margin: 0 !important;
+    text-shadow: 0 0 10px rgba(var(--gold-rgb),0.3);
+  }.settings-menu .drop-head:first-child{ padding-top: 0.25rem !important; }
+  /* Tunn guld-hairline som skiljare */
+  .settings-menu .drop-sep{
+    height: 0 !important; background: none !important; border: none !important;
+    border-top: 1px solid rgba(var(--gold-rgb),0.28) !important;
+    margin: 0.2rem 0.55rem !important; padding: 0 !important;
+  }
+  .model-picker-card{
+   padding: 0.4rem 0.5rem; margin: 0.15rem 0.25rem;
+   background: rgba(0,0,0,0.34);
+   border: 1px solid rgba(var(--gold-rgb),0.16); border-radius: 2px;
+   box-shadow: inset 0 2px 6px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(0,0,0,0.35);
   }.mpc-title{
-    font-family: var(--font-display); font-size: 0.74rem; letter-spacing: 0.08em;
-    color: var(--gold); margin-bottom: 0.3rem;
-  }.mpc-label{ display: block; font-size: 0.74rem; color: var(--bone-dim); margin: 0.28rem 0 0.14rem; }.model-picker-card select{
-    width: 100%; padding: 0.2rem 0.35rem; font-size: 0.8rem;
-    background: var(--stone); color: var(--bone);
-    border: 1px solid var(--edge); border-radius: 0; cursor: pointer;
-    font-family: var(--font-mono);
-  }.model-picker-card select:focus{ outline: none; border-color: var(--gold); }.mpc-hint{ font-size: 0.7rem; color: rgba(180,170,150,0.6); margin-top: 0.3rem; line-height: 1.35; }
+   font-family: var(--font-display); font-size: 0.55rem; letter-spacing: 0.22em;
+   text-transform: uppercase;
+   color: var(--gold); margin-bottom: 0.25rem;
+  }.mpc-label{ display: block; font-family: var(--font-display); font-size: 0.55rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--bone-dim); margin: 0.22rem 0 0.08rem; }.model-picker-card select{
+   width: 100%; padding: 0.15rem 0.3rem; font-size: 0.66rem;
+   background: var(--stone); color: var(--bone);
+   border: 1px solid var(--edge); border-radius: 0; cursor: pointer;
+   font-family: var(--font-mono);
+  }.model-picker-card select:focus{ outline: none; border-color: var(--gold); }.mpc-hint{ font-size: 0.6rem; font-style: italic; color: rgba(180,170,150,0.6); margin-top: 0.25rem; line-height: 1.35; }
   /* ═══════════ Model-info-modal ═══════════ */
   .mi-overlay{ position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(var(--ink-rgb),.82); opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility .25s; }
   .mi-overlay.show{ opacity: 1; visibility: visible; }
@@ -181,11 +186,11 @@
   .mi-callout b{ color: var(--arcane); }
   .mi-callout p{ font-size: .85rem; color: var(--bone); line-height: 1.7; margin: 0; }
   .drop-item{
-    display: flex; align-items: center; gap: 0.75rem; width: 100%;
-    padding: 0.55rem 0.7rem; border: none; border-radius: 2px;
+    display: flex; align-items: center; gap: 0.5rem; width: 100%;
+    padding: 0.32rem 0.5rem; border: none; border-radius: 2px;
     background: transparent; cursor: pointer; text-align: left;
     text-decoration: none; transition: background 0.15s, transform 0.15s;
-  }.drop-item:hover{ background: rgba(var(--gold-bright-rgb),0.1); transform: translateX(3px); }.di-icon{ font-size: 1.05rem; flex-shrink: 0; filter: drop-shadow(0 0 4px rgba(var(--gold-bright-rgb),0.3)); }.di-body{ display: flex; flex-direction: column; min-width: 0; }.di-name{ font-family: var(--font-display); font-size: 0.96rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-bright); }.drop-item:hover .di-name{ color: var(--gold-bright); }.di-hint{ font-size: 0.86rem; font-style: italic; color: var(--bone-dim); }/* Settings-menyn (⚙️): hint-rad → hover-tooltip (desktop). Menyn är högerjusterad → tooltip pekar vänsterut */.settings-menu .drop-item{ position: relative; }.settings-menu .di-hint{ position: absolute; top: 50%; right: calc(100% + 10px); transform: translateY(-50%); white-space: nowrap; font-size: 0.84rem; font-style: italic; color: var(--bone-dim); background: var(--stone-3); border: 1px solid var(--edge); border-radius: 3px; padding: 0.32rem 0.6rem; box-shadow: 0 10px 28px -10px rgba(0,0,0,0.8); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.16s ease, visibility 0.16s ease; z-index: 70; }.settings-menu .drop-item:hover .di-hint{ opacity: 1; visibility: visible; }.settings-menu .drop-item:hover .di-name{ color: var(--gold-bright); }@media (hover:none), (max-width:640px){ .settings-menu .di-hint{ position: static; transform: none; opacity: 1; visibility: visible; background: none; border: none; box-shadow: none; padding: 0; } /* TTS-raden: kompaktare så Combat/Engine Room aldrig klipps bort */ .tts-voice-picker{ gap: 0.2rem 0.3rem; margin-bottom: 0.25rem; }.tts-voice-label{ display: none; }.tts-select{ font-size: 0.58rem; padding: 0.14rem 0.28rem; max-width: 96px; flex-shrink: 1; min-width: 0; letter-spacing: 0; border-radius: 5px; }.tts-auto-btn{ font-size: 0.58rem; padding: 0.16rem 0.4rem; letter-spacing: 0; border-radius: 5px; }.tts-player{ padding: 0.18rem 0.5rem; margin-bottom: 0.3rem; }.tts-player .ttp-idle, .tts-player .ttp-synth{ font-size: 0.62rem; } }.drop-sep{ height: 1px; background: var(--edge); margin: 0.4rem 0.3rem; }.drop-head{ font-family: var(--font-accent); font-size: .55rem; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); opacity: .75; padding: .5rem .7rem .2rem; user-select: none; }.drop-head:first-child{ padding-top: .25rem; }/* ═══════════ Layout ═══════════ */.layout{ position: relative; z-index: auto; flex: 1; display: flex; min-height: 0; }/* ── Sidebar: party ── */.sidebar{
+  }.drop-item:hover{ background: rgba(var(--gold-bright-rgb),0.1); transform: translateX(3px); }.di-icon{ font-size: 0.85rem; flex-shrink: 0; filter: drop-shadow(0 0 4px rgba(var(--gold-bright-rgb),0.3)); }.di-body{ display: flex; flex-direction: column; min-width: 0; }.di-name{ font-family: var(--font-display); font-size: 0.78rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--bone-bright); }.drop-item:hover .di-name{ color: var(--gold-bright); }.di-hint{ font-size: 0.66rem; font-style: italic; color: var(--bone-dim); }/* Settings-menyn (⚙️): hint-rad → hover-tooltip (desktop). Menyn är högerjusterad → tooltip pekar vänsterut */.settings-menu .drop-item{ position: relative; }.settings-menu .di-hint{ position: absolute; top: 50%; right: calc(100% + 10px); transform: translateY(-50%); white-space: nowrap; font-size: 0.66rem; font-style: italic; color: var(--bone-dim); background: var(--stone-3); border: 1px solid var(--edge); border-radius: 3px; padding: 0.32rem 0.6rem; box-shadow: 0 10px 28px -10px rgba(0,0,0,0.8); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.16s ease, visibility 0.16s ease; z-index: 70; }.settings-menu .drop-item:hover .di-hint{ opacity: 1; visibility: visible; }.settings-menu .drop-item:hover .di-name{ color: var(--gold-bright); }@media (hover:none), (max-width:640px){ .settings-menu .di-hint{ position: static; transform: none; opacity: 1; visibility: visible; background: none; border: none; box-shadow: none; padding: 0; } /* TTS-raden: kompaktare så Combat/Engine Room aldrig klipps bort */ .tts-voice-picker{ gap: 0.2rem 0.3rem; margin-bottom: 0.25rem; }.tts-voice-label{ display: none; }.tts-select{ font-size: 0.58rem; padding: 0.14rem 0.28rem; max-width: 96px; flex-shrink: 1; min-width: 0; letter-spacing: 0; border-radius: 5px; }.tts-auto-btn{ font-size: 0.58rem; padding: 0.16rem 0.4rem; letter-spacing: 0; border-radius: 5px; }.tts-player{ padding: 0.18rem 0.5rem; margin-bottom: 0.3rem; }.tts-player .ttp-idle, .tts-player .ttp-synth{ font-size: 0.62rem; } }.drop-sep{ height: 1px; background: var(--edge); margin: 0.4rem 0.3rem; }.drop-head{ font-family: var(--font-accent); font-size: .55rem; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); opacity: .75; padding: .5rem .7rem .2rem; user-select: none; }.drop-head:first-child{ padding-top: .25rem; }/* ═══════════ Layout ═══════════ */.layout{ position: relative; z-index: auto; flex: 1; display: flex; min-height: 0; }/* ── Sidebar: party ── */.sidebar{
     width: 250px; flex-shrink: 0;
     background: linear-gradient(180deg, var(--stone), var(--ink));
     border-right: 1px solid var(--edge);
@@ -1098,6 +1103,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
   }
 </style>
 <link rel="stylesheet" href="snes.css?v=51">
+<link rel="stylesheet" href="rail.css?v=20260923a">
 <style>
 /* ═══════════ CODEX 2-RAD-TABBAR — override snes.css (måste ligga EFTER linken) ═══════════ */
 .cx-tabs{ display: flex !important; flex-direction: column !important; gap: 0.34rem !important; padding: 0.55rem 0.6rem 0.6rem !important; overflow-x: hidden !important; }
@@ -1333,177 +1339,93 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
 <div class="grain"></div>
 <canvas id="embers"></canvas>
 
-<!-- ═══════════ THE RITE-RAIL (våg 3) — 48px grid-rail: brand | turn-tally | actions ═══════════ -->
+<!-- ═══════════ THE RITE-RAIL v2 — unified header (2026-09-23): brand | turn-tally | actions + unified menu ═══════════ -->
 <header class="rite-rail">
   <div class="rr-brand">
-  <div style="position:relative">
-    <button class="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Open menu">☰</button>
-    <div class="mobile-menu" id="mobile-menu">
-      <div class="mobile-menu-turns" id="mobile-menu-turns"></div>
-      <div class="drop-head">Navigate</div>
-      <button class="drop-item" onclick="openCodex();closeMobileMenu()"><span class="di-icon">📖</span><span class="di-body"><span class="di-name">Codex</span><span class="di-hint">lore · map · character</span></span></button>
-      <div class="drop-sep"></div>
-      <div class="drop-head">Your game</div>
-      <a class="drop-item" href="help.html"><span class="di-icon">❓</span><span class="di-body"><span class="di-name">How to Play</span><span class="di-hint">commands & tips</span></span></a>
-      <button class="drop-item" onclick="openFeedbackModal();closeMobileMenu()"><span class="di-icon">💬</span><span class="di-body"><span class="di-name">Feedback</span><span class="di-hint">suggestions or bug reports</span></span></button>
-      <div class="drop-sep"></div>
-      <div class="drop-head">Settings</div>
-      <button class="drop-item" data-cli-label onclick="toggleCliChat();closeMobileMenu()"><span class="di-icon">🖥️</span><span class="di-body"><span class="di-name">Chat style: Terminal</span><span class="di-hint">click to switch to bubbles</span></span></button>
-      <div class="drop-sep"></div>
-      <div class="drop-head">Account</div>
-      <button class="drop-item" onclick="openUsageModal();closeMobileMenu()"><span class="di-icon">📊</span><span class="di-body"><span class="di-name">Usage</span><span class="di-hint">model & token stats</span></span></button>
-      <button class="drop-item" onclick="exportCampaign();closeMobileMenu()"><span class="di-icon">📦</span><span class="di-body"><span class="di-name">Export campaign</span><span class="di-hint">download as .zip</span></span></button>
-      <button class="drop-item" id="mobile-menu-admin" style="display:none" onclick="location.href='admin.html'"><span class="di-icon">👑</span><span class="di-body"><span class="di-name">Admin</span><span class="di-hint">player overview & tokens</span></span></button>
-      <div class="drop-sep"></div>
-      <div class="drop-head">Leave</div>
-      <button class="drop-item" style="color:var(--blood-bright)" onclick="location.href='adventure.html'"><span class="di-icon">🚪</span><span class="di-body"><span class="di-name">Leave the table</span><span class="di-hint">return to adventure select</span></span></button>
-    </div>
-  </div>
     <span class="rr-sigil" onclick="openChatProfileModal()" role="button" tabindex="0" aria-label="Your profile — stats, tier, turns and subscription" title="Profile — stats, tier, turns">⚗</span>
     <span class="rr-name campaign" id="campaign-tag">The Lore Weaver's Cauldron</span>
     <span class="rr-tag">AT THE TABLE</span>
   </div>
-
-  <!-- Turn-Tally — mono-strip: TURNS · TURN · DAY (uppdateras av renderTurnTally) -->
-  <div class="rr-tally" id="rr-tally" title="Turns left · current turn · day number">
-    <span>TURNS <span class="tv" id="rr-quota">—</span></span><span class="sep">·</span>
-    <span>TURN <span class="tv" id="rr-turn">—</span></span><span class="sep">·</span>
-    <span>DAY <span class="tv" id="rr-day">—</span></span>
-  </div>
-
-  <div class="rr-actions">
-  <button class="rr-btn" onclick="openCodex()" title="Codex" aria-label="Codex">📖</button>
-  <button class="rr-btn admin-btn" id="admin-btn" style="display:none" onclick="location.href='admin.html'" title="Admin" aria-label="Admin">👑</button>
-
-  <button class="rr-btn sfx-btn" onclick="sfxToggleBtn()" title="Sound on/off" aria-label="Sound on/off">🎵</button>
-
-  <!-- ═══ Engine Room (debug) ═══ -->
-  <button class="rr-btn" id="console-tab" onclick="toggleConsole()" title="Open Engine Room" aria-label="Open Engine Room">🛠️</button>
-
-  <!-- ═══ Settings — gear icon (längst till höger) ═══ -->
-  <div style="position:relative">
-    <button class="rr-btn" onclick="toggleSettingsMenu()" title="Settings" aria-label="Settings">⚙️</button>
-    <div class="settings-menu" id="settings-menu">
-      <div class="drop-head">Your game</div>
-      <a class="drop-item" href="help.html"><span class="di-icon">❓</span><span class="di-body"><span class="di-name">How to Play</span><span class="di-hint">commands & tips</span></span></a>
-      <button class="drop-item" onclick="openFeedbackModal();closeSettingsMenu()"><span class="di-icon">💬</span><span class="di-body"><span class="di-name">Feedback</span><span class="di-hint">suggestions or bug reports</span></span></button>
-      <div class="drop-sep"></div>
-      <div class="drop-head">Settings</div>
-      <div class="model-picker-card">
-        <div class="mpc-title">🧠 Models <span id="model-picker-lock" style="display:none;color:var(--gold);font-size:.68rem">🔒 Patron</span></div>
-        <label class="mpc-label">Dungeon Master</label>
-        <select id="settings-dm-model" onchange="settingsChangeModel(this.value)"></select>
-        <label class="mpc-label">Lorekeeper</label>
-        <select id="settings-guardian-model" onchange="settingsChangeGuardian(this.value)"></select>
-        <label class="mpc-label">Background (extraction)</label>
-        <select id="settings-extraction-model" onchange="settingsChangeExtraction(this.value)"></select>
-        <div class="mpc-hint" id="settings-guardian-hint"></div>
-        <div class="mpc-hint" id="model-picker-premium-hint" style="display:none;color:var(--gold)">🔒 Premium models locked — one-time Patron unlocks all DMs for 30 days.</div>
-      </div>
-      <button class="drop-item" data-cli-label onclick="toggleCliChat();closeSettingsMenu()"><span class="di-icon">🖥️</span><span class="di-body"><span class="di-name">Chat style: Terminal</span><span class="di-hint">click to switch to bubbles</span></span></button>
-      <button class="drop-item" onclick="openModelInfo();closeSettingsMenu()"><span class="di-icon">ℹ️</span><span class="di-body"><span class="di-name">About the Models</span><span class="di-hint">what each DM model does · why thinking takes time</span></span></button>
-      <div class="drop-sep"></div>
-      <div class="drop-head">Account</div>
-      <button class="drop-item" onclick="openUsageModal();closeSettingsMenu()"><span class="di-icon">📊</span><span class="di-body"><span class="di-name">Usage</span><span class="di-hint">model & token stats</span></span></button>
-      <button class="drop-item" onclick="exportCampaign();closeSettingsMenu()"><span class="di-icon">📦</span><span class="di-body"><span class="di-name">Export campaign</span><span class="di-hint">download as .zip</span></span></button>
-      <div class="drop-sep"></div>
-      <div class="drop-head">Leave</div>
-      <button class="drop-item" style="color:var(--blood-bright)" onclick="location.href='adventure.html'"><span class="di-icon">🚪</span><span class="di-body"><span class="di-name">Leave the table</span><span class="di-hint">return to adventure select</span></span></button>
+  <div class="rr-mid">
+    <!-- Turn-Tally — mono-strip: TURNS · TURN · DAY (uppdateras av renderTurnTally) -->
+    <div class="rr-tally" id="rr-tally" title="Turns left · current turn · day number">
+      <span>TURNS <span class="tv" id="rr-quota">—</span></span><span class="sep">·</span>
+      <span>TURN <span class="tv" id="rr-turn">—</span></span><span class="sep">·</span>
+      <span>DAY <span class="tv" id="rr-day">—</span></span>
     </div>
   </div>
+  <div class="rr-actions">
+    <button class="rr-btn" onclick="openCodex()" title="Codex" aria-label="Codex">📖</button>
+    <button class="rr-btn admin-btn" id="admin-btn" style="display:none" onclick="location.href='admin.html'" title="Admin" aria-label="Admin">👑</button>
+    <button class="rr-btn sfx-btn" onclick="sfxToggleBtn()" title="Sound on/off" aria-label="Sound on/off">🎵</button>
+    <!-- ═══ Engine Room (debug) ═══ -->
+    <button class="rr-btn" id="console-tab" onclick="toggleConsole()" title="Open Engine Room" aria-label="Open Engine Room">🛠️</button>
+    <!-- ═══ Settings — gear icon ═══ -->
+    <div style="position:relative">
+      <button class="rr-btn" onclick="toggleSettingsMenu()" title="Settings" aria-label="Settings">⚙️</button>
+      <div class="settings-menu" id="settings-menu">
+        <div class="drop-head">Your game</div>
+        <a class="drop-item" href="help.html"><span class="di-icon">❓</span><span class="di-body"><span class="di-name">How to Play</span><span class="di-hint">commands &amp; tips</span></span></a>
+        <button class="drop-item" onclick="openFeedbackModal();closeSettingsMenu()"><span class="di-icon">💬</span><span class="di-body"><span class="di-name">Feedback</span><span class="di-hint">suggestions or bug reports</span></span></button>
+        <div class="drop-sep"></div>
+        <div class="drop-head">Settings</div>
+        <div class="model-picker-card">
+          <div class="mpc-title">🧠 Models <span id="model-picker-lock" style="display:none;color:var(--gold);font-size:.68rem">🔒 Patron</span></div>
+          <label class="mpc-label">Dungeon Master</label>
+          <select id="settings-dm-model" onchange="settingsChangeModel(this.value)"></select>
+          <label class="mpc-label">Lorekeeper</label>
+          <select id="settings-guardian-model" onchange="settingsChangeGuardian(this.value)"></select>
+          <label class="mpc-label">Background (extraction)</label>
+          <select id="settings-extraction-model" onchange="settingsChangeExtraction(this.value)"></select>
+          <div class="mpc-hint" id="settings-guardian-hint"></div>
+          <div class="mpc-hint" id="model-picker-premium-hint" style="display:none;color:var(--gold)">🔒 Premium models locked — one-time Patron unlocks all DMs for 30 days.</div>
+        </div>
+        <button class="drop-item" data-cli-label onclick="toggleCliChat();closeSettingsMenu()"><span class="di-icon">🖥️</span><span class="di-body"><span class="di-name">Chat style: Terminal</span><span class="di-hint">click to switch to bubbles</span></span></button>
+        <button class="drop-item" onclick="openModelInfo();closeSettingsMenu()"><span class="di-icon">ℹ️</span><span class="di-body"><span class="di-name">About the Models</span><span class="di-hint">what each DM model does · why thinking takes time</span></span></button>
+        <div class="drop-sep"></div>
+        <div class="drop-head">Account</div>
+        <button class="drop-item" onclick="openUsageModal();closeSettingsMenu()"><span class="di-icon">📊</span><span class="di-body"><span class="di-name">Usage</span><span class="di-hint">model &amp; token stats</span></span></button>
+        <button class="drop-item" onclick="exportCampaign();closeSettingsMenu()"><span class="di-icon">📦</span><span class="di-body"><span class="di-name">Export campaign</span><span class="di-hint">download as .zip</span></span></button>
+        <div class="drop-sep"></div>
+        <div class="drop-head">Leave</div>
+        <button class="drop-item" style="color:var(--blood-bright)" onclick="location.href='adventure.html'"><span class="di-icon">🚪</span><span class="di-body"><span class="di-name">Leave the table</span><span class="di-hint">return to adventure select</span></span></button>
+      </div>
+    </div>
+    <!-- ═══ Unified menu (Rail v2) — LAST ═══ -->
+    <div class="rr-menu">
+      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+      <div class="rr-drop" id="rr-drop">
+        <div class="rr-ghead">At the Table</div>
+        <a href="chat.html">⚔ To the Table</a>
+        <a href="adventure.html">🏰 The Crossroads</a>
+        <a href="newgame.html">✨ New Adventure</a>
+        <a href="characters.html">🔥 The Forge</a>
+        <div class="rr-ghead">The Archive</div>
+        <a href="character.html">🧙 Character</a>
+        <a href="npcs.html">👥 NPCs</a>
+        <a href="platser.html">🗺 The Map</a>
+        <a href="loggbok.html">📜 Logbook</a>
+        <a href="facts.html">✦ Facts</a>
+        <div class="rr-ghead">The Ledger</div>
+        <a href="help.html">❓ How to Play</a>
+        <a href="mechanics.html">📐 Mechanics</a>
+        <a href="models.html">🧠 The Minds</a>
+        <a href="pricing.html">🜲 Paths</a>
+        <a href="releases.html">📓 Release Notes</a>
+        <a href="screenshots.html">🖼 Screens</a>
+        <div class="rr-ghead">Account</div>
+        <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+        <a href="login.html" id="rr-auth">🔒 Log out</a>
+      </div>
+    </div>
   </div>
 </header>
 <style>
-  /* ═══════════ THE RITE-RAIL (våg 3, 2026-08-11) — ersätter topbaren ═══════════
-     Unika rr- / rite-rail-klasser: snes.css !important-overrides når inte hit.
-     Körs EFTER snes.css (link ovan) — !important på rail-knapparna vinner över
-     snes button-regler som annars målar stone-3/edge på alla <button>. */
-  .rite-rail{
-    display: grid !important; grid-template-columns: 1fr auto 1fr !important; align-items: center;
-    height: 48px !important;
-    background: linear-gradient(180deg, var(--stone-2), var(--stone)) !important;
-    border: 1px solid var(--edge) !important; border-top: 1px solid var(--edge-hi) !important;
-    padding: 0 .8rem !important; gap: 1rem; position: relative; z-index: 5;
-  }
-  .rite-rail::after{
-    content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(var(--gold-rgb),.55) 30%, rgba(var(--gold-rgb),.55) 70%, transparent);
-  }
-  .rr-brand{ display: flex; align-items: center; gap: .55rem; min-width: 0; justify-self: start; }
-  .rr-sigil{
-    width: 22px; height: 22px; border: 1px solid var(--gold);
-    display: flex; align-items: center; justify-content: center;
-    color: var(--gold-bright); font-size: .8rem; flex-shrink: 0;
-    box-shadow: 0 0 8px rgba(var(--gold-rgb),.35) inset; cursor: pointer;
-    transition: border-color .15s, color .15s, box-shadow .15s;
-  }
-  .rr-sigil:hover{ border-color: var(--gold-bright); color: var(--bone-bright);
-    box-shadow: 0 0 8px rgba(var(--gold-rgb),.35) inset, 0 0 10px rgba(var(--gold-rgb),.35); }
-  .rr-name{
-    font-family: var(--font-display); font-size: .82rem; letter-spacing: .14em;
-    color: var(--bone-bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .rr-tag{
-    font-family: var(--font-accent); font-size: .52rem; letter-spacing: .2em;
-    color: var(--gold); border: 1px solid rgba(var(--gold-rgb),.4);
-    padding: .15rem .4rem; white-space: nowrap;
-  }
-  /* ── Turn-Tally — mono-strip i railens mittcell (grid 1fr auto 1fr låser sann mitt) ── */
-  .rr-tally{
-    justify-self: center; display: flex; align-items: baseline; gap: .7rem;
-    font-family: var(--font-mono); font-size: .72rem; color: var(--bone-dim);
-    white-space: nowrap; min-width: 0;
-  }
-  .rr-tally .tv{ color: var(--gold-bright); font-weight: 500; font-variant-numeric: tabular-nums; }
-  .rr-tally .sep{ color: var(--edge-hi); }
-  .rr-tally .warn{ color: var(--blood-bright); }
-  /* ── Fasta action-knappar 44×34 — scoped under .rite-rail så de inte krockar
-     med roll-request-knapparnas .rr-btn (snes §5 + kompakt-override) ── */
-  .rr-actions{ display: flex; align-items: center; gap: .4rem; justify-self: end; justify-content: flex-end; flex-wrap: nowrap !important; }
-  .rite-rail .rr-btn{
-    width: 50px; height: 40px;
-    border: 1px solid var(--edge) !important;
-    background: var(--stone) !important;
-    color: var(--bone-dim) !important;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; transition: all .15s !important;
-    font-size: 1.05rem !important; padding: 0 !important;
-    box-shadow: none !important; text-shadow: none !important; filter: none !important;
-    flex-shrink: 0;
-  }
-  .rite-rail .rr-btn:hover{
-    border-color: var(--gold) !important; color: var(--gold-bright) !important;
-    background: var(--stone) !important;
-    box-shadow: 0 0 10px rgba(var(--gold-rgb),.25) !important;
-  }
-  .rite-rail .rr-btn.on{ border-color: var(--gold) !important; color: var(--gold-bright) !important; }
-  .rite-rail .rr-btn.admin-btn{ border-color: rgba(var(--gold-bright-rgb),.45) !important; color: var(--gold) !important; }
-  .rite-rail .rr-btn.admin-btn:hover{ color: var(--bone-bright) !important; border-color: var(--gold-bright) !important; }
-  /* Mobil: hamburgaren får samma 44px-target som rail-knapparna */
-  .rite-rail .mobile-menu-btn{
-    width: 44px; height: 34px; margin-right: 0 !important;
-    border-radius: 0 !important; box-shadow: none !important;
-    background: var(--stone) !important; border-color: var(--edge) !important;
-    color: var(--bone-dim) !important;
-  }
-  .rite-rail .mobile-menu-btn:hover{ border-color: var(--gold) !important; color: var(--gold-bright) !important; }
+  /* ── chat.html rail-rest (2026-09-23): rail.css äger railen — kvar här:
+     Engine Room-knappen dold på mobil + DAY-segmentet faller bort ≤480px
+     (chat-specifikt, saknas i rail.css). ── */
   @media (max-width: 900px){
-    /* Railen: mindre luft; namnet göms (sigill + tag kvar) */
-    .rite-rail{ gap: .5rem !important; padding: 0 .5rem !important; grid-template-columns: auto 1fr auto !important; }
-    .rr-name{ display: none; }
-    .rr-tally{ font-size: .62rem !important; gap: .45rem; }
-    /* Debug-knappen (🛠️) var dold på mobil även förr (snes §30a) */
     .rite-rail #console-tab{ display: none; }
-  }
-  @media (max-width: 640px){
-    .rr-tag{ display: none; }
-    .rr-tally{ font-size: .55rem; gap: .35rem; }
-    .rr-actions{ gap: .25rem !important; }
-    .rite-rail .rr-btn{ width: 44px !important; height: 38px !important; font-size: .95rem !important; }
-    .rr-sigil{ width: 22px; height: 22px; font-size: .8rem; }
-    .rr-brand{ gap: .35rem; }
-    /* Admin-knappen är ändå bara för admin; spara plats på mobil */
-    .rite-rail .admin-btn{ display: none !important; }
   }
   @media (max-width: 480px){
     /* RESET-segmentet får ge vika på riktigt smala skärmar — TURN+TURNS räcker */
@@ -1654,7 +1576,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
 
   /* ═══════════ DEN FÖRBJUDNA GRIMSBOKEN — gilt tick ornaments, HP ink-drop,
      candleflicker (prefers-reduced-motion-guarded) ═══════════ */
-  .settings-menu::after, .mobile-menu::after, .mi-modal::after, .usage-modal::after, .cp-box::after{
+  .settings-menu::after, .mi-modal::after, .usage-modal::after, .cp-box::after{
     content: ''; position: absolute; left: 7px; right: 7px; top: 3px; height: 3px;
     pointer-events: none; opacity: .7;
     background: repeating-linear-gradient(90deg, rgba(var(--gold-rgb),.6) 0 1px, transparent 1px 10px);
@@ -1692,7 +1614,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
           <div class="pc-avatar-bg" id="pc-avatar-bg"></div>
           <div class="pc-card active" onclick="openCodex('character')" title="Open character sheet in Codex">
             <button class="pc-badge pc-badge-zoom" onclick="event.stopPropagation();openPcLightbox()" title="Enlarge portrait" aria-label="Enlarge portrait">🔍</button>
-            <button class="pc-badge pc-badge-paint" onclick="event.stopPropagation();pickAvatar('player')" title="Paint a new portrait" aria-label="Paint a new portrait">🎨</button>
+            <button class="pc-badge pc-badge-paint" onclick="event.stopPropagation();pickAvatar('player')" title="Generate a new portrait" aria-label="Generate a new portrait">🎨</button>
             <div style="flex:1;min-width:0">
               <div class="pc-name" id="pc-name">—</div>
               <div class="pc-sub" id="pc-sub">—</div>
@@ -2102,7 +2024,7 @@ const roleReady = API.me().then(u => {
   }
   if (u && u.role === 'admin') {
     isAdmin = true;
-    for (const id of ['admin-btn', 'admin-drawer-btn', 'mobile-menu-admin']) {
+    for (const id of ['admin-btn', 'admin-drawer-btn']) {
       const b = document.getElementById(id);
       if (b) b.style.display = '';
     }
@@ -2308,8 +2230,6 @@ function updateHeaderInfo() {
   const text = turnDayText();
   const el = document.getElementById('header-turns-info');
   if (el) el.textContent = text ? ' · ' + text : '';
-  const mel = document.getElementById('mobile-menu-turns');
-  if (mel) mel.textContent = turnInfoText() || '';
   renderAvatarBox();
   renderTurnTally();
 }
@@ -2715,8 +2635,8 @@ function pickAvatar(kind) {
     : 'The Adventurer';
   title.textContent = '🎨 Avatar — ' + label;
   desc.textContent = kind === 'player'
-    ? 'Paint a new avatar from your character sheet — items, traits and lore included. StepFun painting is free — Wan 2.7 Pro / Qwen Image 3 Pro need Patron. Or upload your own image.'
-    : 'Paint a new avatar of ' + (kind === 'dm' ? 'the Dungeon Master' : 'this NPC') + '. StepFun painting is free — Wan 2.7 Pro / Qwen Image 3 Pro need Patron. Or upload your own image.';
+    ? 'Generate a new avatar from your character sheet — items, traits and lore included. StepFun image generation is free — Wan 2.7 Pro / Qwen Image 3 Pro need Patron. Or upload your own image.'
+    : 'Generate a new avatar of ' + (kind === 'dm' ? 'the Dungeon Master' : 'this NPC') + '. StepFun image generation is free — Wan 2.7 Pro / Qwen Image 3 Pro need Patron. Or upload your own image.';
   preview.innerHTML = AVATARS[kind]
     ? `<img src="${AVATARS[kind]}" alt="" style="width:100%;height:100%;object-fit:cover">`
     : SPR.html('🎭');
@@ -2729,12 +2649,12 @@ function pickAvatar(kind) {
   // Återställ från ev. profil-läge: Engine-väljaren + knapptext ska synas igen
   const provRow = document.getElementById('avatar-provider-row');
   if (provRow) provRow.style.display = '';
-  aiBtn.textContent = '✨ Paint new from my words';
+  aiBtn.textContent = '✨ Generate new from my words';
   aiBtn.title = '';
   const wanBtn = document.getElementById('avatar-ai-btn-wan');
   if (wanBtn) { wanBtn.style.display = 'none'; wanBtn.title = ''; }
   const promptInp = document.getElementById('avatar-prompt-input');
-  if (promptInp) promptInp.placeholder = "Optional: describe exactly what you want painted… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)";
+  if (promptInp) promptInp.placeholder = "Optional: describe exactly what you want generated… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)";
   document.getElementById('avatar-ai-status').textContent = '';
   updateAvatarProviderLock();
   renderAvatarGallery();
@@ -2761,7 +2681,7 @@ function openProfileAvatarModal() {
   const provRow = document.getElementById('avatar-provider-row');
   const promptInp = document.getElementById('avatar-prompt-input');
   title.textContent = '🎨 Your profile portrait';
-  desc.textContent = 'Paint YOUR profile portrait — the face at your table, separate from your adventurer. Pick an engine below: StepFun (free) or Wan 2.7 Pro / Qwen Image 3 Pro (Patron 30€).';
+  desc.textContent = 'Generate YOUR profile portrait — the face at your table, separate from your adventurer. Pick an engine below: StepFun (free) or Wan 2.7 Pro / Qwen Image 3 Pro (Patron 30€).';
   const url = _hasAccountAvatar ? API.accountAvatarUrl() + '?t=' + Date.now() : null;
   preview.innerHTML = url
     ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover">`
@@ -2770,7 +2690,7 @@ function openProfileAvatarModal() {
   updBtn.style.display = 'none';
   // Profil-läget använder SAMMA Engine-väljare som äventyraren: en knapp + dropdown.
   if (provRow) provRow.style.display = '';
-  if (aiBtn) { aiBtn.style.display = ''; aiBtn.disabled = false; aiBtn.textContent = '✨ Paint your account profile avatar'; aiBtn.title = ''; }
+  if (aiBtn) { aiBtn.style.display = ''; aiBtn.disabled = false; aiBtn.textContent = '✨ Generate your account profile avatar'; aiBtn.title = ''; }
   if (wanBtn) { wanBtn.style.display = 'none'; wanBtn.title = ''; }
   if (promptInp) promptInp.placeholder = 'Describe yourself — e.g. \'hooded figure, lantern light, old leather\' (or leave empty)';
   document.getElementById('avatar-ai-status').textContent = '';
@@ -2914,7 +2834,7 @@ function avatarProvider() {
 // Wan / Qwen Image 3 Pro = Patron (30€). Returnerar false + informerar.
 function avatarGenGate(provider) {
   if ((provider === 'wan' || provider === 'qwen') && !_tierHasModels()) {
-    toast('🔒 Wan 2.7 Pro / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to paint with the premium engines.');
+    toast('🔒 Wan 2.7 Pro / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to generate with the premium engines.');
     try { SFX.error(); } catch (_) {}
     return false;
   }
@@ -2923,7 +2843,7 @@ function avatarGenGate(provider) {
 function avatarProviderChanged(sel) {
   if ((sel && (sel.value === 'wan' || sel.value === 'qwen')) && !_tierHasModels()) {
     sel.value = 'stepfun';
-    toast('🔒 Wan 2.7 Pro / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to paint with the premium engines.');
+    toast('🔒 Wan 2.7 Pro / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to generate with the premium engines.');
     try { SFX.error(); } catch (_) {}
   }
 }
@@ -2959,7 +2879,7 @@ async function generateAvatarAction(provider) {
     const prov = (provider === 'wan' || provider === 'qwen' || provider === 'stepfun') ? provider : avatarProvider();
     if (!avatarGenGate(prov)) return;
     const btn = document.getElementById('avatar-ai-btn');
-    status.textContent = '🎨 Painting your profile portrait… (10–30 s)';
+    status.textContent = '🎨 Generating your profile portrait… (10–30 s)';
     if (btn) btn.disabled = true;
     try {
       const freePrompt = (document.getElementById('avatar-prompt-input') || {}).value || '';
@@ -2969,7 +2889,7 @@ async function generateAvatarAction(provider) {
         _hasAccountAvatar = true;
         refreshAvatars();
         openProfileAvatarModal();
-        status.textContent = '✨ Profile portrait painted — ' + (prov === 'wan' ? 'Wan 2.7' : prov === 'qwen' ? 'Qwen Image 3 Pro' : 'StepFun');
+        status.textContent = '✨ Profile portrait generated — ' + (prov === 'wan' ? 'Wan 2.7' : prov === 'qwen' ? 'Qwen Image 3 Pro' : 'StepFun');
         try { SFX.levelup(); } catch (_) {}
       } else {
         status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Generation failed');
@@ -2987,7 +2907,7 @@ async function generateAvatarAction(provider) {
   const prov = (provider === 'wan' || provider === 'qwen' || provider === 'stepfun') ? provider : avatarProvider();
   const btn = document.getElementById('avatar-ai-btn');
   if (!avatarGenGate(prov)) return;
-  status.textContent = '🎨 The artist is painting… (10–30 s)';
+  status.textContent = '🎨 Generating… (10–30 s)';
   btn.disabled = true;
   try {
     // mode "new" = full generation → alltid en NY bild
@@ -3001,7 +2921,7 @@ async function generateAvatarAction(provider) {
       if (res.gallery_count) AVATAR_GAL[kind] = { count: res.gallery_count, index: res.gallery_index || 0 };
       refreshAvatars();
       pickAvatar(kind); // uppdatera förhandsvisningen i modalen
-      status.textContent = usedWords ? '✨ New avatar painted — used your words' : '✨ New avatar painted — used your character sheet';
+      status.textContent = usedWords ? '✨ New avatar generated — used your words' : '✨ New avatar generated — used your character sheet';
       try { SFX.levelup(); } catch (_) {}
     } else {
       status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Generation failed');
@@ -3136,7 +3056,7 @@ function openAvatarLightbox() {
   if (lb) lb.classList.add('show');
   try { SFX.click(); } catch (_) {}
 }
-// ── §4.3 Shared lightbox: kind state, gallery bar + paint action ──
+// ── §4.3 Shared lightbox: kind state, gallery bar + portrait action ──
 let _lbKind = null;   // kind shown in the lightbox ('player'|'dm'|'npc:<key>'|…)
 let _lbBusy = false;
 function _lbUpdateBar() {
@@ -3217,11 +3137,11 @@ function openMsgAvatarLightbox(kind) {
   }
   _lbOpenForKind(kind, title, _avW(src, 512));
 }
-// Sidebar 🔍 badge (§3.3) — player portrait, or paint fallback.
+// Sidebar 🔍 badge (§3.3) — player portrait, or portrait fallback.
 function openPcLightbox() {
   openMsgAvatarLightbox('player');
 }
-// 🎨 action inside the lightbox: close it, then open the paint modal for the
+// 🎨 action inside the lightbox: close it, then open the portrait modal for the
 // kind currently on display.
 function lbPaint() {
   const kind = _lbKind;
@@ -8166,9 +8086,15 @@ function renderJourney(raw) {
 // ═══════════════════════════════════════
 // ── Settings menu (gear icon) ──
 function toggleSettingsMenu() {
-  closeMobileMenu();
   const m = document.getElementById('settings-menu');
   m.classList.toggle('open');
+  // Rail v2: unified dropdownen och settings-panelen är ömsesidigt uteslutande
+  const rd = document.getElementById('rr-drop');
+  if (rd && m.classList.contains('open')) {
+    rd.classList.remove('open');
+    const rb = document.getElementById('rr-menu-btn');
+    if (rb) rb.setAttribute('aria-expanded', 'false');
+  }
 }
 function closeSettingsMenu() {
   const m = document.getElementById('settings-menu');
@@ -8178,31 +8104,9 @@ document.addEventListener('click', (e) => {
   if (!e.target.closest('#settings-menu') && !e.target.closest('[onclick*="toggleSettingsMenu"]')) closeSettingsMenu();
 });
 
-// ── Mobile topbar-menu (☰) — mobilens navigeringsmeny ──
-// Samlar alla topplänkar som göms på mobil (Codex, Admin, Help, …).
-function toggleMobileMenu() {
-  const m = document.getElementById('mobile-menu');
-  if (!m) return;
-  const isOpen = m.classList.toggle('open');
-  closeSettingsMenu();
-  if (isOpen) {
-    document.addEventListener('click', mobileMenuOutside, true);
-  } else {
-    document.removeEventListener('click', mobileMenuOutside, true);
-  }
-}
-function closeMobileMenu() {
-  const m = document.getElementById('mobile-menu');
-  if (m) m.classList.remove('open');
-  document.removeEventListener('click', mobileMenuOutside, true);
-}
-function mobileMenuOutside(e) {
-  const m = document.getElementById('mobile-menu');
-  const btn = document.querySelector('.mobile-menu-btn');
-  if (m && !m.contains(e.target) && !(btn && btn.contains(e.target))) {
-    closeMobileMenu();
-  }
-}
+// Rail v2: kugghjulspanelen stängs när unified-menyn öppnas (rail.js
+// stopPropagation stoppar outside-click-hanteraren ovan).
+{ const rb = document.getElementById('rr-menu-btn'); if (rb) rb.addEventListener('click', closeSettingsMenu); }
 
 // ── 📊 Usage-modal — modell- och token-statistik ──
 function fmtTok(n) {
@@ -8723,7 +8627,6 @@ function toggleCodexNav() {
 // Close drawers/sheets on Escape
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    closeMobileMenu();
     const sidebar = document.querySelector('.sidebar.mobile-open');
     if (sidebar) { toggleMobileSidebar(); return; }
     if (closeCodexIfOpen()) return;
@@ -8787,7 +8690,7 @@ if (!EMBERS_RM) tick(); else canvas.style.display = 'none';
     <span class="nav-icon">📖</span>
     <span class="nav-label">Codex</span>
   </button>
-  <button class="nav-tab" onclick="toggleMobileMenu();SFX.click()">
+  <button class="nav-tab" onclick="toggleSettingsMenu();SFX.click()">
     <span class="nav-icon">⚙️</span>
     <span class="nav-label">Tools</span>
   </button>
@@ -9248,7 +9151,7 @@ document.addEventListener('keydown', e => {
     <div class="cp-sec">
       <div class="cp-sec-title">🎨 Portrait</div>
       <div class="cp-actions">
-        <button class="cp-paint-btn" onclick="openProfileAvatarModal()">✨ Paint your account profile avatar</button>
+        <button class="cp-paint-btn" onclick="openProfileAvatarModal()">✨ Generate your account profile avatar</button>
       </div>
     </div>
   </div>
@@ -9270,22 +9173,22 @@ document.addEventListener('keydown', e => {
       <div class="av-gal-count" id="avatar-gal-count"></div>
       <div style="font-size:.62rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem">click to enlarge</div>
     </div>
-    <div class="mi-intro" id="avatar-modal-desc" style="font-size:.82rem;line-height:1.55">Paint a new avatar from your character sheet — items, traits and lore included. Or upload your own image.</div>
+    <div class="mi-intro" id="avatar-modal-desc" style="font-size:.82rem;line-height:1.55">Generate a new avatar from your character sheet — items, traits and lore included. Or upload your own image.</div>
     <div style="margin-top:.7rem">
       <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">🎨 YOUR OWN WORDS (optional)</div>
-      <textarea id="avatar-prompt-input" placeholder="Optional: describe exactly what you want painted… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)" style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:var(--font-display);font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>
-      <div style="font-size:.72rem;color:var(--bone-dim);margin-top:.35rem">Overrides the auto-built prompt from your sheet — describe exactly what you want painted.</div>
+      <textarea id="avatar-prompt-input" placeholder="Optional: describe exactly what you want generated… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)" style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:var(--font-display);font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>
+      <div style="font-size:.72rem;color:var(--bone-dim);margin-top:.35rem">Overrides the auto-built prompt from your sheet — describe exactly what you want generated.</div>
     </div>
     <div id="avatar-provider-row" style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
       <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
-      <select id="avatar-provider-select" class="tts-select" style="flex:1;min-width:0" onchange="avatarProviderChanged(this)" title="Image provider for painting">
+      <select id="avatar-provider-select" class="tts-select" style="flex:1;min-width:0" onchange="avatarProviderChanged(this)" title="Image provider for image generation">
         <option value="stepfun" selected>StepFun — Free</option>
         <option value="wan">Wan 2.7 Pro — Patron 🔒</option>
         <option value="qwen">Qwen Image 3 Pro — Patron 🔒</option>
       </select>
     </div>
     <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
-      <button class="av-btn primary" id="avatar-ai-btn" onclick="generateAvatarAction()">✨ Paint new from my words</button>
+      <button class="av-btn primary" id="avatar-ai-btn" onclick="generateAvatarAction()">✨ Generate new from my words</button>
       <button class="av-btn" id="avatar-update-btn" onclick="updateAvatarAction()" style="display:none">🔄 Update from sheet</button>
       <button class="av-btn" onclick="uploadAvatarAction()">📁 Upload image…</button>
       <button class="av-btn danger" id="avatar-del-one-btn" onclick="deleteCurrentAvatarImage()" style="display:none">🗑 Remove this portrait</button>
@@ -9305,10 +9208,11 @@ document.addEventListener('keydown', e => {
     <span class="av-lb-count" id="avatar-lightbox-count"></span>
     <button class="av-lb-nav" onclick="lbRotate(1)" aria-label="Next portrait">›</button>
   </div>
-  <button class="av-lb-act" id="avatar-lightbox-paint" hidden onclick="lbPaint()">🎨 Paint a new portrait</button>
+  <button class="av-lb-act" id="avatar-lightbox-paint" hidden onclick="lbPaint()">🎨 Generate a new portrait</button>
   <button class="av-lb-close" onclick="closeAvatarLightbox()">✕</button>
   <div class="av-lb-title" id="avatar-lightbox-title"></div>
 </div>
 
+<script src="rail.js?v=20260923a"></script>
 </body>
 </html>

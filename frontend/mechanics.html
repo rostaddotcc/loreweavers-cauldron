@@ -433,6 +433,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
 }
 </style>
 <link rel="stylesheet" href="snes.css?v=51">
+<link rel="stylesheet" href="rail.css?v=20260923a">
 <noscript><style>.rv{opacity:1;transform:none}#boot{display:none}.boot-lines{min-height:0}.term-line{opacity:1;transform:none}.str-row{opacity:1;transform:none;border-color:rgba(201,162,39,.4)}</style></noscript>
 <style id="grimoire-leaf">
 /* Den Forbjudna Grimsboken — illuminerat lövskikt (nya regler; befintliga redigerade in-place) */
@@ -458,7 +459,43 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
 </div>
 
 <!-- ═══════════ HERO ═══════════ -->
-<header class="hero">
+<header class="rite-rail">
+  <div class="rr-brand">
+    <span class="rr-sigil">⚗</span>
+    <span class="rr-name">The Lore Weaver's Cauldron</span>
+    <span class="rr-tag">MECHANICS</span>
+  </div>
+  <div class="rr-mid"></div>
+  <div class="rr-actions">
+    <div class="rr-menu">
+      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+      <div class="rr-drop" id="rr-drop">
+        <div class="rr-ghead">At the Table</div>
+        <a href="chat.html">⚔ To the Table</a>
+        <a href="adventure.html">🏰 The Crossroads</a>
+        <a href="newgame.html">✨ New Adventure</a>
+        <a href="characters.html">🔥 The Forge</a>
+        <div class="rr-ghead">The Archive</div>
+        <a href="character.html">🧙 Character</a>
+        <a href="npcs.html">👥 NPCs</a>
+        <a href="platser.html">🗺 The Map</a>
+        <a href="loggbok.html">📜 Logbook</a>
+        <a href="facts.html">✦ Facts</a>
+        <div class="rr-ghead">The Ledger</div>
+        <a href="help.html">❓ How to Play</a>
+        <a href="mechanics.html">📐 Mechanics</a>
+        <a href="models.html">🧠 The Minds</a>
+        <a href="pricing.html">🜲 Paths</a>
+        <a href="releases.html">📓 Release Notes</a>
+        <a href="screenshots.html">🖼 Screens</a>
+        <div class="rr-ghead">Account</div>
+        <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+        <a href="login.html" id="rr-auth">🔒 Log out</a>
+      </div>
+    </div>
+  </div>
+</header>
+<div class="hero">
 <div class="page-eyebrow">THE RULES · HOW THE WORLD MOVES</div>
   <h1>The Mechanics of the Cauldron</h1>
   <div class="page-rule">✦</div>
@@ -519,7 +556,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     <span class="chip b">Undo · costs 1 turn</span>
   </div>
   <div class="scroll-hint">▼ scroll to open the hatch ▼</div>
-</header>
+</div>
 
 <!-- ═══════════ INDEX ═══════════ -->
 <main>
@@ -921,7 +958,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     </div>
     <div class="panel rv">
       <h3><span class="dot">✦</span> The vault</h3>
-      <p>Saved adventurers live in a <b>vault</b> — one per account, not per campaign — so they outlive any adventure. Summoning copies the sheet into a campaign's state; rerolling spawns a fresh stream. Avatars are painted separately, from your words or an auto-built sheet prompt.</p>
+      <p>Saved adventurers live in a <b>vault</b> — one per account, not per campaign — so they outlive any adventure. Summoning copies the sheet into a campaign's state; rerolling spawns a fresh stream. Avatars are generated separately, from your words or an auto-built sheet prompt.</p>
     </div>
   </div>
 
@@ -1621,5 +1658,6 @@ setTimeout(typeJsonDemo, 1400);
 </script>
 <script src="i18n.js?v=20260906a"></script>
 <script src="sprites.js?v=20260806b"></script>
+<script src="rail.js?v=20260923a"></script>
 </body>
 </html>

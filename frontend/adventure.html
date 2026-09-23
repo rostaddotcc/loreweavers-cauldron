@@ -301,28 +301,9 @@
   }
   @media(max-width:400px){.app{padding:0 .5rem 3.5rem}.head h1{font-size:1.55rem}.head .over{letter-spacing:.28em}.path h2{font-size:var(--fs-sm)}.path p{font-size:var(--fs-sm)}.cp-icon{width:54px;height:54px;font-size:1.5rem}.campaign-card .cc-sub{font-size:var(--fs-tiny)}
   }
-  /* ═══════════ ⚙️ Kugghjul-meny (topbar) ═══════════ */
-  .gear-wrap{position:relative}
-  .gear-btn{font-size:1rem}
-  .gear-menu{position:absolute;top:calc(100% + 8px);right:0;z-index:60;min-width:210px;
-    background:var(--stone-2);border:1px solid var(--edge);border-radius:4px;
-    box-shadow:0 18px 50px -12px rgba(0,0,0,.85);padding:.4rem;display:none;flex-direction:column;gap:2px}
-  .gear-menu.show{display:flex}
-  .gm-row{display:flex;align-items:center;gap:.55rem;width:100%;font-family:var(--font-display,'Cinzel',serif);
-    font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--bone);
-    background:transparent;border:none;padding:.5rem .65rem;cursor:pointer;border-radius:3px;
-    text-align:left;transition:color .18s,background .18s}
-  .gm-row:hover{color:var(--gold-bright);background:var(--stone-3)}
-  .gm-row.danger:hover{color:var(--blood-bright)}
-  .gm-ico{width:1.25rem;text-align:center;font-size:.95rem;flex:none}
-  .gm-txt{line-height:1.2}
-  .gm-sep{height:1px;background:var(--edge);margin:.3rem .2rem;opacity:.6}
-  @media(max-width:640px){
-    .gear-menu{position:fixed;top:auto;right:.75rem;bottom:calc(env(safe-area-inset-bottom,0px) + .75rem);left:.75rem;min-width:0;max-height:70vh;overflow-y:auto}
-    .gm-row{min-height:46px;font-size:var(--fs-tiny)}
-  }
 </style>
 <link rel="stylesheet" href="snes.css?v=51">
+<link rel="stylesheet" href="rail.css?v=20260923a">
 <style>
 /* ═══════════ Login-känslan — mjuka knappar (override snes.css DOS-flatten) ═══════════
    snes.css laddas efter inline-blocket och tvingar platta knappar med !important.
@@ -471,7 +452,7 @@ html{font-size:var(--fs-base)}
 .htp-toggle{ border-radius: 8px !important; }
 .mi-modal, .pf-box, .step, .vault-empty, .toast{ border-radius: 14px !important; }
 .weaving-ad .wa-reasoning{ border-radius: 18px !important; }
-.arch .tag, .pv-trait, .vcard-use, .cc-del, .gm-row, .gear-menu, .dark-drop, .dropzone, .file-item{ border-radius: 6px !important; }
+.arch .tag, .pv-trait, .vcard-use, .cc-del, .dark-drop, .dropzone, .file-item{ border-radius: 6px !important; }
 /* ═══════════ Onboarding mjukare kanter (2026-08-05) ═══════════ */
 .name-input, .danger-btn, .dark-select, .dm-model-select, .campaign-card .cc-go, .blank-btn, .tab-btn, .pv-reroll, .top-btn{
   border-radius: 8px !important;
@@ -558,140 +539,45 @@ html{font-size:var(--fs-base)}
 <div class="hero-bg" id="hero-bg"><i class="hb" id="hb-a"></i><i class="hb" id="hb-b"></i></div><div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
 
 <div class="app">
-  <!-- ═══════════ TOPPRAD — RITE-RAIL (2026-08-11) ═══════════ -->
-  <div class="topbar rite-rail">
+  <header class="rite-rail">
     <div class="rr-brand">
-      <span class="rr-sigil">✦</span>
+      <span class="rr-sigil">⚗</span>
+      <span class="rr-name">The Lore Weaver's Cauldron</span>
+      <span class="rr-tag">THE CROSSROADS</span>
     </div>
-
-    <!-- ⚡ Turn-Tally (2026-08-11): adventure-screen visar kvotan — TURNS x/y · RESET hh:mm.
-         ID:n quota-turns/quota-cd/quota-tip/quota-benefits behålls (renderQuotaPill/quotaTick). -->
-    <div class="rr-tally" id="quota-pill" onclick="openProfileModal()" role="button" tabindex="0"
-         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openProfileModal()}">
-      <span class="tlabel">TURNS</span>
-      <span class="tv" id="quota-turns">⚡ …</span>
-      <span class="sep">·</span>
-      <span class="tlabel">RESET</span>
-      <span class="tv" id="quota-cd"></span>
-      <span class="quota-tip" id="quota-tip">Your turn quota — and when it refills. Click for your profile.</span>
-    </div>
-
+    <div class="rr-mid"></div>
     <div class="rr-actions">
-      <button class="quota-chip" id="quota-benefits" style="display:none" onclick="location.href='pricing.html'" title="Support/Patron benefits expire in">👑 0d</button>
-      <button type="button" class="rr-menu" onclick="openProfileModal()" title="Profile">🪞 Profile</button>
-      <button type="button" class="crr-btn" id="gear-sound-ico" onclick="toggleGearSound(this)" title="Sound">🎵</button>
-      <div class="gear-wrap">
-        <button class="crr-btn gear-btn" onclick="toggleGearMenu(event)" title="Menu" aria-haspopup="true" aria-expanded="false">⚙️</button>
-        <div class="gear-menu" id="gear-menu">
-          <div class="drop-head">Account</div>
-          <button type="button" class="gm-row" onclick="openProfileModal()"><span class="gm-ico">🪞</span><span class="gm-txt">Profile</span></button>
-          <button type="button" class="gm-row" id="upgrade-gate-btn" onclick="location.href='pricing.html'"><span class="gm-ico">💳</span><span class="gm-txt">Upgrade</span></button>
-          <div class="drop-head">Realm</div>
-          <button type="button" class="gm-row" onclick="location.href='releases.html'"><span class="gm-ico">✒</span><span class="gm-txt">Release Notes</span></button>
-          <button type="button" class="gm-row" onclick="location.href='characters.html'"><span class="gm-ico">⚒</span><span class="gm-txt">The Forge</span></button>
-          <button type="button" class="gm-row" id="admin-gate-btn" style="display:none" onclick="location.href='admin.html'"><span class="gm-ico">👑</span><span class="gm-txt">Admin</span></button>
-          <div class="gm-sep"></div>
-          <button type="button" class="gm-row danger" onclick="leaveGate()"><span class="gm-ico">🔒</span><span class="gm-txt">Log Out</span></button>
+        <button class="rr-btn" id="gear-sound-ico" onclick="toggleGearSound(this)" title="Sound" aria-label="Sound">🎵</button>
+        <button class="rr-btn" onclick="leaveGate()" title="Leave" aria-label="Leave">🚪 Leave</button>
+      <div class="rr-menu">
+        <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+        <div class="rr-drop" id="rr-drop">
+          <div class="rr-ghead">At the Table</div>
+          <a href="chat.html">⚔ To the Table</a>
+          <a href="adventure.html">🏰 The Crossroads</a>
+          <a href="newgame.html">✨ New Adventure</a>
+          <a href="characters.html">🔥 The Forge</a>
+          <div class="rr-ghead">The Archive</div>
+          <a href="character.html">🧙 Character</a>
+          <a href="npcs.html">👥 NPCs</a>
+          <a href="platser.html">🗺 The Map</a>
+          <a href="loggbok.html">📜 Logbook</a>
+          <a href="facts.html">✦ Facts</a>
+          <div class="rr-ghead">The Ledger</div>
+          <a href="help.html">❓ How to Play</a>
+          <a href="mechanics.html">📐 Mechanics</a>
+          <a href="models.html">🧠 The Minds</a>
+          <a href="pricing.html">🜲 Paths</a>
+          <a href="releases.html">📓 Release Notes</a>
+          <a href="screenshots.html">🖼 Screens</a>
+          <div class="rr-ghead">Account</div>
+          <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+          <a href="login.html" id="rr-auth">🔒 Log out</a>
         </div>
       </div>
     </div>
-  </div>
+  </header>
 
-  <style>
-    /* ═══════════ RITE-RAIL — topbar + Turn-Tally (2026-08-11) ═══════════
-       Designkontrakt (verbatim från mockup): */
-    .rite-rail{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:48px;background:linear-gradient(180deg,var(--stone-2),var(--stone));border:1px solid var(--edge);border-top:1px solid var(--edge-hi);padding:0 .8rem;gap:1rem;position:relative}
-    .rite-rail::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,rgba(var(--gold-rgb),.55) 30%,rgba(var(--gold-rgb),.55) 70%,transparent)}
-    .rr-brand{display:flex;align-items:center;gap:.55rem;min-width:0;justify-self:start}
-    .rr-sigil{width:22px;height:22px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;color:var(--gold-bright);font-size:var(--fs-tiny);flex-shrink:0;box-shadow:0 0 8px rgba(var(--gold-rgb),.35) inset}
-    .rr-name{font-family:var(--font-display);font-size:var(--fs-tiny);letter-spacing:.14em;color:var(--bone-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .rr-tag{font-family:var(--font-accent);font-size:.52rem;letter-spacing:.2em;color:var(--gold);border:1px solid rgba(var(--gold-rgb),.4);padding:.15rem .4rem;white-space:nowrap}
-    .rr-tally{justify-self:center;display:flex;align-items:baseline;gap:.7rem;font-family:var(--font-mono);font-size:.72rem;color:var(--bone-dim);white-space:nowrap}
-    .rr-tally .tv{color:var(--gold-bright);font-weight:500}
-    .rr-tally .sep{color:var(--edge-hi)}
-    .rr-tally .warn{color:var(--blood-bright)}
-    .rr-actions{display:flex;align-items:center;gap:.4rem;justify-self:end;justify-content:flex-end}
-    .crr-btn{width:44px;height:34px;border:1px solid var(--edge);background:var(--stone);color:var(--bone-dim);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;font-size:.85rem}
-    .crr-btn:hover{border-color:var(--gold);color:var(--gold-bright);box-shadow:0 0 10px rgba(var(--gold-rgb),.25)}
-    .crr-btn.on{border-color:var(--gold);color:var(--gold-bright)}
-    .rr-menu{font-family:var(--font-display);font-size:.68rem;letter-spacing:.15em;color:var(--bone);border:1px solid var(--edge);background:var(--stone-2);padding:0 .9rem;height:34px;display:flex;align-items:center;gap:.5rem;cursor:pointer}
-    .rr-menu:hover{border-color:var(--gold);color:var(--gold-bright)}
-
-    /* ── Tillägg utöver kontraktet (nödvändiga) ── */
-    .crr-btn.wide{width:auto;padding:0 .8rem;font-size:.72rem;letter-spacing:.06em}
-    /* .rr-name är nowrap + ellipsis i kontraktet — flex-item måste få krympa
-       (min-width:auto) annars svämmar brand över sin 1fr-kolumn och kolliderar
-       med den centrerade tallyn. Taggen hålls intakt. */
-    .rr-name{min-width:0}
-    .rr-tag{flex-shrink:0}
-    /* justify-self:start (kontraktet) ger brand sin content-bredd och låter den
-       svämma över kolumnen → kollision med tallyn. stretch = samma innehålls-
-       layout (flex-start), men boxen hålls i kolumnen så .rr-name-ellipsen funkar. */
-    .rr-brand{justify-self:stretch}
-    /* Quota-tally: klick → profil; hover-tooltip behålls från quota-pillen */
-    #quota-pill{position:relative;cursor:pointer}
-    #quota-pill:hover .quota-tip{display:block}
-    .quota-tip{position:absolute;top:calc(100% + 9px);left:0;z-index:70;width:min(300px,80vw);
-      background:var(--stone-3);border:1px solid var(--edge-hi);border-radius:6px;padding:.6rem .75rem;
-      font-size:var(--fs-tiny);font-style:italic;line-height:1.55;color:var(--bone);text-align:left;
-      box-shadow:0 12px 30px -10px rgba(0,0,0,.85);display:none}
-    .quota-tip::before{content:'';position:absolute;top:-6px;left:30px;
-      border:6px solid transparent;border-bottom-color:var(--edge-hi)}
-    .quota-chip{display:inline-flex;align-items:center;gap:.22rem;padding:.3rem .5rem;font-size:.68rem;
-      letter-spacing:.05em;font-family:var(--font-display,'Cinzel',serif);color:var(--bone);
-      background:var(--stone-3);border:1px solid var(--edge);border-radius:999px;cursor:pointer;
-      white-space:nowrap;transition:color .2s,border-color .2s}
-    .quota-chip:hover{border-color:var(--gold);color:var(--gold-bright)}
-
-    /* ── snes.css-resist: snes.css tvingar platta DOS-knappar med !important
-       (button/.crr-btn/.rr-menu + font-body på ALLT) och har EGNA .crr-btn/.rr-actions-
-       regler (roll-request-kort i chatten: width:100%, min-height:48px, gul ram).
-       Dessa !important-regler körs EFTER snes.css och återställer rite-rail-
-       kontraktet (samma mönster som blocket längst upp i <head>). */
-    .crr-btn{background:var(--stone)!important;color:var(--bone-dim)!important;transition:all .15s!important;width:44px!important;min-height:34px!important;border-color:var(--edge)!important}
-    .crr-btn:hover{background:var(--stone)!important;border-color:var(--gold)!important;color:var(--gold-bright)!important;box-shadow:0 0 10px rgba(var(--gold-rgb),.25)!important;transform:none!important}
-    .crr-btn:active{background:var(--stone)!important;color:var(--bone-dim)!important}
-    .crr-btn.on{border-color:var(--gold)!important;color:var(--gold-bright)!important}
-    .crr-btn.wide{width:auto!important}
-    .rr-actions{width:auto!important;align-items:center!important;flex-wrap:nowrap!important}
-    .rr-menu{font-family:var(--font-display)!important;letter-spacing:.15em!important;color:var(--bone)!important;background:var(--stone-2)!important;transition:all .15s!important}
-    .rr-menu:hover{background:var(--stone-2)!important;border-color:var(--gold)!important;color:var(--gold-bright)!important;transform:none!important}
-    .rr-menu:active{background:var(--stone-2)!important;color:var(--bone)!important}
-    .rr-name{font-family:var(--font-display)!important;letter-spacing:.14em!important;color:var(--bone-bright)!important}
-    .rr-tag{font-family:var(--font-accent)!important;letter-spacing:.2em!important;color:var(--gold)!important}
-    .rr-tally{font-family:var(--font-mono)!important;font-size:.72rem!important;color:var(--bone-dim)!important}
-    .rr-tally .tv{color:var(--gold-bright)!important}
-    .rr-tally .sep{color:var(--edge-hi)!important}
-    .rr-tally .warn{color:var(--blood-bright)!important}
-
-    /* ── Mobil ── snes.css tvingar gap:0/padding/overflow på .topbar ≤900px → återställ.
-       Railen hålls HORISONTELL (1fr auto 1fr) på alla bredder — knappar/tally
-       kompakteras i stället för att staplas. overflow:visible så gear-menyn
-       (absolut positionerad) inte klipps av snes.css overflow:hidden. ≤640px:
-       dölj .rr-name (kontraktet). */
-    @media(max-width:940px){
-      .topbar{gap:1rem!important;padding:0 .8rem!important}
-      .quota-chip{padding:.3rem .4rem;font-size:.64rem}
-    }
-    @media(max-width:940px){
-      .topbar{grid-template-columns:auto 1fr auto!important;grid-template-rows:none;height:48px!important;overflow:visible!important}
-    }
-    @media(max-width:640px){
-      .rr-name{display:none}
-      .rr-tally{font-size:.56rem!important;gap:.3rem}
-      .rr-tag{font-size:.5rem;letter-spacing:.16em}
-      .crr-btn{width:38px!important;height:32px!important}
-      .rr-actions{gap:.2rem!important}
-      /* Profile-knappen är redundant på mobil (finns i gear-menyn + tally-pillen
-         öppnar profilen) — dölj den så tallyn får plats bredvid actions. */
-      .rr-menu{display:none!important}
-      /* Temanamnet döljs på mobil (icon-only 🎨) — popovern visar namnet. */
-    }
-    @media(max-width:400px){
-      .quota-chip{padding:.3rem .32rem;font-size:.6rem}
-      .rr-tally{gap:.4rem}
-    }
-  </style>
 
   <!-- ═══════════════ 🪞 Profil-modal (spelarens egna stats) ═══════════════ -->
   <style>
@@ -773,7 +659,7 @@ html{font-size:var(--fs-base)}
         <div class="pf-head">
           <div class="pf-thumb" id="pf-thumb" onclick="openPfLightbox()" title="Open full portrait" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openPfLightbox()}">
             <div class="pf-thumb-img" id="pf-thumb-img">👤</div>
-            <button class="pf-paint-mini" onclick="event.stopPropagation();openProfilePortraitModal()" title="Paint your portrait" aria-label="Paint your portrait">🎨</button>
+            <button class="pf-paint-mini" onclick="event.stopPropagation();openProfilePortraitModal()" title="Generate your portrait" aria-label="Generate your portrait">🎨</button>
           </div>
           <div>
             <div class="pf-name" id="pf-name">Adventurer</div>
@@ -798,7 +684,7 @@ html{font-size:var(--fs-base)}
         <span class="pf-lb-count" id="pf-lb-count">—</span>
         <button class="pf-lb-nav" id="pf-lb-next" onclick="pfLightboxRotate(1)" title="Next" aria-label="Next">›</button>
       </div>
-      <div class="pf-lb-hint" id="pf-lb-hint">Click 🎨 to repaint · ‹ › browse your gallery</div>
+      <div class="pf-lb-hint" id="pf-lb-hint">Click 🎨 to generate a new portrait · ‹ › browse your gallery</div>
     </div>
   </div>
 
@@ -823,7 +709,7 @@ html{font-size:var(--fs-base)}
   <div class="mi-overlay" id="adv-paint-overlay" onclick="if(event.target===this)closeAdvPaintModal()">
     <div class="mi-modal" style="max-width:420px">
       <div class="mi-head">
-        <span>🎨 Paint your adventurer</span>
+        <span>🎨 Generate your portrait</span>
         <button class="mi-close" onclick="closeAdvPaintModal()">✕</button>
       </div>
       <!-- Nuvarande porträtt (om det finns) — klick öppnar förstoring/re-roll (2026-08-08) -->
@@ -833,14 +719,14 @@ html{font-size:var(--fs-base)}
              title="Enlarge portrait" style="width:72px;height:72px;border-radius:50%;overflow:hidden;border:2px solid var(--gold);background:var(--stone-3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.6rem;margin:0 auto">🎭</div>
         <div style="font-size:.68rem;color:var(--bone-dim);font-style:italic;margin-top:.4rem">Current portrait — click to enlarge &amp; re-roll</div>
       </div>
-      <div class="mi-intro" id="adv-paint-desc" style="font-size:.82rem;line-height:1.55">Paint your adventurer two ways — <b>🖌️ Free prompt</b> paints ONLY your words, <b>📜 From dossier</b> weaves the portrait from your character's own story. Engine: StepFun (free) or Wan 2.7 Pro / Qwen Image 3 Pro (Patron 30€).</div>
+      <div class="mi-intro" id="adv-paint-desc" style="font-size:.82rem;line-height:1.55">Generate the portrait in two ways — <b>🖌️ Free prompt</b> uses ONLY your words, <b>📜 From dossier</b> weaves the portrait from your character's own story. Engine: StepFun (free) or Wan 2.7 Pro / Qwen Image 3 Pro (Patron 30€).</div>
       <div style="margin-top:.7rem">
         <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">🖌️ YOUR OWN WORDS (free prompt)</div>
-        <textarea id="adv-paint-prompt" placeholder="Describe exactly what you want painted — e.g. 'hooded figure, lantern light, rain'. Paints ONLY your words." style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:6px;resize:vertical"></textarea>
+        <textarea id="adv-paint-prompt" placeholder="Describe exactly what you want to see — e.g. 'hooded figure, lantern light, rain'. Uses ONLY your words." style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:6px;resize:vertical"></textarea>
       </div>
       <div style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
         <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
-        <select id="adv-paint-provider" class="tts-select" style="flex:1;min-width:0;font-size:.8rem;padding:.35rem .5rem;border-radius:6px;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright)" onchange="advPaintProviderChanged(this)" title="Image provider for painting">
+        <select id="adv-paint-provider" class="tts-select" style="flex:1;min-width:0;font-size:.8rem;padding:.35rem .5rem;border-radius:6px;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright)" onchange="advPaintProviderChanged(this)" title="Image provider for image generation">
           <option value="stepfun">StepFun — Free</option>
           <option value="wan">Wan 2.7 Pro — Patron 🔒</option>
           <option value="qwen">Qwen Image 3 Pro — Patron 🔒</option>
@@ -862,21 +748,21 @@ html{font-size:var(--fs-base)}
         <button class="mi-close" onclick="closeProfilePortraitModal()" title="Close">✕</button>
       </div>
       <div id="pf-paint-preview" style="width:150px;height:150px;margin:0 auto .8rem;border-radius:10px;overflow:hidden;border:1px solid var(--edge-hi);background:var(--stone-3);display:flex;align-items:center;justify-content:center;font-size:3rem">👤</div>
-      <div class="mi-intro" style="font-size:.82rem;line-height:1.55">Paint the face you bring to the table — <b>your</b> portrait, separate from your adventurer. Describe it below, or leave empty and let the Cauldron imagine you. Engine: StepFun (free) or Wan 2.7 Pro / Qwen Image 3 Pro (Patron 30€).</div>
+      <div class="mi-intro" style="font-size:.82rem;line-height:1.55">Generate the face you bring to the table — <b>your</b> portrait, separate from your adventurer. Describe it below, or leave empty and let the Cauldron imagine you. Engine: StepFun (free) or Wan 2.7 Pro / Qwen Image 3 Pro (Patron 30€).</div>
       <div style="margin-top:.7rem">
         <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">🖌️ Describe yourself (optional)</div>
         <textarea id="pf-paint-prompt" placeholder="e.g. 'hooded figure, lantern light, old leather' — or leave empty" style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:6px;resize:vertical"></textarea>
       </div>
       <div style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
         <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
-        <select id="pf-paint-provider" class="tts-select" style="flex:1;min-width:0;font-size:.8rem;padding:.35rem .5rem;border-radius:6px;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright)" onchange="pfPaintProviderChanged(this)" title="Image provider for painting">
+        <select id="pf-paint-provider" class="tts-select" style="flex:1;min-width:0;font-size:.8rem;padding:.35rem .5rem;border-radius:6px;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright)" onchange="pfPaintProviderChanged(this)" title="Image provider for image generation">
           <option value="stepfun">StepFun — Free</option>
           <option value="wan">Wan 2.7 Pro — Patron 🔒</option>
           <option value="qwen">Qwen Image 3 Pro — Patron 🔒</option>
         </select>
       </div>
       <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
-        <button class="av-btn primary" id="pf-paint-btn" onclick="profilePortraitGenerate()">✨ Paint portrait</button>
+        <button class="av-btn primary" id="pf-paint-btn" onclick="profilePortraitGenerate()">✨ Generate portrait</button>
       </div>
       <div id="pf-paint-status" style="font-size:.75rem;color:var(--bone-dim);text-align:center;margin-top:.8rem;min-height:1rem"></div>
     </div>
@@ -1083,7 +969,7 @@ html{font-size:var(--fs-base)}
       <!-- Förhandsvisning av den vävda hjälten -->
       <div class="preview" id="adv-preview">
         <div class="pv-head">
-          <div class="pv-portrait" id="adv-pv-portrait" onclick="openAdvPaintModal()" title="Paint your adventurer" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAdvPaintModal()}">🎭</div>
+          <div class="pv-portrait" id="adv-pv-portrait" onclick="openAdvPaintModal()" title="Generate your portrait" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAdvPaintModal()}">🎭</div>
           <div>
             <div class="pv-name" id="adv-pv-name"></div>
             <div class="pv-class" id="adv-pv-class"></div>
@@ -1359,21 +1245,12 @@ async function askDeleteCampaign(campaignId, name) {
   }
 }
 
-// 👑 Visa admin-knapp om inloggad som admin; 💳 Upgrade/Membership etikett per tier
+// 👑 Admin-länk i rail-menyn (rail.js) — quota-pillen återanvänder /api/me-svaret
 API.me().then(u => {
-  if (u && u.role === 'admin') {
-    const btn = document.getElementById('admin-gate-btn');
-    if (btn) btn.style.display = '';
+  if (u && u.role === 'admin' && typeof window.railSetAdmin === 'function') {
+    window.railSetAdmin(true);
   }
   if (u) {
-    const up = document.getElementById('upgrade-gate-btn');
-    if (up) {
-      const prem = (u.subscription_status === 'tier2' || u.subscription_status === 'lifetime');
-      const ico = up.querySelector('.gm-ico');
-      const txt = up.querySelector('.gm-txt');
-      if (ico) ico.textContent = prem ? '👑' : '💳';
-      if (txt) txt.textContent = prem ? 'Membership' : 'Upgrade';
-    }
     window._advMe = u;        // ⚡ quota-pillen återanvänder detta /api/me-svar
     renderQuotaPill(u);
   }
@@ -1468,6 +1345,7 @@ async function leaveGate() {
   sessionStorage.removeItem('dnd_token');
   location.href = 'login.html';
 }
+window.doLogout = leaveGate;   // rail.js "Log out" använder denna
 
 // SFX-knappen ska spegla sparad ljudinställning
 document.querySelectorAll('.sfx-btn').forEach(b => b.textContent = SFX.enabled ? '🎵' : '🔇');
@@ -2077,7 +1955,7 @@ function advPaintProvider() {
 }
 function advPaintGate(provider) {
   if ((provider === 'wan' || provider === 'qwen') && advPaintTier !== 'tier2' && advPaintTier !== 'lifetime') {
-    toast('🔒 Wan 2.7 Pro / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to paint with the premium engines.');
+    toast('🔒 Wan 2.7 Pro / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to generate with the premium engines.');
     try { SFX.error(); } catch (_) {}
     return false;
   }
@@ -2086,7 +1964,7 @@ function advPaintGate(provider) {
 function advPaintProviderChanged(sel) {
   if ((sel && (sel.value === 'wan' || sel.value === 'qwen')) && advPaintTier !== 'tier2' && advPaintTier !== 'lifetime') {
     sel.value = 'stepfun';
-    toast('🔒 Wan 2.7 Pro / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to paint with the premium engines.');
+    toast('🔒 Wan 2.7 Pro / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to generate with the premium engines.');
   }
 }
 function advPaintUpdateLock() {
@@ -2119,7 +1997,7 @@ async function openAdvPaintModal() {
       const res = await API.vaultSave({ character: advAdventurer, inventory: advAdventurerInv });
       advAdventurerId = res.id;
     } catch (e) {
-      toast('⚠ ' + (e.message || 'Could not save the adventurer before painting'));
+      toast('⚠ ' + (e.message || 'Could not save the adventurer before generating'));
       return;
     }
   }
@@ -2162,7 +2040,7 @@ async function advPaintRun(prompt, fromDossier) {
   advPaintLastProvider = prov;
   status.textContent = fromDossier
     ? '📜 Weaving your portrait from the dossier…'
-    : (prov === 'wan' ? '🖼️ Painting with Wan 2.7 Pro… (15–40 s)' : '🎨 Painting with StepFun… (10–30 s)');
+    : (prov === 'wan' ? '🖼️ Generating with Wan 2.7 Pro… (15–40 s)' : '🎨 Generating with StepFun… (10–30 s)');
   if (freeBtn) freeBtn.disabled = true;
   if (dossierBtn) dossierBtn.disabled = true;
   try {
@@ -2181,8 +2059,8 @@ async function advPaintRun(prompt, fromDossier) {
       if (curBox) curBox.innerHTML = '<img src="' + API.vaultAvatarUrl(advAdventurerId) + '?t=' + Date.now() + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">';
       if (curWrap) curWrap.style.display = '';
       status.textContent = fromDossier
-        ? '✨ Portrait painted from your dossier'
-        : (prov === 'wan' ? '✨ Portrait painted — Wan 2.7 Pro, used your words' : '✨ Portrait painted — StepFun, used your words');
+        ? '✨ Portrait generated from your dossier'
+        : (prov === 'wan' ? '✨ Portrait generated — Wan 2.7 Pro, used your words' : '✨ Portrait generated — StepFun, used your words');
       try { SFX.levelup(); } catch (_) {}
     } else {
       status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Generation failed');
@@ -2200,7 +2078,7 @@ async function advPaintFreePrompt() {
   const inp = document.getElementById('adv-paint-prompt');
   const text = (inp && inp.value || '').trim();
   if (!text) {
-    toast('✍️ Write what you want painted first — free prompt paints ONLY your words.');
+    toast('✍️ Write what you want to see first — free prompt uses ONLY your words.');
     try { SFX.error(); } catch (_) {}
     return;
   }
@@ -2263,7 +2141,7 @@ async function rerollPortrait() {
         const res = await API.vaultSave({ character: advAdventurer, inventory: advAdventurerInv });
         advAdventurerId = res.id;
       } catch (e) {
-        if (st) st.textContent = '⚠ ' + (e.message || 'Could not save the adventurer before painting');
+        if (st) st.textContent = '⚠ ' + (e.message || 'Could not save the adventurer before generating');
         if (rb) rb.disabled = false; return;
       }
     }
@@ -2271,7 +2149,7 @@ async function rerollPortrait() {
       if (st) st.textContent = '⚠ ' + (isEn() ? 'Summon or choose your adventurer first' : 'Frammana eller välj din äventyrare först');
       if (rb) rb.disabled = false; return;
     }
-    const prompt = advPaintLastPrompt || fwPromptText() || (advArchKey && ARCHETYPES[advArchKey] ? archField(ARCHETYPES[advArchKey], 'prompt') : '') || (isEn() ? 'A mysterious dark-fantasy adventurer, painted portrait' : 'Ett mystiskt dark-fantasy-äventyrareporträtt');
+    const prompt = advPaintLastPrompt || fwPromptText() || (advArchKey && ARCHETYPES[advArchKey] ? archField(ARCHETYPES[advArchKey], 'prompt') : '') || (isEn() ? 'A mysterious dark-fantasy adventurer, generated portrait' : 'Ett mystiskt dark-fantasy-äventyrareporträtt');
     const res = await API.vaultGenerateAvatar(advAdventurerId, Date.now() % 1000000, 'new', prompt, prov);
     if (res && res.ok) {
       const url = API.vaultAvatarUrl(advAdventurerId) + '?t=' + Date.now();
@@ -2279,7 +2157,7 @@ async function rerollPortrait() {
       if (small) small.innerHTML = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
       const imgBox = document.getElementById('adv-portrait-img');
       if (imgBox) { imgBox.innerHTML = ''; const ni = document.createElement('img'); ni.src = url; ni.alt = ''; imgBox.appendChild(ni); }
-      if (st) st.textContent = (prov === 'wan' ? '✨ New portrait painted — Wan 2.7 Pro' : '✨ New portrait painted — StepFun');
+      if (st) st.textContent = (prov === 'wan' ? '✨ New portrait generated — Wan 2.7 Pro' : '✨ New portrait generated — StepFun');
       try { SFX.levelup(); } catch (_) {}
     } else {
       if (st) st.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Generation failed');
@@ -2650,7 +2528,7 @@ function proceed(mode) {
 let toastTimer;
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2400);}
 
-// ── ⚙️ Kugghjul-meny (topbar) ──
+// ── 🔊 Ljudknapp (topbar) ──
 function toggleGearSound(btn) {
   if (typeof SFX !== 'undefined') SFX.toggle();
   const ico = document.getElementById('gear-sound-ico');
@@ -2661,31 +2539,8 @@ function gearSoundInit() {
   if (ico && typeof SFX !== 'undefined') ico.textContent = SFX.enabled ? '🎵' : '🔇';
 }
 gearSoundInit();
-function toggleGearMenu(e) {
-  e.stopPropagation();
-  const menu = document.getElementById('gear-menu');
-  if (!menu) return;
-  const open = menu.classList.toggle('show');
-  const btn = document.querySelector('.gear-btn');
-  if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-  if (typeof SFX !== 'undefined') SFX.click();
-}
-document.addEventListener('click', (e) => {
-  const menu = document.getElementById('gear-menu');
-  if (menu && menu.classList.contains('show') && !e.target.closest('.gear-wrap')) {
-    menu.classList.remove('show');
-    const btn = document.querySelector('.gear-btn');
-    if (btn) btn.setAttribute('aria-expanded', 'false');
-  }
-});
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    const menu = document.getElementById('gear-menu');
-    if (menu && menu.classList.contains('show')) {
-      menu.classList.remove('show');
-      const btn = document.querySelector('.gear-btn');
-      if (btn) btn.setAttribute('aria-expanded', 'false');
-    }
     // Audit A2 §4.3: Esc stänger ljuslådan + porträtt-preview (var de öppna)
     if (document.getElementById('pf-lb-overlay')?.classList.contains('show')) return closePfLightbox();
     if (document.getElementById('adv-portrait-overlay')?.classList.contains('show')) return closeAdvPortraitPreview();
@@ -2820,7 +2675,7 @@ function closeProfilePortraitModal() {
 function pfPaintProviderChanged(sel) {
   if ((sel && (sel.value === 'wan' || sel.value === 'qwen')) && advPaintTier !== 'tier2' && advPaintTier !== 'lifetime') {
     sel.value = 'stepfun';
-    toast('🔒 Wan 2.7 Pro / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to paint with the premium engines.');
+    toast('🔒 Wan 2.7 Pro / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to generate with the premium engines.');
   }
 }
 function pfPaintUpdateLock() {
@@ -2843,7 +2698,7 @@ async function profilePortraitGenerate() {
   const status = document.getElementById('pf-paint-status');
   const btn = document.getElementById('pf-paint-btn');
   const prompt = ((document.getElementById('pf-paint-prompt') || {}).value || '').trim();
-  status.textContent = (prov === 'wan' ? '🖼️ Painting with Wan 2.7 Pro… (15–40 s)' : prov === 'qwen' ? '🖼️ Painting with Qwen Image 3 Pro… (15–40 s)' : '🎨 Painting with StepFun… (10–30 s)');
+  status.textContent = (prov === 'wan' ? '🖼️ Generating with Wan 2.7 Pro… (15–40 s)' : prov === 'qwen' ? '🖼️ Generating with Qwen Image 3 Pro… (15–40 s)' : '🎨 Generating with StepFun… (10–30 s)');
   if (btn) btn.disabled = true;
   try {
     const res = await API.generateAccountAvatar(prompt, Date.now() % 1000000, prov);
@@ -2852,7 +2707,7 @@ async function profilePortraitGenerate() {
       _pfRenderAvatar();
       const prev = document.getElementById('pf-paint-preview');
       if (prev) prev.innerHTML = `<img src="${API.accountAvatarUrl()}?t=${Date.now()}" alt="" style="width:100%;height:100%;object-fit:cover">`;
-      status.textContent = '✨ Portrait painted — ' + (prov === 'wan' ? 'Wan 2.7 Pro' : prov === 'qwen' ? 'Qwen Image 3 Pro' : 'StepFun');
+      status.textContent = '✨ Portrait generated — ' + (prov === 'wan' ? 'Wan 2.7 Pro' : prov === 'qwen' ? 'Qwen Image 3 Pro' : 'StepFun');
       if (typeof SFX !== 'undefined') SFX.levelup();
     } else {
       status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Generation failed');
@@ -3126,7 +2981,7 @@ tick();
 /* ═══ Den Förbjudna Grimsboken — grimoire-layer (agent11b, 2026-09-22) ═══
    Burnt parchment · gold leaf · oxblood/lapis · vine marginalia.
    Ligger SIST i dokumentordningen (därför i slutet av <body>): vinner mot
-   snes.css (syskonägt, orört) och mot äldre body-<style>-block. Tokens pinnas
+   snes.css (syskonägt, orört) och mot äldre body-style-block. Tokens pinnas
    mot seed-paletten så sidan står rätt även innan snes.css uppdateras. */
 :root{
   --ink:#171310; --stone:#1c1713; --stone-2:#241c15; --stone-3:#2c231a;
@@ -3218,5 +3073,6 @@ select,.adv-details summary,.btn-gold,a.back{min-height:44px}
   .rune-divider span,.rr-sigil,.head h1::first-letter{animation:none!important}
 }
 </style>
+<script src="rail.js?v=20260923a"></script>
 </body>
 </html>

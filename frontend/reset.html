@@ -28,12 +28,12 @@
   }
   *{margin:0;padding:0;box-sizing:border-box}
   body{font-family:var(--font-body);color:var(--bone);background:var(--ink);
-    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
     padding:1.2rem;-webkit-tap-highlight-color:transparent}
+  .rite-rail{align-self:stretch}
   .card{position:relative;z-index:1;width:min(400px,100%);background:var(--stone);
     border:1px solid var(--edge);padding:2.2rem 2rem;text-align:center}
   .card::before{content:'';position:absolute;inset:3px;border:1px solid var(--edge);pointer-events:none;opacity:.3}
-  .sig{font-size:1.6rem;margin-bottom:.5rem}
   h1{font-family:var(--font-display);font-weight:700;font-size:1.25rem;letter-spacing:.16em;
     text-transform:uppercase;color:var(--gold);margin-bottom:.4rem}
   .sub{var(--fs-sm);color:var(--bone-dim);margin-bottom:1.6rem;line-height:1.6}
@@ -52,18 +52,15 @@
   .back{display:inline-block;margin-top:1.1rem;var(--fs-tiny);letter-spacing:.06em;
     color:var(--bone-dim);text-decoration:none}
   .back:hover{color:var(--gold-bright)}
-  .badge{display:inline-block;margin-bottom:1rem;var(--fs-micro);letter-spacing:.14em;text-transform:uppercase;
-    color:var(--gold-bright);border:1px solid var(--edge-hi);padding:.28rem .7rem}
   /* ── Mobilpass (2026-09-06, audit-design-system §8.7): reset.html var enda
      riktiga sidan utan breakpoints — speglar login.html:s småskärmsmönster. ── */
   @media (max-width:600px){
-    body{padding:.8rem;align-items:flex-start;padding-top:2.2rem}
+    body{padding:.8rem;justify-content:flex-start;padding-top:2.2rem}
     .card{width:100%;padding:1.6rem 1.2rem}
     h1{var(--fs-base);letter-spacing:.12em}
     .sub{var(--fs-tiny);margin-bottom:1.2rem}
     .field input{padding:.8rem .85rem}
     .btn{padding:.95rem 1rem;var(--fs-tiny)}
-    .badge{var(--fs-micro);padding:.24rem .6rem}
   
     .btn,.back{min-height:44px}
     input{font-size:16px}
@@ -74,11 +71,46 @@
   }
 </style>
 <link rel="stylesheet" href="snes.css?v=51">
+<link rel="stylesheet" href="rail.css?v=20260923a">
 </head>
 <body>
+<header class="rite-rail">
+  <div class="rr-brand">
+    <span class="rr-sigil">⚗</span>
+    <span class="rr-name">The Lore Weaver's Cauldron</span>
+    <span class="rr-tag">RE-FORGING</span>
+  </div>
+  <div class="rr-mid"></div>
+  <div class="rr-actions">
+    <div class="rr-menu">
+      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+      <div class="rr-drop" id="rr-drop">
+        <div class="rr-ghead">At the Table</div>
+        <a href="chat.html">⚔ To the Table</a>
+        <a href="adventure.html">🏰 The Crossroads</a>
+        <a href="newgame.html">✨ New Adventure</a>
+        <a href="characters.html">🔥 The Forge</a>
+        <div class="rr-ghead">The Archive</div>
+        <a href="character.html">🧙 Character</a>
+        <a href="npcs.html">👥 NPCs</a>
+        <a href="platser.html">🗺 The Map</a>
+        <a href="loggbok.html">📜 Logbook</a>
+        <a href="facts.html">✦ Facts</a>
+        <div class="rr-ghead">The Ledger</div>
+        <a href="help.html">❓ How to Play</a>
+        <a href="mechanics.html">📐 Mechanics</a>
+        <a href="models.html">🧠 The Minds</a>
+        <a href="pricing.html">🜲 Paths</a>
+        <a href="releases.html">📓 Release Notes</a>
+        <a href="screenshots.html">🖼 Screens</a>
+        <div class="rr-ghead">Account</div>
+        <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+        <a href="login.html" id="rr-auth">🔒 Log out</a>
+      </div>
+    </div>
+  </div>
+</header>
 <div class="card fresh-frame">
-  <div class="sig">🦉</div>
-  <div class="badge">The Lore Weaver's Cauldron</div>
   <div class="page-eyebrow">THE GATE · RECOVERY</div>
   <h1 id="title">Re-forge Your Word</h1>
   <div class="page-rule">✦</div>
@@ -149,5 +181,6 @@
 </script>
 <script src="i18n.js?v=20260906a"></script>
 <script src="sprites.js?v=20260806b"></script>
+<script src="rail.js?v=20260923a"></script>
 </body>
 </html>

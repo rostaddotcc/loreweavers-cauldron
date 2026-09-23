@@ -26,7 +26,6 @@
     --font-body:'Spectral',Georgia,serif;
     --font-mono:'IBM Plex Mono',ui-monospace,monospace;
     --font-accent:'Silkscreen',monospace;
-    --nav-h:64px;
   }
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
@@ -35,30 +34,13 @@
   a{text-decoration:none}
   img{max-width:100%;display:block}
 
-  /* ═══════════════ nav ═══════════════ */
-  .nav{position:fixed;top:0;left:0;right:0;z-index:50;height:var(--nav-h);
-    display:flex;align-items:center;justify-content:space-between;padding:0 clamp(1rem,4vw,3rem);
-    background:var(--stone);border-bottom:1px solid var(--edge)}
-  .nav-brand{display:flex;align-items:center;gap:.65rem}
-  .nav-brand img{width:30px;height:30px}
-  .nav-brand span{font-family:var(--font-display);font-size:.72rem;font-weight:700;
-    letter-spacing:.18em;text-transform:uppercase;color:var(--bone-bright)}
-  .nav-links{display:flex;align-items:center;gap:clamp(1rem,2.5vw,2.2rem)}
-  .nav-links a{font-family:var(--font-display);var(--fs-micro);font-weight:700;
-    letter-spacing:.16em;text-transform:uppercase;color:var(--bone-dim);transition:color .25s}
-  .nav-links a:hover{color:var(--gold-bright)}
-  .nav-links .nav-cta{color:var(--ink);background:var(--gold);border:1px solid var(--gold-bright);
-    padding:.5rem 1.15rem}
-  .nav-links .nav-cta:hover{background:var(--gold-bright);color:var(--ink)}
-  @media(max-width:900px){.nav-links a:not(.nav-cta){display:none}
-  .btn-gold{min-height:44px}
-}
+  @media(max-width:900px){.btn-gold{min-height:44px}}
 
   .wrap{max-width:1080px;margin:0 auto;padding:0 1.2rem}
 
   /* ═══════════════ hero ═══════════════ */
   .hero{min-height:52vh;display:flex;align-items:center;justify-content:center;
-    text-align:center;padding:calc(var(--nav-h) + 3.5rem) 1.2rem 2.5rem}
+    text-align:center;padding:3.5rem 1.2rem 2.5rem}
   .eyebrow{font-family:var(--font-display);var(--fs-micro);font-weight:700;
     letter-spacing:.44em;text-transform:uppercase;color:var(--gold);margin-bottom:1.15rem}
   .hero h1{font-family:var(--font-display);font-weight:900;font-size:clamp(2.2rem,5vw,3.6rem);
@@ -96,21 +78,45 @@
   @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
 </style>
 <link rel="stylesheet" href="snes.css?v=51">
+<link rel="stylesheet" href="rail.css?v=20260923a">
 </head>
 <body>
-<nav class="nav">
-  <a class="nav-brand" href="login.html">
-    <img src="assets/logo-cauldron.jpg" alt="">
-    <span>Lore Weaver's Cauldron</span>
-  </a>
-  <div class="nav-links">
-    <a href="pricing.html" title="Pricing & subscriptions">Paths</a>
-    <a href="models.html" title="The AI models behind the game">The Minds</a>
-    <a href="releases.html" title="Release notes / changelog">Ledger</a>
-    <a href="help.html" title="How to Play guide">Guide</a>
-    <a class="nav-cta" href="login.html#gate" title="Sign in or create your adventurer">Enter</a>
+<header class="rite-rail">
+  <div class="rr-brand">
+    <span class="rr-sigil">⚗</span>
+    <span class="rr-name">The Lore Weaver's Cauldron</span>
+    <span class="rr-tag">SCREENS</span>
   </div>
-</nav>
+  <div class="rr-mid"></div>
+  <div class="rr-actions">
+    <div class="rr-menu">
+      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+      <div class="rr-drop" id="rr-drop">
+        <div class="rr-ghead">At the Table</div>
+        <a href="chat.html">⚔ To the Table</a>
+        <a href="adventure.html">🏰 The Crossroads</a>
+        <a href="newgame.html">✨ New Adventure</a>
+        <a href="characters.html">🔥 The Forge</a>
+        <div class="rr-ghead">The Archive</div>
+        <a href="character.html">🧙 Character</a>
+        <a href="npcs.html">👥 NPCs</a>
+        <a href="platser.html">🗺 The Map</a>
+        <a href="loggbok.html">📜 Logbook</a>
+        <a href="facts.html">✦ Facts</a>
+        <div class="rr-ghead">The Ledger</div>
+        <a href="help.html">❓ How to Play</a>
+        <a href="mechanics.html">📐 Mechanics</a>
+        <a href="models.html">🧠 The Minds</a>
+        <a href="pricing.html">🜲 Paths</a>
+        <a href="releases.html">📓 Release Notes</a>
+        <a href="screenshots.html">🖼 Screens</a>
+        <div class="rr-ghead">Account</div>
+        <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+        <a href="login.html" id="rr-auth">🔒 Log out</a>
+      </div>
+    </div>
+  </div>
+</header>
 
 <section class="hero">
   <div class="wrap">
@@ -145,9 +151,9 @@
       </div>
 
       <div class="shot">
-        <div class="shot-img"><img src="assets/screens/book-of-souls.jpg" alt="Book of Souls — the public gallery of summoned adventurers and NPCs as page-turning books with painted portraits" loading="lazy"></div>
+        <div class="shot-img"><img src="assets/screens/book-of-souls.jpg" alt="Book of Souls — the public gallery of summoned adventurers and NPCs as page-turning books with AI-generated portraits" loading="lazy"></div>
         <h3>Book of Souls</h3>
-        <p>Every summoned soul in a page-turning book — painted portraits, names and tales, open to the world.</p>
+        <p>Every summoned soul in a page-turning book — AI-generated portraits, names and tales, open to the world.</p>
       </div>
 
       <div class="shot">
@@ -167,5 +173,6 @@
 
 <script src="i18n.js?v=20260906a"></script>
 <script src="sprites.js?v=20260806b"></script>
+<script src="rail.js?v=20260923a"></script>
 </body>
 </html>

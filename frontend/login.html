@@ -4,19 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>The Best Free AI D&amp;D Roleplaying Game · AI Dungeon Master That Remembers</title>
-<meta name="description" content="The best free AI D&amp;D roleplaying game — an AI Dungeon Master that remembers your world. 50 fresh turns every day. Real D&amp;D 5e rules, no subscription, no credit card.">
+<meta name="description" content="The best free AI D&amp;D roleplaying game — an AI Dungeon Master that remembers your world. Talk to the DM and hear it narrate back; every character gets a portrait generated from their own story. 50 fresh turns every day — no subscription, no credit card, no email.">
 <meta name="keywords" content="best free AI D&D game, free AI D&D roleplaying game, AI dungeon master, most daily free turns, AI dungeon master that remembers, free AI RPG, AI D&D game, play D&D online, D&D 5e online free, no subscription AI game, no credit card D&D, text-based RPG, LLM roleplaying game, AI game master, free D&D game online, free text-based roleplaying game">
 <meta name="robots" content="index, follow">
 <!-- Open Graph / Twitter (delas på sociala medier) -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="The Lore Weaver's Cauldron">
 <meta property="og:title" content="The Best Free AI D&amp;D Roleplaying Game — AI Dungeon Master That Remembers">
-<meta property="og:description" content="50 fresh turns every day. The best free AI D&amp;D roleplaying game — an AI Dungeon Master that remembers your world. No email, no card, no subscription.">
+<meta property="og:description" content="50 fresh turns every day. Talk to the Dungeon Master and hear it narrate back — voice in, voice out. The best free AI D&amp;D roleplaying game. No email, no card, no subscription.">
 <meta property="og:url" content="https://dnd.rostad.cc/">
 <meta property="og:image" content="https://dnd.rostad.cc/assets/cauldron-hero.webp">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="The Best Free AI D&amp;D Roleplaying Game — AI Dungeon Master That Remembers">
-<meta name="twitter:description" content="50 fresh turns every day. An AI Dungeon Master that remembers your world. No email, no card, no subscription.">
+<meta name="twitter:description" content="50 fresh turns every day. An AI Dungeon Master that remembers your world — talk to it, and hear it narrate back. No email, no card, no subscription.">
 <meta name="twitter:image" content="https://dnd.rostad.cc/assets/cauldron-hero.webp">
 <!-- Structured data: VideoGame-schema (Google rika resultat / AI-svar) -->
 <script type="application/ld+json">
@@ -25,7 +25,7 @@
   "@type": "VideoGame",
   "name": "The Lore Weaver's Cauldron",
   "alternateName": "AI Dungeon Master",
-  "description": "The best free AI D&D roleplaying game — an AI Dungeon Master that remembers your world. Real D&D 5e rules in a persistent, text-based world, with more daily free turns than any other AI Dungeon Master: 50 fresh every day. Play online in English or Swedish — no subscription, no card.",
+  "description": "The best free AI D&D roleplaying game — an AI Dungeon Master that remembers your world. Real D&D 5e rules in a persistent, text-based world, with more daily free turns than any other AI Dungeon Master: 50 fresh every day. Talk to the DM and hear it narrate back, and give every character a portrait generated from their own story. Play online in English or Swedish — no subscription, no card.",
   "url": "https://dnd.rostad.cc/",
   "applicationCategory": "GameApplication",
   "gamePlatform": "Web Browser",
@@ -57,7 +57,7 @@
     {
       "@type": "Question",
       "name": "What is an AI Dungeon Master?",
-      "acceptedAnswer": { "@type": "Answer", "text": "An AI Dungeon Master is an LLM that runs your D&D campaign — narrating the world, keeping strict 5e rules, and remembering your story across sessions. The Lore Weaver's Cauldron pairs it with a persistent world engine, real dice ceremony, and AI-painted portraits." }
+      "acceptedAnswer": { "@type": "Answer", "text": "An AI Dungeon Master is an LLM that runs your D&D campaign — narrating the world, keeping strict 5e rules, and remembering your story across sessions. The Lore Weaver's Cauldron pairs it with a persistent world engine, real dice ceremony, AI-generated portraits, and a voice that reads every reply aloud." }
     },
     {
       "@type": "Question",
@@ -126,17 +126,6 @@
   .rv{opacity:0;transform:translateY(14px);transition:opacity .85s cubic-bezier(.2,.7,.3,1),transform .85s cubic-bezier(.2,.7,.3,1)}
   .rv.in{opacity:1;transform:none}
   .rv.d1{transition-delay:.09s}.rv.d2{transition-delay:.18s}.rv.d3{transition-delay:.27s}
-  /* ═══════════════ topbar ═══════════════ */
-  .topbar{position:fixed;top:0;left:0;right:0;z-index:50;height:var(--nav-h);display:flex;align-items:center;justify-content:space-between;padding:0 clamp(1.1rem,4vw,3rem);background:var(--stone);border-bottom:1px solid var(--edge)}
-  .topbar .brand{display:flex;align-items:center;gap:.6rem;text-decoration:none;font-family:var(--font-display);font-size:var(--fs-tiny);font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-bright)}
-  .topbar .brand img{width:28px;height:28px;mix-blend-mode:screen}
-  .topbar .links{display:flex;align-items:center;gap:clamp(.9rem,2.2vw,2rem)}
-  .topbar .links a{font-family:var(--font-display);font-size:.64rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim);text-decoration:none;padding:.4rem 0}
-  .topbar .links a:hover{color:var(--gold-bright)}
-  .topbar .user{display:inline-flex;align-items:center;gap:.45rem;cursor:pointer;font-family:var(--font-display);font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--edge);background:var(--stone-3);padding:.5em 1em;color:var(--bone)}
-  .topbar .user:hover{border-color:var(--gold);color:var(--gold-bright)}
-  .topbar .user .uname{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:none;letter-spacing:.04em}
-  .topbar .burger{display:none;font-family:var(--font-display);font-size:var(--fs-sm);line-height:1;color:var(--bone-bright);background:var(--stone-3);border:1px solid var(--edge);padding:.5em .7em;cursor:pointer}
 
   /* ═══════════════ banners ═══════════════ */
   #deleted-banner{position:sticky;top:var(--nav-h);z-index:40;display:none;justify-content:center;align-items:center;gap:.5rem;padding:.55rem 1rem;font-size:var(--fs-tiny);color:var(--gold);background:var(--stone-3);border-bottom:1px solid var(--gold);text-align:center}
@@ -462,9 +451,6 @@
   .drawer-close{background:none;border:none;color:var(--bone-dim);font-size:1.1rem;cursor:pointer;padding:.3rem .5rem}
   .drawer-close:hover{color:var(--blood-bright)}
   .drawer-body{flex:1;overflow-y:auto;padding:1.2rem 1.2rem 2rem;-webkit-overflow-scrolling:touch}
-  .drawer-links{display:flex;flex-direction:column;gap:.1rem;margin-bottom:1.6rem}
-  .drawer-links a{font-family:var(--font-display);font-size:.64rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--bone);text-decoration:none;padding:.6rem .3rem;border-bottom:1px solid var(--edge)}
-  .drawer-links a:hover{color:var(--gold-bright)}
   .drawer-h2{font-size:1.15rem;font-weight:900;letter-spacing:.02em;margin:0 0 1rem;color:var(--bone-bright)}
   .dfeat{display:flex;flex-direction:column;gap:.8rem}
   .dfeat .d-card{position:relative;background:var(--stone-2);border:1px solid var(--edge);border-left:2px solid color-mix(in srgb, var(--t-accent,var(--gold)) 55%, var(--edge));padding:1rem 1.05rem}
@@ -547,11 +533,7 @@
   @media (max-width:900px){
     html,body{height:100dvh}
     .feat-grid{grid-template-columns:1fr;max-width:560px}
-    #features{display:none}
-    .topbar .links a{display:none}
-    .topbar .burger{display:inline-flex;align-items:center}
     .gate-grid{grid-template-columns:1fr;align-items:start}
-    .pitch-list,.pitch-note{display:none}
     .split{grid-template-columns:1fr}
   }
   @media (max-width:720px){
@@ -574,6 +556,7 @@
   }
 </style>
 <link rel="stylesheet" href="snes.css?v=51">
+<link rel="stylesheet" href="rail.css?v=20260923a">
 <style>
 /* ═══ Manuscript-override (2026-09-20) — laddas EFTER snes.css och återinför
    det Terminal Gothic plattar med !important: boktypografi (EB Garamond),
@@ -606,15 +589,11 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 .deck-abls span{font-family:var(--font-mono) !important;letter-spacing:.06em !important}
 .deck-info .bsec{font-family:var(--font-mono) !important;letter-spacing:.16em !important}
 .field label{font-family:var(--font-mono) !important;letter-spacing:.22em !important}
-.topbar .brand{font-family:var(--font-mono) !important;letter-spacing:.16em !important}
-.topbar .links a{font-family:var(--font-mono) !important;letter-spacing:.18em !important}
-.topbar .user{font-family:var(--font-mono) !important;letter-spacing:.12em !important}
 .scroll-cue{font-family:var(--font-mono) !important;letter-spacing:.24em !important}
 .hero-credit{font-family:var(--font-mono) !important;letter-spacing:.16em !important}
 .rdot{font-family:var(--font-mono) !important;letter-spacing:.2em !important}
 .ledger-fold{font-family:var(--font-mono) !important;letter-spacing:.2em !important}
 .disclosure{font-family:var(--font-mono) !important;letter-spacing:.16em !important}
-.drawer-links a{font-family:var(--font-mono) !important;letter-spacing:.16em !important}
 .faq summary::after{font-family:var(--font-mono) !important}
 /* deck-kortens LV/relation-hörn: snes gömmer ALLA .corner — återinför här */
 .deck-portrait .corner{display:block !important;font-family:var(--font-mono) !important;letter-spacing:.12em !important}
@@ -638,8 +617,6 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 .f-icon{transition:box-shadow .28s,border-color .28s,background .28s !important}
 .gate-toggle{background:none !important;border:none !important;box-shadow:none !important}
 .gate-toggle:hover{background:none !important;border:none !important;color:var(--bone) !important}
-/* topbar: mjuk blur istället för platt sten */
-.topbar{background:color-mix(in srgb,var(--ink) 84%,transparent) !important;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid color-mix(in srgb,var(--edge) 65%,transparent) !important}
 </style>
 </head>
 <body>
@@ -654,22 +631,43 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 
 <div id="update-banner" role="status">✦ <b>A new mind on the Patron path</b> — <b>DeepSeek V4.1 Flash</b> joins the Patron tier as a Dungeon Master, and <b>Step 5 Preview</b> + <b>Qwen 3.8 Flash</b> are free for every account. Pick your mind at the model gate or in Settings. <a href="releases.html" onclick="try{localStorage.setItem('minds_0921_seen','1')}catch(e){}">Read the chronicle →</a><button class="upd-x" aria-label="Dismiss" onclick="try{localStorage.setItem('minds_0921_seen','1')}catch(e){}document.getElementById('update-banner').classList.remove('show')">×</button></div>
 
-<!-- ═══════════════ topbar ═══════════════ -->
-<header class="topbar" id="nav">
-  <a class="brand" href="#top">
-    <img src="assets/logo-cauldron.jpg" alt="">
-    <span>Lore Weaver's Cauldron</span>
-  </a>
-  <div class="links">
-    <button class="burger" id="burger-btn" aria-label="Open menu" onclick="openDrawer()">&#9776;</button>
-    <a href="#features">Features</a>
-    <a href="help.html">How to Play &amp; Underlying Mechanics</a>
-    <a href="#ledger">Release Notes</a>
-    <a href="pricing.html">Pricing</a>
-    <a class="user" id="nav-user" href="#" onclick="openProfile(event)" style="display:none">
-      <span aria-hidden="true">&#10022;</span><span class="uname" id="nav-user-name"></span>
-    </a>
+<!-- ═══════════════ Rail v2 — unified header (2026-09-23) ═══════════════ -->
+<header class="rite-rail" id="nav">
+  <div class="rr-brand">
+    <span class="rr-sigil">⚗</span>
+    <span class="rr-name">The Lore Weaver's Cauldron</span>
+    <span class="rr-tag">THE GATE</span>
+  </div>
+  <div class="rr-mid"></div>
+  <div class="rr-actions">
+    <a class="rr-btn" id="nav-user" href="#" onclick="openProfile(event)" style="display:none" title="Your profile">✦ <span id="nav-user-name"></span></a>
     <a class="btn gold" href="#gate" id="nav-cta">Enter</a>
+    <div class="rr-menu">
+      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+      <div class="rr-drop" id="rr-drop">
+        <div class="rr-ghead">At the Table</div>
+        <a href="chat.html">⚔ To the Table</a>
+        <a href="adventure.html">🏰 The Crossroads</a>
+        <a href="newgame.html">✨ New Adventure</a>
+        <a href="characters.html">🔥 The Forge</a>
+        <div class="rr-ghead">The Archive</div>
+        <a href="character.html">🧙 Character</a>
+        <a href="npcs.html">👥 NPCs</a>
+        <a href="platser.html">🗺 The Map</a>
+        <a href="loggbok.html">📜 Logbook</a>
+        <a href="facts.html">✦ Facts</a>
+        <div class="rr-ghead">The Ledger</div>
+        <a href="help.html">❓ How to Play</a>
+        <a href="mechanics.html">📐 Mechanics</a>
+        <a href="models.html">🧠 The Minds</a>
+        <a href="pricing.html">🜲 Paths</a>
+        <a href="releases.html">📓 Release Notes</a>
+        <a href="screenshots.html">🖼 Screens</a>
+        <div class="rr-ghead">Account</div>
+        <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+        <a href="login.html" id="rr-auth">🔒 Log out</a>
+      </div>
+    </div>
   </div>
 </header>
 
@@ -681,22 +679,17 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
     <button class="drawer-close" onclick="closeDrawer()" aria-label="Close menu">&#10005;</button>
   </div>
   <div class="drawer-body">
-    <nav class="drawer-links">
-      <a href="help.html">How to Play &amp; Underlying Mechanics</a>
-      <a href="#ledger" onclick="closeDrawer()">Release Notes</a>
-      <a href="pricing.html">Pricing</a>
-      <a href="#gate" onclick="closeDrawer()">The Gate &mdash; Enter</a>
-    </nav>
-
     <div class="drawer-pitch">
       <p class="eyebrow">Free to Play</p>
       <ul class="pitch-list" style="display:block">
-        <li><b>Free, forever.</b> 50 fresh turns every day.
-          No card, no hourglass, no metered fate.</li>
-        <li><b>Your identity stays yours.</b> We don&rsquo;t log who you are at the table &mdash;
-          no names to the ledger, no tracking of players.</li>
-        <li><b>No subscription, ever.</b> One-time Patron top-up when it
-          feels right &mdash; or donate whatever the realm is worth to you.</li>
+        <li><b>Free, forever.</b> 50 fresh turns every day &mdash;
+          no subscription, no credit card, no email. No player tracking, no metered fate.</li>
+        <li><b>Talk to the Dungeon Master.</b> Speak your action and hear the DM narrate
+          the reply out loud &mdash; voice in, voice out, a hands-free table.</li>
+        <li><b>Every face gets a portrait.</b> Adventurer, NPC, even the DM &mdash;
+          generated from each character&rsquo;s own story, rerolled until it feels right.
+          <b>StepFun</b> image generation is free for everyone; a one-time <b>Patron</b>
+          coin (30€) unlocks <b>Wan 2.7 Pro</b> &amp; <b>Qwen Image 3 Pro</b>.</li>
       </ul>
       <p class="pitch-note" style="display:block">No rules to memorize before you start. The DM teaches you as you play &mdash;
         or enforces them strictly, if you prefer the iron road.</p>
@@ -710,7 +703,8 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
           <span class="f-kick">Your imagination renders the graphics</span>
           <h3>Purely Text-Based</h3>
           <p>No maps, no miniatures, no busywork &mdash; you write what you do, the DM
-            narrates what happens. Full <b>voice in &amp; voice out</b> for a hands-free table.
+            narrates what happens. Rather speak? Talk to the Dungeon Master and hear it
+            narrate the reply out loud: <b>voice in &amp; voice out</b>, a hands-free table.
             <em>The oldest kind of role-playing, powered by the newest kind of mind.</em></p>
           <p class="tablet-more"><a href="screenshots.html">See the game &#8594;</a></p>
         </div>
@@ -725,10 +719,10 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
         <div class="d-card t-ember">
           <span class="f-kick">Every face at the table, portrayed</span>
           <h3>Create Your Own Avatars</h3>
-          <p>Your adventurer, the NPCs you meet, even the DM &mdash; painted by AI from the
-            character&rsquo;s own story, rerolled until it feels right. <em>StepFun painting is
-            free for everyone</em> &mdash; <b>Patron</b> (one-time 30€) unlocks <b>Wan 2.7 Pro</b>
-            &amp; <b>Qwen Image 3 Pro</b>.</p>
+          <p>Your adventurer, the NPCs you meet, even the DM &mdash; each portrait generated
+            from the character&rsquo;s own story, rerolled until it feels right.
+            <em>StepFun image generation is free for everyone</em> &mdash; <b>Patron</b>
+            (one-time 30€) unlocks <b>Wan 2.7 Pro</b> &amp; <b>Qwen Image 3 Pro</b>.</p>
         </div>
         <div class="d-card t-blood">
           <span class="f-kick">Real rolls. Real consequences.</span>
@@ -776,7 +770,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
        Konsten flyter oavbrutet genom båda sektionerna (ingen klipp i mitten);
        hero-bg ligger på wrappern och når hela vägen bakom loginboxen. -->
   <div class="hero-gate">
-  <div class="hero-bg" id="hero-bg" role="img" aria-label="A painted adventurer"></div>
+  <div class="hero-bg" id="hero-bg" role="img" aria-label="An AI-generated adventurer"></div>
   <!-- ═══════════════ hero ═══════════════ -->
   <section class="hero">
     <div class="wrap">
@@ -788,14 +782,14 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
         <p class="tagline rv in d2">A world that remembers. A dungeon master that never sleeps.
           Your campaign is brewed one turn at a time &mdash; and the pot does not forget.</p>
         <p class="free-slogan rv in d2"><span class="fs-badge">FREE TO PLAY</span>
-          The <b>best free AI D&amp;D roleplaying game</b> — <b>50 fresh turns every day</b>.
-          More daily free turns than any other AI Dungeon Master.
+          The <b>best free AI D&amp;D roleplaying game</b> — <b>50 fresh turns every day</b>,
+          and 50 more tomorrow. Talk to the Dungeon Master and hear it narrate back.
           No card. No email. No subscription.</p>
         <div class="hero-stats rv in d3">
-          <span class="hstat"><b>50</b> turns a day · free forever</span>
-          <span class="hstat"><b>No</b> card · no email</span>
+          <span class="hstat"><b>50</b> fresh turns a day · free forever</span>
+          <span class="hstat"><b>Voice</b> in &amp; out · hands-free</span>
           <span class="hstat"><b>5e</b> rules · real dice</span>
-          <span class="hstat"><b>Worlds</b> that remember</span>
+          <span class="hstat"><b>Portraits</b> from every story</span>
         </div>
         <div class="hero-actions rv in d3">
           <a class="btn gold" href="#gate" id="hero-begin">Begin Your Journey</a>
@@ -816,14 +810,16 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
           <p class="eyebrow rv">The Gate</p>
           <h2 class="rv">Swear yourself in.</h2>
           <ul class="pitch-list">
-            <li class="rv d1"><b>Free, forever.</b> 50 fresh turns every day.
-             No card, no countdown,
-             no metered fate.</li>
-            <li class="rv d2"><b>Your identity stays yours.</b> No player tracking,
-              no analytics profiles &mdash; just a name and a secret word.</li>
-            <li class="rv d3"><b>No subscription, ever.</b> One-time
-              Patron purchase when it feels right &mdash; or donate whatever
-              the realm is worth to you.</li>
+            <li class="rv d1"><b>Free, forever.</b> 50 fresh turns every day &mdash;
+              no subscription, no credit card, no email.
+              No player tracking, no metered fate.</li>
+            <li class="rv d2"><b>Talk to the Dungeon Master.</b> Speak your action and
+              hear the DM narrate the reply out loud &mdash; voice in, voice out,
+              a hands-free table.</li>
+            <li class="rv d3"><b>Every face gets a portrait.</b> Adventurer, NPC, even the
+              DM &mdash; generated from each character&rsquo;s own story, rerolled until
+              it feels right. <b>StepFun</b> image generation is free for everyone; a one-time
+              <b>Patron</b> coin (30€) unlocks <b>Wan 2.7 Pro</b> &amp; <b>Qwen Image 3 Pro</b>.</li>
           </ul>
           <p class="pitch-note rv d3">No rules to memorize before you start.
             The DM teaches you as you play &mdash; or enforces them strictly, if you prefer the iron road.</p>
@@ -917,7 +913,8 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
           </div>
           <p>No maps to learn, no miniatures to buy, no busywork between you and the
             story. You write what you do &mdash; the DM narrates what happens. Prefer to
-            speak? <b>Voice in &amp; voice out</b> makes it a hands-free table.
+            speak? <b>Talk to the Dungeon Master</b> and hear it narrate the reply out
+            loud &mdash; <b>voice in &amp; voice out</b> for a genuinely hands-free table.
             <em>The oldest kind of role-playing, powered by the newest kind of mind.</em></p>
           <p class="tablet-more"><a href="screenshots.html">See the game &#8594;</a></p>
         </div>
@@ -946,8 +943,8 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
             </div>
           </div>
           <p>Your adventurer, the NPCs you meet, even the DM &mdash; each portrait is
-            painted by AI from the character&rsquo;s own story, and rerolled until it feels
-            right. <em>StepFun painting is free for everyone</em> &mdash; and <b>Patron</b>
+            generated by AI from the character&rsquo;s own story, and rerolled until it feels
+            right. <em>StepFun image generation is free for everyone</em> &mdash; and <b>Patron</b>
             (one-time 30€) unlocks <b>Wan 2.7 Pro</b> &amp; <b>Qwen Image 3 Pro</b>,
             the premium image engines.</p>
         </div>
@@ -1020,7 +1017,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
         <div class="eyebrow">✦ The Loreweaver's Book of Souls ✦</div>
         <h2>Summoned in the Cauldron</h2>
         <p class="sub">Every face in this realm was summoned by a player. Shuffle the deck — equipment, spells and all.</p>
-        <p class="disclosure">Only adventurers and NPCs painted by the Loreweaver appear in this deck.</p>
+        <p class="disclosure">Only adventurers and NPCs portrayed by the Loreweaver appear in this deck.</p>
       </div>
       <div class="decks">
         <!-- ADVENTURERS DECK (vänster) -->
@@ -1056,7 +1053,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
           <div id="pricing">
             <p class="eyebrow rv">Free to play · No subscription</p>
             <h2 class="rv">Unlimited. <em>No lock-in.</em></h2>
-            <p class="lede rv d1">50 fresh turns every day, forever. More daily free turns than any other AI Dungeon Master. No card. No email. Support the Cauldron with a one-time top-up when you feel like it.</p>
+            <p class="lede rv d1">50 fresh turns every day, forever. More daily free turns than any other AI Dungeon Master. No card. No email. No subscription &mdash; support the Cauldron with a one-time top-up when you feel like it.</p>
             <div class="pricing-grid">
         <div class="ptier rv d1" onclick="location.href='#gate'">
           <div class="pt-name">Free</div>
@@ -1065,7 +1062,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
             <li><b>50 turns</b> every day &mdash; forever</li>
             <li><b>Two free Dungeon Masters</b> &mdash; Step 5 Preview &amp; Qwen 3.8 Flash</li>
             <li><b>5 free community minds</b> via OpenRouter</li>
-            <li>Free <b>painting &amp; voice</b> (StepFun)</li>
+            <li>Free <b>image generation &amp; voice</b> (StepFun)</li>
             <li>Persistent world, memory &amp; Codex</li>
           </ul>
           <span class="go-hint">Begin your adventure →</span>
@@ -1077,7 +1074,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
           <ul>
             <li><b>100 turns a day</b> &mdash; for 30 days</li>
             <li><b>Every Dungeon Master</b> &mdash; DeepSeek, Qwen 3.8 Max &amp; more</li>
-            <li>Premium painting &mdash; <b>Wan 2.7 Pro</b> &amp; <b>Qwen Image 3 Pro</b></li>
+            <li>Premium image generation &mdash; <b>Wan 2.7 Pro</b> &amp; <b>Qwen Image 3 Pro</b></li>
             <li>Premium TTS narration &mdash; Qwen 3.0 voices</li>
             <li><b>Export</b> your story + uploaded avatars</li>
           </ul>
@@ -1101,7 +1098,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
         </details>
         <details>
           <summary>What is an AI Dungeon Master?</summary>
-          <p>An <b>AI Dungeon Master</b> is an LLM that runs your D&amp;D campaign — narrating the world, keeping strict 5e rules, and remembering your story across sessions. The Cauldron pairs it with a persistent world engine, real dice ceremony, and AI-painted portraits.</p>
+          <p>An <b>AI Dungeon Master</b> is an LLM that runs your D&amp;D campaign — narrating the world, keeping strict 5e rules, and remembering your story across sessions. The Cauldron pairs it with a persistent world engine, real dice ceremony, AI-generated portraits, and a voice that reads every reply aloud.</p>
         </details>
         <details>
           <summary>Does the AI Dungeon Master remember my campaign?</summary>
@@ -1216,7 +1213,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
     <div class="mbody">
       <p>The Lore Weaver&rsquo;s Cauldron is a <b>solo project</b> &mdash; and it was <b>vibed</b>, from first sketch to final spell. Every line of code was written in conversation between me and AI models. No team, no boilerplate &mdash; just me, the models, and an idea that refused to let go.</p>
       <p>I&rsquo;m a D&amp;D dad. I started building this for a friend &mdash; a small experiment to see if an AI could actually be a dungeon master. It turned into something much bigger: a persistent world with its own lorekeeper, its own dice, its own stories.</p>
-      <p><b>Every API cost of this game is mine.</b> Every word the DM writes, every portrait the engines paint, every reasoning token &mdash; I pay for it all. That&rsquo;s what keeps the game free for you, and keeps it honest: no investors, no ads, no data deals.</p>
+      <p><b>Every API cost of this game is mine.</b> Every word the DM writes, every portrait the engines generate, every reasoning token &mdash; I pay for it all. That&rsquo;s what keeps the game free for you, and keeps it honest: no investors, no ads, no data deals.</p>
       <p>And the whole thing runs on a <b>small mini-PC in Stockholm</b> &mdash; no cloud provider, no server farm. One little box on a desk is holding every story told at this table.</p>
       <p>It&rsquo;s free to play, because it started as a gift. If it gives you a story worth telling, that&rsquo;s payment enough.</p>
       <p class="sig">&mdash; rostad</p>
@@ -1246,6 +1243,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 <script src="api.js?v=20260805c"></script>
 <script src="i18n.js?v=20260906a"></script>
 <script src="sprites.js?v=20260806b"></script>
+<script src="rail.js?v=20260923a"></script>
 
 <script>
 /* ═══════════════ update banner — DeepSeek V4.1 Flash (Patron) + fria sinnen, en gång per läsare ═══════════════ */
@@ -1889,7 +1887,7 @@ function toggleLedger() {
 /* ═══ Den Förbjudna Grimsboken — grimoire-layer (agent11b, 2026-09-22) ═══
    Burnt parchment · gold leaf · oxblood/lapis · vine marginalia.
    Ligger SIST i dokumentordningen (därför i slutet av <body>): vinner mot
-   snes.css (syskonägt, orört) och mot äldre body-<style>-block. Tokens pinnas
+   snes.css (syskonägt, orört) och mot äldre stilblock i body. Tokens pinnas
    mot seed-paletten så sidan står rätt även innan snes.css uppdateras. */
 :root{
   --ink:#171310; --stone:#1c1713; --stone-2:#241c15; --stone-3:#2c231a;

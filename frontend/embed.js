@@ -13,10 +13,11 @@
   if (!embedded) return;
 
   var hide = function () {
-    document.querySelectorAll('header.topbar').forEach(function (el) {
-      // !important krävs: lore-sidorna har .topbar.rite-rail{display:grid!important}
-      // (rite-rail-CSS) som annars vinner över inline display:none → headern med
-      // "THE ARCHIVE" + Theme-knappen syns inne i Codex trots body.embedded.
+    // Rail v2 (2026-09-23): sidorna bär nu header.rite-rail utan .topbar —
+    // matcha båda så gamla som nya headers döljs i Codex-iframen.
+    document.querySelectorAll('header.topbar, header.rite-rail').forEach(function (el) {
+      // !important krävs: rail.css har .rite-rail{display:grid!important} som
+      // annars vinner över inline display:none.
       el.style.setProperty('display', 'none', 'important');
     });
     document.body.classList.add('embedded');

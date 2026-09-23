@@ -250,7 +250,7 @@ def test_campaign_avatar_wan_respects_daily_quota(client, monkeypatch):
                     json={"kind": "player", "prompt": "a hero", "provider": "wan"},
                     cookies={"morkrets_token": _tok()})
     assert r.status_code == 403
-    assert "daily painting limit" in r.json()["detail"]  # W3-M2: ärligare 403-text
+    assert "daily image limit" in r.json()["detail"]  # W3-M2: ärligare 403-text
 
 
 def test_campaign_avatar_gate_tier1_ok(client, monkeypatch):

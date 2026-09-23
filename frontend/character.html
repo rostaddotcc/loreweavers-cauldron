@@ -562,20 +562,18 @@
 
 </style>
 <link rel="stylesheet" href="snes.css?v=51">
+<link rel="stylesheet" href="rail.css?v=20260923a">
 <style>
 /* ═══════════ MJUKA UPP — Codex karaktärsblad (2026-08-05) — EFTER snes.css ═══════════ */
-/* Topbar — layout extracted from former inline styles (audit A2 §1.7) */
-.topbar{ position:relative; z-index:5; display:flex; align-items:center; gap:1rem; padding:.7rem 1.2rem;
-  background:linear-gradient(180deg,var(--stone-2),color-mix(in srgb, var(--stone) 95%, transparent));
-  border-bottom:1px solid var(--edge); box-shadow:0 4px 20px rgba(0,0,0,.5) }
-.topbar-brand{ font-family:var(--font-display,'Cinzel',serif); font-weight:900; font-size:var(--fs-base);
-  color:var(--gold-bright); letter-spacing:.06em; white-space:nowrap; text-shadow:0 0 14px rgba(var(--gold-bright-rgb),.3) }
-.topbar-sub{ font-size:var(--fs-sm); font-style:italic; color:var(--bone-dim); border-left:1px solid var(--edge); padding-left:1rem }
+
+
+
+
 .top-btn{ font-family:var(--font-display,'Cinzel',serif); font-size:var(--fs-tiny); letter-spacing:.14em;
   text-transform:uppercase; padding:.45rem .85rem; cursor:pointer; white-space:nowrap; text-decoration:none ;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
 .top-btn.danger{ border-color:var(--blood) !important; color:var(--rubric) !important }
 .top-btn.danger:hover{ background:var(--blood) !important; color:#fff !important }
-@media (max-width:900px){ .topbar-sub{ display:none } }
+@media (max-width:900px){  }
 .top-btn{ border-radius: 8px !important; box-shadow: 0 2px 12px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; min-height:44px;display:inline-flex;align-items:center;justify-content:center}
 .top-btn:hover{ transform: translateY(-1px) !important; }
 .tab{ border-radius: 8px !important; transition: all .2s !important; min-height:44px;display:inline-flex;align-items:center;justify-content:center;border-color:rgba(201,162,39,.4)}
@@ -610,15 +608,41 @@
 <canvas id="embers"></canvas>
 <div class="vignette"></div>
 
-<header class="topbar">
-  <span class="topbar-brand">The Lore Weaver's Cauldron</span>
-  <span class="topbar-sub">Character Sheet</span>
-  <span style="flex:1"></span>
-  <a class="top-btn" href="chat.html">⚔ To the Table</a>
-  <a class="top-btn" href="loggbok.html">📜 Logbook</a>
-  <a class="top-btn" href="platser.html">🗺️ The Map</a>
-  <a class="top-btn" href="npcs.html">👥 NPCs</a>
-  <button class="top-btn danger" onclick="doLogout()">🔒 Log out</button>
+<header class="rite-rail">
+  <div class="rr-brand">
+    <span class="rr-sigil">⚗</span>
+    <span class="rr-name">The Lore Weaver's Cauldron</span>
+    <span class="rr-tag">CHARACTER</span>
+  </div>
+  <div class="rr-mid"></div>
+  <div class="rr-actions">
+    <div class="rr-menu">
+      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+      <div class="rr-drop" id="rr-drop">
+        <div class="rr-ghead">At the Table</div>
+        <a href="chat.html">⚔ To the Table</a>
+        <a href="adventure.html">🏰 The Crossroads</a>
+        <a href="newgame.html">✨ New Adventure</a>
+        <a href="characters.html">🔥 The Forge</a>
+        <div class="rr-ghead">The Archive</div>
+        <a href="character.html">🧙 Character</a>
+        <a href="npcs.html">👥 NPCs</a>
+        <a href="platser.html">🗺 The Map</a>
+        <a href="loggbok.html">📜 Logbook</a>
+        <a href="facts.html">✦ Facts</a>
+        <div class="rr-ghead">The Ledger</div>
+        <a href="help.html">❓ How to Play</a>
+        <a href="mechanics.html">📐 Mechanics</a>
+        <a href="models.html">🧠 The Minds</a>
+        <a href="pricing.html">🜲 Paths</a>
+        <a href="releases.html">📓 Release Notes</a>
+        <a href="screenshots.html">🖼 Screens</a>
+        <div class="rr-ghead">Account</div>
+        <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+        <a href="login.html" id="rr-auth">🔒 Log out</a>
+      </div>
+    </div>
+  </div>
 </header>
 <div class="app">
 
@@ -690,7 +714,7 @@
     </div>
 
     <div class="forge-row">
-      <button class="forge-export-btn btn-ghost" id="forge-paint-btn" onclick="openAvatarModal()" title="Paint your adventurer's portrait — StepFun (free) or Wan 2.7 Pro / Qwen Image 3 Pro (Patron 30€)">🎨 Paint your adventurer</button>
+      <button class="forge-export-btn btn-ghost" id="forge-paint-btn" onclick="openAvatarModal()" title="Generate the portrait of your adventurer — StepFun (free) or Wan 2.7 Pro / Qwen Image 3 Pro (Patron 30€)">🎨 Generate your portrait</button>
       <button class="forge-export-btn btn-gold" id="forge-export-btn" onclick="exportToForge()" title="Save this adventurer to The Forge — start a new campaign with them later">⚒ Export to Forge</button>
     </div>
 
@@ -1756,7 +1780,7 @@ function avatarProvider() {
 }
 function avatarGenGate(provider) {
   if ((provider === 'wan' || provider === 'qwen') && _charTier !== 'tier2' && _charTier !== 'lifetime') {
-    toast('🔒 Wan 2.7 / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to paint with the premium engines.');
+    toast('🔒 Wan 2.7 / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to generate with the premium engines.');
     try { SFX.error(); } catch (_) {}
     return false;
   }
@@ -1765,7 +1789,7 @@ function avatarGenGate(provider) {
 function avatarProviderChanged(sel) {
   if ((sel && (sel.value === 'wan' || sel.value === 'qwen')) && _charTier !== 'tier2' && _charTier !== 'lifetime') {
     sel.value = 'stepfun';
-    toast('🔒 Wan 2.7 / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to paint with the premium engines.');
+    toast('🔒 Wan 2.7 / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to generate with the premium engines.');
   }
 }
 function updateAvatarProviderLock() {
@@ -1808,7 +1832,7 @@ async function _runAvatarGen(mode, statusText, btnId) {
   // 🖌️ Free prompt: BARA spelarens ord — tom text är ett fel (ingen auto-prompt).
   if (mode === 'free') {
     if (!freePrompt.trim()) {
-      toast('✍️ Write what you want painted first — free prompt paints ONLY your words.');
+      toast('✍️ Write what you want to see first — free prompt uses ONLY your words.');
       try { SFX.error(); } catch (_) {}
       return;
     }
@@ -1830,7 +1854,7 @@ async function _runAvatarGen(mode, statusText, btnId) {
       };
       renderHeader();
       openAvatarModal();
-      status.textContent = (mode === 'edit' ? '✨ Avatar updated — ' : '✨ New avatar painted — ') + (usedWords ? 'used your words' : 'used your character sheet');
+      status.textContent = (mode === 'edit' ? '✨ Avatar updated — ' : '✨ New avatar generated — ') + (usedWords ? 'used your words' : 'used your character sheet');
       try { SFX.levelup(); } catch (_) {}
     } else {
       status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Failed');
@@ -1845,12 +1869,12 @@ async function _runAvatarGen(mode, statusText, btnId) {
 }
 
 async function freePromptAction() {
-  await _runAvatarGen('free', '🎨 Painting ONLY your words… (10–30 s)', 'avatar-free-btn');
+  await _runAvatarGen('free', '🎨 Generating from your words only… (10–30 s)', 'avatar-free-btn');
 }
 async function updateAvatarAction() {
   // "Create from dossier": mode='new' → backend bygger auto-prompt från
   // backstory + inventory + senaste loggpost (samma som NPC-dossién).
-  await _runAvatarGen('new', '🎨 Painting from your dossier… (10–30 s)', 'avatar-update-btn');
+  await _runAvatarGen('new', '🎨 Generating from your dossier… (10–30 s)', 'avatar-update-btn');
 }
 
 async function deleteAvatarAction() {
@@ -1903,15 +1927,15 @@ window.getState = exportState;
       <div class="av-gal-count" id="avatar-gal-count"></div>
       <div style="font-size:.62rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem">click to enlarge</div>
     </div>
-    <div class="mi-intro">Paint your adventurer with your own words — <b>🖌️ Free prompt</b> paints ONLY what you describe. Engine: StepFun (free) or Wan 2.7 Pro / Qwen Image 3 Pro (Patron 30€). Or upload your own image.</div>
+    <div class="mi-intro">Generate your portrait with your own words — <b>🖌️ Free prompt</b> generates ONLY what you describe. Engine: StepFun (free) or Wan 2.7 Pro / Qwen Image 3 Pro (Patron 30€). Or upload your own image.</div>
     <div style="margin-top:.7rem">
       <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">✍️ YOUR OWN WORDS</div>
-      <textarea id="avatar-prompt-input" placeholder="Free prompt: describe exactly what you want painted — e.g. 'hooded figure, lantern light, rain'." style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>
-      <div style="font-size:.72rem;color:var(--bone-dim);margin-top:.35rem">Free prompt paints ONLY your words.</div>
+      <textarea id="avatar-prompt-input" placeholder="Free prompt: describe exactly what you want to see — e.g. 'hooded figure, lantern light, rain'." style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:3px;resize:vertical"></textarea>
+      <div style="font-size:.72rem;color:var(--bone-dim);margin-top:.35rem">Free prompt uses ONLY your words.</div>
     </div>
     <div style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
       <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
-      <select id="avatar-provider-select" class="tts-select" style="flex:1;min-width:0" onchange="avatarProviderChanged(this)" title="Image provider for painting">
+      <select id="avatar-provider-select" class="tts-select" style="flex:1;min-width:0" onchange="avatarProviderChanged(this)" title="Image provider for image generation">
         <option value="stepfun">StepFun — Free</option>
         <option value="wan">Wan 2.7 — Patron 🔒</option>
         <option value="qwen">Qwen Image 3 Pro — Patron 🔒</option>
@@ -1933,5 +1957,6 @@ window.getState = exportState;
   <button class="av-lb-close" onclick="closeAvatarLightbox()">✕</button>
   <div class="av-lb-title" id="avatar-lightbox-title"></div>
 </div>
+<script src="rail.js?v=20260923a"></script>
 </body>
 </html>

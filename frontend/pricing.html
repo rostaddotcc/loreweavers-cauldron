@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Pricing — Free AI Dungeon Master: 50 Turns Every Day | The Lore Weaver's Cauldron</title>
-<meta name="description" content="The best free AI D&D roleplaying game — 50 fresh turns every day: more daily free turns than any other AI Dungeon Master. StepFun voice and painting are free for everyone (each one costs a turn; premium Wan painting is capped at 10 per day). No subscription — one-time Patron (30€) top-up. No credit card needed.">
+<meta name="description" content="The best free AI D&D roleplaying game — 50 fresh turns every day: more daily free turns than any other AI Dungeon Master. StepFun voice and image generation are free for everyone (each one costs a turn; premium Wan image generation is capped at 10 per day). No subscription — one-time Patron (30€) top-up. No credit card needed.">
 <link rel="icon" href="/assets/logo-cauldron.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,34 +26,14 @@
     --font-body:'Spectral',Georgia,serif;
     --font-mono:'IBM Plex Mono',ui-monospace,monospace;
     --font-accent:'Silkscreen',monospace;
-    --nav-h:64px;
   --font-flavor:'EB Garamond',Georgia,serif;--rubric:#d4737b;--gilt:rgba(201,162,39,.42);--gilt-hi:rgba(240,214,117,.6);--parch-a:#241c15;--parch-b:#1c1713;}
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{font-family:var(--font-body);color:var(--bone);background:var(--ink);
     overflow-x:hidden;-webkit-tap-highlight-color:transparent;font-size:17px;line-height:1.65}
 
-  /* ═══════════════ nav ═══════════════ */
-  .nav{position:fixed;top:0;left:0;right:0;z-index:50;height:var(--nav-h);
-    display:flex;align-items:center;justify-content:space-between;padding:0 clamp(1rem,4vw,2.5rem);
-    border-bottom:1px solid var(--edge);
-    background:var(--stone)}
-  .nav-brand{display:flex;align-items:center;gap:.65rem;text-decoration:none}
-  .nav-brand img{width:34px;height:34px;mix-blend-mode:screen}
-  .nav-brand span{font-family:var(--font-display);font-weight:700;var(--fs-sm);
-    letter-spacing:.22em;text-transform:uppercase;color:var(--bone-bright)}
-  .nav-links{display:flex;gap:1.4rem;align-items:center}
-  .nav-link{font-family:var(--font-display);font-size:.7rem;letter-spacing:.2em;
-    text-transform:uppercase;color:var(--bone-dim);text-decoration:none;transition:color .2s}
-  .nav-link:hover{color:var(--gold-bright)}
-  .nav-link.active{color:var(--gold)}
-  .nav-cta{font-family:var(--font-display);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;
-    color:var(--ink);background:var(--gold);border:1px solid var(--gold-bright);
-    padding:.5rem 1rem;text-decoration:none;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
-  .nav-cta:hover{background:var(--gold-bright);color:var(--ink)}
-
   /* ═══════════════ pricing hero ═══════════════ */
-  .pricing{max-width:1080px;margin:0 auto;padding:calc(var(--nav-h) + 4.5rem) 1.25rem 5rem}
+  .pricing{max-width:1080px;margin:0 auto;padding:4.5rem 1.25rem 5rem}
   .eyebrow{font-family:var(--font-display);var(--fs-micro);letter-spacing:.44em;
     text-transform:uppercase;color:var(--gold);text-align:center;margin-bottom:1rem;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem;letter-spacing:.34em}
   .pricing h1{font-family:var(--font-display);font-weight:900;font-size:clamp(1.9rem,4.6vw,3rem);
@@ -196,13 +176,13 @@
   input{font-size:16px}
 }
   @media(max-width:640px){
-    .nav-links .nav-link{display:none}
-    .pricing{padding-top:calc(var(--nav-h) + 3rem)}
+    .pricing{padding-top:3rem}
   }
   /* Reduced motion — smooth scroll off (global animation block lives in snes.css) */
   @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
 </style>
 <link rel="stylesheet" href="snes.css?v=51">
+<link rel="stylesheet" href="rail.css?v=20260923a">
 <style id="grimoire-leaf">
 /* Den Forbjudna Grimsboken — illuminerat lövskikt (nya regler; befintliga redigerade in-place) */
 .pricing h1::first-letter{font-family:var(--font-flavor);font-style:italic;font-weight:500;font-size:3.0em;line-height:.82;float:left;margin:.02em .14em -.02em 0;padding:.06em .16em .08em;color:var(--gold-bright);background:linear-gradient(160deg,#5a1f24,#3f1519);border:1px solid rgba(201,162,39,.65);box-shadow:0 0 14px rgba(240,214,117,.25),inset 0 0 8px rgba(0,0,0,.4);text-shadow:0 1px 0 rgba(0,0,0,.6)}
@@ -213,19 +193,42 @@
 </head>
 <body>
 
-<nav class="nav">
-  <a class="nav-brand" href="adventure.html">
-    <img src="/assets/logo-cauldron.jpg" alt="">
-    <span>The Cauldron</span>
-  </a>
-  <div class="nav-links">
-    <a class="nav-link active" href="pricing.html" title="Pricing & subscriptions">Paths</a>
-    <a class="nav-link" href="models.html" title="The AI models behind the game">The Minds</a>
-    <a class="nav-link" href="releases.html" title="Release notes / changelog">Ledger</a>
-    <a class="nav-link" href="help.html" title="How to Play guide">Guide</a>
-    <a class="nav-cta" href="login.html#gate" title="Sign in or create your adventurer">Enter</a>
+<header class="rite-rail">
+  <div class="rr-brand">
+    <span class="rr-sigil">⚗</span>
+    <span class="rr-name">The Lore Weaver's Cauldron</span>
+    <span class="rr-tag">PATHS</span>
   </div>
-</nav>
+  <div class="rr-mid"></div>
+  <div class="rr-actions">
+    <div class="rr-menu">
+      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+      <div class="rr-drop" id="rr-drop">
+        <div class="rr-ghead">At the Table</div>
+        <a href="chat.html">⚔ To the Table</a>
+        <a href="adventure.html">🏰 The Crossroads</a>
+        <a href="newgame.html">✨ New Adventure</a>
+        <a href="characters.html">🔥 The Forge</a>
+        <div class="rr-ghead">The Archive</div>
+        <a href="character.html">🧙 Character</a>
+        <a href="npcs.html">👥 NPCs</a>
+        <a href="platser.html">🗺 The Map</a>
+        <a href="loggbok.html">📜 Logbook</a>
+        <a href="facts.html">✦ Facts</a>
+        <div class="rr-ghead">The Ledger</div>
+        <a href="help.html">❓ How to Play</a>
+        <a href="mechanics.html">📐 Mechanics</a>
+        <a href="models.html">🧠 The Minds</a>
+        <a href="pricing.html">🜲 Paths</a>
+        <a href="releases.html">📓 Release Notes</a>
+        <a href="screenshots.html">🖼 Screens</a>
+        <div class="rr-ghead">Account</div>
+        <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+        <a href="login.html" id="rr-auth">🔒 Log out</a>
+      </div>
+    </div>
+  </div>
+</header>
 
 <section class="pricing">
 <div class="page-eyebrow">THE LEDGER · PATHS & OFFERINGS</div>
@@ -251,7 +254,7 @@
         <li><b>50 turns</b> refresh <b>every day</b> — forever</li>
         <li>The Dungeon Masters (<b>step-3.7-flash</b>, <b>Step 5 Preview</b>, <b>step-3.5-flash-2603</b> and <b>qwen3.8-flash</b>)</li>
         <li><b>5 OpenRouter free DMs</b> — the newest free community minds, always in the picker</li>
-        <li><b>StepFun painting</b> — paint your adventurer, the DM and every NPC (1 turn per painting)</li>
+        <li><b>StepFun image generation</b> — generate portraits of your adventurer, the DM and every NPC (1 turn per image)</li>
         <li><b>StepFun TTS</b> — your DM, characters and NPCs speak aloud (1 turn per narration)</li>
         <li>Persistent world, memory, and Codex</li>
       </ul>
@@ -265,10 +268,10 @@
       <div class="tier-price"><span class="cur-price" data-eur="30" data-sek="351">30€</span><small> once</small></div>
       <div class="tier-desc">The full mind of the Cauldron — when you need it most.</div>
       <ul>
-        <li><b>Everything in Free</b> — StepFun voice, painting and the open-road DMs included</li>
+        <li><b>Everything in Free</b> — StepFun voice, image generation and the open-road DMs included</li>
         <li><b>100 turns every day</b> — for 30 days</li>
         <li><b>All Dungeon Masters</b> — DeepSeek V4.1 Flash, Qwen 3.8 Max &amp; more, for <b>30 days</b></li>
-        <li><b>Wan 2.7 Pro &amp; Qwen Image 3 Pro painting</b> — up to <b>10 premium paintings per day</b> (each also costs 1 turn, like every feature)</li>
+        <li><b>Wan 2.7 Pro &amp; Qwen Image 3 Pro image generation</b> — up to <b>10 premium image generations per day</b> (each also costs 1 turn, like every feature)</li>
         <li><b>Premium TTS narration</b> — Qwen 3.0 voices, for <b>30 days</b></li>
         <li><b>Export &amp; uploaded avatars</b> — your story as a zip, your own images</li>
         <li><b>Priority API</b> — first in line, even when the cauldron is busy</li>
@@ -295,7 +298,7 @@
   </div>
 
   <p class="fine">
-    <b>How the free path works</b> — you get <b>50 fresh turns every day</b>, whether you were here or not. One chat message is one turn; a painting, a voice narration, character summoning or a memory search each cost one turn as well. StepFun voice and painting are free for everyone; premium Wan painting is capped at <b>10 per day</b>.
+    <b>How the free path works</b> — you get <b>50 fresh turns every day</b>, whether you were here or not. One chat message is one turn; an image, a voice narration, character summoning or a memory search each cost one turn as well. StepFun voice and image generation are free for everyone; premium Wan image generation is capped at <b>10 per day</b>.
     Patron is a <b>one-time purchase</b> that unlocks <b>30 days</b> of benefits — buy again to stack more time. Donations are pure support — but every € also tops up <b>100 turns</b>: a 5€ donation adds 500 turns to your cauldron. <b>Purchased turns never expire</b> — they wait in your cauldron until the daily cap runs dry. No subscription, no renewal, no lock-in.
     Payments are processed securely by Stripe.
   </p>
@@ -360,10 +363,10 @@
       desc: 'The full mind of the Cauldron — when you need it most.',
       promo: 'How it is meant to be played — massive storylines, quests without breaking immersion with the full reasoning power of Qwen and DeepSeek, along with premium text-to-speech Dungeon Master narration with Qwen 3.0 TTS.',
       features: [
-        '<b>Everything in Free</b> — StepFun voice, painting and the open-road DMs included',
+        '<b>Everything in Free</b> — StepFun voice, image generation and the open-road DMs included',
         '<b>100 turns every day</b> — for 30 days',
         '<b>All Dungeon Masters</b> — DeepSeek, Qwen 3.8 Max &amp; more, for <b>30 days</b>',
-        '<b>Wan 2.7 Pro &amp; Qwen Image 3 Pro painting</b> — up to <b>10 premium paintings per day</b> (each also costs 1 turn, like every feature)',
+        '<b>Wan 2.7 Pro &amp; Qwen Image 3 Pro image generation</b> — up to <b>10 premium image generations per day</b> (each also costs 1 turn, like every feature)',
         '<b>Premium TTS narration</b> — Qwen 3.0 voices, for <b>30 days</b>',
         '<b>Export &amp; uploaded avatars</b> — your story as a zip, your own images',
         '<b>Priority API</b> — first in line, even when the cauldron is busy',
@@ -585,5 +588,6 @@
 </script>
 <script src="i18n.js?v=20260906a"></script>
 <script src="sprites.js?v=20260806b"></script>
+<script src="rail.js?v=20260923a"></script>
 </body>
 </html>

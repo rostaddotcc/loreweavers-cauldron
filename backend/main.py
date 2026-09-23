@@ -1788,7 +1788,7 @@ def _consume_wan_quota(username: str) -> None:
     DUBBELGRIND (medvetet behållen, W3-M2 2026-09-06): varje Wan-bild kostar
     BÅDE 1 premiumbild/dag OCH 1 turn ur turn-saldot. 403 om kvoten eller
     turn-saldot är slut — dagskvot-403:n säger därför uttryckligen "daily
-    painting cap" så spelaren inte tror att turnerna är slut (ärlig text,
+    image cap" så spelaren inte tror att turnerna är slut (ärlig text,
     oförändrat beteende). Körs strax innan själva genereringen."""
     with _USER_LOCK:
         users = load_users()
@@ -1802,9 +1802,9 @@ def _consume_wan_quota(username: str) -> None:
         used = int(u.get("wan_used_today", 0) or 0)
         if used >= WAN_DAILY_LIMIT:
             raise HTTPException(403, (
-                f"Daily painting cap reached: {WAN_DAILY_LIMIT} premium images/day. "
-                "This is the daily painting limit — not your turn balance. "
-                "Painting quota resets tomorrow (UTC)."
+                f"Daily image cap reached: {WAN_DAILY_LIMIT} premium images/day. "
+                "This is the daily image limit — not your turn balance. "
+                "Image quota resets tomorrow (UTC)."
             ))
         u["wan_used_today"] = used + 1
         save_users(users)
@@ -10122,7 +10122,7 @@ def _require_image_gen_tier(username: str, provider: str, payload: dict | None =
         if tier != "tier2":
             raise HTTPException(
                 403,
-                "Wan 2.7 / Qwen Image 3 Pro painting is a Patron feature (30€) — upgrade to paint with the premium engines.",
+                "Wan 2.7 / Qwen Image 3 Pro image generation is a Patron feature (30€) — upgrade to generate with the premium engines.",
             )
 
 
@@ -11878,7 +11878,7 @@ async def seo_llms_txt():
         "in English or Swedish — no email, no card, no subscription. 50 fresh turns every day: "
         "more daily free turns than any other AI Dungeon Master. "
         "The DM narrates, the Lorekeeper engine tracks initiative, action economy, HP, XP, "
-        "quests and NPCs. AI-painted portraits for your adventurer and every NPC, optional "
+        "quests and NPCs. AI-generated portraits for your adventurer and every NPC, optional "
         "TTS narrator, transparent token usage.\n"
         "\n"
         "## Key pages\n"

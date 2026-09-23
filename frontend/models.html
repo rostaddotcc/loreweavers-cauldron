@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>The Lore Weaver's Cauldron — The Minds, Voices &amp; Brushes</title>
-<meta name="description" content="The minds, voices and brushes behind the mask — DM minds (StepFun Step 5 Preview, StepFun 3.7 Flash, StepFun 3.5 Flash 2603, Qwen 3.8 Flash, Qwen 3.6 Flash, Qwen 3.8 Max, DeepSeek V4.1 Flash), TTS narrators (StepFun TTS, Qwen TTS) and image painters (StepFun image edit 2, Wan 2.7 Pro). Context windows, parameters, speeds and what each one does at your table.">
+<meta name="description" content="The minds, voices and brushes behind the mask — DM minds (StepFun Step 5 Preview, StepFun 3.7 Flash, StepFun 3.5 Flash 2603, Qwen 3.8 Flash, Qwen 3.6 Flash, Qwen 3.8 Max, DeepSeek V4.1 Flash), TTS narrators (StepFun TTS, Qwen TTS) and image generation (StepFun image edit 2, Wan 2.7 Pro). Context windows, parameters, speeds and what each one does at your table.">
 <link rel="icon" href="/assets/logo-cauldron.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,34 +26,14 @@
     --font-body:'Spectral',Georgia,serif;
     --font-mono:'IBM Plex Mono',ui-monospace,monospace;
     --font-accent:'Silkscreen',monospace;
-    --nav-h:64px;
   --font-flavor:'EB Garamond',Georgia,serif;--rubric:#d4737b;--gilt:rgba(201,162,39,.42);--gilt-hi:rgba(240,214,117,.6);--parch-a:#241c15;--parch-b:#1c1713;}
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{font-family:var(--font-body);color:var(--bone);background:var(--ink);
     overflow-x:hidden;-webkit-tap-highlight-color:transparent;font-size:17px;line-height:1.65}
 
-  /* ═══════════════ nav ═══════════════ */
-  .nav{position:fixed;top:0;left:0;right:0;z-index:50;height:var(--nav-h);
-    display:flex;align-items:center;justify-content:space-between;padding:0 clamp(1rem,4vw,2.5rem);
-    border-bottom:1px solid var(--edge);
-    background:var(--stone)}
-  .nav-brand{display:flex;align-items:center;gap:.65rem;text-decoration:none}
-  .nav-brand img{width:34px;height:34px;mix-blend-mode:screen}
-  .nav-brand span{font-family:var(--font-display);font-weight:700;var(--fs-sm);
-    letter-spacing:.22em;text-transform:uppercase;color:var(--bone-bright)}
-  .nav-links{display:flex;gap:1.4rem;align-items:center}
-  .nav-link{font-family:var(--font-display);font-size:.7rem;letter-spacing:.2em;
-    text-transform:uppercase;color:var(--bone-dim);text-decoration:none;transition:color .2s}
-  .nav-link:hover{color:var(--gold-bright)}
-  .nav-link.active{color:var(--gold)}
-  .nav-cta{font-family:var(--font-display);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;
-    color:var(--ink);background:var(--gold);border:1px solid var(--gold-bright);
-    padding:.5rem 1rem;text-decoration:none;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
-  .nav-cta:hover{background:var(--gold-bright);color:var(--ink)}
-
   /* ═══════════════ hero ═══════════════ */
-  .ledger{max-width:960px;margin:0 auto;padding:calc(var(--nav-h) + 4rem) 1.25rem 6rem}
+  .ledger{max-width:960px;margin:0 auto;padding:4rem 1.25rem 6rem}
   .eyebrow{font-family:var(--font-display);var(--fs-micro);letter-spacing:.44em;
     text-transform:uppercase;color:var(--gold);text-align:center;margin-bottom:1rem;font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem;letter-spacing:.34em}
   .ledger h1{font-family:var(--font-display);font-weight:900;font-size:clamp(1.9rem,4.6vw,3rem);
@@ -152,13 +132,13 @@
     .model{padding:1.5rem 1.3rem 1.3rem;position:relative;background:linear-gradient(180deg,rgba(217,201,166,.07),rgba(217,201,166,.015) 55%),linear-gradient(155deg,#241c15,#1c1713 72%);border:1px solid rgba(201,162,39,.34);box-shadow:inset 0 0 0 1px rgba(74,59,38,.5),0 1px 0 rgba(0,0,0,.4)}
   }
   @media(max-width:640px){
-    .nav-links .nav-link{display:none}
-    .ledger{padding-top:calc(var(--nav-h) + 3rem)}
+    .ledger{padding-top:3rem}
     .model{padding:1.4rem 1.1rem 1.2rem;position:relative;background:linear-gradient(180deg,rgba(217,201,166,.07),rgba(217,201,166,.015) 55%),linear-gradient(155deg,#241c15,#1c1713 72%);border:1px solid rgba(201,162,39,.34);box-shadow:inset 0 0 0 1px rgba(74,59,38,.5),0 1px 0 rgba(0,0,0,.4)}
     .sec-head h2{var(--fs-sm);font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.95rem}
   }
 </style>
 <link rel="stylesheet" href="snes.css?v=51">
+<link rel="stylesheet" href="rail.css?v=20260923a">
 <noscript><style>.rv{opacity:1;transform:none}</style></noscript>
 <style id="grimoire-leaf">
 /* Den Forbjudna Grimsboken — illuminerat lövskikt (nya regler; befintliga redigerade in-place) */
@@ -170,26 +150,49 @@
 </head>
 <body>
 
-<nav class="nav">
-  <a class="nav-brand" href="adventure.html">
-    <img src="/assets/logo-cauldron.jpg" alt="">
-    <span>The Cauldron</span>
-  </a>
-  <div class="nav-links">
-    <a class="nav-link" href="pricing.html" title="Pricing & subscriptions">Paths</a>
-    <a class="nav-link active" href="models.html" title="The AI models behind the game">The Minds</a>
-    <a class="nav-link" href="releases.html" title="Release notes / changelog">Ledger</a>
-    <a class="nav-link" href="help.html" title="How to Play guide">Guide</a>
-    <a class="nav-cta" href="login.html#gate" title="Sign in or create your adventurer">Enter</a>
+<header class="rite-rail">
+  <div class="rr-brand">
+    <span class="rr-sigil">⚗</span>
+    <span class="rr-name">The Lore Weaver's Cauldron</span>
+    <span class="rr-tag">THE MINDS</span>
   </div>
-</nav>
+  <div class="rr-mid"></div>
+  <div class="rr-actions">
+    <div class="rr-menu">
+      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+      <div class="rr-drop" id="rr-drop">
+        <div class="rr-ghead">At the Table</div>
+        <a href="chat.html">⚔ To the Table</a>
+        <a href="adventure.html">🏰 The Crossroads</a>
+        <a href="newgame.html">✨ New Adventure</a>
+        <a href="characters.html">🔥 The Forge</a>
+        <div class="rr-ghead">The Archive</div>
+        <a href="character.html">🧙 Character</a>
+        <a href="npcs.html">👥 NPCs</a>
+        <a href="platser.html">🗺 The Map</a>
+        <a href="loggbok.html">📜 Logbook</a>
+        <a href="facts.html">✦ Facts</a>
+        <div class="rr-ghead">The Ledger</div>
+        <a href="help.html">❓ How to Play</a>
+        <a href="mechanics.html">📐 Mechanics</a>
+        <a href="models.html">🧠 The Minds</a>
+        <a href="pricing.html">🜲 Paths</a>
+        <a href="releases.html">📓 Release Notes</a>
+        <a href="screenshots.html">🖼 Screens</a>
+        <div class="rr-ghead">Account</div>
+        <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+        <a href="login.html" id="rr-auth">🔒 Log out</a>
+      </div>
+    </div>
+  </div>
+</header>
 
 <section class="ledger">
   <p class="eyebrow rv">The Grimoire of Minds</p>
   <div class="page-eyebrow">THE MINDS · WHAT THINKS</div>
   <h1 class="rv">The Minds Behind the Mask</h1>
   <div class="page-rule">✦</div>
-  <p class="ledger-sub rv">Seven minds can sit at your table — and behind them wait the voices and the brushes. Each DM is a different weight of thought, a different pace of speech; the narrators give the realm a voice, and the painters give it faces. Here is what each one is made of, and what it is best at.<br><b>Powered by Qwen, DeepSeek, StepFun &amp; Wan</b></p>
+  <p class="ledger-sub rv">Seven minds can sit at your table — and behind them wait the voices and the brushes. Each DM is a different weight of thought, a different pace of speech; the narrators give the realm a voice, and the brushes give it faces. Here is what each one is made of, and what it is best at.<br><b>Powered by Qwen, DeepSeek, StepFun &amp; Wan</b></p>
 
   <!-- ═══════════════ hur det funkar ═══════════════ -->
   <div class="sec rv fresh-frame">
@@ -451,7 +454,7 @@
   <div class="sec rv">
     <div class="sec-head">
       <span class="sec-num">🖌</span>
-      <h2>The Brushes — Image Painters</h2>
+      <h2>The Brushes — Image Generation</h2>
       <span class="ruler"></span><span class="rule"></span>
     </div>
 
@@ -465,14 +468,14 @@
         </div>
         <span class="m-tag dm">The Quick Brush</span>
       </div>
-      <p class="m-desc">The <b>everyday painter</b> — StepFun image edit 2 paints <b>generic but serviceable avatars</b>: a fast, stylized portrait for every face at your table. It reads your adventurer&rsquo;s dossier and paints a recognizable character quickly. Good when you simply need a face; not the brush for lifelike realism. Free for every path since 2026-08-15.</p>
+      <p class="m-desc">The <b>everyday brush</b> — StepFun image edit 2 generates <b>generic but serviceable avatars</b>: a fast, stylized portrait for every face at your table. It reads your adventurer&rsquo;s dossier and generates a recognizable character quickly. Good when you simply need a face; not the brush for lifelike realism. Free for every path since 2026-08-15.</p>
       <div class="spec-grid">
         <div class="spec"><span class="k">Model</span><span class="v">step-image-edit-2</span></div>
         <div class="spec"><span class="k">Unlocks</span><span class="v">Free<small>everyone</small></span></div>
         <div class="spec"><span class="k">Style</span><span class="v">Generic, stylized</span></div>
         <div class="spec"><span class="k">Purpose</span><span class="v">Quick avatars</span></div>
       </div>
-      <div class="m-role"><span class="ico">◆</span><span>Paint a face fast — StepFun produces a generic avatar when you need a portrait without the wait.</span></div>
+      <div class="m-role"><span class="ico">◆</span><span>Generate a face fast — StepFun produces a generic avatar when you need a portrait without the wait.</span></div>
     </div>
 
     <!-- Wan 2.7 Pro -->
@@ -483,7 +486,7 @@
           <div class="m-title">Wan 2.7 Pro</div>
           <div class="m-maker">Alibaba Wan · wan2.7-image</div>
         </div>
-        <span class="m-tag flagship">The Master Painter</span>
+        <span class="m-tag flagship">The Master Brush</span>
       </div>
       <p class="m-desc">The <b>premium brush</b> — Wan 2.7 Pro renders <b>top-quality, realistic avatars</b>: lifelike faces, believable skin and light, in full <b>1080² resolution</b>, up to <b>10 portraits a day</b>. When a character deserves a portrait worth framing, this is the brush. Unlocks with the one-time <b>Patron top-up (30€)</b>.</p>
       <div class="spec-grid">
@@ -492,7 +495,7 @@
         <div class="spec"><span class="k">Resolution</span><span class="v">1080²</span></div>
         <div class="spec"><span class="k">Daily</span><span class="v">10 portraits / day</span></div>
       </div>
-      <div class="m-role"><span class="ico">◆</span><span>Paint a face to keep — Wan produces top-quality, realistic portraits for the characters that matter most.</span></div>
+      <div class="m-role"><span class="ico">◆</span><span>Generate a face to keep — Wan produces top-quality, realistic portraits for the characters that matter most.</span></div>
     </div>
   </div>
 
@@ -589,7 +592,7 @@
             <td class="dim">fast</td>
             <td>Rich male &amp; female narrators — <b>Patron (30€)</b></td>
           </tr>
-          <tr class="cmp-group"><td colspan="6">The Brushes — Image Painters</td></tr>
+          <tr class="cmp-group"><td colspan="6">The Brushes — Image Generation</td></tr>
           <tr>
             <td class="mname">StepFun image edit 2</td>
             <td class="dim">—</td>
@@ -617,7 +620,7 @@
         </tbody>
       </table>
     </div>
-    <p class="note rv"><b>A note on numbers.</b> Context windows and parameter counts come from each model&rsquo;s official release material. Token-per-second figures are independent measurements (Artificial Analysis / Intelligence Index), the vendor&rsquo;s own prompt-processing figure, or measured on the Cauldron&rsquo;s own route — real speed at your table varies with load, context length and reasoning level. Free players choose among <b>StepFun Step 5 Preview, StepFun 3.7 Flash (default), StepFun 3.5 Flash 2603 and Qwen 3.8 Flash</b>, plus the rotating OpenRouter free DMs; <b>Qwen 3.8 Max, Qwen 3.6 Flash and DeepSeek V4.1 Flash</b> unlock with the one-time Patron top-up (30€, 30 days). <b>The voices:</b> StepFun TTS narrates for free; Qwen TTS adds richer male and female narrators with Patron (30€). <b>The brushes:</b> StepFun image edit 2 paints <b>generic</b> avatars for free — <b>Wan 2.7 Pro</b> and <b>Qwen Image 3 Pro</b> paint <b>top-quality, realistic</b> portraits at 1080² with Patron (30€).</p>
+    <p class="note rv"><b>A note on numbers.</b> Context windows and parameter counts come from each model&rsquo;s official release material. Token-per-second figures are independent measurements (Artificial Analysis / Intelligence Index), the vendor&rsquo;s own prompt-processing figure, or measured on the Cauldron&rsquo;s own route — real speed at your table varies with load, context length and reasoning level. Free players choose among <b>StepFun Step 5 Preview, StepFun 3.7 Flash (default), StepFun 3.5 Flash 2603 and Qwen 3.8 Flash</b>, plus the rotating OpenRouter free DMs; <b>Qwen 3.8 Max, Qwen 3.6 Flash and DeepSeek V4.1 Flash</b> unlock with the one-time Patron top-up (30€, 30 days). <b>The voices:</b> StepFun TTS narrates for free; Qwen TTS adds richer male and female narrators with Patron (30€). <b>The brushes:</b> StepFun image edit 2 generates <b>generic</b> avatars for free — <b>Wan 2.7 Pro</b> and <b>Qwen Image 3 Pro</b> generate <b>top-quality, realistic</b> portraits at 1080² with Patron (30€).</p>
   </div>
 
   <div class="footer rv">
@@ -641,5 +644,6 @@
 </script>
 <script src="i18n.js?v=20260906a"></script>
 <script src="sprites.js?v=20260806b"></script>
+<script src="rail.js?v=20260923a"></script>
 </body>
 </html>

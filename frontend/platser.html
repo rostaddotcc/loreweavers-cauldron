@@ -8,37 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="snes.css?v=51">
-<style>
-/* ═══════════ RITE-RAIL — THE ARCHIVE dropdown (2026-08-11) ═══════════ */
-.rite-rail{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:48px;background:linear-gradient(180deg,var(--stone-2),var(--stone));border:1px solid var(--edge);border-top:1px solid var(--edge-hi);padding:0 .8rem;gap:1rem;position:relative}
-.rite-rail::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,rgba(var(--gold-rgb),.55) 30%,rgba(var(--gold-rgb),.55) 70%,transparent)}
-.rr-brand{display:flex;align-items:center;gap:.55rem;min-width:0;justify-self:start}
-.rr-sigil{width:22px;height:22px;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;color:var(--gold-bright);font-size:var(--fs-tiny);flex-shrink:0;box-shadow:0 0 8px rgba(var(--gold-rgb),.35) inset}
-.rr-name{font-family:var(--font-display);font-size:var(--fs-tiny);letter-spacing:.14em;color:var(--bone-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rr-tag{font-family:var(--font-accent);font-size:.52rem;letter-spacing:.2em;color:var(--gold);border:1px solid rgba(var(--gold-rgb),.4);padding:.15rem .4rem;white-space:nowrap}
-.rr-actions{display:flex;align-items:center;gap:.4rem;justify-self:end}
-.rr-menu{font-family:var(--font-display);font-size:.68rem;letter-spacing:.15em;color:var(--bone);border:1px solid var(--edge);background:var(--stone-2);padding:0 .9rem;height:34px;display:flex;align-items:center;gap:.5rem;cursor:pointer;position:relative}
-.rr-menu:hover{border-color:var(--gold);color:var(--gold-bright)}
-.rr-drop{position:absolute;top:calc(100% + .5rem);right:0;min-width:220px;background:var(--stone);border:1px solid var(--gold);box-shadow:0 8px 30px rgba(0,0,0,.6);display:none;z-index:10000;flex-direction:column}
-.rr-drop.open{display:flex}
-.rr-drop a{display:flex;align-items:center;gap:.6rem;padding:.7rem .9rem;color:var(--bone);text-decoration:none;font-family:var(--font-display);font-size:.72rem;letter-spacing:.12em;border-bottom:1px solid var(--edge)}
-.rr-drop a:hover{background:rgba(var(--gold-rgb),.08);color:var(--gold-bright);transform:translateX(3px)}
-.rr-drop a.cur{color:var(--gold);border-left:2px solid var(--gold)}
-/* snes.css-kompat: .topbar !important-regler får inte äta railen */
-.topbar.rite-rail{display:grid!important;align-items:center!important;background:linear-gradient(180deg,var(--stone-2),var(--stone))!important;border:1px solid var(--edge)!important;border-top:1px solid var(--edge-hi)!important;box-shadow:none!important;min-height:48px;padding:0 .8rem!important}
-.topbar.rite-rail .crr-btn{height:34px;min-height:34px;width:auto;padding:0 .6rem;justify-content:center}
-@media(max-width:900px){
-  .topbar.rite-rail{flex-wrap:nowrap;gap:1rem!important;padding:0 .8rem!important;overflow:visible!important;min-height:48px!important;grid-template-columns:auto 1fr auto!important}
-  .topbar.rite-rail .crr-btn{min-height:34px!important;width:auto!important}
-  .rr-drop{position:fixed;top:48px;right:.5rem;left:.5rem;min-width:0;max-height:calc(100dvh - 64px);overflow-y:auto}
-}
-@media(max-width:640px){
-  .rr-name{display:none}
-  .rr-tag{font-size:.46rem;padding:.12rem .3rem}
-  .topbar.rite-rail .crr-btn{min-height:44px!important}
-  .rr-menu{height:38px}
-}
-</style>
+<link rel="stylesheet" href="rail.css?v=20260923a">
+
 <style>
 /* ═══════════ MJUKA UPP — Codex karta (2026-08-05) — EFTER snes.css ═══════════ */
 .top-btn{ border-radius: 8px !important; box-shadow: 0 2px 12px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; }
@@ -62,10 +33,10 @@
   #embers{position:fixed;inset:0;z-index:0;pointer-events:none}
   .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 190px 70px rgba(4,2,8,.88)}
 
-  .topbar{position:relative;z-index:5;display:flex;align-items:center;gap:1rem;padding:.7rem 1.2rem;background:linear-gradient(180deg,var(--stone-2),color-mix(in srgb, var(--stone) 95%, transparent));border-bottom:1px solid var(--edge);box-shadow:0 4px 20px rgba(0,0,0,.5)}
-  .topbar .brand{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:var(--fs-base);color:var(--gold-bright);letter-spacing:.06em;white-space:nowrap;text-shadow:0 0 14px rgba(var(--gold-bright-rgb),.3)}
-  .topbar .page-tag{font-size:var(--fs-sm);font-style:italic;color:var(--bone-dim);border-left:1px solid var(--edge);padding-left:1rem}
-  .topbar .spacer{flex:1}
+  
+  
+  
+  
   .top-btn{font-family:var(--font-display,'Cinzel',serif);font-size:var(--fs-tiny);letter-spacing:.14em;text-transform:uppercase;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:8px;white-space:nowrap;text-decoration:none}
   .top-btn:hover{color:var(--gold-bright);border-color:var(--gold);box-shadow:0 0 12px -3px rgba(var(--gold-bright-rgb),.4)}
 
@@ -152,10 +123,10 @@
   @media(max-width:640px){
     .layout{padding:1rem .75rem 2.5rem}
     .places-grid{grid-template-columns:1fr}
-    .topbar .page-tag{display:none}
+    
     /* Topnav: 44px träffytor (snes.css har !important → kräver !important) */
-    .topbar{flex-wrap:wrap!important;gap:.4rem .5rem!important;padding:.6rem .75rem!important}
-    .topbar .top-btn{min-height:44px!important;display:inline-flex!important;align-items:center!important;padding:.4rem .65rem!important;font-size:.68rem!important}
+    
+    
     /* Karta: full bredd — storlek sköts av zoom/pan-systemet (ej fontkrymp) */
     .ascii-map{padding:.8rem .6rem;margin-left:-.25rem;margin-right:-.25rem}
     .map-head h1{font-size:var(--fs-narr)}
@@ -258,46 +229,43 @@
 <body>
 <div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
 
-<header class="topbar rite-rail">
+<header class="rite-rail">
   <div class="rr-brand">
     <span class="rr-sigil">⚗</span>
     <span class="rr-name">The Lore Weaver's Cauldron</span>
     <span class="rr-tag">THE MAP</span>
   </div>
-  <span class="rr-mid" aria-hidden="true"></span>
+  <div class="rr-mid"></div>
   <div class="rr-actions">
-    <div class="rr-menu" id="archive-menu" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false">☰ THE ARCHIVE ▾
-      <div class="rr-drop" id="archive-drop">
+    <div class="rr-menu">
+      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+      <div class="rr-drop" id="rr-drop">
+        <div class="rr-ghead">At the Table</div>
         <a href="chat.html">⚔ To the Table</a>
-        <a href="npcs.html">👥 NPCs</a>
-        <a href="platser.html" class="cur">🗺 The Map</a>
-        <a href="loggbok.html">📜 Logbook</a>
+        <a href="adventure.html">🏰 The Crossroads</a>
+        <a href="newgame.html">✨ New Adventure</a>
+        <a href="characters.html">🔥 The Forge</a>
+        <div class="rr-ghead">The Archive</div>
         <a href="character.html">🧙 Character</a>
+        <a href="npcs.html">👥 NPCs</a>
+        <a href="platser.html">🗺 The Map</a>
+        <a href="loggbok.html">📜 Logbook</a>
         <a href="facts.html">✦ Facts</a>
-        <a href="login.html" onclick="doLogout();return false">🔒 Log out</a>
+        <div class="rr-ghead">The Ledger</div>
+        <a href="help.html">❓ How to Play</a>
+        <a href="mechanics.html">📐 Mechanics</a>
+        <a href="models.html">🧠 The Minds</a>
+        <a href="pricing.html">🜲 Paths</a>
+        <a href="releases.html">📓 Release Notes</a>
+        <a href="screenshots.html">🖼 Screens</a>
+        <div class="rr-ghead">Account</div>
+        <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+        <a href="login.html" id="rr-auth">🔒 Log out</a>
       </div>
     </div>
   </div>
 </header>
-<script>
-/* ═══════════ RITE-RAIL — THE ARCHIVE dropdown (2026-08-11) ═══════════ */
-(function(){
-  var menu=document.getElementById('archive-menu');
-  var drop=document.getElementById('archive-drop');
-  if(!menu||!drop)return;
-  function setOpen(open){
-    drop.classList.toggle('open',open);
-    menu.setAttribute('aria-expanded',open?'true':'false');
-  }
-  menu.addEventListener('click',function(e){e.stopPropagation();setOpen(!drop.classList.contains('open'));});
-  menu.addEventListener('keydown',function(e){
-    if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();setOpen(!drop.classList.contains('open'));}
-    else if(e.key==='Escape'){setOpen(false);menu.focus();}
-  });
-  document.addEventListener('click',function(e){if(!menu.contains(e.target))setOpen(false);});
-  document.addEventListener('keydown',function(e){if(e.key==='Escape')setOpen(false);});
-})();
-</script>
+
 
 <div class="layout">
   <div class="map-head">
@@ -987,5 +955,6 @@ if (document.hidden) { requestAnimationFrame(tick); return; }ctx.clearRect(0,0,W
 tick();
 </script>
 <script src="embed.js?v=20260806a"></script>
+<script src="rail.js?v=20260923a"></script>
 </body>
 </html>

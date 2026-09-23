@@ -107,4 +107,14 @@
     var u = JSON.parse(sessionStorage.getItem('dnd_user') || 'null');
     if (u && (u.role === 'admin' || u.is_admin || u.admin)) showAdmin(true);
   } catch (e) {}
+
+  /* ── Service worker (PWA/installbarhet + asset-cache) ──
+     Registreras på root-scope från varje sida (även nested book-souls/).
+     sw.js cachar ALDRIG navigation eller /api/ — se filens regler. */
+  if ('serviceWorker' in navigator &&
+      (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
+    });
+  }
 })();

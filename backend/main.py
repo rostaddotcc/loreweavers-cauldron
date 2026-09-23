@@ -11886,13 +11886,24 @@ async def seo_llms_txt():
         "- [Play now](https://dnd.rostad.cc/): free account, 50 fresh turns every day\n"
         "- [How to play & mechanics](https://dnd.rostad.cc/mechanics.html): D&D 5e rules engine, dice ceremony, LLM harness\n"
         "- [Help](https://dnd.rostad.cc/help.html)\n"
-        "- [Pricing](https://dnd.rostad.cc/pricing.html): free forever, one-time Support/Patron top-ups, donations add turns\n"
+        "- [Pricing](https://dnd.rostad.cc/pricing.html): free forever, one-time Patron top-up (30€), donations add turns\n"
+        "- [The Minds, Voices & Brushes](https://dnd.rostad.cc/models.html): every DM model, TTS narrator and image engine with specs\n"
+        "- [Book of Souls](https://dnd.rostad.cc/book-souls/): gallery of player-summoned adventurers and NPCs with AI-generated portraits\n"
+        "- [Screenshots](https://dnd.rostad.cc/screenshots.html)\n"
         "- [Release notes](https://dnd.rostad.cc/releases.html)\n"
         "\n"
         "## Optional\n"
         "> Keep out: /admin.html, /api/ — internal.\n"
     )
     return PlainTextResponse(body, media_type="text/plain; charset=utf-8")
+
+# IndexNow (2026-09-23): nyckelfilen serveras på /<key>.txt så sökmotorer kan
+# verifiera pingar. Nyckeln är per protokoll offentlig — ingen hemlighet.
+INDEXNOW_KEY = (Path(__file__).resolve().parent / "indexnow_key.txt").read_text().strip()
+
+@app.get(f"/{INDEXNOW_KEY}.txt", include_in_schema=False)
+async def indexnow_key():
+    return PlainTextResponse(INDEXNOW_KEY, media_type="text/plain; charset=utf-8")
 
 @app.get("/admin.html", include_in_schema=False)
 async def admin_page_guard(morkrets_token: str | None = Cookie(None)):

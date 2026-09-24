@@ -120,6 +120,20 @@
    border: 1px solid var(--edge); border-radius: 0; cursor: pointer;
    font-family: var(--font-mono);
   }.model-picker-card select:focus{ outline: none; border-color: var(--gold); }.mpc-hint{ font-size: 0.6rem; font-style: italic; color: rgba(180,170,150,0.6); margin-top: 0.25rem; line-height: 1.35; }
+  /* ── Advanced-details i modulkortet (2026-09-24): canon-mönstret från
+     adventure-onboarding (.adv-details) i kompaktskala — nås via ⚙-menyn. ── */
+  .mpc-advanced{ margin-top:.35rem; border:1px solid var(--edge); border-radius:var(--radius-xs);
+    background:rgba(0,0,0,0.22); padding:0; }
+  .mpc-advanced summary{ cursor:pointer; list-style:none; display:flex; align-items:center; gap:.4rem;
+    font-family:var(--font-display); font-size:.55rem; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--bone-dim); padding:.5rem .6rem; transition:color .2s; }
+  .mpc-advanced summary::-webkit-details-marker{ display:none; }
+  .mpc-advanced summary::before{ content:'▸'; color:var(--gold); transition:transform .2s; }
+  .mpc-advanced[open] summary{ color:var(--gold); border-bottom:1px solid var(--edge); }
+  .mpc-advanced[open] summary::before{ transform:rotate(90deg); }
+  .mpc-advanced > .mpc-label, .mpc-advanced > select{ margin-left:.6rem; margin-right:.6rem; }
+  .mpc-advanced > .mpc-label:first-of-type{ margin-top:.5rem; }
+  .mpc-advanced > .mpc-hint{ margin:.35rem .6rem .6rem; }
   /* ═══════════ Model-info-modal ═══════════ */
   .mi-overlay{ position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(var(--ink-rgb),.82); opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility .25s; }
   .mi-overlay.show{ opacity: 1; visibility: visible; }
@@ -1388,12 +1402,22 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
           <div class="mpc-title">🧠 Models <span id="model-picker-lock" style="display:none;color:var(--gold);font-size:.68rem">🔒 Patron</span></div>
           <label class="mpc-label" for="settings-dm-model" title="The voice that narrates your adventure — pick the storyteller">Dungeon Master</label>
           <select id="settings-dm-model" onchange="settingsChangeModel(this.value)"></select>
-          <label class="mpc-label" for="settings-guardian-model" title="Keeps the rules honest — HP, XP, combat, dice checks">Lorekeeper</label>
-          <select id="settings-guardian-model" onchange="settingsChangeGuardian(this.value)"></select>
-          <label class="mpc-label" for="settings-extraction-model" title="Quiet background work — summaries, journal entries, facts">Background (extraction)</label>
-          <select id="settings-extraction-model" onchange="settingsChangeExtraction(this.value)"></select>
           <div class="mpc-hint" id="settings-guardian-hint"></div>
           <div class="mpc-hint" id="model-picker-premium-hint" style="display:none;color:var(--gold)">🔒 Premium models locked — one-time Patron unlocks all DMs for 30 days.</div>
+          <!-- Progressiv avslöjning (2026-09-24, canon-mönstret från adventure-onboarding):
+               DM-valet är spelarens #1-inställning och står synligt; Lorekeeper +
+               Extraction är finjustering → ihopfällda <details> med sensible-defaults-
+               notis. ⚙-menyn är ~920px hög på mobil utan detta — Account/Leave låg
+               under folden. initSettingsModelPickers använder getElementById →
+               nästlingssäker. -->
+          <details class="mpc-advanced">
+            <summary>⚙ Advanced — Lorekeeper &amp; background</summary>
+            <label class="mpc-label" for="settings-guardian-model" title="Keeps the rules honest — HP, XP, combat, dice checks">Lorekeeper</label>
+            <select id="settings-guardian-model" onchange="settingsChangeGuardian(this.value)"></select>
+            <label class="mpc-label" for="settings-extraction-model" title="Quiet background work — summaries, journal entries, facts">Background (extraction)</label>
+            <select id="settings-extraction-model" onchange="settingsChangeExtraction(this.value)"></select>
+            <div class="mpc-hint">Sensible defaults are set — change these only if you like to tinker.</div>
+          </details>
         </div>
         <button class="drop-item" data-cli-label onclick="toggleCliChat();closeSettingsMenu()"><span class="di-icon">🖥️</span><span class="di-body"><span class="di-name">Chat style: Terminal</span><span class="di-hint">click to switch to bubbles</span></span></button>
         <button class="drop-item" onclick="openModelInfo();closeSettingsMenu()"><span class="di-icon">ℹ️</span><span class="di-body"><span class="di-name">About the Models</span><span class="di-hint">what each DM model does · why thinking takes time</span></span></button>

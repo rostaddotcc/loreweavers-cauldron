@@ -72,6 +72,35 @@
     if (t && t === here) { a.classList.add('cur'); a.setAttribute('aria-current', 'page'); }
   });
 
+  /* ── Plain-English titles på meny-länkarna (2026-09-24) ──
+     In-world-namnen (The Crossroads, The Forge, Paths…) är stämningsbärare,
+     men nya spelare behöver en sekund av klartext: samma mönster som
+     marketing-navens title-attribut. En enda tabell här täcker alla 19 sidor
+     (+ book-souls) — inga per-sida-attribut att hålla synkade. */
+  var RAIL_TITLES = {
+    'chat.html':      'Your game table — the conversation with the DM',
+    'adventure.html': 'Adventure select — continue or start',
+    'newgame.html':   'Create a new adventurer and campaign',
+    'characters.html':'The Forge — manage saved characters',
+    'character.html': 'Your character sheet',
+    'npcs.html':      'Cast of NPCs met in your adventures',
+    'platser.html':   'The world map — places visited',
+    'loggbok.html':   'The journal — your story so far',
+    'facts.html':     'Extracted facts ledger',
+    'help.html':      'How to play — commands and tips',
+    'mechanics.html': 'The game rules and mechanics',
+    'models.html':    'The AI minds — model comparison',
+    'pricing.html':   'Paths — free tier and Patron',
+    'releases.html':  'Release notes — what changed',
+    'screenshots.html':'Screens from the game',
+    'admin.html':     'Admin — Overseer tools',
+    'login.html':     'Log out of your account'
+  };
+  Array.prototype.forEach.call(drop.querySelectorAll('a[href]'), function (a) {
+    var t = (a.getAttribute('href') || '').split('#')[0].split('?')[0].split('/').pop().toLowerCase();
+    if (RAIL_TITLES[t] && !a.getAttribute('title')) a.setAttribute('title', RAIL_TITLES[t]);
+  });
+
   /* ── Auth-länk: inloggad → Log out, annars → Enter the Table ── */
   // Bas-derivning: nested pages (t.ex. /book-souls/) måste lösa login.html
   // mot rail.js egen URL, inte sidans katalog (annars blir länken /book-souls/login.html).

@@ -511,6 +511,14 @@ html{font-size:var(--fs-base)}
   .w-status,.weaving-ad .wa-status{animation:none}
   .news-banner{animation:none}
 }
+/* ── adventure-rail-rest (2026-09-24): riktigt smala skärmar — kvot-pillens
+   RESET-segment viker (TURNS räcker; chat.html gör samma sak ≤480px), och
+   pille+chips får aldrig trycka isär railen (grid mitten-kolumn är min 0). ── */
+@media (max-width: 480px){
+  #quota-pill > span:nth-child(4),
+  #quota-pill > span:nth-child(5){ display:none; }
+  #adv-back-btn{ display:none !important; }
+}
 </style>
 <script src="sprites.js?v=20260806b"></script>
 <script src="fonts.js?v=20260806b"></script>
@@ -525,10 +533,21 @@ html{font-size:var(--fs-base)}
       <span class="rr-name">The Lore Weaver's Cauldron</span>
       <span class="rr-tag">THE CROSSROADS</span>
     </div>
-    <div class="rr-mid"></div>
+    <div class="rr-mid">
+      <!-- ⚡ Turn-quota-pille (återställd 2026-09-24): Rail v2-wave:n raderade
+           markeringen men JS (renderQuotaPill/quotaTick) skriver på quota-turns/quota-cd.
+           Kort tooltip per kanon; klick → profilmodalt. -->
+      <div class="rr-tally" id="quota-pill" onclick="openProfileModal()" role="button" tabindex="0" title="Turns left · when the quota refills. Click for your profile."
+           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openProfileModal()}">
+        <span>TURNS <span class="tv" id="quota-turns">⚡ …</span></span>
+        <span class="sep">·</span>
+        <span>RESET <span class="tv" id="quota-cd"></span></span>
+      </div>
+    </div>
     <div class="rr-actions">
         <button class="rr-btn" id="gear-sound-ico" onclick="toggleGearSound(this)" title="Sound" aria-label="Sound">🎵</button>
-        <button class="rr-btn" onclick="leaveGate()" title="Leave" aria-label="Leave">🚪 Leave</button>
+        <button class="rr-btn text-btn" id="quota-benefits" style="display:none" onclick="location.href='pricing.html'" title="Patron benefits expire in" aria-label="Patron benefits expire in">👑 0d</button>
+        <button class="rr-btn text-btn" id="adv-back-btn" style="display:none" onclick="location.href='chat.html'" title="Back to the table" aria-label="Back to the table">⚔ Back</button>
       <div class="rr-menu">
         <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
         <div class="rr-drop" id="rr-drop">
@@ -1144,6 +1163,8 @@ async function initCampaignCheck() {
 
 function showCampaignList(campaigns) {
   hasActiveCampaign = true;
+  const backBtn = document.getElementById('adv-back-btn');
+  if (backBtn) backBtn.style.display = '';
   const list = document.getElementById('campaign-list');
   list.innerHTML = campaigns.map(c => {
     const ch = c.character || {};
@@ -1189,6 +1210,8 @@ function toggleStepperCollapse() {
 
 function showPaths() {
   hasActiveCampaign = false;
+  const backBtn = document.getElementById('adv-back-btn');
+  if (backBtn) backBtn.style.display = 'none';
   document.getElementById('continue-wrap').classList.remove('show');
   document.querySelector('.app').classList.remove('paths-hidden');
   document.querySelector('.app').classList.remove('stepper-collapsed');

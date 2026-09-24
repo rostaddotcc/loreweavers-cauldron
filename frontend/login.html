@@ -916,7 +916,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
             <h3>Continue your journey</h3>
             <p>Welcome back, <b class="gc-name">adventurer</b> &mdash; the fire is still burning.</p>
           </div>
-          <a class="btn gold wide" href="adventure.html?v=20260922e" style="display:block;text-align:center;margin-top:.4rem">Continue to the realm &rarr;</a>
+          <a class="btn gold wide" href="adventure.html?v=20260924a" style="display:block;text-align:center;margin-top:.4rem">Continue to the realm &rarr;</a>
           <div class="gate-toggle" style="font-size:var(--fs-tiny)" onclick="doLogout()">Not you? <b>Sign out</b></div>
         </div>
       </div>
@@ -1269,7 +1269,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
     <div class="mname" id="prof-name"></div>
     <div class="mtier" id="prof-tier"></div>
     <div class="mactions" id="prof-actions">
-      <a class="btn gold" href="adventure.html?v=20260922e">Return to the realm →</a>
+      <a class="btn gold" href="adventure.html?v=20260924a">Return to the realm →</a>
       <a class="btn ghost" href="pricing.html">Membership &amp; billing</a>
       <button class="btn danger-btn btn-ghost" onclick="doLogout()">Log out</button>
       <button class="btn danger-btn btn-blood" id="prof-delete-btn" onclick="askDeleteAccount()">Delete account</button>
@@ -1435,7 +1435,7 @@ function authSuccess(username) {
   sfx('gate');
   sessionStorage.setItem('dnd_user', username);
   let next = new URLSearchParams(location.search).get('next');
-  if (!next || !/^(?:[a-zA-Z0-9_-]+\.html)(?:[?#].*)?$/.test(next)) next = 'adventure.html?v=20260922e';
+  if (!next || !/^(?:[a-zA-Z0-9_-]+\.html)(?:[?#].*)?$/.test(next)) next = 'adventure.html?v=20260924a';
   setTimeout(() => { window.location.href = next; }, 900);
 }
 

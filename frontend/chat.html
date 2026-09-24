@@ -1386,11 +1386,11 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
         <div class="drop-head">Settings</div>
         <div class="model-picker-card">
           <div class="mpc-title">🧠 Models <span id="model-picker-lock" style="display:none;color:var(--gold);font-size:.68rem">🔒 Patron</span></div>
-          <label class="mpc-label">Dungeon Master</label>
+          <label class="mpc-label" for="settings-dm-model" title="The voice that narrates your adventure — pick the storyteller">Dungeon Master</label>
           <select id="settings-dm-model" onchange="settingsChangeModel(this.value)"></select>
-          <label class="mpc-label">Lorekeeper</label>
+          <label class="mpc-label" for="settings-guardian-model" title="Keeps the rules honest — HP, XP, combat, dice checks">Lorekeeper</label>
           <select id="settings-guardian-model" onchange="settingsChangeGuardian(this.value)"></select>
-          <label class="mpc-label">Background (extraction)</label>
+          <label class="mpc-label" for="settings-extraction-model" title="Quiet background work — summaries, journal entries, facts">Background (extraction)</label>
           <select id="settings-extraction-model" onchange="settingsChangeExtraction(this.value)"></select>
           <div class="mpc-hint" id="settings-guardian-hint"></div>
           <div class="mpc-hint" id="model-picker-premium-hint" style="display:none;color:var(--gold)">🔒 Premium models locked — one-time Patron unlocks all DMs for 30 days.</div>
@@ -8141,6 +8141,26 @@ document.addEventListener('click', (e) => {
 // Rail v2: kugghjulspanelen stängs när unified-menyn öppnas (rail.js
 // stopPropagation stoppar outside-click-hanteraren ovan).
 { const rb = document.getElementById('rr-menu-btn'); if (rb) rb.addEventListener('click', closeSettingsMenu); }
+// ── ↑↓-navigering i ⚙-menyn (2026-09-24) — paritet med ☰-menyn (rail.js).
+// Fokus flyttas mellan fokuserbara items (drop-item-knappar/länkar) — select-
+// elementen lämnas åt sina egna piltangenter (i select flyttar ↑↓ valet, inte
+// fokus). Home/End = första/sista.
+document.addEventListener('keydown', (e) => {
+  const m = document.getElementById('settings-menu');
+  if (!m || !m.classList.contains('open')) return;
+  if (!['ArrowDown','ArrowUp','Home','End'].includes(e.key)) return;
+  if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  const focusables = Array.from(m.querySelectorAll('.drop-item, a, button'))
+    .filter(el => el.offsetParent !== null && !el.disabled);
+  if (!focusables.length) return;
+  e.preventDefault();
+  const i = focusables.indexOf(document.activeElement);
+  if (e.key === 'Home') { focusables[0].focus(); return; }
+  if (e.key === 'End')  { focusables[focusables.length - 1].focus(); return; }
+  if (i === -1) { focusables[0].focus(); return; }
+  const next = e.key === 'ArrowDown' ? (i + 1) % focusables.length : (i - 1 + focusables.length) % focusables.length;
+  focusables[next].focus();
+});
 // Esc stänger ⚙-panelen (2026-09-24) — ☰-menyn haft Esc sedan Rail v2; ⚙ saknade den.
 // Focus åter till ⚙-knappen så tangentbordsanvändaren inte tappar position.
 document.addEventListener('keydown', (e) => {

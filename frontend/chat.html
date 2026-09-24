@@ -194,7 +194,14 @@
     padding: 0.32rem 0.5rem; border: none; border-radius: var(--radius-xs);
     background: transparent; cursor: pointer; text-align: left;
     text-decoration: none; transition: background 0.15s, transform 0.15s;
-  }.drop-item:hover{ background: rgba(var(--gold-bright-rgb),0.1); transform: translateX(3px); }.di-icon{ font-size: 0.85rem; flex-shrink: 0; filter: drop-shadow(0 0 4px rgba(var(--gold-bright-rgb),0.3)); }.di-body{ display: flex; flex-direction: column; min-width: 0; }.di-name{ font-family: var(--font-display); font-size: 0.78rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--bone-bright); }.drop-item:hover .di-name{ color: var(--gold-bright); }.di-hint{ font-size: 0.66rem; font-style: italic; color: var(--bone-dim); }/* Settings-menyn (⚙️): hint-rad → hover-tooltip (desktop). Menyn är högerjusterad → tooltip pekar vänsterut */.settings-menu .drop-item{ position: relative; }.settings-menu .di-hint{ position: absolute; top: 50%; right: calc(100% + 10px); transform: translateY(-50%); white-space: nowrap; font-size: 0.66rem; font-style: italic; color: var(--bone-dim); background: var(--stone-3); border: 1px solid var(--edge); border-radius: var(--radius-sm); padding: 0.32rem 0.6rem; box-shadow: 0 10px 28px -10px rgba(0,0,0,0.8); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.16s ease, visibility 0.16s ease; z-index: 70; }.settings-menu .drop-item:hover .di-hint{ opacity: 1; visibility: visible; }.settings-menu .drop-item:hover .di-name{ color: var(--gold-bright); }@media (hover:none), (max-width:640px){ .settings-menu .di-hint{ position: static; transform: none; opacity: 1; visibility: visible; background: none; border: none; box-shadow: none; padding: 0; } /* TTS-raden: kompaktare så Combat/Engine Room aldrig klipps bort */ .tts-voice-picker{ gap: 0.2rem 0.3rem; margin-bottom: 0.25rem; }.tts-voice-label{ display: none; }.tts-select{ font-size: 0.58rem; padding: 0.14rem 0.28rem; max-width: 96px; flex-shrink: 1; min-width: 0; letter-spacing: 0; border-radius: var(--radius-sm); }.tts-auto-btn{ font-size: 0.58rem; padding: 0.16rem 0.4rem; letter-spacing: 0; border-radius: var(--radius-sm); }.tts-player{ padding: 0.18rem 0.5rem; margin-bottom: 0.3rem; }.tts-player .ttp-idle, .tts-player .ttp-synth{ font-size: 0.62rem; } }.drop-sep{ height: 1px; background: var(--edge); margin: 0.4rem 0.3rem; }.drop-head{ font-family: var(--font-accent); font-size: .55rem; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); opacity: .75; padding: .5rem .7rem .2rem; user-select: none; }.drop-head:first-child{ padding-top: .25rem; }/* ═══════════ Layout ═══════════ */.layout{ position: relative; z-index: auto; flex: 1; display: flex; min-height: 0; }/* ── Sidebar: party ── */.sidebar{
+  }.drop-item:hover{ background: rgba(var(--gold-bright-rgb),0.1); transform: translateX(3px); }.di-icon{ font-size: 0.85rem; flex-shrink: 0; filter: drop-shadow(0 0 4px rgba(var(--gold-bright-rgb),0.3)); }.di-body{ display: flex; flex-direction: column; min-width: 0; }.di-name{ font-family: var(--font-display); font-size: 0.78rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--bone-bright); }.drop-item:hover .di-name{ color: var(--gold-bright); }.di-hint{ font-size: 0.66rem; font-style: italic; color: var(--bone-dim); }/* Settings-menyn (⚙️): hint-rad → hover-expand (2026-09-24 — FÖRR hover-tooltip
+   som flög ut vänster om menyn: absolut position utanför behållarkanten KLIPPTES
+   osynlig av menyns scroll-behållare, overflow-y:auto tvingar overflow-x:auto
+   enligt CSS-spec. Nu expanderar hinten under namnet inuti item-kroppen —
+   alltid synlig, aldrig klippt, ingen JS-positionering.) */
+.settings-menu .drop-item{ position: relative; }
+.settings-menu .di-hint{ display: block; white-space: normal; font-size: 0.66rem; font-style: italic; color: var(--bone-dim); opacity: 0; visibility: hidden; max-height: 0; margin: 0; transition: opacity 0.16s ease, visibility 0.16s ease, max-height 0.2s ease, margin 0.2s ease; }
+.settings-menu .drop-item:hover .di-hint, .settings-menu .drop-item:focus-visible .di-hint{ opacity: 1; visibility: visible; max-height: 2.2rem; margin: .12rem 0 .05rem; }.settings-menu .drop-item:hover .di-name{ color: var(--gold-bright); }@media (hover:none), (max-width:640px){ .settings-menu .di-hint{ position: static; transform: none; opacity: 1; visibility: visible; max-height: none; background: none; border: none; box-shadow: none; padding: 0; } /* TTS-raden: kompaktare så Combat/Engine Room aldrig klipps bort */ .tts-voice-picker{ gap: 0.2rem 0.3rem; margin-bottom: 0.25rem; }.tts-voice-label{ display: none; }.tts-select{ font-size: 0.58rem; padding: 0.14rem 0.28rem; max-width: 96px; flex-shrink: 1; min-width: 0; letter-spacing: 0; border-radius: var(--radius-sm); }.tts-auto-btn{ font-size: 0.58rem; padding: 0.16rem 0.4rem; letter-spacing: 0; border-radius: var(--radius-sm); }.tts-player{ padding: 0.18rem 0.5rem; margin-bottom: 0.3rem; }.tts-player .ttp-idle, .tts-player .ttp-synth{ font-size: 0.62rem; } }.drop-sep{ height: 1px; background: var(--edge); margin: 0.4rem 0.3rem; }.drop-head{ font-family: var(--font-accent); font-size: .55rem; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); opacity: .75; padding: .5rem .7rem .2rem; user-select: none; }.drop-head:first-child{ padding-top: .25rem; }/* ═══════════ Layout ═══════════ */.layout{ position: relative; z-index: auto; flex: 1; display: flex; min-height: 0; }/* ── Sidebar: party ── */.sidebar{
     width: 250px; flex-shrink: 0;
     background: linear-gradient(180deg, var(--stone), var(--ink));
     border-right: 1px solid var(--edge);
@@ -1370,7 +1377,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
     <button class="rr-btn" id="console-tab" onclick="toggleConsole()" title="Open Engine Room" aria-label="Open Engine Room">🛠️</button>
     <!-- ═══ Settings — gear icon ═══ -->
     <div style="position:relative">
-      <button class="rr-btn" onclick="toggleSettingsMenu()" title="Settings" aria-label="Settings">⚙️</button>
+      <button class="rr-btn" id="settings-btn" onclick="toggleSettingsMenu()" title="Settings" aria-label="Settings" aria-haspopup="true" aria-expanded="false">⚙️</button>
       <div class="settings-menu" id="settings-menu">
         <div class="drop-head">Your game</div>
         <a class="drop-item" href="help.html"><span class="di-icon">❓</span><span class="di-body"><span class="di-name">How to Play</span><span class="di-hint">commands &amp; tips</span></span></a>
@@ -8108,6 +8115,9 @@ function renderJourney(raw) {
 function toggleSettingsMenu() {
   const m = document.getElementById('settings-menu');
   m.classList.toggle('open');
+  // A11y (2026-09-24): ⚙ speglar öppningsläget — ☰-knappen har haft detta sedan Rail v2.
+  const sb = document.getElementById('settings-btn');
+  if (sb) sb.setAttribute('aria-expanded', m.classList.contains('open') ? 'true' : 'false');
   // Rail v2: unified dropdownen och settings-panelen är ömsesidigt uteslutande
   const rd = document.getElementById('rr-drop');
   if (rd && m.classList.contains('open')) {
@@ -8118,7 +8128,11 @@ function toggleSettingsMenu() {
 }
 function closeSettingsMenu() {
   const m = document.getElementById('settings-menu');
-  if (m) m.classList.remove('open');
+  if (m) {
+    m.classList.remove('open');
+    const sb = document.getElementById('settings-btn');
+    if (sb) sb.setAttribute('aria-expanded', 'false');
+  }
 }
 document.addEventListener('click', (e) => {
   if (!e.target.closest('#settings-menu') && !e.target.closest('[onclick*="toggleSettingsMenu"]')) closeSettingsMenu();
@@ -8127,6 +8141,18 @@ document.addEventListener('click', (e) => {
 // Rail v2: kugghjulspanelen stängs när unified-menyn öppnas (rail.js
 // stopPropagation stoppar outside-click-hanteraren ovan).
 { const rb = document.getElementById('rr-menu-btn'); if (rb) rb.addEventListener('click', closeSettingsMenu); }
+// Esc stänger ⚙-panelen (2026-09-24) — ☰-menyn haft Esc sedan Rail v2; ⚙ saknade den.
+// Focus åter till ⚙-knappen så tangentbordsanvändaren inte tappar position.
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const m = document.getElementById('settings-menu');
+    if (m && m.classList.contains('open')) {
+      closeSettingsMenu();
+      const sb = document.getElementById('settings-btn');
+      if (sb) sb.focus();
+    }
+  }
+});
 
 // ── 📊 Usage-modal — modell- och token-statistik ──
 function fmtTok(n) {

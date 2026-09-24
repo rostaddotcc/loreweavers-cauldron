@@ -77,8 +77,18 @@
   background:linear-gradient(180deg,var(--stone-2),var(--stone));
   border:1px solid var(--gold); box-shadow:0 8px 30px rgba(0,0,0,.6);
   display:none; z-index:10000; flex-direction:column; padding:.3rem 0;
+  /* (2026-09-24) Desktop-skydd: 17 länkar + 4 grupp-huvuden ≈ 656px — utan
+     tak klipps Account-gruppen (Admin/Log out) på laptop-skärmar ≤~620px
+     synlig höjd. Samma recept som mobil-blocket + ⚙-menyn. */
+  max-height:calc(100dvh - 72px); overflow-y:auto; overscroll-behavior:contain;
 }
 .rr-drop.open{ display:flex; }
+/* Tunna guld-scrollbars i ☰-menyn (desktop-taket 2026-09-24) — matchar
+   ⚙-menyns scrollbar-color, grimoire-look på webkit/gecko. */
+.rr-drop::-webkit-scrollbar{ width:8px; }
+.rr-drop::-webkit-scrollbar-thumb{ background:rgba(var(--gold-rgb),.35); }
+.rr-drop::-webkit-scrollbar-track{ background:transparent; }
+.rr-drop{ scrollbar-width:thin; scrollbar-color:rgba(var(--gold-rgb),.35) transparent; }
 .rr-drop a{
   display:flex; align-items:center; gap:.6rem; padding:.5rem .9rem;
   color:var(--bone); text-decoration:none;
@@ -87,6 +97,9 @@
 }
 .rr-drop a:hover{ background:rgba(var(--gold-rgb),.08); color:var(--gold-bright); transform:translateX(3px); }
 .rr-drop a.cur{ color:var(--gold); box-shadow:inset 2px 0 0 var(--gold); }
+/* Tangentbordsfokus på länkarna (2026-09-24): ↑↓-navigeringen i rail.js
+   flyttar fokus — utan synlig ring är positionen osynlig. */
+.rr-drop a:focus-visible{ outline:1px solid var(--gold); outline-offset:-2px; background:rgba(var(--gold-rgb),.08); }
 .rr-ghead{
   font-family:var(--font-accent); font-size:.55rem; letter-spacing:.22em; text-transform:uppercase;
   color:var(--gold); opacity:.85; padding:.5rem .9rem .15rem; user-select:none;

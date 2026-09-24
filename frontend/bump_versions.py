@@ -5,7 +5,8 @@ Usage:
   python3 bump_versions.py snes.css=42 i18n.js=20260906a [modal.js=20260906a]
 
 Rewrites every `FILE?v=XXX` occurrence (link/script tags AND prose/comments)
-across all *.html in this directory to the given value, so all pages ship one
+across all *.html in this directory AND SUBDIRECTORIES (rglob — book-souls/ etc.)
+to the given value, so all pages ship one
 consistent version per asset. Excludes help.html (owned by i18n wave).
 """
 import re, sys, pathlib
@@ -23,7 +24,7 @@ def main():
     if not specs:
         sys.exit('no specs')
     changed = []
-    for p in sorted(here.glob('*.html')):
+    for p in sorted(here.rglob('*.html')):
         if p.name in EXCLUDE:
             continue
         src = p.read_text(encoding='utf-8')

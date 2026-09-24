@@ -1351,11 +1351,15 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
     <span class="rr-tag">AT THE TABLE</span>
   </div>
   <div class="rr-mid">
-    <!-- Turn-Tally — mono-strip: TURNS · TURN · DAY (uppdateras av renderTurnTally) -->
-    <div class="rr-tally" id="rr-tally" title="Turns left · current turn · day number">
+    <!-- Turn-Tally — mono-strip: TURNS · TURN · DAY · RESET (uppdateras av renderTurnTally).
+         Klick → profilmodalt (samma affordance som adventure-pillen); ⚗-sigilen har den vägen redan. -->
+    <div class="rr-tally" id="rr-tally" onclick="openChatProfileModal()" role="button" tabindex="0"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openChatProfileModal()}"
+         title="Turns left · current turn · day number. Click for your profile.">
       <span>TURNS <span class="tv" id="rr-quota">—</span></span><span class="sep">·</span>
       <span>TURN <span class="tv" id="rr-turn">—</span></span><span class="sep">·</span>
-      <span>DAY <span class="tv" id="rr-day">—</span></span>
+      <span>DAY <span class="tv" id="rr-day">—</span></span><span class="sep">·</span>
+      <span>RESET <span class="tv" id="rr-reset">—</span></span>
     </div>
   </div>
   <div class="rr-actions">
@@ -1432,10 +1436,17 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
     .rite-rail #console-tab{ display: none; }
   }
   @media (max-width: 480px){
-    /* RESET-segmentet får ge vika på riktigt smala skärmar — TURN+TURNS räcker */
+    /* Smala skärmar: DAY+RESET viker (span 4–7), TURNS · TURN räcker —
+       pille är klickbar → profilen visar allt ändå. */
     .rr-tally > span:nth-child(4),
-    .rr-tally > span:nth-child(5){ display: none; }
+    .rr-tally > span:nth-child(5),
+    .rr-tally > span:nth-child(6),
+    .rr-tally > span:nth-child(7){ display: none; }
   }
+  /* Klickbar tally → profilmodalt (2026-09-24): samma affordance som ⚗-sigilen. */
+  .rr-tally{ cursor: pointer; }
+  .rr-tally:hover .tv{ color: var(--gold-bright); }
+  .rr-tally:focus-visible{ outline: 1px solid var(--gold); outline-offset: 3px; }
   /* ── Sidebar portrait hover badges (single-layer avatar, §3.3) ── */
   .pc-card{ position: relative; }
   .pc-badge{ position:absolute; z-index:3; width:24px; height:24px; border-radius:50%;
@@ -2229,6 +2240,11 @@ function renderTurnTally() {
     quotaEl.classList.toggle('warn', low);
   }
   quotaEl.textContent = quotaText;
+  // RESET-nedräkning (2026-09-24): renderTurnTally beräknade resetText varje sekund
+  // men ingen slot visade den — död beräkning. Återställd som fjärde segment,
+  // paritet med adventure.htmls pille (där ritades aldrig intervallet om).
+  const resetEl = document.getElementById('rr-reset');
+  if (resetEl) resetEl.textContent = resetText;
 }
 function updateHeaderInfo() {
   const text = turnDayText();

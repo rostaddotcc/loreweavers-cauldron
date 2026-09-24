@@ -86,6 +86,10 @@
 
   /* ═══════════════ CTA ═══════════════ */
   .cta{text-align:center;padding:1rem 1.2rem 5rem}
+  /* this section is full-bleed: pull the frame-corner pseudo-elements inside
+     (the shared -1px offset would extend document scrollWidth by 1px) */
+  .cta.fresh-frame::before{top:0;left:0}
+  .cta.fresh-frame::after{bottom:0;right:0}
   .btn-gold{display:inline-block;font-family:var(--font-display);font-weight:700;
     var(--fs-tiny);letter-spacing:.2em;text-transform:uppercase;color:var(--ink);
     background:var(--gold);border:1px solid var(--gold-bright);

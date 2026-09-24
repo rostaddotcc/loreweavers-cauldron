@@ -172,12 +172,13 @@
   /* ═══════════════ banners ═══════════════ */
   #deleted-banner{position:sticky;top:var(--nav-h);z-index:40;display:none;justify-content:center;align-items:center;gap:.5rem;padding:.55rem 1rem;font-size:var(--fs-tiny);color:var(--gold);background:var(--stone-3);border-bottom:1px solid var(--gold);text-align:center}
   #deleted-banner.show{display:flex}
-  #update-banner{position:sticky;top:var(--nav-h);z-index:40;display:none;justify-content:center;align-items:center;gap:.6rem;padding:.6rem 1rem;font-size:var(--fs-tiny);color:var(--bone-bright);background:linear-gradient(160deg,color-mix(in srgb, var(--arcane-deep) 55%, transparent),var(--stone-3));border-bottom:1px solid var(--gold);text-align:center}
+  #update-banner{position:sticky;top:var(--nav-h);z-index:40;display:none;justify-content:center;align-items:center;flex-wrap:wrap;gap:.6rem;padding:.6rem 1rem;font-size:var(--fs-tiny);color:var(--bone-bright);background:linear-gradient(160deg,color-mix(in srgb, var(--arcane-deep) 55%, transparent),var(--stone-3));border-bottom:1px solid var(--gold);text-align:center}
+  #update-banner .upd-msg{flex:1 1 auto;min-width:0;text-align:center}
   #update-banner.show{display:flex;animation:upd-glow 2.6s ease-in-out infinite}
   @keyframes upd-glow{0%,100%{box-shadow:0 1px 0 rgba(var(--gold-rgb),.25) inset}50%{box-shadow:0 14px 34px rgba(var(--gold-rgb),.16) inset,0 0 18px rgba(var(--gold-rgb),.12)}}
-  #update-banner a{color:var(--gold-bright);font-family:var(--font-display);letter-spacing:.08em;text-decoration:none;border-bottom:1px solid rgba(var(--gold-rgb),.4)}
+  #update-banner a{color:var(--gold-bright);font-family:var(--font-display);letter-spacing:.08em;text-decoration:none;border-bottom:1px solid rgba(var(--gold-rgb),.4);white-space:nowrap}
   #update-banner a:hover{color:var(--gold);text-shadow:0 0 10px rgba(var(--gold-bright-rgb),.5)}
-  #update-banner .upd-x{background:none;border:none;color:var(--bone-dim);font-size:1rem;line-height:1;cursor:pointer;padding:.1rem .35rem;font-family:var(--font-display)}
+  #update-banner .upd-x{background:none;border:none;color:var(--bone-dim);font-size:1rem;line-height:1;cursor:pointer;padding:.1rem .35rem;font-family:var(--font-display);margin-left:auto}
   #update-banner .upd-x:hover{color:var(--bone-bright)}
 
   /* ═══════════════ layout ═══════════════ */
@@ -436,6 +437,12 @@
     .deck-pile,.deck-pile.is-adv{width:min(360px,94%);height:560px}
     .deck-info{overflow-y:visible}
   }
+  @media(max-width:420px){
+    /* Smal mobil: dra ihop fläkten så u3:s högerkant rymmes i viewporten */
+    .pile-under.u1{transform:translate(6px,10px) rotate(.8deg);opacity:.55}
+    .pile-under.u2{transform:translate(12px,20px) rotate(1.6deg);opacity:.38}
+    .pile-under.u3{transform:translate(18px,30px) rotate(2.4deg);opacity:.2}
+  }
   /* Två-kort-raden är bara för desktop. Under 900px staplas de igen
      (annars blir varje kort 160px brett och oläsligt). */
   @media(max-width:900px){
@@ -669,7 +676,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 
 <div id="deleted-banner">&#10022; Your account has been deleted. The Cauldron will remember your stories.</div>
 
-<div id="update-banner" role="status">✦ <b>A new mind on the Patron path</b> — <b>DeepSeek V4.1 Flash</b> joins the Patron tier as a Dungeon Master, and <b>Step 5 Preview</b> + <b>Qwen 3.8 Flash</b> are free for every account. Pick your mind at the model gate or in Settings. <a href="releases.html" onclick="try{localStorage.setItem('minds_0921_seen','1')}catch(e){}">Read the chronicle →</a><button class="upd-x" aria-label="Dismiss" onclick="try{localStorage.setItem('minds_0921_seen','1')}catch(e){}document.getElementById('update-banner').classList.remove('show')">×</button></div>
+<div id="update-banner" role="status"><span class="upd-msg">✦ <b>A new mind on the Patron path</b> — <b>DeepSeek V4.1 Flash</b> joins the Patron tier as a Dungeon Master, and <b>Step 5 Preview</b> + <b>Qwen 3.8 Flash</b> are free for every account. Pick your mind at the model gate or in Settings. <a href="releases.html" onclick="try{localStorage.setItem('minds_0921_seen','1')}catch(e){}">Read the chronicle →</a></span><button class="upd-x" aria-label="Dismiss" onclick="try{localStorage.setItem('minds_0921_seen','1')}catch(e){}document.getElementById('update-banner').classList.remove('show')">×</button></div>
 
 <!-- ═══════════════ Rail v2 — unified header (2026-09-23) ═══════════════ -->
 <header class="rite-rail" id="nav">

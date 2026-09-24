@@ -188,6 +188,9 @@ main{position:relative;z-index:2;max-width:1180px;margin:0 auto;padding:2rem 1.4
 /* ── Flow diagrams (generic SVG frame) ──────────────────────── */
 .flowbox{background:var(--stone);border:1px solid var(--edge);padding:1rem;margin:1.2rem 0;overflow-x:auto}
 .flowbox svg{display:block;width:100%;height:auto;min-width:640px}
+/* grid children must not expand their track via min-width:auto (unshrinkable pre/table content);
+   wide content scrolls internally (.flowbox/.term-body/pre.prompt already have overflow-x:auto) */
+.grid2>*,.grid3>*{min-width:0}
 @keyframes flow-dash{to{stroke-dashoffset:-10}}
 @keyframes blink{50%{opacity:0}}
 .legend{display:flex;flex-wrap:wrap;gap:1rem;margin-top:.7rem;font-family:var(--font-mono);font-size:.64rem;letter-spacing:.1em;color:var(--bone-dim);text-transform:uppercase}

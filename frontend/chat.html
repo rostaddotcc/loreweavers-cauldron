@@ -1372,15 +1372,16 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
     <span class="rr-tag">AT THE TABLE</span>
   </div>
   <div class="rr-mid">
-    <!-- Turn-Tally — mono-strip: TURNS · TURN · DAY · RESET (uppdateras av renderTurnTally).
-         Klick → profilmodalt (samma affordance som adventure-pillen); ⚗-sigilen har den vägen redan. -->
+    <!-- Turn-Tally (våg 4, 2026-09-26): synlig räknare BORT — bara TURN · DAY,
+         REFRESH-timer på minuten + ⚡-varning vid ≤5 turns kvar (klick → cap-modal).
+         Klick i övrigt → profilmodalt (all info finns där). -->
     <div class="rr-tally" id="rr-tally" onclick="openChatProfileModal()" role="button" tabindex="0"
          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openChatProfileModal()}"
-         title="Turns left · current turn · day number. Click for your profile.">
-      <span>TURNS <span class="tv" id="rr-quota">—</span></span><span class="sep">·</span>
-      <span>TURN <span class="tv" id="rr-turn">—</span></span><span class="sep">·</span>
-      <span>DAY <span class="tv" id="rr-day">—</span></span><span class="sep">·</span>
-      <span>RESET <span class="tv" id="rr-reset">—</span></span>
+         title="Current turn · day · when turns refresh. Click for your profile.">
+      <span class="rw" id="rr-warn-row" style="display:none" onclick="capWarnClick(event)">⚡ <span class="tv warn" id="rr-warn">—</span></span><span class="sep rw" id="rr-warn-sep" style="display:none">·</span>
+      <span class="tp">TURN <span class="tv" id="rr-turn">—</span></span><span class="sep tp">·</span>
+      <span class="tp">DAY <span class="tv" id="rr-day">—</span></span><span class="sep" id="rr-reset-sep" style="display:none">·</span>
+      <span id="rr-reset-row" style="display:none">RESET <span class="tv" id="rr-reset">—</span></span>
     </div>
   </div>
   <div class="rr-actions">
@@ -1461,18 +1462,15 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
 </header>
 <style>
   /* ── chat.html rail-rest (2026-09-23): rail.css äger railen — kvar här:
-     Engine Room-knappen dold på mobil + DAY-segmentet faller bort ≤480px
+     Engine Room-knappen dold på mobil + viks-regler för tally-segment
      (chat-specifikt, saknas i rail.css). ── */
   @media (max-width: 900px){
     .rite-rail #console-tab{ display: none; }
   }
   @media (max-width: 480px){
-    /* Smala skärmar: DAY+RESET viker (span 4–7), TURNS · TURN räcker —
-       pille är klickbar → profilen visar allt ändå. */
-    .rr-tally > span:nth-child(4),
-    .rr-tally > span:nth-child(5),
-    .rr-tally > span:nth-child(6),
-    .rr-tally > span:nth-child(7){ display: none; }
+    /* Smala skärmar: kampanj-TURN/DAY viker — ⚡-varning + REFRESH-timer är
+       det som har nytta där (räknarna är redan borttagna från toppvyn). */
+    .rr-tally .tp{ display: none !important; }
   }
   /* Klickbar tally → profilmodalt (2026-09-24): samma affordance som ⚗-sigilen. */
   .rr-tally{ cursor: pointer; }
@@ -2165,123 +2163,91 @@ function resetCountdown(iso, isTs) {
   return d > 0 ? (d + 'd ' + hh + ':' + mm + ':' + ss) : (hh + ':' + mm + ':' + ss);
 }
 
-// Header-strängen: "Turn N · Day M · 🆓 X/Y · reset in 07:42:15" (lifetime →
-// 👑 istället för siffror). Alla icke-lifetime har daglig reset (reset_date).
-// I18N.getLang() styr Tur/Turn + Dag/Day; siffror är universella.
-function turnInfoText() {
-  const en = (typeof I18N !== 'undefined' && I18N.getLang && I18N.getLang() === 'en');
-  const tLabel = en ? 'Turn' : 'Tur';
-  const dLabel = en ? 'Day' : 'Dag';
-  const parts = [];
-  const turn = currentTurnNum();
-  if (turn != null) parts.push(tLabel + ' ' + turn);
-  const day = currentDayNum();
-  if (day != null) parts.push(dLabel + ' ' + day);
-  const me = _meData || {};
-  const tier = _tier();
-  if (tier === 'lifetime') {
-    parts.push('👑 Lifetime');
-  } else {
-    const cap = parseInt(me.turn_cap, 10) || 0;
-    const available = parseInt(me.turns_available, 10);
-    if (cap > 0 && !isNaN(available)) {
-      // Nämnaren = ALLA turn-källor: daglig cap + köpta (turn_bonus) +
-      // signup-promo (promo_bonus). Utan promo_bonus visades "350/50" för
-      // nya konton — såg ut som att 300-bonusen saknades. (2026-08-05 fix)
-      const total = cap + (parseInt(me.turn_bonus, 10) || 0) + (parseInt(me.promo_bonus, 10) || 0);
-      parts.push('🆓 ' + (available >= 999999 ? '∞' : available) + '/' + total);
-      const cd = resetCountdown(me.reset_date, false);
-      if (cd) parts.push((en ? 'reset in ' : 'reset om ') + cd);
-    } else if (!isNaN(available) && available >= 999999) {
-      parts.push('🆓 ∞');
+// ═══ Turn-Tally (våg 4, 2026-09-26) — synlig räknare BORT ═══
+// Vardagsvyn visar inte 'x/50' längre. Kvar: TURN · DAY, en REFRESH-timer på
+// MINUTNIVÅ och en ⚡-varning vid ≤5 turns (klick → cap-modalens top-up-chips).
+// ex-turnInfoText/renderAvatarBox/turnDayText skrev på DOM som togs bort i
+// Rail-v2-vågen (#user-tag, header-turns-info) — döda skrivare följer med nu.
+function tallyResetFmt(me) {
+  // Nedräkning till nästa kvotreset, minutnivå: '🕯 7h 12m' / '🕯 42m'.
+  let ms = null;
+  if ((me.subscription_status === 'tier1' || me.subscription_status === 'tier2') && me.reset_ts) {
+    const t = Date.parse(String(me.reset_ts));
+    if (!isNaN(t)) ms = t - Date.now();
+  } else if (me.reset_date) {
+    const m = String(me.reset_date).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) {
+      let target = Date.UTC(+m[1], +m[2] - 1, +m[3]);
+      if (target <= Date.now()) target += 86400000; // dagens reset har redan skett
+      ms = target - Date.now();
     }
   }
-  return parts.join(' · ');
+  if (ms === null) return '';
+  if (ms < 0) ms = 0;
+  const s = Math.floor(ms / 1000);
+  const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), min = Math.floor((s % 3600) / 60);
+  if (d > 0) return '🕯 ' + d + 'd ' + h + 'h';
+  if (h > 0) return '🕯 ' + h + 'h ' + min + 'm';
+  return '🕯 ' + Math.max(1, min) + 'm';
 }
-
-// Uppdatera header-info: desktop (.topbar) + mobil (☰-menyns topp).
-// Desktop-headern visar BARA Turn/Dag — turns + nedräkning bor nu i
-// avatar-boxen (#user-tag); mobilmenyn behåller hela strängen. (2026-08-08)
-function turnDayText() {
-  const en = (typeof I18N !== 'undefined' && I18N.getLang && I18N.getLang() === 'en');
-  const tLabel = en ? 'Turn' : 'Tur';
-  const dLabel = en ? 'Day' : 'Dag';
-  const parts = [];
-  const turn = currentTurnNum();
-  if (turn != null) parts.push(tLabel + ' ' + turn);
-  const day = currentDayNum();
-  if (day != null) parts.push(dLabel + ' ' + day);
-  return parts.join(' · ');
-}
-
-// ═══ Profil/turn-kort: "⚡ 12/50" + "refreshes in: HH:MM:SS" (2026-08-08) ═══
-// Bara totalen (cap + turn_bonus + promo_bonus) — promo syns i profilen.
-// Data från _meData; tickar live via den befintliga 1s-loopen i updateHeaderInfo.
-function renderAvatarBox() {
-  const turnsEl = document.getElementById('ut-turns');
-  const cdEl = document.getElementById('ut-cd');
-  if (!turnsEl || !cdEl) return;
-  const me = _meData || {};
-  const tier = _tier();
-  if (tier === 'lifetime' || (parseInt(me.turn_cap, 10) || 0) === 0) {
-    turnsEl.textContent = '♾️ ∞';
-    cdEl.textContent = '';
-    return;
-  }
-  const avail = Math.max(0, parseInt(me.turns_available, 10) || 0);
-  const total = (parseInt(me.turn_cap, 10) || 0) + (parseInt(me.turn_bonus, 10) || 0) + (parseInt(me.promo_bonus, 10) || 0);
-  turnsEl.textContent = '⚡ ' + avail + '/' + total;
-  const cd = (tier === 'tier1' || tier === 'tier2')
-    ? resetCountdown(me.reset_ts, true)
-    : resetCountdown(me.reset_date, false);
-  cdEl.textContent = cd ? ('refreshes in: ' + cd) : '';
-}
-
-// ═══ Turn-Tally (våg 3) — railens mittcell: TURNS · TURN · DAY ═══
-// Samma data som det gamla #user-tag-kortet (renderAvatarBox), men i mono-strip
-// på railen. Tickar live via den befintliga 1s-loopen i updateHeaderInfo.
-// States: normal (guld) / låg quota ≤5 → .warn på quota / patron+lifetime
-// → "∞ PATRON" i stället för siffror. Tooltip = tier + quota + reset + turn-modellen.
 function renderTurnTally() {
   const turnEl = document.getElementById('rr-turn');
-  const quotaEl = document.getElementById('rr-quota');
   const dayEl = document.getElementById('rr-day');
-  if (!turnEl || !quotaEl || !dayEl) return;
+  if (!turnEl || !dayEl) return;
   const me = _meData || {};
   const tier = _tier();
   const turn = currentTurnNum();
   turnEl.textContent = (turn != null) ? String(turn) : '—';
   const day = currentDayNum();
   dayEl.textContent = (day != null) ? String(day) : '—';
-  let quotaText = '—';
-  let resetText = '—';
-  if (tier === 'lifetime' || (parseInt(me.turn_cap, 10) || 0) === 0) {
-    quotaText = '∞ PATRON';
-    quotaEl.classList.remove('warn');
-  } else {
-    const avail = Math.max(0, parseInt(me.turns_available, 10) || 0);
-    const total = (parseInt(me.turn_cap, 10) || 0) + (parseInt(me.turn_bonus, 10) || 0) + (parseInt(me.promo_bonus, 10) || 0);
-    quotaText = avail + '/' + total;
-    const cd = (tier === 'tier1' || tier === 'tier2')
-      ? resetCountdown(me.reset_ts, true)
-      : resetCountdown(me.reset_date, false);
-    resetText = cd || '—';
-    // Låg quota (≤5 turns kvar): varning på quota
-    const low = avail <= 5;
-    quotaEl.classList.toggle('warn', low);
-  }
-  quotaEl.textContent = quotaText;
-  // RESET-nedräkning (2026-09-24): renderTurnTally beräknade resetText varje sekund
-  // men ingen slot visade den — död beräkning. Återställd som fjärde segment,
-  // paritet med adventure.htmls pille (där ritades aldrig intervallet om).
+  const en = (typeof I18N !== 'undefined' && I18N.getLang && I18N.getLang() === 'en');
+  const inf = tier === 'lifetime' || (parseInt(me.turn_cap, 10) || 0) === 0;
+  const warnRow = document.getElementById('rr-warn-row');
+  const warnSep = document.getElementById('rr-warn-sep');
+  const warnEl = document.getElementById('rr-warn');
+  const resetRow = document.getElementById('rr-reset-row');
+  const resetSep = document.getElementById('rr-reset-sep');
   const resetEl = document.getElementById('rr-reset');
-  if (resetEl) resetEl.textContent = resetText;
+  if (inf || !warnRow || !resetRow) {
+    // Patron/lifetime eller ännu ingen /api/me — inga kvotsegment alls.
+    if (warnRow) warnRow.style.display = 'none';
+    if (warnSep) warnSep.style.display = 'none';
+    if (resetRow) resetRow.style.display = 'none';
+    if (resetSep) resetSep.style.display = 'none';
+    return;
+  }
+  const avail = Math.max(0, parseInt(me.turns_available, 10) || 0);
+  // ⚡-varning: bara vid taket (≤5 kvar), annars helt osynlig.
+  if (avail <= 5) {
+    warnRow.style.display = '';
+    warnSep.style.display = '';
+    warnEl.textContent = en ? (avail + ' turns left') : (avail + ' rundor kvar');
+  } else {
+    warnRow.style.display = 'none';
+    warnSep.style.display = 'none';
+  }
+  // REFRESH-timer på minutnivå (1s-loopen ritar om — synligt lyft per minut).
+  const rf = tallyResetFmt(me);
+  if (rf) {
+    resetRow.style.display = '';
+    resetSep.style.display = '';
+    resetEl.textContent = rf;
+  } else {
+    resetRow.style.display = 'none';
+    resetSep.style.display = 'none';
+  }
+}
+// ⚡-varningen i tallyn: klick → cap-modalens LÅGT-läge (top-up-chips), inte profilen.
+function capWarnClick(ev) {
+  if (ev) ev.stopPropagation();
+  const me = _meData || {};
+  openCapModal({
+    low: true,
+    left: Math.max(0, parseInt(me.turns_available, 10) || 0),
+    reset_date: me.reset_date || null,
+  });
 }
 function updateHeaderInfo() {
-  const text = turnDayText();
-  const el = document.getElementById('header-turns-info');
-  if (el) el.textContent = text ? ' · ' + text : '';
-  renderAvatarBox();
   renderTurnTally();
 }
 
@@ -2329,7 +2295,18 @@ function openCapModal(info) {
   // delade i18n.js-ordlistan är svenskt nycklad och dessa EN-defaults saknar nycklar.
   const en = !(typeof I18N !== 'undefined' && I18N.getLang && I18N.getLang() === 'sv');
   const w = escapeHtml(whenStr);
-  if (info.premium_expired) {
+  if (info.low) {
+    // Låg-kvarn-läget (2026-09-26): ⚡-varningen i tallyn, INNE i spelet —
+    // ingen 403 ännu. Erbjud top-up MEN also att gratisrundor är på väg.
+    const left = (typeof info.left === 'number') ? info.left : Math.max(0, parseInt(_meData && _meData.turns_available, 10) || 0);
+    if (title) title.textContent = en ? '⚡ Running low' : '⚡ Snart slut på rundor';
+    if (msg) msg.innerHTML = en
+      ? 'You have <b>' + left + '</b> ' + (left === 1 ? 'turn' : 'turns') + ' left. ' +
+        'Fresh free turns arrive in <b>' + w + '</b> — or top up now so you don\'t hit a wall mid-story.'
+      : 'Du har <b>' + left + '</b> rund' + (left === 1 ? 'a' : 'or') + ' kvar. ' +
+        'Nya gratisrundor kommer om <b>' + w + '</b> — eller fyll på nu så du inte kör fast mitt i berättelsen.';
+    if (upgrade) upgrade.textContent = en ? '⚡ Top up' : '⚡ Fyll på';
+  } else if (info.premium_expired) {
     if (title) title.textContent = en ? '⚔ Patron period ended' : '⚔ Patronperioden är slut';
     if (msg) msg.innerHTML = en
       ? 'Your Patron model access has ended, so your free turns are back. ' +

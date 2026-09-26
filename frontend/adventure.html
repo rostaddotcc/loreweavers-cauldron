@@ -511,12 +511,9 @@ html{font-size:var(--fs-base)}
   .w-status,.weaving-ad .wa-status{animation:none}
   .news-banner{animation:none}
 }
-/* ── adventure-rail-rest (2026-09-24): riktigt smala skärmar — kvot-pillens
-   RESET-segment viker (TURNS räcker; chat.html gör samma sak ≤480px), och
-   pille+chips får aldrig trycka isär railen (grid mitten-kolumn är min 0). ── */
+/* ── adventure-rail-rest (2026-09-26): kvot-pillen visar ingen räknare mer —
+   ⚡-varning + RESET-timer är korta segment och ryms kvar även på smal skärm. ── */
 @media (max-width: 480px){
-  #quota-pill > span:nth-child(4),
-  #quota-pill > span:nth-child(5){ display:none; }
   #adv-back-btn{ display:none !important; }
 }
 </style>
@@ -534,14 +531,12 @@ html{font-size:var(--fs-base)}
       <span class="rr-tag">THE CROSSROADS</span>
     </div>
     <div class="rr-mid">
-      <!-- ⚡ Turn-quota-pille (återställd 2026-09-24): Rail v2-wave:n raderade
-           markeringen men JS (renderQuotaPill/quotaTick) skriver på quota-turns/quota-cd.
-           Kort tooltip per kanon; klick → profilmodalt. -->
-      <div class="rr-tally" id="quota-pill" onclick="openProfileModal()" role="button" tabindex="0" title="Turns left · when the quota refills. Click for your profile."
+      <!-- ⚡ Turn-quota-pille (våg 4, 2026-09-26): synlig räknare BORT — bara
+           REFRESH-timer på minutnivå + ⚡-varning vid ≤5 turns. Klick → profilen. -->
+      <div class="rr-tally" id="quota-pill" onclick="openProfileModal()" role="button" tabindex="0" title="When your turns refresh. Click for your profile."
            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openProfileModal()}">
-        <span>TURNS <span class="tv" id="quota-turns">⚡ …</span></span>
-        <span class="sep">·</span>
-        <span>RESET <span class="tv" id="quota-cd"></span></span>
+        <span class="rw" id="quota-warn" style="display:none">⚡ <span class="tv warn" id="quota-warn-tv">—</span></span><span class="sep rw" id="quota-warn-sep" style="display:none">·</span>
+        <span class="cd">RESET <span class="tv" id="quota-cd"></span></span>
       </div>
     </div>
     <div class="rr-actions">
@@ -1316,18 +1311,37 @@ function quotaTick() {
 function renderQuotaPill(me) {
   if (me) { _quotaMe = me; window._advMe = me; }
   me = _quotaMe;
-  const turnsEl = document.getElementById('quota-turns');
-  if (!me || !turnsEl) return;
+  const warnEl = document.getElementById('quota-warn');
+  const warnTv = document.getElementById('quota-warn-tv');
+  const warnSep = document.getElementById('quota-warn-sep');
+  const cdWrap = document.querySelector('#quota-pill > .cd');
+  if (!warnEl || !warnTv || !warnSep || !cdWrap) return;
+  const en = (typeof isEn === 'function') ? isEn() : true;
   const cap = me.turn_cap;
   const inf = (cap === 0 || me.subscription_status === 'lifetime');
-  // Bara totalen: available / (cap + turn_bonus + promo_bonus). Promo syns i profilen.
+  // Synlig räknare BORT (2026-09-26): bara ⚡-varning vid ≤5 + minut-timer.
   const avail = Math.max(0, Math.floor(Number(me.turns_available) || 0));
-  const total = (parseInt(cap, 10) || 0) + (parseInt(me.turn_bonus, 10) || 0) + (parseInt(me.promo_bonus, 10) || 0);
-  turnsEl.textContent = inf ? '⚡ ∞' : ('⚡ ' + avail + '/' + total);
-  const cdEl = document.getElementById('quota-cd');
-  _quotaNextTs = inf ? null : quotaNextReset(me);
-  if (cdEl) quotaTick();
-  if (!_quotaTimer) _quotaTimer = setInterval(quotaTick, 1000);
+  if (inf) {
+    warnEl.style.display = 'none';
+    warnSep.style.display = 'none';
+    cdWrap.style.display = 'none';
+    const cdEl = document.getElementById('quota-cd');
+    if (cdEl) cdEl.textContent = '';
+    _quotaNextTs = null;
+  } else {
+    cdWrap.style.display = '';
+    if (avail <= 5) {
+      warnEl.style.display = '';
+      warnSep.style.display = '';
+      warnTv.textContent = en ? (avail + ' turns left') : (avail + ' rundor kvar');
+    } else {
+      warnEl.style.display = 'none';
+      warnSep.style.display = 'none';
+    }
+    _quotaNextTs = quotaNextReset(me);
+    quotaTick();
+    if (!_quotaTimer) _quotaTimer = setInterval(quotaTick, 1000);
+  }
   // 👑 Support/Patron-förmåner — nedräkning till de går ut
   const ben = document.getElementById('quota-benefits');
   if (ben) {

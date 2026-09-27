@@ -38,7 +38,11 @@
   "inLanguage": ["en", "sv"],
   "isAccessibleForFree": true,
   "keywords": "best free AI D&D roleplaying game, free AI roleplaying game, AI dungeon master that remembers, most daily free turns, AI dungeon master, D&D 5e online, no subscription, no credit card",
-  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR", "availability": "https://schema.org/InStock" },
+  "offers": [
+    { "@type": "Offer", "name": "Free — 30 fresh turns every day", "price": "0", "priceCurrency": "EUR", "availability": "https://schema.org/InStock" },
+    { "@type": "Offer", "name": "Turn top-up — 100 turns per 1€, never expire", "price": "1", "priceCurrency": "EUR", "availability": "https://schema.org/InStock" },
+    { "@type": "Offer", "name": "Unlock — +100 turns, every Dungeon Master, voice & image generation", "price": "10", "priceCurrency": "EUR", "availability": "https://schema.org/InStock" }
+  ],
   "author": { "@type": "Organization", "name": "Rostad" }
 }
 </script>
@@ -321,6 +325,19 @@
   .pt-more{margin-top:1rem;font-family:var(--font-mono);font-size:.6rem;font-weight:500;letter-spacing:.2em;text-transform:uppercase}
   .pt-more a{color:var(--gold);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--gold) 35%,transparent);padding-bottom:.15rem}
   .pt-more a:hover{color:var(--gold-bright);border-color:var(--gold-bright)}
+  /* ═══════════════ top-up (2026-09-27: 1€-vägen — add-on över båda stigarna, inte en egen tier) ═══════════════ */
+  .ptier.ptier-topup{grid-column:1/-1;display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"head copy" "head hint";align-items:start;column-gap:clamp(1rem,2.2vw,1.7rem);row-gap:.5rem;padding:1.05rem 1.25rem}
+  .pt-topup-head{grid-area:head}
+  .pt-topup-copy{grid-area:copy}
+  .ptier.ptier-topup .pt-price{font-size:2rem;margin:.15rem 0 0}
+  .ptier.ptier-topup .pt-name{margin-bottom:0}
+  .pt-topup-copy p{margin:0;font-size:.845rem;font-weight:300;color:var(--bone);line-height:1.55}
+  .pt-topup-copy p + p{margin-top:.4rem}
+  .pt-topup-copy b{color:var(--bone-bright);font-weight:500}
+  .ptier.ptier-topup .go-hint{grid-area:hint;margin-top:0;text-align:left}
+  @media (max-width:720px){
+    .ptier.ptier-topup{grid-template-columns:1fr;grid-template-areas:"head" "copy" "hint";row-gap:.55rem}
+  }
   /* ═══════════════ FAQ (2026-09-20: skrollbar frågebox) ═══════════════ */
   .faq{max-width:760px;margin:1.4rem 0 0;max-height:min(46vh,400px);overflow-y:auto;padding-right:.5rem;scrollbar-width:thin;scrollbar-color:var(--edge) transparent}
   .faq::-webkit-scrollbar{width:6px}
@@ -1125,8 +1142,21 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
           </ul>
           <span class="go-hint">See the full paths →</span>
         </div>
+        <!-- 1€ top-up: add-on-vägen — turns utan unlock (deep-link fyller beloppet + öppnar donation) -->
+        <div class="ptier ptier-topup rv d3" onclick="location.href='pricing.html?donate=1'">
+          <span class="pt-flag">Anytime &middot; never expires</span>
+          <div class="pt-topup-head">
+            <div class="pt-name">Top-up</div>
+            <div class="pt-price">1€<small>per 100 turns</small></div>
+          </div>
+          <div class="pt-topup-copy">
+            <p><b>+100 turns, forever.</b> Top up from 1€ whenever the daily 30 run dry &mdash; no subscription, no expiry.</p>
+            <p>Every € adds exactly 100 turns, spent only after your free turns.</p>
+          </div>
+          <span class="go-hint">Top up turns &#8594;</span>
+        </div>
       </div>
-            <p class="pt-fine rv d2">The 10€ unlock is one-time and permanent &mdash; no window, no renewal. Or donate any amount: every € adds exactly 100 turns that never expire.</p>
+            <p class="pt-fine rv d2">The 10€ unlock is one-time and permanent &mdash; no window, no renewal. Or top up turns any time, from 1€: every € adds exactly 100 turns that never expire.</p>
             <p class="pt-more rv d3"><a href="pricing.html">Compare all paths &amp; donations &#8594;</a></p>
           </div>
           <div id="faq">

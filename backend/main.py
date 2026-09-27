@@ -10336,6 +10336,153 @@ def _ledger_totals() -> dict:
     }
 
 
+# ── Intäktsnedbrytning (2026-09-27, rostad: admin dashboard v2) ──────────
+# key = ledger-radens `type` utan "stripe:"-prefix. live=True = säljs
+# fortfarande → visas ALLTID i by_product (även med 0 kr). Allt som inte
+# står här (t.ex. "stripe:support300", "topup") hamnar i "other".
+_REVENUE_PRODUCTS: dict[str, tuple[str, bool]] = {
+    "unlock10": ("10 € Unlock", True),
+    "donation": ("Donation", True),
+    "patron500": ("Patron 30 €", True),
+    "lifetime": ("Lifetime 100 €", True),
+    "tier1": ("Tier 1 (legacy sub)", False),
+    "tier2": ("Tier 2 (legacy sub)", False),
+    "renewal": ("Renewal (legacy sub)", False),
+}
+# Livscykel-rader (uppsägning/avbokning) är INTE intäkt — exkluderas helt.
+# Alla skrivs med amount_sek=0 (se _churn_record + webhookens cancel-grenar),
+# så att exkludera dem ändrar aldrig summan mot _ledger_totals()["total"].
+_REVENUE_LIFECYCLE = ("stripe:churn", "stripe:cancel_scheduled", "stripe:cancel_reverted")
+
+
+def _ledger_ts_key(ts) -> datetime:
+    """Sorterbar (aware) nyckel för en ledger-tidsstämpel — oparsbar → epoch."""
+    try:
+        dt = datetime.fromisoformat(str(ts))
+    except (ValueError, TypeError):
+        return datetime.min.replace(tzinfo=timezone.utc)
+    return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
+
+
+def _cached_player_country(username: str) -> tuple[str, str]:
+    """Betalarens land — ENBART ur iplog-cachen (aldrig nätverk i en request).
+
+    Okänt (ingen IP eller ingen cache-rad) → ("??", "Unknown"); privat IP →
+    ("LOCAL", "Lokal"). Samma cache-only-regel som geo_for_users (2026-09-20).
+    """
+    try:
+        ip = iplog.get_user_ip(username)
+    except Exception:
+        return ("??", "Unknown")
+    if not ip:
+        return ("??", "Unknown")
+    if iplog.is_private(ip):
+        return ("LOCAL", "Lokal")
+    g = iplog.geo_cached(ip) or {}
+    cc = str(g.get("countryCode") or "").strip().upper()
+    if not cc or cc == "??":
+        return ("??", "Unknown")
+    return (cc, str(g.get("country") or "").strip() or cc)
+
+
+def _revenue_breakdown(ledger: list | None = None) -> dict:
+    """Intäktsnedbrytning för admin-dashboarden (2026-09-27, rostad).
+
+    by_product summerar EXAKT till _ledger_totals()["total"]: livscykel-raderna
+    (churn/cancel*, alltid 0 SEK) exkluderas helt, allt annat hamnar i ett känt
+    produktnamn eller "other". by_month/by_date bucketer daglokalt
+    (Europe/Stockholm via _day_key). by_country läser betalarens land ur
+    iplog-cachen — aldrig ett nätverksanrop. by_country räknar bara rader med
+    sek>0 (en 0-rad är ingen betalning); paying = distinkta betalare per land.
+    """
+    if ledger is None:
+        ledger = _ledger_load()
+    products: dict = {}
+    months: dict = {}
+    dates: dict = {}
+    countries: dict = {}
+    cust: dict = {}
+    cust_first: dict = {}
+    cust_last: dict = {}
+    first_ts = None
+    last_ts = None
+    first_dt = None
+    last_dt = None
+    for row in ledger:
+        rtype = row.get("type") or ""
+        if rtype in _REVENUE_LIFECYCLE:
+            continue
+        user = row.get("user")
+        sek = int(row.get("amount_sek") or 0)
+        key = rtype.split(":", 1)[1] if ":" in rtype else rtype
+        if key not in _REVENUE_PRODUCTS:
+            key = "other"
+        label = _REVENUE_PRODUCTS.get(key, ("Other", False))[0]
+        p = products.setdefault(key, {"key": key, "label": label, "sek": 0, "count": 0})
+        p["sek"] += sek
+        p["count"] += 1
+        # Dag/månad i LOKAL tid — dygns- och månadsgränsen följer rostads
+        # klocka (Europe/Stockholm), inte UTC.
+        day = _day_key(row.get("ts"))
+        if day:
+            m = months.setdefault(day[:7], {"key": day[:7], "sek": 0, "count": 0})
+            m["sek"] += sek
+            m["count"] += 1
+            dates[day] = dates.get(day, 0) + sek
+        ts = row.get("ts")
+        dt = _ledger_ts_key(ts)
+        if first_dt is None or dt < first_dt:
+            first_dt, first_ts = dt, ts
+        if last_dt is None or dt >= last_dt:
+            last_dt, last_ts = dt, ts
+        if user:
+            c = cust.setdefault(user, {"user": user, "sek": 0, "payments": 0,
+                                       "first_ts": None, "last_ts": None, "products": []})
+            c["sek"] += sek
+            if sek > 0:
+                c["payments"] += 1
+            if key not in c["products"]:
+                c["products"].append(key)
+            if user not in cust_first or dt < cust_first[user][0]:
+                cust_first[user] = (dt, ts)
+            if user not in cust_last or dt >= cust_last[user][0]:
+                cust_last[user] = (dt, ts)
+            if sek > 0:
+                cc, country = _cached_player_country(user)
+                cz = countries.setdefault(cc, {"cc": cc, "country": country, "sek": 0,
+                                               "count": 0, "payers": set()})
+                cz["sek"] += sek
+                cz["count"] += 1
+                cz["payers"].add(user)
+    # Live-produkter ska synas även med 0 kr (dashboardens donut/legend).
+    for k, (label, live) in _REVENUE_PRODUCTS.items():
+        if live and k not in products:
+            products[k] = {"key": k, "label": label, "sek": 0, "count": 0}
+    customers = []
+    for user, c in cust.items():
+        c["first_ts"] = cust_first.get(user, (None, None))[1]
+        c["last_ts"] = cust_last.get(user, (None, None))[1]
+        c["products"] = sorted(c["products"])
+        customers.append(c)
+    customers.sort(key=lambda c: (-c["sek"], c["user"]))
+    by_country = [{"cc": cz["cc"], "country": cz["country"], "sek": cz["sek"],
+                   "count": cz["count"], "paying": len(cz["payers"]),
+                   # Betalarna per land → dashboardens lands-drawer kan lista
+                   # transaktionerna även när cc är "??" (ingen geo-cache-post).
+                   "users": sorted(cz["payers"])}
+                  for cz in countries.values()]
+    return {
+        "by_product": sorted(products.values(), key=lambda p: (-p["sek"], p["key"])),
+        "by_month": sorted(months.values(), key=lambda m: m["key"]),
+        "by_date": {d: dates[d] for d in sorted(dates)},
+        "by_country": sorted(by_country, key=lambda cz: (-cz["sek"], cz["cc"])),
+        "customers": customers,
+        "paying_customers": sum(1 for c in customers if c["sek"] > 0),
+        "first_ts": first_ts,
+        "last_ts": last_ts,
+    }
+
+
 def _month_key_now() -> str:
     """Aktuell lokal månad (Europe/Stockholm) som YYYY-MM."""
     return datetime.now(_LOCAL_TZ).strftime("%Y-%m")
@@ -10428,12 +10575,17 @@ def _scan_user_transcripts(user: str) -> dict:
     # {YYYY-MM-DD (lokal): {"calls": n, "tokens": t}} — för admin-vyns
     # AI-calls-graf per dag/vecka/månad (2026-09-21).
     daily: dict = {}
+    # {modell: {dag: anrop}} — anropskurvan per modell för Usage-drilldownen
+    # (2026-09-27). Kontoövergripande (inte per session) eftersom dashboarden
+    # bara frågar efter modellens dagar, aldrig efter kampanjens.
+    model_daily: dict = {}
 
     user_dir = CAMPAIGNS_DIR / user
     if not user_dir.exists():
         base = _empty_account_usage()
         return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "turns": 0,
                 "last_active": "", "sessions": sessions, "tts_usage": tts_usage, "daily": daily,
+                "model_daily": model_daily,
                 "character_creation": base["character_creation"], "image_gen": base["image_gen"],
                 "deleted_campaigns": base["deleted"]}
 
@@ -10521,6 +10673,14 @@ def _scan_user_transcripts(user: str) -> dict:
                             mt["prompt_tokens"] += p
                             mt["completion_tokens"] += c
                             mt["calls"] += 1
+                            # Per-modell-per-dag (2026-09-27, Usage-drilldown):
+                            # modellens anropskurva. Poster utan tidsstämpel kan
+                            # inte placeras på en dag (samma regel som `daily`),
+                            # så bakgrundstokens syns i totalen men inte i kurvan.
+                            _mdk = _day_key(entry.get("ts", ""))
+                            if _mdk:
+                                _md = model_daily.setdefault(m_name, {})
+                                _md[_mdk] = _md.get(_mdk, 0) + 1
                         ts = entry.get("ts", "")
                         if ts and ts > last_active:
                             last_active = ts
@@ -10629,6 +10789,8 @@ def _scan_user_transcripts(user: str) -> dict:
         "model_tokens": model_tokens_total,
         "tts_usage": tts_usage,
         "daily": daily,
+        "model_daily": {m: {d: model_daily[m][d] for d in sorted(model_daily[m])}
+                        for m in sorted(model_daily)},
         "character_creation": _acc.get("character_creation", {}),
         "image_gen": _acc.get("image_gen", {}),
         "deleted_campaigns": _del,
@@ -10726,6 +10888,240 @@ def _user_stat_row(username: str, geo: dict | None = None, ledger_per_user: dict
     return row
 
 
+# ── Admin dashboard v2 (2026-09-27): tidsfönster + "vad spelarna fick" ────
+# window = 24h | 7d | 30d | all. Dagsbucketerade serier i LOKAL tid
+# (Europe/Stockholm via _day_key): 24h = idag, 7d = idag + 6 dagar bakåt,
+# 30d = idag + 29 dagar bakåt. Routen validerar strängen (400 vid skräp).
+_WINDOW_CHOICES = ("24h", "7d", "30d", "all")
+_WINDOW_DAYS = {"24h": 1, "7d": 7, "30d": 30}
+# Kompakta användarrader i /api/admin/overview. daily/model_tokens (stora
+# per-användar-dicts) hör till drill-downen /api/admin/user/{username} — att
+# skicka dem för 159 konton blåser upp payloaden.
+_OVERVIEW_USER_FIELDS = (
+    "username", "role", "email", "subscription_status", "country",
+    "country_code", "country_flag", "total_campaigns", "total_tokens",
+    "total_turns", "revenue", "last_active", "created_at",
+)
+# Media-modeller → provider (samma mappning som /api/admin/stats använder för
+# TTS/bild; modulnivå-kopia så overview kan aggregera utan att röra den
+# befintliga routen).
+_OVERVIEW_MEDIA_PROV = {
+    "stepaudio-2.5-tts": "stepfun",
+    "qwen-audio-3.0-tts-plus": "dashscope",
+    "wan2.7-image": "dashscope",
+    "wan2.7-image-pro": "dashscope",
+    "step-image-edit-2": "stepfun",
+}
+
+
+def _window_since_day(window: str) -> str | None:
+    """Lokal startdag (YYYY-MM-DD) för ett tidsfönster — None för "all"/skräp."""
+    w = (window or "all").strip().lower()
+    if w not in _WINDOW_DAYS:
+        return None
+    return (datetime.now(_LOCAL_TZ).date() - timedelta(days=_WINDOW_DAYS[w] - 1)).isoformat()
+
+
+def _usage_breakdown(user_stats: list) -> tuple[dict, dict]:
+    """Token-/anropsaggregering per provider och modell → (providers, models).
+
+    Samma uppbyggnad som /api/admin/stats (LLM-tokens via MODELS-registret +
+    TTS-/bildanrop via media-mappningen) så Usage-panelen och gamla admin-vyn
+    visar identiska siffror. Sorterat på tokens (fallande), som i stats.
+    """
+    providers: dict = {}
+    models: dict = {}
+    for row in user_stats:
+        for m_name, mv in (row.get("model_tokens") or {}).items():
+            prov = _provider_for_model(m_name)
+            tok = (mv.get("prompt_tokens", 0) or 0) + (mv.get("completion_tokens", 0) or 0)
+            pt = providers.setdefault(prov, {"tokens": 0, "calls": 0})
+            pt["tokens"] += tok
+            pt["calls"] += mv.get("calls", 0) or 0
+            mm = models.setdefault(m_name, {"provider": prov, "tokens": 0, "calls": 0})
+            mm["tokens"] += tok
+            mm["calls"] += mv.get("calls", 0) or 0
+    for row in user_stats:
+        for m_name, n in (row.get("tts_by_model") or {}).items():
+            prov = _OVERVIEW_MEDIA_PROV.get(m_name, "unknown")
+            providers.setdefault(prov, {"tokens": 0, "calls": 0})["calls"] += n or 0
+            models.setdefault(m_name, {"provider": prov, "tokens": 0, "calls": 0})["calls"] += n or 0
+        for m_name, n in (row.get("image_gen_by_model") or {}).items():
+            prov = _OVERVIEW_MEDIA_PROV.get(m_name, "unknown")
+            providers.setdefault(prov, {"tokens": 0, "calls": 0})["calls"] += n or 0
+            models.setdefault(m_name, {"provider": prov, "tokens": 0, "calls": 0})["calls"] += n or 0
+    providers = dict(sorted(providers.items(), key=lambda kv: kv[1]["tokens"], reverse=True))
+    models = dict(sorted(models.items(), key=lambda kv: kv[1]["tokens"], reverse=True))
+    return providers, models
+
+
+def _model_breakdown(model: str, window: str = "all") -> dict:
+    """Drill-down för EN modell (2026-09-27, rostad: "modellanrop per spelare").
+
+    Svarar på två frågor som dashboarden inte kunde svara på alls:
+      1. modellens anropskurva per dag  (transkriptens `model_daily`)
+      2. VILKA spelare som anropat den  (per-användarens `model_tokens`)
+
+    Fönstring: LLM-modeller fönstras på `model_daily` (lokal dag, samma
+    `_day_key`-regel som resten av dashboarden) — både kurvan och
+    `calls_window`. `calls`/`tokens` är LIVSTID ur transkripten och märks
+    `lifetime: true` så ingen blandar ihop dem. TTS-/bildmodeller har ingen
+    dagserie i datat (state.meta räknar bara livstid) → då är `windowed: false`
+    och UI:t visar livstidssiffran med den etiketten i stället för att ljuga.
+    """
+    w = (window or "all").strip().lower()
+    since = _window_since_day(w)
+    provider = _provider_for_model(model)
+    day: dict = {}
+    users_out: list = []
+    calls = tokens = calls_window = 0
+    media_calls = 0
+    has_day_series = False
+
+    gusers = load_users()
+    for username in gusers:
+        try:
+            scan = _scan_user_transcripts(username)
+        except Exception:
+            logger.warning("model breakdown: transcript scan failed for %s", username)
+            continue
+        mv = (scan.get("model_tokens") or {}).get(model) or {}
+        per_calls = int(mv.get("calls", 0) or 0)
+        per_tokens = int(mv.get("prompt_tokens", 0) or 0) + int(mv.get("completion_tokens", 0) or 0)
+        per_media = int((scan.get("tts_usage", {}).get("by_model") or {}).get(model, 0) or 0)
+        per_media += int((scan.get("image_gen", {}).get("by_model") or {}).get(model, 0) or 0)
+        md = (scan.get("model_daily") or {}).get(model) or {}
+        if md:
+            has_day_series = True
+        per_window = 0
+        for d, n in md.items():
+            if since and d < since:
+                continue
+            day[d] = day.get(d, 0) + int(n or 0)
+            per_window += int(n or 0)
+        if not (per_calls or per_tokens or per_window or per_media):
+            continue
+        calls += per_calls
+        tokens += per_tokens
+        calls_window += per_window
+        media_calls += per_media
+        udata = gusers.get(username) or {}
+        users_out.append({
+            "username": username,
+            "role": udata.get("role", "player"),
+            "calls": per_calls,
+            "tokens": per_tokens,
+            "calls_window": per_window,
+            "media_calls": per_media,
+            "subscription_status": _tier_for(username),
+            "last_active": scan.get("last_active", ""),
+        })
+
+    users_out.sort(key=lambda r: (-r["calls"], -r["media_calls"], r["username"]))
+    return {
+        "model": model,
+        "provider": provider,
+        "calls": calls,
+        "tokens": tokens,
+        "calls_window": calls_window,
+        "media_calls": media_calls,
+        "window": w,
+        "windowed": bool(has_day_series and since),
+        "has_day_series": has_day_series,
+        "lifetime": True,
+        "day": {d: day[d] for d in sorted(day)},
+        "users": users_out,
+        "generated_at": _now_iso(),
+    }
+
+
+def _value_delivered(window: str = "all") -> dict:
+    """Vad spelarna FICK för pengarna (2026-09-27, rostad): turns/tokens/anrop.
+
+    turns = antal rader i backend/data/turn_ledgers/*.jsonl (en rad per
+    förbrukad turn), fönstrade med _day_key (lokal dag). Rader utan användbar
+    tidsstämpel kan inte fönstras → räknas bara i "all" och sätter
+    turns_windowed=False (dvs siffran är inte en ren fönsterräkning).
+    tokens/ai_calls = transkriptens dagböcker (_scan_user_transcripts.daily),
+    fönstrade i samma lokala dagar. OBS: dagboken är spårbar-per-transkript —
+    livstids-KPI:n totals.tokens i overview innehåller ÄVEN bakgrundstokens
+    (state.meta.unguarded_tokens) som saknar tidsstämpel.
+    tokens_per_sek / kr_per_1m_tokens är LIVSTIDS-mått (hela tokenvolymen mot
+    hela ledgern) — oberoende av fönstret, None när nämnaren är 0.
+    """
+    since = _window_since_day(window)
+    turns = 0
+    turns_windowed = True
+    turns_day: dict = {}
+    by_action: dict = {}
+    try:
+        if _TURN_LEDGERS_DIR.exists():
+            for p in sorted(_TURN_LEDGERS_DIR.glob("*.jsonl")):
+                try:
+                    lines = p.read_text(encoding="utf-8").splitlines()
+                except OSError:
+                    continue
+                for ln in lines:
+                    ln = ln.strip()
+                    if not ln:
+                        continue
+                    try:
+                        rec = json.loads(ln)
+                    except json.JSONDecodeError:
+                        continue
+                    if not isinstance(rec, dict):
+                        continue
+                    day = _day_key(rec.get("ts") or "")
+                    if not day:
+                        # Utan tidsstämpel → kan bara räknas i "all".
+                        if since is None:
+                            turns += 1
+                        turns_windowed = False
+                        continue
+                    if since and day < since:
+                        continue
+                    turns += 1
+                    # Drill-down-serier (2026-09-27): samma fönster som `turns`,
+                    # så staplarna summerar exakt mot siffran i KPI:n.
+                    turns_day[day] = turns_day.get(day, 0) + 1
+                    act = rec.get("action") or "unknown"
+                    by_action[act] = by_action.get(act, 0) + 1
+    except Exception:
+        logger.warning("value delivered: turn ledger scan failed", exc_info=True)
+
+    lifetime_tokens = 0
+    tokens = 0
+    ai_calls = 0
+    for username in load_users():
+        try:
+            scan = _scan_user_transcripts(username)
+        except Exception:
+            logger.warning("value delivered: transcript scan failed for %s", username)
+            continue
+        lifetime_tokens += int(scan.get("total_tokens", 0) or 0)
+        for day, dv in (scan.get("daily") or {}).items():
+            if since and day < since:
+                continue
+            ai_calls += int((dv or {}).get("calls", 0) or 0)
+            tokens += int((dv or {}).get("tokens", 0) or 0)
+
+    # SEK från SAMMA ledger-total som revenue.total (ingen egen pengamatte).
+    sek = int(_ledger_totals().get("total", 0) or 0)
+    return {
+        "turns": turns,
+        "tokens": tokens,
+        "ai_calls": ai_calls,
+        "tokens_per_sek": round(lifetime_tokens / sek, 2) if sek > 0 else None,
+        "kr_per_1m_tokens": round(1e6 * sek / lifetime_tokens, 2) if lifetime_tokens > 0 else None,
+        "turns_windowed": turns_windowed,
+        # Additiva drill-down-serier (2026-09-27, rostad): staplarna i
+        # "Turns delivered per day" och "What the turns bought" summerar
+        # exakt mot `turns` — samma fönster, samma scan.
+        "turns_day": {d: turns_day[d] for d in sorted(turns_day)},
+        "by_action": dict(sorted(by_action.items(), key=lambda kv: (-kv[1], kv[0]))),
+    }
+
+
 @app.get("/api/admin/stats")
 async def admin_stats(morkrets_token: str | None = Cookie(None)):
     """Admin-only: översikt av alla användare."""
@@ -10815,6 +11211,161 @@ async def admin_stats(morkrets_token: str | None = Cookie(None)):
         "api_daily": api_daily,
         "visits": visits,
     }
+
+
+@app.get("/api/admin/overview")
+async def admin_overview(window: str = "all", morkrets_token: str | None = Cookie(None)):
+    """Admin-only: EN payload för nya dashboardens första målning (2026-09-27).
+
+    window = 24h | 7d | 30d | all (default; allt annat → 400). Allt som
+    fönstras redovisas mot `window`: series.*, value.*, traffic.by_country.
+    `totals` är LIVSTIDS-räknare (accounts/players/admins/campaigns/turns/
+    tokens/ai_calls/visits) och blandas aldrig in i de fönstrade serierna.
+    Betalningar är engångsköp → revenue är livstidssumman ur ledgern (grantad
+    tier utan ledger-rad ger 0 kr, se test_mrr_ignores_admintier_without_payment).
+    Användarnas daily/model_tokens skickas INTE här (159 konton) — de hör till
+    drill-downen /api/admin/user/{username}.
+    """
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+    w = (window or "all").strip().lower()
+    if w not in _WINDOW_CHOICES:
+        raise HTTPException(400, "window must be one of: 24h, 7d, 30d, all")
+    since = _window_since_day(w)
+
+    users = load_users()
+    # Batch-uppslag av IP → land (cache-only, aldrig nätverk i requesten).
+    geo = await iplog.geo_for_users(users)
+    ledger_per_user = _ledger_per_user()
+    rows = [_user_stat_row(u, geo=geo, ledger_per_user=ledger_per_user) for u in users]
+
+    totals = {"accounts": len(users), "players": 0, "admins": 0, "campaigns": 0,
+              "turns": 0, "tokens": 0, "ai_calls": 0, "visits": 0}
+    tiers = {"free": 0, "tier1": 0, "tier2": 0, "lifetime": 0}
+    api_daily: dict = {}
+    signups: dict = {}
+    compact: list = []
+    for row in rows:
+        if row.get("role") == "admin":
+            totals["admins"] += 1
+        else:
+            totals["players"] += 1
+        totals["campaigns"] += row.get("total_campaigns", 0) or 0
+        totals["turns"] += row.get("total_turns", 0) or 0
+        totals["tokens"] += row.get("total_tokens", 0) or 0
+        status = row.get("subscription_status") or "free"
+        tiers[status if status in tiers else "free"] += 1
+        for day, dv in (row.get("daily") or {}).items():
+            a = api_daily.setdefault(day, {"calls": 0, "tokens": 0})
+            a["calls"] += (dv or {}).get("calls", 0) or 0
+            a["tokens"] += (dv or {}).get("tokens", 0) or 0
+        # Registreringar per lokal dag (created_at backfillas av _account_meta
+        # från kampanjdatum för gamla konton).
+        day = _day_key(row.get("created_at") or "")
+        if day:
+            signups[day] = signups.get(day, 0) + 1
+        # Kompakt rad — BARA de fält dashboarden tabellerar.
+        cc = row.get("country_code") or ""
+        compact.append({
+            "username": row.get("username"),
+            "role": row.get("role"),
+            "email": row.get("email"),
+            "subscription_status": row.get("subscription_status"),
+            "country": row.get("country") or "",
+            "country_code": cc,
+            "country_flag": row.get("country_flag") or iplog.country_flag(cc),
+            "total_campaigns": row.get("total_campaigns", 0) or 0,
+            "total_tokens": row.get("total_tokens", 0) or 0,
+            "total_turns": row.get("total_turns", 0) or 0,
+            "revenue": row.get("revenue", 0) or 0,
+            "last_active": row.get("last_active") or "",
+            "created_at": row.get("created_at"),
+        })
+    totals["ai_calls"] = sum(v["calls"] for v in api_daily.values())
+
+    # Besök: ren cache-läsning; land- och referrer-graferna fönstras via
+    # country_range. days=400 → hela besökshistoriken följer med (annars kapade
+    # iplog grafen till 14 dagar och "window: all" ljög om fönstret).
+    visits = await iplog.visits_summary(country_range=w, days=400)
+    totals["visits"] = int(visits.get("total", 0) or 0)
+
+    def _win(series: dict) -> dict:
+        """Bara dagar inom valt fönster (lokal dag), ascending."""
+        return {k: series[k] for k in sorted(series) if not since or k >= since}
+
+    revenue = dict(_ledger_totals())
+    breakdown = _revenue_breakdown()
+    revenue.update(breakdown)
+    providers, models_list = _usage_breakdown(rows)
+    value = _value_delivered(w)
+    return {
+        "generated_at": _now_iso(),
+        "window": w,
+        "totals": totals,
+        "revenue": revenue,
+        "value": value,
+        "series": {
+            "api_calls_day": _win({d: v["calls"] for d, v in api_daily.items()}),
+            "visits_day": _win({d: int(n or 0) for d, n in (visits.get("by_day") or {}).items()}),
+            # Unika besökare per dag (distinkta IP:n) — egen serie så KPI:n
+            # "Unique visitors" kan visa unika i stället för request (2026-09-27).
+            "visits_unique_day": _win({d: int(n or 0) for d, n in (visits.get("by_day_unique") or {}).items()}),
+            "revenue_day": _win(breakdown["by_date"]),
+            "signups_day": _win(signups),
+            # Turns per dag ur turn-ledgern (2026-09-27) — samma fönster som value.turns.
+            "turns_day": _win(value.get("turns_day") or {}),
+        },
+        "usage": {"providers": providers, "models": models_list},
+        "traffic": {
+            "by_country": visits.get("by_country") or {},
+            "referrers": visits.get("by_referrer") or {},
+            "uniques": visits.get("uniques") or {},
+            # Per källa: unika besökare, länder, first/last seen (samma fönster).
+            "referrer_detail": iplog.referrer_detail(w),
+            "total": int(visits.get("total", 0) or 0),
+            "today": int(visits.get("today", 0) or 0),
+            "last_7": int(visits.get("last_7", 0) or 0),
+            "window": w,
+        },
+        "tiers": tiers,
+        "users": compact,
+    }
+
+
+@app.get("/api/admin/model/{model}")
+async def admin_model_detail(
+    model: str, window: str = "all", morkrets_token: str | None = Cookie(None)
+):
+    """Admin-only: EN modells drill-down (2026-09-27).
+
+    Kurva per dag + vilka spelare som anropat modellen. `calls`/`tokens` är
+    livstid; `calls_window`/`day` följer `window` (24h|7d|30d|all). Mediamodeller
+    (TTS/bild) har ingen dagserie → `windowed: false`, UI:t märker siffran som
+    livstid i stället för att påstå ett fönster."""
+    payload = _get_current_user(morkrets_token)
+    _require_admin(payload)
+    w = (window or "all").strip().lower()
+    if w not in _WINDOW_CHOICES:
+        raise HTTPException(400, "window must be one of: 24h, 7d, 30d, all")
+    name = (model or "").strip()
+    if not name or len(name) > 120:
+        raise HTTPException(400, "model must be a non-empty model name")
+    out = _model_breakdown(name, w)
+    registered = (
+        name in MODELS
+        or any((getattr(m, "model_id", "") == name or getattr(m, "api_model", "") == name)
+               for m in MODELS.values())
+    )
+    media = name in _OVERVIEW_MEDIA_PROV
+    # 2026-09-27: `known` sattes tidigare ENBART mot registret → en riktig modell
+    # utanför registret (qwen3.8-max: 291 anrop, 20 spelare — pinnad för tunga
+    # körningar, aldrig i MODELS) visades som "okänd". Kan vi attribuera en
+    # provider vet vi att modellen finns i historiken → known. `registered` är
+    # kvar som egen flagga så UI:t kan skilja "aktiv modell" från "historisk".
+    out["registered"] = bool(registered)
+    out["media"] = bool(media)
+    out["known"] = bool(registered or media or out.get("provider") not in (None, "", "unknown"))
+    return out
 
 
 @app.get("/api/admin/visits_country")
@@ -11351,6 +11902,15 @@ async def admin_user_detail(username: str, morkrets_token: str | None = Cookie(N
         "turn_ledger": _turn_ledger_breakdown(username),
         "turn_ledger_today": _turn_ledger_breakdown(username, since=_today_str()),
         "turn_ledger_recent": _read_turn_ledger(username, limit=50),
+        # ── Admin dashboard v2 (2026-09-27): dossierns Revenue/Usage-flikar ──
+        # ALLA spelarens ledger-rader, nyaste först (churn/cancel-rader har
+        # 0 SEK och visas som livscykelmarkörer). daily = transkriptens dagbok
+        # per lokal dag; model_mix = per-modell-tokens (drill-down, skickas
+        # aldrig i overview-listan).
+        "revenue_history": sorted([r for r in _ledger_load() if r.get("user") == username],
+                                  key=lambda r: _ledger_ts_key(r.get("ts")), reverse=True),
+        "daily": scan.get("daily", {}),
+        "model_mix": scan.get("model_tokens", {}),
         "campaigns": enriched,
     }
 
@@ -11512,6 +12072,9 @@ async def admin_billing(morkrets_token: str | None = Cookie(None)):
     totals = _ledger_totals()
     per_user = _ledger_per_user()
     ledger = _ledger_load()[-50:]  # senaste 50 raderna (filordning)
+    # Admin dashboard v2 (2026-09-27): produkter/månad/dag/land/kunder ur
+    # samma ledger — additiva nycklar, befintliga svar oförändrade.
+    breakdown = _revenue_breakdown()
     return {
         "mrr": totals["mrr"],
         "transactions": totals["transactions"],
@@ -11522,6 +12085,13 @@ async def admin_billing(morkrets_token: str | None = Cookie(None)):
         "ledger": ledger,
         # Churn-datapoint (rostad 2026-08-04): uppsägningar per dag
         "churn": _churn_load(),
+        # ── Admin dashboard v2 (2026-09-27) ──
+        "by_product": breakdown["by_product"],
+        "by_month": breakdown["by_month"],
+        "by_date": breakdown["by_date"],
+        "by_country": breakdown["by_country"],
+        "customers": breakdown["customers"],
+        "paying_customers": breakdown["paying_customers"],
     }
 
 

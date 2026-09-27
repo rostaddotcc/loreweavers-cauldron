@@ -353,14 +353,32 @@ def record_visit(ip: str, referrer: str = "", self_host: str = "") -> None:
         queue_geo_lookup(ip)
 
 
-async def visits_summary(country_range: str = "all") -> dict:
-    """Admin-sammanfattning: total, idag, 7 dagar, per dag (14) + unika per land.
+def _range_cutoff(country_range: str, now: float | None = None) -> float:
+    """Tidsfönster → cutoff-tidsstämpel (0 = allt). Delas av land- och
+    referrer-filtreringen så att båda graferna fönstras på exakt samma regel
+    (IP:ets SENASTE aktivitet). 2026-09-27: flyttad ut ur visits_summary."""
+    now = time.time() if now is None else now
+    return {
+        "1h": now - 3600,
+        "12h": now - 12 * 3600,
+        "24h": now - 24 * 3600,
+        "7d": now - 7 * 86400,
+        "30d": now - 30 * 86400,
+    }.get((country_range or "all").strip().lower(), 0.0)
+
+
+async def visits_summary(country_range: str = "all", days: int = 14) -> dict:
+    """Admin-sammanfattning: total, idag, 7 dagar, per dag + unika per land.
 
     Per-land aggregeras från by_ip via geo-cachen (varje IP = 1 unik besökare,
     2026-08-09); okända IP:er slås upp lat (geo_for_ip, cachad). by_referrer
     = unika besökare per källa (Google/Reddit/Direct …). by_day_unique = unika
     besökare per dag (distinkta IP:er). country_range filtrerar land-grafen på
-    IP:ernas senaste aktivitet: 1h/12h/24h/7d/30d (default "all")."""
+    IP:ernas senaste aktivitet: 1h/12h/24h/7d/30d (default "all").
+
+    2026-09-27: `days` styr hur många dagar by_day/by_day_unique får innehålla
+    (default 14 = gamla beteendet). Admin-dashboardens "all"/"30d"-fönster
+    begär fler dagar, annars visade grafen 14 staplar fast etiketten sa "all"."""
     _visits_load()
     now = time.time()
     today = time.strftime("%Y-%m-%d", time.localtime(now))
@@ -368,11 +386,12 @@ async def visits_summary(country_range: str = "all") -> dict:
     for i in range(7):
         d = time.strftime("%Y-%m-%d", time.localtime(now - i * 86400))
         last_7 += int(_visit_store["by_day"].get(d, 0) or 0)
-    days = sorted(_visit_store["by_day"].keys())[-14:]
-    by_day = {d: int(_visit_store["by_day"].get(d, 0) or 0) for d in days}
+    days = max(1, int(days or 14))
+    day_keys = sorted(_visit_store["by_day"].keys())[-days:]
+    by_day = {d: int(_visit_store["by_day"].get(d, 0) or 0) for d in day_keys}
     # Unika besökare per dag (distinkta IP:er per dag) — dagsgrafen i admin
     du = _visit_store.get("by_day_unique", {}) or {}
-    du_days = sorted(du.keys())[-14:]
+    du_days = sorted(du.keys())[-days:]
     by_day_unique = {d: len(du[d]) for d in du_days if isinstance(du.get(d), dict)}
     # Unique-besök (distinkta IP:er): total, idag, senaste 7 dygn
     now = time.time()
@@ -394,17 +413,7 @@ async def visits_summary(country_range: str = "all") -> dict:
             unique_14d += 1
     # Land-grafens tidsfönster (2026-08-09, rostad): filtrera på IP:ernas
     # senaste aktivitet → "unika besökare de senaste 1h/12h/24h/7d/30d".
-    cutoff = 0  # all time
-    if country_range == "1h":
-        cutoff = now - 3600
-    elif country_range == "12h":
-        cutoff = now - 12 * 3600
-    elif country_range == "24h":
-        cutoff = now - 24 * 3600
-    elif country_range == "7d":
-        cutoff = now - 7 * 86400
-    elif country_range == "30d":
-        cutoff = now - 30 * 86400
+    cutoff = _range_cutoff(country_range, now)
     by_country: dict[str, int] = {}
     for ip, rec in _visit_store["by_ip"].items():
         if cutoff:
@@ -445,11 +454,75 @@ async def visits_summary(country_range: str = "all") -> dict:
         "unique_today": unique_today,
         "unique_7d": unique_7d,
         "unique_14d": unique_14d,
+        # Samlade unika besökare (samma fyra tal som ovan, i en klump) så
+        # admin-KPI:n "Unique visitors" kan visa RIKTIGA unika i stället för
+        # antal request (2026-09-27).
+        "uniques": {
+            "total": unique_total,
+            "today": unique_today,
+            "last_7": unique_7d,
+            "last_14": unique_14d,
+        },
         "by_day": by_day,
         "by_day_unique": by_day_unique,
         "by_country": by_country,
         "by_referrer": by_referrer,
     }
+
+
+def referrer_detail(country_range: str = "all") -> dict:
+    """Per referrer-källa: unika besökare, länder och första/senaste besök.
+
+    2026-09-27 (rostad: "samtliga traffic-referrals syns"): dashboardens
+    referrer-drawer behöver mer än en siffra per källa. by_referrer lagrar
+    {källa: {ip: last_seen}} → vi kan räkna unika besökare, slå upp deras land
+    i geo-cachen (REN cache-läsning, aldrig nätverk i requesten) och visa
+    first/last seen. Ingen per-dag-historik finns för referrers (den började
+    först nu att kunna loggas) — därför säger UI:t first/last i stället för att gissa.
+
+    country_range fönstrar på IP:ets SENASTE besök från källan, exakt samma
+    regel som land-grafen (_range_cutoff).
+    """
+    _visits_load()
+    cutoff = _range_cutoff(country_range)
+    out: dict[str, dict] = {}
+    for src, v in (_visit_store.get("by_referrer", {}) or {}).items():
+        if not isinstance(v, dict):
+            # Legacy-rad (gammal store sparade bara ett totaltal) — redovisa
+            # räknaren utan IP-detaljer i stället för att hitta på ett land.
+            legacy = int(v) if isinstance(v, (int, float)) else 1
+            if not cutoff:
+                out[src] = {"uniques": legacy, "countries": {}, "first_seen": 0, "last_seen": 0,
+                            "legacy": True}
+            continue
+        countries: dict[str, int] = {}
+        uniques = 0
+        first_seen = 0.0
+        last_seen = 0.0
+        for ip, ts in v.items():
+            last = float(ts or 0)
+            if cutoff and last < cutoff:
+                continue
+            uniques += 1
+            if last and (not first_seen or last < first_seen):
+                first_seen = last
+            if last > last_seen:
+                last_seen = last
+            if ip and is_private(ip):
+                cc = "LOCAL"
+            elif ip:
+                cached = _geo_cache.get(ip) or {}
+                cc = cached.get("countryCode") or "??"
+            else:
+                cc = "??"
+            countries[cc] = countries.get(cc, 0) + 1
+        out[src] = {
+            "uniques": uniques,
+            "countries": dict(sorted(countries.items(), key=lambda kv: kv[1], reverse=True)),
+            "first_seen": first_seen,
+            "last_seen": last_seen,
+        }
+    return dict(sorted(out.items(), key=lambda kv: kv[1]["uniques"], reverse=True))
 
 def country_flag(country_code: str) -> str:
     """Landskod 'SE' → flagg-emoji 🇸🇪. 'LOCAL' → 🏠, tom → ❓."""

@@ -2911,7 +2911,7 @@ function avatarProvider() {
   return (sel && sel.value) || 'stepfun';
 }
 // TIERS: bildgenerering är gated (2026-08-15). StepFun = gratis för alla;
-// Wan / Qwen Image 3 Pro = Patron (30€). Returnerar false + informerar.
+// 2026-09-27: ALL bildgenerering bakom 10€-unlåset. Returnerar false + informerar.
 function avatarGenGate(provider) {
   // 2026-09-27 (ny prissättning): ALL bildgenerering bakom 10€-unlåset.
   if (!_tierHasModels()) {
@@ -3864,7 +3864,7 @@ function tierBadge(s) {
 // (Stilväljaren togs bort 2026-08-06 — namnet lever kvar av historiska skäl.)
 function updateTTSStyleLock() {
   const hasStyle = _tierHasModels();
-  // TTS-providers: StepFun = gratis sedan 2026-08-15, Qwen = Patron (30€)+
+  // TTS-providers (2026-09-27): ALLT bakom 10€-unlåset
   const hasTTS = _tierHasAvatars(); // StepFun → alltid tillåten
   // Fallback: om nuvarande val är låst → första tillåtna provider
   // (stepfun om tillåten, annars qwen, annars tom) + uppdatera localStorage.

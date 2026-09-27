@@ -2339,7 +2339,7 @@ const TTS_PROVIDERS = [
   API.me().then(u => {
     const isAdmin = !!(u && u.role === 'admin');
     // free/tier1 (och okänd status) → låst till step-3.7-flash;
-    // TTS: StepFun = gratis, Qwen = Patron (30€)+.
+    // TTS (2026-09-27): ALLT bakom 10€-unlåset (tier2/lifetime/admin).
     const tier = isAdmin ? 'tier2' : ((u && u.subscription_status) || 'free');
     const locked = !isAdmin && (tier === 'free' || tier === 'tier1');
     fillTTS(tier);

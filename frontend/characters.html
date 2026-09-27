@@ -322,7 +322,7 @@ API.me().then(u => {
   }
 }).catch(() => {});
 // TIERS: bildgenerering är gated (2026-08-15). StepFun = gratis för alla;
-// Wan / Qwen Image 3 Pro = Patron (30€). Returnerar false + informerar.
+// 2026-09-27: ALL bildgenerering bakom 10€-unlåset. Returnerar false + informerar.
 function forgeAvatarGenGate(provider) {
   // 2026-09-27 (ny prissättning): ALL bildgenerering bakom 10€-unlåset.
   if (_forgeTier !== 'tier2' && _forgeTier !== 'lifetime') {

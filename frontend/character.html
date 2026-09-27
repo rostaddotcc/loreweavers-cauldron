@@ -711,7 +711,7 @@
     </div>
 
     <div class="forge-row">
-      <button class="forge-export-btn btn-ghost" id="forge-paint-btn" onclick="openAvatarModal()" title="Generate the portrait of your adventurer — StepFun (free) or Wan 2.7 Pro / Qwen Image 3 Pro (Patron 30€)">🎨 Generate your portrait</button>
+      <button class="forge-export-btn btn-ghost" id="forge-paint-btn" onclick="openAvatarModal()" title="Generate the portrait of your adventurer — part of the 10€ unlock, each image costs 1 turn">🎨 Generate your portrait</button>
       <button class="forge-export-btn btn-gold" id="forge-export-btn" onclick="exportToForge()" title="Save this adventurer to The Forge — start a new campaign with them later">⚒ Export to Forge</button>
     </div>
 
@@ -1769,25 +1769,23 @@ function closeAvatarModal() {
   document.getElementById('avatar-overlay').classList.remove('show');
 }
 
-// ── Bildleverantör (StepFun — gratis · Wan 2.7 / Qwen Image 3 Pro — Patron 30€) ──
+// ── Bildleverantör (2026-09-27: ALL bildgenerering bakom 10€-unlåset) ──
 let _charTier = null;  // free | tier1 | tier2 | lifetime (från /api/me)
 function avatarProvider() {
   const sel = document.getElementById('avatar-provider-select');
   return (sel && sel.value) || 'stepfun';
 }
 function avatarGenGate(provider) {
-  if ((provider === 'wan' || provider === 'qwen') && _charTier !== 'tier2' && _charTier !== 'lifetime') {
-    toast('🔒 Wan 2.7 / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to generate with the premium engines.');
+  // 2026-09-27 (ny prissättning): ALL bildgenerering bakom 10€-unlåset.
+  if (_charTier !== 'tier2' && _charTier !== 'lifetime') {
+    toast('🔒 Image generation is part of the 10€ unlock (+100 turns, all Dungeon Masters, voice & images). Each image costs 1 turn. — pricing.html?plan=unlock10');
     try { SFX.error(); } catch (_) {}
     return false;
   }
-  return true; // StepFun = gratis sedan 2026-08-15
+  return true;
 }
 function avatarProviderChanged(sel) {
-  if ((sel && (sel.value === 'wan' || sel.value === 'qwen')) && _charTier !== 'tier2' && _charTier !== 'lifetime') {
-    sel.value = 'stepfun';
-    toast('🔒 Wan 2.7 / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to generate with the premium engines.');
-  }
+  // 2026-09-27: alla motorer kräver samma 10€-unlås — ingen nedgradering.
 }
 function updateAvatarProviderLock() {
   const sel = document.getElementById('avatar-provider-select');
@@ -1805,20 +1803,13 @@ function updateAvatarProviderLock() {
     } catch (_) { _charTier = 'free'; }
     return;
   }
-  const wanUnlocked = _charTier === 'tier2' || _charTier === 'lifetime';  // Patron (30€)
-  if (stepOpt) {
-    stepOpt.disabled = false;
-    stepOpt.textContent = 'StepFun — Free';
-  }
-  if (wanOpt) {
-    wanOpt.disabled = !wanUnlocked;
-    wanOpt.textContent = wanUnlocked ? 'Wan 2.7 — Patron' : 'Wan 2.7 — Patron 🔒';
-  }
-  if (qwenOpt) {
-    qwenOpt.disabled = !wanUnlocked;
-    qwenOpt.textContent = wanUnlocked ? 'Qwen Image 3 Pro — Patron' : 'Qwen Image 3 Pro — Patron 🔒';
-  }
-  if ((sel.value === 'wan' || sel.value === 'qwen') && !wanUnlocked) sel.value = 'stepfun';
+  const unlocked = _charTier === 'tier2' || _charTier === 'lifetime';  // 10€ unlock
+  [['stepfun', 'StepFun'], ['wan', 'Wan 2.7 Pro'], ['qwen', 'Qwen Image 3 Pro']].forEach(([key, name]) => {
+    const opt = sel.querySelector(`option[value="${key}"]`);
+    if (!opt) return;
+    opt.disabled = !unlocked;
+    opt.textContent = unlocked ? name : name + ' — 🔒 10€ unlock';
+  });
 }
 
 async function _runAvatarGen(mode, statusText, btnId) {
@@ -1924,7 +1915,7 @@ window.getState = exportState;
       <div class="av-gal-count" id="avatar-gal-count"></div>
       <div style="font-size:.62rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem">click to enlarge</div>
     </div>
-    <div class="mi-intro">Generate your portrait with your own words — <b>🖌️ Free prompt</b> generates ONLY what you describe. Engine: StepFun (free) or Wan 2.7 Pro / Qwen Image 3 Pro (Patron 30€). Or upload your own image.</div>
+    <div class="mi-intro">Generate your portrait with your own words — <b>🖌️ Free prompt</b> generates ONLY what you describe. Image generation is part of the one-time <b>10€ unlock</b> — each image costs 1 turn. Engines: StepFun, Wan 2.7 Pro, Qwen Image 3 Pro. Or upload your own image.</div>
     <div style="margin-top:.7rem">
       <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">✍️ YOUR OWN WORDS</div>
       <textarea id="avatar-prompt-input" placeholder="Free prompt: describe exactly what you want to see — e.g. 'hooded figure, lantern light, rain'." style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:var(--radius-sm);resize:vertical"></textarea>
@@ -1933,9 +1924,9 @@ window.getState = exportState;
     <div style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
       <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
       <select id="avatar-provider-select" class="tts-select" style="flex:1;min-width:0" onchange="avatarProviderChanged(this)" title="Image provider for image generation">
-        <option value="stepfun">StepFun — Free</option>
-        <option value="wan">Wan 2.7 — Patron 🔒</option>
-        <option value="qwen">Qwen Image 3 Pro — Patron 🔒</option>
+        <option value="stepfun">StepFun</option>
+        <option value="wan">Wan 2.7 Pro</option>
+        <option value="qwen">Qwen Image 3 Pro</option>
       </select>
     </div>
     <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">

@@ -2196,11 +2196,12 @@ function resetCountdown(iso, isTs) {
 // Rail-v2-vågen (#user-tag, header-turns-info) — döda skrivare följer med nu.
 function tallyResetFmt(me) {
   // Nedräkning till nästa kvotreset, minutnivå: '🕯 7h 12m' / '🕯 42m'.
+  // 2026-09-27 (buggfix rostad): reset_ts-grenen BORT. Backend skriver alltid
+  // reset_date i one-time-modellen (period_hours=24 for alla utom lifetime), men
+  // gamla konton bar pa en passerad 6h-reset_ts fran 2026-08 — den grenen gav
+  // evigt "1m" i nedrakningen. reset_date ar enda sanna kalla nu.
   let ms = null;
-  if ((me.subscription_status === 'tier1' || me.subscription_status === 'tier2') && me.reset_ts) {
-    const t = Date.parse(String(me.reset_ts));
-    if (!isNaN(t)) ms = t - Date.now();
-  } else if (me.reset_date) {
+  if (me.reset_date) {
     const m = String(me.reset_date).match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (m) {
       let target = Date.UTC(+m[1], +m[2] - 1, +m[3]);
@@ -2851,7 +2852,10 @@ function renderChatProfile(s, me) {
   const tokenStr = tokens >= 1000000 ? (tokens / 1000000).toFixed(1) + 'M' : tokens >= 1000 ? (tokens / 1000).toFixed(1) + 'K' : tokens;
   const since = s.created_at || me.created_at || null;
   // Turncap beskrivs med perioden så man inte tror att "50" är veckans total.
-  const periodLabel = (st === 'tier1' || st === 'tier2') ? ' per 6h' : ' per day';
+  // 2026-09-27: one-time-modellen — alla tiers har 24h-period (lifetime oändligt).
+  // 'per 6h' var legacy från den gamla prenumerationsperioden och stämde aldrig
+  // mot backend (_period_hours_for = 24 för allt utom lifetime).
+  const periodLabel = ' per day';
   const cap = parseInt(s.turn_cap, 10) || 0;
   const capLabel = cap === 0 ? '∞ (lifetime)' : fmt(cap) + periodLabel;
   const used = s.period_turns_used != null ? s.period_turns_used : (me.period_turns_used != null ? me.period_turns_used : 0);

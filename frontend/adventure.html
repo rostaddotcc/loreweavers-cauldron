@@ -1286,10 +1286,9 @@ let _quotaTimer = null;   // 1s-tick som uppdaterar nedräkningen lokalt
 function quotaNextReset(me) {
   if (!me) return null;
   if (me.subscription_status === 'lifetime' || me.turn_cap === 0) return null;
-  if (me.subscription_status === 'tier1' || me.subscription_status === 'tier2') {
-    if (me.reset_ts) { const t = new Date(me.reset_ts).getTime(); return isNaN(t) ? null : t; }
-    return null;
-  }
+  // 2026-09-27 (buggfix rostad): reset_ts-grenen BORT. Backend skriver alltid
+  // reset_date i one-time-modellen; gamla konton bar en passerad 6h-reset_ts
+  // från 2026-08 som gav evig "0m/1m". reset_date är enda sanna källan nu.
   // free-tier: reset_date = datumet då återställningen SKER (00:00 UTC).
   // Är datumet <= idag har dagens återställning redan skett → nästa är i morgon.
   if (me.reset_date) {
@@ -2791,7 +2790,9 @@ function renderProfile(s) {
   // Bättre turncap-beskrivning (rostad 2026-08-04): visa perioden så man inte
   // tror att "50" är veckans total — det är per period (6h för tier1/2, dagligen free).
   const st = s.subscription_status;
-  const periodLabel = (st === 'tier1' || st === 'tier2') ? ' per 6h' : ' per day';
+  // 2026-09-27: one-time-modellen — alla tiers har 24h-period (lifetime oändligt).
+  // 'per 6h' var legacy från den gamla prenumerationsperioden.
+  const periodLabel = ' per day';
   const capLabel = s.turn_cap === 0 ? '∞ (lifetime)' : fmt(s.turn_cap) + periodLabel;
   h += cell('Turns', fmt(s.period_turns_used) + ' / ' + capLabel + bar(s.period_turns_used, s.turn_cap), true);
   if (s.promo_bonus > 0) h += cell('Signup bonus (legacy)', fmt(s.promo_bonus) + ' left', true);

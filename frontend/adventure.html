@@ -531,12 +531,13 @@ html{font-size:var(--fs-base)}
       <span class="rr-tag">THE CROSSROADS</span>
     </div>
     <div class="rr-mid">
-      <!-- ⚡ Turn-quota-pille (våg 4, 2026-09-26): synlig räknare BORT — bara
-           REFRESH-timer på minutnivå + ⚡-varning vid ≤5 turns. Klick → profilen. -->
+      <!-- ⚡ Turn-quota-pille (våg 4, 2026-09-26 + rostad 2026-09-27): TURNS
+           used/cap + BOUGHT visas ENDAST för betalande (tier2/lifetime/turn_bonus>0);
+           free ser bara REFRESH-timer + ⚡-varning vid ≤5. Klick → profilen. -->
       <div class="rr-tally" id="quota-pill" onclick="openProfileModal()" role="button" tabindex="0" title="When your turns refresh. Click for your profile."
            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openProfileModal()}">
         <span class="rw" id="quota-warn" style="display:none">⚡ <span class="tv warn" id="quota-warn-tv">—</span></span><span class="sep rw" id="quota-warn-sep" style="display:none">·</span>
-        <span class="cd">RESET <span class="tv" id="quota-cd"></span></span>
+        <span class="tp" id="quota-turns-row" style="display:none">TURNS <span class="tv" id="quota-turns"></span></span><span class="sep tp" id="quota-turns-sep" style="display:none">·</span><span class="tp" id="quota-bonus-row" style="display:none">BOUGHT <span class="tv" id="quota-bonus"></span></span><span class="sep tp" id="quota-bonus-sep" style="display:none">·</span><span class="cd">RESET <span class="tv" id="quota-cd"></span></span>
       </div>
     </div>
     <div class="rr-actions">
@@ -1341,7 +1342,36 @@ function renderQuotaPill(me) {
   const en = (typeof isEn === 'function') ? isEn() : true;
   const cap = me.turn_cap;
   const inf = (cap === 0 || me.subscription_status === 'lifetime');
-  // Synlig räknare BORT (2026-09-26): bara ⚡-varning vid ≤5 + minut-timer.
+  // 2026-09-27 (rostad): betalande ser sin cap — daglig kvot (used/cap) +
+  // köpta turns (turn_bonus). Free behåller minimal pill (våg 4).
+  const tRow = document.getElementById('quota-turns-row');
+  const tSep = document.getElementById('quota-turns-sep');
+  const tEl = document.getElementById('quota-turns');
+  const bRow = document.getElementById('quota-bonus-row');
+  const bSep = document.getElementById('quota-bonus-sep');
+  const bEl = document.getElementById('quota-bonus');
+  const bonus = Math.max(0, Math.floor(Number(me.turn_bonus) || 0));
+  const st = me.subscription_status;
+  const paid = st === 'tier2' || st === 'lifetime' || bonus > 0;
+  if (paid && tRow && tEl) {
+    const capN = parseInt(cap, 10) || 0;
+    const used = Math.max(0, Math.floor(Number(me.turns_used) || 0));
+    tRow.style.display = '';
+    if (tSep) tSep.style.display = '';
+    tEl.textContent = capN === 0 ? '∞' : used + '/' + capN;
+    if (bRow && bEl) {
+      const showB = bonus > 0;
+      bRow.style.display = showB ? '' : 'none';
+      if (bSep) bSep.style.display = showB ? '' : 'none';
+      if (showB) bEl.textContent = String(bonus);
+    }
+  } else {
+    if (tRow) tRow.style.display = 'none';
+    if (tSep) tSep.style.display = 'none';
+    if (bRow) bRow.style.display = 'none';
+    if (bSep) bSep.style.display = 'none';
+  }
+  // Synlig räknare för free: BORT (2026-09-26) — bara ⚡-varning vid ≤5 + minut-timer.
   const avail = Math.max(0, Math.floor(Number(me.turns_available) || 0));
   if (inf) {
     warnEl.style.display = 'none';

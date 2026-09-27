@@ -1372,15 +1372,17 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
     <span class="rr-tag">AT THE TABLE</span>
   </div>
   <div class="rr-mid">
-    <!-- Turn-Tally (våg 4, 2026-09-26): synlig räknare BORT — bara TURN · DAY,
-         REFRESH-timer på minuten + ⚡-varning vid ≤5 turns kvar (klick → cap-modal).
+    <!-- Turn-Tally (våg 4, 2026-09-26 + rostad 2026-09-27): TURN · DAY alltid;
+         TURNS used/cap + BOUGHT (köpta turns) visas ENDAST för betalande (tier2/
+         lifetime/turn_bonus>0) — free håller minimal tally. REFRESH-timer på
+         minuten + ⚡-varning vid ≤5 turns kvar (klick → cap-modal).
          Klick i övrigt → profilmodalt (all info finns där). -->
     <div class="rr-tally" id="rr-tally" onclick="openChatProfileModal()" role="button" tabindex="0"
          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openChatProfileModal()}"
          title="Current turn · day · when turns refresh. Click for your profile.">
       <span class="rw" id="rr-warn-row" style="display:none" onclick="capWarnClick(event)">⚡ <span class="tv warn" id="rr-warn">—</span></span><span class="sep rw" id="rr-warn-sep" style="display:none">·</span>
       <span class="tp">TURN <span class="tv" id="rr-turn">—</span></span><span class="sep tp">·</span>
-      <span class="tp">DAY <span class="tv" id="rr-day">—</span></span><span class="sep" id="rr-reset-sep" style="display:none">·</span>
+      <span class="tp">DAY <span class="tv" id="rr-day">—</span></span><span class="sep tp paid" id="rr-quota-sep" style="display:none">·</span><span class="tp paid" id="rr-quota-row" style="display:none">TURNS <span class="tv" id="rr-quota">—</span></span><span class="sep tp paid" id="rr-bonus-sep" style="display:none">·</span><span class="tp paid" id="rr-bonus-row" style="display:none">BOUGHT <span class="tv" id="rr-bonus">—</span></span><span class="sep" id="rr-reset-sep" style="display:none">·</span>
       <span id="rr-reset-row" style="display:none">RESET <span class="tv" id="rr-reset">—</span></span>
     </div>
   </div>
@@ -1469,8 +1471,9 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
   }
   @media (max-width: 480px){
     /* Smala skärmar: kampanj-TURN/DAY viker — ⚡-varning + REFRESH-timer är
-       det som har nytta där (räknarna är redan borttagna från toppvyn). */
-    .rr-tally .tp{ display: none !important; }
+       det som har nytta där. Betalandes kvot-segment (.tp.paid, 2026-09-27)
+       STANNAR: de som köpt turns vill se used/cap + BOUGHT även på mobil. */
+    .rr-tally .tp:not(.paid){ display: none !important; }
   }
   /* Klickbar tally → profilmodalt (2026-09-24): samma affordance som ⚗-sigilen. */
   .rr-tally{ cursor: pointer; }
@@ -2229,6 +2232,34 @@ function renderTurnTally() {
   dayEl.textContent = (day != null) ? String(day) : '—';
   const en = (typeof I18N !== 'undefined' && I18N.getLang && I18N.getLang() === 'en');
   const inf = tier === 'lifetime' || (parseInt(me.turn_cap, 10) || 0) === 0;
+  // 2026-09-27 (rostad): betalande ser sin cap — daglig kvot (used/cap) +
+  // köpta turns (turn_bonus). Free behåller minimal tally (våg 4).
+  const quotaRow = document.getElementById('rr-quota-row');
+  const quotaSep = document.getElementById('rr-quota-sep');
+  const quotaEl = document.getElementById('rr-quota');
+  const bonusRow = document.getElementById('rr-bonus-row');
+  const bonusSep = document.getElementById('rr-bonus-sep');
+  const bonusEl = document.getElementById('rr-bonus');
+  const bonus = Math.max(0, parseInt(me.turn_bonus, 10) || 0);
+  const paid = tier === 'tier2' || tier === 'lifetime' || bonus > 0;
+  if (paid && quotaRow && quotaEl) {
+    const cap = parseInt(me.turn_cap, 10) || 0;
+    const used = Math.max(0, parseInt(me.turns_used, 10) || 0);
+    quotaRow.style.display = '';
+    if (quotaSep) quotaSep.style.display = '';
+    quotaEl.textContent = cap === 0 ? '∞' : used + '/' + cap;
+    if (bonusRow && bonusEl) {
+      const showBonus = bonus > 0;
+      bonusRow.style.display = showBonus ? '' : 'none';
+      if (bonusSep) bonusSep.style.display = showBonus ? '' : 'none';
+      if (showBonus) bonusEl.textContent = String(bonus);
+    }
+  } else {
+    if (quotaRow) quotaRow.style.display = 'none';
+    if (quotaSep) quotaSep.style.display = 'none';
+    if (bonusRow) bonusRow.style.display = 'none';
+    if (bonusSep) bonusSep.style.display = 'none';
+  }
   const warnRow = document.getElementById('rr-warn-row');
   const warnSep = document.getElementById('rr-warn-sep');
   const warnEl = document.getElementById('rr-warn');

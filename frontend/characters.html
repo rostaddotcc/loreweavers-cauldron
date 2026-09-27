@@ -190,7 +190,6 @@
       <button class="summon-btn btn-gold" id="forge-btn" onclick="forgeSummon()">🔮 Forge Character</button>
       <span style="font-size:.78rem;color:var(--bone-dim)">🧙 Model:</span>
       <select id="forge-model">
-        <option value="qwen3.8-max">qwen3.8-max</option>
         <option value="qwen3.8-flash">qwen3.8-flash</option>
         <option value="qwen3.6-flash">qwen3.6-flash</option>
         <option value="deepseek-v4.1-flash">deepseek-v4.1-flash</option>
@@ -296,9 +295,9 @@
 // Auth-guard
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 </script>
-<script src="api.js?v=20260804c"></script>
+<script src="api.js?v=20260927a"></script>
 <script src="modal.js?v=20260906a"></script>
-<script src="i18n.js?v=20260906a"></script>
+<script src="i18n.js?v=20260927a"></script>
 <script>
 // ═══════════════════════════════════════
 // THE FORGE — fristående karaktärsgenerering + valv
@@ -306,8 +305,9 @@ if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 
 // Modellväljare: icke-admin begränsas till spelarmodeller; free/tier1 låses
 // till step-3.7-flash (premium-modeller gråas ut + 🔒 — backend klämmer ändå).
-const PLAYER_CHAR_MODELS = ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4.1-flash', 'step-5-preview', 'step-3.7-flash', 'step-3.5-flash-2603'];
-const PREMIUM_CHAR_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4.1-flash'];
+const PLAYER_CHAR_MODELS = ['qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4.1-flash', 'step-5-preview', 'step-3.7-flash', 'step-3.5-flash-2603'];
+// 2026-09-27 (ny prissättning): premium = allt utom StepFun 3.7/3.5.
+const PREMIUM_CHAR_MODELS = ['qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4.1-flash', 'step-5-preview'];
 let _forgeTier = 'free';  // free | tier1 | tier2 | lifetime
 API.me().then(u => {
   if (u) _forgeTier = u.subscription_status === 'premium' ? 'tier2' : (u.subscription_status || 'free');
@@ -316,19 +316,20 @@ API.me().then(u => {
     const sel = document.getElementById('forge-model');
     sel.innerHTML = PLAYER_CHAR_MODELS.map(m => {
       const dis = locked && PREMIUM_CHAR_MODELS.includes(m);
-      return `<option value="${m}"${dis ? ' disabled' : ''}>${dis ? '🔒 ' + m + ' — Patron (30€)' : m}</option>`;
+      return `<option value="${m}"${dis ? ' disabled' : ''}>${dis ? '🔒 ' + m + ' — 10€ unlock' : m}</option>`;
     }).join('');
-    sel.value = (locked && PLAYER_CHAR_MODELS.includes('qwen3.8-flash')) ? 'qwen3.8-flash' : 'step-3.7-flash';
+    sel.value = 'step-3.7-flash';
   }
 }).catch(() => {});
 // TIERS: bildgenerering är gated (2026-08-15). StepFun = gratis för alla;
 // Wan / Qwen Image 3 Pro = Patron (30€). Returnerar false + informerar.
 function forgeAvatarGenGate(provider) {
-  if ((provider === 'wan' || provider === 'qwen') && _forgeTier !== 'tier2' && _forgeTier !== 'lifetime') {
-    toast('🔒 Wan 2.7 / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to generate with the premium engines.');
+  // 2026-09-27 (ny prissättning): ALL bildgenerering bakom 10€-unlåset.
+  if (_forgeTier !== 'tier2' && _forgeTier !== 'lifetime') {
+    toast('🔒 Image generation is part of the 10€ unlock (+100 turns, all Dungeon Masters, voice & images). Each image costs 1 turn. — pricing.html?plan=unlock10');
     return false;
   }
-  return true; // StepFun = gratis sedan 2026-08-15
+  return true;
 }
 
 let forging = false;

@@ -1,7 +1,8 @@
 """AI-bildgenerering kostar 1 turn — oavsett provider (2026-08-08).
 
-StepFun-bilder var gratis (bugg): endast Wan-grenen drog en turn. Nu drar
-varje bild exakt en turn (StepFun: _gate_turn_quota + _consume_turn).
+2026-09-27 (ny prissättning): ALL bildgenerering ligger dessutom bakom
+10€-unlåset — testerna seedar därför features.all_models (unlock10-form).
+Varje bild drar exakt en turn (_gate_turn_quota + _consume_turn).
 
 autouse-fixtures: ALLA tester pekar users.json + kampanjer mot tmp —
 ALDRIG riktig data.
@@ -95,9 +96,9 @@ def _seed(username="alice", role="player", email=None):
          # tier = 24h-period) så turns_used förblir exakt som seedad.
          "reset_date": "2099-01-01", "subscription_status": "free",
          "subscription_until": None,
-         # Support (3€): features.export + features_until i framtiden → tier1
-         "features": {"export": True},
-         "features_until": "2099-01-01",
+         # 10€-unlock (2026-09-27): features utan utgångsdatum → tier2 permanent
+         "features": {"export": True, "all_models": True, "wan1080": True, "unlock10": True},
+         "features_until": None,
          "wan_used_today": 0, "wan_reset_date": None,
          "created_at": "2026-08-01T10:00:00+00:00",
          "last_login": "2026-08-04T09:00:00+00:00"}

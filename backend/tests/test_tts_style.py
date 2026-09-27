@@ -84,32 +84,27 @@ def test_instruction_capped_at_128():
 
 # ── Premium-gate i /api/tts ───────────────────────────────────────────────
 
-def test_style_ignored_for_tier1(client, monkeypatch):
-    """Support (tier1): style skickas men backend nollställer → synth får style=''.
-
-    (free kan inte TTS alls sedan 2026-08-05 — style-gaten testas på tier1.)
-    """
+def test_tier1_tts_403_feature_locked(client, monkeypatch):
+    """2026-09-27 (ny prissättning): tier1 utan unlock → 403 feature_locked
+    INNAN någon syntes (style-strip-kontraktet är därmed dött för tier1;
+    style behålls för tier2+ — se test_style_passed_for_premium)."""
     _seed("alice", tier="tier1")
     _login(client)
-    seen = {}
-    def fake_synth(voice, text, style=""):
-        seen["style"] = style
-        return b"ID3fake"
-    monkeypatch.setattr(main, "_synth_qwen_tts_retry", fake_synth)
-    monkeypatch.setattr(main, "_synth_stepfun_tts", fake_synth)
+    monkeypatch.setattr(main, "_synth_qwen_tts_retry", lambda voice, text, style="": b"ID3fake")
+    monkeypatch.setattr(main, "_synth_stepfun_tts", lambda voice, text, style="": b"ID3fake")
     r = client.post("/api/tts", json={"text": "Hej världen", "voice": "male", "provider": "stepfun", "style": "scary"})
-    assert r.status_code == 200
-    assert seen.get("style", "?") == ""
+    assert r.status_code == 403
+    assert r.json()["detail"]["feature_locked"] == "tts"
 
 
-def test_stepfun_free_ok(client, monkeypatch):
-    """TIERS 2026-08-15: StepFun TTS är GRATIS — free → 200 (förr 403)."""
+def test_stepfun_free_403(client, monkeypatch):
+    """TIERS 2026-09-27: ALL TTS bakom 10€-unlåset — free + stepfun → 403."""
     _seed("alice", premium=False)
     _login(client)
     monkeypatch.setattr(main, "_synth_stepfun_tts", lambda voice, text, style="": b"ID3fake")
     r = client.post("/api/tts", json={"text": "Hej", "voice": "male", "provider": "stepfun"})
-    assert r.status_code == 200, r.text
-    assert r.content == b"ID3fake"
+    assert r.status_code == 403, r.text
+    assert r.json()["detail"]["feature_locked"] == "tts"
 
 
 def test_qwen_403_for_free(client, monkeypatch):

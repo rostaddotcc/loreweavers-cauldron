@@ -284,47 +284,50 @@ def test_promo_consumed_before_cap(client):
 def test_free_model_clamp(client, llm_mocks):
     _register(client)
     _make_campaign("alice")
-    r = _chat(client, model="qwen3.8-max")
+    r = _chat(client, model="qwen3.8-flash")
     assert r.status_code == 200, r.text
     # DM-anropet fick den klampade modellen
     assert llm_mocks["models"] == ["step-3.7-flash"]
-    # och hjälpfunktionen direkt
-    assert main._clamp_player_model("qwen3.8-max", tier="free") == "step-3.7-flash"
-    assert main._clamp_player_model("qwen3.8-max", tier=main._tier_for("alice")) == "step-3.7-flash"
+    # och hjälpfunktionen direkt (2026-09-27: premium = allt utom stepfun-flash)
+    assert main._clamp_player_model("qwen3.8-flash", tier="free") == "step-3.7-flash"
+    assert main._clamp_player_model("qwen3.8-flash", tier=main._tier_for("alice")) == "step-3.7-flash"
+    # borttagna modeller klampas också till default
+    assert main._clamp_player_model("qwen3.8-max", tier="tier2") == "step-3.7-flash"
 
 
-def test_qwen38_flash_is_free_for_everyone(client, llm_mocks):
-    """2026-09-09: qwen3.8-flash live för free tier (verifierad mot Token Plan)."""
+def test_qwen38_flash_is_premium_10e_unlock(client, llm_mocks):
+    """2026-09-27 (ny prissättning): qwen3.8-flash ligger bakom 10€-unlåset —
+    free/tier1 klampas till step-3.7-flash, tier2 behåller valet."""
     _register(client)
     _make_campaign("alice")
-    assert "qwen3.8-flash" in main.FREE_PLAYER_MODELS
     assert "qwen3.8-flash" in main.PLAYER_MODELS
-    assert main._clamp_player_model("qwen3.8-flash", tier="free") == "qwen3.8-flash"
-    assert main._clamp_player_model("qwen3.8-flash", tier="tier1") == "qwen3.8-flash"
+    assert "qwen3.8-flash" not in main.FREE_PLAYER_MODELS
+    assert main._clamp_player_model("qwen3.8-flash", tier="free") == "step-3.7-flash"
+    assert main._clamp_player_model("qwen3.8-flash", tier="tier1") == "step-3.7-flash"
     assert main._clamp_player_model("qwen3.8-flash", tier="tier2") == "qwen3.8-flash"
     r = _chat(client, model="qwen3.8-flash")
     assert r.status_code == 200, r.text
-    assert llm_mocks["models"] == ["qwen3.8-flash"]
+    assert llm_mocks["models"] == ["step-3.7-flash"]  # free → klampad
     # Registret måste ha provider/nyckel — annars faller anropet i prod
     from models import get_model
     cfg = get_model("qwen3.8-flash")
     assert cfg.api_key_env == "DASHSCOPE_API_KEY" and cfg.api_model == "qwen3.8-flash"
 
 
-def test_step5_preview_is_free_for_everyone(client, llm_mocks):
-    """2026-09-20: step-5-preview (StepFun nya flagships-förhandsvisning) är
-    live för free tier — verifierad mot /step_plan/v1 (200 OK, reasoning +
-    content streamas, JSON-mode fungerar)."""
+def test_step5_preview_is_premium_10e_unlock(client, llm_mocks):
+    """2026-09-27 (ny prissättning): step-5-preview ligger bakom 10€-unlåset —
+    free/tier1 klampas till step-3.7-flash, tier2 behåller valet.
+    (Modellen verifierades live mot /step_plan/v1 2026-09-20.)"""
     _register(client)
     _make_campaign("alice")
-    assert "step-5-preview" in main.FREE_PLAYER_MODELS
     assert "step-5-preview" in main.PLAYER_MODELS
-    assert main._clamp_player_model("step-5-preview", tier="free") == "step-5-preview"
-    assert main._clamp_player_model("step-5-preview", tier="tier1") == "step-5-preview"
+    assert "step-5-preview" not in main.FREE_PLAYER_MODELS
+    assert main._clamp_player_model("step-5-preview", tier="free") == "step-3.7-flash"
+    assert main._clamp_player_model("step-5-preview", tier="tier1") == "step-3.7-flash"
     assert main._clamp_player_model("step-5-preview", tier="tier2") == "step-5-preview"
     r = _chat(client, model="step-5-preview")
     assert r.status_code == 200, r.text
-    assert llm_mocks["models"] == ["step-5-preview"]
+    assert llm_mocks["models"] == ["step-3.7-flash"]  # free → klampad
     # Registret måste ha provider/nyckel — annars faller anropet i prod
     from models import get_model
     cfg = get_model("step-5-preview")
@@ -336,9 +339,9 @@ def test_premium_model_ok(client, llm_mocks):
     _make_campaign("alice")
     _patch_user("alice", features={"all_models": True, "export": True, "wan1080": True},
                 models_until=_in_days(30), subscription_status="tier2", subscription_until=_in_days(30))
-    r = _chat(client, model="qwen3.8-max")
+    r = _chat(client, model="qwen3.8-flash")
     assert r.status_code == 200, r.text
-    assert llm_mocks["models"] == ["qwen3.8-max"]  # tier2 behåller valet
+    assert llm_mocks["models"] == ["qwen3.8-flash"]  # tier2 behåller valet
 
 
 def test_tier1_model_clamped(client, llm_mocks):
@@ -346,10 +349,10 @@ def test_tier1_model_clamped(client, llm_mocks):
     _register(client)
     _make_campaign("alice")
     _patch_user("alice", features={"export": True}, subscription_status="free")
-    r = _chat(client, model="qwen3.8-max")
+    r = _chat(client, model="qwen3.8-flash")
     assert r.status_code == 200, r.text
     assert llm_mocks["models"] == ["step-3.7-flash"]
-    assert main._clamp_player_model("qwen3.8-max", tier="tier1") == "step-3.7-flash"
+    assert main._clamp_player_model("qwen3.8-flash", tier="tier1") == "step-3.7-flash"
 
 
 def test_turn_cap_zero_is_unlimited(client):
@@ -395,7 +398,7 @@ def test_patron_models_expire(client):
     assert main._tier_for("alice") != "tier2"
     # 2026-08-05 v2: export-förmånen går ut med 30-dagarsfönstret → free
     assert main._tier_for("alice") == "free"
-    assert main._clamp_player_model("qwen3.8-max", tier=main._tier_for("alice")) == "step-3.7-flash"
+    assert main._clamp_player_model("qwen3.8-flash", tier=main._tier_for("alice")) == "step-3.7-flash"
     # Köpta turns behålls efter att förmånerna löpt ut
     info = main._user_free_info("alice")
     assert info["turn_bonus"] >= 0
@@ -419,7 +422,9 @@ def test_legacy_account_backfilled(client):
     main.save_users({
         "old_timer": {"password_hash": hash_password("secret123"), "role": "player", "turn_cap": 50},
     })
-    assert main._turns_available("old_timer") == main.DEFAULT_TURN_CAP
+    # Befintlig turn_cap=50 (pre-2026-09-27-konto) hedras som den är —
+    # backfill fyller bara SAKNADE FAS A-fält, skriver aldrig över capen.
+    assert main._turns_available("old_timer") == 50
     u = _user("old_timer")
     assert u["turns_used"] == 0
     assert u["promo_bonus"] == 0  # ingen migrerad startbonus

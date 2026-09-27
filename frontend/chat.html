@@ -1400,11 +1400,11 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
         <div class="drop-sep"></div>
         <div class="drop-head">Settings</div>
         <div class="model-picker-card">
-          <div class="mpc-title">🧠 Models <span id="model-picker-lock" style="display:none;color:var(--gold);font-size:.68rem">🔒 Patron</span></div>
+          <div class="mpc-title">🧠 Models <span id="model-picker-lock" style="display:none;color:var(--gold);font-size:.68rem">🔒 10€ unlock</span></div>
           <label class="mpc-label" for="settings-dm-model" title="The voice that narrates your adventure — pick the storyteller">Dungeon Master</label>
           <select id="settings-dm-model" onchange="settingsChangeModel(this.value)"></select>
           <div class="mpc-hint" id="settings-guardian-hint"></div>
-          <div class="mpc-hint" id="model-picker-premium-hint" style="display:none;color:var(--gold)">🔒 Premium models locked — one-time Patron unlocks all DMs for 30 days.</div>
+          <div class="mpc-hint" id="model-picker-premium-hint" style="display:none;color:var(--gold)">🔒 Premium models locked — the one-time 10€ unlock opens every Dungeon Master, voice narration and image engine forever.</div>
           <!-- Progressiv avslöjning (2026-09-24, canon-mönstret från adventure-onboarding):
                DM-valet är spelarens #1-inställning och står synligt; Lorekeeper +
                Extraction är finjustering → ihopfällda <details> med sensible-defaults-
@@ -1891,6 +1891,28 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
   </div>
 </div>
 
+<!-- 🔓 Unlock-modal (2026-09-27, ny prissättning): visas när free tier klickar på TTS, bild, röst eller låst DM -->
+<div class="fb-modal" id="unlock-modal" role="dialog" aria-modal="true" aria-labelledby="unlock-title">
+  <div class="fb-head">
+    <span class="fb-title" id="unlock-title">🔒 Locked feature</span>
+    <button class="fb-close" onclick="closeUnlockModal()" aria-label="Close">✕</button>
+  </div>
+  <div class="fb-body">
+    <p class="fb-sub" id="unlock-msg" style="font-style:normal;line-height:1.6"></p>
+    <ul id="unlock-list" style="margin:.5rem 0 .2rem;padding-left:1.2rem;line-height:1.7;color:var(--bone)">
+      <li><b>+100 turns</b> — never expire, used only after your 30 daily free turns run out</li>
+      <li><b>All Dungeon Masters</b> — Qwen 3.8 Flash, Qwen 3.6 Flash, DeepSeek V4.1 Flash, Step 5 Preview…</li>
+      <li><b>Voice narration</b> — Qwen &amp; StepFun TTS (1 turn per narration)</li>
+      <li><b>Image generation</b> — StepFun, Wan 2.7 Pro, Qwen Image 3 Pro (1 turn per image)</li>
+    </ul>
+    <p class="cap-chip-note" id="unlock-note">One-time 10€. No subscription, no expiry on the unlock or the turns.</p>
+  </div>
+  <div class="fb-foot">
+    <button class="fb-btn fb-cancel" onclick="closeUnlockModal()">Not now</button>
+    <a class="fb-btn fb-send" id="unlock-cta-btn" href="pricing.html?plan=unlock10" style="display:inline-flex;align-items:center;text-decoration:none">🔓 Unlock — 10€</a>
+  </div>
+</div>
+
 <!-- 🛠️ MASKINRUMMET — flat debug panel (api.js #debug-panel style) -->
 <div class="console" id="console">
   <div class="console-head">
@@ -1937,8 +1959,8 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
 </div>
 
 <script src="sfx.js?v=20260811a"></script>
-<script src="api.js?v=20260806a"></script>
-<script src="i18n.js?v=20260906a"></script>
+<script src="api.js?v=20260927a"></script>
+<script src="i18n.js?v=20260927a"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -2073,9 +2095,13 @@ const roleReady = API.me().then(u => {
       if (b) b.style.display = '';
     }
   } else {
-    // Icke-admin: välj bland de 4 spelarmodellerna (samma som backend PLAYER_MODELS)
-    // — OpenRouter free-modeller (orfree:*) är undantagna, de är gratis för alla.
-    if (!PLAYER_MODEL_IDS.includes(currentModel) && !String(currentModel).startsWith('orfree:')) {
+    // Icke-admin (2026-09-27, ny prissättning): free/tier1 = StepFun 3.7/3.5
+    // ENDAST (även sparade orfree:-val clampas av backend → återställ lokalt).
+    // Upplåsta konton (tier2/lifetime): alla PLAYER_MODEL_IDS + orfree:.
+    const unlocked = ['tier2', 'lifetime', 'premium'].includes(u.subscription_status);
+    const allowed = unlocked ? PLAYER_MODEL_IDS : FREE_MODEL_IDS;
+    const cm = String(currentModel);
+    if (!allowed.includes(cm) && !(unlocked && cm.startsWith('orfree:'))) {
       currentModel = 'step-3.7-flash';
       localStorage.setItem('dnd_model', currentModel);
     }
@@ -2356,6 +2382,32 @@ function openCapModal(info) {
 function closeCapModal() {
   const backdrop = document.getElementById('cap-backdrop');
   const modal = document.getElementById('cap-modal');
+  if (backdrop) backdrop.style.display = 'none';
+  if (modal) modal.classList.remove('open');
+}
+
+// ── 🔓 Unlock-modal (2026-09-27, ny prissättning) ──
+// Öppnas när free tier klickar på en låst funktion: TTS, bildgenerering,
+// röstinmatning eller en låst DM-modell. Delar .fb-modal-klassen med
+// cap-modalen; egen backdrop så modals inte krockar.
+const UNLOCK_MSGS = {
+  tts: 'Voice narration is part of the 10€ unlock. Each narration costs 1 turn.',
+  image: 'Image generation is part of the 10€ unlock. Each image costs 1 turn.',
+  voice: 'Speaking to your DM is part of the 10€ unlock (voice in, voice out).',
+  model: 'This Dungeon Master is part of the 10€ unlock — every model, voice and image engine.',
+};
+function openUnlockModal(kind) {
+  const msg = document.getElementById('unlock-msg');
+  if (msg) msg.textContent = UNLOCK_MSGS[kind] || UNLOCK_MSGS.model;
+  const backdrop = document.getElementById('cap-backdrop');
+  const modal = document.getElementById('unlock-modal');
+  if (backdrop) backdrop.style.display = '';
+  if (modal) modal.classList.add('open');
+  try { SFX.error(); } catch (_) {}
+}
+function closeUnlockModal() {
+  const backdrop = document.getElementById('cap-backdrop');
+  const modal = document.getElementById('unlock-modal');
   if (backdrop) backdrop.style.display = 'none';
   if (modal) modal.classList.remove('open');
 }
@@ -2663,8 +2715,8 @@ function pickAvatar(kind) {
     : 'The Adventurer';
   title.textContent = '🎨 Avatar — ' + label;
   desc.textContent = kind === 'player'
-    ? 'Generate a new avatar from your character sheet — items, traits and lore included. StepFun image generation is free — Wan 2.7 Pro / Qwen Image 3 Pro need Patron. Or upload your own image.'
-    : 'Generate a new avatar of ' + (kind === 'dm' ? 'the Dungeon Master' : 'this NPC') + '. StepFun image generation is free — Wan 2.7 Pro / Qwen Image 3 Pro need Patron. Or upload your own image.';
+    ? 'Generate a new avatar from your character sheet — items, traits and lore included. Image generation is part of the 10€ unlock — each image costs 1 turn. Or upload your own image.'
+    : 'Generate a new avatar of ' + (kind === 'dm' ? 'the Dungeon Master' : 'this NPC') + '. Image generation is part of the 10€ unlock — each image costs 1 turn. Or upload your own image.';
   preview.innerHTML = AVATARS[kind]
     ? `<img src="${AVATARS[kind]}" alt="" style="width:100%;height:100%;object-fit:cover">`
     : SPR.html('🎭');
@@ -2709,7 +2761,7 @@ function openProfileAvatarModal() {
   const provRow = document.getElementById('avatar-provider-row');
   const promptInp = document.getElementById('avatar-prompt-input');
   title.textContent = '🎨 Your profile portrait';
-  desc.textContent = 'Generate YOUR profile portrait — the face at your table, separate from your adventurer. Pick an engine below: StepFun (free) or Wan 2.7 Pro / Qwen Image 3 Pro (Patron 30€).';
+  desc.textContent = 'Generate YOUR profile portrait — the face at your table, separate from your adventurer. Pick an engine below: StepFun, Wan 2.7 Pro or Qwen Image 3 Pro — all part of the 10€ unlock, each image costs 1 turn.';
   const url = _hasAccountAvatar ? API.accountAvatarUrl() + '?t=' + Date.now() : null;
   preview.innerHTML = url
     ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover">`
@@ -2861,40 +2913,28 @@ function avatarProvider() {
 // TIERS: bildgenerering är gated (2026-08-15). StepFun = gratis för alla;
 // Wan / Qwen Image 3 Pro = Patron (30€). Returnerar false + informerar.
 function avatarGenGate(provider) {
-  if ((provider === 'wan' || provider === 'qwen') && !_tierHasModels()) {
-    toast('🔒 Wan 2.7 Pro / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to generate with the premium engines.');
-    try { SFX.error(); } catch (_) {}
+  // 2026-09-27 (ny prissättning): ALL bildgenerering bakom 10€-unlåset.
+  if (!_tierHasModels()) {
+    openUnlockModal('image');
     return false;
   }
   return true;
 }
 function avatarProviderChanged(sel) {
-  if ((sel && (sel.value === 'wan' || sel.value === 'qwen')) && !_tierHasModels()) {
-    sel.value = 'stepfun';
-    toast('🔒 Wan 2.7 Pro / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to generate with the premium engines.');
-    try { SFX.error(); } catch (_) {}
-  }
+  // Alla motorer kräver samma unlås — ingen provider-nedgradering behövs.
 }
 function updateAvatarProviderLock() {
   const sel = document.getElementById('avatar-provider-select');
   if (!sel) return;
-  const wanOpt = sel.querySelector('option[value="wan"]');
-  const qwenOpt = sel.querySelector('option[value="qwen"]');
-  const stepOpt = sel.querySelector('option[value="stepfun"]');
-  const wanUnlocked = _tierHasModels();   // Patron (30€)
-  if (stepOpt) {
-    stepOpt.disabled = false;
-    stepOpt.textContent = 'StepFun — Free';
-  }
-  if (wanOpt) {
-    wanOpt.disabled = !wanUnlocked;
-    wanOpt.textContent = wanUnlocked ? 'Wan 2.7 Pro — Patron' : 'Wan 2.7 Pro — Patron 🔒';
-  }
-  if (qwenOpt) {
-    qwenOpt.disabled = !wanUnlocked;
-    qwenOpt.textContent = wanUnlocked ? 'Qwen Image 3 Pro — Patron' : 'Qwen Image 3 Pro — Patron 🔒';
-  }
-  if ((sel.value === 'wan' || sel.value === 'qwen') && !wanUnlocked) sel.value = 'stepfun';
+  // 2026-09-27 (ny prissättning): alla bildmotorer bakom 10€-unlåset.
+  const unlocked = _tierHasModels();
+  ['wan', 'qwen', 'stepfun'].forEach(key => {
+    const opt = sel.querySelector(`option[value="${key}"]`);
+    if (!opt) return;
+    const name = key === 'wan' ? 'Wan 2.7 Pro' : key === 'qwen' ? 'Qwen Image 3 Pro' : 'StepFun';
+    opt.disabled = !unlocked;
+    opt.textContent = unlocked ? name : name + ' — 🔒 10€ unlock';
+  });
 }
 
 // Generera AI-avatar (prompt byggs i backend från karaktär/NPC-data)
@@ -3803,9 +3843,10 @@ function _tier() {
   if (s === 'premium') return 'tier2';
   return s;
 }
-function _tierHasModels() { const t = _tier(); return t === 'tier2' || t === 'lifetime'; }
-// StepFun-målning + StepFun TTS är GRATIS sedan 2026-08-15 → alltid tillåtet.
-function _tierHasAvatars() { return true; }
+function _tierHasModels() { const t = _tier(); return t === 'tier2' || t === 'lifetime' || isAdmin; }
+// 2026-09-27 (ny prissättning): ALL bildgenerering (även StepFun) ligger bakom
+// 10€-unlåset — samma gate som modellerna.
+function _tierHasAvatars() { return _tierHasModels(); }
 
 // Tier-badge för profilkortet: free (dim) / tier1 (Support) / tier2 (Patron) / lifetime (lila).
 function tierBadge(s) {
@@ -3813,7 +3854,7 @@ function tierBadge(s) {
   const map = {
     'free': '<span style="color:var(--bone-dim)">free</span>',
     'tier1': '<span style="color:var(--bone)">🔹 Support</span>',
-    'tier2': '<span style="color:var(--gold-bright)">⚔ Patron</span>',
+    'tier2': '<span style="color:var(--gold-bright)">🔓 Unlocked</span>',
     'lifetime': '<span style="color:var(--arcane)">💜 Lifetime</span>',
   };
   return map[st] || map['free'];
@@ -3864,13 +3905,10 @@ function ttsProvider() {
   return _safeLS.get(TTS_PROVIDER_KEY) || 'stepfun';
 }
 
-// Tier-gate för TTS-providers (backend klämmer ändå med 403):
-// StepFun = GRATIS sedan 2026-08-15, Qwen = Patron (30€)+.
+// Tier-gate för TTS (2026-09-27, ny prissättning): ALL röst ligger bakom
+// 10€-unlåset — free tier är ren text. Backend klämmer med 403 feature_locked.
 function ttsProviderAllowed(p) {
-  const t = _tier();
-  if (p === 'stepfun') return true;
-  if (p === 'qwen') return t === 'tier2' || t === 'lifetime';
-  return false;
+  return _tierHasModels(); // tier2/lifetime/admin = upplåst
 }
 
 function setTTSProvider(p) {
@@ -3908,13 +3946,14 @@ function renderTTSVoicePopover() {
   const provHost = document.getElementById('tts-pop-provider');
   const voiceHost = document.getElementById('tts-pop-voice');
   if (!provHost || !voiceHost) return;
-  const hasTTS = _tierHasAvatars();   // StepFun TTS = gratis sedan 2026-08-15
-  const hasStyle = _tierHasModels();   // Patron+ → Qwen
+  // 2026-09-27 (ny prissättning): ALL TTS bakom 10€-unlåset.
+  const hasTTS = _tierHasModels();
+  const hasStyle = hasTTS;   // Qwen följer samma unlås
   const curP = ttsProvider();
   const curV = ttsVoice();
   const provOpts = [
-    { key: 'stepfun', name: 'StepFun', allowed: hasTTS, lock: '' },
-    { key: 'qwen', name: 'Qwen', allowed: hasStyle, lock: '🔒 Patron 30€' },
+    { key: 'stepfun', name: 'StepFun', allowed: hasTTS, lock: '🔒 10€ unlock' },
+    { key: 'qwen', name: 'Qwen', allowed: hasStyle, lock: '🔒 10€ unlock' },
   ];
   provHost.innerHTML = provOpts.map(o => {
     const sel = o.key === curP ? ' sel' : '';
@@ -4046,6 +4085,8 @@ function dmReplyToTTS(text) {
 function maybeAutoplayTTS(dmEl, text) {
   if (!ttsAutoplayEnabled()) return;
   if (!dmEl) return;
+  // Free tier (2026-09-27): TTS låst → ingen autoplay, ingen popup (tyst hopp).
+  if (!ttsProviderAllowed(ttsProvider())) return;
   const btn = dmEl.querySelector('.tts-btn');
   if (!btn) return;
   if (btn.dataset.autoPlayed) return; // samma meddelande autoplayas aldrig två gånger
@@ -4117,11 +4158,10 @@ async function playTTS(btn, explicitText) {
   }
   if (!text) return;
 
-  // Tier-guard: TTS är låst för free (StepFun = gratis sedan 2026-08-15, Qwen = Patron 30€+).
+  // Tier-guard (2026-09-27): ALL TTS ligger bakom 10€-unlåset — free tier = ren text.
   const provider = ttsProvider();
   if (!ttsProviderAllowed(provider)) {
-    toast('🔒 Qwen TTS is a Patron feature (30€) — upgrade to unlock the premium narrators.');
-    try { SFX.error(); } catch (_) {}
+    openUnlockModal('tts');
     return;
   }
 
@@ -4159,6 +4199,11 @@ async function playTTS(btn, explicitText) {
     // robotrösten (SpeechSynthesis) ska ALDRIG ersätta riktiga TTS-röster.
     ttsStop(btn);
     const msg = (e && e.message) || 'TTS error';
+    // Backend 403 feature_locked (2026-09-27) → unlock-popup i stället för toast.
+    if (e && e.status === 403 && /feature_locked|unlock/i.test(msg)) {
+      openUnlockModal('tts');
+      return;
+    }
     toast('⚠ ' + msg);
   }
 }
@@ -5272,9 +5317,10 @@ const AWAKENING_TRIGGER = '__VAKNA_DM__';
 // Här vaknar DM bara automatiskt med de sparade modellerna. In-game-bytet sker
 // via settings-menyn (⚙️ → Modeller).
 // Spelarmodeller (icke-admin): samma lista som backend PLAYER_MODELS
-const PLAYER_MODEL_IDS = ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4.1-flash', 'step-5-preview', 'step-3.7-flash', 'step-3.5-flash-2603'];
-// Free-tier-modeller (speglar backend FREE_PLAYER_MODELS) — allt annat låses 🔒.
-const FREE_MODEL_IDS = ['qwen3.8-flash', 'step-5-preview', 'step-3.7-flash', 'step-3.5-flash-2603'];
+const PLAYER_MODEL_IDS = ['qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4.1-flash', 'step-5-preview', 'step-3.7-flash', 'step-3.5-flash-2603'];
+// Free-tier-modeller (speglar backend FREE_PLAYER_MODELS, 2026-09-27 ny
+// prissättning: StepFun 3.7 + 3.5 flash ENDAST) — allt annat låses 🔒.
+const FREE_MODEL_IDS = ['step-3.7-flash', 'step-3.5-flash-2603'];
 
 function autoAwakenDM() {
   roleReady.then(() => {
@@ -5761,6 +5807,11 @@ async function toggleMic() {
   const btn = document.getElementById('mic-btn');
   if (micRecording) {
     stopMic();
+    return;
+  }
+  // 2026-09-27 (ny prissättning): röstinmatning är en del av 10€-unlåset.
+  if (!_tierHasModels()) {
+    openUnlockModal('voice');
     return;
   }
   if (!micSupported()) {
@@ -8492,10 +8543,8 @@ const modelNames = {
   'step-5-preview': 'Step 5 Preview',
   'step-3.7-flash': 'Step 3.7 Flash',
   'step-3.5-flash-2603': 'Step 3.5 Flash 2603',
-  'qwen3.8-max': 'Qwen 3.8 Max',
   'qwen3.8-flash': 'Qwen 3.8 Flash',
   'qwen3.6-flash': 'Qwen 3.6 Flash (snabb)',
-  'qwen3.7-plus': 'Qwen 3.7 Plus',
   'deepseek-v4.1-flash': 'DeepSeek V4.1 Flash',
 };
 function switchModel(model) {
@@ -8519,7 +8568,12 @@ function initSettingsModelPickers() {
   const lockEl = document.getElementById('model-picker-lock');
   const hintEl = document.getElementById('model-picker-premium-hint');
   if (lockEl) lockEl.style.display = isFree ? '' : 'none';
-  if (hintEl) hintEl.style.display = isFree ? '' : 'none';
+  if (hintEl) {
+    hintEl.style.display = isFree ? '' : 'none';
+    // Klick på låshinten → unlock-modal (2026-09-27).
+    hintEl.style.cursor = isFree ? 'pointer' : '';
+    hintEl.onclick = isFree ? (() => openUnlockModal('model')) : null;
+  }
 
   const modelOption = (m, selected) => {
     const locked = lockedIds.includes(m);
@@ -8552,8 +8606,10 @@ function initSettingsModelPickers() {
   const em = (campaignData && campaignData._raw && campaignData._raw.meta && campaignData._raw.meta.extraction_model) || 'step-3.7-flash';
   if (eSel) eSel.innerHTML = allowed.map(m => modelOption(m, m === em)).join('');
 
-  // 🆓 OpenRouter free-modeller (orfree:*) — samma lista som DM-gaten, som en
-  // optgroup i alla tre väljarna. Gratis för ALLA tiers (delad community-nyckel).
+  // 🆓 OpenRouter free-modeller (orfree:*) — 2026-09-27 (ny prissättning):
+  // LIGGER OCKSÅ bakom 10€-unlåset för free/tier1 (backend clamp-ar). Visas
+  // i pickern endast för upplåsta konton.
+  if (isFree) return;
   API.freeOpenRouter().then(list => {
     if (!list || !list.length) return;
     const og = `<optgroup class="orfree-og" label="🆓 OpenRouter free">${list.map(m => `<option value="${m.id}">${m.display}</option>`).join('')}</optgroup>`;
@@ -8640,13 +8696,13 @@ function toast(msg, ms = 2600) {
 }
 
 // ── Release-toast: en gång per version (localStorage) ──
-const RELEASE_TOAST_VERSION = 'v1.3-20260921';
+const RELEASE_TOAST_VERSION = 'v1.4-20260927';
 function maybeShowReleaseToast() {
   try {
     if (localStorage.getItem('dnd_release_toast') === RELEASE_TOAST_VERSION) return;
     localStorage.setItem('dnd_release_toast', RELEASE_TOAST_VERSION);
   } catch (_) { /* private mode — visa ändå */ }
-  setTimeout(() => toast('✦ DeepSeek V4.1 Flash joins the Patron path — and Step 5 Preview + Qwen 3.8 Flash stay free for every account.', 9000), 1400);
+  setTimeout(() => toast('✦ New pricing — the free table refreshes 30 turns a day; the one-time 10€ unlock adds +100 turns and opens every Dungeon Master, voice and image engine.', 9000), 1400);
 }
 
 // ═══════════════════════════════════════
@@ -9098,13 +9154,12 @@ document.addEventListener('keydown', e => {
       facts, the journal and summaries. You can switch the DM and Lorekeeper in
       Settings ⚙️ (the DM choice also appears when you start a new adventure).
     </div>
-    <div class="mi-row"><div class="mi-id">qwen3.8-max</div><div class="mi-desc">The flagship. Deep reasoning, rich narration, fewest mistakes — but it thinks long and hard before every reply.<span class="mi-speed">⏱ slowest · best quality · thinks a lot</span></div></div>
-    <div class="mi-row"><div class="mi-id">qwen3.8-flash</div><div class="mi-desc">The new free pick. Fast narration with solid reasoning — free for every account.<span class="mi-speed">⏱ fast · free tier · light thinking</span></div></div>
+    <div class="mi-row"><div class="mi-id">qwen3.8-flash</div><div class="mi-desc">The quick premium pick. Fast narration with solid reasoning — part of the 10€ unlock.<span class="mi-speed">⏱ fast · unlock · light thinking</span></div></div>
     <div class="mi-row"><div class="mi-id">qwen3.6-flash</div><div class="mi-desc">The balanced storyteller. Visible reasoning, solid quality, noticeably faster.<span class="mi-speed">⏱ medium · good quality · thinks</span></div></div>
     <div class="mi-row"><div class="mi-id">deepseek-v4.1-flash</div><div class="mi-desc">The quick thinker. DeepSeek's newest open-weight reasoning model — economical replies with real depth.<span class="mi-speed">⏱ fast · economical · reasons first</span></div></div>
-    <div class="mi-row"><div class="mi-id">step-5-preview</div><div class="mi-desc">StepFun's new flagship — free for every account. Thinks deeply before every reply, so expect a longer pause.<span class="mi-speed">⏱ slow · free · deep thinking</span></div></div>
-    <div class="mi-row"><div class="mi-id">step-3.7-flash</div><div class="mi-desc">The steadfast default. Snappy narration; occasionally needs a retry on complex character generation.<span class="mi-speed">⏱ fast · light thinking</span></div></div>
-    <div class="mi-row"><div class="mi-id">step-3.5-flash-2603</div><div class="mi-desc">The open one. StepFun's open-weight flash model — a fast alternative with the same steady cadence.<span class="mi-speed">⏱ fast · open weights</span></div></div>
+    <div class="mi-row"><div class="mi-id">step-5-preview</div><div class="mi-desc">StepFun's flagship — thinks deeply before every reply, so expect a longer pause. Part of the 10€ unlock.<span class="mi-speed">⏱ slow · unlock · deep thinking</span></div></div>
+    <div class="mi-row"><div class="mi-id">step-3.7-flash</div><div class="mi-desc">The steadfast default. Snappy narration, free for every account; occasionally needs a retry on complex character generation.<span class="mi-speed">⏱ fast · free tier · light thinking</span></div></div>
+    <div class="mi-row"><div class="mi-id">step-3.5-flash-2603</div><div class="mi-desc">The open one. StepFun's open-weight flash model — a fast free alternative with the same steady cadence.<span class="mi-speed">⏱ fast · free tier · open weights</span></div></div>
     <div class="mi-callout">
       <p><b>Why does a "high reasoning" model take longer?</b> Before answering, the model
       works through the scene — the campaign state, your choices, the rules — and you can
@@ -9249,9 +9304,9 @@ document.addEventListener('keydown', e => {
     <div id="avatar-provider-row" style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
       <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
       <select id="avatar-provider-select" class="tts-select" style="flex:1;min-width:0" onchange="avatarProviderChanged(this)" title="Image provider for image generation">
-        <option value="stepfun" selected>StepFun — Free</option>
-        <option value="wan">Wan 2.7 Pro — Patron 🔒</option>
-        <option value="qwen">Qwen Image 3 Pro — Patron 🔒</option>
+        <option value="stepfun" selected>StepFun</option>
+        <option value="wan">Wan 2.7 Pro</option>
+        <option value="qwen">Qwen Image 3 Pro</option>
       </select>
     </div>
     <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">

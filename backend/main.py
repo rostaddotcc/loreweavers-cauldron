@@ -1175,7 +1175,8 @@ _COOKIE_SECURE = os.getenv("COOKIE_SECURE", "0").lower() in ("1", "true", "yes")
 _USER_LOCK = threading.Lock()
 
 # Default turn-tak för NYA konton (0 = oändligt). Admin höjer via admin-vyn.
-DEFAULT_TURN_CAP = 50
+# 2026-09-27 (ny prissättning): free tier = 30 turns/dag (var 50).
+DEFAULT_TURN_CAP = 30
 # Patron (one-time, 2026-08-07): daglig cap höjs till 100 (istället för +500
 # permanenta turns). Gäller i 30 dagar från köpet (cap_until), sedan tillbaka
 # till DEFAULT_TURN_CAP (lazy-återställning i _turn_cap_for / _maybe_rollover).
@@ -1308,9 +1309,9 @@ def _ensure_user_fields(username: str, udata: dict) -> dict:
 # ═══════════════════════════════════════
 # TIERS — free < tier1(legacy) < tier2 < lifetime
 # ═══════════════════════════════════════
-# free      — 50 turns/dag; step-3.7-flash + step-3.5 +
-#             OpenRouter 🆓 free-modeller (orfree:); StepFun TTS + StepFun
-#             målning + röstinmatning GRATIS (sedan 2026-08-15).
+# free      — 30 turns/dag; step-3.7-flash + step-3.5-flash-2603 ENDAST.
+#             TTS, bildgenerering, röstinmatning och övriga DM:er ligger bakom
+#             10€-unlåset (2026-09-27, ny prissättning).
 # tier1     — 3€ Support: LEGACY (togs bort 2026-08-15). Befintliga köpare
 #             behåller sina förmåner tills features_until löper ut.
 # tier2     — 30€ Patron: 100 turns/dag (cap_until, 30 dagar), allt i Free +
@@ -1619,7 +1620,7 @@ def _consume_turn(username: str, action: str = "turn", model: str | None = None,
                     u["turns_used"] = 0
                     u["reset_ts"] = (now + timedelta(hours=hours)).isoformat()
         # Spenderingsordning (2026-08-05 v3): promo (legacy-kvarvarande) →
-        # daglig cap → köpta turns. Promo förbrukas FÖRE 50/day-cappen;
+        # daglig cap → köpta turns. Promo förbrukas FÖRE day-cappen;
         # köpta turns sparas till sist.
         promo = int(u.get("promo_bonus", 0) or 0)
         if promo > 0:
@@ -1868,9 +1869,10 @@ GUARDIAN_MODEL = os.getenv("GUARDIAN_MODEL", "step-3.7-flash")
 # StepFun 3.7 Flash är default — spelaren måste aktivt välja annan modell.
 DEFAULT_PLAYER_MODEL = "step-3.7-flash"
 # Modeller som icke-admin-spelare får välja mellan
-# (admin ser allt i registret. Borttagna ur spelet 2026-09-21: DeepSeek-egen-API,
-# lokala ollama-modeller och MiMo — registret = de 7 spelar-DM:erna + qwen3.7-plus)
-PLAYER_MODELS = ("qwen3.8-max", "qwen3.8-flash", "qwen3.6-flash", "deepseek-v4.1-flash", "step-5-preview", "step-3.7-flash", "step-3.5-flash-2603")
+# (2026-09-27, ny prissättning: qwen3.8-max + qwen3.7-plus BORT — registret =
+# 4 premium-DM (qwen3.8-flash, qwen3.6-flash, deepseek-v4.1-flash,
+# step-5-preview) + 2 free (step-3.7-flash, step-3.5-flash-2603).)
+PLAYER_MODELS = ("qwen3.8-flash", "qwen3.6-flash", "deepseek-v4.1-flash", "step-5-preview", "step-3.7-flash", "step-3.5-flash-2603")
 
 # Gratisväljaren: free/tier1 får välja mellan StepFun-stegen + Qwen 3.8 Flash
 # (2026-09-09: Qwen 3.8 Flash live för free tier — verifierad mot Token Plan).
@@ -1879,22 +1881,23 @@ PLAYER_MODELS = ("qwen3.8-max", "qwen3.8-flash", "qwen3.6-flash", "deepseek-v4.1
 # (2026-09-20: Step 5 Preview — StepFun nya flagships-förhandsvisning — öppnad
 # för free tier. Verifierad live mot /step_plan/v1 (200 OK, reasoning + content
 # streamas, JSON-mode fungerar). Pris: $1.00 in / $2.70 ut per 1M tokens.)
-FREE_PLAYER_MODELS = ("qwen3.8-flash", "step-5-preview", "step-3.7-flash", "step-3.5-flash-2603")
+# 2026-09-27 (ny prissättning): free tier = StepFun 3.7 + 3.5 flash, inget annat.
+# qwen3.8-flash + step-5-preview flyttade bakom 10€-unlåsningen (tier2+).
+FREE_PLAYER_MODELS = ("step-3.7-flash", "step-3.5-flash-2603")
 
 
 def _clamp_player_model(model_id: str, tier: str | None = None) -> str:
     """Icke-admin: tillåt bara PLAYER_MODELS (eller kända orfree:), annars default.
 
-    🆓 OpenRouter free-modeller (orfree:*) är gratis för ALLA tiers — de är
-    community-modeller på en delad nyckel och låses aldrig.
-    TIERS: free/tier1 → steg inom FREE_PLAYER_MODELS (StepFun 3.7/3.5),
-           default 3.7 men spelaren får välja 3.5.
-    tier2/lifetime (eller tier=None, t.ex. interna anrop) → befintlig logik."""
+    2026-09-27 (ny prissättning): free/tier1 = StepFun 3.7 + 3.5 flash ENDAST —
+    även OpenRouter free-modeller (orfree:) ligger bakom 10€-unlåsningen.
+    tier2/lifetime (eller tier=None, t.ex. interna anrop) → allt i PLAYER_MODELS
+    + orfree:."""
+    if tier in ("free", "tier1"):
+        return model_id if model_id in FREE_PLAYER_MODELS else DEFAULT_PLAYER_MODEL
     if model_id.startswith("orfree:"):
         from or_free import is_known_free
         return model_id if is_known_free(model_id) else DEFAULT_PLAYER_MODEL
-    if tier in ("free", "tier1"):
-        return model_id if model_id in FREE_PLAYER_MODELS else DEFAULT_PLAYER_MODEL
     return model_id if model_id in PLAYER_MODELS else DEFAULT_PLAYER_MODEL
 
 
@@ -2317,8 +2320,8 @@ async def _call_llm(
 
     # Qwen3-modeller: thinking mode PÅ som standard. Ge generöst med
     # utrymme så modellen kan tänka fritt OCH leverera svaret.
-    # qwen3.8-max (full release 2026-08-03) stödjer enable_thinking —
-    # tänker alltid som default, parametern accepteras i båda riktningarna.
+    # qwen3.8-flash/qwen3.6-flash stödjer enable_thinking —
+    # tänker som default, parametern accepteras i båda riktningarna.
     if config.provider == "dashscope" and config.api_model.startswith("qwen3"):
         if thinking == "disabled" or reasoning_effort == "off":
             body["enable_thinking"] = False
@@ -2532,7 +2535,7 @@ async def _stream_llm(
         body["reasoning_effort"] = reasoning_effort
 
     # Qwen3-modeller: thinking mode PÅ som standard. Ge generöst med utrymme.
-    # qwen3.8-max (full release) stödjer enable_thinking i båda riktningarna.
+    # qwen3.8-flash/qwen3.6-flash stödjer enable_thinking i båda riktningarna.
     if config.provider == "dashscope" and config.api_model.startswith("qwen3"):
         if thinking == "disabled" or reasoning_effort == "off":
             body["enable_thinking"] = False
@@ -3724,19 +3727,16 @@ def _parse_tts_error(msg: str):
 async def tts_voices(morkrets_token: str | None = Cookie(None)):
     """Tillgängliga TTS-leverantörer + röster (qwen + stepfun).
 
-    Samma tier-gate som /api/tts (playtest 2026-09): gratis/tier1 ser INTE
-    Qwen-rösterna i pickern — annars krockar valet med 403:et i anropet
-    (eller 'Okänd röst för stepfun' när en qwen-id skickas till stepfun).
-    Admin + Patron (tier2/lifetime) ser allt.
+    2026-09-27 (ny prissättning): ALL TTS ligger bakom 10€-unlåset — båda
+    leverantörerna listas för alla (frontend visar 🔒 10€ unlock för free),
+    och grinden speglar anropet: /api/tts ger 403 feature_locked för free.
+    Ingen hemlig röstlista behövs längre — det finns ingen gratis TTS alls.
     """
-    payload = _get_current_user(morkrets_token)
-    tier = _tier_for(payload["sub"])
-    patron = payload.get("role") == "admin" or tier in ("tier2", "lifetime")
+    _get_current_user(morkrets_token)
     return {
         "providers": [
             {"id": pid, "name": p["name"], "voices": p["voices"]}
             for pid, p in TTS_PROVIDERS.items()
-            if pid != "qwen" or patron
         ],
         "default_provider": TTS_DEFAULT_PROVIDER,
     }
@@ -3746,8 +3746,9 @@ async def tts_voices(morkrets_token: str | None = Cookie(None)):
 async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
     """Generera tal från text via vald TTS-leverantör (qwen eller stepfun).
 
-    TIERS (2026-08-15): StepFun = GRATIS, Qwen = Patron (30€)+.
-    Free tier får 403 — ingen tyst fallback till billigare röst.
+    TIERS (2026-09-27, ny prissättning): ALL TTS bakom 10€-unlåset.
+    Free/tier1 får 403 feature_locked — ingen tyst fallback. Varje
+    ny syntes drar 1 turn (cache-träff gratis).
     """
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
@@ -3762,14 +3763,15 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
     if provider not in TTS_PROVIDERS:
         raise HTTPException(400, f"Okänd TTS-leverantör: {provider}")
 
-    # ── TIERS (2026-08-15): TTS är tier-gated — INGEN tyst fallback.
-    # StepFun = GRATIS (sedan 2026-08-15): free tier får StepFun-rösterna.
-    # Qwen = Patron (30€): free/tier1 räcker inte — 403 istället för att
-    # smyg-köra stepfun, så free/tier1 aldrig byts till en billigare röst.
-    # Lifetime = allt. (rostad 2026-08-04 → skärpt 2026-08-05 → StepFun fri 2026-08-15)
+    # ── TIERS (2026-09-27, ny prissättning): ALL TTS ligger bakom 10€-unlåset.
+    # Free tier = ren text. Ingen tyst fallback — 403 med feature_locked så
+    # frontend kan visa unlock-popup. Lifetime/admin = allt.
     tier = _tier_for(username)
-    if provider == "qwen" and tier not in ("tier2", "lifetime"):
-        raise HTTPException(403, "Qwen TTS is a Patron feature (30€) — upgrade to unlock the premium narrators.")
+    if payload.get("role") != "admin" and tier not in ("tier2", "lifetime"):
+        raise HTTPException(403, detail={
+            "feature_locked": "tts",
+            "message": "Voice narration is part of the 10€ unlock (+100 turns, all Dungeon Masters, voice & images). Each narration costs 1 turn.",
+        })
     pvoices = TTS_PROVIDERS[provider]["voices"]
 
     # ── Röst: kön ('male'/'female') → första rösten med könet; annars voice-id ──
@@ -7629,7 +7631,7 @@ async def vault_export(morkrets_token: str | None = Cookie(None)):
     if payload.get("role") != "admin" and _tier_for(username) not in ("tier1", "tier2", "lifetime"):
         raise HTTPException(
             403,
-            "Forge export is a Patron feature (30€) — upgrade to export your adventurers.",
+            "Forge export is part of the 10€ unlock — upgrade to export your adventurers.",
         )
     entries = vault.list(username)
     data = {
@@ -9429,7 +9431,7 @@ async def export_campaign(morkrets_token: str | None = Cookie(None)):
     if payload.get("role") != "admin" and _tier_for(username) not in ("tier1", "tier2", "lifetime"):
         raise HTTPException(
             403,
-            "Campaign export is a Patron feature (30€) — upgrade to export your story.",
+            "Campaign export is part of the 10€ unlock — upgrade to export your story.",
         )
 
     state = store.get(username)
@@ -10106,36 +10108,34 @@ def _require_admin(payload: dict):
 
 
 def _require_image_gen_tier(username: str, provider: str, payload: dict | None = None) -> None:
-    """TIERS (2026-08-15): AI-bildgenerering är tier-gated.
-
-    - StepFun = GRATIS (sedan 2026-08-15) — alla tiers får måla med StepFun.
-    - Wan 2.7 = Patron (30€) — dyrare, snyggare premium-leverantör.
-    - Qwen Image 3 Pro = Patron (30€) — ny premium-leverantör (Token Plan).
-    Admin har alltid tillgång. Lifetime = allt.
+    """TIERS (2026-09-27, ny prissättning): ALL AI-bildgenerering ligger bakom
+    10€-unlåset (StepFun, Wan 2.7, Qwen Image 3 Pro). Free tier = ren text.
+    Varje bild kostar 1 turn. Admin har alltid tillgång. Lifetime = allt.
     """
     if payload and payload.get("role") == "admin":
         return
     tier = _tier_for(username)
-    if tier == "lifetime":
+    if tier in ("tier2", "lifetime"):
         return
-    if provider in ("wan", "qwen"):
-        if tier != "tier2":
-            raise HTTPException(
-                403,
-                "Wan 2.7 / Qwen Image 3 Pro image generation is a Patron feature (30€) — upgrade to generate with the premium engines.",
-            )
+    raise HTTPException(
+        403,
+        detail={
+            "feature_locked": "image",
+            "message": "Image generation is part of the 10€ unlock (+100 turns, all Dungeon Masters, voice & images). Each image costs 1 turn.",
+        },
+    )
 
 
 def _require_avatar_tier(payload: dict, username: str):
     """TIERS (2026-08-15): avatar-UPPLADDNING kräver Patron (tier2+).
     Support-tieren togs bort 2026-08-15 — legacy tier1-konton med aktiva
     förmåner passerar tills de löper ut. AI-generering är gated via
-    _require_image_gen_tier (StepFun = gratis, Wan/Qwen Image 3 Pro = Patron).
+    _require_image_gen_tier (2026-09-27: ALL bildgenerering bakom 10€-unlåset).
     Admin har alltid tillgång."""
     if payload.get("role") == "admin":
         return
     if _tier_for(username) == "free":
-        raise HTTPException(403, "Avatar uploads are a Patron feature (30€) — upgrade to add your own images.")
+        raise HTTPException(403, "Avatar uploads are part of the 10€ unlock — upgrade to add your own images.")
 
 
 # ═══════════════════════════════════════
@@ -10147,9 +10147,10 @@ def _require_avatar_tier(payload: dict, username: str):
 PREMIUM_PRICE_SEK = 49  # legacy (fas D) — ersatt av TIER_PRICES_SEK
 
 # TIERS: priser i SEK (EUR → SEK ≈ 11.7; avrundat för admin-översikt).
-# support300 = 3€ LEGACY (stängt 2026-08-15) · patron500 = 30€ engång (100 turns/dag i 30d) · lifetime = 100€ engång.
+# unlock10 = 10€ engång (+100 turns + ALLT upplåst permanent, 2026-09-27).
+# support300 = 3€ LEGACY (stängt 2026-08-15) · patron500 = 30€ LEGACY (pensionerad 2026-09-27) · lifetime = 100€ engång.
 # tier1/tier2 = legacy-prenumeranter (MRR-bas tills de löper ut).
-TIER_PRICES_SEK = {"support300": 35, "patron500": 351, "lifetime": 1170,
+TIER_PRICES_SEK = {"support300": 35, "patron500": 351, "unlock10": 117, "lifetime": 1170,
                    "tier1": 35, "tier2": 105}  # legacy: 3€/9€ ≈ 35/105 kr
 
 _LEDGER_FILE = Path(__file__).resolve().parent / "data" / "_billing_ledger.json"
@@ -10327,7 +10328,37 @@ def _ledger_totals() -> dict:
         # Churn-rader (uppsägningar) är INTE transaktioner — räkna allt utom dem
         "transactions": sum(1 for r in ledger if (r.get("type") or "") != "stripe:churn"),
         "total": sum(int(r.get("amount_sek") or 0) for r in ledger),
+        # Månadens intäkt (lokal kalendermånad, Europe/Stockholm) — rostads
+        # dashboard-siffra (2026-09-27): betalningen idag ska synas direkt,
+        # MRR är 0 i one-time-modellen.
+        "month_revenue": _ledger_month_revenue(ledger),
+        "month_key": _month_key_now(),
     }
+
+
+def _month_key_now() -> str:
+    """Aktuell lokal månad (Europe/Stockholm) som YYYY-MM."""
+    return datetime.now(_LOCAL_TZ).strftime("%Y-%m")
+
+
+def _ledger_month_revenue(ledger: list, month_key: str | None = None) -> int:
+    """Summa amount_sek för ledger-rader inom en kalendermånad (lokal tid).
+
+    Churn-rader (amount 0) påverkar inte summan. month_key = YYYY-MM,
+    default = innevarande månad."""
+    mk = month_key or _month_key_now()
+    total = 0
+    for r in ledger:
+        ts = r.get("ts") or ""
+        try:
+            dt = datetime.fromisoformat(str(ts))
+        except (ValueError, TypeError):
+            continue
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        if dt.astimezone(_LOCAL_TZ).strftime("%Y-%m") == mk:
+            total += int(r.get("amount_sek") or 0)
+    return total
 
 
 def _provider_for_model(model_name: str) -> str:
@@ -10832,6 +10863,7 @@ STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 STRIPE_PRICES = {
     "support300": os.getenv("STRIPE_PRICE_SUPPORT300", ""),
     "patron500": os.getenv("STRIPE_PRICE_PATRON500", ""),
+    "unlock10": os.getenv("STRIPE_PRICE_UNLOCK10", ""),
     "donation": os.getenv("STRIPE_PRICE_DONATION", ""),
     "lifetime": os.getenv("STRIPE_PRICE_LIFETIME", ""),  # legacy — behålls
 }
@@ -10884,21 +10916,24 @@ def _stripe_verify_signature(payload: bytes, header: str) -> bool:
 async def billing_checkout(req: BillingCheckoutRequest, morkrets_token: str | None = Cookie(None)):
     """Skapa Stripe Checkout Session (hosted) — one-time purchases.
 
-    patron500 (30€) / donation (valfri summa) / lifetime (legacy).
-    support300 (3€) togs BORT 2026-08-15 — nya köp blockeras (gamla
-    köp/webhooks hedras fortfarande).
+    unlock10 (10€) / donation (valfri summa) / lifetime (legacy).
+    support300 (3€) togs BORT 2026-08-15 och patron500 (30€) pensionerades
+    2026-09-27 (ny prissättning) — nya köp blockeras (gamla köp/webhooks
+    hedras fortfarande tills fönstren löper ut).
     Åtkomst ges ALDRIG här — bara via webhook (checkout.session.completed).
     """
     payload = _get_current_user(morkrets_token)
     username = payload.get("sub")
     tier = (req.tier or "").strip().lower()
     if tier == "support300":
-        raise HTTPException(400, "The 3€ Support pack has been retired — the Patron path now carries every benefit.")
+        raise HTTPException(400, "The 3€ Support pack has been retired — see the 10€ Unlock for every feature.")
+    if tier == "patron500":
+        raise HTTPException(400, "The 30€ Patron pack has been retired (2026-09-27) — the 10€ Unlock now carries every feature.")
     if tier == "donation":
         # Valfri summa — använder custom amount, inget Stripe Price-ID behövs
         pass
     elif tier not in STRIPE_PRICES or not STRIPE_PRICES[tier]:
-        raise HTTPException(400, "Tier must be patron500, donation or lifetime")
+        raise HTTPException(400, "Tier must be unlock10, donation or lifetime")
     if not STRIPE_SECRET_KEY:
         raise HTTPException(503, "Payments are not configured yet")
     # ── E-post krävs innan köp (rostad 2026-08-04): kontot måste ha en
@@ -11052,6 +11087,22 @@ async def stripe_webhook(request: Request):
                 u["features_until"] = cap_until
                 u.pop("models_until", None)
                 u["subscription_status"] = "tier2"
+            elif tier == "unlock10":
+                # 10€ (2026-09-27, ny prissättning): +100 turns (permanenta,
+                # turn_bonus) + ALLT upplåst PERMANENT: alla DM-modeller,
+                # Qwen+StepFun TTS, StepFun/Wan/Qwen bildgenerering, export,
+                # avatar-uppladdning. Varje TTS/bild drar 1 turn ur potten.
+                # Ingen tidsfönster-mekanik — features sätts utan utgångsdatum
+                # (features_until rensas så _benefits_active = permanent True).
+                u["turn_bonus"] = int(u.get("turn_bonus", 0) or 0) + 100
+                features["export"] = True
+                features["wan1080"] = True
+                features["all_models"] = True
+                features["unlock10"] = True
+                u["features"] = features
+                u["features_until"] = None  # permanent
+                u.pop("models_until", None)
+                logger.info("💳 Unlock 10€: +100 turns + permanent features for %s", username)
             elif tier == "donation":
                 # Valfri summa — ren support, ingen feature-window, men varje
                 # € ger +100 turns. amount_total är i ören (ören/100 EUR × 100
@@ -11465,6 +11516,8 @@ async def admin_billing(morkrets_token: str | None = Cookie(None)):
         "mrr": totals["mrr"],
         "transactions": totals["transactions"],
         "total": totals["total"],
+        "month_revenue": totals.get("month_revenue", 0),
+        "month_key": totals.get("month_key", ""),
         "per_user": per_user,
         "ledger": ledger,
         # Churn-datapoint (rostad 2026-08-04): uppsägningar per dag
@@ -11589,7 +11642,7 @@ async def admin_set_subscription(username: str, req: AdminSubscription, morkrets
         if status == "lifetime":
             udata["turn_cap"] = 0
         elif status in ("tier1", "tier2"):
-            # one-time-modellen (2026-08-05): alla får 50 turns/dag (24h) —
+            # one-time-modellen: alla free får DEFAULT_TURN_CAP turns/dag (24h) —
             # ingen 6-timmars-rollover längre. reset_ts tas bort om den finns.
             udata["turn_cap"] = DEFAULT_TURN_CAP
             udata.pop("reset_ts", None)
@@ -11876,14 +11929,14 @@ async def seo_llms_txt():
         "\n"
         "> The best free AI D&D roleplaying game: an AI Dungeon Master that runs real D&D 5e "
         "rules in a persistent, text-based world — and remembers it. Play free in your browser "
-        "in English or Swedish — no email, no card, no subscription. 50 fresh turns every day: "
+        "in English or Swedish — no email, no card, no subscription. 30 fresh turns every day: "
         "more daily free turns than any other AI Dungeon Master. "
         "The DM narrates, the Lorekeeper engine tracks initiative, action economy, HP, XP, "
         "quests and NPCs. AI-generated portraits for your adventurer and every NPC, optional "
         "TTS narrator, transparent token usage.\n"
         "\n"
         "## Key pages\n"
-        "- [Play now](https://dnd.rostad.cc/): free account, 50 fresh turns every day\n"
+        "- [Play now](https://dnd.rostad.cc/): free account, 30 fresh turns every day\n"
         "- [How to play & mechanics](https://dnd.rostad.cc/mechanics.html): D&D 5e rules engine, dice ceremony, LLM harness\n"
         "- [Help](https://dnd.rostad.cc/help.html)\n"
         "- [Pricing](https://dnd.rostad.cc/pricing.html): free forever, one-time Patron top-up (30€), donations add turns\n"

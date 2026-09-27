@@ -541,7 +541,7 @@ html{font-size:var(--fs-base)}
     </div>
     <div class="rr-actions">
         <button class="rr-btn" id="gear-sound-ico" onclick="toggleGearSound(this)" title="Sound on/off" aria-label="Sound on/off">🎵</button>
-        <button class="rr-btn text-btn" id="quota-benefits" style="display:none" onclick="location.href='pricing.html'" title="Patron benefits expire in" aria-label="Patron benefits expire in">👑 0d</button>
+        <button class="rr-btn text-btn" id="quota-benefits" style="display:none" onclick="location.href='pricing.html'" title="Unlocked benefits" aria-label="Unlocked benefits">👑 0d</button>
         <button class="rr-btn text-btn" id="adv-back-btn" style="display:none" onclick="location.href='chat.html'" title="Back to the table" aria-label="Back to the table">⚔ Back</button>
       <div class="rr-menu">
         <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
@@ -682,6 +682,28 @@ html{font-size:var(--fs-base)}
     </div>
   </div>
 
+  <!-- ═══════════════ 🔓 Unlock-modal (2026-09-27, ny prissättning) ═══════════════ -->
+  <div class="mi-overlay" id="adv-unlock-modal" onclick="if(event.target===this)closeAdvUnlockModal()">
+    <div class="mi-modal" style="max-width:420px">
+      <div class="mi-head">
+        <span>🔒 Locked feature</span>
+        <button class="mi-close" onclick="closeAdvUnlockModal()" title="Close">✕</button>
+      </div>
+      <p id="adv-unlock-msg" style="line-height:1.6;margin:.6rem 0"></p>
+      <ul style="margin:.5rem 0 .3rem;padding-left:1.2rem;line-height:1.7;color:var(--bone)">
+        <li><b>+100 turns</b> — never expire, used only after your 30 daily free turns run out</li>
+        <li><b>All Dungeon Masters</b> — Qwen 3.8 Flash, Qwen 3.6 Flash, DeepSeek V4.1 Flash, Step 5 Preview…</li>
+        <li><b>Voice narration</b> — Qwen &amp; StepFun TTS (1 turn per narration)</li>
+        <li><b>Image generation</b> — StepFun, Wan 2.7 Pro, Qwen Image 3 Pro (1 turn per image)</li>
+      </ul>
+      <p style="font-size:.72rem;color:var(--bone-dim);font-style:italic;margin:.3rem 0 .8rem">One-time 10€. No subscription, no expiry on the unlock or the turns.</p>
+      <div style="display:flex;gap:.6rem">
+        <button class="av-btn" onclick="closeAdvUnlockModal()">Not now</button>
+        <a class="av-btn primary" href="pricing.html?plan=unlock10" style="flex:1;text-align:center;text-decoration:none">🔓 Unlock — 10€</a>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══════════════ 🔍 Portrait preview-modal (klicka på porträttet i förhandsvisningen) ═══════════════ -->
   <div class="mi-overlay" id="adv-portrait-overlay" onclick="if(event.target===this)closeAdvPortraitPreview()">
     <div class="mi-modal" style="max-width:440px;text-align:center">
@@ -713,7 +735,7 @@ html{font-size:var(--fs-base)}
              title="Enlarge portrait" style="width:72px;height:72px;border-radius:50%;overflow:hidden;border:2px solid var(--gold);background:var(--stone-3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.6rem;margin:0 auto">🎭</div>
         <div style="font-size:.68rem;color:var(--bone-dim);font-style:italic;margin-top:.4rem">Current portrait — click to enlarge &amp; re-roll</div>
       </div>
-      <div class="mi-intro" id="adv-paint-desc" style="font-size:.82rem;line-height:1.55">Generate the portrait in two ways — <b>🖌️ Free prompt</b> uses ONLY your words, <b>📜 From dossier</b> weaves the portrait from your character's own story. Engine: StepFun (free) or Wan 2.7 Pro / Qwen Image 3 Pro (Patron 30€).</div>
+      <div class="mi-intro" id="adv-paint-desc" style="font-size:.82rem;line-height:1.55">Generate the portrait in two ways — <b>🖌️ Free prompt</b> uses ONLY your words, <b>📜 From dossier</b> weaves the portrait from your character's own story. Image generation is part of the one-time <b>10€ unlock</b> — each image costs 1 turn. Engines: StepFun, Wan 2.7 Pro, Qwen Image 3 Pro.</div>
       <div style="margin-top:.7rem">
         <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">🖌️ YOUR OWN WORDS (free prompt)</div>
         <textarea id="adv-paint-prompt" placeholder="Describe exactly what you want to see — e.g. 'hooded figure, lantern light, rain'. Uses ONLY your words." style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:var(--radius-sm);resize:vertical"></textarea>
@@ -721,9 +743,9 @@ html{font-size:var(--fs-base)}
       <div style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
         <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
         <select id="adv-paint-provider" class="tts-select" style="flex:1;min-width:0;font-size:.8rem;padding:.35rem .5rem;border-radius:var(--radius-sm);background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright)" onchange="advPaintProviderChanged(this)" title="Image provider for image generation">
-          <option value="stepfun">StepFun — Free</option>
-          <option value="wan">Wan 2.7 Pro — Patron 🔒</option>
-          <option value="qwen">Qwen Image 3 Pro — Patron 🔒</option>
+          <option value="stepfun">StepFun</option>
+          <option value="wan">Wan 2.7 Pro</option>
+          <option value="qwen">Qwen Image 3 Pro</option>
         </select>
       </div>
       <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
@@ -742,7 +764,7 @@ html{font-size:var(--fs-base)}
         <button class="mi-close" onclick="closeProfilePortraitModal()" title="Close">✕</button>
       </div>
       <div id="pf-paint-preview" style="width:150px;height:150px;margin:0 auto .8rem;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--edge-hi);background:var(--stone-3);display:flex;align-items:center;justify-content:center;font-size:3rem">👤</div>
-      <div class="mi-intro" style="font-size:.82rem;line-height:1.55">Generate the face you bring to the table — <b>your</b> portrait, separate from your adventurer. Describe it below, or leave empty and let the Cauldron imagine you. Engine: StepFun (free) or Wan 2.7 Pro / Qwen Image 3 Pro (Patron 30€).</div>
+      <div class="mi-intro" style="font-size:.82rem;line-height:1.55">Generate the face you bring to the table — <b>your</b> portrait, separate from your adventurer. Describe it below, or leave empty and let the Cauldron imagine you. Image generation is part of the one-time <b>10€ unlock</b> — each image costs 1 turn. Engines: StepFun, Wan 2.7 Pro, Qwen Image 3 Pro.</div>
       <div style="margin-top:.7rem">
         <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">🖌️ Describe yourself (optional)</div>
         <textarea id="pf-paint-prompt" placeholder="e.g. 'hooded figure, lantern light, old leather' — or leave empty" style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:var(--radius-sm);resize:vertical"></textarea>
@@ -750,9 +772,9 @@ html{font-size:var(--fs-base)}
       <div style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
         <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
         <select id="pf-paint-provider" class="tts-select" style="flex:1;min-width:0;font-size:.8rem;padding:.35rem .5rem;border-radius:var(--radius-sm);background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright)" onchange="pfPaintProviderChanged(this)" title="Image provider for image generation">
-          <option value="stepfun">StepFun — Free</option>
-          <option value="wan">Wan 2.7 Pro — Patron 🔒</option>
-          <option value="qwen">Qwen Image 3 Pro — Patron 🔒</option>
+          <option value="stepfun">StepFun</option>
+          <option value="wan">Wan 2.7 Pro</option>
+          <option value="qwen">Qwen Image 3 Pro</option>
         </select>
       </div>
       <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
@@ -774,8 +796,8 @@ html{font-size:var(--fs-base)}
   <div class="news-banner" id="news-qwen38" onclick="newsQwenToast(event)" style="display:none">
   <span class="nb-icon">✦</span>
   <div class="nb-body">
-  <div class="nb-title" id="nb-title">New — DeepSeek V4.1 Flash joins the Patron path</div>
-  <div class="nb-text" id="nb-text"><b>DeepSeek V4.1 Flash</b> is a new Patron-tier Dungeon Master — and <b>Step 5 Preview</b> + <b>Qwen 3.8 Flash</b> are free for every account. Set your mind at the model gate or in Settings.</div>
+  <div class="nb-title" id="nb-title">New pricing — one unlock opens everything</div>
+  <div class="nb-text" id="nb-text">The free table refreshes <b>30 turns a day</b>. The one-time <b>10€ unlock</b> adds <b>+100 turns</b> (never expire) and opens <b>every Dungeon Master</b>, <b>voice narration</b> and <b>image generation</b> — permanently. Each narration or image costs 1 turn.</div>
   </div>
   <button class="nb-close" onclick="newsQwenDismiss(event)" title="Dismiss">✕</button>
   </div>
@@ -787,11 +809,12 @@ html{font-size:var(--fs-base)}
     </button>
     <div class="rn-body" id="rn-body">
       <div class="rn-inner">
-        <span class="rn-ver">v1.3 — The Rewoven Thread · updated 2026-09-21</span>
+        <span class="rn-ver">v1.4 — The Open Cauldron · updated 2026-09-27</span>
         <ul class="rn-list">
-          <li><b>DeepSeek V4.1 Flash — new on the Patron path (2026-09-21)</b> — DeepSeek's open-weights reasoning model (552B, 16B active, 1M-token context) joins the Patron tier, replacing V4 Flash 0731.</li>
-          <li><b>Meet Step 5 Preview — new in the free tier</b> — StepFun's Step 5 Preview joins the free tier, free for every account. Pick it at the model gate when you start an adventure, or switch to it in Settings.</li>
-          <li><b>Qwen 3.8 Flash — in the free tier</b> — free for every account. Set it as your Dungeon Master in Settings.</li>
+          <li><b>New pricing — one unlock opens everything (2026-09-27)</b> — the free table refreshes <b>30 turns every day</b> with <b>step-3.7-flash</b> and <b>step-3.5-flash-2603</b>. The one-time <b>10€ unlock</b> adds <b>+100 turns</b> that never expire (spent only after your daily turns run out) and opens <b>every Dungeon Master</b> (Qwen 3.8 Flash, Qwen 3.6 Flash, DeepSeek V4.1 Flash, Step 5 Preview), <b>voice narration</b> (Qwen &amp; StepFun) and <b>image generation</b> (StepFun, Wan 2.7 Pro, Qwen Image 3 Pro) — permanently, no 30-day window. Each narration or image costs 1 turn. Donations still work: every € adds exactly 100 turns.</li>
+          <li><b>DeepSeek V4.1 Flash at the table (2026-09-21)</b> — DeepSeek's open-weights reasoning model (552B, 16B active, 1M-token context) joined the roster as a Dungeon Master, replacing V4 Flash 0731.</li>
+          <li><b>Meet Step 5 Preview (2026-09-20)</b> — StepFun's deep-thinking flagship joined the roster. With the 10€ unlock, pick it at the model gate when you start an adventure, or switch to it in Settings.</li>
+          <li><b>Qwen 3.8 Flash joins the roster</b> — with the 10€ unlock, set it as your Dungeon Master in Settings.</li>
           <li><b>Give your composer room (2026-09-13)</b> — the divider between the DM's log and your own words drags to resize, and the text box is generous on desktop and mobile.</li>
           <li><b>Combat that keeps its own count (2026-09-13)</b> — rounds turn over by themselves once everyone has acted, and each round closes with a single honest health snapshot.</li>
           <li><b>Undo your last turn</b> — a mistyped line or a decision made too fast can be rewound: the message, the DM's reply and everything the Lorekeeper recorded from it. Inventory, gold, HP, quests and memory return to where they stood. It costs one turn, and only the most recent turn can be rewound.</li>
@@ -1013,7 +1036,7 @@ html{font-size:var(--fs-base)}
       <select class="dm-model-select" id="adventure-dm-model"></select>
     </div>
     <div class="dm-model-note">The storyteller — every scene, every NPC, every whisper. Unsure? The default is safe — you can ask the DM once the tale begins.</div>
-    <div class="dm-model-note" id="model-gate-upgrade-note" style="display:none">🔒 Patron (one-time 30€) unlocks the premium minds — <a href="pricing.html" style="color:var(--gold);font-weight:600">view the paths →</a></div>
+    <div class="dm-model-note" id="model-gate-upgrade-note" style="display:none">🔒 The one-time <b>10€ unlock</b> opens every Dungeon Master, voice narration and image engine — plus <b>+100 turns</b> that never expire. <a href="pricing.html?plan=unlock10" style="color:var(--gold);font-weight:600">view the paths →</a></div>
     <!-- Audit §2.2: Guardian/Extraction/TTS är infrastruktur-beslut med vettiga
          defaults — kollapsade bakom <details>. ALLA id:n oförändrade
          (populateModelGate/advTTSChanged/startAdventure läser dem). -->
@@ -1128,9 +1151,9 @@ The more you give, the richer the world becomes. But the Dungeon Master fills in
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 </script>
-<script src="api.js?v=20260907a"></script>
+<script src="api.js?v=20260927a"></script>
 <script src="modal.js?v=20260906a"></script>
-<script src="i18n.js?v=20260906a"></script>
+<script src="i18n.js?v=20260927a"></script>
 <script src="archetypes.js?v=20260804a"></script>
 <script>
 // ═══════════════════════════════════════
@@ -1971,34 +1994,47 @@ function advPaintProvider() {
   return (sel && sel.value) || 'stepfun';
 }
 function advPaintGate(provider) {
-  if ((provider === 'wan' || provider === 'qwen') && advPaintTier !== 'tier2' && advPaintTier !== 'lifetime') {
-    toast('🔒 Wan 2.7 Pro / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to generate with the premium engines.');
-    try { SFX.error(); } catch (_) {}
+  // 2026-09-27 (ny prissättning): ALL bildgenerering bakom 10€-unlåset.
+  if (advPaintTier !== 'tier2' && advPaintTier !== 'lifetime') {
+    openAdvUnlockModal('image');
     return false;
   }
-  return true; // StepFun = gratis sedan 2026-08-15
+  return true;
 }
 function advPaintProviderChanged(sel) {
-  if ((sel && (sel.value === 'wan' || sel.value === 'qwen')) && advPaintTier !== 'tier2' && advPaintTier !== 'lifetime') {
-    sel.value = 'stepfun';
-    toast('🔒 Wan 2.7 Pro / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to generate with the premium engines.');
-  }
+  // Alla motorer kräver samma unlås — ingen provider-nedgradering behövs.
 }
 function advPaintUpdateLock() {
   const sel = document.getElementById('adv-paint-provider');
   if (!sel) return;
-  const wanOpt = sel.querySelector('option[value="wan"]');
-  const qwenOpt = sel.querySelector('option[value="qwen"]');
-  const stepOpt = sel.querySelector('option[value="stepfun"]');
-  const wanUnlocked = advPaintTier === 'tier2' || advPaintTier === 'lifetime';
-  if (stepOpt) { stepOpt.disabled = false; stepOpt.textContent = 'StepFun — Free'; }
-  if (wanOpt) { wanOpt.disabled = !wanUnlocked; wanOpt.textContent = wanUnlocked ? 'Wan 2.7 Pro — Patron' : 'Wan 2.7 Pro — Patron 🔒'; }
-  if (qwenOpt) { qwenOpt.disabled = !wanUnlocked; qwenOpt.textContent = wanUnlocked ? 'Qwen Image 3 Pro — Patron' : 'Qwen Image 3 Pro — Patron 🔒'; }
-  if ((sel.value === 'wan' || sel.value === 'qwen') && !wanUnlocked) sel.value = 'stepfun';
+  const unlocked = advPaintTier === 'tier2' || advPaintTier === 'lifetime';
+  ['stepfun', 'wan', 'qwen'].forEach(key => {
+    const opt = sel.querySelector(`option[value="${key}"]`);
+    if (!opt) return;
+    const name = key === 'wan' ? 'Wan 2.7 Pro' : key === 'qwen' ? 'Qwen Image 3 Pro' : 'StepFun';
+    opt.disabled = !unlocked;
+    opt.textContent = unlocked ? name : name + ' — 🔒 10€ unlock';
+  });
   const freeBtn = document.getElementById('adv-paint-free-btn');
   if (freeBtn) freeBtn.disabled = false;
   const dossierBtn = document.getElementById('adv-paint-dossier-btn');
   if (dossierBtn) dossierBtn.disabled = false;
+}
+// ── 🔓 Unlock-modal (2026-09-27, ny prissättning) — adventure-hallens variant ──
+function openAdvUnlockModal(kind) {
+  const msgs = {
+    image: 'Image generation is part of the 10€ unlock. Each image costs 1 turn.',
+    tts: 'Voice narration is part of the 10€ unlock. Each narration costs 1 turn.',
+  };
+  const msgEl = document.getElementById('adv-unlock-msg');
+  if (msgEl) msgEl.textContent = msgs[kind] || msgs.image;
+  const modal = document.getElementById('adv-unlock-modal');
+  if (modal) modal.classList.add('show');
+  try { SFX.error(); } catch (_) {}
+}
+function closeAdvUnlockModal() {
+  const modal = document.getElementById('adv-unlock-modal');
+  if (modal) modal.classList.remove('show');
 }
 async function openAdvPaintModal() {
   if (advPaintTier === null) {
@@ -2199,7 +2235,7 @@ function advPrompt() {
 }
 
 // ── Modellgate (DM/Guardian/Extraction + Character-sheet modell — kan ändras när som helst i kampanjen) ──
-const PLAYER_DM_MODELS = ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4.1-flash', 'step-5-preview', 'step-3.7-flash', 'step-3.5-flash-2603'];
+const PLAYER_DM_MODELS = ['qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4.1-flash', 'step-5-preview', 'step-3.7-flash', 'step-3.5-flash-2603'];
 const TTS_PROVIDERS = [
   { id: 'qwen', name: 'Qwen (Token Plan) ⭐', recommended: true },
   { id: 'stepfun', name: 'StepFun (Step Plan)' },
@@ -2217,32 +2253,35 @@ const TTS_PROVIDERS = [
   const freeOptsHtml = (list) => (list && list.length)
     ? `<optgroup label="${OR_GROUP_LABEL}">${list.map(m => `<option value="${m.id}">${m.display}</option>`).join('')}</optgroup>`
     : '';
-  // Modeller som kräver Patron (30€)+ (backend klämmer redan free/tier1 → step-3.7-flash;
-  // här låses de i UI:t så spelaren inte kan välja något som tyst ignoreras).
-  const PREMIUM_MODELS = ['qwen3.8-max', 'qwen3.6-flash', 'deepseek-v4.1-flash'];
+  // Modeller som kräver 10€-unlåset (backend klämmer redan free/tier1 →
+  // step-3.7-flash; här låses de i UI:t så spelaren inte kan välja något som
+  // tyst ignoreras). 2026-09-27: free tier = StepFun 3.7/3.5 ENDAST.
+  const FREE_TIER_MODELS = ['step-3.7-flash', 'step-3.5-flash-2603'];
   const optionHtml = (m, locked) => {
-    const prem = PREMIUM_MODELS.includes(m);
+    const prem = !FREE_TIER_MODELS.includes(m);
     const dis = locked && prem;
-    // ⭐ markera free-tier-snabbmodellen (audit §2.2.6 — Ledger-rekommendationen synlig vid valet)
-    const star = (m === 'qwen3.8-flash' || m === 'step-5-preview') ? ' ⭐ — free' : '';
-    return `<option value="${m}"${dis ? ' disabled' : ''}>${dis ? '🔒 ' + m + ' — Patron (30€)' : m + star}</option>`;
+    // ⭐ markera free-tier-modellen (Ledger-rekommendationen synlig vid valet)
+    const star = (m === 'step-3.7-flash') ? ' ⭐ — free' : '';
+    return `<option value="${m}"${dis ? ' disabled' : ''}>${dis ? '🔒 ' + m + ' — 10€ unlock' : m + star}</option>`;
   };
-  // Onboarding-standard (rostads beslut 2026-09-17): qwen3.8-flash om den finns,
-  // annars step-3.7-flash, annars första modellen.
-  const defaultModel = (models) => models.includes('qwen3.8-flash') ? 'qwen3.8-flash'
-    : (models.includes('step-3.7-flash') ? 'step-3.7-flash' : (models[0] || ''));
+  // Onboarding-standard (2026-09-27): step-3.7-flash för alla (free-tier-
+  // default; backend clamp-ar free/tier1 till FREE_PLAYER_MODELS ändå).
+  const defaultModel = (models, locked) => (models.includes('step-3.7-flash') ? 'step-3.7-flash' : (models[0] || ''));
   const fill = (models, locked, freeList) => {
+    // 2026-09-27 (ny prissättning): OpenRouter free-modeller ligger OCKSÅ
+    // bakom 10€-unlåset — visa optgroupen endast för upplåsta konton.
+    const effFree = locked ? [] : (freeList || []);
     const houseOpts = models.map(m => optionHtml(m, locked)).join('');
-    const opts = houseOpts + freeOptsHtml(freeList);
+    const opts = houseOpts + freeOptsHtml(effFree);
     // Sparat DM-val från tidigare onboarding (audit §2.3) — används om det
     // fortfarande finns bland de valbara alternativen.
     let savedDm = null;
     try { savedDm = localStorage.getItem('dnd_onb_dm_model'); } catch (e) {}
-    const allowedIds = [...models, ...(freeList || []).map(m => m.id)];
+    const allowedIds = [...models, ...effFree.map(m => m.id)];
     [dmSel, guardSel, extSel].forEach(sel => {
       if (!sel) return;
       sel.innerHTML = opts;
-      sel.value = defaultModel(models);
+      sel.value = defaultModel(models, locked);
     });
     if (dmSel && savedDm && allowedIds.includes(savedDm)) {
       // Sätt sparad DM även om alternativet ligger i en låst optgroup-gren? Nej —
@@ -2258,28 +2297,28 @@ const TTS_PROVIDERS = [
       });
     }
     if (charSel) {
-      // 🆓 OpenRouter free-modeller funkar även för karaktärsskapande (backend
-      // streamar orfree: i _stream_llm) — samma optgroup som DM/Guardian/Extraction.
+      // 🆓 OpenRouter free-modeller funkar även för karaktärsskapande — men
+      // 2026-09-27 ligger de bakom 10€-unlåset (effFree är tom för låsta).
       charSel.innerHTML = opts;
-      charSel.value = defaultModel(models);
+      charSel.value = defaultModel(models, locked);
     }
   };
   const fillTTS = (tier) => {
     if (!ttsSel) return;
-    // tier: 'free' | 'tier1' (legacy Support) | 'tier2' (Patron) | 'lifetime' | 'admin'
-    // StepFun TTS = GRATIS sedan 2026-08-15, Qwen TTS = Patron (30€)+ (backend klämmer ändå).
+    // tier: 'free' | 'tier1' (legacy Support) | 'tier2' (unlocked) | 'lifetime' | 'admin'
+    // 2026-09-27 (ny prissättning): ALL TTS bakom 10€-unlåset (backend 403).
+    const locked = (tier === 'free' || tier === 'tier1');
     const prev = ttsSel.value;              // användarens nuvarande val (om något)
     ttsSel.innerHTML = TTS_PROVIDERS.map(p => {
-      const qwen = p.id === 'qwen';
-      const dis = qwen ? (tier === 'free' || tier === 'tier1') : false;
+      const dis = locked;
       const base = p.name.replace(' ⭐', '');
-      const lock = qwen ? ' 🔒 — Patron (30€)' : '';
+      const lock = ' 🔒 — 10€ unlock';
       const rec = !dis && p.recommended && (tier === 'tier2' || tier === 'lifetime') ? ' — recommended' : '';
       return `<option value="${p.id}"${dis ? ' disabled' : ''}>${base}${dis ? lock : ''}${rec}</option>`;
     }).join('');
     try {
       const saved = localStorage.getItem('dnd_tts_provider');
-      const allowed = (id) => id === 'stepfun' ? true : (id === 'qwen' ? (tier === 'tier2' || tier === 'lifetime') : false);
+      const allowed = (id) => !locked && (id === 'stepfun' || id === 'qwen');
       // 1) Användaren har redan valt ett tillåtet provider (onchange sparar
       //    direkt) → respektera det, skriv ALDRIG över ett färskt val. Detta
       //    fixar att Qwen "resettades" till StepFun: fillTTS körs async efter
@@ -2662,9 +2701,10 @@ async function pfLightboxRotate(delta) {
 }
 
 // ── 🖼 Profil-porträtt: popup för att generera konto-avataren (2026-08-06) ──
-// Återanvänder advPaintTier/advPaintGate-logiken (StepFun = gratis,
-// Wan 2.7 Pro = Patron 30€). Fri prompt — tom prompt tillåten här
-// (backend bygger en default-prompt), till skillnad från äventyraren.
+// Återanvänder advPaintTier/advPaintGate-logiken. 2026-09-27 (ny prissättning):
+// ALL bildgenerering bakom 10€-unlåset (StepFun, Wan 2.7 Pro, Qwen Image 3 Pro),
+// 1 turn per bild. Fri prompt — tom prompt tillåten här (backend bygger en
+// default-prompt), till skillnad från äventyraren.
 function openProfilePortraitModal() {
   const ov = document.getElementById('pf-paint-overlay');
   if (!ov) return;
@@ -2690,24 +2730,20 @@ function closeProfilePortraitModal() {
   if (ov) ov.classList.remove('show');
 }
 function pfPaintProviderChanged(sel) {
-  if ((sel && (sel.value === 'wan' || sel.value === 'qwen')) && advPaintTier !== 'tier2' && advPaintTier !== 'lifetime') {
-    sel.value = 'stepfun';
-    toast('🔒 Wan 2.7 Pro / Qwen Image 3 Pro is a Patron feature (30€) — upgrade to generate with the premium engines.');
-  }
+  // 2026-09-27: alla motorer kräver samma 10€-unlås — ingen nedgradering.
 }
 function pfPaintUpdateLock() {
   const sel = document.getElementById('pf-paint-provider');
   if (!sel) return;
-  const wanOpt = sel.querySelector('option[value="wan"]');
-  const qwenOpt = sel.querySelector('option[value="qwen"]');
-  const stepOpt = sel.querySelector('option[value="stepfun"]');
-  const wanUnlocked = advPaintTier === 'tier2' || advPaintTier === 'lifetime';
-  if (stepOpt) { stepOpt.disabled = false; stepOpt.textContent = 'StepFun — Free'; }
-  if (wanOpt) { wanOpt.disabled = !wanUnlocked; wanOpt.textContent = wanUnlocked ? 'Wan 2.7 Pro — Patron' : 'Wan 2.7 Pro — Patron 🔒'; }
-  if (qwenOpt) { qwenOpt.disabled = !wanUnlocked; qwenOpt.textContent = wanUnlocked ? 'Qwen Image 3 Pro — Patron' : 'Qwen Image 3 Pro — Patron 🔒'; }
-  if ((sel.value === 'wan' || sel.value === 'qwen') && !wanUnlocked) sel.value = 'stepfun';
+  const unlocked = advPaintTier === 'tier2' || advPaintTier === 'lifetime';
+  [['stepfun', 'StepFun'], ['wan', 'Wan 2.7 Pro'], ['qwen', 'Qwen Image 3 Pro']].forEach(([key, name]) => {
+    const opt = sel.querySelector(`option[value="${key}"]`);
+    if (!opt) return;
+    opt.disabled = !unlocked;
+    opt.textContent = unlocked ? name : name + ' — 🔒 10€ unlock';
+  });
   const btn = document.getElementById('pf-paint-btn');
-  if (btn) btn.disabled = false;
+  if (btn) btn.disabled = false;  // gate:n (advPaintGate) visar unlock-modal
 }
 async function profilePortraitGenerate() {
   const prov = (document.getElementById('pf-paint-provider') || {}).value || 'stepfun';

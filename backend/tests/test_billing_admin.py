@@ -195,6 +195,28 @@ def test_ledger_corrupt_file_is_empty(ledger_file):
     assert main._ledger_load() == []
 
 
+# ── Månadens intäkt (2026-09-27, rostads dashboard-krav) ─────────────────
+
+def test_month_revenue_counts_only_current_month(ledger_file):
+    """Ledger-rader utanför innevarande kalendermånad räknas inte i
+    month_revenue — men ligger kvar i lifetime total."""
+    _seed_admin()
+    _seed_player("alice")
+    now = main._month_key_now()  # YYYY-MM
+    # rad i förra månaden
+    prev = main._ledger_append({"user": "alice", "amount_sek": 70, "type": "stripe:donation", "event_id": "e_prev"})
+    prev_dt = (datetime.now(timezone.utc) - timedelta(days=45)).isoformat()
+    ledger = main._ledger_load()
+    ledger[-1]["ts"] = prev_dt
+    ledger_file.write_text(json.dumps(ledger), encoding="utf-8")
+    # rad nu
+    main._ledger_append({"user": "alice", "amount_sek": 105, "type": "stripe:unlock10", "event_id": "e_now"})
+    totals = main._ledger_totals()
+    assert totals["total"] == 175          # lifetime
+    assert totals["month_revenue"] == 105  # bara innevarande månad
+    assert totals["month_key"] == now
+
+
 # ── GET /api/admin/billing ───────────────────────────────────────────────
 
 def test_billing_endpoint_shape(client, ledger_file):
@@ -212,6 +234,11 @@ def test_billing_endpoint_shape(client, ledger_file):
     assert body["per_user"] == {"alice": 315}
     assert len(body["ledger"]) == 3
     assert body["ledger"][0]["amount_sek"] == 105
+    # 2026-09-27: månadens intäkt + månad nyckel (rostads dashboard-siffra)
+    assert "month_revenue" in body and "month_key" in body
+    assert body["month_key"] == main._month_key_now()
+    # alla tre raderna lades in NU → månadens intäkt = hela summan
+    assert body["month_revenue"] == 315
 
 
 def test_billing_ledger_last_50(client, ledger_file):
@@ -228,7 +255,11 @@ def test_billing_empty_ledger(client, ledger_file):
     _seed_admin()
     r = client.get("/api/admin/billing", cookies={"morkrets_token": _atok()})
     assert r.status_code == 200
-    assert r.json() == {"mrr": 0, "transactions": 0, "total": 0, "per_user": {}, "ledger": [], "churn": {}}
+    body = r.json()
+    for k, v in {"mrr": 0, "transactions": 0, "total": 0, "month_revenue": 0,
+                 "per_user": {}, "ledger": [], "churn": {}}.items():
+        assert body[k] == v
+    assert body["month_key"] == main._month_key_now()
 
 
 def test_billing_403_non_admin(client):

@@ -1,8 +1,11 @@
-"""OpenRouter free-modeller i den ordinarie 3-vals-väljaren (2026-08-08).
+"""OpenRouter free-modeller (orfree:) i modellväljarna.
+
+2026-09-27 (ny prissättning): orfree: ligger bakom 10€-unlåset — free/tier1
+klampas till DEFAULT_PLAYER_MODEL; tier2/lifetime/admin behåller orfree:.
 
 Täcker:
-  - _clamp_player_model tillåter kända orfree: för ALLA tiers (free/tier1/tier2)
-  - okända orfree: klampas till DEFAULT_PLAYER_MODEL (safe default)
+  - _clamp_player_model tillåter kända orfree: för tier2/lifetime/None
+  - free/tier1 → default; okända orfree: → default (safe)
   - PATCH /api/campaign/dm-model (och guardian/extraction) accepterar orfree:
   - create_campaign sparar extraction_model=orfree:...
   - _extraction_model_for returnerar orfree: oförändrad (ingen get_model-validering)
@@ -69,11 +72,15 @@ def client(users_file, campaigns_dir, llm_mocks):
         yield c
 
 
-def _seed_player(username="alice", role="player", status="free"):
+def _seed_player(username="alice", role="player", status="free", unlocked=False):
     """Skapa spelaren direkt i users.json (undviker registrerings-rate-limitern
-    _REGISTER_TIMES som är process-global och inte resets mellan tester)."""
+    _REGISTER_TIMES som är process-global och inte resets mellan tester).
+
+    unlocked=True → 10€-unlås (features.all_models utan utgångsdatum →
+    _tier_for = tier2 permanent, samma form som unlock10-webhooken sätter).
+    2026-09-27: orfree: kräver unlock — free/tier1 klampas till default."""
     users = main.load_users()
-    users[username] = {
+    u = {
         "password_hash": hash_password("secret123"),
         "role": role,
         "turn_cap": 50,
@@ -82,6 +89,10 @@ def _seed_player(username="alice", role="player", status="free"):
         "promo_bonus": 0,
         "subscription_status": status,
     }
+    if unlocked:
+        u["features"] = {"all_models": True, "export": True, "wan1080": True, "unlock10": True}
+        u["features_until"] = None
+    users[username] = u
     main.save_users(users)
     return create_token(username, role)
 
@@ -103,9 +114,13 @@ def _admin_token():
 
 # ── Clamp (alla tiers) ──────────────────────────────────────────────────
 
-def test_clamp_allows_known_orfree_for_all_tiers():
-    for tier in ("free", "tier1", "tier2", "lifetime", None):
+def test_clamp_allows_known_orfree_for_unlocked_tiers():
+    """2026-09-27: orfree: bakom 10€-unlåset — tier2/lifetime/None (interna
+    anrop) behåller valet; free/tier1 klampas till default."""
+    for tier in ("tier2", "lifetime", None):
         assert main._clamp_player_model(KNOWN, tier=tier) == KNOWN, tier
+    for tier in ("free", "tier1"):
+        assert main._clamp_player_model(KNOWN, tier=tier) == main.DEFAULT_PLAYER_MODEL, tier
 
 
 def test_clamp_rejects_unknown_orfree_to_default():
@@ -116,7 +131,8 @@ def test_clamp_rejects_unknown_orfree_to_default():
 # ── PATCH-endpoints (icke-admin) ────────────────────────────────────────
 
 def test_non_admin_can_set_dm_orfree(client):
-    tok = _seed_player()
+    """Unlocked (10€) icke-admin kan välja orfree: som DM."""
+    tok = _seed_player(unlocked=True)
     _make_campaign("alice")
     r = client.patch("/api/campaign/dm-model", json={"dm_model": KNOWN}, cookies={"morkrets_token": tok})
     assert r.status_code == 200, r.text
@@ -125,7 +141,7 @@ def test_non_admin_can_set_dm_orfree(client):
 
 
 def test_non_admin_can_set_guardian_orfree(client):
-    tok = _seed_player()
+    tok = _seed_player(unlocked=True)
     _make_campaign("alice")
     r = client.patch("/api/campaign/guardian-model", json={"guardian_model": KNOWN}, cookies={"morkrets_token": tok})
     assert r.status_code == 200, r.text
@@ -134,7 +150,7 @@ def test_non_admin_can_set_guardian_orfree(client):
 
 
 def test_non_admin_can_set_extraction_orfree(client):
-    tok = _seed_player()
+    tok = _seed_player(unlocked=True)
     _make_campaign("alice")
     r = client.patch("/api/campaign/extraction-model", json={"extraction_model": KNOWN}, cookies={"morkrets_token": tok})
     assert r.status_code == 200, r.text
@@ -143,7 +159,8 @@ def test_non_admin_can_set_extraction_orfree(client):
 
 
 def test_non_admin_unknown_orfree_clamped_to_default(client):
-    tok = _seed_player()
+    """Okänd orfree: klampas till default ÄVEN för unlocked-spelare."""
+    tok = _seed_player(unlocked=True)
     _make_campaign("alice")
     r = client.patch("/api/campaign/dm-model", json={"dm_model": "orfree:evil/not-real:free"},
                      cookies={"morkrets_token": tok})
@@ -163,7 +180,7 @@ def test_admin_unknown_orfree_rejected(client):
 # ── create_campaign + extraction-model ──────────────────────────────────
 
 def test_create_campaign_saves_orfree_extraction(client):
-    tok = _seed_player()
+    tok = _seed_player(unlocked=True)
     r = client.post("/api/campaign", json={"name": "OR test", "language": "en", "extraction_model": KNOWN},
                     cookies={"morkrets_token": tok})
     assert r.status_code == 200, r.text
@@ -206,9 +223,9 @@ def test_stream_llm_routes_orfree_to_chat_free_stream(monkeypatch):
     ]
 
 
-def test_vault_generate_stream_accepts_orfree_for_free_player(client, monkeypatch):
-    """Free-tier-spelare ska kunna generera karaktär med orfree: — hela vägen
-    via _stream_llm → or_free.chat_free_stream (ingen get_model-krasch)."""
+def test_vault_generate_stream_accepts_orfree_for_unlocked_player(client, monkeypatch):
+    """2026-09-27: unlocked-spelare (10€) genererar karaktär med orfree: —
+    hela vägen via _stream_llm → or_free.chat_free_stream (ingen get_model-krasch)."""
     import or_free
 
     CHAR_JSON = (
@@ -226,7 +243,7 @@ def test_vault_generate_stream_accepts_orfree_for_free_player(client, monkeypatc
 
     monkeypatch.setattr(or_free, "chat_free_stream", fake_stream)
 
-    tok = _seed_player(status="free")
+    tok = _seed_player(status="free", unlocked=True)
     r = client.post("/api/vault/generate/stream",
                     json={"prompt": "A rogue", "model_id": KNOWN, "lang": "en"},
                     cookies={"morkrets_token": tok})

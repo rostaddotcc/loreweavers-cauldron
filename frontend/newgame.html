@@ -302,10 +302,8 @@
       <div class="adv-body">
         <span style="font-size:.73rem;color:var(--bone-dim);opacity:.7">🧙 Character:</span>
         <select id="char-model" style="background:var(--stone-2);border:1px solid var(--edge);color:var(--bone);padding:.4rem .6rem;font-size:.83rem;cursor:pointer">
-          <option value="qwen3.8-max">qwen3.8-max</option>
           <option value="qwen3.8-flash">qwen3.8-flash</option>
           <option value="qwen3.6-flash">qwen3.6-flash</option>
-          <option value="qwen3.7-plus">qwen3.7-plus</option>
           <option value="deepseek-v4.1-flash">deepseek-v4.1-flash</option>
           <option value="step-5-preview">step-5-preview</option>
           <option value="step-3.7-flash" selected>step-3.7-flash</option>
@@ -402,8 +400,8 @@
 </div>
 
 <script src="sfx.js?v=20260811a"></script>
-<script src="api.js?v=20260804c"></script>
-<script src="i18n.js?v=20260906a"></script>
+<script src="api.js?v=20260927a"></script>
+<script src="i18n.js?v=20260927a"></script>
 <script src="archetypes.js?v=20260807a"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
@@ -413,7 +411,7 @@ if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 // ── Rollbaserat modellval: icke-admin får välja mellan de tillåtna modellerna ──
 let newgameIsAdmin = false;
 let _newgameTier = 'free';  // free | tier1 | tier2 | lifetime
-const PLAYER_CHAR_MODELS = ['qwen3.8-max', 'qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4.1-flash', 'step-5-preview', 'step-3.7-flash', 'step-3.5-flash-2603'];
+const PLAYER_CHAR_MODELS = ['qwen3.8-flash', 'qwen3.6-flash', 'deepseek-v4.1-flash', 'step-5-preview', 'step-3.7-flash', 'step-3.5-flash-2603'];
 // Råa ID:n visas direkt — man vet exakt vilken modell man får (inget "snabb"/"fast"-förskönande)
 const PLAYER_CHAR_LABELS = {};
 PLAYER_CHAR_MODELS.forEach(m => { PLAYER_CHAR_LABELS[m] = m; });
@@ -423,15 +421,16 @@ API.me().then(u => {
     newgameIsAdmin = true;
   } else {
     // Begränsa modellväljaren till de tillåtna spelarmodellerna; free/tier1
-    // låses till step-3.7-flash (premium gråas ut + 🔒 — backend klämmer ändå).
+    // låses till StepFun 3.7/3.5 (2026-09-27, ny prissättning — premium gråas
+    // ut + 🔒, backend klämmer ändå).
     const locked = (u && (u.subscription_status === 'free' || u.subscription_status === 'tier1'));
     const sel = document.getElementById('char-model');
     if (sel) {
       sel.innerHTML = PLAYER_CHAR_MODELS.map(m => {
-        const dis = locked && m !== 'step-3.7-flash' && m !== 'step-5-preview' && m !== 'qwen3.8-flash';
-        return `<option value="${m}"${dis ? ' disabled' : ''}>${dis ? '🔒 ' + (PLAYER_CHAR_LABELS[m] || m) + ' — Patron (30€)' : (PLAYER_CHAR_LABELS[m] || m)}</option>`;
+        const dis = locked && m !== 'step-3.7-flash' && m !== 'step-3.5-flash-2603';
+        return `<option value="${m}"${dis ? ' disabled' : ''}>${dis ? '🔒 ' + (PLAYER_CHAR_LABELS[m] || m) + ' — 10€ unlock' : (PLAYER_CHAR_LABELS[m] || m)}</option>`;
       }).join('');
-      sel.value = (locked && PLAYER_CHAR_MODELS.includes('qwen3.8-flash')) ? 'qwen3.8-flash' : 'step-3.7-flash';
+      sel.value = 'step-3.7-flash';
     }
   }
   // 🆓 OpenRouter free-modeller — även för karaktärsskapande (backend streamar
@@ -1029,7 +1028,15 @@ function renderPreview(c, ac, glow) {
 // TIERS: bildgenerering är gated (2026-08-15) — StepFun = gratis sedan 2026-08-15.
 let _avatarBusy = false;
 function newgameAvatarGenGate() {
-  return true; // StepFun = gratis för alla (Wan/Qwen väljs inte här)
+  // 2026-09-27 (ny prissättning): ALL bildgenerering bakom 10€-unlåset.
+  // _newgameTier sätts från /api/me vid boot; okänd (null) → tillåt och låt
+  // backend-gate:n (403 feature_locked) visa unlock-flödet.
+  const t = _newgameTier;
+  if (t === 'free' || t === 'tier1') {
+    toast('🔒 Image generation is part of the 10€ unlock (+100 turns, all Dungeon Masters, voice & images). Each image costs 1 turn. — pricing.html?plan=unlock10');
+    return false;
+  }
+  return true;
 }
 async function autoAvatar() {
   if (_avatarBusy) return;
@@ -1043,9 +1050,9 @@ async function autoAvatar() {
       if (rerollBtn) rerollBtn.style.display = '';
       toast('🎨 Avatar generated from your sheet!');
     } else {
-      if (res && res.detail && /Patron feature/.test(res.detail)) {
+      if (res && res.detail && /Patron feature|10€ unlock|feature_locked/i.test(JSON.stringify(res.detail))) {
         if (rerollBtn) rerollBtn.style.display = '';
-        rerollBtn.textContent = '🔒 Generate Avatar — Patron';
+        rerollBtn.textContent = '🔒 Generate Avatar — 10€ unlock';
       }
       console.warn('Avatar-gen misslyckades:', res);
     }

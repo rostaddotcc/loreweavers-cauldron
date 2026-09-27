@@ -1,9 +1,9 @@
-"""TIERS 2026-08-15: TTS + profilavatar är tier-gated.
+"""TIERS 2026-09-27 (ny prissättning): ALL TTS + bildgenerering bakom 10€-unlåset.
 
-- StepFun TTS = GRATIS (sedan 2026-08-15) — free → 200.
-- Qwen TTS = Patron (30€)+ — free/tier1 → 403 (förr tyst fallback till stepfun).
-- /api/me/avatar/generate: provider 'stepfun'|'wan'|'qwen' (default stepfun).
-  StepFun = gratis; Wan 2.7 / Qwen Image 3 Pro = Patron (30€)+. Svaret bär provider.
+- /api/tts: free/tier1 → 403 feature_locked (ingen tyst fallback, ingen gratis TTS).
+  tier2/lifetime/admin → 200 (båda providers). Varje ny syntes = 1 turn.
+- /api/me/avatar/generate: provider 'stepfun'|'wan'|'qwen' — alla låsta för
+  free/tier1 (403 feature_locked); tier2 → 200 + provider i svaret.
 
 autouse-fixtures: users.json + kampanjdata pekas mot tmp — skyddar riktig data
 (users.json-incidenten 2026-08-04). Ingen riktig data rörs.
@@ -134,53 +134,56 @@ class _WanClient:
         return _DL()
 
 
-# ── /api/tts: StepFun = gratis, Qwen = Patron (30€)+ ──────────────────────
+# ── /api/tts: ALLT bakom 10€-unlåset (2026-09-27) ────────────────────────
 
-def test_tts_stepfun_free_ok(client, monkeypatch):
-    """free + stepfun → 200 (StepFun TTS är gratis sedan 2026-08-15)."""
+def test_tts_stepfun_free_403(client, monkeypatch):
+    """2026-09-27: free + stepfun → 403 feature_locked (ALL TTS bakom unlock)."""
     _seed("alice", tier="free")
     _login(client)
     monkeypatch.setattr(main, "_synth_stepfun_tts", lambda voice, text, style="": b"RIFFwavfake")
     r = client.post("/api/tts", json={"text": "Hej från free", "voice": "male", "provider": "stepfun"})
-    assert r.status_code == 200, r.text
-    assert r.content == b"RIFFwavfake"
+    assert r.status_code == 403, r.text
+    detail = r.json()["detail"]
+    assert detail["feature_locked"] == "tts"
+    assert "10€ unlock" in detail["message"]
 
 
 def test_tts_qwen_free_403(client, monkeypatch):
-    """free + qwen → 403 (Patron-feature), ingen tyst fallback till stepfun."""
+    """free + qwen → 403 feature_locked, ingen tyst fallback till stepfun."""
     _seed("alice", tier="free")
     _login(client)
     monkeypatch.setattr(main, "_synth_stepfun_tts", lambda voice, text, style="": b"RIFFwavfake")
     monkeypatch.setattr(main, "_synth_qwen_tts_retry", lambda voice, text, style="": b"RIFFqwenfake")
     r = client.post("/api/tts", json={"text": "Hej qwen free", "voice": "male", "provider": "qwen"})
     assert r.status_code == 403
-    assert "Qwen TTS is a Patron feature (30€)" in r.json()["detail"]
+    assert r.json()["detail"]["feature_locked"] == "tts"
 
 
-def test_tts_stepfun_tier1_ok(client, monkeypatch):
-    """Support (tier1) + stepfun → 200."""
+def test_tts_stepfun_tier1_403(client, monkeypatch):
+    """2026-09-27: legacy Support (tier1) räcker INTE för TTS — 403."""
     _seed("alice", tier="tier1")
     _login(client)
     monkeypatch.setattr(main, "_synth_stepfun_tts", lambda voice, text, style="": b"RIFFwavfake")
     r = client.post("/api/tts", json={"text": "Hej från support", "voice": "male", "provider": "stepfun"})
-    assert r.status_code == 200, r.text
-    assert r.content == b"RIFFwavfake"
+    assert r.status_code == 403, r.text
+    assert r.json()["detail"]["feature_locked"] == "tts"
 
 
 def test_tts_qwen_tier1_403(client, monkeypatch):
-    """Support (tier1) räcker INTE för qwen — 403 med Patron-hänvisning."""
+    """Support (tier1) räcker INTE för qwen — 403 feature_locked."""
     _seed("alice", tier="tier1")
     _login(client)
     monkeypatch.setattr(main, "_synth_qwen_tts_retry", lambda voice, text, style="": b"RIFFqwenfake")
     r = client.post("/api/tts", json={"text": "Hej qwen tier1", "voice": "male", "provider": "qwen"})
     assert r.status_code == 403
-    assert "Patron" in r.json()["detail"]
+    assert r.json()["detail"]["feature_locked"] == "tts"
 
 
-def test_tts_consumes_turn_cache_hit_free(client, monkeypatch):
+def test_tts_consumes_turn_cache_hit_unlocked(client, monkeypatch):
     """2026-08-08 (strikt per-anrops-modell): varje NY TTS-syntes = 1 turn;
-    cache-träff (samma text igen) är gratis — inget externt anrop."""
-    _seed("alice", tier="tier1")
+    cache-träff (samma text igen) är gratis — inget externt anrop.
+    2026-09-27: kräver 10€-unlås (tier2) — free/tier1 stoppas av gate:n."""
+    _seed("alice", tier="tier2")
     _login(client)
     monkeypatch.setattr(main, "_synth_stepfun_tts", lambda voice, text, style="": b"RIFFwavfake")
     # Första anropet — cache miss → 1 turn + ledger-post action=tts
@@ -198,7 +201,7 @@ def test_tts_consumes_turn_cache_hit_free(client, monkeypatch):
 
 def test_tts_403_when_turns_exhausted(client, monkeypatch):
     """TTS med 0 turns kvar → 403 cap_reached (innan något syntes-anrop)."""
-    _seed("alice", tier="tier1", turn_cap=1)
+    _seed("alice", tier="tier2", turn_cap=1)
     users = main.load_users()
     users["alice"]["turns_used"] = 1  # cap 1, förbrukad → 0 kvar
     users["alice"]["reset_date"] = _in_days(1)  # imorgon — ingen rollover mitt i testet
@@ -223,50 +226,48 @@ def test_tts_qwen_tier2_ok(client, monkeypatch):
 
 # ── /api/me/avatar/generate: provider stepfun|wan|qwen ─────────────────────
 
-def test_me_avatar_stepfun_free_ok(client, monkeypatch):
-    """free målar profilavataren med StepFun → 200 (gratis sedan 2026-08-15)."""
+def test_me_avatar_stepfun_free_403(client, monkeypatch):
+    """2026-09-27: free får 403 feature_locked för ALL bildgenerering."""
     monkeypatch.setenv("STEPFUN_API_KEY", "test-key")
     _seed("alice", tier="free")
     _login(client)
     monkeypatch.setattr(main.httpx, "AsyncClient", _FakePost)
     r = client.post("/api/me/avatar/generate", json={"prompt": "a hooded mage", "provider": "stepfun"})
-    assert r.status_code == 200, r.text
-    assert r.json()["provider"] == "stepfun"
-    assert len((main._load_user_avatar_gallery("alice").get("gallery") or [])) == 1
+    assert r.status_code == 403, r.text
+    assert r.json()["detail"]["feature_locked"] == "image"
 
 
-def test_me_avatar_stepfun_tier1_ok(client, monkeypatch):
-    """Support (tier1, legacy) målar profilavataren med StepFun → 200 + provider."""
+def test_me_avatar_stepfun_tier1_403(client, monkeypatch):
+    """2026-09-27: legacy Support (tier1) räcker INTE för bildgenerering."""
     monkeypatch.setenv("STEPFUN_API_KEY", "test-key")
     _seed("alice", tier="tier1")
     _login(client)
     monkeypatch.setattr(main.httpx, "AsyncClient", _FakePost)
     r = client.post("/api/me/avatar/generate", json={"prompt": "a hooded mage", "provider": "stepfun"})
-    assert r.status_code == 200, r.text
-    assert r.json()["provider"] == "stepfun"
-    assert len((main._load_user_avatar_gallery("alice").get("gallery") or [])) == 1
+    assert r.status_code == 403, r.text
+    assert r.json()["detail"]["feature_locked"] == "image"
 
 
 def test_me_avatar_wan_tier1_403(client, monkeypatch):
-    """Support (tier1) räcker INTE för Wan 2.7 — 403 med Patron-hänvisning."""
+    """Support (tier1) räcker INTE för Wan 2.7 — 403 feature_locked."""
     _seed("alice", tier="tier1")
     _login(client)
     monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
     monkeypatch.setattr(main.httpx, "AsyncClient", _WanClient)
     r = client.post("/api/me/avatar/generate", json={"prompt": "a hero", "provider": "wan"})
     assert r.status_code == 403
-    assert "Patron" in r.json()["detail"]
+    assert r.json()["detail"]["feature_locked"] == "image"
 
 
 def test_me_avatar_qwen_free_403(client, monkeypatch):
-    """free räcker INTE för Qwen Image 3 Pro — 403 med Patron-hänvisning."""
+    """free räcker INTE för Qwen Image 3 Pro — 403 feature_locked."""
     _seed("alice", tier="free")
     _login(client)
     monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
     monkeypatch.setattr(main.httpx, "AsyncClient", _WanClient)
     r = client.post("/api/me/avatar/generate", json={"prompt": "a hero", "provider": "qwen"})
     assert r.status_code == 403
-    assert "Patron" in r.json()["detail"]
+    assert r.json()["detail"]["feature_locked"] == "image"
 
 
 def test_me_avatar_qwen_tier2_ok(client, monkeypatch):
@@ -314,9 +315,10 @@ def test_me_avatar_wan_tier2_ok(client, monkeypatch):
 
 
 def test_me_avatar_unknown_provider_defaults_stepfun(client, monkeypatch):
-    """Okänd provider → stepfun (inte 400), svaret bär provider."""
+    """Okänd provider → stepfun (inte 400), svaret bär provider.
+    2026-09-27: kräver 10€-unlås (tier2) — gate:n kommer först."""
     monkeypatch.setenv("STEPFUN_API_KEY", "test-key")
-    _seed("alice", tier="tier1")
+    _seed("alice", tier="tier2")
     _login(client)
     monkeypatch.setattr(main.httpx, "AsyncClient", _FakePost)
     r = client.post("/api/me/avatar/generate", json={"prompt": "x", "provider": "flux"})

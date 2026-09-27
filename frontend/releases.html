@@ -6,7 +6,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
 <title>The Lore Weaver's Cauldron — Release Notes</title>
-<meta name="description" content="Release notes for The Lore Weaver's Cauldron — an AI dungeon master with a memory. v1.3 — the rewoven thread: DeepSeek V4.1 Flash joins the Patron path, Step 5 Preview and Qwen 3.8 Flash free for every account, undo your last turn, combat rounds and a resizable composer, refreshed 2026-09-21.">
+<meta name="description" content="Release notes for The Lore Weaver's Cauldron — an AI dungeon master with a memory. v1.4 — the open cauldron: new pricing, 30 free turns a day, one-time 10€ unlock opens every Dungeon Master, voice and image engine and adds +100 turns that never expire, refreshed 2026-09-27.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://dnd.rostad.cc/releases.html">
 <meta property="og:type" content="article">
@@ -241,19 +241,18 @@
   <h1 class="rv">Release Notes</h1>
   <div class="page-rule">✦</div>
    <p class="eyebrow rv">The Ledger of the Realm</p>
-  <p class="ledger-sub rv">Every update written in the ledger, so the realm's history stays legible. This entry — the rewoven thread: the last turn can be taken back, new minds join the table (free and Patron), and the playtest's findings were answered on 2026-09-13.<br><b>v1.2 → v1.3</b> · 2026-09-09 · refreshed 2026-09-21</p>
+  <p class="ledger-sub rv">Every update written in the ledger, so the realm's history stays legible. This entry — the open cauldron: new pricing. 30 free turns every day, and one 10€ unlock opens every mind, voice and image engine — permanently.<br><b>v1.3 → v1.4</b> · 2026-09-27</p>
 
   <div class="current-box rv fresh-frame">
-    <span class="ver-chip"><span class="ver-name">v1.3</span><span class="ver-note">The Rewoven Thread</span></span>
-    <span class="ver-tag">DeepSeek V4.1 Flash — Patron</span>
-    <span class="ver-tag">Step 5 Preview free</span>
-    <span class="ver-tag">Qwen 3.8 Flash free</span>
-    <span class="ver-tag">Undo the last turn</span>
-    <span class="ver-tag">Combat rounds, 2026-09-13</span>
-    <span class="ver-tag">Resizable composer</span>
+    <span class="ver-chip"><span class="ver-name">v1.4</span><span class="ver-note">The Open Cauldron</span></span>
+    <span class="ver-tag">New pricing, 2026-09-27</span>
+    <span class="ver-tag">30 free turns a day</span>
+    <span class="ver-tag">10€ unlock — everything, forever</span>
+    <span class="ver-tag">+100 turns per purchase</span>
   </div>
 
   <div class="ver-chiprow rv" aria-label="Jump to a version">
+    <a href="#s14">v1.4</a>
     <a href="#s13">v1.3</a>
     <a href="#s12">v1.2</a>
     <a href="#s11">v1.1</a>
@@ -261,6 +260,27 @@
     <a href="#s010">v0.10</a>
     <a href="#s09">v0.9</a>
     <a href="#s08">v0.8</a>
+  </div>
+
+  <!-- ═══════════════ 1.4 headline ═══════════════ -->
+  <div class="sec rv" id="s14">
+    <div class="sec-head">
+      <span class="sec-num">1.4</span>
+      <h2>The Open Cauldron</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ux">PRICING</span>
+        <span class="tablet-title">One unlock opens everything · 2026-09-27</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ux">Change</span> <b>New pricing — one door, fully open</b> — the 30€ Patron pack has retired. The one-time <b>10€ unlock</b> now carries everything it used to, permanently: every Dungeon Master (Qwen 3.8 Flash, Qwen 3.6 Flash, DeepSeek V4.1 Flash, Step 5 Preview + the OpenRouter community minds), voice narration (Qwen &amp; StepFun), image generation (StepFun, Wan 2.7 Pro, Qwen Image 3 Pro), voice input and export. No 30-day window, no renewal — one payment, every door open, forever.</li>
+        <li><span class="tag ux">Change</span> <b>30 free turns every day</b> — the free table refreshes 30 turns daily with <b>step-3.7-flash</b> and <b>step-3.5-flash-2603</b> (was 50 with a wider roster). Voice narration, images and every other action draw from the same balance: one chat message, one narration or one image = 1 turn each.</li>
+        <li><span class="tag ux">New</span> <b>+100 turns that never expire</b> — the 10€ unlock adds 100 turns to your cauldron, and donations still pay exactly: every € adds 100 turns. Purchased turns sit in the cauldron and are spent <b>only after</b> the day's free turns run out — they never replace them.</li>
+        <li><span class="tag ai">Change</span> <b>The roster, pruned</b> — Qwen 3.8 Max and Qwen 3.7 Plus have left the table. Deep reasoning stays: Step 5 Preview thinks long and hard before it speaks, and Qwen 3.8 Flash narrates with speed and warmth.</li>
+      </ul>
+    </div>
   </div>
 
   <!-- ═══════════════ 1.3 headline ═══════════════ -->
@@ -746,7 +766,7 @@
         <li><span class="tag feat">FEAT</span><b>Stripe checkout, live</b> — the pricing page is wired to a real Stripe account: products, prices, and a webhook that records payment. No more mock buttons.</li>
         <li><span class="tag feat">FEAT</span><b>Webhook idempotency</b> — a delivered payment event is recorded exactly once, even if Stripe retries it. The ledger never double-counts a coin.</li>
         <li><span class="tag feat">FEAT</span><b>Lifetime is truly forever</b> — a Lifetime purchase never expires (holds until the end of time, not a date). Granting a tier writes a line into the player's transcript.</li>
-        <li><span class="tag ai">AI</span><b>Model gating by tier</b> — free players travel with the steadfast <b>step-3.7-flash</b>; paid paths unlock <b>DeepSeek, Qwen 3.8 Max, and Qwen 3.6 Flash</b> as their Dungeon Master. Locked models are visibly grayed out, never silently ignored.</li>
+        <li><span class="tag ai">AI</span><b>Model gating by tier</b> — free players travel with the steadfast <b>step-3.7-flash</b>; paid paths unlock the deeper minds as their Dungeon Master. Locked models are visibly grayed out, never silently ignored. <i>(2026-09-27: the roster is now Qwen 3.8 Flash, Qwen 3.6 Flash, DeepSeek V4.1 Flash and Step 5 Preview behind the 10€ unlock.)</i></li>
         <li><span class="tag ux">UX</span><b>Your tier is visible</b> — the profile card in the gear menu shows your path, and the pricing page marks your current subscription with a lit sigil.</li>
       </ul>
     </div>
@@ -759,44 +779,37 @@
       <h2>The Paths</h2>
       <span class="ruler"></span><span class="rule"></span>
     </div>
+    <p class="tablet-lead rv">Updated 2026-09-27 — one unlock opens everything. The old monthly paths (Companion / Adventurer) have retired; existing subscribers keep their benefits until their window closes.</p>
     <div class="duo">
       <div class="tier">
-        <div class="tier-name">Wanderer</div>
+        <div class="tier-name">Free</div>
         <div class="tier-price">Free<small> · no card</small></div>
         <ul>
-          <li><b>50 turns</b> every day, refreshed at midnight</li>
-          <li>The steadfast Dungeon Master (<b>step-3.7-flash</b>)</li>
+          <li><b>30 turns</b> every day, refreshed at midnight</li>
+          <li>The steadfast Dungeon Masters (<b>step-3.7-flash</b>, <b>step-3.5-flash-2603</b>)</li>
           <li>Persistent world, memory, and the Codex</li>
-          <li><b>StepFun TTS</b> — always free &amp; the dice ritual</li>
-        </ul>
-      </div>
-      <div class="tier">
-        <div class="tier-name">Companion</div>
-        <div class="tier-price">3€<small> / month</small></div>
-        <ul>
-          <li><b>50 turns</b> refreshed <b>every 6 hours</b></li>
-          <li><b>AI avatars</b> for your adventurer and the NPCs you meet</li>
-          <li>Everything in the Wanderer path</li>
+          <li>The dice ritual</li>
         </ul>
       </div>
       <div class="tier hot">
-        <div class="tier-flag">Most popular</div>
-        <div class="tier-name">Adventurer</div>
-        <div class="tier-price">9€<small> / month</small></div>
+        <div class="tier-flag">Everything</div>
+        <div class="tier-name">Unlock</div>
+        <div class="tier-price">10€<small> · once</small></div>
         <ul>
-          <li><b>All Dungeon Masters</b> — DeepSeek, Qwen 3.8 Max, Qwen 3.6 Flash</li>
-          <li><b>Both narrator voices</b> — Qwen and StepFun TTS</li>
-          <li><b>Customize the narrator</b> — happy, calm, scary, or your own style</li>
-          <li><b>50 turns</b> every 6 hours &middot; <b>AI avatars</b></li>
+          <li><b>+100 turns</b> — never expire, spent after your daily 30</li>
+          <li><b>All Dungeon Masters</b> — Qwen 3.8 Flash, Qwen 3.6 Flash, DeepSeek V4.1 Flash, Step 5 Preview</li>
+          <li><b>Both narrator voices</b> — Qwen and StepFun TTS (1 turn per narration)</li>
+          <li><b>Image generation</b> — StepFun, Wan 2.7 Pro, Qwen Image 3 Pro (1 turn per image)</li>
+          <li><b>Permanent</b> — no window, no renewal</li>
         </ul>
       </div>
       <div class="tier">
-        <div class="tier-name">Lifetime</div>
-        <div class="tier-price">50€<small> · once</small></div>
+        <div class="tier-name">Any</div>
+        <div class="tier-price">Your pick<small> · 1€ = 100 turns</small></div>
         <ul>
-          <li><b>Unlimited turns</b> — the Cauldron never sleeps</li>
-          <li>All Dungeon Masters · both voices · avatars</li>
-          <li>A thank-you from the forge — you keep this realm burning</li>
+          <li><b>Every € adds exactly 100 turns</b> — no expiry</li>
+          <li>Turns are spent only after your daily free turns run out</li>
+          <li>Pure support — no feature unlock, no subscription</li>
         </ul>
       </div>
     </div>
@@ -816,8 +829,8 @@
       </div>
       <ul class="feat">
         <li><span class="tag feat">FEAT</span><b>Turn counter in the header</b> — turn, day, free turns left, and the reset date, all visible at a glance. On mobile it tucks into the menu so the top bar stays clean.</li>
-        <li><span class="tag feat">FEAT</span><b>Daily renewal</b> — your 50 turns refresh each day at midnight, whether you were here or not. A cron keeps the dates in step, and the count rolls over lazily even if the cron sleeps.</li>
-        <li><span class="tag ux">UX</span><b>An honest cap modal</b> — when the free turns run out, the game tells you plainly: new turns on the reset date, or upgrade for unlimited. No dead buttons, no tricks.</li>
+        <li><span class="tag feat">FEAT</span><b>Daily renewal</b> — your 30 turns refresh each day at midnight, whether you were here or not. A cron keeps the dates in step, and the count rolls over lazily even if the cron sleeps.</li>
+        <li><span class="tag ux">UX</span><b>An honest cap modal</b> — when the free turns run out, the game tells you plainly: new turns on the reset date, or top up (every € adds exactly 100 turns that never expire). No dead buttons, no tricks.</li>
         <li><span class="tag pay">PAY</span><b>Admin top-ups</b> — the realm-keeper can grant bonus turns (consumed before the cap) or reset a player's count, without touching the monthly ceiling.</li>
       </ul>
     </div>
@@ -836,9 +849,9 @@
         <span class="tablet-title">A narrator you can give a mood</span>
       </div>
       <ul class="feat">
-        <li><span class="tag feat">FEAT</span><b>StepFun TTS — always free</b> — the narrator's voice belongs to every adventurer, on every path. Wanderers get StepFun narration at no cost, alongside their daily ration of turns.</li>
-        <li><span class="tag snd">SOUND</span><b>Custom narrator voice</b> — pick a style for the one who reads your story: <b>happy, calm, scary</b>, or a custom description of your own. A Tier 2 feature, and gated honestly in the UI.</li>
-        <li><span class="tag snd">SOUND</span><b>Qwen English voices</b> — the Qwen narrator gained English voices alongside the original set. Qwen TTS joins the Tier 2 path.</li>
+        <li><span class="tag feat">FEAT</span><b>StepFun TTS</b> — the narrator's voice reads the story aloud. <i>(2026-09-27: voice narration is part of the one-time 10€ unlock; each narration costs 1 turn.)</i></li>
+        <li><span class="tag snd">SOUND</span><b>Custom narrator voice</b> — pick a style for the one who reads your story: <b>happy, calm, scary</b>, or a custom description of your own. Part of the 10€ unlock, and gated honestly in the UI.</li>
+        <li><span class="tag snd">SOUND</span><b>Qwen English voices</b> — the Qwen narrator gained English voices alongside the original set. Qwen TTS is part of the 10€ unlock.</li>
         <li><span class="tag snd">SOUND</span><b>Faster loading</b> — a TTS cache with a time-to-live keeps repeated lines from re-rendering, and a speed button lets you set the read's pace.</li>
         <li><span class="tag fix">FIX</span><b>Guardian day-correction</b> — the day counter no longer drifts when the Guardian reconciles the world state.</li>
       </ul>
@@ -1005,7 +1018,7 @@
     body.classList.toggle('open', open);
   };
 </script>
-<script src="i18n.js?v=20260906a"></script>
+<script src="i18n.js?v=20260927a"></script>
 <script src="sprites.js?v=20260806b"></script>
 <script src="rail.js?v=20260924a"></script>
 </body>

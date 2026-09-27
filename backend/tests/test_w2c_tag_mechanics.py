@@ -238,4 +238,5 @@ def test_llms_txt_no_300_turns_and_daily_wording():
     body = r.text
     assert "300 turns" not in body
     assert "signup promo" not in body
-    assert "50 fresh turns every day" in body
+    # 2026-09-27 (ny prissättning): 30 turns/dag
+    assert "30 fresh turns every day" in body

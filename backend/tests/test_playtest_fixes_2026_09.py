@@ -138,15 +138,23 @@ def _provider_ids(client, tok):
     return [p["id"] for p in body["providers"]], body
 
 
-def test_voices_free_user_sees_only_stepfun(client):
+def test_voices_catalog_full_but_call_gated_for_free(client):
+    """2026-09-27 (ny prissättning): voices-katalogen visar hela menyn till
+    alla (frontend ritar 🔒 10€ unlock), men ANROPET gate:as — free får 403
+    feature_locked. Grinden är nu vid anropet, inte i katalogen."""
     ids, body = _provider_ids(client, _tok_free())
-    assert ids == ["stepfun"]
+    assert set(ids) == {"stepfun", "qwen"}  # full katalog
     assert body["default_provider"] == main.TTS_DEFAULT_PROVIDER
+    # ...men free kan inte syntetisera
+    r = client.post("/api/tts", json={"text": "hi", "provider": "stepfun"},
+                    cookies={"morkrets_token": _tok_free()})
+    assert r.status_code == 403
+    assert r.json()["detail"]["feature_locked"] == "tts"
 
 
-def test_voices_stepfun_voices_intact_for_free(client):
+def test_voices_stepfun_voices_intact(client):
     _, body = _provider_ids(client, _tok_free())
-    step = body["providers"][0]
+    step = next(p for p in body["providers"] if p["id"] == "stepfun")
     real_ids = {v["id"] for v in main.TTS_PROVIDERS["stepfun"]["voices"]}
     assert {v["id"] for v in step["voices"]} == real_ids
     assert step["voices"], "stepfun must never be emptied"
@@ -167,17 +175,16 @@ def test_voices_admin_keeps_everything(client):
     assert set(ids) == set(main.TTS_PROVIDERS)
 
 
-def test_voices_gate_mirrors_tts_call_gate(client):
-    """free: qwen-röster osynliga OCH qwen-anrop 403 — samma villkor."""
+def test_voices_call_gate_unlocked_vs_free(client):
+    """2026-09-27: katalogen är full för alla; grinden vid ANROPET skiljer.
+    free → 403 feature_locked; unlocked (tier2) passerar grinden (anropet
+    mockas ej — vi provar bara att det INTE 403:ar på feature_locked)."""
     tok = _tok_free()
-    ids, _ = _provider_ids(client, tok)
-    assert "qwen" not in ids
     r = client.post("/api/tts", json={"text": "hello", "provider": "qwen"},
                     cookies={"morkrets_token": tok})
     assert r.status_code == 403
-    assert "Patron" in r.json()["detail"]
-    # patron: bade synlig rost och tillatet anrop (anropet mockas ej —
-    # bara grinden prover vi, sa langt som till 400/403-leget)
+    assert r.json()["detail"]["feature_locked"] == "tts"
+    # unlocked: ser qwen i katalogen OCH passerar feature-gate:n
     ptok = _tok_patron()
     pids, _ = _provider_ids(client, ptok)
     assert "qwen" in pids

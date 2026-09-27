@@ -9,7 +9,7 @@
 
 > **Live game: [dnd.rostad.cc](https://dnd.rostad.cc)** — free to play, open beta, no card and no email required to start.
 >
-> Free players get **50 turns a day** (refreshed at midnight) plus **StepFun TTS narration — always free, forever**. Paid tiers (Companion / Adventurer / Lifetime) unlock all DM models, AI-painted avatars, and Qwen TTS. Full pricing on the live site.
+> Free players get **30 turns a day** (refreshed at midnight) with **step-3.7-flash** and **step-3.5-flash-2603**. The one-time **10€ unlock** adds **+100 turns** (never expire, spent after the daily free turns) and opens every Dungeon Master, voice narration (Qwen/StepFun TTS) and image generation (StepFun / Wan 2.7 Pro / Qwen Image 3 Pro) — permanently. Donations: **1€ = 100 turns**. Full pricing on the live site.
 
 The Lore Weaver's Cauldron is a single-player, browser-based D&D 5e campaign engine. Instead of a rulebook and a dice tower, you get a living table: an LLM weaves the narration, plays every NPC, and reacts to whatever you type — while a dedicated *Guardian* module silently handles all the mechanics (dice, damage, XP, items, gold, quests) so the story never has to stop for bookkeeping.
 
@@ -94,7 +94,7 @@ Built for the phone too — full table, terminal composer and voice input in a p
 - `mechanics.html` is the honest rulebook: engine behaviors (dice, spell slots & rests, TTS cache, undo) documented section by section and audited against the code, not against wishes
 
 ### 💳 Billing & Admin
-- **Stripe subscriptions**: free tier (50 turns/day, step-3.7-flash only), tier1 (3 €/mo — 50 turns per 6 h + AI avatars), tier2 (9 €/mo — all player models + Qwen TTS), **lifetime** (100 €, uncapped); StepFun TTS is always free
+- **Stripe one-time purchases** (2026-09-27): free tier (30 turns/day, step-3.7-flash + step-3.5-flash-2603), **unlock10** (10€ — +100 turns, all models + TTS + image generation, permanent), **donation** (any amount — 100 turns per €). Legacy: tier1/tier2 subscriptions and lifetime (100€) are honored until they expire
 - Password reset flow via mail bridge, **promo endpoint** for time-limited offers
 - **Admin dashboard** with SVG charts: token spend, players by country, role split, TTS minutes; per-user controls (turn caps, top-ups, resets, subscriptions)
 - **IP geolocation** of players (private/LAN IPs are never sent anywhere) to flag abuse

@@ -67,6 +67,7 @@ def stripe_env(monkeypatch):
     monkeypatch.setattr(main, "STRIPE_WEBHOOK_SECRET", "whsec_test123")
     monkeypatch.setattr(main, "STRIPE_PRICES", {
         "support300": "price_sup300", "patron500": "price_pat500",
+        "unlock10": "price_unlock10",
         "donation": "", "lifetime": "price_lt",
     })
 
@@ -122,7 +123,8 @@ def test_checkout_unknown_tier_400(client):
     assert r.status_code == 400
 
 
-def test_checkout_tier2_returns_stripe_url(client, monkeypatch):
+def test_checkout_unlock10_returns_stripe_url(client, monkeypatch):
+    """2026-09-27: unlock10 (10€) är den enda betalda feature-produkten."""
     _seed()
     captured = {}
 
@@ -132,16 +134,34 @@ def test_checkout_tier2_returns_stripe_url(client, monkeypatch):
         return {"url": "https://checkout.stripe.com/c/pay/test123", "id": "cs_1"}
 
     monkeypatch.setattr(main, "_stripe_post", fake_post)
-    r = client.post("/api/billing/checkout", json={"tier": "patron500"},
+    r = client.post("/api/billing/checkout", json={"tier": "unlock10"},
                     cookies={"morkrets_token": _tok()})
     assert r.status_code == 200
     assert "checkout.stripe.com" in r.json()["url"]
     assert captured["path"] == "checkout/sessions"
     assert captured["data"]["mode"] == "payment"  # one-time — ingen subscription
-    assert captured["data"]["line_items[0][price]"] == "price_pat500"
+    assert captured["data"]["line_items[0][price]"] == "price_unlock10"
     assert captured["data"]["metadata[username]"] == "alice"
     # Åtkomst ges INTE i checkout-svaret — users.json orörd
     assert main.load_users()["alice"]["subscription_status"] == "free"
+
+
+def test_checkout_retired_packs_blocked(client, monkeypatch):
+    """2026-09-27: support300 + patron500 pensionerade — nya köp blockeras."""
+    _seed()
+
+    async def fake_post(path, data):  # ska aldrig anropas
+        raise AssertionError("_stripe_post anropades trots blockerad tier")
+
+    monkeypatch.setattr(main, "_stripe_post", fake_post)
+    r = client.post("/api/billing/checkout", json={"tier": "patron500"},
+                    cookies={"morkrets_token": _tok()})
+    assert r.status_code == 400
+    assert "retired" in r.json()["detail"]
+    r = client.post("/api/billing/checkout", json={"tier": "support300"},
+                    cookies={"morkrets_token": _tok()})
+    assert r.status_code == 400
+    assert "retired" in r.json()["detail"]
 
 
 def test_checkout_support300_blocked(client, monkeypatch):
@@ -280,7 +300,46 @@ def test_webhook_checkout_support300_grants_export(client):
     assert "wan1080" not in u["features"]
     assert main._tier_for("alice") == "tier1"  # Support
     # modellerna är FORTFARANDE klampade (Support = stepfun only)
-    assert main._clamp_player_model("qwen3.8-max", tier="tier1") == "step-3.7-flash"
+    assert main._clamp_player_model("qwen3.8-flash", tier="tier1") == "step-3.7-flash"
+
+
+def test_webhook_checkout_unlock10_grants_turns_and_features(client):
+    """2026-09-27 (ny prissättning): unlock10 (10€) ger +100 PERMANENTA turns
+    (turn_bonus — spenderas efter daglig kvot) + permanenta features utan
+    tidsfönster (features_until = None → _benefits_active = True för alltid)."""
+    _seed()
+    _seed_campaign("alice")
+    main.save_users({**main.load_users(), "alice": {**main.load_users()["alice"], "turn_bonus": 20}})
+    body = _event("checkout.session.completed", {
+        "metadata": {"username": "alice", "tier": "unlock10"},
+        "client_reference_id": "alice",
+        "payment_status": "paid",
+        "customer": "cus_u10",
+        "amount_total": 1000,  # 10€ i ören
+    }, event_id="evt_unlock10")
+    r = client.post("/api/stripe/webhook", content=body,
+                    headers={"stripe-signature": _sign(body)})
+    assert r.status_code == 200
+    u = main.load_users()["alice"]
+    # +100 turns på befintlig turn_bonus (20) — köpta turns, inte cap
+    assert u["turn_bonus"] == 120
+    assert u["turn_cap"] == 50  # daglig cap orörd (seed 50)
+    # features permanenta
+    assert u["features"]["all_models"] is True
+    assert u["features"]["wan1080"] is True
+    assert u["features"]["export"] is True
+    assert u["features"]["unlock10"] is True
+    assert u["features_until"] is None  # INGET fönster — permanent
+    assert u["stripe_customer_id"] == "cus_u10"
+    # Ledger-rad med rätt typ
+    rows = [row for row in main._ledger_load() if row.get("event_id") == "evt_unlock10"]
+    assert len(rows) == 1 and rows[0]["type"] == "stripe:unlock10"
+    assert rows[0]["amount_sek"] == round(1000 / 100 * main._EUR_TO_SEK)
+    # dubbel-webhook (retry) ger INTE dubbla turns
+    r = client.post("/api/stripe/webhook", content=body,
+                    headers={"stripe-signature": _sign(body)})
+    assert r.status_code == 200
+    assert main.load_users()["alice"]["turn_bonus"] == 120
 
 
 def test_webhook_checkout_donation_turns_no_features(client):
@@ -358,7 +417,8 @@ def test_webhook_subscription_deleted_demotes(client):
     u = main.load_users()["alice"]
     assert u["subscription_status"] == "free"
     assert u["subscription_until"] is None
-    assert u["turn_cap"] == 50
+    # 2026-09-27: demote sätter free-capen (DEFAULT_TURN_CAP = 30)
+    assert u["turn_cap"] == main.DEFAULT_TURN_CAP
     # Churn-datapoint: ledger-rad + per-dag-ackumulator (rostad 2026-08-04)
     ledger = main._ledger_load()
     churn_rows = [row for row in ledger if row.get("type") == "stripe:churn"]

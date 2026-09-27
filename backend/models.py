@@ -23,26 +23,12 @@ class ModelConfig:
 # ═══════════════════════════════════════
 MODELS: dict[str, ModelConfig] = {
     # ── Qwen (DashScope) ──
-    "qwen3.8-max": ModelConfig(
-        model_id="qwen3.8-max",
-        display_name="Qwen 3.8 Max",
-        provider="dashscope",
-        # Full release 2026-08-03 (2.4T MoE, 1M ctx, thinking-stöd).
-        # Ersätter qwen3.8-max-preview som saknade enable_thinking.
-        api_model="qwen3.8-max",
-        base_url=os.getenv("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
-        api_key_env="DASHSCOPE_API_KEY",
-        supports_vision=True,
-    ),
-    "qwen3.7-plus": ModelConfig(
-        model_id="qwen3.7-plus",
-        display_name="Qwen 3.7 Plus",
-        provider="dashscope",
-        api_model="qwen3.7-plus",
-        base_url=os.getenv("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
-        api_key_env="DASHSCOPE_API_KEY",
-        supports_vision=True,
-    ),
+    # 2026-09-27 (ny prissättning): qwen3.8-max + qwen3.7-plus BORTTAGNA ur
+    # registret (rostads beslut). Premium-listan = qwen3.8-flash, qwen3.6-flash,
+    # deepseek-v4.1-flash, step-5-preview. Gamla kampanj-meta (dm_model m.fl.)
+    # med borttagna id:n kraschar inte — _guardian_model_for/_extraction_model_for
+    # har registry-validering med fallback, och _provider_for_model har
+    # prefix-fallback för historiska transkript.
 
     # ── DeepSeek via Alibaba Token Plan (spelarval) ──
     # 2026-09-21: deepseek-v4-flash-0731 borttagen (rostad) → v4.1-flash ersätter.

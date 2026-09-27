@@ -198,9 +198,7 @@ const API = (() => {
     async models() {
       if (MOCK) {
         return [
-          { id: 'qwen3.8-max', name: 'Qwen 3.8 Max', provider: 'dashscope', vision: true, local: false },
           { id: 'qwen3.8-flash', name: 'Qwen 3.8 Flash', provider: 'dashscope', vision: true, local: false },
-          { id: 'qwen3.7-plus', name: 'Qwen 3.7 Plus', provider: 'dashscope', vision: true, local: false },
           { id: 'qwen3.6-flash', name: 'Qwen 3.6 Flash (snabb)', provider: 'dashscope', vision: false, local: false },
           { id: 'deepseek-v4.1-flash', name: 'DeepSeek V4.1 Flash', provider: 'deepseek', vision: true, local: false },
           { id: 'step-5-preview', name: 'Step 5 Preview (flagship)', provider: 'stepfun', vision: true, local: false },

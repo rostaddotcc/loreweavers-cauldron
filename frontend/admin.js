@@ -310,13 +310,13 @@
       esc(code ? (CODE_LABEL[code] + (why ? ' · ' + why : '')) : 'No coding in this payload (legacy server)') + '"></span>';
   }
   function poolOf(u) { const tp = (u && u.turn_pool) || null; return (tp && typeof tp === 'object') ? tp : null; }
-  /* Potten radvis: "25/30 free used", "464 paid left". Orden used/left är med
-     avsikt — rostad: "hur mycket som gått åt" gick inte att läsa när en siffra
-     stod utan riktning. Tabellcellen radbryter hellre än att kapa ett nyckeltal. */
+  /* Potten radvis: "25/30 free left", "464 paid left". Alla siffror visas som
+     KVAR — rostad 2026-09-28: "jag vill se free turns left, inte used turns".
+     Tabellcellen radbryter hellre än att kapa ett nyckeltal. */
   function poolLines(u) {
     const tp = poolOf(u);
     if (!tp) return [];
-    const out = [tp.unlimited ? '∞ free (no cap)' : num(tp.free_used_period) + '/' + num(tp.free_cap) + ' free used'];
+    const out = [tp.unlimited ? '∞ free (no cap)' : num(tp.free_left) + '/' + num(tp.free_cap) + ' free left'];
     if (Number(tp.promo_left)) out.push(num(tp.promo_left) + ' promo left');
     if (Number(tp.paid_left)) out.push(num(tp.paid_left) + ' paid left');
     return out;

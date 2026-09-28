@@ -1,0 +1,856 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin v2 · Mission Control — design sketch</title>
+<!--
+  DESIGN SKETCH for the admin dashboard refresh (2026-09-27).
+  Real production aggregates (accounts/campaigns/revenue ledger/model usage/visits),
+  per-player rows pseudonymised. Mock data is inline so this file can be opened anywhere.
+  Modern console language on purpose: admin-only surface, NOT aligned with the game's
+  grimoire/pixel canon (see docs/plans/admin-dashboard-v2-2026-09-27.md).
+  Radius/pixel notes: this page does not load snes.css, so radii are allowed here.
+-->
+<style>
+  :root{
+    --bg:#0a0e13; --panel:#121924; --panel-2:#161f2c; --panel-3:#1b2534;
+    --line:#25313f; --line-2:#2f3d4e;
+    --txt:#e8eef7; --dim:#9aabc1; --dim-2:#7d8ea4;
+    --accent:#5b8cff; --accent-dim:#2a3c66; --accent-ink:#0a0e13;
+    --good:#3fbf8f; --bad:#e0605e; --warn:#e0a24a; --violet:#a97bff; --teal:#4fc3c8; --gold:#e2b53f;
+    --radius:10px; --radius-sm:6px;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
+    --shadow:0 18px 40px rgba(0,0,0,.45);
+  }
+  html[data-theme="light"]{
+    --bg:#f4f6fa; --panel:#ffffff; --panel-2:#f7f9fc; --panel-3:#eef2f8;
+    --line:#e1e7f0; --line-2:#cdd7e5;
+    --txt:#0f1a28; --dim:#5a6b83; --dim-2:#61718a;
+    --accent:#2f5fe0; --accent-dim:#dfe7ff; --accent-ink:#ffffff;
+    --good:#0f7d57; --bad:#c93636; --warn:#8f5c10; --violet:#6b46c1; --teal:#0b6f76; --gold:#b8860b;
+    --shadow:0 14px 30px rgba(16,32,64,.12);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--txt); font-family:var(--sans);
+    font-size:14px; line-height:1.45; -webkit-font-smoothing:antialiased;
+  }
+  #app{display:flex; min-width:1020px; min-height:660px; align-items:stretch}
+
+  /* ── sidebar ───────────────────────────────────────────── */
+  #nav{
+    width:208px; flex:0 0 208px; background:var(--panel); border-right:1px solid var(--line);
+    padding:16px 12px; display:flex; flex-direction:column; gap:4px;
+  }
+  .brand{display:flex; align-items:center; gap:9px; padding:4px 8px 16px}
+  .brand .mark{
+    width:26px; height:26px; border-radius:7px; background:linear-gradient(140deg,var(--accent),var(--violet));
+    display:grid; place-items:center; font-weight:700; font-size:12px; color:#fff;
+  }
+  .brand b{font-size:13px; letter-spacing:.02em}
+  .brand span{display:block; font-size:10.5px; color:var(--dim-2); letter-spacing:.09em; text-transform:uppercase}
+  .nav-item{
+    display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:var(--radius-sm);
+    color:var(--dim); cursor:pointer; font-size:13px; border:1px solid transparent; background:none;
+    font-family:inherit; text-align:left; width:100%; min-height:38px;
+  }
+  .nav-item:hover{background:var(--panel-2); color:var(--txt)}
+  .nav-item.cur{background:var(--accent-dim); color:var(--txt); border-color:var(--line-2); font-weight:600}
+  .nav-item .ico{width:17px; text-align:center; font-size:13px}
+  .nav-item .badge{margin-left:auto; font-size:10.5px; color:var(--dim-2)}
+  .nav-sep{margin:10px 10px 4px; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--dim-2)}
+  .nav-foot{margin-top:auto; padding:10px 10px 2px; font-size:10.5px; color:var(--dim-2); line-height:1.5}
+
+  /* ── main ──────────────────────────────────────────────── */
+  #main{flex:1; min-width:0; display:flex; flex-direction:column}
+  #topbar{
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    padding:12px 20px; border-bottom:1px solid var(--line); background:var(--panel);
+  }
+  .crumbs{font-size:12.5px; color:var(--dim); display:flex; align-items:center; gap:6px; min-width:180px}
+  .crumbs b{color:var(--txt); font-weight:600; font-size:14px}
+  .crumbs .sep{color:var(--dim-2)}
+  .scope{display:flex; align-items:center; gap:6px; margin-left:auto; flex-wrap:wrap}
+  .scope .lbl{font-size:11px; color:var(--dim-2); text-transform:uppercase; letter-spacing:.07em}
+  .chip{
+    border:1px solid var(--line-2); background:var(--panel-2); color:var(--dim); border-radius:999px;
+    padding:5px 11px; font-size:12px; cursor:pointer; font-family:inherit; min-height:30px;
+  }
+  .chip:hover{color:var(--txt); border-color:var(--accent)}
+  .chip.on{background:var(--accent); border-color:var(--accent); color:var(--accent-ink); font-weight:600}
+  .icon-btn{
+    border:1px solid var(--line-2); background:var(--panel-2); color:var(--dim); border-radius:var(--radius-sm);
+    min-height:32px; padding:0 10px; cursor:pointer; font-family:inherit; font-size:12.5px;
+  }
+  .icon-btn:hover{color:var(--txt); border-color:var(--accent)}
+  .stamp{font-size:11px; color:var(--dim-2); font-variant-numeric:tabular-nums}
+
+  #view{padding:18px 20px 40px; overflow:auto}
+  .view-head{display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; margin-bottom:14px}
+  .view-head h1{margin:0; font-size:19px; letter-spacing:-.01em}
+  .view-head p{margin:0; color:var(--dim); font-size:12.5px; max-width:70ch}
+  .view-head .spacer{flex:1}
+
+  /* ── cards & grid ──────────────────────────────────────── */
+  .grid{display:grid; gap:12px; grid-template-columns:repeat(12,minmax(0,1fr))}
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:14px; min-width:0;
+  }
+  .card h3{margin:0 0 2px; font-size:13px; letter-spacing:.01em}
+  .card .sub{color:var(--dim-2); font-size:11.5px; margin-bottom:10px}
+  .span3{grid-column:span 3} .span4{grid-column:span 4} .span5{grid-column:span 5}
+  .span6{grid-column:span 6} .span7{grid-column:span 7} .span8{grid-column:span 8}
+  .span12{grid-column:span 12}
+  .card.clickable{cursor:pointer; transition:border-color .14s, transform .14s}
+  .card.clickable:hover{border-color:var(--accent); transform:translateY(-1px)}
+
+  .kpi{display:flex; flex-direction:column; gap:3px; min-height:104px}
+  .kpi .t{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--dim-2)}
+  .kpi .v{font-size:26px; font-weight:650; font-variant-numeric:tabular-nums; letter-spacing:-.02em}
+  .kpi .v.good{color:var(--good)} .kpi .v.accent{color:var(--accent)} .kpi .v.warn{color:var(--warn)}
+  .kpi .f{font-size:11.5px; color:var(--dim); margin-top:auto}
+  .kpi .f b{color:var(--txt); font-weight:600}
+  .kpi .cta{font-size:11px; color:var(--accent); opacity:0; transition:opacity .14s}
+  .card.clickable:hover .cta{opacity:1}
+
+  /* ── charts ────────────────────────────────────────────── */
+  .vchart{display:flex; align-items:flex-end; gap:3px; height:132px; margin-top:6px}
+  .vcol{flex:1; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:4px; cursor:pointer; min-width:0}
+  .vcol .track{width:100%; flex:1; display:flex; align-items:flex-end}
+  .vcol .fill{width:100%; background:linear-gradient(180deg,var(--accent),#2b4f9e); border-radius:3px 3px 0 0; min-height:2px}
+  .vcol.rev .fill{background:linear-gradient(180deg,var(--gold,#e2b53f),#8a6a12)}
+  .vcol:hover .fill{filter:brightness(1.25)}
+  .vcol .lab{font-size:9.5px; color:var(--dim-2); white-space:nowrap}
+  .vcol.today .lab{color:var(--accent); font-weight:700}
+  .legend{display:flex; flex-direction:column; gap:7px; margin-top:4px}
+  .legend button{
+    display:flex; align-items:center; gap:8px; background:none; border:0; color:inherit;
+    font-family:inherit; font-size:12.5px; cursor:pointer; padding:3px 6px; border-radius:var(--radius-sm); text-align:left;
+  }
+  .legend button:hover{background:var(--panel-2)}
+  .dot{width:9px; height:9px; border-radius:50%; flex:0 0 9px}
+  .legend .val{margin-left:auto; font-variant-numeric:tabular-nums; color:var(--dim)}
+  .legend .pct{margin-left:8px; font-variant-numeric:tabular-nums; color:var(--dim-2); font-size:11.5px; min-width:38px; text-align:right}
+  .hbars{display:flex; flex-direction:column; gap:8px; margin-top:4px}
+  .hbar{cursor:pointer}
+  .hbar .row{display:flex; font-size:12px; margin-bottom:3px}
+  .hbar .row .nm{color:var(--txt); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .hbar .row .vl{margin-left:auto; color:var(--dim); font-variant-numeric:tabular-nums; padding-left:10px}
+  .hbar .track{height:7px; background:var(--panel-3); border-radius:4px; overflow:hidden}
+  .hbar .fill{height:100%; background:var(--accent); border-radius:4px}
+  .hbar:hover .fill{filter:brightness(1.2)}
+  .empty{
+    display:flex; flex-direction:column; align-items:center; gap:6px; justify-content:center;
+    color:var(--dim-2); font-size:12px; padding:26px 10px; text-align:center;
+  }
+  .empty .g{font-size:20px; opacity:.6}
+
+  /* ── tables ────────────────────────────────────────────── */
+  .tbl-wrap{overflow:auto; border:1px solid var(--line); border-radius:var(--radius-sm); max-width:100%}
+  table{border-collapse:collapse; width:100%; font-size:12.5px}
+  th,td{padding:8px 10px; text-align:left; border-bottom:1px solid var(--line); white-space:nowrap}
+  th{font-size:10.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--dim-2); font-weight:600; background:var(--panel-2); position:sticky; top:0}
+  td{font-variant-numeric:tabular-nums}
+  tbody tr{cursor:pointer}
+  tbody tr:hover td{background:var(--panel-2)}
+  tbody tr:last-child td{border-bottom:0}
+  .num{text-align:right}
+  .tag{
+    display:inline-block; font-size:10.5px; padding:2px 7px; border-radius:999px;
+    border:1px solid var(--line-2); color:var(--dim); background:var(--panel-2);
+  }
+  .tag.free{color:var(--dim)} .tag.tier1{color:var(--teal); border-color:var(--teal)}
+  .tag.tier2{color:var(--violet); border-color:var(--violet)} .tag.lifetime{color:var(--warn); border-color:var(--warn)}
+  .tag.paid{color:var(--good); border-color:var(--good)}
+
+  /* ── drawer ────────────────────────────────────────────── */
+  #scrim{position:fixed; inset:0; background:rgba(4,8,14,.55); opacity:0; pointer-events:none; transition:opacity .16s; z-index:40}
+  #scrim.on{opacity:1; pointer-events:auto}
+  #drawer{
+    position:fixed; top:0; right:0; height:100%; width:520px; max-width:92vw; z-index:41;
+    background:var(--panel); border-left:1px solid var(--line-2); box-shadow:var(--shadow);
+    transform:translateX(102%); transition:transform .18s ease; display:flex; flex-direction:column;
+  }
+  #drawer.on{transform:none}
+  #drawer header{display:flex; align-items:center; gap:10px; padding:13px 16px; border-bottom:1px solid var(--line)}
+  #drawer header .kind{font-size:10.5px; text-transform:uppercase; letter-spacing:.09em; color:var(--dim-2)}
+  #drawer header h2{margin:0; font-size:15px}
+  #drawer header .x{margin-left:auto; background:none; border:1px solid var(--line-2); color:var(--dim); border-radius:var(--radius-sm); min-height:30px; padding:0 10px; cursor:pointer; font-family:inherit}
+  #drawer .dbody{padding:14px 16px 30px; overflow:auto}
+  .tabs{display:flex; gap:6px; margin:2px 0 12px; flex-wrap:wrap}
+  .tabs button{border:1px solid var(--line-2); background:var(--panel-2); color:var(--dim); border-radius:999px; padding:5px 11px; font-size:12px; cursor:pointer; font-family:inherit}
+  .tabs button.on{background:var(--accent); border-color:var(--accent); color:var(--accent-ink); font-weight:600}
+  .dgrid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; margin-bottom:14px}
+  .dstat{background:var(--panel-2); border:1px solid var(--line); border-radius:var(--radius-sm); padding:9px 11px}
+  .dstat .t{font-size:10.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--dim-2)}
+  .dstat .v{font-size:16px; font-variant-numeric:tabular-nums; font-weight:600}
+  .note{font-size:11.5px; color:var(--dim-2); border-left:2px solid var(--line-2); padding-left:9px; margin:12px 0}
+  .acts{display:flex; gap:7px; flex-wrap:wrap; margin:12px 0 4px}
+  .acts button{border:1px solid var(--line-2); background:var(--panel-2); color:var(--txt); border-radius:var(--radius-sm); min-height:34px; padding:0 11px; font-family:inherit; font-size:12px; cursor:pointer}
+  .acts button:hover{border-color:var(--accent)}
+  .acts button.danger{color:var(--bad); border-color:var(--bad)}
+  .spark{display:flex; align-items:flex-end; gap:2px; height:44px; margin:8px 0 2px}
+  .spark i{flex:1; background:var(--accent); opacity:.75; border-radius:2px 2px 0 0; min-height:1px}
+
+  /* ── misc ──────────────────────────────────────────────── */
+  .tiles{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px}
+  #toasts{position:fixed; bottom:16px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; gap:8px; z-index:60}
+  .toast{background:var(--panel-3); border:1px solid var(--line-2); color:var(--txt); padding:9px 14px; border-radius:999px; font-size:12.5px; box-shadow:var(--shadow)}
+  .mock-note{
+    margin:0 0 14px; padding:9px 12px; border:1px dashed var(--line-2); border-radius:var(--radius-sm);
+    font-size:11.5px; color:var(--dim); background:var(--panel-2);
+  }
+  .mock-note b{color:var(--txt)}
+  @media (prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="nav">
+    <div class="brand">
+      <div class="mark">MC</div>
+      <div><b>Mission Control</b><span>Ayoub Industries</span></div>
+    </div>
+    <div class="nav-sep">Analytics</div>
+    <button class="nav-item" data-view="overview"><span class="ico">◈</span> Overview</button>
+    <button class="nav-item" data-view="revenue"><span class="ico">◍</span> Revenue <span class="badge" id="nav-rev"></span></button>
+    <button class="nav-item" data-view="players"><span class="ico">◉</span> Players <span class="badge" id="nav-players"></span></button>
+    <button class="nav-item" data-view="usage"><span class="ico">⌁</span> Usage</button>
+    <button class="nav-item" data-view="traffic"><span class="ico">⇢</span> Traffic</button>
+    <div class="nav-sep">Operations</div>
+    <button class="nav-item" data-view="feedback"><span class="ico">✎</span> Feedback</button>
+    <button class="nav-item" data-view="system"><span class="ico">⚙</span> System</button>
+    <div class="nav-foot">
+      sketch · preview<br>not committed<br>not deployed
+    </div>
+  </aside>
+
+  <div id="main">
+    <header id="topbar">
+      <div class="crumbs" id="crumbs"></div>
+      <div class="scope">
+        <span class="lbl">Window</span>
+        <button class="chip" data-win="24h">24h</button>
+        <button class="chip" data-win="7d">7d</button>
+        <button class="chip on" data-win="30d">30d</button>
+        <button class="chip" data-win="all">All</button>
+        <span class="stamp" id="stamp"></span>
+        <button class="icon-btn" id="theme">◐ Theme</button>
+        <button class="icon-btn" id="refresh">⟲ Refresh</button>
+      </div>
+    </header>
+    <div id="view"></div>
+  </div>
+</div>
+
+<div id="scrim"></div>
+<aside id="drawer" aria-hidden="true">
+  <header>
+    <div><div class="kind" id="dkind"></div><h2 id="dtitle"></h2></div>
+    <button class="x" id="dclose">Esc ✕</button>
+  </header>
+  <div class="dbody" id="dbody"></div>
+</aside>
+<div id="toasts"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   PRODUCTION AGGREGATES — measured on pn53, 2026-09-27 (see plan §0).
+   Per-player rows: real numbers, pseudonymised names. Everything else is real.
+   ═══════════════════════════════════════════════════════════════════════════ */
+const D = {
+  generated: '2026-09-27 20:1x',
+  totals: {accounts:159, players:156, admins:3, campaigns:132, tokens:41294305, calls:3315, visits:14630},
+  tiers: {free:144, tier1:6, tier2:9, lifetime:0},
+  callsDay: {"2026-08-26":31,"2026-08-27":12,"2026-08-28":5,"2026-08-29":21,"2026-08-30":30,"2026-08-31":9,"2026-09-01":63,"2026-09-02":8,"2026-09-03":4,"2026-09-04":92,"2026-09-05":15,"2026-09-06":2,"2026-09-09":1,"2026-09-10":6,"2026-09-11":1,"2026-09-12":7,"2026-09-13":62,"2026-09-14":31,"2026-09-15":17,"2026-09-16":1,"2026-09-17":4,"2026-09-18":8,"2026-09-20":71,"2026-09-21":80,"2026-09-22":111,"2026-09-23":12,"2026-09-24":2,"2026-09-25":40,"2026-09-26":101,"2026-09-27":118},
+  visitsDay: {"2026-09-14":144,"2026-09-15":75,"2026-09-16":39,"2026-09-17":100,"2026-09-18":61,"2026-09-19":97,"2026-09-20":463,"2026-09-21":928,"2026-09-22":426,"2026-09-23":367,"2026-09-24":127,"2026-09-25":50,"2026-09-26":293,"2026-09-27":188},
+  signupsDay: {"2026-09-15":2,"2026-09-16":1,"2026-09-17":1,"2026-09-18":1,"2026-09-20":3,"2026-09-21":27,"2026-09-22":1,"2026-09-23":2,"2026-09-25":1,"2026-09-26":3},
+  /* Value delivered — what players got for the money. From backend/data/turn_ledgers/*.jsonl. */
+  turnsDay: {"2026-08-26":29,"2026-08-27":15,"2026-08-28":6,"2026-08-29":33,"2026-08-30":35,"2026-08-31":13,"2026-09-01":69,"2026-09-02":5,"2026-09-03":2,"2026-09-04":58,"2026-09-05":16,"2026-09-06":14,"2026-09-09":6,"2026-09-10":6,"2026-09-11":1,"2026-09-12":10,"2026-09-13":51,"2026-09-14":18,"2026-09-15":9,"2026-09-16":1,"2026-09-17":2,"2026-09-18":6,"2026-09-20":60,"2026-09-21":101,"2026-09-22":76,"2026-09-23":15,"2026-09-24":1,"2026-09-25":22,"2026-09-26":91,"2026-09-27":164},
+  turnsTotal: 1839,
+  turnActions: [["dm",1320],["tts",236],["image",168],["undo",38],["char_gen",27],["guardian_post",19],["guardian_pre",13],["logbook",8],["extraction",8],["other",10]],
+  /* Revenue by payer country — geo from the cached ip_geo (no live lookups). */
+  revenueByCountry: [["DE","Germany",139,1],["GB","United Kingdom",70,1],["SE","Sweden",44,1]],
+  models: {
+    "step-3.7-flash": {calls:859, tokens:12103797, prov:'stepfun'},
+    "qwen3.8-flash": {calls:250, tokens:3253507, prov:'dashscope'},
+    "qwen3.6-flash": {calls:231, tokens:3803529, prov:'dashscope'},
+    "qwen3.8-max": {calls:126, tokens:1278962, prov:'dashscope'},
+    "deepseek-v4-flash-0731": {calls:118, tokens:1487902, prov:'deepseek'},
+    "orfree:nvidia/nemotron-3-ultra-550b-a55b:free": {calls:79, tokens:1216576, prov:'openrouter'},
+    "deepseek-v4-flash": {calls:34, tokens:348457, prov:'deepseek'},
+    "__unlabelled": {calls:1539, tokens:16801396, prov:'unlabelled'}
+  },
+  modelsDay: {"step-3.7-flash":{"2026-08-31":5,"2026-09-01":23,"2026-09-02":5,"2026-09-03":2,"2026-09-04":47,"2026-09-05":14,"2026-09-06":2,"2026-09-11":1,"2026-09-12":2,"2026-09-13":11,"2026-09-14":15,"2026-09-15":9,"2026-09-16":1,"2026-09-17":1,"2026-09-21":1,"2026-09-23":2},"qwen3.8-flash":{"2026-09-12":2,"2026-09-14":1,"2026-09-17":1,"2026-09-18":4,"2026-09-20":35,"2026-09-21":39,"2026-09-22":55,"2026-09-23":4,"2026-09-24":1,"2026-09-26":52,"2026-09-27":56},"qwen3.6-flash":{"2026-08-02":208,"2026-08-03":3,"2026-09-13":20},"qwen3.8-max":{"2026-08-01":6,"2026-08-02":12,"2026-08-03":53,"2026-08-04":9,"2026-08-05":6,"2026-08-06":7,"2026-08-07":11,"2026-08-08":9,"2026-08-09":7,"2026-09-01":1,"2026-09-09":1,"2026-09-10":3,"2026-09-13":1},"deepseek-v4-flash-0731":{"2026-08-02":68,"2026-08-03":45,"2026-08-05":5},"orfree:nvidia/nemotron-3-ultra-550b-a55b:free":{"2026-08-17":22,"2026-08-25":2,"2026-08-26":6,"2026-08-27":9,"2026-08-28":5,"2026-08-29":19,"2026-08-30":2,"2026-09-01":13,"2026-09-04":1}},
+  providers: {stepfun:881, dashscope:607, deepseek:168, unlabelled:1659},
+  countries: [["SE","Sweden",4849],["US","United States",2617],["??","Unknown",1237],["PL","Poland",968],["IN","India",486],["BR","Brazil",416],["BD","Bangladesh",365],["DE","Germany",311],["LK","Sri Lanka",301],["CA","Canada",252]],
+  products: [
+    {key:'unlock10', label:'10 € unlock', sek:0,   count:0, live:true,  note:'new product (2026-09-27) — first sale will land here'},
+    {key:'donation', label:'Donation',   sek:70,  count:1, live:true,  note:'any amount, +100 turns per €'},
+    {key:'patron500',label:'Patron 30 €',sek:139, count:1, live:true,  note:'legacy one-time tier (30 days)'},
+    {key:'tier1',    label:'Support (legacy sub)', sek:44, count:1, live:false, note:'legacy subscription — cancelled'},
+    {key:'lifetime', label:'Lifetime',   sek:0,   count:0, live:true,  note:'one-time, no MRR'},
+    {key:'renewal',  label:'Renewal',    sek:0,   count:0, live:true,  note:'legacy subscription renewal'}
+  ],
+  byMonth: [["2026-08",183,2],["2026-09",70,1]],
+  ledger: [
+    {ts:'2026-08-04', user:'player-11', sek:44,  type:'stripe:tier1',            note:'initial checkout (legacy sub)'},
+    {ts:'2026-08-04', user:'player-11', sek:0,   type:'stripe:cancel_scheduled', note:'cancelled via receipt — no revenue row'},
+    {ts:'2026-08-05', user:'player-12', sek:139, type:'stripe:patron500',        note:'one-time tier'},
+    {ts:'2026-09-04', user:'player-11', sek:0,   type:'legacy:cancelled',        note:'legacy subscription ended (no revenue row)'},
+    {ts:'2026-09-27', user:'player-03', sek:70,  type:'stripe:donation',         note:'6 € · +600 turns'}
+  ],
+  players: [
+    {u:'player-01', role:'player', tier:'free',  cc:'SE 🇸🇪', camps:1, tokens:5183293, calls:396, turns:396, rev:0,   last:'2026-08-03', country:'Sweden'},
+    {u:'player-02', role:'player', tier:'free',  cc:'US 🇺🇸', camps:2, tokens:4034680, calls:236, turns:236, rev:0,   last:'2026-08-16', country:'United States'},
+    {u:'player-03', role:'player', tier:'free',  cc:'GB 🇬🇧', camps:2, tokens:3012840, calls:204, turns:204, rev:70,  last:'2026-09-27', country:'United Kingdom'},
+    {u:'player-04', role:'player', tier:'free',  cc:'PL 🇵🇱', camps:1, tokens:2374047, calls:188, turns:188, rev:0,   last:'2026-08-04', country:'Poland'},
+    {u:'player-05', role:'player', tier:'free',  cc:'SE 🇸🇪', camps:1, tokens:2174982, calls:199, turns:199, rev:0,   last:'2026-08-03', country:'Sweden'},
+    {u:'player-06', role:'admin', tier:'free',   cc:'SE 🇸🇪', camps:3, tokens:1432564, calls:115, turns:115, rev:0,   last:'2026-09-22', country:'Sweden'},
+    {u:'player-07', role:'player', tier:'free',  cc:'DE 🇩🇪', camps:1, tokens:1669856, calls:107, turns:107, rev:0,   last:'2026-09-05', country:'Germany'},
+    {u:'player-08', role:'player', tier:'free',  cc:'IN 🇮🇳', camps:1, tokens:1115437, calls:87,  turns:87,  rev:0,   last:'2026-08-07', country:'India'},
+    {u:'player-09', role:'player', tier:'tier2', cc:'BR 🇧🇷', camps:1, tokens:1009284, calls:74,  turns:74,  rev:0,   last:'2026-09-04', country:'Brazil'},
+    {u:'player-10', role:'player', tier:'free',  cc:'SE 🇸🇪', camps:1, tokens:951206,  calls:59,  turns:59,  rev:0,   last:'2026-09-01', country:'Sweden'},
+    {u:'player-11', role:'player', tier:'free',  cc:'SE 🇸🇪', camps:1, tokens:432100,  calls:51,  turns:51,  rev:44,  last:'2026-08-04', country:'Sweden'},
+    {u:'player-12', role:'player', tier:'tier1', cc:'DE 🇩🇪', camps:1, tokens:388420,  calls:44,  turns:44,  rev:139, last:'2026-08-19', country:'Germany'}
+  ],
+  feedback: [
+    {who:'player-02', when:'2026-09-21', text:'[sample] The dice tray disappeared on mobile after my second turn.', tag:'bug'},
+    {who:'player-07', when:'2026-09-20', text:'[sample] Love the narrator voices — could the DM keep my accent? ', tag:'idea'},
+    {who:'player-10', when:'2026-09-19', text:'[sample] Character creation took very long with the big model.', tag:'perf'}
+  ]
+};
+
+/* ─────────────────────────── helpers ─────────────────────────── */
+const $ = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+const fmtNum = n => (n == null ? '—' : Number(n).toLocaleString('en-US'));
+const fmtSek = n => fmtNum(Math.round(n || 0)) + ' kr';
+const fmtTok = n => { n = n || 0; if (n >= 1e9) return (n/1e9).toFixed(2)+'B'; if (n >= 1e6) return (n/1e6).toFixed(1)+'M'; if (n >= 1e3) return (n/1e3).toFixed(1)+'k'; return String(n); };
+const sum = o => Object.values(o).reduce((a, b) => a + (b || 0), 0);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const label = m => m === '__unlabelled' ? 'unlabelled / legacy' : m.replace(/^orfree:/, '').replace(/:free$/, '');
+const modelName = m => m === '__unlabelled' ? 'Unlabelled / legacy rows' : m.replace(/^orfree:/, '');
+const provColor = p => ({stepfun:'#e0a24a', dashscope:'#5b8cff', deepseek:'#3fbf8f', openrouter:'#a97bff', unlabelled:'#6b7c92'})[p] || '#6b7c92';
+const PALETTE = ['#5b8cff', '#e0a24a', '#3fbf8f', '#a97bff', '#4fc3c8', '#e0605e', '#8d9db3'];
+
+let WIN = '30d';
+let state = {view:'overview', entity:null, metric:'calls', revMode:'day'};
+
+function windowDays(){
+  if (WIN === '24h') return 1;
+  if (WIN === '7d') return 7;
+  if (WIN === '30d') return 30;
+  return 3650;
+}
+function inWindow(day){
+  const d = new Date(day + 'T00:00:00');
+  const cut = new Date('2026-09-27T00:00:00');
+  cut.setDate(cut.getDate() - windowDays() + 1);
+  return d >= cut;
+}
+function pick(series){ const out = {}; Object.keys(series).forEach(k => { if (inWindow(k)) out[k] = series[k]; }); return out; }
+
+/* ─────────────────────────── charts ─────────────────────────── */
+function vchart(series, opts){
+  opts = opts || {};
+  const keys = Object.keys(series);
+  if (!keys.length) return emptyState('No data in this window');
+  const max = Math.max.apply(null, keys.map(k => series[k])) || 1;
+  const last = keys[keys.length - 1];
+  const cols = keys.map(k => {
+    const v = series[k];
+    const h = Math.max(Math.round(v / max * 100), v ? 2 : 0);
+    const lab = opts.labelEvery ? (opts.labelEvery(k, keys.indexOf(k), keys.length)) : k.slice(5);
+    return '<div class="vcol' + (k === last ? ' today' : '') + (opts.rev ? ' rev' : '') + '" data-day="' + k + '" data-val="' + v + '">' +
+      '<span class="lab">' + (v && (keys.length <= 16 || opts.alwaysLabel) ? fmtNum(v) : '') + '</span>' +
+      '<span class="track"><span class="fill" style="height:' + h + '%"></span></span>' +
+      '<span class="lab">' + lab + '</span></div>';
+  }).join('');
+  return '<div class="vchart">' + cols + '</div>';
+}
+function donut(items, centerLabel){
+  const total = items.reduce((a, b) => a + b.value, 0);
+  if (!total) return emptyState('Nothing to split yet');
+  const C = 2 * Math.PI * 70;
+  let off = 0;
+  const arcs = items.map((it, i) => {
+    const frac = it.value / total;
+    const dash = Math.max(frac * C - 1.6, 0.001);
+    const el = '<circle r="70" cx="100" cy="100" fill="none" stroke="' + (it.color || PALETTE[i % PALETTE.length]) + '" stroke-width="26" ' +
+      'stroke-dasharray="' + dash + ' ' + (C - dash) + '" stroke-dashoffset="' + (-off) + '" transform="rotate(-90 100 100)">' +
+      '<title>' + esc(it.label) + ': ' + fmtNum(it.value) + '</title></circle>';
+    off += frac * C;
+    return el;
+  }).join('');
+  return '<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">' +
+    '<svg viewBox="0 0 200 200" style="width:150px;height:150px;flex:0 0 150px">' +
+    '<circle r="70" cx="100" cy="100" fill="none" stroke="var(--line)" stroke-width="26"></circle>' + arcs +
+    '<text x="100" y="96" text-anchor="middle" fill="currentColor" font-size="17" font-weight="600">' + esc(centerLabel || fmtNum(total)) + '</text>' +
+    '<text x="100" y="114" text-anchor="middle" fill="currentColor" font-size="10" opacity=".55">' + esc(items.length + ' parts') + '</text></svg>' +
+    '<div class="legend" style="flex:1;min-width:180px">' + items.map((it, i) =>
+      '<button data-leg="' + i + '"><span class="dot" style="background:' + (it.color || PALETTE[i % PALETTE.length]) + '"></span>' +
+      esc(it.label) + '<span class="val">' + fmtNum(it.value) + '</span>' +
+      '<span class="pct">' + (total ? (it.value / total * 100).toFixed(1) : '0') + '%</span></button>').join('') +
+    '</div></div>';
+}
+function hbars(items, opts){
+  opts = opts || {};
+  if (!items.length) return emptyState('Nothing here in this window');
+  const max = Math.max.apply(null, items.map(i => i.value)) || 1;
+  return '<div class="hbars">' + items.map(i =>
+    '<div class="hbar" data-key="' + esc(i.key || i.label) + '"><div class="row"><span class="nm">' + esc(i.label) + '</span>' +
+    '<span class="vl" style="color:' + (i.color || 'var(--dim)') + '">' + (opts.fmt ? opts.fmt(i.value) : fmtNum(i.value)) + '</span></div>' +
+    '<span class="track"><span class="fill" style="width:' + Math.max(i.value / max * 100, i.value ? 2 : 0) + '%;background:' + (i.color || 'var(--accent)') + '"></span></span></div>').join('') + '</div>';
+}
+function spark(series){
+  const keys = Object.keys(series);
+  if (!keys.length) return '';
+  const max = Math.max.apply(null, keys.map(k => series[k])) || 1;
+  return '<div class="spark">' + keys.map(k =>
+    '<i style="height:' + Math.max(series[k] / max * 100, series[k] ? 4 : 1) + '%" title="' + k + ': ' + fmtNum(series[k]) + '"></i>').join('') + '</div>';
+}
+function emptyState(msg){ return '<div class="empty"><span class="g">✧</span>' + esc(msg) + '</div>'; }
+
+/* ─────────────────────────── KPI card ─────────────────────────── */
+function kpi(o){
+  return '<div class="card kpi clickable" data-drill="' + esc(o.drill) + '">' +
+    '<span class="t">' + esc(o.t) + '</span>' +
+    '<span class="v ' + (o.tone || '') + '">' + esc(o.v) + '</span>' +
+    '<span class="f">' + o.f + '</span>' +
+    '<span class="cta">drill down →</span></div>';
+}
+
+/* ─────────────────────────── views ─────────────────────────── */
+function revenueTotals(){
+  const rows = D.ledger;
+  const lifetime = rows.reduce((a, r) => a + r.sek, 0);
+  const month = rows.filter(r => (r.ts || '').slice(0, 7) === '2026-09').reduce((a, r) => a + r.sek, 0);
+  const today = rows.filter(r => r.ts === '2026-09-27').reduce((a, r) => a + r.sek, 0);
+  const payers = new Set(rows.filter(r => r.sek > 0).map(r => r.user));
+  return {lifetime, month, today, payers:payers.size, txs:rows.filter(r => r.sek > 0).length};
+}
+
+/* ── value delivered: the other half of the money story ── */
+function valueStats(){
+  const days = pick(D.turnsDay);
+  const turnsAll = D.turnsTotal;
+  /* the logged turn series covers 30 days; the 'all' window must use the true total */
+  const turnsWindow = WIN === 'all' ? turnsAll : sum(days);
+  const callsWindow = sum(pick(D.callsDay));
+  const sek = revenueTotals().lifetime;
+  const tokens = D.totals.tokens;
+  return {
+    turnsWindow, turnsAll, callsWindow, tokens, sek, turnsDay: days,
+    tokPerSek: sek ? Math.round(tokens / sek) : null,
+    krPerM: tokens ? (1e6 * sek / tokens) : null
+  };
+}
+function payerCountry(user){
+  const p = D.players.find(x => x.u === user);
+  if (p) return {cc: p.cc.slice(0, 2).trim(), name: p.country};
+  return {cc: '??', name: 'Unknown'};
+}
+function isoWeekKey(dstr){
+  const d = new Date(dstr + 'T00:00:00');
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));  // Monday start
+  // local components on purpose: toISOString() would shift the key back a day in CEST
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function revBuckets(mode){
+  const out = {};
+  D.ledger.forEach(r => {
+    if (!r.sek) return;
+    const k = mode === 'day' ? r.ts : mode === 'week' ? isoWeekKey(r.ts) : r.ts.slice(0, 7);
+    out[k] = (out[k] || 0) + r.sek;
+  });
+  return out;
+}
+
+function viewOverview(){
+  const t = D.totals, r = revenueTotals(), v = valueStats();
+  const cD = pick(D.callsDay), vD = pick(D.visitsDay);
+  const visits = sum(vD);
+  const conv = (r.payers / t.accounts * 100).toFixed(1);
+  const tierItems = [
+    {label:'Free', value:D.tiers.free, color:'#7d8ea4', key:'free'},
+    {label:'Patron (tier2)', value:D.tiers.tier2, color:'#a97bff', key:'tier2'},
+    {label:'Support (tier1)', value:D.tiers.tier1, color:'#4fc3c8', key:'tier1'}
+  ];
+  const topModels = Object.entries(D.models).sort((a, b) => b[1].calls - a[1].calls).slice(0, 5)
+    .map(([m, val]) => ({key:m, label:modelName(m), value:val.calls, color:provColor(val.prov)}));
+  const actionItems = D.turnActions.map((a, i) => ({label:a[0], value:a[1], color:PALETTE[i % PALETTE.length]}));
+
+  return '<div class="view-head"><h1>Overview</h1>' +
+    '<p>Money and value side by side. Click any tile, bar or slice to open the records behind it.</p><div class="spacer"></div>' +
+    '<button class="icon-btn" data-csv="overview">⇣ CSV</button></div>' +
+    '<div class="mock-note"><b>Design sketch.</b> Revenue, turns delivered, usage, traffic and tier numbers are real aggregates (2026-09-27); per-player rows are pseudonymised. No subscription logic anywhere — this is a one-time-purchase shop.</div>' +
+    '<div class="tiles" style="margin-bottom:12px">' +
+      kpi({t:'Revenue · September', v:fmtSek(r.month), tone:'accent', drill:'rev:month', f:'<b>' + fmtSek(r.today) + '</b> today · one-time products'}) +
+      kpi({t:'Lifetime revenue', v:fmtSek(r.lifetime), drill:'rev:lifetime', f:'<b>' + r.payers + '</b> paying accounts · ' + r.txs + ' payments · ' + conv + '%'}) +
+      kpi({t:'Turns delivered', v:fmtNum(v.turnsWindow) + ' turns', tone:'good', drill:'value', f:'window ' + WIN + ' · <b>' + fmtNum(v.turnsAll) + '</b> turns lifetime'}) +
+      kpi({t:'Cost of play', v:v.krPerM == null ? '—' : v.krPerM.toFixed(2) + ' kr', drill:'value', f:'per 1M tokens served · <b>' + fmtTok(v.tokPerSek) + '</b> tokens per kr'}) +
+      kpi({t:'Accounts', v:fmtNum(t.accounts), drill:'players', f:'<b>' + t.players + '</b> players · ' + t.admins + ' admin · ' + conv + '% ever paid'}) +
+      kpi({t:'Campaigns', v:fmtNum(t.campaigns), drill:'players', f:'<b>' + (t.campaigns / t.accounts).toFixed(2) + '</b> per account'}) +
+      kpi({t:'AI calls', v:fmtNum(v.callsWindow), drill:'usage:calls', f:'window ' + WIN + ' · lifetime <b>' + fmtNum(t.calls) + '</b>'}) +
+      kpi({t:'Unique visitors', v:fmtNum(visits), drill:'traffic', f:'window ' + WIN + ' · lifetime <b>' + fmtNum(t.visits) + '</b> visits'}) +
+    '</div>' +
+    '<div class="grid">' +
+      '<div class="card span8"><h3>AI calls per day</h3><div class="sub">DM + Lorekeeper + auxiliary calls pulled from the transcripts · window: ' + WIN + '</div>' + vchart(cD, {}) + '</div>' +
+      '<div class="card span4"><h3>Tier distribution</h3><div class="sub">active accounts by membership</div>' + donut(tierItems, fmtNum(t.accounts)) + '</div>' +
+      '<div class="card span7 clickable" data-value="1"><h3>Turns delivered per day</h3><div class="sub">every consumed turn from the turn ledger · click the card for the split</div>' + vchart(pick(D.turnsDay), {}) + '</div>' +
+      '<div class="card span5"><h3>What the turns were spent on</h3><div class="sub">turn ledger actions, lifetime</div>' + donut(actionItems, fmtNum(v.turnsAll)) + '</div>' +
+      '<div class="card span6 clickable" data-value="1"><h3>Revenue vs value delivered</h3><div class="sub">what came in, and what players got for it</div>' +
+        '<div class="dgrid" style="grid-template-columns:repeat(2,minmax(0,1fr))">' +
+        '<div class="dstat"><span class="t">Money in</span><span class="v">' + fmtSek(v.sek) + '</span></div>' +
+        '<div class="dstat"><span class="t">Turns delivered</span><span class="v">' + fmtNum(v.turnsAll) + '</span></div>' +
+        '<div class="dstat"><span class="t">Tokens served</span><span class="v">' + fmtTok(v.tokens) + '</span></div>' +
+        '<div class="dstat"><span class="t">AI calls</span><span class="v">' + fmtNum(t.calls) + '</span></div>' +
+        '<div class="dstat"><span class="t">Tokens per kr</span><span class="v">' + fmtTok(v.tokPerSek) + '</span></div>' +
+        '<div class="dstat"><span class="t">kr per 1M tokens</span><span class="v">' + (v.krPerM == null ? '—' : v.krPerM.toFixed(2)) + '</span></div></div></div>' +
+      '<div class="card span6"><h3>Most used models</h3><div class="sub">by calls · click for that model\'s daily series</div>' + hbars(topModels, {fmt:fmtNum}) + '</div>' +
+      '<div class="card span7"><h3>Visitors per day</h3><div class="sub">every request counted, last 14 days on record</div>' + vchart(pick(D.visitsDay), {}) + '</div>' +
+      '<div class="card span5"><h3>Recent transactions</h3><div class="sub">click a row for the raw record</div>' + ledgerTable(D.ledger.slice(-5).reverse()) + '</div>' +
+    '</div>';
+}
+
+function viewRevenue(){
+  const r = revenueTotals(), v = valueStats();
+  const prodItems = D.products.filter(p => p.sek > 0).map((p, i) => ({label:p.label, value:p.sek, color:PALETTE[i % PALETTE.length], key:p.key}));
+  const mode = state.revMode || 'day';
+  const buckets = revBuckets(mode);
+  const countryItems = D.revenueByCountry.map((c, i) => ({key:c[0], label:c[1] + ' · ' + c[0], value:c[2], color:PALETTE[i % PALETTE.length]}));
+  const custs = {};
+  D.ledger.forEach(row => {
+    const c = custs[row.user] = custs[row.user] || {user:row.user, sek:0, n:0, first:row.ts, last:row.ts, types:new Set(), cc:payerCountry(row.user)};
+    c.sek += row.sek; if (row.sek > 0) c.n++; c.types.add(row.type);
+    if (row.ts > c.last) c.last = row.ts;
+    if (row.ts < c.first) c.first = row.ts;
+  });
+  const custRows = Object.values(custs).sort((a, b) => b.sek - a.sek);
+
+  return '<div class="view-head"><h1>Revenue</h1><p>Every number comes from the billing ledger — the same source the Stripe webhook writes to. One-time purchases only: no subscriptions, no MRR, so the questions that matter are how much, from where, and what it bought.</p><div class="spacer"></div><button class="icon-btn" data-csv="ledger">⇣ CSV</button></div>' +
+    '<div class="tiles" style="margin-bottom:12px">' +
+      kpi({t:'This month · 2026-09', v:fmtSek(r.month), tone:'accent', drill:'rev:month', f:'calendar month, Europe/Stockholm'}) +
+      kpi({t:'Today', v:fmtSek(r.today), tone:'good', drill:'rev:today', f:'first live payment of the new 10 € pricing'}) +
+      kpi({t:'Lifetime', v:fmtSek(r.lifetime), drill:'rev:lifetime', f:'<b>' + r.txs + '</b> payments · ' + r.payers + ' paying accounts'}) +
+      kpi({t:'What it bought', v:fmtNum(v.turnsAll) + ' turns', tone:'good', drill:'value', f:fmtTok(v.tokens) + ' tokens served · ' + (v.krPerM == null ? '—' : v.krPerM.toFixed(2) + ' kr per 1M')}) +
+    '</div>' +
+    '<div class="grid">' +
+      '<div class="card span5"><h3>Revenue by product</h3><div class="sub">one-time products · click a slice</div>' +
+        (prodItems.length ? donut(prodItems, fmtSek(r.lifetime)) : emptyState('The ledger is quiet — first sale will show up here')) +
+        '<div class="note">Products that are live but still unused stay visible below so an empty 10 € unlock is never invisible. Cancellation and other zero-amount rows are trace events — they never count as revenue.</div></div>' +
+      '<div class="card span7"><h3>Revenue over time</h3><div class="sub">buckets from the ledger (local days) · flat stretches are real — purchases are one-time</div>' +
+        '<div class="tabs" style="margin-bottom:6px">' +
+        ['day', 'week', 'month'].map(m => '<button class="' + (mode === m ? 'on' : '') + '" data-rev="' + m + '">' + m[0].toUpperCase() + m.slice(1) + '</button>').join('') +
+        '</div>' + vchart(buckets, {rev:true, alwaysLabel:true, labelEvery:(k) => mode === 'month' ? k.slice(2) : k.slice(5)}) +
+        '<div class="note">Each bar is money actually received in that bucket; clicking it lists the transactions inside.</div></div>' +
+      '<div class="card span7"><h3>Revenue by country</h3><div class="sub">payer country from the cached geo data (no live lookups) · click a bar</div>' +
+        hbars(countryItems, {fmt:fmtSek}) +
+        '<div class="note">3 paying accounts in 3 countries: the £/€ customers are the ones trying the new unlock pricing first.</div></div>' +
+      '<div class="card span5 clickable" data-value="1"><h3>What the money bought</h3><div class="sub">value delivered alongside revenue</div>' +
+        '<div class="dgrid" style="grid-template-columns:repeat(2,minmax(0,1fr))">' +
+        '<div class="dstat"><span class="t">Turns delivered</span><span class="v">' + fmtNum(v.turnsAll) + '</span></div>' +
+        '<div class="dstat"><span class="t">Tokens served</span><span class="v">' + fmtTok(v.tokens) + '</span></div>' +
+        '<div class="dstat"><span class="t">Tokens per kr</span><span class="v">' + fmtTok(v.tokPerSek) + '</span></div>' +
+        '<div class="dstat"><span class="t">kr per 1M tokens</span><span class="v">' + (v.krPerM == null ? '—' : v.krPerM.toFixed(2)) + '</span></div></div>' +
+        donut(D.turnActions.slice(0, 5).map((a, i) => ({label:a[0], value:a[1], color:PALETTE[i % PALETTE.length]})), fmtNum(v.turnsAll)) + '</div>' +
+      '<div class="card span12"><h3>Transactions</h3><div class="sub">every ledger row, oldest first · click a row for the raw record</div>' + ledgerTable(D.ledger) + '</div>' +
+      '<div class="card span7"><h3>Customers by lifetime value</h3><div class="sub">click a customer for the dossier</div>' +
+        '<div class="tbl-wrap"><table><thead><tr><th>Customer</th><th>Country</th><th>Paid</th><th>Payments</th><th>First</th><th>Last</th><th>Products</th></tr></thead><tbody>' +
+        custRows.map(c => '<tr data-player="' + esc(c.user) + '"><td>' + esc(c.user) + '</td><td>' + esc(c.cc.cc + ' ' + c.cc.name) + '</td>' +
+          '<td class="num">' + fmtSek(c.sek) + '</td><td class="num">' + c.n + '</td><td>' + esc(c.first) + '</td><td>' + esc(c.last) + '</td>' +
+          '<td>' + esc(Array.from(c.types).map(x => x.replace('stripe:', '')).join(', ')) + '</td></tr>').join('') +
+        '</tbody></table></div></div>' +
+      '<div class="card span5"><h3>Revenue by month</h3><div class="sub">August (legacy tiers) vs September (new pricing)</div>' +
+        hbars(D.byMonth.map((m, i) => ({key:m[0], label:m[0], value:m[1], color:PALETTE[i % PALETTE.length]})), {fmt:fmtSek}) +
+        '<div class="note">No recurring revenue exists in this model, so this view replaces MRR entirely.</div></div>' +
+    '</div>';
+}
+
+function viewPlayers(){
+  const rows = D.players.slice().sort((a, b) => b.tokens - a.tokens);
+  return '<div class="view-head"><h1>Players</h1><p>Same table as today (sortable, filterable, 10 per page, mobile cards) — the difference is that a row opens a dossier instead of a modal.</p>' +
+    '<div class="spacer"></div><button class="icon-btn" data-csv="players">⇣ CSV</button></div>' +
+    '<div class="card span12"><div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">' +
+      '<input id="pq" placeholder="Search username or e-mail…" style="flex:1;min-width:220px;background:var(--panel-2);border:1px solid var(--line-2);color:var(--txt);border-radius:6px;min-height:34px;padding:0 11px;font-family:inherit">' +
+      '<button class="chip on">All</button><button class="chip">Players</button><button class="chip">Admins</button>' +
+      '<button class="chip">Paid</button><button class="chip">Never paid</button>' +
+      '<span class="stamp" style="align-self:center;margin-left:auto">' + D.players.length + ' of ' + D.totals.accounts + ' accounts</span></div>' +
+      '<div class="tbl-wrap" style="max-height:420px"><table><thead><tr>' +
+      '<th>User</th><th>Role</th><th>Tier</th><th>Country</th><th class="num">Campaigns</th><th class="num">Tokens</th><th class="num">Calls</th><th class="num">Revenue</th><th>Last active</th></tr></thead><tbody>' +
+      rows.map(p => '<tr data-player="' + esc(p.u) + '"><td><b>' + esc(p.u) + '</b></td><td><span class="tag">' + esc(p.role) + '</span></td>' +
+        '<td><span class="tag ' + esc(p.tier) + '">' + esc(p.tier) + '</span></td><td>' + esc(p.cc) + '</td>' +
+        '<td class="num">' + p.camps + '</td><td class="num">' + fmtTok(p.tokens) + '</td><td class="num">' + fmtNum(p.calls) + '</td>' +
+        '<td class="num">' + (p.rev ? '<span class="tag paid">' + fmtSek(p.rev) + '</span>' : '—') + '</td><td>' + esc(p.last) + '</td></tr>').join('') +
+      '</tbody></table></div>' +
+      '<div class="note">Rows are pseudonymised in this sketch; the numbers are the real top-10 by tokens.</div></div>';
+}
+
+function viewUsage(){
+  const metric = state.metric || 'calls';
+  const list = Object.entries(D.models).map(([m, v]) => ({key:m, label:modelName(m), value:v[metric], color:provColor(v.prov)}))
+    .sort((a, b) => b.value - a.value);
+  const provItems = Object.entries(D.providers).map(([p, v], i) => ({label:p, value:v, key:p, color:provColor(p)}));
+  const tokSplit = [
+    {label:'StepFun', value:12103797, color:provColor('stepfun')},
+    {label:'DashScope (Qwen)', value:8335998, color:provColor('dashscope')},
+    {label:'DeepSeek', value:1836359, color:provColor('deepseek')},
+    {label:'OpenRouter free', value:1216576, color:provColor('openrouter')},
+    {label:'Unlabelled / legacy', value:16801396, color:provColor('unlabelled')}
+  ];
+  return '<div class="view-head"><h1>Usage</h1><p>Which models actually get called, and what they cost you in tokens. Unlabelled rows are older transcript entries with no model tag (Guardian/legacy) — they are kept visible on purpose rather than hidden.</p>' +
+    '<div class="spacer"></div><div class="tabs"><button class="' + (metric === 'calls' ? 'on' : '') + '" data-metric="calls">Calls</button><button class="' + (metric === 'tokens' ? 'on' : '') + '" data-metric="tokens">Tokens</button></div></div>' +
+    '<div class="grid">' +
+      '<div class="card span7"><h3>Models by ' + metric + '</h3><div class="sub">click a bar for that model\'s per-day series</div>' +
+        hbars(list, {fmt:metric === 'tokens' ? fmtTok : fmtNum}) + '</div>' +
+      '<div class="card span5"><h3>API calls by provider</h3><div class="sub">' + fmtNum(sum(D.providers)) + ' logged calls · lifetime</div>' + donut(provItems, fmtNum(sum(D.providers))) + '</div>' +
+      '<div class="card span6"><h3>Token share by provider</h3><div class="sub">lifetime tokens, incl. unlabelled bucket</div>' + donut(tokSplit, fmtTok(D.totals.tokens)) + '</div>' +
+      '<div class="card span6"><h3>Calls per day</h3><div class="sub">window: ' + WIN + '</div>' + vchart(pick(D.callsDay), {}) + '</div>' +
+    '</div>';
+}
+
+function viewTraffic(){
+  const vD = pick(D.visitsDay);
+  const cItems = D.countries.map((c, i) => ({key:c[0], label:c[1] + ' · ' + c[0], value:c[2], color:PALETTE[i % PALETTE.length]}));
+  return '<div class="view-head"><h1>Traffic</h1><p>Nobody-logs-in traffic: visits, uniques and where they come from. Counted per request, geo resolved in the background (never inline).</p>' +
+    '<div class="spacer"></div><button class="icon-btn" data-csv="visits">⇣ CSV</button></div>' +
+    '<div class="tiles" style="margin-bottom:12px">' +
+      kpi({t:'Visits in window', v:fmtNum(sum(vD)), tone:'accent', drill:'traffic:visits', f:'lifetime <b>' + fmtNum(D.totals.visits) + '</b>'}) +
+      kpi({t:'Peak day', v:'928', drill:'traffic:peak', f:'2026-09-21 — promo/Reddit day'}) +
+      kpi({t:'Top country', v:'SE', drill:'traffic:countries', f:'<b>4 849</b> visits · US 2 617 · PL 968'}) +
+      kpi({t:'Unique days on record', v:'32', drill:'traffic:days', f:'since 2026-08-27'}) +
+    '</div>' +
+    '<div class="grid">' +
+      '<div class="card span12"><h3>Visits per day</h3><div class="sub">last 14 days on record (window: ' + WIN + ')</div>' + vchart(vD, {}) + '</div>' +
+      '<div class="card span6"><h3>Visits by country</h3><div class="sub">click a bar to filter</div>' + hbars(cItems.slice(0, 8), {fmt:fmtNum}) + '</div>' +
+      '<div class="card span6"><h3>Signups per day</h3><div class="sub">account creation (spike 2026-09-21 = 27 accounts)</div>' + vchart(pick(D.signupsDay), {}) + '</div>' +
+    '</div>';
+}
+
+function viewFeedback(){
+  return '<div class="view-head"><h1>Feedback</h1><p>The inbox keeps its window + sender chips; bodies get a sentiment tag and a link straight to that player\'s dossier.</p></div>' +
+    '<div class="card span12"><div class="tbl-wrap"><table><thead><tr><th>When</th><th>From</th><th>Tag</th><th>Note</th></tr></thead><tbody>' +
+    D.feedback.map(f => '<tr data-player="' + esc(f.who) + '"><td>' + esc(f.when) + '</td><td>' + esc(f.who) + '</td><td><span class="tag">' + esc(f.tag) + '</span></td><td style="white-space:normal;max-width:62ch">' + esc(f.text) + '</td></tr>').join('') +
+    '</tbody></table></div><div class="note">Sample rows — the real inbox is wired to <code>/api/admin/feedback</code> and keeps its existing filters.</div></div>';
+}
+
+function viewSystem(){
+  return '<div class="view-head"><h1>System</h1><p>Stretch goal (Fas 4): one place to see whether the machine behind the game is healthy — no SSH needed.</p></div>' +
+    '<div class="grid">' +
+      '<div class="card span4"><h3>Container</h3><div class="dgrid" style="grid-template-columns:1fr"><div class="dstat"><span class="t">loreweavers-cauldron</span><span class="v">up · :8092 → :8090</span></div></div><div class="note">Stretch: read <code>docker ps</code> + compose health from a small admin endpoint.</div></div>' +
+      '<div class="card span4"><h3>Data on disk</h3>' + hbars([{key:'campaigns', label:'campaigns/', value:132, color:'var(--accent)'},{key:'users', label:'users.json', value:159, color:'var(--teal)'},{key:'visits', label:'visits.json', value:14630, color:'var(--violet)'}], {fmt:fmtNum}) + '</div>' +
+      '<div class="card span4"><h3>Jobs</h3><div class="note">Stretch: cron status (21 jobs), last avatar purge, last nightly gallery WebP run.</div></div>' +
+    '</div>';
+}
+
+function ledgerTable(rows){
+  return '<div class="tbl-wrap"><table><thead><tr><th>Date</th><th>User</th><th class="num">Amount</th><th>Type</th><th>Note</th></tr></thead><tbody>' +
+    rows.map(r => '<tr data-ledger="' + esc(r.ts) + '"><td>' + esc(r.ts) + '</td><td>' + esc(r.user) + '</td>' +
+      '<td class="num" style="color:' + (r.sek ? 'var(--good)' : 'var(--dim-2)') + '">' + fmtSek(r.sek) + '</td>' +
+      '<td><span class="tag' + (r.sek ? ' paid' : '') + '">' + esc(r.type.replace('stripe:', '')) + '</span></td>' +
+      '<td style="white-space:normal">' + esc(r.note) + '</td></tr>').join('') + '</tbody></table></div>';
+}
+
+/* ─────────────────────────── router ─────────────────────────── */
+const VIEWS = {overview:viewOverview, revenue:viewRevenue, players:viewPlayers, usage:viewUsage, traffic:viewTraffic, feedback:viewFeedback, system:viewSystem};
+
+function render(){
+  $$('#nav .nav-item').forEach(b => b.classList.toggle('cur', b.dataset.view === state.view));
+  const fn = VIEWS[state.view] || viewOverview;
+  $('#view').innerHTML = fn();
+  $('#crumbs').innerHTML = '<b>' + esc(state.view[0].toUpperCase() + state.view.slice(1)) + '</b><span class="sep">/</span>' + esc(WIN);
+  $('#stamp').textContent = 'sketch data · updated ' + D.generated;
+  $('#nav-rev').textContent = fmtSek(revenueTotals().lifetime);
+  $('#nav-players').textContent = fmtNum(D.totals.accounts);
+  $$('.chip[data-win]').forEach(c => c.classList.toggle('on', c.dataset.win === WIN));
+  where();
+}
+function where(){ location.hash = '#/' + state.view + (state.entity ? '/' + state.entity : '') + '?w=' + WIN; }
+
+/* ─────────────────────────── drawer ─────────────────────────── */
+function openDrawer(kind, title, html){
+  $('#dkind').textContent = kind;
+  $('#dtitle').textContent = title;
+  $('#dbody').innerHTML = html;
+  $('#drawer').classList.add('on'); $('#drawer').setAttribute('aria-hidden', 'false');
+  $('#scrim').classList.add('on');
+}
+function closeDrawer(){ $('#drawer').classList.remove('on'); $('#drawer').setAttribute('aria-hidden', 'true'); $('#scrim').classList.remove('on'); }
+
+function drawerRevenue(which){
+  const r = revenueTotals();
+  const rows = which === 'today' ? D.ledger.filter(x => x.ts === '2026-09-27')
+    : which === 'month' ? D.ledger.filter(x => x.ts.slice(0, 7) === '2026-09')
+    : which === 'conversion' ? D.ledger.filter(x => x.sek > 0)
+    : D.ledger;
+  const total = rows.reduce((a, x) => a + x.sek, 0);
+  openDrawer('revenue · ' + which, fmtSek(total),
+    '<div class="dgrid"><div class="dstat"><span class="t">Rows</span><span class="v">' + rows.length + '</span></div>' +
+    '<div class="dstat"><span class="t">Paying accounts</span><span class="v">' + new Set(rows.filter(x => x.sek > 0).map(x => x.user)).size + '</span></div></div>' +
+    ledgerTable(rows) +
+    '<div class="note">Source: <code>/api/admin/billing</code> → <code>ledger</code> (server-computed; the UI never adds up money itself).</div>');
+}
+function drawerProduct(key){
+  const p = D.products.find(x => x.key === key);
+  const rows = D.ledger.filter(x => x.type === 'stripe:' + key);
+  openDrawer('revenue · product', p.label,
+    '<div class="dgrid"><div class="dstat"><span class="t">Revenue</span><span class="v">' + fmtSek(p.sek) + '</span></div>' +
+    '<div class="dstat"><span class="t">Payments</span><span class="v">' + p.count + '</span></div>' +
+    '<div class="dstat"><span class="t">Status</span><span class="v">' + (p.live ? 'live' : 'legacy') + '</span></div>' +
+    '<div class="dstat"><span class="t">Price point</span><span class="v">' + (key === 'unlock10' ? '10 €' : key === 'patron500' ? '30 €' : key === 'tier1' ? '3 €/mo' : 'any') + '</span></div></div>' +
+    (rows.length ? ledgerTable(rows) : emptyState('No payments recorded for this product yet')) +
+    '<div class="note">' + esc(p.note) + '</div>');
+}
+function drawerPlayer(u){
+  const p = D.players.find(x => x.u === u);
+  if (!p) return;
+  const rev = D.ledger.filter(x => x.user === u);
+  openDrawer('player dossier', u,
+    '<div class="tabs"><button class="on">Summary</button><button>Usage</button><button>Revenue</button><button>Campaigns</button></div>' +
+    '<div class="dgrid"><div class="dstat"><span class="t">Tokens</span><span class="v">' + fmtTok(p.tokens) + '</span></div>' +
+    '<div class="dstat"><span class="t">AI calls</span><span class="v">' + fmtNum(p.calls) + '</span></div>' +
+    '<div class="dstat"><span class="t">Campaigns</span><span class="v">' + p.camps + '</span></div>' +
+    '<div class="dstat"><span class="t">Revenue</span><span class="v">' + (p.rev ? fmtSek(p.rev) : '—') + '</span></div>' +
+    '<div class="dstat"><span class="t">Tier</span><span class="v">' + esc(p.tier) + '</span></div>' +
+    '<div class="dstat"><span class="t">Last active</span><span class="v">' + esc(p.last) + '</span></div></div>' +
+    '<h3 style="font-size:12.5px;margin:14px 0 0">Activity shape</h3><div class="sub" style="color:var(--dim-2);font-size:11.5px">calls per day (window ' + WIN + ')</div>' +
+    spark(pick(D.callsDay)) +
+    (rev.length ? '<h3 style="font-size:12.5px;margin:16px 0 6px">Payments</h3>' + ledgerTable(rev) : '<div class="note">Never paid — free tier.</div>') +
+    '<div class="acts"><button data-act="bonus">+ Turn bonus</button><button data-act="cap">Set daily cap</button>' +
+    '<button data-act="tier">Change tier</button><button data-act="reset">Reset turns</button><button class="danger" data-act="delete">Delete account</button></div>' +
+    '<div class="note">Actions are the SAME fetch calls as today (byte-identical bodies) — the drawer only changes the shell around them.</div>');
+}
+function drawerModel(m){
+  const v = D.models[m];
+  const days = D.modelsDay[m];
+  openDrawer('usage · model', modelName(m),
+    '<div class="dgrid"><div class="dstat"><span class="t">Calls</span><span class="v">' + fmtNum(v.calls) + '</span></div>' +
+    '<div class="dstat"><span class="t">Tokens</span><span class="v">' + fmtTok(v.tokens) + '</span></div>' +
+    '<div class="dstat"><span class="t">Provider</span><span class="v" style="color:' + provColor(v.prov) + '">' + esc(v.prov) + '</span></div>' +
+    '<div class="dstat"><span class="t">Tokens / call</span><span class="v">' + fmtNum(Math.round(v.tokens / (v.calls || 1))) + '</span></div></div>' +
+    (days ? '<h3 style="font-size:12.5px">Calls per day</h3>' + vchart(days, {alwaysLabel:true}) : '<div class="note">Per-day series is only captured for the top models in this sketch.</div>') +
+    '<div class="note">Source: transcript <code>meta.model</code> + <code>meta.tokens</code> aggregated per provider in the backend.</div>');
+}
+function drawerLedger(ts){
+  const row = D.ledger.find(r => r.ts === ts) || D.ledger[0];
+  openDrawer('ledger row', row.type.replace('stripe:', ''),
+    '<div class="dgrid"><div class="dstat"><span class="t">Date</span><span class="v">' + esc(row.ts) + '</span></div>' +
+    '<div class="dstat"><span class="t">Amount</span><span class="v">' + fmtSek(row.sek) + '</span></div>' +
+    '<div class="dstat"><span class="t">User</span><span class="v">' + esc(row.user) + '</span></div>' +
+    '<div class="dstat"><span class="t">Raw type</span><span class="v" style="font-size:13px">' + esc(row.type) + '</span></div></div>' +
+    '<div class="note">Ledger rows are append-only; cancellations and other trace events carry amount 0 and never count as revenue. The full record also has <code>stripe_sub_id</code> + <code>event_id</code> for reconciliation against Stripe.</div>' +
+    '<div class="acts"><button data-act="open-stripe">Open in Stripe</button><button data-act="copy-id">Copy ids</button></div>');
+}
+function drawerDay(day, val, what){
+  openDrawer(what, day + ' · ' + fmtNum(val),
+    '<div class="dgrid"><div class="dstat"><span class="t">' + esc(what) + '</span><span class="v">' + fmtNum(val) + '</span></div>' +
+    '<div class="dstat"><span class="t">Window</span><span class="v">' + WIN + '</span></div></div>' +
+    '<div class="note">Click-through from a chart bar: the drill-down shows the records behind that day (calls by model, campaigns, or visitors by country).</div>');
+}
+
+function drawerCountry(cc){
+  const rows = D.ledger.filter(r => payerCountry(r.user).cc === cc);
+  const sek = rows.reduce((a, r) => a + r.sek, 0);
+  const name = (D.revenueByCountry.find(c => c[0] === cc) || ['??', 'Unknown'])[1];
+  openDrawer('revenue · country', name + ' · ' + fmtSek(sek),
+    '<div class="dgrid"><div class="dstat"><span class="t">Revenue</span><span class="v">' + fmtSek(sek) + '</span></div>' +
+    '<div class="dstat"><span class="t">Paying accounts</span><span class="v">' + new Set(rows.filter(r => r.sek > 0).map(r => r.user)).size + '</span></div>' +
+    '<div class="dstat"><span class="t">Share of lifetime</span><span class="v">' + (revenueTotals().lifetime ? (sek / revenueTotals().lifetime * 100).toFixed(0) + '%' : '—') + '</span></div>' +
+    '<div class="dstat"><span class="t">Transactions</span><span class="v">' + rows.length + '</span></div></div>' +
+    ledgerTable(rows) +
+    '<div class="note">Country comes from the cached geo lookup for the payer\'s account IP — never a live call from the dashboard.</div>');
+}
+function drawerValue(){
+  const v = valueStats();
+  openDrawer('value delivered', fmtNum(v.turnsAll) + ' turns',
+    '<div class="dgrid"><div class="dstat"><span class="t">Turns (window ' + WIN + ')</span><span class="v">' + fmtNum(v.turnsWindow) + '</span></div>' +
+    '<div class="dstat"><span class="t">Turns all time</span><span class="v">' + fmtNum(v.turnsAll) + '</span></div>' +
+    '<div class="dstat"><span class="t">Tokens served</span><span class="v">' + fmtTok(v.tokens) + '</span></div>' +
+    '<div class="dstat"><span class="t">Tokens per kr</span><span class="v">' + fmtTok(v.tokPerSek) + '</span></div></div>' +
+    '<h3 style="font-size:12.5px;margin:14px 0 0">Turns delivered per day</h3>' + vchart(v.turnsDay, {}) +
+    '<h3 style="font-size:12.5px;margin:16px 0 6px">Spent on</h3>' +
+    hbars(D.turnActions.map((a, i) => ({key:a[0], label:a[0], value:a[1], color:PALETTE[i % PALETTE.length]})), {fmt:fmtNum}) +
+    '<div class="note">Turns come from <code>backend/data/turn_ledgers/*.jsonl</code> (one row per consumed turn, with action + model). Money comes from the billing ledger. Both are server-side counts — the dashboard never estimates.</div>');
+}
+
+/* ─────────────────────────── CSV ─────────────────────────── */
+function toCsv(rows){
+  return rows.map(r => r.map(c => '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"').join(',')).join('\n');
+}
+function download(name, text){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], {type:'text/csv'}));
+  a.download = name; a.click();
+  toast('Exported ' + name);
+}
+function exportCsv(what){
+  if (what === 'players') return download('players.csv', toCsv([['user','role','tier','country','campaigns','tokens','calls','revenue','last_active']].concat(D.players.map(p => [p.u, p.role, p.tier, p.country, p.camps, p.tokens, p.calls, p.rev, p.last]))));
+  if (what === 'ledger') return download('ledger.csv', toCsv([['date','user','sek','type','note']].concat(D.ledger.map(r => [r.ts, r.user, r.sek, r.type, r.note]))));
+  if (what === 'visits') return download('visits.csv', toCsv([['day','visits']].concat(Object.entries(D.visitsDay))));
+  return download('ai_calls.csv', toCsv([['day','calls']].concat(Object.entries(D.callsDay))));
+}
+function toast(msg){
+  const el = document.createElement('div');
+  el.className = 'toast'; el.textContent = msg;
+  $('#toasts').appendChild(el);
+  setTimeout(() => el.remove(), 2200);
+}
+
+/* ─────────────────────────── events ─────────────────────────── */
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-view],[data-drill],[data-leg],[data-player],[data-ledger],[data-day],[data-key],[data-csv],[data-metric],[data-act],[data-rev],[data-country],[data-value],.chip[data-win]');
+  if (!t) return;
+  if (t.dataset.view){ state.view = t.dataset.view; state.entity = null; closeDrawer(); render(); return; }
+  if (t.dataset.win){ WIN = t.dataset.win; render(); return; }
+  if (t.dataset.metric){ state.metric = t.dataset.metric; render(); return; }
+  if (t.dataset.rev){ state.revMode = t.dataset.rev; render(); return; }
+  if (t.dataset.value){ return drawerValue(); }
+  if (t.dataset.csv){ exportCsv(t.dataset.csv); return; }
+  if (t.dataset.drill){
+    const d = t.dataset.drill;
+    if (d.startsWith('rev:')) return drawerRevenue(d.split(':')[1]);
+    if (d.startsWith('usage:')) return openDrawer('usage', d.split(':')[1], '<div class="note">Breakdown of every model bucket behind this number, with per-day series and tokens per call.</div>' + hbars(Object.entries(D.models).map(([m, v]) => ({key:m, label:modelName(m), value:v[d.endsWith('tokens') ? 'tokens' : 'calls'], color:provColor(v.prov)})).sort((a, b) => b.value - a.value), {}));
+    if (d.startsWith('traffic')) return openDrawer('traffic', 'Traffic', hbars(D.countries.map((c, i) => ({key:c[0], label:c[1], value:c[2], color:PALETTE[i % PALETTE.length]})), {fmt:fmtNum}));
+    return; // 'players' → nothing extra, the table is right there
+  }
+  if (t.dataset.leg != null){
+    const card = t.closest('.card');
+    const key = t.dataset.leg;
+    const donutItems = $$('.legend button', card);
+    const idx = Number(key);
+    const name = donutItems[idx] ? donutItems[idx].textContent.trim().split(/\s{2,}/)[0] : 'slice';
+    const prod = D.products.find(p => p.label === name.trim());
+    if (prod) return drawerProduct(prod.key);
+    return openDrawer('breakdown', name, '<div class="note">Slice drill-down: the records behind this segment.</div>');
+  }
+  if (t.dataset.product) return drawerProduct(t.dataset.product);
+  if (t.dataset.player) return drawerPlayer(t.dataset.player);
+  if (t.dataset.ledger) return drawerLedger(t.dataset.ledger);
+  if (t.dataset.day) return drawerDay(t.dataset.day, t.dataset.val, 'Calls logged');
+  if (t.dataset.key){
+    const m = t.dataset.key;
+    if (D.models[m]) return drawerModel(m);
+    if (/^[A-Z]{2}$/.test(m) && D.revenueByCountry.some(c => c[0] === m)) return drawerCountry(m);
+    return openDrawer('breakdown', m, '<div class="note">Drill-down for this row (per-day series and the underlying records).</div>');
+  }
+  if (t.dataset.act) return toast('Action "' + t.dataset.act + '" is wired to the existing endpoint in the real build');
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+$('#dclose').addEventListener('click', closeDrawer);
+$('#scrim').addEventListener('click', closeDrawer);
+$('#theme').addEventListener('click', () => {
+  const html = document.documentElement;
+  html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
+});
+$('#refresh').addEventListener('click', () => { toast('Refetching /api/admin/overview…'); render(); });
+$('#pq') && $('#pq').addEventListener('input', () => {});
+
+render();
+</script>
+</body>
+</html>

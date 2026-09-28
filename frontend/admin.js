@@ -26,6 +26,9 @@
     sortKey: 'tokens', sortDir: 'desc', page: 1, pageSize: 10,
     q: '', fRole: 'all', fStatus: 'all', fCountry: 'all', fCode: 'all',
     auto: false, timer: null, degraded: false, loading: false, dossier: null,
+    /* Hink-filtret i dossiéns ledger-tabell (2026-09-28). Nollställs när en ny
+       spelare öppnas, så ett filter aldrig läcker mellan konton. */
+    dossierBucket: 'all',
     /* expand = "show all" per panel (referrers, countries, models, players-model-mix).
        Empty = the panel's default cap. Never silently truncate without the control. */
     expand: {}, drawerState: null, geoRange: '', geoOverride: null,
@@ -378,7 +381,7 @@
     POOL_PARTS.forEach(p => { totals[p] = 0; });
     Object.keys(byDay || {}).forEach(d => POOL_PARTS.forEach(p => { totals[p] += bucketVal(byDay[d], p); }));
     const rows = POOL_PARTS.map(p => ({ key:p, label:p === 'other' ? 'legacy / unknown' : p, value:totals[p], color:POOL_PART_COLOR[p] }))
-      .filter(r => r.value > 0 || r.key !== 'other');
+      .filter(r => r.value > 0);
     const sum = rows.reduce((a, r) => a + r.value, 0);
     return '<div class="legend pool-legend">' + rows.map(r =>
       '<span class="lg' + (r.value ? '' : ' zero') + '"><span class="dot" style="background:' + r.color + '"></span>' +
@@ -422,7 +425,9 @@
     const bucketDayTotals = {};
     POOL_PARTS.forEach(p => { bucketDayTotals[p] = 0; });
     Object.keys(bucketDay).forEach(d => POOL_PARTS.forEach(p => { bucketDayTotals[p] += bucketVal(bucketDay[d], p); }));
-    return { turns, tokens, money, tps, kpm, calls: Number(v.ai_calls || TOT().ai_calls) || 0, bucketDay, bucketDayTotals };
+    return { turns, tokens, money, tps, kpm, calls: Number(v.ai_calls || TOT().ai_calls) || 0, bucketDay, bucketDayTotals,
+      /* Källuppdelningen (2026-09-28) kommer färdigräknad från servern. */
+      sources: v.tokens_sources || null };
   }
   function tierItems() {
     const t = TIERS();
@@ -508,12 +513,14 @@
   /* Free/paid-fördelningen (rostad 2026-09-28): räknas server-side i
      /api/admin/overview som coding_summary. Klick → kontona bakom koden. */
   function codeDonut(codes) {
+    /* Koder utan konton ritas inte (2026-09-28): en slice som alltid står på 0
+       är en död yta. Reglerna och etiketterna finns kvar i CODE_LABEL. */
     const items = ['paid', 'granted', 'free'].map(k => ({
       key:k, label:CODE_LABEL[k], value:Number(codes[k] || 0), color:POOL_PART_COLOR[k === 'free' ? 'free' : (k === 'paid' ? 'paid' : 'promo')],
-    }));
+    })).filter(i => i.value > 0);
     const total = items.reduce((a, i) => a + i.value, 0);
     if (!total) return emptyState('No coding in this payload', '◌');
-    return donut(items, num(total), 'accounts', { keepZero:true, click: i => 'data-code="' + esc(i.key) + '"' });
+    return donut(items, num(total), 'accounts', { click: i => 'data-code="' + esc(i.key) + '"' });
   }
 
   /* "Senast 5 aktiva spelarna" (rostad 2026-09-28). Källan är last_active som
@@ -547,7 +554,16 @@
       '<div class="dstat"><span class="t">Tokens served</span><span class="v">' + tok(v.tokens) + '</span></div>' +
       '<div class="dstat"><span class="t">AI calls</span><span class="v">' + num(v.calls) + '</span></div>' +
       '<div class="dstat"><span class="t">Tokens per kr</span><span class="v">' + tok(v.tps) + '</span></div>' +
-      '<div class="dstat"><span class="t">kr per 1M tokens</span><span class="v">' + (v.kpm == null ? '—' : v.kpm.toFixed(2)) + '</span></div></div>';
+      '<div class="dstat"><span class="t">kr per 1M tokens</span><span class="v">' + (v.kpm == null ? '—' : v.kpm.toFixed(2)) + '</span></div></div>' +
+      /* Token-KPI:ns tre källor (2026-09-28). Siffran blandade förut transkript
+         (daterad) med bakgrundsanrop och raderade kampanjer (livstidsräknare utan
+         dag), så summan av dagsgrafen kunde aldrig matcha "tokens served". */
+      (v.sources ? '<div class="sub">Tokens served · by source (lifetime)</div><div class="dgrid">' +
+        '<div class="dstat"><span class="t">Dated · transcripts</span><span class="v">' + tok(v.sources.dated) + '</span></div>' +
+        (Number(v.sources.background) ? '<div class="dstat"><span class="t">Background calls · no date</span><span class="v">' + tok(v.sources.background) + '</span></div>' : '') +
+        (Number(v.sources.deleted) ? '<div class="dstat"><span class="t">Deleted campaigns · no date</span><span class="v">' + tok(v.sources.deleted) + '</span></div>' : '') +
+        '<div class="dstat"><span class="t">Lifetime total</span><span class="v">' + tok(v.sources.lifetime) + '</span></div></div>' +
+        '<div class="note">Only transcript calls carry a timestamp — background calls (summaries, extraction, Battle AI) and usage from deleted campaigns are lifetime counters with no day. The day series therefore covers the dated part only.</div>' : '');
   }
 
   function revenueBuckets() {
@@ -718,8 +734,17 @@
             [['all','All'],['free','Free'],['tier1','Support'],['tier2','Patron'],['lifetime','Lifetime']].map(([v, l]) => chip(v === S.fStatus, 'data-fstatus="' + v + '"', l)).join('') + '</div></div>' +
           /* Free/paid-koden är en egen axel (rostad 2026-09-28): tier säger vad
              kontot är, koden säger vad det faktiskt fått turns av. */
+          /* Kod-chips (2026-09-28): bara koder som faktiskt har konton visas —
+             plus den som är aktivt filtrerad, så filtret aldrig försvinner under
+             fingrarna. Antalet står i chipen, samma tal som ftot-raden och CSV:n. */
           '<div class="chip-group"><span class="chip-label">Code</span><div class="chips">' +
-            [['all','All'],['paid','Paid'],['granted','Granted'],['free','Free']].map(([v, l]) => chip(v === S.fCode, 'data-fcode="' + v + '"', l)).join('') + '</div></div>' +
+            (() => {
+              const cc = { paid:0, granted:0, free:0 };
+              USERS().forEach(u => { const c = codeOf(u); if (cc[c] != null) cc[c]++; });
+              return [['all','All ' + num(USERS().length)]]
+                .concat(['paid', 'granted', 'free'].filter(c => cc[c] > 0 || S.fCode === c).map(c => [c, CODE_LABEL[c] + ' · ' + num(cc[c])]))
+                .map(([v, l]) => chip(v === S.fCode, 'data-fcode="' + v + '"', l)).join('');
+            })() + '</div></div>' +
           '<div class="chip-group"><span class="chip-label">Country</span><div class="chips">' +
             [['all','All']].concat(Object.keys(countries).sort().map(k => [k, countries[k]])).map(([v, l]) => chip(v === S.fCountry, 'data-fcountry="' + esc(v) + '"', l)).join('') + '</div></div>' +
           '<button class="chip clear" data-clear="1" title="Reset all filters">✕ Clear</button>' +
@@ -731,9 +756,10 @@
           ftot('Revenue', sek(sumRows(sorted, 'revenue'))) +
           /* Pott-raden (2026-09-28): samma tre koder som legenderna — räknade på
              de filtrerade raderna, så "Paid 7" i tabellen matchar chipen. */
-          ftot('Paid', num(sorted.filter(u => codeOf(u) === 'paid').length)) +
-          ftot('Granted', num(sorted.filter(u => codeOf(u) === 'granted').length)) +
-          ftot('Free', num(sorted.filter(u => codeOf(u) === 'free').length)) +
+          /* Koder utan konton visas inte (2026-09-28): en räknare som alltid står
+             på 0 är en död yta, inte information. */
+          ['paid', 'granted', 'free'].map(c => ({ c: c, n: sorted.filter(u => codeOf(u) === c).length }))
+            .filter(x => x.n > 0).map(x => ftot(CODE_LABEL[x.c], num(x.n))).join('') +
           ftot('Turns left', num(poolSum(sorted, 'available'))) +
           (sorted.some(u => poolOf(u) && poolOf(u).unlimited) ? ftot('Unlimited', num(sorted.filter(u => poolOf(u) && poolOf(u).unlimited).length) + ' acct') : '') +
         '</div>' +
@@ -791,8 +817,13 @@
       '<div class="mc-grid"><span>' + tok(u.total_tokens) + ' tokens</span><span>' + num(u.total_turns) + ' turns</span>' +
       '<span>' + num(u.total_campaigns) + ' campaigns</span><span>' + (u.revenue ? sek(u.revenue) : 'never paid') + '</span></div>' +
       (tp ? '<div class="mc-pool"><span class="pl">' + esc(poolText(u)) + '</span>' + poolBar(u) +
+        /* Samma radvisa pottdetaljer som tabellen (2026-09-28) — mobilen ska säga
+           exakt samma sak som desktop-kolumnen, inte en tunnare version. */
+        '<span class="pool-txt">' + poolLines(u).map(l => '<span class="ln">' + esc(l) + '</span>').join('') + '</span>' +
         '<span class="sp">' + (spent ? num(spent) + ' used in total' + (Number(life.paid) ? ' (' + num(life.paid) + ' bought)' : '') : 'nothing used yet') + '</span></div>' : '') +
-      '<div class="mc-foot">' + esc(String(u.last_active || '').slice(0, 10) || 'never active') + ' · ' + esc(u.country || '') + '</div></div>';
+      '<div class="mc-foot">' + (Date.parse(u.last_active || '')
+        ? esc(String(u.last_active).slice(0, 10)) + ' · ' + esc(agoText(u.last_active))
+        : 'never active') + ' · ' + esc(u.country || '') + '</div></div>';
   }
   function pagerHtml(page, pages, total) {
     if (pages <= 1) return '<span class="stamp">' + num(total) + ' players</span>';
@@ -1285,7 +1316,9 @@
       '<div class="tbl-wrap"><table class="pool-table"><thead><tr><th>Bucket</th><th class="num">Left</th><th class="num">Used</th><th>Note</th></tr></thead><tbody>' +
         row('Free quota', unlimited ? '∞' : num(freeLeft) + ' / ' + num(tp.free_cap), num(tp.free_used_period),
             unlimited ? 'this account is not capped' : reset) +
-        row('Promo / legacy', num(promoLeft), num(usedPromo), 'spent before the free quota — why "0 used" never meant "played nothing"') +
+        (promoLeft || usedPromo
+          ? row('Promo / legacy', num(promoLeft), num(usedPromo), 'spent before the free quota — why "0 used" never meant "played nothing"')
+          : '') +
         row('Bought / granted', num(paidLeft) + (granted ? ' <span class="dim">of ' + num(granted) + '</span>' : ''), num(usedPaid),
             granted ? (known ? 'granted per the purchase log' : '<b>buy unknown before ' + esc(since || '2026-09-28') + '</b>') : (paidLeft ? '<b>buy unknown before ' + esc(since || '2026-09-28') + '</b>' : 'never bought')) +
         (usedUnknown
@@ -1341,11 +1374,12 @@
       '<div class="dgrid">' +
       '<div class="dstat"><span class="t">Turns left · all accounts</span><span class="v">' + num(pool.available) + '</span></div>' +
       '<div class="dstat"><span class="t">Free quota today</span><span class="v">' + num(pool.free_left) + '</span></div>' +
-      '<div class="dstat"><span class="t">Promo / legacy</span><span class="v">' + num(pool.promo_left) + '</span></div>' +
+      (Number(pool.promo_left) ? '<div class="dstat"><span class="t">Promo / legacy</span><span class="v">' + num(pool.promo_left) + '</span></div>' : '') +
       '<div class="dstat"><span class="t">Bought / granted</span><span class="v">' + num(pool.paid_left) + '</span></div>' +
-      '<div class="dstat"><span class="t">Unlimited accounts</span><span class="v">' + num(pool.unlimited_accounts) + '</span></div>' +
-      '<div class="dstat"><span class="t">Accounts with a real purchase log</span><span class="v">' + num(pool.granted_known_accounts) + '</span></div>' +
-      '<div class="dstat"><span class="t">Paid / granted / free</span><span class="v">' + num(codes.paid) + ' · ' + num(codes.granted) + ' · ' + num(codes.free) + '</span></div>' +
+      (Number(pool.unlimited_accounts) ? '<div class="dstat"><span class="t">Unlimited accounts</span><span class="v">' + num(pool.unlimited_accounts) + '</span></div>' : '') +
+      (Number(pool.granted_known_accounts) ? '<div class="dstat"><span class="t">Accounts with a real purchase log</span><span class="v">' + num(pool.granted_known_accounts) + '</span></div>' : '') +
+      '<div class="dstat"><span class="t">Coding</span><span class="v">' +
+        ['paid', 'granted', 'free'].filter(c => Number(codes[c]) > 0).map(c => CODE_LABEL[c] + ' ' + num(codes[c])).join(' · ') + '</span></div>' +
       '<div class="dstat"><span class="t">Turns delivered · window ' + esc(S.win) + '</span><span class="v">' + num(valueStats().turns) + '</span></div></div>' +
       '<div class="sub">Where the turns went · window ' + esc(S.win) + '</div>' + vchartStacked(bucketDay, { unit:'turns', emptyMsg:'No turn series in this payload' }) +
       '<div class="sub">Biggest pools</div>' +
@@ -1468,6 +1502,9 @@
       { d: 'geos' });
   }
   async function drawerPlayer(username, tab) {
+    /* Ny spelare = nytt hink-filter. Görs här och inte i drawerTab, så att
+       filtervalet överlever byte av flik för samma spelare. */
+    if (!S.dossier || S.dossier.username !== username) S.dossierBucket = 'all';
     openDrawer('player dossier', username, '<div class="loading">Loading ' + esc(username) + '…</div>', { d: 'player', k: username, t: tab || 'summary' });
     let detail = null, turnLedger = null;
     try { detail = await api('/api/admin/user/' + encodeURIComponent(username)); }
@@ -1520,6 +1557,39 @@
     const d = {};
     Object.keys(obj || {}).sort().forEach(k => { d[k] = Number((obj[k] || {})[field] || 0) || 0; });
     return d;
+  }
+  /* Ledger-raderna bakom hinksiffran (2026-09-28). Servern skickar redan
+     `entries` (senaste 200) + `by_bucket`/`by_bucket_today` i
+     /api/admin/user/{u}/ledger — tidigare visades bara antalet rader. Här listas
+     de, med hink-filter som bara filtrerar listan: inga nyckeltal räknas i
+     klienten, siffrorna i chipen kommer från serverns `bucket`-fält per rad. */
+  const LEDGER_BUCKETS = ['all', 'free', 'paid', 'promo', 'unknown'];
+  function bucketOf(e) { const b = (e && e.bucket) || ''; return (b && b !== 'none') ? b : 'unknown'; }
+  function ledgerBucketTable(turnLedger, filter) {
+    const entries = (turnLedger && turnLedger.entries) || [];
+    if (!entries.length) {
+      return emptyState('No turn ledger rows for this account — the per-user ledger starts with the first turn played after it was introduced', '◌');
+    }
+    const active = LEDGER_BUCKETS.indexOf(filter) >= 0 ? filter : 'all';
+    const counts = { all: entries.length };
+    entries.forEach(e => { const b = bucketOf(e); counts[b] = (counts[b] || 0) + 1; });
+    const rows = active === 'all' ? entries : entries.filter(e => bucketOf(e) === active);
+    const label = b => b === 'all' ? 'All' : (b === 'unknown' ? 'legacy / unknown' : b);
+    return '<div class="sub">Ledger rows · ' + (active === 'all' ? 'all buckets' : esc(label(active))) +
+        ' (' + num(rows.length) + ' of ' + num(entries.length) + ' loaded)</div>' +
+      '<div class="chips">' + LEDGER_BUCKETS.filter(b => b === 'all' || counts[b] > 0 || active === b)
+        .map(b => '<button type="button" class="chip' + (b === active ? ' on' : '') + '" data-ledgerbucket="' + b + '">' +
+          esc(label(b)) + ' · ' + num(counts[b] || 0) + '</button>').join('') + '</div>' +
+      '<div class="tbl-wrap"><table class="mix-table ledger-rows"><thead><tr><th>When</th><th>Action</th><th>Model</th>' +
+        '<th class="num">Tokens</th><th>Bucket</th><th class="num">Pool after</th></tr></thead><tbody>' +
+        rows.slice(0, 60).map(e => '<tr><td>' + esc(String(e.ts || '').replace('T', ' ').slice(0, 16)) + '</td>' +
+          '<td>' + esc(e.action || '—') + '</td><td>' + esc(e.model || '—') + '</td>' +
+          '<td class="num">' + (e.tokens ? num(e.tokens) : '—') + '</td>' +
+          '<td>' + esc(label(bucketOf(e))) + '</td>' +
+          '<td class="num">' + (e.pool_after == null ? '—' : num(e.pool_after)) + '</td></tr>').join('') +
+      '</tbody></table></div>' +
+      (rows.length > 60 ? '<div class="note">Showing the newest 60 of ' + num(rows.length) + ' matching rows. ' : '<div class="note">') +
+      'Rows written before 2026-09-28 carry no bucket and are counted as legacy / unknown — never guessed into "free".</div>';
   }
   async function drawerTab(tab, username, detail, turnLedger) {
     detail = detail || {};
@@ -1577,6 +1647,8 @@
         (roles.length ? '<div class="sub">Who burns the tokens</div>' + donut(roles, tok(roles.reduce((a, r) => a + r.value, 0)), 'tokens') : '') +
         (mix.length ? modelMixTable(mix) : emptyState('No model mix recorded', '◌')) +
         bucketSplit(detail.turn_ledger_buckets, 'all time') +
+        bucketSplit(detail.turn_ledger_buckets_today, 'today') +
+        ledgerBucketTable(turnLedger, S.dossierBucket) +
         (actions.length ? '<div class="sub">Turn ledger actions · all ' + num(actions.length) + '</div>' + hbars(actions, { fmt: num, class:"ref-list" }) + '<div class="note">Only turns consumed since the per-user turn ledger was introduced are counted here — older turns show up in the campaign totals instead.</div>' : '');
     } else if (tab === 'revenue') {
       const hist = detail.revenue_history || [];
@@ -1835,7 +1907,7 @@
   function openWith(t, fn) { lastTrigger = t; return fn(); }
   document.addEventListener('click', async function (ev) {
     const t = ev.target.closest('[data-view],[data-win],[data-metric],[data-rev],[data-tmetric],[data-expand],' +
-      '[data-drill],[data-slice],[data-key],[data-tx],[data-player],[data-model],[data-action],[data-ref],[data-geo],[data-country],[data-georange],[data-tier],[data-day],[data-peak],[data-csvmodel],' +
+      '[data-drill],[data-slice],[data-key],[data-tx],[data-player],[data-model],[data-action],[data-ref],[data-geo],[data-country],[data-georange],[data-tier],[data-day],[data-ledgerbucket],[data-csvmodel],' +
       '[data-csv],[data-sort],[data-page],[data-frole],[data-fstatus],[data-fcountry],[data-fcode],[data-clear],[data-fbrange],[data-fbmail],[data-tab],[data-act],[data-bucket],[data-product],[data-pool],[data-code]');
     if (!t) return;
     const d = t.dataset;
@@ -1864,6 +1936,12 @@
     if (d.fbmail) { S.fbMail = d.fbmail; render(); return; }
     if (d.csv) { exportCsv(d.csv); return; }
     if (d.csvmodel) { exportModelCsv(d.csvmodel); return; }
+    /* Hink-filter i dossiéns ledger-tabell (2026-09-28): filtrerar bara de rader
+       klienten redan har — inget nyckeltal räknas om här. */
+    if (d.ledgerbucket && S.dossier && S.dossier.username) {
+      S.dossierBucket = d.ledgerbucket;
+      return drawerTab('usage', S.dossier.username, S.dossier.detail, S.dossier.ledger);
+    }
 
     if (d.drill) {
       const v = d.drill;

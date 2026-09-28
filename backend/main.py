@@ -10907,6 +10907,11 @@ def _scan_user_transcripts(user: str) -> dict:
     last_active = ""
     sessions = []
     tts_usage = {"calls": 0, "api_calls": 0, "chars": 0, "tokens": 0, "seconds": 0.0}
+    # Bakgrundsanrop (state.meta.unguarded_tokens): extraktion, sammanfattningar,
+    # dag-entries, Battle AI. De har INGEN tidsstämpel och kan därför aldrig
+    # hamna i `daily` — de redovisas separat så token-KPI:ns tre källor går att
+    # skilja åt i dashboarden (2026-09-28).
+    unguarded_tokens = 0
     # {YYYY-MM-DD (lokal): {"calls": n, "tokens": t}} — för admin-vyns
     # AI-calls-graf per dag/vecka/månad (2026-09-21).
     daily: dict = {}
@@ -10920,10 +10925,13 @@ def _scan_user_transcripts(user: str) -> dict:
         base = _empty_account_usage()
         return {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "turns": 0,
                 "last_active": "", "sessions": sessions, "tts_usage": tts_usage, "daily": daily,
-                "model_daily": model_daily,
+                "model_daily": model_daily, "unguarded_tokens": 0,
                 "character_creation": base["character_creation"], "image_gen": base["image_gen"],
                 "deleted_campaigns": base["deleted"]}
 
+    # Modellattribution för bakgrundsanrop i kampanjer utan transkriptfil
+    # (annars hade de tappats ur modellraden — bara kontots summor räknas).
+    bg_model_orphans: dict = {}
     for campaign_dir in sorted(user_dir.iterdir()):
         if not campaign_dir.is_dir():
             continue
@@ -11023,59 +11031,6 @@ def _scan_user_transcripts(user: str) -> dict:
                             session_last = ts
             except OSError:
                 continue
-            # Bakgrunds-LLM-anrop som inte får en transkriptpost (faktextraktion,
-            # sammanfattningar, dag-entries, Battle AI, Guardian "no changes")
-            # ackumuleras i state.meta.unguarded_tokens — lägg till per kampanj.
-            # Nyare state har by_model (vilken LLM som spenderade) — då fördelas
-            # tokens på rätt modell i model_tokens istället för en grå klump.
-            # DAGBOKLUTSFRI: dessa har ingen tidstämpel alls (livstidsräknare),
-            # så de kan inte placeras i daily — grafen visar transkript-spårbara
-            # anrop; totalsynen (tokens/calls KPI) inkluderar fortfarande allt.
-            try:
-                st_file = campaign_dir / "state.json"
-                if st_file.exists():
-                    with open(st_file) as f:
-                        st = json.load(f)
-                    ut = st.get("meta", {}).get("unguarded_tokens", {}) or {}
-                    up = ut.get("prompt_tokens", 0) or 0
-                    uc = ut.get("completion_tokens", 0) or 0
-                    prompt_tokens += up
-                    completion_tokens += uc
-                    session_prompt += up
-                    session_completion += uc
-                    bg = role_tokens.setdefault("background", {"prompt_tokens": 0, "completion_tokens": 0})
-                    bg["prompt_tokens"] += up
-                    bg["completion_tokens"] += uc
-                    # Per-modell: by_model → model_tokens (anrop räknas som 1 per post)
-                    by_model = ut.get("by_model") or {}
-                    for m_name, mv in by_model.items():
-                        mt = model_tokens.setdefault(m_name, {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0})
-                        mt["prompt_tokens"] += mv.get("prompt_tokens", 0) or 0
-                        mt["completion_tokens"] += mv.get("completion_tokens", 0) or 0
-                        mt["calls"] += mv.get("calls", 0) or 0
-                    # Bakåtkompatibilitet: state utan by_model (gammal data) —
-                    # attribuera klumpen till EXTRACTION_MODEL (vanligaste källan)
-                    # så den ändå syns i modellraden, inte bara som 'background'.
-                    if not by_model and (up or uc):
-                        mt = model_tokens.setdefault(EXTRACTION_MODEL, {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0})
-                        mt["prompt_tokens"] += up
-                        mt["completion_tokens"] += uc
-                        mt["calls"] += 1
-                    # TTS-förbrukning (tokens/sekunder/minuter renderat) per kampanj
-                    tt = st.get("meta", {}).get("tts_usage") or {}
-                    if tt:
-                        tts_usage["calls"] += tt.get("calls", 0) or 0
-                        tts_usage["api_calls"] += tt.get("api_calls", 0) or 0
-                        tts_usage["chars"] += tt.get("chars", 0) or 0
-                        tts_usage["tokens"] += tt.get("tokens", 0) or 0
-                        tts_usage["seconds"] += tt.get("seconds", 0) or 0
-                        # Per-modell-uppdelning (2026-08-06) — TTS-modeller
-                        # ska synas i admin-vyns "Calls by provider".
-                        bm = tts_usage.setdefault("by_model", {})
-                        for m, n in (tt.get("by_model") or {}).items():
-                            bm[m] = (bm.get(m, 0) or 0) + (n or 0)
-            except (OSError, json.JSONDecodeError):
-                pass
             sessions.append({
                 "campaign_id": campaign_id,
                 "session_file": ts_file.name,
@@ -11087,6 +11042,83 @@ def _scan_user_transcripts(user: str) -> dict:
                 "role_tokens": role_tokens,
                 "model_tokens": model_tokens,
             })
+
+        # Bakgrunds-LLM-anrop som inte får en transkriptpost (faktextraktion,
+        # sammanfattningar, dag-entries, Battle AI, Guardian "no changes")
+        # ackumuleras i state.meta.unguarded_tokens, och TTS-förbrukningen i
+        # meta.tts_usage. state.json läses EXAKT EN gång per kampanj (2026-09-28):
+        # blocket låg förut inuti per-fil-loopen, så en kampanj med flera
+        # session-*.jsonl räknade allt en gång per fil, och en kampanj utan
+        # transkriptfil tappades helt (latent bugg — inga skarpa tal ändrades).
+        # DAGBOKSLUTSFRI: dessa har ingen tidstämpel alls (livstidsräknare), så de
+        # kan inte placeras i daily — grafen visar transkript-spårbara anrop;
+        # totalsynen (tokens/calls KPI) inkluderar fortfarande allt.
+        bg_role = {"prompt_tokens": 0, "completion_tokens": 0}
+        bg_model: dict = {}
+        bg_tts: dict = {}
+        try:
+            st_file = campaign_dir / "state.json"
+            if st_file.exists():
+                with open(st_file) as f:
+                    st = json.load(f)
+                ut = st.get("meta", {}).get("unguarded_tokens", {}) or {}
+                _up = ut.get("prompt_tokens", 0) or 0
+                _uc = ut.get("completion_tokens", 0) or 0
+                prompt_tokens += _up
+                completion_tokens += _uc
+                unguarded_tokens += _up + _uc
+                bg_role["prompt_tokens"] += _up
+                bg_role["completion_tokens"] += _uc
+                # Per-modell: by_model → modellraden (annars en grå klump)
+                for m_name, mv in (ut.get("by_model") or {}).items():
+                    _m = bg_model.setdefault(m_name, {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0})
+                    _m["prompt_tokens"] += mv.get("prompt_tokens", 0) or 0
+                    _m["completion_tokens"] += mv.get("completion_tokens", 0) or 0
+                    _m["calls"] += mv.get("calls", 0) or 0
+                # Bakåtkompatibilitet: state utan by_model (gammal data) —
+                # attribuera klumpen till EXTRACTION_MODEL (vanligaste källan)
+                # så den ändå syns i modellraden, inte bara som 'background'.
+                if not (ut.get("by_model") or {}) and (_up or _uc):
+                    _m = bg_model.setdefault(EXTRACTION_MODEL, {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0})
+                    _m["prompt_tokens"] += _up
+                    _m["completion_tokens"] += _uc
+                    _m["calls"] += 1
+                # TTS-förbrukning (tokens/sekunder/minuter renderat) per kampanj
+                bg_tts = st.get("meta", {}).get("tts_usage") or {}
+        except (OSError, json.JSONDecodeError):
+            pass
+        if bg_tts:
+            tts_usage["calls"] += bg_tts.get("calls", 0) or 0
+            tts_usage["api_calls"] += bg_tts.get("api_calls", 0) or 0
+            tts_usage["chars"] += bg_tts.get("chars", 0) or 0
+            tts_usage["tokens"] += bg_tts.get("tokens", 0) or 0
+            tts_usage["seconds"] += bg_tts.get("seconds", 0) or 0
+            bm = tts_usage.setdefault("by_model", {})
+            for m, n in (bg_tts.get("by_model") or {}).items():
+                bm[m] = (bm.get(m, 0) or 0) + (n or 0)
+        if bg_role["prompt_tokens"] or bg_role["completion_tokens"] or bg_model:
+            _camp_sessions = [s for s in sessions if s["campaign_id"] == campaign_id]
+            if _camp_sessions:
+                # Fäst på kampanjens sista transkriptpost: roll- och modellraden
+                # läses ur sessions[] (dossién, /api/campaign/usage). För en
+                # enkelfils-kampanj blir det exakt samma post som förut.
+                _last = _camp_sessions[-1]
+                rt = _last["role_tokens"].setdefault("background", {"prompt_tokens": 0, "completion_tokens": 0})
+                rt["prompt_tokens"] += bg_role["prompt_tokens"]
+                rt["completion_tokens"] += bg_role["completion_tokens"]
+                for m, mv in bg_model.items():
+                    _mt = _last["model_tokens"].setdefault(m, {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0})
+                    _mt["prompt_tokens"] += mv["prompt_tokens"]
+                    _mt["completion_tokens"] += mv["completion_tokens"]
+                    _mt["calls"] += mv["calls"]
+            else:
+                # Ingen transkriptfil kvar (raderad/roterad): kontots totaler är
+                # redan uppdaterade ovan; modellraden fångas via bg_model_orphans.
+                for m, mv in bg_model.items():
+                    _mt = bg_model_orphans.setdefault(m, {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0})
+                    _mt["prompt_tokens"] += mv["prompt_tokens"]
+                    _mt["completion_tokens"] += mv["completion_tokens"]
+                    _mt["calls"] += mv["calls"]
 
     # Lägg till förbrukning från RADERADE kampanjer (beständig ackumulator)
     # så kontots totala tokens/turns/TTS overlever kampanjradering. Uppdateras
@@ -11107,6 +11139,11 @@ def _scan_user_transcripts(user: str) -> dict:
     # Aggregera per-modell-förbrukning över ALLA sessioner (top-level), så
     # admin-dashboarden kan visa token-share per provider utan att dubbelscanna.
     model_tokens_total: dict = {}
+    for _m, _mv in bg_model_orphans.items():
+        mt = model_tokens_total.setdefault(_m, {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0})
+        mt["prompt_tokens"] += _mv.get("prompt_tokens", 0) or 0
+        mt["completion_tokens"] += _mv.get("completion_tokens", 0) or 0
+        mt["calls"] += _mv.get("calls", 0) or 0
     for _s in sessions:
         for _m, _mv in (_s.get("model_tokens") or {}).items():
             mt = model_tokens_total.setdefault(_m, {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0})
@@ -11126,6 +11163,10 @@ def _scan_user_transcripts(user: str) -> dict:
         "daily": daily,
         "model_daily": {m: {d: model_daily[m][d] for d in sorted(model_daily[m])}
                         for m in sorted(model_daily)},
+        # Källuppdelning av token-siffran (2026-09-28): bara `daily` (transkript)
+        # är daterad. `unguarded_tokens` och `deleted_campaigns` är livstidsräknare
+        # utan dag och kan därför aldrig visas i dagsgrafen.
+        "unguarded_tokens": unguarded_tokens,
         "character_creation": _acc.get("character_creation", {}),
         "image_gen": _acc.get("image_gen", {}),
         "deleted_campaigns": _del,
@@ -11448,6 +11489,10 @@ def _value_delivered(window: str = "all") -> dict:
     lifetime_tokens = 0
     tokens = 0
     ai_calls = 0
+    # Token-siffrans tre källor (2026-09-28): transkript (daterad), bakgrunds-
+    # anrop och raderade kampanjer (båda rena livstidsräknare utan dag).
+    src_background = 0
+    src_deleted = 0
     for username in load_users():
         try:
             scan = _scan_user_transcripts(username)
@@ -11455,11 +11500,16 @@ def _value_delivered(window: str = "all") -> dict:
             logger.warning("value delivered: transcript scan failed for %s", username)
             continue
         lifetime_tokens += int(scan.get("total_tokens", 0) or 0)
+        src_background += int(scan.get("unguarded_tokens", 0) or 0)
+        src_deleted += int((scan.get("deleted_campaigns") or {}).get("total_tokens", 0) or 0)
         for day, dv in (scan.get("daily") or {}).items():
             if since and day < since:
                 continue
             ai_calls += int((dv or {}).get("calls", 0) or 0)
             tokens += int((dv or {}).get("tokens", 0) or 0)
+
+    # Den daterade delen är resten av livstiden — aldrig en egen påhittad summa.
+    src_dated = max(0, lifetime_tokens - src_background - src_deleted)
 
     # SEK från SAMMA ledger-total som revenue.total (ingen egen pengamatte).
     sek = int(_ledger_totals().get("total", 0) or 0)
@@ -11477,6 +11527,16 @@ def _value_delivered(window: str = "all") -> dict:
         # Per hink och dag — staplad graf i dashboarden. Summerar mot turns_day
         # (samma scan, samma fönster); "unknown" = rader före 2026-09-28.
         "turns_by_bucket_day": {d: bucket_day[d] for d in sorted(bucket_day)},
+        # Token-siffran uppdelad på källa. `dated_windowed` = fönstrets daterade
+        # tokens (samma tal som `tokens`), `dated` = hela livstidens daterade.
+        # Dashboarden visar de tre källorna i stället för att blanda dem.
+        "tokens_sources": {
+            "dated": src_dated,
+            "dated_windowed": tokens,
+            "background": src_background,
+            "deleted": src_deleted,
+            "lifetime": lifetime_tokens,
+        },
         "by_action": dict(sorted(by_action.items(), key=lambda kv: (-kv[1], kv[0]))),
     }
 

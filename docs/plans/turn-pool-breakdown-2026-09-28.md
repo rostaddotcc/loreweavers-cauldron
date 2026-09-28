@@ -455,6 +455,12 @@ varje våg, inte bara i slutet.
   serveras med `?v=20260928b`.
 
 ### Kvar
-- Dashboard-v2-vågen ligger fortfarande **ocommittad** i trädet (blandat med denna patch) —
-  bör branchas/committas i ett svep när rostad säger till.
+- **Committat 2026-09-28:** hela passet ligger i `dd5a3ec` (*Turn-pott per spelare
+  (rostad 2026-09-28)*, 14 filer, +2 378/−28), och designunderlaget från v2-vågen i
+  `dea1829` (*Admin-dashboard v2: preview-mockup*). Drilldown-koden `20aacd8` var redan
+  committad. **Pushat 2026-09-28** till `origin/main`
+  (`github.com/rostaddotcc/loreweavers-cauldron`, `main` == `origin/main`).
+- Kvar i trädet (medvetet utanför båda commitsen): spelets egna byten i
+  `frontend/book-souls/` (avatarer + `gallery.json`) och 84 ostagade scratch-filer i
+  `tmp/` (äldre subagentrapporter, migreringsskript, `tmp/backup-turnpool-20260928/`).
 - Öppna beslut #1–#5 i planen (admin-kontots kod, primär etikett, m.m.).

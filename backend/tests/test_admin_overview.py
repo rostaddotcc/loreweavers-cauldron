@@ -381,7 +381,9 @@ def test_overview_user_rows_are_compact(client):
                                   "kr_per_1m_tokens", "turns_windowed",
                                   "turns_day", "by_action",
                                   # per hink och dag (2026-09-28)
-                                  "turns_by_bucket_day"}
+                                  "turns_by_bucket_day",
+                                  # källuppdelningen av token-siffran (2026-09-28)
+                                  "tokens_sources"}
     assert body["totals"]["accounts"] == 2 and body["totals"]["admins"] == 1
     assert body["totals"]["players"] == 1
     # kompakta rader: BARA tabellfälten — aldrig daily/model_tokens (159 konton)
@@ -863,3 +865,31 @@ def test_model_detail_rejects_bad_window_and_non_admin(client):
     assert client.get("/api/admin/model/step-3.7-flash",
                       cookies={"morkrets_token": _ptok()}).status_code == 403
     assert client.get("/api/admin/model/step-3.7-flash").status_code in (401, 403)
+
+
+def test_value_delivered_splits_tokens_by_source(ledger_file, monkeypatch):
+    """Token-siffrans tre källor (2026-09-28): transkript (daterad), bakgrunds-
+    anrop (`unguarded_tokens`, ingen dag) och raderade kampanjer (ingen dag).
+    Dashboarden visar de tre i stället för att blanda dem — därför måste de
+    summera exakt mot livstidstalet, och `dated_windowed` vara samma tal som
+    `tokens` (KPI:n). Ingen påhittad fjärde summa: den daterade delen är resten.
+    """
+    _seed_admin()
+    _seed_player("alice")
+
+    def fake_scan(user):
+        if user != "alice":
+            return {"total_tokens": 0, "daily": {}}
+        return {"total_tokens": 10_000, "unguarded_tokens": 1_500,
+                "deleted_campaigns": {"total_tokens": 2_000, "turns": 3},
+                "daily": {"2026-09-27": {"calls": 4, "tokens": 6_500}}}
+    monkeypatch.setattr(main, "_scan_user_transcripts", fake_scan)
+
+    v = main._value_delivered("all")
+    src = v["tokens_sources"]
+    assert src["lifetime"] == 10_000
+    assert src["background"] == 1_500                    # ur state.meta
+    assert src["deleted"] == 2_000                       # ur raderade kampanjer
+    assert src["dated"] == 6_500                         # 10 000 − 1 500 − 2 000
+    assert src["dated"] + src["background"] + src["deleted"] == src["lifetime"]
+    assert src["dated_windowed"] == v["tokens"] == 6_500

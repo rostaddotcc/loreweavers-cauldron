@@ -1650,3 +1650,116 @@ tbody tr.quiet b{font-weight:500}
   .panel-tools{row-gap:var(--sp-1)}
   .geo-list,.ref-list{max-height:none}
 }
+
+/* ── TURN POOL + FREE/PAID CODE (2026-09-28) ─────────────────────────────
+   rostad: potten gick inte att läsa — "hur mycket köpt, hur mycket gått åt".
+   Allt nedan använder BEFINTLIGA temavariabler (paid=--good, granted=--violet,
+   promo=--violet, fri=--good/--dim) — inga nya färger, inga nya temaytor. */
+.tag.granted{color:var(--violet);border-color:var(--violet-dim);background:var(--panel-3);font-weight:600}
+
+/* kod-prick (Recently active + kod-drawern) */
+.codedot{
+  width:8px;height:8px;flex:0 0 8px;border-radius:var(--radius-pill);
+  background:var(--dim-2);box-shadow:0 0 0 1px rgba(127,127,127,.28);
+}
+.codedot.paid{background:var(--good)}
+.codedot.granted{background:var(--violet)}
+.codedot.free{background:var(--dim-2)}
+
+/* pott-bar: fri / promo / köpt i en rad */
+.poolbar{
+  display:flex;width:100%;max-width:132px;height:6px;margin-top:4px;
+  border-radius:var(--radius-pill);overflow:hidden;background:var(--panel-3);
+}
+.poolbar i{display:block;height:100%}
+.poolbar i.free{background:var(--good)}
+.poolbar i.promo{background:var(--violet)}
+.poolbar i.paid{background:var(--warn)}
+.poolbar.empty i{display:none}
+
+/* pott-cell i tabellen: tal + bar, klickbar → pott-drawern */
+.pool-cell .pool-hit{
+  display:flex;flex-direction:column;gap:2px;align-items:flex-start;
+  background:none;border:0;padding:0;margin:0;text-align:left;
+  color:var(--txt);font-family:inherit;font-size:var(--fs-xs);
+  cursor:pointer;min-width:0;max-width:220px;
+}
+.pool-cell .pool-hit:hover .pool-txt{color:var(--accent-hi)}
+/* nyckeltal får radbrytas, aldrig kapas med ellips */
+.pool-cell .pool-txt{
+  display:flex;flex-direction:column;gap:1px;align-items:flex-start;
+  font-variant-numeric:tabular-nums lining-nums;
+}
+.pool-cell .ln{white-space:nowrap}
+
+/* pott-blocket i drawer + dossier */
+.pool-block{margin-top:var(--sp-3);min-width:0}
+.pool-head{display:flex;flex-direction:column;gap:2px;margin-bottom:var(--sp-2)}
+.pool-head .pool-total{
+  font-size:var(--fs-display);font-weight:650;letter-spacing:-.028em;
+  color:var(--txt);font-variant-numeric:tabular-nums lining-nums;
+}
+.pool-head .pool-sub{font-size:var(--fs-xs);color:var(--dim-2)}
+.pool-head .poolbar{max-width:100%;margin-top:6px}
+.pool-table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+.pool-table th{
+  text-align:left;font-size:var(--fs-micro);font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--dim-2);padding:var(--sp-1) var(--sp-2);
+  border-bottom:1px solid var(--line);
+}
+.pool-table td{padding:var(--sp-1) var(--sp-2);border-bottom:1px solid var(--line);vertical-align:top}
+.pool-table td.num{text-align:right;font-variant-numeric:tabular-nums lining-nums}
+.pool-table .note-cell{color:var(--dim-2);font-size:var(--fs-xs);white-space:normal}
+.pool-table .dim{color:var(--dim-2)}
+
+/* staplad graf: fri nederst → köpt → promo → legacy/okänd */
+.vchart .track.stack{
+  display:flex;flex-direction:column-reverse;justify-content:flex-start;
+  align-items:stretch;width:100%;
+}
+.vchart .track.stack .seg{display:block;width:100%;flex:0 0 auto;min-height:1px}
+.vchart .track.stack .seg.free{background:var(--good)}
+.vchart .track.stack .seg.paid{background:var(--warn)}
+.vchart .track.stack .seg.promo{background:var(--violet)}
+.vchart .track.stack .seg.other{background:var(--dim-2)}
+.vcol:hover .track.stack,.vcol:focus-visible .track.stack{filter:brightness(1.14)}
+
+/* staplad legend (span-rader, inte knappar — inget att klicka på) */
+.legend.pool-legend{margin-top:var(--sp-2)}
+.legend .lg{
+  display:flex;align-items:center;gap:var(--sp-2);
+  padding:var(--sp-1) var(--sp-2);font-size:var(--fs-sm);min-width:0;
+}
+.legend .lg.zero{opacity:.55}
+.legend .lg .lb{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.legend .lg .val{margin-left:auto;padding-left:var(--sp-2);color:var(--dim);font-variant-numeric:tabular-nums}
+.legend .lg .pct{margin-left:var(--sp-2);min-width:44px;text-align:right;font-size:var(--fs-xs);color:var(--dim-2)}
+
+/* "Recently active" */
+.recent{display:flex;flex-direction:column;gap:1px;margin-top:var(--sp-1);min-width:0}
+.recent-row{
+  display:flex;align-items:center;gap:var(--sp-2);width:100%;
+  padding:var(--sp-2);background:none;border:0;border-radius:var(--radius-xs);
+  color:var(--txt);font-family:inherit;font-size:var(--fs-sm);text-align:left;cursor:pointer;
+  transition:background var(--dur-1) var(--ease);
+}
+.recent-row:hover{background:var(--panel-2)}
+.recent-row .nm{font-weight:600;min-width:0;max-width:132px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.recent-row .pl{color:var(--dim-2);font-size:var(--fs-xs);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.recent-row .poolbar{margin:0;flex:1 1 84px;max-width:84px}
+.recent-row .wh{margin-left:auto;color:var(--dim-2);font-size:var(--fs-xs);white-space:nowrap}
+.recent-row .go{color:var(--accent);flex:0 0 auto}
+
+/* mobilkortets pott-rad */
+.mc-pool{
+  display:flex;flex-direction:column;gap:2px;margin-top:var(--sp-2);
+  padding-top:var(--sp-2);border-top:1px solid var(--line);
+  font-size:var(--fs-xs);color:var(--dim-2);
+}
+.mc-pool .poolbar{max-width:100%}
+
+@media (max-width:640px){
+  .recent-row .nm{max-width:none}
+  .recent-row .poolbar{flex:1 1 60px;max-width:60px}
+  .pool-cell .pool-hit{max-width:none}
+}

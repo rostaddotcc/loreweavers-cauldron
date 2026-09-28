@@ -24,7 +24,7 @@
     view: 'overview', win: '30d', metric: 'calls', revMode: 'day', trafficMetric: 'requests',
     data: null, billing: null, feedback: null, fbRange: 'all', fbMail: 'all',
     sortKey: 'tokens', sortDir: 'desc', page: 1, pageSize: 10,
-    q: '', fRole: 'all', fStatus: 'all', fCountry: 'all',
+    q: '', fRole: 'all', fStatus: 'all', fCountry: 'all', fCode: 'all',
     auto: false, timer: null, degraded: false, loading: false, dossier: null,
     /* expand = "show all" per panel (referrers, countries, models, players-model-mix).
        Empty = the panel's default cap. Never silently truncate without the control. */
@@ -280,6 +280,134 @@
   }
   function tierTag(t) { t = t || 'free'; return '<span class="tag ' + esc(t) + '">' + esc(TIER_LABEL[t] || t) + '</span>'; }
 
+  /* ── Turn-pott + free/paid-kod (2026-09-28, rostad) ────────────────────────
+     Allt kommer SERVER-RÄKNAT (turn_pool/coding i payloaden). Klienten
+     formaterar bara — räknade den själv skulle tabellen, dossién och CSV:n
+     kunna säga olika saker om samma konto. Saknas fälten (degraded/legacy-
+     payload) faller vi tillbaka på den gamla tier-etiketten i stället för att
+     hitta på en kod. */
+  const CODE_LABEL = { paid:'Paid', granted:'Granted', free:'Free' };
+  function codeOf(u) {
+    const c = (u && u.coding) || null;
+    return (c && c.code) ? c.code : null;
+  }
+  function codeWhy(u) {
+    const c = (u && u.coding) || null;
+    return (c && c.why) ? String(c.why) : '';
+  }
+  function codeTag(u) {
+    const code = codeOf(u);
+    if (!code) return tierTag(u && u.subscription_status);
+    const tier = ((u.coding || {}).tier) || (u && u.subscription_status) || 'free';
+    const why = codeWhy(u);
+    const tip = CODE_LABEL[code] + (why ? ' · ' + why : '') + ' · tier ' + tier;
+    return '<span class="tag ' + esc(code) + '" title="' + esc(tip) + '">' + esc(CODE_LABEL[code]) + '</span>';
+  }
+  function codeDot(u) {
+    const code = codeOf(u);
+    const why = codeWhy(u);
+    return '<span class="codedot' + (code ? ' ' + esc(code) : '') + '" title="' +
+      esc(code ? (CODE_LABEL[code] + (why ? ' · ' + why : '')) : 'No coding in this payload (legacy server)') + '"></span>';
+  }
+  function poolOf(u) { const tp = (u && u.turn_pool) || null; return (tp && typeof tp === 'object') ? tp : null; }
+  /* Potten radvis: "25/30 free used", "464 paid left". Orden used/left är med
+     avsikt — rostad: "hur mycket som gått åt" gick inte att läsa när en siffra
+     stod utan riktning. Tabellcellen radbryter hellre än att kapa ett nyckeltal. */
+  function poolLines(u) {
+    const tp = poolOf(u);
+    if (!tp) return [];
+    const out = [tp.unlimited ? '∞ free (no cap)' : num(tp.free_used_period) + '/' + num(tp.free_cap) + ' free used'];
+    if (Number(tp.promo_left)) out.push(num(tp.promo_left) + ' promo left');
+    if (Number(tp.paid_left)) out.push(num(tp.paid_left) + ' paid left');
+    return out;
+  }
+  /* Potten i en rad — titlar, drawer-tabeller och mobilkortet. */
+  function poolText(u) {
+    const lines = poolLines(u);
+    return lines.length ? lines.join(' · ') : '—';
+  }
+  /* Pottens rubrik till dossiéns ruta: "469  (5/30 free · 464 paid)". */
+  function poolTitle(u) {
+    const tp = poolOf(u);
+    if (!tp) return '—';
+    return (tp.unlimited ? '∞' : num(tp.available)) + ' <small>' + esc(poolText(u)) + '</small>';
+  }
+  /* Förbrukat i livstid, alla tre hinkar. Finns i både rad och dossier. */
+  function poolUsedTotal(u) {
+    const life = (poolOf(u) || {}).used_lifetime || {};
+    return (Number(life.free) || 0) + (Number(life.promo) || 0) + (Number(life.paid) || 0) + (Number(life.unknown) || 0);
+  }
+  function poolBar(u) {
+    const tp = poolOf(u);
+    if (!tp) return '';
+    const free = tp.unlimited ? 1 : Math.max(0, Number(tp.free_left) || 0);
+    const promo = Math.max(0, Number(tp.promo_left) || 0);
+    const paid = Math.max(0, Number(tp.paid_left) || 0);
+    const total = free + promo + paid;
+    if (!total) return '<span class="poolbar empty" title="No turns left in this pool"><i></i></span>';
+    const seg = (cls, v) => v ? '<i class="' + cls + '" style="flex:' + v + '"></i>' : '';
+    return '<span class="poolbar" title="' + esc(poolText(u)) + '">' +
+      seg('free', free) + seg('promo', promo) + seg('paid', paid) + '</span>';
+  }
+  /* Relativ tid för last_active. Tom/ogiltig stämpel → "never", aldrig "0 min"
+     (dashboarden får inte hitta på en aktivitet). */
+  function agoText(iso) {
+    const t = Date.parse(iso || '');
+    if (!t) return 'never';
+    const mins = Math.floor((Date.now() - t) / 60000);
+    if (mins < 0) return 'clock skew';        // server-klocka före klienten
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + ' min ago';
+    const h = Math.floor(mins / 60);
+    if (h < 24) return h + ' h ago';
+    const d = Math.floor(h / 24);
+    return d === 1 ? 'yesterday' : d + ' days ago';
+  }
+  /* Staplad graf: en kolumn per dag, hinkarna staplade (fri nederst → köpt →
+     promo → legacy/okänd). Samma totalsiffra som vchart — hink-fördelningen
+     kommer ur ledgerns `bucket`, och rader före 2026-09-28 är "other" (okänd),
+     aldrig påhittade som "free". */
+  const POOL_PARTS = ['free', 'paid', 'promo', 'other'];
+  function bucketVal(split, part) {
+    const s = split || {};
+    if (part === 'other') return Number(s.none || 0) + Number(s.unknown || 0);
+    return Number(s[part] || 0);
+  }
+  function poolLegend(byDay) {
+    const totals = {};
+    POOL_PARTS.forEach(p => { totals[p] = 0; });
+    Object.keys(byDay || {}).forEach(d => POOL_PARTS.forEach(p => { totals[p] += bucketVal(byDay[d], p); }));
+    const rows = POOL_PARTS.map(p => ({ key:p, label:p === 'other' ? 'legacy / unknown' : p, value:totals[p], color:POOL_PART_COLOR[p] }))
+      .filter(r => r.value > 0 || r.key !== 'other');
+    const sum = rows.reduce((a, r) => a + r.value, 0);
+    return '<div class="legend pool-legend">' + rows.map(r =>
+      '<span class="lg' + (r.value ? '' : ' zero') + '"><span class="dot" style="background:' + r.color + '"></span>' +
+      '<span class="lb">' + esc(r.label) + '</span><span class="val">' + num(r.value) + '</span>' +
+      '<span class="pct">' + pct(r.value, sum) + '</span></span>').join('') + '</div>';
+  }
+  const POOL_PART_COLOR = { free:'var(--good)', paid:'var(--warn)', promo:'var(--violet)', other:'var(--dim)' };
+  function vchartStacked(byDay, opts) {
+    opts = opts || {};
+    const keys = Object.keys(byDay || {});
+    if (!keys.length) return emptyState(opts.emptyMsg || 'No turn series in this payload', '◌');
+    const totals = keys.map(k => POOL_PARTS.reduce((a, p) => a + bucketVal(byDay[k], p), 0));
+    const max = Math.max.apply(null, totals) || 1;
+    const lastKey = keys[keys.length - 1];
+    const thin = keys.length > 12 ? Math.ceil(keys.length / 8) : 1;
+    const keepAt = i => thin === 1 || i % thin === 0 || i === keys.length - 1;
+    return '<div class="vchart stacked">' + keys.map((k, i) => {
+      const segs = POOL_PARTS.map(p => {
+        const v = bucketVal(byDay[k], p);
+        if (!v) return '';
+        return '<span class="seg ' + p + '" style="height:' + (v / max * 100) + '%" title="' + esc(k + ' · ' + p + ' · ' + num(v) + ' ' + (opts.unit || 'turns')) + '"></span>';
+      }).join('');
+      return '<div class="vcol" data-bucket="' + esc(k) + '" data-val="' + totals[i] + '" title="' + esc(k + ' · ' + num(totals[i]) + ' ' + (opts.unit || 'turns')) + '" style="--i:' + i + '">' +
+        '<span class="lab">' + (totals[i] && keys.length <= 16 ? num(totals[i]) : '') + '</span>' +
+        '<span class="track stack">' + segs + '</span>' +
+        '<span class="lab">' + (keepAt(i) ? esc(dayLabel(k)) : '') + '</span></div>';
+    }).join('') + '</div>' + poolLegend(byDay);
+  }
+
   /* ────────────────────────────── views ────────────────────────────── */
   function valueStats() {
     const v = VAL();
@@ -288,7 +416,13 @@
     const money = Number(REV().total != null ? REV().total : REV().lifetime) || 0;
     const tps = v.tokens_per_sek != null ? Number(v.tokens_per_sek) : (money ? Math.round(tokens / money) : null);
     const kpm = v.kr_per_1m_tokens != null ? Number(v.kr_per_1m_tokens) : (tokens ? (1e6 * money / tokens) : null);
-    return { turns, tokens, money, tps, kpm, calls: Number(v.ai_calls || TOT().ai_calls) || 0 };
+    /* Per hink och dag (2026-09-28): server-räknad ur ledgerns `bucket`.
+       Klienten summerar bara för grafen — aldrig för ett nyckeltal. */
+    const bucketDay = v.turns_by_bucket_day || {};
+    const bucketDayTotals = {};
+    POOL_PARTS.forEach(p => { bucketDayTotals[p] = 0; });
+    Object.keys(bucketDay).forEach(d => POOL_PARTS.forEach(p => { bucketDayTotals[p] += bucketVal(bucketDay[d], p); }));
+    return { turns, tokens, money, tps, kpm, calls: Number(v.ai_calls || TOT().ai_calls) || 0, bucketDay, bucketDayTotals };
   }
   function tierItems() {
     const t = TIERS();
@@ -321,6 +455,9 @@
     const callsDay = SER().api_calls_day || {};
     const visitsDay = SER().visits_day || {};
     const turnsDay = SER().turns_day || {};
+    const bucketDay = v.bucketDay || {};
+    const pool = D().pool_totals || {};
+    const codes = D().coding_summary || {};
     const modelClamp = clampList(modelItems('calls'), 'models', 6);
     const conv = r.conversion_pct != null ? Number(r.conversion_pct) : (Number(r.paying_customers) || 0) / (Number(t.accounts) || 1) * 100;
     const actions = VAL().by_action || {};
@@ -336,7 +473,9 @@
         kpi({ t:'Lifetime revenue', v: sek(r.total), drill:'rev:lifetime',
               f: '<b>' + num(r.paying_customers) + '</b> paying accounts · ' + num(r.transactions) + ' payments · ' + conv.toFixed(1) + '%' }) +
         kpi({ t:'Turns delivered', v: num(v.turns) + ' turns', tone:'good', drill:'value',
-              f: 'window ' + S.win + ' · <b>' + tok(v.tokens) + '</b> tokens served' }) +
+              f: 'window ' + S.win + ' · <b>' + num(v.bucketDayTotals.free) + '</b> free / <b>' + num(v.bucketDayTotals.paid) + '</b> paid' }) +
+        kpi({ t:'Turns left in pools', v: (Number(pool.unlimited_accounts) ? '' : '') + num(pool.available) + ' turns', drill:'pool',
+              f: '<b>' + num(pool.free_left) + '</b> free today · <b>' + num(pool.paid_left) + '</b> bought · <b>' + num(pool.promo_left) + '</b> promo' + (Number(pool.unlimited_accounts) ? ' · ' + num(pool.unlimited_accounts) + ' unlimited accounts' : '') }) +
         kpi({ t:'Cost of play', v: v.kpm == null ? '—' : v.kpm.toFixed(2) + ' kr', drill:'value',
               f: 'per 1M tokens · <b>' + tok(v.tps) + '</b> tokens per kr' }) +
         kpi({ t:'Accounts', v: num(t.accounts), drill:'players',
@@ -352,8 +491,11 @@
         card(8, 'AI calls per day', 'DM, Lorekeeper and auxiliary calls read from the transcripts · window ' + S.win,
              vchart(callsDay, { unit:'calls', emptyMsg:'No calls logged in this window' })) +
         card(4, 'Membership', 'active accounts by tier · click a slice for the accounts', donut(tierItems(), num(t.accounts), 'accounts', { keepZero: true, click: i => 'data-tier="' + esc(i.key) + '"' })) +
-        card(7, 'Turns delivered per day', 'every consumed turn from the turn ledger · click a bar for that day', vchart(turnsDay, { unit:'turns', emptyMsg:'No turn series in this payload' }), { data:'clickable', attrs:1 }) +
+        card(7, 'Turns delivered per day, by bucket', 'fri / köpt / promo / legacy staplade — click a bar for that day', vchartStacked(bucketDay, { unit:'turns', emptyMsg:'No turn series in this payload' }), { data:'clickable', attrs:1 }) +
         card(5, 'What the turns bought', 'turn actions, lifetime · click a slice for the split', actionItems.length ? donut(actionItems, num(v.turns), 'turns', { click: i => 'data-action="' + esc(i.key) + '"' }) : emptyState('No action split in this payload', '◌')) +
+        card(5, 'Players by code', 'free / granted / paid — server-counted, click a slice for the accounts',
+             codeDonut(codes)) +
+        recentActiveCard() +
         card(6, 'Revenue vs value delivered', 'what came in, and what players got for it', valueGrid(v), { data:'clickable' }) +
         card(6, 'Most used models', 'by calls · click a bar for that model', hbars(modelClamp.rows, { fmt: num, click: i => 'data-model="' + esc(i.key) + '"' }) + expandBtn('models', modelClamp.hidden, 'models')) +
         card(7, 'Requests per day', 'every request counted · click a bar for the day', vchart(visitsDay, { emptyMsg:'No visits in this window' })) +
@@ -361,6 +503,41 @@
              vchart(SER().signups_day || {}, { emptyMsg:'No signups in this window' })) +
         card(12, 'Recent transactions', 'click a row for the raw record', ledgerTable(ledgerRows().slice(-5).reverse())) +
       '</div>';
+  }
+
+  /* Free/paid-fördelningen (rostad 2026-09-28): räknas server-side i
+     /api/admin/overview som coding_summary. Klick → kontona bakom koden. */
+  function codeDonut(codes) {
+    const items = ['paid', 'granted', 'free'].map(k => ({
+      key:k, label:CODE_LABEL[k], value:Number(codes[k] || 0), color:POOL_PART_COLOR[k === 'free' ? 'free' : (k === 'paid' ? 'paid' : 'promo')],
+    }));
+    const total = items.reduce((a, i) => a + i.value, 0);
+    if (!total) return emptyState('No coding in this payload', '◌');
+    return donut(items, num(total), 'accounts', { keepZero:true, click: i => 'data-code="' + esc(i.key) + '"' });
+  }
+
+  /* "Senast 5 aktiva spelarna" (rostad 2026-09-28). Källan är last_active som
+     redan finns per konto i den kompletta tabellen — ingen ny endpoint.
+     Admins exkluderas (det är spelarna som avses) och konton utan
+     aktivitetsstämpel räknas i notisen i stället för att visas med påhittad tid. */
+  function recentActiveCard() {
+    const players = USERS().filter(u => (u.role || 'player') !== 'admin');
+    const stamped = players.filter(u => Date.parse(u.last_active || ''));
+    const missing = players.length - stamped.length;
+    const top = stamped.slice().sort((a, b) => (Date.parse(b.last_active) || 0) - (Date.parse(a.last_active) || 0)).slice(0, 5);
+    const notes = ['last 5 players · admins excluded'];
+    if (missing) notes.push(num(missing) + ' account' + (missing === 1 ? '' : 's') + ' without an activity stamp');
+    const body = top.length
+      ? '<div class="recent">' + top.map(u =>
+          '<button type="button" class="recent-row" data-player="' + esc(u.username) + '" title="Open ' + esc(u.username) + '’s dossier">' +
+            codeDot(u) +
+            '<span class="nm">' + esc(u.username) + '</span>' +
+            '<span class="pl">' + esc(poolText(u)) + '</span>' + poolBar(u) +
+            '<span class="wh">' + esc(agoText(u.last_active)) + '</span>' +
+            '<span class="go">→</span>' +
+          '</button>').join('') + '</div>'
+      : emptyState('No player activity recorded yet', '◌');
+    return card(7, 'Recently active', notes.join(' · '), body);
   }
 
   function valueGrid(v) {
@@ -463,6 +640,9 @@
       if (S.fRole !== 'all' && (u.role || 'player') !== S.fRole) return false;
       if (S.fStatus !== 'all' && (u.subscription_status || 'free') !== S.fStatus) return false;
       if (S.fCountry !== 'all' && (u.country_code || '__none__') !== S.fCountry) return false;
+      /* Free/paid-koden (2026-09-28): filtreras på den SERVER-räknade koden, så
+         filtret aldrig kan glida ifrån etiketten i kolumnen. */
+      if (S.fCode !== 'all' && (codeOf(u) || '__none__') !== S.fCode) return false;
       return true;
     });
   }
@@ -478,9 +658,23 @@
       case 'total_campaigns': return Number(u.total_campaigns) || 0;
       case 'total_tokens': return Number(u.total_tokens) || 0;
       case 'total_turns': return Number(u.total_turns) || 0;
+      case 'coding': return CODE_RANK[codeOf(u) || '__none__'] != null ? CODE_RANK[codeOf(u) || '__none__'] : 0;
+      /* Pott-sortering: ∞ (unlimited) sorteras högst — annars vore "unlimited"
+         samma som "tom pott" i en lista. */
+      case 'pool_left': {
+        const tp = poolOf(u);
+        if (!tp) return -2;
+        if (tp.unlimited) return Number.MAX_SAFE_INTEGER;
+        return Number(tp.available) || 0;
+      }
+      case 'pool_used': {
+        const l = (poolOf(u) || {}).used_lifetime || {};
+        return (Number(l.free) || 0) + (Number(l.promo) || 0) + (Number(l.paid) || 0);
+      }
       default: return 0;
     }
   }
+  const CODE_RANK = { paid: 3, granted: 2, free: 1, __none__: 0 };
   function sortedPlayers() {
     const rows = playerRows().slice();
     rows.sort((a, b) => {
@@ -522,6 +716,10 @@
             [['all','All'],['player','Players'],['admin','Admins']].map(([v, l]) => chip(v === S.fRole, 'data-frole="' + v + '"', l)).join('') + '</div></div>' +
           '<div class="chip-group"><span class="chip-label">Tier</span><div class="chips">' +
             [['all','All'],['free','Free'],['tier1','Support'],['tier2','Patron'],['lifetime','Lifetime']].map(([v, l]) => chip(v === S.fStatus, 'data-fstatus="' + v + '"', l)).join('') + '</div></div>' +
+          /* Free/paid-koden är en egen axel (rostad 2026-09-28): tier säger vad
+             kontot är, koden säger vad det faktiskt fått turns av. */
+          '<div class="chip-group"><span class="chip-label">Code</span><div class="chips">' +
+            [['all','All'],['paid','Paid'],['granted','Granted'],['free','Free']].map(([v, l]) => chip(v === S.fCode, 'data-fcode="' + v + '"', l)).join('') + '</div></div>' +
           '<div class="chip-group"><span class="chip-label">Country</span><div class="chips">' +
             [['all','All']].concat(Object.keys(countries).sort().map(k => [k, countries[k]])).map(([v, l]) => chip(v === S.fCountry, 'data-fcountry="' + esc(v) + '"', l)).join('') + '</div></div>' +
           '<button class="chip clear" data-clear="1" title="Reset all filters">✕ Clear</button>' +
@@ -531,13 +729,21 @@
           ftot('Accounts', num(sorted.length)) + ftot('Campaigns', num(sumRows(sorted, 'total_campaigns'))) +
           ftot('Tokens', tok(sumRows(sorted, 'total_tokens'))) + ftot('Turns', num(sumRows(sorted, 'total_turns'))) +
           ftot('Revenue', sek(sumRows(sorted, 'revenue'))) +
+          /* Pott-raden (2026-09-28): samma tre koder som legenderna — räknade på
+             de filtrerade raderna, så "Paid 7" i tabellen matchar chipen. */
+          ftot('Paid', num(sorted.filter(u => codeOf(u) === 'paid').length)) +
+          ftot('Granted', num(sorted.filter(u => codeOf(u) === 'granted').length)) +
+          ftot('Free', num(sorted.filter(u => codeOf(u) === 'free').length)) +
+          ftot('Turns left', num(poolSum(sorted, 'available'))) +
+          (sorted.some(u => poolOf(u) && poolOf(u).unlimited) ? ftot('Unlimited', num(sorted.filter(u => poolOf(u) && poolOf(u).unlimited).length) + ' acct') : '') +
         '</div>' +
         '<div class="table-scroll"><div class="table-wrap"><table class="player-table"><thead><tr>' +
-          th('User','username') + th('Role','role') + th('Tier','subscription_status') + th('Country','country') +
+          th('User','username') + th('Role','role') + th('Code','coding') + th('Tier','subscription_status') + th('Country','country') +
           th('Campaigns','total_campaigns') + th('Tokens','total_tokens') + th('Turns','total_turns') +
+          th('Turns left','pool_left') + th('Spent','pool_used') +
           th('Revenue','revenue') + th('Last active','last_active') + '<th></th>' +
         '</tr></thead><tbody>' +
-        (slice.length ? slice.map(u => playerRow(u)).join('') : '<tr><td colspan="10">' + emptyState('No players match the current filters', '◌') + '</td></tr>') +
+        (slice.length ? slice.map(u => playerRow(u)).join('') : '<tr><td colspan="13">' + emptyState('No players match the current filters', '◌') + '</td></tr>') +
         '</tbody></table></div><div class="table-fade"></div><div class="table-scroll-hint">→ scroll for more</div></div>' +
         '<div class="pager" id="pager">' + pagerHtml(S.page, pages, sorted.length) + '</div>' +
         '<div class="mobile-cards">' + (slice.length ? slice.map(mobCard).join('') : emptyState('No players match the current filters', '◌')) + '</div>' +
@@ -545,24 +751,47 @@
   }
   function chip(on, attr, label) { return '<button type="button" class="chip' + (on ? ' on' : '') + '" ' + attr + '>' + esc(label) + '</button>'; }
   function ftot(k, v) { return '<span>' + esc(k) + ' <b>' + v + '</b></span>'; }
+  /* Summerar ett pott-fält över rader. Oändliga konton (cap 0) räknas som 0 —
+     de har ingen ändlig pott att summera, och "∞ + 464" går inte att visa. */
+  function poolSum(rows, field) {
+    return rows.reduce((a, u) => {
+      const tp = poolOf(u);
+      if (!tp || tp.unlimited) return a;
+      return a + (Number(tp[field]) || 0);
+    }, 0);
+  }
   function playerRow(u) {
+    const tp = poolOf(u);
+    const life = (tp || {}).used_lifetime || {};
+    const spent = poolUsedTotal(u);
     return '<tr data-player="' + esc(u.username) + '">' +
       '<td><b>' + esc(u.username) + '</b></td>' +
       '<td><span class="tag">' + esc(u.role || 'player') + '</span></td>' +
+      '<td>' + codeTag(u) + '</td>' +
       '<td>' + tierTag(u.subscription_status) + '</td>' +
       '<td>' + esc((u.country_flag || '') + ' ' + (u.country || 'Unknown')) + '</td>' +
       '<td class="num">' + num(u.total_campaigns) + '</td>' +
       '<td class="num">' + tok(u.total_tokens) + '</td>' +
       '<td class="num">' + num(u.total_turns) + '</td>' +
+      (tp
+        ? '<td class="pool-cell"><button type="button" class="pool-hit" data-pool="' + esc(u.username) + '" title="' + esc('Turn pool: ' + poolText(u) + ' — click for the full breakdown') + '">' +
+            '<span class="pool-txt">' + poolLines(u).map(l => '<span class="ln">' + esc(l) + '</span>').join('') + '</span>' + poolBar(u) + '</button></td>'
+        : '<td class="pool-cell">' + emptyState('no pool in payload', '') + '</td>') +
+      '<td class="num" title="' + esc('Lifetime turns consumed: ' + num(Number(life.free) || 0) + ' free · ' + num(Number(life.promo) || 0) + ' promo · ' + num(Number(life.paid) || 0) + ' bought · ' + num(Number(life.unknown) || 0) + ' legacy (bucket unknown)') + '">' + (spent ? num(spent) : '—') + '</td>' +
       '<td class="num">' + (u.revenue ? '<span class="tag paid">' + sek(u.revenue) + '</span>' : '—') + '</td>' +
       '<td>' + esc(String(u.last_active || '').slice(0, 10) || '—') + '</td>' +
       '<td><button class="icon-btn" data-player="' + esc(u.username) + '">open →</button></td></tr>';
   }
   function mobCard(u) {
+    const tp = poolOf(u);
+    const life = (tp || {}).used_lifetime || {};
+    const spent = poolUsedTotal(u);
     return '<div class="mobile-card" data-player="' + esc(u.username) + '">' +
-      '<div class="mc-head"><b>' + esc(u.username) + '</b>' + tierTag(u.subscription_status) + '</div>' +
+      '<div class="mc-head"><b>' + esc(u.username) + '</b>' + codeTag(u) + tierTag(u.subscription_status) + '</div>' +
       '<div class="mc-grid"><span>' + tok(u.total_tokens) + ' tokens</span><span>' + num(u.total_turns) + ' turns</span>' +
       '<span>' + num(u.total_campaigns) + ' campaigns</span><span>' + (u.revenue ? sek(u.revenue) : 'never paid') + '</span></div>' +
+      (tp ? '<div class="mc-pool"><span class="pl">' + esc(poolText(u)) + '</span>' + poolBar(u) +
+        '<span class="sp">' + (spent ? num(spent) + ' used in total' + (Number(life.paid) ? ' (' + num(life.paid) + ' bought)' : '') : 'nothing used yet') + '</span></div>' : '') +
       '<div class="mc-foot">' + esc(String(u.last_active || '').slice(0, 10) || 'never active') + ' · ' + esc(u.country || '') + '</div></div>';
   }
   function pagerHtml(page, pages, total) {
@@ -1009,6 +1238,9 @@
     const rev = Number((REV().by_date || {})[day] || 0);
     const turns = Number((SER().turns_day || {})[day] || 0);
     const calls = Number((SER().api_calls_day || {})[day] || 0);
+    /* Hinkfördelningen för dagen (2026-09-28): samma server-räknade serie som
+       Overview-grafen, så siffran här och stapeln där aldrig kan gå isär. */
+    const split = (valueStats().bucketDay || {})[day] || null;
     openDrawer('traffic · day', day,
       '<div class="dgrid">' +
       '<div class="dstat"><span class="t">Requests</span><span class="v">' + num(v) + '</span></div>' +
@@ -1016,8 +1248,170 @@
       '<div class="dstat"><span class="t">AI calls</span><span class="v">' + num(calls) + '</span></div>' +
       '<div class="dstat"><span class="t">Turns delivered</span><span class="v">' + num(turns) + '</span></div>' +
       '<div class="dstat"><span class="t">Revenue</span><span class="v">' + (rev ? sek(rev) : '—') + '</span></div></div>' +
+      bucketSplit(split, 'this day') +
       '<div class="note">Everything the logs know about this single day, side by side. Per-source and per-country detail is only kept as a rolling window (geo and referrer are resolved from the cache), so those breakdowns are shown for the current window on the Traffic view rather than per day.</div>',
       { d: 'day', k: day });
+  }
+  /* ── turn-pott: blocket, drawern och kod-drawern (2026-09-28, rostad) ──────
+     rostad: "Nu vet jag inte riktigt hur mycket en spelare köpt eller hur
+     mycket som gått åt, eller det är väldigt svårtläst." Därför EN tabell som
+     svarar på allt i ett svep: kvar per hink, förbrukat per hink, och noten
+     som säger var gränsen för ärlig data går (pool_data_since). Talen kommer
+     ur turn_pool (platt form, samma nycklar i raden som i dossién). */
+  function poolBreakdown(u) {
+    const tp = poolOf(u);
+    if (!tp) return emptyState('No turn pool in this payload', '◌');
+    const life = u && u.turn_pool && u.turn_pool.used_lifetime ? u.turn_pool.used_lifetime : (tp.used_lifetime || {});
+    const unlimited = !!tp.unlimited;
+    const freeLeft = Number(tp.free_left) || 0;
+    const promoLeft = Number(tp.promo_left) || 0;
+    const paidLeft = Number(tp.paid_left) || 0;
+    const usedFree = Number(life.free) || 0;
+    const usedPromo = Number(life.promo) || 0;
+    const usedPaid = Number(life.paid) || 0;
+    const usedUnknown = Number(life.unknown) || 0;
+    const usedTotal = usedFree + usedPromo + usedPaid + usedUnknown;
+    const granted = Number(tp.paid_granted) || 0;
+    const known = !!tp.paid_granted_known;
+    const since = tp.data_since || tp.tracked_since || '';
+    const reset = tp.period_reset ? 'resets ' + esc(String(tp.period_reset)) + ' (00:00 UTC)' : 'no period reset recorded';
+    const row = (what, left, used, note) => '<tr><td>' + what + '</td><td class="num">' + left + '</td><td class="num">' + used + '</td><td class="note-cell">' + note + '</td></tr>';
+    return '<div class="pool-block">' +
+      '<div class="pool-head">' +
+        '<span class="pool-total">' + (unlimited ? '∞' : num(tp.available)) + '</span>' +
+        '<span class="pool-sub">turns left' + (unlimited ? ' · unlimited account' : '') + ' · ' + esc(poolText(u)) + '</span>' +
+        poolBar(u) +
+      '</div>' +
+      '<div class="tbl-wrap"><table class="pool-table"><thead><tr><th>Bucket</th><th class="num">Left</th><th class="num">Used</th><th>Note</th></tr></thead><tbody>' +
+        row('Free quota', unlimited ? '∞' : num(freeLeft) + ' / ' + num(tp.free_cap), num(tp.free_used_period),
+            unlimited ? 'this account is not capped' : reset) +
+        row('Promo / legacy', num(promoLeft), num(usedPromo), 'spent before the free quota — why "0 used" never meant "played nothing"') +
+        row('Bought / granted', num(paidLeft) + (granted ? ' <span class="dim">of ' + num(granted) + '</span>' : ''), num(usedPaid),
+            granted ? (known ? 'granted per the purchase log' : '<b>buy unknown before ' + esc(since || '2026-09-28') + '</b>') : (paidLeft ? '<b>buy unknown before ' + esc(since || '2026-09-28') + '</b>' : 'never bought')) +
+        (usedUnknown
+          ? row('Legacy / unknown', '—', num(usedUnknown),
+                'played before ' + esc(since || '2026-09-28') + ' — those ledger rows carry no bucket, so they are never counted as "free"')
+          : '') +
+        row('<b>Total</b>', '<b>' + (unlimited ? '∞' : num(tp.available)) + '</b>', '<b>' + num(usedTotal) + '</b>',
+            num(usedFree) + ' free · ' + num(usedPromo) + ' promo · ' + num(usedPaid) + ' bought' + (usedUnknown ? ' · ' + num(usedUnknown) + ' legacy' : '') + ', since tracking started') +
+      '</tbody></table></div>' +
+      '<div class="note">One source of truth: this table, the Players table and the CSV are all the same server-computed numbers. ' +
+        (known ? '' : 'Nothing in the logs says how many turns this account bought before ' + esc(since || tp.tracked_since || '2026-09-28') + ', so "left" is exact while "bought" says unknown. ') +
+        'Undo does not refund a turn, and the daily quota resets at 00:00 UTC.</div>' +
+      '</div>';
+  }
+
+  function grantsTable(grants) {
+    const rows = Array.isArray(grants) ? grants : [];
+    if (!rows.length) return '<div class="sub">Purchases and grants</div>' + emptyState('No purchase or grant recorded for this account — anything bought before 2026-09-28 was never logged', '◌');
+    const total = rows.reduce((a, r) => a + (Number(r.turns) || 0), 0);
+    return '<div class="sub">Purchases and grants · ' + num(total) + ' turns in ' + num(rows.length) + ' row' + (rows.length === 1 ? '' : 's') + '</div>' +
+      '<div class="tbl-wrap"><table class="mix-table"><thead><tr><th>When</th><th>Source</th><th class="num">Turns</th><th class="num">Left after</th><th>Note</th></tr></thead><tbody>' +
+      rows.slice().reverse().map(r => '<tr><td>' + esc(String(r.ts || '').replace('T', ' ').slice(0, 16)) + '</td>' +
+        '<td><span class="tag' + (String(r.source || '').indexOf('stripe') === 0 ? ' paid' : '') + '">' + esc(r.source || 'unknown') + '</span></td>' +
+        '<td class="num">' + num(r.turns) + '</td>' +
+        '<td class="num">' + (r.left_after == null ? '—' : num(r.left_after)) + '</td>' +
+        '<td class="note-cell">' + esc(r.note || '') + '</td></tr>').join('') +
+      '</tbody></table></div>';
+  }
+
+  function bucketSplit(bd, label) {
+    if (!bd) return '';
+    const order = ['free', 'paid', 'promo', 'unknown'];
+    const total = order.reduce((a, k) => a + (Number(bd[k]) || 0), 0);
+    if (!total) return emptyState('No turns in the ledger for ' + esc(label), '◌');
+    return '<div class="sub">Which bucket paid · ' + esc(label) + '</div>' +
+      hbars(order.map(k => ({ key: k, label: k === 'unknown' ? 'legacy / unknown' : k, value: Number(bd[k]) || 0, color: POOL_PART_COLOR[k === 'unknown' ? 'other' : k] }))
+        .filter(i => i.value > 0), { fmt: num, unit:'turns' }) +
+      '<div class="note">Rows written before 2026-09-28 carry no bucket and are counted as unknown — never guessed into "free".</div>';
+  }
+
+  /* Pott-översikten: alla konton, hur mycket som är kvar och var det tog vägen. */
+  function drawerPool(username) {
+    if (username) return drawerPoolFor(username);
+    const pool = D().pool_totals || {};
+    const codes = D().coding_summary || {};
+    const rows = USERS().filter(u => poolOf(u)).slice().sort((a, b) => {
+      const av = poolOf(a).unlimited ? Number.MAX_SAFE_INTEGER : (Number(poolOf(a).available) || 0);
+      const bv = poolOf(b).unlimited ? Number.MAX_SAFE_INTEGER : (Number(poolOf(b).available) || 0);
+      return bv - av;
+    });
+    const bucketDay = (valueStats().bucketDay) || {};
+    openDrawer('turn pools', (Number(pool.unlimited_accounts) ? '∞ + ' : '') + num(pool.available) + ' turns left',
+      '<div class="dgrid">' +
+      '<div class="dstat"><span class="t">Turns left · all accounts</span><span class="v">' + num(pool.available) + '</span></div>' +
+      '<div class="dstat"><span class="t">Free quota today</span><span class="v">' + num(pool.free_left) + '</span></div>' +
+      '<div class="dstat"><span class="t">Promo / legacy</span><span class="v">' + num(pool.promo_left) + '</span></div>' +
+      '<div class="dstat"><span class="t">Bought / granted</span><span class="v">' + num(pool.paid_left) + '</span></div>' +
+      '<div class="dstat"><span class="t">Unlimited accounts</span><span class="v">' + num(pool.unlimited_accounts) + '</span></div>' +
+      '<div class="dstat"><span class="t">Accounts with a real purchase log</span><span class="v">' + num(pool.granted_known_accounts) + '</span></div>' +
+      '<div class="dstat"><span class="t">Paid / granted / free</span><span class="v">' + num(codes.paid) + ' · ' + num(codes.granted) + ' · ' + num(codes.free) + '</span></div>' +
+      '<div class="dstat"><span class="t">Turns delivered · window ' + esc(S.win) + '</span><span class="v">' + num(valueStats().turns) + '</span></div></div>' +
+      '<div class="sub">Where the turns went · window ' + esc(S.win) + '</div>' + vchartStacked(bucketDay, { unit:'turns', emptyMsg:'No turn series in this payload' }) +
+      '<div class="sub">Biggest pools</div>' +
+      (rows.length ? '<div class="tbl-wrap"><table class="mix-table"><thead><tr><th>Player</th><th>Code</th><th>Pool</th><th class="num">Left</th><th>Last active</th></tr></thead><tbody>' +
+        rows.slice(0, 20).map(u => '<tr data-player="' + esc(u.username) + '"><td><b>' + esc(u.username) + '</b></td><td>' + codeTag(u) + '</td>' +
+          '<td class="pool-cell">' + esc(poolText(u)) + poolBar(u) + '</td><td class="num">' + (poolOf(u).unlimited ? '∞' : num(poolOf(u).available)) + '</td>' +
+          '<td>' + esc(agoText(u.last_active)) + '</td></tr>').join('') + '</tbody></table></div>' +
+        (rows.length > 20 ? '<div class="note">Showing the 20 biggest of ' + num(rows.length) + ' pools — the Players view has the full list with filters.</div>' : '')
+        : emptyState('No pools in this payload', '◌')) +
+      '<div class="note">Every number here is computed server-side from users.json plus the turn ledger, so the drawer, the table, the code chips and the CSV can never disagree.</div>',
+      { d: 'pool' });
+  }
+  async function drawerPoolFor(username) {
+    openDrawer('turn pool', username, '<div class="loading">Loading the pool for ' + esc(username) + '…</div>', { d: 'pool', k: username });
+    let detail = null;
+    try { detail = await api('/api/admin/user/' + encodeURIComponent(username)); }
+    catch (e) { openDrawer('turn pool', username, '<div class="err-state">⚠ Could not load this pool: ' + esc(e.message) + '</div>', { d: 'pool', k: username }); return; }
+    const tp = detail.turn_pool || {};
+    const title = username + ' · ' + (tp.unlimited ? '∞' : num(tp.available)) + ' turns left';
+    const codes = detail.coding || {};
+    openDrawer('turn pool', title,
+      '<div class="dgrid">' +
+      '<div class="dstat"><span class="t">Code</span><span class="v">' + esc(CODE_LABEL[codes.code] || codes.code || '—') + '</span></div>' +
+      '<div class="dstat"><span class="t">Why</span><span class="v">' + esc(codes.why || '—') + '</span></div>' +
+      '<div class="dstat"><span class="t">Tier</span><span class="v">' + esc(codes.tier || '—') + '</span></div>' +
+      '<div class="dstat"><span class="t">Used in total</span><span class="v">' + num(Object.keys(tp.used_lifetime || {}).reduce((a, k) => a + (Number(tp.used_lifetime[k]) || 0), 0)) + '</span></div></div>' +
+      poolBreakdown(detail) +
+      grantsTable(detail.turn_grants) +
+      bucketSplit(detail.turn_ledger_buckets, 'all time') +
+      bucketSplit(detail.turn_ledger_buckets_today, 'today') +
+      '<div class="note">Open the dossier for this player to see models, campaigns and the admin actions: ' +
+        '<button type="button" class="icon-btn" data-player="' + esc(username) + '">open dossier →</button></div>',
+      { d: 'pool', k: username });
+  }
+  /* Kontona bakom en free/paid-kod. Reglerna står i noten — samma regler som
+     servern räknar med, så etiketten aldrig är en gissning. */
+  function drawerCode(code) {
+    const label = CODE_LABEL[code] || code;
+    const users = USERS().filter(u => codeOf(u) === code);
+    const left = poolSum(users, 'available');
+    const revenue = users.reduce((a, u) => a + (Number(u.revenue) || 0), 0);
+    const rule = code === 'paid'
+      ? '<b>Paid</b>: a payment row in the billing ledger, or a lifetime / patron account. These accounts have actually put money in.'
+      : (code === 'granted'
+        ? '<b>Granted</b>: turns beyond the free quota without a payment row — legacy promo, an admin top-up, or a hand-raised cap. Shown as its own code on purpose: 7 accounts hold 300 bonus turns with no payment row, and calling them "paid" would be a lie.'
+        : '<b>Free</b>: the free daily quota only. Nothing bought, nothing granted.');
+    openDrawer('players · code', label + ' · ' + num(users.length) + ' account' + (users.length === 1 ? '' : 's'),
+      '<div class="dgrid">' +
+      '<div class="dstat"><span class="t">Accounts</span><span class="v">' + num(users.length) + '</span></div>' +
+      '<div class="dstat"><span class="t">Share of all accounts</span><span class="v">' + pct(users.length, Number(TOT().accounts) || 0) + '</span></div>' +
+      '<div class="dstat"><span class="t">Turns left in these pools</span><span class="v">' + num(left) + '</span></div>' +
+      '<div class="dstat"><span class="t">Revenue from these accounts</span><span class="v">' + sek(revenue) + '</span></div></div>' +
+      (users.length ? '<div class="tbl-wrap"><table class="mix-table"><thead><tr><th>Player</th><th>Tier</th><th>Pool</th><th class="num">Left</th><th class="num">Spent</th><th class="num">Revenue</th><th>Last active</th></tr></thead><tbody>' +
+        users.slice().sort((a, b) => (Number(b.total_turns) || 0) - (Number(a.total_turns) || 0)).slice(0, 40).map(u => {
+          const spent = poolUsedTotal(u);
+          return '<tr data-player="' + esc(u.username) + '"><td><b>' + esc(u.username) + '</b></td><td>' + tierTag(u.subscription_status) + '</td>' +
+            '<td class="pool-cell">' + esc(poolText(u)) + poolBar(u) + '</td>' +
+            '<td class="num">' + (poolOf(u) && poolOf(u).unlimited ? '∞' : num((poolOf(u) || {}).available)) + '</td>' +
+            '<td class="num">' + (spent ? num(spent) : '—') + '</td>' +
+            '<td class="num">' + (u.revenue ? sek(u.revenue) : '—') + '</td>' +
+            '<td>' + esc(agoText(u.last_active)) + '</td></tr>';
+        }).join('') + '</tbody></table></div>' +
+        (users.length > 40 ? '<div class="note">Showing the 40 most active of ' + num(users.length) + ' accounts.</div>' : '')
+        : emptyState('No accounts with this code', '◌')) +
+      '<div class="note">' + rule + ' The code is computed server-side per request — filter the Players view by Code to see the same list with the full table and CSV export.</div>',
+      { d: 'code', k: code });
   }
   function drawerGeo(cc) {
     const items = geoItems();
@@ -1152,8 +1546,12 @@
         '<div class="dstat"><span class="t">Campaigns</span><span class="v">' + num(detail.total_campaigns != null ? detail.total_campaigns : campaigns.length) + '</span></div>' +
         '<div class="dstat"><span class="t">Paid lifetime</span><span class="v" style="color:' + (revenue ? 'var(--good)' : 'var(--dim)') + '">' + (revenue ? sek(revenue) : '—') + '</span></div>' +
         '<div class="dstat"><span class="t">Tier</span><span class="v">' + esc(TIER_LABEL[tier] || tier) + (until ? ' <small>to ' + esc(until) + '</small>' : '') + '</span></div>' +
-        '<div class="dstat"><span class="t">Daily cap</span><span class="v">' + (detail.turn_cap == null ? '—' : num(detail.turn_cap)) + ' <small>used ' + num(detail.turns_used) + ' this period</small></span></div>' +
-        '<div class="dstat"><span class="t">Bonus turns</span><span class="v">' + num(detail.turn_bonus) + (Number(detail.promo_bonus) ? ' <small>+ ' + num(detail.promo_bonus) + ' promo</small>' : '') + '</span></div>' +
+        /* Turn-pott (2026-09-28): koden + potten ersätter de två gamla
+           "Daily cap"/"Bonus turns"-rutorna, som visade kvarvarande tal utan att
+           säga vad de hörde till (det var just den oläsligheten rostad pekade på). */
+        '<div class="dstat"><span class="t">Code</span><span class="v">' + codeTag(detail) + ' <small>' + esc(codeWhy(detail) || '—') + '</small></span></div>' +
+        '<div class="dstat"><span class="t">Turns left in the pool</span><span class="v">' + poolTitle(detail) + '</span></div>' +
+        '<div class="dstat"><span class="t">Used in total</span><span class="v">' + num(poolUsedTotal(detail)) + ' <small>free · promo · bought</small></span></div>' +
         '<div class="dstat"><span class="t">Created</span><span class="v">' + esc(String(detail.created_at || '').slice(0, 10) || '—') + '</span></div>' +
         '<div class="dstat"><span class="t">Last active</span><span class="v">' + esc(String(detail.last_active || '').slice(0, 10) || 'never') + '</span></div>' +
         '<div class="dstat"><span class="t">Last login</span><span class="v">' + esc(String(detail.last_login || '').slice(0, 10) || '—') + '</span></div>' +
@@ -1161,6 +1559,8 @@
         '<div class="dstat"><span class="t">Role</span><span class="v">' + esc(detail.role || 'player') + '</span></div>' +
         '</div>' +
         (feat.length ? '<div class="chips feat">' + feat.map(f => '<span class="chip static">' + esc(f) + '</span>').join('') + '</div>' : '') +
+        '<div class="sub">Turn pool · free vs bought</div>' + poolBreakdown(detail) +
+        grantsTable(detail.turn_grants) +
         '<div class="sub">AI calls per day · ' + num(sum(dailyCalls)) + ' calls logged</div>' +
         vchart(dailyCalls, { emptyMsg:'No transcript activity for this account', unit:'calls' }) +
         adminActions(username, tier);
@@ -1176,6 +1576,7 @@
         '</div>' +
         (roles.length ? '<div class="sub">Who burns the tokens</div>' + donut(roles, tok(roles.reduce((a, r) => a + r.value, 0)), 'tokens') : '') +
         (mix.length ? modelMixTable(mix) : emptyState('No model mix recorded', '◌')) +
+        bucketSplit(detail.turn_ledger_buckets, 'all time') +
         (actions.length ? '<div class="sub">Turn ledger actions · all ' + num(actions.length) + '</div>' + hbars(actions, { fmt: num, class:"ref-list" }) + '<div class="note">Only turns consumed since the per-user turn ledger was introduced are counted here — older turns show up in the campaign totals instead.</div>' : '');
     } else if (tab === 'revenue') {
       const hist = detail.revenue_history || [];
@@ -1389,6 +1790,8 @@
       case 'tier': return drawerTier(k);
       case 'bucket': return drawerBucket(k, Number((revenueBuckets() || {})[k]) || 0);
       case 'value': return drawerValue();
+      case 'pool': return drawerPool(k);
+      case 'code': return drawerCode(k);
       case 'action': return drawerAction(k);
       case 'model': return drawerModel(k);
       case 'player': return drawerPlayer(k, state.t || 'summary');
@@ -1433,7 +1836,7 @@
   document.addEventListener('click', async function (ev) {
     const t = ev.target.closest('[data-view],[data-win],[data-metric],[data-rev],[data-tmetric],[data-expand],' +
       '[data-drill],[data-slice],[data-key],[data-tx],[data-player],[data-model],[data-action],[data-ref],[data-geo],[data-country],[data-georange],[data-tier],[data-day],[data-peak],[data-csvmodel],' +
-      '[data-csv],[data-sort],[data-page],[data-frole],[data-fstatus],[data-fcountry],[data-clear],[data-fbrange],[data-fbmail],[data-tab],[data-act],[data-bucket],[data-product]');
+      '[data-csv],[data-sort],[data-page],[data-frole],[data-fstatus],[data-fcountry],[data-fcode],[data-clear],[data-fbrange],[data-fbmail],[data-tab],[data-act],[data-bucket],[data-product],[data-pool],[data-code]');
     if (!t) return;
     const d = t.dataset;
 
@@ -1455,7 +1858,8 @@
     if (d.frole) { S.fRole = d.frole; S.page = 1; render(); return; }
     if (d.fstatus) { S.fStatus = d.fstatus; S.page = 1; render(); return; }
     if (d.fcountry) { S.fCountry = d.fcountry; S.page = 1; render(); return; }
-    if (d.clear) { S.q = ''; S.fRole = 'all'; S.fStatus = 'all'; S.fCountry = 'all'; S.page = 1; render(); return; }
+    if (d.fcode) { S.fCode = d.fcode; S.page = 1; render(); return; }
+    if (d.clear) { S.q = ''; S.fRole = 'all'; S.fStatus = 'all'; S.fCountry = 'all'; S.fCode = 'all'; S.page = 1; render(); return; }
     if (d.fbrange) { S.fbRange = d.fbrange; render(); return; }
     if (d.fbmail) { S.fbMail = d.fbmail; render(); return; }
     if (d.csv) { exportCsv(d.csv); return; }
@@ -1466,6 +1870,7 @@
       if (v.indexOf('rev:') === 0) return openWith(t, () => drawerRevenue(v.slice(4)));
       if (v.indexOf('day:') === 0) return openWith(t, () => drawerDay(v.slice(4)));
       if (v === 'value') return openWith(t, drawerValue);
+      if (v === 'pool') return openWith(t, drawerPool);
       if (v === 'traffic') return openWith(t, drawerTraffic);
       if (v === 'geo') return openWith(t, drawerGeos);
       if (v === 'usage:calls' || v.indexOf('usage') === 0) { S.view = 'usage'; return render(); }
@@ -1509,6 +1914,9 @@
     if (d.tx) return openWith(t, () => drawerLedger(d.tx));
     if (d.bucket != null && t.classList.contains('vcol')) return openWith(t, () => drawerBucket(d.bucket, Number(d.val) || 0));
     if (d.player) return openWith(t, () => drawerPlayer(d.player));
+    /* Turn-pott (2026-09-28): pott-kolumnen/KPI:n → pott-drawer, koden → kontona. */
+    if (d.pool) return openWith(t, () => drawerPool(d.pool));
+    if (d.code) return openWith(t, () => drawerCode(d.code));
     if (d.tab) {
       const u = d.drawerPlayer;
       if (!S.dossier || S.dossier.username !== u) {
@@ -1538,8 +1946,20 @@
   }
 
   function exportCsv(what) {
-    if (what === 'players') return csvDownload('players.csv', [['username','role','tier','country','campaigns','tokens','turns','revenue','last_active']]
-      .concat(sortedPlayers().map(u => [u.username, u.role, u.subscription_status, u.country, u.total_campaigns, u.total_tokens, u.total_turns, u.revenue, u.last_active])));
+    if (what === 'players') return csvDownload('players.csv', [['username','role','code','coding_why','tier','country','campaigns','tokens','turns','pool_free_left','pool_free_cap','pool_free_used_period','pool_promo_left','pool_paid_left','pool_paid_granted','pool_paid_granted_known','pool_available','pool_unlimited','used_total_free','used_total_promo','used_total_paid','revenue','last_active']]
+      .concat(sortedPlayers().map(u => {
+        const tp = poolOf(u) || {};
+        const life = tp.used_lifetime || {};
+        const c = u.coding || {};
+        return [u.username, u.role, c.code || '', c.why || '', u.subscription_status, u.country,
+          u.total_campaigns, u.total_tokens, u.total_turns,
+          tp.free_left == null ? '' : tp.free_left, tp.free_cap || 0, tp.free_used_period || 0,
+          tp.promo_left || 0, tp.paid_left || 0, tp.paid_granted || 0, tp.paid_granted_known ? 'yes' : 'no',
+          /* Oändlig pott får ingen siffra i CSV:n — annars läser kalkylbladet
+             "∞" som 0 och nyckeltalet blir fel i stället för "unlimited". */
+          tp.unlimited ? '' : (tp.available == null ? '' : tp.available), tp.unlimited ? 'yes' : 'no',
+          life.free || 0, life.promo || 0, life.paid || 0, u.revenue, u.last_active];
+      })));
     if (what === 'ledger') return csvDownload('ledger.csv', [['date','user','sek','type','reference']]
       .concat(ledgerRows().map(r => [String(r.ts||'').slice(0,10), r.user, r.amount_sek, r.type, r.event_id || r.stripe_sub_id || ''])));
     if (what === 'visits') return csvDownload('visits.csv', [['day','requests','unique_visitors']]

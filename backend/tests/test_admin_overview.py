@@ -365,7 +365,9 @@ def test_overview_user_rows_are_compact(client):
     body = client.get("/api/admin/overview", cookies={"morkrets_token": _atok()}).json()
     # toppnivå-kontraktet
     assert set(body) == {"generated_at", "window", "totals", "revenue", "value",
-                         "series", "usage", "traffic", "tiers", "users"}
+                         "series", "usage", "traffic", "tiers", "users",
+                         # Turn-pott (2026-09-28): free/paid-legend + pottsummor
+                         "coding_summary", "pool_totals"}
     assert set(body["totals"]) == {"accounts", "players", "admins", "campaigns",
                                    "turns", "tokens", "ai_calls", "visits"}
     assert set(body["series"]) == {"api_calls_day", "visits_day", "visits_unique_day",
@@ -377,7 +379,9 @@ def test_overview_user_rows_are_compact(client):
                                     "uniques", "total", "today", "last_7", "window"}
     assert set(body["value"]) == {"turns", "tokens", "ai_calls", "tokens_per_sek",
                                   "kr_per_1m_tokens", "turns_windowed",
-                                  "turns_day", "by_action"}
+                                  "turns_day", "by_action",
+                                  # per hink och dag (2026-09-28)
+                                  "turns_by_bucket_day"}
     assert body["totals"]["accounts"] == 2 and body["totals"]["admins"] == 1
     assert body["totals"]["players"] == 1
     # kompakta rader: BARA tabellfälten — aldrig daily/model_tokens (159 konton)
@@ -385,6 +389,69 @@ def test_overview_user_rows_are_compact(client):
     assert set(row) == set(main._OVERVIEW_USER_FIELDS)
     assert "daily" not in row and "model_tokens" not in row and "ip" not in row
     assert "country_flag" in row
+
+
+def test_overview_exposes_turn_pool_coding_and_bucket_series(client):
+    """Turn-pott (2026-09-28, rostad): kompakta pott-fält + free/paid-kod per
+    rad, server-räknade summor, och en hink-serie som summerar mot turns_day.
+
+    Kodningen är tre koder: `granted` får ALDRIG se ut som ett köp."""
+    _seed_admin()
+    _seed_player("frida")                       # ren gratispott → free
+    _seed_player("gustav", turn_bonus=300)      # grant utan betalning → granted
+    _seed_player("pelle", promo_bonus=300)      # legacy-promo → granted
+    _seed_player("kalle")                       # betalningsrad → paid
+    _seed_ledger([("kalle", 70, "stripe:donation", _ts(0))])
+    _write_turn_ledger("frida", [
+        {"ts": _ts(0), "action": "dm", "model": None, "tokens": 0, "bucket": "free"},
+    ])
+    _write_turn_ledger("gustav", [
+        {"ts": _ts(0), "action": "dm", "model": None, "tokens": 0, "bucket": "paid"},
+        # rad UTAN bucket (skriven före 2026-09-28) → "unknown", aldrig "free"
+        {"ts": _ts(40), "action": "dm", "model": None, "tokens": 0},
+    ])
+
+    body = client.get("/api/admin/overview?window=all",
+                      cookies={"morkrets_token": _atok()}).json()
+    rows = {u["username"]: u for u in body["users"]}
+
+    assert rows["frida"]["coding"]["code"] == "free"
+    assert rows["gustav"]["coding"]["code"] == "granted"
+    assert rows["gustav"]["coding"]["code"] != "paid"      # grant ≠ köp
+    assert rows["pelle"]["coding"]["code"] == "granted"
+    assert rows["kalle"]["coding"]["code"] == "paid"
+    assert rows["kalle"]["coding"]["why"] == "70 kr paid"
+    # Kompakt rad bär bara code/tier/why — flaggorna (paid/granted) hör till
+    # dossiéns fulla coding-objekt, så payloaden inte växer i onödan.
+    assert set(rows["gustav"]["coding"]) == {"code", "tier", "why"}
+
+    # pott-fälten är server-räknade och säger "köpt: okänt" utan grant-rader
+    assert rows["gustav"]["turn_pool"]["paid_left"] == 300
+    assert rows["gustav"]["turn_pool"]["paid_granted"] == 0
+    assert rows["gustav"]["turn_pool"]["paid_granted_known"] is False
+    assert rows["frida"]["turn_pool"]["free_cap"] == main.DEFAULT_TURN_CAP
+
+    # legenden: bara riktiga koder, summan = antalet konton.
+    # the_admin har cap 0 = oändlig pott → "granted" (inte gratiskvoten, inte
+    # betalande) — personal-konton skiljs ut med Role-filtret i dashboarden.
+    assert set(body["coding_summary"]) == {"paid", "granted", "free"}
+    assert sum(body["coding_summary"].values()) == body["totals"]["accounts"]
+    assert body["coding_summary"] == {"paid": 1, "granted": 3, "free": 1}
+    assert rows["the_admin"]["turn_pool"]["unlimited"] is True
+
+    # hink-serien summerar exakt mot turns_day (samma scan, samma fönster)
+    bd = body["value"]["turns_by_bucket_day"]
+    td = body["value"]["turns_day"]
+    assert set(bd) == set(td)
+    for day, split in bd.items():
+        assert sum(split.values()) == td[day], day
+    assert bd[_local_day(0)]["free"] == 1
+    assert bd[_local_day(0)]["paid"] == 1
+    assert bd[_local_day(40)]["unknown"] == 1
+
+    # pottsummorna räknas server-side (UI:t ska inte summera själv)
+    assert body["pool_totals"]["paid_left"] == 300
+    assert body["pool_totals"]["free_left"] >= main.DEFAULT_TURN_CAP
 
 
 def test_overview_window_filters_only_windowed_series(client):

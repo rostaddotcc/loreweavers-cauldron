@@ -25,6 +25,20 @@ def turn_ledgers_dir(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def turn_grants_file(tmp_path, monkeypatch):
+    """Grant-ledgern (2026-09-28) får ALDRIG skrivas av tester.
+
+    Stripe-vägarna (support300/unlock10/donation) och admin-topup bokför nu
+    varje beviljat turn-paket. Utan denna fixture skrev varje Stripe-test
+    testkonton rakt in i skarpa backend/data/turn_grants.jsonl — samma
+    läckageklass som users.json 2026-08-04 och turn_ledgers 2026-08-08.
+    """
+    f = tmp_path / "turn_grants.jsonl"
+    monkeypatch.setattr(main, "_TURN_GRANTS_FILE", f)
+    return f
+
+
+@pytest.fixture(autouse=True)
 def ip_cache_files(tmp_path, monkeypatch):
     """Geo-/besökscachen får ALDRIG skrivas av tester (2026-09-27).
 

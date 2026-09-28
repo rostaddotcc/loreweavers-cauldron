@@ -140,6 +140,10 @@ def test_chat_consumes_one_turn_and_ledgers_dm(client):
     assert actions == ["dm"], actions
     for e in entries:
         assert e.get("ts") and e.get("model") == "step-3.7-flash"
+        # Turn-pott (2026-09-28): hinken som betalade bokförs per rad.
+        # Kontot har ingen promo och cap 50 → första turen är "free".
+        assert e.get("bucket") == "free"
+        assert e.get("pool_after") == 49
 
 
 def test_ledger_records_one_dm_turn_even_on_even_turn(client):

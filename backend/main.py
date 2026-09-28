@@ -1266,6 +1266,22 @@ _FREE_FIELD_DEFAULTS = {
     # konton som hade kvar). turn_bonus = KÖPTA turns (Support/Patron, spenderas
     # SIST). Daglig cap (turns_used) ligger i mitten: promo → cap → köpta.
     "promo_bonus": 0,
+    # Turn-pott per spelare (2026-09-28): livstids-räknare per hink. De
+    # nollställs ALDRIG av dygns-rollovern — den rör bara `turns_used`.
+    # Varför: potten spenderas promo → daglig cap → köpta, så "hur mycket har
+    # gått åt" gick inte att läsa ut ur users.json (rollover nollade) och inte
+    # ur turn-ledgern (saknade hink + beskärs vid 2 000 rader). Dessa tre tal
+    # är den varaktiga sanningen; ledgern är detaljen.
+    "turns_used_free_total": 0,   # daglig cap (inkl. lifetime-kontons oändliga)
+    "turns_used_paid_total": 0,   # köpta/grants (turn_bonus)
+    "turns_used_promo_total": 0,  # legacy-promo (promo_bonus)
+    # Ledger-rader UTAN hink (skrivna före 2026-09-28). Känt och mätt — aldrig
+    # omfördelat till "free", bara redovisat som legacy/okänt.
+    "turns_used_unknown_total": 0,
+    # Från när kontots pottsiffror är tillförlitliga (ISO-datum). Sätts av
+    # backfill-skriptet; UI:t skriver "okänt före <datum>" i stället för att
+    # hitta på historik.
+    "pool_data_since": None,
     # Wan-bildkvot (10/dag): wan_used_today + wan_reset_date
     "wan_used_today": 0,
     "wan_reset_date": None,
@@ -1559,8 +1575,13 @@ def _gate_turn_quota(username: str) -> None:
         )
 
 
-def _consume_turn(username: str, action: str = "turn", model: str | None = None, tokens: int = 0) -> None:
+def _consume_turn(username: str, action: str = "turn", model: str | None = None, tokens: int = 0) -> str:
     """Bokför en förbrukad turn (efter ev. period-rollover). Spara under _USER_LOCK.
+
+    Returnerar hinken som betalade: "promo" | "free" | "paid" | "none" — anroparen
+    kan behöva veta det, och turn-ledgern bokför den (2026-09-28, turn-pott).
+    "free" täcker även lifetime-konton (cap 0): deras turns är oändliga men de
+    förbrukas ur samma räknare och ska inte få en egen hink i statistiken.
 
     Spenderingsordning (2026-08-05 v3): promo (legacy) → daglig cap →
     köpta turns. Anropas bara när en turn faktiskt skickas (403-checks klara).
@@ -1582,11 +1603,13 @@ def _consume_turn(username: str, action: str = "turn", model: str | None = None,
     tier = _tier_for(username)
     hours = _period_hours_for(tier)
     now = datetime.now(timezone.utc)
+    bucket = "none"
+    pool_after = None
     with _USER_LOCK:
         users = load_users()
         u = users.get(username)
         if not isinstance(u, dict):
-            return
+            return "none"
         # setdefault-backfill inline (vi är redan innanför låset)
         u.setdefault("turns_used", 0)
         u.setdefault("turn_bonus", 0)
@@ -1622,21 +1645,37 @@ def _consume_turn(username: str, action: str = "turn", model: str | None = None,
         # Spenderingsordning (2026-08-05 v3): promo (legacy-kvarvarande) →
         # daglig cap → köpta turns. Promo förbrukas FÖRE day-cappen;
         # köpta turns sparas till sist.
+        # 2026-09-28 (turn-pott): hinken som betalade bokförs (bucket) OCH
+        # räknas i en livstids-räknare som rollovern inte rör — annars går
+        # "free vs paid" inte att läsa ut någonstans (cap-räknaren nollas varje
+        # dygn, ledgern saknade hink och beskärs).
         promo = int(u.get("promo_bonus", 0) or 0)
         if promo > 0:
             u["promo_bonus"] = promo - 1
+            bucket = "promo"
+            u["turns_used_promo_total"] = int(u.get("turns_used_promo_total", 0) or 0) + 1
         else:
             cap = int(u.get("turn_cap", 0) or 0)
             used = int(u.get("turns_used", 0) or 0)
             if cap <= 0 or used < cap:
                 u["turns_used"] = used + 1
+                bucket = "free"
+                u["turns_used_free_total"] = int(u.get("turns_used_free_total", 0) or 0) + 1
             else:
                 purchased = int(u.get("turn_bonus", 0) or 0)
                 if purchased > 0:
                     u["turn_bonus"] = purchased - 1
+                    bucket = "paid"
+                    u["turns_used_paid_total"] = int(u.get("turns_used_paid_total", 0) or 0) + 1
+                else:
+                    # Gaten ska ha stoppat detta; bokför "none" i stället för att
+                    # låtsas att en hink betalade.
+                    bucket = "none"
+        pool_after = _pot_units_left(u)
         save_users(users)
-    # Per-användar-ledger: varje förbrukad turn bokförs med åtgärd/modell/tokens
-    _append_turn_ledger(username, action, model, tokens)
+    # Per-användar-ledger: varje förbrukad turn bokförs med hink + pottläge
+    _append_turn_ledger(username, action, model, tokens, bucket=bucket, pool_after=pool_after)
+    return bucket
 
 
 # ═══════════════════════════════════════
@@ -1651,9 +1690,16 @@ _TURN_LEDGER_KEEP = 2000
 _TURN_LEDGER_LOCK = threading.Lock()
 
 
-def _append_turn_ledger(username: str, action: str, model: str | None = None, tokens: int = 0) -> None:
+def _append_turn_ledger(username: str, action: str, model: str | None = None, tokens: int = 0,
+                        bucket: str | None = None, pool_after: int | None = None) -> None:
     """Bokför EN förbrukad turn i användarens turn-ledger. Får aldrig kasta —
-    en ledger-skrivning ska inte kunna sänka ett spelaranrop."""
+    en ledger-skrivning ska inte kunna sänka ett spelaranrop.
+
+    2026-09-28 (turn-pott): `bucket` (promo|free|paid|none) = hinken som
+    betalade, `pool_after` = turns kvar i potten efter turen (None = oändligt).
+    Rader skrivna FÖRE detta datum saknar fälten — läsare ska tolka dem som
+    "unknown" (gammal rad ≠ free), aldrig gissa.
+    """
     try:
         _TURN_LEDGERS_DIR.mkdir(parents=True, exist_ok=True)
         p = _TURN_LEDGERS_DIR / f"{username}.jsonl"
@@ -1662,6 +1708,8 @@ def _append_turn_ledger(username: str, action: str, model: str | None = None, to
             "action": action,
             "model": model,
             "tokens": int(tokens or 0),
+            "bucket": bucket,
+            "pool_after": pool_after,
         }
         with _TURN_LEDGER_LOCK:
             with open(p, "a", encoding="utf-8") as f:
@@ -1706,6 +1754,293 @@ def _turn_ledger_breakdown(username: str, since: str | None = None) -> dict:
         agg = out.setdefault(a, {"turns": 0, "tokens": 0})
         agg["turns"] += 1
         agg["tokens"] += int(rec.get("tokens") or 0)
+    return out
+
+
+# ═══════════════════════════════════════
+# TURN-POTT — köpt, använt och kvar per hink (2026-09-28, rostad)
+# ═══════════════════════════════════════
+# Potten har tre hinkar med fast spenderingsordning (promo → daglig cap →
+# köpta). Två saker gick inte att svara på före detta datum:
+#   1) "hur mycket har spelaren köpt" — turn_bonus är KVARVARANDE, och 7 konton
+#      hade 300 turns kvar utan en enda rad i betalningsledgern.
+#   2) "hur mycket gick åt, free vs paid" — cap-räknaren nollas varje dygn och
+#      turn-ledgern saknade hink (och beskärs vid 2 000 rader).
+# Grant-ledgern nedan bokför varje BEVILJAT paket; users.json bär livstids-
+# räknarna per hink. `_turn_pool` är den enda källan admin-API:t läser.
+_TURN_GRANTS_FILE = Path(__file__).resolve().parent / "data" / "turn_grants.jsonl"
+_TURN_GRANTS_LOCK = threading.Lock()
+# Från detta datum bokförs hink per turn. Äldre ledger-rader är "unknown" —
+# aldrig "free" (det vore en gissning).
+POOL_TRACKING_SINCE = "2026-09-28"
+
+
+def _append_turn_grant(username: str, turns: int, source: str, note: str | None = None) -> bool:
+    """Bokför ett beviljat turn-paket (en rad per paket). Får aldrig kasta —
+    samma regel som turn-ledgern: bokföring får inte sänka ett spelaranrop."""
+    try:
+        turns = int(turns or 0)
+        if turns <= 0 or not username:
+            return False
+        _TURN_GRANTS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        rec = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "user": username,
+            "turns": turns,
+            "source": source,      # stripe:<produkt> | admin | opening_balance
+            "note": note or "",
+        }
+        with _TURN_GRANTS_LOCK:
+            with open(_TURN_GRANTS_FILE, "a", encoding="utf-8") as f:
+                f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        return True
+    except Exception:
+        logger.warning("turn grant append failed for %s", username, exc_info=True)
+        return False
+
+
+def _read_turn_grants(username: str | None = None, limit: int | None = None) -> list[dict]:
+    """Grant-rader (nyaste sist). `username` filtrerar på spelare."""
+    out: list[dict] = []
+    try:
+        if not _TURN_GRANTS_FILE.exists():
+            return []
+        for ln in _TURN_GRANTS_FILE.read_text(encoding="utf-8").splitlines():
+            ln = ln.strip()
+            if not ln:
+                continue
+            try:
+                rec = json.loads(ln)
+            except ValueError:
+                continue
+            if not isinstance(rec, dict):
+                continue
+            if username is not None and rec.get("user") != username:
+                continue
+            out.append(rec)
+    except Exception:
+        return []
+    return out[-limit:] if limit else out
+
+
+def _turn_grants_index() -> dict:
+    """{user: {"turns": N, "rows": N, "sources": [...]}} i EN filläsning.
+
+    Overview loopar över ~160 konton — att läsa grant-filen per konto vore 160
+    filläsningar per request. Samma skäl som att `_turn_pool` tar emot en redan
+    läst users-rad.
+    """
+    idx: dict = {}
+    for rec in _read_turn_grants():
+        u = str(rec.get("user") or "")
+        if not u:
+            continue
+        e = idx.setdefault(u, {"turns": 0, "rows": 0, "sources": []})
+        e["turns"] += int(rec.get("turns") or 0)
+        e["rows"] += 1
+        src = str(rec.get("source") or "unknown")
+        if src not in e["sources"]:
+            e["sources"].append(src)
+    return idx
+
+
+def _pot_units_left(udata: dict) -> int | None:
+    """Turns kvar i potten ur en users-rad. None = oändligt (cap 0).
+
+    Samma formel som `_turns_available` (promo + cap_left + köpta), så ledgerns
+    `pool_after` aldrig kan säga något annat än gaten gör.
+    """
+    try:
+        if not isinstance(udata, dict):
+            return None
+        cap = int(udata.get("turn_cap", 0) or 0)
+        if cap <= 0:
+            return None
+        used = int(udata.get("turns_used", 0) or 0)
+        promo = int(udata.get("promo_bonus", 0) or 0)
+        paid = int(udata.get("turn_bonus", 0) or 0)
+        return promo + max(0, cap - used) + paid
+    except Exception:
+        return None
+
+
+def _turn_pool(username: str, udata: dict | None = None, grants_index: dict | None = None) -> dict:
+    """Potten för EN spelare: hinkarna, förbrukat i livstid och kvar.
+
+    ENDA källan för pottsiffror i admin-API:t (tabell, dossier, drawer, CSV
+    läser alla samma tal). Skicka in `udata` (redan läst users-rad) och
+    `grants_index` när du loopar — `load_users()` läser filen varje gång.
+    """
+    if udata is None:
+        udata = load_users().get(username) or {}
+    if not isinstance(udata, dict):
+        udata = {}
+    grants = grants_index if grants_index is not None else _turn_grants_index()
+    g = grants.get(username) or {}
+    granted = int(g.get("turns") or 0)
+    grant_rows = int(g.get("rows") or 0)
+    sources = list(g.get("sources") or [])
+    cap = int(udata.get("turn_cap", 0) or 0)
+    used_period = int(udata.get("turns_used", 0) or 0)
+    unlimited = cap <= 0
+    free_left = None if unlimited else max(0, cap - used_period)
+    promo_left = int(udata.get("promo_bonus", 0) or 0)
+    paid_left = int(udata.get("turn_bonus", 0) or 0)
+    used = {
+        "free": int(udata.get("turns_used_free_total", 0) or 0),
+        "paid": int(udata.get("turns_used_paid_total", 0) or 0),
+        "promo": int(udata.get("turns_used_promo_total", 0) or 0),
+        # Rader utan hink (före 2026-09-28) — egen post, aldrig "free".
+        "unknown": int(udata.get("turns_used_unknown_total", 0) or 0),
+    }
+    return {
+        "free": {"cap": cap, "used_period": used_period, "left_period": free_left, "unlimited": unlimited},
+        "promo": {"left": promo_left, "used_total": used["promo"]},
+        "paid": {
+            "left": paid_left,
+            "granted": granted,
+            "grant_rows": grant_rows,
+            "sources": sources,
+            "used_total": used["paid"],
+            # "köpt" är bara KÄNT om grant-ledgern har riktiga köp/grants —
+            # en opening_balance-rad är ett bokslut, inte ett köp.
+            "granted_known": bool(grant_rows) and any(s != "opening_balance" for s in sources),
+        },
+        "used_lifetime": used,
+        # None = oändlig pott (cap 0). _turns_available() svarar 999999 där —
+        # gaten och UI:t visar ∞, aldrig "0 av 0".
+        "available": None if unlimited else (int(free_left or 0) + promo_left + paid_left),
+        "period_reset": udata.get("reset_date"),
+        "data_since": udata.get("pool_data_since"),
+        "buckets_tracked_since": POOL_TRACKING_SINCE,
+        "checked_at": _now_iso(),
+    }
+
+
+def _pool_compact(tp: dict) -> dict:
+    """Platta pott-fälten som dashboarden ritar (rad, drawer, CSV).
+
+    EN form på potten i hela admin-API:t: /api/admin/overview, /api/admin/stats
+    och /api/admin/user/{u} skickar SAMMA nycklar. Dossién lägger till
+    livstidsräknarna och grant-raderna ovanpå (`_pool_detail`), men siffrorna
+    kommer alltid ur `_turn_pool` — klienten ska aldrig behöva känna igen två
+    varianter av samma pott (det var så tabell och dossier kunde glida isär).
+    """
+    free = tp.get("free") or {}
+    promo = tp.get("promo") or {}
+    paid = tp.get("paid") or {}
+    return {
+        "free_cap": int(free.get("cap") or 0),
+        "free_left": free.get("left_period"),
+        "free_used_period": int(free.get("used_period") or 0),
+        "unlimited": bool(free.get("unlimited")),
+        "promo_left": int(promo.get("left") or 0),
+        "paid_left": int(paid.get("left") or 0),
+        "paid_granted": int(paid.get("granted") or 0),
+        "paid_granted_known": bool(paid.get("granted_known")),
+        "available": tp.get("available"),
+        # Ärlighetsgränsen: satt av backfill-skriptet. UI:t skriver "köpt: okänt
+        # före <datum>" — den hör till RADEN också, inte bara dossién, eftersom
+        # tabellen och pott-drawern visar samma not.
+        "data_since": tp.get("data_since"),
+        # Livstidsförbrukningen per hink — liten (3 tal) och dashboarden visar
+        # den i tabellen ("Spent") och på mobilkortet. Finns i både rad och
+        # dossier så ingen yta behöver gissa.
+        "used_lifetime": dict(tp.get("used_lifetime") or {}),
+    }
+
+
+def _pool_detail(tp: dict) -> dict:
+    """Kompakt pott + det dossién behöver: livstid, källor, ärlighetsgränser."""
+    out = _pool_compact(tp)
+    promo = tp.get("promo") or {}
+    paid = tp.get("paid") or {}
+    out.update({
+        "promo_used_total": int(promo.get("used_total") or 0),
+        "paid_used_total": int(paid.get("used_total") or 0),
+        "sources": list(paid.get("sources") or []),
+        "grant_rows": int(paid.get("grant_rows") or 0),
+        "period_reset": tp.get("period_reset"),
+        "tracked_since": tp.get("buckets_tracked_since"),
+        "checked_at": tp.get("checked_at"),
+    })
+    return out
+
+
+def _player_coding(username: str, revenue: float | None = None, pool: dict | None = None,
+                   tier: str | None = None) -> dict:
+    """Free/paid-kodning för dashboarden (rostad 2026-09-28).
+
+    Tre koder, för två vore oärligt — konton med turns kvar men ingen
+    betalningsrad finns (7 st 2026-09-28) och de får inte se ut som köpare:
+
+      paid    = betalningsrad i betalningsledgern, eller tier2/lifetime
+      granted = ingen betalning, men pott utöver den dagliga gratiscappen
+                (grants/köpta, legacy-promo eller annan cap)
+      free    = ren gratispott (standardcap, ingen promo, ingen bonus)
+
+    `tier` skickas in när anroparen redan räknat den (_tier_for läser
+    users.json varje gång — i en loop över 160 konton vill vi inte det).
+    """
+    if tier is None:
+        tier = _tier_for(username)
+    if pool is None:
+        pool = _turn_pool(username)
+    rev = float(revenue or 0) if revenue is not None else float(_ledger_per_user().get(username, 0) or 0)
+    grant_turns = int(pool["paid"].get("granted") or 0)
+    paid_left = int(pool["paid"].get("left") or 0)
+    promo_left = int(pool["promo"].get("left") or 0)
+    used_promo = int(pool["promo"].get("used_total") or 0)
+    used_paid = int(pool["paid"].get("used_total") or 0)
+    cap = int(pool["free"].get("cap") or 0)
+    unlimited = bool(pool["free"].get("unlimited"))
+    paid = rev > 0 or tier in ("tier2", "lifetime")
+    beyond_quota = bool(
+        paid_left or promo_left or used_promo or used_paid or grant_turns or unlimited
+        or cap != DEFAULT_TURN_CAP
+    )
+    if paid:
+        code = "paid"
+        why = f"{int(rev)} kr paid" if rev > 0 else f"tier {tier}"
+    elif beyond_quota:
+        code = "granted"
+        bits = []
+        if grant_turns:
+            bits.append(f"{grant_turns} turns granted")
+        elif paid_left:
+            bits.append(f"{paid_left} bought turns left")
+        if used_paid:
+            bits.append(f"{used_paid} bought turns used")
+        if promo_left or used_promo:
+            bits.append("legacy promo turns")
+        if unlimited or cap != DEFAULT_TURN_CAP:
+            bits.append(f"cap {cap if not unlimited else 'unlimited'}")
+        why = ", ".join(bits) or "turns beyond the free quota"
+    else:
+        code = "free"
+        why = f"daily free quota only ({cap}/day)"
+    return {
+        "code": code,            # paid | granted | free
+        "tier": tier,            # free | tier1 | tier2 | lifetime (sekundär)
+        "paid": code == "paid",
+        "granted": code == "granted",
+        "why": why,
+        "revenue": int(rev),
+    }
+
+
+def _turn_ledger_bucket_breakdown(username: str, since: str | None = None) -> dict:
+    """Ledger-rader per hink: {promo, free, paid, unknown}.
+
+    `unknown` = rader skrivna före 2026-09-28 (ingen hink bokfördes då) — de
+    räknas som okända, aldrig som free.
+    """
+    out = {"promo": 0, "free": 0, "paid": 0, "unknown": 0}
+    for rec in _read_turn_ledger(username, limit=_TURN_LEDGER_KEEP):
+        if since and not str(rec.get("ts", "")).startswith(since):
+            continue
+        b = str(rec.get("bucket") or "unknown")
+        out[b if b in out else "unknown"] += 1
     return out
 
 
@@ -10813,11 +11148,15 @@ def _account_meta(username: str, udata: dict, campaigns: list) -> dict:
     }
 
 
-def _user_stat_row(username: str, geo: dict | None = None, ledger_per_user: dict | None = None) -> dict:
+def _user_stat_row(username: str, geo: dict | None = None, ledger_per_user: dict | None = None,
+                   grants_index: dict | None = None) -> dict:
     """Gemensam per-användar-statistikrad (admin-vyn + spelarens egen profil).
 
     Innehåller ALLT utom ip/land — geo-fälten läggs bara till när `geo`
     skickas med (admin). Spelarens /api/me/stats exkluderar ip/land alltid.
+
+    `grants_index` (2026-09-28): färdigläst grant-ledger. Anropare som loopar
+    över alla konton skickar in den EN gång — annars läses filen per spelare.
     """
     udata = load_users().get(username) or {}
     if not isinstance(udata, dict):
@@ -10839,6 +11178,10 @@ def _user_stat_row(username: str, geo: dict | None = None, ledger_per_user: dict
     tts = scan.get("tts_usage", {})
     tts_sec = tts.get("seconds", 0) or 0
     ledger = ledger_per_user if ledger_per_user is not None else _ledger_per_user()
+    # Turn-pott + free/paid-kodning (2026-09-28): räknas i EN funktion per
+    # koncept så tabell, dossier, CSV och drawer aldrig kan säga olika saker.
+    pool = _turn_pool(username, udata=fresh, grants_index=grants_index)
+    coding = _player_coding(username, revenue=ledger.get(username, 0) or 0, pool=pool, tier=tier)
     row = {
         "username": username,
         "role": role,
@@ -10859,6 +11202,10 @@ def _user_stat_row(username: str, geo: dict | None = None, ledger_per_user: dict
         "promo_bonus": int(fresh.get("promo_bonus", 0) or 0),
         "period_turns_used": int(fresh.get("turns_used", 0) or 0),
         "turns_available": _turns_available(username),
+        # Turn-pott per hink + free/paid-kod (2026-09-28, rostad): EN sanning
+        # som admin-tabellen, dossién, drawern och CSV:n läser.
+        "turn_pool": _pool_compact(pool),
+        "coding": coding,
         "features_until": _benefits_until(username, fresh),
         "cap_until": fresh.get("cap_until"),
         "revenue": ledger.get(username, 0),
@@ -10901,6 +11248,9 @@ _OVERVIEW_USER_FIELDS = (
     "username", "role", "email", "subscription_status", "country",
     "country_code", "country_flag", "total_campaigns", "total_tokens",
     "total_turns", "revenue", "last_active", "created_at",
+    # Turn-pott + free/paid-kod (2026-09-28): kontraktet testas exakt i
+    # tests/test_admin_overview.py (set(row) == set(_OVERVIEW_USER_FIELDS)).
+    "turn_pool", "coding",
 )
 # Media-modeller → provider (samma mappning som /api/admin/stats använder för
 # TTS/bild; modulnivå-kopia så overview kan aggregera utan att röra den
@@ -11054,6 +11404,9 @@ def _value_delivered(window: str = "all") -> dict:
     turns_windowed = True
     turns_day: dict = {}
     by_action: dict = {}
+    # Per hink och dag (2026-09-28): rader före 2026-09-28 saknar bucket →
+    # "unknown". `none` = ingen hink betalade (gaten borde ha stoppat det).
+    bucket_day: dict = {}
     try:
         if _TURN_LEDGERS_DIR.exists():
             for p in sorted(_TURN_LEDGERS_DIR.glob("*.jsonl")):
@@ -11084,6 +11437,9 @@ def _value_delivered(window: str = "all") -> dict:
                     # Drill-down-serier (2026-09-27): samma fönster som `turns`,
                     # så staplarna summerar exakt mot siffran i KPI:n.
                     turns_day[day] = turns_day.get(day, 0) + 1
+                    b = str(rec.get("bucket") or "unknown")
+                    bd = bucket_day.setdefault(day, {"free": 0, "paid": 0, "promo": 0, "none": 0, "unknown": 0})
+                    bd[b if b in bd else "unknown"] += 1
                     act = rec.get("action") or "unknown"
                     by_action[act] = by_action.get(act, 0) + 1
     except Exception:
@@ -11118,6 +11474,9 @@ def _value_delivered(window: str = "all") -> dict:
         # "Turns delivered per day" och "What the turns bought" summerar
         # exakt mot `turns` — samma fönster, samma scan.
         "turns_day": {d: turns_day[d] for d in sorted(turns_day)},
+        # Per hink och dag — staplad graf i dashboarden. Summerar mot turns_day
+        # (samma scan, samma fönster); "unknown" = rader före 2026-09-28.
+        "turns_by_bucket_day": {d: bucket_day[d] for d in sorted(bucket_day)},
         "by_action": dict(sorted(by_action.items(), key=lambda kv: (-kv[1], kv[0]))),
     }
 
@@ -11138,9 +11497,11 @@ async def admin_stats(morkrets_token: str | None = Cookie(None)):
     geo = await iplog.geo_for_users(users)
     # FAS D: intäkter per användare (från billing-ledgern)
     ledger_per_user = _ledger_per_user()
+    # Turn-pott (2026-09-28): grant-ledgern läses EN gång för hela listan
+    grants_index = _turn_grants_index()
 
     for username in users:
-        row = _user_stat_row(username, geo=geo, ledger_per_user=ledger_per_user)
+        row = _user_stat_row(username, geo=geo, ledger_per_user=ledger_per_user, grants_index=grants_index)
         user_stats.append(row)
         total_campaigns += row["total_campaigns"]
         total_tokens += row["total_tokens"]
@@ -11237,11 +11598,17 @@ async def admin_overview(window: str = "all", morkrets_token: str | None = Cooki
     # Batch-uppslag av IP → land (cache-only, aldrig nätverk i requesten).
     geo = await iplog.geo_for_users(users)
     ledger_per_user = _ledger_per_user()
-    rows = [_user_stat_row(u, geo=geo, ledger_per_user=ledger_per_user) for u in users]
+    # Turn-pott (2026-09-28): grant-ledgern läses EN gång, inte per konto.
+    grants_index = _turn_grants_index()
+    rows = [_user_stat_row(u, geo=geo, ledger_per_user=ledger_per_user, grants_index=grants_index) for u in users]
 
     totals = {"accounts": len(users), "players": 0, "admins": 0, "campaigns": 0,
               "turns": 0, "tokens": 0, "ai_calls": 0, "visits": 0}
     tiers = {"free": 0, "tier1": 0, "tier2": 0, "lifetime": 0}
+    # Turn-pott (2026-09-28): free/paid-fördelning + pottsummor för urvalet.
+    coding_counts = {"paid": 0, "granted": 0, "free": 0}
+    pool_totals = {"available": 0, "free_left": 0, "promo_left": 0, "paid_left": 0,
+                   "paid_granted": 0, "unlimited_accounts": 0, "granted_known_accounts": 0}
     api_daily: dict = {}
     signups: dict = {}
     compact: list = []
@@ -11266,6 +11633,24 @@ async def admin_overview(window: str = "all", morkrets_token: str | None = Cooki
             signups[day] = signups.get(day, 0) + 1
         # Kompakt rad — BARA de fält dashboarden tabellerar.
         cc = row.get("country_code") or ""
+        # Kompakt pott — platta tal, SAMMA form som dossiéns pott-block. Hela
+        # _turn_pool-objektet skickas inte för 160 konton (det ligger i
+        # /api/admin/user/{u}).
+        tp = row.get("turn_pool") or {}
+        coding = row.get("coding") or {}
+        # Server-side summering (UI:t ska inte räkna legend-/pott-siffror själv).
+        _code = coding.get("code") or "free"
+        coding_counts[_code if _code in coding_counts else "free"] += 1
+        if tp.get("unlimited"):
+            pool_totals["unlimited_accounts"] += 1
+        else:
+            pool_totals["available"] += int(tp.get("available") or 0)
+            pool_totals["free_left"] += int(tp.get("free_left") or 0)
+        pool_totals["promo_left"] += int(tp.get("promo_left") or 0)
+        pool_totals["paid_left"] += int(tp.get("paid_left") or 0)
+        pool_totals["paid_granted"] += int(tp.get("paid_granted") or 0)
+        if tp.get("paid_granted_known"):
+            pool_totals["granted_known_accounts"] += 1
         compact.append({
             "username": row.get("username"),
             "role": row.get("role"),
@@ -11280,6 +11665,12 @@ async def admin_overview(window: str = "all", morkrets_token: str | None = Cooki
             "revenue": row.get("revenue", 0) or 0,
             "last_active": row.get("last_active") or "",
             "created_at": row.get("created_at"),
+            "turn_pool": tp,
+            "coding": {
+                "code": coding.get("code") or "free",
+                "tier": coding.get("tier") or "free",
+                "why": coding.get("why") or "",
+            },
         })
     totals["ai_calls"] = sum(v["calls"] for v in api_daily.values())
 
@@ -11328,6 +11719,10 @@ async def admin_overview(window: str = "all", morkrets_token: str | None = Cooki
             "window": w,
         },
         "tiers": tiers,
+        # Turn-pott (2026-09-28): free/paid-legend + pottsummorna för hela
+        # urvalet, räknade server-side (UI:t ska inte summera själv).
+        "coding_summary": coding_counts,
+        "pool_totals": pool_totals,
         "users": compact,
     }
 
@@ -11618,6 +12013,9 @@ async def stripe_webhook(request: Request):
                 # Flera köp staplas: turn_bonus ackumuleras, features_until
                 # förlängs +30 dagar från max(idag, nuvarande fönster).
                 u["turn_bonus"] = int(u.get("turn_bonus", 0) or 0) + 300
+                # Grant-ledgern (2026-09-28): "hur mycket köpte spelaren" gick
+                # inte att svara på eftersom turn_bonus bara är KVARVARANDE.
+                _append_turn_grant(username, 300, "stripe:support300")
                 features["export"] = True
                 u["features"] = features
                 u["features_until"] = _stack_benefits_until(u)
@@ -11646,6 +12044,8 @@ async def stripe_webhook(request: Request):
                 # Ingen tidsfönster-mekanik — features sätts utan utgångsdatum
                 # (features_until rensas så _benefits_active = permanent True).
                 u["turn_bonus"] = int(u.get("turn_bonus", 0) or 0) + 100
+                # Grant-ledgern (2026-09-28): spårar köpet, inte bara saldot.
+                _append_turn_grant(username, 100, "stripe:unlock10")
                 features["export"] = True
                 features["wan1080"] = True
                 features["all_models"] = True
@@ -11660,6 +12060,9 @@ async def stripe_webhook(request: Request):
                 # turns/€ = amount_total), så antalet turns = amount_total.
                 _don_turns = max(0, int(amount_total))
                 u["turn_bonus"] = int(u.get("turn_bonus", 0) or 0) + _don_turns
+                # Grant-ledgern (2026-09-28): donationens turns bokförs.
+                if _don_turns:
+                    _append_turn_grant(username, _don_turns, "stripe:donation")
                 logger.info("💳 Donation: +%d turns for %s", _don_turns, username)
             if cust:
                 u["stripe_customer_id"] = cust
@@ -11869,6 +12272,11 @@ async def admin_user_detail(username: str, morkrets_token: str | None = Cookie(N
     tier = _tier_for(username)
     fresh = load_users().get(username)
     fresh = fresh if isinstance(fresh, dict) else {}
+    # Turn-pott + kod räknas EN gång (2026-09-28) — samma objekt svarar både
+    # pott-fälten och "köpt/använt"-siffrorna i dossién.
+    pool = _turn_pool(username, udata=fresh)
+    coding = _player_coding(username, revenue=_ledger_per_user().get(username, 0) or 0,
+                            pool=pool, tier=tier)
     return {
         "username": username,
         "role": users[username].get("role", "player") if isinstance(users[username], dict) else "player",
@@ -11902,6 +12310,15 @@ async def admin_user_detail(username: str, morkrets_token: str | None = Cookie(N
         "turn_ledger": _turn_ledger_breakdown(username),
         "turn_ledger_today": _turn_ledger_breakdown(username, since=_today_str()),
         "turn_ledger_recent": _read_turn_ledger(username, limit=50),
+        # ── Turn-pott per hink (2026-09-28, rostad) ─────────────────────────
+        # HELA pott-objektet (alla tre hinkarna + livstidsförbrukning), grant-
+        # ledgern (vad som köpts/beviljats — "köpt" gick inte att svara på
+        # tidigare), free/paid-koden och ledger-raderna per hink.
+        "turn_pool": _pool_detail(pool),
+        "coding": coding,
+        "turn_grants": _read_turn_grants(username, limit=100),
+        "turn_ledger_buckets": _turn_ledger_bucket_breakdown(username),
+        "turn_ledger_buckets_today": _turn_ledger_bucket_breakdown(username, since=_today_str()),
         # ── Admin dashboard v2 (2026-09-27): dossierns Revenue/Usage-flikar ──
         # ALLA spelarens ledger-rader, nyaste först (churn/cancel-rader har
         # 0 SEK och visas som livscykelmarkörer). daily = transkriptens dagbok
@@ -11934,6 +12351,10 @@ async def admin_user_ledger(username: str, limit: int = 100, morkrets_token: str
         "entries": _read_turn_ledger(username, limit=limit),
         "breakdown_all": _turn_ledger_breakdown(username),
         "breakdown_today": _turn_ledger_breakdown(username, since=_today_str()),
+        # Hink-fördelning (2026-09-28): vilken hink som betalade varje turn.
+        # `unknown` = rader skrivna före 2026-09-28 (ingen hink bokfördes då).
+        "by_bucket": _turn_ledger_bucket_breakdown(username),
+        "by_bucket_today": _turn_ledger_bucket_breakdown(username, since=_today_str()),
     }
 
 
@@ -12115,6 +12536,9 @@ async def admin_turn_topup(username: str, req: AdminTurnBonus, morkrets_token: s
         udata["turn_bonus"] = int(udata.get("turn_bonus", 0) or 0) + req.bonus
         save_users(users)
 
+    # Grant-ledgern (2026-09-28): admin-topup är en grant, inte ett köp — det
+    # syns i `source` så dashboarden kan skilja dem åt.
+    _append_turn_grant(username, req.bonus, "admin", note=f"by {payload.get('sub') or 'admin'}")
     logger.info("➕ Turn top-up: %s +%d bonus (total %d)", username, req.bonus, udata["turn_bonus"])
     return {"ok": True, "username": username, "turn_bonus": udata["turn_bonus"]}
 

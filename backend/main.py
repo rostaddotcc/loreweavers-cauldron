@@ -299,6 +299,7 @@ try:
 except ImportError:
     combat_damage_multiplier = None
 import iplog
+import local_relay
 
 app = FastAPI(title="The Lore Weaver's Cauldron", version="1.0.0")
 
@@ -2228,6 +2229,10 @@ def _clamp_player_model(model_id: str, tier: str | None = None) -> str:
     även OpenRouter free-modeller (orfree:) ligger bakom 10€-unlåsningen.
     tier2/lifetime (eller tier=None, t.ex. interna anrop) → allt i PLAYER_MODELS
     + orfree:."""
+    if model_id.startswith("local:"):
+        # 🏮 Local AI (relä): huset betalar 0 för DM-steget — tillåtet för ALLA
+        # tiers (ingen 10€-gate). Djupvalidering (regex/TTL/cap) sker i prepare.
+        return model_id
     if tier in ("free", "tier1"):
         return model_id if model_id in FREE_PLAYER_MODELS else DEFAULT_PLAYER_MODEL
     if model_id.startswith("orfree:"):
@@ -2237,7 +2242,10 @@ def _clamp_player_model(model_id: str, tier: str | None = None) -> str:
 
 
 def _validate_model_id(model_id: str) -> bool:
-    """True om modellen finns i registret ELLER är en känd OpenRouter-free-modell."""
+    """True om modellen finns i registret, är en känd OpenRouter-free-modell
+    ELLER ett 🏮 local:-id (relä-validering sker i /api/chat/local/prepare)."""
+    if model_id.startswith("local:"):
+        return True
     if model_id.startswith("orfree:"):
         from or_free import is_known_free
         return is_known_free(model_id)
@@ -2355,6 +2363,19 @@ class LoginRequest(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     model_id: str
+
+
+class LocalPrepareRequest(BaseModel):
+    message: str
+    model_id: str
+    num_ctx: int | None = None
+
+
+class LocalCommitRequest(BaseModel):
+    step_id: str
+    content: str
+    reasoning: str | None = None
+    tokens: int | None = None
 
 
 class CharacterRequest(BaseModel):
@@ -2601,6 +2622,11 @@ async def _call_llm(
 
     usage_out: valfri dict — fylls med {"prompt_tokens", "completion_tokens",
     "total_tokens"} från API-svaret. Används för att spåra Guardian-tokens."""
+    # 🏮 local:* = relä-modeller (spelarens egen Ollama). SERVERN får ALDRIG
+    # anropa dem — de routas via /api/chat/local/prepare+commit. Hårdavvisning
+    # som defence-in-depth om någon code-path glömmer borttagningen.
+    if model_id.startswith("local:"):
+        raise HTTPException(500, "local model routed to relay")
     # 🆓 OpenRouter free models: route to or_free.chat_free() BEFORE the
     # MODELS-registry lookup (orfree:* ids are not in MODELS).
     if model_id.startswith("orfree:"):
@@ -2712,6 +2738,9 @@ async def _call_llm_with_reasoning(
     """Som _call_llm men fångar även reasoning-modellens inre monolog
     (reasoning_content). Returnerar (content, reasoning, usage). Används för
     huvud-DM-anropet så spelaren kan se hur DM:n resonerar."""
+    # 🏮 local:* = relä-modeller — servern anropar dem ALDRIG (se _call_llm).
+    if model_id.startswith("local:"):
+        raise HTTPException(500, "local model routed to relay")
     # 🆓 OpenRouter free models: route to or_free.chat_free() (returns the
     # (content, reasoning, usage) tuple this function promises).
     if model_id.startswith("orfree:"):
@@ -2817,6 +2846,9 @@ async def _stream_llm(
     om providern rapporterar det (stream_options.include_usage). Samma
     provider-routing som _call_llm: qwen3-modeller tänker som standard
     (enable_thinking kan stängas av explicit)."""
+    # 🏮 local:* = relä-modeller — servern anropar dem ALDRIG (se _call_llm).
+    if model_id.startswith("local:"):
+        raise HTTPException(500, "local model routed to relay")
     # 🆓 OpenRouter free-modeller (orfree:*) finns inte i MODELS-registret —
     # delegera till or_free.chat_free_stream (streaming, reasoning=low tvingat).
     if model_id.startswith("orfree:"):
@@ -6785,6 +6817,54 @@ async def _chat_locked(
 ) -> dict:
     """Hjärtat av chat-turen — körs under per-kampanj-låset."""
 
+    # Delad i Fas A (prompt-bygge) och Fas B (efter-behandling) så 🏮
+    # local-reläet (/api/chat/local/prepare + /commit) kan köra EXAKT samma
+    # kod över två HTTP-anrop. Husvägen: A → LLM-anrop → B — oförändrat.
+    ctx, early = await _chat_phase_a(req, payload, username, campaign_id, state)
+    if early is not None:
+        return early
+    # FAS A: pipeline-reservationen = EXAKT 1 turn per spelarmeddelande
+    # (eded88a — revert av per-anrops-modellen; se _reserve_chat_pipeline-
+    # docstringen). DM, Guardian pre/post och extraction ingår i den turnen.
+    # Egna turns kostar: bilder, TTS, karaktärsskapande, [SÖK:] och
+    # validerings-repair (se _consume_turn-anropsplatserna). 403 om saldot
+    # inte räcker.
+    _reserve_chat_pipeline(username, req.model_id, ctx["is_awakening"], req.message, ctx["effective_turn"])
+
+    _log_activity(username, "🧙 DM weaving the tale…")
+    _tllm = time.time()
+    try:
+        reply, reasoning, usage = await _call_llm_with_reasoning(req.model_id, ctx["messages"], max_tokens=ctx["_dm_max_tokens"])
+        _llm_time = round(time.time() - _tllm, 1)
+        logger.info("🤖 DM responded (%d tkn, %.1fs)", len(reply), _llm_time)
+        if reasoning:
+            logger.debug("💭 DM reasoned (%d tkn)", len(reasoning))
+    except HTTPException:
+        logger.error("❌ DM call failed (HTTP error)")
+        raise
+    except (ValueError, RuntimeError) as e:
+        logger.error("❌ DM call failed: %s", e)
+        raise HTTPException(502, f"DM:n nås inte just nu: {e}")
+    except Exception as e:
+        logger.error("❌ Unexpected LLM error: %s", e)
+        raise HTTPException(502, f"Oväntat LLM-fel: {e}")
+
+    return await _chat_phase_b(
+        req, payload, username, campaign_id, state, ctx,
+        reply, reasoning, usage, _llm_time,
+    )
+
+
+async def _chat_phase_a(
+    req: ChatRequest, payload: dict, username: str, campaign_id: str, state: dict,
+) -> tuple[dict | None, dict | None]:
+    """Fas A av chat-turen: allt fram till och MED att DM-prompten är byggd.
+
+    Returnerar (ctx, None) — ctx bär messages + turmetadata som Fas B behöver —
+    eller (None, early_response) för /guardian-grenen (ingen LLM-tur alls).
+    Konsumerar INTE någon turn (reservationen ligger i huswrappern; reläets
+    commit bokför en local_dm-ledgerrad med 0 turns istället)."""
+
     # Spara senaste DM-modellen per kampanj — så valet behålls när spelaren
     # återvänder till kampanjen (frontend återställer den vid load).
     if state.setdefault("meta", {}).get("dm_model") != req.model_id:
@@ -6829,7 +6909,7 @@ async def _chat_locked(
     if req.message.strip().lower().startswith("/guardian"):
         instruction = req.message.strip()[len("/guardian"):].strip()
         if not instruction:
-            return {"reply": "🛡️ Usage: `/guardian <instruction>` — e.g. `/guardian remove duplicate NPCs`", "turn_count": state["meta"].get("turn_count", 0)}
+            return None, {"reply": "🛡️ Usage: `/guardian <instruction>` — e.g. `/guardian remove duplicate NPCs`", "turn_count": state["meta"].get("turn_count", 0)}
 
         try:
             _tg = time.time()
@@ -6851,10 +6931,10 @@ async def _chat_locked(
             store.append_message(state, "guardian", guardian_report, meta=_mmeta)
             store.save(state)
 
-            return {"reply": guardian_report, "turn_count": state["meta"].get("turn_count", 0)}
+            return None, {"reply": guardian_report, "turn_count": state["meta"].get("turn_count", 0)}
         except Exception as e:
             logger.error("🛡️ Guardian manual correction failed: %s", e)
-            return {"reply": f"🦉 Lorekeeper could not process the correction: {e}", "turn_count": state["meta"].get("turn_count", 0)}
+            return None, {"reply": f"🦉 Lorekeeper could not process the correction: {e}", "turn_count": state["meta"].get("turn_count", 0)}
 
     # Bygg meddelandelista — spelarens meddelande sparas först EFTER att LLM:n svarat,
     # så ett misslyckat anrop lämnar inga spår i transkriptet.
@@ -6982,10 +7062,6 @@ async def _chat_locked(
     messages.append({"role": "user", "content": user_content})
     logger.debug("Context: %d messages → DM", len(messages))
 
-    # Anropa LLM — vid fel: riktigt felmeddelande, ingen placeholder
-    _tllm = time.time()
-    reasoning = ""
-
     # ── Long-form detektion ──
     # Om spelaren ber om bakgrundshistoria, bokkapitel, detaljerad beskrivning etc.
     # höj max_tokens så DM får utrymme att skriva en längre berättelse.
@@ -7004,31 +7080,43 @@ async def _chat_locked(
     if _is_long_form:
         logger.info("📖 Long-form request — max_tokens raised to %d", _dm_max_tokens)
 
-    # FAS A: pipeline-reservationen = EXAKT 1 turn per spelarmeddelande
-    # (eded88a — revert av per-anrops-modellen; se _reserve_chat_pipeline-
-    # docstringen). DM, Guardian pre/post och extraction ingår i den turnen.
-    # Egna turns kostar: bilder, TTS, karaktärsskapande, [SÖK:] och
-    # validerings-repair (se _consume_turn-anropsplatserna). 403 om saldot
-    # inte räcker.
-    _reserve_chat_pipeline(username, req.model_id, is_awakening, req.message, effective_turn)
 
-    _log_activity(username, "🧙 DM weaving the tale…")
-    try:
-        reply, reasoning, usage = await _call_llm_with_reasoning(req.model_id, messages, max_tokens=_dm_max_tokens)
-        _llm_time = round(time.time() - _tllm, 1)
-        logger.info("🤖 DM responded (%d tkn, %.1fs)", len(reply), _llm_time)
-        if reasoning:
-            logger.debug("💭 DM reasoned (%d tkn)", len(reasoning))
-    except HTTPException:
-        logger.error("❌ DM call failed (HTTP error)")
-        raise
-    except (ValueError, RuntimeError) as e:
-        logger.error("❌ DM call failed: %s", e)
-        raise HTTPException(502, f"DM:n nås inte just nu: {e}")
-    except Exception as e:
-        logger.error("❌ Unexpected LLM error: %s", e)
-        raise HTTPException(502, f"Oväntat LLM-fel: {e}")
+    return {
+        "messages": messages,
+        "effective_turn": effective_turn,
+        "is_awakening": is_awakening,
+        "result_effects": result_effects,
+        "guardian_roll": guardian_roll,
+        "_guardian_roll_usage": _guardian_roll_usage,
+        "_dm_max_tokens": _dm_max_tokens,
+        "turn_epoch": turn_epoch,
+        "_t0": _t0,
+    }, None
 
+
+async def _chat_phase_b(
+    req: ChatRequest, payload: dict, username: str, campaign_id: str, state: dict,
+    ctx: dict, reply: str, reasoning: str, usage: dict, llm_time: float,
+    *, relay: bool = False,
+) -> dict:
+    """Fas B av chat-turen: allt EFTER att DM-svaret mottagits.
+
+    `relay=True` = 🏮 local-vägen (commit): ingen repair-retry (invalid
+    mekanik förkastas, narrationen behålls) och [SÖK:]-fortsättningen körs på
+    husets DEFAULT_PLAYER_MODEL utan att driva turn-potten. Husvägen
+    (relay=False) är beteendemässigt identisk med före relä-refactorn."""
+    messages = ctx["messages"]
+    effective_turn = ctx["effective_turn"]
+    is_awakening = ctx["is_awakening"]
+    result_effects = ctx["result_effects"]
+    guardian_roll = ctx["guardian_roll"]
+    _guardian_roll_usage = ctx["_guardian_roll_usage"]
+    _dm_max_tokens = ctx["_dm_max_tokens"]
+    turn_epoch = ctx["turn_epoch"]
+    _t0 = ctx["_t0"]
+    _llm_time = llm_time
+    _relay = relay
+    _cont_model = DEFAULT_PLAYER_MODEL if _relay else req.model_id
     # ── [SÖK: fråga] — DM-egna minnessökningar (2026-08-07) ──
     # Om DM:n känner att den saknar kontext (en gammal tråd, en NPC som inte
     # dök upp bland minnena) kan den avsluta sitt svar med [SÖK: fråga].
@@ -7047,11 +7135,14 @@ async def _chat_locked(
             if _mem_text:
                 # Extra LLM-anrop ([SÖK:]) = extra turn. Om saldot
                 # tagit slut skippas sökningen tyst — original-svaret behålls.
-                if _turns_available(username) < 1:
+                # 🏮 relä: huset betalar fortsättningen på DEFAULT_PLAYER_MODEL
+                # utan turn-drift — local_dm-capet skyddar mot missbruk.
+                if not _relay and _turns_available(username) < 1:
                     reply = _base
                     logger.info("🔍 DM search skipped — turn cap reached")
                 else:
-                    _consume_turn(username, action="search", model=req.model_id)
+                    if not _relay:
+                        _consume_turn(username, action="search", model=req.model_id)
                     _cont_prompt = (
                         "The player is waiting for your reply. You asked for more context — "
                         "here it is:\n\n" + _mem_text +
@@ -7064,7 +7155,7 @@ async def _chat_locked(
                         {"role": "user", "content": _cont_prompt},
                     ]
                     _reply2, _reasoning2, _usage2 = await _call_llm_with_reasoning(
-                        req.model_id, _cont_messages, max_tokens=_dm_max_tokens,
+                        _cont_model, _cont_messages, max_tokens=_dm_max_tokens,
                     )
                     if _reply2 and len(_reply2.strip()) > 10:
                         reply = _reply2
@@ -7145,7 +7236,7 @@ async def _chat_locked(
             effects = parsed_effects
             break
 
-        if attempt < 1:
+        if attempt < 1 and not _relay:
             # Ogiltigt — be LLM:n reparera de mekaniska taggarna
             # Repair kostar en EGEN turn (+1) — pipeline-reservationen (1 turn
             # per meddelande, eded88a) inkluderar inte validerings-repair.
@@ -7185,6 +7276,7 @@ async def _chat_locked(
             )
             reply = _strip_mechanical_tags(current_reply)
             effects = []
+            break
 
     # Logga dag-byte till aktivitetsflödet (loading-animationen)
     if any(e.get("type") == "ny_dag" for e in effects):
@@ -7310,6 +7402,181 @@ async def _chat_locked(
         },
     }
 
+
+# ═══════════════════════════════════════
+# 🏮 LOCAL AI / OLLAMA RELÄ (v1: DM-steget på spelarens egen hårdvara)
+# ═══════════════════════════════════════
+# Servern är hjärnan, spelarens maskin är munnen: prepare byger DM-prompten
+# (Fas A av /api/chat) och lämnar Ollama-payloaden till klienten; commit kör
+# efterbehandlingen (Fas B) på klientens text. Steget är engångsanvänt,
+# TTL-bundet och låst mot (user, campaign, turn_count). Husets turn-pott
+# drivas INTE — commit bokför en local_dm-ledgerrad (0 turns) och ett
+# dagligt cap (LOCAL_DM_DAILY_CAP) skyddar Guardian/extraction-huset.
+# Se backend/local_relay.py + vault:en (dnd-llm-local-ollama-impl-2026-09).
+
+
+def _local_gate(username: str) -> None:
+    """503 om funktionen är avstängd, 429 om dagliga capet är nått."""
+    if not local_relay.enabled():
+        raise HTTPException(503, "Local AI är inte påslaget på servern just nu")
+    if not local_relay.under_daily_cap(username):
+        logger.info("⛔ Local DM cap reached: %s", username)
+        raise HTTPException(
+            429,
+            f"Dagens lokala drag är slut ({local_relay.daily_cap()}) — vila lite, "
+            "eller kör hus-DM:n (den kostar en turn).",
+        )
+
+
+@app.post("/api/chat/local/prepare")
+async def chat_local_prepare(req: LocalPrepareRequest, morkrets_token: str | None = Cookie(None)):
+    """Fas A över relä: bygg DM-prompten, stasha steget, returnera Ollama-payload.
+
+    Konsumerar INTE någon turn (husets /api-chat reserverar 1 turn mellan Fas A
+    och B; reläets commit bokför istället en local_dm-rad med 0 turns)."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    _local_gate(username)
+
+    if payload.get("role") != "admin":
+        req.model_id = _clamp_player_model(req.model_id, tier=_tier_for(username))
+    if not local_relay.is_local_id(req.model_id):
+        raise HTTPException(400, f"Ogiltig lokal modell: {req.model_id!r}")
+    # /guardian är ett korrigeringsverktyg (hus-Guardian, ingen DM-tur) —
+    # relä-clienten skickar det via vanliga /api/chat.
+    if (req.message or "").strip().lower().startswith("/guardian"):
+        raise HTTPException(400, "guardian-kommandon körs via vanliga /api/chat")
+
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj — skapa en först")
+    campaign_id = state["meta"].get("campaign_id", "")
+
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        fresh_state = store.get(username, campaign_id)
+        if fresh_state:
+            state = fresh_state
+        # Undo-snapshot precis som hus-chatten: steget beskiver läget FÖRE turen.
+        _snap_taken = False
+        try:
+            store.snapshot_turn(state, prompt=req.message)
+            _snap_taken = True
+        except Exception as e:
+            logger.warning("Undo snapshot failed (local prepare): %s", e)
+        try:
+            ctx, early = await _chat_phase_a(req, payload, username, campaign_id, state)
+            if early is not None:
+                # Fas A kortslöt (/guardian-liknande gren) — commit krävs inte.
+                if _snap_taken:
+                    try:
+                        store.discard_snapshot(username, campaign_id)
+                    except Exception:
+                        pass
+                return early
+            # Pre-DM-mutationer ([Resultat:], fienderolls-planering) sparas nu:
+            # husvägen sparar först i Fas B, men reläet kan dö mellan prepare
+            # och commit — planerade kast får inte tappas (idempotent per runda,
+            # samma design som _plan_pre_dm_enemy_rolls).
+            store.save(state)
+        except Exception:
+            if _snap_taken:
+                try:
+                    store.discard_snapshot(username, campaign_id)
+                except Exception:
+                    pass
+            raise
+
+    step_id = local_relay.new_step_id()
+    now = time.time()
+    ttl = local_relay.ttl_seconds()
+    local_relay.stash_step(step_id, {
+        "username": username,
+        "campaign_id": campaign_id,
+        "turn_count_at_prepare": state["meta"].get("turn_count", 0),
+        "model_id": req.model_id,
+        "message": req.message,
+        "ctx": ctx,
+        "created_ts": now,
+    })
+    logger.info("🏮 LOCAL prepare step=%s model=%s turn=%s",
+                step_id[:8], req.model_id, state["meta"].get("turn_count", 0))
+    return {
+        "step_id": step_id,
+        "kind": "generate",
+        "ollama": {
+            "model": local_relay.ollama_model(req.model_id),
+            "messages": ctx["messages"],
+            "options": {
+                "num_ctx": local_relay.clamp_num_ctx(req.num_ctx),
+                "temperature": 0.8,
+                "num_predict": ctx["_dm_max_tokens"],
+            },
+        },
+        "deadline": now + ttl,
+    }
+
+
+@app.post("/api/chat/local/commit")
+async def chat_local_commit(req: LocalCommitRequest, morkrets_token: str | None = Cookie(None)):
+    """Fas B över relä: ta emot klienttexten, kör efterbehandlingen, returnera
+    EXAKT samma JSON som /api/chat (klientrenderingen blir identisk)."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    _local_gate(username)
+
+    if not req.content or not req.content.strip():
+        raise HTTPException(400, "Tomt innehåll från klienten")
+
+    # Engångsanvänt steg — ägarskap kontrolleras FÖRE pop (en gissning
+    # av andras step_id får inte konsumera deras steg).
+    with local_relay._steps_lock:
+        peek = local_relay._steps.get(req.step_id)
+        peek_user = peek.get("username") if peek else None
+    if peek is not None and peek_user != username:
+        raise HTTPException(403, "Steg tillhör en annan spelare")
+    step = local_relay.take_step(req.step_id)
+    if step is None:
+        raise HTTPException(410, "Steg okänt, utgånget eller redan använt — kör om prepare")
+
+    state = store.get(username, step["campaign_id"])
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj — skapa en först")
+    campaign_id = step["campaign_id"]
+
+    lock = _state_lock(username, campaign_id)
+    async with lock:
+        state = store.get(username, campaign_id) or state
+        # Optimistisk låsning: har turn_count flyttats sedan prepare (annan
+        # flik/hus-chatt) — förkasta steget, klienten köer om hela draget.
+        if state["meta"].get("turn_count", 0) != step["turn_count_at_prepare"]:
+            try:
+                store.discard_snapshot(username, campaign_id)
+            except Exception:
+                pass
+            logger.info("🏮 LOCAL commit 409 (turn drift): %s", username)
+            raise HTTPException(409, "Turn-count har flyttats sedan prepare — kö om draget")
+
+        chat_req = ChatRequest(message=step["message"], model_id=step["model_id"])
+        try_tokens = int(req.tokens or 0)
+        usage = {"total_tokens": try_tokens} if try_tokens > 0 else {}
+        # Bokför utan att driva turn-potten (local_dm-row, ingen _consume_turn).
+        _append_turn_ledger(username, "local_dm", step["model_id"], try_tokens)
+        try:
+            return await _chat_phase_b(
+                chat_req, payload, username, campaign_id, state, step["ctx"],
+                reply=req.content,
+                reasoning=(req.reasoning or ""),
+                usage=usage,
+                llm_time=round(time.time() - step["created_ts"], 1),
+                relay=True,
+            )
+        except Exception:
+            try:
+                store.discard_snapshot(username, campaign_id)
+            except Exception:
+                pass
+            raise
 
 # ═══════════════════════════════════════
 # CHARACTER GENERATION

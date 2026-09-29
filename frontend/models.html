@@ -392,6 +392,37 @@
     </div>
   </div>
 
+  <!-- ═══════════════ local ai ═══════════════ -->
+  <div class="sec rv" id="local-ai">
+    <div class="sec-head">
+      <span class="sec-num">🏮</span>
+      <h2>Bring Your Own Breath — Local AI</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="model">
+      <div class="model-head">
+        <span class="m-logo wan">🏮</span>
+        <div>
+          <div class="m-title">Ollama — Models on Your Own Machine</div>
+          <div class="m-maker">Runs where you run it · open source</div>
+        </div>
+        <span class="m-tag dm">Local DM</span>
+      </div>
+      <p class="m-desc">The Cauldron can now speak with a voice that lives on <b>your own hardware</b>. The server stays the brain — it builds every prompt and keeps the books: dice, HP, combat and the world state are rolled and owned server-side, exactly as before. Your machine becomes the mouth: the browser asks your local Ollama to narrate and hands the text back. No API key exists for Ollama, so there is nothing to store, nothing to leak, and <b>the DM step costs 0 turns</b> — it isn't our electricity anymore.</p>
+      <div class="spec-grid">
+        <div class="spec"><span class="k">Cost of the DM step</span><span class="v">0 turns<small>your hardware pays</small></span></div>
+        <div class="spec"><span class="k">Recommended model</span><span class="v">≥14B thinking<small>8B works, less is a gamble</small></span></div>
+        <div class="spec"><span class="k">Context (num_ctx)</span><span class="v">16k<small>Ollama's default 4k is too small</small></span></div>
+        <div class="spec"><span class="k">Daily play</span><span class="v">~100 messages<small>cap, see honest notes</small></span></div>
+      </div>
+      <div class="m-role"><span class="ico">①</span><span><b>Install Ollama</b> on the machine at your table — <span style="font-family:var(--font-mono);font-size:.85em">curl -fsSL https://ollama.com/install.sh | sh</span>, then <span style="font-family:var(--font-mono);font-size:.85em">ollama pull qwen3:8b</span> (or a bigger model you have VRAM for).</span></div>
+      <div class="m-role"><span class="ico">②</span><span><b>Open the picker.</b> Settings (⚙️) at the table shows a 🏮 group with the models it finds on your machine, a ⟳ refresh, and a context slider. If your Ollama listens somewhere unusual — another port, another box on the LAN — paste the base URL (e.g. <span style="font-family:var(--font-mono);font-size:.85em">http://192.168.1.40:11434</span>) in the settings field; it is saved in your browser only and never sent to us.</span></div>
+      <div class="m-role"><span class="ico">③</span><span><b>Play.</b> Pick a 🏮 model as your DM. Your browser streams the narration token by token from your own machine; everything else at the table behaves the same.</span></div>
+      <div class="m-role"><span class="ico">⚑</span><span><b>Requirements:</b> desktop Chrome or Firefox on the same machine as Ollama — loopback to your own box is what this is built for. Reaching another machine (or your phone) means Ollama on <span style="font-family:var(--font-mono);font-size:.85em">OLLAMA_HOST=0.0.0.0</span> with <span style="font-family:var(--font-mono);font-size:.85em">OLLAMA_ORIGINS=https://dnd.rostad.cc</span>, <em>and</em> TLS on its address — browsers refuse plain-HTTP LAN calls from an HTTPS page, so on a tailnet put <span style="font-family:var(--font-mono);font-size:.85em">tailscale serve</span> in front of it. If the page finds your Ollama but shows a yellow CORS dot, that origins line is the fix.</span></div>
+      <p class="note" style="margin-top:1.1rem"><b>The honest limitations.</b> The Lorekeeper (Guardian) and fact extraction still run on our house models in the background, so local play is capped at roughly <b>100 local messages per account per day</b> — still about three times the free tier's play, for none of the DM-step cost. <b>Voice narration and images are not local features</b> — they keep costing house turns as before. Narration quality is exactly as good as the model you picked and as fast as your hardware: an 8B model tells a serviceable tale, a sub-8B one will lose the plot of a long campaign, and a 14B+ thinking model on a real GPU is where this stops feeling like a trade-off. The prompt your Ollama receives is the same prompt our DMs get — it is deliberately not a secret; you can inspect what your DM was actually asked. And a local campaign is your own hardware's child: dice, HP and combat remain server-authoritative, so nothing fabricated locally changes the books.</p>
+    </div>
+  </div>
+
   <!-- ═══════════════ tts: voices ═══════════════ -->
   <div class="sec rv">
     <div class="sec-head">

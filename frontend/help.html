@@ -281,6 +281,17 @@
     <p style="color:var(--bone-dim);font-size:var(--fs-tiny)">Open <b>About the Models</b> in Settings for what each model does and why thinking takes time. Your choices are saved per campaign. If the DM stops responding, switching models is the first thing to try.</p>
   </div>
 
+  <h2 class="rv">Running the DM on Your Own Machine</h2>
+  <div class="box rv d1">
+    <p><b>How do I run the DM on my own machine?</b> Install <a href="https://ollama.com">Ollama</a>, pull a model, and pick it in Settings (⚙️) under the 🏮 group — e.g. <span class="cmd">ollama pull qwen3:8b</span>. The server still builds the prompts and keeps the books (dice, HP and combat stay server-side); your browser asks your own Ollama for the narration and hands it back. The DM step costs <b>0 turns</b>.</p>
+    <ul>
+      <li><b>Same machine</b> — works out of the box in desktop Chrome/Firefox at <span class="cmd">http://127.0.0.1:11434</span>. If the picker shows a yellow CORS dot, Ollama must be told the site may call it: <span class="cmd">OLLAMA_ORIGINS=https://dnd.rostad.cc ollama serve</span></li>
+      <li><b>Another box on your network</b> — run Ollama with <span class="cmd">OLLAMA_HOST=0.0.0.0</span> plus the same <span class="cmd">OLLAMA_ORIGINS</span> line and paste the address (any port) into the base-URL field in Settings; it lives only in your browser and is never sent to us. One honest caveat: this page is served over HTTPS, and browsers refuse plain-HTTP calls to a LAN address from an HTTPS page (loopback to your own machine is exempt). Reaching another box therefore needs TLS on that address — on a tailnet, <span class="cmd">tailscale serve</span> in front of Ollama does it in a minute.</li>
+      <li><b>Model size</b> — a ≥14B thinking model is the comfortable pick, 8B is the practical minimum, and anything smaller will struggle to hold a long campaign. Set the context to <b>16k</b> (the slider does this per request — Ollama's own default of 4k is too small)</li>
+      <li><b>What stays house-run</b> — the Lorekeeper and fact extraction still run on our models in the background, so local play is capped at ~100 messages per account per day; voice narration and images cost turns as before</li>
+    </ul>
+  </div>
+
   <h2 class="rv">Rules (D&amp;D 5e)</h2>
   <div class="box rv d1">
     <ul>

@@ -6,7 +6,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
 <title>The Lore Weaver's Cauldron — Release Notes</title>
-<meta name="description" content="Release notes for The Lore Weaver's Cauldron — an AI dungeon master with a memory. v1.4 — the open cauldron: new pricing, 30 free turns a day, one-time 10€ unlock opens every Dungeon Master, voice and image engine and adds +100 turns that never expire, refreshed 2026-09-27.">
+<meta name="description" content="Release notes for The Lore Weaver's Cauldron — an AI dungeon master with a memory. v1.5 — your own breath: run the DM on your own hardware through Ollama at 0 turns for the DM step, on top of the open cauldron pricing: 30 free turns a day, one-time 10€ unlock, refreshed 2026-09-29.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://dnd.rostad.cc/releases.html">
 <meta property="og:type" content="article">
@@ -241,17 +241,17 @@
   <h1 class="rv">Release Notes</h1>
   <div class="page-rule">✦</div>
    <p class="eyebrow rv">The Ledger of the Realm</p>
-  <p class="ledger-sub rv">Every update written in the ledger, so the realm's history stays legible. This entry — the open cauldron: new pricing. 30 free turns every day, and one 10€ unlock opens every mind, voice and image engine — permanently.<br><b>v1.3 → v1.4</b> · 2026-09-27</p>
+  <p class="ledger-sub rv">Every update written in the ledger, so the realm's history stays legible. This entry — your own breath: the Cauldron can now narrate from a model running on your own machine via Ollama, at 0 turns for the DM step.<br><b>v1.4 → v1.5</b> · 2026-09-29</p>
 
   <div class="current-box rv fresh-frame">
-    <span class="ver-chip"><span class="ver-name">v1.4</span><span class="ver-note">The Open Cauldron</span></span>
-    <span class="ver-tag">New pricing, 2026-09-27</span>
-    <span class="ver-tag">30 free turns a day</span>
-    <span class="ver-tag">10€ unlock — everything, forever</span>
-    <span class="ver-tag">+100 turns per purchase</span>
+    <span class="ver-chip"><span class="ver-name">v1.5</span><span class="ver-note">Your Own Breath</span></span>
+    <span class="ver-tag">Local AI via Ollama, 2026-09-29</span>
+    <span class="ver-tag">DM step costs 0 turns</span>
+    <span class="ver-tag">Server keeps the dice &amp; the books</span>
   </div>
 
   <div class="ver-chiprow rv" aria-label="Jump to a version">
+    <a href="#s15">v1.5</a>
     <a href="#s14">v1.4</a>
     <a href="#s13">v1.3</a>
     <a href="#s12">v1.2</a>
@@ -260,6 +260,28 @@
     <a href="#s010">v0.10</a>
     <a href="#s09">v0.9</a>
     <a href="#s08">v0.8</a>
+  </div>
+
+  <!-- ═══════════════ 1.5 headline ═══════════════ -->
+  <div class="sec rv" id="s15">
+    <div class="sec-head">
+      <span class="sec-num">1.5</span>
+      <h2>Your Own Breath</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ai">MIND</span>
+        <span class="tablet-title">🏮 Local AI — the Cauldron can now drink from your own well · 2026-09-29</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">New</span> <b>The DM runs on your machine</b> — install Ollama, pull a model (<span style="font-family:var(--font-mono);font-size:.85em">ollama pull qwen3:8b</span> works, a ≥14B thinking model is better), and pick the 🏮 model in Settings. The server still builds every prompt; your browser asks your own hardware for the narration. Nothing to sign up for, no key to store.</li>
+        <li><span class="tag feat">New</span> <b>The DM step costs 0 turns</b> — your electricity, not ours. The house only pays for the background steps, so local tables get a generous daily allowance (~100 local messages — about three times a free day's play) before the cap asks you to rest.</li>
+        <li><span class="tag ai">Honest note</span> <b>The background stays house-run</b> — the Lorekeeper and fact extraction still use our models in v1, and voice narration and images still cost house turns as before. Dice, HP and combat remain server-authoritative: the local DM narrates, the engine keeps the books.</li>
+        <li><span class="tag ux">Setup</span> <b>Desktop Chrome/Firefox on the same machine works out of the box.</b> From another device, run Ollama with <span style="font-family:var(--font-mono);font-size:.85em">OLLAMA_HOST=0.0.0.0 OLLAMA_ORIGINS=https://dnd.rostad.cc</span> and paste the base URL (any port) in Settings — stored in your browser only, never sent to the server. One caveat: browsers refuse plain-HTTP LAN addresses from an HTTPS page (loopback is exempt), so another box needs TLS in front of Ollama — on a tailnet, tailscale serve does it in a minute. 16k context recommended.</li>
+        <li><span class="tag ux">Link</span> <b>Full details:</b> <a href="models.html#local-ai">Bring your own breath</a> under The Minds · <a href="help.html">How to Play</a> has the setup walkthrough.</li>
+      </ul>
+    </div>
   </div>
 
   <!-- ═══════════════ 1.4 headline ═══════════════ -->
@@ -994,7 +1016,7 @@
   <div class="footer rv">
     <b>The Lore Weaver's Cauldron</b> — an AI dungeon master with a memory.<br>
     <a href="pricing.html">Choose your path</a> &middot; <a href="adventure.html">Return to the realm</a><br>
-    <span>v1.3 · 2026-09-21 · Questions? <a href="mailto:web@rostad.cc">web@rostad.cc</a></span>
+    <span>v1.5 · 2026-09-29 · Questions? <a href="mailto:web@rostad.cc">web@rostad.cc</a></span>
   </div>
 </section>
 

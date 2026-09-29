@@ -803,6 +803,16 @@ html{font-size:var(--fs-base)}
   <button class="nb-close" onclick="newsQwenDismiss(event)" title="Dismiss">✕</button>
   </div>
 
+  <!-- ═══════════ NYHET: LOCAL AI / OLLAMA (2026-09-29) ═══════════ -->
+  <div class="news-banner" id="news-ollama" onclick="newsOllamaToast(event)" style="display:none">
+  <span class="nb-icon">🏮</span>
+  <div class="nb-body">
+  <div class="nb-title" id="nb-title-ollama">New — the Cauldron can drink from your own well</div>
+  <div class="nb-text" id="nb-text-ollama">Point the Dungeon Master at your own <b>Ollama</b> in <b>Settings</b> and its narration runs on <b>your machine</b> — the DM step costs <b>0 turns</b>. The server still builds every prompt and keeps the dice, HP and the Lorekeeper honest; you just lend it your breath.</div>
+  </div>
+  <button class="nb-close" onclick="newsOllamaDismiss(event)" title="Dismiss">✕</button>
+  </div>
+
   <!-- ═══════════ RELEASE NOTES ═══════════ -->
   <div class="htp">
     <button class="htp-toggle" id="rn-toggle" onclick="toggleRn()">
@@ -810,8 +820,9 @@ html{font-size:var(--fs-base)}
     </button>
     <div class="rn-body" id="rn-body">
       <div class="rn-inner">
-        <span class="rn-ver">v1.4 — The Open Cauldron · updated 2026-09-27</span>
+        <span class="rn-ver">v1.5 — Your Own Breath · updated 2026-09-29</span>
         <ul class="rn-list">
+          <li><b>Local AI — run the Dungeon Master on your own machine (2026-09-29)</b> — the server still builds every prompt, but the DM's words can now come from <b>your own Ollama</b>: set a base URL (any host and port) in <b>Settings</b>, pick a 🏮 model, and the narration is generated on your hardware. <b>The DM step costs 0 turns.</b> Honest caveats: the Lorekeeper and fact-extraction still run on our side (a soft cap of ~100 local messages a day applies to them), dice, HP and combat stay server-authoritative, and voice and images still cost turns. You need a desktop browser on the same machine or LAN as Ollama, with <b>OLLAMA_HOST</b> and <b>OLLAMA_ORIGINS</b> set; a thinking model of 14B or more is recommended (qwen3:8b as a floor, 16k context). Your base URL is kept in the browser only. Rolling out gradually this week — <a href="models.html#local-ai">the models page has the details →</a></li>
           <li><b>New pricing — one unlock opens everything (2026-09-27)</b> — the free table refreshes <b>30 turns every day</b> with <b>step-3.7-flash</b> and <b>step-3.5-flash-2603</b>. The one-time <b>10€ unlock</b> adds <b>+100 turns</b> that never expire (spent only after your daily turns run out) and opens <b>every Dungeon Master</b> (Qwen 3.8 Flash, Qwen 3.6 Flash, DeepSeek V4.1 Flash, Step 5 Preview), <b>voice narration</b> (Qwen &amp; StepFun) and <b>image generation</b> (StepFun, Wan 2.7 Pro, Qwen Image 3 Pro) — permanently, no 30-day window. Each narration or image costs 1 turn. Donations still work: every € adds exactly 100 turns.</li>
           <li><b>DeepSeek V4.1 Flash at the table (2026-09-21)</b> — DeepSeek's open-weights reasoning model (552B, 16B active, 1M-token context) joined the roster as a Dungeon Master, replacing V4 Flash 0731.</li>
           <li><b>Meet Step 5 Preview (2026-09-20)</b> — StepFun's deep-thinking flagship joined the roster. With the 10€ unlock, pick it at the model gate when you start an adventure, or switch to it in Settings.</li>
@@ -851,6 +862,11 @@ html{font-size:var(--fs-base)}
         <span class="htp-icon">🎲</span>
         <h3>Dice &amp; Mechanics</h3>
         <p>When the outcome is uncertain, the DM calls for a roll and a <b>Roll or Write card</b> appears in the chat. Click the dice to roll, or the pen to describe your attempt in words instead. <b>Nat 20</b> = triumph, <b>nat 1</b> = catastrophe.</p>
+      </div>
+      <div class="htp-card">
+        <span class="htp-icon">🏮</span>
+        <h3>Your Own Machine</h3>
+        <p>Since v1.5 the Dungeon Master can narrate from <b>your own Ollama</b> — point the base URL in Settings at a machine on your desk or LAN and the DM step costs <b>0 turns</b>. The server still builds every prompt and keeps dice, HP and the Lorekeeper honest; the words are yours. Bring a thinking model of 14B or more.</p>
       </div>
       <div class="htp-more-row"><a class="rn-more" href="help.html">Read the full guide →</a></div>
     </div>
@@ -1421,6 +1437,7 @@ document.querySelectorAll('.sfx-btn').forEach(b => b.textContent = SFX.enabled ?
 
 initCampaignCheck();
 newsQwenInit();
+newsOllamaInit();
 
 // ═══════════════════════════════════════
 // PANEL TOGGLE
@@ -2894,6 +2911,26 @@ function newsQwenDismiss(e) {
   e.stopPropagation();
   try { localStorage.setItem('minds_0921_dismissed', '1'); } catch (err) {}
   const el = document.getElementById('news-qwen38');
+  if (el) el.style.display = 'none';
+}
+
+// ── Nyhet: Local AI / Ollama — DM:n på din egen maskin (2026-09-29) ──
+// Exakt samma mönster som newsQwen* ovan: visas tills besökaren klickar
+// bort (localStorage), ingen tier-/datum-gating — texten är sann för alla.
+// NYCKEL: ollama_0929_dismissed
+function newsOllamaInit() {
+  try { if (localStorage.getItem('ollama_0929_dismissed') === '1') return; } catch (e) {}
+  const el = document.getElementById('news-ollama');
+  if (!el) return;
+  el.style.display = '';
+}
+function newsOllamaToast(e) {
+  toast('🏮 Pick a 🏮 model in Settings — bring your own breath. The DM step costs 0 turns.');
+}
+function newsOllamaDismiss(e) {
+  e.stopPropagation();
+  try { localStorage.setItem('ollama_0929_dismissed', '1'); } catch (err) {}
+  const el = document.getElementById('news-ollama');
   if (el) el.style.display = 'none';
 }
 

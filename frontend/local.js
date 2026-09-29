@@ -353,7 +353,7 @@
     }
     const reader = resp.body.getReader();
     const dec = new TextDecoder();
-    let buf = '', content = '', reasoning = '';
+    let buf = '', content = '', reasoning = '', evalCount = 0;
     try {
       for (;;) {
         let chunk;
@@ -370,14 +370,17 @@
         while ((nl = buf.indexOf('\n')) >= 0) {
           const line = buf.slice(0, nl).trim();
           buf = buf.slice(nl + 1);
-          if (line.indexOf('data:') !== 0) continue;
+          // Ollama streams bare JSON lines; some proxies prefix "data: ".
+          const payload = line.indexOf('data:') === 0 ? line.slice(5).trim() : line;
+          if (!payload) continue;
           let j;
-          try { j = JSON.parse(line.slice(5)); } catch (e) { continue; }
+          try { j = JSON.parse(payload); } catch (e) { continue; }
           const mc = (j.message && j.message.content) || '';
-          const mr = (j.message && j.message.reasoning) || '';
+          // Ollama streams thinking under "thinking" (some builds "reasoning").
+          const mr = (j.message && (j.message.reasoning || j.message.thinking)) || '';
           if (mr) { reasoning += mr; if (onReasoning) onReasoning(mr); }
           if (mc) { content += mc; if (onToken) onToken(mc); }
-          // j.done / eval_count: token stats are the server's job at commit.
+          if (j.done && typeof j.eval_count === 'number') evalCount = j.eval_count;
         }
       }
     } catch (e) {
@@ -386,7 +389,7 @@
       throw _terr('ollama_down', 'The stream to your machine broke off');
     }
     clearTimeout(idleTimer);
-    return { content, reasoning };
+    return { content, reasoning, evalCount };
   }
 
   async function oneTurn(messageText, modelId, det, onToken, onReasoning) {
@@ -398,10 +401,19 @@
       num_ctx: getNumCtx(),
     });
     const gen = await streamOllama(det.base, step.ollama || {}, onToken, onReasoning);
+    if (!gen.content.trim()) {
+      // Thinking model burned the whole budget on reasoning (CPU-boxes do
+      // this): the server would 400 on empty content → typed error so the
+      // chat shows the house-DM fallback menu instead of a hard failure.
+      throw _terr('ollama_down', gen.reasoning.trim()
+        ? 'Your model thought but never spoke — raise the context or pick a faster model'
+        : 'Your model returned nothing');
+    }
     return await serverFetch('/api/chat/local/commit', {
       step_id: step.step_id,
       content: gen.content,
       reasoning: gen.reasoning || undefined,
+      tokens: gen.evalCount || undefined,
     });
   }
 

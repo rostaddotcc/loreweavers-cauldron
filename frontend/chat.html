@@ -1964,6 +1964,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
 <script src="sfx.js?v=20260811a"></script>
 <script src="api.js?v=20260927a"></script>
 <script src="i18n.js?v=20260927a"></script>
+<script src="local.js?v=20260929a"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -2104,7 +2105,9 @@ const roleReady = API.me().then(u => {
     const unlocked = ['tier2', 'lifetime', 'premium'].includes(u.subscription_status);
     const allowed = unlocked ? PLAYER_MODEL_IDS : FREE_MODEL_IDS;
     const cm = String(currentModel);
-    if (!allowed.includes(cm) && !(unlocked && cm.startsWith('orfree:'))) {
+    // 🏮 local:* passes the guard for EVERY tier (skiss §1b: no 10€ gate —
+    // the relay costs the house nothing on the DM step).
+    if (!allowed.includes(cm) && !cm.startsWith('local:') && !(unlocked && cm.startsWith('orfree:'))) {
       currentModel = 'step-3.7-flash';
       localStorage.setItem('dnd_model', currentModel);
     }
@@ -5275,7 +5278,10 @@ async function answerRollRequest(id, notation, label) {
   try { showThoughts('narrate'); } catch (e) { console.warn('showThoughts:', e); }
   try {
     const resultMsg = `[Resultat: ${label} → ${roll.total} (${roll.rolls.join(', ')}${modStr})]`;
-    const res = await API.chat(resultMsg, currentModel);
+    // 🏮 local:* → relay owns the whole bubble + render; LOCAL_HANDLED ⇒
+    // finally-block below still unlocks the dice box correctly.
+    const res = await sendChat(resultMsg, currentModel);
+    if (res === LOCAL_HANDLED) return;
     hideThoughts();
     // Uppdatera tur-räknare + header-info (FAS A/B)
     if (res.turn_count && campaignData) campaignData.turn_count = res.turn_count;
@@ -6509,14 +6515,138 @@ async function restoreFromTranscript(fallbackErrorMsg, rawErrMsg) {
   return false;
 }
 
+// ═══════════════════════════════════════
+// 🏮 LOCAL RELAY — server is hjärnan, player's machine is munnen (v1)
+// sendChat(): the single DM-step gateway for BOTH call sites (dmRespond +
+// answerRollRequest dice results). currentModel 'local:*' → LocalAI.relay
+// (prepare → stream own Ollama → commit); commit returns the exact /api/chat
+// shape, so the post-response render is shared via renderDmResponse().
+// ═══════════════════════════════════════
+const LOCAL_HANDLED = '__local_handled__';
+const LOCAL_HOUSE_FALLBACK = 'step-3.7-flash';
+
+// Shared post-response rendering — used by the house path AND the relay path.
+// opts.skipGuardian: awakening turn has no Lorekeeper report to poll.
+async function renderDmResponse(res, dmEl, opts) {
+  opts = opts || {};
+  // DM:ns inre monolog (reasoning) — precis ovanför svaret, hopfällbar.
+  // (2026-08-14: attachas INUTI dmEl före .bubble.)
+  if (dmEl && res.reasoning) attachReasoning(dmEl, res.reasoning);
+  if (res.new_npcs && res.new_npcs.length) ingestNpcs(res.new_npcs);
+  // Autoplay TTS — trigga DIREKT när svaret finns (parallellt med typewritern).
+  if (dmEl) maybeAutoplayTTS(dmEl, dmReplyToTTS(res.reply || ''));
+  // Scene byte — ambiensrad (plats · tid · väder) + world-state-synk.
+  if (res.world) {
+    try { maybeAddAmbience(res.world, 'dm'); } catch (e) { console.warn('ambience:', e); }
+    if (campaignData) campaignData.world = Object.assign({}, campaignData.world || {}, res.world);
+  }
+  // Uppdatera tur-räknare + header-info (FAS A/B) — turen är ångringsbar nu.
+  if (res.turn_count && campaignData) campaignData.turn_count = res.turn_count;
+  updateHeaderInfo();
+  refreshMeData();
+  setUndoButton(true);
+  // Vänta tills DM-svaret skrivit klart innan effekter, Lorekeeper-rapporter
+  // och tärningskort renderas — annars dyker de upp mitt i narrationen.
+  if (dmEl && dmEl._twDone) await dmEl._twDone;
+  if (res.effects && res.effects.length) renderEffects(res.effects, res.turn_count);
+  if (res.guardian_pending && !opts.skipGuardian) {
+    showGuardianStatus();
+    pollForGuardian(res.turn_count);
+  } else if (res.guardian_summary) {
+    addMessage('guardian', null, res.guardian_summary);
+  }
+  if (res.ascii_art) addSceneCard(res.ascii_art, res.art_css_class, res.art_label);
+  if (res.roll_requests && res.roll_requests.length) {
+    res.roll_requests.forEach(r => addRollRequest(r.notation, r.label));
+  }
+}
+
+// Failure menu after the relay gives up on the player's hardware. Turn was
+// never committed (commit failed or never reached) → retry is state-safe.
+function _showLocalFallbackMenu(messageText) {
+  const sysEl = addMessage('system', null,
+    '🏮 Din maskin svarade inte — hus-DM för detta drag? (1 turn)' +
+    '<div style="margin-top:.5rem;display:flex;gap:.5rem;justify-content:center">' +
+    '<button class="lr-retry-btn" style="background:rgba(0,0,0,.3);border:1px solid var(--edge,var(--gold));color:var(--bone-bright);padding:.3rem .8rem;border-radius:4px;cursor:pointer;font-size:.8rem">Försök igen</button>' +
+    '<button class="lr-house-btn" style="background:rgba(0,0,0,.3);border:1px solid var(--edge,var(--gold));color:var(--bone-bright);padding:.3rem .8rem;border-radius:4px;cursor:pointer;font-size:.8rem">Hus-DM</button>' +
+    '</div>');
+  if (!sysEl) return;
+  const retry = sysEl.querySelector('.lr-retry-btn');
+  const house = sysEl.querySelector('.lr-house-btn');
+  if (retry) retry.addEventListener('click', () => { sysEl.remove(); dmRespond(messageText); });
+  if (house) house.addEventListener('click', async () => {
+    sysEl.remove();
+    const prev = currentModel;
+    currentModel = LOCAL_HOUSE_FALLBACK;
+    await dmRespond(messageText);
+    if (currentModel === LOCAL_HOUSE_FALLBACK) currentModel = prev;
+  });
+}
+
+// Returns house-shape JSON, or LOCAL_HANDLED when the relay path rendered
+// its own bubble / left the failure menu on screen.
+async function sendChat(messageText, modelId) {
+  if (typeof LocalAI === 'undefined' || !String(modelId || '').startsWith('local:')) {
+    return API.chat(messageText, modelId);
+  }
+  // Live bubble — plain textContent grows with tokens; final render goes
+  // through the EXISTING path (remove live, re-add via addMessage) so the
+  // relay result and a house reply look byte-identical.
+  let liveEl = null, liveText = '';
+  const paint = () => {
+    if (!liveEl) return;
+    const t = liveEl.querySelector('.bubble .text');
+    if (t) t.textContent = liveText || '🏮 …';
+    chat.scrollTop = chat.scrollHeight;
+  };
+  try {
+    const res = await LocalAI.relay(messageText, modelId, (d) => {
+      if (d === '') { liveText = ''; paint(); return; } // 409 regen reset signal
+      if (!liveEl) {
+        liveEl = buildMessage('dm', null, '🏮 …');
+        liveEl._twDone = Promise.resolve();
+        appendToChat(liveEl);
+        chat.scrollTop = chat.scrollHeight;
+      }
+      liveText += d;
+      paint();
+    }, () => {});
+    if (liveEl) liveEl.remove();
+    hideThoughts();
+    const dmEl = addMessage('dm', null, res.reply || '…', { model: res.model_id, tokens: res.tokens, time: res.response_time });
+    await renderDmResponse(res, dmEl);
+    return LOCAL_HANDLED;
+  } catch (e) {
+    if (liveEl) liveEl.remove();
+    const status = e && e.status;
+    if (status === 429) {
+      addMessage('system', null, '🏮 Local DM: daily limit reached — house DM answers this turn.');
+      return API.chat(messageText, LOCAL_HOUSE_FALLBACK);
+    }
+    if (status === 503) {
+      toast('🏮 Local AI är avstängt');
+      return API.chat(messageText, LOCAL_HOUSE_FALLBACK);
+    }
+    if (e && (e.kind === 'ollama_down' || e.kind === 'timeout')) {
+      _showLocalFallbackMenu(messageText);
+      return LOCAL_HANDLED;
+    }
+    // 410 (step expired/used) + unknown server faults → house error UX.
+    throw e;
+  }
+}
+
 async function dmRespond(playerText) {
   isResponding = true;
   document.querySelector('.send-btn')?.setAttribute('disabled', '');
   // Om showThoughts kastar innan try-blocket fastnar isResponding=true och
   // send-knappen förblir disabled (P3-fix från playthrough). Skydda det.
   try { showThoughts('narrate'); } catch (e) { console.warn('showThoughts:', e); }
+  // Shared render-path switch (skiss §2c): ambience/world-sync is done on
+  // the dice-answer path; dmRespond historically skipped it — keep parity.
   try {
-    const res = await API.chat(playerText, currentModel);
+    const res = await sendChat(playerText, currentModel);
+    if (res === LOCAL_HANDLED) { hideThoughts(); return; } // 🏮 relay owns its own bubble + failure UX
     hideThoughts();
 
     // Parsa svaret — DM kan inkludera NPC-dialog
@@ -6525,60 +6655,7 @@ async function dmRespond(playerText) {
     // Visa svaret som DM-narration
     const dmEl = addMessage('dm', null, reply, { model: res.model_id, tokens: res.tokens, time: res.response_time });
 
-    // DM:ns inre monolog (reasoning) — precis ovanför svaret, hopfällbar.
-    // rostad VILL ha kvar denna (önskad funktion, ej en bugg) — rättat
-    // 2026-07-31 efter att QA-fixen tog bort den. (2026-08-14: attachas
-    // INUTI dmEl före .bubble — hamnar under avataren, ovanför svaret.)
-    if (res.reasoning) {
-      attachReasoning(dmEl, res.reasoning);
-    }
-
-    // Lägg till nya NPCs i registret (från DM:s svar)
-    if (res.new_npcs && res.new_npcs.length) {
-      ingestNpcs(res.new_npcs);
-    }
-
-    // Autoplay TTS — trigga DIREKT när svaret finns (parallellt med typewritern):
-    // syntesen buffrar medan texten skrivs, så ljudet är redo utan extra väntan.
-    maybeAutoplayTTS(dmEl, dmReplyToTTS(reply));
-
-    // Vänta tills DM-svaret skrivit klart innan effekter, Lorekeeper-rapporter
-    // och tärningskort renderas — annars dyker de upp mitt i narrationen.
-    // (Löses direkt om spelaren klickar för att hoppa över animationen.)
-    if (dmEl && dmEl._twDone) await dmEl._twDone;
-
-    // Mekaniska effekter (skada, XP, loot, quests…)
-    if (res.effects && res.effects.length) {
-      renderEffects(res.effects, res.turn_count);
-    }
-
-    // Lorekeeper-rapport: körs nu i bakgrunden → polla transkriptet.
-    // VAKNING: ingen guardian-rapport genereras under awakening (turn 1),
-    // så vi startar ALDRIG polling här — annars fastnar laddaren i en
-    // evig väntan på en rapport som aldrig kommer (visuell soft-lock).
-    if (res.guardian_pending && playerText !== AWAKENING_TRIGGER) {
-      showGuardianStatus();
-      pollForGuardian(res.turn_count);
-    } else if (res.guardian_summary) {
-      // Bakåtkompatibilitet: om backend fortfarande skickar inline
-      addMessage('guardian', null, res.guardian_summary);
-    }
-
-    // Scene card från atmosfär-sub-agenten
-    if (res.ascii_art) {
-      addSceneCard(res.ascii_art, res.art_css_class, res.art_label);
-    }
-
-    // DM begär kast → visa inline-knappar i chatten
-    if (res.roll_requests && res.roll_requests.length) {
-      res.roll_requests.forEach(r => addRollRequest(r.notation, r.label));
-    }
-
-    // Uppdatera tur-räknare + header-info (FAS A/B)
-    if (res.turn_count && campaignData) campaignData.turn_count = res.turn_count;
-    updateHeaderInfo();
-    refreshMeData();
-    setUndoButton(true);  // turen är ångringsbara nu
+    await renderDmResponse(res, dmEl, { skipGuardian: playerText === AWAKENING_TRIGGER });
   } catch (e) {
     hideThoughts();
     hideGuardianStatus();
@@ -8202,6 +8279,14 @@ function renderJourney(raw) {
 function toggleSettingsMenu() {
   const m = document.getElementById('settings-menu');
   m.classList.toggle('open');
+  // 🏮 Local AI: detection fires when ⚙ opens (cached ≤5 min; never on the
+  // page-load hot path) + re-paint the picker group/row from cache.
+  if (m.classList.contains('open') && typeof LocalAI !== 'undefined') {
+    try {
+      LocalAI.renderLocalGroup(document.getElementById('settings-dm-model'));
+      LocalAI.onSettingsOpen();
+    } catch (e) { console.warn('localai:', e); }
+  }
   // A11y (2026-09-24): ⚙ speglar öppningsläget — ☰-knappen har haft detta sedan Rail v2.
   const sb = document.getElementById('settings-btn');
   if (sb) sb.setAttribute('aria-expanded', m.classList.contains('open') ? 'true' : 'false');
@@ -8633,6 +8718,16 @@ function initSettingsModelPickers() {
 
   dmSel.innerHTML = allowed.map(m => modelOption(m, m === currentModel)).join('');
 
+  // 🏮 Local AI (local.js): lokala modeller bakom egen optgroup — ÖPPET för
+  // alla tiers (ingen 10€-gate; huset betalar 0 på DM-steget). Render uses
+  // cached detection only — network happens when ⚙ opens (toggleSettingsMenu).
+  if (typeof LocalAI !== 'undefined') {
+    try {
+      LocalAI.renderLocalGroup(dmSel, currentModel);
+      LocalAI.renderSettingsRow(dmSel);
+    } catch (e) { console.warn('localai picker:', e); }
+  }
+
   // Nuvarande Lorekeeper från kampanj-metat (fallback: step-3.7-flash)
   const gm = (campaignData && campaignData._raw && campaignData._raw.meta && campaignData._raw.meta.guardian_model) || 'step-3.7-flash';
   gSel.innerHTML = allowed.map(m => modelOption(m, m === gm)).join('');
@@ -8686,12 +8781,17 @@ function settingsChangeExtraction(model) {
 
 function settingsChangeModel(model) {
   switchModel(model);
-  // Spara per kampanj server-side — så valet behålls vid återkomst
+  // Spara per kampanj server-side — så valet behålls vid återkomst.
+  // 🏮 local:* acceptables nu av bakänden (meta.dm_model = local:id).
   API.setDmModel(model).catch(() => {});
   // Notis i chatten — system-meddelande, syns bara för spelaren (ej DM:ns kontext)
   addMessage('system', null, `🔮 ${I18N.t('Dungeon Master byter röst: ')}${model}`);
   const dmSel = document.getElementById('settings-dm-model');
   if (dmSel) dmSel.value = model;
+  // 🏮 håll LocalAI-gruppens memo + vald option synkad (render om efter byte)
+  if (typeof LocalAI !== 'undefined' && dmSel) {
+    try { LocalAI.renderLocalGroup(dmSel, model); } catch (e) { /* noop */ }
+  }
 }
 
 function settingsChangeGuardian(model) {

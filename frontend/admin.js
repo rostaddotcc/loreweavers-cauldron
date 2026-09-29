@@ -15,8 +15,8 @@
   if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; return; }
 
   const PALETTE = ['#5b8cff', '#e0a24a', '#3fbf8f', '#a97bff', '#4fc3c8', '#e0605e', '#8d9db3'];
-  const PROV_COLOR = { stepfun:'#e0a24a', dashscope:'#5b8cff', deepseek:'#3fbf8f', openrouter:'#a97bff', ollama:'#8d9db3', mimo:'#4fc3c8', unlabelled:'#6b7c92', unknown:'#6b7c92' };
-  const PROV_LABEL = { stepfun:'⚗ StepFun', dashscope:'🌊 Qwen / DashScope', deepseek:'🧠 DeepSeek', openrouter:'🎲 OpenRouter', ollama:'🖥 Local', mimo:'📱 MiMo', unlabelled:'· Unlabelled', unknown:'? Unknown' };
+  const PROV_COLOR = { stepfun:'#e0a24a', dashscope:'#5b8cff', deepseek:'#3fbf8f', openrouter:'#a97bff', ollama:'#8d9db3', 'ollama (relay)':'#8d9db3', mimo:'#4fc3c8', unlabelled:'#6b7c92', unknown:'#6b7c92' };
+  const PROV_LABEL = { stepfun:'⚗ StepFun', dashscope:'🌊 Qwen / DashScope', deepseek:'🧠 DeepSeek', openrouter:'🎲 OpenRouter', ollama:'🖥 Local', 'ollama (relay)':'🏮 Ollama (relay)', mimo:'📱 MiMo', unlabelled:'· Unlabelled', unknown:'? Unknown' };
   const MODEL_SKIP = { '__unlabelled':1, '?':1, '':1 };
   const TIER_LABEL = { free:'Free', tier1:'Support', tier2:'Patron', lifetime:'Lifetime' };
 
@@ -48,7 +48,7 @@
   const stamp = iso => { try { return new Date(iso).toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }); } catch (e) { return iso || ''; } };
   const modelLabel = m => !m || m === '__unlabelled' ? 'unlabelled / legacy'
     : (m === 'undo-voided' ? 'undo-voided (refunded turn)' : m.replace(/^orfree:/, '').replace(/:free$/, ''));
-  const provOf = m => { const s = String(m || ''); if (s === '__unlabelled') return 'unlabelled'; if (/^qwen|^wan|^glm/.test(s)) return 'dashscope'; if (/^deepseek/.test(s)) return 'deepseek'; if (/^step/.test(s)) return 'stepfun'; if (/^orfree:/.test(s)) return 'openrouter'; if (/^mimo/.test(s)) return 'mimo'; return 'unknown'; };
+  const provOf = m => { const s = String(m || ''); if (s === '__unlabelled') return 'unlabelled'; if (/^local:/.test(s)) return 'ollama (relay)'; if (/^qwen|^wan|^glm/.test(s)) return 'dashscope'; if (/^deepseek/.test(s)) return 'deepseek'; if (/^step/.test(s)) return 'stepfun'; if (/^orfree:/.test(s)) return 'openrouter'; if (/^mimo/.test(s)) return 'mimo'; return 'unknown'; };
   const provColor = p => PROV_COLOR[p] || '#6b7c92';
   const REGION = (function () { try { return new Intl.DisplayNames(['en'], { type: 'region' }); } catch (e) { return null; } })();
   /* 'SE' → 'Sweden'. '??'/'' → 'Unknown (no geo)': the geo cache is filled offline, so

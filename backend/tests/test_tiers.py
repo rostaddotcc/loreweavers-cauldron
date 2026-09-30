@@ -393,27 +393,6 @@ def test_campaign_export_support_ok(client):
     assert r.status_code == 200, r.text
 
 
-def test_vault_export_free_403(client):
-    _seed("alice")
-    r = client.get("/api/vault/export", cookies={"morkrets_token": _tok()})
-    assert r.status_code == 403
-    assert "10€ unlock" in r.json()["detail"]
-
-
-def test_vault_export_support_ok(client):
-    _seed("alice", tier="tier1", until=_in_days(30), features={"export": True})
-    r = client.get("/api/vault/export", cookies={"morkrets_token": _tok()})
-    assert r.status_code == 200, r.text
-    # 2026-08-05 v2: zip med forge-export.json + avatars/ (bilder följer med)
-    import io
-    import zipfile
-    zf = zipfile.ZipFile(io.BytesIO(r.content))
-    names = zf.namelist()
-    assert "forge-export.json" in names
-    data = json.loads(zf.read("forge-export.json"))
-    assert "characters" in data
-
-
 # ── Spelarprofilens avatar (konto — StepFun gratis, Wan/Qwen Patron) ──────
 
 def test_me_avatar_generate_free_403(client, monkeypatch):

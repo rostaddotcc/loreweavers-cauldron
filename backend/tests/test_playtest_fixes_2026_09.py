@@ -1,9 +1,13 @@
-"""Playtest-fixar 2026-09 (röd 400 på logbook-refresh + TTS-röster utan grind).
+"""Playtest-fixar 2026-09 (loggbok tom ≠ fel + TTS-röster utan grind).
 
 Täcker:
-  1) POST /api/campaign/logbook/refresh-today: ny kampanj utan dag-entries
-     → 200 {ok: True, refresh: 0} i stället för HTTP 400 (riktiga fel är
-     kvar: ingen kampanj → 404).
+  1) GET /api/campaign/logbook: ny kampanj utan dag-entries/transkript → 200
+     med tomma days, ingen turn förbrukad (riktiga fel kvar: ingen kampanj → 404).
+     Garantin testades ursprungligen mot POST /api/campaign/logbook/refresh-today
+     (playtest-fix 466d4ea); den rutten togs bort 2026-09-30 — dess enda
+     frontend-anropare försvann i loggbok-omdesignen (d085cc6, 2026-08-01),
+     dag-entries genereras automatiskt i chat-pipelinen vid NY_DAG, och
+     GET-rutten (som frontenden använder) har alltid haft samma tom-hantering.
   2) GET /api/tts/voices: samma tier-grind som POST /api/tts — free ser
      endast stepfun, Patron (tier2/lifetime) och admin ser qwen.
   3) Bonus: _extraction_call_RETRY med temp 0.1 på samma modell INNAN
@@ -98,32 +102,23 @@ def _tok_admin():
     return _seed("the_admin", role="admin")
 
 
-# ── 1) logbook refresh-today: tomt ≠ fel ─────────────────────────────────
+# ── 1) logbook GET: ny kampanj ≠ fel (f.d. refresh-today-fixen 466d4ea —
+#       routen borttagen 2026-09-30, garantin testas mot GET-rutten frontenden använder)
 
-def test_refresh_today_no_day_entries_is_200(client):
+def test_logbook_fresh_campaign_is_200_and_spends_no_turn(client):
     tok = _tok_player()
     main.store.create("alice", name="Fresh", language="en")
-    r = client.post("/api/campaign/logbook/refresh-today",
-                    cookies={"morkrets_token": tok})
+    r = client.get("/api/campaign/logbook", cookies={"morkrets_token": tok})
     assert r.status_code == 200, r.text
-    body = r.json()
-    assert body.get("ok") is True
-    assert body.get("refreshed") == 0
-
-
-def test_refresh_today_no_campaign_still_404(client):
-    tok = _tok_player()  # ingen kampanj skapad
-    r = client.post("/api/campaign/logbook/refresh-today",
-                    cookies={"morkrets_token": tok})
-    assert r.status_code == 404
-
-
-def test_refresh_today_empty_campaign_spends_no_turn(client):
-    tok = _tok_player()
-    main.store.create("alice", name="Fresh", language="en")
-    client.post("/api/campaign/logbook/refresh-today",
-                cookies={"morkrets_token": tok})
+    assert r.json().get("days") == []
+    # tom loggbok genereras inte via LLM → ingen turn förbrukad
     assert main.load_users()["alice"]["turns_used"] == 0
+
+
+def test_logbook_no_campaign_still_404(client):
+    tok = _tok_player()  # ingen kampanj skapad
+    r = client.get("/api/campaign/logbook", cookies={"morkrets_token": tok})
+    assert r.status_code == 404
 
 
 # ── 2) /api/tts/voices: samma grind som /api/tts ─────────────────────────

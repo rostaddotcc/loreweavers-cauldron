@@ -105,7 +105,7 @@ Built for the phone too — full table, terminal composer and voice input in a p
 
 ### 💳 Billing & Admin
 - **Stripe one-time purchases** (2026-09-27): free tier (30 turns/day, step-3.7-flash + step-3.5-flash-2603), **unlock10** (10€ — +100 turns, all models + TTS + image generation, permanent), **donation** (any amount — 100 turns per €). Legacy: tier1/tier2 subscriptions and lifetime (100€) are honored until they expire
-- Password reset flow via mail bridge, **promo endpoint** for time-limited offers
+- Password reset flow via mail bridge
 - **Admin dashboard** with SVG charts: token spend, players by country, role split, TTS minutes; per-user controls (turn caps, top-ups, resets, subscriptions)
 - **IP geolocation** of players (private/LAN IPs are never sent anywhere) to flag abuse
 - **Feedback inbox** and a full **billing ledger** (MRR, transactions per user)
@@ -306,15 +306,15 @@ All endpoints live under `/api` and are served by FastAPI (interactive docs at `
 | Group | Endpoints | Purpose |
 |---|---|---|
 | **Auth** | `POST /api/register` · `/api/login` · `/api/logout` · `/api/auth/request-reset` · `/api/auth/reset-with-token` · `GET /api/me` · `PUT /api/me/email` | Accounts, JWT cookie sessions, password reset, profile |
-| **Campaign** | `POST/GET /api/campaign` · `GET /api/campaigns` · `POST /api/campaign/activate` · `DELETE /api/campaign` · `PATCH /api/campaign/{dm-model,guardian-model,extraction-model,language,character,inventory}` · `POST /api/campaign/save` · `POST /api/campaign/undo` | Create, switch, configure, persist — and undo the last turn |
+| **Campaign** | `POST/GET /api/campaign` · `GET /api/campaigns` · `POST /api/campaign/activate` · `DELETE /api/campaign` · `PATCH /api/campaign/{dm-model,guardian-model,extraction-model,language,character}` · `POST /api/campaign/save` · `POST /api/campaign/undo` | Create, switch, configure, persist — and undo the last turn |
 | **Gameplay** | `POST /api/chat` (streamed) · `POST /api/dice` · `POST /api/campaign/pin` · `POST /api/campaign/lore` · `POST /api/campaign/chapter` · `POST /api/campaign/consume-resource` · `GET /api/facts` | Play: chat, server dice, notes, lore, facts |
 | **🏮 Local AI relay** | `POST /api/chat/local/prepare` · `POST /api/chat/local/commit` · `PATCH /api/campaign/local-pipeline` (`"dm"` \| `"full"`) | Player's own Ollama as DM — server builds the prompt, client streams from localhost, server commits the result (requires `LOCAL_AI_ENABLED=1`) |
 | **Combat** | `POST /api/chat` with `[STRID:]`/`[COMBAT:]` tags · engine in `combat.py` + Guardian | Tag-driven combat — the DM opens/advances fights through the chat pipeline |
 | **Character & Vault** | `POST /api/character/generate` (+ `/stream`) · `GET/POST/DELETE /api/vault/characters…` · `…/use` · `…/avatar/generate` | Character creation and vault |
-| **World** | `POST /api/world/build` · `GET /api/campaign/locations` · `GET /api/campaign/logbook` · `POST /api/campaign/logbook/refresh-today` | Import `.md/.pdf/images`, map, journal |
+| **World** | `POST /api/world/build` · `GET /api/campaign/locations` · `GET /api/campaign/logbook` | Import `.md/.pdf/images`, map, journal |
 | **Attachments & Avatars** | `POST/GET/DELETE /api/campaign/attachments…` · `POST /api/campaign/avatar…` · `POST /api/campaign/avatar/generate` · `GET …/avatar/{kind}?w=64…512` | Uploaded world material and hero/NPC art — with lazily generated, disk-cached server thumbnails |
 | **TTS** | `GET /api/tts/voices` · `POST /api/tts` · `POST /api/campaign/tts-settings` | Voice selection and narration audio (the voices list is tier-filtered server-side — premium narrators only appear for entitled accounts) |
-| **Billing** | `POST /api/billing/checkout` · `/api/billing/portal` · `POST /api/stripe/webhook` · `GET /api/promo` | Subscriptions and lifecycle |
+| **Billing** | `POST /api/billing/checkout` · `/api/billing/portal` · `POST /api/stripe/webhook` | Subscriptions and lifecycle |
 | **Admin** | `GET /api/admin/stats` · `/api/admin/billing` · `/api/admin/feedback` · `GET/PUT/DELETE /api/admin/user…` | Dashboard, ledger, user controls |
 | **System** | `GET /api/health` · `GET /api/debug/logs` · `GET /api/models` | Health check, debug log ring buffer, model list |
 

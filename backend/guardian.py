@@ -183,31 +183,6 @@ Player: "I try to persuade the guard to let me in"
 → {"needs_roll": true, "notation": "1d20+2", "label": "PERSUASION (DC 15)", "skill": "CHA"}
 """
 
-# Skill names → ability (SV + EN)
-_SKILL_MAP = {
-    "akrobatik": "DEX", "fingerfärdighet": "DEX", "smygning": "DEX",
-    "arcana": "INT", "historia": "INT", "utredning": "INT", "natur": "INT", "religion": "INT",
-    "djurhantering": "WIS", "insikt": "WIS", "medicin": "WIS", "varseblivning": "WIS", "överlevnad": "WIS",
-    "bedrägeri": "CHA", "intimidation": "CHA", "uppträdande": "CHA", "övertalning": "CHA",
-    "athletics": "STR", "attack": "STR",
-    # English skill names
-    "acrobatics": "DEX", "sleight of hand": "DEX", "stealth": "DEX",
-    "history": "INT", "investigation": "INT", "nature": "INT",
-    "animal handling": "WIS", "insight": "WIS", "medicine": "WIS", "perception": "WIS", "survival": "WIS",
-    "deception": "CHA", "performance": "CHA", "persuasion": "CHA",
-}
-
-# Ability abbreviations → localized labels (SV + EN)
-_ABIL_LABELS = {
-    "STR": "STYRKA", "DEX": "SMIDIGHET", "CON": "KONSTITUTION",
-    "INT": "INTELLIGENS", "WIS": "VISDOM", "CHA": "KARISMA",
-}
-
-_ABIL_LABELS_EN = {
-    "STR": "STRENGTH", "DEX": "DEXTERITY", "CON": "CONSTITUTION",
-    "INT": "INTELLIGENCE", "WIS": "WISDOM", "CHA": "CHARISMA",
-}
-
 # De 18 standard-5e-skillsen (P0-1) — {name, ability}. Proficient-fylls av
 # _ensure_skills. Engelska namn (UI är alltid engelsk för skills).
 _STANDARD_SKILLS = [

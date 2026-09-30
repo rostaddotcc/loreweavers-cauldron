@@ -97,8 +97,10 @@ def test_finalize_character_data_keeps_price_gp():
 
 
 def test_patch_inventory_keeps_price_gp():
-    # PATCH /api/campaign/inventory-vägen kör _normalize_item +
-    # _keep_unknown_item_keys (main.py ~:7730) — samma kontrakt som char-gen.
+    # Inventory-normaliseringen (_normalize_item + _keep_unknown_item_keys)
+    # körs via PATCH /api/campaign/character — samma kontrakt som char-gen.
+    # (Fristående PATCH /api/campaign/inventory togs bort 2026-09-30 — frontend
+    # går via character-PATCH. _normalize_item-täckningen lever kvar här.)
     raw = {"name": "Sköld", "type": "Rustning", "price_gp": 10}
     norm = main._normalize_item(raw)
     main._keep_unknown_item_keys(norm, raw)

@@ -24,7 +24,7 @@ import base64
 import hashlib
 import hmac
 from collections import deque
-from datetime import datetime, date, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import AsyncGenerator
 
@@ -393,14 +393,6 @@ PROSE_ROLL_PATTERN = re.compile(
 # i svensk prosa och fångar meningsfragment ("ser lite besviken ut" → falskt föremål).
 # PROSE_ITEM_PATTERN borttagen (v18) — LLM-extraktion i bakgrunden
 # hanterar nu föremål som DM glömde tagga. Regex gav för många falska positiva.
-
-# Nyckelord som indikerar en riskfylld handling → DM borde begära kast
-ACTION_KEYWORDS = re.compile(
-    r'\b(attackerar?|slår|hugger|skjuter|kastar|smyger|klättrar|hoppar|'
-    r'springer|bryter|sparkar|slåss|fäktar|skär|sticker|hugg|skott|pil|'
-    r'smyga|klättra|hoppa|springa|bryta|sparka|attack)\b',
-    re.IGNORECASE,
-)
 
 NPC_COLORS = ['#8b5fd4', '#d4691e', '#7aa35e', '#5e9aa3', '#d43a4d', '#c9a227', '#a8b2c0', '#b06fd4']
 NPC_ICONS = ['🧙', '⚔️', '🏹', '🛡️', '🎭', '👻', '🐺', '🦉', '💀', '🔮', '🗡️', '🌙']
@@ -1343,10 +1335,6 @@ def _ensure_user_fields(username: str, udata: dict) -> dict:
 # lifetime  — ∞ turns (turn_cap 0), allt (befintliga 100€-köpare)
 # Legacy "premium" → tier2 (bakåtkompatibilitet).
 TIER_ORDER = ("free", "tier1", "tier2", "lifetime")
-
-# Grundarerbjudande försvann 2026-08-05 med subskriptionsmodellen.
-# PROMO_UNTIL_DATE lever kvar — /api/promo (README-dokumenterad) läser den.
-PROMO_UNTIL_DATE = date(2026, 8, 11)  # legacy — används inte längre av checkout
 
 
 # Turn-period (timmar): ALLA får 50/dag (24h) — tier1/tier2 ger inga extra
@@ -8971,45 +8959,6 @@ async def vault_list(morkrets_token: str | None = Cookie(None)):
     return {"ok": True, "characters": [_vault_summary(e) for e in entries]}
 
 
-@app.get("/api/vault/export")
-async def vault_export(morkrets_token: str | None = Cookie(None)):
-    """Exportera alla valv-karaktärer (Forge) + deras avatar-bilder som zip.
-
-    3€ Support-förmån. (2026-08-05 v2: bilderna följer med — 'alla bilder med'.)
-    """
-    payload = _get_current_user(morkrets_token)
-    username = payload["sub"]
-    if payload.get("role") != "admin" and _tier_for(username) not in ("tier1", "tier2", "lifetime"):
-        raise HTTPException(
-            403,
-            "Forge export is part of the 10€ unlock — upgrade to export your adventurers.",
-        )
-    entries = vault.list(username)
-    data = {
-        "exported_at": _now_iso(),
-        "user": username,
-        "characters": entries,
-    }
-    content = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
-    buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("forge-export.json", content)
-        av_dir = vault.avatars_dir(username)
-        if av_dir.exists():
-            for avf in sorted(av_dir.iterdir()):
-                if avf.is_file():
-                    try:
-                        zf.writestr(f"avatars/{avf.name}", avf.read_bytes())
-                    except OSError:
-                        continue
-    buf.seek(0)
-    return StreamingResponse(
-        buf,
-        media_type="application/zip",
-        headers={"Content-Disposition": 'attachment; filename="cauldron-forge-export.zip"'},
-    )
-
-
 @app.get("/api/vault/characters/{char_id}")
 async def vault_get(char_id: str, morkrets_token: str | None = Cookie(None)):
     """Fullständig vault-post (inspektionsvy)."""
@@ -9483,46 +9432,6 @@ async def update_dm_model(req: dict, morkrets_token: str | None = Cookie(None)):
         store.save(state)
     logger.info("🔮 DM model → %s", model_id or "(default)")
     return {"ok": True, "dm_model": model_id or DEFAULT_PLAYER_MODEL}
-
-
-@app.patch("/api/campaign/inventory")
-async def update_inventory(req: dict, morkrets_token: str | None = Cookie(None)):
-    """Uppdatera hela inventory-listan (frontend skickar full array).
-
-    ADMIN-ONLY: inventory styrs av DM/Guardian via prompts (items_add/
-    items_remove med equipped-status). Spelare får inte utrusta, lägga
-    till eller ta bort föremål själva — det skulle kringgå DM-granskningen.
-    """
-    payload = _get_current_user(morkrets_token)
-    if payload.get("role") != "admin":
-        raise HTTPException(403, "Inventory hanteras av DM/Guardian — ändra via spelet")
-    username = payload["sub"]
-    state = store.get(username)
-    if not state:
-        raise HTTPException(404, "Ingen aktiv kampanj")
-    campaign_id = state["meta"].get("campaign_id", "")
-    lock = _state_lock(username, campaign_id)
-    async with lock:
-        fresh = store.get(username, campaign_id)
-        if fresh:
-            state = fresh
-
-        items = req.get("inventory")
-        if not isinstance(items, list):
-            raise HTTPException(400, "inventory måste vara en lista")
-
-        # Normalisera varje föremål (ITEM_SCHEMA via _normalize_item)
-        clean = []
-        for it in items:
-            if not isinstance(it, dict) or not it.get("name"):
-                continue
-            norm = _normalize_item(it)
-            _keep_unknown_item_keys(norm, it)  # W3-M2: price_gp m.fl. överlever
-            norm.setdefault("id", f"item-{len(clean)}")
-            clean.append(norm)
-        state["inventory"] = clean
-        store.save(state)
-        return {"ok": True, "inventory": clean}
 
 
 @app.post("/api/campaign/attachments")
@@ -12034,89 +11943,6 @@ async def campaign_logbook(morkrets_token: str | None = Cookie(None)):
     return log_data
 
 
-@app.post("/api/campaign/logbook/refresh-today")
-async def campaign_logbook_refresh_today(morkrets_token: str | None = Cookie(None)):
-    """Regenerera ENBART den senaste dag-entryn i loggboken."""
-    payload = _get_current_user(morkrets_token)
-    username = payload["sub"]
-
-    state = store.get(username)
-    if not state:
-        raise HTTPException(404, "Ingen aktiv kampanj")
-
-    world = state.setdefault("world", {})
-    logbook = world.setdefault("logbook_llm", {})
-    days = logbook.get("days", [])
-    if not days:
-        # Ny kampanj utan dag-entrys är inget fel — playtest 2026-09:
-        # frontenden flaggade en röd 400. Inget att uppdatera → 200, refreshed 0.
-        return {"ok": True, "refreshed": 0}
-
-    current_day = world.get("day", 1)
-    last_entry = days[-1]
-    target_day = last_entry.get("day", current_day)
-
-    # Samla transkript sedan förra dagsskiftet
-    transcript = store.load_transcript(state, last_n=200)
-    start_idx = world.get("last_day_turn", 0)
-    recent = transcript[start_idx:]
-    t_text = "\n".join(f"{e['role']}: {e['content']}" for e in recent) if recent else ""
-
-    if not t_text:
-        return {"ok": False, "error": "Inget transkript tillgängligt" if _get_lang(state) == "sv" else "No transcript available"}
-
-    _day_update_usage = {}
-    if _get_lang(state) == "sv":
-        prompt = (
-            "Här är transkriptet sedan förra dagsskiftet. "
-            "Skriv en kort dag-entry (JSON): "
-            '{"day": N, "title": "...", "mood": "...", '
-            '"events": ["...", "..."], "location": "...", '
-            '"npcs_met": [...], "quests": [...]}. '
-            f"Dagnumret är {target_day}. "
-            "Max 3 events, max 2 NPCs. Svara ENDAST med JSON.\n\n"
-            + t_text
-        )
-    else:
-        prompt = (
-            "Here is the transcript since the last day boundary. "
-            "Write a short day entry (JSON): "
-            '{"day": N, "title": "...", "mood": "...", '
-            '"events": ["...", "..."], "location": "...", '
-            '"npcs_met": [...], "quests": [...]}. '
-            f"The day number is {target_day}. "
-            "Max 3 events, max 2 NPCs. Reply with JSON ONLY.\n\n"
-            + t_text
-        )
-
-    # Dag-entry-uppdatering är ett LLM-anrop — räknas som en turn (2026-08-08)
-    _gate_turn_quota(username)
-    _consume_turn(username, action="logbook", model=_extraction_model_for(state))
-
-    try:
-        raw = await _extraction_call(
-            state,
-            [{"role": "user", "content": prompt}],
-            _day_update_usage,
-            temperature=0.3,
-            max_tokens=300,
-            timeout=30,
-            thinking="disabled",
-        )
-        new_entry = _extract_json(raw)
-        new_entry["day"] = target_day
-        days[-1] = new_entry
-        logbook["days"] = days
-        # Dag-entry-uppdatering är ett LLM-anrop — spara förbrukningen i
-        # meta["unguarded_tokens"] så admin-stats räknar ALL förbrukning.
-        _track_unguarded(state, _extraction_model_for(state), _day_update_usage)
-        store.save(state)
-        return {"ok": True, "entry": new_entry}
-    except Exception as e:
-        logger.warning("📖 Day entry update failed: %s", e)
-        raise HTTPException(502, f"Kunde inte generera dag-entry: {e}")
-
-
 # ═══════════════════════════════════════
 # Admin Dashboard
 # ═══════════════════════════════════════
@@ -12164,7 +11990,6 @@ def _require_avatar_tier(payload: dict, username: str):
 # Intäktsledger: rad per betalningshändelse
 #   {"ts", "user", "amount_sek", "type", "stripe_sub_id", "event_id"}
 # Skapas tom om den saknas. ALDRIG commit (backend/data committas inte).
-PREMIUM_PRICE_SEK = 49  # legacy (fas D) — ersatt av TIER_PRICES_SEK
 
 # TIERS: priser i SEK (EUR → SEK ≈ 11.7; avrundat för admin-översikt).
 # unlock10 = 10€ engång (+100 turns + ALLT upplåst permanent, 2026-09-27).
@@ -14210,22 +14035,6 @@ async def admin_set_turn_cap(username: str, req: AdminTurnCap, morkrets_token: s
 
     logger.info("🎚️ Turn cap set: %s → %d", username, req.turn_cap)
     return {"ok": True, "username": username, "turn_cap": req.turn_cap}
-
-
-@app.get("/api/promo")
-async def promo_info():
-    """Publik: aktuellt grundarerbjudande (om aktivt) + deadline för timer."""
-    active = datetime.now(timezone.utc).date() <= PROMO_UNTIL_DATE
-    return {
-        "active": active,
-        "until": PROMO_UNTIL_DATE.isoformat(),
-        "offer": {
-            "tier1": {"free_months": 2, "total_months": 3},
-            "tier2": {"free_months": 0, "total_months": 1},
-            "lifetime": {"promo_price_eur": 50, "promo_price_sek": 585, "normal_price_eur": 100},
-        },
-        "tier_names": {"tier1": "Companion", "tier2": "Adventurer"},
-    }
 
 
 @app.get("/api/admin/billing")

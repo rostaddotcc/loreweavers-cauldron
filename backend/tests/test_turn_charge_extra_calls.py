@@ -1,14 +1,17 @@
 """Samtliga LLM-anrop räknas som turns (2026-08-08).
 
 Före: active threads (var 10:e tur), kapitel-sammanfattning (trigger_chapter),
-loggboken (första besöket) och dag-entry-uppdateringen (refresh-today) gjorde
-`_call_llm` UTAN att dra en turn — gratis LLM-anrop.
+loggboken (första besöket) gjorde `_call_llm` UTAN att dra en turn — gratis
+LLM-anrop.
 
 Nu: allt räknas.
 - active threads: `_consume_turn_if_available` (skippas tyst vid 0, som
   dag-entry — ett bakgrundsanrop får aldrig kasta)
-- chapter/logbook/refresh-today: `_gate_turn_quota` + `_consume_turn`
-  (403 cap_reached vid 0)
+- chapter/logbook: `_gate_turn_quota` + `_consume_turn` (403 cap_reached vid 0)
+
+(refresh-today-rutten + dess 2 tester här togs bort 2026-09-30 — dead route
+utan frontend-anropare sedan d085cc6. logbook-GET:ens gate+consume täcks
+nedan; dag-entry-generering vid NY_DAG är gratis bakgrundsarbete i chat-turen.)
 
 autouse-fixtures: ALLA tester pekar users.json + kampanjer + turn-ledger
 mot tmp — ALDRIG riktig data.
@@ -171,45 +174,6 @@ def test_logbook_403_when_zero_turns(client):
     tok = _tok()
 
     r = client.get("/api/campaign/logbook", cookies={"morkrets_token": tok})
-    assert r.status_code == 403
-    assert r.json()["detail"]["cap_reached"] is True
-    assert auth.load_users()["alice"]["turns_used"] == 50
-
-
-# ═══════════════ Dag-entry-uppdatering (/api/campaign/logbook/refresh-today) ═══════════════
-
-def test_refresh_today_consumes_one_turn(client):
-    _seed("alice")
-    cid = _seed_campaign("alice")
-    st = _append_transcript("alice", cid)
-    # Cacha en dag-entry så endpointen har något att regenerera
-    st["world"].setdefault("logbook_llm", {})["days"] = [
-        {"day": 1, "title": "Gammal", "events": ["x"]}
-    ]
-    st["world"]["last_day_turn"] = 0
-    main.store.save(st)
-    tok = _tok()
-    FAKE_LLM["response"] = '{"day": 1, "title": "Ny dag", "mood": "spänd", "events": ["e"]}'
-
-    r = client.post("/api/campaign/logbook/refresh-today",
-                    cookies={"morkrets_token": tok})
-    assert r.status_code == 200, r.text
-    assert auth.load_users()["alice"]["turns_used"] == 1
-
-
-def test_refresh_today_403_when_zero_turns(client):
-    _seed("alice", used=50)
-    cid = _seed_campaign("alice")
-    st = _append_transcript("alice", cid)
-    st["world"].setdefault("logbook_llm", {})["days"] = [
-        {"day": 1, "title": "Gammal", "events": ["x"]}
-    ]
-    st["world"]["last_day_turn"] = 0
-    main.store.save(st)
-    tok = _tok()
-
-    r = client.post("/api/campaign/logbook/refresh-today",
-                    cookies={"morkrets_token": tok})
     assert r.status_code == 403
     assert r.json()["detail"]["cap_reached"] is True
     assert auth.load_users()["alice"]["turns_used"] == 50

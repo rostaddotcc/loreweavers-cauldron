@@ -316,21 +316,3 @@ def test_campaign_export_includes_avatar_images(client):
     assert "images/avatars/player.png" in names
     assert "images/avatars/dm.png" in names
     assert zf.read("images/avatars/player.png") == b"\x89PNG fake player"
-
-
-def test_vault_export_includes_avatar_images(client):
-    _seed(features={"export": True})
-    entry = main.vault.save("alice", {"name": "Hero"}, campaign_name="T", inventory=[])
-    av = {"disk_name": f"vault_{entry['id']}.png"}
-    entry["avatar"] = av
-    main.vault.update("alice", entry)
-    av_dir = main.vault.avatars_dir("alice")
-    av_dir.mkdir(parents=True, exist_ok=True)
-    (av_dir / av["disk_name"]).write_bytes(b"\x89PNG forge hero")
-    r = client.get("/api/vault/export", cookies={"morkrets_token": _tok()})
-    assert r.status_code == 200, r.text
-    zf = zipfile.ZipFile(io.BytesIO(r.content))
-    names = zf.namelist()
-    assert "forge-export.json" in names
-    assert f"avatars/{av['disk_name']}" in names
-    assert zf.read(f"avatars/{av['disk_name']}") == b"\x89PNG forge hero"

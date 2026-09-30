@@ -22,7 +22,7 @@ import pytest
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
-SCRIPTS_DIR = os.environ.get("DND_SCRIPTS_DIR", "/app/scripts")
+SCRIPTS_DIR = os.environ.get("DND_SCRIPTS_DIR") or str(Path(__file__).resolve().parents[2] / "scripts")
 if SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, SCRIPTS_DIR)
 

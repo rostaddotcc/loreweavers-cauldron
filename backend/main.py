@@ -9737,7 +9737,8 @@ async def _avatar_file_response(path: Path, ext: str, w: int | None) -> FileResp
 
 
 def _safe_avatar_key(kind: str) -> str:
-    """Normalisera avatar-nyckel: 'player', 'dm' eller 'npc:<nyckel>'."""
+    """Normalisera avatar-nyckel: 'player', 'dm', 'npc:<nyckel>' eller
+    'item:<slug>' (föremålsmålningar, 2026-09-30)."""
     kind = (kind or "").strip()
     if kind in ("player", "dm"):
         return kind
@@ -9748,7 +9749,23 @@ def _safe_avatar_key(kind: str) -> str:
         # förbjudna är path-separatorer (filnamnssäkerhet) och kontrolltecken.
         if key and not re.search(r"[/\\\x00-\x1f]", key):
             return "npc:" + key
+    if kind.startswith("item:"):
+        # Föremåls-slug: strikt allowlist (a-z, 0-9, bindestreck) — slugen
+        # genereras av oss (_item_slug), aldrig av användarinput direkt.
+        key = kind[5:].strip()
+        if key and len(key) <= 48 and re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", key):
+            return "item:" + key
     raise HTTPException(400, f"Ogiltig avatar-typ: {kind}")
+
+
+_ITEM_SLUG_RE = re.compile(r"[^a-z0-9]+")
+
+
+def _item_slug(name: str) -> str:
+    """Stabil nyckel för föremålsmålning: 'Worn Ritual Dagger' →
+    'worn-ritual-dagger'. Måste matcha frontendens _itemSlug() exakt
+    (inkl. ordningen strip → truncate → rensa trailing bindestreck)."""
+    return _ITEM_SLUG_RE.sub("-", (name or "").strip().lower()).strip("-")[:48].rstrip("-")
 
 
 # ── Avatar-gallerier (2026-08-07): varje karaktär (player/dm/npc:X) sparar
@@ -10573,6 +10590,8 @@ def _build_avatar_prompt(state: dict, avatar_key: str, seed: int = 0) -> str:
         return _build_dm_avatar_prompt(seed, state)
     if avatar_key.startswith("npc:"):
         return _npc_avatar_prompt(state, avatar_key[4:])
+    if avatar_key.startswith("item:"):
+        return _item_avatar_prompt(state, avatar_key[5:])
 
     # Player / standard — bygg från character sheet + inventory + loggbok
     ch = state.get("character", {}) or {}
@@ -10605,6 +10624,51 @@ def _build_avatar_prompt(state: dict, avatar_key: str, seed: int = 0) -> str:
         parts.append(f"Equipment: {inv_s}.")
     if last_entry:
         parts.append(f"Recent journal entry: {last_entry}.")
+    return " ".join(parts)
+
+
+def _item_avatar_prompt(state: dict, slug: str) -> str:
+    """Bildprompt för ETT föremål i inventoryt (2026-09-30). Byggs från
+    föremålets egna fält (namn, typ, sällsynthet, beskrivning, lore,
+    effekter) — samma princip som karaktärsavataren: spelaren promptar
+    aldrig själv, arket är prompten. Stil: still-life-artefakt på mörk
+    bakgrund, aldrig porträtt."""
+    inv = state.get("inventory") or []
+    item = None
+    for it in inv:
+        if isinstance(it, dict) and _item_slug(str(it.get("name") or "")) == slug:
+            item = it
+            break
+    if item is None:
+        # Slug träffar inget föremål (namnbytt/ borttaget) — måla utifrån
+        # slugen själv i stället för att falla tillbaka på karaktären.
+        name = slug.replace("-", " ")
+        parts = [f"A {name}, a single adventuring item."]
+        parts.append(STEP_OPEN_STYLE)
+        return " ".join(parts)
+
+    name = str(item.get("name") or "an item")
+    # Ordning spelar roll: _trim_prompt klipper BAKIFRÅN (490 tecken).
+    # Motiv + stil + komposition FÖRST — beskrivning/lore/effekter sist
+    # (det som kan tummas på), samma princip som karaktärsavataren.
+    parts = [f"{name}, a single fantasy item ({item.get('type') or 'adventuring gear'}), alone on display."]
+    parts.append(STEP_OPEN_STYLE)
+    parts.append(
+        "Composition: museum-display still life, the item resting on dark aged "
+        "wood or stone, single dramatic light source, shallow depth of field."
+    )
+    rarity = item.get("rarity")
+    if rarity in ("magic", "rare", "legendary"):
+        parts.append(f"It is a {rarity} item with a subtle enchanted presence.")
+    desc = str(item.get("description") or "").strip()[:200]
+    if desc:
+        parts.append(f"It looks like this: {desc}.")
+    effects = str(item.get("effects") or "").strip()[:120]
+    if effects:
+        parts.append(f"Magical effects: {effects}.")
+    lore = str(item.get("lore") or "").strip()[:120]
+    if lore:
+        parts.append(f"Lore: {lore}.")
     return " ".join(parts)
 
 

@@ -169,12 +169,15 @@
     border-color: color-mix(in srgb, var(--arcane) 55%, transparent); color: var(--arcane-bright);
     background: linear-gradient(180deg, color-mix(in srgb, var(--arcane) 14%, transparent), color-mix(in srgb, var(--arcane) 4%, transparent));
     box-shadow: 0 0 10px -3px color-mix(in srgb, var(--arcane) 50%, transparent);
-  }.trait.magic:hover{ border-color: var(--arcane); box-shadow: 0 0 16px -3px color-mix(in srgb, var(--arcane) 80%, transparent); }.trait.prof{ border-color: rgba(var(--gold-rgb),0.45); color: var(--gold-bright); }/* ═══════════ Utrustning — kortlayout ═══════════ */.inv-grid{
+  }.trait.magic:hover{ border-color: var(--arcane); box-shadow: 0 0 16px -3px color-mix(in srgb, var(--arcane) 80%, transparent); }.trait.prof{ border-color: rgba(var(--gold-rgb),0.45); color: var(--gold-bright); }/* ═══════════ Utrustning — kortlayout (kompakt 2026-09-30) ═══════════
+   Kompaktheten kommer från BORTTAGNA rader (typ + footer med vikt/status) —
+   kortet är nu ~2 rader högt i stället för ~4. Kolumnbredd 240px behålls så
+   långa namn får plats (2-raders wrap, se .inv-card-name). */.inv-grid{
     display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 0.7rem; padding: 0.2rem 0;
+    gap: 0.5rem; padding: 0.2rem 0;
   }.inv-card{
     background: linear-gradient(180deg, var(--stone-3), var(--stone));
-    border: 1px solid var(--edge); padding: 0.9rem 1rem; cursor: pointer;
+    border: 1px solid var(--edge); padding: 0.5rem 0.6rem; cursor: pointer;
     transition: all 0.22s; position: relative; overflow: hidden;
   position:relative;background:linear-gradient(180deg,rgba(217,201,166,.07),rgba(217,201,166,.015) 55%),linear-gradient(155deg,#241c15,#1c1713 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(74,59,38,.5),0 1px 0 rgba(0,0,0,.4)}.inv-card:hover{
     transform: translateY(-3px); border-color: var(--bone-dim);
@@ -185,33 +188,53 @@
   }/* Rarity: magic */.inv-card.r-magic{ border-color: color-mix(in srgb, var(--arcane) 45%, transparent); }.inv-card.r-magic:hover{ box-shadow: 0 8px 24px -8px color-mix(in srgb, var(--arcane) 40%, transparent); }/* Rarity: rare */.inv-card.r-rare{ border-color: rgba(var(--gold-bright-rgb),0.45); }.inv-card.r-rare:hover{ box-shadow: 0 8px 24px -8px rgba(var(--gold-bright-rgb),0.4); }/* Rarity: legendary */.inv-card.r-legendary{
     border-color: rgba(var(--gold-bright-rgb),0.7);
     background: linear-gradient(180deg, rgba(var(--gold-bright-rgb),0.08), var(--stone-3) 40%, var(--stone));
-  }.inv-card.r-legendary:hover{ box-shadow: 0 8px 28px -8px rgba(var(--gold-bright-rgb),0.6); }.inv-card.r-legendary .inv-card-name{ animation: candle 4s ease-in-out infinite; }.inv-card-row{ display: flex; align-items: flex-start; gap: 0.6rem; }.inv-card-icon{
-    font-size: 1.5rem; line-height: 1; flex-shrink: 0; margin-top: 0.1rem;
+  }.inv-card.r-legendary:hover{ box-shadow: 0 8px 28px -8px rgba(var(--gold-bright-rgb),0.6); }.inv-card.r-legendary .inv-card-name{ animation: candle 4s ease-in-out infinite; }.inv-card-row{ display: flex; align-items: flex-start; gap: 0.55rem; }.inv-card-icon{
+    font-size: 1.25rem; line-height: 1; flex-shrink: 0; margin-top: 0.1rem;
+    width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+    border: 1px solid color-mix(in srgb, var(--gold-rgb), 30%, transparent);
+    background: color-mix(in srgb, var(--ink) 45%, transparent); border-radius: var(--radius-xs);
     filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
-  }.inv-card-info{ flex: 1; min-width: 0; }.inv-card-name{
-    font-family: var(--font-display,'Cinzel',serif); font-weight: 700; font-size:var(--fs-tiny);
-    color: var(--bone-bright); line-height: 1.25;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }.inv-card-name.r-magic{ color: var(--arcane-bright); text-shadow: 0 0 8px color-mix(in srgb, var(--arcane) 45%, transparent); }.inv-card-name.r-rare{ color: var(--gold-bright); text-shadow: 0 0 8px rgba(var(--gold-bright-rgb),0.35); }.inv-card-name.r-legendary{ color: var(--gold-bright); text-shadow: 0 0 12px rgba(var(--gold-bright-rgb),0.6); }.inv-card-type{
-    font-size:var(--fs-tiny); color: var(--bone-dim); font-style: italic; margin-top: 0.15rem;
-  }.inv-card-stats{
-    display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.5rem;
+  }/* AI-målat konstverk i kortet — samma inramning som emoji-fallbacken */.inv-card-art{
+    width: 40px; height: 40px; flex-shrink: 0; margin-top: 0.1rem; border-radius: var(--radius-xs);
+    background-size: cover; background-position: center;
+    border: 1px solid rgba(var(--gold-rgb),0.55);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.4), 0 0 8px -2px rgba(var(--gold-bright-rgb),0.35);
+  }.inv-card-r-magic .inv-card-art, .inv-card.r-magic .inv-card-art{ border-color: color-mix(in srgb, var(--arcane) 65%, transparent); box-shadow: inset 0 0 0 1px rgba(0,0,0,.4), 0 0 10px -2px color-mix(in srgb, var(--arcane) 60%, transparent); }.inv-card.r-legendary .inv-card-art{ border-color: rgba(var(--gold-bright-rgb),0.8); box-shadow: inset 0 0 0 1px rgba(0,0,0,.4), 0 0 12px -2px rgba(var(--gold-bright-rgb),0.55); }.inv-card-info{ flex: 1; min-width: 0; }.inv-card-name{
+   font-family: var(--font-display,'Cinzel',serif); font-weight: 700; font-size:var(--fs-tiny);
+   color: var(--bone-bright); line-height: 1.25;
+   /* Långa namn (”Worn Ritual Dagger”) får linda till 2 rader i stället för
+      att trunkeras till oigenkännlighet — korta namn förblir 1 rad så korten
+      håller sig kompakta. line-clamp kapar vid 2 rader med ellips. */
+   display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2;
+   -webkit-box-orient: vertical; overflow: hidden;
+   overflow-wrap: anywhere;
+ }.inv-card-name.r-magic{ color: var(--arcane-bright); text-shadow: 0 0 8px color-mix(in srgb, var(--arcane) 45%, transparent); }.inv-card-name.r-rare{ color: var(--gold-bright); text-shadow: 0 0 8px rgba(var(--gold-bright-rgb),0.35); }.inv-card-name.r-legendary{ color: var(--gold-bright); text-shadow: 0 0 12px rgba(var(--gold-bright-rgb),0.6); }.inv-card-stats{
+    display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.25rem;
   }.inv-badge{
-    font-family: var(--font-display,'Cinzel',serif); font-size: 0.71rem; letter-spacing: 0.08em;
-    padding: 0.18rem 0.5rem; border: 1px solid var(--edge); background: var(--stone);
+    font-family: var(--font-display,'Cinzel',serif); font-size: 0.62rem; letter-spacing: 0.06em;
+    padding: 0.1rem 0.38rem; border: 1px solid var(--edge); background: var(--stone);
     color: var(--bone); white-space: nowrap; border-radius: var(--radius-xs);
-  }.inv-badge.dmg{ border-color: rgba(var(--blood-rgb),0.5); color: var(--blood-bright); }.inv-badge.ac{ border-color: color-mix(in srgb, var(--poison) 50%, transparent); color: var(--poison); }.inv-badge.charges{ border-color: color-mix(in srgb, var(--arcane) 50%, transparent); color: var(--arcane); }.inv-badge.magic-bonus{ border-color: rgba(var(--gold-bright-rgb),0.5); color: var(--gold-bright); }.inv-badge.range{ color: var(--bone-dim); }.inv-badge.qty{ color: var(--bone-dim); }.inv-card-footer{
-    display: flex; justify-content: space-between; align-items: center;
-    margin-top: 0.55rem; padding-top: 0.45rem;
-    border-top: 1px solid color-mix(in srgb, var(--edge) 40%, transparent);
-  }.inv-card-equip{
-    font-family: var(--font-display,'Cinzel',serif); font-size: 0.65rem; letter-spacing: 0.12em;
-    text-transform: uppercase; padding: 0.2rem 0.55rem; border: 1px solid;
-    cursor: pointer; background: transparent; transition: all 0.2s; white-space: nowrap;
-  min-height:44px;display:inline-flex;align-items:center;justify-content:center}.inv-card-equip.is-equipped{
-    color: var(--poison); border-color: color-mix(in srgb, var(--poison) 60%, transparent);
-    box-shadow: 0 0 6px -2px color-mix(in srgb, var(--poison) 40%, transparent);
-  }.inv-card-equip.not-equipped{ color: var(--bone-dim); border-color: var(--edge); }.inv-card-equip:hover{ transform: translateY(-1px); filter: brightness(1.3); }.inv-card-weight{ font-size:var(--fs-tiny); color: var(--bone-dim); font-style: italic; }/* ── Detaljmodal ── */.item-modal-overlay{
+  }.inv-badge.dmg{ border-color: rgba(var(--blood-rgb),0.5); color: var(--blood-bright); }.inv-badge.ac{ border-color: color-mix(in srgb, var(--poison) 50%, transparent); color: var(--poison); }.inv-badge.charges{ border-color: color-mix(in srgb, var(--arcane) 50%, transparent); color: var(--arcane); }.inv-badge.magic-bonus{ border-color: rgba(var(--gold-bright-rgb),0.5); color: var(--gold-bright); }.inv-badge.range{ color: var(--bone-dim); }.inv-badge.qty{ color: var(--bone-dim); }.inv-badge.wt{ color: var(--bone-dim); border-style: dashed; font-style: italic; }/* Status-märke: ⚔ buren (gift-grön glöd) / 🎒 i väska (diskret men synlig) */.inv-card-eq-dot{
+    flex-shrink: 0; font-size: 0.78rem; width: 22px; height: 22px; margin-top: 0.1rem;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; opacity: 0.7;
+  }.inv-card-eq-dot.on{
+    opacity: 1; filter: none; color: var(--poison);
+    border: 1px solid color-mix(in srgb, var(--poison) 55%, transparent);
+    box-shadow: 0 0 7px -2px color-mix(in srgb, var(--poison) 55%, transparent);
+  }/* ── Föremålsmålning i detaljmodalen (2026-09-30) ── */.item-modal-art-wrap{
+    display: flex; justify-content: center; margin-bottom: 0.9rem;
+  }.item-modal-art{
+    width: 132px; height: 132px; border-radius: var(--radius-xs); overflow: hidden;
+    border: 1px solid rgba(var(--gold-rgb),0.55);
+    background: radial-gradient(ellipse at 50% 35%, color-mix(in srgb, var(--gold-rgb) 8%, transparent), color-mix(in srgb, var(--ink) 55%, transparent));
+    box-shadow: inset 0 0 0 1px rgba(74,59,38,.5), 0 0 18px -6px rgba(var(--gold-bright-rgb),0.4);
+    display: flex; align-items: center; justify-content: center;
+  }.item-modal-art-emoji{ font-size: 3rem; opacity: 0.85; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.6)); }.item-modal-paint{
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem;
+    margin-top: 1.1rem; padding-top: 0.9rem;
+    border-top: 1px solid color-mix(in srgb, var(--edge) 45%, transparent);
+  }.item-modal-paint .av-btn{ font-size: 0.72rem; }.item-paint-status{ font-size: 0.75rem; color: var(--bone-dim); font-style: italic; flex: 1; min-width: 0; }/* ── Detaljmodal ── */.item-modal-overlay{
     position: fixed; inset: 0; z-index: 40;
     background: rgba(8,6,4,0.82); backdrop-filter: blur(4px);
     display: flex; align-items: center; justify-content: center;
@@ -1416,6 +1439,24 @@ function renderTraining() {
 // Typ-ikoner
 const TYPE_ICONS = { Vapen: '⚔️', Rustning: '🛡️', Dryck: '🧪', Magisk: '✦', Verktyg: '🔧', Annat: '📦', Weapon: '⚔️', Armor: '🛡️', Potion: '🧪', Magic: '✦', Tool: '🔧', Other: '📦' };
 
+// ── Föremålsmålningar (2026-09-30): varje item kan AI-målas som en avatar ──
+// Slug MÅSTE matcha backendens _item_slug() exakt:
+// strip("-") → slice(48) → rstrip("-").
+function _itemSlug(name) {
+  return String(name || '').trim().toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+    .slice(0, 48).replace(/-+$/, '');
+}
+function _itemArtKey(item) { return 'item:' + _itemSlug(item.name); }
+function _itemArtUrl(item, w) {
+  const key = _itemArtKey(item);
+  const e = state.avatars && state.avatars[key];
+  if (!e) return null;
+  const qs = new URLSearchParams({ t: String(e.uploaded || Date.now()) });
+  if (w) qs.set('w', String(w));
+  return API.avatarUrl(key) + '?' + qs.toString();
+}
+
 // Hjälp: bygg badge-HTML för ett item
 function _invBadges(item) {
   let badges = '';
@@ -1449,20 +1490,22 @@ function renderInventory() {
     totalWeight += w;
     const rarityCls = item.rarity ? 'r-' + item.rarity : '';
     const icon = TYPE_ICONS[item.type] || TYPE_ICONS.Annat;
+    // Kompakt kort (2026-09-30): konst-verk i stället för emoji när item
+    // är målat, status som litet märke i hörnet, vikt i samma rad.
+    const artUrl = _itemArtUrl(item, 128);
+    const art = artUrl
+      ? `<span class="inv-card-art" style="background-image:url('${artUrl}')"></span>`
+      : `<span class="inv-card-icon">${icon}</span>`;
     const card = document.createElement('div');
     card.className = 'inv-card' + (item.equipped ? ' equipped' : '') + (rarityCls ? ' ' + rarityCls : '');
     card.innerHTML = `
       <div class="inv-card-row" onclick="openItemModal(${i})">
-        <span class="inv-card-icon">${icon}</span>
+        ${art}
         <div class="inv-card-info">
-          <div class="inv-card-name ${rarityCls}">${item.rarity === 'magic' || item.rarity === 'legendary' ? '✦ ' : ''}${item.name}</div>
-          <div class="inv-card-type">${item.type || 'Other'}</div>
-          <div class="inv-card-stats">${_invBadges(item)}${item.qty > 1 ? `<span class="inv-badge qty">×${item.qty}</span>` : ''}</div>
+          <div class="inv-card-name ${rarityCls}">${item.rarity === 'magic' || item.rarity === 'legendary' ? '✦ ' : ''}${_esc(item.name)}</div>
+          <div class="inv-card-stats">${_invBadges(item)}${item.qty > 1 ? `<span class="inv-badge qty">×${item.qty}</span>` : ''}<span class="inv-badge wt">${w.toFixed(1)} lbs</span></div>
         </div>
-      </div>
-      <div class="inv-card-footer">
-        <span class="inv-card-equip ${item.equipped ? 'is-equipped' : 'not-equipped'}">${item.equipped ? I18N.t('⚔ Buren') : I18N.t('🎒 I väska')}</span>
-        <span class="inv-card-weight">${w.toFixed(1)} lbs</span>
+        <span class="inv-card-eq-dot ${item.equipped ? 'on' : ''}" title="${item.equipped ? 'Equipped' : 'In bag'}">${item.equipped ? '⚔' : '🎒'}</span>
       </div>`;
     grid.appendChild(card);
   });
@@ -1538,6 +1581,7 @@ function renderSpells() {
 function openItemModal(i) {
   const item = state.inventory[i];
   if (!item) return;
+  _itemModalIdx = i;
   const container = document.getElementById('item-modal-container');
   const rarityCls = item.rarity ? 'r-' + item.rarity : '';
   const icon = TYPE_ICONS[item.type] || TYPE_ICONS.Annat;
@@ -1584,13 +1628,87 @@ function openItemModal(i) {
     <div class="item-modal-overlay" onclick="closeItemModal(event)">
       <div class="item-modal" onclick="event.stopPropagation()" style="position:relative">
         <button class="item-modal-close" onclick="closeItemModal(event, true)">✕</button>
-        <div class="item-modal-header ${rarityCls}">${icon} ${item.name}</div>
+        <div class="item-modal-art-wrap" id="item-modal-art-wrap">
+          <div class="item-modal-art" id="item-modal-art">${_itemModalArtInner(item)}</div>
+        </div>
+        <div class="item-modal-header ${rarityCls}">${icon} ${_esc(item.name)}</div>
         <div class="item-modal-sub">${item.type || 'Other'}${item.rarity && item.rarity !== 'normal' ? ' · ' + item.rarity : ''}</div>
         ${statsHtml}
         ${propsHtml}
         ${descHtml}
+        <div class="item-modal-paint">
+          <button class="av-btn primary btn-gold" id="item-paint-btn" onclick="paintItemAction(${i})" title="Generate a painting of this item from its description — part of the 10€ unlock, each image costs 1 turn">🎨 ${I18N.t('Paint this item')}</button>
+          <span class="item-paint-status" id="item-paint-status"></span>
+        </div>
       </div>
     </div>`;
+}
+
+// Konstverk i detaljmodalen: målad bild (klickbar → lightbox) eller en
+// inramad emoji-platshållare som visar att målning finns tillgänglig.
+function _itemModalArtInner(item) {
+  const url = _itemArtUrl(item, 256);
+  if (url) {
+    return `<img src="${url}" alt="${_esc(item.name)}" onclick="openItemArtLightbox(${_itemModalIdx})" title="Click for larger view" style="width:100%;height:100%;object-fit:cover;cursor:pointer">`;
+  }
+  const icon = TYPE_ICONS[item.type] || TYPE_ICONS.Annat;
+  return `<span class="item-modal-art-emoji">${icon}</span>`;
+}
+
+let _itemModalIdx = -1;
+function openItemArtLightbox(i) {
+  const item = state.inventory[i];
+  if (!item) return;
+  const url = _itemArtUrl(item);
+  if (!url) return;
+  document.getElementById('avatar-lightbox-img').src = url;
+  document.getElementById('avatar-lightbox-title').textContent = item.name;
+  document.getElementById('avatar-lightbox').classList.add('show');
+  try { SFX.click(); } catch (_) {}
+}
+
+// ── 🎨 Paint this item — samma motor/galleri som avataren (kind=item:slug) ──
+let _itemPaintBusy = false;
+async function paintItemAction(i) {
+  const item = state.inventory[i];
+  if (!item) return;
+  if (_itemPaintBusy) return;
+  if (!_itemSlug(item.name)) { toast('⚠ This item has no name to paint'); return; }
+  if (!avatarGenGate('stepfun')) return;   // 10€-unlås + toast (delas med avataren)
+  const key = _itemArtKey(item);
+  const btn = document.getElementById('item-paint-btn');
+  const status = document.getElementById('item-paint-status');
+  _itemPaintBusy = true;
+  btn.disabled = true;
+  status.textContent = '🎨 Painting… (10–30 s)';
+  try {
+    // mode='new' utan prompt → backend bygger prompten ur itemets fält
+    // (namn, typ, sällsynthet, beskrivning, lore, effekter).
+    const res = await API.generateAvatar(key, Date.now() % 1000000, 'new', '', 'stepfun');
+    if (res && res.ok) {
+      state.avatars = state.avatars || {};
+      state.avatars[key] = {
+        disk_name: 'item.png', uploaded: new Date().toISOString(),
+        ai_generated: true, seed: res.seed,
+        gallery: new Array(res.gallery_count || 1).fill({ disk_name: 'x' }),
+        gallery_index: res.gallery_index || 0,
+      };
+      const art = document.getElementById('item-modal-art');
+      if (art) art.innerHTML = _itemModalArtInner(item);
+      renderInventory();
+      status.textContent = '✨ Painted from its description — 1 turn spent';
+      try { SFX.levelup(); } catch (_) {}
+    } else {
+      status.textContent = '⚠ ' + (res && res.detail ? (typeof res.detail === 'string' ? res.detail : JSON.stringify(res.detail)) : 'Failed');
+      try { SFX.error(); } catch (_) {}
+    }
+  } catch (e) {
+    status.textContent = '⚠ ' + (e.message || 'Failed');
+    try { SFX.error(); } catch (_) {}
+  } finally {
+    _itemPaintBusy = false;
+    btn.disabled = false;
+  }
 }
 
 function closeItemModal(e, force) {

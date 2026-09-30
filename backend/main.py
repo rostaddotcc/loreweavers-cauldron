@@ -5410,29 +5410,35 @@ def _build_system_prompt(
     # backend om mer historik när spelarens senaste meddelande inte matchar
     # de injicerade minnena. Taggen fångas av backend, hämtar relevanta
     # fakta+RAG, och DM:n färdigställer svaret med den nya kontexten.
-    if lang == "en":
-        parts.append(
-            "\n## MEMORY SEARCH TOOL\n"
-            "If you need more context than the memories above provide (an old thread, "
-            "a promise, a NPC not mentioned recently) you may end your reply with "
-            "[SEARCH: your question]. The system will look it up and let you finish "
-            "your reply with the found context. Use it sparingly — it costs a second "
-            "call. Never show the tag in your narration."
-        )
-    else:
-        parts.append(
-            "\n## MINNESSÖKNINGSVERKTYG\n"
-            "Om du behöver mer kontext än minnena ovan ger (en gammal tråd, ett löfte, "
-            "en NPC som inte nämnts nyligen) kan du avsluta ditt svar med "
-            "[SÖK: din fråga]. Systemet hämtar det och låter dig färdigställa svaret "
-            "med den hittade kontexten. Använd sparsamt — det kostar ett extra anrop. "
-            "Visa aldrig taggen i din berättelse."
-        )
+    # Hoppas över under vaknandet (granskning pitfall #4, v31): minnes-
+    # injicering är avstängd de turerna och en ny kampanj har ingen historik
+    # att söka — erbjudandet bara bjuder på ett svalt extra-anrop.
+    if not (bool(state.get("meta", {}).get("awakening")) or awakening_trigger):
+        if lang == "en":
+            parts.append(
+                "\n## MEMORY SEARCH TOOL\n"
+                "If you need more context than the memories above provide (an old thread, "
+                "a promise, a NPC not mentioned recently) you may end your reply with "
+                "[SEARCH: your question]. The system will look it up and let you finish "
+                "your reply with the found context. Use it sparingly — it costs a second "
+                "call. Never show the tag in your narration."
+            )
+        else:
+            parts.append(
+                "\n## MINNESSÖKNINGSVERKTYG\n"
+                "Om du behöver mer kontext än minnena ovan ger (en gammal tråd, ett löfte, "
+                "en NPC som inte nämnts nyligen) kan du avsluta ditt svar med "
+                "[SÖK: din fråga]. Systemet hämtar det och låter dig färdigställa svaret "
+                "med den hittade kontexten. Använd sparsamt — det kostar ett extra anrop. "
+                "Visa aldrig taggen i din berättelse."
+            )
 
-    # Förra turens mekaniska händelser
+    # Förra turens mekaniska händelser — typen är kod-token (svensk),
+    # VISNINGSTEXTEN språkvald (granskning #5, v31: EN-kampanjer fick
+    # svenska etiketter tidigare — samma invariant som world-build enums).
     last_effects = state.get("meta", {}).get("last_effects")
     if last_effects:
-        fx_labels = {
+        fx_labels_sv = {
             "skada": "Skada", "hela": "Hela", "xp": "XP", "guld": "Guld",
             "föremål": "Nytt föremål", "föremål_bort": "Föremål bort",
             "quest": "Nytt uppdrag", "quest_slutförd": "Uppdrag slutfört",
@@ -5440,8 +5446,18 @@ def _build_system_prompt(
             "npc_död": "NPC död", "plats": "Ny plats", "tid": "Tid",
             "npc_relation": "NPC-relation", "ny_dag": "Ny dag", "level_up": "Nivå upp",
         }
+        fx_labels_en = {
+            "skada": "Damage", "hela": "Healed", "xp": "XP", "guld": "Gold",
+            "föremål": "New item", "föremål_bort": "Item lost",
+            "quest": "New quest", "quest_slutförd": "Quest completed",
+            "quest_misslyckad": "Quest failed", "konsekvens": "Consequence",
+            "npc_död": "NPC dead", "plats": "New location", "tid": "Time",
+            "npc_relation": "NPC relation", "ny_dag": "New day", "level_up": "Level up",
+        }
+        fx_labels = fx_labels_sv if lang == "sv" else fx_labels_en
         fx_strs = [f"{fx_labels.get(e.get('type', ''), e.get('type', '?'))}: {e.get('value', '?')}" for e in last_effects]
-        parts.append("\n## Förra turens händelser\n" + ", ".join(fx_strs))
+        fx_head = "## Förra turens händelser" if lang == "sv" else "## Events from last turn"
+        parts.append("\n" + fx_head + "\n" + ", ".join(fx_strs))
 
     # Värld
     world = state.get("world", {})
@@ -5608,13 +5624,23 @@ def _build_system_prompt(
     # Guardian-råd: kast-detektion ──
     # Guardian har analyserat spelarens handling och rekommenderar ett kast.
     # DM:n bör använda exakt denna [KAST:]-tagg (eller motivera varför inte).
+    # Språkmedvetet (granskning #5, v31): rubrik + instruktion på kampanjens
+    # språk — [KAST:]-taggen och notationen förblir protokoll på båda.
     if guardian_roll:
-        parts.append(
-            f"\n## 🛡️ GUARDIAN: KAST REKOMMENDERAS\n"
-            f"Spelarens handling kräver ett tärningskast.\n"
-            f"Använd: [KAST: {guardian_roll['notation']} | {guardian_roll['label']}]\n"
-            f"Bygg scenen så att kastet känns naturligt. Ge konsekvenser för både lyckat och misslyckat."
-        )
+        if lang == "en":
+            parts.append(
+                f"\n## 🛡️ GUARDIAN: ROLL RECOMMENDED\n"
+                f"The player's action requires a dice roll.\n"
+                f"Use: [KAST: {guardian_roll['notation']} | {guardian_roll['label']}]\n"
+                f"Build the scene so the roll feels natural. Give consequences for both success and failure."
+            )
+        else:
+            parts.append(
+                f"\n## 🛡️ GUARDIAN: KAST REKOMMENDERAS\n"
+                f"Spelarens handling kräver ett tärningskast.\n"
+                f"Använd: [KAST: {guardian_roll['notation']} | {guardian_roll['label']}]\n"
+                f"Bygg scenen så att kastet känns naturligt. Ge konsekvenser för både lyckat och misslyckat."
+            )
 
     # ── SPRÅKREINFORCERING (slutet): reasoning-modeller och långa transkript
     # med svenska assistant-meddelanden kan drifta — upprepa språkdirektivet
@@ -7342,8 +7368,12 @@ async def _chat_phase_b(
         _dm_meta["guardian_pre_dm_tokens"] = _guardian_roll_usage
     state = store.append_message(state, "assistant", reply, meta=_dm_meta)
 
-    # Rensa awakening-flaggan efter turn 2 (scenen är öppnad — aldrig igen)
-    if state["meta"].get("awakening") and effective_turn >= 2:
+    # Rensa awakening-flaggan när scenöppningen VERKLIGEN genomförts
+    # (granskning pitfall #2, v31): tidigare ren bara efter turANTALET —
+    # ett tomt/avklippt DM-svar på turn 2 sänkte flaggan ändå och protokollet
+    # halverades för alltid. Nu krävs att öppningssvaret faktiskt sparats
+    # (icke-tomt assistant-meddelande) innan vaknandet anses komplett.
+    if state["meta"].get("awakening") and effective_turn >= 2 and reply and reply.strip():
         state["meta"]["awakening"] = False
         logger.info("🌅 Awakening complete (turn %d)", effective_turn)
 

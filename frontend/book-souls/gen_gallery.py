@@ -230,6 +230,9 @@ def main():
                     "campaign": meta.get("campaign_name") or "",
                     "embarked": format_date(meta.get("created") or ""),
                     "turns_played": meta.get("turn_count", 0),
+                    # sorteringsnyckel (strippas före JSON-dump): när karaktären
+                    # senast smiddes — nyaste äventyraren överst i leken.
+                    "_recency": (meta.get("created") or ""),
                 })
                 seen_players[name] = True
 
@@ -272,6 +275,8 @@ def main():
                     "met_at": met_at,
                     "first_met_date": first_met_date,
                     "met_by": user,
+                    # sorteringsnyckel (strippas före JSON-dump): nyast mött först.
+                    "_recency": (meta.get("created") or ""),
                 })
                 seen_npcs[base] = True
 
@@ -293,8 +298,12 @@ def main():
                     add_npc(base)
 
     gallery["generated_at"] = __import__("datetime").datetime.now().isoformat(timespec="minutes")
-    # Most-played first: level desc, then XP asc (closer to next level = more played)
-    gallery["adventurers"].sort(key=lambda a: (-(a.get("level") or 0), -((a.get("xp_current") or 0) * 1.0 / max(1, (a.get("xp_next") or 1)))))
+    # Newest first (rostad 2026-10-01): första kortet i leken = den senaste
+    # äventyraren som smiddes / den senaste NPC man mötte.
+    gallery["adventurers"].sort(key=lambda a: a.get("_recency") or "", reverse=True)
+    gallery["npcs"].sort(key=lambda n: n.get("_recency") or "", reverse=True)
+    for entry in gallery["adventurers"] + gallery["npcs"]:
+        entry.pop("_recency", None)
     out = os.path.join(OUT_DIR, "gallery.json")
     with open(out, "w", encoding="utf-8") as f:
         json.dump(gallery, f, ensure_ascii=False, indent=1)

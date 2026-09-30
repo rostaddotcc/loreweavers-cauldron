@@ -114,3 +114,36 @@ def test_deleted_campaign_removes_card_and_images(tmp_path):
     g2 = _run(data, out)
     assert g2["npcs"] == []
     assert sorted((out / "avatars").iterdir()) == []
+
+
+def test_newest_first_sort(tmp_path):
+    """Lekens första kort = senast skapade äventyraren / senast mötta NPC:n
+    (kampanjens created-datum, nyast först)."""
+    import json as _json
+    data = tmp_path / "data"
+    out = tmp_path / "out"
+    _make_campaign(data, "elfa", "57c88bb4ed1a", "Kaelithra the Unbroken",
+                   "npc_Kaelithra the Unbroken__cd525828.png")
+    # gammal kampanj
+    _make_campaign(data, "gubbe", "aaaaaaaaaaaa", "Old Tom", "npc_Old Tom.png")
+    # ny kampanj
+    _make_campaign(data, "ny", "bbbbbbbbbbbb", "Flick Flare", "npc_Flick Flare.png")
+    # skriv om created-datum per kampanj
+    for user, cid, iso in (("elfa", "57c88bb4ed1a", "2026-08-01T12:00:00+00:00"),
+                           ("gubbe", "aaaaaaaaaaaa", "2026-06-01T12:00:00+00:00"),
+                           ("ny", "bbbbbbbbbbbb", "2026-09-29T12:00:00+00:00")):
+        p = data / user / cid / "state.json"
+        s = _json.loads(p.read_text())
+        s["meta"]["created"] = iso
+        s["character"]["name"] = f"Hero of {user}"
+        # ge varje kampanj en egen player-avatar så alla blir äventyrarkort
+        _png(p.parent / "avatars" / f"player_{user}.png", tag=user.encode())
+        s["avatars"]["player"] = {"disk_name": f"player_{user}.png"}
+        p.write_text(_json.dumps(s, ensure_ascii=False), encoding="utf-8")
+
+    g = _run(data, out)
+    assert [a["name"] for a in g["adventurers"]] == ["Hero of ny", "Hero of elfa", "Hero of gubbe"]
+    assert [n["name"] for n in g["npcs"]] == ["Flick Flare", "Kaelithra the Unbroken", "Old Tom"]
+    # sorteringsnyckeln läcker inte ut i gallery.json
+    assert "_recency" not in g["adventurers"][0]
+    assert "_recency" not in g["npcs"][0]

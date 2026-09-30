@@ -79,8 +79,18 @@ Built for the phone too — full table, terminal composer and voice input in a p
 - Before each turn, relevant memories are retrieved and injected into the DM's system prompt — the world truly remembers
 - Deterministic content-hash IDs prevent duplicate indexing
 
+### 🏮 Local AI — Bring Your Own Breath (Ollama relay)
+- **The player's own Ollama can BE the DM** — opt-in ("Use own Ollama"), never probed silently: the browser discovers a local Ollama only after you enable it, lists your installed models, and the whole turn runs on your hardware via a **prepare → stream → commit relay hop chain**
+- **Server is the brain, your machine is the mouth**: `POST /api/chat/local/prepare` builds the DM prompt server-side (RAG memories, facts, state — never sent to your box beyond the prompt) and hands the client an Ollama payload; the client streams from `http://127.0.0.1:11434/api/chat` (base URL lives **only** in browser localStorage — the server never sees a user-supplied URL, so there is zero SSRF surface); `POST /api/chat/local/commit` runs the full post-processing (Guardian extraction, facts, RAG) exactly like a house turn
+- **Two pipelines, per campaign** (`PATCH /api/campaign/local-pipeline`): `dm` — only the DM narration hop is local (v1); `full` — the *whole* relay chain (roll-check → DM → repair → Guardian → extraction → memory-search) runs as client hops on your machine (v2, "Whole Cauldron local"); `full` requires a `local:*` DM model and costs the house ~0 tokens
+- **`local:<model>` model IDs** (e.g. `local:qwen3:14b`) — the backend hard-refuses to call a `local:` prefix server-side (defence-in-depth); hops needing JSON run with `format` at the payload top level and `think:false` (real Ollama 0.15 semantics)
+- **Honest economics**: relay turns do **not** consume your house turn pool; instead a `local_dm` ledger row (0 turns) is recorded for admin visibility, capped daily (`LOCAL_DM_DAILY_CAP`, default 100; `LOCAL_DM_DAILY_CAP_FULL`, default 300) because the house still pays Guardian/extraction in `dm` mode
+- **num_ctx is explicit** (8192 / 16384 / 32768 picker, default 16384 — Ollama's stock 4k context is not enough for a campaign prompt), steps are single-use, TTL-bounded (default 600 s) and locked to `(user, campaign, turn_count)` — a 409 drift re-runs the whole turn through the relay
+- **The one gotcha is CORS**: a browser may not read a local Ollama from another origin. The picker detects it and shows the exact fix — `OLLAMA_ORIGINS=https://dnd.rostad.cc ollama serve` — plus the full player guide at **`local-ai.html`** (how it works, tray/CORS trap, verification, FAQ)
+- **Opt-in feature flag server-side**: `LOCAL_AI_ENABLED=1` (default `0` → endpoints return 503). Nothing local ever touches API keys — house model keys stay on the server as always
+
 ### 🔮 Models & Voice
-- **Multi-provider model router**: Qwen (DashScope / Alibaba Token Plan), DeepSeek and StepFun models — switch the DM's brain per campaign, mid-game
+- **Multi-provider model router**: Qwen (DashScope / Alibaba Token Plan), DeepSeek and StepFun models — switch the DM's brain per campaign, mid-game — plus `local:*` Ollama models (see above)
 - **TTS narration**: StepFun voices (always free) or Qwen TTS — male/female narrator voices, per-campaign settings, style phrases
 - Keys never leave the server — the frontend only ever sees model IDs
 
@@ -147,6 +157,12 @@ The core idea: **the DM tells the story, the Guardian owns the mechanics, and th
   Combat runs alongside: chat-first — the DM narrates, the Guardian
   extracts attacks and runs the round bookkeeping; combat.py owns
   the server dice, status ticking and initiative helpers.
+
+  🏮 Local relay: any LLM hop above can optionally run on the PLAYER's
+  machine instead — /api/chat/local/prepare builds the prompt server-side,
+  the browser streams it through its own Ollama, /api/chat/local/commit
+  finishes the turn. In "full" pipeline mode even Guardian/extraction hops
+  run locally as a client hop chain; house keys and state never leave home.
 ```
 
 | Module | Role |
@@ -157,7 +173,8 @@ The core idea: **the DM tells the story, the Guardian owns the mechanics, and th
 | `backend/extraction.py` | `FactRegister` — structured, deduplicated, versioned lore/facts |
 | `backend/rag.py` | Qdrant + Ollama — transcript/lore indexing and semantic retrieval |
 | `backend/state_manager.py` | JSON persistence — campaigns, saves, vaults, rolling summaries (scene → chapter → arc) |
-| `backend/models.py` | Model router — provider configs & keys read from env, **never** exposed to clients |
+| `backend/models.py` | Model router — provider configs & keys read from env, **never** exposed to clients; server-side calls to `local:*` IDs are hard-refused |
+| `backend/local_relay.py` | 🏮 Local AI relay — single-use TTL-bounded step store, per-pipeline daily caps, num_ctx clamping (`local:<model>` convention) |
 | `backend/auth.py` | JWT (HS256) + bcrypt against `data/users.json` |
 | `backend/locations.py` | Dynamic seeded map, deterministic placement, terrain travel times |
 | `backend/logbook.py` | LLM-generated day-by-day adventure journal |
@@ -178,6 +195,7 @@ loreweavers-cauldron/
 │   ├── rag.py                     # Qdrant + Ollama vector memory
 │   ├── state_manager.py           # Campaign / vault JSON persistence
 │   ├── models.py                  # LLM model router (keys stay server-side)
+│   ├── local_relay.py             # 🏮 Ollama relay step store, caps, num_ctx clamping
 │   ├── auth.py · iplog.py
 │   ├── locations.py · logbook.py · dice.py
 │   ├── requirements.txt · .env.example
@@ -194,6 +212,8 @@ loreweavers-cauldron/
 │   ├── mechanics.html             # Engine diagnostics, tag list, travel table
 │   ├── models.html · pricing.html · admin.html · releases.html · help.html
 │   ├── api.js                     # Frontend ↔ backend bridge (+ standalone MOCK mode)
+│   ├── local.js                   # 🏮 Ollama relay client — opt-in detection, model picker, prepare→stream→commit hop loop
+│   ├── local-ai.html              # 🏮 Player guide: "Bring Your Own Breath" (setup, CORS/tray trap, verification, FAQ)
 │   ├── archetypes.js · i18n.js · fonts.js · sprites.js
 │   ├── sfx.js · modal.js · embed.js · snes.css
 │   └── assets/                    # Logo/cauldron art
@@ -257,8 +277,12 @@ All configuration lives in environment variables (`backend/.env` for the app, `b
 | `DEEPSEEK_BASE_URL` | | DeepSeek API base URL (default provided) |
 | `STEPFUN_API_KEY` | | StepFun key — free-tier DM model + always-free TTS |
 | `STEPFUN_BASE_URL` | | StepFun Step Plan base URL (default provided) |
-| `OLLAMA_URL` | | Ollama host used for RAG embeddings (`http://localhost:11434`) |
+| `OLLAMA_URL` | | Server-side Ollama used for RAG embeddings (`http://localhost:11434`) |
 | `QDRANT_URL` | | Vector database URL for RAG (`http://localhost:6333`; in Docker: `http://qdrant:6333`) |
+| `LOCAL_AI_ENABLED` | | 🏮 `1` turns on the player-Ollama relay endpoints (default `0` → `/api/chat/local/*` returns 503) |
+| `LOCAL_STEP_TTL_SECONDS` | | 🏮 Lifetime of a relay step (default `600`; min 30) |
+| `LOCAL_DM_DAILY_CAP` | | 🏮 Local DM hops per day per account, `dm` pipeline (default `100`) |
+| `LOCAL_DM_DAILY_CAP_FULL` | | 🏮 Same cap for the `full` pipeline — the house pays no prompts there, so the limit is higher (default `300`) |
 | `JWT_SECRET` | ✅ | Signs auth tokens — **change this to something long and random** |
 | `JWT_EXPIRY_HOURS` | | Auth token lifetime in hours (default `24`) |
 | `GUARDIAN_MODEL` | | Model for mechanics extraction (default `step-3.7-flash`) |
@@ -284,6 +308,7 @@ All endpoints live under `/api` and are served by FastAPI (interactive docs at `
 | **Auth** | `POST /api/register` · `/api/login` · `/api/logout` · `/api/auth/request-reset` · `/api/auth/reset-with-token` · `GET /api/me` · `PUT /api/me/email` | Accounts, JWT cookie sessions, password reset, profile |
 | **Campaign** | `POST/GET /api/campaign` · `GET /api/campaigns` · `POST /api/campaign/activate` · `DELETE /api/campaign` · `PATCH /api/campaign/{dm-model,guardian-model,extraction-model,language,character,inventory}` · `POST /api/campaign/save` · `POST /api/campaign/undo` | Create, switch, configure, persist — and undo the last turn |
 | **Gameplay** | `POST /api/chat` (streamed) · `POST /api/dice` · `POST /api/campaign/pin` · `POST /api/campaign/lore` · `POST /api/campaign/chapter` · `POST /api/campaign/consume-resource` · `GET /api/facts` | Play: chat, server dice, notes, lore, facts |
+| **🏮 Local AI relay** | `POST /api/chat/local/prepare` · `POST /api/chat/local/commit` · `PATCH /api/campaign/local-pipeline` (`"dm"` \| `"full"`) | Player's own Ollama as DM — server builds the prompt, client streams from localhost, server commits the result (requires `LOCAL_AI_ENABLED=1`) |
 | **Combat** | `POST /api/chat` with `[STRID:]`/`[COMBAT:]` tags · engine in `combat.py` + Guardian | Tag-driven combat — the DM opens/advances fights through the chat pipeline |
 | **Character & Vault** | `POST /api/character/generate` (+ `/stream`) · `GET/POST/DELETE /api/vault/characters…` · `…/use` · `…/avatar/generate` | Character creation and vault |
 | **World** | `POST /api/world/build` · `GET /api/campaign/locations` · `GET /api/campaign/logbook` · `POST /api/campaign/logbook/refresh-today` | Import `.md/.pdf/images`, map, journal |
@@ -303,7 +328,7 @@ source .venv/bin/activate
 python -m pytest tests/ -v
 ```
 
-**44 pytest suites / ~550 tests** cover the mechanics that matter: tier logic and free-tier caps, chat-first combat (round advancement, snapshot dedup, status ticks, combat-end cleanup), Stripe billing + billing admin, security hardening, NPC chat, password reset, TTS tiers/style/survival across deletions, avatar thumbnails + purge, vault export overwrite, undo, feedback inbox, `/api/me` stats, and the travel/system-prompt rules.
+**57 pytest suites / ~790 tests** cover the mechanics that matter: tier logic and free-tier caps, chat-first combat (round advancement, snapshot dedup, status ticks, combat-end cleanup), Stripe billing + billing admin, security hardening, NPC chat, password reset, TTS tiers/style/survival across deletions, avatar thumbnails + purge, vault export overwrite, undo, feedback inbox, `/api/me` stats, the travel/system-prompt rules — and the 🏮 local relay: step discipline (single-use, TTL, 409 drift, caps, `local:` refusal) plus the full v2 hop chain (rollcheck→DM→repair→guardian→extract→search, `test_local_relay.py` + `test_local_relay_chain.py`).
 
 DOM-level frontend tests live in `scripts/` (`test-combat-split-dom.js`, `test-enemy-dice-render.js`) for combat UI behavior.
 

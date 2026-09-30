@@ -888,6 +888,24 @@ const I18N = (() => {
     '🖼 Porträtt sparat': '🖼 Portrait saved',
     '🛡️ Vänta — Lorekeeper uppdaterar…': '🛡️ Wait — Lorekeeper is updating…',
     'Nära dig': 'Near you',
+    // ── Leak-sweep 2026-09-30 (rostad: "optimera översättningar till engelska") ──
+    '🏮 Lokalt — din egen maskin': '🏮 Local — your own machine',
+    '🏮 Lokalt — din egen maskin (CORS-blockerad)': '🏮 Local — your own machine (CORS blocked)',
+    '🏮 Lokalt — din egen maskin (Ollama hittas inte)': '🏮 Local — your own machine (Ollama not found)',
+    'Hela grytan kokar hemma — huset vakar bara över summeringar': 'The whole cauldron brews at home — the house only watches the summaries',
+    'Huset vakar över grytan igen': 'The house keeps watch over the cauldron again',
+    'Kunde inte byta pipeline': 'Could not switch pipeline',
+    '🏮 Local AI är avstängt': '🏮 Local AI is off',
+    '⚠ Kunde inte hämta statistik: ': '⚠ Could not fetch statistics: ',
+    '🦉 Lorekeeper jobbar — du kan skriva klart, skicka när den är klar…': '🦉 Lorekeeper is working — keep typing, send when it\'s done…',
+    '🦉 Lorekeeper jobbar — draft sparad, skicka strax efter': '🦉 Lorekeeper is working — draft saved, send it right after',
+    '🦉 Lorekeeper klar — din draft är redo att skickas': '🦉 Lorekeeper done — your draft is ready to send',
+    '⏳ Lorekeeper tog för lång tid — chatten upplåst (rapporten kommer vid nästa laddning)': '⏳ Lorekeeper took too long — chat unlocked (the report arrives on the next load)',
+    '📍 Ingen känd nuvarande plats': '📍 No known current location',
+    'Ersatta': 'Superseded',
+    ' ersatta sanningar — gamla sanningar som ersatts av nyare': ' superseded truths — old truths replaced by newer ones',
+    '📊 Användning': '📊 Usage',
+    'Samlar statistik…': 'Collecting statistics…',
   };
 
   // ═══════════════════════════════════════

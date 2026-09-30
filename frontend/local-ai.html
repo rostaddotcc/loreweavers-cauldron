@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
+<title>Bring Your Own Breath — Local AI Guide (Ollama) | The Lore Weaver's Cauldron</title>
+<meta name="description" content="Run the Dungeon Master on your own machine with Ollama: setup, the CORS gotcha and status dots, troubleshooting, verification commands and FAQ for the 🏮 Local AI at The Lore Weaver's Cauldron.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://dnd.rostad.cc/local-ai.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Lore Weaver's Cauldron">
+<meta property="og:title" content="Bring Your Own Breath — Local AI Guide | The Lore Weaver's Cauldron">
+<meta property="og:description" content="Set up Ollama as your Dungeon Master, fix the CORS trap that makes the yellow dot sticky, and read the honest FAQ — dice stay server-side, the DM step costs 0 turns.">
+<meta property="og:url" content="https://dnd.rostad.cc/local-ai.html">
+<meta property="og:image" content="https://dnd.rostad.cc/assets/cauldron-hero.webp">
+<meta property="og:image:width" content="1536">
+<meta property="og:image:height" content="1024">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Bring Your Own Breath — Local AI Guide | The Lore Weaver's Cauldron">
+<meta name="twitter:description" content="Set up Ollama as your Dungeon Master, fix the CORS trap that makes the yellow dot sticky, and read the honest FAQ — dice stay server-side, the DM step costs 0 turns.">
+<meta name="twitter:image" content="https://dnd.rostad.cc/assets/cauldron-hero.webp">
+<meta name="theme-color" content="#1c1713">
+<link rel="icon" href="/assets/logo-cauldron.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,700;1,400;1,700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* mirrors snes.css :root, same as help.html */
+    --ink:#1c1109; --stone:#271a10; --stone-2:#322318; --stone-3:#3d2c1e;
+    --edge:#56402a; --bone:#e8d9b4; --bone-bright:#f7efd7; --bone-dim:#b29a6f;
+    --gold:#c9a13a; --gold-bright:#ecd07a; --blood-bright:#e0766a;
+    --arcane:#6e86c9; --term-green:#8cc47a; --term-amber:#d3a83a;
+    --font-marginalia:'EB Garamond', Georgia, serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;border-radius:0}
+  body{
+    color:var(--bone);min-height:100vh;
+    background:var(--ink);line-height:1.8;
+  }
+  .app{max-width:800px;margin:0 auto;padding:2rem 1.5rem 4rem}
+  h1{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:var(--fs-h1);letter-spacing:.06em;color:var(--gold);margin-bottom:.5rem;text-shadow:2px 2px 0 #000}
+  h2{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:var(--fs-h3);color:var(--gold);margin:2rem 0 .8rem;text-transform:uppercase;letter-spacing:.14em}
+  h2::before{content:'\00A7\00A0';color:var(--blood-bright);font-variant:small-caps}
+  p,li{font-size:var(--fs-base);color:var(--bone);margin-bottom:.6rem}
+  ul{padding-left:1.2rem;list-style:none}
+  li::before{content:'▸ ';color:var(--gold)}
+  ol{padding-left:1.4rem}
+  ol li::before{content:none}
+  .box{background:linear-gradient(180deg,var(--stone-2),var(--stone));border:1px solid rgba(var(--gold-rgb),.55);padding:1.2rem;margin:1rem 0;position:relative;box-shadow:inset 0 0 0 1px rgba(var(--gold-rgb),.12)}
+  .box::before{content:'';position:absolute;inset:3px;border:1px solid rgba(var(--gold-rgb),.28);pointer-events:none;opacity:.8}
+  .cmd{color:var(--term-green);background:var(--ink);padding:.15rem .4rem;border:1px solid var(--edge);font-size:var(--fs-sm);display:inline-block;max-width:100%;word-break:break-word}
+  pre.cmd{display:block;white-space:pre-wrap;margin:.5rem 0}
+  .divider{border:none;border-top:1px dashed var(--edge);margin:1.5rem 0}
+  .loop{display:grid;grid-template-columns:auto 1fr;gap:.4rem .8rem;font-size:var(--fs-sm)}
+  .loop .step{color:var(--gold);font-weight:700}
+  .loop .desc{color:var(--bone)}
+  a{color:var(--arcane)}
+
+  /* ═══════════ Scroll reveal (aligned with help.html) ═══════════ */
+  .rv{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s cubic-bezier(.22,1,.36,1)}
+  .rv.in{opacity:1;transform:none}
+  .rv.d1{transition-delay:.1s}.rv.d2{transition-delay:.2s}.rv.d3{transition-delay:.3s}
+  @media (prefers-reduced-motion:reduce){.rv{opacity:1;transform:none;transition:none}}
+
+  /* Troubleshooting cards */
+  .ts{margin:1.2rem 0}
+  .ts .ts-sym{font-family:var(--font-display,'Cinzel',serif);font-weight:700;color:var(--gold-bright);font-size:var(--fs-sm);letter-spacing:.06em;display:block;margin-bottom:.5rem}
+  .ts .ts-tag{display:inline-block;font-size:var(--fs-tiny);color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--edge);padding:.1rem .45rem;margin-bottom:.55rem}
+  .truth{color:var(--term-green)}
+  .truth-bad{color:var(--blood-bright)}
+  /* checklist */
+  .check{list-style:none;padding-left:0}
+  .check li::before{content:'☐ ';color:var(--gold)}
+  .check li.ok::before{content:'☑ ';color:var(--term-green)}
+  /* FAQ */
+  details.faq{background:linear-gradient(180deg,var(--stone-2),var(--stone));border:1px solid rgba(var(--gold-rgb),.55);padding:0;margin:.7rem 0;position:relative;box-shadow:inset 0 0 0 1px rgba(var(--gold-rgb),.12)}
+  details.faq summary{cursor:pointer;padding:1rem 1.2rem;font-weight:700;color:var(--gold);list-style:none}
+  details.faq summary::before{content:'✦ ';color:var(--blood-bright)}
+  details.faq[open] summary{border-bottom:1px dashed var(--edge)}
+  details.faq .a{padding:.9rem 1.2rem 1.1rem}
+
+  /* ═══════════ Mobile ═══════════ */
+  @media (max-width: 900px) {
+    html { -webkit-tap-highlight-color: transparent; }
+  }
+  @media (max-width: 640px) {
+    .app { padding: 1.25rem .75rem 3rem; }
+    h1 { font-size: var(--fs-h2); line-height: 1.4; }
+    h2 { margin: 1.6rem 0 .7rem; }
+    p, li { line-height: 1.9; }
+    .box { padding: .9rem .8rem; }
+    .cmd { word-break: break-word; }
+    .loop { gap: .5rem .6rem; }
+  }
+  @media (max-width: 400px) {
+    .app { padding: 1rem .5rem 2.5rem; }
+    h1 { font-size: var(--fs-h3); }
+    .box { padding: .75rem .6rem; }
+  }
+</style>
+<link rel="stylesheet" href="snes.css?v=51">
+<link rel="stylesheet" href="rail.css?v=20260924a">
+<style>
+/* ═ gilt tick ornaments + candleflicker (shared with help.html) ═ */
+.box::after, details.faq::after{content:'';position:absolute;left:8px;right:8px;top:4px;height:3px;pointer-events:none;opacity:.6;background:repeating-linear-gradient(90deg,rgba(var(--gold-rgb),.55) 0 1px,transparent 1px 10px)}
+@keyframes candleflicker{0%,100%{opacity:1}42%{opacity:.84}58%{opacity:.95}72%{opacity:.88}}
+@media (prefers-reduced-motion: no-preference){
+  .rr-sigil{animation:candleflicker 4.2s ease-in-out infinite}
+}
+</style>
+<noscript><style>.rv{opacity:1;transform:none}</style></noscript>
+<script src="sprites.js?v=20260806b"></script>
+<script src="fonts.js?v=20260806b"></script>
+</head>
+<body>
+<div class="app">
+<header class="rite-rail">
+  <div class="rr-brand">
+    <span class="rr-sigil">⚗</span>
+    <span class="rr-name">The Lore Weaver's Cauldron</span>
+    <span class="rr-tag">LOCAL AI GUIDE</span>
+  </div>
+  <div class="rr-mid"></div>
+  <div class="rr-actions">
+    <div class="rr-menu">
+      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
+      <div class="rr-drop" id="rr-drop">
+        <div class="rr-ghead">At the Table</div>
+        <a href="chat.html">⚔ To the Table</a>
+        <a href="adventure.html">🏰 The Crossroads</a>
+        <a href="newgame.html">✨ New Adventure</a>
+        <a href="characters.html">🔥 The Forge</a>
+        <div class="rr-ghead">The Archive</div>
+        <a href="character.html">🧙 Character</a>
+        <a href="npcs.html">👥 NPCs</a>
+        <a href="platser.html">🗺 The Map</a>
+        <a href="loggbok.html">📜 Logbook</a>
+        <a href="facts.html">✦ Facts</a>
+        <div class="rr-ghead">The Ledger</div>
+        <a href="help.html">❓ How to Play</a>
+        <a href="mechanics.html">📐 Mechanics</a>
+        <a href="models.html">🧠 The Minds</a>
+        <a href="pricing.html">🜲 Paths</a>
+        <a href="releases.html">📓 Release Notes</a>
+        <a href="screenshots.html">🖼 Screens</a>
+        <div class="rr-ghead">Account</div>
+        <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
+        <a href="login.html" id="rr-auth">🔒 Log out</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+  <div class="page-eyebrow rv">LOCAL AI · YOUR MACHINE SPEAKS</div>
+  <h1 class="rv d1">🏮 Bring Your Own Breath</h1>
+  <div class="page-rule rv d1">✦</div>
+  <p class="rv d2" style="color:var(--bone-dim)">A guide to running the Dungeon Master on your own hardware. The server still thinks; your machine lends it a voice. This page covers the setup, the gotchas that actually bite (almost all of them CORS), and the questions people ask before and after.</p>
+
+  <hr class="divider">
+
+  <h2 class="rv">How It Works</h2>
+  <div class="box rv d1">
+    <div class="loop">
+      <span class="step">1.</span><span class="desc"><b>The server thinks</b> — the Cauldron builds the DM prompt: your story so far, the world facts, the rules, what just happened</span>
+      <span class="step">2.</span><span class="desc"><b>Your machine speaks</b> — your browser hands that prompt to your own Ollama, and the narration streams back token by token from your hardware</span>
+      <span class="step">3.</span><span class="desc"><b>The house keeps the books</b> — dice, HP, combat and the world state stay server-side, so the numbers stay honest no matter what the local voice says</span>
+    </div>
+    <p style="margin-top:.9rem">One honest note before anything else: <b>the prompt your Ollama receives is the same prompt our house DMs get</b>. It is deliberately not a secret — you can watch exactly what your DM was asked. The DM step costs <b>0 turns</b>; everything else at the table behaves as before.</p>
+  </div>
+
+  <h2 class="rv">Get Started</h2>
+  <div class="box rv d1">
+    <ol style="padding-left:1.3rem;list-style:decimal">
+      <li style="margin-bottom:.8rem"><b>Install Ollama</b> on the machine at your table. Linux: <span class="cmd">curl -fsSL https://ollama.com/install.sh | sh</span> — Windows/macOS: the installer at <a href="https://ollama.com/download">ollama.com/download</a></li>
+      <li style="margin-bottom:.8rem"><b>Pull a model:</b> <span class="cmd">ollama pull qwen3:8b</span> as a baseline. A 14B+ thinking model is the comfortable pick; anything under 8B will struggle to hold a long campaign, especially if you plan to run the whole cauldron locally</li>
+      <li style="margin-bottom:.8rem"><b>Open the game</b> → <b>Settings ⚙</b> → the <b>Dungeon Master picker</b>. If your machine answers, a <b>🏮 group</b> appears at the bottom of the list with the models you pulled — the row beside it shows a status dot</li>
+      <li>Pick a 🏮 model and play. Narration now streams from your own hardware.</li>
+    </ol>
+  </div>
+  <p class="rv d1" style="color:var(--bone-dim)">Before you ask the first question, the checklist should read like this:</p>
+  <ul class="check rv d2">
+    <li>The 🏮 group in the DM picker is enabled (not grayed out)</li>
+    <li>The status dot in the settings row is <b>🟢 green</b> — found and reachable — not 🟡 (CORS) or ⚪ (not found)</li>
+    <li>The ctx selector says <b>16k</b> (Ollama's own default of 4k is too small for a campaign)</li>
+  </ul>
+
+  <h2 class="rv">Troubleshooting</h2>
+  <p class="rv d1" style="color:var(--bone-dim);font-size:var(--fs-tiny)">In order of how often they bite. The first one is the big trap; most "the guide didn't work" stories are actually this story.</p>
+
+  <div class="box ts rv d1">
+    <span class="ts-sym">🟡 Yellow dot — "Ollama answered — CORS-blocked" (or CORS errors in the browser console)</span>
+    <span class="ts-tag">symptom → cause → fix</span>
+    <p><b>Cause:</b> your Ollama is running and answering, but it refuses to be read from this site because it wasn't told the site is allowed. The exact value it needs, plain, no <span class="cmd">@url:</span> prefix and no quotes needed beyond your shell's habits:</p>
+    <pre class="cmd">OLLAMA_ORIGINS=https://dnd.rostad.cc</pre>
+    <p><b class="truth-bad">The trap:</b> setting that variable <i>in a terminal</i> does <b>not</b> reach an Ollama that is already running — on Linux that's a systemd service, on Windows the tray app, on macOS the menu-bar app. And if you then type <span class="cmd">OLLAMA_ORIGINS=https://dnd.rostad.cc ollama serve</span>, it fails with <span class="cmd">bind: address already in use</span>, which people read as the problem. It isn't — it's proof a healthy instance is already running (see the next card). <b>Fix:</b> stop the real instance first, then start one with the variable — or, better, set it permanently:</p>
+    <ul>
+      <li><b>Linux</b> — <span class="cmd">sudo systemctl edit ollama</span>, add:<pre class="cmd">[Service]
+Environment="OLLAMA_ORIGINS=https://dnd.rostad.cc"</pre>then <span class="cmd">sudo systemctl daemon-reload &amp;&amp; sudo systemctl restart ollama</span></li>
+      <li><b>Windows</b> — set <span class="cmd">OLLAMA_ORIGINS=https://dnd.rostad.cc</span> as a <b>user environment variable</b> (System Properties → Environment Variables), then <b>fully Quit Ollama from the tray icon</b> — not just close the window — and relaunch it</li>
+      <li><b>macOS</b> — <span class="cmd">launchctl setenv OLLAMA_ORIGINS "https://dnd.rostad.cc"</span>, then quit the menu-bar app and relaunch it</li>
+    </ul>
+    <p>After that, hit <b>⟳</b> in the settings row. 🟡 → 🟢 is the success condition.</p>
+  </div>
+
+  <div class="box ts rv d1">
+    <span class="ts-sym">⚪ Gray dot — "Ollama not found on this machine"</span>
+    <p><b>Cause:</b> nothing answered on the usual ports. Either Ollama isn't running at all, or it listens somewhere else.</p>
+    <p><b>Fix:</b> start it — <span class="cmd">ollama serve</span> in a terminal, or launch the desktop app. Confirm it answers: open <a href="http://127.0.0.1:11434">http://127.0.0.1:11434</a> in the browser — it should print "Ollama is running". If it lives on a different port or a different machine, put that address in the <b>base-URL field</b> (e.g. <span class="cmd">http://127.0.0.1:11435</span>) and press ⟳. The field is empty by default — leave it empty when everything runs on the same machine.</p>
+  </div>
+
+  <div class="box ts rv d1">
+    <span class="ts-sym">"address already in use" when I run ollama serve</span>
+    <p><b>Cause:</b> an Ollama is already running and holding the port. This is good news, not an error to fight.</p>
+    <p><b>Fix:</b> stop that instance first (systemd restart / tray Quit / quit the menu-bar app), <i>then</i> start it with the environment variable — or skip the terminal entirely and set the variable permanently as in the first card. Restarting via systemd (<span class="cmd">sudo systemctl restart ollama</span>) after <span class="cmd">systemctl edit</span> is the least painful route on Linux.</p>
+  </div>
+
+  <div class="box ts rv d1">
+    <span class="ts-sym">Verify without the browser</span>
+    <p>Ask your Ollama directly whether it will honour this site. In bash (or fish — the line is the same):</p>
+    <pre class="cmd">curl -s -D - -H "Origin: https://dnd.rostad.cc" http://127.0.0.1:11434/api/tags -o /dev/null | grep -i access-control</pre>
+    <p><b class="truth">Expected:</b> an <span class="cmd">Access-Control-Allow-Origin: https://dnd.rostad.cc</span> header line. No output ⇒ the origins variable isn't reaching the live process. In PowerShell:</p>
+    <pre class="cmd">curl.exe -s -D - -H "Origin: https://dnd.rostad.cc" http://127.0.0.1:11434/api/tags -o NUL | findstr /i access-control</pre>
+    <p style="color:var(--bone-dim)"><b>Advanced (Linux):</b> to see whether the variable actually reached the running process, read its environment: <span class="cmd">tr '\0' '\n' &lt; /proc/$(pgrep -f ollama | head -1)/environ | grep -i origin</span></p>
+  </div>
+
+  <div class="box ts rv d1">
+    <span class="ts-sym">What goes in the base-URL field?</span>
+    <p><b>Nothing</b>, if Ollama runs on the same machine as the browser — the game auto-detects <span class="cmd">http://127.0.0.1:11434</span> (and tries a couple of neighbours). The field is only for a custom port or another host, e.g. <span class="cmd">http://127.0.0.1:11435</span>.</p>
+    <p><b>Another box on your LAN:</b> run Ollama with <span class="cmd">OLLAMA_HOST=0.0.0.0</span> plus the same <span class="cmd">OLLAMA_ORIGINS</span> line, then paste the address into the field. One honest caveat: this page is served over HTTPS, and browsers refuse plain-HTTP calls to a LAN address from an HTTPS page (loopback to your own machine is exempt). Reaching another box therefore needs TLS on its address — if both machines are on a tailnet, <span class="cmd">tailscale serve</span> in front of Ollama does it in a minute.</p>
+    <p>The base URL lives only in your browser and is never sent to us.</p>
+  </div>
+
+  <div class="box ts rv d1">
+    <span class="ts-sym">Lemonade, llama.cpp server, LM Studio or another OpenAI-style server</span>
+    <p><b>Not supported — by design, for now.</b> The game speaks Ollama's native API (<span class="cmd">/api/tags</span>, <span class="cmd">/api/chat</span>), not the OpenAI-style <span class="cmd">/v1/chat/completions</span> those other servers expose, so the picker won't find them and no setting will fix that.</p>
+    <p><b>Fix:</b> run real Ollama instead — it serves the same GGUF models, and on AMD hardware it builds against ROCm. An OpenAI-relay mode is on the roadmap; there is no date for it.</p>
+  </div>
+
+  <div class="box ts rv d1">
+    <span class="ts-sym">Replies are very slow, or the model "thinks" forever and never speaks</span>
+    <p><b>Cause:</b> on CPU, a thinking model spends the whole budget on its internal reasoning before a single word of narration appears. Nothing is broken — your hardware is simply slower than the prompt is long.</p>
+    <p><b>Fix:</b> pick a smaller or faster model, or lower the ctx selector (8k answers sooner than 32k). If narration still never arrives, a <b>house-DM fallback button appears automatically</b> — using it costs <b>1 turn</b>, the same as a normal house message.</p>
+  </div>
+
+  <div class="box ts rv d1">
+    <span class="ts-sym">What about turns? (costs and caps)</span>
+    <p>The DM step itself costs <b>0 turns</b> — your hardware pays for it. If narration never arrives even though the dot is 🟢, the house fallback offers to answer per turn. Voice narration (TTS) and images are <b>not</b> local features and always cost house turns. With the house keeping the background books the cap is roughly <b>100 local messages a day</b>; with the full-cauldron mode, roughly <b>300</b>.</p>
+  </div>
+
+  <h2 class="rv">FAQ</h2>
+
+  <details class="faq rv d1">
+    <summary>Which models can I use?</summary>
+    <div class="a"><p>Anything you've <span class="cmd">ollama pull</span>'ed shows up in the 🏮 group automatically — including custom tags like <span class="cmd">qwen3:14b-q4_K_M</span>; quantized tags are fine. Thinking models also show their reasoning in a window before the narration, exactly as on the house models. Practical floor: 8B; comfortable: a 14B+ thinking model on a real GPU.</p></div>
+  </details>
+
+  <details class="faq rv d1">
+    <summary>What context size should I pick?</summary>
+    <div class="a"><p><b>16k</b> is the recommended default — Ollama's own default of 4k is too small for a campaign prompt. The ctx selector (8k / 16k / 32k) in the settings row is applied per request; it does not change your Ollama globally. Go 32k only if your hardware swallows it without slowing the story to a crawl.</p></div>
+  </details>
+
+  <details class="faq rv d1">
+    <summary>Does local play cost turns?</summary>
+    <div class="a"><p>The DM step costs 0 turns — that's the point of bringing your own breath. The house still runs the background books in v1 (Lorekeeper, extraction), so local play is capped at roughly 100 messages per account per day. In the opt-in full-cauldron mode the cap lifts to roughly 300, because the house spends nearly nothing per turn there. TTS and images cost house turns as before.</p></div>
+  </details>
+
+  <details class="faq rv d1">
+    <summary>What is "Whole Cauldron local"?</summary>
+    <div class="a"><p>Version 2, switched on gradually: a pipeline selector in the ⚙ settings row (visible when a 🏮 model is active). With <b>Full cauldron at home</b>, your own Ollama also runs the Lorekeeper's roll-check, the fact extraction, the tag repair and the memory-search hops — same prompts, your hardware. The house keeps the periodic summaries and the logbook either way. This mode asks a lot of instruction-following: the bookkeeping steps come back as JSON-like tasks, so use a 14B+ thinking model; a tiny 3B model fumbles them.</p></div>
+  </details>
+
+  <details class="faq rv d1">
+    <summary>What leaves my machine? What stays private?</summary>
+    <div class="a"><p>The DM prompt travels <i>to</i> your machine — your browser talks to your local Ollama directly; nothing of the story goes through it on the way. Your model list stays local. The base URL you type is stored in your browser only and never sent to the server. What does still live server-side, as always: your chat history, the ledger and the books — the house keeps the world state. If you want the story itself off our machines too, that is a different product than this one.</p></div>
+  </details>
+
+  <details class="faq rv d1">
+    <summary>Can I cheat by prompting my own model?</summary>
+    <div class="a"><p>You can make your local DM say anything you like — but dice, HP and combat are server-authoritative. Rolls come from real code, and the books only change through the Guardian. A fabricated sentence of narration cannot forge a nat 20 or conjure gold; it just makes a fiction the ledger will contradict.</p></div>
+  </details>
+
+  <details class="faq rv d1">
+    <summary>Can I play local AI on my phone or tablet?</summary>
+    <div class="a"><p>Not comfortably yet. The feature is built for a browser on the same machine as Ollama (loopback). A phone reaching Ollama on another box needs the LAN + TLS setup above, plus <span class="cmd">OLLAMA_HOST=0.0.0.0</span> — it works on a tailnet with <span class="cmd">tailscale serve</span>, but we can't call it a smooth experience yet.</p></div>
+  </details>
+
+  <details class="faq rv d1">
+    <summary>My model is small. Will it hold up?</summary>
+    <div class="a"><p>Honestly: under 8B, expect trouble. Long campaigns ask a model to juggle the transcript, the fact register and the rules in one breath — small models drop threads, contradict the ledger, and in full-cauldron mode they simply fumble the JSON bookkeeping. A sub-8B model is fine for a one-shot; for a saga, 14B+ is the road.</p></div>
+  </details>
+
+  <details class="faq rv d1">
+    <summary>Where do I read more about the models and the machinery?</summary>
+    <div class="a"><p><a href="models.html#local-ai">The Minds — Local AI section</a> for what runs where and the honest limitations. <a href="mechanics.html">The Machinery</a> for how the DM prompt and the Guardian work under the hood. <a href="help.html">How to Play</a> for everything else at the table.</p></div>
+  </details>
+
+  <hr class="divider">
+  <p style="text-align:center;color:var(--bone-dim);font-size:var(--fs-tiny)">
+    Powered by Qwen, DeepSeek &amp; StepFun — and, in this mode, by your own machine. Questions? <a href="mailto:web@rostad.cc">web@rostad.cc</a>
+  </p>
+  <p style="text-align:center;margin-top:1rem"><a href="chat.html" class="btn-gold">To the Table</a> <a href="help.html" class="btn-gold" style="margin-left:.5rem">How to Play</a></p>
+</div>
+<script src="i18n.js?v=20260930a"></script>
+<script>
+/* ═══════════ Scroll reveal — same mechanism as help.html ═══════════ */
+(function () {
+  const reveal = el => { el.classList.add('in'); io.unobserve(el); };
+  const io = new IntersectionObserver(entries => {
+    for (const e of entries) if (e.isIntersecting) reveal(e.target);
+  }, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
+  document.querySelectorAll('.rv:not(.in)').forEach(el => io.observe(el));
+  setTimeout(() => {
+    document.querySelectorAll('.rv:not(.in)').forEach(el => {
+      const r = el.getBoundingClientRect();
+      if (r.top < window.innerHeight && r.bottom > 0) reveal(el);
+    });
+  }, 1500);
+})();
+</script>
+<script src="rail.js?v=20260924a"></script>
+</body>
+</html>

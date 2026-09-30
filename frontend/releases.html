@@ -277,7 +277,7 @@
       <ul class="feat">
         <li><span class="tag feat">New</span> <b>The DM runs on your machine</b> — install Ollama, pull a model (<span style="font-family:var(--font-mono);font-size:.85em">ollama pull qwen3:8b</span> works, a ≥14B thinking model is better), and pick the 🏮 model in Settings. The server still builds every prompt; your browser asks your own hardware for the narration. Nothing to sign up for, no key to store.</li>
         <li><span class="tag feat">New</span> <b>The DM step costs 0 turns</b> — your electricity, not ours. The house only pays for the background steps, so local tables get a generous daily allowance (~100 local messages — about three times a free day's play) before the cap asks you to rest.</li>
-        <li><span class="tag ai">Honest note</span> <b>The background stays house-run</b> — the Lorekeeper and fact extraction still use our models in v1, and voice narration and images still cost house turns as before. Dice, HP and combat remain server-authoritative: the local DM narrates, the engine keeps the books.</li>
+        <li><span class="tag ai">Honest note</span> <b>The background stays house-run — unless you opt in</b> — in v1 the Lorekeeper and fact extraction use our models; v2 adds the optional <b>Whole Cauldron local</b> mode, where the Lorekeeper's roll-check, the fact extraction and the memory search run on your hardware too (~300 local messages a day instead of ~100, since our cost per turn drops to about zero). Voice narration and images still cost house turns as before. Dice, HP and combat remain server-authoritative: the local DM narrates, the engine keeps the books.</li>
         <li><span class="tag ux">Setup</span> <b>Desktop Chrome/Firefox on the same machine works out of the box.</b> From another device, run Ollama with <span style="font-family:var(--font-mono);font-size:.85em">OLLAMA_HOST=0.0.0.0 OLLAMA_ORIGINS=https://dnd.rostad.cc</span> and paste the base URL (any port) in Settings — stored in your browser only, never sent to the server. One caveat: browsers refuse plain-HTTP LAN addresses from an HTTPS page (loopback is exempt), so another box needs TLS in front of Ollama — on a tailnet, tailscale serve does it in a minute. 16k context recommended.</li>
         <li><span class="tag ux">Link</span> <b>Full details:</b> <a href="models.html#local-ai">Bring your own breath</a> under The Minds · <a href="help.html">How to Play</a> has the setup walkthrough.</li>
       </ul>
@@ -1040,7 +1040,7 @@
     body.classList.toggle('open', open);
   };
 </script>
-<script src="i18n.js?v=20260927a"></script>
+<script src="i18n.js?v=20260930a"></script>
 <script src="sprites.js?v=20260806b"></script>
 <script src="rail.js?v=20260924a"></script>
 </body>

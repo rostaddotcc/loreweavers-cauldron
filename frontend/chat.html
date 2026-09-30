@@ -78,10 +78,10 @@
      Micro Cinzel-grupphuvuden med guld-tracking, labels ~.78rem, hints ~.66rem
      italic (hover-tooltip på desktop), tunna guld-hairlines, max-height + scroll
      så panelen aldrig täcker spelvyn. Hooks: .drop-item/.di-name/.di-hint,
-     data-cli-label, #settings-*-model, #settings-guardian-hint,
+     data-cli-label, #settings-*-model, [data-tip] (.set-tip singleton),
      #model-picker-premium-hint, #model-picker-lock, #settings-font-hint (fonts.js). */.settings-menu{
    position: absolute; top: calc(100% + 0.5rem); right: 0; z-index: 10000;
-   min-width: 232px; max-width: 292px; padding: 0.3rem 0.3rem 0.42rem;
+   min-width: 258px; max-width: 330px; padding: 0.3rem 0.3rem 0.42rem;
    max-height: calc(100dvh - 72px); overflow-y: auto; overscroll-behavior: contain;
    background: linear-gradient(180deg, var(--stone-2), var(--ink));
    border: 1px solid rgba(var(--gold-rgb),0.5); border-radius: var(--radius-xs);
@@ -93,7 +93,7 @@
   }.settings-menu.open{ opacity: 1; visibility: visible; transform: translateY(0) scale(1); }.settings-menu::-webkit-scrollbar{ width: 5px; }.settings-menu::-webkit-scrollbar-thumb{ background: rgba(var(--gold-rgb),0.3); }
   /* Grupp-huvuden: micro Cinzel versaler med guld-tracking */
   .settings-menu .drop-head{
-    font-family: var(--font-display) !important; font-size: 0.55rem !important;
+    font-family: var(--font-display) !important; font-size: 0.68rem !important;
     letter-spacing: 0.26em !important; text-transform: uppercase !important;
     color: var(--gold) !important; background: none !important; border: none !important;
     padding: 0.45rem 0.55rem 0.15rem !important; margin: 0 !important;
@@ -111,21 +111,21 @@
    border: 1px solid rgba(var(--gold-rgb),0.16); border-radius: var(--radius-xs);
    box-shadow: inset 0 2px 6px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(0,0,0,0.35);
   }.mpc-title{
-   font-family: var(--font-display); font-size: 0.55rem; letter-spacing: 0.22em;
+   font-family: var(--font-display); font-size: 0.72rem; letter-spacing: 0.2em;
    text-transform: uppercase;
-   color: var(--gold); margin-bottom: 0.25rem;
-  }.mpc-label{ display: block; font-family: var(--font-display); font-size: 0.55rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--bone-dim); margin: 0.22rem 0 0.08rem; }.model-picker-card select{
-   width: 100%; padding: 0.15rem 0.3rem; font-size: 0.66rem;
+   color: var(--gold); margin-bottom: 0.3rem;
+  }.mpc-label{ display: block; font-family: var(--font-display); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-dim); margin: 0.3rem 0 0.1rem; }.model-picker-card select{
+   width: 100%; padding: 0.25rem 0.4rem; font-size: 0.85rem;
    background: var(--stone); color: var(--bone);
    border: 1px solid var(--edge); border-radius: 0; cursor: pointer;
    font-family: var(--font-mono);
-  }.model-picker-card select:focus{ outline: none; border-color: var(--gold); }.mpc-hint{ font-size: 0.6rem; font-style: italic; color: rgba(180,170,150,0.6); margin-top: 0.25rem; line-height: 1.35; }
+  }.model-picker-card select:focus{ outline: none; border-color: var(--gold); }.mpc-hint{ font-size: 0.78rem; font-style: italic; color: rgba(180,170,150,0.75); margin-top: 0.3rem; line-height: 1.4; }
   /* ── Advanced-details i modulkortet (2026-09-24): canon-mönstret från
      adventure-onboarding (.adv-details) i kompaktskala — nås via ⚙-menyn. ── */
   .mpc-advanced{ margin-top:.35rem; border:1px solid var(--edge); border-radius:var(--radius-xs);
     background:rgba(0,0,0,0.22); padding:0; }
   .mpc-advanced summary{ cursor:pointer; list-style:none; display:flex; align-items:center; gap:.4rem;
-    font-family:var(--font-display); font-size:.55rem; letter-spacing:.12em; text-transform:uppercase;
+    font-family:var(--font-display); font-size:.72rem; letter-spacing:.08em; text-transform:uppercase;
     color:var(--bone-dim); padding:.5rem .6rem; transition:color .2s; }
   .mpc-advanced summary::-webkit-details-marker{ display:none; }
   .mpc-advanced summary::before{ content:'▸'; color:var(--gold); transition:transform .2s; }
@@ -142,18 +142,31 @@
   }
   .mpc-advanced > .mpc-label:first-of-type{ margin-top:.5rem; }
   .mpc-advanced > .mpc-hint{ margin:.35rem .6rem .6rem; }
-  /* ── 🏮 Local brain-kortet (2026-09-30 structure pass): titel+status+⟳ som
-     en vridbar flex-rad; ctx/pipeline som lika breda rader (label vänster,
-     select fyller resten) — samma visuell rytm som MODELS-kortet. ── */
-  .mpc-title.local-head{ display:flex; flex-wrap:wrap; align-items:center; gap:.15rem .45rem; margin-bottom:.35rem; }
-  .mpc-title.local-head .local-status{ flex:1 1 auto; min-width:0; letter-spacing:0; text-transform:none; font-family:var(--font-body); font-size:.6rem; font-style:italic; color:rgba(180,170,150,.65); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .mpc-title.local-head #local-refresh{ margin-left:auto; }
-  .local-ctl{ display:flex; align-items:center; gap:.45rem; width:100%; margin:.3rem 0 0; }
-  .local-ctl select{ flex:1 1 0; min-width:0; width:auto; }
-  .local-base{ width:100%; box-sizing:border-box; background:rgba(0,0,0,.35); border:1px solid var(--edge,#3a3550); color:var(--bone-bright); padding:.3rem .5rem; border-radius:4px; font-size:.72rem; font-family:var(--font-mono); margin-top:.35rem; }
-  .local-base:focus{ outline:none; border-color:var(--gold); }
-  #local-refresh{ background:rgba(0,0,0,.3); border:1px solid var(--edge,var(--gold)); color:var(--bone-bright); padding:0 .45rem; border-radius:4px; cursor:pointer; font-size:.8rem; line-height:1.5; }
+  /* ── Tooltip (2026-09-30): .di-hint + data-tip visas som flytande tooltip
+     till vänster om menyn (singleton-div i body — inte klippt av menyns
+     scrollbehållare). Touch: hints visas inline som förut. ── */
+  .set-tip{ position:fixed; z-index:12000; display:none; max-width:250px; padding:.4rem .6rem;
+    font-family:var(--font-body); font-size:.8rem; line-height:1.35; font-style:italic;
+    color:var(--bone); background:linear-gradient(180deg,var(--stone-2),var(--ink));
+    border:1px solid rgba(var(--gold-rgb),.5); border-radius:var(--radius-xs);
+    box-shadow:0 8px 24px rgba(0,0,0,.7); pointer-events:none; }
+  /* ── 🏮 Ollama-kortet (2026-09-30: spelaren slår PÅ det själv — default är
+     våra modeller, ingen automatisk scanning = ingen behörighetsprompt) ── */
+  .local-toggle{ display:flex; align-items:center; gap:.5rem; cursor:pointer;
+    font-family:var(--font-display); font-size:.85rem; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--bone-bright); padding:.25rem 0; }
+  .local-toggle input{ accent-color:var(--gold); width:1em; height:1em; cursor:pointer; }
+  .local-head-row{ display:flex; align-items:center; gap:.45rem; margin:.4rem 0 .2rem; }
+  .local-head-row .local-status{ flex:1 1 auto; min-width:0; font-size:.8rem; font-style:italic;
+    color:var(--bone-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #local-refresh{ margin-left:auto; background:rgba(0,0,0,.3); border:1px solid var(--edge,var(--gold));
+    color:var(--bone-bright); padding:.05rem .5rem; border-radius:4px; cursor:pointer; font-size:.9rem; line-height:1.4; }
   #local-refresh:hover{ border-color:var(--gold); color:var(--gold-bright); }
+  .local-base{ width:100%; box-sizing:border-box; background:rgba(0,0,0,.35); border:1px solid var(--edge,#3a3550);
+    color:var(--bone-bright); padding:.35rem .5rem; border-radius:4px; font-size:.85rem; font-family:var(--font-mono); margin-top:.15rem; }
+  .local-base:focus{ outline:none; border-color:var(--gold); }
+  .local-ctl{ display:flex; align-items:center; gap:.5rem; width:100%; margin-top:.45rem; }
+  .local-ctl select{ flex:1 1 0; min-width:0; width:auto; }
   /* ═══════════ Model-info-modal ═══════════ */
   .mi-overlay{ position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(var(--ink-rgb),.82); opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility .25s; }
   .mi-overlay.show{ opacity: 1; visibility: visible; }
@@ -228,14 +241,12 @@
     padding: 0.32rem 0.5rem; border: none; border-radius: var(--radius-xs);
     background: transparent; cursor: pointer; text-align: left;
     text-decoration: none; transition: background 0.15s, transform 0.15s;
-  }.drop-item:hover{ background: rgba(var(--gold-bright-rgb),0.1); transform: translateX(3px); }.di-icon{ font-size: 0.85rem; flex-shrink: 0; filter: drop-shadow(0 0 4px rgba(var(--gold-bright-rgb),0.3)); }.di-body{ display: flex; flex-direction: column; min-width: 0; }.di-name{ font-family: var(--font-display); font-size: 0.78rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--bone-bright); }.drop-item:hover .di-name{ color: var(--gold-bright); }.di-hint{ font-size: 0.66rem; font-style: italic; color: var(--bone-dim); }/* Settings-menyn (⚙️): hint-rad → hover-expand (2026-09-24 — FÖRR hover-tooltip
-   som flög ut vänster om menyn: absolut position utanför behållarkanten KLIPPTES
-   osynlig av menyns scroll-behållare, overflow-y:auto tvingar overflow-x:auto
-   enligt CSS-spec. Nu expanderar hinten under namnet inuti item-kroppen —
-   alltid synlig, aldrig klippt, ingen JS-positionering.) */
+  }.drop-item:hover{ background: rgba(var(--gold-bright-rgb),0.1); transform: translateX(3px); }.di-icon{ font-size: 1rem; flex-shrink: 0; filter: drop-shadow(0 0 4px rgba(var(--gold-bright-rgb),0.3)); }.di-body{ display: flex; flex-direction: column; min-width: 0; }.di-name{ font-family: var(--font-display); font-size: 0.88rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--bone-bright); }.drop-item:hover .di-name{ color: var(--gold-bright); }.di-hint{ font-size: 0.74rem; font-style: italic; color: var(--bone-dim); }/* Settings-menyn (⚙️): 2026-09-30 rostad — desktop visar hover-hint som FLYTANDE
+   tooltip (en singletons-div .set-tip, CSS:en högre upp) i stället för att
+   expandera raden; touch: hinten visas inline som förut. (Den gamla
+   hover-expansionen gjorde menyn 900px hög med myretext.) */
 .settings-menu .drop-item{ position: relative; }
-.settings-menu .di-hint{ display: block; white-space: normal; font-size: 0.66rem; font-style: italic; color: var(--bone-dim); opacity: 0; visibility: hidden; max-height: 0; margin: 0; transition: opacity 0.16s ease, visibility 0.16s ease, max-height 0.2s ease, margin 0.2s ease; }
-.settings-menu .drop-item:hover .di-hint, .settings-menu .drop-item:focus-visible .di-hint{ opacity: 1; visibility: visible; max-height: 2.2rem; margin: .12rem 0 .05rem; }.settings-menu .drop-item:hover .di-name{ color: var(--gold-bright); }@media (hover:none), (max-width:640px){ .settings-menu .di-hint{ position: static; transform: none; opacity: 1; visibility: visible; max-height: none; background: none; border: none; box-shadow: none; padding: 0; } /* TTS-raden: kompaktare så Combat/Engine Room aldrig klipps bort */ .tts-voice-picker{ gap: 0.2rem 0.3rem; margin-bottom: 0.25rem; }.tts-voice-label{ display: none; }.tts-select{ font-size: 0.58rem; padding: 0.14rem 0.28rem; max-width: 96px; flex-shrink: 1; min-width: 0; letter-spacing: 0; border-radius: var(--radius-sm); }.tts-auto-btn{ font-size: 0.58rem; padding: 0.16rem 0.4rem; letter-spacing: 0; border-radius: var(--radius-sm); }.tts-player{ padding: 0.18rem 0.5rem; margin-bottom: 0.3rem; }.tts-player .ttp-idle, .tts-player .ttp-synth{ font-size: 0.62rem; } }.drop-sep{ height: 1px; background: var(--edge); margin: 0.4rem 0.3rem; }.drop-head{ font-family: var(--font-accent); font-size: .55rem; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); opacity: .75; padding: .5rem .7rem .2rem; user-select: none; }.drop-head:first-child{ padding-top: .25rem; }/* ═══════════ Layout ═══════════ */.layout{ position: relative; z-index: auto; flex: 1; display: flex; min-height: 0; }/* ── Sidebar: party ── */.sidebar{
+.settings-menu .di-hint{ display: block; white-space: normal; font-size: 0.74rem; font-style: italic; color: var(--bone-dim); opacity: 0; visibility: hidden; max-height: 0; margin: 0; transition: opacity 0.16s ease, visibility 0.16s ease; }@media (hover:none), (max-width:640px){ .settings-menu .di-hint{ opacity: 1; visibility: visible; max-height: none; margin: .12rem 0 .05rem; } /* TTS-raden: kompaktare så Combat/Engine Room aldrig klipps bort */ .tts-voice-picker{ gap: 0.2rem 0.3rem; margin-bottom: 0.25rem; }.tts-voice-label{ display: none; }.tts-select{ font-size: 0.58rem; padding: 0.14rem 0.28rem; max-width: 96px; flex-shrink: 1; min-width: 0; letter-spacing: 0; border-radius: var(--radius-sm); }.tts-auto-btn{ font-size: 0.58rem; padding: 0.16rem 0.4rem; letter-spacing: 0; border-radius: var(--radius-sm); }.tts-player{ padding: 0.18rem 0.5rem; margin-bottom: 0.3rem; }.tts-player .ttp-idle, .tts-player .ttp-synth{ font-size: 0.62rem; } }.drop-sep{ height: 1px; background: var(--edge); margin: 0.4rem 0.3rem; }.drop-head{ font-family: var(--font-accent); font-size: .72rem; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); opacity: .8; padding: .5rem .7rem .2rem; user-select: none; }.drop-head:first-child{ padding-top: .25rem; }/* ═══════════ Layout ═══════════ */.layout{ position: relative; z-index: auto; flex: 1; display: flex; min-height: 0; }/* ── Sidebar: party ── */.sidebar{
     width: 250px; flex-shrink: 0;
     background: linear-gradient(180deg, var(--stone), var(--ink));
     border-right: 1px solid var(--edge);
@@ -1422,50 +1433,46 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
         <div class="drop-sep"></div>
         <div class="drop-head">Settings</div>
         <div class="model-picker-card">
-          <div class="mpc-title">🧠 Models <span id="model-picker-lock" style="display:none;color:var(--gold);font-size:.68rem">🔒 10€ unlock</span></div>
-          <label class="mpc-label" for="settings-dm-model" title="The voice that narrates your adventure — pick the storyteller">Dungeon Master</label>
+          <div class="mpc-title">🧠 Models <span id="model-picker-lock" style="display:none;color:var(--gold)">🔒 10€ unlock</span></div>
+          <label class="mpc-label" for="settings-dm-model" data-tip="The model that narrates your adventure">Dungeon Master</label>
           <select id="settings-dm-model" onchange="settingsChangeModel(this.value)"></select>
           <div class="mpc-hint" id="model-picker-premium-hint" style="display:none;color:var(--gold)">🔒 Premium models locked — the one-time 10€ unlock opens every Dungeon Master, voice narration and image engine forever.</div>
-          <!-- Progressiv avslöjning (2026-09-24, canon-mönstret från adventure-onboarding):
-               DM-valet är spelarens #1-inställning och står synligt; Lorekeeper +
-               Extraction är finjustering → ihopfällda <details> med sensible-defaults-
-               notis. ⚙-menyn är ~920px hög på mobil utan detta — Account/Leave låg
-               under folden. initSettingsModelPickers använder getElementById →
-               nästlingssäker. -->
           <details class="mpc-advanced">
-            <summary>⚙ Advanced — Lorekeeper &amp; background</summary>
-            <label class="mpc-label" for="settings-guardian-model" title="Keeps the rules honest — HP, XP, combat, dice checks">Lorekeeper</label>
+            <summary data-tip="Optional — the defaults work for everyone">⚙ Advanced — Lorekeeper &amp; background</summary>
+            <label class="mpc-label" for="settings-guardian-model" data-tip="Handles the rules: HP, XP, combat, dice checks">Lorekeeper</label>
             <select id="settings-guardian-model" onchange="settingsChangeGuardian(this.value)"></select>
-            <div class="mpc-hint" id="settings-guardian-hint"></div>
-            <label class="mpc-label" for="settings-extraction-model" title="Quiet background work — summaries, journal entries, facts">Background (extraction)</label>
+            <label class="mpc-label" for="settings-extraction-model" data-tip="Background work: summaries, journal entries, facts">Background</label>
             <select id="settings-extraction-model" onchange="settingsChangeExtraction(this.value)"></select>
-            <div class="mpc-hint">Sensible defaults are set — change these only if you like to tinker.</div>
           </details>
         </div>
-        <!-- 🏮 Local brain — eget statiskt kort (2026-09-30): Ollama-relät
-             samlas här under Modells-kortet i stället för att injiceras mitt i
-             DM-pickern (⟳/ctx/base stod "lite överallt"). local.js binder
-             renderSettingsRow() till dessa ID:n. -->
+        <!-- 🏮 Ollama (local AI) — ENDAST vad spelaren själv slår på (2026-09-30,
+             rostad): ingen autoscan = ingen webbläsar-behörighetsprompt. Default
+             är våra modeller; allt lokal borgar sig bakom kryssrutan. -->
         <div class="model-picker-card" id="local-card" style="display:none">
-          <div class="mpc-title local-head">
-            <span>🏮 Local brain</span>
-            <span id="local-dot" aria-hidden="true">⚪</span>
-            <span class="local-status" id="local-status">Ollama not found on this machine</span>
-            <button type="button" id="local-refresh" title="Re-scan this machine for Ollama" aria-label="Re-scan this machine for Ollama">⟳</button>
+          <label class="local-toggle" data-tip="Let the Dungeon Master run on your own Ollama — adds your local models to the picker above">
+            <input type="checkbox" id="local-enable" /> 🏮 Use own Ollama
+          </label>
+          <div id="local-body" hidden>
+            <div class="local-head-row">
+              <span id="local-dot" aria-hidden="true">⚪</span>
+              <span class="local-status" id="local-status">—</span>
+              <button type="button" id="local-refresh" data-tip="Search your computer for Ollama again" aria-label="Search again">⟳</button>
+            </div>
+            <label class="mpc-label" for="local-base" data-tip="Address to your Ollama, host and port. Saved only in this browser, never sent to us.">Ollama address</label>
+            <input id="local-base" class="local-base" type="text" spellcheck="false" autocomplete="off" aria-label="Ollama address"
+              placeholder="http://127.0.0.1:11434" />
+            <label class="mpc-label local-ctl" for="local-num-ctx" data-tip="How much text the model remembers each turn. Bigger is slower.">Context
+              <select id="local-num-ctx"></select>
+            </label>
+            <label class="mpc-label local-ctl" for="local-pipeline" data-tip="How much of each turn your own computer does. The explanation is right below.">Runs locally
+              <select id="local-pipeline">
+                <option value="dm">Story only</option>
+                <option value="full">Story + rules</option>
+              </select>
+            </label>
+            <div id="local-pipeline-hint" class="mpc-hint"></div>
+            <div id="local-cors-hint" class="mpc-hint" style="display:none"></div>
           </div>
-          <input id="local-base" class="local-base" type="text" spellcheck="false" autocomplete="off" aria-label="Ollama base URL"
-            placeholder="http://127.0.0.1:11434 — set host and port if you run Ollama somewhere else" />
-          <label class="mpc-label local-ctl" for="local-num-ctx">Context
-            <select id="local-num-ctx" title="Model context window sent with every local turn"></select>
-          </label>
-          <label class="mpc-label local-ctl" for="local-pipeline">Pipeline
-            <select id="local-pipeline" title="How much of the turn runs on your machine">
-              <option value="dm">🏮+🏛 House keeps watch</option>
-              <option value="full">🏮 Full cauldron at home</option>
-            </select>
-          </label>
-          <div id="local-pipeline-hint" class="mpc-hint"></div>
-          <div id="local-cors-hint" class="mpc-hint" style="display:none"></div>
         </div>
         <button class="drop-item" data-cli-label onclick="toggleCliChat();closeSettingsMenu()"><span class="di-icon">🖥️</span><span class="di-body"><span class="di-name">Chat style: Terminal</span><span class="di-hint">click to switch to bubbles</span></span></button>
         <button class="drop-item" onclick="openModelInfo();closeSettingsMenu()"><span class="di-icon">ℹ️</span><span class="di-body"><span class="di-name">About the Models</span><span class="di-hint">what each DM model does · why thinking takes time</span></span></button>
@@ -2001,8 +2008,8 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
 
 <script src="sfx.js?v=20260811a"></script>
 <script src="api.js?v=20260927a"></script>
-<script src="i18n.js?v=20260930a"></script>
-<script src="local.js?v=20260930c"></script>
+<script src="i18n.js?v=20260930b"></script>
+<script src="local.js?v=20260930f"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -8349,8 +8356,9 @@ function renderJourney(raw) {
 function toggleSettingsMenu() {
   const m = document.getElementById('settings-menu');
   m.classList.toggle('open');
-  // 🏮 Local AI: detection fires when ⚙ opens (cached ≤5 min; never on the
-  // page-load hot path) + re-paint the picker group/row from cache.
+  // 🏮 Local AI: on opt-in players, re-paint picker/row + cached detection on
+  // ⚙ open. Default players: pure no-op (opt-in gate in local.js — nothing is
+  // probed unless "Use own Ollama" is checked or a local:* choice is stored).
   if (m.classList.contains('open') && typeof LocalAI !== 'undefined') {
     try {
       LocalAI.renderLocalGroup(document.getElementById('settings-dm-model'));
@@ -8379,6 +8387,55 @@ function closeSettingsMenu() {
 document.addEventListener('click', (e) => {
   if (!e.target.closest('#settings-menu') && !e.target.closest('[onclick*="toggleSettingsMenu"]')) closeSettingsMenu();
 });
+
+// ── Flytande hover-tooltips i ⚙-menyn (2026-09-30, rostad) ──
+// Desktop: .drop-item:hover visar sin .di-hint, och [data-tip] visar sin text —
+// i en singleton-div Utanför menyn (position:fixed), så inget klipp från
+// scrollbehållaren (den gamla anledningen till inline-expansion 2026-09-24).
+// Touch (hover:none): CSS:en visar hints inline — den här koden hoppar över.
+const SET_TIP = (function () {
+  const canHover = window.matchMedia && window.matchMedia('(hover:hover)').matches;
+  if (!canHover) return null;
+  const tip = document.createElement('div');
+  tip.className = 'set-tip';
+  document.body.appendChild(tip);
+  let visible = false;
+  function show(el, text) {
+    if (!text) return;
+    tip.textContent = text;
+    tip.style.display = 'block';
+    visible = true;
+    const r = el.getBoundingClientRect();
+    const tr = tip.getBoundingClientRect();
+    // Preferera till vänster om menyn (menyn sitter uppe till höger); annars under.
+    let x = r.left - tr.width - 10;
+    let y = r.top;
+    if (x < 8) { x = Math.max(8, Math.min(r.right + 10, window.innerWidth - tr.width - 8)); }
+    if (y + tr.height > window.innerHeight - 8) y = Math.max(8, window.innerHeight - tr.height - 8);
+    tip.style.left = x + 'px';
+    tip.style.top = y + 'px';
+  }
+  function hide() { if (visible) { tip.style.display = 'none'; visible = false; } }
+  document.addEventListener('pointerover', (e) => {
+    const menu = document.getElementById('settings-menu');
+    if (!menu || !menu.classList.contains('open')) { hide(); return; }
+    const src = e.target.closest('#settings-menu [data-tip], #settings-menu .drop-item');
+    if (!src) return;
+    const hintEl = src.matches('.drop-item') ? src.querySelector('.di-hint') : null;
+    const text = src.getAttribute('data-tip') || (hintEl ? hintEl.textContent : '');
+    show(src, text);
+  });
+  document.addEventListener('pointerout', (e) => {
+    const src = e.target.closest('#settings-menu [data-tip], #settings-menu .drop-item');
+    if (src) hide();
+  });
+  // Stäng meny →tooltip för navigering (Esc/scroll kring menyn)
+  const _origClose = window.closeSettingsMenu;
+  window.closeSettingsMenu = function () { hide(); if (_origClose) _origClose.apply(null, arguments); };
+  document.addEventListener('keydown', hide, true);
+  window.addEventListener('scroll', hide, true);
+  return { show, hide };
+})();
 
 // Rail v2: kugghjulspanelen stängs när unified-menyn öppnas (rail.js
 // stopPropagation stoppar outside-click-hanteraren ovan).
@@ -8773,12 +8830,6 @@ function initSettingsModelPickers() {
     const label = (modelNames[m] || m) + (locked ? ' 🔒' : '');
     return `<option value="${m}"${selected ? ' selected' : ''}${locked ? ' disabled style="color:var(--bone-dim)"' : ''}>${label}</option>`;
   };
-
-  const en = (typeof I18N !== 'undefined' && I18N.getLang() === 'en');
-  const hint = document.getElementById('settings-guardian-hint');
-  if (hint) hint.textContent = en
-    ? 'Handles mechanics: HP, XP, combat, dice checks.'
-    : 'Lorekeeper håller koll på mekanik: HP, XP, strid.';
 
   // Återställ kampanjens senaste DM-modell (sparas server-side i meta.dm_model
   // vid varje tur + PATCH /api/campaign/dm-model) — så valet behålls när man

@@ -1172,8 +1172,8 @@ if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 </script>
 <script src="api.js?v=20260927a"></script>
 <script src="modal.js?v=20260906a"></script>
-<script src="i18n.js?v=20260930a"></script>
-<script src="local.js?v=20260930c"></script>
+<script src="i18n.js?v=20260930b"></script>
+<script src="local.js?v=20260930f"></script>
 <script src="archetypes.js?v=20260804a"></script>
 <script>
 // ═══════════════════════════════════════
@@ -2448,6 +2448,10 @@ function maybeWireLocalGate(stepId) {
     else { note.style.display = 'none'; note.innerHTML = ''; }
   };
   const localHint = (det) => {
+    // 🏮 opt-in (2026-09-30): the passive state is gray UNPROBED — say
+    // nothing at all then (default = our models, no nagging, no permission
+    // prompt). Notes only appear after the player enabled/checked Ollama.
+    if (det.status === 'gray' && !det.probed) return '';
     const mono = 'font-family:var(--font-mono,monospace);color:var(--gold)';
     if (det.status === 'yellow')
       return '🟡 Found but blocked by CORS — run <code style="' + mono + '">OLLAMA_ORIGINS=' +

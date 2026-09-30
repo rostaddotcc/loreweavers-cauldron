@@ -36,6 +36,7 @@
   const LS_LASTBASE = 'dnd_ollama_lastbase';  // last green base (fallback hint)
   const LS_MODELS  = 'dnd_local_models';      // {ts, models:[{name,size}]}
   const LS_NUMCTX  = 'dnd_ollama_num_ctx';    // '8192' | '16384' | '32768'
+  const LS_OPTIN   = 'dnd_ollama_on';         // '1' = player enabled local AI
 
   const PING_TIMEOUT_MS = 2500;
   const CACHE_TTL_MS    = 5 * 60 * 1000;
@@ -141,11 +142,20 @@
 
   async function detectOllama(force) {
     if (!force && _detect && Date.now() - _detect.ts < CACHE_TTL_MS) return _detect;
+    // 🏮 OPT-IN (2026-09-30, rostad): never probe the player's machine unless
+    // they enabled "Use own Ollama" — silent LAN probes trigger Chrome's
+    // "access other apps and services" permission prompt on every load.
+    if (!force && _get(LS_OPTIN) !== '1') {
+      _detect = { ts: Date.now(), status: 'gray', base: null, probed: false };
+      updateRowUi();
+      if (_dmSel) renderLocalGroup(_dmSel);
+      return _detect;
+    }
     let yellowBase = null;
     for (const base of candidateBases()) {
       const r = await pingTags(base);
       if (r && r.ok) {
-        _detect = { ts: Date.now(), status: 'green', base };
+        _detect = { ts: Date.now(), status: 'green', base, probed: true };
         _set(LS_LASTBASE, base);
         _models = { ts: Date.now(), models: r.models };
         _set(LS_MODELS, JSON.stringify(_models));
@@ -250,6 +260,12 @@
     _dmSel = selEl;
     if (currentModelId !== undefined) _curId = String(currentModelId || '');
     selEl.querySelectorAll('.local-og').forEach(el => el.remove());
+    // OPT-IN gate: the 🏮 group appears only when the player enabled
+    // "Use own Ollama" — or is already carrying a local:* choice. Default:
+    // just the site's own models, nothing invented, nothing probed.
+    const localChoice = (_curId || '').indexOf('local:') === 0 || String(selEl.value || '').indexOf('local:') === 0;
+    if (localChoice && _get(LS_OPTIN) !== '1') _set(LS_OPTIN, '1'); // legacy bridge (see renderSettingsRow)
+    if (_get(LS_OPTIN) !== '1' && !localChoice) return;
     selEl.insertAdjacentHTML('beforeend', buildPickerOptions());
     const cur = _curId;
     if (cur && cur.indexOf('local:') === 0) {
@@ -258,13 +274,15 @@
     try { syncPipelineUi(); } catch (e) { /* row not rendered yet */ }
   }
 
-  // ── settings row (status dot + label, base input, ⟳, num_ctx) ──
+  // ── settings card (opt-in: nothing probes your machine until the player
+  // checks "Use own Ollama" — 2026-09-30 rostad: no surprise permission
+  // prompts; default is always the site's own models) ──
   function statusText() {
     const st = (_detect || {}).status || 'gray';
     const n = ((_models && _models.models) || []).length;
-    if (st === 'green') return `🟢 ${n} brain${n === 1 ? '' : 's'} at home`;
-    if (st === 'yellow') return '🟡 Ollama answered — CORS-blocked';
-    return '⚪ Ollama not found on this machine';
+    if (st === 'green') return `${n} model${n === 1 ? '' : 's'} found on this computer`;
+    if (st === 'yellow') return 'Ollama found — but the browser may not read it (CORS)';
+    return 'Ollama not found on this computer';
   }
 
   function updateRowUi() {
@@ -272,31 +290,25 @@
     const lab = document.getElementById('local-status');
     const corsHint = document.getElementById('local-cors-hint');
     const st = (_detect || {}).status || 'gray';
+    const probed = !!(_detect && _detect.probed);
     if (dot) dot.textContent = st === 'green' ? '🟢' : st === 'yellow' ? '🟡' : '⚪';
-    // Strip the leading status emoji correctly — without the 'u' flag a
-    // character class clips only the high-surrogate of 🟢/🟡 and leaves a
-    // lone surrogate in the label (caught by the 2026-09-30 jsdom pass).
-    if (lab) lab.textContent = statusText().replace(/^(?:🟢|🟡|⚪)\s?/u, '');
+    if (lab) lab.textContent = probed ? statusText() : 'Not checked yet';
     if (corsHint) {
       corsHint.style.display = st === 'yellow' ? '' : 'none';
       corsHint.innerHTML = 'Run Ollama with <code style="color:var(--gold)">' + esc(originsHint()) + '</code> so this page may read it. <a href="local-ai.html" target="_blank" rel="noopener" style="color:var(--arcane,#7d95c4)">Full guide: local-ai.html</a>';
     }
     // Keep the static base input in sync with the stored/normalized base
-    // (unless the player is mid-edit) — the old injected row did this on
-    // render; the card renders once.
+    // (unless the player is mid-edit).
     const baseIn = document.getElementById('local-base');
     if (baseIn && document.activeElement !== baseIn) {
       baseIn.value = _get(LS_BASE) || '';
     }
   }
 
-  // ── 🏮 Local brain card (chat.html static markup, 2026-09-30) ──
-  // Structure pass: the card used to be injected with
-  // dmSel.insertAdjacentHTML('afterend') — ⟳, ctx, pipeline and the base-URL
-  // input landed between the DM dropdown and its hint, i.e. "lite överallt".
-  // chat.html now ships a dedicated <div id="local-card"> below the models
-  // card in a fixed order: header (dot · status · ⟳), base URL, ctx+pipeline,
-  // hints. This function only BINDS and SYNCS the static controls.
+  // ── 🏮 Ollama card (chat.html static markup) — player-gated ──
+  // Nothing is probed until "Use own Ollama" is checked; the passive
+  // auto-detection (which fired Chrome's "access other apps and services"
+  // permission prompt unprompted) is gone. This function only BINDS.
   function renderSettingsRow(dmSel, campaignPipeline) {
     if (campaignPipeline !== undefined && campaignPipeline !== null) {
       setPipelineCache(campaignPipeline);
@@ -306,6 +318,18 @@
     const card = document.getElementById('local-card');
     if (!card) return; // page without the settings menu (adventure.html)
     card.style.display = '';
+    // Legacy bridge: a player whose campaign already runs a local:* DM opted
+    // in through the old UI — treat that stored choice as the opt-in so the
+    // model list and relay keep working (never silently fall off mid-story).
+    if (_get(LS_OPTIN) !== '1'
+        && (String(_curId || '').indexOf('local:') === 0 || String(dmSel.value || '').indexOf('local:') === 0)) {
+      _set(LS_OPTIN, '1');
+    }
+    const enable = document.getElementById('local-enable');
+    const body = document.getElementById('local-body');
+    const on = _get(LS_OPTIN) === '1';
+    if (enable) enable.checked = on;
+    if (body) body.hidden = !on;
     if (card._localWired) { updateRowUi(); syncPipelineUi(); return; }
     card._localWired = true;
 
@@ -319,6 +343,27 @@
       ctxSel.innerHTML = [8192, 16384, 32768]
         .map(v => `<option value="${v}"${v === ctx ? ' selected' : ''}>${(v / 1024)}k</option>`).join('');
     }
+
+    if (enable) enable.addEventListener('change', async () => {
+      _set(LS_OPTIN, enable.checked ? '1' : '0');
+      if (body) body.hidden = !enable.checked;
+      if (enable.checked) {
+        // Explicit player action: a permission prompt here is expected.
+        _detect = null; updateRowUi();
+        try { await detectOllama(true); await listLocalModels(true); } catch (e) { console.warn('localai:', e); }
+      } else {
+        // Turning off: forget the session probe, hide the 🏮 options, and if
+        // a local model was the active DM, fall back to the first house model.
+        _detect = null;
+        const cur = String(_dmSel && _dmSel.value || '');
+        if (cur.indexOf('local:') === 0 && typeof settingsChangeModel === 'function' && _dmSel) {
+          const firstHouse = Array.from(_dmSel.options).find(o => !o.disabled && o.value && o.value.indexOf('local:') !== 0);
+          if (firstHouse) { try { settingsChangeModel(firstHouse.value); } catch (e) { /* noop */ } }
+        }
+        updateRowUi();
+        if (_dmSel) renderLocalGroup(_dmSel);
+      }
+    });
 
     // Honest hint: an HTTPS page cannot reach a plain-HTTP non-loopback host
     // (mixed content). Warn as soon as such a base is typed, before the probe.
@@ -362,11 +407,11 @@
       try {
         await setPipeline(want);
         _localToast('🏮 ' + (want === 'full'
-          ? _t('Hela grytan kokar hemma — huset vakar bara över summeringar')
-          : _t('Huset vakar över grytan igen')));
+          ? 'Your computer now does everything each turn'
+          : 'Dice and rules are handled by us again'));
       } catch (e) {
         pipeSel.value = getPipeline(); // revert the visual selection
-        _localToast('⚠ ' + (e && e.message ? e.message : _t('Kunde inte byta pipeline')));
+        _localToast('⚠ ' + (e && e.message ? e.message : 'Could not change this setting'));
       }
       syncPipelineUi();
     });
@@ -392,21 +437,23 @@
     // honest instead of toasting a raw error on every click.
     if (_pipelineUnsupported) {
       pipeSel.disabled = true;
-      if (hint) hint.textContent = 'Whole-Cauldron mode is still being rolled out to the house — try again soon.';
+      if (hint) hint.textContent = 'Story + rules is not available yet — coming soon.';
       return;
     }
     pipeSel.disabled = !isLocal;
     if (!isLocal) {
-      if (hint) hint.textContent = 'Pick a 🏮 model as your DM first to unlock the pipeline choice.';
+      if (hint) hint.textContent = 'Pick one of your local models as the Dungeon Master to unlock this.';
     } else if (getPipeline() === 'full') {
-      if (hint) hint.textContent = 'Full cauldron at home: DM, dice, Lorekeeper and memory all run on your machine. The house only does summaries + TTS. Cap ~300 turns/day.';
+      if (hint) hint.textContent = 'Story + rules: your computer does everything each turn. Slower, needs a strong model. Roughly 300 turns per day.';
     } else {
-      if (hint) hint.textContent = 'House keeps watch: your machine tells the story; the house rolls the dice and keeps the books. Cap ~100 turns/day.';
+      if (hint) hint.textContent = 'Story only: your computer writes the story, our server handles dice, rules and memory. Roughly 100 turns per day.';
     }
   }
 
-  // Hooked from toggleSettingsMenu() — detection NEVER runs on the page-load
-  // hot path; only when ⚙ opens (or ⟳/base-change above).
+  // Hooked from toggleSettingsMenu(). OPT-IN (2026-09-30): does nothing for
+  // players who never enabled "Use own Ollama" — detectOllama(false) returns
+  // the unprobed gray state without any network call, so Chrome's local-network
+  // permission prompt can only ever appear on the player's own explicit action.
   async function onSettingsOpen() {
     try {
       await detectOllama(false); // 5-min cache respected; force-refresh is ⟳'s job

@@ -892,8 +892,6 @@ const I18N = (() => {
     '🏮 Lokalt — din egen maskin': '🏮 Local — your own machine',
     '🏮 Lokalt — din egen maskin (CORS-blockerad)': '🏮 Local — your own machine (CORS blocked)',
     '🏮 Lokalt — din egen maskin (Ollama hittas inte)': '🏮 Local — your own machine (Ollama not found)',
-    'Hela grytan kokar hemma — huset vakar bara över summeringar': 'The whole cauldron brews at home — the house only watches the summaries',
-    'Huset vakar över grytan igen': 'The house keeps watch over the cauldron again',
     'Kunde inte byta pipeline': 'Could not switch pipeline',
     '🏮 Local AI är avstängt': '🏮 Local AI is off',
     '⚠ Kunde inte hämta statistik: ': '⚠ Could not fetch statistics: ',

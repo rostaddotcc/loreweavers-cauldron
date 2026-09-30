@@ -691,11 +691,9 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 <canvas id="embers" aria-hidden="true"></canvas>
 <div class="vignette" aria-hidden="true"></div>
 
-<div id="deleted-banner">&#10022; Your account has been deleted. The Cauldron will remember your stories.</div>
-
-<div id="update-banner" role="status"><span class="upd-msg">✦ <b>New pricing</b> — the free table refreshes <b>30 turns every day</b> with <b>step-3.7-flash</b> &amp; <b>step-3.5-flash-2603</b>. The one-time <b>10€ unlock</b> adds <b>+100 turns</b> (never expire) and opens <b>every Dungeon Master</b> (Qwen 3.8 Flash, Qwen 3.6 Flash, DeepSeek V4.1 Flash, Step 5 Preview), <b>voice narration</b> &amp; <b>image generation</b> — permanently. <a href="pricing.html?plan=unlock10" onclick="try{localStorage.setItem('pricing_0927_seen','1')}catch(e){}">See the paths →</a></span><button class="upd-x" aria-label="Dismiss" onclick="try{localStorage.setItem('pricing_0927_seen','1')}catch(e){}document.getElementById('update-banner').classList.remove('show')">×</button></div>
-
 <!-- ═══════════════ Rail v2 — unified header (2026-09-23) ═══════════════ -->
+<!-- banners flyttade UNDER headern 2026-09-30: de låg först i flödet och
+     täckte railen + Enter/knappar (position:sticky funkar bara nedåt) -->
 <header class="rite-rail" id="nav">
   <div class="rr-brand">
     <span class="rr-sigil">⚗</span>
@@ -734,6 +732,11 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
     </div>
   </div>
 </header>
+
+<!-- banners (flyttade hit under headern 2026-09-30 — täckte tidigare railen) -->
+<div id="deleted-banner">&#10022; Your account has been deleted. The Cauldron will remember your stories.</div>
+
+<div id="update-banner" role="status"><span class="upd-msg">✦ <b>New pricing</b> — the free table refreshes <b>30 turns every day</b> with <b>step-3.7-flash</b> &amp; <b>step-3.5-flash-2603</b>. The one-time <b>10€ unlock</b> adds <b>+100 turns</b> (never expire) and opens <b>every Dungeon Master</b> (Qwen 3.8 Flash, Qwen 3.6 Flash, DeepSeek V4.1 Flash, Step 5 Preview), <b>voice narration</b> &amp; <b>image generation</b> — permanently. <a href="pricing.html?plan=unlock10" onclick="try{localStorage.setItem('pricing_0927_seen','1')}catch(e){}">See the paths →</a></span><button class="upd-x" aria-label="Dismiss" onclick="try{localStorage.setItem('pricing_0927_seen','1')}catch(e){}document.getElementById('update-banner').classList.remove('show')">×</button></div>
 
 <!-- ═══════════════ mobil: vänsterpanel ═══════════════ -->
 <div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>

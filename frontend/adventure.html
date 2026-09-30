@@ -822,7 +822,7 @@ html{font-size:var(--fs-base)}
       <div class="rn-inner">
         <span class="rn-ver">v1.5 — Your Own Breath · updated 2026-09-29</span>
         <ul class="rn-list">
-          <li><b>Local AI — run the Dungeon Master on your own machine (2026-09-29)</b> — the server still builds every prompt, but the DM's words can now come from <b>your own Ollama</b>: set a base URL (any host and port) in <b>Settings</b>, pick a 🏮 model, and the narration is generated on your hardware. <b>The DM step costs 0 turns.</b> Honest caveats: the Lorekeeper and fact-extraction still run on our side (a soft cap of ~100 local messages a day applies to them), dice, HP and combat stay server-authoritative, and voice and images still cost turns. You need a desktop browser on the same machine or LAN as Ollama, with <b>OLLAMA_HOST</b> and <b>OLLAMA_ORIGINS</b> set; a thinking model of 14B or more is recommended (qwen3:8b as a floor, 16k context). Your base URL is kept in the browser only. Rolling out gradually this week — <a href="models.html#local-ai">the models page has the details →</a></li>
+          <li><b>Local AI — run the Dungeon Master on your own machine (2026-09-29)</b> — the server still builds every prompt, but the DM's words can now come from <b>your own Ollama</b>: set a base URL (any host and port) in <b>Settings</b>, pick a 🏮 model, and the narration is generated on your hardware. <b>The DM step costs 0 turns.</b> Honest caveats: the Lorekeeper and fact-extraction run on our side by default (a soft cap of ~100 local messages a day applies to them), or you opt into <b>Whole Cauldron local</b> in Settings and your hardware carries those steps too — cap ~300 a day, best with a 14B+ thinking model; dice, HP and combat stay server-authoritative, and voice and images still cost turns. You need a desktop browser on the same machine or LAN as Ollama, with <b>OLLAMA_HOST</b> and <b>OLLAMA_ORIGINS</b> set; a thinking model of 14B or more is recommended (qwen3:8b as a floor, 16k context). Your base URL is kept in the browser only. Rolling out gradually this week — <a href="models.html#local-ai">the models page has the details →</a></li>
           <li><b>New pricing — one unlock opens everything (2026-09-27)</b> — the free table refreshes <b>30 turns every day</b> with <b>step-3.7-flash</b> and <b>step-3.5-flash-2603</b>. The one-time <b>10€ unlock</b> adds <b>+100 turns</b> that never expire (spent only after your daily turns run out) and opens <b>every Dungeon Master</b> (Qwen 3.8 Flash, Qwen 3.6 Flash, DeepSeek V4.1 Flash, Step 5 Preview), <b>voice narration</b> (Qwen &amp; StepFun) and <b>image generation</b> (StepFun, Wan 2.7 Pro, Qwen Image 3 Pro) — permanently, no 30-day window. Each narration or image costs 1 turn. Donations still work: every € adds exactly 100 turns.</li>
           <li><b>DeepSeek V4.1 Flash at the table (2026-09-21)</b> — DeepSeek's open-weights reasoning model (552B, 16B active, 1M-token context) joined the roster as a Dungeon Master, replacing V4 Flash 0731.</li>
           <li><b>Meet Step 5 Preview (2026-09-20)</b> — StepFun's deep-thinking flagship joined the roster. With the 10€ unlock, pick it at the model gate when you start an adventure, or switch to it in Settings.</li>
@@ -866,7 +866,7 @@ html{font-size:var(--fs-base)}
       <div class="htp-card">
         <span class="htp-icon">🏮</span>
         <h3>Your Own Machine</h3>
-        <p>Since v1.5 the Dungeon Master can narrate from <b>your own Ollama</b> — point the base URL in Settings at a machine on your desk or LAN and the DM step costs <b>0 turns</b>. The server still builds every prompt and keeps dice, HP and the Lorekeeper honest; the words are yours. Bring a thinking model of 14B or more.</p>
+        <p>Since v1.5 the Dungeon Master can narrate from <b>your own Ollama</b> — point the base URL in Settings at a machine on your desk or LAN and the DM step costs <b>0 turns</b>. The server still builds every prompt and keeps dice, HP and the Lorekeeper honest; the words are yours. Opt into <b>Whole Cauldron local</b> and the Lorekeeper and memory run on your hardware too — ~300 messages a day. Bring a thinking model of 14B or more.</p>
       </div>
       <div class="htp-more-row"><a class="rn-more" href="help.html">Read the full guide →</a></div>
     </div>
@@ -1054,6 +1054,8 @@ html{font-size:var(--fs-base)}
     </div>
     <div class="dm-model-note">The storyteller — every scene, every NPC, every whisper. Unsure? The default is safe — you can ask the DM once the tale begins.</div>
     <div class="dm-model-note" id="model-gate-upgrade-note" style="display:none">🔒 The one-time <b>10€ unlock</b> opens every Dungeon Master, voice narration and image engine — plus <b>+100 turns</b> that never expire. <a href="pricing.html?plan=unlock10" style="color:var(--gold);font-weight:600">view the paths →</a></div>
+    <div class="dm-model-note" id="model-gate-local-note" style="display:none"></div>
+    <div class="dm-model-note" id="model-gate-local-ok" style="display:none">🏮 <b>Narration runs on your own hardware — 0 turns.</b> The house keeps the books.</div>
     <!-- Audit §2.2: Guardian/Extraction/TTS är infrastruktur-beslut med vettiga
          defaults — kollapsade bakom <details>. ALLA id:n oförändrade
          (populateModelGate/advTTSChanged/startAdventure läser dem). -->
@@ -1170,7 +1172,8 @@ if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 </script>
 <script src="api.js?v=20260927a"></script>
 <script src="modal.js?v=20260906a"></script>
-<script src="i18n.js?v=20260927a"></script>
+<script src="i18n.js?v=20260930a"></script>
+<script src="local.js?v=20260930c"></script>
 <script src="archetypes.js?v=20260804a"></script>
 <script>
 // ═══════════════════════════════════════
@@ -1496,6 +1499,7 @@ function revealStep(id) {
   requestAnimationFrame(() => el.classList.add('reveal'));
   updateStepRail(id);
   rmScroll(el, 'start');
+  maybeWireLocalGate(id);
 }
 
 // Gå till ett godtyckligt steg i onboardingen (framåt ELLER bakåt) —
@@ -1511,6 +1515,7 @@ function goStep(id) {
   requestAnimationFrame(() => target.classList.add('reveal'));
   updateStepRail(id);
   rmScroll(target, 'start');
+  maybeWireLocalGate(id);
   try { SFX.click(); } catch (_) {}
 }
 
@@ -1537,7 +1542,12 @@ function pickLang(lang, noAdvance) {
   try { localStorage.setItem('dnd_onb_lang', lang); } catch (_) {}   // audit §2.3
   document.querySelectorAll('.lang-card').forEach(c => c.classList.toggle('selected', c.id === 'lang-' + lang));
   if (!noAdvance) { try { SFX.click(); } catch (_) {} }
-  try { if (typeof I18N !== 'undefined') I18N.init(lang); } catch (_) {}
+  // 2026-09-30 (rostad): UI-chrome är ALTID engelsk — DM-språkspick påverkar
+  // blott innehållet i skapandeflödet (arketyper/promptar/hints via advLang).
+  // Init med 'sv' vände hela lobbyn (kampanjknappars "FORTSÄTT", toastar) till
+  // svenska bland engelsk statisk HTML — språklig smoothie. Kampanjsidan (chat)
+  // fortsätter följa kampanjens språk via meta.language.
+  try { if (typeof I18N !== 'undefined') I18N.init('en'); } catch (_) {}
   renderArchetypes();
   renderDarkSelect();
   renderAskHints();
@@ -2323,18 +2333,34 @@ const TTS_PROVIDERS = [
     // fortfarande finns bland de valbara alternativen.
     let savedDm = null;
     try { savedDm = localStorage.getItem('dnd_onb_dm_model'); } catch (e) {}
+    const prevDm = dmSel ? String(dmSel.value || '') : '';
+    const hadLocal = !!(dmSel && dmSel.querySelector('.local-og'));
     const allowedIds = [...models, ...effFree.map(m => m.id)];
     [dmSel, guardSel, extSel].forEach(sel => {
       if (!sel) return;
       sel.innerHTML = opts;
       sel.value = defaultModel(models, locked);
     });
-    if (dmSel && savedDm && allowedIds.includes(savedDm)) {
+    // 🏮 Local AI: innerHTML-writeback above would wipe the injected local
+    // optgroup — re-append it (only if it existed / a local choice was made;
+    // wireLocalGate does the first render when step-model is revealed).
+    if (dmSel && (hadLocal || prevDm.indexOf('local:') === 0) && typeof LocalAI !== 'undefined') {
+      try { LocalAI.renderLocalGroup(dmSel, prevDm); } catch (e) { /* local.js absent */ }
+    }
+    if (dmSel && savedDm && (allowedIds.includes(savedDm) || savedDm.indexOf('local:') === 0)) {
       // Sätt sparad DM även om alternativet ligger i en låst optgroup-gren? Nej —
       // bara om det faktiskt gick att sätta (disabled-alternativ kan fortfarande
       // väljas via .value, så dubbelkolla mot enabled-alternativen).
+      // 2026-09-30: /^local:/ släpps genom guarden — väljs dock bara om
+      // alternativet finns och är enabled (Ollama detektad just nu).
       const opt = dmSel.querySelector(`option[value="${CSS.escape(savedDm)}"]`);
-      if (opt && !opt.disabled) dmSel.value = savedDm;
+      if (opt && !opt.disabled) {
+        if (savedDm.indexOf('local:') === 0 && typeof LocalAI !== 'undefined') {
+          try { LocalAI.renderLocalGroup(dmSel, savedDm); } catch (e) { dmSel.value = savedDm; }
+        } else {
+          dmSel.value = savedDm;
+        }
+      }
     }
     if (dmSel) {
       // Kom ihåg spelarens DM-val inför nästa äventyr (change + start).
@@ -2404,6 +2430,63 @@ const TTS_PROVIDERS = [
     fill(PLAYER_DM_MODELS, false, []);
   });
 })();
+
+// ── 🏮 Local AI (Ollama) i modellgaten — renderas ONCE när steg 4 syns. ──
+// Ingen pipeline-väljare här (v2 konfigureras i chatten — kampanjen finns
+// inte än). Detekten är icke-blockerande (5-min cache i local.js).
+let _localGateWired = false;
+function maybeWireLocalGate(stepId) {
+  if (stepId !== 'step-model' || _localGateWired || typeof LocalAI === 'undefined') return;
+  _localGateWired = true;
+  const dmSel = document.getElementById('adventure-dm-model');
+  if (!dmSel) return;
+  const note = document.getElementById('model-gate-local-note');
+  const ok = document.getElementById('model-gate-local-ok');
+  const setNote = (html) => {
+    if (!note) return;
+    if (html) { note.innerHTML = html; note.style.display = ''; }
+    else { note.style.display = 'none'; note.innerHTML = ''; }
+  };
+  const localHint = (det) => {
+    const mono = 'font-family:var(--font-mono,monospace);color:var(--gold)';
+    if (det.status === 'yellow')
+      return '🟡 Found but blocked by CORS — run <code style="' + mono + '">OLLAMA_ORIGINS=' +
+        location.origin + ' ollama serve</code> <button type="button" onclick="refreshLocalGate()" title="Re-scan this machine" style="background:none;border:1px solid var(--edge);color:var(--bone-dim);border-radius:4px;cursor:pointer;font-size:.7rem;padding:.1rem .35rem">⟳</button>';
+    if (det.status === 'gray')
+      return '⚪ No Ollama found on this machine — install <b>ollama.com</b> to bring your own breath: <code style="' + mono + '">curl -fsSL https://ollama.com/install.sh | sh</code> <button type="button" onclick="refreshLocalGate()" title="Re-scan this machine" style="background:none;border:1px solid var(--edge);color:var(--bone-dim);border-radius:4px;cursor:pointer;font-size:.7rem;padding:.1rem .35rem">⟳</button>';
+    return '';
+  };
+  const paint = (det) => {
+    try { LocalAI.renderLocalGroup(dmSel, dmSel.value); } catch (e) { /* local.js internally handles missing select */ }
+    // Återställ sparat 🏮-val (innläst på page-load, då gruppen ännu saknades)
+    // så snart alternativet faktiskt finns och är enabled.
+    if (det.status === 'green') {
+      let saved = null;
+      try { saved = localStorage.getItem('dnd_onb_dm_model'); } catch (e) {}
+      if (saved && saved.indexOf('local:') === 0 && String(dmSel.value || '').indexOf('local:') !== 0) {
+        const o = dmSel.querySelector(`option[value="${CSS.escape(saved)}"]`);
+        if (o && !o.disabled) dmSel.value = saved;
+      }
+    }
+    setNote(localHint(det));
+    syncLocalOk();
+  };
+  function syncLocalOk() {
+    if (ok) ok.style.display = String(dmSel.value || '').indexOf('local:') === 0 ? '' : 'none';
+  }
+  dmSel.addEventListener('change', syncLocalOk);
+  window.refreshLocalGate = async () => {
+    try {
+      const det = await LocalAI.detectOllama(true);
+      await LocalAI.listLocalModels(false).catch(() => {});
+      paint(det);
+    } catch (e) { console.warn('localai gate:', e); }
+  };
+  LocalAI.detectOllama(false)
+    .then(det => LocalAI.listLocalModels(false).catch(() => []).then(() => det))
+    .then(paint)
+    .catch(e => console.warn('localai gate:', e));
+}
 
 // TTS-provider vald i onboarding → spara direkt så fillTTS (async) aldrig
 // skriver över det med ett gammalt localStorage-värde. (2026-08-05 fix)

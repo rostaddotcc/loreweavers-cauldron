@@ -131,9 +131,29 @@
   .mpc-advanced summary::before{ content:'▸'; color:var(--gold); transition:transform .2s; }
   .mpc-advanced[open] summary{ color:var(--gold); border-bottom:1px solid var(--edge); }
   .mpc-advanced[open] summary::before{ transform:rotate(90deg); }
-  .mpc-advanced > .mpc-label, .mpc-advanced > select{ margin-left:.6rem; margin-right:.6rem; }
+  .mpc-advanced{ container-type:inline-size; }
+  /* Selects i details-rutan: bredd = boxens insida (100% + marginal-flöde
+     läckte över högerkanten före). Radbryt label+select under ~220px. */
+  .mpc-advanced > .mpc-label, .mpc-advanced > select, .mpc-advanced > .mpc-hint{
+    width: calc(100% - 1.2rem); box-sizing: border-box; margin-left:.6rem; margin-right:.6rem; }
+  @container (width < 220px){
+    .mpc-advanced > .mpc-label{ display:flex; justify-content:space-between; align-items:baseline; gap:.4rem; }
+    .mpc-advanced > .mpc-label + select{ margin-top:.12rem; width:calc(100% - 1.2rem); }
+  }
   .mpc-advanced > .mpc-label:first-of-type{ margin-top:.5rem; }
   .mpc-advanced > .mpc-hint{ margin:.35rem .6rem .6rem; }
+  /* ── 🏮 Local brain-kortet (2026-09-30 structure pass): titel+status+⟳ som
+     en vridbar flex-rad; ctx/pipeline som lika breda rader (label vänster,
+     select fyller resten) — samma visuell rytm som MODELS-kortet. ── */
+  .mpc-title.local-head{ display:flex; flex-wrap:wrap; align-items:center; gap:.15rem .45rem; margin-bottom:.35rem; }
+  .mpc-title.local-head .local-status{ flex:1 1 auto; min-width:0; letter-spacing:0; text-transform:none; font-family:var(--font-body); font-size:.6rem; font-style:italic; color:rgba(180,170,150,.65); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mpc-title.local-head #local-refresh{ margin-left:auto; }
+  .local-ctl{ display:flex; align-items:center; gap:.45rem; width:100%; margin:.3rem 0 0; }
+  .local-ctl select{ flex:1 1 0; min-width:0; width:auto; }
+  .local-base{ width:100%; box-sizing:border-box; background:rgba(0,0,0,.35); border:1px solid var(--edge,#3a3550); color:var(--bone-bright); padding:.3rem .5rem; border-radius:4px; font-size:.72rem; font-family:var(--font-mono); margin-top:.35rem; }
+  .local-base:focus{ outline:none; border-color:var(--gold); }
+  #local-refresh{ background:rgba(0,0,0,.3); border:1px solid var(--edge,var(--gold)); color:var(--bone-bright); padding:0 .45rem; border-radius:4px; cursor:pointer; font-size:.8rem; line-height:1.5; }
+  #local-refresh:hover{ border-color:var(--gold); color:var(--gold-bright); }
   /* ═══════════ Model-info-modal ═══════════ */
   .mi-overlay{ position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(var(--ink-rgb),.82); opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility .25s; }
   .mi-overlay.show{ opacity: 1; visibility: visible; }
@@ -1405,7 +1425,6 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
           <div class="mpc-title">🧠 Models <span id="model-picker-lock" style="display:none;color:var(--gold);font-size:.68rem">🔒 10€ unlock</span></div>
           <label class="mpc-label" for="settings-dm-model" title="The voice that narrates your adventure — pick the storyteller">Dungeon Master</label>
           <select id="settings-dm-model" onchange="settingsChangeModel(this.value)"></select>
-          <div class="mpc-hint" id="settings-guardian-hint"></div>
           <div class="mpc-hint" id="model-picker-premium-hint" style="display:none;color:var(--gold)">🔒 Premium models locked — the one-time 10€ unlock opens every Dungeon Master, voice narration and image engine forever.</div>
           <!-- Progressiv avslöjning (2026-09-24, canon-mönstret från adventure-onboarding):
                DM-valet är spelarens #1-inställning och står synligt; Lorekeeper +
@@ -1417,10 +1436,36 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
             <summary>⚙ Advanced — Lorekeeper &amp; background</summary>
             <label class="mpc-label" for="settings-guardian-model" title="Keeps the rules honest — HP, XP, combat, dice checks">Lorekeeper</label>
             <select id="settings-guardian-model" onchange="settingsChangeGuardian(this.value)"></select>
+            <div class="mpc-hint" id="settings-guardian-hint"></div>
             <label class="mpc-label" for="settings-extraction-model" title="Quiet background work — summaries, journal entries, facts">Background (extraction)</label>
             <select id="settings-extraction-model" onchange="settingsChangeExtraction(this.value)"></select>
             <div class="mpc-hint">Sensible defaults are set — change these only if you like to tinker.</div>
           </details>
+        </div>
+        <!-- 🏮 Local brain — eget statiskt kort (2026-09-30): Ollama-relät
+             samlas här under Modells-kortet i stället för att injiceras mitt i
+             DM-pickern (⟳/ctx/base stod "lite överallt"). local.js binder
+             renderSettingsRow() till dessa ID:n. -->
+        <div class="model-picker-card" id="local-card" style="display:none">
+          <div class="mpc-title local-head">
+            <span>🏮 Local brain</span>
+            <span id="local-dot" aria-hidden="true">⚪</span>
+            <span class="local-status" id="local-status">Ollama not found on this machine</span>
+            <button type="button" id="local-refresh" title="Re-scan this machine for Ollama" aria-label="Re-scan this machine for Ollama">⟳</button>
+          </div>
+          <input id="local-base" class="local-base" type="text" spellcheck="false" autocomplete="off" aria-label="Ollama base URL"
+            placeholder="http://127.0.0.1:11434 — set host and port if you run Ollama somewhere else" />
+          <label class="mpc-label local-ctl" for="local-num-ctx">Context
+            <select id="local-num-ctx" title="Model context window sent with every local turn"></select>
+          </label>
+          <label class="mpc-label local-ctl" for="local-pipeline">Pipeline
+            <select id="local-pipeline" title="How much of the turn runs on your machine">
+              <option value="dm">🏮+🏛 House keeps watch</option>
+              <option value="full">🏮 Full cauldron at home</option>
+            </select>
+          </label>
+          <div id="local-pipeline-hint" class="mpc-hint"></div>
+          <div id="local-cors-hint" class="mpc-hint" style="display:none"></div>
         </div>
         <button class="drop-item" data-cli-label onclick="toggleCliChat();closeSettingsMenu()"><span class="di-icon">🖥️</span><span class="di-body"><span class="di-name">Chat style: Terminal</span><span class="di-hint">click to switch to bubbles</span></span></button>
         <button class="drop-item" onclick="openModelInfo();closeSettingsMenu()"><span class="di-icon">ℹ️</span><span class="di-body"><span class="di-name">About the Models</span><span class="di-hint">what each DM model does · why thinking takes time</span></span></button>
@@ -1956,8 +2001,8 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
 
 <script src="sfx.js?v=20260811a"></script>
 <script src="api.js?v=20260927a"></script>
-<script src="i18n.js?v=20260927a"></script>
-<script src="local.js?v=20260929b"></script>
+<script src="i18n.js?v=20260930a"></script>
+<script src="local.js?v=20260930c"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -1983,6 +2028,13 @@ async function loadCampaign() {
       if (savedDm && savedDm !== currentModel) {
         currentModel = savedDm;
         localStorage.setItem('dnd_model', savedDm);
+      }
+      // 🏮 v2: hydrate the local pipeline cache (dm|full) from campaign meta
+      // so the settings-row selector renders correct before ⚙ opens.
+      if (typeof LocalAI !== 'undefined' && LocalAI.setPipelineCache) {
+        try {
+          LocalAI.setPipelineCache((campaign._raw && campaign._raw.meta && campaign._raw.meta.local_pipeline) || 'dm');
+        } catch (e) { /* noop */ }
       }
       // Kampanjens TTS-inställningar (provider, röst, stil, egen fras, autoplay,
       // hastighet) → pickers + localStorage så de inte resettas vid återkomst.
@@ -3441,7 +3493,7 @@ function buildAmbienceEl(world) {
   const loc = world.current_location || '';
   const tm = world.time || '';
   const wth = world.weather || '';
-  const day = world.day ? `${I18N.getLang() === 'en' ? 'Dag' : 'Dag'} ${world.day}` : '';
+  const day = world.day ? `${I18N.getLang() === 'en' ? 'Day' : 'Dag'} ${world.day}` : '';
   const parts = [];
   if (loc) parts.push(`<span class="a-loc">✧ ${escapeHtml(loc)}</span>`);
   if (tm) parts.push(`<span class="a-tm">${escapeHtml(tm)}</span>`);
@@ -6578,6 +6630,22 @@ function _showLocalFallbackMenu(messageText) {
 
 // Returns house-shape JSON, or LOCAL_HANDLED when the relay path rendered
 // its own bubble / left the failure menu on screen.
+// v2 'full' pipeline: LocalAI.relay walks a hop chain (rollcheck → dm →
+// guardian → …) on the player's machine; onHop labels the spinner per hop.
+const _HOP_STATUS = {
+  rollcheck: '🦉 The Lorekeeper rolls the dice…',
+  guardian: '🦉 The Lorekeeper keeps the books…',
+  extract: '🧠 Memory is being woven…',
+  repair: '🔧 The mechanics are mended…',
+  search: '🔍 Searching memory…',
+};
+function _setHopStatus(chain) {
+  try {
+    const t = document.getElementById('thought-text') || document.getElementById('cli-thought-text');
+    if (t) t.textContent = _HOP_STATUS[chain] || '🏮 The Cauldron brews…';
+  } catch (e) { /* cosmetic only */ }
+}
+
 async function sendChat(messageText, modelId) {
   if (typeof LocalAI === 'undefined' || !String(modelId || '').startsWith('local:')) {
     return API.chat(messageText, modelId);
@@ -6603,10 +6671,19 @@ async function sendChat(messageText, modelId) {
       }
       liveText += d;
       paint();
-    }, () => {});
+    }, () => {}, _setHopStatus);
     if (liveEl) liveEl.remove();
     hideThoughts();
     const dmEl = addMessage('dm', null, res.reply || '…', { model: res.model_id, tokens: res.tokens, time: res.response_time });
+    if (res.chainIncomplete) {
+      // 🏮 'full' chain died after the DM hop: the narration bubble above
+      // is the truth (streamed + committed). The abandoned hop's mechanics
+      // (guardian/extract) never ran at all in full mode — there is no
+      // house background to catch up. Skip house-side extras (guardian
+      // poll, world-sync) — the done JSON never arrived.
+      addMessage('system', null, '🏮 The Lorekeeper dropped off mid-turn — the narration is saved; the mechanics from it (damage, loot) were lost. Dice and combat are unaffected.');
+      return LOCAL_HANDLED;
+    }
     await renderDmResponse(res, dmEl);
     return LOCAL_HANDLED;
   } catch (e) {
@@ -6617,7 +6694,7 @@ async function sendChat(messageText, modelId) {
       return API.chat(messageText, LOCAL_HOUSE_FALLBACK);
     }
     if (status === 503) {
-      toast('🏮 Local AI är avstängt');
+      toast(I18N.t('🏮 Local AI är avstängt'));
       return API.chat(messageText, LOCAL_HOUSE_FALLBACK);
     }
     if (e && (e.kind === 'ollama_down' || e.kind === 'timeout')) {
@@ -8316,7 +8393,10 @@ document.addEventListener('keydown', (e) => {
   if (!['ArrowDown','ArrowUp','Home','End'].includes(e.key)) return;
   if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
   const focusables = Array.from(m.querySelectorAll('.drop-item, a, button'))
-    .filter(el => el.offsetParent !== null && !el.disabled);
+    .filter(el => el.offsetParent !== null && !el.disabled
+      // 2026-09-30 structure pass: inuti korten (models/local brain) styr
+      // fältet sin egen tabIndex — ↑↓ ska bara cyc-la menyraderna.
+      && !el.closest('.model-picker-card'));
   if (!focusables.length) return;
   e.preventDefault();
   const i = focusables.indexOf(document.activeElement);
@@ -8376,7 +8456,7 @@ async function openUsageModal() {
   const overlay = document.getElementById('usage-overlay');
   const body = document.getElementById('usage-body');
   overlay.classList.add('open');
-  body.innerHTML = '<div class="usage-loading">Samlar statistik…</div>';
+  body.innerHTML = '<div class="usage-loading">' + I18N.t('Samlar statistik…') + '</div>';
   try {
     const d = await API.getUsage();
     const ac = d.active_campaign || {};
@@ -8415,7 +8495,7 @@ async function openUsageModal() {
     html += '</div>';
     body.innerHTML = html;
   } catch (e) {
-    body.innerHTML = '<div class="usage-err">⚠ Kunde inte hämta statistik: ' + escapeHtml(e.message || e) + '</div>';
+    body.innerHTML = '<div class="usage-err">' + I18N.t('⚠ Kunde inte hämta statistik: ') + escapeHtml(e.message || e) + '</div>';
   }
 }
 function closeUsageModal() {
@@ -8657,7 +8737,7 @@ const modelNames = {
   'step-3.7-flash': 'Step 3.7 Flash',
   'step-3.5-flash-2603': 'Step 3.5 Flash 2603',
   'qwen3.8-flash': 'Qwen 3.8 Flash',
-  'qwen3.6-flash': 'Qwen 3.6 Flash (snabb)',
+  'qwen3.6-flash': 'Qwen 3.6 Flash',
   'deepseek-v4.1-flash': 'DeepSeek V4.1 Flash',
 };
 function switchModel(model) {
@@ -8717,7 +8797,10 @@ function initSettingsModelPickers() {
   if (typeof LocalAI !== 'undefined') {
     try {
       LocalAI.renderLocalGroup(dmSel, currentModel);
-      LocalAI.renderSettingsRow(dmSel);
+      // 🏮 v2: pass the campaign's pipeline (dm|full) so the selector
+      // renders correct (also refreshes LocalAI's cache from server truth).
+      const lp = (campaignData && campaignData._raw && campaignData._raw.meta && campaignData._raw.meta.local_pipeline);
+      LocalAI.renderSettingsRow(dmSel, lp);
     } catch (e) { console.warn('localai picker:', e); }
   }
 

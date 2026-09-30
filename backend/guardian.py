@@ -355,21 +355,18 @@ def _format_char_context(state: dict, language: str = "sv") -> str:
     return "\n".join(parts)
 
 
-async def guardian_check_roll(
+def build_roll_check_messages(
     player_msg: str,
     state: dict,
-    model_call_fn: ModelCallFn,
     language: str = "sv",
     dm_context: str = "",
-) -> dict | None:
-    """
-    Pre-DM: Does the player's action require a dice roll?
+) -> list[dict] | None:
+    """Build the PRE-DM roll-check message pair.
 
-    Args:
-        dm_context: Last DM reply (for situational awareness). Empty on first turn.
-
-    Returns:
-        dict with {notation, label, skill} if a roll is required, else None.
+    Extracted 2026-09-30 for the 🏮 v2 relay chain (the client runs the exact
+    same prompt as the house model): guardian_check_roll uses this, so the
+    house path is unchanged. Returns None for messages that never need a roll
+    ([Resultat:], awakening) — mirroring guardian_check_roll's early exits.
     """
     # [Resultat:] = player responding to a roll → never a new roll
     if player_msg.startswith("[Resultat:"):
@@ -392,7 +389,6 @@ async def guardian_check_roll(
             f"## Player's action\n{player_msg}\n\n"
             "Does this require a dice roll?"
         )
-        default_label = "Dice roll"
     else:
         system_prompt = GUARDIAN_PRE_SYSTEM
         context_block = ""
@@ -404,20 +400,17 @@ async def guardian_check_roll(
             f"## Spelarens handling\n{player_msg}\n\n"
             "Kräver detta ett tärningskast?"
         )
-        default_label = "Tärningsslag"
 
-    messages = [
+    return [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_msg},
     ]
 
-    try:
-        raw = await model_call_fn(messages)
-    except Exception as e:
-        logger.warning("Guardian pre-DM failed: %s", e)
-        return None
 
-    # Parse JSON
+def parse_roll_check_result(raw, language: str = "sv") -> dict | None:
+    """Parse the roll-check JSON exactly as guardian_check_roll does — shared
+    between the house path and the 🏮 v2 relay chain (invalid → no roll)."""
+    default_label = "Dice roll" if language == "en" else "Tärningsslag"
     result = _parse_json(raw)
     if not result or not result.get("needs_roll"):
         return None
@@ -432,6 +425,35 @@ async def guardian_check_roll(
 
     logger.info("🛡️ Guardian pre-DM: roll required → %s (%s)", notation, label)
     return {"notation": notation, "label": label, "skill": skill}
+
+
+async def guardian_check_roll(
+    player_msg: str,
+    state: dict,
+    model_call_fn: ModelCallFn,
+    language: str = "sv",
+    dm_context: str = "",
+) -> dict | None:
+    """
+    Pre-DM: Does the player's action require a dice roll?
+
+    Args:
+        dm_context: Last DM reply (for situational awareness). Empty on first turn.
+
+    Returns:
+        dict with {notation, label, skill} if a roll is required, else None.
+    """
+    messages = build_roll_check_messages(player_msg, state, language, dm_context)
+    if messages is None:
+        return None
+
+    try:
+        raw = await model_call_fn(messages)
+    except Exception as e:
+        logger.warning("Guardian pre-DM failed: %s", e)
+        return None
+
+    return parse_roll_check_result(raw, language)
 
 
 # ═══════════════════════════════════════
@@ -859,26 +881,19 @@ def _format_state_for_guardian(state: dict, language: str = "sv") -> str:
     return "\n".join(parts)
 
 
-async def guardian_extract_mechanics(
+def build_extract_mechanics_messages(
     dm_reply: str,
     player_msg: str,
     state: dict,
     turn: int,
-    model_call_fn: ModelCallFn,
     language: str = "sv",
     conversation_history: list[dict] | None = None,
-) -> dict:
-    """
-    Post-DM: Extract all mechanical effects from the DM reply.
+) -> list[dict]:
+    """Build the POST-DM mechanical-extraction messages.
 
-    Args:
-        conversation_history: Recent transcript entries (role/content dicts)
-            for context-aware extraction (NPC reveals, implicit changes).
-
-    Returns:
-        Dict with all fields from the GUARDIAN_POST_SYSTEM format.
-        Empty fields if nothing is extracted.
-    """
+    Extracted 2026-09-30 for the 🏮 v2 relay chain: guardian_extract_mechanics
+    uses this, so the house path is unchanged — the client-side guardian hop
+    gets the byte-identical prompt."""
     state_ctx = _format_state_for_guardian(state, language)
     lang_instruction = _LANG_INSTRUCTION_EN if language == "en" else _LANG_INSTRUCTION_SV
 
@@ -917,12 +932,16 @@ async def guardian_extract_mechanics(
             "Extrahera alla mekaniska effekter och uppdateringar:"
         )
 
-    messages = [
+    return [
         {"role": "system", "content": GUARDIAN_POST_SYSTEM + lang_instruction},
         {"role": "user", "content": user_msg},
     ]
 
-    empty = {
+
+def mechanics_empty_template() -> dict:
+    """Canonical empty-mechanics shape (all fields present) — shared by
+    guardian_extract_mechanics and the 🏮 v2 relay chain's guardian hop."""
+    return {
         "damage": [], "healing": [], "death": [], "xp": 0,
         "items_add": [], "items_remove": [], "currency": [], "spells_add": [],
         "quests_new": [], "quests_completed": [], "quests_failed": [],
@@ -938,6 +957,43 @@ async def guardian_extract_mechanics(
         "spell_slots_spend": [], "inspiration_gain": False, "inspiration_spend": False,
         "exhaustion_change": 0, "cover_set": None, "training_update": [],
     }
+
+
+def normalize_mechanics_result(result: dict) -> dict:
+    """Fill missing fields with template defaults and sanitize — shared by the
+    house extraction loop and the 🏮 v2 relay chain's guardian commit."""
+    for key, default in mechanics_empty_template().items():
+        if key not in result:
+            result[key] = default
+    return _sanitize_mechanics(result)
+
+
+async def guardian_extract_mechanics(
+    dm_reply: str,
+    player_msg: str,
+    state: dict,
+    turn: int,
+    model_call_fn: ModelCallFn,
+    language: str = "sv",
+    conversation_history: list[dict] | None = None,
+) -> dict:
+    """
+    Post-DM: Extract all mechanical effects from the DM reply.
+
+    Args:
+        conversation_history: Recent transcript entries (role/content dicts)
+            for context-aware extraction (NPC reveals, implicit changes).
+
+    Returns:
+        Dict with all fields from the GUARDIAN_POST_SYSTEM format.
+        Empty fields if nothing is extracted.
+    """
+    messages = build_extract_mechanics_messages(
+        dm_reply, player_msg, state, turn,
+        language=language, conversation_history=conversation_history,
+    )
+
+    empty = mechanics_empty_template()
 
     for attempt in range(2):
         try:
@@ -963,13 +1019,8 @@ async def guardian_extract_mechanics(
                 continue
             return empty
 
-        # Normalisera: säkerställ att alla fält finns
-        for key, default in empty.items():
-            if key not in result:
-                result[key] = default
-
-        # Validera och sanera
-        result = _sanitize_mechanics(result)
+        # Normalisera: säkerställ att alla fält finns + validera och sanera
+        result = normalize_mechanics_result(result)
 
         n_changes = sum(
             len(result.get(k, [])) for k in

@@ -271,15 +271,21 @@ def _save_user_avatar_gallery(username: str, data: dict) -> None:
 
 
 import rag
-from extraction import FactRegister, extract_facts, format_facts_block
+from extraction import FactRegister, extract_facts, format_facts_block, build_extraction_messages, parse_extraction_result, _extract_json_object
 from guardian import (
     _combat_tag,
     _normalize_item,
+    _parse_json as _guardian_parse_json,
     _XP_THRESHOLDS as XP_THRESHOLDS,  # D&D 5e XP-trösklar (definieras i guardian.py)
     apply_mechanics,
+    build_extract_mechanics_messages,
+    build_roll_check_messages,
     format_guardian_summary,
     guardian_check_roll,
     guardian_extract_mechanics,
+    mechanics_empty_template,
+    normalize_mechanics_result,
+    parse_roll_check_result,
 )
 # W3-M2 (audit-mechanics §2): EN beräkning av bärvikt — weight_utils är single
 # source of truth (fyra divergerande vägar fanns; DM truth block migreras här).
@@ -6213,8 +6219,7 @@ async def _guardian_post_dm_locked(
         state = store.get(username, campaign_id)
         if not state or not _epoch_ok(username, campaign_id, epoch):
             return
-        meta = state.setdefault("meta", {})
-        turn_count = meta.get("turn_count", 0)
+        turn_count = state.setdefault("meta", {}).get("turn_count", 0)
 
         _log_activity(username, "🦉 Lorekeeper updating the world…")
         _tg = time.time()
@@ -6226,107 +6231,126 @@ async def _guardian_post_dm_locked(
             language=_get_lang(state),
             conversation_history=_guardian_transcript,
         )
-        try:
-            # Spår A lägger till skip_effects på apply_mechanics; fallback om
-            # guardian.py inte hunnit uppdateras (parallell utveckling).
-            guardian_effects = apply_mechanics(state, mech, skip_effects=skip_effects)
-        except TypeError:
-            guardian_effects = apply_mechanics(state, mech)
-
-        # Spegla senaste stridslogg-entryn till aktivitetsflödet — så
-        # loading-animationen visar kampanjens senaste loggentry (⚔️ …).
-        _clog = state.get("world", {}).get("combat", {}).get("log", [])
-        if _clog and _clog[-1].get("text"):
-            _e = _clog[-1]
-            _log_activity(username, f"⚔️ {(_e.get('name') + ': ') if _e.get('name') else ''}{_e.get('text')}")
-
-        # ASCII-art (avstängd tills vidare)
-        if ATMOSPHERE_ENABLED:
-            guardian_art = mech.get("ascii_art")
-            if guardian_art and should_generate_art(meta, turn_count):
-                meta["last_art_turn"] = turn_count
-                logger.info("🛡️ Guardian-art (%.1fs)", time.time() - _tg)
-
-        if guardian_effects:
-            existing = meta.get("last_effects", [])
-            existing_keys = {(e.get("type"), str(e.get("value"))) for e in existing}
-            for ge in guardian_effects:
-                key = (ge.get("type"), str(ge.get("value")))
-                if key not in existing_keys:
-                    existing.append(ge)
-            meta["last_effects"] = existing
-
-        guardian_summary = format_guardian_summary(
-            guardian_effects, state,
-            language=_get_lang(state),
-            mech=mech,
-            dm_npcs=dm_npcs,
-            turn=effective_turn,
+        await _guardian_finish_locked(
+            state, mech, username, campaign_id,
+            turn_count=turn_count, effective_turn=effective_turn,
+            dm_npcs=dm_npcs, skip_effects=skip_effects, epoch=epoch,
+            guardian_usage=_guardian_usage,
         )
-
-        # Om striden ändrades via tagg-parsning (initiativ/dödsräddning via
-        # [Resultat:]) men Guardian inte hittade egna effekter → skicka ändå
-        # [COMBAT:]-taggen så frontendens Krigsråd uppdateras direkt.
-        # (Endast om Guardian INTE redan skickat en tagg — payloaderna kan
-        # skilja sig, t.ex. player_hp, så jämför på taggens existens, inte
-        # hela strängen. Duplicering → frontend-regexen strippar bara den
-        # sista och den första läcker ut i chatten.)
-        combat = state.get("world", {}).get("combat")
-        if combat and meta.get("combat_tag_dirty"):
-            # (fix w2c) Fallback-taggen får samma player_hp-payload som
-            # Guardian-vägen (guardian.py format_guardian_summary) — annars
-            # tappar frontendens statusbar spelar-HP när bara tagg-vägen
-            # ändrade striden (t.ex. [Resultat:] initiativ/dödsräddning).
-            _php = (state.get("character", {}) or {}).get("hp", {}) or {}
-            combat_for_tag = dict(combat)
-            combat_for_tag["player_hp"] = {
-                "current": _php.get("current", 0),
-                "max": _php.get("max", 0),
-            }
-            _tag = _combat_tag(combat_for_tag)
-            if _tag and "[COMBAT:" not in (guardian_summary or ""):
-                guardian_summary = (guardian_summary + "\n" + _tag) if guardian_summary else _tag
-            meta.pop("combat_tag_dirty", None)
-        else:
-            meta.pop("combat_tag_dirty", None)
-
-        # Tag-only summary (inga synliga rader) → ge den en rubrik så
-        # bubblan inte ser tom ut i chatten.
-        if guardian_summary and guardian_summary.startswith("["):
-            guardian_summary = "🛡️ **Guardian**\n" + guardian_summary
-
-        if guardian_summary:
-            # Dedupe-säkring: EXAKT en [COMBAT:]-tagg, alltid sist (oavsett
-            # vilken kodväg som emitterade den — guardian-formatet och/eller
-            # combat_tag_dirty-fallbacket ovan).
-            guardian_summary = _ensure_single_combat_tag(guardian_summary)
-            _gmeta = {"turn": effective_turn}
-            if _guardian_usage.get("total_tokens"):
-                _gmeta["tokens"] = _guardian_usage
-            state = store.append_message(
-                state, "guardian", guardian_summary,
-                meta=_gmeta,
-            )
-            logger.info("🛡️ Guardian background (%.1fs): %d effects, %d DM-NPCs, logbook=%s",
-                        time.time() - _tg, len(guardian_effects), len(dm_npcs),
-                        "ja" if mech.get("logbook") else "nej")
-        else:
-            # Guardian körde LLM men hittade inga ändringar → ingen transkript-post.
-            # Spara ändå förbrukningen i meta["unguarded_tokens"] så admin-stats
-            # räknar ALL Guardian-förbrukning (inte bara posterna med summary).
-            _track_unguarded(state, _guardian_model_for(state), _guardian_usage)
-            if _guardian_usage.get("total_tokens"):
-                logger.info("🛡️ Guardian background (%.1fs): no changes (%d tkn unguarded)",
-                            time.time() - _tg, _guardian_usage.get("total_tokens", 0))
-            else:
-                logger.info("🛡️ Guardian background (%.1fs): no changes", time.time() - _tg)
-
-        if not _epoch_ok(username, campaign_id, epoch):
-            logger.info("🛡️ Guardian discarded — the turn was undone (epoch changed)")
-            return
-        store.save(state)
+        logger.info("🛡️ Guardian background (%.1fs)", time.time() - _tg)
     except Exception as e:
         logger.warning("🛡️ Guardian background skipped: %s", e, exc_info=True)
+
+
+async def _guardian_finish_locked(
+    state: dict, mech: dict, username: str, campaign_id: str,
+    *, turn_count: int, effective_turn: int, dm_npcs: list[dict],
+    skip_effects: list | None, epoch: int | None,
+    guardian_usage: dict | None = None,
+) -> bool:
+    """Hjärtat av Guardian post-DM EFTER LLM-anropet: applicera mech-JSON,
+    forma rapporten, skriv transkript-post, spara under epok-guard. Delad
+    mellan husvägen (_guardian_post_dm_locked) och 🏮 v2-reläkedjans
+    guardian-hop (klienten svarar med samma JSON). Returnerar True om
+    applicerat & sparat."""
+    guardian_usage = guardian_usage or {}
+    try:
+        # Spår A lägger till skip_effects på apply_mechanics; fallback om
+        # guardian.py inte hunnit uppdateras (parallell utveckling).
+        guardian_effects = apply_mechanics(state, mech, skip_effects=skip_effects)
+    except TypeError:
+        guardian_effects = apply_mechanics(state, mech)
+    meta = state.setdefault("meta", {})
+
+    # Spegla senaste stridslogg-entryn till aktivitetsflödet — så
+    # loading-animationen visar kampanjens senaste loggentry (⚔️ …).
+    _clog = state.get("world", {}).get("combat", {}).get("log", [])
+    if _clog and _clog[-1].get("text"):
+        _e = _clog[-1]
+        _log_activity(username, f"⚔️ {(_e.get('name') + ': ') if _e.get('name') else ''}{_e.get('text')}")
+
+    # ASCII-art (avstängd tills vidare)
+    if ATMOSPHERE_ENABLED:
+        guardian_art = mech.get("ascii_art")
+        if guardian_art and should_generate_art(meta, turn_count):
+            meta["last_art_turn"] = turn_count
+            logger.info("🛡️ Guardian-art")
+
+    if guardian_effects:
+        existing = meta.get("last_effects", [])
+        existing_keys = {(e.get("type"), str(e.get("value"))) for e in existing}
+        for ge in guardian_effects:
+            key = (ge.get("type"), str(ge.get("value")))
+            if key not in existing_keys:
+                existing.append(ge)
+        meta["last_effects"] = existing
+
+    guardian_summary = format_guardian_summary(
+        guardian_effects, state,
+        language=_get_lang(state),
+        mech=mech,
+        dm_npcs=dm_npcs,
+        turn=effective_turn,
+    )
+
+    # Om striden ändrades via tagg-parsning (initiativ/dödsräddning via
+    # [Resultat:]) men Guardian inte hittade egna effekter → skicka ändå
+    # [COMBAT:]-taggen så frontendens Krigsråd uppdateras direkt.
+    # (Endast om Guardian INTE redan skickat en tagg — payloaderna kan
+    # skilja sig, t.ex. player_hp, så jämför på taggens existens, inte
+    # hela strängen. Duplicering → frontend-regexen strippar bara den
+    # sista och den första läcker ut i chatten.)
+    combat = state.get("world", {}).get("combat")
+    if combat and meta.get("combat_tag_dirty"):
+        # (fix w2c) Fallback-taggen får samma player_hp-payload som
+        # Guardian-vägen (guardian.py format_guardian_summary) — annars
+        # tappar frontendens statusbar spelar-HP när bara tagg-vägen
+        # ändrade striden (t.ex. [Resultat:] initiativ/dödsräddning).
+        _php = (state.get("character", {}) or {}).get("hp", {}) or {}
+        combat_for_tag = dict(combat)
+        combat_for_tag["player_hp"] = {
+            "current": _php.get("current", 0),
+            "max": _php.get("max", 0),
+        }
+        _tag = _combat_tag(combat_for_tag)
+        if _tag and "[COMBAT:" not in (guardian_summary or ""):
+            guardian_summary = (guardian_summary + "\n" + _tag) if guardian_summary else _tag
+        meta.pop("combat_tag_dirty", None)
+    else:
+        meta.pop("combat_tag_dirty", None)
+
+    # Tag-only summary (inga synliga rader) → ge den en rubrik så
+    # bubblan inte ser tom ut i chatten.
+    if guardian_summary and guardian_summary.startswith("["):
+        guardian_summary = "🛡️ **Guardian**\n" + guardian_summary
+
+    if guardian_summary:
+        # Dedupe-säkring: EXAKT en [COMBAT:]-tagg, alltid sist (oavsett
+        # vilken kodväg som emitterade den — guardian-formatet och/eller
+        # combat_tag_dirty-fallbacket ovan).
+        guardian_summary = _ensure_single_combat_tag(guardian_summary)
+        _gmeta = {"turn": effective_turn}
+        if guardian_usage.get("total_tokens"):
+            _gmeta["tokens"] = guardian_usage
+        state = store.append_message(
+            state, "guardian", guardian_summary,
+            meta=_gmeta,
+        )
+        logger.info("🛡️ Guardian finish: %d effects, %d DM-NPCs, logbook=%s",
+                    len(guardian_effects), len(dm_npcs),
+                    "ja" if mech.get("logbook") else "nej")
+    else:
+        # Guardian körde LLM men hittade inga ändringar → ingen transkript-post.
+        # Spara ändå förbrukningen i meta["unguarded_tokens"] så admin-stats
+        # räknar ALL Guardian-förbrukning (inte bara posterna med summary).
+        _track_unguarded(state, _guardian_model_for(state), guardian_usage)
+        logger.info("🛡️ Guardian finish: no changes")
+
+    if not _epoch_ok(username, campaign_id, epoch):
+        logger.info("🛡️ Guardian discarded — the turn was undone (epoch changed)")
+        return False
+    store.save(state)
+    return True
 
 
 # ── Bakgrundsuppgifter efter ett DM-svar (icke-kritiska, blockerar ALDRIG svaret) ──
@@ -6334,6 +6358,7 @@ async def _post_turn_tasks(
     username: str, campaign_id: str, reply: str, player_msg: str,
     turn_count: int, model_id: str,
     epoch: int | None = None,
+    skip_extraction: bool = False,
 ) -> None:
     """Körs i bakgrunden EFTER att HTTP-svaret skickats till klienten.
     Faktextraktion, RAG-indexering och sammanfattning — inget av detta
@@ -6341,7 +6366,11 @@ async def _post_turn_tasks(
     (fix 2026-08-10) Egen nyckel i _RUNNING_BG: post-turn-tasks ska INTE
     hålla guardian_running=true (tärningslåset) medan RAG-indexering körs —
     annars låses tärningen i minuter efter att Lorekeeper-rapporten redan
-    renderats."""
+    renderats.
+
+    🏮 v2 `skip_extraction=True`: faktextraktionens LLM-huvudanrop körs
+    klient-side i reläkedjan (chain:'extract') — huset skutar den delen men
+    kör alla övriga bakgrundsjobb som vanligt."""
     key = (username, campaign_id, "post")
     _RUNNING_BG.add(key)
     try:
@@ -6349,7 +6378,7 @@ async def _post_turn_tasks(
         async with lock:
             await _post_turn_tasks_locked(
                 username, campaign_id, reply, player_msg, turn_count, model_id,
-                epoch=epoch,
+                epoch=epoch, skip_extraction=skip_extraction,
             )
     finally:
         _RUNNING_BG.discard(key)
@@ -6359,6 +6388,7 @@ async def _post_turn_tasks_locked(
     username: str, campaign_id: str, reply: str, player_msg: str,
     turn_count: int, model_id: str,
     epoch: int | None = None,
+    skip_extraction: bool = False,
 ) -> None:
     """Hjärtat av post-turn-uppgifterna — körs under per-kampanj-låset."""
     import time as _ptt
@@ -6379,7 +6409,8 @@ async def _post_turn_tasks_locked(
     # Varannan tur (turn_count % 2 == 0): faktextraktion är ett LLM-anrop
     # (kostnad + latens). [FÖREMÅL:]-taggar + Guardian täcker redan inventory,
     # så att halvera extraktionsfrekvensen tappar ingen mekanik (P2, spec B5).
-    if turn_count % 2 == 0:
+    # 🏮 v2: skip_extraction ⇒ huvud-anropet körs klient-side (chain:'extract').
+    if turn_count % 2 == 0 and not skip_extraction:
         _extract_usage = {}
         try:
             # Hämta state först — closuren nedan behöver extraction-modellen
@@ -6889,7 +6920,32 @@ async def _chat_phase_a(
     Returnerar (ctx, None) — ctx bär messages + turmetadata som Fas B behöver —
     eller (None, early_response) för /guardian-grenen (ingen LLM-tur alls).
     Konsumerar INTE någon turn (reservationen ligger i huswrappern; reläets
-    commit bokför en local_dm-ledgerrad med 0 turns istället)."""
+    commit bokför en local_dm-ledgerrad med 0 turns istället).
+
+    v2 (2026-09-30): Fas A är subdividerad i A1 (deterministiskt före
+    Guardian kast-koll) och A2 (prompt-bygge efter kast-kollen) så 🏮
+    full-pipelinen kan köra kast-kollen på klienten mellan de två. Husvägen
+    A→(guardian_check_roll)→B är beteendemässigt oförändrad."""
+    pre, early = await _chat_phase_a1(req, payload, username, campaign_id, state)
+    if early is not None:
+        return None, early
+    assert pre is not None  # a1:ar returnerar (pre, None) ELLER (None, early)
+    guardian_roll, _guardian_roll_usage = await _house_guardian_roll_check(
+        req, username, state, pre)
+    ctx = await _chat_phase_a2(
+        req, payload, username, campaign_id, state, pre,
+        guardian_roll, _guardian_roll_usage)
+    return ctx, None
+
+
+async def _chat_phase_a1(
+    req: ChatRequest, payload: dict, username: str, campaign_id: str, state: dict,
+) -> tuple[dict | None, dict | None]:
+    """Fas A-del 1: allt deterministic fram T.o.m. pre-DM-sömmen — INNAN
+    Guardian kast-koll (husvägen kör den i wrappern; 🏮 full-pipelinen kör
+    den som en klient-hop mellan A1 och A2).
+
+    Returnerar (pre_ctx, None) eller (None, early_response)."""
 
     # Spara senaste DM-modellen per kampanj — så valet behålls när spelaren
     # återvänder till kampanjen (frontend återställer den vid load).
@@ -6973,29 +7029,57 @@ async def _chat_phase_a(
         "AWAKENING" if is_awakening else f"«{req.message[:40]}»",
     )
 
-    # ── Guardian PRE-DM: kast-detektion ──
-    # Guardian avgör om handlingen kräver ett kast och i så fall vilket.
-    # Resultatet injiceras som råd i DM-prompten + fungerar som fallback
-    # om DM glömmer [KAST:]-taggen.
-    # Vi skickar med senaste DM-svar som kontext så Guardian förstår situationen.
-    guardian_roll = None
-    _guardian_roll_usage = {}
+    # Senaste DM-svar som kontext till Guardian kast-koll (flyttad hit från
+    # A-/B-gränsen 2026-09-30 så 🏮 full-pipelinen kan skicka samma kontext i
+    # roll-check-hopen). Read-fel degraderar till tom kontext — kast-kollen
+    # hoppas ändå över på samma sätt som tidigare vid undantag.
+    dm_context = ""
     if not is_awakening and not req.message.startswith("[Resultat:"):
         try:
-            _tg = time.time()
-            # Hämta senaste DM-svar från transkriptet för kontext
             _recent = store.load_transcript(state, last_n=4)
-            _dm_context = ""
             for entry in reversed(_recent):
                 if entry.get("role") == "assistant":
-                    _dm_context = entry.get("content", "")
+                    dm_context = entry.get("content", "")
                     break
+        except Exception as e:
+            logger.warning("🛡️ Guardian pre-DM context load skipped: %s", e)
+
+    # ── Pre-DM-sömmen (P0): servern rullar fiendeattacker INNAN DM:n narrerar ──
+    # Planerade utfall lagras i meta["enemy_attack_rolls"][str(round)] och
+    # visas i DM-prompten (se _build_system_prompt) så att narrationen blir
+    # konsekvent med tärningarna. Idempotent per runda (retry-säkert).
+    try:
+        _plan_pre_dm_enemy_rolls(state)
+    except Exception as e:
+        logger.warning("Pre-DM enemy roll planning skipped: %s", e)
+
+    return {
+        "effective_turn": effective_turn,
+        "is_awakening": is_awakening,
+        "result_effects": result_effects,
+        "turn_epoch": turn_epoch,
+        "_t0": _t0,
+        "dm_context": dm_context,
+    }, None
+
+
+async def _house_guardian_roll_check(
+    req: ChatRequest, username: str, state: dict, pre: dict,
+) -> tuple[dict | None, dict]:
+    """Husvägens Guardian PRE-DM kast-koll — oförändrad beteende, flyttad
+    till en egen helper när Fas A delades (v2-reläet kör samma prompt
+    klient-side i 'rollcheck'-hopen istället)."""
+    guardian_roll = None
+    _guardian_roll_usage = {}
+    if not pre["is_awakening"] and not req.message.startswith("[Resultat:"):
+        try:
+            _tg = time.time()
             _log_activity(username, "🦉 Lorekeeper reviewing the action…")
             guardian_roll = await guardian_check_roll(
                 req.message, state,
                 lambda msgs: _guardian_call(state, msgs, _guardian_roll_usage, temperature=0.1, max_tokens=1024),
                 language=_get_lang(state),
-                dm_context=_dm_context,
+                dm_context=pre.get("dm_context", ""),
             )
             # Pre-DM tokens sparas i DM-postens meta (guardian_pre_dm_tokens) så
             # admin-stats räknar ALL Guardian-förbrukning (roll-detection körs varje tur).
@@ -7006,15 +7090,17 @@ async def _chat_phase_a(
                 logger.debug("🛡️ Guardian pre-DM (%.1fs): no roll", time.time() - _tg)
         except Exception as e:
             logger.warning("🛡️ Guardian pre-DM skipped: %s", e)
+    return guardian_roll, _guardian_roll_usage
 
-    # ── Pre-DM-sömmen (P0): servern rullar fiendeattacker INNAN DM:n narrerar ──
-    # Planerade utfall lagras i meta["enemy_attack_rolls"][str(round)] och
-    # visas i DM-prompten (se _build_system_prompt) så att narrationen blir
-    # konsekvent med tärningarna. Idempotent per runda (retry-säkert).
-    try:
-        _plan_pre_dm_enemy_rolls(state)
-    except Exception as e:
-        logger.warning("Pre-DM enemy roll planning skipped: %s", e)
+
+async def _chat_phase_a2(
+    req: ChatRequest, payload: dict, username: str, campaign_id: str, state: dict,
+    pre: dict, guardian_roll: dict | None, _guardian_roll_usage: dict,
+) -> dict:
+    """Fas A-del 2: prompt-bygget (systemprompt, RAG/minnen, NPC-kontext,
+    transkript, long-form-detektion) — efter kast-kollen. Returnerar ctx."""
+    is_awakening = pre["is_awakening"]
+    effective_turn = pre["effective_turn"]
 
     messages = [{"role": "system", "content": _build_system_prompt(
         state, turn_override=effective_turn, awakening_trigger=is_awakening,
@@ -7106,31 +7192,37 @@ async def _chat_phase_a(
     if _is_long_form:
         logger.info("📖 Long-form request — max_tokens raised to %d", _dm_max_tokens)
 
-
     return {
         "messages": messages,
         "effective_turn": effective_turn,
         "is_awakening": is_awakening,
-        "result_effects": result_effects,
+        "result_effects": pre["result_effects"],
         "guardian_roll": guardian_roll,
         "_guardian_roll_usage": _guardian_roll_usage,
         "_dm_max_tokens": _dm_max_tokens,
-        "turn_epoch": turn_epoch,
-        "_t0": _t0,
-    }, None
+        "turn_epoch": pre["turn_epoch"],
+        "_t0": pre["_t0"],
+    }
 
 
 async def _chat_phase_b(
     req: ChatRequest, payload: dict, username: str, campaign_id: str, state: dict,
     ctx: dict, reply: str, reasoning: str, usage: dict, llm_time: float,
-    *, relay: bool = False,
+    *, relay: bool = False, full_chain: bool = False,
 ) -> dict:
     """Fas B av chat-turen: allt EFTER att DM-svaret mottagits.
 
     `relay=True` = 🏮 local-vägen (commit): ingen repair-retry (invalid
     mekanik förkastas, narrationen behålls) och [SÖK:]-fortsättningen körs på
     husets DEFAULT_PLAYER_MODEL utan att driva turn-potten. Husvägen
-    (relay=False) är beteendemässigt identisk med före relä-refactorn."""
+    (relay=False) är beteendemässigt identisk med före relä-refactorn.
+
+    `full_chain=True` = 🏮 v2 "Whole Cauldron local": guardian-huvudanropet
+    och faktextraktionens huvudanrop är UTBRUTNA till klient-hopp — denna
+    körs inte som hus-bakgrund. Fas B sparar ändå turen (DM-text + taggar)
+    så ett avbrott lämnar ett giltigt läge, och signalerar further arbete
+    via ctx-nycklarna `_pending_search` (strquery) och `_repair_pending`
+    (bundle för repair-hopen)."""
     messages = ctx["messages"]
     effective_turn = ctx["effective_turn"]
     is_awakening = ctx["is_awakening"]
@@ -7151,7 +7243,14 @@ async def _chat_phase_b(
     # ur det slutgiltiga svaret. Kostar 2x den turen — en undantagsmekanism.
     _search_re = re.compile(r"\[(?:SÖK|SEARCH):\s*(.*?)\]", re.DOTALL | re.IGNORECASE)
     _search_m = _search_re.search(reply or "")
-    if _search_m and not is_awakening:
+    if _search_m and not is_awakening and full_chain:
+        # 🏮 v2: fortsättningsanropet körs klient-side i kedjans 'search'-hop
+        # (sist i kön) — här sparas frågan och taggen strippas (husets
+        # beteende: minne saknas → original-svaret behålls, taggen bort).
+        ctx["_pending_search"] = _search_m.group(1).strip()[:200]
+        reply = reply.replace(_search_m.group(0), "").strip()
+        logger.info("🏮 CHAIN search queued (tag stripped): %.120s", ctx["_pending_search"])
+    elif _search_m and not is_awakening:
         _query = _search_m.group(1).strip()[:200]
         logger.info("🔍 DM requested memory search: %.120s", _query)
         try:
@@ -7262,6 +7361,20 @@ async def _chat_phase_b(
             effects = parsed_effects
             break
 
+        if full_chain:
+            # 🏮 v2: ogiltig mekanik → spara narrationen strippt (säker save —
+            # ett avbrott i kedjan lämnar ett giltigt läge) och kö 'repair'-
+            # hoppen: klienten lagar taggarna, commit validerar om.
+            ctx["_repair_pending"] = {
+                "errors": errors,
+                "current_reply": current_reply,
+                "roll_requests": roll_requests,
+            }
+            logger.info("🏮 CHAIN repair queued — mechanics invalid: %s", "; ".join(errors))
+            reply = _strip_mechanical_tags(current_reply)
+            effects = []
+            break
+
         if attempt < 1 and not _relay:
             # Ogiltigt — be LLM:n reparera de mekaniska taggarna
             # Repair kostar en EGEN turn (+1) — pipeline-reservationen (1 turn
@@ -7307,6 +7420,14 @@ async def _chat_phase_b(
     # Logga dag-byte till aktivitetsflödet (loading-animationen)
     if any(e.get("type") == "ny_dag" for e in effects):
         _log_activity(username, "🌅 A new day dawns…")
+
+    # 🏮 Bokför local_dm-ledgerraden (0 turns) EXAKT en gång per drag — på
+    # dm-hoppet (v1) respektive första committen efter dm (v2: repair-
+    # commiten har flaggan redan satt). Husvägen har ingen local_dm-rad.
+    if _relay and not ctx.get("_ledger_booked"):
+        ctx["_ledger_booked"] = True
+        _append_turn_ledger(username, "local_dm", req.model_id,
+                           int((usage or {}).get("total_tokens") or 0))
 
     # ── [STRID:] — öppna/uppdatera strid (v23) ──
     # DM öppnar striden med taggen → world.combat skapas. Körs EFTER
@@ -7385,19 +7506,25 @@ async def _chat_phase_b(
     # Guardian ska inte applicera [SKADA:]-taggen en andra gång.
     # Registered synchronously (_register_bg_task) so an undo racing this turn
     # can always see and await the task (undo-turn design 2026-09 race recipe).
-    guardian_task = _register_bg_task(username, campaign_id, _guardian_post_dm(
-        username, campaign_id, reply, req.message, effective_turn, list(new_npcs),
-        skip_effects=meta.get("last_effects") or [], epoch=turn_epoch,
-    ))
+    # 🏮 v2 full_chain: guardian-huvudanropet är UTBRUTET till en klient-hop
+    # (chain:'guardian') — ingen hus-registrering här; resten av
+    # bakgrundsjobben (threads/summaries/RAG/dag-entry) registreras som vanligt.
+    if not full_chain:
+        guardian_task = _register_bg_task(username, campaign_id, _guardian_post_dm(
+            username, campaign_id, reply, req.message, effective_turn, list(new_npcs),
+            skip_effects=meta.get("last_effects") or [], epoch=turn_epoch,
+        ))
 
     # ── Fas 3: Faktextraktion + RAG + sammanfattning → BAKGRUND ──
     # Dessa är icke-kritiska och får ALDRIG fördröja HTTP-svaret till klienten.
     # (Tidigare blockerade de svaret i upp till 180s vardera → "fastnar i laddning".)
+    # 🏮 v2 full_chain: faktextraktionens huvudanrop körs klient-side
+    # (chain:'extract') — huset hoppar över den delen men kör resten.
     campaign_id = state["meta"].get("campaign_id", "")
     turn_count = state["meta"].get("turn_count", 0)
     task = _register_bg_task(username, campaign_id, _post_turn_tasks(
         username, campaign_id, reply, req.message, turn_count, req.model_id,
-        epoch=turn_epoch,
+        epoch=turn_epoch, skip_extraction=full_chain,
     ))
 
     # Dag-entry: om NY_DAG trigga, generera loggbok-entry i bakgrunden
@@ -7445,17 +7572,422 @@ async def _chat_phase_b(
 # Se backend/local_relay.py + vault:en (dnd-llm-local-ollama-impl-2026-09).
 
 
-def _local_gate(username: str) -> None:
-    """503 om funktionen är avstängd, 429 om dagliga capet är nått."""
+def _campaign_pipeline(username: str) -> str:
+    """Läs kampanjens relä-pipeline (state-lookup är billig; gjord per
+    endpoint som v1 gör). Okänd/ingen kampanj/tom meta ⇒ "dm" (v1-beteende)."""
+    st = store.get(username)
+    try:
+        if st and st.get("meta", {}).get("local_pipeline") == "full":
+            return "full"
+    except AttributeError:
+        pass
+    return "dm"
+
+
+def _local_gate(username: str, pipeline: str = "dm") -> None:
+    """503 om funktionen är avstängd, 429 om dagliga capet är nått.
+    🏮 v2: capet är pipeline-beroende (LOCAL_DM_DAILY_CAP vs _FULL) — hela
+    kedjan lokalt kostar huset inga prompts ⇒ högre tak."""
     if not local_relay.enabled():
         raise HTTPException(503, "Local AI är inte påslaget på servern just nu")
-    if not local_relay.under_daily_cap(username):
+    if not local_relay.under_daily_cap(username, pipeline):
         logger.info("⛔ Local DM cap reached: %s", username)
         raise HTTPException(
             429,
-            f"Dagens lokala drag är slut ({local_relay.daily_cap()}) — vila lite, "
+            f"Dagens lokala drag är slut ({local_relay.daily_cap(pipeline)}) — vila lite, "
             "eller kör hus-DM:n (den kostar en turn).",
         )
+
+
+# ── 🏮 v2 chain-hjälpare ─────────────────────────────────────────────
+# Varje hop = ett NYTT engångssteg (samma TTL/drift-disciplin som v1) med
+# `chain`-etikett; steget vet vilken hop det är. alla kedjans LLM-anrop körs
+# klient-side — _call_llm anropas ALDRIG med local:-id i kedjan.
+
+
+def _chain_issue_step(
+    *, username: str, campaign_id: str, base: dict, chain: str,
+    messages: list[dict], temperature: float, num_predict: int,
+    json_format: bool = False, turn_count_at: int | None = None,
+    carry: dict | None = None,
+) -> dict:
+    """Stasha nästa kedjehop och returnera stegets JSON-payload (samma form
+    som v1 prepare + `chain`)."""
+    sid = local_relay.new_step_id()
+    now = time.time()
+    ttl = local_relay.ttl_seconds()
+    data = {
+        "username": username,
+        "campaign_id": campaign_id,
+        "turn_count_at_prepare": (
+            turn_count_at if turn_count_at is not None
+            else base.get("turn_count_at_prepare", 0)
+        ),
+        "model_id": base["model_id"],
+        "message": base["message"],
+        "num_ctx": base.get("num_ctx"),
+        "pipeline": "full",
+        "chain": chain,
+        "prepare_ts": base.get("prepare_ts", now),
+        "created_ts": now,
+    }
+    if carry:
+        data.update(carry)
+    local_relay.stash_step(sid, data)
+    options: dict = {
+        "num_ctx": local_relay.clamp_num_ctx(base.get("num_ctx")),
+        "temperature": temperature,
+        "num_predict": num_predict,
+    }
+    if json_format:
+        # Husparitet: strukturerade JSON-anrop körs med thinking AVSTÄNGT
+        # (house _guardian_call/_guardian_manual_correction använder
+        # thinking="disabled"). Ollamas 'think' är ett FÖDT-payload-fält —
+        # clients lyfter det ur options (verifierat mot ollama 2026-09-30:
+        # på CPU brände guardian-hoppet hela num_predict på tanke → tomt).
+        options["format"] = "json"
+        options["think"] = False
+    logger.info("🏮 CHAIN %s step=%s model=%s", chain, sid[:8], base["model_id"])
+    return {
+        "step_id": sid,
+        "kind": "generate",
+        "chain": chain,
+        "ollama": {
+            "model": local_relay.ollama_model(base["model_id"]),
+            "messages": messages,
+            "options": options,
+        },
+        "deadline": now + ttl,
+    }
+
+
+def _chain_dm_step_shape(step: dict, ctx: dict, now: float | None = None) -> dict:
+    """DM-hoppet: options EXAKT som v1 prepare (temp 0.8, num_predict
+    _dm_max_tokens, ingen format-fält)."""
+    sid = local_relay.new_step_id()
+    now = now or time.time()
+    ttl = local_relay.ttl_seconds()
+    data = {
+        "username": step["username"],
+        "campaign_id": step["campaign_id"],
+        "turn_count_at_prepare": step.get("turn_count_at_prepare", 0),
+        "model_id": step["model_id"],
+        "message": step["message"],
+        "num_ctx": step.get("num_ctx"),
+        "pipeline": step.get("pipeline", "dm"),
+        "chain": "dm",
+        "ctx": ctx,
+        "prepare_ts": step.get("prepare_ts", now),
+        "created_ts": now,
+    }
+    local_relay.stash_step(sid, data)
+    logger.info("🏮 CHAIN dm step=%s model=%s", sid[:8], step["model_id"])
+    return {
+        "step_id": sid,
+        "kind": "generate",
+        "chain": "dm",
+        "ollama": {
+            "model": local_relay.ollama_model(step["model_id"]),
+            "messages": ctx["messages"],
+            "options": {
+                "num_ctx": local_relay.clamp_num_ctx(step.get("num_ctx")),
+                "temperature": 0.8,
+                "num_predict": ctx["_dm_max_tokens"],
+            },
+        },
+        "deadline": now + ttl,
+    }
+
+
+async def _chain_issue_guardian_step(step: dict, state: dict) -> dict:
+    """Guardian post-DM-hop: SAMMA meddelanden som _guardian_post_dm bygger för
+    sitt huvud-anrop (delad builder — husvägen oförändrad)."""
+    meta = state.setdefault("meta", {})
+    reply = step["done"]["reply"]
+    messages = build_extract_mechanics_messages(
+        reply, step["message"], state,
+        meta.get("turn_count", 0),
+        language=_get_lang(state),
+        conversation_history=store.load_transcript(state, last_n=8),
+    )
+    carry = {
+        "done": step["done"], "ctx": step.get("ctx"),
+        "skip_effects": list(meta.get("last_effects") or []),
+        "turn_epoch": (step.get("ctx") or {}).get("turn_epoch"),
+        "effective_turn": (step.get("ctx") or {}).get("effective_turn", meta.get("turn_count", 0)),
+        "new_npcs": list(step.get("new_npcs") or (step.get("done") or {}).get("new_npcs") or []),
+    }
+    return _chain_issue_step(
+        username=step["username"], campaign_id=step["campaign_id"], base=step,
+        chain="guardian", messages=messages, temperature=0.1, num_predict=4096,
+        json_format=True, turn_count_at=meta.get("turn_count", 0), carry=carry,
+    )
+
+
+async def _chain_issue_extract_step(step: dict, state: dict) -> dict | None:
+    """Extract-hop — samma cadence som huset: faktextraktion körs varannan
+    tur (turn_count % 2 == 0, P2/spec B5). Bygger samma messages som
+    _post_turn_tasks huvud-anrop via delad builder."""
+    meta = state.setdefault("meta", {})
+    turn_count = meta.get("turn_count", 0)
+    if turn_count % 2 != 0:
+        return None  # huset hade heller inte extraherat denna tur
+    inv_names = [f"- {it['name']} (×{it.get('qty', 1)})" for it in state.get("inventory", [])]
+    messages = build_extraction_messages(
+        step["done"]["reply"], step["message"], turn_count,
+        inventory_list="\n".join(inv_names) if inv_names else "(tomt)",
+        language=_get_lang(state),
+    )
+    carry = {
+        "done": step["done"], "ctx": step.get("ctx"),
+        "turn_epoch": (step.get("ctx") or {}).get("turn_epoch"),
+        "extract_turn": turn_count,
+        "guardian_applied": step.get("guardian_applied"),
+    }
+    return _chain_issue_step(
+        username=step["username"], campaign_id=step["campaign_id"], base=step,
+        chain="extract", messages=messages,
+        # house-paritet: temperature 0.2 ur husets _extraction_llm-closure;
+        # num_predict 2048 per fryst v2-kontrakt (husets max_tokens 800 är en
+        # övre gräns — Ollama stoppar ändå vid EOS).
+        temperature=0.2, num_predict=2048, json_format=True,
+        turn_count_at=turn_count, carry=carry,
+    )
+
+
+async def _chain_issue_search_step(step: dict, state: dict) -> dict | None:
+    """Search-hop: servern hämtar minnet som huset gör; tomt minne ⇒ ingen
+    hop (original-svaret behålls — husets beteende)."""
+    query = (step.get("ctx") or {}).get("_pending_search")
+    if not query:
+        return None
+    campaign_id = step["campaign_id"]
+    try:
+        _mem = await _retrieve_relevant_memory(step["username"], campaign_id, query, state)
+    except Exception as e:
+        logger.warning("🏮 CHAIN search memory failed: %s", e)
+        _mem = {}
+    _mem_text = (_mem or {}).get("text", "")
+    if not _mem_text:
+        logger.info("🏮 CHAIN search skipped — no relevant memory")
+        return None
+    ctx = step["ctx"]
+    _cont_prompt = (
+        "The player is waiting for your reply. You asked for more context — "
+        "here it is:\n\n" + _mem_text +
+        "\n\nFinish your reply to the player now, weaving in anything from "
+        "this memory that matters. Output ONLY the final narration (no [SÖK:] tag)."
+    )
+    messages = [
+        {"role": "system", "content": ctx["messages"][0]["content"]},
+        {"role": "assistant", "content": step["done"]["reply"]},
+        {"role": "user", "content": _cont_prompt},
+    ]
+    carry = {"done": step["done"], "ctx": ctx,
+             "guardian_applied": step.get("guardian_applied")}
+    return _chain_issue_step(
+        username=step["username"], campaign_id=step["campaign_id"], base=step,
+        chain="search", messages=messages, temperature=0.8,
+        num_predict=ctx["_dm_max_tokens"],
+        turn_count_at=state.get("meta", {}).get("turn_count", 0), carry=carry,
+    )
+
+
+def _apply_extracted_facts(username: str, campaign_id: str, facts, inv_changes) -> dict | None:
+    """Applicera extraktionsresultat (fakta + inventory) — EXAKT husets
+    tillämpning i _post_turn_tasks, delad med kedjans extract-commit.
+    Returnerar ev. muterat state (anroparen sparar)."""
+    st = store.get(username, campaign_id)
+    if facts:
+        register = FactRegister(username, campaign_id)
+        register.add_facts(facts)  # self-persistens
+    if inv_changes and st:
+        inv = st.setdefault("inventory", [])
+        tag_added = {e["value"].lower() for e in (st.get("meta", {}).get("last_effects", []))
+                     if e.get("type") == "föremål"}
+        for ch in inv_changes:
+            name_lower = ch["name"].lower()
+            if ch["action"] == "add":
+                if name_lower in tag_added:
+                    logger.debug("📦 LLM extraction skipped '%s' (already tagged)", ch["name"])
+                    continue
+                existing = next((it for it in inv if it["name"].lower() == name_lower), None)
+                if existing:
+                    existing["qty"] = existing.get("qty", 1) + ch["qty"]
+                    logger.info("📦 LLM-dedup: '%s' → qty=%d", ch["name"], existing["qty"])
+                else:
+                    inv.append({
+                        "id": f"llm-{len(inv)}",
+                        "name": ch["name"],
+                        "type": ch.get("type", "Annat"),
+                        "qty": ch["qty"],
+                        "weight": 0,
+                        "equipped": False,
+                        "rarity": "normal",
+                        "description": "",
+                    })
+                    logger.info("📦 LLM extraction added '%s'", ch["name"])
+            elif ch["action"] == "remove":
+                existing = next((it for it in inv if it["name"].lower() == name_lower), None)
+                if existing:
+                    existing["qty"] = existing.get("qty", 1) - ch["qty"]
+                    if existing["qty"] <= 0:
+                        inv.remove(existing)
+                        logger.info("📦 LLM extraction removed '%s'", ch["name"])
+                    else:
+                        logger.info("📦 LLM extraction reduced '%s' → qty=%d", ch["name"], existing["qty"])
+    return st
+
+
+async def _chain_next_step(step: dict, state: dict) -> dict | None:
+    """Nästa hop i kön EFTER den slutförda (repair → guardian → extract →
+    search). None ⇒ kedjan klar (anroparen returnerar done-JSON)."""
+    chain = step.get("chain", "dm")
+    if chain == "dm":
+        ctx = step.get("ctx") or {}
+        if ctx.get("_repair_pending"):
+            rp = ctx["_repair_pending"]
+            repair_prompt = (
+                "Ditt förra svar hade dessa fel: "
+                + "; ".join(rp["errors"])
+                + ". Behåll narrationen men fixa de mekaniska taggarna. "
+                "Svara med samma format."
+            )
+            messages = ctx["messages"] + [
+                {"role": "assistant", "content": rp["current_reply"]},
+                {"role": "user", "content": repair_prompt},
+            ]
+            carry = {"done": step["done"], "ctx": ctx, "repair_attempt": 1}
+            return _chain_issue_step(
+                username=step["username"], campaign_id=step["campaign_id"], base=step,
+                chain="repair", messages=messages, temperature=0.8,
+                num_predict=ctx["_dm_max_tokens"],
+                turn_count_at=state.get("meta", {}).get("turn_count", 0), carry=carry,
+            )
+        return await _chain_issue_guardian_step(step, state)
+    if chain == "repair":
+        return await _chain_issue_guardian_step(step, state)
+    if chain == "guardian":
+        nxt = await _chain_issue_extract_step(step, state)
+        if nxt is not None:
+            return nxt
+        nxt = await _chain_issue_search_step(step, state)
+        return nxt
+    if chain == "extract":
+        return await _chain_issue_search_step(step, state)
+    return None  # search (eller okänd) ⇒ klart
+
+
+def _chain_done(step: dict, state: dict, *, guardian_applied: bool | None = None,
+                final_reply: str | None = None, reasoning: str | None = None) -> dict:
+    """Slutlig done-JSON — EXAKT samma nycklor som /api/chat (v1-kontraktet).
+
+    guardian_pending: hus-vägen sätter alltid True (bakgrunds-Guardian
+    rapporterar via transkript-poll). I FULL mode vet servern om guardian-hoppet
+    faktiskt applicerats — fast → False (ingen poll behövs), avbrott/inget
+    guardian-hopp → True så klienten pollar transkriptet som idag.
+    response_time = prepare→done (kontrakt 3h)."""
+    done = dict(step.get("done") or {})
+    if final_reply is not None:
+        done["reply"] = final_reply
+    if reasoning and not done.get("reasoning"):
+        done["reasoning"] = reasoning[:3000]
+    if guardian_applied is not None:
+        done["guardian_pending"] = not guardian_applied
+    try:
+        done["turn_count"] = state.get("meta", {}).get("turn_count", done.get("turn_count", 0))
+        world = state.get("world", {})
+        done["world"] = {
+            "current_location": world.get("current_location", ""),
+            "time": world.get("time", ""),
+            "weather": world.get("weather", ""),
+            "day": world.get("day", 0),
+        }
+    except AttributeError:
+        pass
+    done["response_time"] = round(time.time() - step.get("prepare_ts", step.get("created_ts", time.time())), 1)
+    return done
+
+
+async def _chain_guardian_apply(step: dict, username: str, campaign_id: str, content: str) -> bool:
+    """Tillämpa klient-JSON:et på guardian-hoppet EXAKT som husvägen
+    (delad finish-hjälpare). Ogiltig JSON ⇒ tomt mech-mallar (husets
+    fallback-beteende vid extraktionsfel; ingen extra retry-hop)."""
+    state = store.get(username, campaign_id)
+    if not state:
+        return False
+    epoch = (step.get("ctx") or {}).get("turn_epoch")
+    if not _epoch_ok(username, campaign_id, epoch):
+        logger.info("🏮 CHAIN guardian discarded — the turn was undone")
+        return False
+    mech = _guardian_parse_json(content)
+    if mech is None:
+        logger.warning("🏮 CHAIN guardian: invalid JSON → treated as no changes")
+        mech = mechanics_empty_template()
+    else:
+        mech = normalize_mechanics_result(dict(mech))
+    return await _guardian_finish_locked(
+        state, mech, username, campaign_id,
+        turn_count=state.get("meta", {}).get("turn_count", 0),
+        effective_turn=step.get("effective_turn", 0),
+        dm_npcs=step.get("new_npcs") or [],
+        skip_effects=step.get("skip_effects") or None,
+        epoch=epoch, guardian_usage={},
+    )
+
+
+async def _chain_extract_apply(step: dict, username: str, campaign_id: str, content: str) -> None:
+    state = store.get(username, campaign_id)
+    if not state:
+        return
+    epoch = step.get("turn_epoch") if step.get("turn_epoch") is not None else (step.get("ctx") or {}).get("turn_epoch")
+    if not _epoch_ok(username, campaign_id, epoch):
+        logger.info("🏮 CHAIN extract discarded — the turn was undone")
+        return
+    parsed = _extract_json_object(content)
+    if parsed is None:
+        logger.warning("🏮 CHAIN extract: invalid JSON → no facts")
+        return
+    facts, inv_changes = parse_extraction_result(parsed, step.get("extract_turn", 0))
+    st = _apply_extracted_facts(username, campaign_id, facts, inv_changes)
+    if st and inv_changes:
+        store.save(st)
+
+
+def _chain_replace_last_assistant(state: dict, new_text: str) -> None:
+    """Byt transkriptets senaste assistant-post mot `new_text` (delad
+    repair/search-rewriter: dm-hoppets commit sparade mitt-texten, den
+    slutgiltiga narrationen ska vara den text klienten renderar)."""
+    try:
+        tdir = store.get_transcripts_dir(state)
+        session = state["meta"].get("session_count", 1)
+        tfile = tdir / f"session-{session:03d}.jsonl"
+        if not tfile.exists():
+            return
+        lines = tfile.read_text(encoding="utf-8").splitlines()
+        for i in range(len(lines) - 1, -1, -1):
+            try:
+                e = json.loads(lines[i])
+            except Exception:
+                continue
+            if e.get("role") == "assistant":
+                e["content"] = new_text
+                lines[i] = json.dumps(e, ensure_ascii=False)
+                break
+        tfile.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    except Exception as ex:
+        logger.warning("🏮 CHAIN transcript rewrite failed: %s", ex)
+
+
+def _chain_clean_search_reply(content: str) -> str:
+    """Rensa en search-fortsettning till ren narration (mekanska taggar
+    bokfordes redan på dm-hoppet — dubbel-applicering undviks; se kontrakt 3g)."""
+    reply, _ = _parse_npcs(content)
+    reply, _ = _parse_roll_requests(reply)
+    reply = _strip_mechanical_tags(reply)
+    reply = re.sub(r'<STATE_UPDATE>.*?</STATE_UPDATE>', '', reply, flags=re.DOTALL).strip()
+    reply = re.sub(r'<think>.*?</think>', '', reply, flags=re.DOTALL | re.IGNORECASE).strip()
+    return reply
 
 
 @app.post("/api/chat/local/prepare")
@@ -7463,10 +7995,15 @@ async def chat_local_prepare(req: LocalPrepareRequest, morkrets_token: str | Non
     """Fas A över relä: bygg DM-prompten, stasha steget, returnera Ollama-payload.
 
     Konsumerar INTE någon turn (husets /api-chat reserverar 1 turn mellan Fas A
-    och B; reläets commit bokför istället en local_dm-rad med 0 turns)."""
+    och B; reläets commit bokför istället en local_dm-ledgerrad med 0 turns).
+
+    🏮 v2: i full-pipeline (meta.local_pipeline=='full' + local:-modell)
+    returneras först en 'rollcheck'-hop (Guardian kast-koll körs klient-side) —
+    för vaknande/[Resultat:]-meddelanden, där huset skutar kast-kollen, kommer
+    dm-hoppet direkt från prepare."""
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
-    _local_gate(username)
+    _local_gate(username, _campaign_pipeline(username))
 
     if payload.get("role") != "admin":
         req.model_id = _clamp_player_model(req.model_id, tier=_tier_for(username))
@@ -7481,6 +8018,7 @@ async def chat_local_prepare(req: LocalPrepareRequest, morkrets_token: str | Non
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj — skapa en först")
     campaign_id = state["meta"].get("campaign_id", "")
+    full_mode = state["meta"].get("local_pipeline") == "full"
 
     lock = _state_lock(username, campaign_id)
     async with lock:
@@ -7495,15 +8033,39 @@ async def chat_local_prepare(req: LocalPrepareRequest, morkrets_token: str | Non
         except Exception as e:
             logger.warning("Undo snapshot failed (local prepare): %s", e)
         try:
-            ctx, early = await _chat_phase_a(req, payload, username, campaign_id, state)
-            if early is not None:
-                # Fas A kortslöt (/guardian-liknande gren) — commit krävs inte.
-                if _snap_taken:
-                    try:
-                        store.discard_snapshot(username, campaign_id)
-                    except Exception:
-                        pass
-                return early
+            if not full_mode:
+                # ── v1 dm-läge: oförändrat ──
+                ctx, early = await _chat_phase_a(req, payload, username, campaign_id, state)
+                if early is not None:
+                    if _snap_taken:
+                        try:
+                            store.discard_snapshot(username, campaign_id)
+                        except Exception:
+                            pass
+                    return early
+                chain_payload = ctx  # stash-ctx under 'dm'-nyckeln nedan
+                chain = "dm"
+            else:
+                # ── v2 full-läge: A1 nu, kast-koll + A2 efter rollcheck-hopen ──
+                pre, early = await _chat_phase_a1(req, payload, username, campaign_id, state)
+                if early is not None:
+                    if _snap_taken:
+                        try:
+                            store.discard_snapshot(username, campaign_id)
+                        except Exception:
+                            pass
+                    return early
+                assert pre is not None
+                if pre["is_awakening"] or req.message.startswith("[Resultat:"):
+                    # huset skutar kast-kollen här → dm-hopp direkt (kontrakt 3a)
+                    guardian_roll, roll_usage = await _house_guardian_roll_check(
+                        req, username, state, pre)
+                    ctx = await _chat_phase_a2(
+                        req, payload, username, campaign_id, state, pre,
+                        guardian_roll, roll_usage)
+                    chain_payload, chain = ctx, "dm"
+                else:
+                    chain_payload, chain = pre, "rollcheck"
             # Pre-DM-mutationer ([Resultat:], fienderolls-planering) sparas nu:
             # husvägen sparar först i Fas B, men reläet kan dö mellan prepare
             # och commit — planerade kast får inte tappas (idempotent per runda,
@@ -7517,52 +8079,96 @@ async def chat_local_prepare(req: LocalPrepareRequest, morkrets_token: str | Non
                     pass
             raise
 
-    step_id = local_relay.new_step_id()
     now = time.time()
     ttl = local_relay.ttl_seconds()
-    local_relay.stash_step(step_id, {
+    if chain == "dm" and not full_mode:
+        # ── v1-formen (byte-identiskt kontrakt): ett enda steg, ingen chain ──
+        step_id = local_relay.new_step_id()
+        local_relay.stash_step(step_id, {
+            "username": username,
+            "campaign_id": campaign_id,
+            "turn_count_at_prepare": state["meta"].get("turn_count", 0),
+            "model_id": req.model_id,
+            "message": req.message,
+            "num_ctx": req.num_ctx,
+            "pipeline": "dm",
+            "chain": "dm",
+            "ctx": chain_payload,
+            "prepare_ts": now,
+            "created_ts": now,
+        })
+        logger.info("🏮 LOCAL prepare step=%s model=%s turn=%s chain=dm",
+                    step_id[:8], req.model_id, state["meta"].get("turn_count", 0))
+        return {
+            "step_id": step_id,
+            "kind": "generate",
+            "ollama": {
+                "model": local_relay.ollama_model(req.model_id),
+                "messages": chain_payload["messages"],
+                "options": {
+                    "num_ctx": local_relay.clamp_num_ctx(req.num_ctx),
+                    "temperature": 0.8,
+                    "num_predict": chain_payload["_dm_max_tokens"],
+                },
+            },
+            "deadline": now + ttl,
+        }
+
+    base = {
         "username": username,
         "campaign_id": campaign_id,
         "turn_count_at_prepare": state["meta"].get("turn_count", 0),
         "model_id": req.model_id,
         "message": req.message,
-        "ctx": ctx,
-        "created_ts": now,
-    })
-    logger.info("🏮 LOCAL prepare step=%s model=%s turn=%s",
-                step_id[:8], req.model_id, state["meta"].get("turn_count", 0))
-    return {
-        "step_id": step_id,
-        "kind": "generate",
-        "ollama": {
-            "model": local_relay.ollama_model(req.model_id),
-            "messages": ctx["messages"],
-            "options": {
-                "num_ctx": local_relay.clamp_num_ctx(req.num_ctx),
-                "temperature": 0.8,
-                "num_predict": ctx["_dm_max_tokens"],
-            },
-        },
-        "deadline": now + ttl,
+        "num_ctx": req.num_ctx,
+        "pipeline": "full",
+        "prepare_ts": now,
     }
+    if chain == "rollcheck":
+        # Guardian kast-koll som klient-hop — samma builder som husets
+        # guardian_check_roll (temp 0.1, json, num_predict 1024 = husets max_tokens)
+        messages = build_roll_check_messages(
+            req.message, state, language=_get_lang(state),
+            dm_context=chain_payload.get("dm_context", "")) or []
+        logger.info("🏮 LOCAL prepare model=%s turn=%s chain=rollcheck",
+                    req.model_id, state["meta"].get("turn_count", 0))
+        return _chain_issue_step(
+            username=username, campaign_id=campaign_id, base=base,
+            chain="rollcheck", messages=messages, temperature=0.1, num_predict=1024,
+            json_format=True, carry={"pre": chain_payload},
+        )
+
+    # full mode, dm-hopp direkt (vaknande / [Resultat:] — huset skutar
+    # kast-kollen på dessa meddelanden, kontrakt 3a)
+    logger.info("🏮 LOCAL prepare model=%s turn=%s chain=dm(full)",
+                req.model_id, state["meta"].get("turn_count", 0))
+    return _chain_dm_step_shape(base, chain_payload, now=now)
 
 
 @app.post("/api/chat/local/commit")
 async def chat_local_commit(req: LocalCommitRequest, morkrets_token: str | None = Cookie(None)):
     """Fas B över relä: ta emot klienttexten, kör efterbehandlingen, returnera
-    EXAKT samma JSON som /api/chat (klientrenderingen blir identisk)."""
+    EXAKT samma JSON som /api/chat (klientrenderingen blir identisk).
+
+    🏮 v2: steget vet vilken hop det är (chain): rollcheck → dm → repair? →
+    guardian → extract → search? — varje commit antingen returnerar nästa
+    generate-steg eller den slutliga done-JSON:en. dm-hoppets commit sparar
+    turen direkt: abbryts kedjan efteråt står draget (DM-text + taggar);
+    utebliven anrikning = samma som en misslyckad bakgrundsuppgift."""
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
-    _local_gate(username)
+
+    with local_relay._steps_lock:
+        peek = local_relay._steps.get(req.step_id)
+        peek_user = peek.get("username") if peek else None
+        peek_pipeline = (peek or {}).get("pipeline", "dm")
+    _local_gate(username, peek_pipeline)
 
     if not req.content or not req.content.strip():
         raise HTTPException(400, "Tomt innehåll från klienten")
 
     # Engångsanvänt steg — ägarskap kontrolleras FÖRE pop (en gissning
     # av andras step_id får inte konsumera deras steg).
-    with local_relay._steps_lock:
-        peek = local_relay._steps.get(req.step_id)
-        peek_user = peek.get("username") if peek else None
     if peek is not None and peek_user != username:
         raise HTTPException(403, "Steg tillhör en annan spelare")
     step = local_relay.take_step(req.step_id)
@@ -7574,39 +8180,152 @@ async def chat_local_commit(req: LocalCommitRequest, morkrets_token: str | None 
         raise HTTPException(404, "Ingen aktiv kampanj — skapa en först")
     campaign_id = step["campaign_id"]
 
+    chain = step.get("chain", "dm")
+    full = step.get("pipeline") == "full"
+
     lock = _state_lock(username, campaign_id)
     async with lock:
         state = store.get(username, campaign_id) or state
-        # Optimistisk låsning: har turn_count flyttats sedan prepare (annan
-        # flik/hus-chatt) — förkasta steget, klienten köer om hela draget.
-        if state["meta"].get("turn_count", 0) != step["turn_count_at_prepare"]:
-            try:
-                store.discard_snapshot(username, campaign_id)
-            except Exception:
-                pass
-            logger.info("🏮 LOCAL commit 409 (turn drift): %s", username)
+        # Optimistisk låsning: har turn_count flyttats sedan steget skapades
+        # (annan flik/hus-chatt) — förkasta steget, klienten köer om hela draget.
+        if state["meta"].get("turn_count", 0) != step.get("turn_count_at_prepare", state["meta"].get("turn_count", 0)):
+            if chain in ("dm", "rollcheck"):
+                try:
+                    store.discard_snapshot(username, campaign_id)
+                except Exception:
+                    pass
+            logger.info("🏮 LOCAL commit 409 (turn drift): %s chain=%s", username, chain)
             raise HTTPException(409, "Turn-count har flyttats sedan prepare — kö om draget")
 
         chat_req = ChatRequest(message=step["message"], model_id=step["model_id"])
-        try_tokens = int(req.tokens or 0)
-        usage = {"total_tokens": try_tokens} if try_tokens > 0 else {}
-        # Bokför utan att driva turn-potten (local_dm-row, ingen _consume_turn).
-        _append_turn_ledger(username, "local_dm", step["model_id"], try_tokens)
-        try:
-            return await _chat_phase_b(
-                chat_req, payload, username, campaign_id, state, step["ctx"],
-                reply=req.content,
-                reasoning=(req.reasoning or ""),
-                usage=usage,
-                llm_time=round(time.time() - step["created_ts"], 1),
-                relay=True,
-            )
-        except Exception:
+
+        # ── v2 rollcheck-hop: parsat kastbesked → Fas A-del 2 → dm-steg ──
+        if chain == "rollcheck":
+            guardian_roll = parse_roll_check_result(req.content, _get_lang(state))
+            _ctx_pre = step.get("pre") or {}
+            ctx = await _chat_phase_a2(
+                chat_req, payload, username, campaign_id, state, _ctx_pre,
+                guardian_roll, {})
+            logger.info("🏮 CHAIN rollcheck done → dm hop (roll=%s)",
+                        guardian_roll["notation"] if guardian_roll else "none")
+            return _chain_dm_step_shape(step, ctx)
+
+        # ── dm-hop: Fas B (relä; full_chain i v2) + boka + spara + köa resten ──
+        if chain == "dm":
+            try_tokens = int(req.tokens or 0)
+            usage = {"total_tokens": try_tokens} if try_tokens > 0 else {}
+            # local_dm-ledgerraden bokfirs INNE i Fas B (exakt en rad per drag)
             try:
-                store.discard_snapshot(username, campaign_id)
+                result = await _chat_phase_b(
+                    chat_req, payload, username, campaign_id, state, step["ctx"],
+                    reply=req.content,
+                    reasoning=(req.reasoning or ""),
+                    usage=usage,
+                    llm_time=round(time.time() - step.get("prepare_ts", step["created_ts"]), 1),
+                    relay=True,
+                    full_chain=full,
+                )
             except Exception:
-                pass
-            raise
+                try:
+                    store.discard_snapshot(username, campaign_id)
+                except Exception:
+                    pass
+                raise
+            if not full:
+                # v1 dm-läge — ett steg, klart (oförändrat kontrakt)
+                return result
+            step["done"] = result
+            # Fas B muterade + sparade sin egen state-kopia (samma ctx-dict
+            # bars i steget: _pending_search/_repair_pending/_ledger_booked) —
+            # läs om för att kö nästa hop mot det sparade läget.
+            state = store.get(username, campaign_id) or state
+            nxt = await _chain_next_step(step, state)
+            if nxt is None:
+                return _chain_done(step, state, guardian_applied=False)
+            return nxt
+
+        # ── repair-hop: validera exakt som hus-loopen; giltig ⇒ applicera ──
+        if chain == "repair":
+            ctx = step.get("ctx") or {}
+            ctx.pop("_repair_pending", None)
+            repair_reply, rep_npcs = _parse_npcs(req.content)
+            repair_reply, rep_rolls = _parse_roll_requests(repair_reply)
+            for npc in rep_npcs:
+                existing = {n.get("name", "").lower() for n in state.get("npcs", [])}
+                if npc["name"].lower() not in existing:
+                    state.setdefault("npcs", []).append(npc)
+            work_state = copy.deepcopy(state)
+            parsed_reply, work_state, parsed_effects = _parse_mechanical_tags(repair_reply, work_state)
+            dm_resp, errors = validate_dm_response(parsed_reply, parsed_effects, rep_rolls, work_state)
+            done = step.get("done") or {}
+            if dm_resp.valid:
+                # tillämpa mekaniken på det sparade läget + uppdatera done-fält
+                state = work_state
+                meta = state.setdefault("meta", {})
+                meta["last_effects"] = (meta.get("last_effects") or []) + parsed_effects
+                meta["last_roll_requests"] = rep_rolls or []
+                done["reply"] = parsed_reply
+                done["effects"] = (done.get("effects") or []) + parsed_effects
+                if rep_rolls:
+                    done["roll_requests"] = rep_rolls
+                store.save(state)
+                _chain_replace_last_assistant(state, parsed_reply)
+                logger.info("🏮 CHAIN repair valid — mechanics applied (%d effects)", len(parsed_effects))
+            else:
+                # husets 'final else': behåll narrationen, förkasta trasig mekanik
+                cleaned = _strip_mechanical_tags(repair_reply)
+                cleaned = re.sub(r'<STATE_UPDATE>.*?</STATE_UPDATE>', '', cleaned, flags=re.DOTALL).strip()
+                cleaned = re.sub(r'<think>.*?</think>', '', cleaned, flags=re.DOTALL | re.IGNORECASE).strip()
+                done["reply"] = cleaned
+                done["effects"] = []
+                store.save(state)
+                _chain_replace_last_assistant(state, cleaned)
+                logger.warning("🏮 CHAIN repair still invalid — mechanics discarded: %s",
+                               "; ".join(errors))
+            step["done"] = done
+            nxt = await _chain_next_step(step, state)
+            if nxt is None:
+                return _chain_done(step, state, guardian_applied=False)
+            return nxt
+
+        # ── guardian-hop: applicera JSON precis som husvägen ──
+        if chain == "guardian":
+            applied = await _chain_guardian_apply(step, username, campaign_id, req.content)
+            logger.info("🏮 CHAIN guardian commit applied=%s", applied)
+            step["guardian_applied"] = applied
+            state = store.get(username, campaign_id) or state
+            nxt = await _chain_next_step(step, state)
+            if nxt is None:
+                return _chain_done(step, state, guardian_applied=applied)
+            return nxt
+
+        # ── extract-hop: fakta + inventory exakt som huset ──
+        if chain == "extract":
+            await _chain_extract_apply(step, username, campaign_id, req.content)
+            logger.info("🏮 CHAIN extract commit")
+            state = store.get(username, campaign_id) or state
+            nxt = await _chain_next_step(step, state)
+            if nxt is None:
+                return _chain_done(step, state, guardian_applied=step.get("guardian_applied"))
+            return nxt
+
+        # ── search-hop (sist): slutlig narration ersätter, tagen bort ──
+        if chain == "search":
+            final_reply = _chain_clean_search_reply(req.content)
+            if len(final_reply) <= 10:
+                final_reply = (step.get("done") or {}).get("reply", req.content)
+                logger.warning("🏮 CHAIN search continuation empty → kept dm reply")
+            else:
+                # transkriptets sista assistant-post = dm-svaret; byt till den
+                # slutgiltiga narrationen så reload visar samma text som klienten
+                _chain_replace_last_assistant(state, final_reply)
+            logger.info("🏮 CHAIN search commit — final reply set (%d chars)", len(final_reply))
+            return _chain_done(step, state,
+                               guardian_applied=step.get("guardian_applied"),
+                               final_reply=final_reply,
+                               reasoning=req.reasoning)
+
+        raise HTTPException(410, "Okänt kedjesteg — kör om prepare")
 
 # ═══════════════════════════════════════
 # CHARACTER GENERATION
@@ -8657,6 +9376,44 @@ async def update_guardian_model(req: dict, morkrets_token: str | None = Cookie(N
         store.save(state)
     logger.info("🛡️ Guardian model → %s", model_id or "(default)")
     return {"ok": True, "guardian_model": model_id or GUARDIAN_MODEL}
+
+
+@app.patch("/api/campaign/local-pipeline")
+async def update_local_pipeline(req: dict, morkrets_token: str | None = Cookie(None)):
+    """🏮 v2: Välj relä-pipeline för aktiv kampanj ("dm" | "full").
+
+    Samma disciplin som PATCH /api/campaign/guardian-model: auth-cookie,
+    per-kampanj-lås, inte admin-begränsad. "full" = Whole Cauldron local —
+    kast-koll, DM, repair, guardian, extraktion och minnessök körs på
+    spelarens hårdvara (resten av bakgrundsjobben stays house-side, billigt
+    men huset betalar inget för de utbrutna huvudanropen).
+    "full" tillåts ENDAST om kampanjens nuvarande dm_model är en local:-modell
+    (annars finns ingen klient att köra kedjan på). Tom meta = "dm" (v1)."""
+    payload = _get_current_user(morkrets_token)
+    username = payload["sub"]
+    state = store.get(username)
+    if not state:
+        raise HTTPException(404, "Ingen aktiv kampanj")
+    campaign_id = state.get("meta", {}).get("campaign_id", "")
+
+    pipeline = str(req.get("pipeline", "")).strip().lower()
+    if pipeline not in ("dm", "full"):
+        raise HTTPException(400, f"Ogiltig pipeline: {pipeline!r} (använd 'dm' eller 'full')")
+
+    async with _state_lock(username, campaign_id):
+        state = store.get(username, campaign_id) or state
+        if pipeline == "full":
+            dm_model = str(state.get("meta", {}).get("dm_model", "") or "")
+            if not dm_model.startswith("local:"):
+                raise HTTPException(
+                    400,
+                    "Hela pipelinen lokalt kräver en lokal DM-modell — välj en "
+                    "🏮-modell för DM:n först.",
+                )
+        state.setdefault("meta", {})["local_pipeline"] = pipeline
+        store.save(state)
+    logger.info("🏮 Local pipeline → %s", pipeline)
+    return {"ok": True, "pipeline": pipeline}
 
 
 @app.patch("/api/campaign/extraction-model")

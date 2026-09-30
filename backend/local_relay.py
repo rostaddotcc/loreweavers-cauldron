@@ -25,6 +25,13 @@ Env-flaggor (lästes vid anrop, inte import):
 - LOCAL_STEP_TTL_SECONDS   stegens livstid (default 600 — hemma-hårdvara
                            behöver minuter, medvetet avsteg från skissens 120 s)
 - LOCAL_DM_DAILY_CAP       max local_dm-kommenteringar/dag per konto (default 100)
+- LOCAL_DM_DAILY_CAP_FULL  samma cap i "full"-pipelineläget (v2, hela kedjan
+                           lokalt ⇒ huset betalar inga Guardian/extraction-
+                           prompts → högre tak tillåtet, default 300)
+
+v2 "Whole Cauldron local": steget kan bära `chain` (rollcheck/dm/repair/
+guardian/extract/search) och `pipeline:"full"` — varje hop är ett nytt
+engångssteg med samma TTL/dygnings-disciplin som v1.
 """
 
 import os
@@ -40,6 +47,7 @@ LOCAL_ID_RE = re.compile(r"^local:[A-Za-z0-9._:/-]{1,80}$")
 MAX_STEPS = 200                      # RAM-bund: evicta vid överskott
 DEFAULT_TTL_SECONDS = 600
 DEFAULT_DAILY_CAP = 100
+DEFAULT_DAILY_CAP_FULL = 300         # v2 full-pipeline (huset betalar ~0)
 DEFAULT_NUM_CTX = 16384              # Ollamas default 4k räcker INTE — skickas explicit
 MIN_NUM_CTX = 2048
 MAX_NUM_CTX = 131072
@@ -64,7 +72,15 @@ def ttl_seconds() -> int:
         return DEFAULT_TTL_SECONDS
 
 
-def daily_cap() -> int:
+def daily_cap(pipeline: str = "dm") -> int:
+    """Dygns-cap per pipelineläge (läses vid ANROPSTILLFÄLLET, samma mönster
+    som övriga env-flaggor). "full" (v2) kostar huset inga LLM-prompter ⇒
+    högre default-cap. Okända värden räknas som "dm"."""
+    if str(pipeline) == "full":
+        try:
+            return max(0, int(os.getenv("LOCAL_DM_DAILY_CAP_FULL", str(DEFAULT_DAILY_CAP_FULL))))
+        except ValueError:
+            return DEFAULT_DAILY_CAP_FULL
     try:
         return max(0, int(os.getenv("LOCAL_DM_DAILY_CAP", str(DEFAULT_DAILY_CAP))))
     except ValueError:
@@ -151,5 +167,5 @@ def local_dm_count_today(username: str) -> int:
     return n
 
 
-def under_daily_cap(username: str) -> bool:
-    return local_dm_count_today(username) < daily_cap()
+def under_daily_cap(username: str, pipeline: str = "dm") -> bool:
+    return local_dm_count_today(username) < daily_cap(pipeline)

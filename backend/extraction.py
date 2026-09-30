@@ -427,6 +427,70 @@ def _extract_json_object(raw: str) -> dict | None:
     return None
 
 
+def build_extraction_messages(
+    dm_reply: str,
+    player_input: str,
+    turn: int,
+    inventory_list: str = "(tomt)",
+    language: str = "sv",
+) -> list[dict]:
+    """Build the fact-extraction messages.
+
+    Extracted 2026-09-30 for the 🏮 v2 relay chain: extract_facts uses this,
+    so the house path is unchanged — the client-side extract hop gets the
+    byte-identical prompt."""
+    # Select prompt language
+    if language == "en":
+        system_prompt = EXTRACTION_SYSTEM_PROMPT_EN
+        user_template = _EXTRACTION_USER_TEMPLATE_EN
+    else:
+        system_prompt = EXTRACTION_SYSTEM_PROMPT
+        user_template = _EXTRACTION_USER_TEMPLATE
+
+    user_msg = user_template.format(
+        turn=turn, dm_reply=dm_reply, player_input=player_input,
+        inventory_list=inventory_list,
+    )
+    return [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_msg},
+    ]
+
+
+def parse_extraction_result(parsed: dict, turn: int) -> tuple[list["Fact"], list[dict]]:
+    """Validate facts + inventory changes from a parsed JSON object — shared
+    by extract_facts and the 🏮 v2 relay chain's extract commit."""
+    # Validera varje faktum med Pydantic
+    facts: list[Fact] = []
+    for item in parsed.get("facts", []):
+        try:
+            fact = Fact(
+                category=item.get("category", "event"),
+                text=item.get("text", ""),
+                source_turn=turn,
+                confidence=float(item.get("confidence", 0.8)),
+            )
+            facts.append(fact)
+        except Exception:
+            logger.debug("Skipped invalid fact: %s", item)
+            continue
+
+    # Validera inventory-ändringar
+    inv_changes: list[dict] = []
+    for ch in parsed.get("inventory_changes", []):
+        action = ch.get("action", "").lower()
+        name = ch.get("name", "").strip()
+        if action not in ("add", "remove") or not name:
+            continue
+        inv_changes.append({
+            "action": action,
+            "name": name,
+            "type": ch.get("type", "Annat"),
+            "qty": max(1, int(ch.get("qty", 1))),
+        })
+    return facts, inv_changes
+
+
 async def extract_facts(
     dm_reply: str,
     player_input: str,
@@ -454,22 +518,10 @@ async def extract_facts(
     Returns:
         Tuple: (lista av validerade Fact-objekt, lista av inventory-change dicts).
     """
-    # Select prompt language
-    if language == "en":
-        system_prompt = EXTRACTION_SYSTEM_PROMPT_EN
-        user_template = _EXTRACTION_USER_TEMPLATE_EN
-    else:
-        system_prompt = EXTRACTION_SYSTEM_PROMPT
-        user_template = _EXTRACTION_USER_TEMPLATE
-
-    user_msg = user_template.format(
-        turn=turn, dm_reply=dm_reply, player_input=player_input,
-        inventory_list=inventory_list,
+    messages = build_extraction_messages(
+        dm_reply, player_input, turn,
+        inventory_list=inventory_list, language=language,
     )
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_msg},
-    ]
 
     # Två försök: ordinarie + retry vid felaktig JSON
     for attempt in range(2):
@@ -505,34 +557,7 @@ async def extract_facts(
                 continue
             return [], []
 
-        # Validera varje faktum med Pydantic
-        facts: list[Fact] = []
-        for item in parsed.get("facts", []):
-            try:
-                fact = Fact(
-                    category=item.get("category", "event"),
-                    text=item.get("text", ""),
-                    source_turn=turn,
-                    confidence=float(item.get("confidence", 0.8)),
-                )
-                facts.append(fact)
-            except Exception:
-                logger.debug("Skipped invalid fact: %s", item)
-                continue
-
-        # Validera inventory-ändringar
-        inv_changes: list[dict] = []
-        for ch in parsed.get("inventory_changes", []):
-            action = ch.get("action", "").lower()
-            name = ch.get("name", "").strip()
-            if action not in ("add", "remove") or not name:
-                continue
-            inv_changes.append({
-                "action": action,
-                "name": name,
-                "type": ch.get("type", "Annat"),
-                "qty": max(1, int(ch.get("qty", 1))),
-            })
+        facts, inv_changes = parse_extraction_result(parsed, turn)
 
         logger.info(
             "Extraherade %d fakta + %d inventory-ändringar från tur %d (försök %d)",

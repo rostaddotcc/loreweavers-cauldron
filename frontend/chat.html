@@ -247,7 +247,8 @@
    hover-expansionen gjorde menyn 900px hög med myretext.) */
 .settings-menu .drop-item{ position: relative; }
 .settings-menu .di-hint{ display: block; white-space: normal; font-size: 0.74rem; font-style: italic; color: var(--bone-dim); opacity: 0; visibility: hidden; max-height: 0; margin: 0; transition: opacity 0.16s ease, visibility 0.16s ease; }@media (hover:none), (max-width:640px){ .settings-menu .di-hint{ opacity: 1; visibility: visible; max-height: none; margin: .12rem 0 .05rem; } /* TTS-raden: kompaktare så Combat/Engine Room aldrig klipps bort */ .tts-voice-picker{ gap: 0.2rem 0.3rem; margin-bottom: 0.25rem; }.tts-voice-label{ display: none; }.tts-select{ font-size: 0.58rem; padding: 0.14rem 0.28rem; max-width: 96px; flex-shrink: 1; min-width: 0; letter-spacing: 0; border-radius: var(--radius-sm); }.tts-auto-btn{ font-size: 0.58rem; padding: 0.16rem 0.4rem; letter-spacing: 0; border-radius: var(--radius-sm); }.tts-player{ padding: 0.18rem 0.5rem; margin-bottom: 0.3rem; }.tts-player .ttp-idle, .tts-player .ttp-synth{ font-size: 0.62rem; } }.drop-sep{ height: 1px; background: var(--edge); margin: 0.4rem 0.3rem; }.drop-head{ font-family: var(--font-accent); font-size: .72rem; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); opacity: .8; padding: .5rem .7rem .2rem; user-select: none; }.drop-head:first-child{ padding-top: .25rem; }/* ═══════════ Layout ═══════════ */.layout{ position: relative; z-index: auto; flex: 1; display: flex; min-height: 0; }/* ── Sidebar: party ── */.sidebar{
-    width: 250px; flex-shrink: 0;
+    width: var(--sidebar-w, 250px); flex-shrink: 0;
+    position: relative;
     background: linear-gradient(180deg, var(--stone), var(--ink));
     border-right: 1px solid var(--edge);
     padding: 1rem 0.9rem; overflow-y: auto;
@@ -1075,7 +1076,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
     padding: 0.6rem 0.5rem; cursor: pointer;
   }.cd-nav-btn:active{ background: var(--gold); color: var(--ink); }/* ═══════════ 📖 CODEX — fast högerpanel i layouten (D1.3) ═══════════ *//* Codex är nu en permanent kolumn till höger — chatten krymper men
      förblir fullt interagerbar. Panelen kan kollapsas med ✕. */.codex-panel{
-    width: 440px; flex-shrink: 0;
+    width: var(--codex-w, 440px); flex-shrink: 0;
     display: none; flex-direction: column;
     background: var(--ink);
     border-left: 1px solid rgba(var(--gold-rgb),.4);
@@ -1692,15 +1693,21 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
 
 <div class="layout">
 
+  <!-- ↔ Sidebar-resize (2026-09-30, rostad): dragbart handtag — samma mönster som composer-splitter -->
+  <div class="vsplit" id="sidebar-split" role="separator" aria-orientation="vertical" tabindex="0"
+       aria-label="Resize the party sidebar — drag or use arrow keys" title="Drag to resize · double-click to reset"><span class="vs-grip" aria-hidden="true"></span></div>
+
   <!-- ═══════════ SIDEBAR ═══════════ -->
   <aside class="sidebar">
+    <!-- Desktop-döljare (2026-09-30): klistrad rad överst — kollapsa sidebaren för maximalt chattutrymme -->
+    <div id="sb-toggle-row"><button id="sb-toggle" onclick="toggleSidebarCollapse()" aria-label="Hide sidebar" title="Hide the sidebar — more room for the story">« Hide</button></div>
     <button class="drawer-close-btn" onclick="toggleMobileSidebar()" aria-label="Close">✕</button>
     <div class="side-section" id="sec-party">
       <div class="side-label side-toggle" onclick="toggleSideSection('party')">The Party <span class="side-caret">▾</span></div>
       <div class="side-body">
         <div class="pc-wrap" id="pc-wrap">
           <div class="pc-avatar-bg" id="pc-avatar-bg"></div>
-          <div class="pc-card active" onclick="openCodex('character')" title="Open character sheet in Codex">
+          <div class="pc-card active" onclick="openCharSheet()" title="Open your character sheet">
             <button class="pc-badge pc-badge-zoom" onclick="event.stopPropagation();openPcLightbox()" title="Enlarge portrait" aria-label="Enlarge portrait">🔍</button>
             <button class="pc-badge pc-badge-paint" onclick="event.stopPropagation();pickAvatar('player')" title="Generate a new portrait" aria-label="Generate a new portrait">🎨</button>
             <div style="flex:1;min-width:0">
@@ -1864,6 +1871,10 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
     </div>
   </main>
 
+  <!-- ↔ Codex-resize (2026-09-30, rostad) -->
+  <div class="vsplit" id="codex-split" role="separator" aria-orientation="vertical" tabindex="0"
+       aria-label="Resize the Codex panel — drag or use arrow keys" title="Drag to resize · double-click to reset"><span class="vs-grip" aria-hidden="true"></span></div>
+
   <!-- ═══════════ 📖 CODEX — fast högerpanel (D1.3) ═══════════ -->
   <aside class="codex-panel" id="codex-modal" aria-hidden="true">
     <div class="cx-head">
@@ -1891,6 +1902,9 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- « Sidebar återöppningsflik (2026-09-30): syns bara i sb-collapsed läge (desktop) -->
+<button id="sb-reopen" onclick="toggleSidebarCollapse()" aria-label="Show sidebar" title="Show the party sidebar">»</button>
 
 <!-- 💬 Feedback-modal -->
 <div class="fb-backdrop" id="fb-backdrop" onclick="closeFeedbackModal()"></div>
@@ -3291,6 +3305,184 @@ function openMsgAvatarLightbox(kind) {
   }
   _lbOpenForKind(kind, title, _avW(src, 512));
 }
+// ── 🧙 Karaktärsarks-modal (2026-09-30, rostad) ──
+// Partikortets klick öppnar arket centrerat över chatten i stället för Codex-
+// popupen: stort porträtt + bläddring mellan gamla bilder + generera-knapp +
+// 5e-aktigt ark (vitals, abilities, skills, spells, equipment, treasury…).
+// Renderar ur campaignData (samma form som refreshSidebar använder) — hämtar
+// färsk state vid öppning så Lorekeeper-ändringar alltid syns.
+function openCharSheet() {
+  try { SFX.click(); } catch (_) {}
+  const ov = document.getElementById('cs-overlay');
+  if (!ov) return;
+  renderCharSheet();
+  ov.classList.add('show');
+  // Hämta fräsch kampanjdata i bakgrunden — rendera om när den landar
+  API.getCampaign().then(({ campaign }) => {
+    if (campaign) { campaignData = campaign; renderCharSheet(); }
+  }).catch(() => {});
+}
+function closeCharSheet() {
+  const ov = document.getElementById('cs-overlay');
+  if (ov) ov.classList.remove('show');
+}
+// Uppdatera porträtt + galleri-pilar i arket (anropas efter generering/rotation)
+function refreshCharSheetPortrait() {
+  const ov = document.getElementById('cs-overlay');
+  if (!ov || !ov.classList.contains('show')) return;
+  _csPaintPortrait();
+}
+function _csPaintPortrait() {
+  const slot = document.getElementById('cs-portrait');
+  if (!slot) return;
+  slot.innerHTML = AVATARS['player']
+    ? `<img src="${_avW(AVATARS['player'], 512)}&t=${Date.now()}" alt="Your adventurer's portrait">`
+    : '🎭';
+  // Galleri-pilar: samma meta som avatar-modalen (player-kinden)
+  const meta = AVATAR_GAL['player'] || { count: AVATARS['player'] ? 1 : 0, index: 0 };
+  const show = (meta.count || 0) > 1;
+  const prev = document.getElementById('cs-gal-prev');
+  const next = document.getElementById('cs-gal-next');
+  const count = document.getElementById('cs-gal-count');
+  if (prev) prev.disabled = !show;
+  if (next) next.disabled = !show;
+  if (count) count.innerHTML = show
+    ? `Portrait <b>${(meta.index || 0) + 1}</b> / ${meta.count}`
+    : (AVATARS['player'] ? 'Portrait' : 'No portrait yet — paint one below');
+}
+// Bläddra mellan gamla porträtt — roterar den aktiva avataren (backend-sanning)
+async function csRotate(delta) {
+  const meta = AVATAR_GAL['player'];
+  if (!meta || (meta.count || 0) < 2 || _galBusy) return;
+  // Låna avatar-modalens rotation (samma backendväg, samma UI-effekter):
+  // ställ in player-läge och anropa rotateAvatarImage som uppdaterar
+  // AVATARS/AVATAR_GAL + chatt-avatarer.
+  const wasProfile = _avatarProfileMode;
+  const wasKind = AVATAR_KIND;
+  _avatarProfileMode = false;
+  AVATAR_KIND = 'player';
+  await rotateAvatarImage(delta);
+  _avatarProfileMode = wasProfile;
+  AVATAR_KIND = wasKind;
+  _csPaintPortrait();
+}
+
+function renderCharSheet() {
+  const raw = (campaignData && campaignData._raw) || {};
+  const ch = campaignData?.character || raw.character || {};
+  const nameEl = document.getElementById('cs-name');
+  if (!nameEl) return;
+
+  _csPaintPortrait();
+
+  if (!ch.name) {
+    nameEl.textContent = 'No adventurer yet';
+    document.getElementById('cs-sub').textContent = '';
+    document.getElementById('cs-vitals').innerHTML = '';
+    document.getElementById('cs-abilities').innerHTML = '';
+    document.getElementById('cs-grid').innerHTML =
+      '<div class="cs-empty">Your adventurer has not been born yet.<br>Start an adventure and this sheet will fill itself in.</div>';
+    return;
+  }
+
+  nameEl.textContent = ch.name;
+  const subBits = [ch.race, ch.class, ch.level ? 'Level ' + ch.level : null, ch.alignment].filter(Boolean);
+  document.getElementById('cs-sub').textContent = subBits.join(' · ') || 'Adventurer';
+
+  // Vitals — HP/AC/initiativ/hastighet/perception/proficiency (+spell slots)
+  const hp = ch.hp || {};
+  const vitals = [];
+  if (hp.max) vitals.push(`<div class="cs-vital hp"><div class="cv-k">HP</div><div class="cv-v">${hp.current ?? 0} / ${hp.max}</div></div>`);
+  if (ch.ac) vitals.push(`<div class="cs-vital"><div class="cv-k">AC</div><div class="cv-v">${ch.ac}</div></div>`);
+  if (ch.initiative !== undefined && ch.initiative !== null) vitals.push(`<div class="cs-vital"><div class="cv-k">Init</div><div class="cv-v">${Number(ch.initiative) >= 0 ? '+' : ''}${ch.initiative}</div></div>`);
+  if (ch.speed) vitals.push(`<div class="cs-vital"><div class="cv-k">Speed</div><div class="cv-v">${ch.speed}</div></div>`);
+  if (ch.perception !== undefined && ch.perception !== null) vitals.push(`<div class="cs-vital"><div class="cv-k">Percep</div><div class="cv-v">${ch.perception}</div></div>`);
+  const ss = ch.spell_slots || {};
+  if (ss.max) vitals.push(`<div class="cs-vital"><div class="cv-k">Slots</div><div class="cv-v">${ss.current ?? 0} / ${ss.max}</div></div>`);
+  if (ch.proficiency !== undefined && ch.proficiency !== null) vitals.push(`<div class="cs-vital"><div class="cv-k">Prof</div><div class="cv-v">${Number(ch.proficiency) >= 0 ? '+' : ''}${ch.proficiency}</div></div>`);
+  document.getElementById('cs-vitals').innerHTML = vitals.join('');
+
+  // Abilities — hex-rutor (cd-ability från drawer-språket), 6 i rad
+  const ab = ch.abilities || {};
+  const ABIL = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
+  document.getElementById('cs-abilities').innerHTML = ABIL
+    .filter(k => ab[k])
+    .map(k => {
+      const a = ab[k];
+      const mod = a.mod !== undefined && a.mod !== null ? (Number(a.mod) >= 0 ? '+' + a.mod : String(a.mod)) : '';
+      return `<div class="cd-ability"><div class="cd-abbr">${k}</div><div class="cd-score">${a.score ?? '?'}</div><div class="cd-mod">${mod}</div></div>`;
+    }).join('') || '';
+
+  // Sektioner: skills, features, spells, equipment, treasury, traits/senses, story+notes
+  const secs = [];
+  const skills = ch.skills || [];
+  if (skills.length) {
+    secs.push(`<div class="cs-sec"><div class="cs-sec-title">Skills</div><div class="cs-sec-body"><ul>${
+      skills.map(s => {
+        const nm = escapeHtml(s.name || '?');
+        const abTag = s.ability ? ` <span class="cs-dim">(${escapeHtml(s.ability)})</span>` : '';
+        return `<li>${s.proficient ? '<span class="cs-prof">●</span>' : '<span class="cs-noprof">○</span>'}${nm}${abTag}</li>`;
+      }).join('')}</ul></div></div>`);
+  }
+  const feats = ch.features || [];
+  if (feats.length) {
+    secs.push(`<div class="cs-sec"><div class="cs-sec-title">Features</div><div class="cs-sec-body"><ul>${
+      feats.map(f => `<li><b>${escapeHtml(f.name || '?')}</b>${f.level ? ` <span class="cs-dim">(lvl ${f.level})</span>` : ''}${f.description ? `<br><span class="cs-dim">${escapeHtml(f.description)}</span>` : ''}</li>`).join(''
+    )}</ul></div></div>`);
+  }
+  const spells = ch.spells || [];
+  if (spells.length) {
+    const byLvl = {};
+    spells.forEach(s => { const l = Number(s.level) || 0; (byLvl[l] = byLvl[l] || []).push(s); });
+    secs.push(`<div class="cs-sec"><div class="cs-sec-title">Spells</div><div class="cs-sec-body"><ul>${
+      Object.keys(byLvl).sort((a, b) => a - b).map(l =>
+        `<li><span class="cs-dim">${l === '0' ? 'Cantrips' : 'Level ' + l}:</span> ${
+          byLvl[l].map(s => escapeHtml(s.name || '?')).join(', ')}</li>`
+      ).join('')}</ul></div></div>`);
+  }
+  const inv = (raw.inventory || []).filter(Boolean);
+  if (inv.length) {
+    secs.push(`<div class="cs-sec"><div class="cs-sec-title">Equipment</div><div class="cs-sec-body"><ul>${
+      inv.slice(0, 12).map(it => {
+        const qty = (it.qty || 1) > 1 ? ` ×${it.qty}` : '';
+        return `<li>${it.equipped ? '<span class="cs-eq">✦</span>' : ''}${escapeHtml(it.name || '?')}${qty}${it.rarity && it.rarity !== 'normal' ? ` <span class="cs-dim">(${escapeHtml(it.rarity)})</span>` : ''}</li>`;
+      }).join('')}${inv.length > 12 ? `<li class="cs-dim">…and ${inv.length - 12} more (see Codex → GEAR)</li>` : ''
+    }</ul></div></div>`);
+  }
+  const cur = raw.currency || {};
+  const coins = ['pp', 'gp', 'sp', 'cp'].filter(k => cur[k]);
+  if (coins.length) {
+    secs.push(`<div class="cs-sec"><div class="cs-sec-title">Treasury</div><div class="cs-sec-body"><div class="cs-coins">${
+      coins.map(k => `<span class="cs-coin">${cur[k]} ${k.toUpperCase()}</span>`).join('')}</div></div></div>`);
+  }
+  const senses = [];
+  if (ch.darkvision) senses.push(`Darkvision ${ch.darkvision}`);
+  if ((ch.resistances || []).length) senses.push('Resist: ' + ch.resistances.join(', '));
+  if ((ch.immunities || []).length) senses.push('Immune: ' + ch.immunities.join(', '));
+  const traits = ch.traits || [];
+  if (senses.length || traits.length) {
+    secs.push(`<div class="cs-sec"><div class="cs-sec-title">Traits &amp; Senses</div><div class="cs-sec-body"><ul>${
+      traits.map(t => `<li>${escapeHtml(String(t))}</li>`).join('')}${
+      senses.map(s => `<li class="cs-dim">${escapeHtml(s)}</li>`).join('')}</ul></div></div>`);
+  }
+  if (ch.story || ch.notes) {
+    secs.push(`<div class="cs-sec"><div class="cs-sec-title">Story &amp; Notes</div><div class="cs-sec-body">${
+      ch.story ? `<div style="font-style:italic;margin-bottom:.5rem">“${escapeHtml(ch.story)}”</div>` : ''}${
+      ch.notes ? `<div>${escapeHtml(ch.notes)}</div>` : ''}</div></div>`);
+  }
+  document.getElementById('cs-grid').innerHTML = secs.join('');
+}
+// Esc stänger arket (lagd till den befintliga modal-Esc-hanteraren)
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const ov = document.getElementById('cs-overlay');
+    // Stäng arket ENDAST när ingen ovanpåliggande modal/lightbox är öppen
+    const above = ['avatar-overlay', 'avatar-lightbox', 'model-info-overlay', 'cp-overlay']
+      .some(id => { const el = document.getElementById(id); return el && (el.classList.contains('show') || el.classList.contains('open')); });
+    if (ov && ov.classList.contains('show') && !above) closeCharSheet();
+  }
+});
+
 // Sidebar 🔍 badge (§3.3) — player portrait, or portrait fallback.
 function openPcLightbox() {
   openMsgAvatarLightbox('player');
@@ -3316,6 +3508,8 @@ function openCpAvatarLightbox() {
 
 // Uppdatera alla avatarer på sidan (efter uppladdning)
 function refreshAvatars() {
+  // Karaktärsarks-modalen (2026-09-30): porträtt + galleri-pilar följer med
+  refreshCharSheetPortrait();
   // Profil-porträtt i headern (konto-avatar — SEPARAT från äventyraren)
   const utAv = document.getElementById('user-tag-avatar');
   if (utAv) {
@@ -9167,7 +9361,7 @@ function cdMentionNpc(name) {
 const CODEX_PAGES = {
   character: { label: '🧙 Character', src: 'character.html?v=20260930a' },
   npcs:      { label: '🧝 NPCs',      src: 'npcs.html?v=20260922b' },
-  map:       { label: '🗺 Map',       src: 'platser.html?v=20260922b' },
+  map:       { label: '🗺 Map',       src: 'platser.html?v=20260930a' },
   journal:   { label: '📜 Journal',   src: 'loggbok.html?v=20260922b' },
   facts:     { label: '📌 Facts',     src: 'facts.html?v=20260922e' },
 };
@@ -9183,6 +9377,7 @@ function openCodex(tabId, placeHash) {
   if (!overlay) return;
   overlay.classList.add('open');
   overlay.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('codex-open');   // ↔ visar codex-resize-handtaget
   // Ingen scroll-lock — chatten ska vara synlig och användbar bredvid
   activateCodexTab(tabId || _codexLastTab, placeHash);
 }
@@ -9194,6 +9389,7 @@ function closeCodex() {
   if (!overlay) return;
   overlay.classList.remove('open');
   overlay.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('codex-open');
 }
 
 function closeCodexIfOpen() {
@@ -9397,6 +9593,102 @@ document.addEventListener('keydown', e => {
     if (isFinite(cur) && cur && cur > maxH()) applyH(cur, true);
   });
 })();
+
+// ═══════════════════════════════════════
+// ↔ PANEL-SPLITTERS (2026-09-30, rostad) — sidebar + Codex dragbara,
+// samma mönster som composer-splitter: pointerdrag + piltangenter +
+// dubbelklick-återställ + localStorage. Sidebar kan dessutom DÖLJAS helt
+// (« knappen) så chatten får full bredd; » flik i vänsterkant öppnar igen.
+// ═══════════════════════════════════════
+(() => {
+  const layout = document.querySelector('.layout');
+  if (!layout) return;
+
+  const PANELS = [
+    { split: 'sidebar-split', varName: '--sidebar-w', key: 'sidebar-w-v1',
+      min: 190, max: 460, def: 250, dir: 1 },   // dra höger = bredare sidebar
+    { split: 'codex-split', varName: '--codex-w', key: 'codex-w-v1',
+      min: 320, max: 900, def: 440, dir: -1 },  // dra vänster = bredare codex
+  ];
+
+  PANELS.forEach(cfg => {
+    const handle = document.getElementById(cfg.split);
+    if (!handle) return;
+    const clampW = w => Math.max(cfg.min, Math.min(Math.round(w) || cfg.def, cfg.max));
+    function applyW(w, persist) {
+      w = clampW(w);
+      layout.style.setProperty(cfg.varName, w + 'px');
+      handle.setAttribute('aria-valuenow', String(w));
+      if (persist) { try { localStorage.setItem(cfg.key, String(w)); } catch (_) {} }
+    }
+    let saved = null;
+    try { saved = parseInt(localStorage.getItem(cfg.key), 10); } catch (_) {}
+    if (saved && isFinite(saved)) applyW(saved, false);
+
+    let dragging = false, startX = 0, startW = 0;
+    handle.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      dragging = true;
+      startX = e.clientX;
+      startW = parseInt(getComputedStyle(layout).getPropertyValue(cfg.varName), 10);
+      if (!isFinite(startW) || !startW) startW = cfg.def;
+      handle.setPointerCapture(e.pointerId);
+      handle.classList.add('dragging');
+      document.body.classList.add('vsplitting');
+    });
+    handle.addEventListener('pointermove', e => {
+      if (!dragging) return;
+      applyW(startW + cfg.dir * (e.clientX - startX), false);
+    });
+    const endDrag = e => {
+      if (!dragging) return;
+      dragging = false;
+      handle.classList.remove('dragging');
+      document.body.classList.remove('vsplitting');
+      try { handle.releasePointerCapture(e.pointerId); } catch (_) {}
+      const cur = parseInt(getComputedStyle(layout).getPropertyValue(cfg.varName), 10);
+      if (isFinite(cur) && cur) applyW(cur, true);
+    };
+    handle.addEventListener('pointerup', endDrag);
+    handle.addEventListener('pointercancel', endDrag);
+    handle.addEventListener('dblclick', () => {
+      layout.style.removeProperty(cfg.varName);
+      try { localStorage.removeItem(cfg.key); } catch (_) {}
+    });
+    handle.addEventListener('keydown', e => {
+      const step = e.shiftKey ? 40 : 12;
+      let cur = parseInt(getComputedStyle(layout).getPropertyValue(cfg.varName), 10);
+      if (!isFinite(cur) || !cur) cur = cfg.def;
+      // Piltangent = splittens rörelseriktning (dir översätter till bredd):
+      // sidebar (dir 1): → bredare · codex (dir -1): ← bredare
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); applyW(cur + cfg.dir * -step, true); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); applyW(cur + cfg.dir * step, true); }
+      if (e.key === 'Home')       { e.preventDefault(); applyW(cfg.def, true); }
+    });
+    // Fönster krymper → håll bredderna rimliga (max 45% av vidden vardera)
+    window.addEventListener('resize', () => {
+      if (dragging) return;
+      const cap = Math.round(window.innerWidth * 0.45);
+      const cur = parseInt(getComputedStyle(layout).getPropertyValue(cfg.varName), 10);
+      if (isFinite(cur) && cur && cur > cap) applyW(cap, true);
+    });
+  });
+
+  // ── Sidebar dölj/visa (desktop) ──
+  const SB_KEY = 'sidebar-collapsed-v1';
+  function applySidebarCollapse(on) {
+    document.body.classList.toggle('sb-collapsed', on);
+    try { localStorage.setItem(SB_KEY, on ? '1' : '0'); } catch (_) {}
+  }
+  window.toggleSidebarCollapse = function () {
+    const on = !document.body.classList.contains('sb-collapsed');
+    applySidebarCollapse(on);
+    try { SFX.click(); } catch (_) {}
+  };
+  let sbSaved = null;
+  try { sbSaved = localStorage.getItem(SB_KEY); } catch (_) {}
+  if (sbSaved === '1') applySidebarCollapse(true);
+})();
 </script>
 
 <!-- ℹ️ Model-info-modal -->
@@ -9534,6 +9826,135 @@ document.addEventListener('keydown', e => {
         <button class="cp-paint-btn" onclick="openProfileAvatarModal()">✨ Generate your account profile avatar</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- 🧙 Karaktärsarks-modal (2026-09-30, rostad): centrerad mitt över chatten —
+     stort porträtt med galleri-bläddring + generera-knapp + 5e-aktigt ark.
+     Ersätter Codex-popupen som förr öppnades via partikortet. Z-index 10000
+     (samma som övriga sidmodaler) men DOM-FÖRE avatar-overlay → avatar-modalen
+     (🎨 Generate) och lightboxen (11000) stackar ovanpå. -->
+<style>
+  .cs-overlay{ position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center;
+    padding: 1rem; background: rgba(var(--ink-rgb),.85); backdrop-filter: blur(4px);
+    opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility .25s; }
+  .cs-overlay.show{ opacity: 1; visibility: visible; }
+  .cs-box{ width: min(940px, 100%); max-height: 92vh; overflow-y: auto; position: relative;
+    background: linear-gradient(165deg, var(--stone-2), var(--stone) 55%, #140b06);
+    border: 1px solid rgba(var(--gold-rgb),.6);
+    padding: 1.6rem 1.7rem 1.8rem;
+    box-shadow: 0 30px 80px -20px rgba(0,0,0,.9), 0 0 40px rgba(var(--gold-rgb),.14), inset 0 0 0 1px rgba(var(--gold-rgb),.18);
+    animation: mi-rise .35s cubic-bezier(.22,1,.36,1); }
+  .cs-close{ position: absolute; top: .6rem; right: .8rem; background: none; border: 1px solid transparent;
+    color: var(--bone-dim); font-size: 1.1rem; cursor: pointer; padding: .3rem .5rem; z-index: 2; }
+  .cs-close:hover{ color: var(--bone-bright); border-color: var(--edge); }
+  .cs-top{ display: flex; gap: 1.6rem; align-items: flex-start; margin-bottom: 1.3rem; }
+  .cs-portrait-col{ flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: .5rem; width: 240px; }
+  .cs-gal-row{ display: flex; align-items: center; gap: .55rem; }
+  .cs-portrait{ width: 190px; height: 190px; overflow: hidden; flex-shrink: 0;
+    border: 2px solid rgba(var(--gold-rgb),.55); background: var(--stone-3);
+    display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font-size: 3.4rem;
+    box-shadow: 0 0 32px -6px rgba(var(--gold-rgb),.5);
+    transition: transform .25s, box-shadow .25s, border-color .25s; }
+  .cs-portrait:hover{ transform: scale(1.02); border-color: var(--gold-bright); box-shadow: 0 0 42px -4px rgba(var(--gold-bright-rgb),.7); }
+  .cs-portrait img{ width: 100%; height: 100%; object-fit: cover; image-rendering: auto; }
+  .cs-gen{ margin-top: .35rem; }
+  .cs-head-col{ flex: 1; min-width: 0; }
+  .cs-name{ font-family: var(--font-display,'Cinzel',serif); font-weight: 900; font-size: 1.7rem;
+    color: var(--bone-bright); letter-spacing: .04em; text-shadow: 0 2px 0 #000; line-height: 1.15; }
+  .cs-sub{ font-family: var(--font-display,'Cinzel',serif); font-size: .8rem; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--gold); margin-top: .3rem; }
+  .cs-vitals{ display: flex; flex-wrap: wrap; gap: .45rem; margin: .9rem 0 1rem; }
+  .cs-vital{ background: var(--stone-2); border: 1px solid var(--edge); padding: .4rem .65rem; min-width: 64px; text-align: center; }
+  .cs-vital .cv-k{ font-family: var(--font-display); font-size: .55rem; letter-spacing: .18em; text-transform: uppercase; color: var(--bone-dim); }
+  .cs-vital .cv-v{ font-family: var(--font-accent,'Silkscreen',monospace); font-size: .85rem; color: var(--bone-bright); margin-top: .25rem; }
+  .cs-vital.hp .cv-v{ color: var(--blood-bright); }
+  .cs-abilities{ grid-template-columns: repeat(6, 1fr) !important; gap: .5rem !important; }
+  .cs-grid{ display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 1rem; }
+  .cs-sec{ background: color-mix(in srgb, var(--ink) 55%, transparent); border: 1px solid var(--edge); padding: .8rem .9rem; min-width: 0; }
+  .cs-sec-title{ font-family: var(--font-display); font-size: .62rem; font-weight: 700; letter-spacing: .22em;
+    text-transform: uppercase; color: var(--gold); margin-bottom: .55rem; }
+  .cs-sec-body{ font-size: .88rem; color: var(--bone); line-height: 1.55; }
+  .cs-sec-body ul{ list-style: none; margin: 0; padding: 0; }
+  .cs-sec-body li{ padding: .16rem 0; }
+  .cs-sec-body li .cs-prof{ color: var(--gold-bright); margin-right: .4rem; }
+  .cs-sec-body li .cs-noprof{ color: var(--bone-dim); margin-right: .4rem; opacity: .6; }
+  .cs-sec-body .cs-dim{ color: var(--bone-dim); font-style: italic; }
+  .cs-sec-body .cs-eq{ color: var(--poison); }
+  .cs-coins{ display: flex; gap: .5rem; flex-wrap: wrap; }
+  .cs-coin{ font-family: var(--font-accent,'Silkscreen',monospace); font-size: .75rem; padding: .3rem .55rem;
+    border: 1px solid var(--edge); background: var(--stone-2); color: var(--bone-bright); }
+  .cs-empty{ text-align: center; color: var(--bone-dim); font-style: italic; padding: 2.5rem 1rem; font-size: 1rem; }
+  @media (max-width: 760px){
+    .cs-top{ flex-direction: column; align-items: center; }
+    .cs-portrait-col{ width: 100%; }
+    .cs-portrait{ width: 160px; height: 160px; }
+    .cs-head-col{ width: 100%; text-align: center; }
+    .cs-vitals{ justify-content: center; }
+    .cs-abilities{ grid-template-columns: repeat(3, 1fr) !important; }
+    .cs-grid{ grid-template-columns: 1fr; }
+    .cs-box{ padding: 1.2rem 1rem 1.4rem; }
+  }
+
+  /* ↔ Vertikala splitterhandtag — sidebar & Codex (2026-09-30, rostad).
+     Flex-syskon mellan panelerna (samma mönster som composer-splitter) —
+     INTE absoluta barn: .sidebar har overflow-y:auto som skulle klippa dem. */
+  .vsplit{ width: 7px; margin: 0 -3px; flex-shrink: 0; cursor: col-resize; position: relative; z-index: 5;
+    touch-action: none; background: transparent; }
+  .vsplit::before{ content: ''; position: absolute; inset: 0 3px; background: transparent; transition: background .15s; }
+  .vsplit:hover::before, .vsplit.dragging::before{ background: linear-gradient(180deg, transparent, rgba(var(--gold-rgb),.55), transparent); }
+  .vsplit .vs-grip{ position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: 3px; height: 34px; background: var(--edge-hi, var(--edge)); opacity: 0; transition: opacity .15s; }
+  .vsplit:hover .vs-grip, .vsplit.dragging .vs-grip{ opacity: .85; }
+  body.vsplitting, body.vsplitting *{ cursor: col-resize !important; user-select: none !important; }
+  body.vsplitting iframe{ pointer-events: none !important; }
+  /* Codex-handtaget syns bara när panelen är öppen */
+  #codex-split{ display: none; }
+  body.codex-open #codex-split{ display: block; }
+  /* Sidebar-döljare (desktop): kollapsad → panel + splitter bort, återöppningsflik fram */
+  #sb-toggle-row{ display: none; }
+  #sb-toggle{ font-family: var(--font-accent,'Silkscreen',monospace); font-size: .58rem; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--bone-dim); background: transparent; border: 1px solid var(--edge);
+    padding: .28rem .5rem; cursor: pointer; transition: color .15s, border-color .15s; }
+  #sb-toggle:hover{ color: var(--gold-bright); border-color: var(--gold); }
+  @media (min-width: 901px){
+    #sb-toggle-row{ display: flex; justify-content: flex-end; margin: -0.4rem 0 -0.2rem; }
+    body.sb-collapsed .sidebar, body.sb-collapsed #sidebar-split{ display: none !important; }
+  }
+  #sb-reopen{ display: none; position: fixed; left: 0; top: 50%; transform: translateY(-50%); z-index: 60;
+    width: 26px; height: 64px; align-items: center; justify-content: center;
+    background: linear-gradient(180deg, var(--stone-2), var(--stone)); border: 1px solid var(--edge);
+    border-left: none; color: var(--gold); font-size: .8rem; cursor: pointer; }
+  #sb-reopen:hover{ color: var(--gold-bright); border-color: var(--gold); }
+  body.sb-collapsed #sb-reopen{ display: flex; }
+  @media (max-width: 900px){
+    .vsplit{ display: none !important; }
+    #sb-reopen{ display: none !important; }
+    #sb-toggle{ display: none !important; }
+  }
+</style>
+<div class="cs-overlay" id="cs-overlay" onclick="if(event.target===this)closeCharSheet()">
+  <div class="cs-box" role="dialog" aria-modal="true" aria-label="Character sheet">
+    <button class="cs-close" onclick="closeCharSheet()" aria-label="Close character sheet">✕</button>
+    <div class="cs-top">
+      <div class="cs-portrait-col">
+        <div class="cs-gal-row">
+          <button class="av-gal-arrow" id="cs-gal-prev" onclick="csRotate(-1)" title="Previous portrait" aria-label="Previous portrait">‹</button>
+          <div class="cs-portrait" id="cs-portrait" onclick="openPcLightbox()" title="Click for larger view">🎭</div>
+          <button class="av-gal-arrow" id="cs-gal-next" onclick="csRotate(1)" title="Next portrait" aria-label="Next portrait">›</button>
+        </div>
+        <div class="av-gal-count" id="cs-gal-count"></div>
+        <button class="av-btn primary cs-gen" onclick="pickAvatar('player')" title="Generate a new portrait — part of the 10€ unlock, each image costs 1 turn">🎨 Generate new portrait</button>
+        <button class="av-btn" onclick="closeCharSheet();openCodex('character')" title="Open the full character page in the Codex panel">📖 Full sheet in Codex</button>
+      </div>
+      <div class="cs-head-col">
+        <div class="cs-name" id="cs-name">—</div>
+        <div class="cs-sub" id="cs-sub">—</div>
+        <div class="cs-vitals" id="cs-vitals"></div>
+        <div class="cd-abilities cs-abilities" id="cs-abilities"></div>
+      </div>
+    </div>
+    <div class="cs-grid" id="cs-grid"></div>
   </div>
 </div>
 

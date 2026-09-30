@@ -131,14 +131,7 @@
     font-family: var(--font-body,'Spectral',serif); font-style: italic; font-weight: 400;
     color: var(--arcane); font-size:var(--fs-chat); margin: 0.3rem 0 0.7rem;
     text-shadow: 0 0 12px color-mix(in srgb, var(--arcane) 40%, transparent);
-  font-family:var(--font-flavor);font-style:italic}.char-meta{ display: flex; gap: 0.5rem 1.1rem; flex-wrap: wrap; font-size:var(--fs-sm); color: var(--bone-dim); }.char-meta b{ color: var(--bone-bright); font-weight: 600; }.char-meta .stat{ display: flex; gap: 0.35rem; align-items: baseline; }.char-meta .stat i{ font-style: normal; color: var(--gold); font-size:var(--fs-sm); letter-spacing: 0.08em; }/* ═══════════ Export till The Forge ═══════════ */.forge-row{ display: flex; justify-content: flex-end; gap: 0.6rem; margin: 0.2rem 0 0.9rem; }.forge-export-btn{
-    font-family: var(--font-display,'Cinzel',serif); font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
-    background: linear-gradient(180deg, var(--stone-3), var(--stone));
-    border: 1px solid var(--gold); color: var(--gold-bright);
-    padding: 0.6rem 1.2rem; cursor: pointer; border-radius: var(--radius-sm); transition: all 0.2s;
-    display: inline-flex; align-items: center; gap: 0.45rem; min-height: 42px;
-  min-height:44px;display:inline-flex;align-items:center;justify-content:center}.forge-export-btn:hover{ filter: brightness(1.15); box-shadow: 0 0 14px -4px rgba(var(--gold-bright-rgb),0.5); }
-  .forge-export-btn:disabled{ opacity: 0.5; cursor: default; box-shadow: none; }/* ═══════════ Mätare ═══════════ */.vitals{ display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem 1.5rem; }.vital{ grid-column: span 1; }.vital.wide{ grid-column: 1 / -1; }.vital-head{
+  font-family:var(--font-flavor);font-style:italic}.char-meta{ display: flex; gap: 0.5rem 1.1rem; flex-wrap: wrap; font-size:var(--fs-sm); color: var(--bone-dim); }.char-meta b{ color: var(--bone-bright); font-weight: 600; }.char-meta .stat{ display: flex; gap: 0.35rem; align-items: baseline; }.char-meta .stat i{ font-style: normal; color: var(--gold); font-size:var(--fs-sm); letter-spacing: 0.08em; }/* ═══════════ Mätare ═══════════ */.vitals{ display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem 1.5rem; }.vital{ grid-column: span 1; }.vital.wide{ grid-column: 1 / -1; }.vital-head{
     display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.4rem;
     font-family: var(--font-display,'Cinzel',serif); font-size: 0.7rem; letter-spacing: 0.22em; text-transform: uppercase;
   }.vital-head .label{ color: var(--bone-dim); font-family:var(--font-display);font-variant:small-caps;font-weight:700;text-transform:none;letter-spacing:.12em;color:var(--rubric);font-size:.82rem}.vital-head .nums{ font-family: var(--font-body,'Spectral',serif); font-size:var(--fs-base); letter-spacing: 0; color: var(--bone-bright); font-weight: 600; }.vital-head .nums small{ color: var(--bone-dim); font-weight: 400; }.trough{
@@ -433,7 +426,7 @@
       padding: .4rem .65rem !important; font-size: .68rem !important; white-space: nowrap;
     }.app{ padding: 1.25rem .75rem 3rem; }
   
-  a.btn-gold, a.btn-ghost, a.btn-blood, .rune-btn, .forge-export-btn, .av-btn { min-height: 44px; min-height:44px;display:inline-flex;align-items:center;justify-content:center;min-height:44px;display:inline-flex;align-items:center;justify-content:center;min-height:44px}
+  a.btn-gold, a.btn-ghost, a.btn-blood, .rune-btn, .av-btn { min-height: 44px; min-height:44px;display:inline-flex;align-items:center;justify-content:center;min-height:44px;display:inline-flex;align-items:center;justify-content:center;min-height:44px}
   input, textarea, select { font-size: 16px; }
 }
   @media (max-width: 640px) {/* Flikar: 2×2 stentavlor med full träffhöjd */.tabs{ display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; }.tab{ min-height: 44px; display: flex; align-items: center; justify-content: center;
@@ -498,8 +491,8 @@
   #panel-character .vitals{ position: relative; z-index: 2; width: 100%; margin: 0.4rem 0 0; padding-right: 10px; }
   #panel-character .vitals .label, #panel-character .vitals .nums{ text-shadow: 0 1px 3px #000, 0 0 12px rgba(0,0,0,.95); }
 /* ═══════════ Codex-knappar — touch-ytor (radier borttagna 2026-09-23, platt canon) ═══════════ */
-.av-btn, .rune-btn, .forge-export-btn, .top-btn{ min-height:44px;display:inline-flex;align-items:center;justify-content:center;min-height:44px;display:inline-flex;align-items:center;justify-content:center;min-height:44px;display:inline-flex;align-items:center;justify-content:center;min-height:44px}
-.av-btn:hover, .rune-btn:hover, .forge-export-btn:hover{ transform: translateY(-1px) !important; box-shadow: 0 4px 16px -6px rgba(0,0,0,.55) !important; }
+.av-btn, .rune-btn, .top-btn{ min-height:44px;display:inline-flex;align-items:center;justify-content:center;min-height:44px;display:inline-flex;align-items:center;justify-content:center;min-height:44px;display:inline-flex;align-items:center;justify-content:center;min-height:44px}
+.av-btn:hover, .rune-btn:hover{ transform: translateY(-1px) !important; box-shadow: 0 4px 16px -6px rgba(0,0,0,.55) !important; }
 /* ═══════════ 5e-mekanik — Skills / Features / Inspiration (2026-08-08) ═══════════ */
 .insp-row{ margin: 0.2rem 0 0.6rem; }
 .insp-badge{
@@ -733,10 +726,9 @@
       </div>
     </div>
 
-    <div class="forge-row">
-      <button class="forge-export-btn btn-ghost" id="forge-paint-btn" onclick="openAvatarModal()" title="Generate the portrait of your adventurer — part of the 10€ unlock, each image costs 1 turn">🎨 Generate your portrait</button>
-      <button class="forge-export-btn btn-gold" id="forge-export-btn" onclick="exportToForge()" title="Save this adventurer to The Forge — start a new campaign with them later">⚒ Export to Forge</button>
-    </div>
+    <!-- (2026-09-30, rostad: "Generate your portrait" + "Export to Forge" borttagna —
+         porträttet klickas direkt för målning/galleri, Forge-sparning flyttad till
+         karaktärsarks-modalen i chat.html) -->
 
     <div class="insp-row">
       <span class="insp-badge off" id="insp-badge">✨ Inspiration — <b>Not available</b></span>
@@ -1055,39 +1047,6 @@ async function saveNotes() {
   } catch (e) {
     notesStatus.classList.add('err');
     notesStatus.textContent = I18N.t('⚠ Kunde inte spara: ') + (e.message || I18N.t('okänt fel'));
-  }
-}
-
-// ═══════════════════════════════════════
-// EXPORT TILL THE FORGE — spara den levda hjälten i valvet
-// ═══════════════════════════════════════
-let _exporting = false;
-async function exportToForge() {
-  if (_exporting) return;
-  const name = (state.character && state.character.name) || '';
-  if (!name) { toast('⚠ No adventurer to export yet'); return; }
-  _exporting = true;
-  const btn = document.getElementById('forge-export-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '⚒ Saving…'; }
-  try {
-    // Hämta valvet för duplikat-koll — fråga innan en befintlig hjälte skrivs över
-    let overwrite_id = null;
-    const { characters } = await API.vaultList();
-    const dup = (characters || []).find(c => (c.name || '').toLowerCase() === name.toLowerCase());
-    if (dup) {
-      const ok = confirm('Do you wish to overwrite "' + dup.name + '" with "' + name + '" from campaign?');
-      if (ok) overwrite_id = dup.id;
-    }
-    const res = await API.vaultSave({ from_campaign: true, overwrite_id });
-    toast(res.overwritten
-      ? '💾 ' + name + ' overwritten in The Forge'
-      : '💾 ' + name + ' saved to The Forge');
-    SFX.gate();
-  } catch (e) {
-    toast('⚠ ' + (e.message || 'Could not export to The Forge'));
-  } finally {
-    _exporting = false;
-    if (btn) { btn.disabled = false; btn.textContent = '⚒ Export to Forge'; }
   }
 }
 

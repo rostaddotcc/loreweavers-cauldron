@@ -23,7 +23,7 @@
   const S = {
     view: 'overview', win: '30d', metric: 'calls', revMode: 'day', trafficMetric: 'requests',
     data: null, billing: null, feedback: null, fbRange: 'all', fbMail: 'all',
-    sortKey: 'tokens', sortDir: 'desc', page: 1, pageSize: 10,
+    sortKey: 'last_active', sortDir: 'desc', page: 1, pageSize: 10,
     q: '', fRole: 'all', fStatus: 'all', fCountry: 'all', fCode: 'all',
     auto: false, timer: null, degraded: false, loading: false, dossier: null,
     /* Hink-filtret i dossiéns ledger-tabell (2026-09-28). Nollställs när en ny
@@ -202,7 +202,15 @@
       const lab = opts.labelEvery ? opts.labelEvery(k, i, keys.length) : dayLabel(k);
       const kept = keepAt(i);
       const showVal = v && (keys.length <= 16 ? true : (opts.alwaysLabel && kept));
-      return '<div class="vcol' + (k === lastKey ? ' today' : '') + (opts.rev ? ' rev' : '') + '" data-bucket="' + esc(k) + '" data-val="' + v + '" title="' + esc(k + ' · ' + num(v) + (opts.unit ? ' ' + opts.unit : '')) + '" style="--i:' + i + '">' +
+      /* Klickbar kolumn: revenue-kurvan (opts.rev) bugar en LEDGER-bucket
+         (data-bucket → drawerBucket), alla andra dagserier bugar DEN DAGEN
+         (data-day → drawerDay). Forut klickade alla grafer pa data-bucket —
+         det ville siga "betalningar denna dag", sa en trafik- eller turns-
+         stapel ledde till en tom kassa. (Dod drilldown, rostad 2026-09-30.) */
+      const drillAttr = opts.rev
+        ? 'data-bucket="' + esc(k) + '" data-val="' + v + '"'
+        : 'data-day="' + esc(k) + '"';
+      return '<div class="vcol' + (k === lastKey ? ' today' : '') + (opts.rev ? ' rev' : '') + '" ' + drillAttr + ' title="' + esc(k + ' · ' + num(v) + (opts.unit ? ' ' + opts.unit : '')) + '" style="--i:' + i + '">' +
         '<span class="lab">' + (showVal ? num(v) : '') + '</span>' +
         '<span class="track"><span class="fill" style="height:' + h + '%"></span></span>' +
         '<span class="lab">' + (kept ? esc(lab) : '') + '</span></div>';
@@ -259,16 +267,26 @@
     return '<div class="spark">' + keys.map(k =>
       '<i style="height:' + Math.max((Number(series[k]) || 0) / max * 100, series[k] ? 4 : 1) + '%" title="' + esc(k + ': ' + num(series[k])) + '"></i>').join('') + '</div>';
   }
+  /* Färgkodade KPI-rutor (rostad 2026-09-30): varje ton = ett begrepp.
+     gold = pengar, good = turns, accent = spelare/konton, violet = trafik/anrop,
+     teal = pottar, warn = kostnad. Pricken i rubriken och siffrans färg följer
+     samma ton — ögat hittar "intäkter" utan att läsa texten. */
+  const TONE_COLOR = { gold:'var(--gold)', good:'var(--good)', accent:'var(--accent)', violet:'var(--violet)', teal:'var(--teal)', warn:'var(--warn)' };
   function kpi(o) {
-    return '<div class="card kpi' + (o.drill ? ' clickable' : '') + '"' + (o.drill ? ' data-drill="' + esc(o.drill) + '"' : '') + '>' +
-      '<span class="t">' + esc(o.t) + '</span>' +
+    return '<div class="card kpi' + (o.drill ? ' clickable' : '') + '"' + (o.drill ? ' data-drill="' + esc(o.drill) + '"' : '') +
+      (o.tone && TONE_COLOR[o.tone] ? ' style="--k:' + TONE_COLOR[o.tone] + '"' : '') + '>' +
+      '<span class="t">' + (o.tone && TONE_COLOR[o.tone] ? '<span class="tdot"></span>' : '') + esc(o.t) + '</span>' +
       '<span class="v' + (o.tone ? ' ' + o.tone : '') + '">' + o.v + '</span>' +
+      (o.delta || '') +
       '<span class="f">' + o.f + '</span>' +
       (o.drill ? '<span class="cta">' + esc(o.cta || 'drill down →') + '</span>' : '') + '</div>';
   }
   function card(span, title, sub, body, opts) {
     opts = opts || {};
-    return '<div class="card span' + span + (opts.data ? ' ' + opts.data : '') + '">' +
+    /* opts.drill: hela kortet blir en riktig drilldown (data-drill på kortet,
+       samma handler som KPI-rutorna) — utan den var .clickable bara en lögn. */
+    return '<div class="card span' + span + (opts.data ? ' ' + opts.data : '') + (opts.drill ? ' clickable' : '') + '"' +
+      (opts.drill ? ' data-drill="' + esc(opts.drill) + '"' : '') + '>' +
       '<h3>' + title + '</h3>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + body + '</div>';
   }
   function ledgerTable(rows, emptyMsg) {
@@ -404,7 +422,7 @@
         if (!v) return '';
         return '<span class="seg ' + p + '" style="height:' + (v / max * 100) + '%" title="' + esc(k + ' · ' + p + ' · ' + num(v) + ' ' + (opts.unit || 'turns')) + '"></span>';
       }).join('');
-      return '<div class="vcol" data-bucket="' + esc(k) + '" data-val="' + totals[i] + '" title="' + esc(k + ' · ' + num(totals[i]) + ' ' + (opts.unit || 'turns')) + '" style="--i:' + i + '">' +
+      return '<div class="vcol" data-day="' + esc(k) + '" data-val="' + totals[i] + '" title="' + esc(k + ' · ' + num(totals[i]) + ' ' + (opts.unit || 'turns') + ' · click for the day') + '" style="--i:' + i + '">' +
         '<span class="lab">' + (totals[i] && keys.length <= 16 ? num(totals[i]) : '') + '</span>' +
         '<span class="track stack">' + segs + '</span>' +
         '<span class="lab">' + (keepAt(i) ? esc(dayLabel(k)) : '') + '</span></div>';
@@ -455,6 +473,28 @@
       .map(k => ({ key: k, label: (PROV_LABEL[k] || k), value: Number(p[k].tokens || 0), color: provColor(k) }));
   }
 
+  /* Nya spelare inom valt datumfilter (rostad 2026-09-30): "+3 players · 7d",
+     eller "+1 today" för 24h-fönstret. Räknas client-side ur USERS() med samma
+     lokala dags-fönster som servern (24h=idag, 7d=idag+6, 30d=idag+29), men
+     BARA roll==player — admins är inga nya spelare. `all` döljer chipt
+     (då är summan = alla konton, ingen information). */
+  function playersDeltaChip() {
+    if (S.degraded) return '';
+    const days = { '24h': 1, '7d': 7, '30d': 30 }[S.win];
+    if (!days) return '';
+    const now = new Date();
+    const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (days - 1));
+    let n = 0;
+    USERS().forEach(u => {
+      if ((u.role || 'player') === 'admin') return;
+      const t = u.created_at ? new Date(u.created_at) : null;
+      if (t && !isNaN(t.getTime()) && t >= cutoff) n++;
+    });
+    const label = S.win === '24h' ? 'today' : 'in ' + S.win;
+    return '<span class="delta' + (n ? ' up' : '') + '" title="Accounts created ' + esc(label) + ' · click for the Players view">' +
+      (n ? '+' + num(n) + ' player' + (n === 1 ? '' : 's') + ' · ' + esc(label) : 'no new players ' + esc(label)) + '</span>';
+  }
+
   function viewOverview() {
     const t = TOT(), r = REV(), v = valueStats();
     const callsDay = SER().api_calls_day || {};
@@ -473,35 +513,35 @@
         '<button class="icon-btn" data-csv="overview">⇣ CSV</button>') +
       banner() +
       '<div class="tiles">' +
-        kpi({ t:'Revenue · ' + (r.month_key || 'this month'), v: sek(r.month_revenue != null ? r.month_revenue : r.month), tone:'accent', drill:'rev:month',
+        kpi({ t:'Revenue · ' + (r.month_key || 'this month'), v: sek(r.month_revenue != null ? r.month_revenue : r.month), tone:'gold', drill:'rev:month',
               f: (Number(r.today) ? '<b>' + sek(r.today) + '</b> today · ' : 'no payments today · ') + 'one-time products' }) +
-        kpi({ t:'Lifetime revenue', v: sek(r.total), drill:'rev:lifetime',
+        kpi({ t:'Lifetime revenue', v: sek(r.total), tone:'gold', drill:'rev:lifetime',
               f: '<b>' + num(r.paying_customers) + '</b> paying accounts · ' + num(r.transactions) + ' payments · ' + conv.toFixed(1) + '%' }) +
         kpi({ t:'Turns delivered', v: num(v.turns) + ' turns', tone:'good', drill:'value',
               f: 'window ' + S.win + ' · <b>' + num(v.bucketDayTotals.free) + '</b> free / <b>' + num(v.bucketDayTotals.paid) + '</b> paid' }) +
-        kpi({ t:'Turns left in pools', v: (Number(pool.unlimited_accounts) ? '' : '') + num(pool.available) + ' turns', drill:'pool',
+        kpi({ t:'Turns left in pools', v: num(pool.available) + ' turns', tone:'teal', drill:'pool',
               f: '<b>' + num(pool.free_left) + '</b> free today · <b>' + num(pool.paid_left) + '</b> bought · <b>' + num(pool.promo_left) + '</b> promo' + (Number(pool.unlimited_accounts) ? ' · ' + num(pool.unlimited_accounts) + ' unlimited accounts' : '') }) +
-        kpi({ t:'Cost of play', v: v.kpm == null ? '—' : v.kpm.toFixed(2) + ' kr', drill:'value',
+        kpi({ t:'Cost of play', v: v.kpm == null ? '—' : v.kpm.toFixed(2) + ' kr', tone:'warn', drill:'value',
               f: 'per 1M tokens · <b>' + tok(v.tps) + '</b> tokens per kr' }) +
-        kpi({ t:'Accounts', v: num(t.accounts), drill:'players',
+        kpi({ t:'Accounts', v: num(t.accounts), tone:'accent', drill:'players', delta: playersDeltaChip(),
               f: '<b>' + num(t.players) + '</b> players · ' + num(t.admins) + ' admin' }) +
-        kpi({ t:'Campaigns', v: num(t.campaigns), drill:'players',
+        kpi({ t:'Campaigns', v: num(t.campaigns), tone:'accent', drill:'players',
               f: '<b>' + (t.accounts ? (t.campaigns / t.accounts).toFixed(2) : '—') + '</b> per account' }) +
-        kpi({ t:'AI calls', v: num(sum(callsDay)), drill:'usage:calls', cta:'open Usage →',
+        kpi({ t:'AI calls', v: num(sum(callsDay)), tone:'violet', drill:'usage:calls', cta:'open Usage →',
               f: 'window ' + S.win + ' · lifetime <b>' + num(t.ai_calls) + '</b>' }) +
-        kpi({ t:'Unique visitors', v: num(UNIQ().total), drill:'traffic', cta:'open Traffic →',
+        kpi({ t:'Unique visitors', v: num(UNIQ().total), tone:'violet', drill:'traffic', cta:'open Traffic →',
               f: 'lifetime distinct IPs · <b>' + num(UNIQ().last_7) + '</b> in 7 days · ' + num(sum(SER().visits_unique_day || {})) + ' visitor-days in this window' }) +
       '</div>' +
       '<div class="grid">' +
         card(8, 'AI calls per day', 'DM, Lorekeeper and auxiliary calls read from the transcripts · window ' + S.win,
              vchart(callsDay, { unit:'calls', emptyMsg:'No calls logged in this window' })) +
         card(4, 'Membership', 'active accounts by tier · click a slice for the accounts', donut(tierItems(), num(t.accounts), 'accounts', { keepZero: true, click: i => 'data-tier="' + esc(i.key) + '"' })) +
-        card(7, 'Turns delivered per day, by bucket', 'fri / köpt / promo / legacy staplade — click a bar for that day', vchartStacked(bucketDay, { unit:'turns', emptyMsg:'No turn series in this payload' }), { data:'clickable', attrs:1 }) +
+        card(7, 'Turns delivered per day, by bucket', 'fri / köpt / promo / legacy staplade — click a bar for that day', vchartStacked(bucketDay, { unit:'turns', emptyMsg:'No turn series in this payload' }), { drill:'pool' }) +
         card(5, 'What the turns bought', 'turn actions, lifetime · click a slice for the split', actionItems.length ? donut(actionItems, num(v.turns), 'turns', { click: i => 'data-action="' + esc(i.key) + '"' }) : emptyState('No action split in this payload', '◌')) +
         card(5, 'Players by code', 'free / granted / paid — server-counted, click a slice for the accounts',
              codeDonut(codes)) +
         recentActiveCard() +
-        card(6, 'Revenue vs value delivered', 'what came in, and what players got for it', valueGrid(v), { data:'clickable' }) +
+        card(6, 'Revenue vs value delivered', 'what came in, and what players got for it', valueGrid(v), { drill:'value' }) +
         card(6, 'Most used models', 'by calls · click a bar for that model', hbars(modelClamp.rows, { fmt: num, click: i => 'data-model="' + esc(i.key) + '"' }) + expandBtn('models', modelClamp.hidden, 'models')) +
         card(7, 'Requests per day', 'every request counted · click a bar for the day', vchart(visitsDay, { emptyMsg:'No visits in this window' })) +
         card(5, 'New accounts per day', num(sum(SER().signups_day || {})) + ' signups in this window · click a bar for the day',
@@ -602,10 +642,10 @@
         '<button class="icon-btn" data-csv="ledger">⇣ CSV</button>') +
       banner() +
       '<div class="tiles">' +
-        kpi({ t:'This month · ' + (r.month_key || ''), v: sek(r.month_revenue != null ? r.month_revenue : r.month), tone:'accent', drill:'rev:month', f:'calendar month, local time' }) +
-        kpi({ t:'Today', v: Number(r.today) ? sek(r.today) : '0 kr', tone:'good', drill:'rev:today',
+        kpi({ t:'This month · ' + (r.month_key || ''), v: sek(r.month_revenue != null ? r.month_revenue : r.month), tone:'gold', drill:'rev:month', f:'calendar month, local time' }) +
+        kpi({ t:'Today', v: Number(r.today) ? sek(r.today) : '0 kr', tone:'gold', drill:'rev:today',
               f: Number(r.today) ? 'payments received since midnight' : 'nothing yet today — the ledger is flat' }) +
-        kpi({ t:'Lifetime', v: sek(r.total), drill:'rev:lifetime', f:'<b>' + num(r.transactions) + '</b> payments · ' + num(r.paying_customers) + ' paying accounts' }) +
+        kpi({ t:'Lifetime', v: sek(r.total), tone:'gold', drill:'rev:lifetime', f:'<b>' + num(r.transactions) + '</b> payments · ' + num(r.paying_customers) + ' paying accounts' }) +
         kpi({ t:'What it bought', v: num(v.turns) + ' turns', tone:'good', drill:'value', f: tok(v.tokens) + ' tokens · ' + (v.kpm == null ? '—' : v.kpm.toFixed(2) + ' kr per 1M') }) +
       '</div>' +
       '<div class="grid">' +
@@ -632,7 +672,7 @@
                  + '</tbody></table></div>'
                : hbars(countries, { fmt: sek, click: i => 'data-country="' + esc(i.key) + '"', emptyMsg:'No paying customers yet' })
                  + '<div class="note">Drill into a country to see who paid and what they bought.</div>') +
-        card(5, 'What the money bought', 'value delivered alongside the revenue', valueGrid(v), { data:'clickable' }) +
+        card(5, 'What the money bought', 'value delivered alongside the revenue', valueGrid(v), { drill:'value' }) +
         card(12, 'Transactions', 'every ledger row, oldest first · click a row for the raw record', ledgerTable(ledgerRows(), 'No transactions in the ledger yet')) +
         card(7, 'Customers by lifetime value', 'click a customer to open the dossier',
              customers.length ? '<div class="tbl-wrap"><table><thead><tr><th>Customer</th><th>Country</th><th class="num">Paid</th><th class="num">Payments</th><th>First</th><th>Last</th><th>Products</th></tr></thead><tbody>' +
@@ -854,9 +894,10 @@
       '<div class="grid">' +
         card(7, 'Models by ' + metric, 'click a bar for that model’s daily curve and the players who called it',
              hbars(models, { fmt: metric === 'tokens' ? tok : num, click: i => 'data-model="' + esc(i.key) + '"' })) +
-        card(5, 'Calls by provider', num(sum(USAGE().providers ? Object.keys(USAGE().providers).reduce((a, k) => { a[k] = USAGE().providers[k].calls; return a; }, {}) : {})) + ' logged calls, lifetime',
-             donut(providerItems(), num(providerItems().reduce((a, i) => a + i.value, 0)), 'calls')) +
-        card(6, 'Token share by provider', 'lifetime tokens, including the unlabelled bucket', donut(tokenSplitItems(), tok(TOT().tokens), 'tokens')) +
+        card(5, 'Calls by provider', num(sum(USAGE().providers ? Object.keys(USAGE().providers).reduce((a, k) => { a[k] = USAGE().providers[k].calls; return a; }, {}) : {})) + ' logged calls, lifetime · click a slice for its models',
+             donut(providerItems(), num(providerItems().reduce((a, i) => a + i.value, 0)), 'calls', { click: i => 'data-provider="' + esc(i.key) + '"' })) +
+        card(6, 'Token share by provider', 'lifetime tokens, including the unlabelled bucket · click a slice for its models',
+             donut(tokenSplitItems(), tok(TOT().tokens), 'tokens', { click: i => 'data-provider="' + esc(i.key) + '"' })) +
         card(6, 'Calls per day', 'window ' + S.win, vchart(SER().api_calls_day || {}, { unit:'calls' })) +
       '</div>';
   }
@@ -966,7 +1007,13 @@
   }
   function viewFeedback() {
     const rows = fbItems();
-    return head('Feedback', 'Everything players sent in. Click a row to open the sender\'s dossier.',
+    /* Headern lovarade "click a row for the sender's dossier" — raderna var
+       inte klickbara alls (dod drilldown, rostad 2026-09-30). Feedback-rader
+       bär email, inte username; vi matchar email → konto i USERS().
+       Anonym eller okänd epost → ingen klick, ärlig etikett i stället. */
+    const userByEmail = {};
+    USERS().forEach(u => { const e = (u.email || '').trim().toLowerCase(); if (e && !(e in userByEmail)) userByEmail[e] = u.username; });
+    return head('Feedback', rows.length ? 'Everything players sent in. A row with a recognised e-mail opens that account’s dossier; anonymous rows stay read-only.' : 'Everything players sent in. No messages yet — nothing to open.',
         '<button class="icon-btn" data-csv="feedback">⇣ CSV</button>') +
       banner() +
       '<div class="card span12">' +
@@ -979,8 +1026,10 @@
         '</div>' +
         '<div class="feedback-inbox">' + (rows.length ? rows.map(f => {
           const t = f.ts ? new Date(f.ts) : null;
-          return '<div class="fb-item">' +
-            '<div class="fb-when">' + esc(t ? t.toLocaleString('en-GB') : 'unknown time') + (f.email ? ' · ' + esc(f.email) : ' · anonymous') + '</div>' +
+          const who = f.email ? userByEmail[String(f.email).trim().toLowerCase()] : null;
+          return '<div class="fb-item' + (who ? ' clickable' : '') + '"' + (who ? ' data-player="' + esc(who) + '" title="Open ' + esc(who) + '’s dossier"' : '') + '>' +
+            '<div class="fb-when">' + esc(t ? t.toLocaleString('en-GB') : 'unknown time') +
+              (f.email ? ' · ' + esc(f.email) + (who ? ' · <b>' + esc(who) + '</b> →' : ' · no account with this e-mail') : ' · anonymous') + '</div>' +
             '<div class="fb-text">' + esc(f.message || f.text || '') + '</div>' +
             (f.email ? '<div class="fb-tag">has reply address</div>' : '') + '</div>';
         }).join('') : emptyState('No feedback yet — the inbox is quiet', '🕊')) + '</div>' +
@@ -1193,6 +1242,27 @@
       '<div class="note">Source: transcript <code>meta.model</code> + <code>meta.tokens</code>, attributed to a provider through the model registry. Undated background calls count in the lifetime totals but cannot be placed on a day.</div>',
       { d: 'model', k: key });
   }
+  /* Provider-drawern (rostad 2026-09-30): Usage-donutens legend-knappar var
+     knappar utan handler — ett klick som inte hände något. Nu: vilka modeller
+     lever hos providern, deras anrop/tokens, klick → modell-drawern. */
+  function drawerProvider(key) {
+    const p = (USAGE().providers || {})[key] || { calls: 0, tokens: 0 };
+    const models = USAGE().models || {};
+    const rows = Object.keys(models).filter(m => !MODEL_SKIP[m] && (models[m].provider || provOf(m)) === key)
+      .map(m => ({ m: m, calls: Number(models[m].calls || 0), tokens: Number(models[m].tokens || 0) }))
+      .sort((a, b) => b.calls - a.calls);
+    openDrawer('usage · provider', (PROV_LABEL[key] || key),
+      '<div class="dgrid">' +
+      '<div class="dstat"><span class="t">Calls · lifetime</span><span class="v">' + num(p.calls) + '</span></div>' +
+      '<div class="dstat"><span class="t">Tokens · lifetime</span><span class="v">' + tok(p.tokens) + '</span></div>' +
+      '<div class="dstat"><span class="t">Tokens per call</span><span class="v">' + num(p.calls ? Math.round((p.tokens || 0) / p.calls) : 0) + '</span></div>' +
+      '<div class="dstat"><span class="t">Models</span><span class="v">' + num(rows.length) + '</span></div></div>' +
+      (rows.length ? '<div class="sub">Models at this provider</div><div class="tbl-wrap"><table class="mix-table"><thead><tr><th>Model</th><th class="num">Calls</th><th class="num">Tokens</th><th></th></tr></thead><tbody>' +
+        rows.map(r => '<tr data-model="' + esc(r.m) + '"><td><b>' + esc(modelLabel(r.m)) + '</b></td><td class="num">' + num(r.calls) + '</td><td class="num">' + tok(r.tokens) + '</td><td class="num"><button class="icon-btn" data-model="' + esc(r.m) + '">open →</button></td></tr>').join('') +
+        '</tbody></table></div>' : emptyState('No models tagged to this provider in the payload', '◌')) +
+      '<div class="note">Attribution is the server\'s model registry (same split as the Usage view). Click a model for its daily curve and the players who called it.</div>',
+      { d: 'provider', k: key });
+  }
   function drawerValue() {
     const v = valueStats();
     openDrawer('value delivered', num(v.turns) + ' turns',
@@ -1269,17 +1339,26 @@
     const rev = Number((REV().by_date || {})[day] || 0);
     const turns = Number((SER().turns_day || {})[day] || 0);
     const calls = Number((SER().api_calls_day || {})[day] || 0);
+    const signups = Number((SER().signups_day || {})[day] || 0);
     /* Hinkfördelningen för dagen (2026-09-28): samma server-räknade serie som
        Overview-grafen, så siffran här och stapeln där aldrig kan gå isär. */
     const split = (valueStats().bucketDay || {})[day] || null;
+    /* Vilka konton skapades denna dag — gör "New accounts per day"-stapeln
+       till en riktig drilldown (klick → kontona), inte bara en siffra. */
+    const joined = USERS().filter(x => String(x.created_at || '').slice(0, 10) === day);
     openDrawer('traffic · day', day,
       '<div class="dgrid">' +
       '<div class="dstat"><span class="t">Requests</span><span class="v">' + num(v) + '</span></div>' +
       '<div class="dstat"><span class="t">Unique visitors</span><span class="v">' + num(u) + '</span></div>' +
       '<div class="dstat"><span class="t">AI calls</span><span class="v">' + num(calls) + '</span></div>' +
       '<div class="dstat"><span class="t">Turns delivered</span><span class="v">' + num(turns) + '</span></div>' +
+      '<div class="dstat"><span class="t">New accounts</span><span class="v">' + num(signups) + '</span></div>' +
       '<div class="dstat"><span class="t">Revenue</span><span class="v">' + (rev ? sek(rev) : '—') + '</span></div></div>' +
+      (joined.length ? '<div class="sub">Accounts created this day</div><div class="tbl-wrap"><table class="mix-table"><thead><tr><th>Player</th><th>Role</th><th>Code</th><th>Tier</th><th>Country</th><th class="num">Turns</th></tr></thead><tbody>' +
+        joined.map(x => '<tr data-player="' + esc(x.username) + '"><td><b>' + esc(x.username) + '</b></td><td>' + esc(x.role || 'player') + '</td><td>' + codeTag(x) + '</td><td>' + tierTag(x.subscription_status) + '</td><td>' + esc((x.country_flag || '') + ' ' + (x.country || 'Unknown')) + '</td><td class="num">' + num(x.total_turns) + '</td></tr>').join('') +
+        '</tbody></table></div>' + '<div class="note">Click an account for the full dossier.</div>' : '') +
       bucketSplit(split, 'this day') +
+      (rev ? '<div class="sub">Payments this day</div>' + ledgerTable(ledgerFor(x => String(x.ts || '').slice(0, 10) === day)) : '') +
       '<div class="note">Everything the logs know about this single day, side by side. Per-source and per-country detail is only kept as a rolling window (geo and referrer are resolved from the cache), so those breakdowns are shown for the current window on the Traffic view rather than per day.</div>',
       { d: 'day', k: day });
   }
@@ -1866,6 +1945,7 @@
       case 'code': return drawerCode(k);
       case 'action': return drawerAction(k);
       case 'model': return drawerModel(k);
+      case 'provider': return drawerProvider(k);
       case 'player': return drawerPlayer(k, state.t || 'summary');
       case 'traffic': return drawerTraffic();
       case 'day': return drawerDay(k);
@@ -1908,6 +1988,7 @@
   document.addEventListener('click', async function (ev) {
     const t = ev.target.closest('[data-view],[data-win],[data-metric],[data-rev],[data-tmetric],[data-expand],' +
       '[data-drill],[data-slice],[data-key],[data-tx],[data-player],[data-model],[data-action],[data-ref],[data-geo],[data-country],[data-georange],[data-tier],[data-day],[data-ledgerbucket],[data-csvmodel],' +
+      '[data-provider],' +
       '[data-csv],[data-sort],[data-page],[data-frole],[data-fstatus],[data-fcountry],[data-fcode],[data-clear],[data-fbrange],[data-fbmail],[data-tab],[data-act],[data-bucket],[data-product],[data-pool],[data-code]');
     if (!t) return;
     const d = t.dataset;
@@ -1958,7 +2039,7 @@
     /* Donut-slices: egen data-nyckel först (data-slicekey sätts alltid av donut()),
        sedan label-texten som sista utväg. Utan nyckeln gissade vi på text. */
     if (d.slice != null && t.closest('.card')) {
-      if (d.product || d.action || d.tier || d.ref || d.geo || d.model) { /* faller igenom nedan */ }
+      if (d.product || d.action || d.tier || d.ref || d.geo || d.model || d.provider) { /* faller igenom nedan */ }
       else {
         const key = d.slicekey || '';
         const item = (t.closest('.card').querySelectorAll('.legend button')[Number(d.slice)]) || null;
@@ -1973,6 +2054,7 @@
       }
     }
     if (d.model) return openWith(t, () => drawerModel(d.model));
+    if (d.provider) return openWith(t, () => drawerProvider(d.provider));
     if (d.ref) return openWith(t, () => drawerReferrer(d.ref));
     if (d.geo) return openWith(t, () => drawerGeo(d.geo));
     if (d.country) return openWith(t, () => drawerCountry(d.country));

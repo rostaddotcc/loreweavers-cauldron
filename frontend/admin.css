@@ -497,6 +497,17 @@ code,kbd,samp{
 .kpi .v.accent{color:var(--accent)}
 .kpi .v.good{color:var(--good)}
 .kpi .v.warn{color:var(--warn)}
+/* Ton per begrepp (rostad 2026-09-30): guld=pengar, violet=trafik/anrop,
+   teal=pottar. --k sätter pricken i rubriken till samma färg som siffran. */
+.kpi .v.gold{color:var(--gold)}
+.kpi .v.violet{color:var(--violet)}
+.kpi .v.teal{color:var(--teal)}
+.kpi .t{display:flex;align-items:center;gap:6px}
+.kpi .tdot{flex:none;width:7px;height:7px;border-radius:50%;background:var(--k,var(--dim-2));box-shadow:0 0 0 3px color-mix(in srgb,var(--k,var(--dim-2)) 18%,transparent)}
+/* Delta-chip på Accounts-rutan: "+3 players · in 7d" ur datumfiltret. */
+.kpi .delta{align-self:flex-start;font-size:var(--fs-micro);font-weight:600;letter-spacing:.03em;
+  padding:2px 8px;border-radius:999px;border:1px solid var(--line-2);color:var(--dim);white-space:nowrap}
+.kpi .delta.up{color:var(--good);border-color:var(--good-dim);background:color-mix(in srgb,var(--good) 10%,transparent)}
 .kpi .f{margin-top:auto;font-size:var(--fs-xs);color:var(--dim);line-height:1.45}
 .kpi .f b{color:var(--txt);font-weight:600}
 .kpi .cta{
@@ -1257,6 +1268,8 @@ button.is-busy::after{
   transition:border-color var(--dur-1) var(--ease);
 }
 .fb-item:hover{border-color:var(--line-2)}
+.fb-item.clickable{cursor:pointer}
+.fb-item.clickable:hover{border-color:var(--accent);background:var(--panel-2)}
 .fb-who{font-size:var(--fs-sm);font-weight:600;color:var(--txt)}
 .fb-when{font-size:var(--fs-xs);color:var(--dim-2)}
 .fb-text{

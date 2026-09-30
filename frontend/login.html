@@ -77,52 +77,18 @@
 <link rel="icon" href="/assets/logo-cauldron.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<script>
-/* ── Hero-art: välj + förhandsladda I head (LCP 2026-09-23) ────────────────
-   Bilden är LCP-elementet. Valet låg tidigare i ett script på rad ~1700 av
-   1986 → hämtningen började först efter att hela dokumentet parsats. Nu körs
-   det före första render: preload (fetchpriority=high) + CSS-variabel som
-   .hero-bg använder. Beteendet är oförändrat: ny slumpart varje besök,
-   aldrig samma som förra (localStorage lwc-hero-last). */
-(function () {
-  var HERO_ART = [
-    'assets/adventurers/webp/adventurer-fighter.webp',
-    'assets/adventurers/webp/adventurer-elf-ranger.webp',
-    'assets/adventurers/webp/adventurer-dwarf-cleric.webp',
-    'assets/adventurers/webp/adventurer-tiefling-warlock.webp',
-    'assets/adventurers/webp/adventurer-rogue.webp',
-    'assets/adventurers/webp/adventurer-dragonborn-paladin.webp',
-    'assets/adventurers/webp/adventurer-halfling-bard.webp',
-    'assets/adventurers/webp/adventurer-gnome-wizard.webp',
-    'assets/adventurers/webp/adventurer-barbarian.webp',
-    'assets/adventurers/webp/adventurer-monk.webp',
-    'assets/adventurers/webp/adventurer-druid.webp',
-    'assets/adventurers/webp/adventurer-sorcerer.webp',
-    'assets/adventurers/webp/adventurer-artificer.webp',
-    'assets/adventurers/webp/adventurer-genasi-pyromancer.webp',
-    'assets/adventurers/webp/adventurer-githyanki-knight.webp',
-    'assets/adventurers/webp/adventurer-drow-priestess.webp',
-    'assets/adventurers/webp/adventurer-warforged-paladin.webp',
-    'assets/adventurers/webp/adventurer-firbolg-druid.webp',
-    'assets/adventurers/webp/adventurer-tabaxi-monk.webp'
-  ];
-  var last = null;
-  try { last = localStorage.getItem('lwc-hero-last'); } catch (e) {}
-  var pool = HERO_ART.filter(function (a) { return a !== last; });
-  var pick = pool[Math.floor(Math.random() * pool.length)];
-  try { localStorage.setItem('lwc-hero-last', pick); } catch (e) {}
-  document.documentElement.style.setProperty('--hero-art', 'url("' + pick + '")');
-  var pl = document.createElement('link');
-  pl.rel = 'preload'; pl.as = 'image'; pl.href = pick; pl.fetchPriority = 'high';
-  document.head.appendChild(pl);
-})();
-</script>
+<link rel="preload" as="image" href="assets/hero-loreweaver.webp" fetchpriority="high">
+<!-- ── Hero-art (2026-09-30): EN statisk bild — kittel-motivet ersätter den
+     roterande äventyraresviten. Bilden är LCP-elementet: förhandsladdas här i
+     head med fetchpriority=high och sätts som CSS-variabel i :root
+     (--hero-art) i stället för den gamla localStorage-rotationen. -->
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=EB+Garamond:ital,wght@0,400;1,400;1,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   /* ═══════════════ Terminal Gothic — flat, DOS/terminal, aligned med spelet ═══════════════
      login.html rebuild 2026-08-12: samma content, flat & enklare. snes.css?v=51 laddas
      EFTER detta block och tvingar scanlines/sprites/knappar med !important. */
   :root{
+    --hero-art:url("assets/hero-loreweaver.webp");   /* statisk hero-art (2026-09-30) */
     --ink:#171310; --stone:#1c1713; --stone-2:#241c15; --stone-3:#2c231a;
     --edge:#4a3b26; --edge-hi:#6b5636;
     --bone:#d9c9a6; --bone-bright:#f2e6c8; --bone-dim:#9d8a6a;
@@ -203,7 +169,7 @@
   .myst-quote{margin-top:2rem;font-style:italic;font-size:var(--fs-sm);color:var(--bone-dim);min-height:1.6em;transition:opacity 1s ease}
   .scroll-cue{position:absolute;bottom:1.5rem;left:50%;transform:translateX(-50%);color:var(--bone-dim);font-family:var(--font-mono);font-size:.58rem;letter-spacing:.26em;text-transform:uppercase;animation:cue-bob 2.6s ease-in-out infinite;z-index:1;display:flex;align-items:center;gap:.5rem}
   @keyframes cue-bob{0%,100%{transform:translate(-50%,0);opacity:.45}50%{transform:translate(-50%,6px);opacity:1}}
-  /* ═══════════════ hero background — roterande äventyrarefaces (Qwen Image 3 Pro) ═══════════════
+  /* ═══════════════ hero background — kittel-motiv (Qwen Image 3 Pro, 2026-09-30) ═══════════════
      2026-09-21: DELAD SCEN — hero-bg är barn till .hero-gate-wrappern och täcker
      hero + gate i ett svep; porträtten klipps inte längre vid hero-kanten utan
      fortsätter bakom loginboxen. Scrim: vänstermörk (hero-copy) + gradvis
@@ -211,7 +177,7 @@
   .hero-gate{position:relative;overflow:hidden}
   .hero-gate > section{position:relative;z-index:1}
   .hero{position:relative}
-  .hero-bg{position:absolute;inset:0;z-index:0;background-image:var(--hero-art);background-size:cover;background-position:center 18%;transform-origin:center;animation:hero-breathe 36s ease-in-out infinite alternate}
+  .hero-bg{position:absolute;inset:0;z-index:0;background-image:var(--hero-art);background-size:cover;background-position:68% 42%;transform-origin:center;animation:hero-breathe 36s ease-in-out infinite alternate}
   .hero-bg::after{content:'';position:absolute;inset:0;background:
     linear-gradient(90deg, var(--ink) 0%, color-mix(in srgb, var(--ink) 82%, transparent) 24%, color-mix(in srgb, var(--ink) 34%, transparent) 52%, color-mix(in srgb, var(--ink) 10%, transparent) 74%, color-mix(in srgb, var(--ink) 46%, transparent) 100%),
     linear-gradient(180deg, color-mix(in srgb, var(--ink) 55%, transparent) 0%, transparent 15%, transparent 44%, color-mix(in srgb, var(--ink) 42%, transparent) 62%, color-mix(in srgb, var(--ink) 80%, transparent) 82%, var(--ink) 99%)}
@@ -219,7 +185,7 @@
   .hero-copy{position:relative;z-index:1}
   .hero-credit{position:absolute;right:clamp(1.2rem,4vw,3rem);bottom:4.4rem;z-index:2;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;color:var(--bone-dim);opacity:.7;text-shadow:1px 1px 0 #000}
   @media (max-width:720px){
-    .hero-bg{background-position:center 12%}
+    .hero-bg{background-position:64% 26%}
     .hero-bg::after{background:
       linear-gradient(180deg, color-mix(in srgb, var(--ink) 72%, transparent) 0%, color-mix(in srgb, var(--ink) 26%, transparent) 20%, transparent 32%, color-mix(in srgb, var(--ink) 42%, transparent) 48%, color-mix(in srgb, var(--ink) 68%, transparent) 60%, color-mix(in srgb, var(--ink) 50%, transparent) 70%, color-mix(in srgb, var(--ink) 88%, transparent) 88%, var(--ink) 100%)}
     .hero-credit{display:none}
@@ -840,7 +806,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
        Konsten flyter oavbrutet genom båda sektionerna (ingen klipp i mitten);
        hero-bg ligger på wrappern och når hela vägen bakom loginboxen. -->
   <div class="hero-gate">
-  <div class="hero-bg" id="hero-bg" role="img" aria-label="An AI-generated adventurer"></div>
+  <div class="hero-bg" id="hero-bg" role="img" aria-label="An AI-painted cauldron brewing a fantasy world"></div>
   <!-- ═══════════════ hero ═══════════════ -->
   <section class="hero">
     <div class="wrap">
@@ -868,7 +834,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
         <p class="myst-quote rv in d3" id="myst-quote"></p>
       </div>
     </div>
-    <p class="hero-credit">Hero portraits &middot; Qwen Image 3 Pro</p>
+    <p class="hero-credit">Hero art &middot; Qwen Image 3 Pro</p>
     <div class="scroll-cue">Descend &#8595;</div>
   </section>
 
@@ -1328,7 +1294,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 <noscript><style>.rv{opacity:1;transform:none}</style></noscript>
 
 <script src="sfx.js?v=20260811a"></script>
-<script src="api.js?v=20260927a"></script>
+<script src="api.js?v=20260930a"></script>
 <script src="i18n.js?v=20260930b"></script>
 <script src="sprites.js?v=20260806b"></script>
 <script src="rail.js?v=20260924a"></script>

@@ -144,14 +144,8 @@ const API = (() => {
     // ── Auth ──
     // remember=true → "Keep me logged in": 30 dagars session (annars 24h).
     async login(username, password, remember = false) {
-      if (MOCK) {
-        const USERS = { admin: 'rostad2026', rostad: 'drake2026', hastis: 'enhorn2026' };
-        if (USERS[username] === password) {
-          sessionStorage.setItem('dnd_user', username);
-          return { ok: true, username, role: username === 'admin' ? 'admin' : 'player' };
-        }
-        throw new Error('Invalid username or password');
-      }
+      // MOCK-login var alltid avstängd (MOCK=false); hårdkodade testlösenord
+      // togs bort 2026-09-30 — de läckte i den publikt servade bundlen.
       return req('/api/login', { method: 'POST', body: JSON.stringify({ username, password, remember: !!remember }) });
     },
 

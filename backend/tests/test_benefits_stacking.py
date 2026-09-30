@@ -312,9 +312,10 @@ def test_campaign_export_includes_avatar_images(client):
     assert r.status_code == 200, r.text
     zf = zipfile.ZipFile(io.BytesIO(r.content))
     names = zf.namelist()
-    assert "bilagor/avatars/player.png" in names
-    assert "bilagor/avatars/dm.png" in names
-    assert zf.read("bilagor/avatars/player.png") == b"\x89PNG fake player"
+    # 2026-09-30: bilagor/ → images/ (engelsk zip-layout, export-rebuild)
+    assert "images/avatars/player.png" in names
+    assert "images/avatars/dm.png" in names
+    assert zf.read("images/avatars/player.png") == b"\x89PNG fake player"
 
 
 def test_vault_export_includes_avatar_images(client):

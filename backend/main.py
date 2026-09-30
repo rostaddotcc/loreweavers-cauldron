@@ -10810,9 +10810,494 @@ async def generate_avatar(
 # ═══════════════════════════════════════
 
 
+# ═══════════════════════════════════════
+# CAMPAIGN EXPORT — markdown-renderare (2026-09-30, rostad: "allt relevant,
+# snyggt strukturerat"). Zip-layout (engelsk chrome — spelets UI-språk):
+#   README.md               översikt + innehållsförteckning
+#   campaign.json           komplett rått state (maskinläsbart)
+#   character/sheet.md|json karaktärsark + inventory.md (utrustning & kassa)
+#   transcript/session-*    .md (läsbart: Player/DM/Lorekeeper) + .jsonl (rått)
+#   world/                  npcs.md, locations.md, quests.md, lore.md, facts.md
+#   journal/                logbook.md, summaries.md, chapters.md, arcs.md
+#   attachments/            spelarens uppladdade filer (originalnamn)
+#   images/                 genererade bilder + images/avatars/ (porträtt)
+# Tidigare luckor som denna version stänger: quests, inventory/currency,
+# facts-registret, loggboken, chapter/arc-sammanfattningar (globben tog bara
+# summary-*.json), attachments, guardian-rader (labbades som "Spelare"),
+# __VAKNA_DM__-sentinel (läckte i transkriptet), svensk README i engelsk UI.
+# ═══════════════════════════════════════
+
+_ABILITY_KEYS = ("STR", "DEX", "CON", "INT", "WIS", "CHA")
+
+
+def _export_signed(v) -> str:
+    try:
+        n = int(v)
+    except (TypeError, ValueError):
+        return str(v if v is not None else "?")
+    return f"+{n}" if n >= 0 else str(n)
+
+
+def _export_quest_mark(status: str) -> str:
+    s = (status or "").strip().lower()
+    if s in ("slutförd", "completed", "klar"):
+        return "✅"
+    if s in ("misslyckad", "failed"):
+        return "💀"
+    return "⚑"
+
+
+def _export_char_sheet_md(char: dict) -> str:
+    """Läsbart karaktärsark (markdown)."""
+    if not char or not char.get("name"):
+        return "# Character\n\n_No character created yet._\n"
+    L = [f"# {char['name']}"]
+    sub = " · ".join(
+        str(x) for x in (
+            char.get("race"), char.get("class"),
+            f"Level {char.get('level', 1)}", char.get("alignment"),
+        ) if x
+    )
+    if sub:
+        L.append(f"\n*{sub}*\n")
+    if char.get("background"):
+        L.append(f"**Background:** {char['background']}\n")
+
+    hp = char.get("hp") or {}
+    L.append("## Vitals\n")
+    temp = f" (+{hp['temp']} temp)" if hp.get("temp") else ""
+    L.append(f"- **HP:** {hp.get('current', '?')}/{hp.get('max', '?')}{temp}")
+    L.append(
+        f"- **AC:** {char.get('ac', '?')} · **Initiative:** {char.get('initiative', '?')}"
+        f" · **Speed:** {char.get('speed', '?')}"
+    )
+    L.append(f"- **Perception:** {char.get('perception', '?')} · **Proficiency:** {_export_signed(char.get('proficiency', 2))}")
+    xp = char.get("xp") or {}
+    if xp:
+        L.append(f"- **XP:** {xp.get('current', 0)} / {xp.get('next_level', '?')}")
+    ss = char.get("spell_slots") or {}
+    if ss.get("max"):
+        L.append(f"- **Spell slots:** {ss.get('current', 0)}/{ss.get('max', 0)}")
+    if char.get("inspiration"):
+        L.append("- **Inspiration:** ✦ yes")
+    if char.get("exhaustion"):
+        L.append(f"- **Exhaustion:** level {char['exhaustion']}")
+
+    ab = char.get("abilities") or {}
+    keys = [k for k in _ABILITY_KEYS if k in ab]
+    if keys:
+        L.append("\n## Abilities\n")
+        L.append("| | " + " | ".join(keys) + " |")
+        L.append("|---" * (len(keys) + 1) + "|")
+        L.append("| Score | " + " | ".join(str((ab.get(k) or {}).get("score", "?")) for k in keys) + " |")
+        L.append("| Mod | " + " | ".join(_export_signed((ab.get(k) or {}).get("mod")) for k in keys) + " |")
+
+    saves = char.get("saves") or []
+    prof_saves = [s.get("name", "?") for s in saves if isinstance(s, dict) and s.get("prof")]
+    if prof_saves:
+        L.append(f"\n**Saving throws proficient:** {', '.join(prof_saves)}")
+
+    skills = char.get("skills") or []
+    if skills:
+        L.append("\n## Skills\n")
+        for s in skills:
+            if not isinstance(s, dict):
+                continue
+            mark = "●" if s.get("proficient") else "○"
+            L.append(f"- {mark} {s.get('name', '?')} ({s.get('ability', '?')})")
+
+    feats = char.get("features") or []
+    if feats:
+        L.append("\n## Features\n")
+        for ft in feats:
+            if not isinstance(ft, dict):
+                L.append(f"- {ft}")
+                continue
+            head = f"- **{ft.get('name', '?')}**"
+            if ft.get("level"):
+                head += f" (level {ft['level']})"
+            L.append(head)
+            if ft.get("description"):
+                L.append(f"  {ft['description']}")
+
+    spells = char.get("spells") or []
+    if spells:
+        L.append("\n## Spells\n")
+        by_level: dict[int, list] = {}
+        for sp in spells:
+            if not isinstance(sp, dict):
+                continue
+            by_level.setdefault(int(sp.get("level", 0) or 0), []).append(sp)
+        for lvl in sorted(by_level):
+            L.append(f"\n### {'Cantrips' if lvl == 0 else f'Level {lvl}'}\n")
+            for sp in by_level[lvl]:
+                bits = [b for b in (sp.get("school"), sp.get("casting_time")) if b]
+                L.append(f"- **{sp.get('name', '?')}**" + (f" _({' · '.join(bits)})_" if bits else ""))
+                if sp.get("damage_dice"):
+                    L.append(f"  - Damage: {sp['damage_dice']}")
+                if sp.get("description"):
+                    L.append(f"  - {sp['description']}")
+
+    traits = char.get("traits") or []
+    if traits:
+        L.append("\n## Traits\n")
+        for t in traits:
+            L.append(f"- {t}")
+
+    cond = []
+    if char.get("resistances"):
+        cond.append(f"**Resistances:** {', '.join(str(r) for r in char['resistances'])}")
+    if char.get("vulnerabilities"):
+        cond.append(f"**Vulnerabilities:** {', '.join(str(v) for v in char['vulnerabilities'])}")
+    if char.get("immunities"):
+        cond.append(f"**Immunities:** {', '.join(str(i) for i in char['immunities'])}")
+    if char.get("darkvision"):
+        cond.append(f"**Darkvision:** {char['darkvision']}")
+    if cond:
+        L.append("\n## Senses & Resistances\n")
+        L.extend(f"- {c}" for c in cond)
+
+    training = char.get("training") or []
+    if training:
+        L.append("\n## Training\n")
+        for tr in training:
+            if isinstance(tr, dict):
+                L.append(f"- {tr.get('name', '?')} — {tr.get('days_spent', 0)}/{tr.get('days_needed', '?')} days"
+                         + (f" ({tr['skill']})" if tr.get("skill") else ""))
+            else:
+                L.append(f"- {tr}")
+
+    if char.get("gear"):
+        L.append(f"\n## Starting Gear\n\n{char['gear']}")
+    if char.get("story"):
+        L.append(f"\n## Story\n\n> {char['story']}")
+    if char.get("notes"):
+        L.append(f"\n## Your Notes\n\n{char['notes']}")
+    return "\n".join(L) + "\n"
+
+
+def _export_inventory_md(inventory: list, currency: dict, char: dict) -> str:
+    """Utrustning + kassa (läsbar markdown)."""
+    L = ["# Inventory & Treasury", "\n## Treasury\n"]
+    cur = currency or {}
+    coins = " · ".join(f"**{cur.get(k, 0)}** {k.upper()}" for k in ("pp", "gp", "sp", "cp") if cur.get(k))
+    L.append(coins if coins else "_No coin._")
+    items = [it for it in (inventory or []) if isinstance(it, dict)]
+    if not items:
+        L.append("\n## Equipment\n\n_Pockets empty._")
+        return "\n".join(L) + "\n"
+    L.append("\n## Equipment\n")
+    total_w = sum(float(it.get("weight") or 0) * int(it.get("qty") or 1) for it in items)
+    cap = char.get("max_weight_lbs") if char else None
+    if cap:
+        L.append(f"_Carrying {total_w:g} / {cap:g} lbs. ✦ = equipped_\n")
+    else:
+        L.append("_✦ = equipped_\n")
+    by_cat: dict[str, list] = {}
+    for it in items:
+        cat = str(it.get("category") or it.get("type") or "other").title()
+        by_cat.setdefault(cat, []).append(it)
+    for cat in sorted(by_cat):
+        L.append(f"\n### {cat}\n")
+        for it in by_cat[cat]:
+            star = " ✦" if it.get("equipped") else ""
+            qty = f" ×{it['qty']}" if int(it.get("qty") or 1) > 1 else ""
+            rar = it.get("rarity") or "normal"
+            rar_s = f" _({rar})_" if rar != "normal" else ""
+            L.append(f"- **{it.get('name', '?')}**{qty}{star}{rar_s}")
+            bits = []
+            if it.get("damage"):
+                bits.append(str(it["damage"]))
+            elif it.get("damage_dice"):
+                bits.append(str(it["damage_dice"]) + (f" {it['damage_type']}" if it.get("damage_type") else ""))
+            if it.get("ac_bonus"):
+                bits.append(f"AC {it['ac_bonus']}")
+            if it.get("magic_bonus"):
+                bits.append(f"+{it['magic_bonus']}")
+            if it.get("range"):
+                bits.append(str(it["range"]))
+            if it.get("properties"):
+                bits.append(", ".join(str(p) for p in it["properties"]))
+            if it.get("weight"):
+                bits.append(f"{float(it['weight']):g} lbs")
+            if it.get("charges") is not None and it.get("max_charges"):
+                bits.append(f"charges {it['charges']}/{it['max_charges']}")
+            if bits:
+                L.append(f"  - {' · '.join(bits)}")
+            desc = it.get("description") or it.get("lore")
+            if desc:
+                L.append(f"  - {desc}")
+    return "\n".join(L) + "\n"
+
+
+def _export_npcs_md(npcs: list) -> str:
+    L = ["# NPCs"]
+    alive: list = []
+    fallen: list = []
+    for n in npcs or []:
+        if not isinstance(n, dict):
+            continue
+        (alive if n.get("alive", True) else fallen).append(n)
+    if not alive and not fallen:
+        return "# NPCs\n\n_No one met yet._\n"
+
+    def block(n: dict) -> list[str]:
+        bits = [b for b in (n.get("role"), n.get("relation")) if b]
+        out = [f"\n## {n.get('name', '?')}"]
+        if bits:
+            out.append(f"*{' · '.join(str(b) for b in bits)}*")
+        if n.get("notes"):
+            out.append(f"\n{n['notes']}")
+        return out
+
+    for n in alive:
+        L.extend(block(n))
+    if fallen:
+        L.append("\n---\n\n# Fallen\n")
+        for n in fallen:
+            L.extend(block(n))
+    return "\n".join(L) + "\n"
+
+
+def _export_locations_md(state: dict) -> str:
+    """Kända platser (med restid — ren beräkning, ingen LLM) + reslogg."""
+    # get_locations_with_travel muterar loc-dicts (sätter x/y) — kör på en kopia
+    # så exporten aldrig rör live-state.
+    try:
+        probe = {**state, "locations": [dict(l) for l in state.get("locations", []) if isinstance(l, dict)]}
+        locs = get_locations_with_travel(probe, lang="en")
+    except Exception:
+        locs = []
+    L = ["# Locations"]
+    if not locs:
+        L.append("\n_No places discovered yet._")
+    else:
+        for loc in locs:
+            tag = " 📍 _You are here_" if loc.get("current") else (" ◆ visited" if loc.get("visited") else " ◇ known")
+            L.append(f"\n## {loc.get('name', '?')}{tag}\n")
+            if loc.get("description"):
+                L.append(f"{loc['description']}")
+            if loc.get("lore"):
+                L.append(f"\n> {loc['lore']}")
+            meta_bits = []
+            if loc.get("terrain") and loc["terrain"] != "okänd":
+                meta_bits.append(f"terrain: {loc['terrain']}")
+            if not loc.get("current") and loc.get("travel_text"):
+                meta_bits.append(str(loc["travel_text"]))
+            if loc.get("landmarks"):
+                meta_bits.append("landmarks: " + ", ".join(str(x) for x in loc["landmarks"]))
+            if meta_bits:
+                L.append("\n_" + " · ".join(meta_bits) + "_")
+    travel_log = (state.get("world") or {}).get("travel_log") or []
+    if travel_log:
+        L.append("\n---\n\n## Journeys\n")
+        for t in travel_log:
+            if isinstance(t, dict):
+                L.append(f"- Day {t.get('day', '?')}: {t.get('from', '?')} → {t.get('to', '?')}")
+    return "\n".join(L) + "\n"
+
+
+def _export_quests_md(quests: list) -> str:
+    qs = [q for q in quests or [] if isinstance(q, dict)]
+    if not qs:
+        return "# Quests\n\n_No quests yet._\n"
+    groups = {"⚑ Active": [], "✅ Completed": [], "💀 Failed": []}
+    order = {"⚑": "⚑ Active", "✅": "✅ Completed", "💀": "💀 Failed"}
+    for q in qs:
+        groups[order[_export_quest_mark(q.get("status", ""))]].append(q)
+    L = ["# Quests"]
+    for title in ("⚑ Active", "✅ Completed", "💀 Failed"):
+        group = groups[title]
+        if not group:
+            continue
+        L.append(f"\n## {title}\n")
+        for q in group:
+            L.append(f"\n### {q.get('name', '?')}\n")
+            if q.get("description"):
+                L.append(f"{q['description']}\n")
+            bits = []
+            if q.get("reward"):
+                bits.append(f"reward: {q['reward']}")
+            if q.get("xp_reward"):
+                bits.append(f"{q['xp_reward']} XP")
+            if q.get("gold_reward"):
+                bits.append(f"{q['gold_reward']} gp")
+            if q.get("created_turn") is not None:
+                bits.append(f"given at turn {q['created_turn']}")
+            if q.get("completed_turn") is not None:
+                bits.append(f"closed at turn {q['completed_turn']}")
+            if bits:
+                L.append("*" + " · ".join(bits) + "*")
+    return "\n".join(L) + "\n"
+
+
+def _export_facts_md(active: list, superseded: list, archived: list, pinned: list) -> str:
+    if not (active or superseded or archived or pinned):
+        return "# Facts\n\n_No facts recorded yet._\n"
+    L = ["# Facts"]
+    if pinned:
+        L.append("\n## Pinned by you\n")
+        for p in pinned:
+            L.append(f"- 📌 {p}")
+    by_cat: dict[str, list] = {}
+    for f in active:
+        by_cat.setdefault(str(f.get("category", "world")), []).append(f)
+    for cat in sorted(by_cat):
+        L.append(f"\n## {cat.title()}\n")
+        for f in sorted(by_cat[cat], key=lambda x: x.get("source_turn", 0)):
+            L.append(f"- {f.get('text', '')} _(turn {f.get('source_turn', '?')})_")
+    if superseded:
+        L.append("\n## Superseded (older truths)\n")
+        for f in superseded:
+            s = f"- ~~{f.get('text', '')}~~ _(turn {f.get('source_turn', '?')})_"
+            if f.get("replaced_by_text"):
+                s += f" → replaced by: {f['replaced_by_text']}"
+            L.append(s)
+    if archived:
+        L.append("\n## Forgotten (archived)\n")
+        for f in archived:
+            L.append(f"- {f.get('text', '')} _(turn {f.get('source_turn', '?')})_")
+    return "\n".join(L) + "\n"
+
+
+def _export_logbook_md(state: dict) -> str:
+    """Äventyrsjournal — LLM-cachen (logbook_llm) först, sedan Guardian-dagar."""
+    world = state.get("world") or {}
+    llm = world.get("logbook_llm") or {}
+    days = llm.get("days") or []
+    title = llm.get("title") or "Journal"
+    if days:
+        L = [f"# {title}"]
+        if llm.get("summary"):
+            L.append(f"\n> {llm['summary']}")
+        for d in days:
+            if not isinstance(d, dict):
+                continue
+            head = f"\n## Day {d.get('day', '?')}"
+            if d.get("title"):
+                head += f" — {d['title']}"
+            L.append(head + "\n")
+            if d.get("mood"):
+                L.append(f"*Mood: {d['mood']}*")
+            if d.get("location"):
+                L.append(f"*Location: {d['location']}*")
+            for ev in d.get("events") or []:
+                L.append(f"- {ev}")
+            if d.get("npcs_met"):
+                L.append(f"\n_NPCs met: {', '.join(str(m) for m in d['npcs_met'])}_")
+            if d.get("quests"):
+                L.append(f"_Quests: {'; '.join(str(q) for q in d['quests'])}_")
+        return "\n".join(L) + "\n"
+    guard = world.get("logbook") or []
+    if isinstance(guard, list) and guard:
+        by_day: dict = {}
+        for e in guard:
+            if not isinstance(e, dict):
+                continue
+            by_day.setdefault(e.get("day", 1), []).append(e)
+        L = ["# Journal"]
+        for day in sorted(by_day):
+            L.append(f"\n## Day {day}\n")
+            for e in by_day[day]:
+                turn = e.get("turn")
+                prefix = f"_(turn {turn})_ " if turn is not None else ""
+                L.append(f"- {prefix}{e.get('text', '')}")
+        return "\n".join(L) + "\n"
+    return "# Journal\n\n_No journal entries yet._\n"
+
+
+def _export_summary_books(sdir: Path) -> tuple[str, str, str]:
+    """(scenes, chapters, arcs) markdown ur summaries/ — ALLA tre nivåerna
+    (gamla exporten globbade bara summary-*.json och tappade chapter/arc)."""
+    def load(pattern: str) -> list[dict]:
+        out = []
+        if sdir.exists():
+            for f in sorted(sdir.glob(pattern)):
+                try:
+                    d = json.loads(f.read_text())
+                    if isinstance(d, dict):
+                        out.append(d)
+                except (json.JSONDecodeError, OSError):
+                    continue
+        return out
+
+    scenes = load("summary-*.json")
+    chapters = load("chapter-*.json")
+    arcs = load("campaign-arc-*.json")
+
+    if scenes:
+        L = ["# Scene Summaries"]
+        for s in scenes:
+            L.append(f"\n## Turn {s.get('turn', '?')}\n\n{s.get('text', '')}\n")
+        scenes_md = "\n".join(L) + "\n"
+    else:
+        scenes_md = "# Scene Summaries\n\n_None yet._\n"
+
+    if chapters:
+        L = ["# Chapters"]
+        for c in chapters:
+            created = f" _({str(c['created'])[:10]})_" if c.get("created") else ""
+            L.append(f"\n## Chapter {c.get('chapter', '?')}{created}\n\n{c.get('text', '')}\n")
+        chapters_md = "\n".join(L) + "\n"
+    else:
+        chapters_md = "# Chapters\n\n_None yet._\n"
+
+    if arcs:
+        L = ["# Campaign Arcs"]
+        for a in arcs:
+            created = f" _({str(a['created'])[:10]})_" if a.get("created") else ""
+            L.append(f"\n## Arc {a.get('arc', '?')}{created}\n\n{a.get('text', '')}\n")
+        arcs_md = "\n".join(L) + "\n"
+    else:
+        arcs_md = "# Campaign Arcs\n\n_None yet._\n"
+
+    return scenes_md, chapters_md, arcs_md
+
+
+def _export_transcript_md(tfile: Path) -> str:
+    """JSONL → läsbar markdown med ROLLRÄTT etikett (guardian = Lorekeeper,
+    inte 'Spelare' som förr) och utan interna sentinel-rader (__VAKNA_DM__)."""
+    title = tfile.stem.replace("-", " ").title()
+    L = [f"# {title}"]
+    try:
+        lines = tfile.read_text().splitlines()
+    except OSError:
+        return f"# {title}\n\n_Transcript unavailable._\n"
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        content = entry.get("content") or ""
+        if content == "__VAKNA_DM__":
+            continue
+        meta = entry.get("meta") or {}
+        role = entry.get("role", "?")
+        if meta.get("log"):
+            label = "📣 System"
+        elif role == "assistant":
+            label = "🧙 Dungeon Master"
+        elif role == "guardian":
+            label = "🦉 Lorekeeper"
+        else:
+            label = "⚔️ Player"
+        ts = str(entry.get("ts", ""))[:16].replace("T", " ")
+        stamp = f" · {ts}" if ts else ""
+        L.append(f"\n### {label}{stamp}\n\n{content}\n")
+    return "\n".join(L) + "\n"
+
+
 @app.get("/api/campaign/export")
 async def export_campaign(morkrets_token: str | None = Cookie(None)):
-    """Exportera kampanjen som zip (3€ Support-förmån — features.export)."""
+    """Exportera kampanjen som zip (3€ Support-förmån — features.export).
+
+    Komplett arkiv 2026-09-30: README + rått state + karaktärsark + inventarie
+    + transkript (md + jsonl) + värld (NPCs/platser/quests/lore/facts)
+    + journal (loggbok/scener/kapitel/bågar) + attachments + alla bilder.
+    """
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
 
@@ -10827,102 +11312,184 @@ async def export_campaign(morkrets_token: str | None = Cookie(None)):
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
 
-    buf = io.BytesIO()
     meta = state["meta"]
+    cid = meta.get("campaign_id", "")
+    char = state.get("character") or {}
+    world = state.get("world") or {}
 
-    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        # README.md
-        readme = f"""# {meta['campaign_name']}
+    # ── Fakta (Codex Facts-flikens register) — active / superseded / archived ──
+    facts_active: list[dict] = []
+    facts_superseded: list[dict] = []
+    facts_archived: list[dict] = []
+    try:
+        register = FactRegister(username, cid)
+        for f in register._facts:
+            d = f.model_dump()
+            if f.superseded_by:
+                by_id = {x.id: x for x in register._facts}
+                repl = by_id.get(f.superseded_by)
+                d["replaced_by_text"] = repl.text if repl else None
+                facts_superseded.append(d)
+            elif f.archived:
+                facts_archived.append(d)
+            else:
+                facts_active.append(d)
+    except Exception:
+        pass
+    pinned = state.get("pinned_facts") or []
 
-**Kampanj-ID:** {meta['campaign_id']}
-**Skapad:** {meta['created']}
-**Senast uppdaterad:** {meta['last_updated']}
-**Turer:** {meta['turn_count']}
-**Sessioner:** {meta.get('session_count', 1)}
+    # ── Journal-böcker (scener/kapitel/bågar) ──
+    sdir = store.get_summaries_dir(state)
+    scenes_md, chapters_md, arcs_md = _export_summary_books(sdir)
 
-## Karaktär
+    # ── Transkript-filer ──
+    tdir = store.get_transcripts_dir(state)
+    tfiles = sorted(tdir.glob("session-*.jsonl")) if tdir.exists() else []
+
+    # ── Attachments (originalnamn, dedup) ──
+    att_dir = CAMPAIGNS_DIR / username / cid / "attachments"
+    att_items: list[tuple[str, bytes]] = []
+    used_names: set[str] = set()
+    for a in state.get("attachments") or []:
+        if not isinstance(a, dict) or not a.get("disk_name"):
+            continue
+        src = att_dir / str(a["disk_name"])
+        if not src.exists():
+            continue
+        name = Path(str(a.get("name") or a["disk_name"])).name or str(a["disk_name"])
+        base, ext = os.path.splitext(name)
+        n = 1
+        while name.lower() in used_names:
+            n += 1
+            name = f"{base} ({n}){ext}"
+        used_names.add(name.lower())
+        try:
+            att_items.append((name, src.read_bytes()))
+        except OSError:
+            continue
+
+    # ── Bilder: legacy state["images"] + avatars-porträtt (ALDRIG tumnaglar) ──
+    img_items: list[tuple[str, bytes]] = []
+    for img in state.get("images") or []:
+        if isinstance(img, dict) and img.get("path"):
+            img_path = Path(str(img["path"]))
+            if img_path.exists():
+                try:
+                    img_items.append((f"images/{img_path.name}", img_path.read_bytes()))
+                except OSError:
+                    pass
+    av_dir = CAMPAIGNS_DIR / username / cid / "avatars"
+    if av_dir.exists():
+        for avf in sorted(av_dir.rglob("*")):
+            # thumbs/ är derivat av avatars/ — hoppa över (rostad: "alla bilder
+            # följer med" = originalsen; tumnaglar är bara mindre kopior).
+            if avf.is_file() and "thumbs" not in avf.relative_to(av_dir).parts[:-1]:
+                try:
+                    img_items.append((f"images/avatars/{avf.name}", avf.read_bytes()))
+                except OSError:
+                    continue
+
+    # ── README — översikt + innehållsförteckning ──
+    quests = [q for q in state.get("quests") or [] if isinstance(q, dict)]
+    active_quests = sum(1 for q in quests if _export_quest_mark(q.get("status", "")) == "⚑")
+    npcs = [n for n in state.get("npcs") or [] if isinstance(n, dict)]
+    exported_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    hero_line = (
+        f"**{char.get('name')}** — Level {char.get('level', 1)} {char.get('race', '?')} {char.get('class', '?')}"
+        if char.get("name") else "_No character created yet._"
+    )
+    readme = f"""# {meta.get('campaign_name', "The Lore Weaver's Cauldron")}
+
+> Exported from **The Lore Weaver's Cauldron** · {exported_at}
+
+| | |
+|---|---|
+| **Campaign ID** | `{cid}` |
+| **Created** | {str(meta.get('created', ''))[:16].replace('T', ' ')} |
+| **Last updated** | {str(meta.get('last_updated', ''))[:16].replace('T', ' ')} |
+| **Turns played** | {meta.get('turn_count', 0)} |
+| **Sessions** | {len(tfiles) or meta.get('session_count', 1)} |
+
+## Hero
+
+{hero_line}
+
+## Where the story stands
+
+- **Location:** {world.get('current_location') or 'Unknown'}
+- **In-game time:** {world.get('time') or 'Unknown'}
+- **Quests:** {active_quests} active · {len(quests)} total
+- **NPCs met:** {len(npcs)}
+- **Facts recorded:** {len(facts_active) + len(facts_superseded)}
+
+## What's in this archive
+
+| Path | Contents |
+|---|---|
+| `campaign.json` | Complete raw campaign state (machine-readable) |
+| `character/sheet.md` | Character sheet — readable |
+| `character/sheet.json` | Character sheet — raw data |
+| `character/inventory.md` | Equipment & treasury |
+| `transcript/session-*.md` | The full story — readable (Player, DM, Lorekeeper) |
+| `transcript/session-*.jsonl` | Raw transcript data |
+| `world/npcs.md` | Everyone you have met |
+| `world/locations.md` | Known places, journeys & travel times |
+| `world/quests.md` | The quest log |
+| `world/lore.md` | World lore |
+| `world/facts.md` | The fact register (incl. superseded truths) |
+| `journal/logbook.md` | The adventure journal, day by day |
+| `journal/summaries.md` | Scene summaries |
+| `journal/chapters.md` | Chapter summaries |
+| `journal/arcs.md` | Campaign arcs |
+| `attachments/` | Files you uploaded ({len(att_items)}) |
+| `images/` | Generated artwork & portraits ({len(img_items)}) |
+
+_May your story outlive the table. ✦_
 """
-        char = state.get("character", {})
-        if char.get("name"):
-            readme += f"- **Namn:** {char['name']}\n"
-            readme += f"- **Ras/Klass:** {char.get('race', '?')} / {char.get('class', '?')}\n"
-            readme += f"- **Nivå:** {char.get('level', 1)}\n"
-        else:
-            readme += "_Ingen karaktär skapad ännu._\n"
 
-        readme += "\n## Värld\n"
-        world = state.get("world", {})
-        readme += f"- **Plats:** {world.get('current_location', 'Okänd')}\n"
-        readme += f"- **Tid:** {world.get('time', 'Okänd')}\n"
+    # ── Lore ──
+    lore = state.get("lore", [])
+    if isinstance(lore, list):
+        lore_md = "\n\n".join(f"- {item}" for item in lore) if lore else "_No lore yet._"
+    else:
+        lore_md = str(lore)
 
+    # ── Bygg zippen ──
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("README.md", readme)
+        zf.writestr("campaign.json", json.dumps(state, ensure_ascii=False, indent=2, default=str))
 
-        # karaktar/
-        if char:
-            zf.writestr("karaktar/character.json", json.dumps(char, ensure_ascii=False, indent=2))
+        zf.writestr("character/sheet.md", _export_char_sheet_md(char))
+        zf.writestr("character/sheet.json", json.dumps(char, ensure_ascii=False, indent=2, default=str))
+        zf.writestr("character/inventory.md",
+                    _export_inventory_md(state.get("inventory") or [], state.get("currency") or {}, char))
 
-        # transkript/ — formatera JSONL till läsbar markdown
-        tdir = store.get_transcripts_dir(state)
-        if tdir.exists():
-            for tfile in sorted(tdir.glob("session-*.jsonl")):
-                md_lines = [f"# {tfile.stem}\n"]
-                with open(tfile) as f:
-                    for line in f:
-                        line = line.strip()
-                        if not line:
-                            continue
-                        try:
-                            entry = json.loads(line)
-                            role_label = "🧙 DM" if entry["role"] == "assistant" else "⚔️ Spelare"
-                            md_lines.append(f"### {role_label}\n{entry['content']}\n")
-                        except json.JSONDecodeError:
-                            continue
-                md_name = tfile.stem + ".md"
-                zf.writestr(f"transkript/{md_name}", "\n".join(md_lines))
+        for tfile in tfiles:
+            zf.writestr(f"transcript/{tfile.stem}.md", _export_transcript_md(tfile))
+            try:
+                zf.writestr(f"transcript/{tfile.stem}.jsonl", tfile.read_text())
+            except OSError:
+                pass
 
-        # varlden/
-        npcs = state.get("npcs", [])
-        zf.writestr("varlden/npcs.json", json.dumps(npcs, ensure_ascii=False, indent=2))
+        zf.writestr("world/npcs.md", _export_npcs_md(npcs))
+        zf.writestr("world/locations.md", _export_locations_md(state))
+        zf.writestr("world/quests.md", _export_quests_md(quests))
+        zf.writestr("world/lore.md", f"# Lore\n\n{lore_md}\n")
+        zf.writestr("world/facts.md", _export_facts_md(facts_active, facts_superseded, facts_archived, pinned))
 
-        locations = state.get("locations", [])
-        visited = state.get("world", {}).get("visited_locations", [])
-        loc_data = {"locations": locations, "visited": visited}
-        zf.writestr("varlden/platser.json", json.dumps(loc_data, ensure_ascii=False, indent=2))
+        zf.writestr("journal/logbook.md", _export_logbook_md(state))
+        zf.writestr("journal/summaries.md", scenes_md)
+        zf.writestr("journal/chapters.md", chapters_md)
+        zf.writestr("journal/arcs.md", arcs_md)
 
-        lore = state.get("lore", [])
-        if isinstance(lore, list):
-            lore_md = "\n\n".join(str(item) for item in lore) if lore else "_Ingen lore ännu._"
-        else:
-            lore_md = str(lore)
-        zf.writestr("varlden/lore.md", f"# Lore\n\n{lore_md}\n")
-
-        # summaries/
-        sdir = store.get_summaries_dir(state)
-        if sdir.exists():
-            for sfile in sorted(sdir.glob("summary-*.json")):
-                zf.writestr(f"summaries/{sfile.name}", sfile.read_text())
-
-        # bilagor/ — bilder
-        images = state.get("images", [])
-        for img in images:
-            if isinstance(img, dict) and img.get("path"):
-                img_path = Path(img["path"])
-                if img_path.exists():
-                    zf.writestr(f"bilagor/{img_path.name}", img_path.read_bytes())
-
-        # bilagor/avatars/ — genererade porträtt (spelare/DM/NPC) så ALLA bilder
-        # följer med vid export (rostad 2026-08-05 v2: "alla bilder följer med").
-        av_dir = CAMPAIGNS_DIR / username / meta.get("campaign_id", "") / "avatars"
-        if av_dir.exists():
-            for avf in sorted(av_dir.iterdir()):
-                if avf.is_file():
-                    try:
-                        zf.writestr(f"bilagor/avatars/{avf.name}", avf.read_bytes())
-                    except OSError:
-                        continue
+        for name, data in att_items:
+            zf.writestr(f"attachments/{name}", data)
+        for name, data in img_items:
+            zf.writestr(name, data)
 
     buf.seek(0)
-    filename = f"the-lore-weavers-cauldron-{meta['campaign_id']}.zip"
+    filename = f"the-lore-weavers-cauldron-{cid}.zip"
     return StreamingResponse(
         buf,
         media_type="application/zip",

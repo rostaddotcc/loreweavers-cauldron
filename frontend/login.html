@@ -7,20 +7,20 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
 <title>The Best Free AI D&amp;D Roleplaying Game · AI Dungeon Master That Remembers</title>
-<meta name="description" content="The best free AI D&amp;D roleplaying game — an AI Dungeon Master that remembers your world. Talk to the DM and hear it narrate back; every character gets a portrait generated from their own story. 30 fresh turns every day — no subscription, no credit card, no email. One-time 10€ unlock: +100 turns, every Dungeon Master, voice & images.">
+<meta name="description" content="The best free AI D&amp;D roleplaying game — an AI Dungeon Master that remembers your world. Every character gets a portrait generated from their own story. 30 fresh turns every day — no subscription, no credit card, no email. Run your own models on your local Ollama — Qwen, DeepSeek, any uncensored mind on your hardware — the DM step costs 0 turns. One-time 10€ unlock: +100 turns, every Dungeon Master, voice &amp; images.">
 <meta name="keywords" content="best free AI D&D game, free AI D&D roleplaying game, AI dungeon master, most daily free turns, AI dungeon master that remembers, free AI RPG, AI D&D game, play D&D online, D&D 5e online free, no subscription AI game, no credit card D&D, text-based RPG, LLM roleplaying game, AI game master, free D&D game online, free text-based roleplaying game">
 <meta name="robots" content="index, follow">
 <!-- Open Graph / Twitter (delas på sociala medier) -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="The Lore Weaver's Cauldron">
 <meta property="og:title" content="The Best Free AI D&amp;D Roleplaying Game — AI Dungeon Master That Remembers">
-<meta property="og:description" content="30 fresh turns every day. Talk to the Dungeon Master and hear it narrate back — voice in, voice out. The best free AI D&amp;D roleplaying game. No email, no card, no subscription.">
+<meta property="og:description" content="30 fresh turns every day. The best free AI D&amp;D roleplaying game — talk to the house Dungeon Master, or run your own models on your local Ollama. No email, no card, no subscription.">
 <meta property="og:url" content="https://dnd.rostad.cc/">
-<meta property="og:image" content="https://dnd.rostad.cc/assets/cauldron-hero.webp">
+<meta property="og:image" content="https://dnd.rostad.cc/assets/hero-loreweaver.webp">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="The Best Free AI D&amp;D Roleplaying Game — AI Dungeon Master That Remembers">
-<meta name="twitter:description" content="30 fresh turns every day. An AI Dungeon Master that remembers your world — talk to it, and hear it narrate back. No email, no card, no subscription.">
-<meta name="twitter:image" content="https://dnd.rostad.cc/assets/cauldron-hero.webp">
+<meta name="twitter:description" content="30 fresh turns every day. An AI Dungeon Master that remembers your world — or run your own uncensored models on your local Ollama, and the DM narrates from your hardware. No email, no card, no subscription.">
+<meta name="twitter:image" content="https://dnd.rostad.cc/assets/hero-loreweaver.webp">
 <!-- Structured data: VideoGame-schema (Google rika resultat / AI-svar) -->
 <script type="application/ld+json">
 {
@@ -28,7 +28,7 @@
   "@type": "VideoGame",
   "name": "The Lore Weaver's Cauldron",
   "alternateName": "AI Dungeon Master",
-  "description": "The best free AI D&D roleplaying game — an AI Dungeon Master that remembers your world. Real D&D 5e rules in a persistent, text-based world, with 30 fresh free turns every day. Talk to the DM and hear it narrate back, and give every character a portrait generated from their own story. Play online in English or Swedish — no subscription, no card.",
+  "description": "The best free AI D&D roleplaying game — an AI Dungeon Master that remembers your world. Real D&D 5e rules in a persistent, text-based world, with 30 fresh free turns every day. Run your own models on your local Ollama — Qwen, DeepSeek, any uncensored mind on your hardware — where the DM step costs 0 turns, and give every character a portrait generated from their own story. Play online in English or Swedish — no subscription, no card.",
   "url": "https://dnd.rostad.cc/",
   "applicationCategory": "GameApplication",
   "gamePlatform": "Web Browser",
@@ -180,7 +180,7 @@
   .hero-gate{position:relative;overflow:hidden}
   .hero-gate > section{position:relative;z-index:1}
   .hero{position:relative}
-  .hero-bg{position:absolute;top:0;left:0;right:0;height:118vh;z-index:0;background-image:var(--hero-art);background-size:cover;background-position:68% 50%;transform-origin:center;animation:hero-breathe 36s ease-in-out infinite alternate}
+  .hero-bg{position:absolute;top:0;left:0;right:0;height:118vh;z-index:0;background-image:var(--hero-art);background-size:cover;background-position:72% 55%;transform-origin:center;animation:hero-breathe 36s ease-in-out infinite alternate}
   .hero-bg::after{content:'';position:absolute;inset:0;background:
     linear-gradient(90deg, var(--ink) 0%, color-mix(in srgb, var(--ink) 82%, transparent) 24%, color-mix(in srgb, var(--ink) 34%, transparent) 52%, color-mix(in srgb, var(--ink) 10%, transparent) 74%, color-mix(in srgb, var(--ink) 46%, transparent) 100%),
     linear-gradient(180deg, color-mix(in srgb, var(--ink) 55%, transparent) 0%, transparent 15%, transparent 44%, color-mix(in srgb, var(--ink) 42%, transparent) 62%, color-mix(in srgb, var(--ink) 74%, transparent) 84%, var(--ink) 97%)}
@@ -477,28 +477,6 @@
   .pc-row{display:flex;flex-direction:column;gap:.6rem}
   .pc-err{font-size:var(--fs-tiny);color:var(--blood-bright);margin-top:.6rem;text-align:center}
 
-  /* ═══════════════ drawer ═══════════════ */
-  .drawer-overlay{position:fixed;inset:0;z-index:80;background:rgba(14,10,7,.72);opacity:0;pointer-events:none;transition:opacity .3s ease}
-  .drawer-overlay.show{opacity:1;pointer-events:auto}
-  .drawer{position:fixed;top:0;left:0;bottom:0;z-index:85;width:min(88vw,350px);background:var(--stone);border-right:1px solid var(--gold);transform:translateX(-106%);transition:transform .3s ease;display:flex;flex-direction:column}
-  .drawer.open{transform:translateX(0)}
-  .drawer-head{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.2rem;border-bottom:1px solid var(--edge)}
-  .drawer-title{font-family:var(--font-display);font-weight:700;font-size:.66rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold)}
-  .drawer-close{background:none;border:none;color:var(--bone-dim);font-size:1.1rem;cursor:pointer;padding:.3rem .5rem}
-  .drawer-close:hover{color:var(--blood-bright)}
-  .drawer-body{flex:1;overflow-y:auto;padding:1.2rem 1.2rem 2rem;-webkit-overflow-scrolling:touch}
-  .drawer-h2{font-size:1.15rem;font-weight:900;letter-spacing:.02em;margin:0 0 1rem;color:var(--bone-bright)}
-  .dfeat{display:flex;flex-direction:column;gap:.8rem}
-  .dfeat .d-card{position:relative;background:var(--stone-2);border:1px solid var(--edge);border-left:2px solid color-mix(in srgb, var(--t-accent,var(--gold)) 55%, var(--edge));padding:1rem 1.05rem}
-  .dfeat .d-card .f-kick{display:block;font-family:var(--font-accent);font-size:.52rem;letter-spacing:.14em;text-transform:uppercase;color:var(--t-accent,var(--gold));margin-bottom:.45rem;line-height:1.5}
-  .dfeat .d-card h3{font-size:var(--fs-tiny);font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-bright);margin-bottom:.5rem}
-  .dfeat .d-card h3::before{content:'> ';color:var(--term-green)}
-  .dfeat .d-card p{font-size:var(--fs-tiny);line-height:1.6;color:var(--bone);margin:0}
-  .dfeat .d-card p b{color:var(--gold-bright);font-weight:600}
-  .dfeat .d-card em{color:var(--bone-dim)}
-  .dfeat .d-card .tablet-more{font-size:var(--fs-tiny);margin-top:.5rem}
-  .dfeat .d-card .tablet-more a{color:var(--gold);text-decoration:none}
-
   /* ═══════════════ the trail — hybrid horizontal rail (v3 2026-09-21) ═══════════════
      Hero+gate är vertikala; därefter fyra rum i sidled — Brews → Souls → Paths →
      Ledger. NAVIGATION: höger/vänsterpilar + dots + autoplay-timer (14s/rum,
@@ -597,7 +575,7 @@
 /* ═══ Manuscript-override (2026-09-20) — laddas EFTER snes.css och återinför
    det Terminal Gothic plattar med !important: boktypografi (EB Garamond),
    mono-etiketter, mjuka radier, deck-hörn. Sidlokal — rör ej andra sidor. ═══ */
-h1,h2,h3,.sb-name,.pt-price,.faq summary,.gate-head h3,.modal .mname,.drawer-h2,.drawer-title{font-family:var(--font-display) !important}
+h1,h2,h3,.sb-name,.pt-price,.faq summary,.gate-head h3,.modal .mname{font-family:var(--font-display) !important}
 h1,h2,h3{letter-spacing:0 !important;line-height:1.1 !important}
 h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 .hero h1{letter-spacing:-.012em !important;line-height:.98 !important;text-shadow:0 3px 30px rgba(0,0,0,.85) !important;font-weight:600 !important}
@@ -677,17 +655,6 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
     <div class="rr-menu">
       <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
       <div class="rr-drop" id="rr-drop">
-        <div class="rr-ghead">At the Table</div>
-        <a href="chat.html">⚔ To the Table</a>
-        <a href="adventure.html">🏰 The Cauldron</a>
-        <a href="newgame.html">✨ New Adventure</a>
-        <a href="characters.html">🔥 Cooked Souls</a>
-        <div class="rr-ghead">The Archive</div>
-        <a href="character.html">🧙 Character</a>
-        <a href="npcs.html">👥 NPCs</a>
-        <a href="platser.html">🗺 The Map</a>
-        <a href="loggbok.html">📜 Logbook</a>
-        <a href="facts.html">✦ Facts</a>
         <div class="rr-ghead">The Ledger</div>
         <a href="help.html">❓ How to Play</a>
         <a href="mechanics.html">📐 Mechanics</a>
@@ -695,7 +662,6 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
         <a href="pricing.html">🜲 Paths</a>
         <a href="releases.html">📓 Release Notes</a>
         <a href="screenshots.html">🖼 Screens</a>
-        <div class="rr-ghead">Account</div>
         <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
         <a href="login.html" id="rr-auth">🔒 Log out</a>
       </div>
@@ -708,102 +674,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 
 <div id="update-banner" role="status"><span class="upd-msg">✦ <b>New pricing</b> — the free table refreshes <b>30 turns every day</b> with <b>step-3.7-flash</b> &amp; <b>step-3.5-flash-2603</b>. The one-time <b>10€ unlock</b> adds <b>+100 turns</b> (never expire) and opens <b>every Dungeon Master</b> (Qwen 3.8 Flash, Qwen 3.6 Flash, DeepSeek V4.1 Flash, Step 5 Preview), <b>voice narration</b> &amp; <b>image generation</b> — permanently. <a href="pricing.html?plan=unlock10" onclick="try{localStorage.setItem('pricing_0927_seen','1')}catch(e){}">See the paths →</a></span><button class="upd-x" aria-label="Dismiss" onclick="try{localStorage.setItem('pricing_0927_seen','1')}catch(e){}document.getElementById('update-banner').classList.remove('show')">×</button></div>
 
-<!-- ═══════════════ mobil: vänsterpanel ═══════════════ -->
-<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
-<aside class="drawer" id="drawer" aria-hidden="true">
-  <div class="drawer-head">
-    <span class="drawer-title">The Lore Weaver's Cauldron</span>
-    <button class="drawer-close" onclick="closeDrawer()" aria-label="Close menu">&#10005;</button>
-  </div>
-  <div class="drawer-body">
-    <div class="drawer-pitch">
-      <p class="eyebrow">Free to Play</p>
-      <ul class="pitch-list" style="display:block">
-        <li><b>Free, forever.</b> 30 fresh turns every day &mdash;
-          no subscription, no credit card, no email. No player tracking, no metered fate.</li>
-        <li><b>Talk to the Dungeon Master.</b> Speak your action and hear the DM narrate
-          the reply out loud &mdash; voice in, voice out, a hands-free table.</li>
-        <li><b>Every face gets a portrait.</b> Adventurer, NPC, even the DM &mdash;
-          generated from each character&rsquo;s own story, rerolled until it feels right.
-          Image generation opens with the one-time <b>10€ unlock</b> &mdash; <b>StepFun</b>,
-          <b>Wan 2.7 Pro</b> &amp; <b>Qwen Image 3 Pro</b>, each image costs 1 turn.</li>
-      </ul>
-      <p class="pitch-note" style="display:block">No rules to memorize before you start. The DM teaches you as you play &mdash;
-        or enforces them strictly, if you prefer the iron road.</p>
-    </div>
 
-    <div class="drawer-features">
-      <p class="eyebrow">What Brews Inside</p>
-      <h2 class="drawer-h2">Not a chatbot. A campaign.</h2>
-      <div class="dfeat">
-        <div class="d-card t-arcane">
-          <span class="f-kick">Your imagination renders the graphics</span>
-          <h3>Purely Text-Based</h3>
-          <p>No maps, no miniatures, no busywork &mdash; you write what you do, the DM
-            narrates what happens. Rather speak? Talk to the Dungeon Master and hear it
-            narrate the reply out loud: <b>voice in &amp; voice out</b>, a hands-free table.
-            <em>The oldest kind of role-playing, powered by the newest kind of mind.</em></p>
-          <p class="tablet-more"><a href="screenshots.html">See the game &#8594;</a></p>
-        </div>
-        <div class="d-card t-teal">
-          <span class="f-kick">The world doesn&rsquo;t reset when you do</span>
-          <h3>A Persistent World</h3>
-          <p>Every turn is distilled into durable facts &mdash; people, promises, grudges,
-            discoveries &mdash; re-ranked before every reply. Leave for a season;
-            <em>the innkeeper still remembers what you did, and who you did it with.</em></p>
-          <p class="tablet-more"><a href="mechanics.html">See core mechanics &#8594;</a></p>
-        </div>
-        <div class="d-card t-ember">
-          <span class="f-kick">Every face at the table, portrayed</span>
-          <h3>Create Your Own Avatars</h3>
-          <p>Your adventurer, the NPCs you meet, even the DM &mdash; each portrait generated
-            from the character&rsquo;s own story, rerolled until it feels right.
-            <em>Image generation opens with the one-time <b>10€ unlock</b></em> &mdash; <b>StepFun</b>,
-            <b>Wan 2.7 Pro</b> &amp; <b>Qwen Image 3 Pro</b>, each image costs 1 turn.</p>
-        </div>
-        <div class="d-card t-blood">
-          <span class="f-kick">Real rolls. Real consequences.</span>
-          <h3>Strict D&amp;D 5e Ruleset</h3>
-          <p>Initiative, advantage, saving throws, action economy &mdash; the Lorekeeper keeps
-            the books, and dice roll <b>server-side</b>: nobody fudges a roll, not even the DM.
-            <em>A natural 20 still feels like lightning.</em></p>
-        </div>
-        <div class="d-card t-poison">
-          <span class="f-kick">Your story leaves with you</span>
-          <h3>Save &amp; Export</h3>
-          <p>NPCs, avatars, characters and all dialogue &mdash; one <b>.zip</b>. No
-            hostage-taking, no lock-in. <em>Export unlocks with any donation &mdash; 1€ is
-            enough &mdash; and stays unlocked for good.</em></p>
-        </div>
-        <div class="d-card t-legend">
-          <span class="f-kick">One hero. Many worlds.</span>
-          <h3>Cooked Souls &mdash; Carry Your Legend</h3>
-          <p>Every adventurer you summon is saved in <b>Cooked Souls</b> &mdash; sheet, level,
-            items, gold and story intact. Start a new adventure and <em>walk back in as the
-            same hero</em>.</p>
-        </div>
-        <div class="d-card t-gold">
-          <span class="f-kick">Choose the mind behind the mask</span>
-          <h3>Powered by Qwen, DeepSeek, StepFun &amp; Wan</h3>
-          <p><b>step-3.7-flash</b> and <b>step-3.5-flash-2603</b> run your table for free &mdash; with transparent token usage
-            and reasoning you can watch live. <em>The one-time 10€ unlock opens every Dungeon Master</em>
-            (Qwen 3.8 Flash, Qwen 3.6 Flash, DeepSeek V4.1 Flash, Step 5 Preview + the OpenRouter community minds).</p>
-          <p class="tablet-more"><a href="models.html">Read more about the minds &#8594;</a></p>
-        </div>
-        <div class="d-card t-arcane">
-          <span class="f-kick">🏮 Live &mdash; your own machine &middot; BYOK &mdash; upcoming</span>
-          <h3>BYOK &amp; Self-Hosted Models</h3>
-          <p><b>Self-hosted is here:</b> point the game at <b>your own ollama server</b> and the
-            DM narrates from your hardware &mdash; <em>the DM step costs 0 turns</em>, while the
-            Lorekeeper and background books stay on house models &mdash; or opt into <b>Whole Cauldron local</b> and run them on your own hardware too.
-            <em><a href="models.html#local-ai">Bring your own breath &#8594;</a></em></p>
-          <p>Bring-your-own-key (OpenRouter, DeepSeek, StepFun) &mdash; your quota, keys stored
-            encrypted &mdash; is <em>still in active development</em>.</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</aside>
 
 <div class="content" id="top">
 
@@ -823,11 +694,10 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
         <p class="tagline rv in d2">A world that remembers. A dungeon master that never sleeps.
           Your campaign is brewed one turn at a time &mdash; and the pot does not forget.</p>
         <p class="free-slogan rv in d2"><span class="fs-badge">FREE TO PLAY</span>
-          The <b>best free AI D&amp;D roleplaying game</b> — <b>30 fresh turns every day</b>,
-          and 30 more tomorrow. Talk to the Dungeon Master and hear it narrate back.
+          The <b>best free AI D&amp;D roleplaying game</b> — <b>30 fresh turns every day</b>.
           No card. No email. No subscription.</p>
         <div class="hero-stats rv in d3">
-          <span class="hstat"><b>30</b> fresh turns a day · free forever</span>
+          <span class="hstat"><b>Local</b> Ollama · run your own models</span>
           <span class="hstat"><b>Voice</b> in &amp; out · hands-free</span>
           <span class="hstat"><b>5e</b> rules · real dice</span>
           <span class="hstat"><b>Portraits</b> from every story</span>
@@ -843,20 +713,116 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
     <div class="scroll-cue">Descend &#8595;</div>
   </section>
 
-  <!-- ═══════════════ the gate ═══════════════ -->
+<style>
+/* ═══════════ summoning seal (gate v2, 2026-10-01 — port of the approved
+   mockup wow-b-summoning.html). .sm-* prefix avoids snes.css collisions:
+   ring rotation lives INLINE on SVG groups (snes.css does not target SVG
+   internals, so those animations survive); reduced-motion wins over the
+   inline animations via stylesheet !important. Circles are SVG (sharp canon). ═══ */
+.sm-seal-wrap{--sm-ignite:0;--sm-charge:0;position:relative;width:min(600px,100%);
+  aspect-ratio:1;margin-inline:auto;justify-self:center}
+/* QA-1: localized dark scrim so the gold top arc keeps contrast over the art's glow */
+.sm-scrim{position:absolute;inset:-14%;z-index:0;pointer-events:none;
+  background:radial-gradient(circle at 50% 34%,rgba(8,8,13,.55) 0%,rgba(8,8,13,.5) 26%,rgba(8,8,13,.24) 52%,transparent 72%)}
+.sm-seal-wrap::after{content:'';position:absolute;inset:8%;z-index:0;pointer-events:none;border-radius:50%;
+  background:radial-gradient(circle,rgba(var(--arcane-rgb),calc(.10 + var(--sm-ignite)*.22)) 0%,rgba(var(--gold-rgb),calc(.05 + var(--sm-ignite)*.10)) 40%,transparent 68%);
+  transition:background .4s ease;filter:blur(2px)}
+.sm-svg{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;overflow:visible}
+.sm-svg circle,.sm-svg path,.sm-svg line{vector-effect:non-scaling-stroke}
+.sm-ring{transform-origin:300px 300px;fill:none}
+.sm-host{transform-origin:300px 300px}
+@keyframes sm-spin{to{transform:rotate(360deg)}}
+@keyframes sm-march{to{stroke-dashoffset:-317}}
+@keyframes sm-spinup{from{transform:rotate(0)}to{transform:rotate(1080deg)}}
+@keyframes sm-spinback1080{from{transform:rotate(0)}to{transform:rotate(-1080deg)}}
+@keyframes sm-quake{0%,100%{transform:translate(0,0)}20%{transform:translate(-3px,2px) scale(1.02)}45%{transform:translate(3px,-2px) scale(1.03)}70%{transform:translate(-2px,1px) scale(1.01)}}
+@keyframes sm-ignite{0%{transform:scale(1)}30%{transform:scale(1.35)}100%{transform:scale(1)}}
+.sm-c-outer{stroke:var(--edge);stroke-width:1}
+.sm-c-gold{stroke:rgba(var(--gold-rgb),.5);stroke-width:1}
+.sm-c-ticks{stroke:var(--gold);stroke-width:2.4;stroke-dasharray:1.5 14.2;opacity:.55}
+.sm-c-arcane{stroke:rgba(var(--arcane-rgb),.55);stroke-width:1;stroke-dasharray:42 11;opacity:calc(.35 + var(--sm-ignite)*.55)}
+.sm-c-inner{stroke:rgba(217,201,166,.22);stroke-width:1}
+.sm-penta{stroke:rgba(var(--gold-rgb),.24);stroke-width:1;fill:none}
+.sm-rune{stroke:var(--bone-dim);stroke-width:1.7;fill:none;stroke-linecap:round;opacity:.4}
+.sm-rune.sm-lit{stroke:var(--gold-bright);opacity:1;filter:drop-shadow(0 0 6px rgba(var(--gold-bright-rgb),.9));animation:sm-ignite .5s ease-out}
+/* mana charge arc — tracks #password length (pathLength=100) */
+.sm-mana-track{stroke:rgba(var(--edge-rgb),.9);stroke-width:5;fill:none}
+.sm-mana-fill{stroke:var(--arcane);stroke-width:5;fill:none;stroke-linecap:round;
+  filter:drop-shadow(0 0 7px rgba(var(--arcane-rgb),calc(.4 + var(--sm-charge)*.7)));
+  transition:stroke-dashoffset .18s ease}
+/* one-shot ember burst — canvas scoped INSIDE the seal (no second global canvas) */
+.sm-burst{position:absolute;inset:4%;width:92%;height:92%;z-index:2;pointer-events:none}
+.sm-core{position:absolute;inset:0;z-index:3;display:grid;place-items:center;pointer-events:none;padding:6%}
+.sm-core>*{pointer-events:auto}
+/* QA-2: inner disc fill behind the form core — labels stay crisp over the art */
+.sm-core::before{content:'';position:absolute;inset:16% 12%;z-index:-1;pointer-events:none;
+  background:radial-gradient(ellipse at center,rgba(8,8,13,.58) 0%,rgba(8,8,13,.34) 55%,transparent 78%)}
+.sm-core .gate-card{width:min(320px,64%)}
+/* kill the panel chrome INSIDE the seal: the mockup's wow = a form floating in
+   the seal's dark centre disc (.sm-core::before), rings visible THROUGH the card.
+   Opaque/translucent rectangles both mask the mana arc + inner rings behind them. */
+.sm-core .gate-card,.sm-core .continue-card{background:none;border:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+.sm-core .gate-card::before{display:none}
+.sm-core .field input{background:rgba(8,8,13,.88)}
+.sm-sigil{display:block;margin:0 auto .55rem;color:var(--gold);opacity:.9;filter:drop-shadow(0 0 6px rgba(var(--gold-rgb),.4))}
+.sm-whisper{min-height:1.05em;margin:0 0 .2rem;font-style:italic;font-size:.78rem;line-height:1.3;
+  color:var(--arcane-bright);text-align:center;opacity:0;transition:opacity .3s}
+.sm-whisper.show{opacity:.85}
+/* submit: spin-up of the two outer hosts + quake + flare */
+.sm-seal-wrap.sm-summoning .sm-host-a{animation:sm-spinup 1s cubic-bezier(.2,.7,.3,1) 1 both}
+.sm-seal-wrap.sm-summoning .sm-host-b{animation:sm-spinback1080 1s cubic-bezier(.2,.7,.3,1) 1 both}
+.sm-seal-wrap.sm-summoning{animation:sm-quake .9s ease-out}
+.sm-seal-wrap.sm-summoning::after{background:radial-gradient(circle,rgba(var(--gold-bright-rgb),.35) 0%,rgba(var(--arcane-rgb),.25) 45%,transparent 70%)}
+/* featured arcane-bordered Ollama inscription (moved out of pitch-list item 2)
+   QA-3: dark backing + arcane tint so the bright book pages never eat the text */
+.sm-hero-line{margin-top:1.5rem;padding:1.05rem 1.25rem;position:relative;
+  font-size:clamp(1.02rem,1.5vw,1.24rem);line-height:1.5;color:var(--bone-bright);
+  border-left:1px solid var(--arcane);
+  background:linear-gradient(90deg,rgba(var(--arcane-rgb),.12),transparent 70%),rgba(8,8,13,.6);
+  text-shadow:0 0 24px rgba(var(--arcane-rgb),calc(.2 + var(--sm-ignite,0)*.35))}
+.sm-hero-line::before,.sm-hero-line::after{content:'';position:absolute;left:-1px;width:1px;height:10px;
+  background:var(--arcane);box-shadow:0 0 8px var(--arcane)}
+.sm-hero-line::before{top:-5px}.sm-hero-line::after{bottom:-5px}
+.sm-hl-lead{font-family:var(--font-display);font-weight:700;color:var(--bone-bright);letter-spacing:.01em}
+.sm-hero-line b{color:var(--gold-bright);font-weight:600}
+.sm-hero-line em{font-style:normal;font-weight:600;color:var(--gold-bright);text-shadow:0 0 18px rgba(var(--gold-rgb),.5)}
+.sm-hero-line .sm-own{color:var(--arcane-bright);font-style:italic}
+.sm-hero-line .sm-zero{color:var(--gold-bright);font-weight:600;text-shadow:0 0 14px rgba(var(--gold-rgb),.45)}
+/* ═══ Field labels over the art: slightly brighter + firmer (QA-2) ═══ */
+.sm-core .field label{color:var(--bone);font-weight:700}
+
+/* mobile ≤900px: seal becomes a dim ornament — the card keeps full flow and tap targets */
+@media (max-width:900px){
+  .sm-seal-wrap{width:min(600px,100%);aspect-ratio:auto;padding:1.4rem .4rem}
+  .sm-svg{opacity:.26}
+  .sm-scrim{display:none}
+  .sm-seal-wrap::after{opacity:.4;filter:blur(4px)}
+  .sm-core{position:relative;inset:auto;display:block;padding:0}
+  .sm-core .gate-card{width:min(360px,94%);margin-inline:auto}
+  .sm-core::before{inset:-4% 6%}
+}
+@media (prefers-reduced-motion:reduce){
+  .sm-seal-wrap .sm-svg *{animation:none !important}
+  .sm-rune.sm-lit{animation:none !important}
+  .sm-seal-wrap.sm-summoning,.sm-seal-wrap.sm-summoning .sm-host{animation:none !important}
+  .sm-whisper{transition:none}
+}
+</style>
+  <!-- ═════════════ the gate — summoning seal v2 (2026-10-01) ═════════════ -->
   <section class="sect-tight" id="gate">
     <div class="wrap">
       <div class="gate-grid">
         <div>
-          <p class="eyebrow rv">The Gate</p>
+          <p class="eyebrow rv">The Summoning Rite</p>
           <h2 class="rv">Swear yourself in.</h2>
+          <p class="sm-hero-line rv"><span class="sm-hl-lead">Run your own mind.</span>
+            Point the Cauldron at your local <b>Ollama</b> — <em>Qwen</em>, <em>DeepSeek</em>,
+            any <span class="sm-own">uncensored model on your hardware</span> — and the DM
+            narrates <span class="sm-zero">for 0 turns</span>.</p>
           <ul class="pitch-list">
             <li class="rv d1"><b>Free, forever.</b> 30 fresh turns every day &mdash;
               no subscription, no credit card, no email.
               No player tracking, no metered fate.</li>
-            <li class="rv d2"><b>Talk to the Dungeon Master.</b> Speak your action and
-              hear the DM narrate the reply out loud &mdash; voice in, voice out,
-              a hands-free table.</li>
             <li class="rv d3"><b>Every face gets a portrait.</b> Adventurer, NPC, even the
               DM &mdash; generated from each character&rsquo;s own story, rerolled until
               it feels right. Image generation opens with the one-time <b>10€ unlock</b> &mdash;
@@ -866,21 +832,51 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
             The DM teaches you as you play &mdash; or enforces them strictly, if you prefer the iron road.</p>
         </div>
 
-        <div class="gate-card rv d2" id="gate-card">
+        <div class="sm-seal-wrap rv d2" id="sm-seal">
+          <div class="sm-scrim" aria-hidden="true"></div>
+          <svg class="sm-svg" viewBox="0 0 600 600" aria-hidden="true" focusable="false">
+            <g class="sm-host sm-host-a"><g class="sm-ring" style="animation:sm-spin 90s linear infinite">
+              <circle class="sm-c-outer" cx="300" cy="300" r="288"/>
+              <circle class="sm-c-ticks" cx="300" cy="300" r="280" style="animation:sm-march 50s linear infinite"/>
+              <circle class="sm-c-gold" cx="300" cy="300" r="272"/>
+            </g></g>
+            <g class="sm-host sm-host-b"><g class="sm-ring" style="animation:sm-spin 64s linear infinite reverse">
+              <circle class="sm-c-arcane" cx="300" cy="300" r="256"/>
+              <path class="sm-penta" d="M300 46 L437.8 409.6 L83.8 190.4 L516.2 190.4 L162.2 409.6 Z"/>
+            </g></g>
+            <g class="sm-host sm-host-r"><g id="sm-rune-ring" class="sm-ring" style="animation:sm-spin 120s linear infinite reverse">
+              <circle class="sm-c-inner" cx="300" cy="300" r="240"/>
+              <circle class="sm-c-inner" cx="300" cy="300" r="216"/>
+            </g></g>
+            <g class="sm-ring" style="animation:sm-spin 200s linear infinite">
+              <circle class="sm-c-gold" cx="300" cy="300" r="196"/>
+            </g>
+            <circle class="sm-mana-track" cx="300" cy="300" r="182" pathLength="100"/>
+            <circle class="sm-mana-fill" id="sm-mana" cx="300" cy="300" r="182" pathLength="100"
+              stroke-dasharray="100" stroke-dashoffset="100" transform="rotate(-90 300 300)"/>
+            <circle class="sm-c-inner" cx="300" cy="300" r="166"/>
+          </svg>
+          <canvas class="sm-burst" id="sm-burst" aria-hidden="true"></canvas>
+          <div class="sm-core">
+
+        <div class="gate-card" id="gate-card">
           <div class="gate-head">
-            <h3 id="gate-title">Return to the Cauldron</h3>
-            <p id="gate-sub">The fire has been kept burning — what will the Cauldron foretell?</p>
+            <svg class="sm-sigil" width="34" height="20" viewBox="0 0 34 20" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true" focusable="false">
+              <path d="M1 10h8M25 10h8M17 2l4 8-4 8-4-8zM7 10l3-3M27 10l-3-3"/>
+            </svg>
+            <h3 id="gate-title">Log in</h3>
+            <p id="gate-sub">Welcome back — pick up where you left off.</p>
           </div>
           <form id="auth-form">
             <div class="field">
-              <label for="username" id="lbl-username">Adventurer</label>
-              <input type="text" id="username" placeholder="Your name, brave one&hellip;"
+              <label for="username" id="lbl-username">Username</label>
+              <input type="text" id="username" placeholder="Your username"
                      autocomplete="username" required>
               <span class="icon">&gt;</span>
             </div>
             <div class="field">
               <label for="password" id="lbl-password">Password</label>
-              <input type="password" id="password" placeholder="The secret word&hellip;"
+              <input type="password" id="password" placeholder="Your password"
                      autocomplete="current-password" required>
               <span class="icon">&gt;</span>
             </div>
@@ -889,41 +885,163 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
                 <input type="checkbox" id="keep-logged-in" checked>
                 <span>Keep me logged in <em>(30 days)</em></span>
               </label>
-              <div class="gate-toggle gate-reset-link" id="gate-reset">Lost your password?</div>
+              <div class="gate-toggle gate-reset-link" id="gate-reset">Forgot your password?</div>
             </div>
             <div class="field" id="confirm-field" style="display:none">
               <label for="confirm">Confirm Password</label>
-              <input type="password" id="confirm" placeholder="Speak it once more&hellip;"
+              <input type="password" id="confirm" placeholder="Confirm your password"
                      autocomplete="new-password">
               <span class="icon">&gt;</span>
             </div>
             <div class="field" id="email-field" style="display:none">
               <label for="email">Email <span class="opt">optional</span></label>
-              <input type="email" id="email" placeholder="A raven to reach you&hellip;"
+              <input type="email" id="email" placeholder="you@example.com"
                      autocomplete="email">
               <span class="icon">&gt;</span>
             </div>
-            <button type="submit" class="gate-btn btn btn-gold wide" id="auth-btn">Enter the Realm</button>
-            <div class="gate-toggle" id="gate-toggle">New here? <b>Forge your name</b></div>
+            <p class="sm-whisper" id="sm-whisper" role="status" aria-live="polite"></p>
+            <button type="submit" class="gate-btn btn btn-gold wide" id="auth-btn">Log in</button>
+            <div class="gate-toggle" id="gate-toggle">New here? <b>Sign up</b></div>
             <button type="button" class="gate-toggle btn-ghost" id="reset-link-btn" style="display:none;font-size:var(--fs-tiny)">Send me a reset link</button>
             <div class="gate-error" id="gate-error"></div>
           </form>
-          <div class="gate-foot">No email needed to play.<br>Powered by Qwen, DeepSeek &amp; StepFun</div>
+          <div class="gate-foot">No email needed to play.<br>Powered by Qwen, DeepSeek &amp; StepFun — or your own Ollama</div>
         </div>
 
         <!-- Redan inloggad: "Continue your journey" istället för formuläret -->
-        <div class="gate-card continue-card rv d2" id="gate-continue" style="display:none">
+        <div class="gate-card continue-card" id="gate-continue" style="display:none">
           <div class="gate-head">
             <h3>Continue your journey</h3>
-            <p>Welcome back, <b class="gc-name">adventurer</b> &mdash; the fire is still burning.</p>
+            <p>Welcome back — ready for your next session?</p>
           </div>
           <a class="btn gold wide" href="adventure.html?v=20260924b" style="display:block;text-align:center;margin-top:.4rem">Continue to the realm &rarr;</a>
           <div class="gate-toggle" style="font-size:var(--fs-tiny)" onclick="doLogout()">Not you? <b>Sign out</b></div>
         </div>
+
+          </div><!-- /sm-core -->
+        </div><!-- /sm-seal-wrap -->
       </div>
     </div>
   </section>
   </div><!-- /hero-gate -->
+<script>
+/* Summoning-seal interaction layer (gate v2, 2026-10-01). Purely additive:
+   rune ignition from #username length, mana arc from #password length, submit
+   spin-up + one-shot ember burst on a canvas scoped INSIDE the seal (the
+   global #embers canvas stays untouched). No preventDefault — the auth
+   submit contract lives in the main script and is not modified. */
+(function () {
+  'use strict';
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var wrap = document.getElementById('sm-seal');
+  var ring = document.getElementById('sm-rune-ring');
+  var mana = document.getElementById('sm-mana');
+  var user = document.getElementById('username');
+  var pass = document.getElementById('password');
+  var form = document.getElementById('auth-form');
+  var whisper = document.getElementById('sm-whisper');
+  var burst = document.getElementById('sm-burst');
+  if (!wrap || !ring || !mana || !user || !pass || !form) return;
+
+  var NS = 'http://www.w3.org/2000/svg';
+  var GLYPHS = [
+    'M0 -10 L0 10 M0 -5 L7 -10 M0 1 L7 -4',
+    'M-5 10 L-5 -10 L5 -4 M-5 -8 L5 10',
+    'M0 10 L0 -10 M-6 -10 L0 -4 L-6 2 M6 -10 L0 -4',
+    'M-6 8 L0 -10 L6 8 M-3.5 0 H3.5',
+    'M-6 -10 L6 -10 M0 -10 L0 10 M-6 10 L6 10',
+    'M-6 10 L-6 -10 L6 -4 L-6 2',
+    'M0 -10 L6 0 L0 10 L-6 0 Z',
+    'M-6 -10 L6 10 M6 -10 L-6 10 M0 -6 V6'
+  ];
+  var RUNES = 16, R = 228;
+  var runes = [];
+  for (var i = 0; i < RUNES; i++) {
+    var a = (i / RUNES) * Math.PI * 2 - Math.PI / 2;
+    var x = 300 + Math.cos(a) * R, y = 300 + Math.sin(a) * R;
+    var p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', GLYPHS[i % GLYPHS.length]);
+    p.setAttribute('class', 'sm-rune');
+    p.setAttribute('transform', 'translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') rotate(' + ((i / RUNES) * 360).toFixed(1) + ')');
+    ring.appendChild(p);
+    runes.push(p);
+  }
+
+  var WHISPERS = ['The circle stirs…', 'The seal is ready.'];
+  function setIgnite() {
+    var n = Math.min(user.value.trim().length, RUNES);
+    for (var i = 0; i < RUNES; i++) {
+      var on = i < n;
+      if (runes[i].classList.contains('sm-lit') !== on) runes[i].classList.toggle('sm-lit', on);
+    }
+    wrap.style.setProperty('--sm-ignite', (n / RUNES).toFixed(3));
+    if (whisper) {
+      var show = n > 0 && n % 6 === 0;
+      whisper.classList.toggle('show', show);
+      if (show) whisper.textContent = WHISPERS[Math.min(Math.floor(n / 6) - 1, WHISPERS.length - 1)];
+    }
+  }
+  user.addEventListener('input', setIgnite);
+
+  function setCharge() {
+    var pct = Math.min(pass.value.length / 16, 1);
+    mana.style.strokeDashoffset = String(100 - pct * 100);
+    wrap.style.setProperty('--sm-charge', pct.toFixed(3));
+  }
+  pass.addEventListener('input', setCharge);
+  setIgnite(); setCharge();
+
+  /* one-shot ember burst — canvas scoped inside the seal only */
+  var P = [], ctx = null, W = 0, H = 0, running = false;
+  if (burst && burst.getContext) ctx = burst.getContext('2d');
+  var DPR = Math.min(window.devicePixelRatio || 1, 2);
+  function size() {
+    if (!ctx) return;
+    var r = burst.getBoundingClientRect();
+    W = r.width; H = r.height;
+    burst.width = Math.max(1, Math.round(W * DPR)); burst.height = Math.max(1, Math.round(H * DPR));
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  function tick() {
+    ctx.clearRect(0, 0, W, H);
+    var alive = 0;
+    for (var i = P.length - 1; i >= 0; i--) {
+      var p = P[i]; p.x += p.vx; p.y += p.vy; p.vy -= .006; p.vx *= .995; p.life -= p.decay;
+      if (p.life <= 0) { P.splice(i, 1); continue; }
+      alive++;
+      ctx.globalAlpha = Math.max(p.life, 0) * .85;
+      ctx.fillStyle = 'rgba(' + p.hue + ',1)';
+      ctx.shadowColor = 'rgba(' + p.hue + ',.8)'; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r * Math.max(p.life, .3), 0, 6.283); ctx.fill();
+    }
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+    if (alive) requestAnimationFrame(tick); else { running = false; ctx.clearRect(0, 0, W, H); }
+  }
+  function fire() {
+    if (!ctx || reduce) return;
+    size();
+    for (var i = 0; i < 30; i++) {
+      var ang = Math.random() * Math.PI * 2, sp = 1.5 + Math.random() * 4.5;
+      P.push({ x: W / 2, y: H / 2, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - .6,
+        r: 1 + Math.random() * 2.2, life: 1, decay: .012 + Math.random() * .02,
+        hue: Math.random() < .6 ? '168,98,31' : '240,214,117' });
+    }
+    if (!running) { running = true; requestAnimationFrame(tick); }
+  }
+
+  var summonTimer = null;
+  form.addEventListener('submit', function () {
+    wrap.classList.remove('sm-summoning');
+    void wrap.offsetWidth;
+    wrap.classList.add('sm-summoning');
+    fire();
+    if (summonTimer) clearTimeout(summonTimer);
+    summonTimer = setTimeout(function () { wrap.classList.remove('sm-summoning'); }, reduce ? 500 : 2100);
+  });
+  window.addEventListener('resize', function () { if (running) size(); }, { passive: true });
+})();
+</script>
+
 
 
 
@@ -1057,7 +1175,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
           <p>Run a local model through <b>Ollama</b> and pour it into the cauldron &mdash;
             your own machine, your own weights, <em>nothing held back</em>. The DM
             narrates with your model as its mind; no cloud, no content filters,
-            no per-turn fees. <b>Free</b>, and it stays yours.</p>
+            and the DM step costs <b>0 turns</b>. <b>Free</b>, and it stays yours.</p>
           <p class="tablet-more"><a href="local-ai.html">Set up your own model &#8594;</a></p>
         </div>
       </div>
@@ -1171,7 +1289,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
         </details>
         <details>
           <summary>What is an AI Dungeon Master?</summary>
-          <p>An <b>AI Dungeon Master</b> is an LLM that runs your D&amp;D campaign — narrating the world, keeping strict 5e rules, and remembering your story across sessions. The Cauldron pairs it with a persistent world engine, real dice ceremony, AI-generated portraits, and a voice that reads every reply aloud.</p>
+          <p>An <b>AI Dungeon Master</b> is an LLM that runs your D&amp;D campaign — narrating the world, keeping strict 5e rules, and remembering your story across sessions. The Cauldron pairs it with a persistent world engine, real dice ceremony, AI-generated portraits, local Ollama models that cost 0 turns — and a voice that reads every reply aloud with the one-time <b>10€ unlock</b>.</p>
         </details>
         <details>
           <summary>Does the AI Dungeon Master remember my campaign?</summary>
@@ -1280,7 +1398,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
       <p>The Lore Weaver&rsquo;s Cauldron &mdash; an AI dungeon master.<br>
         Contact: <a href="mailto:web@rostad.cc">web@rostad.cc</a></p>
       <p class="foot-small">Forged by rostad &middot; brewed on a small server in Stockholm &middot; 2026</p>
-      <p class="foot-small"><a href="#" onclick="openAbout();return false">About the game creator</a></p>
+      <p class="foot-small"><a href="help.html">How to Play</a> &middot; <a href="#" onclick="openAbout();return false">About the game creator</a></p>
     </div>
   </footer>
 
@@ -1353,7 +1471,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 /* ═══════════════ nav + scroll reveal ═══════════════ */
 const nav = document.getElementById('nav');
 addEventListener('scroll', () => {
-  nav.classList.toggle('scrolled', scrollY > 40);
+  if (nav) nav.classList.toggle('scrolled', scrollY > 40);
 }, { passive: true });
 
 const io = new IntersectionObserver(entries => {
@@ -1396,8 +1514,8 @@ function setAuthBusy(busy) {
   const btn = document.getElementById('auth-btn');
   btn.disabled = busy;
   btn.textContent = busy
-    ? (authMode === 'register' ? 'Forging your name\u2026' : authMode === 'reset' ? 'Re-forging your password\u2026' : 'Opening the gate\u2026')
-    : (authMode === 'register' ? 'Forge Your Name' : authMode === 'reset' ? 'Set a New Password' : 'Enter the Realm');
+    ? (authMode === 'register' ? 'Creating account\u2026' : authMode === 'reset' ? 'Sending reset link\u2026' : 'Signing in\u2026')
+    : (authMode === 'register' ? 'Sign up' : authMode === 'reset' ? 'Set a New Password' : 'Log in');
 }
 
 function applyAuthMode() {
@@ -1406,21 +1524,21 @@ function applyAuthMode() {
   document.getElementById('confirm-field').style.display = (isReg || isReset) ? '' : 'none';
   document.getElementById('confirm').required = isReg || isReset;
   document.getElementById('email-field').style.display = isReg ? '' : 'none';
-  document.getElementById('lbl-username').textContent = isReg ? 'New Adventurer' : 'Adventurer';
+  document.getElementById('lbl-username').textContent = 'Username';
   document.getElementById('lbl-password').textContent = isReg ? 'Create a Password' : (isReset ? 'New Password' : 'Password');
   document.getElementById('password').autocomplete = (isReg || isReset) ? 'new-password' : 'current-password';
-  document.getElementById('auth-btn').textContent = isReg ? 'Forge Your Name' : (isReset ? 'Set a New Password' : 'Enter the Realm');
-  document.getElementById('gate-title').textContent = isReg ? 'Forge Your Name' : (isReset ? 'Lost Your Password?' : 'Return to the Cauldron');
+  document.getElementById('auth-btn').textContent = isReg ? 'Sign up' : (isReset ? 'Set a New Password' : 'Log in');
+  document.getElementById('gate-title').textContent = isReg ? 'Sign up' : (isReset ? 'Forgot your password?' : 'Log in');
   document.getElementById('gate-sub').textContent = isReg
-    ? 'The Cauldron has been waiting for someone like you.'
+    ? 'Create a free account — no email required.'
     : (isReset
-      ? 'Speak your name and choose a new secret word. The pot remembers the rest.'
-      : 'The fire has been kept burning — what will the Cauldron foretell?');
+      ? 'Enter your username and choose a new password.'
+      : 'Welcome back — pick up where you left off.');
   document.getElementById('gate-toggle').innerHTML = isReg
-    ? 'Already sworn in? <b>Return to the cauldron</b>'
+    ? 'Already have an account? <b>Log in</b>'
     : (isReset
-      ? 'Remembered it after all? <b>Return to the cauldron</b>'
-      : 'New here? <b>Forge your name</b>');
+      ? 'Remembered it? <b>Log in</b>'
+      : 'New here? <b>Sign up</b>');
   document.getElementById('gate-reset').style.display = (authMode === 'login') ? '' : 'none';
   document.getElementById('reset-link-btn').style.display = isReset ? '' : 'none';
   const keepRow = document.getElementById('keep-logged-in-row');
@@ -1444,16 +1562,16 @@ document.getElementById('gate-reset').addEventListener('click', () => {
 
 document.getElementById('reset-link-btn').addEventListener('click', async () => {
   const user = document.getElementById('username').value.trim().toLowerCase();
-  if (!user) { showAuthError("Write your adventurer's name first."); return; }
+  if (!user) { showAuthError('Enter your username first.'); return; }
   const btn = document.getElementById('reset-link-btn');
   btn.disabled = true;
   try {
     await API.requestReset(user);
-    document.getElementById('gate-error').textContent = '\u2726 If that adventurer has an email, a reset link is on its way. Check your inbox.';
+    document.getElementById('gate-error').textContent = 'If that account has an email, a reset link is on its way. Check your inbox.';
     authMode = 'login';
     applyAuthMode();
   } catch (err) {
-    showAuthError(err && err.message && !/HTTP/.test(err.message) ? err.message : 'The raven could not be sent. Try again shortly.');
+    showAuthError(err && err.message && !/HTTP/.test(err.message) ? err.message : 'Could not send the reset link. Try again shortly.');
   } finally {
     btn.disabled = false;
   }
@@ -1495,7 +1613,7 @@ document.getElementById('auth-form').addEventListener('submit', async (e) => {
       authSuccess(res.username);
     } else if (authMode === 'reset') {
       const confirm = document.getElementById('confirm').value;
-      if (pass !== confirm) { showAuthError('The new words do not match.'); return; }
+      if (pass !== confirm) { showAuthError('The passwords do not match.'); return; }
       const res = await API.resetPassword(user, pass);
       authSuccess(res.username);
     } else {
@@ -1508,10 +1626,10 @@ document.getElementById('auth-form').addEventListener('submit', async (e) => {
     const detail = raw.replace(/^HTTP \d+: /, '').trim();
     if (authMode === 'register' || authMode === 'reset') {
       showAuthError(detail || (authMode === 'register'
-        ? 'The Cauldron would not accept that name. Try another.'
-        : 'The Cauldron could not re-forge that name.'));
+        ? 'That username is not available. Try another.'
+        : 'Could not set a new password for that account.'));
     } else {
-      showAuthError('The Cauldron remains sealed. Wrong name or password.');
+      showAuthError('Wrong username or password.');
     }
   }
 });
@@ -1519,7 +1637,7 @@ document.getElementById('auth-form').addEventListener('submit', async (e) => {
 /* already logged in? */
 if (sessionStorage.getItem('dnd_user')) {
   document.getElementById('gate-title').textContent = 'Welcome back, ' + sessionStorage.getItem('dnd_user');
-  document.getElementById('gate-sub').textContent = 'Your seat at the table is still warm.';
+  document.getElementById('gate-sub').textContent = 'Ready for your next session?';
 }
 
 /* ── Inloggad status + profil i top bar ── */
@@ -1621,30 +1739,9 @@ fetch('/api/me', { credentials: 'include' })
     var gt = document.getElementById('gate-title');
     var gs = document.getElementById('gate-sub');
     if (gt) gt.textContent = 'Welcome back, ' + u.username;
-    if (gs) gs.textContent = 'Your seat at the table is still warm.';
+    if (gs) gs.textContent = 'Ready for your next session?';
   })
   .catch(function () {});
-
-/* ── Mobil: vänsterpanel (drawer) öppna/stäng ── */
-const drawerEl = document.getElementById('drawer');
-const drawerOverlayEl = document.getElementById('drawer-overlay');
-function openDrawer() {
-  if (!drawerEl) return;
-  drawerEl.classList.add('open');
-  drawerEl.setAttribute('aria-hidden', 'false');
-  if (drawerOverlayEl) drawerOverlayEl.classList.add('show');
-  document.body.style.overflow = 'hidden';
-}
-function closeDrawer() {
-  if (!drawerEl) return;
-  drawerEl.classList.remove('open');
-  drawerEl.setAttribute('aria-hidden', 'true');
-  if (drawerOverlayEl) drawerOverlayEl.classList.remove('show');
-  document.body.style.overflow = '';
-}
-document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape' && drawerEl && drawerEl.classList.contains('open')) closeDrawer();
-});
 
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 
@@ -1971,7 +2068,7 @@ i.corner.br{bottom:6px;right:6px} i.corner.br::before{border-left:0;border-top:0
   text-shadow:0 1px 0 rgba(0,0,0,.55);
 }
 /* ── Illuminerade initialer på hjälte-rubriker ── */
-.hero h1::first-letter, .drawer-h2::first-letter{
+.hero h1::first-letter{
   float:left;
   font-family:var(--font-display,'Cinzel',serif)!important;
   font-weight:900;font-size:3.05em;line-height:.82;
@@ -2028,7 +2125,7 @@ select,.adv-details summary,.btn-gold,a.back{min-height:44px}
 @keyframes gr-candle{0%,100%{opacity:1}17%{opacity:.8}33%{opacity:.93}55%{opacity:.74}72%{opacity:.96}87%{opacity:.84}}
 .rune-divider span,.rr-sigil{animation:gr-candle 4.6s ease-in-out infinite}
 @media (prefers-reduced-motion: reduce){
-  .rune-divider span,.rr-sigil,.hero h1::first-letter, .drawer-h2::first-letter{animation:none!important}
+  .rune-divider span,.rr-sigil,.hero h1::first-letter{animation:none!important}
 }
 </style>
 </body>

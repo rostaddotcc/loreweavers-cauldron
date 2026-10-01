@@ -106,12 +106,14 @@ Donationskortet säger idag **"No feature unlock, no subscription — just fuel 
 - Låst undo får inte konsumera snapshoten eller debitera en turn → testas explicit.
 - `main.py` är delad fil i aktiv worktree: grep/read regionen direkt före varje patch, `git diff` som bevis efter.
 
-## 8. Nästa våg (medvetet parkerad): The Forge
+## 8. The Forge — beslut: INTE gata (rostad 2026-10-01)
 
-Forge-generering (`/api/vault/generate/stream` `main.py:8842`) och valvets spara/använd (`8972-9060`) är ogärdade.
-När vågen blir aktuell: gata **skapa/spara/använd** men låt **lista/inspect/radera** vara fritt (annars tappar
-free-konton sina redan skapade själar — "cooked souls" — och kan inte städa dem).
-Beslut kvar: samma `supporter`-grind eller eget steg.
+Frågan om en Forge-våg (gata skapa/spara/använd av valvets själar, "cooked souls") är **lagd på hyllan för gott**:
+**bara exporten ska gatas** — The Forge, inklusive valvet, genereringen och karaktärsanvändningen,
+lämnas fritt för alla konton. Nuvarande grindar som rör Forge är befintliga och består:
+Forge-porträttet går via 10€-grinden `_require_image_gen_tier` för BILDGENERERING (det är en bild, inte en
+Forge-förmån), och själva export-ytan är redan gatud i denna våg. Ingen kod ändras för detta —
+valvet är redan ogärdat.
 
 ## 9. Genomfört + verifierat (2026-10-01)
 

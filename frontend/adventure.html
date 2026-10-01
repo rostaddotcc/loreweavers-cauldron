@@ -1175,7 +1175,7 @@ if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 <script src="modal.js?v=20260906a"></script>
 <script src="i18n.js?v=20260930b"></script>
 <script src="local.js?v=20260930f"></script>
-<script src="archetypes.js?v=20260804a"></script>
+<script src="archetypes.js?v=20261001a"></script>
 <script>
 // ═══════════════════════════════════════
 // SPARADE ÄVENTYR — kontrolleras via API:et
@@ -1673,11 +1673,11 @@ const FREE_PROMPT = `## Legenden
 **Vad söker du?**
 
 Generera:
-1. Namn (mörk fantasy)
+1. Namn enligt kreativitetsspåret — fritt val om spelaren inte velat något
 2. Fullt karaktärsark: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves
 3. 3-4 förmågor/egenskaper
-4. Startutrustning (5-8 föremål)
-5. Bakgrundshistoria (max 100 ord)
+4. Startutrustning (5-8 föremål) — minst ett med egen lore
+5. Bakgrundshistoria (max 100 ord) — en konkret stund, inte en sammanfattning
 Returnera som JSON enligt state-schemat.`;
 
 const FREE_PROMPT_EN = `## Legend
@@ -1691,11 +1691,11 @@ const FREE_PROMPT_EN = `## Legend
 **What do you seek?**
 
 Generate:
-1. Name (dark fantasy)
+1. Name per the creativity track — free choice unless the player specified one
 2. Full character sheet: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves
 3. 3-4 abilities/traits
-4. Starting equipment (5-8 items)
-5. Backstory (max 100 words)
+4. Starting equipment (5-8 items) — at least one with its own lore
+5. Backstory (max 100 words) — one concrete moment, not a summary
 Return as JSON per the state schema.`;
 
 let _lastFwValue = null; // senast programmatiskt satta värdet — avgör om mallen är orörd
@@ -2287,8 +2287,8 @@ function advPrompt() {
   if (tweaked) return tweaked;
   if (advArchKey && ARCHETYPES[advArchKey]) return archField(ARCHETYPES[advArchKey], 'prompt');
   return isEn()
-    ? '## Legend\n\n**Name:**\n**Race:**\n**Class:**\n**Backstory:**\n**Personality:**\n**A memory that haunts you:**\n**What do you seek?**\n\nGenerate:\n1. Name (dark fantasy)\n2. Full character sheet: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves\n3. 3-4 abilities/traits\n4. Starting equipment (5-8 items)\n5. Backstory (max 100 words)\nReturn as JSON per the state schema.'
-    : '## Legenden\n\n**Namn:**\n**Folk:**\n**Klass:**\n**Bakgrund:**\n**Personlighet:**\n**Ett minne som jagar dig:**\n**Vad söker du?**\n\nGenerera:\n1. Namn (mörk fantasy)\n2. Fullt karaktärsark: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves\n3. 3-4 förmågor/egenskaper\n4. Startutrustning (5-8 föremål)\n5. Bakgrundshistoria (max 100 ord)\nReturnera som JSON enligt state-schemat.';
+    ? '## Legend\n\n**Name:**\n**Race:**\n**Class:**\n**Backstory:**\n**Personality:**\n**A memory that haunts you:**\n**What do you seek?**\n\nGenerate:\n1. Name per the creativity track — free choice unless the player specified one\n2. Full character sheet: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves\n3. 3-4 abilities/traits\n4. Starting equipment (5-8 items) — at least one with its own lore\n5. Backstory (max 100 words) — one concrete moment, not a summary\nReturn as JSON per the state schema.'
+    : '## Legenden\n\n**Namn:**\n**Folk:**\n**Klass:**\n**Bakgrund:**\n**Personlighet:**\n**Ett minne som jagar dig:**\n**Vad söker du?**\n\nGenerera:\n1. Namn enligt kreativitetsspåret — fritt val om spelaren inte velat något\n2. Fullt karaktärsark: STR/DEX/CON/INT/WIS/CHA, HP, AC, saves\n3. 3-4 förmågor/egenskaper\n4. Startutrustning (5-8 föremål) — minst ett med egen lore\n5. Bakgrundshistoria (max 100 ord) — en konkret stund, inte en sammanfattning\nReturnera som JSON enligt state-schemat.';
 }
 
 // ── Modellgate (DM/Guardian/Extraction + Character-sheet modell — kan ändras när som helst i kampanjen) ──

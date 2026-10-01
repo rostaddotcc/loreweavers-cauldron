@@ -94,7 +94,7 @@
     width:min(640px,92vw);max-height:80dvh;display:flex;flex-direction:column;
     background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,var(--ink));
     border:1px solid var(--gold);border-radius:var(--radius-md);box-shadow:0 24px 60px -18px rgba(0,0,0,.9);
-    transition:opacity .25s,transform .25s;position:relative;background:linear-gradient(180deg,rgba(217,201,166,.07),rgba(217,201,166,.015) 55%),linear-gradient(155deg,#241c15,#1c1713 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(74,59,38,.5),0 1px 0 rgba(0,0,0,.4)}
+    transition:opacity .25s,transform .25s;background:linear-gradient(180deg,rgba(217,201,166,.07),rgba(217,201,166,.015) 55%),linear-gradient(155deg,#241c15,#1c1713 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(74,59,38,.5),0 1px 0 rgba(0,0,0,.4)}
   .sup-modal.show{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
   .sup-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem;
     padding:.85rem 1.1rem;border-bottom:1px solid var(--edge)}
@@ -182,7 +182,8 @@
 
   @media(max-width:900px){
     html{-webkit-tap-highlight-color:transparent}
-    .shelves{width:240px}
+    .shelves{width:210px}
+    .shelves-head{padding:.7rem .8rem .55rem}
     .archive{padding:1.2rem 1.2rem 3rem}
     
     
@@ -190,9 +191,17 @@
     
   }
   @media(max-width:640px){
-    .layout{flex-direction:column;overflow-y:auto}
-    .shelves{width:100%;height:auto;border-right:none;border-bottom:1px solid var(--edge)}
-    .archive{height:auto;flex:1;padding:1.1rem .75rem 3rem}
+    /* Facts-panelen 2026-10-01: i Codex (smal kolumn) låg .shelves ÖVER .archive
+       med gemensam scroll på .layout → att fälla ut "The scope of the archive"
+       tryckte ihop faktaboxen till en pytteliten scrollbar låda, och statistik-
+       panelen kunde lägga sig så att fakta blev oläslig. Fix: layouten får
+       fast höjd (flex:1 på body), .shelves blir en EGENT scroll-box med tak
+       (max 38dvh) och .archive tar ALL återstående höjd (flex:1 + min-height:0).
+       Nu krymper aldrig faktaboxen för att en hyllsektion fälls ut — den får
+       alltid majoriteten av panelen, och hyllorna scrollar internt vid behov. */
+    .layout{flex-direction:column;overflow:hidden;min-height:0}
+    .shelves{width:100%;height:auto;max-height:38dvh;overflow-y:auto;border-right:none;border-bottom:1px solid var(--edge)}
+    .archive{flex:1;min-height:0;height:auto;overflow-y:auto;padding:1.1rem .75rem 3rem}
     /* Sökfält: full bredd, 48px, 16px mot iOS-zoom */
     .search-wrap input{min-height:var(--tap-lg);font-size:18px;padding:.6rem .9rem}
     /* Kollapsbara sektioner: 44px träffytor */
@@ -225,7 +234,7 @@
 .talk-btn:hover{ transform: translateY(-1px) !important; box-shadow: 0 4px 16px -6px rgba(0,0,0,.55) !important; }
 
 </style>
-<link rel="stylesheet" href="snes.css?v=51">
+<link rel="stylesheet" href="snes.css?v=52">
 <link rel="stylesheet" href="rail.css?v=20260924a">
 <style>
 /* ═══════════ Codex fakta — transitions/touch (2026-08-05) — EFTER snes.css ═══════════ */
@@ -263,9 +272,9 @@
       <div class="rr-drop" id="rr-drop">
         <div class="rr-ghead">At the Table</div>
         <a href="chat.html">⚔ To the Table</a>
-        <a href="adventure.html">🏰 The Crossroads</a>
+        <a href="adventure.html">🏰 The Cauldron</a>
         <a href="newgame.html">✨ New Adventure</a>
-        <a href="characters.html">🔥 The Forge</a>
+        <a href="characters.html">🔥 Cooked Souls</a>
         <div class="rr-ghead">The Archive</div>
         <a href="character.html">🧙 Character</a>
         <a href="npcs.html">👥 NPCs</a>
@@ -606,7 +615,7 @@ async function doLogout() {
   location.href = 'login.html';
 }
 </script>
-<script src="embed.js?v=20260806a"></script>
+<script src="embed.js?v=20261001a"></script>
 <script src="rail.js?v=20260924a"></script>
 </body>
 </html>

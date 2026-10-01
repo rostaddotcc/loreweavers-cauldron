@@ -274,7 +274,7 @@
   .pv-reroll{font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-dim);background:none;border:1px solid var(--edge);padding:.8rem 1.2rem;cursor:pointer;border-radius:var(--radius-sm);transition:all .2s}
   .pv-reroll:hover:not(:disabled){color:var(--arcane);border-color:var(--arcane);box-shadow:0 0 14px -5px rgba(125,149,196,.5)}
   .pv-reroll:disabled{opacity:.45;cursor:wait}
-  /* The Forge — välj färdig hjälte */
+  /* Cooked Souls — välj färdig hjälte */
   .vault-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem}
   .vcard{position:relative;background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,var(--ink));border:1px solid var(--edge);padding:1.2rem 1.1rem 1rem;transition:transform .3s,box-shadow .3s,border-color .3s;overflow:hidden;cursor:pointer}
   .vcard::before{content:'';position:absolute;inset:6px;border:1px solid rgba(var(--gold-rgb),.15);pointer-events:none}
@@ -306,7 +306,7 @@
   @media(max-width:400px){.app{padding:0 .5rem 3.5rem}.head h1{font-size:1.55rem}.head .over{letter-spacing:.28em}.path h2{font-size:var(--fs-sm)}.path p{font-size:var(--fs-sm)}.cp-icon{width:54px;height:54px;font-size:1.5rem}.campaign-card .cc-sub{font-size:var(--fs-tiny)}
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=51">
+<link rel="stylesheet" href="snes.css?v=52">
 <link rel="stylesheet" href="rail.css?v=20260924a">
 <style>
 /* ═══════════ Login-känslan — knapp-stil (override snes.css DOS-flatten) ═══════════
@@ -528,7 +528,7 @@ html{font-size:var(--fs-base)}
     <div class="rr-brand">
       <span class="rr-sigil">⚗</span>
       <span class="rr-name">The Lore Weaver's Cauldron</span>
-      <span class="rr-tag">THE CROSSROADS</span>
+      <span class="rr-tag">THE CAULDRON</span>
     </div>
     <div class="rr-mid">
       <!-- ⚡ Turn-quota-pille (våg 4, 2026-09-26 + rostad 2026-09-27): TURNS
@@ -549,9 +549,9 @@ html{font-size:var(--fs-base)}
         <div class="rr-drop" id="rr-drop">
           <div class="rr-ghead">At the Table</div>
           <a href="chat.html">⚔ To the Table</a>
-          <a href="adventure.html">🏰 The Crossroads</a>
+          <a href="adventure.html">🏰 The Cauldron</a>
           <a href="newgame.html">✨ New Adventure</a>
-          <a href="characters.html">🔥 The Forge</a>
+          <a href="characters.html">🔥 Cooked Souls</a>
           <div class="rr-ghead">The Archive</div>
           <a href="character.html">🧙 Character</a>
           <a href="npcs.html">👥 NPCs</a>
@@ -940,12 +940,12 @@ html{font-size:var(--fs-base)}
       <div class="step-num">3 / 4</div>
       <div>
         <div class="step-title">Choose Your Adventurer</div>
-        <div class="step-sub">Summon a fresh adventurer from a fate already woven — or step in with one from The Forge.</div>
+        <div class="step-sub">Summon a fresh adventurer from a fate already woven — or step in with one from Cooked Souls.</div>
       </div>
     </div>
     <div class="tab-row">
       <button class="tab-btn active" id="tab-summon" onclick="showAdventurerTab('summon')">✨ Summon a new adventurer</button>
-      <button class="tab-btn" id="tab-forge" onclick="showAdventurerTab('forge')">⚒ From The Forge</button>
+      <button class="tab-btn" id="tab-forge" onclick="showAdventurerTab('forge')">⚒ From Cooked Souls</button>
     </div>
 
     <!-- Summon-tab: arketyper → generera → förhandsvisning → reroll -->
@@ -2020,7 +2020,7 @@ async function continueAdventurer() {
   }
   const btn = document.getElementById('adv-continue');
   btn.disabled = true;
-  btn.textContent = '💾 Saving to The Forge…';
+  btn.textContent = '💾 Saving to Cooked Souls…';
   try {
     // Om hjälten redan har ett vault-id (t.ex. från avatar-målningen i
     // onboarding) ska vi UPPDATERA den posten — annars skapar vaultSave en
@@ -2030,7 +2030,7 @@ async function continueAdventurer() {
     if (advAdventurerId) payload.overwrite_id = advAdventurerId;
     const res = await API.vaultSave(payload);
     advAdventurerId = res.id;
-    toast('💾 ' + advAdventurer.name + (isEn() ? ' saved to The Forge' : ' sparad i The Forge'));
+    toast('💾 ' + advAdventurer.name + (isEn() ? ' saved to Cooked Souls' : ' sparad i Cooked Souls'));
     revealStep('step-model');
   } catch (e) {
     btn.disabled = false;

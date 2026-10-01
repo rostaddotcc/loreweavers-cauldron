@@ -80,7 +80,7 @@
 .av-btn:hover, .talk-btn:hover{ transform: translateY(-1px) !important; box-shadow: 0 4px 16px -6px rgba(0,0,0,.55) !important; }
 
 </style>
-<link rel="stylesheet" href="snes.css?v=51">
+<link rel="stylesheet" href="snes.css?v=52">
 <link rel="stylesheet" href="rail.css?v=20260924a">
 
 <style>
@@ -111,9 +111,9 @@
       <div class="rr-drop" id="rr-drop">
         <div class="rr-ghead">At the Table</div>
         <a href="chat.html">⚔ To the Table</a>
-        <a href="adventure.html">🏰 The Crossroads</a>
+        <a href="adventure.html">🏰 The Cauldron</a>
         <a href="newgame.html">✨ New Adventure</a>
-        <a href="characters.html">🔥 The Forge</a>
+        <a href="characters.html">🔥 Cooked Souls</a>
         <div class="rr-ghead">The Archive</div>
         <a href="character.html">🧙 Character</a>
         <a href="npcs.html">👥 NPCs</a>
@@ -730,7 +730,7 @@ function tick(){
 if (document.hidden) { requestAnimationFrame(tick); return; }ctx.clearRect(0,0,W,H);for(let i=0;i<embers.length;i++){const e=embers[i];e.life++;e.y-=e.vy;e.x+=e.vx+Math.sin(e.life*.02)*.12;const fade=Math.min(1,e.life/60)*Math.max(0,1-e.life/e.max);const fl=.5+Math.sin(e.life*.15+i)*.35;ctx.globalAlpha=.4*fade*fl;ctx.drawImage(glowSprite(e.hue),e.x-e.r*2,e.y-e.r*2,e.r*4,e.r*4);if(e.life>e.max||e.y<-12)embers[i]=spawn(false);}ctx.globalAlpha=1;requestAnimationFrame(tick);}
 tick();
 </script>
-<script src="embed.js?v=20260806a"></script>
+<script src="embed.js?v=20261001a"></script>
 
 <input type="file" id="npc-avatar-input" accept="image/*" style="display:none" aria-label="Upload NPC avatar image">
 

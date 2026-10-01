@@ -1087,8 +1087,8 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
     display: flex; align-items: center; gap: 0.8rem;
     padding: 0.55rem 0.9rem; border-bottom: 1px solid var(--edge); flex-shrink: 0;
   }.cx-title{
-    font-family: var(--font-display); font-size: 0.72rem; font-weight: 900;
-    letter-spacing: 0.32em; text-transform: uppercase; color: var(--gold-bright);
+    font-family: var(--font-display); font-size: 0.82rem; font-weight: 900;
+    letter-spacing: 0.28em; text-transform: uppercase; color: var(--gold-bright);
     white-space: nowrap;
   }.cx-close{
     width: 36px; height: 36px; flex-shrink: 0;
@@ -1101,12 +1101,12 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
     }.cx-row{ display: flex; gap: 0.2rem; flex-wrap: nowrap; min-width: 0; }.cx-tab{
       flex: 1 1 0; min-width: 0; text-align: center; white-space: nowrap;
       overflow: hidden; text-overflow: ellipsis;
-      font-family: var(--font-display); font-size: 0.5rem; letter-spacing: 0.03em; text-transform: uppercase;
+      font-family: var(--font-display); font-size: 0.62rem; letter-spacing: 0.03em; text-transform: uppercase;
       background: var(--stone-2); border: 1px solid var(--edge);
-      color: var(--bone-dim); padding: 0.42rem 0.08rem; cursor: pointer;
+      color: var(--bone-dim); padding: 0.46rem 0.1rem; cursor: pointer;
     }.cx-tab:hover{ color: var(--bone-bright); }.cx-tab.active{ background: var(--ink); border-color: var(--gold); color: var(--gold-bright); }.cx-tab.cx-subtab{
       background: rgba(var(--arcane-deep-rgb),0.30); border-color: rgba(var(--gold-rgb),0.30);
-      color: var(--bone-dim); font-size: 0.5rem; letter-spacing: 0.03em;
+      color: var(--bone-dim); font-size: 0.62rem; letter-spacing: 0.03em;
     }.cx-tab.cx-subtab:hover{ color: var(--bone-bright); }.cx-tab.cx-subtab.active{
       background: var(--arcane-deep); border-color: var(--gold); color: var(--gold-bright);
       box-shadow: inset 0 0 12px rgba(var(--gold-rgb),0.18);
@@ -1159,7 +1159,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
     font-family: var(--cli-mono, ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace) !important;
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=51">
+<link rel="stylesheet" href="snes.css?v=52">
 <link rel="stylesheet" href="rail.css?v=20260924a">
 <style>
 /* ═══════════ CODEX 2-RAD-TABBAR — override snes.css (måste ligga EFTER linken) ═══════════ */
@@ -1492,9 +1492,9 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
       <div class="rr-drop" id="rr-drop">
         <div class="rr-ghead">At the Table</div>
         <a href="chat.html">⚔ To the Table</a>
-        <a href="adventure.html">🏰 The Crossroads</a>
+        <a href="adventure.html">🏰 The Cauldron</a>
         <a href="newgame.html">✨ New Adventure</a>
-        <a href="characters.html">🔥 The Forge</a>
+        <a href="characters.html">🔥 Cooked Souls</a>
         <!-- "The Archive"-gruppen borttagen 2026-09-30 (rostad): Character/NPCs/
              Map/Logbook/Facts lever redan i Codex-panelen (📖), snyggare. -->
         <div class="rr-ghead">Account</div>
@@ -3022,10 +3022,20 @@ function avatarGenGate(provider) {
 }
 function avatarProviderChanged(sel) {
   // Alla motorer kräver samma unlås — ingen provider-nedgradering behövs.
+  // 2026-10-01: spara valet i den delade nyckeln (character.html:s item-paint
+  // och denna select läser samma 'dnd_img_engine' → ett val gäller överallt).
+  if (sel) {
+    try { localStorage.setItem('dnd_img_engine', sel.value); } catch (_) {}
+  }
 }
 function updateAvatarProviderLock() {
   const sel = document.getElementById('avatar-provider-select');
   if (!sel) return;
+  // 2026-10-01: återställ senast valda motor (delad med character.html).
+  try {
+    const v = localStorage.getItem('dnd_img_engine');
+    if (v === 'wan' || v === 'qwen' || v === 'stepfun') sel.value = v;
+  } catch (_) {}
   // 2026-09-27 (ny prissättning): alla bildmotorer bakom 10€-unlåset.
   const unlocked = _tierHasModels();
   ['wan', 'qwen', 'stepfun'].forEach(key => {

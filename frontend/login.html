@@ -85,7 +85,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=EB+Garamond:ital,wght@0,400;1,400;1,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   /* ═══════════════ Terminal Gothic — flat, DOS/terminal, aligned med spelet ═══════════════
-     login.html rebuild 2026-08-12: samma content, flat & enklare. snes.css?v=51 laddas
+     login.html rebuild 2026-08-12: samma content, flat & enklare. snes.css?v=52 laddas
      EFTER detta block och tvingar scanlines/sprites/knappar med !important. */
   :root{
     --hero-art:url("assets/hero-loreweaver.webp");   /* statisk hero-art (2026-09-30) */
@@ -104,7 +104,7 @@
     --nav-h:56px;
   }
   *{margin:0;padding:0;box-sizing:border-box;border-radius:0}
-  html{scroll-behavior:smooth}
+  html{scroll-behavior:smooth;font-size:17px}
   body{font-family:var(--font-body);color:var(--bone);background:var(--ink);line-height:1.7;overflow-x:hidden;-webkit-tap-highlight-color:transparent}
   a{color:var(--arcane)}
 
@@ -587,7 +587,7 @@
     .myst-quote{transition:none}
   }
 </style>
-<link rel="stylesheet" href="snes.css?v=51">
+<link rel="stylesheet" href="snes.css?v=52">
 <link rel="stylesheet" href="rail.css?v=20260924a">
 <style>
 /* ═══ Manuscript-override (2026-09-20) — laddas EFTER snes.css och återinför
@@ -675,9 +675,9 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
       <div class="rr-drop" id="rr-drop">
         <div class="rr-ghead">At the Table</div>
         <a href="chat.html">⚔ To the Table</a>
-        <a href="adventure.html">🏰 The Crossroads</a>
+        <a href="adventure.html">🏰 The Cauldron</a>
         <a href="newgame.html">✨ New Adventure</a>
-        <a href="characters.html">🔥 The Forge</a>
+        <a href="characters.html">🔥 Cooked Souls</a>
         <div class="rr-ghead">The Archive</div>
         <a href="character.html">🧙 Character</a>
         <a href="npcs.html">👥 NPCs</a>
@@ -772,8 +772,8 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
         </div>
         <div class="d-card t-legend">
           <span class="f-kick">One hero. Many worlds.</span>
-          <h3>The Forge &mdash; Carry Your Legend</h3>
-          <p>Every adventurer you summon is saved in <b>The Forge</b> &mdash; sheet, level,
+          <h3>Cooked Souls &mdash; Carry Your Legend</h3>
+          <p>Every adventurer you summon is saved in <b>Cooked Souls</b> &mdash; sheet, level,
             items, gold and story intact. Start a new adventure and <em>walk back in as the
             same hero</em>.</p>
         </div>
@@ -1031,13 +1031,28 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
             <span class="f-icon"><svg class="sig" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21c3.9 0 6.4-2.6 6.4-5.9 0-4.4-4.4-6.8-4.4-10.7 0 0-2.4 1.9-2.4 5.3C11.6 8.3 9.2 6.4 9.2 6.4c0 2.4-3.4 4.3-3.4 8.7C5.8 18.4 8.1 21 12 21z"/><path d="M12 21c1.7 0 2.9-1.2 2.9-2.9 0-1.9-1.4-2.8-2.9-4.3-1.5 1.5-2.9 2.4-2.9 4.3C9.1 19.8 10.3 21 12 21z"/></svg></span>
             <div>
               <span class="f-kick">One hero. Many worlds.</span>
-              <h3>The Forge &mdash; Carry Your Legend</h3>
+              <h3>Cooked Souls &mdash; Carry Your Legend</h3>
             </div>
           </div>
-          <p>Every adventurer you summon is saved in <b>The Forge</b> &mdash; full sheet,
+          <p>Every adventurer you summon is saved in <b>Cooked Souls</b> &mdash; full sheet,
             level, items, gold and story intact. Start a new adventure any time and
             <em>walk back in as the same hero</em>: your history travels with you;
             the new world has no idea what you&rsquo;re capable of.</p>
+        </div>
+        <div class="tablet t-arcane rv d2">
+          <span class="f-num">08</span>
+          <div class="f-head">
+            <span class="f-icon"><svg class="sig" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17V9M4 9l4-4h6l4 4v8M4 9h14"/><circle cx="8" cy="19" r="1.6"/><circle cx="16" cy="19" r="1.6"/><path d="M9.5 13h5M12 10.5v5"/></svg></span>
+            <div>
+              <span class="f-kick">Your hardware, your rules, no filters</span>
+              <h3>Bring Your Own Uncensored Models</h3>
+            </div>
+          </div>
+          <p>Run a local model through <b>Ollama</b> and pour it into the cauldron &mdash;
+            your own machine, your own weights, <em>nothing held back</em>. The DM
+            narrates with your model as its mind; no cloud, no content filters,
+            no per-turn fees. <b>Free</b>, and it stays yours.</p>
+          <p class="tablet-more"><a href="local-ai.html">Set up your own model &#8594;</a></p>
         </div>
       </div>
     </div>
@@ -1981,13 +1996,15 @@ em,.destiny-sub,.sub,.hint,.pv-story,.arch .lore,.path p,.htp-card p,.lang-card 
 .vcard-story,.adv-sum-hint,.cat-sub,.dm-model-note,.vault-empty,.vault-note,.mi-intro{
   font-family:var(--font-italic,'EB Garamond',serif);
 }
-/* ── Läsbarhet: brödtext ≥17px, knappar ≥44px ── */
-body{font-size:17px}
+/* ── Läsbarhet: brödtext ≥17px, knappar ≥44px ──
+   2026-10-01 "ett snäpp överallt": root 16→17px (skalar alla 53 rem-deklarationer
+   +6%) och px-golven 17→18px (skalar det som ligger på max(17px,…)). */
+body{font-size:18px}
 .destiny-sub,.sub,.hint,.pv-story,.pv-gear,.arch .lore,.path p,.htp-card p,.lang-card p,
 .rn-list li,.vcard-story,.world-prompt,#prompt,.legend-preview,.lp-single #fw-prompt,
 .dm-model-note,.adv-sum-hint,.vault-empty,.cat-empty,.mi-intro,.pp-status,.pv-vitals,
 .file-item,.dark-select,.dark-select option{
-  font-size:max(17px,1.02rem);
+  font-size:max(18px,1.06rem);
 }
 button{min-height:44px}
 button.quota-chip,button.pf-paint-mini{min-height:26px;min-width:0}

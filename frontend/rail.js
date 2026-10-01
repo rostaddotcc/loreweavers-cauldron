@@ -73,7 +73,7 @@
   });
 
   /* ── Plain-English titles på meny-länkarna (2026-09-24) ──
-     In-world-namnen (The Crossroads, The Forge, Paths…) är stämningsbärare,
+     In-world-namnen (The Cauldron, Cooked Souls, Paths…) är stämningsbärare,
      men nya spelare behöver en sekund av klartext: samma mönster som
      marketing-navens title-attribut. En enda tabell här täcker alla 19 sidor
      (+ book-souls) — inga per-sida-attribut att hålla synkade. */
@@ -81,7 +81,7 @@
     'chat.html':      'Your game table — the conversation with the DM',
     'adventure.html': 'Adventure select — continue or start',
     'newgame.html':   'Create a new adventurer and campaign',
-    'characters.html':'The Forge — manage saved characters',
+    'characters.html':'Cooked Souls — manage saved characters',
     'character.html': 'Your character sheet',
     'npcs.html':      'Cast of NPCs met in your adventures',
     'platser.html':   'The world map — places visited',

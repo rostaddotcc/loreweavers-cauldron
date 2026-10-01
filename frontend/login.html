@@ -788,6 +788,13 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 .sm-hero-line em{font-style:normal;font-weight:600;color:var(--gold-bright);text-shadow:0 0 18px rgba(var(--gold-rgb),.5)}
 .sm-hero-line .sm-own{color:var(--arcane-bright);font-style:italic}
 .sm-hero-line .sm-zero{color:var(--gold-bright);font-weight:600;text-shadow:0 0 14px rgba(var(--gold-rgb),.45)}
+/* the OR between the two ways in — hairline rule, tracked mono, arcane */
+.sm-hero-line .sm-or{display:block;margin:.85rem 0 .75rem;position:relative;
+  font-family:var(--font-mono);font-size:.7rem;letter-spacing:.4em;text-transform:uppercase;
+  color:var(--arcane-bright);text-align:center;line-height:1;text-shadow:0 0 12px rgba(var(--arcane-rgb),.6)}
+.sm-hero-line .sm-or::before,.sm-hero-line .sm-or::after{content:'';position:absolute;top:50%;width:22%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(var(--arcane-rgb),.8));transform:translateY(-50%)}
+.sm-hero-line .sm-or::before{left:0}.sm-hero-line .sm-or::after{right:0;transform:translateY(-50%) scaleX(-1)}
 /* ═══ Field labels over the art: slightly brighter + firmer (QA-2) ═══ */
 .sm-core .field label{color:var(--bone);font-weight:700}
 
@@ -815,10 +822,13 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
         <div>
           <p class="eyebrow rv">The Summoning Rite</p>
           <h2 class="rv">Swear yourself in.</h2>
-          <p class="sm-hero-line rv"><span class="sm-hl-lead">Bring your own mind.</span>
-            Point the Cauldron at your local <b>Ollama</b> — <em>DeepSeek</em>, <em>Qwen</em>,
-            any <span class="sm-own">uncensored model on your hardware</span> — and the DM
-            narrates <span class="sm-zero">for 0 turns</span>.</p>
+          <p class="sm-hero-line rv"><span class="sm-hl-lead">Bring your own models to the Cauldron</span>
+            with local <b>Ollama</b> support — <em>Qwen</em>, <em>DeepSeek</em>, any
+            <span class="sm-own">uncensored model on your hardware</span>, narrating
+            <span class="sm-zero">for&nbsp;0&nbsp;turns</span>.
+            <span class="sm-or">or</span>
+            <span class="sm-hl-lead">Use <em>Qwen</em>, <em>DeepSeek</em> or <em>StepFun</em></span> directly
+            provided by the Cauldron.</p>
           <ul class="pitch-list">
             <li class="rv d1"><b>Free, forever.</b> 30 fresh turns every day &mdash;
               no subscription, no credit card, no email.

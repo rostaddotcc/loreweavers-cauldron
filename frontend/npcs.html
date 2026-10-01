@@ -43,6 +43,40 @@
   }
   @media(max-width:400px){.hall-head{padding:.8rem .8rem .6rem}.dossier{padding:.9rem .5rem 2.5rem}.d-name{font-size:var(--fs-narr)}.q-head{gap:.4rem}.toast{left:1rem;right:1rem;transform:translateY(80px);width:auto}.toast.show{transform:translateY(0)}
   }
+  /* ═══════════ NPC-kort — puts 2026-09-30 (namnplatta i Cinzel, porträttram, mindre chip-brus) ═══════════ */
+  .ncard{ gap:.8rem; padding:.8rem .75rem; border:1px solid var(--edge);
+          background:linear-gradient(180deg, color-mix(in srgb, var(--stone-3) 55%, transparent), transparent 72%); }
+  .ncard .nc-main{ min-width:0; flex:1; }
+  .ncard .nc-top{ display:flex; align-items:center; gap:.35rem; }
+  .ncard .nc-top .nm{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ncard .nm{ font-family:var(--font-display,'Cinzel',serif); font-weight:700; font-size:.94rem; letter-spacing:.02em;
+              color:var(--bone-bright); line-height:1.25; }
+  .ncard.sel .nm{ color:var(--gold-bright); }
+  .ncard .flame{ flex:0 0 auto; font-size:.72rem; line-height:1; filter:drop-shadow(0 0 7px rgba(255,140,40,.6)); }
+  /* porträttram: guldhairline + inre vinjett — foton ligger inte längre "råa" mot stenen */
+  .ncard .sigil{ position:relative; width:58px; height:58px; border-radius:var(--radius-xs);
+                 border:1px solid color-mix(in srgb, var(--nc,var(--edge)) 70%, transparent); }
+  .ncard .sigil::after{ content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+                        box-shadow:inset 0 0 0 1px rgba(var(--gold-rgb),.16), inset 0 0 22px rgba(0,0,0,.5),
+                                   inset 0 -16px 20px -10px rgba(0,0,0,.85); }
+  /* sekundärdata (minne/tur) som tyst metarad i stället för fler chips */
+  .ncard .nmeta{ display:flex; align-items:center; gap:.4rem; margin-top:.32rem; font-size:.68rem;
+                 letter-spacing:.03em; color:var(--bone-dim); opacity:.85; }
+  .ncard .nmeta .dot{ opacity:.4; }
+  /* porträttet toppalignat med namnraden (annars hamnar namnet bredvid tom yta) */
+  .ncard .sigil{ align-self:flex-start; }
+  /* emoji-fallbacken ska läsa som en avsiktlig "inget porträtt"-bricka, inte som trasig bild */
+  .ncard .sigil .d-ph-emoji{ font-size:1.3rem; opacity:.9; }
+  .ncard .sigil:has(.d-ph-emoji){ background:radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--nc,var(--gold)) 20%, transparent), transparent 72%), var(--stone-3); }
+  .ncard .chev{ flex:0 0 auto; color:var(--gold); opacity:0; transform:translateX(-4px);
+                transition:opacity .2s, transform .22s; font-size:1.15rem; line-height:1; }
+  .ncard:hover .chev,.ncard.sel .chev{ opacity:.9; transform:none; }
+  .ncard.sel{ box-shadow:0 0 22px -8px var(--ng,rgba(var(--gold-rgb),.4)), inset 0 0 0 1px rgba(var(--gold-rgb),.16); }
+  .ncard.fallen{ filter:saturate(.5) brightness(.94); }
+  /* bokstavsrubriker: guld-diamant så de läser som avsiktliga, inte som tomma band */
+  .npc-letter::before{ content:'✦'; margin-right:.5rem; font-size:.62rem; color:var(--gold); opacity:.75; }
+  /* dossier: tunn guldlinje under hero-porträttet */
+  .d-head{ border-bottom:1px solid color-mix(in srgb, var(--gold) 22%, transparent); }
   /* ═══════════ Avatar-modal (AI-generera / uppdatera / ladda upp / ta bort) ═══════════ */
   .d-portrait{ cursor: pointer; position: absolute; width: 100%; height: 100%; top: 0; right: 0; }
   .d-portrait::after{ content:'🎨'; position: absolute; right: 8px; bottom: 8px; font-size: 1rem; background: rgba(6,3,10,.85); border: 1px solid var(--gold); border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .2s; }
@@ -162,7 +196,6 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="sfx.js?v=20260811a"></script>
 <script src="api.js?v=20260930a"></script>
 <script src="i18n.js?v=20260930b"></script>
 <script>
@@ -352,20 +385,29 @@ function renderList(){
     const mentions = n.mentions || 1;
     const lastSeen = n.last_seen_turn || 0;
     const hot = mentions >= 3 || (lastSeen > 0 && lastSeen >= (maxTurnSeen() - 10));
+    // Sekundärdata (minne/tur) flyttad ur chip-raden → tyst metarad: färre
+    // konkurrerande element, status-chipsen (relation/quest/fallen) får bära kortet.
+    const meta = [
+      mentions > 1 ? `📖 ×${mentions}` : '',
+      lastSeen > 0 ? `${I18N.t('Tur')} ${lastSeen}` : '',
+    ].filter(Boolean);
     return `
-    <div class="ncard ${selectedId===i?'sel':''}" style="--nc:${n.color};--ng:${n.glow}" onclick="selectNpc(${i})">
-      <div class="sigil">${avatarHtmlFor(n)}</div>
-      <div style="min-width:0">
-        <div class="nm">${esc(n.name)}${hot ? '<span class="badge b-hot" title="Aktiv i berättelsen">🔥</span>' : ''}</div>
+    <div class="ncard ${selectedId===i?'sel':''}${n.alive?'':' fallen'}" data-nid="${i}" style="--nc:${n.color};--ng:${n.glow}" onclick="selectNpc(${i})">
+      <div class="sigil">${avatarHtmlFor(n, 128)}</div>
+      <div class="nc-main">
+        <div class="nc-top">
+          <span class="nm">${esc(n.name)}</span>
+          ${hot ? `<span class="flame" title="${I18N.t('Aktiv i berättelsen')}">🔥</span>` : ''}
+        </div>
         <div class="rl">${esc(n.role)}</div>
         <div class="badges">
           <span class="badge b-rel-${n.relation}">${REL_LABEL[n.relation]}</span>
           ${hasActiveQuest(n)?'<span class="badge b-quest">⚑ Quest</span>':''}
           ${!n.alive?'<span class="badge b-dead">💀 Fallen</span>':''}
-          ${mentions > 1 ? `<span class="badge b-mem" title="${I18N.t('Nämnd i berättelsen')}">📖 ×${mentions}</span>` : ''}
-          ${lastSeen > 0 ? `<span class="badge b-seen" title="${I18N.t('Senast sedd')}">${I18N.t('Tur')} ${lastSeen}</span>` : ''}
         </div>
+        ${meta.length ? `<div class="nmeta" title="${I18N.t('Nämnd i berättelsen')} / ${I18N.t('Senast sedd')}">${meta.join('<span class="dot">·</span>')}</div>` : ''}
       </div>
+      <span class="chev" aria-hidden="true">›</span>
     </div>`;
   };
   const listEl = document.getElementById('npc-list');
@@ -399,10 +441,8 @@ function selectNpc(i){
   // Synka listan med dossiern: scrolla den valda NPC:n i sikte så man
   // alltid ser var man är i hallen (2026-08-04 — många NPCs → lättnavigerat)
   try {
-    const cards = document.querySelectorAll('#npc-list .ncard');
-    if (cards[i]) {
-      cards[i].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    }
+    const card = document.querySelector(`#npc-list .ncard[data-nid="${i}"]`);
+    if (card) card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   } catch (_) {}
 }
 
@@ -427,7 +467,7 @@ function renderDossier(n){
   let html = `
     <div class="d-head" style="--dc:${n.color};--dg:${n.glow}">
       <div class="d-portrait" onclick="openAvatarModal(${selectedId})" title="Avatar — click to generate / enlarge">
-        ${avatarHtmlFor(n)}
+        ${avatarHtmlFor(n, 512)}
         <div class="d-ph-hint">🎨 Avatar</div>
       </div>
       <div>
@@ -492,7 +532,6 @@ function renderDossier(n){
 // TOAST + EMBERS
 // ═══════════════════════════════════════
 async function doLogout() {
-  SFX.click();
   try { await API.logout(); } catch(_) {}
   sessionStorage.removeItem('dnd_user');
   location.href = 'login.html';
@@ -516,12 +555,21 @@ function npcAvatarUrl() {
   if (!meta) return null;
   return API.avatarUrl(key) + '?w=256&t=' + (meta.uploaded || Date.now());
 }
-function avatarHtmlFor(n) {
+// 404-skydd: state kan säga att porträttet finns även om filen är borta på disk
+// → byt ut den trasiga <img> mot emojin i stället för en tom ruta.
+window.avatarImgFallback = function (el) {
+  el.outerHTML = `<span class="d-ph-emoji">${el.dataset.icon || '🎭'}</span>`;
+};
+// w är i {64,128,256,512} (backendens allowlist). Kortens sigil = 128 (2×56px),
+// dossierns hero-porträtt = 512 — tidigare fick heron samma 128 som sigilen.
+function avatarHtmlFor(n, w) {
   const key = 'npc:' + n.name;
-  const has = !!AVATARS[key];
-  return has
-    ? `<img src="${API.avatarUrl(key)}?w=128&t=${AVATARS[key].uploaded || Date.now()}" alt="">`
-    : `<span class="d-ph-emoji">${n.icon}</span>`;
+  const meta = AVATARS[key];
+  if (!meta) return `<span class="d-ph-emoji">${n.icon}</span>`;
+  const thumb = w || 128;
+  const url = `${API.avatarUrl(key)}?w=${thumb}&t=${meta.uploaded || Date.now()}`;
+  const lazy = thumb <= 128 ? ' loading="lazy"' : '';
+  return `<img src="${url}" alt="" data-icon="${esc(n.icon)}"${lazy} onerror="avatarImgFallback(this)">`;
 }
 
 function openAvatarModal(i) {
@@ -531,7 +579,7 @@ function openAvatarModal(i) {
   const has = !!npcAvatarUrl();
   const preview = document.getElementById('avatar-modal-img');
   preview.innerHTML = has
-    ? `<img src="${npcAvatarUrl()}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+    ? `<img src="${npcAvatarUrl()}" alt="" data-icon="${esc(n.icon)}" onerror="avatarImgFallback(this)" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
     : SPR.html('🎭');
   preview.style.cursor = has ? 'pointer' : 'default';
   document.getElementById('avatar-modal-title').textContent = '🎨 Avatar — ' + n.name;
@@ -544,7 +592,6 @@ function openAvatarModal(i) {
   updateAvatarProviderLock();
   renderAvatarGallery();
   document.getElementById('avatar-overlay').classList.add('show');
-  try { SFX.click(); } catch (_) {}
 }
 
 // ── 🖼 Avatar-galleri: bläddra bland NPC:ns tidigare porträtt (2026-08-08) ──
@@ -585,7 +632,6 @@ async function rotateAvatarImage(delta) {
     const preview = document.getElementById('avatar-modal-img');
     if (preview) preview.innerHTML = `<img src="${npcAvatarUrl()}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
     renderDossier(NPCS[CURRENT_NPC]);
-    try { SFX.click(); } catch (_) {}
   } catch (e) {
     toast('⚠ ' + (e.message || 'Could not switch portrait'));
   } finally {
@@ -609,7 +655,6 @@ function avatarGenGate(provider) {
   // 2026-09-27 (ny prissättning): ALL bildgenerering bakom 10€-unlåset.
   if (_npcTier !== 'tier2' && _npcTier !== 'lifetime') {
     toast('🔒 Image generation is part of the 10€ unlock (+100 turns, all Dungeon Masters, voice & images). Each image costs 1 turn. — pricing.html?plan=unlock10');
-    try { SFX.error(); } catch (_) {}
     return false;
   }
   return true;
@@ -653,7 +698,6 @@ async function _runAvatarGen(mode, statusText, btnId) {
   if (mode === 'free') {
     if (!freePrompt.trim()) {
       toast('✍️ Write what you want to see first — free prompt uses ONLY your words.');
-      try { SFX.error(); } catch (_) {}
       return;
     }
   }
@@ -670,14 +714,11 @@ async function _runAvatarGen(mode, statusText, btnId) {
       renderDossier(NPCS[CURRENT_NPC]);
       openAvatarModal(CURRENT_NPC);
       status.textContent = (mode === 'edit' ? '✨ Avatar updated — ' : '✨ New avatar generated — ') + (usedWords ? 'used your words' : 'used your character sheet');
-      try { SFX.levelup(); } catch (_) {}
     } else {
       status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Failed');
-      try { SFX.error(); } catch (_) {}
     }
   } catch (e) {
     status.textContent = '⚠ ' + (e.message || 'Failed');
-    try { SFX.error(); } catch (_) {}
   } finally {
     btn.disabled = false;
   }
@@ -710,7 +751,6 @@ function openAvatarLightbox() {
   document.getElementById('avatar-lightbox-img').src = src;
   document.getElementById('avatar-lightbox-title').textContent = document.getElementById('avatar-modal-title').textContent;
   document.getElementById('avatar-lightbox').classList.add('show');
-  try { SFX.click(); } catch (_) {}
 }
 function closeAvatarLightbox() {
   document.getElementById('avatar-lightbox').classList.remove('show');

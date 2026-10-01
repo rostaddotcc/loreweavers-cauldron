@@ -11,7 +11,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=EB+Garamond:ital,wght@0,400;1,400;1,500&display=swap" rel="stylesheet">
+<link rel="preload" as="image" href="assets/hero-loreweaver.webp?v=2" media="(min-width:721px)" fetchpriority="high">
+<link rel="preload" as="image" href="assets/hero-loreweaver-portrait.webp?v=2" media="(max-width:720px)" fetchpriority="high">
 <style>:root{
+    --hero-art:url("assets/hero-loreweaver.webp?v=2");   /* statisk hero-art (2026-09-30) */
     --ink:#171310;--stone:#1c1713;--stone-2:#241c15;--stone-3:#2c231a;
     --edge:#4a3b26;--bone:#d9c9a6;--bone-bright:#f2e6c8;--bone-dim:#9d8a6a;
     --gold:#c9a227;--gold-bright:#f0d675;--blood:#5a1f24;--blood-bright:#d4707a;
@@ -24,7 +27,7 @@
       var(--ink);
     background-attachment:fixed;overflow-x:hidden;
   }.grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.05;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}.hero-bg{position:fixed;inset:0;z-index:0;pointer-events:none}.hero-bg .hb{position:absolute;inset:0;background-size:cover;background-position:center 20%;opacity:0;transition:opacity 1.4s ease}.hero-bg .hb.on{opacity:1;animation:hero-breathe 42s ease-in-out infinite alternate}@keyframes hero-breathe{from{transform:scale(1)}to{transform:scale(1.06)}}.hero-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(16,11,8,.72),rgba(16,11,8,.5) 38%,rgba(16,11,8,.85))}#embers{position:fixed;inset:0;z-index:1;pointer-events:none}.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(14,10,7,.85)}.app{position:relative;z-index:2;max-width:960px;margin:0 auto;padding:0 1.25rem 5rem}.head-logo{width:150px;display:block;margin:.9rem auto 0;filter:drop-shadow(0 0 14px rgba(var(--gold-rgb),.25)) saturate(1.05);animation:head-float 7s ease-in-out infinite}@keyframes head-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}/* ═══════════ Topprad (ljud + lämna) ═══════════ */.topbar{display:flex;justify-content:flex-end;align-items:center;gap:.6rem;padding:1.1rem .1rem 0}.top-btn{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}.hero-bg{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:var(--hero-art);background-size:cover;background-position:68% 50%;animation:hero-breathe 42s ease-in-out infinite alternate}@keyframes hero-breathe{from{transform:scale(1)}to{transform:scale(1.06)}}@media (max-width:720px){:root{--hero-art:url("assets/hero-loreweaver-portrait.webp?v=2")}.hero-bg{background-position:62% 50%}}.hero-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(16,11,8,.72),rgba(16,11,8,.5) 38%,rgba(16,11,8,.85))}#embers{position:fixed;inset:0;z-index:1;pointer-events:none}.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(14,10,7,.85)}.app{position:relative;z-index:2;max-width:960px;margin:0 auto;padding:0 1.25rem 5rem}.head-logo{width:150px;display:block;margin:.9rem auto 0;filter:drop-shadow(0 0 14px rgba(var(--gold-rgb),.25)) saturate(1.05);animation:head-float 7s ease-in-out infinite}@keyframes head-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}/* ═══════════ Topprad (ljud + lämna) ═══════════ */.topbar{display:flex;justify-content:flex-end;align-items:center;gap:.6rem;padding:1.1rem .1rem 0}.top-btn{
     font-family:var(--font-display,'Cinzel',serif);font-size:var(--fs-tiny);letter-spacing:.14em;text-transform:uppercase;
     background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);
     padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:var(--radius-sm);white-space:nowrap;text-decoration:none;
@@ -507,7 +510,7 @@ html{font-size:var(--fs-base)}
   html{scroll-behavior:auto}
   .step,.continue-wrap,.prepare-link,.htp{opacity:1;transform:none;transition:none}
   .step-num,.head-logo{animation:none}
-  .hero-bg .hb.on{animation:none}
+  .hero-bg{animation:none}
   .w-status,.weaving-ad .wa-status{animation:none}
   .news-banner{animation:none}
 }
@@ -521,7 +524,7 @@ html{font-size:var(--fs-base)}
 <script src="fonts.js?v=20260806b"></script>
 </head>
 <body>
-<div class="hero-bg" id="hero-bg"><i class="hb" id="hb-a"></i><i class="hb" id="hb-b"></i></div><div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
+<div class="hero-bg" id="hero-bg" role="img" aria-label="An AI-painted cauldron brewing a fantasy world"></div><div class="grain"></div><canvas id="embers"></canvas><div class="vignette"></div>
 
 <div class="app">
   <header class="rite-rail">
@@ -552,12 +555,10 @@ html{font-size:var(--fs-base)}
           <a href="adventure.html">🏰 The Cauldron</a>
           <a href="newgame.html">✨ New Adventure</a>
           <a href="characters.html">🔥 Cooked Souls</a>
-          <div class="rr-ghead">The Archive</div>
-          <a href="character.html">🧙 Character</a>
-          <a href="npcs.html">👥 NPCs</a>
-          <a href="platser.html">🗺 The Map</a>
-          <a href="loggbok.html">📜 Logbook</a>
-          <a href="facts.html">✦ Facts</a>
+          <!-- Archive-gruppen (Character/NPCs/Map/Logbook/Facts) borttagen här 2026-09-30:
+               Crossroads är inte inne i något äventyr — länkarna öppnade godtycklig
+               äventyrsdata (t.ex. Facts från senaste kampanjen). Finns kvar i chat.html
+               och de äventyrs-scopade sidornas menyer. -->
           <div class="rr-ghead">The Ledger</div>
           <a href="help.html">❓ How to Play</a>
           <a href="mechanics.html">📐 Mechanics</a>
@@ -3048,63 +3049,9 @@ if (document.hidden) { requestAnimationFrame(tick); return; }ctx.clearRect(0,0,W
 tick();
 }
 </script>
-<script>
-/* ── Hero-bakgrund: egna valv-avatarer om de finns, annars standard-headshots (2026-08-15) ── */
-(function () {
-  var HERO_ART = [
-    'assets/adventurers/webp/adventurer-fighter.webp',
-    'assets/adventurers/webp/adventurer-elf-ranger.webp',
-    'assets/adventurers/webp/adventurer-dwarf-cleric.webp',
-    'assets/adventurers/webp/adventurer-tiefling-warlock.webp',
-    'assets/adventurers/webp/adventurer-rogue.webp',
-    'assets/adventurers/webp/adventurer-dragonborn-paladin.webp',
-    'assets/adventurers/webp/adventurer-halfling-bard.webp',
-    'assets/adventurers/webp/adventurer-gnome-wizard.webp',
-    'assets/adventurers/webp/adventurer-barbarian.webp',
-    'assets/adventurers/webp/adventurer-monk.webp',
-    'assets/adventurers/webp/adventurer-druid.webp',
-    'assets/adventurers/webp/adventurer-sorcerer.webp',
-    'assets/adventurers/webp/adventurer-artificer.webp',
-    'assets/adventurers/webp/adventurer-genasi-pyromancer.webp',
-    'assets/adventurers/webp/adventurer-githyanki-knight.webp',
-    'assets/adventurers/webp/adventurer-drow-priestess.webp',
-    'assets/adventurers/webp/adventurer-warforged-paladin.webp',
-    'assets/adventurers/webp/adventurer-firbolg-druid.webp',
-    'assets/adventurers/webp/adventurer-tabaxi-monk.webp'
-  ];
-  var bg = document.getElementById('hero-bg');
-  if (!bg) return;
-  var a = document.getElementById('hb-a'), b = document.getElementById('hb-b');
-  var active = a, inactive = b, pool = HERO_ART.slice(), timer = null;
-  function show(url) {
-    inactive.style.backgroundImage = 'url("' + url + '")';
-    inactive.classList.add('on');
-    active.classList.remove('on');
-    var t = active; active = inactive; inactive = t;
-  }
-  function next() {
-    if (!pool.length) pool = HERO_ART.slice();
-    var url = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
-    show(url);
-    timer = setTimeout(next, 9000);
-  }
-  function startWith(list) {
-    pool = (list && list.length) ? list.slice() : HERO_ART.slice();
-    next();
-  }
-  // Egna valv-avatarer (uppladdade/genererade) ersätter standard-headshots
-  if (window.API && API.vaultList) {
-    API.vaultList().then(function (res) {
-      var chars = (res && res.characters) || [];
-      var avs = chars.filter(function (c) { return c && c.has_avatar; })
-                     .map(function (c) { return API.vaultAvatarUrl(c.id) + '?t=' + Date.now(); });
-      startWith(avs);
-    }).catch(function () { startWith(null); });
-  } else {
-    startWith(null);
-  }
-})();
-</script>
+<!-- ── Hero-art (2026-09-30): EN statisk bild — kittel-motivet ersätter den
+     roterande sviten (standard-headshots / egna valv-avatarer). Förhandsladdas
+     i head, sätts som --hero-art i :root, byts mot porträtt-beskärningen ≤720px. -->
 <script>
 /* ═══════════ Skrivboxar med gott om plats (2026-09-13) ═══════════
    #world-prompt & #fw-prompt: växer automatiskt med innehållet, men

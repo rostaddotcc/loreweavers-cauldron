@@ -1,19 +1,26 @@
-"""🏮 Local AI v2 — 'Whole Cauldron local' klientkedja (rollcheck → dm →
+"""🏮 Local AI v2/v3 — 'Whole Cauldron local' klientkedja (rollcheck → dm →
 repair? → guardian → extract → search?).
 
-Kontrakt (frysett, vault dnd-llm-local-ollama-impl-2026-09 §1a):
-  - PATCH /api/campaign/local-pipeline {"pipeline":"dm"|"full"} →
-    {ok:true, pipeline}; "full" kräver local:* dm_model; tom meta = "dm".
+Kontrakt (v3 2026-10-01, per-roll-lokala modeller):
+  - Ingen PATCH /api/campaign/local-pipeline längre (borttagen) — rollerna
+    väljs direkt: meta.guardian_model / meta.extraction_model = local:*
+    (PATCH /api/campaign/guardian-model resp. /extraction-model accepterar
+    local:*-id:n). Kedjeläget härleds per drag (_local_role_flags).
+  - Båda rollerna lokala ⇒ 'full'-cap (300/dag); en roll ⇒ 'dm'-cap (100).
+  - Lorekeeper lokal ⇒ rollcheck-hop + guardian-hop; hus-Lorekeeper ⇒
+    huset skjuter kast-kollen och kör guardian i bakgrunden.
+  - Background lokal ⇒ extract-hop (varannan tur); hus-Background ⇒ huset.
+  - Legacy meta.local_pipeline=='full' (gammal kampanjdata) ⇒ båda rollerna
+    carvas på DM-modellen (bakåtkompat).
   - full-mode prepare → rollcheck-hop (json, temp 0.1, num_predict 1024);
     vaknande/[Resultat:] → dm-hop direkt (temp 0.8, ingen format).
   - commit dispatchar på stegets `chain`; varje commit → nästa generate-steg
     eller EXAKT hus-JSON-shapen (done). local_dm-bokföring EXAKT en rad per
     drag (på dm-commiten). state sparas på dm-commiten → avbrott = giltigt
     drag utan anrikning.
-  - cap: LOCAL_DM_DAILY_CAP (100) dm / LOCAL_DM_DAILY_CAP_FULL (300) full —
-    räknas från SAMMA local_dm-rader.
-  - husets _call_llm får ALDRIG anropas för carved-roller i full mode
-    (assert via spy); bg-tasks registreras exakt en gång (dm-commiten).
+  - husets _call_llm får ALDRIG anropas för carved-roller i kedjeläge
+    (assert via spy); bg-tasks registreras per roll (guardian endast när
+    Lorekeeper är hus-side).
 
 Fixtures: samma mönster som test_local_relay.py — ALLTID tmp-data
 (conftest redirectar ledgers/grants; users/campaigns här).
@@ -164,10 +171,18 @@ def _make_campaign(username):
     main.store.create(username, name="Chain Test Campaign", language="en")
 
 
-def _set_pipeline(client, tok, pipeline):
-    return client.patch("/api/campaign/local-pipeline",
-                        json={"pipeline": pipeline},
-                        cookies={"morkrets_token": tok})
+def _set_roles_local(client, tok, guardian=True, extract=True):
+    """v3: välj local:*-modeller per roll (ersätter PATCH local-pipeline)."""
+    if guardian:
+        r = client.patch("/api/campaign/guardian-model",
+                         json={"guardian_model": LOCAL_ID},
+                         cookies={"morkrets_token": tok})
+        assert r.status_code == 200, r.text
+    if extract:
+        r = client.patch("/api/campaign/extraction-model",
+                         json={"extraction_model": LOCAL_ID},
+                         cookies={"morkrets_token": tok})
+        assert r.status_code == 200, r.text
 
 
 def _set_dm_model(client, tok, model_id):
@@ -190,12 +205,25 @@ def _commit(client, tok, step_id, content="You stand on a hill. The wind howls."
 
 
 def _go_full(client, tok):
-    """local dm_model + pipeline 'full' — standard-förfarandet."""
+    """local dm_model + BÅDA rollerna lokala — v3-standardförfarandet
+    (motsvarar gamla pipeline 'full')."""
     r = _set_dm_model(client, tok, LOCAL_ID)
     assert r.status_code == 200, r.text
-    r = _set_pipeline(client, tok, "full")
+    _set_roles_local(client, tok)
+
+
+def _go_guardian_local(client, tok):
+    """Endast Lorekeeper lokal (hus-Background)."""
+    r = _set_dm_model(client, tok, LOCAL_ID)
     assert r.status_code == 200, r.text
-    return r.json()
+    _set_roles_local(client, tok, guardian=True, extract=False)
+
+
+def _go_extract_local(client, tok):
+    """Endast Background lokal (hus-Lorekeeper)."""
+    r = _set_dm_model(client, tok, LOCAL_ID)
+    assert r.status_code == 200, r.text
+    _set_roles_local(client, tok, guardian=False, extract=True)
 
 
 def _drain_chain(client, tok, step_body, dm_content, roll_needs=False,
@@ -231,35 +259,65 @@ def _drain_chain(client, tok, step_body, dm_content, roll_needs=False,
     return seen, body
 
 
-# ── pipeline-PATCH ─────────────────────────────────────────────────────
+# ── per-roll-val (v3) — roll-PATCH:ar accepterar local:* ────────────────
 
-def test_pipeline_patch_flips_meta_and_validates(client):
+def test_role_patches_accept_local_ids(client):
+    """guardian-model/extraction-model-PATCH:ar accepterar local:*-id
+    (_clamp_player_model släpper local: för ALLA tiers; _validate_model_id
+    likaså) och sparar dem i meta."""
+    tok = _seed_player()  # free-tier spelare
+    _make_campaign("alice")
+    r = client.patch("/api/campaign/guardian-model",
+                     json={"guardian_model": LOCAL_ID},
+                     cookies={"morkrets_token": tok})
+    assert r.status_code == 200, r.text
+    r = client.patch("/api/campaign/extraction-model",
+                     json={"extraction_model": LOCAL_ID},
+                     cookies={"morkrets_token": tok})
+    assert r.status_code == 200, r.text
+    meta = main.store.get("alice")["meta"]
+    assert meta["guardian_model"] == LOCAL_ID
+    assert meta["extraction_model"] == LOCAL_ID
+
+
+def test_local_role_flags_per_role_and_legacy(client):
+    """_local_role_flags: per-roll, legacy local_pipeline='full'-skim, och
+    hus-DM ⇒ aldrig carving (rollvalen är meningslösa utan relä-DM)."""
+    _seed_player()
+    _make_campaign("alice")
+    st = main.store.get("alice")
+    # inget valt ⇒ ingen carving
+    assert main._local_role_flags(st) == (False, False)
+    # hus-DM + local guardian ⇒ ingen carving (hus-Guardian kör)
+    st["meta"]["guardian_model"] = LOCAL_ID
+    assert main._local_role_flags(st) == (False, False)
+    # local DM + local guardian ⇒ guardian carvad
+    st["meta"]["dm_model"] = LOCAL_ID
+    assert main._local_role_flags(st) == (True, False)
+    # local DM + båda ⇒ båda
+    st["meta"]["extraction_model"] = LOCAL_ID
+    assert main._local_role_flags(st) == (True, True)
+    # legacy: local DM + local_pipeline='full' utan roll-nycklar ⇒ båda
+    st["meta"].pop("guardian_model"); st["meta"].pop("extraction_model")
+    st["meta"]["local_pipeline"] = "full"
+    assert main._local_role_flags(st) == (True, True)
+    # legacy-skimmen gäller INTE för hus-DM
+    st["meta"]["dm_model"] = "step-3.7-flash"
+    assert main._local_role_flags(st) == (False, False)
+
+
+def test_pipeline_patch_endpoint_gone(client):
+    """PATCH /api/campaign/local-pipeline är borttagen (v3) — 405/404, aldrig 200."""
     tok = _seed_player()
     _make_campaign("alice")
-    # hus-dm_model ⇒ "full" nekas
-    r = _set_pipeline(client, tok, "full")
-    assert r.status_code == 400, r.text
-    st = main.store.get("alice")
-    assert st["meta"].get("local_pipeline") is None  # tom meta = dm
-    # "dm" tillåts alltid
-    r = _set_pipeline(client, tok, "dm")
-    assert r.status_code == 200, r.text
-    assert r.json() == {"ok": True, "pipeline": "dm"}
-    assert main.store.get("alice")["meta"]["local_pipeline"] == "dm"
-    # lokal dm_model ⇒ "full" accepteras
-    r = _set_dm_model(client, tok, LOCAL_ID)
-    assert r.status_code == 200, r.text
-    r = _set_pipeline(client, tok, "full")
-    assert r.status_code == 200, r.text
-    assert r.json() == {"ok": True, "pipeline": "full"}
-    assert main.store.get("alice")["meta"]["local_pipeline"] == "full"
-    # ogiltigt värde
-    r = _set_pipeline(client, tok, "banana")
-    assert r.status_code == 400
+    r = client.patch("/api/campaign/local-pipeline", json={"pipeline": "full"},
+                     cookies={"morkrets_token": tok})
+    assert r.status_code in (404, 405), r.text
 
 
-def test_pipeline_patch_requires_auth(client):
-    r = _set_pipeline(client, "garbage", "dm")
+def test_role_patch_requires_auth(client):
+    r = client.patch("/api/campaign/guardian-model", json={"guardian_model": LOCAL_ID},
+                     cookies={"morkrets_token": "garbage"})
     assert r.status_code == 401
 
 
@@ -624,3 +682,156 @@ def test_chain_steps_one_shot_and_drift_409(client):
     assert r.status_code == 409, r.text
     rows = [x for x in main._read_turn_ledger("alice") if x["action"] == "local_dm"]
     assert len(rows) == 0  # inget av det avbrutna bokfördes
+
+
+# ── v3 per-roll: Lorekeeper lokal, Background hus ─────────────────────
+
+def test_guardian_only_local_chain(client, llm_spy, no_bg):
+    """Endast Lorekeeper lokal: rollcheck + guardian som klient-hopp;
+    hus-Background ⇒ ingen extract-hop på udda tur, hus-bg registreras
+    (post 1, guardian 0 — guardian är carvad), done-JSON exakt som huset."""
+    tok = _seed_player()
+    _make_campaign("alice")
+    _go_guardian_local(client, tok)
+    step = _prepare(client, tok).json()
+    assert step["chain"] == "rollcheck"
+    dm_hop = _commit(client, tok, step["step_id"],
+                     content=json.dumps({"needs_roll": False})).json()
+    assert dm_hop["chain"] == "dm"
+    g = _commit(client, tok, dm_hop["step_id"], content="The tale proceeds. [KAST: 1d20 | Watch]")
+    assert g.status_code == 200, g.text
+    guardian_step = g.json()
+    assert guardian_step["chain"] == "guardian"
+    d = _commit(client, tok, guardian_step["step_id"], content="{}")
+    assert d.status_code == 200, d.text
+    done = d.json()
+    assert set(done) == HOUSE_KEYS
+    assert done["guardian_pending"] is False
+    # hus-Lorekeeper registreras INTE (carvad), post-turn-registreringen EN gång
+    assert no_bg["guardian"] == 0
+    assert no_bg["post"] == 1
+    # inga hus-LLM-anrop för carvade roller
+    assert llm_spy == []
+
+
+def test_guardian_only_local_rollcheck_uses_guardian_model(client):
+    """Per-roll-modell: rollcheck-hopen körs på Lorekeeperns EGEN
+    local:-modell — inte DM-modellen."""
+    tok = _seed_player()
+    _make_campaign("alice")
+    r = _set_dm_model(client, tok, LOCAL_ID)  # qwen3:14b
+    assert r.status_code == 200, r.text
+    r = client.patch("/api/campaign/guardian-model",
+                     json={"guardian_model": "local:gemma3:4b"},
+                     cookies={"morkrets_token": tok})
+    assert r.status_code == 200, r.text
+    step = _prepare(client, tok).json()
+    assert step["chain"] == "rollcheck"
+    assert step["ollama"]["model"] == "gemma3:4b"
+    # dm-hopen kör DM-modellen
+    dm_hop = _commit(client, tok, step["step_id"],
+                     content=json.dumps({"needs_roll": False})).json()
+    assert dm_hop["ollama"]["model"] == "qwen3:14b"
+    # guardian-hopen kör Lorekeeperns modell
+    g_step = _commit(client, tok, dm_hop["step_id"], content="The road is quiet.").json()
+    assert g_step["chain"] == "guardian"
+    assert g_step["ollama"]["model"] == "gemma3:4b"
+
+
+# ── v3 per-roll: Background lokal, Lorekeeper hus ─────────────────────
+
+def test_extract_only_local_turn1_house_guardian(client, no_bg):
+    """Endast Background lokal, turn 1 (udda ⇒ ingen extract-hop): prepare
+    går HUSVÄGEN (rollcheck på huset — ingen rollcheck-hop), dm-commit →
+    hus-Guardian registreras, kedjan klar direkt (done)."""
+    tok = _seed_player()
+    _make_campaign("alice")
+    _go_extract_local(client, tok)
+    step = _prepare(client, tok).json()
+    # hus-Lorekeeper skjuter kast-kollen → dm-hopp direkt (chain-fältet finns,
+    # kedjan är aktiv för extract)
+    assert step["chain"] == "dm"
+    assert step["ollama"]["options"]["temperature"] == 0.8
+    d = _commit(client, tok, step["step_id"], content="A quiet night at the inn.")
+    assert d.status_code == 200, d.text
+    done = d.json()
+    assert set(done) == HOUSE_KEYS
+    # hus-Lorekeeper registrerad (carve_guardian=False), extract i post-turn
+    assert no_bg["guardian"] == 1
+    assert no_bg["post"] == 1
+    assert done["guardian_pending"] is True  # hus-Guardian pollar som i v1
+
+
+def test_extract_only_local_turn2_extract_hop_uses_extract_model(client, no_bg):
+    """Turn 2 (jämn): extract-hop i kön — på Backgrounds EGEN local:-modell.
+    Hus-Guardian registreras fortfarande (carve_extract bara)."""
+    tok = _seed_player()
+    _make_campaign("alice")
+    _go_extract_local(client, tok)
+    r = client.patch("/api/campaign/extraction-model",
+                     json={"extraction_model": "local:llama3.2:3b"},
+                     cookies={"morkrets_token": tok})
+    assert r.status_code == 200, r.text
+    # turn 1
+    s1 = _prepare(client, tok).json()
+    d1 = _commit(client, tok, s1["step_id"], content="First night falls.")
+    assert d1.status_code == 200 and "reply" in d1.json()
+    # turn 2
+    s2 = _prepare(client, tok).json()
+    assert s2["chain"] == "dm"
+    e = _commit(client, tok, s2["step_id"], content="A merchant passes by. [KAST: 1d20 | Haggle]")
+    assert e.status_code == 200, e.text
+    body = e.json()
+    assert body["chain"] == "extract"
+    assert body["ollama"]["model"] == "llama3.2:3b"
+    assert body["ollama"]["options"]["format"] == "json"
+    f = _commit(client, tok, body["step_id"], content=json.dumps(
+        {"facts": [{"category": "event", "text": "Met a merchant", "confidence": 0.9}],
+         "inventory_changes": []}))
+    assert f.status_code == 200, f.text
+    done = f.json()
+    assert set(done) == HOUSE_KEYS
+    assert done["turn_count"] == 2
+    # hus-Guardian registrerad båda dragen (carve_guardian=False hela tiden)
+    assert no_bg["guardian"] == 2
+    assert no_bg["post"] == 2
+
+
+# ── v3 cap: en roll lokal ⇒ dm-cap; båda ⇒ full-cap ────────────────────
+
+def test_cap_mode_single_role_is_dm_cap(client, monkeypatch):
+    """En roll lokal (huset betalar den andra) ⇒ LOCAL_DM_DAILY_CAP (100-läge).
+    monkeypatch cap=1 ⇒ andra draget 429 i prepare."""
+    monkeypatch.setenv("LOCAL_DM_DAILY_CAP", "1")
+    tok = _seed_player()
+    _make_campaign("alice")
+    _go_guardian_local(client, tok)
+    step = _prepare(client, tok).json()
+    dm_hop = _commit(client, tok, step["step_id"],
+                     content=json.dumps({"needs_roll": False})).json()
+    g = _commit(client, tok, dm_hop["step_id"], content="Tale told.").json()
+    _commit(client, tok, g["step_id"], content="{}")
+    r = _prepare(client, tok)
+    assert r.status_code == 429, r.text
+
+
+def test_cap_mode_both_roles_is_full_cap(client, monkeypatch):
+    """Båda rollerna lokala ⇒ LOCAL_DM_DAILY_CAP_FULL (300-läge): med
+    DM-cap=1 och FULL-cap=2 får drag 2 PREPARA (dm-läget hade 429:at) —
+    bevisar 'full'-härledningen. (Cap-gaten körs på varje commit, så en
+    mitt-i-kedjan-överskridning klipper anrikningen — befintligt beteende,
+    klienten hanterar det som chainIncomplete.)"""
+    monkeypatch.setenv("LOCAL_DM_DAILY_CAP", "1")
+    monkeypatch.setenv("LOCAL_DM_DAILY_CAP_FULL", "2")
+    tok = _seed_player()
+    _make_campaign("alice")
+    _go_full(client, tok)
+    # turn 1 — hela kedjan
+    seen, done = _drain_chain(client, tok, _prepare(client, tok).json(),
+                              dm_content="Tale number one.")
+    assert done["turn_count"] == 1
+    # turn 2 — prepare måste tillåtas (räknat 1 < FULL 2; hade varit
+    # 429 om läget var 'dm' med cap 1)
+    s2 = _prepare(client, tok)
+    assert s2.status_code == 200, s2.text
+    assert s2.json()["chain"] == "rollcheck"

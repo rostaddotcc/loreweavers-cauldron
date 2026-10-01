@@ -1472,13 +1472,10 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
             <label class="mpc-label local-ctl" for="local-num-ctx" data-tip="How much text the model remembers each turn. Bigger is slower.">Context
               <select id="local-num-ctx"></select>
             </label>
-            <label class="mpc-label local-ctl" for="local-pipeline" data-tip="How much of each turn your own computer does. The explanation is right below.">Runs locally
-              <select id="local-pipeline">
-                <option value="dm">Story only</option>
-                <option value="full">Story + rules</option>
-              </select>
-            </label>
-            <div id="local-pipeline-hint" class="mpc-hint"></div>
+            <!-- 🏮 v3 (2026-10-01): "Runs locally"-väljaren (Story only /
+                 Story + rules) BORTTAGEN — lokala modeller listas direkt i
+                 Lorekeeper- och Background-väljarna ovan; servern härleder
+                 kedjeläget per drag. -->
             <div id="local-cors-hint" class="mpc-hint" style="display:none"></div>
           </div>
         </div>
@@ -2025,8 +2022,8 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
 
 <script src="sfx.js?v=20260811a"></script>
 <script src="api.js?v=20260930a"></script>
-<script src="i18n.js?v=20260930b"></script>
-<script src="local.js?v=20260930f"></script>
+<script src="i18n.js?v=20261001a"></script>
+<script src="local.js?v=20261001a"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -2053,13 +2050,8 @@ async function loadCampaign() {
         currentModel = savedDm;
         localStorage.setItem('dnd_model', savedDm);
       }
-      // 🏮 v2: hydrate the local pipeline cache (dm|full) from campaign meta
-      // so the settings-row selector renders correct before ⚙ opens.
-      if (typeof LocalAI !== 'undefined' && LocalAI.setPipelineCache) {
-        try {
-          LocalAI.setPipelineCache((campaign._raw && campaign._raw.meta && campaign._raw.meta.local_pipeline) || 'dm');
-        } catch (e) { /* noop */ }
-      }
+      // 🏮 v3 (2026-10-01): ingen pipeline-cache längre — Lorekeeper/Background
+      // bär sina egna local:*-val (renderas i initSettingsModelPickers).
       // Kampanjens TTS-inställningar (provider, röst, stil, egen fras, autoplay,
       // hastighet) → pickers + localStorage så de inte resettas vid återkomst.
       hydrateTtsFromCampaign(campaign._raw && campaign._raw.meta);
@@ -9130,10 +9122,9 @@ function initSettingsModelPickers() {
   if (typeof LocalAI !== 'undefined') {
     try {
       LocalAI.renderLocalGroup(dmSel, currentModel);
-      // 🏮 v2: pass the campaign's pipeline (dm|full) so the selector
-      // renders correct (also refreshes LocalAI's cache from server truth).
-      const lp = (campaignData && campaignData._raw && campaignData._raw.meta && campaignData._raw.meta.local_pipeline);
-      LocalAI.renderSettingsRow(dmSel, lp);
+      // 🏮 v3: rollerna (Lorekeeper/Background) bär sina egna local:*-val —
+      // ingen pipeline-överföring längre.
+      LocalAI.renderSettingsRow(dmSel);
     } catch (e) { console.warn('localai picker:', e); }
   }
 
@@ -9144,6 +9135,17 @@ function initSettingsModelPickers() {
   // Nuvarande extraction-modell från kampanj-metat (fallback: global step-3.7-flash)
   const em = (campaignData && campaignData._raw && campaignData._raw.meta && campaignData._raw.meta.extraction_model) || 'step-3.7-flash';
   if (eSel) eSel.innerHTML = allowed.map(m => modelOption(m, m === em)).join('');
+
+  // 🏮 v3 (2026-10-01, rostad): lokala modeller listas ÄVEN under Lorekeeper
+  // och Background — inte bara DM. Samma opt-in-grind som DM-gruppen
+  // (inget syns förrän spelaren kryssat i "Use own Ollama" eller redan bär
+  // ett local:*-val). local:*-id:n i kampanj-metat återställs som valt värde.
+  if (typeof LocalAI !== 'undefined') {
+    try {
+      LocalAI.renderLocalGroup(gSel, gm);
+      if (eSel) LocalAI.renderLocalGroup(eSel, em);
+    } catch (e) { console.warn('localai role pickers:', e); }
+  }
 
   // 🆓 OpenRouter free-modeller (orfree:*) — 2026-09-27 (ny prissättning):
   // LIGGER OCKSÅ bakom 10€-unlåset för free/tier1 (backend clamp-ar). Visas
@@ -9177,6 +9179,10 @@ function settingsChangeExtraction(model) {
     if (campaignData && campaignData._raw) {
       campaignData._raw.meta = campaignData._raw.meta || {};
       campaignData._raw.meta.extraction_model = model;
+    }
+    // 🏮 håll LocalAI-gruppens memo + vald option synkad (v3: per-roll)
+    if (typeof LocalAI !== 'undefined' && eSel) {
+      try { LocalAI.renderLocalGroup(eSel, model); } catch (e) { /* noop */ }
     }
     toast('🧠 ' + I18N.t('Bakgrundsmodell uppdaterad'));
   }).catch(() => {
@@ -9213,6 +9219,10 @@ function settingsChangeGuardian(model) {
     if (campaignData && campaignData._raw) {
       campaignData._raw.meta = campaignData._raw.meta || {};
       campaignData._raw.meta.guardian_model = model;
+    }
+    // 🏮 håll LocalAI-gruppens memo + vald option synkad (v3: per-roll)
+    if (typeof LocalAI !== 'undefined' && gSel) {
+      try { LocalAI.renderLocalGroup(gSel, model); } catch (e) { /* noop */ }
     }
     toast('🛡️ ' + I18N.t('Lorekeeper-modell uppdaterad'));
   }).catch(() => {

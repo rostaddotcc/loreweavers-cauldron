@@ -292,7 +292,6 @@ const I18N = (() => {
     'NY DAG': 'NEW DAY',
     ' är död.': ' is dead.',
     '✦ atmosfär ✦': '✦ atmosphere ✦',
-    ' · körs lokalt': ' · runs locally',
     '📦 Bygger kampanj-export… (zip med transkript, karaktärsark, bilagor)': '📦 Building campaign export… (zip with transcript, character sheet, attachments)',
     'Bygger kampanj-export…': 'Building campaign export…',
     '⚠ Export ej tillgänglig i mock-läge': '⚠ Export not available in mock mode',
@@ -843,7 +842,6 @@ const I18N = (() => {
 
     // ── chat.html: model switch ──
     'Dungeon Master byter röst: ': 'The Dungeon Master changes voice: ',
-    ' körs lokalt': ' · runs locally',
     'Kunde inte radera': 'Could not delete',
     'Kunde inte ladda upp: ': 'Could not upload: ',
 

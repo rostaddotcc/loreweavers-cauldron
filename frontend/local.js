@@ -1,22 +1,24 @@
 // ═══════════════════════════════════════════════════════════════
-// 🏮 local.js — Local AI / Ollama relay client (v1), 2026-09-29.
+// 🏮 local.js — Local AI / Ollama relay client, 2026-09-29.
 //
 // Server är hjärnan, spelarens maskin är munnen: prepare/commit går
 // mot huset (dnd.rostad.cc), själva DM-texten genereras lokalt mot
 // userstyrd Ollama. base_url lever ALDRIG på servern — blott i denna
 // flikens localStorage. Model-ids: 'local:<ollama-name>'.
 //
-// v2 (2026-09-30): campaign meta local_pipeline 'dm'|'full'. 'full' = the
-// whole turn runs through the player's Ollama as a HOP CHAIN: prepare/
-// commit responses may carry {kind:'generate', chain:…, ollama:{…}} and
-// relay loops hop→hop until the final done JSON (chat-shape, unchanged).
-// 'dm'-campaigns see the exact v1 responses (no chain field ⇒ treated as
-// the v1 path). PATCH /api/campaign/local-pipeline flips the mode.
+// v2 (2026-09-30): campaign meta local_pipeline 'dm'|'full' — hop chain.
+//
+// v3 (2026-10-01, rostad): den binära "Runs locally: Story only / Story +
+// rules"-väljaren är BORTA. Lokala modeller listas i ALLA roll-väljare
+// (Dungeon Master, Lorekeeper, Background/extraction) — servern härleder
+// kedjeläget per drag ur kampanj-metat (meta.guardian_model/extraction_model
+// = local:*). Klienten behöver inte veta något om carving: relay() går
+// hop→hop tills done-JSON precis som i v2.
 //
 // Loaded as a classic script AFTER api.js/i18n.js. Public surface:
 //   window.LocalAI = { detectOllama, listLocalModels, getNumCtx,
 //     buildPickerOptions, renderLocalGroup, renderSettingsRow,
-//     onSettingsOpen, relay, getPipeline, setPipeline, setPipelineCache }
+//     onSettingsOpen, relay }
 // Backend contract (built in parallel, code against EXACTLY):
 //   POST /api/chat/local/prepare {message, model_id, num_ctx}
 //     → {step_id, kind:'generate', chain:'rollcheck'|'dm',
@@ -27,7 +29,7 @@
 //       guardian_pending, world…) OR the next hop
 //       {step_id, kind:'generate', chain:'guardian'|'extract'|'repair'|
 //       'search', ollama:{…}}. Errors: 409 drift / 410 expired /
-//       429 cap (full: ~300/dag) / 503 feature off.
+//       429 cap / 503 feature off.
 // ═══════════════════════════════════════════════════════════════
 (function () {
   'use strict';
@@ -44,8 +46,18 @@
 
   let _detect = null;   // {ts, status:'green'|'yellow'|'gray', base, models?}
   let _models = null;   // {ts, models:[{name,size}]}
-  let _dmSel  = null;   // settings select reference (for post-refresh re-render)
-  let _curId  = '';     // last known current model id (local:…) for re-renders
+  // v3: MULTI-SELECT registry — alla select-element som bär en 🏮-grupp
+  // (DM, Lorekeeper, Background; adventure.html + chat.html). Nyckel =
+  // elementet; värde = senast kända current-model-id för den selecten.
+  const _reg = new Map();
+  let _dmSel  = null;   // primary DM select (legacy bridge + opt-in fallback)
+  let _curId  = '';     // last known DM model id (local:…) for re-renders
+
+  function _rerenderAll() {
+    _reg.forEach((curId, sel) => {
+      try { if (sel.isConnected) renderLocalGroup(sel, curId); } catch (e) { /* noop */ }
+    });
+  }
 
   // ── tiny helpers ─────────────────────────────────────────────
   function esc(s) {
@@ -148,7 +160,7 @@
     if (!force && _get(LS_OPTIN) !== '1') {
       _detect = { ts: Date.now(), status: 'gray', base: null, probed: false };
       updateRowUi();
-      if (_dmSel) renderLocalGroup(_dmSel);
+      _rerenderAll();
       return _detect;
     }
     let yellowBase = null;
@@ -160,7 +172,7 @@
         _models = { ts: Date.now(), models: r.models };
         _set(LS_MODELS, JSON.stringify(_models));
         updateRowUi();
-        if (_dmSel) renderLocalGroup(_dmSel);
+        _rerenderAll();
         return _detect;
       }
       if (r === 'cors' && !yellowBase) yellowBase = base;
@@ -171,7 +183,7 @@
       _detect = { ts: Date.now(), status: 'gray', base: null };
     }
     updateRowUi();
-    if (_dmSel) renderLocalGroup(_dmSel);
+    _rerenderAll();
     return _detect;
   }
 
@@ -193,7 +205,7 @@
         _models = { ts: Date.now(), models: r.models };
         _set(LS_MODELS, JSON.stringify(_models));
         updateRowUi();
-        if (_dmSel) renderLocalGroup(_dmSel);
+        _rerenderAll();
         return _models.models;
       }
     }
@@ -204,25 +216,6 @@
   function getNumCtx() {
     const v = parseInt(_get(LS_NUMCTX), 10);
     return ([8192, 16384, 32768].includes(v)) ? v : 16384;
-  }
-
-  // ── pipeline (v2): 'dm' = house guards/books (v1 chain), 'full' = the
-  // whole cauldron runs on the player's machine (DM + rollcheck + guardian
-  // + extract + repair + search hops; house only summaries/TTS). Campaign
-  // meta via PATCH /api/campaign/local-pipeline; cached per-campaign here.
-  let _pipeline = 'dm';
-  let _pipelineUnsupported = false; // backend wave older than the PATCH route — 404/405/501
-  function getPipeline() { return _pipeline; }
-  function setPipelineCache(p) { _pipeline = (p === 'full') ? 'full' : 'dm'; }
-  async function setPipeline(p) {
-    try {
-      const r = await serverFetch('/api/campaign/local-pipeline', { pipeline: p }, 'PATCH');
-      setPipelineCache((r && r.pipeline) || p);
-      return r;
-    } catch (e) {
-      if (e && (e.status === 404 || e.status === 405 || e.status === 501)) _pipelineUnsupported = true;
-      throw e;
-    }
   }
 
   // ── picker group ─────────────────────────────────────────────
@@ -255,23 +248,34 @@
     return `<optgroup class="local-og" label="${esc(label)}">${opts}</optgroup>`;
   }
 
+  // v3 (2026-10-01): called for EVERY role select (DM, Lorekeeper,
+  // Background) on BOTH pages — each select is registered so a later
+  // detection/refresh re-renders them all. `currentModelId` is that
+  // select's own chosen model (may differ per role).
   function renderLocalGroup(selEl, currentModelId) {
     if (!selEl) return;
-    _dmSel = selEl;
-    if (currentModelId !== undefined) _curId = String(currentModelId || '');
+    if (currentModelId !== undefined) {
+      // primary DM select: keep the legacy _curId memo (opt-in bridge +
+      // renderSettingsRow fallback use it).
+      if (selEl === _dmSel || !_dmSel || selEl.id.indexOf('dm') >= 0) _curId = String(currentModelId || '');
+      _reg.set(selEl, String(currentModelId || ''));
+    }
+    if (!_dmSel) _dmSel = selEl;
+    const selCur = String(_reg.get(selEl) || currentModelId || selEl.value || '');
     selEl.querySelectorAll('.local-og').forEach(el => el.remove());
     // OPT-IN gate: the 🏮 group appears only when the player enabled
-    // "Use own Ollama" — or is already carrying a local:* choice. Default:
-    // just the site's own models, nothing invented, nothing probed.
-    const localChoice = (_curId || '').indexOf('local:') === 0 || String(selEl.value || '').indexOf('local:') === 0;
-    if (localChoice && _get(LS_OPTIN) !== '1') _set(LS_OPTIN, '1'); // legacy bridge (see renderSettingsRow)
-    if (_get(LS_OPTIN) !== '1' && !localChoice) return;
-    selEl.insertAdjacentHTML('beforeend', buildPickerOptions());
-    const cur = _curId;
-    if (cur && cur.indexOf('local:') === 0) {
-      try { selEl.value = cur; } catch (e) { /* option may be absent while gray */ }
+    // "Use own Ollama" — or ANY select is already carrying a local:* choice.
+    // Default: just the site's own models, nothing invented, nothing probed.
+    let anyLocal = selCur.indexOf('local:') === 0;
+    if (!anyLocal) {
+      _reg.forEach((v) => { if (String(v).indexOf('local:') === 0) anyLocal = true; });
     }
-    try { syncPipelineUi(); } catch (e) { /* row not rendered yet */ }
+    if (anyLocal && _get(LS_OPTIN) !== '1') _set(LS_OPTIN, '1'); // legacy bridge
+    if (_get(LS_OPTIN) !== '1' && !anyLocal) return;
+    selEl.insertAdjacentHTML('beforeend', buildPickerOptions());
+    if (selCur && selCur.indexOf('local:') === 0) {
+      try { selEl.value = selCur; } catch (e) { /* option may be absent while gray */ }
+    }
   }
 
   // ── settings card (opt-in: nothing probes your machine until the player
@@ -309,12 +313,13 @@
   // Nothing is probed until "Use own Ollama" is checked; the passive
   // auto-detection (which fired Chrome's "access other apps and services"
   // permission prompt unprompted) is gone. This function only BINDS.
+  // v3 (2026-10-01): ingen pipeline-väljare — "Runs locally: Story only /
+  // Story + rules" är borta; rollerna väljs direkt i sina egna selectar
+  // (🏮-gruppen finns i DM, Lorekeeper OCH Background).
   function renderSettingsRow(dmSel, campaignPipeline) {
-    if (campaignPipeline !== undefined && campaignPipeline !== null) {
-      setPipelineCache(campaignPipeline);
-    }
     if (!dmSel) return;
     _dmSel = dmSel;
+    _reg.set(dmSel, String(dmSel.value || ''));
     const card = document.getElementById('local-card');
     if (!card) return; // page without the settings menu (adventure.html)
     card.style.display = '';
@@ -330,7 +335,7 @@
     const on = _get(LS_OPTIN) === '1';
     if (enable) enable.checked = on;
     if (body) body.hidden = !on;
-    if (card._localWired) { updateRowUi(); syncPipelineUi(); return; }
+    if (card._localWired) { updateRowUi(); return; }
     card._localWired = true;
 
     const baseIn = document.getElementById('local-base');
@@ -361,7 +366,9 @@
           if (firstHouse) { try { settingsChangeModel(firstHouse.value); } catch (e) { /* noop */ } }
         }
         updateRowUi();
-        if (_dmSel) renderLocalGroup(_dmSel);
+        _reg.clear();
+        if (_dmSel) { _reg.set(_dmSel, String(_dmSel.value || '')); }
+        _rerenderAll();
       }
     });
 
@@ -400,55 +407,11 @@
       catch (e) { console.warn('localai:', e); }
       refresh.textContent = '⟳';
     });
-    // ── pipeline selector ──
-    const pipeSel = document.getElementById('local-pipeline');
-    if (pipeSel) pipeSel.addEventListener('change', async () => {
-      const want = pipeSel.value;
-      try {
-        await setPipeline(want);
-        _localToast('🏮 ' + (want === 'full'
-          ? 'Your computer now does everything each turn'
-          : 'Dice and rules are handled by us again'));
-      } catch (e) {
-        pipeSel.value = getPipeline(); // revert the visual selection
-        _localToast('⚠ ' + (e && e.message ? e.message : 'Could not change this setting'));
-      }
-      syncPipelineUi();
-    });
     updateRowUi();
-    syncPipelineUi();
   }
 
-  function _localToast(msg) {
-    try { if (typeof toast === 'function') toast(msg); } catch (e) { /* noop */ }
-  }
-
-  // Reflect campaign state in the pipeline row: value = cached pipeline,
-  // disabled unless the chosen DM is a 🏮 local model (the PATCH would also
-  // 400 server-side — better to say it before the click fails).
-  function syncPipelineUi() {
-    const pipeSel = document.getElementById('local-pipeline');
-    if (!pipeSel) return;
-    const hint = document.getElementById('local-pipeline-hint');
-    const cur = String(((_dmSel && _dmSel.value) || _curId || ''));
-    const isLocal = cur.indexOf('local:') === 0;
-    pipeSel.value = getPipeline();
-    // Backend wave may predate the PATCH route (404/405 on first try) — stay
-    // honest instead of toasting a raw error on every click.
-    if (_pipelineUnsupported) {
-      pipeSel.disabled = true;
-      if (hint) hint.textContent = 'Story + rules is not available yet — coming soon.';
-      return;
-    }
-    pipeSel.disabled = !isLocal;
-    if (!isLocal) {
-      if (hint) hint.textContent = 'Pick one of your local models as the Dungeon Master to unlock this.';
-    } else if (getPipeline() === 'full') {
-      if (hint) hint.textContent = 'Story + rules: your computer does everything each turn. Slower, needs a strong model. Roughly 300 turns per day.';
-    } else {
-      if (hint) hint.textContent = 'Story only: your computer writes the story, our server handles dice, rules and memory. Roughly 100 turns per day.';
-    }
-  }
+  // syncPipelineUi BORTTAGEN 2026-10-01 (v3): "Runs locally"-väljaren finns
+  // inte längre — per-roll-lokala modeller väljs i roll-väljarna direkt.
 
   // Hooked from toggleSettingsMenu(). OPT-IN (2026-09-30): does nothing for
   // players who never enabled "Use own Ollama" — detectOllama(false) returns
@@ -666,9 +629,6 @@
     detectOllama,
     listLocalModels,
     getNumCtx,
-    getPipeline,
-    setPipeline,
-    setPipelineCache,
     buildPickerOptions,
     renderLocalGroup,
     renderSettingsRow,

@@ -176,7 +176,7 @@
   <div class="box rv d1">
     <ol style="padding-left:1.3rem;list-style:decimal">
       <li style="margin-bottom:.8rem"><b>Install Ollama</b> on the machine at your table. Linux: <span class="cmd">curl -fsSL https://ollama.com/install.sh | sh</span> — Windows/macOS: the installer at <a href="https://ollama.com/download">ollama.com/download</a></li>
-      <li style="margin-bottom:.8rem"><b>Pull a model:</b> <span class="cmd">ollama pull qwen3:8b</span> as a baseline. A 14B+ thinking model is the comfortable pick; anything under 8B will struggle to hold a long campaign, especially if you plan to run the whole cauldron locally</li>
+      <li style="margin-bottom:.8rem"><b>Pull a model:</b> <span class="cmd">ollama pull qwen3:8b</span> as a baseline. A 14B+ thinking model is the comfortable pick; anything under 8B will struggle to hold a long campaign, especially if you plan to run the Lorekeeper or Background roles on it too</li>
       <li style="margin-bottom:.8rem"><b>Open the game</b> → <b>Settings ⚙</b> → the <b>Dungeon Master picker</b>. If your machine answers, a <b>🏮 group</b> appears at the bottom of the list with the models you pulled — the row beside it shows a status dot</li>
       <li>Pick a 🏮 model and play. Narration now streams from your own hardware.</li>
     </ol>
@@ -248,7 +248,7 @@ Environment="OLLAMA_ORIGINS=https://dnd.rostad.cc"</pre>then <span class="cmd">s
 
   <div class="box ts rv d1">
     <span class="ts-sym">What about turns? (costs and caps)</span>
-    <p>The DM step itself costs <b>0 turns</b> — your hardware pays for it. If narration never arrives even though the dot is 🟢, the house fallback offers to answer per turn. Voice narration (TTS) and images are <b>not</b> local features and always cost house turns. With the house keeping the background books the cap is roughly <b>100 local messages a day</b>; with the full-cauldron mode, roughly <b>300</b>.</p>
+    <p>The DM step itself costs <b>0 turns</b> — your hardware pays for it. If narration never arrives even though the dot is 🟢, the house fallback offers to answer per turn. Voice narration (TTS) and images are <b>not</b> local features and always cost house turns. While any background role still runs on house models the cap is roughly <b>100 local messages a day</b>; with both the Lorekeeper and the Background local, roughly <b>300</b>.</p>
   </div>
 
   <h2 class="rv">FAQ</h2>
@@ -265,12 +265,12 @@ Environment="OLLAMA_ORIGINS=https://dnd.rostad.cc"</pre>then <span class="cmd">s
 
   <details class="faq rv d1">
     <summary>Does local play cost turns?</summary>
-    <div class="a"><p>The DM step costs 0 turns — that's the point of bringing your own breath. The house still runs the background books in v1 (Lorekeeper, extraction), so local play is capped at roughly 100 messages per account per day. In the opt-in full-cauldron mode the cap lifts to roughly 300, because the house spends nearly nothing per turn there. TTS and images cost house turns as before.</p></div>
+    <div class="a"><p>The DM step costs 0 turns — that's the point of bringing your own breath. While any background role (Lorekeeper, extraction) still runs on house models, local play is capped at roughly 100 messages per account per day. Pick 🏮 models for both of them and the cap lifts to roughly 300, because the house spends nearly nothing per turn then. TTS and images cost house turns as before.</p></div>
   </details>
 
   <details class="faq rv d1">
-    <summary>What is "Whole Cauldron local"?</summary>
-    <div class="a"><p>Version 2, switched on gradually: a pipeline selector in the ⚙ settings row (visible when a 🏮 model is active). With <b>Full cauldron at home</b>, your own Ollama also runs the Lorekeeper's roll-check, the fact extraction, the tag repair and the memory-search hops — same prompts, your hardware. The house keeps the periodic summaries and the logbook either way. This mode asks a lot of instruction-following: the bookkeeping steps come back as JSON-like tasks, so use a 14B+ thinking model; a tiny 3B model fumbles them.</p></div>
+    <summary>Can I run more than the DM on my own machine?</summary>
+    <div class="a"><p>Yes — per role, with no mode to flip. The 🏮 group appears in three dropdowns (in the in-game ⚙ settings and in the new-adventure setup): <b>Dungeon Master</b>, <b>Lorekeeper</b> (the Guardian: rules, dice checks, HP/XP/items bookkeeping) and <b>Background</b> (extraction: facts, journal, memory). Pick your own Ollama model for as many of them as you like; roles you leave on house models keep running on the house exactly as before. One dependency: local background roles only take effect when the DM is local too — the relay lives on that path. The bookkeeping roles ask a lot of instruction-following: their steps come back as JSON-like tasks, so use a 14B+ thinking model there; a tiny 3B model fumbles them. An earlier version had a separate on/off switch for this — it is gone, and campaigns set up with it keep behaving the same.</p></div>
   </details>
 
   <details class="faq rv d1">
@@ -290,7 +290,7 @@ Environment="OLLAMA_ORIGINS=https://dnd.rostad.cc"</pre>then <span class="cmd">s
 
   <details class="faq rv d1">
     <summary>My model is small. Will it hold up?</summary>
-    <div class="a"><p>Honestly: under 8B, expect trouble. Long campaigns ask a model to juggle the transcript, the fact register and the rules in one breath — small models drop threads, contradict the ledger, and in full-cauldron mode they simply fumble the JSON bookkeeping. A sub-8B model is fine for a one-shot; for a saga, 14B+ is the road.</p></div>
+    <div class="a"><p>Honestly: under 8B, expect trouble. Long campaigns ask a model to juggle the transcript, the fact register and the rules in one breath — small models drop threads, contradict the ledger, and on the Lorekeeper and Background roles they simply fumble the JSON bookkeeping. A sub-8B model is fine for a one-shot; for a saga, 14B+ is the road.</p></div>
   </details>
 
   <details class="faq rv d1">
@@ -304,7 +304,7 @@ Environment="OLLAMA_ORIGINS=https://dnd.rostad.cc"</pre>then <span class="cmd">s
   </p>
   <p style="text-align:center;margin-top:1rem"><a href="chat.html" class="btn-gold">To the Table</a> <a href="help.html" class="btn-gold" style="margin-left:.5rem">How to Play</a></p>
 </div>
-<script src="i18n.js?v=20260930b"></script>
+<script src="i18n.js?v=20261001a"></script>
 <script>
 /* ═══════════ Scroll reveal — same mechanism as help.html ═══════════ */
 (function () {

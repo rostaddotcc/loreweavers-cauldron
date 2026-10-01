@@ -7239,7 +7239,8 @@ async def _chat_phase_a2(
 async def _chat_phase_b(
     req: ChatRequest, payload: dict, username: str, campaign_id: str, state: dict,
     ctx: dict, reply: str, reasoning: str, usage: dict, llm_time: float,
-    *, relay: bool = False, full_chain: bool = False,
+    *, relay: bool = False, chain_active: bool = False,
+    carve_guardian: bool = False, carve_extract: bool = False,
 ) -> dict:
     """Fas B av chat-turen: allt EFTER att DM-svaret mottagits.
 
@@ -7248,12 +7249,16 @@ async def _chat_phase_b(
     husets DEFAULT_PLAYER_MODEL utan att driva turn-potten. Husvägen
     (relay=False) är beteendemässigt identisk med före relä-refactorn.
 
-    `full_chain=True` = 🏮 v2 "Whole Cauldron local": guardian-huvudanropet
-    och faktextraktionens huvudanrop är UTBRUTNA till klient-hopp — denna
-    körs inte som hus-bakgrund. Fas B sparar ändå turen (DM-text + taggar)
-    så ett avbrott lämnar ett giltigt läge, och signalerar further arbete
-    via ctx-nycklarna `_pending_search` (strquery) och `_repair_pending`
-    (bundle för repair-hopen)."""
+    🏮 Per-roll (2026-10-01, ersätter `full_chain`-booleans):
+    - `chain_active` = minst en bakgrundsroll är local: → repair/[SÖK:]-hopp
+      kan köas som klient-hopp (Fas B sparar ändå turen så ett avbrott
+      lämnar ett giltigt läge; signalerar vidare arbete via ctx-nycklarna
+      `_pending_search` och `_repair_pending`).
+    - `carve_guardian` = Lorekeeperns huvud-anrop är utbrutet till en
+      klient-hop (chain:'guardian') — ingen hus-registrering här.
+    - `carve_extract` = faktextraktionens huvud-anrop körs klient-side
+      (chain:'extract') — huset hoppar över den delen men kör resten.
+    Rollerna som INTE är local: körs på huset exakt som i v1."""
     messages = ctx["messages"]
     effective_turn = ctx["effective_turn"]
     is_awakening = ctx["is_awakening"]
@@ -7274,7 +7279,7 @@ async def _chat_phase_b(
     # ur det slutgiltiga svaret. Kostar 2x den turen — en undantagsmekanism.
     _search_re = re.compile(r"\[(?:SÖK|SEARCH):\s*(.*?)\]", re.DOTALL | re.IGNORECASE)
     _search_m = _search_re.search(reply or "")
-    if _search_m and not is_awakening and full_chain:
+    if _search_m and not is_awakening and chain_active:
         # 🏮 v2: fortsättningsanropet körs klient-side i kedjans 'search'-hop
         # (sist i kön) — här sparas frågan och taggen strippas (husets
         # beteende: minne saknas → original-svaret behålls, taggen bort).
@@ -7392,10 +7397,12 @@ async def _chat_phase_b(
             effects = parsed_effects
             break
 
-        if full_chain:
+        if chain_active:
             # 🏮 v2: ogiltig mekanik → spara narrationen strippt (säker save —
             # ett avbrott i kedjan lämnar ett giltigt läge) och kö 'repair'-
             # hoppen: klienten lagar taggarna, commit validerar om.
+            # (repair-hoppen körs alltid på DM-modellen — det är DM:ens
+            # narration som lagas, oavsett Lorekeeper/Background-rollval.)
             ctx["_repair_pending"] = {
                 "errors": errors,
                 "current_reply": current_reply,
@@ -7540,7 +7547,9 @@ async def _chat_phase_b(
     # 🏮 v2 full_chain: guardian-huvudanropet är UTBRUTET till en klient-hop
     # (chain:'guardian') — ingen hus-registrering här; resten av
     # bakgrundsjobben (threads/summaries/RAG/dag-entry) registreras som vanligt.
-    if not full_chain:
+    # Per-roll (2026-10-01): carve_guardian styr exakt detta; Lorekeeper på
+    # huset ⇒ hus-Guardian registreras som i v1.
+    if not carve_guardian:
         guardian_task = _register_bg_task(username, campaign_id, _guardian_post_dm(
             username, campaign_id, reply, req.message, effective_turn, list(new_npcs),
             skip_effects=meta.get("last_effects") or [], epoch=turn_epoch,
@@ -7551,11 +7560,12 @@ async def _chat_phase_b(
     # (Tidigare blockerade de svaret i upp till 180s vardera → "fastnar i laddning".)
     # 🏮 v2 full_chain: faktextraktionens huvudanrop körs klient-side
     # (chain:'extract') — huset hoppar över den delen men kör resten.
+    # Per-roll (2026-10-01): carve_extract styr bara extraktionen.
     campaign_id = state["meta"].get("campaign_id", "")
     turn_count = state["meta"].get("turn_count", 0)
     task = _register_bg_task(username, campaign_id, _post_turn_tasks(
         username, campaign_id, reply, req.message, turn_count, req.model_id,
-        epoch=turn_epoch, skip_extraction=full_chain,
+        epoch=turn_epoch, skip_extraction=carve_extract,
     ))
 
     # Dag-entry: om NY_DAG trigga, generera loggbok-entry i bakgrunden
@@ -7603,22 +7613,62 @@ async def _chat_phase_b(
 # Se backend/local_relay.py + vault:en (dnd-llm-local-ollama-impl-2026-09).
 
 
-def _campaign_pipeline(username: str) -> str:
-    """Läs kampanjens relä-pipeline (state-lookup är billig; gjord per
-    endpoint som v1 gör). Okänd/ingen kampanj/tom meta ⇒ "dm" (v1-beteende)."""
+def _local_role_flags(state: dict) -> tuple[bool, bool]:
+    """🏮 (guardian_local, extract_local) — vilka bakgrundsroller som körs på
+    spelarens egen maskin (2026-10-01: per-roll-val ersätter den binära
+    local_pipeline-växlaren "Story only / Story + rules").
+
+    Rollerna läses ur samma meta-nycklar som husmodellerna
+    (meta.guardian_model / meta.extraction_model) — en local:*-modell där
+    betyder att rollens kedjehop körs klient-side. Meningsbart ENDAST när
+    kampanjens DM är en local:-modell (reläkedjan finns annars inte; hus-DM
+    med local:-guardian faller säkert tillbaka på hus-Guardian via
+    _guardian_model_for:s registry-validering).
+
+    Legacy-skim: meta.local_pipeline=='full' (v2-växlaren, borttagen ur UI
+    2026-10-01) carvar fortfarande båda rollerna — de kampanjerna körde
+    hoppen på DM-modellen och fortsätter göra det (roll-modellen är ett
+    hus-id → _chain_issue_* använder DM:ens local:-modell, se
+    _local_role_model)."""
+    meta = state.get("meta", {}) or {}
+    dm_local = str(meta.get("dm_model", "") or "").startswith(local_relay.LOCAL_PREFIX)
+    if not dm_local:
+        return False, False
+    g = str(meta.get("guardian_model", "") or "").startswith(local_relay.LOCAL_PREFIX)
+    e = str(meta.get("extraction_model", "") or "").startswith(local_relay.LOCAL_PREFIX)
+    if not g and not e and meta.get("local_pipeline") == "full":
+        g = e = True  # legacy v2-kampanj — hela kedjan på DM-modellen
+    return g, e
+
+
+def _local_role_model(state: dict, meta_key: str, fallback: str) -> str:
+    """local:-modellen för en roll (meta.guardian_model/meta.extraction_model)
+    — fallback = DM:ens local:-modell (legacy full-läge körde alla hoppar på
+    DM-modellen; ett hus-id i rollnyckeln betyder då 'samma som DM')."""
+    m = str((state.get("meta", {}) or {}).get(meta_key, "") or "")
+    return m if m.startswith(local_relay.LOCAL_PREFIX) else fallback
+
+
+def _local_cap_mode(username: str) -> str:
+    """Dygns-cap-läge för _local_gate: 'full' (300/dag) när BÅDA bakgrunds-
+    rollerna (Lorekeeper + Background) är local: — huset betalar inga
+    huvud-anrop per drag. Annars 'dm' (100/dag). Okänd/ingen kampanj ⇒ 'dm'."""
     st = store.get(username)
+    if not st:
+        return "dm"
     try:
-        if st and st.get("meta", {}).get("local_pipeline") == "full":
-            return "full"
+        g, e = _local_role_flags(st)
     except AttributeError:
-        pass
-    return "dm"
+        return "dm"
+    return "full" if (g and e) else "dm"
 
 
 def _local_gate(username: str, pipeline: str = "dm") -> None:
     """503 om funktionen är avstängd, 429 om dagliga capet är nått.
     🏮 v2: capet är pipeline-beroende (LOCAL_DM_DAILY_CAP vs _FULL) — hela
-    kedjan lokalt kostar huset inga prompts ⇒ högre tak."""
+    kedjan lokalt kostar huset inga prompts ⇒ högre tak. Per-roll-läget
+    (2026-10-01) härleder 'full' när BÅDE Lorekeeper och Background är
+    lokala; annars 'dm' (huset betalar minst en roll per drag)."""
     if not local_relay.enabled():
         raise HTTPException(503, "Local AI är inte påslaget på servern just nu")
     if not local_relay.under_daily_cap(username, pipeline):
@@ -7640,10 +7690,16 @@ def _chain_issue_step(
     *, username: str, campaign_id: str, base: dict, chain: str,
     messages: list[dict], temperature: float, num_predict: int,
     json_format: bool = False, turn_count_at: int | None = None,
-    carry: dict | None = None,
+    carry: dict | None = None, ollama_model: str | None = None,
 ) -> dict:
     """Stasha nästa kedjehop och returnera stegets JSON-payload (samma form
-    som v1 prepare + `chain`)."""
+    som v1 prepare + `chain`).
+
+    `ollama_model` (2026-10-01, per-roll-lokala modeller): rollens egen
+    local:-modell (Lorekeeper/Background kan vara en ANNAN ollama-modell än
+    DM:ens). Stegets `model_id` förblir DM-modellen (ledger + done-JSON:s
+    model_id bokför DM:ens röst); endast ollama-payloadens model fält viker
+    av. None ⇒ DM-modellen (repair/search/rollcheck-legacy)."""
     sid = local_relay.new_step_id()
     now = time.time()
     ttl = local_relay.ttl_seconds()
@@ -7658,6 +7714,8 @@ def _chain_issue_step(
         "message": base["message"],
         "num_ctx": base.get("num_ctx"),
         "pipeline": "full",
+        "carve_guardian": bool(base.get("carve_guardian")),
+        "carve_extract": bool(base.get("carve_extract")),
         "chain": chain,
         "prepare_ts": base.get("prepare_ts", now),
         "created_ts": now,
@@ -7678,13 +7736,15 @@ def _chain_issue_step(
         # på CPU brände guardian-hoppet hela num_predict på tanke → tomt).
         options["format"] = "json"
         options["think"] = False
-    logger.info("🏮 CHAIN %s step=%s model=%s", chain, sid[:8], base["model_id"])
+    role_model = local_relay.ollama_model(ollama_model) if ollama_model \
+        else local_relay.ollama_model(base["model_id"])
+    logger.info("🏮 CHAIN %s step=%s model=%s", chain, sid[:8], role_model)
     return {
         "step_id": sid,
         "kind": "generate",
         "chain": chain,
         "ollama": {
-            "model": local_relay.ollama_model(base["model_id"]),
+            "model": role_model,
             "messages": messages,
             "options": options,
         },
@@ -7706,6 +7766,8 @@ def _chain_dm_step_shape(step: dict, ctx: dict, now: float | None = None) -> dic
         "message": step["message"],
         "num_ctx": step.get("num_ctx"),
         "pipeline": step.get("pipeline", "dm"),
+        "carve_guardian": bool(step.get("carve_guardian")),
+        "carve_extract": bool(step.get("carve_extract")),
         "chain": "dm",
         "ctx": ctx,
         "prepare_ts": step.get("prepare_ts", now),
@@ -7730,9 +7792,22 @@ def _chain_dm_step_shape(step: dict, ctx: dict, now: float | None = None) -> dic
     }
 
 
+def _step_carves(step: dict) -> tuple[bool, bool]:
+    """(carve_guardian, carve_extract) ur ett stashat steg. Steg skapade
+    FÖRE per-roll-vågen (deploy-övergång, TTL ≤ 600 s) bär endast
+    pipeline:'full' — de behandlas som båda-rollerna-lokala (dåtidens
+   Whole Cauldron-läge)."""
+    if "carve_guardian" in step or "carve_extract" in step:
+        return bool(step.get("carve_guardian")), bool(step.get("carve_extract"))
+    full = step.get("pipeline") == "full"
+    return full, full
+
+
 async def _chain_issue_guardian_step(step: dict, state: dict) -> dict:
     """Guardian post-DM-hop: SAMMA meddelanden som _guardian_post_dm bygger för
-    sitt huvud-anrop (delad builder — husvägen oförändrad)."""
+    sitt huvud-anrop (delad builder — husvägen oförändrad).
+    🏮 Per-roll (2026-10-01): hoppen körs på Lorekeeperns EGEN local:-modell
+    (meta.guardian_model) — fallback DM-modellen (legacy full-läge)."""
     meta = state.setdefault("meta", {})
     reply = step["done"]["reply"]
     messages = build_extract_mechanics_messages(
@@ -7752,6 +7827,7 @@ async def _chain_issue_guardian_step(step: dict, state: dict) -> dict:
         username=step["username"], campaign_id=step["campaign_id"], base=step,
         chain="guardian", messages=messages, temperature=0.1, num_predict=4096,
         json_format=True, turn_count_at=meta.get("turn_count", 0), carry=carry,
+        ollama_model=_local_role_model(state, "guardian_model", step["model_id"]),
     )
 
 
@@ -7783,6 +7859,8 @@ async def _chain_issue_extract_step(step: dict, state: dict) -> dict | None:
         # övre gräns — Ollama stoppar ändå vid EOS).
         temperature=0.2, num_predict=2048, json_format=True,
         turn_count_at=turn_count, carry=carry,
+        # 🏮 per-roll: Backgrounds EGEN local:-modell (meta.extraction_model)
+        ollama_model=_local_role_model(state, "extraction_model", step["model_id"]),
     )
 
 
@@ -7872,8 +7950,15 @@ def _apply_extracted_facts(username: str, campaign_id: str, facts, inv_changes) 
 
 async def _chain_next_step(step: dict, state: dict) -> dict | None:
     """Nästa hop i kön EFTER den slutförda (repair → guardian → extract →
-    search). None ⇒ kedjan klar (anroparen returnerar done-JSON)."""
+    search). None ⇒ kedjan klar (anroparen returnerar done-JSON).
+
+    🏮 Per-roll (2026-10-01): steget bär carve_guardian/carve_extract —
+    roller på HUSet hoppas som klient-hop (huset kör dem i bakgrunden,
+    registrerade på dm-commiten via _chat_phase_b). repair/search är alltid
+    DM-modellens hoppar när KEDJAN är aktiv."""
     chain = step.get("chain", "dm")
+    carve_g = bool(step.get("carve_guardian"))
+    carve_e = bool(step.get("carve_extract"))
     if chain == "dm":
         ctx = step.get("ctx") or {}
         if ctx.get("_repair_pending"):
@@ -7895,15 +7980,28 @@ async def _chain_next_step(step: dict, state: dict) -> dict | None:
                 num_predict=ctx["_dm_max_tokens"],
                 turn_count_at=state.get("meta", {}).get("turn_count", 0), carry=carry,
             )
-        return await _chain_issue_guardian_step(step, state)
+        if carve_g:
+            return await _chain_issue_guardian_step(step, state)
+        if carve_e:
+            nxt = await _chain_issue_extract_step(step, state)
+            if nxt is not None:
+                return nxt
+        # search-hoppen (DM-fortsättning) om [SÖK:] köats — annars None
+        return await _chain_issue_search_step(step, state)
     if chain == "repair":
-        return await _chain_issue_guardian_step(step, state)
+        if carve_g:
+            return await _chain_issue_guardian_step(step, state)
+        if carve_e:
+            nxt = await _chain_issue_extract_step(step, state)
+            if nxt is not None:
+                return nxt
+        return await _chain_issue_search_step(step, state)
     if chain == "guardian":
-        nxt = await _chain_issue_extract_step(step, state)
-        if nxt is not None:
-            return nxt
-        nxt = await _chain_issue_search_step(step, state)
-        return nxt
+        if carve_e:
+            nxt = await _chain_issue_extract_step(step, state)
+            if nxt is not None:
+                return nxt
+        return await _chain_issue_search_step(step, state)
     if chain == "extract":
         return await _chain_issue_search_step(step, state)
     return None  # search (eller okänd) ⇒ klart
@@ -8028,13 +8126,17 @@ async def chat_local_prepare(req: LocalPrepareRequest, morkrets_token: str | Non
     Konsumerar INTE någon turn (husets /api-chat reserverar 1 turn mellan Fas A
     och B; reläets commit bokför istället en local_dm-ledgerrad med 0 turns).
 
-    🏮 v2: i full-pipeline (meta.local_pipeline=='full' + local:-modell)
-    returneras först en 'rollcheck'-hop (Guardian kast-koll körs klient-side) —
-    för vaknande/[Resultat:]-meddelanden, där huset skutar kast-kollen, kommer
-    dm-hoppet direkt från prepare."""
+    🏮 Per-roll (2026-10-01, ersätter full-pipeline-växlaren): vilka hopp som
+    körs lokalt bestäms av kampanjens roll-modeller (meta.guardian_model /
+    meta.extraction_model = local:*). Är Lorekeepern lokal körs kast-kollen
+    ('rollcheck'-hop) på spelarens maskin; är ingen roll lokal är svaret ett
+    enda dm-steg (byte-identiskt v1-kontrakt, ingen chain-nyckel). Legacy
+    meta.local_pipeline=='full' carvar båda rollerna (skim i
+    _local_role_flags). För vaknande/[Resultat:]-meddelanden, där huset
+    skjuter kast-kollen, kommer dm-hoppet direkt från prepare."""
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
-    _local_gate(username, _campaign_pipeline(username))
+    _local_gate(username, _local_cap_mode(username))
 
     if payload.get("role") != "admin":
         req.model_id = _clamp_player_model(req.model_id, tier=_tier_for(username))
@@ -8049,13 +8151,15 @@ async def chat_local_prepare(req: LocalPrepareRequest, morkrets_token: str | Non
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj — skapa en först")
     campaign_id = state["meta"].get("campaign_id", "")
-    full_mode = state["meta"].get("local_pipeline") == "full"
 
     lock = _state_lock(username, campaign_id)
     async with lock:
         fresh_state = store.get(username, campaign_id)
         if fresh_state:
             state = fresh_state
+        # 🏮 per-roll: vilka bakgrundsroller är local:* i kampanj-metat?
+        carve_guardian, carve_extract = _local_role_flags(state)
+        chain_active = carve_guardian or carve_extract
         # Undo-snapshot precis som hus-chatten: steget beskiver läget FÖRE turen.
         _snap_taken = False
         try:
@@ -8064,8 +8168,9 @@ async def chat_local_prepare(req: LocalPrepareRequest, morkrets_token: str | Non
         except Exception as e:
             logger.warning("Undo snapshot failed (local prepare): %s", e)
         try:
-            if not full_mode:
-                # ── v1 dm-läge: oförändrat ──
+            if not carve_guardian:
+                # Hus-Lorekeeper (eller ingen roll lokal): huset skjuter
+                # kast-kollen — v1-flödet A→(roll check)→A2, prompten klar.
                 ctx, early = await _chat_phase_a(req, payload, username, campaign_id, state)
                 if early is not None:
                     if _snap_taken:
@@ -8077,7 +8182,7 @@ async def chat_local_prepare(req: LocalPrepareRequest, morkrets_token: str | Non
                 chain_payload = ctx  # stash-ctx under 'dm'-nyckeln nedan
                 chain = "dm"
             else:
-                # ── v2 full-läge: A1 nu, kast-koll + A2 efter rollcheck-hopen ──
+                # 🏮 lokal Lorekeeper: A1 nu, kast-koll + A2 efter rollcheck-hopen
                 pre, early = await _chat_phase_a1(req, payload, username, campaign_id, state)
                 if early is not None:
                     if _snap_taken:
@@ -8088,7 +8193,7 @@ async def chat_local_prepare(req: LocalPrepareRequest, morkrets_token: str | Non
                     return early
                 assert pre is not None
                 if pre["is_awakening"] or req.message.startswith("[Resultat:"):
-                    # huset skutar kast-kollen här → dm-hopp direkt (kontrakt 3a)
+                    # huset skjuter kast-kollen här → dm-hopp direkt (kontrakt 3a)
                     guardian_roll, roll_usage = await _house_guardian_roll_check(
                         req, username, state, pre)
                     ctx = await _chat_phase_a2(
@@ -8112,7 +8217,7 @@ async def chat_local_prepare(req: LocalPrepareRequest, morkrets_token: str | Non
 
     now = time.time()
     ttl = local_relay.ttl_seconds()
-    if chain == "dm" and not full_mode:
+    if not chain_active:
         # ── v1-formen (byte-identiskt kontrakt): ett enda steg, ingen chain ──
         step_id = local_relay.new_step_id()
         local_relay.stash_step(step_id, {
@@ -8153,11 +8258,14 @@ async def chat_local_prepare(req: LocalPrepareRequest, morkrets_token: str | Non
         "message": req.message,
         "num_ctx": req.num_ctx,
         "pipeline": "full",
+        "carve_guardian": carve_guardian,
+        "carve_extract": carve_extract,
         "prepare_ts": now,
     }
     if chain == "rollcheck":
-        # Guardian kast-koll som klient-hop — samma builder som husets
-        # guardian_check_roll (temp 0.1, json, num_predict 1024 = husets max_tokens)
+        # Lorekeeperns kast-koll som klient-hop — samma builder som husets
+        # guardian_check_roll (temp 0.1, json, num_predict 1024 = husets max_tokens).
+        # 🏮 Körs på Lorekeeperns EGEN local:-modell (per-roll).
         messages = build_roll_check_messages(
             req.message, state, language=_get_lang(state),
             dm_context=chain_payload.get("dm_context", "")) or []
@@ -8167,12 +8275,13 @@ async def chat_local_prepare(req: LocalPrepareRequest, morkrets_token: str | Non
             username=username, campaign_id=campaign_id, base=base,
             chain="rollcheck", messages=messages, temperature=0.1, num_predict=1024,
             json_format=True, carry={"pre": chain_payload},
+            ollama_model=_local_role_model(state, "guardian_model", req.model_id),
         )
 
-    # full mode, dm-hopp direkt (vaknande / [Resultat:] — huset skutar
-    # kast-kollen på dessa meddelanden, kontrakt 3a)
-    logger.info("🏮 LOCAL prepare model=%s turn=%s chain=dm(full)",
-                req.model_id, state["meta"].get("turn_count", 0))
+    # kedja aktiv, dm-hopp direkt (vaknande / [Resultat:] / hus-Lorekeeper)
+    logger.info("🏮 LOCAL prepare model=%s turn=%s chain=dm(carve g=%s e=%s)",
+                req.model_id, state["meta"].get("turn_count", 0),
+                carve_guardian, carve_extract)
     return _chain_dm_step_shape(base, chain_payload, now=now)
 
 
@@ -8185,15 +8294,19 @@ async def chat_local_commit(req: LocalCommitRequest, morkrets_token: str | None 
     guardian → extract → search? — varje commit antingen returnerar nästa
     generate-steg eller den slutliga done-JSON:en. dm-hoppets commit sparar
     turen direkt: abbryts kedjan efteråt står draget (DM-text + taggar);
-    utebliven anrikning = samma som en misslyckad bakgrundsuppgift."""
+    utebliven anrikning = samma som en misslyckad bakgrundsuppgift.
+    Per-roll (2026-10-01): steget bär carve_guardian/carve_extract — roller
+    på huset körs som hus-bakgrund (registrerade i Fas B), lokala roller som
+    klient-hopp. Legacy-steg (pipeline:'full' utan carve-nycklar) = båda."""
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
 
     with local_relay._steps_lock:
         peek = local_relay._steps.get(req.step_id)
         peek_user = peek.get("username") if peek else None
-        peek_pipeline = (peek or {}).get("pipeline", "dm")
-    _local_gate(username, peek_pipeline)
+        peek_carves = _step_carves(peek) if peek else (False, False)
+    # Cap-läge ur stegets rollsammansättning (båda lokala ⇒ 'full'/300 per dag)
+    _local_gate(username, "full" if all(peek_carves) else "dm")
 
     if not req.content or not req.content.strip():
         raise HTTPException(400, "Tomt innehåll från klienten")
@@ -8212,7 +8325,8 @@ async def chat_local_commit(req: LocalCommitRequest, morkrets_token: str | None 
     campaign_id = step["campaign_id"]
 
     chain = step.get("chain", "dm")
-    full = step.get("pipeline") == "full"
+    carve_guardian, carve_extract = _step_carves(step)
+    chain_active = carve_guardian or carve_extract
 
     lock = _state_lock(username, campaign_id)
     async with lock:
@@ -8241,7 +8355,7 @@ async def chat_local_commit(req: LocalCommitRequest, morkrets_token: str | None 
                         guardian_roll["notation"] if guardian_roll else "none")
             return _chain_dm_step_shape(step, ctx)
 
-        # ── dm-hop: Fas B (relä; full_chain i v2) + boka + spara + köa resten ──
+        # ── dm-hop: Fas B (relä; per-roll carve-flaggor) + boka + spara + köa resten ──
         if chain == "dm":
             try_tokens = int(req.tokens or 0)
             usage = {"total_tokens": try_tokens} if try_tokens > 0 else {}
@@ -8254,7 +8368,9 @@ async def chat_local_commit(req: LocalCommitRequest, morkrets_token: str | None 
                     usage=usage,
                     llm_time=round(time.time() - step.get("prepare_ts", step["created_ts"]), 1),
                     relay=True,
-                    full_chain=full,
+                    chain_active=chain_active,
+                    carve_guardian=carve_guardian,
+                    carve_extract=carve_extract,
                 )
             except Exception:
                 try:
@@ -8262,7 +8378,7 @@ async def chat_local_commit(req: LocalCommitRequest, morkrets_token: str | None 
                 except Exception:
                     pass
                 raise
-            if not full:
+            if not chain_active:
                 # v1 dm-läge — ett steg, klart (oförändrat kontrakt)
                 return result
             step["done"] = result
@@ -8272,6 +8388,9 @@ async def chat_local_commit(req: LocalCommitRequest, morkrets_token: str | None 
             state = store.get(username, campaign_id) or state
             nxt = await _chain_next_step(step, state)
             if nxt is None:
+                # Hus-Lorekeeper (carve_guardian=False) ⇒ guardian_pending True
+                # (klienten pollar transkriptet som i v1); lokal Lorekeeper som
+                # inte hann köra ⇒ samma. Kedjan klar utan guardian-applicering.
                 return _chain_done(step, state, guardian_applied=False)
             return nxt
 
@@ -9647,42 +9766,13 @@ async def update_guardian_model(req: dict, morkrets_token: str | None = Cookie(N
     return {"ok": True, "guardian_model": model_id or GUARDIAN_MODEL}
 
 
-@app.patch("/api/campaign/local-pipeline")
-async def update_local_pipeline(req: dict, morkrets_token: str | None = Cookie(None)):
-    """🏮 v2: Välj relä-pipeline för aktiv kampanj ("dm" | "full").
-
-    Samma disciplin som PATCH /api/campaign/guardian-model: auth-cookie,
-    per-kampanj-lås, inte admin-begränsad. "full" = Whole Cauldron local —
-    kast-koll, DM, repair, guardian, extraktion och minnessök körs på
-    spelarens hårdvara (resten av bakgrundsjobben stays house-side, billigt
-    men huset betalar inget för de utbrutna huvudanropen).
-    "full" tillåts ENDAST om kampanjens nuvarande dm_model är en local:-modell
-    (annars finns ingen klient att köra kedjan på). Tom meta = "dm" (v1)."""
-    payload = _get_current_user(morkrets_token)
-    username = payload["sub"]
-    state = store.get(username)
-    if not state:
-        raise HTTPException(404, "Ingen aktiv kampanj")
-    campaign_id = state.get("meta", {}).get("campaign_id", "")
-
-    pipeline = str(req.get("pipeline", "")).strip().lower()
-    if pipeline not in ("dm", "full"):
-        raise HTTPException(400, f"Ogiltig pipeline: {pipeline!r} (använd 'dm' eller 'full')")
-
-    async with _state_lock(username, campaign_id):
-        state = store.get(username, campaign_id) or state
-        if pipeline == "full":
-            dm_model = str(state.get("meta", {}).get("dm_model", "") or "")
-            if not dm_model.startswith("local:"):
-                raise HTTPException(
-                    400,
-                    "Hela pipelinen lokalt kräver en lokal DM-modell — välj en "
-                    "🏮-modell för DM:n först.",
-                )
-        state.setdefault("meta", {})["local_pipeline"] = pipeline
-        store.save(state)
-    logger.info("🏮 Local pipeline → %s", pipeline)
-    return {"ok": True, "pipeline": pipeline}
+# PATCH /api/campaign/local-pipeline BORTTAGEN 2026-10-01 (rostad): den binära
+# "Story only / Story + rules"-växlaren ersattes av PER-ROLL-lokala modeller —
+# spelaren väljer en 🏮 local:*-modell direkt i Lorekeeper-/Background-väljaren
+# (PATCH /api/campaign/guardian-model respektive /api/campaign/extraction-model
+# accepterar redan local:*-id:n via _clamp_player_model/_validate_model_id).
+# Kedjeläget härleds per drag ur meta (_local_role_flags). Legacy-kampanjer med
+# meta.local_pipeline=='full' carvar fortfarande båda rollerna (skim).
 
 
 @app.patch("/api/campaign/extraction-model")

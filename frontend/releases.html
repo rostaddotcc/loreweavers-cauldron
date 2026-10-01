@@ -282,6 +282,18 @@
         <li><span class="tag feat">Honest note</span> <b>Nobody who has paid loses anything</b> — donors, 10€ buyers, legacy Support/Patron accounts and lifetime tables all pass, whatever the calendar says about old benefit windows. And a donation still pays exactly as before: <b>1€ = 100 turns</b>, spent only after the day's free turns.</li>
       </ul>
     </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ai">MIND</span>
+        <span class="tablet-title">🏮 Your own models, role by role · 2026-10-01</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">New</span> <b>Local models for the Lorekeeper and the Background too</b> — the 🏮 group now sits in three dropdowns: <b>Dungeon Master</b>, <b>Lorekeeper</b> (rules, dice checks, HP/XP/items bookkeeping) and <b>Background</b> (facts, journal, memory) — both in the in-game ⚙ settings and in the new-adventure setup, once you've opted in with <b>Use own Ollama</b>. Pick your own Ollama model per role; roles you leave on house models keep running on the house exactly as before.</li>
+        <li><span class="tag fix">Removed</span> <b>The old "Runs locally: Story only / Story + rules" switch is gone</b> — there is no mode left to flip, just the three dropdowns. Campaigns that were set to "Story + rules" keep behaving the same: both roles stay carved out and run on the DM's local model.</li>
+        <li><span class="tag ai">Honest note</span> <b>The daily allowance follows how many roles you run at home</b> — roughly <b>100 local messages a day</b> while any background role still rides the house models; roughly <b>300</b> when both the Lorekeeper and the Background are local, because the house then spends almost nothing per turn. The house keeps the periodic summaries and the logbook either way, and TTS and images still cost house turns as before.</li>
+        <li><span class="tag ux">Good to know</span> <b>Local background roles need a local DM</b> — the relay only exists on the local-DM path, so the 🏮 picks for Lorekeeper and Background take effect once the DM is local too. And bookkeeping asks instruction-following: a 14B+ thinking model handles the JSON-like steps happily, a tiny 3B one fumbles them.</li>
+      </ul>
+    </div>
   </div>
 
   <!-- ═══════════════ 1.5 headline ═══════════════ -->
@@ -1062,7 +1074,7 @@
     body.classList.toggle('open', open);
   };
 </script>
-<script src="i18n.js?v=20260930b"></script>
+<script src="i18n.js?v=20261001a"></script>
 <script src="sprites.js?v=20260806b"></script>
 <script src="rail.js?v=20260924a"></script>
 </body>

@@ -519,6 +519,113 @@ html{font-size:var(--fs-base)}
 @media (max-width: 480px){
   #adv-back-btn{ display:none !important; }
 }
+/* ═══════════ MJUK UP 2026-10-01 (rostad) — "ett mjukare intryck och snyggare
+   knappar för allt". Mjuka radier + varmare lådor återvänder på ONBOARDING-sidan
+   endast — platt canon i snes.css (chatt/terminal) förblir orörd. Blocket ligger
+   sist i override-stycket → !important här slår snes.css §0 (*{border-radius:0}),
+   §4 (platta paneler), §5/§5b (platta knappar), §7 (input) och §16 (path/arch)
+   via senare position + lika/högre specificitet. Färgidentitet (ink/stone/bone/
+   gold), layout, markup och ID:n oförändrade — ren CSS. Porträtt/ikoncirklar
+   (.pv-portrait/.cp-icon/.cc-icon/.sr-stop i) rörda ej (soft-full/50% gäller).
+   Reduced-motion: snes.css globala gard dödar alla transitioner nedan automatiskt. */
+
+/* ── M1. Stora paneler — 14px radie, varmare gradient, guldtonad kant,
+   lagerdimmad skugga (slår §4s box-shadow:none på panel-box/continue-panel) ── */
+.step,.panel-box,.continue-panel,.mi-modal{
+  border-radius:14px!important;
+  background:linear-gradient(168deg,color-mix(in srgb,var(--stone-2) 90%,var(--ember)) 0%,var(--stone) 55%,var(--ink))!important;
+  border:1px solid color-mix(in srgb,var(--edge) 74%,var(--gold))!important;
+  box-shadow:0 18px 44px -22px rgba(8,5,3,.95),0 0 0 1px rgba(var(--gold-rgb),.06),inset 0 1px 0 rgba(var(--gold-bright-rgb),.06)!important;
+}
+/* §4s fyrkantiga inset-dubbelram följer med rundningen inuti (annars skär
+   hörnlinjen mot den rundade kanten) */
+.panel-box::before,.continue-panel::before{inset:4px;border-radius:10px!important;opacity:.35}
+
+/* ── M2. Kort — 12px radie, samma varmare bladkant (slår §4/§16 på path/arch) ── */
+.campaign-card,.lang-card,.arch,.path,.htp-card,.dark-drop{
+  border-radius:12px!important;
+  background:linear-gradient(168deg,color-mix(in srgb,var(--stone-2) 92%,var(--ember)),var(--stone) 58%,var(--ink))!important;
+  border:1px solid color-mix(in srgb,var(--edge) 74%,var(--gold))!important;
+  box-shadow:0 14px 34px -18px rgba(8,5,3,.9),0 0 0 1px rgba(var(--gold-rgb),.05),inset 0 1px 0 rgba(var(--gold-bright-rgb),.05)!important;
+}
+/* Accent-ytor: behåll egen identitet (news-banner guld-wash + 3px vänsterkant,
+   adv-details halvtransparenta sten) — bara radie + dimmig skugga */
+.dark-drop{border-left:3px solid var(--blood)!important}
+.news-banner{border-radius:12px!important;box-shadow:0 14px 34px -18px rgba(8,5,3,.9),0 0 0 1px rgba(var(--gold-rgb),.06)!important}
+.adv-details,.fw-wrap{border-radius:12px!important}
+.adv-details{border-color:color-mix(in srgb,var(--edge) 74%,var(--gold))!important;box-shadow:0 10px 26px -16px rgba(8,5,3,.8)!important}
+.weaving-ad .wa-reasoning{border-radius:12px!important}
+/* §16 dödar hover-lyft på path/arch — mjukt lyft tillbaka, transition med */
+.arch,.path{transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s,border-color .3s!important}
+.arch:hover,.path:hover{
+  transform:rotate(0) translateY(-5px)!important;
+  border-color:var(--gold)!important;
+  box-shadow:0 20px 42px -18px rgba(8,5,3,.92),0 0 26px -8px rgba(var(--gold-rgb),.35)!important;
+}
+/* Vald-staterna tappar inte sin guldring när M2-skuggan vinner */
+.arch.selected,.lang-card.selected{
+  border-color:var(--gold)!important;
+  box-shadow:0 0 0 1px var(--gold),0 16px 34px -12px rgba(var(--gold-bright-rgb),.45)!important;
+}
+
+/* ── M3. Knappar — 10px radie, 1px kant med ljusare överkant, mjuk elevation,
+   smidiga transitioner. STENGRÅ CTA-familj behålls (rostad 2026-08-11: matcha
+   top-btn, EJ guld) — bara mjukare. §5/§5b platt-regler slås av ordning+!important. ── */
+.go-btn,.gen-btn,.pv-go,.start-btn,.cc-go,.top-btn,.tab-btn,.blank-btn,.pv-reroll,.danger-btn,.stepper-toggle,.av-btn{
+  border-radius:10px!important;
+  border:1px solid var(--edge)!important;
+  border-top-color:color-mix(in srgb,var(--edge-hi) 62%,var(--bone-dim))!important;
+  border-bottom-color:color-mix(in srgb,var(--edge) 70%,#000)!important;
+  box-shadow:0 3px 8px -3px rgba(6,4,2,.75),0 1px 0 rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.09)!important;
+  transition:color .22s ease,border-color .22s ease,box-shadow .22s ease,transform .22s ease,background-color .22s ease!important;
+}
+/* Sekundära/ghost-knappar (New Adventure, Back, Blank Parchment, cc-go/cc-del):
+   snes.css §5b ger dem transparent bakgrund → skuggan svart-på-svart läste platt
+   (vision-QA 2026-10-01). Mjuk stenfyllning + tydligare underkant lyfter dem
+   till samma nivå som de ifyllda CTA:erna utan att göra dem guld. */
+.go-btn.btn-ghost,.top-btn.btn-ghost,.blank-btn,.pv-reroll,.campaign-card .cc-go,.campaign-card .cc-del{
+  background:linear-gradient(180deg,color-mix(in srgb,var(--stone-3) 88%,#fff 2%),var(--stone-2))!important;
+}
+/* Fara behåller blodkanten (M3-gruppens border-shorthand annars plattar den) */
+.danger-btn{border-color:rgba(var(--blood-bright-rgb),.55)!important;border-top-color:rgba(var(--blood-bright-rgb),.8)!important}
+/* .av-btn.primary behåller sin guldkant i paint-modalen */
+.av-btn.primary{border-color:var(--gold)!important;border-top-color:var(--gold-bright)!important;color:var(--gold-bright)!important}
+/* Hover: guldtonad kant + glöd + 1px lyft — stenbakgrunden kvar */
+.go-btn:hover,.gen-btn:hover:not(:disabled),.pv-go:hover:not(:disabled),.start-btn:hover:not(:disabled),.cc-go:hover,.top-btn:hover,.tab-btn:hover:not(.active),.blank-btn:hover:not(.active),.pv-reroll:hover:not(:disabled),.stepper-toggle:hover,.av-btn:hover:not(:disabled){
+  background:var(--stone-3)!important;
+  color:var(--gold-bright)!important;
+  border-color:var(--gold)!important;
+  transform:translateY(-1px)!important;
+  box-shadow:0 0 16px -4px rgba(var(--gold-rgb),.45),0 4px 14px -6px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.06)!important;
+  filter:none!important;
+}
+/* Aktiv: 1px press (§5s guld-flash på button:active består — taktil feedback) */
+.go-btn:active,.gen-btn:active,.pv-go:active,.start-btn:active,.cc-go:active,.top-btn:active,.tab-btn:active,.blank-btn:active,.pv-reroll:active,.stepper-toggle:active,.av-btn:active{
+  transform:translateY(1px)!important;
+  box-shadow:0 1px 5px -2px rgba(0,0,0,.6)!important;
+}
+/* .tab-btn.active behåller arcan-lila fyllning (regel ovan i blocket) — får
+   bara mjukradien från M3. Fokus: mjuk guldring UTANPÅ §5c-outline (a11y). */
+.go-btn:focus-visible,.gen-btn:focus-visible,.pv-go:focus-visible,.start-btn:focus-visible,.cc-go:focus-visible,.top-btn:focus-visible,.tab-btn:focus-visible,.blank-btn:focus-visible,.pv-reroll:focus-visible,.danger-btn:focus-visible,.stepper-toggle:focus-visible,.av-btn:focus-visible{
+  border-color:var(--gold)!important;
+  box-shadow:0 0 0 3px rgba(var(--gold-rgb),.25),0 2px 10px -4px rgba(0,0,0,.5)!important;
+}
+
+/* ── M4. Input/select/textarea — 8px radie (§0 plattar annars), mjuk fokus-glöd
+   där §7 slår ut den (world-prompt) ── */
+.name-input,.dm-model-select,.dark-select,.world-prompt,#fw-prompt,.wt-select,.legend-preview{border-radius:8px!important}
+.dropzone,.vault-empty{border-radius:10px!important}
+.world-prompt:focus{
+  border-color:var(--arcane)!important;
+  box-shadow:0 0 0 3px rgba(var(--arcane-rgb),.14),0 0 22px -6px rgba(var(--arcane-rgb),.5)!important;
+}
+
+/* ── M5. Små chip — 6-8px radie ── */
+.file-item,.ep-card,.ask-tip,.toast{border-radius:8px!important}
+.campaign-card .cc-del{border-radius:7px!important}
+.ex-bar,.ex-fill{border-radius:8px!important}
+.arch .tag,.path .tag{border-radius:6px!important}
+.mi-close{border-radius:8px!important}
 </style>
 <script src="sprites.js?v=20260806b"></script>
 <script src="fonts.js?v=20260806b"></script>
@@ -1173,8 +1280,8 @@ if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 </script>
 <script src="api.js?v=20260930a"></script>
 <script src="modal.js?v=20260906a"></script>
-<script src="i18n.js?v=20260930b"></script>
-<script src="local.js?v=20260930f"></script>
+<script src="i18n.js?v=20261001a"></script>
+<script src="local.js?v=20261001a"></script>
 <script src="archetypes.js?v=20261001a"></script>
 <script>
 // ═══════════════════════════════════════
@@ -2334,20 +2441,23 @@ const TTS_PROVIDERS = [
     // fortfarande finns bland de valbara alternativen.
     let savedDm = null;
     try { savedDm = localStorage.getItem('dnd_onb_dm_model'); } catch (e) {}
-    const prevDm = dmSel ? String(dmSel.value || '') : '';
-    const hadLocal = !!(dmSel && dmSel.querySelector('.local-og'));
     const allowedIds = [...models, ...effFree.map(m => m.id)];
+    // 🏮 v3 (2026-10-01, rostad): lokala modeller listas i ALLA tre
+    // roll-väljare (DM, Lorekeeper, Extraction) — inte bara DM. innerHTML-
+    // writebacken ovan skulle sopa bort en injicerad 🏮-optgroup: fånga
+    // föregående värde/grupp per select och återinjicera efteråt
+    // (renderLocalGroup är opt-in-gated — inget syns för spelare som inte
+    // valt "Use own Ollama" eller redan bär ett local:*-val).
     [dmSel, guardSel, extSel].forEach(sel => {
       if (!sel) return;
+      const prev = String(sel.value || '');
+      const hadLocal = !!sel.querySelector('.local-og');
       sel.innerHTML = opts;
       sel.value = defaultModel(models, locked);
+      if ((hadLocal || prev.indexOf('local:') === 0) && typeof LocalAI !== 'undefined') {
+        try { LocalAI.renderLocalGroup(sel, prev); } catch (e) { /* local.js absent */ }
+      }
     });
-    // 🏮 Local AI: innerHTML-writeback above would wipe the injected local
-    // optgroup — re-append it (only if it existed / a local choice was made;
-    // wireLocalGate does the first render when step-model is revealed).
-    if (dmSel && (hadLocal || prevDm.indexOf('local:') === 0) && typeof LocalAI !== 'undefined') {
-      try { LocalAI.renderLocalGroup(dmSel, prevDm); } catch (e) { /* local.js absent */ }
-    }
     if (dmSel && savedDm && (allowedIds.includes(savedDm) || savedDm.indexOf('local:') === 0)) {
       // Sätt sparad DM även om alternativet ligger i en låst optgroup-gren? Nej —
       // bara om det faktiskt gick att sätta (disabled-alternativ kan fortfarande
@@ -2433,13 +2543,21 @@ const TTS_PROVIDERS = [
 })();
 
 // ── 🏮 Local AI (Ollama) i modellgaten — renderas ONCE när steg 4 syns. ──
-// Ingen pipeline-väljare här (v2 konfigureras i chatten — kampanjen finns
-// inte än). Detekten är icke-blockerande (5-min cache i local.js).
+// v3 (2026-10-01): 🏮-gruppen renderas i ALLA tre roll-väljare (DM,
+// Lorekeeper, Extraction) — spelaren väljer lokala modeller per roll direkt
+// i onboarding (startAdventure PATCH:ar dem till kampanj-metat). Ingen
+// pipeline-väljare (per-roll-carving härleds server-side ur meta).
+// Detekten är icke-blockerande (5-min cache i local.js).
 let _localGateWired = false;
 function maybeWireLocalGate(stepId) {
   if (stepId !== 'step-model' || _localGateWired || typeof LocalAI === 'undefined') return;
   _localGateWired = true;
   const dmSel = document.getElementById('adventure-dm-model');
+  const roleSels = [
+    dmSel,
+    document.getElementById('adventure-guardian-model'),
+    document.getElementById('adventure-extraction-model'),
+  ].filter(Boolean);
   if (!dmSel) return;
   const note = document.getElementById('model-gate-local-note');
   const ok = document.getElementById('model-gate-local-ok');
@@ -2462,7 +2580,9 @@ function maybeWireLocalGate(stepId) {
     return '';
   };
   const paint = (det) => {
-    try { LocalAI.renderLocalGroup(dmSel, dmSel.value); } catch (e) { /* local.js internally handles missing select */ }
+    roleSels.forEach(sel => {
+      try { LocalAI.renderLocalGroup(sel, sel.value); } catch (e) { /* local.js internally handles missing select */ }
+    });
     // Återställ sparat 🏮-val (innläst på page-load, då gruppen ännu saknades)
     // så snart alternativet faktiskt finns och är enabled.
     if (det.status === 'green') {

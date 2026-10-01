@@ -655,6 +655,13 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
 /* UNDO UX: arming-läge + on-track-state */
 .undo-inline button.armed{ border-color: var(--blood-bright) !important; color: var(--bone-bright) !important; }
 .undo-inline button[disabled]{ opacity: .55; cursor: wait; }
+/* UNDO LOCKED (2026-10-01): konto utan donation ser knappen kvar men dämpad.
+   Ändrar INTE höjd/bredd (ingen padding/font/box-size) — bara färg/border/opacitet,
+   så mobil-vikningen är oförändrad. Klick går till donationssidan. */
+.undo-inline.locked{ max-width: 100%; }
+.undo-inline.locked button{ opacity: .62; cursor: pointer; border-style: dashed; color: var(--bone-dim) !important; }
+.undo-inline.locked button:hover{ opacity: .82; color: var(--bone) !important; }
+.undo-inline .ui-locked-tag{ margin-left: .35rem; opacity: .85; }
 /* COMBAT TOGGLE: aktiv-state klass (sätts av setCombatSplit, rensas av clearCombatUi) */
 .battle-drawer-toggle.combat-active{ border-color: var(--gold) !important; color: var(--gold-bright) !important; box-shadow: 0 0 10px -4px rgba(var(--gold-bright-rgb),.6); }
 /* DM SIGIL: pixeltärning-runa för DM-bubblor utan eget porträtt (.pxs-stil) */
@@ -1480,7 +1487,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
         <div class="drop-sep"></div>
         <div class="drop-head">Account</div>
         <button class="drop-item" onclick="openUsageModal();closeSettingsMenu()"><span class="di-icon">📊</span><span class="di-body"><span class="di-name">Usage</span><span class="di-hint">model &amp; token stats</span></span></button>
-        <button class="drop-item" onclick="exportCampaign();closeSettingsMenu()"><span class="di-icon">📦</span><span class="di-body"><span class="di-name">Export campaign</span><span class="di-hint">download as .zip</span></span></button>
+        <button class="drop-item" id="export-campaign-item" onclick="exportCampaign();closeSettingsMenu()"><span class="di-icon">📦</span><span class="di-body"><span class="di-name">Export campaign</span><span class="di-hint">download as .zip</span></span></button>
         <div class="drop-sep"></div>
         <div class="drop-head">Leave</div>
         <button class="drop-item" style="color:var(--blood-bright)" onclick="location.href='adventure.html'"><span class="di-icon">🚪</span><span class="di-body"><span class="di-name">Leave the table</span><span class="di-hint">return to adventure select</span></span></button>
@@ -2372,6 +2379,7 @@ function capWarnClick(ev) {
 }
 function updateHeaderInfo() {
   renderTurnTally();
+  _refreshExportLockHint();
 }
 
 // api.js inbäddar JSON.stringify(detail) i e.message ("HTTP 403: {...}").
@@ -6349,7 +6357,7 @@ function helpCardHtml() {
   ${cmd('/lore [text]', 'Add a lore entry')}
   ${cmd('/chapter [title]', 'End the chapter (writes a summary)')}
   ${cmd('/save [text]', 'Save the campaign (checkpoint)')}
-  ${cmd('/undo', 'Undo your last message, the DM reply and everything it changed (costs 1 turn)')}
+  ${cmd('/undo', 'Undo your last message, the DM reply and everything it changed — needs a donation of any amount (1€ is enough); each undo costs 1 turn')}
   ${cmd('/roll [dice]', 'Roll dice yourself — e.g. <i>/roll 2d6+3</i>')}
   ${cmd('/help', 'Show this help')}
 
@@ -6401,6 +6409,26 @@ function helpCardHtml() {
 // En observer håller .undo-inline som sista barn i #chat, så den följer med både
 // när loadTranscript() bygger om loggen och när ett nytt svar läggs till.
 let _undoAvailable = false;
+// 2026-10-01: undo låses upp permanent av MINSTA donation (1€ räcker).
+// Konto utan donation ser knappen i LÅST läge i stället för att den försvinner;
+// klick går då till donationssidan och anropar ALDRIG API:et.
+function _undoUnlocked() {
+  return _supporterUnlocked();
+}
+// Samma vägg bär exporten (2026-10-01): admin kommer alltid in, annars krävs
+// features.supporter (= kontot har någonsin betalat — donation 1€+ räcker).
+function _supporterUnlocked() {
+  return isAdmin || !!(_meData && _meData.features && _meData.features.supporter);
+}
+// Speglar låst-läget i ☰-menyns Export-post (hinten, inte etiketten — posten
+// ska se ut som den alltid gjort, bara säga vad som gäller).
+function _refreshExportLockHint() {
+  const item = document.getElementById('export-campaign-item');
+  if (!item) return;
+  const hint = item.querySelector('.di-hint');
+  if (!hint) return;
+  hint.textContent = _supporterUnlocked() ? 'download as .zip' : 'unlocked by any donation';
+}
 function _renderUndoAffordance() {
   const chat = document.getElementById('chat');
   if (!chat) return;
@@ -6409,9 +6437,28 @@ function _renderUndoAffordance() {
   if (!el) {
     el = document.createElement('div');
     el.className = 'undo-inline';
-    el.innerHTML = '<button type="button" onclick="doUndo()" title="Undo last turn (costs 1 turn)">'
-      + '↶ Undo last turn <span class="ui-cost">· costs 1 turn</span></button>';
     chat.appendChild(el);
+  }
+  const unlocked = _undoUnlocked();
+  const want = unlocked ? 'unlocked' : 'locked';
+  if (el.dataset.undoState !== want) {
+    el.dataset.undoState = want;
+    if (unlocked) {
+      // Upplåst: exakt som förut (anropar API, kostar 1 turn).
+      el.classList.remove('locked');
+      el.removeAttribute('data-locked');
+      el.innerHTML = '<button type="button" onclick="doUndo()" title="Undo last turn (costs 1 turn)">'
+        + '↶ Undo last turn <span class="ui-cost">· costs 1 turn</span></button>';
+    } else {
+      // Låst: knappen finns kvar men dämpad. Klick → donationssidan, inte API:t.
+      el.classList.add('locked');
+      el.setAttribute('data-locked', 'undo');
+      el.innerHTML = '<button type="button" onclick="openUndoUnlock()"'
+        + ' title="Undo is locked. Any donation — 1€ is enough — unlocks it permanently, and each undo then costs 1 turn."'
+        + ' aria-label="Undo is locked. Any donation of 1€ or more unlocks it permanently; each undo then costs 1 turn.">'
+        + '↶ Undo last turn <span class="ui-cost">· unlocked by any donation</span>'
+        + '<span class="ui-locked-tag" aria-hidden="true">🔒</span></button>';
+    }
   }
   if (chat.lastElementChild !== el) chat.appendChild(el);
 }
@@ -6433,9 +6480,24 @@ function setUndoButton(on) {
   else attach();
 })();
 
+// Ärlig låst-rad (ENGELSKA, raka ord): vad som låser upp, att inget är förlorat
+// och att ingen turn drogs. Används både av /undo och av en 403 feature_locked.
+function _showUndoLockedNotice() {
+  addMessage('system', null,
+    '↶ <b>Undo is locked.</b> Undo unlocks permanently with any donation — 1€ is enough — ' +
+    'and each undo then costs 1 turn. Nothing was undone, so nothing is lost, and no turn was spent. ' +
+    '<a href="pricing.html?plan=donation">Unlock with a donation →</a>');
+}
+function openUndoUnlock() {
+  // Låst inline-knapp: skicka spelaren till donationssidan. Anropar ALDRIG API:t.
+  location.href = 'pricing.html?plan=donation';
+}
+
 let _undoInFlight = false;
 async function doUndo() {
   if (_undoInFlight) return;  // dubbelklick-skydd (confirm kan köa två anrop)
+  // 2026-10-01: låst konto (ingen donation) → ärlig rad, inget API-anrop, ingen turn.
+  if (!_undoUnlocked()) { _showUndoLockedNotice(); return; }
   const ok = window.confirm(
     'Undo your last message?\n\n' +
     'The DM reply and everything the Lorekeeper recorded from it are removed. ' +
@@ -6455,6 +6517,16 @@ async function doUndo() {
     addMessage('system', null,
       `↶ <b>Last turn undone.</b> ${res.removed_messages || 0} message(s) removed — the story is back where it was.`);
   } catch (e) {
+    // Backend 403 feature_locked:'undo' (2026-10-01) → samma ärliga låst-rad som
+    // /undo-vägen. MÅSTE checkas före handleCapError: capInfoFromError tolkar
+    // varje 403 som cap_reached och skulle annars öppna fel modal.
+    const emsg = String((e && e.message) || '');
+    if (e && e.status === 403 && /feature_locked/.test(emsg) && /undo/i.test(emsg)) {
+      await refreshMeData();
+      setUndoButton(true);
+      _showUndoLockedNotice();
+      return;
+    }
     if (await handleCapError(e)) return;
     setUndoButton(true);
     addMessage('system', null, '⚠ Could not undo: ' + escapeHtml(e.message || String(e)));
@@ -8980,6 +9052,16 @@ function stopConsolePolling() {
 function exportCampaign() {
   const url = API.exportUrl();
   if (!url) { toast(I18N.t('⚠ Export ej tillgänglig i mock-läge')); return; }
+  // 2026-10-01: exporten ligger hos supporter-unlocken. Ett låst konto ska få en
+  // ärlig rad — inte en rå 403-JSON i en ny flik (backend svarar numera
+  // {"detail":{"feature_locked":"export", ...}}).
+  if (!_supporterUnlocked()) {
+    addMessage('system', null,
+      '📦 <b>Campaign export is locked.</b> It unlocks permanently with any donation — 1€ is enough. ' +
+      'Your story comes out as a zip: character sheet, inventory, journal, world, transcript and images. ' +
+      '<a href="pricing.html?plan=donation">Unlock with a donation →</a>');
+    return;
+  }
   toast(I18N.t('📦 Bygger kampanj-export… (zip med transkript, karaktärsark, bilagor)'));
   // Öppna nedladdningen i en ny flik — cookien följer med automatiskt
   window.open(url, '_blank');

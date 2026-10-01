@@ -576,7 +576,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     <span class="chip">Server-rolled dice</span>
     <span class="chip t">TTS cache · 64 × 600s</span>
     <span class="chip e">SSE character weaving</span>
-    <span class="chip b">Undo · costs 1 turn</span>
+    <span class="chip b">Undo · 1 turn · any donation</span>
   </div>
   <div class="scroll-hint">▼ scroll to open the hatch ▼</div>
 </div>
@@ -596,7 +596,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     <li data-ix="s8"><a href="#s8"><span class="ix-num">§8</span>Voice &amp; TTS Cache<span class="ix-tag">speak once, reuse</span></a></li>
     <li data-ix="s9"><a href="#s9"><span class="ix-num">§9</span>Character Weaving<span class="ix-tag">SSE adventurer creation</span></a></li>
     <li data-ix="s10"><a href="#s10"><span class="ix-num">§10</span>State Model<span class="ix-tag">the one truth</span></a></li>
-    <li data-ix="s11"><a href="#s11"><span class="ix-num">§11</span>Undoing a Turn<span class="ix-tag">one rewind, one turn</span></a></li>
+    <li data-ix="s11"><a href="#s11"><span class="ix-num">§11</span>Undoing a Turn<span class="ix-tag">one rewind, one turn · any donation</span></a></li>
   </ol>
 </nav>
 
@@ -1099,12 +1099,12 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     <h2 class="sec-title"><span class="sec-mark">◆</span>Undoing a Turn</h2>
     <div class="sec-rule"></div>
   </div>
-  <p class="sec-lede">Every turn is snapshotted before it is written. One rewind, one turn, one level deep — press it and watch the world step back.</p>
+  <p class="sec-lede">Every turn is snapshotted before it is written. One rewind, one turn, one level deep — press it and watch the world step back. The rewind itself is part of the supporter unlock: <b>any donation</b> opens it (one euro is enough) and it stays open.</p>
 
   <div class="rv">
     <div style="text-align:center;margin-bottom:.8rem">
       <button class="jb-btn btn-gold" id="undo-btn" onclick="undoDemo()" style="letter-spacing:.2em">↶ UNDO LAST TURN</button>
-      <span class="stat" style="margin-left:.8rem">costs <b>1 turn</b> · no refund · ledger records action=undo</span>
+      <span class="stat" style="margin-left:.8rem">costs <b>1 turn</b> · no refund · ledger records action=undo · unlocked by <b>any donation</b></span>
     </div>
     <div class="rw-stage">
       <div class="rw-card" id="rw-prev">
@@ -1128,6 +1128,7 @@ footer p{font-family:var(--font-mono);font-size:.68rem;color:var(--bone-dim);lin
     <div class="panel rv">
       <h3><span class="dot">✦</span> What the rewind takes back</h3>
       <p class="stat">Your message, the DM's reply, and <b>everything the Guardian recorded</b> — state mutations, the fact register, transcript lines, scene/chapter summaries. The vector index is purged and re-indexed from the restored transcript.</p>
+      <p class="stat">A locked attempt costs nothing: without the unlock the request is refused <b>before</b> anything is touched — no turn is spent, the world is unchanged, and the snapshot waits for you until you donate.</p>
     </div>
     <div class="panel rv">
       <h3><span class="dot">✦</span> No zombie data</h3>

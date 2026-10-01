@@ -275,6 +275,9 @@ from extraction import FactRegister, extract_facts, format_facts_block, build_ex
 from guardian import (
     _combat_tag,
     _normalize_item,
+    _CLASS_ALIASES,
+    _hit_die_for_class,
+    _SPELL_SLOTS_BY_LEVEL,
     _parse_json as _guardian_parse_json,
     _XP_THRESHOLDS as XP_THRESHOLDS,  # D&D 5e XP-trösklar (definieras i guardian.py)
     apply_mechanics,
@@ -8361,10 +8364,38 @@ async def chat_local_commit(req: LocalCommitRequest, morkrets_token: str | None 
 
 CHARACTER_PROMPT_SV = """Du är en D&D-karaktärsgenerator för ett mörkt fantasy-äventyr. Skapa en karaktär baserad på spelarens beskrivning.
 
-VIKTIGT: Karaktären hör hemma i en PÅHITTAD fantasy-värld. Använd ALDRIG verkliga ortsnamn (inga svenska städer, länder eller kända platser) i namn, bakgrund eller utrustning. Hitta på stämningsfulla fantasy-namn.
+## SPELARENS ÖNSKEMÅL ÄR HELIGT (FÖRST AV ALLT)
+Spelarens beskrivning i nästa meddelande styr. Ger den namn, ras, klass,
+kultur eller koncept — ANVÄND DEM EXAKT SOM ANGIVET och bygg resten av
+karaktären runt dem. Alla regler nedan gäller ENDAST det spelaren inte har
+tagit ställning till. Ett enkelt, vanligt namn spelaren valt är ALLTID
+rätt — byt aldrig ut ett specificerat namn mot något "mer oväntat".
 
-NAMNVARIATION (KRITISKT): Namnet ska vara UNIKT och OVÄNTAT. Variera den språkliga stilen mellan generationer — ibland nordisk (Hakon, Yrsa, Torstein), ibland keltisk (Aedan, Brannagh, Sorcha), ibland östlig (Zahir, Nilay, Ozan), ibland latin/medelhavs (Cassian, Livia, Octavian), ibland helt påhittad stavelse-poesi (Vaelen, Thrum, Grit). Kombinera gärna oväntade ljud. Använd ALDRIG samma namn, samma namnrytm eller samma ändelser som i promptens exempel — och återanvänd aldrig ett namn du redan använt i tidigare svar.
-FÖRBJUDNA NAMN (AI-klassiker — använd ALDRIG): Kaelen, Kael, Elara, Lyra, Thorne, Aldric, Edric, Vane, Vex, Pip, Sable, Brunja, Maren, Eramus, Zara, Kira, Aria, Nyx, Corvin, Draven, Alaric, Morwen, Gwendolyn, Seraphina, Caspian, Rowan, Silas, Lark, Wren. Om du känner att du vill använda ett av dessa — välj något ANNAT.
+## VÄRLD OCH NAMN
+Karaktären hör hemma i en påhittad mörk fantasy-värld: hitta på egna
+ortnamn — inga verkliga städer eller länder i bakgrund, bygd eller
+utrustning. I själva PERSONNAMNEN är jordiska kulturtraditioner däremot
+uttryckligen TILLÅTNA och uppmuntrade (nordiskt, keltiskt, slaviskt,
+västafrikanskt, persiskt, polynesiskt, japanskt, iberiskt, romerskt,
+arabiskt, påhittat). Följ kreativitetsspåret i spelarens meddelande — det
+dras slumpat mellan generationer för mångfald. Ett bra namn låter som att
+en förälder valde det, inte som en generator spottade ut det. Undvik de
+utgnuggade AI-klassikerna (Elara, Kael, Thorne, Nyx och makei) — men
+undvik dem genom att vrida en stavelse till något oväntat, inte genom att
+hydda hela ljudområden eller vara rädd för vanliga namn.
+
+## KREATIVITET
+Två karaktärer från samma prompt ska kännas som om OLIKA MÄNNISKOR skrivit
+dem:
+- Klassisk klass + oväntad bakgrund (en präst som tvivlar, en tjuv med för
+  mycket samvete).
+- Ovanlig ras/klass-kombination är uppmuntrad: halvorch-druid, dvärg bard,
+  munk som sent börjat — så länge mekaniken är 5e-korrekt.
+- Välj en detalj som överraskar (ärr med historia, gammalt yrke, udda
+  husdjur, en vana) och låt den genomsyra story, utrustning och item-lore.
+"Mörk fantasy" är VÄRLDEN, inte en mall för karaktären — inte alla är
+mörka, söndrade eller hämndlystna. En glad halvlingsbagare som hamnat i
+fel sällskap är också mörk fantasy.
 
 Svara ENDAST med giltig JSON (ingen markdown) med detta schema:
 {
@@ -8378,10 +8409,10 @@ Svara ENDAST med giltig JSON (ingen markdown) med detta schema:
   "ac": 10 + DEX-mod (+ rustning om utrustad),  // BERÄKNA från abilities!
   "initiative": DEX-mod,                        // BERÄKNA från abilities!
   "perception": 10 + WIS-mod,                   // BERÄKNA från abilities!
-  "speed": "30 ft",
+  "speed": "string — rasbaserad: dvärg/halvling 25 ft, de flesta andra 30 ft",
   "proficiency": 2,
-  "hp": {"current": 10, "max": 10, "temp": 0},
-  "spell_slots": {"current": 0, "max": 0},
+  "hp": {"current": "<max>", "max": "<BERÄKNA: klassens hit die + CON-mod, nivå 1>", "temp": 0},
+  "spell_slots": {"current": "<max>", "max": "<klassens besvärjelseplatser enligt 5e-tabellen; icke-kastare 0; full kastare 2, warlock 1>"},
   "spells": [{"name": "string", "level": 0, "school": "string", "casting_time": "string", "damage_dice": "string|null", "description": "string"}],  // KLASS-ANPASSADE besvärjelser: cantrips (nivå 0) + nivå-1-besvärjelser för nivå 1. Icke-kasterklasser (fighter, rogue, barbarian) → []. Kasterklasser (wizard, sorcerer, cleric, druid, bard, warlock): ALLTID minst 2 cantrips + 2 nivå-1-besvärjelser.
   "xp": {"current": 0, "next_level": 300},
   "abilities": {
@@ -8410,13 +8441,15 @@ Svara ENDAST med giltig JSON (ingen markdown) med detta schema:
   ]
 }
 
-## HÄRLEDDA VÄRDEN (BERÄKNA — hårdkoda INTE 10/0/10)
+## HÄRLEDDA VÄRDEN (BERÄKNA — exempelvärden i schemat är EXEMPEL, inte krav)
+- hp.max = klassens hit die + CON-mod (barbarian 12, fighter/paladin/ranger 10,
+  bard/cleric/druid/monk/rogue/warlock 8, sorcerer/wizard 6) — minimum 1 HP.
 - ac = 10 + DEX-mod (+ rustning om utrustad) — beräkna från abilities
 - initiative = DEX-mod
 - perception = 10 + WIS-mod
-- resistances/vulnerabilities/immunities = ras-/klassbaserat: dvärg = poison-resistans, tiefling = fire-resistans, elf/drow = darkvision 60 ft, undead/blodslinje = sårbarheter. Tomma arrayer om inga.
-- darkvision = rasbaserat: elf/drow "60 ft", övriga null. Exhaustion = 0, training = [] (frisk karaktär utan pågående träning).
-- saves = klassens save-proficiencies: Krigare/Paladin/Barbarian = STR+CON, Wizard = INT+WIS, Rogue/Monk = DEX+INT, Cleric/Druid/Sorcerer/Bard/Warlock/Ranger = WIS+CHA
+- resistances/vulnerabilities/immunities = ras-/klassbaserat: dvärg = poison-resistans, tiefling = fire-resistans, blodslinje/undead = sårbarheter. Tomma arrayer om inga.
+- darkvision = rasbaserat: dvärg "120 ft", elf/drow/orc/halvorch/tiefling/gnom "60 ft", människa/halvling null.
+- saves = klassens save-proficiencies (5e): Barbarian/Krigare = STR+CON, Bard = DEX+CHA, Präst/Cleric = WIS+CHA, Häxmästare/Warlock = WIS+CHA, Druid/Trollkarl = INT+WIS, Munk = STR+DEX, Paladin/Riddare = STR+WIS, Ranger/Jägare = STR+DEX, Tjuv/Rogue = DEX+INT, Sorcerer = CON+CHA
 
 ## STARTUTRUSTNING (inventory) — KRITISKT
 Fyll ALLTID inventory-arrayen med 5-8 föremål som passar karaktärens klass och bakgrund:
@@ -8434,10 +8467,38 @@ Fyll ALLTID inventory-arrayen med 5-8 föremål som passar karaktärens klass oc
 
 CHARACTER_PROMPT_EN = """You are a D&D character generator for a dark fantasy adventure. Create a character based on the player's description.
 
-IMPORTANT: The character belongs in a FICTIONAL fantasy world. NEVER use real place names (no real cities, countries, or known locations) in names, backgrounds, or equipment. Invent atmospheric fantasy names.
+## THE PLAYER'S WISH IS SACRED (FIRST OF ALL)
+The player's description in the next message rules. If it gives a name,
+race, class, culture or concept — USE IT EXACTLY AS GIVEN and build the
+rest of the character around it. Every rule below applies ONLY to what the
+player left unspecified. A plain, common name the player chose is ALWAYS
+right — never swap a specified name for something "more unexpected".
 
-NAME VARIATION (CRITICAL): The name must be UNIQUE and UNEXPECTED. Vary the linguistic style between generations — sometimes Nordic (Hakon, Yrsa, Torstein), sometimes Celtic (Aedan, Brannagh, Sorcha), sometimes Eastern (Zahir, Nilay, Ozan), sometimes Latin/Mediterranean (Cassian, Livia, Octavian), sometimes invented syllable-poetry (Vaelen, Thrum, Grit). Combine unexpected sounds. NEVER use the same name, name-rhythm, or endings as any example in the prompt — and never reuse a name you have already used in previous answers.
-FORBIDDEN NAMES (AI classics — NEVER use): Kaelen, Kael, Elara, Lyra, Thorne, Aldric, Edric, Vane, Vex, Pip, Sable, Brunja, Maren, Eramus, Zara, Kira, Aria, Nyx, Corvin, Draven, Alaric, Morwen, Gwendolyn, Seraphina, Caspian, Rowan, Silas, Lark, Wren. If you feel tempted to use one of these — pick something else.
+## WORLD AND NAMES
+The character belongs in an invented dark-fantasy world: make up your own
+place names — no real cities or countries in background, homeland or gear.
+In PERSON NAMES, however, earthly cultural traditions are explicitly
+ALLOWED and encouraged (Nordic, Celtic, Slavic, West African, Persian,
+Polynesian, Japanese, Iberian, Roman, Arabic, invented). Follow the
+creativity track in the player's message — it is drawn randomly between
+generations for variety. A good name sounds chosen by a parent, not
+spat out by a generator. Avoid the worn-out AI classics (Elara, Kael,
+Thorne, Nyx and kin) — but avoid them by twisting one syllable into
+something unexpected, not by hiding whole sound-worlds or fearing common
+names.
+
+## CREATIVITY
+Two characters from the same prompt should feel written by DIFFERENT
+PEOPLE:
+- Classic class + unexpected background (a doubting priest, a thief with
+  too much conscience).
+- Unusual race/class pairings are encouraged: half-orc druid, dwarf bard,
+  a monk who started late — as long as the mechanics are 5e-correct.
+- Pick one surprising detail (a scar with history, an old trade, an odd
+  pet, a habit) and let it colour story, gear and item lore.
+"Dark fantasy" is the WORLD, not a template for the character — not
+everyone is grim, broken or vengeful. A cheerful halfling baker who ended
+up in the wrong company is dark fantasy too.
 
 Respond ONLY with valid JSON (no markdown) using this schema:
 {
@@ -8451,10 +8512,10 @@ Respond ONLY with valid JSON (no markdown) using this schema:
   "ac": 10 + DEX-mod (+ armor if equipped),  // COMPUTE from abilities!
   "initiative": DEX-mod,                     // COMPUTE from abilities!
   "perception": 10 + WIS-mod,                // COMPUTE from abilities!
-  "speed": "30 ft",
+  "speed": "string — race-based: dwarf/halfling 25 ft, most others 30 ft",
   "proficiency": 2,
-  "hp": {"current": 10, "max": 10, "temp": 0},
-  "spell_slots": {"current": 0, "max": 0},
+  "hp": {"current": "<max>", "max": "<COMPUTE: class hit die at level 1 + CON mod>", "temp": 0},
+  "spell_slots": {"current": "<max>", "max": "<class spell slots per 5e table; non-casters 0; full casters 2, warlock 1>"},
   "spells": [{"name": "string", "level": 0, "school": "string", "casting_time": "string", "damage_dice": "string|null", "description": "string"}],  // CLASS-APPROPRIATE spells: cantrips (level 0) + level-1 spells for level 1. Non-caster classes (fighter, rogue, barbarian) → []. Caster classes (wizard, sorcerer, cleric, druid, bard, warlock): ALWAYS at least 2 cantrips + 2 level-1 spells.
   "xp": {"current": 0, "next_level": 300},
   "abilities": {
@@ -8483,13 +8544,15 @@ Respond ONLY with valid JSON (no markdown) using this schema:
   ]
 }
 
-## DERIVED VALUES (COMPUTE — do NOT hardcode 10/0/10)
+## DERIVED VALUES (COMPUTE — example values in the schema are EXAMPLES, not requirements)
+- hp.max = class hit die + CON mod (barbarian 12, fighter/paladin/ranger 10,
+  bard/cleric/druid/monk/rogue/warlock 8, sorcerer/wizard 6) — minimum 1 HP.
 - ac = 10 + DEX-mod (+ armor if equipped) — compute from abilities
 - initiative = DEX-mod
 - perception = 10 + WIS-mod
-- resistances/vulnerabilities/immunities = race/class-based: dwarf = poison resistance, tiefling = fire resistance, elf/drow = darkvision 60 ft, undead/bloodline = vulnerabilities. Empty arrays if none.
-- darkvision = race-based: elf/drow "60 ft", others null. Exhaustion = 0, training = [] (healthy character with no ongoing training).
-- saves = class save proficiencies: Fighter/Paladin/Barbarian = STR+CON, Wizard = INT+WIS, Rogue/Monk = DEX+INT, Cleric/Druid/Sorcerer/Bard/Warlock/Ranger = WIS+CHA
+- resistances/vulnerabilities/immunities = race/class-based: dwarf = poison resistance, tiefling = fire resistance, undead/bloodline = vulnerabilities. Empty arrays if none.
+- darkvision = race-based: dwarf "120 ft", elf/drow/orc/half-orc/tiefling/gnome "60 ft", human/halfling null.
+- saves = class save proficiencies (5e): Barbarian/Fighter = STR+CON, Bard = DEX+CHA, Cleric/Warlock = WIS+CHA, Druid/Wizard = INT+WIS, Monk = STR+DEX, Paladin = STR+WIS, Ranger = STR+DEX, Rogue = DEX+INT, Sorcerer = CON+CHA
 
 ## STARTING EQUIPMENT (inventory) — CRITICAL
 ALWAYS fill the inventory array with 5-8 items fitting the character's class and background:
@@ -8504,6 +8567,173 @@ ALWAYS fill the inventory array with 5-8 items fitting the character's class and
 - Compute max_weight_lbs = STR score × 15 (D&D 5e carry capacity).
 - The base weapon should have equipped:true, everything else equipped:false.
 - rarity: most items "normal", potions can be "magic", the class-unique item can be "rare"."""
+
+
+# ═══════════════════════════════════════
+# CHAR-GEN: kreativitetsspår + namn-dedup (2026-10-01)
+# Variationen HAMTAS UR PROMPTEN (kontrollerat) i stället för att
+# förväntas komma ur temperaturen kring en statisk text. Dessutom:
+# 'återanvänd inte namn från tidigare svar' var omöjligt att följa —
+# varje generering är statlös. I stället levereras spelarens EGENA
+# senaste namn i meddelandet, så undvik-regeln faktiskt kan uppfyllas.
+# ═══════════════════════════════════════
+
+_CHARGEN_CULTURES = [
+    ("nordisk klang: hårda företonsstavelser, ändelser som -vi, -mund, -dottir, -stein",
+     "Nordic feel: hard stressed syllables, endings like -vi, -mund, -dottir, -stein"),
+    ("keltisk klang: blöta konsonanter, apostrofer, ändelser som -agh, -een, -idh",
+     "Celtic feel: soft consonants, apostrophes, endings like -agh, -een, -idh"),
+    ("slavisk klang: konsonantkluster, -ovich, -ova, -slav, -mira",
+     "Slavic feel: consonant clusters, -ovich, -ova, -slav, -mira"),
+    ("västafrikansk klang (joruba/akan): toniska vokalsekvenser, -kwa, -di, Ama-",
+     "West African feel (Yoruba/Akan): tonal vowel runs, -kwa, -di, Ama-"),
+    ("persisk klang: mjuka g-, ch-, -zad, -an, -eh, Farra-",
+     "Persian feel: soft g-, ch-, -zad, -an, -eh, Farra-"),
+    ("polynesisk klang: få konsonanter, många vokaler, glottala stop, -nga, Wha-",
+     "Polynesian feel: few consonants, many vowels, glottal stops, -nga, Wha-"),
+    ("japansk klang: morarytm, -tarō, -hime, -zō, Kuro-",
+     "Japanese feel: mora rhythm, -tarō, -hime, -zō, Kuro-"),
+    ("iberisk klang: -ez, -ito, -ita, Dor-, Sal-",
+     "Iberian feel: -ez, -ito, -ita, Dor-, Sal-"),
+    ("romersk-latin klang: tria nomina-efterklang, -ianus, -illa, Cass-",
+     "Roman-Latin feel: echo of tria nomina, -ianus, -illa, Cass-"),
+    ("arabisk klang: -uddin, -iya, Rash-, Am-, q- och 'ain-ljud",
+     "Arabic feel: -uddin, -iya, Rash-, Am-, q and 'ayn sounds"),
+    ("grekisk klang: -andros, -ia, Thesso-, Niko-, -dora",
+     "Greek feel: -andros, -ia, Thesso-, Niko-, -dora"),
+    ("påhittad stavelsepoesi: inga jordiska rötter — bygg upp/ned-ljud, hårda clusters, udda tryck",
+     "invented syllable-poetry: no earthly roots — build up/down sounds, hard clusters, odd stress"),
+    ("blandkultur: slå ihop två traditioner till ett namn som tillhör en gränsbygd",
+     "cross-culture: fuse two traditions into a name from a borderland"),
+]
+
+_CHARGEN_NAMEFORMS = [
+    ("enväld + efternamn härlett från yrke eller hembygd",
+     "given name + surname from a trade or homeland"),
+    ("enväld + episkt tillnamn (smeknamn byn gett)",
+     "single name + epic epithet (a nickname the village gave)"),
+    ("faders-/modersnamn (-son/-dottir, -ić, -pour, -sen)",
+     "patronymic/matronymic (-son/-dottir, -ić, -pour, -sen)"),
+    ("kort tvåstavigt, hårda konsonanter, slutar konsonant",
+     "short two-syllable, hard consonants, ends in a consonant"),
+    ("långt och musikaliskt, många vokaler, flytande tryck",
+     "long and musical, many vowels, flowing stress"),
+    ("korthugget enstavigt ropnamn",
+     "chopped one-syllable shout-name"),
+]
+
+_CHARGEN_TWISTS = [
+    ("klassisk klass, oväntad bakgrund (den tvivelnde prästen, tjuven med för mycket samvete)",
+     "classic class, unexpected background (the doubting priest, the thief with too much conscience)"),
+    ("ovanlig ras/klass-kombination (halvorch-druid, dvärg bard, gnom krigare)",
+     "unusual race/class pairing (half-orc druid, dwarf bard, gnome fighter)"),
+    ("fel ålder på jobbet: för ung eller för gammal för sin klass — låt det synas i story och hälsa",
+     "wrong age for the job: too young or too old for the class — let it show in story and health"),
+    ("ljust folkslag i mörk värld: inte söndrad, inte hämndlysten — men omgiven av allt som kan bita",
+     "a bright soul in a dark world: not broken, not vengeful — but surrounded by everything that can bite"),
+    ("vanligt hantverk innan äventyret: bagare, bryggare, slaktare, vävare, budbärare — låt verktygen följa med",
+     "an ordinary trade before adventuring: baker, brewer, butcher, weaver, courier — let the tools follow"),
+    ("något förlorat som aldrig återkommer: ett namn, en persons minne, en kroppsdel, en röst",
+     "something lost that never returns: a name, a person's memory, a body part, a voice"),
+    ("ett hemligt förflutet: karaktären är inte den hen utger sig för, och varken spelaren eller världen vet ännu",
+     "a secret past: the character is not who they seem — neither player nor world knows yet"),
+    ("en lojal följeslagare: udda husdjur, byxbandsapa, tam råtta, en kråka som svarar på ett vissel",
+     "a loyal companion: odd pet, trouser monkey, tame rat, a crow that answers a whistle"),
+]
+
+
+def _canonical_class_name(class_str: str) -> str:
+    """Klassnamn (SV eller EN) → kanonisk 5e-nyckel via guardian:s alias."""
+    c = (class_str or "").strip().lower()
+    if not c:
+        return ""
+    canon = _CLASS_ALIASES.get(c)
+    if canon:
+        return canon
+    for key, val in _CLASS_ALIASES.items():
+        if key in c:
+            return val
+    return ""
+
+
+# Save-proficiencies enligt 5e PHB (klass → de två savings den är proficient i).
+_SAVE_PROFS_BY_CLASS = {
+    "barbarian": ["STR", "CON"],
+    "bard": ["DEX", "CHA"],
+    "cleric": ["WIS", "CHA"],
+    "druid": ["INT", "WIS"],
+    "fighter": ["STR", "CON"],
+    "monk": ["STR", "DEX"],
+    "paladin": ["STR", "WIS"],
+    "ranger": ["STR", "DEX"],
+    "rogue": ["DEX", "INT"],
+    "sorcerer": ["CON", "CHA"],
+    "warlock": ["WIS", "CHA"],
+    "wizard": ["INT", "WIS"],
+}
+
+
+def _recent_character_names(username: str, limit: int = 8) -> list:
+    """Spelarens senaste karaktnamn (valv + kampanjer) — för namn-dedup."""
+    names: list = []
+    seen = set()
+
+    def _add(raw) -> None:
+        n = str(raw or "").strip()
+        key = n.lower()
+        if n and key not in seen:
+            seen.add(key)
+            names.append(n)
+
+    try:
+        for e in vault.list(username):
+            _add((e.get("character") or {}).get("name"))
+            if len(names) >= limit:
+                break
+    except Exception:
+        pass
+    try:
+        for c in store.list_campaigns(username):
+            _add(c.get("character_name"))
+            if len(names) >= limit:
+                break
+    except Exception:
+        pass
+    return names[:limit]
+
+
+def _build_chargen_seed_block(username: str, lang: str) -> str:
+    """Slumpat kreativitetsspår + nyligen använda namn till user-meddelandet.
+
+    Språket styrs av kampanjen; dragningarna är index-parallella så samma
+    drag ger samma spår i båda språken. Allt är villkorat: spelarens
+    uttalade önskemål väger tyngre (sé promptens första stycke).
+    """
+    ci = random.randrange(len(_CHARGEN_CULTURES))
+    ni = random.randrange(len(_CHARGEN_NAMEFORMS))
+    ti = random.randrange(len(_CHARGEN_TWISTS))
+    en = lang == "en"
+    cult = _CHARGEN_CULTURES[ci][1 if en else 0]
+    namef = _CHARGEN_NAMEFORMS[ni][1 if en else 0]
+    twist = _CHARGEN_TWISTS[ti][1 if en else 0]
+    if en:
+        head = ("## CREATIVITY TRACK (randomly drawn for THIS character — "
+                "the player's stated wishes always outrank it)")
+        lines = [f"- Naming culture: {cult}",
+                 f"- Name shape: {namef}",
+                 f"- Concept twist: {twist}"]
+        avoid = "- Avoid recently used names: "
+    else:
+        head = ("## KREATIVITETSSPÅR (slumpat för DEN HÄR karaktären — "
+                "spelarens uttalade önskemål väger alltid tyngre)")
+        lines = [f"- Namnkultur: {cult}",
+                 f"- Namnform: {namef}",
+                 f"- Koncept-twist: {twist}"]
+        avoid = "- Undvik nyligen använda namn: "
+    recent = _recent_character_names(username)
+    if recent:
+        lines.append(avoid + ", ".join(recent))
+    return "\n\n" + head + "\n" + "\n".join(lines)
 
 
 @app.post("/api/character/generate")
@@ -8526,7 +8756,8 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
     # Språkanpassning av karaktärsgenerering
     lang = _get_lang(state)
     char_prompt = CHARACTER_PROMPT_EN if lang == "en" else CHARACTER_PROMPT_SV
-    user_msg = f"Create a character: {req.prompt}" if lang == "en" else f"Skapa en karaktär: {req.prompt}"
+    user_msg = (f"Create a character: {req.prompt}" if lang == "en"
+                else f"Skapa en karaktär: {req.prompt}") + _build_chargen_seed_block(username, lang)
 
     messages = [
         {"role": "system", "content": char_prompt},
@@ -8612,20 +8843,67 @@ def _finalize_character_data(char_data: dict, lang: str) -> tuple[dict, list, bo
     if wis_mod and (not char_data.get("perception") or char_data["perception"] <= 10):
         char_data["perception"] = 10 + wis_mod
 
-    # Save-proficiencies: fyll från klassen om modellen lämnade dem tomma
+    # Save-proficiencies: fyll från klassen om modellen lämnade dem tomma.
+    # 2026-10-01: tabellen var fel mot 5e (monk/ranger/bard/druid) och
+    # matchade aldrig svenska klassnamn — använder guardian:s klass-alias.
     if not char_data.get("saves"):
-        klass = (char_data.get("class") or "").lower()
-        save_profs = {
-            "fighter": ["STR", "CON"], "paladin": ["STR", "CON"], "barbarian": ["STR", "CON"],
-            "wizard": ["INT", "WIS"],
-            "rogue": ["DEX", "INT"], "monk": ["DEX", "INT"],
-            "cleric": ["WIS", "CHA"], "druid": ["WIS", "CHA"], "sorcerer": ["WIS", "CHA"],
-            "bard": ["WIS", "CHA"], "warlock": ["WIS", "CHA"], "ranger": ["WIS", "CHA"],
-        }
-        for cls, profs in save_profs.items():
-            if cls in klass:
-                char_data["saves"] = [{"name": p, "prof": True} for p in profs]
-                break
+        canon = _canonical_class_name(char_data.get("class") or "")
+        profs = _SAVE_PROFS_BY_CLASS.get(canon)
+        if profs:
+            char_data["saves"] = [{"name": p, "prof": True} for p in profs]
+
+    # ── HP / besvärjelseplatser / speed (2026-10-01): kodnät ──
+    # Gamla schemat hårdkodade hp 10/10 och spell_slots 0/0 — direkt i
+    # strid med "BERÄKNA"-kraven (nivå-1-trollkarl utan slots, barbar med
+    # 10 HP). Nätet räknar ut auktoritativa värden från 5e-tabellerna
+    # (samma tabeller som Guardian använder vid level-up) när modellen lämnat
+    # fälten tomma eller satt dem till 0. Modellens rimliga värden rörs.
+    try:
+        level = int(char_data.get("level", 1) or 1)
+    except (TypeError, ValueError):
+        level = 1
+    canon_cls = _canonical_class_name(char_data.get("class") or "")
+    con_mod = _abil_mod("CON")
+
+    hp = char_data.get("hp")
+    if not isinstance(hp, dict):
+        hp = {}
+        char_data["hp"] = hp
+    try:
+        hp_max = int(hp.get("max") or 0)
+    except (TypeError, ValueError):
+        hp_max = 0
+    if hp_max <= 0:
+        sides = int(_hit_die_for_class(canon_cls or "rogue").split("d")[-1] or 8)
+        hp_max = max(1, sides + con_mod)
+        hp["max"] = hp_max
+    try:
+        hp_cur = int(hp.get("current") or 0)
+    except (TypeError, ValueError):
+        hp_cur = 0
+    if hp_cur <= 0 or hp_cur > hp_max:
+        hp["current"] = hp_max
+    hp.setdefault("temp", 0)
+
+    ss = char_data.get("spell_slots")
+    if not isinstance(ss, dict):
+        ss = {}
+        char_data["spell_slots"] = ss
+    try:
+        ss_max = int(ss.get("max") or 0)
+    except (TypeError, ValueError):
+        ss_max = 0
+    if ss_max <= 0:
+        slot_table = _SPELL_SLOTS_BY_LEVEL.get(canon_cls)
+        expected = slot_table.get(level, slot_table.get(1, 0)) if slot_table else 0
+        if expected > 0:
+            char_data["spell_slots"] = {"current": expected, "max": expected}
+
+    race_s = str(char_data.get("race") or "").lower()
+    _sp = str(char_data.get("speed") or "").strip()
+    if not _sp or "<" in _sp:  # tomt eller modelskrevt platshållartext
+        slow = any(k in race_s for k in ("dvärg", "dwarf", "halfling", "halvl"))
+        char_data["speed"] = "25 ft" if slow else "30 ft"
 
     # ── Skills (2026-08-08): säkerställ att alla 18 standard-5e-skills finns.
     # LLM:n kan glömma dem — fyll ut (proficient=False) så bladet alltid är
@@ -8817,7 +9095,8 @@ async def generate_character_stream(req: CharacterRequest, morkrets_token: str |
 
     lang = _get_lang(state)
     char_prompt = CHARACTER_PROMPT_EN if lang == "en" else CHARACTER_PROMPT_SV
-    user_msg = f"Create a character: {req.prompt}" if lang == "en" else f"Skapa en karaktär: {req.prompt}"
+    user_msg = (f"Create a character: {req.prompt}" if lang == "en"
+                else f"Skapa en karaktär: {req.prompt}") + _build_chargen_seed_block(username, lang)
 
     messages = [
         {"role": "system", "content": char_prompt},
@@ -8892,7 +9171,8 @@ async def vault_generate_stream(req: VaultGenRequest, morkrets_token: str | None
 
     lang = "sv" if (req.lang or "en").lower().startswith("sv") else "en"
     char_prompt = CHARACTER_PROMPT_EN if lang == "en" else CHARACTER_PROMPT_SV
-    user_msg = f"Create a character: {req.prompt}" if lang == "en" else f"Skapa en karaktär: {req.prompt}"
+    user_msg = (f"Create a character: {req.prompt}" if lang == "en"
+                else f"Skapa en karaktär: {req.prompt}") + _build_chargen_seed_block(username, lang)
     messages = [
         {"role": "system", "content": char_prompt},
         {"role": "user", "content": user_msg},

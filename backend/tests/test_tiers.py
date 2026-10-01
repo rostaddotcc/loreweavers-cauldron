@@ -379,14 +379,26 @@ def test_vault_avatar_wan_tier2_ok(client, monkeypatch):
 # ── Export / Forge-gating (Patron 30€; legacy tier1 hedras) ──────────────
 
 def test_campaign_export_free_403(client):
+    """2026-10-01: exporten ligger hos supporter-unlocken (donation 1€+)."""
     _seed("alice")
     _seed_campaign("alice")
     r = client.get("/api/campaign/export", cookies={"morkrets_token": _tok()})
     assert r.status_code == 403
-    assert "10€ unlock" in r.json()["detail"]
+    assert r.json()["detail"]["feature_locked"] == "export"
 
 
-def test_campaign_export_support_ok(client):
+def test_campaign_export_donor_ok_but_stays_free_tier(client):
+    """En donation på 1€ räcker — och den får INTE läcka in i tier-modellen:
+    kontot förblir free (ingen tillgång till modeller/TTS/bilder i smyg)."""
+    _seed("alice", features={"supporter": True})
+    _seed_campaign("alice")
+    r = client.get("/api/campaign/export", cookies={"morkrets_token": _tok()})
+    assert r.status_code == 200, r.text
+    assert main._tier_for("alice") == "free"
+
+
+def test_campaign_export_legacy_support_ok(client):
+    """Legacy Support (tier1) har betalat → passerar, fönstret till trots."""
     _seed("alice", tier="tier1", until=_in_days(30), features={"export": True})
     _seed_campaign("alice")
     r = client.get("/api/campaign/export", cookies={"morkrets_token": _tok()})

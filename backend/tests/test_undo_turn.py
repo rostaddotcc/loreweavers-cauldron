@@ -103,15 +103,21 @@ def _today() -> str:
     return datetime.now(timezone.utc).date().isoformat()
 
 
-def _seed_user(username="alice", role="player", turn_cap=50) -> str:
+def _seed_user(username="alice", role="player", turn_cap=50, supporter=True) -> str:
     """Seeda användare DIREKT — /api/register är rate-limitad process-globalt
-    (_REGISTER_TIMES) och ger 429 i helsviten (test-isolation-pitfall)."""
+    (_REGISTER_TIMES) och ger 429 i helsviten (test-isolation-pitfall).
+
+    supporter=True som default (2026-10-01): undo ligger bakom donation-väggen
+    (_require_supporter), så filens tester ska handla om undo-MEKANIKEN — inte
+    om grinden. Grinden har egna tester i tests/test_supporter_gate.py.
+    """
     users = main.load_users()
     users[username] = {
         "password_hash": hash_password("secret123"), "role": role,
         "turn_cap": turn_cap, "turns_used": 0, "turn_bonus": 0,
         "promo_bonus": 0, "reset_date": _today(), "subscription_status": "free",
         "start_bonus_granted": True,
+        "features": {"supporter": True} if supporter else {},
     }
     main.save_users(users)
     return create_token(username, role)

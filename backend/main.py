@@ -1389,6 +1389,36 @@ def _benefits_active(username: str, udata: dict | None = None) -> bool:
         return False
 
 
+# ── Supporter (2026-10-01): "har någonsin betalat" ──────────────────────────
+# Donationen (valfritt belopp, 1€+) är en egen unlock: den låser upp
+# undo-knappen + kampanj-exporten PERMANENT. Flaggan features["supporter"]
+# sätts i VARJE betalväg (donation, unlock10, legacy support/patron, lifetime,
+# admin-grant) och läses DIREKT — aldrig via _benefits_active, som dömer alla
+# features mot EN gemensam features_until och därför skulle låsa en donator så
+# snart ett legacy-fönster löpt ut.
+_PAID_FEATURE_KEYS = ("supporter", "export", "wan1080", "all_models", "unlock10")
+
+
+def _is_supporter(username: str, udata: dict | None = None) -> bool:
+    """True om kontot någonsin betalat: supporter-flaggan, en legacy-betald
+    feature-flagga, eller en betald tier (tier1/tier2/lifetime).
+
+    Hålls UTANFÖR _tier_for/_benefits_active (se kommentaren ovan) — annars
+    läcker donationen in i tier-modellen. Läser users.json om udata inte
+    skickas in (så anropare med udata redan i handen slipper en extra läsning).
+    Kastar vidare läsfel — _require_supporter gör 503 av dem.
+    """
+    if udata is None:
+        udata = load_users().get(username, {})
+    if not isinstance(udata, dict):
+        udata = {}
+    f = udata.get("features")
+    f = f if isinstance(f, dict) else {}
+    if any(f.get(k) for k in _PAID_FEATURE_KEYS):
+        return True
+    return _tier_for(username) in ("tier1", "tier2", "lifetime")
+
+
 def _stack_benefits_until(udata: dict, days: int = PATRON_MODEL_DAYS) -> str:
     """Nytt features_until efter ett köp: +30 dagar från max(dagens datum,
     nuvarande aktiva fönster). Flera köp staplas — köper man igen medan
@@ -2172,6 +2202,9 @@ def _user_free_info(username: str) -> dict:
         "period_hours": _period_hours_for(tier),
         "features": {
             "export": bool((udata.get("features") or {}).get("export")),
+            # 2026-10-01: "har någonsin betalat" — styr undo-knappens låsta läge
+            # och exporten. Alla konto-svar bär den (frontend läser den direkt).
+            "supporter": _is_supporter(username, udata),
             "all_models": _tier_for(username) in ("tier2", "lifetime"),
             "models_until": udata.get("models_until"),
             # 2026-08-05 v2: hela förmånspaketet (Support+Patron) går ut på
@@ -4784,6 +4817,13 @@ async def undo_last_turn(morkrets_token: str | None = Cookie(None)):
     """
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
+    # Betalvägg (2026-10-01): undo kräver att kontot någonsin betalat (donation
+    # 1€+ räcker). Grinden ligger FÖRE allt annat — ett låst anrop får inte dra
+    # en turn, inte bumpa epoch, inte konsumera snapshoten och inte ens vänta in
+    # kampanjens bakgrundsjobb.
+    _require_supporter(username, payload, "undo",
+                       "Undo is part of the supporter unlock — any donation (1€ or more) "
+                       "unlocks it permanently. Your last turn is untouched either way.")
     state = store.get(username)
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
@@ -11274,12 +11314,13 @@ async def export_campaign(morkrets_token: str | None = Cookie(None)):
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
 
-    # One-time-modellen (2026-08-05): export kräver features.export (3€+) eller lifetime.
-    if payload.get("role") != "admin" and _tier_for(username) not in ("tier1", "tier2", "lifetime"):
-        raise HTTPException(
-            403,
-            "Campaign export is part of the 10€ unlock — upgrade to export your story.",
-        )
+    # Betalvägg (2026-10-01): exporten ligger hos DONATIONEN (any amount 1€+,
+    # permanent) — inte längre hos 10€-unlocken. _is_supporter täcker även
+    # legacy tier1/tier2/lifetime (de har betalat) så ingen gammal köpare tappar
+    # exporten. Samma 403-form som bild/TTS-grindarna.
+    _require_supporter(username, payload, "export",
+                       "Campaign export is part of the supporter unlock — any donation "
+                       "(1€ or more) unlocks it permanently.")
 
     state = store.get(username)
     if not state:
@@ -11982,6 +12023,36 @@ def _require_avatar_tier(payload: dict, username: str):
         return
     if _tier_for(username) == "free":
         raise HTTPException(403, "Avatar uploads are part of the 10€ unlock — upgrade to add your own images.")
+
+
+def _require_supporter(username: str, payload: dict, feature: str,
+                       message: str | None = None) -> None:
+    """Betalvägg (2026-10-01): undo-knappen + kampanj-exporten kräver att
+    kontot någonsin betalat — en donation på 1€ räcker, och den gäller för alltid.
+
+    Admin går alltid förbi. Läsfel på users.json → 503, ALDRIG tyst 403: en
+    betalare ska inte se "låst" för att en transient fel läste fel.
+    """
+    if payload and payload.get("role") == "admin":
+        return
+    try:
+        ok = _is_supporter(username)
+    except Exception as e:
+        logger.warning("Supporter-gate could not read account %s: %s", username, e)
+        raise HTTPException(
+            503,
+            detail={"message": "Could not verify your account just now — try again in a moment."},
+        )
+    if ok:
+        return
+    raise HTTPException(
+        403,
+        detail={
+            "feature_locked": feature,
+            "message": message or ("This is part of the supporter unlock — any donation "
+                                   "(1€ or more) unlocks it permanently."),
+        },
+    )
 
 
 # ═══════════════════════════════════════
@@ -13578,6 +13649,7 @@ async def stripe_webhook(request: Request):
                 u["subscription_status"] = "lifetime"
                 u["subscription_until"] = None
                 u["turn_cap"] = 0
+                features["supporter"] = True   # 2026-10-01: har betalat → undo + export
             elif tier == "support300":
                 # 3€ — +300 turns (BEHÅLLS alltid), export + StepFun i 30 dagar.
                 # Flera köp staplas: turn_bonus ackumuleras, features_until
@@ -13587,6 +13659,7 @@ async def stripe_webhook(request: Request):
                 # inte att svara på eftersom turn_bonus bara är KVARVARANDE.
                 _append_turn_grant(username, 300, "stripe:support300")
                 features["export"] = True
+                features["supporter"] = True   # 2026-10-01: har betalat → undo + export
                 u["features"] = features
                 u["features_until"] = _stack_benefits_until(u)
                 u.pop("models_until", None)  # enhetligt fönster framåt
@@ -13602,6 +13675,7 @@ async def stripe_webhook(request: Request):
                 features["export"] = True
                 features["wan1080"] = True
                 features["all_models"] = True
+                features["supporter"] = True   # 2026-10-01: har betalat → undo + export
                 u["features"] = features
                 u["features_until"] = cap_until
                 u.pop("models_until", None)
@@ -13620,6 +13694,7 @@ async def stripe_webhook(request: Request):
                 features["wan1080"] = True
                 features["all_models"] = True
                 features["unlock10"] = True
+                features["supporter"] = True   # 2026-10-01: har betalat → undo + export
                 u["features"] = features
                 u["features_until"] = None  # permanent
                 u.pop("models_until", None)
@@ -13630,6 +13705,12 @@ async def stripe_webhook(request: Request):
                 # turns/€ = amount_total), så antalet turns = amount_total.
                 _don_turns = max(0, int(amount_total))
                 u["turn_bonus"] = int(u.get("turn_bonus", 0) or 0) + _don_turns
+                # 2026-10-01: donationen är en egen unlock — undo-knappen +
+                # kampanj-exporten, PERMANENT (ingen features_until-mekanik;
+                # flaggan läses direkt av _is_supporter). Kopiorna nedan speglar
+                # webhooken exakt så en admin-grant aldrig ger olika tillgång.
+                features["supporter"] = True
+                u["features"] = features
                 # Grant-ledgern (2026-09-28): donationens turns bokförs.
                 if _don_turns:
                     _append_turn_grant(username, _don_turns, "stripe:donation")
@@ -14250,6 +14331,7 @@ async def admin_grant_tier(username: str, req: AdminGrant, morkrets_token: str |
         # permanenta turns — speglar Stripe-webhooken exakt.
         if tier == "support":
             features["export"] = True
+            features["supporter"] = True   # 2026-10-01: har betalat → undo + export
             # Stöd ger INGEN daglig cap-boost — rensa eventuellt kvarvarande
             # Patron-cap (och återställ till standard, utom lifetime=0).
             if int(udata.get("turn_cap", 0) or 0) == PATRON_DAILY_CAP:
@@ -14259,6 +14341,7 @@ async def admin_grant_tier(username: str, req: AdminGrant, morkrets_token: str |
             features["export"] = True
             features["wan1080"] = True
             features["all_models"] = True
+            features["supporter"] = True   # 2026-10-01: har betalat → undo + export
             udata["turn_cap"] = PATRON_DAILY_CAP
         udata["features"] = features
         udata["features_until"] = _stack_benefits_until(udata, days=days)

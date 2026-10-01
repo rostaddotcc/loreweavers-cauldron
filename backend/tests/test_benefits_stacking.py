@@ -192,15 +192,20 @@ def test_legacy_features_without_until_stay_active(client):
     assert info["features"]["benefits_active"] is True
 
 
-def test_expired_export_no_longer_exports(client):
+def test_expired_window_still_exports_for_payers(client):
+    """2026-10-01 (ändrat kontrakt): exporten hänger på att kontot NÅGONSIN
+    betalat (features.supporter), inte på 30-dagarsfönstret. Ett utgånget
+    features_until stänger modeller/TTS/bilder — men en betalare ska aldrig
+    låsas ute ur undo/export. Det var hela poängen med supporter-flaggan."""
     _seed()
     _webhook(client, "support300", event_id="evt_a")
     u = main.load_users()["alice"]
+    assert u["features"]["supporter"] is True
     u["features_until"] = _in_days(-1)
     main.save_users({"alice": u})
     main.store.create("alice", name="T", language="en")
     r = client.get("/api/campaign/export", cookies={"morkrets_token": _tok()})
-    assert r.status_code == 403  # förmånen löpt → export borta
+    assert r.status_code == 200, r.text
 
 
 # ── Admin-stats: provider-aggregation ────────────────────────────────────

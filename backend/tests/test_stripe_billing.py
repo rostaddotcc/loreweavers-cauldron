@@ -342,9 +342,12 @@ def test_webhook_checkout_unlock10_grants_turns_and_features(client):
     assert main.load_users()["alice"]["turn_bonus"] == 120
 
 
-def test_webhook_checkout_donation_turns_no_features(client):
-    """Donation (valfri summa): +100 turns per € (amount_total i ören = turns),
-    inga förmåner/fönster (2026-08-04)."""
+def test_webhook_checkout_donation_turns_and_supporter_flag(client):
+    """Donation (valfri summa): +100 turns per € (amount_total i ören = turns).
+
+    2026-10-01: donationen är nu en egen unlock — den sätter features.supporter
+    (undo + export, permanent) men INGA premiumfeatures och ingen tier-höjning:
+    kontot ska förbli free så en 1€-donation inte ger modeller/TTS/bilder."""
     _seed("alice")
     body = _event("checkout.session.completed", {
         "metadata": {"username": "alice", "tier": "donation"},
@@ -357,8 +360,11 @@ def test_webhook_checkout_donation_turns_no_features(client):
     assert r.status_code == 200
     u = main.load_users()["alice"]
     assert u["turn_bonus"] == 500  # 5€ × 100 turns/€
-    assert u["features"] == {}
+    assert u["features"] == {"supporter": True}
+    assert u.get("features_until") is None        # permanent, inget fönster
     assert u["subscription_status"] == "free"
+    assert main._tier_for("alice") == "free"      # flaggan läcker inte in i tiern
+    assert main._is_supporter("alice") is True
     ledger = json.loads(main._LEDGER_FILE.read_text())
     assert any(e["type"] == "stripe:donation" and e["user"] == "alice" for e in ledger)
 

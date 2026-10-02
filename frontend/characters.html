@@ -673,7 +673,7 @@ async function confirmNewAdventure() {
     sessionStorage.setItem('dnd_vault_character', navCharId);
     try { SFX.gate(); } catch (_) {}
     toast('🌟 A new chapter begins!');
-    setTimeout(() => { location.href = 'chat.html?v=20260924d'; }, 900);
+    setTimeout(() => { location.href = 'chat.html?v=20261002a'; }, 900);
   } catch (e) {
     toast('⚠ ' + (e.message || 'Could not start the adventure'));
     navStarting = false;

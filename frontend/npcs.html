@@ -213,6 +213,22 @@ let CAMPAIGN = null;
 const REL_LABEL = { allierad:'Ally', neutral:'Neutral', fiende:'Foe', 'okänd':'Unknown' };
 const REL_KEYS  = ['allierad', 'neutral', 'fiende', 'okänd'];
 
+const REL_ALIAS = {
+  allierad:'allierad', ally:'allierad', friendly:'allierad', 'vänlig':'allierad', 'vän':'allierad',
+  neutral:'neutral',
+  fiende:'fiende', enemy:'fiende', hostile:'fiende', 'fientlig':'fiende', antagonistic:'fiende',
+  'okänd':'okänd', okand:'okänd', unknown:'okänd'
+};
+// Mappa godtyckligt relationsvärde → kanon-enum (allierad/neutral/fiende/okänd).
+// Legacy-EN ('ally'/'enemy') och fritext ('mentor') har läckt in i state.json förr;
+// UI:t känner bara svenska nycklar → okänt värde faller tillbaka till `dflt`.
+function normalizeRelation(v, dflt) {
+  if (typeof v !== 'string') return dflt;
+  const r = REL_ALIAS[v.trim().toLowerCase()];
+  return r === undefined ? dflt : r;
+}
+
+
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 function trustTier(t){
@@ -263,7 +279,7 @@ function relatedQuests(n){
       name: n.name || 'Nameless',
       role: n.role || 'Unknown role',
       race: n.race || '',
-      relation: REL_KEYS.includes(n.relation) ? n.relation : 'okänd',
+      relation: normalizeRelation(n.relation, 'okänd'),
       trust: typeof n.trust === 'number' ? n.trust : null,
       alive: n.alive !== false,
       color: n.color || 'var(--gold)',

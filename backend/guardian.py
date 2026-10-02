@@ -38,6 +38,28 @@ _HIT_DIE_BY_CLASS = {
     "sorcerer": 6, "wizard": 6,
 }
 
+# NPC-relation: kanon-enum är SVENSK (allierad/neutral/fiende/okänd) — UI känner bara
+# dessa nycklar. Skriv-vägar måste normalisera: legacy-EN ('ally'/'enemy'/'unknown') och
+# LLM-fritext har läckt in i state.json förr → "Unknown"-badge + tom "The Party"-sidebar.
+_RELATION_ALIASES = {
+    "allierad": "allierad", "ally": "allierad", "friendly": "allierad",
+    "vänlig": "allierad", "vän": "allierad",
+    "neutral": "neutral",
+    "fiende": "fiende", "enemy": "fiende", "hostile": "fiende",
+    "fientlig": "fiende", "antagonistic": "fiende",
+    "okänd": "okänd", "okand": "okänd", "unknown": "okänd",
+}
+
+
+def _normalize_relation(value, default=None):
+    # Mappa godtyckligt relationsvärde till kanon-enumen (allierad/neutral/fiende/okänd).
+    # Returnerar `default` (standard None) om värdet inte känns igen — anroparen väljer då
+    # skip (bevara gammalt värde) eller fallback (nya NPC:er). case/whitespace-tolerant.
+    if not isinstance(value, str):
+        return default
+    return _RELATION_ALIASES.get(value.strip().lower(), default)
+
+
 def _hit_die_for_class(cls_name) -> str:
     """Tärningstärningens storlek per klass (5e). Default d8."""
     c = (cls_name or "").lower()
@@ -2455,9 +2477,8 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
         if not name:
             continue
         if not any(n.get("name", "").lower() == name.lower() for n in npcs):
-            relation = npc.get("relation", "okänd")
-            if relation not in ("allierad", "neutral", "fiende", "okänd"):
-                relation = "okänd"
+            # Ally→allierad m.m.: normalisera via alias-mappen (LLM-EN/fritext → kanon)
+            relation = _normalize_relation(npc.get("relation"), default="okänd")
             h = int.from_bytes(name.encode("utf-8"), "big")
             _colors = ['#8b5fd4', '#d4691e', '#7aa35e', '#5e9aa3', '#d43a4d', '#c9a227', '#a8b2c0', '#b06fd4']
             _icons = ['🧙', '⚔️', '🏹', '🛡️', '🎭', '👻', '🐺', '🦉', '💀', '🔮', '🗡️', '🌙']
@@ -2476,8 +2497,8 @@ def apply_mechanics(state: dict, mech: dict, skip_effects: list | None = None) -
 
     for rel in mech.get("npc_relations", []):
         name = rel.get("name", "").strip()
-        new_rel = rel.get("new_relation", "").strip().lower()
-        if not name or new_rel not in ("allierad", "neutral", "fiende", "okänd"):
+        new_rel = _normalize_relation(rel.get("new_relation"))
+        if not name or new_rel is None:
             continue
         for npc in npcs:
             if npc.get("name", "").lower() == name.lower():

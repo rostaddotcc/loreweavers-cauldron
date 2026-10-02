@@ -2532,6 +2532,21 @@ function npcColorFor(name) {
   return NPC_PALETTE[h % NPC_PALETTE.length];
 }
 
+const REL_ALIAS = {
+  allierad:'allierad', ally:'allierad', friendly:'allierad', 'vänlig':'allierad', 'vän':'allierad',
+  neutral:'neutral',
+  fiende:'fiende', enemy:'fiende', hostile:'fiende', 'fientlig':'fiende', antagonistic:'fiende',
+  'okänd':'okänd', okand:'okänd', unknown:'okänd'
+};
+// Mappa godtyckligt relationsvärde → kanon-enum (allierad/neutral/fiende/okänd).
+// Legacy-EN ('ally'/'enemy') och fritext ('mentor') har läckt in i state.json förr;
+// UI:t känner bara svenska nycklar → okänt värde faller tillbaka till `dflt`.
+function normalizeRelation(v, dflt) {
+  if (typeof v !== 'string') return dflt;
+  const r = REL_ALIAS[v.trim().toLowerCase()];
+  return r === undefined ? dflt : r;
+}
+
 function ingestNpcs(npcList) {
   (npcList || []).forEach(npc => {
     if (!npc || !npc.name) return;
@@ -2543,12 +2558,12 @@ function ingestNpcs(npcList) {
         icon: npc.icon || '🎭',
         role: npc.role || '',
         alive: npc.alive !== false,
-        relation: npc.relation || 'okänd',
+        relation: normalizeRelation(npc.relation, 'okänd'),
         near: !!npc.near,
       };
     } else {
       if (npc.alive === false) NPCS[key].alive = false;
-      if (npc.relation) NPCS[key].relation = npc.relation;
+      if (npc.relation) NPCS[key].relation = normalizeRelation(npc.relation, NPCS[key].relation);
       if (typeof npc.near === 'boolean') NPCS[key].near = npc.near;
     }
   });
@@ -9423,7 +9438,7 @@ function renderNpcDrawer(key) {
   const rawName = n.name || key || 'Unknown';
   const name = cdEsc(rawName);
   const role = cdEsc(n.role || extra.role || '');
-  const relation = CD_REL_KEYS.includes(extra.relation) ? extra.relation : 'okänd';
+  const relation = normalizeRelation(extra.relation, 'okänd');
   const relCls = relation === 'allierad' ? 'ally' : relation === 'fiende' ? 'foe' : 'neutral';
   const alive = n.alive !== false;
   const avatar = AVATARS['npc:' + key]
@@ -9462,7 +9477,7 @@ function cdMentionNpc(name) {
 // ═══════════════ 📖 CODEX MODAL (D1.3) — lazy iframes ═══════════════
 const CODEX_PAGES = {
   character: { label: '🧙 Character', src: 'character.html?v=20260930a' },
-  npcs:      { label: '🧝 NPCs',      src: 'npcs.html?v=20260922b' },
+  npcs:      { label: '🧝 NPCs',      src: 'npcs.html?v=20261002a' },
   map:       { label: '🗺 Map',       src: 'platser.html?v=20260930a' },
   journal:   { label: '📜 Journal',   src: 'loggbok.html?v=20260922b' },
   facts:     { label: '📌 Facts',     src: 'facts.html?v=20260922e' },

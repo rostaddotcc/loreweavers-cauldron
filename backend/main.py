@@ -275,6 +275,7 @@ from extraction import FactRegister, extract_facts, format_facts_block, build_ex
 from guardian import (
     _combat_tag,
     _normalize_item,
+    _normalize_relation,
     _CLASS_ALIASES,
     _hit_die_for_class,
     _SPELL_SLOTS_BY_LEVEL,
@@ -544,7 +545,7 @@ def _maybe_inject_npc_context(system_content: str, message: str, state: dict) ->
         return system_content
     if npc.get("alive", True) is False:
         return system_content
-    if npc.get("relation") == "fiende":
+    if npc.get("relation") in ("fiende", "enemy"):
         return system_content
     block = _build_npc_chat_context(npc, _get_lang(state))
     return system_content + "\n\n" + block
@@ -899,7 +900,9 @@ def _parse_mechanical_tags(text: str, state: dict) -> tuple[str, dict, list[dict
     # NPC_RELATION — uppdatera en NPCs relation
     for m in _MECH_PATTERNS['NPC_RELATION'].finditer(text):
         npc_name = m.group(1).strip().lower()
-        new_rel = m.group(2).strip()
+        new_rel = _normalize_relation(m.group(2))
+        if new_rel is None:
+            continue  # okänt värde → behåll gammal relation (ingen tyst enum-drift)
         for npc in state.get('npcs', []):
             if npc.get('name', '').lower() == npc_name:
                 npc['relation'] = new_rel
@@ -5254,7 +5257,7 @@ def compact_state(state: dict, language: str = "sv") -> str:
     lines.append(f"Plats: {loc}. Tid: {tid}. Dag: {dag}.")
 
     # Fiender
-    enemies = [n for n in state.get("npcs", []) if n.get("relation") == "fiende" and n.get("alive", True)]
+    enemies = [n for n in state.get("npcs", []) if n.get("relation") in ("fiende", "enemy") and n.get("alive", True)]
     if enemies:
         e_str = ", ".join(f"{n.get('name', '?')} ({n.get('hp', '?')})" for n in enemies)
         lines.append(f"Fiender: {e_str}")
@@ -5394,7 +5397,7 @@ def _build_system_prompt(
     parts.append(f"[DM-prompt {DM_PROMPT_VERSION}]\n" + DM_CORE_PROMPT)
 
     # Combat vs Narrative — injicera bara det som behövs denna tur
-    enemies = [n for n in state.get("npcs", []) if n.get("relation") == "fiende" and n.get("alive", True)]
+    enemies = [n for n in state.get("npcs", []) if n.get("relation") in ("fiende", "enemy") and n.get("alive", True)]
     if enemies:
         parts.append(DM_COMBAT_PROMPT)
     else:
@@ -6066,7 +6069,7 @@ async def _guardian_manual_correction(
                 npcs.append({
                     "name": npc["name"],
                     "role": npc.get("role", "unknown" if en else "okänd"),
-                    "relation": npc.get("relation", "neutral"),
+                    "relation": _normalize_relation(npc.get("relation", "neutral"), default="neutral"),
                     "notes": npc.get("notes", ""),
                     "alive": npc.get("alive", True),
                 })
@@ -6075,7 +6078,9 @@ async def _guardian_manual_correction(
     # NPC relation changes
     for rel in data.get("npc_relations", []):
         rname = rel.get("name", "")
-        new_rel = rel.get("new_relation", "")
+        new_rel = _normalize_relation(rel.get("new_relation"))
+        if new_rel is None:
+            continue  # okänt värde → behåll gammal relation
         for npc in npcs:
             if npc.get("name", "").lower() == rname.lower():
                 old_rel = npc.get("relation", "?")
@@ -12074,7 +12079,7 @@ def _merge_world_data(state: dict, extracted: dict, merged: dict, lang: str = "s
                 state.setdefault("npcs", []).append({
                     "name": npc["name"],
                     "role": npc.get("role", _default_role),
-                    "relation": npc.get("relation", "neutral"),
+                    "relation": _normalize_relation(npc.get("relation", "neutral"), default="neutral"),
                     "notes": npc.get("notes", ""),
                     "alive": npc.get("alive", True),
                 })

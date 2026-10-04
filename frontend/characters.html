@@ -295,7 +295,7 @@
 // Auth-guard
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 </script>
-<script src="api.js?v=20260930a"></script>
+<script src="api.js?v=20261004a"></script>
 <script src="modal.js?v=20260906a"></script>
 <script src="i18n.js?v=20261001a"></script>
 <script>
@@ -604,11 +604,25 @@ async function useCharacter(charId) {
     toast('⚔️ The adventurer steps into the adventure!');
     setTimeout(() => { location.href = 'chat.html'; }, 900);
   } catch (e) {
-    if (String(e.message||'').includes('No active campaign')) {
+    const msg = String(e.message || '');
+    // 409 = den aktiva kampanjen har redan en spelad hjälte. Erbjud alltid
+    // en NY kampanj i stället — den pågående lämnas orörd (2026-10-04).
+    if (e.status === 409 || msg.includes('already has a hero')) {
+      const body = msg.replace(/^HTTP \d+:\s*/, '');
+      const go = await Modal.confirm({
+        title: 'Your adventure is already running',
+        body: body + '\n\nStart a NEW adventure with this adventurer? Your current one is left untouched.',
+        confirmText: '🌟 New adventure',
+        cancelText: 'Cancel',
+      });
+      if (go) startNewAdventure(charId);
+      return;
+    }
+    if (msg.includes('No active campaign')) {
       toast('📜 Start a New Adventure first, then choose this adventurer.');
       setTimeout(() => { location.href = 'adventure.html'; }, 1400);
     } else {
-      toast('⚠ ' + (e.message || 'Could not use character'));
+      toast('⚠ ' + (msg || 'Could not use character'));
     }
   }
 }

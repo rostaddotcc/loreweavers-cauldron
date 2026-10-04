@@ -2021,7 +2021,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
 </div>
 
 <script src="sfx.js?v=20260811a"></script>
-<script src="api.js?v=20260930a"></script>
+<script src="api.js?v=20261004a"></script>
 <script src="i18n.js?v=20261001a"></script>
 <script src="local.js?v=20261001a"></script>
 <script>
@@ -3390,6 +3390,35 @@ async function csRotate(delta) {
   _avatarProfileMode = wasProfile;
   AVATAR_KIND = wasKind;
   _csPaintPortrait();
+}
+
+// ── ⚒ Spara den LEVDA hjälten till Cooked Souls (nivå, gear, story) ──
+// Rostad 2026-10-01 (84017d8): Forge-sparningen flyttades hit från character.html
+// — den här knappen är den flytten. Backend (from_campaign:true) tar den AKTIVA
+// kampanjens character + inventory; kampanjer som startades UR valvet bär
+// meta.vault_id → SAMMA kort uppdateras, så nivån behålls och inga tvillingar
+// skapas. Utan valv-länk skapas ett nytt kort med aktuell nivå (2026-10-04).
+let _csSaving = false;
+async function saveToCookedSouls() {
+  if (_csSaving) return;
+  const ch = (campaignData && campaignData.character) || {};
+  if (!ch.name) { toast('⚠ No adventurer to save yet'); return; }
+  _csSaving = true;
+  const btn = document.getElementById('cs-save-vault');
+  if (btn) { btn.disabled = true; btn.textContent = '💾 Saving…'; }
+  try {
+    const res = await API.vaultSave({ from_campaign: true });
+    const lvl = ch.level ? ' — level ' + ch.level : '';
+    toast(res && res.overwritten
+      ? '⚒ ' + ch.name + lvl + ' updated in Cooked Souls'
+      : '⚒ ' + ch.name + lvl + ' saved to Cooked Souls');
+    try { SFX.gate(); } catch (_) {}
+  } catch (e) {
+    toast('⚠ ' + (e.message || 'Could not save to Cooked Souls'));
+  } finally {
+    _csSaving = false;
+    if (btn) { btn.disabled = false; btn.textContent = '⚒ Save to Cooked Souls'; }
+  }
 }
 
 function renderCharSheet() {
@@ -10063,6 +10092,7 @@ document.addEventListener('keydown', e => {
         <div class="av-gal-count" id="cs-gal-count"></div>
         <button class="av-btn primary cs-gen" onclick="pickAvatar('player')" title="Generate a new portrait — part of the 10€ unlock, each image costs 1 turn">🎨 Generate new portrait</button>
         <button class="av-btn" onclick="closeCharSheet();openCodex('character')" title="Open the full character page in the Codex panel">📖 Full sheet in Codex</button>
+        <button class="av-btn" id="cs-save-vault" onclick="saveToCookedSouls()" title="Save this adventurer — level, gear and story — to Cooked Souls, so you can start a new adventure with them later. Heroes that came from Cooked Souls update their own card.">⚒ Save to Cooked Souls</button>
       </div>
       <div class="cs-head-col">
         <div class="cs-name" id="cs-name">—</div>

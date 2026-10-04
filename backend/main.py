@@ -5106,6 +5106,29 @@ async def trigger_chapter(body: ChapterRequest, morkrets_token: str | None = Coo
 # ═══════════════════════════════════════
 
 
+def _status_names(statuses) -> str:
+    """Status-namn ur en lista som kan bära strängar ELLER dicts.
+
+    Stridsmotorn (combat.py) skriver statusar som dicts
+    ({"name": "blind", "duration": 3, ...}). Läsvägarna gjorde tidigare
+    `", ".join(listan)` rakt av → TypeError: sequence item 0: expected str
+    instance, dict found — kastat inuti systemprompten, alltså EFTER
+    Guardian men FÖRE svaret, vilket gjorde att hela POST /api/chat blev 500
+    och kampanjen blev ospelbar (incident 2026-10-04: 5 kampanjer, 4 spelare).
+    Tål båda formerna och skräp-innehåll.
+    """
+    names: list[str] = []
+    for s in statuses or []:
+        if isinstance(s, dict):
+            raw = s.get("name")
+        else:
+            raw = s
+        name = str(raw or "").strip()
+        if name:
+            names.append(name)
+    return ", ".join(names)
+
+
 def compact_state(state: dict, language: str = "sv") -> str:
     """Kompakt naturligt-språk-sammanfattning av kampanjtillståndet.
 
@@ -5277,7 +5300,7 @@ def compact_state(state: dict, language: str = "sv") -> str:
             lines.append(f"Turordning: {order_str}")
         for e in combat.get("enemies", []):
             if e.get("alive", True):
-                status = ", ".join(e.get("statuses", [])) if e.get("statuses") else ""
+                status = _status_names(e.get("statuses"))
                 lines.append(f"  Fiende: {e.get('name', '?')} — HP {e.get('hp', '?')}/{e.get('max_hp', '?')}, AC {e.get('ac', '?')}{f', Status: {status}' if status else ''}")
         # Spelarens action economy
         pa = combat.get("player_actions", {})
@@ -9444,6 +9467,13 @@ async def vault_save(body: dict, morkrets_token: str | None = Cookie(None)):
     # Overwrite-stöd: om frontend skickar overwrite_id och posten finns,
     # uppdatera den befintliga posten i stället för att skapa en duplikat.
     overwrite_id = (body.get("overwrite_id") or "").strip()
+    # Länkad valvpost? Kampanjer som startades FRÅN valvet bär meta.vault_id —
+    # exportera då tillbaka till SAMMA kort (nivå, gear och story behålls;
+    # produktlöftet "no more adventurer-twins" 2026-09-13).
+    if not overwrite_id and state is not None:
+        linked = str((state.get("meta") or {}).get("vault_id") or "").strip()
+        if linked and re.fullmatch(r"[0-9a-f]{10}", linked) and vault.get(username, linked):
+            overwrite_id = linked
     # Security (2026-08-04, P0): vault-id:n är uuid-hex (10) — blockera
     # traversal-försök innan vault.get/update bygger sökvägen.
     if overwrite_id and not re.fullmatch(r"[0-9a-f]{10}", overwrite_id):
@@ -9494,12 +9524,55 @@ async def vault_delete(char_id: str, morkrets_token: str | None = Cookie(None)):
     return {"ok": True}
 
 
+def _campaign_has_progress(state: dict) -> bool:
+    """True om kampanjen har riktig spelhistorik (inte bara nyss skapad).
+
+    Används av /api/vault/characters/{id}/use för att ALDRIG tyst byta ut
+    hjälten i ett pågående äventyr — det bytte bort 91 turer av tillväxt för
+    spelaren chup 2026-10-03 (Qhilvorum niv 2 → valv-snapshot niv 1).
+    """
+    if not isinstance(state, dict):
+        return False
+    meta = state.get("meta") or {}
+    try:
+        if int(meta.get("turn_count") or 0) > 0:
+            return True
+    except (TypeError, ValueError):
+        return True
+    ch = state.get("character") or {}
+    if isinstance(ch, dict):
+        if ch.get("updates"):
+            return True
+        try:
+            if int(ch.get("level") or 1) > 1:
+                return True
+        except (TypeError, ValueError):
+            return True
+        xp = ch.get("xp") or {}
+        if isinstance(xp, dict):
+            try:
+                if int(xp.get("current") or 0) > 0:
+                    return True
+            except (TypeError, ValueError):
+                return True
+    return False
+
+
 @app.post("/api/vault/characters/{char_id}/use")
-async def vault_use(char_id: str, morkrets_token: str | None = Cookie(None)):
+async def vault_use(char_id: str, body: dict | None = None, morkrets_token: str | None = Cookie(None)):
     """Lyft en valv-karaktär till den aktiva kampanjen: character + inventory
-    (+ spelar-avatar om valvet har en) skrivs in i kampanj-state."""
+    (+ spelar-avatar om valvet har en) skrivs in i kampanj-state.
+
+    SÄKERHET (2026-10-04): om den aktiva kampanjen redan har spelhistorik
+    krävs {"confirm_replace": true} — annars 409. Ett pågående äventyr får
+    aldrig tystas ned till en valv-snapshot; vill spelaren ha hjälten i en
+    NY kampanj ska kampanjen skapas först (mode "new" i UI:t).
+    """
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
+
+    body = body or {}
+    confirm_replace = bool(body.get("confirm_replace"))
 
     entry = vault.get(username, char_id)
     if not entry:
@@ -9508,6 +9581,20 @@ async def vault_use(char_id: str, morkrets_token: str | None = Cookie(None)):
     state = store.get(username)
     if not state:
         raise HTTPException(404, "No active campaign — create one first")
+
+    if _campaign_has_progress(state) and not confirm_replace:
+        cur_ch = state.get("character") or {}
+        cur_name = cur_ch.get("name") or "the current hero"
+        try:
+            turns = int((state.get("meta") or {}).get("turn_count") or 0)
+        except (TypeError, ValueError):
+            turns = 0
+        raise HTTPException(
+            409,
+            f"Your active adventure already has a hero — {cur_name} "
+            f"({turns} turns). Start a new adventure to keep it untouched. "
+            "Replacing the hero discards their progress.",
+        )
 
     char_data = entry.get("character") or {}
     # Backup-beräkning av härledda värden för gamla valv-poster
@@ -9519,6 +9606,13 @@ async def vault_use(char_id: str, morkrets_token: str | None = Cookie(None)):
     inv = entry.get("inventory") or []
     if inv:
         state["inventory"] = inv
+
+    # Länka kampanjen till valvposten → exporten (from_campaign) uppdaterar
+    # SAMMA kort med aktuell nivå/gear i stället för att skapa en tvilling.
+    try:
+        state.setdefault("meta", {})["vault_id"] = char_id
+    except (TypeError, AttributeError):
+        pass
 
     # Kopiera avatar-bild till kampanjen om valvet har en
     av = entry.get("avatar") or {}

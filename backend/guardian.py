@@ -843,11 +843,11 @@ def _format_state_for_guardian(state: dict, language: str = "sv") -> str:
             parts.append(f"  - SPELAREN {ch.get('name', '?')} (HP {hp.get('current', '?')}/{hp.get('max', '?')}, AC {ch.get('ac', '?')}){p_status_str}")
         for e in combat.get("enemies", []):
             if e.get("alive", True):
-                status = ", ".join(e.get("statuses", [])) if e.get("statuses") else ""
+                status = ", ".join(s.get("name", str(s)) if isinstance(s, dict) else str(s) for s in (e.get("statuses") or [])).strip(", ")
                 parts.append(f"  - {e.get('name', '?')} (HP {e.get('hp', '?')}/{e.get('max_hp', '?')}, AC {e.get('ac', '?')}){(' [' + status + ']') if status else ''}")
         for a in combat.get("allies", []):
             if a.get("alive", True):
-                status = ", ".join(a.get("statuses", [])) if a.get("statuses") else ""
+                status = ", ".join(s.get("name", str(s)) if isinstance(s, dict) else str(s) for s in (a.get("statuses") or [])).strip(", ")
                 parts.append(f"  - ALLIERAD {a.get('name', '?')} (HP {a.get('hp', '?')}/{a.get('max_hp', '?')}, AC {a.get('ac', '?')}){(' [' + status + ']') if status else ''}")
         initiative = combat.get("initiative", [])
         if initiative:

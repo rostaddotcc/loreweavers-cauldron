@@ -591,8 +591,12 @@ const API = (() => {
       return req('/api/vault/characters/' + encodeURIComponent(charId), { method: 'DELETE' });
     },
 
-    vaultUse(charId) {
-      return req('/api/vault/characters/' + encodeURIComponent(charId) + '/use', { method: 'POST', body: '{}' });
+    // confirmReplace=true byter medvetet ut hjälten i en PÅGÅENDE kampanj
+    // (backend svarar 409 utan flaggan när kampanjen har spelhistorik).
+    vaultUse(charId, opts = {}) {
+      const body = { confirm_replace: !!(opts && opts.confirmReplace) };
+      return req('/api/vault/characters/' + encodeURIComponent(charId) + '/use',
+                 { method: 'POST', body: JSON.stringify(body) });
     },
 
     vaultGenerateAvatar(charId, seed, mode, prompt, provider = 'stepfun') {

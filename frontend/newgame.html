@@ -400,7 +400,7 @@
 </div>
 
 <script src="sfx.js?v=20260811a"></script>
-<script src="api.js?v=20260930a"></script>
+<script src="api.js?v=20261004a"></script>
 <script src="i18n.js?v=20261001a"></script>
 <script src="archetypes.js?v=20261001a"></script>
 <script>
@@ -925,7 +925,8 @@ async function summon() {
     }
     const { campaign } = await API.getCampaign();
     if (!campaign) {
-      await API.createCampaign(sessionStorage.getItem('dnd_adventure_mode') || 'freestyle', selLang);
+      // Tomt namn → backendens språkmedvetna default ("An Untitled Adventure").
+      await API.createCampaign('', selLang);
     } else {
       try {
         await API.updateCampaignLanguage(selLang);
@@ -1246,7 +1247,8 @@ async function useVaultHero(charId, btn) {
     // Säkerställ kampanj + språk (samma flöde som summon())
     const { campaign } = await API.getCampaign();
     if (!campaign) {
-      await API.createCampaign(sessionStorage.getItem('dnd_adventure_mode') || 'freestyle', selLang);
+      // Tomt namn → backendens språkmedvetna default ("An Untitled Adventure").
+      await API.createCampaign('', selLang);
     } else {
       try { await API.updateCampaignLanguage(selLang); } catch (e) { console.warn(e); }
     }
@@ -1257,8 +1259,23 @@ async function useVaultHero(charId, btn) {
     sessionStorage.setItem('dnd_vault_character', charId);
     setTimeout(() => { location.href = 'chat.html'; }, 900);
   } catch (e) {
+    const msg = String(e.message || '');
+    // 409 = pågående kampanj med spelad hjälte → erbjud en NY kampanj i stället
+    // för att skriva över den (2026-10-04).
+    if (e.status === 409 || msg.includes('already has a hero')) {
+      if (btn) { btn.disabled = false; btn.textContent = '⚔️ Take This Adventurer'; }
+      const body = msg.replace(/^HTTP \d+:\s*/, '');
+      const go = await Modal.confirm({
+        title: 'Your adventure is already running',
+        body: body + '\n\nStart a NEW adventure with this adventurer? Your current one is left untouched.',
+        confirmText: '🌟 New adventure',
+        cancelText: 'Cancel',
+      });
+      if (go) startNewAdventure(charId, btn);
+      return;
+    }
     SFX.error();
-    toast('⚠ ' + (e.message || 'Could not take this adventurer'));
+    toast('⚠ ' + (msg || 'Could not take this adventurer'));
     if (btn) { btn.disabled = false; btn.textContent = '⚔️ Take This Adventurer'; }
   }
 }

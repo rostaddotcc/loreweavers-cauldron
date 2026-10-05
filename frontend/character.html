@@ -511,7 +511,11 @@
   box-shadow: 0 0 18px -4px rgba(var(--gold-bright-rgb),0.5), inset 0 1px 0 rgba(255,255,255,0.1);
   animation: candle 4s ease-in-out infinite;
 }
-.sk-grid{ display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem 1.5rem; padding: 0.2rem 0 0.4rem; }
+.sk-grid{ display: grid; grid-template-columns: 1fr; gap: 0.3rem 1.5rem; padding: 0.2rem 0 0.4rem; }
+  /* 2 kolumner ENDAST på bred vy (fristående character.html). Codex-iframen (~388px)
+     och mobil måste vara 1 kol — annars klipps högerkolumnens (ability)+bonus mot kanten.
+     Placerad EFTER basregeln: media-query ger ingen extra specificitet, ordningen avgör. */
+  @media (min-width: 721px){ .sk-grid{ grid-template-columns: 1fr 1fr; } }
 .sk-row{
   display: flex; align-items: baseline; gap: 0.5rem;
   font-size:var(--fs-sm); padding: 0.3rem 0.55rem; border-radius: var(--radius-sm);

@@ -6,13 +6,13 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
 <title>The Lore Weaver's Cauldron — The Minds, Voices &amp; Brushes</title>
-<meta name="description" content="The minds, voices and brushes behind the mask — free DM minds (StepFun 3.7 Flash, StepFun 3.5 Flash 2603) and unlocked minds (Step 5 Preview, Qwen 3.8 Flash, Qwen 3.6 Flash, DeepSeek V4.1 Flash), TTS narrators (StepFun TTS, Qwen TTS) and image generation (StepFun, Wan 2.7 Pro, Qwen Image 3 Pro). Context windows, parameters, speeds and what each one does at your table.">
+<meta name="description" content="The minds, voices and brushes behind the mask — free DM minds (StepFun 3.7 Flash, StepFun 3.5 Flash 2603) and unlocked minds (Step 5 Preview, Qwen 3.8 Flash, Qwen 3.6 Flash, DeepSeek V4.1 Flash), TTS narrators (StepFun TTS, Qwen TTS) and image generation (StepFun, Wan 2.7 Pro, Qwen Image 3 Pro) — or bring your own: run the DM on your local Ollama, any model it can play including uncensored ones, at 0 turns per DM step. Context windows, parameters, speeds and what each one does at your table.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://dnd.rostad.cc/models.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="The Lore Weaver's Cauldron">
 <meta property="og:title" content="The Lore Weaver's Cauldron — The Minds, Voices &amp; Brushes">
-<meta property="og:description" content="Meet the minds, voices and brushes behind the mask: Qwen, DeepSeek and StepFun DMs, TTS narrators and AI image generation — with context windows, speeds and what each one does at your table.">
+<meta property="og:description" content="Meet the minds, voices and brushes behind the mask: Qwen, DeepSeek and StepFun DMs, TTS narrators and AI image generation — or run the DM on your own Ollama, uncensored models included, at 0 turns per DM step.">
 <meta property="og:url" content="https://dnd.rostad.cc/models.html">
 <meta property="og:image" content="https://dnd.rostad.cc/assets/cauldron-hero.webp">
 <meta property="og:image:width" content="1536">
@@ -20,7 +20,7 @@
 <meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="The Lore Weaver's Cauldron — The Minds, Voices &amp; Brushes">
-<meta name="twitter:description" content="Meet the minds, voices and brushes behind the mask: Qwen, DeepSeek and StepFun DMs, TTS narrators and AI image generation — with context windows, speeds and what each one does at your table.">
+<meta name="twitter:description" content="Meet the minds, voices and brushes behind the mask: Qwen, DeepSeek and StepFun DMs, TTS narrators and AI image generation — or run the DM on your own Ollama, uncensored models included, at 0 turns per DM step.">
 <meta name="twitter:image" content="https://dnd.rostad.cc/assets/cauldron-hero.webp">
 <meta name="theme-color" content="#1c1713">
 <link rel="icon" href="/assets/logo-cauldron.jpg">
@@ -408,7 +408,7 @@
         </div>
         <span class="m-tag dm">Local DM</span>
       </div>
-      <p class="m-desc">The Cauldron can now speak with a voice that lives on <b>your own hardware</b>. The server stays the brain — it builds every prompt and keeps the books: dice, HP, combat and the world state are rolled and owned server-side, exactly as before. Your machine becomes the mouth: the browser asks your local Ollama to narrate and hands the text back. No API key exists for Ollama, so there is nothing to store, nothing to leak, and <b>the DM step costs 0 turns</b> — it isn't our electricity anymore.</p>
+      <p class="m-desc">The Cauldron can now speak with a voice that lives on <b>your own hardware</b>. The server stays the brain — it builds every prompt and keeps the books: dice, HP, combat and the world state are rolled and owned server-side, exactly as before. Your machine becomes the mouth: the browser asks your local Ollama to narrate and hands the text back. No API key exists for Ollama, so there is nothing to store, nothing to leak, and <b>the DM step costs 0 turns</b> — it isn't our electricity anymore. It isn't our content policy either: the house minds (StepFun, Qwen, DeepSeek) are subject to their providers' policies, while a model on <b>your</b> hardware answers only to you. Any model your Ollama can run is fully playable as the DM — uncensored ones included. Images and voice remain house engines; this is about the DM's words.</p>
       <div class="spec-grid">
         <div class="spec"><span class="k">Cost of the DM step</span><span class="v">0 turns<small>your hardware pays</small></span></div>
         <div class="spec"><span class="k">Recommended model</span><span class="v">≥14B thinking<small>8B works, less is a gamble</small></span></div>
@@ -420,6 +420,7 @@
       <div class="m-role"><span class="ico">③</span><span><b>Play.</b> Pick a 🏮 model as your DM. Your browser streams the narration token by token from your own machine; everything else at the table behaves the same.</span></div>
       <div class="m-role"><span class="ico">⚑</span><span><b>Requirements:</b> desktop Chrome or Firefox on the same machine as Ollama — loopback to your own box is what this is built for. From another machine (or your phone): Ollama on <span style="font-family:var(--font-mono);font-size:.85em">OLLAMA_HOST=0.0.0.0</span> with <span style="font-family:var(--font-mono);font-size:.85em">OLLAMA_ORIGINS=https://dnd.rostad.cc</span>, <em>and</em> TLS on its address — browsers refuse plain-HTTP LAN calls from an HTTPS page, so on a tailnet put <span style="font-family:var(--font-mono);font-size:.85em">tailscale serve</span> in front of it. If the page finds your Ollama but shows a yellow CORS dot, that origins line is the fix. The bookkeeping roles want a model that follows JSON-like instructions — a 14B+ thinking model does those steps happily, a tiny 3B one fumbles them.</span></div>
       <div class="m-role"><span class="ico">④</span><span><b>Pick who carries the background — role by role.</b> The 🏮 group sits in three dropdowns: <b>Dungeon Master</b>, <b>Lorekeeper</b> (the Guardian: rules, dice checks, HP/XP/items bookkeeping) and <b>Background</b> (extraction: facts, journal, memory) — in the ⚙ settings and in the new-adventure setup alike, once you've opted in with <b>Use own Ollama</b>. There is no mode switch: you simply pick your own model for as many roles as you like, and roles you leave on house models keep running on the house exactly as before. When both the Lorekeeper and the Background run locally, the daily allowance rises to roughly <b>300 messages</b>, because the house then spends almost nothing per turn; it keeps the periodic summaries and the logbook either way.</span></div>
+      <div class="m-role"><span class="ico">◆</span><span><b>Your table, your rules.</b> House minds answer to their providers' content policies; a model on your own hardware answers to you. Whatever your Ollama can run is fully playable as the DM — the uncensored ones included — and the house doesn't get a vote in what it says. It does still keep the books: the server builds every prompt, and dice, HP and the Lorekeeper stay server-authoritative, so a local DM can be as frank as it likes without the numbers drifting. Run the Lorekeeper and the Background locally too and the whole Cauldron breathes on your machine. Portraits and voices are the exception — image generation and TTS stay on house engines.</span></div>
       <p class="note" style="margin-top:1.1rem"><b>The honest limitations.</b> The daily allowance follows how many roles you run at home: while <b>any</b> background role still rides our models, local play is capped at roughly <b>100 local messages per account per day</b> — still about three times the free tier's play, for none of the DM-step cost. Pick 🏮 models for <b>both</b> the Lorekeeper and the Background and the cap lifts to roughly <b>300 messages a day</b> — which is simply because our API cost per turn drops to about zero there. One dependency, honestly stated: local background roles only take effect when the DM is local too — the relay lives on that path. Periodic summaries and the logbook stay on the house either way, and <b>voice narration and images are not local features</b> — they keep costing house turns as before. Narration quality is exactly as good as the model you picked and as fast as your hardware: an 8B model tells a serviceable tale, a sub-8B one will lose the plot of a long campaign, and a 14B+ thinking model on a real GPU is where this stops feeling like a trade-off — the bookkeeping roles ask even more instruction-following, since their steps come back as JSON-like tasks. The prompt your Ollama receives is the same prompt our DMs get — it is deliberately not a secret; you can inspect what your DM was actually asked. And a local campaign is your own hardware's child: dice, HP and combat remain server-authoritative, so nothing fabricated locally changes the books. The whole feature is opt-in — nothing is probed until you tick <b>Use own Ollama</b>. <a href="local-ai.html" style="color:var(--gold-bright)">🏮 Bring Your Own Breath — the full player guide</a> covers setup, the CORS trap behind the yellow dot, and the troubleshooting FAQ.</p>
     </div>
   </div>
@@ -659,6 +660,6 @@
 </script>
 <script src="i18n.js?v=20261001a"></script>
 <script src="sprites.js?v=20260806b"></script>
-<script src="rail.js?v=20261005a"></script>
+<script src="rail.js?v=20261006a"></script>
 </body>
 </html>

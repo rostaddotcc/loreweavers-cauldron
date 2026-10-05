@@ -137,6 +137,9 @@
     } else {
       auth.textContent = '⚔ Enter the Table';
       auth.setAttribute('href', loginHref + '#gate');
+      // RAIL_TITLES satte 'Log out of your account' före denna gren (bugg
+      // 2026-10-05, tooltip-audit): utloggad ska title matcha länktexten.
+      auth.setAttribute('title', 'Enter the Realm — log in or forge your name');
     }
   }
 

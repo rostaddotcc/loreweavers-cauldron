@@ -6,13 +6,13 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
 <title>Bring Your Own Breath — Local AI Guide (Ollama) | The Lore Weaver's Cauldron</title>
-<meta name="description" content="Run the Dungeon Master on your own machine with Ollama: setup, the CORS gotcha and status dots, troubleshooting, verification commands and FAQ for the 🏮 Local AI at The Lore Weaver's Cauldron.">
+<meta name="description" content="Run the Dungeon Master on your own machine with Ollama: any model you can run becomes your narrator — uncensored ones included, at 0 turns per DM step. Setup, the CORS gotcha and status dots, troubleshooting, verification commands and FAQ for the 🏮 Local AI at The Lore Weaver's Cauldron.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://dnd.rostad.cc/local-ai.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="The Lore Weaver's Cauldron">
 <meta property="og:title" content="Bring Your Own Breath — Local AI Guide | The Lore Weaver's Cauldron">
-<meta property="og:description" content="Set up Ollama as your Dungeon Master, fix the CORS trap that makes the yellow dot sticky, and read the honest FAQ — dice stay server-side, the DM step costs 0 turns.">
+<meta property="og:description" content="Set up Ollama as your Dungeon Master — any model your hardware can run narrates, uncensored ones included, at 0 turns per DM step. Fix the CORS trap that makes the yellow dot sticky, and read the honest FAQ — dice stay server-side.">
 <meta property="og:url" content="https://dnd.rostad.cc/local-ai.html">
 <meta property="og:image" content="https://dnd.rostad.cc/assets/cauldron-hero.webp">
 <meta property="og:image:width" content="1536">
@@ -20,7 +20,7 @@
 <meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Bring Your Own Breath — Local AI Guide | The Lore Weaver's Cauldron">
-<meta name="twitter:description" content="Set up Ollama as your Dungeon Master, fix the CORS trap that makes the yellow dot sticky, and read the honest FAQ — dice stay server-side, the DM step costs 0 turns.">
+<meta name="twitter:description" content="Set up Ollama as your Dungeon Master — any model your hardware can run narrates, uncensored ones included, at 0 turns per DM step. Fix the CORS trap that makes the yellow dot sticky, and read the honest FAQ — dice stay server-side.">
 <meta name="twitter:image" content="https://dnd.rostad.cc/assets/cauldron-hero.webp">
 <meta name="theme-color" content="#1c1713">
 <link rel="icon" href="/assets/logo-cauldron.jpg">
@@ -158,7 +158,7 @@
   <div class="page-eyebrow rv">LOCAL AI · YOUR MACHINE SPEAKS</div>
   <h1 class="rv d1">🏮 Bring Your Own Breath</h1>
   <div class="page-rule rv d1">✦</div>
-  <p class="rv d2" style="color:var(--bone-dim)">A guide to running the Dungeon Master on your own hardware. The server still thinks; your machine lends it a voice. This page covers the setup, the gotchas that actually bite (almost all of them CORS), and the questions people ask before and after.</p>
+  <p class="rv d2" style="color:var(--bone-dim)">A guide to running the Dungeon Master on your own hardware. The server still thinks; your machine lends it a voice. Any model your Ollama can run is fully playable as the DM — uncensored ones included: the house models answer to their providers' content policies, a model on your hardware answers to you. This page covers the setup, the gotchas that actually bite (almost all of them CORS), and the questions people ask before and after.</p>
 
   <hr class="divider">
 
@@ -170,6 +170,7 @@
       <span class="step">3.</span><span class="desc"><b>The house keeps the books</b> — dice, HP, combat and the world state stay server-side, so the numbers stay honest no matter what the local voice says</span>
     </div>
     <p style="margin-top:.9rem">One honest note before anything else: <b>the prompt your Ollama receives is the same prompt our house DMs get</b>. It is deliberately not a secret — you can watch exactly what your DM was asked. The DM step costs <b>0 turns</b>; everything else at the table behaves as before.</p>
+    <p style="margin-top:.6rem">And one honest difference: the house minds answer to <b>their providers' content policies</b>; a model on your own hardware answers only to you. Whatever your Ollama can run is fully playable — <b>the uncensored ones included</b>. The server still builds every prompt and keeps dice, HP and the Lorekeeper honest, so a frank local DM never means drifting numbers. Images and voices are the exception: image generation and TTS stay on house engines.</p>
   </div>
 
   <h2 class="rv">Get Started</h2>
@@ -259,6 +260,11 @@ Environment="OLLAMA_ORIGINS=https://dnd.rostad.cc"</pre>then <span class="cmd">s
   </details>
 
   <details class="faq rv d1">
+    <summary>Does a local DM follow the house models' content policies?</summary>
+    <div class="a"><p>No — that's the point of your own hardware. The house minds (StepFun, Qwen, DeepSeek) are subject to their providers' content policies; a model running on your machine answers only to you. Whatever your Ollama can run is fully playable as the DM — <b>uncensored models included</b>. Two honest boundaries: the server still builds every prompt and keeps dice, HP and the Lorekeeper honest, so narration can be as frank as it likes without the books drifting — and image generation and TTS remain house engines, which stay under house policies.</p></div>
+  </details>
+
+  <details class="faq rv d1">
     <summary>What context size should I pick?</summary>
     <div class="a"><p><b>16k</b> is the recommended default — Ollama's own default of 4k is too small for a campaign prompt. The ctx selector (8k / 16k / 32k) in the settings row is applied per request; it does not change your Ollama globally. Go 32k only if your hardware swallows it without slowing the story to a crawl.</p></div>
   </details>
@@ -321,6 +327,6 @@ Environment="OLLAMA_ORIGINS=https://dnd.rostad.cc"</pre>then <span class="cmd">s
   }, 1500);
 })();
 </script>
-<script src="rail.js?v=20261005a"></script>
+<script src="rail.js?v=20261006a"></script>
 </body>
 </html>

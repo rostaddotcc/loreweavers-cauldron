@@ -689,11 +689,20 @@ html{font-size:var(--fs-base)}
     <div class="rr-mid">
       <!-- ⚡ Turn-quota-pille (våg 4, 2026-09-26 + rostad 2026-09-27): TURNS
            used/cap + BOUGHT visas ENDAST för betalande (tier2/lifetime/turn_bonus>0);
-           free ser bara REFRESH-timer + ⚡-varning vid ≤5. Klick → profilen. -->
+           free ser bara REFRESH-timer + ⚡-varning vid ≤5. Klick → profilen.
+           Våg 2026-10-05 (adv-counters): pillen är ETT instrument — chip med
+           mikroskopiska etiketter + guld-värden, RESET-segmentet tonat. Hover/
+           focus öppnar #quota-pop som visar dagens modellanrop (/api/me/stats,
+           lat hämtning + 5-min-cache). Alla id:n och skrothookar orörda. -->
       <div class="rr-tally" id="quota-pill" onclick="openProfileModal()" role="button" tabindex="0" title="When your turns refresh. Click for your profile."
            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openProfileModal()}">
         <span class="rw" id="quota-warn" style="display:none">⚡ <span class="tv warn" id="quota-warn-tv">—</span></span><span class="sep rw" id="quota-warn-sep" style="display:none">·</span>
-        <span class="tp" id="quota-turns-row" style="display:none">TURNS <span class="tv" id="quota-turns"></span></span><span class="sep tp" id="quota-turns-sep" style="display:none">·</span><span class="tp" id="quota-bonus-row" style="display:none">LEFT <span class="tv" id="quota-bonus"></span></span><span class="sep tp" id="quota-bonus-sep" style="display:none">·</span><span class="cd">RESET <span class="tv" id="quota-cd"></span></span>
+        <span class="tp" id="quota-turns-row" style="display:none"><span class="tl">TURNS</span> <span class="tv" id="quota-turns"></span></span><span class="sep tp" id="quota-turns-sep" style="display:none">·</span><span class="tp" id="quota-bonus-row" style="display:none"><span class="tl">LEFT</span> <span class="tv" id="quota-bonus"></span></span><span class="sep tp" id="quota-bonus-sep" style="display:none">·</span><span class="cd"><span class="tl">RESET</span> <span class="tv" id="quota-cd"></span></span>
+        <div class="qp-pop" id="quota-pop" role="tooltip" aria-hidden="true">
+          <div class="qp-line qp-turns" id="qp-line-turns">Turns refresh at midnight UTC.</div>
+          <div class="qp-line qp-calls" id="qp-line-calls" hidden></div>
+          <div class="qp-line qp-canon">The DM, the dice and the Lorekeeper all run per turn — the calls show the machinery. Only turns are what you spend.</div>
+        </div>
       </div>
     </div>
     <div class="rr-actions">
@@ -727,6 +736,88 @@ html{font-size:var(--fs-base)}
     </div>
   </header>
 
+  <!-- ═══════════ ⚡ Quota-pill instrument (våg 2026-10-05, adv-counters) ═══════════
+       Pilloren ska läsa som ETT instrument: mjuk chip, mikroskopiska
+       etiketter (Cinzel små versaler, bone-dim), guld-värden, tonat
+       RESET-segment. Popovern (#quota-pop) = bläck + guldhårlinje, Spectral
+       13px, z-index under rail-dropdownens 10000 men över sidan (railen har
+       egen stacking context z:5 > .app z:2). Platt canon: snes.css §0
+       *{border-radius:0!important} gäller — inga rundade hörn här.
+       Kontrast (snes.css-not): bone-dim 4.6:1 · bone 9.4:1 · gold-bright
+       10.7:1 · blood-bright 4.8:1 — alla ≥4.5:1 mot ink/stone-familjen. -->
+  <style>
+    /* Krock-fix (våg 2026-10-05): .rr-brand (titel+tagg ~315px) flödar ur sin
+       1fr-kolumn i rail.css-gridden (auto-overflow, white-space:nowrap) och
+       biter in i mittkolumnen → pillens chip-kant kolliderar med .rr-tagg:ens
+       ram vid ~960–1500px. Redan i HEAD osynlig krock (gap −11px), synlig nu
+       när pillen har egen ram. Fix: samma grid som rail.css själv använder vid
+       ≤900px (auto 1fr auto) — brand får naturlig bredd, pillen centreras i
+       restutrymmet. Sidlokal override (rail.css är syskonägd/orörd), senare i
+       dokumentordning + !important → vinner. */
+    @media (min-width:901px){
+      .rite-rail{ grid-template-columns:auto minmax(0,1fr) auto !important; }
+    }
+    #quota-pill{
+      position:relative; cursor:pointer;
+      padding:.35rem .65rem;
+      background:color-mix(in srgb, var(--ink) 35%, transparent);
+      border:1px solid color-mix(in srgb, var(--gold) 20%, var(--edge));
+      box-shadow:inset 0 1px 0 rgba(var(--gold-rgb),.05);
+      transition:border-color .2s ease, background .2s ease;
+    }
+    #quota-pill:hover{
+      background:color-mix(in srgb, var(--ink) 50%, transparent);
+      border-color:color-mix(in srgb, var(--gold) 50%, var(--edge));
+    }
+    #quota-pill:focus-visible{ outline:1px solid var(--gold); outline-offset:2px; }
+    @media (pointer:coarse){ #quota-pill{ min-height:44px; align-items:center; } }
+    #quota-pill .tl{
+      font-family:var(--font-accent,'Cinzel',serif);
+      font-size:.52rem; letter-spacing:.18em; color:var(--bone-dim);
+    }
+    #quota-pill .tv{ color:var(--gold-bright); font-weight:500; font-variant-numeric:tabular-nums; }
+    #quota-pill .tv.warn{ color:var(--blood-bright); }
+    #quota-pill .sep{ color:color-mix(in srgb, var(--edge-hi) 75%, transparent); }
+    /* RESET-segmentet: egen sänkt yta + bone-värde (skiljer sig från guld-turns) */
+    #quota-pill .cd{
+      padding:.12rem .45rem;
+      background:color-mix(in srgb, var(--ink) 45%, transparent);
+      border-left:1px solid color-mix(in srgb, var(--edge) 70%, transparent);
+    }
+    #quota-pill .cd .tv{ color:var(--bone); font-weight:400; }
+    /* ── Popover: dagens modellanrop ── */
+    .qp-pop{
+      position:absolute; top:calc(100% + 9px); left:50%; transform:translateX(-50%);
+      z-index:400; width:max-content; max-width:min(320px, calc(100vw - 1.5rem));
+      padding:.65rem .8rem;
+      background:linear-gradient(170deg, var(--stone-2), var(--ink));
+      border:1px solid color-mix(in srgb, var(--gold) 45%, var(--edge));
+      box-shadow:0 18px 40px -18px rgba(0,0,0,.9);
+      font-family:var(--font-body,'Spectral',Georgia,serif);
+      font-size:13px; line-height:1.45; color:var(--bone); text-align:left;
+      white-space:normal;
+      opacity:0; visibility:hidden; pointer-events:none;
+      transition:opacity .16s ease;
+    }
+    .qp-pop.show{ opacity:1; visibility:visible; }
+    .qp-pop::before{
+      content:''; position:absolute; top:-5px; left:50%;
+      width:8px; height:8px; transform:translateX(-50%) rotate(45deg);
+      background:var(--stone-2);
+      border-left:1px solid color-mix(in srgb, var(--gold) 45%, var(--edge));
+      border-top:1px solid color-mix(in srgb, var(--gold) 45%, var(--edge));
+    }
+    .qp-pop .qp-turns{ color:var(--bone-bright); font-weight:500; }
+    .qp-pop .qp-calls{ color:var(--gold-bright); margin-top:.15rem; }
+    .qp-pop .qp-canon{
+      margin-top:.45rem; padding-top:.45rem;
+      border-top:1px solid color-mix(in srgb, var(--edge) 70%, transparent);
+      color:var(--bone-dim); font-style:italic;
+    }
+    @media (prefers-reduced-motion: reduce){
+      #quota-pill, .qp-pop{ transition:none; }
+    }
+  </style>
 
   <!-- ═══════════════ 🪞 Profil-modal (spelarens egna stats) ═══════════════ -->
   <style>
@@ -1413,7 +1504,7 @@ async function activateAndContinue(campaignId) {
   SFX.click();
   try {
     await API.activateCampaign(campaignId);
-    location.href = 'chat.html?v=20261002a';
+    location.href = 'chat.html?v=20261006a';
   } catch (e) {
     toast('⚠ ' + I18N.t('Kunde inte aktivera kampanj: ') + (e.message || I18N.t('okänt fel')));
   }
@@ -1578,6 +1669,124 @@ function renderQuotaPill(me) {
     } else ben.style.display = 'none';
   }
 }
+
+// ── ⚡ Quota-popover: dagens modellanrop (våg 2026-10-05, adv-counters) ──
+// Lat hämtning: FÖRSTA hover/focus på pillen → GET /api/me/stats (credentials
+// include). Cachen lever ~5 min; ingen polling någonsin. 401/fel → tyst
+// fallback (befintlig kort title-text kvar, calls-rad dold). Title-attributet
+// skrivs EXAKT EN gång efter lyckad fetch — aldrig per tick (quotaTick orörd).
+// Popovern visar: rad 1 = pillens turns-siffror, rad 2 = dagens + livstids
+// modellanrop, rad 3 = kanon (ligger statiskt i markupen). Guardian/extraktion
+// är FRIA interna anrop — texten får aldrig antyda att de kostar turns.
+let _qpStats = null;        // {at, today, lifetime} — cachen
+let _qpFetch = null;        // inflight-promise (dubbelfetch-guard)
+let _qpTitleDone = false;   // title skrivs EN gång
+const _QP_TTL = 5 * 60 * 1000;
+
+function _qpTodayKey() {
+  // Backendnycklar är lokala Stockholm-dagar (_day_key i main.py) — samma zon här.
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Stockholm' });
+}
+function _qpFmt(n) {
+  return Number(n || 0).toLocaleString('en-US');
+}
+async function _qpLoadStats(force) {
+  if (!force && _qpStats && (Date.now() - _qpStats.at) < _QP_TTL) return _qpStats;
+  if (_qpFetch) return _qpFetch;
+  _qpFetch = (async () => {
+    try {
+      const res = await fetch('/api/me/stats', { credentials: 'include' });
+      if (!res.ok) return null;                    // 401/5xx → tyst fallback
+      const data = await res.json();
+      const daily = (data && data.stats && data.stats.daily) || {};
+      const key = _qpTodayKey();
+      let lifetime = 0;
+      for (const k in daily) lifetime += Number((daily[k] || {}).calls) || 0;
+      _qpStats = { at: Date.now(), today: Number((daily[key] || {}).calls) || 0, lifetime };
+      _qpApplyTitle();
+      if (document.getElementById('quota-pop').classList.contains('show')) _qpRender();
+      return _qpStats;
+    } catch (_) { return null; }                   // nätverksfel → tyst fallback
+    finally { _qpFetch = null; }
+  })();
+  return _qpFetch;
+}
+function _qpApplyTitle() {
+  if (_qpTitleDone || !_qpStats) return;
+  const pill = document.getElementById('quota-pill');
+  if (!pill) return;
+  pill.title = 'Turns left · ' + _qpFmt(_qpStats.today) + (_qpStats.today === 1 ? ' model call today' : ' model calls today') + ' · click for your profile.';
+  _qpTitleDone = true;                             // EN gång — aldrig per tick
+}
+function _qpRender() {
+  // Rad 1: turns-siffror ( skrivs bara vid show/fetch — ALDRIG per 1s-tick ).
+  const l1 = document.getElementById('qp-line-turns');
+  const l2 = document.getElementById('qp-line-calls');
+  if (!l1 || !l2) return;
+  const me = _quotaMe;
+  if (me) {
+    const cap = Number(me.turn_cap) || 0;
+    const inf = (cap === 0 || me.subscription_status === 'lifetime');
+    if (inf) {
+      l1.textContent = 'Unlimited turns — your path never resets.';
+    } else {
+      const used = Math.max(0, Math.floor(Number(me.turns_used) || 0));
+      const avail = Math.max(0, Math.floor(Number(me.turns_available) || 0));
+      l1.textContent = used + '/' + cap + ' turns today · ' + avail + ' turns left';
+    }
+  } else {
+    l1.textContent = 'Turns refresh at midnight UTC.';
+  }
+  if (_qpStats) {
+    const t = _qpStats.today;
+    l2.textContent = (t > 0
+      ? _qpFmt(t) + ' model calls behind them today'
+      : 'No model calls yet today')
+      + ' · ' + _qpFmt(_qpStats.lifetime) + ' all time';
+    l2.hidden = false;
+  } else {
+    l2.hidden = true;                              // fallback: bara rad 1 + kanon
+  }
+}
+function _qpClamp() {
+  // Håll popovern inom viewporten (pille ligger mitt i railen, men på smala
+  // skärmar kan translateX(-50%) sticka ut — kläm i sidled vid show).
+  const pop = document.getElementById('quota-pop');
+  if (!pop) return;
+  pop.style.marginLeft = '';
+  const r = pop.getBoundingClientRect();
+  const pad = 8;
+  if (r.left < pad) pop.style.marginLeft = (pad - r.left) + 'px';
+  else if (r.right > window.innerWidth - pad) pop.style.marginLeft = (window.innerWidth - pad - r.right) + 'px';
+}
+function _qpShow() {
+  const pop = document.getElementById('quota-pop');
+  const pill = document.getElementById('quota-pill');
+  if (!pop) return;
+  _qpRender();
+  pop.classList.add('show');
+  pop.setAttribute('aria-hidden', 'false');
+  if (pill) pill.setAttribute('aria-describedby', 'quota-pop');
+  _qpClamp();
+  _qpLoadStats(Date.now() - (_qpStats ? _qpStats.at : 0) >= _QP_TTL);
+}
+function _qpHide() {
+  const pop = document.getElementById('quota-pop');
+  const pill = document.getElementById('quota-pill');
+  if (!pop) return;
+  pop.classList.remove('show');
+  pop.setAttribute('aria-hidden', 'true');
+  if (pill) pill.removeAttribute('aria-describedby');
+}
+(function _qpInit() {
+  const pill = document.getElementById('quota-pill');
+  if (!pill) return;
+  pill.addEventListener('mouseenter', _qpShow);
+  pill.addEventListener('mouseleave', _qpHide);
+  pill.addEventListener('focusin', _qpShow);       // keyboard: Tab till pillen
+  pill.addEventListener('focusout', _qpHide);
+  pill.addEventListener('keydown', (e) => { if (e.key === 'Escape') _qpHide(); });
+})();
 
 // Lämna porten (logga ut)
 async function leaveGate() {
@@ -2702,7 +2911,7 @@ async function startAdventure() {
     // 3) Lyft in hjälten (genererad → sparad i Forge; eller färdig Forge-hjälte)
     await API.vaultUse(advAdventurerId);
     sessionStorage.setItem('dnd_vault_character', advAdventurerId);
-    location.href = 'chat.html?v=20261002a';
+    location.href = 'chat.html?v=20261006a';
   } catch (e) {
     try { SFX.error(); } catch (_) {}
     toast('⚠ ' + (e.message || 'Could not start'));
@@ -3394,6 +3603,6 @@ select,.adv-details summary,.btn-gold,a.back{min-height:44px}
   .rune-divider span,.rr-sigil,.head h1::first-letter{animation:none!important}
 }
 </style>
-<script src="rail.js?v=20261005a"></script>
+<script src="rail.js?v=20261006a"></script>
 </body>
 </html>

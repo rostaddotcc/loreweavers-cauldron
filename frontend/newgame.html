@@ -1323,7 +1323,7 @@ async function confirmNewAdventure() {
     sessionStorage.setItem('dnd_vault_character', navCharId);
     SFX.gate();
     toast('🌟 A new chapter begins!');
-    setTimeout(() => { location.href = 'chat.html?v=20261002a'; }, 900);
+    setTimeout(() => { location.href = 'chat.html?v=20261006a'; }, 900);
   } catch (e) {
     SFX.error();
     toast('⚠ ' + (e.message || 'Could not start the adventure'));
@@ -1486,6 +1486,6 @@ select,.adv-details summary,.btn-gold,a.back{min-height:var(--tap-min)}
   .rune-divider span,.rr-sigil,.destiny-title h1::first-letter{animation:none!important}
 }
 </style>
-<script src="rail.js?v=20261005a"></script>
+<script src="rail.js?v=20261006a"></script>
 </body>
 </html>

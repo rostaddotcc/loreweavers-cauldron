@@ -1411,18 +1411,28 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
     <span class="rr-tag">AT THE TABLE</span>
   </div>
   <div class="rr-mid">
-    <!-- Turn-Tally (våg 4, 2026-09-26 + rostad 2026-09-27): TURN · DAY alltid;
-         TURNS used/cap + BOUGHT (köpta turns) visas ENDAST för betalande (tier2/
-         lifetime/turn_bonus>0) — free håller minimal tally. REFRESH-timer på
-         minuten + ⚡-varning vid ≤5 turns kvar (klick → cap-modal).
-         Klick i övrigt → profilmodalt (all info finns där). -->
+    <!-- Turn-Tally (våg 4, 2026-09-26 + rostad 2026-09-27 · instrument-polish
+         2026-10-05): TURN · DAY alltid; TURNS used/cap + BOUGHT (köpta turns)
+         visas ENDAST för betalande (tier2/lifetime/turn_bonus>0) — free håller
+         minimal tally. REFRESH-timer på minuten + ⚡-varning vid ≤5 turns kvar
+         (klick → cap-modal). Klick i övrigt → profilmodalt (all info finns där).
+         Hover/focus → #rr-pop: dagens modellanrop (lazy /api/me/stats, ~5 min
+         cache, tyst fallback). Alla ids/klasser (rr-*, .tp/.tv/.sep/.rw/.paid)
+         är skrivarkrokar för renderTurnTally() — rör inte utan grep först. -->
     <div class="rr-tally" id="rr-tally" onclick="openChatProfileModal()" role="button" tabindex="0"
          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openChatProfileModal()}"
          title="Current turn · day · when turns refresh. Click for your profile.">
       <span class="rw" id="rr-warn-row" style="display:none" onclick="capWarnClick(event)">⚡ <span class="tv warn" id="rr-warn">—</span></span><span class="sep rw" id="rr-warn-sep" style="display:none">·</span>
-      <span class="tp">TURN <span class="tv" id="rr-turn">—</span></span><span class="sep tp">·</span>
-      <span class="tp">DAY <span class="tv" id="rr-day">—</span></span><span class="sep tp paid" id="rr-quota-sep" style="display:none">·</span><span class="tp paid" id="rr-quota-row" style="display:none">TURNS <span class="tv" id="rr-quota">—</span></span><span class="sep tp paid" id="rr-bonus-sep" style="display:none">·</span><span class="tp paid" id="rr-bonus-row" style="display:none">LEFT <span class="tv" id="rr-bonus">—</span></span><span class="sep" id="rr-reset-sep" style="display:none">·</span>
-      <span id="rr-reset-row" style="display:none">RESET <span class="tv" id="rr-reset">—</span></span>
+      <span class="tp"><span class="tl">TURN</span><span class="tv" id="rr-turn">—</span></span><span class="sep tp">·</span>
+      <span class="tp"><span class="tl">DAY</span><span class="tv" id="rr-day">—</span></span><span class="sep tp paid" id="rr-quota-sep" style="display:none">·</span><span class="tp paid" id="rr-quota-row" style="display:none"><span class="tl">TURNS</span><span class="tv" id="rr-quota">—</span></span><span class="sep tp paid" id="rr-bonus-sep" style="display:none">·</span><span class="tp paid" id="rr-bonus-row" style="display:none"><span class="tl">LEFT</span><span class="tv" id="rr-bonus">—</span></span><span class="sep" id="rr-reset-sep" style="display:none">·</span>
+      <span id="rr-reset-row" class="treset" style="display:none"><span class="tl">RESET</span><span class="tv" id="rr-reset">—</span></span>
+    </div>
+    <!-- Hover/focus-popover (2026-10-05): idag-siffror från /api/me/stats.
+         Renderas av _renderTallyPop(); role=tooltip, aria-hidden växlar med .show. -->
+    <div class="rr-pop" id="rr-pop" role="tooltip" aria-hidden="true">
+      <div class="rp-line" id="rp-turns">—</div>
+      <div class="rp-line" id="rp-calls" hidden>—</div>
+      <div class="rp-note">The DM, the dice and the Lorekeeper all run per turn — the extra model calls are on the house. Only turns are spent.</div>
     </div>
   </div>
   <div class="rr-actions">
@@ -1521,10 +1531,83 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
        STANNAR: de som köpt turns vill se used/cap + BOUGHT även på mobil. */
     .rr-tally .tp:not(.paid){ display: none !important; }
   }
-  /* Klickbar tally → profilmodalt (2026-09-24): samma affordance som ⚗-sigilen. */
-  .rr-tally{ cursor: pointer; }
+  /* ── TALLY INSTRUMENT (2026-10-05, rostad: "snygga till counters") — ett
+     instrument, inte lös text: chip-bakgrund med guld-hårline, micro-caps-
+     etiketter i bone-dim (Cinzel), värden i guld (mono, tabular). RESET får
+     egen teal-tintad nisch. Alla färger = snes.css :root-variabler. ── */
+  .rr-mid{ position: relative; }
+  .rr-tally{
+    cursor: pointer; align-items: center; gap: 0 !important;
+    padding: .3rem .55rem; border: 1px solid color-mix(in srgb, var(--edge) 80%, transparent);
+    border-top-color: color-mix(in srgb, var(--edge-hi) 85%, transparent);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--stone-3) 55%, transparent), color-mix(in srgb, var(--stone) 65%, transparent));
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .rr-tally .tp, .rr-tally .rw, .rr-tally .treset{
+    display: inline-flex; align-items: baseline; gap: .3rem;
+    padding: 0 .55rem; white-space: nowrap;
+  }
+  /* Etiketter: dämpade micro-caps (Cinzel) — värdena bär guld/bright. */
+  .rr-tally .tl{
+    font-family: var(--font-accent); font-size: .5rem; letter-spacing: .16em;
+    color: var(--bone-dim); text-transform: uppercase; user-select: none;
+  }
+  .rr-tally .tv{ color: var(--gold-bright); font-weight: 500; font-variant-numeric: tabular-nums; }
+  /* Mjuka hårline-separatorer i stället för lösa punkter. */
+  .rr-tally .sep{
+    color: transparent; padding: 0; align-self: stretch; position: relative;
+    width: 1px; min-width: 1px; font-size: 0; overflow: hidden;
+    background: color-mix(in srgb, var(--edge-hi) 70%, transparent);
+  }
+  .rr-tally .rw{ color: var(--blood-bright); }
+  .rr-tally .rw .tv{ color: var(--blood-bright); }
+  /* 🕯-segmentet: egen nisch med teal-tint (info-kanon) så reset läses skilt.
+     Ingen border-left — .sep#rr-reset-sep ritar redan hårline (undvik dubbel). */
+  .rr-tally .treset{
+    background: rgba(var(--teal-rgb), .10);
+    margin-left: .05rem; padding-right: .5rem;
+  }
+  .rr-tally .treset .tl{ color: var(--teal); }
+  .rr-tally .treset .tv{ color: var(--bone); }
+  .rr-tally:hover, .rr-tally:focus-visible{
+    border-color: color-mix(in srgb, var(--gold) 55%, var(--edge));
+    box-shadow: 0 0 10px -4px rgba(var(--gold-rgb),.35);
+  }
   .rr-tally:hover .tv{ color: var(--gold-bright); }
-  .rr-tally:focus-visible{ outline: 1px solid var(--gold); outline-offset: 3px; }
+  .rr-tally:hover .treset .tv{ color: var(--bone-bright); }
+  .rr-tally:focus-visible{ outline: 1px solid var(--gold); outline-offset: 2px; }
+  /* ── Popover: bläck + guld-hårline, Spectral ≥13px, pekas bara (aldrig
+     klickbar). position:fixed i JS så den aldrig klipps; z=12000 = samma
+     tooltip-nivå som .set-tip (settings-tooltips) i z-index-stegen. ── */
+  .rr-pop{
+    position: fixed; z-index: 12000; display: none; max-width: min(300px, calc(100vw - 16px));
+    padding: .55rem .7rem .5rem;
+    background: var(--ink); border: 1px solid color-mix(in srgb, var(--gold) 45%, var(--edge));
+    border-top: 2px solid var(--gold);
+    box-shadow: 0 10px 28px -10px rgba(0,0,0,.75);
+    font-family: var(--font-body); font-size: .85rem; line-height: 1.45; color: var(--bone);
+    pointer-events: none; opacity: 0; transition: opacity .12s ease;
+  }
+  .rr-pop.show{ display: block; opacity: 1; }
+  .rr-pop .rp-line{ margin-bottom: .2rem; }
+  .rr-pop .rp-line b{ color: var(--gold-bright); font-weight: 700; }
+  .rr-pop .rp-note{
+    margin-top: .35rem; padding-top: .35rem;
+    border-top: 1px solid color-mix(in srgb, var(--edge) 70%, transparent);
+    font-size: .82rem; font-style: italic; color: var(--bone-dim);
+  }
+  @media (prefers-reduced-motion: reduce){
+    .rr-pop{ transition: none; }
+    .rr-tally, .rr-tally:hover{ transition: none; }
+  }
+  /* Touch-skärmar: ingen hover — popovern visas på focus (tab) ändå.
+     Betalandes fulla slot-rad (TURNS·LEFT·RESET) ska få plats utan att
+     hänga över vänsterkant → tajtare padding + kortare label-spacing här. */
+  @media (max-width: 480px){
+    .rr-tally{ padding: .26rem .2rem; }
+    .rr-tally .tp, .rr-tally .rw, .rr-tally .treset{ padding: 0 .3rem; gap: .22rem; }
+    .rr-tally .tl{ font-size: .46rem; letter-spacing: .1em; }
+  }
   /* ── Sidebar portrait hover badges (single-layer avatar, §3.3) ── */
   .pc-card{ position: relative; }
   .pc-badge{ position:absolute; z-index:3; width:24px; height:24px; border-radius:50%;
@@ -2362,6 +2445,7 @@ function renderTurnTally() {
 // ⚡-varningen i tallyn: klick → cap-modalens LÅGT-läge (top-up-chips), inte profilen.
 function capWarnClick(ev) {
   if (ev) ev.stopPropagation();
+  if (typeof hideTallyPop === 'function') hideTallyPop(); // popover under cap-modalen
   const me = _meData || {};
   openCapModal({
     low: true,
@@ -2369,6 +2453,129 @@ function capWarnClick(ev) {
     reset_date: me.reset_date || null,
   });
 }
+
+// ═══ TALLY HOVER-POPOVER (2026-10-05, rostad: "hovrar man över sina turns så
+// ska man se 'antal api calls'") ═══
+// /api/me/stats hämtas LAZY vid första hover/focus på #rr-tally, cachas i
+// _tallyStats (~5 min TTL). Aldrig polling: tick-loopen (1 Hz) och
+// renderTurnTally() rör varken title eller popover — hover-datan skrivs EN
+// gång efter fetch (title) och vid visning (rader). 401/fel → tyst fallback,
+// befintlig korta title står kvar. daily-nyckeln är Stockholm-dygn (backend
+// _day_key) — samma nyckel här via en-CA + timeZone.
+let _tallyStats = null;         // {fetched, calls, lifetime} | null
+let _tallyStatsPromise = null;  // in-flight dedup (snabba dubbel-hovrar)
+const _TALLY_STATS_TTL = 5 * 60 * 1000;
+function _tallyTodayKey() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Stockholm' });
+}
+async function _fetchTallyStats() {
+  if (_tallyStats && (Date.now() - _tallyStats.fetched) < _TALLY_STATS_TTL) return _tallyStats;
+  if (_tallyStatsPromise) return _tallyStatsPromise;
+  _tallyStatsPromise = (async () => {
+    try {
+      const res = await fetch('/api/me/stats', { credentials: 'include' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const daily = (data && data.stats && data.stats.daily) || {};
+      const today = daily[_tallyTodayKey()] || {};
+      let lifetime = 0;
+      for (const k of Object.keys(daily)) lifetime += (daily[k] && daily[k].calls) || 0;
+      _tallyStats = { fetched: Date.now(), calls: today.calls || 0, lifetime: lifetime };
+      _setTallyTitle();
+    } catch (_) {
+      _tallyStats = null; // tyst — befintlig title/fallback-text består
+    }
+    _tallyStatsPromise = null;
+    return _tallyStats;
+  })();
+  return _tallyStatsPromise;
+}
+// Uppdateras EN gång per lyckad fetch (aldrig per tick).
+function _setTallyTitle() {
+  const pill = document.getElementById('rr-tally');
+  if (!pill || !_tallyStats) return;
+  const nf = n => Number(n).toLocaleString('en-US');
+  const me = _meData || {};
+  const cap = parseInt(me.turn_cap, 10) || 0;
+  // 'Unlimited' kräver verklig _meData (cap=0 utan data ≠ lifetime).
+  const inf = !!_meData && ((typeof _tier === 'function' && _tier() === 'lifetime') || cap === 0);
+  const head = !_meData ? '' : inf ? 'Unlimited turns · ' : (Math.max(0, parseInt(me.turns_available, 10) || 0) + ' turns left · ');
+  pill.title = head + nf(_tallyStats.calls) + ' model calls today · click for your profile.';
+}
+function _renderTallyPop() {
+  const turnsEl = document.getElementById('rp-turns');
+  const callsEl = document.getElementById('rp-calls');
+  if (!turnsEl || !callsEl) return;
+  const nf = n => Number(n).toLocaleString('en-US');
+  const me = _meData || {};
+  const cap = parseInt(me.turn_cap, 10) || 0;
+  // Pre-load (ingen /api/me ännu): cap=0 betyder INTE unlimited — visa — istället.
+  const inf = !!_meData && ((typeof _tier === 'function' && _tier() === 'lifetime') || cap === 0);
+  if (!_meData) {
+    turnsEl.innerHTML = '<b>—</b> turns · loading your ledger…';
+  } else if (inf) {
+    turnsEl.innerHTML = '<b>Unlimited turns</b> — lifetime patron';
+  } else {
+    const used = Math.max(0, parseInt(me.period_turns_used != null ? me.period_turns_used : me.turns_used, 10) || 0);
+    const left = Math.max(0, parseInt(me.turns_available, 10) || 0);
+    // 'available' — inte 'left': LEFT-slotten i tallyn visar köpta bonus-turns,
+    // en annan siffra. available = daglig headroom + köpta (backend
+    // _turns_available) → redovisa köpta inom parentes så 88+3=91 går ihop.
+    const bonus = Math.max(0, parseInt(me.turn_bonus, 10) || 0);
+    turnsEl.innerHTML = '<b>' + nf(used) + (cap ? ' / ' + nf(cap) : '') + ' turns</b> used today · ' + nf(left) + ' available' + (bonus > 0 ? ' (incl. ' + nf(bonus) + ' bought)' : '');
+  }
+  if (_tallyStats) {
+    callsEl.hidden = false;
+    callsEl.innerHTML = '<b>' + nf(_tallyStats.calls) + ' model calls</b> behind them today · ' + nf(_tallyStats.lifetime) + ' lifetime';
+  } else {
+    callsEl.hidden = true; // ingen fetch ännu / fel — bara turns-raden + noten
+  }
+}
+function _placeTallyPop() {
+  const pop = document.getElementById('rr-pop');
+  const pill = document.getElementById('rr-tally');
+  if (!pop || !pill) return;
+  const r = pill.getBoundingClientRect();
+  pop.style.left = '0px'; pop.style.top = '0px';
+  const pr = pop.getBoundingClientRect();
+  let left = r.left + r.width / 2 - pr.width / 2;
+  left = Math.max(8, Math.min(left, Math.max(8, window.innerWidth - pr.width - 8)));
+  let top = r.bottom + 8;
+  if (top + pr.height > window.innerHeight - 8) top = Math.max(8, r.top - pr.height - 8);
+  pop.style.left = Math.round(left) + 'px';
+  pop.style.top = Math.round(top) + 'px';
+}
+function showTallyPop() {
+  const pop = document.getElementById('rr-pop');
+  const pill = document.getElementById('rr-tally');
+  if (!pop || !pill) return;
+  _renderTallyPop();
+  pop.classList.add('show');
+  pop.setAttribute('aria-hidden', 'false');
+  _placeTallyPop();
+  _fetchTallyStats().then(s => { if (s && pop.classList.contains('show')) _renderTallyPop(); });
+}
+function hideTallyPop() {
+  const pop = document.getElementById('rr-pop');
+  if (!pop) return;
+  pop.classList.remove('show');
+  pop.setAttribute('aria-hidden', 'true');
+}
+(() => {
+  const pill = document.getElementById('rr-tally');
+  if (!pill) return;
+  pill.addEventListener('mouseenter', showTallyPop);
+  pill.addEventListener('mouseleave', hideTallyPop);
+  pill.addEventListener('focus', showTallyPop);      // tangentbord: focus visar
+  pill.addEventListener('blur', hideTallyPop);
+  pill.addEventListener('click', hideTallyPop);      // klick → profilmodal, ej popover
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') hideTallyPop(); });
+  window.addEventListener('resize', () => {
+    const p = document.getElementById('rr-pop');
+    if (p && p.classList.contains('show')) _placeTallyPop();
+  });
+})();
+
 function updateHeaderInfo() {
   renderTurnTally();
   _refreshExportLockHint();
@@ -5440,7 +5647,7 @@ function addRollRequest(notation, label) {
         <div class="rr-title rr-death-title">${I18N.t(ATK_STR.deathTitle)}</div>
         <div class="rr-prompt rr-death-text">${I18N.t(ATK_STR.deathText)}</div>
         <div class="rr-actions">
-          <button class="rr-ico rr-ico-dice rr-death-btn" onclick="answerRollRequest('${id}','${notation}','${label.replace(/'/g, "\\'")}')"" aria-label="${I18N.t(ATK_STR.deathRoll)} (${notation})"${busy ? ' disabled' : ''}>
+          <button class="rr-ico rr-ico-dice rr-death-btn" onclick="answerRollRequest('${id}','${notation}','${label.replace(/'/g, "\\'")}')" aria-label="${I18N.t(ATK_STR.deathRoll)} (${notation})"${busy ? ' disabled' : ''}>
             <span class="rr-ico-glyph">🎲</span>
             <span class="rr-ico-label">${I18N.t(ATK_STR.deathRoll)} · ${escapeHtml(notation)}</span>
           </button>
@@ -10161,6 +10368,6 @@ document.addEventListener('keydown', e => {
   <div class="av-lb-title" id="avatar-lightbox-title"></div>
 </div>
 
-<script src="rail.js?v=20261005a"></script>
+<script src="rail.js?v=20261006a"></script>
 </body>
 </html>

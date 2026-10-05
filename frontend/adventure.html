@@ -626,6 +626,52 @@ html{font-size:var(--fs-base)}
 .ex-bar,.ex-fill{border-radius:8px!important}
 .arch .tag,.path .tag{border-radius:6px!important}
 .mi-close{border-radius:8px!important}
+
+/* ── M6 (2026-10-05, rostad): kampanjkortets knappar — EN guldig Continue +
+   EN röd Delete med bara ett ✕. Markup bär inte längre .btn-gold/.btn-blood
+   (snes.css vers-nummer + §5b-platt försvinner); dessa regler ligger sist i
+   blocket och vinner mot M3-gruppens sten-!important. ── */
+.campaign-card .cc-go{
+  flex:1;min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:.4em;
+  font-family:var(--font-display,'Cinzel',serif)!important;font-weight:700!important;
+  font-size:var(--fs-tiny)!important;letter-spacing:.14em!important;text-transform:uppercase!important;
+  color:var(--ink)!important;
+  background:linear-gradient(180deg,var(--gold-bright),var(--gold))!important;
+  border:1px solid var(--gold)!important;border-top-color:var(--gold-bright)!important;
+  border-radius:9px!important;cursor:pointer;white-space:nowrap;
+  box-shadow:0 4px 14px -4px rgba(var(--gold-bright-rgb),.45),inset 0 1px 0 rgba(255,255,255,.35)!important;
+  text-shadow:none!important;
+  transition:filter .2s,transform .2s,box-shadow .2s!important;
+}
+.campaign-card .cc-go:hover{
+  filter:brightness(1.1)!important;transform:translateY(-1px)!important;
+  box-shadow:0 6px 20px -4px rgba(var(--gold-bright-rgb),.6),inset 0 1px 0 rgba(255,255,255,.4)!important;
+}
+.campaign-card .cc-go:active{transform:translateY(1px)!important;filter:brightness(.95)!important}
+.campaign-card .cc-go:focus-visible{outline:2px solid var(--gold-bright)!important;outline-offset:2px!important}
+.campaign-card .cc-del{
+  flex:0 0 auto;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;
+  font-family:var(--font-display,'Cinzel',serif)!important;font-weight:700!important;
+  font-size:.9rem!important;letter-spacing:0!important;line-height:1;
+  color:var(--blood-bright)!important;
+  background:color-mix(in srgb,var(--blood) 26%,var(--stone-2))!important;
+  border:1px solid rgba(var(--blood-bright-rgb),.55)!important;
+  border-top-color:rgba(var(--blood-bright-rgb),.8)!important;
+  border-radius:9px!important;cursor:pointer;
+  box-shadow:0 3px 8px -3px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05)!important;
+  transition:background .2s,color .2s,border-color .2s,transform .2s!important;
+}
+.campaign-card .cc-del::before{content:none!important}   /* bara ✕ — inget versnummer */
+.campaign-card .cc-del:hover{
+  color:#fff!important;background:var(--blood)!important;border-color:var(--blood-bright)!important;
+  transform:translateY(-1px)!important;
+}
+.campaign-card .cc-del:active{transform:translateY(1px)!important;background:color-mix(in srgb,var(--blood) 70%,#000)!important}
+.campaign-card .cc-del:focus-visible{outline:2px solid var(--blood-bright)!important;outline-offset:2px!important}
+@media(prefers-reduced-motion:reduce){
+  .campaign-card .cc-go,.campaign-card .cc-del{transition:none!important}
+  .campaign-card .cc-go:hover,.campaign-card .cc-del:hover{transform:none!important}
+}
 </style>
 <script src="sprites.js?v=20260806b"></script>
 <script src="fonts.js?v=20260806b"></script>
@@ -1329,8 +1375,8 @@ function showCampaignList(campaigns) {
         <div class="cc-date">${I18N.t('Senast spelad:')} ${date}</div>
       </div>
       <div class="cc-actions">
-        <button class="go-btn cc-go btn-gold" onclick="activateAndContinue('${esc(c.campaign_id)}')">${I18N.t('⚔️ Fortsätt')}</button>
-        <button class="cc-del btn-blood" onclick="askDeleteCampaign('${esc(c.campaign_id)}','${esc(name)}')">✕</button>
+        <button class="cc-go" onclick="activateAndContinue('${esc(c.campaign_id)}')">${I18N.t('⚔️ Fortsätt')}</button>
+        <button class="cc-del" title="${I18N.t('Radera')}" aria-label="${I18N.t('Radera')} ${esc(name)}" onclick="askDeleteCampaign('${esc(c.campaign_id)}','${esc(name)}')">✕</button>
       </div>
     </div>`;
   }).join('');
@@ -3348,6 +3394,6 @@ select,.adv-details summary,.btn-gold,a.back{min-height:44px}
   .rune-divider span,.rr-sigil,.head h1::first-letter{animation:none!important}
 }
 </style>
-<script src="rail.js?v=20260924a"></script>
+<script src="rail.js?v=20261005a"></script>
 </body>
 </html>

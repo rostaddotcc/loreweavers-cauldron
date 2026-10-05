@@ -157,42 +157,23 @@
   .wrap{max-width:1140px;margin:0 auto;padding:0 clamp(1.3rem,5vw,3rem)}
   .sect{padding:clamp(4rem,8vw,6.5rem) 0}
 
-  /* ═══════════════ hero ═══════════════ */
-  .hero{min-height:min(100svh,900px);display:flex;align-items:center;padding:calc(var(--nav-h) + 1.5rem) 0 2.5rem}
-  .hero-copy{max-width:600px}
-  .hero h1{font-size:clamp(2.7rem,6.6vw,4.9rem);font-weight:600;line-height:.98;letter-spacing:-.012em;text-shadow:0 3px 30px rgba(0,0,0,.85)}
-  .hero h1 .of{display:block;font-family:var(--font-mono);font-weight:500;font-size:.135em;letter-spacing:.34em;text-transform:uppercase;color:var(--gold);margin-top:1.5em;text-shadow:none}
-  .hero .tagline{font-style:italic;font-weight:300;font-size:clamp(1.06rem,1.75vw,1.3rem);color:var(--bone);margin-top:1.5rem;line-height:1.62;max-width:44ch}
-  .free-slogan{margin-top:1.15rem;font-size:var(--fs-sm);font-weight:300;color:var(--bone-dim);line-height:1.6;max-width:52ch}
-  .free-slogan .fs-badge{font-family:var(--font-mono);font-style:normal;font-size:.55rem;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:#241a06;background:linear-gradient(180deg,var(--gold-bright),var(--gold));border:1px solid var(--gold-bright);border-radius:var(--radius-xs);padding:.34em .7em;margin-right:.6rem;vertical-align:middle}
-  .free-slogan b{color:var(--gold-bright);font-style:normal;font-weight:500}
-  .hero-actions{display:flex;align-items:center;gap:.9rem;margin-top:2rem;flex-wrap:wrap}
-  .myst-quote{margin-top:2rem;font-style:italic;font-size:var(--fs-sm);color:var(--bone-dim);min-height:1.6em;transition:opacity 1s ease}
-  .scroll-cue{position:absolute;bottom:1.5rem;left:50%;transform:translateX(-50%);color:var(--bone-dim);font-family:var(--font-mono);font-size:.58rem;letter-spacing:.26em;text-transform:uppercase;animation:cue-bob 2.6s ease-in-out infinite;z-index:1;display:flex;align-items:center;gap:.5rem}
-  @keyframes cue-bob{0%,100%{transform:translate(-50%,0);opacity:.45}50%{transform:translate(-50%,6px);opacity:1}}
-  /* ═══════════════ hero background — kittel-motiv (Qwen Image 3 Pro, 2026-09-30) ═══════════════
-     2026-09-30: EN statisk bild (ingen rotation) i ett 118vh-band från wrapperns
-     topp — bilden är komponerad med motivet i övre halvan och en mörk uttoning
-     nedtill, så kitteln syns i första skärmen och bandet tonar sömlöst mot ink
-     innan loginboxen (som ligger på ink, inte på konst). Två beskärningar:
-     landskap ≥721px, porträtt ≤720px (--hero-art byts i mobil-media-queryn).
-     Scrim: vänstermörk (hero-copy) + gradvis mörkare nedåt (gate-text). */
+  /* ═══════════════ hero background — kittel-motiv (Qwen Image 3 Pro, 2026-09-30)
+     2026-10-05: hero-sektionen borttagen (rostad) — gaten är nu första skärm.
+     Bakgrundsbandet ligger kvar på .hero-gate-wrappern: 118vh från toppen,
+     motivet glöder bakom sigillet och tonar mot ink före karusellen.
+     Scrim: gradvis mörkare nedåt. Två beskärningar: landskap ≥721px,
+     porträtt ≤720px (--hero-art byts i mobil-media-queryn). ═══════════════ */
   .hero-gate{position:relative;overflow:hidden}
   .hero-gate > section{position:relative;z-index:1}
-  .hero{position:relative}
   .hero-bg{position:absolute;top:0;left:0;right:0;height:118vh;z-index:0;background-image:var(--hero-art);background-size:cover;background-position:72% 55%;transform-origin:center;animation:hero-breathe 36s ease-in-out infinite alternate}
   .hero-bg::after{content:'';position:absolute;inset:0;background:
-    linear-gradient(90deg, var(--ink) 0%, color-mix(in srgb, var(--ink) 82%, transparent) 24%, color-mix(in srgb, var(--ink) 34%, transparent) 52%, color-mix(in srgb, var(--ink) 10%, transparent) 74%, color-mix(in srgb, var(--ink) 46%, transparent) 100%),
-    linear-gradient(180deg, color-mix(in srgb, var(--ink) 55%, transparent) 0%, transparent 15%, transparent 44%, color-mix(in srgb, var(--ink) 42%, transparent) 62%, color-mix(in srgb, var(--ink) 74%, transparent) 84%, var(--ink) 97%)}
+    linear-gradient(180deg, color-mix(in srgb, var(--ink) 62%, transparent) 0%, color-mix(in srgb, var(--ink) 24%, transparent) 22%, transparent 40%, color-mix(in srgb, var(--ink) 42%, transparent) 62%, color-mix(in srgb, var(--ink) 74%, transparent) 84%, var(--ink) 97%)}
   @keyframes hero-breathe{from{transform:scale(1)}to{transform:scale(1.07)}}
-  .hero-copy{position:relative;z-index:1}
-  .hero-credit{position:absolute;right:clamp(1.2rem,4vw,3rem);bottom:4.4rem;z-index:2;font-family:var(--font-mono);font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;color:var(--bone-dim);opacity:.7;text-shadow:1px 1px 0 #000}
   @media (max-width:720px){
     :root{--hero-art:url("assets/hero-loreweaver-portrait.webp?v=2")}   /* porträtt-art: mörk övre halva, kitteln glöder nedtill */
     .hero-bg{height:112vh;background-position:50% 50%}
     .hero-bg::after{background:
       linear-gradient(180deg, color-mix(in srgb, var(--ink) 72%, transparent) 0%, color-mix(in srgb, var(--ink) 26%, transparent) 20%, transparent 32%, color-mix(in srgb, var(--ink) 42%, transparent) 48%, color-mix(in srgb, var(--ink) 68%, transparent) 60%, color-mix(in srgb, var(--ink) 50%, transparent) 70%, color-mix(in srgb, var(--ink) 88%, transparent) 88%, var(--ink) 100%)}
-    .hero-credit{display:none}
   }
 
   /* ═══════════════ ambient layers — grain / embers / vignette / glow (2026-09-20)
@@ -221,15 +202,6 @@
   .rune-div::before,.rune-div::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.45}
   .rune-div span{color:var(--gold);font-size:var(--fs-tiny);text-shadow:0 0 8px rgba(var(--gold-rgb),.55)}
 
-  /* ═══════════════ hero — stat-strip + blinkande cursor (2026-09-20) ═══════════════
-     Fyra lösa chips → EN sammanhållen stat-rad med hairline-separatorer. */
-  .hero-copy{max-width:600px}
-  .hero-stats{display:flex;flex-wrap:wrap;align-items:center;gap:0;margin-top:1.6rem;border-top:1px solid color-mix(in srgb,var(--edge) 80%,transparent);border-bottom:1px solid color-mix(in srgb,var(--edge) 80%,transparent);padding:.6rem 0}
-  .hstat{font-family:var(--font-mono);font-size:.6rem;font-weight:500;letter-spacing:.15em;text-transform:uppercase;color:var(--bone-dim);line-height:1.5;padding:0 .95rem;position:relative}
-  .hstat + .hstat::before{content:'';position:absolute;left:0;top:15%;bottom:15%;width:1px;background:var(--edge)}
-  .hstat:first-child{padding-left:0}
-  .hstat b{color:var(--gold-bright);font-weight:600}
-  .hero h1 .of .cursor{display:inline-block;width:.55em;height:1.1em;background:var(--gold);margin-left:.5em;vertical-align:-.16em;animation:blink-cursor 1.2s steps(1) infinite}
   /* ═══════════════ features — täta info-boxar, 2 kolonner (2026-09-20) ═══════════════
      Sigill (inline-SVG) ersätter emoji-ikonerna. Mjuka radier + lyft på hover. */
   .feat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem;margin-top:1.5rem}
@@ -551,22 +523,15 @@
     .split{grid-template-columns:1fr}
   }
   @media (max-width:720px){
-    .hero{align-items:flex-end;padding-bottom:8vh}
-    .hero-copy{max-width:none}
-    .hero h1{font-size:clamp(1.9rem,9vw,2.6rem)}
-    .scroll-cue{display:none}
-    .myst-quote{margin-top:1.7rem}
     .field input{min-height:var(--tap-min)}
     .gate-btn{min-height:var(--tap-lg)}
   }
   @media (prefers-reduced-motion:reduce){
     html{scroll-behavior:auto}
     .rv{opacity:1;transform:none;transition:none}
-    .scroll-cue,.head-logo,.hero-bg{animation:none}
-    .hero h1 .of .cursor{animation:none;opacity:.85}
+    .hero-bg{animation:none}
     #update-banner.show{animation:none}
     .gate-card.shake{animation:none}
-    .myst-quote{transition:none}
   }
 </style>
 <link rel="stylesheet" href="snes.css?v=52">
@@ -578,8 +543,6 @@
 h1,h2,h3,.sb-name,.pt-price,.faq summary,.gate-head h3,.modal .mname{font-family:var(--font-display) !important}
 h1,h2,h3{letter-spacing:0 !important;line-height:1.1 !important}
 h2 em{font-style:italic !important;color:var(--gold-bright) !important}
-.hero h1{letter-spacing:-.012em !important;line-height:.98 !important;text-shadow:0 3px 30px rgba(0,0,0,.85) !important;font-weight:600 !important}
-.hero h1 .of{letter-spacing:.34em !important}
 .sb-name{letter-spacing:.03em !important}
 .pt-price{letter-spacing:-.01em !important}
 .faq summary{letter-spacing:0 !important}
@@ -587,8 +550,6 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 .eyebrow{font-family:var(--font-mono) !important;letter-spacing:.28em !important}
 .f-kick{font-family:var(--font-mono) !important;letter-spacing:.16em !important}
 .f-num{font-family:var(--font-mono) !important;letter-spacing:.14em !important}
-.hstat{font-family:var(--font-mono) !important;letter-spacing:.15em !important}
-.fs-badge{font-family:var(--font-mono) !important;letter-spacing:.2em !important}
 .btn,.gate-btn{font-family:var(--font-mono) !important;letter-spacing:.17em !important}
 .pt-name{font-family:var(--font-mono) !important;letter-spacing:.26em !important}
 .pt-flag{font-family:var(--font-mono) !important;letter-spacing:.16em !important}
@@ -603,8 +564,6 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 .deck-abls span{font-family:var(--font-mono) !important;letter-spacing:.06em !important}
 .deck-info .bsec{font-family:var(--font-mono) !important;letter-spacing:.16em !important}
 .field label{font-family:var(--font-mono) !important;letter-spacing:.22em !important}
-.scroll-cue{font-family:var(--font-mono) !important;letter-spacing:.24em !important}
-.hero-credit{font-family:var(--font-mono) !important;letter-spacing:.16em !important}
 .rdot{font-family:var(--font-mono) !important;letter-spacing:.2em !important}
 .ledger-fold{font-family:var(--font-mono) !important;letter-spacing:.2em !important}
 .disclosure{font-family:var(--font-mono) !important;letter-spacing:.16em !important}
@@ -629,6 +588,23 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 .f-icon{transition:box-shadow .28s,border-color .28s,background .28s !important}
 .gate-toggle{background:none !important;border:none !important;box-shadow:none !important}
 .gate-toggle:hover{background:none !important;border:none !important;color:var(--bone) !important}
+  /* ═══════════════ slim header links (2026-10-05) ═══════════════
+     Headern bär bara länkar — ingen brand/CTA/meny. .rr-link är sidlokal
+     (rail.css äger rr-btn/rr-drop för de andra sidorna). */
+  .rr-link{display:inline-flex;align-items:center;gap:.35rem;font-family:var(--font-mono);font-size:.6rem;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--bone-dim);text-decoration:none;padding:.4rem .55rem;border:1px solid transparent;white-space:nowrap;transition:color .2s,border-color .2s,background .2s}
+  .rr-link:hover{color:var(--gold-bright);border-color:rgba(var(--gold-rgb),.45);background:rgba(var(--gold-rgb),.06)}
+  .rr-link:focus-visible{outline:1px solid var(--gold);outline-offset:1px;color:var(--gold-bright)}
+  .rr-quick{gap:.1rem}
+  @media (max-width:900px){
+    .rr-quick{gap:0}
+    .rr-link{padding:.4rem .35rem;font-size:.54rem;letter-spacing:.1em}
+    .rr-quick{justify-content:flex-end}
+  }
+  @media (max-width:600px){
+    .rite-rail{grid-template-columns:auto 1fr auto !important}   /* slå rail.css auto-1fr-auto omvändning */
+    .rr-link .rr-l{display:none}                                 /* trångt: namn bort, romerska siffror kvar */
+    .rr-quick .rr-link{padding:.55rem .3rem;font-size:.6rem}
+  }
 </style>
 </head>
 <body>
@@ -639,34 +615,26 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 <canvas id="embers" aria-hidden="true"></canvas>
 <div class="vignette" aria-hidden="true"></div>
 
-<!-- ═══════════════ Rail v2 — unified header (2026-09-23) ═══════════════ -->
-<!-- banners flyttade UNDER headern 2026-09-30: de låg först i flödet och
-     täckte railen + Enter/knappar (position:sticky funkar bara nedåt) -->
+<!-- ═══════════════ Slim header (2026-10-05, rostad): ENDAST länkar —
+     pricing + mechanics, och snabblänkar till karusellens fyra rum längst ned.
+     Ingen brand-block, ingen ☰-meny, ingen Enter-CTA (gate ligger nu överst).
+     rr-link är sidlokal CSS (override-blocket efter rail.css). Karusell-
+     ankarna fångas av trail-IIFE:ns a[href^="#"]-map (features/souls/pricing/ledger). -->
 <header class="rite-rail" id="nav">
   <div class="rr-brand">
-    <span class="rr-sigil">⚗</span>
-    <span class="rr-name">The Lore Weaver's Cauldron</span>
-    <span class="rr-tag">THE GATE</span>
+    <a class="rr-link" href="pricing.html" title="Paths — pricing &amp; donations">🜲 <span class="rr-l">Pricing</span></a>
+    <a class="rr-link" href="mechanics.html" title="The game rules and mechanics">📐 <span class="rr-l">Mechanics</span></a>
   </div>
   <div class="rr-mid"></div>
-  <div class="rr-actions">
+  <nav class="rr-actions rr-quick" aria-label="Jump to a room in the trail below">
+    <!-- profil-chip: dolt för besökare, visas av /api/me-hantern när inloggad —
+         enda ingången till profilmodalen (Delete account/GDPR får inte dö tyst) -->
     <a class="rr-btn" id="nav-user" href="#" onclick="openProfile(event)" style="display:none" title="Your profile">✦ <span id="nav-user-name"></span></a>
-    <a class="btn gold" href="#gate" id="nav-cta">Enter</a>
-    <div class="rr-menu">
-      <button class="rr-btn rr-menu-btn" id="rr-menu-btn" aria-haspopup="true" aria-expanded="false" title="Menu" aria-label="Menu">☰</button>
-      <div class="rr-drop" id="rr-drop">
-        <div class="rr-ghead">The Ledger</div>
-        <a href="help.html">❓ How to Play</a>
-        <a href="mechanics.html">📐 Mechanics</a>
-        <a href="models.html">🧠 The Minds</a>
-        <a href="pricing.html">🜲 Paths</a>
-        <a href="releases.html">📓 Release Notes</a>
-        <a href="screenshots.html">🖼 Screens</a>
-        <a href="admin.html" id="rr-admin" hidden>👑 Admin</a>
-        <a href="login.html" id="rr-auth">🔒 Log out</a>
-      </div>
-    </div>
-  </div>
+    <a class="rr-link" href="#features">I <span class="rr-l">· Brews</span></a>
+    <a class="rr-link" href="#souls">II <span class="rr-l">· Souls</span></a>
+    <a class="rr-link" href="#pricing">III <span class="rr-l">· Paths</span></a>
+    <a class="rr-link" href="#ledger">IV <span class="rr-l">· Ledger</span></a>
+  </nav>
 </header>
 
 <!-- banners (flyttade hit under headern 2026-09-30 — täckte tidigare railen) -->
@@ -678,40 +646,11 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 
 <div class="content" id="top">
 
-  <!-- ═══════════════ hero + gate (2026-09-21, hero-art 2026-09-30) ═══════════════
-       hero-bg ligger på wrappern som ett 118vh-band och tonar mot ink före
-       loginboxen; kitteln står i första skärmen på både desktop och mobil. -->
+  <!-- ═══════════════ gate (2026-10-05: hero borttagen — gaten är nu första
+       sektionen; "Swear yourself in" överst per rostad). hero-bg ligger kvar på
+       wrappern som ett 118vh-band bakom sigillet och tonar mot ink. ═══════════════ -->
   <div class="hero-gate">
   <div class="hero-bg" id="hero-bg" role="img" aria-label="An AI-painted cauldron brewing a fantasy world"></div>
-  <!-- ═══════════════ hero ═══════════════ -->
-  <section class="hero">
-    <div class="wrap">
-      <div class="hero-copy">
-        <p class="eyebrow rv in">A Free AI Dungeon Master &middot; Open Beta</p>
-        <h1 class="rv in d1">The Lore Weaver&rsquo;s Cauldron
-          <span class="of">What will the Cauldron Foretell?<i class="cursor" aria-hidden="true"></i></span>
-        </h1>
-        <p class="tagline rv in d2">A world that remembers. A dungeon master that never sleeps.
-          Your campaign is brewed one turn at a time &mdash; and the pot does not forget.</p>
-        <p class="free-slogan rv in d2"><span class="fs-badge">FREE TO PLAY</span>
-          The <b>best free AI D&amp;D roleplaying game</b> — <b>30 fresh turns every day</b>.
-          No card. No email. No subscription.</p>
-        <div class="hero-stats rv in d3">
-          <span class="hstat"><b>Local</b> Ollama · run your own models</span>
-          <span class="hstat"><b>Voice</b> in &amp; out · hands-free</span>
-          <span class="hstat"><b>5e</b> rules · real dice</span>
-          <span class="hstat"><b>Portraits</b> from every story</span>
-        </div>
-        <div class="hero-actions rv in d3">
-          <a class="btn gold" href="#gate" id="hero-begin">Begin Your Journey</a>
-          <a class="btn ghost" href="#features">Explore the trail &#8594;</a>
-        </div>
-        <p class="myst-quote rv in d3" id="myst-quote"></p>
-      </div>
-    </div>
-    <p class="hero-credit">Hero art &middot; Qwen Image 3 Pro</p>
-    <div class="scroll-cue">Descend &#8595;</div>
-  </section>
 
 <style>
 /* ═══════════ summoning seal (gate v2, 2026-10-01 — port of the approved
@@ -1452,7 +1391,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 <script src="api.js?v=20261004a"></script>
 <script src="i18n.js?v=20261001a"></script>
 <script src="sprites.js?v=20260806b"></script>
-<script src="rail.js?v=20260924a"></script>
+<script src="rail.js?v=20261005a"></script>
 
 <script>
 /* ═══════════════ update banner — ny prissättning 2026-09-27 (30/dag free, 10€ unlock), en gång per läsare ═══════════════ */
@@ -1495,25 +1434,6 @@ setTimeout(() => {
     if (r.top < window.innerHeight && r.bottom > 0 && r.left < window.innerWidth && r.right > 0) el.classList.add('in');
   });
 }, 2500);
-
-/* ═══════════════ rotating mystery quotes ═══════════════ */
-(function () {
-  const quotes = [
-    'In the cauldron, tales wait to be told.',
-    'The Cauldron knows you\u2026 or does it?',
-    'Every tale poured in becomes a world of its own.',
-    'The dragons remember your name. Do you remember theirs?'
-  ];
-  const el = document.getElementById('myst-quote');
-  const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let idx = 0;
-  el.textContent = quotes[0];
-  setInterval(() => {
-    if (RM) { idx = (idx + 1) % quotes.length; el.textContent = quotes[idx]; return; }
-    el.style.opacity = '0';
-    setTimeout(() => { idx = (idx + 1) % quotes.length; el.textContent = quotes[idx]; el.style.opacity = '1'; }, 1000);
-  }, 7000);
-})();
 
 /* ═══════════════ AUTH — same flow as before (JWT httpOnly cookie) ═══════════════ */
 let authMode = 'login'; // 'login' | 'register' | 'reset'
@@ -1605,11 +1525,19 @@ function authSuccess(username) {
   sessionStorage.setItem('dnd_user', username);
   let next = new URLSearchParams(location.search).get('next');
   if (!next || !/^(?:[a-zA-Z0-9_-]+\.html)(?:[?#].*)?$/.test(next)) next = 'adventure.html?v=20260924b';
-  setTimeout(() => { window.location.href = next; }, 900);
+  /* Kort fördröjning (2026-10-05, rostad): låt runorna/snurr-animationen i
+     sigillet spela klart innan redirect. Vänta upp till ~2.2 s från klicket —
+     API-svaret kan redan ha hunnit landa mitt i animationen. Reduced motion:
+     bara en kort andning. */
+  const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const elapsed = window._authSubmitTs ? performance.now() - window._authSubmitTs : 0;
+  const wait = RM ? 300 : Math.max(900, Math.round(2200 - elapsed));
+  setTimeout(() => { window.location.href = next; }, wait);
 }
 
 document.getElementById('auth-form').addEventListener('submit', async (e) => {
   e.preventDefault();
+  window._authSubmitTs = performance.now();
   const user = document.getElementById('username').value.trim().toLowerCase();
   const pass = document.getElementById('password').value;
   setAuthBusy(true);
@@ -1731,13 +1659,8 @@ fetch('/api/me', { credentials: 'include' })
     try { sessionStorage.setItem('dnd_user', u.username); } catch (e) {}
     var nu = document.getElementById('nav-user');
     var nname = document.getElementById('nav-user-name');
-    var cta = document.getElementById('nav-cta');
     if (nu) nu.style.display = '';
     if (nname) nname.textContent = u.username;
-    if (cta) {
-      cta.textContent = 'Continue your journey';
-      cta.href = 'adventure.html';
-    }
     var fc = document.getElementById('gate-card');
     var cont = document.getElementById('gate-continue');
     if (fc) fc.style.display = 'none';
@@ -2077,19 +2000,6 @@ i.corner.br{bottom:6px;right:6px} i.corner.br::before{border-left:0;border-top:0
   color:var(--blood-bright)!important;
   text-shadow:0 1px 0 rgba(0,0,0,.55);
 }
-/* ── Illuminerade initialer på hjälte-rubriker ── */
-.hero h1::first-letter{
-  float:left;
-  font-family:var(--font-display,'Cinzel',serif)!important;
-  font-weight:900;font-size:3.05em;line-height:.82;
-  padding:.08em .17em .05em;margin:.03em .16em .04em 0;
-  color:var(--gold-bright)!important;
-  background:linear-gradient(160deg,var(--blood),color-mix(in srgb,var(--blood) 50%,var(--ink)));
-  border:1px solid var(--gold);
-  box-shadow:0 0 20px -6px rgba(var(--gold-bright-rgb),.55),inset 0 0 12px rgba(0,0,0,.5);
-  text-shadow:0 1px 0 rgba(0,0,0,.65);
-  animation:gr-candle 5.2s ease-in-out infinite;
-}
 /* ── Förgyllda hårstreck + tick-ornament ── */
 .rune-divider::before,.rune-divider::after{
   height:2px;opacity:.85;
@@ -2133,9 +2043,9 @@ select,.adv-details summary,.btn-gold,a.back{min-height:44px}
 .btn-gold,a.back{display:inline-flex;align-items:center;justify-content:center}
 /* ── Ljuslåga — candleflicker (all rörelse reduced-motion-gated) ── */
 @keyframes gr-candle{0%,100%{opacity:1}17%{opacity:.8}33%{opacity:.93}55%{opacity:.74}72%{opacity:.96}87%{opacity:.84}}
-.rune-divider span,.rr-sigil{animation:gr-candle 4.6s ease-in-out infinite}
+.rune-divider span{animation:gr-candle 4.6s ease-in-out infinite}
 @media (prefers-reduced-motion: reduce){
-  .rune-divider span,.rr-sigil,.hero h1::first-letter{animation:none!important}
+  .rune-divider span{animation:none!important}
 }
 </style>
 </body>

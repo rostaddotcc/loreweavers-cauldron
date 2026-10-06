@@ -197,7 +197,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="api.js?v=20261004a"></script>
-<script src="i18n.js?v=20261001a"></script>
+<script src="i18n.js?v=20261006a"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -413,7 +413,7 @@ function renderList(){
       <div class="nc-main">
         <div class="nc-top">
           <span class="nm">${esc(n.name)}</span>
-          ${hot ? `<span class="flame" title="${I18N.t('Aktiv i berättelsen')}">🔥</span>` : ''}
+          ${hot ? `<span class="flame" title="Active in the story">🔥</span>` : ''}
         </div>
         <div class="rl">${esc(n.role)}</div>
         <div class="badges">

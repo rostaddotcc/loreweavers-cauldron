@@ -1947,7 +1947,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
         <div class="at-chat-chip" id="at-chat-chip" hidden></div>
         <div class="input-row">
           <span class="cli-prompt" id="cli-prompt" aria-hidden="true"><span class="cp-user"></span> <span class="cp-pct">%</span></span><span class="cli-cursor" id="cli-cursor">▌</span>
-          <textarea id="player-input" rows="1" enterkeyhint="send" placeholder="What do you do? Write freely — fight, sneak, talk, cast a spell…"></textarea>
+          <textarea id="player-input" rows="1" enterkeyhint="send" aria-label="Your message to the DM" placeholder="What do you do? Write freely — fight, sneak, talk, cast a spell…"></textarea>
           <button class="mic-btn" id="mic-btn" onclick="toggleMic()" title="Speak — English voice input (StepFun ASR)" aria-label="Voice input"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg></button>
           <button class="send-btn" onclick="sendPlayer()">⚔ Act</button>
         </div>
@@ -2071,7 +2071,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
     <span class="console-count" id="console-count">0 lines</span>
     <button class="console-btn" id="console-autoscroll" onclick="toggleAutoScroll()">⬇ Auto</button>
     <button class="console-btn danger" onclick="clearConsole()">Clear</button>
-    <button class="console-btn" onclick="toggleConsole()">✕</button>
+    <button class="console-btn" onclick="toggleConsole()" title="Close the Engine Room" aria-label="Close the Engine Room">✕</button>
   </div>
   <div class="console-log" id="console-log">
     <div class="console-empty">Waiting for logs… the DM's whispers will appear here.</div>
@@ -2094,7 +2094,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
 <div class="usage-overlay" id="usage-overlay" onclick="if(event.target===this)closeUsageModal()">
   <div class="usage-modal">
     <div class="usage-head">
-      <span class="usage-title">📊 Användning</span>
+      <span class="usage-title">📊 Usage</span>
       <button class="usage-close" onclick="closeUsageModal()" aria-label="Close">✕</button>
     </div>
     <div class="usage-body" id="usage-body">
@@ -2105,7 +2105,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
 
 <script src="sfx.js?v=20260811a"></script>
 <script src="api.js?v=20261004a"></script>
-<script src="i18n.js?v=20261001a"></script>
+<script src="i18n.js?v=20261006a"></script>
 <script src="local.js?v=20261001a"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
@@ -10049,7 +10049,7 @@ document.addEventListener('keydown', e => {
   <div class="mi-modal">
     <div class="mi-head">
       <span>🧠 About the Models</span>
-      <button class="mi-close" onclick="closeModelInfo()">✕</button>
+      <button class="mi-close" onclick="closeModelInfo()" title="Close" aria-label="Close">✕</button>
     </div>
     <div class="mi-intro">
       The <b>Dungeon Master</b> writes the world. The <b>Lorekeeper</b> quietly tracks
@@ -10299,7 +10299,7 @@ document.addEventListener('keydown', e => {
         <div class="av-gal-count" id="cs-gal-count"></div>
         <button class="av-btn primary cs-gen" onclick="pickAvatar('player')" title="Generate a new portrait — part of the 10€ unlock, each image costs 1 turn">🎨 Generate new portrait</button>
         <button class="av-btn" onclick="closeCharSheet();openCodex('character')" title="Open the full character page in the Codex panel">📖 Full sheet in Codex</button>
-        <button class="av-btn" id="cs-save-vault" onclick="saveToCookedSouls()" title="Save this adventurer — level, gear and story — to Cooked Souls, so you can start a new adventure with them later. Heroes that came from Cooked Souls update their own card.">⚒ Save to Cooked Souls</button>
+        <button class="av-btn" id="cs-save-vault" onclick="saveToCookedSouls()" title="Save this adventurer to Cooked Souls — reuse them in a new adventure">⚒ Save to Cooked Souls</button>
       </div>
       <div class="cs-head-col">
         <div class="cs-name" id="cs-name">—</div>
@@ -10317,7 +10317,7 @@ document.addEventListener('keydown', e => {
   <div class="mi-modal" style="max-width:400px">
     <div class="mi-head">
       <span id="avatar-modal-title">🎨 Avatar</span>
-      <button class="mi-close" onclick="closeAvatarModal()">✕</button>
+      <button class="mi-close" onclick="closeAvatarModal()" title="Close" aria-label="Close">✕</button>
     </div>
     <div style="text-align:center;margin:0 0 1rem">
       <div class="av-gal-row">
@@ -10331,7 +10331,7 @@ document.addEventListener('keydown', e => {
     <div class="mi-intro" id="avatar-modal-desc" style="font-size:.82rem;line-height:1.55">Generate a new avatar from your character sheet — items, traits and lore included. Or upload your own image.</div>
     <div style="margin-top:.7rem">
       <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">🎨 YOUR OWN WORDS (optional)</div>
-      <textarea id="avatar-prompt-input" placeholder="Optional: describe exactly what you want generated… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)" style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:var(--font-display);font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:var(--radius-sm);resize:vertical"></textarea>
+      <textarea id="avatar-prompt-input" aria-label="Portrait prompt (optional)" placeholder="Optional: describe exactly what you want generated… e.g. 'hooded figure, lantern light, rain' (free prompt overrides the auto-built one)" style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:var(--font-display);font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:var(--radius-sm);resize:vertical"></textarea>
       <div style="font-size:.72rem;color:var(--bone-dim);margin-top:.35rem">Overrides the auto-built prompt from your sheet — describe exactly what you want generated.</div>
     </div>
     <div id="avatar-provider-row" style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
@@ -10364,7 +10364,7 @@ document.addEventListener('keydown', e => {
     <button class="av-lb-nav" onclick="lbRotate(1)" aria-label="Next portrait">›</button>
   </div>
   <button class="av-lb-act" id="avatar-lightbox-paint" hidden onclick="lbPaint()">🎨 Generate a new portrait</button>
-  <button class="av-lb-close" onclick="closeAvatarLightbox()">✕</button>
+  <button class="av-lb-close" onclick="closeAvatarLightbox()" title="Close preview" aria-label="Close preview">✕</button>
   <div class="av-lb-title" id="avatar-lightbox-title"></div>
 </div>
 

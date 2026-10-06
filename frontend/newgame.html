@@ -367,14 +367,14 @@
 <div class="av-lightbox" id="pv-lightbox" onclick="if(event.target===this)closePvLightbox()" role="dialog" aria-modal="true" aria-label="Portrait preview">
   <div id="pv-lightbox-img-slot"></div>
   <button class="av-lb-act btn-ghost" id="pv-lb-paint" onclick="pvLbPaint()">🎨 Generate a new portrait</button>
-  <button class="av-lb-close" onclick="closePvLightbox()" aria-label="Close">✕</button>
+  <button class="av-lb-close" onclick="closePvLightbox()" title="Close" aria-label="Close">✕</button>
   <div class="av-lb-title" id="pv-lightbox-title"></div>
 </div>
 
 <!-- ═══════════ VAULT INSPECT OVERLAY ═══════════ -->
 <div class="insp-overlay" id="vault-insp-overlay" onclick="if(event.target===this)closeVaultInspect()">
   <div class="insp-modal">
-    <button class="insp-close" onclick="closeVaultInspect()">✕</button>
+    <button class="insp-close" onclick="closeVaultInspect()" title="Close" aria-label="Close">✕</button>
     <div id="vault-insp-content" class="insp-full"></div>
   </div>
 </div>
@@ -382,7 +382,7 @@
 <!-- ═══════════ NEW ADVENTURE OVERLAY (carry a vault hero into a fresh campaign) ═══════════ -->
 <div class="insp-overlay" id="nav-overlay" onclick="if(event.target===this)closeNewAdv()">
   <div class="insp-modal" style="width:min(440px,100%)">
-    <button class="insp-close" onclick="closeNewAdv()">✕</button>
+    <button class="insp-close" onclick="closeNewAdv()" title="Close" aria-label="Close">✕</button>
     <div style="text-align:center;margin-bottom:1.2rem">
       <div style="font-size:2rem;margin-bottom:.4rem">🌟</div>
       <div style="font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:1.15rem;letter-spacing:.06em;color:var(--bone-bright)">A New Adventure</div>
@@ -401,7 +401,7 @@
 
 <script src="sfx.js?v=20260811a"></script>
 <script src="api.js?v=20261004a"></script>
-<script src="i18n.js?v=20261001a"></script>
+<script src="i18n.js?v=20261006a"></script>
 <script src="archetypes.js?v=20261001a"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad

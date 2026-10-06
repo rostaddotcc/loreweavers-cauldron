@@ -40,7 +40,7 @@
 <body>
 <header class="rite-rail">
   <div class="rr-brand">
-    <span class="rr-sigil" onclick="location.href='/login.html'" title="The Lore Weaver's Cauldron">⚗</span>
+    <span class="rr-sigil" role="button" tabindex="0" onclick="location.href='/login.html'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();location.href='/login.html'}" title="The Cauldron's seal — click to return to the Gate" aria-label="The Cauldron's seal — click to return to the Gate">⚗</span>
     <span class="rr-name">The Lore Weaver's Cauldron</span>
     <span class="rr-tag">LOST PAGE</span>
   </div>
@@ -86,7 +86,7 @@
     <div class="lost-actions">
       <a class="lost-btn solid" href="/login.html#gate">⚔ Enter the Table</a>
       <a class="lost-btn" href="/help.html">❓ How to Play</a>
-      <a class="lost-btn" href="/pricing.html">🜲 The Paths</a>
+      <a class="lost-btn" href="/pricing.html" title="Paths — pricing: free tier and the 10€ unlock">🜲 The Paths</a>
     </div>
   </div>
 </main>

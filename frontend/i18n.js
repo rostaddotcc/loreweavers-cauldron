@@ -900,7 +900,6 @@ const I18N = (() => {
     '📍 Ingen känd nuvarande plats': '📍 No known current location',
     'Ersatta': 'Superseded',
     ' ersatta sanningar — gamla sanningar som ersatts av nyare': ' superseded truths — old truths replaced by newer ones',
-    '📊 Användning': '📊 Usage',
     'Samlar statistik…': 'Collecting statistics…',
   };
 

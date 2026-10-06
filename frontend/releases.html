@@ -1002,7 +1002,7 @@
 
   <!-- ═══════════════ historical ═══════════════ -->
   <div class="sec rv">
-    <button class="hist-toggle btn-ghost" id="hist-toggle" onclick="toggleHist()">
+    <button class="hist-toggle btn-ghost" id="hist-toggle" onclick="toggleHist()" title="Show or hide the older v0.6.x entries" aria-expanded="false" aria-controls="hist-body">
       <span class="caret">▸</span> Older entries
     </button>
     <div class="hist-body" id="hist-body">
@@ -1072,9 +1072,10 @@
     var body = document.getElementById('hist-body');
     var open = btn.classList.toggle('open');
     body.classList.toggle('open', open);
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
   };
 </script>
-<script src="i18n.js?v=20261001a"></script>
+<script src="i18n.js?v=20261006a"></script>
 <script src="sprites.js?v=20260806b"></script>
 <script src="rail.js?v=20261006a"></script>
 </body>

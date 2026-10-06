@@ -640,7 +640,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 <!-- banners (flyttade hit under headern 2026-09-30 — täckte tidigare railen) -->
 <div id="deleted-banner">&#10022; Your account has been deleted. The Cauldron will remember your stories.</div>
 
-<div id="update-banner" role="status"><span class="upd-msg">✦ <b>New pricing</b> — the free table refreshes <b>30 turns every day</b> with <b>step-3.7-flash</b> &amp; <b>step-3.5-flash-2603</b>. The one-time <b>10€ unlock</b> adds <b>+100 turns</b> (never expire) and opens <b>every Dungeon Master</b> (Qwen 3.8 Flash, Qwen 3.6 Flash, DeepSeek V4.1 Flash, Step 5 Preview), <b>voice narration</b> &amp; <b>image generation</b> — permanently. <a href="pricing.html?plan=unlock10" onclick="try{localStorage.setItem('pricing_0927_seen','1')}catch(e){}">See the paths →</a></span><button class="upd-x" aria-label="Dismiss" onclick="try{localStorage.setItem('pricing_0927_seen','1')}catch(e){}document.getElementById('update-banner').classList.remove('show')">×</button></div>
+<div id="update-banner" role="status"><span class="upd-msg">✦ <b>New pricing</b> — the free table refreshes <b>30 turns every day</b> with <b>step-3.7-flash</b> &amp; <b>step-3.5-flash-2603</b>. The one-time <b>10€ unlock</b> adds <b>+100 turns</b> (never expire) and opens <b>every Dungeon Master</b> (Qwen 3.8 Flash, Qwen 3.6 Flash, DeepSeek V4.1 Flash, Step 5 Preview), <b>voice narration</b> &amp; <b>image generation</b> — permanently. <a href="pricing.html?plan=unlock10" onclick="try{localStorage.setItem('pricing_0927_seen','1')}catch(e){}">See the paths →</a></span><button class="upd-x" aria-label="Dismiss" title="Dismiss the pricing notice" onclick="try{localStorage.setItem('pricing_0927_seen','1')}catch(e){}document.getElementById('update-banner').classList.remove('show')">×</button></div>
 
 
 
@@ -1333,10 +1333,10 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
     </div>
 
     </div>
-    <button class="rail-arrow prev soft-full" id="trail-prev" type="button" aria-label="Previous room">
+    <button class="rail-arrow prev soft-full" id="trail-prev" type="button" aria-label="Previous room" title="Previous room">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4.5L7 12l7.5 7.5"/></svg>
     </button>
-    <button class="rail-arrow next soft-full" id="trail-next" type="button" aria-label="Next room">
+    <button class="rail-arrow next soft-full" id="trail-next" type="button" aria-label="Next room" title="Next room">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 4.5L17 12l-7.5 7.5"/></svg>
     </button>
     <div class="rail-progress" aria-hidden="true"><i id="trail-bar"></i></div>
@@ -1345,7 +1345,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
       <button class="rdot" data-pane="1" type="button"><span class="rd-n">II</span>Souls</button>
       <button class="rdot" data-pane="2" type="button"><span class="rd-n">III</span>Paths</button>
       <button class="rdot" data-pane="3" type="button"><span class="rd-n">IV</span>Ledger</button>
-      <button class="rdot-pause" id="trail-pause" type="button" aria-label="Pause auto-advance"></button>
+      <button class="rdot-pause" id="trail-pause" type="button" aria-label="Pause auto-advance" title="Pause auto-advance"></button>
     </nav>
   </div>
 
@@ -1398,7 +1398,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 <noscript><style>.rv{opacity:1;transform:none}</style></noscript>
 
 <script src="api.js?v=20261004a"></script>
-<script src="i18n.js?v=20261001a"></script>
+<script src="i18n.js?v=20261006a"></script>
 <script src="sprites.js?v=20260806b"></script>
 <script src="rail.js?v=20261006a"></script>
 
@@ -1871,6 +1871,7 @@ document.addEventListener('keydown', e => {
     if (!pauseB) return;
     pauseB.innerHTML = auto ? PAUSE_IC : PLAY_IC;
     pauseB.setAttribute('aria-label', auto ? 'Pause auto-advance' : 'Resume auto-advance');
+    pauseB.setAttribute('title', auto ? 'Pause auto-advance' : 'Resume auto-advance');
   }
   function resetAuto() { elapsed = 0; if (bar) bar.style.width = '0%'; }
   function autoTick() {

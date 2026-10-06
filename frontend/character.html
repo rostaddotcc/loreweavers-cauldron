@@ -687,7 +687,7 @@
   <section class="fresh-frame panel active" id="panel-character">
 
     <div class="char-header">
-      <div class="portrait-frame" id="portrait" title="Upload a portrait — Qwen can analyze it">
+      <div class="portrait-frame" id="portrait" title="Your portrait — click to view or change it">
         <span class="emoji" id="portrait-emoji">🧙‍♀️</span>
         <span class="hint">📷 Add image</span>
         <input type="file" id="portrait-input" accept="image/*" aria-label="Upload portrait image">
@@ -855,7 +855,7 @@ Markdown is not rendered, but the structure is yours."></textarea>
 
 <script src="sfx.js?v=20260811a"></script>
 <script src="api.js?v=20261004a"></script>
-<script src="i18n.js?v=20261001a"></script>
+<script src="i18n.js?v=20261006a"></script>
 <script>
 // Auth-guard — omdirigera till porten om ej inloggad
 if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
@@ -1600,10 +1600,10 @@ function openItemModal(i) {
         ${propsHtml}
         ${descHtml}
         <div class="item-modal-paint">
-          <select id="item-paint-provider" class="tts-select" style="flex:0 0 auto;max-width:130px" title="Image engine for this painting" onchange="_itemEngineChanged(this)">
+          <select id="item-paint-provider" class="tts-select" style="flex:0 0 auto;max-width:130px" title="Image engine for this item" onchange="_itemEngineChanged(this)">
             ${['stepfun', 'wan', 'qwen'].map(v => `<option value="${v}"${v === _imgEngine() ? ' selected' : ''}>${v === 'stepfun' ? 'StepFun' : v === 'wan' ? 'Wan 2.7 Pro' : 'Qwen Image 3 Pro'}</option>`).join('')}
           </select>
-          <button class="av-btn primary btn-gold" id="item-paint-btn" onclick="paintItemAction(${i})" title="Generate a painting of this item from its description — part of the 10€ unlock, each image costs 1 turn">🎨 ${I18N.t('Paint this item')}</button>
+          <button class="av-btn primary btn-gold" id="item-paint-btn" onclick="paintItemAction(${i})" title="Generate an item image — 1 turn, part of the 10€ unlock">🎨 ${I18N.t('Generate item image')}</button>
           <span class="item-paint-status" id="item-paint-status"></span>
         </div>
       </div>
@@ -1666,7 +1666,7 @@ async function paintItemAction(i) {
   const item = state.inventory[i];
   if (!item) return;
   if (_itemPaintBusy) return;
-  if (!_itemSlug(item.name)) { toast('⚠ This item has no name to paint'); return; }
+  if (!_itemSlug(item.name)) { toast('⚠ This item has no name — cannot generate an image'); return; }
   const engine = _imgEngine();
   if (!avatarGenGate(engine)) return;   // 10€-unlås + toast (delas med avataren)
   const key = _itemArtKey(item);
@@ -1674,7 +1674,7 @@ async function paintItemAction(i) {
   const status = document.getElementById('item-paint-status');
   _itemPaintBusy = true;
   btn.disabled = true;
-  status.textContent = '🎨 Painting… (10–30 s)';
+  status.textContent = '🎨 Generating… (10–30 s)';
   try {
     // mode='new' utan prompt → backend bygger prompten ur itemets fält
     // (namn, typ, sällsynthet, beskrivning, lore, effekter).
@@ -1690,7 +1690,7 @@ async function paintItemAction(i) {
       const art = document.getElementById('item-modal-art');
       if (art) art.innerHTML = _itemModalArtInner(item);
       renderInventory();
-      status.textContent = `✨ Painted from its description — 1 turn spent`;
+      status.textContent = `✨ Generated from its description — 1 turn spent`;
       try { SFX.levelup(); } catch (_) {}
     } else {
       status.textContent = '⚠ ' + (res && res.detail ? (typeof res.detail === 'string' ? res.detail : JSON.stringify(res.detail)) : 'Failed');

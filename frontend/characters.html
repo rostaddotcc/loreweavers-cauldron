@@ -251,7 +251,7 @@
 <!-- ═══════════ INSPECT OVERLAY ═══════════ -->
 <div class="insp-overlay" id="insp-overlay" onclick="if(event.target===this)closeInspect()">
   <div class="insp-modal">
-    <button class="insp-close" onclick="closeInspect()">✕</button>
+    <button class="insp-close" onclick="closeInspect()" title="Close" aria-label="Close">✕</button>
     <div id="insp-content" class="insp-full"></div>
   </div>
 </div>
@@ -259,7 +259,7 @@
 <!-- ═══════════ NEW ADVENTURE OVERLAY (carry a forged hero into a fresh campaign) ═══════════ -->
 <div class="insp-overlay" id="nav-overlay" onclick="if(event.target===this)closeNewAdv()">
   <div class="insp-modal" style="width:min(440px,100%)">
-    <button class="insp-close" onclick="closeNewAdv()">✕</button>
+    <button class="insp-close" onclick="closeNewAdv()" title="Close" aria-label="Close">✕</button>
     <div style="text-align:center;margin-bottom:1.2rem">
       <div style="font-size:2rem;margin-bottom:.4rem">🌟</div>
       <div style="font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:1.15rem;letter-spacing:.06em;color:var(--bone-bright)" id="nav-title">A New Adventure</div>
@@ -286,7 +286,7 @@
 <!-- 🔍 Portrait lightbox — shared pattern (audit A2 §4.3) -->
 <div class="av-lightbox" id="vault-lightbox" onclick="if(event.target===this)closeVaultLightbox()" role="dialog" aria-modal="true" aria-label="Portrait preview">
   <div id="vault-lightbox-img-slot"></div>
-  <button class="av-lb-close" onclick="closeVaultLightbox()" aria-label="Close">✕</button>
+  <button class="av-lb-close" onclick="closeVaultLightbox()" title="Close" aria-label="Close">✕</button>
   <div class="av-lb-title" id="vault-lightbox-title"></div>
 </div>
 
@@ -297,7 +297,7 @@ if (!sessionStorage.getItem('dnd_user')) { location.href = 'login.html'; }
 </script>
 <script src="api.js?v=20261004a"></script>
 <script src="modal.js?v=20260906a"></script>
-<script src="i18n.js?v=20261001a"></script>
+<script src="i18n.js?v=20261006a"></script>
 <script>
 // ═══════════════════════════════════════
 // COOKED SOULS — fristående karaktärsgenerering + valv

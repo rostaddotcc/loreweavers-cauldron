@@ -408,7 +408,7 @@ function renderList(){
       lastSeen > 0 ? `${I18N.t('Tur')} ${lastSeen}` : '',
     ].filter(Boolean);
     return `
-    <div class="ncard ${selectedId===i?'sel':''}${n.alive?'':' fallen'}" data-nid="${i}" style="--nc:${n.color};--ng:${n.glow}" onclick="selectNpc(${i})">
+    <div class="ncard ${selectedId===i?'sel':''}${n.alive?'':' fallen'}" data-nid="${i}" style="--nc:${n.color};--ng:${n.glow}" title="Click to open the dossier" onclick="selectNpc(${i})">
       <div class="sigil">${avatarHtmlFor(n, 128)}</div>
       <div class="nc-main">
         <div class="nc-top">
@@ -482,7 +482,7 @@ function renderDossier(n){
 
   let html = `
     <div class="d-head" style="--dc:${n.color};--dg:${n.glow}">
-      <div class="d-portrait" onclick="openAvatarModal(${selectedId})" title="Avatar — click to generate / enlarge">
+      <div class="d-portrait" onclick="openAvatarModal(${selectedId})" title="Portrait — click to view or generate">
         ${avatarHtmlFor(n, 512)}
         <div class="d-ph-hint">🎨 Avatar</div>
       </div>
@@ -821,8 +821,8 @@ tick();
       </select>
     </div>
     <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
-      <button class="av-btn primary btn-gold" id="avatar-free-btn" onclick="freePromptAction()">🖌️ Free prompt</button>
-      <button class="av-btn btn-ghost" id="avatar-ai-btn" onclick="generateAvatarAction()">🎨 Generate from the dossier</button>
+      <button class="av-btn primary btn-gold" id="avatar-free-btn" onclick="freePromptAction()" title="Draw exactly what you describe — 1 turn">🖌️ Free prompt</button>
+      <button class="av-btn btn-ghost" id="avatar-ai-btn" onclick="generateAvatarAction()" title="Portrait from the NPC's story — 1 turn">🎨 Generate from the dossier</button>
       <button class="av-btn btn-ghost" onclick="document.getElementById('npc-avatar-input').click()">📁 Upload image…</button>
       <button class="av-btn danger btn-blood" id="avatar-del-btn" onclick="deleteAvatarAction()" style="display:none">🗑 Remove avatar</button>
     </div>

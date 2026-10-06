@@ -507,7 +507,7 @@ function renderStats(stats) {
   if (stats.superseded > 0) {
     html += `<button type="button" class="btn-ghost" onclick="openSuperseded()" title="Click to see which truths were replaced" style="margin-top:.5rem;width:100%;text-align:left;background:transparent;border:1px dashed rgba(212,58,77,.45);border-radius:var(--radius-sm);padding:.45rem .55rem;font-size:.8rem;color:var(--bone-dim);font-style:italic;cursor:pointer;transition:all .2s">✦ ${stats.superseded}${I18N.t(' ersatta uppgifter')} — <span style="color:var(--rubric);font-style:normal">click to view</span> →</button>`;
   } else if (ALL_SUPERSEDED.length > 0) {
-    html += `<button type="button" class="btn-ghost" onclick="openSuperseded()" style="margin-top:.5rem;width:100%;text-align:left;background:transparent;border:1px dashed rgba(212,58,77,.45);border-radius:var(--radius-sm);padding:.45rem .55rem;font-size:.8rem;color:var(--bone-dim);font-style:italic;cursor:pointer">✦ ${ALL_SUPERSEDED.length} ersatta — <span style="color:var(--rubric);font-style:normal">click to view</span> →</button>`;
+    html += `<button type="button" class="btn-ghost" onclick="openSuperseded()" title="Click to see which truths were replaced" style="margin-top:.5rem;width:100%;text-align:left;background:transparent;border:1px dashed rgba(212,58,77,.45);border-radius:var(--radius-sm);padding:.45rem .55rem;font-size:.8rem;color:var(--bone-dim);font-style:italic;cursor:pointer">✦ ${ALL_SUPERSEDED.length} ersatta — <span style="color:var(--rubric);font-style:normal">click to view</span> →</button>`;
   }
   document.getElementById('stats').innerHTML = html;
 }

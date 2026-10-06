@@ -1422,7 +1422,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
     <div class="rr-tally" id="rr-tally" onclick="openChatProfileModal()" role="button" tabindex="0"
          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openChatProfileModal()}"
          title="Current turn · day · when turns refresh. Click for your profile.">
-      <span class="rw" id="rr-warn-row" style="display:none" onclick="capWarnClick(event)">⚡ <span class="tv warn" id="rr-warn">—</span></span><span class="sep rw" id="rr-warn-sep" style="display:none">·</span>
+      <span class="rw" id="rr-warn-row" style="display:none" title="Low turns — click for top-up options" onclick="capWarnClick(event)">⚡ <span class="tv warn" id="rr-warn">—</span></span><span class="sep rw" id="rr-warn-sep" style="display:none">·</span>
       <span class="tp"><span class="tl">TURN</span><span class="tv" id="rr-turn">—</span></span><span class="sep tp">·</span>
       <span class="tp"><span class="tl">DAY</span><span class="tv" id="rr-day">—</span></span><span class="sep tp paid" id="rr-quota-sep" style="display:none">·</span><span class="tp paid" id="rr-quota-row" style="display:none"><span class="tl">TURNS</span><span class="tv" id="rr-quota">—</span></span><span class="sep tp paid" id="rr-bonus-sep" style="display:none">·</span><span class="tp paid" id="rr-bonus-row" style="display:none"><span class="tl">LEFT</span><span class="tv" id="rr-bonus">—</span></span><span class="sep" id="rr-reset-sep" style="display:none">·</span>
       <span id="rr-reset-row" class="treset" style="display:none"><span class="tl">RESET</span><span class="tv" id="rr-reset">—</span></span>
@@ -1788,9 +1788,9 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
   <aside class="sidebar">
     <!-- Desktop-döljare (2026-09-30): klistrad rad överst — kollapsa sidebaren för maximalt chattutrymme -->
     <div id="sb-toggle-row"><button id="sb-toggle" onclick="toggleSidebarCollapse()" aria-label="Hide sidebar" title="Hide the sidebar — more room for the story">« Hide</button></div>
-    <button class="drawer-close-btn" onclick="toggleMobileSidebar()" aria-label="Close">✕</button>
+    <button class="drawer-close-btn" onclick="toggleMobileSidebar()" title="Close menu" aria-label="Close menu">✕</button>
     <div class="side-section" id="sec-party">
-      <div class="side-label side-toggle" onclick="toggleSideSection('party')">The Party <span class="side-caret">▾</span></div>
+      <div class="side-label side-toggle" title="Show or hide the party list" onclick="toggleSideSection('party')">The Party <span class="side-caret">▾</span></div>
       <div class="side-body">
         <div class="pc-wrap" id="pc-wrap">
           <div class="pc-avatar-bg" id="pc-avatar-bg"></div>
@@ -1814,7 +1814,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
     </div>
 
     <div class="side-section" id="sec-quests">
-      <div class="side-label side-toggle" onclick="toggleSideSection('quests')">⚑ Quests <span class="side-caret">▾</span></div>
+      <div class="side-label side-toggle" title="Show or hide your quests" onclick="toggleSideSection('quests')">⚑ Quests <span class="side-caret">▾</span></div>
       <div class="side-body">
         <div class="quest-list" id="quest-list">
           <div class="quest-empty">No quests yet — the DM will post one when the story hooks you.</div>
@@ -1823,7 +1823,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
     </div>
 
     <div class="side-section" id="sec-journey">
-      <div class="side-label side-toggle" onclick="toggleSideSection('journey')">📜 Journey <span class="side-caret">▾</span></div>
+      <div class="side-label side-toggle" title="Show or hide the journey log" onclick="toggleSideSection('journey')">📜 Journey <span class="side-caret">▾</span></div>
       <div class="side-body">
         <div class="journey-entry" id="journey-entry" onclick="openCodex('journal')" title="Open journal in Codex" style="cursor:pointer">
           <div class="je-head">—</div>
@@ -1833,7 +1833,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
     </div>
 
     <div class="side-section" id="sec-npcs">
-      <div class="side-label side-toggle" onclick="toggleSideSection('npcs')">Known NPCs <span class="side-caret">▾</span></div>
+      <div class="side-label side-toggle" title="Show or hide known NPCs" onclick="toggleSideSection('npcs')">Known NPCs <span class="side-caret">▾</span></div>
       <div class="side-body">
         <div class="npc-list" id="npc-list"></div>
       </div>
@@ -1841,7 +1841,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
 
     <div style="margin-top:auto">
       <div class="side-section" id="sec-loc">
-        <div class="side-label side-toggle" onclick="toggleSideSection('loc')">Location <span class="side-caret">▾</span></div>
+        <div class="side-label side-toggle" title="Show or hide the location card" onclick="toggleSideSection('loc')">Location <span class="side-caret">▾</span></div>
         <div class="side-body">
           <div class="loc-card" onclick="openCodex('map')" title="Open map in Codex" style="cursor:pointer">
             <div id="loc-name" style="font-size:0.9rem;color:var(--bone-bright)">🗺 Unknown location</div>
@@ -1966,7 +1966,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
   <aside class="codex-panel" id="codex-modal" aria-hidden="true">
     <div class="cx-head">
       <span class="cx-title">📖 Codex</span>
-      <button class="cx-close" onclick="closeCodex()" aria-label="Close">✕</button>
+      <button class="cx-close" onclick="closeCodex()" title="Close the Codex" aria-label="Close the Codex">✕</button>
     </div>
     <div class="cx-wrap">
       <nav class="cx-spine" id="cx-spine" aria-label="Codex sections">
@@ -1998,7 +1998,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
 <div class="fb-modal" id="fb-modal" role="dialog" aria-modal="true" aria-labelledby="fb-title">
   <div class="fb-head">
     <span class="fb-title" id="fb-title">💬 Feedback</span>
-    <button class="fb-close" onclick="closeFeedbackModal()" aria-label="Close">✕</button>
+    <button class="fb-close" onclick="closeFeedbackModal()" title="Close" aria-label="Close">✕</button>
   </div>
   <div class="fb-body">
     <p class="fb-sub">Found a bug or want something new? Tell the Lorekeeper.</p>
@@ -2019,7 +2019,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
 <div class="fb-modal" id="cap-modal" role="dialog" aria-modal="true" aria-labelledby="cap-title">
   <div class="fb-head">
     <span class="fb-title" id="cap-title">⏳ Inga gratisrundor kvar</span>
-    <button class="fb-close" onclick="closeCapModal()" aria-label="Close">✕</button>
+    <button class="fb-close" onclick="closeCapModal()" title="Close" aria-label="Close">✕</button>
   </div>
   <div class="fb-body">
     <p class="fb-sub" id="cap-msg" style="font-style:normal;line-height:1.6">Dina rundor är slut. Nya gratisrundor kommer om <b>…</b> — eller fyll på en gång för att fortsätta spela.</p>
@@ -2040,7 +2040,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
 <div class="fb-modal" id="unlock-modal" role="dialog" aria-modal="true" aria-labelledby="unlock-title">
   <div class="fb-head">
     <span class="fb-title" id="unlock-title">🔒 Locked feature</span>
-    <button class="fb-close" onclick="closeUnlockModal()" aria-label="Close">✕</button>
+    <button class="fb-close" onclick="closeUnlockModal()" title="Close" aria-label="Close">✕</button>
   </div>
   <div class="fb-body">
     <p class="fb-sub" id="unlock-msg" style="font-style:normal;line-height:1.6"></p>
@@ -2069,7 +2069,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
       <button class="cchip" data-lv="WARNING" onclick="setConsoleLevel(this,'WARNING')">Warn+</button>
     </div>
     <span class="console-count" id="console-count">0 lines</span>
-    <button class="console-btn" id="console-autoscroll" onclick="toggleAutoScroll()">⬇ Auto</button>
+    <button class="console-btn" id="console-autoscroll" onclick="toggleAutoScroll()" title="Auto-scroll to the newest log line">⬇ Auto</button>
     <button class="console-btn danger" onclick="clearConsole()">Clear</button>
     <button class="console-btn" onclick="toggleConsole()" title="Close the Engine Room" aria-label="Close the Engine Room">✕</button>
   </div>
@@ -2083,7 +2083,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
 <aside class="cd-drawer" id="char-drawer" aria-hidden="true">
   <div class="cd-head">
     <span class="cd-title" id="cd-title">🧙 Character</span>
-    <button class="cd-close" onclick="closeCharDrawer()" aria-label="Close">✕</button>
+    <button class="cd-close" onclick="closeCharDrawer()" title="Close" aria-label="Close">✕</button>
   </div>
   <div class="cd-body" id="cd-body">
     <div class="cd-empty">Opening the ledger…</div>
@@ -2095,7 +2095,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
   <div class="usage-modal">
     <div class="usage-head">
       <span class="usage-title">📊 Usage</span>
-      <button class="usage-close" onclick="closeUsageModal()" aria-label="Close">✕</button>
+      <button class="usage-close" onclick="closeUsageModal()" title="Close" aria-label="Close">✕</button>
     </div>
     <div class="usage-body" id="usage-body">
       <div class="usage-loading">Samlar statistik…</div>
@@ -3906,6 +3906,7 @@ function appendToChat(el) {
     g.className = 'day-group';
     const head = document.createElement('div');
     head.className = 'day-head';
+    head.title = 'Collapse or expand this day';
     head.innerHTML = `<span class="dh-caret">▼</span><span class="dh-title">${escapeHtml(_newDayLabel || (I18N.getLang() === 'en' ? 'New day' : 'Ny dag'))}</span>`;
     head.addEventListener('click', () => g.classList.toggle('collapsed'));
     const body = document.createElement('div');
@@ -4239,7 +4240,7 @@ function attachReasoning(hostMsg, text) {
   el.className = 'reasoning';
   const words = text.trim().split(/\s+/).length;
   el.innerHTML = `
-    <div class="reasoning-head" onclick="this.parentElement.classList.toggle('open')">
+    <div class="reasoning-head" title="The DM's thinking — click to read it" onclick="this.parentElement.classList.toggle('open')">
       <span class="orb"></span>
       <span>${I18N.t('DM:ns inre monolog')}</span>
       <span class="rwords">· ${words}${I18N.t(' ord')}</span>
@@ -5935,6 +5936,7 @@ async function loadTranscript() {
         g.className = 'day-group';
         const head = document.createElement('div');
         head.className = 'day-head';
+        head.title = 'Collapse or expand this day';
         head.innerHTML = `<span class="dh-caret">▼</span><span class="dh-title">${escapeHtml(label)}</span>`;
         head.addEventListener('click', () => g.classList.toggle('collapsed'));
         const body = document.createElement('div');
@@ -6697,7 +6699,7 @@ function _renderUndoAffordance() {
       el.classList.add('locked');
       el.setAttribute('data-locked', 'undo');
       el.innerHTML = '<button type="button" onclick="openUndoUnlock()"'
-        + ' title="Undo is locked. Any donation — 1€ is enough — unlocks it permanently, and each undo then costs 1 turn."'
+        + ' title="Undo — locked. Any donation (1€) unlocks it; each undo costs 1 turn."'
         + ' aria-label="Undo is locked. Any donation of 1€ or more unlocks it permanently; each undo then costs 1 turn.">'
         + '↶ Undo last turn <span class="ui-cost">· unlocked by any donation</span>'
         + '<span class="ui-locked-tag" aria-hidden="true">🔒</span></button>';
@@ -7132,10 +7134,10 @@ async function renderDmResponse(res, dmEl, opts) {
 // never committed (commit failed or never reached) → retry is state-safe.
 function _showLocalFallbackMenu(messageText) {
   const sysEl = addMessage('system', null,
-    '🏮 Din maskin svarade inte — hus-DM för detta drag? (1 turn)' +
+    '🏮 Your machine didn\'t answer — let the house DM take this turn? (1 turn)' +
     '<div style="margin-top:.5rem;display:flex;gap:.5rem;justify-content:center">' +
-    '<button class="lr-retry-btn" style="background:rgba(0,0,0,.3);border:1px solid var(--edge,var(--gold));color:var(--bone-bright);padding:.3rem .8rem;border-radius:4px;cursor:pointer;font-size:.8rem">Försök igen</button>' +
-    '<button class="lr-house-btn" style="background:rgba(0,0,0,.3);border:1px solid var(--edge,var(--gold));color:var(--bone-bright);padding:.3rem .8rem;border-radius:4px;cursor:pointer;font-size:.8rem">Hus-DM</button>' +
+    '<button class="lr-retry-btn" style="background:rgba(0,0,0,.3);border:1px solid var(--edge,var(--gold));color:var(--bone-bright);padding:.3rem .8rem;border-radius:4px;cursor:pointer;font-size:.8rem">Try again</button>' +
+    '<button class="lr-house-btn" title="Let the house DM take this turn — costs 1 turn" style="background:rgba(0,0,0,.3);border:1px solid var(--edge,var(--gold));color:var(--bone-bright);padding:.3rem .8rem;border-radius:4px;cursor:pointer;font-size:.8rem">House DM</button>' +
     '</div>');
   if (!sysEl) return;
   const retry = sysEl.querySelector('.lr-retry-btn');
@@ -8346,7 +8348,7 @@ function maybeShowResumeCard(messages) {
   const card = document.createElement('div');
   card.className = 'resume-card';
   card.innerHTML = `
-    <div class="rc-head" onclick="this.parentElement.classList.toggle('collapsed')" role="button" tabindex="0" aria-expanded="true">
+    <div class="rc-head" onclick="this.parentElement.classList.toggle('collapsed')" role="button" tabindex="0" aria-expanded="true" title="Recap card — click to fold away">
       <span class="rc-title">🕯️ ${en ? 'Last time in the Cauldron…' : 'Senast i Cauldron…'}</span>
       <span class="rc-caret">▾</span>
     </div>
@@ -8648,7 +8650,7 @@ function addSceneCard(art, cssClass, label) {
   const artLabel = label || '✦ atmosphere ✦';
   el.innerHTML = `
     <div class="scene-card${artClass}">
-      <div class="scene-header">
+      <div class="scene-header" title="Collapse or expand the scene art">
         <span>${artLabel}</span>
         <span class="scene-caret">▼</span>
       </div>
@@ -10344,7 +10346,7 @@ document.addEventListener('keydown', e => {
     </div>
     <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
       <button class="av-btn primary" id="avatar-ai-btn" onclick="generateAvatarAction()">✨ Generate new from my words</button>
-      <button class="av-btn" id="avatar-update-btn" onclick="updateAvatarAction()" style="display:none">🔄 Update from sheet</button>
+      <button class="av-btn" id="avatar-update-btn" onclick="updateAvatarAction()" style="display:none" title="Regenerate the portrait from your character sheet — 1 turn">🔄 Update from sheet</button>
       <button class="av-btn" onclick="uploadAvatarAction()">📁 Upload image…</button>
       <button class="av-btn danger" id="avatar-del-one-btn" onclick="deleteCurrentAvatarImage()" style="display:none">🗑 Remove this portrait</button>
       <button class="av-btn danger" id="avatar-del-btn" onclick="deleteAvatarAction()" style="display:none">🗑 Remove avatar</button>
@@ -10359,9 +10361,9 @@ document.addEventListener('keydown', e => {
        Lazily först när lightboxen öppnas med en verklig src. -->
   <div id="avatar-lightbox-img-slot"></div>
   <div class="av-lb-bar" id="avatar-lightbox-bar" hidden>
-    <button class="av-lb-nav" onclick="lbRotate(-1)" aria-label="Previous portrait">‹</button>
+    <button class="av-lb-nav" onclick="lbRotate(-1)" title="Previous portrait" aria-label="Previous portrait">‹</button>
     <span class="av-lb-count" id="avatar-lightbox-count"></span>
-    <button class="av-lb-nav" onclick="lbRotate(1)" aria-label="Next portrait">›</button>
+    <button class="av-lb-nav" onclick="lbRotate(1)" title="Next portrait" aria-label="Next portrait">›</button>
   </div>
   <button class="av-lb-act" id="avatar-lightbox-paint" hidden onclick="lbPaint()">🎨 Generate a new portrait</button>
   <button class="av-lb-close" onclick="closeAvatarLightbox()" title="Close preview" aria-label="Close preview">✕</button>

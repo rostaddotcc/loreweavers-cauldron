@@ -189,7 +189,7 @@
     <div class="forge-actions">
       <button class="summon-btn btn-gold" id="forge-btn" onclick="forgeSummon()">🔮 Forge Character</button>
       <span style="font-size:.78rem;color:var(--bone-dim)">🧙 Model:</span>
-      <select id="forge-model">
+      <select id="forge-model" aria-label="Character model">
         <option value="qwen3.8-flash">qwen3.8-flash</option>
         <option value="qwen3.6-flash">qwen3.6-flash</option>
         <option value="deepseek-v4.1-flash">deepseek-v4.1-flash</option>
@@ -198,7 +198,7 @@
         <option value="step-3.5-flash-2603">step-3.5-flash-2603</option>
       </select>
       <span style="font-size:.78rem;color:var(--bone-dim)">🌐</span>
-      <select id="forge-lang">
+      <select id="forge-lang" aria-label="Character language">
         <option value="en" selected>English</option>
         <option value="sv">Svenska</option>
       </select>
@@ -266,7 +266,7 @@
       <div style="font-style:italic;font-size:.85rem;color:var(--bone-dim);margin-top:.35rem" id="nav-sub"></div>
     </div>
     <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem">Name your adventure (optional)</div>
-    <input type="text" id="nav-name-input" maxlength="60" placeholder="An unnamed adventure…" autocomplete="off"
+    <input type="text" id="nav-name-input" maxlength="60" placeholder="An unnamed adventure…" autocomplete="off" aria-label="Adventure name"
       style="width:100%;box-sizing:border-box;padding:.7rem .8rem;font-family:var(--font-body,'Spectral',serif);font-size:1rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:var(--radius-sm);margin-bottom:1rem">
     <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem">Campaign language</div>
     <div style="display:flex;gap:.6rem;margin-bottom:1.4rem">
@@ -577,8 +577,8 @@ async function openInspect(charId) {
     <div class="pv-actions" style="margin-top:1.4rem">
       <button class="pv-go btn-gold" onclick="startNewAdventure('${esc(charId)}')">🌟 Create New Adventure</button>
       <button class="pv-reroll btn-ghost" onclick="useCharacter('${esc(charId)}')">⚔️ Use in Current Adventure</button>
-      <button class="pv-reroll btn-ghost" id="insp-avatar-btn" onclick="genAvatar('${esc(charId)}')">${entry.avatar ? '🎨 Reroll Portrait' : '🎨 Generate Portrait'}</button>
-      ${entry.avatar ? `<button class="pv-reroll btn-ghost" onclick="downloadVaultAvatar('${esc(charId)}')">⬇ Portrait</button>` : ''}
+      <button class="pv-reroll btn-ghost" id="insp-avatar-btn" onclick="genAvatar('${esc(charId)}')" title="Costs 1 turn — part of the 10€ unlock">${entry.avatar ? '🎨 Reroll Portrait' : '🎨 Generate Portrait'}</button>
+      ${entry.avatar ? `<button class="pv-reroll btn-ghost" onclick="downloadVaultAvatar('${esc(charId)}')" title="Download the portrait image">⬇ Portrait</button>` : ''}
       <button class="pv-reroll btn-blood" style="color:var(--blood-bright)" onclick="deleteCharacter('${esc(charId)}','${esc(ch.name||'')}')">🗑 Delete</button>
     </div>`;
   document.getElementById('insp-overlay').classList.add('show');

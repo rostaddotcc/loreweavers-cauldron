@@ -260,7 +260,7 @@
   <!-- ═══════════ KAMPANJSPRÅK ═══════════ -->
   <div class="lang-row">
     <label class="lang-label">Campaign language</label>
-    <select id="lang-select" class="dark-select lang-dropdown" onchange="onLangChange(this.value)">
+    <select id="lang-select" class="dark-select lang-dropdown" aria-label="Campaign language" onchange="onLangChange(this.value)">
       <option value="en">🌐 English</option>
       <option value="sv">⚔️ Svenska</option>
     </select>
@@ -293,7 +293,7 @@
     </div>
     <div class="lp-single" id="legend-editor">
       <textarea id="prompt" spellcheck="false" oninput="renderLegendPreview()" onblur="onPromptBlur(event)"></textarea>
-      <div class="legend-preview" id="legend-preview" aria-live="polite" onclick="enterEditMode()"></div>
+      <div class="legend-preview" id="legend-preview" aria-live="polite" onclick="enterEditMode()" title="Click to edit this text"></div>
     </div>
     <!-- Fix 2026-09-20 (rostad, samma rapport som adventure.html §2.4): modellvalet
          FÖRE Summon-knappen — inställning → handling, ingen skrollning uppåt. ID:n oförändrade. -->
@@ -301,7 +301,7 @@
       <summary>⚙ Advanced — character model <span class="adv-sum-hint">· sensible default is set</span></summary>
       <div class="adv-body">
         <span style="font-size:.73rem;color:var(--bone-dim);opacity:.7">🧙 Character:</span>
-        <select id="char-model" style="background:var(--stone-2);border:1px solid var(--edge);color:var(--bone);padding:.4rem .6rem;font-size:.83rem;cursor:pointer">
+        <select id="char-model" aria-label="Character model" style="background:var(--stone-2);border:1px solid var(--edge);color:var(--bone);padding:.4rem .6rem;font-size:.83rem;cursor:pointer">
           <option value="qwen3.8-flash">qwen3.8-flash</option>
           <option value="qwen3.6-flash">qwen3.6-flash</option>
           <option value="deepseek-v4.1-flash">deepseek-v4.1-flash</option>
@@ -312,7 +312,7 @@
       </div>
     </details>
     <div class="scroll-actions">
-      <button class="summon-btn btn-gold" id="summon" onclick="summon()">🔮 Summon Character</button>
+      <button class="summon-btn btn-gold" id="summon" onclick="summon()" title="Weaves your character — costs 1 turn">🔮 Summon Character</button>
     </div>
   </div>
 
@@ -355,7 +355,7 @@
       <div class="pv-story" id="pv-story"></div>
       <div class="pv-actions">
         <button class="pv-go btn-gold" onclick="enterGame()">⚔️ To the Table</button>
-        <button class="pv-reroll btn-ghost" onclick="summon()">🔄 Reroll Fate</button>
+        <button class="pv-reroll btn-ghost" onclick="summon()" title="Weave them again — costs 1 turn">🔄 Reroll Fate</button>
       </div>
     </div>
   </div>
@@ -389,7 +389,7 @@
       <div style="font-style:italic;font-size:.85rem;color:var(--bone-dim);margin-top:.35rem" id="nav-sub"></div>
     </div>
     <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem">Name your adventure (optional)</div>
-    <input type="text" id="nav-name-input" maxlength="60" placeholder="An unnamed adventure…" autocomplete="off"
+    <input type="text" id="nav-name-input" maxlength="60" placeholder="An unnamed adventure…" autocomplete="off" aria-label="Adventure name"
       style="width:100%;box-sizing:border-box;padding:.7rem .8rem;font-family:var(--font-body,'Spectral',serif);font-size:1rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:var(--radius-sm);margin-bottom:1rem">
     <div class="pv-actions">
       <button class="pv-go btn-gold" id="nav-create-btn" onclick="confirmNewAdventure()" style="flex:1">⚔️ Create New Adventure</button>

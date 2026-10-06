@@ -601,6 +601,7 @@
 .top-btn{ box-shadow: 0 2px 12px -6px rgba(0,0,0,.6) !important; transition: all .2s !important; min-height:44px;display:inline-flex;align-items:center;justify-content:center}
 .top-btn:hover{ transform: translateY(-1px) !important; }
 .tab{ transition: all .2s !important; min-height:44px;display:inline-flex;align-items:center;justify-content:center;border-color:rgba(var(--gold-rgb),.4)}
+.tab:focus-visible{ outline: 2px solid var(--gold-bright); outline-offset: 2px; }
 .panel{ position:relative;background:linear-gradient(180deg,rgba(217,201,166,.07),rgba(217,201,166,.015) 55%),linear-gradient(155deg,#241c15,#1c1713 72%);border:1px solid rgba(var(--gold-rgb),.34);box-shadow:inset 0 0 0 1px rgba(74,59,38,.5),0 1px 0 rgba(0,0,0,.4)}
 .ability{ background:linear-gradient(180deg,rgba(217,201,166,.07),rgba(217,201,166,.015) 55%),linear-gradient(155deg,#241c15,#1c1713 72%);border:1px solid rgba(var(--gold-rgb),.34)}
 .trait{ border-color:rgba(var(--gold-rgb),.35);background:linear-gradient(180deg,#241c15,#1c1713)}
@@ -675,12 +676,12 @@
     <p>Loading the campaign's state…</p>
   </div>
 
-  <nav class="tabs">
-    <div class="tab active" data-tab="character">⚔ Character</div>
-    <div class="tab" data-tab="spells">✨ Spells</div>
-    <div class="tab" data-tab="inventory">🎒 Equipment</div>
-    <div class="tab" data-tab="currency">🪙 Treasury</div>
-    <div class="tab" data-tab="notes">📜 Notes</div>
+  <nav class="tabs" role="tablist">
+    <div class="tab active" data-tab="character" role="tab" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">⚔ Character</div>
+    <div class="tab" data-tab="spells" role="tab" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">✨ Spells</div>
+    <div class="tab" data-tab="inventory" role="tab" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">🎒 Equipment</div>
+    <div class="tab" data-tab="currency" role="tab" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">🪙 Treasury</div>
+    <div class="tab" data-tab="notes" role="tab" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">📜 Notes</div>
   </nav>
 
   <!-- ═══════════ KARAKTÄR ═══════════ -->
@@ -816,7 +817,7 @@
     <div class="notes-layout">
       <div class="notes-main">
         <div class="section-title">Free Notes <span class="notes-hint">— write freely about your character, the world, your goals…</span></div>
-        <textarea id="notes-editor" spellcheck="false" placeholder="# My Character
+        <textarea id="notes-editor" aria-label="Free notes — anything about your character" spellcheck="false" placeholder="# My Character
 
 Write freely here — backstory, goals, relationships, theories about the world…
 
@@ -1229,6 +1230,7 @@ function abilityNames() {
     : { STR: 'STY', DEX: 'SMI', CON: 'TÅL', INT: 'INT', WIS: 'VIS', CHA: 'KAR' };
 }
 const abilityOrder = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA'];
+const ABILITY_FULL = { STR: 'Strength', DEX: 'Dexterity', CON: 'Constitution', INT: 'Intelligence', WIS: 'Wisdom', CHA: 'Charisma' };
 
 function renderAbilities() {
   const abilities = state.character.abilities || {};
@@ -1236,7 +1238,7 @@ function renderAbilities() {
     const v = abilities[key] || {};
     const score = v.score ?? 10;
     const mod = v.mod ?? Math.floor((score - 10) / 2);
-    return `<div class="ability" title="${key}">
+    return `<div class="ability" title="${ABILITY_FULL[key] || key}">
       <div class="abbr">${abilityNames()[key]}</div>
       <div class="score">${score}</div>
       <div class="mod">${mod >= 0 ? '+' + mod : mod}</div>
@@ -1462,7 +1464,7 @@ function renderInventory() {
     const card = document.createElement('div');
     card.className = 'inv-card' + (item.equipped ? ' equipped' : '') + (rarityCls ? ' ' + rarityCls : '');
     card.innerHTML = `
-      <div class="inv-card-row" onclick="openItemModal(${i})">
+      <div class="inv-card-row" title="Item — click for details" onclick="openItemModal(${i})">
         ${art}
         <div class="inv-card-info">
           <div class="inv-card-name ${rarityCls}">${item.rarity === 'magic' || item.rarity === 'legendary' ? '✦ ' : ''}${_esc(item.name)}</div>
@@ -2053,8 +2055,8 @@ window.getState = exportState;
       </select>
     </div>
     <div style="display:flex;flex-direction:column;gap:.6rem;margin-top:.9rem">
-      <button class="av-btn primary btn-gold" id="avatar-free-btn" onclick="freePromptAction()">🖌️ Free prompt</button>
-      <button class="av-btn btn-ghost" id="avatar-update-btn" onclick="updateAvatarAction()">🎨 Create from dossier</button>
+      <button class="av-btn primary btn-gold" id="avatar-free-btn" onclick="freePromptAction()" title="Draw exactly what you describe — 1 turn">🖌️ Free prompt</button>
+      <button class="av-btn btn-ghost" id="avatar-update-btn" onclick="updateAvatarAction()" title="Portrait from your character sheet — 1 turn">🎨 Create from dossier</button>
       <button class="av-btn btn-ghost" onclick="portraitInput.click()">📁 Upload image…</button>
       <button class="av-btn danger btn-blood" id="avatar-del-btn" onclick="deleteAvatarAction()" style="display:none">🗑 Remove avatar</button>
     </div>

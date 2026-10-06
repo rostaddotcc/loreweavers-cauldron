@@ -498,7 +498,7 @@ function renderMap(locations, travelLog) {
   const rows = grid.map(row => {
     const cells = row.map(c => {
       if (c.loc) {
-        return `<span class="mc ${c.cls}" data-loc="${escapeAttr(c.loc)}">${c.ch}</span>`;
+        return `<span class="mc ${c.cls}" data-loc="${escapeAttr(c.loc)}" title="Click for the place card">${c.ch}</span>`;
       }
       // shimmer-fas per cell → ingen synchronized swimming
       if (c.cls === 'bg water') return `<span class="mc bg water" style="--d:${(rng() * 4).toFixed(2)}s">${c.ch}</span>`;

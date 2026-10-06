@@ -251,6 +251,7 @@
   .pricing-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.9rem;margin-top:1.5rem;max-width:760px}
   .ptier{position:relative;background:linear-gradient(168deg,var(--stone-2),var(--stone));border:1px solid var(--edge);padding:1.15rem 1.25rem 1.1rem;cursor:pointer;transition:transform .28s cubic-bezier(.2,.7,.3,1),border-color .28s,box-shadow .28s}
   .ptier:hover{transform:translateY(-3px);border-color:var(--gold);box-shadow:0 20px 40px -26px rgba(0,0,0,.95)}
+  .ptier:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
   .ptier .go-hint{display:block;margin-top:.85rem;font-family:var(--font-mono);font-size:.55rem;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
   .pt-name{font-family:var(--font-mono);font-weight:500;font-size:.6rem;letter-spacing:.26em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.3rem}
   .pt-price{font-family:var(--font-display);font-weight:700;font-size:2.5rem;line-height:1;color:var(--gold-bright);margin-bottom:.85rem;letter-spacing:-.01em}
@@ -630,10 +631,10 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
     <!-- profil-chip: dolt för besökare, visas av /api/me-hantern när inloggad —
          enda ingången till profilmodalen (Delete account/GDPR får inte dö tyst) -->
     <a class="rr-btn" id="nav-user" href="#" onclick="openProfile(event)" style="display:none" title="Your profile">✦ <span id="nav-user-name"></span></a>
-    <a class="rr-link" href="#features">I <span class="rr-l">· Brews</span></a>
-    <a class="rr-link" href="#souls">II <span class="rr-l">· Souls</span></a>
-    <a class="rr-link" href="#pricing">III <span class="rr-l">· Paths</span></a>
-    <a class="rr-link" href="#ledger">IV <span class="rr-l">· Ledger</span></a>
+    <a class="rr-link" href="#features" title="Room I — what brews inside (the features)">I <span class="rr-l">· Brews</span></a>
+    <a class="rr-link" href="#souls" title="Room II — the Book of Souls gallery">II <span class="rr-l">· Souls</span></a>
+    <a class="rr-link" href="#pricing" title="Room III — pricing paths &amp; FAQ">III <span class="rr-l">· Paths</span></a>
+    <a class="rr-link" href="#ledger" title="Room IV — the release ledger (what's new)">IV <span class="rr-l">· Ledger</span></a>
   </nav>
 </header>
 
@@ -1187,7 +1188,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
             <h2 class="rv">Unlimited. <em>No lock-in.</em></h2>
             <p class="lede rv d1">30 fresh turns every day, forever. No card. No email. No subscription &mdash; the one-time <b>10€ unlock</b> adds 100 turns and opens every mind, voice and image engine. Or donate any amount: every € adds 100 turns, and any donation &mdash; 1€ is enough &mdash; permanently unlocks <b>Undo</b> and <b>campaign export</b>.</p>
             <div class="pricing-grid">
-        <div class="ptier rv d1" onclick="location.href='#gate'">
+        <div class="ptier rv d1" role="button" tabindex="0" onclick="location.href='#gate'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" title="The free path — jump to the gate and start">
           <div class="pt-name">Free</div>
           <div class="pt-price">0€</div>
           <ul>
@@ -1199,7 +1200,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
           </ul>
           <span class="go-hint">Begin your adventure →</span>
         </div>
-        <div class="ptier patron rv d2" onclick="location.href='pricing.html?plan=unlock10'">
+        <div class="ptier patron rv d2" role="button" tabindex="0" onclick="location.href='pricing.html?plan=unlock10'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" title="The one-time 10€ unlock — full details on Paths">
           <span class="pt-flag">One-time · forever</span>
           <div class="pt-name">Unlock</div>
           <div class="pt-price">10€<small> once</small></div>
@@ -1213,7 +1214,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
           <span class="go-hint">See the full paths →</span>
         </div>
         <!-- 1€ top-up: add-on-vägen — turns utan unlock (deep-link fyller beloppet + öppnar donation) -->
-        <div class="ptier ptier-topup rv d3" onclick="location.href='pricing.html?donate=1'">
+        <div class="ptier ptier-topup rv d3" role="button" tabindex="0" onclick="location.href='pricing.html?donate=1'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" title="Top up turns from 1€ — opens the donation path">
           <span class="pt-flag">Anytime &middot; never expires</span>
           <div class="pt-topup-head">
             <div class="pt-name">Top-up</div>
@@ -1741,7 +1742,7 @@ function renderDeck(key) {
     <div class="pile-under u1"></div>
     <div class="pile-under u2"></div>
     <div class="pile-under u3"></div>
-    <div class="deck-card" onclick="deckClick('${key}',event)">${deckCardHtml(key, d)}</div>`;
+    <div class="deck-card" title="Draw the next card — far-left edge goes back" onclick="deckClick('${key}',event)">${deckCardHtml(key, d)}</div>`;
   cnt.textContent = (st.i + 1) + ' / ' + st.data.length;
 }
 

@@ -282,6 +282,7 @@
   .vcard{position:relative;background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,var(--ink));border:1px solid var(--edge);padding:1.2rem 1.1rem 1rem;transition:transform .3s,box-shadow .3s,border-color .3s;overflow:hidden;cursor:pointer}
   .vcard::before{content:'';position:absolute;inset:6px;border:1px solid rgba(var(--gold-rgb),.15);pointer-events:none}
   .vcard:hover{transform:translateY(-4px);box-shadow:0 14px 30px -12px rgba(0,0,0,.85);border-color:var(--gold)}
+  .vcard:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   .vcard.selected{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),0 14px 30px -12px rgba(var(--gold-bright-rgb),.45)}
   .vcard-head{display:flex;gap:.9rem;align-items:center;margin-bottom:.5rem}
   .vcard-avatar{width:54px;height:54px;flex-shrink:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:var(--fs-h3);border:2px solid var(--edge-hi);background:var(--stone-3);overflow:hidden}
@@ -471,6 +472,7 @@ html{font-size:var(--fs-base)}
 /* Progress-rail: 4 stop ovanför steppern */
 .step-rail{display:flex;justify-content:center;align-items:center;gap:clamp(.6rem,2.4vw,1.6rem);flex-wrap:wrap;margin:0 0 1.4rem;font-family:var(--font-display,'Cinzel',serif);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-dim)}
 .sr-stop{display:inline-flex;align-items:center;gap:.4rem;cursor:default;opacity:.75}
+.sr-stop:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .sr-stop i{font-style:normal;display:inline-flex;align-items:center;justify-content:center;width:1.35rem;height:1.35rem;border:1px solid var(--edge);border-radius:50%;font-size:.62rem;color:var(--bone-dim);background:var(--stone-3)}
 .sr-stop.on{color:var(--gold-bright);opacity:1}
 .sr-stop.on i{border-color:var(--gold);color:var(--ink);background:linear-gradient(180deg,var(--gold-bright),var(--gold));box-shadow:0 0 10px rgba(var(--gold-rgb),.4)}
@@ -960,7 +962,7 @@ html{font-size:var(--fs-base)}
       <div class="pp-portrait soft-full" id="adv-portrait-img">🎭</div>
       <div class="pp-name" id="adv-portrait-name"></div>
       <div class="pp-actions">
-        <button class="av-btn primary" id="adv-portrait-reroll" onclick="rerollPortrait()">🎲 Re-roll portrait</button>
+        <button class="av-btn primary" id="adv-portrait-reroll" onclick="rerollPortrait()" title="Roll a new portrait — each image costs 1 turn">🎲 Re-roll portrait</button>
         <button class="av-btn" onclick="closeAdvPortraitPreview()">✕ Close</button>
       </div>
       <div class="pp-status" id="adv-portrait-status"></div>
@@ -1132,11 +1134,11 @@ html{font-size:var(--fs-base)}
 
   <!-- ═══════════ ONBOARDING — STEG 1: KAMPANJSPRÅK ═══════════ -->
   <button type="button" class="stepper-toggle" id="stepper-toggle" onclick="toggleStepperCollapse()">🎲 <span id="stepper-toggle-label">New adventure?</span></button>
-  <div class="step-rail" id="step-rail" role="list" aria-label="Adventure setup progress">
-    <span class="sr-stop on" data-for="step-lang" role="listitem" onclick="railGo(this)"><i>1</i> Language</span>
-    <span class="sr-stop" data-for="step-name" role="listitem" onclick="railGo(this)"><i>2</i> Name</span>
-    <span class="sr-stop" data-for="step-arch" role="listitem" onclick="railGo(this)"><i>3</i> Adventurer</span>
-    <span class="sr-stop" data-for="step-model" role="listitem" onclick="railGo(this)"><i>4</i> Dungeon Master</span>
+  <div class="step-rail" id="step-rail" role="group" aria-label="Adventure setup progress">
+    <span class="sr-stop on" data-for="step-lang" role="button" tabindex="0" title="Jump back to this step" onclick="railGo(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();railGo(this)}"><i>1</i> Language</span>
+    <span class="sr-stop" data-for="step-name" role="button" tabindex="0" title="Jump back to this step" onclick="railGo(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();railGo(this)}"><i>2</i> Name</span>
+    <span class="sr-stop" data-for="step-arch" role="button" tabindex="0" title="Jump back to this step" onclick="railGo(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();railGo(this)}"><i>3</i> Adventurer</span>
+    <span class="sr-stop" data-for="step-model" role="button" tabindex="0" title="Jump back to this step" onclick="railGo(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();railGo(this)}"><i>4</i> Dungeon Master</span>
   </div>
   <div class="step" id="step-lang">
     <div class="step-head">
@@ -1200,7 +1202,7 @@ html{font-size:var(--fs-base)}
       <div class="spread" id="spread"></div>
       <div class="dark-drop" id="dark-drop" style="display:none">
         <div class="dark-drop-label"><span class="dd-icon">🖤</span> <span class="dd-name" id="dd-name">Dark Paths</span> <span class="dd-sub" id="dd-sub">mature archetypes</span></div>
-        <select id="dark-select" class="dark-select" onchange="selectDarkArch(this.value)">
+        <select id="dark-select" class="dark-select" aria-label="Dark archetype" onchange="selectDarkArch(this.value)">
           <option value="">— choose a darker path —</option>
         </select>
       </div>
@@ -1212,13 +1214,13 @@ html{font-size:var(--fs-base)}
         <div class="fw-head">
           <span class="fw-mode" id="fw-mode">📜 <b>Blank Parchment</b></span>
           <div class="fw-btns">
-            <button class="blank-btn" id="fw-toggle" onclick="toggleFateweave()">✏️ Edit</button>
-            <button class="blank-btn" onclick="clearPrompt()">🗑 Clear</button>
+            <button class="blank-btn" id="fw-toggle" onclick="toggleFateweave()" title="Toggle edit / preview">✏️ Edit</button>
+            <button class="blank-btn" onclick="clearPrompt()" title="Empty the textarea">🗑 Clear</button>
           </div>
         </div>
         <div class="lp-single" id="fw-editor">
           <textarea id="fw-prompt" spellcheck="false" oninput="renderFwPreview()" onblur="onFwBlur(event)"></textarea>
-          <div class="legend-preview" id="fw-preview" onclick="enterFwEdit()"></div>
+          <div class="legend-preview" id="fw-preview" onclick="enterFwEdit()" title="Click to edit this text"></div>
         </div>
         <div class="prompt-size-hint" id="fw-size-hint">Drag the corner to make the box bigger</div>
         <div class="blank-note">Tweak the template before the weaver gets it — your own name, a pet, a pouch of coins, a crown…</div>
@@ -1236,7 +1238,7 @@ html{font-size:var(--fs-base)}
         </div>
       </details>
       <div class="step-actions" id="gen-row">
-        <button class="gen-btn btn-gold" id="gen-btn" onclick="generateAdventurer()" disabled>🔮 Summon Adventurer</button>
+        <button class="gen-btn btn-gold" id="gen-btn" onclick="generateAdventurer()" title="Weaves a new adventurer — costs 1 turn" disabled>🔮 Summon Adventurer</button>
         <span class="hint" id="gen-hint">Pick an archetype first — or take the blank parchment</span>
       </div>
       <!-- Vävning (summoning-ritual) -->
@@ -1261,7 +1263,7 @@ html{font-size:var(--fs-base)}
         <div class="pv-story" id="adv-pv-story"></div>
         <div class="pv-actions">
           <!-- adv-paint-btn borttagen 2026-08-08 — klicka på porträttet (adv-pv-portrait) för att måla -->
-          <button class="pv-reroll btn-ghost" id="adv-reroll" onclick="rerollAdventurer()">🎲 Reroll</button>
+          <button class="pv-reroll btn-ghost" id="adv-reroll" onclick="rerollAdventurer()" title="Weave them again — costs 1 turn">🎲 Reroll</button>
           <button class="pv-go btn-gold" id="adv-continue" onclick="continueAdventurer()">Continue →</button>
         </div>
       </div>
@@ -1467,7 +1469,7 @@ function showCampaignList(campaigns) {
       </div>
       <div class="cc-actions">
         <button class="cc-go" onclick="activateAndContinue('${esc(c.campaign_id)}')">${I18N.t('⚔️ Fortsätt')}</button>
-        <button class="cc-del" title="${I18N.t('Radera')}" aria-label="${I18N.t('Radera')} ${esc(name)}" onclick="askDeleteCampaign('${esc(c.campaign_id)}','${esc(name)}')">✕</button>
+        <button class="cc-del" title="Delete this adventure — asks first" aria-label="${I18N.t('Radera')} ${esc(name)}" onclick="askDeleteCampaign('${esc(c.campaign_id)}','${esc(name)}')">✕</button>
       </div>
     </div>`;
   }).join('');
@@ -2345,7 +2347,7 @@ async function loadForgeAdventurers() {
   if (!chars.length) { empty.style.display = ''; grid.innerHTML = ''; return; }
   empty.style.display = 'none';
   grid.innerHTML = chars.map(ch => `
-    <div class="vcard" data-id="${ch.id}" onclick="selectForgeAdventurer('${ch.id}')">
+    <div class="vcard" data-id="${ch.id}" role="button" tabindex="0" title="Pick this adventurer" onclick="selectForgeAdventurer('${ch.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectForgeAdventurer('${ch.id}')}">
       <div class="vcard-head">
         <div class="vcard-avatar">${ch.has_avatar
           ? '<img src="' + API.vaultAvatarUrl(ch.id) + '" alt="">'

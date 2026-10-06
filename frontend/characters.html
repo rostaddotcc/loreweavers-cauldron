@@ -201,6 +201,10 @@
       <select id="forge-lang" aria-label="Character language">
         <option value="en" selected>English</option>
         <option value="sv">Svenska</option>
+        <option value="de">Deutsch</option>
+        <option value="fr">Français</option>
+        <option value="es">Español</option>
+        <option value="it">Italiano</option>
       </select>
     </div>
   </div>
@@ -269,9 +273,13 @@
     <input type="text" id="nav-name-input" maxlength="60" placeholder="An unnamed adventure…" autocomplete="off" aria-label="Adventure name"
       style="width:100%;box-sizing:border-box;padding:.7rem .8rem;font-family:var(--font-body,'Spectral',serif);font-size:1rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:var(--radius-sm);margin-bottom:1rem">
     <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem">Campaign language</div>
-    <div style="display:flex;gap:.6rem;margin-bottom:1.4rem">
-      <button class="pv-reroll nav-lang btn-ghost" data-lang="en" style="flex:1" onclick="navPickLang('en',this)">🇬🇧 English</button>
-      <button class="pv-reroll nav-lang btn-ghost" data-lang="sv" style="flex:1" onclick="navPickLang('sv',this)">🇸🇪 Svenska</button>
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1.4rem">
+      <button class="pv-reroll nav-lang btn-ghost" data-lang="en" style="flex:1 1 40%" onclick="navPickLang('en',this)">🇬🇧 English</button>
+      <button class="pv-reroll nav-lang btn-ghost" data-lang="sv" style="flex:1 1 40%" onclick="navPickLang('sv',this)">🇸🇪 Svenska</button>
+      <button class="pv-reroll nav-lang btn-ghost" data-lang="de" style="flex:1 1 40%" onclick="navPickLang('de',this)">🇩🇪 Deutsch</button>
+      <button class="pv-reroll nav-lang btn-ghost" data-lang="fr" style="flex:1 1 40%" onclick="navPickLang('fr',this)">🇫🇷 Français</button>
+      <button class="pv-reroll nav-lang btn-ghost" data-lang="es" style="flex:1 1 40%" onclick="navPickLang('es',this)">🇪🇸 Español</button>
+      <button class="pv-reroll nav-lang btn-ghost" data-lang="it" style="flex:1 1 40%" onclick="navPickLang('it',this)">🇮🇹 Italiano</button>
     </div>
     <div class="pv-actions">
       <button class="pv-go btn-gold" id="nav-create-btn" onclick="confirmNewAdventure()" style="flex:1">⚔️ Create New Adventure</button>

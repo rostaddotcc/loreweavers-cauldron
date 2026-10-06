@@ -28,42 +28,7 @@
       var(--ink);
     background-attachment:fixed;overflow-x:hidden;
   }.grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.05;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}#embers{position:fixed;inset:0;z-index:1;pointer-events:none}.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(14,10,7,.85)}.app{position:relative;z-index:2;max-width:1080px;margin:0 auto;padding:2rem 1.25rem 5rem}.destiny-title{text-align:center;margin-bottom:.4rem}.destiny-title .over{font-family:var(--font-display,'Cinzel',serif);font-size:.66rem;letter-spacing:.42em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.55rem}.destiny-title h1{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:clamp(1.8rem,5vw,2.7rem);color:var(--bone-bright);letter-spacing:.05em}.destiny-sub{text-align:center;font-style:italic;color:var(--bone-dim);font-size:var(--fs-base);margin-bottom:2.2rem}.rune-divider{display:flex;align-items:center;gap:.9rem;margin:0 auto 2.4rem;max-width:380px}.rune-divider::before,.rune-divider::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.5}.rune-divider span{color:var(--gold);text-shadow:0 0 8px rgba(var(--gold-rgb),.6)}/* ── Campaign language selector ── */.lang-row{display:flex;align-items:center;justify-content:center;gap:.8rem;flex-wrap:wrap;margin:0 auto 1.6rem;max-width:640px}.lang-label{font-family:var(--font-display,'Cinzel',serif);font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim);flex-shrink:0}.lang-hint{font-size:var(--fs-tiny);font-style:italic;color:var(--bone-dim)}.section-label{display:flex;align-items:baseline;gap:.55rem;margin:2.6rem 0 1.1rem;font-family:var(--font-display,'Cinzel',serif);font-size:.78rem;font-weight:700;letter-spacing:.28em;text-transform:uppercase;color:var(--gold)}.section-label .num{color:var(--blood-bright);letter-spacing:.1em}.spread{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}.arch{
-    position:relative;cursor:pointer;text-align:center;padding:1.4rem 1rem 1.2rem;
-    background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,var(--ink));
-    border:1px solid var(--edge);
-    transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s,border-color .3s;
-    overflow:hidden;
-  }.arch::before{content:'';position:absolute;inset:6px;border:1px solid rgba(var(--gold-rgb),.18);pointer-events:none;transition:border-color .3s}.arch:nth-child(1){transform:rotate(-1.6deg)}.arch:nth-child(2){transform:rotate(1.1deg)}.arch:nth-child(3){transform:rotate(-.8deg)}.arch:nth-child(4){transform:rotate(1.4deg)}.arch:nth-child(5){transform:rotate(-1.2deg)}.arch:nth-child(6){transform:rotate(.9deg)}.arch:hover{transform:rotate(0) translateY(-8px);box-shadow:0 18px 34px -12px rgba(0,0,0,.85);border-color:var(--ac,var(--gold));z-index:2}.arch:hover::before{border-color:var(--ac,var(--gold))}.arch .glow{position:absolute;inset:0;opacity:0;transition:opacity .35s;pointer-events:none;
-    background:radial-gradient(ellipse at 50% 0%,var(--ac-glow,rgba(var(--gold-rgb),.14)),transparent 70%)}.arch:hover .glow{opacity:1}.arch .icon{
-    width:56px;height:56px;margin:0 auto .8rem;border-radius:var(--radius-full);
-    display:flex;align-items:center;justify-content:center;font-size:1.6rem;
-    border:1px solid var(--ac,var(--gold));background:var(--stone-3);
-    box-shadow:0 0 16px -4px var(--ac-glow,rgba(var(--gold-rgb),.4)),inset 0 0 12px rgba(0,0,0,.5);
-    transition:transform .3s,box-shadow .3s;
-  }.arch:hover .icon{transform:scale(1.12);box-shadow:0 0 24px -2px var(--ac-glow,rgba(var(--gold-rgb),.6)),inset 0 0 12px rgba(0,0,0,.5)}.arch h3{font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:var(--fs-sm);color:var(--bone-bright);letter-spacing:.04em;margin-bottom:.45rem}.arch .lore{font-style:italic;font-size:var(--fs-sm);color:var(--bone-dim);line-height:1.5;margin-bottom:.8rem;min-height:3.6em}.arch .tags{display:flex;justify-content:center;gap:.35rem;flex-wrap:wrap}.arch .tag{font-family:var(--font-display,'Cinzel',serif);font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim);border:1px solid var(--edge);padding:.2rem .5rem;border-radius:var(--radius-xs)}.arch .ribbon{
-    position:absolute;top:10px;right:-30px;transform:rotate(38deg);
-    font-family:var(--font-display,'Cinzel',serif);font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;
-    background:var(--ac,var(--gold));color:var(--ink);padding:.25rem 2.2rem;
-    opacity:0;transition:opacity .3s;
-  }.arch.selected{border-color:var(--ac,var(--gold));transform:rotate(0) translateY(-6px);
-    box-shadow:0 0 0 1px var(--ac,var(--gold)),0 16px 34px -12px var(--ac-glow,rgba(var(--gold-rgb),.5))}.arch.selected .ribbon{opacity:1}.arch.selected::before{border-color:var(--ac,var(--gold))}/* ═══════════ Arketyp-kategorier — fyra hopfällbara sektioner ═══════════ */.arch-cat{
-    margin-top:1.4rem;border:1px solid var(--edge);
-    background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,var(--ink));
-  }.arch-cat .cat-head{
-    width:100%;display:flex;align-items:center;gap:.85rem;padding:.9rem 1.1rem;text-align:left;
-    background:transparent;border:0;cursor:pointer;font:inherit;color:inherit;
-    border-bottom:1px solid rgba(var(--gold-rgb),.16);transition:background .2s;
-  }.arch-cat .cat-head:hover{background:rgba(var(--gold-rgb),.07)}.arch-cat .cat-head:active{background:rgba(var(--gold-rgb),.12)!important;color:inherit!important}.arch-cat .cat-icon{font-size:1.15rem;flex-shrink:0}.arch-cat .cat-titles{flex:1;min-width:0;display:flex;flex-direction:column;gap:.12rem}.arch-cat .cat-title{
-    font-family:var(--font-display,'Cinzel',serif)!important;font-weight:700;font-size:var(--fs-tiny);
-    letter-spacing:.24em!important;text-transform:uppercase;color:var(--gold-bright)!important;
-  }.arch-cat .cat-sub{font-size:var(--fs-tiny);font-style:italic;color:var(--bone-dim)}.arch-cat .cat-count{
-    flex-shrink:0;min-width:1.7rem;text-align:center;
-    font-family:var(--font-display,'Cinzel',serif)!important;font-size:.66rem;letter-spacing:.1em;
-    color:var(--gold);border:1px solid var(--edge);padding:.22rem .45rem;border-radius:var(--radius-xs);
-  }.arch-cat .cat-chevron{flex-shrink:0;color:var(--bone-dim);font-size:.85rem;transition:transform .25s}.arch-cat .cat-chevron::before{content:'▾'}.arch-cat:not(.open) .cat-chevron::before{content:'▸'}.arch-cat .cat-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .4s cubic-bezier(.22,1,.36,1)}.arch-cat.open .cat-body{grid-template-rows:1fr}.arch-cat .cat-inner{overflow:hidden;min-height:0}.arch-cat.open .cat-inner .spread{padding:1.1rem 1.1rem 1.35rem}.arch-cat .cat-empty{padding:1rem 1.1rem 1.35rem;font-style:italic;color:var(--bone-dim);font-size:var(--fs-sm)}/* Den Mörka Vägen — blodröd accent, hotfull header */.arch-cat.dark{
-    border-left:3px solid var(--blood);background:linear-gradient(170deg,var(--ink),var(--ink) 60%,var(--ink));
-  }.arch-cat.dark .cat-head{border-bottom-color:rgba(var(--blood-rgb),.28)}.arch-cat.dark .cat-title{color:var(--blood-bright)!important}.arch-cat.dark .cat-count{color:var(--blood-bright);border-color:rgba(var(--blood-rgb),.45)}.dark-select{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}#embers{position:fixed;inset:0;z-index:1;pointer-events:none}.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(14,10,7,.85)}.app{position:relative;z-index:2;max-width:1080px;margin:0 auto;padding:2rem 1.25rem 5rem}.destiny-title{text-align:center;margin-bottom:.4rem}.destiny-title .over{font-family:var(--font-display,'Cinzel',serif);font-size:.66rem;letter-spacing:.42em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.55rem}.destiny-title h1{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:clamp(1.8rem,5vw,2.7rem);color:var(--bone-bright);letter-spacing:.05em}.destiny-sub{text-align:center;font-style:italic;color:var(--bone-dim);font-size:var(--fs-base);margin-bottom:2.2rem}.rune-divider{display:flex;align-items:center;gap:.9rem;margin:0 auto 2.4rem;max-width:380px}.rune-divider::before,.rune-divider::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.5}.rune-divider span{color:var(--gold);text-shadow:0 0 8px rgba(var(--gold-rgb),.6)}/* ── Campaign language selector ── */.lang-row{display:flex;align-items:center;justify-content:center;gap:.8rem;flex-wrap:wrap;margin:0 auto 1.6rem;max-width:640px}.lang-label{font-family:var(--font-display,'Cinzel',serif);font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;color:var(--bone-dim);flex-shrink:0}.lang-hint{font-size:var(--fs-tiny);font-style:italic;color:var(--bone-dim)}.section-label{display:flex;align-items:baseline;gap:.55rem;margin:2.6rem 0 1.1rem;font-family:var(--font-display,'Cinzel',serif);font-size:.78rem;font-weight:700;letter-spacing:.28em;text-transform:uppercase;color:var(--gold)}.section-label .num{color:var(--blood-bright);letter-spacing:.1em}/* ═══════════ Arketyper — små accordion-boxar, EN sammanslagen lista (2026-10-06): mörka arketyper blandade med alla, inga emoji-titlar, ingen NSFW-dropdown ═══════════ */.arch-cats{display:flex;flex-direction:column;gap:.55rem}.arch-acc{--ac:var(--gold);--ac-glow:rgba(var(--gold-rgb),.35);position:relative;background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,var(--ink));border:1px solid var(--edge);border-radius:12px;overflow:hidden;transition:border-color .3s,box-shadow .3s}.arch-acc::before{content:'';position:absolute;inset:4px;border:1px solid rgba(var(--gold-rgb),.14);border-radius:8px;pointer-events:none;transition:border-color .3s}.arch-acc:hover{border-color:var(--ac)}.arch-acc:hover::before{border-color:var(--ac)}.arch-acc.selected{border-color:var(--ac);box-shadow:0 0 0 1px var(--ac),0 10px 24px -14px var(--ac-glow)}.arch-acc.selected::before{border-color:var(--ac)}.aa-head{display:flex;align-items:center;gap:.7rem;width:100%;background:transparent;border:0;color:inherit;font:inherit;text-align:left;padding:.7rem .9rem;cursor:pointer;min-height:44px}.aa-dot{flex-shrink:0;width:11px;height:11px;border-radius:50%;border:1px solid var(--ac);background:radial-gradient(circle at 35% 30%,var(--ac-glow),transparent 70%);box-shadow:0 0 8px -2px var(--ac-glow)}.arch-acc.selected .aa-dot{background:var(--ac)}.aa-name{flex:1;min-width:0;font-family:var(--font-display,'Cinzel',serif);font-weight:700;font-size:var(--fs-sm);color:var(--bone-bright);letter-spacing:.04em}.aa-chosen{display:none;flex-shrink:0;font-family:var(--font-display,'Cinzel',serif);font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);border:1px solid var(--ac);padding:.15rem .5rem;border-radius:var(--radius-xs)}.arch-acc.selected .aa-chosen{display:inline-block}.aa-chev{flex-shrink:0;color:var(--bone-dim);font-size:.8rem}.aa-chev::before{content:'▸'}.arch-acc.open .aa-chev::before{content:'▾'}.aa-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .35s cubic-bezier(.22,1,.36,1)}.arch-acc.open .aa-body{grid-template-rows:1fr}.aa-inner{overflow:hidden;min-height:0}.aa-lore{font-style:italic;font-size:var(--fs-sm);color:var(--bone-dim);line-height:1.5;margin:0 .9rem .55rem;padding-left:1.5rem}.aa-tags{display:flex;gap:.35rem;flex-wrap:wrap;margin:0 .9rem .85rem;padding-left:1.5rem}.aa-tags .tag{font-family:var(--font-display,'Cinzel',serif);font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--bone-dim);border:1px solid var(--edge);border-radius:6px;padding:.2rem .5rem}.dark-select{
     width:100%;font-family:var(--font-body,'Spectral',serif);font-size:16px;color:var(--bone-bright);
     background:var(--ink);border:1px solid var(--edge);padding:.6rem .8rem;cursor:pointer;outline:none;
   }.dark-select:hover,.dark-select:focus{border-color:var(--blood)}.dark-select option{background:var(--stone-2);color:var(--bone-bright)}/* Kampanjspråk-dropdown — medvetet ej förvalt, tydlig platshållare */.lang-dropdown{max-width:340px;margin:0 auto;text-align:center;font-family:var(--font-display,'Cinzel',serif);letter-spacing:.08em;font-size:.85rem}.lang-dropdown:invalid{color:var(--bone-dim);font-style:italic}.lang-dropdown option{font-family:var(--font-body,'Spectral',serif);letter-spacing:0}/* ═══════════ Prompt scroll ═══════════ */.scroll-box{position:relative;background:linear-gradient(165deg,var(--stone-2),var(--stone) 55%,var(--ink));border:1px solid var(--edge);padding:1.6rem 1.5rem;box-shadow:0 20px 50px -20px rgba(0,0,0,.9)}.scroll-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.6rem}.scroll-head .mode{font-family:var(--font-display,'Cinzel',serif);font-size:.85rem;letter-spacing:.2em;text-transform:uppercase;color:var(--arcane)}.scroll-head .mode b{color:var(--bone-bright)}.blank-btn{font-family:var(--font-display,'Cinzel',serif);font-size:.73rem;letter-spacing:.14em;text-transform:uppercase;background:transparent;border:1px solid var(--edge);color:var(--bone-dim);padding:.4rem .8rem;cursor:pointer;transition:all .2s;border-radius:var(--radius-xs)}.blank-btn:hover{color:var(--bone-bright);border-color:var(--bone-dim)}#prompt{
@@ -120,13 +85,12 @@
   }/* ═══════════ Character preview ═══════════ */.preview{display:none;margin-top:2.4rem}.preview.show{display:block;animation:msg-in .55s cubic-bezier(.22,1,.36,1)}
   @keyframes msg-in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}.pv-head{display:flex;gap:1.4rem;align-items:center;margin-bottom:1.4rem;flex-wrap:wrap}.pv-portrait{width:84px;height:84px;flex-shrink:0;border-radius:var(--radius-full);display:flex;align-items:center;justify-content:center;font-size:var(--fs-h1);border:2px solid var(--pv-ac,var(--gold));background:var(--stone-3);box-shadow:0 0 22px -4px var(--pv-glow,rgba(var(--gold-rgb),.5));transform:rotate(-3deg)}.pv-name{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:1.5rem;color:var(--bone-bright);text-shadow:0 2px 0 #000}.pv-class{font-style:italic;color:var(--pv-ac,var(--arcane));font-size:var(--fs-base);margin-top:.15rem}.pv-stats{display:grid;grid-template-columns:repeat(6,1fr);gap:.6rem;margin-bottom:1.3rem}.pv-stat{text-align:center;padding:.7rem .2rem .6rem;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--edge);clip-path:polygon(50% 0,100% 12%,100% 88%,50% 100%,0 88%,0 12%)}.pv-stat .a{font-family:var(--font-display,'Cinzel',serif);font-size:.55rem;letter-spacing:.2em;color:var(--gold)}.pv-stat .s{font-family:var(--font-display,'Cinzel',serif);font-weight:900;font-size:1.3rem;color:var(--bone-bright)}.pv-stat .m{font-size:.85rem;color:var(--arcane)}.pv-vitals{display:flex;gap:1.4rem;flex-wrap:wrap;font-size:.98rem;color:var(--bone-dim);margin-bottom:1.3rem}.pv-vitals b{color:var(--bone-bright);font-size:var(--fs-chat)}.pv-traits{display:flex;flex-wrap:wrap;gap:.45rem;margin-bottom:1.3rem}.pv-trait{font-size:var(--fs-sm);padding:.3rem .8rem;border:1px solid color-mix(in srgb, var(--arcane) 50%, transparent);color:var(--arcane-bright);background:color-mix(in srgb, var(--arcane) 8%, transparent);border-radius:var(--radius-xs)}.pv-gear{font-size:.85rem;color:var(--bone);line-height:1.7;margin-bottom:1.3rem}.pv-gear b{color:var(--gold-bright)}.pv-story{font-style:italic;color:var(--bone);line-height:1.7;border-left:2px solid var(--pv-ac,var(--gold));padding-left:1rem;margin-bottom:1.6rem;font-size:var(--fs-sm)}.pv-actions{display:flex;gap:.8rem;flex-wrap:wrap}.pv-go{font-family:var(--font-display,'Cinzel',serif);font-weight:7700;font-size:var(--fs-sm);letter-spacing:.14em;text-transform:uppercase;color:var(--ink);cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold));border:1px solid var(--gold);padding:.8rem 1.5rem;border-radius:var(--radius-xs);box-shadow:0 4px 14px -4px rgba(var(--gold-bright-rgb),.4),inset 0 1px 0 rgba(255,255,255,.35);transition:all .2s}.pv-go:hover:not(:disabled){filter:brightness(1.12);transform:translateY(-2px)}.pv-go:disabled{opacity:.55;cursor:wait}.pv-reroll{font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-dim);background:none;border:1px solid var(--edge);padding:.8rem 1.2rem;cursor:pointer;border-radius:var(--radius-xs);transition:all .2s}.pv-reroll:hover:not(:disabled){color:var(--bone-bright);border-color:var(--arcane)}.pv-reroll:disabled{opacity:.45;cursor:wait}.toast{position:fixed;bottom:1.5rem;left:50%;transform:translate(-50%,80px);z-index:50;font-family:var(--font-display,'Cinzel',serif);font-size:var(--fs-sm);letter-spacing:.12em;background:linear-gradient(180deg,var(--stone-3),var(--stone));border:1px solid var(--gold);color:var(--gold-bright);padding:.7rem 1.5rem;box-shadow:0 10px 30px rgba(0,0,0,.7);opacity:0;transition:all .35s cubic-bezier(.22,1,.36,1);pointer-events:none}.toast.show{transform:translate(-50%,0);opacity:1}
   @keyframes card-in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}/* ═══════════ Mobile — smedjan i fickformat ═══════════ */html{-webkit-tap-highlight-color:transparent}
-  @media(max-width:900px){.vault-chip,.dark-select{min-height:var(--tap-min)}.vault-chip,.dark-select{min-height:var(--tap-min)}.spread{grid-template-columns:repeat(2,1fr)}.pv-stats{grid-template-columns:repeat(3,1fr)}.arch:active{transform:rotate(0) translateY(2px);border-color:var(--ac,var(--gold));
-      box-shadow:0 4px 14px -8px rgba(0,0,0,.8)}.arch:active .glow{opacity:1}.arch:active .icon{transform:scale(1.08)}
+  @media(max-width:900px){.vault-chip,.dark-select{min-height:var(--tap-min)}.vault-chip,.dark-select{min-height:var(--tap-min)}.pv-stats{grid-template-columns:repeat(3,1fr)}
   }
-  @media(max-width:640px){.app{padding:1.4rem .75rem 4rem}.destiny-sub{font-size:.98rem;margin-bottom:1.6rem}.section-label{margin:2rem 0 1rem;letter-spacing:.22em}/* Språkval — två stora pills i full bredd */.lang-row{flex-direction:column;gap:.7rem;margin:-1rem 0 1.8rem}.lang-hint{text-align:center}/* Arketyper */.arch .lore{min-height:0}.arch h3{font-size:var(--fs-sm)}.arch-cat .cat-head{min-height:var(--tap-min);padding:.75rem .8rem;gap:.6rem}.arch-cat .cat-title{font-size:.68rem;letter-spacing:.16em!important}.arch-cat .cat-sub{font-size:.72rem}.arch-cat .cat-count{display:none}/* Pergament + modeller */.scroll-box{padding:1.3rem 1rem}#prompt{min-height:120px;font-size:18px}.legend-preview{min-height:140px;font-size:18px}.lp-clear{min-height:var(--tap-min)}.blank-btn{min-height:var(--tap-min);display:inline-flex;align-items:center}.scroll-actions{flex-direction:column;align-items:stretch;gap:.7rem}.summon-btn{width:100%;min-height:var(--tap-lg);font-size:var(--fs-base)}.summon-btn:active:not(:disabled){transform:translateY(2px);filter:brightness(.94);
+  @media(max-width:640px){.app{padding:1.4rem .75rem 4rem}.destiny-sub{font-size:.98rem;margin-bottom:1.6rem}.section-label{margin:2rem 0 1rem;letter-spacing:.22em}/* Språkval — två stora pills i full bredd */.lang-row{flex-direction:column;gap:.7rem;margin:-1rem 0 1.8rem}.lang-hint{text-align:center}/* Arketyper — accordion skalar automatiskt; 44px-golvet ärvs via button{} *//* Pergament + modeller */.scroll-box{padding:1.3rem 1rem}#prompt{min-height:120px;font-size:18px}.legend-preview{min-height:140px;font-size:18px}.lp-clear{min-height:var(--tap-min)}.blank-btn{min-height:var(--tap-min);display:inline-flex;align-items:center}.scroll-actions{flex-direction:column;align-items:stretch;gap:.7rem}.summon-btn{width:100%;min-height:var(--tap-lg);font-size:var(--fs-base)}.summon-btn:active:not(:disabled){transform:translateY(2px);filter:brightness(.94);
       box-shadow:0 2px 8px -4px rgba(var(--gold-bright-rgb),.4),inset 0 1px 0 rgba(255,255,255,.2)}.scroll-actions>span{margin-top:.3rem;text-align:left;opacity:.85}.scroll-actions select{width:100%;min-height:var(--tap-min);font-size:18px;padding:.6rem .7rem;background:var(--stone-2)}.vault-chip{flex:0 0 auto}.vault-chip:active{border-color:var(--gold);transform:translateY(1px)}/* Förhandsvisning */.preview{margin-top:1.8rem}.pv-head{gap:1rem}.pv-portrait{width:68px;height:68px;font-size:1.8rem}.pv-name{font-size:1.25rem}.pv-class{font-size:.98rem}.pv-stats{grid-template-columns:repeat(3,1fr)}.pv-vitals{gap:.9rem;font-size:var(--fs-sm)}.pv-story{font-size:1.01rem}.pv-actions{flex-direction:column;align-items:stretch}.pv-go{width:100%;min-height:var(--tap-lg)}.pv-go:active{transform:translateY(2px);filter:brightness(.94)}.pv-reroll{width:100%;min-height:var(--tap-min)}.pv-reroll:active{transform:translateY(2px);color:var(--bone-bright);border-color:var(--arcane)}.toast{max-width:92%;text-align:center}
   }
-  @media(max-width:480px){.spread{grid-template-columns:1fr}.arch{transform:none!important}.arch.selected{transform:none!important}
+  @media(max-width:480px){
   }
   @media(max-width:400px){.app{padding:1.2rem .5rem 3.5rem}.destiny-title h1{font-size:1.5rem}.destiny-title .over{letter-spacing:.28em}.pv-stats{grid-template-columns:repeat(2,1fr)}.pv-portrait{width:58px;height:58px;font-size:1.5rem}.pv-name{font-size:1.1rem}
   }
@@ -279,9 +243,9 @@
     <div class="vault-note" id="vault-note" style="display:none">Choose a saved adventurer to step straight into this campaign — or summon a fresh one below.</div>
   </div>
 
-  <!-- ═══════════ 1. ARKETYPER — fyra hopfällbara kategorier ═══════════ -->
+  <!-- ═══════════ 1. ARKETYPER — samlad accordion-lista ═══════════ -->
   <div class="section-label"><span class="num">I.</span> Archetypes</div>
-  <div id="archetype-cats"></div>
+  <div class="arch-cats" id="archetype-cats"></div>
 
   <!-- ═══════════ 2. PROMPT-MALL ═══════════ -->
   <div class="section-label"><span class="num">II.</span> The Fateweave</div>
@@ -500,88 +464,41 @@ function archField(a, field) {
   return (isEn() && a.en && a.en[field]) ? a.en[field] : a[field];
 }
 
-// Kategoriordning + texter (SV/EN). catId matchar a.cat i archetypes.js;
-// saknas cat fallback: a.dark ? 'dark' : 'other'.
-const CATEGORIES = [
-  { id: 'classic', icon: '⚔️', titleEn: 'Classic Archetypes', titleSv: 'Klassiska Arketyper', subEn: '', subSv: '', defaultOpen: true },
-  { id: 'weird', icon: '🌌', titleEn: 'Something Else Entirely', titleSv: 'Något Helt Annat',
-    subEn: 'Backstories beyond high fantasy — present day, far future, deep space…',
-    subSv: 'Bakgrundshistorier bortom high fantasy — nutid, framtid, rymden…', defaultOpen: true },
-  { id: 'other', icon: '🎭', titleEn: 'Others', titleSv: 'Andra', subEn: '', subSv: '', defaultOpen: true },
-  { id: 'dark', icon: '🖤', titleEn: 'The Dark Path', titleSv: 'Den Mörka Vägen',
-    subEn: 'mature archetypes · 18+', subSv: 'mogna arketyper · 18+', defaultOpen: false, dark: true },
-];
-
-function catOf(a) { return (a && a.cat) || (a && a.dark ? 'dark' : 'other'); }
-
-function catOpenState(id) {
-  try {
-    const stored = JSON.parse(localStorage.getItem('newgame_cats') || '{}');
-    if (typeof stored[id] === 'boolean') return stored[id];
-  } catch (e) {}
-  const cat = CATEGORIES.find(c => c.id === id);
-  return cat ? cat.defaultOpen : true;
-}
-
-function saveCatState(id, open) {
-  try {
-    const stored = JSON.parse(localStorage.getItem('newgame_cats') || '{}');
-    stored[id] = open;
-    localStorage.setItem('newgame_cats', JSON.stringify(stored));
-  } catch (e) {}
-}
-
-function toggleCat(id) {
-  const sec = document.getElementById('cat-' + id);
-  if (!sec) return;
-  const open = sec.classList.toggle('open');
-  const head = sec.querySelector('.cat-head');
-  if (head) head.setAttribute('aria-expanded', open ? 'true' : 'false');
-  saveCatState(id, open);
-}
-
-function archCard(key, a) {
+// En enda sammanslagen accordion-lista — mörka arketyper blandade med alla
+// andra (2026-10-06, rostad). Ingen kategorisektion, ingen NSFW-dropdown,
+// inga emoji i titlarna. Klick på rad = välj + expandera lore/taggar;
+// klick på redan vald rad = fäll ihop/ut (valet består).
+function archAccRow(key, a) {
   return `
-  <div class="arch" data-key="${key}" style="--ac:${a.color};--ac-glow:${a.glow}" onclick="selectArch('${key}')">
-    <div class="glow"></div>
-    <div class="ribbon">${isEn() ? 'Chosen' : 'Vald'}</div>
-    <div class="icon">${a.icon}</div>
-    <h3>${archField(a, 'name')}</h3>
-    <p class="lore">${archField(a, 'lore')}</p>
-    <div class="tags">${archField(a, 'tags').map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+  <div class="arch-acc" data-key="${key}" style="--ac:${a.color};--ac-glow:${a.glow}">
+    <button type="button" class="aa-head" onclick="selectArch('${key}')" aria-expanded="false">
+      <span class="aa-dot" aria-hidden="true"></span>
+      <span class="aa-name">${archField(a, 'name')}</span>
+      <span class="aa-chosen">${isEn() ? 'Chosen' : 'Vald'}</span>
+      <span class="aa-chev" aria-hidden="true"></span>
+    </button>
+    <div class="aa-body"><div class="aa-inner">
+      <p class="aa-lore">${archField(a, 'lore')}</p>
+      <div class="aa-tags">${archField(a, 'tags').map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+    </div></div>
   </div>`;
+}
+
+function archApplySelected(key) {
+  document.querySelectorAll('.arch-acc').forEach(el => {
+    const on = el.dataset.key === key;
+    el.classList.toggle('selected', on);
+    el.classList.toggle('open', on);
+    const h = el.querySelector('.aa-head');
+    if (h) h.setAttribute('aria-expanded', on ? 'true' : 'false');
+  });
 }
 
 function renderCategories() {
   const host = document.getElementById('archetype-cats');
-  if (!host) return;
-  host.innerHTML = CATEGORIES.map(cat => {
-    const entries = Object.entries(ARCHETYPES).filter(([, a]) => catOf(a) === cat.id);
-    const open = catOpenState(cat.id);
-    const title = isEn() ? cat.titleEn : cat.titleSv;
-    const sub = isEn() ? cat.subEn : cat.subSv;
-    const body = entries.length
-      ? `<div class="spread">${entries.map(([key, a]) => archCard(key, a)).join('')}</div>`
-      : `<p class="cat-empty">${isEn() ? 'No templates here yet…' : 'Inga mallar här ännu…'}</p>`;
-    return `<section class="arch-cat${cat.dark ? ' dark' : ''}${open ? ' open' : ''}" id="cat-${cat.id}" data-cat="${cat.id}">
-      <button type="button" class="cat-head" onclick="toggleCat('${cat.id}')" aria-expanded="${open ? 'true' : 'false'}">
-        <span class="cat-icon">${cat.icon}</span>
-        <span class="cat-titles">
-          <span class="cat-title">${title}</span>
-          ${sub ? `<span class="cat-sub">${sub}</span>` : ''}
-        </span>
-        <span class="cat-count">${entries.length}</span>
-        <span class="cat-chevron" aria-hidden="true"></span>
-      </button>
-      <div class="cat-body">
-        <div class="cat-inner">${body}</div>
-      </div>
-    </section>`;
-  }).join('');
-  // Re-apply selected state after re-render
-  if (selectedKey) {
-    document.querySelectorAll('.arch').forEach(el => el.classList.toggle('selected', el.dataset.key === selectedKey));
-  }
+  if (!host || typeof ARCHETYPES === 'undefined') return;
+  host.innerHTML = Object.entries(ARCHETYPES).map(([key, a]) => archAccRow(key, a)).join('');
+  if (selectedKey) archApplySelected(selectedKey);
 }
 
 let selectedKey = null;
@@ -632,8 +549,16 @@ function selectedLang() {
 }
 
 function selectArch(key) {
+  const el = document.querySelector('.arch-acc[data-key="' + key + '"]');
+  const wasSelected = (selectedKey === key);
   selectedKey = key;
-  document.querySelectorAll('.arch').forEach(el => el.classList.toggle('selected', el.dataset.key === key));
+  if (el && wasSelected) {
+    const open = el.classList.toggle('open');
+    const h = el.querySelector('.aa-head');
+    if (h) h.setAttribute('aria-expanded', open ? 'true' : 'false');
+  } else {
+    archApplySelected(key);
+  }
   const a = ARCHETYPES[key];
   setPrompt(archField(a, 'prompt'));
   document.getElementById('mode-label').innerHTML = isEn()
@@ -645,7 +570,7 @@ function selectArch(key) {
 }
 function blankScroll() {
   selectedKey = null;
-  document.querySelectorAll('.arch').forEach(el => el.classList.remove('selected'));
+  document.querySelectorAll('.arch-acc').forEach(el => { el.classList.remove('selected'); el.classList.remove('open'); });
   setPrompt(isEn() ? FREE_PROMPT_EN : FREE_PROMPT);
   document.getElementById('mode-label').innerHTML = isEn()
     ? `📜 <b>Blank scroll</b> — write freely`
@@ -668,7 +593,7 @@ function setPrompt(v) {
 // 🗑 Töm textarean helt → spelaren kan skriva fritt
 function clearPrompt() {
   selectedKey = null;
-  document.querySelectorAll('.arch').forEach(el => el.classList.remove('selected'));
+  document.querySelectorAll('.arch-acc').forEach(el => { el.classList.remove('selected'); el.classList.remove('open'); });
   lastSetValue = null; // tom ≠ orörd mall → språkväxling fyller inte i igen
   document.getElementById('prompt').value = '';
   document.getElementById('mode-label').innerHTML = isEn()
@@ -1464,20 +1389,20 @@ i.corner.br{bottom:6px;right:6px} i.corner.br::before{border-left:0;border-top:0
   mask-image:linear-gradient(90deg,#000 60%,transparent);
 }
 /* ── Pergamentblad — varma kanter + skuggor ── */
-.arch,.vcard,.campaign-card,.path,.htp-card,.lang-card,.step,.panel-box,.continue-panel,
+.arch-acc,.vcard,.campaign-card,.path,.htp-card,.lang-card,.step,.panel-box,.continue-panel,
 .scroll-box,.ep-card,.rn-inner,.d-card,.gate-card,.t-card,.quote-card,.news-banner,
 .adv-details,.insp-modal,.mi-modal,.pf-box{
   border-color:var(--edge);
   box-shadow:0 16px 40px -18px rgba(8,5,3,.95),0 0 0 1px rgba(var(--gold-rgb),.07),inset 0 1px 0 rgba(var(--gold-bright-rgb),.05);
 }
 /* ── EB Garamond-kursiv som smakspråk i brödtext ── */
-em,.destiny-sub,.sub,.hint,.pv-story,.arch .lore,.path p,.htp-card p,.lang-card p,
+em,.destiny-sub,.sub,.hint,.pv-story,.aa-lore,.path p,.htp-card p,.lang-card p,
 .vcard-story,.adv-sum-hint,.cat-sub,.dm-model-note,.vault-empty,.vault-note,.mi-intro{
   font-family:var(--font-italic,'EB Garamond',serif);
 }
 /* ── Läsbarhet: brödtext ≥17px, knappar ≥44px ── */
 body{font-size:17px}
-.destiny-sub,.sub,.hint,.pv-story,.pv-gear,.arch .lore,.path p,.htp-card p,.lang-card p,
+.destiny-sub,.sub,.hint,.pv-story,.pv-gear,.aa-lore,.path p,.htp-card p,.lang-card p,
 .rn-list li,.vcard-story,.world-prompt,#prompt,.legend-preview,.lp-single #fw-prompt,
 .dm-model-note,.adv-sum-hint,.vault-empty,.cat-empty,.mi-intro,.pp-status,.pv-vitals,
 .file-item,.dark-select,.dark-select option{

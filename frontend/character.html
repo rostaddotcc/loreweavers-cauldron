@@ -946,6 +946,45 @@ const state = {
   attachments: [],
 };
 
+let _AV_SEQ = {};
+let _CHAR_CAMPAIGN = '';
+const _AV_TOKEN = new WeakMap();
+function _avToken(kind, entry) {
+  if (entry && entry.disk_name) {
+    // Kampanjsopat: valv-startade äventyr kopierar sin avatar till 'player.png'
+    // (main.py ~9663) — samma stam i två kampanjer kan bära olika bytes, så
+    // cid prefixas alltid. Alla andra filnamn är redan slumpunika (key__hex8).
+    const stem = encodeURIComponent(String(entry.disk_name).replace(/\.[a-z0-9]+$/i, ''));
+    return encodeURIComponent(_CHAR_CAMPAIGN || 'c') + '-' + stem;
+  }
+  if (entry && entry.size) return 'sz' + entry.size;
+  // Svaga fallback per entry-objekt (inkommande disk_name efter mutation) →
+  // stabil seq-tagg: samma objekt ger samma URL omgående → ingen reload-bränning.
+  let t = _AV_TOKEN.get(entry);
+  if (!t) { _AV_SEQ[kind] = (_AV_SEQ[kind] || 0) + 1; t = encodeURIComponent(_CHAR_CAMPAIGN || 'c') + '-seq-' + _AV_SEQ[kind]; _AV_TOKEN.set(entry, t); }
+  return t;
+}
+function _avEntry(kind) { return (state.avatars && state.avatars[kind]) || {}; }
+function _avUrl(kind, w) {
+  const e = _avEntry(kind);
+  return API.avatarUrl(kind) + '?v=' + _avToken(kind, e) + (w ? '&w=' + w : '');
+}
+// Fräsch kampanjstate efter mutation → riktiga disk_name på URL:arna.
+// Inkallad AFTER mutation så headern/modalen aldrig står med föråldrad state.
+async function _avRefreshState() {
+  try {
+    const { campaign } = await API.getCampaign();
+    const raw = (campaign && campaign._raw) || {};
+    if (raw.avatars && typeof raw.avatars === 'object') {
+      state.avatars = raw.avatars;
+      renderHeader();
+      renderInventory();
+      const ov = document.getElementById('avatar-overlay');
+      if (ov && ov.classList.contains('show')) openAvatarModal();
+    }
+  } catch (_) { /* seq-URL fungerar tills vidare */ }
+}
+
 // ═══════════════════════════════════════
 // INIT — hämta kampanjens tillstånd från backend
 // ═══════════════════════════════════════
@@ -964,6 +1003,7 @@ const state = {
     state.world        = raw.world || {};
     state.attachments  = Array.isArray(raw.attachments) ? raw.attachments : [];
     state.avatars      = raw.avatars || {};
+    _CHAR_CAMPAIGN     = (raw.meta && raw.meta.campaign_id) || '';
     renderAll();
     document.getElementById('loading').style.display = 'none';
   } catch (e) {
@@ -1032,7 +1072,7 @@ function renderHeader() {
     _frame.classList.add('has-portrait');
     let img = _frame.querySelector('img');
     if (!img) { img = document.createElement('img'); _frame.insertBefore(img, _frame.querySelector('.hint')); }
-    img.src = API.avatarUrl('player') + '?w=512&t=' + (avatarEntry.uploaded || Date.now());
+    img.src = _avUrl('player', 512);
   } else if (c.portrait) {
     _emoji.style.display = 'none';
     _frame.classList.add('has-portrait');
@@ -1292,13 +1332,15 @@ portraitInput.addEventListener('change', async e => {
   try {
     const res = await API.uploadAvatar('player', file);
     state.avatars = state.avatars || {};
+    // Okänt nyt filnamn → WeakMap-seq-tagg bustar omgående; _avRefreshState
+    // byter till riktiga disk_name (cachebar URL) strax efter.
     state.avatars.player = {
-      disk_name: 'player.png', uploaded: new Date().toISOString(),
-      gallery: new Array((res && res.gallery_count) || 1).fill({ disk_name: 'x' }),
+      gallery: new Array((res && res.gallery_count) || 1).fill({}),
       gallery_index: (res && res.gallery_index) || 0,
     };
     renderHeader();
     toast(I18N.t('🖼 Porträtt sparat'));
+    await _avRefreshState();
   } catch (err) {
     toast('⚠ ' + (err.message || I18N.t('Kunde inte spara porträttet')));
   }
@@ -1513,9 +1555,7 @@ function _itemArtUrl(item, w) {
   const key = _itemArtKey(item);
   const e = state.avatars && state.avatars[key];
   if (!e) return null;
-  const qs = new URLSearchParams({ t: String(e.uploaded || Date.now()) });
-  if (w) qs.set('w', String(w));
-  return API.avatarUrl(key) + '?' + qs.toString();
+  return _avUrl(key, w);
 }
 
 // Hjälp: bygg badge-HTML för ett item
@@ -1779,10 +1819,10 @@ async function paintItemAction(i) {
     const res = await API.generateAvatar(key, Date.now() % 1000000, 'new', '', engine);
     if (res && res.ok) {
       state.avatars = state.avatars || {};
+      // Okänt filnamn → WeakMap-seq-tagg först; _avRefreshState nedan sätter
+      // riktiga disk_name (cachebar URL).
       state.avatars[key] = {
-        disk_name: 'item.png', uploaded: new Date().toISOString(),
-        ai_generated: true, seed: res.seed,
-        gallery: new Array(res.gallery_count || 1).fill({ disk_name: 'x' }),
+        gallery: new Array(res.gallery_count || 1).fill({}),
         gallery_index: res.gallery_index || 0,
       };
       const art = document.getElementById('item-modal-art');
@@ -1790,6 +1830,7 @@ async function paintItemAction(i) {
       renderInventory();
       status.textContent = `✨ Generated from its description — 1 turn spent`;
       try { SFX.levelup(); } catch (_) {}
+      await _avRefreshState();
     } else {
       status.textContent = '⚠ ' + (res && res.detail ? (typeof res.detail === 'string' ? res.detail : JSON.stringify(res.detail)) : 'Failed');
       try { SFX.error(); } catch (_) {}
@@ -1906,7 +1947,7 @@ tick();
 // AVATAR-MODAL (AI-generera / uppdatera / ladda upp / ta bort)
 // ═══════════════════════════════════════
 function currentAvatar() {
-  return (state.avatars && state.avatars.player) ? API.avatarUrl('player') + '?t=' + (state.avatars.player.uploaded || Date.now()) : null;
+  return (state.avatars && state.avatars.player) ? _avUrl('player') : null;
 }
 
 function openAvatarModal() {
@@ -1967,13 +2008,19 @@ async function rotateAvatarImage(delta) {
   try {
     const res = await API.rotateAvatar('player', delta);
     state.avatars = state.avatars || {};
-    state.avatars.player = Object.assign({}, state.avatars.player, {
-      gallery_index: res.gallery_index,
-      uploaded: new Date().toISOString(),  // cache-buster
+    // KÄNDA gallerifiler: aktivt disk_name ur state → stabil ?v=-tagg utan
+    // nätverks-bust. Saknas gallery (nyss målad) → seq + fräsch state.
+    const e = state.avatars.player || {};
+    const gal = Array.isArray(e.gallery) ? e.gallery : [];
+    const item = gal[res.gallery_index || 0] || {};
+    state.avatars.player = Object.assign({}, e, {
+      gallery_index: res.gallery_index || 0,
+      disk_name: item.disk_name || '',
     });
     const preview = document.getElementById('avatar-modal-img');
     if (preview) preview.innerHTML = `<img src="${currentAvatar()}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
     renderAll();
+    if (!item.disk_name) await _avRefreshState();
     try { SFX.click(); } catch (_) {}
   } catch (e) {
     toast('⚠ ' + (e.message || 'Could not switch portrait'));
@@ -2062,16 +2109,17 @@ async function _runAvatarGen(mode, statusText, btnId) {
       state.avatars = state.avatars || {};
       // Behåll galleri-metadatan: den nya målningen LÄGGS TILL i galleriet
       // (backend returnerar count/index) så bläddra-pilarna dyker upp direkt.
+      // Filnamnet är okänt → WeakMap-seq-tagg bustar omgående; refresh nedan
+      // sätter riktiga disk_name (cachebar URL).
       state.avatars.player = {
-        disk_name: 'player.png', uploaded: new Date().toISOString(),
-        ai_generated: true, seed: res.seed,
-        gallery: new Array(res.gallery_count || 1).fill({ disk_name: 'x' }),
+        gallery: new Array(res.gallery_count || 1).fill({}),
         gallery_index: res.gallery_index || 0,
       };
       renderHeader();
       openAvatarModal();
       status.textContent = (mode === 'edit' ? '✨ Avatar updated — ' : '✨ New avatar generated — ') + (usedWords ? 'used your words' : 'used your character sheet');
       try { SFX.levelup(); } catch (_) {}
+      await _avRefreshState();
     } else {
       status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Failed');
       try { SFX.error(); } catch (_) {}

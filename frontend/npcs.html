@@ -345,6 +345,7 @@ function relatedQuests(n){
     }));
     QUESTS = Array.isArray(raw.quests) ? raw.quests : [];
     AVATARS = (raw.avatars && typeof raw.avatars === 'object') ? raw.avatars : {};
+    _NPCS_CAMPAIGN = (raw.meta && raw.meta.campaign_id) || '';
     CURRENT_NPC = 0;
     buildFilters();
     renderList();
@@ -615,7 +616,53 @@ function toast(msg){const el=document.getElementById('toast');el.textContent=msg
 // ═══════════════════════════════════════
 let AVATARS = {};
 let CURRENT_NPC = 0;
-
+// ── Versionstaggade avatar-URL:er (2026-10-06: cross-campaign-buggen) ──────
+// /api/campaign/avatar/{kind} pekar mot den AKTIVA kampanjen och servas med
+// max-age=604800 — samma URL över alla kampanjer → webbläsaren svarade
+// senaste äventyrens bild i sju dagar efter kampanjbyte. Taggen
+// ?v=<disk_name-stem> (backendens filnamn är unika per målad bild, även
+// mellan kampanjer) ger egen cachekey per bild. Aldrig Date.now() i
+// persisterna URL:er — då bränns cache-hitten på varje reload.
+let _AV_SEQ = {};
+let _NPCS_CAMPAIGN = '';
+const _AV_TOKEN = new WeakMap();
+function _avToken(kind, entry) {
+  if (entry) {
+    if (entry.disk_name) {
+      // Kampanjsopat: valv-startade äventyr kopierar sin avatar till 'player.png'
+      // (main.py ~9663) — samma stam i två kampanjer kan bära olika bytes, så
+      // cid prefixas alltid. Alla andra filnamn är redan slumpunika (key__hex8).
+      const stem = encodeURIComponent(String(entry.disk_name).replace(/\.[a-z0-9]+$/i, ''));
+      return encodeURIComponent(_NPCS_CAMPAIGN || 'c') + '-' + stem;
+    }
+    if (entry.size) return 'sz' + entry.size;
+    // Okänt filnamn (alldeles målad/uppladdad, eller state utan gallery):
+    // sticky seq-tagg PER ENTRY — samma URL över alla repaints, men bustar
+    // den 7-dagars-cachte gamla bilden. _avReload byter sedan till disk_name.
+    let t = _AV_TOKEN.get(entry);
+    if (!t) { _AV_SEQ[kind] = (_AV_SEQ[kind] || 0) + 1; t = encodeURIComponent(_NPCS_CAMPAIGN || 'c') + '-seq-' + _AV_SEQ[kind]; _AV_TOKEN.set(entry, t); }
+    return t;
+  }
+  _AV_SEQ[kind] = (_AV_SEQ[kind] || 0) + 1;
+  return encodeURIComponent(_NPCS_CAMPAIGN || 'c') + '-seq-' + _AV_SEQ[kind];
+}
+async function _avReload() {
+  // Fresh kampanjstate efter målat/uppladdat/roterat → riktiga disk_name på
+  // URL:arna (cachebara) + omritning. Inkallad AFTER mutation så pilarna och
+  // modalen aldrig står med en föråldrad galleri-count.
+  try {
+    const { campaign } = await API.getCampaign();
+    const raw = (campaign && campaign._raw) || {};
+    if (raw.avatars && typeof raw.avatars === 'object') {
+      AVATARS = raw.avatars;
+      _NPCS_CAMPAIGN = (raw.meta && raw.meta.campaign_id) || _NPCS_CAMPAIGN;
+      renderDossier(NPCS[CURRENT_NPC]);
+      renderList();
+      const ov = document.getElementById('avatar-overlay');
+      if (ov && ov.classList.contains('show')) openAvatarModal(CURRENT_NPC);
+    }
+  } catch (_) { /* seq-URL:en fungerar tills vidare */ }
+}
 function npcAvatarKey() {
   const n = NPCS[CURRENT_NPC];
   return n ? 'npc:' + n.name : null;
@@ -624,7 +671,7 @@ function npcAvatarUrl() {
   const key = npcAvatarKey();
   const meta = key && AVATARS[key];
   if (!meta) return null;
-  return API.avatarUrl(key) + '?w=256&t=' + (meta.uploaded || Date.now());
+  return API.avatarUrl(key) + '?w=256&v=' + _avToken(key, meta);
 }
 // 404-skydd: state kan säga att porträttet finns även om filen är borta på disk
 // → byt ut den trasiga <img> mot empty-state (hero) / emoji (sigil), inte en tom ruta.
@@ -644,7 +691,7 @@ function avatarHtmlFor(n, w) {
     return thumb >= 256 ? portraitEmptyState(esc(n.icon))
                         : `<span class="d-ph-emoji">${esc(n.icon)}</span>`;
   }
-  const url = `${API.avatarUrl(key)}?w=${thumb}&t=${meta.uploaded || Date.now()}`;
+  const url = `${API.avatarUrl(key)}?w=${thumb}&v=${_avToken(key, meta)}`;
   const lazy = thumb <= 128 ? ' loading="lazy"' : '';
   return `<img src="${url}" alt="" data-icon="${esc(n.icon)}"${lazy} onerror="avatarImgFallback(this)">`;
 }
@@ -743,13 +790,17 @@ async function rotateAvatarImage(delta) {
   renderAvatarGallery();
   try {
     const res = await API.rotateAvatar(key, delta);
-    AVATARS[key] = Object.assign({}, AVATARS[key], {
-      gallery_index: res.gallery_index,
-      uploaded: new Date().toISOString(),  // cache-buster
-    });
+    // KÄNDA gallerifiler: aktivt disk_name ur state ger stabil ?v=-tagg.
+    // Saknas gallery i state → seq-bust + fräsch state via _avReload.
+    const e = (AVATARS && AVATARS[key]) || {};
+    const gal = Array.isArray(e.gallery) ? e.gallery : [];
+    const item = gal[res.gallery_index || 0] || {};
+    AVATARS[key] = Object.assign({}, e, { gallery_index: res.gallery_index || 0, disk_name: item.disk_name || '' });
     const preview = document.getElementById('avatar-modal-img');
     if (preview) preview.innerHTML = `<img src="${npcAvatarUrl()}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
     renderDossier(NPCS[CURRENT_NPC]);
+    renderList();
+    if (!item.disk_name) await _avReload();
   } catch (e) {
     toast('⚠ ' + (e.message || 'Could not switch portrait'));
   } finally {
@@ -826,12 +877,14 @@ async function _runAvatarGen(mode, statusText, btnId) {
     const res = await API.generateAvatar(key, Date.now() % 1000000, mode, freePrompt, avatarProvider());
     if (res && res.ok) {
       // Nya målningen LÄGGS TILL i NPC:ns galleri — behåll count/index så
-      // bläddra-pilarna dyker upp direkt (2026-08-08).
-      AVATARS[key] = { disk_name: 'avatar.png', uploaded: new Date().toISOString(), ai_generated: true, seed: res.seed,
-        gallery: new Array(res.gallery_count || 1).fill({ disk_name: 'x' }), gallery_index: res.gallery_index || 0 };
+      // bläddra-pilarna dyker upp direkt (2026-08-08). Filnamnet är okänt →
+      // seq-tagg (bustar 7-dagars-cachen) tills _avReload hämtar disk_name.
+      AVATARS[key] = { disk_name: '', uploaded: new Date().toISOString(), ai_generated: true, seed: res.seed,
+        gallery: new Array(res.gallery_count || 1).fill({}), gallery_index: res.gallery_index || 0 };
       renderDossier(NPCS[CURRENT_NPC]);
       openAvatarModal(CURRENT_NPC);
       status.textContent = (mode === 'edit' ? '✨ Avatar updated — ' : '✨ New avatar generated — ') + (usedWords ? 'used your words' : 'used your character sheet');
+      await _avReload();
     } else {
       status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Failed');
     }
@@ -947,11 +1000,12 @@ document.getElementById('npc-avatar-input').addEventListener('change', async e =
   try {
     const res = await API.uploadAvatar(key, file);
     if (res && res.ok) {
-      AVATARS[key] = { disk_name: 'avatar.png', uploaded: new Date().toISOString(), ai_generated: false,
-        gallery: new Array(res.gallery_count || 1).fill({ disk_name: 'x' }), gallery_index: res.gallery_index || 0 };
+      // Okänt nyt filnamn → seq-tagg först, riktiga disk_name efter _avReload.
+      AVATARS[key] = { gallery: new Array(res.gallery_count || 1).fill({}), gallery_index: res.gallery_index || 0 };
       renderDossier(NPCS[CURRENT_NPC]);
       openAvatarModal(CURRENT_NPC);
       toast('🖼 Avatar saved');
+      await _avReload();
     } else {
       toast('⚠ ' + (res && res.detail ? res.detail : 'Upload misslyckades'));
     }

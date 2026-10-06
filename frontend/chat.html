@@ -2801,16 +2801,103 @@ const AVATARS = {};
 // Varje karaktär håller upp till 5 porträtt som spelaren bläddrar mellan med
 // pilarna i avatar-modalen — så man kan gå tillbaka till en gammal bild.
 const AVATAR_GAL = {};
+// ── Versionstaggade avatar-URL:er (2026-10-06: cross-campaign-buggen) ──────
+// /api/campaign/avatar/{kind} resolve mot den AKTIVA kampanjen och servas med
+// max-age=604800 — samma URL mellan kampanjer → webbläsaren svarade senaste
+// äventyrens bild i sju dagar efter kampanjbyte. Tagnen ?v=<disk_name-stem>
+// (backendens filnamn key__hex8.ext är unika per målad bild — också mellan
+// kampanjer) → egen cachekey per bild. Aldrig Date.now() i persisterna
+// URL:er — då bränns cache-hitten på varje reload. _AV_SEQ ger tillfälliga
+// taggar för mutationer vars nya filnamn ännu inte finns i local state.
+const _AV_SEQ = {};
+const _AV_TOKEN = new WeakMap();
+function _avCampaignTag() {
+  const raw = (typeof campaignData !== 'undefined' && campaignData && campaignData._raw) || {};
+  return encodeURIComponent((raw.meta && raw.meta.campaign_id) || 'c');
+}
+function _avToken(kind, entry) {
+  if (entry) {
+    if (entry.disk_name) {
+      // Kampanjsopat: valv-startade äventyr kopierar ALWAYS sin avatar till
+      // filen 'player.png' (main.py ~9663) — samma stam i två kampanjer kan
+      // alltså bära olika bytes. cid+stem är därför uniquely per bildinnehåll;
+      // alla andra filnamn är redan slumpunika (key__hex8.ext).
+      const stem = encodeURIComponent(String(entry.disk_name).replace(/\.[a-z0-9]+$/i, ''));
+      return _avCampaignTag() + '-' + stem;
+    }
+    if (entry.size) return 'sz' + entry.size;
+    // Okänt filnamn (nyss målad/uppladdad): sticky seq-tagg PER ENTRY —
+    // samma URL över repaints, men bustar den 7-dagars-cachade gamla bilden.
+    let t = _AV_TOKEN.get(entry);
+    if (!t) { _AV_SEQ[kind] = (_AV_SEQ[kind] || 0) + 1; t = _avCampaignTag() + '-seq-' + _AV_SEQ[kind]; _AV_TOKEN.set(entry, t); }
+    return t;
+  }
+  _AV_SEQ[kind] = (_AV_SEQ[kind] || 0) + 1;
+  return _avCampaignTag() + '-seq-' + _AV_SEQ[kind];
+}
+function _avUrl(kind, entry) { return API.avatarUrl(kind) + '?v=' + _avToken(kind, entry || {}); }
+// Sätt en kinds URL + spegla NPC-aliset (normaliserat ↔ visningsnamn) så
+// inget nyckel-par kan peka på olika (gamla) versioner efter en mutation.
+function _avSet(kind, url) {
+  AVATARS[kind] = url;
+  if (kind.startsWith('npc:')) {
+    const norm = 'npc:' + kind.slice(4).toLowerCase().replace(/\s+/g, '_');
+    if (norm !== kind) {
+      if (AVATARS[norm]) AVATARS[norm] = url;
+      if (AVATAR_GAL[norm]) AVATAR_GAL[norm] = AVATAR_GAL[kind];
+    }
+  }
+}
+function _avDelete(kind) {
+  delete AVATARS[kind];
+  delete AVATAR_GAL[kind];
+  if (kind.startsWith('npc:')) {
+    const norm = 'npc:' + kind.slice(4).toLowerCase().replace(/\s+/g, '_');
+    if (norm !== kind) { delete AVATARS[norm]; delete AVATAR_GAL[norm]; }
+  }
+}
+// Aktiv bild ur det ingesta galleriet — rotation/pick vet filnamnet redan,
+// då blir taggen direkt stabil (retry på gammal bild = ren cache-hit).
+function _avActiveItem(kind) {
+  const g = AVATAR_GAL[kind] || {};
+  const gal = Array.isArray(g.gallery) ? g.gallery : [];
+  return gal[g.index || 0] || {};
+}
+// Efter mutation som skapat/ändat filer vi inte har namnen på: hämta fräsch
+// state och bygg om URL:arna med riktiga disk_name (samma mönster som
+// openCharSheet). Anropas awaited så _galBusy täcker nätverket.
+async function _avRefreshState() {
+  try {
+    const { campaign } = await API.getCampaign();
+    if (!campaign) return;
+    campaignData = campaign;
+    ingestAvatars(campaign._raw && campaign._raw.avatars);
+    refreshAvatars();
+    // öppen avatar-modal: förhandsvisningen följer med den stabila taggade URL:en
+    const ov = document.getElementById('avatar-overlay');
+    if (ov && ov.classList.contains('show') && typeof _avatarProfileMode !== 'undefined' && !_avatarProfileMode) {
+      const u = AVATARS[AVATAR_KIND];
+      const preview = document.getElementById('avatar-modal-img');
+      if (preview && u) preview.innerHTML = `<img src="${u}" alt="" style="width:100%;height:100%;object-fit:cover">`;
+    }
+    // öppen lightbox följer med den nya taggade URL:en
+    const lb = document.getElementById('avatar-lightbox');
+    if (lb && lb.classList.contains('show') && typeof _lbKind !== 'undefined' && _lbKind && typeof _lbSetImg === 'function') {
+      const u = AVATARS[_lbKind];
+      if (u) _lbSetImg(_avW(u, 512)); else lb.classList.remove('show');
+    }
+  } catch (_) { /* tillfälliga seq-URL:en fungerar ändå — nästa laddning får rätt namn */ }
+}
 
 // Fyll AVATARS från kampanjstate
 function ingestAvatars(avatarMap) {
   Object.keys(AVATARS).forEach(k => delete AVATARS[k]);
   Object.keys(AVATAR_GAL).forEach(k => delete AVATAR_GAL[k]);
   Object.keys(avatarMap || {}).forEach(kind => {
-    AVATARS[kind] = API.avatarUrl(kind);
     const entry = avatarMap[kind] || {};
+    AVATARS[kind] = _avUrl(kind, entry);
     const gal = Array.isArray(entry.gallery) ? entry.gallery : (entry.disk_name ? [entry] : []);
-    const meta = { count: gal.length, index: entry.gallery_index || 0 };
+    const meta = { count: gal.length, index: entry.gallery_index || 0, gallery: gal };
     AVATAR_GAL[kind] = meta;
     // NPC-nycklar kan ligga som 'npc:Keeper of Paths' (visningsnamn) i staten
     // medan chatten slår upp 'npc:keeper_of_paths' (normaliserad) — alisa båda
@@ -2819,7 +2906,7 @@ function ingestAvatars(avatarMap) {
       const display = kind.slice(4);
       const norm = display.toLowerCase().replace(/\s+/g, '_');
       if (norm !== display) {
-        AVATARS['npc:' + norm] = API.avatarUrl(kind);
+        AVATARS['npc:' + norm] = AVATARS[kind];
         AVATAR_GAL['npc:' + norm] = meta;
       }
     }
@@ -2928,22 +3015,17 @@ async function rotateAvatarImage(delta) {
     } else {
       const kind = AVATAR_KIND;
       const res = await API.rotateAvatar(kind, delta);
-      AVATAR_GAL[kind] = { count: res.gallery_count, index: res.gallery_index };
-      // Cache-buster: samma URL, ny aktiv bild bakom den.
-      const url = API.avatarUrl(kind) + '?t=' + Date.now();
-      AVATARS[kind] = url;
-      // NPC-aliaset (normaliserat namn) pekar på samma bild
-      if (kind.startsWith('npc:')) {
-        const norm = 'npc:' + kind.slice(4).toLowerCase().replace(/\s+/g, '_');
-        if (norm !== kind && AVATARS[norm]) {
-          AVATARS[norm] = url;
-          AVATAR_GAL[norm] = AVATAR_GAL[kind];
-        }
-      }
+      AVATAR_GAL[kind] = Object.assign({}, AVATAR_GAL[kind], { count: res.gallery_count, index: res.gallery_index });
+      // Rotering byter bara aktiv bild bland KÄNDA filer — ta disk_name ur det
+      // ingesta galleriet → stabil ?v=-tagg direkt, ingen nätverks-bust behövd.
+      const item = _avActiveItem(kind);
+      const url = _avUrl(kind, item.disk_name ? item : {});
+      _avSet(kind, url);
       const preview = document.getElementById('avatar-modal-img');
       if (preview) preview.innerHTML = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover">`;
       refreshAvatars();
       rerenderChatAvatars(kind, url);
+      if (!item.disk_name) await _avRefreshState();  // gammalt state utan gallery → hämta namn
     }
     try { SFX.click(); } catch (_) {}
   } catch (e) {
@@ -2994,14 +3076,16 @@ async function deleteCurrentAvatarImage() {
       const res = await API.deleteAvatarImage(kind, idx);
       const count = res.gallery_count || 0;
       if (count > 0) {
-        AVATAR_GAL[kind] = { count, index: res.gallery_index || 0 };
-        AVATARS[kind] = API.avatarUrl(kind) + '?t=' + Date.now();
+        AVATAR_GAL[kind] = Object.assign({}, AVATAR_GAL[kind], { count, index: res.gallery_index || 0 });
+        // Bilden vi står på byts till en ANNAN fil (lokalt okänt namn) →
+        // seq-tagg för omedelbar bust + fräsch state med rätt disk_name.
+        _avSet(kind, _avUrl(kind, {}));
         refreshAvatars();
         rerenderChatAvatars(kind, AVATARS[kind]);
         pickAvatar(kind);
+        await _avRefreshState();
       } else {
-        delete AVATARS[kind];
-        delete AVATAR_GAL[kind];
+        _avDelete(kind);
         refreshAvatars();
         closeAvatarModal();
       }
@@ -3315,12 +3399,13 @@ async function generateAvatarAction(provider) {
     const usedWords = !!freePrompt.trim();
     const res = await API.generateAvatar(kind, Date.now() % 1000000, 'new', freePrompt, prov);
     if (res && res.ok) {
-      AVATARS[kind] = API.avatarUrl(kind) + '?t=' + Date.now();
+      _avSet(kind, _avUrl(kind, {}));   // ny fil, okänt namn → seq-bust …
       // Nya målningen LÄGGS TILL i galleriet — uppdatera count/index så
       // bläddra-pilarna dyker upp direkt (2026-08-08).
-      if (res.gallery_count) AVATAR_GAL[kind] = { count: res.gallery_count, index: res.gallery_index || 0 };
+      if (res.gallery_count) AVATAR_GAL[kind] = Object.assign({}, AVATAR_GAL[kind], { count: res.gallery_count, index: res.gallery_index || 0 });
       refreshAvatars();
       pickAvatar(kind); // uppdatera förhandsvisningen i modalen
+      await _avRefreshState();  // …sedan riktiga disk_name-taggen (cachebar URL)
       status.textContent = usedWords ? '✨ New avatar generated — used your words' : '✨ New avatar generated — used your character sheet';
       try { SFX.levelup(); } catch (_) {}
     } else {
@@ -3349,10 +3434,11 @@ async function updateAvatarAction() {
     const usedWords = !!freePrompt.trim();
     const res = await API.generateAvatar(kind, Date.now() % 1000000, 'edit', freePrompt, avatarProvider());
     if (res && res.ok) {
-      AVATARS[kind] = API.avatarUrl(kind) + '?t=' + Date.now();
-      if (res.gallery_count) AVATAR_GAL[kind] = { count: res.gallery_count, index: res.gallery_index || 0 };
+      _avSet(kind, _avUrl(kind, {}));   // ny fil, okänt namn → seq-bust …
+      if (res.gallery_count) AVATAR_GAL[kind] = Object.assign({}, AVATAR_GAL[kind], { count: res.gallery_count, index: res.gallery_index || 0 });
       refreshAvatars();
       pickAvatar(kind);
+      await _avRefreshState();  // …sedan riktiga disk_name-taggen
       status.textContent = usedWords ? '✨ Avatar updated — used your words' : '✨ Avatar updated — used your character sheet';
       try { SFX.levelup(); } catch (_) {}
     } else {
@@ -3379,11 +3465,12 @@ function uploadAvatarAction() {
     if (!file) return;
     try {
       const res = await API.uploadAvatar(kind, file);
-      AVATARS[kind] = API.avatarUrl(kind) + '?t=' + Date.now();
-      if (res && res.gallery_count) AVATAR_GAL[kind] = { count: res.gallery_count, index: res.gallery_index || 0 };
+      _avSet(kind, _avUrl(kind, {}));   // ny fil, okänt namn → seq-bust …
+      if (res && res.gallery_count) AVATAR_GAL[kind] = Object.assign({}, AVATAR_GAL[kind], { count: res.gallery_count, index: res.gallery_index || 0 });
       refreshAvatars();
       rerenderChatAvatars(kind, AVATARS[kind]);
       toast(I18N.t('🖼 Bild uppdaterad'));
+      await _avRefreshState();  // …sedan riktiga disk_name-taggen
     } catch (e) {
       toast('⚠ ' + I18N.t('Kunde inte ladda upp: ') + (e.message || I18N.t('okänt fel')));
     }
@@ -3408,8 +3495,7 @@ async function deleteAvatarAction() {
   const kind = AVATAR_KIND;
   try {
     await API.deleteAvatar(kind);
-    delete AVATARS[kind];
-    delete AVATAR_GAL[kind];
+    _avDelete(kind);
     refreshAvatars();
     closeAvatarModal();
     toast('🗑 Avatar removed');
@@ -3491,17 +3577,15 @@ async function lbRotate(delta) {
   try {
     const kind = _lbKind;
     const res = await API.rotateAvatar(kind, delta);
-    AVATAR_GAL[kind] = { count: res.gallery_count, index: res.gallery_index };
-    const url = API.avatarUrl(kind) + '?t=' + Date.now();
-    AVATARS[kind] = url;
-    if (kind.startsWith('npc:')) {
-      const norm = 'npc:' + kind.slice(4).toLowerCase().replace(/\s+/g, '_');
-      if (norm !== kind && AVATARS[norm]) { AVATARS[norm] = url; AVATAR_GAL[norm] = AVATAR_GAL[kind]; }
-    }
+    AVATAR_GAL[kind] = Object.assign({}, AVATAR_GAL[kind], { count: res.gallery_count, index: res.gallery_index });
+    const item = _avActiveItem(kind);
+    const url = _avUrl(kind, item.disk_name ? item : {});
+    _avSet(kind, url);
     _lbSetImg(_avW(url, 512));
     _lbUpdateBar();
     refreshAvatars();
     rerenderChatAvatars(kind, url);
+    if (!item.disk_name) await _avRefreshState();
   } catch (e) {
     toast('⚠ Could not change portrait');
   }
@@ -3568,7 +3652,7 @@ function _csPaintPortrait() {
   const slot = document.getElementById('cs-portrait');
   if (!slot) return;
   slot.innerHTML = AVATARS['player']
-    ? `<img src="${_avW(AVATARS['player'], 512)}&t=${Date.now()}" alt="Your adventurer's portrait">`
+    ? `<img src="${_avW(AVATARS['player'], 512)}" alt="Your adventurer's portrait">`
     : _avEmptyHtml('Paint your adventurer below');
   // Galleri-pilar: samma meta som avatar-modalen (player-kinden)
   const meta = AVATAR_GAL['player'] || { count: AVATARS['player'] ? 1 : 0, index: 0 };
@@ -3591,7 +3675,8 @@ function _sheetGhost(overlayId, url) {
   const box = document.querySelector('#' + overlayId + ' .cs-box');
   if (!box) return;
   if (url) {
-    box.style.setProperty('--ghost', 'url("' + url + (url.includes('?') ? '&' : '?') + 't=' + Date.now() + '")');
+    // Stabil ?v=-tagg från AVATARS räcker — inget Date.now()-brännande här.
+    box.style.setProperty('--ghost', 'url("' + url + '")');
     box.classList.add('has-ghost');
   } else {
     box.classList.remove('has-ghost');
@@ -3853,7 +3938,7 @@ function _nsPaintPortrait() {
   const kind = _nsKind || 'npc:';
   const url = AVATARS[kind];
   slot.innerHTML = url
-    ? `<img src="${_avW(url, 512)}&t=${Date.now()}" alt="Portrait">`
+    ? `<img src="${_avW(url, 512)}" alt="Portrait">`
     : _avEmptyHtml('No portrait yet — paint this soul');
   const meta = AVATAR_GAL[kind] || { count: url ? 1 : 0, index: 0 };
   const show = (meta.count || 0) > 1;
@@ -9877,8 +9962,8 @@ function cdMentionNpc(name) {
 
 // ═══════════════ 📖 CODEX MODAL (D1.3) — lazy iframes ═══════════════
 const CODEX_PAGES = {
-  character: { label: '🧙 Character', src: 'character.html?v=20261006a' },
-  npcs:      { label: '🧝 NPCs',      src: 'npcs.html?v=20261006a' },
+  character: { label: '🧙 Character', src: 'character.html?v=20261006b' },
+  npcs:      { label: '🧝 NPCs',      src: 'npcs.html?v=20261006b' },
   map:       { label: '🗺 Map',       src: 'platser.html?v=20260930a' },
   journal:   { label: '📜 Journal',   src: 'loggbok.html?v=20260922b' },
   facts:     { label: '📌 Facts',     src: 'facts.html?v=20260922e' },

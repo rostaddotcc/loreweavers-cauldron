@@ -7,7 +7,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
 <title>The Best Free AI D&amp;D Roleplaying Game · AI Dungeon Master That Remembers</title>
-<meta name="description" content="The best free AI D&amp;D roleplaying game — an AI Dungeon Master that remembers your world. Every character gets a portrait generated from their own story. 30 fresh turns every day — no subscription, no credit card, no email. Run your own models on your local Ollama — Qwen, DeepSeek, any uncensored mind on your hardware — the DM step costs 0 turns. One-time 10€ unlock: +100 turns, every Dungeon Master, voice &amp; images.">
+<meta name="description" content="The best free AI D&amp;D roleplaying game — an AI Dungeon Master that remembers your world. Every character gets a portrait generated from their own story. 30 fresh turns every day — no subscription, no credit card, no email. Run your own models on your local Ollama — Qwen, DeepSeek, any uncensored mind on your hardware — the DM step costs 0 turns. One-time 10€ unlock: +100 turns, a permanent daily cap raise from 30 to 50 turns, every Dungeon Master, voice &amp; images.">
 <meta name="keywords" content="best free AI D&D game, free AI D&D roleplaying game, AI dungeon master, most daily free turns, AI dungeon master that remembers, free AI RPG, AI D&D game, play D&D online, D&D 5e online free, no subscription AI game, no credit card D&D, text-based RPG, LLM roleplaying game, AI game master, free D&D game online, free text-based roleplaying game">
 <meta name="robots" content="index, follow">
 <!-- Open Graph / Twitter (delas på sociala medier) -->
@@ -41,7 +41,7 @@
   "offers": [
     { "@type": "Offer", "name": "Free — 30 fresh turns every day", "price": "0", "priceCurrency": "EUR", "availability": "https://schema.org/InStock" },
     { "@type": "Offer", "name": "Turn top-up — 100 turns per 1€, never expire", "price": "1", "priceCurrency": "EUR", "availability": "https://schema.org/InStock" },
-    { "@type": "Offer", "name": "Unlock — +100 turns, every Dungeon Master, voice & image generation", "price": "10", "priceCurrency": "EUR", "availability": "https://schema.org/InStock" }
+    { "@type": "Offer", "name": "Unlock — +100 turns, permanent daily cap raise from 30 to 50 turns, every Dungeon Master, voice & image generation", "price": "10", "priceCurrency": "EUR", "availability": "https://schema.org/InStock" }
   ],
   "author": { "@type": "Organization", "name": "Rostad" }
 }
@@ -59,7 +59,7 @@
     {
       "@type": "Question",
       "name": "How many free turns do I get each day?",
-      "acceptedAnswer": { "@type": "Answer", "text": "30 fresh turns every day. One chat message = one turn; voice narrations and images each cost one turn too. The one-time 10€ unlock adds 100 turns that never expire and opens every Dungeon Master, voice and image engine." }
+      "acceptedAnswer": { "@type": "Answer", "text": "30 fresh turns every day. One chat message = one turn; voice narrations and images each cost one turn too. The one-time 10€ unlock adds 100 turns that never expire, permanently raises your daily cap from 30 to 50 turns, and opens every Dungeon Master, voice and image engine." }
     },
     {
       "@type": "Question",
@@ -162,19 +162,34 @@
      Bakgrundsbandet ligger kvar på .hero-gate-wrappern: 118vh från toppen,
      motivet glöder bakom sigillet och tonar mot ink före karusellen.
      Scrim: gradvis mörkare nedåt. Två beskärningar: landskap ≥721px,
-     porträtt ≤720px (--hero-art byts i mobil-media-queryn). ═══════════════ */
+     porträtt ≤720px (--hero-art byts i mobil-media-queryn).
+     2026-10-06: .hero-glow — bakad levande ambience (rostad: "looks dead"):
+     candle-glow-puls under .hero-bg (z-index:0 men senare i DOM:en ⇒ målas
+     ovanpå arten, UNDER sektionerna som har z-index:1), pointer-events:none.
+     Drivna ember-motes ritas på det sedan tidigare döda #embers-canvaset
+     (fixed, z-index:1, pointer-events:none — bakom .content z-index:5).
+     Allt rörelse dör i prefers-reduced-motion; glowen står då stilla som
+     statisk bakgrunds-glöd — sidan ser designad utan animation. ═══════════════ */
   .hero-gate{position:relative;overflow:hidden}
   .hero-gate > section{position:relative;z-index:1}
   .hero-bg{position:absolute;top:0;left:0;right:0;height:118vh;z-index:0;background-image:var(--hero-art);background-size:cover;background-position:72% 55%;transform-origin:center;animation:hero-breathe 36s ease-in-out infinite alternate}
   .hero-bg::after{content:'';position:absolute;inset:0;background:
     linear-gradient(180deg, color-mix(in srgb, var(--ink) 62%, transparent) 0%, color-mix(in srgb, var(--ink) 24%, transparent) 22%, transparent 40%, color-mix(in srgb, var(--ink) 42%, transparent) 62%, color-mix(in srgb, var(--ink) 74%, transparent) 84%, var(--ink) 97%)}
   @keyframes hero-breathe{from{transform:scale(1)}to{transform:scale(1.07)}}
+  .hero-glow{position:absolute;left:0;right:0;bottom:-8vh;height:62vh;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(58% 52% at 62% 64%, rgba(var(--ember-rgb),.15), transparent 70%),
+      radial-gradient(40% 38% at 60% 66%, rgba(var(--gold-rgb),.10), transparent 72%)}
+  @keyframes hero-glow-breathe{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:1;transform:scale(1.05)}}
+  .hero-glow{animation:hero-glow-breathe 9s ease-in-out infinite}
   @media (max-width:720px){
     :root{--hero-art:url("assets/hero-loreweaver-portrait.webp?v=2")}   /* porträtt-art: mörk övre halva, kitteln glöder nedtill */
     .hero-bg{height:112vh;background-position:50% 50%}
     .hero-bg::after{background:
       linear-gradient(180deg, color-mix(in srgb, var(--ink) 72%, transparent) 0%, color-mix(in srgb, var(--ink) 26%, transparent) 20%, transparent 32%, color-mix(in srgb, var(--ink) 42%, transparent) 48%, color-mix(in srgb, var(--ink) 68%, transparent) 60%, color-mix(in srgb, var(--ink) 50%, transparent) 70%, color-mix(in srgb, var(--ink) 88%, transparent) 88%, var(--ink) 100%)}
-  }
+    .hero-glow{background:
+      radial-gradient(52% 46% at 50% 70%, rgba(var(--ember-rgb),.15), transparent 70%),
+      radial-gradient(38% 34% at 50% 72%, rgba(var(--gold-rgb),.10), transparent 72%)}}
 
   /* ═══════════════ ambient layers — grain / embers / vignette / glow (2026-09-20)
      Samma 4-lagersstack som newgame/facts/platser. snes.css §22 stylar #embers
@@ -254,7 +269,7 @@
   .ptier:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
   .ptier .go-hint{display:block;margin-top:.85rem;font-family:var(--font-mono);font-size:.55rem;font-weight:500;letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
   .pt-name{font-family:var(--font-mono);font-weight:500;font-size:.6rem;letter-spacing:.26em;text-transform:uppercase;color:var(--bone-dim);margin-bottom:.3rem}
-  .pt-price{font-family:var(--font-display);font-weight:700;font-size:2.5rem;line-height:1;color:var(--gold-bright);margin-bottom:.85rem;letter-spacing:-.01em}
+  .pt-price{font-family:var(--font-display);font-weight:700;font-size:2.5rem;line-height:1;color:var(--gold-bright);margin-bottom:.85rem;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
   .ptier ul{list-style:none;text-align:left}
   .ptier li{padding:.34rem 0 .34rem 1.05rem;position:relative;font-size:.845rem;font-weight:300;color:var(--bone);line-height:1.5;border-top:1px solid color-mix(in srgb,var(--edge) 55%,transparent)}
   .ptier li:first-child{border-top:none}
@@ -281,21 +296,29 @@
   @media (max-width:720px){
     .ptier.ptier-topup{grid-template-columns:1fr;grid-template-areas:"head" "copy" "hint";row-gap:.55rem}
   }
-  /* ═══════════════ FAQ (2026-09-20: skrollbar frågebox) ═══════════════ */
-  .faq{max-width:760px;margin:1.4rem 0 0;max-height:min(46vh,400px);overflow-y:auto;padding-right:.5rem;scrollbar-width:thin;scrollbar-color:var(--edge) transparent}
-  .faq::-webkit-scrollbar{width:6px}
-  .faq::-webkit-scrollbar-thumb{background:var(--edge);border-radius:var(--radius-sm)}
-  .faq details{background:linear-gradient(168deg,var(--stone-2),var(--stone));border:1px solid var(--edge);margin-bottom:.5rem;padding:0 1.1rem;transition:border-color .25s}
-  .faq details[open]{border-color:color-mix(in srgb,var(--gold) 55%,var(--edge))}
-  .faq summary{cursor:pointer;font-family:var(--font-display);font-size:1.14rem;font-weight:600;letter-spacing:.005em;color:var(--bone-bright);padding:.8rem 0;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:1rem}
+  /* ═══════════════ FAQ (2026-10-06: natural flöde, ingen trång inner-scroll)
+     Fix (rostad): den gamla max-height-boxen med egen scrollkropp verkade
+     klump och den svävande pill-raden dimmade sista frågan. Raderna får nu
+     hårline-ram + tydlig hover/focus-affordans; expandringen animeras mjukt
+     (reduced-motion-guardad); + roterar till × och syncas med aria-expanded. ═══════════════ */
+  .faq{max-width:760px;margin:1.4rem 0 0}
+  .faq details{background:linear-gradient(168deg,var(--stone-2),var(--stone));border:1px solid var(--edge);margin-bottom:.6rem;padding:0 1.1rem;transition:border-color .25s,box-shadow .25s}
+  .faq details:hover{border-color:color-mix(in srgb,var(--gold) 45%,var(--edge))}
+  .faq details[open]{border-color:color-mix(in srgb,var(--gold) 55%,var(--edge));box-shadow:inset 0 0 22px -14px rgba(var(--gold-rgb),.35)}
+  .faq summary{cursor:pointer;font-family:var(--font-display);font-size:1.14rem;font-weight:600;letter-spacing:.005em;color:var(--bone-bright);padding:.95rem 0;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:1rem;min-height:44px}
+  .faq summary:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:0}
   .faq summary::after{content:'+';color:var(--gold);font-family:var(--font-mono);font-size:1rem;line-height:1;transition:transform .25s}
   .faq details[open] summary::after{transform:rotate(45deg)}
   .faq summary::-webkit-details-marker{display:none}
-  .faq details p{color:var(--bone);font-size:var(--fs-sm);font-weight:300;line-height:1.65;padding:0 0 .9rem;margin:0}
+  .faq details p{color:var(--bone);font-size:var(--fs-sm);font-weight:300;line-height:1.65;padding:0 0 .95rem;margin:0;animation:faq-reveal .3s cubic-bezier(.2,.7,.3,1) both}
+  @keyframes faq-reveal{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
   .faq details p b{color:var(--gold-bright);font-weight:500}
   /* ═══════════════ gate ═══════════════ */
   .gate-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(1.5rem,4vw,3rem);align-items:center;margin-top:.25rem}
   .pitch-list{list-style:none;margin-top:1.8rem}
+  /* Scrim bakom pitch-kolumnen (vision-QA 2026-10-06): tunn ink-slinga så
+     texten inte tappar kontrast där den korsar den ljusa boken i konstarten. */
+  .pitch-list li, .pitch-note{background:linear-gradient(90deg, rgba(var(--ink-rgb),.62), rgba(var(--ink-rgb),.45) 78%, rgba(var(--ink-rgb),.2));border-radius:2px;box-shadow:0 0 0 .45rem rgba(var(--ink-rgb),.35)}
   .pitch-list li{position:relative;padding:0 0 1.25rem 1.7rem;font-weight:300;font-size:1rem;line-height:1.6;color:var(--bone)}
   .pitch-list li::before{content:'▸';position:absolute;left:.1rem;top:.1rem;color:var(--gold)}
   .pitch-list li b{color:var(--bone-bright);font-weight:600}
@@ -461,7 +484,7 @@
      GPU-kompositerat, ingen pixel-avrundningshackighet. Wheel/trackpad/dots
      styr samma flyttal `pos`; trackpad = kontinuerlig glid + snap, mushjul = steg. */
   .rail{display:flex;height:100%;transform:translate3d(0,0,0);will-change:transform;touch-action:pan-y}
-  .rail-pane{flex:0 0 100%;width:100%;height:100%;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--edge) transparent;padding:clamp(1.8rem,5vh,3.4rem) 0 4.8rem;display:flex;align-items:flex-start}
+  .rail-pane{flex:0 0 100%;width:100%;height:100%;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--edge) transparent;padding:clamp(1.8rem,5vh,3.4rem) 0 6.2rem;display:flex;align-items:flex-start}
   .rail-pane > *{width:100%}
   .rail-pane section{scroll-margin-top:var(--nav-h)}
   .rail-pane .sec-head{margin-bottom:1.1rem}
@@ -531,6 +554,9 @@
     html{scroll-behavior:auto}
     .rv{opacity:1;transform:none;transition:none}
     .hero-bg{animation:none}
+    .hero-glow{animation:none}
+    .faq details p{animation:none}
+    .faq summary::after{transition:none}
     #update-banner.show{animation:none}
     .gate-card.shake{animation:none}
   }
@@ -606,6 +632,14 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
     .rr-link .rr-l{display:none}                                 /* trångt: namn bort, romerska siffror kvar */
     .rr-quick .rr-link{padding:.55rem .3rem;font-size:.6rem}
   }
+/* ═══ C: price-card polish (2026-10-06) — platt, allt var()-baserat.
+   UNLOCK-kortet (patron) får subtil inner-glöd + flagg med mer närvaro;
+   hover-liftet följer .btn-idiomet (redan återinfört ovan). ═══ */
+.ptier.patron{box-shadow:inset 0 0 36px -22px rgba(var(--gold-rgb),.6) !important}
+.ptier.patron:hover{box-shadow:inset 0 0 36px -22px rgba(var(--gold-rgb),.6),0 20px 40px -26px rgba(0,0,0,.95) !important}
+.ptier.patron .pt-flag{padding:.42em .85em;box-shadow:0 0 16px -4px rgba(var(--gold-rgb),.65)}
+.ptier.ptier-topup .pt-flag{padding:.4em .8em}
+.ptier li{font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -641,7 +675,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 <!-- banners (flyttade hit under headern 2026-09-30 — täckte tidigare railen) -->
 <div id="deleted-banner">&#10022; Your account has been deleted. The Cauldron will remember your stories.</div>
 
-<div id="update-banner" role="status"><span class="upd-msg">✦ <b>New pricing</b> — the free table refreshes <b>30 turns every day</b> with <b>step-3.7-flash</b> &amp; <b>step-3.5-flash-2603</b>. The one-time <b>10€ unlock</b> adds <b>+100 turns</b> (never expire) and opens <b>every Dungeon Master</b> (Qwen 3.8 Flash, Qwen 3.6 Flash, DeepSeek V4.1 Flash, Step 5 Preview), <b>voice narration</b> &amp; <b>image generation</b> — permanently. <a href="pricing.html?plan=unlock10" onclick="try{localStorage.setItem('pricing_0927_seen','1')}catch(e){}">See the paths →</a></span><button class="upd-x" aria-label="Dismiss" title="Dismiss the pricing notice" onclick="try{localStorage.setItem('pricing_0927_seen','1')}catch(e){}document.getElementById('update-banner').classList.remove('show')">×</button></div>
+<div id="update-banner" role="status"><span class="upd-msg">✦ <b>New pricing</b> — the free table refreshes <b>30 turns every day</b> with <b>step-3.7-flash</b> &amp; <b>step-3.5-flash-2603</b>. The one-time <b>10€ unlock</b> adds <b>+100 turns</b> (never expire), <b>raises your daily cap to 50</b> — permanently — and opens <b>every Dungeon Master</b> (Qwen 3.8 Flash, Qwen 3.6 Flash, DeepSeek V4.1 Flash, Step 5 Preview), <b>voice narration</b> &amp; <b>image generation</b> — permanently. <a href="pricing.html?plan=unlock10" onclick="try{localStorage.setItem('pricing_0927_seen','1')}catch(e){}">See the paths →</a></span><button class="upd-x" aria-label="Dismiss" title="Dismiss the pricing notice" onclick="try{localStorage.setItem('pricing_0927_seen','1')}catch(e){}document.getElementById('update-banner').classList.remove('show')">×</button></div>
 
 
 
@@ -654,6 +688,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
        sigillet och tonar mot ink. ═══════════════ -->
   <div class="hero-gate">
   <div class="hero-bg" id="hero-bg" role="img" aria-label="An AI-generated cauldron brewing a fantasy world"></div>
+  <div class="hero-glow" aria-hidden="true"></div>
 
 <style>
 /* ═══════════ summoning seal (gate v2, 2026-10-01 — port of the approved
@@ -728,15 +763,6 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
 .sm-hl-lead{font-family:var(--font-display);font-weight:700;color:var(--bone-bright);letter-spacing:.01em}
 .sm-hero-line b{color:var(--gold-bright);font-weight:600}
 .sm-hero-line em{font-style:normal;font-weight:600;color:var(--gold-bright);text-shadow:0 0 18px rgba(var(--gold-rgb),.5)}
-.sm-hero-line .sm-own{color:var(--arcane-bright);font-style:italic}
-.sm-hero-line .sm-zero{color:var(--gold-bright);font-weight:600;text-shadow:0 0 14px rgba(var(--gold-rgb),.45)}
-/* the OR between the two ways in — hairline rule, tracked mono, arcane */
-.sm-hero-line .sm-or{display:block;margin:.85rem 0 .75rem;position:relative;
-  font-family:var(--font-mono);font-size:.7rem;letter-spacing:.4em;text-transform:uppercase;
-  color:var(--arcane-bright);text-align:center;line-height:1;text-shadow:0 0 12px rgba(var(--arcane-rgb),.6)}
-.sm-hero-line .sm-or::before,.sm-hero-line .sm-or::after{content:'';position:absolute;top:50%;width:22%;height:1px;
-  background:linear-gradient(90deg,transparent,rgba(var(--arcane-rgb),.8));transform:translateY(-50%)}
-.sm-hero-line .sm-or::before{left:0}.sm-hero-line .sm-or::after{right:0;transform:translateY(-50%) scaleX(-1)}
 /* ═══ Field labels over the art: slightly brighter + firmer (QA-2) ═══ */
 .sm-core .field label{color:var(--bone);font-weight:700}
 
@@ -764,17 +790,9 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
         <div>
           <p class="eyebrow rv">The Summoning Rite</p>
           <h2 class="rv">loreweavers cauldron - a text based dnd 5e adventure that remembers everything</h2>
-          <p class="sm-hero-line rv"><span class="sm-hl-lead">Your table, your rules.</span>
-            Point the DM at your own <b>Ollama</b> and any model you can run becomes
-            its voice &mdash; <em>Qwen</em>, <em>DeepSeek</em>, or any
-            <span class="sm-own">uncensored model on your hardware</span>, NSFW play
-            included. House models answer to their providers&rsquo; content policies;
-            a model on your own machine answers to you. The DM step costs
-            <span class="sm-zero">0&nbsp;turns</span> &mdash; the house still builds every
-            prompt and keeps dice, HP and the Lorekeeper honest.
-            <span class="sm-or">or</span>
-            <span class="sm-hl-lead">Use <em>Qwen</em>, <em>DeepSeek</em> or <em>StepFun</em></span> directly
-            provided by the Cauldron.</p>
+          <p class="sm-hero-line rv"><span class="sm-hl-lead">A free AI-D&amp;D Adventure</span> with mechanic dices, full 5e rules and unlimited freedom within the cauldron.<br>
+            Play with <em>deepseek-v4.1-flash</em>, <em>step-5-preview</em> and
+            <em>qwen3.8-flash</em> for free &mdash; or bring your own locally hosted models.</p>
           <ul class="pitch-list">
             <li class="rv d1"><b>Free, forever.</b> 30 fresh turns every day &mdash;
               no subscription, no credit card, no email.
@@ -782,7 +800,8 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
             <li class="rv d3"><b>Bring your own breath.</b> Run the DM on your own
               <b>Ollama</b> and the narration costs <b>0 turns</b> &mdash; uncensored and
               NSFW-friendly models play exactly as they are; your hardware, your content
-              rules. Opt into <b>Whole Cauldron local</b> and the Lorekeeper and memory run
+              rules. Bring your own uncensored <b>NSFW models</b> to the cauldron. Opt into
+              <b>Whole Cauldron local</b> and the Lorekeeper and memory run
               on your machine too. Dice, HP and the books stay honest on the server;
               portraits and voice narration stay on house engines.</li>
           </ul>
@@ -1186,7 +1205,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
           <div id="pricing">
             <p class="eyebrow rv">Free to play · No subscription</p>
             <h2 class="rv">Unlimited. <em>No lock-in.</em></h2>
-            <p class="lede rv d1">30 fresh turns every day, forever. No card. No email. No subscription &mdash; the one-time <b>10€ unlock</b> adds 100 turns and opens every mind, voice and image engine. Or donate any amount: every € adds 100 turns, and any donation &mdash; 1€ is enough &mdash; permanently unlocks <b>Undo</b> and <b>campaign export</b>.</p>
+            <p class="lede rv d1">30 fresh turns every day, forever. No card. No email. No subscription &mdash; the one-time <b>10€ unlock</b> adds 100 turns, permanently lifts your daily cap from 30 to 50 turns, and opens every mind, voice and image engine. Or donate any amount: every € adds 100 turns, and any donation &mdash; 1€ is enough &mdash; permanently unlocks <b>Undo</b> and <b>campaign export</b>.</p>
             <div class="pricing-grid">
         <div class="ptier rv d1" role="button" tabindex="0" onclick="location.href='#gate'" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" title="The free path — jump to the gate and start">
           <div class="pt-name">Free</div>
@@ -1206,6 +1225,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
           <div class="pt-price">10€<small> once</small></div>
           <ul>
             <li><b>+100 turns</b> &mdash; never expire, spent after your daily 30</li>
+            <li><b>Daily cap 30 &rarr; 50</b> &mdash; a permanent raise, yours for good</li>
             <li><b>Every Dungeon Master</b> &mdash; Qwen 3.8 Flash, Qwen 3.6 Flash, DeepSeek V4.1 Flash, Step 5 Preview</li>
             <li><b>Voice narration</b> &mdash; Qwen 3.0 &amp; StepFun (1 turn per narration)</li>
             <li><b>Image generation</b> &mdash; StepFun, Wan 2.7 Pro, Qwen Image 3 Pro (1 turn per image)</li>
@@ -1227,7 +1247,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
           <span class="go-hint">Top up turns &#8594;</span>
         </div>
       </div>
-            <p class="pt-fine rv d2">The 10€ unlock is one-time and permanent &mdash; no window, no renewal. Or top up turns any time, from 1€: every € adds exactly 100 turns that never expire. Any donation (1€ is enough) also permanently unlocks <b>Undo</b> and <b>campaign export</b>.</p>
+            <p class="pt-fine rv d2">The 10€ unlock is one-time and permanent &mdash; no window, no renewal. It adds 100 turns and permanently lifts your daily cap from 30 to 50 turns. Or top up turns any time, from 1€: every € adds exactly 100 turns that never expire. Any donation (1€ is enough) also permanently unlocks <b>Undo</b> and <b>campaign export</b>.</p>
             <p class="pt-more rv d3"><a href="pricing.html">Compare all paths &amp; donations &#8594;</a></p>
           </div>
           <div id="faq">
@@ -1240,7 +1260,7 @@ h2 em{font-style:italic !important;color:var(--gold-bright) !important}
         </details>
         <details>
           <summary>How many free turns do I get each day?</summary>
-          <p><b>30 fresh turns every day</b>. One chat message = one turn; a voice narration or an image costs one turn too. Purchased turns never expire and are used only after your daily turns run out.</p>
+          <p><b>30 fresh turns every day</b>. One chat message = one turn; a voice narration or an image costs one turn too. Purchased turns never expire and are used only after your daily turns run out. The one-time <b>10€ unlock</b> adds <b>+100 turns</b> and permanently lifts your daily cap <b>from 30 to 50 turns</b>.</p>
         </details>
         <details>
           <summary>What does a donation unlock?</summary>
@@ -1984,6 +2004,71 @@ function toggleLedger() {
   }
   try { sfx('click'); } catch (_) {}
 }
+
+/* ═══ A: ambient cauldron embers (2026-10-06) — fyller det tidigare döda
+   #embers-canvaset (fixed z-index:1, pointer-events:none ⇒ alltid bakom
+   .content z-index:5, fångar aldrig klick). Driftar inte LCP-bilden: .hero-bg
+   + preload är orörda, canvasen är en separat bakgrundslayer. Körs aldrig vid
+   prefers-reduced-motion — canvasen förblir tom, .hero-glow står stilla som
+   statisk glöd (formateckning i CSS-blocket ovan). Pausar i bakgrunden. ═══ */
+(function () {
+  var cv = document.getElementById('embers');
+  if (!cv) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var ctx = cv.getContext && cv.getContext('2d');
+  if (!ctx) return;
+  var W, H, motes = [];
+  function resize() { W = cv.width = innerWidth; H = cv.height = innerHeight; }
+  resize(); addEventListener('resize', resize);
+  function spawn(init) {
+    return { x: Math.random() * W, y: init ? Math.random() * H : H + 12,
+      r: 0.7 + Math.random() * 1.3, vy: 0.18 + Math.random() * 0.5,
+      vx: (Math.random() - 0.5) * 0.22, life: 0, max: 420 + Math.random() * 520,
+      hue: Math.random() < 0.82 ? 24 + Math.random() * 16 : 268 + Math.random() * 18 };
+  }
+  for (var i = 0; i < 26; i++) motes.push(spawn(true));
+  var SPR = {};
+  function sprite(hue) {
+    var k = Math.round(hue / 10) * 10;
+    if (SPR[k]) return SPR[k];
+    var c = document.createElement('canvas'); c.width = c.height = 48;
+    var g = c.getContext('2d'); var rg = g.createRadialGradient(24, 24, 0, 24, 24, 24);
+    rg.addColorStop(0, 'hsla(' + k + ',90%,65%,1)');
+    rg.addColorStop(0.4, 'hsla(' + k + ',85%,55%,.55)');
+    rg.addColorStop(1, 'hsla(' + k + ',80%,50%,0)');
+    g.fillStyle = rg; g.fillRect(0, 0, 48, 48); SPR[k] = c; return c;
+  }
+  function tick() {
+    if (document.hidden) { requestAnimationFrame(tick); return; }
+    ctx.clearRect(0, 0, W, H);
+    for (var i = 0; i < motes.length; i++) {
+      var e = motes[i];
+      e.life++; e.y -= e.vy; e.x += e.vx + Math.sin(e.life * 0.02) * 0.12;
+      var fade = Math.min(1, e.life / 60) * Math.max(0, 1 - e.life / e.max);
+      var fl = 0.5 + Math.sin(e.life * 0.15 + i) * 0.35;
+      ctx.globalAlpha = 0.34 * fade * fl;
+      ctx.drawImage(sprite(e.hue), e.x - e.r * 2, e.y - e.r * 2, e.r * 4, e.r * 4);
+      if (e.life > e.max || e.y < -12) motes[i] = spawn(false);
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(tick);
+  }
+  tick();
+})();
+
+/* ═══ B: FAQ accordion — aria-expanded sync (native details/summary kräver
+   det ej, men assistive teknik förväntar sig togglesvaret; + förblir ett
+   roterat kryss via CSS. Tangentbordet fungerar genom summary natively. ═══ */
+(function () {
+  document.querySelectorAll('.faq details').forEach(function (d) {
+    var s = d.querySelector('summary');
+    if (!s) return;
+    s.setAttribute('aria-expanded', d.open ? 'true' : 'false');
+    d.addEventListener('toggle', function () {
+      s.setAttribute('aria-expanded', d.open ? 'true' : 'false');
+    });
+  });
+})();
 </script>
 
 

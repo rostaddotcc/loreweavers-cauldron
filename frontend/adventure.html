@@ -3574,18 +3574,7 @@ i.corner.br{bottom:6px;right:6px} i.corner.br::before{border-left:0;border-top:0
   text-shadow:0 1px 0 rgba(0,0,0,.55);
 }
 /* ── Illuminerade initialer på hjälte-rubriker ── */
-.head h1::first-letter{
-  float:left;
-  font-family:var(--font-display,'Cinzel',serif)!important;
-  font-weight:900;font-size:3.05em;line-height:.82;
-  padding:.08em .17em .05em;margin:.03em .16em .04em 0;
-  color:var(--gold-bright)!important;
-  background:linear-gradient(160deg,var(--blood),color-mix(in srgb,var(--blood) 50%,var(--ink)));
-  border:1px solid var(--gold);
-  box-shadow:0 0 20px -6px rgba(var(--gold-bright-rgb),.55),inset 0 0 12px rgba(0,0,0,.5);
-  text-shadow:0 1px 0 rgba(0,0,0,.65);
-  animation:gr-candle 5.2s ease-in-out infinite;
-}
+.head h1::first-letter{font-family:var(--font-flavor);font-style:italic;font-weight:700;font-size:1.55em;line-height:1;vertical-align:-.12em;padding:.02em .14em .06em .08em;margin-right:.06em;color:var(--gold-bright);background:linear-gradient(160deg,#5a1f24,#3f1519);border:1px solid rgba(var(--gold-rgb),.55);border-radius:8px;box-shadow:0 0 14px rgba(240,214,117,.22),inset 0 0 8px rgba(0,0,0,.4);text-shadow:0 1px 0 rgba(0,0,0,.6);animation:gr-candle 5.2s ease-in-out infinite}
 /* ── Förgyllda hårstreck + tick-ornament ── */
 .rune-divider::before,.rune-divider::after{
   height:2px;opacity:.85;

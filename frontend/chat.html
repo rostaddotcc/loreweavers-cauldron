@@ -9503,13 +9503,13 @@ function toast(msg, ms = 2600) {
 }
 
 // ── Release-toast: en gång per version (localStorage) ──
-const RELEASE_TOAST_VERSION = 'v1.4-20260927';
+const RELEASE_TOAST_VERSION = 'v1.7-20261006';
 function maybeShowReleaseToast() {
   try {
     if (localStorage.getItem('dnd_release_toast') === RELEASE_TOAST_VERSION) return;
     localStorage.setItem('dnd_release_toast', RELEASE_TOAST_VERSION);
   } catch (_) { /* private mode — visa ändå */ }
-  setTimeout(() => toast('✦ New pricing — the free table refreshes 30 turns a day; the one-time 10€ unlock adds +100 turns and opens every Dungeon Master, voice and image engine.', 9000), 1400);
+  setTimeout(() => toast('✦ v1.7 — Six Voices at the Table: run your campaign in German, French, Spanish or Italian — the DM and even your character sheet speak your tongue.', 9000), 1400);
 }
 
 // ═══════════════════════════════════════

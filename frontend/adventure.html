@@ -27,7 +27,7 @@
       var(--ink);
     background-attachment:fixed;overflow-x:hidden;
   }.grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.05;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}.hero-bg{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:var(--hero-art);background-size:cover;background-position:68% 50%;animation:hero-breathe 42s ease-in-out infinite alternate}@keyframes hero-breathe{from{transform:scale(1)}to{transform:scale(1.06)}}@media (max-width:720px){:root{--hero-art:url("assets/hero-loreweaver-portrait.webp?v=2")}.hero-bg{background-position:62% 50%}}.hero-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(16,11,8,.72),rgba(16,11,8,.5) 38%,rgba(16,11,8,.85))}#embers{position:fixed;inset:0;z-index:1;pointer-events:none}.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(14,10,7,.85)}.app{position:relative;z-index:2;max-width:960px;margin:0 auto;padding:0 1.25rem 5rem}.head-logo{width:150px;display:block;margin:.9rem auto 0;filter:drop-shadow(0 0 14px rgba(var(--gold-rgb),.25)) saturate(1.05);animation:head-float 7s ease-in-out infinite}@keyframes head-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}/* ═══════════ Topprad (ljud + lämna) ═══════════ */.topbar{display:flex;justify-content:flex-end;align-items:center;gap:.6rem;padding:1.1rem .1rem 0}.top-btn{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}.hero-bg{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:var(--hero-art);background-size:cover;background-position:68% 50%;animation:hero-breathe 42s ease-in-out infinite alternate}@keyframes hero-breathe{from{transform:scale(1)}to{transform:scale(1.06)}}@media (max-width:720px){:root{--hero-art:url("assets/hero-loreweaver-portrait.webp?v=2")}.hero-bg{background-position:62% 50%}}.hero-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(16,11,8,.72),rgba(16,11,8,.5) 38%,rgba(16,11,8,.85))}#embers{position:fixed;inset:0;z-index:1;pointer-events:none}.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 180px 60px rgba(14,10,7,.85)}.app{position:relative;z-index:2;max-width:960px;margin:0 auto;padding:0 1.25rem 5rem}/* ═══════════ Topprad (ljud + lämna) ═══════════ */.topbar{display:flex;justify-content:flex-end;align-items:center;gap:.6rem;padding:1.1rem .1rem 0}.top-btn{
     font-family:var(--font-display,'Cinzel',serif);font-size:var(--fs-tiny);letter-spacing:.14em;text-transform:uppercase;
     background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-dim);
     padding:.45rem .85rem;cursor:pointer;transition:all .2s;border-radius:var(--radius-sm);white-space:nowrap;text-decoration:none;
@@ -513,7 +513,7 @@ html{font-size:var(--fs-base)}
 @media (prefers-reduced-motion: reduce){
   html{scroll-behavior:auto}
   .step,.continue-wrap,.prepare-link,.htp{opacity:1;transform:none;transition:none}
-  .step-num,.head-logo{animation:none}
+  .step-num{animation:none}
   .hero-bg{animation:none}
   .w-status,.weaving-ad .wa-status{animation:none}
   .news-banner{animation:none}
@@ -1038,11 +1038,20 @@ html{font-size:var(--fs-base)}
     <div class="over">What will the Cauldron Foretell?</div>
     <h1>The Lore Weaver's Cauldron</h1>
     <p class="sub">Every adventure begins with a choice. Which path will you take?</p>
-    <img src="assets/logo-cauldron-alpha.png" alt="The Lore Weaver's Cauldron" class="head-logo">
     <div class="rune-divider"><span>✦</span></div>
   </div>
 
   <!-- ═══════════ NYHET: QWEN 3.8 FLASH — FREE TIER (2026-09) ═══════════ -->
+  <!-- ═══════════ NYHET: SENASTE LEDGER-NOTISEN v1.7 (2026-10-06) — ersätter svävande giffeln ═══════════ -->
+  <div class="news-banner" id="news-rel17" onclick="newsRelToast(event)" style="display:none">
+  <span class="nb-icon">✦</span>
+  <div class="nb-body">
+  <div class="nb-title" id="nb-title-rel17">v1.7 — Six Voices at the Table</div>
+  <div class="nb-text" id="nb-text-rel17">The realm now opens its doors in <b>German, French, Spanish and Italian</b> — the Dungeon Master narrates, the chronicle writes and <b>even your character's soul is woven in your tongue</b>, while the interface stays English. The fates are now one accordion — the <b>mature archetypes have moved in from the cold</b> — and the illuminated initials finally stop <b>breaking their words apart</b>. <i>Voice input remains English-only — said plainly, not papered over.</i></div>
+  </div>
+  <button class="nb-close" onclick="newsRelDismiss(event)" title="Dismiss">✕</button>
+  </div>
+
   <div class="news-banner" id="news-qwen38" onclick="newsQwenToast(event)" style="display:none">
   <span class="nb-icon">✦</span>
   <div class="nb-body">
@@ -1069,8 +1078,10 @@ html{font-size:var(--fs-base)}
     </button>
     <div class="rn-body" id="rn-body">
       <div class="rn-inner">
-        <span class="rn-ver">v1.5 — Your Own Breath · updated 2026-09-29</span>
+        <span class="rn-ver">v1.7 — Six Voices at the Table · updated 2026-10-06</span>
         <ul class="rn-list">
+          <li><b>Six voices at the table (2026-10-06)</b> — start campaigns in <b>German, French, Spanish or Italian</b> next to English and Swedish: the Dungeon Master narrates in your tongue, and the <b>character sheet — backstory, personality, gear and lore included — is woven in it too</b>, while class and race stay exact machine keys. Voice narration gets a native-pronunciation instruction; voice input remains English-only (the ASR engine supports English and Chinese, nothing else — said plainly). Battle reports, the chronicle, quests and travel times ("3 Tage", "3 jours") follow the campaign language, and the language gate was swept so a non-English campaign can no longer drift into Swedish under the hood.</li>
+          <li><b>The archetype accordion (2026-10-06)</b> — every fate is now a small expandable card: a colour dot, a name, a chevron; click to read its lore and tags, click again to fold it back. Two per row on desktop, one on phones. The six <b>mature archetypes moved from their separate dropdown into the same list</b> — the "dark paths" select and the emoji name tags are gone. The hovering cauldron sigil above the gate was replaced by this news line (the ✕ retires it until the next entry), and illuminated initials stop breaking words apart — "C auldron" and "HOOSE YOUR FATE" are fixed on all eight page banners.</li>
           <li><b>Local AI — run the Dungeon Master on your own machine (2026-09-29)</b> — the server still builds every prompt, but the DM's words can now come from <b>your own Ollama</b>: set a base URL (any host and port) in <b>Settings</b>, pick a 🏮 model, and the narration is generated on your hardware. <b>The DM step costs 0 turns.</b> Honest caveats: the Lorekeeper and fact-extraction run on our side by default (a soft cap of ~100 local messages a day applies to them), or you opt into <b>Whole Cauldron local</b> in Settings and your hardware carries those steps too — cap ~300 a day, best with a 14B+ thinking model; dice, HP and combat stay server-authoritative, and voice and images still cost turns. You need a desktop browser on the same machine or LAN as Ollama, with <b>OLLAMA_HOST</b> and <b>OLLAMA_ORIGINS</b> set; a thinking model of 14B or more is recommended (qwen3:8b as a floor, 16k context). Your base URL is kept in the browser only. Rolling out gradually this week — <a href="models.html#local-ai">the models page has the details →</a></li>
           <li><b>New pricing — one unlock opens everything (2026-09-27)</b> — the free table refreshes <b>30 turns every day</b> with <b>step-3.7-flash</b> and <b>step-3.5-flash-2603</b>. The one-time <b>10€ unlock</b> adds <b>+100 turns</b> that never expire (spent only after your daily turns run out) and opens <b>every Dungeon Master</b> (Qwen 3.8 Flash, Qwen 3.6 Flash, DeepSeek V4.1 Flash, Step 5 Preview), <b>voice narration</b> (Qwen &amp; StepFun) and <b>image generation</b> (StepFun, Wan 2.7 Pro, Qwen Image 3 Pro) — permanently, no 30-day window. Each narration or image costs 1 turn. Donations still work: every € adds exactly 100 turns, and any donation — <b>1€ is enough</b> — permanently unlocks <b>Undo</b> and <b>campaign export</b>.</li>
           <li><b>DeepSeek V4.1 Flash at the table (2026-09-21)</b> — DeepSeek's open-weights reasoning model (552B, 16B active, 1M-token context) joined the roster as a Dungeon Master, replacing V4 Flash 0731.</li>
@@ -1823,6 +1834,7 @@ window.doLogout = leaveGate;   // rail.js "Log out" använder denna
 document.querySelectorAll('.sfx-btn').forEach(b => b.textContent = SFX.enabled ? '🎵' : '🔇');
 
 initCampaignCheck();
+newsRelInit();
 newsQwenInit();
 newsOllamaInit();
 
@@ -3384,6 +3396,24 @@ function newsQwenInit() {
   if (!el) return;
   el.style.display = '';
 }
+// ── Nyhet: senaste ledger-notisen (v1.7, 2026-10-06) — ersätter den svävande
+// giffeln i head-sektionen. Samma mönster som newsQwen*: visas tills bortklickad.
+// NYCKEL: rel17_1006_dismissed
+function newsRelInit() {
+  try { if (localStorage.getItem('rel17_1006_dismissed') === '1') return; } catch (e) {}
+  const el = document.getElementById('news-rel17');
+  if (el) el.style.display = '';
+}
+function newsRelToast(e) {
+  toast('✦ v1.7 — six voices at the table. Read the full ledger in Release Notes.');
+}
+function newsRelDismiss(e) {
+  e.stopPropagation();
+  try { localStorage.setItem('rel17_1006_dismissed', '1'); } catch (err) {}
+  const el = document.getElementById('news-rel17');
+  if (el) el.style.display = 'none';
+}
+
 function newsQwenToast(e) {
   toast('✦ New pricing — the free table refreshes 30 turns a day; the one-time 10€ unlock adds +100 turns and opens every Dungeon Master, voice and image engine.');
 }

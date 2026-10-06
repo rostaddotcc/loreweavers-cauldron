@@ -6,7 +6,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/assets/icons/icon-192.png">
 <title>The Lore Weaver's Cauldron — Release Notes</title>
-<meta name="description" content="Release notes for The Lore Weaver's Cauldron — an AI dungeon master with a memory. v1.5 — your own breath: run the DM on your own hardware through Ollama at 0 turns for the DM step, on top of the open cauldron pricing: 30 free turns a day, one-time 10€ unlock, refreshed 2026-09-29.">
+<meta name="description" content="Release notes for The Lore Weaver's Cauldron — an AI dungeon master with a memory. v1.7 — six voices at the table: campaigns in German, French, Spanish and Italian beside English and Swedish, the character sheet written in your campaign language, archetypes folded into a single accordion, and no more leaked words or broken initials, refreshed 2026-10-06.">
 <meta name="robots" content="index,follow">
 <link rel="canonical" href="https://dnd.rostad.cc/releases.html">
 <meta property="og:type" content="article">
@@ -241,16 +241,18 @@
   <h1 class="rv">Release Notes</h1>
   <div class="page-rule">✦</div>
    <p class="eyebrow rv">The Ledger of the Realm</p>
-  <p class="ledger-sub rv">Every update written in the ledger, so the realm's history stays legible. This entry — the supporter's coin: any donation now opens the rewind and the archive. Undo your last turn, take your story out as a zip — one euro is enough, and it stays open.<br><b>v1.5 → v1.6</b> · 2026-10-01</p>
+  <p class="ledger-sub rv">Every update written in the ledger, so the realm's history stays legible. This entry — six voices at the table: the realm opens to German, French, Spanish and Italian, the character sheet follows your campaign's tongue, and the archetype picker folds into one quiet accordion.<br><b>v1.6 → v1.7</b> · 2026-10-06</p>
 
   <div class="current-box rv fresh-frame">
-    <span class="ver-chip"><span class="ver-name">v1.6</span><span class="ver-note">The Supporter's Coin</span></span>
-    <span class="ver-tag">Undo + campaign export with any donation</span>
-    <span class="ver-tag">1€ = 100 turns, 2026-10-01</span>
-    <span class="ver-tag">Whoever has paid keeps it — forever</span>
+    <span class="ver-chip"><span class="ver-name">v1.7</span><span class="ver-note">Six Voices at the Table</span></span>
+    <span class="ver-tag">German · French · Spanish · Italian campaigns</span>
+    <span class="ver-tag">Character sheets written in your language</span>
+    <span class="ver-tag">Archetype accordion — dark paths merged</span>
+    <span class="ver-tag">Leak-free prompts, unbroken initials</span>
   </div>
 
   <div class="ver-chiprow rv" aria-label="Jump to a version">
+    <a href="#s17">v1.7</a>
     <a href="#s16">v1.6</a>
     <a href="#s15">v1.5</a>
     <a href="#s14">v1.4</a>
@@ -261,6 +263,61 @@
     <a href="#s010">v0.10</a>
     <a href="#s09">v0.9</a>
     <a href="#s08">v0.8</a>
+  </div>
+
+  <!-- ═══════════════ 1.7 headline ═══════════════ -->
+  <div class="sec rv" id="s17">
+    <div class="sec-head">
+      <span class="sec-num">1.7</span>
+      <h2>Six Voices at the Table</h2>
+      <span class="ruler"></span><span class="rule"></span>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ai">LANGUAGE</span>
+        <span class="tablet-title">German, French, Spanish and Italian join the table · 2026-10-06</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag feat">New</span> <b>Four new campaign languages</b> — choose <b>Deutsch, Français, Español or Italiano</b> when you begin an adventure and the Dungeon Master narrates every scene, every NPC, every whisper in it. English and Swedish stay exactly as they were.</li>
+        <li><span class="tag feat">New</span> <b>The character sheet follows the campaign</b> — backstory, personality, appearance, starting gear with its lore, even the languages your hero speaks: the sheet is now woven in your campaign language, while class and race names stay exact, because they are machine keys the rules engine reads.</li>
+        <li><span class="tag feat">New</span> <b>The whole engine speaks along</b> — battle reports, the logbook chronicle, quests, the memory archive and travel times ("3 Tage", "3 jours", "3 días", "3 giorni") all run in the tongue you picked.</li>
+        <li><span class="tag ai">Honest note</span> <b>Voice narration got an accent</b> — the spoken DM is now told to read German, French, Spanish and Italian with native pronunciation. <b>Voice input stays English-only</b> for now — the speech-to-text engine we use only understands English (and Chinese), and we say so plainly rather than pretend.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ux">UI</span>
+        <span class="tablet-title">One accordion, two per row — the dark paths go quiet · 2026-10-06</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ux">Changed</span> <b>Every archetype is now a small expandable card</b> — a colour dot, a name, a chevron; click to fold out its lore and tags, click again to fold it back. Twenty-seven fate lines sit two per row on desktop and stack to one on phones, so choosing a fate is browsing, not scrolling a wall of tiles.</li>
+        <li><span class="tag ux">Changed</span> <b>The mature archetypes moved in from the cold</b> — the separate "dark paths" dropdown is gone; the six darkest fates now stand in the same list as the rest, without emoji name tags or a section of their own. They were always part of the table.</li>
+        <li><span class="tag fix">Fixed</span> <b>Illuminated initials stop breaking words</b> — the decorated first letter used to float out of its own word ("C&nbsp;&nbsp;&nbsp;auldron", "HOOSE YOUR FATE"). It now sits enlarged and gilded <i>inside</i> the word on all eight page banners; the drop-caps at the start of real paragraphs were left alone, since there the float is correct.</li>
+        <li><span class="tag ux">Changed</span> <b>The hovering cauldron sigil retires</b> — the floating logo above the realm's gate is replaced by a quiet news line carrying the latest ledger entry, with a ✕ whenever you have read it.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip fix">LEAKAGE</span>
+        <span class="tablet-title">Swedish retreats to where it belongs · 2026-10-06</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag fix">Fixed</span> <b>The language gate got a spine</b> — thirty-odd places in the engine asked "is this English? if not, Swedish". That made every non-English campaign quietly Swedish inside. The gate now asks "is this Swedish?" and everything else falls back to the campaign's own tongue — one rule, from the combat block to the chronicle prompt.</li>
+        <li><span class="tag fix">Fixed</span> <b>The vault stopped flattening your language</b> — summoning an adventurer in German used to collapse to English on the way in. Supported codes are honoured end to end; only unknown ones fall back.</li>
+        <li><span class="tag fix">Fixed</span> <b>English chrome everywhere</b> — picking German, French, Spanish or Italian no longer flips menus, buttons and tooltips to Swedish on the way in; the interface stays English while the story speaks your language.</li>
+        <li><span class="tag ux">Unchanged</span> <b>The dice protocol stays Swedish underneath</b> — the internal tags the parser reads are untouched on purpose; you never see them, and what you do see is a language reminder at the top and bottom of every prompt, so a long transcript in one tongue cannot drag the DM into another.</li>
+      </ul>
+    </div>
+    <div class="tablet">
+      <div class="tablet-h">
+        <span class="chip ai">MINDS</span>
+        <span class="tablet-title">The house DMs keep their manners · 2026-10-06</span>
+      </div>
+      <ul class="feat">
+        <li><span class="tag ai">Note</span> <b>No new models, no new prices</b> — the six house Dungeon Masters are the same roster as before, and the free table still refreshes <b>30 turns a day</b>; the <b>10€ unlock</b> still opens every voice, image engine and DM permanently. What is new is only what those minds are allowed to say, and in which language.</li>
+        <li><span class="tag feat">New</span> <b>Guardian and Lorekeeper localise their notes too</b> — the bookkeeping agents that write daily entries, NPC notes and item lore now receive instructions in the campaign language, so the journal in your vault reads in one tongue from cover to cover.</li>
+      </ul>
+    </div>
   </div>
 
   <!-- ═══════════════ 1.6 headline ═══════════════ -->
@@ -1050,7 +1107,7 @@
   <div class="footer rv">
     <b>The Lore Weaver's Cauldron</b> — an AI dungeon master with a memory.<br>
     <a href="pricing.html">Choose your path</a> &middot; <a href="adventure.html">Return to the realm</a><br>
-    <span>v1.5 · 2026-09-29 · Questions? <a href="mailto:web@rostad.cc">web@rostad.cc</a></span>
+    <span>v1.7 · 2026-10-06 · Questions? <a href="mailto:web@rostad.cc">web@rostad.cc</a></span>
   </div>
 </section>
 

@@ -143,6 +143,7 @@
   /* Språkkort — två stora val */
   .lang-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:1.1rem}
   @media(max-width:640px){.lang-cards{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:640px){.arch-cats{grid-template-columns:1fr}}
   .lang-card{position:relative;cursor:pointer;text-align:center;padding:1.9rem 1.2rem 1.5rem;background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,var(--ink));border:1px solid var(--edge);border-radius:var(--radius-md);transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s,border-color .3s;overflow:hidden}
   .lang-card:hover{transform:translateY(-6px);box-shadow:0 16px 34px -12px rgba(0,0,0,.85);border-color:var(--gold);z-index:2}
   .lang-card .lc-icon{font-size:2.4rem;display:block;margin-bottom:.7rem;filter:drop-shadow(0 4px 12px rgba(0,0,0,.6))}
@@ -177,7 +178,7 @@
   @media(max-width:700px){#gen-row{max-width:100%}}
   /* Arketyper — små accordion-boxar (2026-10-06): en rad per arketyp, expandera
      lore+tags. Mörka arketyper är sammanslagna med resten — ingen dropdown. */
-  .arch-cats{display:flex;flex-direction:column;gap:.55rem}
+  .arch-cats{display:grid;grid-template-columns:repeat(2,1fr);gap:.55rem;align-items:start}
   .arch-acc{--ac:var(--gold);--ac-glow:rgba(var(--gold-rgb),.35);position:relative;background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,var(--ink));border:1px solid var(--edge);border-radius:12px;overflow:hidden;transition:border-color .3s,box-shadow .3s}
   .arch-acc::before{content:'';position:absolute;inset:4px;border:1px solid rgba(var(--gold-rgb),.14);border-radius:8px;pointer-events:none;transition:border-color .3s}
   .arch-acc:hover{border-color:var(--ac)}

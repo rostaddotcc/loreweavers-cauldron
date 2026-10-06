@@ -718,10 +718,10 @@ _LANG_INSTRUCTION_SV = "\n\n[VIKTIGT: Skriv alla användarvända texter (logbook
 _LANG_INSTRUCTION_EN = "\n\n[IMPORTANT: Write all user-facing text (logbook, npc_notes, day_summary, quest descriptions) in ENGLISH.]"
 # EU-språk (de/fr/es/it): engelskspråkigt direktiv — Guardian-prompten är engelsk.
 _LANG_INSTRUCTION_BY_LANG = {
-    "de": "\n\n[IMPORTANT: Write all user-facing text (logbook, npc_notes, day_summary, quest descriptions) in GERMAN — every sentence.]",
-    "fr": "\n\n[IMPORTANT: Write all user-facing text (logbook, npc_notes, day_summary, quest descriptions) in FRENCH — every sentence.]",
-    "es": "\n\n[IMPORTANT: Write all user-facing text (logbook, npc_notes, day_summary, quest descriptions) in SPANISH — every sentence.]",
-    "it": "\n\n[IMPORTANT: Write all user-facing text (logbook, npc_notes, day_summary, quest descriptions) in ITALIAN — every sentence.]",
+    "de": "\n\n[IMPORTANT: Write all user-facing text (logbook, npc_notes, day_summary, quest descriptions, character update notes, item names and lore) in GERMAN — every sentence.]",
+    "fr": "\n\n[IMPORTANT: Write all user-facing text (logbook, npc_notes, day_summary, quest descriptions, character update notes, item names and lore) in FRENCH — every sentence.]",
+    "es": "\n\n[IMPORTANT: Write all user-facing text (logbook, npc_notes, day_summary, quest descriptions, character update notes, item names and lore) in SPANISH — every sentence.]",
+    "it": "\n\n[IMPORTANT: Write all user-facing text (logbook, npc_notes, day_summary, quest descriptions, character update notes, item names and lore) in ITALIAN — every sentence.]",
 }
 
 

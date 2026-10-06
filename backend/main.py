@@ -224,6 +224,7 @@ from languages import (
     get_opening_styles,
     get_awakening_ask,
     get_awakening_open,
+    get_char_sheet_output_directive,
     DEFAULT_CAMPAIGN_NAMES,
     TTS_PRONUNCIATION_HINTS,
 )
@@ -8934,7 +8935,8 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
     lang = _get_lang(state)
     char_prompt = CHARACTER_PROMPT_SV if lang == "sv" else CHARACTER_PROMPT_EN
     user_msg = (f"Skapa en karaktär: {req.prompt}" if lang == "sv"
-                else f"Create a character: {req.prompt}") + _build_chargen_seed_block(username, lang)
+                else f"Create a character: {req.prompt}") + _build_chargen_seed_block(username, lang) \
+        + get_char_sheet_output_directive(lang)
 
     messages = [
         {"role": "system", "content": char_prompt},
@@ -9273,7 +9275,8 @@ async def generate_character_stream(req: CharacterRequest, morkrets_token: str |
     lang = _get_lang(state)
     char_prompt = CHARACTER_PROMPT_SV if lang == "sv" else CHARACTER_PROMPT_EN
     user_msg = (f"Skapa en karaktär: {req.prompt}" if lang == "sv"
-                else f"Create a character: {req.prompt}") + _build_chargen_seed_block(username, lang)
+                else f"Create a character: {req.prompt}") + _build_chargen_seed_block(username, lang) \
+        + get_char_sheet_output_directive(lang)
 
     messages = [
         {"role": "system", "content": char_prompt},
@@ -9346,10 +9349,15 @@ async def vault_generate_stream(req: VaultGenRequest, morkrets_token: str | None
     if payload.get("role") != "admin":
         req.model_id = _clamp_player_model(req.model_id, tier=_tier_for(username))
 
-    lang = "sv" if (req.lang or "en").lower().startswith("sv") else "en"
+    # Språk: normalisera via languages (i18n B1) — 'de'/'fr'/'es'/'it' behålls,
+    # skräp → 'en'. Promptval: 'sv' → SV, allt annat → EN; prose-direktivet
+    # (get_char_sheet_output_directive) styr målspråket i arket.
+    raw = (req.lang or "en").strip().lower()
+    lang = raw if is_supported(raw) else "en"
     char_prompt = CHARACTER_PROMPT_SV if lang == "sv" else CHARACTER_PROMPT_EN
     user_msg = (f"Skapa en karaktär: {req.prompt}" if lang == "sv"
-                else f"Create a character: {req.prompt}") + _build_chargen_seed_block(username, lang)
+                else f"Create a character: {req.prompt}") + _build_chargen_seed_block(username, lang) \
+        + get_char_sheet_output_directive(lang)
     messages = [
         {"role": "system", "content": char_prompt},
         {"role": "user", "content": user_msg},

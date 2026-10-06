@@ -519,3 +519,56 @@ def get_directive(lang) -> str:
 def get_reminder(lang) -> str:
     """Last-block language reminder for `lang` (unknown → en)."""
     return LANGUAGE_REMINDERS[_norm(lang)]
+
+
+# ═══════════════════════════════════════
+# CHAR-SHEET OUTPUT DIRECTIVES (CONTRACT-B B1)
+# Injected into the char-gen USER message AFTER _build_chargen_seed_block so
+# the sheet's PROSE lands in the campaign language while the master prompt
+# (CHARACTER_PROMPT_EN/SV) stays untouched. de/fr/es/it only — en/sv get ''
+# (byte-identical behavior). Directive text is English (guardian pattern:
+# instruction language ≠ output language). class/race stay exact English
+# D&D terms — they are machine keys — and every JSON key is unchanged.
+# ═══════════════════════════════════════
+CHAR_SHEET_OUTPUT_DIRECTIVES: dict[str, str] = {
+    "de": (
+        "\n## OUTPUT LANGUAGE\nThis campaign is played in GERMAN. Write ALL prose "
+        "fields of the character sheet in German (Standardneutraldeutsch): backstory, "
+        "personality_traits, appearance, ideals/bonds/flaws, item names AND item lore, "
+        "and the languages field (e.g. 'Gemeinsprache'). Keep class and race as the "
+        "exact English D&D terms (they are machine keys) and keep every JSON key and "
+        "numeric value unchanged. Names of people and places follow the creativity "
+        "track as usual."
+    ),
+    "fr": (
+        "\n## OUTPUT LANGUAGE\nThis campaign is played in FRENCH. Write ALL prose "
+        "fields of the character sheet in French: backstory, personality_traits, "
+        "appearance, ideals/bonds/flaws, item names AND item lore, and the languages "
+        "field (e.g. 'Commun'). Keep class and race as the exact English D&D terms "
+        "(they are machine keys) and keep every JSON key and numeric value unchanged. "
+        "Names of people and places follow the creativity track as usual."
+    ),
+    "es": (
+        "\n## OUTPUT LANGUAGE\nThis campaign is played in SPANISH. Write ALL prose "
+        "fields of the character sheet in Spanish: backstory, personality_traits, "
+        "appearance, ideals/bonds/flaws, item names AND item lore, and the languages "
+        "field (e.g. 'Común'). Keep class and race as the exact English D&D terms "
+        "(they are machine keys) and keep every JSON key and numeric value unchanged. "
+        "Names of people and places follow the creativity track as usual."
+    ),
+    "it": (
+        "\n## OUTPUT LANGUAGE\nThis campaign is played in ITALIAN. Write ALL prose "
+        "fields of the character sheet in Italian: backstory, personality_traits, "
+        "appearance, ideals/bonds/flaws, item names AND item lore, and the languages "
+        "field (e.g. 'Comune'). Keep class and race as the exact English D&D terms "
+        "(they are machine keys) and keep every JSON key and numeric value unchanged. "
+        "Names of people and places follow the creativity track as usual."
+    ),
+}
+
+
+def get_char_sheet_output_directive(lang) -> str:
+    """Char-sheet prose directive for `lang`; '' for en/sv/unknown (no directive)."""
+    if not isinstance(lang, str):
+        return ""
+    return CHAR_SHEET_OUTPUT_DIRECTIVES.get(lang.strip().lower(), "")

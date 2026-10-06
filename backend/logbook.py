@@ -65,21 +65,34 @@ Reply ONLY with valid JSON (no markdown):
 }"""
 
 
+# EU-språk: engelskspråkigt output-direktiv ovanpå den engelska base-prompten.
+# 'en' behöver inget (redan engelska), 'sv' använder LOG_PROMPT_SV.
+_LOG_OUTPUT_DIRECTIVE: dict[str, str] = {
+    "de": "\nWrite the entire journal entry in GERMAN.",
+    "fr": "\nWrite the entire journal entry in FRENCH.",
+    "es": "\nWrite the entire journal entry in SPANISH.",
+    "it": "\nWrite the entire journal entry in ITALIAN.",
+}
+
+
 def build_log_prompt(transcript_text: str, summaries_text: str, campaign_name: str, language: str = "sv") -> str:
-    """Build prompt for logbook generation. Supports 'sv' and 'en'."""
-    base = LOG_PROMPT_EN if language == "en" else LOG_PROMPT_SV
+    """Build prompt for logbook generation. sv → Swedish, allt annat → English base;
+    de/fr/es/it → + output directive (engelskspråkig instruktion)."""
+    base = LOG_PROMPT_SV if language == "sv" else LOG_PROMPT_EN
+    if language in _LOG_OUTPUT_DIRECTIVE:
+        base = base + _LOG_OUTPUT_DIRECTIVE[language]
     parts = [base]
     if campaign_name:
-        label = "Campaign" if language == "en" else "Kampanj"
+        label = "Kampanj" if language == "sv" else "Campaign"
         parts.append(f"\n{label}: {campaign_name}")
     if summaries_text:
-        label = "Summaries" if language == "en" else "Sammanfattningar"
+        label = "Sammanfattningar" if language == "sv" else "Summaries"
         parts.append(f"\n## {label}\n{summaries_text}")
     if transcript_text:
         # Truncate if extremely long
         if len(transcript_text) > 30000:
-            trunc_label = "[... truncated ...]" if language == "en" else "[... trunkerad ...]"
+            trunc_label = "[... trunkerad ...]" if language == "sv" else "[... truncated ...]"
             transcript_text = transcript_text[:30000] + f"\n{trunc_label}"
-        label = "Transcript" if language == "en" else "Transkript"
+        label = "Transkript" if language == "sv" else "Transcript"
         parts.append(f"\n## {label}\n{transcript_text}")
     return "\n".join(parts)

@@ -217,6 +217,16 @@ from models import (
 from atmosphere import (
     should_generate_art,
 )
+from languages import (
+    is_supported,
+    get_directive,
+    get_reminder,
+    get_opening_styles,
+    get_awakening_ask,
+    get_awakening_open,
+    DEFAULT_CAMPAIGN_NAMES,
+    TTS_PRONUNCIATION_HINTS,
+)
 from locations import get_locations_with_travel, place_location, clean_location_name, find_location
 from logbook import build_log_prompt
 from state_manager import CAMPAIGNS_DIR, VAULTS_DIR, CampaignStore, CharacterVault
@@ -372,8 +382,12 @@ def _get_lang(state: dict) -> str:
 
 
 def _err(msg_sv: str, msg_en: str, lang: str = "sv") -> str:
-    """Return an error message in the campaign's language."""
-    return msg_en if lang == "en" else msg_sv
+    """Return an error message in the campaign's language.
+
+    EU rule (i18n-wave 2026-10): only 'sv' gets the Swedish message — every
+    other campaign language (en/de/fr/es/it) falls back to English.
+    """
+    return msg_sv if lang == "sv" else msg_en
 
 # ═══════════════════════════════════════
 # NPC-parsning + Äventyrsöppningar
@@ -501,7 +515,7 @@ def _build_npc_chat_context(npc: dict, lang: str) -> str:
     relation = npc.get("relation", "okänd")
     notes = (npc.get("notes") or "").strip()
 
-    if lang == "en":
+    if lang != "sv":  # EU-languages fall back to the English block (sv-only Swedish)
         lines = [
             f"The player is directly addressing **{name}**. You MUST respond "
             f"IN CHARACTER as {name} — first-person, with quoted speech, "
@@ -3585,22 +3599,33 @@ TTS_STYLE_FRASES = {
     "scary": "Low ominous eerie tone, tense and creeping.",
 }
 
-def _tts_instruction(base: str, style: str, max_len: int = 128) -> str:
-    """Bygg TTS-instruktion = [style-fras] + bas, kapad vid ordgräns.
+def _tts_instruction(base: str, style: str, max_len: int = 128,
+                     pronunciation: str = "") -> str:
+    """Bygg TTS-instruktion = [style-fras] + bas + [uttalshint], kapad vid ordgräns.
 
     style = preset (happy/calm/scary) eller godtycklig kort fras (custom).
+    pronunciation = valfri språklig uttalshint (EU-kampanjer, se
+    languages.TTS_PRONUNCIATION_HINTS) — appenderas EFTER basen; basen
+    trunkeras först så hook+bas+hint ryms inom max_len (128-teckensgränsen,
+    pitfall: längre instruktion ger "Instruction is invalid!").
     Free-konton skickar aldrig style hit (backend-gate i /api/tts).
     """
     hook = (TTS_STYLE_FRASES.get(style) or style or "").strip()
-    if not hook:
+    pron = (pronunciation or "").strip()
+    if not hook and not pron:
         return base
-    budget = max_len - len(hook) - 1
+    base = (base or "").strip()
+    overhead = (len(hook) + 1 if hook else 0) + (len(pron) + 1 if pron else 0)
+    budget = max_len - overhead
     short = base
+    if budget < 0:
+        # Patologiskt fall: hook+hint ensam över stegen — spara vad som ryms.
+        return (hook + " " + pron).strip()[:max_len]
     if len(short) > budget:
         cut = short[:budget]
         sp = cut.rfind(" ")
         short = cut[:sp] if sp > 0 else cut
-    return f"{hook} {short}".strip()[:max_len]
+    return " ".join(p for p in (hook, short, pron) if p)[:max_len]
 
 # Token Plan TTS: REST-endpoint (dokumenterad för Token Plan, 2026-08-03).
 # WS-vägen (dashscope SDK) slutade fungera — se _synth_qwen_tts. REST:
@@ -3984,7 +4009,8 @@ def _campaign_usage_snapshot(user: str, campaign_id: str) -> dict:
     }
 
 
-def _synth_qwen_tts(voice: str, text: str, use_instruction: bool = True, style: str = "") -> bytes:
+def _synth_qwen_tts(voice: str, text: str, use_instruction: bool = True, style: str = "",
+                    pronunciation: str = "") -> bytes:
     """Token Plan TTS via REST (2026-08-03).
 
     WebSocket-vägen (dashscope SDK) blev trasig: servern svarade task-failed
@@ -4006,7 +4032,8 @@ def _synth_qwen_tts(voice: str, text: str, use_instruction: bool = True, style: 
 
     inp = {"text": text, "voice": voice, "format": "mp3", "sample_rate": 24000, "rate": 1.1}
     if use_instruction:
-        instr = _tts_instruction(TTS_INSTRUCTIONS.get(voice, ""), style)
+        instr = _tts_instruction(TTS_INSTRUCTIONS.get(voice, ""), style,
+                                 pronunciation=pronunciation)
         if instr:
             inp["instruction"] = instr
 
@@ -4042,7 +4069,8 @@ def _synth_qwen_tts(voice: str, text: str, use_instruction: bool = True, style: 
         raise RuntimeError(f"Qwen TTS nedladdning fel: {e}")
 
 
-def _synth_qwen_tts_retry(voice: str, text: str, style: str = "") -> bytes:
+def _synth_qwen_tts_retry(voice: str, text: str, style: str = "",
+                          pronunciation: str = "") -> bytes:
     """Qwen TTS med retry — token-plan-servern är flaky med instruction.
 
     1) Försök med instruction (styr accent/stil)
@@ -4050,7 +4078,8 @@ def _synth_qwen_tts_retry(voice: str, text: str, style: str = "") -> bytes:
     3) Vid kvarvarande fel → kasta vidare
     """
     try:
-        return _synth_qwen_tts(voice, text, use_instruction=True, style=style)
+        return _synth_qwen_tts(voice, text, use_instruction=True, style=style,
+                               pronunciation=pronunciation)
     except Exception as e:
         msg = str(e)
         if "request timeout" in msg:
@@ -4059,7 +4088,8 @@ def _synth_qwen_tts_retry(voice: str, text: str, style: str = "") -> bytes:
         raise
 
 
-def _synth_stepfun_tts(voice: str, text: str, style: str = "") -> bytes:
+def _synth_stepfun_tts(voice: str, text: str, style: str = "",
+                       pronunciation: str = "") -> bytes:
     """StepFun TTS via Step Plan (/step_plan/v1/audio/speech).
 
     OpenAI-kompatibel REST — officiella systemröster, inga snippet-
@@ -4082,7 +4112,8 @@ def _synth_stepfun_tts(voice: str, text: str, style: str = "") -> bytes:
         "response_format": "mp3",
         "speed": 1.2,  # stepaudio: 1.1 försvinner i modellbrus, 1.2 ger tydlig ~14% ökning
     }
-    inst = _tts_instruction(STEPFUN_INSTRUCTIONS.get(voice, ""), style)
+    inst = _tts_instruction(STEPFUN_INSTRUCTIONS.get(voice, ""), style,
+                            pronunciation=pronunciation)
     if inst:
         body["instruction"] = inst
     req = _ur.Request(
@@ -4163,6 +4194,13 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
     if provider not in TTS_PROVIDERS:
         raise HTTPException(400, f"Okänd TTS-leverantör: {provider}")
 
+    # ── Kampanjspråk → uttalshint (EU-vågen 2026-10) ──
+    # en/sv har tom hint → betende oförändrat; de/fr/es/it får en
+    # uttalsinstruktion (TTS_PRONUNCIATION_HINTS) som klistras ihop med
+    # stil+bas inom 128-teckensgränsen.
+    _tts_lang = (_get_lang(state) if state else "en")
+    pronunciation = TTS_PRONUNCIATION_HINTS.get(_tts_lang, "") or ""
+
     # ── TIERS (2026-09-27, ny prissättning): ALL TTS ligger bakom 10€-unlåset.
     # Free tier = ren text. Ingen tyst fallback — 403 med feature_locked så
     # frontend kan visa unlock-popup. Lifetime/admin = allt.
@@ -4196,7 +4234,7 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
     # segment som syntetiseras var för sig och sys ihop till en MP3.
     segments = _split_tts_segments(text)
 
-    cache_key = (provider, voice, style, text)
+    cache_key = (provider, voice, style, _tts_lang, text)
     cached = _tts_cache_get(cache_key)
     if cached is not None:
         logger.info("🔊 TTS cache hit: provider=%s voice=%s, %d chars, %d bytes", provider, voice, len(text), len(cached))
@@ -4213,14 +4251,18 @@ async def tts(req: TTSRequest, morkrets_token: str | None = Cookie(None)):
     logger.info("🔊 TTS synth: provider=%s model=%s, voice=%s, %d chars, %d segments", provider, _tts_model_label(provider), voice, len(text), len(segments))
     synth = _synth_qwen_tts_retry if provider == "qwen" else _synth_stepfun_tts
     _t0 = time.time()
+    # Uttalshinten bara som KEYWORD och BARA när den finns: gamla test-dubbar
+    # med signatur (voice, text, style) och en/sv-flödet (hint = '') hålls
+    # därmed exakt oförändrade.
+    _pron_kw = {"pronunciation": pronunciation} if pronunciation else {}
     try:
         if len(segments) == 1:
-            audio = await asyncio.to_thread(synth, voice, segments[0], style)
+            audio = await asyncio.to_thread(synth, voice, segments[0], style, **_pron_kw)
         else:
             # Syntetisera varje segment sekventiellt (rate limits) och sy ihop
             parts = []
             for seg in segments:
-                parts.append(await asyncio.to_thread(synth, voice, seg, style))
+                parts.append(await asyncio.to_thread(synth, voice, seg, style, **_pron_kw))
             audio = b"".join(parts)
     except HTTPException:
         raise
@@ -4314,6 +4356,9 @@ def _asr_stepfun(wav_bytes: bytes) -> str:
         "audio": {
             "data": base64.b64encode(wav_bytes).decode(),
             "input": {
+                # StepFun ASR stödjer endast en/zh — röstinput är engelskt för
+                # ALLA kampanjspråk (de/fr/es/it inkluderade): spelaren pratar
+                # EN, DM:n svarar på kampanjens språk. (Kontract A4.)
                 "transcription": {"model": ASR_MODEL, "language": "en", "enable_itn": True},
                 "format": {"type": "wav"},
             },
@@ -4467,9 +4512,14 @@ async def set_tts_settings(req: dict, morkrets_token: str | None = Cookie(None))
 async def create_campaign(body: CampaignCreateRequest | None = None, morkrets_token: str | None = Cookie(None)):
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
-    language = (body.language if body else "en") or "en"
-    # Fix 2026-09-07 (feedback): default-namn följde kampanjspråket
-    name = (body.name if body else "") or ("An Untitled Adventure" if language == "en" else "Ett namnlöst äventyr")
+    language = ((body.language if body else "en") or "en").strip().lower()
+    # API-gate (CONTRACT A4): okänt språk → 400; interno fallback för OKända
+    # koder är engelska (languages.py), men skapelse nekas hårdt.
+    if not is_supported(language):
+        raise HTTPException(400, "Unsupported campaign language")
+    # Fix 2026-09-07 (feedback): default-namn följer kampanjspråket
+    name = (body.name if body else "") or DEFAULT_CAMPAIGN_NAMES.get(
+        language, DEFAULT_CAMPAIGN_NAMES["en"])
 
     state = store.create(username, name=name, language=language)
     # Admin kan välja Guardian-modell per kampanj
@@ -4480,9 +4530,8 @@ async def create_campaign(body: CampaignCreateRequest | None = None, morkrets_to
     extraction_model = (body.extraction_model if body else "") or ""
     if extraction_model and _validate_model_id(extraction_model):
         state["meta"]["extraction_model"] = extraction_model
-    # Slumpa en äventyrsöppning (språkmedveten)
-    styles = OPENING_STYLES_EN if language == "en" else OPENING_STYLES
-    style_key, style_desc = random.choice(styles)
+    # Slumpa en äventyrsöppning (språkmedveten — get_opening_styles fallback en)
+    style_key, style_desc = random.choice(get_opening_styles(language))
     state["meta"]["opening_style"] = style_desc
     state["meta"]["opening_key"] = style_key
     state["meta"]["awakening"] = True  # DM vaknar: frågor först, sen öppnas scenen
@@ -5151,22 +5200,22 @@ def compact_state(state: dict, language: str = "sv") -> str:
 
     # Darkvision (P2) — egen rad: "Darkvision: 60 ft" / "Darkvision: Ingen".
     _dv = char.get("darkvision")
-    lines.append(f"Darkvision: {_dv}" if _dv else ("Darkvision: Ingen" if language != "en" else "Darkvision: None"))
+    lines.append(f"Darkvision: {_dv}" if _dv else ("Darkvision: None" if language != "sv" else "Darkvision: Ingen"))
 
     # Resistanser/sårbarheter (P2) — bara om icke-tomma.
     res = [r for r in (char.get("resistances", []) or []) if r]
     if res:
-        lines.append(("Resistanser: " if language != "en" else "Resistances: ") + ", ".join(res))
+        lines.append(("Resistances: " if language != "sv" else "Resistanser: ") + ", ".join(res))
 
     # Exhaustion (P2) — "Exhaustion: L2 — speed halverad" vid nivå > 0.
     exh = int(char.get("exhaustion", 0) or 0)
     if exh > 0:
         _EXH_PEN = (
-            {1: "disadvantage ability checks", 2: "speed halved", 3: "disadvantage attacks/saves",
-             4: "HP max halved", 5: "speed 0", 6: "death"}
-            if language == "en" else
             {1: "ability checks med nackdel", 2: "speed halverad", 3: "attacks/saves med nackdel",
              4: "HP max halverad", 5: "speed 0", 6: "död"}
+            if language == "sv" else
+            {1: "disadvantage ability checks", 2: "speed halved", 3: "disadvantage attacks/saves",
+             4: "HP max halved", 5: "speed 0", 6: "death"}
         )
         lines.append(f"Exhaustion: L{exh} — {_EXH_PEN.get(exh, '')}")
     else:
@@ -5179,9 +5228,9 @@ def compact_state(state: dict, language: str = "sv") -> str:
         for t in training[:10]:
             if isinstance(t, dict) and t.get("name"):
                 _dn = t.get("days_needed", 10) or 10
-                tr_parts.append(f"{t.get('name')} {t.get('days_spent', 0) or 0}/{_dn}{' dagar' if language != 'en' else ' days'}")
+                tr_parts.append(f"{t.get('name')} {t.get('days_spent', 0) or 0}/{_dn}{' dagar' if language == 'sv' else ' days'}")
         if tr_parts:
-            lines.append(("Träning: " if language != "en" else "Training: ") + ", ".join(tr_parts))
+            lines.append(("Training: " if language != "sv" else "Träning: ") + ", ".join(tr_parts))
 
     # Bakgrund / backstory
     background = char.get("background", "")
@@ -5213,7 +5262,7 @@ def compact_state(state: dict, language: str = "sv") -> str:
         )
         lines.append(f"Inventory: {inv_str}")
     else:
-        lines.append("Inventory: tomt" if language != "en" else "Inventory: empty")
+        lines.append("Inventory: empty" if language != "sv" else "Inventory: tomt")
 
     # Bärvikt (D&D 5e: max = STR × 15). W3-M2: migrerad till
     # weight_utils.compute_carry_weight() (single source of truth —
@@ -5236,7 +5285,7 @@ def compact_state(state: dict, language: str = "sv") -> str:
         )
         lines.append(f"Besvärjelser: {sp_str}")
     else:
-        lines.append("Besvärjelser: inga" if language != "en" else "Spells: none")
+        lines.append("Spells: none" if language != "sv" else "Besvärjelser: inga")
     slots = char.get("spell_slots", {})
     if isinstance(slots, dict) and (slots.get("max") or 0) > 0:
         lines.append(f"Spell slots: {slots.get('current', 0)}/{slots.get('max', 0)}")
@@ -5350,19 +5399,19 @@ def truth_block(state: dict, language: str = "sv") -> str:
     _is_dying = (not _is_dead) and int(_hp.get("current", 0) or 0) <= 0
     if _is_dead:
         parts.insert(1, (
-            "**🩸 KARAKTÄREN ÄR DÖD — 3 misslyckade dödsräddningar. Spela inte vidare som "
-            "levande; hantera döden explicit (sörjande, arv, ny karaktär).**\n"
-            if language != "en" else
             "**🩸 THE CHARACTER IS DEAD — 3 failed death saves. Do not continue as alive; "
             "handle death explicitly (mourning, legacy, new character).**\n"
+            if language != "sv" else
+            "**🩸 KARAKTÄREN ÄR DÖD — 3 misslyckade dödsräddningar. Spela inte vidare som "
+            "levande; hantera döden explicit (sörjande, arv, ny karaktär).**\n"
         ))
     elif _is_dying:
         parts.insert(1, (
-            "**🩸 KARAKTÄREN ÄR DÖENDE (0 HP) — kräv DÖDSRÄDDNINGAR varje tur; "
-            "fortsätt ej normalt spel.**\n"
-            if language != "en" else
             "**🩸 THE CHARACTER IS DYING (0 HP) — require DEATH SAVES every turn; "
             "do not continue normal play.**\n"
+            if language != "sv" else
+            "**🩸 KARAKTÄREN ÄR DÖENDE (0 HP) — kräv DÖDSRÄDDNINGAR varje tur; "
+            "fortsätt ej normalt spel.**\n"
         ))
 
     pinned = state.get("pinned_facts", [])
@@ -5405,18 +5454,7 @@ def _build_system_prompt(
     # Core-prompt + version (versionen tvingar cache-miss vid ändringar)
     # ── LANGUAGE FIRST: must come before everything else ──
     lang = _get_lang(state)
-    if lang == "en":
-        parts = [
-            "[LANGUAGE: ENGLISH] You MUST write ALL narration, dialogue, NPC speech, "
-            "descriptions, and every single word of your response in English. "
-            "This overrides any Swedish text in the instructions below — those are "
-            "internal system notes, NOT the output language.\n"
-        ]
-    else:
-        parts = [
-            "[SPRÅK: SVENSKA] Du MÅSTE skriva ALL narration, dialog, NPC-repliker, "
-            "beskrivningar och varje ord i ditt svar på svenska.\n"
-        ]
+    parts = [get_directive(lang)]
     parts.append(f"[DM-prompt {DM_PROMPT_VERSION}]\n" + DM_CORE_PROMPT)
 
     # Combat vs Narrative — injicera bara det som behövs denna tur
@@ -5477,16 +5515,7 @@ def _build_system_prompt(
     # injicering är avstängd de turerna och en ny kampanj har ingen historik
     # att söka — erbjudandet bara bjuder på ett svalt extra-anrop.
     if not (bool(state.get("meta", {}).get("awakening")) or awakening_trigger):
-        if lang == "en":
-            parts.append(
-                "\n## MEMORY SEARCH TOOL\n"
-                "If you need more context than the memories above provide (an old thread, "
-                "a promise, a NPC not mentioned recently) you may end your reply with "
-                "[SEARCH: your question]. The system will look it up and let you finish "
-                "your reply with the found context. Use it sparingly — it costs a second "
-                "call. Never show the tag in your narration."
-            )
-        else:
+        if lang == "sv":  # EU-kampanjer (de/fr/es/it) → engelsk fallback
             parts.append(
                 "\n## MINNESSÖKNINGSVERKTYG\n"
                 "Om du behöver mer kontext än minnena ovan ger (en gammal tråd, ett löfte, "
@@ -5494,6 +5523,15 @@ def _build_system_prompt(
                 "[SÖK: din fråga]. Systemet hämtar det och låter dig färdigställa svaret "
                 "med den hittade kontexten. Använd sparsamt — det kostar ett extra anrop. "
                 "Visa aldrig taggen i din berättelse."
+            )
+        else:
+            parts.append(
+                "\n## MEMORY SEARCH TOOL\n"
+                "If you need more context than the memories above provide (an old thread, "
+                "a promise, a NPC not mentioned recently) you may end your reply with "
+                "[SEARCH: your question]. The system will look it up and let you finish "
+                "your reply with the found context. Use it sparingly — it costs a second "
+                "call. Never show the tag in your narration."
             )
 
     # Förra turens mekaniska händelser — typen är kod-token (svensk),
@@ -5617,21 +5655,21 @@ def _build_system_prompt(
     hp = char.get("hp", {})
     if hp.get("current", 0) == 0:
         ds = char.get("death_saves", {}) or {}
-        if lang == "en":
-            _death_block = (
-                "\n## 💀 DEATH SAVES\n"
-                "The player is at 0 HP. You MUST request [KAST: 1d20 | DEATH SAVE] every round "
-                "until stabilised/dead. "
-                f"Successes: {ds.get('successes', 0)}, Failures: {ds.get('failures', 0)}. "
-                "3 successes = stable, 3 failures = dead. Nat 20 = wake with 1 HP."
-            )
-        else:
+        if lang == "sv":  # EU-kampanjer → engelsk fallback
             _death_block = (
                 "\n## 💀 DÖDSRÄDDNING\n"
                 "Spelaren är på 0 HP. Du MÅSTE begära [KAST: 1d20 | DÖDSRÄDDNING] varje runda "
                 "tills stabiliserad/död. "
                 f"Framgångar: {ds.get('successes', 0)}, Misslyckanden: {ds.get('failures', 0)}. "
                 "3 framgångar = stabil, 3 misslyckanden = död. Nat 20 = vaknar med 1 HP."
+            )
+        else:
+            _death_block = (
+                "\n## 💀 DEATH SAVES\n"
+                "The player is at 0 HP. You MUST request [KAST: 1d20 | DEATH SAVE] every round "
+                "until stabilised/dead. "
+                f"Successes: {ds.get('successes', 0)}, Failures: {ds.get('failures', 0)}. "
+                "3 successes = stable, 3 failures = dead. Nat 20 = wake with 1 HP."
             )
         parts.append(_death_block)
 
@@ -5644,21 +5682,21 @@ def _build_system_prompt(
     # förblir svensk på båda språk, men själva instruktionen som DM:n läser
     # ska vara på kampanjens språk.
     if player_input.strip().startswith("[Resultat:"):
-        if lang == "en":
-            parts.append(
-                "\n## 🎲 DICE RESULT RECEIVED\n"
-                "The player has rolled a die. Give the outcome directly:\n"
-                "1. Compare against DC/AC → SUCCEEDED or FAILED.\n"
-                "2. Narrate the outcome.\n"
-                "3. NEVER ask 'what do you do?' without FIRST giving the outcome."
-            )
-        else:
+        if lang == "sv":  # EU-kampanjer → engelsk fallback
             parts.append(
                 "\n## 🎲 TÄRNINGSRESULTAT MOTTAGET\n"
                 "Spelaren har slagit en tärning. Ge utfallet direkt:\n"
                 "1. Jämför mot DC/AC → LYCKADES eller MISSLYCKADES.\n"
                 "2. Berätta utfallet narrativt.\n"
                 "3. ALDRIG fråga 'vad gör du?' utan att FÖRST ge utfallet."
+            )
+        else:
+            parts.append(
+                "\n## 🎲 DICE RESULT RECEIVED\n"
+                "The player has rolled a die. Give the outcome directly:\n"
+                "1. Compare against DC/AC → SUCCEEDED or FAILED.\n"
+                "2. Narrate the outcome.\n"
+                "3. NEVER ask 'what do you do?' without FIRST giving the outcome."
             )
 
     # ── VAKNANDEPROTOKOLLET ──
@@ -5669,15 +5707,16 @@ def _build_system_prompt(
     meta = state.get("meta", {})
     if meta.get("awakening") or awakening_trigger:
         turn = turn_override if turn_override is not None else meta.get("turn_count", 0)
-        default_opening = ("Describe the surroundings atmospherically and let the player explore."
-                           if lang == "en" else
-                           "Beskriv omgivningen atmosfäriskt och låt spelaren utforska.")
+        # Default-öppning per kampanjspråk (A1: same nyckelset för alla språk;
+        # okänt språk → EN-fallback inuti get_opening_styles).
+        default_opening = dict(get_opening_styles(lang)).get(
+            "alone", dict(get_opening_styles("en"))["alone"])
         opening = meta.get("opening_style", default_opening)
         if turn <= 1:
-            parts.append(AWAKENING_ASK_EN if lang == "en" else AWAKENING_ASK)
+            parts.append(get_awakening_ask(lang))
         elif turn == 2:
-            tmpl = AWAKENING_OPEN_EN if lang == "en" else AWAKENING_OPEN
-            parts.append(tmpl.format(opening_style=opening))
+            # {opening_style}-platshållaren är verbatim i varje språkvariant.
+            parts.append(get_awakening_open(lang).format(opening_style=opening))
 
     # Per-turs regelinjicering — relevanta D&D 5e-regler för denna tur
     rules_text = inject_rules(player_input)
@@ -5690,35 +5729,25 @@ def _build_system_prompt(
     # Språkmedvetet (granskning #5, v31): rubrik + instruktion på kampanjens
     # språk — [KAST:]-taggen och notationen förblir protokoll på båda.
     if guardian_roll:
-        if lang == "en":
-            parts.append(
-                f"\n## 🛡️ GUARDIAN: ROLL RECOMMENDED\n"
-                f"The player's action requires a dice roll.\n"
-                f"Use: [KAST: {guardian_roll['notation']} | {guardian_roll['label']}]\n"
-                f"Build the scene so the roll feels natural. Give consequences for both success and failure."
-            )
-        else:
+        if lang == "sv":  # EU-kampanjer → engelsk fallback
             parts.append(
                 f"\n## 🛡️ GUARDIAN: KAST REKOMMENDERAS\n"
                 f"Spelarens handling kräver ett tärningskast.\n"
                 f"Använd: [KAST: {guardian_roll['notation']} | {guardian_roll['label']}]\n"
                 f"Bygg scenen så att kastet känns naturligt. Ge konsekvenser för både lyckat och misslyckat."
             )
+        else:
+            parts.append(
+                f"\n## 🛡️ GUARDIAN: ROLL RECOMMENDED\n"
+                f"The player's action requires a dice roll.\n"
+                f"Use: [KAST: {guardian_roll['notation']} | {guardian_roll['label']}]\n"
+                f"Build the scene so the roll feels natural. Give consequences for both success and failure."
+            )
 
     # ── SPRÅKREINFORCERING (slutet): reasoning-modeller och långa transkript
     # med svenska assistant-meddelanden kan drifta — upprepa språkdirektivet
     # SIST i systemprompten så det väger lika tungt som toppen.
-    if lang == "en":
-        parts.append(
-            "\n[LANGUAGE REMINDER] Your response THIS TURN must be written entirely in English — "
-            "every word of narration, dialogue, and description. Never switch to Swedish, no matter "
-            "what the conversation history contains."
-        )
-    else:
-        parts.append(
-            "\n[SPRÅKPÅMINNELSE] Ditt svar DENNA TUR måste skrivas helt på svenska — varenda ord av "
-            "narration, dialog och beskrivning. Byt aldrig till engelska, oavsett vad samtalshistoriken innehåller."
-        )
+    parts.append(get_reminder(lang))
 
     return "\n".join(parts)
 
@@ -5981,19 +6010,20 @@ async def _guardian_manual_correction(
     # svenska spelare fick engelska korrigeringsrapporter (och tvärtom).
     # Quest-status är kodnivå-token ("slutförd" etc. jämförs i kod) — rapporten
     # översätter bara ETIKETTERNA, aldrig token-värdena.
-    en = language == "en"
+    # EU-vågen 2026-10: bara 'sv' får svenska; de/fr/es/it → engelsk fallback.
+    not_sv = language != "sv"
     L = {
-        "manual_correction": "Manual Correction" if en else "Manuell korrigering",
-        "parse_fail": "Could not parse response. Raw:" if en else "Kunde inte tolka svaret. Rådata:",
-        "npc_removed": "NPC removed:" if en else "NPC borttagen:",
-        "npc_added": "NPC added:" if en else "NPC tillagd:",
-        "item_removed": "Item removed:" if en else "Föremål borttaget:",
-        "item_added": "Item added:" if en else "Föremål tillagt:",
-        "quest_updated": "Quest updated:" if en else "Uppdrag uppdaterat:",
-        "hp_set": "HP set to:" if en else "HP satt till:",
-        "spell_slots": "Spell slots set to:" if en else "Spell slots satt till:",
-        "day_advanced": "Day advanced:" if en else "Dag avancerad:",
-        "no_changes": "No changes were needed." if en else "Inga ändringar behövdes.",
+        "manual_correction": "Manual Correction" if not_sv else "Manuell korrigering",
+        "parse_fail": "Could not parse response. Raw:" if not_sv else "Kunde inte tolka svaret. Rådata:",
+        "npc_removed": "NPC removed:" if not_sv else "NPC borttagen:",
+        "npc_added": "NPC added:" if not_sv else "NPC tillagd:",
+        "item_removed": "Item removed:" if not_sv else "Föremål borttaget:",
+        "item_added": "Item added:" if not_sv else "Föremål tillagt:",
+        "quest_updated": "Quest updated:" if not_sv else "Uppdrag uppdaterat:",
+        "hp_set": "HP set to:" if not_sv else "HP satt till:",
+        "spell_slots": "Spell slots set to:" if not_sv else "Spell slots satt till:",
+        "day_advanced": "Day advanced:" if not_sv else "Dag avancerad:",
+        "no_changes": "No changes were needed." if not_sv else "Inga ändringar behövdes.",
     }
 
     state_ctx = _format_state_for_guardian(state, language)
@@ -6018,7 +6048,7 @@ async def _guardian_manual_correction(
         # annars svarar Lorekeeper ofta svenska i EN-kampanjer (stat ctx är SV).
         # quest_updates.new_status är kodnivå-token — ALDRIG översätta dem.
         + ("IMPORTANT: write the \"report\" field in ENGLISH. quest_updates.new_status values (aktiv/slutförd/misslyckad) are code tokens — copy them exactly, never translate.\n"
-           if language == "en" else
+           if language != "sv" else
            "VIKTIGT: skriv \"report\"-fältet på SVENSKA. quest_updates.new_status-värdena (aktiv/slutförd/misslyckad) är kodnivå-token — skriv dem exakt, översätt aldrig.\n")
         + "Apply the corrections:"
     )
@@ -6091,7 +6121,7 @@ async def _guardian_manual_correction(
             if npc["name"].lower() not in existing:
                 npcs.append({
                     "name": npc["name"],
-                    "role": npc.get("role", "unknown" if en else "okänd"),
+                    "role": npc.get("role", "unknown" if not_sv else "okänd"),
                     "relation": _normalize_relation(npc.get("relation", "neutral"), default="neutral"),
                     "notes": npc.get("notes", ""),
                     "alive": npc.get("alive", True),
@@ -6679,7 +6709,7 @@ async def _post_turn_tasks_locked(
                     "No markdown, no explanation.\n\n"
                     "Recent scene summary:\n" + s_text + "\n\nRecent events:\n" + t_text
                 )
-                if lang != "en":
+                if lang == "sv":  # EU-kampanjer → engelsk arkivarie-prompt
                     prompt = (
                         "Du är en arkivarie som håller koll på storytrådar i en D&D-kampanj. "
                         "Läs de senaste händelserna och identifiera de 3-5 AKTIVA storytrådarna "
@@ -7224,11 +7254,11 @@ async def _chat_phase_a2(
     if is_awakening:
         _lang = _get_lang(state)
         user_content = (
-            "*You open your eyes in the darkness. Someone has called upon you. "
-            "A new player sits at the table, waiting.*"
-            if _lang == "en" else
             "*Du slår upp ögonen i mörkret. Någon har kallat på dig. "
             "En ny spelare sitter vid bordet och väntar.*"
+            if _lang == "sv" else  # EU-kampanjer → engelsk kallelse
+            "*You open your eyes in the darkness. Someone has called upon you. "
+            "A new player sits at the table, waiting.*"
         )
     messages.append({"role": "user", "content": user_content})
     logger.debug("Context: %d messages → DM", len(messages))
@@ -8859,11 +8889,11 @@ def _build_chargen_seed_block(username: str, lang: str) -> str:
     ci = random.randrange(len(_CHARGEN_CULTURES))
     ni = random.randrange(len(_CHARGEN_NAMEFORMS))
     ti = random.randrange(len(_CHARGEN_TWISTS))
-    en = lang == "en"
-    cult = _CHARGEN_CULTURES[ci][1 if en else 0]
-    namef = _CHARGEN_NAMEFORMS[ni][1 if en else 0]
-    twist = _CHARGEN_TWISTS[ti][1 if en else 0]
-    if en:
+    not_sv = lang != "sv"  # EU-kampanjer → engelskt spår (fallback)
+    cult = _CHARGEN_CULTURES[ci][1 if not_sv else 0]
+    namef = _CHARGEN_NAMEFORMS[ni][1 if not_sv else 0]
+    twist = _CHARGEN_TWISTS[ti][1 if not_sv else 0]
+    if not_sv:
         head = ("## CREATIVITY TRACK (randomly drawn for THIS character — "
                 "the player's stated wishes always outrank it)")
         lines = [f"- Naming culture: {cult}",
@@ -8900,11 +8930,11 @@ async def generate_character(req: CharacterRequest, morkrets_token: str | None =
     if not state:
         raise HTTPException(404, "Ingen aktiv kampanj")
 
-    # Språkanpassning av karaktärsgenerering
+    # Språkanpassning av karaktärsgenerering (EU → EN-fallback, bara 'sv' SV)
     lang = _get_lang(state)
-    char_prompt = CHARACTER_PROMPT_EN if lang == "en" else CHARACTER_PROMPT_SV
-    user_msg = (f"Create a character: {req.prompt}" if lang == "en"
-                else f"Skapa en karaktär: {req.prompt}") + _build_chargen_seed_block(username, lang)
+    char_prompt = CHARACTER_PROMPT_SV if lang == "sv" else CHARACTER_PROMPT_EN
+    user_msg = (f"Skapa en karaktär: {req.prompt}" if lang == "sv"
+                else f"Create a character: {req.prompt}") + _build_chargen_seed_block(username, lang)
 
     messages = [
         {"role": "system", "content": char_prompt},
@@ -8956,9 +8986,9 @@ def _finalize_character_data(char_data: dict, lang: str) -> tuple[dict, list, bo
     """
     # Validera löst — se till att grundfält finns
     if not char_data.get("name"):
-        char_data["name"] = "Nameless" if lang == "en" else "Namnlös"
+        char_data["name"] = "Namnlös" if lang == "sv" else "Nameless"
     for field in ("race", "class", "alignment", "background"):
-        char_data.setdefault(field, "Unknown" if lang == "en" else "Okänd")
+        char_data.setdefault(field, "Okänd" if lang == "sv" else "Unknown")
     char_data.setdefault("level", 1)
     char_data.setdefault("abilities", {})
 
@@ -9193,7 +9223,7 @@ def _finalize_character_data(char_data: dict, lang: str) -> tuple[dict, list, bo
             if any(low in ex or ex in low for ex in _existing):
                 continue
             clean.append(_normalize_item({
-                "name": raw, "type": "Other" if lang == "en" else "Annat",
+                "name": raw, "type": "Annat" if lang == "sv" else "Other",
                 "qty": qty, "weight": 1.0, "lore": None, "equipped": False, "rarity": "normal",
             }, lang=lang))
             _existing.append(low)
@@ -9241,9 +9271,9 @@ async def generate_character_stream(req: CharacterRequest, morkrets_token: str |
         raise HTTPException(404, "Ingen aktiv kampanj")
 
     lang = _get_lang(state)
-    char_prompt = CHARACTER_PROMPT_EN if lang == "en" else CHARACTER_PROMPT_SV
-    user_msg = (f"Create a character: {req.prompt}" if lang == "en"
-                else f"Skapa en karaktär: {req.prompt}") + _build_chargen_seed_block(username, lang)
+    char_prompt = CHARACTER_PROMPT_SV if lang == "sv" else CHARACTER_PROMPT_EN
+    user_msg = (f"Skapa en karaktär: {req.prompt}" if lang == "sv"
+                else f"Create a character: {req.prompt}") + _build_chargen_seed_block(username, lang)
 
     messages = [
         {"role": "system", "content": char_prompt},
@@ -9317,9 +9347,9 @@ async def vault_generate_stream(req: VaultGenRequest, morkrets_token: str | None
         req.model_id = _clamp_player_model(req.model_id, tier=_tier_for(username))
 
     lang = "sv" if (req.lang or "en").lower().startswith("sv") else "en"
-    char_prompt = CHARACTER_PROMPT_EN if lang == "en" else CHARACTER_PROMPT_SV
-    user_msg = (f"Create a character: {req.prompt}" if lang == "en"
-                else f"Skapa en karaktär: {req.prompt}") + _build_chargen_seed_block(username, lang)
+    char_prompt = CHARACTER_PROMPT_SV if lang == "sv" else CHARACTER_PROMPT_EN
+    user_msg = (f"Skapa en karaktär: {req.prompt}" if lang == "sv"
+                else f"Create a character: {req.prompt}") + _build_chargen_seed_block(username, lang)
     messages = [
         {"role": "system", "content": char_prompt},
         {"role": "user", "content": user_msg},
@@ -9812,8 +9842,9 @@ async def update_campaign_language(req: dict, morkrets_token: str | None = Cooki
         raise HTTPException(404, "Ingen aktiv kampanj")
 
     language = str(req.get("language", "")).strip().lower()
-    if language not in ("en", "sv"):
-        raise HTTPException(400, "language måste vara 'en' eller 'sv'")
+    # API-gate (CONTRACT A4): alla stödda koder (en/sv/de/fr/es/it) OK, annat 400.
+    if not is_supported(language):
+        raise HTTPException(400, "language must be one of: en, sv, de, fr, es, it")
 
     old_lang = state.get("meta", {}).get("language", "en")
     state.setdefault("meta", {})["language"] = language
@@ -9821,8 +9852,7 @@ async def update_campaign_language(req: dict, morkrets_token: str | None = Cooki
     # Om äventyret inte startat än (awakening pågår): rulla om öppningen
     # så den matchar det nya språket.
     if state["meta"].get("awakening") and old_lang != language:
-        styles = OPENING_STYLES_EN if language == "en" else OPENING_STYLES
-        style_key, style_desc = random.choice(styles)
+        style_key, style_desc = random.choice(get_opening_styles(language))
         state["meta"]["opening_style"] = style_desc
         state["meta"]["opening_key"] = style_key
 
@@ -12077,16 +12107,18 @@ async def world_build(
     # SVENSKA prompts oavsett kampanjspråk → engelska kampanjer fick svenska
     # quests/NPC-roller/lore. Välj prompt + instruktionsanvisning per språk;
     # fallback till kampanjens språk om clienten inte skickar language.
-    lang = language if language in ("en", "sv") else _get_lang(state)
+    # EU-vågen 2026-10: bara 'sv'/tomt (kampanje-SV) ger SV-prompt — explicit
+    # client-språk (de/fr/es/it/en) behålls och går EN-grenen nedan.
+    lang = language.strip().lower() if language else _get_lang(state)
 
     merged = {"locations": 0, "npcs": 0, "lore": 0, "quests": 0, "characters": 0, "items": 0}
 
     # ── 1. Prompt → LLM extraktion ──
     if prompt.strip():
         messages = [
-            {"role": "system", "content": WORLD_BUILD_PROMPT_EN if lang == "en" else WORLD_BUILD_PROMPT},
-            {"role": "user", "content": (f"Build the world from this description:\n\n{prompt.strip()}" if lang == "en"
-                                         else f"Bygg världen utifrån denna beskrivning:\n\n{prompt.strip()}")},
+            {"role": "system", "content": WORLD_BUILD_PROMPT if lang == "sv" else WORLD_BUILD_PROMPT_EN},
+            {"role": "user", "content": (f"Bygg världen utifrån denna beskrivning:\n\n{prompt.strip()}" if lang == "sv"
+                                         else f"Build the world from this description:\n\n{prompt.strip()}")},
         ]
         try:
             raw = await _call_llm(model_id, messages, temperature=0.4, max_tokens=2048, thinking="disabled")
@@ -12123,9 +12155,9 @@ async def world_build(
             text = text[:50000] + "\n\n[... trunkerad ...]"
 
         messages = [
-            {"role": "system", "content": IMPORT_PROMPT_EN if lang == "en" else IMPORT_PROMPT},
-            {"role": "user", "content": (f"Extract data from this text:\n\n{text}" if lang == "en"
-                                         else f"Extrahera data från denna text:\n\n{text}")},
+            {"role": "system", "content": IMPORT_PROMPT if lang == "sv" else IMPORT_PROMPT_EN},
+            {"role": "user", "content": (f"Extrahera data från denna text:\n\n{text}" if lang == "sv"
+                                         else f"Extract data from this text:\n\n{text}")},
         ]
         try:
             raw = await _call_llm(model_id, messages, temperature=0.2, max_tokens=2048, thinking="disabled")
@@ -12154,7 +12186,7 @@ def _merge_world_data(state: dict, extracted: dict, merged: dict, lang: str = "s
     svenska smyge-värden för fritt textinnehåll. Quest-status är kodnivå-token
     ("aktiv"/"active" matchas båda av sökaren) — default förblir "aktiv".
     """
-    _default_role = "unknown" if lang == "en" else "okänd"
+    _default_role = "okänd" if lang == "sv" else "unknown"
     # Locations
     for loc in extracted.get("locations", []):
         if isinstance(loc, dict) and loc.get("name"):

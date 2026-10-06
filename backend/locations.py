@@ -167,30 +167,44 @@ def calculate_travel_days(from_loc: dict, to_loc: dict) -> float:
     return max(0.5, round(days, 1))  # Minst en halv dag
 
 
+# Ord-förråd för restid per språk. saknat/okänt nyckel → EN (fallback).
+#   singular/plural: ord för "day"/"days" vid heltalsformatering (days >= 2)
+#   travel/pre/sub1: formulering — se format_travel_time för EXAKT användning
+_TRAVEL_VOCAB = {
+    "sv": {"here": "Här är du", "lt1": "Mindre än en dag", "one": "1 dags resa",
+           "frac": "{d:.1f} dagars resa", "multi": "{d:.0f} dagars resa",
+           "marker": "Du är här"},
+    "de": {"here": "Sie sind hier", "lt1": "Weniger als ein Tag", "one": "1 Tag Reise",
+           "frac": "{d:.1f} Tage Reise", "multi": "{d:.0f} Tage Reise",
+           "marker": "Sie sind hier"},
+    "fr": {"here": "Vous êtes ici", "lt1": "Moins d'un jour", "one": "1 jour de voyage",
+           "frac": "{d:.1f} jours de voyage", "multi": "{d:.0f} jours de voyage",
+           "marker": "Vous êtes ici"},
+    "es": {"here": "Estás aquí", "lt1": "Menos de un día", "one": "1 día de viaje",
+           "frac": "{d:.1f} días de viaje", "multi": "{d:.0f} días de viaje",
+           "marker": "Estás aquí"},
+    "it": {"here": "Sei qui", "lt1": "Meno di un giorno", "one": "1 giorno di viaggio",
+           "frac": "{d:.1f} giorni di viaggio", "multi": "{d:.0f} giorni di viaggio",
+           "marker": "Sei qui"},
+    "en": {"here": "You are here", "lt1": "Less than a day", "one": "1 day's travel",
+           "frac": "{d:.1f} days' travel", "multi": "{d:.0f} days' travel",
+           "marker": "You are here"},
+}
+
+
 def format_travel_time(days: float, lang: str = "en") -> str:
-    """Formatera restid som läsbar text (kampanjens språk)."""
-    if lang == "sv":
-        if days < 0.5:
-            return 'Här är du'
-        elif days < 1:
-            return 'Mindre än en dag'
-        elif days == 1:
-            return '1 dags resa'
-        elif days < 2:
-            return f'{days:.1f} dagars resa'
-        else:
-            return f'{days:.0f} dagars resa'
+    """Formatera restid som läsbar text (kampanjens språk; okänt → EN)."""
+    v = _TRAVEL_VOCAB.get(lang) or _TRAVEL_VOCAB["en"]
+    if days < 0.5:
+        return v["here"]
+    elif days < 1:
+        return v["lt1"]
+    elif days == 1:
+        return v["one"]
+    elif days < 2:
+        return v["frac"].format(d=days)
     else:
-        if days < 0.5:
-            return 'You are here'
-        elif days < 1:
-            return 'Less than a day'
-        elif days == 1:
-            return "1 day's travel"
-        elif days < 2:
-            return f"{days:.1f} days' travel"
-        else:
-            return f"{days:.0f} days' travel"
+        return v["multi"].format(d=days)
 
 
 def get_locations_with_travel(state: dict, lang: str = "en") -> list[dict]:
@@ -244,7 +258,7 @@ def get_locations_with_travel(state: dict, lang: str = "en") -> list[dict]:
     for name, loc in all_locations.items():
         travel_days = calculate_travel_days(current_loc, loc)
         loc['travel_days'] = travel_days
-        loc['travel_text'] = format_travel_time(travel_days, lang) if not loc['current'] else ('Du är här' if lang == 'sv' else 'You are here')
+        loc['travel_text'] = format_travel_time(travel_days, lang) if not loc['current'] else (_TRAVEL_VOCAB.get(lang) or _TRAVEL_VOCAB["en"])["marker"]
         result.append(loc)
 
     # Sortera: nuvarande först, sedan efter restid

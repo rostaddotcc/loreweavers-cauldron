@@ -83,6 +83,15 @@ CATEGORY_LABELS_EN: dict[str, str] = {
     "relationship": "RELATIONSHIP",
 }
 
+# EU-språk: målspråk för fact-texterna i den engelska extraktionsprompten.
+# 'en' har inget entry (prompten är redan engelsk), 'sv' använder SV-prompten.
+_FACT_OUTPUT_LANG: dict[str, str] = {
+    "de": "GERMAN",
+    "fr": "FRENCH",
+    "es": "SPANISH",
+    "it": "ITALIAN",
+}
+
 
 class Fact(BaseModel):
     """Ett enskilt faktum extraherat ur ett DM-svar."""
@@ -439,13 +448,20 @@ def build_extraction_messages(
     Extracted 2026-09-30 for the 🏮 v2 relay chain: extract_facts uses this,
     so the house path is unchanged — the client-side extract hop gets the
     byte-identical prompt."""
-    # Select prompt language
-    if language == "en":
-        system_prompt = EXTRACTION_SYSTEM_PROMPT_EN
-        user_template = _EXTRACTION_USER_TEMPLATE_EN
-    else:
+    # Select prompt language: SV only for 'sv' — everything else (en/de/fr/es/it/
+    # okänt) falls back to the English prompt. EU-språk får ett extra direktiv.
+    if language == "sv":
         system_prompt = EXTRACTION_SYSTEM_PROMPT
         user_template = _EXTRACTION_USER_TEMPLATE
+    else:
+        system_prompt = EXTRACTION_SYSTEM_PROMPT_EN
+        user_template = _EXTRACTION_USER_TEMPLATE_EN
+        _target = _FACT_OUTPUT_LANG.get(language)
+        if _target:
+            system_prompt = (
+                system_prompt
+                + f"\n\n[IMPORTANT: Extract and write the fact texts in {_target}.]"
+            )
 
     user_msg = user_template.format(
         turn=turn, dm_reply=dm_reply, player_input=player_input,
@@ -513,7 +529,9 @@ async def extract_facts(
         model_call_fn: Async funktion (messages) -> str, tillhandahålls
                        av anroparen (t.ex. en wrapper kring httpx + billig modell).
         inventory_list: Formaterad lista av nuvarande inventory (för dedup-kontext).
-        language: Campaign language ('sv' or 'en') — selects prompt language.
+        language: Campaign language — 'sv' selects the Swedish prompt;
+            everything else (en/de/fr/es/it/okänt) uses the English prompt,
+            with an extra target-language directive for de/fr/es/it.
 
     Returns:
         Tuple: (lista av validerade Fact-objekt, lista av inventory-change dicts).
@@ -910,10 +928,10 @@ def format_facts_block(facts: list[Fact], language: str = "sv") -> str:
     if not facts:
         return ""
 
-    labels = CATEGORY_LABELS_EN if language == "en" else CATEGORY_LABELS
-    header = "## FACT REGISTER (authoritative — never contradict)" if language == "en" \
-        else "## FAKTAREGISTER (auktoritativt — motsäg aldrig)"
-    turn_word = "turn" if language == "en" else "tur"
+    labels = CATEGORY_LABELS if language == "sv" else CATEGORY_LABELS_EN
+    header = "## FAKTAREGISTER (auktoritativt — motsäg aldrig)" if language == "sv" \
+        else "## FACT REGISTER (authoritative — never contradict)"
+    turn_word = "tur" if language == "sv" else "turn"
 
     lines = [header]
     for fact in facts:

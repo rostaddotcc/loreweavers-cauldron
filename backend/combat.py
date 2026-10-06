@@ -878,7 +878,7 @@ def build_combat_context(state: dict, language: str = "sv") -> str:
 
     char = state.get("character", {})
     hp = char.get("hp", {})
-    en = language == "en"
+    en = language != "sv"  # EN fallback för allt utom svenska (de/fr/es/it → EN)
 
     lines = []
     if en:

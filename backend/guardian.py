@@ -271,17 +271,17 @@ def _format_char_context(state: dict, language: str = "sv") -> str:
     prof = ch.get("proficiency", 2)
     level = ch.get("level", 1)
     hp = ch.get("hp") or {}
-    cls = ch.get("class", "Unknown" if language == "en" else "Okänd")
+    cls = ch.get("class", "Okänd" if language == "sv" else "Unknown")
 
-    if language == "en":
+    if language == "sv":
         parts = [
-            f"Class: {cls}, Level: {level}, Proficiency: +{prof}",
+            f"Klass: {cls}, Nivå: {level}, Proficiency: +{prof}",
             f"Abilities: {abil_str}",
             f"HP: {hp.get('current', '?')}/{hp.get('max', '?')}",
         ]
     else:
         parts = [
-            f"Klass: {cls}, Nivå: {level}, Proficiency: +{prof}",
+            f"Class: {cls}, Level: {level}, Proficiency: +{prof}",
             f"Abilities: {abil_str}",
             f"HP: {hp.get('current', '?')}/{hp.get('max', '?')}",
         ]
@@ -290,15 +290,15 @@ def _format_char_context(state: dict, language: str = "sv") -> str:
     npcs = state.get("npcs", [])
     enemies = [n["name"] for n in npcs if n.get("relation") in ("fiende", "enemy") and n.get("alive", True)]
     if enemies:
-        if language == "en":
-            parts.append(f"⚔ COMBAT IN PROGRESS — enemies: {', '.join(enemies)}")
-        else:
+        if language == "sv":
             parts.append(f"⚔ STRID PÅGÅR — fiender: {', '.join(enemies)}")
+        else:
+            parts.append(f"⚔ COMBAT IN PROGRESS — enemies: {', '.join(enemies)}")
 
     # Latest location
     world = state.get("world", {})
     if world.get("current_location"):
-        label = "Location" if language == "en" else "Plats"
+        label = "Plats" if language == "sv" else "Location"
         parts.append(f"{label}: {world['current_location']}")
 
     # Skills (5e, P0-1): bonus = ability-mod + proficiency om proficient (●)
@@ -374,7 +374,18 @@ def build_roll_check_messages(
         return None
 
     char_ctx = _format_char_context(state, language)
-    if language == "en":
+    if language == "sv":
+        system_prompt = GUARDIAN_PRE_SYSTEM
+        context_block = ""
+        if dm_context:
+            context_block = f"## DM:s senaste berättelse\n{dm_context[:500]}\n\n"
+        user_msg = (
+            f"## Karaktär\n{char_ctx}\n\n"
+            f"{context_block}"
+            f"## Spelarens handling\n{player_msg}\n\n"
+            "Kräver detta ett tärningskast?"
+        )
+    else:
         system_prompt = GUARDIAN_PRE_SYSTEM_EN
         # Include DM context if available
         context_block = ""
@@ -386,17 +397,6 @@ def build_roll_check_messages(
             f"## Player's action\n{player_msg}\n\n"
             "Does this require a dice roll?"
         )
-    else:
-        system_prompt = GUARDIAN_PRE_SYSTEM
-        context_block = ""
-        if dm_context:
-            context_block = f"## DM:s senaste berättelse\n{dm_context[:500]}\n\n"
-        user_msg = (
-            f"## Karaktär\n{char_ctx}\n\n"
-            f"{context_block}"
-            f"## Spelarens handling\n{player_msg}\n\n"
-            "Kräver detta ett tärningskast?"
-        )
 
     return [
         {"role": "system", "content": system_prompt},
@@ -407,7 +407,7 @@ def build_roll_check_messages(
 def parse_roll_check_result(raw, language: str = "sv") -> dict | None:
     """Parse the roll-check JSON exactly as guardian_check_roll does — shared
     between the house path and the 🏮 v2 relay chain (invalid → no roll)."""
-    default_label = "Dice roll" if language == "en" else "Tärningsslag"
+    default_label = "Tärningsslag" if language == "sv" else "Dice roll"
     result = _parse_json(raw)
     if not result or not result.get("needs_roll"):
         return None
@@ -716,6 +716,22 @@ JSON-fältnamnen (damage, healing, xp, items_add osv.) är kodnivå och ändras 
 # Language instruction appended dynamically per call
 _LANG_INSTRUCTION_SV = "\n\n[VIKTIGT: Skriv alla användarvända texter (logbook, npc_notes, day_summary, quest-beskrivningar) på SVENSKA.]"
 _LANG_INSTRUCTION_EN = "\n\n[IMPORTANT: Write all user-facing text (logbook, npc_notes, day_summary, quest descriptions) in ENGLISH.]"
+# EU-språk (de/fr/es/it): engelskspråkigt direktiv — Guardian-prompten är engelsk.
+_LANG_INSTRUCTION_BY_LANG = {
+    "de": "\n\n[IMPORTANT: Write all user-facing text (logbook, npc_notes, day_summary, quest descriptions) in GERMAN — every sentence.]",
+    "fr": "\n\n[IMPORTANT: Write all user-facing text (logbook, npc_notes, day_summary, quest descriptions) in FRENCH — every sentence.]",
+    "es": "\n\n[IMPORTANT: Write all user-facing text (logbook, npc_notes, day_summary, quest descriptions) in SPANISH — every sentence.]",
+    "it": "\n\n[IMPORTANT: Write all user-facing text (logbook, npc_notes, day_summary, quest descriptions) in ITALIAN — every sentence.]",
+}
+
+
+def _lang_instruction(language: str) -> str:
+    """Pick the Guardian language instruction: sv → SV, en → EN, else BY_LANG (fallback EN)."""
+    if language == "sv":
+        return _LANG_INSTRUCTION_SV
+    if language == "en":
+        return _LANG_INSTRUCTION_EN
+    return _LANG_INSTRUCTION_BY_LANG.get(language, _LANG_INSTRUCTION_EN)
 
 
 def _format_state_for_guardian(state: dict, language: str = "sv") -> str:
@@ -733,7 +749,7 @@ def _format_state_for_guardian(state: dict, language: str = "sv") -> str:
 
     # Character
     parts.append(f"HP: {hp.get('current', '?')}/{hp.get('max', '?')}")
-    lvl_word = "level" if language == "en" else "nivå"
+    lvl_word = "nivå" if language == "sv" else "level"
     parts.append(f"XP: {xp.get('current', 0)}/{xp.get('next_level', '?')} ({lvl_word} {ch.get('level', 1)})")
 
     # Skills (5e, P0-1) — kompakt rad: alla listade skills, proficient markerade
@@ -782,13 +798,13 @@ def _format_state_for_guardian(state: dict, language: str = "sv") -> str:
 
     # Currency
     if any(cur.get(d, 0) for d in ("pp", "gp", "sp", "cp")):
-        cur_label = "Currency" if language == "en" else "Valuta"
+        cur_label = "Valuta" if language == "sv" else "Currency"
         parts.append(f"{cur_label}: {cur.get('pp',0)}pp {cur.get('gp',0)}gp {cur.get('sp',0)}sp {cur.get('cp',0)}cp")
 
     # NPCs
     if npcs:
-        dead_word = "dead" if language == "en" else "död"
-        alive_word = "alive" if language == "en" else "levande"
+        dead_word = "död" if language == "sv" else "dead"
+        alive_word = "levande" if language == "sv" else "alive"
         npc_str = "; ".join(
             f"{n['name']}({n.get('relation','?')}, {dead_word if not n.get('alive', True) else alive_word})"
             for n in npcs[:10]
@@ -807,40 +823,40 @@ def _format_state_for_guardian(state: dict, language: str = "sv") -> str:
                 line += f" [ID:{qid}]"
             q_lines.append(line)
         q_str = "; ".join(q_lines)
-        q_label = "Active quests" if language == "en" else "Aktiva uppdrag"
+        q_label = "Aktiva uppdrag" if language == "sv" else "Active quests"
         parts.append(f"{q_label}: {q_str}")
     done_statuses = ("slutförd", "completed", "misslyckad", "failed")
     done = [q for q in quests if q.get("status") in done_statuses]
     if done:
         d_str = "; ".join(q["name"] for q in done[:4])
-        d_label = "Concluded quests (do not re-add)" if language == "en" else "Avslutade uppdrag (lägg ej till igen)"
+        d_label = "Avslutade uppdrag (lägg ej till igen)" if language == "sv" else "Concluded quests (do not re-add)"
         parts.append(f"{d_label}: {d_str}")
 
     # World
     if world.get("current_location"):
-        loc_label = "Location" if language == "en" else "Plats"
+        loc_label = "Plats" if language == "sv" else "Location"
         parts.append(f"{loc_label}: {world['current_location']}")
     if world.get("day"):
-        day_label = "Day" if language == "en" else "Dag"
+        day_label = "Dag" if language == "sv" else "Day"
         parts.append(f"{day_label}: {world['day']}")
 
     # Combat (stridspågår) — ALLA deltagare inkl. spelaren med HP/AC så
     # Guardian kan extrahera rätt skada OCH justera allas HP nästa tur.
     combat = world.get("combat")
     if combat and combat.get("active"):
-        if language == "en":
-            parts.append(f"⚔ COMBAT: Round {combat.get('round', 1)}")
-        else:
+        if language == "sv":
             parts.append(f"⚔ STRID: Runda {combat.get('round', 1)}")
+        else:
+            parts.append(f"⚔ COMBAT: Round {combat.get('round', 1)}")
         # Spelaren FÖRST — Guardian måste se sin egen HP/AC/status
         ch = state.get("character", {})
         hp = ch.get("hp") or {}
         p_status = ch.get("statuses", [])
         p_status_str = f" [{', '.join(s.get('name', str(s)) for s in p_status)}]" if p_status else ""
-        if language == "en":
-            parts.append(f"  - PLAYER {ch.get('name', '?')} (HP {hp.get('current', '?')}/{hp.get('max', '?')}, AC {ch.get('ac', '?')}){p_status_str}")
-        else:
+        if language == "sv":
             parts.append(f"  - SPELAREN {ch.get('name', '?')} (HP {hp.get('current', '?')}/{hp.get('max', '?')}, AC {ch.get('ac', '?')}){p_status_str}")
+        else:
+            parts.append(f"  - PLAYER {ch.get('name', '?')} (HP {hp.get('current', '?')}/{hp.get('max', '?')}, AC {ch.get('ac', '?')}){p_status_str}")
         for e in combat.get("enemies", []):
             if e.get("alive", True):
                 status = ", ".join(s.get("name", str(s)) if isinstance(s, dict) else str(s) for s in (e.get("statuses") or [])).strip(", ")
@@ -866,7 +882,7 @@ def _format_state_for_guardian(state: dict, language: str = "sv") -> str:
         clog = combat.get("log", [])
         if clog:
             recent_log = clog[-8:]
-            log_label = "Combat log" if language == "en" else "Stridslogg"
+            log_label = "Stridslogg" if language == "sv" else "Combat log"
             parts.append(f"{log_label}:")
             for entry in recent_log:
                 actor = entry.get("actor", "system")
@@ -892,7 +908,7 @@ def build_extract_mechanics_messages(
     uses this, so the house path is unchanged — the client-side guardian hop
     gets the byte-identical prompt."""
     state_ctx = _format_state_for_guardian(state, language)
-    lang_instruction = _LANG_INSTRUCTION_EN if language == "en" else _LANG_INSTRUCTION_SV
+    lang_instruction = _lang_instruction(language)
 
     # Bygg konversationskontext (senaste 6 meddelanden)
     history_block = ""
@@ -912,21 +928,21 @@ def build_extract_mechanics_messages(
             history_label = "## Senaste konversation" if language == "sv" else "## Recent conversation"
             history_block = f"{history_label}\n" + "\n".join(lines) + "\n\n"
 
-    if language == "en":
-        user_msg = (
-            f"## Current state\n{state_ctx}\n\n"
-            f"{history_block}"
-            f"## DM reply (turn {turn})\n{dm_reply}\n\n"
-            f"## Player's action\n{player_msg}\n\n"
-            "Extract all mechanical effects and updates:"
-        )
-    else:
+    if language == "sv":
         user_msg = (
             f"## Nuvarande tillstånd\n{state_ctx}\n\n"
             f"{history_block}"
             f"## DM-svar (tur {turn})\n{dm_reply}\n\n"
             f"## Spelarens handling\n{player_msg}\n\n"
             "Extrahera alla mekaniska effekter och uppdateringar:"
+        )
+    else:
+        user_msg = (
+            f"## Current state\n{state_ctx}\n\n"
+            f"{history_block}"
+            f"## DM reply (turn {turn})\n{dm_reply}\n\n"
+            f"## Player's action\n{player_msg}\n\n"
+            "Extract all mechanical effects and updates:"
         )
 
     return [
@@ -1482,7 +1498,7 @@ def _normalize_item(raw: dict, lang: str = "sv") -> dict:
     if not isinstance(raw, dict):
         raw = {}
     name = str(raw.get("name", "") or "").strip()
-    item_type = str(raw.get("type", "") or "").strip() or ("Other" if lang == "en" else "Annat")
+    item_type = str(raw.get("type", "") or "").strip() or ("Annat" if lang == "sv" else "Other")
     category = str(raw.get("category", "") or "").strip().lower()
     if category not in ("weapon", "armor", "potion", "magic", "tool", "trinket"):
         category = _category_from_type(item_type)
@@ -3786,7 +3802,7 @@ def format_guardian_summary(
     Includes: effects, DM-tag NPCs, logbook, time, rest, day changes.
     Returns empty string only if truly nothing happened.
     """
-    en = language == "en"
+    en = language != "sv"  # EN fallback för allt utom svenska (de/fr/es/it → EN)
     lines: list[str] = []
     ch = state.get("character", {})
     hp = ch.get("hp") or {}

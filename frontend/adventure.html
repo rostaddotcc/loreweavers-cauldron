@@ -1129,7 +1129,6 @@ html{font-size:var(--fs-base)}
       <div class="campaign-list" id="campaign-list"></div>
       <div class="actions">
         <span class="hint">Choose an adventure to continue, or start a new one.</span>
-        <button class="go-btn btn-ghost" onclick="resetStepper()">🎲 New Adventure</button>
       </div>
     </div>
   </div>
@@ -1909,17 +1908,6 @@ function rmScroll(el, block) {
   if (!el) return;
   const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   setTimeout(() => el.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: block || 'start' }), 60);
-}
-
-function resetStepper() {
-  advLang = null; advArchKey = null;
-  document.querySelectorAll('.lang-card').forEach(c => c.classList.remove('selected'));
-  ['step-name', 'step-arch', 'step-model'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
-  const st = document.getElementById('step-lang');
-  if (st) st.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function pickLang(lang, noAdvance) {

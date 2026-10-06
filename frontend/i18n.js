@@ -916,7 +916,9 @@ const I18N = (() => {
    * Re-entrant: safe to call multiple times.
    */
   function init(lang) {
-    _lang = (!lang || lang === 'en') ? 'en' : 'sv';
+    // 2026-10 (EU-språk): only 'sv' selects Swedish chrome. 'de'/'fr'/'es'/'it'
+    // are CAMPAIGN-content languages — UI chrome stays English (canon).
+    _lang = (lang === 'sv') ? 'sv' : 'en';
     _initialized = true;
     document.documentElement.lang = _lang;
     if (_lang === 'en') {
@@ -1041,7 +1043,10 @@ const I18N = (() => {
     if (!window.speechSynthesis) return false;
     window.speechSynthesis.cancel();
     const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = (lang || _lang) === 'en' ? 'en-US' : 'sv-SE';
+    // Browser-locale map for campaign languages (server TTS is the main path;
+    // this is the SpeechSynthesis fallback). Unknown code → en-US.
+    const BCP47 = { en: 'en-US', sv: 'sv-SE', de: 'de-DE', fr: 'fr-FR', es: 'es-ES', it: 'it-IT' };
+    utter.lang = BCP47[lang || _lang] || 'en-US';
     utter.rate = 0.92;
     utter.pitch = 0.9;
     // Prefer a darker voice when available

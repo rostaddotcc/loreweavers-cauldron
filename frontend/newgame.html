@@ -263,6 +263,10 @@
     <select id="lang-select" class="dark-select lang-dropdown" aria-label="Campaign language" onchange="onLangChange(this.value)">
       <option value="en">🌐 English</option>
       <option value="sv">⚔️ Svenska</option>
+      <option value="de">🇩🇪 Deutsch</option>
+      <option value="fr">🇫🇷 Français</option>
+      <option value="es">🇪🇸 Español</option>
+      <option value="it">🇮🇹 Italiano</option>
     </select>
     <span class="lang-hint" id="lang-hint"></span>
   </div>
@@ -590,9 +594,15 @@ function onLangChange(lang) {
   const sel = document.getElementById('lang-select');
   if (sel) sel.value = lang;
   const hint = document.getElementById('lang-hint');
-  if (hint) hint.textContent = lang === 'en'
-    ? 'The adventure, DM and all responses in English.'
-    : 'Äventyret, DM och alla svar på svenska.';
+  // Hint written ON the campaign's target language (de/fr/es/it/sv); en = English.
+  if (hint) hint.textContent = ({
+    en: 'The adventure, DM and all responses in English.',
+    sv: 'Äventyret, DM och alla svar på svenska.',
+    de: 'Das Abenteuer, der DM und alle Antworten auf Deutsch.',
+    fr: "L'aventure, le MD et toutes les réponses en français.",
+    es: 'La aventura, el DM y todas las respuestas en español.',
+    it: "L'avventura, il DM e tutte le risposte in italiano.",
+  })[lang] || 'The adventure, DM and all responses in English.';
   // Live preview: translate the whole page + re-render templates
   if (typeof I18N !== 'undefined') {
     I18N.init(lang);

@@ -141,7 +141,8 @@
   .fw-encourage b{color:var(--gold);font-style:normal}
   .step-actions{display:flex;gap:.8rem;flex-wrap:wrap;align-items:center;margin-top:1.2rem}
   /* Språkkort — två stora val */
-  .lang-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:1.1rem}
+  .lang-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:1.1rem}
+  @media(max-width:640px){.lang-cards{grid-template-columns:repeat(2,1fr)}}
   .lang-card{position:relative;cursor:pointer;text-align:center;padding:1.9rem 1.2rem 1.5rem;background:linear-gradient(170deg,var(--stone-2),var(--stone) 60%,var(--ink));border:1px solid var(--edge);border-radius:var(--radius-md);transition:transform .3s cubic-bezier(.22,1,.36,1),box-shadow .3s,border-color .3s;overflow:hidden}
   .lang-card:hover{transform:translateY(-6px);box-shadow:0 16px 34px -12px rgba(0,0,0,.85);border-color:var(--gold);z-index:2}
   .lang-card .lc-icon{font-size:2.4rem;display:block;margin-bottom:.7rem;filter:drop-shadow(0 4px 12px rgba(0,0,0,.6))}
@@ -1162,6 +1163,30 @@ html{font-size:var(--fs-base)}
         <h3>Svenska</h3>
         <p>Äventyret, DM:n och alla svar på svenska.</p>
       </div>
+      <div class="lang-card" id="lang-de" onclick="pickLang('de')">
+        <span class="lc-check">✓</span>
+        <span class="lc-icon">🇩🇪</span>
+        <h3>Deutsch</h3>
+        <p>Das Abenteuer, der DM und alle Antworten auf Deutsch.</p>
+      </div>
+      <div class="lang-card" id="lang-fr" onclick="pickLang('fr')">
+        <span class="lc-check">✓</span>
+        <span class="lc-icon">🇫🇷</span>
+        <h3>Français</h3>
+        <p>L'aventure, le MD et toutes les réponses en français.</p>
+      </div>
+      <div class="lang-card" id="lang-es" onclick="pickLang('es')">
+        <span class="lc-check">✓</span>
+        <span class="lc-icon">🇪🇸</span>
+        <h3>Español</h3>
+        <p>La aventura, el DM y todas las respuestas en español.</p>
+      </div>
+      <div class="lang-card" id="lang-it" onclick="pickLang('it')">
+        <span class="lc-check">✓</span>
+        <span class="lc-icon">🇮🇹</span>
+        <h3>Italiano</h3>
+        <p>L'avventura, il DM e tutte le risposte in italiano.</p>
+      </div>
     </div>
   </div>
 
@@ -1917,15 +1942,15 @@ function pickLang(lang, noAdvance) {
   renderDarkSelect();
   renderAskHints();
   const btn = document.getElementById('blank-btn');
-  if (btn) btn.innerHTML = (lang === 'en')
-    ? '✦ Blank Parchment — write your own'
-    : '✦ Tomt pergament — skriv din egen';
+  if (btn) btn.innerHTML = (lang === 'sv')
+    ? '✦ Tomt pergament — skriv din egen'
+    : '✦ Blank Parchment — write your own';
   const enc = document.getElementById('fw-encourage');
-  if (enc) enc.textContent = (lang === 'en')
-    ? 'Pick an archetype below — then tweak the template to your liking: your own name, a pet, a pouch of coins, a crown. Easiest way to start.'
-    : 'Välj en arketyp nedan — och justera mallen som du vill: eget namn, ett husdjur, en pung med mynt, en krona. Enklast att börja.';
+  if (enc) enc.textContent = (lang === 'sv')
+    ? 'Välj en arketyp nedan — och justera mallen som du vill: eget namn, ett husdjur, en pung med mynt, en krona. Enklast att börja.'
+    : 'Pick an archetype below — then tweak the template to your liking: your own name, a pet, a pouch of coins, a crown. Easiest way to start.';
   const gb = document.getElementById('gen-btn');
-  if (gb) gb.innerHTML = (lang === 'en') ? '🔮 Summon Adventurer' : '🔮 Frammana Äventyrare';
+  if (gb) gb.innerHTML = (lang === 'sv') ? '🔮 Frammana Äventyrare' : '🔮 Summon Adventurer';
   const wb = document.getElementById('lang-welcome-back');
   if (wb) wb.style.display = 'none';
   if (noAdvance) return;   // återvändar-läge (audit §2.3): välj förval utan att gå vidare
@@ -1954,7 +1979,10 @@ function railGo(el) {
 }
 
 // ── Arketyper (delas med newgame.html via archetypes.js) ──
-function isEn() { return advLang === 'en'; }
+// 2026-10 (EU-språk): flödesinnehåll (mallar/arketyper/promptar) är SVENSKA
+// endast för sv-kampanjer — engelska för en OCH de/fr/es/it (kanon: målspråket
+// styr spelets innehåll via backend, inte skapandeflödet).
+function isEn() { return advLang !== 'sv'; }
 function archField(a, field) { return (isEn() && a.en && a.en[field]) ? a.en[field] : a[field]; }
 
 function renderArchetypes() {
@@ -2203,14 +2231,15 @@ function renderAskHints() {
 (function restoreOnboardingLang() {
   let saved = null;
   try { saved = localStorage.getItem('dnd_onb_lang'); } catch (_) {}
-  if (saved !== 'en' && saved !== 'sv') return;
+  if (!['en', 'sv', 'de', 'fr', 'es', 'it'].includes(saved)) return;
   pickLang(saved, true);   // markera kort + baksides-effekter, men avslöja INTE step-name
   const wb = document.getElementById('lang-welcome-back');
   if (wb) {
+    const NAMES = { en: 'English', sv: 'svenska', de: 'Deutsch', fr: 'Français', es: 'Español', it: 'Italiano' };
     wb.style.display = '';
-    wb.innerHTML = (saved === 'en')
-      ? 'Welcome back — still <b>English</b>? Pick to continue, or switch.'
-      : 'Välkommen tillbaka — fortfarande <b>svenska</b>? Välj för att fortsätta, eller byt.';
+    wb.innerHTML = (saved === 'sv')
+      ? 'Välkommen tillbaka — fortfarande <b>svenska</b>? Välj för att fortsätta, eller byt.'
+      : 'Welcome back — still <b>' + (NAMES[saved] || 'English') + '</b>? Pick to continue, or switch.';
   }
 })();
 
@@ -2986,7 +3015,8 @@ async function prepareWorldTargets() {
     if (!cid) continue;
     const turns = c.turn_count || 0;
     const name = c.name || cid;
-    const lang = c.language === 'sv' ? 'SV' : c.language === 'en' ? 'EN' : '';
+    const langLabel = { en: 'EN', sv: 'SV', de: 'DE', fr: 'FR', es: 'ES', it: 'IT' };
+    const lang = langLabel[c.language] || '';
     const opt = document.createElement('option');
     opt.value = cid;
     opt.textContent = '↳ ' + name + ' (' + turns + (isEn() ? ' turns' : ' turer') + (lang ? ', ' + lang : '') + ')' + (turns ? ' ⚠' : '');

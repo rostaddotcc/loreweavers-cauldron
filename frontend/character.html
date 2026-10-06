@@ -490,6 +490,71 @@
   #panel-character .char-class, #panel-character .char-meta{ text-shadow: 0 1px 3px #000, 0 0 14px rgba(0,0,0,.85); }
   #panel-character .vitals{ position: relative; z-index: 2; width: 100%; margin: 0.4rem 0 0; padding-right: 10px; }
   #panel-character .vitals .label, #panel-character .vitals .nums{ text-shadow: 0 1px 3px #000, 0 0 12px rgba(0,0,0,.95); }
+/* ═══════════ Tomt porträtt — ingraverad ram (2026-10) ═══════════
+   Empty state: engraved double hairline + corner ticks + hatch/vignette,
+   small-caps label + marginal hint line. Reads intentional from ~84px
+   plates up to the full hero. Copy follows the image-generation canon
+   (no "paint" in visible strings). */
+.portrait-empty{
+  position: absolute; inset: 0; z-index: 1; display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: .34rem; padding: .6rem; text-align: center; pointer-events: none;
+  background:
+    repeating-linear-gradient(45deg, rgba(var(--gold-rgb),.035) 0 2px, transparent 2px 7px),
+    radial-gradient(115% 90% at 50% 38%, transparent 34%, rgba(var(--ink-rgb),.55) 100%);
+  box-shadow: inset 0 0 0 1px rgba(var(--gold-rgb),.22), inset 0 0 0 5px rgba(var(--ink-rgb),.28),
+              inset 0 0 22px 4px rgba(var(--ink-rgb),.5);
+}
+.portrait-frame:not(.has-portrait) .portrait-empty{ display: flex; }
+.portrait-frame:not(.has-portrait) .emoji{ opacity: .16; filter: saturate(.35) blur(1px); }
+.portrait-empty::before, .portrait-empty::after{
+  content: ''; position: absolute; width: 11px; height: 11px;
+  border: 1px solid rgba(var(--gold-rgb),.4); pointer-events: none;
+}
+.portrait-empty::before{ top: 6px; left: 6px; border-width: 1px 0 0 1px; }
+.portrait-empty::after{ bottom: 6px; right: 6px; border-width: 0 1px 1px 0; }
+.portrait-empty .pe-glyph{ font-size: .9rem; line-height: 1; color: rgba(var(--gold-rgb),.55); text-shadow: 0 0 12px rgba(var(--gold-bright-rgb),.3); }
+@media (max-width: 640px){ .portrait-frame > .portrait-empty .pe-glyph{ display: none; } }
+.portrait-empty .pe-label{
+  font-family: var(--font-display); font-variant: small-caps; font-weight: 700;
+  letter-spacing: .14em; font-size: .72rem; line-height: 1.25; color: var(--bone-dim);
+  text-shadow: 0 1px 2px rgba(var(--ink-rgb),.9);
+}
+.portrait-empty .pe-hint{
+  font-family: var(--font-flavor); font-style: italic; font-size: .68rem;
+  display: block; line-height: 1.35; color: var(--bone-dim); max-width: 92%;
+}
+@media (prefers-reduced-motion: no-preference){
+  .portrait-frame:not(.has-portrait) .portrait-empty{ animation: empty-glow 5.5s ease-in-out infinite; }
+  @keyframes empty-glow{
+    0%, 100%{ box-shadow: inset 0 0 0 1px rgba(var(--gold-rgb),.20), inset 0 0 0 5px rgba(var(--ink-rgb),.28), inset 0 0 22px 4px rgba(var(--ink-rgb),.5); }
+    45%{ box-shadow: inset 0 0 0 1px rgba(var(--gold-rgb),.34), inset 0 0 0 5px rgba(var(--ink-rgb),.28), inset 0 0 26px 6px rgba(var(--ink-rgb),.5), inset 0 0 34px 2px rgba(var(--gold-rgb),.05); }
+  }
+}
+/* Hero (Codex character view): a framed plate upper-right over a subtle
+   vignette instead of the bare 8rem emoji. Frame lifts above the
+   text-safe veil (that gradient keeps guarding .char-header::after). */
+#panel-character .portrait-frame:not(.has-portrait){
+  z-index: 2;
+  background:
+    radial-gradient(85% 70% at 76% 26%, rgba(var(--gold-rgb),.04), transparent 60%),
+    radial-gradient(130% 110% at 50% 45%, transparent 42%, rgba(var(--ink-rgb),.5) 100%);
+}
+#panel-character .portrait-frame:not(.has-portrait) .emoji{ display: none; }
+#panel-character .portrait-empty{
+  top: 12px; right: 12px; left: auto; bottom: auto;
+  width: min(38%, 128px); gap: .3rem; padding: .7rem .5rem;
+  border: 1px solid rgba(var(--gold-rgb),.28);
+  box-shadow: inset 0 0 0 1px rgba(var(--gold-rgb),.28), inset 0 0 0 5px rgba(var(--ink-rgb),.24),
+              inset 0 0 18px 3px rgba(var(--ink-rgb),.55), 0 10px 24px -10px rgba(var(--ink-rgb),.9);
+}
+/* Hover-strip + hint copy swap when embedded (CSS-only, standalone untouched) */
+.portrait-frame .hint-codex{ display: none; }
+.in-codex .portrait-frame .hint{ display: none; }
+.in-codex .portrait-frame .hint-codex{ display: block; }
+.portrait-empty .pe-hint-codex{ display: none; }
+.in-codex .portrait-empty .pe-hint{ display: none; }
+.in-codex .portrait-empty .pe-hint-codex{ display: block; }
 /* ═══════════ Codex-knappar — touch-ytor (radier borttagna 2026-09-23, platt canon) ═══════════ */
 .av-btn, .rune-btn, .top-btn{ min-height:44px;display:inline-flex;align-items:center;justify-content:center;min-height:44px;display:inline-flex;align-items:center;justify-content:center;min-height:44px;display:inline-flex;align-items:center;justify-content:center;min-height:44px}
 .av-btn:hover, .rune-btn:hover{ transform: translateY(-1px) !important; box-shadow: 0 4px 16px -6px rgba(0,0,0,.55) !important; }
@@ -690,7 +755,14 @@
     <div class="char-header">
       <div class="portrait-frame" id="portrait" title="Your portrait — click to view or change it">
         <span class="emoji" id="portrait-emoji">🧙‍♀️</span>
+        <div class="portrait-empty">
+          <span class="pe-glyph">✦</span>
+          <span class="pe-label">No portrait yet</span>
+          <span class="pe-hint">Generate one from the portrait panel</span>
+          <span class="pe-hint pe-hint-codex">Generate one from the character sheet</span>
+        </div>
         <span class="hint">📷 Add image</span>
+        <span class="hint hint-codex">Open character sheet</span>
         <input type="file" id="portrait-input" accept="image/*" aria-label="Upload portrait image">
       </div>
       <div class="char-identity">
@@ -953,18 +1025,26 @@ function renderHeader() {
   // Porträtt: nytt avatar-system (state.avatars / AI-genererad eller uppladdad)
   // först — fallback till gammal base64-portrait i character.portrait.
   const avatarEntry = state.avatars && state.avatars.player;
+  const _frame = document.getElementById('portrait');
+  const _emoji = document.getElementById('portrait-emoji');
   if (avatarEntry) {
-    const frame = document.getElementById('portrait');
-    document.getElementById('portrait-emoji').style.display = 'none';
-    let img = frame.querySelector('img');
-    if (!img) { img = document.createElement('img'); frame.insertBefore(img, frame.querySelector('.hint')); }
+    _emoji.style.display = 'none';
+    _frame.classList.add('has-portrait');
+    let img = _frame.querySelector('img');
+    if (!img) { img = document.createElement('img'); _frame.insertBefore(img, _frame.querySelector('.hint')); }
     img.src = API.avatarUrl('player') + '?w=512&t=' + (avatarEntry.uploaded || Date.now());
   } else if (c.portrait) {
-    const frame = document.getElementById('portrait');
-    document.getElementById('portrait-emoji').style.display = 'none';
-    let img = frame.querySelector('img');
-    if (!img) { img = document.createElement('img'); frame.insertBefore(img, frame.querySelector('.hint')); }
+    _emoji.style.display = 'none';
+    _frame.classList.add('has-portrait');
+    let img = _frame.querySelector('img');
+    if (!img) { img = document.createElement('img'); _frame.insertBefore(img, _frame.querySelector('.hint')); }
     img.src = c.portrait;
+  } else {
+    // Tomt tillstånd: ingraverad ram (CSS) — returnera från t.ex. borttagen avatar.
+    _frame.classList.remove('has-portrait');
+    _emoji.style.display = '';
+    const stale = _frame.querySelector('img');
+    if (stale) stale.remove();  // 404:ad gammal avatar syns inte längre
   }
   const dex  = c.abilities?.DEX?.mod ?? 0;
   const wis  = c.abilities?.WIS?.mod ?? 0;
@@ -1189,7 +1269,23 @@ function toast(msg) {
 // ═══════════════════════════════════════
 const portrait = document.getElementById('portrait');
 const portraitInput = document.getElementById('portrait-input');
-portrait.addEventListener('click', () => openAvatarModal());
+// Inne i Codex-iframe: klick på porträttet (både lilla ramen och hero-
+// bakgrunden — samma #portrait) öppnar KARAKTÄRSARKS-MODALEN hos föräldern
+// (chat.html cs-overlay) i stället för den lokala avatar-modalen. Fristående
+// behåller lokal modal. Detekteringen matchar .in-codex-villkoret (sätts
+// ovan i denna script-block when embedded — och av embed.js).
+function _isCodexEmbedded() {
+  if (document.documentElement.classList.contains('in-codex')) return true;
+  try { return window.self !== window.top; } catch (_) { return true; }
+}
+if (_isCodexEmbedded()) portrait.title = 'Open character sheet';
+portrait.addEventListener('click', () => {
+  if (_isCodexEmbedded()) {
+    try { window.parent.postMessage({ type: 'codex-portrait-click', kind: 'player' }, '*'); } catch (_) {}
+    return;
+  }
+  openAvatarModal();
+});
 portraitInput.addEventListener('change', async e => {
   const file = e.target.files[0];
   if (!file) return;
@@ -1814,6 +1910,13 @@ function currentAvatar() {
 }
 
 function openAvatarModal() {
+  // Codex-iframe: den lokala modalen är inte ingången här — porträtt-klick
+  // ber föräldern öppna karaktärsarket (cs-overlay). Vakta även denna funktion
+  // så inga övriga vägar (t.ex. återöppning efter generering) dubbeluppstår.
+  if (typeof _isCodexEmbedded === 'function' && _isCodexEmbedded()) {
+    try { window.parent.postMessage({ type: 'codex-portrait-click', kind: 'player' }, '*'); } catch (_) {}
+    return;
+  }
   const has = !!currentAvatar();
   const preview = document.getElementById('avatar-modal-img');
   preview.innerHTML = has

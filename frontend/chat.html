@@ -3569,7 +3569,7 @@ function _csPaintPortrait() {
   if (!slot) return;
   slot.innerHTML = AVATARS['player']
     ? `<img src="${_avW(AVATARS['player'], 512)}&t=${Date.now()}" alt="Your adventurer's portrait">`
-    : '🎭';
+    : _avEmptyHtml('Paint your adventurer below');
   // Galleri-pilar: samma meta som avatar-modalen (player-kinden)
   const meta = AVATAR_GAL['player'] || { count: AVATARS['player'] ? 1 : 0, index: 0 };
   const show = (meta.count || 0) > 1;
@@ -3581,6 +3581,22 @@ function _csPaintPortrait() {
   if (count) count.innerHTML = show
     ? `Portrait <b>${(meta.index || 0) + 1}</b> / ${meta.count}`
     : (AVATARS['player'] ? 'Portrait' : 'No portrait yet — paint one below');
+  _sheetGhost('cs-overlay', AVATARS['player'] ? _avW(AVATARS['player'], 512) : null);
+}
+// Spökporträtt (2026-10-06, rostad): den aktiva avatar-BILDEN tonad bakom
+// HELA arket — tre bakgrundslager: ink-slinga över bilden (läsbarhet 87-95%),
+// bilden (cover, 'local' = följer scroll), ordinarie gradient. CSS-var + klass
+// → inget extraelement, ingen z-index-strid, -webkit-free.
+function _sheetGhost(overlayId, url) {
+  const box = document.querySelector('#' + overlayId + ' .cs-box');
+  if (!box) return;
+  if (url) {
+    box.style.setProperty('--ghost', 'url("' + url + (url.includes('?') ? '&' : '?') + 't=' + Date.now() + '")');
+    box.classList.add('has-ghost');
+  } else {
+    box.classList.remove('has-ghost');
+    box.style.removeProperty('--ghost');
+  }
 }
 // Bläddra mellan gamla porträtt — roterar den aktiva avataren (backend-sanning)
 async function csRotate(delta) {
@@ -3733,14 +3749,159 @@ function renderCharSheet() {
   }
   document.getElementById('cs-grid').innerHTML = secs.join('');
 }
-// Esc stänger arket (lagd till den befintliga modal-Esc-hanteraren)
+// ── 🧝 NPC-arks-modal (2026-10-06) — öppnas från Codex-iframe-porträtt ──
+// Samma mönster som cs-overlay: stort porträtt + galleri-pilar + tumremsa +
+// måla-knapp, vänster kolumn; identitet (namn/roll/relation/plats/anteckningar)
+// höger kolumn. NPCS + findNpcExtra är samma datorm som cd-drawern använder.
+// _nsKind = registernyckeln som används mot API:t (kan vara visningsform
+// 'npc:Keeper of Paths' ELLER normaliserad 'npc:keeper_of_paths').
+let _nsKind = null;      // resolved registry kind currently shown
+let _nsRawKind = null;   // kind as it arrived (re-resolve after re-ingest)
+function _nsNorm(s) { return String(s || '').toLowerCase().replace(/\s+/g, '_'); }
+function _nsResolveKind(kind) {
+  if (!kind || !kind.startsWith('npc:')) return kind;
+  if (AVATARS[kind] || AVATAR_GAL[kind]) return kind;
+  const want = _nsNorm(kind.slice(4));
+  // registret kan bära visningsform ('npc:Keeper of Paths') medan anropet
+  // kommer normaliserat (chattens onclick-nyckel) — matcha åt båda hållen.
+  for (const k of Object.keys(AVATARS).concat(Object.keys(AVATAR_GAL))) {
+    if (k.startsWith('npc:') && _nsNorm(k.slice(4)) === want) return k;
+  }
+  return kind;  // okänd i registret → empty-state, måla-knappen använder nonetheless
+}
+function openNpcSheet(kind, titleHint) {
+  if (!kind || !kind.startsWith('npc:')) return;
+  try { SFX.click(); } catch (_) {}
+  const ov = document.getElementById('ns-overlay');
+  if (!ov) return;
+  _nsRawKind = kind;
+  _nsKind = _nsResolveKind(kind);
+  renderNpcSheet(titleHint);
+  ov.classList.add('show');
+  // Fräsch state i bakgrunden så Lorekeeper-ändringar syns direkt (samma som arket)
+  API.getCampaign().then(({ campaign }) => {
+    if (!campaign) return;
+    campaignData = campaign;
+    ingestNpcs(campaign._raw && campaign._raw.npcs);
+    ingestAvatars(campaign._raw && campaign._raw.avatars);
+    refreshAvatars();
+    if (ov.classList.contains('show')) {
+      _nsKind = _nsResolveKind(_nsRawKind);
+      renderNpcSheet(titleHint);
+    }
+  }).catch(() => {});
+}
+function closeNpcSheet() {
+  const ov = document.getElementById('ns-overlay');
+  if (ov) ov.classList.remove('show');
+}
+function nsTitle(kind, npc, titleHint) {
+  if (typeof titleHint === 'string' && titleHint.trim()) return titleHint.trim();
+  const nk = kind.slice(4);
+  return (npc && npc.name) || nk.replace(/_/g, ' ');
+}
+function renderNpcSheet(titleHint) {
+  const info = document.getElementById('ns-info');
+  const nameEl = document.getElementById('ns-name');
+  if (!info || !nameEl) return;
+  const nk = (_nsKind || 'npc:').slice(4);
+  const npc = NPCS[_nsNorm(nk)] || NPCS[nk] || null;
+  const name = nsTitle(_nsKind || 'npc:', npc, titleHint);
+  const extra = findNpcExtra(name);
+  nameEl.textContent = name;
+  const role = escapeHtml(npc && npc.role || extra.role || '');
+  if (document.getElementById('ns-role')) {
+    document.getElementById('ns-role').innerHTML = role || 'Role unknown';
+  }
+  const relation = normalizeRelation(extra.relation, (npc && npc.relation) || 'okänd');
+  const relCls = relation === 'allierad' ? 'ally' : relation === 'fiende' ? 'foe' : 'neutral';
+  const relEl = document.getElementById('ns-rel');
+  if (relEl) relEl.innerHTML = `<span class="cd-rel-badge ${relCls}">${CD_REL_LABEL[relation] || 'Unknown'}</span>` +
+    (npc && npc.alive === false ? '<span class="cd-alive dead">💀 Fallen</span>' : '');
+  const world = (campaignData && campaignData.world) || (campaignData && campaignData._raw && campaignData._raw.world) || {};
+  const locEl = document.getElementById('ns-loc');
+  if (locEl) {
+    const loc = (extra && extra.location) || world.current_location || '';
+    locEl.innerHTML = loc
+      ? `<div class="ns-meta-k">🗺 Last seen at</div><div class="ns-meta-v">${escapeHtml(loc)}</div>`
+      : '';
+  }
+  const notesRaw = (extra && extra.notes) || (npc && npc.notes) || '';
+  const notes = Array.isArray(notesRaw) ? notesRaw : String(notesRaw).split('\n').filter(x => x.trim());
+  const notesEl = document.getElementById('ns-notes');
+  if (notesEl) {
+    notesEl.innerHTML = notes.length
+      ? `<div class="ns-meta-k">Notes</div><div class="cd-notes">` +
+        notes.slice(0, 8).map(x => `<p>✦ ${escapeHtml(String(x))}</p>`).join('') + `</div>`
+      : `<div class="ns-meta-k">Notes</div><div class="ns-no-notes">Nothing known about them yet.</div>`;
+  }
+  _nsPaintPortrait();
+}
+function refreshNpcSheetPortrait() {
+  const ov = document.getElementById('ns-overlay');
+  if (!ov || !ov.classList.contains('show')) return;
+  _nsPaintPortrait();
+}
+// Delad designerad empty-state (båda arken) — ingen naket-emoji i ramen.
+function _avEmptyHtml(sub) {
+  return `<div class="av-empty"><span class="av-empty-glyph">🖌</span>` +
+    `<span class="av-empty-sub">${escapeHtml(sub || 'No portrait yet')}</span></div>`;
+}
+function _nsPaintPortrait() {
+  const slot = document.getElementById('ns-portrait');
+  if (!slot) return;
+  const kind = _nsKind || 'npc:';
+  const url = AVATARS[kind];
+  slot.innerHTML = url
+    ? `<img src="${_avW(url, 512)}&t=${Date.now()}" alt="Portrait">`
+    : _avEmptyHtml('No portrait yet — paint this soul');
+  const meta = AVATAR_GAL[kind] || { count: url ? 1 : 0, index: 0 };
+  const show = (meta.count || 0) > 1;
+  const prev = document.getElementById('ns-gal-prev');
+  const next = document.getElementById('ns-gal-next');
+  const count = document.getElementById('ns-gal-count');
+  if (prev) prev.disabled = !show;
+  if (next) next.disabled = !show;
+  if (count) count.innerHTML = show
+    ? `Portrait <b>${(meta.index || 0) + 1}</b> / ${meta.count}`
+    : (url ? 'Portrait' : 'No portrait yet');
+  _sheetGhost('ns-overlay', url ? _avW(url, 512) : null);
+}
+// Rotera via samma backendväg som arket lånar (rotateAvatarImage uppdaterar
+// AVATARS/AVATAR_GAL + chatt-avatarer + båda arken via refreshAvatars).
+async function nsRotate(delta) {
+  if (!_nsKind || _galBusy) return;
+  const wasProfile = _avatarProfileMode;
+  const wasKind = AVATAR_KIND;
+  _avatarProfileMode = false;
+  AVATAR_KIND = _nsKind;
+  await rotateAvatarImage(delta);
+  _avatarProfileMode = wasProfile;
+  AVATAR_KIND = wasKind;
+  _nsPaintPortrait();
+}
+function nsPaint() {
+  if (_nsKind) pickAvatar(_nsKind);
+}
+function nsPortraitTap() {
+  const kind = _nsKind || 'npc:';
+  if (AVATARS[kind]) openMsgAvatarLightbox(kind);
+  else pickAvatar(kind);
+}
+
+// Esc-stängning — överst-ytan först: avatar-modal/lightbox/profil (9872-lyssnaren),
+// sedan NPC-arket, sedan spelararket. Samma above-modal-guard som tidigare.
+// stopImmediatePropagation: 9557-lyssnaren (codex/drawer, registrerad SENARE i
+// samma block) ska inte stänga Codex i samma tangenttryck som arket stängs —
+// en Esc per yta, uppifrån och ner.
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    const ov = document.getElementById('cs-overlay');
-    // Stäng arket ENDAST när ingen ovanpåliggande modal/lightbox är öppen
-    const above = ['avatar-overlay', 'avatar-lightbox', 'model-info-overlay', 'cp-overlay']
-      .some(id => { const el = document.getElementById(id); return el && (el.classList.contains('show') || el.classList.contains('open')); });
-    if (ov && ov.classList.contains('show') && !above) closeCharSheet();
+    const shown = id => { const el = document.getElementById(id); return el && (el.classList.contains('show') || el.classList.contains('open')); };
+    // Modalerna ovanför arken stängs av sin egen lyssnare — arken får inte
+    // stängs i samma tangenttryck.
+    if (['avatar-overlay', 'avatar-lightbox', 'model-info-overlay', 'cp-overlay'].some(shown)) return;
+    if (shown('ns-overlay')) { e.stopImmediatePropagation(); closeNpcSheet(); return; }
+    if (shown('cs-overlay')) { e.stopImmediatePropagation(); closeCharSheet(); }
   }
 });
 
@@ -3771,6 +3932,8 @@ function openCpAvatarLightbox() {
 function refreshAvatars() {
   // Karaktärsarks-modalen (2026-09-30): porträtt + galleri-pilar följer med
   refreshCharSheetPortrait();
+  // NPC-arket (2026-10-06): porträtt + tumremsa följer med rotation/generering
+  refreshNpcSheetPortrait();
   // Profil-porträtt i headern (konto-avatar — SEPARAT från äventyraren)
   const utAv = document.getElementById('user-tag-avatar');
   if (utAv) {
@@ -9714,8 +9877,8 @@ function cdMentionNpc(name) {
 
 // ═══════════════ 📖 CODEX MODAL (D1.3) — lazy iframes ═══════════════
 const CODEX_PAGES = {
-  character: { label: '🧙 Character', src: 'character.html?v=20261005a' },
-  npcs:      { label: '🧝 NPCs',      src: 'npcs.html?v=20261002a' },
+  character: { label: '🧙 Character', src: 'character.html?v=20261006a' },
+  npcs:      { label: '🧝 NPCs',      src: 'npcs.html?v=20261006a' },
   map:       { label: '🗺 Map',       src: 'platser.html?v=20260930a' },
   journal:   { label: '📜 Journal',   src: 'loggbok.html?v=20260922b' },
   facts:     { label: '📌 Facts',     src: 'facts.html?v=20260922e' },
@@ -9828,13 +9991,23 @@ function postSubTabToChar() {
 }
 
 // Karaktärsbladet rapporterar sin sub-vy — håll rad 2 i synk
+// Codex-iframe (npcs.html/character.html) begär ett fullstort ark i TOPPSIDAN:
+// {type:'codex-portrait-click', kind:'player'|'npc:<name>', title?:string}.
+// kind normaliseras här — sändaren behöver bara skicka 'npc:' + visningsnamn
+// (exakt som npcs.html gör); _nsResolveKind matchar lossat mot registret.
 window.addEventListener('message', (e) => {
   const d = e.data || {};
-  if (d && d.type === 'codex-subtab-changed' && typeof d.tab === 'string') {
+  if (!d || typeof d.type !== 'string') return;
+  if (d.type === 'codex-subtab-changed' && typeof d.tab === 'string') {
     _codexSubTab = d.tab;
     if (_codexLastTab === 'character') {
       document.querySelectorAll('#cx-spine .cx-sp[data-subtab]').forEach(b => b.classList.toggle('active', b.dataset.subtab === d.tab));
     }
+  } else if (d.type === 'codex-portrait-click') {
+    if (typeof d.kind !== 'string' || !d.kind) return;
+    const title = typeof d.title === 'string' ? d.title : undefined;
+    if (d.kind === 'player') openCharSheet();
+    else if (d.kind.startsWith('npc:')) openNpcSheet(d.kind, title);
   }
 });
 
@@ -10240,6 +10413,44 @@ document.addEventListener('keydown', e => {
   .cs-coin{ font-family: var(--font-accent,'Silkscreen',monospace); font-size: .75rem; padding: .3rem .55rem;
     border: 1px solid var(--edge); background: var(--stone-2); color: var(--bone-bright); }
   .cs-empty{ text-align: center; color: var(--bone-dim); font-style: italic; padding: 2.5rem 1rem; font-size: 1rem; }
+  /* ── Spökporträtt + designad empty-state (2026-10-06, båda arken) ──
+     .has-ghost: den AKTIVA avataren som tonad bakgrund under hela arksboxen —
+     tre lager: ink-slinga över bilden (läsbarhet ~90%), bilden (cover, 'local'
+     så den följer arket vid scroll), ordinarie gradient. rostad: ingen tum-
+     remsa — bilden må finnas i bakgrunden i stället.
+     .av-empty panel i porträftramarna — ingen naket-emoji-placeholdare.   */
+  .cs-box.has-ghost{
+    background-image: linear-gradient(rgba(var(--ink-rgb),.88), rgba(var(--ink-rgb),.93)),
+      var(--ghost),
+      linear-gradient(165deg, var(--stone-2), var(--stone) 55%, #140b06);
+    background-size: auto, cover, auto;
+    background-position: center, center 24%, center;
+    background-repeat: no-repeat;
+    background-attachment: local, local, local; }
+  .av-empty{ display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .55rem;
+    width: 100%; height: 100%; padding: .6rem; text-align: center;
+    background: repeating-linear-gradient(45deg, var(--stone-3), var(--stone-3) 10px, var(--stone-2) 10px, var(--stone-2) 20px); }
+  .av-empty-glyph{ font-size: 2.1rem; line-height: 1; }
+  .av-empty-sub{ font-family: var(--font-display,'Cinzel',serif); font-size: .58rem; font-weight: 700;
+    letter-spacing: .18em; text-transform: uppercase; color: var(--bone-dim); line-height: 1.5; }
+  /* 🧝 NPC-arket — återanvänder cs-overlay/cs-box/cs-top/cs-close/cs-head-col;
+     egna klasser bara där layouten skiljer (porträttkolumn bredare, meta-rader) */
+  .ns-portrait-col{ flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: .5rem; width: 300px; }
+  .ns-portrait{ width: 280px; height: 280px; overflow: hidden; flex-shrink: 0;
+    border: 2px solid rgba(var(--gold-rgb),.55); background: var(--stone-3);
+    display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+    box-shadow: 0 0 32px -6px rgba(var(--gold-rgb),.5);
+    transition: transform .25s, box-shadow .25s, border-color .25s; }
+  .ns-portrait:hover{ transform: scale(1.02); border-color: var(--gold-bright); box-shadow: 0 0 42px -4px rgba(var(--gold-bright-rgb),.7); }
+  .ns-portrait img{ width: 100%; height: 100%; object-fit: cover; }
+  .ns-meta-k{ font-family: var(--font-display,'Cinzel',serif); font-size: .58rem; font-weight: 700;
+    letter-spacing: .2em; text-transform: uppercase; color: var(--gold); margin: 1rem 0 .3rem; }
+  .ns-meta-v{ font-size: .9rem; color: var(--bone); line-height: 1.5; }
+  .ns-no-notes{ font-size: .86rem; color: var(--bone-dim); font-style: italic; line-height: 1.5; }
+  @media (max-width: 720px){
+    .ns-portrait-col{ width: 100%; }
+    .ns-portrait{ width: 200px; height: 200px; }
+  }
   @media (max-width: 760px){
     .cs-top{ flex-direction: column; align-items: center; }
     .cs-portrait-col{ width: 100%; }
@@ -10299,7 +10510,7 @@ document.addEventListener('keydown', e => {
           <button class="av-gal-arrow" id="cs-gal-next" onclick="csRotate(1)" title="Next portrait" aria-label="Next portrait">›</button>
         </div>
         <div class="av-gal-count" id="cs-gal-count"></div>
-        <button class="av-btn primary cs-gen" onclick="pickAvatar('player')" title="Generate a new portrait — part of the 10€ unlock, each image costs 1 turn">🎨 Generate new portrait</button>
+        <button class="av-btn primary cs-gen" onclick="pickAvatar('player')" title="Paint a new portrait — part of the 10€ unlock, each image costs 1 turn">🎨 Paint a new portrait</button>
         <button class="av-btn" onclick="closeCharSheet();openCodex('character')" title="Open the full character page in the Codex panel">📖 Full sheet in Codex</button>
         <button class="av-btn" id="cs-save-vault" onclick="saveToCookedSouls()" title="Save this adventurer to Cooked Souls — reuse them in a new adventure">⚒ Save to Cooked Souls</button>
       </div>
@@ -10311,6 +10522,34 @@ document.addEventListener('keydown', e => {
       </div>
     </div>
     <div class="cs-grid" id="cs-grid"></div>
+  </div>
+</div>
+
+<!-- 🧝 NPC-arks-modal (2026-10-06): fullstort NPC-ark i toppsidan, öppnat från
+     Codex-iframe-porträtt (codex-portrait-click). Dom-ORDNING FÖRE
+     #avatar-overlay: samma z-rung 10000, men avatar-modalen (🎨) och lightboxen
+     (11000) stackar ovanpå — samma trick som cs-overlay. -->
+<div class="cs-overlay" id="ns-overlay" onclick="if(event.target===this)closeNpcSheet()">
+  <div class="cs-box" role="dialog" aria-modal="true" aria-label="NPC sheet">
+    <button class="cs-close" onclick="closeNpcSheet()" title="Close" aria-label="Close NPC sheet">✕</button>
+    <div class="cs-top">
+      <div class="ns-portrait-col">
+        <div class="cs-gal-row">
+          <button class="av-gal-arrow" id="ns-gal-prev" onclick="nsRotate(-1)" title="Previous portrait" aria-label="Previous portrait">‹</button>
+          <div class="ns-portrait" id="ns-portrait" onclick="nsPortraitTap()" title="Click for larger view"></div>
+          <button class="av-gal-arrow" id="ns-gal-next" onclick="nsRotate(1)" title="Next portrait" aria-label="Next portrait">›</button>
+        </div>
+        <div class="av-gal-count" id="ns-gal-count"></div>
+        <button class="av-btn primary cs-gen" onclick="nsPaint()" title="Paint a new portrait — part of the 10€ unlock, each image costs 1 turn">🎨 Paint a new portrait</button>
+      </div>
+      <div class="cs-head-col" id="ns-info">
+        <div class="cs-name" id="ns-name">—</div>
+        <div class="cd-role" id="ns-role"></div>
+        <div id="ns-rel"></div>
+        <div id="ns-loc"></div>
+        <div id="ns-notes"></div>
+      </div>
+    </div>
   </div>
 </div>
 

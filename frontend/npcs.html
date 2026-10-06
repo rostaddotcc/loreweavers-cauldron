@@ -125,6 +125,60 @@
 .fchip:hover{ transform: translateY(-1px) !important; }
 /* v5-fresh: mobile touch targets */
 @media(max-width:900px){.av-btn{min-height:44px}.mi-close,.av-lb-close,.av-gal-arrow{min-width:44px;min-height:44px}#avatar-prompt-input{font-size:16px}}
+/* ═══════════ Porträtt-tomma tillstånd + Codex-klickaffär (2026-10-06) ═══════════
+   Bara existerande palett-vars — inga nya hex. All rörelse (pe-rune .flicker)
+   skyddas av snes.css global prefers-reduced-motion-guard. */
+/* Dossier-hjälten: graverad stentavla i stället för naken 7rem-emoji.
+   Selektorn (0,3,0) vinner mot .d-portrait .d-ph-emoji (0,2,0) i head-blocken. */
+.d-portrait .d-ph-emoji.portrait-empty{
+  position:relative; font-size:1rem;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:.5rem; padding:1.6rem 1rem 2.1rem; text-align:center;
+  background:
+    radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--stone-3) 80%, transparent), transparent 72%),
+    repeating-linear-gradient(115deg, transparent 0 7px, rgba(var(--gold-rgb),.022) 7px 8px),
+    linear-gradient(170deg, var(--stone), var(--ink) 80%);
+  box-shadow: inset 0 0 0 1px rgba(var(--gold-rgb),.15),
+              inset 0 0 0 6px color-mix(in srgb, var(--ink) 68%, transparent),
+              inset 0 0 0 7px rgba(var(--gold-rgb),.10),
+              inset 0 0 48px rgba(0,0,0,.55);
+  filter:none;
+}
+.portrait-empty .pe-icon{ font-size:clamp(2.2rem,9vw,3.2rem); line-height:1;
+  filter:drop-shadow(0 4px 8px rgba(0,0,0,.65)); }
+.portrait-empty .pe-rune{ position:absolute; top:.85rem; left:50%; transform:translateX(-50%);
+  font-size:.8rem; color:var(--gold); opacity:.55; }
+.portrait-empty .pe-label{ font-family:var(--font-display,'Cinzel',serif);
+  font-size:.68rem; letter-spacing:.24em; text-transform:uppercase;
+  color:var(--gold-bright); opacity:.85; }
+.portrait-empty .pe-hint{ font-style:italic; color:var(--bone-dim);
+  font-size:.84rem; max-width:24ch; line-height:1.45; }
+/* hörnmarkeringar som panel-box .corner — men tonligare, in gravering */
+.portrait-empty .pe-c{ position:absolute; width:13px; height:13px;
+  border-style:solid; border-width:0; border-color:rgba(var(--gold-rgb),.42); }
+.portrait-empty .pe-c.tl{ top:11px; left:11px; border-top-width:1px; border-left-width:1px; }
+.portrait-empty .pe-c.tr{ top:11px; right:11px; border-top-width:1px; border-right-width:1px; }
+.portrait-empty .pe-c.bl{ bottom:11px; left:11px; border-bottom-width:1px; border-left-width:1px; }
+.portrait-empty .pe-c.br{ bottom:11px; right:11px; border-bottom-width:1px; border-right-width:1px; }
+/* Hall-kortets sigil: samma tom-tillstånd i miniatyr — inner hairline-ring
+   + svag rune, utan att röra hover/scale. Emojin ligger överst (z-1). */
+.ncard .sigil .d-ph-emoji{ position:relative; z-index:1; }
+.ncard .sigil:has(.d-ph-emoji)::before{
+  content:'✦'; position:absolute; inset:6px; z-index:0; pointer-events:none;
+  border:1px solid rgba(var(--gold-rgb),.20);
+  display:flex; align-items:flex-end; justify-content:center; padding-bottom:2px;
+  font-size:.58rem; line-height:1; color:var(--gold); opacity:.5;
+  background:color-mix(in srgb, var(--ink) 34%, transparent);
+}
+/* Codex-inbäddad: pillen läser "öppna porträtt", inte "måla" (föräldern äger
+   målningen — den lokala modalen öppnas aldrig i iframen). */
+.in-codex .d-portrait::after{ content:'⤢'; }
+.in-codex .d-portrait .d-ph-hint{ transform:none; }
+/* Smal-iframe-golv (268px codex-frame): hall-kortens chip-rad MUST wrap —
+   Unknown+⚑ Quest+💀 Fallen ≈ 210px mot ~140px tillgänglig nc-main annars.
+   (d-chips/q-head wrapar redan; .nc-top .nm har redan ellipsis+min-width:0.) */
+.ncard .badges{ flex-wrap:wrap; }
+.ncard .badges .badge{ flex:0 0 auto; }
 </style>
 <script src="sprites.js?v=20260806b"></script>
 <script src="fonts.js?v=20260806b"></script>
@@ -471,6 +525,7 @@ function closeDossierMobile(){
 
 function renderDossier(n){
   const d = document.getElementById('dossier');
+  const embedded = isCodexEmbedded();
   const sec = (idx, label, body) => `
     <div class="d-sec" style="animation-delay:${.08*idx}s">
       <div class="d-label">${label}</div>${body}
@@ -482,9 +537,9 @@ function renderDossier(n){
 
   let html = `
     <div class="d-head" style="--dc:${n.color};--dg:${n.glow}">
-      <div class="d-portrait" onclick="openAvatarModal(${selectedId})" title="Portrait — click to view or generate">
+      <div class="d-portrait" onclick="portraitTap(${selectedId})" title="${embedded ? 'Portrait — click to open the full sheet' : 'Portrait — click to view or generate'}">
         ${avatarHtmlFor(n, 512)}
-        <div class="d-ph-hint">🎨 Avatar</div>
+        <div class="d-ph-hint">${embedded ? 'View portrait' : '🎨 Avatar'}</div>
       </div>
       <div>
         <div class="d-name">${esc(n.name)}</div>
@@ -572,23 +627,70 @@ function npcAvatarUrl() {
   return API.avatarUrl(key) + '?w=256&t=' + (meta.uploaded || Date.now());
 }
 // 404-skydd: state kan säga att porträttet finns även om filen är borta på disk
-// → byt ut den trasiga <img> mot emojin i stället för en tom ruta.
+// → byt ut den trasiga <img> mot empty-state (hero) / emoji (sigil), inte en tom ruta.
 window.avatarImgFallback = function (el) {
-  el.outerHTML = `<span class="d-ph-emoji">${el.dataset.icon || '🎭'}</span>`;
+  const icon = esc(el.dataset.icon || '🎭');
+  el.outerHTML = el.closest('.d-portrait')
+    ? portraitEmptyState(icon)
+    : `<span class="d-ph-emoji">${icon}</span>`;
 };
 // w är i {64,128,256,512} (backendens allowlist). Kortens sigil = 128 (2×56px),
 // dossierns hero-porträtt = 512 — tidigare fick heron samma 128 som sigilen.
 function avatarHtmlFor(n, w) {
   const key = 'npc:' + n.name;
   const meta = AVATARS[key];
-  if (!meta) return `<span class="d-ph-emoji">${n.icon}</span>`;
   const thumb = w || 128;
+  if (!meta) {
+    return thumb >= 256 ? portraitEmptyState(esc(n.icon))
+                        : `<span class="d-ph-emoji">${esc(n.icon)}</span>`;
+  }
   const url = `${API.avatarUrl(key)}?w=${thumb}&t=${meta.uploaded || Date.now()}`;
   const lazy = thumb <= 128 ? ' loading="lazy"' : '';
   return `<img src="${url}" alt="" data-icon="${esc(n.icon)}"${lazy} onerror="avatarImgFallback(this)">`;
 }
+// ── Porträttets empty-state (dossier-hjälten): en graverad platta i stället
+// för en naken jätte-emoji. Bara existerande palett-vars; rörelsen (pe-rune
+// .flicker) skyddas av snes.css global prefers-reduced-motion-guard. ──
+function portraitEmptyState(iconHtml) {
+  const hint = isCodexEmbedded() ? 'Open to paint a portrait'
+                                 : 'Paint one from this dossier';
+  return `<span class="d-ph-emoji portrait-empty">
+    <span class="pe-rune flicker" aria-hidden="true">✦</span>
+    <i class="pe-c tl" aria-hidden="true"></i><i class="pe-c tr" aria-hidden="true"></i><i class="pe-c bl" aria-hidden="true"></i><i class="pe-c br" aria-hidden="true"></i>
+    <span class="pe-icon">${iconHtml}</span>
+    <span class="pe-label">No portrait yet</span>
+    <span class="pe-hint">${hint}</span>
+  </span>`;
+}
+// ── Codex-inbäddnings-detektering + porträtt-klick-router ──
+// npcs.html inuti Chatt Codex-iframe (embed.js sätter html.in-codex): klick på
+// hjält-porträttet ÖPPNAR INTE den lokala avatar-modalen — vi ber föräldern
+// (chat.html) öppna det stora NPC-arket i stället. Fristående sida behåller
+// exakt gamla beteendet: portraitTap → openAvatarModal.
+// kind sänds med VERBATIM visningsnamn ('npc:Keeper of Paths' — mellanslag/
+// apostrofer som de är); föräldern normaliserar till npc:keeper_of_paths och
+// har designat empty-state för NPC:er utan porträtt.
+function isCodexEmbedded() {
+  return document.documentElement.classList.contains('in-codex');
+}
+function postPortraitToParent(n) {
+  if (!n) return;
+  try {
+    window.parent.postMessage({ type: 'codex-portrait-click', kind: 'npc:' + n.name, title: n.name }, '*');
+  } catch (_) { /* förälder onåbar — tyst, ingen console-brus för spelaren */ }
+}
+function portraitTap(i) {
+  const n = NPCS[i];
+  if (!n) return;
+  if (isCodexEmbedded()) postPortraitToParent(n);
+  else openAvatarModal(i);
+}
 
 function openAvatarModal(i) {
+  // Codex-inbäddad: föräldern (chat.html) äger porträtt-ynan — den lokala
+  // modalen öppnas ALDRIG (guard tämer återöppnings-vägarna efter generering
+  // / upload så att de inte dubbelöppnar). Fristående: oförändrat beteende.
+  if (isCodexEmbedded()) return;
   CURRENT_NPC = i;
   const n = NPCS[i];
   if (!n) return;

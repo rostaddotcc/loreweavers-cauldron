@@ -1517,11 +1517,18 @@ body.cli-chat .scribe-inkline i{
 /* CRT-scanlines/borttagna (grimoire v5 2026-09-22) — statusraden bär pappers-
    narv från body::before, aldrig katskärmstextur. */
 body.cli-chat .scribe-mini .scribe-inkline{ height: 8px; }
-/* Statusbaren = panelens andra header-rad (flyttad hit från ovanför input) */
+/* Statusbaren = panelens andra header-rad (flyttad hit från ovanför input).
+   WRAP-PLIKT (chup-feedback 2026-10-06 "enemies veer off right"): JS sätter
+   display:flex inline men flex-wrap stannar på nowrap-default ⇒ lång fiendelista
+   bucklar panelen (sw 736 > cw 279 mätt 2026-10-07). Originalregeln
+   .combat-status-bar i chat.html är död CSS (elementet har klass .bl-status). */
 .battle-log-pane .bl-status{
   border-top: none;
   border-bottom: 1px solid rgba(139,26,42,.25);
   background: rgba(11,8,18,.55);
+  flex-wrap: wrap;
+  row-gap: .15rem;
+  min-width: 0;
 }
 .bl-body{
   flex: 1; min-height: 0;

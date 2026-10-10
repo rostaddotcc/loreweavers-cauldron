@@ -2,8 +2,9 @@
 
 - /api/tts: free/tier1 → 403 feature_locked (ingen tyst fallback, ingen gratis TTS).
   tier2/lifetime/admin → 200 (båda providers). Varje ny syntes = 1 turn.
-- /api/me/avatar/generate: provider 'stepfun'|'wan'|'qwen' — alla låsta för
+- /api/me/avatar/generate: provider 'wan'|'qwen' — båda låsta för
   free/tier1 (403 feature_locked); tier2 → 200 + provider i svaret.
+  (StepFun step-image-edit-2 pensionerad 2026-10-10 → legacy/okänt = wan.)
 
 autouse-fixtures: users.json + kampanjdata pekas mot tmp — skyddar riktig data
 (users.json-incidenten 2026-08-04). Ingen riktig data rörs.
@@ -77,27 +78,6 @@ def _login(client, username="alice"):
 
 
 # ── httpx-mockar (samma mönster som test_tiers.py) ────────────────────────
-
-class _FakeResp:
-    status_code = 200
-
-    def json(self):
-        return {"data": [{"b64_json": "QUJD"}]}
-
-
-class _FakePost:
-    def __init__(self, *a, **k):
-        pass
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, *a):
-        return False
-
-    async def post(self, *a, **k):
-        return _FakeResp()
-
 
 # Wan 2.7-svar (DashScope-shape) + nerladdning av bild-URL:en
 class _WanResp:
@@ -224,25 +204,24 @@ def test_tts_qwen_tier2_ok(client, monkeypatch):
     assert r.content == b"RIFFqwenfake"
 
 
-# ── /api/me/avatar/generate: provider stepfun|wan|qwen ─────────────────────
+# ── /api/me/avatar/generate: provider wan|qwen ────────────────────────────
 
-def test_me_avatar_stepfun_free_403(client, monkeypatch):
-    """2026-09-27: free får 403 feature_locked för ALL bildgenerering."""
-    monkeypatch.setenv("STEPFUN_API_KEY", "test-key")
+def test_me_avatar_legacy_stepfun_normalizes_to_wan_free_403(client, monkeypatch):
+    """2026-10-10: 'stepfun' (pensionerad bildmotor) normaliseras till wan —
+    free får fortfarande 403 feature_locked, aldrig ett steganrop."""
     _seed("alice", tier="free")
     _login(client)
-    monkeypatch.setattr(main.httpx, "AsyncClient", _FakePost)
+    monkeypatch.setattr(main.httpx, "AsyncClient", _WanClient)
     r = client.post("/api/me/avatar/generate", json={"prompt": "a hooded mage", "provider": "stepfun"})
     assert r.status_code == 403, r.text
     assert r.json()["detail"]["feature_locked"] == "image"
 
 
-def test_me_avatar_stepfun_tier1_403(client, monkeypatch):
-    """2026-09-27: legacy Support (tier1) räcker INTE för bildgenerering."""
-    monkeypatch.setenv("STEPFUN_API_KEY", "test-key")
+def test_me_avatar_legacy_stepfun_tier1_403(client, monkeypatch):
+    """2026-10-10: legacy Support (tier1) räcker INTE för bildgenerering."""
     _seed("alice", tier="tier1")
     _login(client)
-    monkeypatch.setattr(main.httpx, "AsyncClient", _FakePost)
+    monkeypatch.setattr(main.httpx, "AsyncClient", _WanClient)
     r = client.post("/api/me/avatar/generate", json={"prompt": "a hooded mage", "provider": "stepfun"})
     assert r.status_code == 403, r.text
     assert r.json()["detail"]["feature_locked"] == "image"
@@ -314,13 +293,14 @@ def test_me_avatar_wan_tier2_ok(client, monkeypatch):
     assert seen["json"]["parameters"]["size"] == "2048*2048"
 
 
-def test_me_avatar_unknown_provider_defaults_stepfun(client, monkeypatch):
-    """Okänd provider → stepfun (inte 400), svaret bär provider.
-    2026-09-27: kräver 10€-unlås (tier2) — gate:n kommer först."""
-    monkeypatch.setenv("STEPFUN_API_KEY", "test-key")
+def test_me_avatar_unknown_provider_defaults_wan(client, monkeypatch):
+    """Okänd/legacy provider (t.ex. 'flux', 'stepfun') → wan (inte 400),
+    svaret bär provider. 2026-09-27: kräver 10€-unlås (tier2) — gate:n
+    kommer först. (StepFun-bildmotorn pensionerad 2026-10-10.)"""
     _seed("alice", tier="tier2")
     _login(client)
-    monkeypatch.setattr(main.httpx, "AsyncClient", _FakePost)
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
+    monkeypatch.setattr(main.httpx, "AsyncClient", _WanClient)
     r = client.post("/api/me/avatar/generate", json={"prompt": "x", "provider": "flux"})
     assert r.status_code == 200, r.text
-    assert r.json()["provider"] == "stepfun"
+    assert r.json()["provider"] == "wan"

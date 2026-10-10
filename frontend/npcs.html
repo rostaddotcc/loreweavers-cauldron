@@ -814,11 +814,11 @@ function closeAvatarModal() {
 
 // ── Bildleverantör (2026-09-27: ALL bildgenerering bakom 10€-unlåset) ──
 // Samma mönster som character.html: _npcTier laddas från /api/me och
-// låser Wan/Qwen-optionen för free/tier1. (2026-08-15)
+// låser motorerna för free/tier1. (StepFun-bildmotorn pensionerad 2026-10-10.)
 let _npcTier = null;  // free | tier1 | tier2 | lifetime (från /api/me)
 function avatarProvider() {
   const sel = document.getElementById('avatar-provider-select');
-  return (sel && sel.value) || 'stepfun';
+  return (sel && sel.value) || 'wan';
 }
 function avatarGenGate(provider) {
   // 2026-09-27 (ny prissättning): ALL bildgenerering bakom 10€-unlåset.
@@ -834,9 +834,6 @@ function avatarProviderChanged(sel) {
 function updateAvatarProviderLock() {
   const sel = document.getElementById('avatar-provider-select');
   if (!sel) return;
-  const wanOpt = sel.querySelector('option[value="wan"]');
-  const qwenOpt = sel.querySelector('option[value="qwen"]');
-  const stepOpt = sel.querySelector('option[value="stepfun"]');
   if (_npcTier === null) {
     try {
       fetch('/api/me').then(r => r.ok ? r.json() : null).then(me => {
@@ -848,7 +845,7 @@ function updateAvatarProviderLock() {
     return;
   }
   const unlocked = _npcTier === 'tier2' || _npcTier === 'lifetime';  // 10€ unlock
-  [['stepfun', 'StepFun'], ['wan', 'Wan 2.7 Pro'], ['qwen', 'Qwen Image 3 Pro']].forEach(([key, name]) => {
+  [['wan', 'Wan 2.7 Pro'], ['qwen', 'Qwen Image 3 Pro']].forEach(([key, name]) => {
     const opt = sel.querySelector(`option[value="${key}"]`);
     if (!opt) return;
     opt.disabled = !unlocked;
@@ -970,7 +967,6 @@ tick();
     <div style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
       <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
       <select id="avatar-provider-select" class="tts-select" style="flex:1;min-width:0" onchange="avatarProviderChanged(this)" title="Image provider for image generation">
-        <option value="stepfun">StepFun</option>
         <option value="wan">Wan 2.7 Pro</option>
         <option value="qwen">Qwen Image 3 Pro</option>
       </select>

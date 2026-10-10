@@ -9,7 +9,7 @@
 
 > **Live game: [dnd.rostad.cc](https://dnd.rostad.cc)** — free to play, open beta, no card and no email required to start.
 >
-> Free players get **30 turns a day** (refreshed at midnight) with **step-3.7-flash** and **step-3.5-flash-2603**. The one-time **10€ unlock** adds **+100 turns** (never expire, spent after the daily free turns) and opens every Dungeon Master, voice narration (Qwen/StepFun TTS) and image generation (StepFun / Wan 2.7 Pro / Qwen Image 3 Pro) — permanently. Donations: **1€ = 100 turns**. Full pricing on the live site.
+> Free players get **30 turns a day** (refreshed at midnight) with **step-3.7-flash** and **step-3.5-flash-2603**. The one-time **10€ unlock** adds **+100 turns** (never expire, spent after the daily free turns) and opens every Dungeon Master, voice narration (Qwen/StepFun TTS) and image generation (Wan 2.7 Pro / Qwen Image 3 Pro) — permanently. Donations: **1€ = 100 turns**. Full pricing on the live site.
 
 The Lore Weaver's Cauldron is a single-player, browser-based D&D 5e campaign engine. Instead of a rulebook and a dice tower, you get a living table: an LLM weaves the narration, plays every NPC, and reacts to whatever you type — while a dedicated *Guardian* module silently handles all the mechanics (dice, damage, XP, items, gold, quests) so the story never has to stop for bookkeeping.
 

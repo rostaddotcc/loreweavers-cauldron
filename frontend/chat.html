@@ -2048,7 +2048,7 @@ body:not(.cli-chat) .msg.dm .bubble .text > p:first-of-type::first-letter{ float
       <li><b>+100 turns</b> — never expire, used only after your 30 daily free turns run out</li>
       <li><b>All Dungeon Masters</b> — Qwen 3.8 Flash, Qwen 3.6 Flash, DeepSeek V4.1 Flash, Step 5 Preview…</li>
       <li><b>Voice narration</b> — Qwen &amp; StepFun TTS (1 turn per narration)</li>
-      <li><b>Image generation</b> — StepFun, Wan 2.7 Pro, Qwen Image 3 Pro (1 turn per image)</li>
+      <li><b>Image generation</b> — Wan 2.7 Pro, Qwen Image 3 Pro (1 turn per image)</li>
     </ul>
     <p class="cap-chip-note" id="unlock-note">One-time 10€. No subscription, no expiry on the unlock or the turns.</p>
   </div>
@@ -3146,10 +3146,9 @@ function pickAvatar(kind) {
 }
 
 // ── Spelarprofilens avatar (konto — SEPARAT från äventyraren) ──
-// Öppnar avatar-modalen i PROFILE-läge: TVÅ målningsknappar — StepFun
-// (step-image-edit-2, gratis sedan 2026-08-15) och Wan 2.7 Pro / Qwen Image
-// 3 Pro (Patron 30€) — med tier-lås (free → StepFun öppen, Wan/Qwen 🔒,
-// tier2/lifetime → alla öppna). Headerns porträtt hör hit.
+// Öppnar avatar-modalen i PROFILE-läge med Wan 2.7 Pro / Qwen Image 3 Pro
+// (10€-unlås) — med tier-lås. Headerns porträtt hör hit.
+// (StepFun step-image-edit-2 pensionerad 2026-10-10.)
 function openProfileAvatarModal() {
   _avatarProfileMode = true;
   AVATAR_KIND = 'player';
@@ -3164,7 +3163,7 @@ function openProfileAvatarModal() {
   const provRow = document.getElementById('avatar-provider-row');
   const promptInp = document.getElementById('avatar-prompt-input');
   title.textContent = '🎨 Your profile portrait';
-  desc.textContent = 'Generate YOUR profile portrait — the face at your table, separate from your adventurer. Pick an engine below: StepFun, Wan 2.7 Pro or Qwen Image 3 Pro — all part of the 10€ unlock, each image costs 1 turn.';
+  desc.textContent = 'Generate YOUR profile portrait — the face at your table, separate from your adventurer. Pick an engine below: Wan 2.7 Pro or Qwen Image 3 Pro — both part of the 10€ unlock, each image costs 1 turn.';
   const url = _hasAccountAvatar ? API.accountAvatarUrl() + '?t=' + Date.now() : null;
   preview.innerHTML = url
     ? `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover">`
@@ -3202,7 +3201,7 @@ function closeAvatarModal() {
 // Öppnas när man klickar på kontots avatar i headern (#user-tag). Visar
 // konto-stats (Role/Tier/Campaigns/Turns/Tokens/Since) från /api/me +
 // /api/me/stats, och en Portrait-sektion som återanvänder den befintliga
-// målnings-modalen (openProfileAvatarModal('stepfun'|'wan')).
+// målnings-modalen (openProfileAvatarModal('wan'|'qwen')).
 async function openChatProfileModal() {
   const ovl = document.getElementById('cp-overlay');
   if (!ovl) return;
@@ -3311,13 +3310,13 @@ async function openBillingPortal(e) {
   }
 }
 
-// ── Bildleverantör (StepFun — gratis · Wan 2.7 Pro / Qwen Image 3 Pro — Patron 30€) ──
+// ── Bildleverantör (Wan 2.7 Pro / Qwen Image 3 Pro — 10€-unlås) ──
 function avatarProvider() {
   const sel = document.getElementById('avatar-provider-select');
-  return (sel && sel.value) || 'stepfun';
+  return (sel && sel.value) || 'wan';
 }
-// TIERS: bildgenerering är gated (2026-08-15). StepFun = gratis för alla;
-// 2026-09-27: ALL bildgenerering bakom 10€-unlåset. Returnerar false + informerar.
+// TIERS: bildgenerering är gated. 2026-09-27: ALL bildgenerering bakom
+// 10€-unlåset. Returnerar false + informerar.
 function avatarGenGate(provider) {
   // 2026-09-27 (ny prissättning): ALL bildgenerering bakom 10€-unlåset.
   if (!_tierHasModels()) {
@@ -3337,30 +3336,31 @@ function avatarProviderChanged(sel) {
 function updateAvatarProviderLock() {
   const sel = document.getElementById('avatar-provider-select');
   if (!sel) return;
-  // 2026-10-01: återställ senast valda motor (delad med character.html).
+  // 2026-10-10: återställ senast valda motor (delad med character.html).
   try {
     const v = localStorage.getItem('dnd_img_engine');
-    if (v === 'wan' || v === 'qwen' || v === 'stepfun') sel.value = v;
+    if (v === 'wan' || v === 'qwen') sel.value = v;
+    else sel.value = 'wan';  // gammalt 'stepfun'-val → wan
   } catch (_) {}
   // 2026-09-27 (ny prissättning): alla bildmotorer bakom 10€-unlåset.
   const unlocked = _tierHasModels();
-  ['wan', 'qwen', 'stepfun'].forEach(key => {
+  ['wan', 'qwen'].forEach(key => {
     const opt = sel.querySelector(`option[value="${key}"]`);
     if (!opt) return;
-    const name = key === 'wan' ? 'Wan 2.7 Pro' : key === 'qwen' ? 'Qwen Image 3 Pro' : 'StepFun';
+    const name = key === 'wan' ? 'Wan 2.7 Pro' : 'Qwen Image 3 Pro';
     opt.disabled = !unlocked;
     opt.textContent = unlocked ? name : name + ' — 🔒 10€ unlock';
   });
 }
 
 // Generera AI-avatar (prompt byggs i backend från karaktär/NPC-data)
-// provider: 'stepfun' | 'wan' | 'qwen' — i profil-läget väljer knappen; annars
+// provider: 'wan' | 'qwen' — i profil-läget väljer knappen; annars
 // avatarProvider() (Engine-väljaren).
 async function generateAvatarAction(provider) {
   const status = document.getElementById('avatar-ai-status');
   // TIERS: bildgenerering är gated — informera innan API-anropet.
   if (_avatarProfileMode) {
-    const prov = (provider === 'wan' || provider === 'qwen' || provider === 'stepfun') ? provider : avatarProvider();
+    const prov = (provider === 'wan' || provider === 'qwen') ? provider : avatarProvider();
     if (!avatarGenGate(prov)) return;
     const btn = document.getElementById('avatar-ai-btn');
     status.textContent = '🎨 Generating your profile portrait… (10–30 s)';
@@ -3373,7 +3373,7 @@ async function generateAvatarAction(provider) {
         _hasAccountAvatar = true;
         refreshAvatars();
         openProfileAvatarModal();
-        status.textContent = '✨ Profile portrait generated — ' + (prov === 'wan' ? 'Wan 2.7' : prov === 'qwen' ? 'Qwen Image 3 Pro' : 'StepFun');
+        status.textContent = '✨ Profile portrait generated — ' + (prov === 'wan' ? 'Wan 2.7' : 'Qwen Image 3 Pro');
         try { SFX.levelup(); } catch (_) {}
       } else {
         status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Generation failed');
@@ -3388,7 +3388,7 @@ async function generateAvatarAction(provider) {
     return;
   }
   const kind = AVATAR_KIND;
-  const prov = (provider === 'wan' || provider === 'qwen' || provider === 'stepfun') ? provider : avatarProvider();
+  const prov = (provider === 'wan' || provider === 'qwen') ? provider : avatarProvider();
   const btn = document.getElementById('avatar-ai-btn');
   if (!avatarGenGate(prov)) return;
   status.textContent = '🎨 Generating… (10–30 s)';
@@ -3420,7 +3420,7 @@ async function generateAvatarAction(provider) {
   }
 }
 
-// Uppdatera befintlig avatar enligt aktuellt sheet/story (image-edit — behåller ansikte/stil)
+// Uppdatera befintlig avatar enligt aktuellt sheet/story (ny målning från sheet-data)
 async function updateAvatarAction() {
   const kind = AVATAR_KIND;
   if (!AVATARS[kind]) return;
@@ -4634,7 +4634,7 @@ function _tier() {
   return s;
 }
 function _tierHasModels() { const t = _tier(); return t === 'tier2' || t === 'lifetime' || isAdmin; }
-// 2026-09-27 (ny prissättning): ALL bildgenerering (även StepFun) ligger bakom
+// 2026-09-27 (ny prissättning): ALL bildgenerering ligger bakom
 // 10€-unlåset — samma gate som modellerna.
 function _tierHasAvatars() { return _tierHasModels(); }
 
@@ -10663,8 +10663,7 @@ document.addEventListener('keydown', e => {
     <div id="avatar-provider-row" style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
       <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
       <select id="avatar-provider-select" class="tts-select" style="flex:1;min-width:0" onchange="avatarProviderChanged(this)" title="Image provider for image generation">
-        <option value="stepfun" selected>StepFun</option>
-        <option value="wan">Wan 2.7 Pro</option>
+        <option value="wan" selected>Wan 2.7 Pro</option>
         <option value="qwen">Qwen Image 3 Pro</option>
       </select>
     </div>

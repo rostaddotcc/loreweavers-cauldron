@@ -50,25 +50,39 @@ def ledger_file(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
-def fake_stepfun(monkeypatch):
-    """Stubba StepFun HTTP-et — ingen riktig API-nyckel/network i tester."""
+def fake_token_plan_image(monkeypatch):
+    """Stubba Token Plan (Wan/Qwen-bild) — ingen riktig API-nyckel/network.
+    (StepFun-bildmotorn pensionerad 2026-10-10.)"""
     class _FakeResp:
         status_code = 200
         text = "{}"
 
         def json(self):
-            b64 = base64.b64encode(b"fake-item-image").decode()
-            return {"data": [{"b64_json": b64}]}
+            return {"output": {"choices": [{"message": {"content": [
+                {"type": "image", "image": "http://fake.example/img.png"}]}}]}}
+
+        def raise_for_status(self):
+            return None
 
     async def _fake_post(self, *args, **kwargs):
         return _FakeResp()
 
+    async def _fake_get(self, *args, **kwargs):
+        class _DL:
+            status_code = 200
+            content = b"fake-item-image"
+
+            def raise_for_status(self):
+                pass
+        return _DL()
+
     monkeypatch.setattr(main.httpx.AsyncClient, "post", _fake_post)
-    monkeypatch.setenv("STEPFUN_API_KEY", "test-key")
+    monkeypatch.setattr(main.httpx.AsyncClient, "get", _fake_get)
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
 
 
 @pytest.fixture
-def client(users_file, campaigns_dir, ledger_file, fake_stepfun):
+def client(users_file, campaigns_dir, ledger_file, fake_token_plan_image):
     from fastapi.testclient import TestClient
     with TestClient(main.app) as c:
         yield c
@@ -176,7 +190,7 @@ def test_generate_item_image_consumes_one_turn_and_saves_gallery(client):
 
     r = client.post(
         "/api/campaign/avatar/generate",
-        json={"provider": "stepfun", "kind": "item:worn-ritual-dagger"},
+        json={"provider": "wan", "kind": "item:worn-ritual-dagger"},
         cookies={"morkrets_token": tok},
     )
     assert r.status_code == 200, r.text
@@ -212,7 +226,7 @@ def test_generate_item_blocked_for_free_tier(client):
 
     r = client.post(
         "/api/campaign/avatar/generate",
-        json={"provider": "stepfun", "kind": "item:worn-ritual-dagger"},
+        json={"provider": "wan", "kind": "item:worn-ritual-dagger"},
         cookies={"morkrets_token": tok},
     )
     assert r.status_code == 403
@@ -230,7 +244,7 @@ def test_generate_item_rejects_bad_kind(client):
     tok = _tok()
     r = client.post(
         "/api/campaign/avatar/generate",
-        json={"provider": "stepfun", "kind": "item:../evil"},
+        json={"provider": "wan", "kind": "item:../evil"},
         cookies={"morkrets_token": tok},
     )
     assert r.status_code == 400

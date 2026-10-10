@@ -329,8 +329,8 @@ API.me().then(u => {
     sel.value = 'step-3.7-flash';
   }
 }).catch(() => {});
-// TIERS: bildgenerering är gated (2026-08-15). StepFun = gratis för alla;
-// 2026-09-27: ALL bildgenerering bakom 10€-unlåset. Returnerar false + informerar.
+// TIERS: bildgenerering är gated — ALL bildgenerering bakom 10€-unlåset
+// (2026-09-27). Returnerar false + informerar.
 function forgeAvatarGenGate(provider) {
   // 2026-09-27 (ny prissättning): ALL bildgenerering bakom 10€-unlåset.
   if (_forgeTier !== 'tier2' && _forgeTier !== 'lifetime') {
@@ -726,7 +726,7 @@ async function deleteCharacter(charId, name) {
 
 async function genAvatar(charId) {
   const btn = document.getElementById('insp-avatar-btn');
-  if (!forgeAvatarGenGate('stepfun')) return;
+  if (!forgeAvatarGenGate('wan')) return;
   if (btn) { btn.disabled = true; btn.textContent = '🎨 Generating…'; }
   try {
     const freePrompt = (document.getElementById('insp-prompt-input') || {}).value || '';

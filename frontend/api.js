@@ -375,11 +375,11 @@ const API = (() => {
       return req('/api/campaign/avatar/gallery/' + encodeURIComponent(kind) + '/' + idx, { method: 'DELETE' });
     },
 
-    // ── AI-avatar (StepFun step-image-edit-2 — prompt byggs automatiskt i backend) ──
-    // mode: "new" = full generation (ny bild), "edit" = image-edit på befintlig
+    // ── AI-avatar (Wan 2.7 / Qwen Image 3 Pro — prompt byggs automatiskt i backend) ──
+    // mode: "new" = full generation (ny bild), "edit" = sheet-uppdatering
     // prompt: valfri fri text från användaren — väger tyngst, auto-prompten blir kontext.
-    // ── AI-avatar (StepFun = gratis · Wan 2.7 / Qwen Image 3 Pro = Patron 30€, provider i body) ──
-    async generateAvatar(kind, seed, mode, prompt, provider = 'stepfun') {
+    // (StepFun-bildmotorn step-image-edit-2 pensionerad 2026-10-10; default = wan.)
+    async generateAvatar(kind, seed, mode, prompt, provider = 'wan') {
       if (MOCK) throw new Error('Not available in mock mode');
       return req('/api/campaign/avatar/generate', {
         method: 'POST',
@@ -391,7 +391,7 @@ const API = (() => {
     accountAvatarUrl() {
       return MOCK ? null : BASE + '/api/me/avatar';
     },
-    async generateAccountAvatar(prompt, seed, provider = 'stepfun') {
+    async generateAccountAvatar(prompt, seed, provider = 'wan') {
       if (MOCK) throw new Error('Not available in mock mode');
       return req('/api/me/avatar/generate', {
         method: 'POST',
@@ -599,7 +599,7 @@ const API = (() => {
                  { method: 'POST', body: JSON.stringify(body) });
     },
 
-    vaultGenerateAvatar(charId, seed, mode, prompt, provider = 'stepfun') {
+    vaultGenerateAvatar(charId, seed, mode, prompt, provider = 'wan') {
       const body = { prompt: prompt || '', provider };
       if (typeof seed === 'number') body.seed = seed;
       if (mode) body.mode = mode;

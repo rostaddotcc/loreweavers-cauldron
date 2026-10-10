@@ -1739,7 +1739,7 @@ function openItemModal(i) {
         ${descHtml}
         <div class="item-modal-paint">
           <select id="item-paint-provider" class="tts-select" style="flex:0 0 auto;max-width:130px" title="Image engine for this item" onchange="_itemEngineChanged(this)">
-            ${['stepfun', 'wan', 'qwen'].map(v => `<option value="${v}"${v === _imgEngine() ? ' selected' : ''}>${v === 'stepfun' ? 'StepFun' : v === 'wan' ? 'Wan 2.7 Pro' : 'Qwen Image 3 Pro'}</option>`).join('')}
+            ${['wan', 'qwen'].map(v => `<option value="${v}"${v === _imgEngine() ? ' selected' : ''}>${v === 'wan' ? 'Wan 2.7 Pro' : 'Qwen Image 3 Pro'}</option>`).join('')}
           </select>
           <button class="av-btn primary btn-gold" id="item-paint-btn" onclick="paintItemAction(${i})" title="Generate an item image — 1 turn, part of the 10€ unlock">🎨 ${I18N.t('Generate item image')}</button>
           <span class="item-paint-status" id="item-paint-status"></span>
@@ -1775,15 +1775,16 @@ function openItemArtLightbox(i) {
 let _itemPaintBusy = false;
 // ── Bildmotor för itemmålning (2026-10-01) ──
 // Rostad: "vi behöver en dropdown så man kan välja imagemodell — nu vet vi
-// inte vilken det är som gäller." Itemmålningen hårdkodade 'stepfun' medan
-// avatar-modalen redan hade ett Engine-val. Samma tre motorer, samma 10€-
+// inte vilken det är som gäller." Itemmålningen hårdkodade bildmotorn medan
+// avatar-modalen redan hade ett Engine-val. Samma motorer, samma 10€-
 // gate (_require_image_gen_tier skiljer inte per provider) → dropdown utan
 // låsning. Valet sparas i localStorage och delas med avatar-selecten så man
 // inte behöver välja motor två gånger.
+// (StepFun-bildmotorn pensionerad 2026-10-10 → motorerna är wan / qwen.)
 const _IMG_ENGINE_KEY = 'dnd_img_engine';
 function _imgEngine() {
   const v = (() => { try { return localStorage.getItem(_IMG_ENGINE_KEY); } catch (_) { return null; } })();
-  return (v === 'wan' || v === 'qwen' || v === 'stepfun') ? v : 'stepfun';
+  return (v === 'wan' || v === 'qwen') ? v : 'wan';
 }
 function _saveImgEngine(v) {
   try { localStorage.setItem(_IMG_ENGINE_KEY, v); } catch (_) {}
@@ -2037,7 +2038,7 @@ function closeAvatarModal() {
 let _charTier = null;  // free | tier1 | tier2 | lifetime (från /api/me)
 function avatarProvider() {
   const sel = document.getElementById('avatar-provider-select');
-  return (sel && sel.value) || 'stepfun';
+  return (sel && sel.value) || 'wan';
 }
 function avatarGenGate(provider) {
   // 2026-09-27 (ny prissättning): ALL bildgenerering bakom 10€-unlåset.
@@ -2059,15 +2060,13 @@ function avatarProviderChanged(sel) {
 function updateAvatarProviderLock() {
   const sel = document.getElementById('avatar-provider-select');
   if (!sel) return;
-  // 2026-10-01: återställ senast valda motor (delad 'dnd_img_engine'-nyckel
+  // 2026-10-10: återställ senast valda motor (delad 'dnd_img_engine'-nyckel
   // med chat.html + item-paint-dropdownen — ett val gäller överallt).
   try {
     const v = localStorage.getItem('dnd_img_engine');
-    if (v === 'wan' || v === 'qwen' || v === 'stepfun') sel.value = v;
+    if (v === 'wan' || v === 'qwen') sel.value = v;
+    else sel.value = 'wan';  // gammalt 'stepfun'-val → wan
   } catch (_) {}
-  const wanOpt = sel.querySelector('option[value="wan"]');
-  const qwenOpt = sel.querySelector('option[value="qwen"]');
-  const stepOpt = sel.querySelector('option[value="stepfun"]');
   if (_charTier === null) {
     try {
       fetch('/api/me').then(r => r.ok ? r.json() : null).then(me => {
@@ -2079,7 +2078,7 @@ function updateAvatarProviderLock() {
     return;
   }
   const unlocked = _charTier === 'tier2' || _charTier === 'lifetime';  // 10€ unlock
-  [['stepfun', 'StepFun'], ['wan', 'Wan 2.7 Pro'], ['qwen', 'Qwen Image 3 Pro']].forEach(([key, name]) => {
+  [['wan', 'Wan 2.7 Pro'], ['qwen', 'Qwen Image 3 Pro']].forEach(([key, name]) => {
     const opt = sel.querySelector(`option[value="${key}"]`);
     if (!opt) return;
     opt.disabled = !unlocked;
@@ -2191,7 +2190,7 @@ window.getState = exportState;
       <div class="av-gal-count" id="avatar-gal-count"></div>
       <div style="font-size:.62rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-top:.4rem">click to enlarge</div>
     </div>
-    <div class="mi-intro">Generate your portrait with your own words — <b>🖌️ Free prompt</b> generates ONLY what you describe. Image generation is part of the one-time <b>10€ unlock</b> — each image costs 1 turn. Engines: StepFun, Wan 2.7 Pro, Qwen Image 3 Pro. Or upload your own image.</div>
+    <div class="mi-intro">Generate your portrait with your own words — <b>🖌️ Free prompt</b> generates ONLY what you describe. Image generation is part of the one-time <b>10€ unlock</b> — each image costs 1 turn. Engines: Wan 2.7 Pro, Qwen Image 3 Pro. Or upload your own image.</div>
     <div style="margin-top:.7rem">
       <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">✍️ YOUR OWN WORDS</div>
       <textarea id="avatar-prompt-input" placeholder="Free prompt: describe exactly what you want to see — e.g. 'hooded figure, lantern light, rain'." style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:var(--radius-sm);resize:vertical"></textarea>
@@ -2200,7 +2199,6 @@ window.getState = exportState;
     <div style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
       <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
       <select id="avatar-provider-select" class="tts-select" style="flex:1;min-width:0" onchange="avatarProviderChanged(this)" title="Image provider for image generation">
-        <option value="stepfun">StepFun</option>
         <option value="wan">Wan 2.7 Pro</option>
         <option value="qwen">Qwen Image 3 Pro</option>
       </select>

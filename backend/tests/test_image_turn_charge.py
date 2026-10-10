@@ -1,13 +1,17 @@
-"""AI-bildgenerering kostar 1 turn — oavsett provider (2026-08-08).
+"""AI-bildgenerering kostar 1 turn — oavsett motor (2026-08-08).
 
 2026-09-27 (ny prissättning): ALL bildgenerering ligger dessutom bakom
 10€-unlåset — testerna seedar därför features.all_models (unlock10-form).
-Varje bild drar exakt en turn (_gate_turn_quota + _consume_turn).
+Varje bild drar exakt en turn (_consume_wan_quota → _gate_turn_quota +
+_consume_turn).
+
+2026-10-10: StepFun step-image-edit-2 är pensionerad (leverantören serverar
+inte bild-API:n) — motorerna är Wan 2.7 / Qwen Image 3 Pro (Token Plan).
+Steget normaliseras till wan i alla tre avatar-endpoints.
 
 autouse-fixtures: ALLA tester pekar users.json + kampanjer mot tmp —
 ALDRIG riktig data.
 """
-import base64
 import sys
 from pathlib import Path
 
@@ -55,32 +59,45 @@ def ledger_file(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
-def fake_stepfun(monkeypatch):
-    """Stubba StepFun HTTP-et — ingen riktig API-nyckel/network i tester.
+def fake_token_plan_image(monkeypatch):
+    """Stubba Token Plan (Wan/Qwen-bild)— ingen riktig API-nyckel/network.
 
-    Endpointen kör `async with httpx.AsyncClient(timeout=150) as client:
-    resp = await client.post(...)` och läser resp.status_code samt
-    resp.json()["data"][0]["b64_json"]. Patchar klassmetoden så både
-    vault/me/campaign-grenarna träffas utan nätverk.
+    _token_plan_image kör POST mot DashScope-endpointen (output-choices-
+    shape med bild-URL) och sedan en GET för att hämta bilden. Patchar
+    httpx.AsyncClient klassmetoderna så alla tre avatar-grenarna
+    (campaign/vault/me) träffas utan nätverk.
     """
     class _FakeResp:
         status_code = 200
         text = "{}"
 
         def json(self):
-            b64 = base64.b64encode(b"fake-image-bytes").decode()
-            return {"data": [{"b64_json": b64}]}
+            return {"output": {"choices": [{"message": {"content": [
+                {"type": "image", "image": "http://fake.example/img.png"}]}}]}}
+
+        def raise_for_status(self):
+            return None
 
     async def _fake_post(self, *args, **kwargs):
         return _FakeResp()
 
+    async def _fake_get(self, *args, **kwargs):
+        class _DL:
+            status_code = 200
+            content = b"fake-image-bytes"
+
+            def raise_for_status(self):
+                pass
+        return _DL()
+
     monkeypatch.setattr(main.httpx.AsyncClient, "post", _fake_post)
-    # Endpointen kräver STEPFUN_API_KEY (os.getenv) innan HTTP-anropet
-    monkeypatch.setenv("STEPFUN_API_KEY", "test-key")
+    monkeypatch.setattr(main.httpx.AsyncClient, "get", _fake_get)
+    # Endpointen kräver DASHSCOPE_API_KEY (os.getenv) innan HTTP-anropet
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
 
 
 @pytest.fixture
-def client(users_file, campaigns_dir, ledger_file, fake_stepfun):
+def client(users_file, campaigns_dir, ledger_file, fake_token_plan_image):
     from fastapi.testclient import TestClient
     with TestClient(main.app) as c:
         yield c
@@ -115,15 +132,15 @@ def _seed_campaign(username):
     main.store.create(username, name="Test Campaign", language="en")
 
 
-def test_stepfun_avatar_consumes_one_turn_per_image(client):
-    """Varje StepFun-bild drar exakt 1 turn (var gratis före 2026-08-08)."""
+def test_wan_avatar_consumes_one_turn_per_image(client):
+    """Varje wan-bild drar exakt 1 turn (dubbelgrind: dagskvot + turn)."""
     _seed("alice")
     _seed_campaign("alice")
     tok = _tok()
 
     r1 = client.post(
         "/api/campaign/avatar/generate",
-        json={"provider": "stepfun", "kind": "player"},
+        json={"provider": "wan", "kind": "player"},
         cookies={"morkrets_token": tok},
     )
     assert r1.status_code == 200, r1.text
@@ -133,7 +150,7 @@ def test_stepfun_avatar_consumes_one_turn_per_image(client):
     # Andra bilden → 2 turns totalt (fortfarande inom 50/day-cappen)
     r2 = client.post(
         "/api/campaign/avatar/generate",
-        json={"provider": "stepfun", "kind": "player"},
+        json={"provider": "wan", "kind": "player"},
         cookies={"morkrets_token": tok},
     )
     assert r2.status_code == 200, r2.text
@@ -141,7 +158,24 @@ def test_stepfun_avatar_consumes_one_turn_per_image(client):
     assert users["alice"]["turns_used"] == 2
 
 
-def test_stepfun_avatar_gate_blocks_when_turns_exhausted(client):
+def test_legacy_stepfun_provider_normalizes_to_wan(client):
+    """2026-10-10: 'stepfun' (pensionerad bildmotor) → wan, ingen StepFun-
+    HTTP-väg finns kvar. Anropet drar fortfarande exakt 1 turn."""
+    _seed("alice")
+    _seed_campaign("alice")
+
+    r = client.post(
+        "/api/campaign/avatar/generate",
+        json={"provider": "stepfun", "kind": "player"},
+        cookies={"morkrets_token": _tok()},
+    )
+    assert r.status_code == 200, r.text
+    users = auth.load_users()
+    assert users["alice"]["turns_used"] == 1
+    assert users["alice"]["wan_used_today"] == 1
+
+
+def test_avatar_gate_blocks_when_turns_exhausted(client):
     """0 turns kvar → 403 cap_reached (inte en gratisbild)."""
     _seed("alice")
     _seed_campaign("alice")
@@ -154,7 +188,7 @@ def test_stepfun_avatar_gate_blocks_when_turns_exhausted(client):
 
     r = client.post(
         "/api/campaign/avatar/generate",
-        json={"provider": "stepfun", "kind": "player"},
+        json={"provider": "wan", "kind": "player"},
         cookies={"morkrets_token": _tok()},
     )
     assert r.status_code == 403

@@ -233,7 +233,9 @@ from logbook import build_log_prompt
 from state_manager import CAMPAIGNS_DIR, VAULTS_DIR, CampaignStore, CharacterVault
 
 # Spelarprofilens avatar (konto) — SEPARAT från äventyrarens kort. Genereras
-# alltid med StepFun step-image-edit-2 (Support-feature 3€). (2026-08-05)
+# med Wan 2.7 / Qwen Image 3 Pro (Token Plan).
+# (StepFun step-image-edit-2 pensionerad 2026-10-10 — leverantören serverar
+# inte bild-API:n längre.)
 # Beräknas lazy via CAMPAIGNS_DIR så testerna kan monkeypatcha sökvägen.
 
 
@@ -3925,7 +3927,7 @@ def _add_character_creation(username: str, usage: dict | None) -> None:
 def _add_image_gen(username: str, model: str = "") -> None:
     """Bokför en AI-bildgenerering (iteration).
 
-    model (2026-08-06): bildmodellen (t.ex. wan2.7-image / step-image-edit-2)
+    model (2026-08-06): bildmodellen (t.ex. wan2.7-image / qwen-image-3.0-pro)
     för admin-vyns "Calls by provider" — alla anropade modeller ska synas,
     inte bara LLM:erna.
     """
@@ -9677,23 +9679,20 @@ async def vault_use(char_id: str, body: dict | None = None, morkrets_token: str 
 
 @app.post("/api/vault/characters/{char_id}/avatar/generate")
 async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | None = Cookie(None)):
-    """AI-avatar för en valv-karaktär (StepFun, prompt byggs från karaktärsarket)."""
+    """AI-avatar för en valv-karaktär (prompt byggs från karaktärsarket)."""
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
 
-    # TIERS: AI-bildgenerering är tier-gated (2026-08-15):
-    # StepFun = GRATIS; Wan 2.7 / Qwen Image 3 Pro = Patron (30€).
+    # TIERS: AI-bildgenerering ligger bakom 10€-unlåset. Motorer: Wan 2.7 /
+    # Qwen Image 3 Pro. (StepFun step-image-edit-2 pensionerad 2026-10-10 —
+    # legacy-värden 'stepfun'/okänt normaliseras till wan så gamla cachade
+    # frontend-versioner inte skickar anrop mot en nedlagd API.)
     provider = str((body or {}).get("provider", "") or "").strip().lower()
-    if provider not in ("stepfun", "wan", "qwen"):
-        provider = "stepfun"
+    if provider not in ("wan", "qwen"):
+        provider = "wan"
     _require_image_gen_tier(username, provider, payload)
-    if provider in ("wan", "qwen"):
-        # 10 premiumbilder/dag (Wan 2.7 + Qwen Image 3 Pro); varje bild = 1 turn
-        _consume_wan_quota(username)
-    else:
-        # 2026-08-08: every image costs 1 turn — StepFun included (was free)
-        _gate_turn_quota(username)
-        _consume_turn(username, action="image", model="stepfun")
+    # 10 premiumbilder/dag (Wan 2.7 + Qwen Image 3 Pro); varje bild = 1 turn
+    _consume_wan_quota(username)
 
     entry = vault.get(username, char_id)
     if not entry:
@@ -9727,11 +9726,6 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
     else:
         prompt = _trim_prompt(_build_avatar_prompt(fake_state, "player", seed))
 
-    api_key = os.getenv("STEPFUN_API_KEY")
-    base_url = os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.ai/step_plan/v1")
-    if provider != "wan" and not api_key:
-        raise HTTPException(500, "STEPFUN_API_KEY missing on the server")
-
     av_dir = vault.avatars_dir(username)
 
     content: bytes = b""
@@ -9741,26 +9735,10 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
             # (2048², features.wan1080), övriga standard 1024².
             wan_model, wan_size = _wan_model_and_size(username)
             content = await _token_plan_image(wan_model, prompt, wan_size, seed)
-        elif provider == "qwen":
-            # Qwen Image 3 Pro (Token Plan) — ny Patron-premium (2026-08-15).
+        else:
+            # Qwen Image 3 Pro (Token Plan) — premium (2026-08-15).
             qwen_model, qwen_size = _qwen_image_model_and_size()
             content = await _token_plan_image(qwen_model, prompt, qwen_size, seed)
-        else:
-            async with httpx.AsyncClient(timeout=150) as client:
-                resp = await client.post(
-                    f"{base_url.rstrip('/')}/images/generations",
-                    headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
-                    json={"model": STEP_IMAGE_EDIT_2, "prompt": prompt,
-                          "response_format": "b64_json", "steps": 8, "seed": seed,
-                          "text_mode": True},
-                )
-            if resp.status_code != 200:
-                raise HTTPException(502, f"StepFun error ({resp.status_code})")
-            data = resp.json()
-            try:
-                content = base64.b64decode(data["data"][0]["b64_json"])
-            except (KeyError, IndexError, ValueError):
-                raise HTTPException(502, "StepFun returned no image")
     except HTTPException:
         raise
     except Exception as e:
@@ -9777,8 +9755,7 @@ async def vault_avatar_generate(char_id: str, body: dict, morkrets_token: str | 
     vault.update(username, entry)
     # Bokför en AI-bildgenerering (iteration), livstid
     img_model = ("wan2.7-image" if provider == "wan"
-                 else "qwen-image-3.0-pro" if provider == "qwen"
-                 else STEP_IMAGE_EDIT_2)
+                 else "qwen-image-3.0-pro")
     _add_image_gen(username, img_model)
     return {"ok": True, "seed": seed, "url": f"/api/vault/characters/{char_id}/avatar"}
 
@@ -10548,8 +10525,8 @@ app.router.lifespan_context = _lifespan
 # SPELARPROFILENS AVATAR (konto — SEPARAT från äventyraren)
 # ═══════════════════════════════════════
 # Profilavataren hör till KONTOT (headerns porträtt) — inte till kampanjens
-# äventyrare/NPC/DM-kort. Målas med StepFun step-image-edit-2 (gratis sedan
-# 2026-08-15) eller Wan 2.7 / Qwen Image 3 Pro (Patron 30€) via provider-fältet.
+# äventyrare/NPC/DM-kort. Målas med Wan 2.7 / Qwen Image 3 Pro via
+# provider-fältet. (StepFun step-image-edit-2 pensionerad 2026-10-10.)
 
 
 @app.get("/api/me/avatar")
@@ -10643,23 +10620,18 @@ async def me_avatar_gallery_delete_one(idx: int, morkrets_token: str | None = Co
 
 @app.post("/api/me/avatar/generate")
 async def me_avatar_generate(body: dict | None = None, morkrets_token: str | None = Cookie(None)):
-    """Måla profilavataren — StepFun step-image-edit-2 (gratis sedan 2026-08-15)
-    eller Wan 2.7 / Qwen Image 3 Pro (Patron 30€) via provider-fältet
-    ('stepfun'|'wan'|'qwen', default stepfun; okänt → stepfun). Spelarens egna
+    """Måla profilavataren — Wan 2.7 / Qwen Image 3 Pro (Token Plan) via
+    provider-fältet ('wan'|'qwen', default wan; okänt/'stepfun' → wan —
+    StepFun step-image-edit-2 pensionerad 2026-10-10). Spelarens egna
     ord (fri prompt) eller en standardporträtt-prompt om ingen text ges."""
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
     provider = str((body or {}).get("provider", "") or "").strip().lower()
-    if provider not in ("stepfun", "wan", "qwen"):
-        provider = "stepfun"
+    if provider not in ("wan", "qwen"):
+        provider = "wan"
     _require_image_gen_tier(username, provider, payload)
-    if provider in ("wan", "qwen"):
-        # 10 premiumbilder/dag (Wan 2.7 + Qwen Image 3 Pro); varje bild = 1 turn
-        _consume_wan_quota(username)
-    else:
-        # 2026-08-08: every image costs 1 turn — StepFun included (was free)
-        _gate_turn_quota(username)
-        _consume_turn(username, action="image", model="stepfun")
+    # 10 premiumbilder/dag (Wan 2.7 + Qwen Image 3 Pro); varje bild = 1 turn
+    _consume_wan_quota(username)
 
     user_prompt = ((body or {}).get("prompt") or "").strip()[:450]
     seed = (body or {}).get("seed")
@@ -10678,36 +10650,10 @@ async def me_avatar_generate(body: dict | None = None, morkrets_token: str | Non
             # som vault/campaign wan-grenen (wan2.7-image(-pro), size, seed).
             wan_model, wan_size = _wan_model_and_size(username)
             content = await _token_plan_image(wan_model, prompt, wan_size, seed)
-        elif provider == "qwen":
-            # Qwen Image 3 Pro (Token Plan) — ny Patron-premium (2026-08-15).
+        else:
+            # Qwen Image 3 Pro (Token Plan) — premium (2026-08-15).
             qwen_model, qwen_size = _qwen_image_model_and_size()
             content = await _token_plan_image(qwen_model, prompt, qwen_size, seed)
-        else:
-            api_key = os.getenv("STEPFUN_API_KEY")
-            base_url = os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.ai/step_plan/v1")
-            if not api_key:
-                raise HTTPException(500, "STEPFUN_API_KEY saknas på servern")
-            async with httpx.AsyncClient(timeout=150) as client:
-                resp = await client.post(
-                    f"{base_url.rstrip('/')}/images/generations",
-                    headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
-                    json={
-                        "model": STEP_IMAGE_EDIT_2,
-                        "prompt": prompt,
-                        "response_format": "b64_json",
-                        "steps": 8,
-                        "seed": seed,
-                        "text_mode": True,
-                    },
-                )
-            if resp.status_code != 200:
-                logger.error("🎨 Profile avatar StepFun error: HTTP %d %s", resp.status_code, resp.text[:300])
-                raise HTTPException(502, f"StepFun-fel ({resp.status_code})")
-            try:
-                b64 = resp.json()["data"][0]["b64_json"]
-                content = base64.b64decode(b64)
-            except (KeyError, IndexError, ValueError):
-                raise HTTPException(502, "StepFun returnerade ingen bild")
     except HTTPException:
         raise
     except Exception as e:
@@ -10782,10 +10728,12 @@ async def me_avatar_delete(morkrets_token: str | None = Cookie(None)):
 
 
 # ═══════════════════════════════════════
-# AI-AVATAR-GENERERING (StepFun step-image-edit-2)
+# AI-AVATAR-GENERERING (Wan 2.7 / Qwen Image 3 Pro)
 # ═══════════════════════════════════════
 
-STEP_IMAGE_EDIT_2 = "step-image-edit-2"
+# StepFun step-image-edit-2 pensionerad 2026-10-10 (leverantören serverar
+# inte bild-API:n). Modellsträngen finns kvar i _MEDIA_PROV/_OVERVIEW_MEDIA_PROV
+# så historiska bildanrop tetapporteras i admin-vyn.
 # Stilsträngar (2026-08-07): ALLTID fotorealistiskt, aldrig animerat/illustrerat.
 # Anti-animations-direktivet ligger i FÖRSTA meningen så det överlever
 # _trim_prompt(490) även när prompten klipps bakifrån.
@@ -10890,7 +10838,7 @@ def _build_dm_avatar_prompt(seed: int, state: dict | None = None) -> str:
 # ── Klass-specifika visuella ledtrådar (v30) ──
 # Utan dessa smälter alla klasser ihop till en generic "western fantasy rogue".
 # Substring-match på class-fältet (lower) så "Druid (Circle of the Moon)" träffar.
-# Okänd klass → tom sträng (ingen tvingad stil — StepFun tolkar fritt).
+# Okänd klass → tom sträng (ingen tvingad stil — bildmotorn tolkar fritt).
 # Cues hålls ~110–160 tecken så de + identitet + stil får plats i 490-budgeten.
 _CLASS_VISUAL_CUES = {
     "druid": (
@@ -10971,7 +10919,7 @@ _NPC_APPEARANCE_RE = re.compile(
 )
 # Maskin/varelse-ord i lore → behåll 'depict AS THAT'-direktivet (drönare ska
 # förbli drönare). Saknas orden får NPC:n ett mänskligt porträttdirektiv i
-# stället — annars tolkar StepFun 'machine' i stiltexten som cyborg.
+# stället — annars tolkar bildmotorn 'machine' i stiltexten som cyborg.
 _NPC_MACHINE_RE = re.compile(
     r"(machine|drone|construct|robot|mechanical|clockwork|automaton|golem|"
     r"energy being|spirit|undead|skeleton|animated)", re.I,
@@ -11129,7 +11077,8 @@ def _item_avatar_prompt(state: dict, slug: str) -> str:
 
 
 def _trim_prompt(p: str, limit: int = 490) -> str:
-    """Klipp prompt till max 'limit' tecken (StepFun tillåter max 512).
+    """Klipp prompt till max 'limit' tecken (budget: StepFun-bildmotorn tillät
+    max 512 — gränsen behålls för korta, tydliga prompts).
     Klipper vid sista mellanslag så inget ord trunkeras."""
     p = p.strip()
     if len(p) <= limit:
@@ -11166,7 +11115,7 @@ def _build_sheet_update_prompt(state: dict) -> str:
     parts = [f"{name}, a {race} {cls}."]
     # Stilen direkt efter identiteten — _trim_prompt klipper BAKIFRÅN, så
     # fotorealism-direktivet måste ligga FÖRE state-detaljerna (HP/inv/loc)
-    # som får tummas på. Utan stilen föll StepFun på anime-default (2026-08-07).
+    # som får tummas på. Utan stilen föll bildmotorn på anime-default (2026-08-07).
     parts.append(STEP_PORTRAIT_STYLE)
     if hp_s:
         parts.append(f"Current health: {hp_s}.")
@@ -11184,7 +11133,7 @@ async def generate_avatar(
     body: dict,
     morkrets_token: str | None = Cookie(None),
 ):
-    """Generera en AI-avatar med StepFun step-image-edit-2 baserat på kampanjdata.
+    """Generera en AI-avatar (Wan 2.7 / Qwen Image 3 Pro) baserat på kampanjdata.
     Prompten byggs automatiskt från character sheet / NPC-data — ingen
     användarprompt krävs. 'seed' styr slumpen (samma seed = samma bild).
     (2026-08-07) Varje anrop målar en HELT NY bild från text — ingen
@@ -11192,19 +11141,16 @@ async def generate_avatar(
     payload = _get_current_user(morkrets_token)
     username = payload["sub"]
 
-    # TIERS (2026-08-15): AI-bildgenerering är tier-gated.
-    # StepFun = GRATIS; Wan 2.7 / Qwen Image 3 Pro = Patron (30€).
+    # TIERS: AI-bildgenerering ligger bakom 10€-unlåset. Motorer: Wan 2.7 /
+    # Qwen Image 3 Pro. (StepFun step-image-edit-2 pensionerad 2026-10-10 —
+    # legacy-värden 'stepfun'/okänt normaliseras till wan så gamla cachade
+    # frontend-versioner inte skickar anrop mot en nedlagd API.)
     provider = str((body or {}).get("provider", "") or "").strip().lower()
-    if provider not in ("stepfun", "wan", "qwen"):
-        provider = "stepfun"
+    if provider not in ("wan", "qwen"):
+        provider = "wan"
     _require_image_gen_tier(username, provider, payload)
-    if provider in ("wan", "qwen"):
-        # 10 premiumbilder/dag (Wan 2.7 + Qwen Image 3 Pro); varje bild = 1 turn
-        _consume_wan_quota(username)
-    else:
-        # 2026-08-08: every image costs 1 turn — StepFun included (was free)
-        _gate_turn_quota(username)
-        _consume_turn(username, action="image", model="stepfun")
+    # 10 premiumbilder/dag (Wan 2.7 + Qwen Image 3 Pro); varje bild = 1 turn
+    _consume_wan_quota(username)
 
     state = store.get(username)
     if not state:
@@ -11241,11 +11187,6 @@ async def generate_avatar(
     logger.info("🎨 AI avatar: %s (mode=%s, seed %d, provider=%s)", avatar_key, mode, seed, provider)
     logger.info("🎨 Avatar prompt (%s): %.280s", avatar_key, prompt)
 
-    api_key = os.getenv("STEPFUN_API_KEY")
-    base_url = os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.ai/step_plan/v1")
-    if provider not in ("wan", "qwen") and not api_key:
-        raise HTTPException(500, "STEPFUN_API_KEY saknas på servern")
-
     cid = state["meta"]["campaign_id"]
     av_dir = CAMPAIGNS_DIR / username / cid / "avatars"
 
@@ -11258,33 +11199,11 @@ async def generate_avatar(
             #    reproducerbarhet. Edit-läge = färsk målning från sheet-data.
             wan_model, wan_size = _wan_model_and_size(username)
             content = await _token_plan_image(wan_model, prompt, wan_size, seed)
-        elif provider == "qwen":
-            # ── Qwen Image 3 Pro (DashScope Token Plan) — ny Patron-premium
+        else:
+            # ── Qwen Image 3 Pro (DashScope Token Plan) — premium
             #    (2026-08-15). Samma endpoint/payload som Wan 2.7.
             qwen_model, qwen_size = _qwen_image_model_and_size()
             content = await _token_plan_image(qwen_model, prompt, qwen_size, seed)
-        else:
-            async with httpx.AsyncClient(timeout=150) as client:
-                resp = await client.post(
-                    f"{base_url.rstrip('/')}/images/generations",
-                    headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
-                    json={
-                        "model": STEP_IMAGE_EDIT_2,
-                        "prompt": prompt,
-                        "response_format": "b64_json",
-                        "steps": 8,
-                        "seed": seed,
-                        "text_mode": True,
-                    },
-                )
-            if resp.status_code != 200:
-                logger.error("🎨 StepFun error: HTTP %d %s", resp.status_code, resp.text[:300])
-                raise HTTPException(502, f"StepFun-fel ({resp.status_code})")
-            data = resp.json()
-            try:
-                content = base64.b64decode(data["data"][0]["b64_json"])
-            except (KeyError, IndexError, ValueError):
-                raise HTTPException(502, "StepFun returnerade ingen bild")
     except HTTPException:
         raise
     except Exception as e:
@@ -11316,8 +11235,7 @@ async def generate_avatar(
     store.save(state)
     # Bokför en AI-bildgenerering (iteration), livstid
     img_model = ("wan2.7-image" if provider == "wan"
-                 else "qwen-image-3.0-pro" if provider == "qwen"
-                 else STEP_IMAGE_EDIT_2)
+                 else "qwen-image-3.0-pro")
     _add_image_gen(username, img_model)
 
     return {"ok": True, "kind": avatar_key, "url": f"/api/campaign/avatar/{avatar_key}", "seed": seed,
@@ -12505,7 +12423,7 @@ def _require_admin(payload: dict):
 
 def _require_image_gen_tier(username: str, provider: str, payload: dict | None = None) -> None:
     """TIERS (2026-09-27, ny prissättning): ALL AI-bildgenerering ligger bakom
-    10€-unlåset (StepFun, Wan 2.7, Qwen Image 3 Pro). Free tier = ren text.
+    10€-unlåset (Wan 2.7, Qwen Image 3 Pro). Free tier = ren text.
     Varje bild kostar 1 turn. Admin har alltid tillgång. Lifetime = allt.
     """
     if payload and payload.get("role") == "admin":

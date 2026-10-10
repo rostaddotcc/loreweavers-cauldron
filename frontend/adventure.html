@@ -944,7 +944,7 @@ html{font-size:var(--fs-base)}
         <li><b>+100 turns</b> — never expire, used only after your 30 daily free turns run out</li>
         <li><b>All Dungeon Masters</b> — Qwen 3.8 Flash, Qwen 3.6 Flash, DeepSeek V4.1 Flash, Step 5 Preview…</li>
         <li><b>Voice narration</b> — Qwen &amp; StepFun TTS (1 turn per narration)</li>
-        <li><b>Image generation</b> — StepFun, Wan 2.7 Pro, Qwen Image 3 Pro (1 turn per image)</li>
+        <li><b>Image generation</b> — Wan 2.7 Pro, Qwen Image 3 Pro (1 turn per image)</li>
       </ul>
       <p style="font-size:.72rem;color:var(--bone-dim);font-style:italic;margin:.3rem 0 .8rem">One-time 10€. No subscription, no expiry on the unlock or the turns. Or donate any amount — <b>1€ is enough</b> — to permanently unlock <b>Undo</b> and <b>campaign export</b>.</p>
       <div style="display:flex;gap:.6rem">
@@ -985,7 +985,7 @@ html{font-size:var(--fs-base)}
              title="Enlarge portrait" style="width:72px;height:72px;border-radius:50%;overflow:hidden;border:2px solid var(--gold);background:var(--stone-3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.6rem;margin:0 auto">🎭</div>
         <div style="font-size:.68rem;color:var(--bone-dim);font-style:italic;margin-top:.4rem">Current portrait — click to enlarge &amp; re-roll</div>
       </div>
-      <div class="mi-intro" id="adv-paint-desc" style="font-size:.82rem;line-height:1.55">Generate the portrait in two ways — <b>🖌️ Free prompt</b> uses ONLY your words, <b>📜 From dossier</b> weaves the portrait from your character's own story. Image generation is part of the one-time <b>10€ unlock</b> — each image costs 1 turn. Engines: StepFun, Wan 2.7 Pro, Qwen Image 3 Pro.</div>
+      <div class="mi-intro" id="adv-paint-desc" style="font-size:.82rem;line-height:1.55">Generate the portrait in two ways — <b>🖌️ Free prompt</b> uses ONLY your words, <b>📜 From dossier</b> weaves the portrait from your character's own story. Image generation is part of the one-time <b>10€ unlock</b> — each image costs 1 turn. Engines: Wan 2.7 Pro, Qwen Image 3 Pro.</div>
       <div style="margin-top:.7rem">
         <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">🖌️ YOUR OWN WORDS (free prompt)</div>
         <textarea id="adv-paint-prompt" placeholder="Describe exactly what you want to see — e.g. 'hooded figure, lantern light, rain'. Uses ONLY your words." style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:var(--radius-sm);resize:vertical"></textarea>
@@ -993,7 +993,6 @@ html{font-size:var(--fs-base)}
       <div style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
         <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
         <select id="adv-paint-provider" class="tts-select" style="flex:1;min-width:0;font-size:.8rem;padding:.35rem .5rem;border-radius:var(--radius-sm);background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright)" onchange="advPaintProviderChanged(this)" title="Image provider for image generation">
-          <option value="stepfun">StepFun</option>
           <option value="wan">Wan 2.7 Pro</option>
           <option value="qwen">Qwen Image 3 Pro</option>
         </select>
@@ -1014,7 +1013,7 @@ html{font-size:var(--fs-base)}
         <button class="mi-close" onclick="closeProfilePortraitModal()" title="Close">✕</button>
       </div>
       <div id="pf-paint-preview" style="width:150px;height:150px;margin:0 auto .8rem;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--edge-hi);background:var(--stone-3);display:flex;align-items:center;justify-content:center;font-size:3rem">👤</div>
-      <div class="mi-intro" style="font-size:.82rem;line-height:1.55">Generate the face you bring to the table — <b>your</b> portrait, separate from your adventurer. Describe it below, or leave empty and let the Cauldron imagine you. Image generation is part of the one-time <b>10€ unlock</b> — each image costs 1 turn. Engines: StepFun, Wan 2.7 Pro, Qwen Image 3 Pro.</div>
+      <div class="mi-intro" style="font-size:.82rem;line-height:1.55">Generate the face you bring to the table — <b>your</b> portrait, separate from your adventurer. Describe it below, or leave empty and let the Cauldron imagine you. Image generation is part of the one-time <b>10€ unlock</b> — each image costs 1 turn. Engines: Wan 2.7 Pro, Qwen Image 3 Pro.</div>
       <div style="margin-top:.7rem">
         <div style="font-size:.75rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.3rem">🖌️ Describe yourself (optional)</div>
         <textarea id="pf-paint-prompt" placeholder="e.g. 'hooded figure, lantern light, old leather' — or leave empty" style="width:100%;min-height:56px;padding:.5rem .6rem;font-family:var(--font-display,'Cinzel',serif);font-size:.72rem;background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright);border-radius:var(--radius-sm);resize:vertical"></textarea>
@@ -1022,7 +1021,6 @@ html{font-size:var(--fs-base)}
       <div style="display:flex;align-items:center;gap:.6rem;margin-top:.8rem">
         <label style="font-size:.72rem;color:var(--bone-dim);letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">🎨 Engine</label>
         <select id="pf-paint-provider" class="tts-select" style="flex:1;min-width:0;font-size:.8rem;padding:.35rem .5rem;border-radius:var(--radius-sm);background:var(--stone-3);border:1px solid var(--edge);color:var(--bone-bright)" onchange="pfPaintProviderChanged(this)" title="Image provider for image generation">
-          <option value="stepfun">StepFun</option>
           <option value="wan">Wan 2.7 Pro</option>
           <option value="qwen">Qwen Image 3 Pro</option>
         </select>
@@ -2432,13 +2430,14 @@ async function continueAdventurer() {
 
 // ── 🎨 Paint portrait (onboarding — före modellvalen, 2026-08-05) ──
 // Öppnar paint-modalen: 2 val (free prompt / från karaktärskortet) +
-// engine-val (StepFun = gratis sedan 2026-08-15 · Wan 2.7 Pro / Qwen Image 3 Pro = Patron 30€).
+// engine-val (Wan 2.7 Pro / Qwen Image 3 Pro — 10€-unlås).
+// (StepFun step-image-edit-2 pensionerad 2026-10-10.)
 let advPaintTier = null;  // free | tier1 | tier2 | lifetime (från /api/me)
 let advPaintLastPrompt = null;   // senast använda målnings-prompt (för portrait re-roll)
-let advPaintLastProvider = null; // senast använda engine (stepfun | wan)
+let advPaintLastProvider = null; // senast använda engine (wan | qwen)
 function advPaintProvider() {
   const sel = document.getElementById('adv-paint-provider');
-  return (sel && sel.value) || 'stepfun';
+  return (sel && sel.value) || 'wan';
 }
 function advPaintGate(provider) {
   // 2026-09-27 (ny prissättning): ALL bildgenerering bakom 10€-unlåset.
@@ -2455,10 +2454,10 @@ function advPaintUpdateLock() {
   const sel = document.getElementById('adv-paint-provider');
   if (!sel) return;
   const unlocked = advPaintTier === 'tier2' || advPaintTier === 'lifetime';
-  ['stepfun', 'wan', 'qwen'].forEach(key => {
+  ['wan', 'qwen'].forEach(key => {
     const opt = sel.querySelector(`option[value="${key}"]`);
     if (!opt) return;
-    const name = key === 'wan' ? 'Wan 2.7 Pro' : key === 'qwen' ? 'Qwen Image 3 Pro' : 'StepFun';
+    const name = key === 'wan' ? 'Wan 2.7 Pro' : 'Qwen Image 3 Pro';
     opt.disabled = !unlocked;
     opt.textContent = unlocked ? name : name + ' — 🔒 10€ unlock';
   });
@@ -2540,7 +2539,7 @@ async function advPaintRun(prompt, fromDossier) {
   advPaintLastProvider = prov;
   status.textContent = fromDossier
     ? '📜 Weaving your portrait from the dossier…'
-    : (prov === 'wan' ? '🖼️ Generating with Wan 2.7 Pro… (15–40 s)' : '🎨 Generating with StepFun… (10–30 s)');
+    : (prov === 'wan' ? '🖼️ Generating with Wan 2.7 Pro… (15–40 s)' : '🖼️ Generating with Qwen Image 3 Pro… (15–40 s)');
   if (freeBtn) freeBtn.disabled = true;
   if (dossierBtn) dossierBtn.disabled = true;
   try {
@@ -2560,7 +2559,7 @@ async function advPaintRun(prompt, fromDossier) {
       if (curWrap) curWrap.style.display = '';
       status.textContent = fromDossier
         ? '✨ Portrait generated from your dossier'
-        : (prov === 'wan' ? '✨ Portrait generated — Wan 2.7 Pro, used your words' : '✨ Portrait generated — StepFun, used your words');
+        : (prov === 'wan' ? '✨ Portrait generated — Wan 2.7 Pro, used your words' : '✨ Portrait generated — Qwen Image 3 Pro, used your words');
       try { SFX.levelup(); } catch (_) {}
     } else {
       status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Generation failed');
@@ -2633,7 +2632,7 @@ async function rerollPortrait() {
         if (advPaintTier === 'premium') advPaintTier = 'tier2';
       } catch (_) { advPaintTier = 'free'; }
     }
-    const prov = advPaintLastProvider || 'stepfun';
+    const prov = advPaintLastProvider || 'wan';
     if (!advPaintGate(prov)) { if (rb) rb.disabled = false; return; }
     // Se till att hjälten har ett vault-id (samma logik som openAdvPaintModal)
     if (!advAdventurerId && advAdventurer && advAdventurer.name && advAdventurerMode === 'summon') {
@@ -2657,7 +2656,7 @@ async function rerollPortrait() {
       if (small) small.innerHTML = `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
       const imgBox = document.getElementById('adv-portrait-img');
       if (imgBox) { imgBox.innerHTML = ''; const ni = document.createElement('img'); ni.src = url; ni.alt = ''; imgBox.appendChild(ni); }
-      if (st) st.textContent = (prov === 'wan' ? '✨ New portrait generated — Wan 2.7 Pro' : '✨ New portrait generated — StepFun');
+      if (st) st.textContent = (prov === 'wan' ? '✨ New portrait generated — Wan 2.7 Pro' : '✨ New portrait generated — Qwen Image 3 Pro');
       try { SFX.levelup(); } catch (_) {}
     } else {
       if (st) st.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Generation failed');
@@ -3240,7 +3239,7 @@ async function pfLightboxRotate(delta) {
 
 // ── 🖼 Profil-porträtt: popup för att generera konto-avataren (2026-08-06) ──
 // Återanvänder advPaintTier/advPaintGate-logiken. 2026-09-27 (ny prissättning):
-// ALL bildgenerering bakom 10€-unlåset (StepFun, Wan 2.7 Pro, Qwen Image 3 Pro),
+// ALL bildgenerering bakom 10€-unlåset (Wan 2.7 Pro, Qwen Image 3 Pro),
 // 1 turn per bild. Fri prompt — tom prompt tillåten här (backend bygger en
 // default-prompt), till skillnad från äventyraren.
 function openProfilePortraitModal() {
@@ -3274,7 +3273,7 @@ function pfPaintUpdateLock() {
   const sel = document.getElementById('pf-paint-provider');
   if (!sel) return;
   const unlocked = advPaintTier === 'tier2' || advPaintTier === 'lifetime';
-  [['stepfun', 'StepFun'], ['wan', 'Wan 2.7 Pro'], ['qwen', 'Qwen Image 3 Pro']].forEach(([key, name]) => {
+  [['wan', 'Wan 2.7 Pro'], ['qwen', 'Qwen Image 3 Pro']].forEach(([key, name]) => {
     const opt = sel.querySelector(`option[value="${key}"]`);
     if (!opt) return;
     opt.disabled = !unlocked;
@@ -3284,12 +3283,12 @@ function pfPaintUpdateLock() {
   if (btn) btn.disabled = false;  // gate:n (advPaintGate) visar unlock-modal
 }
 async function profilePortraitGenerate() {
-  const prov = (document.getElementById('pf-paint-provider') || {}).value || 'stepfun';
+  const prov = (document.getElementById('pf-paint-provider') || {}).value || 'wan';
   if (!advPaintGate(prov)) return;
   const status = document.getElementById('pf-paint-status');
   const btn = document.getElementById('pf-paint-btn');
   const prompt = ((document.getElementById('pf-paint-prompt') || {}).value || '').trim();
-  status.textContent = (prov === 'wan' ? '🖼️ Generating with Wan 2.7 Pro… (15–40 s)' : prov === 'qwen' ? '🖼️ Generating with Qwen Image 3 Pro… (15–40 s)' : '🎨 Generating with StepFun… (10–30 s)');
+  status.textContent = (prov === 'wan' ? '🖼️ Generating with Wan 2.7 Pro… (15–40 s)' : '🖼️ Generating with Qwen Image 3 Pro… (15–40 s)');
   if (btn) btn.disabled = true;
   try {
     const res = await API.generateAccountAvatar(prompt, Date.now() % 1000000, prov);
@@ -3298,7 +3297,7 @@ async function profilePortraitGenerate() {
       _pfRenderAvatar();
       const prev = document.getElementById('pf-paint-preview');
       if (prev) prev.innerHTML = `<img src="${API.accountAvatarUrl()}?t=${Date.now()}" alt="" style="width:100%;height:100%;object-fit:cover">`;
-      status.textContent = '✨ Portrait generated — ' + (prov === 'wan' ? 'Wan 2.7 Pro' : prov === 'qwen' ? 'Qwen Image 3 Pro' : 'StepFun');
+      status.textContent = '✨ Portrait generated — ' + (prov === 'wan' ? 'Wan 2.7 Pro' : 'Qwen Image 3 Pro');
       if (typeof SFX !== 'undefined') SFX.levelup();
     } else {
       status.textContent = '⚠ ' + (res && res.detail ? res.detail : 'Generation failed');
